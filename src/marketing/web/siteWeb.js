@@ -49,14 +49,18 @@ module.exports = () => {
   });
 
   router.get("/site-web/sites", need("forms.read"), (req, res) => {
-    const archived = req.query.vue === "archives";
-    res.render("marketing/sites", { title: "Sites", active: "sites", archived, sites: pages.listSites(req.mk.ctx, { archived }) });
+    const view = pages.SITE_VIEWS.includes(req.query.vue) ? req.query.vue : "actifs";
+    const q = String(req.query.q || "").trim().slice(0, 80);
+    res.render("marketing/sites", {
+      title: "Mes sites", active: "sites", view, q, sites: pages.listSites(req.mk.ctx, { view, q }), counts: pages.siteCounts(req.mk.ctx),
+      siteTypes: pages.SITE_TYPES, canWrite: req.mk.can("forms.write"), canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"),
+    });
   });
   router.post("/site-web/sites", need("forms.write"), (req, res, next) => {
     let created = null;
     attempt(req, res, next, () => (created ? `/marketing/site-web/sites/${created.id}` : "/marketing/site-web/sites"), () => {
-      created = pages.createSite(req.mk.ctx, { name: req.body.name });
-      return "Site créé : ajoutez ses pages, choisissez sa page d'accueil et réglez son design system.";
+      created = pages.createSite(req.mk.ctx, { name: req.body.name, slug: req.body.slug, description: req.body.description, siteType: req.body.site_type });
+      return `Site « ${created.name} » créé. Ajoutez ses pages, choisissez sa page d'accueil et réglez son design system.`;
     });
   });
 
@@ -86,11 +90,17 @@ module.exports = () => {
     if (!site) res.status(404).render("error", { message: "Site introuvable." });
     return site;
   };
+  // « Ouvrir » un site : son espace d'administration (palier 3, B1) ; la fiche de réglages en est l'écran « Réglages »
   router.get("/site-web/sites/:id(\\d+)", need("forms.read"), (req, res) => {
     const site = load(req, res);
     if (!site) return;
+    res.redirect(`/marketing/site-web/sites/${site.id}/tableau-de-bord`);
+  });
+  router.get("/site-web/sites/:id(\\d+)/reglages", need("forms.read"), (req, res) => {
+    const site = load(req, res);
+    if (!site) return;
     res.render("marketing/site", {
-      title: site.name, active: "sites", site, sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
+      title: "Réglages du site", active: "espace/reglages", site, siteTypes: pages.SITE_TYPES, canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"), sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
       T: tokens, cssVars: tokens.tokensToCss(site.tokens), templates: require("../pages/templates").catalog(),
       components: pages.listComponents(req.mk.ctx, { siteId: site.id }), headerOverview: pages.headerOverview(req.mk.ctx, site.id),
     });
@@ -98,8 +108,8 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => {
-      pages.updateSite(req.mk.ctx, site.id, { name: req.body.name });
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages`, () => {
+      pages.updateSite(req.mk.ctx, site.id, { name: req.body.name, slug: req.body.slug, description: req.body.description, siteType: req.body.site_type });
       if (req.body.home_page_id !== undefined) pages.setHomePage(req.mk.ctx, site.id, intOrNull(req.body.home_page_id));
       return "Réglages du site enregistrés.";
     });
@@ -107,7 +117,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/design", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#design`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#design`, () => {
       const t = req.body.reset === "1" ? tokens.DEFAULT_TOKENS : tokensFromBody(req.body, site.tokens);
       pages.updateSite(req.mk.ctx, site.id, { tokens: t });
       const live = pages.listPages(req.mk.ctx, { siteId: site.id }).filter((p) => p.status === "published").length;
@@ -167,7 +177,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#parties`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#parties`, () => {
       pages.setSiteParts(req.mk.ctx, site.id, { header: intOrNull(req.body.header), footer: intOrNull(req.body.footer) });
       return "En-tête et pied de page enregistrés : ils s'affichent sur toutes les pages du site.";
     });
@@ -178,7 +188,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/entete/creer", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
       if (site.header_component_id) throw new (require("../errors").MarketingError)("invalid", "Ce site a déjà un en-tête.");
       let name = "En-tête principal", n = 1;
       while (req.mk.ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(req.mk.ctx.organizationId, name)) { n += 1; name = `En-tête principal ${n}`; }
@@ -191,7 +201,7 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     let variant = null;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
       variant = pages.createHeaderVariant(req.mk.ctx, site.id, { name: req.body.name });
       return `Variante « ${variant.name} » créée (copie de l'en-tête du site). Modifiez-la, puis choisissez les pages qui l'utilisent.`;
     });
@@ -199,7 +209,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/entete/pages/:pageId(\\d+)", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
       const page = pages.requirePage(req.mk.ctx, Number(req.params.pageId));
       if (page.site_id !== site.id) throw new (require("../errors").MarketingError)("invalid", "Cette page n'appartient pas à ce site.");
       const choice = String(req.body.choice || "inherit");
@@ -212,9 +222,10 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     let copy = null;
-    attempt(req, res, next, () => (copy ? `/marketing/site-web/sites/${copy.id}` : `/marketing/site-web/sites/${site.id}`), () => {
-      copy = pages.duplicateSite(req.mk.ctx, site.id);
-      return `Copie créée : « ${copy.name} » (ses pages sont hors ligne, en brouillon).`;
+    attempt(req, res, next, () => (copy ? `/marketing/site-web/sites/${copy.id}` : `/marketing/site-web/sites/${site.id}/reglages`), () => {
+      const withPages = req.body.contenu !== "configuration";
+      copy = pages.duplicateSite(req.mk.ctx, site.id, { withPages });
+      return withPages ? `Copie créée : « ${copy.name} » (réglages et pages ; les pages sont en brouillon, hors ligne). Médias, tunnels et articles ne sont pas copiés.` : `Copie créée : « ${copy.name} » (réglages seulement, sans pages).`;
     });
   });
   router.post("/site-web/sites/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
@@ -225,7 +236,22 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
+  });
+  router.post("/site-web/sites/:id(\\d+)/supprimer", need("forms.write"), need("pages.delete"), (req, res, next) => {
+    if (req.mk.siteOnly) return res.status(403).render("error", { message: "Seule l'équipe de l'organisation peut supprimer un site." });
+    const site = load(req, res);
+    if (!site) return;
+    attempt(req, res, next, "/marketing/site-web/sites?vue=archives", () => {
+      if (String(req.body.confirmation || "").trim().toLowerCase() !== site.name.toLowerCase()) throw new (require("../errors").MarketingError)("invalid_field", "Pour supprimer le site, tapez son nom exact dans le champ de confirmation.");
+      pages.deleteSite(req.mk.ctx, site.id);
+      return `Site « ${site.name} » supprimé. Il est dans la corbeille (Mes sites → Supprimés) : rien n'est effacé et vous pouvez le récupérer.`;
+    });
+  });
+  router.post("/site-web/sites/:id(\\d+)/recuperer", need("forms.write"), (req, res, next) => {
+    const site = load(req, res);
+    if (!site) return;
+    attempt(req, res, next, "/marketing/site-web/sites?vue=archives", () => { pages.undeleteSite(req.mk.ctx, site.id); return `Site « ${site.name} » sorti de la corbeille (il reste archivé : restaurez-le pour le remettre en service).`; });
   });
   // ---------- Médiathèque de l'éditeur (JSON) ----------
   // Une seule bibliothèque d'images pour les pages : la médiathèque Marketing (envoi, texte de remplacement, suppression
@@ -233,7 +259,7 @@ module.exports = () => {
   const mediaError = (res, next, error) => {
     const { MarketingError } = require("../errors");
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "not_found" ? 404 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : 422).json({ error: { code: error.code, message: error.message } });
   };
   const marketingItem = (m) => ({ source: "marketing", id: m.id, path: m.path, name: m.name, alt: m.alt || "", width: m.width, height: m.height, size: m.size, mime: m.mime, editable: true });
   router.get("/site-web/medias.json", need("forms.read"), (req, res) => {
@@ -242,6 +268,27 @@ module.exports = () => {
     const mk = src === "site" ? [] : media.listMedia(req.mk.ctx, { kind: "image", q, limit: 100 }).items.map(marketingItem);
     const site = src === "marketing" ? [] : siteImages(req.mk.ctx.db, { q, limit: 100 });
     res.set("Cache-Control", "no-store").json({ items: mk.concat(site) });
+  });
+  // Résolutions proposables pour une ou plusieurs images de la médiathèque (widget Image, Galerie…) : seulement les tailles
+  // plus petites que l'image la plus petite du lot, et seulement si le serveur sait fabriquer des versions réduites.
+  router.get("/site-web/medias/resolutions.json", need("forms.read"), (req, res) => {
+    const variants = require("../media/variants");
+    const list = [].concat(req.query.src || []).map(String).slice(0, 24);
+    const vis = media.visibleSql(req.mk.ctx);
+    const rows = list.map((src) => (variants.isLocal(src) ? req.mk.ctx.db.prepare(`SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image' AND ${vis.sql}`).get(req.mk.ctx.organizationId, src, ...vis.params) : null));
+    const known = rows.filter((r) => r && r.width);
+    const complete = list.length > 0 && known.length === list.length;
+    const min = complete ? Math.min(...known.map((r) => r.width)) : 0;
+    res.set("Cache-Control", "no-store").json({
+      available: variants.available(), complete, width: complete ? min : null, height: complete && list.length === 1 ? known[0].height : null, bytes: complete && list.length === 1 ? known[0].size : null,
+      sizes: complete ? variants.offered(min) : [],
+    });
+  });
+  // Où une image est utilisée (pages, composants, modèles, articles, sites) : la même détection que le refus de suppression
+  router.get("/site-web/medias/:id(\\d+)/usage.json", need("forms.read"), (req, res) => {
+    const m = media.getMedia(req.mk.ctx, Number(req.params.id));
+    if (!m) return res.status(404).json({ error: { code: "not_found", message: "Fichier introuvable." } });
+    res.set("Cache-Control", "no-store").json({ items: media.mediaUsage(req.mk.ctx, m).map((u) => ({ kind: u.kind, name: u.name, href: media.usageHref(u) })) });
   });
   router.post("/site-web/medias", need("forms.write"), (req, res, next) => {
     mediaUpload.single("file")(req, res, (uploadError) => {
@@ -252,7 +299,7 @@ module.exports = () => {
         const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
         const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
         if (media.sniff(req.file.buffer) && media.sniff(req.file.buffer).kind !== "image") throw new MarketingError("invalid_field", "Une page affiche des images : JPEG, PNG, GIF ou WebP. Un PDF se partage par un lien.");
-        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image"] });
+        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image"], siteId: media.siteOfUpload(req.mk.ctx) });
         if (req.body && typeof req.body.alt === "string" && req.body.alt.trim()) saved = media.updateMedia(req.mk.ctx, saved.id, { alt: req.body.alt });
         res.status(201).json({ media: marketingItem(saved) });
       } catch (error) { mediaError(res, next, error); }
@@ -269,9 +316,9 @@ module.exports = () => {
   const jsonError = (res, next, error) => {
     const { MarketingError } = require("../errors");
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" ? 409 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" ? 409 : 422).json({ error: { code: error.code, message: error.message, ...(error.details ? { details: error.details } : {}) } });
   };
-  const describe = (c, ctx) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type, section: c.section, uses: ctx ? pages.componentUsage(ctx, c.id).length : undefined });
+  const describe = (c, ctx) => ({ id: c.id, name: c.name, global: c.global, kind: c.kind, hasDraft: c.hasDraft, version: c.version, blocks: c.blocks, type: c.section && c.section.type, section: c.section, uses: ctx ? pages.componentInstances(ctx, c.id).reduce((n, p) => n + p.count, 0) : undefined });
   router.get("/site-web/composants.json", need("forms.read"), (req, res) => {
     res.set("Cache-Control", "no-store").json({ components: pages.listComponents(req.mk.ctx, { siteId: intOrNull(req.query.site) }).map(describe) });
   });
@@ -283,7 +330,7 @@ module.exports = () => {
   router.post("/site-web/composants", need("forms.write"), (req, res, next) => {
     try {
       const b = req.body || {};
-      const c = pages.createComponent(req.mk.ctx, { name: b.name, section: b.section, siteId: b.global ? null : intOrNull(b.siteId) });
+      const c = pages.createComponent(req.mk.ctx, { name: b.name, section: b.section, siteId: b.global ? null : intOrNull(b.siteId), kind: b.kind === "global" ? "global" : "standard" });
       res.status(201).json({ component: describe(c) });
     } catch (error) { jsonError(res, next, error); }
   });
@@ -303,6 +350,14 @@ module.exports = () => {
     if (!t) return res.status(404).json({ error: { code: "not_found", message: "Modèle introuvable." } });
     res.set("Cache-Control", "no-store").json({ template: { id: t.id, name: t.name, category: t.category, sections: t.content.sections } });
   });
+  // Sections d'un gabarit intégré (écran « Création guidée » de l'éditeur) : copie neuve à chaque appel, rien n'est enregistré
+  router.get("/site-web/gabarits/:key([a-z0-9-]+).json", need("forms.read"), (req, res, next) => {
+    try {
+      const sections = pages.gabaritSections(req.mk.ctx, req.params.key);
+      if (!sections) return res.status(404).json({ error: { code: "not_found", message: "Gabarit introuvable." } });
+      res.set("Cache-Control", "no-store").json({ gabarit: { key: req.params.key, sections } });
+    } catch (error) { jsonError(res, next, error); }
+  });
   router.post("/site-web/modeles", need("forms.write"), (req, res, next) => {
     try {
       const b = req.body || {};
@@ -313,10 +368,29 @@ module.exports = () => {
   router.post("/site-web/modeles/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
     attempt(req, res, next, "/marketing/pages#nouvelle", () => { pages.deletePageTemplate(req.mk.ctx, Number(req.params.id)); return "Modèle supprimé (les pages déjà créées avec lui ne changent pas)."; });
   });
+  // Pages et nombre d'instances liées (données réelles : contenu de travail de chaque page)
+  router.get("/site-web/composants/:id(\\d+)/instances.json", need("forms.read"), (req, res) => {
+    const c = pages.getComponent(req.mk.ctx, Number(req.params.id));
+    if (!c) return res.status(404).json({ error: { code: "not_found", message: "Composant introuvable." } });
+    const pagesUsing = pages.componentInstances(req.mk.ctx, c.id);
+    res.set("Cache-Control", "no-store").json({ id: c.id, name: c.name, kind: c.kind, instances: pagesUsing.reduce((n, p) => n + p.count, 0), pages: pagesUsing });
+  });
+  // Mise à jour explicite : la copie de travail devient la version diffusée aux instances liées
+  router.post("/site-web/composants/:id(\\d+)/mettre-a-jour", need("forms.write"), (req, res, next) => {
+    try {
+      const r = pages.publishComponent(req.mk.ctx, Number(req.params.id));
+      res.json({ component: describe(r.component, req.mk.ctx), changed: r.changed, pages: r.instances.length, instances: r.instances.reduce((n, p) => n + p.count, 0) });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/site-web/composants/:id(\\d+)/abandonner", need("forms.write"), (req, res, next) => {
+    try { res.json({ component: describe(pages.discardComponentDraft(req.mk.ctx, Number(req.params.id)), req.mk.ctx) }); } catch (error) { jsonError(res, next, error); }
+  });
+  // Suppression : sans instance liée, directe ; sinon le corps choisit « instances » (les supprimer aussi) ou « detach » (les conserver, devenues indépendantes)
   router.post("/site-web/composants/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
     try {
-      pages.deleteComponent(req.mk.ctx, Number(req.params.id));
-      res.json({ ok: true });
+      const b = req.body || {};
+      const r = pages.deleteComponent(req.mk.ctx, Number(req.params.id), { mode: b.mode || null, skipDraftOfPage: b.skipDraftOfPage ? Number(b.skipDraftOfPage) : null });
+      res.json({ ok: true, ...r });
     } catch (error) { jsonError(res, next, error); }
   });
   return router;

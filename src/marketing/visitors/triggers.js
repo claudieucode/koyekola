@@ -3,8 +3,7 @@
 // écrire). Une visite donne au plus un événement par page et par visite (clé d'idempotence), et « tunnel terminé » au
 // plus une fois par contact et par tunnel.
 //  - page.visited        { pageId, pageName, page }
-//  - funnel.step_reached { funnelId, funnelName, stepId, stepName, step } (tunnels actifs)
-//  - funnel.completed    { funnelId, funnelName } quand la page est la dernière étape du tunnel
+//  - funnel.entered / funnel.step_reached / funnel.step.completed / funnel.completed : voir funnels/events.js (tunnels actifs)
 const { emit } = require("../audience/shared");
 
 function emitVisitEvents(ctx, { contactId, sessionId, pageViews }) {
@@ -22,25 +21,10 @@ function emitVisitEvents(ctx, { contactId, sessionId, pageViews }) {
   return n;
 }
 
-// Étapes de tunnels actifs correspondant à une page (ou à une formation, pour une étape « Formation »)
-function stepsWhere(ctx, condition, value) {
-  return ctx.db.prepare(`SELECT s.id, s.name, s.position, f.id AS funnel_id, f.name AS funnel_name,
-      (SELECT MAX(x.position) FROM mk_funnel_steps x WHERE x.funnel_id = f.id) AS last_position
-    FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE ${condition} AND f.status = 'active' AND f.organization_id = ?`).all(value, ctx.organizationId);
-}
-function emitStepEvents(ctx, contact, steps, sessionId) {
-  let n = 0;
-  for (const s of steps) {
-    emit(ctx, "funnel.step_reached", { contact, source: "site", idempotencyKey: `funnel.step_reached:${contact.id}:${s.id}:${sessionId}`,
-      metadata: { funnelId: String(s.funnel_id), funnelName: s.funnel_name, stepId: String(s.id), stepName: s.name, step: s.position } });
-    n += 1;
-    if (s.position === s.last_position) {
-      emit(ctx, "funnel.completed", { contact, source: "site", idempotencyKey: `funnel.completed:${contact.id}:${s.funnel_id}`, metadata: { funnelId: String(s.funnel_id), funnelName: s.funnel_name } });
-      n += 1;
-    }
-  }
-  return n;
-}
+// Étapes de tunnels actifs correspondant à une page (ou à une formation) : les événements « funnel.* » sont produits par funnels/events.js (palier 19)
+const funnelEvents = require("../funnels/events");
+const stepsWhere = funnelEvents.stepsWhere;
+const emitStepEvents = (ctx, contact, steps, sessionId) => funnelEvents.emitJourney(ctx, contact, steps, { sessionId });
 
 // E-commerce (phase 11), même règle (contact connu, mesure acceptée) : fiche formation consultée, ajout au panier,
 // page de commande ouverte. L'achat lui-même est « lms.order_completed » (pont du LMS, sans dépendre du suivi).

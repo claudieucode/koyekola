@@ -17,7 +17,7 @@ function targetClause(ctx, { targetType, targetId }) {
   if (targetType === "segment") {
     const segment = segments.getSegment(ctx, targetId);
     if (!segment) throw new MarketingError("not_found", "Segment introuvable.");
-    const { sql, params } = segments.selectSql(ctx, segment.definition);
+    const { sql, params } = segments.selectSql(ctx, segment.definition, { siteId: segment.site_id ?? undefined }); // un segment de site ne vise que les contacts de ce site
     return { from: `FROM mk_contacts c WHERE ${sql}`, params, listId: undefined };
   }
   throw new MarketingError("invalid_field", "La cible d'une campagne est une liste ou un segment.");

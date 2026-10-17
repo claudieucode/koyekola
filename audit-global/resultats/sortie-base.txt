@@ -1,0 +1,13 @@
+tables: 155 | avec site_id: 23 | avec organization_id: 76 | avec clé étrangère: 127
+ - autres                   28
+ - apparence                3
+ - blog / taxonomie         9
+ - LMS / commerce de base   12
+ - CMS (cms_)               4
+ - marketing (mk_)          79
+ - navigation (nav_)        3
+ - SEO (seo_)               17
+tables avec site_id: appearance_configs, appearance_patterns, appearance_revisions, cms_revisions, cms_tool_runs, cms_url_history, mk_automations, mk_campaigns, mk_conversions, mk_events, mk_funnels, mk_invitations, mk_landing_pages, mk_lists, mk_page_tests, mk_segments, mk_site_members, mk_templates, mk_web_components, mk_web_events, nav_locations, nav_menus, seo_redirects
+tables SANS organization_id ni site_id parmi mk_*: mk_organizations, mk_page_test_events, mk_rss_seen
+PRAGMA integrity_check: ok | foreign_key_check lignes: 0
+mode journal: wal | triggers: 17 | index: 319

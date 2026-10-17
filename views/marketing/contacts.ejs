@@ -20,11 +20,19 @@
   if (filters.segment) activeChips.push({ label: "Segment", value: nameOf(savedSegments, filters.segment), clear: url({ segment: null, page: null }) });
   if (filters.source) activeChips.push({ label: "Source", value: mkh.sourceLabel(filters.source), clear: url({ source: null, page: null }) });
   if (filters.depuis) activeChips.push({ label: "Ajoutés", value: `depuis ${filters.depuis} jours`, clear: url({ depuis: null, page: null }) });
+  if (filters.cycle) activeChips.push({ label: "Cycle de vie", value: lifecycles[filters.cycle] || filters.cycle, clear: url({ cycle: null, page: null }) });
+  if (filters.etat) activeChips.push({ label: "Fiches", value: filters.etat === "all" ? "toutes" : (recordLabels[filters.etat] || filters.etat).toLowerCase() + "s", clear: url({ etat: null, page: null }) });
+  if (filters.site) activeChips.push({ label: "Site", value: nameOf(sitesList, filters.site), clear: url({ site: null, page: null }) });
+  if (filters.consentement) activeChips.push({ label: "Consentement", value: ({ granted: "donné", withdrawn: "retiré", none: "aucun enregistré" })[filters.consentement], clear: url({ consentement: null, page: null }) });
+  if (filters.cree_du) activeChips.push({ label: "Créés à partir du", value: filters.cree_du, clear: url({ cree_du: null, page: null }) });
+  if (filters.cree_au) activeChips.push({ label: "Créés jusqu'au", value: filters.cree_au, clear: url({ cree_au: null, page: null }) });
+  if (filters.inactifs) activeChips.push({ label: "Sans activité", value: `depuis ${filters.inactifs} jours`, clear: url({ inactifs: null, page: null }) });
   if (filters.joignables) activeChips.push({ label: null, value: "Joignables seulement", clear: url({ joignables: null, page: null }) });
 %>
     <div class="mk-head">
       <h1>Contacts <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1>
       <div class="mk-actions">
+        <% if (mk.can("contacts.merge")) { %><a href="/marketing/contacts/doublons" class="btn btn-outline btn-sm">Doublons</a><% } %>
         <% if (mk.can("contacts.import")) { %><a href="/marketing/importer" class="btn btn-outline btn-sm">Importer</a><% } %>
         <% if (mk.can("contacts.export")) { %><a href="<%= exportUrl %>" class="btn btn-outline btn-sm">Exporter (CSV)</a><% } %>
       </div>
@@ -57,6 +65,29 @@
       <div class="field-group"><label for="f-source">Source</label>
         <select id="f-source" name="source"><option value="">Toutes</option>
           <% sources.forEach((s) => { %><option value="<%= s %>" <%= filters.source === s ? "selected" : "" %>><%= mkh.sourceLabel(s) %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-cycle">Cycle de vie</label>
+        <select id="f-cycle" name="cycle"><option value="">Tous</option>
+          <% Object.entries(lifecycles).forEach(([k, label]) => { %><option value="<%= k %>" <%= filters.cycle === k ? "selected" : "" %>><%= label %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-etat">État de la fiche</label>
+        <select id="f-etat" name="etat"><option value="">Actives et inactives</option>
+          <% Object.entries(recordLabels).forEach(([k, label]) => { %><option value="<%= k %>" <%= filters.etat === k ? "selected" : "" %>><%= label %></option><% }) %>
+          <option value="all" <%= filters.etat === "all" ? "selected" : "" %>>Toutes</option>
+        </select></div>
+      <% if (sitesList.length) { %><div class="field-group"><label for="f-site">Site</label>
+        <select id="f-site" name="site"><option value="">Tous les sites</option>
+          <% sitesList.forEach((x) => { %><option value="<%= x.id %>" <%= String(filters.site) === String(x.id) ? "selected" : "" %>><%= x.name %></option><% }) %>
+        </select></div><% } %>
+      <div class="field-group"><label for="f-consent">Consentement marketing</label>
+        <select id="f-consent" name="consentement"><option value="">Tous</option>
+          <% [["granted", "Donné"], ["withdrawn", "Retiré"], ["none", "Aucun enregistré"]].forEach(([k, label]) => { %><option value="<%= k %>" <%= filters.consentement === k ? "selected" : "" %>><%= label %></option><% }) %>
+        </select></div>
+      <div class="field-group"><label for="f-cree-du">Créés à partir du</label><input id="f-cree-du" type="date" name="cree_du" value="<%= filters.cree_du %>"></div>
+      <div class="field-group"><label for="f-cree-au">Créés jusqu'au</label><input id="f-cree-au" type="date" name="cree_au" value="<%= filters.cree_au %>"></div>
+      <div class="field-group"><label for="f-inactifs">Sans activité</label>
+        <select id="f-inactifs" name="inactifs"><option value="">Peu importe</option>
+          <% [30, 90, 180, 365].forEach((d) => { %><option value="<%= d %>" <%= String(filters.inactifs) === String(d) ? "selected" : "" %>>Depuis <%= d %> jours</option><% }) %>
         </select></div>
       <div class="field-group"><label for="f-depuis">Ajoutés</label>
         <select id="f-depuis" name="depuis"><option value="">Depuis toujours</option>
@@ -131,6 +162,7 @@
             <%- sortHead("email", "E-mail") %>
             <%- sortHead("name", "Nom") %>
             <%- sortHead("status", "Statut") %>
+            <th scope="col">Cycle de vie</th>
             <th scope="col">Étiquettes</th>
             <%- sortHead("source", "Source") %>
             <%- sortHead("created", "Ajouté le") %>
@@ -140,9 +172,10 @@
             <% rows.forEach((c) => { const ctags = tagsOf.get(c.id) || []; %>
               <tr>
                 <% if (canWrite) { %><td class="mk-col-check" data-label="Sélection"><input type="checkbox" data-mk-select-row form="bulk-form" name="ids" value="<%= c.id %>" aria-label="Sélectionner <%= c.email %>"></td><% } %>
-                <td class="mk-cell-email" data-label="E-mail"><a href="/marketing/contacts/<%= c.id %>"><%= c.email %></a></td>
+                <td class="mk-cell-email" data-label="E-mail"><a href="/marketing/contacts/<%= c.id %><%= filters.site && siteScoped ? "?site=" + filters.site : "" %>"><%= c.email %></a><% if (c.record_status !== "active") { %> <span class="mk-chip mk-chip-static"><%= recordLabels[c.record_status] || c.record_status %></span><% } %></td>
                 <td data-label="Nom"><%= mkh.fullName(c) %></td>
                 <td data-label="Statut"><span class="mk-status <%= mkh.contactStatus(c.status).cls %>"><%= mkh.statusLabel(c.status) %></span></td>
+                <td data-label="Cycle de vie"><%= lifecycles[c.lifecycle_stage] || c.lifecycle_stage %></td>
                 <td data-label="Étiquettes"><% ctags.slice(0, 3).forEach((t) => { %><span class="mk-chip mk-chip-static"><%= t.name %></span> <% }) %><% if (ctags.length > 3) { %><span class="field-hint">+<%= ctags.length - 3 %></span><% } %></td>
                 <td data-label="Source"><%= mkh.sourceLabel(c.source) %></td>
                 <td data-label="Ajouté le"><%= mkh.fdate(c.created_at) %></td>

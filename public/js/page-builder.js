@@ -18,6 +18,9 @@
   var LEGACY = {}; boot.types.forEach(function (t) { LEGACY[t.type] = t; });
   var SP = {}; SPEC.styleProps.forEach(function (p) { SP[p.key] = p; });
   var BPS = SPEC.breakpoints.map(function (b) { return b.key; });
+  // Hiérarchie des écrans : la tablette hérite de l'ordinateur, le mobile de la tablette, le grand écran de l'ordinateur (il ne passe jamais par la tablette ni le mobile)
+  var DEVICE_PARENT = { tablet: "desktop", mobile: "tablet", wide: "desktop" };
+  function ancestors(dev) { var out = []; for (var d = DEVICE_PARENT[dev]; d; d = DEVICE_PARENT[d]) out.push(d); return out; }
   var bpLabel = function (k) { return SPEC.breakpoints.find(function (b) { return b.key === k; }).label; };
   var components = boot.components.slice();
 
@@ -31,6 +34,8 @@
     get: function (k, d) { try { var v = localStorage.getItem("pb:" + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
     set: function (k, v) { try { localStorage.setItem("pb:" + k, JSON.stringify(v)); } catch (e) { /* stockage indisponible */ } },
   };
+  // Comportement des accordéons : réglage d'interface (mémorisé dans ce navigateur, jamais dans le document de la page)
+  if (window.KWAccordion) window.KWAccordion.configure({ get: function () { return store.get("acc-mode", "many"); }, set: function (v) { store.set("acc-mode", v); } });
   function h(tag, attrs) {
     var el = document.createElement(tag);
     Object.keys(attrs || {}).forEach(function (k) {
@@ -49,8 +54,11 @@
     }
     return el;
   }
+  // Les modèles d'icônes ne changent pas : on les retrouve une seule fois (le calque est reconstruit à chaque modification, une recherche
+  // dans le document par icône y coûtait l'essentiel du temps)
+  var iconTemplates = {};
   function icon(name) {
-    var t = document.querySelector('template[data-pb-icon="' + name + '"]');
+    var t = iconTemplates[name] || (iconTemplates[name] = document.querySelector('template[data-pb-icon="' + name + '"]'));
     return t ? t.content.firstElementChild.cloneNode(true) : h("span", { "aria-hidden": "true" });
   }
   var toastTimer = null;
@@ -58,9 +66,10 @@
     var t = $("[data-pb-toast]");
     t.textContent = text;
     t.classList.toggle("is-error", Boolean(isError));
+    if (window.KolMotion) window.KolMotion.cancelLeave(t);
     t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.hidden = true; }, isError ? 6500 : 3200);
+    toastTimer = setTimeout(function () { if (window.KolMotion) window.KolMotion.leave(t, "fade"); t.hidden = true; }, isError ? 6500 : 3200);
   }
   function api(method, url, body, isForm) {
     var opts = { method: method, credentials: "same-origin", headers: { Accept: "application/json" } };
@@ -96,8 +105,28 @@
       if (k) ensureIds(k);
     });
   }
-  function reId(it) { it.id = newId(); delete it.locked; delete it.anchor; var k = kidsOf(it); if (k) k.forEach(reId); return it; }
+  // Nouveaux identifiants pour une copie. `map` (ancien → nouveau) permet ensuite de rediriger les interactions de la copie vers les
+  // copies de leurs cibles (voir reIdAll) : sans cela, une copie continuerait à piloter les éléments d'origine.
+  function reId(it, map) { var old = it.id; it.id = newId(); if (map && old) map[old] = it.id; delete it.locked; delete it.anchor; var k = kidsOf(it); if (k) k.forEach(function (c) { reId(c, map); }); return it; }
+  function remapInteractions(it, map) {
+    if (it.interactions) it.interactions.forEach(function (x) { if (map[x.target]) x.target = map[x.target]; });
+    var k = kidsOf(it); if (k) k.forEach(function (c) { remapInteractions(c, map); });
+  }
+  function reIdAll(items) { var map = {}; items.forEach(function (it) { reId(it, map); }); items.forEach(function (it) { remapInteractions(it, map); }); return items; }
+  // Retire les interactions dont la cible vient d'être supprimée (dans le même pas d'historique : annuler les rétablit)
+  function dropInteractionsTo(removed) {
+    walk(function (it) {
+      if (!it.interactions) return;
+      var kept = it.interactions.filter(function (x) { return !removed[x.target]; });
+      if (kept.length === it.interactions.length) return;
+      if (kept.length) it.interactions = kept; else delete it.interactions;
+    });
+  }
   ensureIds(content.sections);
+  // Dernière version ENREGISTRÉE de la page (voir « Réinitialisation » plus bas) : référence des icônes de réinitialisation
+  var KR = window.KWReset;
+  var saved = new KR.Baseline();
+  saved.set(content.sections);
   // Recherche d'un élément : { item, list, index, parent (null = racine), depth, ancestors }
   function locate(id, list, parent, depth, ancestors) {
     list = list || content.sections; depth = depth || 0; ancestors = ancestors || [];
@@ -160,7 +189,7 @@
   var frame = $("[data-pb-frame]");
   var stage = $("[data-pb-stage]");
   var wrap = $("[data-pb-frame-wrap]");
-  var dirty = false, blocked = false, saving = false, saveTimer = null;
+  var dirty = false, blocked = false, saving = false, saveTimer = null, inflight = null; // inflight : la requête d'enregistrement en cours
 
   // ---------- Historique (annuler / rétablir) ----------
   var past = [], future = [], lastKey = null;
@@ -176,7 +205,7 @@
   // identique) forment UNE seule étape d'annulation.
   function change(fn, opts) {
     opts = opts || {};
-    if (!canWrite) return false;
+    if (!canWrite || probing) return false;
     // Même clé que la modification précédente (frappes, glissement de curseur) : pas de nouvelle copie du document
     var before = opts.key && opts.key === lastKey ? null : snapshot();
     var label = opts.label || nextLabel || "Modification";
@@ -189,11 +218,11 @@
       future = []; futureLabels = [];
     } else if (pastLabels.length) pastLabels[pastLabels.length - 1].at = Date.now();
     lastKey = opts.key || null;
-    afterChange(opts.light);
+    afterChange(opts.light, !opts.key && !opts.light);
     return true;
   }
-  function undo() { if (!past.length) return; future.push(snapshot()); futureLabels.push(pastLabels.pop()); restore(past.pop()); lastKey = null; afterChange(false); }
-  function redo() { if (!future.length) return; past.push(snapshot()); pastLabels.push(futureLabels.pop()); restore(future.pop()); lastKey = null; afterChange(false); }
+  function undo() { if (!past.length) return; future.push(snapshot()); futureLabels.push(pastLabels.pop()); restore(past.pop()); lastKey = null; afterChange(false, true); }
+  function redo() { if (!future.length) return; past.push(snapshot()); pastLabels.push(futureLabels.pop()); restore(future.pop()); lastKey = null; afterChange(false, true); }
   // Revenir à un point de l'historique (n étapes en arrière ou en avant)
   function travel(steps) { var n = Math.abs(steps); for (var i = 0; i < n; i++) { if (steps < 0) undo(); else redo(); } }
   function openHistory(anchor) {
@@ -208,19 +237,182 @@
     showMenuEntries(entries.slice(0, 60), r.left, r.bottom + 4, { wide: true });
   }
   // light : saisie dans un champ de l'inspecteur (il n'est pas redessiné, sinon le curseur serait perdu)
-  function afterChange(light) {
-    renderTree();
-    if (!light) { renderInspector(); renderContext(); renderPageSettings(); }
-    updateHistoryButtons();
-    placeCanvasBar();
-    if (!light) renderDoc();
-    scheduleRender();
+  // Saisie (light) : les calques sont redessinés au plus une fois par pause de frappe ; le reste suit tout de suite
+  var treeTimer = null;
+  function scheduleTree() { clearTimeout(treeTimer); treeTimer = setTimeout(renderTree, 120); }
+  // Un rendu secondaire (calques, inspecteur, réglages…) qui échoue ne doit JAMAIS empêcher le rendu du canevas ni l'enregistrement
+  // d'une modification déjà appliquée au document : chaque étape est isolée, l'erreur est signalée dans la console.
+  function guarded(fn) { try { fn(); } catch (err) { if (window.console) console.error("[KOLAKISA] rendu de l'éditeur :", err); } }
+  var docVersion = 0; // compteur de modifications du document (résultats de l'inspecteur de qualité : actuels ou obsolètes)
+  function afterChange(light, quick) {
+    docVersion++;
+    resetMemo = {};
+    guarded(function () { if (light) scheduleTree(); else { clearTimeout(treeTimer); renderTree(); } });
+    if (!light) { guarded(renderInspector); guarded(renderContext); guarded(refreshPageSettings); }
+    guarded(updateHistoryButtons);
+    guarded(scheduleHistorySave);
+    guarded(refreshStart);
+    if (!light) { guarded(placeCanvasBar); guarded(renderDoc); } // saisie : la barre est replacée avec les repères, juste après le rendu du canevas
+    scheduleRender(quick);
     scheduleSave();
-    navListeners.forEach(function (f) { f(); });
+    navListeners.forEach(function (f) { guarded(f); });
+    guarded(refreshResets);
   }
+  // ---------- Historique conservé après rechargement ----------
+  // L'historique (étapes + libellés) est copié dans ce navigateur (localStorage « pb-history-<page> ») avec l'empreinte du document auquel il
+  // s'applique. Au rechargement il n'est repris QUE si le document chargé est identique à cette empreinte : sinon (page modifiée ailleurs, version
+  // restaurée…) il est écarté, jamais appliqué à un autre contenu. Taille plafonnée : les étapes les plus anciennes partent d'abord.
+  var HISTORY_KEY = "pb-history-" + PAGE.id, HISTORY_MAX_CHARS = 2000000, historyTimer = null;
+  function docKey() { return JSON.stringify({ sections: content.sections, title: content.title, description: content.description, seo: content.seo, theme: content.theme }); }
+  function writeHistory() {
+    clearTimeout(historyTimer); historyTimer = null;
+    try {
+      if (!canWrite || (!past.length && !future.length)) { localStorage.removeItem(HISTORY_KEY); return; }
+      var p = past.slice(), pl = pastLabels.slice(), f = future.slice(), fl = futureLabels.slice();
+      var size = function () { var n = 0; p.forEach(function (x) { n += x.length; }); f.forEach(function (x) { n += x.length; }); return n; };
+      var total = size();
+      while (total > HISTORY_MAX_CHARS && p.length) { total -= p[0].length; p.shift(); pl.shift(); }
+      while (total > HISTORY_MAX_CHARS && f.length) { total -= f[0].length; f.shift(); fl.shift(); }
+      localStorage.setItem(HISTORY_KEY, JSON.stringify({ cur: docKey(), past: p, pastLabels: pl, future: f, futureLabels: fl }));
+    } catch (e) { try { localStorage.removeItem(HISTORY_KEY); } catch (e2) { /* stockage indisponible */ } }
+  }
+  function scheduleHistorySave() { clearTimeout(historyTimer); historyTimer = setTimeout(writeHistory, 800); }
+  // Reprise : renvoie vrai si l'historique enregistré correspond exactement au document courant
+  function restoreHistory() {
+    if (!canWrite) return false;
+    var raw = null;
+    try { raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || "null"); } catch (e) { raw = null; }
+    if (!raw || raw.cur !== docKey() || !Array.isArray(raw.past) || !Array.isArray(raw.future) || raw.past.length !== (raw.pastLabels || []).length || raw.future.length !== (raw.futureLabels || []).length) return false;
+    past = raw.past; pastLabels = raw.pastLabels; future = raw.future; futureLabels = raw.futureLabels; lastKey = null;
+    updateHistoryButtons();
+    return true;
+  }
+  window.addEventListener("pagehide", function () { if (historyTimer) writeHistory(); });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden" && historyTimer) writeHistory(); });
   function updateHistoryButtons() {
     $("[data-pb-undo]").disabled = !past.length || !canWrite;
     $("[data-pb-redo]").disabled = !future.length || !canWrite;
+  }
+
+  // ---------- Réinitialisation : revenir à la dernière version ENREGISTRÉE ----------
+  // Référence (« saved ») : la page telle qu'elle était à l'ouverture, puis telle qu'elle est après chaque enregistrement
+  // demandé (bouton Enregistrer, Ctrl/⌘ + S, publication). L'enregistrement automatique protège le travail mais ne déplace
+  // pas la référence. Un élément est modifié quand la valeur actuelle de l'un de ses réglages diffère de la référence
+  // (après normalisation : « #F00 » = « rgb(255,0,0) »). Un élément créé depuis n'a pas de référence : pas d'icône.
+  // Trois sortes de retour, distinctes : cette réinitialisation (dernière valeur enregistrée), l'icône ↺ des champs de style
+  // (retirer la valeur propre à l'écran pour retrouver l'héritage) et les valeurs par défaut du widget.
+  var probing = null;               // lecture à blanc d'un champ pour savoir quel réglage il écrit (rien n'est modifié)
+  var resetMemo = {};               // réglages modifiés par élément, recalculés à chaque modification
+  var resetBtns = [];               // icônes affichées dans l'inspecteur (leur visibilité suit l'état réel)
+  var inspItem = null;              // élément dont l'inspecteur est en cours de dessin
+  var stylePath = function (key) { return (styleState === "normal" ? "s:" + device : "t:" + styleState) + ":" + key; };
+  function commitSaved(json) {
+    if (json === undefined) saved.set(content.sections); else saved.setJson(json);
+    resetMemo = {};
+    refreshResets(); placeCanvasBar();
+  }
+  function changedPaths(it) {
+    if (!it || !canWrite) return [];
+    var m = resetMemo[it.id];
+    if (m) return m;
+    var base = saved.get(it.id);
+    return (resetMemo[it.id] = base ? KR.diff(it, base, isNode(it)) : []);
+  }
+  // Réglages modifiés des descendants : { total, kids, list: [{ id, paths }] }
+  function subtreeChanges(it) {
+    var memo = resetMemo["deep:" + it.id];
+    if (memo) return memo;
+    var out = resetMemo["deep:" + it.id] = { total: 0, kids: 0, list: [] };
+    (kidsOf(it) || []).forEach(function (c) {
+      var ps = changedPaths(c);
+      if (ps.length) { out.total += ps.length; out.kids++; out.list.push({ id: c.id, paths: ps }); }
+      var d = subtreeChanges(c);
+      out.total += d.total; out.kids += d.kids; out.list = out.list.concat(d.list);
+    });
+    return out;
+  }
+  var plural = function (n, one, many) { return n + " " + (n > 1 ? many : one); };
+  function restorePaths(list, label) {
+    list = list.filter(function (x) { return x.paths.length; });
+    if (!list.length) return;
+    if (list.some(function (x) { return lockedDeep(x.id); })) { toast("Élément verrouillé : déverrouillez-le d'abord.", true); return; }
+    change(function () {
+      var any = false;
+      list.forEach(function (x) { var it = byId(x.id), base = saved.get(x.id); if (it && base) { KR.restore(it, base, x.paths, isNode(it)); any = true; } });
+      if (!any) return false;
+    }, { label: label });
+  }
+  function paintRestore(b, ch) {
+    var ps = b._scope(ch);
+    b.classList.toggle("is-on", ps.length > 0);
+    if (ps.length) { var tip = b._tip(ps); b.setAttribute("aria-label", tip); b.setAttribute("data-tip", tip); b.tabIndex = 0; } else b.tabIndex = -1;
+  }
+  function refreshResets() {
+    if (!resetBtns.length) return;
+    resetBtns = resetBtns.filter(function (b) { return b.isConnected; });
+    var it = selection.length === 1 ? byId(selection[0]) : null;
+    var ch = it ? changedPaths(it) : [];
+    resetBtns.forEach(function (b) { paintRestore(b, ch); });
+  }
+  // Icône de réinitialisation : présente dans le DOM mais invisible (donc sans décalage) tant que son réglage n'a pas changé
+  function restoreButton(it, scope, tip, onClick, cls) {
+    if (!canWrite || selection.length !== 1 || !saved.has(it.id)) return null;
+    var b = h("button", { type: "button", class: "pb-restore" + (cls ? " " + cls : "") }, icon("undo"));
+    b._scope = scope; b._tip = typeof tip === "function" ? tip : function () { return tip; };
+    b.addEventListener("click", function (e) {
+      e.preventDefault(); e.stopPropagation(); hideTip();
+      var cur = byId(it.id);
+      if (onClick) onClick(cur, b); else restorePaths([{ id: it.id, paths: scope(changedPaths(cur)) }], "Restaurer la dernière valeur enregistrée");
+    });
+    resetBtns.push(b);
+    paintRestore(b, changedPaths(it));
+    return b;
+  }
+  // Un réglage de style de l'écran (et de l'état) affiché
+  function styleRestore(it, key) {
+    var path = stylePath(key), where = device !== "desktop" || styleState !== "normal" ? " (" + (device !== "desktop" ? bpLabel(device) : "") + (device !== "desktop" && styleState !== "normal" ? ", " : "") + (styleState !== "normal" ? styleState : "") + ")" : "";
+    return restoreButton(it, function (ch) { return ch.indexOf(path) >= 0 ? [path] : []; }, "Restaurer la dernière valeur enregistrée" + where);
+  }
+  // Un groupe de réglages de style (écran et état affichés) : seuls ses réglages modifiés sont restaurés
+  function groupRestore(it, group, keys) {
+    var kind = styleState === "normal" ? "s" : "t", scopeName = styleState === "normal" ? device : styleState;
+    var all = keys.concat(Object.keys(SP).filter(function (k) { return SP[k].group === group; }));
+    return restoreButton(it, function (ch) {
+      return ch.filter(function (p) { var q = KR.parsePath(p); return q.kind === kind && q.scope === scopeName && all.indexOf(q.key) >= 0; });
+    }, function (ps) { return "Restaurer les " + plural(ps.length, "réglage modifié", "réglages modifiés") + " de ce groupe"; }, null, "pb-restore-group");
+  }
+  // Un champ de contenu : on lit à blanc ce que son rappel écrirait pour savoir de quel réglage il s'agit
+  function withRestore(el, probe) {
+    var it = inspItem;
+    if (!it || !el || !saved.has(it.id) || selection.length !== 1 || !canWrite) return el;
+    var rec = [];
+    probing = rec;
+    try { probe(); } catch (e) { /* champ sans réglage propre */ }
+    probing = null;
+    if (!rec.length) return el;
+    var b = restoreButton(it, function (ch) { return ch.filter(function (p) { return rec.indexOf(p) >= 0; }); }, "Restaurer la dernière valeur enregistrée");
+    if (b) { el.classList.add("pb-has-restore"); el.appendChild(b); }
+    return el;
+  }
+  // Tout l'élément : ses seuls réglages, ou aussi ceux de ses enfants (choix explicite, périmètre annoncé)
+  function resetElement(it, btn) {
+    var own = changedPaths(it), deep = subtreeChanges(it);
+    var label = "Réinitialiser « " + nameOf(it) + " »";
+    if (!own.length && !deep.total) return;
+    if (!deep.total) { restorePaths([{ id: it.id, paths: own }], label); return; }
+    var r = btn.getBoundingClientRect();
+    var entries = [{ heading: "Réinitialiser les modifications non enregistrées" }];
+    if (own.length) entries.push(["Cet élément seulement (" + plural(own.length, "réglage", "réglages") + ")", function () { restorePaths([{ id: it.id, paths: own }], label); }]);
+    entries.push([(own.length ? "Cet élément et " : "") + "ses enfants modifiés : " + plural(deep.kids, "enfant", "enfants") + ", " + plural(own.length + deep.total, "réglage", "réglages"),
+      function () { restorePaths([{ id: it.id, paths: own }].concat(deep.list), label + " et ses enfants"); }]);
+    showMenuEntries(entries, r.left, r.bottom + 4, { wide: true });
+  }
+  var elementResetCount = function (it) { var d = subtreeChanges(it); return changedPaths(it).length + d.total; };
+  function elementRestore(it, cls) {
+    return restoreButton(it, function (ch) { var d = subtreeChanges(it); return ch.length || d.total ? [1] : []; }, function () {
+      var own = changedPaths(it).length, d = subtreeChanges(it);
+      return "Réinitialiser les modifications non enregistrées" + (own ? " (" + plural(own, "réglage", "réglages") + (d.total ? " et celles de ses enfants" : "") + ")" : " de ses enfants");
+    }, resetElement, cls);
   }
 
   // ---------- Sélection ----------
@@ -230,12 +422,13 @@
     if (!id) selection = [];
     else if (additive) selection = selection.indexOf(id) >= 0 ? selection.filter(function (x) { return x !== id; }) : selection.concat(id);
     else selection = [id];
+    var geo = mode === "structure" ? null : readOverlayGeo(); // lectures AVANT toute écriture (arbre, inspecteur, classes du canevas)
     if (id && !additive) revealInTree(id);
     styleState = "normal";
     markTreeSelection();
     renderInspector();
     renderContext();
-    markCanvasSelection(opts.scroll !== false);
+    markCanvasSelection(opts.scroll !== false, geo);
     markDocSelection(opts.scroll !== false);
     navListeners.forEach(function (f) { f(); });
   }
@@ -265,8 +458,23 @@
   // ---------- Placement (règles de structure) ----------
   // Racine : uniquement des sections. Section libre et conteneurs : uniquement des éléments. Un élément posé à la racine
   // est placé dans une nouvelle section libre (jamais d'élément orphelin).
+  // Limites de la page, annoncées par le serveur (SPEC.limits) : vérifiées AVANT d'insérer, pour un message immédiat. Sans cela, l'ajout
+  // était accepté à l'écran puis refusé à l'enregistrement (« Trop d'éléments ») et le travail restait non enregistré.
+  function nodeTotal() { var n = 0; walk(function (x) { if (isNode(x)) n++; }); return n; }
+  function nodesIn(it) { return (isNode(it) ? 1 : 0) + countDeep(it); }
+  function heightOf(it) { var k = kidsOf(it), m = 0; (k || []).forEach(function (c) { m = Math.max(m, heightOf(c)); }); return isNode(it) ? 1 + m : m; }
+  function exceedsLimits(parent, items) {
+    var lim = SPEC.limits || {};
+    if (lim.nodes && nodeTotal() + items.reduce(function (n, it) { return n + nodesIn(it); }, 0) > lim.nodes) { toast("Une page compte au plus " + lim.nodes + " éléments : supprimez-en avant d'en ajouter.", true); return true; }
+    if (lim.depth) {
+      var base = parent ? locate(parent.id).depth : 0; // section = 0, ses éléments = 1
+      if (items.some(function (it) { return base + heightOf(it) > lim.depth; })) { toast("Les éléments ne peuvent pas être imbriqués sur plus de " + lim.depth + " niveaux.", true); return true; }
+    }
+    return false;
+  }
   function insertInto(parent, index, items) {
     if (refusesLockedWidget(items)) return null;
+    if (exceedsLimits(parent, items)) return null;
     if (parent === null) {
       var sections = [], pending = [];
       items.forEach(function (it) { if (isNode(it)) pending.push(it); else { if (pending.length) { sections.push({ id: newId(), type: "layout", children: pending }); pending = []; } sections.push(it); } });
@@ -387,7 +595,9 @@
     var label = ids.length === 1 ? "« " + nameOf(byId(ids[0])) + " »" : ids.length + " éléments";
     nextLabel = "Suppression : " + label;
     change(function () {
-      ids.forEach(function (id) { var l = locate(id); if (l) l.list.splice(l.index, 1); });
+      var gone = {};
+      ids.forEach(function (id) { var l = locate(id); if (l) { walk(function (x) { gone[x.id] = true; }, [l.item]); l.list.splice(l.index, 1); } });
+      dropInteractionsTo(gone);
       selection = selection.filter(function (id) { return byId(id); });
     });
     markCanvasSelection(false);
@@ -399,8 +609,9 @@
     var ids = topLevelSelection();
     if (!ids.length) return;
     if (ids.some(function (id) { return !isNode(byId(id)); }) && content.sections.length + ids.length > 30) { toast("Une page compte au plus 30 sections.", true); return; }
-    var made = ids.map(function (id) { return reId(clone(byId(id))); });
+    var made = reIdAll(ids.map(function (id) { return clone(byId(id)); }));
     if (refusesLockedWidget(made)) return;
+    if (SPEC.limits && SPEC.limits.nodes && nodeTotal() + made.reduce(function (n, it) { return n + nodesIn(it); }, 0) > SPEC.limits.nodes) { toast("Une page compte au plus " + SPEC.limits.nodes + " éléments : supprimez-en avant d'en dupliquer.", true); return; }
     nextLabel = "Duplication";
     change(function () {
       ids.forEach(function (id, i) { var l = locate(id); l.list.splice(l.index + 1, 0, made[i]); });
@@ -421,22 +632,23 @@
   // ---------- Structures : colonnes et grille ----------
   // Largeur des colonnes : proportions (flex-grow) par écran, ramenées à une moyenne de 1 (1 / 1 = moitié-moitié).
   var MAX_COLS = 6;
-  function growAt(c, from) {
-    for (var j = from; j >= 0; j--) { var s = c.styles && c.styles[BPS[j]]; if (s && s.flexGrow !== undefined) return Number(s.flexGrow); }
+  function growIn(c, devs) {
+    for (var j = 0; j < devs.length; j++) { var s = c.styles && c.styles[devs[j]]; if (s && s.flexGrow !== undefined) return Number(s.flexGrow); }
     return 1;
   }
+  function growAt(c, dev) { return growIn(c, [dev].concat(ancestors(dev))); }
   // Parts de la largeur (en %) de chaque colonne, pour l'écran modifié
   function columnShares(it) {
-    var g = (kidsOf(it) || []).map(function (c) { return growAt(c, BPS.indexOf(device)); });
+    var g = (kidsOf(it) || []).map(function (c) { return growAt(c, device); });
     var tot = g.reduce(function (a, b) { return a + b; }, 0) || 1;
     return g.map(function (x) { return x / tot * 100; });
   }
   // Enregistre des parts (en %) pour l'écran modifié : une valeur égale à celle héritée n'est pas répétée
   function storeShares(colsItem, shares) {
-    var k = kidsOf(colsItem), avg = 100 / k.length, i0 = BPS.indexOf(device);
+    var k = kidsOf(colsItem), avg = 100 / k.length;
     k.forEach(function (c, i) {
       var g = Math.max(0.05, Math.round(shares[i] / avg * 100) / 100);
-      var inh = growAt(c, i0 - 1);
+      var inh = growIn(c, ancestors(device));
       var s = styleSet(c, device, "normal", true);
       if (Math.abs(g - inh) < 0.01) delete s.flexGrow; else s.flexGrow = g;
       cleanStyles(c);
@@ -482,7 +694,8 @@
   // Grille : nombre de colonnes réellement affiché (réglage de l'écran, sinon celui mesuré dans le canevas)
   function gridColumnsOf(it) {
     // Tablette / mobile sans réglage propre : la grille se resserre d'elle-même (voir pageCss) → lue dans le canevas
-    for (var j = BPS.indexOf(device); j >= (device === "desktop" ? 0 : 1); j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s.columns !== undefined) return Number(s.columns); }
+    var gridChain = device === "wide" ? ["wide", "desktop"] : device === "mobile" ? ["mobile", "tablet"] : [device];
+    for (var j = 0; j < gridChain.length; j++) { var s = it.styles && it.styles[gridChain[j]]; if (s && s.columns !== undefined) return Number(s.columns); }
     var el = canvasEl(it.id);
     if (el) { var t = frame.contentWindow.getComputedStyle(el).gridTemplateColumns; if (t && t !== "none") return t.split(" ").length; }
     return 3;
@@ -609,97 +822,216 @@
     if (!ids.length) return;
     clipboard = ids.map(function (id) { var it = byId(id); var c = clone(it); if (!isNode(it)) c.section = true; return c; });
     store.set("clipboard", clipboard);
+    // Copie aussi dans le presse-papiers du système (texte balisé) : permet « Coller depuis un autre site ou navigateur » ; sans permission, la copie interne suffit
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText("KOLAKISA:" + JSON.stringify({ v: 1, items: clipboard })).catch(function () {}); } catch (e) { /* copie interne seulement */ }
     if (cut) { if (refuseLocked(ids)) return; removeSelected(); toast("Coupé (" + ids.length + ")."); }
     else toast("Copié (" + ids.length + ").");
   }
   function paste() {
     var items = clipboard || store.get("clipboard", null);
     if (!items || !items.length) { toast("Rien à coller.", true); return; }
-    addItems(items.map(function (it) { var c = reId(clone(it)); if (c.section) { delete c.section; markSection(c); } return c; }));
+    addItems(reIdAll(items.map(function (it) { return clone(it); })).map(function (c) { if (c.section) { delete c.section; markSection(c); } return c; }));
+  }
+  // Coller depuis le presse-papiers du système : éléments copiés dans un autre site KOLAKISA ou un autre navigateur. Le contenu est relu, borné, puis revalidé par le serveur à l'enregistrement.
+  function pasteFromSystem() {
+    if (!navigator.clipboard || !navigator.clipboard.readText) { toast("Votre navigateur ne permet pas de lire le presse-papiers.", true); return; }
+    navigator.clipboard.readText().then(function (text) {
+      if (!text || text.indexOf("KOLAKISA:") !== 0) { toast("Le presse-papiers ne contient pas d'éléments KOLAKISA copiés.", true); return; }
+      if (text.length > 600000) { toast("Contenu copié trop volumineux.", true); return; }
+      var data; try { data = JSON.parse(text.slice(9)); } catch (e) { data = null; }
+      var items = data && data.v === 1 && Array.isArray(data.items) ? data.items.filter(function (x) { return x && typeof x === "object" && typeof x.type === "string"; }).slice(0, 40) : [];
+      if (!items.length) { toast("Aucun élément valide dans le presse-papiers.", true); return; }
+      addItems(reIdAll(items.map(function (it) { return clone(it); })).map(function (c) { if (c.section) { delete c.section; markSection(c); } return c; }));
+      toast("Collé depuis le presse-papiers (" + items.length + ").");
+    }, function () { toast("Accès au presse-papiers refusé : autorisez-le dans le navigateur.", true); });
   }
   // Copier / coller le style (styles par écran et par état ; préréglages des sections)
   // Réinitialiser le style : tous les écrans et tous les états (le contenu est gardé) ; annulable
   function resetStyle() {
     var ids = selection.slice();
     if (!ids.length || refuseLocked(ids)) return;
-    var any = ids.some(function (id) { var it = byId(id); return it && (it.styles || it.states); });
+    var any = ids.some(function (id) { var it = byId(id); return it && (it.styles || it.states || it.parts); });
     if (!any) { toast("Aucun style propre à réinitialiser."); return; }
-    change(function () { ids.forEach(function (id) { var it = byId(id); if (it) { delete it.styles; delete it.states; } }); });
+    change(function () { ids.forEach(function (id) { var it = byId(id); if (it) { delete it.styles; delete it.states; delete it.parts; } }); });
     toast("Style réinitialisé (tous les écrans et états). Ctrl/⌘ + Z pour annuler.");
   }
   function copyStyle() {
     var it = selectedItems()[0];
     if (!it) return;
-    styleClipboard = { styles: clone(it.styles || {}), states: clone(it.states || {}), style: clone(it.style || null) };
+    styleClipboard = { styles: clone(it.styles || {}), states: clone(it.states || {}), style: clone(it.style || null), type: it.type, parts: clone(it.parts || {}) };
     store.set("style-clipboard", styleClipboard);
     toast("Style copié depuis « " + nameOf(it) + " ».");
   }
-  function pasteStyle() {
+  // Groupes de réglages collables séparément (même découpage que l'onglet Style de l'inspecteur)
+  var STYLE_GROUPS = [["typography", "Typographie"], ["color", "Couleurs"], ["background", "Fond"], ["border", "Bordure"], ["spacing", "Espacement"], ["size", "Dimensions"], ["effects", "Effets"], ["layout", "Mise en page"], ["position", "Position"]];
+  // Un réglage s'applique à un élément seulement si l'inspecteur de CET élément propose son groupe (et ce réglage dans ce groupe)
+  function acceptsStyle(it, key) {
+    var p = SP[key], g = isNode(it) ? inspectorFor(it).groups : null;
+    if (!p || !g || g[p.group] === undefined) return false;
+    return Array.isArray(g[p.group]) ? g[p.group].indexOf(key) >= 0 : true;
+  }
+  // Coller le style : FUSION (les réglages propres de la cible qui ne sont pas dans le style copié restent), seulement les réglages applicables à la cible,
+  // éventuellement limités à des groupes (« Coller le style : couleurs »). Le contenu n'est jamais touché. Une seule étape d'annulation.
+  function pasteStyle(only) {
     var st = styleClipboard || store.get("style-clipboard", null);
     if (!st) { toast("Aucun style copié.", true); return; }
     var ids = selection.slice();
     if (!ids.length || refuseLocked(ids)) return;
-    change(function () {
+    var applied = 0, skipped = 0;
+    var wanted = function (key) { return !only || (SP[key] && only.indexOf(SP[key].group) >= 0); };
+    var done = change(function () {
       ids.forEach(function (id) {
         var it = byId(id);
-        if (Object.keys(st.styles).length) it.styles = clone(st.styles); else delete it.styles;
-        if (Object.keys(st.states).length) it.states = clone(st.states); else delete it.states;
-        if (!isNode(it) && st.style) it.style = clone(st.style);
+        if (!it) return;
+        if (!isNode(it)) { if (st.style && !only) { it.style = Object.assign({}, it.style || {}, clone(st.style)); applied++; } return; }
+        Object.keys(st.styles || {}).forEach(function (bp) {
+          Object.keys(st.styles[bp] || {}).forEach(function (key) {
+            if (!wanted(key)) return;
+            if (!acceptsStyle(it, key)) { skipped++; return; }
+            it.styles = it.styles || {}; it.styles[bp] = it.styles[bp] || {};
+            it.styles[bp][key] = clone(st.styles[bp][key]); applied++;
+          });
+        });
+        Object.keys(st.states || {}).forEach(function (state) {
+          Object.keys(st.states[state] || {}).forEach(function (key) {
+            if (!wanted(key)) return;
+            if (!acceptsStyle(it, key)) { skipped++; return; }
+            it.states = it.states || {}; it.states[state] = it.states[state] || {};
+            it.states[state][key] = clone(st.states[state][key]); applied++;
+          });
+        });
+        // Parties (carte, titre…) : reprises seulement entre widgets du MÊME type, partie par partie, et seulement les réglages que la partie accepte
+        if (st.type && st.type === it.type) Object.keys(st.parts || {}).forEach(function (pk) {
+          var def = partDef(it, pk), src = st.parts[pk];
+          if (!def) return;
+          var okKey = function (key) { var g = SP[key] && SP[key].group; if (key === "backgroundColor") g = "background"; var spec = g && def.groups[g]; return spec === true || (Array.isArray(spec) && spec.indexOf(key) >= 0); };
+          [["styles", Object.keys(src.styles || {})], ["states", Object.keys(src.states || {})]].forEach(function (kind) {
+            kind[1].forEach(function (slot) {
+              Object.keys(src[kind[0]][slot] || {}).forEach(function (key) {
+                if (!wanted(key)) return;
+                if (!okKey(key)) { skipped++; return; }
+                it.parts = it.parts || {}; it.parts[pk] = it.parts[pk] || {}; it.parts[pk][kind[0]] = it.parts[pk][kind[0]] || {}; it.parts[pk][kind[0]][slot] = it.parts[pk][kind[0]][slot] || {};
+                it.parts[pk][kind[0]][slot][key] = clone(src[kind[0]][slot][key]); applied++;
+              });
+            });
+          });
+        });
       });
-    });
-    toast("Style collé sur " + ids.length + " élément" + (ids.length > 1 ? "s" : "") + ".");
+      if (!applied) return false;
+    }, { label: only ? "Coller le style (" + only.map(function (g) { return (STYLE_GROUPS.filter(function (x) { return x[0] === g; })[0] || [0, g])[1].toLowerCase(); }).join(", ") + ")" : "Coller le style" });
+    if (!done) { toast(skipped ? "Aucun réglage du style copié ne s'applique à cet élément." : "Rien à coller" + (only ? " pour ce groupe." : "."), true); return; }
+    toast("Style collé sur " + ids.length + " élément" + (ids.length > 1 ? "s" : "") + " : " + applied + " réglage" + (applied > 1 ? "s" : "") + (skipped ? " (" + skipped + " inapplicable" + (skipped > 1 ? "s" : "") + " ignoré" + (skipped > 1 ? "s" : "") + ")" : "") + ". Les autres réglages de la cible sont conservés.");
   }
 
   // ---------- Styles (par écran et par état) ----------
   // Écran modifié = écran affiché. Une valeur absente est héritée de l'écran plus grand.
-  function styleSet(it, bp, state, create) {
-    if (state && state !== "normal") {
-      if (!it.states) { if (!create) return null; it.states = {}; }
-      if (!it.states[state]) { if (!create) return null; it.states[state] = {}; }
-      return it.states[state];
-    }
-    if (!it.styles) { if (!create) return null; it.styles = {}; }
-    if (!it.styles[bp]) { if (!create) return null; it.styles[bp] = {}; }
-    return it.styles[bp];
+  // Cible des réglages : null = le widget lui-même ; sinon une de ses PARTIES (carte, image, titre…, déclarées par le registre). Les parties ont la même forme
+  // que le widget ({ styles: { écran }, states: { état } }) : tous les contrôles, l'historique et l'enregistrement fonctionnent donc sans changement.
+  var styleTarget = null;
+  // Un réglage n'est écrit dans une PARTIE que si le registre des parties (parts.js, même source que le serveur) l'accepte pour cette partie ; sinon il
+  // revient au widget lui-même (ex. « Aligner dans le parent » de la barre contextuelle alors qu'une partie est choisie dans l'inspecteur).
+  var GROUP_OF = null;
+  function groupOfKey(k) { if (!GROUP_OF) { GROUP_OF = {}; SPEC.styleProps.forEach(function (p) { GROUP_OF[p.key] = p.group; }); } return k === "backgroundColor" ? "background" : GROUP_OF[k]; }
+  function partAllowsKey(it, key) {
+    var pd = styleTarget && partDef(it, styleTarget), g = pd && groupOfKey(key);
+    if (!pd || !g) return true; // pas de partie, ou réglage composé (fond, filtre, ombre…) géré par les contrôles de son groupe
+    var spec = pd.groups[g];
+    return spec === true || (Array.isArray(spec) && spec.indexOf(key) >= 0);
   }
-  function ownValue(it, key) { var s = styleSet(it, device, styleState, false); return s && s[key] !== undefined ? s[key] : undefined; }
+  function holderOf(it, create, key) {
+    if (!styleTarget || !partDef(it, styleTarget) || (key !== undefined && !partAllowsKey(it, key))) return it;
+    if (!it.parts || !it.parts[styleTarget]) { if (!create) return null; it.parts = it.parts || {}; it.parts[styleTarget] = {}; }
+    return it.parts[styleTarget];
+  }
+  function partDef(it, key) { var d = it && isNode(it) && NT[it.type] && NT[it.type].parts; return d ? d.filter(function (x) { return x.key === key; })[0] || null : null; }
+  function styleSet(it, bp, state, create, key) {
+    var o = holderOf(it, create, key);
+    if (!o) return null;
+    if (state && state !== "normal") {
+      if (!o.states) { if (!create) return null; o.states = {}; }
+      if (!o.states[state]) { if (!create) return null; o.states[state] = {}; }
+      return o.states[state];
+    }
+    if (!o.styles) { if (!create) return null; o.styles = {}; }
+    if (!o.styles[bp]) { if (!create) return null; o.styles[bp] = {}; }
+    return o.styles[bp];
+  }
+  function ownValue(it, key) { var s = styleSet(it, device, styleState, false, key); return s && s[key] !== undefined ? s[key] : undefined; }
   // Valeur héritée (écrans plus grands) : affichée en indication grise
   function inheritedValue(it, key) {
     if (styleState !== "normal") return undefined;
     var i = BPS.indexOf(device);
     // Grille sans réglage propre à la tablette / au mobile : 2 colonnes au plus sur tablette, 1 sur mobile (voir pageCss)
-    if (it.type === "grid" && (key === "columns" || key === "gridTemplate") && i > 0) {
+    if (!styleTarget && it.type === "grid" && (key === "columns" || key === "gridTemplate") && (device === "tablet" || device === "mobile")) {
       var own = function (b) { var st = it.styles && it.styles[b]; return st && (st.columns !== undefined || st.gridTemplate !== undefined); };
       var d = (it.styles && it.styles.desktop) || {}, cols = d.gridTemplate ? String(d.gridTemplate).split(" ").length : Number(d.columns) || 0;
       if (!own("tablet") && (device === "tablet" ? cols > 2 : !own("mobile") && cols > 1)) return key === "columns" ? (device === "tablet" ? 2 : 1) : undefined;
     }
-    for (var j = i - 1; j >= 0; j--) { var s = it.styles && it.styles[BPS[j]]; if (s && s[key] !== undefined) return s[key]; }
+    var ho = holderOf(it, false, key);
+    var up = ancestors(device);
+    for (var j = 0; j < up.length; j++) { var s = ho && ho.styles && ho.styles[up[j]]; if (s && s[key] !== undefined) return s[key]; }
     return undefined;
   }
-  function cleanStyles(it) {
-    if (it.styles) { BPS.forEach(function (b) { if (it.styles[b] && !Object.keys(it.styles[b]).length) delete it.styles[b]; }); if (!Object.keys(it.styles).length) delete it.styles; }
-    if (it.states) { Object.keys(it.states).forEach(function (k) { if (!Object.keys(it.states[k]).length) delete it.states[k]; }); if (!Object.keys(it.states).length) delete it.states; }
+  function cleanSet(o) {
+    if (o.styles) { BPS.forEach(function (b) { if (o.styles[b] && !Object.keys(o.styles[b]).length) delete o.styles[b]; }); if (!Object.keys(o.styles).length) delete o.styles; }
+    if (o.states) { Object.keys(o.states).forEach(function (k) { if (!Object.keys(o.states[k]).length) delete o.states[k]; }); if (!Object.keys(o.states).length) delete o.states; }
   }
-  var COMPOSED_LABEL = { filter: "filtres", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
+  function cleanStyles(it) {
+    cleanSet(it);
+    if (it.parts) { Object.keys(it.parts).forEach(function (k) { cleanSet(it.parts[k]); if (!Object.keys(it.parts[k]).length) delete it.parts[k]; }); if (!Object.keys(it.parts).length) delete it.parts; }
+  }
+  var COMPOSED_LABEL = { filter: "filtres", backdrop: "filtres de l'arrière-plan", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
   // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
   function setStyles(ids, map, opts) {
+    if (probing) { Object.keys(map).forEach(function (k) { probing.push(stylePath(k)); }); return; }
     ids = ids || selection;
     if (!ids.length || refuseLocked(ids)) return;
-    change(function () {
+    if (refuseFormat(ids, Object.keys(map))) return;
+    if (change(function () {
       ids.forEach(function (id) {
         var it = byId(id);
         if (!it) return;
         Object.keys(map).forEach(function (key) {
           var value = map[key];
           var empty = value === "" || value === null || value === undefined;
-          var set = styleSet(it, device, styleState, !empty);
+          var set = styleSet(it, device, styleState, !empty, key);
           if (!set) return;
           if (empty) delete set[key]; else set[key] = value;
         });
         cleanStyles(it);
       });
-    }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") });
+    }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") }) !== false) previewStyles(ids, map);
+  }
+  // Retour visuel IMMÉDIAT : la valeur choisie est posée tout de suite en style en ligne sur l'élément du canevas, sans attendre le rendu
+  // serveur. Le rendu serveur qui suit remplace la page et retire ces styles (clearPreviews) : seul ce qui est certain d'être identique
+  // au CSS généré est prévisualisé (propriétés simples, valeurs littérales, état normal, élément lui-même).
+  var PREVIEW = { fontSize: 1, color: 1, backgroundColor: 1, opacity: 1, letterSpacing: 1, width: 1, height: 1, maxWidth: 1, minHeight: 1, gap: 1, borderRadius: 1, paddingTop: 1, paddingRight: 1, paddingBottom: 1, paddingLeft: 1, marginTop: 1, marginRight: 1, marginBottom: 1, marginLeft: 1 };
+  var PREVIEW_VALUE = /^(-?\d{1,4}(\.\d{1,3})?(px|%|rem|em|vh|vw)?|#[0-9a-fA-F]{3,8})$/;
+  // Listes de mise en page et de texte dont le CSS généré est EXACTEMENT « propriété: valeur » (aucune conversion côté serveur) : la valeur est
+  // aperçue tout de suite si elle fait partie des options du modèle (la même liste que le serveur accepte)
+  var PREVIEW_ENUM = { display: 1, flexDirection: 1, flexWrap: 1, justifyContent: 1, alignItems: 1, alignContent: 1, alignSelf: 1, justifySelf: 1, justifyItems: 1, textAlign: 1, textTransform: 1, textDecoration: 1, fontStyle: 1, fontWeight: 1, position: 1, overflow: 1, overflowX: 1, overflowY: 1, visibility: 1, whiteSpace: 1, objectFit: 1, cursor: 1, pointerEvents: 1, direction: 1 };
+  var previews = [];
+  function previewStyles(ids, map) {
+    if (styleState !== "normal" || styleTarget || !ids) return;
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body || swapping) return;
+    ids.forEach(function (id) {
+      var el = doc.querySelector('[data-node-id="' + id + '"]');
+      if (!el) return;
+      Object.keys(map).forEach(function (key) {
+        var v = map[key];
+        var isEnum = PREVIEW_ENUM[key] && SP[key] && SP[key].options && typeof v === "string" && SP[key].options.some(function (o) { return o[0] === v; });
+        if (!isEnum && (!PREVIEW[key] || typeof v !== "string" && typeof v !== "number" || !PREVIEW_VALUE.test(String(v)))) return;
+        var css = key.replace(/[A-Z]/g, function (c) { return "-" + c.toLowerCase(); });
+        if (!previews.some(function (x) { return x.el === el && x.css === css; })) previews.push({ el: el, css: css, was: el.style.getPropertyValue(css) });
+        el.style.setProperty(css, String(v));
+      });
+    });
+  }
+  function clearPreviews() {
+    previews.forEach(function (x) { if (x.was) x.el.style.setProperty(x.css, x.was); else x.el.style.removeProperty(x.css); });
+    previews = [];
   }
   // Largeur du contenu d'un conteneur : « full » (propriété) et « maxWidth » (style de l'écran affiché) changent ENSEMBLE, en une seule étape d'annulation
   function setContainerWidth(id, mode, customValue) {
@@ -710,14 +1042,16 @@
       it.props = it.props || {};
       var inherited = inheritedValue(it, "maxWidth") !== undefined;
       if (mode === "full") it.props.full = true; else delete it.props.full;
+      if (mode === "band") it.props.band = true; else delete it.props.band;
       var set = styleSet(it, device, "normal", mode === "custom" || inherited);
       if (mode === "custom") set.maxWidth = customValue;
-      else if (inherited) set.maxWidth = mode === "full" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
+      else if (inherited) set.maxWidth = mode === "full" || mode === "band" ? "100%" : "1100px"; // écran plus petit qui hérite d'une largeur personnalisée : on la remplace explicitement
       else if (set) delete set.maxWidth;
       cleanStyles(it);
     }, { label: "Largeur du contenu" });
   }
   function setProp(id, key, value, opts) {
+    if (probing) { probing.push((isNode(byId(id)) ? "p:" : "f:") + key); return; }
     if (lockedDeep(id)) { toast("Élément verrouillé.", true); return; }
     change(function () {
       var it = byId(id);
@@ -733,6 +1067,7 @@
     if (!s) return "";
     if (/^-?\d{1,4}(\.\d{1,3})?$/.test(s)) s = s === "0" ? "0" : s + "px";
     if (s === "auto") return ["width", "height", "flexBasis", "marginTop", "marginRight", "marginBottom", "marginLeft"].indexOf(key) >= 0 ? s : null;
+    if (s === "fit-content" || s === "min-content" || s === "max-content") return ["width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight"].indexOf(key) >= 0 ? s : null;
     if (s === "0" || LEN.test(s)) {
       if (/^-/.test(s) && !SIGNED_LEN.test(key)) return null;
       return s;
@@ -743,62 +1078,113 @@
   // ---------- Calques (arbre) ----------
   var treeEl = $("[data-pb-layers]");
   var dragIds = null, dragNew = null;
+  // Les calques ne sont reconstruits que si ce qu'ils affichent a changé (identifiants, noms, drapeaux, hiérarchie, repli, filtre) : une
+  // modification de style, de couleur ou de dimension ne touche à aucun calque (mesuré : la reconstruction coûte ~ 15 000 nœuds DOM à 400 éléments)
+  var treeRendered = false, treeSig = null, treeMarked = null, treeTab = null, treeNames = {}, treeLi = {};
+  function treeSignature() {
+    var out = [];
+    treeNames = {};
+    (function w(list, lvl) { list.forEach(function (it) { var k = kidsOf(it); var nm = treeNames[it.id] = nameOf(it); out.push(it.id + "|" + lvl + "|" + it.type + "|" + nm + "|" + (it.hidden ? 1 : 0) + (it.locked ? 1 : 0) + (it.note ? "n" + it.note.length : "") + (collapsed[it.id] ? 1 : 0) + "|" + (k ? k.length : -1)); if (k) w(k, lvl + 1); }); })(content.sections, 1);
+    return out.join("\n") + "#" + treeQuery + "#" + errorItemId + "#" + canWrite;
+  }
   function renderTree() {
-    var frag = document.createDocumentFragment();
-    var matches = function (it) { return norm(nameOf(it)).indexOf(treeQuery) >= 0 || norm(typeLabel(it)).indexOf(treeQuery) >= 0; };
+    var sig = treeSignature();
+    if (sig === treeSig && treeEl.firstChild) { markTreeSelection(true); return; }
+    treeSig = sig;
+    var nm = function (it) { return treeNames[it.id] !== undefined ? treeNames[it.id] : nameOf(it); };
+    var matches = function (it) { return norm(nm(it)).indexOf(treeQuery) >= 0 || norm(typeLabel(it)).indexOf(treeQuery) >= 0; };
     var hasMatch = function (it) { return matches(it) || (kidsOf(it) || []).some(hasMatch); };
-    var build = function (list, level, into) {
+    // Une ligne (<li>) : créée une fois, puis RÉUTILISÉE tant que ce qu'elle affiche ne change pas. Les écouteurs lisent l'élément par son
+    // identifiant au moment du clic (jamais l'objet capturé : annuler / rétablir remplace tous les objets du document).
+    var makeRow = function (it0, level, kids, open) {
+      var id = it0.id, cur = function () { return byId(id) || it0; };
+      var on = selection.indexOf(id) >= 0;
+      var li = h("li", { role: "treeitem", "aria-level": String(level), "aria-selected": String(on), "aria-expanded": kids && kids.length ? String(Boolean(open)) : null, class: "pb-node" + (it0.hidden ? " is-hidden" : "") + (it0.locked ? " is-locked" : ""), dataset: { id: id } });
+      var label = nm(it0);
+      var row = h("div", { class: "pb-row-item" + (on ? " is-selected" : "") + (id === errorItemId ? " is-error" : ""), draggable: canWrite ? "true" : null, style: "--level:" + (level - 1), tabindex: "-1" },
+        kids && kids.length ? h("button", { type: "button", class: "pb-twist", tabindex: "-1", "aria-label": open ? "Replier" : "Déplier", onclick: function (e) { e.stopPropagation(); toggleCollapse(id); } }, icon(open ? "chevronDown" : "chevronRight")) : h("span", { class: "pb-twist-gap", "aria-hidden": "true" }),
+        h("span", { class: "pb-node-icon", "aria-hidden": "true" }, icon(isNode(it0) ? NT[it0.type].icon : it0.type === "layout" ? "layout" : "fileText")),
+        h("span", { class: "pb-node-name", text: label }),
+        it0.note ? h("span", { class: "pb-note-dot", role: "img", "aria-label": "Note de l'équipe : " + it0.note, "data-tip": it0.note }, icon("fileText")) : null,
+        h("span", { class: "pb-node-flags" },
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it0.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it0.hidden)), "aria-label": (it0.hidden ? "Afficher « " : "Masquer « ") + label + " »", "data-tip": it0.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([id], "hidden", !cur().hidden); } }, icon(it0.hidden ? "eyeOff" : "eye")),
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it0.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it0.locked)), "aria-label": (it0.locked ? "Déverrouiller « " : "Verrouiller « ") + label + " »", "data-tip": it0.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([id], "locked", !cur().locked); } }, icon("lock")),
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-more", "aria-haspopup": "menu", "aria-label": "Actions de « " + label + " »", "data-tip": "Actions (dupliquer, copier, renommer, déplacer…)",
+            onclick: function (e) { e.stopPropagation(); if (selection.indexOf(id) < 0) select(id); var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
+          h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + label + " »" + (kids && kids.length ? " et ses " + countDeep(it0) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it0) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(id), onclick: function (e) { e.stopPropagation(); removeItems([id]); } }, icon("trash"))));
+      row.addEventListener("click", function (e) { select(id, e.shiftKey || e.metaKey || e.ctrlKey); });
+      row.addEventListener("dblclick", function (e) { if (canWrite && !e.target.closest("button")) startRename(row, cur()); });
+      row.addEventListener("contextmenu", function (e) { e.preventDefault(); if (selection.indexOf(id) < 0) select(id); openMenu(e.clientX, e.clientY); });
+      row.addEventListener("dragstart", function (e) {
+        if (lockedDeep(id)) { e.preventDefault(); toast("Élément verrouillé.", true); return; }
+        dragIds = selection.indexOf(id) >= 0 ? selection.slice() : [id]; dragNew = null;
+        e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move");
+      });
+      row.addEventListener("dragover", function (e) {
+        if (!dragIds && !dragNew) return;
+        var pos = dropPosition(row, e.clientY, cur());
+        e.preventDefault();
+        clearTreeDrop();
+        row.classList.add(pos === "before" ? "is-drop-before" : pos === "after" ? "is-drop-after" : "is-drop-inside");
+      });
+      row.addEventListener("dragleave", function () { row.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside"); });
+      row.addEventListener("drop", function (e) {
+        var it = cur(), pos = dropPosition(row, e.clientY, it);
+        clearTreeDrop();
+        e.preventDefault();
+        var l = locate(id);
+        performDrop(pos === "inside" ? { parent: it, index: kidsOf(it).length } : { parent: l.parent, index: l.index + (pos === "after" ? 1 : 0) });
+      });
+      li.appendChild(row);
+      return li;
+    };
+    // Bouton « Supprimer » d'une ligne réutilisée : son libellé dépend du nombre d'éléments qu'elle contient et d'un verrou hérité. Il est mis à jour EN PLACE
+    // (recréer la ligne d'un conteneur obligeait à déplacer tous ses descendants dans le DOM : mesuré, c'était l'essentiel de la mise en page après une opération)
+    var syncDelete = function (li, it, has) {
+      var b = li.firstElementChild && li.firstElementChild.querySelector(".pb-flag-delete");
+      if (!b) return;
+      var label = nm(it), n = has ? countDeep(it) : 0;
+      var aria = "Supprimer « " + label + " »" + (has ? " et ses " + n + " élément(s)" : ""), tip = has ? "Supprimer (avec ses " + n + " élément(s))" : "Supprimer", off = !canWrite || lockedDeep(it.id);
+      if (b.getAttribute("aria-label") !== aria) { b.setAttribute("aria-label", aria); b.setAttribute("data-tip", tip); }
+      if (b.disabled !== off) b.disabled = off;
+    };
+    var nextLi = {};
+    var reconcile = function (list, level, into) {
+      var seq = [];
       list.forEach(function (it) {
         if (treeQuery && !hasMatch(it)) return;
-        var kids = kidsOf(it);
-        var open = kids && kids.length && (treeQuery ? true : !collapsed[it.id]);
-        var on = selection.indexOf(it.id) >= 0;
-        var li = h("li", { role: "treeitem", "aria-level": String(level), "aria-selected": String(on), "aria-expanded": kids && kids.length ? String(Boolean(open)) : null, class: "pb-node" + (it.hidden ? " is-hidden" : "") + (it.locked ? " is-locked" : ""), dataset: { id: it.id } });
-        var row = h("div", { class: "pb-row-item" + (on ? " is-selected" : "") + (it.id === errorItemId ? " is-error" : ""), draggable: canWrite ? "true" : null, style: "--level:" + (level - 1), tabindex: "-1" },
-          kids && kids.length ? h("button", { type: "button", class: "pb-twist", tabindex: "-1", "aria-label": open ? "Replier" : "Déplier", onclick: function (e) { e.stopPropagation(); toggleCollapse(it.id); } }, icon(open ? "chevronDown" : "chevronRight")) : h("span", { class: "pb-twist-gap", "aria-hidden": "true" }),
-          h("span", { class: "pb-node-icon", "aria-hidden": "true" }, icon(isNode(it) ? NT[it.type].icon : it.type === "layout" ? "layout" : "fileText")),
-          h("span", { class: "pb-node-name", text: nameOf(it) }),
-          h("span", { class: "pb-node-flags" },
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.hidden ? " is-on" : ""), "aria-pressed": String(Boolean(it.hidden)), "aria-label": (it.hidden ? "Afficher « " : "Masquer « ") + nameOf(it) + " »", "data-tip": it.hidden ? "Afficher" : "Masquer", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "hidden", !it.hidden); } }, icon(it.hidden ? "eyeOff" : "eye")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag" + (it.locked ? " is-on" : ""), "aria-pressed": String(Boolean(it.locked)), "aria-label": (it.locked ? "Déverrouiller « " : "Verrouiller « ") + nameOf(it) + " »", "data-tip": it.locked ? "Déverrouiller" : "Verrouiller", disabled: !canWrite, onclick: function (e) { e.stopPropagation(); setFlag([it.id], "locked", !it.locked); } }, icon("lock")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-more", "aria-haspopup": "menu", "aria-label": "Actions de « " + nameOf(it) + " »", "data-tip": "Actions (dupliquer, copier, renommer, déplacer…)",
-              onclick: function (e) { e.stopPropagation(); if (selection.indexOf(it.id) < 0) select(it.id); var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
-            h("button", { type: "button", tabindex: "-1", class: "pb-flag pb-flag-delete", "aria-label": "Supprimer « " + nameOf(it) + " »" + (kids && kids.length ? " et ses " + countDeep(it) + " élément(s)" : ""), "data-tip": kids && kids.length ? "Supprimer (avec ses " + countDeep(it) + " élément(s))" : "Supprimer", disabled: !canWrite || lockedDeep(it.id), onclick: function (e) { e.stopPropagation(); removeItems([it.id]); } }, icon("trash"))));
-        row.addEventListener("click", function (e) { select(it.id, e.shiftKey || e.metaKey || e.ctrlKey); });
-        row.addEventListener("dblclick", function (e) { if (canWrite && !e.target.closest("button")) startRename(row, it); });
-        row.addEventListener("contextmenu", function (e) { e.preventDefault(); if (selection.indexOf(it.id) < 0) select(it.id); openMenu(e.clientX, e.clientY); });
-        row.addEventListener("dragstart", function (e) {
-          if (lockedDeep(it.id)) { e.preventDefault(); toast("Élément verrouillé.", true); return; }
-          dragIds = selection.indexOf(it.id) >= 0 ? selection.slice() : [it.id]; dragNew = null;
-          e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move");
-        });
-        row.addEventListener("dragover", function (e) {
-          if (!dragIds && !dragNew) return;
-          var pos = dropPosition(row, e.clientY, it);
-          e.preventDefault();
-          clearTreeDrop();
-          row.classList.add(pos === "before" ? "is-drop-before" : pos === "after" ? "is-drop-after" : "is-drop-inside");
-        });
-        row.addEventListener("dragleave", function () { row.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside"); });
-        row.addEventListener("drop", function (e) {
-          var pos = dropPosition(row, e.clientY, it);
-          clearTreeDrop();
-          e.preventDefault();
-          var l = locate(it.id);
-          performDrop(pos === "inside" ? { parent: it, index: kidsOf(it).length } : { parent: l.parent, index: l.index + (pos === "after" ? 1 : 0) });
-        });
-        li.appendChild(row);
-        if (open) { var ul = h("ul", { role: "group", class: "pb-tree-group" }); build(kids, level + 1, ul); li.appendChild(ul); }
-        into.appendChild(li);
+        var kids = kidsOf(it), has = Boolean(kids && kids.length), open = has && (treeQuery ? true : !collapsed[it.id]);
+        // Signature de la LIGNE (sans ses enfants) : tout ce qu'elle affiche
+        var rsig = [level, it.type, nm(it), it.hidden ? 1 : 0, it.locked ? 1 : 0, it.note || "", has ? (open ? "o" : "c") : "-", it.id === errorItemId ? 1 : 0, canWrite ? 1 : 0].join("|");
+        var ent = treeLi[it.id], brandNew = treeRendered && !treeQuery && !ent;
+        if (!ent || ent.sig !== rsig) ent = { li: makeRow(it, level, kids, open), sig: rsig };
+        if (brandNew) freshRows.push(ent.li);
+        else syncDelete(ent.li, it, has);
+        nextLi[it.id] = ent;
+        var li = ent.li, ul = li.lastElementChild && li.lastElementChild.tagName === "UL" ? li.lastElementChild : null;
+        if (open) { if (!ul) { ul = h("ul", { role: "group", class: "pb-tree-group" }); li.appendChild(ul); } reconcile(kids, level + 1, ul); } else if (ul) ul.remove();
+        seq.push(li);
       });
+      // Ordre : on ne déplace que les lignes qui ne sont pas déjà à leur place
+      // D'abord retirer les lignes disparues (sinon la ligne suivante serait « déplacée » devant elle, avec tous ses descendants), puis insérer les manquantes
+      var keep = new Set(seq), at = into.firstElementChild;
+      while (at) { var nx = at.nextElementSibling; if (!keep.has(at)) at.remove(); at = nx; }
+      at = into.firstElementChild;
+      seq.forEach(function (li) { if (at === li) at = at.nextElementSibling; else into.insertBefore(li, at); });
     };
-    build(content.sections, 1, frag);
-    treeEl.textContent = "";
-    if (treeQuery && !frag.childNodes.length) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Aucun calque ne correspond." })));
+    $$(".pb-tree-empty", treeEl).forEach(function (e) { e.remove(); });
+    var freshRows = []; // lignes réellement nouvelles (identifiant jamais vu) : apparition très courte ; pas pour un filtre ni pour un afflux (chargement, gros annuler)
+    reconcile(content.sections, 1, treeEl);
+    treeLi = nextLi;
+    if (window.KolMotion && freshRows.length && freshRows.length <= 12) freshRows.forEach(function (li) { window.KolMotion.appear(li, "fade"); });
+    treeRendered = true;
+    var anyRow = treeEl.firstElementChild;
+    if (treeQuery && !anyRow) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Aucun calque ne correspond." })));
     if (!content.sections.length) treeEl.appendChild(h("li", { class: "pb-tree-empty", role: "none" }, h("p", { class: "pb-hint", text: "Page vide : glissez un élément ou un bloc ici, ou dans la page." })));
-    treeEl.appendChild(frag);
+    treeMarked = null; markTreeSelection(true); // coches de sélection : lignes réutilisées comprises
     var cur = treeEl.querySelector(".pb-row-item.is-selected") || treeEl.querySelector(".pb-row-item");
     if (cur) cur.tabIndex = 0;
+    treeTab = cur; treeMarked = selection.slice();
     var info = $("[data-pb-page-count]");
     if (info) { var total = 0; walk(function () { total++; }); info.textContent = content.sections.length + " section" + (content.sections.length > 1 ? "s" : "") + " · " + (total - content.sections.length) + " élément" + (total - content.sections.length > 1 ? "s" : ""); }
   }
@@ -818,14 +1204,24 @@
     if (dragNew) { var make = dragNew.make; dragNew = null; make(target); }
     else if (dragIds) { var ids = dragIds; dragIds = null; moveTo(ids, target.parent, target.index); }
   }
-  function markTreeSelection() {
-    $$(".pb-node", treeEl).forEach(function (li) {
-      var on = selection.indexOf(li.dataset.id) >= 0;
-      li.setAttribute("aria-selected", String(on));
-      li.firstElementChild.classList.toggle("is-selected", on);
-    });
+  // Sélection dans les calques : seules les lignes dont l'état change sont touchées (avant : les 400 lignes, à chaque sélection)
+  function markTreeSelection(noScroll) {
+    var mark = function (li, on) { if (!li) return; li.setAttribute("aria-selected", String(on)); if (li.firstElementChild) li.firstElementChild.classList.toggle("is-selected", on); };
+    var liOf = function (id) { return treeEl.querySelector('.pb-node[data-id="' + id + '"]'); };
+    if (!treeMarked) {
+      $$(".pb-node", treeEl).forEach(function (li) { mark(li, selection.indexOf(li.dataset.id) >= 0); });
+    } else {
+      treeMarked.forEach(function (id) { if (selection.indexOf(id) < 0) mark(liOf(id), false); });
+      selection.forEach(function (id) { if (treeMarked.indexOf(id) < 0) mark(liOf(id), true); });
+    }
+    treeMarked = selection.slice();
     var cur = selection.length ? treeEl.querySelector('.pb-node[data-id="' + selection[selection.length - 1] + '"] > .pb-row-item') : null;
-    if (cur) { $$(".pb-row-item", treeEl).forEach(function (r) { r.tabIndex = -1; }); cur.tabIndex = 0; cur.scrollIntoView({ block: "nearest" }); }
+    if (cur) {
+      if (treeTab && treeTab.isConnected) treeTab.tabIndex = -1; else $$(".pb-row-item", treeEl).forEach(function (r) { r.tabIndex = -1; });
+      cur.tabIndex = 0; treeTab = cur;
+      // Faire apparaître la ligne : au prochain affichage (le défilement impose une mise en page, inutile en plein traitement du clic)
+      if (!noScroll) requestAnimationFrame(function () { if (cur.isConnected) cur.scrollIntoView({ block: "nearest" }); });
+    }
   }
   function toggleCollapse(id, value) {
     if (value === undefined) value = !collapsed[id];
@@ -839,7 +1235,7 @@
     nameEl.replaceWith(input);
     input.focus(); input.select();
     var done = false;
-    var finish = function (save) { if (done) return; done = true; if (save) rename(it.id, input.value); renderTree(); };
+    var finish = function (save) { if (done) return; done = true; if (save) rename(it.id, input.value); treeSig = null; treeLi = {}; renderTree(); }; // le champ de saisie a remplacé le nom dans le calque : reconstruction forcée même si rien n'a changé
     input.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") finish(true); if (e.key === "Escape") finish(false); });
     input.addEventListener("blur", function () { finish(true); });
     input.addEventListener("click", function (e) { e.stopPropagation(); });
@@ -1050,7 +1446,7 @@
   var elCategory = store.get("el-category", "");
   var elClosed = store.get("el-closed", []);
   function elementGroups() {
-    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
+    var item = function (t) { var need = deniedWidget(t.type); return { type: t.type, sub: t.sub || null, label: t.label, desc: t.description || null, icon: t.icon, keywords: t.keywords, locked: need ? "Widget " + SPEC.widgetPermissions[need] + "." : null, disabled: t.asks === "course" && !boot.courses.length ? "Publiez d'abord une formation dans le catalogue." : null }; };
     var groups = Object.keys(SPEC.widgetGroups).map(function (k) { return { key: k, label: SPEC.widgetGroups[k], items: SPEC.types.filter(function (t) { return t.group === k; }).map(item) }; });
     groups[0].items.unshift({ type: "layout", label: "Section libre", icon: "layout", keywords: "section libre bloc zone" });
     (SPEC.shortcuts || []).forEach(function (sc) { var g = groups.find(function (x) { return x.key === sc.group; }); if (g) g.items.push({ type: sc.type, sub: sc.sub || null, shortcut: sc, label: sc.label, icon: sc.icon, keywords: sc.keywords }); });
@@ -1102,7 +1498,7 @@
       g.items.forEach(function (it) {
         if (g.key === "site" && !f && it.sub !== lastSub) { lastSub = it.sub; ul.appendChild(h("li", { class: "pb-pal-subhead", text: it.sub || "Autres" })); }
         var off = it.disabled || it.locked;
-        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
+        var btn = h("button", { type: "button", class: "pb-pal-item" + (it.locked ? " is-locked" : ""), disabled: !canWrite || Boolean(it.disabled), "aria-disabled": it.locked ? "true" : null, "data-tip": off || it.desc || null, "data-widget": it.shortcut ? it.shortcut.key : it.type,
           onclick: function () { if (it.locked) { toast(it.label + " : " + it.locked, true); return; } useElement(it); if (it.shortcut) addShortcut(it.shortcut); else if (it.legacy) addLegacy(it.type); else addElement(it.type); } },
           icon(it.icon), h("span", { text: it.label }), f && it.legacy && it.type !== "form" ? h("span", { class: "pb-pal-kind", text: "Section prête" }) : null, it.locked ? h("span", { class: "pb-pal-lock", "aria-label": "Réservé" }, icon("lock")) : null);
         if (!off) draggableSource(btn, it.legacy ? { type: it.type, section: true } : { type: it.type }, function (target) { useElement(it); if (it.shortcut) addShortcut(it.shortcut, target); else if (it.legacy) addLegacy(it.type, target); else addElement(it.type, target); });
@@ -1179,14 +1575,19 @@
   var tipEl = h("div", { class: "pb-tip", role: "tooltip", id: "pb-tip", hidden: true });
   document.body.appendChild(tipEl);
   var tipTimer = null, tipFor = null;
-  function hideTip() { clearTimeout(tipTimer); tipTimer = null; if (tipFor) tipFor.removeAttribute("aria-describedby"); tipFor = null; tipEl.hidden = true; }
+  var tipHidAt = 0; // instant où la dernière infobulle visible s'est fermée : passer d'un bouton voisin à l'autre ne réattend pas le délai complet
+  function hideTip() { clearTimeout(tipTimer); tipTimer = null; if (tipFor) tipFor.removeAttribute("aria-describedby"); tipFor = null; if (!tipEl.hidden) tipHidAt = Date.now(); tipEl.hidden = true; }
   function showTip(el) {
     var text = el.getAttribute("data-tip");
     if (!text) return;
     // Barre étendue : le nom est déjà affiché, l'infobulle n'ajoute que ce qui manque (raccourci, indisponibilité)
     var label = el.querySelector(".pb-tool-label");
     if ((panels.toolsExpanded || panels.toolsDense) && label && el.closest(".pb-tools") && text === label.textContent && label.scrollWidth <= label.clientWidth) return;
-    tipEl.textContent = text;
+    // « Titre (Ctrl/⌘ + … pour …) » : le titre d'abord, le raccourci en second plan (même texte, rien n'est ajouté ni retiré)
+    var kb = /^(.*?)\s*\(([^()]*(?:Ctrl|⌘|Maj|Alt)[^()]*)\)\s*$/.exec(text);
+    tipEl.textContent = "";
+    if (kb && kb[1]) { tipEl.appendChild(h("span", { class: "pb-tip-title", text: kb[1] })); tipEl.appendChild(h("span", { class: "pb-tip-key", text: kb[2] })); }
+    else tipEl.textContent = text;
     tipEl.hidden = false;
     var r = el.getBoundingClientRect(), t = tipEl.getBoundingClientRect();
     var side = el.closest(".pb-tools");
@@ -1199,20 +1600,25 @@
     el.setAttribute("aria-describedby", "pb-tip");
     tipFor = el;
   }
+  // Champ de saisie actif (focus ou saisie en cours) : aucune infobulle ne doit venir le recouvrir
+  var isEditing = function (el) { var ae = document.activeElement; return Boolean(ae && ae.matches && ae.matches("input, textarea, select, [contenteditable]") && (el === ae || el.contains(ae))); };
   function armTip(el) {
     if (tipFor === el) return;
+    if (isEditing(el) || el.getAttribute("aria-expanded") === "true") { hideTip(); return; }
+    var warm = Date.now() - tipHidAt < 250 || !tipEl.hidden;
     hideTip();
     tipFor = el;
-    tipTimer = setTimeout(function () { tipFor = null; showTip(el); }, 350);
+    tipTimer = setTimeout(function () { tipFor = null; showTip(el); }, warm ? 40 : 350);
   }
   document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el) armTip(el); else if (tipFor) hideTip(); });
   document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && !el.contains(e.relatedTarget)) hideTip(); });
-  document.addEventListener("focusin", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el.matches(":focus-visible")) armTip(el); });
+  document.addEventListener("focusin", function (e) { if (e.target.matches && e.target.matches("input, textarea, select")) { hideTip(); return; } var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el.matches(":focus-visible")) armTip(el); });
   document.addEventListener("focusout", hideTip);
   document.addEventListener("mousedown", hideTip, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(); }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" || (e.target.matches && e.target.matches("input, textarea, select"))) hideTip(); }, true); // Échap, ou saisie dans un champ : l'infobulle disparaît
   function setTool(k) {
     tool = k;
+    document.dispatchEvent(new CustomEvent("pb:tool", { detail: k }));
     $$(".pb-tool[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === k)); });
     var doc = frame.contentDocument;
     if (doc && doc.body) doc.body.classList.toggle("pb-hand", k === "hand");
@@ -1221,7 +1627,7 @@
   // Modèle de l'équipe inséré dans la page en cours : une copie de ses sections (nouveaux identifiants)
   function insertTemplate(t, target) {
     api("GET", "/marketing/site-web/modeles/" + t.id + ".json").then(function (r) {
-      var secs = clone(r.template.sections).map(function (s) { return markSection(reId(s)); });
+      var secs = reIdAll(clone(r.template.sections)).map(function (s) { return markSection(s); });
       if (secs.some(function (s) { return s.type === "form"; }) && content.sections.some(function (s) { return s.type === "form"; })) { toast("Une page n'a qu'un formulaire d'inscription : ce modèle en contient un.", true); return; }
       ensureIds(secs);
       var index = target && target.parent === null ? target.index : insertionPoint({ type: "layout" }).index;
@@ -1269,15 +1675,19 @@
   // Modifier un composant (nom, portée) : la réponse du serveur remplace la fiche locale
   function updateComponentMeta(c, body, done) {
     api("POST", "/marketing/site-web/composants/" + c.id, body).then(function (r) {
-      components = components.map(function (x) { return x.id === c.id ? Object.assign({}, x, { name: r.component.name, global: r.component.global, uses: r.component.uses }) : x; });
+      components = components.map(function (x) { return x.id === c.id ? Object.assign({}, x, { name: r.component.name, global: r.component.global, uses: r.component.uses, kind: r.component.kind, hasDraft: r.component.hasDraft, version: r.component.version, blocks: r.component.blocks }) : x; });
       renderComponents(); toast(done);
     }, apiFail);
   }
+  // ---------- Composants réutilisables : enregistrer, retrouver, insérer, modifier, mettre à jour, détacher, supprimer ----------
+  // Deux natures. STANDARD : un modèle, ses insertions sont des copies indépendantes. GLOBAL : une référence partagée ; ses insertions sont des instances LIÉES
+  // (section « composant ») qui affichent la dernière version diffusée. « Tous les sites » est une portée (colonne site_id), distincte de la nature.
+  var plural = function (n, one, many) { return n + " " + (n > 1 ? many : one); };
   function renderComponents() {
-    [[$("[data-pb-components]"), false, "Aucun composant de ce site. Sélectionnez un élément ou une section, puis « Enregistrer comme composant » (inspecteur, onglet Avancé)."],
-     [$("[data-pb-globals]"), true, "Aucun élément global. À l'enregistrement d'un composant, cochez « Utilisable par tous les sites (global) » : il apparaît ici, sur toutes les pages de tous vos sites."]].forEach(function (x) {
+    [[$("[data-pb-components]"), "standard", "Aucun composant standard. Sélectionnez un ou plusieurs blocs dans la page, puis « Enregistrer comme composant » (inspecteur, menu clic droit ou Ctrl/⌘ + K)."],
+     [$("[data-pb-globals]"), "global", "Aucun composant global. Sélectionnez plusieurs blocs, puis « Enregistrer comme composant » et choisissez « Composant global »."]].forEach(function (x) {
       x[0].textContent = "";
-      var all = components.filter(function (c) { return Boolean(c.global) === x[1]; });
+      var all = components.filter(function (c) { return (c.kind || "standard") === x[1]; });
       var list = all.filter(function (c) { return !compQuery || norm(c.name).indexOf(compQuery) >= 0; });
       if (!all.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: x[2] })));
       else if (!list.length) x[0].appendChild(h("li", {}, h("p", { class: "pb-hint", text: "Aucun composant ne correspond à la recherche." })));
@@ -1285,32 +1695,223 @@
     });
   }
   function componentRow(c) {
-      var insertSync = function (target) { addItems([{ type: "component", componentId: c.id }], { parent: null, index: target && target.parent === null ? target.index : insertionPoint({ type: "component" }).index }); };
-      var syncBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !canWrite, onclick: function () { insertSync(null); } }, "Synchronisé");
-      draggableSource(syncBtn, { type: "component" }, insertSync);
-      return h("li", { class: "pb-comp" },
-        h("div", {}, h("strong", { text: c.name }), h("span", { class: "pb-hint", text: (c.global ? "Global" : "Ce site") + " · " + (c.type === "layout" ? "Section libre" : LEGACY[c.type] ? LEGACY[c.type].label : c.type) + (typeof c.uses === "number" ? " · " + (c.uses ? "utilisé sur " + c.uses + " page" + (c.uses > 1 ? "s" : "") : "pas encore utilisé") : "") })),
-        h("div", { class: "pb-row pb-wrap" }, syncBtn,
-          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () { fetchComponent(c.id).then(function (comp) { var s = markSection(reId(clone(comp.section))); ensureIds([s]); addItems([s], { parent: null, index: insertionPoint({ type: "layout" }).index }); }, apiFail); } }, "Copie"),
-          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
-            ask("Renommer le composant", [["name", "text", "Nouveau nom"]], function (v) { if (v.name && v.name !== c.name) updateComponentMeta(c, { name: v.name }, "Composant renommé : « " + v.name + " »."); });
-            var input = $("[data-pb-ask-fields] input[name='name']"); if (input) { input.value = c.name; input.select(); }
-          } }, "Renommer"),
-          c.global ? (PAGE.siteId ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, "data-tip": "Le réserver au site « " + (PAGE.siteName || "de cette page") + " » (refusé s'il est utilisé par une page d'un autre site)", onclick: function () { updateComponentMeta(c, { global: false, siteId: PAGE.siteId }, "« " + c.name + " » est maintenant réservé à ce site (onglet Composants)."); } }, "Réserver à ce site") : null)
-            : h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, "data-tip": "Le partager avec tous les sites de l'organisation", onclick: function () { updateComponentMeta(c, { global: true }, "« " + c.name + " » est maintenant global (onglet Globales)."); } }, "Rendre global"),
-          h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: !canWrite, onclick: function () {
-            if (!window.confirm("Supprimer le composant « " + c.name + " » ? (Refusé s'il est encore utilisé par une page.)")) return;
-            api("POST", "/marketing/site-web/composants/" + c.id + "/supprimer", {}).then(function () { components = components.filter(function (x) { return x.id !== c.id; }); renderComponents(); toast("Composant supprimé."); }, apiFail);
-          } }, "Supprimer")));
+    var isGlobal = c.kind === "global";
+    var meta = [];
+    if (c.blocks) meta.push(plural(c.blocks, "bloc", "blocs"));
+    if (isGlobal) meta.push(c.uses ? plural(c.uses, "instance liée", "instances liées") : "aucune instance liée");
+    if (c.global) meta.push("tous les sites");
+    var insertBtn = h("button", { type: "button", class: "btn btn-primary btn-sm", disabled: !canWrite, "data-comp-insert": c.id, "data-tip": isGlobal ? "Insérer une instance liée à ce composant global" : "Insérer une copie indépendante de ce modèle", onclick: function () { insertComponent(c, null); } }, "Insérer");
+    draggableSource(insertBtn, { type: isGlobal ? "component" : "layout" }, function (target) { insertComponent(c, target); });
+    var more = h("button", { type: "button", class: "pb-icon-btn", "data-comp-menu": c.id, "aria-haspopup": "menu", "aria-label": "Actions du composant « " + c.name + " »", "data-tip": "Plus d'actions", onclick: function (e) { var r = e.currentTarget.getBoundingClientRect(); showMenuEntries(componentMenu(c), r.left, r.bottom + 4, { wide: true }); } }, icon("moreHorizontal"));
+    return h("li", { class: "pb-comp pb-comp2", "data-comp": c.id, "data-kind": c.kind || "standard" },
+      h("div", { class: "pb-comp-main" },
+        h("div", { class: "pb-comp-line" }, h("strong", { class: "pb-comp-name", text: c.name }), h("span", { class: "pb-comp-badge is-" + (c.kind || "standard"), text: isGlobal ? "Global" : "Standard" }), c.hasDraft ? h("span", { class: "pb-comp-badge is-draft", "data-tip": "Des modifications ne sont pas encore diffusées : « Mettre à jour » dans l'éditeur du composant", text: "Brouillon" }) : null),
+        h("span", { class: "pb-hint pb-comp-meta", text: meta.join(" · ") })),
+      h("div", { class: "pb-comp-actions" }, insertBtn, more));
   }
-  // Enregistrer un élément ou une section comme composant (un élément est enregistré dans une section libre)
-  function saveAsComponent(it, name, global) {
-    var section = clone(it);
-    if (isNode(it)) section = { type: "layout", children: [section] };
-    delete section.id; delete section.locked;
-    return api("POST", "/marketing/site-web/composants", { name: name, section: section, global: global, siteId: PAGE.siteId }).then(function (r) {
-      components.push(r.component); renderComponents(); toast("Composant « " + r.component.name + " » enregistré (Éléments › " + (r.component.global ? "Globales" : "Composants") + ")."); return r.component;
+  function componentMenu(c) {
+    var isGlobal = c.kind === "global";
+    return [
+      ["Modifier le composant", function () { openComponentEditor(c); }, !canWrite],
+      ["Renommer", function () { renameComponent(c); }, !canWrite],
+      isGlobal ? ["Insérer une copie indépendante", function () { fetchComponent(c.id).then(function (comp) { insertCopy(comp, null, c.name); }, apiFail); }, !canWrite] : null,
+      isGlobal ? ["Pages qui l'utilisent…", function () { showComponentPages(c); }, false] : null,
+      "-",
+      c.global ? (PAGE.siteId ? ["Le réserver au site « " + (PAGE.siteName || "de cette page") + " »", function () { updateComponentMeta(c, { global: false, siteId: PAGE.siteId }, "« " + c.name + " » est maintenant réservé à ce site."); }, !canWrite] : null)
+        : ["Le partager avec tous les sites", function () { updateComponentMeta(c, { global: true }, "« " + c.name + " » est maintenant partagé avec tous les sites."); }, !canWrite],
+      "-",
+      ["Supprimer…", function () { deleteComponentFlow(c); }, !canWrite, "", "is-danger"],
+    ].filter(function (x) { return x !== null; });
+  }
+  function renameComponent(c) {
+    ask("Renommer le composant", [["name", "text", "Nouveau nom"]], function (v) { if (v.name && v.name !== c.name) updateComponentMeta(c, { name: v.name }, "Composant renommé : « " + v.name + " »."); });
+    var input = $("[data-pb-ask-fields] input[name='name']"); if (input) { input.value = c.name; input.select(); }
+  }
+  function openComponentEditor(c) {
+    var go = function () { window.open("/marketing/site-web/composants/" + c.id + "/editeur", "_blank", "noopener"); };
+    if (dirty || saving) saveNow().then(go); else go();
+  }
+  // Insertion : global → instance liée (référence) ; standard → copie indépendante avec de NOUVEAUX identifiants (jamais ceux du modèle)
+  function insertComponent(c, target) {
+    if (!canWrite) return;
+    if (c.kind === "global") {
+      addItems([{ type: "component", componentId: c.id }], { parent: null, index: target && target.parent === null ? target.index : insertionPoint({ type: "component" }).index }, "Insertion : composant global « " + c.name + " »");
+      return;
+    }
+    fetchComponent(c.id).then(function (comp) { insertCopy(comp, target, c.name); }, apiFail);
+  }
+  function insertCopy(comp, target, name) {
+    var sec = markSection(reIdAll([clone(comp.section)])[0]);
+    ensureIds([sec]);
+    if (refusesLockedWidget([sec])) return;
+    var sel = selection.length === 1 ? byId(selection[0]) : null;
+    // Un élément ou un conteneur est sélectionné : les blocs du composant s'insèrent à sa place (règles de placement du moteur) ; sinon, une nouvelle section
+    if (!target && sec.type === "layout" && sel && isNode(sel) && sec.children && sec.children.length) addItems(sec.children, undefined, "Insertion : « " + name + " »");
+    else addItems([sec], { parent: null, index: target && target.parent === null ? target.index : insertionPoint({ type: "layout" }).index }, "Insertion : « " + name + " »");
+  }
+  // Instance liée → bloc indépendant : même apparence et même contenu, structure native avec de nouveaux identifiants ; annulable
+  function detachInstance(it) {
+    if (!canWrite || !it || it.type !== "component") return;
+    fetchComponent(it.componentId).then(function (comp) {
+      var sec = comp.section;
+      if (refusesLockedWidget([reId(clone(sec))])) return;
+      nextLabel = "Détacher du composant";
+      change(function () { var l = locate(it.id); if (!l) return false; var copy = markSection(reId(clone(sec))); copy.id = it.id; ensureIds([copy]); if (it.hideOn) copy.hideOn = it.hideOn; if (it.name) copy.name = it.name; l.list[l.index] = copy; selection = [copy.id]; });
+      markCanvasSelection(false);
+      toast("Détaché du composant : ce bloc est maintenant indépendant et entièrement modifiable.");
     }, apiFail);
+  }
+  function showComponentPages(c) {
+    api("GET", "/marketing/site-web/composants/" + c.id + "/instances.json").then(function (r) {
+      compDialog({ title: "Pages qui utilisent « " + c.name + " »", hideConfirm: true, cancelLabel: "Fermer", build: function (body) {
+        if (!r.pages.length) { body.appendChild(h("p", { class: "pb-hint", text: "Aucune page n'utilise ce composant pour l'instant." })); return; }
+        body.appendChild(h("p", { class: "pb-hint", text: plural(r.instances, "instance liée", "instances liées") + " dans " + plural(r.pages.length, "page", "pages") + "." }));
+        body.appendChild(h("ul", { class: "pb-comp-pages" }, r.pages.map(function (p) { return h("li", {}, h("a", { href: "/marketing/pages/" + p.id + "/editeur", target: "_blank", rel: "noopener", text: p.name }), h("span", { class: "pb-hint", text: " · " + plural(p.count || p.live, "instance", "instances") + (p.status === "published" ? " · en ligne" : "") })); })));
+      } });
+    }, apiFail);
+  }
+
+  // ---------- Boîte de dialogue des composants (une seule, réutilisée ; jetons de l'éditeur, clair et sombre) ----------
+  var compDlg = null;
+  function compDialog(o) {
+    if (!compDlg) {
+      compDlg = h("dialog", { class: "pb-modal pb-comp-dlg", "aria-labelledby": "pb-comp-dlg-title" },
+        h("form", { method: "dialog" },
+          h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-comp-dlg-title", "data-cd-title": "" }), h("span", { class: "pb-modal-spacer" }), h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Fermer", "data-cd-x": "" }, icon("close"))),
+          h("div", { class: "pb-comp-dlg-body", "data-cd-body": "" }),
+          h("p", { class: "pb-note is-warn", role: "alert", "data-cd-error": "", hidden: true }),
+          h("div", { class: "pb-comp-dlg-foot" }, h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-cd-cancel": "" }, "Annuler"), h("button", { type: "submit", class: "btn btn-primary btn-sm", "data-cd-ok": "" }, "Valider"))));
+      document.body.appendChild(compDlg);
+      compDlg.querySelector("[data-cd-x]").addEventListener("click", function () { compDlg.close(); });
+      compDlg.querySelector("[data-cd-cancel]").addEventListener("click", function () { compDlg.close(); });
+      compDlg.querySelector("form").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var fn = compDlg._confirm; if (!fn) return;
+        var err = compDlg.querySelector("[data-cd-error]"), ok = compDlg.querySelector("[data-cd-ok]");
+        err.hidden = true; ok.disabled = true;
+        new Promise(function (resolve) { resolve(fn()); }).then(function (res) { ok.disabled = false; if (res === false) return; compDlg.close(); }, function (e2) { ok.disabled = false; err.textContent = e2 && e2.message ? e2.message : "L'opération a échoué."; err.hidden = false; });
+      });
+    }
+    compDlg.querySelector("[data-cd-title]").textContent = o.title;
+    var body = compDlg.querySelector("[data-cd-body]"); body.textContent = "";
+    compDlg.querySelector("[data-cd-error]").hidden = true;
+    var ok = compDlg.querySelector("[data-cd-ok]"); ok.hidden = Boolean(o.hideConfirm); ok.disabled = false; ok.textContent = o.confirmLabel || "Valider"; ok.classList.toggle("btn-danger", Boolean(o.danger)); ok.classList.toggle("btn-primary", !o.danger);
+    compDlg.querySelector("[data-cd-cancel]").textContent = o.cancelLabel || "Annuler";
+    compDlg._confirm = o.onConfirm || null;
+    o.build(body);
+    compDlg.showModal();
+    var first = body.querySelector("input:not([type=radio]), input[type=radio]:checked, button, a"); if (first) first.focus();
+  }
+
+  // ---------- Enregistrer comme composant : toujours depuis la sélection réelle ----------
+  // Un composant est UNE section : un seul bloc (section ou élément) ou plusieurs ÉLÉMENTS, enregistrés dans l'ordre du document avec leur structure interne.
+  function componentSource() {
+    var items = selectedItems();
+    if (!items.length) return { error: "Sélectionnez d'abord un ou plusieurs blocs dans la page." };
+    if (items.some(function (x) { return x.type === "component"; })) return { error: "Un composant ne peut pas contenir un autre composant (instance liée) : détachez-la d'abord." };
+    var picked = {}; items.forEach(function (x) { picked[x.id] = 1; });
+    var top = items.filter(function (x) { var l = locate(x.id); return l && !l.ancestors.some(function (a) { return picked[a.id]; }); });
+    var order = {}, n = 0; walk(function (x) { order[x.id] = n++; });
+    top.sort(function (a, b) { return order[a.id] - order[b.id]; });
+    var section;
+    if (top.length === 1 && !isNode(top[0])) section = clone(top[0]);
+    else if (top.every(isNode)) section = { type: "layout", children: top.map(clone) };
+    else return { error: "Un composant est une seule section : sélectionnez soit une section, soit des éléments (pas plusieurs sections)." };
+    delete section.id; delete section.locked;
+    var count = 0; var countIn = function (list) { (list || []).forEach(function (x) { count++; countIn(x.children); }); };
+    if (section.type === "layout") countIn(section.children); else count = 1;
+    return { section: section, top: top, count: count, signature: top.map(function (x) { return x.id; }).join(",") };
+  }
+  function structureRows(top) {
+    var rows = [];
+    var visit = function (x, depth) {
+      if (rows.length >= 8) return;
+      var kids = kidsOf(x) || [];
+      rows.push({ label: nameOf(x), depth: depth, icon: blockIcon(x) });
+      kids.forEach(function (k) { visit(k, depth + 1); });
+    };
+    top.forEach(function (x) { visit(x, 0); });
+    return rows;
+  }
+  function openSaveComponent() {
+    if (!canWrite) return;
+    var src = componentSource();
+    if (src.error) { toast(src.error, true); return; }
+    var multiple = src.top.length > 1;
+    var nameInput = h("input", { type: "text", id: "pb-comp-dlg-name", name: "name", maxlength: "80", required: true, autocomplete: "off", value: multiple ? "" : nameOf(src.top[0]) === typeLabel(src.top[0]) ? "" : nameOf(src.top[0]), placeholder: "Nom du composant" });
+    var kindStd = h("input", { type: "radio", name: "kind", value: "standard", id: "pb-comp-kind-std", checked: true });
+    var kindGlo = h("input", { type: "radio", name: "kind", value: "global", id: "pb-comp-kind-glo" });
+    compDialog({ title: "Enregistrer comme composant", confirmLabel: "Enregistrer", build: function (body) {
+      body.appendChild(h("div", { class: "pb-field" }, h("label", { for: "pb-comp-dlg-name", text: "Nom du composant" }), nameInput));
+      var rows = structureRows(src.top);
+      body.appendChild(h("div", { class: "pb-comp-sum" },
+        h("p", { class: "pb-comp-sum-title", text: multiple ? plural(src.top.length, "bloc sélectionné", "blocs sélectionnés") + " · " + plural(src.count, "élément", "éléments") : plural(src.count, "élément", "éléments") + " · " + (isNode(src.top[0]) ? typeLabel(src.top[0]) : "Section") }),
+        h("ul", { class: "pb-comp-tree", "aria-label": "Structure enregistrée" }, rows.map(function (r) { return h("li", { style: "padding-left:" + (r.depth * 14) + "px" }, icon(r.icon), h("span", { text: r.label })); })),
+        src.count > rows.length ? h("p", { class: "pb-hint", text: "… et " + (src.count - rows.length) + " autre(s) élément(s) imbriqué(s)." }) : null));
+      if (multiple) {
+        body.appendChild(h("fieldset", { class: "pb-comp-kinds" }, h("legend", { text: "Type de composant" }),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-kind-std" }, kindStd, h("span", {}, h("strong", { text: "Composant standard" }), h("small", { text: "Un modèle réutilisable : chaque insertion est une copie indépendante." }))),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-kind-glo" }, kindGlo, h("span", {}, h("strong", { text: "Composant global" }), h("small", { text: "Une référence partagée : ses instances liées reçoivent les mises à jour du composant principal." })))));
+      } else body.appendChild(h("p", { class: "pb-hint", text: "Composant standard : un modèle réutilisable, chaque insertion est une copie indépendante." }));
+    }, onConfirm: function () {
+      var nm = nameInput.value.trim();
+      if (!nm) throw new Error("Donnez un nom au composant.");
+      if (components.some(function (x) { return norm(x.name) === norm(nm); })) throw new Error("Un composant porte déjà ce nom.");
+      var now = componentSource();   // la sélection a pu changer pendant que la fenêtre était ouverte
+      if (now.error || now.signature !== src.signature) throw new Error("La sélection a changé : fermez cette fenêtre et recommencez.");
+      return saveAsComponent(now.section, nm, multiple && kindGlo.checked ? "global" : "standard").then(function () { return true; }, function (err) { throw err; });
+    } });
+    nameInput.focus();
+  }
+  function saveAsComponent(section, name, kind) {
+    return api("POST", "/marketing/site-web/composants", { name: name, section: section, kind: kind, global: !PAGE.siteId, siteId: PAGE.siteId }).then(function (r) {
+      r.component.uses = 0; components.push(r.component); renderComponents();
+      toast("Composant « " + r.component.name + " » enregistré (Éléments › " + (kind === "global" ? "Globales" : "Composants") + ").");
+      return r.component;
+    });
+  }
+
+  // ---------- Supprimer : choix explicite quand des instances liées existent ----------
+  function deleteComponentFlow(c) {
+    api("GET", "/marketing/site-web/composants/" + c.id + "/instances.json").then(function (r) {
+      var mode = h("input", { type: "radio", name: "mode", value: "detach", id: "pb-comp-del-detach", checked: true });
+      var modeAll = h("input", { type: "radio", name: "mode", value: "instances", id: "pb-comp-del-all" });
+      compDialog({ title: "Supprimer ce composant ?", confirmLabel: "Supprimer", danger: true, build: function (body) {
+        if (!r.instances) { body.appendChild(h("p", { text: "« " + c.name + " » n'est utilisé par aucune page. Il sera supprimé de la bibliothèque." })); return; }
+        body.appendChild(h("p", { text: "« " + c.name + " » possède encore " + plural(r.instances, "instance liée", "instances liées") + " dans " + plural(r.pages.length, "page", "pages") + " (" + r.pages.slice(0, 4).map(function (p) { return "« " + p.name + " »"; }).join(", ") + (r.pages.length > 4 ? "…" : "") + "). Que faire ?" }));
+        body.appendChild(h("fieldset", { class: "pb-comp-kinds" }, h("legend", { class: "sr-only", text: "Sort des instances" }),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-del-all" }, modeAll, h("span", {}, h("strong", { text: "Supprimer le composant et ses instances" }), h("small", { text: "Retire le composant et ses " + plural(r.instances, "instance liée", "instances liées") + ". Les blocs indépendants ne sont pas touchés." }))),
+          h("label", { class: "pb-comp-kind", for: "pb-comp-del-detach" }, mode, h("span", {}, h("strong", { text: "Conserver les instances comme blocs indépendants" }), h("small", { text: "Supprime le composant de la bibliothèque ; chaque instance garde son apparence et son contenu, sans lien." })))));
+        body.appendChild(h("p", { class: "pb-hint", text: "Cette action n'est pas annulable : l'historique d'annulation de cette page est réinitialisé." }));
+      }, onConfirm: function () { return performComponentDelete(c, r.instances ? (modeAll.checked ? "instances" : "detach") : null); } });
+    }, apiFail);
+  }
+  // Serveur d'abord (une transaction : tout ou rien), puis la page ouverte : son brouillon est converti ici
+  function performComponentDelete(c, mode) {
+    var needSection = mode === "detach" ? fetchComponent(c.id) : Promise.resolve(null);
+    var pid = /^\d+$/.test(String(PAGE.id)) ? Number(PAGE.id) : null;
+    return needSection.then(function (comp) {
+      return api("POST", "/marketing/site-web/composants/" + c.id + "/supprimer", { mode: mode, skipDraftOfPage: pid }).then(function (r) {
+        if (r.revisions && pid && r.revisions[pid]) revision = r.revisions[pid];
+        if (mode) {
+          var swap = function (list) {
+            for (var i = list.length - 1; i >= 0; i--) {
+              if (list[i].type !== "component" || list[i].componentId !== c.id) continue;
+              if (mode === "instances") list.splice(i, 1);
+              else { var copy = markSection(reId(clone(comp.section))); copy.id = list[i].id || copy.id; if (list[i].hideOn) copy.hideOn = list[i].hideOn; if (list[i].name) copy.name = list[i].name; list[i] = copy; }
+            }
+          };
+          swap(content.sections);
+          ensureIds(content.sections);
+        }
+        components = components.filter(function (x) { return x.id !== c.id; });
+        past = []; future = []; pastLabels = []; futureLabels = []; lastKey = null; // une suppression de bibliothèque n'est pas annulable : on ne laisse aucune étape qui recréerait une référence orpheline
+        selection = selection.filter(function (id) { return byId(id); });
+        updateHistoryButtons(); scheduleHistorySave(); renderTree(); renderInspector(); scheduleRender(); scheduleSave(); renderComponents();
+        toast(mode === "detach" ? "Composant supprimé ; ses " + plural(r.instances, "instance est devenue indépendante", "instances sont devenues indépendantes") + "." : mode === "instances" ? "Composant et " + plural(r.instances, "instance supprimés", "instances supprimés") + "." : "Composant supprimé.");
+        return true;
+      });
+    });
   }
 
   // ---------- Champs de l'inspecteur ----------
@@ -1367,8 +1968,9 @@
     var input = opts.multiline ? h("textarea", { id: id, rows: opts.rows || "4", maxlength: opts.max ? String(opts.max) : null, disabled: opts.disabled }) : h("input", { id: id, type: opts.type || "text", maxlength: opts.max ? String(opts.max) : null, disabled: opts.disabled, list: opts.list || null, placeholder: opts.placeholder || null });
     input.value = value === undefined || value === null ? "" : value;
     input.addEventListener(opts.onChange ? "change" : "input", function () { onInput(input.value); });
-    if (opts.dyn) return h("div", { class: "pb-field pb-field-dyn" }, h("label", { for: id, text: label }), h("div", { class: "pb-dyn-row" }, input, dynButton(input, opts)), opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null);
-    return h("div", { class: "pb-field" }, h("label", { for: id, text: label }), input, opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null);
+    var probe = function () { onInput(input.value); };
+    if (opts.dyn) return withRestore(h("div", { class: "pb-field pb-field-dyn" }, h("label", { for: id, text: label }), h("div", { class: "pb-dyn-row" }, input, dynButton(input, opts)), opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null), probe);
+    return withRestore(h("div", { class: "pb-field" }, h("label", { for: id, text: label }), input, opts.hint ? h("p", { class: "pb-hint", text: opts.hint }) : null), probe);
   }
   // Champ numérique d'un contenu (pas d'un style) : même NumericControl que l'inspecteur de style
   function numberField(label, value, cfg, apply, hint) {
@@ -1377,7 +1979,7 @@
       onCommit: function (raw, u, opts) { if (raw === "") return cfg.allowEmpty === false ? false : apply(null, opts); return apply(Number(raw), opts); } }));
     var lab = h("label", { for: id, text: label });
     if (ctl.scrub) ctl.scrub(lab);
-    return h("div", { class: "pb-field" }, lab, ctl, hint ? h("p", { class: "pb-hint", text: hint }) : null);
+    return withRestore(h("div", { class: "pb-field" }, lab, ctl, hint ? h("p", { class: "pb-hint", text: hint }) : null), function () { apply(Number(value) || 0, {}); });
   }
   function selectField(label, value, options, onChange, opts) {
     opts = opts || {};
@@ -1385,35 +1987,71 @@
     var sel = h("select", { id: id, disabled: opts.disabled }, options.map(function (o) { return h("option", { value: String(o[0]), text: o[1] }); }));
     sel.value = value === undefined || value === null ? String(options[0][0]) : String(value);
     sel.addEventListener("change", function () { onChange(sel.value); });
-    return h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel);
+    return withRestore(h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel), function () { onChange(sel.value); });
   }
   function checkField(label, value, onChange, opts) {
     var cb = h("input", { type: "checkbox", disabled: opts && opts.disabled });
     cb.checked = Boolean(value);
     cb.addEventListener("change", function () { onChange(cb.checked); });
-    var lab = h("label", { class: "pb-check" }, cb, " " + label);
+    var lab = withRestore(h("label", { class: "pb-check" }, cb, " " + label), function () { onChange(cb.checked); });
     return opts && opts.hint ? h("div", {}, lab, h("p", { class: "pb-hint", text: opts.hint })) : lab;
   }
   document.body.appendChild(h("datalist", { id: "pb-tags" }, (boot.tags || []).map(function (t) { return h("option", { value: t }); })));
   document.body.appendChild(h("datalist", { id: "pb-links" }, boot.links.map(function (l) { return h("option", { value: l.url, label: l.label }); })));
-  document.body.appendChild(h("datalist", { id: "pb-scale" }, SPEC.spacingScale.map(function (n) { return h("option", { value: n + "px" }); }).concat(["auto", "100%", "50%"].map(function (v) { return h("option", { value: v }); }))));
 
   // Contenu de chaque élément (onglet « Contenu »)
   // Widget personnalisé : champs de l'inspecteur générés depuis sa description (src/marketing/pages/widgets)
+  // Un champ simple d'un widget personnalisé ; set(valeur, léger, clé) l'enregistre (léger = saisie au clavier : une seule étape d'annulation par rafale)
+  function schemaScalar(f, val, set, disabled, widgetType) {
+    var frag = document.createDocumentFragment();
+    if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") frag.appendChild(textField(f.label, val, function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
+    else if (f.kind === "number") frag.appendChild(numberField(f.label, val, { min: f.min, max: f.max, step: f.step || 1, integer: f.integer || Number.isInteger(f.min) && Number.isInteger(f.max) && !f.step, disabled: disabled }, function (n, opts) { if (n === null) return false; set(n, opts && opts.light, opts && opts.key); }, "Entre " + f.min + " et " + f.max + "."));
+    else if (f.kind === "select") frag.appendChild(selectField(f.label, val, f.options, function (v) { set(v); }, { disabled: disabled }));
+    else if (f.kind === "bool") frag.appendChild(checkField(f.label, val === true, function (v) { set(v); }, { disabled: disabled }));
+    else if (f.kind === "image") {
+      frag.appendChild(h("p", { class: "pb-sub", text: f.label }));
+      frag.appendChild(mediaPreview(val, function (m) { set(m.path); }, disabled));
+      if (val && !f.required) frag.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { set(""); } }, "Retirer l'image"));
+    } else if (f.kind === "icon") { frag.appendChild(h("p", { class: "pb-sub", text: f.label })); frag.appendChild(iconPicker(val || "", function (v) { set(v); }, disabled)); }
+    else if (f.kind === "color") { var cid = fid(); frag.appendChild(h("div", { class: "pb-field" }, h("label", { for: cid, text: f.label }), colorButton(cid, val, undefined, disabled, function (v, o) { set(v || "", o && o.light); }, "w-" + widgetType + "-" + f.key))); }
+    return frag;
+  }
+  // Valeur de départ d'un nouvel élément d'une liste : défaut du sous-champ, sinon vide / 1re option / minimum
+  function blankItem(f) {
+    var o = {};
+    f.fields.forEach(function (sf) { o[sf.key] = sf.default !== undefined ? sf.default : sf.kind === "bool" ? false : sf.kind === "number" ? sf.min : sf.kind === "select" ? sf.options[0][0] : ""; });
+    return o;
+  }
+  // Liste d'éléments répétés (diapositives, liens, témoignages…) : ajouter, supprimer, réordonner, et chaque sous-champ modifie le rendu réel
+  function itemsEditor(it, f, disabled) {
+    var list = (it.props && it.props[f.key]) || [], min = f.min || 0;
+    // Les actions relisent TOUJOURS la liste courante de l'élément (une saisie « légère » ne reconstruit pas l'inspecteur : la liste capturée à l'affichage serait périmée)
+    var live = function () { var n = byId(it.id); return (n && n.props && n.props[f.key]) || []; };
+    var wrap = h("div", { class: "pb-items", role: "group", "aria-label": f.label });
+    wrap.appendChild(h("p", { class: "pb-sub", text: f.label + " (" + list.length + (f.max ? " sur " + f.max : "") + ")" }));
+    var commit = function (next, light, key) { setProp(it.id, f.key, next, light ? { key: key, light: true } : null); };
+    list.forEach(function (item, i) {
+      var move = function (d) { var cur = live(), next = cur.slice(), t = next[i]; next[i] = next[i + d]; next[i + d] = t; commit(next); };
+      var head = h("div", { class: "pb-items-head" }, h("strong", { text: "Élément " + (i + 1) }), h("span", { class: "pb-items-tools" },
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Monter l'élément " + (i + 1), "data-tip": "Monter", disabled: disabled || i === 0, onclick: function () { move(-1); } }, icon("arrowUp")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Descendre l'élément " + (i + 1), "data-tip": "Descendre", disabled: disabled || i === list.length - 1, onclick: function () { move(1); } }, icon("arrowDown")),
+        h("button", { type: "button", class: "pb-icon-btn is-danger", "aria-label": "Supprimer l'élément " + (i + 1), "data-tip": "Supprimer", disabled: disabled || list.length <= min, onclick: function () { commit(live().filter(function (_, k) { return k !== i; })); } }, icon("trash"))));
+      var card = h("div", { class: "pb-items-item" }, head);
+      f.fields.forEach(function (sf) {
+        var set = function (v, light, key) { var next = live().map(function (x) { return Object.assign({}, x); }); if (!next[i]) return; next[i][sf.key] = v; commit(next, light, key || it.id + ":" + f.key + ":" + i + ":" + sf.key); };
+        card.appendChild(schemaScalar(sf, item[sf.key], set, disabled, it.type));
+      });
+      wrap.appendChild(card);
+    });
+    wrap.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || list.length >= f.max, onclick: function () { commit(live().concat([blankItem(f)])); } }, icon("plus"), "Ajouter un élément"));
+    return wrap;
+  }
   function schemaFields(it, box, disabled) {
     var p = it.props || (it.props = {});
     (NT[it.type].schema || []).forEach(function (f) {
-      var set = function (v, light) { setProp(it.id, f.key, v, light ? { key: it.id + ":" + f.key, light: true } : null); };
-      if (f.kind === "text" || f.kind === "textarea" || f.kind === "link") box.appendChild(textField(f.label + (f.required ? "" : ""), p[f.key], function (v) { set(v, true); }, { max: f.max || (f.kind === "textarea" ? 1000 : f.kind === "link" ? 500 : 200), multiline: f.kind === "textarea", list: f.kind === "link" ? "pb-links" : null, placeholder: f.kind === "link" ? "/catalogue, /p/…, #ancre ou https://…" : null, disabled: disabled }));
-      else if (f.kind === "number") box.appendChild(numberField(f.label, p[f.key], { min: f.min, max: f.max, step: f.step || 1, integer: f.integer || Number.isInteger(f.min) && Number.isInteger(f.max) && !f.step, disabled: disabled }, function (n, opts) { if (n === null) return false; setProp(it.id, f.key, n, opts && opts.light ? { key: opts.key, light: true } : null); }, "Entre " + f.min + " et " + f.max + "."));
-      else if (f.kind === "select") box.appendChild(selectField(f.label, p[f.key], f.options, function (v) { set(v); }, { disabled: disabled }));
-      else if (f.kind === "bool") box.appendChild(checkField(f.label, p[f.key] === true, function (v) { set(v); }, { disabled: disabled }));
-      else if (f.kind === "image") {
-        box.appendChild(h("p", { class: "pb-sub", text: f.label }));
-        box.appendChild(mediaPreview(p[f.key], function (m) { set(m.path); }, disabled));
-        if (p[f.key] && !f.required) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { set(""); } }, "Retirer l'image"));
-      } else if (f.kind === "icon") { box.appendChild(h("p", { class: "pb-sub", text: f.label })); box.appendChild(iconPicker(p[f.key] || "", function (v) { set(v); }, disabled)); }
-      else if (f.kind === "color") { var cid = fid(); box.appendChild(h("div", { class: "pb-field" }, h("label", { for: cid, text: f.label }), colorButton(cid, p[f.key], undefined, disabled, function (v, o) { setProp(it.id, f.key, v || "", o && o.light ? { key: it.id + ":" + f.key, light: true } : null); }, "w-" + it.type + "-" + f.key))); }
+      if (f.kind === "items") { box.appendChild(itemsEditor(it, f, disabled)); return; }
+      var set = function (v, light, key) { setProp(it.id, f.key, v, light ? { key: key || it.id + ":" + f.key, light: true } : null); };
+      box.appendChild(schemaScalar(f, p[f.key], set, disabled, it.type));
     });
   }
   function nodeContentFields(it, box, disabled) {
@@ -1425,6 +2063,7 @@
       case "heading":
         box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, dyn: true, hint: "Ou double-cliquez sur le titre dans la page. { } : insérer une donnée dynamique." }));
         box.appendChild(selectField("Niveau", p.level, [["1", "Titre 1 (un seul par page)"], ["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"], ["5", "Titre 5"], ["6", "Titre 6"]], set("level", false), { disabled: disabled }));
+        box.appendChild(selectField("Balise HTML", p.tag || "", [["", "Titre (selon le niveau)"], ["p", "Paragraphe"], ["div", "Bloc (div)"], ["span", "Texte en ligne (span)"]], function (v) { change(function () { var x = byId(it.id).props; if (v) x.tag = v; else delete x.tag; }); }, { disabled: disabled, hint: "Un titre aide les moteurs de recherche et les lecteurs d'écran ; choisissez autre chose seulement pour un simple texte d'apparence de titre." }));
         box.appendChild(textField("Lien (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue, /p/…, #ancre ou https://…", hint: "Tout le titre devient cliquable sur la page publiée." }));
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
@@ -1433,6 +2072,7 @@
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, onclick: function () { startEdit(it.id); } }, "Écrire dans la page"));
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-tip": "Ajoute à la fin du texte une donnée lue à chaque affichage (titre, prix, date…)",
           onclick: function (e) { openDynPicker(e.currentTarget, function (token) { change(function () { var x = byId(it.id); x.props.html = (x.props.html || "") + "<p>" + token + "</p>"; }); }, ["text"]); } }, "Insérer une donnée dynamique"));
+        box.appendChild(checkField("Lettrine (première lettre agrandie)", p.dropCap, function (v) { setProp(it.id, "dropCap", v); }, { disabled: disabled, hint: "Les colonnes de texte se règlent dans Style → Typographie (« Colonnes »)." }));
         if (hasDynamic(it)) box.appendChild(h("p", { class: "pb-hint", text: "Ce texte contient une donnée dynamique : il se modifie ici (Écrire dans la page est désactivé pour ne pas effacer la donnée)." }));
         break;
       case "list":
@@ -1445,10 +2085,16 @@
         break;
       case "code":
         box.appendChild(textField("Texte affiché tel quel", p.text, set("text"), { multiline: true, rows: "8", max: 4000, disabled: disabled, hint: "Affiché comme texte, jamais exécuté." }));
+        box.appendChild(selectField("Coloration du code", p.language || "text", SPEC.codeLanguages, function (v) { change(function () { var x = byId(it.id); if (v === "text") delete x.props.language; else x.props.language = v; }); }, { disabled: disabled }));
+        box.appendChild(checkField("Numéros de ligne", p.lineNumbers, function (v) { setProp(it.id, "lineNumbers", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Bouton « Copier »", p.copy, function (v) { setProp(it.id, "copy", v); }, { disabled: disabled }));
+        box.appendChild(textField("Lignes surlignées (ex. 2-4, 7)", p.highlight, function (v) { change(function () { var x = byId(it.id).props; if (v.trim()) x.highlight = v.trim(); else delete x.highlight; }, { key: it.id + ":hl", light: true }); }, { max: 80, disabled: disabled }));
         break;
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
-        box.appendChild(textField("…ou image dynamique", /^\{\{/.test(p.src || "") ? p.src : "", function (v) { if (/^\s*\{\{[^}]+\}\}\s*$/.test(v)) setProp(it.id, "src", v.trim()); }, { onChange: true, disabled: disabled, dyn: true, dynKinds: ["image"], placeholder: "{{post.image}} ou {{course.image}}", hint: "Remplace l'image choisie ; lue à chaque affichage (utile dans une boucle ou un modèle)." }));
+        box.appendChild(textField("…ou image dynamique", /^\{\{/.test(p.src || "") ? p.src : "", function (v) { if (/^\s*\{\{[^}]+\}\}\s*$/.test(v)) setProp(it.id, "src", v.trim()); else if (v.trim()) toast("Image dynamique : écrivez une étiquette entre doubles accolades, ex. {{post.image}} (ou utilisez le bouton d'étiquettes).", true); else if (/^\{\{/.test(p.src || "")) toast("Pour remplacer l'image dynamique, choisissez une image dans la médiathèque.", true); }, { onChange: true, disabled: disabled, dyn: true, dynKinds: ["image"], placeholder: "{{post.image}} ou {{course.image}}", hint: "Remplace l'image choisie ; lue à chaque affichage (utile dans une boucle ou un modèle)." }));
+        box.appendChild(resolutionField(it, [p.src], disabled));
+        if (!p.link) box.appendChild(checkField("Agrandir au clic (visionneuse)", p.lightbox, function (v) { setProp(it.id, "lightbox", v); }, { disabled: disabled, hint: "Ouvre l'image d'origine en grand. Indisponible si l'image a un lien." }));
         box.appendChild(textField("Texte de remplacement", p.alt, function (v) { change(function () { var x = byId(it.id); x.props.alt = v; if (v) delete x.props.decorative; else x.props.decorative = true; }, { key: it.id + ":alt", light: true }); }, { max: 200, disabled: disabled, dyn: true, hint: "Décrit l'image pour les personnes qui ne la voient pas (et pour le référencement). Vide = image décorative." }));
         box.appendChild(textField("Lien au clic (facultatif)", p.link, set("link"), { list: "pb-links", disabled: disabled, dyn: true, dynKinds: ["url"], placeholder: "/catalogue ou https://…" }));
         if (p.link) box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
@@ -1460,17 +2106,30 @@
           box.appendChild(h("div", { class: "pb-repeat-item" }, h("img", { src: im.src, alt: "", class: "pb-thumb" }),
             textField("Texte de remplacement " + (i + 1), im.alt, function (v) { change(function () { byId(it.id).props.images[i].alt = v; }, { key: it.id + ":img" + i, light: true }); }, { max: 200, disabled: disabled }),
             textField("Légende " + (i + 1), im.caption, function (v) { change(function () { byId(it.id).props.images[i].caption = v; }, { key: it.id + ":gcap" + i, light: true }); }, { max: 200, disabled: disabled }),
+            textField("Étiquette " + (i + 1) + " (filtre, facultatif)", im.tag, function (v) { change(function () { var x = byId(it.id).props.images[i]; if (v) x.tag = v; else delete x.tag; }, { key: it.id + ":gtag" + i, light: true }); }, { max: 30, disabled: disabled }),
             textField("Lien de l'image " + (i + 1) + " (facultatif)", im.link, function (v) { change(function () { byId(it.id).props.images[i].link = v; }, { key: it.id + ":glink" + i, light: true }); }, { list: "pb-links", disabled: disabled, placeholder: "/catalogue ou https://…" }),
             h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || p.images.length < 2, onclick: function () { change(function () { byId(it.id).props.images.splice(i, 1); }); } }, "Retirer")));
         });
+        box.appendChild(resolutionField(it, (p.images || []).map(function (im) { return im.src; }), disabled));
         box.appendChild(checkField("Agrandir au clic (visionneuse)", p.lightbox, function (v) { setProp(it.id, "lightbox", v); }, { disabled: disabled, hint: "Les images qui ont un lien ouvrent leur lien." }));
-        box.appendChild(checkField("Mosaïque (hauteurs naturelles, en colonnes)", p.masonry, function (v) { setProp(it.id, "masonry", v); }, { disabled: disabled }));
+        var galMode = p.masonry ? "masonry" : p.layout === "justified" ? "justified" : "grid";
+        box.appendChild(selectField("Disposition", galMode, [["grid", "Grille"], ["masonry", "Mosaïque (hauteurs naturelles)"], ["justified", "Justifiée (lignes de même hauteur)"]], function (v) {
+          change(function () { var x = byId(it.id); delete x.props.masonry; delete x.props.layout; if (v === "masonry") x.props.masonry = true; else if (v === "justified") x.props.layout = "justified"; });
+        }, { disabled: disabled }));
+        if (galMode !== "justified") box.appendChild(numberField("Colonnes", p.columns || 3, { min: 1, max: 12, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id); if (n === 3) delete x.props.columns; else x.props.columns = n; }); }, "De 1 à 12 (2 au plus sur téléphone)."));
+        if (galMode === "grid") box.appendChild(selectField("Ratio d'aspect des images", p.ratio || "1:1", [["1:1", "Carré (1:1)"], ["4:3", "4:3"], ["3:2", "3:2"], ["16:9", "16:9"], ["9:16", "Vertical (9:16)"], ["21:9", "Panoramique (21:9)"]], function (v) { change(function () { var x = byId(it.id); if (v === "1:1") delete x.props.ratio; else x.props.ratio = v; }); }, { disabled: disabled }));
+        if (galMode === "justified") box.appendChild(selectField("Hauteur des lignes", String(p.rowHeight || "200"), [["120", "120 px"], ["160", "160 px"], ["200", "200 px"], ["260", "260 px"], ["320", "320 px"]], function (v) { change(function () { var x = byId(it.id); if (v === "200") delete x.props.rowHeight; else x.props.rowHeight = v; }); }, { disabled: disabled }));
+        box.appendChild(checkField("Légende au survol (sur l'image)", p.overlay, function (v) { setProp(it.id, "overlay", v); }, { disabled: disabled, hint: "Sur écran tactile, la légende reste visible." }));
+        box.appendChild(checkField("Barre de filtres (par étiquette d'image)", p.filters, function (v) { setProp(it.id, "filters", v); }, { disabled: disabled, hint: "Donnez une étiquette à chaque image ci-dessus : « Tous » plus une touche par étiquette." }));
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled || (p.images || []).length >= 24, onclick: function () { openMedia({ title: "Ajouter à la galerie", multiple: true, onPick: function (list) { change(function () { var x = byId(it.id); list.forEach(function (m) { x.props.images.push({ src: m.path, alt: m.alt || "" }); }); }); } }); } }, "Ajouter des images"));
         break;
       case "video":
         box.appendChild(textField("Adresse (YouTube, Vimeo ou fichier https://)", p.url, set("url"), { type: "url", disabled: disabled }));
         box.appendChild(libraryButton("Choisir dans la médiathèque", { title: "Choisir une vidéo", type: "video" }, function (m) { change(function () { var x = byId(it.id).props; x.url = m.path; if (!x.title) x.title = m.title || m.name; }); toast("Vidéo choisie dans la médiathèque."); }, disabled));
         box.appendChild(textField("Titre (lu par les lecteurs d'écran)", p.title, set("title"), { max: 150, disabled: disabled }));
+        box.appendChild(h("div", { class: "pb-grid-2" },
+          numberField("Début (secondes)", p.start || "", { min: 1, max: 86399, step: 1, integer: true, disabled: disabled, empty: true }, function (n) { change(function () { var x = byId(it.id).props; if (n === null || n === "") delete x.start; else x.start = n; }); }),
+          numberField("Fin (secondes)", p.end || "", { min: 2, max: 86400, step: 1, integer: true, disabled: disabled, empty: true }, function (n) { change(function () { var x = byId(it.id).props; if (n === null || n === "") delete x.end; else x.end = n; }); })));
         box.appendChild(h("p", { class: "pb-sub", text: "Lecture" }));
         box.appendChild(checkField("Lecture automatique (sans le son, exigé par les navigateurs)", p.autoplay, function (v) { change(function () { var x = byId(it.id).props; if (v) { x.autoplay = true; x.muted = true; } else { delete x.autoplay; if (x.controls === false) delete x.controls; } }); }, { disabled: disabled }));
         box.appendChild(checkField("Son coupé au départ", p.muted || p.autoplay, function (v) { setProp(it.id, "muted", v); }, { disabled: disabled || p.autoplay }));
@@ -1562,6 +2221,7 @@
         break;
       case "carousel":
         box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
+        box.appendChild(resolutionField(it, (p.images || []).map(function (im) { return im.src; }), disabled));
         (p.images || []).forEach(function (im, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" }, h("img", { src: im.src, alt: "", class: "pb-thumb" }),
             textField("Texte de remplacement " + (i + 1), im.alt, function (v) { change(function () { byId(it.id).props.images[i].alt = v; }, { key: it.id + ":img" + i, light: true }); }, { max: 200, disabled: disabled }),
@@ -1594,6 +2254,7 @@
         if (it.type === "imagebox") {
           box.appendChild(h("p", { class: "pb-sub", text: "Image" }));
           box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (!x.alt && m.alt) x.alt = m.alt; }); }, disabled));
+          box.appendChild(resolutionField(it, [p.src], disabled));
           box.appendChild(textField("Texte de remplacement (vide = image décorative)", p.alt, set("alt"), { max: 200, disabled: disabled }));
         } else {
           box.appendChild(iconPicker(p.icon || "star", function (v) { setProp(it.id, "icon", v); }, disabled));
@@ -1665,6 +2326,7 @@
         break;
       case "readingprogress":
         box.appendChild(selectField("Position", p.position || "top", [["top", "En haut de l'écran"], ["bottom", "En bas de l'écran"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Forme", p.shape === "circle" ? "circle" : "bar", [["bar", "Barre sur toute la largeur"], ["circle", "Cercle dans un coin (à droite)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "circle") x.shape = "circle"; else delete x.shape; }); }, { disabled: disabled }));
         box.appendChild(selectField("Épaisseur", String(p.thickness || 4), ["2", "3", "4", "6", "8", "10"].map(function (n) { return [n, n + " px"]; }), function (v) { setProp(it.id, "thickness", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Couleur : onglet Style › Couleurs (couleur du texte). Sur la page publiée, la barre suit la lecture." }));
         break;
@@ -1704,6 +2366,8 @@
         box.appendChild(h("p", { class: "pb-hint", text: "Dans l'éditeur, le contenu est représenté (il se charge dans l'aperçu et sur la page publiée)." }));
         break;
       case "iconlist":
+        box.appendChild(checkField("Éléments côte à côte (en ligne)", p.inline, function (v) { setProp(it.id, "inline", v); }, { disabled: disabled }));
+        box.appendChild(checkField("Trait de séparation entre les éléments", p.divider, function (v) { setProp(it.id, "divider", v); }, { disabled: disabled }));
         (p.items || []).forEach(function (x, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" },
             textField("Texte " + (i + 1), x.text, function (v) { change(function () { byId(it.id).props.items[i].text = v; }, { key: it.id + ":il" + i, light: true }); }, { max: 200, disabled: disabled }),
@@ -1722,6 +2386,8 @@
         break;
       case "hotspot":
         box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (m.alt) x.alt = m.alt; }); }, disabled));
+        box.appendChild(resolutionField(it, [p.src], disabled));
+        box.appendChild(selectField("Ouvrir l'infobulle", p.trigger === "hover" ? "hover" : "click", [["click", "Au clic"], ["hover", "Au survol (et au clic)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "hover") x.trigger = "hover"; else delete x.trigger; }); }, { disabled: disabled }));
         box.appendChild(textField("Texte de remplacement de l'image", p.alt, set("alt"), { max: 200, disabled: disabled }));
         (p.spots || []).forEach(function (sp, i) {
           box.appendChild(h("div", { class: "pb-repeat-item" },
@@ -1787,6 +2453,7 @@
         box.appendChild(h("div", { class: "pb-grid-2" }, textField("Avant (ex. +)", p.prefix, set("prefix"), { max: 10, disabled: disabled }), textField("Après (ex. %, élèves)", p.suffix, set("suffix"), { max: 16, disabled: disabled })));
         box.appendChild(textField("Ce que mesure ce nombre (et sa source)", p.label, set("label"), { max: 120, disabled: disabled }));
         box.appendChild(selectField("Décimales", String(p.decimals || 0), [["0", "Aucune"], ["1", "1"], ["2", "2"]], function (v) { setProp(it.id, "decimals", Number(v)); }, { disabled: disabled }));
+        box.appendChild(selectField("Séparateur des milliers", p.separator || "space", [["space", "Espace (1 234)"], ["dot", "Point (1.234)"], ["none", "Aucun (1234)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "space") delete x.separator; else x.separator = v; }); }, { disabled: disabled }));
         box.appendChild(selectField("Animation du comptage", String(p.duration === undefined ? 1500 : p.duration), [["0", "Aucune"], ["800", "Rapide"], ["1500", "Normale"], ["3000", "Lente"]], function (v) { setProp(it.id, "duration", Number(v)); }, { disabled: disabled }));
         break;
       case "testimonial":
@@ -1796,7 +2463,9 @@
         box.appendChild(selectField("Note", String(p.rating || 0), [["0", "Pas de note"], ["1", "1 / 5"], ["2", "2 / 5"], ["3", "3 / 5"], ["4", "4 / 5"], ["5", "5 / 5"]], function (v) { setProp(it.id, "rating", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-sub", text: "Photo (facultative)" }));
         box.appendChild(mediaPreview(p.avatar, function (m) { setProp(it.id, "avatar", m.path); }, disabled));
-        if (p.avatar) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { change(function () { delete byId(it.id).props.avatar; }); } }, "Retirer la photo"));
+        if (p.avatar) box.appendChild(selectField("Place de la photo", p.avatarPos || "", [["", "À côté du nom (défaut)"], ["above", "Au-dessus du témoignage"], ["left", "À gauche du témoignage"], ["right", "À droite du témoignage"]], function (v) { change(function () { var x = byId(it.id).props; if (v) x.avatarPos = v; else delete x.avatarPos; }); }, { disabled: disabled }));
+        if (p.avatar) box.appendChild(resolutionField(it, [p.avatar], disabled));
+        if (p.avatar) box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled, onclick: function () { change(function () { var x = byId(it.id).props; delete x.avatar; delete x.size; }); } }, "Retirer la photo"));
         break;
       case "pricing":
         box.appendChild(textField("Nom de l'offre", p.title, set("title"), { max: 80, disabled: disabled }));
@@ -1846,7 +2515,19 @@
         box.appendChild(textField("Contenu (gras, liens…)", p.text, set("text"), { multiline: true, max: 4000, disabled: disabled }));
         box.appendChild(h("div", { class: "pb-grid-2" }, textField("Bouton dans la fenêtre (facultatif)", p.ctaLabel, set("ctaLabel"), { max: 60, disabled: disabled }), textField("Son adresse", p.ctaUrl, set("ctaUrl"), { list: "pb-links", disabled: disabled })));
         box.appendChild(selectField("Taille", p.size || "md", [["sm", "Petite"], ["md", "Moyenne"], ["lg", "Grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
-        box.appendChild(selectField("Position", p.position || "center", [["center", "Fenêtre au centre"], ["left", "Panneau glissant depuis la gauche"], ["right", "Panneau glissant depuis la droite"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Position", p.position || "center", [["center", "Fenêtre au centre"], ["left", "Panneau glissant depuis la gauche"], ["right", "Panneau glissant depuis la droite"], ["corner", "Carte dans le coin bas droit (ne bloque pas la page)"], ["bar", "Barre en bas de l'écran (ne bloque pas la page)"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
+        box.appendChild(h("p", { class: "pb-sub", text: "Ouverture automatique" }));
+        box.appendChild(selectField("Quand ouvrir la fenêtre", p.auto || "", [["", "Seulement au clic sur le bouton"]].concat(SPEC.modalTriggers), function (v) { change(function () { var x = byId(it.id).props; if (!v) { ["auto", "delay", "scrollAt", "clicks", "minViews", "source", "freq", "autoClose", "lock"].forEach(function (k) { delete x[k]; }); } else { x.auto = v; if (!x.freq) x.freq = "session"; } }); }, { disabled: disabled, hint: "Dans l'éditeur, la fenêtre ne s'ouvre jamais toute seule." }));
+        if (p.auto === "load" || p.auto === "idle") box.appendChild(numberField(p.auto === "idle" ? "Inactivité avant ouverture (secondes)" : "Délai avant ouverture (secondes)", p.delay || (p.auto === "idle" ? 20 : 5), { min: 1, max: 600, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "delay", n); }));
+        if (p.auto === "scroll") box.appendChild(numberField("Défilement de la page (%)", p.scrollAt || 50, { min: 5, max: 95, step: 5, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "scrollAt", n); }));
+        if (p.auto === "clicks") box.appendChild(numberField("Nombre de clics sur la page", p.clicks || 3, { min: 1, max: 50, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "clicks", n); }));
+        if (p.auto) {
+          box.appendChild(numberField("Pages vues minimum pendant la visite (vide = aucune règle)", p.minViews || "", { min: 2, max: 20, step: 1, integer: true, disabled: disabled }, function (n) { change(function () { var x = byId(it.id).props; if (!n) delete x.minViews; else x.minViews = n; }); }));
+          box.appendChild(selectField("Provenance du visiteur", p.source || "", [["", "Tous les visiteurs"]].concat(SPEC.modalSources), function (v) { change(function () { var x = byId(it.id).props; if (!v) delete x.source; else x.source = v; }); }, { disabled: disabled }));
+          box.appendChild(selectField("Fréquence", p.freq || "session", [["session", "Une fois par visite"], ["once", "Une seule fois pour ce visiteur"], ["always", "À chaque affichage de la page"]], function (v) { setProp(it.id, "freq", v); }, { disabled: disabled }));
+          box.appendChild(numberField("Fermeture automatique après (secondes, vide = jamais)", p.autoClose || "", { min: 1, max: 600, step: 1, integer: true, disabled: disabled }, function (n) { change(function () { var x = byId(it.id).props; if (!n) delete x.autoClose; else x.autoClose = n; }); }));
+          box.appendChild(checkField("Empêcher la fermeture par Échap ou clic à côté", p.lock, function (v) { setProp(it.id, "lock", v); }, { disabled: disabled, hint: "Le bouton « × » reste disponible." }));
+        }
         box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { var d = frame.contentDocument && frame.contentDocument.getElementById("kw-m-" + it.id); if (d && d.showModal) { d.showModal(); var c = d.querySelector("[data-kw-modal-close]"); if (c) c.onclick = function () { d.close(); }; d.onclick = function (e) { if (e.target === d) d.close(); }; } } }, "Ouvrir la fenêtre dans le canevas"));
         break;
       case "countdown":
@@ -1854,7 +2535,14 @@
         var pad = function (n) { return ("0" + n).slice(-2); };
         var val = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
         box.appendChild(textField("Fin (heure de votre ordinateur)", val, function (v) { var x = new Date(v); if (!isNaN(x)) setProp(it.id, "until", x.toISOString().replace(/\.\d{3}Z$/, "Z")); }, { type: "datetime-local", disabled: disabled, onChange: true }));
-        box.appendChild(textField("Texte affiché à la fin", p.endText, set("endText"), { max: 120, disabled: disabled }));
+        box.appendChild(selectField("Mode", p.mode === "evergreen" ? "evergreen" : "fixed", [["fixed", "Date fixe (la même pour tous)"], ["evergreen", "Minuteur par visiteur (démarre à sa première visite)"]], function (v) { change(function () { var x = byId(it.id); if (v === "evergreen") { x.props.mode = "evergreen"; x.props.minutes = x.props.minutes || 60; } else { delete x.props.mode; delete x.props.minutes; } }); }, { disabled: disabled }));
+        if (p.mode === "evergreen") box.appendChild(numberField("Durée par visiteur (minutes)", p.minutes || 60, { min: 1, max: 14400, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "minutes", n); }, "La date ci-dessus sert seulement de repli sans JavaScript."));
+        box.appendChild(selectField("À la fin", p.expire || "message", [["message", "Afficher le texte"], ["hide", "Masquer le compte à rebours"], ["redirect", "Rediriger vers une page"]], function (v) { change(function () { var x = byId(it.id); if (v === "message") { delete x.props.expire; delete x.props.redirectUrl; } else x.props.expire = v; if (v === "redirect" && !x.props.redirectUrl) x.props.redirectUrl = "/"; if (v !== "redirect") delete x.props.redirectUrl; }); }, { disabled: disabled }));
+        if (p.expire === "redirect") box.appendChild(textField("Adresse de redirection", p.redirectUrl, set("redirectUrl"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue ou https://…" }));
+        else if (p.expire !== "hide") box.appendChild(textField("Texte affiché à la fin", p.endText, set("endText"), { max: 120, disabled: disabled }));
+        [["days", "Jours"], ["hours", "Heures"], ["minutes", "Minutes"], ["seconds", "Secondes"]].forEach(function (u) {
+          box.appendChild(checkField("Afficher : " + u[1], (p.hideUnits || []).indexOf(u[0]) < 0, function (v) { change(function () { var x = byId(it.id); var l = (x.props.hideUnits || []).filter(function (z) { return z !== u[0]; }); if (!v) l.push(u[0]); if (l.length && l.length < 4) x.props.hideUnits = l; else delete x.props.hideUnits; }); }, { disabled: disabled || ((p.hideUnits || []).length >= 3 && (p.hideUnits || []).indexOf(u[0]) < 0) }));
+        });
         break;
       case "course":
         box.appendChild(selectField("Formation", p.courseId, boot.courses.map(function (c) { return [c.id, c.title]; }), function (v) { setProp(it.id, "courseId", Number(v)); }, { disabled: disabled }));
@@ -1940,6 +2628,32 @@
       h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, onclick: function () { openMedia({ title: "Choisir l'image", onPick: onPick }); } }, src ? "Remplacer" : "Choisir"));
   }
 
+  // Résolution d'une image (service commun : tailles réellement disponibles pour les images de la médiathèque).
+  // `srcs` : adresses des images du widget (une seule pour Image, plusieurs pour Galerie / Carrousel). Les tailles proposées
+  // sont fournies par le serveur (plus petites que la plus petite image) ; la valeur « full » = original (rien n'est enregistré).
+  var resCache = {};
+  function resolutionField(it, srcs, disabled, io) {
+    var wrap = h("div", { class: "pb-res", "data-pb-resolution": "" });
+    var list = (srcs || []).filter(function (s) { return s && !/^\{\{/.test(s); });
+    var key = list.join("|");
+    function paint(info) {
+      wrap.textContent = "";
+      var cur = io ? io.get() : ((it.props && it.props.size) || "full");
+      var sizes = (info && info.sizes) || [];
+      var opts = [["full", "Taille originale" + (info && info.width && list.length === 1 ? " (" + info.width + " × " + info.height + " px)" : "")]];
+      sizes.forEach(function (z) { opts.push([z.key, z.label + " (" + z.width + " px)"]); });
+      if (sizes.length && !(io && io.noAuto)) opts.push(["auto", "Adaptative (selon l'écran)"]);
+      if (!opts.some(function (o) { return o[0] === cur; })) opts.push([cur, "Indisponible pour cette image (original affiché)"]);
+      var hint = !info ? "Chargement des tailles…" : !info.available ? "Les versions réduites ne sont pas disponibles sur ce serveur : l'image d'origine est affichée." : !info.complete ? "Disponible pour les images de la médiathèque." : !sizes.length ? "Cette image est déjà petite : seule la taille originale est proposée." : "Une version plus légère charge plus vite. L'image d'origine n'est pas modifiée.";
+      wrap.appendChild(selectField("Résolution de l'image", cur, opts, function (v) { if (io) { io.set(v); return; } change(function () { var x = byId(it.id); if (v === "full") delete x.props.size; else x.props.size = v; }); }, { disabled: disabled || !info || !sizes.length, hint: hint }));
+    }
+    if (!list.length) { paint({ available: true, complete: false, sizes: [] }); return wrap; }
+    if (resCache[key]) { paint(resCache[key]); return wrap; }
+    paint(null);
+    api("GET", "/marketing/site-web/medias/resolutions.json?" + list.map(function (s) { return "src=" + encodeURIComponent(s); }).join("&")).then(function (info) { resCache[key] = info; if (wrap.isConnected) paint(info); }, function () { if (wrap.isConnected) paint({ available: false, complete: false, sizes: [] }); });
+    return wrap;
+  }
+
   // Sections prêtes (bandeau, formulaire…) : champs de contenu
   var F = {
     hero: [["title", "text", "Titre", 150], ["subtitle", "textarea", "Sous-titre", 300], ["image", "image", "Image"], ["imageAlt", "text", "Description de l'image", 200], ["buttonLabel", "text", "Texte du bouton", 60], ["buttonUrl", "link", "Adresse du bouton"]],
@@ -1999,8 +2713,8 @@
   // states : styles de survol / focus / clic proposés. Un nouveau type d'élément ajoute ici son schéma.
   var BOX_LAYOUT = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "gap", "rowGap", "columnGap"];
   var SIZE_W = ["width", "minWidth", "maxWidth"];
-  var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, color: null, background: true, border: null, effects: null };
-  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "backdropBlur"] };
+  var BOX = { layout: BOX_LAYOUT, size: null, spacing: true, typography: null, color: null, background: true, border: null, effects: null }; // la typographie d'un conteneur est héritée par ses enfants
+  var TEXTUAL = { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: ["boxShadow", "opacity", "transitionDuration", "transitionEasing", "backdropBlur", "visibility", "cursor", "mixBlendMode"] };
   // Ordre des groupes selon la nature de l'élément (le premier est ouvert par défaut)
   var TEXT_ORDER = ["typography", "spacing", "size", "layout", "background", "border", "effects"];
   var INSPECTORS = {
@@ -2010,7 +2724,7 @@
     column: { kind: "Colonne", groups: BOX, tabs: "box", states: ["hover", "active"] },
     stack: { kind: "Pile", groups: BOX, tabs: "box", states: ["hover", "active"] },
     group: { kind: "Groupe", groups: BOX, tabs: "box", states: ["hover", "active"] },
-    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null }, tabs: "box", states: ["hover", "active"] },
+    grid: { kind: "Grille", groups: { layout: ["columns", "gridTemplate", "gridRows", "gridRowsTemplate", "gridAutoFlow", "gridAutoRows", "gridAutoColumns", "gap", "rowGap", "columnGap", "justifyItems", "alignItems", "alignContent", "justifyContent"], size: null, spacing: true, color: null, background: true, border: null, effects: null }, tabs: "box", states: ["hover", "active"] },
     heading: { kind: "Titre", groups: TEXTUAL, order: TEXT_ORDER },
     text: { kind: "Texte", groups: TEXTUAL, order: TEXT_ORDER },
     list: { kind: "Liste", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2036,7 +2750,7 @@
     account: { kind: "Compte du visiteur", groups: TEXTUAL, order: TEXT_ORDER, states: true },
     dyntext: { kind: "Texte dynamique", groups: TEXTUAL, order: TEXT_ORDER },
     alert: { kind: "Alerte", groups: TEXTUAL, order: TEXT_ORDER },
-    counter: { kind: "Compteur", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, effects: ["opacity", "transitionDuration"] }, order: ["typography", "spacing", "size", "layout", "effects"] },
+    counter: { kind: "Compteur", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, effects: ["opacity", "transitionDuration", "transitionEasing"] }, order: ["typography", "spacing", "size", "layout", "effects"] },
     testimonial: { kind: "Témoignage", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["typography", "background", "border", "effects", "spacing", "size", "layout"], states: true },
     pricing: { kind: "Offre tarifaire", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["background", "border", "effects", "typography", "spacing", "size", "layout"], states: true },
     breadcrumb: { kind: "Fil d'Ariane", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2078,6 +2792,9 @@
   };
   // Widgets personnalisés : schéma d'inspecteur selon leur nature (texte ou boîte)
   SPEC.types.forEach(function (t) { if (t.schema && !INSPECTORS[t.type]) INSPECTORS[t.type] = t.style === "box" ? { kind: t.label, groups: BOX } : { kind: t.label, groups: TEXTUAL, order: TEXT_ORDER }; });
+  // États : le serveur accepte survol / focus / clic pour tout type ; seules les fiches ne les proposaient pas. Survol pour les éléments de contenu et les widgets personnalisés.
+  ["heading", "text", "list", "quote", "badge", "iconlist", "rating", "counter", "progress", "gallery", "video", "carousel", "social", "sharebuttons", "iconbox", "imagebox", "map", "hotspot"].forEach(function (t) { if (INSPECTORS[t] && !INSPECTORS[t].states) INSPECTORS[t].states = ["hover"]; });
+  SPEC.types.forEach(function (t) { if (t.schema && INSPECTORS[t.type] && !INSPECTORS[t.type].states) INSPECTORS[t.type].states = ["hover"]; });
   function inspectorFor(it) {
     if (!it) return null;
     if (it.type === "layout") return INSPECTORS.section;
@@ -2086,6 +2803,14 @@
     if (it.type === "form") return INSPECTORS.form;
     return Object.assign({}, INSPECTORS.legacy, { kind: LEGACY[it.type] ? LEGACY[it.type].label : INSPECTORS.legacy.kind });
   }
+  // États (survol) : le serveur les accepte et les publie pour TOUT élément ; l'interface les offrait pour 15 types seulement. On les ouvre (survol) aux
+  // autres types qui ont un aspect réglable ; pas aux éléments sans apparence propre (espace, progression de lecture, contenus intégrés, médias lus…).
+  var NO_STATES = ["spacer", "readingprogress", "modal", "tooltip", "embed", "html", "map", "video", "audio", "lottie", "component", "form", "legacy", "section", "sitelogo", "hotspot", "carousel", "gallery"];
+  Object.keys(INSPECTORS).forEach(function (k) {
+    var d = INSPECTORS[k], g = d.groups || {};
+    if (d.states || NO_STATES.indexOf(k) >= 0) return;
+    if (["typography", "color", "background", "border", "effects"].some(function (x) { return g[x] !== undefined; })) d.states = ["hover"];
+  });
   var GROUP_ORDER = ["layout", "spacing", "size", "typography", "color", "background", "media", "border", "effects"];
   var optLabel = function (p, v) { var o = (p.options || []).find(function (x) { return String(x[0]) === String(v); }); return o ? o[1] : v; };
   var lockedAny = function (items) { return !canWrite || items.some(function (x) { return lockedDeep(x.id); }); };
@@ -2093,10 +2818,13 @@
   // ---------- Contrôles de style compacts ----------
   // Une ligne par propriété : libellé | valeur | effacer. Le point devant le libellé signale une valeur propre à l'écran
   // modifié ; les petites icônes d'appareil, les écrans plus petits qui ont leur propre valeur pour cette propriété.
+  // Mots-clés de dimension : valeur sans nombre (comme « auto ») ; liste fermée, la même que celle du serveur
+  var KW = ["auto", "fit-content", "min-content", "max-content"];
+  var isKw = function (u) { return KW.indexOf(u) >= 0; };
   var UNITS = {
-    width: ["px", "%", "rem", "vw", "auto"], height: ["px", "%", "rem", "vh", "auto"], flexBasis: ["px", "%", "rem", "auto"],
-    minWidth: ["px", "%", "rem", "vw"], maxWidth: ["px", "%", "rem", "vw"], minHeight: ["px", "%", "rem", "vh"], maxHeight: ["px", "%", "rem", "vh"],
-    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
+    width: ["px", "%", "rem", "em", "vw", "auto", "fit-content", "min-content", "max-content"], height: ["px", "%", "rem", "em", "vh", "auto", "fit-content", "min-content", "max-content"], outlineWidth: ["px"], outlineOffset: ["px", "rem"], flexBasis: ["px", "%", "rem", "auto"],
+    minWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], maxWidth: ["px", "%", "rem", "em", "vw", "fit-content", "min-content", "max-content"], minHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"], maxHeight: ["px", "%", "rem", "em", "vh", "fit-content", "min-content", "max-content"],
+    gap: ["px", "rem", "em", "%"], rowGap: ["px", "rem", "em", "%"], columnGap: ["px", "rem", "em", "%"], fontSize: ["px", "em", "rem", "vw"], letterSpacing: ["px", "em", "rem"], wordSpacing: ["px", "em", "rem"], scrollMarginTop: ["px", "rem", "em"], textStrokeWidth: ["px", "em"], textIndent: ["px", "em", "rem", "%"], borderWidth: ["px"], borderTopWidth: ["px"], borderRightWidth: ["px"], borderBottomWidth: ["px"], borderLeftWidth: ["px"],
     borderRadius: ["px", "%", "rem"], borderTopLeftRadius: ["px", "%", "rem"], borderTopRightRadius: ["px", "%", "rem"], borderBottomRightRadius: ["px", "%", "rem"], borderBottomLeftRadius: ["px", "%", "rem"],
     top: ["px", "%", "rem"], left: ["px", "%", "rem"], right: ["px", "%", "rem"], bottom: ["px", "%", "rem"],
   };
@@ -2106,11 +2834,11 @@
   function splitLen(v) {
     if (v === undefined || v === null || v === "") return null;
     var s = String(v);
-    if (s === "auto") return { num: "", unit: "auto" };
+    if (isKw(s)) return { num: "", unit: s };
     var m = /^(-?[\d.]+)([a-z%]*)$/.exec(s);
     return m ? { num: m[1], unit: m[2] || "px" } : null;
   }
-  var DEVICE_ICON = { desktop: "monitor", tablet: "tablet", smartphone: "smartphone", mobile: "smartphone" };
+  var DEVICE_ICON = { desktop: "monitor", wide: "monitor", tablet: "tablet", smartphone: "smartphone", mobile: "smartphone" };
   // Flèches ↑ / ↓ : un pas (Maj : 10 pas, Alt : un dixième) ; chaque pas s'applique tout de suite, une seule étape d'annulation
   function arrowStep(input, step, read, write) {
     input.addEventListener("keydown", function (e) {
@@ -2130,6 +2858,11 @@
   // l'historique (annuler / rétablir), l'enregistrement et le rendu. Un clic ▲▼ ou une touche = une étape d'annulation ;
   // un glissement ou un déplacement de curseur = UNE étape (même clé), et le document n'est copié qu'une fois par geste.
   var ncSeq = 0;
+  // Curseurs : part de la piste parcourue (variable CSS --pb-fill, 0–100 %) pour dessiner la partie active ; purement visuel, ne touche ni la valeur ni les bornes
+  function paintRange(r) {
+    var lo = Number(r.min || 0), hi = Number(r.max || 100), v = Number(r.value);
+    r.style.setProperty("--pb-fill", (hi > lo ? Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100)) : 0) + "%");
+  }
   function numericControl(c) {
     var units = c.units && c.units.length ? c.units.slice() : null;
     var min = c.min === undefined ? -Infinity : c.min, max = c.max === undefined ? Infinity : c.max;
@@ -2140,9 +2873,9 @@
     var rnd = function (n) { if (c.integer) return Math.round(n); var f = Math.pow(10, prec); return Math.round(n * f) / f; };
     var clamp = function (n) { return Math.min(max, Math.max(min, n)); };
     var shown = function (n, u) { return c.inlineUnit && u && u !== "px" ? n + u : String(n); };
-    var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || unitState === "auto", autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
+    var input = h("input", { id: c.id, type: "text", inputmode: "decimal", class: "pb-len-num", value: c.value === undefined || c.value === null ? "" : String(c.value), placeholder: c.placeholder === undefined ? "–" : String(c.placeholder), disabled: c.disabled || isKw(unitState), autocomplete: "off", "data-prop": c.prop || null, "aria-label": c.ariaLabel || null, "data-tip": c.tip || null });
     if (c.inputClass) input.className = c.inputClass;
-    if (c.list) input.setAttribute("list", c.list);
+    // Contrat : un champ numérique n'ouvre JAMAIS de liste au focus (ni datalist, ni autocomplétion) ; l'attribut « list » n'est volontairement pas pris en charge ici.
     var sel = null;
     if (units && !c.inlineUnit) {
       if (units.length > 1) { sel = h("select", { class: "pb-len-unit", "aria-label": (c.label || "Valeur") + " : unité", disabled: c.disabled }, units.map(function (u) { return h("option", { value: u, text: u }); })); sel.value = unitState; }
@@ -2169,27 +2902,28 @@
       if (!r) return;
       range.min = String(r[0]); range.max = String(r[1]); range.step = String(stepOf(unitNow()));
       range.value = String(read());
+      paintRange(range);
     };
     var mark = function (on) { var row = input.closest ? input.closest(".pb-prop") : null; if (row) row.classList.toggle("is-set", on); };
     var send = function (n, u, opts) {
       var ok = c.onCommit(n === "" ? "" : String(n), u, opts);
       if (ok === false) return false;
       input.removeAttribute("aria-invalid");
-      mark(n !== "" || u === "auto");
+      mark(n !== "" || isKw(u));
       return true;
     };
     // Saisie validée (Entrée / sortie du champ) : « 32 », « 2rem » (si l'unité existe pour cette propriété), ou vide
     var commit = function (opts) {
       var u = unitNow();
       var raw = input.value.trim().replace(",", ".");
-      if (u === "auto") { input.value = ""; input.placeholder = "auto"; send("", "auto", opts); return true; }
-      if (/^auto$/i.test(raw)) { if (units && units.indexOf("auto") >= 0) { if (sel) sel.value = "auto"; else unitState = "auto"; send("", "auto", opts); return true; } return invalid("« auto » n'est pas possible ici."); }
+      if (isKw(u)) { input.value = ""; input.placeholder = u; send("", u, opts); return true; }
+      var kwTyped = KW.filter(function (k) { return k === raw.toLowerCase(); })[0]; if (kwTyped) { if (units && units.indexOf(kwTyped) >= 0) { if (sel) sel.value = kwTyped; else unitState = kwTyped; send("", kwTyped, opts); return true; } return invalid("« " + kwTyped + " » n'est pas possible ici."); }
       if (raw === "") { if (c.allowEmpty === false) return invalid("une valeur est nécessaire."); send("", u, opts); syncRange(); return true; }
       var m = (units ? /^(-?\d*\.?\d+)\s*(px|%|rem|em|vh|vw)?$/i : /^(-?\d*\.?\d+)$/).exec(raw);
       if (!m) return invalid(units ? "nombre attendu (ex. 24, 50 %, 2rem)." : "nombre attendu.");
       if (m[2]) {
         var tu = m[2].toLowerCase();
-        if (units.indexOf(tu) < 0) return invalid("l'unité « " + tu + " » n'existe pas pour ce réglage (" + units.filter(function (x) { return x !== "auto"; }).join(", ") + ").");
+        if (units.indexOf(tu) < 0) return invalid("l'unité « " + tu + " » n'existe pas pour ce réglage (" + units.filter(function (x) { return !isKw(x); }).join(", ") + ").");
         u = tu; if (sel) sel.value = tu; else unitState = tu;
       }
       var typed = parseFloat(m[1]);
@@ -2197,7 +2931,7 @@
       if (typed < min || typed > max) return invalid(isFinite(min) && isFinite(max) ? "entre " + min + " et " + max + "." : isFinite(max) ? max + " au plus." : min + " au moins.");
       var n = rnd(typed);
       input.value = shown(n, u);
-      if (u === "auto") u = units[0];
+      if (isKw(u)) u = units[0];
       if (send(n, u, opts) === false) return false;
       syncRange();
       return true;
@@ -2206,7 +2940,7 @@
     var bump = function (steps, opts) {
       if (c.disabled) return;
       var u = unitNow();
-      if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; else unitState = u; input.disabled = false; }
+      if (isKw(u)) { u = units.filter(function (x) { return !isKw(x); })[0] || "px"; if (sel) sel.value = u; else unitState = u; input.disabled = false; }
       var n = rnd(clamp(read() + steps * stepOf(u)));
       input.value = shown(n, u);
       input.removeAttribute("aria-invalid");
@@ -2230,8 +2964,8 @@
       bump((e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 10 : e.altKey ? 0.1 : 1), { key: e.repeat ? "step:" + c.id + ":" + burst : null, light: true });
     });
     if (sel) sel.addEventListener("change", function () {
-      input.disabled = Boolean(c.disabled) || sel.value === "auto";
-      if (sel.value === "auto" || input.value.trim() !== "") commit(); else { input.focus(); syncRange(); }
+      input.disabled = Boolean(c.disabled) || isKw(sel.value);
+      if (isKw(sel.value) || input.value.trim() !== "") commit(); else { input.focus(); syncRange(); }
     });
     // ▲▼ : deux vrais boutons compacts (hors de l'ordre de tabulation : le clavier a déjà les flèches)
     var stepBtn = function (dir, glyph, text) {
@@ -2249,7 +2983,8 @@
       range.addEventListener("pointerdown", function () { slide = ++ncSeq; });
       range.addEventListener("keydown", function () { slide = ++ncSeq; });
       range.addEventListener("input", function () {
-        var u = unitNow(); if (u === "auto") { u = units.filter(function (x) { return x !== "auto"; })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
+        var u = unitNow(); if (isKw(u)) { u = units.filter(function (x) { return !isKw(x); })[0] || "px"; if (sel) sel.value = u; input.disabled = false; }
+        paintRange(range);
         var n = rnd(clamp(Number(range.value)));
         input.value = shown(n, u);
         send(n, u, { key: "slide:" + c.id + ":" + (slide || ++ncSeq), light: true });
@@ -2268,7 +3003,7 @@
         var x0 = e.clientX, base = read(), moved = false, key = "drag:" + c.id + ":" + (++ncSeq), pending = null, raf = 0;
         var flush = function () {
           raf = 0; if (pending === null) return;
-          var u = unitNow(); if (u === "auto") u = units.filter(function (x) { return x !== "auto"; })[0] || "px";
+          var u = unitNow(); if (isKw(u)) u = units.filter(function (x) { return !isKw(x); })[0] || "px";
           var n = rnd(clamp(pending)); pending = null;
           input.value = shown(n, u); send(n, u, { key: key, light: true }); syncRange();
         };
@@ -2300,14 +3035,15 @@
   // Libellés courts dans les lignes (le nom complet reste en infobulle et pour les lecteurs d'écran)
   var SHORT = { alignItems: "Aligner", alignSelf: "Alignement", justifySelf: "Justification", justifyItems: "Justifier", alignContent: "Aligner lignes", gridAutoFlow: "Remplissage", flexWrap: "Retour ligne", justifyContent: "Justifier", gap: "Écart", rowGap: "Écart lignes", columnGap: "Écart colonnes", flexDirection: "Direction", display: "Affichage",
     minWidth: "Largeur min.", maxWidth: "Largeur max.", minHeight: "Hauteur min.", maxHeight: "Hauteur max.", flexGrow: "Proportion", columns: "Colonnes",
-    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", wordSpacing: "Esp. des mots", textIndent: "Retrait", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
+    fontFamily: "Police", fontWeight: "Graisse", fontSize: "Taille", lineHeight: "Interligne", letterSpacing: "Interlettrage", wordSpacing: "Esp. des mots", columnCount: "Colonnes", textStrokeWidth: "Contour", textStrokeColor: "Couleur du contour", direction: "Sens", scrollMarginTop: "Décalage d'ancre", backgroundClip: "Découpe du fond", textIndent: "Retrait", textTransform: "Casse", textAlign: "Alignement", textDecoration: "Décoration", fontStyle: "Style",
     zIndex: "Plan", boxShadow: "Ombre (préréglage)", gridTemplate: "Largeurs", gridRows: "Lignes", gridColumnSpan: "Colonnes occupées", gridRowSpan: "Lignes occupées", textShadow: "Ombre du texte", transitionDuration: "Transition (ms)", backdropBlur: "Flou arrière (px)", transformOrigin: "Origine", right: "Décalage droite", bottom: "Décalage bas", opacity: "Opacité", overflow: "Débordement", objectFit: "Cadrage", objectPosition: "Point focal", aspectRatio: "Proportions", top: "Décalage haut", left: "Décalage gauche" };
   function propRow(items, key, control, label, id, extra) {
     label = label || SHORT[key];
     var it = items[0];
     var own = ownValue(it, key);
     var dis = lockedAny(items);
-    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && it.styles && it.styles[b] && it.styles[b][key] !== undefined; }) : [];
+    var oh = holderOf(it, false);
+    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && oh && oh.styles && oh.styles[b] && oh.styles[b][key] !== undefined; }) : [];
     var marks = others.length ? h("span", { class: "pb-prop-bps" }, others.map(function (b) {
       return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
     })) : null;
@@ -2315,7 +3051,7 @@
     var lab = h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label);
     if (control && control.scrub) control.scrub(lab);
     return h("div", { class: "pb-field pb-style-field pb-prop" + (own !== undefined ? " is-set" : ""), "data-prop": key },
-      h("div", { class: "pb-prop-head" }, lab, marks),
+      h("div", { class: "pb-prop-head" }, lab, marks, items.length === 1 ? styleRestore(it, key) : null),
       control, extra || null, reset);
   }
   // ---------- Contrôles iconographiques : un bouton = une vraie valeur du modèle ----------
@@ -2341,6 +3077,7 @@
     overflow: { values: [["visible", "Débordement visible", "T:Visible"], ["hidden", "Débordement masqué", "T:Masqué"], ["auto", "Défilement si nécessaire", "T:Défiler"]] },
   };
   // Axe physique (h / v) réglé par une propriété d'alignement, d'après le rendu réel du canevas (sens du conteneur)
+  var axisReal = {};
   function physicalAxis(it, key) {
     var spec = ICON_ENUMS[key];
     if (!spec || !spec.axis) return null;
@@ -2351,9 +3088,16 @@
     // Valeur du modèle (écran affiché, héritage compris) d'abord : juste même avant que le canevas soit redessiné ;
     // sinon le rendu réel (valeur par défaut de chaque conteneur)
     var disp = valueOf(target, "display"), dir = valueOf(target, "flexDirection");
-    var el = canvasEl(target.id), cs = el && frame.contentWindow ? frame.contentWindow.getComputedStyle(el) : null;
-    if (!disp && cs) disp = cs.display;
-    if (!dir && cs) dir = cs.flexDirection;
+    if (!disp || !dir) {
+      // Style réel du canevas lu UNE fois par élément et par reconstruction de l'inspecteur (chaque lecture force un calcul de style)
+      var real = axisReal[target.id];
+      if (!real) {
+        var el = canvasEl(target.id), cs = el && frame.contentWindow ? frame.contentWindow.getComputedStyle(el) : null;
+        real = axisReal[target.id] = cs ? { display: cs.display, flexDirection: cs.flexDirection } : {};
+      }
+      if (!disp) disp = real.display;
+      if (!dir) dir = real.flexDirection;
+    }
     var col = !/grid/.test(disp || "") && /column/.test(dir || "");
     return spec.axis === "main" ? (col ? "v" : "h") : (col ? "h" : "v");
   }
@@ -2462,6 +3206,16 @@
       else if (SP[k]) inner.appendChild(styleControl(items, k));
     });
   }
+  // Graisses : avec une police de la bibliothèque, seules les graisses réellement fournies par la famille sont proposées
+  // (la valeur déjà enregistrée reste affichée, jamais effacée)
+  function availableOptions(items, key, p) {
+    if (key !== "fontWeight" || !window.KFonts) return p.options;
+    var fam = ownValue(items[0], "fontFamily"); if (fam === undefined) fam = inheritedValue(items[0], "fontFamily");
+    var w = /^font\./.test(String(fam || "")) ? window.KFonts.weightsFor(fam) : null;
+    if (!w) return p.options;
+    var own = ownValue(items[0], key);
+    return p.options.filter(function (o) { var n = Number(o[0]); return String(o[0]) === String(own) || (w.variable ? n >= w.weights[0] && n <= w.weights[w.weights.length - 1] : w.weights.indexOf(n) >= 0); });
+  }
   function styleControl(items, key, label, extra) {
     var p = SP[key];
     var it = items[0];
@@ -2473,8 +3227,14 @@
     var control;
     var seg = p.kind === "enum" && ICON_ENUMS[key] ? iconSeg(items, key) : null;
     if (seg) control = seg;
+    else if (key === "fontFamily" && window.KFonts) {
+      // Police : bibliothèque centrale (Font Manager), les cinq réglages du site restent proposés en tête
+      control = window.KFonts.picker({ value: mixed || own === undefined ? "" : String(own), legacy: p.options.map(function (o) { return [o[0], o[1]]; }), emptyLabel: inh !== undefined ? "Hérité : " + (/^font\./.test(inh) ? String(inh).replace(/^font\./, "").replace(/-/g, " ") : optLabel(p, inh)) : "Par défaut", disabled: dis, label: "Police",
+        onChange: function (v) { setStyle(idsOf(items), key, v); } });
+      control.id = id;
+    }
     else if (p.kind === "enum") {
-      control = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [h("option", { value: "", text: inh !== undefined ? "Hérité : " + optLabel(p, inh) : "Par défaut" })].concat(p.options.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+      control = h("select", { id: id, class: "pb-prop-select", disabled: dis }, [h("option", { value: "", text: inh !== undefined ? "Hérité : " + optLabel(p, inh) : "Par défaut" })].concat(availableOptions(items, key, p).map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
       control.value = mixed || own === undefined ? "" : String(own);
       control.addEventListener("change", function () { setStyle(idsOf(items), key, control.value); });
     } else if (p.kind === "color") control = colorButton(id, mixed ? undefined : own, inh, dis, function (v, opts) { setStyle(idsOf(items), key, v, opts); }, key);
@@ -2502,6 +3262,10 @@
     wordSpacing: { min: -100, max: 100, step: function (u) { return u === "px" ? 0.1 : 0.01; }, precision: 2 },
     textIndent: { min: -999, max: 999 },
     borderRadius: { slider: rangeBy({ px: [0, 100], "%": [0, 50], rem: [0, 6] }) },
+    // Écarts : curseur de confort (la saisie accepte toujours jusqu'à 9999 ; une valeur enregistrée hors plage n'est jamais ramenée dans la plage)
+    gap: { slider: rangeBy({ px: [0, 100], rem: [0, 6], em: [0, 6], "%": [0, 20] }) },
+    rowGap: { slider: rangeBy({ px: [0, 100], rem: [0, 6], em: [0, 6], "%": [0, 20] }) },
+    columnGap: { slider: rangeBy({ px: [0, 100], rem: [0, 6], em: [0, 6], "%": [0, 20] }) },
   };
   // Nombres sans unité : [min, max, pas] + précision, entier, curseur, valeur de départ
   var NUMCFG = {
@@ -2510,11 +3274,11 @@
     zIndex: { integer: true },
     backdropBlur: { integer: true, staticUnit: "px" },
     transitionDuration: { integer: true, staticUnit: "ms" },
-    columns: { integer: true }, flexGrow: { precision: 1 }, flexShrink: { precision: 1 }, order: { integer: true },
+    columns: { integer: true }, columnCount: { integer: true }, lineClamp: { integer: true }, flexGrow: { precision: 1 }, flexShrink: { precision: 1 }, order: { integer: true },
     gridRows: { integer: true }, gridColumnSpan: { integer: true }, gridRowSpan: { integer: true },
     gridColumnStart: { integer: true }, gridColumnEnd: { integer: true }, gridRowStart: { integer: true }, gridRowEnd: { integer: true },
   };
-  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.01], lineHeight: [0.8, 3, 0.1], zIndex: [-100, 9999, 1], columns: [1, 12, 1], flexGrow: [0, 20, 0.1], flexShrink: [0, 20, 0.1], order: [-20, 20, 1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], gridColumnStart: [1, 13, 1], gridColumnEnd: [1, 13, 1], gridRowStart: [1, 13, 1], gridRowEnd: [1, 13, 1], transitionDuration: [0, 2000, 50] };
+  var NUM = { backdropBlur: [1, 40, 1], opacity: [0, 1, 0.01], lineHeight: [0.8, 3, 0.1], zIndex: [-100, 9999, 1], columns: [1, 12, 1], columnCount: [1, 6, 1], lineClamp: [1, 10, 1], flexGrow: [0, 20, 0.1], flexShrink: [0, 20, 0.1], order: [-20, 20, 1], gridRows: [1, 12, 1], gridColumnSpan: [1, 12, 1], gridRowSpan: [1, 6, 1], gridColumnStart: [1, 13, 1], gridColumnEnd: [1, 13, 1], gridRowStart: [1, 13, 1], gridRowEnd: [1, 13, 1], transitionDuration: [0, 2000, 50] };
   // Nombre sans unité d'une propriété de style (opacité, interligne, plan…)
   function numberControl(items, key, id, own, inh, dis) {
     var lim = NUM[key] || [-9999, 9999, 1], cfg = NUMCFG[key] || {};
@@ -2523,13 +3287,38 @@
     }));
   }
   // Longueurs : valeur + unité (seules les unités utiles à la propriété) ; « 2rem » tapé directement est compris ; changer l'unité change le CSS
+  // Valeurs globales du site (espacements, rayons, tailles de texte) : un élément peut les RÉFÉRENCER (« token:space-md ») au lieu de copier un nombre ;
+  // changer le jeton dans les réglages du site met alors à jour tous les éléments qui le référencent.
+  var LEN_FAMILY = { gap: "space", rowGap: "space", columnGap: "space", marginTop: "space", marginRight: "space", marginBottom: "space", marginLeft: "space", paddingTop: "space", paddingRight: "space", paddingBottom: "space", paddingLeft: "space", borderRadius: "radius", fontSize: "type" };
+  var LEN_LABEL = { "space-xs": "Espacement XS", "space-sm": "Espacement S", "space-md": "Espacement M", "space-lg": "Espacement L", "space-xl": "Espacement XL", "space-xxl": "Espacement XXL",
+    "radius-sm": "Rayon S", "radius-md": "Rayon M", "radius-lg": "Rayon L", "radius-button": "Rayon des boutons", "radius-field": "Rayon des champs", "radius-card": "Rayon des cartes",
+    "h1-size": "Taille H1", "h2-size": "Taille H2", "h3-size": "Taille H3", "h4-size": "Taille H4", "h5-size": "Taille H5", "h6-size": "Taille H6", "body-size": "Taille du texte", "caption-size": "Taille de légende", "button-size": "Taille des boutons" };
+  var lenTokenLabel = function (t) { return LEN_LABEL[t] || t; };
   function lengthControl(items, key, id, own, inh, dis) {
+    var fam = LEN_FAMILY[key], list = fam && SPEC.lengthTokens && SPEC.lengthTokens[fam];
+    var numeric = lengthControlPlain(items, key, id, own, inh, dis);
+    if (!list || !list.length) return numeric;
+    var isTok = typeof own === "string" && own.indexOf("token:") === 0;
+    var pick = function (btn) {
+      var r = btn.getBoundingClientRect();
+      var entries = [{ heading: "Valeurs du site" }].concat(list.map(function (t) { return [(("token:" + t.key) === own ? "● " : "") + lenTokenLabel(t.key), function () { setStyle(idsOf(items), key, "token:" + t.key); }, dis, "défaut " + t.value.replace("px", " px")]; }));
+      entries.push([isTok ? "Revenir à une valeur propre" : "Valeur propre (nombre)", function () { if (isTok) setStyle(idsOf(items), key, ""); }, dis || !isTok]);
+      showMenuEntries(entries, r.left, r.bottom + 4, { wide: true });
+    };
+    var btn = h("button", { type: "button", class: "pb-tokbtn" + (isTok ? " is-on" : ""), disabled: dis, "aria-haspopup": "menu", "aria-label": "Valeur du site pour « " + SP[key].label + " »", "data-tip": isTok ? "Lié au site : " + lenTokenLabel(own.slice(6)) + " (cliquer pour changer)" : "Utiliser une valeur du site (suit les réglages du site)", onclick: function () { pick(btn); } }, icon("link"));
+    if (isTok) return h("div", { class: "pb-lenwrap is-token" }, h("span", { class: "pb-tokchip", text: "Site : " + lenTokenLabel(own.slice(6)) }), btn);
+    var wrapNum = h("div", { class: "pb-lenwrap" }, numeric, btn);
+    wrapNum.scrub = numeric.scrub; // le glissement sur le libellé vient du champ numérique : l'enveloppe « valeur du site » doit le transmettre
+    wrapNum.input = numeric.input;
+    return wrapNum;
+  }
+  function lengthControlPlain(items, key, id, own, inh, dis) {
     var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh), cfg = LENCFG[key] || {};
     var unit = cur ? cur.unit : base ? base.unit : units[0];
     return numericControl(Object.assign({ id: id, label: SP[key].label, units: units, unit: unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, drag: true, disabled: dis,
-      value: cur && cur.unit !== "auto" ? cur.num : "", placeholder: base ? (base.unit === "auto" ? "auto" : base.num) : cur && cur.unit === "auto" ? "auto" : "–" }, cfg, {
+      value: cur && !isKw(cur.unit) ? cur.num : "", placeholder: base ? (isKw(base.unit) ? base.unit : base.num) : cur && isKw(cur.unit) ? cur.unit : "–" }, cfg, {
       onCommit: function (raw, u, opts) {
-        var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
+        var v = isKw(u) ? u : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
         if (parseLength(v, key) === null) { toast(SP[key].label + " : valeur invalide.", true); return false; }
         setStyle(idsOf(items), key, v, opts);
       },
@@ -2618,7 +3407,8 @@
     var sw = btn.querySelector(".pb-swatch"), label = btn.querySelector(".pb-color-text");
     var hexIn = h("input", { type: "text", class: "pb-cpop-hex", value: cur ? cur.toUpperCase() : "", placeholder: "#RRGGBB, rgb(…), hsl(…)", "aria-label": "Code couleur (HEX, RGB ou HSL)", autocomplete: "off", spellcheck: "false" });
     var native = h("input", { type: "color", value: state.hex, "aria-label": "Nuancier", class: "pb-cpop-native" });
-    var alpha = h("input", { type: "range", min: "0", max: "100", step: "1", value: String(Math.round(state.alpha * 100)), "aria-label": "Opacité de la couleur (en %)" });
+    var alpha = h("input", { type: "range", min: "0", max: "100", step: "1", value: String(Math.round(state.alpha * 100)), "aria-label": "Opacité de la couleur (en %)", class: "pb-cpop-range" });
+    paintRange(alpha);
     var alphaOut = h("output", { class: "pb-cpop-alpha", text: Math.round(state.alpha * 100) + " %" });
     var info = h("p", { class: "pb-cpop-info", "aria-live": "polite" });
     var show = function (v) {
@@ -2632,12 +3422,12 @@
     var set = function (v) { cpopDirty = true; show(v); onSet(v, { key: hk, light: true }); };
     var applyHex = function () { var v = state.hex + (state.alpha < 0.999 ? hex2(state.alpha * 255) : ""); hexIn.value = v.toUpperCase(); hexIn.removeAttribute("aria-invalid"); set(v); };
     native.addEventListener("input", function () { state.hex = native.value; applyHex(); });
-    alpha.addEventListener("input", function () { state.alpha = Number(alpha.value) / 100; alphaOut.textContent = alpha.value + " %"; applyHex(); });
+    alpha.addEventListener("input", function () { state.alpha = Number(alpha.value) / 100; alphaOut.textContent = alpha.value + " %"; paintRange(alpha); applyHex(); });
     hexIn.addEventListener("change", function () {
       var c = parseColor(hexIn.value);
       if (!c) { hexIn.setAttribute("aria-invalid", "true"); toast("Couleur : #RRGGBB, rgb(r, g, b) ou hsl(t, s %, l %) attendu.", true); return; }
       state.hex = c.slice(0, 7); state.alpha = c.length === 9 ? parseInt(c.slice(7), 16) / 255 : 1;
-      native.value = state.hex; alpha.value = String(Math.round(state.alpha * 100)); alphaOut.textContent = alpha.value + " %";
+      native.value = state.hex; alpha.value = String(Math.round(state.alpha * 100)); paintRange(alpha); alphaOut.textContent = alpha.value + " %";
       applyHex();
     });
     hexIn.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); hexIn.dispatchEvent(new Event("change")); } });
@@ -2683,9 +3473,10 @@
       var own = ownValue(it, key), inh = inheritedValue(it, key);
       var name = (kind === "margin" ? "Marge " : "Intérieur ") + SIDE_LABEL[side];
       var cls = "is-" + kind[0] + side[0].toLowerCase();
+      var isTok = typeof own === "string" && own.indexOf("token:") === 0;
       var u0 = (splitLen(own) || splitLen(inh) || { unit: spUnit[kind] }).unit;
       return numericControl({ prop: key, label: name, inlineUnit: true, hideSteps: false, units: unitsOf(key), unit: u0 === "auto" ? spUnit[kind] : u0, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, disabled: dis,
-        value: showLen(own), placeholder: inh !== undefined ? showLen(inh) : "0", list: "pb-scale", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : ""), cellClass: cls,
+        value: isTok ? "" : showLen(own), placeholder: isTok ? lenTokenLabel(own.slice(6)).replace("Espacement ", "") : inh !== undefined ? showLen(inh) : "0", inputClass: "pb-box-input " + cls + (own !== undefined ? " is-set" : "") + (isTok ? " is-token" : ""), cellClass: cls,
         ariaLabel: name + (linkState[kind] ? " (4 côtés liés)" : ""), tip: name + (inh !== undefined && own === undefined ? " · hérité : " + inh : ""),
         onCommit: function (raw, u, opts) {
           var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
@@ -2699,19 +3490,20 @@
     // Unité commune des 4 côtés : elle s'applique aux valeurs déjà saisies (le CSS change vraiment) et sert aux prochaines saisies
     var unitSel = function (kind, label) {
       var first = SIDES.map(function (sd) { return splitLen(ownValue(it, kind + sd)); }).filter(function (p) { return p && p.unit !== "auto"; })[0];
-      var sel = h("select", { class: "pb-len-unit pb-link-unit", "aria-label": label + " : unité des 4 côtés", "data-tip": label + " : unité des 4 côtés", disabled: dis }, ["px", "%", "rem", "em"].map(function (u) { return h("option", { value: u, text: u }); }));
+      var sel = h("select", { class: "pb-len-unit pb-link-unit", "aria-label": label + " : unité des 4 côtés", "data-tip": label + " : unité des 4 côtés (les nombres sont conservés, sans conversion)", disabled: dis }, ["px", "%", "rem", "em"].map(function (u) { return h("option", { value: u, text: u }); }));
+      sel.classList.add("pb-sp-unit");
       sel.value = first ? first.unit : spUnit[kind];
       sel.addEventListener("change", function () {
         spUnit[kind] = sel.value;
         var map = {};
         SIDES.forEach(function (sd) { var p = splitLen(ownValue(it, kind + sd)); if (p && p.unit !== "auto" && p.num !== "") map[kind + sd] = Number(p.num) === 0 ? "0" : p.num + sel.value; });
-        if (Object.keys(map).length) setStyles(ids, map); else renderInspector();
+        if (Object.keys(map).length) { setStyles(ids, map); toast(label + " : unité " + sel.value + " — les nombres sont conservés (pas de conversion)."); } else renderInspector();
       });
       return sel;
     };
     var linkBtn = function (kind, label) {
       var on = Boolean(linkState[kind]);
-      return h("button", { type: "button", class: "pb-link-btn", "aria-pressed": String(on), "data-link": kind, "aria-label": (on ? "Délier les côtés : " : "Lier les 4 côtés : ") + label, "data-tip": on ? label + " : 4 côtés liés (une valeur pour tous)" : label + " : côtés indépendants — cliquer pour les lier", disabled: dis,
+      return h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(on), "data-link": kind, "aria-label": (on ? "Délier les côtés : " : "Lier les 4 côtés : ") + label, "data-tip": on ? label + " : 4 côtés liés (une valeur pour tous)" : label + " : côtés indépendants — cliquer pour les lier", disabled: dis,
         onclick: function () {
           linkState[kind] = !on; store.set("spacing-link", linkState);
           if (!on) {
@@ -2725,16 +3517,36 @@
             }
           }
           renderInspector();
-        } }, icon("link"), h("span", { text: label }));
+        } }, icon("link"));
     };
-    return h("div", { class: "pb-spacing" },
-      h("div", { class: "pb-spacing-head" }, linkBtn("margin", "Marge"), unitSel("margin", "Marge"), linkBtn("padding", "Intérieur"), unitSel("padding", "Intérieur")),
-      h("div", { class: "pb-boxmodel" },
-        h("span", { class: "pb-box-label", text: "Marge", "aria-hidden": "true" }),
-        h("div", { class: "pb-box-pad", "aria-hidden": "true" }, h("span", { class: "pb-box-label", text: "Intérieur" })),
-        cell("margin", "Top"), cell("margin", "Right"), cell("margin", "Bottom"), cell("margin", "Left"),
-        cell("padding", "Top"), cell("padding", "Right"), cell("padding", "Bottom"), cell("padding", "Left"),
-        h("span", { class: "pb-box-core", "aria-hidden": "true" })));
+    // Valeur du site (espacement XS … XXL) pour les 4 côtés d'une boîte : une RÉFÉRENCE (« token:space-md »), pas une copie du nombre
+    var tokBtn = function (kind, label) {
+      var list = SPEC.lengthTokens && SPEC.lengthTokens.space;
+      if (!list || !list.length) return null;
+      var allTok = SIDES.every(function (sd) { var v = ownValue(it, kind + sd); return typeof v === "string" && v.indexOf("token:") === 0; });
+      var btn = h("button", { type: "button", class: "pb-tokbtn" + (allTok ? " is-on" : ""), disabled: dis, "aria-haspopup": "menu", "aria-label": label + " : valeur du site (4 côtés)", "data-tip": label + " : utiliser une valeur du site (suit les réglages du site)",
+        onclick: function () {
+          var r = btn.getBoundingClientRect();
+          var entries = [{ heading: label + " : valeurs du site" }].concat(list.map(function (t) { return [lenTokenLabel(t.key), function () { var map = {}; SIDES.forEach(function (sd) { map[kind + sd] = "token:" + t.key; }); setStyles(ids, map); }, dis, "défaut " + t.value.replace("px", " px")]; }));
+          entries.push(["Revenir à des valeurs propres", function () { var map = {}; SIDES.forEach(function (sd) { var v = ownValue(it, kind + sd); if (typeof v === "string" && v.indexOf("token:") === 0) map[kind + sd] = ""; }); if (Object.keys(map).length) setStyles(ids, map); }, dis || !SIDES.some(function (sd) { var v = ownValue(it, kind + sd); return typeof v === "string" && v.indexOf("token:") === 0; })]);
+          showMenuEntries(entries, r.left, r.bottom + 4, { wide: true });
+        } }, icon("palette"));
+      return btn;
+    };
+    // Présentation : deux blocs « Marge externe » / « Marge interne » (titre, valeur du site, liaison), grille 2 × 2 Haut / Droite / Bas / Gauche ;
+    // chaque champ porte l'icône de son côté et l'unité du groupe (vrai sélecteur, le même pour les 4 côtés). Mêmes données, même liaison que partout.
+    var ORDER = ["Top", "Right", "Bottom", "Left"], SIDE_NAME = { Top: "Haut", Right: "Droite", Bottom: "Bas", Left: "Gauche" };
+    var group = function (kind, title, label) {
+      var fields = ORDER.map(function (sd) {
+        return h("div", { class: "pb-sp-field" },
+          h("span", { class: "pb-sp-side", text: SIDE_NAME[sd] }),
+          h("div", { class: "pb-sp-box" }, h("span", { class: "pb-sp-edge is-" + sd.toLowerCase(), "aria-hidden": "true" }), cell(kind, sd), unitSel(kind, label)));
+      });
+      return h("div", { class: "pb-sp-group", "data-kind": kind },
+        h("div", { class: "pb-sp-head" }, h("span", { class: "pb-sp-title", text: title }), tokBtn(kind, label), linkBtn(kind, label)),
+        h("div", { class: "pb-sp-grid" }, fields));
+    };
+    return h("div", { class: "pb-spacing" }, group("margin", "Marge externe", "Marge"), group("padding", "Marge interne", "Intérieur"));
   }
 
   // ---------- Bordure : style d'abord ; épaisseur et couleur seulement s'il y a une bordure ; arrondi liable ----------
@@ -2771,6 +3583,14 @@
         SIDE_WIDTHS.forEach(function (k) { inner.appendChild(styleControl(items, k[0], k[1])); });
       }
       inner.appendChild(styleControl(items, "borderColor", "Couleur"));
+    }
+    // Contour (hors de la bordure : ne change pas la taille ; utile au focus et aux repères) : les réglages détaillés n'apparaissent qu'une fois un style choisi
+    inner.appendChild(styleControl(items, "outlineStyle", "Contour : style"));
+    var ostyle = valueOf(it, "outlineStyle");
+    if ((ostyle && ostyle !== "none") || ownValue(it, "outlineWidth") !== undefined || ownValue(it, "outlineColor") !== undefined || ownValue(it, "outlineOffset") !== undefined) {
+      inner.appendChild(styleControl(items, "outlineWidth", "Contour : épaisseur"));
+      inner.appendChild(styleControl(items, "outlineColor", "Contour : couleur"));
+      inner.appendChild(styleControl(items, "outlineOffset", "Contour : décalage"));
     }
     var split = radiusSplit[it.id] || CORNER_KEYS.some(function (c) { return valueOf(it, c[0]) !== undefined; });
     var link = h("button", { type: "button", class: "pb-link-btn is-icon", "aria-pressed": String(!split), "data-link": "radius", "aria-label": split ? "Lier les 4 coins (un seul arrondi)" : "Délier : un arrondi par coin", "data-tip": split ? "Coins indépendants — cliquer pour un seul arrondi" : "4 coins liés — cliquer pour régler chaque coin", disabled: dis,
@@ -2815,6 +3635,7 @@
         bg ? h("img", { src: bg.src, alt: "" }) : h("span", { class: "pb-img-empty", "aria-hidden": "true" }), h("span", { class: "pb-color-text", text: bg ? bg.src.split("/").pop() : "Choisir une image" }));
       var rm = bg ? h("button", { type: "button", class: "pb-reset", "data-tip": "Retirer l'image de fond", "aria-label": "Retirer l'image de fond", disabled: dis, onclick: function () { setStyle(ids, "backgroundImage", ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
       inner.appendChild(h("div", { class: "pb-field pb-style-field pb-prop" + (bg ? " is-set" : ""), "data-prop": "backgroundImage" }, h("div", { class: "pb-prop-head" }, h("label", { for: pid, class: "pb-prop-label" }, "Image")), pick, rm));
+      if (bg && bg.src) inner.appendChild(resolutionField(it, [bg.src], dis, { noAuto: true, get: function () { return bg.size || "full"; }, set: function (v) { setStyle(ids, "backgroundImage", v === "full" ? { src: bg.src } : { src: bg.src, size: v }); } }));
       if (bg || valueOf(it, "backgroundImage")) {
         inner.appendChild(styleControl(items, "backgroundSize", "Taille"));
         inner.appendChild(styleControl(items, "backgroundPosition", "Position"));
@@ -2832,16 +3653,72 @@
     }
     if (type === "gradient" || has("gradient")) {
       var g = valueOf(it, "gradient");
-      var gset = function (part) { return function (v, opts) { if (!v) return; var cur = Object.assign({ from: "#0277b6", to: "#102a3a", angle: 180 }, valueOf(byId(it.id), "gradient") || {}); cur[part] = v; setStyle(ids, "gradient", cur, opts); }; };
+      var gset = function (part) { return function (v, opts) { if (v === "" || v === null || v === undefined) return; var cur = Object.assign({ from: "#0277b6", to: "#102a3a", angle: 180 }, valueOf(byId(it.id), "gradient") || {}); cur[part] = v; Object.keys(cur).forEach(function (k) { if (cur[k] === "" ) delete cur[k]; }); setStyle(ids, "gradient", cur, opts); }; };
       var row = function (label, control, cid) { return h("div", { class: "pb-field pb-style-field pb-prop" }, h("div", { class: "pb-prop-head" }, h("label", { for: cid, class: "pb-prop-label" }, label)), control, h("span", { class: "pb-reset-slot", "aria-hidden": "true" })); };
       var f1 = fid(), f2 = fid(), f3 = fid();
       inner.appendChild(row("Départ", colorButton(f1, g && g.from, undefined, dis, gset("from"), "gradient-from", { noClear: true }), f1));
       inner.appendChild(row("Arrivée", colorButton(f2, g && g.to, undefined, dis, gset("to"), "gradient-to", { noClear: true }), f2));
+      inner.appendChild(selectField("Type de dégradé", g && g.type === "radial" ? "radial" : "linear", [["linear", "Linéaire (angle)"], ["radial", "Radial (du centre)"]], function (v) { gset("type")(v === "radial" ? "radial" : "linear"); }, { disabled: dis }));
+      inner.appendChild(h("div", { class: "pb-grid-2" },
+        numberField("Position départ (%)", g && g.fromAt !== undefined ? g.fromAt : 0, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; gset("fromAt")(n); }),
+        numberField("Position arrivée (%)", g && g.toAt !== undefined ? g.toAt : 100, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; gset("toAt")(n); })));
+      // Couleurs intermédiaires (jusqu'à 3), chacune avec sa position en %
+      ((g && g.extra) || []).forEach(function (e, i) {
+        var cid = fid();
+        var setEx = function (patch) { var cur = Object.assign({ from: "#0277b6", to: "#102a3a", angle: 180 }, valueOf(byId(it.id), "gradient") || {}); var ex = (cur.extra || []).slice(); ex[i] = Object.assign({}, ex[i], patch); cur.extra = ex; setStyle(ids, "gradient", cur); };
+        inner.appendChild(h("div", { class: "pb-grid-2" },
+          row("Couleur " + (i + 2), colorButton(cid, e.color, undefined, dis, function (v) { if (v) setEx({ color: v }); }, "gradient-x" + i, { noClear: true }), cid),
+          numberField("Position (%)", e.at, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setEx({ at: n }); })));
+        inner.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { var cur = Object.assign({}, valueOf(byId(it.id), "gradient")); cur.extra = (cur.extra || []).filter(function (z, k) { return k !== i; }); if (!cur.extra.length) delete cur.extra; setStyle(ids, "gradient", cur); } }, "Retirer cette couleur"));
+      });
+      inner.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: dis || ((g && g.extra) || []).length >= 3 || !g, onclick: function () { var cur = Object.assign({ from: "#0277b6", to: "#102a3a", angle: 180 }, valueOf(byId(it.id), "gradient") || {}); cur.extra = (cur.extra || []).concat([{ color: "#ffffff", at: 50 }]); setStyle(ids, "gradient", cur); } }, "Ajouter une couleur au dégradé"));
       var angRow = numField("Angle", { min: 0, max: 360, step: 1, integer: true, staticUnit: "°", value: g ? g.angle : 180, placeholder: 180, base: 180, slider: [0, 360], drag: true, disabled: dis, prop: "gradient-angle",
         onCommit: function (raw, u, opts) { if (raw === "") return false; gset("angle")(Number(raw), opts); } }, false);
       inner.appendChild(angRow);
       if (has("gradient")) inner.appendChild(h("div", { class: "pb-prop-sub" }, h("span"), h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { if (bgChoice[it.id] === "gradient") delete bgChoice[it.id]; setStyle(ids, "gradient", ""); } }, "Retirer le dégradé")));
     }
+    // Découpe du fond : jusqu'à la bordure, au remplissage, au contenu, ou dans les lettres du texte (dégradé / image visibles à travers le texte)
+    if (type === "image" || type === "gradient" || has("backgroundImage") || has("gradient") || has("backgroundClip")) inner.appendChild(styleControl(items, "backgroundClip", "Découpe du fond"));
+  }
+  // Séparateur de forme (conteneurs) : une forme en haut et / ou en bas (forme, hauteur, couleur, retournement, au premier plan)
+  function shapeDividerControls(it, dis) {
+    var out = [];
+    // Diaporama en arrière-plan : images de la médiathèque en fondu, temps par image, effet Ken Burns
+    var bs = it.bgSlides || { images: [] };
+    var setBs = function (fn) { nextLabel = "Diaporama de fond"; change(function () { var x = byId(it.id); var cur = Object.assign({ images: [] }, x.bgSlides); fn(cur); if (cur.images.length) x.bgSlides = cur; else delete x.bgSlides; }); };
+    out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Diaporama en arrière-plan" })));
+    bs.images.forEach(function (src, i) {
+      out.push(h("div", { class: "pb-repeat-item" }, h("img", { src: src, alt: "", class: "pb-thumb" }), h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setBs(function (c) { c.images.splice(i, 1); }); } }, "Retirer")));
+    });
+    out.push(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: dis || bs.images.length >= 8, onclick: function () { openMedia({ title: "Images du diaporama de fond", multiple: true, onPick: function (list) { setBs(function (c) { list.forEach(function (m) { if (c.images.length < 8) c.images.push(m.path); }); }); } }); } }, "Ajouter des images"));
+    if (bs.images.length === 1) out.push(h("p", { class: "pb-hint", text: "Une seule image : elle reste fixe. Ajoutez-en une deuxième pour lancer le diaporama." }));
+    if (bs.images.length >= 2) {
+      out.push(numberField("Secondes par image", bs.seconds || 5, { min: 2, max: 30, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setBs(function (c) { if (n === 5) delete c.seconds; else c.seconds = n; }); }));
+      out.push(checkField("Effet Ken Burns (zoom lent)", bs.kenBurns, function (v) { setBs(function (c) { if (v) c.kenBurns = true; else delete c.kenBurns; }); }, { disabled: dis }));
+    }
+      [["top", "Séparateur de forme en haut"], ["bottom", "Séparateur de forme en bas"]].forEach(function (pos) {
+        var cur = (it.shapes || []).find(function (x) { return x.position === pos[0]; });
+        var setShape = function (patch, label) {
+          nextLabel = "Séparateur de forme";
+          change(function () {
+            var x = byId(it.id), list = (x.shapes || []).filter(function (y) { return y.position !== pos[0]; });
+            var base = cur ? Object.assign({}, cur) : { position: pos[0] };
+            var next = Object.assign(base, patch);
+            Object.keys(next).forEach(function (k) { if (next[k] === "" || next[k] === false || next[k] === undefined) delete next[k]; });
+            if (next.shape) list.push(next);
+            if (list.length) x.shapes = list; else delete x.shapes;
+          });
+        };
+        out.push(selectField(pos[1], cur ? cur.shape : "", [["", "Aucun"]].concat(SPEC.shapeDividers), function (v) { setShape({ shape: v }); }, { disabled: dis }));
+        if (cur) {
+          out.push(h("div", { class: "pb-grid-2" },
+            numberField("Hauteur (px)", cur.height || 100, { min: 20, max: 300, step: 10, integer: true, disabled: dis }, function (n) { if (n === null) return false; setShape({ height: n === 100 ? "" : n }); }),
+            h("div", { class: "pb-field" }, h("label", { class: "pb-prop-label", text: "Couleur" }), h("input", { type: "color", "aria-label": "Couleur de la forme", value: /^#[0-9a-fA-F]{6}$/.test(cur.color || "") ? cur.color : "#ffffff", disabled: dis, onchange: function (e) { setShape({ color: e.target.value }); } }))));
+          out.push(checkField("Retourner la forme", cur.flip, function (v) { setShape({ flip: v }); }, { disabled: dis }));
+          out.push(checkField("Au premier plan (devant le contenu)", cur.front, function (v) { setShape({ front: v }); }, { disabled: dis }));
+        }
+      });
+    return out;
   }
   function composedControls(items, group) {
     var it = items[0];
@@ -2850,12 +3727,20 @@
     var out = [];
     if (group === "effects") {
       var fl = ownValue(it, "filter") || {}, fli = inheritedValue(it, "filter") || {};
-      var FILTERS = [["blur", "Flou", 0, 40, "px", 0], ["brightness", "Luminosité", 0, 300, "%", 100], ["contrast", "Contraste", 0, 300, "%", 100], ["grayscale", "Noir et blanc", 0, 100, "%", 0], ["saturate", "Saturation", 0, 300, "%", 100], ["sepia", "Sépia", 0, 100, "%", 0], ["hueRotate", "Teinte", -360, 360, "°", 0]];
+      var FILTERS = [["blur", "Flou", 0, 40, "px", 0], ["brightness", "Luminosité", 0, 300, "%", 100], ["contrast", "Contraste", 0, 300, "%", 100], ["grayscale", "Noir et blanc", 0, 100, "%", 0], ["saturate", "Saturation", 0, 300, "%", 100], ["sepia", "Sépia", 0, 100, "%", 0], ["hueRotate", "Teinte", -360, 360, "°", 0], ["invert", "Inversion des couleurs", 0, 100, "%", 0]];
       out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Filtres" }), Object.keys(fl).length ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "filter", ""); } }, "Retirer") : null));
       FILTERS.forEach(function (f) {
         var putF = function (n, opts) { var next = Object.assign({}, ownValue(byId(it.id), "filter") || {}); if (n === null) delete next[f[0]]; else next[f[0]] = n; setStyle(ids, "filter", Object.keys(next).length ? next : "", opts); };
         out.push(numField(f[1], { min: f[2], max: f[3], step: 1, integer: true, staticUnit: f[4], value: fl[f[0]] === undefined ? "" : fl[f[0]], placeholder: fli[f[0]] !== undefined ? fli[f[0]] : f[5], base: f[5], slider: [f[2], f[3]], drag: true, disabled: dis, prop: "filter-" + f[0],
           onCommit: function (raw, u, opts) { putF(raw === "" ? null : Number(raw), opts); } }, fl[f[0]] !== undefined, function () { putF(null); }));
+      });
+      var bl = ownValue(it, "backdrop") || {}, bli = inheritedValue(it, "backdrop") || {};
+      var BFILTERS = [["blur", "Flou", 0, 40, "px", 0], ["brightness", "Luminosité", 0, 300, "%", 100], ["contrast", "Contraste", 0, 300, "%", 100], ["grayscale", "Noir et blanc", 0, 100, "%", 0], ["saturate", "Saturation", 0, 300, "%", 100], ["sepia", "Sépia", 0, 100, "%", 0], ["hueRotate", "Teinte", -360, 360, "°", 0], ["invert", "Inversion des couleurs", 0, 100, "%", 0]];
+      out.push(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Filtres de l'arrière-plan (verre dépoli)" }), Object.keys(bl).length ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: dis, onclick: function () { setStyle(ids, "backdrop", ""); } }, "Retirer") : null));
+      BFILTERS.forEach(function (f) {
+        var putF = function (n, opts) { var next = Object.assign({}, ownValue(byId(it.id), "backdrop") || {}); if (n === null) delete next[f[0]]; else next[f[0]] = n; setStyle(ids, "backdrop", Object.keys(next).length ? next : "", opts); };
+        out.push(numField(f[1], { min: f[2], max: f[3], step: 1, integer: true, staticUnit: f[4], value: bl[f[0]] === undefined ? "" : bl[f[0]], placeholder: bli[f[0]] !== undefined ? bli[f[0]] : f[5], base: f[5], slider: [f[2], f[3]], drag: true, disabled: dis, prop: "filter-" + f[0],
+          onCommit: function (raw, u, opts) { putF(raw === "" ? null : Number(raw), opts); } }, bl[f[0]] !== undefined, function () { putF(null); }));
       });
       var sh = ownValue(it, "shadow"), shi = inheritedValue(it, "shadow"), cur = sh || shi || { x: 0, y: 6, blur: 18, spread: 0, color: "#10222f29" };
       var put = function (k, v, opts) { var next = Object.assign({ x: 0, y: 6, blur: 18, spread: 0, color: "#10222f29" }, ownValue(byId(it.id), "shadow") || shi || {}); next[k] = v; setStyle(ids, "shadow", next, opts); };
@@ -2868,6 +3753,7 @@
       out.push(num("x", "Décalage X", -100, 100), num("y", "Décalage Y", -100, 100), num("blur", "Flou", 0, 200), num("spread", "Étendue", -50, 100),
         h("div", { class: "pb-field pb-style-field pb-prop" + (sh ? " is-set" : ""), "data-prop": "shadow" }, h("div", { class: "pb-prop-head" }, h("label", { for: sc, class: "pb-prop-label" }, "Couleur")), colorButton(sc, sh && sh.color, shi && shi.color, dis, function (v, opts) { if (v) put("color", v, opts); }, "shadow", { noClear: true }), h("span", { class: "pb-reset-slot", "aria-hidden": "true" })));
     }
+    if (group === "background" && kidsOf(it)) shapeDividerControls(it, dis).forEach(function (c) { out.push(c); });
     // (la transformation — déplacement, rotation, échelle, inclinaison — est dans la section « Transformer », page-builder-effects.js)
     return out;
   }
@@ -2875,7 +3761,7 @@
   function breakpointSwitch(items) {
     var it = items[0];
     var seg = h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
-      var own = it.styles && it.styles[b.key] && Object.keys(it.styles[b.key]).length;
+      var bh = holderOf(it, false), own = bh && bh.styles && bh.styles[b.key] && Object.keys(bh.styles[b.key]).length;
       return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), class: own ? "has-values" : null, "data-tip": own ? b.label + " · réglages propres à cet écran" : b.label + (b.key === "desktop" ? "" : " · hérite de l'écran plus grand"), "data-device": b.key, onclick: function () { setDevice(b.key); } }, icon(DEVICE_ICON[b.key]), h("span", { class: "sr-only", text: b.label }));
     }));
     return h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }), seg);
@@ -2903,11 +3789,34 @@
     extra.forEach(function (k) { if (out.indexOf(k) < 0 && !taken[k] && SP[k]) out.push(k); });
     return out;
   }
+  // Sélecteur de PARTIE (widgets qui en déclarent) : « Widget · Carte · Image · Titre… » ; un point signale une partie déjà personnalisée
+  function partsRow(items, box) {
+    var it = items[0], defs = items.length === 1 && isNode(it) && NT[it.type] && NT[it.type].parts;
+    if (!defs) return;
+    var pick = function (key) { styleTarget = key; renderInspector(); };
+    var chip = function (key, label) {
+      var own = key ? Boolean(it.parts && it.parts[key]) : Boolean(it.styles || it.states);
+      return h("button", { type: "button", class: "pb-part" + (styleTarget === key ? " is-on" : "") + (own ? " has-own" : ""), "aria-pressed": String(styleTarget === key), "data-part": key || "", "data-tip": own ? label + " · réglages propres" : label, onclick: function () { pick(key); } }, label);
+    };
+    var row = h("div", { class: "pb-parts", role: "group", "aria-label": "Partie du widget à modifier" }, chip(null, "Widget"));
+    defs.forEach(function (d) { row.appendChild(chip(d.key, d.label)); });
+    var wrap = h("div", { class: "pb-parts-wrap" }, h("span", { class: "pb-insp-bar-label", text: "Partie" }), row);
+    if (styleTarget && it.parts && it.parts[styleTarget]) wrap.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm pb-part-reset", disabled: lockedAny(items), "data-tip": "Revient aux valeurs par défaut du thème pour cette partie (tous les écrans et états)", onclick: function () {
+      var key = styleTarget;
+      change(function () { var x = byId(it.id); if (x && x.parts) { delete x.parts[key]; cleanStyles(x); } }, { label: "Réinitialiser la partie" });
+      toast("Partie réinitialisée. Ctrl/⌘ + Z pour annuler.");
+    } }, "Réinitialiser la partie"));
+    box.appendChild(wrap);
+  }
   function styleTab(items, box) {
     var it = items[0];
-    var schema = inspectorFor(it);
+    var pdef = styleTarget ? partDef(it, styleTarget) : null;
+    // Partie choisie : ses groupes et ses états (déclarés par le registre) remplacent ceux du widget
+    var schema = pdef ? { kind: pdef.label, groups: pdef.groups, states: pdef.states.length ? pdef.states : null } : inspectorFor(it);
+    partsRow(items, box);
     var bar = breakpointSwitch(items);
-    if (schema.states && items.every(function (x) { return inspectorFor(x).states; })) {
+    if (pdef && styleState !== "normal" && pdef.states.indexOf(styleState) < 0) styleState = "normal";
+    if (schema.states && (pdef || items.every(function (x) { return inspectorFor(x).states; }))) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
       var stateList = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : SPEC.states;
       bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
@@ -2921,7 +3830,7 @@
     // dans « Fond » (avec l'image et le dégradé)
     var keysOf = function (g) {
       var spec = schema.groups[g];
-      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (CHILD_FLEX.indexOf(p.key) < 0 || it.type === "column"); }).map(function (p) { return p.key; });
+      return Array.isArray(spec) ? spec.slice() : SPEC.styleProps.filter(function (p) { return p.group === g && (CHILD_FLEX.indexOf(p.key) < 0 || it.type === "column") && (p.key !== "lineClamp" || styleTarget); }).map(function (p) { return p.key; });
     };
     var plan = [];
     var order = schema.order || GROUP_ORDER;
@@ -2934,12 +3843,12 @@
         if (hasTypo || !keys.length) return;
       }
       if (g === "typography" && schema.groups.color !== undefined && keysOf("color").indexOf("color") >= 0) keys.splice(Math.min(3, keys.length), 0, "color");
-      if (g === "layout") keys = withChildKeys(it, keys, plan);
-      if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
+      if (g === "layout" && !pdef) keys = withChildKeys(it, keys, plan); // le placement dans le parent concerne le WIDGET, jamais une de ses parties
+      if (g === "background") keys = ["backgroundColor", "backgroundImage", "gradient", "overlay", "backgroundClip", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment"];
       plan.push([g, keys]);
     });
     // Un élément sans groupe « Mise en page » (image, bouton…) reçoit tout de même les réglages d'enfant de son parent
-    if (!plan.some(function (x) { return x[0] === "layout"; })) { var ck = withChildKeys(it, [], plan); if (ck.length) plan.push(["layout", ck]); }
+    if (!pdef && !plan.some(function (x) { return x[0] === "layout"; })) { var ck = withChildKeys(it, [], plan); if (ck.length) plan.push(["layout", ck]); }
     if (it.type === "layout" && items.length === 1) {
       var wid = fid();
       var wsel = h("select", { id: wid, class: "pb-prop-select", disabled: lockedAny(items) }, STYLE.width.map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
@@ -2953,12 +3862,10 @@
   // Un groupe repliable (état ouvert / fermé mémorisé) ; le nombre discret = valeurs propres à l'écran modifié
   var COLOR_LABEL = { color: "Texte" };
   function styleSection(items, g, keys, opts) {
-    var det = h("details", { class: "pb-acc", "data-group": g });
-    if (store.get("open-" + g, Boolean(opts && opts.open))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-" + g, det.open); });
+    var det = accShell(g, opts && opts.open);
     var counted = g === "spacing" ? SIDES.map(function (s) { return "margin" + s; }).concat(SIDES.map(function (s) { return "padding" + s; })) : keys;
     var set = counted.filter(function (k, i) { return counted.indexOf(k) === i && items.some(function (x) { return ownValue(x, k) !== undefined; }); }).length;
-    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
+    det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: SPEC.groups[g] || g }), items.length === 1 ? groupRestore(items[0], g, counted) : null, set ? h("span", { class: "pb-acc-count", title: set + " réglage(s) propre(s) à cet écran", "aria-label": set + " réglage(s) modifié(s)" }, String(set)) : null));
     var inner = h("div", { class: "pb-acc-body" });
     if (g === "spacing") inner.appendChild(spacingBox(items));
     else if (g === "border") borderControls(items, inner);
@@ -3034,7 +3941,7 @@
       add("Format", (String(src).split("?")[0].split(".").pop() || "").toUpperCase());
       add("Texte de remplacement", p.decorative ? "Image décorative" : (p.alt || it.alt || it.imageAlt || "manquant"));
       var img = m && (m.el.tagName === "IMG" ? m.el : m.el.querySelector("img"));
-      if (img && img.naturalWidth) add("Taille d'origine", img.naturalWidth + " × " + img.naturalHeight + " px");
+      if (img && img.naturalWidth) add("Taille chargée", img.naturalWidth + " × " + img.naturalHeight + " px");
     }
     if (!node && it.type === "button") { add("Texte", it.label); add("Adresse", it.url); }
     if (node && (it.type === "button" || it.type === "link")) { add("Texte", p.label); add("Adresse", p.url); if (it.type === "button") add("Apparence", { primary: "Plein", outline: "Contour", ghost: "Discret" }[p.variant] || p.variant); add("Nouvel onglet", p.newTab ? "oui" : "non"); }
@@ -3070,16 +3977,32 @@
 
   // ---------- Inspecteur ----------
   var inspTab = store.get("insp-tab", "content");
-  var headObserver = null;
+  var headObserver = null, inspHeadH = 0, inspScroll = 0;
+  (function () { var b = $("[data-pb-inspector]"); if (b) b.addEventListener("scroll", function () { inspScroll = b.scrollTop; }, { passive: true }); })();
+  var pendingReveal = null;
+  // Réglage « Comportement des accordéons » (menu principal et commandes) : une entrée par mode, le mode actif est coché
+  function accEntry(m) {
+    var K = window.KWAccordion, on = K && K.getMode() === m;
+    return [(on ? "● " : "○ ") + K.LABELS[m][0], function () { accSetMode(m); }, !K, K.LABELS[m][1]];
+  }
+  function accSetMode(m) {
+    var K = window.KWAccordion; if (!K) return;
+    var closed = K.setMode(m, document.querySelector("[data-pb-inspector]"));
+    toast("Accordéons : « " + K.LABELS[m][0] + " »." + (closed ? " " + closed + " section" + (closed > 1 ? "s" : "") + " refermée" + (closed > 1 ? "s" : "") + " (la dernière ouverte reste ouverte)." : ""));
+  }
   function renderInspector() {
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
-    var keepScroll = box.dataset.for === selection.join(",") ? box.scrollTop : 0;
+    axisReal = {};
+    if (box.dataset.for !== selection.join(",")) styleTarget = null; // un autre élément : on repart du widget lui-même
+    var keepScroll = box.dataset.for === selection.join(",") ? inspScroll : 0;
     box.textContent = "";
+    resetBtns = []; inspItem = null;
     box.dataset.for = selection.join(",");
     // fieldSeq n'est JAMAIS remis à zéro : les identifiants (pb-f-N) restent uniques dans toute la page, sinon un libellé de
     // l'inspecteur désignait un champ d'un autre panneau (réglages de la page…) au clic et pour les lecteurs d'écran
     var items = selectedItems();
+    if (styleTarget && !(items.length === 1 && partDef(items[0], styleTarget))) styleTarget = null;
     // Rien de sélectionné : état vide, et seulement quelques actions globales réelles
     if (!items.length) {
       box.appendChild(h("div", { class: "pb-insp-empty" },
@@ -3100,7 +4023,12 @@
     }
     var it = items[0];
     var multi = items.length > 1;
+    if (formatLocked() && items.every(function (x) { return isTopLevelId(x.id); })) {
+      box.appendChild(h("div", { class: "pb-note", role: "note" }, icon("lock"), h("span", { text: " Format verrouillé : largeur et marges de cet élément protégées. " }),
+        canWrite ? h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { setLayout(Object.assign({}, layoutOf(), { locked: false })); } }, "Déverrouiller") : null));
+    }
     var locked = lockedAny(items);
+    inspItem = multi || locked ? null : it;
     var schema = inspectorFor(it);
     var l = locate(it.id);
     // En-tête : ce que l'on modifie (nature, nom) et son chemin dans la structure (cliquable)
@@ -3112,14 +4040,15 @@
         h("div", { class: "pb-insp-titles" },
           h("p", { class: "pb-kind", text: multi ? "Sélection multiple" : "Modifier " + schema.kind }),
           h("h2", { text: multi ? items.length + " éléments" : (it.name || preview(it) || schema.kind) })),
-        h("span", { class: "pb-insp-head-actions" },
+        h("span", { class: "pb-insp-head-actions" }, multi ? null : elementRestore(it),
           h("button", { type: "button", class: "pb-panel-toggle", "aria-haspopup": "menu", "data-tip": "Actions : dupliquer, copier, renommer, déplacer, supprimer…", "aria-label": "Actions de la sélection", onclick: function (e) { var r = e.currentTarget.getBoundingClientRect(); openMenu(r.right - 4, r.bottom + 4); } }, icon("moreVertical")),
           h("button", { type: "button", class: "pb-panel-toggle", "data-tip": "Désélectionner", "aria-label": "Désélectionner", onclick: function () { select(null); } }, icon("close")))));
     box.appendChild(head);
     // L'onglet qui suit reste collé sous l'en-tête quand on fait défiler : on lui donne la hauteur réelle de l'en-tête
     if (headObserver) headObserver.disconnect();
-    if (window.ResizeObserver) { headObserver = new ResizeObserver(function () { box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px"); }); headObserver.observe(head); }
-    box.style.setProperty("--pb-insp-head-h", head.offsetHeight + "px");
+    // Hauteur de l'en-tête : valeur connue d'avant, corrigée par l'observateur avant l'affichage (lire offsetHeight ici imposait une mise en page complète)
+    if (window.ResizeObserver) { headObserver = new ResizeObserver(function () { inspHeadH = head.offsetHeight; box.style.setProperty("--pb-insp-head-h", inspHeadH + "px"); }); headObserver.observe(head); }
+    box.style.setProperty("--pb-insp-head-h", (inspHeadH || 96) + "px");
     if (locked && canWrite) box.appendChild(h("p", { class: "pb-note is-warn", text: "Verrouillé : déverrouillez-le (cadenas dans les calques) pour le modifier." }));
     var boxTabs = !multi && schema.tabs === "box";
     var tabs = boxTabs ? [["general", "Général"], ["style", "Style"], ["interactions", "Interactions"]] : multi ? [["style", "Style"], ["advanced", "Avancé"]] : !schema.groups ? [["content", "Contenu"], ["advanced", "Avancé"]] : [["content", "Contenu"], ["style", "Style"], ["advanced", "Avancé"]];
@@ -3129,6 +4058,7 @@
     box.appendChild(tablist);
     var body = h("div", { class: "pb-insp-body", role: "tabpanel" });
     box.appendChild(body);
+    if (inspTab !== "style") styleTarget = null; // les parties ne se règlent que dans l'onglet Style
     if (inspTab === "general") generalTab(it, body, locked);
     else if (inspTab === "interactions") interactionsTab(it, body, locked);
     else if (inspTab === "content") {
@@ -3138,7 +4068,9 @@
       else legacyContentFields(it, body, locked);
     } else if (inspTab === "style") { styleTab(items, body); if (boxTabs) boxStyleExtras(items, body, locked); }
     else advancedTab(items, body, locked);
-    box.scrollTop = keepScroll;
+    inspItem = null;
+    if (window.KWAccordion) window.KWAccordion.normalizeIn(box, pendingReveal); pendingReveal = null; // règle du mode choisi (ex. « un seul ouvert ») appliquée au rendu
+    if (keepScroll || inspScroll) { box.scrollTop = keepScroll; inspScroll = keepScroll; } // écrire le défilement impose une mise en page : seulement s'il y a quelque chose à restaurer
   }
   // Contenu d'une section libre ou d'un conteneur : sa structure (enfants cliquables), et comment y ajouter
   function structureContent(it, box) {
@@ -3154,10 +4086,29 @@
     if (["container", "grid", "stack", "group"].indexOf(it.type) >= 0) {
       var dis = !canWrite || lockedDeep(it.id), p = it.props || {};
       if (it.type === "container") {
+        // Mode d'affichage des enfants : ordinaire, onglets (titre = nom de l'enfant) ou carrousel
+        box.appendChild(checkField("Carte insérée dans la boucle de la grille parente (non répétée)", p.loopInsert === true, function (v) { setProp(it.id, "loopInsert", v); }, { disabled: dis, hint: "Seulement utile dans une grille qui répète des résultats : réglez « Intercaler une carte après N résultats » sur la grille." }));
+        box.appendChild(selectField("Affichage des éléments à l'intérieur", p.mode || "", [["", "Normal (les uns sous les autres)"], ["tabs", "Onglets (un conteneur enfant par onglet)"], ["accordion", "Accordéon (un conteneur enfant par volet)"], ["carousel", "Carrousel (un conteneur enfant par diapositive)"]], function (v) { change(function () { var x = byId(it.id); if (v) { x.props.mode = v; } else { ["mode", "tabsLook", "tabsStart", "accStart", "accSingle", "dots", "loop", "autoplay", "interval"].forEach(function (k) { delete x.props[k]; }); } }); }, { disabled: dis }));
+        var setNested = function (k) { return function (v) { setProp(it.id, k, v); }; };
+        if (p.mode === "tabs") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son onglet ; sans nom : « Onglet 1 », « Onglet 2 »…" }));
+          box.appendChild(selectField("Style des onglets", p.tabsLook || "line", [["line", "Soulignés"], ["pills", "Boutons arrondis"]], setNested("tabsLook"), { disabled: dis }));
+          box.appendChild(numberField("Onglet ouvert au départ", p.tabsStart || 1, { min: 1, max: 12, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setProp(it.id, "tabsStart", n); }, "De 1 à 12."));
+        } else if (p.mode === "accordion") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son volet ; il peut contenir n'importe quels éléments. Sans nom : « Volet 1 », « Volet 2 »…" }));
+          box.appendChild(selectField("Ouvert au départ", p.accStart || "first", [["first", "Le premier volet"], ["none", "Aucun"], ["all", "Tous"]], setNested("accStart"), { disabled: dis }));
+          box.appendChild(checkField("Un seul volet ouvert à la fois", p.accSingle === true, setNested("accSingle"), { disabled: dis }));
+        } else if (p.mode === "carousel") {
+          box.appendChild(h("p", { class: "pb-hint", text: "Chaque conteneur enfant est une diapositive (images, textes, boutons… à l'intérieur). Boutons précédent / suivant et défilement au doigt inclus." }));
+          box.appendChild(checkField("Points de navigation", p.dots !== false, setNested("dots"), { disabled: dis }));
+          box.appendChild(checkField("Reboucler", p.loop === true, setNested("loop"), { disabled: dis }));
+          box.appendChild(checkField("Lecture automatique", p.autoplay === true, setNested("autoplay"), { disabled: dis }));
+          if (p.autoplay) box.appendChild(numberField("Secondes entre deux diapositives", p.interval || 5, { min: 2, max: 20, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setProp(it.id, "interval", n); }, "De 2 à 20."));
+        }
         // Trois modèles de largeur : encadrée (largeur des conteneurs du site, centrée), pleine largeur, personnalisée (largeur max. propre à l'écran affiché)
         var mw = ownValue(it, "maxWidth"); if (mw === undefined) mw = inheritedValue(it, "maxWidth");
-        var wmode = p.full ? "full" : mw !== undefined && mw !== "" ? "custom" : "boxed";
-        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
+        var wmode = p.full ? "full" : p.band && (mw === undefined || mw === "") ? "band" : mw !== undefined && mw !== "" ? "custom" : "boxed";
+        box.appendChild(selectField("Largeur du contenu", wmode, [["boxed", "Encadrée (largeur des conteneurs du site, centrée)"], ["band", "Fond pleine largeur, contenu encadré"], ["full", "Pleine largeur"], ["custom", "Personnalisée (largeur max.)"]], function (v) { setContainerWidth(it.id, v, mw !== undefined && mw !== "" ? mw : "960px"); }, { disabled: dis }));
         if (wmode === "custom") {
           var wid = fid();
           var winp = h("input", { id: wid, type: "text", value: mw === undefined ? "" : String(mw), placeholder: "960px", disabled: dis, "aria-describedby": wid + "-h" });
@@ -3236,6 +4187,8 @@
       }
       box.appendChild(checkField("Défilement horizontal (carrousel : flèches et glissement)", loop.slider === true, function (v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); if (v) { x.props.loop.slider = true; delete x.props.loop.paginate; delete x.props.loop.pagination; } else delete x.props.loop.slider; }, { label: "Carrousel de boucle" }); }, { disabled: dis }));
       box.appendChild(selectField("Pagination", loop.paginate ? (loop.pagination || "numbers") : "none", [["none", "Aucune"], ["numbers", "Page x / y"], ["prevnext", "Précédent / Suivant"], ["both", "Numéros de pages"], ["more", "Bouton « Voir plus »"], ["infinite", "Défilement infini"]], function (v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); if (v === "none") { delete x.props.loop.paginate; delete x.props.loop.pagination; } else { x.props.loop.paginate = true; x.props.loop.pagination = v; } }, { label: "Pagination" }); }, { disabled: dis }));
+      box.appendChild(numberField("Intercaler une carte après N résultats (vide = aucune)", loop.insertAt || "", { min: 1, max: 50, step: 1, integer: true, disabled: dis }, function (n) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); if (!n) { delete x.props.loop.insertAt; delete x.props.loop.insertEvery; } else x.props.loop.insertAt = n; }, { label: "Carte insérée dans la boucle" }); }, "Dans cette grille, cochez « Carte insérée » sur un conteneur enfant : il n'est pas répété, il s'intercale entre les résultats (publicité, appel à l'action)."));
+      if (loop.insertAt) box.appendChild(checkField("Répéter la carte tous les N résultats", loop.insertEvery === true, function (v) { setLoop("insertEvery", v); }, { disabled: dis }));
       box.appendChild(checkField("Filtrer avec l'adresse (?q=… recherche, ?categorie=…)", loop.urlFilter === true, function (v) { setLoop("urlFilter", v); }, { disabled: dis }));
       box.appendChild(textField("Message s'il n'y a aucun résultat", loop.empty || "", function (v) { setLoop("empty", v); }, { max: 160, disabled: dis, onChange: true }));
       box.appendChild(h("p", { class: "pb-hint", text: "Le contenu de cette grille est le MODÈLE d'un résultat : ajoutez-y un titre, une image, un bouton, puis utilisez { } pour y insérer le titre, l'image ou l'adresse du résultat. La page montre un exemplaire par résultat." }));
@@ -3252,6 +4205,7 @@
       box.appendChild(info);
       box.appendChild(textField("Nom du calque", it.name, function (v) { rename(it.id, v); }, { max: 60, placeholder: inspectorFor(it).kind, onChange: true, disabled: !canWrite }));
       if (isNode(it)) box.appendChild(anchorField(it, locked));
+      if (isNode(it)) box.appendChild(noteGroup(it, locked));
     }
     // Position et plan (propriétés avancées de placement), pour l'écran actif
     if (inspectorFor(it).groups) {
@@ -3279,22 +4233,14 @@
       b(items.some(function (x) { return x.locked; }) ? "Déverrouiller" : "Verrouiller", function () { setFlag(selection.slice(), "locked", !items.some(function (x) { return x.locked; })); }, { disabled: !canWrite }),
       b("Dupliquer", duplicateSelected, { disabled: !canWrite }),
       b("Copier le style", copyStyle),
-      b("Coller le style", pasteStyle, { disabled: !canWrite || locked }),
-      b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states; }) }),
+      b("Coller le style", function () { pasteStyle(); }, { disabled: !canWrite || locked }),
+      b("Réinitialiser le style", resetStyle, { disabled: !canWrite || locked || !items.some(function (x) { return x.styles || x.states || x.parts; }) }),
       items.length > 1 ? b("Grouper", groupSelected, { disabled: !canWrite || locked }) : null,
       single && ["group", "stack", "container"].indexOf(it.type) >= 0 ? b("Dissocier", ungroupSelected, { disabled: !canWrite || locked }) : null,
       b("Supprimer", removeSelected, { class: "btn btn-danger btn-sm", disabled: !canWrite || locked })));
-    if (single && canWrite && it.type !== "component") {
-      var form = h("form", { class: "pb-field" });
-      var nameInput = h("input", { type: "text", id: "pb-comp-name", maxlength: "80", required: true, placeholder: "Nom du composant" });
-      var global = h("input", { type: "checkbox" });
-      form.appendChild(h("p", { class: "pb-sub", text: "Composant réutilisable" }));
-      form.appendChild(h("label", { for: "pb-comp-name", text: "Enregistrer comme composant" }));
-      form.appendChild(nameInput);
-      if (PAGE.siteId) form.appendChild(h("label", { class: "pb-check" }, global, " Utilisable par tous les sites (global)"));
-      form.appendChild(h("button", { type: "submit", class: "btn btn-outline btn-sm" }, "Enregistrer le composant"));
-      form.addEventListener("submit", function (e) { e.preventDefault(); saveAsComponent(it, nameInput.value, !PAGE.siteId || global.checked).then(function () { nameInput.value = ""; }); });
-      box.appendChild(form);
+    if (canWrite && !IS_COMPONENT && items.every(function (x) { return x.type !== "component"; })) {
+      box.appendChild(h("p", { class: "pb-sub", text: "Composant réutilisable" }));
+      box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", "data-comp-save": "", onclick: openSaveComponent }, "Enregistrer comme composant…"));
     }
   }
   // « Afficher sur » : écrans sur lesquels l'élément est visible (au moins un doit rester)
@@ -3325,11 +4271,18 @@
   // enregistrement automatique, écrans, calques et rendu du canevas fonctionnent donc sans rien de plus. Un autre type d'élément
   // adopte ces onglets en déclarant « tabs: "box" » dans INSPECTORS.
   var LINKABLE = ["container", "grid", "stack", "group"];
-  // Groupe repliable de l'inspecteur (état ouvert mémorisé dans ce navigateur) ; count = réglages en place
-  function accGroup(key, title, defOpen, build, count) {
+  // Coque commune de TOUS les accordéons de l'inspecteur : un <details class="pb-acc"> dont l'état ouvert / fermé est mémorisé dans ce navigateur
+  // (« open-<clé> »). Le comportement à l'ouverture (un seul ouvert, plusieurs, fermer en dessous) est donné par le moteur commun
+  // (accordion-engine.js), qui agit sur tout <details class="pb-acc"> : rien à écrire ici pour un nouvel accordéon.
+  function accShell(key, defOpen) {
     var det = h("details", { class: "pb-acc", "data-group": key });
     if (store.get("open-" + key, Boolean(defOpen))) det.open = true;
     det.addEventListener("toggle", function () { store.set("open-" + key, det.open); });
+    return det;
+  }
+  // Groupe repliable de l'inspecteur (état ouvert mémorisé dans ce navigateur) ; count = réglages en place
+  function accGroup(key, title, defOpen, build, count) {
+    var det = accShell(key, defOpen);
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: title }), count ? h("span", { class: "pb-acc-count", "aria-label": count + " réglage(s) en place" }, String(count)) : null));
     var inner = h("div", { class: "pb-acc-body" });
     build(inner);
@@ -3338,6 +4291,12 @@
   }
   // Contenu d'un groupe existant (déjà repliable) placé dans un autre groupe : sans double titre
   var bodyOf = function (det) { var b = det.querySelector(":scope > .pb-acc-body"); return b || det; };
+  // Note privée de l'équipe sur un élément : visible seulement dans l'éditeur (jamais écrite dans la page publique)
+  function noteGroup(it, locked) {
+    return accGroup("g-note", "Note de l'équipe", Boolean(it.note), function (b) {
+      b.appendChild(textField("Note privée sur cet élément", it.note || "", function (v) { change(function () { var s = byId(it.id); if (!s) return false; var n = String(v || "").trim().slice(0, 500); if ((s.note || "") === n) return false; if (n) s.note = n; else delete s.note; }); }, { multiline: true, rows: 3, max: 500, disabled: locked, onChange: true, hint: "Visible seulement dans l'éditeur (pastille dans la Structure). Jamais publiée sur le site." }));
+    }, it.note ? 1 : 0);
+  }
   function generalTab(it, box, locked) {
     var dis = !canWrite || locked;
     var p = it.props || {};
@@ -3357,6 +4316,7 @@
       b.appendChild(audienceField(it, locked));
       b.appendChild(screensField(it, locked));
     }, (it.audience ? 1 : 0) + ((it.hideOn || []).length ? 1 : 0)));
+    box.appendChild(noteGroup(it, locked));
     box.appendChild(infoBlock(it));
     box.appendChild(accGroup("g-actions", "Actions", true, function (b) { actionsAndComponent([it], b, locked); }));
   }
@@ -3389,9 +4349,7 @@
     if (window.pbEffects && window.pbEffects.motion) return window.pbEffects.motion(it, locked); // moteur de mouvement (page-builder-effects.js)
     var m = it.motion || {};
     var setM = function (k, v) { nextLabel = "Animation"; change(function () { var x = byId(it.id); var n = Object.assign({}, x.motion); if (v === "" || v === undefined) delete n[k]; else n[k] = v; if (k === "entrance" && !v) { delete n.duration; delete n.delay; } if (k === "entrance" && v) { if (n.duration === undefined) n.duration = 600; if (n.delay === undefined) n.delay = 0; } if (Object.keys(n).length) x.motion = n; else delete x.motion; }); };
-    var det = h("details", { class: "pb-acc", "data-group": "motion" });
-    if (store.get("open-motion", Boolean(m.entrance || m.hover))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-motion", det.open); });
+    var det = accShell("motion", Boolean(m.entrance || m.hover));
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: "Animation" }), m.entrance || m.hover ? h("span", { class: "pb-acc-count", text: String((m.entrance ? 1 : 0) + (m.hover ? 1 : 0)) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
     inner.appendChild(selectField("À l'apparition", m.entrance || "", [["", "Aucune"]].concat(SPEC.entrances), function (v) { setM("entrance", v); }, { disabled: locked }));
@@ -3411,9 +4369,7 @@
   // Interactions : déclencheur sur cet élément → action sur un élément de la page ; état de départ ; programmation
   function interactionField(it, locked) {
     var list = it.interactions || [];
-    var det = h("details", { class: "pb-acc", "data-group": "interactions" });
-    if (store.get("open-interactions", Boolean(list.length || it.startHidden || it.schedule))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-interactions", det.open); });
+    var det = accShell("interactions", Boolean(list.length || it.startHidden || it.schedule));
     var n = list.length + (it.startHidden ? 1 : 0) + (it.schedule ? 1 : 0);
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: "Interactions et conditions" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
@@ -3439,9 +4395,29 @@
     inner.appendChild(h("div", { class: "pb-grid-2" },
       textField("À partir du", local(sc.from), function (v) { setSc("from", v); }, { type: "datetime-local", onChange: true, disabled: locked }),
       textField("Jusqu'au", local(sc.until), function (v) { setSc("until", v); }, { type: "datetime-local", onChange: true, disabled: locked })));
+    // Jours et heures (heure de Paris) : l'élément n'est affiché que ces jours-là et dans cette plage horaire
+    var setDays = function (d, on) { nextLabel = "Programmation"; change(function () { var x = byId(it.id); var s0 = Object.assign({}, x.schedule); var l = (s0.days || [1, 2, 3, 4, 5, 6, 7]).filter(function (z) { return z !== d; }); if (on) l.push(d); l.sort(); if (l.length >= 7 || !l.length) delete s0.days; else s0.days = l; if (Object.keys(s0).length) x.schedule = s0; else delete x.schedule; }); };
+    inner.appendChild(h("p", { class: "pb-sub", text: "Afficher seulement certains jours (heure de Paris)" }));
+    inner.appendChild(h("div", { class: "pb-row pb-wrap" }, [[1, "Lun"], [2, "Mar"], [3, "Mer"], [4, "Jeu"], [5, "Ven"], [6, "Sam"], [7, "Dim"]].map(function (d) {
+      return checkField(d[1], !sc.days || sc.days.indexOf(d[0]) >= 0, function (v) { setDays(d[0], v); }, { disabled: locked });
+    })));
+    var setHours = function (k, v) { nextLabel = "Programmation"; change(function () { var x = byId(it.id); var s0 = Object.assign({}, x.schedule); var hh = Object.assign({}, s0.hours); if (v) hh[k] = v; else delete hh[k]; if (hh.from || hh.to) s0.hours = hh; else delete s0.hours; if (Object.keys(s0).length) x.schedule = s0; else delete x.schedule; }); };
+    inner.appendChild(h("div", { class: "pb-grid-2" },
+      textField("De (heure)", (sc.hours || {}).from || "", function (v) { setHours("from", v); }, { type: "time", onChange: true, disabled: locked }),
+      textField("À (heure)", (sc.hours || {}).to || "", function (v) { setHours("to", v); }, { type: "time", onChange: true, disabled: locked })));
+    inner.appendChild(h("p", { class: "pb-hint", text: "Renseignez les deux heures ; une plage qui passe minuit (22:00 → 06:00) est permise. L'heure est celle de Paris, évaluée à chaque affichage de la page." }));
     if (kidsOf(it)) {
       var bv = it.bgVideo ? it.bgVideo.src : "";
-      inner.appendChild(textField("Vidéo de fond (fichier .mp4 ou .webm)", bv, function (v) { nextLabel = "Vidéo de fond"; change(function () { var x = byId(it.id); if (v.trim()) x.bgVideo = { src: v.trim() }; else delete x.bgVideo; }); }, { type: "url", onChange: true, disabled: locked, placeholder: "https://…/fond.mp4", hint: "Lue sans le son et en boucle derrière le contenu ; arrêtée pour les personnes qui réduisent les animations." }));
+      inner.appendChild(textField("Vidéo de fond (fichier .mp4 ou .webm)", bv, function (v) { nextLabel = "Vidéo de fond"; change(function () { var x = byId(it.id); if (v.trim()) x.bgVideo = Object.assign({}, x.bgVideo, { src: v.trim() }); else delete x.bgVideo; }); }, { type: "url", onChange: true, disabled: locked, placeholder: "https://…/fond.mp4", hint: "Lue sans le son et en boucle derrière le contenu ; arrêtée pour les personnes qui réduisent les animations." }));
+      if (it.bgVideo) {
+        var setBv = function (k, v) { nextLabel = "Vidéo de fond"; change(function () { var x = byId(it.id); var b = Object.assign({}, x.bgVideo); if (v === null || v === "" || v === false) delete b[k]; else b[k] = v; x.bgVideo = b; }); };
+        inner.appendChild(h("div", { class: "pb-grid-2" },
+          numberField("Début (secondes)", it.bgVideo.start || "", { min: 1, max: 86399, step: 1, integer: true, disabled: locked }, function (n) { setBv("start", n); }),
+          numberField("Fin (secondes)", it.bgVideo.end || "", { min: 2, max: 86400, step: 1, integer: true, disabled: locked }, function (n) { setBv("end", n); })));
+        inner.appendChild(checkField("Lire une seule fois (sans boucle)", it.bgVideo.once, function (v) { setBv("once", v); }, { disabled: locked }));
+        inner.appendChild(mediaPreview(it.bgVideo.poster, function (m) { setBv("poster", m.path); }, locked));
+        inner.appendChild(h("p", { class: "pb-hint", text: "Image de secours : affichée si la vidéo ne peut pas se charger." }));
+      }
     }
     det.appendChild(inner);
     return det;
@@ -3461,53 +4437,401 @@
     }).catch(function (e) { toast(e.message, true); });
   }
   // Styles propres de l'élément (écrans et états), prêts à entrer dans une classe
-  var ownStyles = function (it) { return { styles: clone(it.styles || {}), states: clone(it.states || {}) }; };
   var classNames = function (it) { return String(it.classes || "").split(/\s+/).filter(Boolean); };
   function setNodeClasses(it, names, label, clearOwn) {
     change(function () { var x = byId(it.id); if (names.length) x.classes = names.join(" "); else delete x.classes; if (clearOwn) { delete x.styles; delete x.states; } }, { label: label });
+  }
+  // ---------- Style Studio : styles enregistrés = classes globales du site (liées : modifier le style met à jour tous ses éléments) ----------
+  // Un style contient seulement les catégories / propriétés / écrans / états choisis. Deux modes d'application :
+  //  • Compléter : le style est lié ; les réglages propres de l'élément gardent la priorité (rien n'est retiré).
+  //  • Remplacer : le style est lié ET les réglages propres de l'élément, dans les catégories du style, sont retirés (le style prend ces catégories).
+  // Dissocier : copie les valeurs du style dans l'élément (seulement là où il n'a rien) puis coupe le lien : apparence inchangée.
+  var PRESET_CATS = SPEC.presetCategories || [];
+  var COMPOSED_LABEL = { gradient: "Dégradé", overlay: "Voile", shadow: "Ombre", filter: "Filtres", backdrop: "Filtres de l'arrière-plan", transform: "Transformation", mask: "Masque" };
+  var presetKeyLabel = function (k) { return (SP[k] && SP[k].label) || COMPOSED_LABEL[k] || k; };
+  var presetCatOf = function (k) { for (var i = 0; i < PRESET_CATS.length; i++) if (PRESET_CATS[i].keys.indexOf(k) >= 0) return PRESET_CATS[i].id; return null; };
+  var presetCatLabel = function (id) { var c = PRESET_CATS.filter(function (x) { return x.id === id; })[0]; return c ? c.label : id; };
+  var presetScopeLabel = function (scope) { var s = SPEC.states.filter(function (x) { return x.key === scope; })[0]; return s ? "État : " + s.label : bpLabel(scope); };
+  var styleDef = function (name) { return siteClasses.filter(function (x) { return x.name === name; })[0] || null; };
+  var styleTitle = function (c) { return c.label || c.name; };
+  // Identifiant technique à partir du nom saisi (minuscules, tirets, sans accents, jamais un préfixe réservé)
+  function slugifyStyle(label) {
+    var s = String(label || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30).replace(/-+$/, "");
+    if (!s) return "";
+    if (!/^[a-z]/.test(s)) s = "s-" + s;
+    if (/^(kw|lp|pb|mk)-/.test(s)) s = "s-" + s;
+    return s.slice(0, 30).replace(/-+$/, "");
+  }
+  function presetKeysOf(def) {
+    var out = {};
+    ["styles", "states"].forEach(function (src) { Object.keys(def[src] || {}).forEach(function (s) { Object.keys(def[src][s]).forEach(function (k) { out[k] = true; }); }); });
+    return out;
+  }
+  // Catégories d'un style : celles enregistrées, sinon déduites de ses propriétés (styles créés avant le Style Studio)
+  function styleCats(def) {
+    if (def.meta && def.meta.categories && def.meta.categories.length) return def.meta.categories;
+    var seen = {}; Object.keys(presetKeysOf(def)).forEach(function (k) { var c = presetCatOf(k); if (c) seen[c] = true; });
+    return PRESET_CATS.map(function (c) { return c.id; }).filter(function (id) { return seen[id]; });
+  }
+  function stylesOf(it) { return classNames(it).filter(function (n) { return styleDef(n); }); }
+  function usersOfStyle(name) { var n = 0; walk(function (x) { if (isNode(x) && classNames(x).indexOf(name) >= 0) n++; }); return n; }
+  // Propriétés propres de l'élément qui peuvent entrer dans un style : { styles|states : { écran|état : [clés] } }
+  function presetOwn(it) {
+    var out = { styles: {}, states: {} };
+    ["styles", "states"].forEach(function (src) {
+      Object.keys(it[src] || {}).forEach(function (scope) {
+        var keys = Object.keys(it[src][scope] || {}).filter(function (k) { return presetCatOf(k); });
+        if (keys.length) out[src][scope] = keys;
+      });
+    });
+    return out;
+  }
+  // Copie filtrée (jamais l'original) : absent ≠ vide, valeurs copiées telles quelles
+  function presetPick(it, keys, scopes) {
+    var out = { styles: {}, states: {}, n: 0 };
+    ["styles", "states"].forEach(function (src) {
+      Object.keys(it[src] || {}).forEach(function (scope) {
+        if (!scopes[scope]) return;
+        var sub = {};
+        Object.keys(it[src][scope] || {}).forEach(function (k) { if (keys[k]) { sub[k] = clone(it[src][scope][k]); out.n++; } });
+        if (Object.keys(sub).length) out[src][scope] = sub;
+      });
+    });
+    return out;
+  }
+  // Aperçu réel : les propriétés enregistrées appliquées à un échantillon (propriétés de taille / de position ignorées pour rester lisible)
+  var SAMPLE_SKIP = /^(width|height|min|max|margin|padding|aspectRatio|objectFit|objectPosition|transform$|transformOrigin|lineClamp|transition|backgroundAttachment|backgroundPosition|backgroundSize|backgroundRepeat|mask$)/;
+  function styleSample(def) {
+    var el = h("span", { class: "pb-sp-sample", "aria-hidden": "true", text: "Aa" }), set = (def.styles && def.styles.desktop) || {};
+    Object.keys(set).forEach(function (k) {
+      var v = set[k];
+      if (SAMPLE_SKIP.test(k)) return;
+      try {
+        if (k === "gradient" && v && v.from && v.to) el.style.backgroundImage = "linear-gradient(" + (Number(v.angle) || 180) + "deg," + v.from + "," + v.to + ")";
+        else if (SP[k] && SP[k].css && typeof v !== "object") el.style.setProperty(SP[k].css, String(v));
+      } catch (e) { /* valeur non affichable : ignorée */ }
+    });
+    return el;
+  }
+  // ----- Appliquer / dissocier / retirer (une seule étape d'annulation) -----
+  function applyStyleTo(ids, name, mode) {
+    var def = styleDef(name); if (!def) return;
+    var cats = styleCats(def);
+    change(function () {
+      ids.forEach(function (id) {
+        var x = byId(id); if (!x) return;
+        var cl = classNames(x); if (cl.indexOf(name) < 0) cl.push(name); x.classes = cl.join(" ");
+        if (mode !== "replace") return;
+        ["styles", "states"].forEach(function (src) {
+          Object.keys(x[src] || {}).forEach(function (scope) {
+            Object.keys(x[src][scope]).forEach(function (k) { if (cats.indexOf(presetCatOf(k)) >= 0) delete x[src][scope][k]; });
+            if (!Object.keys(x[src][scope]).length) delete x[src][scope];
+          });
+          if (x[src] && !Object.keys(x[src]).length) delete x[src];
+        });
+      });
+    }, { label: "Style « " + styleTitle(def) + " » appliqué (" + (mode === "replace" ? "remplacement" : "complément") + ")" });
+    var skipped = [];
+    ids.forEach(function (id) { var x = byId(id); if (x && def.meta && def.meta.source && def.meta.source !== x.type) { var no = presetUnsupported(x, def); if (no.length) skipped.push(no.length); } });
+    var all = Object.keys(presetKeysOf(def)).length;
+    if (skipped.length) toast("Style « " + styleTitle(def) + " » : certains réglages (" + skipped[0] + " sur " + all + ") n'ont pas d'effet sur ce type d'élément.");
+    else toast("Style « " + styleTitle(def) + " » appliqué.");
+  }
+  function unlinkStyleFrom(ids, name, copy) {
+    var def = styleDef(name); if (!def) return;
+    change(function () {
+      ids.forEach(function (id) {
+        var x = byId(id); if (!x) return;
+        var cl = classNames(x).filter(function (n) { return n !== name; });
+        if (copy) ["styles", "states"].forEach(function (src) {
+          Object.keys(def[src] || {}).forEach(function (scope) {
+            Object.keys(def[src][scope]).forEach(function (k) {
+              x[src] = x[src] || {}; x[src][scope] = x[src][scope] || {};
+              if (!Object.prototype.hasOwnProperty.call(x[src][scope], k)) x[src][scope][k] = clone(def[src][scope][k]);
+            });
+          });
+        });
+        if (cl.length) x.classes = cl.join(" "); else delete x.classes;
+      });
+    }, { label: copy ? "Dissocié du style « " + styleTitle(def) + " »" : "Style « " + styleTitle(def) + " » retiré" });
+  }
+  // ----- Points d'entrée communs (menus, barre flottante, palette) -----
+  function saveStyleOf(it) {
+    if (!it || !isNode(it)) { toast("Sélectionnez un widget ou un conteneur pour enregistrer son style.", true); return; }
+    if (!PAGE.siteSettingsUrl) { toast("Les styles enregistrés appartiennent à un site : cette page n'en a pas.", true); return; }
+    openStyleDialog(it);
+  }
+  var canSaveStyle = function (items) { return items.length === 1 && isNode(items[0]) && Boolean(PAGE.siteSettingsUrl) && Boolean(items[0].styles || items[0].states); };
+  // ----- Enregistrer / redéfinir -----
+  function openStyleDialog(it, redefineName) {
+    var own = presetOwn(it), scopes = {}, keys = {}, byCat = {}, redef = redefineName ? styleDef(redefineName) : null;
+    ["styles", "states"].forEach(function (src) { Object.keys(own[src]).forEach(function (scope) { scopes[scope] = true; own[src][scope].forEach(function (k) { keys[k] = true; (byCat[presetCatOf(k)] = byCat[presetCatOf(k)] || {})[k] = true; }); }); });
+    var scopeList = Object.keys(scopes);
+    if (!scopeList.length) { toast("Cet élément n'a aucun réglage propre à enregistrer : modifiez d'abord son style dans l'inspecteur.", true); return; }
+    // Redéfinition : on part des catégories déjà contenues dans le style (le reste reste décoché)
+    if (redef) { var rc = styleCats(redef); Object.keys(keys).forEach(function (k) { keys[k] = rc.indexOf(presetCatOf(k)) >= 0; }); if (!Object.keys(keys).some(function (k) { return keys[k]; })) Object.keys(keys).forEach(function (k) { keys[k] = true; }); }
+    var cats = PRESET_CATS.filter(function (c) { return byCat[c.id]; });
+    var dlg = h("dialog", { class: "pb-modal pb-sp", "aria-labelledby": "pb-sp-title", "data-pb-style-dialog": "" });
+    var form = h("form", { class: "pb-sp-form", method: "dialog", novalidate: "" });
+    var master = h("input", { type: "checkbox", "data-sp-all": "", "aria-label": "Tout sélectionner" }), summary = h("p", { class: "pb-sp-summary", "data-sp-summary": "", "aria-live": "polite" });
+    var catBoxes = {}, keyBoxes = {}, catCounts = {}, sampleHost = h("div", { class: "pb-sp-sample-host" });
+    var nameIn = h("input", { type: "text", class: "pb-input", maxlength: "60", placeholder: "Nom du style", "aria-label": "Nom du style", "data-sp-name": "", value: redef ? styleTitle(redef) : "", autocomplete: "off", disabled: redef ? true : null });
+    var warn = h("p", { class: "pb-note is-warn", role: "alert", hidden: true, "data-sp-error": "" });
+    var applyIn = h("input", { type: "checkbox", "data-sp-apply": "" }); applyIn.checked = true;
+    var saveBtn = h("button", { type: "submit", class: "btn btn-primary", "data-sp-save": "" }, redef ? "Redéfinir le style" : "Enregistrer le style");
+    var chosenKeys = function () { return Object.keys(keys).filter(function (k) { return keys[k]; }); };
+    var chosenScopes = function () { return scopeList.filter(function (s) { return scopes[s]; }); };
+    var slugNow = function () { return redef ? redef.name : slugifyStyle(nameIn.value); };
+    function refresh() {
+      var all = Object.keys(keys), on = chosenKeys();
+      master.checked = on.length === all.length; master.indeterminate = on.length > 0 && on.length < all.length;
+      cats.forEach(function (c) {
+        var ks = Object.keys(byCat[c.id]), n = ks.filter(function (k) { return keys[k]; }).length;
+        catBoxes[c.id].checked = n === ks.length; catBoxes[c.id].indeterminate = n > 0 && n < ks.length;
+        catCounts[c.id].textContent = n + "/" + ks.length;
+        ks.forEach(function (k) { keyBoxes[k].checked = Boolean(keys[k]); });
+      });
+      var p = presetPick(it, keys, scopes);
+      summary.textContent = p.n ? p.n + " réglage" + (p.n > 1 ? "s" : "") + " seront enregistrés" + (scopeList.length > 1 ? " · " + chosenScopes().map(presetScopeLabel).join(", ") : "") + "." : "Rien n'est sélectionné.";
+      sampleHost.textContent = ""; sampleHost.appendChild(styleSample(p));
+      var slug = slugNow(), exists = !redef && slug && siteClasses.some(function (x) { return x.name === slug; });
+      saveBtn.disabled = !p.n || !slug;
+      if (!redef) saveBtn.textContent = exists ? "Remplacer le style" : "Enregistrer le style";
+      if (exists) { warn.hidden = false; warn.textContent = "Le style « " + slug + " » existe déjà : il sera remplacé pour tous les éléments du site qui l'utilisent."; }
+      else if (redef) { var n = usersOfStyle(redef.name); warn.hidden = false; warn.textContent = "Ce style est utilisé par " + n + " élément" + (n > 1 ? "s" : "") + " de cette page (et peut-être d'autres pages du site) : tous suivront la nouvelle définition. Leurs réglages propres sont conservés."; }
+      else warn.hidden = true;
+    }
+    var setAll = function (v) { Object.keys(keys).forEach(function (k) { keys[k] = v; }); refresh(); };
+    master.addEventListener("change", function () { setAll(master.checked); });
+    form.appendChild(h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-sp-title", text: redef ? "Redéfinir le style" : "Enregistrer comme style" }), h("span", { class: "pb-modal-spacer" }),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": "Fermer", onclick: function () { dlg.close(); } }, "×")));
+    var body = h("div", { class: "pb-sp-body" });
+    body.appendChild(h("p", { class: "pb-hint", text: "Source : " + ((inspectorFor(it) || {}).kind || it.type) + ". Cochez ce que le style doit contenir ; le texte, les images, les liens et la structure ne sont jamais copiés." }));
+    body.appendChild(h("div", { class: "pb-sp-namerow" }, h("div", { class: "pb-field" }, h("label", { text: "Nom du style" }), nameIn), sampleHost));
+    body.appendChild(h("div", { class: "pb-sp-bar" }, h("label", { class: "pb-check pb-sp-master" }, master, " Tout sélectionner"),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-sp-none": "", onclick: function () { setAll(false); } }, "Tout désélectionner")));
+    var list = h("div", { class: "pb-sp-cats", role: "group", "aria-label": "Catégories à enregistrer" });
+    cats.forEach(function (c) {
+      var cb = h("input", { type: "checkbox", "data-sp-cat": c.id }); catBoxes[c.id] = cb;
+      cb.addEventListener("change", function () { Object.keys(byCat[c.id]).forEach(function (k) { keys[k] = cb.checked; }); refresh(); });
+      var det = h("details", { class: "pb-sp-cat" });
+      var props = h("div", { class: "pb-sp-props" });
+      Object.keys(byCat[c.id]).forEach(function (k) {
+        var kb = h("input", { type: "checkbox", "data-sp-key": k }); keyBoxes[k] = kb;
+        kb.addEventListener("change", function () { keys[k] = kb.checked; refresh(); });
+        props.appendChild(h("label", { class: "pb-check" }, kb, " " + presetKeyLabel(k)));
+      });
+      det.appendChild(h("summary", {}, h("label", { class: "pb-check", onclick: function (e) { e.stopPropagation(); } }, cb, " " + c.label), (catCounts[c.id] = h("span", { class: "pb-sp-count" }))));
+      det.appendChild(props);
+      list.appendChild(det);
+    });
+    body.appendChild(list);
+    if (scopeList.length > 1) {
+      var sc = h("div", { class: "pb-sp-scopes", role: "group", "aria-label": "Écrans et états à enregistrer" }, h("span", { class: "pb-sub", text: "Écrans et états" }));
+      scopeList.forEach(function (s) {
+        var cb = h("input", { type: "checkbox", "data-sp-scope": s }); cb.checked = true;
+        cb.addEventListener("change", function () { scopes[s] = cb.checked; refresh(); });
+        sc.appendChild(h("label", { class: "pb-check" }, cb, " " + presetScopeLabel(s)));
+      });
+      body.appendChild(sc);
+    }
+    body.appendChild(h("p", { class: "pb-hint", text: "Portée : ce site (le style sert à toutes ses pages)." }));
+    if (!redef) body.appendChild(h("label", { class: "pb-check" }, applyIn, " Appliquer à cet élément (ses réglages enregistrés passent dans le style, les autres restent)"));
+    body.appendChild(summary); body.appendChild(warn);
+    form.appendChild(body);
+    form.appendChild(h("div", { class: "pb-sp-actions" }, h("button", { type: "button", class: "btn btn-outline", onclick: function () { dlg.close(); } }, "Annuler"), saveBtn));
+    nameIn.addEventListener("input", refresh);
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = slugNow(), label = nameIn.value.trim();
+      if (!/^[a-z][a-z0-9-]{0,29}$/.test(name)) { warn.hidden = false; warn.textContent = "Donnez un nom au style (lettres, chiffres, tirets)."; nameIn.focus(); return; }
+      var p = presetPick(it, keys, scopes);
+      if (!p.n) return;
+      var picked = chosenKeys(), catIds = PRESET_CATS.filter(function (c) { return picked.some(function (k) { return byCat[c.id] && byCat[c.id][k]; }); }).map(function (c) { return c.id; });
+      var prev = styleDef(name), def = { name: name, meta: { source: it.type, categories: catIds, updated: new Date().toISOString().slice(0, 10) } };
+      if (label && label !== name) def.label = label.slice(0, 60);
+      if (redef && redef.label) def.label = redef.label;
+      if (Object.keys(p.styles).length) def.styles = p.styles;
+      if (Object.keys(p.states).length) def.states = p.states;
+      var next = siteClasses.map(clone), at = -1; next.forEach(function (x, i) { if (x.name === name) at = i; });
+      if (at >= 0) next[at] = def; else next.push(def);
+      saveBtn.disabled = true;
+      saveSiteClasses(next, function () {
+        if (applyIn.checked && !redef) change(function () {
+          var x = byId(it.id), cl = classNames(x);
+          if (cl.indexOf(name) < 0) cl.push(name);
+          x.classes = cl.join(" ");
+          ["styles", "states"].forEach(function (src) {
+            Object.keys(p[src]).forEach(function (scope) {
+              Object.keys(p[src][scope]).forEach(function (k) { delete x[src][scope][k]; });
+              if (!Object.keys(x[src][scope]).length) delete x[src][scope];
+            });
+            if (x[src] && !Object.keys(x[src]).length) delete x[src];
+          });
+        }, { label: "Style « " + (def.label || name) + " » enregistré et appliqué" });
+        toast("Style « " + (def.label || name) + " » " + (redef ? "redéfini" : prev ? "remplacé" : "enregistré") + " (" + p.n + " réglage" + (p.n > 1 ? "s" : "") + ").");
+        dlg.close();
+        if (libraryPaint) libraryPaint();
+      });
+      setTimeout(function () { if (dlg.open) saveBtn.disabled = false; }, 4000);
+    });
+    dlg.appendChild(form);
+    dlg.addEventListener("close", function () { dlg.remove(); });
+    document.body.appendChild(dlg);
+    refresh();
+    dlg.showModal();
+    (redef ? saveBtn : nameIn).focus();
+  }
+  // Compatibilité : réglages d'un style que le type de l'élément cible ne propose pas (écrits mais sans effet sur lui)
+  function presetUnsupported(it, def) {
+    var schema = inspectorFor(it), g = schema && schema.groups;
+    if (!g) return Object.keys(presetKeysOf(def));
+    var offered = function (k) { var gr = k === "backgroundColor" ? "background" : (SP[k] && SP[k].group) || (({ gradient: "background", overlay: "background", shadow: "effects", filter: "effects", backdrop: "effects", transform: "position", mask: "mask" })[k]); var spec = gr && g[gr]; return spec === true || (Array.isArray(spec) && spec.indexOf(k) >= 0) || (k === "color" && g.typography !== undefined); };
+    return Object.keys(presetKeysOf(def)).filter(function (k) { return !offered(k); });
+  }
+  // ----- Bibliothèque des styles du site -----
+  var libraryPaint = null;
+  function openStyleLibrary() {
+    if (!PAGE.siteSettingsUrl) { toast("Les styles enregistrés appartiennent à un site : cette page n'en a pas.", true); return; }
+    var dlg = h("dialog", { class: "pb-modal pb-sp pb-sl", "aria-labelledby": "pb-sl-title", "data-pb-style-library": "" });
+    var mode = store.get("style-mode", "complete") === "replace" ? "replace" : "complete";
+    var q = "", cat = "";
+    var search = h("input", { type: "search", class: "pb-input", placeholder: "Rechercher un style", "aria-label": "Rechercher un style", "data-sl-search": "" });
+    var catSel = h("select", { class: "pb-prop-select", "aria-label": "Filtrer par catégorie", "data-sl-cat": "" }, h("option", { value: "", text: "Toutes les catégories" }), PRESET_CATS.map(function (c) { return h("option", { value: c.id, text: c.label }); }));
+    var modeHint = h("p", { class: "pb-hint", "data-sl-hint": "" });
+    var seg = h("div", { class: "pb-seg", role: "radiogroup", "aria-label": "Mode d'application" });
+    var listEl = h("div", { class: "pb-sl-list", "data-sl-list": "" });
+    var HINT = { complete: "Compléter : le style s'ajoute ; les réglages propres de l'élément restent prioritaires et rien n'est retiré.", replace: "Remplacer : les réglages propres de l'élément, dans les catégories du style, sont retirés ; le style les remplace." };
+    function paintMode() {
+      seg.textContent = "";
+      [["complete", "Compléter"], ["replace", "Remplacer"]].forEach(function (m) {
+        seg.appendChild(h("button", { type: "button", role: "radio", "aria-checked": String(mode === m[0]), "data-sl-mode": m[0], onclick: function () { mode = m[0]; store.set("style-mode", mode); paintMode(); } }, m[1]));
+      });
+      modeHint.textContent = HINT[mode];
+    }
+    function targets() { return selectedItems().filter(function (x) { return isNode(x) && !lockedDeep(x.id); }); }
+    function paint() {
+      listEl.textContent = "";
+      var sel = selectedItems(), one = sel.length === 1 && isNode(sel[0]) ? sel[0] : null, used = one ? stylesOf(one) : [], tg = targets();
+      var rows = siteClasses.filter(function (c) {
+        var text = (styleTitle(c) + " " + c.name).toLowerCase();
+        return (!q || text.indexOf(q) >= 0) && (!cat || styleCats(c).indexOf(cat) >= 0);
+      });
+      if (!rows.length) listEl.appendChild(h("p", { class: "pb-hint", text: siteClasses.length ? "Aucun style ne correspond." : "Aucun style enregistré. Réglez un élément dans l'inspecteur, puis « Enregistrer comme style… »." }));
+      rows.forEach(function (c) {
+        var cl = styleCats(c), n = usersOfStyle(c.name), on = used.indexOf(c.name) >= 0;
+        var act = function (label, fn, dis, attrs) { return h("button", Object.assign({ type: "button", class: "btn btn-ghost btn-sm", disabled: dis || null, onclick: fn }, attrs || {}), label); };
+        listEl.appendChild(h("div", { class: "pb-sl-row" + (on ? " is-on" : ""), "data-style": c.name },
+          styleSample(c),
+          h("div", { class: "pb-sl-main" }, h("strong", { text: styleTitle(c) }), on ? h("span", { class: "pb-blk-badge", text: "Appliqué" }) : null,
+            h("small", { text: (cl.map(presetCatLabel).join(" · ") || "—") + " · " + n + " élément" + (n > 1 ? "s" : "") + " ici" })),
+          h("button", { type: "button", class: "btn btn-outline btn-sm", "data-sl-apply": c.name, disabled: !canWrite || !tg.length, "data-tip": !tg.length ? "Sélectionnez d'abord un élément (non verrouillé) dans le canevas" : null, onclick: function () { applyStyleTo(tg.map(function (x) { return x.id; }), c.name, mode); paint(); } }, "Appliquer"),
+          h("details", { class: "pb-sl-more" }, h("summary", { "aria-label": "Autres actions pour " + styleTitle(c), text: "⋯" }),
+            h("div", { class: "pb-sl-menu" },
+              act("Renommer", function () {
+                ask("Renommer le style", [["label", "text", "Nom du style"]], function (v) {
+                  var next = siteClasses.map(clone); next.forEach(function (x) { if (x.name === c.name) { if (v.label) x.label = v.label.slice(0, 60); else delete x.label; } });
+                  saveSiteClasses(next, paint);
+                });
+                var f = $("[data-pb-ask-fields] [name=label]"); if (f) { f.value = styleTitle(c); f.select(); }
+              }, !canWrite, { "data-sl-rename": c.name }),
+              act("Dupliquer", function () {
+                var base = c.name.slice(0, 24) + "-copie", nm = base, i = 2;
+                while (styleDef(nm)) nm = base.slice(0, 27) + "-" + (i++);
+                var copy = clone(c); copy.name = nm; copy.label = (styleTitle(c) + " (copie)").slice(0, 60);
+                saveSiteClasses(siteClasses.map(clone).concat([copy]), paint);
+              }, !canWrite, { "data-sl-dup": c.name }),
+              act("Redéfinir depuis la sélection", function () { dlg.close(); openStyleDialog(one, c.name); }, !canWrite || !one || !canSaveStyle([one]), { "data-sl-redefine": c.name }),
+              act("Supprimer", function () {
+                var msg = n ? n + " élément" + (n > 1 ? "s" : "") + " de cette page " + (n > 1 ? "utilisent" : "utilise") + " ce style : ils seront dissociés et garderont leur apparence. Les autres pages du site qui l'utilisent la perdront. Supprimer « " + styleTitle(c) + " » ?" : "Supprimer le style « " + styleTitle(c) + " » du site ? Les autres pages qui l'utilisent perdront son apparence.";
+                if (!window.confirm(msg)) return;
+                var ids = []; walk(function (x) { if (isNode(x) && classNames(x).indexOf(c.name) >= 0) ids.push(x.id); });
+                if (ids.length) unlinkStyleFrom(ids, c.name, true);
+                saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Style supprimé."); paint(); });
+              }, !canWrite, { "data-sl-delete": c.name })))));
+      });
+    }
+    search.addEventListener("input", function () { q = search.value.trim().toLowerCase(); paint(); });
+    catSel.addEventListener("change", function () { cat = catSel.value; paint(); });
+    paintMode();
+    var form = h("div", { class: "pb-sp-form" },
+      h("div", { class: "pb-modal-head" }, h("h2", { id: "pb-sl-title", text: "Styles du site" }), h("span", { class: "pb-modal-spacer" }),
+        h("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": "Fermer", onclick: function () { dlg.close(); } }, "×")),
+      h("div", { class: "pb-sp-body" },
+        h("div", { class: "pb-sl-tools" }, search, catSel),
+        h("div", { class: "pb-sl-mode" }, h("span", { class: "pb-sub", text: "Appliquer en mode" }), seg), modeHint,
+        listEl),
+      h("div", { class: "pb-sp-actions" },
+        h("button", { type: "button", class: "btn btn-outline", "data-sl-new": "", disabled: !canWrite, onclick: function () { var s = selectedItems(); if (s.length === 1 && canSaveStyle(s)) { dlg.close(); saveStyleOf(s[0]); } else toast("Sélectionnez un élément qui a des réglages propres pour enregistrer son style.", true); } }, "Enregistrer la sélection comme style…"),
+        h("button", { type: "button", class: "btn btn-primary", onclick: function () { dlg.close(); } }, "Fermer")));
+    dlg.appendChild(form);
+    dlg.addEventListener("close", function () { libraryPaint = null; dlg.remove(); });
+    document.body.appendChild(dlg);
+    libraryPaint = paint;
+    paint();
+    dlg.showModal();
+    search.focus();
   }
   function globalClassesBlock(it, locked) {
     var box = h("div", { class: "pb-global-classes" });
     box.appendChild(h("p", { class: "pb-sub", text: "Classes globales du site" }));
     var names = classNames(it);
-    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis créez une classe : les autres éléments pourront la réutiliser, et la modifier mettra tout à jour." }));
+    if (!siteClasses.length) box.appendChild(h("p", { class: "pb-hint", text: "Aucune classe globale. Réglez le style de cet élément, puis « Enregistrer comme style » : les autres éléments pourront le réutiliser, et le modifier mettra tout à jour." }));
     siteClasses.forEach(function (c) {
       var on = names.indexOf(c.name) >= 0;
       var cb = h("input", { type: "checkbox", disabled: locked || null });
       cb.checked = on;
-      cb.addEventListener("change", function () { setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false); });
+      cb.addEventListener("change", function () {
+        setNodeClasses(it, cb.checked ? names.concat([c.name]) : names.filter(function (n) { return n !== c.name; }), cb.checked ? "Classe « " + c.name + " » appliquée" : "Classe « " + c.name + " » retirée", false);
+        if (cb.checked && c.meta && c.meta.source && c.meta.source !== it.type) {
+          var no = presetUnsupported(it, c), all = Object.keys(presetKeysOf(c)).length;
+          if (no.length) toast("Style « " + c.name + " » : " + (all - no.length) + " réglage" + (all - no.length > 1 ? "s" : "") + " sur " + all + " s'appliquent à ce type d'élément (sans effet : " + no.slice(0, 4).map(presetKeyLabel).join(", ") + (no.length > 4 ? "…" : "") + ").");
+        }
+      });
       box.appendChild(h("div", { class: "pb-gclass-row" },
-        h("label", { class: "pb-check" }, cb, " ." + c.name),
-        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Ajoute les réglages propres de cet élément à la classe (tous les éléments de la classe sont mis à jour), puis les retire de l'élément",
-          onclick: function () {
-            var own = ownStyles(it), list = siteClasses.map(function (x) { return clone(x); }), t = list.filter(function (x) { return x.name === c.name; })[0];
-            ["styles", "states"].forEach(function (k) { t[k] = t[k] || {}; Object.keys(own[k]).forEach(function (bp) { t[k][bp] = Object.assign({}, t[k][bp], own[k][bp]); }); });
-            saveSiteClasses(list, function () { setNodeClasses(it, classNames(byId(it.id) || it), "Classe « " + c.name + " » mise à jour", true); toast("Classe « " + c.name + " » mise à jour : tous ses éléments suivent."); });
-          } }, "Mettre à jour la classe") : null,
+        h("label", { class: "pb-check" }, cb, " " + (c.label || "." + c.name)),
+        on ? h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !(it.styles || it.states), "data-tip": "Remplace le contenu du style par les réglages que vous choisissez parmi ceux de cet élément (tous les éléments qui l'utilisent suivent)", onclick: function () { openStyleDialog(it, c.name); } }, "Mettre à jour le style") : null,
         h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, "aria-label": "Supprimer la classe " + c.name,
           onclick: function () { if (!window.confirm("Supprimer la classe « " + c.name + " » du site ? Les éléments qui la portent perdent son style.")) return; saveSiteClasses(siteClasses.filter(function (x) { return x.name !== c.name; }), function () { toast("Classe supprimée."); }); } }, "Supprimer")));
     });
-    var nameIn = h("input", { type: "text", maxlength: "30", placeholder: "nom-de-la-classe", "aria-label": "Nom de la nouvelle classe globale", disabled: locked || null });
-    box.appendChild(h("div", { class: "pb-gclass-new" }, nameIn, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || !PAGE.siteSettingsUrl, "data-tip": "Crée la classe avec les réglages de style propres de cet élément, et l'applique",
-      onclick: function () {
-        var name = nameIn.value.trim().toLowerCase();
-        if (!/^[a-z][a-z0-9-]{0,29}$/.test(name) || /^(kw|lp|pb|mk)-/.test(name)) { toast("Nom de classe invalide : minuscules, chiffres et tirets, commence par une lettre (préfixes kw-, lp-, pb-, mk- réservés).", true); return; }
-        if (siteClasses.some(function (x) { return x.name === name; })) { toast("Cette classe existe déjà : cochez-la pour l'appliquer.", true); return; }
-        var own = ownStyles(it), def = { name: name };
-        if (Object.keys(own.styles).length) def.styles = own.styles;
-        if (Object.keys(own.states).length) def.states = own.states;
-        saveSiteClasses(siteClasses.concat([def]), function () { setNodeClasses(it, classNames(it).concat([name]), "Classe « " + name + " » créée", true); toast("Classe « " + name + " » créée et appliquée."); });
-      } }, "Créer une classe depuis cet élément")));
+    box.appendChild(h("div", { class: "pb-gclass-new" }, h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-save-style": "", disabled: locked || !PAGE.siteSettingsUrl || !(it.styles || it.states), "data-tip": "Choisissez les catégories de réglages de cet élément à enregistrer comme style réutilisable", onclick: function () { openStyleDialog(it); } }, "Enregistrer comme style…"), h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-style-library-open": "", onclick: openStyleLibrary }, "Bibliothèque")));
     if (!PAGE.siteSettingsUrl) box.appendChild(h("p", { class: "pb-hint", text: "Les classes globales appartiennent à un site : cette page n'en a pas." }));
+    else box.appendChild(classesTransfer(locked));
     return box;
+  }
+  // Export / import des classes globales seules (fichier .json) : l'import passe par l'enregistrement normal des réglages du site, donc par la même validation
+  function classesTransfer(locked) {
+    var file = h("input", { type: "file", accept: "application/json,.json", hidden: "", "data-pb-classes-import": "" });
+    file.addEventListener("change", function () {
+      var f = file.files && file.files[0]; file.value = "";
+      if (!f) return;
+      if (f.size > 1048576) { toast("Fichier trop volumineux (1 Mo au plus).", true); return; }
+      f.text().then(function (txt) {
+        var data; try { data = JSON.parse(txt); } catch (e) { toast("Ce fichier n'est pas un export de classes valide.", true); return; }
+        var list = Array.isArray(data) ? data : data && Array.isArray(data.classes) ? data.classes : null;
+        if (!list || !list.length) { toast("Aucune classe trouvée dans ce fichier.", true); return; }
+        var byName = {}; siteClasses.forEach(function (c) { byName[c.name] = c; });
+        var added = 0, replaced = 0;
+        list.forEach(function (c) { if (c && typeof c.name === "string") { if (byName[c.name]) replaced++; else added++; byName[c.name] = c; } });
+        if (!added && !replaced) { toast("Aucune classe trouvée dans ce fichier.", true); return; }
+        saveSiteClasses(Object.keys(byName).map(function (k) { return byName[k]; }), function () { toast("Classes importées : " + added + " ajoutée" + (added > 1 ? "s" : "") + ", " + replaced + " remplacée" + (replaced > 1 ? "s" : "") + "."); });
+      });
+    });
+    return h("div", { class: "pb-gclass-transfer" },
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-classes-export": "", disabled: !siteClasses.length, onclick: function () {
+        var blob = new Blob([JSON.stringify({ kolakisa: "classes", version: 1, classes: siteClasses }, null, 2)], { type: "application/json" });
+        var a = h("a", { href: URL.createObjectURL(blob), download: "classes-globales.json" }); document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+        toast(siteClasses.length + " classe" + (siteClasses.length > 1 ? "s exportées" : " exportée") + ".");
+      } }, "Exporter les classes"),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || !canWrite, onclick: function () { file.click(); } }, "Importer des classes"), file);
   }
   // Code : CSS propre à l'élément, classes et attributs (vérifiés à l'enregistrement : aucune ressource externe)
   function codeField(it, locked, opts) {
     opts = opts || {};
-    var det = h("details", { class: "pb-acc", "data-group": "code" });
+    var det = null;
     var n = (opts.onlyAttrs ? 0 : (it.css ? 1 : 0) + (it.cssHover ? 1 : 0) + (it.classes ? 1 : 0)) + (opts.noAttrs ? 0 : (it.attrs ? it.attrs.length : 0));
-    if (store.get("open-code", Boolean(n))) det.open = true;
-    det.addEventListener("toggle", function () { store.set("open-code", det.open); });
+    det = accShell("code", Boolean(n));
     det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: opts.onlyAttrs ? "Attributs HTML" : opts.noAttrs ? "CSS personnalisé et classes" : "CSS, classes et attributs" }), n ? h("span", { class: "pb-acc-count", text: String(n) }) : null));
     var inner = h("div", { class: "pb-acc-body" });
     if (!opts.onlyAttrs) {
@@ -3536,31 +4860,47 @@
   function audienceField(it, locked) {
     var wrap = h("div", { class: "pb-field" });
     var a = it.audience || {};
-    var id = fid();
-    var sel = h("select", { id: id, disabled: locked }, [h("option", { value: "", text: "Tout le monde" })].concat(SPEC.audiences.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
-    sel.value = a.who || "";
     var needsValue = function (w) { return w === "tag" || w === "not_tag" || w === "score_min" || w === "param"; };
     var holder = function (w) { return w === "score_min" ? "Score minimal" : w === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette"; };
-    var val = h("input", { type: a.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: a.who === "score_min" ? "Score minimal" : a.who === "param" ? "clé ou clé=valeur (ex. campagne=printemps)" : "Nom de l'étiquette", value: a.value === undefined ? "" : String(a.value), disabled: locked, "aria-label": "Valeur du public d'affichage", list: a.who === "score_min" ? null : "pb-tags" });
-    val.hidden = !needsValue(a.who);
-    var apply = function () {
-      var who = sel.value;
-      val.hidden = !needsValue(who);
-      val.type = who === "score_min" ? "number" : "text";
-      val.placeholder = holder(who);
-      if (needsValue(who) && val.value.trim() === "") { val.focus(); return; }
-      change(function () {
-        var x = byId(it.id);
-        if (!who) delete x.audience;
-        else x.audience = needsValue(who) ? { who: who, value: who === "score_min" ? Number(val.value) : val.value.trim() } : { who: who };
-      });
-    };
-    sel.addEventListener("change", apply);
-    val.addEventListener("change", apply);
+    // Une ligne « condition » (liste + valeur éventuelle). get() lit la condition actuelle ; put(cond) l'enregistre (null = retirer).
+    function condRow(label, cond, put, removable) {
+      var id = fid(), c = cond || {};
+      var sel = h("select", { id: id, disabled: locked }, [h("option", { value: "", text: removable ? "— choisir —" : "Tout le monde" })].concat(SPEC.audiences.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+      sel.value = c.who || "";
+      var val = h("input", { type: c.who === "score_min" ? "number" : "text", min: "0", step: "1", maxlength: "60", placeholder: holder(c.who), value: c.value === undefined ? "" : String(c.value), disabled: locked, "aria-label": "Valeur de la condition" });
+      val.hidden = !needsValue(c.who);
+      var apply = function () {
+        var who = sel.value;
+        val.hidden = !needsValue(who); val.type = who === "score_min" ? "number" : "text"; val.placeholder = holder(who);
+        if (needsValue(who) && val.value.trim() === "") { val.focus(); return; }
+        put(!who ? null : needsValue(who) ? { who: who, value: who === "score_min" ? Number(val.value) : val.value.trim() } : { who: who });
+      };
+      sel.addEventListener("change", apply); val.addEventListener("change", apply);
+      var row = h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel, val);
+      if (removable) row.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked, onclick: function () { put(null); } }, "Retirer cette condition"));
+      return row;
+    }
+    // Écrit l'ensemble { who, value, and, or } après modification par fn(copie)
+    var edit = function (fn) { change(function () { var x = byId(it.id), cur = JSON.parse(JSON.stringify(x.audience || {})); fn(cur); if (!cur.who) delete x.audience; else { if (cur.and && !cur.and.length) delete cur.and; if (cur.or && !cur.or.length) delete cur.or; x.audience = cur; } }); };
     wrap.appendChild(h("p", { class: "pb-sub", text: "Personnalisation" }));
-    wrap.appendChild(h("label", { for: id, text: "Afficher à" }));
-    wrap.appendChild(sel);
-    wrap.appendChild(val);
+    wrap.appendChild(condRow("Afficher à", a.who ? { who: a.who, value: a.value } : null, function (c) {
+      edit(function (cur) { if (!c) { for (var k in cur) delete cur[k]; } else { cur.who = c.who; if (c.value !== undefined) cur.value = c.value; else delete cur.value; } });
+    }, false));
+    if (a.who) {
+      (a.and || []).forEach(function (c, i) {
+        wrap.appendChild(condRow("ET", c, function (nc) { edit(function (cur) { if (nc) cur.and[i] = nc; else cur.and.splice(i, 1); }); }, true));
+      });
+      wrap.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || (a.and || []).length >= 3, onclick: function () { edit(function (cur) { cur.and = (cur.and || []).concat([{ who: "known" }]); }); } }, "Ajouter une condition (ET)"));
+      (a.or || []).forEach(function (g, gi) {
+        wrap.appendChild(condRow("OU bien (groupe " + (gi + 2) + ")", { who: g.who, value: g.value }, function (nc) { edit(function (cur) { if (nc) { cur.or[gi].who = nc.who; if (nc.value !== undefined) cur.or[gi].value = nc.value; else delete cur.or[gi].value; } else cur.or.splice(gi, 1); }); }, true));
+        (g.and || []).forEach(function (c, i) {
+          wrap.appendChild(condRow("ET (groupe " + (gi + 2) + ")", c, function (nc) { edit(function (cur) { var l = cur.or[gi].and; if (nc) l[i] = nc; else l.splice(i, 1); if (!l.length) delete cur.or[gi].and; }); }, true));
+        });
+        wrap.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: locked || (g.and || []).length >= 3, onclick: function () { edit(function (cur) { cur.or[gi].and = (cur.or[gi].and || []).concat([{ who: "known" }]); }); } }, "Ajouter une condition (ET) au groupe " + (gi + 2)));
+      });
+      wrap.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: locked || (a.or || []).length >= 3, onclick: function () { edit(function (cur) { cur.or = (cur.or || []).concat([{ who: "known" }]); }); } }, "Ajouter un autre groupe (OU)"));
+      wrap.appendChild(h("p", { class: "pb-hint", text: "Les conditions d'un même groupe s'additionnent (ET) ; l'élément s'affiche si l'un des groupes est satisfait (OU)." }));
+    }
     wrap.appendChild(h("p", { class: "pb-hint", text: "Selon ce que le site sait réellement du visiteur : son compte s'il est connecté, ou le contact relié à son navigateur (cookies acceptés). Un visiteur inconnu ne voit que ce qui s'adresse à tout le monde ou aux inconnus." }));
     return wrap;
   }
@@ -3574,35 +4914,26 @@
   }
   // Composant synchronisé : sa source se modifie ici, pour TOUTES les pages qui l'affichent
   var compSaveTimer = null;
+  // Instance liée : on ne modifie pas son contenu ici (il vient du composant principal) ; on peut l'ouvrir, la détacher, voir ses pages
   function componentInspector(box, s) {
     var c = components.find(function (x) { return x.id === s.componentId; });
-    box.appendChild(h("p", { class: "pb-note", text: "Composant synchronisé « " + (c ? c.name : "?") + " » : le modifier ici modifie sa SOURCE, donc toutes les pages qui l'utilisent (enregistré automatiquement ; non concerné par « Annuler »)." }));
-    var holder = h("div", {}, h("p", { class: "pb-hint", text: "Chargement du composant…" }));
-    box.appendChild(holder);
-    fetchComponent(s.componentId).then(function (comp) {
-      holder.textContent = "";
-      var sec = comp.section;
-      if (sec.type === "layout") holder.appendChild(h("p", { class: "pb-hint", text: "Composant fait d'éléments : détachez-le pour modifier ses éléments dans cette page (il devient une copie indépendante)." }));
-      else (F[sec.type] || []).forEach(function (fd) {
-        if (fd[1] === "repeat" || fd[1] === "image") return;
-        holder.appendChild(textField(fd[2], fd[1] === "lines" ? (sec[fd[0]] || []).join("\n") : sec[fd[0]], function (v) {
-          sec[fd[0]] = fd[1] === "lines" ? v.split("\n") : v;
-          clearTimeout(compSaveTimer);
-          compSaveTimer = setTimeout(function () { api("POST", "/marketing/site-web/composants/" + comp.id, { section: sec }).then(function () { toast("Source du composant enregistrée (toutes les pages)."); scheduleRender(); }, apiFail); }, 800);
-        }, { multiline: fd[1] === "textarea" || fd[1] === "markdown" || fd[1] === "lines", disabled: !canWrite || lockedDeep(s.id) }));
-      });
-      if (canWrite) holder.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () {
-        if (refusesLockedWidget([reId(clone(sec))])) return;
-        change(function () { var l = locate(s.id); var copy = markSection(reId(clone(sec))); copy.id = s.id; ensureIds([copy]); if (s.hideOn) copy.hideOn = s.hideOn; if (s.name) copy.name = s.name; l.list[l.index] = copy; });
-        toast("Composant détaché : cette section est maintenant une copie indépendante.");
-      } }, "Détacher (copie indépendante)"));
-    }, function (err) { holder.textContent = ""; holder.appendChild(h("p", { class: "pb-note is-warn", text: err.message })); });
+    box.appendChild(h("p", { class: "pb-note", "data-comp-linked": "", text: "Instance liée au composant global « " + (c ? c.name : "?") + " » : son contenu vient du composant principal. Une mise à jour du composant principal s'y applique après « Mettre à jour »." }));
+    var row = h("div", { class: "pb-row pb-wrap" });
+    row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: !c, "data-comp-main": "", onclick: function () { if (c) openComponentEditor(c); } }, "Accéder au composant principal"));
+    if (canWrite) row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", "data-comp-detach": "", "data-tip": "Remplace cette instance par un bloc indépendant, sans lien avec le composant", onclick: function () { detachInstance(s); } }, "Détacher du composant"));
+    box.appendChild(row);
+    box.appendChild(h("p", { class: "pb-hint", text: "« Modifier cette instance » = la détacher : le bloc devient alors entièrement modifiable ici, sans toucher au composant." }));
   }
 
   // ---------- Barre contextuelle (selon la sélection) ----------
   function ctxSelect(label, key, items, options) {
     var p = SP[key];
     var own = ownValue(items[0], key);
+    if (key === "fontFamily" && window.KFonts) {
+      var kf = window.KFonts.picker({ value: own === undefined ? "" : String(own), legacy: p.options.map(function (o) { return [o[0], o[1]]; }), emptyLabel: "Police par défaut", disabled: lockedAny(items), label: label || "Police", onChange: function (v) { setStyle(idsOf(items), key, v); } });
+      kf.classList.add("kf-ctx"); kf.setAttribute("data-tip", label || p.label);
+      return kf;
+    }
     var sel = h("select", { "aria-label": label || p.label, "data-tip": label || p.label, disabled: lockedAny(items) }, [h("option", { value: "", text: (label || p.label) + "…" })].concat((options || p.options).map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
     sel.value = own === undefined ? "" : String(own);
     sel.addEventListener("change", function () { setStyle(idsOf(items), key, key === "columns" && sel.value ? Number(sel.value) : sel.value); });
@@ -3612,7 +4943,7 @@
   function ctxLength(label, key, items, width) {
     var it = items[0], own = ownValue(it, key), inh = inheritedValue(it, key), dis = lockedAny(items);
     var isNum = SP[key].kind === "number", cfg = (isNum ? NUMCFG[key] : LENCFG[key]) || {};
-    var commonOpts = { label: label, ariaLabel: label, tip: label, list: isNum ? null : "pb-scale", inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
+    var commonOpts = { label: label, ariaLabel: label, tip: label, inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
     var wrap;
     if (isNum) {
       var lim = NUM[key] || [-9999, 9999, 1];
@@ -3816,7 +5147,19 @@
   // Pas de nouveau rendu pendant une édition directe ou un geste dans le canevas (guide, poignée) : le document serait
   // remplacé sous la souris ; le rendu attend la fin du geste
   var gesture = false;
-  function scheduleRender() { if (editing || gesture) { pendingRender = true; return; } clearTimeout(renderTimer); renderTimer = setTimeout(renderCanvas, 220); }
+  // Saisie continue : 150 ms de regroupement ; action isolée (dupliquer, supprimer, annuler, couleur choisie…) : rendu presque tout de suite
+  // Délai de regroupement de la saisie : proportionnel au coût du dernier rendu (petite page : réponse rapide ; grande page : on ne multiplie pas les requêtes)
+  var lastRenderMs = 100;
+  // Regroupement des rendus : le PREMIER changement après une pause (400 ms sans changement) est envoyé tout de suite — l'attente d'une fenêtre de regroupement
+  // n'aurait servi qu'à retarder l'affichage —, les suivants (frappes, séries) attendent la fenêtre habituelle pour ne pas multiplier les requêtes.
+  var lastScheduleAt = -1e9;
+  function scheduleRender(quick) {
+    if (editing || gesture) { pendingRender = true; return; }
+    clearTimeout(renderTimer);
+    var now = performance.now(), first = now - lastScheduleAt > 400;
+    lastScheduleAt = now;
+    renderTimer = setTimeout(renderCanvas, first ? 0 : quick ? 30 : Math.max(50, Math.min(150, Math.round(lastRenderMs * 1.2))));
+  }
   function endGesture() { gesture = false; if (pendingRender && !editing) { pendingRender = false; scheduleRender(); } }
   var errorItemId = null;
   // « Section 3 › élément 2 « Titre » : … » → identifiant de l'élément en cause (mis en évidence dans les calques)
@@ -3827,13 +5170,121 @@
     (m[2].match(/élément (\d+)/g) || []).forEach(function (part) { var k = it && kidsOf(it); it = k ? k[Number(part.replace(/\D/g, "")) - 1] : null; });
     return it ? it.id : null;
   }
+  // Mise à jour du canevas EN PLACE : le rendu serveur est comparé au précédent, section par section, et seules les sections
+  // modifiées sont remplacées (feuilles de style comprises). Le document du cadre, ses écouteurs, ses images déjà chargées et le
+  // défilement restent en place : plus de rechargement complet à chaque modification. Tout ce qui sortirait de ce cadre simple
+  // (en-tête ou pied changé, scripts, sections interactives : onglets, carrousel, animations, formulaires…) recharge le cadre
+  // en entier, comme avant.
+  var lastRender = null;
+  var INTERACTIVE = /\sdata-kw-(?!add\b)[a-z-]+|<script|<iframe|<video|<audio|<form|<input|<details|<style/i;
+  function renderSignature(text) {
+    var d = new DOMParser().parseFromString(text, "text/html");
+    var main = d.getElementById("main");
+    var sig = { doc: d, main: main, head: "", styles: [], bodyClass: d.body ? d.body.className : "", bodyStyle: d.body ? d.body.getAttribute("style") || "" : "", rest: "", items: [] };
+    if (!main || !d.body) return null;
+    Array.prototype.forEach.call(d.head.children, function (el) { if (el.tagName === "STYLE") sig.styles.push(el.textContent); else sig.head += el.outerHTML; });
+    var clone = d.body.cloneNode(true);
+    clone.querySelector("#main").textContent = "";
+    clone.removeAttribute("style");
+    sig.rest = clone.outerHTML;
+    var other = 0;
+    Array.prototype.forEach.call(main.children, function (el) { sig.items.push({ key: el.getAttribute("data-section-id") || "~" + other++, html: el.outerHTML, el: el }); });
+    return sig;
+  }
+  function patchCanvas(text) {
+    var next = renderSignature(text), prev = lastRender;
+    lastRender = next;
+    if (!next || !prev) return false;
+    var doc = frame.contentDocument;
+    var main = doc && doc.body && doc.readyState === "complete" ? doc.getElementById("main") : null;
+    if (!main || !doc.body.classList.contains("lp-builder")) return false;
+    if (next.head !== prev.head || next.rest !== prev.rest || next.bodyClass !== prev.bodyClass) return false;
+    var liveStyles = Array.prototype.filter.call(doc.head.children, function (el) { return el.tagName === "STYLE"; });
+    // Le nombre de feuilles peut changer (la première règle d'un élément en crée une) : elles sont réconciliées plus bas, sans recharger le cadre
+    if (liveStyles.length !== prev.styles.length) return false;
+    var prevHtml = {};
+    prev.items.forEach(function (i) { prevHtml[i.key] = i.html; });
+    var liveByKey = {}, liveOther = [];
+    Array.prototype.forEach.call(main.children, function (el) { var k = el.getAttribute("data-section-id"); if (k) liveByKey[k] = el; else liveOther.push(el); });
+    var want = [], other = 0, replaced = 0;
+    for (var n = 0; n < next.items.length; n++) {
+      var it = next.items[n], live = it.key.charAt(0) === "~" ? liveOther[Number(it.key.slice(1))] : liveByKey[it.key];
+      if (live && prevHtml[it.key] === it.html) { want.push(live); continue; }
+      if (INTERACTIVE.test(it.html) || (live && INTERACTIVE.test(prevHtml[it.key] || ""))) return false;
+      want.push(doc.importNode(it.el, true)); replaced++;
+    }
+    var knownIds = {};
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { knownIds[idOfEl(e)] = 1; });
+    // Tout est vérifié : on applique (aucun retour en arrière possible après ce point)
+    syncStyles(doc, liveStyles, next.styles);
+    if (next.bodyStyle !== prev.bodyStyle) doc.body.setAttribute("style", next.bodyStyle);
+    var ref = main.firstChild;
+    want.forEach(function (el) { if (el === ref) ref = ref.nextSibling; else main.insertBefore(el, ref); });
+    Array.prototype.slice.call(main.children).forEach(function (el) { if (want.indexOf(el) < 0) el.remove(); });
+    inlineTouched.forEach(function (el) { el.style.width = ""; el.style.height = ""; });
+    inlineTouched = [];
+    clearPreviews();
+    // Éléments créés : apparition très courte (opacité + micro-zoom, sans toucher à la mise en page). Seuls les plus hauts d'un lot sont animés (au plus 6)
+    if (window.KolMotion) {
+      var fresh = Array.prototype.filter.call(doc.querySelectorAll("[data-node-id],[data-section-id]"), function (e) { return !knownIds[idOfEl(e)]; });
+      var top = fresh.filter(function (e) { var up = e.parentElement && e.parentElement.closest("[data-node-id],[data-section-id]"); return !up || knownIds[idOfEl(up)]; });
+      if (top.length && top.length <= 6) top.forEach(function (e) { window.KolMotion.appear(e, "appear"); });
+    }
+    markCanvasSelection(false);
+    drawRulers();
+    drawGuides();
+    refreshInfo();
+    return true;
+  }
+  // Feuilles <style> du cadre alignées sur le nouveau rendu, en place : réutilisées si identiques, créées ou retirées sinon (ordre conservé)
+  function syncStyles(doc, live, wanted) {
+    var cur = 0, surplus = wanted.length - live.length, last = null;
+    wanted.forEach(function (text) {
+      var l = live[cur];
+      while (surplus < 0 && l && l.textContent !== text) { l.remove(); cur++; surplus++; l = live[cur]; }
+      if (surplus > 0 && (!l || l.textContent !== text)) {
+        var made = doc.createElement("style"); made.textContent = text;
+        if (l) l.parentNode.insertBefore(made, l); else if (last) last.parentNode.insertBefore(made, last.nextSibling); else doc.head.appendChild(made);
+        surplus--; last = made; return;
+      }
+      if (l) { if (l.textContent !== text) l.textContent = text; cur++; last = l; }
+    });
+    for (; cur < live.length; cur++) live[cur].remove();
+  }
+  // Rechargement COMPLET du cadre (sections interactives : onglets, accordéons, compteurs, formulaires…, dont les scripts ne
+  // s'initialisent qu'une fois). Double tampon : le nouveau cadre se charge masqué par-dessus l'ancien, qui reste affiché et actif
+  // jusqu'à ce que le nouveau soit prêt ; l'échange est alors immédiat (aucun blanc, défilement et sélection restitués par setupCanvas).
+  var swapping = null, canvasReady = false;
+  function reloadCanvas(text, y) {
+    if (!canvasReady) { frame.onload = function () { setupCanvas(y); }; frame.srcdoc = text; return; } // tout premier affichage
+    var old = frame, nu = old.cloneNode(false);
+    nu.removeAttribute("data-pb-frame"); nu.removeAttribute("srcdoc");
+    nu.style.position = "absolute"; nu.style.inset = "0"; nu.style.visibility = "hidden";
+    swapping = nu;
+    nu.onload = function () {
+      // Un iframe inséré déclenche d'abord un `load` pour son document vide initial : on n'échange que sur le vrai contenu
+      var nd = nu.contentDocument;
+      if (swapping !== nu || !nd || nd.URL !== "about:srcdoc" || !nd.body) return;
+      swapping = null;
+      // Une édition directe ou un geste a commencé entre-temps : on ne remplace rien sous la main de la personne
+      if (editing || gesture) { nu.remove(); lastRender = null; pendingRender = true; return; }
+      // Le clavier passe à la zone du canevas (sinon un raccourci tapé pendant l'échange, Ctrl/⌘ + Z par exemple, serait perdu)
+      if (document.activeElement === old) $("[data-pb-canvas]").focus({ preventScroll: true });
+      nu.setAttribute("data-pb-frame", ""); nu.style.position = ""; nu.style.inset = ""; nu.style.visibility = "";
+      frame = nu; old.remove();
+      setupCanvas(y);
+    };
+    nu.srcdoc = text; // avant l'insertion : le document chargé est directement le bon
+    old.parentNode.appendChild(nu);
+  }
   function renderCanvas() {
     if (editing || gesture) { pendingRender = true; return; }
-    var seq = ++renderSeq;
+    var seq = ++renderSeq, t0 = performance.now();
     fetch(BASE + "/rendu", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: payload() }) })
       .then(function (r) { return r.text().then(function (text) { return { ok: r.ok, text: text }; }); })
       .then(function (res) {
         if (seq !== renderSeq) return;
+        lastRenderMs = performance.now() - t0;
         var errBox = $("[data-pb-render-error]");
         if (!res.ok) {
           var msg = "Aperçu non mis à jour.";
@@ -3847,13 +5298,13 @@
         errBox.hidden = true;
         if (errorItemId) { errorItemId = null; markError(); }
         if (editing || gesture) { pendingRender = true; return; }
+        // Un rechargement précédent n'a pas fini : son contenu est dépassé, on le jette et on recharge avec ce rendu-ci
+        if (swapping) { swapping.remove(); swapping = null; lastRender = null; }
+        if (patchCanvas(res.text)) return;
         var y = 0;
         try { y = frame.contentWindow.scrollY; } catch (e) { y = 0; }
-        frame.onload = function () { setupCanvas(y); };
-        // Le cadre va être remplacé : le clavier passe à la zone du canevas (sinon un raccourci tapé pendant le
-        // rechargement, Ctrl/⌘ + Z par exemple, serait perdu)
-        if (document.activeElement === frame) $("[data-pb-canvas]").focus({ preventScroll: true });
-        frame.srcdoc = res.text;
+        inlineTouched = [];
+        reloadCanvas(res.text, y);
       }, function () { var errBox = $("[data-pb-render-error]"); errBox.textContent = "Aperçu indisponible (connexion au serveur interrompue)."; errBox.hidden = false; });
   }
   function markError() { $$(".pb-row-item.is-error", treeEl).forEach(function (r) { r.classList.remove("is-error"); }); if (errorItemId) { var r = treeEl.querySelector('.pb-node[data-id="' + errorItemId + '"] > .pb-row-item'); if (r) r.classList.add("is-error"); } }
@@ -3866,13 +5317,17 @@
   var targetOf = function (e) { return e.target && e.target.closest ? e.target.closest("[data-node-id],[data-section-id]") : null; };
   var idOfEl = function (el) { return el ? el.getAttribute("data-node-id") || el.getAttribute("data-section-id") : null; };
   function setupCanvas(y) {
+    previews = [];
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
+    canvasReady = true;
+    guarded(refreshStart); // premier rendu terminé : seul moment où une page vide peut proposer le choix de création
     doc.body.classList.add("lp-builder");
+    if (window.pbDirect) window.pbDirect.canvas(doc); // manipulation directe : couche de survol et poignées de ce document
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
     frame.contentWindow.scrollTo(0, y);
-    doc.addEventListener("mousedown", function () { canvasPointerAt = Date.now(); closeMenu(); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
+    doc.addEventListener("mousedown", function (e) { canvasPointerAt = Date.now(); closeMenu(); releasePart(e); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
     doc.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
     frame.contentWindow.addEventListener("focus", function () {
       if (editing || Date.now() - canvasPointerAt < 1500 || Date.now() - tabAt < 500) return;
@@ -3967,6 +5422,13 @@
     refreshInfo();
   }
   // Cible de dépôt dans le canevas : avant / après un élément (selon l'axe de son parent) ou dans un conteneur
+  // Élément qui met réellement en page les enfants de `el` : le conteneur parent ; pour un enfant direct d'une Section libre, la section elle-même
+  // (l'enveloppe .kw-layout est transparente : display: contents, ses enfants sont ceux de la section)
+  function layoutParentEl(el) {
+    var p = el ? el.parentElement : null;
+    while (p && p.classList && p.classList.contains("kw-layout")) p = p.parentElement;
+    return p;
+  }
   function canvasDropTarget(e) {
     var doc = frame.contentDocument;
     var el = targetOf(e);
@@ -3978,7 +5440,7 @@
     var r = el.getBoundingClientRect();
     var it = l.item;
     var horizontal = false;
-    if (l.parent && el.parentElement) { var cs = doc.defaultView.getComputedStyle(el.parentElement); horizontal = (cs.display.indexOf("flex") >= 0 && cs.flexDirection.indexOf("row") === 0) || (cs.display.indexOf("grid") >= 0 && cs.gridTemplateColumns.split(" ").length > 1); }
+    var lpe = layoutParentEl(el); if (l.parent && lpe) { var cs = doc.defaultView.getComputedStyle(lpe); horizontal = (cs.display.indexOf("flex") >= 0 && cs.flexDirection.indexOf("row") === 0) || (cs.display.indexOf("grid") >= 0 && cs.gridTemplateColumns.split(" ").length > 1); }
     var rel = horizontal ? (e.clientX - r.left) / r.width : (e.clientY - r.top) / r.height;
     var accepts = kidsOf(it) && placingNode && !lockedDeep(it.id) && !(dragIds && dragIds.indexOf(it.id) >= 0);
     if (accepts && ((rel > 0.2 && rel < 0.8) || !kidsOf(it).length)) return { target: { parent: it, index: kidsOf(it).length }, el: el, pos: "inside", horizontal: horizontal };
@@ -4033,40 +5495,59 @@
     $$(".pb-drop-line, .pb-drop-box, .pb-drop-label", doc).forEach(function (x) { x.remove(); });
   }
   // Sélection dans le canevas : cadre, nom, dimensions, parent en pointillés, poignées de redimensionnement
-  function markCanvasSelection(scroll) {
+  function markCanvasSelection(scroll, pre) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
     $$(".is-selected", doc).forEach(function (el) { el.classList.remove("is-selected"); });
     selection.forEach(function (id) { var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]'); if (el) el.classList.add("is-selected"); });
-    drawOverlays();
+    drawOverlays(pre);
     if (scroll && selection.length) {
       var first = doc.querySelector('[data-node-id="' + selection[0] + '"],[data-section-id="' + selection[0] + '"]');
-      if (first) { var r = first.getBoundingClientRect(); if (r.top < 0 || r.top > frame.contentWindow.innerHeight - 40) first.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      if (first) { var r = pre && pre.items[0] && pre.items[0].client ? pre.items[0].client : first.getBoundingClientRect(); if (r.top < 0 || r.top > frame.contentWindow.innerHeight - 40) first.scrollIntoView({ block: "center", behavior: "smooth" }); }
     }
   }
-  function drawOverlays() {
+  // Géométrie nécessaire aux aides de sélection (cadres, parent, poignées, barre d'actions) : LUE EN BLOC, avant toute écriture dans la page, l'arbre ou l'inspecteur.
+  // La mise en page du canevas ne dépend pas de la sélection (simple contour) : lire avant ou après donne les mêmes valeurs, mais lire avant évite une mise en page forcée.
+  function readOverlayGeo() {
+    var doc = frame.contentDocument;
+    if (!doc || !doc.body) return null;
+    var geo = { pageW: doc.documentElement.clientWidth };
+    geo.items = selection.map(function (id, n) {
+      var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
+      if (!el) return null;
+      var rd = { el: el, r: pageRect(el) };
+      if (n === 0) { rd.l = locate(id); var pe = rd.l && rd.l.parent ? doc.querySelector('[data-node-id="' + rd.l.parent.id + '"],[data-section-id="' + rd.l.parent.id + '"]') : null; rd.pr = pe ? pageRect(pe) : null; rd.client = el.getBoundingClientRect(); }
+      return rd;
+    });
+    geo.bar = barGeo();
+    return geo;
+  }
+  function barGeo() {
+    var el = selection.length ? canvasEl(selection[0]) : null;
+    return { fr: frame.getBoundingClientRect(), sr: stage.getBoundingClientRect(), r: el ? el.getBoundingClientRect() : null };
+  }
+  function drawOverlays(pre) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
+    var geo = pre || readOverlayGeo();
+    if (!geo) return;
+    var pageW = geo.pageW, reads = geo.items;
     $$(".pb-sel-box, .pb-sel-badge, .pb-parent-box, .pb-handle, .pb-dim, .pb-col-split, .pb-struct-add", doc).forEach(function (x) { x.remove(); });
-    placeCanvasBar();
+    placeCanvasBar(geo.bar);
     selection.forEach(function (id, n) {
-      var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
-      if (!el) return;
-      var r = pageRect(el);
+      var rd = reads[n];
+      if (!rd) return;
+      var el = rd.el, r = rd.r;
       var box = doc.createElement("div"); box.className = "pb-sel-box"; box.style.cssText = "left:" + r.left + "px;top:" + r.top + "px;width:" + r.width + "px;height:" + r.height + "px"; doc.body.appendChild(box);
       if (n !== 0) return;
       var it = byId(id);
       var badge = doc.createElement("div"); badge.className = "pb-sel-badge"; badge.textContent = nameOf(it) + " · " + Math.round(r.width) + " × " + Math.round(r.height);
       badge.style.left = r.left + "px"; badge.style.top = Math.max(18, r.top) + "px"; doc.body.appendChild(badge);
-      var l = locate(id);
-      if (l && l.parent) {
-        var pe = doc.querySelector('[data-node-id="' + l.parent.id + '"],[data-section-id="' + l.parent.id + '"]');
-        if (pe) { var pr = pageRect(pe); var pb = doc.createElement("div"); pb.className = "pb-parent-box"; pb.style.cssText = "left:" + pr.left + "px;top:" + pr.top + "px;width:" + pr.width + "px;height:" + pr.height + "px"; doc.body.appendChild(pb); }
-      }
+      if (rd.pr) { var pr = rd.pr; var pb = doc.createElement("div"); pb.className = "pb-parent-box"; pb.style.cssText = "left:" + pr.left + "px;top:" + pr.top + "px;width:" + pr.width + "px;height:" + pr.height + "px"; doc.body.appendChild(pb); }
       if (selection.length === 1 && isNode(it) && canWrite && !lockedDeep(id) && !editing) {
         [["e", r.left + r.width, r.top + r.height / 2, "Largeur"], ["s", r.left + r.width / 2, r.top + r.height, "Hauteur"], ["se", r.left + r.width, r.top + r.height, "Largeur et hauteur"]].forEach(function (hd) {
           // Les poignées restent entièrement dans la page, même quand l'élément touche son bord (pleine largeur)
-          var hx = Math.max(7, Math.min(hd[1], doc.documentElement.clientWidth - 7));
+          var hx = Math.max(7, Math.min(hd[1], pageW - 7));
           var hEl = doc.createElement("div"); hEl.className = "pb-handle pb-handle-" + hd[0]; hEl.style.left = hx + "px"; hEl.style.top = hd[2] + "px";
           hEl.setAttribute("title", hd[3]);
           hEl.addEventListener("mousedown", function (e) { resizeStart(e, id, el, hd[0]); });
@@ -4075,6 +5556,7 @@
       }
       if (selection.length === 1 && canWrite && !lockedDeep(id) && !editing) structureOverlays(it, el, r);
     });
+    if (window.pbDirect) window.pbDirect.refresh();
   }
   // Colonnes et grille sélectionnées : séparations à tirer (largeurs) et bouton « + » au bord (colonne, ligne)
   function structureOverlays(it, el, r) {
@@ -4106,9 +5588,6 @@
     } else if (it.type === "grid") {
       plus("is-row", r.left + r.width / 2, r.top + r.height, "Ajouter une ligne", function () { gridAddRow(it.id); });
       plus("is-col", r.left + r.width, r.top + r.height / 2, "Ajouter une colonne", function () { gridSetColumns(it.id, gridColumnsOf(it) + 1); });
-    } else if (kidsOf(it) && !kidsOf(it).length) {
-      // À CÔTÉ du « + » de la zone vide (44 px, centré : « créer une structure »), jamais par-dessus : sinon il le recouvrait et la création d'un container devenait inaccessible au centre
-      plus("is-inside", Math.min(r.left + r.width / 2 + 46, r.left + r.width - 14), r.top + r.height / 2, "Ajouter un élément ici", function () { openCommands("Ajouter", { inside: it.id }); });
     }
   }
   // Tirer la séparation entre deux colonnes : les deux voisines se partagent leur largeur commune
@@ -4153,7 +5632,11 @@
   // Redimensionner à la souris : largeur / hauteur en pixels, pour l'écran modifié. Le bord qui bouge s'accroche (si le
   // magnétisme est actif) aux guides, à la grille, aux bords, aux centres, aux autres éléments et à la disposition réelle
   // du parent (pistes de Grille, écart Flexbox). Alt : mouvement libre. Maj (poignée d'angle) : garder les proportions.
+  // Éléments dont un geste a posé une taille en ligne (aperçu pendant le glissement) : la taille enregistrée vient ensuite du rendu,
+  // et la mise à jour en place retire ces tailles provisoires (sinon elles masqueraient, par exemple, une annulation)
+  var inlineTouched = [];
   function resizeStart(e, id, el, dir) {
+    if (inlineTouched.indexOf(el) < 0) inlineTouched.push(el);
     e.preventDefault(); e.stopPropagation();
     var doc = frame.contentDocument;
     var start = { x: e.clientX, y: e.clientY, w: el.getBoundingClientRect().width, h: el.getBoundingClientRect().height };
@@ -4223,13 +5706,34 @@
       smartClear();
       gesture = false;
       ignoreClickUntil = Date.now() + 250;
-      if (cur.w === null && cur.h === null) { endGesture(); return; }
+      // Une borne (largeur / hauteur min. ou max.) peut empêcher l'élément d'atteindre la taille demandée : écrire quand même cette taille
+      // enregistrerait une valeur que la page n'affiche jamais. Elle n'est alors pas enregistrée (et l'utilisateur est prévenu).
+      var limited = [];
+      var csr = frame.contentWindow.getComputedStyle(el);
+      if (csr.boxSizing === "border-box") {
+        // Seule une borne min. / max. DÉCLARÉE explique une taille inatteignable (en Flexbox, la taille rendue peut aussi différer de la valeur : c'est normal)
+        var par = el.parentElement;
+        var bound = function (v, base) { if (!v || v === "none" || v === "auto") return null; if (/%$/.test(v)) return base ? parseFloat(v) * base / 100 : null; var n = parseFloat(v); return isFinite(n) ? n : null; };
+        var over = function (req, min, max) { return (max !== null && req > max + 1.5) || (min !== null && req < min - 1.5); };
+        if (cur.w !== null && over(cur.w, bound(csr.minWidth, par && par.clientWidth), bound(csr.maxWidth, par && par.clientWidth))) { limited.push("largeur"); cur.w = null; }
+        if (cur.h !== null && over(cur.h, bound(csr.minHeight, par && par.clientHeight), bound(csr.maxHeight, par && par.clientHeight))) { limited.push("hauteur"); cur.h = null; }
+      }
+      if (cur.w === null && cur.h === null) { endGesture(); if (limited.length) toast("La " + limited.join(" et la ") + " demandée n'est pas atteignable (limite min. / max. de l'élément) : rien n'a été enregistré.", true); return; }
+      // Unité d'origine conservée : un élément réglé en % (ou rem, em, vw, vh) reste fluide ; seul un élément sans valeur propre ou en mots-clés
+      // (auto, fit-content…) reçoit des pixels. Le facteur px ↔ unité est mesuré sur l'élément lui-même au début du geste.
+      var inUnit = function (key, px, startPx) {
+        var it0 = byId(id), own = ownValue(it0, key), v = own !== undefined ? own : inheritedValue(it0, key);
+        var m = typeof v === "string" ? /^(-?\d+(?:\.\d+)?)(%|rem|em|vw|vh)$/.exec(v) : null;
+        if (!m || !(Number(m[1]) > 0) || !(startPx > 0)) return Math.round(px) + "px";
+        var n = Math.round((px / (startPx / Number(m[1]))) * 100) / 100;
+        return n + m[2];
+      };
       change(function () {
         var s = styleSet(byId(id), device, "normal", true);
-        if (cur.w !== null) s.width = cur.w + "px";
-        if (cur.h !== null) s.height = cur.h + "px";
+        if (cur.w !== null) s.width = inUnit("width", cur.w, start.w);
+        if (cur.h !== null) s.height = inUnit("height", cur.h, start.h);
       });
-      toast("Dimensions enregistrées pour l'écran « " + bpLabel(device) + " ».");
+      toast("Dimensions enregistrées pour l'écran « " + bpLabel(device) + " »." + (limited.length ? " (" + limited.join(" et ") + " limitée par un min. / max.)" : ""));
     };
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
@@ -4254,6 +5758,8 @@
     gridRowDel: { icon: "listMinus", label: "Retirer la dernière ligne", off: function (it) { return kidsOf(it).length <= gridColumnsOf(it); }, run: function (it) { gridRemoveRow(it.id); } },
     addInside: { icon: "plus", label: "Ajouter un élément à l'intérieur", run: function (it) { openCommands("Ajouter", { inside: it.id }); } },
     addSection: { icon: "listPlus", label: "Ajouter une section en dessous", run: function (it) { openCommands("Ajouter", { after: topOf(it.id).id }); } },
+    restore: { icon: "undo", label: function () { var it = selectedItems()[0]; var n = it ? elementResetCount(it) : 0; return "Réinitialiser les modifications non enregistrées (" + plural(n, "réglage", "réglages") + ")"; }, run: function (it, btn) { resetElement(it, btn); } },
+    saveStyle: { icon: "palette", label: "Enregistrer comme style : choisir les réglages à réutiliser", off: function (it) { return !canSaveStyle([it]); }, run: function (it) { saveStyleOf(byId(it.id) || it); } },
     duplicate: { icon: "copy", label: "Dupliquer (Ctrl/⌘ + D)", run: function () { duplicateSelected(); } },
     hide: { icon: function () { return anyFlag("hidden") ? "eye" : "eyeOff"; }, label: function () { return anyFlag("hidden") ? "Afficher (Ctrl/⌘ + Maj + H)" : "Masquer : reste dans la page et les calques (Ctrl/⌘ + Maj + H)"; }, pressed: function () { return anyFlag("hidden"); }, run: function () { setFlag(selection.slice(), "hidden", !anyFlag("hidden")); } },
     lock: { icon: "lock", label: function () { return anyFlag("locked") ? "Déverrouiller (Ctrl/⌘ + Maj + L)" : "Verrouiller : ni déplacé, ni modifié, ni supprimé (Ctrl/⌘ + Maj + L)"; }, pressed: function () { return anyFlag("locked"); }, run: function () { setFlag(selection.slice(), "locked", !anyFlag("locked")); } },
@@ -4271,7 +5777,7 @@
     if (it.locked) return ["lock", "more"];
     if (lockedDeep(it.id)) return l.parent ? ["parent", "more"] : ["more"];
     var key = isNode(it) ? it.type : it.type === "layout" || it.type === "component" || it.type === "form" ? it.type : "legacy";
-    var list = (l.parent ? ["parent"] : []).concat(isNode(it) ? ["move"] : []).concat(TYPE_ACTIONS[key] || []).concat(["duplicate", "hide"]);
+    var list = (l.parent ? ["parent"] : []).concat(isNode(it) ? ["move"] : []).concat(TYPE_ACTIONS[key] || []).concat(isNode(it) && PAGE.siteSettingsUrl ? ["saveStyle"] : []).concat(elementResetCount(it) ? ["restore"] : []).concat(["duplicate", "hide"]);
     if (STRUCTURAL.indexOf(it.type) >= 0 || !isNode(it)) list.push("lock");
     return list.concat(["remove", "more"]);
   }
@@ -4290,7 +5796,8 @@
     });
   }
   // Position : au-dessus de l'élément (bord droit), en dessous s'il n'y a pas la place ; masquée hors de la zone visible
-  function placeCanvasBar() {
+  var barSizes = {};
+  function placeCanvasBar(pre) {
     if (!cbar) return; // appel pendant l'initialisation
     if (mode === "structure") { cbar.hidden = true; return; }
     var items = selectedItems();
@@ -4299,11 +5806,14 @@
     if (!el) { cbar.hidden = true; return; }
     var key = selection.join(",") + "|" + acts.join(",") + "|" + items.map(function (x) { return (x.hidden ? "h" : "") + (x.locked ? "l" : "") + ((kidsOf(x) || []).length); }).join(",") + "|" + device;
     if (cbar.dataset.key !== key) { buildCanvasBar(acts, items[0]); cbar.dataset.key = key; }
-    var fr = frame.getBoundingClientRect(), sr = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var g = pre && pre.r ? pre : null, fr = g ? g.fr : frame.getBoundingClientRect(), sr = g ? g.sr : stage.getBoundingClientRect(), r = g ? g.r : el.getBoundingClientRect();
     var top = fr.top + r.top * zoom, bottom = fr.top + r.bottom * zoom, right = fr.left + r.right * zoom;
     if (bottom < sr.top + 8 || top > sr.bottom - 8 || !r.width) { cbar.hidden = true; return; }
+    // Taille de la barre : ne dépend que de son jeu d'actions ; mesurée une fois (affichée), puis relue dans le cache (pas de mise en page forcée à chaque sélection)
+    var sizeKey = acts.join(",") + "|" + device, size = barSizes[sizeKey];
     cbar.hidden = false;
-    var bw = cbar.offsetWidth, bh = cbar.offsetHeight;
+    if (!size) size = barSizes[sizeKey] = [cbar.offsetWidth, cbar.offsetHeight];
+    var bw = size[0], bh = size[1];
     // Au-dessus si possible. Sinon : un conteneur qui a des enfants reçoit la barre EN DESSOUS (elle ne recouvre jamais ses
     // enfants) ; un élément vide ou sans enfants, assez grand, la reçoit dans son coin haut (on ne cache pas son voisin) ;
     // sinon en dessous ; en dernier recours en haut de la zone visible
@@ -4319,12 +5829,12 @@
     cbar.style.left = Math.round(x) + "px"; cbar.style.top = Math.round(y) + "px";
   }
   stage.addEventListener("scroll", placeCanvasBar, { passive: true });
-  window.addEventListener("resize", placeCanvasBar);
+  window.addEventListener("resize", function () { barSizes = {}; placeCanvasBar(); });
   // Ouvrir l'inspecteur sur un onglet (et un groupe de réglages déplié)
   function openInspector(tab, group) {
     if (panels.rightHidden) togglePanel("right");
     inspTab = tab; store.set("insp-tab", tab);
-    if (group) store.set("open-" + group, true);
+    if (group) { store.set("open-" + group, true); pendingReveal = group; }
     renderInspector();
     var target = group ? $("[data-pb-inspector] details[data-group='" + group + "']") : $("[data-pb-inspector] .pb-insp-body");
     if (target) { target.scrollIntoView({ block: "nearest" }); var f = target.querySelector("input, select, textarea, button"); if (f) f.focus({ preventScroll: true }); }
@@ -4336,7 +5846,8 @@
     var win = frame.contentWindow, doc = frame.contentDocument;
     var sx = e.clientX, sy = e.clientY, oy = win.scrollY, sl = stage.scrollLeft;
     var move = function (ev) { win.scrollTo(0, oy - (ev.clientY - sy)); stage.scrollLeft = sl - (ev.clientX - sx) * zoom; };
-    var up = function () { doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); };
+    var up = function () { doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); doc.body.classList.remove("is-panning"); };
+    doc.body.classList.add("is-panning"); // curseur « main fermée » pendant le déplacement
     doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
   }
 
@@ -4347,15 +5858,24 @@
   var mode = store.get("mode", "visual");
   var docEl = $("[data-pb-doc]");
   var docFocus = null; // { id, field, end } : curseur à rendre après un redessin
+  // Passer en « Structure » masque le canevas (display:none) : le navigateur oublie alors son défilement. On retient la vue en quittant
+  // le mode Visuel et on la rétablit au retour (sinon la page repartait toujours tout en haut).
+  var visualView = null;
   function setMode(m) {
     if (editing) commitEdit();
-    mode = m === "structure" ? "structure" : "visual";
+    var next = m === "structure" ? "structure" : "visual";
+    if (mode === "visual" && next === "structure") { try { visualView = { y: frame.contentWindow.scrollY, sl: stage.scrollLeft, st: stage.scrollTop }; } catch (e) { visualView = null; } }
+    mode = next;
     store.set("mode", mode);
     $$("[data-pb-mode]").forEach(function (b) { b.setAttribute("aria-checked", String(b.dataset.pbMode === mode)); });
     $("[data-pb-canvas]").classList.toggle("is-structure", mode === "structure");
     docEl.hidden = mode !== "structure";
     if (mode === "structure") renderDoc();
-    else { applyZoom(); setTimeout(function () { drawOverlays(); drawRulers(); drawGuides(); }, 30); }
+    else {
+      applyZoom();
+      if (visualView) { try { frame.contentWindow.scrollTo(0, visualView.y); stage.scrollLeft = visualView.sl; stage.scrollTop = visualView.st; } catch (e) { /* cadre pas encore prêt : il se positionnera à son chargement */ } visualView = null; }
+      requestAnimationFrame(function () { drawOverlays(); drawRulers(); drawGuides(); });
+    }
     placeCanvasBar();
   }
   $$("[data-pb-mode]").forEach(function (b) { b.addEventListener("click", function () { setMode(b.dataset.pbMode); }); });
@@ -4639,15 +6159,18 @@
   // largeur FLUIDE = l'espace réellement disponible dans le canevas (fenêtre − panneaux), jamais sous le point de rupture
   // « tablette » du site (sinon le cadre afficherait la mise en page tablette) ni au-dessus d'un plafond confortable. Si l'espace
   // est plus étroit que le minimum, la page garde ce minimum et le zoom « ajuster » la réduit pour qu'elle tienne.
-  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390 }; // largeur nominale : repli, et valeur des appareils
-  var DESKTOP_MAX = 1920;
+  var WIDTH = { desktop: 1280, tablet: 820, mobile: 390, wide: 1920 }; // largeur nominale : repli, et valeur des appareils (grand écran : son point de rupture, réglable dans les réglages du site)
+  function wideFrom() { var w = PAGE.breakpoints && PAGE.breakpoints.wide; return Number.isInteger(w) ? w : 1920; }
+  function desktopMax() { return wideFrom() - 1; } // le cadre « ordinateur » reste sous le seuil du grand écran (sinon il afficherait la mise en page grand écran)
   var STAGE_PAD = 48; // 24 px de chaque côté de la surface de travail
+  WIDTH.wide = wideFrom();
   var shownWidth = WIDTH.desktop;
   function desktopMin() { var bp = PAGE.breakpoints && PAGE.breakpoints.tablet; return (Number.isInteger(bp) ? bp : 1023) + 1; }
   function frameWidth(avail) {
+    if (device === "wide") return wideFrom();
     if (device !== "desktop") return WIDTH[device];
     var target = zoomFit ? avail : Math.floor(avail / zoom);
-    return Math.min(DESKTOP_MAX, Math.max(desktopMin(), target));
+    return Math.min(desktopMax(), Math.max(desktopMin(), target));
   }
   function setDevice(d) {
     if (editing) commitEdit();
@@ -4658,9 +6181,10 @@
     wrap.dataset.device = d;
     applyZoom();
     renderInspector(); renderContext();
-    setTimeout(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); }, 60);
+    requestAnimationFrame(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); });
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
+  var MAX_ZOOM = 4; // 400 %
   function applyZoom() {
     var avail = Math.max(240, stage.clientWidth - STAGE_PAD);
     var w = frameWidth(avail);
@@ -4675,16 +6199,31 @@
     wrap.style.marginRight = -((1 - zoom) * w) + "px";
     wrap.style.marginBottom = -((1 - zoom) * hgt) + "px";
     $("[data-pb-zoom-value]").textContent = Math.round(zoom * 100) + " %";
-    $$("[data-pb-zoom]").forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= 0.25) || (v === "+" && zoom >= 2); });
+    $$("[data-pb-zoom]").forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= 0.25) || (v === "+" && zoom >= MAX_ZOOM); });
     drawRulers();
     refreshInfo();
     placeCanvasBar();
   }
-  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(2, Math.max(0.25, z)); applyZoom(); setTimeout(function () { drawOverlays(); drawGuides(); }, 30); }
+  // Recalcul de la zone du canevas (largeur du cadre, zoom, règles, barre d'actions) : au plus UN par image, quel que soit le nombre de causes
+  // (glisser d'une poignée de panneau, observateur de taille, redimensionnement de la fenêtre)
+  // Pendant le glissement d'une poignée de panneau, le recalcul (qui refait la mise en page de toute la page du cadre à chaque nouvelle largeur) est limité
+  // à ~11 par seconde : le bord du panneau suit la main à chaque image, le canevas se met à jour en continu mais pas à chaque pixel ; au relâchement,
+  // un dernier recalcul exact est fait.
+  var zoomQueued = false, panelDragging = false, lastZoomAt = 0;
+  function queueZoom() {
+    if (zoomQueued) return;
+    zoomQueued = true;
+    requestAnimationFrame(function run() {
+      if (panelDragging && performance.now() - lastZoomAt < 90) { requestAnimationFrame(run); return; }
+      zoomQueued = false; lastZoomAt = performance.now();
+      if (zoomFit) applyZoom(); else drawRulers();
+    });
+  }
+  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(0.25, z)); applyZoom(); requestAnimationFrame(function () { drawOverlays(); drawGuides(); }); }
   $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
-  window.addEventListener("resize", function () { if (zoomFit) applyZoom(); else drawRulers(); });
+  window.addEventListener("resize", queueZoom);
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
-  if (window.ResizeObserver) new ResizeObserver(function () { applyZoom(); }).observe(stage);
+  if (window.ResizeObserver) new ResizeObserver(function () { queueZoom(); }).observe(stage);
   function setAid(k, v) {
     aids[k] = v; store.set("aids", aids);
     $$("[data-pb-toggle='" + k + "'], [data-aid='" + k + "']").forEach(function (b) { b.setAttribute("aria-pressed", String(k === "guides" ? v !== false : Boolean(v))); });
@@ -4856,7 +6395,7 @@
       env.rects.push(b);
       if (el && e.parentElement === el.parentElement) env.siblings.push(b);
     }
-    var pe = el ? el.parentElement : null;
+    var pe = el ? layoutParentEl(el) : null;
     if (pe) {
       var cs = win.getComputedStyle(pe), pb = pageBox(pe);
       var pl = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth) || 0, pr = parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth) || 0;
@@ -5150,6 +6689,7 @@
   function showSimpleMenu(entries, x, y) {
     menu.textContent = "";
     entries.forEach(function (en) { menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item", disabled: en[2] || null, tabindex: "-1", onclick: function () { closeMenu(); en[1](); } }, h("span", { text: en[0] }), en[3] ? h("kbd", { text: en[3] }) : null)); });
+    if (window.KolMotion) window.KolMotion.cancelLeave(menu);
     menu.hidden = false;
     var r = menu.getBoundingClientRect();
     menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
@@ -5168,7 +6708,7 @@
   var zoomValueEl = $("[data-pb-zoom-value]");
   function zoomMenu() {
     var r = zoomValueEl.getBoundingClientRect();
-    showSimpleMenu([["Ajuster à la fenêtre", function () { setZoom("fit"); }, false, "Maj 1"]].concat([0.5, 0.64, 0.75, 1, 1.25, 1.5, 2].map(function (z) { return [(!zoomFit && Math.abs(zoom - z) < 0.005 ? "✓ " : "") + Math.round(z * 100) + " %", function () { setZoom(z); }, false]; })), r.left, r.bottom + 4);
+    showSimpleMenu([["Ajuster à la fenêtre", function () { setZoom("fit"); }, false, "Maj 1"]].concat([0.5, 0.64, 0.75, 1, 1.25, 1.5, 2, 3, 4].map(function (z) { return [(!zoomFit && Math.abs(zoom - z) < 0.005 ? "✓ " : "") + Math.round(z * 100) + " %", function () { setZoom(z); }, false]; })), r.left, r.bottom + 4);
   }
   zoomValueEl.setAttribute("role", "button"); zoomValueEl.setAttribute("tabindex", "0"); zoomValueEl.setAttribute("title", "Niveaux de zoom");
   zoomValueEl.addEventListener("click", zoomMenu);
@@ -5233,7 +6773,7 @@
     subscribe: function (fn) { rulesListeners.push(fn); },
     setZoom: setZoom,
     open: function () {}, // remplacé par le panneau
-    h: h, toast: toast,
+    h: h, toast: toast, icon: icon,
   };
 
   // ---------- Apparence de l'éditeur (claire / sombre / système) ----------
@@ -5381,10 +6921,16 @@
   }
   if (paletteMedia) { var onScheme = function () { if (paletteMode === "system") applyPalette(); }; if (paletteMedia.addEventListener) paletteMedia.addEventListener("change", onScheme); else if (paletteMedia.addListener) paletteMedia.addListener(onScheme); }
 
+  // Sections repliables de l'Inspecteur : le contenu apparaît en douceur quand l'AUTEUR ouvre (jamais quand l'Inspecteur est reconstruit avec des sections déjà ouvertes)
+  var accUser = 0;
+  ["pointerdown", "keydown"].forEach(function (ev) { document.addEventListener(ev, function (e) { if (e.target.closest && e.target.closest("summary")) accUser = Date.now(); }, true); });
+  document.addEventListener("toggle", function (e) { var d = e.target; if (window.KolMotion && d.open && d.matches && d.matches("details.pb-acc, details.pb-info") && Date.now() - accUser < 500) window.KolMotion.appear(d.querySelector(":scope > .pb-acc-body, :scope > .pb-meta"), "rise"); }, true);
+
   // ---------- Panneaux redimensionnables ----------
   var main = $("[data-pb-main]");
   var PANEL_MIN_RIGHT = 280;
-  function applyPanels() {
+  // live : glissement d'une poignée en cours — les préférences ne sont écrites qu'au relâchement (une écriture, pas une par pixel)
+  function applyPanels(live) {
     if (panels.right < PANEL_MIN_RIGHT) panels.right = PANEL_MIN_RIGHT; // largeur enregistrée avant ce minimum
     main.style.setProperty("--pb-tools-w", panels.toolsExpanded ? "176px" : panels.toolsDense ? "136px" : "48px");
     main.classList.toggle("is-tools-expanded", Boolean(panels.toolsExpanded));
@@ -5394,20 +6940,20 @@
     main.classList.toggle("is-left-hidden", panels.leftHidden);
     main.classList.toggle("is-right-hidden", panels.rightHidden);
     $("[data-pb-right]").style.setProperty("--pb-layers-h", panels.layers + "%");
-    store.set("panels", panels);
-    if (zoomFit) applyZoom(); else drawRulers();
+    if (!live) store.set("panels", panels);
+    queueZoom();
   }
-  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); }
+  function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); if (pageSettingsStale) refreshPageSettings(); }
   $$("[data-pb-resize]").forEach(function (handle) {
     var side = handle.dataset.pbResize;
     // Largeur : jamais assez étroite pour rendre les contrôles illisibles (droite : 280 px au moins), ni plus de la moitié de la fenêtre
-    var setW = function (w) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(); };
+    var setW = function (w, live) { var min = side === "right" ? PANEL_MIN_RIGHT : 200; panels[side] = Math.min(560, Math.max(min, Math.min(Math.round(w), Math.round(window.innerWidth * 0.5)))); panels[side + "Hidden"] = false; applyPanels(live); };
     handle.addEventListener("pointerdown", function (e) {
-      e.preventDefault(); handle.setPointerCapture(e.pointerId);
+      e.preventDefault(); handle.setPointerCapture(e.pointerId); panelDragging = true;
       var sx = e.clientX, sw = panels[side];
       frame.style.pointerEvents = "none";
-      var move = function (ev) { setW(side === "left" ? sw + ev.clientX - sx : sw - (ev.clientX - sx)); };
-      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; renderTools(); };
+      var move = function (ev) { setW(side === "left" ? sw + ev.clientX - sx : sw - (ev.clientX - sx), true); };
+      var up = function () { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); frame.style.pointerEvents = ""; panelDragging = false; store.set("panels", panels); queueZoom(); renderTools(); };
       handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up);
     });
     handle.addEventListener("keydown", function (e) { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setW(panels[side] + ((e.key === "ArrowRight") === (side === "left") ? 16 : -16)); } });
@@ -5434,14 +6980,591 @@
   });
   if (document.getElementById(store.get("lib-tab", ""))) openLibTab(document.getElementById(store.get("lib-tab", "")));
   var tabs = $$(".pb-tabs [role=tab]");
-  function openTab(tab) { if (panels.leftHidden) togglePanel("left"); tabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); }
+  function openTab(tab) { if (panels.leftHidden) togglePanel("left"); tabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; document.getElementById(t.getAttribute("aria-controls")).hidden = !on; }); if (pageSettingsStale) refreshPageSettings(); }
   tabs.forEach(function (t, i) {
     t.addEventListener("click", function () { openTab(t); });
     t.addEventListener("keydown", function (e) { if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return; var next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length]; openTab(next); next.focus(); });
   });
 
   // ---------- Réglages de la page (titre, description, SEO, couleurs) ----------
+  // Le panneau « Page » (réglages, aperçu et analyse SEO côté serveur) n'est reconstruit que lorsqu'il est visible : sinon il est
+  // seulement marqué « à rafraîchir » et refait à l'ouverture de l'onglet (une requête et une reconstruction en moins par modification).
+  var pageSettingsStale = true;
+  function pageSettingsVisible() { var box = $("[data-pb-page-settings]"), pane = box && box.closest("[role=tabpanel]"); return Boolean(pane) && !pane.hidden && !panels.leftHidden; }
+  function refreshPageSettings() { if (!pageSettingsVisible()) { pageSettingsStale = true; return; } renderPageSettings(); }
+  // ---------- Format de mise en page (conception guidée) : le serveur applique le verrou ; ici, refus immédiat et clair ----------
+  var LF = boot.layoutFormats || { formats: {}, protected: [], labels: {} };
+  function layoutOf() { var l = content.theme && content.theme.layout; return l && l.mode === "guided" ? l : null; }
+  function formatLocked() { var l = layoutOf(); return Boolean(l && l.locked); }
+  function isTopLevelId(id) { var l = locate(id); return Boolean(l && l.parent && l.parent.type === "layout"); }
+  function refuseFormat(ids, keys) {
+    if (!formatLocked() || !keys.some(function (k) { return LF.protected.indexOf(k) >= 0; }) || !ids.some(isTopLevelId)) return false;
+    toast("Format verrouillé : la largeur et les marges des éléments de premier niveau sont protégées. Déverrouillez le format dans l'onglet « Page ».", true);
+    return true;
+  }
+  function formatConflicts() {
+    var out = [];
+    content.sections.forEach(function (s) {
+      if (s.type !== "layout") return;
+      (s.children || []).forEach(function (n) {
+        var sets = Object.keys(n.styles || {}).map(function (k) { return n.styles[k]; }).concat(Object.keys(n.states || {}).map(function (k) { return n.states[k]; }));
+        if (sets.some(function (set) { return LF.protected.some(function (p) { return set && set[p] !== undefined && set[p] !== ""; }); })) out.push(n);
+      });
+    });
+    return out;
+  }
+  function setLayout(next, opts) {
+    opts = opts || {};
+    var conflicts = next && next.locked ? formatConflicts() : [];
+    if (conflicts.length && !opts.clear) {
+      if (!window.confirm(conflicts.length + " élément(s) de premier niveau ont déjà une largeur ou des marges. Pour verrouiller ce format, ces réglages doivent être remis à zéro (annulable avec Ctrl/⌘ + Z). Continuer ?")) { renderPageSettings(); return; }
+      opts.clear = true;
+    }
+    var label = next ? "Format : " + ((LF.formats[next.format] || {}).label || next.format) + (next.locked ? " (verrouillé)" : "") : "Conception libre";
+    change(function () {
+      content.theme = Object.assign({}, content.theme);
+      if (next) content.theme.layout = next; else delete content.theme.layout;
+      if (opts.clear) formatConflicts().forEach(function (n) {
+        Object.keys(n.styles || {}).concat(Object.keys(n.states || {})).forEach(function (k) {
+          var set = (n.styles && n.styles[k]) || (n.states && n.states[k]);
+          LF.protected.forEach(function (p) { if (set) delete set[p]; });
+          cleanStyles(n);
+        });
+      });
+    }, { label: label });
+    // Verrouiller / déverrouiller : enregistrement immédiat (le serveur n'accepte un déverrouillage que seul)
+    saveNow().then(function () { var ae = document.activeElement; if (ae && ae.blur && $("[data-pb-page-settings]").contains(ae)) ae.blur(); renderPageSettings(); renderInspector(); });
+  }
+  // Magnétisme de défilement de la page : la page s'accroche au début de chaque section (theme.scrollSnap)
+  function scrollSnapSection(box) {
+    var cur = (content.theme && content.theme.scrollSnap) || null;
+    var put = function (patch) {
+      change(function () {
+        content.theme = Object.assign({}, content.theme);
+        var next = Object.assign({}, cur || { position: "start" }, patch);
+        if (patch.position === "") delete content.theme.scrollSnap;
+        else { if (!next.padding) delete next.padding; if (!next.always) delete next.always; content.theme.scrollSnap = next; }
+      }, { key: "page:scrollSnap", light: true });
+    };
+    box.appendChild(h("p", { class: "pb-sub", text: "Magnétisme de défilement" }));
+    box.appendChild(selectField("Accrocher les sections", cur ? cur.position : "", [["", "Non"], ["start", "Au haut de l'écran"], ["center", "Au centre de l'écran"], ["end", "Au bas de l'écran"]], function (v) { put({ position: v }); }, { disabled: !canWrite, hint: "En faisant défiler la page publiée, chaque section s'accroche à la position choisie. Pas actif dans l'éditeur." }));
+    if (cur) {
+      box.appendChild(numberField("Marge de défilement (px)", cur.padding || 0, { min: 0, max: 300, step: 1, integer: true, disabled: !canWrite }, function (n) { if (n === null) return false; put({ padding: n }); }, "Utile avec un en-tête fixe, pour que la section ne passe pas dessous."));
+      box.appendChild(checkField("Arrêt obligatoire sur chaque section", cur.always, function (v) { put({ always: v }); }, { disabled: !canWrite, hint: "Plus strict : on ne peut pas dépasser une section sans s'y arrêter." }));
+    }
+  }
+  function formatSection(box) {
+    box.appendChild(h("p", { class: "pb-sub", text: "Format de mise en page" }));
+    var l = layoutOf(), locked = formatLocked();
+    var fmt = function (patch) { return Object.assign({ mode: "guided", format: "standard", maxWidth: 1200, gutter: 24, locked: false }, l || {}, patch); };
+    var presets = LF.formats;
+    box.appendChild(selectField("Conception", l ? "guided" : "free", [["free", "Libre : je règle tout moi-même"], ["guided", "Guidée par un format"]], function (v) {
+      if (v === "free") setLayout(null); else { var f = presets.standard; setLayout({ mode: "guided", format: "standard", maxWidth: f.maxWidth, gutter: f.gutter, locked: false }); }
+    }, { disabled: !canWrite || locked }));
+    if (!l) { box.appendChild(h("p", { class: "pb-hint", text: "Conteneurs, Flexbox et widgets : aucune contrainte. Le format n'est pas une taille d'écran : l'aperçu ordinateur / tablette / mobile ne change pas." })); return; }
+    box.appendChild(selectField("Format", l.format, Object.keys(presets).map(function (k) { return [k, presets[k].label + (k !== "custom" && presets[k].maxWidth ? " · " + presets[k].maxWidth + " px" : "")]; }), function (v) {
+      var f = presets[v]; setLayout(fmt({ format: v, maxWidth: v === "custom" ? l.maxWidth : f.maxWidth, gutter: v === "custom" ? l.gutter : f.gutter }));
+    }, { disabled: !canWrite || locked }));
+    box.appendChild(h("p", { class: "pb-hint", text: (presets[l.format] || {}).hint || "" }));
+    if (l.format === "custom") {
+      box.appendChild(textField("Largeur maximale du contenu (px, 0 = aucune)", String(l.maxWidth), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && (n === 0 || (n >= 320 && n <= 2400))) setLayout(fmt({ maxWidth: n })); }, { type: "number", disabled: !canWrite || locked }));
+      box.appendChild(textField("Marge latérale minimale (px)", String(l.gutter), function (v) { var n = Math.round(Number(v)); if (isFinite(n) && n >= 0 && n <= 96) setLayout(fmt({ gutter: n })); }, { type: "number", disabled: !canWrite || locked }));
+    } else box.appendChild(h("p", { class: "pb-hint", text: "Largeur fluide plafonnée à " + (l.maxWidth ? l.maxWidth + " px" : "l'écran") + ", marges de " + l.gutter + " px minimum. Les éléments de premier niveau de chaque section suivent ce format ; un réglage manuel l'emporte tant que le format est déverrouillé." }));
+    // Largeur effective du contenu à l'écran actuel (ordinateur / tablette / mobile) : mesurée sur la largeur LOGIQUE de l'iframe (clientWidth : le zoom n'y change rien)
+    var eff = h("p", { class: "pb-hint", "data-pb-format-effective": "", "aria-live": "polite" });
+    var paintEff = function () {
+      var fr = $("[data-pb-frame]"), vw = fr ? fr.clientWidth : 0, avail = vw - 2 * l.gutter, cap = l.maxWidth > 0 && avail > l.maxWidth, w = cap ? l.maxWidth : avail;
+      eff.textContent = vw > 0 && w > 0 ? "Largeur effective du contenu à cet écran : " + w + " px (écran de " + vw + " px, marges de " + l.gutter + " px de chaque côté" + (cap ? ", contenu centré" : ", le contenu suit l'écran") + ")." : "";
+    };
+    paintEff();
+    box.appendChild(eff);
+    if (window.ResizeObserver && $("[data-pb-frame]")) { var ro = new ResizeObserver(function () { if (!eff.isConnected) { ro.disconnect(); return; } paintEff(); }); ro.observe($("[data-pb-frame]")); }
+    box.appendChild(checkField("Verrouiller le format", l.locked, function (v) { setLayout(fmt({ locked: v })); }, { disabled: !canWrite, hint: locked ? "Protégé : " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau, le format lui-même. Textes, images, couleurs, widgets et sections restent libres." : "Verrouillé, le format protège la largeur et les marges des éléments de premier niveau, y compris pour l'IA." }));
+  }
+  // ---------- Écran de démarrage d'une page vide : « Création classique » ou « Création guidée » ----------
+  // Aucun moteur de plus : « classique » ouvre le sélecteur de structures habituel, « guidée » écrit theme.layout par setLayout (même voie que l'onglet Page,
+  // verrou contrôlé par le serveur). Affiché seulement pour un vrai état vide : écriture permise, aucune section, aucun format, canevas rendu, aucune
+  // modification dans la session. Dès qu'une section ou une modification existe, il ne revient plus (vider une page existante ne le déclenche pas).
+  var startEl = $("[data-pb-start]"), startStep = "choice", startDraft = null, startDone = IS_COMPONENT || !canWrite || content.sections.length > 0 || Boolean(layoutOf());
+  var PC = boot.pageCatalog || null, catState = { q: "", group: "all", scope: "gabarits", sort: "default" }, recentFilter = "all";
+  function startEligible() { return !startDone && canvasReady && !past.length && !content.sections.length && !layoutOf(); }
+  function startFinish() { homeOpen = false; if (homeBtn) homeBtn.setAttribute("aria-pressed", "false"); startDone = true; refreshStart(); }
+  // ---------- Accueil rouvert à la demande (icône Accueil) : même panneau, vue de navigation seulement ----------
+  // Ouvrir l'accueil ne touche ni au document, ni à l'historique, ni à l'enregistrement, ni à la sélection : « Reprendre mon travail » ne fait que
+  // refermer le panneau, tout l'état de travail étant resté en mémoire. Aucun stockage de plus : après un rechargement, la page est restaurée
+  // par le brouillon serveur (et la copie locale proposée par offerBackup), comme avant.
+  var homeOpen = false, homeBtn = $("[data-pb-home]"), homeFrom = null;
+  function hasWork() { return content.sections.length > 0 || past.length > 0 || Boolean(layoutOf()); }
+  function homeButtonState() { if (homeBtn) { homeBtn.setAttribute("aria-pressed", String(homeOpen)); } }
+  function closeHome() {
+    if (!homeOpen) return;
+    homeOpen = false; homeButtonState(); homeNotice = null;
+    startEl.hidden = true; startEl.textContent = "";
+    refreshStart();
+    var back = homeFrom; homeFrom = null;
+    if (back && back.isConnected && back.focus) back.focus({ preventScroll: true });
+  }
+  function openHome() {
+    if (!startEl || IS_COMPONENT || !canWrite) return;
+    if (homeOpen) { closeHome(); return; }
+    if (!startEl.hidden) { var f0 = startEl.querySelector("button:not([disabled])"); if (f0) f0.focus({ preventScroll: true }); return; } // l'écran de démarrage est déjà affiché
+    if (editing) commitEdit();
+    if (mode !== "visual") setMode("visual"); // le panneau se pose sur le canevas visuel
+    homeFrom = document.activeElement;
+    homeOpen = true; homeButtonState(); homeNotice = null;
+    startStep = "choice"; startDraft = null;
+    startEl.hidden = false;
+    paintStart();
+  }
+  if (homeBtn) { if (IS_COMPONENT || !canWrite) homeBtn.hidden = true; else homeBtn.addEventListener("click", openHome); }
+  if (startEl) startEl.addEventListener("keydown", function (e) { if (e.key === "Escape" && homeOpen && startStep === "choice") { e.stopPropagation(); closeHome(); } });
+  function refreshStart() {
+    if (!startEl) return;
+    if (homeOpen) return; // accueil ouvert volontairement : seule une action explicite le referme (pas le rendu qui suit une modification)
+    if (!startDone && (content.sections.length || past.length || layoutOf())) startDone = true;
+    if (!startEligible()) { if (!startEl.hidden) { startEl.hidden = true; startEl.textContent = ""; } return; }
+    if (!startEl.hidden) return; // déjà affiché : pas de redessin
+    startStep = "choice"; startDraft = null;
+    startEl.hidden = false;
+    paintStart();
+  }
+  function paintStart(focusFirst) {
+    startEl.textContent = "";
+    var box = h("div", { class: "pb-start-box" });
+    startEl.appendChild(box);
+    if (startStep === "choice") paintStartChoice(box); else if (startStep === "catalog" && PC) paintCatalog(box); else paintStartConfig(box);
+    if (focusFirst !== false) { var f = box.querySelector("button:not([disabled]), input:not([disabled])"); if (f) f.focus({ preventScroll: true }); }
+  }
+  // Illustrations SVG vectorielles inline (constantes, ~1 Ko chacune, aucune image ni requête) : même grammaire pour les quatre (fenêtre de navigateur,
+  // trait de 1,5, rayons 6/3, accent réservé à l'élément « action »). Les couleurs viennent des jetons --editor-* via les classes il-* : elles suivent donc le thème.
+  var IL_WIN = '<rect class="il-w" x="14" y="10" width="212" height="100" rx="8"/><path class="il-bar" d="M14 18a8 8 0 0 1 8-8h196a8 8 0 0 1 8 8v8H14z"/><circle class="il-t" cx="26" cy="18" r="2"/><circle class="il-t" cx="34" cy="18" r="2"/><circle class="il-t" cx="42" cy="18" r="2"/>';
+  var IL_SVG = {
+    resume: IL_WIN + '<rect class="il-s" x="26" y="34" width="188" height="28" rx="4"/><rect class="il-a" x="36" y="43" width="74" height="6" rx="3"/><rect class="il-t" x="36" y="53" width="104" height="3" rx="1.5"/><rect class="il-t" x="26" y="72" width="120" height="4" rx="2"/><rect class="il-bar" x="26" y="82" width="158" height="4" rx="2"/><rect class="il-bar" x="26" y="92" width="96" height="4" rx="2"/><rect class="il-a" x="148" y="68" width="1.8" height="14" rx="1"/><path class="il-cur" d="M176 70l0 22 5.5-5 4 9 3.5-1.6-4-8.6 7.5-.2z"/>',
+    structure: IL_WIN + '<rect class="il-s" x="26" y="34" width="188" height="20" rx="4"/><rect class="il-t" x="36" y="41" width="70" height="4" rx="2"/><rect class="il-d" x="26" y="62" width="188" height="38" rx="5"/><rect class="il-w2" x="34" y="69" width="48" height="24" rx="3"/><rect class="il-w2" x="96" y="69" width="48" height="24" rx="3"/><rect class="il-w2" x="158" y="69" width="48" height="24" rx="3"/><circle class="il-a" cx="206" cy="100" r="11"/><path class="il-plus" d="M206 94.5v11M200.5 100h11"/>',
+    blank: '<rect class="il-w" x="14" y="10" width="212" height="100" rx="8"/><path class="il-bar" d="M14 18a8 8 0 0 1 8-8h196a8 8 0 0 1 8 8v8H14z"/><circle class="il-t" cx="26" cy="18" r="2"/><circle class="il-t" cx="34" cy="18" r="2"/><circle class="il-t" cx="42" cy="18" r="2"/><rect class="il-d" x="30" y="36" width="180" height="64" rx="5"/><circle class="il-a" cx="120" cy="68" r="14"/><path class="il-plus" d="M120 60v16M112 68h16"/><path class="il-spark" d="M168 48l1.8 4.2 4.2 1.8-4.2 1.8L168 60l-1.8-4.2-4.2-1.8 4.2-1.8zM70 82l1.2 2.8 2.8 1.2-2.8 1.2L70 90l-1.2-2.8-2.8-1.2 2.8-1.2z"/>',
+    guided: '<rect class="il-w" x="22" y="24" width="64" height="82" rx="6"/><rect class="il-s" x="30" y="32" width="48" height="22" rx="3"/><rect class="il-bar" x="30" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="30" y="72" width="32" height="4" rx="2"/><rect class="il-w" x="154" y="24" width="64" height="82" rx="6"/><rect class="il-bar" x="162" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="188" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="162" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="162" y="72" width="36" height="4" rx="2"/><rect class="il-w il-front" x="82" y="12" width="76" height="98" rx="7"/><rect class="il-s" x="91" y="21" width="58" height="26" rx="4"/><rect class="il-a" x="98" y="29" width="30" height="5" rx="2.5"/><rect class="il-t" x="98" y="37" width="40" height="3" rx="1.5"/><rect class="il-bar" x="91" y="55" width="26" height="18" rx="3"/><rect class="il-bar" x="123" y="55" width="26" height="18" rx="3"/><rect class="il-t" x="91" y="81" width="58" height="4" rx="2"/><rect class="il-a" x="91" y="92" width="26" height="9" rx="4.5"/>'
+  };
+  IL_SVG.classic = IL_SVG.structure;
+  function illus(kind) {
+    var el = h("div", { class: "pb-illus is-" + kind, "aria-hidden": "true" });
+    el.innerHTML = '<svg viewBox="0 0 240 120" focusable="false" preserveAspectRatio="xMidYMid meet">' + (IL_SVG[kind] || "") + '</svg>';
+    return el;
+  }
+  function startCard(iconName, title, text, hint, label, onclick, id) {
+    return h("div", { class: "pb-start-card", "data-pb-start-card": id },
+      illus(id === "guided" ? "guided" : "classic"),
+      h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon(iconName)),
+      h("h2", { class: "pb-start-title", text: title }),
+      h("p", { class: "pb-start-text", text: text }),
+      h("p", { class: "pb-start-hint", text: hint }),
+      h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
+  }
+  function paintStartChoice(box) {
+    if (homeOpen) { paintHomeChoice(box); return; }
+    box.appendChild(h("h1", { class: "pb-start-head", text: "Comment voulez-vous commencer ?" }));
+    box.appendChild(h("div", { class: "pb-start-cards" },
+      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", "Aucune contrainte : vous réglez tout vous-même.", "Commencer",
+        function () { startFinish(); openStructurePicker({ parent: null, index: 0 }); }, "classic"),
+      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
+        function () { startStep = PC ? "catalog" : "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true, gabarit: "" }; paintStart(); }, "guided")));
+    paintRecents(box);
+    box.appendChild(h("p", { class: "pb-start-foot", text: "Dans les deux cas vous utilisez les mêmes conteneurs, la même grille Flexbox et les mêmes widgets. Vous pourrez changer de mode plus tard dans l'onglet « Page »." }));
+  }
+  // Accueil rouvert : reprendre (action principale, pleine largeur) puis trois autres façons de commencer, étiquetées par ce qu'elles touchent :
+  // « Sur cette page » (ajouter une structure, gabarit) ou « Nouveau document » (page vierge). Les identifiants data-pb-* des actions sont inchangés.
+  function homeCard(iconName, tag, title, text, label, onclick, id) {
+    return h("div", { class: "pb-start-card pb-home-card", "data-pb-start-card": id },
+      illus(id === "guided" ? "guided" : id === "blank" ? "blank" : "structure"),
+      h("div", { class: "pb-home-top" }, h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon(iconName)), h("span", { class: "pb-home-tag", text: tag })),
+      h("h2", { class: "pb-start-title", text: title }),
+      h("p", { class: "pb-start-text", text: text }),
+      h("button", { type: "button", class: "btn btn-outline pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
+  }
+  function paintHomeChoice(box) {
+    var n = content.sections.length, lockedHome = formatLocked(), busy = newPageBusy;
+    var summary = n ? plural(n, "section", "sections") + (past.length ? " · " + plural(past.length, "modification annulable", "modifications annulables") : "") + ". Rien n'est modifié en revenant." : "Page vide, réglages conservés. Rien n'est modifié en revenant.";
+    box.appendChild(h("div", { class: "pb-home-head" }, h("h1", { class: "pb-start-head", text: "Que voulez-vous faire ?" }), h("p", { class: "pb-home-sub", text: "Votre travail est conservé : choisissez comment poursuivre." })));
+    if (homeNotice) box.appendChild(h("p", { class: "pb-note" + (homeNotice.error ? " is-warn" : ""), role: homeNotice.error ? "alert" : "status", "data-pb-home-note": "", text: homeNotice.text }));
+    var sv = blocked ? ["is-error", "Enregistrement impossible : document dans un état incertain"] : saving ? ["is-busy", "Enregistrement en cours…"] : dirty ? ["is-pending", "Modifications en attente d'enregistrement"] : ["is-ok", "Tout est enregistré"];
+    box.appendChild(h("div", { class: "pb-start-card pb-home-resume", "data-pb-start-card": "resume" },
+      illus("resume"),
+      h("div", { class: "pb-home-resume-text" }, h("h2", { class: "pb-start-title", text: "Votre travail en cours" }), h("p", { class: "pb-start-text", text: summary }), h("p", { class: "pb-home-state " + sv[0], "data-pb-home-state": "", role: "status", text: sv[1] })),
+      h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": "resume", "data-pb-home-resume": "", onclick: closeHome }, "Reprendre mon travail")));
+    box.appendChild(h("p", { class: "pb-home-label", text: "Ou commencer autrement" }));
+    box.appendChild(h("div", { class: "pb-start-cards is-home" },
+      homeCard("layers", "Sur cette page", "Ajouter une structure", "Ajoutez conteneurs, colonnes ou grille à la fin de la page. Rien n'est effacé.", "Ajouter une structure",
+        function () { startFinish(); openStructurePicker({ parent: null, index: content.sections.length }); }, "classic"),
+      homeCard("layout", "Sur cette page", "Création guidée", lockedHome ? "Format verrouillé : déverrouillez-le d'abord dans l'onglet « Page »." : "Appliquez un gabarit et ses règles de mise en page. Annulable avec Ctrl/⌘ + Z.", "Choisir un gabarit",
+        function () { if (lockedHome) return; startStep = PC ? "catalog" : "config"; var p = layoutOf() || LF.formats.standard || {}; startDraft = layoutOf() ? { format: p.format, maxWidth: p.maxWidth, gutter: p.gutter, locked: Boolean(p.locked), gabarit: "" } : { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true, gabarit: "" }; paintStart(); }, "guided"),
+      homeCard("plus", "Nouveau document", "Nouvelle page vierge", "Créez une page vide et indépendante. La page actuelle reste enregistrée dans « Pages ».", busy ? "Création en cours…" : "Nouvelle page vierge", requestNewPage, "blank")));
+    var blankBtn = box.querySelector('[data-pb-start-go="blank"]'); if (blankBtn) { blankBtn.disabled = busy; blankBtn.setAttribute("aria-busy", String(busy)); }
+    if (lockedHome) { var gb = box.querySelector('[data-pb-start-go="guided"]'); if (gb) gb.disabled = true; }
+    paintRecents(box);
+  }
+  // ---------- Nouvelle page vierge : enregistrement vérifié, puis création par la route existante ----------
+  // La page courante n'est jamais vidée ni remplacée : une page DISTINCTE est créée (POST /marketing/pages, comme « Nouvelle page » du CMS), puis on y navigue.
+  var newPageBusy = false, homeNotice = null;
+  function setHomeNotice(text, error) { homeNotice = text ? { text: text, error: Boolean(error) } : null; if (homeOpen && startEl && !startEl.hidden && startStep === "choice") paintStart(false); }
+  function setNewPageBusy(on) { newPageBusy = on; if (homeOpen && startEl && !startEl.hidden && startStep === "choice") paintStart(false); }
+  // Enregistrement RÉEL du brouillon (même service que le bouton Enregistrer) ; réussi seulement si plus rien n'est en attente ni en erreur
+  function saveConfirmed() {
+    if (editing) commitEdit();
+    return Promise.resolve(saveNow()).then(function () {
+      if (saving && inflight) return inflight.then(function () { return saveConfirmed(); });
+      if (dirty || blocked || aiHold || saving) throw new Error("L'enregistrement n'a pas abouti. Votre travail est conservé dans l'éditeur ; réessayez.");
+      return true;
+    });
+  }
+  // ---------- Dialogue commun de nommage : toute création réelle d'un NOUVEAU document passe ici ----------
+  // Le nom est validé par le serveur (mêmes règles que le renommage : obligatoire, 100 caractères au plus, unique sans tenir compte de la casse), puis la page est
+  // créée EN UNE FOIS avec ce nom (POST /marketing/pages/creer.json) : aucune page anonyme n'existe, même brièvement. Annuler ne crée rien ; une erreur garde le dialogue.
+  // Résultat : { url } si la page est créée, null si l'utilisateur annule. `spec` : { template, layout } du parcours guidé (conservés tels quels).
+  var NAME_MAX = 100;
+  function askPageName(spec) {
+    spec = spec || {};
+    return new Promise(function (resolve) {
+      var done = false, busy = false, checkTimer = null, checkSeq = 0, valid = false, input = null, msg = null, touched = false, badge = null;
+      var okBtn = function () { return compDlg && compDlg.querySelector("[data-cd-ok]"); };
+      var setState = function (text, kind) { msg.textContent = text || ""; msg.className = "pb-hint pb-name-msg" + (kind ? " is-" + kind : ""); input.setAttribute("aria-invalid", kind === "error" ? "true" : "false"); };
+      var apply = function () { var b = okBtn(); if (b && !busy) b.disabled = !valid; };
+      var validate = function () {
+        var text = input.value.trim(); clearTimeout(checkTimer); valid = false; apply();
+        if (!text) { setState(touched ? "Le nom est obligatoire." : "", ""); return; }
+        if (text.length > NAME_MAX) { setState("Le nom ne peut pas dépasser " + NAME_MAX + " caractères (" + text.length + " saisis).", "error"); return; }
+        setState("Vérification…", "");
+        var seq = ++checkSeq;
+        checkTimer = setTimeout(function () {
+          api("GET", "/marketing/pages/nom.json?name=" + encodeURIComponent(text) + (spec.rename ? "&except=" + spec.rename.id : "") + (PAGE.siteId ? "&site=" + PAGE.siteId : "")).then(function (r) {
+            if (seq !== checkSeq) return;
+            valid = Boolean(r.ok); setState(r.ok ? "" : r.message, r.ok ? "" : "error"); apply();
+          }, function () { if (seq !== checkSeq) return; valid = true; setState("", ""); apply(); }); // réseau indisponible : le serveur revérifiera à la création
+        }, 250);
+      };
+      compDialog({ title: spec.rename ? "Renommer la page" : "Créer une nouvelle page", confirmLabel: spec.rename ? "Renommer" : "Créer la page", cancelLabel: "Annuler", build: function (body) {
+        // Habillage propre à ce dialogue (classe retirée à la fermeture : le dialogue partagé reste identique pour les autres usages)
+        compDlg.classList.add("pb-name-dlg");
+        badge = h("span", { class: "pb-name-badge", "aria-hidden": "true" }, icon(spec.rename ? "edit" : "fileText"));
+        var headEl = compDlg.querySelector(".pb-modal-head"); headEl.insertBefore(badge, headEl.firstChild);
+        body.appendChild(h("p", { class: "pb-hint pb-name-intro", text: spec.rename ? "Le nom change partout ; l'adresse de la page et son identifiant restent les mêmes." : "Donnez un nom à votre page pour la retrouver facilement dans votre espace de travail." }));
+        input = h("input", { type: "text", class: "pb-input", "data-pb-name-input": "", id: "pb-name-input", maxlength: String(NAME_MAX + 50), placeholder: "Ex. : Accueil, À propos, Nos services…", autocomplete: "off", "aria-describedby": "pb-name-msg", "aria-required": "true" });
+        msg = h("p", { class: "pb-hint pb-name-msg", id: "pb-name-msg", role: "status", "aria-live": "polite" });
+        body.appendChild(h("div", { class: "pb-field" }, h("label", { for: "pb-name-input", text: "Nom de la page" }), input));
+        body.appendChild(msg);
+        input.addEventListener("input", function () { touched = true; validate(); });
+        if (spec.rename) input.value = spec.rename.name;
+        setTimeout(function () { validate(); input.focus(); input.select(); }, 0);
+      }, onConfirm: function () {
+        if (busy || !valid) return false;
+        busy = true; var b = okBtn(); if (b) { b.disabled = true; b.setAttribute("aria-busy", "true"); b.textContent = spec.rename ? "Enregistrement…" : "Création…"; }
+        if (spec.rename) return api("POST", "/marketing/pages/" + spec.rename.id + "/renommer.json", { name: input.value.trim() }).then(function (r) { done = true; resolve({ name: r.page.name }); return true; }, function (e) { busy = false; var b3 = okBtn(); if (b3) { b3.removeAttribute("aria-busy"); b3.textContent = "Renommer"; } setTimeout(apply, 0); throw e; });
+        var body = { name: input.value.trim(), template: spec.template || "", layout: spec.layout || null };
+        if (PAGE.siteId) body.siteId = PAGE.siteId;
+        return api("POST", "/marketing/pages/creer.json", body).then(function (r) { done = true; resolve({ url: r.url }); return true; }, function (e) {
+          busy = false; var b2 = okBtn(); if (b2) { b2.removeAttribute("aria-busy"); b2.textContent = "Créer la page"; }
+          setTimeout(function () { apply(); if (/déjà ce nom/.test(e.message || "")) { valid = false; setState(e.message, "error"); apply(); } }, 0);
+          throw e;
+        });
+      } });
+      compDlg.addEventListener("close", function onClose() { compDlg.removeEventListener("close", onClose); clearTimeout(checkTimer); compDlg.classList.remove("pb-name-dlg"); if (badge && badge.parentNode) badge.parentNode.removeChild(badge); if (!done) resolve(null); });
+    });
+  }
+  // Renommer depuis la barre supérieure : mêmes règles et même dialogue ; le nom est mis à jour partout où il est affiché sans recharger l'éditeur
+  var titleEl = $(".pb-title h1");
+  if (titleEl && !IS_COMPONENT && canWrite && PAGE.id) {
+    var renameBtn = h("button", { type: "button", class: "pb-icon-btn pb-title-edit", "data-pb-rename": "", "data-tip": "Renommer la page", "aria-label": "Renommer la page" }, icon("edit"));
+    titleEl.parentNode.insertBefore(renameBtn, titleEl.nextSibling);
+    renameBtn.addEventListener("click", function () {
+      askPageName({ rename: { id: PAGE.id, name: PAGE.name || titleEl.textContent } }).then(function (r) {
+        if (!r) return;
+        PAGE.name = r.name; titleEl.textContent = r.name;
+        document.title = document.title.replace(/^[^·]*/, "Éditeur — " + r.name + " ");
+        toast("Page renommée : « " + r.name + " ».");
+      });
+    });
+  }
+  var CANCELLED = function () { var e = new Error("Création annulée."); e.cancelled = true; return e; };
+  // Adresse de la page créée, ou rejet « annulé » (rien n'a été créé)
+  function nameThenCreate(spec) { return askPageName(spec).then(function (r) { if (!r) throw CANCELLED(); return r.url; }); }
+  function leaveFor(url, discard) {
+    if (discard) { dirty = false; clearTimeout(saveTimer); try { localStorage.removeItem("pb-backup-" + PAGE.id); localStorage.removeItem(HISTORY_KEY); } catch (e) { /* stockage indisponible */ } }
+    window.location.assign(url);
+  }
+  var NEWPAGE_LEAVE = { getUrl: function () { return nameThenCreate({}); }, auto: true, text: "Vous allez quitter le document actuel pour créer une nouvelle page vierge. Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "Votre travail est enregistré. Vous pouvez maintenant créer la nouvelle page vierge." };
+  function requestNewPage() { requestLeave(NEWPAGE_LEAVE); }
+  // Quitter ce document pour un autre (nouvelle page, page récente, liste des pages) : jamais de perte silencieuse, enregistrement vérifié d'abord.
+  // opts : getUrl() → promesse de l'adresse à ouvrir ; text : explication de la boîte de dialogue ; saved : message après un enregistrement réussi.
+  function notifyLeave(text, error) { if (homeOpen && startStep === "choice") setHomeNotice(text, error); else if (text) toast(text, error); }
+  function requestLeave(opts) {
+    if (newPageBusy || !canWrite) return;
+    if (blocked || aiHold) { notifyLeave(blocked ? "Ce document est dans un état incertain (modifié ailleurs ou enregistrement refusé) : rien n'est quitté. Actualisez ou copiez votre travail d'abord." : "Une proposition de l'IA est en cours d'aperçu : appliquez-la ou annulez-la avant de quitter ce document.", true); return; }
+    if (editing) commitEdit();
+    setNewPageBusy(true); setHomeNotice(null);
+    var settle = saving && inflight ? inflight.then(function () {}) : Promise.resolve();
+    settle.then(function () {
+      if (blocked || aiHold) throw new Error("Ce document est dans un état incertain : rien n'est quitté.");
+      if (!dirty && !saving) return opts.getUrl().then(function (url) { leaveFor(url, false); return "left"; });
+      setNewPageBusy(false); // modifications en attente : la boîte de dialogue décide
+      return openLeaveDialog(opts).then(function () { return "dialog"; });
+    }).catch(function (err) { setNewPageBusy(false); if (err && err.cancelled) return; notifyLeave(err.message || "L'opération a échoué.", true); });
+  }
+  function openLeaveDialog(opts) {
+    return new Promise(function (resolve) {
+      var confirming = false, working = false, quitBtn = null;
+      var lock = function (on) { working = on; if (!compDlg) return; Array.prototype.forEach.call(compDlg.querySelectorAll("button"), function (b) { b.disabled = on; }); };
+      compDialog({ title: "Enregistrer votre travail avant de continuer ?", confirmLabel: "Enregistrer et continuer", cancelLabel: "Annuler", build: function (body) {
+        body.appendChild(h("p", { class: "pb-hint", "data-pb-leave-text": "", text: opts.text }));
+        quitBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-leave-quit": "", onclick: function () {
+          if (working) return;
+          var err = compDlg.querySelector("[data-cd-error]");
+          if (!confirming) { confirming = true; quitBtn.textContent = "Confirmer : abandonner mes modifications"; quitBtn.classList.add("btn-danger"); err.textContent = "Les modifications non enregistrées de ce document seront perdues. La dernière version enregistrée reste intacte."; err.hidden = false; return; }
+          lock(true); err.hidden = true;
+          // Le document n'est abandonné (leaveFor) qu'APRÈS la création réussie de la nouvelle page : si le nom est annulé, rien n'est perdu
+          lock(false); compDlg.close();
+          setTimeout(function () { opts.getUrl().then(function (url) { leaveFor(url, true); resolve("quit"); }, function (e) { if (!e.cancelled) notifyLeave(e.message, true); }); }, 50);
+        } }, "Quitter sans enregistrer");
+        body.appendChild(quitBtn);
+      }, onConfirm: function () {
+        if (working) return false;
+        lock(true);
+        return saveConfirmed().then(function () {
+          lock(false);
+          if (opts.auto) { lock(false); resolve("saved"); setTimeout(function () { opts.getUrl().then(function (u) { leaveFor(u, false); }, function (e) { setNewPageBusy(false); if (!e.cancelled) notifyLeave(e.message, true); }); }, 50); return true; }
+          notifyLeave(opts.saved, false);
+          resolve("saved"); return true;
+        }, function (e) { lock(false); throw e; });
+      } });
+      compDlg.addEventListener("close", function onClose() { compDlg.removeEventListener("close", onClose); resolve("closed"); });
+    });
+  }
+  // ---------- Création guidée : catalogue de gabarits réels + inventaire des types de pages (étape « catalog ») ----------
+  // Quatre notions séparées : type de page (inventaire), gabarit visuel (composition réelle de sections), structure (conteneurs/grille, inchangés) et
+  // format du canevas (étape suivante). Les types sans gabarit sont seulement RÉPERTORIÉS (jamais présentés comme prêts). Aucun gabarit simulé.
+  var WF = { hero: "hero", features: "cols", list: "lines", text: "lines", faq: "rows", cta: "cta", form: "form", testimonials: "quote", course: "card", divider: "rule", layout: "cols" };
+  function wireframe(shape) {
+    var wf = h("div", { class: "pb-wf", "aria-hidden": "true" });
+    (shape.length ? shape : ["text"]).slice(0, 7).forEach(function (t) {
+      var k = WF[t] || "lines", b = h("span", { class: "pb-wf-" + k });
+      if (k === "cols" || k === "card") { b.appendChild(h("i")); b.appendChild(h("i")); if (k === "cols") b.appendChild(h("i")); }
+      if (k === "lines" || k === "rows" || k === "form") { b.appendChild(h("i")); b.appendChild(h("i")); }
+      wf.appendChild(b);
+    });
+    return wf;
+  }
+  function catMatches(words, hay) { return words.every(function (w) { return hay.indexOf(w) >= 0; }); }
+  function paintCatalog(box) {
+    var d = startDraft, st = catState;
+    var gabs = PC.gabarits, typeById = {}; PC.types.forEach(function (t) { typeById[t.id] = t; });
+    var home = homeOpen;
+    box.appendChild(h("div", { class: "pb-home-head" }, h("h1", { class: "pb-start-head", text: "Choisissez un gabarit" }),
+      h("p", { class: "pb-home-sub", "data-pb-cat-count": "", text: plural(gabs.length, "gabarit prêt à l'emploi", "gabarits prêts à l'emploi") + " · " + plural(PC.types.length, "type de page répertorié", "types de pages répertoriés") + ". Un gabarit n'est jamais un format : vous réglerez la largeur ensuite." })));
+    var q = h("input", { type: "search", class: "pb-input", "data-pb-cat-q": "", placeholder: "Rechercher : contact, vente, portfolio…", "aria-label": "Rechercher un gabarit ou un type de page", value: st.q });
+    var sort = h("select", { class: "pb-input", "data-pb-cat-sort": "", "aria-label": "Trier" }, h("option", { value: "default", text: "Ordre proposé" }), h("option", { value: "name", text: "Nom (A → Z)" }), h("option", { value: "sections", text: "Nombre de sections" }));
+    sort.value = st.sort;
+    var scope = h("div", { class: "pb-cat-seg", role: "group", "aria-label": "Afficher" });
+    [["gabarits", "Gabarits disponibles"], ["all", "Tous les types de pages"]].forEach(function (o) {
+      scope.appendChild(h("button", { type: "button", class: "pb-cat-chip" + (st.scope === o[0] ? " is-on" : ""), "aria-pressed": String(st.scope === o[0]), "data-pb-cat-scope": o[0], onclick: function () { st.scope = o[0]; repaintCat(); } }, o[1]));
+    });
+    box.appendChild(h("div", { class: "pb-cat-bar" }, q, sort, scope));
+    var groups = h("div", { class: "pb-cat-groups", role: "group", "aria-label": "Catégories" });
+    [{ id: "all", label: "Toutes les catégories" }].concat(PC.groups).forEach(function (g) {
+      groups.appendChild(h("button", { type: "button", class: "pb-cat-chip" + (st.group === g.id ? " is-on" : ""), "aria-pressed": String(st.group === g.id), "data-pb-cat-group": g.id, onclick: function () { st.group = g.id; repaintCat(); } }, g.label));
+    });
+    box.appendChild(groups);
+    var results = h("div", { class: "pb-cat-results", "aria-live": "polite" });
+    box.appendChild(results);
+    var action = h("div", { class: "pb-start-actions pb-cat-actions" });
+    box.appendChild(action);
+    function repaintCat() {
+      $$("[data-pb-cat-scope]", box).forEach(function (b) { var on = b.getAttribute("data-pb-cat-scope") === st.scope; b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", String(on)); });
+      $$("[data-pb-cat-group]", box).forEach(function (b) { var on = b.getAttribute("data-pb-cat-group") === st.group; b.classList.toggle("is-on", on); b.setAttribute("aria-pressed", String(on)); });
+      results.textContent = "";
+      var words = norm(st.q).split(/\s+/).filter(Boolean);
+      var okGab = gabs.filter(function (g) {
+        if (st.group !== "all" && g.groups.indexOf(st.group) < 0) return false;
+        var hay = norm([g.name, g.category, g.description].concat(g.types.map(function (id) { return typeById[id].name + " " + typeById[id].groupLabel; })).join(" "));
+        return catMatches(words, hay);
+      });
+      if (st.sort === "name") okGab = okGab.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "fr"); });
+      if (st.sort === "sections") okGab = okGab.slice().sort(function (a, b) { return b.shape.length - a.shape.length; });
+      var okTypes = PC.types.filter(function (t) {
+        if (t.gabarits.length) return false; // couverts : ils apparaissent sur la carte de leur gabarit
+        if (st.group !== "all" && t.group !== st.group) return false;
+        return catMatches(words, norm(t.name + " " + t.groupLabel));
+      });
+      var showBlank = !words.length && st.group === "all";
+      var recentG = store.get("pb-gab-recent", []).map(function (k) { return gabs.filter(function (g) { return g.key === k; })[0]; }).filter(Boolean);
+      if (recentG.length && !words.length && st.group === "all") {
+        var rg = h("div", { class: "pb-cat-groups", "data-pb-cat-recentg": "", role: "group", "aria-label": "Gabarits récemment appliqués" }, h("span", { class: "pb-home-label", text: "Récemment appliqués" }));
+        recentG.forEach(function (g) { rg.appendChild(h("button", { type: "button", class: "pb-cat-chip" + (d.gabarit === g.key ? " is-on" : ""), "data-pb-cat-pick": g.key, onclick: function () { var c = box.querySelector('[data-pb-cat-card="' + g.key + '"]'); if (c) { c.click(); c.scrollIntoView({ block: "nearest" }); } } }, g.name)); });
+        results.appendChild(rg);
+      }
+      var grid = h("div", { class: "pb-cat-grid", role: "radiogroup", "aria-label": "Gabarits" });
+      if (showBlank) grid.appendChild(catCard("", "Page vide", "Aucune section : vous choisissez seulement le format du canevas, puis construisez librement.", [], ["hero"].slice(0, 0), "Format seul"));
+      okGab.forEach(function (g) { grid.appendChild(catCard(g.key, g.name, g.description, g.types.slice(0, 3).map(function (id) { return typeById[id].name; }).concat(g.types.length > 3 ? ["+" + (g.types.length - 3)] : []), g.shape, plural(g.shape.length, "section", "sections"))); });
+      if (showBlank || okGab.length) results.appendChild(grid);
+      if (st.scope === "all" && okTypes.length) {
+        var det = h("section", { class: "pb-cat-types", "data-pb-cat-types": "" }, h("h2", { class: "pb-cat-h", text: "Types de pages sans gabarit pour l'instant (" + okTypes.length + ")" }), h("p", { class: "pb-hint", text: "Répertoriés pour la couverture : aucun gabarit n'existe encore pour eux. Vous pouvez partir d'une page vide ou d'un gabarit proche." }));
+        var ul = h("ul", { class: "pb-cat-tlist" });
+        okTypes.forEach(function (t) { ul.appendChild(h("li", { "data-pb-cat-type": t.id }, h("span", { class: "pb-cat-tname", text: t.name }), h("span", { class: "pb-cat-tmeta", text: t.needs ? "Nécessite : " + t.needs : t.groupLabel }), h("span", { class: "pb-cat-badge" + (t.needs ? " is-need" : ""), text: t.needs ? "Fonction manquante" : "Répertorié" }))); });
+        det.appendChild(ul); results.appendChild(det);
+      }
+      if (!okGab.length && !(st.scope === "all" && okTypes.length) && !showBlank) {
+        results.appendChild(h("div", { class: "pb-cat-empty", "data-pb-cat-empty": "" }, icon("search"), h("p", { class: "pb-start-title", text: "Aucun résultat" }), h("p", { class: "pb-start-text", text: st.q ? "Rien ne correspond à « " + st.q + " »." : "Aucun gabarit dans cette catégorie." }),
+          h("button", { type: "button", class: "btn btn-outline", "data-pb-cat-reset": "", onclick: function () { st.q = ""; st.group = "all"; q.value = ""; repaintCat(); } }, "Effacer la recherche et les filtres")));
+      }
+      if (st.scope === "gabarits" && okTypes.length && !(words.length === 0 && st.group === "all")) results.appendChild(h("p", { class: "pb-hint", "data-pb-cat-more": "", text: plural(okTypes.length, "type de page correspondant n'a pas encore de gabarit", "types de pages correspondants n'ont pas encore de gabarit") + ". Choisissez « Tous les types de pages » pour les voir." }));
+      paintActions();
+    }
+    function catCard(key, name, desc, tags, shape, meta) {
+      var on = (d.gabarit || "") === key;
+      var card = h("button", { type: "button", class: "pb-cat-card" + (on ? " is-on" : ""), role: "radio", "aria-checked": String(on), "data-pb-cat-card": key || "blank", onclick: function () { d.gabarit = key; $$(".pb-cat-card", box).forEach(function (c) { var o = c.getAttribute("data-pb-cat-card") === (key || "blank"); c.classList.toggle("is-on", o); c.setAttribute("aria-checked", String(o)); }); paintActions(); } },
+        key ? wireframe(shape) : h("div", { class: "pb-wf is-blank", "aria-hidden": "true" }, icon("plus")),
+        h("strong", { class: "pb-cat-name", text: name }), h("span", { class: "pb-cat-desc", text: desc }),
+        h("span", { class: "pb-cat-tags" }, tags.map(function (t) { return h("span", { class: "pb-cat-tag", text: t }); }), h("span", { class: "pb-cat-meta", text: meta })));
+      return card;
+    }
+    function paintActions() {
+      action.textContent = "";
+      var chosen = d.gabarit ? (gabs.filter(function (g) { return g.key === d.gabarit; })[0] || null) : null;
+      action.appendChild(h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = "choice"; paintStart(); } }, "Retour"));
+      action.appendChild(h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"));
+      action.appendChild(h("button", { type: "button", class: "btn btn-primary", "data-pb-cat-next": "", onclick: function () { startStep = "config"; paintStart(); } }, chosen ? "Continuer avec « " + chosen.name + " »" : "Continuer avec une page vide"));
+    }
+    var qTimer = null;
+    q.addEventListener("input", function () { st.q = q.value; clearTimeout(qTimer); qTimer = setTimeout(repaintCat, 120); });
+    sort.addEventListener("change", function () { st.sort = sort.value; repaintCat(); });
+    repaintCat();
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape" && e.target !== q) { e.stopPropagation(); startStep = "choice"; paintStart(); } });
+    paintRecents(box);
+  }
+  // Insère un gabarit intégré à la fin (accueil) ou en tête (page vide), en une étape annulable ; la copie est neuve, aucune page n'est dupliquée
+  function insertGabarit(key, atEnd) {
+    return api("GET", "/marketing/site-web/gabarits/" + encodeURIComponent(key) + ".json").then(function (r) {
+      var secs = reIdAll(clone(r.gabarit.sections)).map(function (s) { return markSection(s); });
+      if (secs.some(function (s) { return s.type === "form"; }) && content.sections.some(function (s) { return s.type === "form"; })) { toast("Une page n'a qu'un formulaire d'inscription : ce gabarit en contient un, il n'a pas été ajouté.", true); return false; }
+      var lay = layoutOf();
+      if (lay && lay.locked) { // le format verrouillé règle la largeur et les marges de premier niveau : le gabarit n'y touche pas (sinon l'enregistrement serait refusé)
+        secs.forEach(function (sec) { (sec.children || []).forEach(function (n) { [n.styles, n.states].forEach(function (grp) { Object.keys(grp || {}).forEach(function (k) { LF.protected.forEach(function (pr) { if (grp[k]) delete grp[k][pr]; }); }); }); }); });
+      }
+      ensureIds(secs);
+      var name = (PC.gabarits.filter(function (g) { return g.key === key; })[0] || {}).name || key;
+      nextLabel = "Gabarit appliqué : « " + name + " »";
+      change(function () { if (!insertInto(null, atEnd ? content.sections.length : 0, secs)) return false; selection = secs.length ? [secs[0].id] : []; });
+      markCanvasSelection(true);
+      store.set("pb-gab-recent", [key].concat(store.get("pb-gab-recent", []).filter(function (k) { return k !== key; })).slice(0, 4));
+      toast("Gabarit « " + name + " » ajouté (" + plural(secs.length, "section", "sections") + "). Annulable avec Ctrl/⌘ + Z.");
+      return true;
+    });
+  }
+  // ---------- Pages récentes : pages réelles de l'organisation, classées par dernière MODIFICATION (aucune date d'ouverture n'est enregistrée) ----------
+  function ago(sqlDate) {
+    var t = Date.parse(String(sqlDate || "").replace(" ", "T") + "Z");
+    if (isNaN(t)) return "";
+    var s = Math.max(0, Math.round((Date.now() - t) / 1000));
+    if (s < 60) return "à l'instant";
+    if (s < 3600) return "il y a " + Math.round(s / 60) + " min";
+    if (s < 86400) return "il y a " + Math.round(s / 3600) + " h";
+    if (s < 86400 * 30) return "il y a " + Math.round(s / 86400) + " j";
+    return "le " + new Date(t).toLocaleDateString("fr-FR");
+  }
+  function statusOf(p) { return p.status === "published" ? (p.hasDraft ? { t: "Publiée · brouillon en cours", c: "is-live" } : { t: "Publiée", c: "is-live" }) : p.status === "unpublished" ? { t: "Dépubliée", c: "" } : { t: "Brouillon", c: "is-draft" }; }
+  var KIND_LABEL = { page: "Page du site", landing: "Page d'atterrissage", step: "Étape de tunnel", post: "Article" };
+  function paintRecents(box) {
+    var pins = store.get("pb-pins", []);
+    var list = (boot.recentPages || []).filter(function (p) { return recentFilter === "all" || (recentFilter === "pin" ? pins.indexOf(p.id) >= 0 : recentFilter === "draft" ? p.status !== "published" || p.hasDraft : p.status === "published"); })
+      .map(function (p, i) { return { p: p, i: i }; }).sort(function (a, b) { return (pins.indexOf(b.p.id) >= 0) - (pins.indexOf(a.p.id) >= 0) || a.i - b.i; }).map(function (x) { return x.p; });
+    var sec = h("section", { class: "pb-recents", "data-pb-recents": "", "aria-label": "Pages récentes" });
+    var head = h("div", { class: "pb-recents-head" }, h("h2", { class: "pb-cat-h", text: "Pages récentes" }));
+    var chips = h("div", { class: "pb-cat-seg", role: "group", "aria-label": "Filtrer les pages récentes" });
+    [["all", "Toutes"], ["pin", "Épinglées"], ["draft", "Brouillons"], ["live", "Publiées"]].forEach(function (o) {
+      chips.appendChild(h("button", { type: "button", class: "pb-cat-chip" + (recentFilter === o[0] ? " is-on" : ""), "aria-pressed": String(recentFilter === o[0]), "data-pb-recent-filter": o[0], onclick: function () { recentFilter = o[0]; paintStart(false); } }, o[1]));
+    });
+    head.appendChild(chips);
+    head.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", "data-pb-recent-all": "", onclick: function () { requestLeave({ getUrl: function () { return Promise.resolve("/marketing/pages"); }, text: "Vous allez quitter le document actuel pour afficher toutes les pages. Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "", auto: true }); } }, "Voir toutes les pages"));
+    sec.appendChild(head);
+    if (!(boot.recentPages || []).length) {
+      sec.appendChild(h("div", { class: "pb-recents-empty", "data-pb-recents-empty": "" }, icon("fileText"), h("p", { class: "pb-start-text", text: "Aucune autre page pour l'instant. Quand vous en créerez, les dernières pages modifiées apparaîtront ici pour être rouvertes en un clic." })));
+    } else if (!list.length) {
+      sec.appendChild(h("p", { class: "pb-hint", "data-pb-recents-none": "", text: "Aucune page dans ce filtre." }));
+    } else {
+      var ul = h("ul", { class: "pb-recents-list" });
+      list.slice(0, 6).forEach(function (p) {
+        var s = statusOf(p);
+        ul.appendChild(h("li", { class: "pb-recent", "data-pb-recent": String(p.id) },
+          h("span", { class: "pb-recent-ico", "aria-hidden": "true" }, icon("fileText")),
+          h("span", { class: "pb-recent-main" }, h("strong", { class: "pb-recent-name", text: p.name }), h("span", { class: "pb-recent-meta", text: (KIND_LABEL[p.kind] || "Page") + (p.siteName ? " · " + p.siteName : "") + " · modifiée " + ago(p.updatedAt) })),
+          h("span", { class: "pb-cat-badge " + s.c, text: s.t }),
+          h("button", { type: "button", class: "pb-recent-pin" + (pins.indexOf(p.id) >= 0 ? " is-on" : ""), "data-pb-recent-pin": String(p.id), "aria-pressed": String(pins.indexOf(p.id) >= 0), "aria-label": (pins.indexOf(p.id) >= 0 ? "Désépingler « " : "Épingler « ") + p.name + " » (sur cet appareil)", "data-tip": "Épingler sur cet appareil", onclick: function () { var cur = store.get("pb-pins", []); store.set("pb-pins", cur.indexOf(p.id) >= 0 ? cur.filter(function (x) { return x !== p.id; }) : [p.id].concat(cur).slice(0, 20)); paintStart(false); } }, icon("star")),
+          h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-recent-open": String(p.id), "aria-label": "Ouvrir la page « " + p.name + " »", onclick: function () { requestLeave({ getUrl: function () { return Promise.resolve("/marketing/pages/" + p.id + "/editeur"); }, text: "Vous allez quitter le document actuel pour ouvrir « " + p.name + " ». Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard.", saved: "", auto: true }); } }, "Ouvrir")));
+      });
+      sec.appendChild(ul);
+    }
+    box.appendChild(sec);
+  }
+  function startPreview() {
+    var d = startDraft, wide = d.maxWidth > 0 ? Math.max(20, Math.min(100, Math.round(d.maxWidth / 1600 * 100))) : 100;
+    var pv = h("div", { class: "pb-start-preview", "data-pb-start-preview": "", role: "img", "aria-label": "Aperçu : contenu centré, " + (d.maxWidth ? d.maxWidth + " px au plus" : "sans largeur maximale") + ", marges de " + d.gutter + " px au minimum" },
+      h("div", { class: "pb-start-pv-inner", style: "width:" + wide + "%" }, h("span", { class: "pb-start-pv-bar" }), h("span", { class: "pb-start-pv-bar is-short" }), h("span", { class: "pb-start-pv-block" })));
+    return h("div", null, pv, h("p", { class: "pb-hint pb-start-pv-note", "data-pb-start-note": "", text: d.maxWidth ? "Contenu : " + d.maxWidth + " px au plus, marges de " + d.gutter + " px au minimum. Sur un écran plus étroit, il suit l'écran." : "Contenu fluide : il suit toute la largeur de l'écran, marges de " + d.gutter + " px au minimum." }));
+  }
+  function paintStartConfig(box) {
+    var d = startDraft, presets = LF.formats, err = h("p", { class: "pb-note is-warn", role: "alert", hidden: true });
+    box.appendChild(PC ? h("div", { class: "pb-home-head" }, h("h1", { class: "pb-start-head", text: "Format du canevas" }), h("p", { class: "pb-home-sub", "data-pb-start-chosen": "", text: d.gabarit ? "Gabarit : « " + (PC && d.gabarit ? (PC.gabarits.filter(function (g) { return g.key === d.gabarit; })[0] || {}).name : "") + " ». Le format règle la largeur du contenu et les marges, pas la composition." : "Page vide. Le format règle la largeur du contenu et les marges." })) : h("h1", { class: "pb-start-head", text: "Choisissez un gabarit" }));
+    var list = h("div", { class: "pb-start-formats", role: "radiogroup", "aria-label": "Format de conception" });
+    Object.keys(presets).forEach(function (k) {
+      var f = presets[k], on = d.format === k;
+      list.appendChild(h("button", { type: "button", class: "pb-start-format" + (on ? " is-on" : ""), role: "radio", "aria-checked": on ? "true" : "false", "data-pb-start-format": k, onclick: function () {
+        d.format = k; if (k !== "custom") { d.maxWidth = f.maxWidth; d.gutter = f.gutter; }
+        paintStart(false); var b = box.parentNode && startEl.querySelector('[data-pb-start-format="' + k + '"]'); if (b) b.focus({ preventScroll: true });
+      } }, h("strong", { text: f.label }), h("span", { text: k === "custom" ? "320 à 2 400 px" : (f.maxWidth ? f.maxWidth + " px maximum" : "Largeur de l'écran") }), h("small", { text: k === "custom" ? "Vos valeurs" : "Marges " + f.gutter + " px · fluide sous " + (f.maxWidth ? f.maxWidth + " px" : "l'écran") })));
+    });
+    box.appendChild(list);
+    box.appendChild(h("p", { class: "pb-hint", text: (presets[d.format] || {}).hint || "" }));
+    var pvHost = h("div", { class: "pb-start-pvhost" });
+    var refreshPv = function () { pvHost.textContent = ""; pvHost.appendChild(startPreview()); };
+    if (d.format === "custom") {
+      var num = function (label, key, min, max, note) {
+        var inp = h("input", { type: "number", class: "pb-input", value: String(d[key]), min: String(min), max: String(max), "aria-label": label });
+        inp.setAttribute("data-pb-start-" + key, "");
+        inp.addEventListener("input", function () { d[key] = inp.value === "" ? NaN : Number(inp.value); refreshPv(); });
+        return h("label", { class: "pb-start-num" }, h("span", { text: label }), inp, h("small", { text: note }));
+      };
+      box.appendChild(h("div", { class: "pb-start-nums" }, num("Largeur maximale du contenu (px)", "maxWidth", 0, 2400, "0 = aucune limite, sinon 320 à 2 400"), num("Marge latérale minimale (px)", "gutter", 0, 96, "0 à 96")));
+    }
+    refreshPv();
+    box.appendChild(pvHost);
+    var lockText = function () { return d.locked ? "Protège " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau. Textes, images, couleurs et widgets restent libres. Modifiable ensuite dans l'onglet « Page »." : "Les réglages du format restent modifiables partout. Vous pourrez verrouiller plus tard dans l'onglet « Page »."; };
+    var lockLabel = h("strong", { text: d.locked ? "Format verrouillé" : "Format déverrouillé" }), lockHint = h("small", { text: lockText() });
+    var lock = h("button", { type: "button", class: "pb-start-lock" + (d.locked ? " is-on" : ""), role: "switch", "aria-checked": d.locked ? "true" : "false", "data-pb-start-lock": "", onclick: function () {
+      d.locked = !d.locked; lock.classList.toggle("is-on", d.locked); lock.setAttribute("aria-checked", d.locked ? "true" : "false"); lockLabel.textContent = d.locked ? "Format verrouillé" : "Format déverrouillé"; lockHint.textContent = lockText();
+    } }, icon("lock"), h("span", { class: "pb-start-lock-text" }, lockLabel, lockHint));
+    box.appendChild(lock);
+    box.appendChild(err);
+    box.appendChild(h("div", { class: "pb-start-actions" },
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = PC ? "catalog" : "choice"; paintStart(); } }, "Retour"),
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"),
+      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-newpage": "", title: "Crée une page distincte avec ce gabarit et ce format ; la page actuelle n'est pas modifiée", onclick: function () {
+        var wOk2 = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk2 = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
+        if (d.format === "custom" && !(wOk2 && gOk2)) { err.textContent = !wOk2 ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }
+        var spec = { template: d.gabarit || "", layout: { mode: "guided", format: d.format, maxWidth: d.maxWidth, gutter: d.gutter, locked: d.locked } };
+        requestLeave({ getUrl: function () { return nameThenCreate(spec); }, auto: true, saved: "", text: "Vous allez quitter le document actuel pour créer une nouvelle page" + (d.gabarit ? " à partir du gabarit choisi" : "") + ". Enregistrez vos modifications pour pouvoir reprendre ce travail plus tard." });
+      } }, "Créer dans une nouvelle page"),
+      h("button", { type: "button", class: "btn btn-primary", "data-pb-start-continue": "", onclick: function () {
+        var wOk = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
+        if (d.format === "custom" && !(wOk && gOk)) { err.textContent = !wOk ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }
+        var layout = { mode: "guided", format: d.format, maxWidth: d.maxWidth, gutter: d.gutter, locked: d.locked };
+        var wasHome = homeOpen;
+        homeOpen = false; startDone = true; // le panneau se retire d'abord : aucune retouche du canevas par lui
+        setLayout(layout);
+        refreshStart();
+        if (wasHome) homeButtonState();
+        if (d.gabarit) { insertGabarit(d.gabarit, wasHome).catch(apiFail); return; }
+        openStructurePicker({ parent: null, index: wasHome ? content.sections.length : 0 });
+      } }, d.gabarit ? "Appliquer le gabarit" : "Continuer")));
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); startStep = PC ? "catalog" : "choice"; paintStart(); } });
+  }
   function renderPageSettings() {
+    pageSettingsStale = false;
     var box = $("[data-pb-page-settings]");
     if (box.contains(document.activeElement)) return; // saisie en cours : on ne redessine pas
     box.textContent = "";
@@ -5451,6 +7574,8 @@
     box.appendChild(h("p", { class: "pb-sub", text: "Page" }));
     box.appendChild(textField("Titre de la page (onglet du navigateur)", content.title, setC("title"), { max: 120, disabled: !canWrite }));
     box.appendChild(textField("Description (aperçu de partage)", content.description, setC("description"), { multiline: true, max: 300, disabled: !canWrite }));
+    if (!IS_COMPONENT) formatSection(box);
+    if (!IS_COMPONENT) scrollSnapSection(box);
     // ----- Référencement (palier 11) : mêmes données que la page publique, aperçu et analyse calculés par le moteur SEO du serveur -----
     var seoCfg = boot.seo || {};
     var seoCan = canWrite && seoCfg.canEdit;
@@ -5568,36 +7693,60 @@
 
   // ---------- Médiathèque ----------
   var mediaDialog = $("[data-pb-media]");
-  var mediaOpts = {}, mediaItems = [], mediaChosen = [];
+  var mediaOpts = {}, mediaItems = [], mediaChosen = [], mediaSavedFlash = null, mediaLoadedOnce = false;
   function openMedia(opts) {
     if (editing) commitEdit();
     mediaOpts = opts || {};
     mediaChosen = [];
     $("#pb-media-title").textContent = mediaOpts.title || "Médiathèque";
     mediaDialog.showModal();
+    $("[data-pb-media-q]").focus();
     loadMedia();
   }
   var mediaTimer = null;
+  var mediaCount = function (n) { return n + (n > 1 ? " images" : " image"); };
   function loadMedia(keep) {
     var q = $("[data-pb-media-q]").value, src = $("[data-pb-media-src]").value;
-    $("[data-pb-media-status]").textContent = "Chargement…";
-    return api("GET", "/marketing/site-web/medias.json?source=" + encodeURIComponent(src) + "&q=" + encodeURIComponent(q)).then(function (r) {
-      mediaItems = r.items;
-      if (keep) mediaChosen = mediaChosen.map(function (c) { return mediaItems.find(function (m) { return m.source === c.source && m.id === c.id; }) || c; });
-      $("[data-pb-media-status]").textContent = r.items.length ? r.items.length + " image(s)." : "Aucune image" + (q ? " pour cette recherche." : " : envoyez-en une.");
-      renderMediaGrid();
-    }, function (err) { $("[data-pb-media-status]").textContent = err.message; });
-  }
-  $("[data-pb-media-q]").addEventListener("input", function () { clearTimeout(mediaTimer); mediaTimer = setTimeout(loadMedia, 250); });
-  $("[data-pb-media-src]").addEventListener("change", function () { loadMedia(); });
-  var mediaKey = function (m) { return m.source + ":" + m.id; };
-  function renderMediaGrid() {
     var grid = $("[data-pb-media-grid]");
+    $("[data-pb-media-status]").textContent = "Chargement…";
+    if (!mediaItems.length && !mediaLoadedOnce) { // premier affichage : emplacements neutres plutôt qu'une zone vide
+      grid.setAttribute("aria-busy", "true"); grid.textContent = "";
+      for (var i = 0; i < 8; i++) grid.appendChild(h("li", { class: "pb-media-skel", "aria-hidden": "true" }));
+    }
+    return api("GET", "/marketing/site-web/medias.json?source=" + encodeURIComponent(src) + "&q=" + encodeURIComponent(q)).then(function (r) {
+      mediaItems = r.items; mediaLoadedOnce = true;
+      if (keep) mediaChosen = mediaChosen.map(function (c) { return mediaItems.find(function (m) { return m.source === c.source && m.id === c.id; }) || c; });
+      $("[data-pb-media-status]").textContent = r.items.length ? mediaCount(r.items.length) + (q ? " trouvée" + (r.items.length > 1 ? "s" : "") : "") : "";
+      grid.setAttribute("aria-busy", "false");
+      renderMediaGrid();
+    }, function (err) { grid.setAttribute("aria-busy", "false"); grid.textContent = ""; $("[data-pb-media-status]").textContent = err.message; });
+  }
+  $("[data-pb-media-q]").addEventListener("input", function () { clearTimeout(mediaTimer); mediaTimer = setTimeout(loadMedia, 180); });
+  $("[data-pb-media-src]").addEventListener("change", function () { loadMedia(); });
+  $("[data-pb-media-sort]").addEventListener("change", function () { renderMediaGrid(); });
+  var mediaKey = function (m) { return m.source + ":" + m.id; };
+  function sortedMedia() {
+    var mode = $("[data-pb-media-sort]").value, list = mediaItems.slice();
+    if (mode === "az" || mode === "za") list.sort(function (a, b) { return (mode === "az" ? 1 : -1) * String(a.name).localeCompare(String(b.name), "fr", { sensitivity: "base", numeric: true }); });
+    return list;
+  }
+  function renderMediaGrid() {
+    var grid = $("[data-pb-media-grid]"), empty = $("[data-pb-media-empty]");
     grid.textContent = "";
-    mediaItems.forEach(function (m) {
+    var list = sortedMedia(), q = $("[data-pb-media-q]").value.trim();
+    empty.hidden = list.length > 0;
+    if (!list.length) {
+      empty.textContent = "";
+      empty.appendChild(h("span", { class: "pb-media-empty-ico", "aria-hidden": "true" }, icon("image")));
+      empty.appendChild(h("strong", { text: q ? "Aucune image trouvée" : "Aucune image" }));
+      empty.appendChild(h("span", { text: q ? "Essayez un autre terme ou une autre bibliothèque." : "Importez votre première image pour commencer." }));
+      if (!q && canWrite) empty.appendChild(h("button", { type: "button", class: "btn btn-primary btn-sm", onclick: function () { $("[data-pb-upload]").click(); } }, icon("plus"), "Importer une image"));
+    }
+    list.forEach(function (m) {
       var chosen = mediaChosen.some(function (x) { return mediaKey(x) === mediaKey(m); });
-      var btn = h("button", { type: "button", class: "pb-media-item" + (chosen ? " is-chosen" : ""), "aria-pressed": String(chosen), "aria-label": (m.alt || m.name) + (m.width ? " (" + m.width + " × " + m.height + ")" : ""), onclick: function () { chooseMedia(m); }, ondblclick: function () { chooseMedia(m, true); } },
-        h("img", { src: m.path, alt: "", loading: "lazy" }), h("span", { class: "pb-media-name", text: m.name }), m.alt ? null : h("span", { class: "pb-media-flag", text: "Sans texte alt." }));
+      var btn = h("button", { type: "button", class: "pb-media-item" + (chosen ? " is-chosen" : ""), "aria-pressed": String(chosen), title: m.name, "aria-label": (m.alt || m.name) + (m.width ? " (" + m.width + " × " + m.height + ")" : "") + (m.alt ? "" : " — texte alternatif manquant"), onclick: function () { chooseMedia(m); }, ondblclick: function () { chooseMedia(m, true); } },
+        h("span", { class: "pb-media-thumb" }, h("img", { src: m.path, alt: "", loading: "lazy", decoding: "async" }), h("span", { class: "pb-media-check", "aria-hidden": "true" }, icon("check")), m.alt ? null : h("span", { class: "pb-media-flag", text: "Alt manquant" })),
+        h("span", { class: "pb-media-name", text: m.name }));
       grid.appendChild(h("li", {}, btn));
     });
     renderMediaDetail();
@@ -5616,28 +7765,89 @@
     mediaDialog.close();
     pick(multiple ? chosen : chosen[0]);
   }
+  var fmtSize = function (b) { return !b ? "—" : b >= 1048576 ? (b / 1048576).toFixed(2).replace(".", ",") + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko"; };
+  var shortPath = function (p) { return p.length > 38 ? p.slice(0, 20) + "…" + p.slice(-16) : p; };
+  function mediaInfoRow(label, value, full) { return h("div", { class: "pb-media-row" }, h("dt", { text: label }), h("dd", { title: full || null }, value)); }
   function renderMediaDetail() {
     var box = $("[data-pb-media-detail]");
     box.textContent = "";
     var m = mediaChosen[mediaChosen.length - 1];
-    if (!m) { box.appendChild(h("p", { class: "pb-hint", text: mediaOpts.onPick ? "Choisissez une image (double-clic pour l'insérer directement)." : "Cliquez une image pour voir ses informations." })); return; }
-    box.appendChild(h("img", { src: m.path, alt: "", class: "pb-media-big" }));
-    box.appendChild(h("dl", { class: "pb-meta" }, h("dt", { text: "Nom" }), h("dd", { text: m.name }), h("dt", { text: "Dimensions" }), h("dd", { text: m.width ? m.width + " × " + m.height + " px" : "inconnues" }),
-      h("dt", { text: "Poids" }), h("dd", { text: m.size ? Math.round(m.size / 1024) + " Ko" : "—" }), h("dt", { text: "Type" }), h("dd", { text: m.mime || "image" }), h("dt", { text: "Adresse" }), h("dd", {}, h("code", { text: m.path })), h("dt", { text: "Bibliothèque" }), h("dd", { text: m.source === "marketing" ? "Marketing" : "Site (gérée dans le Centre de gestion)" })));
+    if (!m) {
+      box.appendChild(h("div", { class: "pb-media-nosel" }, h("span", { class: "pb-media-empty-ico", "aria-hidden": "true" }, icon("image")), h("strong", { text: "Sélectionnez une image" }),
+        h("span", { text: mediaOpts.onPick ? "Choisissez une ressource pour afficher ses détails (double-clic pour l'insérer directement)." : "Choisissez une ressource pour afficher ses détails." })));
+      return;
+    }
+    // Aperçu (damier discret : les transparences restent visibles) ; en cas d'échec de chargement, message et « Réessayer »
+    var prev = h("div", { class: "pb-media-preview" });
+    var showImg = function (bust) {
+      prev.textContent = "";
+      var img = h("img", { src: m.path + (bust ? (m.path.indexOf("?") < 0 ? "?" : "&") + "r=" + Date.now() : ""), alt: m.alt || "" });
+      img.addEventListener("error", function () { prev.textContent = ""; prev.appendChild(h("div", { class: "pb-media-fail", role: "alert" }, h("span", { text: "Impossible de charger cette image." }), h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { showImg(true); } }, "Réessayer"))); });
+      prev.appendChild(img);
+    };
+    showImg(false);
+    box.appendChild(prev);
+    var pathBtn = h("button", { type: "button", class: "pb-media-copy", "data-tip": "Copier l'adresse", "aria-label": "Copier l'adresse de l'image", onclick: function () {
+      var done = function () { toast("Adresse copiée."); }, fail = function () { toast("Copie impossible : sélectionnez l'adresse à la main.", true); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.origin + m.path).then(done, fail); else fail();
+    } }, icon("copy"));
+    box.appendChild(h("dl", { class: "pb-media-info" },
+      mediaInfoRow("Nom", h("span", { class: "pb-media-ell", text: m.name }), m.name),
+      mediaInfoRow("Dimensions", m.width ? m.width + " × " + m.height + " px" : "inconnues"),
+      mediaInfoRow("Poids", fmtSize(m.size)),
+      mediaInfoRow("Type", m.mime || "image"),
+      mediaInfoRow("Bibliothèque", m.source === "marketing" ? "Marketing" : "Site (Centre de gestion)"),
+      mediaInfoRow("Adresse", h("span", { class: "pb-media-pathrow" }, h("code", { class: "pb-media-ell", text: shortPath(m.path) }), pathBtn), m.path)));
+    var usageBox = h("div", { class: "pb-media-usage", "aria-live": "polite" });
+    var usageList = null; // null = inconnu, [] = non utilisée
+    box.appendChild(usageBox);
+    if (m.source === "marketing") {
+      api("GET", "/marketing/site-web/medias/" + m.id + "/usage.json").then(function (r) {
+        if (mediaChosen[mediaChosen.length - 1] !== m && !usageBox.isConnected) return;
+        usageList = r.items;
+        if (!r.items.length) return;
+        usageBox.appendChild(h("p", { class: "pb-media-usage-title", text: "Utilisée dans " + r.items.length + (r.items.length > 1 ? " contenus" : " contenu") }));
+        var ul = h("ul", {});
+        r.items.slice(0, 6).forEach(function (u) { ul.appendChild(h("li", {}, u.href ? h("a", { href: u.href, target: "_blank", rel: "noopener", text: u.name }) : h("span", { text: u.name }), h("small", { text: " " + u.kind }))); });
+        if (r.items.length > 6) ul.appendChild(h("li", {}, h("small", { text: "… et " + (r.items.length - 6) + " autre(s)" })));
+        usageBox.appendChild(ul);
+      }, function () { /* information facultative : la suppression reste protégée côté serveur */ });
+    }
+    var actions = h("div", { class: "pb-media-actions" });
     if (m.editable && canWrite) {
       var name = textField("Nom", m.name, function () {}, { max: 120 });
-      var alt = textField("Texte de remplacement", m.alt, function () {}, { max: 200 });
-      box.appendChild(name); box.appendChild(alt);
-      box.appendChild(h("div", { class: "pb-row pb-wrap" },
-        h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () {
-          api("POST", "/marketing/site-web/medias/" + m.id, { alt: alt.querySelector("input").value, name: name.querySelector("input").value }).then(function (r) { Object.assign(m, r.media); toast("Image mise à jour."); loadMedia(true); }, apiFail);
-        } }, "Enregistrer"),
-        h("button", { type: "button", class: "btn btn-danger btn-sm", onclick: function () {
-          if (!window.confirm("Supprimer définitivement « " + m.name + " » ? (Refusé si une page, un composant ou un modèle d'e-mail l'utilise.)")) return;
-          api("POST", "/marketing/site-web/medias/" + m.id + "/supprimer", {}).then(function () { mediaChosen = []; toast("Image supprimée."); loadMedia(); }, apiFail);
-        } }, "Supprimer")));
-    } else if (!m.editable) box.appendChild(h("p", { class: "pb-hint", text: "Texte de remplacement et suppression : Centre de gestion → Ressources." }));
-    if (mediaOpts.onPick) box.appendChild(h("button", { type: "button", class: "btn btn-primary btn-sm", onclick: finishMedia }, mediaOpts.multiple ? "Insérer " + mediaChosen.length + " image(s)" : "Insérer cette image"));
+      var alt = textField("Texte alternatif", m.alt, function () {}, { max: 200 });
+      alt.appendChild(h("p", { class: "pb-media-help", text: m.alt ? "Lu par les lecteurs d'écran ; affiché si l'image ne charge pas." : "Manquant : décrivez l'image pour améliorer l'accessibilité." }));
+      var meta = h("div", { class: "pb-media-meta" }, h("h3", { text: "Métadonnées" }), name, alt);
+      box.appendChild(meta);
+      var save = h("button", { type: "button", class: "btn btn-primary btn-sm", disabled: true }, "Enregistrer");
+      var flashed = mediaSavedFlash === mediaKey(m); mediaSavedFlash = null;
+      if (flashed) { save.textContent = "Enregistré"; setTimeout(function () { if (save.isConnected && save.textContent === "Enregistré") save.textContent = "Enregistrer"; }, 1600); }
+      var nameIn = name.querySelector("input"), altIn = alt.querySelector("input");
+      var dirty = function () { save.disabled = nameIn.value === m.name && altIn.value === (m.alt || ""); if (!save.disabled && save.textContent === "Enregistré") save.textContent = "Enregistrer"; };
+      nameIn.addEventListener("input", dirty); altIn.addEventListener("input", dirty);
+      save.addEventListener("click", function () {
+        save.disabled = true; save.textContent = "Enregistrement…";
+        api("POST", "/marketing/site-web/medias/" + m.id, { alt: altIn.value, name: nameIn.value }).then(function (r) { Object.assign(m, r.media); mediaSavedFlash = mediaKey(m); toast("Modifications enregistrées."); loadMedia(true); }, function (err) { save.textContent = "Enregistrer"; save.disabled = false; apiFail(err); });
+      });
+      var del = h("button", { type: "button", class: "btn btn-sm pb-media-del" }, icon("trash"), "Supprimer");
+      del.addEventListener("click", function () { // confirmation sur place ; si le fichier est utilisé, la suppression est refusée (liste ci-dessus)
+        actions.textContent = "";
+        var inUse = usageList && usageList.length;
+        actions.appendChild(h("div", { class: "pb-media-confirm", role: "alertdialog", "aria-label": "Confirmer la suppression" },
+          h("strong", { text: "Supprimer cette image ?" }),
+          h("span", { text: inUse ? "Cette image est actuellement utilisée : retirez-la d'abord des contenus listés ci-dessus." : "Cette action ne peut pas être annulée." }),
+          h("div", { class: "pb-row pb-wrap" },
+            h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { renderMediaDetail(); } }, "Annuler"),
+            h("button", { type: "button", class: "btn btn-sm pb-media-del is-solid", disabled: Boolean(inUse), onclick: function () {
+              api("POST", "/marketing/site-web/medias/" + m.id + "/supprimer", {}).then(function () { mediaChosen = []; toast("Image supprimée."); loadMedia(); }, function (err) { apiFail(err); renderMediaDetail(); });
+            } }, "Supprimer définitivement"))));
+        actions.querySelector(".btn-outline").focus();
+      });
+      actions.appendChild(save); actions.appendChild(del);
+    } else if (!m.editable) box.appendChild(h("p", { class: "pb-media-help", text: "Texte alternatif et suppression : Centre de gestion → Ressources." }));
+    if (mediaOpts.onPick) box.insertBefore(h("button", { type: "button", class: "btn btn-primary pb-media-insert", onclick: finishMedia }, mediaOpts.multiple ? "Insérer " + mediaChosen.length + " image(s)" : "Insérer cette image"), box.children[1]);
+    if (actions.children.length) box.appendChild(actions);
   }
   function uploadFile(file) {
     if (!file) return;
@@ -5646,7 +7856,7 @@
     var fd = new FormData(); fd.append("file", file);
     $("[data-pb-media-status]").textContent = "Envoi de « " + file.name + " »…";
     api("POST", "/marketing/site-web/medias", fd, true).then(function (r) {
-      toast("Image envoyée : ajoutez son texte de remplacement à droite.");
+      toast("Image envoyée : ajoutez son texte alternatif à droite.");
       $("[data-pb-media-src]").value = "all"; $("[data-pb-media-q]").value = "";
       mediaChosen = mediaOpts.multiple ? mediaChosen.concat(r.media) : [r.media];
       loadMedia(true);
@@ -5654,9 +7864,11 @@
   }
   $("[data-pb-upload]").addEventListener("change", function () { uploadFile(this.files[0]); this.value = ""; });
   var drop = $("[data-pb-drop]");
-  ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { e.preventDefault(); drop.classList.add("is-over"); } }); });
-  drop.addEventListener("dragleave", function () { drop.classList.remove("is-over"); });
-  drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("is-over"); if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+  drop.addEventListener("click", function () { $("[data-pb-upload]").click(); });
+  drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("[data-pb-upload]").click(); } });
+  ["dragenter", "dragover"].forEach(function (ev) { mediaDialog.addEventListener(ev, function (e) { if (canWrite && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { e.preventDefault(); drop.classList.add("is-over"); } }); });
+  mediaDialog.addEventListener("dragleave", function (e) { if (!mediaDialog.contains(e.relatedTarget)) drop.classList.remove("is-over"); });
+  mediaDialog.addEventListener("drop", function (e) { drop.classList.remove("is-over"); if (!canWrite) return; e.preventDefault(); if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
   if (!canWrite) { $(".pb-upload").hidden = true; drop.hidden = true; }
 
   // ---------- Fenêtre « demande de contenu » ----------
@@ -5696,11 +7908,21 @@
   function openPreview() {
     if (editing) commitEdit();
     var go = function () { $("[data-pb-preview-frame]").src = "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
-    if (dirty && !blocked) { clearTimeout(saveTimer); save().then(go); } else go();
+    if ((dirty || saving) && !blocked) { clearTimeout(saveTimer); saveNow().then(function () { if (dirty) { toast("Aperçu non ouvert : vos dernières modifications ne sont pas enregistrées (voir le message en haut).", true); return; } go(); }); } else go();
   }
   $("[data-pb-preview]").addEventListener("click", openPreview);
   $$("[data-preview-device]").forEach(function (b) { b.addEventListener("click", function () { $$("[data-preview-device]").forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); }); $("[data-pb-preview-frame]").dataset.device = b.dataset.previewDevice; }); });
-  previewDialog.addEventListener("close", function () { $("[data-pb-preview-frame]").src = "about:blank"; });
+  // Plein écran : le même dialogue, redimensionné (aucune reconstruction du cadre : appareil, défilement et page restent tels quels)
+  var previewFullBtn = $("[data-pb-preview-full]");
+  function setPreviewFull(on) {
+    previewDialog.classList.toggle("is-full", on);
+    previewFullBtn.setAttribute("aria-pressed", String(on));
+    var label = on ? "Quitter le plein écran" : "Plein écran";
+    previewFullBtn.setAttribute("aria-label", label); previewFullBtn.setAttribute("data-tip", label);
+  }
+  previewFullBtn.addEventListener("click", function () { setPreviewFull(!previewDialog.classList.contains("is-full")); });
+  previewDialog.addEventListener("keydown", function (e) { if (e.key === "Escape" && previewDialog.classList.contains("is-full")) { e.preventDefault(); setPreviewFull(false); } }); // Échap sort d'abord du plein écran
+  previewDialog.addEventListener("close", function () { $("[data-pb-preview-frame]").src = "about:blank"; setPreviewFull(false); });
 
   // ---------- Menu contextuel (clic droit) ----------
   var menu = $("[data-pb-menu]");
@@ -5716,14 +7938,25 @@
       ["Copier", function () { copySelected(false); }, false, "Ctrl+C"],
       ["Couper", function () { copySelected(true); }, !canWrite || locked, "Ctrl+X"],
       ["Coller", paste, !canWrite, "Ctrl+V"],
+      ["Coller depuis un autre site ou navigateur", pasteFromSystem, !canWrite],
       ["Copier le style", copyStyle, false, "Ctrl+Alt+C"],
-      ["Coller le style", pasteStyle, !canWrite || locked, "Ctrl+Alt+V"],
-      ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states; })],
+      ["Coller le style", function () { pasteStyle(); }, !canWrite || locked, "Ctrl+Maj+V"],
+      ["Réinitialiser le style", resetStyle, !canWrite || locked || !items.some(function (z) { return z.styles || z.states || z.parts; })],
+      "-",
+      { heading: "Style" },
+      PAGE.siteSettingsUrl && items.every(isNode) ? ["Appliquer un style…", openStyleLibrary, !canWrite || locked] : null,
+      items.length === 1 && isNode(it) ? ["Enregistrer comme style…", function () { saveStyleOf(byId(it.id) || it); }, !canWrite || locked || !canSaveStyle(items)] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Modifier le style « " + styleTitle(styleDef(stylesOf(it)[0])) + " »…", openStyleLibrary, false] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Redéfinir « " + styleTitle(styleDef(stylesOf(it)[0])) + " » depuis cet élément…", function () { openStyleDialog(byId(it.id) || it, stylesOf(it)[0]); }, !canWrite || locked || !canSaveStyle(items)] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Dissocier du style (garde l'apparence)", function () { unlinkStyleFrom([it.id], stylesOf(it)[0], true); }, !canWrite || locked] : null,
+      items.length === 1 && isNode(it) && stylesOf(it).length ? ["Retirer le style (perd son apparence)", function () { unlinkStyleFrom([it.id], stylesOf(it)[0], false); }, !canWrite || locked] : null,
       "-",
       items.length === 1 ? ["Renommer", function () { var row = treeEl.querySelector('.pb-node[data-id="' + it.id + '"] > .pb-row-item'); if (row) startRename(row, it); }, !canWrite, "F2"] : null,
       [items.some(function (z) { return z.hidden; }) ? "Afficher" : "Masquer", function () { setFlag(selection.slice(), "hidden", !items.some(function (z) { return z.hidden; })); }, !canWrite, "Ctrl+Maj+H"],
       [items.some(function (z) { return z.locked; }) ? "Déverrouiller" : "Verrouiller", function () { setFlag(selection.slice(), "locked", !items.some(function (z) { return z.locked; })); }, !canWrite, "Ctrl+Maj+L"],
       items.length > 1 ? ["Grouper", groupSelected, !canWrite || locked, "Ctrl+G"] : null,
+      !IS_COMPONENT && items.every(function (x) { return x.type !== "component"; }) ? ["Enregistrer comme composant…", openSaveComponent, !canWrite] : null,
+      items.length === 1 && items[0].type === "component" ? ["Détacher du composant", function () { detachInstance(items[0]); }, !canWrite] : null,
       items.length === 1 && ["group", "stack", "container"].indexOf(it.type) >= 0 ? ["Dissocier", ungroupSelected, !canWrite || locked, "Ctrl+Maj+G"] : null,
       l && l.parent ? ["Sélectionner le parent", function () { select(l.parent.id); }, false] : null,
       ["Monter", function () { nudge(-1); }, !canWrite || locked, "Alt+↑"],
@@ -5747,13 +7980,14 @@
       if (typeof e === "object" && e.heading) { menu.appendChild(h("p", { class: "pb-menu-heading", text: e.heading })); return; }
       menu.appendChild(h("button", { type: "button", role: "menuitem", class: "pb-menu-item" + (e[0] === "Supprimer" ? " is-danger" : "") + (e[4] ? " " + e[4] : ""), disabled: e[2] || null, tabindex: "-1", onclick: function () { closeMenu(); e[1](); } }, h("span", { text: e[0] }), e[3] ? h("kbd", { text: e[3] }) : null));
     });
+    if (window.KolMotion) window.KolMotion.cancelLeave(menu);
     menu.hidden = false;
     var r = menu.getBoundingClientRect();
     menu.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + "px";
     menu.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + "px";
     var first = menu.querySelector(".pb-menu-item:not([disabled])"); if (first) first.focus();
   }
-  function closeMenu() { menu.hidden = true; var mb = $("[data-pb-mainmenu]"); if (mb) mb.setAttribute("aria-expanded", "false"); }
+  function closeMenu() { if (window.KolMotion && !menu.hidden) window.KolMotion.leave(menu); menu.hidden = true; var mb = $("[data-pb-mainmenu]"); if (mb) mb.setAttribute("aria-expanded", "false"); }
   menu.addEventListener("keydown", function (e) {
     var list = $$(".pb-menu-item:not([disabled])", menu);
     var i = list.indexOf(document.activeElement);
@@ -5761,6 +7995,10 @@
     else if (e.key === "ArrowUp") { e.preventDefault(); (list[i - 1] || list[list.length - 1]).focus(); }
     else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); closeMenu(); }
   });
+  // Un geste hors de l'inspecteur (poignée, glisser, barre contextuelle, menu…) agit toujours sur le widget lui-même : la partie choisie est lâchée avant
+  var inInspectorFlow = ".pb-right, [data-pb-inspector], .pb-cpop, .pb-amenu, .pb-dyn-pop, .kf-panel, .pb-menu, .pb-tip, .pb-toast";
+  var releasePart = function (e) { if (styleTarget && !(e.target.closest && e.target.closest(inInspectorFlow))) { styleTarget = null; renderInspector(); } };
+  document.addEventListener("mousedown", releasePart, true);
   var menuWasOpenAtPress = false;
   document.addEventListener("mousedown", function (e) { menuWasOpenAtPress = !menu.hidden && Boolean(e.target.closest && e.target.closest("[data-pb-mainmenu]")); if (!menu.hidden && !menu.contains(e.target)) closeMenu(); }, true);
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) closeMenu(); }); // Échap ferme aussi quand le focus n'est plus dans le menu
@@ -5771,18 +8009,24 @@
   var cmdAnchor = null, cmdIndex = 0, cmdShown = [];
   function commandList() {
     var has = selection.length > 0;
-    var adds = [{ type: "layout", label: "Section libre" }].concat(SPEC.types.map(function (t) { return { type: t.type, label: t.label }; })).concat(boot.types.map(function (t) { return { type: t.type, label: t.label + " (section prête)", legacy: true }; }));
-    var list = canWrite ? adds.map(function (a) { return { label: "Ajouter : " + a.label, run: function () { addAt(a.type, a.legacy); } }; }) : [];
+    var adds = [{ type: "layout", label: "Section libre", icon: "layout" }].concat(SPEC.types.map(function (t) { return { type: t.type, label: t.label, icon: t.icon }; })).concat(boot.types.map(function (t) { return { type: t.type, label: t.label + " (section prête)", legacy: true }; }));
+    var list = canWrite ? adds.map(function (a) { return { label: "Ajouter : " + a.label, icon: a.icon, run: function () { addAt(a.type, a.legacy); } }; }) : [];
     if (canWrite) boot.blocks.forEach(function (b) { list.push({ label: "Ajouter le bloc : " + b.label, run: function () { var btn = $(".pb-block-item[data-block='" + b.key + "']"); if (btn) btn.click(); } }); });
     return list.concat([
       { label: "Ouvrir la médiathèque", run: function () { openMedia({ title: "Médiathèque" }); } },
       { label: "Aperçu", run: openPreview }, { label: "Enregistrer maintenant", run: saveNow, off: !canWrite }, { label: "Publier", run: function () { $("[data-pb-publish]").click(); }, off: !canWrite || $("[data-pb-publish]").hidden },
       { label: "Annuler", run: undo, off: !past.length }, { label: "Rétablir", run: redo, off: !future.length },
+      { label: "Accordéons : un seul ouvert", run: function () { accSetMode("one"); } }, { label: "Accordéons : plusieurs ouverts", run: function () { accSetMode("many"); } }, { label: "Accordéons : fermer ceux situés en dessous", run: function () { accSetMode("below"); } },
       { label: "Dupliquer la sélection", run: duplicateSelected, off: !has || !canWrite }, { label: "Supprimer la sélection", run: removeSelected, off: !has || !canWrite },
+      { label: "Enregistrer comme composant…", run: openSaveComponent, off: !selection.length || !canWrite || IS_COMPONENT },
+      { label: "Détacher du composant", run: function () { var x = selection.length === 1 ? byId(selection[0]) : null; if (x && x.type === "component") detachInstance(x); }, off: !canWrite || selection.length !== 1 || (byId(selection[0]) || {}).type !== "component" },
       { label: "Grouper", run: groupSelected, off: selection.length < 2 || !canWrite }, { label: "Dissocier", run: ungroupSelected, off: !has || !canWrite },
       { label: "Masquer / afficher", run: function () { setFlag(selection.slice(), "hidden", !selectedItems().some(function (z) { return z.hidden; })); }, off: !has || !canWrite },
       { label: "Verrouiller / déverrouiller", run: function () { setFlag(selection.slice(), "locked", !selectedItems().some(function (z) { return z.locked; })); }, off: !has || !canWrite },
-      { label: "Copier le style", run: copyStyle, off: !has }, { label: "Réinitialiser le style", run: resetStyle, off: !has || !canWrite }, { label: "Coller le style", run: pasteStyle, off: !has || !canWrite },
+      { label: "Styles du site : bibliothèque", run: openStyleLibrary, off: !PAGE.siteSettingsUrl },
+      { label: "Enregistrer comme style…", run: function () { saveStyleOf(selectedItems()[0]); }, off: !has || !canWrite || !canSaveStyle(selectedItems()) },
+      { label: "Coller depuis un autre site ou navigateur", run: pasteFromSystem, off: !canWrite }, { label: "Copier le style", run: copyStyle, off: !has }, { label: "Réinitialiser le style", run: resetStyle, off: !has || !canWrite }, { label: "Coller le style", run: function () { pasteStyle(); }, off: !has || !canWrite },
+      ].concat(STYLE_GROUPS.map(function (g) { return { label: "Coller le style : " + g[1].toLowerCase() + " seulement", run: function () { pasteStyle([g[0]]); }, off: !has || !canWrite || !(styleClipboard || store.get("style-clipboard", null)) }; })).concat([
       { label: "Sélectionner le parent", run: function () { var l = locate(selection[0]); if (l && l.parent) select(l.parent.id); }, off: !has },
       { label: "Écran : ordinateur", run: function () { setDevice("desktop"); } }, { label: "Écran : tablette", run: function () { setDevice("tablet"); } }, { label: "Écran : mobile", run: function () { setDevice("mobile"); } },
       { label: "Zoom : ajuster à l'écran", run: function () { setZoom("fit"); } }, { label: "Zoom : 100 %", run: function () { setZoom(1); } },
@@ -5792,7 +8036,6 @@
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
       { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
-      { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
       { label: "Ajouter une structure (Flexbox ou Grille)", run: function () { openStructurePicker(insertionPoint({ type: "container" })); }, off: !canWrite },
       { label: dock.mode === "floating" ? "Structure : rattacher le panneau" : "Structure : détacher le panneau", run: function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); } },
       { label: dock.mode === "closed" ? "Structure : rouvrir le panneau" : "Structure : fermer le panneau", run: function () { setDockMode(dock.mode === "closed" ? dock.last : "closed"); } },
@@ -5800,7 +8043,7 @@
       { label: panels.layersCollapsed ? "Calques : déplier le panneau" : "Calques : replier le panneau", run: function () { layersToggle.click(); } }, { label: "Calques et inspecteur : afficher / masquer", run: function () { togglePanel("right"); } },
       { label: "Réglages de la page (SEO, titre)", run: function () { openTab($("#pb-tab-page")); } },
       { label: mode === "structure" ? "Mode : Visuel" : "Mode : Structure (blocs)", run: function () { setMode(mode === "structure" ? "visual" : "structure"); } },
-    ]).filter(function (c) { return !c.off; });
+    ])).filter(function (c) { return !c.off; });
   }
   function addAt(type, legacy) {
     var anchor = cmdAnchor; cmdAnchor = null;
@@ -5817,57 +8060,143 @@
     }
     if (legacy) addLegacy(type, at); else addElement(type, at);
   }
+  // Catégories (déduites du début du libellé, sans rien renommer), icônes, raccourcis et synonymes : de simples tables à côté de la liste
+  var CMD_CATS = ["Créer", "Édition", "Page", "Affichage", "Interface"];
+  function cmdCategory(l) {
+    if (/^Ajouter/.test(l)) return "Créer";
+    if (/^(Dupliquer|Supprimer|Grouper|Dissocier|Masquer|Verrouiller|Copier|Coller|Réinitialiser|Sélectionner|Annuler|Rétablir|Vider)/.test(l)) return "Édition";
+    if (/^(Écran|Zoom|Grille|Guides|Contours|Règles)/.test(l)) return "Affichage";
+    if (/^(Structure|Calques|Panneau|Mode)/.test(l)) return "Interface";
+    return "Page";
+  }
+  var CMD_ICONS = [[/^Ouvrir la médiathèque/, "image"], [/^Aperçu/, "eye"], [/^Enregistrer/, "check"], [/^Publier/, "upload"], [/^Annuler/, "undo"], [/^Rétablir/, "redo"], [/^Dupliquer/, "copy"], [/^(Supprimer|Vider)/, "trash"], [/^(Grouper|Dissocier)/, "layers"], [/^Masquer/, "eyeOff"], [/^Verrouiller/, "lock"], [/style/, "palette"], [/^Sélectionner le parent/, "arrowUp"], [/^Écran : ordinateur/, "monitor"], [/^Écran : tablette/, "tablet"], [/^Écran : mobile/, "smartphone"], [/^Zoom/, "maximize"], [/^(Grille|Guides|Contours|Règles)/, "borderBox"], [/^(Structure|Calques|Panneau)/, "layers"], [/^Réglages/, "sliders"], [/^Mode/, "edit"], [/^Ajouter une structure/, "layout"], [/^Ajouter le bloc/, "listPlus"]];
+  var CMD_KEYS = [[/^Enregistrer/, "Ctrl+S"], [/^Annuler$/, "Ctrl+Z"], [/^Rétablir$/, "Ctrl+Maj+Z"], [/^Dupliquer/, "Ctrl+D"], [/^Supprimer la sélection/, "Suppr"], [/^Grouper$/, "Ctrl+G"], [/^Dissocier$/, "Ctrl+Maj+G"], [/^Masquer/, "Ctrl+Maj+H"], [/^Verrouiller/, "Ctrl+Maj+L"], [/^Copier le style/, "Ctrl+Alt+C"], [/^Coller le style$/, "Ctrl+Alt+V"], [/^Zoom : ajuster/, "Maj+1"], [/^Structure : (rouvrir|fermer)/, "Ctrl+Maj+Y"], [/^Mode :/, "Ctrl+Maj+E"]];
+  var CMD_ALIASES = [[/^Ajouter : Conteneur/, "container"], [/^Ajouter : Section/, "section"], [/^Ajouter : Colonne/, "columns column"], [/^Ajouter : Titre/, "heading title"], [/^Ajouter : Texte/, "text paragraph"], [/^Ajouter : Image/, "picture photo"], [/^Ajouter : Bouton/, "button"], [/^Ajouter : Vid/, "video"], [/^Supprimer/, "delete remove"], [/^Dupliquer/, "duplicate copy clone"], [/^Masquer/, "hide show"], [/^Verrouiller/, "lock unlock"], [/^Aperçu/, "preview"], [/^Enregistrer/, "save"], [/^Publier/, "publish"], [/^Annuler/, "undo"], [/^Rétablir/, "redo"], [/^Écran/, "responsive device"], [/^Zoom/, "scale"], [/^Grouper/, "group"]];
+  var cmdMac = /Mac|iPhone|iPad/.test(navigator.platform || "");
+  var CMD_MAX = 80, CMD_RECENT = 4;
+  function cmdLookup(table, label) { for (var i = 0; i < table.length; i++) if (table[i][0].test(label)) return table[i][1]; return ""; }
+  function cmdKbd(label) {
+    var k = cmdLookup(CMD_KEYS, label);
+    return k && cmdMac ? k.replace(/Ctrl\+?/, "⌘").replace(/Alt\+?/, "⌥").replace(/Maj\+?/, "⇧").replace(/Suppr/, "⌫") : k;
+  }
+  var cmdRows = [];
   function openCommands(prefill, anchor) {
     if (editing) commitEdit();
     cmdAnchor = anchor || null;
     var q = $("[data-pb-cmd-q]");
     q.value = prefill || "";
     cmdIndex = 0;
-    cmdDialog.showModal();
+    if (!cmdDialog.open) cmdDialog.showModal();
     renderCommands();
     q.focus();
   }
+  function cmdRow(c, i) {
+    var kbd = cmdKbd(c.label);
+    return h("li", { role: "option", id: "pb-cmd-" + i, "aria-selected": "false", class: "pb-cmd-item", onclick: function () { runCommand(i); } },
+      h("span", { class: "pb-cmd-ico", "aria-hidden": "true" }, c.icon || cmdLookup(CMD_ICONS, c.label) ? icon(c.icon || cmdLookup(CMD_ICONS, c.label)) : null),
+      h("span", { class: "pb-cmd-label", text: c.label }), kbd ? h("kbd", { class: "pb-cmd-kbd", text: kbd }) : null);
+  }
+  // Reconstruit la liste (frappe seulement) : favoris et récentes en tête quand la recherche est vide, puis les catégories
   function renderCommands() {
     var words = norm($("[data-pb-cmd-q]").value).split(/\s+/).filter(Boolean);
-    cmdShown = commandList().filter(function (c) { var t = norm(c.label); return words.every(function (w) { return t.indexOf(w) >= 0; }); }).slice(0, 80);
-    cmdIndex = Math.min(cmdIndex, Math.max(0, cmdShown.length - 1));
+    var pool = commandList().filter(function (c) { var t = norm(c.label + " " + cmdLookup(CMD_ALIASES, c.label)); return words.every(function (w) { return t.indexOf(w) >= 0; }); });
+    if (words.length) pool = pool.slice(0, CMD_MAX); // sans recherche, tout est listé par catégorie (les 80 premiers seraient tous des « Ajouter »)
+    var groups = [], favs = store.get("cmd-fav", []);
+    function take(title, list) { if (!list.length) return; groups.push([title, list]); pool = pool.filter(function (c) { return list.indexOf(c) < 0; }); }
+    take("Favoris", pool.filter(function (c) { return favs.indexOf(c.label) >= 0; }));
+    if (!words.length) take("Récentes", store.get("cmd-recent", []).map(function (l) { return pool.filter(function (c) { return c.label === l; })[0]; }).filter(Boolean));
+    CMD_CATS.forEach(function (cat) { take(cat, pool.filter(function (c) { return cmdCategory(c.label) === cat; })); });
     var ul = $("[data-pb-cmd-list]");
     ul.textContent = "";
-    cmdShown.forEach(function (c, i) { ul.appendChild(h("li", { role: "option", id: "pb-cmd-" + i, "aria-selected": String(i === cmdIndex), class: i === cmdIndex ? "is-active" : null, onclick: function () { runCommand(i); }, text: c.label })); });
-    if (!cmdShown.length) ul.appendChild(h("li", { class: "pb-hint", role: "none", text: "Aucune commande." }));
-    $("[data-pb-cmd-q]").setAttribute("aria-activedescendant", cmdShown.length ? "pb-cmd-" + cmdIndex : "");
+    cmdShown = []; cmdRows = [];
+    groups.forEach(function (g) {
+      ul.appendChild(h("li", { class: "pb-cmd-cat", role: "presentation", text: g[0] }));
+      g[1].forEach(function (c) { var li = cmdRow(c, cmdShown.length); cmdShown.push(c); cmdRows.push(li); ul.appendChild(li); });
+    });
+    if (!cmdShown.length) ul.appendChild(h("li", { class: "pb-cmd-empty", role: "presentation" }, h("strong", { text: "Aucune commande trouvée" }), h("span", { text: "Essayez un autre terme." })));
+    cmdIndex = Math.min(cmdIndex, Math.max(0, cmdShown.length - 1));
+    setCmdActive(cmdIndex, true);
   }
-  function runCommand(i) { var c = cmdShown[i]; if (!c) return; var anchor = cmdAnchor; cmdDialog.close(); cmdAnchor = anchor; c.run(); cmdAnchor = null; }
+  // Déplacer la sélection ne touche que deux lignes (pas de reconstruction, donc pas de scintillement)
+  function setCmdActive(i, top) {
+    var prev = $(".pb-cmd-list .is-active"); if (prev) { prev.classList.remove("is-active"); prev.setAttribute("aria-selected", "false"); }
+    cmdIndex = i;
+    var el = cmdRows[i], q = $("[data-pb-cmd-q]");
+    q.setAttribute("aria-activedescendant", el ? el.id : "");
+    if (!el) return;
+    el.classList.add("is-active"); el.setAttribute("aria-selected", "true");
+    if (top && i === 0) $("[data-pb-cmd-list]").scrollTop = 0; else el.scrollIntoView({ block: "nearest" });
+  }
+  function runCommand(i) {
+    var c = cmdShown[i]; if (!c) return;
+    store.set("cmd-recent", [c.label].concat(store.get("cmd-recent", []).filter(function (l) { return l !== c.label; })).slice(0, CMD_RECENT));
+    var anchor = cmdAnchor; cmdDialog.close(); cmdAnchor = anchor; c.run(); cmdAnchor = null;
+  }
   $("[data-pb-cmd-q]").addEventListener("input", function () { cmdIndex = 0; renderCommands(); });
   $("[data-pb-cmd-q]").addEventListener("keydown", function (e) {
-    if (e.key === "ArrowDown") { e.preventDefault(); cmdIndex = Math.min(cmdShown.length - 1, cmdIndex + 1); renderCommands(); scrollCmd(); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); cmdIndex = Math.max(0, cmdIndex - 1); renderCommands(); scrollCmd(); }
+    if (e.key === "ArrowDown") { e.preventDefault(); if (cmdShown.length) setCmdActive((cmdIndex + 1) % cmdShown.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (cmdShown.length) setCmdActive((cmdIndex - 1 + cmdShown.length) % cmdShown.length); }
     else if (e.key === "Enter") { e.preventDefault(); runCommand(cmdIndex); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key || "").toLowerCase() === "k") { e.preventDefault(); e.stopPropagation(); cmdDialog.close(); } // le raccourci d'ouverture ferme aussi (l'écouteur global se tait quand une fenêtre est ouverte)
   });
-  function scrollCmd() { var a = $(".pb-cmd-list .is-active"); if (a) a.scrollIntoView({ block: "nearest" }); }
+  // Clic sur le fond : la cible est le <dialog> lui-même (son contenu le remplit entièrement) ; on exige aussi que l'appui ait commencé sur le fond
+  var cmdPressedBackdrop = false;
+  cmdDialog.addEventListener("mousedown", function (e) { cmdPressedBackdrop = e.target === cmdDialog; });
+  cmdDialog.addEventListener("click", function (e) { if (e.target === cmdDialog && cmdPressedBackdrop) cmdDialog.close(); cmdPressedBackdrop = false; });
   $("[data-pb-command]").addEventListener("click", function () { openCommands(""); });
 
   // ---------- Sauvegarde automatique ----------
   var retry = 0;
   var saveEl = $("[data-pb-save]");
-  function setSave(text, cls) { saveEl.textContent = text; saveEl.className = "pb-save" + (cls ? " " + cls : ""); }
+  // Texte court : la largeur de l'en-tête ne doit pas dépendre de l'état d'enregistrement (un texte plus long que « Enregistré à 14:03 » faisait passer
+  // l'en-tête sur une ligne de plus à certaines largeurs : tout le canevas descendait de 46 px à chaque modification, puis remontait)
+  function setSave(text, cls, full) { saveEl.textContent = text; saveEl.title = full || text; saveEl.className = "pb-save" + (cls ? " " + cls : ""); }
   function scheduleSave() {
     if (!canWrite) return;
     dirty = true;
-    if (!blocked) setSave("Modifications non enregistrées", "is-dirty");
+    if (!blocked) setSave("Non enregistré", "is-dirty", "Modifications non enregistrées");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 1000);
     backup();
   }
+  // Réglages que le serveur a écartés (inapplicables à une partie) : l'éditeur les retire de SON document, sans nouvelle étape d'historique, et prévient une fois
+  function healIgnored(list) {
+    var seen = {};
+    list.forEach(function (w) {
+      var it = w.nodeId && byId(w.nodeId), p = it && it.parts && it.parts[w.part];
+      if (it && w.kind === "interaction_target" && it.interactions) {
+        var keep = it.interactions.filter(function (x) { return x.target !== w.target; });
+        if (keep.length) it.interactions = keep; else delete it.interactions;
+      }
+      if (p) {
+        if (w.kind === "part_prop") { var bag = (p.styles && p.styles[w.scope]) || (p.states && p.states[w.scope]); if (bag) delete bag[w.prop]; }
+        if (w.kind === "part_state" && p.states) delete p.states[w.state];
+        cleanStyles(it);
+        if (!Object.keys(p).length) delete it.parts[w.part];
+      }
+      seen[w.message] = true;
+    });
+    var msgs = Object.keys(seen);
+    toast(msgs[0] + (msgs.length > 1 ? " (+" + (msgs.length - 1) + " autre" + (msgs.length > 2 ? "s" : "") + ")" : ""), false);
+    renderInspector(); scheduleRender(true);
+  }
   function backup() { try { localStorage.setItem("pb-backup-" + PAGE.id, JSON.stringify({ at: Date.now(), revision: revision, content: payload() })); } catch (e) { /* stockage indisponible */ } }
-  function save() {
-    if (!dirty || blocked) return Promise.resolve();
+  var aiHold = false; // aperçu d'une proposition de l'IA : rien n'est enregistré tant qu'elle n'est pas appliquée
+  // explicit : enregistrement demandé (bouton, Ctrl/⌘ + S, publication, changement de page) ; l'enregistrement automatique
+  // ne déplace pas la référence des icônes de réinitialisation, sinon elles disparaîtraient après une seconde
+  function save(explicit) {
+    explicit = explicit === true;
+    if (!dirty || blocked || aiHold) return Promise.resolve();
     if (saving) { clearTimeout(saveTimer); saveTimer = setTimeout(save, 500); return Promise.resolve(); }
     saving = true;
     dirty = false;
     setSave("Enregistrement…");
-    return api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
+    // Ce qui part au serveur : c'est CET état (et pas celui, plus récent, de l'écran à l'arrivée de la réponse) qui devient la référence
+    var sentJson = explicit ? JSON.stringify(content.sections) : null;
+    inflight = api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
+      if (r.warnings && r.warnings.length) healIgnored(r.warnings);
+      if (sentJson !== null) commitSaved(sentJson);
       updateStatus();
       if (!dirty) { setSave("Enregistré à " + new Date(r.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), "is-ok"); try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
     }, function (err) {
@@ -5876,12 +8205,14 @@
       if (err.status === 422) { setSave("Non enregistré : " + err.message, "is-error"); errorItemId = itemFromError(err.message); markError(); return; }
       if (err.status === 403) { blocked = true; setSave("Non enregistré : droits insuffisants", "is-error"); return; }
       retry = Math.min(retry + 1, 5);
-      setSave("Erreur d'enregistrement : nouvel essai dans " + (retry * 5) + " s", "is-error");
+      // Session expirée : le message dit quoi faire (le travail est gardé dans ce navigateur, les essais reprennent seuls une fois reconnecté)
+      setSave(err.status === 401 ? "Session expirée : reconnectez-vous (dans un autre onglet). Nouvel essai dans " + (retry * 5) + " s" : "Erreur d'enregistrement : nouvel essai dans " + (retry * 5) + " s", "is-error", err.status === 401 ? "Votre session a expiré : le travail non enregistré est gardé dans ce navigateur. Connectez-vous dans un autre onglet : l'enregistrement reprendra tout seul." : null);
       clearTimeout(saveTimer);
       saveTimer = setTimeout(save, retry * 5000);
-    });
+    }).then(function () { inflight = null; });
+    return inflight;
   }
-  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (!dirty) { setSave("Tout est enregistré", "is-ok"); return Promise.resolve(); } return save(); }
+  function saveNow() { if (editing) commitEdit(); clearTimeout(saveTimer); if (saving && inflight) return inflight.then(function () { return saveNow(); }); if (!dirty) { setSave("Tout est enregistré", "is-ok"); if (!saving && !blocked) commitSaved(); return Promise.resolve(); } return save(true); }
   $("[data-pb-save-now]").addEventListener("click", saveNow);
   if (!canWrite) $("[data-pb-save-now]").hidden = true;
   window.addEventListener("beforeunload", function (e) { if (editing) commitEdit(); if (dirty || saving) { backup(); e.preventDefault(); e.returnValue = ""; } });
@@ -5891,6 +8222,16 @@
     var el = $("[data-pb-status]");
     // Composant (en-tête, pied de page…) : pas de brouillon ni de publication, chaque enregistrement s'applique à toutes les pages
     if (IS_COMPONENT) {
+      var cm = PAGE.component || {};
+      var staged = cm.role === "component";   // composants ordinaires : brouillon + « Mettre à jour » ; en-tête / pied / variantes : diffusion directe
+      var pubBtn = $("[data-pb-publish]");
+      if (staged) {
+        el.textContent = cm.hasDraft ? "Modifications non diffusées" : "À jour";
+        el.classList.toggle("is-live", !cm.hasDraft);
+        if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
+        ["[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
+        return;
+      }
       el.textContent = "Composant · appliqué à toutes les pages";
       el.classList.add("is-live");
       [".pb-publish-group", "[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
@@ -5904,15 +8245,42 @@
     pub.textContent = live ? "Publier les modifications" : "Publier";
     if (PAGE.abTest) el.textContent = "Version B d'un test A/B";
   }
+  // Éditeur d'un composant ordinaire : « Mettre à jour » diffuse le brouillon. Global → aperçu des pages touchées avant propagation ; standard → seul le modèle change.
+  function publishComponentUpdate(btn) {
+    var cm = PAGE.component, pid = null;
+    clearTimeout(saveTimer);
+    btn.disabled = true;
+    (dirty ? save() : Promise.resolve()).then(function () {
+      if (dirty || blocked) { toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+      return api("GET", "/marketing/site-web/composants/" + cm.id + "/instances.json").then(function (r) {
+        var apply = function () {
+          return api("POST", "/marketing/site-web/composants/" + cm.id + "/mettre-a-jour", {}).then(function (res) {
+            cm.hasDraft = false; cm.version = res.component.version; updateStatus();
+            toast(cm.kind === "global" ? (r.instances ? "Composant mis à jour : " + plural(r.instances, "instance liée a reçu", "instances liées ont reçu") + " la nouvelle version." : "Composant mis à jour (aucune instance liée pour l'instant).") : "Modèle mis à jour : les futures insertions utiliseront cette version ; les copies déjà insérées ne changent pas.");
+            return true;
+          });
+        };
+        if (cm.kind !== "global" || !r.instances) return apply();
+        compDialog({ title: "Mettre à jour le composant global", confirmLabel: "Mettre à jour", build: function (body) {
+          body.appendChild(h("p", { text: "Cette mise à jour sera appliquée à " + plural(r.instances, "instance liée", "instances liées") + ", dans " + plural(r.pages.length, "page", "pages") + " :" }));
+          body.appendChild(h("ul", { class: "pb-comp-pages" }, r.pages.map(function (p) { return h("li", {}, h("span", { text: p.name }), h("span", { class: "pb-hint", text: " · " + plural(p.count, "instance", "instances") + (p.status === "published" ? " · en ligne" : "") })); })));
+          body.appendChild(h("p", { class: "pb-hint", text: "Les blocs détachés du composant ne sont pas modifiés. Tout est appliqué en une seule fois." }));
+        }, onConfirm: apply });
+      });
+    }).then(function () { btn.disabled = false; }, function (e) { btn.disabled = false; apiFail(e); });
+  }
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;
+    if (IS_COMPONENT) { if (PAGE.component && PAGE.component.role === "component") publishComponentUpdate(btn); return; }
+    if (window.pbQuality) window.pbQuality.beforePublish();
     if (editing) commitEdit();
     btn.disabled = true;
     clearTimeout(saveTimer);
-    (dirty ? save() : Promise.resolve()).then(function () {
-      if (dirty || blocked) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+    saveNow().then(function () {
+      if (dirty || blocked || saving) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
       return api("POST", "/marketing/pages/" + PAGE.id + "/publier.json", {}).then(function (r) {
         status = "published"; hasDraft = false; revision = r.revision;
+        if (!saving) commitSaved();
         updateStatus();
         toast("Page en ligne (version " + r.version + ") : " + r.url);
       }, apiFail);
@@ -5973,6 +8341,9 @@
       ["Versions, comparaison et restauration", function () { window.location.href = "/marketing/pages/" + PAGE.id + "#lp-versions"; }],
       ["Historique des actions", function () { openHistory($("[data-pb-history]")); }],
       "-",
+      { heading: "Comportement des accordéons" },
+      accEntry("one"), accEntry("many"), accEntry("below"),
+      "-",
       { heading: "Modèles et fichiers" },
       ["Enregistrer comme modèle de page…", saveAsTemplate, !canWrite],
       ["Exporter la page (fichier JSON)", exportPage],
@@ -6010,9 +8381,11 @@
     var typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
     var mod = e.metaKey || e.ctrlKey;
     var k = (e.key || "").toLowerCase();
+    if (!typing && styleTarget) styleTarget = null; // touches de l'éditeur (déplacements…) : sur le widget, jamais sur une partie
     if (mod && k === "s") { e.preventDefault(); saveNow(); return; }
+    if (homeOpen) return; // accueil ouvert : aucun raccourci du canevas (Suppr, coller…) ne doit agir sur la page cachée dessous
     if (mod && e.shiftKey && k === "y") { e.preventDefault(); setDockMode(dock.mode === "closed" ? dock.last : "closed"); return; }
-    if (mod && k === "k") { e.preventDefault(); openCommands(""); return; }
+    if (mod && k === "k") { e.preventDefault(); if (cmdDialog.open) cmdDialog.close(); else openCommands(""); return; }
     if (mod && e.shiftKey && k === "e") { e.preventDefault(); setMode(mode === "structure" ? "visual" : "structure"); return; }
     if (typing || editing) return;
     if (mod && k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
@@ -6034,6 +8407,7 @@
     if (!mod && !e.altKey && e.shiftKey && k === "m") { e.preventDefault(); setAid("snap", !aids.snap); toast(aids.snap ? "Magnétisme activé." : "Magnétisme désactivé : mouvement libre."); return; }
     if (!canWrite) return;
     if (mod && k === "x") { e.preventDefault(); copySelected(true); return; }
+    if (mod && e.shiftKey && !e.altKey && k === "v") { e.preventDefault(); pasteStyle(); return; } // coller le style (même raccourci qu'Elementor, documenté)
     if (mod && k === "v") { e.preventDefault(); paste(); return; }
     if (mod && k === "d") { e.preventDefault(); duplicateSelected(); return; }
     if (mod && k === "g") { e.preventDefault(); if (e.shiftKey) ungroupSelected(); else groupSelected(); return; }
@@ -6053,6 +8427,7 @@
   document.addEventListener("keydown", function (e) { if (!menu.hidden || document.querySelector("dialog[open]:not([data-pb-navmgr]):not([data-pb-rules])")) return; onKey(e); });
 
   // ---------- Démarrage ----------
+  var historyRestored = restoreHistory();
   (function offerBackup() {
     var raw = null;
     try { raw = JSON.parse(localStorage.getItem("pb-backup-" + PAGE.id) || "null"); } catch (e) { raw = null; }
@@ -6060,6 +8435,7 @@
     if (JSON.stringify(raw.content.sections) === JSON.stringify(content.sections)) { try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } return; }
     if (window.confirm("Une copie non enregistrée de cette page (" + new Date(raw.at).toLocaleString("fr-FR") + ") est gardée dans ce navigateur. La reprendre ?")) {
       change(function () { content.sections = raw.content.sections || content.sections; ensureIds(content.sections); if (raw.content.seo) content.seo = raw.content.seo; if (raw.content.title) content.title = raw.content.title; if (raw.content.description !== undefined) content.description = raw.content.description; });
+      if (!historyRestored) restoreHistory(); // l'historique gardé s'applique à cette copie non enregistrée : on le reprend à la place de l'étape unique créée ci-dessus
     } else { try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
   })();
   if (!canWrite) setSave("Lecture seule");
@@ -6073,7 +8449,7 @@
   renderElements("");
   renderBlocks();
   renderComponents();
-  renderPageSettings();
+  refreshPageSettings();
   renderTree();
   renderInspector();
   renderContext();
@@ -6084,6 +8460,52 @@
   // Pont vers le gestionnaire de menu (page-builder-menu.js) : mêmes fonctions que l'inspecteur, donc même document et même historique
   window.pbNav = { h: h, walk: function (fn) { walk(fn); }, byId: byId, topOf: topOf, sectionNumber: function (top) { return top ? sectionIndex(top) + 1 : 0; }, change: change, select: function (id) { select(id); },
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
+  // Pont vers la manipulation directe (page-builder-direct.js) : mêmes propriétés que l'inspecteur, mêmes fonctions d'écriture et d'historique
+  if (window.pbDirect) window.pbDirect.attach({
+    frame: function () { return frame; }, stage: function () { return stage; }, canWrite: function () { return canWrite; }, selection: function () { return selection.slice(); },
+    byId: byId, isNode: isNode, kidsOf: kidsOf, lockedDeep: lockedDeep, nameOf: nameOf, canvasEl: canvasEl, pageRect: pageRect, select: function (id) { select(id); },
+    openInspector: openInspector, duplicateSelected: duplicateSelected, icon: icon, toast: toast, bpLabel: bpLabel,
+    device: function () { return device; }, tool: function () { return tool; }, setTool: setTool, zoom: function () { return zoom; }, editing: function () { return Boolean(editing); },
+    gesture: function (on) { if (on === undefined) return gesture; if (on) gesture = true; else endGesture(); }, ignoreClick: function (ms) { ignoreClickUntil = Date.now() + ms; },
+    ownValue: ownValue, inheritedValue: inheritedValue, splitLen: splitLen, styleSet: styleSet, cleanStyles: cleanStyles, change: change,
+    caps: function (it) { var ins = inspectorFor(it), g = (ins && ins.groups) || {}; return { gap: Array.isArray(g.layout) && g.layout.indexOf("gap") >= 0, spacing: Boolean(g.spacing), size: g.size !== undefined && g.size !== false }; }
+  });
+  // Pont vers l'inspecteur de qualité (page-builder-quality.js) : lecture du rendu réel, corrections natives annulables
+  if (window.pbQuality) window.pbQuality.attach({
+    api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; }, pageId: function () { return PAGE.id; },
+    saveNow: function () { return saveNow(); }, subscribe: function (f) { navListeners.push(f); }, version: function () { return docVersion; },
+    busy: function () { return gesture || Boolean(editing); }, content: function () { return content; }, sections: function () { return content.sections; },
+    walk: function (fn) { walk(fn); }, byId: byId, nameOf: nameOf, frame: function () { return frame; }, canvasReady: function () { return canvasReady; }, canvasEl: canvasEl,
+    device: function () { return device; }, setDevice: setDevice, select: function (id) { select(id); }, openInspector: function () { openInspector(); },
+    seoUrl: function () { return (boot.seo || {}).canView ? boot.seo.url : null; },
+    applyStyles: function (id, bp, map, label) {
+      var it = byId(id);
+      if (!it || !canWrite || refuseLocked([id]) || refuseFormat([id], Object.keys(map))) return false;
+      change(function () { Object.keys(map).forEach(function (k) { styleSet(it, bp, "normal", true)[k] = map[k]; }); cleanStyles(it); }, { label: label || "Qualité" });
+      return true;
+    },
+  });
+  // Pont vers IA Kolakisa (page-builder-ai.js) : l'IA propose, l'éditeur applique en UNE étape d'historique
+  if (window.pbAi) window.pbAi.attach({
+    base: BASE, api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; },
+    saveNow: function () { return saveNow(); }, revision: function () { return revision; },
+    snapshotKey: function () { return JSON.stringify([content.sections, content.title, content.description]); },
+    sections: function () { return content.sections; },
+    frame: function () { return frame; }, device: function () { return device; }, setDevice: setDevice,
+    byId: byId, canvasEl: canvasEl, pageRect: pageRect, selection: function () { return selection.slice(); },
+    applyContent: function (next, label, hold) {
+      if (hold) aiHold = true;
+      change(function () {
+        content.sections = clone(next.sections);
+        if (next.title !== undefined) content.title = next.title;
+        if (next.description !== undefined) content.description = next.description;
+        selection = selection.filter(function (id) { return byId(id); });
+      }, { label: label || "IA Kolakisa" });
+      if (!hold) { aiHold = false; scheduleSave(); }
+    },
+    keepPreview: function () { aiHold = false; scheduleSave(); },
+    discardPreview: function () { undo(); future.pop(); futureLabels.pop(); updateHistoryButtons(); aiHold = false; scheduleSave(); },
+  });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
     accGroup: accGroup, ownValue: ownValue, inheritedValue: inheritedValue, canvasEl: canvasEl, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,

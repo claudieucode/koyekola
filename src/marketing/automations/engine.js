@@ -10,6 +10,7 @@ const { audit } = require("../audience/shared");
 const { getContact } = require("../audience/contacts");
 const { createProviderFor } = require("../sending/config");
 const { getAction } = require("./actions");
+const { filterMatches } = require("./catalog");
 const { enqueueRun } = require("./jobs");
 
 const nowOf = (ctx) => (typeof ctx.now === "function" ? ctx.now() : Date.now());
@@ -23,7 +24,16 @@ function eventData(ctx, event) {
   return {
     course_title: md.courseTitle || md.title || "", order_total: md.orderTotal || "", order_id: md.orderId ?? "", lesson_title: md.lessonTitle || "",
     course_url: base && slug ? `${base}/cours/${encodeURIComponent(String(slug))}` : "", learn_url: base ? `${base}/mes-cours` : "",
+    // Tunnel d'origine (palier 19) : variables {{event.funnel_name}} et {{event.funnel_step}} ; les identifiants servent au suivi des e-mails
+    refund_amount: md.refundAmount || "", funnel_name: md.funnelName || "", funnel_step: md.stepName || md.lastStepName || "", funnel_id: md.funnelId || "", funnel_step_id: md.stepId || md.lastStepId || "",
   };
+}
+
+// Un scénario d'un SITE n'accueille que les contacts de ce site : l'événement vient de ce site, ou le contact y a son origine / une activité enregistrée
+function belongsToSite(ctx, contact, event, siteId) {
+  if (Number.isInteger(event.siteId) && event.siteId === siteId) return true;
+  if (contact.origin_site_id === siteId) return true;
+  return Boolean(ctx.db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(ctx.organizationId, contact.id, siteId));
 }
 
 // ---------- Entrée d'un contact dans un scénario ----------
@@ -42,16 +52,24 @@ function onEvent(ctx, event) {
     .all(ctx.organizationId, event.name);
   let entered = 0;
   const now = nowOf(ctx);
+  // Objectif atteint (palier 19) : les passages EN COURS de ce contact dans un scénario dont l'objectif est cet événement se terminent — aucun e-mail de plus ne part
+  for (const g of ctx.db.prepare("SELECT a.id, a.name FROM mk_automations a WHERE a.organization_id = ? AND a.goal_event = ? AND a.status IN ('active', 'paused')").all(ctx.organizationId, event.name)) {
+    for (const run of ctx.db.prepare("SELECT id, step_index FROM mk_automation_runs WHERE organization_id = ? AND automation_id = ? AND contact_id = ? AND status = 'running'").all(ctx.organizationId, g.id, contact.id)) {
+      ctx.db.prepare("INSERT INTO mk_automation_log (organization_id, run_id, step_index, action, detail, at) VALUES (?, ?, ?, 'goal', ?, ?)").run(ctx.organizationId, run.id, run.step_index, `objectif atteint : ${event.name}`, now);
+      ctx.db.prepare("UPDATE mk_automation_runs SET status = 'completed', last_error = '', finished_at = ? WHERE id = ?").run(now, run.id);
+    }
+  }
   for (const a of autos) {
     // Le déclencheur qui a fait correspondre CE scénario (pas forcément le premier) porte le filtre à appliquer.
     const matched = JSON.parse(a.triggers || "[]").find((t) => t.event === event.name);
     const filter = matched ? matched.filter : {};
-    if (filter.key && String(event.metadata && event.metadata[filter.key]) !== String(filter.value)) continue;
+    if (!filterMatches(event.metadata, filter)) continue;
+    if (Number.isInteger(a.site_id) && !belongsToSite(ctx, contact, event, a.site_id)) continue;
     const steps = JSON.parse(a.active_steps);
     if (!steps.length) continue;
     const info = ctx.db
-      .prepare("INSERT OR IGNORE INTO mk_automation_runs (organization_id, automation_id, contact_id, trigger_event_id, steps, event_data, wake_at, entered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, a.id, contact.id, event.id ?? null, a.active_steps, JSON.stringify(eventData(ctx, event)), now, now);
+      .prepare("INSERT OR IGNORE INTO mk_automation_runs (organization_id, automation_id, contact_id, trigger_event_id, steps, event_data, wake_at, entered_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, a.id, contact.id, event.id ?? null, a.active_steps, JSON.stringify(eventData(ctx, event)), now, now, a.version || 0);
     if (info.changes === 0) continue; // déjà passé dans ce scénario
     enqueueRun(ctx.db, { organizationId: ctx.organizationId, runId: Number(info.lastInsertRowid), runAt: now, tag: "start" });
     entered++;

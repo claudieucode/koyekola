@@ -47,6 +47,8 @@ const marketing = require("./src/marketing").initMarketing({ db, dbFile, dataDir
 
 const app = express();
 app.locals.marketing = marketing;
+// Contact Core (palier 15) : les commentaires alimentent le journal d'événements des contacts (jamais d'abonnement marketing)
+try { require("./src/marketing/contactcore/hooks").install({ marketing, db, comments: require("./src/services/comments") }); } catch (error) { console.error("[KOLAKISA] Contact Core : branchement des commentaires impossible :", error.message); }
 // Pont CRM (fiche élève ↔ fiche contact) : mis à disposition du module marketing sans qu'il importe la base du LMS
 app.locals.crm = require("./src/services/gestion/crm");
 
@@ -56,6 +58,11 @@ app.set("trust proxy", 1);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+// Gabarits compilés UNE fois : sans « view cache » (réservé par Express à NODE_ENV=production), EJS recompile le gabarit à chaque
+// include(), donc chaque élément d'une page du Page Builder (~4 ms par élément : 1,6 s pour 400 éléments, mesuré). Hors production,
+// le cache est vidé dès qu'un fichier de views/ change : les gabarits restent modifiables à chaud.
+app.enable("view cache");
+if (!isProduction) { try { require("fs").watch(path.join(__dirname, "views"), { recursive: true, persistent: false }, () => require("ejs").clearCache()); } catch { /* surveillance indisponible : redémarrer pour voir un gabarit modifié */ } }
 
 app.use(compression()); // pages, CSS et JS envoyés compressés (gzip) : environ 4 fois plus légers
 app.use(securityHeaders);
@@ -63,6 +70,7 @@ app.use(canonicalHost);
 // Palier 12 : site d'après l'hôte (domaines enregistrés seulement), casse / barre finale des adresses de contenu, environnement non public jamais indexé
 const siteHost = require("./src/middlewares/siteHost");
 app.use(siteHost.attachSite);
+app.use(require("./src/marketing/pages").schedulerMiddleware); // pages programmées : mises en ligne à la première visite après l'heure prévue (palier 23)
 app.use(siteHost.indexingGuard);
 app.use(siteHost.normalizePaths);
 // Webhooks du fournisseur d'envoi : corps BRUT (la signature porte sur les octets exacts), donc avant l'analyse JSON
@@ -88,6 +96,10 @@ app.use((req, res, next) => {
   next();
 });
 // Photos du site (diaporama de l'accueil) : 30 jours
+// Bibliothèque typographique (Font Manager) : fichiers WOFF2 versionnés avec l'application, cache long
+app.use("/fonts/library", express.static(path.join(__dirname, "public", "fonts", "library"), { maxAge: "30d", immutable: true, index: false }));
+app.use(require("./src/routes/fonts"));
+app.locals.fontFacesFor = (css) => require("./src/utils/fontLibrary").faceCssFor(css); // @font-face des familles citées dans un texte CSS
 app.use("/img", express.static(path.join(__dirname, "public", "img"), { maxAge: "30d" }));
 app.use(express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 // Miniatures publiques (noms de fichiers uniques, donc mise en cache longue sans risque).
@@ -97,6 +109,8 @@ app.use("/uploads/thumbnails", express.static(path.join(uploadsRoot, "thumbnails
 app.use("/uploads/blog", express.static(path.join(uploadsRoot, "blog"), { maxAge: "30d", immutable: true }));
 // Médiathèque de KOLAKISA Marketing : images et PDF insérés dans les e-mails, publics (lus par les messageries).
 // Type vérifié à l'envoi (signature du fichier : JPEG, PNG, GIF, WebP, PDF — jamais de HTML ni de SVG) ; nosniff.
+// Résolutions d'image à la demande (…/<organisation>/v/<largeur>/<nom>.webp) : fabriquées au premier accès, jamais d'original modifié
+app.use("/uploads/marketing", require("./src/marketing/media/variants").middleware);
 app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing"), {
   maxAge: "30d", immutable: true, index: false,
   // Documents Office : toujours téléchargés (jamais ouverts dans le navigateur) ; tout le reste (images, PDF, vidéo, audio) s'affiche
@@ -109,6 +123,8 @@ app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing")
 // SEO CORE : redirections gérées (exécutées avant toute page) et journal des erreurs 404
 app.use(require("./src/seo/notfound").middleware);
 app.use(require("./src/seo/redirects").middleware);
+app.use(siteHost.siteIsolation); // domaine d'un site : jamais le contenu du site principal ; domaine retiré : rien
+app.use(siteHost.homeRouting); // page d'accueil choisie dans les réglages (site principal)
 app.use(siteHost.siteRouting); // domaine d'un site : accueil et pages à la racine
 app.use(siteHost.movedFallback); // ancienne adresse d'une page ou d'un terme → 301 vers l'adresse courante (avant les routes, qui répondraient 404 elles-mêmes)
 
@@ -139,9 +155,10 @@ app.use(require("./src/services/tools/maintenance").middleware); // mode mainten
 app.get("/favicon.ico", (req, res) => res.redirect(301, "/favicon.svg"));
 
 // Vérification rapide que le site et sa base répondent (utile après un déploiement)
-app.get("/sante", (req, res) => {
+app.get("/sante", async (req, res) => {
   const { c } = db.prepare("SELECT COUNT(*) c FROM courses").get();
-  res.json({ statut: "ok", formations: c });
+  // « versions_images » : le redimensionnement des images (versions réduites des widgets) fonctionne réellement sur ce serveur ; sinon les images d'origine sont servies
+  res.json({ statut: "ok", formations: c, versions_images: (await require("./src/marketing/media/variants").selfTest()) ? "ok" : "indisponible" });
 });
 
 app.use(seoRoutes);

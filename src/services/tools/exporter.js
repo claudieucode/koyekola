@@ -10,6 +10,7 @@ const MAX_PER_TYPE = 5000;
 // Types : portée (site = lié à un site ou au site principal ; org = contenu de l'organisation), droit de lecture requis
 const TYPES = {
   site: { label: "Réglages du site", scope: "site", read: "forms.read", write: "forms.write", needsSite: true },
+  settings: { label: "Paramètres du site", scope: "site", read: "settings.read", write: "settings.write", mainOk: true },
   pages: { label: "Pages", scope: "site", read: "forms.read", write: "forms.write" },
   menus: { label: "Menus de navigation", scope: "site", read: "navigation.read", write: "navigation.write" },
   redirects: { label: "Redirections", scope: "site", read: "redirects.view", write: "redirects.create" },
@@ -18,8 +19,11 @@ const TYPES = {
   media: { label: "Médias (métadonnées)", scope: "org", read: "media.read", write: "media.write" },
   seo: { label: "Référencement (SEO)", scope: "org", read: "seo.view", write: "seo.edit" },
   comments: { label: "Commentaires", scope: "org", read: "comments.read", write: null },
+  // Contact Core (palier 15) : DONNÉES PERSONNELLES — jamais cochées d'office, droits « contacts.export » ET « voir les données sensibles », équipe de l'organisation seulement.
+  // Export seulement : l'import de contacts passera plus tard par les services du Contact Core (jamais d'écriture directe dans les tables).
+  contacts: { label: "Contacts (données personnelles)", scope: "org", read: "contacts.export", write: null, sensitive: true },
 };
-const ORDER = ["site", "taxonomies", "pages", "articles", "menus", "redirects", "media", "seo", "comments"];
+const ORDER = ["site", "settings", "taxonomies", "pages", "articles", "menus", "redirects", "media", "seo", "comments", "contacts"];
 
 // Types qu'une personne peut exporter / importer pour CE site : droit « tools.* » + droit de la ressource + portée
 function allowedTypes(ctx, { siteId = null, mode = "export" } = {}) {
@@ -29,6 +33,8 @@ function allowedTypes(ctx, { siteId = null, mode = "export" } = {}) {
     const m = TYPES[t];
     if (m.needsSite && siteId === null) return false;
     if (mode === "import" && !m.write) return false;
+    if (m.mainOk && siteId === null && !ctx.orgLevel) return false; // réglages du site principal : équipe de l'organisation seulement
+    if (m.sensitive && !ctx.can("contacts.view_sensitive")) return false;
     if (m.scope === "org" && !ctx.orgLevel) return false; // un accès limité à un site ne touche jamais au contenu de l'organisation
     return ctx.can(mode === "export" ? m.read : m.write);
   });
@@ -53,6 +59,7 @@ function count(ctx, type, siteId) {
   const org = ctx.organizationId;
   switch (type) {
     case "site": return siteId === null ? 0 : 1;
+    case "settings": return 1;
     case "pages": return db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND site_id IS ? AND archived_at IS NULL").get(org, siteId).n;
     case "menus": return db.prepare("SELECT COUNT(*) n FROM nav_menus WHERE site_id IS ?").get(siteId).n;
     case "redirects": return db.prepare("SELECT COUNT(*) n FROM seo_redirects WHERE site_id IS ?").get(siteId).n;
@@ -61,6 +68,7 @@ function count(ctx, type, siteId) {
     case "media": return db.prepare("SELECT COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL").get(org).n;
     case "seo": return db.prepare("SELECT COUNT(*) n FROM seo_meta").get().n;
     case "comments": return db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE status = 'approved'").get().n;
+    case "contacts": return db.prepare("SELECT COUNT(*) n FROM mk_contacts WHERE organization_id = ? AND record_status IN ('active', 'inactive')").get(org).n;
     default: return 0;
   }
 }
@@ -75,6 +83,15 @@ const EXPORTERS = {
     // Réglages non sensibles : pas d'adresse publique (propre au domaine d'origine, réattribuée par l'administrateur du site de destination)
     const { seo = {}, ...rest } = s;
     return { ref: refOf("s", site.id), name: site.name, tokens: site.tokens, settings: { ...rest, seo: { title: seo.title || "", ogImage: seo.ogImage || "", follow: seo.follow !== false } }, homePageRef: site.home_page_id ? refOf("p", site.home_page_id) : null };
+  },
+
+  // Valeurs des réglages du périmètre (aucun secret : le moteur de réglages n'en contient pas) ; l'import ne rejoue jamais les réglages sensibles
+  async settings(ctx, api, siteId) {
+    const engine = require("../settings");
+    const scope = { siteId };
+    const values = engine.readAll(scope, ctx);
+    api.advance({ done: 1 });
+    return { scope: siteId ? "site" : "main", values: Object.fromEntries(engine.defsFor(scope).map((d) => [d.key, { value: values[d.key].value, type: d.type, sensitive: Boolean(d.sensitive) }])) };
   },
 
   async pages(ctx, api, siteId) {
@@ -153,6 +170,21 @@ const EXPORTERS = {
         ogTitle: r.og_title, ogDescription: r.og_description, ogImagePath: r.og_image_path, twitterCard: r.twitter_card, focusKeyword: r.focus_keyword, secondaryKeywords: r.secondary_keywords });
       api.advance({ done: 1 });
     }, 500);
+    return ok ? out : null;
+  },
+
+  // Contacts : identité, cycle de vie, origine, étiquettes et DERNIER état de consentement — jamais l'adresse IP, le texte de preuve, les notes ni les données d'événements
+  async contacts(ctx, api) {
+    const out = [];
+    const ok = await paged(api, `SELECT c.id, c.email, c.first_name, c.last_name, c.phone, c.company, c.job_title, c.country, c.language, c.lifecycle_stage, c.record_status, c.source, c.source_detail, c.status, c.origin_site_id, c.created_at, c.last_activity_at,
+        (SELECT group_concat(t.name, char(31)) FROM mk_contact_tags ct JOIN mk_tags t ON t.id = ct.tag_id WHERE ct.contact_id = c.id) AS tags,
+        (SELECT k.action FROM mk_consents k WHERE k.contact_id = c.id AND k.purpose = 'marketing' ORDER BY k.id DESC LIMIT 1) AS consent
+      FROM mk_contacts c WHERE c.organization_id = ? AND c.record_status IN ('active', 'inactive') ORDER BY c.id`, [ctx.organizationId], (r) => {
+      out.push({ ref: refOf("k", r.id), email: r.email, firstName: r.first_name, lastName: r.last_name, phone: r.phone, company: r.company, jobTitle: r.job_title, country: r.country, language: r.language, lifecycleStage: r.lifecycle_stage,
+        recordStatus: r.record_status, source: r.source, sourceDetail: r.source_detail, subscriptionStatus: r.status, marketingConsent: r.consent || null, siteRef: r.origin_site_id ? refOf("s", r.origin_site_id) : null,
+        tags: r.tags ? r.tags.split("\u001f") : [], createdAt: iso(r.created_at), lastActivityAt: iso(r.last_activity_at) });
+      api.advance({ done: 1 });
+    }, 200);
     return ok ? out : null;
   },
 

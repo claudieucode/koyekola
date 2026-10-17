@@ -10,10 +10,36 @@ const isRead = (req) => req.method === "GET" || req.method === "HEAD";
 const queryOf = (req) => (req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "");
 const MISSING = "/__introuvable__"; // adresse qu'aucune route ne sert : la page d'erreur 404 habituelle prend le relais
 
+// Hôtes autorisés pour servir le site principal : le domaine configuré (SITE_URL) avec ou sans « www. », plus la liste facultative HOTES_AUTORISES
+// (séparée par des virgules : domaine provisoire de l'hébergeur, etc.). Hôtes locaux / réseau privé : toujours acceptés (sondes de l'hébergeur, développement, tests).
+// Sans SITE_URL (installation neuve, développement) : aucune restriction. → "main" | "unknown"
+// Hôte local STRICT : « localhost », adresse IP privée ou de bouclage COMPLÈTE (jamais un nom de domaine qui commence par des chiffres, ex. 127.evil.com), IPv6 de bouclage,
+// ou suffixe jamais délégué sur Internet (.local, .localhost, .internal, .lan)
+function isLocalHost(host) {
+  if (host === "localhost" || /\.(local|localhost|internal|lan)$/.test(host) || /^\[?::1\]?$/.test(host)) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!m) return false;
+  const [a, b] = [Number(m[1]), Number(m[2])];
+  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31);
+}
+function hostPolicy(host) {
+  if (!process.env.SITE_URL) return "main";
+  if (!host) return "unknown";
+  if (isLocalHost(host)) return "main";
+  const main = urls.mainHost();
+  const bare = main.replace(/^www\./, "");
+  if (host === main || host === bare || host === `www.${bare}`) return "main";
+  const extra = String(process.env.HOTES_AUTORISES || "").split(",").map((h) => urls.normHost(h)).filter(Boolean);
+  return extra.includes(host) ? "main" : "unknown";
+}
+
 // 1. Site de la requête (req.kwSite) : uniquement un domaine enregistré ; jamais déduit d'un hôte arbitraire
 function attachSite(req, res, next) {
   const host = urls.normHost(req.hostname);
   req.kwSite = host && host !== urls.mainHost() ? urls.siteForHost(host) : null;
+  req.kwRetired = !req.kwSite && host && host !== urls.mainHost() ? urls.isRetiredHost(host) : false;
+  // Domaine ni principal, ni site actif, ni retiré : inconnu de Kolakisa (voir hostPolicy)
+  req.kwUnknownHost = !req.kwSite && !req.kwRetired && hostPolicy(host) === "unknown";
   // Sur le domaine d'un site, toutes les adresses absolues (canonical, plan du site, robots.txt, JSON-LD) sont celles de ce site
   if (req.kwSite && req.kwSite.base) req.seoBase = req.kwSite.base;
   next();
@@ -42,10 +68,65 @@ function siteRouting(req, res, next) {
   next();
 }
 
+// 2 ter. Isolation des domaines (palier 2) : le domaine d'un site ne sert JAMAIS le contenu public du site principal (blog, formations, catalogue,
+// pages éditoriales), et le domaine d'un site archivé ou supprimé ne sert rien du tout (il ne retombe pas sur le site principal).
+// Réponse 404 comme pour une adresse inconnue. Restent servis sur le domaine d'un site : ses pages, les fichiers, robots.txt / plan du site (adaptés au site),
+// les formulaires et le suivi, la connexion et les comptes (communs à la plateforme), les pages techniques.
+const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|favoris|formations?)(\/|$)/i;
+const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg))(\/|$|\.)/i;
+const refusedLogged = new Set();
+// Blog propre à un site (R6 lot 4) : le domaine d'un site sert SON blog (articles rattachés à ce site, adresses logiques du site) dès que ce site a au moins un article en ligne ;
+// sans article, le blog reste introuvable sur ce domaine (comme avant). Il ne sert jamais le blog du site principal ni celui d'un autre site (portée appliquée par les routes du blog).
+const BLOG_PATH = /^\/(blog|feed)(\/|$)/i;
+function siteHasBlog(siteId) {
+  try {
+    return Boolean(require("../config/database").prepare("SELECT 1 FROM posts p JOIN mk_content_sites cs ON cs.content_type = 'post' AND cs.content_id = p.id WHERE cs.site_id = ? AND p.published = 1 AND p.deleted_at IS NULL LIMIT 1").get(siteId));
+  } catch { return false; }
+}
+function siteIsolation(req, res, next) {
+  if (req.path === "/sante") return next(); // sonde de santé : joignable quel que soit l'hôte
+  // Domaine inconnu de Kolakisa : jamais le site principal ni celui d'un autre site (421 « requête mal dirigée »)
+  if (req.kwUnknownHost) {
+    // Diagnostic : l'hôte lu et les en-têtes reçus sont consignés (une fois par hôte et par processus) pour repérer tout de suite un hôte légitime refusé par erreur
+    const seen = String(req.hostname || "").slice(0, 100);
+    if (!refusedLogged.has(seen) && refusedLogged.size < 200) {
+      refusedLogged.add(seen);
+      console.warn(`[KOLAKISA] Hôte refusé (421) : « ${seen} » — en-tête Host : « ${String(req.headers.host || "").slice(0, 100)} », X-Forwarded-Host : « ${String(req.headers["x-forwarded-host"] || "").slice(0, 100)} ». S'il s'agit d'un domaine légitime, l'ajouter à HOTES_AUTORISES.`);
+    }
+    return res.status(421).type("text/plain").send(`Ce domaine (${seen.replace(/[^a-z0-9.\-:\[\]]/gi, "?")}) n'est pas configuré sur cette plateforme.`);
+  }
+  if (ALWAYS_OK.test(req.path)) return next();
+  if (req.kwSite && BLOG_PATH.test(req.path) && siteHasBlog(req.kwSite.id)) return next();
+  if (req.kwRetired || (req.kwSite && MAIN_SITE_ONLY.test(req.path))) {
+    if (!isRead(req)) return res.status(404).type("text/plain").send("Introuvable");
+    req.url = MISSING;
+  }
+  next();
+}
+
+// 2 bis. Page d'accueil du site principal choisie dans Paramètres → Lecture : « / » affiche cette page (réécriture interne, comme sur le domaine
+// d'un site) ; son adresse /p/<adresse> redirige vers « / » (une seule adresse). Si la page n'est plus publiée, l'accueil standard reprend.
+function mainHome() {
+  const id = require("../services/settings").main().homepagePage;
+  if (!id) return null;
+  const row = require("../config/database").prepare("SELECT id, slug, status, archived_at, site_id, kind FROM mk_landing_pages WHERE id = ?").get(id);
+  return row && row.status === "published" && !row.archived_at && row.site_id === null && row.kind !== "step" ? row : null;
+}
+function homeRouting(req, res, next) {
+  if (req.kwSite || !isRead(req)) return next();
+  let home = null;
+  try { home = mainHome(); } catch { return next(); }
+  if (!home) return next();
+  if (req.path === "/") { req.url = `/p/${home.slug}${queryOf(req)}`; return next(); }
+  if (req.path === `/p/${home.slug}`) return res.redirect(301, `/${queryOf(req)}`);
+  next();
+}
+
 // 3. Casse et barre finale : seulement pour les adresses de contenu public (jamais jetons, administration, fichiers, API)
 const NORMALIZED = /^\/(p|blog|cours|categorie|catalogue)(\/|$)/;
 function normalizePaths(req, res, next) {
   if (!isRead(req)) return next();
+  try { if (!require("../services/settings").main().normalizePaths) return next(); } catch { /* réglage indisponible : normalisation active */ }
   const raw = req.path;
   if (raw.includes("%")) return next(); // adresse encodée : jamais réécrite (les séquences %XX ne sont pas de la « casse »)
   const single = req.kwSite && /^\/[A-Za-z0-9-]+\/?$/.test(raw);
@@ -68,16 +149,22 @@ function movedFallback(req, res, next) {
 
 // 5. Environnement non public : jamais indexé (développement, adresse locale ou réseau privé), ou ALLOW_INDEXING=0 ; ALLOW_INDEXING=1 force l'ouverture
 const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)|\.(local|localhost|internal|lan)$/i;
+// Visibilité masquée dans Paramètres → Indexation (site principal) : un seul point de décision pour l'en-tête HTTP, la balise robots, robots.txt et le plan du site
+function closedBySetting() {
+  try { return require("../services/settings").main().searchVisibility === "closed"; } catch { return false; }
+}
 function indexingAllowed(req) {
   if (process.env.ALLOW_INDEXING === "0") return false;
+  if (closedBySetting() && !(req && req.kwSite)) return false; // la visibilité du site principal ne ferme pas un site à domaine propre : il a son propre réglage
   if (process.env.ALLOW_INDEXING === "1") return true; // forcé (tests, préproduction publique volontaire)
   let host = "";
   try { host = process.env.SITE_URL ? new URL(process.env.SITE_URL).hostname : req.hostname; } catch { host = req.hostname; }
   return !PRIVATE_HOST.test(String(host || ""));
 }
 function indexingGuard(req, res, next) {
-  if (!indexingAllowed(req)) res.set("X-Robots-Tag", "noindex, nofollow");
+  // Environnement non public, visibilité masquée (site principal) ou site entier en noindex (réglage du site) : en-tête HTTP lu par les moteurs
+  if (!indexingAllowed(req) || (req.kwSite && req.kwSite.noindex)) res.set("X-Robots-Tag", "noindex, nofollow");
   next();
 }
 
-module.exports = { attachSite, siteRouting, normalizePaths, movedFallback, indexingGuard, indexingAllowed, MISSING };
+module.exports = { closedBySetting, attachSite, siteIsolation, homeRouting, siteRouting, normalizePaths, movedFallback, indexingGuard, indexingAllowed, MISSING };

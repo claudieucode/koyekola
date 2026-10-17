@@ -27,7 +27,8 @@
             </tr><% }) %></tbody></table></div>
         </details>
       <% } %>
-      <% if (canSync) { %><form action="/marketing/evenements/synchroniser" method="post"><button type="submit" class="btn btn-outline btn-sm">Synchroniser maintenant</button></form><% } %>
+      <% if (canSync) { %><form action="/marketing/evenements/synchroniser" method="post"><button type="submit" class="btn btn-outline btn-sm">Synchroniser maintenant</button></form>
+        <form action="/marketing/evenements/abandons" method="post"><button type="submit" class="btn btn-outline btn-sm">Détecter les abandons maintenant</button></form><% } %>
     </section>
 
     <h2 class="mk-h2">Événements récents</h2>
@@ -41,7 +42,7 @@
       <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Événements récents (100 au plus)</caption>
         <thead><tr><th scope="col">Événement</th><th scope="col">Contact</th><th scope="col">Origine</th><th scope="col">Date</th><th scope="col">État</th></tr></thead>
         <tbody><% events.forEach((e) => { const label = mkh.eventLabel(e.name); %><tr>
-          <td data-label="Événement"><%= label || "Événement personnalisé" %> <code class="mk-sub"><%= e.name %></code></td>
+          <td data-label="Événement"><a href="/marketing/evenements/<%= e.id %>"><%= label || "Événement personnalisé" %></a> <code class="mk-sub"><%= e.name %></code></td>
           <td data-label="Contact"><%= e.email || "—" %></td>
           <td data-label="Origine"><%= mkh.eventSourceLabel(e.source) %></td>
           <td data-label="Date"><%= mkh.fdatetime(e.occurred_at) %></td>

@@ -73,6 +73,7 @@ function safely(back, fn) {
 }
 // Bouton « Retour » : le niveau parent réel (jamais history.back())
 function backOf(p) {
+  if (/^\/formateur\/gestion\/sauvegardes\/.+/.test(p)) return { href: "/formateur/gestion/sauvegardes", label: "Retour aux sauvegardes" };
   if (/^\/formateur\/gestion\/ventes\/commandes\/\d+/.test(p)) return { href: "/formateur/gestion/ventes", label: "Retour aux commandes" };
   if (/^\/formateur\/gestion\/eleves\/\d+/.test(p)) return { href: "/formateur/gestion/eleves", label: "Retour aux élèves" };
   if (/^\/formateur\/gestion\/support\/\d+/.test(p)) return { href: "/formateur/gestion/support", label: "Retour au support" };
@@ -118,7 +119,7 @@ router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req
 // ---------- Ventes ----------
 router.get("/formateur/gestion/ventes", page("gestion/ventes", "Ventes", (req) => ({ tab: "commandes", orders: sales.listOrders(me(req), req.query), courses: sales.myCourses(me(req)) })));
 router.get("/formateur/gestion/ventes/commandes", (req, res) => res.redirect(301, `/formateur/gestion/ventes${req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : ""}`));
-router.get("/formateur/gestion/ventes/commandes/:id(\\d+)", (req, res, next) => page("gestion/commande", `Commande #${req.params.id}`, (r) => sales.getOrder(me(r), Number(r.params.id)) || null)(req, res, next));
+router.get("/formateur/gestion/ventes/commandes/:id(\\d+)", (req, res, next) => page("gestion/commande", `Commande #${req.params.id}`, (r) => { const o = sales.getOrder(me(r), Number(r.params.id)); return o ? { ...o, contact: crm.contactOfUser(r.app.locals.marketing, o.order.user_id) } : null; })(req, res, next));
 // Paiements par carte (Stripe) des formations du formateur : lus dans checkout_sessions, jamais inventés.
 // Sans Stripe, le paiement du site est une démonstration : l'onglet le dit.
 function stripePayments(instructorId) {
@@ -414,6 +415,44 @@ router.post("/formateur/gestion/sauvegardes", safely("/formateur/gestion/sauvega
   flash(req, "ok", `Sauvegarde « ${name} » créée. Téléchargez-la pour en garder une copie hors du serveur.`);
   res.redirect("/formateur/gestion/sauvegardes");
 }));
+// Audit d'isolation des sites (palier 2) : analyse en LECTURE SEULE d'une sauvegarde existante (ou de la base en service) ; n'affiche que des nombres.
+// Une sauvegarde est ouverte en lecture seule puis refermée ; rien n'est écrit, aucun contenu ni donnée personnelle n'est affiché.
+router.get("/formateur/gestion/sauvegardes/audit-sites", page("gestion/audit-sites", "Audit des sites", (req) => {
+  const source = String(req.query.source || "");
+  const auditSites = require("../services/auditSites");
+  let result;
+  let label;
+  if (source === "active") {
+    label = "Base en service (lecture seule)";
+    result = auditSites.run(require("../config/database"));
+  } else {
+    const file = backups.pathOf(source);
+    if (!file) return null;
+    label = `Sauvegarde ${source}`;
+    const { DatabaseSync } = require("node:sqlite");
+    const copy = new DatabaseSync(file, { readOnly: true });
+    try { result = auditSites.run(copy); } finally { copy.close(); }
+  }
+  const stat = source === "active" ? null : backups.list().find((b) => b.name === source) || null;
+  return { result, label, source, createdAt: stat ? stat.createdAt : null };
+}));
+// Essai de reconstruction (palier 3, livraison 1) : sur une COPIE TEMPORAIRE d'une sauvegarde existante, jamais sur la base en service. Nombres uniquement.
+router.get("/formateur/gestion/sauvegardes/essai-reconstruction", (req, res) => res.redirect("/formateur/gestion/sauvegardes"));
+router.post("/formateur/gestion/sauvegardes/essai-reconstruction", async (req, res) => {
+  const essai = require("../services/essaiReconstruction");
+  const name = String((req.body && req.body.source) || "");
+  const stat = backups.list().find((b) => b.name === name) || null;
+  if (!stat) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: backOf("/formateur/gestion/sauvegardes") });
+  try {
+    const result = await essai.run(name);
+    res.set("Cache-Control", "no-store");
+    res.render("gestion/essai-reconstruction", { title: "Essai de reconstruction", flash: takeFlash(req), query: req.query, url: urlFor(req), result, label: `Sauvegarde ${name}`, createdAt: stat.createdAt });
+  } catch (error) {
+    if (error instanceof essai.EssaiError) { flash(req, "error", error.message); return res.redirect("/formateur/gestion/sauvegardes"); }
+    console.error("[KOLAKISA] Essai de reconstruction :", error.stack || error.message);
+    res.status(500).render("gestion/erreur", { title: "Essai de reconstruction", retry: null, back: backOf("/formateur/gestion/sauvegardes"), detail: String(error.message || error).slice(0, 200) });
+  }
+});
 router.get("/formateur/gestion/sauvegardes/fichiers.tar", (req, res, next) => {
   const stamp = new Date().toISOString().slice(0, 10);
   res.set({ "Content-Type": "application/x-tar", "Content-Disposition": `attachment; filename="KOYEKOLA-fichiers-${stamp}.tar"`, "Cache-Control": "no-store" });

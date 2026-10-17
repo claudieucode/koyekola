@@ -41,7 +41,8 @@ describe("liste", () => {
   test("jamais l'empreinte ni la clé, seulement le préfixe", () => {
     createApiKey(A, { name: "K", scope: "write" });
     const [row] = listApiKeys(A);
-    assert.deepEqual(Object.keys(row).sort(), ["created_at", "id", "last_used_at", "name", "prefix", "revoked_at", "scope"].sort());
+    // R2 : portée de site (reach, site_id, site_name) ; toujours ni empreinte ni clé
+    assert.deepEqual(Object.keys(row).sort(), ["created_at", "id", "last_used_at", "name", "prefix", "reach", "revoked_at", "scope", "site_id", "site_name"].sort());
   });
   test("isolation : les clés de l'autre organisation n'apparaissent jamais", () => {
     createApiKey(B, { name: "Chez B", scope: "read" });
@@ -53,7 +54,7 @@ describe("authentification", () => {
   test("clé valide : renvoie l'organisation et la portée", () => {
     const { key } = createApiKey(A, { name: "K", scope: "write" });
     const auth = authenticate(m.db, key);
-    assert.deepEqual(auth, { keyId: auth.keyId, organizationId: 1, scope: "write" });
+    assert.deepEqual(auth, { keyId: auth.keyId, organizationId: 1, scope: "write", reach: "organization", siteId: null }); // R2 : une clé sans site garde la portée « organisation »
   });
   test("clé inconnue, vide, ou sans le bon préfixe : refusée", () => {
     assert.equal(authenticate(m.db, "mk_live_0000000000000000000000000000000000000000000000"), null);

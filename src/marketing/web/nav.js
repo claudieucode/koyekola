@@ -24,10 +24,11 @@ const ITEMS = [
   live("marketing", "dashboard", "Accueil", "/marketing", "home", "contacts.read"),
 
   live("audience", "contacts", "Tous les contacts", "/marketing/contacts", "user", "contacts.read", { label: "Ajouter un contact", href: "/marketing/contacts/nouveau", permission: "contacts.write" }),
+  live("audience", "contactdupes", "Doublons", "/marketing/contacts/doublons", "users", "contacts.merge"),
   live("audience", "lists", "Listes", "/marketing/listes", "list", "lists.read", { label: "Nouvelle liste", href: "/marketing/listes#nouvelle", permission: "lists.write" }),
   live("audience", "segments", "Segments", "/marketing/segments", "filter", "segments.read", { label: "Nouveau segment", href: "/marketing/segments/nouveau", permission: "segments.write" }),
   live("audience", "tags", "Étiquettes", "/marketing/etiquettes", "tag", "lists.read", { label: "Nouvelle étiquette", href: "/marketing/etiquettes#nouvelle", permission: "lists.write" }),
-  live("audience", "properties", "Propriétés", "/marketing/proprietes", "sliders", "contacts.read", { label: "Nouvelle propriété", href: "/marketing/proprietes#nouvelle", permission: "contacts.write" }),
+  live("audience", "properties", "Propriétés", "/marketing/proprietes", "sliders", "contacts.read", { label: "Nouvelle propriété", href: "/marketing/proprietes#nouvelle", permission: "contacts.manage_fields" }),
   // Formulaires d'inscription : dans Audience, comme chez Mailchimp (« Signup forms »). Pop-ups : un réglage d'un formulaire.
   live("audience", "forms", "Formulaires d'inscription", "/marketing/formulaires", "layout", "forms.read", { label: "Nouveau formulaire", href: "/marketing/formulaires#nouveau", permission: "forms.write" }),
   // Sondages (« Surveys » de Mailchimp) : questions, lien public ou personnel, étiquettes selon les réponses
@@ -54,15 +55,16 @@ const ITEMS = [
 
   // Site Web : tableau de bord, sites (design system), pages (les pages d'atterrissage y sont rattachées) — un seul
   // moteur de pages, partagé avec les Tunnels
-  live("site", "sitedash", "Tableau de bord", "/marketing/site-web", "activity", "forms.read"),
-  live("site", "sites", "Sites", "/marketing/site-web/sites", "globe", "forms.read", { label: "Créer un site", href: "/marketing/site-web/sites#nouveau", permission: "forms.write" }),
+  live("site", "sites", "Mes sites", "/marketing/site-web/sites", "globe", "forms.read", { label: "Créer un site", href: "/marketing/site-web/sites#nouveau", permission: "forms.write" }),
+  live("site", "sitedash", "Tableau de bord du site principal", "/marketing/site-web", "activity", "forms.read"),
   live("site", "landing", "Pages", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
   live("site", "pagetests", "Tests A/B", "/marketing/site-web/tests-ab", "activity", "forms.read"),
 
   // Tunnels : suites d'étapes faites des pages du même moteur (même éditeur que Site Web) et des formations du catalogue
-  live("tunnels", "funnels", "Tunnels", "/marketing/tunnels", "filter", "forms.read", { label: "Créer un tunnel", href: "/marketing/tunnels#nouveau", permission: "forms.write" }),
+  live("tunnels", "funnels", "Tunnels", "/marketing/tunnels", "filter", "funnels.read", { label: "Créer un tunnel", href: "/marketing/tunnels#nouveau", permission: "funnels.write" }),
 
-  live("analytics", "analytics", "Analytics", "/marketing/analytics", "activity", "analytics.read"),
+  live("analytics", "analytics-global", "Tableau de bord", "/marketing/analytics/global", "barChart", "analytics.read"),
+  live("analytics", "analytics", "Envois e-mail", "/marketing/analytics", "activity", "analytics.read"),
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),
   live("analytics", "compare", "Rapports comparatifs", "/marketing/analytics/comparer", "barChart", "analytics.read"),
 

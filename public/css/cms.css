@@ -6,6 +6,8 @@
 .is-cms .mk-nav-sublink { min-height: 32px; padding: 4px 12px; font-size: 0.88rem; justify-content: space-between; gap: 8px; }
 .mk-cms-tag { flex: none; margin-left: auto; padding: 1px 7px; border-radius: 4px; font-size: 0.66rem; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); background: var(--mk-hover); border: 1px solid var(--mk-border); }
 .mk-nav-link .mk-cms-tag { margin-left: auto; }
+/* Entrée du menu d'un site pas encore disponible : visible, grisée, sans lien ni action */
+.mk-nav-link.is-soon, .mk-nav-sublink.is-soon { opacity: .6; cursor: not-allowed; }
 .mk-cms-back { display: flex; align-items: center; gap: 10px; margin: auto 8px 10px; padding: 8px 12px; border-top: 1px solid var(--mk-border); color: var(--muted); font-size: 0.86rem; text-decoration: none; border-radius: 6px; }
 .mk-cms-back:hover { background: var(--mk-hover); color: var(--mk-text); }
 html[data-sidebar="collapsed"] .mk-cms-back { justify-content: center; padding: 8px 0; }
@@ -23,7 +25,6 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 .mk-cms-menu-note { display: block; padding: 8px 14px; font-size: 0.8rem; color: var(--muted); max-width: 260px; }
 
 /* ----- Contenu des écrans ----- */
-.is-cms .mk-content { max-width: 1280px; }
 .mk-cms-soon { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 16px; padding: 10px 14px; background: var(--accent-light); color: var(--accent-dark); border: 1px solid var(--mk-border); border-radius: 6px; }
 .mk-cms-soon .icon { flex: none; margin-top: 2px; }
 .mk-cms-soon p { margin: 0; font-size: 0.9rem; }
@@ -311,3 +312,33 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 @media (max-width: 640px) { .mk-tl-dl > div { grid-template-columns: 1fr; gap: 2px; } }
 @media (prefers-reduced-motion: reduce) { .mk-tl-bar { transition: none; } }
 .mk-tl-site select { max-width: 360px; }
+
+/* Paramètres (palier 14) */
+.mk-st-tabs { flex-wrap: wrap; }
+.mk-st-form { display: grid; gap: 18px; }
+.mk-st-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 18px; }
+.mk-st-field { margin: 0; min-width: 0; }
+.mk-st-field input[type="text"], .mk-st-field input[type="url"], .mk-st-field input[type="email"], .mk-st-field input[type="number"], .mk-st-field select, .mk-st-field textarea { width: 100%; max-width: 560px; }
+.mk-st-field .field-hint { overflow-wrap: anywhere; }
+.mk-st-badge { margin-left: 6px; }
+.mk-st-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.mk-st-confirm { border-color: #d98a00; }
+.mk-st-impacts { margin: 8px 0 14px; padding-left: 20px; display: grid; gap: 10px; overflow-wrap: anywhere; }
+
+/* Espace d'un site (palier 3, B1) : bandeau d'identité + formulaire de création */
+.mk-site-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; padding: 10px 14px; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border); border-left: 4px solid var(--accent, #7a1f3d); border-radius: 6px; }
+.mk-site-banner-icon { display: inline-flex; color: var(--accent, #7a1f3d); }
+.mk-site-banner-text { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; flex: 1 1 220px; min-width: 0; }
+.mk-site-banner-label { font-size: 0.8rem; color: var(--mk-muted, #5b6470); }
+.mk-site-banner-name { font-size: 1.05rem; overflow-wrap: anywhere; }
+.mk-cms-create { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; }
+.mk-cms-create .field-group { flex: 1 1 260px; margin: 0; }
+@media (max-width: 640px) { .mk-site-banner > .btn { margin-left: auto; } }
+
+/* ----- Tableaux CMS : colonnes courtes lisibles, colonne de titre souple ----- */
+/* « anywhere » (style.css) comptait chaque lettre comme point de coupure : les dates se brisaient en 3 lignes et la colonne titre prenait tout. */
+.mk-cms-table td, .mk-cms-table th[scope="row"] { overflow-wrap: break-word; }
+.mk-ar-table td[data-label="Date"], .mk-ar-table td[data-label="Modifié"], .mk-ar-table td[data-label="Commentaires"] { white-space: nowrap; }
+.mk-cms-table tbody th[scope="row"] { white-space: normal; } /* style.css impose nowrap à tous les th : le titre ne pouvait jamais se replier */
+.mk-ar-table th[scope="row"] { min-width: 220px; }
+.mk-body .mk-cms-table th, .mk-body .mk-cms-table td { padding-left: 12px; padding-right: 12px; }

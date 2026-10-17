@@ -10,6 +10,28 @@ const MAX_LIMIT = 1000;
 const DEFAULT_LIMIT = 50;
 const MAX_IN = 500;
 
+// Colonnes d'une table (null si elle n'existe pas). Le résultat est gardé en mémoire (un import appelle le dépôt à chaque ligne) et
+// recalculé dès que le schéma de la base change (PRAGMA schema_version : migration, colonne ajoutée) : la validation reste exacte.
+const statements = new WeakMap(); // db -> Map(SQL -> requête préparée) : préparer une requête coûte plus cher que de l'exécuter
+function prepared(db, sql) {
+  let map = statements.get(db);
+  if (!map) { map = new Map(); statements.set(db, map); }
+  let st = map.get(sql);
+  if (!st) { if (map.size > 500) map.clear(); st = db.prepare(sql); map.set(sql, st); }
+  return st;
+}
+const schemaCache = new WeakMap(); // db -> { version, tables: Map(nom -> Set | null) }
+function tableColumns(db, name) {
+  const version = db.prepare("PRAGMA schema_version").get().schema_version;
+  let entry = schemaCache.get(db);
+  if (!entry || entry.version !== version) { entry = { version, tables: new Map() }; schemaCache.set(db, entry); }
+  if (!entry.tables.has(name)) {
+    const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name);
+    entry.tables.set(name, exists ? new Set(db.prepare(`PRAGMA table_info(${name})`).all().map((c) => c.name)) : null);
+  }
+  return entry.tables.get(name);
+}
+
 function bindable(value) {
   if (value === null || typeof value === "string" || typeof value === "bigint") return value;
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -18,15 +40,20 @@ function bindable(value) {
   throw new Error("Valeur non prise en charge : une valeur doit être un texte, un nombre, un booléen ou null (sérialisez les objets explicitement).");
 }
 
-function createRepository(db, organizationId) {
+// siteScope (palier 16) : un numéro de site → TOUTES les lectures/écritures des tables qui ont une colonne site_id sont limitées à ce site
+// (une personne dont l'accès est limité à un site ne peut ni voir, ni modifier, ni créer hors de son site). Absent = toute l'organisation.
+// hiddenSites (R4) : sites dont la personne ne peut pas LIRE les éléments (visibility.js) — exclus des lectures en liste et des comptages, jamais des écritures.
+function createRepository(db, organizationId, { siteScope, hiddenSites } = {}) {
   if (!Number.isInteger(organizationId) || organizationId < 1) throw new Error("Identifiant d'organisation invalide.");
 
   function table(name) {
     if (typeof name !== "string" || !TABLE_NAME.test(name)) throw new Error("Nom de table invalide : il doit commencer par mk_ et ne contenir que des minuscules, chiffres et « _ ».");
-    if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name)) throw new Error(`Table introuvable : ${name}.`);
-    const columns = new Set(db.prepare(`PRAGMA table_info(${name})`).all().map((c) => c.name));
+    const columns = tableColumns(db, name);
+    if (!columns) throw new Error(`Table introuvable : ${name}.`);
     if (!columns.has("organization_id")) throw new Error(`${name} n'a pas de colonne organization_id : elle ne peut pas passer par le dépôt.`);
     if (!columns.has("id")) throw new Error(`${name} n'a pas de colonne id : elle ne peut pas passer par le dépôt.`);
+
+    const scoped = Number.isInteger(siteScope) && columns.has("site_id");
 
     const column = (col) => {
       if (col === "organization_id") throw new Error("organization_id ne peut pas être utilisée ici : elle est imposée par le dépôt.");
@@ -37,6 +64,11 @@ function createRepository(db, organizationId) {
     function buildWhere(where = {}) {
       const clauses = ["organization_id = ?"];
       const params = [organizationId];
+      if (scoped) { clauses.push("site_id = ?"); params.push(siteScope); }
+      if (!scoped && columns.has("site_id") && Array.isArray(hiddenSites) && hiddenSites.length) {
+        const ids = hiddenSites.filter((n) => Number.isInteger(n));
+        if (ids.length) { clauses.push(`(site_id IS NULL OR site_id NOT IN (${ids.map(() => "?").join(", ")}))`); params.push(...ids); }
+      }
       for (const [key, condition] of Object.entries(where)) {
         const col = column(key);
         if (condition === null) clauses.push(`${col} IS NULL`);
@@ -69,13 +101,14 @@ function createRepository(db, organizationId) {
 
     return {
       insert(row = {}) {
-        const { keys, values } = assignments(row);
+        if (scoped && row.site_id !== undefined && row.site_id !== siteScope) throw new Error("Cette création est limitée à votre site.");
+        const { keys, values } = assignments(scoped ? { ...row, site_id: siteScope } : row);
         const cols = ["organization_id", ...keys];
-        return db.prepare(`INSERT INTO ${name} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")}) RETURNING *`).get(organizationId, ...values);
+        return prepared(db, `INSERT INTO ${name} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")}) RETURNING *`).get(organizationId, ...values);
       },
       get(id) {
         if (!Number.isInteger(id)) return null;
-        return db.prepare(`SELECT * FROM ${name} WHERE id = ? AND organization_id = ?`).get(id, organizationId) ?? null;
+        return db.prepare(`SELECT * FROM ${name} WHERE id = ? AND organization_id = ?${scoped ? " AND site_id = ?" : ""}`).get(id, organizationId, ...(scoped ? [siteScope] : [])) ?? null;
       },
       list({ where, orderBy, limit = DEFAULT_LIMIT, afterId } = {}) {
         if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) throw new Error(`Limite invalide (entre 1 et ${MAX_LIMIT}).`);
@@ -105,15 +138,16 @@ function createRepository(db, organizationId) {
       },
       update(id, patch = {}) {
         if (!Number.isInteger(id)) return null;
+        if (scoped && patch.site_id !== undefined && patch.site_id !== siteScope) throw new Error("Cette modification est limitée à votre site.");
         const { keys, values } = assignments(patch, { forUpdate: true });
         if (!keys.length) return this.get(id);
         return (
-          db.prepare(`UPDATE ${name} SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ? AND organization_id = ? RETURNING *`).get(...values, id, organizationId) ?? null
+          db.prepare(`UPDATE ${name} SET ${keys.map((k) => `${k} = ?`).join(", ")} WHERE id = ? AND organization_id = ?${scoped ? " AND site_id = ?" : ""} RETURNING *`).get(...values, id, organizationId, ...(scoped ? [siteScope] : [])) ?? null
         );
       },
       remove(id) {
         if (!Number.isInteger(id)) return false;
-        return db.prepare(`DELETE FROM ${name} WHERE id = ? AND organization_id = ?`).run(id, organizationId).changes > 0;
+        return db.prepare(`DELETE FROM ${name} WHERE id = ? AND organization_id = ?${scoped ? " AND site_id = ?" : ""}`).run(id, organizationId, ...(scoped ? [siteScope] : [])).changes > 0;
       },
     };
   }
@@ -121,4 +155,4 @@ function createRepository(db, organizationId) {
   return { organizationId, table };
 }
 
-module.exports = { createRepository };
+module.exports = { createRepository, prepared };

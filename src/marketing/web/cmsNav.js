@@ -13,8 +13,8 @@ const leaf = (key, label, href, extra = {}) => ({ key, label, href, status: "liv
 // Les clés « sitedash », « sites », « landing » et « pagetests » sont celles que passent déjà les écrans existants
 // (tableau de bord, sites, pages, tests A/B) : ils entrent dans la coque CMS sans changer.
 const SECTIONS = [
-  { key: "dashboard", label: "Tableau de bord", icon: "activity", items: [leaf("sitedash", "Tableau de bord", BASE)] },
-  { key: "sites", label: "Sites", icon: "globe", items: [leaf("sites", "Sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
+  { key: "sites", label: "Mes sites", icon: "globe", items: [leaf("sites", "Mes sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
+  { key: "dashboard", label: "Site principal", icon: "activity", items: [leaf("sitedash", "Tableau de bord du site principal", BASE)] },
   { key: "pages", label: "Pages", icon: "layout", items: [leaf("landing", "Pages", "/marketing/pages", { primary: { label: "Ajouter une page", href: "/marketing/pages#nouvelle", permission: "forms.write" } })] },
   {
     key: "articles", label: "Articles", icon: "fileText", items: [
@@ -96,17 +96,17 @@ const SECTIONS = [
   },
   {
     key: "parametres", label: "Paramètres", icon: "settings", items: [
-      leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/identite", "Identité du site", `${BASE}/parametres/identite`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/domaine", "Domaine", `${BASE}/parametres/domaine`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/seo", "SEO", `${BASE}/parametres/seo`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/performance", "Performance", `${BASE}/parametres/performance`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/securite", "Sécurité", `${BASE}/parametres/securite`, { permission: "settings.read", status: "preview" }),
+      leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read" }),
+      leaf("parametres/lecture", "Lecture", `${BASE}/parametres/lecture`, { permission: "settings.read" }),
       leaf("parametres/commentaires", "Commentaires", `${BASE}/parametres/commentaires`, { permission: "settings.read" }),
-      leaf("parametres/confidentialite", "Confidentialité", `${BASE}/parametres/confidentialite`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/cookies", "Cookies", `${BASE}/parametres/cookies`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/scripts", "Scripts", `${BASE}/parametres/scripts`, { permission: "settings.read", status: "preview" }),
-      leaf("parametres/code", "Code personnalisé", `${BASE}/parametres/code`, { permission: "settings.read", status: "preview" }),
+      leaf("parametres/medias", "Médias", `${BASE}/parametres/medias`, { permission: "settings.read" }),
+      leaf("parametres/permaliens", "Permaliens", `${BASE}/parametres/permaliens`, { permission: "settings.read" }),
+      leaf("parametres/seo", "SEO", `${BASE}/parametres/seo`, { permission: "settings.read" }),
+      leaf("parametres/confidentialite", "Confidentialité", `${BASE}/parametres/confidentialite`, { permission: "settings.read" }),
+      leaf("parametres/indexation", "Indexation", `${BASE}/parametres/indexation`, { permission: "settings.read" }),
+      leaf("parametres/emailing", "Emailing", `${BASE}/parametres/emailing`, { permission: "settings.read" }),
+      leaf("parametres/tunnels", "Tunnels", `${BASE}/parametres/tunnels`, { permission: "settings.read" }),
+      leaf("parametres/avance", "Avancé", `${BASE}/parametres/avance`, { permission: "settings.read" }),
     ],
   },
 ];
@@ -117,10 +117,11 @@ const itemOf = (key) => ALL.find((i) => i.key === key) || null;
 const isCmsKey = (key) => ALL.some((i) => i.key === key);
 
 // Clés servies par le routeur générique des écrans CMS (cmsScreens) : celles dont la route n'existe pas déjà ailleurs.
-const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils", "parametres"];
+const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
-function buildCmsNav({ can, active }) {
+function buildCmsNav({ can, active, space = null }) {
+  if (space) return buildSiteNav({ can, active, space });
   const current = itemOf(active);
   if (!current) return null;
   const sections = [];
@@ -140,4 +141,169 @@ function buildCmsNav({ can, active }) {
   return { sections, trail, primary, current, section };
 }
 
-module.exports = { BASE, SECTIONS, ALL, GENERIC_SECTIONS, buildCmsNav, isCmsKey, itemOf, sectionOf };
+// ---------- Espace d'un site (palier 3, B1 → lot P1a) ----------
+// Le MÊME moteur et les MÊMES écrans, vus d'UN site : adresses /marketing/site-web/sites/<id>/<module> (ou /principal/<module>).
+// space = { siteId (nombre | null), principal (booléen), base (préfixe d'adresse), name, listHref }. Le site vient de l'adresse vérifiée par le serveur.
+//
+// P1a : le menu d'un site n'est plus une définition parallèle. Il est la PROJECTION du registre SECTIONS : mêmes groupes, mêmes libellés,
+// même ordre (le plan ci-dessous ne fait que dire, pour chaque groupe, quels modules s'ouvrent pour un site). Un module est :
+//   own      : écran de l'espace du site (données de CE site seulement) ;
+//   delegate : écran PARTAGÉ existant (Emailing, Tests A/B, Analytics, Santé du site) ouvert par /sites/<id>/<module> : le site vient de l'adresse,
+//              l'écran reste le même et s'affiche dans le cadre du site ;
+//   soon     : module d'un prochain lot (« Bientôt ») : aucune donnée, aucune action.
+// Un groupe dont aucun module n'est disponible apparaît en UNE seule entrée « Bientôt ». Les modules des lots P1b et P1c n'apparaissent pas encore.
+const SOON_PHASE = { B2: "médias", B3: "modèles et blocs", B4: "formulaires et contacts", B5: "blog", B6: "SEO" };
+const SITE_MODULES = {
+  "tableau-de-bord": { label: "Tableau de bord", kind: "own", reg: "sitedash", permission: "forms.read" },
+  pages: { label: "Pages", kind: "own", reg: "landing", permission: "forms.read", primary: true },
+  composants: { label: "Composants", kind: "own", permission: "forms.read" },
+  redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
+  equipe: { label: "Équipe du site", kind: "own", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  reglages: { label: "Réglages du site", kind: "own", permission: "settings.read", legacy: `${BASE}/parametres`, legacyLabel: "Paramètres du site principal" },
+  articles: { label: "Articles", kind: "soon", phase: "B5", permission: "articles.read", legacy: `${BASE}/articles`, reg: "articles" },
+  categories: { label: "Catégories et étiquettes", kind: "soon", phase: "B5", permission: "taxonomies.read", legacy: `${BASE}/articles/categories` },
+  commentaires: { label: "Commentaires", kind: "soon", phase: "B5", permission: "comments.read", legacy: `${BASE}/commentaires`, reg: "commentaires" },
+  medias: { label: "Médias", kind: "soon", phase: "B2", permission: "media.read", legacy: `${BASE}/mediatheque`, reg: "mediatheque" },
+  formulaires: { label: "Formulaires et contacts", kind: "soon", phase: "B4", permission: "forms.read", legacy: "/marketing/formulaires", legacyLabel: "Formulaires" },
+  contacts: { label: "Contacts", kind: "soon", phase: "B4", permission: "forms.read", legacy: "/marketing/contacts" },
+  modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
+  navigation: { label: "Menus", kind: "soon", phase: "menus", permission: "navigation.read", legacy: `${BASE}/navigation`, reg: "navigation" },
+  seo: { label: "SEO", kind: "soon", phase: "B6", permission: "forms.read", legacy: `${BASE}/seo`, reg: "seo" },
+  // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
+  listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
+  segments: { label: "Segments", kind: "delegate", to: "/segments", reg: "segments", permission: "segments.read", legacy: "/marketing/segments" },
+  "modeles-email": { label: "Modèles d'e-mail", kind: "delegate", to: "/modeles", reg: "templates", permission: "templates.read", legacy: "/marketing/modeles" },
+  campagnes: { label: "Campagnes", kind: "delegate", to: "/campagnes", reg: "campaigns", permission: "campaigns.read", legacy: "/marketing/campagnes" },
+  automatisations: { label: "Automatisations", kind: "delegate", to: "/automatisations", reg: "automations", permission: "automations.read", legacy: "/marketing/automatisations" },
+  tunnels: { label: "Tunnels", kind: "delegate", to: "/tunnels", reg: "funnels", permission: "funnels.read", legacy: "/marketing/tunnels" },
+  "tests-ab": { label: "Tests A/B", kind: "delegate", to: "/site-web/tests-ab", reg: "pagetests", permission: "forms.read", legacy: `${BASE}/tests-ab` },
+  analytics: { label: "Analytics", kind: "delegate", to: "/analytics/global", reg: "analytics-global", permission: "analytics.read", legacy: "/marketing/analytics/global" },
+  outils: { label: "Santé du site", kind: "delegate", to: "/site-web/outils", reg: "outils", permission: "tools.view", legacy: `${BASE}/outils` },
+};
+// Modules délégués : tables lues par le serveur (délégation) et par la vue (écrans à afficher dans le cadre du site)
+const DELEGATED = Object.fromEntries(Object.entries(SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => [k, m.to]));
+const SCOPED_KEYS = new Set(Object.values(SITE_MODULES).filter((m) => m.kind === "delegate").map((m) => m.reg));
+// Un écran partagé prend le cadre du site seulement s'il est déclaré propre au site ET que le serveur a vérifié un site pour la requête
+const isSiteScopedKey = (key) => SCOPED_KEYS.has(key);
+
+// Un module vu depuis un espace : { key, label, href, status, phase, permission, external, reg, primary }
+function siteModule(space, mod) {
+  const m = SITE_MODULES[mod];
+  if (!m) return null;
+  const P = space.principal;
+  const own = (m.kind === "own" || m.kind === "soon") && !(P && m.legacy); // servi par le routeur de l'espace (les modules délégués passent par l'écran existant)
+  const legacyHref = P && m.legacy;
+  const href = legacyHref || `${space.base}/${mod}`;
+  const status = m.kind === "soon" && !P ? "preview" : "live";
+  return {
+    key: `espace/${mod}`, module: mod, label: P && m.legacyLabel ? m.legacyLabel : m.label, href, status, phase: m.kind === "soon" && !P ? m.phase : undefined,
+    permission: m.permission, external: !own, reg: m.reg || null, kind: m.kind,
+    ...(m.primary ? { primary: { label: "Ajouter une page", href: `${space.base}/pages#nouvelle`, permission: "forms.write" } } : {}),
+  };
+}
+const siteModuleOf = (space, mod) => siteModule(space, mod);
+
+// ─── UNE SEULE définition du menu : le registre SECTIONS ────────────────────────────────────────────────────────────────────────────
+// Le menu du site principal et celui d'un site sont deux PRÉSENTATIONS de ce registre, calculées par la même fonction (projectSections) :
+// mêmes groupes, mêmes entrées, mêmes libellés, même ordre, mêmes clés, mêmes icônes. Seule différence permise : l'ÉTAT d'une entrée dans un site.
+// ABILITY dit, pour une entrée du registre (par sa clé), ce qu'elle devient dans l'espace d'UN site :
+//   link    : lien simple (Mes sites) ;
+//   open    : écran ouvert dans le cadre du site (`module` = SITE_MODULES[module], `hash` = ancre éventuelle) ;
+//   central : reste dans l'administration centrale (décision 4) : absente du menu d'un site ;
+//   (absente) : « Bientôt » — visible, grisée, sans action ni donnée. Une entrée du registre qui n'est PAS listée ici n'est donc jamais
+//   ouverte à un site par défaut : un module n'est activé qu'après démonstration de son isolation.
+const ABILITY = {
+  sites: { mode: "link" },
+  sitedash: { mode: "open", module: "tableau-de-bord", label: "Tableau de bord" },
+  landing: { mode: "open", module: "pages" },
+  apparence: { mode: "open", module: "reglages", hash: "design" },
+  "apparence/en-tete": { mode: "open", module: "reglages", hash: "entete" },
+  "apparence/pied-de-page": { mode: "open", module: "reglages", hash: "entete" },
+  redirections: { mode: "open", module: "redirections" },
+  utilisateurs: { mode: "open", module: "equipe" },
+  pagetests: { mode: "open", module: "tests-ab" },
+  outils: { mode: "open", module: "outils" },
+  parametres: { mode: "open", module: "reglages" },
+  "outils/sauvegardes": { mode: "central" },
+  "outils/systeme": { mode: "central" },
+  "outils/logs": { mode: "central" },
+};
+// Lot où une entrée « Bientôt » sera ouverte (texte de l'écran explicatif : SOON_TEXT de siteSpace.js)
+const soonPhase = (key) => {
+  if (key.startsWith("articles") || key.startsWith("commentaires")) return "B5";
+  if (key === "mediatheque") return "B2";
+  if (key === "apparence/templates" || key === "apparence/patterns") return "B3";
+  if (key === "apparence/styles") return "P2";
+  if (key === "navigation" || key === "apparence/menus") return "menus";
+  if (key.startsWith("seo")) return "B6";
+  if (key === "corbeille") return "corbeille";
+  return "C4";
+};
+// Anciennes adresses d'écrans « Bientôt » (/sites/N/articles, …) : elles continuent d'afficher leur explication
+const SOON_SLUG = { articles: "articles", mediatheque: "medias", navigation: "navigation", commentaires: "commentaires", seo: "seo" };
+
+// Extensions de l'espace, communes au principal et aux sites (hors registre) : Composants (groupe Pages) et le groupe « Marketing du site »
+const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires"];
+function marketingGroup(space) {
+  const P = space.principal;
+  const items = (P ? [...MARKETING_MODULES, "contacts"] : MARKETING_MODULES).map((m) => {
+    if (P) { const x = SITE_MODULES[m] || { label: "Contacts", legacy: "/marketing/contacts", permission: "forms.read" }; return { key: `espace/${m}`, module: m, label: x.legacyLabel || x.label, href: x.legacy, status: "live", permission: x.permission, reg: x.reg || null, section: "marketing" }; }
+    const it = siteModule(space, m);
+    return it.status === "preview" ? { ...it, href: null, disabled: true } : it;
+  });
+  return { key: "marketing", label: "Marketing du site", icon: "mail", items };
+}
+
+// Une entrée du registre vue depuis un espace : { key, label, href, status, permission, reg, alias?, disabled?, phase?, primary? } — ou null (central)
+function projectItem(item, group, space) {
+  const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key };
+  if (space.principal) return { ...item, ...base };
+  const a = ABILITY[item.key];
+  if (a && a.mode === "central") return null;
+  if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
+  if (a && a.mode === "open") {
+    const m = siteModule(space, a.module);
+    return { ...base, label: a.label || item.label, href: a.hash ? `${m.href}#${a.hash}` : m.href, status: "live", external: m.external, ...(a.hash ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
+  }
+  const slug = SOON_SLUG[item.key];
+  return { ...base, href: null, status: "preview", disabled: true, phase: soonPhase(item.key), ...(slug ? { alias: `espace/${slug}`, module: slug } : {}) };
+}
+
+// LA fonction qui produit le menu d'un espace (principal ou site) à partir du registre
+function projectSections(space) {
+  const out = [];
+  for (const s of SECTIONS) {
+    if (s.key === "outils") out.push(marketingGroup(space));
+    const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
+    if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages" });
+    if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items });
+  }
+  return out;
+}
+const siteSections = projectSections;
+const principalSections = projectSections;
+// Les écrans propres de l'espace du principal portent leur clé `espace/…` : on les rattache à leur entrée du registre.
+const PRINCIPAL_ALIAS = { "espace/tableau-de-bord": "sitedash", "espace/pages": "landing", "espace/redirections": "redirections" };
+
+function buildSiteNav({ can, active, space }) {
+  const all = projectSections(space);
+  const flat = all.flatMap((sec) => sec.items.map((i) => ({ ...i, section: sec.key })));
+  // Un écran existant garde son cadre : on retrouve son entrée par sa clé `active` propre OU par la clé qu'il porte déjà dans le registre
+  const regKey = space.principal && PRINCIPAL_ALIAS[active] ? PRINCIPAL_ALIAS[active] : active;
+  const hit = (i) => (i.reg && i.reg === regKey) || i.key === regKey || i.alias === regKey;
+  const current = flat.find((i) => i.key === active) || flat.find(hit) || null;
+  if (!current) return null;
+  const sections = [];
+  for (const sec of all) {
+    const items = sec.items.filter((i) => can(i.permission)).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
+    if (!items.length) continue;
+    sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });
+  }
+  const sec = all.find((x) => x.key === current.section);
+  const trail = [{ label: "Site Web", href: BASE }, { label: "Mes sites", href: space.listHref || `${BASE}/sites` }, { label: space.name, href: `${space.base}/tableau-de-bord` }];
+  if (current.module !== "tableau-de-bord") { if (sec.items.length > 1 && sec.label !== current.label) trail.push({ label: sec.label }); trail.push({ label: current.label, href: current.href }); }
+  const primary = current.primary && can(current.primary.permission) ? { label: current.primary.label, href: current.primary.href } : null;
+  return { sections, trail, primary, current, section: sec, space };
+}
+
+module.exports = { BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

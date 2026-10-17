@@ -12,25 +12,11 @@ function createMarketingRouters({ db }) {
   // requête (un retrait ou une suspension est immédiat) et calculés par UNE seule fonction : cmsAccess.effectivePermissions(utilisateur, site).
   // Quand l'adresse vise un site (page, fiche de site, composant), les droits sont ceux de CE site : rôle d'équipe + rôle sur ce site.
   const access = require("../../services/cmsAccess");
-  const siteOfRequest = (req) => {
-    const p = req.path;
-    let m = /^\/pages\/(\d+)(?:\/|$)/.exec(p);
-    if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
-    m = /^\/site-web\/sites\/(\d+)(?:\/|$)/.exec(p);
-    if (m) return { siteId: Number(m[1]) };
-    m = /^\/site-web\/historique\/page\/(\d+)(?:\/|$)/.exec(p);
-    if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
-    m = /^\/site-web\/composants\/(\d+)/.exec(p);
-    if (m) { const r = db.prepare("SELECT site_id FROM mk_web_components WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
-    // Outils (palier 13) : le site choisi (?site=) fixe le contexte des droits ; sans lui, l'organisation / le site principal
-    if (/^\/site-web\/outils(?:\/|$)/.test(p)) {
-      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
-      if (/^\d{1,12}$/.test(String(raw ?? ""))) return { siteId: Number(raw) };
-      return null;
-    }
-    if (req.method === "POST" && (p === "/pages" || p === "/site-web/composants") && req.body && /^\d+$/.test(String(req.body.site_id || ""))) return { siteId: Number(req.body.site_id) };
-    return null;
-  };
+  // Site visé par la requête : table déclarative des règles (R3, anomalie A-07) — web/routeScopes.js. Le comportement est celui de l'ancienne cascade d'expressions régulières.
+  const { siteOfRequest: scopeOf } = require("./routeScopes");
+  const siteOfRequest = (req) => scopeOf(db, req);
+  // Site choisi (?site=) ; pour les écrans de contenu (articles, commentaires) un formulaire l'envoie aussi dans le champ « site » (R6 lot 2) : lu seulement pour ces écrans
+  const contentSiteRaw = (req) => (req.query.site !== undefined ? req.query.site : /^\/site-web\/(?:articles|commentaires)(?:\/|$)/.test(req.path) && req.body ? req.body.site : undefined);
   admin.use((req, res, next) => {
     const user = req.session.user;
     if (!user) return res.redirect(`/connexion?redirect=${encodeURIComponent(req.originalUrl)}`);
@@ -50,11 +36,22 @@ function createMarketingRouters({ db }) {
     const perms = access.effectivePermissions(user.id, { organizationId: orgId, siteId });
     const allowed = (permission) => perms.has(permission);
     const role = membership ? membership.role : "site";
+    // Contexte de site (palier 2) : calculé pour CETTE requête seulement, à partir de la base (jamais d'état partagé). req.mk.site = le site visé,
+    // ou null (site principal / écran sans site) ; req.mk.siteContext = le détail du contrôle (reason : not_found, deleted, archived, forbidden).
+    const siteContext = require("../../services/siteContext");
+    const sc = siteId !== null ? siteContext.resolve(db, { userId: user.id, organizationId: orgId }, siteId, { allowArchived: true, allowDeleted: true }) : null;
     req.mk = {
+      site: sc && sc.ok ? sc.site : null, siteContext: sc,
       role, can: allowed, perms, siteId, marketing, siteOnly: !membership,
-      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL },
+      // Email Engine (palier 16) : accès limité à un site → siteScope impose ce site à tout le moteur (jamais lu dans l'adresse) ; équipe de l'organisation → simple filtre d'affichage
+      ctx: { db, organizationId: orgId, userId: user.id, can: allowed, canOn: (target, permission) => siteContext.canOn(db, { userId: user.id, organizationId: orgId }, target, permission), bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL,
+        ...(membership ? { siteFilter: /^\d{1,12}$/.test(String(contentSiteRaw(req) ?? "")) ? Number(contentSiteRaw(req)) : req.query.site === "principal" ? "principal" : undefined } : { siteScope: Number.isInteger(siteId) ? siteId : -1 }) },
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
+    // Écrans de contenu d'un site (R6 lot 2) : le site courant est conservé dans les formulaires (champ caché « site »)
+    { const s = require("../../services/siteContent").siteParam(req.mk.ctx); res.locals.mkSiteField = s ? `<input type="hidden" name="site" value="${s}">` : ""; res.locals.mkSiteId = s; res.locals.mkNavUrl = (u) => (s && typeof u === "string" && /^\/marketing\/site-web\/(?:articles|commentaires)(?:[/?#]|$)/.test(u) && !/[?&]site=/.test(u) ? u + (u.includes("?") ? "&" : "?") + "site=" + s : u); res.locals.mkRestricted = Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteScope > 0; }
+    // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
+    if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
     res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action
@@ -63,22 +60,27 @@ function createMarketingRouters({ db }) {
     next();
   });
 
+  admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
+  admin.use(require("./contactCore")()); // Contact Core (palier 15) : doublons, fusion, cycle de vie, état, journal — avant admin.js (« /contacts/:id »)
   admin.use(require("./segments")({ db }));
   admin.use(require("./templates")({ db }));
   admin.use(require("./campaigns")({ db }));
   admin.use(require("./rss")());
   admin.use(require("./landing")());
   admin.use(require("./siteWeb")());
+  admin.use(require("./siteSpace")()); // Espace d'administration d'UN site (palier 3, B1) : après siteWeb (ses routes /sites/:id/… sont plus précises)
   admin.use(require("./funnels")());
   admin.use(require("./pageTests")());
   admin.use(require("./articles")()); // KOLAKISA CMS → Articles (palier 4) : gestion des articles du blog
   admin.use(require("./taxonomies")()); // Catégories et étiquettes (palier 5)
+  admin.use(require("./settings")()); // Paramètres : moteur de réglages (palier 14) — avant les modules qui avaient leur propre écran
   admin.use(require("./comments")()); // Commentaires : modération et réglages (palier 6)
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
   admin.use(require("./tools")()); // Outils : santé, import, export, diagnostic, maintenance (palier 13)
+  admin.use(require("./cmsSearch")()); // Recherche d'administration : pages, articles, médias, menus (palier 23)
   admin.use(require("./urls")()); // Redirections, liens cassés, permaliens et adresses (palier 12)
   admin.use(require("./mediaLibrary")()); // KOLAKISA CMS → Médias (palier 3) : page et API de la médiathèque
   admin.use(require("./cmsScreens")()); // écrans de KOLAKISA CMS (lecture seule, tables existantes) : après les routes /site-web déjà en place

@@ -32,6 +32,31 @@ const registerContent = (type, def) => { CONTENT[type] = def; };
 const events = new EventEmitter();
 const emit = (name, payload) => { try { events.emit(name, { event: name, at: new Date().toISOString(), ...payload }); } catch { /* un abonné ne casse jamais l'action */ } };
 
+// ---------- Prévenir la modération (palier 23) ----------
+// Un commentaire « en attente » prévient l'adresse administrative (Paramètres → Général, sinon celle de l'hébergeur) par la file d'envoi existante.
+// Au plus UN e-mail par tranche de 10 minutes, qui annonce le nombre total de commentaires en attente (jamais le texte du commentaire : il vient d'un inconnu).
+// COMMENT_NOTIFY=0 coupe cette alerte. Un échec d'envoi ne gêne jamais l'envoi du commentaire.
+const NOTIFY_EVERY_MS = 10 * 60 * 1000;
+let lastNotified = 0;
+events.on("comment.pending", () => {
+  try {
+    if (process.env.COMMENT_NOTIFY === "0" || Date.now() - lastNotified < NOTIFY_EVERY_MS) return;
+    const mailer = require("../utils/mailer");
+    let to = "";
+    try { to = require("./settings").main().adminEmail; } catch { to = ""; }
+    to = to || process.env.CONTACT_EMAIL || mailer.fromAddress();
+    if (!to) return;
+    const waiting = db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE status = 'pending'").get().n;
+    if (!waiting) return;
+    lastNotified = Date.now();
+    require("../utils/outbox").queueMail(db, {
+      kind: "comment_pending", to,
+      subject: `[KOLAKISA] ${waiting} commentaire${waiting > 1 ? "s" : ""} en attente de modération`,
+      text: `${waiting} commentaire${waiting > 1 ? "s attendent" : " attend"} votre modération.\n\nOuvrir la modération : ${mailer.siteUrl()}/marketing/site-web/commentaires/en-attente\n\n(Au plus un e-mail toutes les 10 minutes. Pour couper cette alerte : COMMENT_NOTIFY=0.)`,
+    });
+  } catch { /* l'alerte ne doit jamais gêner le commentaire */ }
+});
+
 // ---------- Réglages (une ligne par clé dans mk_settings, organisation par défaut) ----------
 const DEFAULTS = Object.freeze({
   enabled_default: true,   // nouveaux articles : commentaires ouverts
@@ -196,13 +221,13 @@ const ACTIONS = {
   restore: { from: ["spam", "trash"], event: "comment.restored" },
   delete: { from: ["trash"], event: null },
 };
-function moderate(ids, action, actorId = null) {
+function moderate(ids, action, actorId = null, allow = null) {
   const spec = ACTIONS[action];
   if (!spec) throw new UserError("Action inconnue.");
   const done = [], skipped = [];
   for (const id of uniqueIds(ids)) {
     const c = get(id);
-    if (!c) { skipped.push({ id, why: "introuvable" }); continue; }
+    if (!c || (allow && !allow(id))) { skipped.push({ id, why: "introuvable" }); continue; } // allow : portée de site (R6 lot 2) — hors portée = même réponse qu'un commentaire inconnu
     if (!spec.from.includes(c.status)) { skipped.push({ id, why: `déjà ${STATUS_LABELS[c.status].toLowerCase()}` }); continue; }
     const payload = { commentId: c.id, contentType: c.content_type, contentId: c.content_id, parentId: c.parent_id, userId: c.user_id, actorId, from: c.status };
     if (action === "delete") { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(c.id); emit("comment.purged", payload); done.push(id); continue; }
@@ -227,13 +252,24 @@ function reply(parentId, actor, body, ip = "") {
 const uniqueIds = (v) => [...new Set([].concat(v || []).flatMap((x) => String(x).split(",")).map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 500);
 // Suppression par l'auteur d'un commentaire (site public) ou par un formateur : définitive, les réponses remontent d'un niveau
 function purge(id) { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(id); }
+// Droit à l'effacement (palier 23) : supprime DÉFINITIVEMENT tous les commentaires d'invité écrits avec cette adresse e-mail (le texte peut contenir des données
+// personnelles, donc on supprime au lieu de masquer ; les réponses remontent d'un niveau). Les commentaires de membres connectés ne sont pas concernés
+// (ils partent avec la suppression du compte). Retourne le nombre supprimé ; l'adresse n'est jamais renvoyée ni journalisée en clair.
+function purgeGuest(email) {
+  const address = String(email || "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) || address.length > 254) throw new UserError("Saisissez une adresse e-mail valide.");
+  const rows = db.prepare("SELECT id, content_type, content_id FROM blog_comments WHERE user_id IS NULL AND lower(author_email) = ?").all(address);
+  for (const r of rows) { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(r.id); emit("comment.purged", { commentId: r.id, contentType: r.content_type, contentId: Number(r.content_id) }); }
+  return rows.length;
+}
 
 // ---------- Liste d'administration : recherche, filtres, tri, pagination — tout dans la base ----------
 const PERIODS = { "7": "-7 days", "30": "-30 days", "90": "-90 days", "365": "-365 days" };
 const SORTS = { recent: "c.created_at DESC, c.id DESC", ancien: "c.created_at ASC, c.id ASC", auteur: "author COLLATE NOCASE ASC, c.id DESC", contenu: "content_title COLLATE NOCASE ASC, c.id DESC" };
 const like = (s) => `%${String(s).replace(/[\\%_]/g, "\\$&")}%`;
-function list({ status = "", q = "", content = "", author = "", period = "", sort = "recent", page = 1, perPage = PER_PAGE_ADMIN, includeEmail = false } = {}) {
+function list({ status = "", q = "", content = "", author = "", period = "", sort = "recent", page = 1, perPage = PER_PAGE_ADMIN, includeEmail = false, scope = null } = {}) {
   const where = [], args = [];
+  if (scope) { where.push(scope.sql); args.push(...scope.params); } // portée de site (R6 lot 2) : seulement les commentaires des articles de ce site
   if (STATUSES.includes(status)) { where.push("c.status = ?"); args.push(status); } else where.push("c.status <> 'trash'"); // « Tous » : tout sauf la corbeille
   const m = /^([a-z_]{1,20}):(\d{1,9})$/.exec(String(content));
   if (m) { where.push("c.content_type = ? AND c.content_id = ?"); args.push(m[1], Number(m[2])); }
@@ -256,17 +292,17 @@ function list({ status = "", q = "", content = "", author = "", period = "", sor
   return { rows, total, page: current, pages };
 }
 // Effectifs par statut (onglets) : une seule requête groupée
-function counts(content = "") {
+function counts(content = "", scope = null) {
   const m = /^([a-z_]{1,20}):(\d{1,9})$/.exec(String(content));
-  const rows = m ? db.prepare("SELECT status, COUNT(*) n FROM blog_comments WHERE content_type = ? AND content_id = ? GROUP BY status").all(m[1], Number(m[2])) : db.prepare("SELECT status, COUNT(*) n FROM blog_comments GROUP BY status").all();
+  const rows = scope ? db.prepare(`SELECT c.status, COUNT(*) n FROM blog_comments c WHERE ${m ? "c.content_type = ? AND c.content_id = ? AND " : ""}${scope.sql} GROUP BY c.status`).all(...(m ? [m[1], Number(m[2])] : []), ...scope.params) : m ? db.prepare("SELECT status, COUNT(*) n FROM blog_comments WHERE content_type = ? AND content_id = ? GROUP BY status").all(m[1], Number(m[2])) : db.prepare("SELECT status, COUNT(*) n FROM blog_comments GROUP BY status").all();
   const out = { pending: 0, approved: 0, spam: 0, trash: 0 };
   for (const r of rows) out[r.status] = r.n;
   out.all = out.pending + out.approved + out.spam;
   return out;
 }
 // Éléments pour le filtre « contenu » : articles qui ont des commentaires
-function commentedContents(limit = 100) {
-  return db.prepare(`SELECT 'post:' || p.id AS value, p.title AS label FROM posts p WHERE EXISTS (SELECT 1 FROM blog_comments c WHERE c.content_type = 'post' AND c.content_id = p.id) ORDER BY p.title COLLATE NOCASE LIMIT ?`).all(limit);
+function commentedContents(limit = 100, scope = null) {
+  return db.prepare(`SELECT 'post:' || p.id AS value, p.title AS label FROM posts p WHERE EXISTS (SELECT 1 FROM blog_comments c WHERE c.content_type = 'post' AND c.content_id = p.id)${scope ? " AND " + scope.sql : ""} ORDER BY p.title COLLATE NOCASE LIMIT ?`).all(...(scope ? scope.params : []), limit);
 }
 function contentInfo(type, id) {
   const def = CONTENT[type];
@@ -285,5 +321,5 @@ function countsForPosts(ids) {
 module.exports = {
   COMMENT_MAX, STATUSES, STATUS_LABELS, MAX_LINKS, IP_RETENTION_DAYS, PER_PAGE_PUBLIC, PER_PAGE_ADMIN, PERIODS, SORTS, DEFAULTS,
   CONTENT, registerContent, events, settings, saveSettings, resetCache,
-  clean, html, linksIn, ipHash, levelOf, create, thread, count, get, moderate, reply, purge, list, counts, commentedContents, contentInfo, countsForPosts, uniqueIds,
+  clean, html, linksIn, ipHash, levelOf, create, thread, count, get, moderate, reply, purge, purgeGuest, list, counts, commentedContents, contentInfo, countsForPosts, uniqueIds,
 };

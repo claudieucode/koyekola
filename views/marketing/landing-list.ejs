@@ -50,7 +50,7 @@
         <tbody><% pages.forEach((p) => { const menuId = "pg-menu-" + p.id; const stClass = inTrash ? "mk-status-off" : STATUS_CLASS[p.status]; %>
           <tr><% if (canWrite) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.name %> »"></td><% } %>
             <th scope="row" data-label="Titre"><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a>
-              <span class="mk-sub">/p/<%= p.slug %><% if (p.parent_name) { %> · sous-page de « <%= p.parent_name %> »<% } %><% if (p.has_draft && !inTrash) { %> · modifications non publiées<% } %></span></th>
+              <span class="mk-sub">/p/<%= p.slug %><% if (p.parent_name) { %> · sous-page de « <%= p.parent_name %> »<% } %><% if (p.has_draft && !inTrash) { %> · modifications non publiées<% } %><% if (p.funnels && p.funnels.length) { %> · utilisée dans <%= p.funnels.length > 1 ? "les tunnels" : "le tunnel" %> « <%= p.funnels.join(" », « ") %> »<% } %></span></th>
             <td data-label="État"><span class="mk-status <%= stClass %>"><%= inTrash ? "Corbeille" : STATUSES[p.status] %></span></td>
             <td data-label="Auteur"><%= p.author || "—" %></td><td data-label="Site"><%= p.site_name || "—" %></td>
             <td data-label="Modifiée"><%= fmt(p.updated_at) %></td><td data-label="Publiée"><%= fmt(p.published_at) %></td>
@@ -68,6 +68,7 @@
                     <% if (canPublish && p.status !== "published") { %><form action="/marketing/pages/<%= p.id %>/publier" method="post" role="none"><button type="submit" role="menuitem">Publier</button></form><% } %>
                     <% if (canPublish && p.status === "published") { %><form action="/marketing/pages/<%= p.id %>/depublier" method="post" role="none"><button type="submit" role="menuitem">Mettre hors ligne</button></form><% } %>
                     <form action="/marketing/pages/<%= p.id %>/dupliquer" method="post" role="none"><button type="submit" role="menuitem">Dupliquer</button></form>
+                    <% if (sites.length) { %><form action="/marketing/pages/<%= p.id %>/deplacer" method="post" role="none" class="mk-cms-move"><label class="sr-only" for="mv-<%= p.id %>">Déplacer « <%= p.name %> » vers</label><select id="mv-<%= p.id %>" name="site_id"><option value="">Aucun site (site principal)</option><% sites.forEach((st) => { if (st.id !== p.site_id) { %><option value="<%= st.id %>"><%= st.name %></option><% } }) %></select><button type="submit" role="menuitem" data-mk-confirm-title="Déplacer cette page ?" data-mk-confirm-ok="Déplacer" data-mk-confirm="La page « <%= p.name %> » changera de site. Son contenu et ses médias sont conservés ; sa place d'accueil et ses liens hiérarchiques avec l'ancien site sont retirés.">Déplacer</button></form><% } %>
                     <form action="/marketing/pages/<%= p.id %>/archiver" method="post" role="none"><button type="submit" role="menuitem" data-mk-confirm="La page « <%= p.name %> » passera hors ligne et ira à la corbeille. Vous pourrez la restaurer.">Mettre à la corbeille</button></form>
                   <% } %>
                   <% if (inTrash && canDelete) { %><form action="/marketing/pages/<%= p.id %>/supprimer" method="post" role="none"><button type="submit" role="menuitem" data-mk-confirm="« <%= p.name %> » sera supprimée définitivement, avec ses statistiques et ses versions. Cette action est irréversible.">Supprimer définitivement</button></form><% } %>
@@ -91,10 +92,20 @@
             <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
           <div class="mk-dialog-body"><div class="field-group"><label for="lp-name">Nom de la page *</label><input id="lp-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit : bien débuter en photo"></div>
             <fieldset class="mk-tpl-choice"><legend>Modèle de départ</legend>
-              <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Page vierge</strong><span class="mk-sub">Point de départ minimal, à composer dans l'éditeur visuel.</span></span></label>
+              <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Page vierge</strong><span class="mk-sub">Canevas vide : l'éditeur propose ensuite la création classique ou guidée.</span></span></label>
               <% userTemplates.forEach((t) => { %><label class="mk-tpl"><input type="radio" name="template" value="mine:<%= t.id %>"><span><strong><%= t.name %></strong><span class="mk-sub">Mes modèles · <%= t.category %><%= t.description ? " · " + t.description : "" %></span></span></label><% }) %>
               <% templates.forEach((t) => { %><label class="mk-tpl"><input type="radio" name="template" value="<%= t.key %>"><span><strong><%= t.name %></strong><span class="mk-sub"><%= t.category %> · <%= t.description %></span></span></label><% }) %>
             </fieldset>
+            <fieldset class="mk-tpl-choice" data-lp-layout><legend>Mise en page</legend>
+              <label class="mk-tpl"><input type="radio" name="layoutMode" value="free" checked><span><strong>Conception libre</strong><span class="mk-sub">Conteneurs, Flexbox et widgets comme d'habitude : vous réglez tout vous-même.</span></span></label>
+              <label class="mk-tpl"><input type="radio" name="layoutMode" value="guided"><span><strong>Guidée par un format</strong><span class="mk-sub">Largeur maximale et marges de départ cohérentes, modifiables et verrouillables. Mêmes widgets.</span></span></label>
+              <div class="field-group" data-lp-layout-opts hidden>
+                <label for="lp-format">Format</label>
+                <select id="lp-format" name="layoutFormat"><% Object.entries(layoutFormats).forEach(([k, f]) => { %><option value="<%= k %>"<%= k === "standard" ? " selected" : "" %>><%= f.label %><%= f.maxWidth ? " · " + f.maxWidth + " px" : "" %></option><% }) %></select>
+                <label class="mk-check"><input type="checkbox" name="layoutLocked" value="1"> Verrouiller le format (protège la largeur et les marges des éléments de premier niveau)</label>
+              </div>
+            </fieldset>
+            <script>(function(){var f=document.currentScript.parentNode;var o=f.querySelector("[data-lp-layout-opts]");f.addEventListener("change",function(){o.hidden=f.querySelector('[name=layoutMode]:checked').value!=="guided";});})();</script>
             <% if (sites.length) { %><div class="field-group"><label for="lp-new-site">Site</label><select id="lp-new-site" name="site_id"><option value="">Aucun (page d'atterrissage isolée)</option><% sites.forEach((st) => { %><option value="<%= st.id %>"><%= st.name %></option><% }) %></select></div><% } %></div>
           <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer et ouvrir l’éditeur</button></div>
         </form>

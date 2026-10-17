@@ -1,21 +1,46 @@
 <%- include("partials/top", { title, active }) %>
-<% const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); const STATUS_CLASS = { draft: "", running: "mk-status-ok", stopped: "mk-status-warn", completed: "" }; %>
+<%
+  const STATUS_CLASS = { draft: "", running: "mk-status-ok", stopped: "mk-status-warn", completed: "" };
+  const LABELS = { all: "Tous", draft: "Brouillons", running: "En cours", stopped: "En pause", completed: "Terminés", archived: "Archivés" };
+  const qs = (extra) => { const p = new URLSearchParams({ ...(filters.status !== "all" ? { statut: filters.status } : {}), ...(filters.q ? { q: filters.q } : {}), ...(filters.sort !== "recent" ? { tri: filters.sort } : {}), ...extra }); for (const [k, v] of [...p]) if (v === "") p.delete(k); const s = p.toString(); return s ? "?" + s : ""; };
+%>
     <div class="mk-head"><h1>Tests A/B des pages</h1></div>
-    <p class="mk-lead">Comparez deux versions d'une page (titre, bouton, sections, mise en page, formulaire) : une partie des visiteurs voit la version B. Un gagnant n'est désigné qu'avec assez de données. Pour créer un test, ouvrez une page puis « Test A/B ».</p>
-    <% if (!tests.length) { %>
-      <div class="mk-empty"><%- icon("activity", { size: 32 }) %><h2>Aucun test</h2><p>Ouvrez une page en ligne (Site Web → Pages) et choisissez « Test A/B ».</p>
-        <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages">Voir les pages</a></div></div>
+    <p class="mk-lead">Comparez deux versions d'une page (titre, bouton, sections, mise en page, formulaire) : une partie des visiteurs voit la version B. Un gagnant n'est désigné qu'avec assez de données et une différence statistiquement fiable. Pour créer un test, ouvrez une page puis « Test A/B », ou une étape de tunnel puis « Tester en A/B ».</p>
+    <% if (!list.counts.all && !list.counts.archived) { %>
+      <div class="mk-empty"><%- icon("activity", { size: 32 }) %><h2>Aucune expérience A/B</h2><p>Créez votre première expérience pour comparer deux variantes d'une page.</p>
+        <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages">+ Nouvelle expérience (choisir une page)</a></div></div>
     <% } else { %>
+      <nav class="mk-tabs" aria-label="Filtrer les tests par état">
+        <% STATUS_FILTERS.forEach((k) => { %><a class="mk-tab" href="/marketing/site-web/tests-ab<%= qs({ statut: k === "all" ? "" : k, page: "" }) %>"<%- filters.status === k ? ' aria-current="page"' : "" %>><%= LABELS[k] %> <span class="mk-tab-count"><%= list.counts[k] || 0 %></span></a><% }) %>
+      </nav>
+      <form class="mk-filterbar" method="get" action="/marketing/site-web/tests-ab" role="search" aria-label="Rechercher un test">
+        <% if (filters.status !== "all") { %><input type="hidden" name="statut" value="<%= filters.status %>"><% } %>
+        <label class="mk-search"><span class="sr-only">Rechercher un test ou une page</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= filters.q %>" placeholder="Rechercher un test" maxlength="100"></label>
+        <label class="sr-only" for="ab-sort">Trier par</label>
+        <select id="ab-sort" name="tri"><% [["recent", "Plus récents"], ["name", "Nom"], ["status", "État"], ["views", "Visiteurs"]].forEach(([k, l]) => { %><option value="<%= k %>"<%= filters.sort === k ? " selected" : "" %>><%= l %></option><% }) %></select>
+        <button type="submit" class="btn btn-outline btn-sm">Filtrer</button>
+      </form>
+      <% if (!tests.length) { %>
+        <div class="mk-empty"><h2>Aucun résultat</h2><p>Aucun test ne correspond à ces filtres.</p></div>
+      <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable">
         <caption class="sr-only">Tests A/B des pages</caption>
-        <thead><tr><th scope="col">Test</th><th scope="col">Page</th><th scope="col">Objectif</th><th scope="col">État</th><th scope="col" class="mk-num">Visiteurs</th><th scope="col" class="mk-num">Conversions</th></tr></thead>
+        <thead><tr><th scope="col">Test</th><th scope="col">Page</th><th scope="col">Objectif</th><th scope="col">État</th><th scope="col">Répartition</th><th scope="col">Début</th><th scope="col" class="mk-num">Visiteurs</th><th scope="col" class="mk-num">Conversions</th></tr></thead>
         <tbody><% tests.forEach((t) => { %>
-          <tr><th scope="row" data-label="Test"><a href="/marketing/pages/<%= t.page_id %>/test-ab?test=<%= t.id %>"><%= t.name %></a><% if (t.winner) { %><span class="mk-sub">Gagnant retenu : version <%= t.winner.toUpperCase() %></span><% } %></th>
+          <tr><th scope="row" data-label="Test"><a href="/marketing/pages/<%= t.page_id %>/test-ab?test=<%= t.id %>"><%= t.name %></a><% if (t.winner) { %><span class="mk-sub">Version retenue : <%= t.winner.toUpperCase() %></span><% } %></th>
             <td data-label="Page"><%= t.page_name %><span class="mk-sub">/p/<%= t.page_slug %></span></td>
-            <td data-label="Objectif"><%= GOALS[t.goal] %></td>
-            <td data-label="État"><span class="mk-status <%= STATUS_CLASS[t.status] %>"><%= STATUS[t.status] %></span></td>
-            <td class="mk-num" data-label="Visiteurs"><%= mkh.fmt(t.views) %></td><td class="mk-num" data-label="Conversions"><%= mkh.fmt(t.conversions) %></td></tr>
+            <td data-label="Objectif"><%= GOALS[t.goalKey] %></td>
+            <td data-label="État"><span class="mk-status <%= STATUS_CLASS[t.status] %>"><%= t.archived ? "Archivé" : STATUS[t.status] %></span></td>
+            <td data-label="Répartition">A <%= 100 - t.traffic_b %> % · B <%= t.traffic_b %> %</td>
+            <td data-label="Début"><%= t.started_at ? mkh.fdatetime(t.started_at) : "—" %></td>
+            <td class="mk-num" data-label="Visiteurs"><%= mkh.fmt(t.views) %></td><td class="mk-num" data-label="Conversions"><%= t.goalKey === "purchase" ? "voir le détail" : mkh.fmt(t.conversions) %></td></tr>
         <% }) %></tbody>
       </table></div>
+      <% if (list.pages > 1) { %><div class="mk-pager"><span>Page <%= list.page %> sur <%= list.pages %> · <%= list.total %> test(s)</span>
+        <nav class="mk-pager-links" aria-label="Pagination">
+          <% if (list.page > 1) { %><a href="/marketing/site-web/tests-ab<%= qs({ page: list.page - 1 }) %>">Précédent</a><% } %>
+          <% if (list.page < list.pages) { %><a href="/marketing/site-web/tests-ab<%= qs({ page: list.page + 1 }) %>">Suivant</a><% } %>
+        </nav></div><% } %>
+      <% } %>
     <% } %>
 <%- include("partials/bottom") %>

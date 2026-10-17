@@ -20,7 +20,7 @@ after(() => srv.stop());
 
 describe("registre et menu", () => {
   test("le registre couvre la structure cible (14 rubriques) sans adresse en double", () => {
-    assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Tableau de bord", "Sites", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
+    assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
     assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Éditeur du site", "Templates", "Patterns", "Styles", "En-tête", "Pied de page", "Menus"]);
   });
@@ -56,13 +56,10 @@ describe("registre et menu", () => {
 });
 
 describe("honnêteté : rien n'est simulé", () => {
-  test("un écran « bientôt » le dit, désactive ses commandes et n'invente aucune donnée", async () => {
-    for (const href of ["/marketing/site-web/parametres", "/marketing/site-web/parametres/performance"]) {
-      const html = (await boss.get(href)).text;
-      assert.match(html, /Prochain palier\./, href);
-      assert.match(html, /disabled/, href);
-      assert.doesNotMatch(html, /<form[^>]*action="\/marketing[^"]*"[^>]*method="post"/, `${href} : aucun envoi réel`);
-    }
+  test("plus aucun écran « bientôt » : chaque rubrique du CMS a sa vraie fonction (les anciens écrans à champs désactivés ont disparu)", async () => {
+    assert.deepEqual(cmsNav.ALL.filter((i) => i.status === "preview").map((i) => i.key), [], "aucune entrée de menu en aperçu");
+    for (const href of ["/marketing/site-web/parametres/performance", "/marketing/site-web/parametres/securite", "/marketing/site-web/parametres/cookies", "/marketing/site-web/parametres/code"]) assert.equal((await boss.get(href)).status, 404, `${href} n'existe plus`);
+    for (const href of ["/marketing/site-web/parametres", "/marketing/site-web/outils/cache"]) assert.doesNotMatch((await boss.get(href)).text, /Prochain palier\./, href);
   });
 
   test("les écrans de données montent un état vide quand la base est vide", async () => {

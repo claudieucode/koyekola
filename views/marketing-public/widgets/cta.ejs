@@ -1,0 +1,13 @@
+<%# Appel à l'action (src/marketing/pages/widgets/cta.js). Variables : p, cls, attrs, L (L.link = adresse comptée). %>
+<% const tag = ["h2", "h3", "h4", "p"].includes(p.titleTag) ? p.titleTag : "h3"; const whole = p.applyOn === "box" && L.link; %>
+<% const inner = () => { %>
+  <% if (p.ribbon) { %><span class="kw-cta-ribbon is-<%= p.ribbonSide === "left" ? "left" : "right" %>"><%= p.ribbon %></span><% } %>
+  <% if (p.image) { %><img class="kw-cta-img" src="<%= p.image %>" alt="<%= p.imageAlt || "" %>" loading="lazy" decoding="async"><% } %>
+  <div class="kw-cta-body">
+    <<%= tag %> class="kw-cta-title"><%= p.title %></<%= tag %>>
+    <% if (p.text) { %><p class="kw-cta-text"><%= p.text %></p><% } %>
+    <% if (p.buttonLabel && L.link) { %><% if (whole) { %><span class="kw-cta-button kw-button kw-btn-primary"><%= p.buttonLabel %></span><% } else { %><a class="kw-cta-button kw-button kw-btn-primary" href="<%= L.link %>"><%= p.buttonLabel %></a><% } %><% } %>
+  </div>
+<% }; %>
+<% const klass = `${cls} kw-cta-${p.skin === "cover" ? "cover" : "classic"} is-img-${p.position || "above"} is-${p.align === "left" ? "left" : "center"}${p.image ? " has-img" : ""}`; %>
+<% if (whole) { %><a class="<%= klass %> kw-cta-whole" href="<%= L.link %>"<%- attrs %>><% inner() %></a><% } else { %><div class="<%= klass %>"<%- attrs %>><% inner() %></div><% } %>

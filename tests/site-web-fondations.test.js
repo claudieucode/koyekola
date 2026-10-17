@@ -209,7 +209,7 @@ describe("composants réutilisables", () => {
   });
 
   test("suppression refusée tant qu'une page l'utilise ; composant d'une autre organisation refusé", () => {
-    assert.throws(() => pages.deleteComponent(A, comp.id), /utilisé par 1 page/);
+    assert.throws(() => pages.deleteComponent(A, comp.id), /instances liées dans 1 page/);
     assert.throws(() => normalizeSection(B, { type: "component", componentId: comp.id }, 0), /introuvable/);
     pages.saveDraft(A, page.id, { sections: [text("Sans composant")] }, { revision: pages.getPage(A, page.id).revision });
     pages.deleteComponent(A, comp.id);

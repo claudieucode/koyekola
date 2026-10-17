@@ -22,7 +22,7 @@ const BASE = "/marketing/site-web/outils";
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: importer.MAX_BYTES, files: 1 } });
 const TABS = [
-  ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
+  ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
   ["diagnostic", "Diagnostic", "tools.view"], ["systeme", "Informations système", "tools.view"], ["maintenance", "Maintenance", "tools.maintenance"],
   ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["logs", "Journal d'activité", "tools.view"],
 ];
@@ -101,7 +101,7 @@ module.exports = () => {
   router.get("/site-web/outils/exporter", need("tools.export"), (req, res) => withSite(req, res, (siteId) => {
     const ctx = toolsCtx(req);
     const allowed = exporter.allowedTypes(ctx, { siteId, mode: "export" });
-    const types = exporter.ORDER.map((t) => ({ key: t, label: exporter.TYPES[t].label, scope: exporter.TYPES[t].scope, allowed: allowed.includes(t), count: allowed.includes(t) ? exporter.count(ctx, t, siteId) : null }));
+    const types = exporter.ORDER.map((t) => ({ key: t, label: exporter.TYPES[t].label, scope: exporter.TYPES[t].scope, sensitive: Boolean(exporter.TYPES[t].sensitive), allowed: allowed.includes(t), count: allowed.includes(t) ? exporter.count(ctx, t, siteId) : null }));
     res.render("marketing/tools-export", { title: "Exporter", active: "outils", ...shell(req, siteId, "exporter"), types, recent: runs.list(ctx.organizationId, "export", { limit: 8 }) });
   }));
   router.post("/site-web/outils/exporter", need("tools.export"), (req, res) => withSite(req, res, (siteId) => {
@@ -187,6 +187,73 @@ module.exports = () => {
     } catch (error) { if (!error.user) return next(error); flash(req, "error", error.message); }
     res.redirect(`${BASE}/importer/${r.run.id}${q(r.run.site_id)}`);
   });
+
+  // ----- Sauvegarde d'un site avec ses médias (R5) : télécharger un paquet, l'analyser (rien n'est écrit), le restaurer -----
+  // Le paquet analysé est gardé dans un dossier privé du serveur (jamais public) sous un jeton aléatoire lié à l'organisation ET à la personne ; il est effacé après la restauration ou au bout de 2 h.
+  const bundle = require("../../services/tools/siteBundle");
+  const fs = require("node:fs");
+  const nodePath = require("node:path");
+  const crypto = require("node:crypto");
+  const BUNDLE_DIR = nodePath.join(require("../../config/paths").dataDir, "tmp", "site-bundles");
+  const bundleUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: bundle.MAX_TOTAL + 64 * 1024 * 1024, files: 1 } });
+  const bundleFile = (req, token) => (/^[a-f0-9]{32}$/.test(String(token)) ? nodePath.join(BUNDLE_DIR, `${req.mk.ctx.organizationId}-${req.session.user.id}-${token}.kksite`) : null);
+  const sweepBundles = () => { try { for (const f of fs.readdirSync(BUNDLE_DIR)) { const full = nodePath.join(BUNDLE_DIR, f); if (Date.now() - fs.statSync(full).mtimeMs > 2 * 3600e3) fs.unlinkSync(full); } } catch { /* dossier absent */ } };
+  const bundleBack = (siteId) => `${BASE}/sauvegarde-site${q(siteId)}`;
+  const bundlePage = (req, res, siteId, extra = {}) => res.render("marketing/tools-site-bundle", { title: "Sauvegarde du site", active: "outils", ...shell(req, siteId, "sauvegarde-site"), STRATEGIES: importer.STRATEGIES, canOverwrite: req.mk.can("tools.overwrite"), canExport: req.mk.can("tools.export"), canImport: req.mk.can("tools.import"), maxMb: Math.round(bundle.MAX_TOTAL / 1048576), report: null, ...extra });
+  router.get("/site-web/outils/sauvegarde-site", need("tools.view"), (req, res) => withSite(req, res, (siteId) => bundlePage(req, res, siteId)));
+  router.post("/site-web/outils/sauvegarde-site/telecharger", need("tools.export"), (req, res, next) => withSite(req, res, async (siteId) => {
+    try {
+      const out = await bundle.build(toolsCtx(req), { siteId });
+      const site = (pages.getSite(req.mk.ctx, siteId) || {}).name;
+      const slug = String(site || "site").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "site";
+      toolsAudit.log(req, "site_bundle_export", `Paquet du site téléchargé (${slug})`, { siteId, files: out.files, bytes: out.buffer.length });
+      res.set({ "Content-Type": "application/octet-stream", "Content-Disposition": `attachment; filename="kolakisa-site-${slug}-${new Date().toISOString().slice(0, 10)}.kksite"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).send(out.buffer);
+    } catch (error) {
+      if (!error.user) return next(error);
+      flash(req, "error", error.message);
+      res.redirect(bundleBack(siteId));
+    }
+  }));
+  router.post("/site-web/outils/sauvegarde-site/analyser", need("tools.import"), (req, res, next) => {
+    bundleUpload.single("file")(req, res, (uploadError) => {
+      const s = siteOf(req);
+      if (s.missing) return res.status(404).render("error", { message: "Site introuvable." });
+      if (!Number.isInteger(s.siteId)) { flash(req, "error", "Choisissez le site à restaurer."); return res.redirect(bundleBack(null)); }
+      if (uploadError) { flash(req, "error", "Envoi du paquet impossible (fichier trop volumineux ou illisible)."); return res.redirect(bundleBack(s.siteId)); }
+      if (!req.file) { flash(req, "error", "Choisissez un paquet de sauvegarde (.kksite)."); return res.redirect(bundleBack(s.siteId)); }
+      try {
+        const pl = bundle.plan(toolsCtx(req), req.file.buffer, { siteId: s.siteId });
+        if (!pl.ok) { toolsAudit.log(req, "site_bundle_refused", "Paquet de site refusé à l'analyse", { siteId: s.siteId, errors: pl.errors.length }); return bundlePage(req, res, s.siteId, { report: { ok: false, errors: pl.errors.slice(0, 30), warnings: pl.warnings } }); }
+        sweepBundles();
+        fs.mkdirSync(BUNDLE_DIR, { recursive: true, mode: 0o700 });
+        const token = crypto.randomBytes(16).toString("hex");
+        fs.writeFileSync(bundleFile(req, token), req.file.buffer, { flag: "wx", mode: 0o600 });
+        toolsAudit.log(req, "site_bundle_analyse", "Paquet de site analysé", { siteId: s.siteId, files: pl.mapping.length });
+        bundlePage(req, res, s.siteId, { report: { ok: true, token, errors: [], warnings: pl.warnings, source: pl.source, counts: pl.counts, files: pl.mapping.length, reuse: pl.mapping.filter((m) => m.action === "reuse").length, bytes: pl.ins.totalBytes } });
+      } catch (error) { next(error); }
+    });
+  });
+  router.post("/site-web/outils/sauvegarde-site/restaurer", need("tools.import"), (req, res, next) => withSite(req, res, async (siteId) => {
+    const back = bundleBack(siteId);
+    try {
+      if (!Number.isInteger(siteId)) throw Object.assign(new Error("Choisissez le site à restaurer."), { user: true });
+      if (req.body.confirm !== "1") throw Object.assign(new Error("Cochez la case de confirmation pour lancer la restauration."), { user: true });
+      const onConflict = String(req.body.on_conflict || "skip");
+      if (onConflict === "update" && !req.mk.can("tools.overwrite")) throw Object.assign(new Error("Mettre à jour l'existant exige la permission « tools.overwrite »."), { user: true });
+      const file = bundleFile(req, req.body.token);
+      if (!file || !fs.existsSync(file)) throw Object.assign(new Error("Ce paquet n'est plus disponible : analysez-le de nouveau."), { user: true });
+      const out = await bundle.restore(toolsCtx(req), fs.readFileSync(file), { siteId, onConflict });
+      fs.unlinkSync(file);
+      toolsAudit.log(req, "site_bundle_restore", "Site restauré depuis un paquet", { siteId, runId: out.run && out.run.id, files: out.created.files, reused: out.created.reused });
+      flash(req, "ok", `Site restauré : ${out.created.files} fichier(s) créé(s), ${out.created.reused} réutilisé(s). Les pages arrivent en brouillon.`);
+      res.redirect(out.run ? `${BASE}/importer/${out.run.id}${q(siteId)}` : back);
+    } catch (error) {
+      if (!error.user) return next(error);
+      toolsAudit.log(req, "site_bundle_failed", "Restauration de paquet refusée ou échouée", { siteId });
+      flash(req, "error", error.message);
+      res.redirect(back);
+    }
+  }));
 
   // ----- Diagnostic : intégrité, orphelins, file de travaux -----
   router.get("/site-web/outils/diagnostic", need("tools.view"), (req, res) => withSite(req, res, (siteId) => {

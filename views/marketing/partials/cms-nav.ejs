@@ -1,12 +1,16 @@
 <%# Menu latéral de KOLAKISA CMS : mêmes classes et même comportement (sections dépliables, menu réduit, tiroir mobile) que le menu Marketing. « Bientôt » = interface prête, fonction d'un prochain palier. %>
 <% cms.sections.forEach((section) => { %>
   <% if (section.flat) { const item = section.items[0]; %>
-    <a class="mk-nav-link" href="<%= item.href %>" title="<%= item.label %><%= item.status === 'preview' ? ' (bientôt)' : '' %>"<%- item.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= item.label %></span><% if (item.status === "preview") { %><span class="mk-cms-tag mk-nav-label">Bientôt</span><% } %></a>
+    <% if (item.disabled) { %>
+    <span class="mk-nav-link is-soon" aria-disabled="true" title="<%= item.label %> (bientôt)"<%- item.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= item.label %></span><span class="mk-cms-tag mk-nav-label">Bientôt</span></span>
+    <% } else { %>
+    <a class="mk-nav-link" href="<%= typeof mkNavUrl === "function" ? mkNavUrl(item.href) : item.href %>" title="<%= item.label %><%= item.status === 'preview' ? ' (bientôt)' : '' %>"<%- item.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= item.label %></span><% if (item.status === "preview") { %><span class="mk-cms-tag mk-nav-label">Bientôt</span><% } %></a>
+    <% } %>
   <% } else { %>
     <div class="mk-nav-group<%= section.open ? ' is-open' : '' %>" data-mk-group="<%= section.key %>">
       <button type="button" class="mk-nav-head" aria-expanded="<%= section.open ? 'true' : 'false' %>" aria-controls="mk-sub-<%= section.key %>" title="<%= section.label %>"><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= section.label %></span><%- icon("chevronDown", { size: 14, className: "mk-nav-caret" }) %></button>
       <div class="mk-nav-sub" id="mk-sub-<%= section.key %>">
-        <% section.items.forEach((item) => { %><a class="mk-nav-sublink" href="<%= item.href %>"<%- item.current ? ' aria-current="page"' : "" %>><span><%= item.label %></span><% if (item.status === "preview") { %><span class="mk-cms-tag">Bientôt</span><% } %></a>
+        <% section.items.forEach((item) => { %><% if (item.disabled) { %><span class="mk-nav-sublink is-soon" aria-disabled="true" title="<%= item.label %> (bientôt)"<%- item.current ? ' aria-current="page"' : "" %>><span><%= item.label %></span><span class="mk-cms-tag">Bientôt</span></span><% } else { %><a class="mk-nav-sublink" href="<%= typeof mkNavUrl === "function" ? mkNavUrl(item.href) : item.href %>"<%- item.current ? ' aria-current="page"' : "" %>><span><%= item.label %></span><% if (item.status === "preview") { %><span class="mk-cms-tag">Bientôt</span><% } %></a><% } %>
         <% }) %>
       </div>
     </div>

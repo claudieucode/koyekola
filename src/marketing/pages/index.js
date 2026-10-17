@@ -31,6 +31,12 @@ function normalizeTheme(input) {
     try { require("./nodes").normalizePageCss(css); } catch (e) { throw bad(e.message); }
     theme.css = css.slice(0, 8000);
   }
+  // Format de mise en page (conception guidée) : valeur du thème, enregistrée et versionnée avec la page
+  const layout = layoutFormat.normalizeLayout(input && input.layout);
+  if (layout) theme.layout = layout;
+  // Magnétisme de défilement de la page (position, marge, arrêt obligatoire)
+  const snap = require("./scrollSnap").normalize(input && input.scrollSnap);
+  if (snap) theme.scrollSnap = snap;
   return theme;
 }
 
@@ -59,10 +65,16 @@ function normalizeSeo(input = {}) {
 // Contenu en ligne d'une ligne de page
 const publishedContent = (row) => ({ sections: json(row.sections, []), theme: { ...landing.DEFAULT_THEME, ...json(row.theme, {}) }, title: row.title, description: row.description, seo: json(row.seo, {}) });
 
+// Portée de site (R6) : un contexte limité à un site (ctx.siteScope, imposé par le serveur) ne lit et n'écrit que les pages de CE site ; défense en profondeur
+// derrière la garde des routes (une page d'un autre site est « introuvable », comme une page inconnue)
+const inScope = (ctx, siteId) => !Number.isInteger(ctx.siteScope) || (siteId ?? null) === ctx.siteScope;
+function assertSiteScope(ctx, siteId) {
+  if (!inScope(ctx, siteId)) throw new MarketingError("forbidden", "Ce site n'est pas accessible avec vos droits.");
+}
 function getPage(ctx, id) {
   checkCtx(ctx);
   const row = Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null;
-  if (!row) return null;
+  if (!row || !inScope(ctx, row.site_id)) return null;
   const published = publishedContent(row);
   const draft = row.draft ? { ...published, ...json(row.draft, {}) } : null;
   const { draft: _d, sections: _s, theme: _t, seo: _seo, ...meta } = row;
@@ -76,10 +88,21 @@ function requirePage(ctx, id) {
 
 // Contenu validé et normalisé (sans rien enregistrer) : sert au brouillon et au rendu du canevas de l'éditeur.
 // Chaque section reçoit un identifiant stable (sélection, calques, composants, tests A/B à venir).
+// Isolation par site : un composant propre à un site ne s'insère que dans une page de CE site (un composant global, sans site, va partout).
+// Vérifié côté serveur à l'enregistrement ET au déplacement d'une page : jamais seulement par la liste proposée à l'éditeur.
+function assertComponentsUsable(ctx, sections, siteId) {
+  for (const s of sections) {
+    if (!s || s.type !== "component") continue;
+    const c = ctx.db.prepare("SELECT site_id, name FROM mk_web_components WHERE id = ? AND organization_id = ?").get(s.componentId, ctx.organizationId);
+    if (c && c.site_id !== null && c.site_id !== (siteId ?? null)) throw bad(`Le composant « ${c.name} » appartient à un autre site : il ne peut pas être utilisé dans cette page.`);
+  }
+}
 function normalizeContent(ctx, page, input = {}) {
   const raw = (Array.isArray(input.sections) ? input.sections : []).map((s) => (s && typeof s === "object" && s.id === undefined ? { ...s, id: newSectionId() } : s));
+  const normalized = normalizeSections(ctx, raw);
+  assertComponentsUsable(ctx, normalized, page.site_id);
   return {
-    sections: normalizeSections(ctx, raw),
+    sections: normalized,
     theme: normalizeTheme(input.theme),
     title: line(input.title, 120) || page.name,
     description: line(input.description, 300),
@@ -89,6 +112,7 @@ function normalizeContent(ctx, page, input = {}) {
 
 // Widgets réservés (HTML…) : vérifiés pour la personne connectée (ctx.can, posé par les routes web). Un appel interne
 // sans ctx.can (script, tâche de fond, tests du moteur) n'est pas limité.
+const layoutFormat = require("./layoutFormat");
 function checkWidgetRights(ctx, before, after) {
   if (typeof ctx.can !== "function") return;
   try { require("./nodes").lockedWidgetChanges(before, after, ctx.can); } catch (e) { throw new MarketingError("forbidden_widget", e.message); }
@@ -100,15 +124,21 @@ function saveDraft(ctx, id, input = {}, { revision, record = true } = {}) {
   const page = requirePage(ctx, id);
   if (page.archived_at) throw bad("Cette page est archivée : restaurez-la pour la modifier.");
   if (!Number.isInteger(revision)) throw bad("Révision manquante.");
-  const content = normalizeContent(ctx, page, input);
+  // Diagnostics non bloquants (réglages écartés car inapplicables) : renvoyés à l'éditeur, qui nettoie son document
+  const warnings = [];
+  const previous = ctx.__warnings;
+  ctx.__warnings = warnings;
+  let content;
+  try { content = normalizeContent(ctx, page, input); } finally { ctx.__warnings = previous; }
   checkWidgetRights(ctx, [...page.working.sections, ...page.published.sections], content.sections);
+  layoutFormat.checkLocked(page.working, content);
   const next = revision + 1;
   const changed = ctx.db.prepare("UPDATE mk_landing_pages SET draft = ?, revision = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ? AND revision = ?")
     .run(JSON.stringify(content), next, id, ctx.organizationId, revision).changes;
   if (!changed) throw conflict();
   // Historique commun (palier 10) : l'état du brouillon est conservé comme point d'historique (jamais bloquant)
   if (record) require("../../services/revisions").hooks.pageDraft(ctx, page, content);
-  return { revision: next, content };
+  return { revision: next, content, warnings };
 }
 
 function discardDraft(ctx, id) {
@@ -127,11 +157,16 @@ function publish(ctx, id) {
   const check = landing.preflight(ctx, { ...page, sections: resolveSections(ctx, content.sections) });
   if (!check.ready) throw new MarketingError("preflight_failed", check.errors.join(" "));
   return transaction(ctx.db, () => {
-    const number = (ctx.db.prepare("SELECT MAX(number) n FROM mk_page_versions WHERE page_id = ?").get(id).n || 0) + 1;
-    ctx.db.prepare("INSERT INTO mk_page_versions (organization_id, page_id, number, content, reason, created_by) VALUES (?, ?, ?, ?, 'publish', ?)")
-      .run(ctx.organizationId, id, number, JSON.stringify(content), ctx.userId ?? null);
+    // Publier une seconde fois SANS aucun changement (double clic, page remise en ligne) ne fabrique pas une copie identique : elle chasserait de
+    // l'historique (borné) de vraies versions. Le contenu est comparé à la dernière version ; identique → on garde son numéro.
+    const last = ctx.db.prepare("SELECT number, content FROM mk_page_versions WHERE page_id = ? ORDER BY number DESC LIMIT 1").get(id);
+    const serialized = JSON.stringify(content);
+    const same = last && last.content === serialized;
+    const number = same ? last.number : (last ? last.number : 0) + 1;
+    if (!same) ctx.db.prepare("INSERT INTO mk_page_versions (organization_id, page_id, number, content, reason, created_by) VALUES (?, ?, ?, ?, 'publish', ?)")
+      .run(ctx.organizationId, id, number, serialized, ctx.userId ?? null);
     ctx.db.prepare(`UPDATE mk_landing_pages SET sections = ?, theme = ?, title = ?, description = ?, seo = ?, draft = NULL, revision = revision + 1,
-        status = 'published', published_at = COALESCE(published_at, datetime('now')), updated_at = datetime('now') WHERE id = ?`)
+        status = 'published', published_at = COALESCE(published_at, datetime('now')), scheduled_at = NULL, updated_at = datetime('now') WHERE id = ?`)
       .run(JSON.stringify(content.sections), JSON.stringify(content.theme), content.title, content.description, JSON.stringify(content.seo), id);
     // Historique borné : les plus anciennes versions au-delà de MAX_VERSIONS sont effacées
     ctx.db.prepare("DELETE FROM mk_page_versions WHERE page_id = ? AND number <= ?").run(id, number - MAX_VERSIONS);
@@ -144,17 +179,67 @@ function unpublish(ctx, id) {
   landing.unpublishPage(ctx, id);
 }
 
+// ---------- Programmation de la publication (palier 23) ----------
+// Une page peut être mise en ligne automatiquement à une date future (UTC). Il n'y a pas de tâche de fond : comme pour les articles, la page
+// est publiée à la première visite du site (ou lecture du plan du site, ou ouverture de la liste des pages) APRÈS l'heure prévue.
+// Les contrôles de publication (formulaire publié, etc.) sont faits dès la programmation ET au moment de publier ; si la page n'est plus publiable à
+// l'heure dite, la programmation est retirée et l'échec est consigné dans le journal d'audit (jamais d'échec silencieux).
+const SCHEDULE_FORMAT = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+function schedulePage(ctx, id, at) {
+  const page = requirePage(ctx, id);
+  if (page.archived_at) throw bad("Cette page est archivée : restaurez-la avant de la programmer.");
+  if (ctx.db.prepare("SELECT 1 FROM mk_page_tests WHERE variant_page_id = ?").get(id)) throw bad("Cette page est la version B d'un test A/B : elle ne se programme pas seule.");
+  const when = String(at || "");
+  if (!SCHEDULE_FORMAT.test(when) || Number.isNaN(Date.parse(when.replace(" ", "T") + "Z"))) throw bad("Date de programmation invalide.");
+  const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+  if (when <= now) throw bad("Programmation : choisissez une date et une heure dans le futur.");
+  const check = landing.preflight(ctx, { ...page, sections: resolveSections(ctx, page.working.sections) });
+  if (!check.ready) throw new MarketingError("preflight_failed", check.errors.join(" "));
+  ctx.db.prepare("UPDATE mk_landing_pages SET scheduled_at = ?, updated_at = datetime('now') WHERE id = ?").run(when, id);
+  audit(ctx, "page.scheduled", "landing", id, { at: when, slug: page.slug });
+  return { at: when };
+}
+function cancelSchedule(ctx, id) {
+  const page = requirePage(ctx, id);
+  if (!page.scheduled_at) return false;
+  ctx.db.prepare("UPDATE mk_landing_pages SET scheduled_at = NULL, updated_at = datetime('now') WHERE id = ?").run(id);
+  audit(ctx, "page.schedule_cancelled", "landing", id, { was: page.scheduled_at });
+  return true;
+}
+let lastPromotion = 0;
+function promoteScheduledPages(db, { force = false } = {}) {
+  const nowMs = Date.now();
+  if (!force && nowMs - lastPromotion < 15000) return 0; // au plus une vérification toutes les 15 s par processus
+  lastPromotion = nowMs;
+  let due;
+  try { due = db.prepare("SELECT id, organization_id FROM mk_landing_pages WHERE scheduled_at IS NOT NULL AND scheduled_at <= datetime('now') AND archived_at IS NULL ORDER BY scheduled_at LIMIT 25").all(); } catch { return 0; }
+  let done = 0;
+  for (const row of due) {
+    const ctx = { db, organizationId: row.organization_id, userId: null };
+    // `audit()` ignore les actions sans personne connectée : la mise en ligne automatique est consignée directement (utilisateur vide = le système)
+    const trace = (action, metadata) => { try { require("../audit").recordAudit(db, { organizationId: row.organization_id, userId: null, action, resourceType: "landing", resourceId: row.id, metadata }); } catch { /* la trace ne bloque pas la publication */ } };
+    try { publish(ctx, row.id); trace("page.published", { scheduled: true }); done += 1; } catch (error) {
+      db.prepare("UPDATE mk_landing_pages SET scheduled_at = NULL WHERE id = ?").run(row.id);
+      trace("page.schedule_failed", { reason: String(error.message || error).slice(0, 300) });
+    }
+  }
+  return done;
+}
+// Intergiciel du serveur : vérifie les programmations échues avant de servir une page
+const schedulerMiddleware = (req, res, next) => { try { promoteScheduledPages(require("../../config/database")); } catch { /* jamais bloquant */ } next(); };
+
 // Toutes les pages (Site Web → Pages) : site, brouillon en cours, statistiques réelles cumulées
 function listPages(ctx, { archived = false, siteId } = {}) {
   checkCtx(ctx);
   const bySite = siteId === undefined ? "" : siteId === null ? " AND p.site_id IS NULL" : " AND p.site_id = ?";
-  const params = [ctx.organizationId, ...(siteId ? [siteId] : [])];
+  const hid = require("../visibility").notHiddenSql(ctx.hiddenSites, "p.site_id"); // R4 : pages des sites cachés exclues
+  const params = [ctx.organizationId, ...(siteId ? [siteId] : []), ...hid.params];
   return ctx.db.prepare(`SELECT p.id, p.name, p.slug, p.title, p.status, p.kind, p.site_id, p.published_at, p.updated_at, p.archived_at, p.draft IS NOT NULL AS has_draft,
       s.name AS site_name,
       (SELECT COUNT(DISTINCT e.visitor || ':' || (e.occurred_at / 86400000)) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'view') AS visitors,
       (SELECT COUNT(*) FROM mk_landing_events e WHERE e.page_id = p.id AND e.type = 'signup') AS signups
     FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id
-    WHERE p.organization_id = ? AND p.archived_at IS ${archived ? "NOT " : ""}NULL${bySite}
+    WHERE p.organization_id = ? AND p.archived_at IS ${archived ? "NOT " : ""}NULL${bySite} AND ${hid.sql}
       AND p.id NOT IN (SELECT variant_page_id FROM mk_page_tests WHERE variant_page_id IS NOT NULL) -- versions B des tests A/B : gérées dans leur test
     ORDER BY p.updated_at DESC, p.id DESC`).all(...params);
 }
@@ -189,36 +274,73 @@ function uniqueName(ctx, table, base) {
 }
 
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
-function createPage(ctx, { name, siteId = null, kind = "page", template = null } = {}) {
+function createPage(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
+  assertSiteScope(ctx, siteId);
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
   const mine = typeof template === "string" && /^mine:\d+$/.test(template) ? getPageTemplate(ctx, Number(template.slice(5))) : null;
   const fromTemplate = mine ? mine.content.sections : template ? require("./templates").buildTemplate(ctx, template) : null;
   if (template && !fromTemplate) throw bad("Modèle de page inconnu.");
   const page = landing.createPage(ctx, { name });
-  ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ? WHERE id = ?").run(kind, siteId, page.id);
+  // Palier 23 : une page de SITE (À propos, Contact…) est indexable par défaut (comme sur WordPress) ; une page d'atterrissage ou une étape de tunnel reste non indexée
+  // jusqu'à ce qu'on la rende indexable. La personne peut toujours changer ce réglage dans la fiche de la page.
+  ctx.db.prepare("UPDATE mk_landing_pages SET kind = ?, site_id = ?, indexable = ? WHERE id = ?").run(kind, siteId, kind === "page" ? 1 : 0, page.id);
   if (fromTemplate) {
     const sections = normalizeSections(ctx, fromTemplate.map((s) => ({ ...s, id: newSectionId() })));
     checkWidgetRights(ctx, [], sections);
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
     if (mine && mine.content.theme) ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(normalizeTheme(mine.content.theme)), page.id);
     audit(ctx, "page.created_from_template", "landing", page.id, { template });
-    return requirePage(ctx, page.id);
+    return withLayout(ctx, page.id, layout);
   }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
   // avant toute publication)
-  if (kind === "page" || kind === "step") {
+  // Page vierge demandée explicitement (éditeur) : aucune section, l'éditeur propose alors création classique ou guidée. Sans `blank`, le contenu de départ historique est inchangé.
+  if (blank) ctx.db.prepare("UPDATE mk_landing_pages SET sections = '[]' WHERE id = ?").run(page.id);
+  else if (kind === "page" || kind === "step") {
     const start = [{ ...page.sections[0], id: newSectionId() }, { type: "text", markdown: "Présentez ici le contenu de la page.", id: newSectionId() }];
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(start), page.id);
   }
-  return requirePage(ctx, page.id);
+  return withLayout(ctx, page.id, layout);
+}
+// Sections d'un gabarit intégré, validées comme toute section (insertion dans une page ouverte dans l'éditeur) ; null si la clé est inconnue
+function gabaritSections(ctx, key) {
+  const raw = typeof key === "string" ? require("./templates").buildTemplate(ctx, key) : null;
+  if (!raw) return null;
+  const sections = normalizeSections(ctx, raw.map((s) => ({ ...s, id: newSectionId() })));
+  checkWidgetRights(ctx, [], sections);
+  return sections;
+}
+// Pages les plus récemment MODIFIÉES (aucune date d'ouverture n'est enregistrée) : données réelles de la table des pages, sans copie
+function recentPages(ctx, { limit = 8, exceptId = null } = {}) {
+  return listPages(ctx).filter((p) => p.id !== exceptId).slice(0, limit)
+    .map((p) => ({ id: p.id, name: p.name, status: p.status, kind: p.kind, siteName: p.site_name || "", updatedAt: p.updated_at, hasDraft: Boolean(p.has_draft) }));
+}
+// Conception guidée dès la création : le format est écrit dans le thème de la page (aucune migration)
+function withLayout(ctx, id, layout) {
+  if (layout) {
+    const norm = layoutFormat.normalizeLayout(layout);
+    if (norm) {
+      const row = ctx.db.prepare("SELECT theme, sections FROM mk_landing_pages WHERE id = ?").get(id);
+      const theme = { ...JSON.parse(row.theme || "{}"), layout: norm };
+      ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(theme), id);
+      // Format verrouillé + gabarit : la largeur et les marges des éléments de premier niveau sont réglées par le format, pas par le gabarit (sinon le verrou refuserait chaque enregistrement)
+      if (norm.locked) {
+        const cleaned = layoutFormat.apply({ sections: JSON.parse(row.sections || "[]") }, norm, { clearConflicts: true }).sections;
+        ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(cleaned), id);
+      }
+      audit(ctx, "page.layout_format_set", "landing", id, { format: norm.format, locked: norm.locked });
+    }
+  }
+  return requirePage(ctx, id);
 }
 
 // Copie : contenu de travail (brouillon s'il existe), en brouillon, hors ligne, nouvelle adresse
 function duplicatePage(ctx, id, { siteId } = {}) {
   const page = requirePage(ctx, id);
   const target = siteId === undefined ? page.site_id : siteId;
+  assertSiteScope(ctx, target);
   if (target !== null && target !== undefined) requireSite(ctx, target, { active: true });
   const name = uniqueName(ctx, "mk_landing_pages", `${page.name} (copie)`);
   const c = page.working;
@@ -231,10 +353,14 @@ function duplicatePage(ctx, id, { siteId } = {}) {
 }
 
 // Archiver : la page est retirée du site (hors ligne) et des listes ; rien n'est effacé (statistiques, versions)
-function archivePage(ctx, id) {
+function archivePage(ctx, id, { detach = false } = {}) {
   requirePage(ctx, id);
-  ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
+  // Palier 18 : une page utilisée par un tunnel actif ne part pas à la corbeille en silence (refus listant les tunnels, ou détachement explicite)
+  require("../funnels").guardPageRemoval(ctx, id, { detach, action: "mise à la corbeille" });
+  require("./abtests").guardPageRemoval(ctx, id, "mise à la corbeille"); // palier 22 : une page testée ne disparaît pas en silence
+  ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), scheduled_at = NULL, status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ?").run(id, ctx.organizationId);
+  invalidateSites();
   audit(ctx, "page.archived", "landing", id, {});
 }
 // Restaurer une page archivée : elle revient hors ligne (jamais republiée d'office)
@@ -257,22 +383,63 @@ const parseSite = (row) => {
   const settings = siteSettingsLib.normalizeSettings(json(row.settings, {}));
   return { ...row, tokens, settings, assets: siteSettingsLib.siteAssets(tokens, settings, themeCss) };
 };
+const SITE_TYPES = { "": "Non précisé", vitrine: "Site vitrine", blog: "Blog", boutique: "Boutique", formation: "Formation", autre: "Autre" };
+const SITE_VIEWS = ["actifs", "archives", "supprimes", "tous"];
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+function freeSiteSlug(ctx, base, exceptId = null) {
+  let slug = base, n = 2;
+  while (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND slug = ? AND id IS NOT ?").get(ctx.organizationId, slug, exceptId)) slug = `${base.slice(0, 55)}-${n++}`;
+  return slug;
+}
+// Les sites créés avant le Site Manager n'ont pas d'identifiant lisible : il leur est attribué (une seule fois) d'après leur nom
+function backfillSlugs(ctx) {
+  const rows = ctx.db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND slug IS NULL ORDER BY id").all(ctx.organizationId);
+  for (const r of rows) ctx.db.prepare("UPDATE mk_sites SET slug = ? WHERE id = ?").run(freeSiteSlug(ctx, landing.slugify(r.name).replace(/^page$/, "site"), r.id), r.id);
+}
+function cleanSiteSlug(ctx, value, { exceptId = null } = {}) {
+  const v = String(value ?? "").trim().toLowerCase();
+  if (!SLUG_RE.test(v) || v.length < 2 || v.length > 60) throw bad("Identifiant lisible invalide : 2 à 60 caractères, lettres minuscules, chiffres et tirets (ex. mon-site).");
+  if (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND slug = ? AND id IS NOT ?").get(ctx.organizationId, v, exceptId)) throw new MarketingError("duplicate", "Cet identifiant est déjà utilisé par un autre site.");
+  return v;
+}
+function cleanSiteType(value) {
+  const v = String(value ?? "").trim();
+  if (!Object.prototype.hasOwnProperty.call(SITE_TYPES, v)) throw bad("Type de site inconnu.");
+  return v;
+}
 function getSite(ctx, id) {
   checkCtx(ctx);
+  backfillSlugs(ctx);
   return parseSite(Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_sites WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null);
 }
 function requireSite(ctx, id, { active = false } = {}) {
   const site = getSite(ctx, Number(id));
   if (!site) throw new MarketingError("not_found", "Site introuvable.");
-  if (active && site.status !== "active") throw bad("Ce site est archivé : restaurez-le d'abord.");
+  if (active && (site.status !== "active" || site.deleted_at)) throw bad("Ce site est archivé ou supprimé : restaurez-le d'abord.");
   return site;
 }
-function listSites(ctx, { archived = false } = {}) {
+// view : actifs | archives | supprimes | tous (hors supprimés) ; q : recherche dans le nom, l'identifiant lisible et la description (lecture seule)
+function listSites(ctx, { archived = false, view = null, q = "", only = null } = {}) {
   checkCtx(ctx);
+  backfillSlugs(ctx);
+  const v = SITE_VIEWS.includes(view) ? view : archived ? "archives" : "actifs";
+  const where = ["s.organization_id = ?"];
+  const args = [ctx.organizationId];
+  if (v === "supprimes") where.push("s.deleted_at IS NOT NULL");
+  else { where.push("s.deleted_at IS NULL"); if (v !== "tous") { where.push("s.status = ?"); args.push(v === "archives" ? "archived" : "active"); } }
+  const term = String(q || "").trim().slice(0, 80);
+  if (term) { const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`; where.push("(s.name LIKE ? ESCAPE '\\' OR s.slug LIKE ? ESCAPE '\\' OR s.description LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
+  if (Array.isArray(only)) { where.push(`s.id IN (${only.length ? only.map(() => "?").join(",") : "NULL"})`); args.push(...only); }
   return ctx.db.prepare(`SELECT s.*,
       (SELECT COUNT(*) FROM mk_landing_pages p WHERE p.site_id = s.id AND p.archived_at IS NULL) AS pages,
       (SELECT COUNT(*) FROM mk_landing_pages p WHERE p.site_id = s.id AND p.archived_at IS NULL AND p.status = 'published') AS published
-    FROM mk_sites s WHERE s.organization_id = ? AND s.status = ? ORDER BY s.updated_at DESC, s.id DESC`).all(ctx.organizationId, archived ? "archived" : "active").map(parseSite);
+    FROM mk_sites s WHERE ${where.join(" AND ")} ORDER BY s.updated_at DESC, s.id DESC`).all(...args).map(parseSite);
+}
+function siteCounts(ctx) {
+  checkCtx(ctx);
+  const r = ctx.db.prepare(`SELECT COALESCE(SUM(deleted_at IS NULL AND status = 'active'), 0) AS actifs, COALESCE(SUM(deleted_at IS NULL AND status = 'archived'), 0) AS archives,
+    COALESCE(SUM(deleted_at IS NOT NULL), 0) AS supprimes FROM mk_sites WHERE organization_id = ?`).get(ctx.organizationId);
+  return { actifs: r.actifs, archives: r.archives, supprimes: r.supprimes, tous: r.actifs + r.archives };
 }
 function sitePages(ctx, siteId, { archived = false } = {}) {
   requireSite(ctx, siteId);
@@ -280,26 +447,50 @@ function sitePages(ctx, siteId, { archived = false } = {}) {
     WHERE organization_id = ? AND site_id = ? AND archived_at IS ${archived ? "NOT " : ""}NULL ORDER BY name COLLATE NOCASE`).all(ctx.organizationId, siteId);
 }
 
-function createSite(ctx, { name, tokens } = {}) {
+function createSite(ctx, { name, tokens, slug, description, siteType } = {}) {
   checkCtx(ctx);
   const clean_ = line(name, 100);
   if (!clean_) throw bad("Le nom du site est obligatoire.");
   if (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, clean_)) throw new MarketingError("duplicate", "Un site porte déjà ce nom.");
-  const id = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, tokens, created_by) VALUES (?, ?, ?, ?)")
-    .run(ctx.organizationId, clean_, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
+  backfillSlugs(ctx);
+  const finalSlug = slug !== undefined && String(slug).trim() !== "" ? cleanSiteSlug(ctx, slug) : freeSiteSlug(ctx, landing.slugify(clean_).replace(/^page$/, "site"));
+  const desc = line(description ?? "", 500);
+  const type = cleanSiteType(siteType ?? "");
+  const id = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, slug, description, site_type, tokens, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, clean_, finalSlug, desc, type, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
   audit(ctx, "site.created", "site", id, {});
   return getSite(ctx, id);
 }
-function updateSite(ctx, id, { name, tokens } = {}) {
+function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {}) {
   const site = requireSite(ctx, id, { active: true });
   const newName = name === undefined ? site.name : line(name, 100);
   if (!newName) throw bad("Le nom du site est obligatoire.");
   const dup = ctx.db.prepare("SELECT id FROM mk_sites WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, newName);
   if (dup && dup.id !== site.id) throw new MarketingError("duplicate", "Un site porte déjà ce nom.");
   const newTokens = tokens === undefined ? site.tokens : normalizeTokens(tokens, { strict: true });
-  ctx.db.prepare("UPDATE mk_sites SET name = ?, tokens = ?, updated_at = datetime('now') WHERE id = ?").run(newName, JSON.stringify(newTokens), site.id);
+  const newSlug = slug === undefined ? site.slug : cleanSiteSlug(ctx, slug, { exceptId: site.id });
+  const newDesc = description === undefined ? site.description : line(description, 500);
+  const newType = siteType === undefined ? site.site_type : cleanSiteType(siteType);
+  ctx.db.prepare("UPDATE mk_sites SET name = ?, slug = ?, description = ?, site_type = ?, tokens = ?, updated_at = datetime('now') WHERE id = ?").run(newName, newSlug, newDesc, newType, JSON.stringify(newTokens), site.id);
+  invalidateSites();
   audit(ctx, "site.updated", "site", site.id, { tokens: tokens !== undefined });
   return getSite(ctx, site.id);
+}
+// Où le site lui-même référence une couleur personnalisée (pour le message de refus) : libellés lisibles, jamais de chemin technique
+function siteColorHolders(tokens, settings) {
+  const has = (v, key) => JSON.stringify(v === undefined ? null : v).includes(`"token:${key}"`);
+  return (key) => {
+    const where = [];
+    if ((settings.classes || []).some((c) => has(c.styles, key) || has(c.states, key))) where.push("classes globales");
+    if (has(tokens.buttons, key)) where.push("boutons");
+    if (has(tokens.link, key)) where.push("liens");
+    if (has(tokens.list, key)) where.push("listes");
+    if (has(tokens.forms, key)) where.push("champs de formulaire");
+    if (has(tokens.images, key) || has(tokens.typeExtra, key) || has(tokens.border, key)) where.push("images, textes ou bordures");
+    if (has(settings.background, key)) where.push("fond du site");
+    if (!where.length) where.push("autres réglages");
+    return where;
+  };
 }
 // Enregistrement des réglages d'un site (couleurs, polices… = jetons). Une seule révision pour l'ensemble des réglages :
 // deux enregistrements concurrents ne s'écrasent jamais en silence.
@@ -320,6 +511,12 @@ function saveSiteDesign(ctx, id, { tokens, settings, name, revision } = {}) {
   // Supprimer une couleur personnalisée encore utilisée casserait des widgets : refusé, avec le détail
   const removed = site.tokens.customColors.filter((c) => !nextTokens.customColors.some((n) => n.key === c.key));
   if (removed.length) {
+    // Références portées par le site lui-même (classes globales, boutons, liens, puces, champs, fond…) : elles aussi laisseraient une variable CSS inexistante
+    const siteText = JSON.stringify({ tokens: { ...nextTokens, customColors: undefined }, settings: nextSettings });
+    const ownerOf = siteColorHolders(nextTokens, nextSettings);
+    for (const c of removed) {
+      if (siteText.includes(`"token:${c.key}"`)) throw bad(`La couleur « ${c.label} » est utilisée par les réglages du site (${ownerOf(c.key).join(", ")}) : remplacez-la avant de la supprimer.`);
+    }
     const usage = colorUsage(ctx, site.id);
     const busy = removed.filter((c) => usage[c.key] && usage[c.key].pages > 0);
     if (busy.length) {
@@ -372,16 +569,34 @@ function setHomePage(ctx, siteId, pageId) {
   invalidateSites();
 }
 function movePage(ctx, pageId, siteId) {
-  requirePage(ctx, pageId);
+  const page = requirePage(ctx, pageId);
+  if (page.archived_at) throw bad("Cette page est à la corbeille : restaurez-la avant de la déplacer.");
+  assertSiteScope(ctx, siteId); // un accès limité à un site ne déplace pas une page vers un autre site
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
-  ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ? AND id IS NOT ?").run(pageId, ctx.organizationId, siteId);
+  // Les composants propres à l'ancien site ne suivent pas la page : déplacer d'abord, ou retirer ces composants
+  assertComponentsUsable(ctx, page.working.sections, siteId);
+  assertComponentsUsable(ctx, page.published.sections, siteId);
+  if ((page.site_id ?? null) === (siteId ?? null)) return;
+  // Une page utilisée par un tunnel ne change pas de site en silence : le tunnel doit d'abord s'en détacher
+  const funnel = ctx.db.prepare("SELECT f.name FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE s.page_id = ? AND f.site_id IS NOT ? LIMIT 1").get(pageId, siteId ?? null);
+  if (funnel) throw bad(`Cette page est une étape du tunnel « ${funnel.name} » : retirez-la du tunnel avant de la déplacer vers un autre site.`);
+  transaction(ctx.db, () => {
+    ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ? AND id IS NOT ?").run(pageId, ctx.organizationId, siteId);
+    // Liens hiérarchiques avec l'ancien site (page parente, pages enfants) : retirés avant le déplacement
+    ctx.db.prepare("UPDATE mk_landing_pages SET parent_id = NULL WHERE id = ? OR parent_id = ?").run(pageId, pageId);
+    // Les expériences A/B de la page suivent son site (le site y est recopié de la page)
+    ctx.db.prepare("UPDATE mk_page_tests SET site_id = ? WHERE page_id = ?").run(siteId, pageId);
+    // Une variante d'en-tête propre à l'ancien site ne suit pas la page : elle reprend l'en-tête du nouveau site
+    ctx.db.prepare("UPDATE mk_landing_pages SET header_mode = 'inherit', header_component_id = NULL WHERE id = ? AND header_component_id IN (SELECT id FROM mk_web_components WHERE site_id IS NOT NULL AND site_id IS NOT ?)").run(pageId, siteId ?? null);
+    ctx.db.prepare("UPDATE mk_landing_pages SET site_id = ?, updated_at = datetime('now') WHERE id = ?").run(siteId, pageId);
+  });
   invalidateSites();
-  ctx.db.prepare("UPDATE mk_landing_pages SET site_id = ?, updated_at = datetime('now') WHERE id = ?").run(siteId, pageId);
   audit(ctx, "page.moved", "landing", pageId, { siteId });
 }
 // Archiver un site : ses pages en ligne passent hors ligne (rien n'est effacé) ; restaurer ne republie rien d'office
 function archiveSite(ctx, id) {
   const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est supprimé : restaurez-le d'abord.");
   transaction(ctx.db, () => {
     ctx.db.prepare("UPDATE mk_landing_pages SET status = 'unpublished', updated_at = datetime('now') WHERE site_id = ? AND status = 'published'").run(site.id);
     ctx.db.prepare("UPDATE mk_sites SET status = 'archived', archived_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(site.id);
@@ -391,6 +606,7 @@ function archiveSite(ctx, id) {
 }
 function restoreSite(ctx, id) {
   const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est dans la corbeille : sortez-le d'abord de la corbeille.");
   // Le domaine d'un site archivé a pu être repris par un autre site : il n'est pas rendu en silence (le site restauré retrouve ses réglages sans domaine)
   const restoredUrl = site.settings.seo && site.settings.seo.publicUrl;
   if (restoredUrl) {
@@ -402,32 +618,61 @@ function restoreSite(ctx, id) {
   invalidateSites();
   audit(ctx, "site.restored", "site", site.id, {});
 }
-// Dupliquer un site : design system et pages (en brouillon, hors ligne, nouvelles adresses)
-function duplicateSite(ctx, id) {
+// Dupliquer un site : configuration (design system, réglages, description, type) et, si demandé, ses pages (en brouillon, hors ligne, nouvelles adresses).
+// Médias, tunnels, articles et autres données du CMS ne sont jamais copiés.
+function duplicateSite(ctx, id, { withPages = true } = {}) {
   const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est supprimé : restaurez-le d'abord.");
   return transaction(ctx.db, () => {
-    const copy = createSite(ctx, { name: uniqueName(ctx, "mk_sites", `${site.name} (copie)`), tokens: site.tokens });
+    const copy = createSite(ctx, { name: uniqueName(ctx, "mk_sites", `${site.name} (copie)`), tokens: site.tokens, description: site.description, siteType: site.site_type });
     // Une copie n'hérite jamais du domaine de l'original (un domaine ne sert qu'un seul site)
     ctx.db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify({ ...site.settings, seo: { ...site.settings.seo, publicUrl: "" } }), copy.id);
-    const map = new Map();
-    for (const p of sitePages(ctx, site.id)) map.set(p.id, duplicatePage(ctx, p.id, { siteId: copy.id }).id);
-    if (site.home_page_id && map.has(site.home_page_id)) setHomePage(ctx, copy.id, map.get(site.home_page_id));
-    audit(ctx, "site.duplicated", "site", copy.id, { from: site.id });
+    if (withPages) {
+      const map = new Map();
+      for (const p of sitePages(ctx, site.id)) map.set(p.id, duplicatePage(ctx, p.id, { siteId: copy.id }).id);
+      if (site.home_page_id && map.has(site.home_page_id)) setHomePage(ctx, copy.id, map.get(site.home_page_id));
+    }
+    audit(ctx, "site.duplicated", "site", copy.id, { from: site.id, withPages });
     return getSite(ctx, copy.id);
   });
+}
+// Suppression logique : seulement un site archivé (donc hors ligne). Rien n'est effacé : pages, accès et réglages restent en base et le site se restaure depuis la corbeille.
+function deleteSite(ctx, id) {
+  const site = requireSite(ctx, id);
+  if (site.deleted_at) throw bad("Ce site est déjà supprimé.");
+  if (site.status !== "archived") throw bad("Archivez d'abord ce site : seul un site archivé peut être supprimé.");
+  ctx.db.prepare("UPDATE mk_sites SET deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?").run(ctx.userId ?? null, site.id);
+  invalidateSites();
+  audit(ctx, "site.deleted", "site", site.id, {});
+}
+function undeleteSite(ctx, id) {
+  const site = requireSite(ctx, id);
+  if (!site.deleted_at) throw bad("Ce site n'est pas supprimé.");
+  ctx.db.prepare("UPDATE mk_sites SET deleted_at = NULL, deleted_by = NULL, updated_at = datetime('now') WHERE id = ?").run(site.id);
+  invalidateSites();
+  audit(ctx, "site.undeleted", "site", site.id, {});
 }
 
 // ---------- Composants réutilisables ----------
 
+const COMPONENT_KINDS = ["standard", "global"];
+// Nombre d'éléments (blocs) d'une section de composant : la section libre compte ses éléments imbriqués, un autre type de section compte pour un
+function countBlocks(section) {
+  if (!section) return 0;
+  const walk = (list) => list.reduce((n, x) => n + 1 + walk(Array.isArray(x.children) ? x.children : []), 0);
+  return section.type === "layout" ? walk(Array.isArray(section.children) ? section.children : []) : 1;
+}
+// « global » = portée (tous les sites) ; « kind » = nature (modèle standard ou référence globale à instances liées)
+const readComponent = (row) => row ? { ...row, section: json(row.section, null), draft: json(row.draft, null), hasDraft: Boolean(row.draft), global: row.site_id === null, kind: row.kind || "standard", blocks: countBlocks(json(row.section, null)) } : null;
 function listComponents(ctx, { siteId = null } = {}) {
   checkCtx(ctx);
   return ctx.db.prepare("SELECT * FROM mk_web_components WHERE organization_id = ? AND (site_id IS NULL OR site_id = ?) ORDER BY name COLLATE NOCASE")
-    .all(ctx.organizationId, siteId).map((c) => ({ ...c, section: json(c.section, null), global: c.site_id === null }));
+    .all(ctx.organizationId, siteId).map(readComponent);
 }
 function getComponent(ctx, id) {
   checkCtx(ctx);
   const row = Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_web_components WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null;
-  return row ? { ...row, section: json(row.section, null), global: row.site_id === null } : null;
+  return readComponent(row);
 }
 // Une section enregistrée comme composant : jamais un composant dans un composant (pas de boucle possible)
 function componentSection(ctx, section) {
@@ -435,16 +680,17 @@ function componentSection(ctx, section) {
   const { id: _id, ...rest } = section;
   return normalizeSection(ctx, rest, 0);
 }
-function createComponent(ctx, { name, section, siteId = null } = {}) {
+function createComponent(ctx, { name, section, siteId = null, kind = "standard" } = {}) {
   checkCtx(ctx);
+  if (!COMPONENT_KINDS.includes(kind)) throw bad("Nature de composant inconnue (standard ou global).");
   const n = line(name, 80);
   if (!n) throw bad("Le nom du composant est obligatoire.");
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   if (ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, n)) throw new MarketingError("duplicate", "Un composant porte déjà ce nom.");
   checkWidgetRights(ctx, [], [componentSection(ctx, section)]);
-  const id = Number(ctx.db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section, created_by) VALUES (?, ?, ?, ?, ?)")
-    .run(ctx.organizationId, siteId, n, JSON.stringify(componentSection(ctx, section)), ctx.userId ?? null).lastInsertRowid);
-  audit(ctx, "component.created", "component", id, {});
+  const id = Number(ctx.db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section, kind, created_by) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(ctx.organizationId, siteId, n, JSON.stringify(componentSection(ctx, section)), kind, ctx.userId ?? null).lastInsertRowid);
+  audit(ctx, "component.created", "component", id, { kind });
   return getComponent(ctx, id);
 }
 // global : true = partagé par tous les sites ; false = réservé au site siteId (refusé s'il est utilisé ailleurs)
@@ -463,6 +709,10 @@ function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
     const sid = Number(siteId);
     if (!Number.isInteger(sid)) throw bad("Choisissez le site auquel réserver ce composant.");
     requireSite(ctx, sid, { active: true });
+    // Aussi : en-tête / pied de page d'un autre site, et variantes d'en-tête de pages d'un autre site
+    const partOf = ctx.db.prepare("SELECT name FROM mk_sites WHERE (header_component_id = ? OR footer_component_id = ?) AND id <> ? LIMIT 1").get(c.id, c.id, sid)
+      || ctx.db.prepare("SELECT name FROM mk_landing_pages WHERE header_component_id = ? AND site_id IS NOT ? LIMIT 1").get(c.id, sid);
+    if (partOf) throw new MarketingError("in_use", `Ce composant sert d'en-tête ou de pied de page à « ${partOf.name} » (autre site) : il doit rester global.`);
     const elsewhere = componentUsage(ctx, c.id).filter((p) => p.site_id !== sid);
     if (elsewhere.length) throw new MarketingError("in_use", `Ce composant est utilisé par des pages d'un autre site ou hors site (${elsewhere.map((p) => `« ${p.name} »`).join(", ")}) : il doit rester global.`);
     site = sid;
@@ -471,6 +721,47 @@ function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
   audit(ctx, "component.updated", "component", c.id, {});
   return getComponent(ctx, c.id);
 }
+// Copie de travail : modifiée dans l'éditeur du composant, SANS effet sur les pages tant que la mise à jour n'est pas demandée
+function saveComponentDraft(ctx, id, section) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  const s = componentSection(ctx, section);
+  checkWidgetRights(ctx, [c.section], [s]);
+  ctx.db.prepare("UPDATE mk_web_components SET draft = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(s), c.id);
+  return getComponent(ctx, c.id);
+}
+// Mise à jour explicite : la copie de travail devient la version diffusée (les instances liées l'affichent), numéro de version + 1
+function publishComponent(ctx, id) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  if (!c.draft) return { component: c, changed: false, instances: componentInstances(ctx, c.id) };
+  checkWidgetRights(ctx, [c.section], [c.draft]);
+  transaction(ctx.db, () => {
+    ctx.db.prepare("UPDATE mk_web_components SET section = ?, draft = NULL, version = version + 1, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(c.draft), c.id);
+    audit(ctx, "component.published", "component", c.id, { version: c.version + 1 });
+  });
+  return { component: getComponent(ctx, c.id), changed: true, instances: componentInstances(ctx, c.id) };
+}
+function discardComponentDraft(ctx, id) {
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  ctx.db.prepare("UPDATE mk_web_components SET draft = NULL, updated_at = datetime('now') WHERE id = ?").run(c.id);
+  return getComponent(ctx, c.id);
+}
+// Instances liées réellement présentes dans le contenu de travail de chaque page (brouillon s'il existe, sinon version en ligne) : nombre exact, pas une recherche de texte
+function countRefs(list, id) {
+  return (Array.isArray(list) ? list : []).reduce((n, x) => n + (x && x.type === "component" && Number(x.componentId) === Number(id) ? 1 : 0), 0);
+}
+function componentInstances(ctx, id) {
+  const rows = ctx.db.prepare("SELECT id, name, status, site_id, sections, draft FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
+    .all(ctx.organizationId, `%"componentId":${Number(id)}}%`, `%"componentId":${Number(id)},%`, `%"componentId":${Number(id)}}%`, `%"componentId":${Number(id)},%`);
+  const out = rows.map((p) => {
+    const draft = json(p.draft, null);
+    const working = draft && Array.isArray(draft.sections) ? draft.sections : json(p.sections, []);
+    return { id: p.id, name: p.name, status: p.status, site_id: p.site_id, count: countRefs(working, id), live: countRefs(json(p.sections, []), id) };
+  }).filter((p) => p.count > 0 || p.live > 0);
+  return out;
+}
 // Pages (en ligne ou en brouillon) qui affichent ce composant synchronisé
 function componentUsage(ctx, id) {
   const n = Number(id);
@@ -478,17 +769,74 @@ function componentUsage(ctx, id) {
   return ctx.db.prepare("SELECT id, name, status, site_id FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? OR sections LIKE ? OR draft LIKE ? OR draft LIKE ?) ORDER BY name")
     .all(ctx.organizationId, end, mid, end, mid);
 }
-function deleteComponent(ctx, id) {
+// Copie profonde d'une section de composant avec de NOUVEAUX identifiants (sections et éléments) : une instance détachée ne partage aucun identifiant avec la source
+function freshIds(section) {
+  const crypto = require("crypto");
+  const nid = () => crypto.randomBytes(6).toString("hex");
+  const walk = (x) => {
+    const y = { ...x, id: nid() };
+    if (Array.isArray(x.children)) y.children = x.children.map(walk);
+    return y;
+  };
+  return walk(section);
+}
+// Transforme une liste de sections : chaque instance liée au composant est retirée (mode « instances ») ou remplacée par une copie indépendante (mode « detach »)
+function convertRefs(list, c, mode) {
+  let changed = 0;
+  const out = [];
+  for (const x of Array.isArray(list) ? list : []) {
+    if (x && x.type === "component" && Number(x.componentId) === c.id) {
+      changed += 1;
+      if (mode === "detach") {
+        const copy = freshIds(c.section);
+        const { type: _t, componentId: _c, ...attrs } = x;
+        out.push({ ...copy, ...(attrs.hideOn ? { hideOn: attrs.hideOn } : {}), ...(attrs.name ? { name: attrs.name } : {}), id: x.id || copy.id });
+      }
+    } else out.push(x);
+  }
+  return { list: out, changed };
+}
+const DELETE_MODES = ["instances", "detach"];
+// Suppression intelligente. Sans instance liée : suppression directe. Avec des instances : un choix OBLIGATOIRE — « instances » (supprimer aussi les instances liées)
+// ou « detach » (les conserver, devenues indépendantes). Tout se passe dans UNE transaction : en cas d'échec, rien n'est modifié (aucune instance orpheline).
+// skipDraftOfPage : le brouillon de cette page est converti par l'éditeur ouvert (annulable) ; sa version en ligne, elle, est traitée ici.
+function deleteComponent(ctx, id, { mode = null, skipDraftOfPage = null } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
   const asPart = ctx.db.prepare("SELECT name FROM mk_sites WHERE organization_id = ? AND (header_component_id = ? OR footer_component_id = ?)").all(ctx.organizationId, c.id, c.id);
   if (asPart.length) throw new MarketingError("in_use", `Ce composant est l'en-tête ou le pied de page du site ${asPart.map((x) => `« ${x.name} »`).join(", ")} : choisissez-en un autre d'abord.`);
   const asVariant = ctx.db.prepare("SELECT name FROM mk_landing_pages WHERE organization_id = ? AND header_component_id = ?").all(ctx.organizationId, c.id);
-  if (asVariant.length) throw new MarketingError("in_use", `Cette variante est l'en-tête de ${asVariant.length} page(s) : ${asVariant.map((x) => `« ${x.name} »`).join(", ")}. Remettez-les sur l'en-tête du site d'abord.`);
-  const used = componentUsage(ctx, c.id);
-  if (used.length) throw new MarketingError("in_use", `Ce composant est utilisé par ${used.length} page(s) : ${used.map((p) => `« ${p.name} »`).join(", ")}. Retirez-le de ces pages d'abord.`);
-  ctx.db.prepare("DELETE FROM mk_web_components WHERE id = ?").run(c.id);
-  audit(ctx, "component.deleted", "component", c.id, {});
+  if (asVariant.length) throw new MarketingError("in_use", `Cette variante est l'en-tête de ${asVariant.length} page(s) : ${asVariant.map((x) => `« ${x.name} »`).join(", ")}. Remettez-les sur l'en-tête du site (page › en-tête) avant de supprimer cette variante.`);
+  const used = componentInstances(ctx, c.id);
+  if (used.length && !mode) {
+    const error = new MarketingError("in_use", `Ce composant a encore des instances liées dans ${used.length} page(s) : ${used.map((p) => `« ${p.name} »`).join(", ")}. Choisissez : les supprimer aussi, ou les conserver comme blocs indépendants.`);
+    error.details = { instances: used.reduce((n, p) => n + p.count, 0), pages: used };
+    throw error;
+  }
+  if (mode && !DELETE_MODES.includes(mode)) throw bad("Choix de suppression inconnu (instances ou detach).");
+  let converted = 0, pagesTouched = 0;
+  const revisions = {}; // nouvelle révision des pages modifiées : l'éditeur ouvert sur l'une d'elles évite ainsi un faux conflit à son prochain enregistrement
+  transaction(ctx.db, () => {
+    for (const p of used) {
+      const row = ctx.db.prepare("SELECT id, sections, draft, revision FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(p.id, ctx.organizationId);
+      const live = convertRefs(json(row.sections, []), c, mode);
+      let draftJson = row.draft, dChanged = 0;
+      if (row.draft && Number(skipDraftOfPage) !== row.id) {
+        const d = json(row.draft, null);
+        if (d && Array.isArray(d.sections)) { const r = convertRefs(d.sections, c, mode); dChanged = r.changed; draftJson = JSON.stringify({ ...d, sections: r.list }); }
+      }
+      if (!live.changed && !dChanged) continue;
+      ctx.db.prepare("UPDATE mk_landing_pages SET sections = ?, draft = ?, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?")
+        .run(live.changed ? JSON.stringify(live.list) : row.sections, draftJson, row.id, ctx.organizationId);
+      converted += live.changed + dChanged; pagesTouched += 1; revisions[row.id] = row.revision + 1;
+    }
+    // Garde-fou : plus aucune référence (hors brouillon géré par l'éditeur ouvert) ne doit pointer vers ce composant
+    const left = componentInstances(ctx, c.id).filter((p) => Number(skipDraftOfPage) !== p.id || p.live > 0);
+    if (left.length) throw new MarketingError("failed", "La conversion des instances n'a pas abouti : rien n'a été supprimé.");
+    ctx.db.prepare("DELETE FROM mk_web_components WHERE id = ?").run(c.id);
+    audit(ctx, "component.deleted", "component", c.id, { mode: mode || "none", pages: pagesTouched, instances: converted });
+  });
+  return { mode: mode || "none", pages: pagesTouched, instances: converted, revisions };
 }
 // Affichage : chaque composant synchronisé est remplacé par sa dernière version (un composant supprimé disparaît)
 // ---------- Parties globales d'un site (en-tête, pied de page) ----------
@@ -628,6 +976,7 @@ function exportPage(ctx, id) {
 }
 // Import : une NOUVELLE page (aucune page existante n'est remplacée), contenu revalidé comme une saisie
 function importPage(ctx, data, { siteId = null } = {}) {
+  assertSiteScope(ctx, siteId);
   if (!data || data.format !== EXPORT_FORMAT || !data.content || !Array.isArray(data.content.sections)) throw bad("Fichier non reconnu : exportez une page depuis l'éditeur KOLAKISA (format kolakisa-page@1).");
   const name = uniqueName(ctx, "mk_landing_pages", line(data.name, 100) || "Page importée");
   const kind = Object.hasOwn(KINDS, data.kind) ? data.kind : "page";
@@ -655,9 +1004,9 @@ function resolveSections(ctx, sections) {
 module.exports = {
   KINDS, MAX_VERSIONS,
   getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
-  createPage, duplicatePage, archivePage, restorePage,
-  getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite,
-  listComponents, getComponent, createComponent, updateComponent, componentUsage, deleteComponent, resolveSections,
-  siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
+  createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
+  getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
+  listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
+  siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

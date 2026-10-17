@@ -135,7 +135,7 @@ function applyEvent(ctx, event, { silent = false } = {}) {
   const md = event.metadata || {};
   let delta = 0;
   for (const r of rules) {
-    if (r.filter_key && String(md[r.filter_key]) !== r.filter_value) continue;
+    if (!require("../automations/catalog").filterMatches(md, { key: r.filter_key, value: r.filter_value })) continue;
     if (r.max_times !== null && ctx.db.prepare("SELECT COUNT(*) n FROM mk_score_log WHERE rule_id = ? AND contact_id = ?").get(r.id, contact.id).n >= r.max_times) continue;
     const ins = ctx.db.prepare("INSERT OR IGNORE INTO mk_score_log (organization_id, contact_id, rule_id, event_id, event, points, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
       .run(ctx.organizationId, contact.id, r.id, event.id, event.name, r.points, event.occurredAt || Date.now());

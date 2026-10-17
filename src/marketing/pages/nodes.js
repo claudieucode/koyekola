@@ -22,6 +22,8 @@ const RESERVED_ANCHORS = new Set(["main", "contenu", "top", "haut", "kw-consent"
 // Écrans : la liste peut s'allonger (ordinateur portable, écran personnalisé) sans changer le modèle
 const BREAKPOINTS = [
   { key: "desktop", label: "Ordinateur", media: null },
+  // Grand écran (comme les écrans supplémentaires d'Elementor) : réglages propres au-delà d'une largeur réglable (1920 px par défaut) ; hérite de l'ordinateur, jamais de la tablette
+  { key: "wide", label: "Grand écran", media: "(min-width: 1920px)" },
   { key: "tablet", label: "Tablette", media: "(max-width: 1023px)" },
   { key: "mobile", label: "Mobile", media: "(max-width: 767px)" },
 ];
@@ -33,15 +35,40 @@ const line = (v, max) => clean(v, max).replace(/\s+/g, " ");
 
 // ---------- Valeurs de style (validées une à une) ----------
 const LEN = /^(-?\d{1,4}(?:\.\d{1,3})?)(px|%|rem|em|vh|vw)$/;
-const lengthOf = ({ auto = false, negative = false } = {}) => (v) => {
+const INTRINSIC = new Set(["fit-content", "min-content", "max-content"]); // dimensions intrinsèques : liste fermée, jamais de CSS libre
+const lengthOf = ({ auto = false, negative = false, intrinsic = false } = {}) => (v) => {
   const s = String(v ?? "").trim().toLowerCase();
   if (s === "0") return "0";
   if (auto && s === "auto") return "auto";
+  if (intrinsic && INTRINSIC.has(s)) return s;
   const m = s.match(LEN);
   if (!m) return null;
   if (!negative && Number(m[1]) < 0) return null;
   return `${Number(m[1])}${m[2]}`;
 };
+// Valeurs GLOBALES du site référençables par un élément (comme les couleurs) : espacements, rayons, tailles de texte. L'élément enregistre « token:space-md » ;
+// le rendu écrit var(--kw-space-md, <valeur par défaut>) : changer le jeton dans les réglages du site met à jour tous les éléments qui le référencent, une valeur propre
+// reste intacte. Le repli sert aux pages hors site (jetons non posés).
+// (construit à la première utilisation : tokens.js et nodes.js se référencent mutuellement au chargement)
+let LEN_TOKENS_CACHE = null;
+const lenTokens = () => {
+  if (LEN_TOKENS_CACHE) return LEN_TOKENS_CACHE;
+  const siteTokens = require("./tokens");
+  LEN_TOKENS_CACHE = {
+    space: Object.fromEntries(siteTokens.SPACE_KEYS.map((k) => [`space-${k}`, `${siteTokens.DEFAULT_TOKENS.space[k]}px`])),
+    radius: Object.fromEntries(Object.keys(siteTokens.DEFAULT_TOKENS.radius).map((k) => [`radius-${k}`, `${siteTokens.DEFAULT_TOKENS.radius[k]}px`])),
+    type: Object.fromEntries(siteTokens.TYPE_KEYS.map((k) => [`${k}-size`, `${siteTokens.DEFAULT_TOKENS.type[k].size}px`])),
+  };
+  return LEN_TOKENS_CACHE;
+};
+const lenTokenValue = (name) => { const t = lenTokens(); return t.space[name] || t.radius[name] || t.type[name] || null; };
+// check : accepte « token:<famille> » en plus de la longueur ; out : le convertit en var() avec repli
+const withLenToken = (family, check) => (v) => {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (s.startsWith("token:")) return Object.hasOwn(lenTokens()[family], s.slice(6)) ? s : null;
+  return check(v);
+};
+const lenTokenOut = (v) => (String(v).startsWith("token:") ? `var(--kw-${v.slice(6)}, ${lenTokenValue(v.slice(6))})` : v);
 const COLOR_TOKENS = ["primary", "secondary", "accent", "background", "surface", "text", "muted", "success", "warning", "error", "on-primary", "on-accent"];
 const color = (v) => {
   const s = String(v ?? "").trim().toLowerCase();
@@ -50,8 +77,20 @@ const color = (v) => {
   if (s.startsWith("token:") && (COLOR_TOKENS.includes(s.slice(6)) || /^c-[a-z0-9]{1,20}$/.test(s.slice(6)))) return s;
   return null;
 };
-const colorCss = (v) => (v.startsWith("token:") ? `var(--kw-${v.slice(6)})` : v);
+// Couleur du site → var(--kw-<clé>, <valeur d'origine>) : le repli sert aux pages HORS site (aucune variable posée, sinon la couleur serait ignorée
+// en silence) ; comme pour les longueurs du site. Une couleur personnalisée (c-…) n'existe que dans un site : pas de repli possible.
+const colorFallback = (key) => {
+  const t = require("./tokens");
+  if (Object.hasOwn(t.DEFAULT_TOKENS.colors, key)) return t.DEFAULT_TOKENS.colors[key];
+  if (key === "on-primary") return t.onColor(t.DEFAULT_TOKENS.colors.primary);
+  if (key === "on-accent") return t.onColor(t.DEFAULT_TOKENS.colors.accent);
+  return null;
+};
+const colorCss = (v) => { if (!v.startsWith("token:")) return v; const key = v.slice(6), f = colorFallback(key); return f ? `var(--kw-${key}, ${f})` : `var(--kw-${key})`; };
+const fontLib = require("../../utils/fontLibrary");
 const oneOf = (...list) => (v) => (list.includes(v) ? v : null);
+// Résolution d'image (service commun : media/variants.js). « full » (l'original) est la valeur par défaut et n'est pas enregistrée.
+const imageSize = (p) => { const v = oneOf(...require("../media/variants").SIZE_CHOICES)(p && p.size); return v && v !== "full" ? { size: v } : {}; };
 const numberIn = (min, max, { integer = false } = {}) => (v) => {
   const n = Number(v);
   if (v === "" || v === null || v === undefined || !Number.isFinite(n) || n < min || n > max) return null;
@@ -70,7 +109,10 @@ const gridTrack = (v) => {
   if (!s || parts.length > 12) return null;
   return parts.every((t) => /^(\d{1,2}(\.\d)?fr|\d{1,4}px|\d{1,3}%|auto)$/.test(t)) ? s : null;
 };
-const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
+const len = lengthOf(), lenAuto = lengthOf({ auto: true }), lenSize = lengthOf({ intrinsic: true }), lenSizeAuto = lengthOf({ auto: true, intrinsic: true }), lenNeg = lengthOf({ negative: true }), marginLen = lengthOf({ auto: true, negative: true });
+const partsLib = require("./parts");
+// Épaisseurs (bordure, contour) : le pourcentage n'a pas de sens en CSS (il serait ignoré par le navigateur) : refusé ici plutôt que publié en silence
+const lenNoPercent = (v) => (/%\s*$/.test(String(v)) ? null : len(v));
 const STYLE_PROPS = {
   display: { css: "display", check: oneOf("block", "flex", "grid", "inline-block", "inline", "inline-flex", "none"), group: "layout" },
   flexDirection: { css: "flex-direction", check: oneOf("row", "column", "row-reverse", "column-reverse"), group: "layout" },
@@ -84,15 +126,18 @@ const STYLE_PROPS = {
   justifySelf: { css: "justify-self", check: oneOf("auto", "start", "center", "end", "stretch"), group: "layout" },
   // Ordre d'affichage d'un enfant (flex ou grille), sans changer sa place dans les calques
   order: { css: "order", check: numberIn(-20, 20, { integer: true }), group: "layout" },
-  gap: { css: "gap", check: len, group: "layout" },
-  rowGap: { css: "row-gap", check: len, group: "layout" },
-  columnGap: { css: "column-gap", check: len, group: "layout" },
+  gap: { css: "gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
+  rowGap: { css: "row-gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
+  columnGap: { css: "column-gap", check: withLenToken("space", len), out: lenTokenOut, group: "layout" },
   columns: { css: "grid-template-columns", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, minmax(0, 1fr))`, group: "layout" },
   // Largeurs des colonnes d'une grille, ex. « 2fr 1fr » ou « 240px 1fr » (remplace le nombre de colonnes égales)
   gridTemplate: { css: "grid-template-columns", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
   gridRows: { css: "grid-template-rows", check: numberIn(1, 12, { integer: true }), out: (n) => `repeat(${n}, auto)`, group: "layout" },
   // Hauteurs des lignes (ex. « 200px 1fr ») : remplace le nombre de lignes égales (écrit après lui)
   gridRowsTemplate: { css: "grid-template-rows", check: gridTrack, out: (v) => v.split(" ").map((t) => (/fr$/.test(t) ? `minmax(0, ${t})` : t)).join(" "), group: "layout" },
+  // Pistes créées automatiquement quand il y a plus d'éléments que de cases (ex. « minmax(120px, auto) »)
+  gridAutoRows: { css: "grid-auto-rows", check: gridTrack, group: "layout" },
+  gridAutoColumns: { css: "grid-auto-columns", check: gridTrack, group: "layout" },
   gridAutoFlow: { css: "grid-auto-flow", check: oneOf("row", "column", "row dense", "column dense"), group: "layout" },
   justifyItems: { css: "justify-items", check: oneOf("stretch", "start", "center", "end"), group: "layout" },
   // Élément enfant d'une grille : nombre de colonnes / lignes occupées
@@ -104,29 +149,32 @@ const STYLE_PROPS = {
   gridColumnEnd: { css: "grid-column-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
   gridRowStart: { css: "grid-row-start", check: numberIn(1, 13, { integer: true }), group: "layout" },
   gridRowEnd: { css: "grid-row-end", check: numberIn(1, 13, { integer: true }), group: "layout" },
-  width: { css: "width", check: lenAuto, group: "size" },
-  height: { css: "height", check: lenAuto, group: "size" },
-  minWidth: { css: "min-width", check: len, group: "size" },
-  maxWidth: { css: "max-width", check: len, group: "size" },
-  minHeight: { css: "min-height", check: len, group: "size" },
-  maxHeight: { css: "max-height", check: len, group: "size" },
+  width: { css: "width", check: lenSizeAuto, group: "size" },
+  height: { css: "height", check: lenSizeAuto, group: "size" },
+  minWidth: { css: "min-width", check: lenSize, group: "size" },
+  maxWidth: { css: "max-width", check: lenSize, group: "size" },
+  minHeight: { css: "min-height", check: lenSize, group: "size" },
+  maxHeight: { css: "max-height", check: lenSize, group: "size" },
   // Part de largeur d'une colonne dans « Colonnes » (proportions : 1 / 1 = moitié-moitié, 2 / 1 = deux tiers - un tiers)
   flexGrow: { css: "flex-grow", check: numberIn(0, 20), group: "size" },
   flexShrink: { css: "flex-shrink", check: numberIn(0, 20), group: "size" },
   flexBasis: { css: "flex-basis", check: lenAuto, group: "size" },
-  marginTop: { css: "margin-top", check: marginLen, group: "spacing" },
-  marginRight: { css: "margin-right", check: marginLen, group: "spacing" },
-  marginBottom: { css: "margin-bottom", check: marginLen, group: "spacing" },
-  marginLeft: { css: "margin-left", check: marginLen, group: "spacing" },
-  paddingTop: { css: "padding-top", check: len, group: "spacing" },
-  paddingRight: { css: "padding-right", check: len, group: "spacing" },
-  paddingBottom: { css: "padding-bottom", check: len, group: "spacing" },
-  paddingLeft: { css: "padding-left", check: len, group: "spacing" },
-  fontFamily: { css: "font-family", check: oneOf(...Object.keys(FONT_STACKS)), out: (v) => FONT_STACKS[v], group: "typography" },
-  fontSize: { css: "font-size", check: len, group: "typography" },
+  marginTop: { css: "margin-top", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginRight: { css: "margin-right", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginBottom: { css: "margin-bottom", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  marginLeft: { css: "margin-left", check: withLenToken("space", marginLen), out: lenTokenOut, group: "spacing" },
+  paddingTop: { css: "padding-top", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingRight: { css: "padding-right", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingBottom: { css: "padding-bottom", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  paddingLeft: { css: "padding-left", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
+  // Police : un des cinq réglages historiques du site OU une famille de la bibliothèque (Font Manager, identifiant « font.inter »)
+  fontFamily: { css: "font-family", check: (v) => (Object.hasOwn(FONT_STACKS, v) || fontLib.isId(v) ? v : null), out: (v) => FONT_STACKS[v] || fontLib.stackOf(v), group: "typography" },
+  fontSize: { css: "font-size", check: withLenToken("type", len), out: lenTokenOut, group: "typography" },
   fontWeight: { css: "font-weight", check: oneOf("300", "400", "500", "600", "700", "800", "900"), group: "typography" },
   fontStyle: { css: "font-style", check: oneOf("normal", "italic"), group: "typography" },
   lineHeight: { css: "line-height", check: numberIn(0.8, 3), group: "typography" },
+  columnCount: { css: "column-count", check: numberIn(1, 6, { integer: true }), group: "typography" }, // texte en colonnes (journal) ; l'écart utilise « columnGap »
+  lineClamp: { css: "-webkit-line-clamp", check: numberIn(1, 10, { integer: true }), group: "typography" }, // nombre de lignes maximum (le reste est coupé) : voir declarations()
   letterSpacing: { css: "letter-spacing", check: lenNeg, group: "typography" },
   wordSpacing: { css: "word-spacing", check: lenNeg, group: "typography" },
   textIndent: { css: "text-indent", check: lenNeg, group: "typography" },
@@ -134,17 +182,26 @@ const STYLE_PROPS = {
   textAlign: { css: "text-align", check: oneOf("left", "center", "right", "justify"), group: "typography" },
   textDecoration: { css: "text-decoration", check: oneOf("none", "underline", "line-through"), group: "typography" },
   textShadow: { css: "text-shadow", check: oneOf(...Object.keys(TEXT_SHADOWS)), out: (v) => TEXT_SHADOWS[v], group: "typography" },
+  // Contour du texte (comme « Text Stroke » d'Elementor) : épaisseur + couleur, deux propriétés simples (la couleur peut être un jeton du site)
+  direction: { css: "direction", check: oneOf("ltr", "rtl"), group: "typography" }, // sens d'écriture (langues écrites de droite à gauche)
+  textStrokeWidth: { css: "-webkit-text-stroke-width", check: len, group: "typography" },
+  textStrokeColor: { css: "-webkit-text-stroke-color", check: color, out: colorCss, group: "typography" },
+  // Retours à la ligne et débordement du texte (les points de suspension demandent « sans retour » + débordement masqué)
+  whiteSpace: { css: "white-space", check: oneOf("normal", "nowrap", "pre", "pre-wrap", "pre-line"), group: "typography" },
+  textWrap: { css: "text-wrap", check: oneOf("wrap", "nowrap", "balance", "pretty"), group: "typography" },
+  overflowWrap: { css: "overflow-wrap", check: oneOf("normal", "break-word", "anywhere"), group: "typography" },
+  textOverflow: { css: "text-overflow", check: oneOf("clip", "ellipsis"), group: "typography" },
   color: { css: "color", check: color, out: colorCss, group: "color" },
   backgroundColor: { css: "background-color", check: color, out: colorCss, group: "color" },
-  borderWidth: { css: "border-width", check: len, group: "border" },
+  borderWidth: { css: "border-width", check: lenNoPercent, group: "border" },
   // Épaisseur côté par côté (bordure « déliée ») : écrite après l'épaisseur générale, qu'elle précise
-  borderTopWidth: { css: "border-top-width", check: len, group: "border" },
-  borderRightWidth: { css: "border-right-width", check: len, group: "border" },
-  borderBottomWidth: { css: "border-bottom-width", check: len, group: "border" },
-  borderLeftWidth: { css: "border-left-width", check: len, group: "border" },
-  borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
+  borderTopWidth: { css: "border-top-width", check: lenNoPercent, group: "border" },
+  borderRightWidth: { css: "border-right-width", check: lenNoPercent, group: "border" },
+  borderBottomWidth: { css: "border-bottom-width", check: lenNoPercent, group: "border" },
+  borderLeftWidth: { css: "border-left-width", check: lenNoPercent, group: "border" },
+  borderStyle: { css: "border-style", check: oneOf("none", "solid", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset"), group: "border" },
   borderColor: { css: "border-color", check: color, out: colorCss, group: "border" },
-  borderRadius: { css: "border-radius", check: len, group: "border" },
+  borderRadius: { css: "border-radius", check: withLenToken("radius", len), out: lenTokenOut, group: "border" },
   // Arrondi coin par coin (arrondi « délié ») : toujours écrit après l'arrondi général, qu'il précise
   borderTopLeftRadius: { css: "border-top-left-radius", check: len, group: "border" },
   borderTopRightRadius: { css: "border-top-right-radius", check: len, group: "border" },
@@ -155,6 +212,18 @@ const STYLE_PROPS = {
   overflow: { css: "overflow", check: oneOf("visible", "hidden", "auto"), group: "effects" },
   // Flou de ce qui est DERRIÈRE l'élément (effet verre dépoli, avec un fond semi-transparent)
   backdropBlur: { css: "backdrop-filter", check: numberIn(1, 40, { integer: true }), out: (n) => `blur(${n}px)`, group: "effects" },
+  // Visibilité sans toucher à la mise en page (l'élément garde sa place), souris, curseur, fusion avec ce qui est derrière, débordement par axe
+  visibility: { css: "visibility", check: oneOf("visible", "hidden"), group: "effects" },
+  cursor: { css: "cursor", check: oneOf("auto", "default", "pointer", "text", "move", "grab", "not-allowed", "help", "zoom-in", "zoom-out"), group: "effects" },
+  pointerEvents: { css: "pointer-events", check: oneOf("auto", "none"), group: "effects" },
+  mixBlendMode: { css: "mix-blend-mode", check: oneOf("normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "color-burn", "soft-light", "hard-light", "difference", "exclusion"), group: "effects" },
+  overflowX: { css: "overflow-x", check: oneOf("visible", "hidden", "auto", "scroll", "clip"), group: "effects" },
+  overflowY: { css: "overflow-y", check: oneOf("visible", "hidden", "auto", "scroll", "clip"), group: "effects" },
+  // Contour (hors de la bordure, ne change pas la taille) : accessibilité du focus, repères visuels
+  outlineWidth: { css: "outline-width", check: lenNoPercent, group: "border" },
+  outlineStyle: { css: "outline-style", check: oneOf("none", "solid", "dashed", "dotted"), group: "border" },
+  outlineColor: { css: "outline-color", check: color, out: colorCss, group: "border" },
+  outlineOffset: { css: "outline-offset", check: lenNeg, group: "border" },
   // Absolue : placée par rapport au parent positionné (relatif) ; fixe : par rapport à l'écran (bandeau, bouton flottant)
   position: { css: "position", check: oneOf("static", "relative", "sticky", "absolute", "fixed"), group: "position" },
   top: { css: "top", check: lenNeg, group: "position" },
@@ -164,12 +233,16 @@ const STYLE_PROPS = {
   transformOrigin: { css: "transform-origin", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "position" },
   // Durée des changements au survol / focus / clic (couleurs, ombre, transformation…)
   transitionDuration: { css: "transition", check: numberIn(0, 2000, { integer: true }), out: (n) => `color ${n}ms ease, background-color ${n}ms ease, border-color ${n}ms ease, box-shadow ${n}ms ease, transform ${n}ms ease, opacity ${n}ms ease`, group: "effects" },
+  // Accélération des transitions (écrite APRÈS « transition » : la propriété détaillée remplace l'accélération par défaut de la durée)
+  transitionEasing: { css: "transition-timing-function", check: oneOf("ease", "linear", "ease-in", "ease-out", "ease-in-out"), group: "effects" },
   zIndex: { css: "z-index", check: numberIn(-100, 9999, { integer: true }), group: "position" },
   objectFit: { css: "object-fit", check: oneOf("cover", "contain", "fill", "none"), group: "media" },
-  objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "media" },
+  objectPosition: { css: "object-position", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "media" },
   aspectRatio: { css: "aspect-ratio", check: oneOf("auto", "1/1", "4/3", "3/2", "16/9", "21/9", "3/4"), out: (v) => v.replace("/", " / "), group: "media" },
+  backgroundClip: { css: "background-clip", check: oneOf("border-box", "padding-box", "content-box", "text"), group: "background" }, // « text » : le fond (dégradé, image) se voit à travers les lettres ; voir declarations()
+  scrollMarginTop: { css: "scroll-margin-top", check: len, group: "position" }, // décalage d'ancre : distance au haut de l'écran quand un lien #ancre saute ici (en-tête collant)
   backgroundSize: { css: "background-size", check: oneOf("cover", "contain", "auto"), group: "background" },
-  backgroundPosition: { css: "background-position", check: oneOf("center", "top", "bottom", "left", "right"), group: "background" },
+  backgroundPosition: { css: "background-position", check: oneOf("center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"), group: "background" },
   backgroundRepeat: { css: "background-repeat", check: oneOf("no-repeat", "repeat", "repeat-x", "repeat-y"), group: "background" },
   backgroundAttachment: { css: "background-attachment", check: oneOf("scroll", "fixed"), group: "background" },
 };
@@ -179,6 +252,7 @@ const COMPOSED = {
   gradient: { group: "background" },            // { from, to, angle }
   overlay: { group: "background" },
   shadow: { group: "effects" },
+  backdrop: { group: "effects" },               // { blur, brightness, contrast, grayscale, saturate, sepia, hueRotate, invert } : filtres appliqués à ce qui se trouve DERRIÈRE l'élément (verre dépoli)
   filter: { group: "effects" },                 // { blur, brightness, contrast, grayscale, saturate, sepia, hueRotate }                 // { x, y, blur, spread, color } : ombre personnalisée (remplace le préréglage)             // { color } : voile posé sur l'image ou le dégradé (lisibilité du texte)
   transform: { group: "position" },             // { x, y, rotate, scale, skewX, skewY }
   mask: { group: "mask" },                      // { shape, src, size, position, repeat } : découpe en forme ou masque d'image
@@ -197,20 +271,25 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
       out[k] = ok;
     } else if (k === "backgroundImage") {
       const src = imageUrl(v && v.src, `${at} (image de fond)`);
-      if (src) out.backgroundImage = { src };
+      if (src) { const sz = oneOf(...require("../media/variants").KEYS)(v && v.size); out.backgroundImage = sz ? { src, size: sz } : { src }; }
     } else if (k === "overlay") {
       const c = color(v && v.color);
       if (c) out.overlay = { color: c };
     } else if (k === "gradient") {
       const from = color(v && v.from), to = color(v && v.to), angle = numberIn(0, 360, { integer: true })(v && v.angle);
-      if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle };
-    } else if (k === "filter") {
+      // Dégradé linéaire (angle) ou radial, avec la position de chaque couleur en % (comme « Location » d'Elementor) ; valeurs par défaut non enregistrées
+      const at = (x, d) => { const n = numberIn(0, 100, { integer: true })(x); return n === null || n === d ? null : n; };
+      const fromAt = at(v && v.fromAt, 0), toAt = at(v && v.toAt, 100);
+      // Couleurs intermédiaires (jusqu'à 3), chacune avec sa position en % : « extra: [{ color, at }] »
+      const extra = (Array.isArray(v && v.extra) ? v.extra : []).slice(0, 3).map((e) => { const c = color(e && e.color), a = numberIn(0, 100, { integer: true })(e && e.at); return c && a !== null ? { color: c, at: a } : null; }).filter(Boolean);
+      if (from && to) out.gradient = { from, to, angle: angle === null ? 180 : angle, ...(v && v.type === "radial" ? { type: "radial" } : {}), ...(fromAt !== null ? { fromAt } : {}), ...(toAt !== null ? { toAt } : {}), ...(extra.length ? { extra } : {}) };
+    } else if (k === "filter" || k === "backdrop") {
       const f = {};
       const put = (name, min, max) => { const x = numberIn(min, max, { integer: true })(v && v[name]); if (x !== null) f[name] = x; };
-      put("blur", 0, 40); put("brightness", 0, 300); put("contrast", 0, 300); put("grayscale", 0, 100); put("saturate", 0, 300); put("sepia", 0, 100); put("hueRotate", -360, 360);
+      put("blur", 0, 40); put("brightness", 0, 300); put("contrast", 0, 300); put("grayscale", 0, 100); put("saturate", 0, 300); put("sepia", 0, 100); put("hueRotate", -360, 360); put("invert", 0, 100);
       // Valeurs neutres retirées (100 % de luminosité, 0 de flou…)
-      for (const [name, neutral] of Object.entries({ blur: 0, brightness: 100, contrast: 100, grayscale: 0, saturate: 100, sepia: 0, hueRotate: 0 })) if (f[name] === neutral) delete f[name];
-      if (Object.keys(f).length) out.filter = f;
+      for (const [name, neutral] of Object.entries({ blur: 0, brightness: 100, contrast: 100, grayscale: 0, saturate: 100, sepia: 0, hueRotate: 0, invert: 0 })) if (f[name] === neutral) delete f[name];
+      if (Object.keys(f).length) out[k] = f;
     } else if (k === "shadow") {
       const c = color(v && v.color);
       const px = (n, min, max) => { const x = numberIn(min, max, { integer: true })(n); return x === null ? 0 : x; };
@@ -242,15 +321,19 @@ function normalizeStyleSet(raw, at, { imageUrl }) {
 // Placement dans la grille : écrit en « grid-column: début / fin » (même chose pour les lignes), jamais en déclarations qui
 // s'écrasent : début seul, fin seule, début + occupées (« 2 / span 3 ») ou occupées seules (« span 3 »)
 const PLACEMENT = new Set(["gridColumnStart", "gridColumnEnd", "gridColumnSpan", "gridRowStart", "gridRowEnd", "gridRowSpan"]);
-const CORNERS = new Set(["gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
-function declarations(set) {
+const CORNERS = new Set(["overflowX", "overflowY", "gridTemplate", "gridRowsTemplate", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius", "borderTopWidth", "borderRightWidth", "borderBottomWidth", "borderLeftWidth"]);
+// band : conteneur « fond pleine largeur, contenu encadré » : ses intérieurs gauche / droite sont écrits dans des variables (--kw-pl, --kw-pr) que
+// la règle .kw-band de landing.css combine avec le retrait qui centre le contenu à la largeur du site : le réglage de l'auteur reste effectif
+function declarations(set, band = false) {
   const d = [];
   const entries = Object.entries(set);
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
-  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k)).concat(entries.filter(([k]) => CORNERS.has(k)))) {
+  for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k) && k !== "transitionEasing").concat(entries.filter(([k]) => CORNERS.has(k) || k === "transitionEasing"))) {
     const p = STYLE_PROPS[k];
-    if (p) d.push(`${p.css}:${p.out ? p.out(v) : v}`);
+    if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
+  if (set.columnCount !== undefined && set.columnGap === undefined) d.push("column-gap:2rem"); // écart par défaut entre les colonnes de texte
+  if (set.lineClamp !== undefined) d.push("display:-webkit-box", "-webkit-box-orient:vertical", "overflow:hidden");
   for (const [axis, css] of [["Column", "grid-column"], ["Row", "grid-row"]]) {
     const start = set[`grid${axis}Start`], end = set[`grid${axis}End`], span = set[`grid${axis}Span`];
     if (start !== undefined || end !== undefined) d.push(`${css}:${start !== undefined ? start : "auto"} / ${end !== undefined ? end : span !== undefined ? `span ${span}` : "auto"}`);
@@ -258,13 +341,25 @@ function declarations(set) {
   }
   const layers = [];
   if (set.overlay) layers.push(`linear-gradient(${colorCss(set.overlay.color)}, ${colorCss(set.overlay.color)})`);
-  if (set.gradient) layers.push(`linear-gradient(${set.gradient.angle}deg, ${colorCss(set.gradient.from)}, ${colorCss(set.gradient.to)})`);
-  if (set.backgroundImage) layers.push(`url("${set.backgroundImage.src}")`);
+  if (set.gradient) {
+    const g = set.gradient;
+    const stops = g.extra && g.extra.length
+      ? [{ c: g.from, at: g.fromAt || 0 }, ...g.extra.map((e) => ({ c: e.color, at: e.at })), { c: g.to, at: g.toAt === undefined ? 100 : g.toAt }].sort((a, b) => a.at - b.at).map((s) => `${colorCss(s.c)} ${s.at}%`).join(", ")
+      : `${colorCss(g.from)}${g.fromAt ? ` ${g.fromAt}%` : ""}, ${colorCss(g.to)}${g.toAt !== undefined ? ` ${g.toAt}%` : ""}`;
+    layers.push(g.type === "radial" ? `radial-gradient(circle at center, ${stops})` : `linear-gradient(${g.angle}deg, ${stops})`);
+  }
+  if (set.backgroundImage) layers.push(`url("${require("../media/variants").sourceFor(set.backgroundImage.src, set.backgroundImage.size)}")`);
   if (layers.length) d.push(`background-image:${layers.join(", ")}`);
   if (set.filter) {
     const f = set.filter, unit = { blur: "px", hueRotate: "deg" }, fn = { hueRotate: "hue-rotate" };
     d.push(`filter:${Object.entries(f).map(([k, v]) => `${fn[k] || k}(${v}${unit[k] || (k === "blur" ? "px" : "%")})`).join(" ")}`);
   }
+  if (set.backdrop) { // « verre dépoli » : prime sur le simple flou d'arrière-plan
+    const f = set.backdrop, unit = { blur: "px", hueRotate: "deg" }, fn = { hueRotate: "hue-rotate" };
+    const v = Object.entries(f).map(([k, x]) => `${fn[k] || k}(${x}${unit[k] || "%"})`).join(" ");
+    d.push(`-webkit-backdrop-filter:${v}`, `backdrop-filter:${v}`);
+  }
+  if (set.backgroundClip === "text") d.push("-webkit-background-clip:text", "-webkit-text-fill-color:transparent"); // le fond apparaît dans les lettres
   if (set.shadow) { const h = set.shadow; d.push(`box-shadow:${h.inset ? "inset " : ""}${h.x}px ${h.y}px ${h.blur}px ${h.spread}px ${colorCss(h.color)}`); }
   if (set.mask) {
     const m = set.mask;
@@ -313,6 +408,8 @@ const loopProps = (p) => {
     // Défilement horizontal (carrousel) : pas de pagination (les éléments défilent, ils ne se tournent pas en pages)
     ...(l.slider === true ? { slider: true } : paginate ? { paginate: true, pagination: pagination !== "none" ? pagination : "numbers" } : {}),
     ...(l.urlFilter === true ? { urlFilter: true } : {}),
+    // Carte insérée : un conteneur enfant marqué « loopInsert » s'intercale après le N-ième résultat (une fois, ou tous les N résultats)
+    ...(numberIn(1, 50, { integer: true })(l.insertAt) ? { insertAt: numberIn(1, 50, { integer: true })(l.insertAt), ...(l.insertEvery === true ? { insertEvery: true } : {}) } : {}),
     empty: line(l.empty, 160) || EMPTY_LOOP[source] || "Aucun résultat ne correspond.",
   } };
 };
@@ -324,13 +421,23 @@ const dynamicHelpers = (h) => ({
 });
 const boxProps = (p, at, h) => {
   const link = h.linkUrl(p.link, `${at} (lien du conteneur)`);
-  return { ...boxTag(p), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
+  return { ...boxTag(p), ...(p.loopInsert === true ? { loopInsert: true } : {}), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
+const nestedProps = (p) => {
+  const mode = oneOf("tabs", "carousel", "accordion")(p.mode);
+  if (!mode) return {};
+  // Accordéon : chaque conteneur enfant est un volet (titre = son nom) qui peut contenir n'importe quel élément ; ouvert au départ : le premier, aucun ou tous ; un seul volet ouvert à la fois ou plusieurs
+  if (mode === "accordion") return { mode, accStart: oneOf("none", "all")(p.accStart) || "first", accSingle: p.accSingle === true };
+  if (mode === "tabs") return { mode, tabsLook: oneOf("line", "pills")(p.tabsLook) || "line", tabsStart: numberIn(1, 12, { integer: true })(p.tabsStart) || 1 };
+  return { mode, dots: p.dots !== false, loop: p.loop === true, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5 };
+};
 const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : {}) }) },
+  // Mode d'affichage des enfants (facultatif ; absent = conteneur ordinaire, comme avant) : « onglets » (un enfant = un onglet, titre = son nom) ou
+  // « carrousel » (un enfant = une diapositive, avec le carrousel du site). Les enfants restent de vrais conteneurs, modifiables dans le canevas.
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
@@ -345,7 +452,8 @@ const NODE_TYPES = {
       lineStyle: oneOf("solid", "dashed", "dotted", "double")(p.lineStyle) || "solid",
       thickness: numberIn(1, 12, { integer: true })(p.thickness) || 1,
       ...(color(p.color) ? { color: color(p.color) } : {}),
-      ...(text ? { text, align: oneOf("left", "center", "right")(p.align) || "center" } : {}),
+      // La position du texte est conservée même quand le texte est vide : choisir « à droite » AVANT de saisir le texte ne doit pas perdre le choix
+      ...(text ? { text, align: oneOf("left", "center", "right")(p.align) || "center" } : oneOf("left", "right")(p.align) ? { align: p.align } : {}),
     };
   } },
   heading: { label: "Titre", category: "text", props: (p, at, h) => {
@@ -353,11 +461,13 @@ const NODE_TYPES = {
     const text = line(p.text, 200);
     // Lien facultatif sur tout le titre (compté comme les autres liens de la page)
     const link = h.linkUrl(p.link, `${at} (lien du titre)`);
-    return { text, level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+    // Balise : un titre H1–H6 par défaut ; « p », « div » ou « span » pour un texte d'apparence de titre qui n'entre pas dans le plan de la page
+    const tag = oneOf("p", "div", "span")(p.tag);
+    return { text, level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", ...(tag ? { tag } : {}), ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
   } },
   text: { label: "Texte", category: "text", props: (p, at) => {
     const html = sanitizeRich(p.html); // vide permis (paragraphe en cours d'écriture), jamais affiché sur la page publique
-    return { html };
+    return { html, ...(p.dropCap === true ? { dropCap: true } : {}) }; // lettrine : première lettre agrandie (classe CSS fixe)
   } },
   list: { label: "Liste", category: "text", props: (p, at) => {
     const items = (Array.isArray(p.items) ? p.items : []).map((x) => line(x, 300)).filter(Boolean).slice(0, 30);
@@ -372,7 +482,11 @@ const NODE_TYPES = {
   code: { label: "Code (texte)", category: "text", props: (p, at) => {
     const text = clean(p.text, 4000);
     if (!text) throw new Error(`${at} (code) : le texte est obligatoire.`);
-    return { text };
+    // Langage de coloration : facultatif (absent = texte brut, comme avant) ; une valeur inconnue est ignorée
+    const language = require("./highlight").LANGUAGES.includes(p.language) && p.language !== "text" ? p.language : "";
+    // Numéros de ligne, bouton « Copier » et lignes surlignées (plages « 2-4, 7 ») : réglages d'affichage, le texte reste du texte
+    const hl = [...new Set(String(p.highlight || "").split(",").flatMap((part) => { const m = /^\s*(\d{1,4})(?:\s*-\s*(\d{1,4}))?\s*$/.exec(part); if (!m) return []; const a = Number(m[1]), b = m[2] ? Number(m[2]) : a; return a >= 1 && b >= a && b - a < 200 ? Array.from({ length: b - a + 1 }, (_, i) => a + i) : []; }))].filter((x) => x <= 500).sort((a, b) => a - b).slice(0, 60);
+    return { text, ...(language ? { language } : {}), ...(p.lineNumbers === true ? { lineNumbers: true } : {}), ...(p.copy === true ? { copy: true } : {}), ...(hl.length ? { highlight: hl.join(",") } : {}) };
   } },
   image: { label: "Image", category: "media", props: (p, at, h) => {
     const src = h.imageUrl(p.src, `${at} (image)`);
@@ -380,7 +494,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200);
     if (!alt && p.decorative !== true) throw new Error(`${at} (image) : un texte de remplacement est obligatoire (ou cochez « image décorative »).`);
     const link = h.linkUrl(p.link, `${at} (lien de l'image)`);
-    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://") };
+    return { src, alt, decorative: p.decorative === true && !alt, link, caption: line(p.caption, 200), title: line(p.title, 150), newTab: p.newTab === true && link.startsWith("https://"), ...(p.lightbox === true && !link ? { lightbox: true } : {}), ...imageSize(p) };
   } },
   gallery: { label: "Galerie", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
@@ -389,11 +503,15 @@ const NODE_TYPES = {
       if (src && !alt) throw new Error(`${at} (galerie) : texte de remplacement manquant pour l'image ${i + 1}.`);
       if (!src) return null;
       const caption = line(im && im.caption, 200), link = h.linkUrl(im && im.link, `${at} (lien de l'image ${i + 1})`);
-      return { src, alt, ...(caption ? { caption } : {}), ...(link ? { link } : {}) };
+      const tag = line(im && im.tag, 30);
+      return { src, alt, ...(caption ? { caption } : {}), ...(link ? { link } : {}), ...(tag ? { tag } : {}) };
     }).filter(Boolean);
     if (!images.length) throw new Error(`${at} (galerie) : au moins une image.`);
-    // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes
-    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true };
+    // lightbox : clic = image en grand (sauf image avec lien) ; masonry : hauteurs naturelles en colonnes ; justified : lignes de même hauteur
+    // colonnes (grille), ratio d'aspect (grille), hauteur de ligne (justifiée), légende en surcouche au survol, barre de filtres par étiquette (valeurs par défaut non enregistrées)
+    const layout = p.masonry === true ? "" : oneOf("justified")(p.layout);
+    const columns = numberIn(1, 12, { integer: true })(p.columns), ratio = oneOf("4:3", "3:2", "16:9", "9:16", "21:9")(p.ratio), rowHeight = oneOf("120", "160", "260", "320")(String(p.rowHeight));
+    return { images, lightbox: p.lightbox === true, masonry: p.masonry === true, ...(layout ? { layout } : {}), ...(columns && columns !== 3 ? { columns } : {}), ...(ratio ? { ratio } : {}), ...(layout && rowHeight ? { rowHeight } : {}), ...(p.overlay === true ? { overlay: true } : {}), ...(p.filters === true && images.some((im) => im.tag) ? { filters: true } : {}), ...imageSize(p) };
   } },
   video: { label: "Vidéo", category: "media", props: (p, at, h) => {
     const url = line(p.url, 500);
@@ -412,6 +530,10 @@ const NODE_TYPES = {
     }
     const poster = p.poster ? h.imageUrl(p.poster, `${at} (image d'attente de la vidéo)`) : "";
     if (poster) out.poster = poster;
+    // Début et fin de lecture (secondes), comme « Start Time / End Time » d'Elementor
+    const start = numberIn(1, 86399, { integer: true })(p.start), end = numberIn(2, 86400, { integer: true })(p.end);
+    if (start) out.start = start;
+    if (end) { if (end <= (start || 0)) throw new Error(`${at} (vidéo) : la fin doit venir après le début.`); out.end = end; }
     return out;
   } },
   audio: { label: "Audio", category: "media", props: (p, at) => {
@@ -487,7 +609,7 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...imageSize(p) };
   } },
   toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
     const title = line(p.title, 150), text = clean(p.text, 4000);
@@ -504,13 +626,14 @@ const NODE_TYPES = {
     if (value === null) throw new Error(`${at} (compteur) : un nombre réel est obligatoire.`);
     const label = line(p.label, 120);
     if (!label) throw new Error(`${at} (compteur) : dites ce que mesure ce nombre (et sa source).`);
-    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500 };
+    const sep = oneOf("dot", "none")(p.separator); // séparateur des milliers : espace (défaut), point ou aucun
+    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500, ...(sep ? { separator: sep } : {}) };
   } },
   testimonial: { label: "Témoignage", category: "marketing", props: (p, at, h) => {
     const text = clean(p.text, 1200), name = line(p.name, 80);
     if (!text || !name) throw new Error(`${at} (témoignage) : le texte et le nom de la personne sont obligatoires (témoignage réel, avec son accord).`);
     const avatar = p.avatar ? h.imageUrl(p.avatar, `${at} (photo du témoignage)`) : "";
-    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
+    return { text, name, role: line(p.role, 120), ...(avatar ? { avatar, ...(oneOf("above", "left", "right")(p.avatarPos) ? { avatarPos: p.avatarPos } : {}), ...imageSize(p) } : {}), rating: numberIn(0, 5, { integer: true })(p.rating) || 0 };
   } },
   pricing: { label: "Offre tarifaire", category: "marketing", props: (p, at, h) => {
     const title = line(p.title, 80), price = line(p.price, 30);
@@ -542,7 +665,7 @@ const NODE_TYPES = {
   // Boutons de partage : de vrais liens « partager cette page » (adresse publique de la page, construite à l'affichage par le
   // serveur : jamais saisie). Réseaux de partage uniquement ; l'adresse de la page n'existe qu'en https (sinon rien n'est affiché).
   sharebuttons: { label: "Boutons de partage", category: "interaction", props: (p, at) => {
-    const networks = (Array.isArray(p.networks) ? p.networks : []).filter((k, i, a) => Object.hasOwn(SHARE_NETWORKS, k) && a.indexOf(k) === i).slice(0, 6);
+    const networks = (Array.isArray(p.networks) ? p.networks : []).filter((k, i, a) => Object.hasOwn(SHARE_NETWORKS, k) && a.indexOf(k) === i).slice(0, 9);
     if (!networks.length) throw new Error(`${at} (partage) : au moins un réseau (${Object.values(SHARE_NETWORKS).join(", ")}).`);
     return { networks, size: oneOf("24", "32", "40", "48")(String(p.size)) || "32", shape: oneOf("circle", "square", "plain")(p.shape) || "circle", label: line(p.label, 60) || "Partager cette page", message: line(p.message, 120) };
   } },
@@ -552,7 +675,9 @@ const NODE_TYPES = {
     const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton de la fenêtre)`), ctaLabel = line(p.ctaLabel, 60);
     return { buttonLabel, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", title, text, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), size: oneOf("sm", "md", "lg")(p.size) || "md",
       // centre : fenêtre ; gauche / droite : panneau qui glisse depuis le bord (« off-canvas »)
-      position: oneOf("center", "left", "right")(p.position) || "center" };
+      position: oneOf("center", "left", "right", "corner", "bar")(p.position) || "center",
+      // Ouverture automatique (comme les déclencheurs d'une popup Elementor) : au chargement après un délai, au défilement, à la sortie de la page ou après inactivité ; fréquence limitée
+      ...modalAuto(p) };
   } },
   html: { label: "HTML (sécurisé)", category: "advanced", props: (p, at) => {
     const html = sanitizeHtmlBlock(p.html);
@@ -574,7 +699,8 @@ const NODE_TYPES = {
       return { text, icon: h.iconNames.includes(String(x.icon)) ? String(x.icon) : "check", ...(link ? { link } : {}) };
     }).filter(Boolean);
     if (!items.length) throw new Error(`${at} (liste d'icônes) : au moins une ligne.`);
-    return { items, iconColor: color(p.iconColor) || "" };
+    // Disposition en ligne et séparateurs entre éléments (comme « Layout: Inline » et « Divider » de la liste d'icônes d'Elementor)
+    return { items, iconColor: color(p.iconColor) || "", ...(p.inline === true ? { inline: true } : {}), ...(p.divider === true ? { divider: true } : {}) };
   } },
   tooltip: { label: "Infobulle", category: "interaction", props: (p, at) => {
     const text = line(p.text, 120), tip = line(p.tip, 300);
@@ -591,7 +717,7 @@ const NODE_TYPES = {
       const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
       return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
     }).filter(Boolean);
-    return { src, alt, spots };
+    return { src, alt, spots, ...(p.trigger === "hover" ? { trigger: "hover" } : {}), ...imageSize(p) };
   } },
   posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
@@ -622,11 +748,27 @@ const NODE_TYPES = {
     return { rows: rows.map((r) => r.concat(Array(width - r.length).fill(""))), header: p.header !== false, caption: line(p.caption, 150),
       footer: p.footer === true && rows.length > (p.header !== false ? 2 : 1), striped: p.striped === true, align: oneOf("left", "center", "right")(p.align) || "left" };
   } },
-  countdown: { label: "Compte à rebours", category: "marketing", props: (p, at) => {
+  countdown: { label: "Compte à rebours", category: "marketing", props: (p, at, h) => {
     const until = String(p.until || "");
     const t = Date.parse(until);
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})$/.test(until) || !Number.isFinite(t)) throw new Error(`${at} (compte à rebours) : date et heure de fin invalides.`);
-    return { until: new Date(t).toISOString(), endText: line(p.endText, 120) || "C'est terminé." };
+    const out = { until: new Date(t).toISOString(), endText: line(p.endText, 120) || "C'est terminé." };
+    // Minuteur « évolutif » (par visiteur, comme Elementor) : chaque visiteur dispose de la durée donnée à partir de sa première visite ; la date fixe sert de repli sans JavaScript
+    if (p.mode === "evergreen") {
+      const minutes = numberIn(1, 14400, { integer: true })(p.minutes);
+      if (!minutes) throw new Error(`${at} (compte à rebours) : durée du minuteur par visiteur (1 à 14 400 minutes) attendue.`);
+      out.mode = "evergreen"; out.minutes = minutes;
+    }
+    // Que faire à la fin : afficher le texte (défaut), masquer le compte à rebours, ou rediriger vers une page du site
+    const expire = oneOf("hide", "redirect")(p.expire);
+    if (expire === "redirect") {
+      const url = h.linkUrl(p.redirectUrl, `${at} (adresse de redirection)`);
+      if (!url || !/^(\/(?!\/)|https:\/\/)/.test(url)) throw new Error(`${at} (compte à rebours) : adresse de redirection attendue (page du site « /… » ou https://…).`);
+      out.expire = "redirect"; out.redirectUrl = url;
+    } else if (expire === "hide") out.expire = "hide";
+    const hideUnits = (Array.isArray(p.hideUnits) ? p.hideUnits : []).filter((u, i, a) => ["days", "hours", "minutes", "seconds"].includes(u) && a.indexOf(u) === i);
+    if (hideUnits.length && hideUnits.length < 4) out.hideUnits = hideUnits;
+    return out;
   } },
   course: { label: "Formation", category: "commerce", props: (p, at, h) => {
     const courseId = Number(p.courseId);
@@ -685,7 +827,7 @@ const NODE_TYPES = {
   // Table des matières : construite à l'affichage à partir des titres de la page (jamais une liste recopiée à la main)
   toc: { label: "Table des matières", category: "interaction", props: (p) => ({ title: line(p.title, 80) || "Sommaire", depth: oneOf("2", "3", "4")(String(p.depth)) || "3", numbered: p.numbered === true }) },
   // Barre de lecture : progression du défilement de la page, en haut ou en bas de l'écran
-  readingprogress: { label: "Barre de lecture", category: "interaction", props: (p) => ({ position: oneOf("top", "bottom")(p.position) || "top", thickness: numberIn(2, 10, { integer: true })(p.thickness) || 4 }) },
+  readingprogress: { label: "Barre de lecture", category: "interaction", props: (p) => ({ position: oneOf("top", "bottom")(p.position) || "top", thickness: numberIn(2, 10, { integer: true })(p.thickness) || 4, ...(p.shape === "circle" ? { shape: "circle" } : {}) }) },
   // Formulaire : un formulaire du module « Formulaires d'inscription » (champs, consentement, anti-robot, double
   // confirmation, étiquettes : tout vient du formulaire). Plusieurs par page, chacun à son emplacement.
   signupform: { label: "Formulaire", category: "marketing", props: (p, at, h) => {
@@ -709,7 +851,7 @@ const NODE_TYPES = {
     const alt = line(p.alt, 200), title = line(p.title, 120);
     if (!title) throw new Error(`${at} (boîte d'image) : le titre est obligatoire.`);
     const link = h.linkUrl(p.link, `${at} (lien de la boîte d'image)`);
-    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}) };
+    return { src, alt, title, text: clean(p.text, 600), titleLevel: oneOf("2", "3", "4", "5", "6")(String(p.titleLevel)) || "3", position: oneOf("top", "left", "right")(p.position) || "top", ...(link ? { link, newTab: p.newTab === true && link.startsWith("https://") } : {}), ...imageSize(p) };
   } },
   iconbox: { label: "Boîte d'icône", category: "media", props: (p, at, h) => {
     const icon = String(p.icon || "");
@@ -819,6 +961,11 @@ const SITE_SUB = { cmsmenu: SITE_SUBS[0], sitelogo: SITE_SUBS[0], sitetitle: SIT
   archiveinfo: SITE_SUBS[2], catfilter: SITE_SUBS[2], querylist: SITE_SUBS[3], posts: SITE_SUBS[3], account: SITE_SUBS[4], minicart: SITE_SUBS[4] };
 const WIDGET_SHORTCUTS = [
   { key: "soundcloud", label: "SoundCloud", group: "general", icon: "play", keywords: "soundcloud son musique podcast audio lecteur", type: "embed", provider: "soundcloud" },
+  { key: "youtubeplaylist", label: "Playlist YouTube", group: "general", icon: "video", keywords: "playlist youtube liste de lecture videos serie video", type: "embed", provider: "youtubelist" },
+  { key: "facebookpage", label: "Page Facebook", group: "social", icon: "users", keywords: "facebook page fil actualites abonnes plugin", type: "embed", provider: "facebookpage" },
+  { key: "facebookpost", label: "Publication Facebook", group: "social", icon: "fileText", keywords: "facebook publication post video integrer embed", type: "embed", provider: "facebookpost" },
+  { key: "instagrampost", label: "Instagram", group: "social", icon: "image", keywords: "instagram publication reel photo integrer embed", type: "embed", provider: "instagram" },
+  { key: "tiktokvideo", label: "TikTok", group: "social", icon: "video", keywords: "tiktok video integrer embed", type: "embed", provider: "tiktok" },
   // Titre de la page : texte dynamique (source « titre de la page ») préréglé, rien à demander
   { key: "pagetitle", label: "Titre de la page", group: "site", sub: SITE_SUBS[0], icon: "type", keywords: "titre de la page nom h1 h2", type: "dyntext", preset: { source: "pageTitle", tag: "h2", before: "", after: "", fallback: "" } },
   { key: "posttitle", label: "Titre de l'article", group: "site", sub: "Contenu de l'article", icon: "type", keywords: "titre article billet h1 post title", type: "heading", preset: {"text": "{{post.title | fallback: Titre de l'article}}", "level": "1"} },
@@ -850,32 +997,66 @@ const WIDGET_SHORTCUTS = [
   { key: "tagcloud", label: "Nuage d'étiquettes", group: "site", sub: "Listes dynamiques", icon: "tag", keywords: "etiquettes tags nuage mots cles", type: "querylist", preset: {"title": "Étiquettes", "source": "tags", "mode": "popular", "count": 24, "layout": "inline"} },
   { key: "authorlist", label: "Liste des auteurs", group: "site", sub: "Listes dynamiques", icon: "users", keywords: "auteurs equipe redacteurs liste", type: "querylist", preset: {"title": "Nos auteurs", "source": "authors", "mode": "popular", "count": 8, "showExcerpt": true} },
   { key: "pagelist", label: "Liste des pages du site", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "pages du site menu plan navigation liste", type: "querylist", preset: {"title": "Pages", "source": "pages", "mode": "recent", "count": 12, "layout": "compact", "showImage": false, "showDate": false} },
+  // Produit = formation : mêmes données que la fiche d'une formation (modèle « Fiche d'une formation » du thème) ; l'élément se remplit à l'affichage
+  { key: "producttitle", label: "Titre du produit", group: "commerce", icon: "type", keywords: "produit titre formation nom product title", type: "heading", preset: {"text": "{{product.title | fallback: Titre de la formation}}", "level": "1"} },
+  { key: "productprice", label: "Prix du produit", group: "commerce", icon: "coin", keywords: "produit prix tarif formation product price", type: "text", preset: {"html": "<p><strong>{{product.price}}</strong></p>"} },
+  { key: "productimage", label: "Image du produit", group: "commerce", icon: "image", keywords: "produit image vignette couverture formation product images", type: "image", preset: {"src": "{{product.image}}", "alt": "{{product.title}}"} },
+  { key: "productshort", label: "Description du produit", group: "commerce", icon: "alignLeft", keywords: "produit description courte resume formation short description", type: "text", preset: {"html": "<p>{{product.subtitle}}</p><p>{{product.description}}</p>"} },
+  { key: "productmeta", label: "Informations du produit", group: "commerce", icon: "info", keywords: "produit meta categorie formateur informations product meta", type: "text", preset: {"html": "<p>Catégorie : {{product.category}} · Formateur : {{product.instructor}}</p>"} },
+  { key: "productrelated", label: "Produits apparentés", group: "commerce", icon: "list", keywords: "produits apparentes lies similaires formations related upsells", type: "querylist", preset: {"title": "Vous aimerez aussi", "source": "courses", "mode": "recent", "count": 3, "layout": "cards", "showDate": false, "excludeCurrent": true} },
   { key: "courselist2", label: "Formations (liste dynamique)", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "formations cours catalogue liste dynamique recents", type: "querylist", preset: {"title": "Nos formations", "source": "courses", "mode": "recent", "count": 6, "layout": "cards", "showDate": false} },
 ];
 
+// Description courte de chaque élément (infobulle de la bibliothèque) : ce qu'il fait, en une phrase. Les widgets personnalisés portent la leur (widgets/*.js).
+const WIDGET_DESCRIPTIONS = {
+  container: "Une boîte qui range d'autres éléments (colonne, ligne, section)", columns: "Plusieurs colonnes côte à côte", column: "Une colonne d'un ensemble de colonnes", grid: "Une grille de cases à colonnes réglables", stack: "Des éléments empilés avec un espacement régulier", group: "Un groupe d'éléments qui se déplacent ensemble",
+  spacer: "Un espace vertical réglable", divider: "Un trait de séparation, avec un texte au milieu si besoin", heading: "Un titre (H1 à H6)", text: "Un paragraphe de texte mis en forme", list: "Une liste à puces ou numérotée", quote: "Une citation mise en valeur", code: "Un bloc de code affiché tel quel, coloré selon le langage choisi",
+  image: "Une image avec son texte de remplacement et un lien possible", gallery: "Plusieurs images en grille, avec agrandissement", video: "Une vidéo YouTube, Vimeo ou un fichier", audio: "Un lecteur pour un fichier audio", button: "Un bouton d'appel à l'action", link: "Un lien texte",
+  accordion: "Des questions qui se déplient (FAQ)", tabs: "Des onglets pour organiser un contenu", badge: "Une petite étiquette (nouveau, promo…)", timeline: "Des étapes sur une ligne du temps", progress: "Une barre de progression", menu: "Le menu de navigation du site", carousel: "Des images qui défilent", toggle: "Un titre qui déplie son contenu",
+  alert: "Un message d'information, d'alerte ou de succès", counter: "Un nombre qui s'incrémente en arrivant à l'écran", testimonial: "Un témoignage avec son auteur", pricing: "Une offre tarifaire avec ses avantages et son bouton", breadcrumb: "Le fil d'Ariane de la page", social: "Des liens vers vos réseaux sociaux", sharebuttons: "Des boutons pour partager la page",
+  modal: "Une fenêtre qui s'ouvre au clic, ou un panneau latéral (off-canvas) à gauche ou à droite", html: "Du HTML sécurisé (réservé aux administrateurs)", embed: "Un contenu d'un service accepté (YouTube, Facebook, Spotify…)", iconlist: "Une liste d'éléments avec des icônes", tooltip: "Une infobulle au survol", hotspot: "Une image avec des points d'intérêt cliquables",
+  posts: "Les derniers articles du blog", courselist: "Les formations du catalogue", search: "Un champ de recherche dans le site", account: "Connexion ou compte du visiteur", dyntext: "Un texte rempli avec une donnée (prénom, page, site…)", table: "Un tableau de données", countdown: "Un compte à rebours jusqu'à une date",
+  course: "Une formation du catalogue en carte", sitelogo: "Le logo du site", postcontent: "Le contenu de l'article affiché", catfilter: "Un filtre par catégorie", sitetitle: "Le nom du site", copyright: "La ligne de copyright avec l'année", addtocart: "Un bouton pour acheter ou ajouter une formation au panier", courserating: "Les avis et la note d'une formation",
+  animatedheading: "Un titre dont un mot change ou s'écrit", flipbox: "Une boîte qui se retourne au survol", pricelist: "Une liste de prix avec descriptions", toc: "Une table des matières construite depuis les titres", readingprogress: "Une barre qui montre l'avancée de la lecture", signupform: "Un formulaire d'inscription du module Formulaires",
+  map: "Une carte Google Maps à partir d'une adresse", imagebox: "Une image avec un titre et un texte", iconbox: "Une icône avec un titre et un texte", rating: "Une note en étoiles", menuanchor: "Une ancre pour les liens internes (#nom)", icon: "Une icône du site, seule, avec sa taille, sa couleur et un lien possible", profilecard: "La fiche d'une personne (photo, nom, rôle)",
+  querylist: "Une liste dynamique de contenus (articles, pages, formations…)", postmeta: "Auteur, date, catégorie et lecture de l'article", postterms: "Les catégories et étiquettes de l'article", postnav: "Les liens vers l'article précédent et suivant", authorbox: "La présentation de l'auteur de l'article", archiveinfo: "Le titre et la description d'une archive", postcomments: "Les commentaires de l'article et leur formulaire",
+  cmsmenu: "Un menu géré dans le CMS", minicart: "Une icône de panier avec le nombre d'articles",
+};
 // ---------- Widgets personnalisés (src/marketing/pages/widgets/*.js) ----------
 // Chaque description (champs typés) devient un type d'élément ordinaire : validation, fiche de bibliothèque, contenu de
 // départ, champs de l'inspecteur, liens comptés, versions. Voir docs/widgets-personnalises.md.
 const CUSTOM_WIDGETS = {};
 const emptyValue = (v) => v === undefined || v === null || v === "";
+// Valide UN champ d'un widget personnalisé selon son type (aussi utilisé pour les sous-champs d'une liste)
+function validateField(f, raw, where, h) {
+  let v;
+  if (f.kind === "text") v = line(raw === undefined ? f.default : raw, f.max || 200);
+  else if (f.kind === "textarea") v = clean(raw === undefined ? f.default : raw, f.max || 1000);
+  else if (f.kind === "number") { v = numberIn(f.min, f.max, { integer: f.integer === true })(raw); if (v === null) v = numberIn(f.min, f.max)(f.default); }
+  else if (f.kind === "select") v = f.options.some((o) => o[0] === raw) ? raw : f.default !== undefined ? f.default : f.options[0][0];
+  else if (f.kind === "bool") v = typeof raw === "boolean" ? raw : f.default === true;
+  else if (f.kind === "link") v = h.linkUrl(raw, where);
+  else if (f.kind === "image") v = raw ? h.imageUrl(raw, where) : "";
+  else if (f.kind === "icon") v = h.iconNames.includes(String(raw || "")) ? String(raw) : h.iconNames.includes(String(f.default || "")) ? f.default : "";
+  else if (f.kind === "color") v = color(raw) || "";
+  else if (f.kind === "items") {
+    const list = raw === undefined ? (f.default || []) : raw;
+    if (!Array.isArray(list)) throw new Error(`${where} : une liste d'éléments est attendue.`);
+    if (list.length > f.max) throw new Error(`${where} : ${f.max} élément(s) au plus.`);
+    if (list.length < (f.min || 0)) throw new Error(`${where} : ${f.min} élément(s) au moins.`);
+    v = list.map((it, i) => {
+      if (!it || typeof it !== "object" || Array.isArray(it)) throw new Error(`${where} : l'élément ${i + 1} est invalide.`);
+      return Object.fromEntries(f.fields.map((sf) => [sf.key, validateField(sf, it[sf.key], `${where}, élément ${i + 1} (${sf.label})`, h)]));
+    });
+  }
+  if (f.required && (f.kind === "items" ? !v.length : emptyValue(v))) throw new Error(`${where} : obligatoire.`);
+  return v === null ? "" : v;
+}
 function schemaProps(def) {
   return (p, at, h) => {
     const out = {};
-    for (const f of def.schema) {
-      const raw = p[f.key], where = `${at} (${def.label}, ${f.label})`;
-      let v;
-      if (f.kind === "text") v = line(raw === undefined ? f.default : raw, f.max || 200);
-      else if (f.kind === "textarea") v = clean(raw === undefined ? f.default : raw, f.max || 1000);
-      else if (f.kind === "number") { v = numberIn(f.min, f.max, { integer: f.integer === true })(raw); if (v === null) v = numberIn(f.min, f.max)(f.default); }
-      else if (f.kind === "select") v = f.options.some((o) => o[0] === raw) ? raw : f.default !== undefined ? f.default : f.options[0][0];
-      else if (f.kind === "bool") v = typeof raw === "boolean" ? raw : f.default === true;
-      else if (f.kind === "link") v = h.linkUrl(raw, where);
-      else if (f.kind === "image") v = raw ? h.imageUrl(raw, where) : "";
-      else if (f.kind === "icon") v = h.iconNames.includes(String(raw || "")) ? String(raw) : h.iconNames.includes(String(f.default || "")) ? f.default : "";
-      else if (f.kind === "color") v = color(raw) || "";
-      if (f.required && emptyValue(v)) throw new Error(`${where} : obligatoire.`);
-      out[f.key] = v === null ? "" : v;
-    }
+    for (const f of def.schema) out[f.key] = validateField(f, p[f.key], `${at} (${def.label}, ${f.label})`, h);
+    if (def.validate) def.validate(out, `${at} (${def.label})`); // règles qui portent sur l'ensemble des réglages
     return out;
   };
 }
@@ -893,7 +1074,7 @@ function registerWidget(def) {
 }
 // Contenu de départ : valeurs par défaut des champs (+ version)
 let paletteReady = false;
-const paletteEntry = (def) => ({ icon: def.icon, blank: () => ({ props: Object.fromEntries(def.schema.filter((f) => f.default !== undefined).map((f) => [f.key, f.default])), ...(def.version > 1 ? { v: def.version } : {}) }) });
+const paletteEntry = (def) => ({ icon: def.icon, blank: () => ({ props: Object.fromEntries(def.schema.filter((f) => f.default !== undefined).map((f) => [f.key, Array.isArray(f.default) ? JSON.parse(JSON.stringify(f.default)) : f.default])), ...(def.version > 1 ? { v: def.version } : {}) }) });
 // Permissions exigées par des widgets : libellé affiché sur le cadenas
 const WIDGET_PERMISSIONS = { "pages.code": "réservé aux administrateurs (le HTML s'affiche sur le même domaine que les comptes des élèves)" };
 const LOADED_WIDGETS = require("./widgets").load();
@@ -925,7 +1106,8 @@ const CATEGORIES = { structure: "Structure", text: "Texte", media: "Média", int
 // Contenu de départ de chaque élément (toujours VALIDE : un élément ajouté s'enregistre tout de suite) et icône de la
 // palette. Les éléments qui demandent une donnée réelle (image, vidéo, formation…) la demandent à l'ajout (`asks`).
 const PALETTE = {
-  container: { icon: "borderBox", blank: () => ({ children: [] }) },
+  // Un conteneur ajouté naît avec un écart de 20 px entre ses enfants (valeur courante des constructeurs de pages) ; les conteneurs existants gardent le leur
+  container: { icon: "borderBox", blank: () => ({ children: [], styles: { desktop: { gap: "20px" } } }) },
   columns: { icon: "columns", blank: () => ({ children: [{ type: "column", children: [] }, { type: "column", children: [] }] }) },
   column: { icon: "moveVertical", blank: () => ({ children: [] }) },
   grid: { icon: "layout", blank: () => ({ children: [] }) },
@@ -1017,30 +1199,43 @@ const STYLE_UI = {
   paddingTop: ["Intérieur haut"], paddingRight: ["Intérieur droite"], paddingBottom: ["Intérieur bas"], paddingLeft: ["Intérieur gauche"],
   fontFamily: ["Police", { heading: "Titres du site", body: "Texte du site", system: "Système", serif: "Avec empattements", mono: "Chasse fixe" }],
   fontSize: ["Taille"], fontWeight: ["Graisse", { 300: "Légère", 400: "Normale", 500: "Moyenne", 600: "Demi-grasse", 700: "Grasse", 800: "Extra-grasse", 900: "Noire" }],
-  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
+  fontStyle: ["Style", { normal: "Normal", italic: "Italique" }], lineHeight: ["Interligne"], lineClamp: ["Lignes maximum"], columnCount: ["Colonnes de texte"], textStrokeWidth: ["Contour du texte : épaisseur"], textStrokeColor: ["Contour du texte : couleur"], letterSpacing: ["Espacement des lettres"], wordSpacing: ["Espacement des mots"], textIndent: ["Retrait de première ligne"],
   textTransform: ["Casse", { none: "Normale", uppercase: "MAJUSCULES", lowercase: "minuscules", capitalize: "Première Lettre" }],
   textAlign: ["Alignement du texte", { left: "Gauche", center: "Centre", right: "Droite", justify: "Justifié" }],
   textShadow: ["Ombre du texte", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", glow: "Halo clair" }],
   textDecoration: ["Décoration", { none: "Aucune", underline: "Soulignée", "line-through": "Barrée" }],
   color: ["Couleur du texte"], backgroundColor: ["Couleur de fond"],
-  borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
+  borderWidth: ["Épaisseur de bordure"], borderStyle: ["Style de bordure", { none: "Aucune", solid: "Pleine", dashed: "Tirets", dotted: "Points", double: "Double", groove: "Gravée", ridge: "En relief", inset: "Creusée", outset: "Bombée" }], borderColor: ["Couleur de bordure"], borderRadius: ["Arrondi"],
   borderTopWidth: ["Épaisseur haut"], borderRightWidth: ["Épaisseur droite"], borderBottomWidth: ["Épaisseur bas"], borderLeftWidth: ["Épaisseur gauche"],
   borderTopLeftRadius: ["Arrondi haut gauche"], borderTopRightRadius: ["Arrondi haut droit"], borderBottomRightRadius: ["Arrondi bas droit"], borderBottomLeftRadius: ["Arrondi bas gauche"],
   backdropBlur: ["Flou de l'arrière-plan (px)"],
+  direction: ["Sens d'écriture", { ltr: "De gauche à droite", rtl: "De droite à gauche" }], scrollMarginTop: ["Décalage d'ancre (lien #…)"],
+  backgroundClip: ["Découpe du fond", { "border-box": "Jusqu'à la bordure", "padding-box": "Jusqu'au remplissage", "content-box": "Au contenu seulement", text: "Dans les lettres du texte" }],
   boxShadow: ["Ombre", { none: "Aucune", sm: "Légère", md: "Moyenne", lg: "Forte", xl: "Très forte" }], opacity: ["Opacité"],
   overflow: ["Débordement", { visible: "Visible", hidden: "Masqué", auto: "Défilement" }],
+  overflowX: ["Débordement horizontal", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }], overflowY: ["Débordement vertical", { visible: "Visible", hidden: "Masqué", auto: "Auto", scroll: "Défilement", clip: "Coupé" }],
+  visibility: ["Visibilité (garde sa place)", { visible: "Visible", hidden: "Invisible" }],
+  cursor: ["Curseur de la souris", { auto: "Automatique", default: "Flèche", pointer: "Main", text: "Texte", move: "Déplacer", grab: "Attraper", "not-allowed": "Interdit", help: "Aide", "zoom-in": "Zoom +", "zoom-out": "Zoom −" }],
+  pointerEvents: ["Réaction à la souris", { auto: "Normale", none: "Aucune (traversée)" }],
+  mixBlendMode: ["Fusion avec l'arrière-plan", { normal: "Normale", multiply: "Produit", screen: "Écran", overlay: "Incrustation", darken: "Assombrir", lighten: "Éclaircir", "color-dodge": "Densité couleur −", "color-burn": "Densité couleur +", "soft-light": "Lumière tamisée", "hard-light": "Lumière crue", difference: "Différence", exclusion: "Exclusion" }],
+  whiteSpace: ["Retour à la ligne", { normal: "Normal", nowrap: "Jamais", pre: "Conserver les espaces", "pre-wrap": "Conserver + retour", "pre-line": "Conserver les sauts" }],
+  textWrap: ["Équilibrage du texte", { wrap: "Normal", nowrap: "Sans retour", balance: "Équilibré (titres)", pretty: "Soigné (paragraphes)" }],
+  overflowWrap: ["Mots trop longs", { normal: "Normal", "break-word": "Couper si besoin", anywhere: "Couper partout" }],
+  textOverflow: ["Texte coupé (avec « Masqué » et « Jamais »)", { clip: "Net", ellipsis: "Points de suspension" }],
+  outlineWidth: ["Contour : épaisseur"], outlineStyle: ["Contour : style", { none: "Aucun", solid: "Plein", dashed: "Tirets", dotted: "Points" }], outlineColor: ["Contour : couleur"], outlineOffset: ["Contour : décalage"],
+  gridAutoRows: ["Lignes automatiques (ex. minmax(120px, auto))"], gridAutoColumns: ["Colonnes automatiques (ex. 1fr)"],
   gridAutoFlow: ["Remplissage", { row: "Ligne par ligne", column: "Colonne par colonne", "row dense": "Lignes, sans trous", "column dense": "Colonnes, sans trous" }],
   justifyItems: ["Alignement horizontal des cases", { stretch: "Étirer", start: "Début", center: "Centre", end: "Fin" }],
   position: ["Position", { static: "Normale", relative: "Relative", sticky: "Collante", absolute: "Absolue (dans le parent)", fixed: "Fixe (à l'écran)" }], top: ["Décalage haut"], right: ["Décalage droite"], bottom: ["Décalage bas"], left: ["Décalage gauche"],
   transformOrigin: ["Origine des transformations", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
-  transitionDuration: ["Durée des transitions (ms)"], zIndex: ["Plan (z-index)"],
+  transitionDuration: ["Durée des transitions (ms)"], transitionEasing: ["Accélération des transitions", { ease: "Douce", linear: "Linéaire", "ease-in": "Départ lent", "ease-out": "Arrivée lente", "ease-in-out": "Départ et arrivée lents" }], zIndex: ["Plan (z-index)"],
   objectFit: ["Cadrage", { cover: "Remplir", contain: "Contenir", fill: "Étirer", none: "Taille réelle" }],
-  objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
+  objectPosition: ["Point focal", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
   aspectRatio: ["Proportions", { auto: "Libres", "1/1": "1:1", "4/3": "4:3", "3/2": "3:2", "16/9": "16:9", "21/9": "21:9", "3/4": "3:4" }],
   backgroundSize: ["Taille du fond", { cover: "Couvrir", contain: "Contenir", auto: "Réelle" }],
   backgroundRepeat: ["Répétition du fond", { "no-repeat": "Aucune", repeat: "Mosaïque", "repeat-x": "Horizontale", "repeat-y": "Verticale" }],
   backgroundAttachment: ["Défilement du fond", { scroll: "Avec la page", fixed: "Fixe (effet parallaxe)" }],
-  backgroundPosition: ["Position du fond", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite" }],
+  backgroundPosition: ["Position du fond", { center: "Centre", top: "Haut", bottom: "Bas", left: "Gauche", right: "Droite", "top left": "Haut gauche", "top right": "Haut droit", "bottom left": "Bas gauche", "bottom right": "Bas droit" }],
 };
 const GROUP_LABELS = { layout: "Mise en page", size: "Dimensions", spacing: "Espacement", typography: "Typographie", color: "Couleurs", background: "Fond", border: "Bordure", effects: "Effets", position: "Position", media: "Image", mask: "Masque" };
 // Description de l'éditeur (envoyée au navigateur) : types, palette, propriétés de style, écrans, états
@@ -1048,18 +1243,18 @@ function editorSpec() {
   const kind = (k) => {
     const p = STYLE_PROPS[k];
     if (p.check === color || [ "color", "backgroundColor", "borderColor" ].includes(k)) return "color";
-    if (["columns", "lineHeight", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
-    if (k === "gridTemplate" || k === "gridRowsTemplate") return "text";
+    if (["columns", "columnCount", "lineHeight", "lineClamp", "opacity", "zIndex", "flexGrow", "flexShrink", "order", "gridRows", "gridColumnSpan", "gridRowSpan", "gridColumnStart", "gridColumnEnd", "gridRowStart", "gridRowEnd", "transitionDuration", "backdropBlur"].includes(k)) return "number";
+    if (k === "gridTemplate" || k === "gridRowsTemplate" || k === "gridAutoRows" || k === "gridAutoColumns") return "text";
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text" } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
-    categories: CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
-    styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(partsLib.PARTS[type] ? { parts: partsLib.spec(type) } : {}), ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: WIDGETS[type][1], description: (CUSTOM_WIDGETS[type] && CUSTOM_WIDGETS[type].description) || WIDGET_DESCRIPTIONS[type] || "", requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text", ...(CUSTOM_WIDGETS[type].status ? { status: CUSTOM_WIDGETS[type].status } : {}), ...(CUSTOM_WIDGETS[type].dependencies ? { dependencies: CUSTOM_WIDGETS[type].dependencies } : {}) } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, presetCategories: require("./stylePresets").CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
+    styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, css: p.css, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    shapeDividers: Object.entries(SHAPE_DIVIDERS), modalTriggers: Object.entries(MODAL_TRIGGERS), modalSources: Object.entries(MODAL_SOURCES), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
-    colorTokens: COLOR_TOKENS, spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
+    colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
   };
 }
@@ -1115,7 +1310,7 @@ function registerCondition(key, def) {
   CUSTOM_CONDITIONS.set(key, def);
   AUDIENCES[key] = def.label;
 }
-function normalizeAudience(raw, at) {
+function normalizeAudienceOne(raw, at) {
   if (!raw || typeof raw !== "object" || !raw.who) return undefined;
   if (!Object.hasOwn(AUDIENCES, raw.who)) throw new Error(`${at} : public d'affichage inconnu.`);
   if (CUSTOM_CONDITIONS.has(raw.who)) {
@@ -1144,8 +1339,27 @@ function normalizeAudience(raw, at) {
   }
   return { who: raw.who };
 }
+// Groupes de conditions (comme les conditions d'affichage d'Elementor) : la condition principale ET celles de « and » forment le premier groupe ;
+// chaque groupe de « or » en est une alternative (ET entre ses conditions) ; l'élément s'affiche si UN groupe est satisfait.
+function normalizeAudience(raw, at) {
+  const first = normalizeAudienceOne(raw, at);
+  if (!first) return undefined;
+  const more = (list) => (Array.isArray(list) ? list : []).slice(0, 3).map((c) => normalizeAudienceOne(c, at)).filter(Boolean);
+  const and = more(raw.and), or = (Array.isArray(raw.or) ? raw.or : []).slice(0, 3).map((g) => {
+    const head = normalizeAudienceOne(g, at);
+    if (!head) return null;
+    const gand = more(g.and);
+    return gand.length ? { ...head, and: gand } : head;
+  }).filter(Boolean);
+  return { ...first, ...(and.length ? { and } : {}), ...(or.length ? { or } : {}) };
+}
 // Le visiteur correspond-il ? visitor = { known, student, subscribed, customer, tags: Set, score }
 function audienceMatches(audience, visitor) {
+  if (!audience) return true;
+  const group = (g) => audienceMatchesOne(g, visitor) && (g.and || []).every((c) => audienceMatchesOne(c, visitor));
+  return group(audience) || (audience.or || []).some(group);
+}
+function audienceMatchesOne(audience, visitor) {
   if (!audience) return true;
   const v = visitor || { known: false, student: false, subscribed: false, customer: false, tags: new Set(), score: 0 };
   switch (audience.who) {
@@ -1215,6 +1429,12 @@ const EMBED_PROVIDERS = [
   { key: "gforms", label: "Google Forms", re: /^https:\/\/docs\.google\.com\/forms\/d\/e\/([\w-]{20,80})\/viewform/i, src: (m) => `https://docs.google.com/forms/d/e/${m[1]}/viewform?embedded=true`, ratio: "3/4" },
   { key: "typeform", label: "Typeform", re: /^https:\/\/([\w-]{1,40})\.typeform\.com\/to\/([A-Za-z0-9]{4,20})/i, src: (m) => `https://${m[1]}.typeform.com/to/${m[2]}`, ratio: "3/4" },
   { key: "loom", label: "Loom", re: /^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/([a-f0-9]{20,40})/i, src: (m) => `https://www.loom.com/embed/${m[1]}`, ratio: "16/9" },
+  { key: "youtubelist", label: "Playlist YouTube", re: /^https:\/\/(?:www\.)?youtube\.com\/playlist\?list=([\w-]{10,60})/i, src: (m) => `https://www.youtube-nocookie.com/embed/videoseries?list=${m[1]}`, ratio: "16/9" },
+  // Facebook : modules officiels d'intégration (cadres, sans clé ni script) ; l'adresse est reconstruite, jamais copiée telle quelle
+  { key: "facebookpage", label: "Page Facebook", re: /^https:\/\/(?:www\.)?facebook\.com\/([\w.-]{3,80})\/?$/i, src: (m) => `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(`https://www.facebook.com/${m[1]}`)}&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true`, ratio: "5/6" },
+  { key: "facebookpost", label: "Publication ou vidéo Facebook", re: /^https:\/\/(?:www\.)?facebook\.com\/([\w.-]{3,80})\/(posts|videos)\/([\w.-]{5,120})\/?$/i, src: (m) => `https://www.facebook.com/plugins/${m[2] === "videos" ? "video" : "post"}.php?href=${encodeURIComponent(`https://www.facebook.com/${m[1]}/${m[2]}/${m[3]}`)}&show_text=true&width=500`, ratio: "4/5" },
+  { key: "instagram", label: "Instagram (publication ou reel)", re: /^https:\/\/www\.instagram\.com\/(p|reel|tv)\/([\w-]{5,30})\/?/i, src: (m) => `https://www.instagram.com/${m[1]}/${m[2]}/embed`, ratio: "4/5" },
+  { key: "tiktok", label: "TikTok", re: /^https:\/\/www\.tiktok\.com\/@([\w.]{2,40})\/video\/(\d{10,25})/i, src: (m) => `https://www.tiktok.com/embed/v2/${m[2]}`, ratio: "9/16" },
   { key: "canva", label: "Canva (lien « Intégrer »)", re: /^https:\/\/www\.canva\.com\/design\/([\w-]{6,40})\/([\w-]{6,40})\/view/i, src: (m) => `https://www.canva.com/design/${m[1]}/${m[2]}/view?embed`, ratio: "16/9" },
 ];
 function embedOf(url) {
@@ -1224,8 +1444,8 @@ function embedOf(url) {
 }
 
 // Réseaux sociaux proposés (pictogrammes dessinés pour KOLAKISA, dans views/marketing-public/_social-icon.ejs)
-const SHARE_NETWORKS = { facebook: "Facebook", x: "X (Twitter)", linkedin: "LinkedIn", whatsapp: "WhatsApp", email: "E-mail" };
-const SOCIAL_NETWORKS = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X (Twitter)", tiktok: "TikTok", whatsapp: "WhatsApp", email: "E-mail", website: "Site web" };
+const SHARE_NETWORKS = { facebook: "Facebook", x: "X (Twitter)", linkedin: "LinkedIn", whatsapp: "WhatsApp", telegram: "Telegram", pinterest: "Pinterest", reddit: "Reddit", threads: "Threads", email: "E-mail" };
+const SOCIAL_NETWORKS = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X (Twitter)", tiktok: "TikTok", whatsapp: "WhatsApp", email: "E-mail", telegram: "Telegram", pinterest: "Pinterest", reddit: "Reddit", threads: "Threads", website: "Site web" };
 
 // ---------- CSS personnalisé, classes, attributs ----------
 // Sécurité : les pages sont servies sur le domaine des comptes des élèves. Le CSS saisi ne peut charger AUCUNE ressource
@@ -1300,9 +1520,33 @@ function normalizeSchedule(raw, at) {
   const from = d(raw.from), until = d(raw.until);
   if (Number.isNaN(from) || Number.isNaN(until)) throw new Error(`${at} : date de programmation invalide.`);
   if (from && until && from >= until) throw new Error(`${at} : la fin de la programmation doit suivre le début.`);
-  return from || until ? { ...(from ? { from } : {}), ...(until ? { until } : {}) } : undefined;
+  // Jours de la semaine (1 = lundi … 7 = dimanche) et plage horaire de la journée, en heure de Paris (comme « Day of the week » / « Time of day » d'Elementor, mais sur l'heure du site)
+  const days = [...new Set((Array.isArray(raw.days) ? raw.days : []).map(Number).filter((x) => Number.isInteger(x) && x >= 1 && x <= 7))].sort((a, b) => a - b);
+  const hm = (v) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v || "")) ? String(v) : null);
+  const hours = raw.hours && typeof raw.hours === "object" ? { from: hm(raw.hours.from), to: hm(raw.hours.to) } : null;
+  if (hours && (hours.from === null) !== (hours.to === null)) throw new Error(`${at} : plage horaire incomplète (début et fin attendus, au format HH:MM).`);
+  if (hours && hours.from && hours.from === hours.to) throw new Error(`${at} : la plage horaire doit avoir une durée.`);
+  const out = { ...(from ? { from } : {}), ...(until ? { until } : {}), ...(days.length && days.length < 7 ? { days } : {}), ...(hours && hours.from ? { hours } : {}) };
+  return Object.keys(out).length ? out : undefined;
 }
-const scheduleMatches = (s, now = Date.now()) => !s || ((!s.from || Date.parse(s.from) <= now) && (!s.until || Date.parse(s.until) > now));
+// Jour (1–7) et minutes écoulées depuis minuit à Paris
+const parisClock = (now) => {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(now)).map((x) => [x.type, x.value]));
+  return { day: { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 }[p.weekday], minutes: Number(p.hour) * 60 + Number(p.minute) };
+};
+const scheduleMatches = (s, now = Date.now()) => {
+  if (!s) return true;
+  if ((s.from && Date.parse(s.from) > now) || (s.until && Date.parse(s.until) <= now)) return false;
+  if (s.days || s.hours) {
+    const c = parisClock(now);
+    if (s.days && !s.days.includes(c.day)) return false;
+    if (s.hours) {
+      const [fh, fm] = s.hours.from.split(":").map(Number), [th, tm] = s.hours.to.split(":").map(Number), a = fh * 60 + fm, b = th * 60 + tm;
+      if (!(a < b ? c.minutes >= a && c.minutes < b : c.minutes >= a || c.minutes < b)) return false; // une plage qui passe minuit (22:00 → 06:00) est permise
+    }
+  }
+  return true;
+};
 
 // ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
 // Registre central des animations : src/marketing/pages/motion.js (une animation = une ligne ; le panneau, la validation, le CSS publié et l'aperçu le lisent)
@@ -1323,14 +1567,45 @@ function capsOf(type) {
   return caps;
 }
 // Formes de découpe (masque) : tracés CSS « clip-path », sans fichier à charger
+// Ouverture automatique d'une fenêtre : déclencheur, délai (s), seuil de défilement (%), fréquence, fermeture automatique (s), fermeture verrouillée
+const MODAL_TRIGGERS = { load: "Au chargement de la page", scroll: "Après un défilement", exit: "Quand le visiteur s'apprête à quitter la page", idle: "Après un temps d'inactivité", clicks: "Après un nombre de clics sur la page" };
+const MODAL_SOURCES = { direct: "Visiteur arrivé directement (sans site d'origine)", search: "Visiteur venu d'un moteur de recherche", social: "Visiteur venu d'un réseau social", other: "Visiteur venu d'un autre site" };
+function modalAuto(p) {
+  const auto = oneOf(...Object.keys(MODAL_TRIGGERS))(p.auto);
+  if (!auto) return {};
+  const out = { auto };
+  if (auto === "load" || auto === "idle") out.delay = numberIn(1, 600, { integer: true })(p.delay) || (auto === "idle" ? 20 : 5);
+  if (auto === "clicks") out.clicks = numberIn(1, 50, { integer: true })(p.clicks) || 3;
+  if (auto === "scroll") out.scrollAt = numberIn(5, 95, { integer: true })(p.scrollAt) || 50;
+  out.freq = oneOf("always", "session", "once")(p.freq) || "session";
+  const close = numberIn(1, 600, { integer: true })(p.autoClose);
+  if (close) out.autoClose = close;
+  if (p.lock === true) out.lock = true;
+  // Règles d'affichage : nombre minimum de pages vues pendant la visite, provenance du visiteur
+  const views = numberIn(2, 20, { integer: true })(p.minViews);
+  if (views) out.minViews = views;
+  const source = oneOf(...Object.keys(MODAL_SOURCES))(p.source);
+  if (source) out.source = source;
+  return out;
+}
 const MASK_SHAPES = {
   circle: ["Cercle", "circle(50% at 50% 50%)"], ellipse: ["Ellipse", "ellipse(50% 38% at 50% 50%)"], triangle: ["Triangle", "polygon(50% 0%, 100% 100%, 0% 100%)"],
   diamond: ["Losange", "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)"], pentagon: ["Pentagone", "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)"],
   hexagon: ["Hexagone", "polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%)"],
   octagon: ["Octogone", "polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)"],
   star: ["Étoile", "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)"],
+  // Formes organiques (comme « Fleur », « Croquis » et « Blob » d'Elementor) : polygones calculés, valeurs en % (s'adaptent à la taille de l'élément)
+  flower: ["Fleur", "polygon(100% 50%, 95% 55%, 84% 58%, 76% 59%, 74% 62%, 80% 69%, 86% 78%, 85% 85%, 78% 86%, 69% 80%, 62% 74%, 59% 76%, 58% 84%, 55% 95%, 50% 100%, 45% 95%, 42% 84%, 41% 76%, 38% 74%, 31% 80%, 22% 86%, 15% 85%, 14% 78%, 20% 69%, 26% 62%, 24% 59%, 16% 58%, 5% 55%, 0% 50%, 5% 45%, 16% 42%, 24% 41%, 26% 38%, 20% 31%, 14% 22%, 15% 15%, 22% 14%, 31% 20%, 38% 26%, 41% 24%, 42% 16%, 45% 5%, 50% 0%, 55% 5%, 58% 16%, 59% 24%, 62% 26%, 69% 20%, 78% 14%, 85% 15%, 86% 22%, 80% 31%, 74% 38%, 76% 41%, 84% 42%, 95% 45%)"],
+  blob: ["Blob", "polygon(96% 50%, 95% 56%, 93% 61%, 90% 67%, 87% 72%, 85% 77%, 81% 81%, 77% 85%, 71% 87%, 66% 88%, 60% 87%, 55% 86%, 50% 86%, 45% 86%, 40% 87%, 34% 89%, 27% 89%, 21% 88%, 15% 85%, 12% 79%, 10% 73%, 10% 66%, 11% 60%, 12% 55%, 12% 50%, 12% 45%, 12% 40%, 13% 35%, 15% 30%, 18% 25%, 22% 22%, 26% 18%, 29% 14%, 34% 10%, 38% 6%, 44% 3%, 50% 2%, 56% 3%, 62% 6%, 66% 11%, 69% 17%, 72% 22%, 75% 25%, 78% 28%, 83% 31%, 88% 34%, 92% 39%, 95% 44%)"],
+  sketch: ["Croquis", "polygon(91% 50%, 93% 56%, 96% 64%, 91% 69%, 83% 71%, 78% 74%, 77% 81%, 76% 90%, 68% 91%, 62% 90%, 56% 90%, 50% 90%, 44% 89%, 38% 92%, 31% 93%, 25% 90%, 23% 81%, 21% 75%, 15% 72%, 9% 69%, 5% 63%, 8% 56%, 5% 50%, 9% 44%, 14% 40%, 15% 34%, 11% 25%, 12% 17%, 22% 18%, 29% 18%, 33% 13%, 38% 9%, 44% 6%, 50% 7%, 56% 6%, 62% 9%, 66% 15%, 70% 18%, 79% 16%, 87% 18%, 88% 26%, 86% 34%, 90% 38%, 92% 44%)"],
 };
-const HOVERS = { grow: "Grossit", shrink: "Rétrécit", lift: "Se soulève", tilt: "S'incline" };
+// Séparateurs de forme (Elementor : « Shape Divider ») : formes dessinées en CSS (clip-path en %), liste fermée
+const SHAPE_DIVIDERS = { wave: "Vague", curve: "Courbe", triangle: "Triangle", tilt: "Incliné", slope: "Pente", arrow: "Flèche", zigzag: "Zigzag" };
+const HOVERS = {
+  grow: "Grossit", shrink: "Rétrécit", lift: "Se soulève", tilt: "S'incline",
+  // Animations de survol d'Elementor (liste officielle : /help/hover-animations/), en CSS pur, désactivées si « réduire les animations »
+  float: "Flotte vers le haut", sink: "S'enfonce", rotate: "Pivote", skew: "Se penche", push: "Appuie", pop: "Surgit", pulse: "Pulse", bounce: "Rebondit", bob: "Flotte (va-et-vient)", hang: "Se balance (suspendu)", wobble: "Vacille", buzz: "Vibre",
+};
 // Effets au DÉFILEMENT : chaque effet a une amplitude appliquée selon la position de l'élément dans la fenêtre (p = -1 quand
 // il entre par le bas, 0 au centre, +1 quand il sort par le haut). Valeurs entières bornées ; zéro = pas d'effet.
 const SCROLL_FX = {
@@ -1407,7 +1682,7 @@ function normalizeMotion(raw, type) {
   // Écrans où les effets de défilement et de souris sont COUPÉS (indépendant par écran)
   if ((out.scroll || out.mouse || out.scrollFx || out.mouseFx) && Array.isArray(raw.off)) {
     const off = BREAKPOINTS.map((b) => b.key).filter((k) => raw.off.includes(k));
-    if (off.length && off.length < BREAKPOINTS.length) out.off = off;
+    if (off.length && !["desktop", "tablet", "mobile"].every((k) => off.includes(k))) out.off = off; // « ordinateur » couvre aussi le grand écran
   }
   if (Object.hasOwn(ENTRANCES, raw.entrance)) {
     out.entrance = raw.entrance;
@@ -1464,6 +1739,9 @@ function normalizeNode(raw, at, h, depth, counter) {
   const node = { id, type: raw.type, props: def.props(rawProps, where, dynamicHelpers(h)) };
   if (cw && cw.version > 1) node.v = cw.version;
   if (label) node.name = label;
+  // Note privée de l'équipe (jamais écrite dans la page publique)
+  const note = clean(raw.note, 500);
+  if (note) node.note = note;
   if (raw.hidden === true) node.hidden = true;
   if (raw.locked === true) node.locked = true;
   // Ancre : identifiant HTML pour les liens internes (« /p/ma-page#tarifs »), unique dans la page
@@ -1482,7 +1760,7 @@ function normalizeNode(raw, at, h, depth, counter) {
   // Visible sur certains écrans seulement (au moins un)
   if (Array.isArray(raw.hideOn)) {
     const hideOn = [...new Set(raw.hideOn.filter((b) => BREAKPOINTS.some((x) => x.key === b)))];
-    if (hideOn.length === BREAKPOINTS.length) throw new Error(`${where} : un élément ne peut pas être masqué sur tous les écrans (utilisez « Masquer »).`);
+    if (["desktop", "tablet", "mobile"].every((k) => hideOn.includes(k))) throw new Error(`${where} : un élément ne peut pas être masqué sur tous les écrans (utilisez « Masquer »).`);
     if (hideOn.length) node.hideOn = hideOn;
   }
   const motion = normalizeMotion(raw.motion, raw.type);
@@ -1498,14 +1776,38 @@ function normalizeNode(raw, at, h, depth, counter) {
   if (raw.startHidden === true) node.startHidden = true;
   const schedule = normalizeSchedule(raw.schedule, where);
   if (schedule) node.schedule = schedule;
+  // Séparateur de forme (haut et / ou bas d'un conteneur) : forme d'une liste fixe, couleur validée, hauteur bornée ; rien d'autre n'atteint la page
+  if (def.container && Array.isArray(raw.shapes)) {
+    const seen = new Set(), shapes = [];
+    for (const s of raw.shapes.slice(0, 2)) {
+      const position = oneOf("top", "bottom")(s && s.position), shape = oneOf(...Object.keys(SHAPE_DIVIDERS))(s && s.shape);
+      if (!position || !shape || seen.has(position)) continue;
+      seen.add(position);
+      const colorV = s.color ? color(String(s.color).trim()) : null;
+      const height = numberIn(20, 300, { integer: true })(s.height);
+      shapes.push({ position, shape, ...(colorV ? { color: colorV } : {}), ...(height && height !== 100 ? { height } : {}), ...(s.flip === true ? { flip: true } : {}), ...(s.front === true ? { front: true } : {}) });
+    }
+    if (shapes.length) node.shapes = shapes;
+  }
+  // Diaporama en arrière-plan (comme « Background Slideshow » d'Elementor) : 2 à 8 images de la médiathèque qui se succèdent en fondu, temps par image, effet Ken Burns facultatif
+  if (def.container && raw.bgSlides && Array.isArray(raw.bgSlides.images)) {
+    const images = raw.bgSlides.images.slice(0, 8).map((src, i) => h.imageUrl(src, `${where} (diaporama de fond, image ${i + 1})`)).filter(Boolean);
+    if (images.length) { const seconds = numberIn(2, 30, { integer: true })(raw.bgSlides.seconds); node.bgSlides = { images, ...(seconds && seconds !== 5 ? { seconds } : {}), ...(raw.bgSlides.kenBurns === true ? { kenBurns: true } : {}) }; }
+  }
   if (def.container && raw.bgVideo && raw.bgVideo.src) {
     const src = line(raw.bgVideo.src, 1000);
     if (!/^(https:\/\/[^\s<>"'`\\/@]+\/[^\s<>"'`\\]*|\/uploads\/[a-z0-9/_.-]+)\.(mp4|webm)(\?[^\s<>"'`\\]*)?$/i.test(src)) throw new Error(`${where} : vidéo de fond : fichier .mp4 ou .webm (https:// ou médiathèque).`);
-    node.bgVideo = { src };
+    // Début / fin (secondes), image de secours (affichée si la vidéo ne charge pas) et lecture unique, comme « Background Video » d'Elementor
+    const bs = numberIn(1, 86399, { integer: true })(raw.bgVideo.start), be = numberIn(2, 86400, { integer: true })(raw.bgVideo.end);
+    if (be && be <= (bs || 0)) throw new Error(`${where} : vidéo de fond : la fin doit venir après le début.`);
+    const poster = raw.bgVideo.poster ? h.imageUrl(raw.bgVideo.poster, `${where} (image de secours de la vidéo de fond)`) : "";
+    node.bgVideo = { src, ...(bs ? { start: bs } : {}), ...(be ? { end: be } : {}), ...(poster ? { poster } : {}), ...(raw.bgVideo.once === true ? { once: true } : {}) };
   }
   const styles = normalizeStyles(raw.styles, raw.states, where, h);
   if (styles.styles) node.styles = styles.styles;
   if (styles.states) node.states = styles.states;
+  const parts = normalizeParts(raw.type, raw.parts, where, h, raw.id);
+  if (parts) node.parts = parts;
   if (def.container) {
     const kids = Array.isArray(raw.children) ? raw.children : [];
     node.children = kids.map((c, i) => normalizeNode(c, `${where} › élément ${i + 1}`, h, depth + 1, counter));
@@ -1515,6 +1817,35 @@ function normalizeNode(raw, at, h, depth, counter) {
     }
   }
   return node;
+}
+// Parties stylables d'un widget (voir parts.js) : chaque partie reçoit le jeu de styles COMPLET validé comme celui de la racine, restreint aux groupes
+// et aux états que le registre autorise pour elle. Une partie inconnue ou une propriété hors de ses groupes est refusée (jamais ignorée en silence).
+// Diagnostics non bloquants collectés pendant la validation (lus par l'enregistrement du brouillon : ctx.__warnings)
+function ignored(h, w) { if (h && h.ctx && Array.isArray(h.ctx.__warnings) && h.ctx.__warnings.length < 50) h.ctx.__warnings.push(w); }
+function normalizeParts(type, raw, at, h, nodeId) {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} : parties invalides.`);
+  const defs = partsLib.PARTS[type];
+  const groupOf = (k) => (k === "backgroundColor" ? "background" : (STYLE_PROPS[k] || COMPOSED[k] || {}).group); // la couleur de fond est réglée dans « Fond » (comme dans l'Inspector)
+  const out = {};
+  for (const [key, val] of Object.entries(raw)) {
+    const def = defs && Object.hasOwn(defs, key) ? defs[key] : null;
+    if (!def) throw new Error(`${at} : « ${key} » n'est pas une partie stylable de cet élément.`);
+    const st = normalizeStyles(val && val.styles, val && val.states, `${at} › ${def.label}`, h);
+    // Réglage valide dans la grammaire mais que cette partie n'accepte pas (ex. « alignement dans le parent » sur « Question + réponse ») : il n'a aucun effet
+    // légitime ici. Il est écarté, le reste est enregistré, et la personne est prévenue (diagnostic non bloquant, jamais une erreur qui bloque la page).
+    const drop = (set, scope) => { for (const k of Object.keys(set)) if (!partsLib.allows(def, k, groupOf)) { delete set[k]; ignored(h, { kind: "part_prop", nodeId, part: key, partLabel: def.label, prop: k, scope, message: `Le réglage « ${(STYLE_UI[k] || [k])[0]} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué (le reste est enregistré).` }); } };
+    for (const [bp, set] of Object.entries(st.styles || {})) drop(set, bp);
+    for (const [state, set] of Object.entries(st.states || {})) {
+      if (!def.states.includes(state)) { delete st.states[state]; ignored(h, { kind: "part_state", nodeId, part: key, partLabel: def.label, state, message: `L'état « ${state} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué.` }); continue; }
+      drop(set, state);
+    }
+    for (const bag of [st.styles, st.states]) if (bag) for (const [k, set] of Object.entries(bag)) if (!Object.keys(set).length) delete bag[k];
+    if (st.styles && !Object.keys(st.styles).length) delete st.styles;
+    if (st.states && !Object.keys(st.states).length) delete st.states;
+    if (st.styles || st.states) out[key] = st;
+  }
+  return Object.keys(out).length ? out : null;
 }
 function normalizeStyles(styles, states, at, h) {
   const out = {};
@@ -1583,7 +1914,7 @@ function motionAttrs(n) {
 
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
 // breakpoints : { tablet, mobile } = largeurs maximales (px) des écrans « Tablette » et « Mobile » du site (réglages du site)
-const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767 };
+const DEFAULT_BREAKPOINTS = { tablet: 1023, mobile: 767, wide: 1920 };
 // ---------- Classes globales du site ----------
 // Une classe globale = un nom + des styles (par écran et par état), définis une fois pour le site et appliqués à tout élément
 // qui porte ce nom dans « Classes ». Modifier la classe met à jour tous les éléments. Le style PROPRE d'un élément l'emporte
@@ -1599,52 +1930,111 @@ function normalizeClassDefs(raw, h, { strict = false } = {}) {
       if (out.length >= GLOBAL_CLASS_MAX) throw new Error(`${GLOBAL_CLASS_MAX} classes globales au plus.`);
       const st = normalizeStyles(c.styles, c.states, `Classe « ${name} »`, h);
       seen.add(name);
-      out.push({ name, ...(line(c.label, 60) ? { label: line(c.label, 60) } : {}), ...(st.styles ? { styles: st.styles } : {}), ...(st.states ? { states: st.states } : {}) });
+      // Origine du style (type d'élément source, catégories choisies, date) : informatif, sert à la compatibilité et à l'affichage
+      const m = c.meta && typeof c.meta === "object" ? c.meta : null, sp = require("./stylePresets");
+      const meta = m ? {
+        ...(Object.hasOwn(NODE_TYPES, m.source) ? { source: m.source } : {}),
+        ...(Array.isArray(m.categories) ? { categories: sp.CATEGORIES.map((x) => x.id).filter((id) => m.categories.includes(id)) } : {}),
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(String(m.updated || "")) ? { updated: m.updated } : {}),
+      } : null;
+      out.push({ name, ...(line(c.label, 60) ? { label: line(c.label, 60) } : {}), ...(st.styles ? { styles: st.styles } : {}), ...(st.states ? { states: st.states } : {}), ...(meta && Object.keys(meta).length ? { meta } : {}) });
     } catch (e) { if (strict) throw e; }
   }
   return out;
 }
 function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
-  const base = [], media = { tablet: [], mobile: [] };
-  const mediaOf = (key) => (key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : `(max-width: ${breakpoints.mobile}px)`);
+  const base = [], media = { wide: [], tablet: [], mobile: [] };
+  const mediaOf = (key) => (key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : `(max-width: ${breakpoints.mobile}px)`);
   for (const c of classes || []) {
     if (!/^[a-z][a-z0-9-]{0,29}$/.test(c.name)) continue;
     const sel = `.lp-site :where(.${c.name})`;
     for (const bp of BREAKPOINTS) { const d = c.styles && c.styles[bp.key] ? declarations(c.styles[bp.key]) : ""; if (d) (bp.media ? media[bp.key] : base).push(`${sel}{${d}}`); }
     for (const state of STATES) { const d = c.states && c.states[state.key] ? declarations(c.states[state.key]) : ""; if (d) base.push(`${sel}${state.sel}{${d}}`); }
   }
-  return [...base, ...["tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
+  return [...base, ...["wide", "tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
 }
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
-  const mediaOf = (bp) => (bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
+  const mediaOf = (bp) => (bp.key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
   const usedAnims = new Set(); // animations réellement utilisées : seules leurs images-clés sont écrites dans la page
   const clamps = { tablet: [], mobile: [] }; // cases de grille ramenées au nombre de colonnes de l'écran : écrites après toutes les autres règles
-  const add = (id, styles, states) => {
+  // Parties d'un widget : mêmes écrans et mêmes états que la racine, sélecteur fixé par le registre (parts.js). `.kw-node.kw-n-<id>` donne à la règle une
+  // spécificité supérieure aux styles par défaut du site pour ces zones : le réglage de l'auteur l'emporte sans « !important ».
+  const addParts = (n) => {
+    const defs = partsLib.PARTS[n.type];
+    if (!defs || !n.parts || !NODE_ID.test(String(n.id || ""))) return;
+    for (const [key, set] of Object.entries(n.parts)) {
+      const def = defs[key];
+      if (!def) continue;
+      const sel = `.kw-node.kw-n-${n.id} ${def.select}`;
+      for (const bp of BREAKPOINTS) {
+        const d = set.styles && set.styles[bp.key] ? declarations(set.styles[bp.key]) : "";
+        if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
+      }
+      for (const state of STATES) {
+        const d = set.states && set.states[state.key] ? declarations(set.states[state.key]) : "";
+        if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+      }
+    }
+  };
+  const add = (id, styles, states, band = false) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
     for (const bp of BREAKPOINTS) {
-      const d = styles && styles[bp.key] ? declarations(styles[bp.key]) : "";
+      const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
       if (!d) continue;
       (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
     }
     for (const state of STATES) {
-      const d = states && states[state.key] ? declarations(states[state.key]) : "";
+      const d = states && states[state.key] ? declarations(states[state.key], band) : "";
       if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+    }
+  };
+  // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE
+  // d'un parent, ces marges se partageraient l'espace libre et prendraient le pas sur « Répartition » et « Écart » : c'est le PARENT qui doit répartir
+  // ses enfants. Pour chaque parent, on écrit donc (par écran, avec l'héritage ordinateur → tablette → mobile) une règle à spécificité nulle qui retire
+  // ces marges quand le parent est en ligne / en grille, et les rend quand un écran plus étroit repasse en colonne. Les marges choisies par l'auteur
+  // sur l'enfant (.kw-n-<id>) l'emportent toujours.
+  const DEFAULT_LAYOUT = { layout: ["flex", "column"], columns: ["flex", "row"], grid: ["grid", "row"] };
+  const rowMarginRules = (id, type, styles, kids, wrapper) => {
+    if (!NODE_ID.test(String(id || "")) || !(kids || []).some((k) => k && k.type === "container")) return;
+    const sel = `:where(.kw-n-${id} > ${wrapper ? ".kw-layout > " : ""}.kw-container)`;
+    let [display, dir] = DEFAULT_LAYOUT[type] || ["flex", "column"], prev = null;
+    for (const bp of BREAKPOINTS) {
+      const st = (styles && styles[bp.key]) || {};
+      if (st.display) display = st.display;
+      if (st.flexDirection) dir = st.flexDirection;
+      const row = display === "grid" || display === "inline-grid" || (/flex/.test(display) && /^row/.test(dir));
+      if (row !== prev && !(prev === null && !row)) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{margin-left:${row ? "0" : "auto"};margin-right:${row ? "0" : "auto"}}`);
+      prev = row;
     }
   };
   const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
     add(s.id, s.styles, s.states);
+    if (s.type === "layout") rowMarginRules(s.id, "layout", s.styles, s.children, true);
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, n.styles, n.states);
+      add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+    addParts(n);
+      if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
+      // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
+      // aient un effet (sans cela l'image garde sa hauteur naturelle et la boîte reste vide en dessous). Seulement pour un écran qui fixe l'une de ces valeurs :
+      // une image sans hauteur ni proportions garde sa taille naturelle.
+      if (n.type === "image" && NODE_ID.test(String(n.id || ""))) for (const bp of BREAKPOINTS) {
+        const st = n.styles && n.styles[bp.key];
+        if (st && ((st.height && st.height !== "auto") || (st.aspectRatio && st.aspectRatio !== "auto"))) (bp.media ? rules.media[bp.key] : rules.base).push(`.kw-n-${n.id} img{width:100%;height:100%}`);
+      }
       entranceRules(n, rules, usedAnims);
       // CSS personnalisé de l'élément (validé à l'enregistrement, revalidé ici : rien d'autre n'atteint la page)
       if (n.css && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.css, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}{${c}}`); } catch { /* ignoré */ } }
       if (n.cssHover && NODE_ID.test(String(n.id || ""))) { try { const c = cssDeclarations(n.cssHover, "CSS"); if (c) rules.custom.push(`.kw-node.kw-n-${n.id}:hover{${c}}`); } catch { /* ignoré */ } }
       // Barre de progression : sa largeur vient de sa valeur (validée 0–100), pas d'un style écrit dans la page
+      if (n.shapes && NODE_ID.test(String(n.id || ""))) {
+        rules.base.push(`:where(.kw-n-${n.id}){position:relative;isolation:isolate}`);
+        for (const sh of n.shapes) rules.base.push(`.kw-n-${n.id}>.kw-shape-${sh.position}{height:${sh.height || 100}px;${sh.color ? "color:" + colorCss(sh.color) + ";" : ""}}`);
+      }
       if (n.type === "hotspot" && NODE_ID.test(String(n.id || "")) && n.props) n.props.spots.forEach((sp, k) => rules.base.push(`.kw-n-${n.id}-s${k}{left:${Number(sp.x)}%;top:${Number(sp.y)}%}`));
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if ((n.type === "social" || n.type === "sharebuttons") && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
@@ -1694,7 +2084,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   // « Masquer sur cet écran » : mêmes seuils que les écrans du site (réglages du site)
   // (écrites seulement si la page masque quelque chose selon l'écran)
   if (/"hideOn":\["/.test(JSON.stringify(sections))) {
-    css += `\n@media (min-width:${breakpoints.tablet + 1}px){.lp-hide-desktop{display:none}}\n@media (min-width:${breakpoints.mobile + 1}px) and (max-width:${breakpoints.tablet}px){.lp-hide-tablet{display:none}}\n@media (max-width:${breakpoints.mobile}px){.lp-hide-mobile{display:none}}`;
+    css += `\n@media (min-width:${breakpoints.tablet + 1}px){.lp-hide-desktop{display:none}}\n@media (min-width:${breakpoints.wide || 1920}px){.lp-hide-wide{display:none}}\n@media (min-width:${breakpoints.mobile + 1}px) and (max-width:${breakpoints.tablet}px){.lp-hide-tablet{display:none}}\n@media (max-width:${breakpoints.mobile}px){.lp-hide-mobile{display:none}}`;
   }
   // Le CSS personnalisé vient en dernier (il précise les réglages de l'inspecteur), avec une spécificité plus forte
   if (rules.custom.length) css += `\n${rules.custom.join("\n")}`;

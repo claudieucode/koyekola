@@ -16,6 +16,7 @@
       <h1>Listes <span class="mk-count"><%= lists.length %></span></h1>
     </div>
     <p class="mk-lead">Organisez vos contacts en groupes pour faciliter la gestion de votre audience et vos campagnes.</p>
+    <%- include("partials/site-filter", { action: "/marketing/listes" }) %>
 
     <div class="mk-callout">
       <%- icon("info", { size: 18 }) %>
@@ -104,6 +105,7 @@
               <label for="l-name">Nom de la liste *</label>
               <input id="l-name" type="text" name="name" maxlength="100" placeholder="Ex. Newsletter" required data-mk-required-message="Le nom de la liste est obligatoire.">
             </div>
+            <%- include("partials/site-field", { id: "l-site" }) %>
             <div class="field-group">
               <label for="l-desc">Description</label>
               <input id="l-desc" type="text" name="description" maxlength="500" placeholder="Description facultative">

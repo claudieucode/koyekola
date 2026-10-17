@@ -1,12 +1,12 @@
 // Campagnes : création et modification (brouillon seulement). Le lancement est dans dispatch.js.
 const { createRepository } = require("../db/repository");
 const { MarketingError } = require("../errors");
-const { checkCtx, cleanText, audit } = require("../audience/shared");
+const { checkCtx, cleanText, audit, resolveSite, siteSql } = require("../audience/shared");
 const { getList } = require("../audience/lists");
 const segments = require("../segments");
 const templates = require("../templates");
 
-const table = (ctx) => createRepository(ctx.db, ctx.organizationId).table("mk_campaigns");
+const table = (ctx) => createRepository(ctx.db, ctx.organizationId, { siteScope: ctx.siteScope }).table("mk_campaigns");
 const flag = (v, fallback) => (v === undefined ? fallback : v ? 1 : 0);
 const SUMMARY = "id, name, template_id, target_type, target_id, category, track_clicks, track_opens, ab_variants, ab_winner, ab_decide_at, status, scheduled_at, send_mode, send_plan, started_at, finished_at, error, total_recipients, sent_count, delivered_count, bounced_count, complained_count, failed_count, skipped_count, unsubscribed_count, open_count, unique_open_count, click_count, unique_click_count, created_at, updated_at";
 
@@ -17,16 +17,20 @@ function cleanName(value) {
   return name;
 }
 
-function checkTemplate(ctx, templateId) {
+// Une campagne d'un site n'utilise que les modèles de CE site ou ceux de l'organisation (sans site) ; une campagne sans site, jamais un modèle de site
+function checkTemplate(ctx, templateId, siteId = null) {
   const template = Number.isInteger(templateId) ? templates.getTemplate(ctx, templateId) : null;
   if (!template) throw new MarketingError("not_found", "Modèle introuvable.");
+  if (template.site_id !== null && template.site_id !== siteId) throw new MarketingError("invalid_field", "Ce modèle appartient à un autre site.");
   if (template.kind !== "marketing") throw new MarketingError("invalid_field", "Une campagne utilise un modèle de type marketing (avec désinscription).");
 }
 
-function checkTarget(ctx, type, id) {
+// La cible (audience ou segment) est TOUJOURS du même site que la campagne : jamais d'envoi vers l'audience d'un autre site
+function checkTarget(ctx, type, id, siteId = null) {
   if (type !== "list" && type !== "segment") throw new MarketingError("invalid_field", "La cible d'une campagne est une liste ou un segment.");
   const found = Number.isInteger(id) ? (type === "list" ? getList(ctx, id) : segments.getSegment(ctx, id)) : null;
   if (!found) throw new MarketingError("not_found", type === "list" ? "Liste introuvable." : "Segment introuvable.");
+  if ((found.site_id ?? null) !== siteId) throw new MarketingError("invalid_field", type === "list" ? "Cette audience n'appartient pas au même site que la campagne." : "Ce segment n'appartient pas au même site que la campagne.");
 }
 
 function checkCategory(ctx, key) {
@@ -40,13 +44,17 @@ function checkCategory(ctx, key) {
 function createCampaign(ctx, input = {}) {
   checkCtx(ctx);
   const name = cleanName(input.name);
-  checkTemplate(ctx, input.templateId);
-  checkTarget(ctx, input.targetType, input.targetId);
+  // Le site d'une campagne est celui de son audience (ou de son segment) — jamais un choix séparé qui pourrait la désaccorder
+  const targetRow = input.targetType === "list" || input.targetType === "segment"
+    ? (Number.isInteger(input.targetId) ? (input.targetType === "list" ? getList(ctx, input.targetId) : segments.getSegment(ctx, input.targetId)) : null) : null;
+  const siteId = input.siteId !== undefined || Number.isInteger(ctx.siteScope) ? resolveSite(ctx, input.siteId) : targetRow ? targetRow.site_id ?? null : null;
+  checkTemplate(ctx, input.templateId, siteId);
+  checkTarget(ctx, input.targetType, input.targetId, siteId);
   const category = checkCategory(ctx, input.category);
   const repo = table(ctx);
   if (repo.count({ name }) > 0) throw new MarketingError("duplicate", "Une campagne porte déjà ce nom.");
   const row = repo.insert({
-    name, template_id: input.templateId, target_type: input.targetType, target_id: input.targetId, category,
+    name, site_id: siteId, template_id: input.templateId, target_type: input.targetType, target_id: input.targetId, category,
     track_clicks: flag(input.trackClicks, 1), track_opens: flag(input.trackOpens, 0), created_by: ctx.userId ?? null,
   });
   audit(ctx, "campaign.created", "campaign", row.id, {});
@@ -61,7 +69,7 @@ function requireCampaign(ctx, id) {
   return campaign;
 }
 
-const listCampaigns = (ctx) => (checkCtx(ctx), ctx.db.prepare(`SELECT ${SUMMARY} FROM mk_campaigns WHERE organization_id = ? AND kind = 'campaign' ORDER BY id DESC`).all(ctx.organizationId));
+const listCampaigns = (ctx) => { checkCtx(ctx); const site = siteSql(ctx, "mk_campaigns"); return ctx.db.prepare(`SELECT ${SUMMARY}, site_id FROM mk_campaigns WHERE organization_id = ? AND kind = 'campaign' AND ${site.sql} ORDER BY id DESC`).all(ctx.organizationId, ...site.params); };
 
 function updateCampaign(ctx, id, patch = {}) {
   const campaign = requireCampaign(ctx, id);
@@ -71,11 +79,11 @@ function updateCampaign(ctx, id, patch = {}) {
     fields.name = cleanName(patch.name);
     if (fields.name.toLowerCase() !== campaign.name.toLowerCase() && table(ctx).count({ name: fields.name }) > 0) throw new MarketingError("duplicate", "Une campagne porte déjà ce nom.");
   }
-  if (patch.templateId !== undefined) { checkTemplate(ctx, patch.templateId); fields.template_id = patch.templateId; }
+  if (patch.templateId !== undefined) { checkTemplate(ctx, patch.templateId, campaign.site_id ?? null); fields.template_id = patch.templateId; }
   if (patch.targetType !== undefined || patch.targetId !== undefined) {
     const type = patch.targetType ?? campaign.target_type;
     const targetId = patch.targetId ?? campaign.target_id;
-    checkTarget(ctx, type, targetId);
+    checkTarget(ctx, type, targetId, campaign.site_id ?? null);
     fields.target_type = type; fields.target_id = targetId;
   }
   if (patch.category !== undefined) fields.category = checkCategory(ctx, patch.category);
@@ -107,7 +115,7 @@ function duplicateCampaign(ctx, id) {
   let n = 1;
   while (taken.has(build(n).toLowerCase())) n++;
   const copy = createCampaign(ctx, {
-    name: build(n), templateId: source.template_id, targetType: source.target_type, targetId: source.target_id, category: source.category,
+    name: build(n), siteId: source.site_id, templateId: source.template_id, targetType: source.target_type, targetId: source.target_id, category: source.category,
     trackClicks: Boolean(source.track_clicks), trackOpens: Boolean(source.track_opens),
   });
   // Test A/B : les versions (objet, modèle) et les réglages sont repris ; jamais le contenu figé ni le gagnant

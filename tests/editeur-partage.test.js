@@ -16,7 +16,7 @@ describe("boutons de partage (sans serveur)", () => {
     assert.equal(t.group, "social");
     assert.equal(spec.widgetGroups.social, "Réseaux sociaux");
     assert.ok(/partager/.test(t.keywords));
-    assert.deepEqual(spec.shareNetworks.map((n) => n[0]), ["facebook", "x", "linkedin", "whatsapp", "email"]);
+    assert.deepEqual(spec.shareNetworks.map((n) => n[0]), ["facebook", "x", "linkedin", "whatsapp", "telegram", "pinterest", "reddit", "threads", "email"]);
     const { A } = freshMarketing();
     const p = pages.createPage(A, { name: "Partage", kind: "page" });
     const out = pages.saveDraft(A, p.id, { sections: section(t.blank.props) }, { revision: p.revision }).content.sections[0].children[0];

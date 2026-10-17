@@ -24,6 +24,7 @@ const GROUPS = [
     ["users.delete", "Retirer de l'équipe", "delete"], ["users.manage_roles", "Attribuer des rôles", "edit"], ["roles.manage", "Créer et modifier les rôles", "edit"], ["audit.read", "Lire le journal d'activité", "view"]] },
   { key: "pages", label: "Pages, sites et formulaires", perms: [
     ["forms.read", "Voir les pages, sites et formulaires", "view"], ["forms.write", "Créer et modifier pages, sites, formulaires", "edit"], ["pages.publish", "Publier une page", "publish"],
+    ["funnels.read", "Tunnels : voir", "view"], ["funnels.write", "Tunnels : construire (étapes, pages associées, réglages)", "edit"],
     ["pages.delete", "Supprimer définitivement une page", "delete"], ["pages.code", "Code personnalisé dans les pages", "edit"]] },
   { key: "articles", label: "Articles", perms: [
     ["articles.read", "Voir les articles", "view"], ["articles.edit_own", "Gérer ses propres articles", "edit"], ["articles.write", "Gérer tous les articles", "edit"],
@@ -41,9 +42,11 @@ const GROUPS = [
   { key: "navigation", label: "Navigation", perms: [["navigation.read", "Voir", "view"], ["navigation.write", "Créer et modifier les menus", "edit"], ["navigation.publish", "Affecter à un emplacement", "publish"], ["navigation.delete", "Supprimer un menu", "delete"]] },
   { key: "appearance", label: "Apparence", perms: [["appearance.read", "Voir", "view"], ["appearance.styles", "Modifier les styles", "edit"], ["appearance.parts", "Modifier en-tête et pied de page", "edit"],
     ["appearance.templates", "Modifier les templates", "edit"], ["appearance.patterns", "Gérer les patterns", "edit"], ["appearance.publish", "Publier l'apparence", "publish"]] },
-  { key: "settings", label: "Réglages du site", perms: [["settings.read", "Voir", "view"], ["settings.write", "Modifier", "edit"], ["domains.manage", "Domaines", "edit"], ["api_keys.manage", "Clés d'API", "edit"], ["webhooks.manage", "Webhooks", "edit"], ["queue.manage", "File d'envoi", "edit"]] },
+  { key: "settings", label: "Réglages du site", perms: [["settings.read", "Voir", "view"], ["settings.write", "Modifier", "edit"], ["settings.sensitive", "Modifier les réglages sensibles (domaine, indexation, page d'accueil, adresses)", "edit"], ["domains.manage", "Domaines", "edit"], ["api_keys.manage", "Clés d'API", "edit"], ["webhooks.manage", "Webhooks", "edit"], ["queue.manage", "File d'envoi", "edit"]] },
   { key: "marketing", label: "Marketing (contacts, listes, campagnes, automatisations)", perms: [
     ["contacts.read", "Contacts : voir", "view"], ["contacts.write", "Contacts : modifier", "edit"], ["contacts.delete", "Contacts : supprimer", "delete"], ["contacts.import", "Contacts : importer", "create"], ["contacts.export", "Contacts : exporter", "view"],
+    ["contacts.archive", "Contacts : archiver et rétablir", "edit"], ["contacts.merge", "Contacts : fusionner deux fiches", "edit"], ["contacts.manage_fields", "Contacts : gérer les champs personnalisés", "edit"],
+    ["contacts.view_sensitive", "Contacts : voir téléphone, e-mail complet et preuves de consentement", "view"], ["events.view", "Journal d'événements des contacts : voir", "view"],
     ["compliance.read", "Conformité : voir", "view"], ["compliance.manage", "Conformité : gérer", "edit"], ["lists.read", "Listes : voir", "view"], ["lists.write", "Listes : modifier", "edit"],
     ["segments.read", "Segments : voir", "view"], ["segments.write", "Segments : modifier", "edit"], ["templates.read", "Modèles d'e-mail : voir", "view"], ["templates.write", "Modèles d'e-mail : modifier", "edit"],
     ["campaigns.read", "Campagnes : voir", "view"], ["campaigns.write", "Campagnes : modifier", "edit"], ["campaigns.send", "Campagnes : envoyer", "publish"],
@@ -59,7 +62,7 @@ const ACTIONS = [["view", "Voir"], ["create", "Créer"], ["edit", "Modifier"], [
 const ALL_KEYS = Object.keys(orgs.PERMISSIONS);
 const byMin = (min) => ALL_KEYS.filter((k) => orgs.roleAtLeast(min, orgs.PERMISSIONS[k]));
 const VIEWER_KEYS = byMin("viewer");
-const NOT_FOR_AUTHORS = ["contacts.read", "compliance.read", "lists.read", "segments.read", "templates.read", "campaigns.read", "automations.read", "analytics.read", "settings.read", "audit.read"];
+const NOT_FOR_AUTHORS = ["contacts.read", "contacts.view_sensitive", "events.view", "compliance.read", "lists.read", "segments.read", "templates.read", "campaigns.read", "automations.read", "analytics.read", "settings.read", "audit.read"];
 const SYSTEM_ROLES = [
   { key: "owner", name: "Super administrateur", description: "Tous les droits, y compris la gestion de l'équipe et de l'organisation. Protégé : le dernier ne peut pas être retiré.", rank: 4, permissions: byMin("owner") },
   { key: "admin", name: "Administrateur", description: "Gère le site, le contenu, l'apparence et l'équipe (sans toucher aux Super administrateurs).", rank: 3, permissions: byMin("admin") },
@@ -94,18 +97,28 @@ const permissionsOf = (key) => (getRole(key) ? getRole(key).permissions : new Se
 function membershipOf(userId, organizationId) {
   return db.prepare("SELECT role FROM mk_org_members WHERE organization_id = ? AND user_id = ?").get(organizationId, userId) || null;
 }
+// → { role, mode } ou null. mode : 'add' (les droits du site s'ajoutent à ceux de l'équipe, comportement historique) ou 'limit' (plafond : intersection)
 function siteRoleOf(userId, siteId) {
-  return Number.isInteger(siteId) ? db.prepare("SELECT role FROM mk_site_members WHERE site_id = ? AND user_id = ?").get(siteId, userId) || null : null;
+  return Number.isInteger(siteId) ? db.prepare("SELECT role, mode FROM mk_site_members WHERE site_id = ? AND user_id = ?").get(siteId, userId) || null : null;
 }
-const siteMemberships = (userId) => db.prepare("SELECT sm.site_id, sm.role, s.name AS site_name FROM mk_site_members sm JOIN mk_sites s ON s.id = sm.site_id WHERE sm.user_id = ? AND s.status = 'active' ORDER BY s.name").all(userId);
-// Union des permissions du rôle d'équipe (global) et du rôle sur le site demandé ; un compte suspendu n'a aucune permission
+const siteMemberships = (userId) => db.prepare("SELECT sm.site_id, sm.role, sm.mode, s.name AS site_name FROM mk_site_members sm JOIN mk_sites s ON s.id = sm.site_id WHERE sm.user_id = ? AND s.status = 'active' ORDER BY s.name").all(userId);
+// Union des permissions du rôle d'équipe (global) et du rôle sur le site demandé ; un compte suspendu n'a aucune permission.
+// R3 (plafond par site) : si l'affectation à CE site est en mode 'limit' ET que la personne est membre de l'équipe, ses droits sur ce site sont
+// l'INTERSECTION du rôle d'équipe et du rôle de site (jamais plus que l'un ou l'autre). Sans affectation, ou en mode 'add' (valeur par défaut de toutes
+// les lignes existantes), c'est l'union historique, inchangée. Un accès limité à un site (sans rôle d'équipe) n'est pas concerné : son plafond est son rôle de site.
 function effectivePermissions(userId, { organizationId, siteId = null } = {}) {
   const user = db.prepare("SELECT status FROM users WHERE id = ?").get(userId);
   if (!user || (user.status && user.status !== "active")) return new Set();
   const out = new Set();
   const org = membershipOf(userId, organizationId);
-  if (org) permissionsOf(org.role).forEach((p) => out.add(p));
   const site = siteRoleOf(userId, siteId);
+  const teamPerms = org ? permissionsOf(org.role) : null;
+  if (org && site && site.mode === "limit") {
+    const sitePerms = permissionsOf(site.role);
+    teamPerms.forEach((p) => { if (sitePerms.has(p)) out.add(p); });
+    return out;
+  }
+  if (teamPerms) teamPerms.forEach((p) => out.add(p));
   if (site) permissionsOf(site.role).forEach((p) => out.add(p));
   return out;
 }
@@ -254,15 +267,41 @@ function removeFromTeam(organizationId, actor, targetId) {
   audit(organizationId, actor.id, "user.removed", "user", targetId, { role: m ? m.role : null });
 }
 // Accès à un site : rôle propre à ce site
-function setSiteRole(organizationId, actor, targetId, siteId, roleKey) {
+const SITE_MODES = Object.freeze(["add", "limit"]);
+function setSiteRole(organizationId, actor, targetId, siteId, roleKey, { mode } = {}) {
   const site = db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId);
   if (!site) throw new UserError("Site introuvable.");
   assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
   assertCanGrantRole(actor.perms, roleKey);
   if (roleKey === "owner") throw new UserError("Le rôle Super administrateur ne s'attribue pas à un seul site.");
   if (!db.prepare("SELECT 1 FROM users WHERE id = ?").get(targetId)) throw new UserError("Compte introuvable.");
-  db.prepare("INSERT INTO mk_site_members (site_id, user_id, role, created_by) VALUES (?, ?, ?, ?) ON CONFLICT (site_id, user_id) DO UPDATE SET role = excluded.role").run(siteId, targetId, roleKey, actor.id);
-  audit(organizationId, actor.id, "site_access.granted", "user", targetId, { site: site.name, role: roleKey });
+  if (mode !== undefined && !SITE_MODES.includes(mode)) throw new UserError("Mode d'accès inconnu.");
+  const before = siteRoleOf(targetId, siteId);
+  const newMode = mode ?? (before ? before.mode : "add"); // sans mode demandé : le mode existant est conservé, jamais remis à « add » en silence
+  if (newMode === "limit") assertCanLimit(organizationId, targetId);
+  // Repasser de « limit » à « add » ÉLARGIT les droits de la personne sur ce site : on ne peut le faire que si l'on possède tous ces droits soi-même
+  if (before && before.mode === "limit" && newMode === "add") assertCanGrantRole(actor.perms, before.role);
+  db.prepare("INSERT INTO mk_site_members (site_id, user_id, role, mode, created_by) VALUES (?, ?, ?, ?, ?) ON CONFLICT (site_id, user_id) DO UPDATE SET role = excluded.role, mode = excluded.mode").run(siteId, targetId, roleKey, newMode, actor.id);
+  audit(organizationId, actor.id, "site_access.granted", "user", targetId, { site: site.name, role: roleKey, mode: newMode });
+  return site;
+}
+// Un plafond n'a de sens que pour un membre de l'équipe, et jamais pour un Super administrateur (qui doit garder la maîtrise de l'organisation)
+function assertCanLimit(organizationId, targetId) {
+  const m = membershipOf(targetId, organizationId);
+  if (m && m.role === "owner") throw new UserError("Un Super administrateur ne peut pas être plafonné sur un site.");
+}
+// Change seulement le mode d'une affectation existante (plafond ou comportement historique)
+function setSiteMode(organizationId, actor, targetId, siteId, mode) {
+  if (!SITE_MODES.includes(mode)) throw new UserError("Mode d'accès inconnu.");
+  const row = siteRoleOf(targetId, siteId);
+  if (!row) throw new UserError("Cette personne n'a pas d'accès propre à ce site.");
+  const site = db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId);
+  if (!site) throw new UserError("Site introuvable.");
+  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
+  if (mode === "limit") assertCanLimit(organizationId, targetId);
+  else if (row.mode === "limit") assertCanGrantRole(actor.perms, row.role); // retirer un plafond élargit les droits : même règle anti-escalade qu'un octroi
+  db.prepare("UPDATE mk_site_members SET mode = ? WHERE site_id = ? AND user_id = ?").run(mode, siteId, targetId);
+  audit(organizationId, actor.id, "site_access.mode_changed", "user", targetId, { site: site.name, role: row.role, from: row.mode, to: mode });
   return site;
 }
 function removeSiteRole(organizationId, actor, targetId, siteId) {
@@ -350,5 +389,5 @@ module.exports = {
   GROUPS, LABELS, ACTIONS, OWNER_ONLY, ASSIGNABLE, SYSTEM_ROLES, INVITE_DAYS,
   getRole, allRoles, customRoles, invalidate, cacheInfo, permissionsOf, membershipOf, siteRoleOf, siteMemberships, effectivePermissions, can, subset,
   assertCanGrantRole, assertNotLastOwner, assertCanManage, createRole, updateRole, deleteRole, roleUsage, listMembers, statusCounts, memberDetail,
-  setOrgRole, setStatus, removeFromTeam, setSiteRole, removeSiteRole, invite, reissue, revoke, listInvitations, invitationByToken, acceptInvitation, matrix, activeOwners,
+  setOrgRole, setStatus, removeFromTeam, setSiteRole, setSiteMode, SITE_MODES, removeSiteRole, invite, reissue, revoke, listInvitations, invitationByToken, acceptInvitation, matrix, activeOwners,
 };

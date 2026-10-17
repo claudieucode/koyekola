@@ -1,0 +1,1242 @@
+[
+ {
+  "t": "activity_reads",
+  "cols": 3,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "activity_state",
+  "cols": 2,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 0
+ },
+ {
+  "t": "appearance_configs",
+  "cols": 12,
+  "site": true,
+  "org": false,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "appearance_patterns",
+  "cols": 13,
+  "site": true,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "appearance_revisions",
+  "cols": 6,
+  "site": true,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "audit_log",
+  "cols": 11,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ },
+ {
+  "t": "blog_block_trash",
+  "cols": 13,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "blog_comments",
+  "cols": 18,
+  "site": false,
+  "org": false,
+  "fks": 4,
+  "idx": 7
+ },
+ {
+  "t": "blog_reusable_blocks",
+  "cols": 8,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 0
+ },
+ {
+  "t": "certificates",
+  "cols": 12,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 4
+ },
+ {
+  "t": "checkout_sessions",
+  "cols": 16,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 4
+ },
+ {
+  "t": "cms_maintenance",
+  "cols": 6,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "cms_revisions",
+  "cols": 11,
+  "site": true,
+  "org": false,
+  "fks": 1,
+  "idx": 3
+ },
+ {
+  "t": "cms_tool_runs",
+  "cols": 23,
+  "site": true,
+  "org": true,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "cms_url_history",
+  "cols": 8,
+  "site": true,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ },
+ {
+  "t": "contact_messages",
+  "cols": 7,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "coupons",
+  "cols": 12,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "course_slug_history",
+  "cols": 2,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "courses",
+  "cols": 23,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 3
+ },
+ {
+  "t": "dashboard_prefs",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 0
+ },
+ {
+  "t": "editor_prefs",
+  "cols": 3,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 0
+ },
+ {
+  "t": "enrollments",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "faqs",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "favorites",
+  "cols": 3,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "lesson_attachments",
+  "cols": 8,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "lesson_notes",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "lesson_progress",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "lesson_state",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "lessons",
+  "cols": 11,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mail_outbox",
+  "cols": 14,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "media",
+  "cols": 14,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ },
+ {
+  "t": "mk_ai_requests",
+  "cols": 9,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_api_keys",
+  "cols": 10,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 3
+ },
+ {
+  "t": "mk_audit_logs",
+  "cols": 8,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_automation_log",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_automation_runs",
+  "cols": 15,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 3
+ },
+ {
+  "t": "mk_automation_versions",
+  "cols": 8,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_automations",
+  "cols": 18,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_bridge_cursors",
+  "cols": 5,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_campaign_recipients",
+  "cols": 14,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 3
+ },
+ {
+  "t": "mk_campaigns",
+  "cols": 45,
+  "site": true,
+  "org": true,
+  "fks": 3,
+  "idx": 4
+ },
+ {
+  "t": "mk_consents",
+  "cols": 11,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_contact_aliases",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_contact_merges",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 2
+ },
+ {
+  "t": "mk_contact_notes",
+  "cols": 9,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_contact_preferences",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 2
+ },
+ {
+  "t": "mk_contact_property_values",
+  "cols": 8,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 4
+ },
+ {
+  "t": "mk_contact_tags",
+  "cols": 5,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 2
+ },
+ {
+  "t": "mk_contacts",
+  "cols": 32,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 14
+ },
+ {
+  "t": "mk_conversions",
+  "cols": 9,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_events",
+  "cols": 15,
+  "site": true,
+  "org": true,
+  "fks": 1,
+  "idx": 9
+ },
+ {
+  "t": "mk_form_files",
+  "cols": 9,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 2
+ },
+ {
+  "t": "mk_forms",
+  "cols": 26,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_funnel_steps",
+  "cols": 11,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 2
+ },
+ {
+  "t": "mk_funnels",
+  "cols": 11,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_import_rejects",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_imports",
+  "cols": 24,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_invitations",
+  "cols": 12,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 4
+ },
+ {
+  "t": "mk_jobs",
+  "cols": 16,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 3
+ },
+ {
+  "t": "mk_journey_favorites",
+  "cols": 4,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_journey_usage",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_landing_events",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_landing_pages",
+  "cols": 26,
+  "site": true,
+  "org": true,
+  "fks": 4,
+  "idx": 7
+ },
+ {
+  "t": "mk_links",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_list_members",
+  "cols": 5,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 2
+ },
+ {
+  "t": "mk_lists",
+  "cols": 6,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_media",
+  "cols": 18,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 3
+ },
+ {
+  "t": "mk_message_events",
+  "cols": 10,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "mk_messages",
+  "cols": 19,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 5
+ },
+ {
+  "t": "mk_order_attributions",
+  "cols": 12,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 4
+ },
+ {
+  "t": "mk_org_members",
+  "cols": 4,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_organizations",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "mk_page_templates",
+  "cols": 9,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_page_test_events",
+  "cols": 7,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 3
+ },
+ {
+  "t": "mk_page_tests",
+  "cols": 24,
+  "site": true,
+  "org": true,
+  "fks": 4,
+  "idx": 3
+ },
+ {
+  "t": "mk_page_versions",
+  "cols": 8,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_pending_confirmations",
+  "cols": 11,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 3
+ },
+ {
+  "t": "mk_preference_categories",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_property_defs",
+  "cols": 9,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_roles",
+  "cols": 9,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_rss_campaigns",
+  "cols": 25,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_rss_seen",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_saved_blocks",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_saved_reports",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_score_levels",
+  "cols": 4,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_score_log",
+  "cols": 9,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 3
+ },
+ {
+  "t": "mk_score_rules",
+  "cols": 11,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_segments",
+  "cols": 8,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_sending_domains",
+  "cols": 13,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_settings",
+  "cols": 5,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_site_members",
+  "cols": 5,
+  "site": true,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_sites",
+  "cols": 14,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_sms_campaigns",
+  "cols": 30,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_sms_clicks",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 4,
+  "idx": 3
+ },
+ {
+  "t": "mk_sms_links",
+  "cols": 5,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_sms_messages",
+  "cols": 16,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 4
+ },
+ {
+  "t": "mk_sms_short_links",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 3
+ },
+ {
+  "t": "mk_sms_suppressions",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_social_posts",
+  "cols": 20,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "mk_suppressions",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_survey_responses",
+  "cols": 8,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 3
+ },
+ {
+  "t": "mk_surveys",
+  "cols": 15,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "mk_tags",
+  "cols": 4,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "mk_template_versions",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 1
+ },
+ {
+  "t": "mk_templates",
+  "cols": 16,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "mk_unsubscribes",
+  "cols": 7,
+  "site": false,
+  "org": true,
+  "fks": 3,
+  "idx": 2
+ },
+ {
+  "t": "mk_web_components",
+  "cols": 12,
+  "site": true,
+  "org": true,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "mk_web_events",
+  "cols": 16,
+  "site": true,
+  "org": true,
+  "fks": 4,
+  "idx": 6
+ },
+ {
+  "t": "mk_web_visitors",
+  "cols": 6,
+  "site": false,
+  "org": true,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "mk_webhook_endpoints",
+  "cols": 10,
+  "site": false,
+  "org": true,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "nav_items",
+  "cols": 18,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "nav_locations",
+  "cols": 5,
+  "site": true,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "nav_menus",
+  "cols": 9,
+  "site": true,
+  "org": false,
+  "fks": 1,
+  "idx": 3
+ },
+ {
+  "t": "notifications",
+  "cols": 8,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "offers",
+  "cols": 10,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "order_items",
+  "cols": 7,
+  "site": false,
+  "org": false,
+  "fks": 3,
+  "idx": 3
+ },
+ {
+  "t": "order_refunds",
+  "cols": 6,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "orders",
+  "cols": 7,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "password_resets",
+  "cols": 6,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "post_autosaves",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 0
+ },
+ {
+  "t": "post_revisions",
+  "cols": 12,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "post_slug_history",
+  "cols": 2,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "posts",
+  "cols": 46,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 6
+ },
+ {
+  "t": "quiz_attempts",
+  "cols": 6,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "quiz_options",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "quiz_questions",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "quizzes",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "reviews",
+  "cols": 6,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "schema_migrations",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "sections",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "seo_404",
+  "cols": 8,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ },
+ {
+  "t": "seo_alerts",
+  "cols": 6,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_audits",
+  "cols": 11,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 0
+ },
+ {
+  "t": "seo_changes",
+  "cols": 9,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ },
+ {
+  "t": "seo_integration_cache",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_integrations",
+  "cols": 7,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_issues",
+  "cols": 9,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "seo_job_runs",
+  "cols": 7,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_jobs",
+  "cols": 9,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_meta",
+  "cols": 15,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_monitor_snapshots",
+  "cols": 3,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 0
+ },
+ {
+  "t": "seo_pagespeed",
+  "cols": 7,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_redirects",
+  "cols": 12,
+  "site": true,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ },
+ {
+  "t": "seo_settings",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_tasks_done",
+  "cols": 3,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "seo_workspace_prefs",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 0
+ },
+ {
+  "t": "seo_workspaces",
+  "cols": 4,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 1
+ },
+ {
+  "t": "sessions",
+  "cols": 3,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ },
+ {
+  "t": "site_pages",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 1
+ },
+ {
+  "t": "support_messages",
+  "cols": 6,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 2
+ },
+ {
+  "t": "support_tickets",
+  "cols": 10,
+  "site": false,
+  "org": false,
+  "fks": 2,
+  "idx": 3
+ },
+ {
+  "t": "taxonomy_relations",
+  "cols": 5,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 2
+ },
+ {
+  "t": "taxonomy_terms",
+  "cols": 9,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 4
+ },
+ {
+  "t": "user_prefs",
+  "cols": 3,
+  "site": false,
+  "org": false,
+  "fks": 1,
+  "idx": 0
+ },
+ {
+  "t": "users",
+  "cols": 14,
+  "site": false,
+  "org": false,
+  "fks": 0,
+  "idx": 2
+ }
+]

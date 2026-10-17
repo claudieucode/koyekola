@@ -20,9 +20,32 @@ function audit(ctx, action, resourceType, resourceId, metadata) {
   recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType, resourceId, metadata });
 }
 
-function emit(ctx, name, { contact, metadata = {}, idempotencyKey = null, source = "marketing" }) {
+function emit(ctx, name, { contact, metadata = {}, idempotencyKey = null, source = "marketing", siteId = null, objectType = null, objectId = null, actorUserId = null, occurredAt }) {
   if (!ctx.bus) return;
-  ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source, metadata, idempotencyKey });
+  ctx.bus.emit({ organizationId: ctx.organizationId, name, email: contact.email, contactId: contact.id, source, metadata, idempotencyKey, siteId, objectType, objectId, actorUserId, occurredAt });
 }
 
-module.exports = { checkCtx, cleanText, audit, emit, MarketingError };
+// ---------- Contexte de site (palier 16) ----------
+// ctx.siteScope (nombre) : accès LIMITÉ à ce site — imposé par le serveur, jamais par l'adresse ; ctx.siteFilter : simple filtre d'affichage de l'équipe de l'organisation
+// ("principal" = données sans site). Les contacts, eux, restent dans le Contact Core.
+function resolveSite(ctx, siteId) {
+  if (Number.isInteger(ctx.siteScope)) return ctx.siteScope;
+  if (siteId === undefined || siteId === null || siteId === "") return null;
+  const id = Number(siteId);
+  if (!Number.isInteger(id) || id < 1 || !ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+  return id;
+}
+// Fragment SQL de portée pour une table portant site_id (alias `a`)
+const { notHiddenSql } = require("../visibility");
+function siteSql(ctx, a) {
+  if (Number.isInteger(ctx.siteScope)) return { sql: `${a}.site_id = ?`, params: [ctx.siteScope] };
+  // R4 : sites dont la personne ne peut pas lire les éléments de cet écran (ctx.hiddenSites, posé par visibility.attach) : toujours exclus, avec ou sans filtre d'affichage
+  const hid = notHiddenSql(ctx.hiddenSites, `${a}.site_id`);
+  let base;
+  if (ctx.siteFilter === "principal") base = { sql: `${a}.site_id IS NULL`, params: [] };
+  else if (Number.isInteger(ctx.siteFilter)) base = { sql: `${a}.site_id = ?`, params: [ctx.siteFilter] };
+  else return hid;
+  return hid.params.length ? { sql: `${base.sql} AND ${hid.sql}`, params: [...base.params, ...hid.params] } : base;
+}
+
+module.exports = { checkCtx, cleanText, audit, emit, resolveSite, siteSql, MarketingError };

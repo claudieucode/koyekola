@@ -121,6 +121,7 @@
     var el = A.canvasEl(it.id), win = el && el.ownerDocument.defaultView, out = [];
     if (!el || !win) return out;
     var parent = el.parentElement;
+    while (parent && win.getComputedStyle(parent).display === "contents") parent = parent.parentElement; // enveloppe transparente d'une Section libre : le vrai parent est la section
     if (parent && parent.getBoundingClientRect().height <= el.getBoundingClientRect().height + 1) {
       var pd = win.getComputedStyle(parent).display, stretch = /flex|grid/.test(pd) && win.getComputedStyle(el).alignSelf !== "flex-start" && win.getComputedStyle(el).alignSelf !== "start";
       out.push(stretch ? "Le conteneur étire l'élément sur toute sa hauteur : il n'a donc aucune place pour glisser. Réglez « Alignement dans le parent » (Mise en page) sur « Début »." : "Le conteneur n'est pas plus haut que l'élément : il n'y a aucune place pour qu'il reste épinglé. Donnez plus de hauteur au conteneur.");

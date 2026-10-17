@@ -51,11 +51,30 @@ function freeSlug(ctx, base, exceptId = null) {
   return slug;
 }
 
+// Règles du nom visible d'une page, UNE seule fois pour la création et le renommage : espaces inutiles retirés, obligatoire, 100 caractères au plus
+// (limite du modèle), unique dans l'organisation sans tenir compte de la casse (contrainte de la table). Le nom n'est ni l'identifiant ni l'adresse (slug).
+const NAME_MAX = 100;
+function checkName(ctx, raw, { exceptId = null } = {}) {
+  checkCtx(ctx);
+  const text = String(raw === undefined || raw === null ? "" : raw).trim();
+  if (!text) throw bad("Le nom de la page est obligatoire.");
+  if (text.length > NAME_MAX) throw bad(`Le nom de la page ne peut pas dépasser ${NAME_MAX} caractères (${text.length} saisis).`);
+  const name = line(text, NAME_MAX);
+  const dup = ctx.db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, name);
+  if (dup && dup.id !== exceptId) throw new MarketingError("duplicate", "Une page porte déjà ce nom. Choisissez un nom différent.");
+  return name;
+}
+// Renommer SEULEMENT le nom visible : mêmes règles que la création, identifiant et adresse inchangés
+function renamePage(ctx, id, name) {
+  requirePage(ctx, id);
+  const clean_ = checkName(ctx, name, { exceptId: id });
+  ctx.db.prepare("UPDATE mk_landing_pages SET name = ?, updated_at = datetime('now') WHERE id = ?").run(clean_, id);
+  audit(ctx, "landing.renamed", "landing", id, {});
+  return getPage(ctx, id);
+}
 function createPage(ctx, { name } = {}) {
   checkCtx(ctx);
-  const clean_ = line(name, 100);
-  if (!clean_) throw bad("Le nom de la page est obligatoire.");
-  if (ctx.db.prepare("SELECT 1 FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, clean_)) throw new MarketingError("duplicate", "Une page porte déjà ce nom.");
+  const clean_ = checkName(ctx, name);
   const sections = [{ type: "hero", title: clean_, subtitle: "Une phrase qui dit clairement ce que la personne y gagne.", image: "", imageAlt: "", buttonLabel: "", buttonUrl: "" }, { type: "form", heading: "Inscrivez-vous", intro: "" }];
   const id = Number(ctx.db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, created_by) VALUES (?, ?, ?, ?, ?, ?)")
     .run(ctx.organizationId, clean_, freeSlug(ctx, slugify(clean_)), clean_, JSON.stringify(sections), ctx.userId ?? null).lastInsertRowid);
@@ -67,10 +86,7 @@ function createPage(ctx, { name } = {}) {
 // partie du contenu publié (le contenu, lui, passe par le brouillon du moteur de pages : src/marketing/pages)
 function saveSettings(ctx, id, input = {}) {
   const before = requirePage(ctx, id);
-  const name = line(input.name, 100);
-  if (!name) throw bad("Le nom de la page est obligatoire.");
-  const dup = ctx.db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, name);
-  if (dup && dup.id !== id) throw new MarketingError("duplicate", "Une page porte déjà ce nom.");
+  const name = checkName(ctx, input.name, { exceptId: id });
   const slug = line(input.slug, 60).toLowerCase();
   if (!SLUG.test(slug)) throw bad("Adresse de la page : lettres minuscules sans accent, chiffres et tirets (ex. « guide-gratuit »).");
   // Page d'un site : elle peut être servie à la racine du domaine du site, une adresse réservée à une route du site est donc refusée (palier 12)
@@ -123,6 +139,13 @@ function preflight(ctx, page) {
     if (!f) errors.push("Un widget « Formulaire » vise un formulaire supprimé : choisissez-en un autre.");
     else if (f.status !== "published") errors.push(`Le formulaire « ${f.name} » n'est pas publié : publiez-le d'abord (Audience → Formulaires d'inscription).`);
   });
+  // Widgets personnalisés incomplets (ex. un média sans image) : le brouillon s'enregistre, mais la page ne peut pas être publiée ainsi
+  for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+    const cw = pageNodes.CUSTOM_WIDGETS[n.type];
+    if (!cw || !cw.complete || n.hidden) return;
+    const msg = cw.complete(n.props);
+    if (msg) errors.push(`${cw.label} : ${msg}`);
+  });
   return { ready: errors.length === 0, errors };
 }
 function publishPage(ctx, id) {
@@ -138,8 +161,11 @@ function unpublishPage(ctx, id) {
   ctx.db.prepare("UPDATE mk_landing_pages SET status = 'unpublished', updated_at = datetime('now') WHERE id = ?").run(id);
   audit(ctx, "landing.unpublished", "landing", id, {});
 }
-function deletePage(ctx, id) {
+function deletePage(ctx, id, { detach = false } = {}) {
   requirePage(ctx, id);
+  // Palier 18 : une page utilisée par un tunnel actif n'est pas supprimée en silence (refus listant les tunnels, ou détachement explicite)
+  require("../funnels").guardPageRemoval(ctx, id, { detach, action: "supprimée" });
+  require("../pages/abtests").guardPageRemoval(ctx, id, "suppression"); // palier 22 : le test A/B (et ses résultats) ne part pas avec la page
   ctx.db.prepare("DELETE FROM mk_landing_pages WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   audit(ctx, "landing.deleted", "landing", id, {});
 }
@@ -223,7 +249,7 @@ function dynamicProps(ctx, n, visitor, page) {
   return null;
 }
 // Vue d'une formation pour les étiquettes dynamiques (scope.course) et les boucles
-const courseScope = (c) => ({ title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
+const courseScope = (c) => ({ id: c.id, instructor: c.instructor_name || c.instructor || "", title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
 // Éléments d'une boucle (grille « répéter pour chaque ») : une page de résultats, filtrée par l'adresse si demandé
 function loopQuery(ctx, loop, id, visitor, scope) {
   const q = (visitor && visitor.query) || {};
@@ -246,22 +272,32 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (n.type === "grid" && n.props && n.props.loop && n.children) {
       const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor, scope);
       const children = [];
+      // Cartes insérées (conteneurs « loopInsert ») : hors du modèle, intercalées après le N-ième résultat (une fois ou tous les N)
+      const cards = loop.insertAt ? n.children.filter((c) => c.props && c.props.loopInsert) : [];
+      const template = cards.length ? n.children.filter((c) => !(c.props && c.props.loopInsert)) : n.children;
+      let placed = 0;
       found.items.forEach((item, i) => {
         const itemScope = { ...scope, ...{ [require("../pages/query").SOURCES.get(loop.source).scopeKey]: item } };
-        nodeView(ctx, n.children, visitor, page, itemScope).forEach((c) => children.push({ ...c, loopItem: i }));
+        nodeView(ctx, template, visitor, page, itemScope).forEach((c) => children.push({ ...c, loopItem: i }));
+        if (cards.length && (i + 1) % loop.insertAt === 0 && (loop.insertEvery || i + 1 === loop.insertAt)) {
+          const card = cards[placed++ % cards.length];
+          nodeView(ctx, [card], visitor, page, scope).forEach((c) => children.push({ ...c, loopItem: `carte-${i}` }));
+        }
       });
       return { ...n, children, loopInfo: { empty: !found.items.length, message: loop.empty, paginate: Boolean(loop.paginate) && found.pages > 1, pagination: loop.pagination || "numbers", pageNo: found.pageNo, pages: found.pages,
         base: Object.entries((visitor && visitor.query) || {}).filter(([k]) => k !== `lp-${n.id}`).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&") } };
     }
     const dyn = dynamicProps(ctx, n, visitor, page);
     if (dyn) n = { ...n, props: dyn };
+    // Code : coloration calculée à l'affichage (texte échappé + <span class="kw-tok-…"> générés par highlight.js) ; jamais enregistrée
+    if (n.type === "code" && n.props.language) n = { ...n, props: { ...n.props, html: require("../pages/highlight").highlight(n.props.text, n.props.language) } };
     // Widget personnalisé : son gabarit et ses champs « lien » (comptés dans cet ordre, comme dans linksOf)
     const cw = pageNodes.CUSTOM_WIDGETS[n.type];
     if (cw) {
       // Données dynamiques du widget (requête, article courant, visiteur…) : jamais bloquant, un échec donne un widget vide
       let data = null;
       if (cw.data) { try { data = cw.data(ctx, n.props, { scope, visitor, page, runQuery: (q, o) => require("../pages/query").runQuery(ctx, q, { scope, ...o }) }); } catch { data = null; } }
-      n = { ...n, customView: { partial: `widgets/${cw.template || n.type}`, links: cw.schema.filter((f) => f.kind === "link").map((f) => f.key), data } };
+      n = { ...n, customView: { partial: `widgets/${cw.template || n.type}`, links: cw.schema.filter((f) => f.kind === "link").map((f) => f.key), fields: cw.schema.map((f) => ({ key: f.key, kind: f.kind, subs: f.kind === "items" ? f.fields.map((x) => ({ key: x.key, kind: x.kind })) : undefined })), data } };
     }
     if (n.type === "addtocart" || n.type === "courserating") {
       const c = getCourse(ctx, n.props.courseId);
@@ -309,7 +345,10 @@ function viewModel(ctx, page) {
     const row = page.site_id ? ctx.db.prepare("SELECT settings FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
     breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
   } catch { breakpoints = undefined; }
-  return { ...page, sections, nodeCss: pageNodes.pageCss(sections, breakpoints), customCss };
+  // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
+  const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
+  const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
+  return { ...page, sections, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {
@@ -321,14 +360,21 @@ function linksOf(page) {
     if (s.type === "image" && s.link) out.push({ section: i, label: `Image : ${s.alt}`, url: s.link });
     if (s.type === "course" && s.course) out.push({ section: i, label: `Formation : ${s.course.title}`, url: s.course.url });
     // Section libre : mêmes liens, dans l'ordre d'affichage des éléments
+    // Un élément aux données corrompues ne fait pas échouer le calcul des liens de toute la page : il n'en compte aucun (le rendu fait de même, voir _node-safe.ejs)
     if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+      const mark = out.length;
+      try {
       if ((n.type === "sitelogo" || n.type === "sitetitle") && n.props.link && n.props.homeUrl) out.push({ section: i, label: n.type === "sitelogo" ? "Logo du site" : "Titre du site", url: n.props.homeUrl });
       if (["container", "grid", "stack", "group"].includes(n.type) && (n.props || {}).link) out.push({ section: i, label: `Conteneur : ${n.name || (pageNodes.NODE_TYPES[n.type] || {}).label || n.type}`, url: n.props.link });
       if (n.type === "flipbox" && n.props.ctaUrl) out.push({ section: i, label: `Boîte retournable : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "pricelist") n.props.items.forEach((it) => { if (it.link) out.push({ section: i, label: `Liste de prix : ${it.title}`, url: it.link }); });
       if ((n.type === "imagebox" || n.type === "iconbox") && n.props.link) out.push({ section: i, label: `${n.type === "imagebox" ? "Boîte d'image" : "Boîte d'icône"} : ${n.props.title}`, url: n.props.link });
       const cw = pageNodes.CUSTOM_WIDGETS[n.type];
-      if (cw) cw.schema.forEach((f) => { if (f.kind === "link" && n.props[f.key]) out.push({ section: i, label: `${cw.label} : ${f.label}`, url: n.props[f.key] }); });
+      // Même ordre que l'affichage (_node.ejs) : champs dans l'ordre du schéma ; pour une liste, élément par élément puis sous-champ par sous-champ
+      if (cw) cw.schema.forEach((f) => {
+        if (f.kind === "link" && n.props[f.key]) out.push({ section: i, label: `${cw.label} : ${f.label}`, url: n.props[f.key] });
+        else if (f.kind === "items") (n.props[f.key] || []).forEach((it, k) => f.fields.forEach((sf) => { if (sf.kind === "link" && it[sf.key]) out.push({ section: i, label: `${cw.label} : ${f.label} ${k + 1} (${sf.label})`, url: it[sf.key] }); }));
+      });
       if (n.type === "heading" && n.props.link) out.push({ section: i, label: `Titre : ${n.props.text}`, url: n.props.link });
       if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });
       if (n.type === "link") out.push({ section: i, label: n.props.label, url: n.props.url });
@@ -344,7 +390,7 @@ function linksOf(page) {
       if (n.type === "courselist") (n.props.items || []).forEach((c) => out.push({ section: i, label: `Formation : ${c.title}`, url: c.url }));
       if (n.type === "account") { out.push({ section: i, label: n.props.loggedIn ? "Mon compte" : "Se connecter", url: n.props.loggedIn ? "/mon-compte" : "/connexion" }); if (n.props.showCart) out.push({ section: i, label: "Panier", url: "/panier" }); }
       if (n.type === "modal" && n.props.ctaUrl) out.push({ section: i, label: `Fenêtre : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
-      if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });
+      if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });      } catch { out.length = mark; }
     });
   });
   // Les ancres (#…) sautent dans la page sans passer par le compteur de clics (même règle que href() du rendu)
@@ -373,6 +419,6 @@ function pageReport(ctx, id, { days = 30, now = Date.now() } = {}) {
 }
 
 module.exports = {
-  createPage, savePage, saveSettings, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
+  createPage, renamePage, checkName, NAME_MAX, savePage, saveSettings, getPage, requirePage, getPublishedPage, listPages, publishPage, unpublishPage, deletePage, preflight, viewModel, linksOf, freeSlug,
   visitorOf, isBot, record, pageReport, normalizeSection, slugify, SECTION_TYPES, STATUSES, DEFAULT_THEME, MAX_TAGS,
 };

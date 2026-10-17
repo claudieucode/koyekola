@@ -12,22 +12,24 @@ const THEMES = [
   { key: "noir", label: "Noir", hint: "Menu noir profond.", swatch: ["#0d0d0d", "#262626", "#f5f5f5", "#5cbdf5"] },
 ];
 const KEYS = new Set(THEMES.map((t) => t.key));
+// Menu de gauche des personnes qui n'ont rien choisi : bleu foncé (marine, identité Kolakisa) ; un choix déjà enregistré, y compris « clair », est conservé
+const DEFAULT_THEME = "nuit";
 const settingKey = (userId) => `ui.theme.u${userId}`;
 
-// Thème de l'utilisateur ; « clair » par défaut ou si la valeur enregistrée est inconnue
+// Thème de l'utilisateur ; marine par défaut ou si la valeur enregistrée est inconnue
 function themeOf(settings, organizationId, userId) {
   try {
-    const value = settings.get(organizationId, settingKey(userId), "clair");
-    return KEYS.has(value) ? value : "clair";
+    const value = settings.get(organizationId, settingKey(userId), DEFAULT_THEME);
+    return KEYS.has(value) ? value : DEFAULT_THEME;
   } catch {
-    return "clair";
+    return DEFAULT_THEME;
   }
 }
 
 function router() {
   const r = express.Router();
   r.get("/apparence", need("contacts.read"), (req, res) => {
-    res.render("marketing/appearance", { title: "Apparence", active: "appearance", themes: THEMES, current: res.locals.mkTheme || "clair" });
+    res.render("marketing/appearance", { title: "Apparence", active: "appearance", themes: THEMES, current: res.locals.mkTheme || DEFAULT_THEME });
   });
   r.post("/apparence", need("contacts.read"), (req, res, next) =>
     attempt(req, res, next, "/marketing/apparence", () => {

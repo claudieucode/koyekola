@@ -41,7 +41,7 @@ const SCREENS = {
   // ----- Apparence -----
   apparence(req, ctx, sub) {
     const sites = pages.listSites(ctx);
-    const siteRows = (anchor, linkLabel) => sites.map((s) => ({ cells: [{ text: s.name, href: `${BASE}/sites/${s.id}` }, String(s.page_count ?? s.pages ?? "—"), s.status === "active" ? { status: { label: "Actif", cls: "mk-status-ok" } } : { status: { label: "Archivé", cls: "mk-status-off" } }], actions: [{ label: linkLabel, href: `${BASE}/sites/${s.id}${anchor}` }] }));
+    const siteRows = (anchor, linkLabel) => sites.map((s) => ({ cells: [{ text: s.name, href: `${BASE}/sites/${s.id}` }, String(s.page_count ?? s.pages ?? "—"), s.status === "active" ? { status: { label: "Actif", cls: "mk-status-ok" } } : { status: { label: "Archivé", cls: "mk-status-off" } }], actions: [{ label: linkLabel, href: `${BASE}/sites/${s.id}/reglages${anchor}` }] }));
     const siteTable = (caption, anchor, linkLabel) => ({ caption, columns: [{ label: "Site" }, { label: "Pages", num: true }, { label: "Statut" }], rows: siteRows(anchor, linkLabel), empty: empty("globe", "Aucun site", "Créez un site pour régler son design, son en-tête et son pied de page.", { label: "Créer un site", href: `${BASE}/sites#nouveau` }) });
     if (sub === "templates") {
       const user = pages.listPageTemplates(ctx);
@@ -121,29 +121,6 @@ const SCREENS = {
       }
       default: return null; // santé, import, export, diagnostic, système, maintenance, caches et outils de contenu : routes de tools.js (palier 13)
     }
-  },
-
-  // ----- Paramètres (interface seulement : champs désactivés) -----
-  parametres(req, ctx, sub) {
-    const tabs = tabsOf("parametres", sub, [["", "Général"], ["identite", "Identité"], ["domaine", "Domaine"], ["urls", "URLs"], ["permaliens", "Permaliens"], ["seo", "SEO"], ["performance", "Performance"], ["securite", "Sécurité"], ["confidentialite", "Confidentialité"], ["cookies", "Cookies"], ["scripts", "Scripts"], ["code", "Code personnalisé"]]);
-    const siteUrl = process.env.SITE_URL || "";
-    const F = (label, type, extra = {}) => ({ label, type, ...extra });
-    const SECTIONS = {
-      "": ["Général", "Réglages généraux du site.", [F("Nom du site", "text"), F("Slogan", "text"), F("Langue du site", "select", { options: ["Français"] }), F("Fuseau horaire", "select", { options: ["Africa/Brazzaville"] })]],
-      identite: ["Identité du site", "Logo, icône et nom affichés partout.", [F("Logo", "file"), F("Icône du site (favicon)", "file"), F("Nom affiché", "text")]],
-      domaine: ["Domaine", "Adresse publique du site.", [F("Adresse principale", "text", { value: siteUrl, hint: siteUrl ? "Valeur actuelle (variable SITE_URL du serveur)." : "Non renseignée sur ce serveur." }), F("Domaines supplémentaires", "text")]],
-      urls: ["URLs", "Structure des adresses.", [F("Adresse du site", "text", { value: siteUrl }), F("Préfixe des pages", "text", { value: "/p/", hint: "Valeur actuelle du moteur de pages." })]],
-      permaliens: ["Permaliens", "Forme des adresses des pages et des articles.", [F("Structure des adresses", "select", { options: ["/p/nom-de-la-page (actuel)"] }), F("Base des articles", "text", { value: "/blog/", hint: "Valeur actuelle du blog." })]],
-      seo: ["SEO", "Réglages SEO par défaut.", [F("Titre par défaut", "text"), F("Description par défaut", "textarea"), F("Image de partage par défaut", "file")]],
-      performance: ["Performance", "Compression, cache et chargement.", [F("Cache des pages", "select", { options: ["Désactivé"] }), F("Chargement différé des images", "checkbox")]],
-      securite: ["Sécurité", "Protection de l'accès et des formulaires.", [F("Limitation des tentatives de connexion", "checkbox"), F("Anti-robot des formulaires", "checkbox")]],
-      confidentialite: ["Confidentialité", "Pages et mentions légales.", [F("Page de politique de confidentialité", "select", { options: ["—"] }), F("Page de mentions légales", "select", { options: ["—"] })]],
-      cookies: ["Cookies", "Bandeau de consentement.", [F("Afficher le bandeau", "checkbox"), F("Texte du bandeau", "textarea")]],
-      scripts: ["Scripts", "Scripts de mesure et d'intégration.", [F("Scripts de l'en-tête", "textarea"), F("Scripts du pied de page", "textarea")]],
-      code: ["Code personnalisé", "CSS global du site.", [F("CSS personnalisé", "textarea")]],
-    };
-    const [title, lead, fields] = SECTIONS[sub || ""];
-    return { title: `Paramètres · ${title}`, lead, soon: SOON, tabs, form: { fields, submit: "Enregistrer les modifications" } };
   },
 };
 

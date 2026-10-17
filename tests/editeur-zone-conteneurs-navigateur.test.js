@@ -8,7 +8,7 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
 const { TEST_KEY } = require("./marketing-helpers");
-const { startServer, loginInstructor } = require("./helpers");
+const { startServer, loginInstructor, dismissStart } = require("./helpers");
 
 let chromium = null;
 try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
@@ -47,6 +47,7 @@ describe("zone d'édition des conteneurs : vide = vraie zone de construction, pl
     assert.equal(put.status, 200, put.text.slice(0, 160));
     await page.goto(`${srv.base}/marketing/pages/${pageId}/editeur`);
     await ready();
+    await dismissStart(page);
     await wait(300);
   }
   // Mesures réelles (px CSS de la page affichée) de tous les conteneurs du canevas, dans l'ordre du document
@@ -69,6 +70,8 @@ describe("zone d'édition des conteneurs : vide = vraie zone de construction, pl
     await dlg.locator(`.pb-structure[data-structure="${key}"]`).click();
     await until(async () => !(await dlg.evaluate((d) => d.open)), { what: "fenêtre fermée" });
     await until(async () => (await boxes()).length > 0, { what: "structure affichée" });
+    // la nouveauté apparaît avec une micro-animation (zoom léger, ~150 ms) : on mesure une fois posée
+    await until(() => page.evaluate(() => !document.querySelector("[data-pb-frame]").contentDocument.querySelector("[class*='kol-in-']")), { what: "apparition terminée" });
   }
   const addWidget = async (label) => { await page.locator(".pb-pal-item", { hasText: new RegExp(`^${label}$`) }).first().click(); };
   const rowOf = (id) => page.locator(`[data-pb-layers] .pb-node[data-id="${id}"] > .pb-row-item`);

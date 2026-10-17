@@ -57,7 +57,7 @@ describe("registre de navigation", () => {
     assert.deepEqual(viewerSettings.items.map((i) => i.key), ["compliance", "appearance"]);
     assert.deepEqual(viewer.sections.find((s) => s.key === "sms").items.map((i) => i.key), ["smscampaigns", "smsaudience"]);
     const analytics = viewer.sections.find((s) => s.key === "analytics");
-    assert.deepEqual(analytics.items.map((i) => i.key), ["analytics", "revenue", "compare"], "Analytics + Revenus + Rapports comparatifs");
+    assert.deepEqual(analytics.items.map((i) => i.key), ["analytics-global", "analytics", "revenue", "compare"], "Tableau de bord + Envois e-mail + Revenus + Rapports comparatifs");
     assert.notEqual(analytics.flat, true, "plusieurs entrées : un groupe, pas un lien direct");
     const flat = viewer.sections.filter((s) => s.items.length === 1);
     assert.ok(flat.every((s) => s.flat === true), "toute section à une seule entrée devient un lien direct");
@@ -69,7 +69,7 @@ describe("registre de navigation", () => {
     assert.equal(automations.flat, false);
     assert.equal(owner.sections.find((s) => s.key === "audience").flat, false);
     // Site Web : tableau de bord, sites, pages (les pages d'atterrissage y sont rattachées)
-    assert.deepEqual(owner.sections.find((s) => s.key === "site").items.map((i) => i.key), ["sitedash", "sites", "landing", "pagetests"]);
+    assert.deepEqual(owner.sections.find((s) => s.key === "site").items.map((i) => i.key), ["sites", "sitedash", "landing", "pagetests"]);
     assert.deepEqual(owner.sections.map((s) => s.key), ["marketing", "campaigns", "sms", "automations", "site", "tunnels", "audience", "analytics", "integrations", "settings"]);
   });
   test("entrée courante, section ouverte, fil d'Ariane et bouton principal selon la page et le rôle", () => {

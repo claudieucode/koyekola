@@ -124,9 +124,10 @@ function campaignRows(ctx, f) {
 
   if (f.channel !== "sms") {
     const revenue = new Map(ctx.db.prepare("SELECT campaign_id, COUNT(*) orders, SUM(amount_cents) cents FROM mk_order_attributions WHERE organization_id = ? AND campaign_id IS NOT NULL GROUP BY campaign_id").all(ctx.organizationId).map((r) => [r.campaign_id, r]));
+    const hid = require("../visibility").notHiddenSql(ctx.hiddenSites, "site_id"); // R4 : campagnes des sites dont la personne ne peut pas lire les éléments, exclues
     for (const c of ctx.db
-      .prepare(`SELECT * FROM mk_campaigns WHERE organization_id = ? AND kind = 'campaign' AND status = 'sent' AND finished_at >= ? AND finished_at < ? ORDER BY finished_at DESC LIMIT ?`)
-      .all(ctx.organizationId, startMs, endMs, MAX_ROWS + 1)) {
+      .prepare(`SELECT * FROM mk_campaigns WHERE organization_id = ? AND kind = 'campaign' AND status = 'sent' AND finished_at >= ? AND finished_at < ? AND ${hid.sql} ORDER BY finished_at DESC LIMIT ?`)
+      .all(ctx.organizationId, startMs, endMs, ...hid.params, MAX_ROWS + 1)) {
       const r = revenue.get(c.id) || { orders: 0, cents: 0 };
       rows.push({
         key: `e:${c.id}`, channel: "email", id: c.id, name: c.name, at: c.started_at || c.finished_at, finishedAt: c.finished_at,

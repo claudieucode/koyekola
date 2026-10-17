@@ -14,6 +14,9 @@ const { listCourses } = require("../bridge/catalog");
 const { MarketingError } = require("../errors");
 const { renderMarkdown } = require("../../utils/markdown");
 const { attempt, need } = require("./kit");
+const ai = require("../ai");
+const studio = require("../ai/studio");
+const { AiError } = require("../../services/aiCore");
 
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 // Réglages SEO : modifiés seulement avec la permission « seo.edit » (vérifiée ici, pas seulement masquée dans l'interface)
@@ -75,11 +78,12 @@ module.exports = () => {
   // Site Web → Pages : toutes les pages (sites, tunnels, pages d'atterrissage), archivées à part
   router.get("/pages", need("forms.read"), (req, res) => {
     const ctx = req.mk.ctx;
+    pages.promoteScheduledPages(ctx.db, { force: true });
     // Ancien lien « ?vue=archivees » conservé : c'est la corbeille
     const state = req.query.vue === "archivees" ? "corbeille" : cmsPages.STATES.includes(req.query.etat) ? req.query.etat : "toutes";
     const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: String(req.query.site || ""), auteur: String(req.query.auteur || ""), tri: Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee", ordre: req.query.ordre === "asc" || (req.query.tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc" };
     const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, sort: filters.tri, dir: filters.ordre, page: req.query.page });
-    res.render("marketing/landing-list", {
+    res.render("marketing/landing-list", { layoutFormats: require("../pages/layoutFormat").FORMATS,
       title: "Pages", active: "landing", state, filters, result, pages: result.rows, authors: cmsPages.authorsOfPages(ctx), sites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
       userTemplates: pages.listPageTemplates(ctx), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true,
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
@@ -93,9 +97,29 @@ module.exports = () => {
       const siteId = intOrNull(req.body.site_id);
       const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
       // Nouvelle page du CMS : une page de site (bandeau + texte, publiable tout de suite) ; sans « ouvrir », comportement historique (page d'atterrissage)
-      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template });
+      const layout = req.body.layoutMode === "guided" ? { mode: "guided", format: req.body.layoutFormat, maxWidth: req.body.layoutMax, gutter: req.body.layoutGutter, locked: req.body.layoutLocked === "1" } : null;
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template, layout, blank: toBuilder && !template });
       return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
+  });
+  // Nommage à la création (éditeur) : contrôle en direct du nom (mêmes règles que la création et le renommage) puis création JSON, sans passer par la liste des pages
+  router.get("/pages/nom.json", need("forms.write"), (req, res, next) => {
+    try { res.set("Cache-Control", "no-store").json({ ok: true, name: landing.checkName(req.mk.ctx, req.query.name, { exceptId: intOrNull(req.query.except) }) }); }
+    catch (error) { if (error instanceof MarketingError) return res.set("Cache-Control", "no-store").json({ ok: false, code: error.code, message: error.message }); next(error); }
+  });
+  router.post("/pages/:id(\\d+)/renommer.json", need("forms.write"), (req, res, next) => {
+    try { const p = landing.renamePage(req.mk.ctx, intOrNull(req.params.id), (req.body || {}).name); res.json({ page: { id: p.id, name: p.name, slug: p.slug } }); }
+    catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/pages/creer.json", need("forms.write"), (req, res, next) => {
+    try {
+      const b = req.body || {};
+      const siteId = intOrNull(b.siteId);
+      const template = typeof b.template === "string" && b.template ? b.template : null;
+      const layout = b.layout && typeof b.layout === "object" && b.layout.mode === "guided" ? b.layout : null;
+      const page = pages.createPage(req.mk.ctx, { name: b.name, siteId, kind: "page", template, layout, blank: !template });
+      res.status(201).json({ page: { id: page.id, name: page.name, slug: page.slug }, url: `/marketing/pages/${page.id}/editeur?retour=pages` });
+    } catch (error) { jsonError(res, next, error); }
   });
   // Actions groupées de la liste (publier, mettre hors ligne, corbeille, restaurer, supprimer définitivement) : droits vérifiés par action
   router.post("/pages/actions", need("forms.write"), (req, res, next) => {
@@ -110,7 +134,7 @@ module.exports = () => {
       const r = cmsPages.bulk(ctx, action, req.body.ids, {
         publish: (id) => pages.publish(ctx, id), unpublish: (id) => landing.unpublishPage(ctx, id), archive: (id) => pages.archivePage(ctx, id),
         restore: (id) => pages.restorePage(ctx, id), remove: (id) => landing.deletePage(ctx, id),
-      });
+      }, (row) => (typeof ctx.canOn === "function" ? ctx.canOn(row.site_id ?? null, needs) : true)); // droit vérifié sur le site de CHAQUE page (plafond de droits compris)
       const n = r.done.length;
       const head = n ? `${n} page${n > 1 ? "s" : ""} ${r.label[n > 1 ? 1 : 0]}.` : "";
       const detail = r.failed.map((f) => `« ${f.name} » : ${f.message}`).join(" · ");
@@ -263,6 +287,8 @@ module.exports = () => {
       const ctx = req.mk.ctx;
       landing.saveSettings(ctx, page.id, { name: b.name, slug: b.slug, formId: b.form_id, tags: b.tags, indexable: b.indexable === "on" });
       const siteId = intOrNull(b.site_id);
+      // Déplacer une page vers un autre site (ou vers le site principal) exige les droits d'écriture SUR le site de destination, vérifiés côté serveur
+      if (b.site_id !== undefined && siteId !== page.site_id && !ctx.canOn(siteId, "forms.write")) throw new MarketingError("forbidden", "Vous n'avez pas accès au site de destination : la page n'a pas été déplacée.");
       if (b.site_id !== undefined && siteId !== page.site_id) pages.movePage(ctx, page.id, siteId);
       // Page parente (hiérarchie préparée) : un changement de site retire d'abord le lien avec l'ancien parent
       if (b.site_id !== undefined && siteId !== page.site_id) cmsPages.setParent(ctx, page.id, null);
@@ -293,7 +319,7 @@ module.exports = () => {
         customColors: site ? site.tokens.customColors.map((c) => ({ key: c.key, label: c.label })) : [], siteClasses: site && site.settings ? site.settings.classes || [] : [], siteSettingsUrl: site ? `/marketing/site-web/sites/${site.id}/reglages.json` : null, formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
         abTest: component ? null : (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null,
         // Édition d'un composant : adresses de l'éditeur propres au composant (rendu, enregistrement) et retour à la fiche du site
-        ...(component ? { base: `/marketing/site-web/composants/${component.id}`, component: { id: component.id, name: component.name, role: component.role } } : {}) },
+        ...(component ? { base: `/marketing/site-web/composants/${component.id}`, component: { id: component.id, name: component.name, role: component.role, kind: component.kind, hasDraft: component.hasDraft, version: component.version, instances: pages.componentInstances(ctx, component.id).reduce((n, p) => n + p.count, 0) } } : {}) },
       content: page.working, types: blanks(ctx), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
       // Permissions exigées par certains widgets (cadenas de la bibliothèque ; revérifiées à l'enregistrement)
       perms: { "pages.code": req.mk.can("pages.code") },
@@ -301,15 +327,18 @@ module.exports = () => {
       forms: require("../forms").listForms(ctx).map((f) => ({ id: f.id, name: f.name, status: f.status })),
       blocks: require("../pages/patterns").catalog(ctx).concat(require("../../services/appearance").patternBlocks(page.site_id ?? null)),
       courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
-      components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, type: c.section && c.section.type, uses: pages.componentUsage(ctx, c.id).length })),
+      components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, kind: c.kind, hasDraft: c.hasDraft, version: c.version, blocks: c.blocks, type: c.section && c.section.type, uses: pages.componentInstances(ctx, c.id).reduce((n, p) => n + p.count, 0) })),
       // Modèles de pages de l'équipe (onglet Blocs : insérables dans la page en cours)
+      // Écran d'accueil / création guidée : registre des types et gabarits intégrés, pages récemment modifiées (données réelles)
+      pageCatalog: component ? null : require("../pages/pageTypes").catalog(ctx), recentPages: component ? [] : pages.recentPages(ctx, { exceptId: page.id }),
       templates: pages.listPageTemplates(ctx).map((t) => ({ id: t.id, name: t.name, category: t.category, sections: t.content.sections.length })),
       // Adresses proposées pour les liens : pages en ligne, pages du site, étape suivante (page d'un tunnel)
       links: [{ url: "/catalogue", label: "Catalogue des formations" }, { url: "/blog", label: "Blog" }, { url: "/", label: "Accueil du site" }]
-        .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }] : [])
+        .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }, ...require("../funnels").getFunnel(ctx, funnel.id).steps.filter((x) => x.pageId !== page.id).map((x) => ({ url: `/etape/${x.id}`, label: `Étape « ${x.name} » du tunnel « ${funnel.name} »` }))] : [])
         .concat(pages.listPages(ctx).filter((p) => p.status === "published" && p.id !== page.id).slice(0, 50).map((p) => ({ url: `/p/${p.slug}`, label: `Page « ${p.name} »` }))),
       siteUrl: String((site && site.settings && site.settings.seo && site.settings.seo.publicUrl) || process.env.SITE_URL || "").replace(/\/+$/, ""),
       // SEO (palier 11) : droits réels (revérifiés à l'enregistrement) et adresses du service SEO
+      layoutFormats: (({ FORMATS, PROTECTED, PROTECTED_LABELS }) => ({ formats: FORMATS, protected: PROTECTED, labels: PROTECTED_LABELS }))(require("../pages/layoutFormat")),
       seo: { canView: req.mk.can("seo.view"), canEdit: req.mk.can("seo.edit"), url: component ? null : `/marketing/pages/${page.id}/seo/analyse` },
       tags: require("../audience/tags").listTags(ctx).map((t) => t.name),
     };
@@ -317,6 +346,26 @@ module.exports = () => {
     const { ICONS } = require("../../utils/icons");
     res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? "/marketing/pages" : null, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   };
+  // ---------- IA Kolakisa : l'IA PROPOSE, l'éditeur applique (une étape d'historique) — rien n'est enregistré ici ----------
+  const IA_STATUS = { not_configured: 503, quota: 429, rate: 429, conflict: 409, busy: 429 };
+  const iaError = (res, next, error) => {
+    if (error instanceof AiError || error instanceof MarketingError) return res.status(IA_STATUS[error.code] || 400).set("Cache-Control", "no-store").json({ ok: false, error: error.message, code: error.code });
+    next(error);
+  };
+  router.get("/pages/:id(\\d+)/ia/etat", need("forms.read"), (req, res) => {
+    res.set("Cache-Control", "no-store").json({ configured: ai.getAiSettings(req.mk.ctx).configured, canWrite: req.mk.can("forms.write") });
+  });
+  router.post("/pages/:id(\\d+)/ia/proposer", need("forms.write"), async (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { res.set("Cache-Control", "no-store").json(await studio.propose(req.mk.ctx, page.id, req.body || {})); } catch (error) { iaError(res, next, error); }
+  });
+  // Analyse responsive : le navigateur mesure le rendu réel ; les corrections sont calculées par des règles (aucune clé IA nécessaire)
+  router.post("/pages/:id(\\d+)/ia/responsive", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { res.set("Cache-Control", "no-store").json(studio.responsiveFixes(req.mk.ctx, page.id, req.body || {})); } catch (error) { iaError(res, next, error); }
+  });
   router.get("/pages/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const page = load(req, res);
     if (!page) return;
@@ -337,13 +386,13 @@ module.exports = () => {
     const site = c.site_id ? pages.getSite(ctx, c.site_id) : null;
     const role = site && site.header_component_id === c.id ? "header" : site && site.footer_component_id === c.id ? "footer" : c.variant_of ? "variant" : "component";
     return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: 0, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
-      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}#entete` : "/marketing/site-web/sites", working: { sections: [c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
+      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/reglages#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
   };
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const c = loadComponent(req, res);
     if (!c) return;
     const page = componentPage(req.mk.ctx, c);
-    openEditor(req, res, page, { component: { id: c.id, name: c.name, role: page.role } });
+    openEditor(req, res, page, { component: { id: c.id, name: c.name, role: page.role, kind: c.kind, hasDraft: c.hasDraft, version: c.version } });
   });
   router.post("/site-web/composants/:id(\\d+)/rendu", need("forms.read"), (req, res, next) => {
     const c = loadComponent(req, res);
@@ -363,8 +412,11 @@ module.exports = () => {
     try {
       const content = pages.normalizeContent(ctx, componentPage(ctx, c), (req.body && req.body.content) || {});
       if (content.sections.length !== 1) throw new MarketingError("invalid", "Ce composant est UNE seule section : gardez une seule section dans l'éditeur (placez tous les éléments dedans).");
-      pages.updateComponent(ctx, c.id, { section: content.sections[0] });
-      res.set("Cache-Control", "no-store").json({ revision: 0, savedAt: new Date().toISOString() });
+      // Composant ordinaire : copie de travail (aucun effet sur les pages avant « Mettre à jour ») ; en-tête, pied de page et variantes du site : application directe, comme avant
+      const direct = c.variant_of || (c.site_id && ((pages.getSite(ctx, c.site_id) || {}).header_component_id === c.id || (pages.getSite(ctx, c.site_id) || {}).footer_component_id === c.id));
+      if (direct) pages.updateComponent(ctx, c.id, { section: content.sections[0] });
+      else pages.saveComponentDraft(ctx, c.id, content.sections[0]);
+      res.set("Cache-Control", "no-store").json({ revision: 0, savedAt: new Date().toISOString(), draft: !direct });
     } catch (error) { jsonError(res, next, error); }
   });
   // Rendu du canevas : contenu de l'éditeur validé (rien n'est enregistré), même gabarit que la page publiée
@@ -386,8 +438,8 @@ module.exports = () => {
     try {
       const content = (req.body && req.body.content) || {};
       guardSeo(req, page.working.seo, content.seo);
-      const { revision } = pages.saveDraft(req.mk.ctx, page.id, content, { revision: Number(req.body && req.body.revision) });
-      res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString() });
+      const { revision, warnings } = pages.saveDraft(req.mk.ctx, page.id, content, { revision: Number(req.body && req.body.revision) });
+      res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString(), ...(warnings && warnings.length ? { warnings } : {}) });
     } catch (error) { jsonError(res, next, error); }
   });
   router.post("/pages/:id(\\d+)/publier.json", need("pages.publish"), (req, res, next) => {
@@ -421,6 +473,24 @@ module.exports = () => {
       return `Version ${req.params.n} copiée dans le brouillon. La page en ligne n'a pas changé : vérifiez l'aperçu, puis publiez.`;
     });
   });
+  // Programmation (palier 23) : la date est saisie en heure locale (champ « local ») ; le navigateur joint son décalage horaire en minutes (« offset »)
+  router.post("/pages/:id(\\d+)/programmer", need("pages.publish"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+      const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(req.body.local || ""));
+      const offset = Number(req.body.offset);
+      if (!m || !Number.isInteger(offset) || Math.abs(offset) > 840) throw new (require("../errors").MarketingError)("invalid_field", "Date de programmation invalide.");
+      const utc = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) + offset * 60000).toISOString().slice(0, 19).replace("T", " ");
+      pages.schedulePage(req.mk.ctx, page.id, utc);
+      return "Publication programmée : la page sera mise en ligne à la première visite du site après l'heure choisie.";
+    });
+  });
+  router.post("/pages/:id(\\d+)/programmer/annuler", need("pages.publish"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.cancelSchedule(req.mk.ctx, page.id); return "Programmation annulée : la page reste hors ligne."; });
+  });
   router.post("/pages/:id(\\d+)/depublier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
@@ -437,10 +507,29 @@ module.exports = () => {
     let copy = null;
     attempt(req, res, next, () => (copy ? `/marketing/pages/${copy.id}` : `/marketing/pages/${page.id}`), () => { copy = pages.duplicatePage(req.mk.ctx, page.id); return `Copie créée (hors ligne) : « ${copy.name} ».`; });
   });
+  // Déplacer une page vers un autre site (ou le site principal) : droit d'écrire sur la page (garde de la route) ET sur le site d'arrivée ; équipe seulement pour le site principal
+  router.post("/pages/:id(\\d+)/deplacer", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+      const raw = req.body.site_id;
+      const target = raw === undefined || raw === "" ? null : intOrNull(raw);
+      if (raw !== undefined && raw !== "" && target === null) throw new MarketingError("invalid_field", "Site de destination invalide.");
+      if (req.mk.siteOnly && target === null) throw new MarketingError("forbidden", "Le site principal est réservé à l'équipe de l'organisation.");
+      if (typeof req.mk.ctx.canOn === "function" && !req.mk.ctx.canOn(target, "forms.write")) throw new MarketingError("forbidden", "Vous ne pouvez pas écrire dans le site de destination.");
+      // Les droits sur la page source (garde de la route) et sur le site d'arrivée (ci-dessus) sont établis : la portée « un seul site » de la requête est levée pour CE déplacement seulement,
+      // afin qu'une personne autorisée sur deux sites puisse déplacer de l'un à l'autre (sans cela, le service refuse tout site autre que celui de la requête)
+      const sourceOk = typeof req.mk.ctx.canOn !== "function" || req.mk.ctx.canOn(page.site_id ?? null, "forms.write");
+      if (!sourceOk) throw new MarketingError("forbidden", "Vous ne pouvez pas écrire dans le site de cette page.");
+      const moveCtx = Number.isInteger(req.mk.ctx.siteScope) ? { ...req.mk.ctx, siteScope: undefined } : req.mk.ctx;
+      pages.movePage(moveCtx, page.id, target);
+      return `Page « ${page.name} » déplacée.`;
+    });
+  });
   router.post("/pages/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, "/marketing/pages", () => { pages.archivePage(req.mk.ctx, page.id); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
+    attempt(req, res, next, "/marketing/pages", () => { pages.archivePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
   });
   router.post("/pages/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
@@ -452,7 +541,7 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     if (!page.archived_at) { req.session.mkFlash = { type: "error", text: "Mettez d'abord la page à la corbeille : elle ne peut être supprimée définitivement que depuis la corbeille." }; return res.redirect(`/marketing/pages/${page.id}`); }
-    attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
+    attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
   });
   return router;
 };

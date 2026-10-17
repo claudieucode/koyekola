@@ -175,7 +175,7 @@ describe("recherche et filtres de la liste", () => {
   });
   test("chaque ligne porte catégorie, type, objet, nombre de blocs, date et nombre d'usages", () => {
     const row = templates.searchTemplates(A, { q: "Promo" })[0];
-    assert.deepEqual(Object.keys(row).sort(), ["blockCount", "category", "created_at", "id", "kind", "name", "subject", "updated_at", "usedBy", "version"].sort());
+    assert.deepEqual(Object.keys(row).sort(), ["blockCount", "category", "created_at", "id", "kind", "name", "site_id", "subject", "updated_at", "usedBy", "version"].sort());
     assert.equal(row.blockCount, 1);
   });
   test("usages : campagnes qui utilisent le modèle (les campagnes système des scénarios ne comptent pas)", () => {

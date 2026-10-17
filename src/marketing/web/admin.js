@@ -7,8 +7,10 @@ const sms = require("../sms");
 const { getOverview } = require("../overview");
 const segmentsService = require("../segments");
 const { parseKey } = require("../security/crypto");
-const { attempt, need, flashError } = require("./kit");
+const { attempt, need, flashError, siteChoices } = require("./kit");
 const sendtime = require("../sending/sendtime");
+const core = require("../contactcore");
+const automationsLib = require("../automations");
 
 const PROFILE_FIELDS = ["first_name", "last_name", "phone", "company", "country", "language", "timezone"];
 const pick = (body, keys) => Object.fromEntries(keys.filter((k) => typeof body[k] === "string").map((k) => [k, body[k]]));
@@ -20,7 +22,10 @@ module.exports = ({ db }) => {
   // Charge la fiche ou répond 404 (identifiant non numérique, inconnu ou d'une autre organisation)
   const loadContact = (req, res) => {
     const id = intOrNull(req.params.id);
-    const contact = id ? audience.getContact(req.mk.ctx, id) : null;
+    let contact = id ? audience.getContact(req.mk.ctx, id) : null;
+    // Contact Core : une personne qui n'a accès qu'à un site ne voit que les contacts de CE site
+    if (contact && req.mk.siteOnly && !(req.mk.siteId !== null && (contact.origin_site_id === req.mk.siteId
+      || db.prepare("SELECT 1 FROM mk_events WHERE organization_id = ? AND contact_id = ? AND site_id = ? LIMIT 1").get(contact.organization_id, contact.id, req.mk.siteId)))) contact = null;
     if (!contact) res.status(404).render("error", { message: "Contact introuvable." });
     return contact;
   };
@@ -35,7 +40,7 @@ module.exports = ({ db }) => {
 
   // ---------- Contacts ----------
   // Paramètres de l'adresse (français) → critères de recherche ; toute valeur invalide est ignorée, jamais une erreur
-  const contactQuery = (query, ctx) => {
+  const contactQuery = (query, ctx, req = null) => {
     const text = (v, max) => (typeof v === "string" ? v.trim().slice(0, max) : "");
     const q = text(query.q, 100);
     const status = audience.STATUSES.includes(query.status) ? query.status : undefined;
@@ -54,17 +59,31 @@ module.exports = ({ db }) => {
       } catch { custom = undefined; }
       if (!custom) segmentId = null;
     }
-    const criteria = { ...(q && { q }), ...(status && { status }), ...(listId && { listId }), ...(tagId && { tagId }), ...(source && { source }), ...(sendable && { sendable }), ...(sinceDays && { sinceDays }), ...(custom && { custom }) };
-    const params = { ...(q && { q }), ...(status && { status }), ...(listId && { liste: listId }), ...(tagId && { etiquette: tagId }), ...(source && { source }), ...(sendable && { joignables: "1" }), ...(sinceDays && { depuis: sinceDays }), ...(segmentId && { segment: segmentId }) };
-    return { criteria, params, filters: { q, status: status ?? "", liste: listId ?? "", etiquette: tagId ?? "", source, joignables: sendable, depuis: sinceDays ?? "", segment: segmentId ?? "" } };
+    // Contact Core (palier 15) : cycle de vie, état de la fiche (défaut : actives et inactives), site, consentement, dates, inactivité
+    const lifecycle = Object.hasOwn(core.lifecycleStages(ctx), query.cycle) ? query.cycle : undefined;
+    const etat = ["active", "inactive", "archived", "merged", "all"].includes(query.etat) ? query.etat : undefined;
+    const siteQ = intOrNull(query.site);
+    const consent = audience.CONSENT_FILTERS.includes(query.consentement) ? query.consentement : undefined;
+    const ymdOk = (v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+    const createdFrom = ymdOk(query.cree_du), createdTo = ymdOk(query.cree_au);
+    const inactiveDays = [30, 90, 180, 365].includes(Number(query.inactifs)) ? Number(query.inactifs) : undefined;
+    // Accès limité à un site : le site est imposé par le serveur, jamais par l'adresse ; sans droit « données sensibles », la recherche ne porte que sur les noms
+    const siteForced = req && req.mk.siteOnly ? req.mk.siteId : siteQ;
+    const noSensitive = Boolean(req && !req.mk.can("contacts.view_sensitive"));
+    const criteria = { ...(q && { q }), recordStatus: etat || "live", ...(noSensitive && { noSensitiveSearch: true }), ...(lifecycle && { lifecycle }), ...(siteForced && { siteId: siteForced }), ...(consent && { consent }), ...(createdFrom && { createdFrom }), ...(createdTo && { createdTo }), ...(inactiveDays && { inactiveDays }), ...(status && { status }), ...(listId && { listId }), ...(tagId && { tagId }), ...(source && { source }), ...(sendable && { sendable }), ...(sinceDays && { sinceDays }), ...(custom && { custom }) };
+    const params = { ...(q && { q }), ...(status && { status }), ...(listId && { liste: listId }), ...(tagId && { etiquette: tagId }), ...(source && { source }), ...(sendable && { joignables: "1" }), ...(sinceDays && { depuis: sinceDays }), ...(segmentId && { segment: segmentId }),
+      ...(lifecycle && { cycle: lifecycle }), ...(etat && { etat }), ...(siteQ && { site: siteQ }), ...(consent && { consentement: consent }), ...(createdFrom && { cree_du: createdFrom }), ...(createdTo && { cree_au: createdTo }), ...(inactiveDays && { inactifs: inactiveDays }) };
+    return { criteria, params, filters: { cycle: lifecycle ?? "", etat: etat ?? "", site: siteQ ?? "", consentement: consent ?? "", cree_du: createdFrom ?? "", cree_au: createdTo ?? "", inactifs: inactiveDays ?? "", q, status: status ?? "", liste: listId ?? "", etiquette: tagId ?? "", source, joignables: sendable, depuis: sinceDays ?? "", segment: segmentId ?? "" } };
   };
   // Adresse de retour d'une action groupée : uniquement une page contacts du site (aucune redirection ouverte)
   const safeBack = (value) => (typeof value === "string" && /^\/marketing\/contacts(\?[A-Za-z0-9_%&=.+\-]*)?$/.test(value) ? value : "/marketing/contacts");
 
   router.get("/contacts", need("contacts.read"), (req, res) => {
     const { ctx } = req.mk;
-    const { criteria, params, filters } = contactQuery(req.query, ctx);
+    const { criteria, params, filters } = contactQuery(req.query, ctx, req);
     const result = audience.searchContacts(ctx, criteria, { sort: req.query.tri, dir: req.query.sens, page: req.query.page, pageSize: req.query.taille });
+    const sensitiveOk = req.mk.can("contacts.view_sensitive");
+    if (!sensitiveOk) result.rows = result.rows.map(core.maskContact);
     const defaultSort = result.sort === "created" && result.dir === "desc" && !req.query.tri;
     const view = { ...params, ...(req.query.tri && result.sort ? { tri: result.sort, sens: result.dir } : {}), ...(result.pageSize !== 50 && { taille: result.pageSize }) };
     // Adresse de la page avec des paramètres modifiés (null = retirer)
@@ -78,16 +97,18 @@ module.exports = ({ db }) => {
     const from = result.total === 0 ? 0 : (result.page - 1) * result.pageSize + 1;
     res.render("marketing/contacts", {
       title: "Contacts", active: "contacts", result, rows: result.rows, tagsOf: audience.tagsForContacts(ctx, result.rows.map((c) => c.id)), url, view, defaultSort,
-      range: { from, to: from + result.rows.length - (result.total === 0 ? 0 : 1) }, filters, hasFilters: Object.keys(criteria).length > 0,
+      range: { from, to: from + result.rows.length - (result.total === 0 ? 0 : 1) }, filters, hasFilters: Object.keys(params).length > 0,
       exportUrl: `/marketing/contacts/export.csv${exportParams ? `?${exportParams}` : ""}`,
-      lists: audience.listLists(ctx), tags: audience.listTags(ctx), statuses: audience.STATUSES, savedSegments: segmentsService.listSegments(ctx).map((x) => ({ id: x.id, name: x.name })),
+      lists: audience.listLists(ctx), tags: audience.listTags(ctx), statuses: audience.STATUSES, sensitiveOk, siteScoped: req.mk.siteOnly,
+      lifecycles: core.lifecycleStages(ctx), recordLabels: core.RECORD_STATUS_LABELS, sitesList: req.mk.siteOnly ? [] : db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? ORDER BY name").all(ctx.organizationId), savedSegments: segmentsService.listSegments(ctx).map((x) => ({ id: x.id, name: x.name })),
       sources: db.prepare("SELECT DISTINCT source FROM mk_contacts WHERE organization_id = ? AND source <> '' ORDER BY source LIMIT 50").all(ctx.organizationId).map((r) => r.source),
     });
   });
 
   // Export CSV des contacts filtrés (administrateurs) — avant « /contacts/:id »
   router.get("/contacts/export.csv", need("contacts.export"), (req, res) => {
-    const { criteria } = contactQuery(req.query, req.mk.ctx);
+    if (!req.mk.can("contacts.view_sensitive")) return res.status(403).render("error", { message: "L'export contient adresses et numéros complets : il demande aussi le droit « voir les données sensibles des contacts »." });
+    const { criteria } = contactQuery(req.query, req.mk.ctx, req);
     res.set({ "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="contacts-${new Date().toISOString().slice(0, 10)}.csv"`, "Cache-Control": "no-store" });
     audience.exportContacts(req.mk.ctx, criteria, (chunk) => res.write(chunk));
     res.end();
@@ -140,11 +161,23 @@ module.exports = ({ db }) => {
     if (!contact) return;
     const { ctx } = req.mk;
     const defs = audience.listProperties(ctx);
-    const memberOf = db
-      .prepare("SELECT l.id, l.name FROM mk_list_members m JOIN mk_lists l ON l.id = m.list_id WHERE m.contact_id = ? AND m.organization_id = ? ORDER BY l.name")
-      .all(contact.id, ctx.organizationId);
+    // Chaque audience avec l'état d'abonnement du contact DANS cette audience (palier 16)
+    const memberOf = audience.subscriptionsOf(ctx, contact.id).map((x) => ({ id: x.list_id, name: x.name, state: x.state, stateLabel: audience.STATES[x.state] }));
+    // Contact Core (palier 15) : sans le droit « données sensibles », adresse et numéro sont masqués et les preuves détaillées ne sont pas montrées
+    const sensitiveOk = req.mk.can("contacts.view_sensitive");
+    const siteLimit = req.mk.siteOnly ? req.mk.siteId : null;
+    const eventsPage = req.mk.can("events.view") ? core.eventsOf(ctx, contact.id, { before: intOrNull(req.query.avant), limit: 20, siteId: siteLimit }) : null;
+    const absorbed = db.prepare("SELECT id, email, created_at FROM mk_contacts WHERE organization_id = ? AND merged_into_id = ? ORDER BY id").all(ctx.organizationId, contact.id).map((a) => (sensitiveOk ? a : { ...a, email: core.maskEmail(a.email) }));
+    const aliases = db.prepare("SELECT email, created_at FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ? ORDER BY id").all(ctx.organizationId, contact.id).map((a) => (sensitiveOk ? a : { ...a, email: core.maskEmail(a.email) }));
+    const mergedInto = contact.merged_into_id ? audience.getContact(ctx, contact.merged_into_id) : null;
     res.render("marketing/contact", {
-      title: contact.email, active: "contacts", contact, defs, values: audience.getContactProperties(ctx, contact.id), tags: audience.tagsOf(ctx, contact.id),
+      commerce: req.mk.can("events.view") && !req.mk.siteOnly ? require("../bridge/commerce").commerceOf(ctx, contact) : null,
+      journeys: req.mk.can("events.view") ? require("../funnels/events").contactJourney(ctx, contact.id, { siteId: siteLimit }) : null,
+      autoRuns: req.mk.can("automations.read") ? automationsLib.contactRuns(ctx, contact.id) : null,
+      sensitiveOk, eventsPage, absorbed, aliases, mergedInto: mergedInto ? { id: mergedInto.id, email: sensitiveOk ? mergedInto.email : core.maskEmail(mergedInto.email) } : null,
+      lifecycles: core.lifecycleStages(ctx), recordLabels: core.RECORD_STATUS_LABELS, originSite: contact.origin_site_id ? db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(contact.origin_site_id, ctx.organizationId) : null,
+      absorbedProofs: absorbed.length && sensitiveOk ? core.consentProofs(ctx, contact.id, { limit: 50 }).filter((k) => k.contact_id !== contact.id) : [],
+      title: sensitiveOk ? contact.email : core.maskEmail(contact.email), active: "contacts", contact: sensitiveOk ? contact : core.maskContact(contact), defs, values: audience.getContactProperties(ctx, contact.id), tags: audience.tagsOf(ctx, contact.id),
       memberOf, allLists: audience.listLists(ctx), history: compliance.consentHistory(ctx, contact.id), preferences: compliance.preferencesOf(ctx, contact.id),
       sendable: compliance.isSendable(ctx, contact.id), smsSendable: sms.isSmsSendable(ctx, contact.id), smsPhoneMasked: sms.maskPhone(contact.sms_phone),
       summary: audience.contactSummary(ctx, contact.id), timeline: audience.contactTimeline(ctx, contact.id, { limit: 50 }), score: require("../scoring").contactScore(ctx, contact.id),
@@ -280,12 +313,12 @@ module.exports = ({ db }) => {
       const text = qs.toString();
       return `/marketing/listes${text ? `?${text}` : ""}`;
     };
-    res.render("marketing/lists", { title: "Listes", active: "lists", lists, q, sort, dir, url, hasQuery: Boolean(q) });
+    res.render("marketing/lists", { title: "Listes", active: "lists", lists, q, sort, dir, url, hasQuery: Boolean(q), ...siteChoices(req) });
   });
 
   router.post("/listes", need("lists.write"), (req, res, next) =>
     attempt(req, res, next, "/marketing/listes", () => {
-      audience.createList(req.mk.ctx, { name: req.body.name, description: req.body.description });
+      audience.createList(req.mk.ctx, { name: req.body.name, description: req.body.description, siteId: req.body.site });
       return "Liste créée.";
     }));
 
@@ -299,11 +332,14 @@ module.exports = ({ db }) => {
   router.get("/listes/:id", need("lists.read"), (req, res) => {
     const list = loadList(req, res);
     if (!list) return;
-    const page = audience.listMembers(req.mk.ctx, list.id, { limit: 50, afterId: intOrNull(req.query.apres) ?? undefined });
+    const etat = Object.hasOwn(audience.STATES, req.query.etat) ? req.query.etat : "";
+    const page = audience.listSubscribers(req.mk.ctx, list.id, { state: etat || undefined, limit: 50, afterId: intOrNull(req.query.apres) ?? undefined });
     const stats = audience.listListsWithStats(req.mk.ctx).find((l) => l.id === list.id);
+    const sensitiveOk = req.mk.can("contacts.view_sensitive");
     res.render("marketing/list", {
-      title: list.name, active: "lists", list, rows: page.rows, nextUrl: page.nextAfterId ? `/marketing/listes/${list.id}?apres=${page.nextAfterId}` : null,
-      count: stats.member_count, sendableCount: stats.sendable_count,
+      title: list.name, active: "lists", list, rows: sensitiveOk ? page.rows : page.rows.map((r) => ({ ...require("../contactcore").maskContact(r), subscription_state: r.subscription_state })),
+      nextUrl: page.nextAfterId ? `/marketing/listes/${list.id}?${etat ? `etat=${etat}&` : ""}apres=${page.nextAfterId}` : null,
+      count: stats.member_count, sendableCount: stats.sendable_count, etat, stateCounts: audience.stateCounts(req.mk.ctx, list.id), STATES: audience.STATES,
     });
   });
 
@@ -363,7 +399,7 @@ module.exports = ({ db }) => {
 
   // ---------- Propriétés personnalisées ----------
   router.get("/proprietes", need("contacts.read"), (req, res) => res.render("marketing/properties", { title: "Propriétés", active: "properties", defs: audience.listProperties(req.mk.ctx), types: audience.TYPES, usage: audience.propertyUsage(req.mk.ctx) }));
-  router.post("/proprietes", need("contacts.write"), (req, res, next) =>
+  router.post("/proprietes", need("contacts.manage_fields"), (req, res, next) =>
     attempt(req, res, next, "/marketing/proprietes", () => {
       const options = String(req.body.options ?? "").split("\n").map((s) => s.trim()).filter(Boolean);
       audience.defineProperty(req.mk.ctx, { key: req.body.key, label: req.body.label, type: req.body.type, options });

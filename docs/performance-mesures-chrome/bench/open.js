@@ -1,0 +1,41 @@
+const path = require("path"); const fs = require("fs");
+const REPO = path.join(__dirname, "..", "..", "..");
+const { chromium } = require("playwright-core");
+const { startServer, loginInstructor } = require(path.join(REPO, "tests/helpers"));
+const { TEST_KEY } = require(path.join(REPO, "tests/marketing-helpers"));
+const src = fs.readFileSync(path.join(__dirname, "bench.js"), "utf8");
+const makeContent = new Function(src.slice(src.indexOf("function makeContent"), src.indexOf("const median")) + "; return makeContent;")();
+(async () => {
+  const srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+  const boss = await loginInstructor(srv);
+  const browser = await chromium.launch({ executablePath: (process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"), headless: true });
+  const res = [];
+  for (const target of [20, 400]) {
+    const context = await browser.newContext({ viewport: { width: 1500, height: 900 } });
+    await context.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
+    const page = await context.newPage();
+    const pageId = Number((await boss.post("/marketing/pages", { name: "Ouv " + target })).location.match(/(\d+)$/)[1]);
+    const revision = srv.db().prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pageId).revision;
+    await boss.request(`/marketing/pages/${pageId}/brouillon`, { method: "PUT", json: { revision, content: { sections: makeContent(target).sections } }, headers: { Origin: srv.base } });
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Performance.enable"); await cdp.send("Profiler.enable"); await cdp.send("Profiler.setSamplingInterval", { interval: 250 }); await cdp.send("Profiler.start");
+    const t0 = Date.now();
+    const reqs = [];
+    page.on("requestfinished", async (r) => { const s = await r.sizes().catch(() => null); reqs.push({ u: r.url().replace(srv.base, "").slice(0, 70), t: r.timing().responseEnd, body: s && s.responseBodySize, hdr: s && s.responseHeadersSize }); });
+    await page.goto(`${srv.base}/marketing/pages/${pageId}/editeur`);
+    await page.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder"); }, null, { timeout: 60000 });
+    const ready = Date.now() - t0;
+    await page.waitForTimeout(1500);
+    const m = Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map((x) => [x.name, x.value]));
+    const { profile } = await cdp.send("Profiler.stop");
+    const byId = new Map(profile.nodes.map((n) => [n.id, n])); const self = new Map();
+    profile.samples.forEach((id, i) => { const cf = byId.get(id).callFrame; const key = (cf.functionName || "(anonyme)") + " " + (cf.url.split("/").pop().split("?")[0] || "") + ":" + (cf.lineNumber + 1); self.set(key, (self.get(key) || 0) + (profile.timeDeltas[i] || 0) / 1000); });
+    const top = [...self.entries()].filter(([k]) => !/idle/.test(k)).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, v]) => k + " " + Math.round(v) + "ms");
+    const big = reqs.sort((a, b) => (b.body || 0) - (a.body || 0)).slice(0, 8).map((r) => r.u + " " + Math.round((r.body || 0) / 1024) + "Ko");
+    const nreq = reqs.length;
+    res.push({ target, readyMs: ready, scriptMs: Math.round(m.ScriptDuration * 1000), layoutMs: Math.round(m.LayoutDuration * 1000), styleMs: Math.round(m.RecalcStyleDuration * 1000), taskMs: Math.round(m.TaskDuration * 1000), nreq, big, top });
+    await context.close();
+  }
+  console.log(JSON.stringify(res, null, 1));
+  await browser.close(); await srv.stop();
+})().catch((e) => { console.error(e); process.exit(1); });

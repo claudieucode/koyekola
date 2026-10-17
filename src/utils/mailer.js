@@ -38,7 +38,10 @@ function sendPurchaseWelcomeEmail(db, { to, username, courseTitles }) {
 // Prévient le formateur d'un nouveau message de contact. Réception : CONTACT_EMAIL, sinon SMTP_FROM / SMTP_USER.
 // Le message est de toute façon conservé dans « Mon espace ».
 function sendContactNotification(db, { name, email, subject, message }) {
-  const to = process.env.CONTACT_EMAIL || fromAddress();
+  // Adresse administrative choisie dans Paramètres → Général, sinon celle configurée par l'hébergeur
+  let adminEmail = "";
+  try { adminEmail = require("../services/settings").main().adminEmail; } catch { adminEmail = ""; }
+  const to = adminEmail || process.env.CONTACT_EMAIL || fromAddress();
   if (!to) return { queued: false, reason: "no_recipient" };
   return queueMail(db, {
     kind: "contact_notification", to, replyTo: oneLine(email),

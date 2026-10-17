@@ -9,8 +9,9 @@ const seoPages = require("../seo/pages");
 
 const router = express.Router();
 
-// Tout l'espace d'administration de ces pages est réservé au formateur
-router.use("/formateur", requireInstructor);
+// Tout l'espace d'administration de ces pages est réservé au formateur — SAUF l'éditeur d'articles (/formateur/blog), dont le routeur du blog applique sa propre
+// barrière (compte créateur, ou rôle autorisé à rédiger selon ses droits : voir requireBlogAccess dans routes/blog.js)
+router.use("/formateur", (req, res, next) => (req.path === "/blog" || req.path.startsWith("/blog/") ? next() : requireInstructor(req, res, next)));
 
 // ---------- À propos ----------
 

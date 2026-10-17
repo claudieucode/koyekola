@@ -30,7 +30,7 @@ describe("sécurité et validation (sans serveur)", () => {
   test("élément : classes, attributs, interactions, programmation, vidéo de fond, filtres validés", () => {
     const { A } = freshMarketing();
     const p = pages.createPage(A, { name: "V3", kind: "page" });
-    const save = (node) => pages.saveDraft(A, p.id, { sections: [layout([node])] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children[0].children[0];
+    const save = (node) => pages.saveDraft(A, p.id, { sections: [layout([node, { id: "text00000001", type: "text", props: { html: "<p>Cible des interactions</p>" } }])] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children[0].children[0]; // la cible d'une interaction doit exister dans la page (sinon elle est écartée)
     const n = save({ id: "head00000001", type: "heading", props: { text: "A", level: 2 }, css: "letter-spacing: 2px", cssHover: "opacity: .8", classes: "carte  carte mise-en-avant", attrs: [{ name: "data-suivi", value: "hero" }, { name: "aria-describedby", value: "x" }], interactions: [{ trigger: "click", action: "toggle", target: "text00000001" }, { trigger: "nope", action: "toggle", target: "x" }], startHidden: true, schedule: { from: "2026-01-01T09:00:00Z", until: "2030-01-01T00:00:00Z" }, styles: { desktop: { filter: { blur: 2, brightness: 100, grayscale: 50 }, backdropBlur: 6, display: "inline-flex" } } });
     assert.equal(n.classes, "carte mise-en-avant");
     assert.deepEqual(n.attrs, [{ name: "data-suivi", value: "hero" }, { name: "aria-describedby", value: "x" }]);

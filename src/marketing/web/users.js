@@ -144,7 +144,9 @@ module.exports = () => {
   });
   userRoute("/role", "users.manage_roles", (id, req) => { const r = access.setOrgRole(org(req), actor(req), id, String(req.body.role || "")); return `Rôle de ${r.target.username} : « ${r.role.name} ».`; });
   userRoute("/statut", "users.edit", (id, req) => { access.setStatus(org(req), actor(req), id, String(req.body.status || "")); return { active: "Compte réactivé.", suspended: "Compte suspendu : la personne est déconnectée et ne peut plus se connecter.", disabled: "Compte désactivé : la personne est déconnectée et ne peut plus se connecter." }[req.body.status] || "Statut enregistré."; });
-  userRoute("/sites", "users.manage_roles", (id, req) => { const s = access.setSiteRole(org(req), actor(req), id, intOrNull(req.body.site_id), String(req.body.role || "")); return `Accès au site « ${s.name} » enregistré.`; });
+  userRoute("/sites", "users.manage_roles", (id, req) => { const s = access.setSiteRole(org(req), actor(req), id, intOrNull(req.body.site_id), String(req.body.role || ""), req.body.mode ? { mode: String(req.body.mode) } : {}); return `Accès au site « ${s.name} » enregistré.`; });
+  // Plafond de droits par site (R3) : « limit » = sur ce site, les droits sont ceux que le rôle d'équipe ET le rôle de site accordent à la fois
+  userRoute("/sites/:siteId(\\d+)/mode", "users.manage_roles", (id, req) => { const s = access.setSiteMode(org(req), actor(req), id, Number(req.params.siteId), String(req.body.mode || "")); return String(req.body.mode) === "limit" ? `Droits plafonnés sur le site « ${s.name} ».` : `Plafond retiré sur le site « ${s.name} ».`; });
   userRoute("/sites/:siteId(\\d+)/retirer", "users.manage_roles", (id, req) => { access.removeSiteRole(org(req), actor(req), id, Number(req.params.siteId)); return "Accès au site retiré."; });
   router.post("/site-web/utilisateurs/:id(\\d+)/retirer", need("users.delete"), (req, res, next) => {
     let gone = false;

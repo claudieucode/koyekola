@@ -301,7 +301,9 @@ function submitForm(ctx, formId, input = {}) {
   try {
     // Fuseau du navigateur (champ caché rempli par le formulaire) : seulement s'il est valide, jamais bloquant
     const timezone = cleanTimeZone(input.tz);
-    ({ contact } = upsertContact(ctx, { email: input.email, ...fields, ...(timezone ? { timezone } : {}), source: "form" }));
+    // Contact Core (palier 15) : même fiche pour une même personne (adresse normalisée, alias de fusion), cycle de vie « prospect », origine = ce formulaire.
+    // L'envoi d'un formulaire ne consent à RIEN : l'accord vient plus bas, de la case cochée.
+    ({ contact } = require("../contactcore").identify(ctx, { email: input.email, ...fields, ...(timezone ? { timezone } : {}), source: "form", sourceDetail: form.slug || form.name }));
   } catch (error) {
     if (error instanceof MarketingError) return { ok: false, reason: error.code, message: error.message };
     throw error;
@@ -337,7 +339,7 @@ function submitForm(ctx, formId, input = {}) {
 // en attente ou non. La page est un chemin du site (jamais une adresse complète venue du navigateur).
 function emitSubmitted(ctx, form, contact, { pending, page }) {
   const where = typeof page === "string" && /^\/[^\s<>"'`\\]{0,300}$/.test(page) ? page : `/f/${form.slug}`;
-  emit(ctx, "form.submitted", { contact, source: "form", metadata: { formId: String(form.id), formName: form.name, page: where, pending: Boolean(pending) } });
+  emit(ctx, "form.submitted", { contact, source: "form", objectType: "form", objectId: form.id, metadata: { formId: String(form.id), formName: form.name, page: where, pending: Boolean(pending) } });
 }
 
 // Fichier joint : rangé hors des dossiers publics (uploads/forms/<organisation>/), nom aléatoire, lisible seulement par

@@ -89,10 +89,10 @@ async function sendWebhook({ url, secret, eventName, eventId, occurredAt, metada
 function eventHandler({ db, env = process.env } = {}) {
   return async (event) => {
     if (!env.ENCRYPTION_KEY) return; // sans clé, aucun secret n'est lisible : ne rien tenter plutôt qu'échouer en boucle
-    for (const endpoint of endpointsFor(db, event.organizationId, event.name)) {
+    for (const endpoint of endpointsFor(db, event.organizationId, event.name, Number.isInteger(event.siteId) ? event.siteId : null)) {
       enqueue(db, {
         organizationId: event.organizationId, type: "webhook.deliver", priority: 6, maxAttempts: 6,
-        payload: { endpointId: endpoint.id, eventName: event.name, eventId: event.id, occurredAt: event.occurredAt, metadata: event.metadata },
+        payload: { endpointId: endpoint.id, eventName: event.name, eventId: event.id, occurredAt: event.occurredAt, metadata: event.metadata, siteId: Number.isInteger(event.siteId) ? event.siteId : null },
         idempotencyKey: `webhook:${endpoint.id}:${event.id}`,
       });
     }
@@ -110,7 +110,7 @@ function sendTestEvent(ctx, endpointId) {
   const testId = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
   return enqueue(ctx.db, {
     organizationId: ctx.organizationId, type: "webhook.deliver", priority: 6, maxAttempts: 6,
-    payload: { endpointId: endpoint.id, eventName: "test.ping", eventId: `test-${testId}`, occurredAt: new Date().toISOString(), metadata: { message: "Événement de test envoyé manuellement depuis KOLAKISA." } },
+    payload: { endpointId: endpoint.id, eventName: "test.ping", eventId: `test-${testId}`, siteId: endpoint.reach === "site" ? endpoint.siteId : null, occurredAt: new Date().toISOString(), metadata: { message: "Événement de test envoyé manuellement depuis KOLAKISA." } },
     idempotencyKey: `webhook:test:${endpoint.id}:${testId}`,
   });
 }
@@ -122,6 +122,8 @@ function jobHandlers({ db, env = process.env, lookup, fetchImpl } = {}) {
       if (!row) throw new UnrecoverableError("Point d'accès supprimé.");
       if (!row.enabled) throw new UnrecoverableError("Point d'accès mis en pause.");
       if (!env.ENCRYPTION_KEY) throw new UnrecoverableError("ENCRYPTION_KEY absente : secret illisible.");
+      // Défense en profondeur (R2) : un point d'arrivée de site ne livre jamais un événement d'un autre site, même si un travail a été mis en file par erreur
+      if (row.reach === "site" && payload.siteId !== row.site_id) throw new UnrecoverableError("Événement hors de la portée de site de ce point d'accès : livraison refusée.");
       const secret = decryptSecret(row.secret, env.ENCRYPTION_KEY, secretContext(row.organization_id, row.id));
       try {
         await sendWebhook({ url: row.url, secret, eventName: payload.eventName, eventId: payload.eventId, occurredAt: payload.occurredAt, metadata: payload.metadata, lookup, fetchImpl });

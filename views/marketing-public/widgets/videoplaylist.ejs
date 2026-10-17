@@ -1,0 +1,9 @@
+<%# Playlist vidéo (src/marketing/pages/widgets/videoplaylist.js). Variables : p, d (d.videos[i].src = adresse du lecteur reconstruite), cls, attrs. %>
+<% const vids = p.videos || []; const dv = (d && d.videos) || []; const first = dv[0] && dv[0].src; const sep = (s) => (s.includes("?") ? "&" : "?"); %>
+<section class="<%= cls %> is-list-<%= ["left", "below"].includes(p.listSide) ? p.listSide : "right" %>" aria-label="<%= p.title || "Playlist vidéo" %>" data-kw-vplay<%- attrs %>>
+  <div class="kw-vp-stage"><% if (first) { %><iframe class="kw-vp-frame" src="<%= first %>" title="<%= vids[0].title %>" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe><% } %></div>
+  <div class="kw-vp-side">
+    <% if (p.title) { %><p class="kw-vp-title"><%= p.title %></p><% } %>
+    <ol class="kw-vp-list"><% vids.forEach((v, i) => { const s = (dv[i] || {}).src || ""; %><li><a class="kw-vp-item<%= i === 0 ? ' is-current' : '' %>" href="<%= v.url %>" data-kw-vp-src="<%= s %><%= s ? sep(s) + "autoplay=1" : "" %>" data-kw-vp-title="<%= v.title %>"<%- i === 0 ? ' aria-current="true"' : "" %> target="_blank" rel="noopener noreferrer"><span class="kw-vp-num"><%= i + 1 %></span><span class="kw-vp-name"><%= v.title %></span><% if (v.duration) { %><span class="kw-vp-dur"><%= v.duration %></span><% } %></a></li><% }) %></ol>
+  </div>
+</section>

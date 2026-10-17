@@ -387,13 +387,14 @@
     bodyEl.appendChild(section("Largeurs et marges", [
       { kind: "toggle", path: "settings.layout.fullWidth", label: "Contenu pleine largeur", hint: "Le contenu des pages occupe toute la largeur de l'écran (les conteneurs gardent leur largeur maximale)." },
       { kind: "number", path: "settings.layout.contentWidth", label: "Largeur du contenu", min: 480, max: 1600, unit: "px" },
-      { kind: "number", path: "settings.layout.containerWidth", label: "Largeur maximale des conteneurs", min: 480, max: 1600, unit: "px" },
+      { kind: "number", path: "settings.layout.containerWidth", label: "Largeur maximale des conteneurs", min: 480, max: 1600, unit: "px", hint: "1 100 px par défaut. 1 140 px est la valeur courante des constructeurs de pages ; la valeur choisie s'applique aux conteneurs « encadrés » et au contenu des conteneurs « fond pleine largeur, contenu encadré »." },
       { kind: "number", path: "settings.layout.gutter", label: "Marges latérales", min: 0, max: 80, unit: "px" },
       { kind: "number", path: "tokens.space.lg", label: "Espace entre les sections", min: 0, max: 200, unit: "px" },
     ]));
     bodyEl.appendChild(section("Écrans (points de rupture)", [
       { kind: "number", path: "settings.layout.breakpoints.tablet", label: "Tablette : jusqu'à", min: 820, max: 1279, unit: "px", hint: "Les styles « Tablette » des éléments et « Masquer sur tablette » s'appliquent jusqu'à cette largeur." },
       { kind: "number", path: "settings.layout.breakpoints.mobile", label: "Mobile : jusqu'à", min: 400, max: 767, unit: "px", hint: "Les styles « Mobile » des éléments et « Masquer sur mobile » s'appliquent jusqu'à cette largeur. Les adaptations internes de chaque élément gardent leurs propres seuils." },
+      { kind: "number", path: "settings.layout.breakpoints.wide", label: "Grand écran : à partir de", min: 1400, max: 3000, unit: "px", hint: "Les styles « Grand écran » des éléments et « Masquer sur grand écran » s'appliquent à partir de cette largeur ; sans réglage propre, un élément garde son style « Ordinateur »." },
     ]));
   }
   function renderLightbox() {
@@ -531,13 +532,16 @@
     C.fontRoles.forEach(function (role) {
       var id = "ss-font-" + role;
       var sample = h("p", { class: "ss-sample", text: role === "heading" ? "Des objets pensés pour durer" : role === "button" ? "Je commence" : role === "link" ? "Découvrir notre histoire" : "Chaque pièce est choisie pour la qualité de sa fabrication." });
-      sample.style.fontFamily = C.fonts[T.fonts[role]].stack;
-      var select = h("select", { id: id, disabled: !state.canWrite }, Object.keys(C.fonts).map(function (k) { return h("option", { value: k, selected: T.fonts[role] === k, text: C.fonts[k].label }); }));
-      select.addEventListener("change", function () {
-        var v = select.value;
-        change(function (t) { t.fonts[role] = v; });
-        sample.style.fontFamily = C.fonts[v].stack;
-      });
+      var stackOf = function (k) { var lib = window.KFonts && window.KFonts.byId(k); if (lib) { window.KFonts.ensure([lib.id]); return lib.stack; } return C.fonts[k] ? C.fonts[k].stack : "inherit"; };
+      sample.style.fontFamily = stackOf(T.fonts[role]);
+      // Police : bibliothèque centrale (Font Manager) ; les polices historiques du site restent proposées en tête
+      var select = window.KFonts
+        ? window.KFonts.picker({ value: T.fonts[role], legacy: Object.keys(C.fonts).map(function (k) { return [k, C.fonts[k].label]; }), legacyStacks: function () { var m = {}; Object.keys(C.fonts).forEach(function (k) { m[k] = C.fonts[k].stack; }); return m; }, disabled: !state.canWrite, label: C.fontLabels[role],
+          onChange: function (v) { change(function (t) { t.fonts[role] = v; }); setTimeout(function () { sample.style.fontFamily = stackOf(v); }, 60); } })
+        : h("select", { id: id, disabled: !state.canWrite }, Object.keys(C.fonts).map(function (k) { return h("option", { value: k, selected: T.fonts[role] === k, text: C.fonts[k].label }); }));
+      if (!window.KFonts) select.addEventListener("change", function () { var v = select.value; change(function (t) { t.fonts[role] = v; }); sample.style.fontFamily = C.fonts[v].stack; });
+      select.id = id;
+      if (window.KFonts && !window.KFonts.ready()) window.KFonts.load().then(function () { sample.style.fontFamily = stackOf(T.fonts[role]); }).catch(function () {});
       sec.appendChild(h("div", { class: "ss-field" }, [h("label", { for: id, text: C.fontLabels[role] }), select, sample]));
     });
     bodyEl.appendChild(sec);

@@ -3,6 +3,7 @@
 // (mk_landing_pages, brouillon / publication / versions / corbeille = archived_at) : aucune table parallèle.
 const { MarketingError } = require("../errors");
 const { checkCtx, audit } = require("../audience/shared");
+const { notHiddenSql } = require("../visibility"); // R4 : pages des sites dont la personne ne peut pas lire les éléments
 
 const STATES = ["toutes", "publiees", "brouillons", "corbeille"];
 const SORTS = { modifiee: "p.updated_at", titre: "p.name COLLATE NOCASE", creee: "p.id", publiee: "p.published_at" };
@@ -22,16 +23,18 @@ const stateSql = (state) => ({
 }[state]);
 
 function counts(ctx) {
+  const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
   const r = ctx.db.prepare(`SELECT COALESCE(SUM(p.archived_at IS NULL), 0) toutes,
       COALESCE(SUM(p.archived_at IS NULL AND p.status = 'published'), 0) publiees,
       COALESCE(SUM(p.archived_at IS NULL AND p.status IN ('draft', 'unpublished')), 0) brouillons,
       COALESCE(SUM(p.archived_at IS NOT NULL), 0) corbeille
-    FROM mk_landing_pages p WHERE p.organization_id = ? AND ${NOT_VARIANT}`).get(ctx.organizationId);
+    FROM mk_landing_pages p WHERE p.organization_id = ? AND ${NOT_VARIANT} AND ${hid.sql}`).get(ctx.organizationId, ...hid.params);
   return { toutes: r.toutes, publiees: r.publiees, brouillons: r.brouillons, corbeille: r.corbeille };
 }
 
 function authorsOfPages(ctx) {
-  return ctx.db.prepare("SELECT DISTINCT u.id, u.username FROM mk_landing_pages p JOIN users u ON u.id = p.created_by WHERE p.organization_id = ? ORDER BY u.username COLLATE NOCASE").all(ctx.organizationId);
+  const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
+  return ctx.db.prepare(`SELECT DISTINCT u.id, u.username FROM mk_landing_pages p JOIN users u ON u.id = p.created_by WHERE p.organization_id = ? AND ${hid.sql} ORDER BY u.username COLLATE NOCASE`).all(ctx.organizationId, ...hid.params);
 }
 
 // Liste filtrée, triée et paginée DANS la base ; les chiffres de fréquentation ne sont calculés que pour la page affichée
@@ -40,6 +43,8 @@ function queryPages(ctx, { state = "toutes", q = "", siteId = "", authorId = "",
   if (!STATES.includes(state)) state = "toutes";
   const where = ["p.organization_id = ?", stateSql(state), NOT_VARIANT];
   const args = [ctx.organizationId];
+  const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
+  if (hid.params.length) { where.push(hid.sql); args.push(...hid.params); }
   const needle = String(q || "").trim();
   if (needle) { where.push("(p.name LIKE ? ESCAPE '\\' OR p.slug LIKE ? ESCAPE '\\' OR p.title LIKE ? ESCAPE '\\')"); args.push(like(needle), like(needle), like(needle)); }
   if (siteId === "none") where.push("p.site_id IS NULL");
@@ -59,7 +64,10 @@ function queryPages(ctx, { state = "toutes", q = "", siteId = "", authorId = "",
     const marks = ids.map(() => "?").join(",");
     const stat = (type) => Object.fromEntries(ctx.db.prepare(`SELECT page_id, COUNT(DISTINCT visitor || ':' || (occurred_at / 86400000)) n FROM mk_landing_events WHERE page_id IN (${marks}) AND type = ? GROUP BY page_id`).all(...ids, type).map((r) => [r.page_id, r.n]));
     const views = stat("view"); const signups = Object.fromEntries(ctx.db.prepare(`SELECT page_id, COUNT(*) n FROM mk_landing_events WHERE page_id IN (${marks}) AND type = 'signup' GROUP BY page_id`).all(...ids).map((r) => [r.page_id, r.n]));
-    for (const r of rows) { r.visitors = views[r.id] || 0; r.signups = signups[r.id] || 0; }
+    // Palier 18 : tunnels (actifs) qui utilisent chaque page — une page utilisée est identifiable, et protégée contre la suppression silencieuse
+    const inFunnels = {};
+    for (const u of ctx.db.prepare(`SELECT s.page_id, f.name FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE s.page_id IN (${marks}) AND f.status = 'active' AND f.organization_id = ? ORDER BY f.name`).all(...ids, ctx.organizationId)) (inFunnels[u.page_id] ||= []).push(u.name);
+    for (const r of rows) { r.visitors = views[r.id] || 0; r.signups = signups[r.id] || 0; r.funnels = inFunnels[r.id] || []; }
   }
   return { rows, total, page: current, pages, perPage, counts: counts(ctx) };
 }
@@ -116,14 +124,16 @@ const RUNNERS = { publier: "publish", depublier: "unpublish", corbeille: "archiv
 // Participe passé au singulier et au pluriel (« 1 page publiée », « 3 pages publiées »)
 const ACTIONS = { publier: ["publiée", "publiées"], depublier: ["mise hors ligne", "mises hors ligne"], corbeille: ["mise à la corbeille", "mises à la corbeille"], restaurer: ["restaurée", "restaurées"], supprimer: ["supprimée définitivement", "supprimées définitivement"] };
 // run : { publish, unpublish, archive, restore, remove } fournis par la route (moteur de pages) ; can(action) filtre les droits
-function bulk(ctx, action, ids, run) {
+// allow(row, action) : droit de CETTE page (son site), vérifié page par page ; refus individuel signalé sans arrêter les autres
+function bulk(ctx, action, ids, run, allow = null) {
   if (!Object.hasOwn(ACTIONS, action)) throw bad("Action inconnue.");
   const list = [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
   if (!list.length) throw bad("Sélectionnez au moins une page.");
   const done = []; const failed = [];
   for (const id of list) {
-    const row = ctx.db.prepare("SELECT id, name, archived_at FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
-    if (!row) { failed.push({ id, name: `#${id}`, message: "page introuvable" }); continue; }
+    const row = ctx.db.prepare("SELECT id, name, archived_at, site_id FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
+    if (!row || (Number.isInteger(ctx.siteScope) && (row.site_id ?? null) !== ctx.siteScope)) { failed.push({ id, name: `#${id}`, message: "page introuvable" }); continue; }
+    if (allow && !allow(row, action)) { failed.push({ id, name: row.name, message: "vous n'avez pas ce droit sur le site de cette page" }); continue; }
     try {
       if (action === "supprimer" && !row.archived_at) throw bad("mettez d'abord la page à la corbeille");
       if (action === "restaurer" && !row.archived_at) throw bad("la page n'est pas dans la corbeille");

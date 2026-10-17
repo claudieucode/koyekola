@@ -31,22 +31,23 @@ const PERIODS = { 7: 7, 30: 30, 90: 90, annee: null };
 const like = (q) => `%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 const now = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
-function counts() {
+function counts(scope = null) {
   const r = db.prepare(`SELECT COALESCE(SUM(deleted_at IS NULL), 0) toutes,
       COALESCE(SUM(deleted_at IS NULL AND status = 'published'), 0) publies,
       COALESCE(SUM(deleted_at IS NULL AND status = 'scheduled'), 0) programmes,
       COALESCE(SUM(deleted_at IS NULL AND status NOT IN ('published', 'scheduled')), 0) brouillons,
-      COALESCE(SUM(deleted_at IS NOT NULL), 0) corbeille FROM posts`).get();
+      COALESCE(SUM(deleted_at IS NOT NULL), 0) corbeille FROM posts p${scope ? " WHERE " + scope.sql : ""}`).get(...(scope ? scope.params : []));
   return { toutes: r.toutes, publies: r.publies, programmes: r.programmes, brouillons: r.brouillons, corbeille: r.corbeille };
 }
 
 // Liste filtrée, triée et paginée DANS la base ; le contenu complet n'est jamais chargé (seule la recherche le parcourt)
-function list({ state = "toutes", q = "", author = "", category = "", tag = "", period = "", sort = "modifie", page = 1, perPage = PER_PAGE } = {}) {
+function list({ state = "toutes", q = "", author = "", category = "", tag = "", period = "", sort = "modifie", page = 1, perPage = PER_PAGE, scope = null } = {}) {
   taxonomy.reconcile();
   blog.promoteScheduled(); // un article programmé dont l'heure est passée devient publié avant toute lecture
   if (!STATES.includes(state)) state = "toutes";
   const where = [stateSql[state]];
   const args = [];
+  if (scope) { where.push(scope.sql); args.push(...scope.params); } // portée de site (R6 lot 2)
   const needle = String(q || "").trim().slice(0, 100);
   if (needle) { where.push("(p.title LIKE ? ESCAPE '\\' OR p.slug LIKE ? ESCAPE '\\' OR p.excerpt LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')"); args.push(like(needle), like(needle), like(needle), like(needle)); }
   if (/^\d{1,9}$/.test(String(author))) { where.push("p.author_id = ?"); args.push(Number(author)); }
@@ -67,10 +68,10 @@ function list({ state = "toutes", q = "", author = "", category = "", tag = "", 
     FROM posts p LEFT JOIN users u ON u.id = p.author_id WHERE ${where.join(" AND ")} ORDER BY ${SORTS[sort] || SORTS.modifie} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
   const cc = require("./comments").countsForPosts(rows.map((r) => r.id));
   for (const r of rows) Object.assign(r, { comments_approved: (cc.get(r.id) || {}).approved || 0, comments_pending: (cc.get(r.id) || {}).pending || 0 });
-  return { rows, total, page: current, pages, perPage, counts: counts() };
+  return { rows, total, page: current, pages, perPage, counts: counts(scope) };
 }
-const authors = () => db.prepare("SELECT DISTINCT u.id, u.username FROM posts p JOIN users u ON u.id = p.author_id WHERE p.deleted_at IS NULL ORDER BY u.username COLLATE NOCASE").all();
-const categoryTree = () => taxonomy.tree("category"); // catégories en arbre (profondeur) pour le filtre
+const authors = (scope = null) => db.prepare(`SELECT DISTINCT u.id, u.username FROM posts p JOIN users u ON u.id = p.author_id WHERE p.deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY u.username COLLATE NOCASE`).all(...(scope ? scope.params : []));
+const categoryTree = (scope = null) => taxonomy.tree("category", scope); // catégories en arbre (profondeur) pour le filtre
 
 const get = (id) => (Number.isInteger(id) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(id) : null);
 
@@ -186,7 +187,7 @@ function unpublish(id, userId) {
 // Participe passé au singulier et au pluriel (« 1 article publié », « 3 articles publiés »)
 const ACTIONS = { publier: ["publié", "publiés"], depublier: ["remis en brouillon", "remis en brouillon"], corbeille: ["mis à la corbeille", "mis à la corbeille"], restaurer: ["restauré", "restaurés"], supprimer: ["supprimé définitivement", "supprimés définitivement"] };
 // Actions groupées : chaque article est traité à part (un refus n'arrête pas les autres), avec le motif de chaque refus
-function bulk(action, ids, userId, req) {
+function bulk(action, ids, userId, req, allow = null) {
   if (!Object.hasOwn(ACTIONS, action)) throw new UserError("Action inconnue.");
   const list = [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
   if (!list.length) throw new UserError("Sélectionnez au moins un article.");
@@ -195,7 +196,7 @@ function bulk(action, ids, userId, req) {
   for (const id of list) {
     const p = get(id);
     try {
-      if (!p) throw new UserError("article introuvable");
+      if (!p || (allow && !allow(id))) throw new UserError("article introuvable"); // allow : portée de site (R6 lot 2)
       run(id, userId, req);
       done.push(id);
     } catch (e) {

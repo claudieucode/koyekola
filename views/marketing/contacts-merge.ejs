@@ -1,0 +1,42 @@
+<%- include("partials/top", { title, active }) %>
+    <p class="mk-back"><a href="/marketing/contacts/doublons">← Doublons</a></p>
+    <div class="mk-head"><h1>Fusionner deux contacts</h1></div>
+    <% if (error) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p><%= error %></p></span></div><% } %>
+    <% if (!preview) { %>
+      <section class="mk-panel">
+        <p class="field-hint">Choisissez les deux fiches depuis la page des doublons ou depuis une fiche contact.</p>
+        <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/contacts/doublons">Voir les doublons</a></div>
+      </section>
+    <% } else { const fieldLabel = { first_name: "Prénom", last_name: "Nom", phone: "Téléphone", company: "Entreprise", country: "Pays", language: "Langue", timezone: "Fuseau", job_title: "Fonction", normalized_phone: "Téléphone normalisé", source_detail: "Détail de la source" }; %>
+      <section class="mk-panel" aria-labelledby="mg-h">
+        <h2 id="mg-h">Ce qui va se passer</h2>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Comparaison des deux fiches</caption>
+          <thead><tr><th scope="col"></th><th scope="col">Fiche conservée (maître) #<%= preview.master.id %></th><th scope="col">Fiche absorbée #<%= preview.source.id %></th></tr></thead>
+          <tbody>
+            <tr><th scope="row">E-mail</th><td><%= preview.master.email %></td><td><%= preview.source.email %></td></tr>
+            <% ["first_name", "last_name", "phone", "company", "country", "language", "job_title"].forEach((f) => { %>
+              <tr><th scope="row"><%= fieldLabel[f] %></th><td><%= preview.master[f] || "—" %></td><td><%= preview.source[f] || "—" %></td></tr>
+            <% }) %>
+            <tr><th scope="row">Statut d'abonnement</th><td><%= mkh.statusLabel(preview.masterStatus) %></td><td><%= mkh.statusLabel(preview.sourceStatus) %></td></tr>
+          </tbody>
+        </table></div>
+        <ul class="mk-status-list">
+          <li>Champs vides du maître complétés : <strong><%= preview.fills.length ? preview.fills.map((f) => fieldLabel[f]).join(", ") : "aucun" %></strong>.</li>
+          <% if (preview.conflicts.length) { %><li>Valeurs différentes (le maître garde les siennes) : <%= preview.conflicts.map((f) => fieldLabel[f]).join(", ") %>.</li><% } %>
+          <li>Étiquettes reprises : <strong><%= preview.tagsToAdd %></strong> · listes reprises : <strong><%= preview.listsToAdd %></strong> · événements rattachés : <strong><%= preview.events %></strong>.</li>
+          <li>L'adresse <%= preview.source.email %> devient une autre adresse du contact maître.</li>
+          <li>Preuves de consentement de la fiche absorbée : <strong><%= preview.consentProofs %></strong>, conservées telles quelles et affichées sur le maître. <strong>Elles ne rendent pas le maître abonné.</strong></li>
+          <li>Statut d'abonnement après fusion : <strong><%= mkh.statusLabel(preview.statusOutcome) %></strong> (jamais plus permissif qu'avant).</li>
+          <li>La fiche absorbée est archivée et conservée : aucune donnée n'est supprimée. Il n'existe pas encore de bouton « défusionner ».</li>
+        </ul>
+        <form method="post" action="/marketing/contacts/fusion" class="mk-form">
+          <input type="hidden" name="maitre" value="<%= preview.master.id %>"><input type="hidden" name="source" value="<%= preview.source.id %>">
+          <label class="checkbox-row"><input type="checkbox" name="confirmer" value="1" required> Je confirme la fusion de ces deux fiches</label>
+          <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Fusionner</button>
+            <a class="btn btn-ghost btn-sm" href="/marketing/contacts/fusion?maitre=<%= preview.source.id %>&source=<%= preview.master.id %>">Inverser (garder l'autre fiche)</a>
+            <a class="btn btn-ghost btn-sm" href="/marketing/contacts/doublons">Annuler</a></div>
+        </form>
+      </section>
+    <% } %>
+<%- include("partials/bottom") %>

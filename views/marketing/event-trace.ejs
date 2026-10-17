@@ -1,0 +1,53 @@
+<%- include("partials/top", { title, active }) %>
+<%
+  const ev = t.event;
+  const label = mkh.eventLabel(ev.name);
+%>
+    <div class="mk-head"><h1>Diagnostic d'un événement</h1></div>
+    <p class="mk-lead"><a href="/marketing/evenements">← Tous les événements</a> · Ce qui s'est passé (ou se passerait) après cet événement. Lecture seule : rien n'est envoyé ni modifié ici.</p>
+
+    <section class="mk-panel">
+      <h2><%= label || "Événement personnalisé" %> <code class="mk-sub"><%= ev.name %></code></h2>
+      <dl class="mk-journey-facts">
+        <dt>Contact</dt><dd><%= ev.email || "—" %></dd>
+        <dt>Origine</dt><dd><%= mkh.eventSourceLabel(ev.source) %></dd>
+        <dt>Date</dt><dd><%= mkh.fdatetime(ev.occurredAt) %></dd>
+        <dt>État</dt><dd><%= ev.processedAt ? "Traité" : "En attente de distribution" %></dd>
+      </dl>
+      <% const keys = Object.keys(ev.metadata); if (keys.length) { %>
+        <details class="mk-advanced"><summary>Données de l'événement</summary>
+          <ul><% keys.forEach((k) => { %><li><code><%= k %></code> : <%= ev.metadata[k] %></li><% }) %></ul>
+        </details>
+      <% } %>
+    </section>
+
+    <h2 class="mk-h2">Scénarios actifs qui écoutent cet événement</h2>
+    <% if (!t.matches.length) { %>
+      <p class="mk-note">Aucun scénario actif n'a cet événement pour déclencheur.</p>
+    <% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Scénarios à l'écoute</caption>
+        <thead><tr><th scope="col">Scénario</th><th scope="col">Résultat</th><th scope="col">Raison</th></tr></thead>
+        <tbody><% t.matches.forEach((m) => { %><tr>
+          <td data-label="Scénario"><a href="/marketing/automatisations/<%= m.automationId %>"><%= m.name %></a></td>
+          <td data-label="Résultat"><%= m.verdict %></td>
+          <td data-label="Raison"><%= m.reason || "—" %></td>
+        </tr><% }) %></tbody></table></div>
+    <% } %>
+
+    <h2 class="mk-h2">Passages nés de cet événement</h2>
+    <% if (!t.runs.length) { %>
+      <p class="mk-note">Aucun passage n'a démarré à cause de cet événement.</p>
+    <% } else { t.runs.forEach((r) => { %>
+      <section class="mk-panel">
+        <h3><a href="/marketing/automatisations/<%= r.automation_id %>"><%= r.name %></a> — <%= r.status === "running" ? "en cours" : r.status === "completed" ? "terminé" : r.status === "exited" ? "sorti" : "en erreur" %></h3>
+        <ul><% r.log.forEach((l) => { %><li>Étape <%= l.step_index + 1 %> · <%= l.action %> — <%= l.detail %></li><% }) %></ul>
+      </section>
+    <% }) } %>
+
+    <h2 class="mk-h2">E-mails partis</h2>
+    <% if (!t.messages.length) { %>
+      <p class="mk-note">Aucun e-mail envoyé à la suite de cet événement.</p>
+    <% } else { %>
+      <ul><% t.messages.forEach((m) => { %><li><%= m.subject || "(sans objet)" %> — <%= m.status %></li><% }) %></ul>
+    <% } %>
+<%- include("partials/bottom") %>

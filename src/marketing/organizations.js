@@ -6,13 +6,17 @@ const ROLE_ORDER = { viewer: 1, editor: 2, admin: 3, owner: 4 };
 // Permission → rôle minimal. Une permission absente de cette liste est REFUSÉE à tout le monde.
 const PERMISSIONS = Object.freeze({
   "contacts.read": "viewer", "contacts.write": "editor", "contacts.delete": "admin", "contacts.import": "editor", "contacts.export": "admin",
+  // Contact Core (palier 15) : archiver = éditeur ; fusionner deux fiches = administrateur ; gérer les champs personnalisés = éditeur ; voir téléphone, e-mail complet et preuves = lecteur (retirable à un rôle personnalisé) ; journal d'événements = lecteur
+  "contacts.archive": "editor", "contacts.merge": "admin", "contacts.manage_fields": "editor", "contacts.view_sensitive": "viewer", "events.view": "viewer",
   "compliance.read": "viewer", "compliance.manage": "admin",
   "lists.read": "viewer", "lists.write": "editor",
   "segments.read": "viewer", "segments.write": "editor",
   "templates.read": "viewer", "templates.write": "editor",
   "campaigns.read": "viewer", "campaigns.write": "editor", "campaigns.send": "admin",
   "automations.read": "viewer", "automations.write": "editor", "automations.activate": "admin",
-  "forms.read": "viewer", "forms.write": "editor", "pages.code": "admin",
+  "forms.read": "viewer", "forms.write": "editor",
+  // Tunnels (palier 18) : voir = lecteur ; construire (étapes, pages associées, réglages) = éditeur. Modifier le CONTENU d'une page reste « forms.write », mettre en ligne « pages.publish » : on peut gérer un tunnel sans pouvoir éditer ses pages, et inversement.
+  "funnels.read": "viewer", "funnels.write": "editor", "pages.code": "admin",
   // Pages du CMS : publier = éditeur (comme avant) ; suppression DÉFINITIVE (depuis la corbeille) = administrateur
   "pages.publish": "editor", "pages.delete": "admin",
   // Médias du CMS : voir = lecteur ; envoyer, modifier, mettre à la corbeille = éditeur ; supprimer définitivement = administrateur
@@ -38,7 +42,8 @@ const PERMISSIONS = Object.freeze({
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
   "analytics.read": "viewer",
-  "settings.read": "admin", "settings.write": "admin",
+  "settings.read": "admin", "settings.write": "admin", "settings.sensitive": "admin", // réglages sensibles (domaine, indexation, page d'accueil, adresses) : retirables à un rôle personnalisé
+ 
   "api_keys.manage": "admin", "webhooks.manage": "admin", "domains.manage": "admin",
   "audit.read": "admin", "queue.manage": "admin",
   "members.manage": "owner", "organization.delete": "owner",

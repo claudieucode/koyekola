@@ -52,7 +52,7 @@ async function applyPlan(run, api, data, plan, opts) {
   const todo = plan.items.filter((i) => ["create", "update", "duplicate", "skip", "error"].includes(i.action));
   api.setTotal(todo.length);
   api.reset();
-  const sourcesByType = (type) => (type === "site" ? [data.resources.site] : data.resources[type] || []);
+  const sourcesByType = (type) => (type === "site" || type === "settings" ? [data.resources[type]] : data.resources[type] || []);
   // Ordre de dépendance : termes → pages → articles → menus → redirections → médias → SEO
   const ordered = [];
   for (const type of exporter.ORDER) {
@@ -107,12 +107,19 @@ const uniqueName = (table, base, where = "", args = []) => { let name = base; fo
 const resolve = (idMap, ref, type) => { const m = ref && idMap.get(ref); return m && m.type === type ? m.id : null; };
 
 const APPLY = {
+  settings(ctx, { it, raw, siteId }) {
+    const engine = require("../settings");
+    const r = engine.update({ siteId }, it.apply || {}, ctx, { confirm: false });
+    if (!r.ok) throw new Error((r.errors || ["Réglages refusés."]).join(" "));
+    return { result: "updated", id: siteId || 1, message: `${r.changed.length} réglage(s) mis à jour.` };
+  },
+
   site(ctx, { raw, siteId, it }) {
     const pages = require("../../marketing/pages");
     const site = pages.requireSite(ctx, siteId);
     const incoming = raw.settings || {};
     // L'adresse publique du site de destination est conservée (jamais importée) ; le reste du design est remplacé par un enregistrement validé
-    const settings = { ...incoming, seo: { ...(incoming.seo || {}), publicUrl: (site.settings.seo || {}).publicUrl || "" } };
+    const settings = { ...incoming, seo: { ...(incoming.seo || {}), publicUrl: (site.settings.seo || {}).publicUrl || "" }, extras: { ...(incoming.extras || {}), noindex: Boolean((site.settings.extras || {}).noindex) } }; // domaine et indexation de la destination : jamais importés
     pages.saveSiteDesign(ctx, siteId, { tokens: raw.tokens, settings, revision: site.settings_revision });
     void it;
     return { result: "updated", id: siteId, message: "Réglages du site remplacés (adresse publique conservée)." };
@@ -254,6 +261,51 @@ runner.register("import-undo", async (run, api) => {
   return { status: "done", report: { undone: detail }, message: "Import annulé : les pages et articles créés sont à la corbeille (restaurables) ; les mises à jour d'éléments existants se retrouvent dans l'historique." };
 });
 
+// ---------- Application immédiate (restauration d'un paquet de site, R5) ----------
+// Même analyse, mêmes exécuteurs et même rapport qu'un import confirmé, mais dans la requête (le paquet a déjà été validé) ; une opération « import » est créée
+// pour que « Annuler cet import » fonctionne. Si un élément échoue après une analyse sans erreur, ce qui a été créé est mis à la corbeille (pages…) ou retiré.
+async function applyNow(ctx, { siteId, text, types, onConflict = "skip", source = "bundle" }) {
+  const allowed = exporter.allowedTypes(ctx, { siteId, mode: "import" });
+  const chosen = exporter.ORDER.filter((t) => types.includes(t) && allowed.includes(t));
+  if (!chosen.length) return { ok: false, message: "Aucun type de ressource importable pour vous dans ce site." };
+  const strategy = Object.hasOwn(importer.STRATEGIES, onConflict) ? onConflict : "skip";
+  const run = runs.create({ organizationId: ctx.organizationId, siteId, userId: ctx.userId, kind: "import", options: { types: chosen, onConflict: strategy, source } });
+  const now = () => new Date().toISOString().slice(0, 19).replace("T", " ");
+  const end = (patch) => { runs.update(run.id, { finished_at: now(), phase: "apply", ...patch }); return runs.get(ctx.organizationId, run.id); };
+  const parsed = importer.parseFile(text);
+  if (parsed.errors.length) return { ok: false, message: parsed.errors.join(" "), run: end({ status: "failed", message: parsed.errors.join(" ") }) };
+  const plan = importer.analyse(ctx, parsed.data, { siteId, types: chosen, onConflict: strategy });
+  if (plan.blocked) return { ok: false, message: "Restauration refusée : conflits détectés avec la stratégie « tout arrêter ».", run: end({ status: "failed", message: "Conflits (tout arrêter)." }) };
+  const bad = plan.items.filter((i) => i.action === "error");
+  if (bad.length) return { ok: false, message: `Restauration refusée : ${bad.length} élément(s) invalide(s) (${bad[0].label} : ${bad[0].issues.join(" ")}).`, run: end({ status: "failed", message: "Éléments invalides.", report: { analysis: summarize(plan) } }) };
+  runs.update(run.id, { phase: "apply", status: "running", started_at: now() });
+  const state = { done: 0, failed: 0, skipped: 0, conflicts: 0 };
+  const api = { ctx, run, setTotal: (n) => runs.update(run.id, { total: n }), advance: (d = {}) => { for (const k of Object.keys(state)) state[k] += Number(d[k] || 0); runs.update(run.id, state); }, reset: () => { for (const k of Object.keys(state)) state[k] = 0; }, message() {}, cancelled: () => false, yieldTurn: () => Promise.resolve() };
+  const out = await applyPlan(runs.raw(run.id), api, parsed.data, plan, { types: chosen, onConflict: strategy });
+  const failed = Object.values(out.report.per).reduce((a, c) => a + c.failed, 0);
+  if (failed) {
+    const undone = undoCreated(ctx, out.report.created);
+    return { ok: false, message: `La restauration a échoué sur ${failed} élément(s) : ce qu'elle avait créé a été retiré${undone.failed ? ` (sauf ${undone.failed} élément(s), à retirer à la main)` : ""}.`, run: end({ status: "failed", message: "Restauration échouée, annulée.", report: { ...out.report, rolledBack: undone } }) };
+  }
+  return { ok: true, report: out.report, run: end({ status: "done", message: out.message, report: out.report }) };
+}
+// Retire ce qu'un import a CRÉÉ (même règles que « Annuler cet import ») : pages et articles à la corbeille, menus, redirections et termes supprimés
+function undoCreated(ctx, c) {
+  const pages = require("../../marketing/pages");
+  const articles = require("../articles");
+  const navigation = require("../navigation");
+  const redirects = require("../../seo/redirects");
+  const taxonomy = require("../taxonomy");
+  let removed = 0, failed = 0;
+  const each = (list, fn) => { for (const id of list || []) { try { fn(id); removed++; } catch { failed++; } } };
+  each(c.pages, (id) => { const p = db.prepare("SELECT archived_at FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId); if (p && !p.archived_at) pages.archivePage(ctx, id); });
+  each(c.articles, (id) => articles.trash(id, ctx.userId));
+  each(c.menus, (id) => navigation.remove(id));
+  each(c.redirects, (id) => redirects.remove(id, ctx.userId));
+  each((c.taxonomies || []).slice().reverse(), (id) => taxonomy.remove(id));
+  return { removed, failed };
+}
+
 // ---------- Création des opérations (appelées par les routes) ----------
 function startExport(ctx, { siteId, types }) {
   const allowed = exporter.allowedTypes(ctx, { siteId, mode: "export" });
@@ -290,4 +342,4 @@ function startUndo(ctx, id) {
   return run;
 }
 
-module.exports = { startExport, startImport, confirmImport, startUndo, STRATEGIES: importer.STRATEGIES, TYPES: exporter.TYPES, ORDER: exporter.ORDER };
+module.exports = { applyNow, startExport, startImport, confirmImport, startUndo, STRATEGIES: importer.STRATEGIES, TYPES: exporter.TYPES, ORDER: exporter.ORDER };

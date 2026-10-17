@@ -1,11 +1,11 @@
 <%- include("partials/top", { title, active }) %>
-<% const archived = site.status === "archived"; const dis = canWrite && !archived ? "" : " disabled"; const t = site.tokens; const STATUS = { draft: "Brouillon", published: "En ligne", unpublished: "Hors ligne" }; const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" }; %>
-    <p class="mk-back"><a href="/marketing/site-web/sites">← Sites</a></p>
-    <div class="mk-head"><div class="mk-builder-title"><h1><%= site.name %></h1><% if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
+<% const archived = site.status === "archived" || Boolean(site.deleted_at); const dis = canWrite && !archived ? "" : " disabled"; const t = site.tokens; const STATUS = { draft: "Brouillon", published: "En ligne", unpublished: "Hors ligne" }; const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" }; %>
+    <div class="mk-head"><div class="mk-builder-title"><h1><%= site.name %></h1><% if (site.deleted_at) { %><span class="mk-status mk-status-warn">Supprimé</span><% } else if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
       <% if (canWrite) { %><div class="mk-actions">
-        <% if (archived) { %><form action="/marketing/site-web/sites/<%= site.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le site</button></form>
+        <% if (site.deleted_at) { %><form action="/marketing/site-web/sites/<%= site.id %>/recuperer" method="post"><button type="submit" class="btn btn-primary btn-sm">Récupérer le site</button></form>
+        <% } else if (archived) { %><form action="/marketing/site-web/sites/<%= site.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le site</button></form>
         <% } else { %>
-          <form action="/marketing/site-web/sites/<%= site.id %>/dupliquer" method="post"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
+          <form action="/marketing/site-web/sites/<%= site.id %>/dupliquer" method="post" class="mk-actions"><select name="contenu" aria-label="Contenu à copier"><option value="pages">Réglages + pages (brouillons)</option><option value="configuration">Réglages seulement</option></select><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form>
           <form action="/marketing/site-web/sites/<%= site.id %>/archiver" method="post"><button type="submit" class="btn btn-outline btn-sm" data-mk-confirm="Les pages en ligne du site passent hors ligne. Rien n'est effacé : vous pourrez restaurer le site, puis republier ses pages." data-mk-confirm-title="Archiver ce site ?" data-mk-confirm-ok="Archiver">Archiver</button></form>
         <% } %>
       </div><% } %>
@@ -16,6 +16,9 @@
         <h2 id="site-settings">Réglages</h2>
         <form action="/marketing/site-web/sites/<%= site.id %>" method="post" class="mk-form">
           <div class="field-group"><label for="site-name">Nom du site</label><input id="site-name" type="text" name="name" maxlength="100" required value="<%= site.name %>"<%= dis %>></div>
+          <div class="field-group"><label for="site-slug">Identifiant lisible</label><input id="site-slug" type="text" name="slug" maxlength="60" pattern="[a-z0-9]+(-[a-z0-9]+)*" required value="<%= site.slug %>"<%= dis %>><p class="field-hint">Lettres minuscules, chiffres et tirets. L'identifiant interne (n° <%= site.id %>) ne change jamais, même si vous renommez le site.</p></div>
+          <div class="field-group"><label for="site-desc">Description</label><textarea id="site-desc" name="description" rows="2" maxlength="500"<%= dis %>><%= site.description %></textarea></div>
+          <div class="field-group"><label for="site-type">Type de site</label><select id="site-type" name="site_type"<%= dis %>><% Object.entries(siteTypes).forEach(([k, label]) => { %><option value="<%= k %>"<%= site.site_type === k ? " selected" : "" %>><%= label %></option><% }) %></select></div>
           <div class="field-group"><label for="site-home">Page d'accueil</label>
             <select id="site-home" name="home_page_id"<%= dis %>><option value="">Aucune</option><% sitePages.forEach((p) => { %><option value="<%= p.id %>"<%= site.home_page_id === p.id ? " selected" : "" %>><%= p.name %></option><% }) %></select></div>
           <p class="field-hint">Adresse des pages : <code>/p/…</code> sur le domaine du site KOLAKISA. Domaine personnalisé : pas encore disponible (il demande une configuration chez l'hébergeur et sera ajouté dans une prochaine étape).</p>
@@ -116,7 +119,7 @@
         </fieldset>
         <fieldset class="mk-sd-group"><legend>Typographies</legend>
           <div class="field-row">
-            <% [["heading", "Police des titres"], ["body", "Police du texte"]].forEach(([k, label]) => { %><div class="field-group"><label for="f-<%= k %>"><%= label %></label><select id="f-<%= k %>" name="font_<%= k %>"<%= dis %>><% Object.entries(T.FONTS).forEach(([key, f]) => { %><option value="<%= key %>"<%= t.fonts[k] === key ? " selected" : "" %>><%= f.label %></option><% }) %></select></div><% }) %>
+            <% [["heading", "Police des titres"], ["body", "Police du texte"]].forEach(([k, label]) => { %><div class="field-group"><label for="f-<%= k %>"><%= label %></label><select id="f-<%= k %>" name="font_<%= k %>"<%= dis %>><% Object.entries(T.FONTS).forEach(([key, f]) => { %><option value="<%= key %>"<%= t.fonts[k] === key ? " selected" : "" %>><%= f.label %></option><% }) %><% if (!Object.hasOwn(T.FONTS, t.fonts[k])) { %><option value="<%= t.fonts[k] %>" selected><%= String(t.fonts[k]).replace(/^font\./, "").replace(/-/g, " ") %></option><% } %></select></div><% }) %>
           </div>
           <div class="mk-table-wrap"><table class="mk-table mk-sd-type">
             <caption class="sr-only">Taille et graisse de chaque style de texte</caption>
@@ -149,4 +152,18 @@
         <div class="mk-sd-card"><p class="mk-sd-h3">Carte</p><p class="mk-sd-caption">Légende : rayon, bordure et ombre des cartes.</p><span class="mk-sd-btn">Bouton principal</span></div>
       </div>
     </section>
+    <% if (canWrite && canDelete && archived && !site.deleted_at) { %>
+    <section class="mk-panel" id="zone-sensible" aria-labelledby="site-danger">
+      <h2 id="site-danger">Supprimer ce site</h2>
+      <p class="field-hint">Le site disparaît de vos listes mais reste récupérable dans <em>Mes sites → Supprimés</em> : ses pages et ses accès ne sont pas effacés. Seul un site archivé peut être supprimé.</p>
+      <form action="/marketing/site-web/sites/<%= site.id %>/supprimer" method="post" class="mk-form">
+        <div class="field-group"><label for="site-confirm">Tapez le nom du site pour confirmer : <strong><%= site.name %></strong></label><input id="site-confirm" type="text" name="confirmation" autocomplete="off" required></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Supprimer le site</button></div>
+      </form>
+    </section>
+    <% } %>
+    <section class="mk-panel" aria-labelledby="site-soon"><h2 id="site-soon">À venir pour ce site</h2>
+      <p class="field-hint">Pas encore disponibles : articles propres au site, médiathèque propre au site, domaine et SEO par site depuis cet espace, modules activables. Ils seront ajoutés aux prochains paliers ; rien ici ne les simule.</p></section>
+<script src="<%= asset('/js/font-manager.js') %>"></script>
+<script>(function () { ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police" }); }); })();</script>
 <%- include("partials/bottom") %>

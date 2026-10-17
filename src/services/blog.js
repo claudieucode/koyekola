@@ -48,10 +48,10 @@ const card = (p) => ({
   category: p.category, categorySlug: p.category ? taxonomy.categorySlugOfName(p.category) : "", views: p.views,
 });
 
-function categories() {
+function categories(scope = null) {
   return db
-    .prepare("SELECT category, COUNT(*) n FROM posts WHERE published = 1 AND category <> '' GROUP BY category COLLATE NOCASE ORDER BY n DESC, category COLLATE NOCASE")
-    .all()
+    .prepare(`SELECT category, COUNT(*) n FROM posts WHERE published = 1 AND category <> ''${scope ? " AND " + scope.sql : ""} GROUP BY category COLLATE NOCASE ORDER BY n DESC, category COLLATE NOCASE`)
+    .all(...(scope ? scope.params : []))
     .map((r) => ({ name: r.category, slug: taxonomy.categorySlugOfName(r.category), count: r.n }));
 }
 
@@ -60,21 +60,22 @@ function categoryBySlug(slug) {
   return categories().find((c) => c.slug === slug) || null;
 }
 
-function popular(limit = 4, exceptId = 0) {
-  return db.prepare("SELECT * FROM posts WHERE published = 1 AND id != ? AND views > 0 ORDER BY views DESC, published_at DESC LIMIT ?").all(exceptId, limit).map(card);
+// scope : fragment SQL de portée de domaine (urls.contentScope, sur « posts.id ») ; absent = comportement d'origine
+function popular(limit = 4, exceptId = 0, scope = null) {
+  return db.prepare(`SELECT * FROM posts WHERE published = 1 AND id != ? AND views > 0${scope ? " AND " + scope.sql : ""} ORDER BY views DESC, published_at DESC LIMIT ?`).all(exceptId, ...(scope ? scope.params : []), limit).map(card);
 }
 
-function recent(limit = 4, exceptId = 0) {
-  return db.prepare("SELECT * FROM posts WHERE published = 1 AND id != ? ORDER BY published_at DESC, id DESC LIMIT ?").all(exceptId, limit).map(card);
+function recent(limit = 4, exceptId = 0, scope = null) {
+  return db.prepare(`SELECT * FROM posts WHERE published = 1 AND id != ?${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT ?`).all(exceptId, ...(scope ? scope.params : []), limit).map(card);
 }
 
 // Articles similaires : même catégorie (+3) et étiquettes communes (+2 chacune), puis les plus récents pour compléter
-function similar(post, limit = 3) {
+function similar(post, limit = 3, scope = null) {
   const tags = new Set(parseTags(post.tags).map(slugify));
   const category = slugify(post.category || "");
   const scored = db
-    .prepare("SELECT * FROM posts WHERE published = 1 AND id != ? ORDER BY published_at DESC, id DESC LIMIT 200")
-    .all(post.id)
+    .prepare(`SELECT * FROM posts WHERE published = 1 AND id != ?${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT 200`)
+    .all(post.id, ...(scope ? scope.params : []))
     .map((p) => {
       let score = 0;
       if (category && slugify(p.category || "") === category) score += 3;
@@ -87,10 +88,11 @@ function similar(post, limit = 3) {
 }
 
 // Précédent = plus ancien, suivant = plus récent (ordre de publication)
-function neighbours(post) {
+function neighbours(post, scope = null) {
   if (!post.published || !post.published_at) return { previous: null, next: null };
-  const previous = db.prepare("SELECT * FROM posts WHERE published = 1 AND (published_at < ? OR (published_at = ? AND id < ?)) ORDER BY published_at DESC, id DESC LIMIT 1").get(post.published_at, post.published_at, post.id);
-  const next = db.prepare("SELECT * FROM posts WHERE published = 1 AND (published_at > ? OR (published_at = ? AND id > ?)) ORDER BY published_at ASC, id ASC LIMIT 1").get(post.published_at, post.published_at, post.id);
+  const extra = scope ? " AND " + scope.sql : "", sp = scope ? scope.params : [];
+  const previous = db.prepare(`SELECT * FROM posts WHERE published = 1 AND (published_at < ? OR (published_at = ? AND id < ?))${extra} ORDER BY published_at DESC, id DESC LIMIT 1`).get(post.published_at, post.published_at, post.id, ...sp);
+  const next = db.prepare(`SELECT * FROM posts WHERE published = 1 AND (published_at > ? OR (published_at = ? AND id > ?))${extra} ORDER BY published_at ASC, id ASC LIMIT 1`).get(post.published_at, post.published_at, post.id, ...sp);
   return { previous: previous ? card(previous) : null, next: next ? card(next) : null };
 }
 

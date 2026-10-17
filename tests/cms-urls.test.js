@@ -383,16 +383,17 @@ describe("domaines des sites : un site par domaine, isolation, canonical, plan d
     assert.equal((await anon.get(`/${slugB}`, onHost("beta.example"))).status, 200);
     assert.equal((await anon.get(`/${slugB}`)).status, 404, "sur le site principal, les pages à domaine propre ne sont pas à la racine");
   });
-  test("hôte inconnu ou forgé : jamais un site ; domaine du site principal inchangé", async () => {
+  test("hôte inconnu ou forgé : jamais un site, jamais le site principal (421, règle des domaines du palier 2)", async () => {
     const slug = row(pa).slug;
     for (const h of ["evil.example", "www.alpha.example.evil.example", "alpha.example", "ALPHA.EXAMPLE.", "x.k.test"]) {
       const r = await anon.get(`/${slug}`, onHost(h));
-      assert.equal(r.status, h.toLowerCase().startsWith("alpha.example.") || h === "ALPHA.EXAMPLE." ? r.status : 404, h);
+      assert.equal(r.status, 421, h);
+      assert.doesNotMatch(r.text, /canonical/i, `${h} : aucune adresse publiée`);
     }
-    assert.equal((await anon.get(`/${slug}`, onHost("evil.example"))).status, 404);
     const home = await anon.get("/", onHost("evil.example"));
-    assert.equal(home.status, 200);
-    assert.equal(linkOf(home.text, "canonical"), "https://k.test/", "un hôte forgé ne change jamais les adresses publiées");
+    assert.equal(home.status, 421, "un hôte forgé ne reçoit plus le site principal");
+    assert.doesNotMatch(home.text, /<link[^>]*canonical/i);
+    assert.equal(linkOf((await anon.get("/")).text, "canonical"), "https://k.test/", "le domaine du site principal est inchangé");
   });
   test("plan du site par domaine : seulement les pages de CE site, sur CE domaine ; le plan principal ne liste pas les pages à domaine propre", async () => {
     const a = (await anon.get("/sitemap.xml", onHost("www.alpha.example"))).text;

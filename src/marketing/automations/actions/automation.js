@@ -24,11 +24,12 @@ defineAction({
     const t = targetOf(ctx, step.automationId);
     if (!t) return { next: true, log: ["failed", "scénario ciblé introuvable"] };
     if (t.id === automation.id) return { next: true, log: ["skipped", "un scénario ne se démarre pas lui-même"] };
+    if ((t.site_id ?? null) !== (automation.site_id ?? null)) return { next: true, log: ["skipped", `scénario « ${t.name} » d'un autre site : rien démarré`] };
     if (t.status !== "active" || !t.active_steps) return { next: true, log: ["skipped", `scénario « ${t.name} » inactif : rien démarré`] };
     if (!JSON.parse(t.active_steps).length) return { next: true, log: ["skipped", `scénario « ${t.name} » sans étape`] };
     const info = ctx.db
-      .prepare("INSERT OR IGNORE INTO mk_automation_runs (organization_id, automation_id, contact_id, trigger_event_id, steps, event_data, wake_at, entered_at) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)")
-      .run(ctx.organizationId, t.id, contact.id, t.active_steps, run.event_data, now, now);
+      .prepare("INSERT OR IGNORE INTO mk_automation_runs (organization_id, automation_id, contact_id, trigger_event_id, steps, event_data, wake_at, entered_at, version) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, t.id, contact.id, t.active_steps, run.event_data, now, now, t.version || 0);
     if (!info.changes) return { next: true, log: ["already_in", `déjà passé dans « ${t.name} »`] };
     enqueueRun(ctx.db, { organizationId: ctx.organizationId, runId: Number(info.lastInsertRowid), runAt: now, tag: "start" });
     return { next: true, log: ["start_automation", `démarré : « ${t.name} »`] };

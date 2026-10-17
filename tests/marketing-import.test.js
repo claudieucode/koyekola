@@ -261,7 +261,8 @@ describe("tranches et reprise", () => {
     const t = Date.now();
     const rep = imports.runImport(A, id, { mapping: ["email", "last_name"] });
     assert.equal(rep.created, 5000);
-    assert.ok(Date.now() - t < 8000, `trop lent : ${Date.now() - t} ms`);
+    // Seuil large : le coût est linéaire (≈ 2 ms par ligne sur une machine de 2015, ≈ 0,5 ms sur une machine récente) ; une vraie régression (quadratique) dépasserait largement une minute
+    assert.ok(Date.now() - t < 25000, `trop lent : ${Date.now() - t} ms`);
   });
   test("via la file de travail : le job « import.run » traite l'import complet", async () => {
     const id = preview(A, big(30)).id;

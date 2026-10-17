@@ -1,0 +1,34 @@
+POST /stripe/webhook sans signature (secret non configuré) 503   
+POST /webhooks/email/resend/1 sans signature               404   
+POST /webhooks/sms/twilio/1 sans signature                 404   
+POST /webhooks/sms/twilio/1/entrant sans signature         404   
+GET /api/v1/contacts sans clé                              401   
+GET /api/v1/contacts avec fausse clé                       401   
+POST /api/v1/events sans clé                               401   
+POST /api/mobile/login mauvais identifiants                401   
+GET /api/mobile/me sans jeton                              401   
+GET /t/c/jeton-invalide (suivi de clic)                    404   ← ne doit PAS rediriger vers une adresse inconnue
+GET /go/inexistant (lien court social)                     404   
+GET /s/inexistant (lien court SMS)                         404   
+GET /u/jeton-invalide (désinscription)                     404   
+POST /u/jeton-invalide                                     404   
+GET /preferences/jeton-invalide                            404   
+GET /f/confirmer/jeton-invalide                            410   
+POST /w/e (suivi visiteur) corps vide                      204   
+POST /w/e sans consentement (kw_consent)                   204   
+GET /f/formulaire-inexistant                               404   
+POST /f/formulaire-inexistant                              404   
+GET /sondage/inexistant                                    404   
+GET /uploads/../server.js (traversée)                      404   
+GET /uploads/marketing/../../data/KOYEKOLA.db              404   
+GET /data/KOYEKOLA.db                                      404   
+GET /.env                                                  404   
+GET /package.json                                          404   
+GET /server.js                                             404   
+GET /src/config/database.js                                404   
+GET /.git/config                                           404   
+GET /marketing/pages/abc (non connecté)                    302  /connexion?redirect=%2Fmarketing%2Fpages%2Fabc 
+POST /w/e 2000 événements (volume)                         413   
+resend           404 {"error":"introuvable"}
+twilio statut    404 
+twilio entrant   404 

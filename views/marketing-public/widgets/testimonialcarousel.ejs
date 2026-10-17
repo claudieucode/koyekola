@@ -1,0 +1,10 @@
+<%# Carrousel de témoignages (widgets/carrousels.js). Variables : p, cls, attrs. Exécution : le carrousel du site (data-kw-carousel). %>
+<div class="<%= cls %>" role="region" aria-roledescription="carrousel" aria-label="<%= p.label %>" data-kw-carousel<%- p.dots ? " data-kw-dots" : "" %><%- p.autoplay ? ` data-kw-autoplay="${p.interval}"` : "" %><%- p.loop ? " data-kw-loop" : "" %><%- attrs %>>
+  <div class="kw-carousel-track"><% p.items.forEach((t, i) => { %>
+    <figure class="kw-carousel-slide kw-tcar-slide" aria-roledescription="diapositive" aria-label="<%= i + 1 %> sur <%= p.items.length %>">
+      <% if (t.stars > 0) { %><p class="kw-tcar-stars" role="img" aria-label="Note : <%= t.stars %> sur 5"><%= "★".repeat(t.stars) %><span aria-hidden="true"><%= "☆".repeat(5 - t.stars) %></span></p><% } %>
+      <blockquote class="kw-tcar-quote"><p><%= t.quote %></p></blockquote>
+      <figcaption class="kw-tcar-who"><% if (t.photo) { %><img class="kw-tcar-photo" src="<%= t.photo %>" alt="" loading="lazy" decoding="async"><% } %><span><strong class="kw-tcar-name"><%= t.name %></strong><% if (t.role) { %><span class="kw-tcar-role"><%= t.role %></span><% } %></span></figcaption>
+    </figure><% }) %>
+  </div>
+</div>

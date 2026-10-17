@@ -48,6 +48,27 @@
         <p class="field-hint">Enregistrez d'abord vos modifications : le contrôle porte sur la version enregistrée.</p>
       </section>
     <% } %>
+    <% if (!check && typeof activeNotes !== "undefined" && activeNotes.length) { %>
+      <section class="mk-panel mk-verdict is-no">
+        <ul class="mk-status-list"><% activeNotes.forEach((w) => { %><li class="mk-warn"><strong>Scénario actif :</strong> <%= w.message %> Les e-mails de ce scénario sont enregistrés comme « envoyés » sans quitter le serveur.</li><% }) %></ul>
+      </section>
+    <% } %>
+
+    <section class="mk-panel">
+      <h2>Déclencheur et objectif</h2>
+      <p>Ce scénario démarre sur : <% (a.triggers || []).forEach((t, i) => { const src = SOURCE_LABELS[sourceOf(t.event)]; %><%= i ? ", " : "" %><strong><%= (TRIGGER_NAMES[t.event] || t.event) %></strong> <span class="mk-sub">(source : <%= src %>)</span><% }) %>.</p>
+      <p class="field-hint">Objectif : quand cet événement arrive pour un contact en cours de parcours, le parcours s'arrête là (aucun e-mail de plus). Vide = aucun objectif.</p>
+      <% if (mk.can("automations.write")) { %>
+      <form action="/marketing/automatisations/<%= a.id %>/objectif" method="post" class="mk-inline-form">
+        <label for="goal-event" class="sr-only">Événement objectif</label>
+        <select id="goal-event" name="objectif">
+          <option value="">Aucun objectif</option>
+          <% GOAL_EVENTS.forEach((g) => { %><option value="<%= g.value %>" <%= a.goal_event === g.value ? "selected" : "" %>><%= g.label %></option><% }) %>
+        </select>
+        <button type="submit" class="btn btn-outline btn-sm">Enregistrer l'objectif</button>
+      </form>
+      <% } else { %><p>Objectif : <strong><%= a.goal_event ? (TRIGGER_NAMES[a.goal_event] || a.goal_event) : "aucun" %></strong></p><% } %>
+    </section>
 
     <section class="mk-panel">
       <h2>Actions</h2>
@@ -97,6 +118,21 @@
           <thead><tr><th scope="col">Contact</th><th scope="col">État</th><th scope="col">Étape</th><th scope="col">Détail</th><th scope="col"><span class="sr-only">Journal</span></th></tr></thead>
           <tbody><% runs.forEach((r) => { %><tr><td><%= r.email %></td><td><%= RUN_STATUS[r.status] %></td><td><%= r.step_index + 1 %></td><td><%= r.last_error %></td><td><a href="/marketing/automatisations/<%= a.id %>/passages/<%= r.id %>">Voir le journal</a></td></tr><% }) %></tbody></table></div>
       <% } else { %><p class="field-hint">Aucun passage pour l'instant.</p><% } %>
+    </section>
+
+    <section class="mk-panel" id="versions" aria-labelledby="ver-h">
+      <h2 id="ver-h">Versions publiées</h2>
+      <% if (!versions.length) { %><p class="field-hint">Ce scénario n'a pas encore été publié. À chaque activation d'un contenu modifié, une nouvelle version est enregistrée ; les contacts déjà entrés gardent les étapes de leur version.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Versions publiées</caption>
+          <thead><tr><th scope="col">Version</th><th scope="col">Publiée le</th><th scope="col">Étapes</th><th scope="col">Passages</th></tr></thead>
+          <tbody><% versions.forEach((v) => { %><tr><td>v<%= v.version %><%= v.version === a.version ? " (en cours)" : "" %></td><td><%= mkh.fdate(v.publishedAt) %></td><td><%= v.stepCount %></td><td><%= mkh.fmt(v.runs) %></td></tr><% }) %></tbody>
+        </table></div>
+      <% } %>
+      <div class="mk-actions">
+        <a class="btn btn-outline btn-sm" href="/marketing/automatisations/historique?scenario=<%= a.id %>">Historique des passages</a>
+        <% if (canSimulate) { %><a class="btn btn-outline btn-sm" href="/marketing/automatisations/<%= a.id %>/simulation">Simuler sur un contact</a><% } %>
+      </div>
     </section>
 
     <script type="application/json" id="mk-automation-data"><%- data %></script>

@@ -83,6 +83,8 @@
     cats.forEach(function (c) { newParent.appendChild(h("option", { value: String(c.id), text: indent(c) })); });
   }
   function api(method, url, body) {
+    var siteId = (document.getElementById("be-form") || { dataset: {} }).dataset.site; // accès limité à un site : le site de l'article accompagne chaque appel (validé par le serveur)
+    if (siteId && String(url).indexOf("/formateur/blog/api/") === 0) url += (String(url).indexOf("?") >= 0 ? "&" : "?") + "site=" + encodeURIComponent(siteId);
     return fetch(url, { method: method, credentials: "same-origin", headers: Object.assign({ Accept: "application/json" }, body ? { "Content-Type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.error || "Erreur (" + r.status + ")."); return d; }); },
         function () { throw new Error("Connexion impossible : réessayez."); });

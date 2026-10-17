@@ -59,7 +59,7 @@ describe("sites et design system", () => {
     assert.equal(row(pageId).kind, "page");
     assert.deepEqual(JSON.parse(row(pageId).sections).map((x) => x.type), ["hero", "text"], "page de site : publiable sans formulaire");
     await boss.post(`/marketing/site-web/sites/${siteId}`, { name: "Académie Photo", home_page_id: String(pageId) });
-    const html = (await boss.get(`/marketing/site-web/sites/${siteId}`)).text;
+    const html = (await boss.get(`/marketing/site-web/sites/${siteId}/reglages`)).text;
     assert.match(html, /Accueil Photo<\/a> <span class="mk-status">Accueil<\/span>/);
   });
 

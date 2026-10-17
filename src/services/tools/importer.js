@@ -30,7 +30,7 @@ function parseFile(text) {
   }
   for (const [type, list] of Object.entries(data.resources)) {
     if (!Object.hasOwn(TYPES, type)) { errors.push(`Type de ressource inconnu : « ${line(type, 30)} ».`); continue; }
-    if (type === "site") { if (!list || typeof list !== "object") errors.push("Réglages du site invalides."); continue; }
+    if (type === "site" || type === "settings") { if (!list || typeof list !== "object" || Array.isArray(list)) errors.push(`« ${TYPES[type].label} » : objet attendu.`); continue; }
     if (!Array.isArray(list)) { errors.push(`« ${TYPES[type].label} » : liste attendue.`); continue; }
     if (list.length > MAX_PER_TYPE) errors.push(`« ${TYPES[type].label} » : ${list.length} éléments (${MAX_PER_TYPE} au plus par import).`);
   }
@@ -39,7 +39,7 @@ function parseFile(text) {
 }
 
 // ---------- Plan (analyse à blanc) ----------
-const labelOf = { pages: (i) => i.name || i.slug, taxonomies: (i) => `${i.taxonomy} · ${i.name}`, articles: (i) => i.title, menus: (i) => i.name, redirects: (i) => `${i.source} → ${i.target}`, media: (i) => i.path, seo: (i) => `${i.entityType} · ${i.entityKey}`, site: (i) => i.name || "Réglages du site", comments: () => "" };
+const labelOf = { settings: () => "Paramètres du site", pages: (i) => i.name || i.slug, taxonomies: (i) => `${i.taxonomy} · ${i.name}`, articles: (i) => i.title, menus: (i) => i.name, redirects: (i) => `${i.source} → ${i.target}`, media: (i) => i.path, seo: (i) => `${i.entityType} · ${i.entityKey}`, site: (i) => i.name || "Réglages du site", comments: () => "" };
 
 // Retourne { items: [{ type, ref, label, action, existing, issues, warnings, data }], counts, blocked }
 function analyse(ctx, data, { siteId, types, onConflict }) {
@@ -61,7 +61,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
   const dupRef = new Set();
 
   for (const type of selected) {
-    const list = type === "site" ? [data.resources.site] : data.resources[type];
+    const list = type === "site" || type === "settings" ? [data.resources[type]] : data.resources[type];
     if (!allowed.includes(type)) {
       for (const item of list) { const it = push(type, item || {}, { action: "error" }); it.issues.push(type === "comments" ? "Les commentaires ne sont pas importés (confidentialité : ils s'exportent seulement)." : "Vous n'avez pas le droit d'importer ce type de ressource dans ce site."); }
       continue;
@@ -69,7 +69,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
     for (const raw of list) {
       const item = raw && typeof raw === "object" ? raw : {};
       const it = push(type, item, {});
-      if (type !== "site" && type !== "redirects" && type !== "seo") {
+      if (type !== "site" && type !== "settings" && type !== "redirects" && type !== "seo") {
         if (!item.ref || !REF.test(String(item.ref))) it.issues.push("Référence manquante ou invalide.");
         else if (dupRef.has(item.ref)) it.issues.push(`Référence en double (${item.ref}).`);
         else { dupRef.add(item.ref); refs.set(item.ref, { type }); }
@@ -121,8 +121,8 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
             const external = /^https?:\/\//i.test(item.target.trim());
             if (external && !ctx.can("redirects.external")) it.issues.push("Redirection vers un site extérieur : réservée aux administrateurs.");
             const v = redirects.validate({ source: item.source, target: item.target, status: item.status, siteId });
-            const exists = v.value.source_path && db.prepare("SELECT id FROM seo_redirects WHERE source_path = ?").get(v.value.source_path);
-            if (exists) { it.existing = exists.id; it.action = "conflict"; it.reason = "une redirection existe déjà pour cette adresse"; }
+            const exists = v.value.source_path && db.prepare("SELECT id, site_id FROM seo_redirects WHERE source_path = ?").get(v.value.source_path);
+            if (exists) { it.existing = exists.id; it.action = "conflict"; it.reason = (exists.site_id ?? null) !== (siteId ?? null) ? "une redirection d'un autre site existe déjà pour cette adresse" : "une redirection existe déjà pour cette adresse"; it.crossSite = (exists.site_id ?? null) !== (siteId ?? null); }
             else for (const e of v.errors) it.issues.push(e);
           }
         } else if (type === "media") {
@@ -139,6 +139,30 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
             const cur = seoMeta.get(item.entityType, item.entityKey);
             if (Object.values(cur).some((v) => v !== null && v !== "" && typeof v !== "object") && (cur.seo_title || cur.seo_description || cur.canonical_url)) { it.action = "conflict"; it.reason = "des réglages SEO existent déjà pour ce contenu"; it.existing = 1; }
           }
+        } else if (type === "settings") {
+          const engine = require("../settings");
+          const scope = { siteId };
+          const cur = engine.readAll(scope, ctx);
+          const incoming = item && item.values && typeof item.values === "object" ? item.values : null;
+          if (!incoming) it.issues.push("Valeurs de réglages manquantes.");
+          else {
+            const apply = {};
+            let differing = 0;
+            for (const [k, raw] of Object.entries(incoming)) {
+              const d = engine.byKey(scope, k);
+              if (!d) { it.warnings.push(`« ${line(k, 40)} » : réglage inconnu pour ce périmètre, ignoré.`); continue; }
+              if (d.sensitive) { it.warnings.push(`« ${d.label} » : réglage sensible (domaine, indexation, accueil, adresses), jamais importé.`); continue; }
+              if (k === "site_name") { it.warnings.push("« Nom du site » : le nom du site de destination est conservé."); continue; }
+              if (d.type === "page") { it.warnings.push(`« ${d.label} » : une page se choisit dans le site de destination, ignoré.`); continue; }
+              const v = engine.validate(d, raw && typeof raw === "object" && "value" in raw ? raw.value : raw, scope, ctx);
+              if (!v.ok) { it.warnings.push(`${v.error} Ignoré.`); continue; }
+              if (!ctx.can(d.perm)) { it.warnings.push(`« ${d.label} » : permission « ${d.perm} » requise, ignoré.`); continue; }
+              if (JSON.stringify(v.value ?? "") !== JSON.stringify(cur[k].value ?? "")) { apply[k] = v.value; differing++; }
+            }
+            it.apply = apply;
+            if (!differing) { it.action = "skip"; it.reason = "les réglages sont identiques"; }
+            else { it.existing = siteId || 1; it.action = "conflict"; it.reason = `${differing} réglage(s) diffèrent des valeurs actuelles`; }
+          }
         } else if (type === "site") {
           it.existing = siteId; it.action = "conflict"; it.reason = "les réglages actuels du site seraient remplacés (couleurs, polices, identité)";
           it.warnings.push("L'adresse publique (domaine) n'est jamais importée : elle se règle dans le site de destination.");
@@ -151,7 +175,8 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
   const known = (ref) => refs.has(ref);
   for (const it of items) {
     if (it.issues.length) { it.action = "error"; continue; }
-    const src = (data.resources[it.type] || []).find((x) => x && x.ref === it.ref);
+    const pool = data.resources[it.type];
+    const src = Array.isArray(pool) ? pool.find((x) => x && x.ref === it.ref) : pool;
     if (it.type === "taxonomies" && src && src.parentRef && !known(src.parentRef)) it.warnings.push("Catégorie parente absente du fichier : le terme sera créé au premier niveau.");
     if (it.type === "articles" && src) for (const r of [...(src.categoryRefs || []), ...(src.tagRefs || [])]) if (!known(r)) it.warnings.push(`Terme ${r} absent du fichier : ignoré.`);
     if (it.type === "menus" && src) for (const m of src.items || []) if (m.objectRef && !known(m.objectRef)) it.warnings.push(`Élément « ${line(m.label, 40)} » : ressource ${m.objectRef} absente du fichier, élément ignoré.`);
@@ -162,12 +187,12 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
     if (it.action !== "conflict") continue;
     if (onConflict === "update") {
       if (!ctx.can("tools.overwrite")) { it.action = "error"; it.issues.push("Mettre à jour des éléments existants exige la permission « tools.overwrite »."); }
-      else if (it.type === "pages" && (it.crossSite || it.trashed)) { it.action = "skip"; it.warnings.push(`Non modifiée : ${it.reason}.`); }
+      else if ((it.type === "pages" || it.type === "redirects") && (it.crossSite || it.trashed)) { it.action = "skip"; it.warnings.push(`Non modifiée : ${it.reason}.`); }
       else if (it.type === "articles" && (it.live || it.trashed)) { it.action = "skip"; it.warnings.push(it.live ? "Article en ligne : jamais modifié par un import (créez une copie)." : `Non modifié : ${it.reason}.`); }
       else if (it.type === "menus") { it.action = "skip"; it.warnings.push("Un menu existant n'est jamais modifié par un import (créez une copie)."); }
       else it.action = "update";
     } else if (onConflict === "duplicate") {
-      if (["redirects", "media", "seo", "site"].includes(it.type)) { it.action = "skip"; it.warnings.push("Pas de copie possible pour ce type : ignoré."); } else it.action = "duplicate";
+      if (["redirects", "media", "seo", "site", "settings"].includes(it.type)) { it.action = "skip"; it.warnings.push("Pas de copie possible pour ce type : ignoré."); } else it.action = "duplicate";
     } else it.action = "skip"; // skip et stop : rien n'est modifié
   }
 

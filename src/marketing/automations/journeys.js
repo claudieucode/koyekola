@@ -378,12 +378,12 @@ function createJourney(ctx, key, params = {}) {
     const ids = j.emails(base).map((e, i) => templates.createTemplate(ctx, {
       name: freeName(ctx, "mk_templates", `${j.label}${suffix} — ${i + 1}. ${e.name}`),
       kind: e.kind || j.kind, category: j.kind === "transactional" ? "transactional" : j.group === "welcome" ? "welcome" : j.group === "reengage" ? "reengage" : "general",
-      subject: e.subject, preheader: e.preheader, blocks: e.blocks,
+      subject: e.subject, preheader: e.preheader, blocks: e.blocks, siteId: params.siteId,
     }).id);
     const texts = j.sms ? j.sms(base) : [];
     const steps = mine.steps.map((s) => (s.type === "email" ? { type: "email", templateId: ids[s.email] } : s.type === "sms" ? { type: "sms", body: texts[s.sms].body, trackClicks: true } : s));
     // Les références d'e-mail d'une condition (« a ouvert l'e-mail de l'étape N ») restent des numéros d'étape : inchangées.
-    const automation = service.createAutomation(ctx, { name: automationName, kind: j.kind, triggers: [mine.trigger], steps });
+    const automation = service.createAutomation(ctx, { name: automationName, kind: j.kind, triggers: [mine.trigger], steps, siteId: params.siteId });
     audit(ctx, "automation.journey_created", "automation", automation.id, { journey: j.key, templates: ids.length });
     store.recordUsage(ctx, j.key, automation.id);
     return automation;

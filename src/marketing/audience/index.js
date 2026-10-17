@@ -8,4 +8,5 @@ module.exports = {
   ...require("./bulk"),
   ...require("./export"),
   ...require("./timeline"),
+  ...require("./subscriptions"),
 };

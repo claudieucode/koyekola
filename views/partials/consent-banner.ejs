@@ -3,6 +3,7 @@
 <div class="kw-consent" id="kw-consent" role="region" aria-labelledby="kw-consent-title" tabindex="-1" hidden>
   <p class="kw-consent-title" id="kw-consent-title">Mesure d'audience</p>
   <p class="kw-consent-text">Avec votre accord, nous mesurons les pages consultées et les boutons utilisés sur ce site pour l'améliorer et vous proposer des contenus adaptés. Rien n'est vendu ni partagé. Vous pouvez changer d'avis à tout moment. <a href="/cookies">En savoir plus</a></p>
+  <% if (typeof privacyUrl !== "undefined" && privacyUrl) { %><p class="kw-consent-text"><a href="<%= privacyUrl %>">Politique de confidentialité</a></p><% } %>
   <div class="kw-consent-actions">
     <button type="button" class="kw-consent-btn" data-kw-refuse>Refuser</button>
     <button type="button" class="kw-consent-btn" data-kw-accept>Accepter</button>

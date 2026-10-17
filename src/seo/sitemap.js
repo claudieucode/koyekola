@@ -39,18 +39,26 @@ function entries({ hostSite = null } = {}) {
   }
   blog.promoteScheduled();
   add({ path: "/blog", type: "Page" }, metaIndex("page", "blog"));
-  for (const t of taxonomy.publicTerms("category")) add({ path: taxonomy.urlOf(t), type: "Catégorie d'articles" }, metaIndex("blog_category", t.slug));
-  for (const p of db.prepare("SELECT slug, updated_at, robots_index, canonical_url, cover_path, title FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
-    const e = { path: `/blog/${p.slug}`, type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title };
+  // Contenus par site (R6 lot 4) : un article ou un terme servi par le domaine de son site est listé dans le plan de CE domaine (siteId + base), sous son adresse logique ;
+  // le plan du domaine principal n'en contient aucun (même règle que les pages d'un site à domaine propre)
+  const homeOf = (type, id) => urls.publicHomeOf(type, id);
+  const siteTag = (home) => (home ? { siteId: home, base: urls.siteInfo(home).base } : {});
+  for (const t of taxonomy.publicTerms("category")) { const home = homeOf("term", t.id); add({ path: home ? `${taxonomy.baseOf("category")}/${urls.addressOf("term", t)}` : taxonomy.urlOf(t), type: "Catégorie d'articles", ...siteTag(home) }, metaIndex("blog_category", t.slug)); }
+  const blogSites = new Set();
+  for (const p of db.prepare("SELECT id, slug, updated_at, robots_index, canonical_url, cover_path, title FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
+    const home = homeOf("post", p.id);
+    if (home) blogSites.add(home);
+    const e = { path: `/blog/${home ? urls.addressOf("post", p) : p.slug}`, type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title, ...siteTag(home) };
     if (!p.robots_index) excluded.push({ ...e, reason: "Réglé en noindex" });
     else if (p.canonical_url) excluded.push({ ...e, reason: `Canonical vers ${p.canonical_url}` });
     else included.push(e);
   }
+  for (const id of blogSites) add({ path: "/blog", type: "Page", ...siteTag(id) }, null); // l'accueil du blog de chaque domaine qui a des articles
   // Pages Site Web / pages d'atterrissage (/p/…) : en ligne, non archivées ; indexées seulement si la page le permet
   // (case « Autoriser les moteurs de recherche ») et sans canonical vers une autre adresse ni noindex dans son SEO
   let webPages = [];
   try {
-    webPages = db.prepare("SELECT p.id, p.slug, p.name, p.title, p.indexable, p.seo, p.updated_at, p.site_id, s.settings AS site_settings FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id AND s.status = 'active' WHERE p.status = 'published' AND p.archived_at IS NULL ORDER BY p.published_at DESC").all();
+    webPages = db.prepare("SELECT p.id, p.slug, p.name, p.title, p.indexable, p.seo, (SELECT 1 FROM mk_funnel_steps st JOIN mk_funnels f ON f.id = st.funnel_id WHERE st.page_id = p.id AND f.status = 'active' AND json_extract(st.settings, '$.noindex') = 1 LIMIT 1) AS funnel_noindex, p.updated_at, p.site_id, s.settings AS site_settings FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id AND s.status = 'active' WHERE p.status = 'published' AND p.archived_at IS NULL ORDER BY p.published_at DESC").all();
   } catch (error) {
     if (!/no such (table|column)/.test(error.message)) throw error; // module marketing pas encore migré : aucune page web
   }
@@ -63,6 +71,7 @@ function entries({ hostSite = null } = {}) {
     const e = { path: urls.pageCanonicalPath(p), type: "Page web", lastmod: isoDate(p.updated_at), title: p.title || p.name, base: (siteConf.seo && siteConf.seo.publicUrl) || undefined, siteId: p.site_id || null };
     if (siteConf.extras && siteConf.extras.noindex) excluded.push({ ...e, reason: "Site réglé en noindex (réglages SEO du site)" });
     else if (!p.indexable || seo.noindex) excluded.push({ ...e, reason: "Page non indexée (réglage de la page)" });
+    else if (p.funnel_noindex) excluded.push({ ...e, reason: "Étape de tunnel non proposée aux moteurs de recherche (réglage de l'étape)" });
     else if (seo.canonical && !seo.canonical.endsWith(e.path === "/" ? "/" : e.path)) excluded.push({ ...e, reason: `Canonical vers ${seo.canonical}` });
     else included.push(e);
   }
@@ -73,7 +82,8 @@ function entries({ hostSite = null } = {}) {
     const rule = metaIndex("blog_tag", slug);
     if (rule.index === 1 || (rule.index === null && st.index_blog_tags)) add(e, rule); else excluded.push({ ...e, reason: "Étiquettes non indexées (Réglages)" });
   }
-  for (const a of db.prepare("SELECT DISTINCT author_id id FROM posts WHERE published = 1 AND author_id IS NOT NULL").all()) {
+  const authorScope = urls.contentScope("post", "posts.id", null); // pages d'auteur : seulement celles du domaine principal (les articles des domaines de sites n'y figurent pas)
+  for (const a of db.prepare(`SELECT DISTINCT author_id id FROM posts WHERE published = 1 AND author_id IS NOT NULL${authorScope ? " AND " + authorScope.sql : ""}`).all(...(authorScope ? authorScope.params : []))) {
     const e = { path: `/blog/auteur/${a.id}`, type: "Auteur" };
     const rule = metaIndex("author", a.id);
     if (rule.index === 1 || (rule.index === null && st.index_authors)) add(e, rule); else excluded.push({ ...e, reason: "Auteurs non indexés (Réglages)" });
@@ -83,6 +93,10 @@ function entries({ hostSite = null } = {}) {
   const final = [];
   for (const e of included) (redirected.has(e.path) ? excluded.push({ ...e, reason: "Adresse redirigée" }) : final.push(e));
   let kept = final;
+  // Visibilité masquée (Paramètres → Indexation) : aucune adresse du site principal n'est proposée aux moteurs
+  if (!hostSite && require("../middlewares/siteHost").closedBySetting()) { for (const e of final) excluded.push({ ...e, reason: "Site masqué aux moteurs de recherche (Paramètres → Indexation)" }); final.length = 0; }
+  // Page d'accueil choisie dans les réglages : une seule entrée pour « / »
+  { const seen = new Set(); for (let i = 0; i < final.length; i++) { const key = `${final[i].base || ""}${final[i].path}`; if (seen.has(key)) final.splice(i--, 1); else seen.add(key); } }
   if (hostSite) {
     for (const e of excluded.splice(0)) if (e.siteId === hostSite.id) excluded.push(e);
     kept = final.filter((e) => e.siteId === hostSite.id);

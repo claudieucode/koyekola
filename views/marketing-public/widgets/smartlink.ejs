@@ -1,0 +1,2 @@
+<%# Lien intelligent (src/marketing/pages/widgets/smartlink.js). Variables : p, d (d.href reconstruit, d.web), cls, attrs. %>
+<div class="<%= cls %>"<%- attrs %>><a class="kw-button kw-btn-<%= ["primary", "outline", "ghost"].includes(p.variant) ? p.variant : "primary" %>" href="<%= d.href %>"<%- d.web ? ' target="_blank" rel="noopener noreferrer"' : "" %>><%= p.label %></a></div>

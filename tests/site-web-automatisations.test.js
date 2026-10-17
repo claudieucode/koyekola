@@ -22,12 +22,12 @@ describe("déclencheurs (sans serveur)", () => {
     const { contact } = audience.upsertContact(A, { email: "visite@ex.fr" });
     const names = () => db.prepare("SELECT name, metadata FROM mk_events WHERE contact_id = ? AND name <> 'contact.created' ORDER BY id").all(contact.id).map((e) => [e.name, JSON.parse(e.metadata)]);
     emitVisitEvents(A, { contactId: contact.id, sessionId: "sessionAAAA", pageViews: [{ pageId: s1.pageId }] });
-    assert.deepEqual(names().map((e) => e[0]), ["page.visited", "funnel.step_reached"]);
-    assert.equal(names()[1][1].stepId, String(s1.id));
+    assert.deepEqual(names().map((e) => e[0]), ["page.visited", "funnel.entered", "funnel.step_reached"]);
+    assert.equal(names()[2][1].stepId, String(s1.id));
     emitVisitEvents(A, { contactId: contact.id, sessionId: "sessionAAAA", pageViews: [{ pageId: s1.pageId }] });
-    assert.equal(names().length, 2, "même visite : rien de nouveau");
+    assert.equal(names().length, 3, "même visite : rien de nouveau");
     emitVisitEvents(A, { contactId: contact.id, sessionId: "sessionAAAA", pageViews: [{ pageId: s2.pageId }] });
-    assert.deepEqual(names().map((e) => e[0]).slice(2), ["page.visited", "funnel.step_reached", "funnel.completed"]);
+    assert.deepEqual(names().map((e) => e[0]).slice(3), ["page.visited", "funnel.step_reached", "funnel.step.completed", "funnel.completed"]);
     emitVisitEvents(A, { contactId: contact.id, sessionId: "sessionBBBB", pageViews: [{ pageId: s2.pageId }] });
     assert.equal(names().filter((e) => e[0] === "funnel.completed").length, 1, "tunnel terminé : une seule fois");
     assert.equal(names().filter((e) => e[0] === "page.visited").length, 3, "nouvelle visite : la page compte de nouveau");
@@ -78,7 +78,7 @@ describe("vrai serveur", () => {
     db.prepare("UPDATE mk_web_visitors SET contact_id = ? WHERE id = ?").run(contact.id, known);
     await beacon(known, [{ t: "page_view", p: `/p/${slug}` }, { t: "page_view", p: `/p/${slug}` }]);
     const evts = db.prepare("SELECT name FROM mk_events WHERE contact_id = ? AND name <> 'contact.created' ORDER BY id").all(contact.id).map((e) => e.name);
-    assert.deepEqual(evts, ["page.visited", "funnel.step_reached"]);
+    assert.deepEqual(evts, ["page.visited", "funnel.entered", "funnel.step_reached"]);
     // Éditeur d'automatisation : listes réelles pour les filtres
     const created = await boss.post("/marketing/automatisations", { name: "Visite", kind: "marketing", trigger_event: "page.visited" });
     const aid = Number(created.location.match(/(\d+)/)[1]);

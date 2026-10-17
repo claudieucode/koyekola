@@ -30,9 +30,10 @@ function record(db, organizationId, { visitorId, sessionId, events, userAgent = 
   if (!visitor) db.prepare("INSERT INTO mk_web_visitors (id, organization_id, first_seen, last_seen, sessions) VALUES (?, ?, ?, ?, ?)").run(visitorId, organizationId, first, now, starts);
   else db.prepare("UPDATE mk_web_visitors SET last_seen = ?, sessions = sessions + ? WHERE id = ?").run(now, starts, visitorId);
   const contactId = visitor ? visitor.contact_id : null;
-  const insert = db.prepare(`INSERT INTO mk_web_events (organization_id, visitor_id, session_id, contact_id, type, path, page_id, target, referrer, utm_source, utm_medium, utm_campaign, device, occurred_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const pageIdOf = db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND slug = ?");
+  // INSERT OR IGNORE : un événement identique reçu deux fois (relance du navigateur) n'est compté qu'une fois (index UNIQUE, voir migration 066)
+  const insert = db.prepare(`INSERT OR IGNORE INTO mk_web_events (organization_id, visitor_id, session_id, contact_id, type, path, page_id, site_id, target, referrer, utm_source, utm_medium, utm_campaign, device, occurred_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const pageIdOf = db.prepare("SELECT id, site_id FROM mk_landing_pages WHERE organization_id = ? AND slug = ?");
   let saved = 0;
   const pageViews = []; // pages du moteur vues dans ce lot (déclencheurs d'automatisation, voir visitors/triggers.js)
   const signals = [];   // formations consultées, ajouts au panier, commande commencée (déclencheurs e-commerce)
@@ -44,10 +45,12 @@ function record(db, organizationId, { visitorId, sessionId, events, userAgent = 
     const m = /^\/p\/([a-z0-9-]{1,60})\/?$/.exec(path);
     const page = m ? pageIdOf.get(organizationId, m[1]) : null;
     // Date envoyée par le navigateur : acceptée seulement si plausible (dans les 10 dernières minutes)
-    const at = Number.isInteger(e.at) && e.at <= now && now - e.at < 10 * 60000 ? e.at : now;
+    // Sans date plausible (client qui n'est pas le script du site), l'heure est arrondie à la minute : un lot rejoué dans la même minute reste dédupliqué (palier 25, A25-03)
+    const at = Number.isInteger(e.at) && e.at <= now && now - e.at < 10 * 60000 ? e.at : Math.floor(now / 60000) * 60000;
     const ref = cut(e.r, 120).toLowerCase();
-    insert.run(organizationId, visitorId, sid, contactId, e.t, path, page ? page.id : null, cut(e.x, 120), /^[a-z0-9.-]+$/.test(ref) ? ref : "",
+    const done = insert.run(organizationId, visitorId, sid, contactId, e.t, path, page ? page.id : null, page ? page.site_id ?? null : null, cut(e.x, 120), /^[a-z0-9.-]+$/.test(ref) ? ref : "",
       cut(e.us, 80), cut(e.um, 80), cut(e.uc, 80), DEVICES.includes(e.d) ? e.d : "", at);
+    if (!done.changes) continue; // doublon : ni compté ni rejoué vers les déclencheurs
     saved += 1;
     if (e.t === "page_view" && page && !pageViews.some((v) => v.pageId === page.id)) pageViews.push({ pageId: page.id, path });
     const course = e.t === "page_view" ? /^\/cours\/([a-z0-9-]{1,120})\/?$/.exec(path) : null;
@@ -78,8 +81,8 @@ function recordFormSubmit(db, organizationId, { visitorId, contactId, path, form
   const p = cleanPath(path) || "/";
   const m = /^\/p\/([a-z0-9-]{1,60})\/?$/.exec(p);
   const page = m ? db.prepare("SELECT id FROM mk_landing_pages WHERE organization_id = ? AND slug = ?").get(organizationId, m[1]) : null;
-  db.prepare("INSERT INTO mk_web_events (organization_id, visitor_id, session_id, contact_id, type, path, page_id, target, occurred_at) VALUES (?, ?, 'serveur', ?, 'form_submit', ?, ?, ?, ?)")
-    .run(organizationId, visitorId, contactId, p, page ? page.id : null, cut(formName, 120), now);
+  db.prepare("INSERT OR IGNORE INTO mk_web_events (organization_id, visitor_id, session_id, contact_id, type, path, page_id, site_id, target, occurred_at) VALUES (?, ?, 'serveur', ?, 'form_submit', ?, ?, ?, ?, ?)")
+    .run(organizationId, visitorId, contactId, p, page ? page.id : null, page ? (db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(page.id) || {}).site_id ?? null : null, cut(formName, 120), now);
   return true;
 }
 
@@ -90,9 +93,9 @@ function journey(ctx, contactId, { limit = 100 } = {}) {
     .all(ctx.organizationId, contactId, Math.min(Math.max(Number(limit) || 100, 1), 500));
 }
 
-// Conservation : 13 mois au plus
-function purge(db, now = Date.now()) {
-  const limit = now - RETENTION_MS;
+// Conservation : 13 mois par défaut ; réglable (Paramètres → Confidentialité, en jours). Les agrégats ne sont pas stockés : rien d'autre à purger.
+function purge(db, now = Date.now(), days = null) {
+  const limit = now - (Number.isInteger(days) && days >= 30 ? days * 86400000 : RETENTION_MS);
   const events = db.prepare("DELETE FROM mk_web_events WHERE occurred_at < ?").run(limit).changes;
   const visitors = db.prepare("DELETE FROM mk_web_visitors WHERE last_seen < ?").run(limit).changes;
   return { events, visitors };

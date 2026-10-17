@@ -17,7 +17,7 @@ const STATUS = {
   sent: ["Envoyée", "badge-success"], cancelled: ["Annulée", "badge-muted"], failed: ["En échec", "mk-badge-danger"],
 };
 const REASONS = {
-  not_subscribed: "pas d'accord SMS", unsubscribed: "désinscrit des SMS", suppressed: "numéro bloqué", no_consent: "pas de preuve d'accord", no_phone: "pas de numéro valide",
+  inactive_record: "fiche archivée ou désactivée", not_subscribed: "pas d'accord SMS", unsubscribed: "désinscrit des SMS", suppressed: "numéro bloqué", no_consent: "pas de preuve d'accord", no_phone: "pas de numéro valide",
   phone_changed: "numéro modifié depuis le lancement", contact_removed: "contact supprimé", cancelled: "campagne annulée", too_long: "message trop long",
   invalid_number: "numéro refusé (inexistant ou fixe)", opted_out: "a répondu STOP", temporary_exhausted: "erreurs temporaires répétées", interrupted: "envoi interrompu",
   permanent: "refusé par le fournisseur", error: "erreur imprévue", quiet_hours: "heures de silence", undelivered: "non livré",

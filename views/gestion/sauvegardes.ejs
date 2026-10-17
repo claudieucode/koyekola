@@ -12,22 +12,48 @@
 <section class="dpanel" aria-labelledby="bk-db">
   <h2 id="bk-db">Base de données</h2>
   <p class="field-hint"><%= autoEnabled ? "Une copie automatique est faite chaque jour ; les 14 dernières sont gardées." : "Copie automatique désactivée (SAUVEGARDE_AUTO=0)." %> Une sauvegarde est aussi faite avant chaque mise à jour du module marketing.</p>
+  <p class="g-flash is-info" id="essai-etat" role="status" aria-live="polite" hidden></p>
   <% if (!list.length) { %>
     <div class="dash-empty g-state"><h3>Aucune sauvegarde pour l'instant</h3><p>La première copie automatique est faite quelques minutes après le démarrage du site. Vous pouvez aussi en créer une tout de suite.</p></div>
   <% } else { %>
     <div class="dtable-wrap"><table class="dtable g-table">
       <caption class="sr-only">Sauvegardes de la base, les plus récentes d'abord</caption>
-      <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col" class="g-num">Taille</th><th scope="col"><span class="sr-only">Télécharger</span></th></tr></thead>
+      <thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col" class="g-num">Taille</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody><% list.forEach((b) => { %>
         <tr>
           <td data-label="Date"><%= when(b.createdAt) %></td>
           <td data-label="Type"><%= kinds[b.kind] %></td>
           <td class="g-num" data-label="Taille"><%= sizeOf(b.size) %></td>
-          <td data-label="Télécharger"><a class="btn btn-outline btn-sm" href="/formateur/gestion/sauvegardes/<%= encodeURIComponent(b.name) %>" download><%- icon("download", { size: 16 }) %> Télécharger<span class="sr-only"> la sauvegarde du <%= when(b.createdAt) %></span></a></td>
+          <td data-label="Actions"><a class="btn btn-ghost btn-sm" href="/formateur/gestion/sauvegardes/audit-sites?source=<%= encodeURIComponent(b.name) %>" title="Vérifie, en lecture seule, qu'aucune donnée n'associe deux sites différents">Audit des sites<span class="sr-only"> de la sauvegarde du <%= when(b.createdAt) %></span></a>
+            <form method="post" action="/formateur/gestion/sauvegardes/essai-reconstruction" style="display:inline" data-essai-form><input type="hidden" name="source" value="<%= b.name %>"><button type="submit" class="btn btn-ghost btn-sm" title="Essaie la reconstruction de quatre tables sur une copie temporaire de cette sauvegarde (rien n'est modifié)">Essai de reconstruction<span class="sr-only"> sur la sauvegarde du <%= when(b.createdAt) %></span></button></form>
+            <a class="btn btn-outline btn-sm" href="/formateur/gestion/sauvegardes/<%= encodeURIComponent(b.name) %>" download><%- icon("download", { size: 16 }) %> Télécharger<span class="sr-only"> la sauvegarde du <%= when(b.createdAt) %></span></a></td>
         </tr>
       <% }) %></tbody>
     </table></div>
   <% } %>
+</section>
+
+<section class="dpanel" aria-labelledby="bk-audit">
+  <h2 id="bk-audit">Audit des sites</h2>
+  <p class="field-hint">Vérifie, en <strong>lecture seule</strong>, qu'aucune donnée n'associe deux sites différents (étapes de tunnel, pages parentes, composants…). Le résultat ne contient que des nombres : aucun nom, e-mail ni contenu. Choisissez « Audit des sites » sur une sauvegarde ci-dessus, ou analysez la base en service :</p>
+  <a class="btn btn-outline" href="/formateur/gestion/sauvegardes/audit-sites?source=active">Analyser la base en service</a>
+</section>
+
+<section class="dpanel" aria-labelledby="bk-essai">
+  <h2 id="bk-essai">Essai de reconstruction (préparation du palier 3)</h2>
+  <p class="field-hint">Choisissez « Essai de reconstruction » à côté d'une sauvegarde : l'application en fait une <strong>copie temporaire</strong>, y essaie la reconstruction de quatre tables, compare tout avant / après (données, relations, index, déclencheurs, intégrité), teste le retour arrière, puis <strong>supprime la copie</strong>. La sauvegarde et la base en service ne sont jamais modifiées ; le résultat ne contient que des nombres. L'essai peut durer quelques dizaines de secondes.</p>
+  <script>
+    document.querySelectorAll("[data-essai-form]").forEach(function (form) {
+      form.addEventListener("submit", function (event) {
+        // Un seul essai à la fois : tous les boutons sont désactivés pendant l'essai, et le message s'affiche juste au-dessus de la liste
+        var clicked = event.submitter || form.querySelector("button");
+        var etat = document.getElementById("essai-etat");
+        if (etat) { etat.textContent = "Essai en cours sur une copie temporaire de la sauvegarde… patientez, le résultat s'affiche tout seul (quelques secondes à une minute)."; etat.hidden = false; }
+        if (clicked) clicked.firstChild.nodeValue = "Essai en cours…";
+        document.querySelectorAll("[data-essai-form] button").forEach(function (b) { b.disabled = true; });
+      });
+    });
+  </script>
 </section>
 
 <section class="dpanel" aria-labelledby="bk-files">

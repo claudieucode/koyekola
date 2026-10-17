@@ -1,0 +1,6 @@
+<%# Carrousel média (widgets/carrousels.js). Variables : p, cls, attrs, d = { embeds }. Exécution : le carrousel du site (data-kw-carousel). %>
+<div class="<%= cls %>" role="region" aria-roledescription="carrousel" aria-label="<%= p.label %>" data-kw-carousel<%- p.dots ? " data-kw-dots" : "" %><%- p.autoplay ? ` data-kw-autoplay="${p.interval}"` : "" %><%- p.loop ? " data-kw-loop" : "" %><%- attrs %>>
+  <div class="kw-carousel-track"><% p.items.forEach((m, i) => { const src = d && d.embeds ? d.embeds[i] : null; if (!(m.kind === "video" ? src : m.image)) return; %>
+    <figure class="kw-carousel-slide kw-mcar-slide" aria-roledescription="diapositive" aria-label="<%= i + 1 %> sur <%= p.items.length %>"><% if (m.kind === "video" && src) { %><div class="kw-mcar-video"><iframe src="<%= src %>" title="<%= m.caption || "Vidéo " + (i + 1) %>" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div><% } else if (m.image) { %><img class="kw-mcar-img" src="<%= m.image %>" alt="<%= m.alt %>" loading="lazy" decoding="async"><% } %><% if (m.caption) { %><figcaption><%= m.caption %></figcaption><% } %></figure><% }) %>
+  </div>
+</div>

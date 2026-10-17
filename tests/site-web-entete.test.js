@@ -17,7 +17,7 @@ describe("en-tête du site (vrai serveur)", () => {
   const html = async (slug) => (await new Client(srv.base).get(`/p/${slug}`, { headers: UA })).text;
   const hasHeader = (h) => /lp-site-part lp-site-header/.test(h);
   const slugOf = (id) => db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
-  const panel = async (who = boss) => (await who.get(`/marketing/site-web/sites/${siteId}`)).text;
+  const panel = async (who = boss) => (await who.get(`/marketing/site-web/sites/${siteId}/reglages`)).text;
   const choose = (pageId, choice, who = boss) => who.post(`/marketing/site-web/sites/${siteId}/entete/pages/${pageId}`, { choice });
   const putComponent = (cid, content, who = boss) => who.request(`/marketing/site-web/composants/${cid}/brouillon`, { method: "PUT", json: { content, revision: 0 }, headers: { Origin: srv.base } });
   let headerId, variantId;
@@ -66,7 +66,7 @@ describe("en-tête du site (vrai serveur)", () => {
     assert.match(types, /"type":"sitetitle"/);
     for (const id of Object.values(pagesOf)) assert.equal(hasHeader(await html(slugOf(id))), true, `page ${id}`);
     assert.equal((await boss.post(`/marketing/site-web/sites/${siteId}/entete/creer`, {})).status, 302);
-    assert.match(flashOf((await boss.get(`/marketing/site-web/sites/${siteId}`)).text), /déjà un en-tête/);
+    assert.match(flashOf((await boss.get(`/marketing/site-web/sites/${siteId}/reglages`)).text), /déjà un en-tête/);
   });
 
   test("fiche du site : statut Publié, type Global, « Utilisé par 4 pages sur 4 », liste des pages, bouton Modifier", async () => {
@@ -126,7 +126,7 @@ describe("en-tête du site (vrai serveur)", () => {
     assert.equal(boot.page.base, `/marketing/site-web/composants/${headerId}`);
     assert.equal(boot.page.component.role, "header");
     assert.equal(boot.content.sections.length, 1, "le contenu de l'éditeur est la source du composant");
-    assert.match(page.text, /href="\/marketing\/site-web\/sites\/\d+#entete"/, "retour à la fiche du site");
+    assert.match(page.text, /href="\/marketing\/site-web\/sites\/\d+\/reglages#entete"/, "retour à la fiche du site");
     // refus : plusieurs sections
     const two = { sections: [boot.content.sections[0], { type: "text", markdown: "Une seconde section" }] };
     const bad = await putComponent(headerId, two);

@@ -393,7 +393,7 @@ describe("droits", () => {
     }
     assert.equal(row(pid).deleted_at, null);
   });
-  test("éditeur (rôle) : copie, publie, corbeille, restaure ; ne supprime pas définitivement ; ne crée pas (éditeur d'articles réservé au compte créateur)", async () => {
+  test("éditeur (rôle) : copie, publie, corbeille, restaure ; ne supprime pas définitivement ; crée et rédige (palier 23 : l'éditeur d'articles s'ouvre selon les droits)", async () => {
     assert.equal((await editor.post(`${CMS}/${pid}/dupliquer`, {})).status, 302);
     assert.ok(db.prepare("SELECT 1 FROM posts WHERE title = 'Article des droits (copie)'").get());
     await editor.post(`${CMS}/${pid}/corbeille`, {});
@@ -403,9 +403,10 @@ describe("droits", () => {
     await editor.post(`${CMS}/${pid}/restaurer`, {});
     assert.equal(row(pid).deleted_at, null);
     const before = db.prepare("SELECT COUNT(*) n FROM posts").get().n;
-    await editor.post(CMS, { title: "Tentative de création" });
-    assert.equal(db.prepare("SELECT COUNT(*) n FROM posts").get().n, before, "rien créé par un compte qui n'a pas l'éditeur");
-    assert.doesNotMatch((await editor.get(CMS)).text, /data-mk-modal-open="nouvel-article"/);
+    const made = await editor.post(CMS, { title: "Création par un éditeur" });
+    assert.equal(made.status, 302); assert.match(made.location, /\/formateur\/blog\/\d+\/modifier/);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM posts").get().n, before + 1, "un éditeur (articles.write) crée un article");
+    assert.match((await editor.get(CMS)).text, /data-mk-modal-open="nouvel-article"/);
   });
   test("administrateur : supprime définitivement, depuis la corbeille", async () => {
     await admin.post(`${CMS}/${pid}/corbeille`, {});

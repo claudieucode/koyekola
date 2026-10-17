@@ -14,6 +14,7 @@
       <h1>Modèles d'e-mails <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1>
       <div class="mk-actions"><a href="/marketing/modeles/bibliotheque" class="btn btn-outline btn-sm">Parcourir la bibliothèque</a></div>
     </div>
+    <%- include("partials/site-filter", { action: "/marketing/modeles" }) %>
     <p class="mk-lead">Composez vos e-mails par blocs (titre, texte, image, vidéo, bouton, citation, liste, réseaux sociaux, formation du catalogue…). Le lien de désinscription est ajouté automatiquement en bas de chaque e-mail marketing.</p>
 
     <% if (counts.all === 0) { %>
@@ -108,6 +109,7 @@
           <div class="mk-dialog-body">
             <div class="field-group"><label for="m-name">Nom du modèle *</label>
               <input id="m-name" type="text" name="name" maxlength="100" required autofocus placeholder="Ex. Lettre d'information de mars" data-mk-required-message="Le nom du modèle est obligatoire."></div>
+            <%- include("partials/site-field", { id: "m-site" }) %>
             <div class="field-group"><label for="m-starter">Modèle de départ</label>
               <select id="m-starter" name="starter">
             <% starterGroups.forEach((g) => { %><optgroup label="<%= g.category.label %>"><% g.starters.forEach((s) => { %><option value="<%= s.key %>" <%= s.key === "newsletter" ? "selected" : "" %>><%= s.label %></option><% }) %></optgroup><% }) %>

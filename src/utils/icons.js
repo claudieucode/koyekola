@@ -145,6 +145,7 @@ const ICONS = {
   mail: { body: '<rect x="3" y="5" width="18" height="14" rx="2"></rect><polyline points="3 7 12 13 21 7"></polyline>' },
   send: { body: '<line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>' },
   layout: { body: '<rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="9" x2="9" y2="21"></line>' },
+  keyboard: { body: '<rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.01"></path><path d="M10 8h.01"></path><path d="M14 8h.01"></path><path d="M18 8h.01"></path><path d="M8 12h.01"></path><path d="M12 12h.01"></path><path d="M16 12h.01"></path><path d="M7 16h10"></path>' },
   zap: { body: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>' },
   activity: { body: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>' },
   shield: { body: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><polyline points="9 12 11 14 15 10"></polyline>' },
@@ -156,6 +157,12 @@ const ICONS = {
   help: { body: '<circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"></path><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"></circle>' },
   logout: { body: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>' },
   plus: { body: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>' },
+  // IA Kolakisa : bouton de la barre et outils d'annotation
+  sparkles: { body: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"></path>' },
+  eraser: { body: '<path d="M20 20H9l-5.3-5.3a1.5 1.5 0 0 1 0-2.1l8.9-8.9a1.5 1.5 0 0 1 2.1 0l5.3 5.3a1.5 1.5 0 0 1 0 2.1L12 20"></path><line x1="8" y1="9" x2="15" y2="16"></line>' },
+  annotArrow: { body: '<line x1="5" y1="19" x2="19" y2="5"></line><polyline points="9 5 19 5 19 15"></polyline>' },
+  annotCircle: { body: '<ellipse cx="12" cy="12" rx="9" ry="7"></ellipse>' },
+  annotRect: { body: '<rect x="3" y="5" width="18" height="14" rx="1"></rect>' },
   minus: { body: '<line x1="5" y1="12" x2="19" y2="12"></line>' },
   filter: { body: '<polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"></polygon>' },
   // Éditeur graphique des scénarios (canevas d'automatisation, src/editor/automation-flow.js)
