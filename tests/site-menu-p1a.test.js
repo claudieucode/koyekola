@@ -229,6 +229,6 @@ describe("7 — site principal et régressions", () => {
     assert.ok(fs.existsSync(dir)); assert.ok(last, "migrations lues");
     const root = path.join(__dirname, "..");
     const all = [dir, path.join(root, "src", "migrations"), path.join(root, "migrations")].filter((d) => fs.existsSync(d)).flatMap((d) => fs.readdirSync(d)).filter((f) => /^\d+/.test(f)).map((f) => parseInt(f, 10));
-    assert.ok(Math.max(...all) <= 75, `dernière migration : ${Math.max(...all)}`); // 75 = R6 lot 1 (contenus par site) ; 72, 73 et 74 sont attribuées à R2, R3 et R5
+    assert.ok(Math.max(...all) <= 79, `dernière migration : ${Math.max(...all)}`); // 79 = index des médias par site (lot 7C) ; 75 = R6 lot 1 (contenus par site) ; 72, 73 et 74 sont attribuées à R2, R3 et R5
   });
 });
