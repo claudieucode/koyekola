@@ -319,7 +319,7 @@ function submitForm(ctx, formId, input = {}) {
   if (withheld && contact.status === "unsubscribed" && !form.doubleOptin) {
     ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
     emitSubmitted(ctx, form, contact, { pending: false, page: input.page, withheld });
-    return { ok: true, contact: getContact(ctx, contact.id), sms: null };
+    return { ok: true, contact: getContact(ctx, contact.id), sms: null, withheld };
   }
   if (upload) storeUpload(ctx, form, contact.id, upload);
   // Double confirmation : rien n'est accordé maintenant ; un lien est envoyé (par l'appelant, qui connaît l'adresse du site)
@@ -332,20 +332,20 @@ function submitForm(ctx, formId, input = {}) {
     ctx.db.prepare("DELETE FROM mk_pending_confirmations WHERE contact_id = ? AND form_id = ? AND confirmed_at IS NULL").run(contact.id, formId);
     ctx.db
       .prepare("INSERT INTO mk_pending_confirmations (organization_id, form_id, contact_id, token_hash, consent_text, ip, payload, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, formId, contact.id, tokenHash(token), form.consentText, truncateIp(input.ip), JSON.stringify({ properties, ...(sms ? { sms } : {}) }), now + CONFIRM_TTL_MS, now);
+      .run(ctx.organizationId, formId, contact.id, tokenHash(token), form.consentText, truncateIp(input.ip), JSON.stringify({ properties, ...(sms ? { sms } : {}), ...(withheld ? { withheld: true } : {}) }), now + CONFIRM_TTL_MS, now);
     ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
     audit(ctx, "form.pending_confirmation", "form", formId, {});
     emitSubmitted(ctx, form, contact, { pending: true, page: input.page, withheld });
-    return { ok: true, pending: true, token, email: contact.email, contact: getContact(ctx, contact.id) };
+    return { ok: true, pending: true, token, email: contact.email, contact: getContact(ctx, contact.id), withheld };
   }
   const consent = recordConsent(ctx, contact.id, { source: "form", textShown: form.consentText, ip: input.ip, formId, siteId: form.siteId });
   if (!consent.ok) return { ok: false, reason: consent.reason };
-  applyFormExtras(ctx, form, contact.id, properties);
-  const smsResult = sms ? applySmsConsent(ctx, form, contact.id, sms, input.ip) : null;
+  applyFormExtras(ctx, form, contact.id, properties, { withheld });
+  const smsResult = sms ? applySmsConsent(ctx, form, contact.id, sms, input.ip, { withheld }) : null;
   ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
   emitSubmitted(ctx, form, contact, { pending: false, page: input.page, withheld });
   // `contact` date d'AVANT recordConsent (qui vient de faire passer son statut à « subscribed ») : on renvoie l'état à jour, pas l'instantané périmé
-  return { ok: true, contact: getContact(ctx, contact.id), sms: smsResult };
+  return { ok: true, contact: getContact(ctx, contact.id), sms: smsResult, withheld };
 }
 
 // Événement « formulaire envoyé » (déclencheur de scénario, journal du contact) : formulaire, page d'origine, confirmation
@@ -385,9 +385,16 @@ function formFile(ctx, id) {
 
 // Accord SMS donné dans le formulaire : enregistré avec SA preuve (texte de la case + numéro + IP tronquée + formulaire).
 // Jamais bloquant pour l'inscription e-mail : un numéro bloqué (STOP) reste simplement non joignable par SMS.
-function applySmsConsent(ctx, form, contactId, sms, ip) {
+function applySmsConsent(ctx, form, contactId, sms, ip, { withheld = false, confirmed = false } = {}) {
   try {
-    return recordSmsConsent(ctx, contactId, { phone: sms.phone, source: "form", textShown: sms.text, ip, formId: form.id });
+    // R7 lot 3 : pour un contact d'une autre origine (`withheld`) — un accord SMS donné depuis ce site ne remplace JAMAIS un numéro déjà enregistré, et ne réabonne pas un contact qui
+    // a retiré son accord SMS (sauf après double confirmation par la personne). Réponse inchangée pour l'appelant (rien ne trahit l'état de la fiche).
+    if (withheld) {
+      const c = getContact(ctx, contactId);
+      if (c && c.sms_phone && c.sms_phone !== sms.phone) return { ok: false, reason: "withheld" };
+      if (c && c.sms_status === "unsubscribed" && !confirmed) return { ok: false, reason: "withheld" };
+    }
+    return recordSmsConsent(ctx, contactId, { phone: sms.phone, source: "form", textShown: sms.text, ip, formId: form.id, siteId: form.siteId });
   } catch (error) {
     if (!(error instanceof MarketingError)) throw error;
     return { ok: false, reason: error.code };
@@ -395,7 +402,8 @@ function applySmsConsent(ctx, form, contactId, sms, ip) {
 }
 
 // Liste, propriétés et étiquettes du formulaire : appliquées à l'inscription (ou à la confirmation, en double opt-in)
-function applyFormExtras(ctx, form, contactId, properties) {
+// R7 lot 3 : pour un contact d'une autre origine (`withheld`), ni propriétés ni étiquettes ne sont écrites (seul l'abonnement à la liste du formulaire, acte explicite de la personne, est conservé)
+function applyFormExtras(ctx, form, contactId, properties, { withheld = false } = {}) {
   const contact = { id: contactId };
   if (form.listId) {
     try {
@@ -405,6 +413,7 @@ function applyFormExtras(ctx, form, contactId, properties) {
       console.error(`[KOLAKISA] Formulaire ${form.id} : contact non ajouté à la liste ${form.listId} :`, error.message);
     }
   }
+  if (withheld) return;
   if (Object.keys(properties).length) setContactProperties(ctx, contact.id, properties, { skipEmpty: true });
   for (const tag of form.tags) tagContact(ctx, contact.id, tag);
 }
@@ -438,9 +447,9 @@ function confirmSubscription(ctx, token, { now = Date.now() } = {}) {
   if (!consent.ok) return { ok: false, reason: consent.reason };
   let payload = {};
   try { payload = JSON.parse(pending.payload) || {}; } catch { payload = {}; }
-  applyFormExtras(ctx, form, pending.contact_id, payload.properties || {});
+  applyFormExtras(ctx, form, pending.contact_id, payload.properties || {}, { withheld: Boolean(payload.withheld) });
   // Accord SMS donné au moment du formulaire : enregistré à la confirmation, avec le texte présenté à l'époque
-  if (payload.sms && payload.sms.phone && payload.sms.text) applySmsConsent(ctx, form, pending.contact_id, payload.sms, pending.ip);
+  if (payload.sms && payload.sms.phone && payload.sms.text) applySmsConsent(ctx, form, pending.contact_id, payload.sms, pending.ip, { withheld: Boolean(payload.withheld), confirmed: true });
   audit(ctx, "form.confirmed", "form", form.id, {});
   return { ok: true, form };
 }

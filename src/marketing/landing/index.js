@@ -97,6 +97,11 @@ function saveSettings(ctx, id, input = {}) {
     formId = Number(input.formId);
     const form = ctx.db.prepare("SELECT id FROM mk_forms WHERE id = ? AND organization_id = ?").get(formId, ctx.organizationId);
     if (!form) throw bad("Formulaire d'inscription introuvable.");
+    // R7 lot 3 : jamais le formulaire d'un autre site (le site principal compte comme un site) ; un formulaire déjà lié (historique) peut rester tel quel
+    if (formId !== before.form_id) {
+      const own = ctx.db.prepare("SELECT site_id FROM mk_forms WHERE id = ?").get(formId);
+      if ((own.site_id ?? null) !== (before.site_id ?? null)) throw bad("Ce formulaire appartient à un autre site : choisissez un formulaire du même site que la page (aucun partage entre sites).");
+    }
   }
   const tags = [...new Set((Array.isArray(input.tags) ? input.tags : String(input.tags || "").split(",")).map((t) => line(t, 64)).filter(Boolean))];
   if (tags.length > MAX_TAGS) throw bad(`${MAX_TAGS} étiquettes au plus.`);
@@ -127,16 +132,18 @@ function preflight(ctx, page) {
   const errors = [];
   if (!page.sections.length) errors.push("La page ne contient aucune section.");
   if (page.sections.some((s) => s.type === "form")) {
-    const form = page.form_id ? ctx.db.prepare("SELECT status, name FROM mk_forms WHERE id = ? AND organization_id = ?").get(page.form_id, ctx.organizationId) : null;
-    if (!form) errors.push("La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.");
+    const form = page.form_id ? ctx.db.prepare("SELECT status, name, site_id FROM mk_forms WHERE id = ? AND organization_id = ?").get(page.form_id, ctx.organizationId) : null;
+    if (form && (form.site_id ?? null) !== (page.site_id ?? null)) errors.push(`Le formulaire « ${form.name} » appartient à un autre site : choisissez un formulaire du même site que la page (aucun partage entre sites).`);
+    else if (!form) errors.push("La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.");
     else if (form.status !== "published") errors.push(`Le formulaire « ${form.name} » n'est pas publié : publiez-le d'abord (Audience → Formulaires d'inscription).`);
   }
   for (const s of page.sections) if (s.type === "course" && !getCourse(ctx, s.courseId)) errors.push("Une section « formation » vise une formation qui n'est plus publiée.");
   // Widgets « Formulaire » : leur formulaire doit exister et être publié
   for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
     if (n.type !== "signupform" || n.hidden) return;
-    const f = ctx.db.prepare("SELECT status, name FROM mk_forms WHERE id = ? AND organization_id = ?").get(Number(n.props && n.props.formId), ctx.organizationId);
-    if (!f) errors.push("Un widget « Formulaire » vise un formulaire supprimé : choisissez-en un autre.");
+    const f = ctx.db.prepare("SELECT status, name, site_id FROM mk_forms WHERE id = ? AND organization_id = ?").get(Number(n.props && n.props.formId), ctx.organizationId);
+    if (f && (f.site_id ?? null) !== (page.site_id ?? null)) errors.push(`Le formulaire « ${f.name} » appartient à un autre site : choisissez un formulaire du même site que la page (aucun partage entre sites).`);
+    else if (!f) errors.push("Un widget « Formulaire » vise un formulaire supprimé : choisissez-en un autre.");
     else if (f.status !== "published") errors.push(`Le formulaire « ${f.name} » n'est pas publié : publiez-le d'abord (Audience → Formulaires d'inscription).`);
   });
   // Widgets personnalisés incomplets (ex. un média sans image) : le brouillon s'enregistre, mais la page ne peut pas être publiée ainsi
@@ -236,7 +243,9 @@ function dynamicProps(ctx, n, visitor, page) {
     const forms = require("../forms");
     let f = null;
     try { f = forms.getForm(ctx, p.formId); } catch { f = null; }
-    const live = f && f.status === "published" ? f : null;
+    // R7 lot 3 : le rendu ne contourne pas la règle — le formulaire d'un AUTRE site n'est jamais affiché dans cette page (même si une donnée historique le référence)
+    const sameSite = !page || !f || (f.siteId ?? null) === (page.site_id ?? null);
+    const live = f && f.status === "published" && sameSite ? f : null;
     return { ...p, formName: f ? f.name : "", form: live, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: live ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, live) : [] };
   }
   // Boutons de partage : adresse publique de la page (https seulement : un partage vers une adresse locale n'aurait aucun sens)

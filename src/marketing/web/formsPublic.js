@@ -116,9 +116,9 @@ module.exports = ({ db }) => {
         return fail(400, message);
       }
       // Visiteur suivi (accord donné) : l'envoi rejoint son parcours, ses visites sont reliées au contact
-      if (result.contact && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, req.mkForms.organizationId, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: page, formName: form.name });
+      if (result.contact && !result.withheld && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, req.mkForms.organizationId, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: page, formName: form.name });
       // Palier 19 : le parcours déjà suivi par ce visiteur rejoint son contact (événements datés de leur vrai moment)
-      if (result.contact && consentedVisitor(req)) { try { require("../funnels/events").replayVisitor({ db, organizationId: req.mkForms.organizationId, bus: req.mkForms.bus, userId: null, audit: false }, consentedVisitor(req), result.contact.id); } catch (error) { console.error("[KOLAKISA] Parcours du visiteur :", error.message); } }
+      if (result.contact && !result.withheld && consentedVisitor(req)) { try { require("../funnels/events").replayVisitor({ db, organizationId: req.mkForms.organizationId, bus: req.mkForms.bus, userId: null, audit: false }, consentedVisitor(req), result.contact.id); } catch (error) { console.error("[KOLAKISA] Parcours du visiteur :", error.message); } }
       if (result.pending) {
         // Double confirmation : l'adresse publique du site (SITE_URL) sert au lien ; sinon celle de la requête
         const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");

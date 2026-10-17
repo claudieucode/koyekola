@@ -39,13 +39,16 @@ function toE164(ctx, raw) {
 }
 
 // phone : le numéro qui donne son accord (sinon celui de la fiche du contact)
-function recordSmsConsent(ctx, contactId, { phone, source, textShown, ip, formId = null } = {}) {
+function recordSmsConsent(ctx, contactId, { phone, source, textShown, ip, formId = null, siteId = null } = {}) {
   checkCtx(ctx);
   checkSource(source);
   const proof = cleanText(textShown, { max: 1000, field: "textShown" });
   if (proof.length < 3) throw new MarketingError("proof_required", "Une preuve est obligatoire : le texte exact présenté à la personne.");
   if (formId !== null && !Number.isInteger(formId)) throw new MarketingError("invalid_field", "formId doit être un entier.");
   const contact = requireContact(ctx, contactId);
+  // R7 lot 3 : site où l'accord SMS a été collecté (preuve), quand il est connu. Déterminé par le SERVEUR (site du formulaire, ou site imposé à l'accès limité) ; vérifié comme site de
+  // l'organisation, sinon NULL (inconnu / site principal). Les preuves existantes gardent NULL. La liste STOP reste commune à l'organisation (aucun site dans mk_sms_suppressions).
+  const collectedAt = Number.isInteger(siteId) && ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId) ? siteId : null;
   const e164 = toE164(ctx, phone !== undefined && phone !== null && phone !== "" ? phone : contact.phone);
   if (isSuppressedPhone(ctx, e164)) return { ok: false, reason: "suppressed" };
   if (contact.sms_status === "unsubscribed" && !PERSON_SOURCES.has(source) && !SMS_PERSON_SOURCES.has(source)) return { ok: false, reason: "unsubscribed" };
@@ -53,8 +56,8 @@ function recordSmsConsent(ctx, contactId, { phone, source, textShown, ip, formId
 
   return transaction(ctx.db, () => {
     const info = ctx.db
-      .prepare("INSERT INTO mk_consents (organization_id, contact_id, purpose, action, source, text_shown, ip, form_id, channel_address) VALUES (?, ?, 'sms', 'granted', ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, contactId, source, proof, truncateIp(ip), formId, e164);
+      .prepare("INSERT INTO mk_consents (organization_id, contact_id, purpose, action, source, text_shown, ip, form_id, channel_address, site_id) VALUES (?, ?, 'sms', 'granted', ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, contactId, source, proof, truncateIp(ip), formId, e164, collectedAt);
     ctx.db.prepare("UPDATE mk_contacts SET sms_status = 'subscribed', sms_phone = ?, sms_unsubscribed_at = NULL, updated_at = ? WHERE id = ? AND organization_id = ?")
       .run(e164, now(), contactId, ctx.organizationId);
     emit(ctx, "contact.sms_subscribed", { contact, source: "marketing", idempotencyKey: `contact.sms_subscribed:${contactId}:${info.lastInsertRowid}`, metadata: { consentSource: source } });

@@ -97,10 +97,31 @@ function assertComponentsUsable(ctx, sections, siteId) {
     if (c && c.site_id !== null && c.site_id !== (siteId ?? null)) throw bad(`Le composant « ${c.name} » appartient à un autre site : il ne peut pas être utilisé dans cette page.`);
   }
 }
+// Formulaires par site (R7 lot 3, décision du 17/10/2026) : une page ne référence QUE un formulaire de SON site (le site principal compte comme un site : NULL = NULL), aucun partage
+// implicite entre sites. Références comptées : le formulaire de la page (réglages) et chaque widget « Formulaire » du contenu. Vérifié côté serveur à l'enregistrement, à la publication,
+// au déplacement, à la copie et à la création depuis un gabarit — jamais seulement par la liste proposée à l'éditeur. `tolerated` : références déjà présentes (données historiques) qu'un
+// enregistrement ordinaire ne fait que CONSERVER ; elles sont refusées à la publication, au déplacement et à la copie.
+function formIdsOf(sections, pageFormId) {
+  const ids = new Set();
+  if (Number.isInteger(pageFormId)) ids.add(pageFormId);
+  const nodes = require("./nodes");
+  for (const s of sections || []) if (s && s.type === "layout") nodes.walk(s.children, (n) => { if (n && n.type === "signupform" && n.props) { const id = Number(n.props.formId); if (Number.isInteger(id)) ids.add(id); } });
+  return ids;
+}
+function assertFormsUsable(ctx, sections, pageFormId, siteId, { tolerated = new Set() } = {}) {
+  for (const id of formIdsOf(sections, pageFormId)) {
+    if (tolerated.has(id)) continue;
+    const f = ctx.db.prepare("SELECT site_id, name FROM mk_forms WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
+    if (f && (f.site_id ?? null) !== (siteId ?? null)) throw bad(`Le formulaire « ${f.name} » appartient à un autre site : choisissez un formulaire du même site que la page (aucun partage entre sites).`);
+  }
+}
 function normalizeContent(ctx, page, input = {}) {
   const raw = (Array.isArray(input.sections) ? input.sections : []).map((s) => (s && typeof s === "object" && s.id === undefined ? { ...s, id: newSectionId() } : s));
   const normalized = normalizeSections(ctx, raw);
   assertComponentsUsable(ctx, normalized, page.site_id);
+  // Seulement pour une VRAIE page (un modèle de page enregistré n'a pas de site : le contrôle a lieu quand il est utilisé pour créer une page)
+  // Composants et modèles n'ont pas de formulaire de page (`form_id` absent) : leur contrôle a lieu quand ils sont placés dans une page
+  if (page.working && page.published && "form_id" in page) assertFormsUsable(ctx, normalized, page.form_id, page.site_id, { tolerated: formIdsOf([...page.working.sections, ...page.published.sections], page.form_id) });
   return {
     sections: normalized,
     theme: normalizeTheme(input.theme),
@@ -289,6 +310,7 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null, 
   if (fromTemplate) {
     const sections = normalizeSections(ctx, fromTemplate.map((s) => ({ ...s, id: newSectionId() })));
     checkWidgetRights(ctx, [], sections);
+    try { assertFormsUsable(ctx, sections, null, siteId); } catch (e) { ctx.db.prepare("DELETE FROM mk_landing_pages WHERE id = ?").run(page.id); throw e; } // gabarit d'un autre site : la page créée est annulée
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
     if (mine && mine.content.theme) ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(normalizeTheme(mine.content.theme)), page.id);
     audit(ctx, "page.created_from_template", "landing", page.id, { template });
@@ -345,6 +367,7 @@ function duplicatePage(ctx, id, { siteId } = {}) {
   const name = uniqueName(ctx, "mk_landing_pages", `${page.name} (copie)`);
   const c = page.working;
   const sections = c.sections.map((s) => (s.id ? { ...s, id: newSectionId() } : s));
+  assertFormsUsable(ctx, sections, page.form_id, target ?? null); // une copie vers un autre site ne peut pas emporter le formulaire de l'ancien
   const newId = Number(ctx.db.prepare(`INSERT INTO mk_landing_pages (organization_id, name, slug, title, description, sections, theme, form_id, tags, indexable, created_by, kind, site_id, seo)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`)
     .run(ctx.organizationId, name, landing.freeSlug(ctx, landing.slugify(name)), c.title, c.description, JSON.stringify(sections), JSON.stringify(c.theme), page.form_id, JSON.stringify(page.tags), ctx.userId ?? null, page.kind, target ?? null, JSON.stringify(c.seo || {})).lastInsertRowid);
@@ -576,6 +599,8 @@ function movePage(ctx, pageId, siteId) {
   // Les composants propres à l'ancien site ne suivent pas la page : déplacer d'abord, ou retirer ces composants
   assertComponentsUsable(ctx, page.working.sections, siteId);
   assertComponentsUsable(ctx, page.published.sections, siteId);
+  // Un formulaire propre à l'ancien site ne suit pas la page : retirer le formulaire (ou en choisir un du nouveau site) avant de la déplacer ; rien n'est modifié en silence
+  if ((page.site_id ?? null) !== (siteId ?? null)) { assertFormsUsable(ctx, page.working.sections, page.form_id, siteId); assertFormsUsable(ctx, page.published.sections, page.form_id, siteId); }
   if ((page.site_id ?? null) === (siteId ?? null)) return;
   // Une page utilisée par un tunnel ne change pas de site en silence : le tunnel doit d'abord s'en détacher
   const funnel = ctx.db.prepare("SELECT f.name FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id WHERE s.page_id = ? AND f.site_id IS NOT ? LIMIT 1").get(pageId, siteId ?? null);
