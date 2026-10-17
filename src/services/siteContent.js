@@ -150,6 +150,48 @@ const siteOfComment = (db, commentId) => {
   return c && c.content_type === "post" ? siteOf(db, "post", c.content_id) : undefined;
 };
 
+
+// ---------- Contenu NOUVEAU créé dans un site (lot 2) ----------
+// Le site d'un contenu qu'on vient de créer : celui de l'accès limité (imposé par le serveur), ou le site choisi par l'équipe (?site=). Aucun site : site principal (rien à écrire).
+// Autorisé à un accès limité UNIQUEMENT pour son propre site (contrairement à assign, réservé à l'équipe : déplacer un contenu existant).
+function adopt(ctx, { type, id } = {}) {
+  const db = ctx.db;
+  if (!TYPES[type]) throw new MarketingError("invalid_field", "Type de contenu inconnu.");
+  const target = Number.isInteger(ctx.siteScope) ? ctx.siteScope : Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : null;
+  if (target === null) return { type, id, siteId: null };
+  if (!db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL").get(target, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+  if (siteOf(db, type, id) === undefined) throw new MarketingError("not_found", "Contenu introuvable.");
+  db.prepare("INSERT OR IGNORE INTO mk_content_sites (content_type, content_id, organization_id, site_id, scope, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(type, id, ctx.organizationId, target, scopeOf(db, type, id), ctx.userId ?? null);
+  audit(ctx, "content.site_assigned", id, { type, site_id: target, from: null, created: true });
+  return { type, id, siteId: target };
+}
+
+// ---------- Portée des listes et des opérations par identifiant (lot 2) ----------
+// Deux niveaux, volontairement distincts :
+//  - RESTRICTION (ctx.siteScope, accès limité à un site) : listes ET opérations par identifiant ne voient que ce site ;
+//  - FILTRE D'AFFICHAGE (ctx.siteFilter, équipe qui choisit un site) : seules les LISTES sont filtrées ; l'équipe garde ses droits sur tous les contenus (comportement historique).
+const listSite = (ctx) => (Number.isInteger(ctx.siteScope) ? ctx.siteScope : Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : ctx.siteFilter === "principal" ? 0 : null);
+// Fragment SQL « le contenu est dans la portée » pour une liste ; null = aucune restriction. idExpr : expression SQL de l'identifiant (ex. « p.id »)
+function scopePredicate(ctx, type, idExpr) {
+  const site = listSite(ctx);
+  if (site === null) return null;
+  const base = `FROM mk_content_sites cs WHERE cs.content_type = '${type}' AND cs.content_id = ${idExpr}`;
+  return site === 0 ? { sql: `NOT EXISTS (SELECT 1 ${base})`, params: [] } : { sql: `EXISTS (SELECT 1 ${base} AND cs.site_id = ?)`, params: [site] };
+}
+// Commentaires : le site est celui de l'article commenté ; les commentaires d'un autre type de contenu ne sont pas « d'un site » (visibles seulement hors restriction)
+function commentPredicate(ctx, alias = "c") {
+  const site = listSite(ctx);
+  if (site === null) return null;
+  const base = `FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = ${alias}.content_id`;
+  return site === 0 ? { sql: `(${alias}.content_type <> 'post' OR NOT EXISTS (SELECT 1 ${base}))`, params: [] } : { sql: `(${alias}.content_type = 'post' AND EXISTS (SELECT 1 ${base} AND cs.site_id = ?))`, params: [site] };
+}
+// Opération par identifiant : refusée seulement pour un accès limité à un site hors de son site (l'équipe garde tout)
+const restricted = (ctx) => Number.isInteger(ctx.siteScope);
+// Site « courant » des écrans de contenu (pour conserver ?site= dans les redirections et les formulaires) : accès limité ou site choisi par l'équipe ; sinon null
+const siteParam = (ctx) => (Number.isInteger(ctx.siteScope) && ctx.siteScope > 0 ? ctx.siteScope : Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : null);
+const allowedContent = (ctx, type, id) => !restricted(ctx) || siteOf(ctx.db, type, id) === ctx.siteScope;
+const allowedComment = (ctx, commentId) => !restricted(ctx) || siteOfComment(ctx.db, commentId) === ctx.siteScope;
+
 // ---------- Inventaire (lecture seule, nombres uniquement) ----------
 function inventory(db) {
   const n = (sql, ...a) => db.prepare(sql).get(...a).n;
@@ -167,4 +209,4 @@ function inventory(db) {
   return out;
 }
 
-module.exports = { TYPES, ensureCoreTriggers, siteOf, assign, clear, listPosts, listTerms, listComments, siteOfComment, requirePostInScope, requireTermInScope, inventory, visibleSql };
+module.exports = { TYPES, ensureCoreTriggers, siteOf, assign, clear, adopt, siteParam, scopePredicate, commentPredicate, restricted, allowedContent, allowedComment, listPosts, listTerms, listComments, siteOfComment, requirePostInScope, requireTermInScope, inventory, visibleSql };

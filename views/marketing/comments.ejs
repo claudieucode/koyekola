@@ -28,7 +28,7 @@
       <% }) %>
     </nav>
 
-    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= tabHref(sub) %>" role="search" aria-label="Rechercher et filtrer les commentaires">
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= tabHref(sub) %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>" role="search" aria-label="Rechercher et filtrer les commentaires">
       <label class="mk-search"><span class="sr-only">Rechercher (texte, auteur, contenu<%= canEmail ? ", e-mail" : "" %>)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher un commentaire"></label>
       <% if (contents.length) { %><label class="sr-only" for="cm-contenu">Contenu</label>
       <select id="cm-contenu" name="contenu"><option value="">Tous les contenus</option><% contents.forEach((c) => { %><option value="<%= c.value %>"<%= c.value === f.contenu ? " selected" : "" %>><%= c.label %></option><% }) %></select><% } %>
@@ -45,7 +45,7 @@
         <p><%= filtered ? "Aucun commentaire ne correspond à ces critères." : status === "" ? "Les commentaires laissés sous vos articles apparaîtront ici." : "" %></p></div>
     <% } else { %>
       <% if (canModerate) { %>
-      <form id="cm-bulk" class="mk-cms-bulk" action="<%= BASE %>/actions" method="post" data-cms-bulk data-cms-noun="commentaire" data-cms-delete-text="Cette action est irréversible.">
+      <form id="cm-bulk" class="mk-cms-bulk" action="<%= BASE %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>/actions" method="post" data-cms-bulk data-cms-noun="commentaire" data-cms-delete-text="Cette action est irréversible.">
         <input type="hidden" name="retour" value="<%= here %>">
         <label class="sr-only" for="cm-bulk-action">Action groupée</label>
         <select id="cm-bulk-action" name="action" disabled><option value="">Action groupée</option><% bulk.forEach(([k, name]) => { %><option value="<%= k %>"><%= name %></option><% }) %></select>

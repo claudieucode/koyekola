@@ -20,7 +20,7 @@
       <a class="mk-tab" href="<%= PATHS.tag %>"<%- key === "tag" ? ' aria-current="page"' : "" %>>Étiquettes</a>
     </nav>
 
-    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= PATHS[key] %>" role="search" aria-label="Rechercher parmi les <%= def.plural.toLowerCase() %>">
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= PATHS[key] %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>" role="search" aria-label="Rechercher parmi les <%= def.plural.toLowerCase() %>">
       <label class="mk-search"><span class="sr-only">Rechercher (nom, adresse, description)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une <%= one %>"></label>
       <% if (hier) { %><label class="sr-only" for="tx-f-parent">Catégorie parente</label>
       <select id="tx-f-parent" name="parent"><option value="">Tous les niveaux</option><option value="0"<%= f.parent === "0" ? " selected" : "" %>>Premier niveau seulement</option><% options.forEach((o) => { %><option value="<%= o.id %>"<%= String(o.id) === f.parent ? " selected" : "" %>>Sous « <%= o.name %> »</option><% }) %></select><% } %>
@@ -36,7 +36,7 @@
         <% if (canWrite && !filtered) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-tx-new>Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></button></div><% } %></div>
     <% } else { %>
       <% if (canDelete) { %>
-      <form id="tx-bulk" class="mk-cms-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-cms-bulk data-cms-delete-text="Aucun article n'est supprimé ; les termes utilisés sont refusés." data-cms-noun="<%= one %>">
+      <form id="tx-bulk" class="mk-cms-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-cms-bulk data-cms-delete-text="Aucun article n'est supprimé ; les termes utilisés sont refusés." data-cms-noun="<%= one %><%- typeof mkSiteField === "string" ? mkSiteField : "" %>">
         <input type="hidden" name="taxonomy" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>">
         <label class="sr-only" for="tx-bulk-action">Action groupée</label><select id="tx-bulk-action" name="action" disabled><option value="">Action groupée</option><option value="supprimer">Supprimer</option></select>
         <button type="submit" class="btn btn-outline btn-sm" disabled>Appliquer</button><span class="mk-sub" data-cms-bulk-count aria-live="polite"></span>
@@ -76,7 +76,7 @@
     <% if (canWrite || canDelete) { %>
       <%# Une seule fenêtre de saisie (création et modification), une de suppression, une de fusion : remplies par public/js/cms-taxonomy.js %>
       <dialog class="mk-dialog mk-modal" id="tx-form" aria-labelledby="tx-form-title">
-        <form method="post" action="/marketing/site-web/articles/termes" data-tx-form>
+        <form method="post" action="/marketing/site-web/articles/termes" data-tx-form><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
           <input type="hidden" name="taxonomy" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>">
           <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tx-form-title">Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></h2></div><button type="button" class="mk-dialog-close" data-tx-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
           <div class="mk-dialog-body">

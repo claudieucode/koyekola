@@ -165,9 +165,10 @@ const merge = (sourceId, targetId) => remove(sourceId, { reassignTo: targetId, k
 // ---------- Lecture ----------
 const SORTS = { nom: "t.name COLLATE NOCASE ASC", nom_desc: "t.name COLLATE NOCASE DESC", utilisation: "n DESC, t.name COLLATE NOCASE ASC", recent: "t.id DESC", ancien: "t.id ASC" };
 // Liste paginée (recherche par nom, adresse, description) avec le nombre d'utilisations CALCULÉ dans la base ; filtre parent (« 0 » = racines)
-function list({ taxonomy, q = "", sort = "nom", page = 1, perPage = 30, parentId = "", unused = false } = {}) {
+function list({ taxonomy, q = "", sort = "nom", page = 1, perPage = 30, parentId = "", unused = false, scope = null } = {}) {
   taxonomyOf(taxonomy);
   const where = ["t.taxonomy = ?"]; const args = [taxonomy];
+  if (scope) { where.push(scope.sql); args.push(...scope.params); } // portée de site (R6 lot 2)
   const needle = String(q || "").trim().slice(0, 80);
   if (needle) { const like = `%${needle.replace(/[\\%_]/g, (c) => `\\${c}`)}%`; where.push("(t.name LIKE ? ESCAPE '\\' OR t.slug LIKE ? ESCAPE '\\' OR t.description LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
   if (parentId === "0" || parentId === 0) where.push("t.parent_id IS NULL");
@@ -193,8 +194,8 @@ function withCounts(rows) {
   return rows.map((r) => ({ ...r, total: out.get(r.id).all, live: out.get(r.id).live }));
 }
 // Catégories en arbre (ordre de lecture : parent puis enfants, par nom) avec profondeur ; recherche : liste à plat des correspondances
-function tree(taxonomy = "category") {
-  const all = db.prepare("SELECT t.*, (SELECT COUNT(*) FROM taxonomy_relations r WHERE r.term_id = t.id) AS n FROM taxonomy_terms t WHERE t.taxonomy = ? ORDER BY t.name COLLATE NOCASE").all(taxonomy);
+function tree(taxonomy = "category", scope = null) {
+  const all = db.prepare(`SELECT t.*, (SELECT COUNT(*) FROM taxonomy_relations r WHERE r.term_id = t.id) AS n FROM taxonomy_terms t WHERE t.taxonomy = ?${scope ? " AND " + scope.sql : ""} ORDER BY t.name COLLATE NOCASE`).all(taxonomy, ...(scope ? scope.params : []));
   const kids = new Map();
   for (const t of all) kids.set(t.parent_id ?? 0, [...(kids.get(t.parent_id ?? 0) || []), t]);
   const out = [];

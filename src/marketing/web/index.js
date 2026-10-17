@@ -71,12 +71,31 @@ function createMarketingRouters({ db }) {
       const r = db.prepare("SELECT site_id FROM mk_media WHERE id = ?").get(Number(m[1]));
       return r ? { siteId: r.site_id } : { siteId: null, missing: true };
     }
+    // Contenus par site (R6 lot 2) : un article, un terme ou un commentaire relève du site de son rattachement (aucune ligne = site principal, donc fermé à un accès limité à un site) ;
+    // les écrans sans identifiant (listes, création, actions groupées) relèvent du site choisi (?site= ou champ « site »), validé comme pour les autres familles
+    const contentSite = (type, id) => { const s = require("../../services/siteContent").siteOf(db, type, id); return s === undefined ? { siteId: null, missing: true } : { siteId: s }; };
+    m = /^\/site-web\/articles\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) return contentSite("post", Number(m[1]));
+    m = /^\/site-web\/articles\/termes\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) return contentSite("term", Number(m[1]));
+    m = /^\/site-web\/commentaires\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) {
+      const c = db.prepare("SELECT content_type, content_id FROM blog_comments WHERE id = ?").get(Number(m[1]));
+      if (!c) return { siteId: null, missing: true };
+      return c.content_type === "post" ? contentSite("post", c.content_id) : { siteId: null };
+    }
+    if (/^\/site-web\/(?:articles|commentaires)(?:\/|$)/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
     if (/^\/site-web\/(?:mediatheque|medias)(?:\/|\.json$|$)/.test(p)) {
       const raw = req.query && req.query.site;
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
     }
     return null;
   };
+  // Site choisi (?site=) ; pour les écrans de contenu (articles, commentaires) un formulaire l'envoie aussi dans le champ « site » (R6 lot 2) : lu seulement pour ces écrans
+  const contentSiteRaw = (req) => (req.query.site !== undefined ? req.query.site : /^\/site-web\/(?:articles|commentaires)(?:\/|$)/.test(req.path) && req.body ? req.body.site : undefined);
   admin.use((req, res, next) => {
     const user = req.session.user;
     if (!user) return res.redirect(`/connexion?redirect=${encodeURIComponent(req.originalUrl)}`);
@@ -105,9 +124,11 @@ function createMarketingRouters({ db }) {
       role, can: allowed, perms, siteId, marketing, siteOnly: !membership,
       // Email Engine (palier 16) : accès limité à un site → siteScope impose ce site à tout le moteur (jamais lu dans l'adresse) ; équipe de l'organisation → simple filtre d'affichage
       ctx: { db, organizationId: orgId, userId: user.id, can: allowed, canOn: (target, permission) => siteContext.canOn(db, { userId: user.id, organizationId: orgId }, target, permission), bus: marketing.bus, settings: marketing.settings, tokenKey: process.env.ENCRYPTION_KEY, baseUrl: process.env.SITE_URL,
-        ...(membership ? { siteFilter: /^\d{1,12}$/.test(String(req.query.site ?? "")) ? Number(req.query.site) : req.query.site === "principal" ? "principal" : undefined } : { siteScope: Number.isInteger(siteId) ? siteId : -1 }) },
+        ...(membership ? { siteFilter: /^\d{1,12}$/.test(String(contentSiteRaw(req) ?? "")) ? Number(contentSiteRaw(req)) : req.query.site === "principal" ? "principal" : undefined } : { siteScope: Number.isInteger(siteId) ? siteId : -1 }) },
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
+    // Écrans de contenu d'un site (R6 lot 2) : le site courant est conservé dans les formulaires (champ caché « site »)
+    { const s = require("../../services/siteContent").siteParam(req.mk.ctx); res.locals.mkSiteField = s ? `<input type="hidden" name="site" value="${s}">` : ""; res.locals.mkSiteId = s; }
     // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
     if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
     res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence

@@ -5,7 +5,7 @@
       <div class="mk-callout"><span><strong>Rédaction réservée au compte créateur.</strong> L'éditeur d'articles du blog est réservé au compte créateur ; vous pouvez en revanche retrouver, publier, copier ou mettre à la corbeille les articles existants.</span></div>
       <p><a class="btn btn-outline btn-sm" href="<%= BASE %>">Voir les articles</a></p>
     <% } else { %>
-      <form class="mk-panel mk-ar-new" action="/marketing/site-web/articles" method="post">
+      <form class="mk-panel mk-ar-new" action="/marketing/site-web/articles" method="post"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
         <div class="field-group"><label for="ar-title">Titre de l'article *</label><input id="ar-title" type="text" name="title" maxlength="150" required autofocus placeholder="Comment réussir son référencement naturel"></div>
         <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Créer et ouvrir l’éditeur</button><a class="btn btn-ghost btn-sm" href="<%= BASE %>">Annuler</a></div>
       </form>

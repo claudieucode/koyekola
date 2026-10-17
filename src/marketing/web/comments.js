@@ -6,6 +6,7 @@ const express = require("express");
 const comments = require("../../services/comments");
 const { UserError } = require("../../utils/errors");
 const { need } = require("./kit");
+const siteContent = require("../../services/siteContent");
 
 const BASE = "/marketing/site-web/commentaires";
 const TABS = [["", "Tous", "all"], ["en-attente", "En attente", "pending"], ["approuves", "Approuvés", "approved"], ["indesirables", "Indésirables", "spam"], ["corbeille", "Corbeille", "trash"]];
@@ -16,7 +17,8 @@ const DONE = { approve: ["approuvé", "approuvés"], spam: ["marqué indésirabl
 module.exports = () => {
   const router = express.Router();
   const flash = (req, type, text, detail) => { req.session.mkFlash = { type, text, ...(detail ? { detail } : {}), noReopen: true }; };
-  const back = (req) => (/^\/marketing\/site-web\/commentaires(\/[a-z-]+)?(\?[^#\s]*)?$/.test(String(req.body.retour || "")) ? req.body.retour : BASE);
+  const withSite = (req, url) => { const s = siteContent.siteParam(req.mk.ctx); return s && !/[?&]site=/.test(url) ? `${url}${url.includes("?") ? "&" : "?"}site=${s}` : url; };
+  const back = (req) => withSite(req, /^\/marketing\/site-web\/commentaires(\/[a-z-]+)?(\?[^#\s]*)?$/.test(String(req.body.retour || "")) ? req.body.retour : BASE);
 
   // ----- Liste -----
   const show = (sub) => (req, res) => {
@@ -27,11 +29,12 @@ module.exports = () => {
       tri: Object.hasOwn(comments.SORTS, req.query.tri) ? req.query.tri : "recent",
     };
     const status = STATUS_OF[sub] || "";
-    const result = comments.list({ status: status || "", q: f.q, content: f.contenu, author: f.auteur, period: f.periode, sort: f.tri, page: req.query.page, includeEmail: can("comments.email") });
-    const counts = comments.counts(f.contenu);
+    const scope = siteContent.commentPredicate(req.mk.ctx, "c"); // portée de site : liste, effectifs et filtre « contenu » ne montrent que les commentaires des articles du site
+    const result = comments.list({ status: status || "", q: f.q, content: f.contenu, author: f.auteur, period: f.periode, sort: f.tri, page: req.query.page, includeEmail: can("comments.email"), scope });
+    const counts = comments.counts(f.contenu, scope);
     res.render("marketing/comments", {
       title: "Commentaires", active: sub ? `commentaires/${sub}` : "commentaires", sub, status, tabs: TABS, counts, f, result, rows: result.rows,
-      contents: comments.commentedContents(), focus: f.contenu ? comments.contentInfo(...f.contenu.split(":").map((v, i) => (i ? Number(v) : v))) : null,
+      contents: comments.commentedContents(100, siteContent.scopePredicate(req.mk.ctx, "post", "p.id")), focus: f.contenu && siteContent.allowedContent(req.mk.ctx, "post", Number(f.contenu.split(":")[1])) ? comments.contentInfo(...f.contenu.split(":").map((v, i) => (i ? Number(v) : v))) : null,
       canModerate: can("comments.moderate"), canDelete: can("comments.delete"), canEmail: can("comments.email"), cmsPagesJs: true, STATUS_LABELS: comments.STATUS_LABELS, BASE,
       cfg: comments.settings(),
     });
@@ -45,7 +48,7 @@ module.exports = () => {
     if (!spec || !req.mk.can(spec[1])) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
     try {
       if (!comments.uniqueIds(ids).length) throw new UserError("Sélectionnez au moins un commentaire.");
-      const r = comments.moderate(ids, spec[0], req.session.user.id);
+      const r = comments.moderate(ids, spec[0], req.session.user.id, (id) => siteContent.allowedComment(req.mk.ctx, id)); // hors portée = « introuvable », sans écriture
       const n = r.done.length, label = DONE[spec[0]][n > 1 ? 1 : 0];
       const detail = r.skipped.map((s) => `#${s.id} : ${s.why}`).join(" · ");
       if (n && !r.skipped.length) flash(req, "ok", `${n} commentaire${n > 1 ? "s" : ""} ${label}.`);
@@ -62,7 +65,7 @@ module.exports = () => {
 
   // ----- Droit à l'effacement : tous les commentaires d'un invité, par son adresse e-mail (définitif, confirmé, journalisé sans l'adresse) -----
   router.post("/site-web/commentaires/effacer-invite", need("comments.email"), (req, res, next) => {
-    if (!req.mk.can("comments.delete")) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    if (!req.mk.can("comments.delete") || siteContent.restricted(req.mk.ctx)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." }); // l'effacement d'un invité vaut pour TOUS les sites : équipe de l'organisation seulement
     try {
       if (req.body.confirm !== "1") throw new UserError("Cochez la confirmation : cette suppression est définitive.");
       const n = comments.purgeGuest(req.body.email);
@@ -78,6 +81,7 @@ module.exports = () => {
   // ----- Réponse d'un modérateur : publiée tout de suite sous son compte -----
   router.post("/site-web/commentaires/:id(\\d+)/repondre", need("comments.moderate"), (req, res, next) => {
     try {
+      if (!siteContent.allowedComment(req.mk.ctx, Number(req.params.id))) throw new UserError("Commentaire introuvable.");
       const actor = require("../../config/database").prepare("SELECT id, username, email, role FROM users WHERE id = ?").get(req.session.user.id);
       comments.reply(Number(req.params.id), actor, req.body.body, req.ip);
       flash(req, "ok", "Réponse publiée.");
