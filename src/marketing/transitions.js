@@ -61,6 +61,36 @@ function aiEligibility(db) {
   return out;
 }
 
+// Aperçu DÉTAILLÉ (lecture seule) : une ligne par site avec la décision et la raison, et le compte des motifs d'exclusion des membres. Mêmes critères que aiEligibility (testé : mêmes sites retenus).
+function aiEligibilityDetail(db) {
+  const system = systemRolesWith(AI.permission);
+  const systemKeys = new Set(require("../services/cmsAccess").SYSTEM_ROLES.map((r) => r.key));
+  const userActive = hasTable(db, "users")
+    ? (hasColumn(db, "users", "status") ? db.prepare("SELECT 1 FROM users WHERE id = ? AND (status IS NULL OR status = 'active')") : db.prepare("SELECT 1 FROM users WHERE id = ?"))
+    : null;
+  const isTeam = db.prepare("SELECT 1 FROM mk_org_members WHERE organization_id = ? AND user_id = ?");
+  const already = db.prepare("SELECT enabled FROM mk_site_modules WHERE site_id = ? AND module = ?");
+  return db.prepare("SELECT id, organization_id, name, status, deleted_at FROM mk_sites ORDER BY id").all().map((s) => {
+    const base = { siteId: s.id, organizationId: s.organization_id, name: s.name, people: 0, memberReasons: {} };
+    const row = already.get(s.id, AI.module);
+    if (s.deleted_at) return { ...base, decision: "exclu", reason: "site supprimé" };
+    if (s.status !== "active") return { ...base, decision: "exclu", reason: `site non actif (${s.status})` };
+    const members = db.prepare("SELECT user_id, role FROM mk_site_members WHERE site_id = ?").all(s.id);
+    if (!members.length) return { ...base, decision: "exclu", reason: "aucun membre" };
+    const why = {};
+    let people = 0;
+    for (const m of members) {
+      let motif = null;
+      if (isTeam.get(s.organization_id, m.user_id)) motif = "membre de l'équipe (non soumis à l'activation)";
+      else if (userActive && !userActive.get(m.user_id)) motif = "compte non actif";
+      else if (!(systemKeys.has(m.role) ? system.has(m.role) : customRoleGrants(db, s.organization_id, m.role, AI.permission))) motif = `rôle « ${m.role} » sans ${AI.permission}`;
+      if (motif) why[motif] = (why[motif] || 0) + 1; else people += 1;
+    }
+    if (!people) return { ...base, decision: "exclu", reason: "aucun membre avec accès réel au studio IA", memberReasons: why };
+    return { ...base, people, memberReasons: why, decision: "inclus", reason: `${people} personne(s) hors équipe, compte actif, ${AI.permission}`, alreadyRow: row ? (row.enabled ? "déjà activé" : "désactivé volontairement : ne sera pas réactivé") : null };
+  });
+}
+
 // Exécute la transition « ai » UNE fois. → { done: true, enabled: n } ou { done: false, reason }
 function runAiOnce(db, { log = console } = {}) {
   if (!hasTable(db, "schema_migrations") || !hasTable(db, "mk_site_modules") || !hasTable(db, "mk_sites")) return { done: false, reason: "schéma incomplet" };
@@ -78,4 +108,4 @@ function runAiOnce(db, { log = console } = {}) {
     return { done: true, enabled };
   } catch (error) { try { db.exec("ROLLBACK"); } catch { /* déjà annulé */ } throw error; }
 }
-module.exports = { SCOPE, AI, CRITERIA, aiEligibility, runAiOnce };
+module.exports = { SCOPE, AI, CRITERIA, aiEligibility, aiEligibilityDetail, runAiOnce };
