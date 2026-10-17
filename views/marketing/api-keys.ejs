@@ -18,13 +18,14 @@
       <div class="mk-table-wrap">
         <table class="mk-table mk-datatable">
           <caption class="sr-only">Clés d'API</caption>
-          <thead><tr><th scope="col">Nom</th><th scope="col">Clé</th><th scope="col">Portée</th><th scope="col">Dernière utilisation</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th scope="col">Nom</th><th scope="col">Clé</th><th scope="col">Droits</th><th scope="col">Périmètre</th><th scope="col">Dernière utilisation</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             <% keys.forEach((k) => { %>
               <tr>
                 <td data-label="Nom"><%= k.name %><% if (k.revoked_at) { %> <span class="mk-status mk-badge-danger">Révoquée</span><% } %></td>
                 <td data-label="Clé"><code><%= k.prefix %>…</code></td>
                 <td data-label="Portée"><span class="mk-status <%= k.scope === 'write' ? 'mk-status-warn' : '' %>"><%= k.scope === 'write' ? 'Lecture/écriture' : 'Lecture' %></span></td>
+                <td data-label="Périmètre"><%= k.reach === 'site' ? ('Site : ' + (k.site_name || ('n°' + k.site_id))) : 'Toute l\'organisation' %></td>
                 <td data-label="Dernière utilisation"><%= k.last_used_at ? mkh.fdate(k.last_used_at) : "Jamais utilisée" %></td>
                 <td data-label="Actions" class="mk-row-actions">
                   <% if (!k.revoked_at) { %>
@@ -70,6 +71,14 @@
               <option value="write">Lecture et écriture</option>
             </select>
             <p class="field-hint">« Lecture seule » suffit pour consulter les contacts ; « Lecture et écriture » permet aussi d'en créer et d'envoyer des événements.</p></div>
+          <% if (typeof sites !== "undefined" && sites.length) { %>
+          <div class="field-group"><label for="k-site">Périmètre</label>
+            <select id="k-site" name="site_id">
+              <option value="">Toute l'organisation</option>
+              <% sites.forEach((s) => { %><option value="<%= s.id %>">Un seul site : <%= s.name %></option><% }) %>
+            </select>
+            <p class="field-hint">Une clé limitée à un site ne voit que les contacts, listes et campagnes de ce site. Ce choix est définitif : pour en changer, créez une autre clé.</p></div>
+          <% } %>
         </div>
         <div class="mk-dialog-actions">
           <button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button>

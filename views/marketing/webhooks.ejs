@@ -16,13 +16,14 @@
       <div class="mk-table-wrap">
         <table class="mk-table mk-datatable">
           <caption class="sr-only">Webhooks</caption>
-          <thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">Événements</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">Événements</th><th scope="col">Périmètre</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
           <tbody>
             <% endpoints.forEach((e) => { %>
               <tr>
                 <td data-label="Nom"><a href="/marketing/webhooks/<%= e.id %>"><%= e.name %></a></td>
                 <td data-label="Adresse" class="mk-link-url"><%= e.url %></td>
                 <td data-label="Événements"><%= e.events.includes("*") ? "Tous" : `${e.events.length} événement${e.events.length > 1 ? "s" : ""}` %></td>
+                <td data-label="Périmètre"><%= e.reach === 'site' ? ('Site : ' + (e.siteName || ('n°' + e.siteId))) : 'Toute l\'organisation' %></td>
                 <td data-label="État"><span class="mk-status <%= e.enabled ? 'mk-status-ok' : '' %>"><%= e.enabled ? "Actif" : "En pause" %></span></td>
                 <td data-label="Actions" class="mk-row-actions"><a class="btn btn-outline btn-sm" href="/marketing/webhooks/<%= e.id %>">Détails</a></td>
               </tr>
@@ -45,6 +46,14 @@
           <div class="mk-dialog-body">
             <div class="field-group"><label for="w-name">Nom *</label><input id="w-name" type="text" name="name" maxlength="80" placeholder="Ex. Zapier, entrepôt de données…" required data-mk-required-message="Le nom du webhook est obligatoire."></div>
             <div class="field-group"><label for="w-url">Adresse (https://) *</label><input id="w-url" type="url" name="url" maxlength="2048" placeholder="https://exemple.fr/webhooks/koyekola" required data-mk-required-message="L'adresse qui recevra les notifications est obligatoire."></div>
+            <% if (typeof sites !== "undefined" && sites.length) { %>
+            <div class="field-group"><label for="w-site">Périmètre</label>
+              <select id="w-site" name="site_id">
+                <option value="">Toute l'organisation</option>
+                <% sites.forEach((s) => { %><option value="<%= s.id %>">Un seul site : <%= s.name %></option><% }) %>
+              </select>
+              <p class="field-hint">Un webhook limité à un site ne reçoit que les événements de ce site. Ce choix est définitif : pour en changer, créez un autre webhook.</p></div>
+            <% } %>
             <fieldset class="mk-fieldset">
               <legend>Événements à notifier</legend>
               <label class="checkbox-row mk-check-all"><input type="checkbox" name="events" value="*"> <span><strong>Tous les événements</strong>, y compris ceux ajoutés plus tard</span></label>

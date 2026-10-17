@@ -19,17 +19,20 @@ function recentDeliveries(db, organizationId, endpointId) {
     .all(organizationId, endpointId, DELIVERIES_LIMIT);
 }
 
+// Sites proposables pour limiter la portée (R2) : seulement pour l'équipe de l'organisation ; un accès limité à un site n'a pas le choix (portée imposée par le serveur)
+const sitesFor = (db, ctx) => (Number.isInteger(ctx.siteScope) ? [] : db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND status = 'active' AND deleted_at IS NULL ORDER BY name").all(ctx.organizationId));
+
 module.exports = ({ db }) => {
   const router = express.Router();
 
   router.get("/webhooks", need("webhooks.manage"), (req, res) => {
-    res.render("marketing/webhooks", { title: "Webhooks", active: "webhooks", endpoints: webhooks.listEndpoints(req.mk.ctx), events: webhooks.EVENTS });
+    res.render("marketing/webhooks", { title: "Webhooks", active: "webhooks", endpoints: webhooks.listEndpoints(req.mk.ctx), events: webhooks.EVENTS, sites: sitesFor(db, req.mk.ctx) });
   });
 
   router.post("/webhooks", need("webhooks.manage"), (req, res, next) => {
     try {
       const events = Array.isArray(req.body.events) ? req.body.events : req.body.events ? [req.body.events] : [];
-      const result = webhooks.createEndpoint(req.mk.ctx, { name: req.body.name, url: req.body.url, events, encryptionKey: process.env.ENCRYPTION_KEY });
+      const result = webhooks.createEndpoint(req.mk.ctx, { name: req.body.name, url: req.body.url, events, encryptionKey: process.env.ENCRYPTION_KEY, siteId: req.body.site_id ? Number(req.body.site_id) : null });
       req.session.mkNewWebhookSecret = result; // survit à la redirection ; retiré au premier GET (voir /webhooks/:id)
       res.redirect(`/marketing/webhooks/${result.id}`);
     } catch (error) {

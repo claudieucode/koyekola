@@ -56,7 +56,8 @@ describe("liste et lecture", () => {
   test("jamais le secret, même chiffré", () => {
     createEndpoint(A, { name: "E1", url: "https://exemple.fr/a", events: ["*"], encryptionKey: TEST_KEY });
     const [row] = listEndpoints(A);
-    assert.deepEqual(Object.keys(row).sort(), ["created_at", "enabled", "events", "id", "name", "updated_at", "url"].sort());
+    // R2 : portée de site ; toujours jamais le secret
+    assert.deepEqual(Object.keys(row).sort(), ["created_at", "enabled", "events", "id", "name", "reach", "siteId", "siteName", "updated_at", "url"].sort());
   });
   test("isolation : les points d'accès de l'autre organisation n'apparaissent jamais", () => {
     createEndpoint(B, { name: "Chez B", url: "https://exemple.fr/b", events: ["*"], encryptionKey: TEST_KEY });
