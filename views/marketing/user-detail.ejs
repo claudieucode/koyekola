@@ -28,11 +28,14 @@
 
       <section class="mk-ap-card" aria-labelledby="us-sites"><h2 id="us-sites">Accès par site</h2>
         <% if (!u.sites.length) { %><p class="field-hint">Aucun accès propre à un site.</p><% } else { %>
-        <ul class="mk-cms-list"><% u.sites.forEach((s) => { %><li><span><strong><%= s.site_name %></strong> · <%= roleName(s.role) %></span>
-          <% if (canRoles && !self) { %><form method="post" action="<%= BASE %>/<%= u.id %>/sites/<%= s.site_id %>/retirer" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer l'accès au site <%= s.site_name %>">Retirer</button></form><% } %></li><% }) %></ul><% } %>
+        <ul class="mk-cms-list"><% u.sites.forEach((s) => { %><li><span><strong><%= s.site_name %></strong> · <%= roleName(s.role) %><%= s.mode === "limit" ? " · droits plafonnés sur ce site" : "" %></span>
+          <% if (canRoles && !self && u.org_role && u.org_role !== "owner") { %><form method="post" action="<%= BASE %>/<%= u.id %>/sites/<%= s.site_id %>/mode" class="mk-cm-form"><input type="hidden" name="mode" value="<%= s.mode === "limit" ? "add" : "limit" %>"><button type="submit" class="btn btn-ghost btn-sm" aria-label="<%= s.mode === "limit" ? "Retirer le plafond sur" : "Plafonner les droits sur" %> le site <%= s.site_name %>"><%= s.mode === "limit" ? "Retirer le plafond" : "Plafonner" %></button></form><% } %>
+          <% if (canRoles && !self) { %><form method="post" action="<%= BASE %>/<%= u.id %>/sites/<%= s.site_id %>/retirer" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer l'accès au site <%= s.site_name %>">Retirer</button></form><% } %></li><% }) %></ul>
+        <% if (u.sites.some((s) => s.mode === "limit")) { %><p class="field-hint">Le plafond limite l'accès aux éléments du site et les écritures. Les listes de l'organisation ne sont pas encore filtrées par ce plafond.</p><% } %><% } %>
         <% if (canRoles && !self && sites.length) { %>
         <form method="post" action="<%= BASE %>/<%= u.id %>/sites" class="mk-form"><div class="mk-ap-grid">
           <div class="field-group"><label for="us-s">Site</label><select id="us-s" name="site_id" required><% sites.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div>
+          <% if (u.org_role && u.org_role !== "owner") { %><div class="field-group"><label for="us-sm">Droits sur ce site</label><select id="us-sm" name="mode"><option value="add">S'ajoutent aux droits de l'équipe (par défaut)</option><option value="limit">Plafonnés : seulement ce que l'équipe ET ce rôle accordent</option></select><p class="field-hint">Le plafond ne peut jamais donner de droit en plus ; il restreint la personne sur ce site seulement. Le plafond limite l'accès aux éléments du site et les écritures. Les listes de l'organisation ne sont pas encore filtrées par ce plafond.</p></div><% } %>
           <div class="field-group"><label for="us-sr">Rôle sur ce site</label><select id="us-sr" name="role" required><% roles.filter((r) => r.key !== "owner").forEach((r) => { %><option value="<%= r.key %>"<%= r.ok ? "" : " disabled" %>><%= r.name %></option><% }) %></select></div></div>
           <button type="submit" class="btn btn-outline btn-sm">Donner l'accès à ce site</button></form><% } %>
       </section>

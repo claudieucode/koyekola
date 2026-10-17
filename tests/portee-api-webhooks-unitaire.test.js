@@ -34,7 +34,7 @@ describe("migration 072 : neutre pour l'existant", () => {
       assert.deepEqual({ ...db.prepare("SELECT organization_id org, scope FROM mk_api_keys").get() }, { org: 1, scope: "write" });
       // Application de 072 sur cette base existante
       migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet });
-      assert.equal(db.prepare("SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1").get().version, "072");
+      assert.ok(db.prepare("SELECT 1 FROM schema_migrations WHERE version = '072'").get()); // 072 appliquée (adaptation d'intégration : d'autres migrations, 073 à 075, peuvent la suivre)
       const key = db.prepare("SELECT reach, site_id, scope, name FROM mk_api_keys").get();
       assert.deepEqual({ ...key }, { reach: "organization", site_id: null, scope: "write", name: "ancienne" });
       const ep = db.prepare("SELECT reach, site_id, events FROM mk_webhook_endpoints").get();
