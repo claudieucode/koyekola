@@ -409,8 +409,12 @@
    "classe": "a-decider"
   },
   "mk_social_posts": {
-   "siteId": false,
+   "siteId": true,
    "classe": "a-decider"
+  },
+  "mk_social_site_grants": {
+   "siteId": true,
+   "classe": "isolee"
   },
   "mk_suppressions": {
    "siteId": false,

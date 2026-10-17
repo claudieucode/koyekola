@@ -32,7 +32,7 @@ function serialize(metadata) {
 const SITE_OF = Object.freeze({
   landing: ["mk_landing_pages", "site_id"], form: ["mk_forms", "site_id"], contact: ["mk_contacts", "origin_site_id"], funnel: ["mk_funnels", "site_id"],
   component: ["mk_web_components", "site_id"], media: ["mk_media", "site_id"], campaign: ["mk_campaigns", "site_id"], list: ["mk_lists", "site_id"],
-  segment: ["mk_segments", "site_id"], template: ["mk_templates", "site_id"], automation: ["mk_automations", "site_id"],
+  segment: ["mk_segments", "site_id"], template: ["mk_templates", "site_id"], automation: ["mk_automations", "site_id"], social_post: ["mk_social_posts", "site_id"],
 });
 const validSite = (db, organizationId, siteId) => {
   if (!Number.isInteger(siteId) || siteId < 1) return null;

@@ -6,10 +6,15 @@
 //  - jeton refusé → échec immédiat avec la marche à suivre ; panne du réseau → nouvel essai (3 au plus) ;
 //  - jamais de double publication : la ligne est « réservée » avant l'appel, une publication interrompue n'est pas renvoyée ;
 //  - le lien passe par un lien court /go/<code> : les clics sont comptés ici (robots exclus).
+// R7 lot 6.3 — par site : les COMPTES et leurs jetons restent à l'organisation (équipe seulement, jamais lus par un site). Une publication peut appartenir à un site (site_id ; NULL = organisation, historique) ;
+// un site ne publie que sur les réseaux que l'ÉQUIPE lui a autorisés explicitement (mk_social_site_grants) ET si le module « social » est activé pour lui. L'autorisation est revérifiée AU MOMENT de la
+// publication (tâche d'arrière-plan) : retirée ou module désactivé → la publication est annulée, jamais envoyée. Désactiver ou retirer ne supprime aucune donnée.
 const crypto = require("crypto");
 const { checkCtx, audit } = require("../audience/shared");
 const { MarketingError } = require("../errors");
 const { enqueue } = require("../queue/jobs");
+const siteModules = require("../siteModules");
+const { recordAudit, validSite } = require("../audit");
 
 const GRAPH = "https://graph.facebook.com/v23.0";
 const LINKEDIN = "https://api.linkedin.com/rest/posts";
@@ -25,6 +30,13 @@ const K = {
 const bad = (message) => new MarketingError("invalid_field", message);
 const nowOf = (ctx) => (typeof ctx.now === "function" ? ctx.now() : Date.now());
 const HTTPS = /^https:\/\/[^\s<>"]{3,2000}$/i;
+// Accès LIMITÉ à un site : ctx.siteScope est imposé par le serveur (jamais par l'adresse ni par le corps de la requête)
+const limited = (ctx) => ctx.siteScope !== undefined && ctx.siteScope !== null;
+const teamOnly = (ctx) => { if (limited(ctx)) throw new MarketingError("forbidden", "Les comptes de réseaux sociaux sont gérés par l'équipe de l'organisation."); };
+// Trace avec site explicite (le site peut ne pas être relisible depuis la ressource) ; ne bloque jamais l'action
+function auditSite(ctx, action, resourceType, resourceId, metadata, siteId) {
+  try { recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId ?? null, action, resourceType, resourceId, metadata, siteId }); } catch { /* la trace ne bloque jamais */ }
+}
 
 let fetchForTests = null;
 function setFetchForTests(f) { fetchForTests = f; }
@@ -53,6 +65,7 @@ const secret = (ctx, k) => ctx.settings.get(ctx.organizationId, k) ?? "";
 
 function saveSocialConfig(ctx, input = {}) {
   checkCtx(ctx);
+  teamOnly(ctx);
   const s = ctx.settings;
   const org = ctx.organizationId;
   const id = (v, label) => { const t = String(v ?? "").trim(); if (t && !/^\d{5,25}$/.test(t)) throw bad(`${label} : un identifiant numérique (chiffres seulement).`); return t; };
@@ -77,6 +90,57 @@ function saveSocialConfig(ctx, input = {}) {
   if (input.facebookPageId !== undefined || input.facebookToken) s.remove(org, K.fbName);
   audit(ctx, "social.settings_updated", "settings", null, { facebook: Boolean(input.facebookToken), linkedin: Boolean(input.linkedinToken) });
   return getSocialConfig(ctx);
+}
+
+// ---------- Autorisations de publier par site (R7 lot 6.3) ----------
+// Réseaux que l'équipe a autorisés pour ce site (aucune ligne = aucun)
+function grantedNetworks(db, organizationId, siteId) {
+  if (!Number.isInteger(siteId)) return new Set();
+  return new Set(db.prepare("SELECT network FROM mk_social_site_grants WHERE site_id = ? AND organization_id = ?").all(siteId, organizationId).map((r) => r.network));
+}
+// Décision unique « ce site peut-il publier sur ces réseaux ? » → null (oui) ou la raison du refus. Utilisée à la création ET à l'heure de la publication.
+function denial(db, organizationId, siteId, networks) {
+  if (siteId === null || siteId === undefined) return null; // organisation / site principal : fonctionnement historique
+  const site = Number.isInteger(siteId) ? db.prepare("SELECT deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId) : null;
+  if (!site || site.deleted_at) return "le site n'existe plus";
+  if (!siteModules.isEnabled(db, organizationId, siteId, "social")) return "le module « Réseaux sociaux » n'est pas activé pour ce site";
+  const granted = grantedNetworks(db, organizationId, siteId);
+  const missing = networks.filter((n) => !granted.has(n));
+  if (missing.length) return `ce site n'est pas autorisé à publier sur ${missing.map((n) => NETWORKS[n] || n).join(", ")}`;
+  return null;
+}
+// ÉQUIPE seulement : remplace l'ensemble des réseaux autorisés pour un site (ajouts et retraits tracés). N'agit jamais sur les comptes ni sur les publications.
+function setSiteGrants(ctx, siteId, networks) {
+  checkCtx(ctx);
+  teamOnly(ctx);
+  const site = ctx.db.prepare("SELECT deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId);
+  if (!site || site.deleted_at) throw new MarketingError("not_found", "Site introuvable.");
+  const wanted = new Set((Array.isArray(networks) ? networks : [networks]).filter(Boolean));
+  for (const n of wanted) if (!Object.hasOwn(NETWORKS, n)) throw bad("Réseau inconnu.");
+  const current = grantedNetworks(ctx.db, ctx.organizationId, siteId);
+  const added = [...wanted].filter((n) => !current.has(n));
+  const removed = [...current].filter((n) => !wanted.has(n));
+  for (const n of added) ctx.db.prepare("INSERT INTO mk_social_site_grants (site_id, organization_id, network, granted_by) VALUES (?, ?, ?, ?)").run(siteId, ctx.organizationId, n, ctx.userId ?? null);
+  for (const n of removed) ctx.db.prepare("DELETE FROM mk_social_site_grants WHERE site_id = ? AND organization_id = ? AND network = ?").run(siteId, ctx.organizationId, n);
+  if (added.length) auditSite(ctx, "social.grant_added", "site", siteId, { networks: added }, siteId);
+  if (removed.length) auditSite(ctx, "social.grant_removed", "site", siteId, { networks: removed }, siteId);
+  return { added, removed };
+}
+// ÉQUIPE : tableau « site × réseaux autorisés » (sites non supprimés)
+function listSiteGrants(ctx) {
+  checkCtx(ctx);
+  teamOnly(ctx);
+  const grants = new Map();
+  for (const g of ctx.db.prepare("SELECT site_id, network FROM mk_social_site_grants WHERE organization_id = ?").all(ctx.organizationId)) grants.set(g.site_id, [...(grants.get(g.site_id) || []), g.network]);
+  return ctx.db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND deleted_at IS NULL ORDER BY name").all(ctx.organizationId)
+    .map((s) => ({ id: s.id, name: s.name, moduleEnabled: siteModules.isEnabled(ctx.db, ctx.organizationId, s.id, "social"), networks: grants.get(s.id) || [] }));
+}
+// Réglages tels que la PERSONNE les voit : l'équipe voit tout (jamais le jeton lui-même) ; un accès limité ne voit que « utilisable par mon site » — ni identifiants de page, ni auteur, ni nom de page, ni indication de jeton
+function getSocialView(ctx) {
+  const cfg = getSocialConfig(ctx);
+  if (!limited(ctx)) return cfg;
+  const granted = grantedNetworks(ctx.db, ctx.organizationId, ctx.siteScope);
+  return Object.fromEntries(Object.keys(NETWORKS).map((n) => [n, { connected: cfg[n].connected && granted.has(n) }]));
 }
 
 // ---------- Appels aux réseaux ----------
@@ -105,6 +169,7 @@ async function call(url, { method = "GET", form, json, headers = {} } = {}) {
 
 // Vérifie un réseau configuré (lecture seule) ; Facebook : mémorise le nom de la page
 async function testConnection(ctx, network) {
+  teamOnly(ctx);
   const cfg = getSocialConfig(ctx);
   if (network === "facebook" || network === "instagram") {
     if (!cfg[network].connected) throw bad(`${NETWORKS[network]} n'est pas configuré.`);
@@ -140,14 +205,22 @@ function newCode(ctx) {
 // input : { networks: [..], body, linkUrl, imageUrl, campaignId, scheduledAt (ms, facultatif) }
 function createPosts(ctx, input = {}) {
   checkCtx(ctx);
+  if (limited(ctx)) siteModules.assertEnabled(ctx, "social");
   const now = nowOf(ctx);
   const cfg = getSocialConfig(ctx);
+  // Site de la publication : un accès limité publie TOUJOURS pour son site ; l'équipe peut en désigner un (valide, de l'organisation) ou publier pour l'organisation (aucun site)
+  let siteId = null;
+  if (limited(ctx)) siteId = validSite(ctx.db, ctx.organizationId, ctx.siteScope);
+  else if (input.siteId !== undefined && input.siteId !== null && input.siteId !== "") siteId = validSite(ctx.db, ctx.organizationId, Number(input.siteId));
+  if ((limited(ctx) || (input.siteId !== undefined && input.siteId !== null && input.siteId !== "")) && siteId === null) throw new MarketingError("not_found", "Site introuvable.");
   const networks = [...new Set((Array.isArray(input.networks) ? input.networks : [input.networks]).filter(Boolean))];
   if (!networks.length) throw bad("Choisissez au moins un réseau.");
   for (const n of networks) {
     if (!Object.hasOwn(NETWORKS, n)) throw bad("Réseau inconnu.");
-    if (!cfg[n].connected) throw bad(`${NETWORKS[n]} n'est pas relié : configurez-le dans Paramètres → Réseaux sociaux.`);
+    if (!cfg[n].connected) throw bad(`${NETWORKS[n]} n'est pas relié : ${limited(ctx) ? "demandez à l'équipe de l'organisation" : "configurez-le dans Paramètres → Réseaux sociaux"}.`);
   }
+  const refused = denial(ctx.db, ctx.organizationId, siteId, networks);
+  if (refused) throw new MarketingError("forbidden", `Publication refusée : ${refused}.`);
   const body = String(input.body ?? "").replace(/\r\n?/g, "\n").trim();
   if (!body) throw bad("Écrivez le texte de la publication.");
   for (const n of networks) if (body.length > LIMITS[n]) throw bad(`Texte trop long pour ${NETWORKS[n]} (${LIMITS[n]} caractères au plus).`);
@@ -165,9 +238,9 @@ function createPosts(ctx, input = {}) {
   const campaignId = Number.isInteger(input.campaignId) ? input.campaignId : null;
   const group = crypto.randomBytes(8).toString("hex");
   const ids = [];
-  const insert = ctx.db.prepare("INSERT INTO mk_social_posts (organization_id, group_key, network, body, link_url, image_url, campaign_id, scheduled_at, link_code, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id");
+  const insert = ctx.db.prepare("INSERT INTO mk_social_posts (organization_id, group_key, network, body, link_url, image_url, campaign_id, scheduled_at, link_code, created_by, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id");
   for (const n of networks) {
-    const id = insert.get(ctx.organizationId, group, n, body, linkUrl, imageUrl, campaignId, at, linkUrl ? newCode(ctx) : null, ctx.userId ?? null).id;
+    const id = insert.get(ctx.organizationId, group, n, body, linkUrl, imageUrl, campaignId, at, linkUrl ? newCode(ctx) : null, ctx.userId ?? null, siteId).id;
     enqueue(ctx.db, { organizationId: ctx.organizationId, type: "social.publish", payload: { organizationId: ctx.organizationId, postId: id }, runAt: at, priority: 5, maxAttempts: 1, idempotencyKey: `social:${id}:0` });
     ids.push(id);
   }
@@ -228,6 +301,13 @@ async function publishPost(ctx, id) {
   }
   if (post.status !== "scheduled") return { done: true };
   if (post.scheduled_at > now) return { done: false, waitMs: post.scheduled_at - now };
+  // R7 lot 6.3 — autorisation revérifiée AU MOMENT de la publication (module, site, réseau) : retirée depuis la programmation → annulée, JAMAIS envoyée
+  const refused = denial(ctx.db, ctx.organizationId, post.site_id, [post.network]);
+  if (refused) {
+    ctx.db.prepare("UPDATE mk_social_posts SET status = 'cancelled', error = ?, updated_at = datetime('now') WHERE id = ? AND status = 'scheduled'").run(`Publication annulée : ${refused}.`, id);
+    auditSite(ctx, "social.blocked", "social_post", id, { network: post.network, reason: refused }, post.site_id);
+    return { done: true, blocked: true };
+  }
   if (!ctx.db.prepare("UPDATE mk_social_posts SET status = 'publishing', attempts = attempts + 1, updated_at = datetime('now') WHERE id = ? AND status = 'scheduled'").run(id).changes) return { done: true };
   const cfg = getSocialConfig(ctx);
   let r;
@@ -254,13 +334,19 @@ async function publishPost(ctx, id) {
 }
 
 // ---------- Gestion ----------
+// Un accès limité ne voit et ne touche QUE les publications de son site (jamais celles de l'organisation ni d'un autre site) ; module requis
+const scopeOf = (ctx) => (limited(ctx) ? (Number.isInteger(ctx.siteScope) ? { sql: " AND p.site_id = ?", params: [ctx.siteScope] } : { sql: " AND 1 = 0", params: [] }) : { sql: "", params: [] });
 function getPost(ctx, id) {
   checkCtx(ctx);
-  return Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_social_posts WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) ?? null : null;
+  if (limited(ctx)) siteModules.assertEnabled(ctx, "social");
+  const sc = scopeOf(ctx);
+  return Number.isInteger(id) ? ctx.db.prepare(`SELECT p.* FROM mk_social_posts p WHERE p.id = ? AND p.organization_id = ?${sc.sql}`).get(id, ctx.organizationId, ...sc.params) ?? null : null;
 }
 function listPosts(ctx, { limit = 100 } = {}) {
   checkCtx(ctx);
-  return ctx.db.prepare("SELECT * FROM mk_social_posts WHERE organization_id = ? ORDER BY scheduled_at DESC, id DESC LIMIT ?").all(ctx.organizationId, Math.min(Math.max(limit, 1), 500))
+  if (limited(ctx)) siteModules.assertEnabled(ctx, "social");
+  const sc = scopeOf(ctx);
+  return ctx.db.prepare(`SELECT p.*, s.name AS site_name FROM mk_social_posts p LEFT JOIN mk_sites s ON s.id = p.site_id WHERE p.organization_id = ?${sc.sql} ORDER BY p.scheduled_at DESC, p.id DESC LIMIT ?`).all(ctx.organizationId, ...sc.params, Math.min(Math.max(limit, 1), 500))
     .map((p) => ({ ...p, networkLabel: NETWORKS[p.network], statusLabel: STATUS_LABELS[p.status], shortUrl: p.link_code ? shortLink(ctx, p.link_code) : "" }));
 }
 function cancelPost(ctx, id) {
@@ -274,6 +360,8 @@ function retryPost(ctx, id) {
   const p = getPost(ctx, id);
   if (!p) throw new MarketingError("not_found", "Publication introuvable.");
   if (p.status !== "failed") throw new MarketingError("invalid_state", "Seule une publication en échec peut être relancée.");
+  const refused = denial(ctx.db, ctx.organizationId, p.site_id, [p.network]);
+  if (refused) throw new MarketingError("forbidden", `Relance refusée : ${refused}.`);
   const now = nowOf(ctx);
   ctx.db.prepare("UPDATE mk_social_posts SET status = 'scheduled', scheduled_at = ?, attempts = 0, error = '', updated_at = datetime('now') WHERE id = ?").run(now, id);
   enqueue(ctx.db, { organizationId: ctx.organizationId, type: "social.publish", payload: { organizationId: ctx.organizationId, postId: id }, runAt: now, priority: 5, maxAttempts: 1, idempotencyKey: `social:${id}:retry:${now}` });
@@ -310,4 +398,5 @@ function jobHandlers({ db, bus = null, settings, env = process.env, log = consol
 module.exports = {
   NETWORKS, LIMITS, STATUS_LABELS, getSocialConfig, saveSocialConfig, testConnection, createPosts, publishPost, listPosts, getPost, cancelPost, retryPost, deletePost,
   resolveShortLink, jobHandlers, setFetchForTests, linkedinVersion,
+  grantedNetworks, setSiteGrants, listSiteGrants, getSocialView,
 };

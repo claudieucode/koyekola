@@ -11,7 +11,7 @@ const { recordAudit } = require("./audit");
 const MODULES = Object.freeze({
   sms: { label: "SMS", phase: "R7-6.1", ready: true },
   ai: { label: "Intelligence artificielle", phase: "R7-6.2", ready: true },
-  social: { label: "Réseaux sociaux", phase: "R7-6.3", ready: false },
+  social: { label: "Réseaux sociaux", phase: "R7-6.3", ready: true },
   scoring: { label: "Score des contacts", phase: "R7-6.4", ready: false },
   commerce: { label: "Commerce", phase: "R7-6.5", ready: false },
   lms: { label: "Formations", phase: "R7-6.6", ready: false },

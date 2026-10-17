@@ -22,7 +22,7 @@ const ANY_DIGITS = /^\d+$/;
 const RESOURCE_TABLES = Object.freeze({
   page: "mk_landing_pages", composant: "mk_web_components",
   campagnes: "mk_campaigns", listes: "mk_lists", segments: "mk_segments", modeles: "mk_templates", automatisations: "mk_automations", tunnels: "mk_funnels",
-  test: "mk_page_tests", evenement: "mk_events", media: "mk_media", form: "mk_forms", smsCampaign: "mk_sms_campaigns",
+  test: "mk_page_tests", evenement: "mk_events", media: "mk_media", form: "mk_forms", smsCampaign: "mk_sms_campaigns", socialPost: "mk_social_posts",
 });
 
 // Valeur d'un paramètre de site : « ?site= » puis le champ « site » du formulaire (même ordre qu'avant R3)
@@ -103,6 +103,9 @@ const SITE_RULES = Object.freeze([
   { id: "sms-du-site", pattern: /^\/sms(?:\/(?:campagnes|abonnes))?$/, kind: "param", terminal: true },
   // Assistant IA (R7 lot 6.2) : les appels d'aide à la rédaction (e-mails, SMS) relèvent du site choisi (?site= ou champ « site » du corps JSON) ; les réglages de l'assistant (voix de marque, plafond) restent à l'organisation
   { id: "ia-assistant", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/, kind: "param", terminal: true },
+  // Réseaux sociaux par site (R7 lot 6.3) : une publication par son identifiant relève de son site (NULL = organisation, fermée à un accès limité) ; liste et création : site choisi ; comptes, jetons et autorisations : organisation
+  { id: "reseau-publication-par-identifiant", pattern: /^\/reseaux\/(\d{1,12})\/(?:annuler|relancer|supprimer)$/, kind: "resource", table: "socialPost", idGroup: 1 },
+  { id: "reseaux-du-site", pattern: /^\/reseaux$/, kind: "param", terminal: true },
   { id: "demandes-du-site", pattern: /^\/contacts\/demandes$/, methods: ["GET"], kind: "queryGet" },
   { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
@@ -128,6 +131,7 @@ const FAMILIES = Object.freeze([
   { id: "contacts", scope: "site", pattern: /^\/contacts(?:\/|$)/ },
   { id: "ia-assistant", scope: "site", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/ },
   { id: "sms-campagnes", scope: "site", pattern: /^\/sms(?:\/campagnes(?:\/|$)|\/abonnes$|$)/ },
+  { id: "reseaux-publications", scope: "site", pattern: /^\/reseaux(?:\/\d+\/(?:annuler|relancer|supprimer))?$/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
