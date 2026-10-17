@@ -11,12 +11,27 @@ const crypto = require("crypto");
 
 const NEW_COLUMN = "site_id";
 // Chaque entrée : contrainte d'unicité à lever (reconnue de façon tolérante dans le CREATE TABLE réel), son remplaçant, et l'unicité « par site » (NULL = site principal)
+// R6 lot 5 : le plan couvre aussi les tables d'adresses des PAGES, des REDIRECTIONS et des HISTORIQUES (mk_landing_pages, seo_redirects, post_slug_history, cms_url_history).
+// Champs : table ; drop/keep/unique (forme d'origine, une seule contrainte) OU drops/keeps/uniques (plusieurs) ; relax : colonnes dont la clé ou l'obligation change volontairement (ex. clé primaire
+// d'une adresse remplacée par l'unicité par site). La colonne site_id n'est ajoutée que si elle n'existe pas déjà (pages, redirections, historiques d'URL l'ont déjà).
 const PLAN = [
   { table: "posts", drop: /slug\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i, keep: "slug TEXT NOT NULL", unique: "CREATE UNIQUE INDEX uq_posts_site_slug ON posts(COALESCE(site_id, 0), slug)" },
   { table: "taxonomy_terms", drop: /,\s*UNIQUE\s*\(\s*taxonomy\s*,\s*slug\s*\)/i, keep: "", unique: "CREATE UNIQUE INDEX uq_taxonomy_terms_site_slug ON taxonomy_terms(COALESCE(site_id, 0), taxonomy, slug)" },
   { table: "mk_forms", drop: /,\s*UNIQUE\s*\(\s*organization_id\s*,\s*slug\s*\)/i, keep: "", unique: "CREATE UNIQUE INDEX uq_mk_forms_site_slug ON mk_forms(organization_id, COALESCE(site_id, 0), slug)" },
   { table: "mk_page_templates", drop: /,\s*UNIQUE\s*\(\s*organization_id\s*,\s*name\s*\)/i, keep: "", unique: "CREATE UNIQUE INDEX uq_mk_page_templates_site_name ON mk_page_templates(organization_id, COALESCE(site_id, 0), name)" },
+  // Pages : adresse unique par site (le « /p/<adresse> » du principal est celui des pages sans site) ; nom unique par site dans l'organisation
+  { table: "mk_landing_pages", drops: [/slug\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i, /,\s*UNIQUE\s*\(\s*organization_id\s*,\s*name\s*\)/i], keeps: ["slug TEXT NOT NULL", ""],
+    uniques: ["CREATE UNIQUE INDEX uq_mk_landing_pages_site_slug ON mk_landing_pages(COALESCE(site_id, 0), slug)", "CREATE UNIQUE INDEX uq_mk_landing_pages_site_name ON mk_landing_pages(organization_id, COALESCE(site_id, 0), name)"] },
+  // Redirections : une même adresse source peut exister sur deux sites (NULL = « pour tous », règle existante)
+  { table: "seo_redirects", drop: /source_path\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i, keep: "source_path TEXT NOT NULL", unique: "CREATE UNIQUE INDEX uq_seo_redirects_site_source ON seo_redirects(COALESCE(site_id, 0), source_path)" },
+  // Historique des adresses d'articles : la clé primaire « ancienne adresse » devient une unicité par site
+  { table: "post_slug_history", drop: /old_slug\s+TEXT\s+PRIMARY\s+KEY/i, keep: "old_slug TEXT NOT NULL", unique: "CREATE UNIQUE INDEX uq_post_slug_history_site_old ON post_slug_history(COALESCE(site_id, 0), old_slug)", relax: ["old_slug"] },
+  // Historique des adresses de pages et de termes (CMS, palier 12)
+  { table: "cms_url_history", drop: /,\s*UNIQUE\s*\(\s*resource_type\s*,\s*old_slug\s*\)/i, keep: "", unique: "CREATE UNIQUE INDEX uq_cms_url_history_site_old ON cms_url_history(resource_type, COALESCE(site_id, 0), old_slug)" },
 ];
+// Formes normalisées (une ou plusieurs contraintes)
+for (const p of PLAN) { p.drops = p.drops || [p.drop]; p.keeps = p.keeps || [p.keep]; p.uniques = p.uniques || [p.unique]; p.relax = p.relax || []; }
+const UNIQUE_INDEX_NAMES = new Set(PLAN.flatMap((p) => p.uniques.map((u) => /CREATE UNIQUE INDEX (\w+)/.exec(u)[1])));
 const PLAN_TABLES = PLAN.map((p) => p.table);
 const norm = (sql) => String(sql || "").replace(/--[^\n]*/g, "").replace(/\s+/g, " ").trim();
 const q = (name) => `"${String(name).replace(/"/g, '""')}"`;
@@ -25,7 +40,10 @@ const columnsOf = (db, t) => db.prepare(`PRAGMA table_info(${q(t)})`).all();
 const hasSiteColumn = (db, t) => columnsOf(db, t).some((c) => c.name === NEW_COLUMN);
 
 // Tables du plan qui n'ont pas encore la colonne de site (donc à reconstruire)
-const pending = (db) => PLAN.filter((p) => has(db, p.table) && !hasSiteColumn(db, p.table)).map((p) => p.table);
+// Une table est « à reconstruire » tant que sa définition porte encore la contrainte d'unicité d'origine (la colonne site_id peut déjà exister)
+const definitionOf = (db, t) => (db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(t) || {}).sql || "";
+const isPending = (db, p) => has(db, p.table) && p.drops.every((re) => re.test(definitionOf(db, p.table)));
+const pending = (db) => PLAN.filter((p) => isPending(db, p)).map((p) => p.table);
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 // Reconstruction : UNE transaction, clés étrangères désactivées avant, tout contrôle raté → ROLLBACK (aucune modification partielle)
@@ -38,36 +56,52 @@ function rebuild(db, opts = {}) {
   try {
     for (const p of PLAN) {
       if (!has(db, p.table)) { result.skipped.push({ table: p.table, reason: "absente" }); continue; }
-      if (hasSiteColumn(db, p.table)) { result.skipped.push({ table: p.table, reason: "déjà reconstruite" }); continue; }
+      if (!isPending(db, p)) {
+        // Plus de contrainte d'origine : soit la table est DÉJÀ reconstruite (ses unicités par site existent), soit sa définition est inattendue → refus, rien n'est modifié
+        const done = p.uniques.every((u) => db.prepare("SELECT 1 FROM sqlite_master WHERE type='index' AND name = ?").get(/CREATE UNIQUE INDEX (\w+)/.exec(u)[1]));
+        if (!done) throw new Error(`${p.table} : la contrainte d'unicité attendue est introuvable dans la définition réelle (rien n'a été modifié)`);
+        result.skipped.push({ table: p.table, reason: "déjà reconstruite" }); continue;
+      }
       const t = p.table;
       const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").get(t);
       if (!row || !row.sql) throw new Error(`${t} : définition introuvable`);
       if (/WITHOUT\s+ROWID/i.test(row.sql)) throw new Error(`${t} : table WITHOUT ROWID non prévue`);
-      if (!p.drop.test(row.sql)) throw new Error(`${t} : la contrainte d'unicité attendue est introuvable dans la définition réelle (rien n'a été modifié)`);
+      for (const re of p.drops) if (!re.test(row.sql)) throw new Error(`${t} : la contrainte d'unicité attendue est introuvable dans la définition réelle (rien n'a été modifié)`);
       const oldCols = columnsOf(db, t);
       const oldNames = oldCols.map((c) => c.name);
-      let sql = row.sql.replace(p.drop, p.keep).replace(/\)\s*$/, `, ${NEW_COLUMN} INTEGER REFERENCES mk_sites(id) )`).replace(/^\s*CREATE\s+TABLE\s+("?)[\w]+\1/i, `CREATE TABLE ${t}__new`);
+      const hadSite = oldCols.some((c) => c.name === NEW_COLUMN);
+      let sql = row.sql;
+      p.drops.forEach((re, i) => { sql = sql.replace(re, p.keeps[i]); });
+      if (!hadSite) sql = sql.replace(/\)\s*$/, `, ${NEW_COLUMN} INTEGER REFERENCES mk_sites(id) )`);
+      sql = sql.replace(/^\s*CREATE\s+TABLE\s+("?)[\w]+\1/i, `CREATE TABLE ${t}__new`);
       if (!sql.includes(`${t}__new`)) throw new Error(`${t} : définition illisible`);
       const keptIndexes = db.prepare("SELECT name, sql FROM sqlite_master WHERE tbl_name=? AND type IN ('index','trigger') AND sql IS NOT NULL").all(t);
+      // Déclencheurs et vues d'AUTRES tables qui citent celle-ci : SQLite relit tout le schéma au RENAME et échouerait (« no such table ») pendant que la table n'existe plus.
+      // Ils sont retirés puis recréés à l'identique, dans le même ordre (R6 lot 5)
+      const dependents = db.prepare("SELECT type, name, sql FROM sqlite_master WHERE type IN ('trigger','view') AND sql IS NOT NULL AND tbl_name <> ? ORDER BY rowid").all(t).filter((o) => new RegExp(`\\b${t}\\b`).test(o.sql));
       const seq = has(db, "sqlite_sequence") ? db.prepare("SELECT seq FROM sqlite_sequence WHERE name=?").get(t) : null;
       const before = db.prepare(`SELECT COUNT(*) n FROM ${q(t)}`).get().n;
+      for (const o of dependents) db.exec(`DROP ${o.type.toUpperCase()} IF EXISTS ${q(o.name)}`);
       db.exec(sql);
-      // La nouvelle table doit avoir EXACTEMENT les anciennes colonnes (type, obligatoire, défaut, clé) + site_id : sinon la définition lue ne correspond pas
+      // La nouvelle table doit avoir EXACTEMENT les anciennes colonnes (type, obligatoire, défaut, clé ; sauf celles que le plan relâche) + site_id si elle ne l'avait pas
       const newCols = columnsOf(db, `${t}__new`);
-      const same = newCols.length === oldCols.length + 1 && oldCols.every((c, i) => { const n = newCols[i]; return n && n.name === c.name && n.type === c.type && n.notnull === c.notnull && n.dflt_value === c.dflt_value && n.pk === c.pk; }) && newCols[newCols.length - 1].name === NEW_COLUMN;
+      const same = newCols.length === oldCols.length + (hadSite ? 0 : 1) && oldCols.every((c, i) => { const n = newCols[i]; return n && n.name === c.name && n.type === c.type && n.dflt_value === c.dflt_value && (p.relax.includes(c.name) || (n.notnull === c.notnull && n.pk === c.pk)); }) && (hadSite || newCols[newCols.length - 1].name === NEW_COLUMN);
       if (!same) throw new Error(`${t} : les colonnes de la nouvelle table ne correspondent pas à l'ancienne`);
       const list = oldNames.map(q).join(", ");
-      db.exec(`INSERT INTO ${t}__new (${list}) SELECT ${list} FROM ${q(t)}`);
+      db.exec(`INSERT INTO ${t}__new (${list}) SELECT ${list} FROM ${q(t)} ORDER BY rowid`);
       const after = db.prepare(`SELECT COUNT(*) n FROM ${t}__new`).get().n;
       if (after !== before) throw new Error(`${t} : écart de lignes pendant la copie (${before} → ${after})`);
       db.exec(`DROP TABLE ${q(t)}`);
       db.exec(`ALTER TABLE ${t}__new RENAME TO ${q(t)}`);
       for (const o of keptIndexes) db.exec(o.sql);
-      db.exec(p.unique);
+      for (const o of dependents) db.exec(o.sql); // déclencheurs et vues des autres tables, recréés à l'identique
+      for (const u of p.uniques) db.exec(u);
       if (seq) db.prepare("INSERT OR REPLACE INTO sqlite_sequence (name, seq) VALUES (?, ?)").run(t, seq.seq);
       result.rebuilt.push({ table: t, rows: after, indexes: keptIndexes.length });
       if (opts.inject && opts.inject === t) throw new Error("erreur provoquée (essai du retour arrière)");
     }
+    // Étapes qui doivent réussir ou échouer AVEC les reconstructions (reprise des rattachements, marqueur d'exécution…) : dans la même transaction (R6 lot 5)
+    if (typeof opts.after === "function") opts.after(db, result);
     const bad = db.prepare("PRAGMA foreign_key_check").all();
     if (bad.length) throw new Error(`contrôle des relations : ${bad.length} anomalie(s)`);
     db.exec("COMMIT");
@@ -129,15 +163,20 @@ function compare(A, B, { rebuilt = PLAN_TABLES } = {}) {
     if (a.rows !== b.rows) bad(`${t} : nombre de lignes ${a.rows} → ${b.rows}`);
     if (a.hash !== b.hash) bad(`${t} : empreinte des données différente`);
     const wantsNew = planned.has(t) && !a.columns.includes(NEW_COLUMN);
+    const plan = PLAN.find((x) => x.table === t);
+    // Colonnes dont le plan relâche volontairement la clé ou l'obligation (R6 lot 5) : comparées sans ces deux indicateurs
+    const loosen = (d) => (plan && plan.relax.length && plan.relax.includes(String(d).split("|")[0]) ? String(d).split("|").slice(0, 2).join("|") : d);
     if (wantsNew) {
-      const ok = b.detail.length === a.detail.length + 1 && a.detail.every((d, i) => d === b.detail[i]) && b.columns[b.columns.length - 1] === NEW_COLUMN;
+      const ok = b.detail.length === a.detail.length + 1 && a.detail.every((d, i) => loosen(d) === loosen(b.detail[i])) && b.columns[b.columns.length - 1] === NEW_COLUMN;
       ok ? exp(`${t} : colonne ${NEW_COLUMN} ajoutée (NULL = site principal), colonnes d'origine identiques`) : bad(`${t} : colonnes modifiées de façon inattendue`);
+    } else if (planned.has(t) && plan && plan.relax.length) {
+      JSON.stringify(a.detail.map(loosen)) === JSON.stringify(b.detail.map(loosen)) ? exp(`${t} : colonnes identiques (clé relâchée par le plan : ${plan.relax.join(", ")})`) : bad(`${t} : colonnes différentes`);
     } else if (JSON.stringify(a.detail) !== JSON.stringify(b.detail)) bad(`${t} : colonnes différentes`);
   }
   for (const t of Object.keys(B.tables)) if (!A.tables[t]) bad(`table apparue : ${t}`);
   for (const k of new Set([...Object.keys(A.objects), ...Object.keys(B.objects)])) {
     if (A.objects[k] === B.objects[k]) continue;
-    if (A.objects[k] === undefined && /^index:uq_(posts_site_slug|taxonomy_terms_site_slug|mk_forms_site_slug|mk_page_templates_site_name)$/.test(k) && PLAN.some((p) => norm(p.unique) === B.objects[k])) { exp(`${k.replace("index:", "unicité par site ajoutée : ")}`); continue; }
+    if (A.objects[k] === undefined && k.startsWith("index:") && UNIQUE_INDEX_NAMES.has(k.slice(6)) && PLAN.some((p) => p.uniques.some((u) => norm(u) === B.objects[k]))) { exp(`${k.replace("index:", "unicité par site ajoutée : ")}`); continue; }
     bad(`${k.split(":")[0]} ${A.objects[k] === undefined ? "apparu" : B.objects[k] === undefined ? "disparu" : "modifié"} : ${k.split(":")[1]}`);
   }
   const fa = new Set(A.fks), fb = new Set(B.fks);
@@ -165,6 +204,12 @@ function behaviour(db) {
     ["catégories", (s) => db.prepare("INSERT INTO taxonomy_terms (taxonomy, name, slug) VALUES ('category', 'a', 'essai-x')").run(), (s) => db.prepare("INSERT INTO taxonomy_terms (taxonomy, name, slug, site_id) VALUES ('category', 'b', 'essai-x', ?)").run(s)],
     ["formulaires", (s) => db.prepare("INSERT INTO mk_forms (organization_id, name, slug, consent_text) VALUES (?, 'a', 'essai-x', 'ok')").run(org.id), (s) => db.prepare("INSERT INTO mk_forms (organization_id, name, slug, consent_text, site_id) VALUES (?, 'b', 'essai-x', 'ok', ?)").run(org.id, s)],
     ["modèles de pages", (s) => db.prepare("INSERT INTO mk_page_templates (organization_id, name, content) VALUES (?, 'essai-x', '{}')").run(org.id), (s) => db.prepare("INSERT INTO mk_page_templates (organization_id, name, content, site_id) VALUES (?, 'essai-x', '{}', ?)").run(org.id, s)],
+    // R6 lot 5 : pages, redirections, historiques d'adresses (même adresse sur deux sites ; même adresse sur le même site refusée ; l'ancien code sans site insère encore)
+    ["pages", (s) => db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug) VALUES (?, 'essai-x', 'essai-x')").run(org.id), (s) => db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, site_id) VALUES (?, 'essai-x', 'essai-x', ?)").run(org.id, s)],
+    ["redirections", (s) => db.prepare("INSERT INTO seo_redirects (source_path, target) VALUES ('/essai-x', '/y')").run(), (s) => db.prepare("INSERT INTO seo_redirects (source_path, target, site_id) VALUES ('/essai-x', '/y', ?)").run(s)],
+    ["historique des adresses d'articles", (s) => { const p = db.prepare("INSERT INTO posts (slug, title) VALUES ('essai-h', 'h')").run().lastInsertRowid; db.prepare("INSERT INTO post_slug_history (old_slug, post_id) VALUES ('essai-x', ?)").run(p); },
+      (s) => { const p = db.prepare("INSERT INTO posts (slug, title) VALUES ('essai-h2', 'h')").run().lastInsertRowid; db.prepare("INSERT INTO post_slug_history (old_slug, post_id, site_id) VALUES ('essai-x', ?, ?)").run(p, s); }],
+    ["historique des adresses de pages et de termes", (s) => db.prepare("INSERT INTO cms_url_history (resource_type, resource_id, old_slug) VALUES ('page', 1, 'essai-x')").run(), (s) => db.prepare("INSERT INTO cms_url_history (resource_type, resource_id, old_slug, site_id) VALUES ('page', 1, 'essai-x', ?)").run(s)],
   ];
   for (const [label, main, other] of cases) {
     check(`${label} : l'ancien code (sans site) insère encore`, true, () => { main(); return true; });
@@ -193,4 +238,4 @@ function behaviour(db) {
   return out;
 }
 
-module.exports = { PLAN, PLAN_TABLES, pending, rebuild, snapshot, compare, behaviour };
+module.exports = { PLAN, PLAN_TABLES, UNIQUE_INDEX_NAMES, pending, rebuild, snapshot, compare, behaviour };

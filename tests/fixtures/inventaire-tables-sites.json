@@ -196,6 +196,10 @@
    "siteId": true,
    "classe": "a-isoler-B4"
   },
+  "mk_content_sites": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_conversions": {
    "siteId": true,
    "classe": "isolee"

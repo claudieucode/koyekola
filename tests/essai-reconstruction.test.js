@@ -148,9 +148,12 @@ describe("reconstruction : le comparateur détecte les vraies différences", () 
   const rebuiltCopy = (name) => { const d = copyOf(name); const A = tables.snapshot(d); tables.rebuild(d); return { d, A }; };
   const unexplainedAfter = (A, d) => tables.compare(A, tables.snapshot(d, A)).unexplained;
 
-  test("reconstruction correcte : aucune différence inexpliquée, 12 différences attendues documentées", () => {
+  test("reconstruction correcte : aucune différence inexpliquée, 19 différences attendues documentées (12 pour articles, termes, formulaires, modèles ; 7 pour pages, redirections et historiques d'adresses : R6 lot 5)", () => {
     const { d, A } = rebuiltCopy("ok.db"); const c = tables.compare(A, tables.snapshot(d, A));
-    assert.deepEqual(c.unexplained, []); assert.equal(c.expected.length, 12); d.close();
+    assert.deepEqual(c.unexplained, []); assert.equal(c.expected.length, 19);
+    // Le détail des 7 différences ajoutées par le lot 5 : 2 unicités de pages, 1 de redirections, colonne + unicité + relation de l'historique d'articles, 1 de l'historique CMS
+    const added = c.expected.filter((e) => /mk_landing_pages|seo_redirects|post_slug_history|cms_url_history/.test(e));
+    assert.equal(added.length, 7, added.join(" | ")); d.close();
   });
   const sabotages = {
     "une ligne supprimée": (d) => d.exec("DELETE FROM taxonomy_relations WHERE rowid = (SELECT MIN(rowid) FROM taxonomy_relations)"),
