@@ -84,7 +84,7 @@ describe("retours arrière R7 (080 → 089)", () => {
     const db = build("079"); seedBefore(db);
     const before = snapshotData(db);
     // montée complète
-    const dir = MIGRATIONS; assert.deepEqual(migrate(db, { dir, dbPath: ":memory:", log: quiet }).applied, ["080", "081", "082", "083", "084", "085", "086", "087", "088", "089"]);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "r7-080-089-")); for (const f of fs.readdirSync(MIGRATIONS)) if (f < "090") fs.copyFileSync(path.join(MIGRATIONS, f), path.join(dir, f)); /* périmètre R7 : 090 et 091 (R8) ont leur propre test de retour arrière */ assert.deepEqual(migrate(db, { dir, dbPath: ":memory:", log: quiet }).applied, ["080", "081", "082", "083", "084", "085", "086", "087", "088", "089"]);
     const fullSig = signature(db);
     assert.notDeepEqual(fullSig, refSig);
     seedAfter(db);

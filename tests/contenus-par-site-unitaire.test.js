@@ -24,7 +24,7 @@ describe("contenus par site : migration 075 et service", () => {
   // Empreinte des tables du CŒUR : prouve qu'aucun contenu historique n'est touché
   const CORE = ["posts", "taxonomy_terms", "taxonomy_relations", "post_slug_history", "post_revisions", "blog_comments", "seo_redirects", "nav_items", "seo_meta"];
   const fingerprint = () => JSON.stringify(Object.fromEntries(CORE.filter((t) => one("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", t)).map((t) => [t, crypto.createHash("sha256").update(JSON.stringify(all(`SELECT * FROM ${t} ORDER BY rowid`))).digest("hex")])));
-  const schemaOfCore = () => JSON.stringify(all("SELECT name, sql FROM sqlite_master WHERE tbl_name IN ('posts','taxonomy_terms','taxonomy_relations','blog_comments','seo_redirects','post_slug_history') AND type='table' ORDER BY name"));
+  const schemaOfCore = () => JSON.stringify(all("SELECT name, sql FROM sqlite_master WHERE tbl_name IN ('posts','taxonomy_terms','taxonomy_relations','blog_comments','post_slug_history') AND type='table' ORDER BY name"));
   let before0, schema0;
 
   before(() => {
@@ -50,7 +50,7 @@ describe("contenus par site : migration 075 et service", () => {
     before0 = fingerprint(); schema0 = schemaOfCore();
     // Application de 075 par le vrai lanceur, puis des déclencheurs (comme au démarrage)
     const r = migrate(db, { dir: MIGRATIONS, dbPath: dbFile, backupDir: path.join(SCRATCH, "backups"), log: quiet });
-    assert.deepEqual(r.applied, ["075", "079", "080", "081", "082", "083", "084", "085", "086", "087", "088", "089"]); // 079 (lot 7C, index des médias), 080 à 089 (R7, contacts, formulaires, journal, demandes de rattachement, modules par site, SMS et IA par site) suivent la 075
+    assert.deepEqual(r.applied, ["075", "079", "080", "081", "082", "083", "084", "085", "086", "087", "088", "089", "090", "091"]); // 090 et 091 (R8 lot 6A, SEO et imports par site) ; 079 (lot 7C, index des médias), 080 à 089 (R7, contacts, formulaires, journal, demandes de rattachement, modules par site, SMS et IA par site) suivent la 075
     site = require("../src/services/siteContent");
     assert.ok(site.ensureCoreTriggers(db).created >= 9);
   });
@@ -58,6 +58,10 @@ describe("contenus par site : migration 075 et service", () => {
   test("migration 075 : contenus historiques, adresses, redirections, relations, commentaires et structure du cœur strictement INCHANGÉS ; aucun contenu n'est rattaché", () => {
     assert.equal(fingerprint(), before0);
     assert.equal(schemaOfCore(), schema0, "aucune colonne ni contrainte du cœur n'a changé (outil de reconstruction intact)");
+    // seo_redirects fait exception DEPUIS la migration 090 (R8 lot 6A, décision du 17/10/2026) : l'unicité y est par site ; ses lignes (fingerprint ci-dessus) et son index sont ceux du plan de l'outil de reconstruction
+    const redirDef = one("SELECT sql FROM sqlite_master WHERE type='table' AND name='seo_redirects'").sql;
+    assert.doesNotMatch(redirDef, /source_path\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i);
+    assert.ok(one("SELECT 1 FROM sqlite_master WHERE type='index' AND name='uq_seo_redirects_site_source'"));
     assert.equal(one("SELECT COUNT(*) n FROM mk_content_sites").n, 0);
     assert.equal(one("SELECT slug FROM posts WHERE id = ?", post).slug, "bienvenue");
     assert.equal(site.siteOf(db, "post", post), null, "contenu historique = site principal");

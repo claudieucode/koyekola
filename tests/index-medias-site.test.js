@@ -21,7 +21,7 @@ test("079 : crée l'index partiel sur mk_media(site_id), idempotente, données i
     const rows = () => db.prepare("SELECT id, path, reach, site_id FROM mk_media ORDER BY id").all().map((r) => ({ ...r }));
     const before = rows();
     assert.equal(db.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE name = 'idx_mk_media_site_id'").get().n, 0);
-    assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied, ["079", "080", "081", "082", "083", "084", "085", "086", "087", "088", "089"]);
+    assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied, ["079", "080", "081", "082", "083", "084", "085", "086", "087", "088", "089", "090", "091"]);
     const idx = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'idx_mk_media_site_id'").get();
     assert.match(idx.sql, /ON mk_media\(site_id\) WHERE site_id IS NOT NULL/);
     assert.equal(db.prepare("PRAGMA index_info('idx_mk_media_site_id')").all()[0].name, "site_id", "première colonne = site_id");
