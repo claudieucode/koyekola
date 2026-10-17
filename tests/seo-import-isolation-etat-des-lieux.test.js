@@ -1,5 +1,4 @@
-// R8 lot 5 — ÉTAT DES LIEUX (aucune correction) : ce que l'isolation SEO garantit AUJOURD'HUI, et les écarts connus qui interdisent d'ouvrir le SEO ou l'import aux sites.
-// Les tests « ÉCART CONNU » décrivent le comportement ACTUEL : ils doivent être réécrits (pas affaiblis) quand la correction autorisée sera livrée.
+// R8 lot 5 → lot 6 — garanties d'isolation SEO et import. Les quatre « écarts connus » du lot 5 sont ici réécrits pour vérifier les CORRECTIONS livrées au lot 6 (migrations 090 et 091, résolution par site, import par site).
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY, freshMarketing } = require("./marketing-helpers");
@@ -33,18 +32,19 @@ describe("SEO : garanties actuelles et écarts (HTTP)", () => {
     assert.match(r.text, /ancien-alpha/); assert.doesNotMatch(r.text, /ancien-bravo|ancien-global/);
     assert.equal((await adminA.get(`${SP}/${B}/redirections`)).status, 403, "le site d'un autre");
   });
-  test("ÉCART CONNU 1 — redirections : « source_path » est UNIQUE pour toute l'organisation : deux sites ne peuvent pas avoir la même ancienne adresse", () => {
-    assert.throws(() => db.prepare("INSERT INTO seo_redirects (source_path, target, status, site_id) VALUES ('/ancien-alpha', '/autre', 301, ?)").run(B), /UNIQUE/i);
+  test("CORRIGÉ (écart 1, migration 090) — redirections : l'ancienne adresse est unique PAR site : deux sites peuvent avoir la même, un même site ne peut pas l'avoir deux fois", () => {
+    db.prepare("INSERT INTO seo_redirects (source_path, target, status, site_id) VALUES ('/ancien-alpha', '/autre-b', 301, ?)").run(B);            // même adresse, autre site : permis
+    assert.throws(() => db.prepare("INSERT INTO seo_redirects (source_path, target, status, site_id) VALUES ('/ancien-alpha', '/x', 301, ?)").run(A), /UNIQUE/i, "deux fois pour le même site");
+    assert.throws(() => db.prepare("INSERT INTO seo_redirects (source_path, target, status, site_id) VALUES ('/ancien-global', '/x', 301, NULL)").run(), /UNIQUE/i, "deux fois en commun");
   });
-  test("ÉCART CONNU 2 — le journal des 404, les réglages SEO et le journal des modifications n'ont aucune colonne de site", () => {
+  test("CORRIGÉ (écart 2, migration 090) — le journal 404, le journal des modifications, les audits, les alertes et la surveillance portent le site ; les réglages d'un site ont leur table ; les réglages globaux restent globaux ; seo_meta reste par contenu", () => {
     const cols = (t) => db.prepare(`SELECT name FROM pragma_table_info('${t}')`).all().map((c) => c.name);
-    for (const t of ["seo_404", "seo_settings", "seo_changes", "seo_meta"]) assert.ok(!cols(t).includes("site_id"), `${t} n'a pas de site_id`);
-    for (const t of ["seo_audits", "seo_alerts", "seo_monitor_snapshots", "seo_jobs"]) { const c = cols(t); if (c.length) assert.ok(!c.includes("site_id"), `${t} n'a pas de site_id`); }
-    assert.ok(cols("seo_redirects").includes("site_id"), "seul seo_redirects porte déjà un site (palier 12)");
+    for (const t of ["seo_404", "seo_changes", "seo_redirects", "seo_audits", "seo_alerts", "seo_monitor_snapshots", "seo_site_settings"]) assert.ok(cols(t).includes("site_id"), `${t} : site_id`);
+    for (const t of ["seo_settings", "seo_meta"]) assert.ok(!cols(t).includes("site_id"), `${t} : global / par contenu, sans site`);
   });
 });
 
-describe("Import de contacts : le service actuel n'est PAS sûr pour un accès limité à un site", () => {
+describe("Import de contacts : le service est sûr pour un accès limité à un site", () => {
   const imports = require("../src/marketing/import");
   const contactcore = require("../src/marketing/contactcore");
   let m, siteA, siteB, limitedA, contactB;
@@ -55,20 +55,20 @@ describe("Import de contacts : le service actuel n'est PAS sûr pour un accès l
     contactB = contactcore.identify({ ...m.A, siteScope: undefined }, { email: "secret@bravo.cd", first_name: "Original", source: "admin", siteId: siteB }, {}).contact.id;
     limitedA = { ...m.A, siteScope: siteA };
   });
-  test("ÉCART CONNU 3 — « mk_imports » n'a aucune colonne de site : un import (et ses lignes rejetées) est lisible par toute personne de l'organisation qui a le droit d'import", () => {
-    assert.ok(!m.db.prepare("SELECT name FROM pragma_table_info('mk_imports')").all().some((c) => c.name === "site_id"));
+  test("CORRIGÉ (écart 3, migration 091) — un import appartient à un site : un accès limité à un autre site ne le lit pas", () => {
+    assert.ok(m.db.prepare("SELECT name FROM pragma_table_info('mk_imports')").all().some((c) => c.name === "site_id"));
     const p = imports.previewImport(m.A, { filename: "a.csv", data: Buffer.from("E-mail,Prénom\nx@ex.cd,X\n") });
-    assert.ok(imports.getImport(limitedA, p.importId ?? p.id), "un accès limité à un autre site lit l'import d'un autre");
+    assert.equal(imports.getImport(limitedA, p.id), null, "un accès limité au site A ne lit pas un import d'équipe");
+    const own = imports.previewImport(limitedA, { filename: "b.csv", data: Buffer.from("E-mail,Prénom\ny@ex.cd,Y\n") });
+    assert.equal(m.db.prepare("SELECT site_id FROM mk_imports WHERE id = ?").get(own.id).site_id, siteA);
+    assert.equal(imports.getImport({ ...m.A, siteScope: siteB }, own.id), null, "ni celui d'un autre site");
   });
-  test("ÉCART CONNU 4 — l'import ne cherche pas les doublons selon la portée du site : une adresse connue d'un AUTRE site est trouvée et MODIFIÉE (aucune demande de rattachement)", () => {
-    const text = "E-mail,Prénom\nsecret@bravo.cd,Ecrase\n";
-    const p = imports.previewImport(limitedA, { filename: "b.csv", data: Buffer.from(text) });
-    const id = p.importId ?? p.id;
-    const r = imports.runImport(limitedA, id, { mapping: ["email", "first_name"], options: { updateExisting: "overwrite" } });
-    const after = m.db.prepare("SELECT first_name FROM mk_contacts WHERE id = ?").get(contactB);
-    const requests = m.db.prepare("SELECT COUNT(*) n FROM mk_contact_requests").get().n;
-    assert.equal(after.first_name, "Ecrase", "le contact de l'autre site a été réécrit par un import limité au site A");
-    assert.equal(requests, 0, "aucune demande de rattachement n'a été mise en file");
-    assert.ok(r);
+  test("CORRIGÉ (écart 4) — l'import d'un site ne trouve plus, ne modifie plus un contact d'un AUTRE site : demande de rattachement, contact intact", () => {
+    const p = imports.previewImport(limitedA, { filename: "c.csv", data: Buffer.from("E-mail,Prénom\nsecret@bravo.cd,Ecrase\n") });
+    const options = { updateExisting: "overwrite" };
+    imports.analyzeImport(limitedA, p.id, { mapping: ["email", "first_name"], options });
+    imports.runImport(limitedA, p.id, { mapping: ["email", "first_name"], options });
+    assert.equal(m.db.prepare("SELECT first_name FROM mk_contacts WHERE id = ?").get(contactB).first_name, "Original", "contact de l'autre site intact");
+    assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_contact_requests WHERE email = 'secret@bravo.cd' AND site_id = ? AND status = 'pending'").get(siteA).n, 1, "demande de rattachement en file");
   });
 });

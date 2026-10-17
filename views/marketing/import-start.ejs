@@ -11,7 +11,8 @@
       </ul>
     </section>
 
-    <form action="/marketing/importer" method="post" enctype="multipart/form-data" class="mk-form">
+    <% if (typeof siteImport !== "undefined" && siteImport) { %><div class="mk-cms-soon" role="note"><p>Import de ce site : les contacts importés sont ajoutés à ce site seulement. Un fichier compte 5 000 lignes au plus, et l'analyse (sans rien importer) est obligatoire avant le lancement.</p></div><% } %>
+    <form action="<%= importBase %>" method="post" enctype="multipart/form-data" class="mk-form">
       <div class="field-group">
         <label for="imp-file" class="sr-only">Fichier CSV</label>
         <div class="mk-dropzone" data-mk-dropzone data-mk-dropzone-max-mb="<%= maxMb %>">
@@ -38,7 +39,7 @@
         <caption class="sr-only">Imports précédents</caption>
         <thead><tr><th scope="col">Fichier</th><th scope="col">Lignes</th><th scope="col">État</th><th scope="col">Date</th></tr></thead>
         <tbody><% imports.forEach((i) => { %>
-          <tr><td><a href="/marketing/importer/<%= i.id %>"><%= i.filename %></a></td><td><%= mkh.fmt(i.total_rows) %></td>
+          <tr><td><a href="<%= importBase %>/<%= i.id %>"><%= i.filename %></a></td><td><%= mkh.fmt(i.total_rows) %></td>
             <td><%= { previewed: "à configurer", running: "en cours", done: "terminé", failed: "en échec" }[i.status] %></td><td><%= mkh.fdate(i.created_at) %></td></tr>
         <% }) %></tbody>
       </table></div>

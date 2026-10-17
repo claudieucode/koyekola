@@ -169,6 +169,8 @@ const SITE_MODULES = {
   // R8 lot 3 : Formulaires et Contacts s'ouvrent dans le cadre du site (isolation R7 : formulaires, contacts, consentements, demandes de rattachement ; le site vient de l'adresse)
   formulaires: { label: "Formulaires", kind: "delegate", to: "/formulaires", reg: "forms", permission: "forms.read", legacy: "/marketing/formulaires", legacyLabel: "Formulaires" },
   contacts: { label: "Contacts", kind: "delegate", to: "/contacts", reg: "contacts", permission: "contacts.read", legacy: "/marketing/contacts" },
+  // R8 lot 6D : import de contacts PROPRE au site (fichier, correspondance, analyse obligatoire, doublons inter-sites traités par l'équipe)
+  importer: { label: "Importer des contacts", kind: "own", reg: "import", permission: "contacts.import", legacy: "/marketing/importer" },
   modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
   // R8 lot 4 : Navigation / Menus par site (menus et emplacements PROPRES au site ; ressources limitées à celles du site)
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
@@ -276,7 +278,7 @@ const soonPhase = (key) => {
 const SOON_SLUG = { articles: "articles", mediatheque: "medias", navigation: "navigation", commentaires: "commentaires", seo: "seo" };
 
 // Extensions de l'espace, communes au principal et aux sites (hors registre) : Composants (groupe Pages) et le groupe « Marketing du site »
-const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires", "contacts"];
+const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires", "contacts", "importer"];
 function marketingGroup(space) {
   const P = space.principal;
   const items = MARKETING_MODULES.map((m) => {

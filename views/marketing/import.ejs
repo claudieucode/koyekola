@@ -1,5 +1,5 @@
 <%- include("partials/top", { title, active }) %>
-    <p class="mk-back"><a href="/marketing/importer">← Importer</a></p>
+    <p class="mk-back"><a href="<%= importBase %>">← Importer</a></p>
     <h1 class="mk-email"><%= imp.filename %></h1>
     <p class="mk-lead"><%= mkh.fmt(imp.total_rows) %> ligne<%= imp.total_rows > 1 ? "s" : "" %> de données · séparateur « <%= imp.delimiter === "\t" ? "tabulation" : imp.delimiter %> » · ajouté le <%= mkh.fdate(imp.created_at) %></p>
     <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
@@ -14,21 +14,21 @@
           <li><%= mkh.fmt(imp.subscribed_count) %> abonné<%= imp.subscribed_count > 1 ? "s" : "" %> (consentement déclaré) · <%= mkh.fmt(imp.blocked_unsubscribed_count) %> désinscrit<%= imp.blocked_unsubscribed_count > 1 ? "s" : "" %> non réabonné<%= imp.blocked_unsubscribed_count > 1 ? "s" : "" %></li>
           <li><%= plural(imp.invalid_count, "ligne invalide", "lignes invalides") %> · <%= plural(imp.duplicate_count, "doublon", "doublons") %> · <%= plural(imp.suppressed_count, "adresse bloquée ignorée", "adresses bloquées ignorées") %></li>
         </ul>
-        <% if (imp.invalid_count + imp.duplicate_count + imp.suppressed_count > 0) { %><p><a class="btn btn-outline btn-sm" href="/marketing/importer/<%= imp.id %>/rejets.csv">Télécharger les lignes rejetées (CSV)</a></p><% } %>
+        <% if (canSeeRejects !== false && imp.invalid_count + imp.duplicate_count + imp.suppressed_count > 0) { %><p><a class="btn btn-outline btn-sm" href="<%= importBase %>/<%= imp.id %>/rejets.csv">Télécharger les lignes rejetées (CSV)</a></p><% } %>
         <p><a class="btn btn-primary btn-sm" href="/marketing/contacts">Voir les contacts</a></p>
       </section>
     <% } else if (imp.status === "running") { %>
       <section class="mk-panel">
         <h2>Import en cours</h2>
         <p><%= mkh.fmt(imp.processed_rows) %> / <%= mkh.fmt(imp.total_rows) %> lignes traitées.</p>
-        <p><a class="btn btn-outline btn-sm" href="/marketing/importer/<%= imp.id %>">Actualiser</a></p>
+        <p><a class="btn btn-outline btn-sm" href="<%= importBase %>/<%= imp.id %>">Actualiser</a></p>
       </section>
     <% } else if (imp.status === "failed") { %>
       <section class="mk-panel mk-danger">
         <h2>Import interrompu</h2>
         <p><%= imp.error %></p>
         <p class="field-hint">Rien n'a été écrit pour la tranche en cours : la reprise ne crée aucun doublon.</p>
-        <form action="/marketing/importer/<%= imp.id %>/reprendre" method="post"><button type="submit" class="btn btn-primary btn-sm">Reprendre l'import</button></form>
+        <form action="<%= importBase %>/<%= imp.id %>/reprendre" method="post"><button type="submit" class="btn btn-primary btn-sm">Reprendre l'import</button></form>
       </section>
     <% } else if (setup) { %>
       <form method="post" class="mk-form-wide">
@@ -100,8 +100,8 @@
         <% } %>
 
         <div class="mk-actions">
-          <button type="submit" class="btn btn-outline" formaction="/marketing/importer/<%= imp.id %>/analyser">Analyser (sans rien importer)</button>
-          <button type="submit" class="btn btn-primary" formaction="/marketing/importer/<%= imp.id %>/lancer">Lancer l'import</button>
+          <button type="submit" class="btn btn-outline" formaction="<%= importBase %>/<%= imp.id %>/analyser">Analyser (sans rien importer)</button>
+          <button type="submit" class="btn btn-primary" formaction="<%= importBase %>/<%= imp.id %>/lancer">Lancer l'import</button>
         </div>
       </form>
     <% } %>

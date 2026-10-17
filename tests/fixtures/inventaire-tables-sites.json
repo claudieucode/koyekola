@@ -238,7 +238,7 @@
   },
   "mk_imports": {
    "siteId": true,
-   "classe": "plateforme"
+   "classe": "isolee"
   },
   "mk_invitations": {
    "siteId": true,

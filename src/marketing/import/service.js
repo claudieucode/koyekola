@@ -14,8 +14,12 @@ const { requireList, addToList } = require("../audience/lists");
 const { tagContact } = require("../audience/tags");
 const { recordConsent } = require("../compliance/consent");
 const { checkCtx, cleanText, audit, emit, MarketingError } = require("../audience/shared");
+const { recordAudit } = require("../audit");
 const { parseCsv, decodeCsv, toCsv, DEFAULT_LIMITS } = require("./csv");
 const { cleanTimeZone } = require("../sending/sendtime");
+const crypto = require("node:crypto");
+const siteAccess = require("../contactcore/siteAccess");
+const contactRequests = require("../contactcore/requests");
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const SAMPLE_ROWS = 10;
@@ -24,6 +28,16 @@ const MAX_REJECTS = 1000;
 const MAX_TAGS_PER_ROW = 20;
 const TEXT_TARGETS = ["first_name", "last_name", "phone", "company", "country", "language", "timezone"];
 const MODES = ["fill", "skip", "overwrite"];
+// R8 lot 6D — import PAR SITE. Un import appartient à un site (mk_imports.site_id, NULL = import de l'équipe / de l'organisation). Le site vient du serveur, jamais d'un champ du fichier ou du formulaire :
+//   - accès LIMITÉ à un site : ctx.siteScope (imposé par le serveur) ; - équipe dans l'espace d'un site : ctx.importSite (site de l'adresse vérifiée, posé par la route) ; - équipe hors espace de site : aucun site.
+// Plafond de lignes d'un import de site (au-delà : à découper ou à confier à l'équipe) ; analyse à blanc obligatoire avant de lancer un import de site.
+const SITE_MAX_ROWS = Number(process.env.IMPORT_SITE_MAX_ROWS) > 0 ? Number(process.env.IMPORT_SITE_MAX_ROWS) : 5000;
+// Journal d'un import : le site est celui de l'IMPORT (relu en base), même quand l'équipe ou une tâche de fond agit ; aucune adresse e-mail n'est écrite
+function auditImport(ctx, action, id, metadata, siteId) {
+  if (ctx.userId == null || ctx.audit === false) return;
+  recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId, action, resourceType: "import", resourceId: id, metadata, siteId: siteId ?? undefined });
+}
+const scopeOf = (ctx) => (Number.isInteger(ctx.siteScope) ? ctx.siteScope : Number.isInteger(ctx.importSite) ? ctx.importSite : undefined);
 
 const norm = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const SYNONYMS = {
@@ -63,7 +77,8 @@ const forget = (ctx, id) => {
 };
 const emailColumn = (imp) => JSON.parse(imp.mapping).indexOf("email");
 
-const table = (ctx) => createRepository(ctx.db, ctx.organizationId).table("mk_imports");
+// Le dépôt applique lui-même la portée de site (lecture, création, modification) quand le ctx en a une : un import d'un autre site est « introuvable »
+const table = (ctx) => createRepository(ctx.db, ctx.organizationId, { siteScope: scopeOf(ctx) }).table("mk_imports");
 const strip = ({ source_text: _omit, ...rest }) => ({ ...rest, headers: JSON.parse(rest.headers), mapping: JSON.parse(rest.mapping), options: JSON.parse(rest.options) });
 
 function getImport(ctx, id) {
@@ -115,8 +130,13 @@ function previewImport(ctx, { filename = "import.csv", data, limits = {} } = {})
   const headers = parsed.rows[0].map((h) => h.trim().slice(0, 100));
   const suggestedMapping = suggestMapping(headers, listProperties(ctx));
   const safeName = path.basename(String(filename).replace(/\\/g, "/")).replace(/[\x00-\x1f\x7f]/g, "").slice(0, 120) || "import.csv";
+  const site = scopeOf(ctx) ?? null;
+  if (site !== null) {
+    if (!ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(site, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+    if (parsed.rows.length - 1 > SITE_MAX_ROWS) throw new MarketingError("too_many_rows", `Un import de site compte ${SITE_MAX_ROWS} lignes au plus (ce fichier : ${parsed.rows.length - 1}). Découpez le fichier en plusieurs envois.`);
+  }
   const row = table(ctx).insert({
-    user_id: ctx.userId ?? null, filename: safeName, delimiter: parsed.delimiter, headers: JSON.stringify(headers),
+    user_id: ctx.userId ?? null, filename: safeName, ...(site !== null ? { site_id: site } : {}), delimiter: parsed.delimiter, headers: JSON.stringify(headers),
     total_rows: parsed.rows.length - 1, source_text: text,
   });
   return { id: row.id, filename: safeName, delimiter: parsed.delimiter, headers, sample: parsed.rows.slice(1, 1 + SAMPLE_ROWS), totalRows: row.total_rows, suggestedMapping };
@@ -141,14 +161,17 @@ function validateMapping(ctx, mapping, columns) {
   return mapping;
 }
 
-function normalizeOptions(ctx, options = {}) {
+function normalizeOptions(ctx, options = {}, imp = null) {
   const out = { updateExisting: options.updateExisting ?? "fill", listId: null, tag: "", consent: null };
   if (!MODES.includes(out.updateExisting)) throw new MarketingError("invalid_field", "Mode de mise à jour inconnu (fill, skip, overwrite).");
   if (options.listId !== undefined && options.listId !== null) {
     const target = requireList(ctx, options.listId);
+    // Import de site : la liste cible est une audience de CE site (jamais une liste commune ni celle d'un autre site)
+    if (imp && imp.site_id !== null && imp.site_id !== undefined && target.site_id !== imp.site_id) throw new MarketingError("not_found", "Liste introuvable.");
     out.listId = options.listId;
     out.siteId = target.site_id ?? undefined; // une audience de site : les contacts importés ont ce site pour origine
   }
+  if (imp && imp.site_id !== null && imp.site_id !== undefined) out.siteId = imp.site_id; // le site d'un import est celui de l'import (serveur), pas celui d'une valeur reçue
   if (options.tag) out.tag = cleanText(options.tag, { max: 64, field: "tag" });
   if (options.consent?.declared) {
     const text = cleanText(options.consent.text, { max: 1000, field: "consent.text" });
@@ -171,7 +194,9 @@ function processRows(ctx, imp, parsed, from, to, { mapping, options, dryRun }) {
   const counters = newCounters();
   const rejects = [];
   const examples = { invalid: [], duplicatesInFile: [], suppressed: [], blockedUnsubscribed: [] };
-  const rowCtx = { ...ctx, audit: false, bus: null };
+  // Import de site : chaque ligne s'exécute avec la MÊME portée qu'un accès limité à ce site (lecture, écriture, listes, consentements), quel que soit l'appelant (page, tâche en arrière-plan)
+  const siteId = imp.site_id ?? null;
+  const rowCtx = { ...ctx, audit: false, bus: null, ...(siteId !== null ? { siteScope: siteId } : {}) };
   const headerCount = parsed.rows[0].length;
   const col = (target) => mapping.indexOf(target);
   const reject = (kind, line, email, reason, extra = {}) => {
@@ -223,6 +248,16 @@ function processRows(ctx, imp, parsed, from, to, { mapping, options, dryRun }) {
     if (rowError) { reject("invalid", line, check.email, rowError); continue; }
 
     const existing = findByEmail(ctx, check.email);
+    if (siteId !== null && existing) {
+      // Adresse connue hors de la portée du site : JAMAIS lue, modifiée, étiquetée, listée ni abonnée. Pour le demandeur c'est une création (aucun indice) ; l'équipe reçoit une demande de rattachement (file R7 lot 5).
+      if (!siteAccess.canRead(rowCtx, existing)) {
+        if (dryRun) willCreate++;
+        else { contactRequests.enqueue(rowCtx, { email: check.email, source: "admin" }); counters.created++; }
+        continue;
+      }
+      // Contact lisible mais non modifiable par le site (rattachement en lecture seule) : rien n'est modifié
+      if (!siteAccess.canWrite(rowCtx, existing)) { counters.unchanged++; continue; }
+    }
     const cleanFields = Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, cleanText(v, { max: 200, field: k })]));
     const filled = Object.entries(cleanFields).some(([k, v]) => v !== "" && (existing ? existing[k] === "" : true));
     const differs = existing && Object.entries(cleanFields).some(([k, v]) => v !== "" && existing[k] !== v.slice(0, { first_name: 100, last_name: 100, phone: 40, country: 100, language: 20 }[k] ?? 200));
@@ -285,10 +320,12 @@ function analyzeImport(ctx, id, { mapping, options } = {}) {
   if (imp.status === "done") throw new MarketingError("already_done", "Cet import est terminé.");
   const headers = JSON.parse(imp.headers);
   const valid = validateMapping(ctx, mapping, headers.length);
-  const opts = normalizeOptions(ctx, options);
+  const opts = normalizeOptions(ctx, options, imp);
   const parsed = parsedOf(ctx, { ...imp, mapping: JSON.stringify(valid) });
   const r = processRows(ctx, imp, parsed, 0, imp.total_rows, { mapping: valid, options: opts, dryRun: true });
   const c = r.counters;
+  // Import de site : la preuve que CETTE correspondance avec CES options a été analysée est conservée ; changer l'un des deux impose une nouvelle analyse
+  if (imp.site_id !== null && imp.site_id !== undefined) table(ctx).update(id, { options: JSON.stringify({ analysis: { key: analysisKey(valid, opts), at: new Date().toISOString().slice(0, 19).replace("T", " ") } }) });
   return {
     total: imp.total_rows, willCreate: r.willCreate, willUpdate: r.willUpdate, unchanged: c.unchanged, invalid: c.invalid,
     duplicatesInFile: c.duplicatesInFile, suppressed: c.suppressed, willSubscribe: r.willSubscribe, blockedUnsubscribed: c.blockedUnsubscribed,
@@ -296,15 +333,25 @@ function analyzeImport(ctx, id, { mapping, options } = {}) {
   };
 }
 
+const analysisKey = (mapping, opts) => crypto.createHash("sha256").update(JSON.stringify([mapping, opts])).digest("hex");
+
 function startImport(ctx, id, { mapping, options } = {}) {
   const imp = requireImport(ctx, id);
   if (imp.status === "done") throw new MarketingError("already_done", "Cet import est déjà terminé : il ne peut pas être relancé.");
   if (imp.status !== "previewed") throw new MarketingError("invalid_state", "Cet import a déjà démarré.");
   const valid = validateMapping(ctx, mapping, JSON.parse(imp.headers).length);
-  const opts = normalizeOptions(ctx, options);
+  const opts = normalizeOptions(ctx, options, imp);
+  if (imp.site_id !== null && imp.site_id !== undefined) {
+    let proof = null;
+    try { proof = (JSON.parse(imp.options || "{}").analysis || {}).key || null; } catch { proof = null; }
+    if (proof !== analysisKey(valid, opts)) throw new MarketingError("analysis_required", "Lancez d'abord l'analyse (sans rien importer) avec cette correspondance et ces options : l'import n'est lancé qu'après une analyse identique.");
+  }
   forget(ctx, id);
-  table(ctx).update(id, { mapping: JSON.stringify(valid), options: JSON.stringify(opts), status: "running", started_at: new Date().toISOString().slice(0, 19).replace("T", " ") });
-  audit(ctx, "import.started", "import", id, { total: imp.total_rows, updateExisting: opts.updateExisting, consentDeclared: Boolean(opts.consent), list: opts.listId, tag: Boolean(opts.tag) });
+  // Démarrage ATOMIQUE : deux envois du même formulaire ne lancent jamais deux fois l'import (le second trouve l'import déjà démarré)
+  const started = ctx.db.prepare("UPDATE mk_imports SET mapping = ?, options = ?, status = 'running', started_at = ? WHERE id = ? AND organization_id = ? AND status = 'previewed'")
+    .run(JSON.stringify(valid), JSON.stringify(opts), new Date().toISOString().slice(0, 19).replace("T", " "), id, ctx.organizationId).changes;
+  if (started !== 1) throw new MarketingError("invalid_state", "Cet import a déjà démarré.");
+  auditImport(ctx, "import.started", id, { total: imp.total_rows, updateExisting: opts.updateExisting, consentDeclared: Boolean(opts.consent), list: opts.listId, tag: Boolean(opts.tag) }, imp.site_id);
   return getImport(ctx, id);
 }
 
@@ -350,7 +397,7 @@ function runImportSlice(ctx, id, { maxRows = 1000 } = {}) {
         ctx.db.prepare("UPDATE mk_imports SET status = 'done', finished_at = datetime('now'), source_text = '' WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
         const final = reportOf(requireImport(ctx, id));
         if (ctx.bus) ctx.bus.emit({ organizationId: ctx.organizationId, name: "contacts.imported", source: "marketing", idempotencyKey: `contacts.imported:${id}`, metadata: { importId: id, ...final } });
-        audit(ctx, "import.completed", "import", id, final);
+        auditImport(ctx, "import.completed", id, final, imp.site_id);
         forget(ctx, id);
         return { done: true, processed: to, report: final };
       }
@@ -374,6 +421,8 @@ function runImport(ctx, id, { mapping, options, sliceSize = 1000 } = {}) {
 
 function rejectsCsv(ctx, id) {
   const imp = requireImport(ctx, id);
+  // Les lignes rejetées reprennent les cellules brutes du fichier (données personnelles) : pour un import de site, le droit de voir les données sensibles est exigé ici aussi (défense en profondeur)
+  if (imp.site_id !== null && imp.site_id !== undefined && typeof ctx.can === "function" && !ctx.can("contacts.view_sensitive")) throw new MarketingError("forbidden", "Vous n'avez pas la permission de voir les lignes rejetées (données sensibles).");
   const headers = JSON.parse(imp.headers);
   const rows = ctx.db.prepare("SELECT line, email, reason, raw FROM mk_import_rejects WHERE import_id = ? AND organization_id = ? ORDER BY line").all(id, ctx.organizationId);
   return toCsv([["ligne", "e-mail", "raison", ...headers], ...rows.map((r) => [r.line, r.email, r.reason, ...JSON.parse(r.raw)])]);

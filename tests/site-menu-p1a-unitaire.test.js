@@ -35,7 +35,7 @@ describe("projection du registre (menu d'un site)", () => {
   });
   test("ce qui est réservé à l'administration centrale ou à un lot suivant n'a AUCUN lien dans un site", () => {
     const hrefs = flat(nav.siteSections(site)).map((i) => i.href || "").join(" ");
-    for (const w of ["sauvegardes", "logs", "systeme", "importer", "exporter", "diagnostic", "maintenance", "roles", "permissions", "invitations", "liens-casses", "permaliens", "parametres"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
+    for (const w of ["sauvegardes", "logs", "systeme", "outils/importer", "exporter", "diagnostic", "maintenance", "roles", "permissions", "invitations", "liens-casses", "permaliens", "parametres"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
     assert.ok(!flat(nav.siteSections(site)).some((i) => i.href === `${site.base}/corbeille`), "la corbeille du site (Outils) reste fermée ; seules celles des articles et des commentaires sont ouvertes");
     const keys = flat(nav.siteSections(site)).map((i) => i.key);
     for (const k of ["outils/sauvegardes", "outils/systeme", "outils/logs"]) assert.ok(!keys.includes(k), `${k} reste dans l'administration centrale`);
@@ -67,7 +67,7 @@ describe("espace du site principal", () => {
     for (const it of nav.ALL) assert.ok(hrefs.has(it.href), it.href);
     assert.equal(nav.ALL.length, 66);
     assert.equal(r.sections.length, 15);
-    assert.equal(flat(r.sections).length, 66 + 1 + 9);
+    assert.equal(flat(r.sections).length, 66 + 1 + 10); // R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
     const g = nav.buildCmsNav({ can: all, active: "landing" });

@@ -35,12 +35,12 @@ describe("C1 — une seule définition, deux présentations", () => {
     const dash = sg.find((x) => x.key === "dashboard").items[0];
     assert.equal(dash.label, "Tableau de bord", "seule différence de libellé : le tableau de bord d'un site n'est pas « du site principal »");
   });
-  test("le principal : toutes les entrées du registre, libellés et adresses historiques inchangés (66 + Composants + 9 Marketing)", () => {
+  test("le principal : toutes les entrées du registre, libellés et adresses historiques inchangés (66 + Composants + 10 Marketing)", () => {
     const pg = nav.projectSections(principal);
     const items = pg.flatMap((g) => g.items);
     for (const reg of nav.ALL) { const got = items.find((i) => i.key === reg.key); assert.ok(got, reg.key); assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); assert.equal(got.permission, reg.permission); }
     assert.equal(nav.ALL.length, 66);
-    assert.equal(items.length, 66 + 1 + 9);
+    assert.equal(items.length, 66 + 1 + 10); // R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("les trois fonctions centrales n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);
@@ -50,7 +50,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("les clés d'un site sont celles du registre (plus Composants et le groupe Marketing) : pas de clé inventée", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items.map((i) => i.key));
     const extra = keys.filter((k) => !registryKeys.includes(k));
-    assert.deepEqual(extra.filter((k) => !EXTENSIONS.includes(k)).filter((k) => !/^espace\/(listes|segments|modeles-email|campagnes|automatisations|tunnels|analytics|formulaires|contacts)$/.test(k)), []);
+    assert.deepEqual(extra.filter((k) => !EXTENSIONS.includes(k)).filter((k) => !/^espace\/(listes|segments|modeles-email|campagnes|automatisations|tunnels|analytics|formulaires|contacts|importer)$/.test(k)), []);
   });
   test("aucune entrée n'est ouverte à un site par défaut : une NOUVELLE entrée du registre est « Bientôt » dans un site et normale dans le principal", () => {
     const grp = nav.SECTIONS.find((s) => s.key === "pages");
