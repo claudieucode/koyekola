@@ -21,6 +21,7 @@ const MIGRATIONS_DIR = path.join(__dirname, "migrations");
 function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }) {
   try {
     const migrations = migrate(db, { dir: MIGRATIONS_DIR, dbPath: dbFile, backupDir: path.join(dataDir, "backups"), log });
+    try { require("./transitions").runAiOnce(db, { log }); } catch (error) { log.warn?.("[KOLAKISA] Transition IA non exécutée (sera retentée au prochain démarrage) :", error.message); } // R7 lot 6.2 : activation initiale UNIQUE du module « ai » pour les sites qui utilisaient déjà le studio de pages IA
     require("../services/siteContent").ensureCoreTriggers(db); // R6 lot 1 : déclencheurs d'intégrité des contenus par site (idempotents, additifs)
     const organization = ensureDefaultOrganization(db, { name: "KOLAKISA", slug: "koyekola" });
     syncInstructorMembers(db, organization.id);

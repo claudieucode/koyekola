@@ -17,29 +17,108 @@ const { startServer, loginInstructor, newStudent } = require("./helpers");
 const NOW = Date.UTC(2026, 9, 5, 12);
 const rows = (db, sql, ...a) => db.prepare(sql).all(...a).map((r) => ({ ...r }));
 
-describe("migration 086 : colonne ajoutée, historique sans site, transition explicite du module « ai »", () => {
-  test("lignes existantes inchangées (site NULL) ; module « ai » activé UNE FOIS pour les sites existants non supprimés qui ont un membre ; les autres et les sites créés ensuite restent désactivés ; rejouée : rien", () => {
+describe("migration 086 + transition unique : colonne ajoutée, historique sans site, accès IA préservé seulement là où il existait", () => {
+  const transitions = require("../src/marketing/transitions");
+  // Base d'avant 086 (vraies migrations < 086), avec deux organisations, des comptes et des sites de tous les cas
+  const avant = () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mig86-"));
-    try {
-      for (const f of fs.readdirSync(MIGRATIONS)) if (f < "086") fs.copyFileSync(path.join(MIGRATIONS, f), path.join(dir, f));
-      const db = new DatabaseSync(":memory:"); db.exec("PRAGMA foreign_keys = ON");
-      db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, email TEXT, password_hash TEXT DEFAULT 'x', role TEXT NOT NULL DEFAULT 'etudiant', status TEXT DEFAULT 'active', created_at TEXT DEFAULT (datetime('now')))");
-      migrate(db, { dir, dbPath: ":memory:", log: quiet });
-      db.exec("INSERT INTO mk_organizations (name, slug) VALUES ('A', 'a')");
-      db.exec("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (1, 'Avec membre', 'a', '{}'), (1, 'Sans membre', 'b', '{}'), (1, 'Supprimé', 'c', '{}')");
-      db.exec("UPDATE mk_sites SET deleted_at = datetime('now') WHERE slug = 'c'");
-      db.exec("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (1, 1, 'editor'), (3, 2, 'editor')");
-      db.exec("INSERT INTO mk_ai_requests (organization_id, user_id, action, ok, created_at) VALUES (1, 7, 'rewrite', 1, 1), (1, NULL, 'sms', 0, 2)");
-      const before = rows(db, "SELECT * FROM mk_ai_requests");
-      assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied.filter((v) => v === "086"), ["086"]);
-      assert.deepEqual(rows(db, "SELECT * FROM mk_ai_requests").map(({ site_id, ...r }) => ({ ...r, site_id })), before.map((r) => ({ ...r, site_id: null })));
-      assert.deepEqual(rows(db, "SELECT site_id, module, enabled FROM mk_site_modules ORDER BY site_id"), [{ site_id: 1, module: "ai", enabled: 1 }], "seul le site existant avec membre, non supprimé");
-      assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied, []);
-      db.exec("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (1, 'Nouveau', 'n', '{}')");
-      assert.equal(modules.isEnabled(db, 1, 4, "ai"), false, "site créé après : désactivé par défaut");
-      assert.equal(db.prepare("PRAGMA foreign_key_check").all().length, 0);
-      db.close();
-    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+    for (const f of fs.readdirSync(MIGRATIONS)) if (f < "086") fs.copyFileSync(path.join(MIGRATIONS, f), path.join(dir, f));
+    const db = new DatabaseSync(":memory:"); db.exec("PRAGMA foreign_keys = ON");
+    db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, email TEXT, password_hash TEXT DEFAULT 'x', role TEXT NOT NULL DEFAULT 'etudiant', status TEXT DEFAULT 'active', created_at TEXT DEFAULT (datetime('now')))");
+    migrate(db, { dir, dbPath: ":memory:", log: quiet });
+    fs.rmSync(dir, { recursive: true, force: true });
+    for (let i = 1; i <= 9; i++) db.prepare("INSERT INTO users (id, username, email) VALUES (?, ?, ?)").run(i, `u${i}`, `u${i}@x.fr`);
+    db.exec("UPDATE users SET status = 'suspended' WHERE id = 6");
+    db.exec("INSERT INTO mk_organizations (name, slug) VALUES ('A', 'a'), ('B', 'b')");
+    const site = (org, name, extra = "") => { const r = db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (?, ?, ?, '{}')").run(org, name, name.toLowerCase().replace(/\W/g, "")); if (extra) db.exec(`UPDATE mk_sites SET ${extra} WHERE id = ${r.lastInsertRowid}`); return Number(r.lastInsertRowid); };
+    const member = (siteId, userId, role) => db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, ?)").run(siteId, userId, role);
+    return { db, site, member };
+  };
+  const enabled = (db) => rows(db, "SELECT site_id FROM mk_site_modules WHERE module = 'ai' AND enabled = 1 ORDER BY site_id").map((r) => r.site_id);
+
+  test("C1/C2/C7 : accès préservé pour la preuve réelle (éditeur actif hors équipe, rôle personnalisé avec forms.write) ; rien pour les simples présences, sites vides, archivés, supprimés, comptes suspendus, membres de l'équipe", () => {
+    const { db, site, member } = avant();
+    db.exec("INSERT INTO mk_org_members (organization_id, user_id, role) VALUES (1, 5, 'editor'), (1, 9, 'viewer')");
+    db.exec("INSERT INTO mk_roles (organization_id, key, name, permissions) VALUES (1, 'redacteur', 'Rédacteur', '[\"forms.write\",\"forms.read\"]'), (1, 'lecteurplus', 'Lecteur plus', '[\"forms.read\"]'), (2, 'redacteur', 'Rédacteur B', '[]')");
+    const s = {
+      editeur: site(1, "Editeur"), personnalise: site(1, "Personnalise"), lecteur: site(1, "Lecteur"), auteur: site(1, "Auteur"), contributeur: site(1, "Contributeur"),
+      roleSansDroit: site(1, "RoleSansDroit"), suspendu: site(1, "Suspendu"), equipe: site(1, "Equipe"), vide: site(1, "Vide"), archive: site(1, "Archive", "status = 'archived'"),
+      supprime: site(1, "Supprime", "deleted_at = datetime('now')"), autreOrg: site(2, "AutreOrg"),
+    };
+    member(s.editeur, 1, "editor"); member(s.personnalise, 2, "redacteur"); member(s.lecteur, 3, "viewer"); member(s.auteur, 4, "author"); member(s.contributeur, 4, "contributor");
+    member(s.roleSansDroit, 2, "lecteurplus"); member(s.suspendu, 6, "editor"); member(s.equipe, 5, "editor"); member(s.equipe, 9, "admin");
+    member(s.archive, 1, "editor"); member(s.supprime, 1, "editor");
+    member(s.autreOrg, 8, "redacteur"); // rôle de même clé que celui de l'organisation A, mais défini SANS droit dans B (cloisonnement des rôles)
+    assert.throws(() => member(s.lecteur, 7, "fantome"), /rôle invalide/, "un rôle inconnu est refusé par la base : cas impossible");
+    db.exec("INSERT INTO mk_ai_requests (organization_id, user_id, action, ok, created_at) VALUES (1, 7, 'rewrite', 1, 1), (1, NULL, 'sms', 0, 2)");
+    const before = rows(db, "SELECT * FROM mk_ai_requests");
+    assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied.filter((v) => v === "086"), ["086"]);
+    assert.equal(rows(db, "SELECT COUNT(*) n FROM mk_site_modules WHERE module = 'ai'")[0].n, 0, "la migration SQL seule n'active rien");
+    assert.deepEqual(rows(db, "SELECT * FROM mk_ai_requests").map(({ site_id, ...r }) => ({ ...r, site_id })), before.map((r) => ({ ...r, site_id: null })), "historique intact, site inconnu non deviné");
+    const preview = transitions.aiEligibility(db);
+    assert.deepEqual(preview.eligible.map((e) => e.siteId), [s.editeur, s.personnalise]);
+    assert.equal(enabled(db).length, 0, "l'aperçu est en lecture seule");
+    const r = transitions.runAiOnce(db, { log: {} });
+    assert.deepEqual([r.done, r.enabled], [true, 2]);
+    assert.deepEqual(enabled(db), [s.editeur, s.personnalise].sort((a, b) => a - b));
+    for (const nom of ["lecteur", "auteur", "contributeur", "roleSansDroit", "suspendu", "equipe", "vide", "archive", "supprime", "autreOrg"]) assert.equal(modules.isEnabled(db, 1, s[nom], "ai"), false, nom);
+    assert.equal(db.prepare("PRAGMA foreign_key_check").all().length, 0);
+    db.close();
+  });
+
+  test("C3/C4/C5 : site créé ensuite désactivé ; transition rejouée sans effet ; module désactivé volontairement jamais réactivé (même si le repère disparaît et la transition est rejouée)", () => {
+    const { db, site, member } = avant();
+    const a = site(1, "A"), b = site(1, "B");
+    member(a, 1, "editor"); member(b, 2, "editor");
+    db.exec(`INSERT INTO mk_site_modules (site_id, organization_id, module, enabled) VALUES (${b}, 1, 'ai', 0)`); // l'équipe l'avait volontairement désactivé
+    migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet });
+    assert.equal(transitions.runAiOnce(db, { log: {} }).enabled, 1);
+    assert.deepEqual(enabled(db), [a], "B reste désactivé");
+    // site créé après, même avec un éditeur dessus : aucune activation automatique
+    const c = site(1, "C"); member(c, 3, "editor");
+    assert.equal(modules.isEnabled(db, 1, c, "ai"), false);
+    assert.deepEqual(transitions.runAiOnce(db, { log: {} }), { done: false, reason: "déjà exécutée" });
+    assert.equal(modules.isEnabled(db, 1, c, "ai"), false, "rejouée : le nouveau site n'est pas activé");
+    // l'équipe désactive A après la transition ; deuxième passage de migrate : aucun changement
+    modules.setEnabled({ db, organizationId: 1, userId: null }, 1, "ai", false);
+    assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied, []);
+    transitions.runAiOnce(db, { log: {} });
+    assert.equal(modules.isEnabled(db, 1, a, "ai"), false, "désactivation volontaire respectée");
+    // même repère effacé par erreur : INSERT OR IGNORE ne réactive pas une ligne existante
+    db.exec("DELETE FROM schema_migrations WHERE scope = 'transition'");
+    transitions.runAiOnce(db, { log: {} });
+    assert.equal(modules.isEnabled(db, 1, a, "ai"), false, "ligne existante jamais écrasée");
+    assert.equal(modules.isEnabled(db, 1, b, "ai"), false);
+    db.close();
+  });
+
+  test("C6 : deux organisations — chaque transition reste dans son organisation, les lignes d'activation portent la bonne organisation", () => {
+    const { db, site, member } = avant();
+    db.exec("INSERT INTO mk_roles (organization_id, key, name, permissions) VALUES (2, 'redacteur', 'Rédacteur', '[\"forms.write\"]')");
+    const a = site(1, "A"), b = site(2, "B"), c = site(2, "C");
+    member(a, 1, "editor"); member(b, 2, "redacteur"); member(c, 3, "viewer");
+    migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet });
+    transitions.runAiOnce(db, { log: {} });
+    assert.deepEqual(rows(db, "SELECT site_id, organization_id FROM mk_site_modules WHERE module = 'ai' ORDER BY site_id"), [{ site_id: a, organization_id: 1 }, { site_id: b, organization_id: 2 }]);
+    assert.equal(modules.isEnabled(db, 2, c, "ai"), false);
+    assert.equal(modules.isEnabled(db, 1, b, "ai"), false, "le site d'une autre organisation n'est pas lisible depuis la mauvaise organisation");
+    db.close();
+  });
+
+  test("C8 : la transition ne touche ni aux permissions, ni aux quotas, ni aux secrets, ni à aucune table hors activation et repère", () => {
+    const { db, site, member } = avant();
+    const a = site(1, "A"); member(a, 1, "editor");
+    db.exec("INSERT INTO mk_settings (organization_id, key, value) VALUES (1, 'ai_quota', '5')");
+    db.exec("INSERT INTO mk_roles (organization_id, key, name, permissions) VALUES (1, 'x', 'X', '[\"forms.write\"]')");
+    migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet });
+    const snap = () => Object.fromEntries(["mk_settings", "mk_roles", "mk_org_members", "mk_site_members", "mk_sites", "mk_ai_requests", "users"].map((t) => [t, JSON.stringify(rows(db, `SELECT * FROM ${t}`))]));
+    const before = snap();
+    transitions.runAiOnce(db, { log: {} });
+    assert.deepEqual(snap(), before);
+    assert.deepEqual(rows(db, "SELECT scope, version FROM schema_migrations WHERE scope = 'transition'"), [{ scope: "transition", version: "086" }]);
+    const src = fs.readFileSync(path.join(__dirname, "../src/marketing/transitions.js"), "utf8");
+    assert.ok(!/ANTHROPIC|process\.env|api[_-]?key/i.test(src), "aucun accès aux secrets");
+    db.close();
   });
 });
 
