@@ -10,7 +10,7 @@ const { recordAudit } = require("./audit");
 // Registre fermé. `phase` : sous-lot qui rend le moteur sensible au site ; `ready` : le moteur honore le site (false = activation possible mais SANS effet visible tant que le sous-lot n'est pas livré).
 const MODULES = Object.freeze({
   sms: { label: "SMS", phase: "R7-6.1", ready: true },
-  ai: { label: "Intelligence artificielle", phase: "R7-6.2", ready: false },
+  ai: { label: "Intelligence artificielle", phase: "R7-6.2", ready: true },
   social: { label: "Réseaux sociaux", phase: "R7-6.3", ready: false },
   scoring: { label: "Score des contacts", phase: "R7-6.4", ready: false },
   commerce: { label: "Commerce", phase: "R7-6.5", ready: false },

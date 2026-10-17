@@ -75,6 +75,8 @@
       var label = btn.textContent;
       btn.disabled = true; btn.textContent = "L'IA rédige…"; btn.setAttribute("aria-busy", "true");
       aiOut.textContent = "";
+      var siteMeta = document.querySelector('meta[name="mk-site"]'); // accès limité à un site (R7 lot 6.2)
+      if (siteMeta) payload = Object.assign({}, payload, { site: siteMeta.content });
       fetch("/marketing/ia/sms", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload) })
         .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { if (!res.ok || !j.ok) throw new Error(j.error || "Demande impossible (" + res.status + ")."); return j; }); })
         .then(function (r) {

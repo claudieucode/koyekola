@@ -125,7 +125,7 @@
    "classe": "a-isoler-B2"
   },
   "mk_ai_requests": {
-   "siteId": false,
+   "siteId": true,
    "classe": "a-decider"
   },
   "mk_api_keys": {

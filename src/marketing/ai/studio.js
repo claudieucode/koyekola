@@ -303,7 +303,7 @@ async function propose(ctx, pageId, input = {}) {
   if (busy.has(key)) throw new MarketingError("busy", "Une demande à l'IA est déjà en cours pour cette page.");
   busy.add(key);
   try {
-    const r = await ai.call(ctx, `studio_${mode}`, { prompt: prompt, schema: SCHEMA, effort: mode === "create" ? "medium" : "low", system: systemPrompt(ctx, mode) });
+    const r = await ai.call(ctx, `studio_${mode}`, { prompt: prompt, schema: SCHEMA, effort: mode === "create" ? "medium" : "low", system: systemPrompt(ctx, mode), siteId: page.site_id ?? undefined }); // R7 lot 6.2 : consommation attribuée au site de la page (relu en base)
     if (!r.operations || !r.operations.length) return { ok: true, summary: clip(r.summary, 400), question: clip(r.question, 300), changes: [], operations: [], needsConfirm: false, revision: page.revision };
     const ops = normalizeOps(r.operations.map((o) => ({ ...o, parent: o.parent || null, index: Number.isInteger(o.index) && o.index >= 0 ? o.index : -1 })));
     return finalize(ctx, page, ops, { scope, summary: clip(r.summary, 400), mode });

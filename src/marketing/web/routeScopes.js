@@ -101,6 +101,8 @@ const SITE_RULES = Object.freeze([
   // SMS par site (R7 lot 6.1) : une campagne par son identifiant relève de son site (NULL = organisation, fermée à un accès limité) ; liste, création et abonnés : site choisi ; réglages, test, blocages (STOP) : organisation
   { id: "sms-campagne-par-identifiant", pattern: /^\/sms\/campagnes\/(\d{1,12})(?:\/|$)/, kind: "resource", table: "smsCampaign", idGroup: 1 },
   { id: "sms-du-site", pattern: /^\/sms(?:\/(?:campagnes|abonnes))?$/, kind: "param", terminal: true },
+  // Assistant IA (R7 lot 6.2) : les appels d'aide à la rédaction (e-mails, SMS) relèvent du site choisi (?site= ou champ « site » du corps JSON) ; les réglages de l'assistant (voix de marque, plafond) restent à l'organisation
+  { id: "ia-assistant", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/, kind: "param", terminal: true },
   { id: "demandes-du-site", pattern: /^\/contacts\/demandes$/, methods: ["GET"], kind: "queryGet" },
   { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
@@ -124,6 +126,7 @@ const FAMILIES = Object.freeze([
   { id: "analytics", scope: "site", pattern: /^\/analytics(?:\/|$)/ },
   { id: "evenements", scope: "site", pattern: /^\/evenements(?:\/|$)/ },
   { id: "contacts", scope: "site", pattern: /^\/contacts(?:\/|$)/ },
+  { id: "ia-assistant", scope: "site", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/ },
   { id: "sms-campagnes", scope: "site", pattern: /^\/sms(?:\/campagnes(?:\/|$)|\/abonnes$|$)/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },

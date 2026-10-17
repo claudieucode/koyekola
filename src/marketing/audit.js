@@ -93,4 +93,4 @@ function listAudit(db, organizationId, { limit = 50, beforeId, resourceType, res
     .map((r) => ({ ...r, metadata: JSON.parse(r.metadata) }));
 }
 
-module.exports = { recordAudit, listAudit, redact, scopeSql, siteOfResource };
+module.exports = { recordAudit, listAudit, redact, scopeSql, siteOfResource, validSite };
