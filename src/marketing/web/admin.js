@@ -150,10 +150,18 @@ module.exports = ({ db }) => {
 
   router.post("/contacts", need("contacts.write"), (req, res, next) => {
     let created = null;
-    // Réussite : vers la fiche du nouveau contact ; erreur : retour au formulaire avec le message
-    attempt(req, res, next, () => (created ? `/marketing/contacts/${created.id}` : "/marketing/contacts/nouveau"), () => {
-      created = audience.upsertContact(req.mk.ctx, { email: req.body.email, ...pick(req.body, PROFILE_FIELDS), source: "manual" }, { failIfExists: true }).contact;
-      return "Contact créé.";
+    // Réussite : vers la fiche du nouveau contact ; erreur : retour au formulaire avec le message.
+    // R7 : pour un accès LIMITÉ à un site, la réponse est la même que l'adresse soit nouvelle ou déjà connue d'un autre site (retour à la liste, même message) : aucune
+    // fiche n'est exposée et l'existence d'une adresse protégée n'est pas confirmée. Une adresse déjà visible de son site garde le message « existe déjà ».
+    const target = () => {
+      const q = req.mk.siteOnly ? `?site=${req.mk.siteId}` : "";
+      if (created === null) return `/marketing/contacts/nouveau${q}`;
+      return req.mk.siteOnly ? `/marketing/contacts${q}` : `/marketing/contacts/${created.id}`;
+    };
+    attempt(req, res, next, target, () => {
+      const out = audience.upsertContact(req.mk.ctx, { email: req.body.email, ...pick(req.body, PROFILE_FIELDS), source: "manual" }, { failIfExists: true });
+      created = req.mk.siteOnly ? { masked: true } : out.contact;
+      return req.mk.siteOnly ? "Contact enregistré." : "Contact créé.";
     });
   });
 

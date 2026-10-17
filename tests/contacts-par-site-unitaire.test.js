@@ -138,3 +138,104 @@ describe("règle d'accès : équipe, membre limité à un site, historique sans 
     assert.doesNotThrow(() => core.mergePreview(w.A, w.own.id, w.other.id));
   });
 });
+
+describe("formulaires par site : service (défense en profondeur, indépendante des routes)", () => {
+  const forms = require("../src/marketing/forms");
+  const world = () => {
+    const m = freshMarketing();
+    m.db.exec("INSERT INTO users (id, username, email) VALUES (7, 'admin', 'admin@x.fr')");
+    m.db.exec("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (1, 'S1', 's1', '{}'), (1, 'S2', 's2', '{}'), (2, 'Autre', 'autre', '{}')");
+    const mk = (ctx, name, siteId) => forms.createForm(ctx, { name, fields: [], consentText: "J'accepte ceci.", siteId });
+    const f1 = mk({ ...m.A, siteScope: 1 }, "F1", 2 /* ignoré : le site vient du serveur */), f2 = mk({ ...m.A, siteScope: 2 }, "F2"), fm = mk(m.A, "Principal");
+    return { ...m, f1, f2, fm, S1: { ...m.A, siteScope: 1 } };
+  };
+  test("le site d'un formulaire vient du serveur ; liste, lecture et toute écriture d'un formulaire d'un autre site ou du site principal sont « introuvable » pour un accès limité", () => {
+    const w = world();
+    assert.deepEqual([w.f1.siteId, w.f2.siteId, w.fm.siteId], [1, 2, null]);
+    assert.deepEqual(forms.listForms(w.S1).map((f) => f.name), ["F1"]);
+    assert.deepEqual(forms.listForms(w.A).map((f) => f.name).sort(), ["F1", "F2", "Principal"]);
+    for (const f of [w.f2, w.fm]) {
+      assert.throws(() => forms.getForm(w.S1, f.id), /introuvable/);
+      assert.throws(() => forms.setStatus(w.S1, f.id, "published"), /introuvable/);
+      assert.throws(() => forms.updateForm(w.S1, f.id, { name: "X", fields: [], consentText: "J'accepte ceci." }), /introuvable/);
+      assert.throws(() => forms.deleteForm(w.S1, f.id), /introuvable/);
+    }
+    assert.equal(w.db.prepare("SELECT COUNT(*) n FROM mk_forms").get().n, 3);
+    assert.doesNotThrow(() => forms.getForm(w.S1, w.f1.id));
+  });
+  test("la base refuse un formulaire rattaché à un site d'une autre organisation", () => {
+    const w = world();
+    assert.throws(() => w.db.prepare("UPDATE mk_forms SET site_id = 3 WHERE id = ?").run(w.f1.id), /même organisation/);
+    assert.throws(() => w.db.prepare("INSERT INTO mk_forms (organization_id, name, slug, consent_text, site_id) VALUES (1, 'Z', 'z', 'ok ok', 3)").run(), /même organisation/);
+  });
+  test("migration 081 : colonnes ajoutées, formulaires et preuves existants inchangés (site NULL), preuves toujours en écriture seule", () => {
+    const w = world();
+    assert.equal(w.db.prepare("SELECT COUNT(*) n FROM pragma_table_info('mk_consents') WHERE name = 'site_id'").get().n, 1);
+    const c = w.db.prepare("INSERT INTO mk_contacts (organization_id, email) VALUES (1, 'c@x.fr')").run().lastInsertRowid;
+    w.db.prepare("INSERT INTO mk_consents (organization_id, contact_id, source, text_shown, action) VALUES (1, ?, 'form', 'preuve', 'granted')").run(c);
+    assert.equal(w.db.prepare("SELECT site_id s FROM mk_consents").get().s, null);
+    assert.throws(() => w.db.prepare("UPDATE mk_consents SET site_id = 1").run(), /lecture seule/);
+  });
+});
+
+describe("migration 081 sur des données existantes, double confirmation et consentement restrictif (service, base synthétique)", () => {
+  const forms = require("../src/marketing/forms");
+  test("migration 081 : formulaires, preuves de consentement et confirmations en attente existants strictement inchangés ; tous restent au site principal", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mig81-"));
+    try {
+      for (const f of fs.readdirSync(MIGRATIONS)) if (f < "081") fs.copyFileSync(path.join(MIGRATIONS, f), path.join(dir, f));
+      const db = new DatabaseSync(":memory:"); db.exec("PRAGMA foreign_keys = ON"); withUsers(db);
+      migrate(db, { dir, dbPath: ":memory:", log: quiet });
+      db.exec("INSERT INTO mk_organizations (name, slug) VALUES ('A', 'a')");
+      db.exec("INSERT INTO mk_forms (organization_id, name, slug, consent_text) VALUES (1, 'Ancien', 'ancien', 'Texte de preuve')");
+      db.exec("INSERT INTO mk_contacts (organization_id, email) VALUES (1, 'x@x.fr')");
+      db.exec("INSERT INTO mk_consents (organization_id, contact_id, source, text_shown, action, form_id) VALUES (1, 1, 'form', 'Texte de preuve', 'granted', 1)");
+      const before = { f: rows(db, "SELECT * FROM mk_forms"), c: rows(db, "SELECT * FROM mk_consents") };
+      assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied.filter((v) => v === "081"), ["081"]);
+      const strip = (r) => r.map(({ site_id, ...rest }) => rest);
+      assert.deepEqual({ f: strip(rows(db, "SELECT * FROM mk_forms")), c: strip(rows(db, "SELECT * FROM mk_consents")) }, { f: strip(before.f), c: strip(before.c) });
+      assert.deepEqual([rows(db, "SELECT site_id FROM mk_forms")[0].site_id, rows(db, "SELECT site_id FROM mk_consents")[0].site_id], [null, null]);
+      assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied, [], "rejouée : rien à appliquer");
+      assert.equal(db.prepare("PRAGMA foreign_key_check").all().length, 0);
+      db.close();
+    } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  const world = () => {
+    const m = freshMarketing();
+    m.db.exec("INSERT INTO users (id, username, email) VALUES (7, 'admin', 'admin@x.fr')");
+    m.db.exec("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (1, 'S1', 's1', '{}'), (1, 'S2', 's2', '{}')");
+    const f = forms.createForm({ ...m.A, siteScope: 1 }, { name: "F1", fields: ["first_name"], consentText: "J'accepte ceci.", doubleOptin: true });
+    forms.setStatus(m.A, f.id, "published");
+    return { ...m, form: f };
+  };
+  test("double confirmation : un contact d'un autre site, désinscrit, reçoit une confirmation en attente SANS rien changer (champs, origine, association, consentement) ; la confirmation par la personne l'abonne avec le site de collecte", () => {
+    const w = world();
+    const other = core.identify(w.A, { email: "p@x.fr", siteId: 2 }).contact;
+    w.db.prepare("UPDATE mk_contacts SET status = 'unsubscribed' WHERE id = ?").run(other.id);
+    const r = forms.submitForm(w.A, w.form.id, { email: "p@x.fr", first_name: "Intrus", consent: "1", ip: "203.0.113.5" });
+    assert.equal(r.ok, true); assert.equal(r.pending, true); assert.ok(r.token);
+    const after = rows(w.db, "SELECT first_name, status, origin_site_id FROM mk_contacts WHERE id = ?", other.id)[0];
+    assert.ok(!after.first_name, "champ non complété"); assert.equal(after.status, "unsubscribed"); assert.equal(after.origin_site_id, 2);
+    assert.equal(rows(w.db, "SELECT COUNT(*) n FROM mk_consents WHERE contact_id = ?", other.id)[0].n, 0, "aucun consentement avant la confirmation");
+    assert.equal(rows(w.db, "SELECT COUNT(*) n FROM mk_contact_sites WHERE contact_id = ? AND site_id = 1", other.id)[0].n, 0, "aucune association avec le site du formulaire");
+    assert.equal(rows(w.db, "SELECT COUNT(*) n FROM mk_events WHERE contact_id = ? AND site_id = 1", other.id)[0].n, 0, "événement non rattaché au site du formulaire");
+    const ok = forms.confirmSubscription(w.A, r.token);
+    assert.equal(ok.ok, true);
+    assert.equal(rows(w.db, "SELECT status FROM mk_contacts WHERE id = ?", other.id)[0].status, "subscribed");
+    const proof = rows(w.db, "SELECT site_id, source FROM mk_consents WHERE contact_id = ?", other.id);
+    assert.deepEqual(proof, [{ site_id: 1, source: "form" }], "preuve avec le site de collecte");
+    assert.equal(rows(w.db, "SELECT COUNT(*) n FROM mk_contact_sites WHERE contact_id = ? AND site_id = 1", other.id)[0].n, 0, "la confirmation ne donne pas non plus accès à la fiche");
+  });
+  test("sans double confirmation : un désinscrit d'un autre site n'est pas réabonné ; un contact « inconnu » d'un autre site peut donner son accord (aucun consentement restrictif écrasé)", () => {
+    const w = world();
+    w.db.prepare("UPDATE mk_forms SET double_optin = 0 WHERE id = ?").run(w.form.id);
+    const un = core.identify(w.A, { email: "u@x.fr", siteId: 2 }).contact;
+    w.db.prepare("UPDATE mk_contacts SET status = 'unsubscribed' WHERE id = ?").run(un.id);
+    const unknown = core.identify(w.A, { email: "k@x.fr", siteId: 2 }).contact;
+    assert.equal(forms.submitForm(w.A, w.form.id, { email: "u@x.fr", consent: "1" }).ok, true);
+    assert.equal(rows(w.db, "SELECT status FROM mk_contacts WHERE id = ?", un.id)[0].status, "unsubscribed");
+    assert.equal(forms.submitForm(w.A, w.form.id, { email: "k@x.fr", consent: "1" }).ok, true);
+    assert.equal(rows(w.db, "SELECT status FROM mk_contacts WHERE id = ?", unknown.id)[0].status, "subscribed", "l'absence de consentement devient un accord seulement par la case cochée de la personne");
+  });
+});

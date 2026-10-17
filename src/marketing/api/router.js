@@ -83,13 +83,17 @@ function createApiRouter({ db }) {
     try {
       let outcome;
       if (isSiteKey(req.mkApi)) {
-        // Clé de site : le contact est rattaché au site de la clé (origine), jamais à un autre ; une adresse déjà connue hors de ce site n'est ni lue ni modifiée.
+        // Clé de site : le contact est rattaché au site de la clé (origine), jamais à un autre. R7 : une adresse déjà connue dont l'ORIGINE n'est pas ce site (autre site, activité
+        // seulement, historique sans association) n'est NI lue, NI modifiée, NI confirmée : la réponse est la même que pour une création (202, aucune donnée). Seule la mise à jour
+        // d'un contact dont l'origine est le site de la clé répond 200 avec la fiche.
         const body = req.body || {};
-        const known = contactsRepo.findByEmail(req.mkCtx, body.email);
-        if (known && contactOutsideScope(db, req.mkApi, { contact: known })) return outOfScope(req, res, "contact d'un autre site");
         const input = {};
         for (const k of ["email", "first_name", "last_name", "company", "country", "language", "timezone", "phone", "properties", "source"]) if (body[k] !== undefined) input[k] = body[k];
         outcome = contactCore.identify(req.mkCtx, { ...input, siteId: req.mkApi.siteId });
+        if (outcome.created || outcome.withheld) {
+          if (outcome.withheld) auditDenied(db, req.mkApi, "POST /contacts", "contact hors de la portée d'écriture");
+          return res.status(202).json({ data: null, accepted: true });
+        }
       } else {
         outcome = audience.upsertContact(req.mkCtx, req.body || {});
       }
@@ -111,8 +115,9 @@ function createApiRouter({ db }) {
         // Clé de site : l'événement appartient au site de la clé ; un autre site est refusé (jamais ignoré en silence), un contact d'un autre site n'est ni rattaché ni révélé.
         if (body.site_id !== undefined && body.site_id !== null && Number(body.site_id) !== req.mkApi.siteId) return outOfScope(req, res, "site demandé différent de celui de la clé");
         if (Number.isInteger(body.contact_id) && contactOutsideScope(db, req.mkApi, { contactId: body.contact_id })) { auditDenied(db, req.mkApi, "POST /events", "contact d'un autre site"); return fail(res, 404, "not_found", "Contact introuvable."); }
+        // R7 : une adresse connue hors de la portée de la clé n'est ni rattachée ni confirmée : l'événement est enregistré SANS identité (comme pour une adresse inconnue), même réponse
         const byEmail = body.email ? contactsRepo.findByEmail(req.mkCtx, body.email) : null;
-        if (byEmail && contactOutsideScope(db, req.mkApi, { contact: byEmail })) return outOfScope(req, res, "contact d'un autre site");
+        if (byEmail && contactOutsideScope(db, req.mkApi, { contact: byEmail })) { auditDenied(db, req.mkApi, "POST /events", "contact d'un autre site"); body.email = null; }
         eventSite = req.mkApi.siteId;
       }
       // Contact Core (palier 15) : le journal n'est écrit que par recordEvent — contact, site et objet sont vérifiés (aucun identifiant d'une autre organisation)

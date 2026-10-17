@@ -8,6 +8,7 @@
 //  - un événement est un fait historique, enregistré uniquement par recordEvent() (jamais par INSERT direct) ;
 //  - fusion = absorption réversible à la main : la fiche absorbée est conservée (jamais supprimée), son historique reste lisible.
 const { transaction } = require("../db/tx");
+const siteAccess = require("./siteAccess");
 const { MarketingError } = require("../errors");
 const { checkCtx, cleanText, audit } = require("../audience/shared");
 const { validateEmail } = require("../audience/email");
@@ -58,7 +59,9 @@ function identify(ctx, input = {}, { failIfExists = false } = {}) {
   checkCtx(ctx);
   const check = validateEmail(input.email);
   if (!check.ok) throw new MarketingError("invalid_email", check.reason);
-  const siteId = checkSite(ctx, input.siteId ?? null);
+  // R7 : pour un accès LIMITÉ à un site, le site d'origine est celui du serveur (ctx.siteScope), jamais celui de l'appelant
+  const scoped = Number.isInteger(ctx.siteScope);
+  const siteId = checkSite(ctx, scoped ? ctx.siteScope : input.siteId ?? null);
   const source = cleanText(input.source ?? "api", { max: 50, field: "source" }) || "api";
   const sourceDetail = cleanText(input.sourceDetail ?? "", { max: 200, field: "source_detail" });
   const jobTitle = cleanText(input.jobTitle ?? "", { max: 120, field: "job_title" });
@@ -79,6 +82,12 @@ function identify(ctx, input = {}, { failIfExists = false } = {}) {
 
   return transaction(ctx.db, () => {
     const found = contacts.findByEmail(ctx, check.email);
+    // R7 : un accès limité à un site ne complète ni ne modifie QUE les contacts dont l'origine est son site (une simple activité ne suffit pas, un contact sans association non plus).
+    // Sinon : AUCUNE écriture (champs, étape, téléphone, compte, événements orphelins) et `withheld: true` — l'appelant ne doit jamais exposer cette fiche ni confirmer son existence.
+    if (found && scoped && !siteAccess.canWrite(ctx, found)) {
+      if (failIfExists && siteAccess.canRead(ctx, found)) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
+      return { contact: found, created: false, withheld: true, attachedEvents: 0 };
+    }
     if (found && failIfExists) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
     const base = { email: check.email, source };
     for (const f of ["first_name", "last_name", "company", "country", "language", "timezone"]) if (input[f] !== undefined) base[f] = input[f];

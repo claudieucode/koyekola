@@ -52,6 +52,15 @@ est déjà sur liste de suppression) : il ne recevra donc aucune campagne tant q
 Corps : `{ "email": "...", "first_name"?, "last_name"?, "phone"?, "company"?, "country"?, "language"?, "properties"? }`.
 Réponse : `201` (créé) ou `200` (complété) avec `{ "data": <contact>, "created": true|false }`.
 
+**Clé limitée à un site (R7 lot 2, 16/10/2026 — changement de contrat pour ces clés seulement ; les clés d'organisation sont inchangées)** :
+le contact créé a pour origine le site de la clé (jamais un site demandé dans le corps). Pour qu'une clé de site ne puisse pas deviner quelles
+adresses existent ailleurs dans l'organisation, la réponse est **`202` `{ "data": null, "accepted": true }`** dans deux cas indiscernables :
+l'adresse est nouvelle (le contact est créé), ou l'adresse est déjà connue sans que ce site en soit l'origine (rien n'est lu, modifié ni confirmé ;
+la tentative est journalisée `api_key.out_of_scope`). Seule la mise à jour d'un contact dont **l'origine est le site de la clé** répond `200` avec la fiche.
+Pour retrouver un contact créé, utilisez `GET /contacts` (limité aux contacts associés au site). Ancien comportement supprimé : `201` avec la fiche à la création
+et `403 out_of_scope` pour une adresse d'un autre site (ce `403` confirmait l'existence de l'adresse).
+Dans `POST /events`, un `email` connu hors de la portée de la clé n'est plus refusé (`403`) : l'événement est enregistré **sans identité** (comme pour une adresse inconnue) et n'est rattaché à aucun contact.
+
 ### `POST /api/v1/events` (portée `write`)
 Enregistre un événement personnalisé, qui peut déclencher une automatisation (voir EMAIL_MARKETING_AUTOMATIONS.md).
 Corps : `{ "name": "minuscules.points_soulignes", "email"?, "contact_id"?, "metadata"? }`. En-tête `Idempotency-Key`

@@ -22,7 +22,7 @@ const ANY_DIGITS = /^\d+$/;
 const RESOURCE_TABLES = Object.freeze({
   page: "mk_landing_pages", composant: "mk_web_components",
   campagnes: "mk_campaigns", listes: "mk_lists", segments: "mk_segments", modeles: "mk_templates", automatisations: "mk_automations", tunnels: "mk_funnels",
-  test: "mk_page_tests", evenement: "mk_events", media: "mk_media",
+  test: "mk_page_tests", evenement: "mk_events", media: "mk_media", form: "mk_forms",
 });
 
 // Valeur d'un paramètre de site : « ?site= » puis le champ « site » du formulaire (même ordre qu'avant R3)
@@ -95,6 +95,9 @@ const SITE_RULES = Object.freeze([
   { id: "contacts-du-site", pattern: /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/, methods: ["GET"], kind: "queryGet" },
   // Contacts par site (R7, décision D2) : écriture d'un contact par un accès limité à un site — le site vient de « ?site= » ou du champ « site » (validé par les droits) ; le DROIT de modifier ce contact
   // (origine = ce site) est ensuite vérifié par contactcore/siteAccess ; fusion et doublons restent réservés à l'équipe (contactCore.js)
+  // Formulaires par site (R7 lot 2) : un formulaire visé par son identifiant relève de son site (NULL = site principal, fermé à un accès limité) ; liste et création : site choisi
+  { id: "formulaire-par-identifiant", pattern: /^\/formulaires\/(\d{1,12})(?:\/|$)/, kind: "resource", table: "form", idGroup: 1 },
+  { id: "formulaires-du-site", pattern: /^\/formulaires(?:\/|$)/, kind: "param", terminal: true },
   { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
   // Médias par site (R5) : un fichier visé par son identifiant relève du site qui le possède (commun = organisation, fermé à un accès limité à un site)
@@ -117,11 +120,12 @@ const FAMILIES = Object.freeze([
   { id: "analytics", scope: "site", pattern: /^\/analytics(?:\/|$)/ },
   { id: "evenements", scope: "site", pattern: /^\/evenements(?:\/|$)/ },
   { id: "contacts", scope: "site", pattern: /^\/contacts(?:\/|$)/ },
+  { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —
   { id: "tableau-de-bord", scope: "organization", pattern: /^\/$/ },
-  { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|formulaires|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
+  { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
   { id: "site-web-organisation", scope: "organization", pattern: /^\/site-web(?:\/(?:utilisateurs|apparence|navigation|redirections|modeles-de-theme|modeles|modeles\.json|liens-casses|corbeille|recherche|permaliens|gabarits|mes-sites|seo)(?:\/|$)|$)/ },
 ]);
 

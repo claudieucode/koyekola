@@ -70,6 +70,14 @@ function upsertContact(ctx, input = {}, { failIfExists = false } = {}) {
     const repo = createRepository(ctx.db, ctx.organizationId).table("mk_contacts");
     const existing = findByEmail(ctx, check.email);
     if (existing) {
+      // R7 : un accès limité à un site ne complète que les contacts dont l'origine est son site ; sinon AUCUNE écriture et `withheld: true` (jamais exposer cette fiche ni confirmer son existence)
+      if (Number.isInteger(ctx.siteScope)) {
+        const access = require("../contactcore/siteAccess");
+        if (!access.canWrite(ctx, existing)) {
+          if (failIfExists && access.canRead(ctx, existing)) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
+          return { contact: existing, created: false, withheld: true };
+        }
+      }
       if (failIfExists) throw new MarketingError("duplicate", "Un contact avec cette adresse existe déjà.");
       const fill = {};
       for (const [k, v] of Object.entries(fields)) if ((existing[k] === "" || existing[k] === null) && v !== "" && v !== null) fill[k] = v;

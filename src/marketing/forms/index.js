@@ -1,7 +1,7 @@
 // Formulaires d'inscription publics (jalon M5 — Capture, partie 1) : un formulaire = une adresse /f/:slug, un texte de
 // consentement présenté (preuve enregistrée), des champs facultatifs, une liste optionnelle. Un contact créé par un
 // formulaire suit EXACTEMENT les mêmes règles que partout ailleurs (compliance/consent.js) : aucun raccourci ici.
-const { checkCtx, cleanText, audit, emit, MarketingError } = require("../audience/shared");
+const { checkCtx, cleanText, audit, emit, resolveSite, siteSql, MarketingError } = require("../audience/shared");
 const { upsertContact, getContact } = require("../audience/contacts");
 const { cleanTimeZone } = require("../sending/sendtime");
 const { addToList } = require("../audience/lists");
@@ -112,12 +112,12 @@ function rowToForm(row) {
     doubleOptin: Boolean(row.double_optin), smsConsentText: row.sms_consent_text || "",
     popupEnabled: Boolean(row.popup_enabled), popupTrigger: row.popup_trigger, popupTriggerValue: row.popup_trigger_value, popupFrequencyDays: row.popup_frequency_days,
     fieldSettings: parseJson(row.field_settings, {}), fileField: parseJson(row.file_field, {}), popupRules: parseJson(row.popup_rules, {}),
-    createdAt: row.created_at, updatedAt: row.updated_at,
+    siteId: row.site_id ?? null, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
 
 // doubleOptin : activé par la page de création (nouveaux formulaires) ; désactivé par défaut ici pour les appelants existants
-function createForm(ctx, { name, fields, consentText, listId, doubleOptin = false }) {
+function createForm(ctx, { name, fields, consentText, listId, doubleOptin = false, siteId }) {
   checkCtx(ctx);
   const cleanName = cleanText(name, { max: 80, field: "name" });
   if (!cleanName) throw new MarketingError("invalid_field", "Le nom est obligatoire.");
@@ -128,8 +128,8 @@ function createForm(ctx, { name, fields, consentText, listId, doubleOptin = fals
   const slug = uniqueSlug(ctx, slugify(name));
   const id = Number(
     ctx.db
-      .prepare("INSERT INTO mk_forms (organization_id, name, slug, fields, consent_text, list_id, created_by, double_optin) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(ctx.organizationId, cleanName, slug, JSON.stringify(cleanFields), cleanConsent, list, ctx.userId ?? null, doubleOptin ? 1 : 0).lastInsertRowid
+      .prepare("INSERT INTO mk_forms (organization_id, name, slug, fields, consent_text, list_id, created_by, double_optin, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, cleanName, slug, JSON.stringify(cleanFields), cleanConsent, list, ctx.userId ?? null, doubleOptin ? 1 : 0, resolveSite(ctx, siteId)).lastInsertRowid
   );
   audit(ctx, "form.created", "form", id, { name: cleanName, slug });
   return getForm(ctx, id);
@@ -137,12 +137,15 @@ function createForm(ctx, { name, fields, consentText, listId, doubleOptin = fals
 
 function listForms(ctx) {
   checkCtx(ctx);
-  return ctx.db.prepare("SELECT * FROM mk_forms WHERE organization_id = ? ORDER BY id DESC").all(ctx.organizationId).map(rowToForm);
+  // R7 : un accès LIMITÉ à un site ne liste que les formulaires de son site (imposé par le serveur) ; l'équipe peut filtrer l'affichage par site
+  const scope = siteSql(ctx, "f");
+  return ctx.db.prepare(`SELECT f.* FROM mk_forms f WHERE f.organization_id = ? AND ${scope.sql} ORDER BY f.id DESC`).all(ctx.organizationId, ...scope.params).map(rowToForm);
 }
 
 function requireFormRow(ctx, id) {
+  // R7 : un formulaire d'un autre site est « introuvable » pour un accès limité à un site (lecture ET écriture : tout passe par ici)
   const row = ctx.db.prepare("SELECT * FROM mk_forms WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
-  if (!row) throw new MarketingError("not_found", "Formulaire introuvable.");
+  if (!row || (Number.isInteger(ctx.siteScope) && row.site_id !== ctx.siteScope)) throw new MarketingError("not_found", "Formulaire introuvable.");
   return row;
 }
 
@@ -297,16 +300,26 @@ function submitForm(ctx, formId, input = {}) {
     if (!r.ok) return { ok: false, reason: "invalid_phone", message: `Numéro de mobile invalide : ${r.reason}` };
     sms = { phone: r.e164, text: form.smsConsentText };
   }
-  let contact;
+  let contact, withheld = false;
   try {
     // Fuseau du navigateur (champ caché rempli par le formulaire) : seulement s'il est valide, jamais bloquant
     const timezone = cleanTimeZone(input.tz);
     // Contact Core (palier 15) : même fiche pour une même personne (adresse normalisée, alias de fusion), cycle de vie « prospect », origine = ce formulaire.
     // L'envoi d'un formulaire ne consent à RIEN : l'accord vient plus bas, de la case cochée.
-    ({ contact } = require("../contactcore").identify(ctx, { email: input.email, ...fields, ...(timezone ? { timezone } : {}), source: "form", sourceDetail: form.slug || form.name }));
+    // R7 : le site est celui du FORMULAIRE (lu en base, jamais envoyé par le navigateur). Pour un formulaire de site, le contact créé a ce site pour origine ; un contact déjà connu
+    // dont l'origine est un autre site n'est PAS complété (la personne reste identifiée par son adresse pour la suite : consentement, confirmation, événement) et la réponse publique est identique.
+    const siteCtx = Number.isInteger(form.siteId) ? { ...ctx, siteScope: form.siteId } : ctx;
+    ({ contact, withheld } = require("../contactcore").identify(siteCtx, { email: input.email, ...fields, ...(timezone ? { timezone } : {}), source: "form", sourceDetail: form.slug || form.name }));
   } catch (error) {
     if (error instanceof MarketingError) return { ok: false, reason: error.code, message: error.message };
     throw error;
+  }
+  // R7 : consentement. Un contact d'un autre site (`withheld`) qui s'est DÉSINSCRIT ne redevient pas abonné par un simple envoi sans double confirmation depuis ce site : la réponse reste
+  // identique (rien ne trahit son statut), rien n'est enregistré. Avec la double confirmation, la personne prouve qu'elle contrôle la boîte : le comportement historique s'applique.
+  if (withheld && contact.status === "unsubscribed" && !form.doubleOptin) {
+    ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
+    emitSubmitted(ctx, form, contact, { pending: false, page: input.page, withheld });
+    return { ok: true, contact: getContact(ctx, contact.id), sms: null };
   }
   if (upload) storeUpload(ctx, form, contact.id, upload);
   // Double confirmation : rien n'est accordé maintenant ; un lien est envoyé (par l'appelant, qui connaît l'adresse du site)
@@ -322,24 +335,26 @@ function submitForm(ctx, formId, input = {}) {
       .run(ctx.organizationId, formId, contact.id, tokenHash(token), form.consentText, truncateIp(input.ip), JSON.stringify({ properties, ...(sms ? { sms } : {}) }), now + CONFIRM_TTL_MS, now);
     ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
     audit(ctx, "form.pending_confirmation", "form", formId, {});
-    emitSubmitted(ctx, form, contact, { pending: true, page: input.page });
+    emitSubmitted(ctx, form, contact, { pending: true, page: input.page, withheld });
     return { ok: true, pending: true, token, email: contact.email, contact: getContact(ctx, contact.id) };
   }
-  const consent = recordConsent(ctx, contact.id, { source: "form", textShown: form.consentText, ip: input.ip, formId });
+  const consent = recordConsent(ctx, contact.id, { source: "form", textShown: form.consentText, ip: input.ip, formId, siteId: form.siteId });
   if (!consent.ok) return { ok: false, reason: consent.reason };
   applyFormExtras(ctx, form, contact.id, properties);
   const smsResult = sms ? applySmsConsent(ctx, form, contact.id, sms, input.ip) : null;
   ctx.db.prepare("UPDATE mk_forms SET submit_count = submit_count + 1 WHERE id = ?").run(formId);
-  emitSubmitted(ctx, form, contact, { pending: false, page: input.page });
+  emitSubmitted(ctx, form, contact, { pending: false, page: input.page, withheld });
   // `contact` date d'AVANT recordConsent (qui vient de faire passer son statut à « subscribed ») : on renvoie l'état à jour, pas l'instantané périmé
   return { ok: true, contact: getContact(ctx, contact.id), sms: smsResult };
 }
 
 // Événement « formulaire envoyé » (déclencheur de scénario, journal du contact) : formulaire, page d'origine, confirmation
 // en attente ou non. La page est un chemin du site (jamais une adresse complète venue du navigateur).
-function emitSubmitted(ctx, form, contact, { pending, page }) {
+// R7 : si le contact existait déjà avec une autre origine (`withheld`), l'événement n'est PAS rattaché au site du formulaire : une soumission publique (usurpable, n'importe qui peut saisir une
+// adresse) ne doit pas donner à un site la lecture d'un contact d'un autre site.
+function emitSubmitted(ctx, form, contact, { pending, page, withheld = false }) {
   const where = typeof page === "string" && /^\/[^\s<>"'`\\]{0,300}$/.test(page) ? page : `/f/${form.slug}`;
-  emit(ctx, "form.submitted", { contact, source: "form", objectType: "form", objectId: form.id, metadata: { formId: String(form.id), formName: form.name, page: where, pending: Boolean(pending) } });
+  emit(ctx, "form.submitted", { contact, source: "form", siteId: withheld ? null : form.siteId ?? null, objectType: "form", objectId: form.id, metadata: { formId: String(form.id), formName: form.name, page: where, pending: Boolean(pending) } });
 }
 
 // Fichier joint : rangé hors des dossiers publics (uploads/forms/<organisation>/), nom aléatoire, lisible seulement par
@@ -418,7 +433,7 @@ function confirmSubscription(ctx, token, { now = Date.now() } = {}) {
   const claimed = ctx.db.prepare("UPDATE mk_pending_confirmations SET confirmed_at = ? WHERE id = ? AND confirmed_at IS NULL").run(now, pending.id).changes;
   if (!claimed) return { ok: false, reason: "invalid" };
   const consent = recordConsent(ctx, pending.contact_id, {
-    source: "form", textShown: `${pending.consent_text} [Inscription confirmée par e-mail (double opt-in)]`, ip: pending.ip, formId: form.id,
+    source: "form", textShown: `${pending.consent_text} [Inscription confirmée par e-mail (double opt-in)]`, ip: pending.ip, formId: form.id, siteId: form.siteId,
   });
   if (!consent.ok) return { ok: false, reason: consent.reason };
   let payload = {};

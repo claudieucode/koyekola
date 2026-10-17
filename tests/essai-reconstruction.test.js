@@ -65,7 +65,8 @@ describe("essai de reconstruction dans l'interface", () => {
     assert.deepEqual(live(), liveBefore, "la base en service n'est pas touchée");
     assert.equal(live().cols, false, "aucune colonne site_id ajoutée à la base en service : le démarrage ne reconstruit rien");
     const ro = new DatabaseSync(backupFile, { readOnly: true });
-    assert.equal(cols(ro, "mk_forms").includes("site_id"), false); ro.close();
+    // R7 lot 2 : mk_forms.site_id vient désormais de la migration 081 (ajout simple, déjà dans la sauvegarde) ; les tables que l'OUTIL reconstruira (articles, termes…) restent sans site_id
+    assert.equal(cols(ro, "mk_forms").includes("site_id"), true); assert.equal(cols(ro, "posts").includes("site_id"), false); ro.close();
     const root = path.join(srv.dir, "data", "essais-temporaires");
     assert.deepEqual(fs.readdirSync(root), [], "ni dossier d'essai ni verrou ne subsistent");
   });
@@ -148,9 +149,10 @@ describe("reconstruction : le comparateur détecte les vraies différences", () 
   const rebuiltCopy = (name) => { const d = copyOf(name); const A = tables.snapshot(d); tables.rebuild(d); return { d, A }; };
   const unexplainedAfter = (A, d) => tables.compare(A, tables.snapshot(d, A)).unexplained;
 
-  test("reconstruction correcte : aucune différence inexpliquée, 19 différences attendues documentées (12 pour articles, termes, formulaires, modèles ; 7 pour pages, redirections et historiques d'adresses : R6 lot 5)", () => {
+  test("reconstruction correcte : aucune différence inexpliquée, 17 différences attendues documentées (10 pour articles, termes, formulaires, modèles ; 7 pour pages, redirections et historiques d'adresses : R6 lot 5)", () => {
     const { d, A } = rebuiltCopy("ok.db"); const c = tables.compare(A, tables.snapshot(d, A));
-    assert.deepEqual(c.unexplained, []); assert.equal(c.expected.length, 19);
+    assert.deepEqual(c.unexplained, []); assert.equal(c.expected.length, 17); // R7 lot 2 : mk_forms porte déjà site_id (migration 081) — l'outil n'ajoute plus que l'unicité par site (−2 : colonne et relation) ; seul « uq_mk_forms_site_slug » reste attendu pour cette table
+    assert.deepEqual(c.expected.filter((e) => /mk_forms/.test(e)), ["unicité par site ajoutée : uq_mk_forms_site_slug"]);
     // Le détail des 7 différences ajoutées par le lot 5 : 2 unicités de pages, 1 de redirections, colonne + unicité + relation de l'historique d'articles, 1 de l'historique CMS
     const added = c.expected.filter((e) => /mk_landing_pages|seo_redirects|post_slug_history|cms_url_history/.test(e));
     assert.equal(added.length, 7, added.join(" | ")); d.close();
