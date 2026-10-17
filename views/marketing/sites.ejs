@@ -5,7 +5,14 @@
   const href = (v) => "/marketing/site-web/sites?vue=" + v + (q ? "&q=" + encodeURIComponent(q) : "");
 %>
     <div class="mk-head"><h1>Mes sites</h1><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button><% } %></div>
-    <p class="mk-lead">Chaque site a son nom, son identifiant, son design system et ses pages. Ouvrez un site pour accéder à son espace d'administration. L'isolation complète des contenus (articles, médias, contacts…) par site viendra plus tard : pour l'instant, un site regroupe ses pages et ses réglages.</p>
+    <p class="mk-lead">Le point d'entrée de tous vos sites. Chaque site a son propre espace d'administration : ses pages, son design system, ses contenus, ses contacts et son équipe restent séparés de ceux des autres sites. Ouvrez un site pour travailler dans son espace ; le site principal s'ouvre de la même façon.</p>
+
+    <div class="mk-stats mk-stats-4" aria-label="Vue d'ensemble des sites">
+      <div class="mk-stat"><span class="mk-stat-label">Sites actifs</span><span class="mk-stat-value"><%= mkh.fmt(totals.actifs + (main ? 1 : 0)) %></span><span class="mk-stat-hint">site principal compris</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Sites archivés</span><span class="mk-stat-value"><%= mkh.fmt(totals.archives) %></span><span class="mk-stat-hint">pages hors ligne, rien d'effacé</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Pages en ligne</span><span class="mk-stat-value"><%= mkh.fmt(totals.publiees) %></span><span class="mk-stat-hint">tous les sites actifs</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Modules activés</span><span class="mk-stat-value"><%= mkh.fmt(totals.modules) %></span><span class="mk-stat-hint">par site, à l'initiative de l'équipe</span></div>
+    </div>
 
     <nav class="mk-tabs" aria-label="Filtrer les sites par état">
       <% VUES.forEach(([key, label]) => { %><a class="mk-tab" href="<%= href(key) %>"<%- view === key ? ' aria-current="page"' : "" %>><%= label %> (<%= counts[key] %>)</a><% }) %>
@@ -19,16 +26,25 @@
       <span class="mk-filter-count"><%= sites.length %> site<%= sites.length > 1 ? "s" : "" %></span>
     </form>
 
-    <% if (!sites.length) { %>
-      <div class="mk-empty"><%- icon("globe", { size: 32 }) %>
-        <h2><%= q ? "Aucun site ne correspond à « " + q + " »" : VIDE[view] %></h2>
-        <p><%= q ? "Essayez un autre mot, ou changez de filtre." : view === "supprimes" ? "Un site supprimé reste ici, récupérable." : view === "archives" ? "Un site archivé a ses pages hors ligne ; rien n'est effacé." : "Créez votre premier site : vous y rattacherez des pages et réglerez son design system." %></p>
-        <% if (canWrite && !q && (view === "actifs" || view === "tous")) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button></div><% } %></div>
-    <% } else { %>
-      <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+    <% if (main || sites.length) { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-site-manager">
         <caption class="sr-only">Mes sites</caption>
-        <thead><tr><th scope="col">Site</th><th scope="col">État</th><th scope="col">Domaine</th><th scope="col" class="mk-num">Pages</th><th scope="col" class="mk-num">En ligne</th><th scope="col">Créé le</th><th scope="col">Actions</th></tr></thead>
-        <tbody><% sites.forEach((st) => {
+        <thead><tr><th scope="col">Site</th><th scope="col">État</th><th scope="col">Domaine</th><th scope="col" class="mk-num">Pages</th><th scope="col" class="mk-num">En ligne</th><th scope="col" class="mk-num">Équipe</th><th scope="col" class="mk-num">Contacts</th><th scope="col">Modules</th><th scope="col">Modifié le</th><th scope="col">Actions</th></tr></thead>
+        <tbody>
+<% if (main) { %>          <tr data-site="principal">
+            <th scope="row" data-label="Site"><a href="<%= main.openHref %>"><%= main.name %></a> <span class="mk-status mk-status-ok">Principal</span>
+              <span class="mk-sub"><%= main.description %></span></th>
+            <td data-label="État"><span class="mk-status mk-status-ok">Actif</span></td>
+            <td data-label="Domaine"><%= main.domain || "—" %></td>
+            <td class="mk-num" data-label="Pages"><%= mkh.fmt(main.pages) %></td>
+            <td class="mk-num" data-label="En ligne"><%= mkh.fmt(main.published) %></td>
+            <td class="mk-num" data-label="Équipe"><%= mkh.fmt(main.members) %></td>
+            <td class="mk-num" data-label="Contacts" title="Contacts non rattachés à un site"><%= mkh.fmt(main.contacts) %></td>
+            <td data-label="Modules"><span class="mk-sub">Tous (site principal)</span></td>
+            <td data-label="Modifié le"><%= main.lastEdit ? String(main.lastEdit).slice(0, 10) : "—" %></td>
+            <td data-label="Actions"><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= main.openHref %>">Ouvrir<span class="sr-only"> le site principal</span></a></div></td>
+          </tr>
+<% } %>        <% sites.forEach((st) => {
           const domaine = st.settings && st.settings.seo && st.settings.seo.publicUrl ? st.settings.seo.publicUrl.replace(/^https?:\/\//, "") : "";
           const etat = st.deleted_at ? ["Supprimé", "mk-status-warn"] : st.status === "archived" ? ["Archivé", "mk-status-warn"] : ["Actif", "mk-status-ok"];
         %>
@@ -39,9 +55,13 @@
             <td data-label="Domaine"><%= domaine || "—" %></td>
             <td class="mk-num" data-label="Pages"><%= mkh.fmt(st.pages) %></td>
             <td class="mk-num" data-label="En ligne"><%= mkh.fmt(st.published) %></td>
-            <td data-label="Créé le"><%= st.created_at ? String(st.created_at).slice(0, 10) : "—" %></td>
+            <td class="mk-num" data-label="Équipe"><%= mkh.fmt(st.members) %></td>
+            <td class="mk-num" data-label="Contacts"><%= mkh.fmt(st.contacts) %></td>
+            <td data-label="Modules"><% if (!st.modules.length) { %><span class="mk-sub">Aucun</span><% } else { %><span class="mk-chips"><% st.modules.forEach((m) => { %><span class="mk-status"><%= m.label %></span> <% }) %></span><% } %></td>
+            <td data-label="Modifié le" title="Créé le <%= st.created_at ? String(st.created_at).slice(0, 10) : '—' %>"><%= st.lastEdit ? String(st.lastEdit).slice(0, 10) : (st.created_at ? String(st.created_at).slice(0, 10) : "—") %></td>
             <td data-label="Actions"><div class="mk-actions">
-              <% if (!st.deleted_at) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= st.id %>/tableau-de-bord">Ouvrir</a><% } %>
+              <% if (!st.deleted_at) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= st.id %>/tableau-de-bord">Ouvrir<span class="sr-only"> <%= st.name %></span></a><% } %>
+              <% if (canModules && !st.deleted_at && st.status === "active") { %><a class="btn btn-ghost btn-sm" href="/marketing/site-web/sites/<%= st.id %>/modules">Modules<span class="sr-only"> de <%= st.name %></span></a><% } %>
               <% if (canWrite && !st.deleted_at && st.status === "active") { %>
                 <form action="/marketing/site-web/sites/<%= st.id %>/dupliquer" method="post"><input type="hidden" name="contenu" value="pages"><button type="submit" class="btn btn-ghost btn-sm" title="Copie le design system, les réglages et les pages (en brouillon)">Dupliquer</button></form>
                 <form action="/marketing/site-web/sites/<%= st.id %>/archiver" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Les pages en ligne de « <%= st.name %> » passent hors ligne. Rien n'est effacé et vous pourrez le restaurer.">Archiver</button></form>
@@ -53,8 +73,16 @@
               <% } %>
             </div></td>
           </tr>
-        <% }) %></tbody>
+        <% }) %>
+        </tbody>
       </table></div>
+    <% } %>
+
+    <% if (!sites.length) { %>
+      <div class="mk-empty"><%- icon("globe", { size: 32 }) %>
+        <h2><%= q ? "Aucun site ne correspond à « " + q + " »" : VIDE[view] %></h2>
+        <p><%= q ? "Essayez un autre mot, ou changez de filtre." : view === "supprimes" ? "Un site supprimé reste ici, récupérable." : view === "archives" ? "Un site archivé a ses pages hors ligne ; rien n'est effacé." : "Créez votre premier site : vous y rattacherez des pages et réglerez son design system." %></p>
+        <% if (canWrite && !q && (view === "actifs" || view === "tous")) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button></div><% } %></div>
     <% } %>
 
     <% if (canWrite) { %>

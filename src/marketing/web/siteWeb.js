@@ -51,8 +51,13 @@ module.exports = () => {
   router.get("/site-web/sites", need("forms.read"), (req, res) => {
     const view = pages.SITE_VIEWS.includes(req.query.vue) ? req.query.vue : "actifs";
     const q = String(req.query.q || "").trim().slice(0, 80);
+    const manager = require("../pages/siteManager");
+    const counts = pages.siteCounts(req.mk.ctx);
+    // Le site principal est une ligne comme les autres (équipe seulement) ; il suit la recherche et n'apparaît ni dans « Archivés » ni dans « Supprimés »
+    const main = !req.mk.siteOnly ? manager.mainSite(req.mk.ctx) : null;
+    const showMain = Boolean(main) && (view === "actifs" || view === "tous") && (!q || /principal|site principal/i.test(q) || main.name.toLowerCase().includes(q.toLowerCase()));
     res.render("marketing/sites", {
-      title: "Mes sites", active: "sites", view, q, sites: pages.listSites(req.mk.ctx, { view, q }), counts: pages.siteCounts(req.mk.ctx),
+      title: "Mes sites", active: "sites", view, q, sites: manager.enrich(req.mk.ctx, pages.listSites(req.mk.ctx, { view, q })), counts, main: showMain ? main : null, totals: manager.totals(req.mk.ctx, counts), canModules: !req.mk.siteOnly && req.mk.can("sites.modules"), MODULES: require("../siteModules").MODULES,
       siteTypes: pages.SITE_TYPES, canWrite: req.mk.can("forms.write"), canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"),
     });
   });
