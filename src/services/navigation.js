@@ -23,28 +23,43 @@ const LOCATIONS = {
 };
 const registerLocation = (def) => { LOCATIONS[def.key] = def; };
 
+// R8 lot 4 — menus PAR SITE : une ressource ne peut figurer que dans un menu de SON site (un menu du site principal garde son comportement historique : aucune restriction)
+const siteContent = () => require("./siteContent");
+function termSearch(kind, q, limit, siteId) {
+  if (!Number.isInteger(siteId)) return taxonomy.list({ taxonomy: kind, q, perPage: limit, sort: "nom" }).rows.map((t) => ({ id: t.id, title: t.name, detail: taxonomy.urlOf(t) }));
+  return db.prepare(`SELECT t.id FROM taxonomy_terms t WHERE t.taxonomy = ? AND t.name LIKE ? ESCAPE '\\' AND EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'term' AND cs.content_id = t.id AND cs.site_id = ?) ORDER BY t.name COLLATE NOCASE LIMIT ?`)
+    .all(kind, like(q), siteId, limit).map((r) => taxonomy.get(r.id)).filter(Boolean).map((t) => ({ id: t.id, title: t.name, detail: taxonomy.urlOf(t) }));
+}
+function inSiteScope(type, oid, siteId) {
+  if (!Number.isInteger(siteId)) return true;
+  if (type === "page") return Boolean(db.prepare("SELECT 1 FROM mk_landing_pages WHERE id = ? AND site_id = ?").get(oid, siteId));
+  if (type === "article") return siteContent().siteOf(db, "post", oid) === siteId;
+  if (type === "category" || type === "tag") return siteContent().siteOf(db, "term", oid) === siteId;
+  return true;
+}
+
 // ---------- Types d'éléments et résolveurs (registre extensible) ----------
 // search(q, limit) → [{ id, title, detail }] ; resolve(ids) → Map(id → { title, url, state }) ; state : ok | unpublished | trashed | missing
 const TYPES = {
   home: { label: "Accueil", needsObject: false },
   page: {
     label: "Page", needsObject: true,
-    search: (q, limit) => db.prepare(`SELECT id, COALESCE(NULLIF(title, ''), name) AS title, slug AS detail FROM mk_landing_pages WHERE archived_at IS NULL AND kind <> 'step' AND (name LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY updated_at DESC LIMIT ?`).all(like(q), like(q), like(q), limit).map((r) => ({ ...r, detail: urlsLib().publicPath("page", { slug: r.detail }, { hostSite: null }) })),
+    search: (q, limit, siteId = null) => db.prepare(`SELECT id, COALESCE(NULLIF(title, ''), name) AS title, slug AS detail FROM mk_landing_pages WHERE archived_at IS NULL AND kind <> 'step' AND (? IS NULL OR site_id = ?) AND (name LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY updated_at DESC LIMIT ?`).all(siteId, siteId, like(q), like(q), like(q), limit).map((r) => ({ ...r, detail: urlsLib().publicPath("page", { slug: r.detail }, { hostSite: null }) })),
     resolve: (ids) => fetchMap(ids, "SELECT id, COALESCE(NULLIF(title, ''), name) AS title, slug, status, archived_at FROM mk_landing_pages", (r) => ({ title: r.title, url: urlsLib().publicPath("page", r, { hostSite: null }), state: r.archived_at ? "trashed" : r.status === "published" ? "ok" : "unpublished" })),
   },
   article: {
     label: "Article", needsObject: true,
-    search: (q, limit) => db.prepare(`SELECT id, title, slug AS detail FROM posts WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY COALESCE(published_at, created_at) DESC LIMIT ?`).all(like(q), like(q), limit).map((r) => ({ ...r, detail: urlsLib().publicPath("post", { slug: r.detail }) })),
+    search: (q, limit, siteId = null) => db.prepare(`SELECT id, title, slug AS detail FROM posts WHERE deleted_at IS NULL AND (? IS NULL OR EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = posts.id AND cs.site_id = ?)) AND (title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\') ORDER BY COALESCE(published_at, created_at) DESC LIMIT ?`).all(siteId, siteId, like(q), like(q), limit).map((r) => ({ ...r, detail: urlsLib().publicPath("post", { slug: r.detail }) })),
     resolve: (ids) => fetchMap(ids, "SELECT id, title, slug, published, deleted_at FROM posts", (r) => ({ title: r.title, url: urlsLib().publicPath("post", r), state: r.deleted_at ? "trashed" : r.published ? "ok" : "unpublished" })),
   },
   category: {
     label: "Catégorie", needsObject: true,
-    search: (q, limit) => taxonomy.list({ taxonomy: "category", q, perPage: limit, sort: "nom" }).rows.map((t) => ({ id: t.id, title: t.name, detail: taxonomy.urlOf(t) })),
+    search: (q, limit, siteId = null) => termSearch("category", q, limit, siteId),
     resolve: (ids) => termMap(ids, "category"),
   },
   tag: {
     label: "Étiquette", needsObject: true,
-    search: (q, limit) => taxonomy.list({ taxonomy: "tag", q, perPage: limit, sort: "nom" }).rows.map((t) => ({ id: t.id, title: t.name, detail: taxonomy.urlOf(t) })),
+    search: (q, limit, siteId = null) => termSearch("tag", q, limit, siteId),
     resolve: (ids) => termMap(ids, "tag"),
   },
   custom: { label: "Lien personnalisé", needsObject: false },
@@ -169,7 +184,7 @@ function heightOf(itemId) {
 function subtreeIds(itemId) {
   return db.prepare(`WITH RECURSIVE sub(id) AS (SELECT ? UNION SELECT i.id FROM nav_items i JOIN sub s ON i.parent_id = s.id) SELECT id FROM sub`).all(itemId).map((r) => r.id);
 }
-function normalizeItem(input, existing = null) {
+function normalizeItem(input, existing = null, siteId = null) {
   const type = existing ? existing.type : String(input.type || "");
   const def = TYPES[type];
   if (!def) throw new UserError("Type d'élément inconnu.");
@@ -178,6 +193,7 @@ function normalizeItem(input, existing = null) {
     const oid = input.object_id === undefined && existing ? existing.object_id : Number(input.object_id);
     if (!Number.isInteger(oid) || oid <= 0) throw new UserError(`Choisissez ${type === "page" ? "une page" : type === "article" ? "un article" : type === "category" ? "une catégorie" : "une étiquette"}.`);
     out.object_id = oid;
+    if (!(existing && existing.object_id === oid) && !inSiteScope(type, oid, siteId)) throw new UserError("Cette ressource n'appartient pas à ce site.");
     const info = def.resolve([oid]).get(oid);
     if (!info && !existing) throw new UserError("Cette ressource n'existe pas.");
     out.url = "";
@@ -190,7 +206,7 @@ function add(menuId, input) {
   const m = menuRow(menuId);
   if (!m) throw new UserError("Menu introuvable.");
   if (db.prepare("SELECT COUNT(*) n FROM nav_items WHERE menu_id = ?").get(menuId).n >= MAX_ITEMS) throw new UserError(`Un menu contient ${MAX_ITEMS} éléments au plus.`);
-  const base = normalizeItem(input);
+  const base = normalizeItem(input, null, m.site_id);
   const label = cleanLabel(input.label);
   if (base.type === "custom" && !label) throw new UserError("Donnez un texte au lien.");
   let parentId = null;
@@ -211,7 +227,7 @@ function add(menuId, input) {
 function updateItem(id, input) {
   const it = itemRow(id);
   if (!it) throw new UserError("Élément introuvable.");
-  const base = normalizeItem({ ...input, type: it.type }, it);
+  const base = normalizeItem({ ...input, type: it.type }, it, (menuRow(it.menu_id) || {}).site_id ?? null);
   const label = input.label === undefined ? it.label : cleanLabel(input.label);
   if (base.type === "custom" && !label) throw new UserError("Donnez un texte au lien.");
   const visibility = input.visibility === undefined ? it.visibility : ["all", "guests", "members"].includes(input.visibility) ? input.visibility : it.visibility;
@@ -428,5 +444,5 @@ function importCurrentSite({ userId = null, siteId = null } = {}) {
 module.exports = {
   MAX_DEPTH, MAX_ITEMS, MAX_LABEL, LOCATIONS, TYPES, STATE_LABELS, REL_ALLOWED, events, registerLocation, registerType,
   cleanUrl, isExternal, create, update, remove, duplicate, menuRow, itemRow, add, updateItem, removeItem, move, shift, reorder, tree, flatten, listMenus, brokenCount, usageOf,
-  assign, assignments, forLocation, forMenu, importCurrentSite, subtreeIds, depthOf, search: (type, q, limit = 20) => (TYPES[type] && TYPES[type].search ? TYPES[type].search(String(q || "").trim().slice(0, 80), Math.min(Number(limit) || 20, 50)) : []),
+  assign, assignments, forLocation, forMenu, importCurrentSite, subtreeIds, depthOf, search: (type, q, limit = 20, { siteId = null } = {}) => (TYPES[type] && TYPES[type].search ? TYPES[type].search(String(q || "").trim().slice(0, 80), Math.min(Number(limit) || 20, 50), Number.isInteger(siteId) ? siteId : null) : []), inSiteScope,
 };

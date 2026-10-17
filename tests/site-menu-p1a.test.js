@@ -13,7 +13,7 @@ const one = (sql, ...a) => db.prepare(sql).get(...a);
 const uid = (c) => one("SELECT id FROM users WHERE email = ?", c.email).id;
 const SP = "/marketing/site-web/sites";
 const PR = "/marketing/site-web/principal";
-const DELEGATED = Object.entries(nav.SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => ({ mod: k, to: m.to, reg: m.reg, label: ({ articles: "Tous les articles", commentaires: "Tous", categories: "Catégories" })[k] || m.label })); // libellé de l'entrée ACTIVE dans le menu (R8 lot 2 : articles et commentaires sont délégués)
+const DELEGATED = Object.entries(nav.SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => ({ mod: k, to: m.to, reg: m.reg, label: ({ articles: "Tous les articles", commentaires: "Tous", categories: "Catégories", navigation: "Navigation" })[k] || m.label })); // libellé de l'entrée ACTIVE dans le menu (R8 lot 2 : articles et commentaires sont délégués)
 const mkSite = (name, status = "active") => Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens, status) VALUES (?, ?, ?, '{}', ?)").run(orgId, name, name.toLowerCase().replace(/\W+/g, "-"), status).lastInsertRowid);
 const row = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
 const mkList = (site, name) => row("INSERT INTO mk_lists (organization_id, name, site_id) VALUES (?, ?, ?)", orgId, name, site);
@@ -65,7 +65,7 @@ describe("1 — le menu d'un site est la projection du registre", () => {
     assert.equal((navOf(html).match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon.length);
     assert.equal((navOf(html).match(/is-soon" aria-disabled="true"/g) || []).length, soon.length, "chaque entrée grisée est un élément désactivé");
     for (const i of soon) assert.doesNotMatch(navOf(html), new RegExp(`<a [^>]*>[^<]*<span>${i.label.replace(/[()]/g, ".")}</span><span class="mk-cms-tag">Bientôt`), `${i.key} : pas de lien`);
-    for (const m of ["navigation", "seo"]) { // formulaires et contacts : ouverts depuis R8 lot 3 ; articles, médias et commentaires sont ouverts depuis R8 lot 2 (voir menu-site-inventaire)
+    for (const m of ["seo"]) { // navigation : ouverte depuis R8 lot 4 ; formulaires et contacts : ouverts depuis R8 lot 3 ; articles, médias et commentaires sont ouverts depuis R8 lot 2 (voir menu-site-inventaire)
       const r = await boss.get(`${SP}/${A}/${m}`);
       assert.equal(r.status, 200, m);
       assert.doesNotMatch(main(r.text), /Liste Beta|Page Beta|<table|<form/, `${m} : ni donnée ni action`);

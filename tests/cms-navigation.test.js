@@ -408,10 +408,10 @@ describe("duplication, suppression, droits", () => {
     const s = await newStudent(srv);
     assert.notEqual((await s.get(NAV)).status, 200);
   });
-  test("menu d'un autre site : introuvable depuis l'écran du site principal ; emplacement refusé", async () => {
+  test("menu d'un autre site : s'ouvre dans SON site (R8 lot 4) et jamais dans l'écran du site principal ; emplacement du principal refusé ; liste du principal sans lui", async () => {
     const siteId = Number(db.prepare("INSERT INTO mk_sites (organization_id, name) VALUES (?, 'Autre site')").run(orgId).lastInsertRowid);
     const other = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug) VALUES (?, 'Menu autre site', 'menu-autre-site')").run(siteId).lastInsertRowid);
-    assert.equal((await boss.get(`${NAV}/menus/${other}`)).status, 404);
+    const own = await boss.get(`${NAV}/menus/${other}`); assert.equal(own.status, 200); assert.match(own.text, /Autre site/, "ouvert dans le cadre de son site"); assert.doesNotMatch(own.text, /Menu du site principal/)
     const before = q("SELECT * FROM nav_locations").length;
     await boss.post(`${NAV}/emplacements`, { header: String(other) });
     assert.equal(q("SELECT * FROM nav_locations WHERE menu_id = ?", other).length, 0);

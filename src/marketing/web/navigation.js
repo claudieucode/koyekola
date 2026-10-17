@@ -16,18 +16,27 @@ module.exports = () => {
     if (!(error instanceof UserError)) return next(error);
     flash(req, "error", error.message); res.redirect(to);
   };
-  const menuOr404 = (req, res) => {
+  // R8 lot 4 — menus PAR SITE : le site est celui du contexte vérifié par le serveur (adresse /sites/N/navigation, « ?site= » validé, ou site du menu / de l'élément appelé par identifiant) ;
+  // null = site principal. Un menu ou un élément d'un autre site est introuvable, même appelé par son identifiant.
+  const NAV = /^\/site-web\/(?:navigation|apparence\/menus)(?:\/|$)/;
+  router.use((req, res, next) => {
+    if (!NAV.test(req.path)) return next();
+    if (req.mk.siteId !== null && !(req.mk.site && req.mk.site.id === req.mk.siteId)) return res.status(404).render("error", { message: "Site introuvable." });
+    req.navSite = req.mk.siteId;
+    next();
+  });
+  const menuOr404 = (req, res, json = false) => {
     const m = navigation.menuRow(Number(req.params.id));
-    if (!m || m.site_id !== null) { res.status(404).render("error", { message: "Menu introuvable." }); return null; }
+    if (!m || (m.site_id ?? null) !== req.navSite) { if (json) res.status(404).json({ ok: false, error: "Menu introuvable." }); else res.status(404).render("error", { message: "Menu introuvable." }); return null; }
     return m;
   };
 
   // ----- Liste des menus et emplacements -----
   // Le même écran est l'entrée « Navigation » et « Apparence → Menus » du menu latéral
   const showList = (active) => (req, res) => {
-    const menus = navigation.listMenus();
+    const menus = navigation.listMenus({ siteId: req.navSite });
     res.render("marketing/navigation", {
-      title: "Navigation", active, menus, locations: navigation.LOCATIONS, assigned: navigation.assignments(), BASE,
+      title: "Navigation", active, menus, locations: navigation.LOCATIONS, assigned: navigation.assignments({ siteId: req.navSite }), BASE, navSite: req.navSite,
       canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), canDelete: req.mk.can("navigation.delete"),
     });
   };
@@ -36,14 +45,14 @@ module.exports = () => {
 
   router.post("/site-web/navigation/menus", need("navigation.write"), (req, res, next) => {
     try {
-      const menu = navigation.create({ name: req.body.name, description: req.body.description, userId: req.session.user.id });
+      const menu = navigation.create({ name: req.body.name, description: req.body.description, siteId: req.navSite, userId: req.session.user.id });
       flash(req, "ok", `Menu « ${menu.name} » créé.`);
       res.redirect(`${BASE}/menus/${menu.id}`);
     } catch (error) { fail(req, res, next, BASE, error); }
   });
   router.post("/site-web/navigation/importer", need("navigation.write"), (req, res, next) => {
     try {
-      const made = navigation.importCurrentSite({ userId: req.session.user.id });
+      const made = navigation.importCurrentSite({ userId: req.session.user.id, siteId: req.navSite });
       flash(req, made.length ? "ok" : "error", made.length ? `${made.length} menu${made.length > 1 ? "s" : ""} créé${made.length > 1 ? "s" : ""} à partir du site actuel. Affectez-les à un emplacement pour les utiliser.` : "Les menus du site actuel existent déjà.");
       res.redirect(BASE);
     } catch (error) { fail(req, res, next, BASE, error); }
@@ -51,13 +60,13 @@ module.exports = () => {
   router.post("/site-web/navigation/emplacements", need("navigation.publish"), (req, res, next) => {
     try {
       // Formulaire d'un menu (cases à cocher) : décocher libère l'emplacement seulement s'il est occupé par CE menu ; liste des menus : choix direct
-      const current = navigation.assignments();
+      const current = navigation.assignments({ siteId: req.navSite });
       const only = req.body.menu ? Number(req.body.menu) : null;
       for (const key of Object.keys(navigation.LOCATIONS)) {
         if (!Object.hasOwn(req.body, key)) continue;
         const value = [].concat(req.body[key]).filter(Boolean).pop();
         if (only && !value && current[key] !== only) continue;
-        navigation.assign(key, value ? Number(value) : null);
+        navigation.assign(key, value ? Number(value) : null, { siteId: req.navSite });
       }
       flash(req, "ok", "Emplacements enregistrés : le site utilise maintenant ces menus.");
       res.redirect(String(req.body.retour || "").startsWith(BASE) ? req.body.retour : BASE);
@@ -72,13 +81,14 @@ module.exports = () => {
     const flat = navigation.flatten(nodes);
     res.render("marketing/navigation-menu", {
       title: menu.name, active: "navigation", menu, nodes, count: flat.length, broken: flat.filter((n) => n.resource.state !== "ok" && ["page", "article", "category", "tag"].includes(n.type)).length,
-      locations: navigation.LOCATIONS, assigned: navigation.assignments(), types: navigation.TYPES, maxDepth: navigation.MAX_DEPTH, BASE, REL: navigation.REL_ALLOWED,
-      menus: navigation.listMenus(), canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), canDelete: req.mk.can("navigation.delete"),
+      locations: navigation.LOCATIONS, assigned: navigation.assignments({ siteId: req.navSite }), types: navigation.TYPES, maxDepth: navigation.MAX_DEPTH, BASE, REL: navigation.REL_ALLOWED, navSite: req.navSite,
+      menus: navigation.listMenus({ siteId: req.navSite }), canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), canDelete: req.mk.can("navigation.delete"),
       navJs: true,
     });
   });
   router.post("/site-web/navigation/menus/:id(\\d+)", need("navigation.write"), (req, res, next) => {
     const back = `${BASE}/menus/${req.params.id}`;
+    if (!menuOr404(req, res)) return;
     try {
       const m = navigation.update(Number(req.params.id), { name: req.body.name, description: req.body.description, status: req.body.status });
       flash(req, "ok", `Menu « ${m.name} » enregistré.`);
@@ -86,6 +96,7 @@ module.exports = () => {
     } catch (error) { fail(req, res, next, back, error); }
   });
   router.post("/site-web/navigation/menus/:id(\\d+)/dupliquer", need("navigation.write"), (req, res, next) => {
+    if (!menuOr404(req, res)) return;
     try {
       const copy = navigation.duplicate(Number(req.params.id), { userId: req.session.user.id });
       flash(req, "ok", `Copie créée : « ${copy.name} » (en brouillon, à vérifier avant de l'affecter).`);
@@ -93,6 +104,7 @@ module.exports = () => {
     } catch (error) { fail(req, res, next, BASE, error); }
   });
   router.post("/site-web/navigation/menus/:id(\\d+)/supprimer", need("navigation.delete"), (req, res, next) => {
+    if (!menuOr404(req, res)) return;
     try {
       const r = navigation.remove(Number(req.params.id));
       flash(req, "ok", `Menu « ${r.name} » supprimé${r.locations.length ? ` ; ${r.locations.map((l) => navigation.LOCATIONS[l].label.toLowerCase()).join(", ")} : retour à l'affichage d'origine` : ""}. Les pages et articles qu'il montrait ne sont pas touchés.`);
@@ -103,6 +115,7 @@ module.exports = () => {
   // ----- Éléments -----
   router.post("/site-web/navigation/menus/:id(\\d+)/elements", need("navigation.write"), (req, res, next) => {
     const back = `${BASE}/menus/${req.params.id}`;
+    if (!menuOr404(req, res)) return;
     try {
       const menuId = Number(req.params.id);
       const type = String(req.body.type || "");
@@ -118,7 +131,8 @@ module.exports = () => {
   });
   const itemRoute = (path, perm, run) => router.post(`/site-web/navigation/elements/:id(\\d+)${path}`, need(perm), (req, res, next) => {
     const it = navigation.itemRow(Number(req.params.id));
-    if (!it) return res.status(404).render("error", { message: "Élément introuvable." });
+    const owner = it ? navigation.menuRow(it.menu_id) : null;
+    if (!it || !owner || (owner.site_id ?? null) !== req.navSite) return res.status(404).render("error", { message: "Élément introuvable." });
     const back = `${BASE}/menus/${it.menu_id}`;
     try { flash(req, "ok", run(it, req)); res.redirect(back); } catch (error) { fail(req, res, next, back, error); }
   });
@@ -134,6 +148,7 @@ module.exports = () => {
   });
   // Glisser-déposer : la structure entière est envoyée et écrite d'un seul bloc (transaction)
   router.post("/site-web/navigation/menus/:id(\\d+)/organiser", need("navigation.write"), express.json({ limit: "512kb" }), (req, res, next) => {
+    if (!menuOr404(req, res, true)) return;
     try {
       const n = navigation.reorder(Number(req.params.id), (req.body || {}).tree);
       res.json({ ok: true, count: n });
@@ -147,7 +162,7 @@ module.exports = () => {
   router.get("/site-web/navigation/ressources", need("navigation.read"), (req, res) => {
     const type = String(req.query.type || "");
     if (!navigation.TYPES[type] || !navigation.TYPES[type].search) return res.status(400).json({ error: "Type inconnu." });
-    res.json({ results: navigation.search(type, req.query.q, 20) });
+    res.json({ results: navigation.search(type, req.query.q, 20, { siteId: req.navSite }) });
   });
   return router;
 };

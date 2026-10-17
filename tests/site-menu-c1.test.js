@@ -60,7 +60,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("les entrées non ouvertes sont des éléments grisés SANS lien ; les entrées ouvertes ont toutes un lien dans le cadre du site", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const entries = site.flatMap((g) => g.entrees);
-    assert.ok(entries.filter((e) => e.grise).length >= 36, "R8 lots 2 et 3 : médias, articles et commentaires sont ouverts ; le reste reste grisé");
+    assert.ok(entries.filter((e) => e.grise).length >= 33, "R8 lots 2 à 4 : médias, articles et commentaires sont ouverts ; le reste reste grisé");
     for (const e of entries) { if (e.grise) assert.equal(e.href, null, e.libelle); else assert.match(e.href, new RegExp(`^(${SP}/${A}/|${SP}$)`), e.libelle); }
   });
   test("chaque lien ouvert du menu répond 200 DANS le cadre du site (bandeau + menu) : aucun lien ne renvoie au CMS principal", async () => {
@@ -76,7 +76,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   });
   test("une entrée grisée n'ouvre rien : ni adresse « Bientôt » dans le menu, ni écran du principal, ni donnée", async () => {
     const html = navHtml((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
-    for (const w of ["/utilisateurs/roles", "/outils/importer", "/parametres/lecture", `/${A}/corbeille`, "/outils/sauvegardes", "/outils/logs", "/outils/systeme", "/seo", "/navigation"]) assert.ok(!html.includes(w), w);
+    for (const w of ["/utilisateurs/roles", "/outils/importer", "/parametres/lecture", `/${A}/corbeille`, "/outils/sauvegardes", "/outils/logs", "/outils/systeme", "/seo"]) assert.ok(!html.includes(w), w);
     assert.ok(!/href="\/marketing\/site-web\/(?!sites)/.test(html), "aucun lien vers l'administration du site principal");
   });
   test("rôles limités à un site : même ordre de groupes, sous-ensemble selon les permissions, jamais un lien vers un autre site", async () => {

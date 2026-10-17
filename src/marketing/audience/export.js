@@ -10,9 +10,11 @@ const HEADER = ["E-mail", "Prénom", "Nom", "Téléphone", "Société", "Pays", 
 function listsForContacts(ctx, ids) {
   const map = new Map();
   if (!ids.length) return map;
+  // R8 lot 4 : un accès LIMITÉ à un site n'obtient que les listes de SON site (un contact partagé peut être dans la liste d'un autre site : son nom n'est pas communiqué)
+  const own = Number.isInteger(ctx.siteScope) ? " AND l.site_id = ?" : "";
   const rows = ctx.db
-    .prepare(`SELECT m.contact_id, l.name FROM mk_list_members m JOIN mk_lists l ON l.id = m.list_id WHERE m.organization_id = ? AND m.contact_id IN (${ids.map(() => "?").join(",")}) ORDER BY l.name COLLATE NOCASE`)
-    .all(ctx.organizationId, ...ids);
+    .prepare(`SELECT m.contact_id, l.name FROM mk_list_members m JOIN mk_lists l ON l.id = m.list_id WHERE m.organization_id = ? AND m.contact_id IN (${ids.map(() => "?").join(",")})${own} ORDER BY l.name COLLATE NOCASE`)
+    .all(ctx.organizationId, ...ids, ...(own ? [ctx.siteScope] : []));
   for (const r of rows) { if (!map.has(r.contact_id)) map.set(r.contact_id, []); map.get(r.contact_id).push(r.name); }
   return map;
 }

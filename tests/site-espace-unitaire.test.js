@@ -56,8 +56,8 @@ describe("menu de l'espace d'un site (buildSiteNav)", () => {
   });
   test("modules des paliers suivants : 'preview' pour un site, écran historique 'live' pour le site principal", () => {
     const status = (sp, key) => nav.siteModuleOf(sp, key).status;
-    for (const k of ["articles", "categories", "commentaires", "medias", "formulaires", "contacts"]) { assert.equal(status(space, k), "live", `site : ${k} (ouvert, R8 lot 2)`); assert.equal(nav.siteModuleOf(space, k).external, true, k); }
-    for (const k of ["modeles", "navigation", "seo"]) {
+    for (const k of ["articles", "categories", "commentaires", "medias", "formulaires", "contacts", "navigation"]) { assert.equal(status(space, k), "live", `site : ${k} (ouvert, R8 lot 2)`); assert.equal(nav.siteModuleOf(space, k).external, true, k); }
+    for (const k of ["modeles", "seo"]) {
       assert.equal(status(space, k), "preview", `site : ${k}`);
       assert.equal(Boolean(nav.siteModuleOf(space, k).external), false);
     }

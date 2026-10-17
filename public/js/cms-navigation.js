@@ -3,11 +3,14 @@
 // entière au serveur, qui la valide (aucune boucle, profondeur limitée) et l'écrit d'un seul bloc. Un refus recharge la page.
 (function () {
   var BASE = "/marketing/site-web/navigation";
+  // R8 lot 4 : menu d'un SITE — le site est celui du menu (posé par le serveur sur la structure), jamais une valeur saisie
+  var treeEl = document.querySelector("[data-nav-tree]");
+  var SITE = treeEl ? treeEl.getAttribute("data-site") || "" : "";
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   function h(tag, attrs, text) { var el = document.createElement(tag); Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); }); if (text !== undefined) el.textContent = text; return el; }
   function search(type, q) {
-    return fetch(BASE + "/ressources?type=" + encodeURIComponent(type) + "&q=" + encodeURIComponent(q || ""), { credentials: "same-origin", headers: { Accept: "application/json" } })
+    return fetch(BASE + "/ressources?type=" + encodeURIComponent(type) + "&q=" + encodeURIComponent(q || "") + (SITE ? "&site=" + encodeURIComponent(SITE) : ""), { credentials: "same-origin", headers: { Accept: "application/json" } })
       .then(function (r) { if (!r.ok) throw new Error("Recherche indisponible."); return r.json(); }).then(function (d) { return d.results; });
   }
 

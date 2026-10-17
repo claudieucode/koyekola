@@ -45,7 +45,7 @@
         <h2 id="structure-title">Structure du menu</h2>
         <% if (canWrite && count > 1) { %><p class="field-hint">Glissez les éléments par la poignée pour les réorganiser (un élément déposé sur un autre devient son sous-élément), ou utilisez les flèches. <span data-nav-status role="status" aria-live="polite"></span></p><% } %>
         <% if (!count) { %><p class="mk-empty-line" data-nav-empty>Ce menu ne contient aucun élément.</p><% } %>
-        <ol class="mk-nav-tree" data-nav-tree data-menu="<%= menu.id %>" data-max-depth="<%= maxDepth %>" data-save="<%= BASE %>/menus/<%= menu.id %>/organiser" data-can-write="<%= canWrite ? 1 : 0 %>">
+        <ol class="mk-nav-tree" data-nav-tree data-site="<%= navSite === null ? "" : navSite %>" data-menu="<%= menu.id %>" data-max-depth="<%= maxDepth %>" data-save="<%= BASE %>/menus/<%= menu.id %>/organiser" data-can-write="<%= canWrite ? 1 : 0 %>">
           <% nodes.forEach((n) => { %><%- include("nav-item", { node: n, depth: 1, BASE, types, canWrite, REL }) %><% }) %>
         </ol>
       </section>

@@ -146,11 +146,14 @@ const FAMILY = [
       const nav = require("../../../services/navigation");
       const user = env.visitor && env.visitor.loggedIn ? {} : null;
       let found = null;
+      // R8 lot 4 : une page d'un SITE utilise d'abord les menus de ce site ; sans menu propre pour cet emplacement, le comportement d'avant (menus du site principal) est conservé
+      const siteId = env.page && Number.isInteger(env.page.site_id) ? env.page.site_id : null;
       if (p.location === "name") {
         const wanted = String(p.menuName || "").trim().toLowerCase();
-        const menu = wanted ? nav.listMenus().find((m) => String(m.name).toLowerCase() === wanted) : null;
+        const own = wanted && siteId !== null ? nav.listMenus({ siteId }).find((m) => String(m.name).toLowerCase() === wanted) : null;
+        const menu = own || (wanted ? nav.listMenus().find((m) => String(m.name).toLowerCase() === wanted) : null);
         found = menu ? nav.forMenu(menu.id, { user }) : null;
-      } else found = nav.forLocation(p.location, { user });
+      } else found = (siteId !== null ? nav.forLocation(p.location, { user, siteId }) : null) || nav.forLocation(p.location, { user });
       return { menu: found };
     },
   },

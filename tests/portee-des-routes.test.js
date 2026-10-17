@@ -58,7 +58,7 @@ const legacySiteOfRequest = (db) => (req) => {
       return null;
     }
     // Contact Core (palier 15) : lecture des contacts d'UN site (?site=) — c'est ce qui ouvre l'écran aux personnes qui n'ont accès qu'à ce site
-    if (req.method === "GET" && /^\/contacts(?:\/\d+(?:\/evenements\.json)?)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
+    if (req.method === "GET" && /^\/contacts(?:\/export\.csv|\/\d+(?:\/evenements\.json)?)?$/.test(p) && /^\d{1,12}$/.test(String((req.query && req.query.site) ?? ""))) return { siteId: Number(req.query.site) };
     // Formulaires par site (R7 lot 2)
     m = /^\/formulaires\/(\d{1,12})(?:\/|$)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_forms WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
@@ -75,6 +75,15 @@ const legacySiteOfRequest = (db) => (req) => {
     m = /^\/sms\/campagnes\/(\d{1,12})(?:\/|$)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_sms_campaigns WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     if (/^\/sms(?:\/(?:campagnes|abonnes))?$/.test(p)) {
+      const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
+      return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
+    }
+    // Navigation par site (R8 lot 4)
+    m = /^\/site-web\/navigation\/menus\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) { let r; try { r = db.prepare("SELECT site_id FROM nav_menus WHERE id = ?").get(Number(m[1])); } catch { r = undefined; } return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    m = /^\/site-web\/navigation\/elements\/(\d{1,12})(?:\/|$)/.exec(p);
+    if (m) { let r; try { r = db.prepare("SELECT mn.site_id FROM nav_items i JOIN nav_menus mn ON mn.id = i.menu_id WHERE i.id = ?").get(Number(m[1])); } catch { r = undefined; } return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
+    if (/^\/site-web\/(?:navigation|apparence\/menus)(?:\/(?:menus|emplacements|importer|ressources))?$/.test(p)) {
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
     }

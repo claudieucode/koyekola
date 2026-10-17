@@ -20,7 +20,7 @@ const mkPage = (site, name, status = "draft") => Number(db.prepare("INSERT INTO 
 const mkComp = (site, name) => Number(db.prepare("INSERT INTO mk_web_components (organization_id, site_id, name, section) VALUES (?, ?, ?, ?)").run(orgId, site, name, JSON.stringify({ type: "text", title: name, body: "x" })).lastInsertRowid);
 const mkRedirect = (site, from) => db.prepare("INSERT INTO seo_redirects (source_path, target, status, enabled, site_id) VALUES (?, '/ailleurs', 301, 1, ?)").run(from, site);
 const MODULES_LIVE = ["tableau-de-bord", "pages", "composants", "redirections", "reglages"];
-const MODULES_SOON = ["modeles", "navigation", "seo"]; // R8 lot 2 : articles, catégories, commentaires et médias sont ouverts (voir menu-site-inventaire)
+const MODULES_SOON = ["modeles", "seo"]; // R8 lot 2 : articles, catégories, commentaires et médias sont ouverts (voir menu-site-inventaire)
 
 before(async () => {
   srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
@@ -55,8 +55,9 @@ describe("1 — « Ouvrir » mène à l'espace du site (unitaires + intégration
     for (const m of ["pages", "composants", "redirections", "reglages"]) assert.match(r.text, new RegExp(`href="${SP}/${A}/${m}`), `menu : ${m}`);
     // R8 lot 2 : Articles, Médias et Commentaires sont OUVERTS (liens dans le cadre du site) ; Navigation et SEO restent visibles mais grisés « Bientôt » (aucun lien)
     for (const m of ["articles", "medias", "commentaires"]) assert.match(r.text, new RegExp(`href="${SP}/${A}/${m}"`), `${m} : lien ouvert`);
-    for (const m of ["navigation", "seo"]) assert.doesNotMatch(r.text, new RegExp(`href="${SP}/${A}/${m}"`), `${m} : pas de lien`);
-    assert.match(r.text, /class="mk-nav-link is-soon" aria-disabled="true" title="Navigation \(bientôt\)"/);
+    assert.match(r.text, new RegExp(`href="${SP}/${A}/navigation"`), "navigation : lien ouvert (R8 lot 4)");
+    for (const m of ["seo"]) assert.doesNotMatch(r.text, new RegExp(`href="${SP}/${A}/${m}"`), `${m} : pas de lien`);
+    assert.match(r.text, /is-soon" aria-disabled="true" title="Meta \(bientôt\)"/);
     assert.match(r.text, /Pages en ligne/);
   });
   test("chaque module disponible répond 200 pour l'équipe, avec le bandeau du bon site", async () => {
@@ -180,7 +181,7 @@ describe("4 — modules « Bientôt » : aucune donnée, aucune action simulée"
     const space = { siteId: A, principal: false, base: `${SP}/${A}`, name: "Site Alpha", listHref: "/marketing/site-web/sites" };
     const soon = nav.projectSections(space).flatMap((x) => x.items).filter((i) => i.disabled).length;
     assert.equal((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon);
-    assert.equal(soon, 37, "R8 lots 2 et 3 : 53 − 15 (articles, médias, commentaires) − 1 (formulaires)");
+    assert.equal(soon, 35, "R8 lots 2 à 4 : 53 − 15 (articles, médias, commentaires) − 1 (formulaires) − 2 (navigation, menus)");
   });
 });
 

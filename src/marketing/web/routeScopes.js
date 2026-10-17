@@ -55,6 +55,9 @@ const resolvers = {
     const raw = req.body && req.body.siteId;
     return DIGITS.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
   },
+  // Menus de navigation par site (R8 lot 4) : un menu relève de son site (NULL = principal) ; un élément relève du site de son menu
+  navMenu(rule, m, db) { try { const r = db.prepare("SELECT site_id FROM nav_menus WHERE id = ?").get(Number(m[rule.idGroup])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; } catch { return { siteId: null, missing: true }; } },
+  navItem(rule, m, db) { try { const r = db.prepare("SELECT mn.site_id FROM nav_items i JOIN nav_menus mn ON mn.id = i.menu_id WHERE i.id = ?").get(Number(m[rule.idGroup])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; } catch { return { siteId: null, missing: true }; } },
   // Contenus par site (R6 lot 2) : un article ou un terme relève du site de son rattachement (aucune ligne = site principal, fermé à un accès limité à un site)
   content(rule, m, db) {
     const s = require("../../services/siteContent").siteOf(db, rule.contentType, Number(m[rule.idGroup]));
@@ -92,10 +95,14 @@ const SITE_RULES = Object.freeze([
   { id: "analytics-du-site", pattern: /^\/analytics\/global(?:\/export)?$/, methods: ["GET"], kind: "queryGet" },
   { id: "evenement-par-identifiant", pattern: /^\/evenements\/(\d{1,12})$/, kind: "resource", table: "evenement", idGroup: 1 },
   { id: "email-liste-et-creation", pattern: new RegExp(`^\\/(?:${EMAIL_FAMILIES})(?:\\/(?:nouvelle|nouveau|apercu|apercu-cible|historique|parcours(?:\\/.*)?|bibliotheque(?:\\/.*)?))?$`), kind: "param", terminal: true },
-  { id: "contacts-du-site", pattern: /^\/contacts(?:\/nouveau|\/\d+(?:\/evenements\.json)?)?$/, methods: ["GET"], kind: "queryGet" }, // R8 lot 3 : + « nouveau » (page de création, dans le cadre du site)
+  { id: "contacts-du-site", pattern: /^\/contacts(?:\/nouveau|\/export\.csv|\/\d+(?:\/evenements\.json)?)?$/, methods: ["GET"], kind: "queryGet" }, // R8 lots 3-4 : + « nouveau » (page de création) et l'export CSV du site
   // Contacts par site (R7, décision D2) : écriture d'un contact par un accès limité à un site — le site vient de « ?site= » ou du champ « site » (validé par les droits) ; le DROIT de modifier ce contact
   // (origine = ce site) est ensuite vérifié par contactcore/siteAccess ; fusion et doublons restent réservés à l'équipe (contactCore.js)
   // Formulaires par site (R7 lot 2) : un formulaire visé par son identifiant relève de son site (NULL = site principal, fermé à un accès limité) ; liste et création : site choisi
+  // Navigation par site (R8 lot 4) : un menu ou un élément appelé par identifiant relève de son site ; liste, création, emplacements, import et recherche : site choisi (« ?site= » ou champ « site »)
+  { id: "navigation-menu-par-identifiant", pattern: /^\/site-web\/navigation\/menus\/(\d{1,12})(?:\/|$)/, kind: "navMenu", idGroup: 1 },
+  { id: "navigation-element-par-identifiant", pattern: /^\/site-web\/navigation\/elements\/(\d{1,12})(?:\/|$)/, kind: "navItem", idGroup: 1 },
+  { id: "navigation-du-site", pattern: /^\/site-web\/(?:navigation|apparence\/menus)(?:\/(?:menus|emplacements|importer|ressources))?$/, kind: "param", terminal: true },
   { id: "formulaire-par-identifiant", pattern: /^\/formulaires\/(\d{1,12})(?:\/|$)/, kind: "resource", table: "form", idGroup: 1 },
   { id: "formulaires-du-site", pattern: /^\/formulaires(?:\/|$)/, kind: "param", terminal: true },
   // SMS par site (R7 lot 6.1) : une campagne par son identifiant relève de son site (NULL = organisation, fermée à un accès limité) ; liste, création et abonnés : site choisi ; réglages, test, blocages (STOP) : organisation
@@ -138,6 +145,7 @@ const FAMILIES = Object.freeze([
   { id: "reseaux-publications", scope: "site", pattern: /^\/reseaux(?:\/\d+\/(?:annuler|relancer|supprimer))?$/ },
   { id: "score-apercu", scope: "site", pattern: /^\/score$/ },
   { id: "revenus-apercu", scope: "site", pattern: /^\/revenus$/ },
+  { id: "navigation-du-site", scope: "site", pattern: /^\/site-web\/(?:navigation|apparence\/menus)(?:\/|$)/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },

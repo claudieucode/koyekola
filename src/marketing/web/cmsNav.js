@@ -170,7 +170,8 @@ const SITE_MODULES = {
   formulaires: { label: "Formulaires", kind: "delegate", to: "/formulaires", reg: "forms", permission: "forms.read", legacy: "/marketing/formulaires", legacyLabel: "Formulaires" },
   contacts: { label: "Contacts", kind: "delegate", to: "/contacts", reg: "contacts", permission: "contacts.read", legacy: "/marketing/contacts" },
   modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
-  navigation: { label: "Menus", kind: "soon", phase: "menus", permission: "navigation.read", legacy: `${BASE}/navigation`, reg: "navigation" },
+  // R8 lot 4 : Navigation / Menus par site (menus et emplacements PROPRES au site ; ressources limitées à celles du site)
+  navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
   seo: { label: "SEO", kind: "soon", phase: "B6", permission: "forms.read", legacy: `${BASE}/seo`, reg: "seo" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
   listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
@@ -246,6 +247,8 @@ const ABILITY = {
   "articles/ajouter": { mode: "open", module: "articles", sub: "ajouter" }, // création : permise aux accès limités (éditeur ouvert, contenus-par-site-editeur)
   "articles/auteurs": { mode: "open", module: "articles", sub: "auteurs" },
   mediatheque: { mode: "open", module: "medias" },
+  navigation: { mode: "open", module: "navigation" },
+  "apparence/menus": { mode: "open", module: "navigation" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
@@ -336,4 +339,5 @@ function buildSiteNav({ can, active, space }) {
 }
 
 for (const [key, a] of Object.entries(ABILITY)) if (a.mode === "open" && a.sub) FRAMED.add(key);
+FRAMED.add("apparence/menus"); // même écran que « Navigation » (clé active distincte)
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

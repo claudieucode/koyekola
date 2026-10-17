@@ -2,7 +2,7 @@
 // Le site vient du contexte vérifié par le serveur (ctx.siteScope pour un accès limité, ctx.siteFilter pour l'équipe), jamais du HTML ; il est AJOUTÉ aux seuls liens et formulaires qui mènent aux familles
 // /marketing/contacts et /marketing/formulaires, s'ils n'en portent pas déjà un. Ainsi, dans le cadre d'un site, chaque lien, filtre, pagination et formulaire garde le site (sans quoi un accès limité
 // serait refusé : la portée d'une adresse de ces familles est lue dans « ?site= » ou dans le champ « site »). Les adresses réservées à l'équipe (doublons, fusion, traitement des demandes) restent telles quelles.
-const TARGET = /^\/marketing\/(?:contacts|formulaires)(?:[/?#]|$)/;
+const TARGET = /^\/marketing\/(?:contacts|formulaires|site-web\/navigation|site-web\/apparence\/menus)(?:[/?#]|$)/;
 const TEAM_ONLY = /^\/marketing\/contacts\/(?:doublons|fusion|demandes\/traiter|demandes\/\d+)/;
 
 function withSite(url, site) {

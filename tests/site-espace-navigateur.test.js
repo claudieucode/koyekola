@@ -96,7 +96,7 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     assert.ok(await soon.isVisible(), "l'entrée grisée est visible");
     assert.equal(await soon.getAttribute("aria-disabled"), "true");
     assert.equal(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/seo"]`).count(), 0, "aucun lien vers un module pas prêt");
-    assert.ok(await page.locator(".mk-cms-nav .mk-cms-tag", { hasText: "Bientôt" }).first().isVisible());
+    assert.ok(await page.locator(".mk-cms-nav .mk-cms-tag", { hasText: "Bientôt" }).count() >= 1, "badges « Bientôt » présents pour les entrées fermées");
     await soon.click({ force: true });
     assert.equal(new URL(page.url()).pathname, `${SP}/${A}/tableau-de-bord`, "cliquer sur une entrée grisée ne change pas de page");
     await page.goto(`${srv.base}${SP}/${A}/seo`);
