@@ -124,4 +124,16 @@ describe("migrations 090 / 091 : base neuve et retour arrière", () => {
     assert.deepEqual(up(db).applied, ["090", "091"]);
     assert.deepEqual(schemaOf(db), full, "la remontée redonne exactement le schéma complet");
   });
+  test("prérequis : si seo_redirects n'a pas la colonne site_id du palier 12, la 090 échoue PROPREMENT (rien n'est modifié, repère non posé) ; les imports anciens ne sont jamais réattribués au hasard", () => {
+    const db = fresh(); until(db, "090");
+    db.exec("INSERT INTO mk_organizations (name, slug) VALUES ('A', 'a')");
+    db.exec(OLD_SEO.replace(", site_id INTEGER);\n  CREATE INDEX idx_seo_redirects_site ON seo_redirects(site_id);", ");"));   // base d'avant le palier 12
+    assert.ok(!cols(db, "seo_redirects").includes("site_id"));
+    db.exec("INSERT INTO seo_redirects (source_path, target) VALUES ('/a', '/b')");
+    assert.throws(() => up(db), /site_id/i);
+    assert.deepEqual(rows(db, "SELECT source_path FROM seo_redirects"), [{ source_path: "/a" }], "ligne conservée");
+    assert.ok(!cols(db, "seo_redirects").includes("site_id") && !cols(db, "seo_404").includes("site_id"), "aucune modification partielle");
+    assert.equal(rows(db, "SELECT COUNT(*) n FROM schema_migrations WHERE version IN ('090','091')")[0].n, 0);
+    assert.ok(!cols(db, "seo_site_settings").length, "table non créée");
+  });
 });
