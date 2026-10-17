@@ -23,6 +23,7 @@ const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const taxonomy = require("../services/taxonomy");
 const siteContent = require("../services/siteContent");
+const urls = require("../services/urls");
 const { transaction: siteTransaction } = require("../marketing/db/tx");
 const themeRender = require("../marketing/web/themeRender");
 const blockTrash = require("../services/blockTrash");
@@ -113,6 +114,9 @@ function readingMinutes(p) {
 function renderList(req, res, { filter = null } = {}) {
   const where = ["published = 1"];
   const params = [];
+  // Contenus par site (R6 lot 4) : le domaine demandé ne montre QUE ses articles (domaine d'un site) ; le domaine principal ne montre pas ceux des sites qui ont leur domaine
+  const scope = urls.contentScope("post", "posts.id", req.kwSite || null);
+  if (scope) { where.push(scope.sql); params.push(...scope.params); }
   // Catégorie ou étiquette : relations de la taxonomie (une catégorie montre aussi les articles de ses sous-catégories)
   if (filter && (filter.type === "category" || filter.type === "tag")) { const f = taxonomy.contentFilter("post", filter.termIds); where.push(f.sql); params.push(...f.args); }
   if (filter && filter.type === "author") { where.push("(author_id = ? OR (author_id IS NULL AND ? = (SELECT MIN(id) FROM users WHERE role = 'formateur')))"); params.push(filter.id, filter.id); }
@@ -153,11 +157,11 @@ function renderList(req, res, { filter = null } = {}) {
   const seo = seoPages.blogList(req, { filter, page, basePath, heading, crumbs, posts: listed });
   // Résultats de recherche : pas d'indexation (contenu en double des listes), liens suivis
   if (q) seo.robots = "noindex, follow";
-  const categories = blog.categories().map((c) => ({ ...c, theme: themeFor(c) }));
+  const categories = blog.categories(scope).map((c) => ({ ...c, theme: themeFor(c) }));
   // Sections éditoriales de l'accueil du blog
   let popular = [], discover = null;
   if (hub && page === 1) {
-    popular = blog.popular(3).map((p) => decorate(db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id)));
+    popular = blog.popular(3, 0, scope).map((p) => decorate(db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id)));
     const shown = new Set([featured && featured.id, ...posts.map((p) => p.id), ...popular.map((p) => p.id)]);
     const other = rows.find((p) => !shown.has(p.id));
     if (other) discover = { type: "post", post: decorate(other) };
@@ -202,9 +206,10 @@ router.get("/recherche", (req, res) => {
   if (q) {
     const terms = fold(q).split(" ").filter(Boolean);
     const matches = (parts) => { const hay = fold(parts.join(" \n ")); return terms.every((t) => hay.includes(t)); };
-    articles = db.prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY published_at DESC, id DESC").all()
+    const scope = urls.contentScope("post", "posts.id", req.kwSite || null);
+    articles = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC`).all(...(scope ? scope.params : []))
       .filter((p) => matches([p.title, p.excerpt, p.category, p.subcategory, p.tags, blog.textOf(p)])).slice(0, 30)
-      .map((p) => ({ title: p.title, url: `/blog/${encodeURIComponent(p.slug)}`, summary: excerptOf(p) }));
+      .map((p) => ({ title: p.title, url: `/blog/${encodeURIComponent(urls.publicHomeOf("post", p.id) ? urls.addressOf("post", p) : p.slug)}`, summary: excerptOf(p) }));
     pages = db.prepare("SELECT name, title, slug, description FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL AND kind = 'page' AND site_id IS NULL ORDER BY published_at DESC, id DESC").all()
       .filter((p) => matches([p.name, p.title, p.description])).slice(0, 30)
       .map((p) => ({ title: p.title || p.name, url: `/p/${encodeURIComponent(p.slug)}`, summary: p.description || "" }));
@@ -214,11 +219,12 @@ router.get("/recherche", (req, res) => {
 
 router.get("/blog/feed.xml", (req, res) => {
   const { escapeXml } = require("../utils/seo");
-  const rows = db.prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY published_at DESC, id DESC LIMIT 20").all();
-  const siteName = require("../seo/settings").get("site_name") || "KOLAKISA";
+  const feedScope = urls.contentScope("post", "posts.id", req.kwSite || null); // le flux d'un domaine ne contient que les articles de ce domaine
+  const rows = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${feedScope ? " AND " + feedScope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT 20`).all(...(feedScope ? feedScope.params : []));
+  const siteName = (req.kwSite && req.kwSite.name) || require("../seo/settings").get("site_name") || "KOLAKISA";
   const date = (value) => { const d = new Date(String(value || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(value)) ? "" : "Z")); return Number.isNaN(d.getTime()) ? new Date(0).toUTCString() : d.toUTCString(); };
   const items = rows.map((p) => {
-    const url = absoluteUrl(req, `/blog/${encodeURIComponent(p.slug)}`);
+    const url = absoluteUrl(req, `/blog/${encodeURIComponent(urls.publicHomeOf("post", p.id) ? urls.addressOf("post", p) : p.slug)}`);
     return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description></item>`;
   }).join("");
   const channelLast = rows.length ? date(rows[0].published_at) : new Date(0).toUTCString();
@@ -230,7 +236,7 @@ router.get("/blog/feed.xml", (req, res) => {
 const categoryBase = taxonomy.baseOf("category");
 const tagBase = taxonomy.baseOf("tag");
 router.get(`${categoryBase}/:slug`, (req, res) => {
-  const term = taxonomy.bySlug("category", req.params.slug);
+  const term = urls.resolveTerm("category", req.params.slug, req.kwSite || null);
   if (!term) return res.status(404).render("error", { message: "Catégorie introuvable." });
   const lineage = taxonomy.ancestors(term.id);
   renderList(req, res, { filter: { type: "category", termIds: taxonomy.subtreeIds(term.id), name: term.name, path: taxonomy.urlOf(term), label: term.name, heading: term.name, ancestors: lineage.map((a) => ({ name: a.name, url: taxonomy.urlOf(a) })),
@@ -238,7 +244,7 @@ router.get(`${categoryBase}/:slug`, (req, res) => {
 });
 
 router.get(`${tagBase}/:slug`, (req, res) => {
-  const term = taxonomy.bySlug("tag", req.params.slug);
+  const term = urls.resolveTerm("tag", req.params.slug, req.kwSite || null);
   if (!term) return res.status(404).render("error", { message: "Étiquette introuvable." });
   renderList(req, res, { filter: { type: "tag", termIds: [term.id], name: term.name, slug: term.slug, path: taxonomy.urlOf(term), label: `#${term.name}`, heading: `Articles : ${term.name}`, lead: term.description || `Tous nos articles sur « ${term.name} ».` } });
 });
@@ -274,7 +280,7 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   if (postTerms.primary) { const root = taxonomy.ancestors(postTerms.primary.id)[0]; crumbs.push(root ? { name: root.name, url: taxonomy.urlOf(root) } : { name: postTerms.primary.name, url: postTerms.primary.url }); } // fil d'Ariane : catégorie racine, comme avant
   else if (post.category) crumbs.push({ name: post.category, url: `${taxonomy.baseOf("category")}/${taxonomy.categorySlugOfName(post.category)}` });
   crumbs.push({ name: post.title });
-  const ownUrl = absoluteUrl(req, `/blog/${post.slug}`);
+  const ownUrl = absoluteUrl(req, `/blog/${urls.publicHomeOf("post", post.id) ? urls.addressOf("post", post) : post.slug}`);
   const canonical = post.canonical_url && /^https:\/\//i.test(post.canonical_url) ? post.canonical_url : ownUrl;
   const cover = post.cover_path ? absoluteUrl(req, post.cover_path) : null;
   const socialImage = post.og_image_path ? absoluteUrl(req, post.og_image_path) : cover;
@@ -333,7 +339,8 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     seo.locale = seoPages.LOCALES[post.language] || undefined;
     seo.graph = { page: { type: "WebPage", url: ownUrl, crumbs, imagePath, inLanguage: lang, datePublished: isoDateTime(post.published_at), dateModified: isoDateTime(post.updated_at) }, main };
   }
-  const { previous, next } = post.published ? blog.neighbours(post) : { previous: null, next: null };
+  const pageScope = urls.contentScope("post", "posts.id", req.kwSite || null);
+  const { previous, next } = post.published ? blog.neighbours(post, pageScope) : { previous: null, next: null };
   const toc = post.toc_enabled === 0 ? [] : article.toc;
   // Modèle de thème « Article du blog » (Page Builder) : remplace l'en-tête, l'image et le texte ; sans modèle publié, rien ne change
   const postTaxo = taxonomy.termsOf("post", post.id);
@@ -344,8 +351,8 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     themeTemplate, post, crumbs, author, seo, article: { ...article, toc }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
     tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,
     categorySlug: post.category ? taxonomy.categorySlugOfName(post.category) : "", postTerms,
-    sidebar: { popular: blog.popular(4, post.id), recent: blog.recent(4, post.id), categories: blog.categories(), newsletter },
-    similar: post.published ? blog.similar(post, 3) : [],
+    sidebar: { popular: blog.popular(4, post.id, pageScope), recent: blog.recent(4, post.id, pageScope), categories: blog.categories(pageScope), newsletter },
+    similar: post.published ? blog.similar(post, 3, pageScope) : [],
     comments: commentThread,
     replyTo: replyTarget,
     commentHtml: (body) => commentsEngine.html(body, { links: commentsEngine.settings().links_allowed }),
@@ -371,9 +378,10 @@ const burstLimiter = createRateLimiter(1, 5 * 1000);         // jamais deux envo
 // Un formateur ou un membre de l'équipe (éditeur et plus) est publié tout de suite
 const canModerate = (user) => Boolean(user && (user.role === "formateur" || (marketingOrgId() && cmsAccess.can(user.id, "comments.moderate", { organizationId: marketingOrgId() }))));
 router.post("/blog/:slug/commentaires", (req, res) => {
-  const post = db.prepare("SELECT * FROM posts WHERE slug = ? AND published = 1").get(req.params.slug);
+  const found = urls.resolvePost(req.params.slug, req.kwSite || null); // même résolution que la page : un article d'un autre domaine est « introuvable » (aucun commentaire déposé ailleurs)
+  const post = found && !found.redirect && found.row.published ? found.row : null;
   if (!post) return res.status(404).render("error", { message: "Article introuvable." });
-  const back = `/blog/${post.slug}`;
+  const back = `/blog/${req.params.slug}`;
   const user = req.session.user || null;
   const cfg = commentsEngine.settings();
   if (!user && !cfg.guests_allowed) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
@@ -408,13 +416,12 @@ router.post("/blog/commentaires/:id/supprimer", (req, res) => {
 });
 
 router.get("/blog/:slug", (req, res) => {
-  const post = db.prepare("SELECT * FROM posts WHERE slug = ?").get(req.params.slug);
-  if (!post) {
-    const moved = db.prepare("SELECT posts.slug FROM post_slug_history JOIN posts ON posts.id = post_slug_history.post_id WHERE post_slug_history.old_slug = ?").get(req.params.slug);
-    if (moved) return res.redirect(301, `/blog/${moved.slug}`);
-  }
-  // Brouillon, relecture, programmé ou archivé : visible seulement par le formateur (prévisualisation, non indexée)
+  // Résolution dans le contexte du domaine (R6 lot 4) : adresse logique du site, ancienne adresse, article d'un autre domaine (301 vers SON domaine) ou introuvable
+  const found = urls.resolvePost(req.params.slug, req.kwSite || null);
+  const post = found ? found.row : null;
+  // Brouillon, relecture, programmé ou archivé : visible seulement par le formateur (prévisualisation, non indexée) ; jamais révélé par une redirection
   if (!post || (!post.published && !isInstructor(req))) return res.status(404).render("error", { message: "Article introuvable." });
+  if (found.redirect) return res.redirect(301, found.redirect);
   blog.countView(post, req);
   renderPostPage(req, res, post);
 });

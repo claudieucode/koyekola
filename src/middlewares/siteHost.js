@@ -75,6 +75,14 @@ function siteRouting(req, res, next) {
 const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|favoris|formations?)(\/|$)/i;
 const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg))(\/|$|\.)/i;
 const refusedLogged = new Set();
+// Blog propre à un site (R6 lot 4) : le domaine d'un site sert SON blog (articles rattachés à ce site, adresses logiques du site) dès que ce site a au moins un article en ligne ;
+// sans article, le blog reste introuvable sur ce domaine (comme avant). Il ne sert jamais le blog du site principal ni celui d'un autre site (portée appliquée par les routes du blog).
+const BLOG_PATH = /^\/(blog|feed)(\/|$)/i;
+function siteHasBlog(siteId) {
+  try {
+    return Boolean(require("../config/database").prepare("SELECT 1 FROM posts p JOIN mk_content_sites cs ON cs.content_type = 'post' AND cs.content_id = p.id WHERE cs.site_id = ? AND p.published = 1 AND p.deleted_at IS NULL LIMIT 1").get(siteId));
+  } catch { return false; }
+}
 function siteIsolation(req, res, next) {
   if (req.path === "/sante") return next(); // sonde de santé : joignable quel que soit l'hôte
   // Domaine inconnu de Kolakisa : jamais le site principal ni celui d'un autre site (421 « requête mal dirigée »)
@@ -88,6 +96,7 @@ function siteIsolation(req, res, next) {
     return res.status(421).type("text/plain").send(`Ce domaine (${seen.replace(/[^a-z0-9.\-:\[\]]/gi, "?")}) n'est pas configuré sur cette plateforme.`);
   }
   if (ALWAYS_OK.test(req.path)) return next();
+  if (req.kwSite && BLOG_PATH.test(req.path) && siteHasBlog(req.kwSite.id)) return next();
   if (req.kwRetired || (req.kwSite && MAIN_SITE_ONLY.test(req.path))) {
     if (!isRead(req)) return res.status(404).type("text/plain").send("Introuvable");
     req.url = MISSING;

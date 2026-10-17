@@ -126,7 +126,7 @@ function baseOfPage(page) { const s = siteInfo(page.site_id); return s && s.base
 function publicPath(type, row, opts = {}) {
   switch (type) {
     case "page": return pagePath(row, opts);
-    case "post": return `/blog/${row.slug}`;
+    case "post": return `/blog/${publicHomeOf("post", row.id) ? addressOf("post", row) : row.slug}`; // adresse logique du site seulement sur son domaine
     case "course": return `/cours/${row.slug}`;
     default: return taxonomy().TAXONOMIES[type] ? `${taxonomy().baseOf(type)}/${row.slug}` : null;
   }
@@ -139,6 +139,64 @@ function publicUrl(req, type, row, opts = {}) {
   const own = type === "page" ? baseOfPage(row) : "";
   const base = own || siteBase(req);
   return `${base.replace(/\/+$/, "")}${path === "/" ? "/" : path}`;
+}
+
+// ---------- Contenus par site : « maison publique » d'un article ou d'un terme (R6 lot 4, résolution B2 par domaine) ----------
+// Un contenu rattaché à un site (table mk_content_sites, lot 1) est servi sur le DOMAINE de ce site, sous l'adresse logique de ce site (`address`, sinon son adresse actuelle).
+// Sur le domaine principal ne restent que les contenus historiques (sans rattachement) ET ceux d'un site SANS domaine : tant que la forme d'adresse d'un site sans domaine n'est pas
+// décidée (B1 : non servi / B2 : préfixe), ils restent servis exactement comme avant — aucune adresse publique existante ne disparaît.
+const TYPE_TABLE = { post: "posts", term: "taxonomy_terms" };
+function attachedSite(type, id) {
+  try { const r = db.prepare("SELECT site_id, address FROM mk_content_sites WHERE content_type = ? AND content_id = ?").get(type, id); return r || null; } catch { return null; }
+}
+// Site qui sert ce contenu sur son domaine, ou null (domaine principal)
+function publicHomeOf(type, id) {
+  const r = attachedSite(type, id);
+  const s = r && siteInfo(r.site_id);
+  return s && s.base ? s.id : null;
+}
+// Adresse publique d'un article/terme sur le domaine de son site : adresse logique si elle existe, sinon l'adresse actuelle
+const addressOf = (type, row) => { const r = attachedSite(type, row.id); return (r && r.address) || row.slug; };
+const domainSiteIds = () => [...loadSites().byId.values()].filter((s) => s.base).map((s) => s.id);
+// Fragment SQL « ce contenu est servi par CE domaine » pour les listes (idExpr : colonne identifiant, ex. « posts.id ») ; null = aucune restriction
+function contentScope(type, idExpr, hostSite) {
+  const base = `FROM mk_content_sites cs WHERE cs.content_type = '${type}' AND cs.content_id = ${idExpr}`;
+  try { db.prepare("SELECT 1 FROM mk_content_sites LIMIT 1").get(); } catch { return null; }
+  if (hostSite) return { sql: `EXISTS (SELECT 1 ${base} AND cs.site_id = ?)`, params: [hostSite.id] };
+  const ids = domainSiteIds();
+  return ids.length ? { sql: `NOT EXISTS (SELECT 1 ${base} AND cs.site_id IN (${ids.map(() => "?").join(",")}))`, params: ids } : null;
+}
+// Résolution d'un article dans le contexte d'un domaine : { row } servi ici ; { redirect } adresse à suivre (301) ; null = introuvable ici (aucune fuite : un contenu d'un autre domaine est « inconnu »)
+function resolvePost(slug, hostSite) {
+  if (!SLUG.test(slug)) return null;
+  const where = "SELECT p.* FROM posts p JOIN mk_content_sites cs ON cs.content_type = 'post' AND cs.content_id = p.id WHERE cs.site_id = ?";
+  const here = (row) => (row ? { row } : null);
+  if (hostSite) {
+    let hit = null;
+    try { hit = db.prepare(`${where} AND cs.address = ?`).get(hostSite.id, slug) || db.prepare(`${where} AND p.slug = ?`).get(hostSite.id, slug); } catch { hit = null; }
+    if (hit) { const addr = addressOf("post", hit); return addr === slug ? here(hit) : { row: hit, redirect: `/blog/${addr}` }; }
+    // Ancienne adresse (historique des articles) d'un article DE CE SITE
+    const moved = db.prepare("SELECT p.* FROM post_slug_history h JOIN posts p ON p.id = h.post_id WHERE h.old_slug = ?").get(slug);
+    if (moved && (attachedSite("post", moved.id) || {}).site_id === hostSite.id) return { row: moved, redirect: `/blog/${addressOf("post", moved)}`, moved: true };
+    return null;
+  }
+  let row = db.prepare("SELECT * FROM posts WHERE slug = ?").get(slug);
+  let moved = false;
+  if (!row) { row = db.prepare("SELECT p.* FROM post_slug_history h JOIN posts p ON p.id = h.post_id WHERE h.old_slug = ?").get(slug); moved = Boolean(row); }
+  if (!row) return null;
+  const home = publicHomeOf("post", row.id);
+  if (home) return { row, redirect: `${siteInfo(home).base}/blog/${addressOf("post", row)}`, foreign: true }; // servi par le domaine de son site : l'ancienne adresse y renvoie (301)
+  return moved ? { row, redirect: `/blog/${row.slug}`, moved: true } : { row };
+}
+// Même résolution pour un terme (catégorie, étiquette) : adresse logique du site, sinon adresse actuelle
+function resolveTerm(taxonomyKey, slug, hostSite) {
+  if (!SLUG.test(slug)) return null;
+  if (hostSite) {
+    const where = "SELECT t.* FROM taxonomy_terms t JOIN mk_content_sites cs ON cs.content_type = 'term' AND cs.content_id = t.id WHERE t.taxonomy = ? AND cs.site_id = ?";
+    try { return db.prepare(`${where} AND cs.address = ?`).get(taxonomyKey, hostSite.id, slug) || db.prepare(`${where} AND t.slug = ?`).get(taxonomyKey, hostSite.id, slug) || null; } catch { return null; }
+  }
+  const row = taxonomy().bySlug(taxonomyKey, slug);
+  return row && !publicHomeOf("term", row.id) ? row : null;
 }
 
 // ---------- Résolution d'une adresse ----------
@@ -181,10 +239,15 @@ function resolve(pathname, { hostSite = null } = {}) {
     if (row) return { type: "page", id: row.id, row, state: pageState(row, hostSite), path: pagePath(row, { hostSite }), siteId: row.site_id };
   }
   if ((m = /^\/blog\/([a-z0-9][a-z0-9-]*)$/.exec(p)) && !["categorie", "etiquette", "auteur"].includes(m[1])) {
-    const row = db.prepare("SELECT id, slug, title, published, status, deleted_at FROM posts WHERE slug = ?").get(m[1]);
-    if (row) return { type: "post", id: row.id, row, state: row.deleted_at ? "trashed" : row.published ? "live" : "draft", path: `/blog/${row.slug}`, siteId: null };
-    const moved = db.prepare("SELECT p.id, p.slug, p.published, p.deleted_at FROM post_slug_history h JOIN posts p ON p.id = h.post_id WHERE h.old_slug = ?").get(m[1]);
-    if (moved) return { type: "post", id: moved.id, state: moved.published && !moved.deleted_at ? "moved" : "trashed", path: `/blog/${moved.slug}`, siteId: null };
+    // Contenus par site (R6 lot 4) : l'article est résolu dans le contexte du domaine demandé ; celui d'un autre domaine est « foreign » (comme une page d'un autre site)
+    const r = resolvePost(m[1], hostSite);
+    if (r) {
+      const row = r.row, dead = row.deleted_at || !row.published;
+      const owner = (attachedSite("post", row.id) || {}).site_id ?? null;
+      if (r.foreign) return { type: "post", id: row.id, row, state: "foreign", path: r.redirect, siteId: owner };
+      if (r.moved) return { type: "post", id: row.id, state: !dead ? "moved" : "trashed", path: r.redirect, siteId: owner };
+      return { type: "post", id: row.id, row, state: row.deleted_at ? "trashed" : row.published ? "live" : "draft", path: r.redirect || `/blog/${row.slug}`, siteId: owner };
+    }
   }
   if ((m = /^\/cours\/([a-z0-9][a-z0-9-]*)$/.exec(p))) {
     const row = db.prepare("SELECT id, slug, title, published, archived FROM courses WHERE slug = ?").get(m[1]);
@@ -196,8 +259,8 @@ function resolve(pathname, { hostSite = null } = {}) {
   for (const key of Object.keys(tx.TAXONOMIES)) {
     const base = tx.baseOf(key);
     if (p.startsWith(`${base}/`) && (m = /^\/([a-z0-9][a-z0-9-]*)$/.exec(p.slice(base.length)))) {
-      const row = tx.bySlug(key, m[1]);
-      if (row) return { type: key, id: row.id, row, state: "live", path: tx.urlOf(row), siteId: null };
+      const row = resolveTerm(key, m[1], hostSite);
+      if (row) return { type: key, id: row.id, row, state: "live", path: tx.urlOf(row), siteId: (attachedSite("term", row.id) || {}).site_id ?? null };
     }
   }
   // Ancienne adresse d'une page ou d'un terme (historique)
@@ -227,7 +290,9 @@ function movedTarget(p, { hostSite = null } = {}) {
     if (p.startsWith(`${base}/`) && (m = /^\/([a-z0-9][a-z0-9-]*)$/.exec(p.slice(base.length)))) {
       const h = db.prepare("SELECT resource_id FROM cms_url_history WHERE resource_type = ? AND old_slug = ?").get(key, m[1]);
       const row = h && tx.get(h.resource_id);
-      if (row && row.taxonomy === key && !tx.bySlug(key, m[1])) return { type: key, id: row.id, row, state: "moved", path: tx.urlOf(row), siteId: null };
+      // Contenus par site (R6 lot 4) : l'ancienne adresse d'un terme ne mène qu'au terme DU domaine demandé
+      const ownerHere = row && ((hostSite ? (attachedSite("term", row.id) || {}).site_id === hostSite.id : !publicHomeOf("term", row.id)));
+      if (row && row.taxonomy === key && ownerHere && !resolveTerm(key, m[1], hostSite)) return { type: key, id: row.id, row, state: "moved", path: hostSite && attachedSite("term", row.id).address ? `${tx.baseOf(key)}/${attachedSite("term", row.id).address}` : tx.urlOf(row), siteId: (attachedSite("term", row.id) || {}).site_id ?? null };
     }
   }
   return null;
@@ -281,6 +346,6 @@ module.exports = {
   RESERVED, isReserved, normalizeSlug, checkSlug, uniqueSlug, isTaken,
   siteForHost, isRetiredHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
   pagePath, pageCanonicalPath, baseOfPage, publicPath, publicUrl,
-  resolve, cleanPath, movedLocation, movedTarget,
+  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, addressOf, contentScope, resolvePost, resolveTerm,
   slugChanged, slugMovedTo, historyOf, purgeHistory,
 };

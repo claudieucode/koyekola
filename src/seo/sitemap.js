@@ -39,13 +39,21 @@ function entries({ hostSite = null } = {}) {
   }
   blog.promoteScheduled();
   add({ path: "/blog", type: "Page" }, metaIndex("page", "blog"));
-  for (const t of taxonomy.publicTerms("category")) add({ path: taxonomy.urlOf(t), type: "Catégorie d'articles" }, metaIndex("blog_category", t.slug));
-  for (const p of db.prepare("SELECT slug, updated_at, robots_index, canonical_url, cover_path, title FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
-    const e = { path: `/blog/${p.slug}`, type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title };
+  // Contenus par site (R6 lot 4) : un article ou un terme servi par le domaine de son site est listé dans le plan de CE domaine (siteId + base), sous son adresse logique ;
+  // le plan du domaine principal n'en contient aucun (même règle que les pages d'un site à domaine propre)
+  const homeOf = (type, id) => urls.publicHomeOf(type, id);
+  const siteTag = (home) => (home ? { siteId: home, base: urls.siteInfo(home).base } : {});
+  for (const t of taxonomy.publicTerms("category")) { const home = homeOf("term", t.id); add({ path: home ? `${taxonomy.baseOf("category")}/${urls.addressOf("term", t)}` : taxonomy.urlOf(t), type: "Catégorie d'articles", ...siteTag(home) }, metaIndex("blog_category", t.slug)); }
+  const blogSites = new Set();
+  for (const p of db.prepare("SELECT id, slug, updated_at, robots_index, canonical_url, cover_path, title FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
+    const home = homeOf("post", p.id);
+    if (home) blogSites.add(home);
+    const e = { path: `/blog/${home ? urls.addressOf("post", p) : p.slug}`, type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title, ...siteTag(home) };
     if (!p.robots_index) excluded.push({ ...e, reason: "Réglé en noindex" });
     else if (p.canonical_url) excluded.push({ ...e, reason: `Canonical vers ${p.canonical_url}` });
     else included.push(e);
   }
+  for (const id of blogSites) add({ path: "/blog", type: "Page", ...siteTag(id) }, null); // l'accueil du blog de chaque domaine qui a des articles
   // Pages Site Web / pages d'atterrissage (/p/…) : en ligne, non archivées ; indexées seulement si la page le permet
   // (case « Autoriser les moteurs de recherche ») et sans canonical vers une autre adresse ni noindex dans son SEO
   let webPages = [];
@@ -74,7 +82,8 @@ function entries({ hostSite = null } = {}) {
     const rule = metaIndex("blog_tag", slug);
     if (rule.index === 1 || (rule.index === null && st.index_blog_tags)) add(e, rule); else excluded.push({ ...e, reason: "Étiquettes non indexées (Réglages)" });
   }
-  for (const a of db.prepare("SELECT DISTINCT author_id id FROM posts WHERE published = 1 AND author_id IS NOT NULL").all()) {
+  const authorScope = urls.contentScope("post", "posts.id", null); // pages d'auteur : seulement celles du domaine principal (les articles des domaines de sites n'y figurent pas)
+  for (const a of db.prepare(`SELECT DISTINCT author_id id FROM posts WHERE published = 1 AND author_id IS NOT NULL${authorScope ? " AND " + authorScope.sql : ""}`).all(...(authorScope ? authorScope.params : []))) {
     const e = { path: `/blog/auteur/${a.id}`, type: "Auteur" };
     const rule = metaIndex("author", a.id);
     if (rule.index === 1 || (rule.index === null && st.index_authors)) add(e, rule); else excluded.push({ ...e, reason: "Auteurs non indexés (Réglages)" });
