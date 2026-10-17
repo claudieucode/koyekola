@@ -245,4 +245,21 @@ describe("reconstruction par site : contrôles, outil étendu, exécution dédi�
       assert.ok(!fs.readdirSync(dir).some((x) => x.startsWith("ESSAI-")) && !fs.existsSync(`${f}.reconstruction.lock`));
     });
   });
+
+  describe("audit en lecture seule d'une copie (lot 6)", () => {
+    test("résultats agrégés sans contenu, base d'origine intacte, base vivante refusée, constats bloquants signalés", () => {
+      const { audit } = require("../src/services/auditCopie");
+      const f = fresh("audit"), h = sha(f);
+      const ok = audit(f);
+      assert.equal(ok.status, "conforme"); assert.equal(ok.integrite, true); assert.equal(ok.violations_cles_etrangeres, 0);
+      assert.deepEqual(ok.tables_a_reconstruire, tables.PLAN_TABLES);
+      assert.ok(!/Titre |Commentaire|Invité|bienvenue/.test(JSON.stringify(ok)), "aucun contenu ni adresse");
+      assert.equal(sha(f), h);
+      assert.ok(!fs.existsSync(`${f}.reconstruction.lock`) && !fs.existsSync(`${f}-wal`));
+      const bad = audit(mutate("audit-bad", (d) => d.exec("INSERT INTO posts (slug, title) VALUES ('Bienvenue', 'x')")));
+      assert.equal(bad.status, "bloquant"); assert.ok(bad.constats.some((c) => c.code === "adresses_articles" && c.gravite === "block"));
+      assert.equal(audit(require("../src/config/paths").dbFile).status, "refus");
+      assert.equal(audit(path.join(SCRATCH, "absent.db")).status, "refus");
+    });
+  });
 });
