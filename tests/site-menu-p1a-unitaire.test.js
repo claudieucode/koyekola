@@ -23,7 +23,9 @@ describe("projection du registre (menu d'un site)", () => {
   test("tout module ouvert par la table d'aptitude existe ; tout module délégué porte la clé de l'écran existant et figure parmi les écrans propres au site", () => {
     for (const [key, a] of Object.entries(nav.ABILITY)) { assert.ok(nav.ALL.some((i) => i.key === key), `clé hors registre : ${key}`); if (a.mode === "open") assert.ok(nav.SITE_MODULES[a.module], `module inconnu : ${a.module}`); }
     for (const [mod, m] of Object.entries(nav.SITE_MODULES)) if (m.kind === "delegate") { assert.ok(m.reg, mod); assert.ok(nav.isSiteScopedKey(m.reg), mod); assert.equal(nav.DELEGATED[mod], m.to); }
-    for (const k of ["landing", "dashboard", "utilisateurs", "apparence", "parametres", "seo"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+    for (const k of ["dashboard", "utilisateurs", "apparence", "parametres", "seo"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+    // « landing » (écran d'UNE page et son éditeur) prend le cadre du site de la page, mais seulement si le serveur a vérifié un site (voir creation-page-contexte-site) : la liste centrale « ?site= » reste centrale
+    assert.equal(nav.isSiteScopedKey("landing"), true);
     for (const k of ["navigation", "apparence/menus", "forms", "contacts", "articles", "articles/brouillons", "articles/categories", "articles/auteurs", "mediatheque", "commentaires", "commentaires/en-attente"]) assert.equal(nav.isSiteScopedKey(k), true, `${k} : contenu isolé par site (R5/R6), ouvert dans le cadre du site (R8 lot 2)`);
   });
   test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
@@ -71,7 +73,7 @@ describe("espace du site principal", () => {
   });
   test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
     const g = nav.buildCmsNav({ can: all, active: "landing" });
-    assert.equal(g.sections.length, 14);
+    assert.equal(g.sections.length, 13, "le groupe « Site principal » (tableau de bord) n'est plus une entrée du menu central");
     assert.ok(!JSON.stringify(g).includes("espace/"));
   });
 });

@@ -31,7 +31,8 @@ describe("registre et menu", () => {
       assert.equal(res.status, 200, item.href);
       assert.match(res.text, /class="mk-body is-cms"/, `${item.href} : coque CMS`);
       assert.match(res.text, /aria-label="Sections du CMS"/);
-      assert.match(res.text, new RegExp(`href="${item.href.replace(/[/]/g, "\\/")}"[^>]*aria-current="page"`), `${item.href} : entrée active`);
+      // Le tableau de bord du principal est servi dans la coque CMS mais n'a plus d'entrée dans le menu central (Mes sites → Ouvrir)
+      if (item.key !== "sitedash") assert.match(res.text, new RegExp(`href="${item.href.replace(/[/]/g, "\\/")}"[^>]*aria-current="page"`), `${item.href} : entrée active`);
       assert.doesNotMatch(res.text, /Menu marketing/, `${item.href} : plus le menu Marketing`);
     }
   });

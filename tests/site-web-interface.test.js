@@ -32,7 +32,9 @@ describe("navigation et tableau de bord", () => {
   test("menu : section « Site Web » (Tableau de bord, Sites, Pages), puis « Tunnels » (noms exacts)", async () => {
     const html = (await boss.get("/marketing/site-web")).text;
     assert.match(html, />Site Web</);
-    for (const href of ["/marketing/site-web", "/marketing/site-web/sites", "/marketing/pages"]) assert.match(html, new RegExp(`href="${href}"`));
+    for (const href of ["/marketing/site-web/sites", "/marketing/pages"]) assert.match(html, new RegExp(`href="${href}"`));
+    // « Mes sites » est l'unique point d'entrée central : le tableau de bord du principal s'ouvre par Mes sites → Ouvrir (pas d'entrée parallèle dans le menu)
+    assert.doesNotMatch(html.match(/<nav[^>]*mk-cms-nav[\s\S]*?<\/nav>/)[0], /Tableau de bord du site principal/);
     // Depuis le palier 1, Site Web est l'environnement KOLAKISA CMS : « Tunnels » reste une section du Marketing, atteinte par « Retour au Marketing »
     assert.match(html, /class="mk-cms-back" href="\/marketing"/, "retour au Marketing depuis le CMS");
     assert.match((await boss.get("/marketing")).text, /href="\/marketing\/tunnels"/, "section Tunnels (phase 8), dans le menu Marketing");

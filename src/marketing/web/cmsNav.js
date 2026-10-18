@@ -14,7 +14,8 @@ const leaf = (key, label, href, extra = {}) => ({ key, label, href, status: "liv
 // (tableau de bord, sites, pages, tests A/B) : ils entrent dans la coque CMS sans changer.
 const SECTIONS = [
   { key: "sites", label: "Mes sites", icon: "globe", items: [leaf("sites", "Mes sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
-  { key: "dashboard", label: "Site principal", icon: "activity", items: [leaf("sitedash", "Tableau de bord du site principal", BASE)] },
+  // centralHidden : le tableau de bord du principal est celui de SON espace (Mes sites → Ouvrir) ; le menu central n'en fait pas une entrée parallèle
+  { key: "dashboard", label: "Site principal", icon: "activity", centralHidden: true, items: [leaf("sitedash", "Tableau de bord du site principal", BASE)] },
   { key: "pages", label: "Pages", icon: "layout", items: [leaf("landing", "Pages", "/marketing/pages", { primary: { label: "Ajouter une page", href: "/marketing/pages#nouvelle", permission: "forms.write" } })] },
   {
     key: "articles", label: "Articles", icon: "fileText", items: [
@@ -127,6 +128,7 @@ function buildCmsNav({ can, active, space = null }) {
   if (!current) return null;
   const sections = [];
   for (const s of SECTIONS) {
+    if (s.centralHidden) continue;
     const items = s.items.filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === active }));
     if (!items.length) continue;
     sections.push({ key: s.key, label: s.label, icon: s.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });

@@ -56,7 +56,8 @@ const ITEMS = [
   // Site Web : tableau de bord, sites (design system), pages (les pages d'atterrissage y sont rattachées) — un seul
   // moteur de pages, partagé avec les Tunnels
   live("site", "sites", "Mes sites", "/marketing/site-web/sites", "globe", "forms.read", { label: "Créer un site", href: "/marketing/site-web/sites#nouveau", permission: "forms.write" }),
-  live("site", "sitedash", "Tableau de bord du site principal", "/marketing/site-web", "activity", "forms.read"),
+  // Le tableau de bord du site principal s'ouvre depuis « Mes sites » (Ouvrir) : pas d'entrée parallèle dans le menu central. L'écran reste servi.
+  { ...live("site", "sitedash", "Tableau de bord du site principal", "/marketing/site-web", "activity", "forms.read"), hidden: true },
   live("site", "landing", "Pages", "/marketing/pages", "layout", "forms.read", { label: "Créer une page", href: "/marketing/pages#nouvelle", permission: "forms.write" }),
   live("site", "pagetests", "Tests A/B", "/marketing/site-web/tests-ab", "activity", "forms.read"),
 
