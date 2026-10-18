@@ -30,6 +30,7 @@
 |---|---|
 | Autres paires texte + adresse sans message (G2), onglets / accordéon sans éléments imbriqués (G3), publication des composants globaux (G5) | 9 |
 | Profil du geste de poignée avec des widgets variés ; suite complète nocturne ; Firefox / Safari / tactile ; contrastes (G1, G6) | 10 |
+| **Mise à jour palier 11** : Défilement continu (marquee) et Avant / Après créés ; restent Shortcode, Sidebar, Portfolio, Méga-menu, boutons de paiement — voir `KOLAKISA_PALIER11_IMPLEMENTATION.md` | 11 |
 | Widgets Elementor absents : shortcode, barre latérale, portfolio, méga-menu, boutons de paiement, avant / après, défilement continu (G4) | à planifier avec le produit |
 
 ## 4. Recommandations de suivi
