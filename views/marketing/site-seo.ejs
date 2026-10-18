@@ -31,7 +31,7 @@
 <% } else if (mode === "notfound") { %>
     <p class="mk-lead"><%= stats.urls %> adresse(s) · <%= stats.human %> visite(s) de personnes · <%= stats.bot %> de robots.</p>
     <% if (!list.length) { %><div class="mk-cms-soon"><p>Aucune erreur 404 enregistrée pour ce site.</p></div><% } else { %>
-    <div class="table-wrap"><table class="mk-table" id="seo-404-table"><thead><tr><th>Adresse</th><th>Personnes</th><th>Robots</th><th>Dernière visite</th><th></th></tr></thead><tbody>
+    <div class="mk-table-wrap"><table class="mk-table" id="seo-404-table"><thead><tr><th>Adresse</th><th>Personnes</th><th>Robots</th><th>Dernière visite</th><th></th></tr></thead><tbody>
       <% list.forEach((r) => { %><tr><td><code><%= r.path %></code></td><td><%= r.hits_human %></td><td><%= r.hits_bot %></td><td><%= fmt(r.last_seen) %></td>
         <td><% if (canRedirect) { %><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections?source=<%= encodeURIComponent(r.path) %>#nouvelle">Rediriger</a><% } %></td></tr><% }) %>
     </tbody></table></div><% } %>
@@ -48,7 +48,7 @@
     <% } %>
     <form method="get" class="dash-search" role="search"><label class="sr-only" for="rd-q">Rechercher</label><input type="search" id="rd-q" name="q" value="<%= search %>" placeholder="Rechercher"><button class="btn btn-outline btn-sm" type="submit">Rechercher</button></form>
     <% if (!q.rows.length) { %><div class="mk-cms-soon"><p>Ce site n'a aucune redirection.</p></div><% } else { %>
-    <div class="table-wrap"><table class="mk-table" id="seo-redirects-table"><thead><tr><th>Ancienne adresse</th><th>Nouvelle adresse</th><th>Type</th><th>État</th><th>Visites</th><th></th></tr></thead><tbody>
+    <div class="mk-table-wrap"><table class="mk-table" id="seo-redirects-table"><thead><tr><th>Ancienne adresse</th><th>Nouvelle adresse</th><th>Type</th><th>État</th><th>Visites</th><th></th></tr></thead><tbody>
       <% q.rows.forEach((r) => { %><tr data-redirect="<%= r.id %>"><td><code><%= r.source_path %></code></td><td><code><%= r.target %></code></td><td><%= r.status %></td><td><%= r.enabled ? "Active" : "Désactivée" %></td><td><%= r.hits %></td>
         <td><% if (can.edit) { %><details><summary>Modifier</summary>
             <form method="post" action="<%= space.base %>/redirections/<%= r.id %>" class="mk-form">

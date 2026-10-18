@@ -32,6 +32,11 @@ describe("reconstruction par site : contrôles, outil étendu, exécution dédi�
     const { migrate } = require("../src/marketing/db/migrate");
     migrate(db, { dir: MIGRATIONS, dbPath: path.join(SCRATCH, "data", "KOYEKOLA.db"), backupDir: path.join(SCRATCH, "b"), log: quiet });
     require("../src/services/siteContent").ensureCoreTriggers(db);
+    // R8 lot 6 : la migration 090 reconstruit déjà seo_redirects (unicité par site). Cette base synthétique représente l'état d'AVANT la reconstruction du cœur : on y remet la forme d'origine de seo_redirects
+    // pour continuer à éprouver l'outil sur sa table de redirections (le cas « déjà reconstruite » est couvert par contenus-par-site-unitaire).
+    db.exec(`DROP INDEX IF EXISTS uq_seo_redirects_site_source; DROP INDEX IF EXISTS idx_seo_redirects_site; ALTER TABLE seo_redirects RENAME TO seo_redirects_r8;
+      CREATE TABLE seo_redirects (id INTEGER PRIMARY KEY AUTOINCREMENT, source_path TEXT NOT NULL UNIQUE, target TEXT NOT NULL, status INTEGER NOT NULL DEFAULT 301, enabled INTEGER NOT NULL DEFAULT 1, note TEXT NOT NULL DEFAULT '', hits INTEGER NOT NULL DEFAULT 0, last_hit_at TEXT, created_by INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')), site_id INTEGER);
+      DROP TABLE seo_redirects_r8; CREATE INDEX idx_seo_redirects_site ON seo_redirects(site_id);`);
     tables = require("../src/services/reconstructionTables"); checks = require("../src/services/reconstructionChecks"); runner = require("../src/services/reconstructionRun"); backfill = require("../src/services/reconstructionBackfill");
     const run = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
     const org = run("INSERT INTO mk_organizations (name, slug) VALUES ('O', 'o')");

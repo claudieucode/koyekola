@@ -95,11 +95,11 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     const soon = page.locator(".mk-cms-nav .mk-nav-sublink.is-soon", { hasText: "Meta" }).first();
     assert.ok(await soon.isVisible(), "l'entrée grisée est visible");
     assert.equal(await soon.getAttribute("aria-disabled"), "true");
-    assert.equal(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/seo"]`).count(), 0, "aucun lien vers un module pas prêt");
+    assert.equal(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/modeles"]`).count(), 0, "aucun lien vers un module pas prêt"); // R8 lot 6C : « seo » est ouvert ; « Meta » et « modeles » restent fermés
     assert.ok(await page.locator(".mk-cms-nav .mk-cms-tag", { hasText: "Bientôt" }).count() >= 1, "badges « Bientôt » présents pour les entrées fermées");
     await soon.click({ force: true });
     assert.equal(new URL(page.url()).pathname, `${SP}/${A}/tableau-de-bord`, "cliquer sur une entrée grisée ne change pas de page");
-    await page.goto(`${srv.base}${SP}/${A}/seo`);
+    await page.goto(`${srv.base}${SP}/${A}/modeles`);
     assert.ok(await page.locator(".mk-cms-soon", { hasText: "Prochain palier" }).isVisible());
     assert.equal(await page.locator("main table, main form").count(), 0);
     await shot(page, "b1-04-module-bientot");

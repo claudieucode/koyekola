@@ -2011,3 +2011,6 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 /* Tableaux de données : coupure aux espaces (pas au milieu d'un mot) ; dates et source sur une ligne */
 .mk-body .mk-datatable td { overflow-wrap: break-word; }
 .mk-body .mk-datatable td[data-label="Ajouté le"], .mk-body .mk-datatable td[data-label="Dernière activité"], .mk-body .mk-datatable td[data-label="Source"] { white-space: nowrap; }
+
+/* R8 lot 1 : gestionnaire central des sites (repère de tableau) */
+.mk-body .mk-site-manager { width: 100%; }
