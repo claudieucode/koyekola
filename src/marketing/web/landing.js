@@ -169,7 +169,7 @@ module.exports = () => {
   });
   // Données d'affichage d'un contenu (formations relues dans le catalogue, composants synchronisés résolus)
   // Aperçu, canevas, versions : vus comme par un visiteur inconnu (personnalisation non appliquée, tout est montré)
-  const shown = (ctx, page, content) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections)) });
+  const shown = (ctx, page, content, draftId = null) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId }) });
 
   router.get("/pages/:id(\\d+)", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -205,11 +205,11 @@ module.exports = () => {
     res.render("marketing/page-compare", { title: `Comparer la version ${v.number} — ${page.name}`, active: "landing", page, version: v, diff, canWrite: req.mk.can("forms.write") });
   });
   // Aperçu du BROUILLON (ou de la version en ligne s'il n'y a pas de brouillon) : clics et inscriptions non enregistrés
-  const renderPreview = (req, res, page, content, label) => {
+  const renderPreview = (req, res, page, content, label, draftId = null) => {
     const ctx = req.mk.ctx;
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     res.set("Cache-Control", "no-store");
-    res.render("marketing-public/landing", { page: shown(ctx, page, content), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
+    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
   };
   router.get("/pages/:id(\\d+)/apercu", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -385,9 +385,8 @@ module.exports = () => {
   };
   // « page » de travail du composant : mêmes champs qu'une page pour l'éditeur et le rendu (aucune n'est enregistrée)
   const componentPage = (ctx, c) => {
-    const site = c.site_id ? pages.getSite(ctx, c.site_id) : null;
-    const role = site && site.header_component_id === c.id ? "header" : site && site.footer_component_id === c.id ? "footer" : c.variant_of ? "variant" : "component";
-    return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: 0, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
+    const role = pages.componentRole(ctx, c);
+    return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: c.revision, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
       back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/reglages#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
   };
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
@@ -407,6 +406,31 @@ module.exports = () => {
       res.render("marketing-public/landing", { page: landing.viewModel(ctx, { ...page, ...content, sections: pages.resolveSections(ctx, content.sections) }), site: c.site_id ? pages.getSite(ctx, c.site_id) : null, tokensToCss, form: null, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
     } catch (error) { jsonError(res, next, error); }
   });
+  // Aperçu PRIVÉ du brouillon d'un composant (en-tête, pied de page, variante) dans une vraie page du site : même rendu que le site public, mais avec la copie de travail.
+  // Réservé à l'équipe (forms.read, comme l'aperçu des pages) ; la révision demandée (?rev=) est comparée à la dernière enregistrée.
+  router.get("/site-web/composants/:id(\\d+)/apercu", need("forms.read"), (req, res, next) => {
+    const c = loadComponent(req, res);
+    if (!c) return;
+    const ctx = req.mk.ctx;
+    try {
+      const role = pages.componentRole(ctx, c);
+      const candidates = c.site_id ? pages.sitePages(ctx, c.site_id).filter((p) => p.kind !== "step") : pages.listPages(ctx, {}).filter((p) => p.kind !== "step" && !p.archived_at);
+      const wanted = intOrNull(req.query.page);
+      let page = wanted ? pages.getPage(ctx, wanted) : null;
+      if (page && (page.archived_at || (c.site_id && page.site_id !== c.site_id))) page = null;
+      if (!page) {
+        const usable = candidates.filter((p) => role === "variant" ? p.header_mode === "variant" && p.header_component_id === c.id : role === "header" ? p.header_mode !== "none" && p.header_mode !== "variant" : true);
+        const pick = usable[0] || candidates[0];
+        page = pick ? pages.getPage(ctx, pick.id) : null;
+      }
+      if (!page) return res.status(404).render("error", { message: "Ce site n'a pas encore de page : créez-en une pour voir l'aperçu dans son contexte." });
+      const asked = Number(req.query.rev);
+      const stale = Number.isInteger(asked) && req.query.rev !== undefined && asked !== c.revision;
+      const label = (c.hasDraft ? `Aperçu du brouillon (révision ${c.revision}) de « ${c.name} » — pas encore visible par les visiteurs.` : `« ${c.name} » n'a pas de brouillon : aperçu de la version en ligne.`)
+        + (stale ? ` Attention : cet aperçu montre la révision ${c.revision}, plus récente que celle demandée (${asked}).` : "");
+      renderPreview(req, res, page, page.working, label, c.id);
+    } catch (error) { jsonError(res, next, error); }
+  });
   router.put("/site-web/composants/:id(\\d+)/brouillon", need("forms.write"), (req, res, next) => {
     const c = loadComponent(req, res);
     if (!c) return;
@@ -414,11 +438,10 @@ module.exports = () => {
     try {
       const content = pages.normalizeContent(ctx, componentPage(ctx, c), (req.body && req.body.content) || {});
       if (content.sections.length !== 1) throw new MarketingError("invalid", "Ce composant est UNE seule section : gardez une seule section dans l'éditeur (placez tous les éléments dedans).");
-      // Composant ordinaire : copie de travail (aucun effet sur les pages avant « Mettre à jour ») ; en-tête, pied de page et variantes du site : application directe, comme avant
-      const direct = c.variant_of || (c.site_id && ((pages.getSite(ctx, c.site_id) || {}).header_component_id === c.id || (pages.getSite(ctx, c.site_id) || {}).footer_component_id === c.id));
-      if (direct) pages.updateComponent(ctx, c.id, { section: content.sections[0] });
-      else pages.saveComponentDraft(ctx, c.id, content.sections[0]);
-      res.set("Cache-Control", "no-store").json({ revision: 0, savedAt: new Date().toISOString(), draft: !direct });
+      // Tout composant (y compris en-tête, pied de page et variantes d'un site) : copie de travail ; rien n'est diffusé avant « Mettre à jour »
+      const asked = Number(req.body && req.body.revision);
+      pages.saveComponentDraft(ctx, c.id, content.sections[0], { revision: Number.isInteger(asked) ? asked : undefined });
+      res.set("Cache-Control", "no-store").json({ revision: pages.getComponent(ctx, c.id).revision, savedAt: new Date().toISOString(), draft: true });
     } catch (error) { jsonError(res, next, error); }
   });
   // Rendu du canevas : contenu de l'éditeur validé (rien n'est enregistré), même gabarit que la page publiée

@@ -19,7 +19,8 @@ describe("en-tête du site (vrai serveur)", () => {
   const slugOf = (id) => db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
   const panel = async (who = boss) => (await who.get(`/marketing/site-web/sites/${siteId}/reglages`)).text;
   const choose = (pageId, choice, who = boss) => who.post(`/marketing/site-web/sites/${siteId}/entete/pages/${pageId}`, { choice });
-  const putComponent = (cid, content, who = boss) => who.request(`/marketing/site-web/composants/${cid}/brouillon`, { method: "PUT", json: { content, revision: 0 }, headers: { Origin: srv.base } });
+  const putComponent = (cid, content, who = boss) => who.request(`/marketing/site-web/composants/${cid}/brouillon`, { method: "PUT", json: { content, revision: db.prepare("SELECT revision FROM mk_web_components WHERE id = ?").get(cid).revision }, headers: { Origin: srv.base } });
+  const publishPart = (cid, who = boss) => who.request(`/marketing/site-web/composants/${cid}/mettre-a-jour`, { method: "POST", json: { revision: db.prepare("SELECT revision FROM mk_web_components WHERE id = ?").get(cid).revision }, headers: { Origin: srv.base } });
   let headerId, variantId;
 
   before(async () => {
@@ -108,6 +109,7 @@ describe("en-tête du site (vrai serveur)", () => {
     // la variante se modifie dans l'éditeur (une seule section), sans changer l'en-tête du site
     const content = { sections: [{ type: "layout", children: [{ type: "container", children: [{ type: "heading", props: { text: "Variante spéciale", level: "2" } }] }] }] };
     assert.equal((await putComponent(variantId, content)).status, 200);
+    assert.equal((await publishPart(variantId)).status, 200, "la variante est diffusée par « Mettre à jour »");
     const campagne = pagesOf["Landing campagne"];
     await choose(campagne, `variant:${variantId}`);
     const hc = await html(slugOf(campagne));
@@ -119,7 +121,7 @@ describe("en-tête du site (vrai serveur)", () => {
     assert.match(h, /data-header-count>2 pages sur 4</);
   });
 
-  test("éditeur de l'en-tête : une seule section, enregistrement = mise à jour immédiate sur TOUTES les pages qui l'utilisent", async () => {
+  test("éditeur de l'en-tête : une seule section, l'enregistrement est un brouillon ; « Mettre à jour » le diffuse sur TOUTES les pages qui l'utilisent", async () => {
     const page = (await boss.get(`/marketing/site-web/composants/${headerId}/editeur`));
     assert.equal(page.status, 200);
     const boot = JSON.parse(page.text.match(/<script type="application\/json" id="pb-boot">([\s\S]*?)<\/script>/)[1]);
@@ -135,6 +137,8 @@ describe("en-tête du site (vrai serveur)", () => {
     // enregistrement valide
     const content = { sections: [{ id: boot.content.sections[0].id, type: "layout", children: [{ type: "container", children: [{ type: "heading", props: { text: "Mon nouvel en-tête", level: "2" } }] }] }] };
     assert.equal((await putComponent(headerId, content)).status, 200);
+    for (const name of ["Accueil", "Formations"]) assert.doesNotMatch(await html(slugOf(pagesOf[name])), /Mon nouvel en-tête/, `${name} : un brouillon n'est pas visible en ligne`);
+    assert.equal((await publishPart(headerId)).status, 200);
     for (const name of ["Accueil", "Formations"]) assert.match(await html(slugOf(pagesOf[name])), /Mon nouvel en-tête/, name);
     assert.doesNotMatch(await html(slugOf(pagesOf["Tunnel Photoshop"])), /Mon nouvel en-tête/, "exception : aucun en-tête");
     assert.doesNotMatch(await html(slugOf(pagesOf["Landing campagne"])), /Mon nouvel en-tête/, "exception : variante");

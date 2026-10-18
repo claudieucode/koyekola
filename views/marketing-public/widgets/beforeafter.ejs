@@ -1,0 +1,17 @@
+<%# Avant / Après (widget personnalisé : src/marketing/pages/widgets/beforeafter.js). Variables : p, cls, attrs, isBuilder.
+    Sans script : les deux images à la position de départ. Le script (landing.js, [data-kw-compare]) relie le champ « range » à la ligne de séparation. %>
+<% const pos = Number.isFinite(Number(p.position)) ? Number(p.position) : 50; %>
+<figure class="<%= cls %>" data-kw-compare style="--kw-cmp-pos: <%= pos %>%; --kw-cmp-ratio: <%= p.ratio || "16 / 9" %>"<%- attrs %>>
+  <% if (!p.before || !p.after) { %>
+    <div class="kw-compare-empty"><%= isBuilder ? "Choisissez les images « Avant » et « Après » dans l'onglet Contenu." : "" %></div>
+  <% } else { %>
+    <div class="kw-compare-stage">
+      <img class="kw-compare-img kw-compare-after" src="<%= p.after %>" alt="<%= p.afterAlt || "Après" %>" loading="lazy" decoding="async" draggable="false">
+      <img class="kw-compare-img kw-compare-before" src="<%= p.before %>" alt="<%= p.beforeAlt || "Avant" %>" loading="lazy" decoding="async" draggable="false">
+      <% if (p.beforeLabel) { %><span class="kw-compare-tag kw-compare-tag-before" aria-hidden="true"><%= p.beforeLabel %></span><% } %>
+      <% if (p.afterLabel) { %><span class="kw-compare-tag kw-compare-tag-after" aria-hidden="true"><%= p.afterLabel %></span><% } %>
+      <span class="kw-compare-bar" aria-hidden="true"><span class="kw-compare-knob"></span></span>
+      <input class="kw-compare-range" type="range" min="0" max="100" step="1" value="<%= pos %>" aria-label="Comparer « <%= p.beforeLabel || "Avant" %> » et « <%= p.afterLabel || "Après" %> » : déplacer le curseur">
+    </div>
+  <% } %>
+</figure>

@@ -19,6 +19,7 @@ const KINDS = { landing: "Page d'atterrissage", page: "Page de site", step: "Ét
 const HEX = /^#[0-9a-f]{6}$/i;
 
 const conflict = () => new MarketingError("conflict", "Cette page a été modifiée ailleurs (autre onglet ou autre personne) : rechargez-la avant d'enregistrer, vos modifications n'ont pas été enregistrées.");
+const componentConflict = () => new MarketingError("conflict", "Ce composant a été modifié ailleurs (autre onglet ou autre personne) : rechargez-le avant de continuer, vos modifications n'ont pas été enregistrées.");
 const json = (text, fallback) => { try { return text ? JSON.parse(text) : fallback; } catch { return fallback; } };
 
 // ---------- Contenu d'une page ----------
@@ -372,6 +373,10 @@ function duplicatePage(ctx, id, { siteId } = {}) {
   const newId = Number(ctx.db.prepare(`INSERT INTO mk_landing_pages (organization_id, name, slug, title, description, sections, theme, form_id, tags, indexable, created_by, kind, site_id, seo)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`)
     .run(ctx.organizationId, name, landing.freeSlug(ctx, landing.slugify(name)), c.title, c.description, JSON.stringify(sections), JSON.stringify(c.theme), page.form_id, JSON.stringify(page.tags), ctx.userId ?? null, page.kind, target ?? null, JSON.stringify(c.seo || {})).lastInsertRowid);
+  // « Aucun en-tête » suit la page ; une variante aussi, tant que la copie reste dans le même site (elle appartient à ce site)
+  if (page.header_mode === "none" || (page.header_mode === "variant" && target === page.site_id)) {
+    ctx.db.prepare("UPDATE mk_landing_pages SET header_mode = ?, header_component_id = ? WHERE id = ?").run(page.header_mode, page.header_mode === "variant" ? page.header_component_id : null, newId);
+  }
   audit(ctx, "page.duplicated", "landing", newId, { from: id });
   return requirePage(ctx, newId);
 }
@@ -381,6 +386,7 @@ function archivePage(ctx, id, { detach = false } = {}) {
   requirePage(ctx, id);
   // Palier 18 : une page utilisée par un tunnel actif ne part pas à la corbeille en silence (refus listant les tunnels, ou détachement explicite)
   require("../funnels").guardPageRemoval(ctx, id, { detach, action: "mise à la corbeille" });
+  require("./themeTemplates").guardPageRemoval(ctx, id, { detach, action: "mise à la corbeille" }); // mission 9 : une page qui sert de modèle de thème ne disparaît pas en silence
   require("./abtests").guardPageRemoval(ctx, id, "mise à la corbeille"); // palier 22 : une page testée ne disparaît pas en silence
   ctx.db.prepare("UPDATE mk_landing_pages SET archived_at = datetime('now'), scheduled_at = NULL, status = CASE status WHEN 'published' THEN 'unpublished' ELSE status END, revision = revision + 1, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(id, ctx.organizationId);
   ctx.db.prepare("UPDATE mk_sites SET home_page_id = NULL WHERE home_page_id = ? AND organization_id = ?").run(id, ctx.organizationId);
@@ -658,10 +664,37 @@ function duplicateSite(ctx, id, { withPages = true } = {}) {
       const map = new Map();
       for (const p of sitePages(ctx, site.id)) map.set(p.id, duplicatePage(ctx, p.id, { siteId: copy.id }).id);
       if (site.home_page_id && map.has(site.home_page_id)) setHomePage(ctx, copy.id, map.get(site.home_page_id));
+      duplicateSiteParts(ctx, site, copy, map);
     }
     audit(ctx, "site.duplicated", "site", copy.id, { from: site.id, withPages });
     return getSite(ctx, copy.id);
   });
+}
+// Parties globales d'une copie de site : l'en-tête, le pied de page et les variantes réservés au site d'origine sont COPIÉS pour la copie
+// (nouveaux identifiants, modifier l'un ne change pas l'autre) ; un composant partagé par tous les sites reste partagé.
+function duplicateSiteParts(ctx, site, copy, pageMap) {
+  const done = new Map();
+  const cloneOf = (cid) => {
+    if (!cid) return null;
+    if (done.has(cid)) return done.get(cid);
+    const c = getComponent(ctx, Number(cid));
+    if (!c || !c.section) return null;
+    if (c.site_id === null) { done.set(cid, c.id); return c.id; }
+    if (c.site_id !== site.id) return null;
+    const created = createComponent(ctx, { name: uniqueName(ctx, "mk_web_components", `${c.name} (copie)`), section: freshIds(c.section), siteId: copy.id, kind: c.kind });
+    if (c.variant_of) ctx.db.prepare("UPDATE mk_web_components SET variant_of = ? WHERE id = ?").run(cloneOf(c.variant_of), created.id);
+    done.set(cid, created.id);
+    return created.id;
+  };
+  const header = cloneOf(site.header_component_id), footer = cloneOf(site.footer_component_id);
+  if (header || footer) setSiteParts(ctx, copy.id, { header, footer });
+  for (const [from, to] of pageMap) {
+    const src = ctx.db.prepare("SELECT header_mode, header_component_id FROM mk_landing_pages WHERE id = ?").get(from);
+    if (src && src.header_mode === "variant") {
+      const v = cloneOf(src.header_component_id);
+      if (v) ctx.db.prepare("UPDATE mk_landing_pages SET header_mode = 'variant', header_component_id = ? WHERE id = ?").run(v, to);
+    }
+  }
 }
 // Suppression logique : seulement un site archivé (donc hors ligne). Rien n'est effacé : pages, accès et réglages restent en base et le site se restaure depuis la corbeille.
 function deleteSite(ctx, id) {
@@ -721,9 +754,10 @@ function createComponent(ctx, { name, section, siteId = null, kind = "standard" 
   return getComponent(ctx, id);
 }
 // global : true = partagé par tous les sites ; false = réservé au site siteId (refusé s'il est utilisé ailleurs)
-function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
+function updateComponent(ctx, id, { name, section, global, siteId, revision } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  if (Number.isInteger(revision) && revision !== c.revision) throw componentConflict();
   const n = name === undefined ? c.name : line(name, 80);
   if (!n) throw bad("Le nom du composant est obligatoire.");
   const dup = ctx.db.prepare("SELECT id FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, n);
@@ -744,35 +778,39 @@ function updateComponent(ctx, id, { name, section, global, siteId } = {}) {
     if (elsewhere.length) throw new MarketingError("in_use", `Ce composant est utilisé par des pages d'un autre site ou hors site (${elsewhere.map((p) => `« ${p.name} »`).join(", ")}) : il doit rester global.`);
     site = sid;
   }
-  ctx.db.prepare("UPDATE mk_web_components SET name = ?, section = ?, site_id = ?, updated_at = datetime('now') WHERE id = ?").run(n, JSON.stringify(s), site, c.id);
+  ctx.db.prepare("UPDATE mk_web_components SET name = ?, section = ?, site_id = ?, revision = revision + 1, updated_at = datetime('now') WHERE id = ?").run(n, JSON.stringify(s), site, c.id);
   audit(ctx, "component.updated", "component", c.id, {});
   return getComponent(ctx, c.id);
 }
 // Copie de travail : modifiée dans l'éditeur du composant, SANS effet sur les pages tant que la mise à jour n'est pas demandée
-function saveComponentDraft(ctx, id, section) {
+function saveComponentDraft(ctx, id, section, { revision } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  if (Number.isInteger(revision) && revision !== c.revision) throw componentConflict();
   const s = componentSection(ctx, section);
   checkWidgetRights(ctx, [c.section], [s]);
-  ctx.db.prepare("UPDATE mk_web_components SET draft = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(s), c.id);
+  ctx.db.prepare("UPDATE mk_web_components SET draft = ?, revision = revision + 1, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(s), c.id);
   return getComponent(ctx, c.id);
 }
 // Mise à jour explicite : la copie de travail devient la version diffusée (les instances liées l'affichent), numéro de version + 1
-function publishComponent(ctx, id) {
+function publishComponent(ctx, id, { revision } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  // La mise à jour porte sur la version que la personne a vue confirmée : si le serveur en a une autre, rien n'est diffusé
+  if (Number.isInteger(revision) && revision !== c.revision) throw componentConflict();
   if (!c.draft) return { component: c, changed: false, instances: componentInstances(ctx, c.id) };
   checkWidgetRights(ctx, [c.section], [c.draft]);
   transaction(ctx.db, () => {
-    ctx.db.prepare("UPDATE mk_web_components SET section = ?, draft = NULL, version = version + 1, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(c.draft), c.id);
+    ctx.db.prepare("UPDATE mk_web_components SET section = ?, draft = NULL, version = version + 1, revision = revision + 1, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(c.draft), c.id);
     audit(ctx, "component.published", "component", c.id, { version: c.version + 1 });
   });
   return { component: getComponent(ctx, c.id), changed: true, instances: componentInstances(ctx, c.id) };
 }
-function discardComponentDraft(ctx, id) {
+function discardComponentDraft(ctx, id, { revision } = {}) {
   const c = getComponent(ctx, id);
   if (!c) throw new MarketingError("not_found", "Composant introuvable.");
-  ctx.db.prepare("UPDATE mk_web_components SET draft = NULL, updated_at = datetime('now') WHERE id = ?").run(c.id);
+  if (Number.isInteger(revision) && revision !== c.revision) throw componentConflict();
+  ctx.db.prepare("UPDATE mk_web_components SET draft = NULL, revision = revision + 1, updated_at = datetime('now') WHERE id = ?").run(c.id);
   return getComponent(ctx, c.id);
 }
 // Instances liées réellement présentes dans le contenu de travail de chaque page (brouillon s'il existe, sinon version en ligne) : nombre exact, pas une recherche de texte
@@ -868,27 +906,36 @@ function deleteComponent(ctx, id, { mode = null, skipDraftOfPage = null } = {}) 
 // Affichage : chaque composant synchronisé est remplacé par sa dernière version (un composant supprimé disparaît)
 // ---------- Parties globales d'un site (en-tête, pied de page) ----------
 // Un composant réutilisable choisi dans les réglages du site, affiché autour des sections de chacune de ses pages
-function partOf(ctx, cid, which) {
+// draftId : composant dont on montre le BROUILLON à la place de la version diffusée (aperçu privé d'un en-tête / pied de page) ; sans lui, seule la version diffusée est lue
+function partOf(ctx, cid, which, draftId = null) {
   if (!cid) return null;
   const c = getComponent(ctx, Number(cid));
-  return c && c.section && c.section.type !== "component" ? { ...c.section, id: c.section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which } : null;
+  const section = c && draftId !== null && Number(draftId) === c.id && c.draft ? c.draft : c && c.section;
+  return c && section && section.type !== "component" ? { ...section, id: section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which } : null;
 }
-function siteParts(ctx, siteId) {
+function siteParts(ctx, siteId, { draftId = null } = {}) {
   const none = { header: null, footer: null };
   if (!siteId) return none;
   const site = getSite(ctx, Number(siteId));
   if (!site || site.status !== "active") return none;
-  return { header: partOf(ctx, site.header_component_id, "header"), footer: partOf(ctx, site.footer_component_id, "footer") };
+  return { header: partOf(ctx, site.header_component_id, "header", draftId), footer: partOf(ctx, site.footer_component_id, "footer", draftId) };
 }
 // Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
-function withSiteParts(ctx, page, sections) {
-  const p = siteParts(ctx, page && page.site_id);
+function withSiteParts(ctx, page, sections, { draftId = null } = {}) {
+  const p = siteParts(ctx, page && page.site_id, { draftId });
   let header = p.header;
   if (page && page.site_id && header) {
     if (page.header_mode === "none") header = null;
-    else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header") || p.header;
+    else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header", draftId) || p.header;
   }
   return [header, ...sections, p.footer].filter(Boolean);
+}
+// Rôle d'un composant : en-tête ou pied de page d'un site, variante d'en-tête, ou composant ordinaire. Les trois premiers ont une copie de travail et une mise à jour explicite.
+function componentRole(ctx, c) {
+  if (!c) return "component";
+  if (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND header_component_id = ?").get(ctx.organizationId, c.id)) return "header";
+  if (ctx.db.prepare("SELECT 1 FROM mk_sites WHERE organization_id = ? AND footer_component_id = ?").get(ctx.organizationId, c.id)) return "footer";
+  return c.variant_of ? "variant" : "component";
 }
 function setSiteParts(ctx, siteId, { header = null, footer = null } = {}) {
   const site = requireSite(ctx, siteId, { active: true });
@@ -956,7 +1003,8 @@ function headerOverview(ctx, siteId) {
   const variants = header ? [...comps.values()].filter((c) => c.variant_of === header.id).map((c) => ({ id: c.id, name: c.name, pages: exceptions.filter((e) => e.variant && e.variant.id === c.id).length })) : [];
   const usable = [...comps.values()].filter((c) => c.section && c.section.type !== "component").map((c) => ({ id: c.id, name: c.name, global: c.global }));
   return {
-    header: header ? { id: header.id, name: header.name, global: header.global } : null,
+    header: header ? { id: header.id, name: header.name, global: header.global, hasDraft: header.hasDraft } : null,
+    footer: (() => { const f = site.footer_component_id ? getComponent(ctx, site.footer_component_id) : null; return f ? { id: f.id, name: f.name, hasDraft: f.hasDraft } : null; })(),
     // « Publié » : l'en-tête est choisi et s'affiche sur les pages du site (composant synchronisé : toujours sa dernière version)
     status: header ? "published" : "none", type: "global",
     using, exceptions, variants, usable, total: all.length,
@@ -1046,6 +1094,6 @@ module.exports = {
   createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
-  siteParts, withSiteParts, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
+  siteParts, withSiteParts, componentRole, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

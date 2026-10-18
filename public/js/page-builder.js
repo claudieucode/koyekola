@@ -107,12 +107,20 @@
   }
   // Nouveaux identifiants pour une copie. `map` (ancien → nouveau) permet ensuite de rediriger les interactions de la copie vers les
   // copies de leurs cibles (voir reIdAll) : sans cela, une copie continuerait à piloter les éléments d'origine.
-  function reId(it, map) { var old = it.id; it.id = newId(); if (map && old) map[old] = it.id; delete it.locked; delete it.anchor; var k = kidsOf(it); if (k) k.forEach(function (c) { reId(c, map); }); return it; }
+  // Une ancre est unique dans la page : une copie la perd, SAUF « Ancre de menu » dont le nom est obligatoire (sans lui le serveur refuse tout le brouillon) :
+  // elle reçoit un nom voisin et libre (tarifs → tarifs-2). `pendingAnchors` retient les noms donnés pendant la même copie.
+  var pendingAnchors = {};
+  function freeAnchor(base) {
+    var taken = {}; walk(function (x) { if (x.anchor) taken[x.anchor] = true; });
+    for (var n = 2; n < 1000; n++) { var suffix = "-" + n, name = base.slice(0, 40 - suffix.length) + suffix; if (!taken[name] && !pendingAnchors[name]) { pendingAnchors[name] = true; return name; } }
+    return base;
+  }
+  function reId(it, map) { var old = it.id; it.id = newId(); if (map && old) map[old] = it.id; delete it.locked; if (it.type === "menuanchor" && it.anchor) it.anchor = freeAnchor(it.anchor); else delete it.anchor; var k = kidsOf(it); if (k) k.forEach(function (c) { reId(c, map); }); return it; }
   function remapInteractions(it, map) {
     if (it.interactions) it.interactions.forEach(function (x) { if (map[x.target]) x.target = map[x.target]; });
     var k = kidsOf(it); if (k) k.forEach(function (c) { remapInteractions(c, map); });
   }
-  function reIdAll(items) { var map = {}; items.forEach(function (it) { reId(it, map); }); items.forEach(function (it) { remapInteractions(it, map); }); return items; }
+  function reIdAll(items) { var map = {}; pendingAnchors = {}; items.forEach(function (it) { reId(it, map); }); items.forEach(function (it) { remapInteractions(it, map); }); return items; }
   // Retire les interactions dont la cible vient d'être supprimée (dans le même pas d'historique : annuler les rétablit)
   function dropInteractionsTo(removed) {
     walk(function (it) {
@@ -2059,6 +2067,8 @@
     if (NT[it.type] && NT[it.type].schema && !deniedWidget(it.type)) { schemaFields(it, box, disabled); return; }
     if (deniedWidget(it.type)) { box.appendChild(h("p", { class: "pb-note is-warn" }, icon("lock"), h("span", { text: "Widget " + SPEC.widgetPermissions[deniedWidget(it.type)] + " : vous pouvez le déplacer ou le supprimer, pas le modifier." }))); disabled = true; }
     var set = function (k, light) { return function (v) { setProp(it.id, k, v, { key: it.id + ":" + k, light: light !== false }); }; };
+    // Deux réglages qui ne s'affichent qu'ENSEMBLE (ex. texte + adresse d'un bouton) : quand un seul est rempli, on le dit au lieu de ne rien montrer
+    var pairSet = function (k, other, what) { return function (v) { set(k)(v); if (!String(v || "").trim() !== !(byId(it.id).props[other] || "").toString().trim()) toast(what + " n'apparaît que si le texte ET l'adresse sont remplis."); }; };
     switch (it.type) {
       case "heading":
         box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, dyn: true, hint: "Ou double-cliquez sur le titre dans la page. { } : insérer une donnée dynamique." }));
@@ -2088,7 +2098,12 @@
         box.appendChild(selectField("Coloration du code", p.language || "text", SPEC.codeLanguages, function (v) { change(function () { var x = byId(it.id); if (v === "text") delete x.props.language; else x.props.language = v; }); }, { disabled: disabled }));
         box.appendChild(checkField("Numéros de ligne", p.lineNumbers, function (v) { setProp(it.id, "lineNumbers", v); }, { disabled: disabled }));
         box.appendChild(checkField("Bouton « Copier »", p.copy, function (v) { setProp(it.id, "copy", v); }, { disabled: disabled }));
-        box.appendChild(textField("Lignes surlignées (ex. 2-4, 7)", p.highlight, function (v) { change(function () { var x = byId(it.id).props; if (v.trim()) x.highlight = v.trim(); else delete x.highlight; }, { key: it.id + ":hl", light: true }); }, { max: 80, disabled: disabled }));
+        box.appendChild(textField("Lignes surlignées (ex. 2-4, 7)", p.highlight, function (v) {
+          // Mêmes règles que le serveur (nodes.js, code) : numéros ou plages « 2-4 », séparés par des virgules. Une saisie illisible est expliquée, jamais perdue en silence.
+          var bad = v.trim() && v.split(",").some(function (part) { var m = /^\s*(\d{1,4})(?:\s*-\s*(\d{1,4}))?\s*$/.exec(part); return !m || Number(m[1]) < 1 || (m[2] && (Number(m[2]) < Number(m[1]) || Number(m[2]) - Number(m[1]) >= 200)); });
+          if (bad) { toast("Lignes surlignées : écrivez des numéros ou des plages, par exemple 2-4, 7.", true); renderInspector(); return; }
+          change(function () { var x = byId(it.id).props; if (v.trim()) x.highlight = v.trim(); else delete x.highlight; }, { key: it.id + ":hl", light: true });
+        }, { max: 80, disabled: disabled }));
         break;
       case "image":
         box.appendChild(mediaPreview(/^\{\{/.test(p.src || "") ? "" : p.src, function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); }, disabled));
@@ -2309,8 +2324,8 @@
         box.appendChild(h("p", { class: "pb-sub", text: "Verso" }));
         box.appendChild(textField("Titre du verso", p.backTitle, set("backTitle"), { max: 80, disabled: disabled }));
         box.appendChild(textField("Texte du verso", p.backText, set("backText"), { multiline: true, max: 400, disabled: disabled }));
-        box.appendChild(textField("Bouton du verso : texte (facultatif)", p.ctaLabel, set("ctaLabel"), { max: 40, disabled: disabled }));
-        box.appendChild(textField("Bouton du verso : adresse", p.ctaUrl, set("ctaUrl"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…" }));
+        box.appendChild(textField("Bouton du verso : texte (facultatif)", p.ctaLabel, pairSet("ctaLabel", "ctaUrl", "Le bouton du verso"), { max: 40, disabled: disabled }));
+        box.appendChild(textField("Bouton du verso : adresse", p.ctaUrl, pairSet("ctaUrl", "ctaLabel", "Le bouton du verso"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…" }));
         box.appendChild(selectField("Effet", p.effect || "flip", [["flip", "Retournement"], ["fade", "Fondu"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
         box.appendChild(selectField("Hauteur", String(p.height || 280), [["200", "200 px"], ["280", "280 px"], ["360", "360 px"], ["440", "440 px"]].concat([200, 280, 360, 440].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le verso s'affiche au survol, au clavier (Tab puis Entrée) ou d'un toucher sur mobile." }));
@@ -2472,12 +2487,12 @@
         box.appendChild(h("div", { class: "pb-grid-2" }, textField("Prix (réel)", p.price, set("price"), { max: 30, disabled: disabled }), textField("Période (ex. / mois)", p.period, set("period"), { max: 40, disabled: disabled })));
         box.appendChild(textField("Description courte", p.description, set("description"), { max: 300, disabled: disabled }));
         box.appendChild(textField("Ce qui est inclus (un point par ligne)", (p.features || []).join("\n"), function (v) { setProp(it.id, "features", v.split("\n"), { key: it.id + ":features", light: true }); }, { multiline: true, disabled: disabled }));
-        box.appendChild(h("div", { class: "pb-grid-2" }, textField("Texte du bouton", p.ctaLabel, set("ctaLabel"), { max: 60, disabled: disabled }), textField("Adresse du bouton", p.ctaUrl, set("ctaUrl"), { list: "pb-links", disabled: disabled })));
+        box.appendChild(h("div", { class: "pb-grid-2" }, textField("Texte du bouton", p.ctaLabel, pairSet("ctaLabel", "ctaUrl", "Le bouton de l'offre"), { max: 60, disabled: disabled }), textField("Adresse du bouton", p.ctaUrl, pairSet("ctaUrl", "ctaLabel", "Le bouton de l'offre"), { list: "pb-links", disabled: disabled })));
         box.appendChild(textField("Badge (ex. Le plus choisi)", p.badge, set("badge"), { max: 40, disabled: disabled }));
         box.appendChild(checkField("Mettre cette offre en avant", p.highlight, function (v) { setProp(it.id, "highlight", v); }, { disabled: disabled }));
         break;
       case "breadcrumb":
-        repeatEditor(box, it, "items", [["label", "Texte", 60], ["url", "Adresse (sauf le dernier niveau : la page actuelle)", 500]], { label: "Niveau", url: "/" }, 8, disabled);
+        repeatEditor(box, it, "items", [["label", "Texte", 60], ["url", "Adresse", 500]], { label: "Niveau", url: "/" }, 8, disabled, ["url"]);
         box.appendChild(selectField("Séparateur", p.separator || "chevron", [["chevron", "›"], ["slash", "/"], ["dot", "·"]], function (v) { setProp(it.id, "separator", v); }, { disabled: disabled }));
         break;
       case "social":
@@ -2513,7 +2528,7 @@
         box.appendChild(selectField("Apparence du bouton", p.variant, [["primary", "Plein"], ["outline", "Contour"], ["ghost", "Discret"]], function (v) { setProp(it.id, "variant", v); }, { disabled: disabled }));
         box.appendChild(textField("Titre de la fenêtre", p.title, set("title"), { max: 120, disabled: disabled }));
         box.appendChild(textField("Contenu (gras, liens…)", p.text, set("text"), { multiline: true, max: 4000, disabled: disabled }));
-        box.appendChild(h("div", { class: "pb-grid-2" }, textField("Bouton dans la fenêtre (facultatif)", p.ctaLabel, set("ctaLabel"), { max: 60, disabled: disabled }), textField("Son adresse", p.ctaUrl, set("ctaUrl"), { list: "pb-links", disabled: disabled })));
+        box.appendChild(h("div", { class: "pb-grid-2" }, textField("Bouton dans la fenêtre (facultatif)", p.ctaLabel, pairSet("ctaLabel", "ctaUrl", "Le bouton de la fenêtre"), { max: 60, disabled: disabled }), textField("Son adresse", p.ctaUrl, pairSet("ctaUrl", "ctaLabel", "Le bouton de la fenêtre"), { list: "pb-links", disabled: disabled })));
         box.appendChild(selectField("Taille", p.size || "md", [["sm", "Petite"], ["md", "Moyenne"], ["lg", "Grande"]], function (v) { setProp(it.id, "size", v); }, { disabled: disabled }));
         box.appendChild(selectField("Position", p.position || "center", [["center", "Fenêtre au centre"], ["left", "Panneau glissant depuis la gauche"], ["right", "Panneau glissant depuis la droite"], ["corner", "Carte dans le coin bas droit (ne bloque pas la page)"], ["bar", "Barre en bas de l'écran (ne bloque pas la page)"]], function (v) { setProp(it.id, "position", v); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-sub", text: "Ouverture automatique" }));
@@ -2591,13 +2606,14 @@
     draw();
     return h("div", { class: "pb-field" }, h("label", { text: "Icône : " + current }), q, grid);
   }
-  function repeatEditor(box, it, key, fields, blank, max, disabled) {
+  // noLast : clés de champs sans effet sur le DERNIER rang (le serveur les ignore) ; l'éditeur l'explique au lieu de proposer un champ muet
+  function repeatEditor(box, it, key, fields, blank, max, disabled, noLast) {
     var list = it.props[key] || [];
     list.forEach(function (row, i) {
       var w = h("div", { class: "pb-repeat-item" }, h("div", { class: "pb-row" }, h("strong", { text: "N° " + (i + 1) }),
         h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || i === 0, "aria-label": "Monter le n° " + (i + 1), onclick: function () { change(function () { var a = byId(it.id).props[key]; var t = a[i - 1]; a[i - 1] = a[i]; a[i] = t; }); } }, icon("arrowUp")),
         h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || list.length < 2, onclick: function () { change(function () { byId(it.id).props[key].splice(i, 1); }); } }, "Retirer")));
-      fields.forEach(function (fd) { w.appendChild(textField(fd[1], row[fd[0]], function (v) { change(function () { byId(it.id).props[key][i][fd[0]] = v; }, { key: it.id + ":" + key + i + fd[0], light: true }); }, { max: fd[2], multiline: fd[3], disabled: disabled })); });
+      fields.forEach(function (fd) { if (noLast && noLast.indexOf(fd[0]) >= 0 && i === list.length - 1) { w.appendChild(h("p", { class: "pb-hint", text: "Dernier niveau : c'est la page actuelle, il n'a pas d'adresse." })); return; } w.appendChild(textField(fd[1], row[fd[0]], function (v) { change(function () { byId(it.id).props[key][i][fd[0]] = v; }, { key: it.id + ":" + key + i + fd[0], light: true }); }, { max: fd[2], multiline: fd[3], disabled: disabled })); });
       box.appendChild(w);
     });
     if (list.length < max) box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, onclick: function () { change(function () { var x = byId(it.id); x.props[key] = (x.props[key] || []).concat(clone(blank)); }); } }, "Ajouter"));
@@ -5299,7 +5315,9 @@
         if (errorItemId) { errorItemId = null; markError(); }
         if (editing || gesture) { pendingRender = true; return; }
         // Un rechargement précédent n'a pas fini : son contenu est dépassé, on le jette et on recharge avec ce rendu-ci
-        if (swapping) { swapping.remove(); swapping = null; lastRender = null; }
+        // (on l'oublie AVANT de le retirer : retirer un cadre qui finit de charger déclenche son `load` pendant le retrait, et son gestionnaire
+        // l'aurait alors promu en canevas à la place de l'ancien, laissant la page sans cadre)
+        if (swapping) { var stale = swapping; swapping = null; stale.onload = null; stale.remove(); lastRender = null; }
         if (patchCanvas(res.text)) return;
         var y = 0;
         try { y = frame.contentWindow.scrollY; } catch (e) { y = 0; }
@@ -7907,7 +7925,7 @@
   var previewDialog = $("[data-pb-preview-dialog]");
   function openPreview() {
     if (editing) commitEdit();
-    var go = function () { $("[data-pb-preview-frame]").src = "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
+    var go = function () { $("[data-pb-preview-frame]").src = IS_COMPONENT ? "/marketing/site-web/composants/" + PAGE.component.id + "/apercu?rev=" + revision + "&t=" + Date.now() : "/marketing/pages/" + PAGE.id + "/apercu?t=" + Date.now(); previewDialog.showModal(); };
     if ((dirty || saving) && !blocked) { clearTimeout(saveTimer); saveNow().then(function () { if (dirty) { toast("Aperçu non ouvert : vos dernières modifications ne sont pas enregistrées (voir le message en haut).", true); return; } go(); }); } else go();
   }
   $("[data-pb-preview]").addEventListener("click", openPreview);
@@ -8195,13 +8213,15 @@
     var sentJson = explicit ? JSON.stringify(content.sections) : null;
     inflight = api("PUT", BASE + "/brouillon", { content: payload(), revision: revision }).then(function (r) {
       saving = false; retry = 0; revision = r.revision; hasDraft = true;
+      // Composant ordinaire : le serveur garde une copie de travail non diffusée → « Modifications non diffusées » et le bouton « Mettre à jour » apparaissent tout de suite
+      if (IS_COMPONENT && PAGE.component && r.draft !== undefined) PAGE.component.hasDraft = Boolean(r.draft);
       if (r.warnings && r.warnings.length) healIgnored(r.warnings);
       if (sentJson !== null) commitSaved(sentJson);
       updateStatus();
       if (!dirty) { setSave("Enregistré à " + new Date(r.savedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), "is-ok"); try { localStorage.removeItem("pb-backup-" + PAGE.id); } catch (e) { /* rien */ } }
     }, function (err) {
       saving = false; dirty = true; backup();
-      if (err.status === 409) { blocked = true; setSave("Non enregistré : page modifiée ailleurs", "is-error"); toast(err.message + " Une copie de votre travail est gardée dans ce navigateur.", true); return; }
+      if (err.status === 409) { blocked = true; setSave("Non enregistré : " + (IS_COMPONENT ? "composant modifié" : "page modifiée") + " ailleurs", "is-error"); toast(err.message + " Une copie de votre travail est gardée dans ce navigateur.", true); return; }
       if (err.status === 422) { setSave("Non enregistré : " + err.message, "is-error"); errorItemId = itemFromError(err.message); markError(); return; }
       if (err.status === 403) { blocked = true; setSave("Non enregistré : droits insuffisants", "is-error"); return; }
       retry = Math.min(retry + 1, 5);
@@ -8220,21 +8240,17 @@
   // ---------- Statut, publication ----------
   function updateStatus() {
     var el = $("[data-pb-status]");
-    // Composant (en-tête, pied de page…) : pas de brouillon ni de publication, chaque enregistrement s'applique à toutes les pages
+    // Composant (en-tête, pied de page, variante, composant ordinaire) : copie de travail enregistrée ; seule « Mettre à jour » change ce que voient les visiteurs
     if (IS_COMPONENT) {
       var cm = PAGE.component || {};
-      var staged = cm.role === "component";   // composants ordinaires : brouillon + « Mettre à jour » ; en-tête / pied / variantes : diffusion directe
       var pubBtn = $("[data-pb-publish]");
-      if (staged) {
-        el.textContent = cm.hasDraft ? "Modifications non diffusées" : "À jour";
-        el.classList.toggle("is-live", !cm.hasDraft);
-        if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
-        ["[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
-        return;
-      }
-      el.textContent = "Composant · appliqué à toutes les pages";
-      el.classList.add("is-live");
-      [".pb-publish-group", "[data-pb-preview]", "#pb-tab-page"].forEach(function (sel) { var x = $(sel); if (x) x.style.display = "none"; });
+      var part = cm.role === "header" || cm.role === "footer" || cm.role === "variant";
+      var what = cm.role === "footer" ? "Pied de page" : cm.role === "variant" ? "Variante d'en-tête" : cm.role === "header" ? "En-tête" : "";
+      el.textContent = cm.hasDraft ? (what ? what + " : brouillon non publié" : "Modifications non diffusées") : (what ? what + " : publié, à jour" : "À jour");
+      el.classList.toggle("is-live", !cm.hasDraft);
+      if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = part ? "Mettre à jour" : cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
+      var pv = $("[data-pb-preview]"); if (pv) pv.style.display = "";
+      var tab = $("#pb-tab-page"); if (tab) tab.style.display = "none";
       return;
     }
     var live = status === "published";
@@ -8250,17 +8266,20 @@
     var cm = PAGE.component, pid = null;
     clearTimeout(saveTimer);
     btn.disabled = true;
-    (dirty ? save() : Promise.resolve()).then(function () {
-      if (dirty || blocked) { toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+    // Même garantie que la publication d'une page (palier 7) : on attend la fin de l'enregistrement en cours, puis on diffuse la version confirmée par le serveur
+    saveNow().then(function () {
+      if (dirty || blocked || saving) { toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
       return api("GET", "/marketing/site-web/composants/" + cm.id + "/instances.json").then(function (r) {
+        var isPart = cm.role === "header" || cm.role === "footer" || cm.role === "variant";
         var apply = function () {
-          return api("POST", "/marketing/site-web/composants/" + cm.id + "/mettre-a-jour", {}).then(function (res) {
-            cm.hasDraft = false; cm.version = res.component.version; updateStatus();
+          return api("POST", "/marketing/site-web/composants/" + cm.id + "/mettre-a-jour", { revision: revision }).then(function (res) {
+            cm.hasDraft = false; cm.version = res.component.version; if (res.component.revision !== undefined) revision = res.component.revision; updateStatus();
+            if (isPart) { toast((cm.role === "footer" ? "Pied de page" : cm.role === "variant" ? "Variante d'en-tête" : "En-tête") + " mis à jour (version " + res.component.version + ") : les visiteurs voient maintenant cette version."); return true; }
             toast(cm.kind === "global" ? (r.instances ? "Composant mis à jour : " + plural(r.instances, "instance liée a reçu", "instances liées ont reçu") + " la nouvelle version." : "Composant mis à jour (aucune instance liée pour l'instant).") : "Modèle mis à jour : les futures insertions utiliseront cette version ; les copies déjà insérées ne changent pas.");
             return true;
           });
         };
-        if (cm.kind !== "global" || !r.instances) return apply();
+        if (isPart || cm.kind !== "global" || !r.instances) return apply();
         compDialog({ title: "Mettre à jour le composant global", confirmLabel: "Mettre à jour", build: function (body) {
           body.appendChild(h("p", { text: "Cette mise à jour sera appliquée à " + plural(r.instances, "instance liée", "instances liées") + ", dans " + plural(r.pages.length, "page", "pages") + " :" }));
           body.appendChild(h("ul", { class: "pb-comp-pages" }, r.pages.map(function (p) { return h("li", {}, h("span", { text: p.name }), h("span", { class: "pb-hint", text: " · " + plural(p.count, "instance", "instances") + (p.status === "published" ? " · en ligne" : "") })); })));
@@ -8271,7 +8290,7 @@
   }
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;
-    if (IS_COMPONENT) { if (PAGE.component && PAGE.component.role === "component") publishComponentUpdate(btn); return; }
+    if (IS_COMPONENT) { if (PAGE.component) publishComponentUpdate(btn); return; }
     if (window.pbQuality) window.pbQuality.beforePublish();
     if (editing) commitEdit();
     btn.disabled = true;
@@ -8324,6 +8343,11 @@
       showMenuEntries([
         { heading: "Composant du site" },
         ["Retour à la fiche du site", function () { saveNow().then(function () { window.location.href = $(".pb-back").getAttribute("href"); }); }],
+        "-",
+        ["Abandonner les modifications non publiées", function () {
+          if (!(PAGE.component && PAGE.component.hasDraft)) { toast("Aucune modification non publiée."); return; }
+          saveNow().then(function () { return api("POST", "/marketing/site-web/composants/" + PAGE.component.id + "/abandonner", { revision: revision }); }).then(function () { window.location.reload(); }, apiFail);
+        }, !canWrite],
         "-",
         ["Historique des actions", function () { openHistory($("[data-pb-history]")); }],
         ["Raccourcis clavier", function () { $("[data-pb-shortcuts]").showModal(); }],
