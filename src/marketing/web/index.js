@@ -64,6 +64,14 @@ function createMarketingRouters({ db }) {
     next();
   });
 
+  // R9-4 : la ligne dédiée du site principal (créée par la migration explicite R9-3) n'est pas un site ordinaire : son adresse « /sites/<id> » renvoie vers l'espace du principal (aucun contenu ne peut lui être rattaché par erreur)
+  admin.use((req, res, next) => {
+    const m = req.method === "GET" ? /^\/site-web\/sites\/(\d{1,12})(\/.*)?$/.exec(req.path) : null;
+    if (!m || req.mk.siteOnly) return next();
+    const prim = require("../../services/primarySite").row(db, req.mk.ctx.organizationId);
+    if (prim && prim.id === Number(m[1])) return res.redirect(302, `/marketing/site-web/principal${m[2] || "/tableau-de-bord"}`);
+    next();
+  });
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
   admin.use(require("./siteModules")()); // R7 lot 6.0 : activation des modules par site (équipe seulement)
   admin.use(require("./contactRequests")()); // R7 lot 5 : demandes de rattachement de contacts entre sites — avant contactCore et admin.js (« /contacts/:id »)

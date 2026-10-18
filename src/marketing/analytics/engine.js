@@ -7,6 +7,7 @@
 // Règle d'honnêteté : « pas de donnée » (null / noData) n'est JAMAIS affiché comme « 0 ».
 const { notHiddenSql } = require("../visibility"); // R4
 const { checkCtx } = require("../audience/shared");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { resolvePeriod, dayBoundaries, dayIndex, sqlUtc, delta, PRESETS } = require("./period");
 const { classify } = require("../funnels/events");
 const attribution = require("./attribution");
@@ -264,7 +265,7 @@ function createConversion(ctx, { name, event, filterKey = "", filterValue = "", 
   if (!EVENT_NAME.test(String(event || ""))) throw new MarketingError("invalid_field", "Événement invalide (minuscules, chiffres, « _ » et « . »).");
   if (filterKey && (!KEY.test(filterKey) || !String(filterValue).trim())) throw new MarketingError("invalid_field", "Filtre invalide : une clé simple et une valeur sont attendues.");
   const site = Number.isInteger(ctx.siteScope) ? ctx.siteScope : (siteId === null || siteId === "" || siteId === undefined ? null : Number(siteId));
-  if (site !== null && !ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(site, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+  if (site !== null && !ctx.db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(site, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
   try {
     const info = ctx.db.prepare("INSERT INTO mk_conversions (organization_id, site_id, name, event, filter_key, filter_value, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)").run(ctx.organizationId, site, label, event, filterKey, String(filterValue).trim().slice(0, 120), ctx.userId ?? null);
     return Number(info.lastInsertRowid);

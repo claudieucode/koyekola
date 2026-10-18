@@ -1,6 +1,7 @@
 // Réglages SEO centraux (Mon espace → SEO → Réglages). Chaque réglage a un type, une validation et une valeur par défaut
 // qui reproduit exactement le comportement du site avant le SEO CORE : sans réglage enregistré, rien ne change.
 const { db, logChange } = require("./store");
+const primarySite = require("../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { unknownVariables } = require("./templates");
 
 const SAFE_PATH = /^\/uploads\/thumbnails\/[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i;
@@ -81,7 +82,7 @@ function allFor(siteId) {
   const stored = storedFor(siteId);
   let siteName = "", siteLogo = "";
   try {
-    const row = db.prepare("SELECT name, settings FROM mk_sites WHERE id = ?").get(siteId) || {};
+    const row = db.prepare(`SELECT name, settings FROM mk_sites WHERE id = ?${primarySite.excludeSql(db)}`).get(siteId) || {};
     siteName = row.name || "";
     // Le logo neutre d'un site est SON logo (Réglages du site ▸ Identité), jamais celui de l'organisation du site principal
     try { siteLogo = require("../marketing/pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}")).identity.logoUrl || ""; } catch { siteLogo = ""; }
@@ -166,7 +167,7 @@ function save(input, userId) {
 // Enregistre des réglages PROPRES à un site (tout ou rien) : seules les clés propres aux sites sont acceptées ; une valeur null retire le réglage propre (retour à la valeur neutre).
 // Le site vient TOUJOURS de l'appelant (adresse vérifiée), jamais d'une saisie ; un site inexistant est refusé.
 function saveForSite(siteId, input, userId) {
-  if (!Number.isInteger(siteId) || !db.prepare("SELECT 1 FROM mk_sites WHERE id = ?").get(siteId)) return { ok: false, errors: ["Site introuvable."] };
+  if (!Number.isInteger(siteId) || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ?${primarySite.excludeSql(db)}`).get(siteId)) return { ok: false, errors: ["Site introuvable."] };
   const errors = [];
   const next = {};
   for (const key of Object.keys(input || {})) {

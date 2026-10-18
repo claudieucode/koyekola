@@ -11,6 +11,7 @@ const { transaction } = require("../db/tx");
 const landing = require("../landing");
 const { TYPES, normalizeSections, normalizeSection, newSectionId, imageUrl, line, bad } = require("./sections");
 const tokensModule = require("./tokens");
+const primarySite = require("../../services/primarySite"); // R9-4 : ligne dédiée du site principal, jamais traitée comme un site ordinaire
 const { normalizeTokens, DEFAULT_TOKENS } = tokensModule;
 
 const MAX_VERSIONS = 100;
@@ -433,7 +434,7 @@ function cleanSiteType(value) {
 function getSite(ctx, id) {
   checkCtx(ctx);
   backfillSlugs(ctx);
-  return parseSite(Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_sites WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null);
+  return parseSite(Number.isInteger(id) ? ctx.db.prepare(`SELECT * FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(id, ctx.organizationId) : null);
 }
 function requireSite(ctx, id, { active = false } = {}) {
   const site = getSite(ctx, Number(id));
@@ -448,6 +449,7 @@ function listSites(ctx, { archived = false, view = null, q = "", only = null } =
   const v = SITE_VIEWS.includes(view) ? view : archived ? "archives" : "actifs";
   const where = ["s.organization_id = ?"];
   const args = [ctx.organizationId];
+  if (primarySite.hasColumn(ctx.db)) where.push("s.is_primary = 0"); // R9-4 : la ligne dédiée du principal n'est pas un site ordinaire
   if (v === "supprimes") where.push("s.deleted_at IS NOT NULL");
   else { where.push("s.deleted_at IS NULL"); if (v !== "tous") { where.push("s.status = ?"); args.push(v === "archives" ? "archived" : "active"); } }
   const term = String(q || "").trim().slice(0, 80);
@@ -461,7 +463,7 @@ function listSites(ctx, { archived = false, view = null, q = "", only = null } =
 function siteCounts(ctx) {
   checkCtx(ctx);
   const r = ctx.db.prepare(`SELECT COALESCE(SUM(deleted_at IS NULL AND status = 'active'), 0) AS actifs, COALESCE(SUM(deleted_at IS NULL AND status = 'archived'), 0) AS archives,
-    COALESCE(SUM(deleted_at IS NOT NULL), 0) AS supprimes FROM mk_sites WHERE organization_id = ?`).get(ctx.organizationId);
+    COALESCE(SUM(deleted_at IS NOT NULL), 0) AS supprimes FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(ctx.organizationId);
   return { actifs: r.actifs, archives: r.archives, supprimes: r.supprimes, tous: r.actifs + r.archives };
 }
 function sitePages(ctx, siteId, { archived = false } = {}) {

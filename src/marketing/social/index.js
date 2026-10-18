@@ -10,6 +10,7 @@
 // un site ne publie que sur les réseaux que l'ÉQUIPE lui a autorisés explicitement (mk_social_site_grants) ET si le module « social » est activé pour lui. L'autorisation est revérifiée AU MOMENT de la
 // publication (tâche d'arrière-plan) : retirée ou module désactivé → la publication est annulée, jamais envoyée. Désactiver ou retirer ne supprime aucune donnée.
 const crypto = require("crypto");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { checkCtx, audit } = require("../audience/shared");
 const { MarketingError } = require("../errors");
 const { enqueue } = require("../queue/jobs");
@@ -101,7 +102,7 @@ function grantedNetworks(db, organizationId, siteId) {
 // Décision unique « ce site peut-il publier sur ces réseaux ? » → null (oui) ou la raison du refus. Utilisée à la création ET à l'heure de la publication.
 function denial(db, organizationId, siteId, networks) {
   if (siteId === null || siteId === undefined) return null; // organisation / site principal : fonctionnement historique
-  const site = Number.isInteger(siteId) ? db.prepare("SELECT deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId) : null;
+  const site = Number.isInteger(siteId) ? db.prepare(`SELECT deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId) : null;
   if (!site || site.deleted_at) return "le site n'existe plus";
   if (!siteModules.isEnabled(db, organizationId, siteId, "social")) return "le module « Réseaux sociaux » n'est pas activé pour ce site";
   const granted = grantedNetworks(db, organizationId, siteId);
@@ -113,7 +114,7 @@ function denial(db, organizationId, siteId, networks) {
 function setSiteGrants(ctx, siteId, networks) {
   checkCtx(ctx);
   teamOnly(ctx);
-  const site = ctx.db.prepare("SELECT deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId);
+  const site = ctx.db.prepare(`SELECT deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId);
   if (!site || site.deleted_at) throw new MarketingError("not_found", "Site introuvable.");
   const wanted = new Set((Array.isArray(networks) ? networks : [networks]).filter(Boolean));
   for (const n of wanted) if (!Object.hasOwn(NETWORKS, n)) throw bad("Réseau inconnu.");
@@ -132,7 +133,7 @@ function listSiteGrants(ctx) {
   teamOnly(ctx);
   const grants = new Map();
   for (const g of ctx.db.prepare("SELECT site_id, network FROM mk_social_site_grants WHERE organization_id = ?").all(ctx.organizationId)) grants.set(g.site_id, [...(grants.get(g.site_id) || []), g.network]);
-  return ctx.db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND deleted_at IS NULL ORDER BY name").all(ctx.organizationId)
+  return ctx.db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(ctx.db)} AND deleted_at IS NULL ORDER BY name`).all(ctx.organizationId)
     .map((s) => ({ id: s.id, name: s.name, moduleEnabled: siteModules.isEnabled(ctx.db, ctx.organizationId, s.id, "social"), networks: grants.get(s.id) || [] }));
 }
 // Réglages tels que la PERSONNE les voit : l'équipe voit tout (jamais le jeton lui-même) ; un accès limité ne voit que « utilisable par mon site » — ni identifiants de page, ni auteur, ni nom de page, ni indication de jeton

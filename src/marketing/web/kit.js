@@ -1,5 +1,6 @@
 // Outils communs aux routes d'administration : exécution d'une action avec message flash, contrôle de permission.
 const { MarketingError } = require("../errors");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 
 // Exécute une action d'écriture : un message de réussite (texte renvoyé) ou l'erreur métier en message flash, puis redirection
 function attempt(req, res, next, back, action) {
@@ -52,8 +53,8 @@ const safeJson = (value) => JSON.stringify(value).replace(/</g, "\\u003c").repla
 const siteChoices = (req) => {
   const { db, organizationId } = req.mk.ctx;
   const rows = req.mk.siteOnly
-    ? db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND id = ?").all(organizationId, req.mk.siteId ?? 0)
-    : db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? ORDER BY name").all(organizationId);
+    ? db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} AND id = ?`).all(organizationId, req.mk.siteId ?? 0)
+    : db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} ORDER BY name`).all(organizationId);
   return { sitesList: req.mk.siteOnly ? [] : rows, siteFixed: req.mk.siteOnly ? req.mk.siteId : null, siteFilter: req.mk.ctx.siteFilter ?? "", siteNames: Object.fromEntries(rows.map((r) => [r.id, r.name])) };
 };
 

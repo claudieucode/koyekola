@@ -5,6 +5,7 @@
 // confirmation, liste, étiquettes du formulaire) ; la page ajoute jusqu'à 5 étiquettes à ses inscrits.
 // Statistiques : visites (visiteurs uniques par jour, empreinte non réversible, robots exclus), clics, inscriptions.
 const crypto = require("crypto");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { MarketingError } = require("../errors");
 const { checkCtx, audit } = require("../audience/shared");
 const { getCourse } = require("../bridge/catalog");
@@ -188,7 +189,7 @@ const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet"
 function siteInfo(ctx, page) {
   let seo = {};
   try { seo = require("../../seo/settings").all(); } catch { seo = {}; }
-  const site = page && page.site_id ? ctx.db.prepare("SELECT name, home_page_id, settings FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
+  const site = page && page.site_id ? ctx.db.prepare(`SELECT name, home_page_id, settings FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(page.site_id, ctx.organizationId) : null;
   // Le logo choisi dans « Réglages du site ▸ Identité » passe avant le logo des réglages SEO de l'organisation
   let siteLogo = "";
   try { siteLogo = site ? require("../pages/siteSettings").normalizeSettings(JSON.parse(site.settings || "{}")).identity.logoUrl : ""; } catch { siteLogo = ""; }
@@ -353,7 +354,7 @@ function viewModel(ctx, page) {
   // Points de rupture du site de la page (réglages du site) : écrans « Tablette » et « Mobile » de ses éléments
   let breakpoints;
   try {
-    const row = page.site_id ? ctx.db.prepare("SELECT settings FROM mk_sites WHERE id = ? AND organization_id = ?").get(page.site_id, ctx.organizationId) : null;
+    const row = page.site_id ? ctx.db.prepare(`SELECT settings FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(page.site_id, ctx.organizationId) : null;
     breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
   } catch { breakpoints = undefined; }
   // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)

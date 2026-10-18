@@ -48,7 +48,7 @@
           const domaine = st.settings && st.settings.seo && st.settings.seo.publicUrl ? st.settings.seo.publicUrl.replace(/^https?:\/\//, "") : "";
           const etat = st.deleted_at ? ["Supprimé", "mk-status-warn"] : st.status === "archived" ? ["Archivé", "mk-status-warn"] : ["Actif", "mk-status-ok"];
         %>
-          <tr>
+          <tr data-site="<%= st.id %>">
             <th scope="row" data-label="Site"><a href="/marketing/site-web/sites/<%= st.id %>"><%= st.name %></a>
               <span class="mk-sub"><code><%= st.slug %></code><%= st.site_type ? " · " + (siteTypes[st.site_type] || st.site_type) : "" %><%= st.description ? " · " + st.description : "" %></span></th>
             <td data-label="État"><span class="mk-status <%= etat[1] %>"><%= etat[0] %></span></td>

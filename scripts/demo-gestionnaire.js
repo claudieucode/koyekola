@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Démonstration LOCALE du gestionnaire central de sites KOLAKISA (vrai code de l'application, base de démonstration FICTIVE, aucune connexion à la production).
-//   node scripts/demo-gestionnaire.js [--port 3210] [--dossier <nouveau dossier>] [--node-modules <dossier>]
+//   node scripts/demo-gestionnaire.js [--port 3210] [--dossier <nouveau dossier>] [--node-modules <dossier>] [--avec-ligne-principale]
+// --avec-ligne-principale : applique, sur la base de démonstration fictive SEULEMENT, la migration R9-3 (ligne dédiée du site principal) pour montrer le gestionnaire tel qu'il sera après R9.
 // Crée un dossier de données NEUF (refuse un dossier qui existe déjà et n'est pas vide ; ne supprime rien), y prépare un compte formateur de démonstration, un site principal avec quelques pages
 // et trois sites fictifs, puis lance l'application sur http://127.0.0.1:<port>. Sans worker, sans e-mail, sans tâches SEO. Arrêt : Ctrl+C.
 const fs = require("node:fs");
@@ -58,6 +59,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   page(ids["Studio Nord"], "studio-accueil", "Accueil Studio");
   const contact = (email, site) => db.prepare("INSERT INTO mk_contacts (organization_id, email, first_name, origin_site_id) VALUES (?, ?, 'Démo', ?)").run(org, email, site);
   ["a", "b", "c", "d", "e"].forEach((x) => contact(`principal-${x}@demo.local`, null)); ["a", "b", "c"].forEach((x) => contact(`boutique-${x}@demo.local`, ids["Boutique Lumière"])); ["a", "b"].forEach((x) => contact(`academie-${x}@demo.local`, ids["Académie Horizon"]));
+  if (args.includes("--avec-ligne-principale")) { db.exec("PRAGMA foreign_keys = ON"); const r = require("./r9/site-maitre").appliquer(db); out(`Ligne dédiée du site principal créée (n° ${r.primaryId}) — base de démonstration uniquement.`); }
   db.close();
   out(`\nDÉMONSTRATION PRÊTE (base fictive, aucune connexion à la production)\n  Adresse : ${base}/marketing/site-web/sites\n  Connexion : ${base}/connexion\n  Compte    : ${EMAIL}\n  Mot de passe : ${PASSWORD}   (compte fictif de démonstration)\n  Dossier de données : ${DIR}\n  Arrêt : Ctrl+C`);
 })().catch((e) => { out(`Erreur : ${e.message}`); process.exit(1); });

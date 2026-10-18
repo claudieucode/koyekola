@@ -5,6 +5,7 @@
 //  - désactiver ne supprime AUCUNE donnée ; l'activation ne remplace NI les permissions NI l'isolation par site (contrôle supplémentaire seulement) ;
 //  - côté serveur : `assertEnabled(ctx, module)` pour les services, `isEnabled` / `moduleOfPath` pour les routes (garde dans web/index.js).
 const { MarketingError } = require("./errors");
+const primarySite = require("../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { recordAudit } = require("./audit");
 
 // Registre fermé. `phase` : sous-lot qui rend le moteur sensible au site ; `ready` : le moteur honore le site (false = activation possible mais SANS effet visible tant que le sous-lot n'est pas livré).
@@ -56,7 +57,7 @@ function denies({ siteOnly, siteId }, path, db, organizationId) {
 }
 
 function listFor(ctx, siteId) {
-  const site = ctx.db.prepare("SELECT id FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId);
+  const site = ctx.db.prepare(`SELECT id FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId);
   if (!site) throw new MarketingError("not_found", "Site introuvable.");
   const rows = new Map(ctx.db.prepare("SELECT module, enabled FROM mk_site_modules WHERE site_id = ? AND organization_id = ?").all(siteId, ctx.organizationId).map((r) => [r.module, r.enabled === 1]));
   return KEYS.map((key) => ({ key, label: MODULES[key].label, phase: MODULES[key].phase, ready: MODULES[key].ready, enabled: rows.get(key) === true }));
@@ -66,7 +67,7 @@ function listFor(ctx, siteId) {
 function setEnabled(ctx, siteId, module, enabled) {
   if (ctx.siteScope !== undefined && ctx.siteScope !== null) throw new MarketingError("forbidden", "L'activation des modules est réservée à l'équipe de l'organisation.");
   if (!isModule(module)) throw new MarketingError("invalid_field", "Module inconnu.");
-  const site = ctx.db.prepare("SELECT id, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId);
+  const site = ctx.db.prepare(`SELECT id, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId);
   if (!site || site.deleted_at) throw new MarketingError("not_found", "Site introuvable.");
   const value = enabled ? 1 : 0;
   const before = ctx.db.prepare("SELECT enabled FROM mk_site_modules WHERE site_id = ? AND module = ?").get(siteId, module);

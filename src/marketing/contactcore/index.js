@@ -8,6 +8,7 @@
 //  - un événement est un fait historique, enregistré uniquement par recordEvent() (jamais par INSERT direct) ;
 //  - fusion = absorption réversible à la main : la fiche absorbée est conservée (jamais supprimée), son historique reste lisible.
 const { transaction } = require("../db/tx");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const siteAccess = require("./siteAccess");
 const { MarketingError } = require("../errors");
 const { checkCtx, cleanText, audit } = require("../audience/shared");
@@ -46,7 +47,7 @@ function checkStage(ctx, stage) {
 function checkSite(ctx, siteId) {
   if (siteId === null || siteId === undefined) return null;
   if (!Number.isInteger(siteId) || siteId < 1) throw new MarketingError("invalid_field", "Site invalide.");
-  if (!ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+  if (!ctx.db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
   return siteId;
 }
 

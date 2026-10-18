@@ -9,6 +9,7 @@
 // accès par site, garde-fous (pas d'escalade, dernier propriétaire), invitations et journal d'audit (mk_audit_logs existant).
 // (Ne pas confondre avec services/access.js : droits d'accès aux formations et aux leçons.)
 const crypto = require("crypto");
+const primarySite = require("./primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const orgs = require("../marketing/organizations");
 const { recordAudit } = require("../marketing/audit");
 const { UserError } = require("../utils/errors");
@@ -269,7 +270,7 @@ function removeFromTeam(organizationId, actor, targetId) {
 // Accès à un site : rôle propre à ce site
 const SITE_MODES = Object.freeze(["add", "limit"]);
 function setSiteRole(organizationId, actor, targetId, siteId, roleKey, { mode } = {}) {
-  const site = db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId);
+  const site = db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId);
   if (!site) throw new UserError("Site introuvable.");
   assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
   assertCanGrantRole(actor.perms, roleKey);
@@ -295,7 +296,7 @@ function setSiteMode(organizationId, actor, targetId, siteId, mode) {
   if (!SITE_MODES.includes(mode)) throw new UserError("Mode d'accès inconnu.");
   const row = siteRoleOf(targetId, siteId);
   if (!row) throw new UserError("Cette personne n'a pas d'accès propre à ce site.");
-  const site = db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId);
+  const site = db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId);
   if (!site) throw new UserError("Site introuvable.");
   assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
   if (mode === "limit") assertCanLimit(organizationId, targetId);
@@ -320,7 +321,7 @@ function invite(organizationId, actor, { email, role, siteId = null }) {
   if (!EMAIL_RE.test(mail)) throw new UserError("Indiquez une adresse e-mail valide.");
   assertCanGrantRole(actor.perms, role);
   if (siteId !== null) {
-    if (!db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId)) throw new UserError("Site introuvable.");
+    if (!db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId)) throw new UserError("Site introuvable.");
     if (role === "owner") throw new UserError("Le rôle Super administrateur ne s'attribue pas à un seul site.");
   }
   const existing = db.prepare("SELECT id, username FROM users WHERE email = ?").get(mail);

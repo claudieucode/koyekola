@@ -2,6 +2,7 @@
 // portée « read » (lecture) ou « write » (lecture + écriture). La clé complète n'est JAMAIS stockée ni journalisée :
 // seule son empreinte SHA-256 l'est (comme un mot de passe), avec un préfixe affiché pour la reconnaître.
 const crypto = require("crypto");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { checkCtx, cleanText, audit, resolveSite, MarketingError } = require("../audience/shared");
 
 const PREFIX = "mk_live_";
@@ -80,7 +81,7 @@ function authenticate(db, rawKey) {
   if (!row) return null;
   // Clé limitée à un site : refusée si son site n'existe plus ou n'est plus actif (même effet que la révocation, sans rien modifier). Une portée inconnue est refusée par prudence.
   if (row.reach === "site") {
-    const site = Number.isInteger(row.site_id) ? db.prepare("SELECT status, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?").get(row.site_id, row.organization_id) : null;
+    const site = Number.isInteger(row.site_id) ? db.prepare(`SELECT status, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(row.site_id, row.organization_id) : null;
     if (!site || site.status !== "active" || site.deleted_at) return null;
   } else if (row.reach !== "organization") return null;
   const stale = !row.last_used_at || Date.now() - Date.parse(`${row.last_used_at.replace(" ", "T")}Z`) > 60_000;

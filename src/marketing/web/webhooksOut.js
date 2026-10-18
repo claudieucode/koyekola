@@ -1,6 +1,7 @@
 // Route « Webhooks sortants » (/marketing/webhooks, jalon M5 — Intégrations, partie 2) : points d'accès, révélation
 // du secret à la demande, liste de livraisons (dans mk_jobs, réutilisé — pas de table dédiée), rejeu d'une livraison abandonnée.
 const express = require("express");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const webhooks = require("../webhooks");
 const { retryDead } = require("../queue/jobs");
 const { attempt, need, flashError } = require("./kit");
@@ -20,7 +21,7 @@ function recentDeliveries(db, organizationId, endpointId) {
 }
 
 // Sites proposables pour limiter la portée (R2) : seulement pour l'équipe de l'organisation ; un accès limité à un site n'a pas le choix (portée imposée par le serveur)
-const sitesFor = (db, ctx) => (Number.isInteger(ctx.siteScope) ? [] : db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND status = 'active' AND deleted_at IS NULL ORDER BY name").all(ctx.organizationId));
+const sitesFor = (db, ctx) => (Number.isInteger(ctx.siteScope) ? [] : db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} AND status = 'active' AND deleted_at IS NULL ORDER BY name`).all(ctx.organizationId));
 
 module.exports = ({ db }) => {
   const router = express.Router();

@@ -2,6 +2,7 @@
 // (point 9 de la parité Mailchimp) : filtres dans l'adresse (lien partageable), étiquettes de campagne, rapports
 // enregistrés, export CSV.
 const express = require("express");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { getAnalyticsOverview, PERIODS } = require("../analytics");
 const compare = require("../analytics/compare");
 const engine = require("../analytics/engine");
@@ -25,7 +26,7 @@ module.exports = ({ db }) => {
   });
 
   // ---------- Tableau de bord central (palier 21) ----------
-  const sitesOf = (ctx) => db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? ORDER BY name COLLATE NOCASE").all(ctx.organizationId).filter((x) => !Number.isInteger(ctx.siteScope) || x.id === ctx.siteScope);
+  const sitesOf = (ctx) => db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} ORDER BY name COLLATE NOCASE`).all(ctx.organizationId).filter((x) => !Number.isInteger(ctx.siteScope) || x.id === ctx.siteScope);
   const dashParams = (req) => ({ range: req.query.plage, from: req.query.du, to: req.query.au, source: req.query.source, device: req.query.appareil, model: req.query.modele });
   router.get("/analytics/global", need("analytics.read"), (req, res, next) => {
     try {

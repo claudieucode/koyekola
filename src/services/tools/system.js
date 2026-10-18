@@ -34,7 +34,7 @@ function info({ siteId = null, req = null } = {}) {
     { title: "Base de données", rows: [
       ["Type", "SQLite (node:sqlite)"], ["Taille du fichier", dbFile === null ? "Non mesurée" : mb(dbFile)], ["Migrations appliquées", migrations && migrations.n !== null ? `${migrations.n} (dernière : ${migrations.v})` : "Non mesurées"],
       ["Pages", count("SELECT COUNT(*) n FROM mk_landing_pages WHERE archived_at IS NULL")], ["Articles", count("SELECT COUNT(*) n FROM posts WHERE deleted_at IS NULL")],
-      ["Catégories et étiquettes", count("SELECT COUNT(*) n FROM taxonomy_terms")], ["Médias", count("SELECT COUNT(*) n FROM mk_media WHERE deleted_at IS NULL")], ["Sites", count("SELECT COUNT(*) n FROM mk_sites WHERE status = 'active'")],
+      ["Catégories et étiquettes", count("SELECT COUNT(*) n FROM taxonomy_terms")], ["Médias", count("SELECT COUNT(*) n FROM mk_media WHERE deleted_at IS NULL")], ["Sites", count(`SELECT COUNT(*) n FROM mk_sites WHERE status = 'active'${require("../primarySite").excludeSql(db)}`)],
     ] },
     { title: "Stockage", rows: [
       ["Fichiers envoyés", st.uploadsInsideApp ? "Dans le dossier de l'application (perdus à un redéploiement)" : "Dossier conservé, hors de l'application"],

@@ -4,6 +4,7 @@
 // users.delete (retirer de l'équipe) · roles.manage (créer / modifier les rôles). Garde-fous dans cmsAccess : jamais plus de droits que soi,
 // jamais soi-même, jamais le dernier Super administrateur.
 const express = require("express");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const access = require("../../services/cmsAccess");
 const mailer = require("../../utils/mailer");
 const { listAudit } = require("../audit");
@@ -29,7 +30,7 @@ module.exports = () => {
       flash(req, "error", error.message); res.redirect(typeof back === "function" ? back() : back);
     }
   };
-  const sites = (req) => db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND status = 'active' ORDER BY name COLLATE NOCASE").all(org(req));
+  const sites = (req) => db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} AND status = 'active' ORDER BY name COLLATE NOCASE`).all(org(req));
   // Rôles que l'acteur peut réellement attribuer (jamais plus de droits que lui)
   const grantable = (req) => access.allRoles().map((r) => ({ ...r, ok: access.subset(r.permissions, req.mk.perms) }));
   const roleName = (key) => (access.getRole(key) ? access.getRole(key).name : key);

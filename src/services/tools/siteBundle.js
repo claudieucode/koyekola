@@ -8,6 +8,7 @@
 //   "KKSITE1\n" | longueur du manifeste (uint32 BE) | manifeste JSON (UTF-8) | octets des fichiers, bout à bout, dans l'ordre du manifeste
 // Les chemins d'origine écrits dans le paquet ne servent JAMAIS de chemin sur le disque : un fichier restauré reçoit une adresse fabriquée ici.
 const crypto = require("node:crypto");
+const primarySite = require("../primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const fs = require("node:fs");
 const db = require("../../config/database");
 const media = require("../../marketing/media");
@@ -161,7 +162,7 @@ async function restore(ctx, buffer, { siteId, onConflict = "skip" }) {
   if (dry.blocked) throw fail("Restauration refusée : conflits détectés avec la stratégie « tout arrêter ».");
   if (refused.length) throw fail(`Restauration refusée : ${refused.length} élément(s) invalide(s) (${refused[0].label} : ${refused[0].issues.join(" ")}).`);
   // État du site cible avant la restauration (réglages, jetons, clés propres au site) : rétabli en cas d'échec, le contenu créé étant défait par l'import lui-même
-  const siteBefore = db.prepare("SELECT * FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId);
+  const siteBefore = db.prepare(`SELECT * FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, ctx.organizationId);
   const kvPattern = `%site\\_${siteId}.%`; // clés de réglages propres au site (ex. email.site_3.from_name)
   const kvBefore = db.prepare("SELECT key, value, is_secret FROM mk_settings WHERE organization_id = ? AND key LIKE ? ESCAPE '\\'").all(ctx.organizationId, kvPattern);
   const rollbackSite = () => {

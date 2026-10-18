@@ -3,6 +3,7 @@
 // nouveaux identifiants, les fichiers médias ne sont PAS exportés (métadonnées et chemins seulement), et jamais de secret :
 // ni utilisateurs, ni e-mails, ni mots de passe, ni jetons, ni clés. Toutes les lectures passent par les services du CMS.
 const crypto = require("node:crypto");
+const primarySite = require("../primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const db = require("../../config/database");
 
 const FORMAT = "kolakisa-site@1";
@@ -96,7 +97,7 @@ const EXPORTERS = {
 
   async pages(ctx, api, siteId) {
     const pages = require("../../marketing/pages");
-    const home = siteId === null ? null : (db.prepare("SELECT home_page_id h FROM mk_sites WHERE id = ?").get(siteId) || {}).h;
+    const home = siteId === null ? null : (db.prepare(`SELECT home_page_id h FROM mk_sites WHERE id = ?${primarySite.excludeSql(db)}`).get(siteId) || {}).h;
     const out = [];
     const ok = await paged(api, "SELECT id, name, slug, kind, status, indexable, tags, parent_id FROM mk_landing_pages WHERE organization_id = ? AND site_id IS ? AND archived_at IS NULL ORDER BY id", [ctx.organizationId, siteId], (r) => {
       const exp = pages.exportPage(ctx, r.id);
@@ -222,7 +223,7 @@ async function build(ctx, api, { types, siteId }) {
     resources[t] = part;
     counts[t] = Array.isArray(part) ? part.length : 1;
   }
-  const site = siteId === null ? null : db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId);
+  const site = siteId === null ? null : db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, ctx.organizationId);
   const body = { format: FORMAT, exportedAt: new Date().toISOString(), generator: "KOLAKISA CMS", source: { siteId, siteName: site ? site.name : "Site principal" }, selection: chosen, counts,
     media: { policy: "metadata-and-references", files: false, note: "Les fichiers ne sont pas inclus : seuls les chemins et les métadonnées sont exportés." }, resources };
   const text = JSON.stringify(body);

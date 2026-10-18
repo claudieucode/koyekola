@@ -1,6 +1,7 @@
 // Routes d'administration : tableau de bord, contacts, listes, étiquettes, propriétés, conformité.
 // Chaque écriture passe par les services du module (jamais de SQL d'écriture ici) et vérifie la permission du rôle.
 const express = require("express");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const audience = require("../audience");
 const compliance = require("../compliance");
 const sms = require("../sms");
@@ -101,7 +102,7 @@ module.exports = ({ db }) => {
       range: { from, to: from + result.rows.length - (result.total === 0 ? 0 : 1) }, filters, hasFilters: Object.keys(params).length > 0,
       exportUrl: `/marketing/contacts/export.csv${exportParams ? `?${exportParams}` : ""}`,
       lists: audience.listLists(ctx), tags: audience.listTags(ctx), statuses: audience.STATUSES, sensitiveOk, siteScoped: req.mk.siteOnly,
-      lifecycles: core.lifecycleStages(ctx), recordLabels: core.RECORD_STATUS_LABELS, sitesList: req.mk.siteOnly ? [] : db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? ORDER BY name").all(ctx.organizationId), savedSegments: segmentsService.listSegments(ctx).map((x) => ({ id: x.id, name: x.name })),
+      lifecycles: core.lifecycleStages(ctx), recordLabels: core.RECORD_STATUS_LABELS, sitesList: req.mk.siteOnly ? [] : db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} ORDER BY name`).all(ctx.organizationId), savedSegments: segmentsService.listSegments(ctx).map((x) => ({ id: x.id, name: x.name })),
       sources: db.prepare("SELECT DISTINCT source FROM mk_contacts WHERE organization_id = ? AND source <> '' ORDER BY source LIMIT 50").all(ctx.organizationId).map((r) => r.source),
     });
   });
@@ -188,7 +189,7 @@ module.exports = ({ db }) => {
       journeys: req.mk.can("events.view") ? require("../funnels/events").contactJourney(ctx, contact.id, { siteId: siteLimit }) : null,
       autoRuns: req.mk.can("automations.read") ? automationsLib.contactRuns(ctx, contact.id) : null,
       sensitiveOk, eventsPage, absorbed, aliases, mergedInto: mergedInto ? { id: mergedInto.id, email: sensitiveOk ? mergedInto.email : core.maskEmail(mergedInto.email) } : null,
-      lifecycles: core.lifecycleStages(ctx), recordLabels: core.RECORD_STATUS_LABELS, originSite: contact.origin_site_id ? db.prepare("SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?").get(contact.origin_site_id, ctx.organizationId) : null,
+      lifecycles: core.lifecycleStages(ctx), recordLabels: core.RECORD_STATUS_LABELS, originSite: contact.origin_site_id ? db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(contact.origin_site_id, ctx.organizationId) : null,
       absorbedProofs: absorbed.length && sensitiveOk ? core.consentProofs(ctx, contact.id, { limit: 50 }).filter((k) => k.contact_id !== contact.id) : [],
       title: sensitiveOk ? contact.email : core.maskEmail(contact.email), active: "contacts", contact: sensitiveOk ? contact : core.maskContact(contact), defs, values: audience.getContactProperties(ctx, contact.id), tags: audience.tagsOf(ctx, contact.id),
       memberOf, allLists: audience.listLists(ctx), history: compliance.consentHistory(ctx, contact.id), preferences: compliance.preferencesOf(ctx, contact.id),

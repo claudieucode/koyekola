@@ -1,5 +1,6 @@
 // Éléments communs de l'audience : contexte, nettoyage de texte, audit, événements.
 const { MarketingError } = require("../errors");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { recordAudit } = require("../audit");
 
 function checkCtx(ctx) {
@@ -33,7 +34,7 @@ function resolveSite(ctx, siteId) {
   if (Number.isInteger(ctx.siteScope)) return ctx.siteScope;
   if (siteId === undefined || siteId === null || siteId === "") return null;
   const id = Number(siteId);
-  if (!Number.isInteger(id) || id < 1 || !ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+  if (!Number.isInteger(id) || id < 1 || !ctx.db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(id, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
   return id;
 }
 // Fragment SQL de portée pour une table portant site_id (alias `a`)

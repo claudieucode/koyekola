@@ -6,6 +6,7 @@
 //  3. Un numéro en liste de suppression SMS (STOP, numéro invalide, blocage manuel) ne redevient jamais joignable ici.
 //  4. isSmsSendable() est la SEULE porte vers l'envoi d'un SMS marketing ; smsSendableSql() en est la version en masse.
 const { transaction } = require("../db/tx");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { getContact } = require("../audience/contacts");
 const { checkCtx, cleanText, audit, emit, MarketingError } = require("../audience/shared");
 const { PERSON_SOURCES, truncateIp } = require("../compliance/consent");
@@ -48,7 +49,7 @@ function recordSmsConsent(ctx, contactId, { phone, source, textShown, ip, formId
   const contact = requireContact(ctx, contactId);
   // R7 lot 3 : site où l'accord SMS a été collecté (preuve), quand il est connu. Déterminé par le SERVEUR (site du formulaire, ou site imposé à l'accès limité) ; vérifié comme site de
   // l'organisation, sinon NULL (inconnu / site principal). Les preuves existantes gardent NULL. La liste STOP reste commune à l'organisation (aucun site dans mk_sms_suppressions).
-  const collectedAt = Number.isInteger(siteId) && ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId) ? siteId : null;
+  const collectedAt = Number.isInteger(siteId) && ctx.db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId) ? siteId : null;
   const e164 = toE164(ctx, phone !== undefined && phone !== null && phone !== "" ? phone : contact.phone);
   if (isSuppressedPhone(ctx, e164)) return { ok: false, reason: "suppressed" };
   if (contact.sms_status === "unsubscribed" && !PERSON_SOURCES.has(source) && !SMS_PERSON_SOURCES.has(source)) return { ok: false, reason: "unsubscribed" };

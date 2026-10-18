@@ -4,6 +4,7 @@
 const { checkCtx } = require("../audience/shared");
 const siteModules = require("../siteModules");
 const urls = require("../../services/urls");
+const primarySite = require("../../services/primarySite");
 
 const safeCount = (ctx, sql, ...a) => { try { return ctx.db.prepare(sql).get(...a).n; } catch { return 0; } };
 
@@ -37,8 +38,12 @@ function mainSite(ctx) {
   const org = ctx.organizationId;
   let host = "";
   try { host = urls.mainHost(); } catch { /* sans SITE_URL */ }
+  // R9-4 : si la ligne dédiée existe (migration R9-3 appliquée), elle IDENTIFIE le principal (nom, adresse lisible, description) ; ses contenus restent site_id NULL (id: null).
+  const dedicated = primarySite.row(ctx.db, org);
   return {
-    id: null, principal: true, name: "Site principal", slug: "principal", description: "Le site historique de l'organisation : ses pages, son blog et ses formations.", status: "active", deleted_at: null,
+    id: null, principal: true, dedicated: Boolean(dedicated), rowId: dedicated ? dedicated.id : null,
+    name: dedicated ? dedicated.name : "Site principal", slug: dedicated ? dedicated.slug : "principal",
+    description: dedicated && dedicated.description ? dedicated.description : "Le site historique de l'organisation : ses pages, son blog et ses formations.", status: "active", deleted_at: null,
     domain: host,
     pages: safeCount(ctx, "SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND site_id IS NULL AND archived_at IS NULL", org),
     published: safeCount(ctx, "SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND site_id IS NULL AND archived_at IS NULL AND status = 'published'", org),

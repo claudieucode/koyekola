@@ -29,7 +29,7 @@ function resolve(db, { userId, organizationId }, rawSiteId, { allowArchived = fa
   const orgMember = Boolean(access.membershipOf(userId, organizationId));
   const perms = access.effectivePermissions(userId, { organizationId, siteId });
   if (siteId === null) return orgMember && perms.size ? { ok: true, site: null, siteId: null, perms, orgMember } : fail("forbidden");
-  const site = db.prepare("SELECT id, name, slug, status, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, organizationId);
+  const site = db.prepare(`SELECT id, name, slug, status, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?${require("./primarySite").excludeSql(db)}`).get(siteId, organizationId); // R9-4 : la ligne dédiée du principal n'est pas un site ouvrable par son identifiant
   // Sans accès, on ne révèle pas si le site existe (même réponse qu'un site inconnu)
   const hasAccess = orgMember || Boolean(access.siteRoleOf(userId, siteId));
   if (!site || !hasAccess || !perms.size) return fail(!site && orgMember ? "not_found" : hasAccess ? "forbidden" : "not_found");

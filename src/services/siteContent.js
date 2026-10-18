@@ -5,6 +5,7 @@
 //   Il ne change AUCUNE adresse publique, AUCUNE redirection, AUCUNE route : /blog/... et /p/... restent exactement ce qu'ils sont ; l'unicité par site (adresse logique) est préparée,
 //   pas imposée. La reconstruction des tables et les changements d'adresses publiques relèvent d'étapes ultérieures, autorisées séparément.
 const { MarketingError } = require("../marketing/errors");
+const primarySite = require("./primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { transaction } = require("../marketing/db/tx");
 const { recordAudit } = require("../marketing/audit");
 
@@ -75,7 +76,7 @@ function assign(ctx, { type, id, siteId, address } = {}) {
   const db = ctx.db;
   if (!TYPES[type]) throw new MarketingError("invalid_field", "Type de contenu inconnu.");
   if (!orgLevel(ctx)) throw new MarketingError("forbidden", "Seule l'équipe de l'organisation peut rattacher un contenu à un site.");
-  if (!Number.isInteger(siteId) || !db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL").get(siteId, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+  if (!Number.isInteger(siteId) || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(db)}`).get(siteId, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
   const current = siteOf(db, type, id);
   if (current === undefined) throw new MarketingError("not_found", "Contenu introuvable.");
   const logical = checkAddress(address);
@@ -159,7 +160,7 @@ function adopt(ctx, { type, id } = {}) {
   if (!TYPES[type]) throw new MarketingError("invalid_field", "Type de contenu inconnu.");
   const target = Number.isInteger(ctx.siteScope) ? ctx.siteScope : Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : null;
   if (target === null) return { type, id, siteId: null };
-  if (!db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL").get(target, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+  if (!db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(db)}`).get(target, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
   if (siteOf(db, type, id) === undefined) throw new MarketingError("not_found", "Contenu introuvable.");
   db.prepare("INSERT OR IGNORE INTO mk_content_sites (content_type, content_id, organization_id, site_id, scope, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(type, id, ctx.organizationId, target, scopeOf(db, type, id), ctx.userId ?? null);
   audit(ctx, "content.site_assigned", id, { type, site_id: target, from: null, created: true });

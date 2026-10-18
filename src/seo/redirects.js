@@ -3,6 +3,7 @@
 // A → B → C (y compris avec les changements d'adresse automatiques des formations et articles) et correction en A → C.
 // Import / export CSV. Compteur d'utilisations réel.
 const { db, logChange } = require("./store");
+const primarySite = require("../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 
 const { sameScope } = require("../services/siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 db.exec(`
@@ -113,7 +114,7 @@ function validate({ source, target, status, siteId }, { exceptId = null } = {}) 
   let site = null;
   if (siteId !== undefined && siteId !== null && siteId !== "") {
     site = Number(siteId);
-    if (!Number.isInteger(site) || !db.prepare("SELECT 1 FROM mk_sites WHERE id = ?").get(site)) { errors.push("Site introuvable."); site = null; }
+    if (!Number.isInteger(site) || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ?${primarySite.excludeSql(db)}`).get(site)) { errors.push("Site introuvable."); site = null; }
   }
   if (src && !errors.length) {
     // L'ancienne adresse n'est unique que PAR site (une redirection commune et celle d'un site peuvent coexister : celle du site passe avant sur son domaine)

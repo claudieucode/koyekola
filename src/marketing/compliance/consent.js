@@ -5,6 +5,7 @@
 //  3. Une adresse en liste de suppression (rebond dur, plainte, blocage manuel) ne redevient jamais joignable ici.
 //  4. isSendable() est la SEULE porte vers l'envoi marketing : il vérifie tout, y compris les incohérences.
 const net = require("node:net");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { transaction } = require("../db/tx");
 const { getContact } = require("../audience/contacts");
 const { checkCtx, cleanText, audit, emit, MarketingError } = require("../audience/shared");
@@ -53,7 +54,7 @@ function recordConsent(ctx, contactId, { source, textShown, ip, formId = null, s
   if (proof.length < 3) throw new MarketingError("proof_required", "Une preuve est obligatoire : le texte exact présenté à la personne.");
   if (formId !== null && !Number.isInteger(formId)) throw new MarketingError("invalid_field", "formId doit être un entier.");
   // R7 : site où le consentement a été collecté (preuve), quand il est connu ; vérifié comme site de l'organisation, sinon ignoré (jamais une valeur du navigateur)
-  const collectedAt = Number.isInteger(siteId) && ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(siteId, ctx.organizationId) ? siteId : null;
+  const collectedAt = Number.isInteger(siteId) && ctx.db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId) ? siteId : null;
   const contact = requireContact(ctx, contactId);
   if (BLOCKED.has(contact.status) || isSuppressedEmail(ctx, contact.email)) return { ok: false, reason: "suppressed", status: contact.status };
   if (contact.status === "unsubscribed" && !PERSON_SOURCES.has(source)) return { ok: false, reason: "unsubscribed", status: contact.status };

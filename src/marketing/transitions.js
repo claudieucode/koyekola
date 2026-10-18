@@ -15,6 +15,7 @@
 // Règles : une seule fois (repère dans schema_migrations, scope « transition ») ; INSERT OR IGNORE (ne réactive JAMAIS un module que l'équipe a désactivé, ne touche pas une ligne existante) ;
 // jamais pour un site créé après ; aucune permission, aucun quota, aucun secret modifié ; aucune donnée supprimée.
 const crypto = require("node:crypto");
+const primarySite = require("../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 
 const SCOPE = "transition";
 const AI = Object.freeze({ version: "086", name: "ia_acces_existants", permission: "forms.write", module: "ai" });
@@ -49,7 +50,7 @@ function aiEligibility(db) {
     : null;
   const isTeam = db.prepare("SELECT 1 FROM mk_org_members WHERE organization_id = ? AND user_id = ?");
   const out = { eligible: [], ignored: { archive: 0, supprime: 0, sansMembre: 0, aucunDroit: 0 } };
-  for (const s of db.prepare("SELECT id, organization_id, status, deleted_at FROM mk_sites ORDER BY id").all()) {
+  for (const s of db.prepare(`SELECT id, organization_id, status, deleted_at FROM mk_sites WHERE 1 = 1${primarySite.excludeSql(db)} ORDER BY id`).all()) {
     if (s.deleted_at) { out.ignored.supprime += 1; continue; }
     if (s.status !== "active") { out.ignored.archive += 1; continue; }
     const members = db.prepare("SELECT user_id, role FROM mk_site_members WHERE site_id = ?").all(s.id);
@@ -70,7 +71,7 @@ function aiEligibilityDetail(db) {
     : null;
   const isTeam = db.prepare("SELECT 1 FROM mk_org_members WHERE organization_id = ? AND user_id = ?");
   const already = db.prepare("SELECT enabled FROM mk_site_modules WHERE site_id = ? AND module = ?");
-  return db.prepare("SELECT id, organization_id, name, status, deleted_at FROM mk_sites ORDER BY id").all().map((s) => {
+  return db.prepare(`SELECT id, organization_id, name, status, deleted_at FROM mk_sites WHERE 1 = 1${primarySite.excludeSql(db)} ORDER BY id`).all().map((s) => {
     const base = { siteId: s.id, organizationId: s.organization_id, name: s.name, people: 0, memberReasons: {} };
     const row = already.get(s.id, AI.module);
     if (s.deleted_at) return { ...base, decision: "exclu", reason: "site supprimé" };

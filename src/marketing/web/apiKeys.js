@@ -1,11 +1,12 @@
 // Route « Clés d'API » (/marketing/api, jalon M5 — Intégrations, partie 1) : créer, lister, révoquer.
 const express = require("express");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { createApiKey, listApiKeys, revokeApiKey } = require("../api/keys");
 const { attempt, need, flashError } = require("./kit");
 const { MarketingError } = require("../errors");
 
 // Sites proposables pour limiter la portée (R2) : seulement pour l'équipe de l'organisation ; un accès limité à un site n'a pas le choix (portée imposée par le serveur)
-const sitesFor = (db, ctx) => (Number.isInteger(ctx.siteScope) ? [] : db.prepare("SELECT id, name FROM mk_sites WHERE organization_id = ? AND status = 'active' AND deleted_at IS NULL ORDER BY name").all(ctx.organizationId));
+const sitesFor = (db, ctx) => (Number.isInteger(ctx.siteScope) ? [] : db.prepare(`SELECT id, name FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} AND status = 'active' AND deleted_at IS NULL ORDER BY name`).all(ctx.organizationId));
 
 module.exports = ({ db }) => {
   const router = express.Router();

@@ -2,6 +2,7 @@
 // seule son empreinte est conservée. Le compte créé ici est un compte ordinaire du site (mêmes règles d'inscription, même session) : aucun
 // second système d'authentification. Jamais de mot de passe dans l'e-mail.
 const express = require("express");
+const primarySite = require("../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const bcrypt = require("bcryptjs");
 const db = require("../config/database");
 const access = require("../services/cmsAccess");
@@ -16,7 +17,7 @@ function load(req, res) {
   const inv = /^[A-Za-z0-9_-]{20,60}$/.test(token) ? access.invitationByToken(token) : null;
   if (!inv) { res.status(404).render("error", { message: "Cette invitation n'est plus valable (expirée, déjà utilisée ou révoquée). Demandez-en une nouvelle." }); return null; }
   const role = access.getRole(inv.role);
-  const site = inv.site_id ? db.prepare("SELECT name FROM mk_sites WHERE id = ?").get(inv.site_id) : null;
+  const site = inv.site_id ? db.prepare(`SELECT name FROM mk_sites WHERE id = ?${primarySite.excludeSql(db)}`).get(inv.site_id) : null;
   return { inv, roleName: role ? role.name : inv.role, siteName: site ? site.name : "" };
 }
 

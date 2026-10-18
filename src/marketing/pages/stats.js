@@ -4,6 +4,7 @@
 // Visiteur : empreinte quotidienne non réversible (sans cookie) → « visiteurs uniques » = visiteurs distincts par jour,
 // additionnés sur la période.
 const { checkCtx } = require("../audience/shared");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 
 const DAY = 86400000;
 const PERIODS = [7, 30, 90];
@@ -20,7 +21,7 @@ function dashboard(ctx, { days = 30, now = Date.now() } = {}) {
   const since = now - period * DAY;
 
   const counts = {
-    sites: one("SELECT COUNT(*) n FROM mk_sites WHERE organization_id = ? AND status = 'active'", org).n,
+    sites: one(`SELECT COUNT(*) n FROM mk_sites WHERE organization_id = ? AND status = 'active'${primarySite.excludeSql(ctx.db)}`, org).n,
     pages: one("SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND archived_at IS NULL", org).n,
     published: one("SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND archived_at IS NULL AND status = 'published'", org).n,
     drafts: one("SELECT COUNT(*) n FROM mk_landing_pages WHERE organization_id = ? AND archived_at IS NULL AND draft IS NOT NULL", org).n,

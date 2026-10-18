@@ -5,6 +5,7 @@
 //    ni une adresse en liste de suppression (celles-ci sont ignorées) ;
 //  - un import ne déclenche pas un événement par contact (pas de tempête d'automatisations) : un seul « contacts.imported ».
 const path = require("node:path");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { createRepository } = require("../db/repository");
 const { transaction } = require("../db/tx");
 const { validateEmail, normalizeEmail } = require("../audience/email");
@@ -132,7 +133,7 @@ function previewImport(ctx, { filename = "import.csv", data, limits = {} } = {})
   const safeName = path.basename(String(filename).replace(/\\/g, "/")).replace(/[\x00-\x1f\x7f]/g, "").slice(0, 120) || "import.csv";
   const site = scopeOf(ctx) ?? null;
   if (site !== null) {
-    if (!ctx.db.prepare("SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?").get(site, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
+    if (!ctx.db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(site, ctx.organizationId)) throw new MarketingError("not_found", "Site introuvable.");
     if (parsed.rows.length - 1 > SITE_MAX_ROWS) throw new MarketingError("too_many_rows", `Un import de site compte ${SITE_MAX_ROWS} lignes au plus (ce fichier : ${parsed.rows.length - 1}). Découpez le fichier en plusieurs envois.`);
   }
   const row = table(ctx).insert({

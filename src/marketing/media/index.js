@@ -7,6 +7,7 @@
 // par les pages et les e-mails. Corbeille : suppression douce ; le fichier n'est effacé qu'à la suppression définitive,
 // refusée tant qu'un contenu l'utilise.
 const fs = require("fs");
+const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const path = require("path");
 const crypto = require("crypto");
 const { uploadsRoot } = require("../../config/paths");
@@ -247,7 +248,7 @@ function mediaUsage(ctx, media) {
   const pages = db.prepare("SELECT id, name, 'page' AS kind, site_id FROM mk_landing_pages WHERE organization_id = ? AND (sections LIKE ? ESCAPE '\\' OR draft LIKE ? ESCAPE '\\' OR seo LIKE ? ESCAPE '\\')").all(org, like, like, like);
   const components = db.prepare("SELECT id, name, 'composant' AS kind, site_id FROM mk_web_components WHERE organization_id = ? AND section LIKE ? ESCAPE '\\'").all(org, like);
   const pageTemplates = safe(() => db.prepare("SELECT id, name, 'modèle de page' AS kind, NULL AS site_id FROM mk_page_templates WHERE organization_id = ? AND content LIKE ? ESCAPE '\\'").all(org, like));
-  const sites = safe(() => db.prepare("SELECT id, name, 'site' AS kind, id AS site_id FROM mk_sites WHERE organization_id = ? AND (tokens LIKE ? ESCAPE '\\' OR settings LIKE ? ESCAPE '\\')").all(org, like, like));
+  const sites = safe(() => db.prepare(`SELECT id, name, 'site' AS kind, id AS site_id FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} AND (tokens LIKE ? ESCAPE '\\' OR settings LIKE ? ESCAPE '\\')`).all(org, like, like));
   // Articles (image mise en avant, images de partage, images dans le texte) : le texte cite l'adresse du fichier
   const articles = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind, NULL AS site_id FROM posts WHERE featured_media_id = ? OR cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ? ESCAPE '\\'").all(media.id, media.path, media.path, media.path, like));
   return [...templates, ...pages, ...components, ...pageTemplates, ...sites, ...articles];

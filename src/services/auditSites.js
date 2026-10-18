@@ -25,6 +25,7 @@ const CHECKS = [
 // Préparation du palier 3 (CMS indépendant par site) — INFORMATIF, jamais compté dans les anomalies, uniquement des NOMBRES.
 // Mesure ce qui existe et surtout les cas AMBIGUS : un média ou un formulaire déjà utilisé par plusieurs sites ne peut pas être rattaché à un seul site sans décision.
 const { scopeKey: KEY } = require("./siteScope"); // 0 = site principal (R9-2 : définition unique dans siteScope)
+const primarySite = require("./primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 function classify(ownerSets) {
   const c = { inutilises: 0, principal: 0, un_site: 0, plusieurs: 0 };
   for (const owners of ownerSets) {
@@ -103,13 +104,13 @@ function run(db) {
   if (!out.hasSites) return out;
   const hasDeleted = cols("mk_sites").includes("deleted_at");
   out.sites = {
-    total: db.prepare("SELECT COUNT(*) n FROM mk_sites").get().n,
-    deleted: hasDeleted ? db.prepare("SELECT COUNT(*) n FROM mk_sites WHERE deleted_at IS NOT NULL").get().n : null,
-    archived: db.prepare("SELECT COUNT(*) n FROM mk_sites WHERE status = 'archived'").get().n,
+    total: db.prepare(`SELECT COUNT(*) n FROM mk_sites WHERE 1 = 1${primarySite.excludeSql(db)}`).get().n,
+    deleted: hasDeleted ? db.prepare(`SELECT COUNT(*) n FROM mk_sites WHERE deleted_at IS NOT NULL${primarySite.excludeSql(db)}`).get().n : null,
+    archived: db.prepare(`SELECT COUNT(*) n FROM mk_sites WHERE status = 'archived'${primarySite.excludeSql(db)}`).get().n,
   };
   // Les comptages se recouvrent : un site supprimé est toujours archivé d'abord (pages.deleteSite). On donne donc aussi les parts qui ne se recouvrent pas.
-  out.sites.active = db.prepare(`SELECT COUNT(*) n FROM mk_sites WHERE status <> 'archived'${hasDeleted ? " AND deleted_at IS NULL" : ""}`).get().n;
-  out.sites.trashed = hasDeleted ? db.prepare("SELECT COUNT(*) n FROM mk_sites WHERE deleted_at IS NOT NULL AND status = 'archived'").get().n : null;
+  out.sites.active = db.prepare(`SELECT COUNT(*) n FROM mk_sites WHERE status <> 'archived'${primarySite.excludeSql(db)}${hasDeleted ? " AND deleted_at IS NULL" : ""}`).get().n;
+  out.sites.trashed = hasDeleted ? db.prepare(`SELECT COUNT(*) n FROM mk_sites WHERE deleted_at IS NOT NULL AND status = 'archived'${primarySite.excludeSql(db)}`).get().n : null;
   for (const [t, c, label] of TABLES) {
     if (!has(t) || !cols(t).includes(c)) { out.tables.push({ table: t, label, absent: true }); continue; }
     const r = db.prepare(`SELECT COUNT(*) total, COALESCE(SUM(${c} IS NULL), 0) principal, COALESCE(SUM(${c} IS NOT NULL), 0) rattachees,

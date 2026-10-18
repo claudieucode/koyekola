@@ -7,6 +7,7 @@
 //   • réglages de la PLATEFORME (variables d'environnement, secrets, indicateurs techniques) : lecture seule, jamais modifiables depuis le CMS.
 // Les moteurs restent propriétaires de leur logique (URL, SEO, commentaires, médias…) : les réglages les CONFIGURENT et ils s'exécutent.
 const db = require("../../config/database");
+const primarySite = require("../primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const { transaction } = require("../../marketing/db/tx");
 const { UserError } = require("../../utils/errors");
 
@@ -364,7 +365,7 @@ function reset(scope, target, ctx, { confirm = false, actor = null } = {}) {
 
 function assertScope(scope, ctx) {
   if (scope.siteId) {
-    const row = db.prepare("SELECT id FROM mk_sites WHERE id = ? AND organization_id = ?").get(scope.siteId, ctx.organizationId);
+    const row = db.prepare(`SELECT id FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(scope.siteId, ctx.organizationId);
     if (!row) throw Object.assign(new UserError("Site introuvable."), { status: 404 });
   } else if (!ctx.orgLevel) throw Object.assign(new UserError("Les réglages du site principal sont réservés à l'équipe de l'organisation."), { status: 403 });
 }
