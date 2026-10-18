@@ -26,6 +26,8 @@ async function startServerOnce(extraEnv = {}) {
     FORMATEUR_PASSWORD: INSTRUCTOR.password,
     ...extraEnv,
   };
+  // Recette sur copie (R8 étape 8) : KOYEKOLA_TEST_SEED_DB = base de DÉPART du serveur de test (COPIE d'une copie de production, jamais la production) ; elle est recopiée dans le dossier temporaire du test
+  if (process.env.KOYEKOLA_TEST_SEED_DB) { fs.mkdirSync(path.join(dir, "data"), { recursive: true }); fs.copyFileSync(process.env.KOYEKOLA_TEST_SEED_DB, path.join(dir, "data", "KOYEKOLA.db")); }
   const child = spawn(process.execPath, ["server.js"], { cwd: ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
   let log = "";
   child.stdout.on("data", (d) => (log += d));

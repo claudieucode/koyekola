@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, Client, loginInstructor, newStudent } = require("./helpers");
 
-let srv, boss, db, A, B, C, memberA, viewer, noAccess, baseMain;
+let srv, boss, db, A, B, C, memberA, viewer, noAccess, baseMain, base0;
 const S = "/marketing/site-web/sites";
 const one = (sql, ...a) => db.prepare(sql).get(...a);
 const idOf = (c) => one("SELECT id FROM users WHERE email = ?", c.email).id;
@@ -17,6 +17,10 @@ const siteMeta = (html) => (/<meta name="mk-space" content="([a-z0-9]+)"/.exec(h
 before(async () => {
   srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
   boss = await loginInstructor(srv); db = srv.db();
+  // État de départ de la base (vide en test courant ; données réelles en recette sur copie) : les attendus sont relatifs à cet état
+  base0 = { pagesMain: one("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id IS NULL AND archived_at IS NULL").n, publishedMain: one("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id IS NULL AND archived_at IS NULL AND status = 'published'").n,
+    activeSites: one("SELECT COUNT(*) n FROM mk_sites WHERE status = 'active' AND deleted_at IS NULL").n, archivedSites: one("SELECT COUNT(*) n FROM mk_sites WHERE status = 'archived' AND deleted_at IS NULL").n,
+    publishedOfSites: one("SELECT COUNT(*) n FROM mk_landing_pages p JOIN mk_sites s ON s.id = p.site_id WHERE s.status = 'active' AND s.deleted_at IS NULL AND p.archived_at IS NULL AND p.status = 'published'").n, modules: one("SELECT COUNT(*) n FROM mk_site_modules WHERE enabled = 1").n };
   A = await mk("Alpha Manager"); B = await mk("Bravo Manager"); C = await mk("Charlie Archivé");
   // pages : 2 pour A (1 en ligne), 1 pour B, 1 pour le principal
   const page = (name, site, status) => db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, status, site_id) VALUES (1, ?, ?, 't', ?, ?)").run(name, name.toLowerCase().replace(/\W/g, "-"), status, site);
@@ -41,7 +45,7 @@ describe("le site principal est une ligne comme les autres", () => {
     const html = (await boss.get(S)).text;
     const main = rowOf(html, 'data-site="principal"');
     assert.match(main, /Site principal/); assert.match(main, /Principal<\/span>/);
-    assert.equal(cell(main, "Pages"), "1"); assert.equal(cell(main, "En ligne"), "1");
+    assert.equal(cell(main, "Pages"), String(base0.pagesMain + 1)); assert.equal(cell(main, "En ligne"), String(base0.publishedMain + 1));
     const sansSite = one("SELECT COUNT(*) n FROM mk_contacts c WHERE NOT EXISTS (SELECT 1 FROM mk_contact_sites cs WHERE cs.contact_id = c.id)").n; // calcul indépendant en base
     assert.ok(sansSite >= baseMain + 3);
     assert.equal(cell(main, "Contacts"), String(sansSite), "seulement les contacts sans rattachement à un site (ceux d'Alpha et de Bravo en sont exclus)");
@@ -60,7 +64,7 @@ describe("le site principal est une ligne comme les autres", () => {
   test("bande de chiffres : sites actifs (principal compris), archivés, pages en ligne de tous les sites actifs, modules activés", async () => {
     const html = (await boss.get(S)).text;
     const stat = (label) => (new RegExp(`mk-stat-label">${label}</span><span class="mk-stat-value">([^<]*)<`).exec(html) || [])[1];
-    assert.equal(stat("Sites actifs"), "3"); assert.equal(stat("Sites archivés"), "1"); assert.equal(stat("Pages en ligne"), "3"); assert.equal(stat("Modules activés"), "2");
+    assert.equal(stat("Sites actifs"), String(3 + base0.activeSites)); assert.equal(stat("Sites archivés"), String(1 + base0.archivedSites)); assert.equal(stat("Pages en ligne"), String(3 + base0.publishedMain + base0.publishedOfSites)); assert.equal(stat("Modules activés"), String(2 + base0.modules));
   });
   test("recherche et filtres : « principal » retrouve le site principal ; il n'apparaît ni dans Archivés ni dans Supprimés ; un autre mot l'exclut", async () => {
     assert.match((await boss.get(`${S}?q=principal`)).text, /data-site="principal"/);
