@@ -5,13 +5,16 @@
 # (3) un rapport complet est enregistré dans ~/RECETTE-R8-<date>/ sur le Mac (dossier privé ; rien n'est supprimé).
 #   scripts/r9/lancer-recette-prod.sh diagnostic <utilisateur@serveur> [-p PORT] [--source CHEMIN_SERVEUR] [--simuler]
 #   scripts/r9/lancer-recette-prod.sh assistant  <utilisateur@serveur> [-p PORT] [--source CHEMIN_SERVEUR] [--simuler]   (diagnostic, puis VOUS tapez OUI pour créer la copie, la télécharger et la vérifier)
+#   scripts/r9/lancer-recette-prod.sh sauvegarde <utilisateur@serveur> [-p PORT] [--source CHEMIN_SERVEUR] --confirmer-sauvegarde [--simuler]   (SAUVEGARDE de déploiement : base cohérente + archive de uploads/, téléchargées, empreintes et comptes contrôlés, MANIFESTE.txt ; ne prouve la restaurabilité QUE par scripts/r9/essai-restauration.js)
 # diagnostic = aucune écriture (serveur ou Mac, hors le rapport local). La base vivante n'est ouverte qu'en LECTURE SEULE. Aucune migration, aucune recette, aucune suppression.
 set -euo pipefail
 MODE="${1:-}"; HOST="${2:-}"; shift 2 || true
 PORT=""; SOURCE='$HOME/koyekola-data/KOYEKOLA.db'; DRY=0
-while [ $# -gt 0 ]; do case "$1" in -p) PORT="$2"; shift 2;; --source) SOURCE="$2"; shift 2;; --simuler) DRY=1; shift;; *) echo "Option inconnue : $1" >&2; exit 2;; esac; done
-case "$MODE" in diagnostic|assistant) ;; *) echo "Usage : $0 <diagnostic|assistant> <utilisateur@serveur> [-p PORT] [--source CHEMIN] [--simuler]" >&2; exit 2;; esac
+CONFIRM_SAVE=0
+while [ $# -gt 0 ]; do case "$1" in -p) PORT="$2"; shift 2;; --source) SOURCE="$2"; shift 2;; --simuler) DRY=1; shift;; --confirmer-sauvegarde) CONFIRM_SAVE=1; shift;; *) echo "Option inconnue : $1" >&2; exit 2;; esac; done
+case "$MODE" in diagnostic|assistant|sauvegarde) ;; *) echo "Usage : $0 <diagnostic|assistant|sauvegarde> <utilisateur@serveur> [-p PORT] [--source CHEMIN] [--confirmer-sauvegarde] [--simuler]" >&2; exit 2;; esac
 [ -n "$HOST" ] || { echo "Indiquez la connexion SSH (utilisateur@serveur)." >&2; exit 2; }
+if [ "$MODE" = "sauvegarde" ] && [ "$CONFIRM_SAVE" != 1 ] && [ "$DRY" != 1 ]; then echo "Refus : la sauvegarde exige --confirmer-sauvegarde (elle crée des fichiers dans ~/RECETTE-R8-… sur le serveur ; la base vivante reste en lecture seule)." >&2; exit 2; fi
 HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(cd "$HERE/../.." && pwd)"
 TOOL="$(mktemp "${TMPDIR:-/tmp}/preparer-XXXXXX")"; git -C "$REPO" show r8-recette-outil:scripts/recette-r8-preparer.js > "$TOOL" || { echo "Outil introuvable dans la branche r8-recette-outil." >&2; exit 2; }
 STAMP="$(date +%Y%m%d-%H%M%S)-$$"; LOCAL_DIR="$HOME/RECETTE-R8-$STAMP"; REMOTE_DIR="\$HOME/RECETTE-R8-$STAMP"
@@ -33,8 +36,10 @@ grep -q "CODE_SORTIE=0" "$REPORT" || { echo; echo "ARRÊT : le diagnostic n'a pa
 grep -q "DIAGNOSTIC" "$REPORT" || { echo "ARRÊT : aucun compte rendu de diagnostic reçu (seulement le message d'accueil du serveur)." >&2; exit 1; }
 [ "$MODE" = "diagnostic" ] && { echo; echo "Diagnostic terminé : rien n'a été écrit sur le serveur. Rapport : $REPORT"; exit 0; }
 echo; echo "L'étape suivante CRÉE une copie de la base dans ~/RECETTE-R8-$STAMP sur le serveur (base vivante en lecture seule), puis la télécharge sur ce Mac."
-read -r -p "Tapez OUI (en majuscules) pour autoriser la création de cette copie, ou Entrée pour arrêter : " REPONSE </dev/tty
-[ "$REPONSE" = "OUI" ] || { echo "Arrêt : aucune copie créée."; exit 0; }
+if [ "$MODE" != "sauvegarde" ]; then
+  read -r -p "Tapez OUI (en majuscules) pour autoriser la création de cette copie, ou Entrée pour arrêter : " REPONSE </dev/tty
+  [ "$REPONSE" = "OUI" ] || { echo "Arrêt : aucune copie créée."; exit 0; }
+fi
 set +e; { "${SSH[@]}" "$HOST" "$(remote "copie --source \"$SOURCE\" --dest \"$REMOTE_DIR\" --confirmer-copie")" < "$TOOL" 2>&1; echo "CODE_SORTIE=$?"; } | sed 's/\x1b\[[0-9;]*m//g' | tee "$LOCAL_DIR/copie.txt"; set -e
 grep -q "CODE_SORTIE=0" "$LOCAL_DIR/copie.txt" || { echo "ARRÊT : la copie n'a pas abouti (voir $LOCAL_DIR/copie.txt)." >&2; exit 1; }
 "${SSH[@]}" "$HOST" "cat \"$REMOTE_DIR/RAPPORT-copie.json\"" > "$LOCAL_DIR/RAPPORT-copie.json"; "${SSH[@]}" "$HOST" "cat \"$REMOTE_DIR/copie-A.db\"" > "$LOCAL_DIR/copie-A.db"
@@ -42,4 +47,18 @@ EXPECTED="$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(
 [ "$EXPECTED" = "$ACTUAL" ] || { echo "ARRÊT : empreinte différente après téléchargement ($ACTUAL ≠ $EXPECTED). Rien n'est utilisable." >&2; exit 1; }
 cp "$LOCAL_DIR/copie-A.db" "$LOCAL_DIR/copie-B.db"; echo "Empreinte sha256 identique au serveur : $ACTUAL"
 node "$TOOL" verifier "$LOCAL_DIR/copie-A.db"
+if [ "$MODE" = "sauvegarde" ]; then
+  # archive de uploads/ (lecture seule du dossier ; l'archive est écrite dans le dossier de sauvegarde du serveur) + comptes pour comparaison
+  UP_REMOTE="bash -lc 'D=\$(dirname \"$SOURCE\"); if [ -d \"\$D/uploads\" ]; then tar -czf \"$REMOTE_DIR/uploads.tgz\" -C \"\$D\" uploads && echo FICHIERS=\$(find \"\$D/uploads\" -type f | wc -l | tr -d \" \") && echo OCTETS_ARCHIVE=\$(wc -c < \"$REMOTE_DIR/uploads.tgz\" | tr -d \" \"); else echo ABSENT=1; fi'"
+  set +e; "${SSH[@]}" "$HOST" "$UP_REMOTE" 2>&1 | tee "$LOCAL_DIR/uploads.txt"; set -e
+  if grep -q "^ABSENT=1" "$LOCAL_DIR/uploads.txt"; then echo "uploads : aucun dossier uploads/ à côté de la base (rien à archiver)." | tee -a "$LOCAL_DIR/uploads.txt"; UPN=0; else
+    RF="$(grep '^FICHIERS=' "$LOCAL_DIR/uploads.txt" | cut -d= -f2)"; [ -n "$RF" ] || { echo "ARRÊT : l'archive de uploads/ n'a pas pu être créée (voir $LOCAL_DIR/uploads.txt)." >&2; exit 1; }
+    "${SSH[@]}" "$HOST" "cat \"$REMOTE_DIR/uploads.tgz\"" > "$LOCAL_DIR/uploads.tgz"
+    tar -tzf "$LOCAL_DIR/uploads.tgz" > "$LOCAL_DIR/uploads-liste.txt" || { echo "ARRÊT : l'archive téléchargée est illisible." >&2; exit 1; }
+    UPN="$(grep -vc '/$' "$LOCAL_DIR/uploads-liste.txt" || true)"
+    [ "$UPN" = "$RF" ] || { echo "ARRÊT : l'archive contient $UPN fichier(s), le serveur en compte $RF." >&2; exit 1; }
+  fi
+  { echo "SAUVEGARDE DE DÉPLOIEMENT — $(date -u +%Y-%m-%dT%H:%M:%SZ)"; echo "base : copie-A.db sha256 $ACTUAL"; [ -f "$LOCAL_DIR/uploads.tgz" ] && echo "uploads : uploads.tgz sha256 $(shasum -a 256 "$LOCAL_DIR/uploads.tgz" | cut -d' ' -f1) · $UPN fichier(s)" || echo "uploads : aucun"; echo "STATUT : téléchargée et contrôlée (intégrité, empreintes, comptes) ; NON PROUVÉE RESTAURABLE tant que scripts/r9/essai-restauration.js n'a pas réussi sur ce dossier"; } | tee "$LOCAL_DIR/MANIFESTE.txt"
+  echo; echo "TERMINÉ : sauvegarde dans $LOCAL_DIR. Prochaine étape obligatoire : essai de restauration (scripts/r9/essai-restauration.js)."; exit 0
+fi
 echo; echo "TERMINÉ : copie vérifiée dans $LOCAL_DIR. La recette R8/R9 n'est PAS lancée : elle attend votre autorisation distincte."
