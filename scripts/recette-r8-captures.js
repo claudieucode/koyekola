@@ -11,6 +11,9 @@ const err = (t) => fs.writeSync(2, `${t}\n`);
 const args = process.argv.slice(2);
 const cmd = args[0];
 const multi = (flag) => args.flatMap((a, i) => (a === flag ? [args[i + 1]] : []));
+// Garde-fous : requêtes GET uniquement (aucune écriture sur l'instance interrogée) ; l'adresse de base doit être locale ou privée (loopback, réseau privé, .local/.internal/.lan) sauf --autoriser-hote-distant ;
+// la sortie est UN fichier local qui ne doit pas déjà exister (jamais écrasé).
+const PRIVATE = /^(localhost|127\.\d+\.\d+\.\d+|\[?::1\]?|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|.+\.(local|localhost|internal|lan))$/i;
 const DEFAULT_PATHS = ["/", "/blog", "/catalogue", "/a-propos", "/faq", "/contact", "/robots.txt", "/sitemap.xml", "/page-introuvable-recette"];
 
 function get(base, host, p) {
@@ -34,6 +37,10 @@ function shape(p, r) {
   if (cmd === "capture") {
     const [, base, file] = args; const hosts = multi("--host"); const paths = multi("--path").length ? multi("--path") : DEFAULT_PATHS;
     if (!base || !file || !hosts.length) { err("Usage : capture <urlDeBase> <sortie.json> --host <hôte> [--host …] [--path …]"); process.exitCode = 2; return; }
+    let u; try { u = new URL(base); } catch { err(`Adresse de base invalide : ${base}`); process.exitCode = 2; return; }
+    if (u.protocol !== "http:") { err("Refus : seule une instance locale en http:// est interrogée (jamais le site en production)."); process.exitCode = 2; return; }
+    if (!PRIVATE.test(u.hostname) && !args.includes("--autoriser-hote-distant")) { err(`Refus : ${u.hostname} n'est pas une adresse locale ou privée (utilisez l'instance de recette locale).`); process.exitCode = 2; return; }
+    if (fs.existsSync(file)) { err(`Refus d'écraser : ${file} existe déjà.`); process.exitCode = 2; return; }
     const res = {};
     for (const h of hosts) { res[h] = {}; for (const p of paths) { const r = await get(base, h, p); res[h][p] = shape(p, { statusCode: r.status, status: r.status, headers: r.headers, text: r.text }); } }
     fs.writeFileSync(file, JSON.stringify(res, null, 1)); out(`${hosts.length} hôte(s) × ${paths.length} chemin(s) → ${file}`); return;

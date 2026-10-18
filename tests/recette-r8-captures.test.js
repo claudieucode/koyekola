@@ -23,6 +23,11 @@ describe("photographies de recette", () => {
     await boss.post("/formateur/seo/reglages", { robots_custom: "User-agent: *\nDisallow: /secret-recette" });
     assert.equal(run("capture", srv.base, c, "--host", "k.test").status, 0);
     const diff = run("comparer", a, c); assert.equal(diff.status, 1); assert.match(diff.stdout, /k\.test\/robots\.txt/); assert.match(diff.stdout, /secret-recette/);
+    // garde-fous : hôte distant, https, sortie existante → refus ; rien n'est écrit
+    const nope = path.join(dir, "refus.json");
+    for (const base of ["http://203.0.113.10:80", "https://k.test", "http://exemple.org"]) { const r = run("capture", base, nope, "--host", "k.test"); assert.equal(r.status, 2, base); assert.match(r.stderr, /Refus/); }
+    assert.ok(!fs.existsSync(nope), "aucun fichier créé en cas de refus");
+    const again = run("capture", srv.base, a, "--host", "k.test"); assert.equal(again.status, 2); assert.match(again.stderr, /écraser/);
     assert.equal(run("capture").status, 2); assert.equal(run("comparer", a).status, 2); assert.equal(run("inconnu").status, 2);
   });
 });

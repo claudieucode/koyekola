@@ -20,6 +20,12 @@ const file = path.resolve(fileArg);
 if (!fs.existsSync(file)) die(`Fichier introuvable : ${file}`);
 const live = require("../src/config/paths").dbFile;
 if (path.resolve(live) === file) die("Refus : c'est la base vivante de l'application. Utilisez scripts/copie-base-audit.js pour en faire une copie.");
+// Garde-fous supplémentaires (la base vivante peut se trouver ailleurs que dans DATA_DIR de CE shell) :
+//  1. le nom du fichier doit dire que c'est une copie (copie, recette, jetable, essai) ; 2. un fichier -wal / -shm non vide = base ouverte par une application : refus ; 3. le dossier de l'application (DATA_DIR) est interdit.
+if (!/(copie|recette|jetable|essai)/i.test(path.basename(file))) die(`Refus : le nom « ${path.basename(file)} » ne désigne pas une copie (attendu : copie, recette, jetable ou essai dans le nom du fichier).`);
+for (const ext of ["-wal", "-shm"]) { try { if (fs.statSync(file + ext).size > 0) die(`Refus : ${path.basename(file)}${ext} existe et n'est pas vide — la base est ouverte par une application (base vivante ?).`); } catch (e) { if (e.code !== "ENOENT") throw e; } }
+const liveDir = path.resolve(path.dirname(live));
+if (file === liveDir || file.startsWith(liveDir + path.sep)) die(`Refus : le fichier est dans le dossier de données de l'application (${liveDir}).`);
 
 const DOWN = path.join(__dirname, "migrations-retour-arriere");
 const MIGRATIONS = path.join(__dirname, "..", "src", "marketing", "migrations");

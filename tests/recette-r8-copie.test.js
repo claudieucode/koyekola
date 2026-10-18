@@ -36,11 +36,19 @@ describe("recette R8 sur copie", () => {
     const r = run("migrer", live, "--copie-confirmee"); assert.notEqual(r.status, 0); assert.match(r.stderr, /base vivante/);
     assert.equal(sha(live), sha(file), "la base vivante n'a pas bougé");
     assert.notEqual(run("inconnu", file, "--copie-confirmee").status, 0);
+    // la base vivante peut être ailleurs que dans le DATA_DIR de ce shell : nom ambigu, fichier -wal actif ou dossier de données → refus
+    const ambigu = path.join(dir, "KOYEKOLA.db"); fs.copyFileSync(file, ambigu);
+    let r2 = run("migrer", ambigu, "--copie-confirmee"); assert.notEqual(r2.status, 0); assert.match(r2.stderr, /ne désigne pas une copie/);
+    const wal = path.join(dir, "copie-ouverte.db"); fs.copyFileSync(file, wal); fs.writeFileSync(wal + "-wal", "x");
+    r2 = run("migrer", wal, "--copie-confirmee"); assert.notEqual(r2.status, 0); assert.match(r2.stderr, /ouverte par une application/);
+    const inLive = path.join(dir, "vivante", "copie-dans-donnees.db"); fs.copyFileSync(file, inLive);
+    r2 = run("prerequis", inLive, "--copie-confirmee"); assert.notEqual(r2.status, 0); assert.match(r2.stderr, /dossier de données/);
+    assert.equal(sha(ambigu), sha(file)); assert.equal(sha(inLive), sha(file));
   });
   test("prérequis : lecture seule (fichier inchangé), préconditions satisfaites ; une base d'avant le palier 12 est signalée BLOQUANTE", () => {
     const before = sha(file); const r = run("prerequis", file, "--copie-confirmee");
     assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /préconditions satisfaites/); assert.match(r.stdout, /imports : 1/); assert.equal(sha(file), before, "aucune écriture");
-    const old = make("avant-palier12.db", { palier12: false }); const b = run("prerequis", old, "--copie-confirmee");
+    const old = make("copie-avant-palier12.db", { palier12: false }); const b = run("prerequis", old, "--copie-confirmee");
     assert.equal(b.status, 1, b.stdout + b.stderr); assert.match(b.stdout + b.stderr, /BLOQUANT : seo_redirects sans la colonne site_id/); assert.match(b.stdout, /NE PAS MIGRER/);
   });
   test("migrer puis retour sur la copie : 090 et 091 appliquées, lignes identiques, retour arrière complet, sauvegarde automatique créée", () => {
