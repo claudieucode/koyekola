@@ -66,7 +66,7 @@ describe("menu de l'espace d'un site (buildSiteNav)", () => {
   });
   test("le menu de l'espace ne modifie pas le menu global existant", () => {
     const g = nav.buildCmsNav({ can: all, active: "landing" });
-    assert.ok(g && g.sections.some((s) => s.key === "sites") && !g.sections.some((s) => s.key === "dashboard"), "menu central : Mes sites, sans entrée parallèle vers le tableau de bord du principal");
+    assert.deepEqual(g.sections.map((s) => s.key), ["sites"], "menu central : « Mes sites » seulement (le contenu est celui d'un espace)");
     assert.ok(!JSON.stringify(g).includes("espace/"));
   });
 });

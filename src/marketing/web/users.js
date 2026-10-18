@@ -157,7 +157,7 @@ module.exports = () => {
   // ----- Mes sites : accès limités à certains sites -----
   router.get("/site-web/mes-sites", (req, res) => {
     const mine = access.siteMemberships(req.session.user.id);
-    res.render("marketing/users", { title: "Mes sites", active: "sitedash", mode: "mysites", mine, roleName, BASE, f: {}, tabs: [], counts: {}, rows: [], invitations: [], roles: [], sites: [], canCreate: false, canEdit: false, me: 0 });
+    res.render("marketing/users", { title: "Mes sites", active: "sites", mode: "mysites", mine, roleName, BASE, f: {}, tabs: [], counts: {}, rows: [], invitations: [], roles: [], sites: [], canCreate: false, canEdit: false, me: 0 });
   });
   return router;
 };

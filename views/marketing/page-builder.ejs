@@ -22,6 +22,7 @@
     <div class="pb-top-left">
       <button type="button" class="pb-icon-btn pb-mainmenu-btn" data-pb-mainmenu aria-haspopup="menu" aria-expanded="false" data-tip="Menu principal" aria-label="Menu principal"><%- icon("menu", { size: 18 }) %></button>
       <% const cmsBack = typeof backTo !== "undefined" && backTo; const backText = cmsBack ? "Retour aux pages" : page.back ? "Retour à la fiche du site" : "Réglages de la page"; %><a class="pb-back" href="<%= cmsBack || page.back || `/marketing/pages/${page.id}` %>" data-tip="<%= backText %>"><%- icon("arrowLeft", { size: 16 }) %><span class="sr-only"><%= backText %></span></a>
+      <% if (typeof sitesHome !== "undefined" && sitesHome) { %><a class="pb-icon-btn pb-back-sites" href="<%= sitesHome %>" data-mk-back-to-sites data-tip="Retour à Mes sites (les modifications non enregistrées sont signalées)" aria-label="Retour à Mes sites"><%- icon("globe", { size: 16 }) %></a><% } %>
       <div class="pb-title"><h1><%= page.name %></h1><span class="pb-status" data-pb-status></span></div>
       <button type="button" class="pb-icon-btn" data-pb-home aria-pressed="false" data-tip="Accueil : revoir l'écran de démarrage (votre travail est conservé)" aria-label="Accueil : écran de démarrage et reprise du travail"><%- icon("home", { size: 16 }) %></button>
       <div class="pb-group-btns">

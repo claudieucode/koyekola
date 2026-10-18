@@ -145,6 +145,8 @@ module.exports.attach = (req, res, next) => {
   const space = spaceOf(req);
   if (space) res.locals.siteSpace = space;
   else if (req.mk.site && Number.isInteger(req.mk.siteId) && req.mk.site.id === req.mk.siteId) res.locals.siteCandidate = describe(req, req.mk.site);
+  // Écran historique du site principal (/marketing/pages, /site-web/articles…) sans site vérifié : il s'affiche dans le cadre DU PRINCIPAL (même menu que les autres sites), jamais dans un menu « central » complet
+  else if (!req.mk.siteOnly && req.mk.siteId === null) res.locals.principalFrame = { navOnly: true, siteId: null, principal: true, base: `${BASE}/principal`, name: "Site principal", status: "active", deleted: false, slug: null, listHref: listHref(req) };
   const m = /^\/site-web\/sites\/(\d{1,12})\/([a-z-]+)(?:\/([a-z0-9-]+))?\/?$/.exec(req.path);
   if (!m || !Object.hasOwn(nav.DELEGATED, m[2]) || (req.method !== "GET" && req.method !== "HEAD")) return next();
   if (m[3] !== undefined && !(Object.hasOwn(nav.NESTED, m[2]) && nav.NESTED[m[2]].includes(m[3]))) return next(); // sous-page hors de la liste fermée : jamais déléguée

@@ -346,7 +346,7 @@ module.exports = () => {
     };
     res.set("Cache-Control", "no-store");
     const { ICONS } = require("../../utils/icons");
-    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? pagesHome(page.site_id) : null, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
+    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? pagesHome(page.site_id) : null, sitesHome: req.mk.siteOnly ? "/marketing/site-web/mes-sites" : "/marketing/site-web/sites", boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   };
   // ---------- IA Kolakisa : l'IA PROPOSE, l'éditeur applique (une étape d'historique) — rien n'est enregistré ici ----------
   const IA_STATUS = { not_configured: 503, quota: 429, rate: 429, conflict: 409, busy: 429 };

@@ -16,7 +16,8 @@ describe("C1 — une seule définition, deux présentations", () => {
     assert.equal(nav.principalSections, nav.projectSections);
   });
   test("mêmes groupes (clé, libellé, icône), dans le même ordre ; seul « Marketing du site » s'ajoute, avant Outils — dans les deux présentations", () => {
-    const reg = nav.SECTIONS.map((s) => [s.key, s.label, s.icon]);
+    // « Mes sites » (centralOnly) n'est PAS une rubrique du menu d'un espace : il est le gestionnaire central
+    const reg = nav.SECTIONS.filter((s) => !s.centralOnly).map((s) => [s.key, s.label, s.icon]);
     for (const space of [site, principal]) {
       const got = nav.projectSections(space);
       assert.deepEqual(got.filter((g) => g.key !== "marketing").map((g) => [g.key, g.label, g.icon]), reg, space.principal ? "principal" : "site");
@@ -25,7 +26,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   });
   test("mêmes sous-entrées (clés), mêmes libellés, même ordre : le site = le registre − l'administration centrale (+ Composants)", () => {
     const sg = nav.projectSections(site);
-    for (const reg of nav.SECTIONS) {
+    for (const reg of nav.SECTIONS.filter((s) => !s.centralOnly)) {
       const g = sg.find((x) => x.key === reg.key);
       const expected = reg.items.filter((i) => !CENTRAL.includes(i.key));
       const got = g.items.filter((i) => !EXTENSIONS.includes(i.key));
@@ -38,14 +39,17 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("le principal : toutes les entrées du registre, libellés et adresses historiques inchangés (66 + Composants + 10 Marketing)", () => {
     const pg = nav.projectSections(principal);
     const items = pg.flatMap((g) => g.items);
-    for (const reg of nav.ALL) { const got = items.find((i) => i.key === reg.key); assert.ok(got, reg.key); assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); assert.equal(got.permission, reg.permission); }
+    for (const reg of nav.ALL.filter((i) => i.key !== "sites")) { const got = items.find((i) => i.key === reg.key); assert.ok(got, reg.key); assert.equal(got.permission, reg.permission);
+      // seule différence : dans son espace, le principal a le même « Tableau de bord » que les autres sites ; « Mes sites » n'est pas une entrée d'espace
+      if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
+    assert.ok(!items.some((i) => i.key === "sites"), "pas de « Mes sites » dans le menu du principal")
     assert.equal(nav.ALL.length, 66);
-    assert.equal(items.length, 66 + 1 + 10); // R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(items.length, 65 + 1 + 10); // 65 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("les trois fonctions centrales n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);
     for (const k of CENTRAL) assert.ok(!keys.includes(k), k);
-    assert.deepEqual(registryKeys.filter((k) => !keys.includes(k)), CENTRAL);
+    assert.deepEqual(registryKeys.filter((k) => !keys.includes(k)), ["sites", ...CENTRAL], "« Mes sites » (gestionnaire central) + les fonctions centrales");
   });
   test("les clés d'un site sont celles du registre (plus Composants et le groupe Marketing) : pas de clé inventée", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items.map((i) => i.key));
@@ -66,7 +70,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("exactement les écrans dont l'isolation est démontrée sont ouverts ; tout le reste est grisé", () => {
     const items = nav.projectSections(site).flatMap((g) => g.items).filter((i) => registryKeys.includes(i.key));
     const live = items.filter((i) => !i.disabled).map((i) => i.key).sort();
-    assert.deepEqual(live, ["apparence", "apparence/en-tete", "apparence/menus", "apparence/pied-de-page", "articles", "articles/ajouter", "articles/auteurs", "articles/brouillons", "articles/categories", "articles/corbeille", "articles/etiquettes", "articles/programmes", "articles/publies", "commentaires", "commentaires/approuves", "commentaires/corbeille", "commentaires/en-attente", "commentaires/indesirables", "landing", "mediatheque", "navigation", "outils", "pagetests", "parametres", "redirections", "seo", "seo/404", "sitedash", "sites", "utilisateurs"].sort()); // R8 lot 6C : + SEO du site et erreurs 404 ; R8 lot 2 : + médias, articles, commentaires (isolation R5/R6)
+    assert.deepEqual(live, ["apparence", "apparence/en-tete", "apparence/menus", "apparence/pied-de-page", "articles", "articles/ajouter", "articles/auteurs", "articles/brouillons", "articles/categories", "articles/corbeille", "articles/etiquettes", "articles/programmes", "articles/publies", "commentaires", "commentaires/approuves", "commentaires/corbeille", "commentaires/en-attente", "commentaires/indesirables", "landing", "mediatheque", "navigation", "outils", "pagetests", "parametres", "redirections", "seo", "seo/404", "sitedash", "utilisateurs"].sort()); // R8 lot 6C : + SEO du site et erreurs 404 ; R8 lot 2 : + médias, articles, commentaires (isolation R5/R6)
     for (const i of items.filter((x) => x.disabled)) { assert.equal(i.href, null, i.key); assert.equal(i.status, "preview", i.key); assert.ok(i.phase, `${i.key} : lot annoncé`); }
     for (const k of ["corbeille", "seo/meta", "apparence/templates", "utilisateurs/roles", "outils/importer", "parametres/lecture"]) assert.equal(items.find((i) => i.key === k).disabled, true, k);
   });

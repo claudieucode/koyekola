@@ -54,9 +54,9 @@ describe("1 — le menu d'un site est la projection du registre", () => {
   test("les 14 groupes du registre, dans l'ordre, plus « Marketing du site » avant Outils", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
     const labels = topLabels(html);
-    const expected = ["Mes sites", "Tableau de bord", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
+    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
     assert.deepEqual(labels, expected);
-    assert.equal(nav.SECTIONS.length, 14, "le registre compte 14 groupes");
+    assert.equal(nav.SECTIONS.length, 14, "le registre compte 14 groupes (dont « Mes sites », réservé au gestionnaire central)");
   });
   test("C1 : une entrée pas encore ouverte est visible, grisée « Bientôt », SANS lien ; son ancienne adresse n'affiche ni donnée ni action", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
@@ -208,11 +208,12 @@ describe("7 — site principal et régressions", () => {
   test("l'espace du site principal garde le menu COMPLET du registre (toutes les entrées, adresses historiques)", async () => {
     const html = (await boss.get(`${PR}/tableau-de-bord`)).text;
     const links = new Set(navLinks(html));
-    for (const it of nav.ALL) assert.ok(links.has(it.href), `entrée du registre absente de l'espace principal : ${it.label} (${it.href})`);
+    for (const it of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(links.has(it.href), `entrée du registre absente de l'espace principal : ${it.label} (${it.href})`);
+    assert.ok(links.has(`${PR}/tableau-de-bord`), "le tableau de bord du principal est celui de son espace"); assert.ok(!links.has(`${SP}`), "pas de « Mes sites » dans le menu d'un espace");
     assert.ok(hasBanner(html, "Site principal"));
   });
   test("les 66 entrées du menu du principal répondent comme avant (200) avec leurs adresses historiques", async () => {
-    for (const it of nav.ALL) { const r = await boss.get(it.href); assert.equal(r.status, 200, `${it.label} (${it.href})`); assert.ok(!/mk-site-banner/.test(r.text), `${it.href} : pas de cadre de site`); }
+    for (const it of nav.ALL) { const r = await boss.get(it.href); assert.equal(r.status, 200, `${it.label} (${it.href})`); assert.ok(!/mk-site-banner/.test(r.text), `${it.href} : pas de bandeau de site`); }
   });
   test("les écrans partagés servis dans l'espace du principal restent leurs écrans historiques", async () => {
     for (const d of DELEGATED) { const r = await boss.get(`${PR}/${d.mod}`); assert.ok([200, 302, 404].includes(r.status), d.mod); }

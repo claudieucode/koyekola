@@ -13,9 +13,9 @@ const leaf = (key, label, href, extra = {}) => ({ key, label, href, status: "liv
 // Les clés « sitedash », « sites », « landing » et « pagetests » sont celles que passent déjà les écrans existants
 // (tableau de bord, sites, pages, tests A/B) : ils entrent dans la coque CMS sans changer.
 const SECTIONS = [
-  { key: "sites", label: "Mes sites", icon: "globe", items: [leaf("sites", "Mes sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
-  // centralHidden : le tableau de bord du principal est celui de SON espace (Mes sites → Ouvrir) ; le menu central n'en fait pas une entrée parallèle
-  { key: "dashboard", label: "Site principal", icon: "activity", centralHidden: true, items: [leaf("sitedash", "Tableau de bord du site principal", BASE)] },
+  // centralOnly : « Mes sites » est l'unique rubrique du gestionnaire central ; elle n'est PAS une entrée du menu d'un site (le retour se fait par « Retour à Mes sites » dans l'en-tête du site)
+  { key: "sites", label: "Mes sites", icon: "globe", centralOnly: true, items: [leaf("sites", "Mes sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
+  { key: "dashboard", label: "Site principal", icon: "activity", items: [leaf("sitedash", "Tableau de bord du site principal", BASE)] },
   { key: "pages", label: "Pages", icon: "layout", items: [leaf("landing", "Pages", "/marketing/pages", { primary: { label: "Ajouter une page", href: "/marketing/pages#nouvelle", permission: "forms.write" } })] },
   {
     key: "articles", label: "Articles", icon: "fileText", items: [
@@ -128,7 +128,7 @@ function buildCmsNav({ can, active, space = null }) {
   if (!current) return null;
   const sections = [];
   for (const s of SECTIONS) {
-    if (s.centralHidden) continue;
+    if (!s.centralOnly) continue; // gestionnaire central : seulement la gestion des sites ; le contenu (pages, articles…) est celui d'UN site, dans son espace
     const items = s.items.filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === active }));
     if (!items.length) continue;
     sections.push({ key: s.key, label: s.label, icon: s.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });
@@ -294,7 +294,8 @@ function marketingGroup(space) {
 // Une entrée du registre vue depuis un espace : { key, label, href, status, permission, reg, alias?, disabled?, phase?, primary? } — ou null (central)
 function projectItem(item, group, space) {
   const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
-  if (space.principal) return { ...item, ...base };
+  // Dans son espace, le principal a le même « Tableau de bord » que tout autre site, à l'adresse de SON espace
+  if (space.principal) return item.key === "sitedash" ? { ...item, ...base, label: "Tableau de bord", href: `${space.base}/tableau-de-bord` } : { ...item, ...base };
   const a = ABILITY[item.key];
   if (a && a.mode === "central") return null;
   if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
@@ -312,6 +313,7 @@ function projectItem(item, group, space) {
 function projectSections(space) {
   const out = [];
   for (const s of SECTIONS) {
+    if (s.centralOnly) continue;
     if (s.key === "outils") out.push(marketingGroup(space));
     const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
     if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages" });

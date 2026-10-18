@@ -12,5 +12,5 @@
     <% if (siteSpace.slug) { %><span class="mk-sub"><%= siteSpace.slug %></span><% } %>
   </div>
   <span class="mk-status <%= stateCls %>"><%= siteSpace.principal ? "Site principal" : stateLabel %></span>
-  <a class="btn btn-ghost btn-sm" href="/marketing/site-web/sites"><%- icon("arrowLeft", { size: 14 }) %> Mes sites</a>
+  <a class="btn btn-ghost btn-sm mk-site-back" href="<%= siteSpace.listHref || "/marketing/site-web/sites" %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a>
 </section>

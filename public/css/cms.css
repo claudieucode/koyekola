@@ -327,6 +327,7 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label { display: none; }
 
 /* Espace d'un site (palier 3, B1) : bandeau d'identité + formulaire de création */
 .mk-site-banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 16px; padding: 10px 14px; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border); border-left: 4px solid var(--accent, #7a1f3d); border-radius: 6px; }
+.mk-site-return { margin: 0 0 12px; }
 .mk-site-banner-icon { display: inline-flex; color: var(--accent, #7a1f3d); }
 .mk-site-banner-text { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; flex: 1 1 220px; min-width: 0; }
 .mk-site-banner-label { font-size: 0.8rem; color: var(--mk-muted, #5b6470); }
