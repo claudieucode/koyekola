@@ -1,38 +1,48 @@
 # Palier 10 — phase 2 : suite complète isolée
 
 ## Conclusion
-**EXÉCUTION BLOQUÉE — ENVIRONNEMENT NON ISOLÉ.** La suite complète n'a **pas** été lancée dans cette phase. Aucun résultat nouveau n'est annoncé.
 
-## Vérifications faites (2026-10-12, ~22 h 30 – 23 h 20 UTC)
-- Branche `theme-builder-brouillon-parties`, HEAD `dfcc132` (présent), arbre propre. Rapport de la phase 1 relu.
-- **Processus de test concurrents** (relevés `pgrep -f "node --test"` + répertoire de travail de chaque processus), aucun n'est à moi :
-  | Relevé | Sessions actives |
-  |---|---|
-  | début | `KOYEKOLA-deploy` (suite complète, 7 min), un dossier temporaire `…/scratchpad/p8/final` (suite complète, 30 s) |
-  | +10 min | + `KOYEKOLA-accueil` |
-  | +20 min | `KOYEKOLA-deploy` (28 min, sous-processus de 7 min), `KOYEKOLA-accueil` (3 processus), le dossier temporaire `p8/final` (21 min) — **7 processus de test** |
-  La charge machine restait de 10 à 13 (contre 8 à 83 pendant la première exécution), ce qui montre que ces sessions travaillent en continu.
-- Demande d'arrêt coordonné faite à l'utilisateur ; réponse : « vous les arrêtez, je lance ensuite ». Pendant ~20 min de surveillance, **aucune de ces sessions ne s'est arrêtée**. Je n'ai interrompu aucun processus qui ne m'appartient pas.
+**SUITE EXÉCUTÉE AVEC ÉCHECS À ANALYSER** — 5 019 tests, 5 017 réussis, **2 échecs**, 0 ignoré, 0 annulé. Les 2 échecs sont dans un seul fichier (`editeur-menu-navigateur`), ne se reproduisent pas (rejeux seuls et sous charge, sur HEAD comme sur `738322d`) et leur cause n'est **pas démontrée**. Aucun fichier de production n'a été modifié dans cette phase.
 
-## Deuxième tentative (2026-10-13, 12:15 → 12:41 UTC) — interrompue
+## Exécution (commit testé : `d8a4daa`, branche `theme-builder-brouillon-parties`, arbre propre)
 
-- Avant le lancement (12:15 UTC) : aucun processus `node --test`, charge ≈ 2,7. Lancement de `npm test` (concurrence 1, `NODE_PATH` avec jsdom, playwright-core et sharp), avec échantillonneur de chevauchement (une mesure par minute).
-- Mesures : 0 autre suite de 12:15 à 12:32, puis **la session `KOYEKOLA-accueil` a relancé des tests à 12:33**, puis une session du dossier temporaire `…/p9/final` à 12:40 (jusqu'à 5 processus de test étrangers, charge montée à 7,7).
-- Décision : j'ai arrêté **ma propre** suite à 12:41 (uniquement les processus de dossier `KOYEKOLA-noyau` plus mes scripts) plutôt que de produire un résultat non isolé. Aucun processus d'une autre session n'a été touché.
-- Avancement au moment de l'arrêt : suite à ~25 minutes, **0 échec** sur les fichiers déjà passés, mais **résultat non retenu** (non terminé, non isolé).
-- Conclusion inchangée : **EXÉCUTION BLOQUÉE — ENVIRONNEMENT NON ISOLÉ**.
+- Commande : `NODE_PATH=<jsdom>:<playwright-core 1.64>:<sharp 0.35.5> npm test` (= `node --test --test-concurrency=1 "tests/*.test.js"`, 395 fichiers).
+- Début 2026-10-13 20:54:38 UTC, fin 22:41:12 UTC (1 h 47). Chrome 150 réel, Node 24.20.0.
+- **Isolation** : 107 mesures (une par minute) = 0 processus de test d'une autre session, du premier au dernier relevé. La condition « isolé » est remplie. (Deux tentatives précédentes, abandonnées pour chevauchement, sont décrites plus bas.)
+- Bilan Node : tests 5 019 · suites 1 051 · réussis 5 017 · échoués 2 · ignorés 0 · annulés 0 · durée 6 392 s.
+- Aucun test ignoré : donc les parcours navigateur et les 5 fichiers `sharp` ont réellement tourné (au lieu de 3 ignorés + 6 blocs `sharp` ignorés lors de l'essai précédent).
 
-## Préparation prête (étape B, sans exécution lourde)
-- `sharp 0.35.5` fonctionnel dans un dossier hors projet ; les 5 fichiers concernés (46 tests) y ont déjà réussi à la phase 1. Méthode prévue par le dépôt : `sharp` est une dépendance **optionnelle** de `package.json`, absente du `node_modules` partagé ; je ne modifie ni `package.json`, ni le verrou, ni les dépendances partagées. On l'ajoute au `NODE_PATH`.
-- Dépendances jsdom et playwright-core présentes hors projet. 395 fichiers de tests présents.
-- **Commande prévue (à lancer dès l'isolation obtenue) :**
-  `cd /Users/imac/ClaudeProjects/KOYEKOLA-noyau && NODE_PATH=<dossier jsdom>/node_modules:<dossier playwright>/node_modules:<dossier sharp>/node_modules npm test` — soit `node --test --test-concurrency=1 "tests/*.test.js"`. Les chemins existent dans le dossier temporaire de la session (`scratchpad/jsd`, `bench`, `sharptest`).
+## Les 2 échecs
 
-## Écarts par rapport à l'exécution précédente
-Aucun résultat à comparer : la phase 1 reste la dernière exécution complète (4 996 tests, 4 990 réussis, 3 échoués, 3 ignorés ; échecs depuis analysés et corrigés au niveau des tests).
+Fichier `tests/editeur-menu-navigateur.test.js` (réglages du menu de navigation, parcours Chrome) :
+- test 6 « réordonner (boutons puis glisser-déposer) » : après le glisser-déposer de « Contact », le brouillon n'a pas pris le nouvel ordre dans les 12 s (`Délai dépassé : enregistré : Contact glissé`) ;
+- test 7 « sous-menu » : même type de délai (`Blog sous Contact`), à la suite de l'état laissé par le test 6.
+Les tests 1 à 5 et 8 à 12 passent.
 
-## Reste à faire une fois isolé
-Suite complète avec `sharp` (attendu : 46 tests de plus exécutés), puis analyse de chaque échec ; vérifier spécifiquement : parcours en-tête / pied (brouillon, aperçu, « Mettre à jour »), tests SMS et e-mail corrigés, test de fluidité (seuil inchangé ; une réussite unique ne le déclare pas résolu), tests `sharp`.
+Analyse (faite le 2026-10-18) :
+- Rejeu seul sur HEAD : 3 fois 12/12 ; sur `738322d` (worktree détaché, supprimé ensuite) : 3 fois 12/12.
+- Rejeu sous 12 boucles CPU (les miennes), alterné HEAD / `738322d` : 6 fois chacun, **12/12 réussis partout**.
+- Le fichier de test n'a pas changé depuis `738322d`, mais `public/js/page-builder.js` et `src/marketing/pages/index.js` ont changé (paliers 9 et 9.1) : un lien avec ces changements **ne peut pas être écarté**, ni démontré. Le geste en cause est un glisser-déposer natif (`dragTo`) ; ce fichier n'avait pas échoué lors de la suite précédente sur `4189ed9`.
+- Classement : **non reproduit, cause non démontrée** (test de geste instable, ou régression rare). Rien n'a été corrigé en production, rien n'a été assoupli dans le test.
+- Pour trancher : rejouer ce fichier un grand nombre de fois (≥ 30) sur HEAD et sur `738322d`, ou refaire la suite complète et voir si l'échec revient au même endroit.
+
+## Vérifications demandées
+
+- **En-tête / pied : brouillon, aperçu, publication** : les fichiers `theme-builder-*` et les tests « en-tête et pied de page » font partie des 5 017 réussis (0 échec, 0 ignoré).
+- **SMS** (`marketing-sms-parcours`) et **e-mail** (course `sent` / `completed`) : réussis dans cette suite isolée. Une réussite unique ne prouve pas la stabilité ; l'e-mail avait déjà été vérifié sous 12 boucles CPU en phase 1.
+- **Fluidité 300 éléments** : réussie ; seuil **inchangé**. Une seule réussite ne la déclare pas résolue : les tâches longues natives des widgets variés (52–263 ms) restent ouvertes.
+- **`sharp`** : 5 fichiers exécutés réellement (0 ignoré).
+- `refonte-design` (classe `mk-hint`) et `marketing-interface-5` : réussis.
+
+## Tentatives précédentes (abandonnées)
+
+- 2026-10-12 : non lancée, trois autres sessions faisaient tourner leurs suites (commit `d8a4daa`).
+- 2026-10-13 12:15–12:41 UTC : suite lancée puis arrêtée par moi (processus du dossier `KOYEKOLA-noyau` seulement) quand `KOYEKOLA-accueil` puis `p9/final` ont lancé des tests ; aucun processus d'une autre session touché.
+
+## Outils / environnement
+
+- Le dossier temporaire a été partiellement nettoyé par macOS entre-temps (fichiers de `playwright-core` effacés) ; réinstallé hors du projet (`bench2`). `package.json`, verrou et `node_modules` du projet : non touchés.
 
 ## Git
-Aucun push, aucune fusion, aucun déploiement. Seul ce document est ajouté.
+
+Commits locaux uniquement. Aucun push, fusion ni déploiement.
