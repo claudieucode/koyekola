@@ -60,4 +60,23 @@ describe("recette R8 sur copie", () => {
     const e = new DatabaseSync(file, { readOnly: true });
     assert.ok(!e.prepare("SELECT 1 x FROM pragma_table_info('mk_imports') WHERE name = 'site_id'").get()); assert.equal(e.prepare("SELECT COUNT(*) n FROM seo_redirects").get().n, 1); assert.equal(e.prepare("SELECT COUNT(*) n FROM mk_imports").get().n, 1); e.close();
   });
+  test("empreintes : lecture seule, sortie jamais écrasée ; deux copies d'un même état ont la même empreinte, une migration la change ; comparaison en code de sortie", () => {
+    const c1 = make("copie-e1.db"), c2 = path.join(dir, "copie-e2.db"); fs.copyFileSync(c1, c2);
+    const before = sha(c1); const e1 = path.join(dir, "e1.json"), e2 = path.join(dir, "e2.json"), e3 = path.join(dir, "e3.json");
+    assert.equal(run("empreinte", c1, e1, "--copie-confirmee").status, 0); assert.equal(sha(c1), before, "aucune écriture");
+    assert.notEqual(run("empreinte", c1, e1, "--copie-confirmee").status, 0, "sortie existante : refus"); assert.match(run("empreinte", c1, e1, "--copie-confirmee").stderr, /écraser/);
+    assert.equal(run("empreinte", c2, e2, "--copie-confirmee").status, 0);
+    const same = run("comparer-empreintes", e1, e2); assert.equal(same.status, 0); assert.match(same.stdout, /identiques/);
+    assert.notEqual(run("empreinte", path.join(dir, "KOYEKOLA.db"), path.join(dir, "x.json"), "--copie-confirmee").status, 0, "mêmes garde-fous de copie");
+    assert.equal(run("migrer", c2, "--copie-confirmee").status, 0);
+    assert.equal(run("empreinte", c2, e3, "--copie-confirmee").status, 0);
+    const diff = run("comparer-empreintes", e1, e3); assert.equal(diff.status, 1); assert.match(diff.stdout, /schéma différent/); assert.match(diff.stdout, /seo_site_settings : absente → 0/);
+    assert.equal(run("comparer-empreintes", e1).status, 2);
+  });
+  test("migrer compare TOUTES les tables et contrôle l'intégrité : une clé étrangère cassée dans la copie arrête (code 1) ; retour arrière vérifié affiche sa conclusion", () => {
+    const bad = make("copie-cassee.db"); const d = new DatabaseSync(bad); d.exec("PRAGMA foreign_keys = OFF"); d.exec("INSERT INTO mk_imports (organization_id, filename) VALUES (99, 'orphelin.csv')"); d.close();
+    const r = run("migrer", bad, "--copie-confirmee"); assert.equal(r.status, 1, r.stdout + r.stderr); assert.match(r.stdout, /foreign_key_check/); assert.match(r.stdout, /ARRÊT/);
+    const ok = make("copie-saine.db"); const m = run("migrer", ok, "--copie-confirmee"); assert.equal(m.status, 0, m.stdout + m.stderr); assert.match(m.stdout, /tables comparées/); assert.match(m.stdout, /intégrité et clés étrangères ok/);
+    const back = run("retour", ok, "--copie-confirmee"); assert.equal(back.status, 0, back.stdout + back.stderr); assert.match(back.stdout, /Retour arrière vérifié/);
+  });
 });

@@ -3,7 +3,11 @@
 //   node scripts/recette-r8-copie.js prerequis <copie.db> --copie-confirmee     (LECTURE SEULE : préconditions et risques)
 //   node scripts/recette-r8-copie.js migrer    <copie.db> --copie-confirmee     (applique 090 et 091 à la COPIE, avec la sauvegarde automatique du moteur de migrations)
 //   node scripts/recette-r8-copie.js retour    <copie.db> --copie-confirmee     (joue les retours arrière 091 puis 090 sur la COPIE)
-// Garde-fous : « --copie-confirmee » obligatoire ; refuse la base vivante de l'application (DATA_DIR / data/…) ; refuse un fichier qui n'existe pas ; ne crée aucune base ; code de sortie ≠ 0 au moindre blocage.
+//   node scripts/recette-r8-copie.js empreinte <copie.db> <sortie.json> --copie-confirmee   (LECTURE SEULE : empreinte logique = schéma + nombre de lignes par table ; sortie jamais écrasée)
+//   node scripts/recette-r8-copie.js comparer-empreintes <a.json> <b.json>       (compare deux empreintes ; code 1 s'il y a une différence)
+// Garde-fous : « --copie-confirmee » obligatoire ; refuse la base vivante de l'application (DATA_DIR / data/…), un nom de fichier qui ne dit pas « copie / recette / jetable / essai », un fichier -wal/-shm non vide (base ouverte),
+// un fichier du dossier de données de l'application, un fichier inexistant ; ne crée aucune base ; code de sortie ≠ 0 au moindre blocage.
+// LIMITE : aucun de ces contrôles ne PROUVE qu'un fichier est une copie (un nom peut mentir) — la preuve d'identité vient de scripts/copie-base-audit.js (comparaison source/copie au moment de la copie) et de la vérification humaine décrite dans la procédure.
 const fs = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
@@ -14,8 +18,18 @@ const err = (t) => fs.writeSync(2, `${t}\n`);
 const [cmd, fileArg] = process.argv.slice(2);
 const flags = process.argv.slice(4);
 const die = (msg, code = 2) => { err(msg); process.exit(code); };
-if (!["prerequis", "migrer", "retour"].includes(cmd) || !fileArg) die("Usage : node scripts/recette-r8-copie.js <prerequis|migrer|retour> <copie.db> --copie-confirmee");
-if (!flags.includes("--copie-confirmee")) die("Refus : ajoutez --copie-confirmee pour certifier que ce fichier est une COPIE jetable (jamais la base vivante).");
+if (cmd === "comparer-empreintes") {
+  const [a, b] = [process.argv[3], process.argv[4]];
+  if (!a || !b) die("Usage : node scripts/recette-r8-copie.js comparer-empreintes <a.json> <b.json>");
+  const A = JSON.parse(fs.readFileSync(a, "utf8")), B = JSON.parse(fs.readFileSync(b, "utf8"));
+  const diffs = [];
+  if (A.schema !== B.schema) diffs.push(`schéma différent (${A.schema.slice(0, 12)} ≠ ${B.schema.slice(0, 12)})`);
+  for (const t of new Set([...Object.keys(A.tables), ...Object.keys(B.tables)])) if (A.tables[t] !== B.tables[t]) diffs.push(`${t} : ${A.tables[t] ?? "absente"} → ${B.tables[t] ?? "absente"}`);
+  out(diffs.length ? `${diffs.length} différence(s) :\n  ${diffs.join("\n  ")}` : "Empreintes identiques (schéma et nombre de lignes de chaque table).");
+  process.exit(diffs.length ? 1 : 0);
+}
+if (!["prerequis", "migrer", "retour", "empreinte"].includes(cmd) || !fileArg) die("Usage : node scripts/recette-r8-copie.js <prerequis|migrer|retour|empreinte> <copie.db> [sortie.json] --copie-confirmee");
+if (!process.argv.includes("--copie-confirmee")) die("Refus : ajoutez --copie-confirmee pour certifier que ce fichier est une COPIE jetable (jamais la base vivante).");
 const file = path.resolve(fileArg);
 if (!fs.existsSync(file)) die(`Fichier introuvable : ${file}`);
 const live = require("../src/config/paths").dbFile;
@@ -29,12 +43,26 @@ if (file === liveDir || file.startsWith(liveDir + path.sep)) die(`Refus : le fic
 
 const DOWN = path.join(__dirname, "migrations-retour-arriere");
 const MIGRATIONS = path.join(__dirname, "..", "src", "marketing", "migrations");
-const db = new DatabaseSync(file, { readOnly: cmd === "prerequis" });
+const db = new DatabaseSync(file, { readOnly: cmd === "prerequis" || cmd === "empreinte" });
 const one = (sql, ...a) => db.prepare(sql).get(...a);
 const all = (sql, ...a) => db.prepare(sql).all(...a);
 const has = (t) => Boolean(one("SELECT 1 x FROM sqlite_master WHERE type='table' AND name = ?", t));
 const cols = (t) => (has(t) ? all(`SELECT name FROM pragma_table_info('${t}')`).map((c) => c.name) : []);
 const applied = () => (has("schema_migrations") ? all("SELECT version FROM schema_migrations WHERE scope = 'marketing'").map((r) => r.version) : []);
+
+const SYS = /^(sqlite_|schema_migrations$)/;
+const counts = () => Object.fromEntries(all("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").map((t) => [t.name, one(`SELECT COUNT(*) n FROM "${t.name}"`).n]));
+const schemaHash = () => require("node:crypto").createHash("sha256").update(JSON.stringify(all("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name"))).digest("hex");
+// Contrôles d'intégrité après une opération sur la copie : intégrité SQLite, clés étrangères
+const integrityProblems = () => { const p = []; if (Object.values(one("PRAGMA integrity_check"))[0] !== "ok") p.push("integrity_check ≠ ok"); const fk = all("PRAGMA foreign_key_check"); if (fk.length) p.push(`foreign_key_check : ${fk.length} anomalie(s)`); return p; };
+
+if (cmd === "empreinte") {
+  const target = process.argv[4]; if (!target || target.startsWith("--")) die("Usage : empreinte <copie.db> <sortie.json> --copie-confirmee");
+  const dest = path.resolve(target); if (fs.existsSync(dest)) die(`Refus d'écraser : ${dest} existe déjà.`);
+  const e = { schema: schemaHash(), tables: counts() }; fs.writeFileSync(dest, JSON.stringify(e, null, 1));
+  out(`Empreinte : schéma ${e.schema.slice(0, 12)} · ${Object.keys(e.tables).length} tables · ${Object.values(e.tables).reduce((x, y) => x + y, 0)} lignes → ${dest}`);
+  process.exit(0);
+}
 
 if (cmd === "prerequis") {
   const blocking = [], warnings = [], info = [];
@@ -66,17 +94,25 @@ if (cmd === "prerequis") {
 
 if (cmd === "migrer") {
   const { migrate } = require("../src/marketing/db/migrate");
-  const before = { redirects: has("seo_redirects") ? one("SELECT COUNT(*) n FROM seo_redirects").n : 0, n404: has("seo_404") ? one("SELECT COUNT(*) n FROM seo_404").n : 0, imports: one("SELECT COUNT(*) n FROM mk_imports").n };
+  const before = counts();
   const r = migrate(db, { dir: MIGRATIONS, dbPath: file, backupDir: path.join(path.dirname(file), "sauvegardes-recette"), log: console });
-  const after = { redirects: one("SELECT COUNT(*) n FROM seo_redirects").n, n404: one("SELECT COUNT(*) n FROM seo_404").n, imports: one("SELECT COUNT(*) n FROM mk_imports").n };
-  const same = JSON.stringify(before) === JSON.stringify(after);
-  out(`Appliquées : ${r.applied.join(", ") || "aucune"} · lignes avant ${JSON.stringify(before)} · après ${JSON.stringify(after)} · ${same ? "identiques" : "ÉCART — ARRÊT"}`);
-  process.exit(same ? 0 : 1);
+  const after = counts();
+  // TOUTES les tables d'avant doivent garder exactement leur nombre de lignes (seules les tables créées par la migration s'ajoutent)
+  const ecarts = Object.keys(before).filter((t) => !SYS.test(t) && before[t] !== after[t]).map((t) => `${t} : ${before[t]} → ${after[t] ?? "absente"}`);
+  const problems = [...integrityProblems(), ...ecarts.map((x) => `écart de lignes ${x}`)];
+  out(`Appliquées : ${r.applied.join(", ") || "aucune"} · ${Object.keys(before).length} tables comparées · ${problems.length ? `PROBLÈME(S) — ARRÊT :\n  ${problems.join("\n  ")}` : "lignes identiques, intégrité et clés étrangères ok"}`);
+  process.exit(problems.length ? 1 : 0);
 }
 
 // retour
+const beforeRetour = counts();
 for (const f of ["091_imports_par_site.down.sql", "090_seo_par_site.down.sql"]) {
   const v = f.slice(0, 3);
   if (!applied().includes(v)) { out(`${v} : non appliquée, rien à défaire`); continue; }
   try { db.exec(fs.readFileSync(path.join(DOWN, f), "utf8")); out(`${v} : retour arrière effectué`); } catch (e) { try { db.exec("ROLLBACK"); } catch { /* aucune transaction ouverte */ } die(`${v} : retour arrière REFUSÉ (${e.message}) — rien n'a été modifié pour cette migration`, 1); }
 }
+const afterRetour = counts();
+const lost = Object.keys(beforeRetour).filter((t) => !SYS.test(t) && t !== "seo_site_settings" && beforeRetour[t] !== afterRetour[t]).map((t) => `${t} : ${beforeRetour[t]} → ${afterRetour[t] ?? "absente"}`);
+const problems2 = [...integrityProblems(), ...lost.map((x) => `ligne(s) perdue(s) ${x}`)];
+out(problems2.length ? `PROBLÈME(S) après retour arrière — ARRÊT :\n  ${problems2.join("\n  ")}` : "Retour arrière vérifié : lignes conservées (hors réglages propres aux sites), intégrité et clés étrangères ok.");
+process.exitCode = problems2.length ? 1 : 0;
