@@ -41,9 +41,10 @@ describe("lanceur SSH v2 (faux serveur local)", () => {
 
   test("mode sauvegarde : refusé sans confirmation ; avec elle, base cohérente + archive de uploads/ téléchargées, comptes et empreintes contrôlés, manifeste « non prouvée restaurable » ; la base vivante et uploads/ ne sont pas modifiés", () => {
     const up = path.join(srvHome, "koyekola-data", "uploads"); fs.mkdirSync(path.join(up, "videos"), { recursive: true }); for (const f of ["a.png", "b.txt", "videos/c.mp4"]) fs.writeFileSync(path.join(up, f), `contenu ${f}`);
-    const refus = run(["sauvegarde", "me@serveur"]); assert.notEqual(refus.status, 0); assert.match(refus.stderr, /--confirmer-sauvegarde/);
+    const refus = run(["sauvegarde", "me@serveur", "--migration-attendue", "089", "--sans-essai-restauration"]); assert.notEqual(refus.status, 0); assert.match(refus.stderr, /--confirmer-sauvegarde/);
     const liveBefore = fs.statSync(live).size, upBefore = fs.readdirSync(up).sort().join(",");
-    const r = run(["sauvegarde", "me@serveur", "--confirmer-sauvegarde"]); assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /Empreinte sha256 identique au serveur/); assert.match(r.stdout, /uploads : uploads\.tgz sha256 [0-9a-f]{64} · 3 fichier\(s\)/);
+    const wrongMig = run(["sauvegarde", "me@serveur", "--confirmer-sauvegarde", "--sans-essai-restauration"]); assert.notEqual(wrongMig.status, 0); assert.match(wrongMig.stderr, /n'est plus à la migration 071/); assert.ok(!fs.readdirSync(srvHome).some((x) => x.startsWith("RECETTE-R8-")), "rien créé sur le serveur si la précondition échoue");
+    const r = run(["sauvegarde", "me@serveur", "--confirmer-sauvegarde", "--migration-attendue", "089", "--sans-essai-restauration"]); assert.equal(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /Empreinte sha256 identique au serveur/); assert.match(r.stdout, /uploads : uploads\.tgz sha256 [0-9a-f]{64} · 3 fichier\(s\)/);
     const dirs = fs.readdirSync(home).filter((x) => x.startsWith("RECETTE-R8-")).sort(); const saved = dirs.map((d) => path.join(home, d)).find((d) => fs.existsSync(path.join(d, "MANIFESTE.txt")));
     assert.ok(saved, "dossier de sauvegarde local"); for (const f of ["copie-A.db", "RAPPORT-copie.json", "uploads.tgz", "MANIFESTE.txt"]) assert.ok(fs.existsSync(path.join(saved, f)), f);
     assert.match(fs.readFileSync(path.join(saved, "MANIFESTE.txt"), "utf8"), /NON PROUVÉE RESTAURABLE/); assert.equal(fs.readdirSync(up).sort().join(","), upBefore); assert.equal(fs.statSync(live).size, liveBefore);
