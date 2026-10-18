@@ -1626,7 +1626,7 @@
   }
   // Modèle de l'équipe inséré dans la page en cours : une copie de ses sections (nouveaux identifiants)
   function insertTemplate(t, target) {
-    api("GET", "/marketing/site-web/modeles/" + t.id + ".json").then(function (r) {
+    api("GET", "/marketing/site-web/modeles/" + t.id + ".json" + (PAGE.siteId ? "?site=" + PAGE.siteId : "")).then(function (r) {
       var secs = reIdAll(clone(r.template.sections)).map(function (s) { return markSection(s); });
       if (secs.some(function (s) { return s.type === "form"; }) && content.sections.some(function (s) { return s.type === "form"; })) { toast("Une page n'a qu'un formulaire d'inscription : ce modèle en contient un.", true); return; }
       ensureIds(secs);
@@ -8307,7 +8307,7 @@
   });
   function saveAsTemplate() {
     ask("Enregistrer comme modèle de page", [["name", "text", "Nom du modèle"], ["category", "text", "Catégorie (facultative)", true], ["description", "text", "Description (facultative)", true]], function (v) {
-      return saveNow().then(function () { return api("POST", "/marketing/site-web/modeles", { name: v.name, category: v.category, description: v.description, content: payload() }); }).then(function (r) {
+      return saveNow().then(function () { return api("POST", "/marketing/site-web/modeles", { name: v.name, category: v.category, description: v.description, content: payload(), siteId: PAGE.siteId || null }); }).then(function (r) {
         toast("Modèle « " + r.template.name + " » enregistré : il est proposé dans « Nouvelle page ».");
       }, apiFail);
     });

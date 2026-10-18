@@ -301,7 +301,7 @@ function createPage(ctx, { name, siteId = null, kind = "page", template = null, 
   assertSiteScope(ctx, siteId);
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
-  const mine = typeof template === "string" && /^mine:\d+$/.test(template) ? getPageTemplate(ctx, Number(template.slice(5))) : null;
+  const mine = typeof template === "string" && /^mine:\d+$/.test(template) ? getPageTemplate(ctx, Number(template.slice(5)), { siteId }) : null;
   const fromTemplate = mine ? mine.content.sections : template ? require("./templates").buildTemplate(ctx, template) : null;
   if (template && !fromTemplate) throw bad("Modèle de page inconnu.");
   const page = landing.createPage(ctx, { name, siteId });
@@ -964,36 +964,48 @@ function headerOverview(ctx, siteId) {
 }
 
 // ---------- Modèles de pages enregistrés par l'équipe ----------
-const userTemplate = (row) => (row ? { id: row.id, name: row.name, category: row.category, description: row.description, content: json(row.content, { sections: [] }), updatedAt: row.updated_at } : null);
-function listPageTemplates(ctx) {
+const userTemplate = (row) => (row ? { id: row.id, name: row.name, category: row.category, description: row.description, content: json(row.content, { sections: [] }), updatedAt: row.updated_at, siteId: row.site_id, shared: Boolean(row.shared) } : null);
+// Modèles enregistrés : PRIVÉS au site qui les a créés (site_id ; NULL = site principal). Seuls les modèles hérités d'avant l'isolation (shared = 1) restent communs.
+// siteId = site de la création de page en cours (null = site principal) : on ne voit jamais le modèle d'un autre site.
+function listPageTemplates(ctx, { siteId = null } = {}) {
   checkCtx(ctx);
-  return ctx.db.prepare("SELECT * FROM mk_page_templates WHERE organization_id = ? ORDER BY category COLLATE NOCASE, name COLLATE NOCASE").all(ctx.organizationId).map(userTemplate);
+  if (siteId !== null && !Number.isInteger(siteId)) return [];
+  return ctx.db.prepare("SELECT * FROM mk_page_templates WHERE organization_id = ? AND (shared = 1 OR site_id IS ?) ORDER BY category COLLATE NOCASE, name COLLATE NOCASE").all(ctx.organizationId, siteId).filter((r) => r.shared || inScope(ctx, r.site_id)).map(userTemplate);
 }
-function getPageTemplate(ctx, id) {
+function getPageTemplate(ctx, id, { siteId = null } = {}) {
   checkCtx(ctx);
-  return userTemplate(Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_page_templates WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null);
+  if (!Number.isInteger(id) || (siteId !== null && !Number.isInteger(siteId))) return null;
+  const row = ctx.db.prepare("SELECT * FROM mk_page_templates WHERE id = ? AND organization_id = ? AND (shared = 1 OR site_id IS ?)").get(id, ctx.organizationId, siteId);
+  return row && (row.shared || inScope(ctx, row.site_id)) ? userTemplate(row) : null;
 }
-// Enregistrer un contenu de page comme modèle (validé comme toute page ; un modèle du même nom est remplacé)
-function savePageTemplate(ctx, { name, category, description, content } = {}) {
+// Enregistrer un contenu de page comme modèle du site (validé comme toute page ; un modèle du même nom DU MÊME SITE est remplacé)
+function savePageTemplate(ctx, { name, category, description, content, siteId = null } = {}) {
   checkCtx(ctx);
+  assertSiteScope(ctx, siteId);
   const n = line(name, 80);
   if (!n) throw bad("Le nom du modèle est obligatoire.");
-  const clean = normalizeContent(ctx, { name: n }, content || {});
+  if (siteId !== null) requireSite(ctx, siteId, { active: true });
+  const clean = normalizeContent(ctx, { name: n, siteId }, content || {});
   const resolved = { ...clean, sections: resolveSections(ctx, clean.sections).map((sec) => { const { fromComponent: _f, ...rest } = sec; return rest; }) };
   if (!resolved.sections.length) throw bad("Le modèle est vide.");
   const cat = line(category, 60) || "Mes modèles", desc = line(description, 200);
-  ctx.db.prepare(`INSERT INTO mk_page_templates (organization_id, name, category, description, content, created_by) VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT (organization_id, name) DO UPDATE SET category = excluded.category, description = excluded.description, content = excluded.content, updated_at = datetime('now')`)
-    .run(ctx.organizationId, n, cat, desc, JSON.stringify(resolved), ctx.userId ?? null);
-  const row = ctx.db.prepare("SELECT * FROM mk_page_templates WHERE organization_id = ? AND name = ?").get(ctx.organizationId, n);
-  audit(ctx, "page_template.saved", "page_template", row.id, { name: n });
+  const same = ctx.db.prepare("SELECT id FROM mk_page_templates WHERE organization_id = ? AND site_id IS ? AND shared = 0 AND name = ?").get(ctx.organizationId, siteId, n);
+  let id;
+  if (same) { ctx.db.prepare("UPDATE mk_page_templates SET category = ?, description = ?, content = ?, updated_at = datetime('now') WHERE id = ?").run(cat, desc, JSON.stringify(resolved), same.id); id = same.id; }
+  else {
+    try { id = Number(ctx.db.prepare("INSERT INTO mk_page_templates (organization_id, site_id, shared, name, category, description, content, created_by) VALUES (?, ?, 0, ?, ?, ?, ?, ?)").run(ctx.organizationId, siteId, n, cat, desc, JSON.stringify(resolved), ctx.userId ?? null).lastInsertRowid); }
+    catch (e) { if (/UNIQUE/i.test(e.message)) throw new MarketingError("duplicate", "Un modèle porte déjà ce nom : choisissez un autre nom (un modèle d'un autre site n'est jamais remplacé)."); throw e; }
+  }
+  const row = ctx.db.prepare("SELECT * FROM mk_page_templates WHERE id = ?").get(id);
+  audit(ctx, "page_template.saved", "page_template", row.id, { name: n, siteId });
   return userTemplate(row);
 }
 function deletePageTemplate(ctx, id) {
-  const t = getPageTemplate(ctx, Number(id));
-  if (!t) throw new MarketingError("not_found", "Modèle introuvable.");
-  ctx.db.prepare("DELETE FROM mk_page_templates WHERE id = ?").run(t.id);
-  audit(ctx, "page_template.deleted", "page_template", t.id, { name: t.name });
+  checkCtx(ctx);
+  const row = Number.isInteger(id) ? ctx.db.prepare("SELECT * FROM mk_page_templates WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) : null;
+  if (!row || !(row.shared || inScope(ctx, row.site_id))) throw new MarketingError("not_found", "Modèle introuvable.");
+  ctx.db.prepare("DELETE FROM mk_page_templates WHERE id = ?").run(row.id);
+  audit(ctx, "page_template.deleted", "page_template", row.id, { name: row.name });
 }
 // Export : le contenu de travail d'une page, dans un format que l'import relit (et valide entièrement)
 const EXPORT_FORMAT = "kolakisa-page@1";

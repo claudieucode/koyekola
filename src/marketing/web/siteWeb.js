@@ -345,13 +345,14 @@ module.exports = () => {
       res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: b.name, section: b.section, global: typeof b.global === "boolean" ? b.global : undefined, siteId: b.siteId }), req.mk.ctx) });
     } catch (error) { jsonError(res, next, error); }
   });
-  // Modèles de pages de l'équipe (enregistrés depuis l'éditeur ; proposés à la création d'une page)
+  // Modèles de pages (enregistrés depuis l'éditeur ; proposés à la création d'une page) : PRIVÉS à leur site. Le site demandé (?site=) n'est qu'un sélecteur : l'accès à ce site est revérifié par le moteur (inScope)
+  const tplSite = (req) => { const v = req.query.site; return v === undefined || v === "" || v === "principal" ? null : (/^\d{1,12}$/.test(String(v)) ? Number(v) : -1); };
   router.get("/site-web/modeles.json", need("forms.read"), (req, res) => {
-    res.set("Cache-Control", "no-store").json({ templates: pages.listPageTemplates(req.mk.ctx).map(({ content, ...t }) => ({ ...t, sections: content.sections.length })) });
+    res.set("Cache-Control", "no-store").json({ templates: pages.listPageTemplates(req.mk.ctx, { siteId: tplSite(req) }).map(({ content, ...t }) => ({ ...t, sections: content.sections.length })) });
   });
   // Contenu d'un modèle de l'équipe (insertion dans la page en cours, depuis l'éditeur)
   router.get("/site-web/modeles/:id(\\d+).json", need("forms.read"), (req, res) => {
-    const t = pages.getPageTemplate(req.mk.ctx, Number(req.params.id));
+    const t = pages.getPageTemplate(req.mk.ctx, Number(req.params.id), { siteId: tplSite(req) });
     if (!t) return res.status(404).json({ error: { code: "not_found", message: "Modèle introuvable." } });
     res.set("Cache-Control", "no-store").json({ template: { id: t.id, name: t.name, category: t.category, sections: t.content.sections } });
   });
@@ -366,7 +367,7 @@ module.exports = () => {
   router.post("/site-web/modeles", need("forms.write"), (req, res, next) => {
     try {
       const b = req.body || {};
-      const t = pages.savePageTemplate(req.mk.ctx, { name: b.name, category: b.category, description: b.description, content: b.content });
+      const t = pages.savePageTemplate(req.mk.ctx, { name: b.name, category: b.category, description: b.description, content: b.content, siteId: Number.isInteger(b.siteId) && b.siteId > 0 ? b.siteId : null });
       res.status(201).json({ template: { id: t.id, name: t.name, category: t.category } });
     } catch (error) { jsonError(res, next, error); }
   });

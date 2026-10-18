@@ -1,0 +1,31 @@
+<%#
+  Page d'erreur de la vitrine d'UN site (domaine propre) : volontairement SANS l'en-tête, le pied de page, les menus ni le style de la plateforme KOLAKISA
+  (catalogue, blog, connexion…) — un site vide ou une adresse inconnue ne doit jamais ressembler au site principal.
+  Locals : siteName, built (le site a-t-il une page d'accueil publiée ?), message.
+%><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= built ? "Page introuvable" : "Site en construction" %> · <%= siteName %></title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2933; background: #fff; }
+    main { max-width: 34rem; padding: 2rem 1.25rem; text-align: center; }
+    h1 { font-size: 1.5rem; margin: 0 0 .75rem; }
+    p { margin: 0; color: #52606d; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <% if (built) { %>
+      <h1>Page introuvable</h1>
+      <p><%= message %></p>
+    <% } else { %>
+      <h1>Ce site n'est pas encore publié</h1>
+      <p>« <%= siteName %> » est en cours de construction : aucune page n'est en ligne pour le moment.</p>
+    <% } %>
+  </main>
+</body>
+</html>

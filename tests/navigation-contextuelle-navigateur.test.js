@@ -66,4 +66,14 @@ describe("navigation contextuelle dans un navigateur réel", { skip: SKIP }, () 
     assert.equal(srv.db().prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(id).site_id, A);
     assert.match(String(srv.db().prepare("SELECT draft FROM mk_landing_pages WHERE id = ?").get(id).draft), /Modifié non enregistré/, "la modification a été enregistrée");
   });
+  test("site vierge : tableau de bord → « Aperçu du site » (état vide explicite) → « Créer la première page » ouvre la boîte Nouvelle page de CE site", async () => {
+    const V = Number(String((await boss.post(SP, { name: "Vierge Chrome" })).location).match(/sites\/(\d+)/)[1]);
+    await page.goto(`${srv.base}${SP}/${V}/tableau-de-bord`);
+    await page.getByRole("link", { name: "Aperçu du site" }).click(); await page.waitForURL(`**${SP}/${V}/apercu`);
+    assert.ok(await page.getByText("Ce site n'a pas encore été construit").isVisible(), "état vide explicite"); await shot("ctx-4-apercu-site-vierge");
+    assert.equal(await page.locator("main").getByText(/Page Chrome|Alpha Chrome/).count(), 0, "rien d'un autre site dans l'aperçu");
+    await page.getByRole("link", { name: "Créer la première page" }).click(); await page.waitForURL(`**${SP}/${V}/pages#nouvelle`);
+    assert.ok(await page.locator("dialog#nouvelle").isVisible(), "la boîte Nouvelle page s'ouvre");
+    assert.equal(await page.locator('dialog#nouvelle input[name="site_id"]').getAttribute("value"), String(V));
+  });
 });

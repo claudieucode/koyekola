@@ -183,6 +183,7 @@ app.use("/marketing", marketingWeb.admin);
 app.use(marketingWeb.publicRoutes);
 
 app.use((req, res) => {
+  if (req.kwSite || req.kwRetired) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." }); // rendu neutre (siteHost.attachSite)
   // Modèle de thème « Page introuvable (404) » du Page Builder, s'il y en a un en ligne ; sinon page d'erreur d'origine
   require("./src/marketing/web/themeRender").renderRegion(req, res, require("./src/config/database"), "not_found", {}, (themeTemplate) => {
     res.status(404).render("error", { message: "Page introuvable.", themeTemplate });

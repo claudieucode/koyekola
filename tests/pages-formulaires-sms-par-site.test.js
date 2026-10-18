@@ -85,6 +85,7 @@ describe("pages × formulaires : un formulaire d'un autre site n'est jamais réf
   test("création depuis un gabarit enregistré : un formulaire d'un autre site est refusé et la page créée est annulée", () => {
     const w = world();
     const tpl = pages.savePageTemplate(w.A, { name: "Modèle", category: "autre", description: "", content: { sections: [widget(w.f2.id)], theme: {}, title: "T", description: "" } });
+    w.db.prepare("UPDATE mk_page_templates SET shared = 1 WHERE id = ?").run(tpl.id); // modèle hérité (commun à tous les sites) : c'est le cas où un gabarit peut atteindre un autre site
     const before = w.db.prepare("SELECT COUNT(*) n FROM mk_landing_pages").get().n;
     assert.throws(() => pages.createPage(w.A, { name: "Depuis modèle", siteId: 1, kind: "page", template: `mine:${tpl.id}` }), /autre site/);
     assert.equal(w.db.prepare("SELECT COUNT(*) n FROM mk_landing_pages").get().n, before);

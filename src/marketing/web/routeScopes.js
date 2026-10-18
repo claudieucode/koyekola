@@ -22,7 +22,7 @@ const ANY_DIGITS = /^\d+$/;
 const RESOURCE_TABLES = Object.freeze({
   page: "mk_landing_pages", composant: "mk_web_components",
   campagnes: "mk_campaigns", listes: "mk_lists", segments: "mk_segments", modeles: "mk_templates", automatisations: "mk_automations", tunnels: "mk_funnels",
-  test: "mk_page_tests", evenement: "mk_events", media: "mk_media", form: "mk_forms", smsCampaign: "mk_sms_campaigns", socialPost: "mk_social_posts",
+  modelePage: "mk_page_templates", test: "mk_page_tests", evenement: "mk_events", media: "mk_media", form: "mk_forms", smsCampaign: "mk_sms_campaigns", socialPost: "mk_social_posts",
 });
 
 // Valeur d'un paramètre de site : « ?site= » puis le champ « site » du formulaire (même ordre qu'avant R3)
@@ -88,6 +88,10 @@ const SITE_RULES = Object.freeze([
   { id: "composant-par-identifiant", pattern: /^\/site-web\/composants\/(\d+)/, kind: "resource", table: "composant", idGroup: 1 },
   { id: "page-creation-json", pattern: /^\/pages\/(?:creer|importer)\.json$/, methods: ["POST"], kind: "bodySiteIdJson" },
   { id: "page-nom-json", pattern: /^\/pages\/nom\.json$/, methods: ["GET"], kind: "queryGet" },
+  // Modèles de pages enregistrés, PRIVÉS à leur site (site builder) : enregistrement = site du corps (« siteId »), lecture = « ?site= » (les deux revérifiés par le moteur), suppression = site du modèle
+  { id: "modele-page-enregistrement", pattern: /^\/site-web\/modeles$/, methods: ["POST"], kind: "bodySiteIdJson" },
+  { id: "modele-page-lecture", pattern: /^\/site-web\/modeles(?:\.json|\/\d+\.json)$/, methods: ["GET"], kind: "queryGet" },
+  { id: "modele-page-suppression", pattern: /^\/site-web\/modeles\/(\d+)\/supprimer$/, methods: ["POST"], kind: "resource", table: "modelePage", idGroup: 1 },
   { id: "outils-et-parametres", pattern: /^\/site-web\/(?:outils|parametres)(?:\/|$)/, kind: "param", terminal: true },
   { id: "email-par-identifiant", pattern: new RegExp(`^\\/(${EMAIL_FAMILIES})\\/(\\d{1,12})(?:\\/|$)`), kind: "resource", table: "byFamily", idGroup: 2 },
   { id: "tests-ab-du-site", pattern: /^\/site-web\/tests-ab$/, methods: ["GET"], kind: "queryGet" },

@@ -149,10 +149,11 @@ describe("reconstruction : le comparateur détecte les vraies différences", () 
   const rebuiltCopy = (name) => { const d = copyOf(name); const A = tables.snapshot(d); tables.rebuild(d); return { d, A }; };
   const unexplainedAfter = (A, d) => tables.compare(A, tables.snapshot(d, A)).unexplained;
 
-  test("reconstruction correcte : aucune différence inexpliquée, 16 différences attendues documentées (10 pour articles, termes, formulaires, modèles ; 6 pour pages et historiques d'adresses : R6 lot 5 ; les redirections sont déjà reconstruites par la migration 090, R8 lot 6)", () => {
+  test("reconstruction correcte : aucune différence inexpliquée, 14 différences attendues documentées (8 pour articles, termes, formulaires, modèles ; 6 pour pages et historiques d'adresses : R6 lot 5 ; les redirections sont déjà reconstruites par la migration 090, R8 lot 6)", () => {
     const { d, A } = rebuiltCopy("ok.db"); const c = tables.compare(A, tables.snapshot(d, A));
-    assert.deepEqual(c.unexplained, []); assert.equal(c.expected.length, 16); // R7 lot 2 : mk_forms porte déjà site_id (migration 081) — l'outil n'ajoute plus que l'unicité par site (−2 : colonne et relation) ; seul « uq_mk_forms_site_slug » reste attendu pour cette table
+    assert.deepEqual(c.unexplained, []); assert.equal(c.expected.length, 14); // R7 lot 2 : mk_forms porte déjà site_id (migration 081) — l'outil n'ajoute plus que l'unicité par site (−2 : colonne et relation) ; seul « uq_mk_forms_site_slug » reste attendu pour cette table. Site builder : mk_page_templates porte aussi site_id (migration 093, additive) → −2 de même, seul « uq_mk_page_templates_site_name » reste attendu
     assert.deepEqual(c.expected.filter((e) => /mk_forms/.test(e)), ["unicité par site ajoutée : uq_mk_forms_site_slug"]);
+    assert.deepEqual(c.expected.filter((e) => /mk_page_templates/.test(e)), ["unicité par site ajoutée : uq_mk_page_templates_site_name"]);
     // Le détail des 6 différences ajoutées par le lot 5 (R8 lot 6 : l'unicité des redirections vient désormais de la migration 090 et n'est plus à reconstruire) : 2 unicités de pages, colonne + unicité + relation de l'historique d'articles, 1 de l'historique CMS
     const added = c.expected.filter((e) => /mk_landing_pages|seo_redirects|post_slug_history|cms_url_history/.test(e));
     assert.equal(added.length, 6, added.join(" | ")); assert.ok(!added.some((e) => /seo_redirects/.test(e)), "seo_redirects : déjà reconstruite par la 090"); d.close();

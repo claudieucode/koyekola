@@ -55,7 +55,7 @@ const SCREENS = {
       { label: "Listes d'envoi", value: own("mk_lists"), href: space.principal ? "/marketing/listes?site=principal" : `${space.base}/listes` },
       { label: "Campagnes", value: own("mk_campaigns"), href: space.principal ? "/marketing/campagnes?site=principal" : `${space.base}/campagnes` },
     ];
-    return { title: "Tableau de bord", lead: `Vue d'ensemble de « ${space.name} » : uniquement les contenus de ce site.`, note: readOnlyNote(space), stats, activity: dash.activity(req, space),
+    return { title: "Tableau de bord", actions: [{ label: "Aperçu du site", href: `${space.base}/apercu` }], lead: `Vue d'ensemble de « ${space.name} » : uniquement les contenus de ce site.`, note: readOnlyNote(space), stats, activity: dash.activity(req, space),
       table: { caption: "Pages récemment modifiées", columns: [{ label: "Page" }, { label: "État" }, { label: "Modifiée le" }], rows: recent.map((p) => ({ cells: [{ text: p.name, href: `/marketing/pages/${p.id}`, sub: `/${p.slug}` }, pageStatus(p), fdate(p.updated_at)] })),
         empty: empty("layout", "Aucune page pour l'instant", "Les pages de ce site apparaîtront ici dès leur création.", space.status === "active" && req.mk.can("forms.write") ? { label: "Ajouter une page", href: `${space.base}/pages#nouvelle` } : null) } };
   },
@@ -65,7 +65,7 @@ const SCREENS = {
     const canCreate = space.status === "active" && !space.deleted && req.mk.can("forms.write");
     return { title: "Pages", lead: `Les pages de « ${space.name} ». Une page s'ouvre dans l'éditeur visuel KOLAKISA.`, note: readOnlyNote(space),
       // Même boîte « Nouvelle page » que la liste centrale (page vierge, modèles, mise en page) : le site est celui de l'ESPACE (adresse vérifiée par le serveur), jamais un choix du navigateur
-      newPage: canCreate ? { fixedSite: { id: space.siteId }, templates: require("../pages/templates").catalog(), userTemplates: pages.listPageTemplates(req.mk.ctx), layoutFormats: require("../pages/layoutFormat").FORMATS } : null,
+      newPage: canCreate ? { fixedSite: { id: space.siteId }, templates: require("../pages/templates").catalog(), userTemplates: pages.listPageTemplates(req.mk.ctx, { siteId: space.siteId }), layoutFormats: require("../pages/layoutFormat").FORMATS } : null,
       table: { caption: "Pages du site", columns: [{ label: "Page" }, { label: "Adresse" }, { label: "État" }, { label: "Modifiée le" }],
         rows: list.map((p) => ({ cells: [{ text: p.name, href: `/marketing/pages/${p.id}` }, `/${p.slug}`, pageStatus(p), fdate(p.updated_at)] })),
         empty: empty("layout", "Aucune page", "Ce site n'a pas encore de page.") } };
@@ -131,6 +131,27 @@ module.exports = () => {
     const model = screen(req, space);
     res.render("marketing/cms-screen", { active, query: req.query, PER_PAGE: 25, preview: false, ...model });
   };
+  // Aperçu PRIVÉ d'un site (connecté, droit de lecture sur CE site) : un site sans page affiche un état vide explicite (jamais le contenu du site principal) ;
+  // sinon l'aperçu de sa page d'accueil (ou, à défaut, de sa première page), brouillon compris, jamais exposé aux visiteurs.
+  const preview = (req, res) => {
+    const space = res.locals.siteSpace;
+    if (!space) {
+      const reason = req.mk.siteContext && !req.mk.siteContext.ok ? req.mk.siteContext.reason : "not_found";
+      return res.status(reason === "forbidden" ? 403 : 404).render("error", { message: reason === "forbidden" ? "Vous n'avez pas accès à ce site." : "Site introuvable." });
+    }
+    res.set("Cache-Control", "no-store");
+    const list = pages.listPages(req.mk.ctx, { siteId: space.siteId }).filter((p) => p.kind !== "step" && !p.archived_at).sort((a, b) => a.id - b.id);
+    const homeId = req.mk.site && req.mk.site.home_page_id;
+    const first = list.find((p) => p.id === homeId) || list[0];
+    if (first) return res.redirect(`/marketing/pages/${first.id}/apercu`);
+    const canCreate = space.status === "active" && !space.deleted && req.mk.can("forms.write");
+    res.render("marketing/cms-screen", { active: "espace/tableau-de-bord", query: req.query, PER_PAGE: 25, preview: false, title: "Aperçu du site",
+      lead: `Aperçu privé de « ${space.name} » : visible seulement par les personnes autorisées sur ce site.`,
+      table: { caption: "Aperçu", columns: [{ label: "Page" }], rows: [],
+        empty: empty("layout", "Ce site n'a pas encore été construit", "Il ne contient aucune page : rien n'est affiché ici, et rien du site principal n'est repris. Créez la première page pour commencer.", canCreate ? { label: "Créer la première page", href: `${space.base}/pages#nouvelle` } : null) } });
+  };
+  router.get("/site-web/sites/:id(\\d+)/apercu", need("forms.read"), preview);
+  router.get("/site-web/principal/apercu", need("forms.read"), preview);
   router.get("/site-web/sites/:id(\\d+)/:module([a-z-]+)", need("forms.read"), handle);
   router.get("/site-web/principal/:module([a-z-]+)", need("forms.read"), handle);
   return router;

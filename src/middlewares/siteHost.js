@@ -42,7 +42,22 @@ function attachSite(req, res, next) {
   req.kwUnknownHost = !req.kwSite && !req.kwRetired && hostPolicy(host) === "unknown";
   // Sur le domaine d'un site, toutes les adresses absolues (canonical, plan du site, robots.txt, JSON-LD) sont celles de ce site
   if (req.kwSite && req.kwSite.base) req.seoBase = req.kwSite.base;
+  if (req.kwSite || req.kwRetired) neutralErrors(req, res);
   next();
+}
+
+// Vitrine d'un site à domaine propre : toute page d'erreur (« error ») est rendue SANS l'habillage de la plateforme (en-tête, catalogue, blog, connexion) ni le modèle 404 du site
+// principal ; « pas encore publié » tant que le site n'a aucune page d'accueil en ligne. Le code HTTP choisi par la route est conservé.
+function neutralErrors(req, res) {
+  const render = res.render.bind(res);
+  res.render = (view, locals, cb) => {
+    if (view !== "error") return render(view, locals, cb);
+    const site = req.kwSite || null;
+    let built = true;
+    if (site) { try { const home = urls.resolve("/", { hostSite: site }); built = Boolean(home && home.type === "page" && home.state === "live"); } catch { built = false; } }
+    res.set("X-Robots-Tag", "noindex, nofollow");
+    return render("site-public-error", { siteName: site ? site.name : "Ce site", built, message: (locals && locals.message) || "Cette page n'existe pas ou n'est plus en ligne." }, cb);
+  };
 }
 
 // 2. Accueil et pages d'un site à domaine propre

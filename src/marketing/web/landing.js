@@ -333,7 +333,7 @@ module.exports = () => {
       // Modèles de pages de l'équipe (onglet Blocs : insérables dans la page en cours)
       // Écran d'accueil / création guidée : registre des types et gabarits intégrés, pages récemment modifiées (données réelles)
       pageCatalog: component ? null : require("../pages/pageTypes").catalog(ctx), recentPages: component ? [] : pages.recentPages(ctx, { exceptId: page.id }),
-      templates: pages.listPageTemplates(ctx).map((t) => ({ id: t.id, name: t.name, category: t.category, sections: t.content.sections.length })),
+      templates: pages.listPageTemplates(ctx, { siteId: page.site_id ?? null }).map((t) => ({ id: t.id, name: t.name, category: t.category, sections: t.content.sections.length })),
       // Adresses proposées pour les liens : pages en ligne, pages du site, étape suivante (page d'un tunnel)
       links: [{ url: "/catalogue", label: "Catalogue des formations" }, { url: "/blog", label: "Blog" }, { url: "/", label: "Accueil du site" }]
         .concat(funnel ? [{ url: require("../funnels").NEXT_URL, label: `Étape suivante du tunnel « ${funnel.name} »` }, ...require("../funnels").getFunnel(ctx, funnel.id).steps.filter((x) => x.pageId !== page.id).map((x) => ({ url: `/etape/${x.id}`, label: `Étape « ${x.name} » du tunnel « ${funnel.name} »` }))] : [])
