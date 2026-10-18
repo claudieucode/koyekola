@@ -440,7 +440,9 @@ describe("lot 6 — Site", () => {
     db.prepare("UPDATE mk_sites SET home_page_id = ? WHERE id = ?").run(home, site);
     db.prepare("UPDATE mk_landing_pages SET site_id = ? WHERE id = ?").run(site, id);
     const html2 = (await boss.get(`/p/${slug}`)).text;
-    assert.match(html2, /alt="Vitrine Kola"/);
+    // R8 lot 6 : une page d'un SITE n'emprunte jamais le logo des réglages du site principal (seul le logo d'identité du site compte) ; son nom reste celui du site
+    assert.doesNotMatch(html2, /logo-kola\.png/, "pas de logo du site principal sur la page d'un autre site");
+    assert.doesNotMatch(html2, /Atelier Kola/, "pas de nom de marque du site principal");
     assert.match(html2, /© \d{4} Vitrine Kola\./);
     assert.equal((await boss.get(`/p/${slug}/clic/0`)).location, "/p/accueil-vitrine");
   });

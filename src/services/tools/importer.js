@@ -121,7 +121,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
             const external = /^https?:\/\//i.test(item.target.trim());
             if (external && !ctx.can("redirects.external")) it.issues.push("Redirection vers un site extérieur : réservée aux administrateurs.");
             const v = redirects.validate({ source: item.source, target: item.target, status: item.status, siteId });
-            const exists = v.value.source_path && db.prepare("SELECT id, site_id FROM seo_redirects WHERE source_path = ?").get(v.value.source_path);
+            const exists = v.value.source_path && db.prepare("SELECT id, site_id FROM seo_redirects WHERE source_path = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").get(v.value.source_path, siteId ?? null); // R8 lot 6 : l'ancienne adresse n'est unique que PAR site
             if (exists) { it.existing = exists.id; it.action = "conflict"; it.reason = (exists.site_id ?? null) !== (siteId ?? null) ? "une redirection d'un autre site existe déjà pour cette adresse" : "une redirection existe déjà pour cette adresse"; it.crossSite = (exists.site_id ?? null) !== (siteId ?? null); }
             else for (const e of v.errors) it.issues.push(e);
           }

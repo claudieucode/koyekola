@@ -100,6 +100,7 @@ DROP TABLE seo_404;
 ALTER TABLE seo_404_r8 RENAME TO seo_404;
 CREATE UNIQUE INDEX idx_seo_404_scope ON seo_404(COALESCE(site_id, 0), path);
 CREATE INDEX idx_seo_404_last ON seo_404(last_seen);
+CREATE INDEX idx_seo_404_site ON seo_404(site_id);
 
 -- 5. Audits, alertes et surveillance : colonne « site » (NULL = site principal). L'audit et la surveillance ne parcourent encore que l'hôte principal et restent réservés à l'équipe.
 CREATE TABLE IF NOT EXISTS seo_audits (
@@ -116,12 +117,14 @@ CREATE TABLE IF NOT EXISTS seo_audits (
   finished_at TEXT
 );
 ALTER TABLE seo_audits ADD COLUMN site_id INTEGER REFERENCES mk_sites(id);
+CREATE INDEX idx_seo_audits_site ON seo_audits(site_id);
 CREATE TABLE IF NOT EXISTS seo_monitor_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   data TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ALTER TABLE seo_monitor_snapshots ADD COLUMN site_id INTEGER REFERENCES mk_sites(id);
+CREATE INDEX idx_seo_monitor_snapshots_site ON seo_monitor_snapshots(site_id);
 CREATE TABLE IF NOT EXISTS seo_alerts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   severity TEXT NOT NULL,
@@ -131,4 +134,5 @@ CREATE TABLE IF NOT EXISTS seo_alerts (
   seen_at TEXT
 );
 ALTER TABLE seo_alerts ADD COLUMN site_id INTEGER REFERENCES mk_sites(id);
+CREATE INDEX idx_seo_alerts_site ON seo_alerts(site_id);
 CREATE INDEX IF NOT EXISTS idx_seo_alerts_open ON seo_alerts(seen_at, id);

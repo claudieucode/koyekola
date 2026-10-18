@@ -247,9 +247,11 @@ describe("import : analyse à blanc, confirmation, lots, relations remappées", 
     const items = all("SELECT * FROM nav_items WHERE menu_id = ?", menu.id);
     assert.equal(items.find((i) => i.type === "page").object_id !== pA1, true);
     assert.ok(run.report.created.pages.includes(items.find((i) => i.type === "page").object_id), "le menu pointe sur la page importée");
-    assert.equal(items.find((i) => i.type === "article").object_id, copy1.id);
+    // R8 lot 4 : un menu de site ne pointe que sur des ressources de CE site ; les articles importés sont de niveau organisation (scope « org » de l'import) : l'élément « article » est donc ignoré (et signalé), jamais lié à un contenu hors du site
+    assert.equal(items.find((i) => i.type === "article"), undefined, "élément vers un article hors du site : ignoré");
     // redirection du site B
-    assert.equal(count("SELECT COUNT(*) n FROM seo_redirects WHERE site_id = ? AND source_path = '/ancienne-offre-a'", siteB), 0, "même source déjà prise globalement : ignorée proprement (voir rapport)");
+    // R8 lot 6 : l'ancienne adresse est unique PAR site (migration 090) — la même source existant pour le site A, elle est créée pour le site B
+    assert.equal(count("SELECT COUNT(*) n FROM seo_redirects WHERE site_id = ? AND source_path = '/ancienne-offre-a'", siteB), 1, "même source que celle du site A : créée pour le site B");
     // historique : les services ont enregistré leurs révisions
     assert.ok(count("SELECT COUNT(*) n FROM cms_revisions WHERE content_type = 'page' AND content_id IN (" + run.report.created.pages.join(",") + ")") >= 1);
     // progression réelle
