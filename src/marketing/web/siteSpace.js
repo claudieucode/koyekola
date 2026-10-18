@@ -64,7 +64,8 @@ const SCREENS = {
     const list = pages.listPages(req.mk.ctx, { siteId: space.siteId }).filter((p) => p.kind !== "step");
     const canCreate = space.status === "active" && !space.deleted && req.mk.can("forms.write");
     return { title: "Pages", lead: `Les pages de « ${space.name} ». Une page s'ouvre dans l'éditeur visuel KOLAKISA.`, note: readOnlyNote(space),
-      createForm: canCreate ? { action: "/marketing/pages", hidden: space.siteId === null ? {} : { site_id: String(space.siteId) }, label: "Nouvelle page dans ce site", field: "name", placeholder: "Accueil, Programme, Contact…", button: "Créer la page" } : null,
+      // Même boîte « Nouvelle page » que la liste centrale (page vierge, modèles, mise en page) : le site est celui de l'ESPACE (adresse vérifiée par le serveur), jamais un choix du navigateur
+      newPage: canCreate ? { fixedSite: { id: space.siteId }, templates: require("../pages/templates").catalog(), userTemplates: pages.listPageTemplates(req.mk.ctx), layoutFormats: require("../pages/layoutFormat").FORMATS } : null,
       table: { caption: "Pages du site", columns: [{ label: "Page" }, { label: "Adresse" }, { label: "État" }, { label: "Modifiée le" }],
         rows: list.map((p) => ({ cells: [{ text: p.name, href: `/marketing/pages/${p.id}` }, `/${p.slug}`, pageStatus(p), fdate(p.updated_at)] })),
         empty: empty("layout", "Aucune page", "Ce site n'a pas encore de page.") } };

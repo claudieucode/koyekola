@@ -14,6 +14,7 @@
 %>
     <div class="mk-head">
       <h1><%= title %></h1>
+      <% if (typeof newPage !== "undefined" && newPage) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Nouvelle page</button><% } %>
       <% if (typeof actions !== "undefined" && actions && actions.length) { %><div class="mk-actions">
         <% actions.forEach((a) => { %>
           <% if (a.disabled) { %><button type="button" class="btn btn-outline btn-sm" disabled title="<%= a.title || soonTitle %>"><%= a.label %></button>
@@ -25,6 +26,7 @@
     <% if (typeof note !== "undefined" && note) { %>
       <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><%= note %></p></div>
     <% } %>
+    <% if (typeof newPage !== "undefined" && newPage) { %><%- include("partials/new-page-dialog", newPage) %><% } %>
     <% if (typeof createForm !== "undefined" && createForm) { %>
       <form id="nouvelle" action="<%= createForm.action %>" method="post" class="mk-form mk-cms-create">
         <% Object.entries(createForm.hidden || {}).forEach(([k, v]) => { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% }) %>

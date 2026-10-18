@@ -66,12 +66,19 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     const main = await page.locator("main").innerText();
     assert.match(main, /Page Alpha/); assert.doesNotMatch(main, /Page Beta|Page Principale/);
     await shot(page, "b1-02-pages-bureau");
-    await page.locator("#cms-create-field").fill("Ma nouvelle page");
-    await Promise.all([page.waitForNavigation(), page.getByRole("button", { name: "Créer la page" }).click()]);
+    // La même boîte « Nouvelle page » que la liste centrale (page vierge, modèles, mise en page) ; elle ouvre l'éditeur sur la page créée
+    await page.getByRole("button", { name: "Nouvelle page" }).first().click();
+    const dlg = page.locator("dialog#nouvelle");
+    assert.ok(await dlg.isVisible(), "la boîte Nouvelle page s'ouvre");
+    assert.ok(await dlg.getByText("Page vierge").isVisible() && await dlg.getByText("Conception libre").isVisible() && await dlg.getByText("Guidée par un format").isVisible(), "choix : page vierge, modèles, mise en page");
+    await shot(page, "nouvelle-page-boite-site");
+    await dlg.locator("#lp-name").fill("Ma nouvelle page");
+    await Promise.all([page.waitForURL(/\/marketing\/pages\/\d+\/editeur/), dlg.getByRole("button", { name: /Créer et ouvrir l/ }).click()]);
     assert.equal(one("SELECT site_id FROM mk_landing_pages WHERE name = 'Ma nouvelle page'").site_id, A);
     // Incident « création de page renvoyée vers le principal » : la page créée s'ouvre DANS le cadre du site (bandeau, menu, retour), s'enregistre et revient à la liste du site
     const id = one("SELECT id FROM mk_landing_pages WHERE name = 'Ma nouvelle page'").id;
-    assert.match(page.url(), new RegExp(`/marketing/pages/${id}$`));
+    assert.match(page.url(), new RegExp(`/marketing/pages/${id}/editeur`), "l'éditeur s'ouvre sur la page créée");
+    await page.goto(`${srv.base}/marketing/pages/${id}`);
     assert.ok(await page.locator(".mk-site-banner-name", { hasText: "Site Alpha" }).isVisible(), "bandeau du site après création");
     assert.ok(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/tableau-de-bord"]`).count() > 0, "le menu pointe vers le tableau de bord DU SITE");
     assert.equal(await page.locator('.mk-cms-nav a[href="/marketing/site-web/principal/tableau-de-bord"]').count(), 0, "aucun lien vers le tableau de bord du principal");

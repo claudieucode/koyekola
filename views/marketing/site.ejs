@@ -36,12 +36,7 @@
           </ul>
         <% } %>
         <% if (canWrite && !archived) { %>
-          <form action="/marketing/pages" method="post" class="mk-form mk-sw-newpage">
-            <input type="hidden" name="site_id" value="<%= site.id %>">
-            <div class="field-group"><label for="site-new-page">Nouvelle page dans ce site</label><input id="site-new-page" type="text" name="name" maxlength="100" required placeholder="Accueil, Programme, Contact…"></div>
-            <div class="field-group"><label for="site-new-tpl">Modèle de départ</label><select id="site-new-tpl" name="template"><option value="">Page vierge</option><% templates.forEach((t) => { %><option value="<%= t.key %>"><%= t.name %> — <%= t.category %></option><% }) %></select></div>
-            <button type="submit" class="btn btn-outline btn-sm">Créer la page</button>
-          </form>
+          <p><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= site.id %>/pages#nouvelle">Nouvelle page dans ce site</a></p>
           <p class="field-hint">Une page existante se rattache au site depuis ses réglages (champ « Site »).</p>
         <% } %>
       </section>
