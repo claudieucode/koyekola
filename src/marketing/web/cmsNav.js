@@ -345,4 +345,5 @@ function buildSiteNav({ can, active, space }) {
 
 for (const [key, a] of Object.entries(ABILITY)) if (a.mode === "open" && a.sub) FRAMED.add(key);
 FRAMED.add("apparence/menus"); // même écran que « Navigation » (clé active distincte)
+FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

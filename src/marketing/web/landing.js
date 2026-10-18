@@ -89,11 +89,13 @@ module.exports = () => {
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
     });
   });
+  // Liste des pages « de retour » : celle de l'ESPACE DU SITE de la page (jamais la liste centrale, qui est celle du principal) ; sans site : la liste centrale, comme avant
+  const pagesHome = (siteId) => (Number.isInteger(siteId) && siteId > 0 ? `/marketing/site-web/sites/${siteId}/pages` : "/marketing/pages");
   router.post("/pages", need("forms.write"), (req, res, next) => {
     let created = null;
     // « Nouvelle page » du CMS : la page est créée en base (identifiant réel), puis l'éditeur visuel s'ouvre dessus
     const toBuilder = req.body.ouvrir === "editeur";
-    attempt(req, res, next, () => (created ? `/marketing/pages/${created.id}${toBuilder ? "/editeur?retour=pages" : ""}` : "/marketing/pages"), () => {
+    attempt(req, res, next, () => (created ? `/marketing/pages/${created.id}${toBuilder ? "/editeur?retour=pages" : ""}` : pagesHome(req.mk.site ? req.mk.site.id : null)), () => {   // échec : retour à l'espace du site vérifié par le serveur
       const siteId = intOrNull(req.body.site_id);
       const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
       // Nouvelle page du CMS : une page de site (bandeau + texte, publiable tout de suite) ; sans « ouvrir », comportement historique (page d'atterrissage)
@@ -176,7 +178,7 @@ module.exports = () => {
     res.render("marketing/landing", {
       title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_LABELS: Object.fromEntries(Object.entries(pages.TYPES).map(([k, t]) => [k, t.label])),
       forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(ctx, { kind: "image", limit: 100 }).items,
-      sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id), inFunnels: require("../funnels").funnelsOfPage(ctx, page.id),
+      pagesHome: pagesHome(page.site_id), sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id), inFunnels: require("../funnels").funnelsOfPage(ctx, page.id),
       variantOf: ctx.db.prepare("SELECT t.id, t.page_id, p.name FROM mk_page_tests t JOIN mk_landing_pages p ON p.id = t.page_id WHERE t.variant_page_id = ? AND t.organization_id = ?").get(page.id, ctx.organizationId) || null,
       openTest: ctx.db.prepare("SELECT id, name, status FROM mk_page_tests WHERE page_id = ? AND organization_id = ? AND status IN ('draft', 'running', 'stopped')").get(page.id, ctx.organizationId) || null,
       report: landing.pageReport(ctx, page.id), check: landing.preflight(ctx, { ...page, sections: pages.resolveSections(ctx, page.working.sections) }), canWrite: req.mk.can("forms.write"),
@@ -344,7 +346,7 @@ module.exports = () => {
     };
     res.set("Cache-Control", "no-store");
     const { ICONS } = require("../../utils/icons");
-    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? "/marketing/pages" : null, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
+    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? pagesHome(page.site_id) : null, boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   };
   // ---------- IA Kolakisa : l'IA PROPOSE, l'éditeur applique (une étape d'historique) — rien n'est enregistré ici ----------
   const IA_STATUS = { not_configured: 503, quota: 429, rate: 429, conflict: 409, busy: 429 };
@@ -529,7 +531,7 @@ module.exports = () => {
   router.post("/pages/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, "/marketing/pages", () => { pages.archivePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
+    attempt(req, res, next, pagesHome(page.site_id), () => { pages.archivePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
   });
   router.post("/pages/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
@@ -541,7 +543,7 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     if (!page.archived_at) { req.session.mkFlash = { type: "error", text: "Mettez d'abord la page à la corbeille : elle ne peut être supprimée définitivement que depuis la corbeille." }; return res.redirect(`/marketing/pages/${page.id}`); }
-    attempt(req, res, next, "/marketing/pages", () => { landing.deletePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
+    attempt(req, res, next, pagesHome(page.site_id), () => { landing.deletePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
   });
   return router;
 };

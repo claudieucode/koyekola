@@ -1,6 +1,6 @@
 <%- include("partials/top", { title, active }) %>
 <% const archived = Boolean(page.archived_at); const dis = canWrite && !archived ? "" : " disabled"; const c = content; %>
-    <p class="mk-back"><a href="/marketing/pages">← Pages</a></p>
+    <p class="mk-back"><a href="<%= typeof pagesHome !== "undefined" ? pagesHome : "/marketing/pages" %>">← Pages</a></p>
     <div class="mk-head"><div class="mk-builder-title"><h1><%= page.name %></h1><span class="mk-status <%= STATUS_CLASS[page.status] %>"><%= STATUSES[page.status] %></span></div>
       <% if (canWrite && !archived) { %><div class="mk-actions">
         <% if (page.status === "published") { %><a class="btn btn-outline btn-sm" href="/p/<%= page.slug %>" target="_blank" rel="noopener">Voir la page en ligne</a><% } %>

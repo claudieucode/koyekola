@@ -69,6 +69,20 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     await page.locator("#cms-create-field").fill("Ma nouvelle page");
     await Promise.all([page.waitForNavigation(), page.getByRole("button", { name: "Créer la page" }).click()]);
     assert.equal(one("SELECT site_id FROM mk_landing_pages WHERE name = 'Ma nouvelle page'").site_id, A);
+    // Incident « création de page renvoyée vers le principal » : la page créée s'ouvre DANS le cadre du site (bandeau, menu, retour), s'enregistre et revient à la liste du site
+    const id = one("SELECT id FROM mk_landing_pages WHERE name = 'Ma nouvelle page'").id;
+    assert.match(page.url(), new RegExp(`/marketing/pages/${id}$`));
+    assert.ok(await page.locator(".mk-site-banner-name", { hasText: "Site Alpha" }).isVisible(), "bandeau du site après création");
+    assert.ok(await page.locator(`.mk-cms-nav a[href="${SP}/${A}/tableau-de-bord"]`).count() > 0, "le menu pointe vers le tableau de bord DU SITE");
+    assert.equal(await page.locator('.mk-cms-nav a[href="/marketing/site-web/principal/tableau-de-bord"]').count(), 0, "aucun lien vers le tableau de bord du principal");
+    await shot(page, "incident-page-creee-dans-le-site");
+    await page.locator("input[name=slug]").first().fill("ma-nouvelle-page-v2");
+    const formSel = `form[action$="/marketing/pages/${id}"]`;
+    await Promise.all([page.waitForNavigation(), page.locator(`${formSel} button[type=submit], ${formSel} button:not([type])`).first().click()]);
+    assert.equal(one("SELECT slug FROM mk_landing_pages WHERE id = ?", id).slug, "ma-nouvelle-page-v2", "enregistrement effectué");
+    assert.equal(one("SELECT site_id FROM mk_landing_pages WHERE id = ?", id).site_id, A, "toujours dans le site après enregistrement");
+    assert.ok(await page.locator(".mk-site-banner-name", { hasText: "Site Alpha" }).isVisible(), "bandeau du site après enregistrement");
+    await Promise.all([page.waitForURL(`**${SP}/${A}/pages`), page.locator(".mk-back a").first().click()]);
     await context.close();
   });
 
