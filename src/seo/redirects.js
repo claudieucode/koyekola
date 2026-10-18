@@ -4,6 +4,7 @@
 // Import / export CSV. Compteur d'utilisations réel.
 const { db, logChange } = require("./store");
 
+const { sameScope } = require("../services/siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 db.exec(`
   CREATE TABLE IF NOT EXISTS seo_redirects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -116,7 +117,7 @@ function validate({ source, target, status, siteId }, { exceptId = null } = {}) 
   }
   if (src && !errors.length) {
     // L'ancienne adresse n'est unique que PAR site (une redirection commune et celle d'un site peuvent coexister : celle du site passe avant sur son domaine)
-    const other = db.prepare("SELECT id FROM seo_redirects WHERE source_path = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").get(src, site);
+    const other = db.prepare(`SELECT id FROM seo_redirects WHERE source_path = ? AND ${sameScope("site_id")}`).get(src, site);
     if (other && other.id !== exceptId) errors.push(`Une redirection existe déjà pour « ${src} »${site ? " sur ce site" : ""}.`);
   }
   if (src && dst && !errors.length) {

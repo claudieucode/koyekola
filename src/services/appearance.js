@@ -8,6 +8,7 @@
 // l'élément (classe posée dans l'inspecteur du Page Builder) → CSS personnalisé du site.
 // Sans configuration publiée, le site s'affiche EXACTEMENT comme avant : seules les valeurs modifiées produisent du CSS.
 const db = require("../config/database");
+const { sameScope } = require("./siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 const tokensLib = require("../marketing/pages/tokens");
 const navigation = require("./navigation");
 const { UserError } = require("../utils/errors");
@@ -86,7 +87,7 @@ function normalizeConfig(input = {}, { strict = true } = {}) {
 const DEFAULT_CONFIG = Object.freeze({ tokens: DEFAULT_TOKENS, header: DEFAULT_HEADER, footer: DEFAULT_FOOTER });
 
 // ---------- Lecture / écriture ----------
-const row = (siteId = null) => db.prepare("SELECT * FROM appearance_configs WHERE COALESCE(site_id, 0) = COALESCE(?, 0)").get(siteId);
+const row = (siteId = null) => db.prepare(`SELECT * FROM appearance_configs WHERE ${sameScope("site_id")}`).get(siteId);
 const parse = (text) => { try { return text ? JSON.parse(text) : null; } catch { return null; } };
 function repair(cfg) { try { return normalizeConfig(cfg, { strict: false }); } catch { return normalizeConfig({}, { strict: false }); } }
 // État d'un site : configuration publiée (ou d'origine), brouillon éventuel, différences
@@ -150,7 +151,7 @@ function assertAccepted(patch, normalized, path) {
   }
 }
 function discardDraft(siteId = null) {
-  db.prepare("UPDATE appearance_configs SET draft = NULL, draft_by = NULL, draft_at = NULL, updated_at = datetime('now') WHERE COALESCE(site_id, 0) = COALESCE(?, 0)").run(siteId);
+  db.prepare(`UPDATE appearance_configs SET draft = NULL, draft_by = NULL, draft_at = NULL, updated_at = datetime('now') WHERE ${sameScope("site_id")}`).run(siteId);
   return state(siteId);
 }
 // Publier : le brouillon devient la version en ligne ; la feuille de style est compilée une fois ; la version est archivée
@@ -166,21 +167,21 @@ function publish(siteId, userId = null, note = "", { baseRev } = {}) {
       ON CONFLICT (COALESCE(site_id, 0)) DO UPDATE SET published = excluded.published, published_css = excluded.published_css, revision = appearance_configs.revision + 1,
         published_by = excluded.published_by, published_at = excluded.published_at, draft = NULL, draft_by = NULL, draft_at = NULL, updated_at = datetime('now')`).run(siteId, JSON.stringify(cfg), css, userId);
     db.prepare("INSERT INTO appearance_revisions (site_id, config, note, created_by) VALUES (?, ?, ?, ?)").run(siteId, JSON.stringify(cfg), line(note, 120), userId);
-    db.prepare(`DELETE FROM appearance_revisions WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND id NOT IN (SELECT id FROM appearance_revisions WHERE COALESCE(site_id, 0) = COALESCE(?, 0) ORDER BY id DESC LIMIT ?)`).run(siteId, siteId, MAX_REVISIONS);
+    db.prepare(`DELETE FROM appearance_revisions WHERE ${sameScope("site_id")} AND id NOT IN (SELECT id FROM appearance_revisions WHERE ${sameScope("site_id")} ORDER BY id DESC LIMIT ?)`).run(siteId, siteId, MAX_REVISIONS);
   });
   version += 1;
   return state(siteId);
 }
 // Retour à l'apparence d'origine : le site reprend son affichage historique (la version publiée est retirée, l'historique reste)
 function unpublish(siteId = null) {
-  db.prepare("UPDATE appearance_configs SET published = NULL, published_css = '', revision = revision + 1, published_at = NULL, updated_at = datetime('now') WHERE COALESCE(site_id, 0) = COALESCE(?, 0)").run(siteId);
+  db.prepare(`UPDATE appearance_configs SET published = NULL, published_css = '', revision = revision + 1, published_at = NULL, updated_at = datetime('now') WHERE ${sameScope("site_id")}`).run(siteId);
   version += 1;
   return state(siteId);
 }
-const history = (siteId = null, limit = 10) => db.prepare("SELECT r.id, r.note, r.created_at, u.username AS by FROM appearance_revisions r LEFT JOIN users u ON u.id = r.created_by WHERE COALESCE(r.site_id, 0) = COALESCE(?, 0) ORDER BY r.id DESC LIMIT ?").all(siteId, limit);
+const history = (siteId = null, limit = 10) => db.prepare(`SELECT r.id, r.note, r.created_at, u.username AS by FROM appearance_revisions r LEFT JOIN users u ON u.id = r.created_by WHERE ${sameScope("r.site_id")} ORDER BY r.id DESC LIMIT ?`).all(siteId, limit);
 // Une ancienne version revient dans le BROUILLON (rien n'est publié tant qu'on ne publie pas)
 function restore(siteId, revisionId, userId = null) {
-  const r = db.prepare("SELECT id FROM appearance_revisions WHERE id = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").get(Number(revisionId), siteId);
+  const r = db.prepare(`SELECT id FROM appearance_revisions WHERE id = ? AND ${sameScope("site_id")}`).get(Number(revisionId), siteId);
   if (!r) throw new UserError("Version introuvable.");
   // Historique commun (palier 10) : le brouillon actuel est d'abord conservé, la restauration est tracée
   require("./revisions").adapter("appearance").restore({ userId }, 0, `p:${r.id}`);
@@ -290,7 +291,7 @@ const bump = () => { version += 1; };
 // ---------- Patterns enregistrés (sections du Page Builder réutilisables) ----------
 const PATTERN_CATEGORY = "Mes patterns";
 function patternRows(siteId = null) {
-  return db.prepare("SELECT id, name, category, description, mode, sections, source_page_id, created_at FROM appearance_patterns WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND deleted_at IS NULL ORDER BY name COLLATE NOCASE").all(siteId);
+  return db.prepare(`SELECT id, name, category, description, mode, sections, source_page_id, created_at FROM appearance_patterns WHERE ${sameScope("site_id")} AND deleted_at IS NULL ORDER BY name COLLATE NOCASE`).all(siteId);
 }
 // Patterns pour le sélecteur « Ajouter » du Page Builder (même forme que le catalogue intégré : key, category, label, sections)
 function patternBlocks(siteId = null) {
@@ -302,7 +303,7 @@ function createPattern({ name, description = "", sections, siteId = null, source
   const nm = line(name, 60);
   if (!nm) throw new UserError("Donnez un nom au pattern.");
   if (!Array.isArray(sections) || !sections.length) throw new UserError("Le pattern ne contient aucune section.");
-  if (db.prepare("SELECT 1 FROM appearance_patterns WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE AND deleted_at IS NULL").get(siteId, nm)) throw new UserError(`Un pattern « ${nm} » existe déjà.`);
+  if (db.prepare(`SELECT 1 FROM appearance_patterns WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND deleted_at IS NULL`).get(siteId, nm)) throw new UserError(`Un pattern « ${nm} » existe déjà.`);
   if (db.prepare("SELECT COUNT(*) n FROM appearance_patterns").get().n >= 200) throw new UserError("200 patterns au plus.");
   const id = Number(db.prepare("INSERT INTO appearance_patterns (site_id, name, description, sections, source_page_id, created_by) VALUES (?, ?, ?, ?, ?, ?)")
     .run(siteId, nm, line(description, 200), JSON.stringify(sections), sourcePageId, userId).lastInsertRowid);
@@ -314,7 +315,7 @@ function renamePattern(id, { name, description }, userId = null) {
   if (!p) throw new UserError("Pattern introuvable.");
   const nm = line(name ?? p.name, 60);
   if (!nm) throw new UserError("Donnez un nom au pattern.");
-  if (db.prepare("SELECT 1 FROM appearance_patterns WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL").get(p.site_id, nm, id)) throw new UserError(`Un pattern « ${nm} » existe déjà.`);
+  if (db.prepare(`SELECT 1 FROM appearance_patterns WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL`).get(p.site_id, nm, id)) throw new UserError(`Un pattern « ${nm} » existe déjà.`);
   db.prepare("UPDATE appearance_patterns SET name = ?, description = ?, updated_at = datetime('now') WHERE id = ?").run(nm, line(description ?? p.description, 200), id);
   require("./revisions").hooks.pattern(id, p.site_id, "rename", "Modification des informations du pattern", db.prepare("SELECT * FROM appearance_patterns WHERE id = ?").get(id), userId);
 }
@@ -329,7 +330,7 @@ function deletePattern(id, userId = null) {
 function restorePattern(id, userId = null) {
   const p = db.prepare("SELECT * FROM appearance_patterns WHERE id = ? AND deleted_at IS NOT NULL").get(id);
   if (!p) throw new UserError("Ce pattern n'est pas dans la corbeille.");
-  if (db.prepare("SELECT 1 FROM appearance_patterns WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL").get(p.site_id, p.name, id)) throw new UserError(`Un pattern « ${p.name} » existe déjà : renommez l'un des deux avant de restaurer.`);
+  if (db.prepare(`SELECT 1 FROM appearance_patterns WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL`).get(p.site_id, p.name, id)) throw new UserError(`Un pattern « ${p.name} » existe déjà : renommez l'un des deux avant de restaurer.`);
   db.prepare("UPDATE appearance_patterns SET deleted_at = NULL, deleted_by = NULL WHERE id = ?").run(id);
   require("./revisions").hooks.pattern(id, p.site_id, "restore_trash", "Restauré depuis la corbeille", p, userId);
   return p;

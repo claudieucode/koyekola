@@ -3,6 +3,7 @@
 //   import  : phase « analyse » (aucune écriture : rapport, conflits, erreurs) → attente de CONFIRMATION → phase « apply » (par lots, annulable) ;
 //   annuler un import : met à la corbeille ce que l'import a créé (pages, articles) et supprime ses menus, redirections et termes inutilisés.
 const db = require("../../config/database");
+const { sameScope } = require("../siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 const { transaction } = require("../../marketing/db/tx");
 const runs = require("./runs");
 const runner = require("./runner");
@@ -178,7 +179,7 @@ const APPLY = {
 
   menus(ctx, { it, raw, siteId, idMap, created }) {
     const navigation = require("../navigation");
-    const name = it.action === "duplicate" ? uniqueName("nav_menus", `${importer.line(raw.name, 50)} (import)`, "AND COALESCE(site_id, 0) = COALESCE(?, 0)", [siteId]) : importer.line(raw.name, 60);
+    const name = it.action === "duplicate" ? uniqueName("nav_menus", `${importer.line(raw.name, 50)} (import)`, `AND ${sameScope("site_id")}`, [siteId]) : importer.line(raw.name, 60);
     const menu = navigation.create({ name, description: importer.line(raw.description, 300), siteId, userId: ctx.userId });
     created.menus.push(menu.id);
     const typeOfRef = { page: "pages", article: "articles", category: "taxonomies", tag: "taxonomies" };

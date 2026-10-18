@@ -8,6 +8,7 @@
 // PUBLIÉ n'est jamais modifié par une sauvegarde de brouillon ; l'historique de brouillon est borné par une règle explicite (jamais les
 // publications ni les restaurations).
 const crypto = require("crypto");
+const { sameScope } = require("./siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 const db = require("../config/database");
 const { UserError } = require("../utils/errors");
 const { transaction } = require("../marketing/db/tx");
@@ -275,7 +276,7 @@ const patternAdapter = {
     const data = this.content(ctx, id, ref);
     const cur = db.prepare("SELECT * FROM appearance_patterns WHERE id = ?").get(id);
     if (!cur || cur.deleted_at) throw new UserError("Ce pattern est dans la corbeille : restaurez-le d'abord.");
-    if (db.prepare("SELECT 1 FROM appearance_patterns WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL").get(cur.site_id, data.name, id)) throw new UserError(`Un pattern « ${data.name} » existe déjà : renommez-le d'abord.`);
+    if (db.prepare(`SELECT 1 FROM appearance_patterns WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL`).get(cur.site_id, data.name, id)) throw new UserError(`Un pattern « ${data.name} » existe déjà : renommez-le d'abord.`);
     transaction(db, () => {
       record({ type: "pattern", id, siteId: cur.site_id, kind: "before_restore", label: "État avant la restauration", data: patternData(cur), userId: ctx.userId });
       db.prepare("UPDATE appearance_patterns SET name = ?, description = ?, category = ?, sections = ?, updated_at = datetime('now') WHERE id = ?").run(data.name, data.description || "", data.category || cur.category, JSON.stringify(data.sections || []), id);
@@ -358,7 +359,7 @@ function dependencies(ctx, type, id) {
     else if (post.deleted_at) blocking.push("L'article de ce commentaire est dans la corbeille : restaurez-le d'abord.");
   } else if (type === "pattern") {
     const p = db.prepare("SELECT site_id, name FROM appearance_patterns WHERE id = ?").get(id);
-    if (p && db.prepare("SELECT 1 FROM appearance_patterns WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL").get(p.site_id, p.name, id)) blocking.push(`Un pattern « ${p.name} » existe déjà : renommez l'un des deux.`);
+    if (p && db.prepare(`SELECT 1 FROM appearance_patterns WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND id <> ? AND deleted_at IS NULL`).get(p.site_id, p.name, id)) blocking.push(`Un pattern « ${p.name} » existe déjà : renommez l'un des deux.`);
   }
   return { blocking, warnings };
 }

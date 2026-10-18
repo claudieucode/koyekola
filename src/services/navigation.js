@@ -3,6 +3,7 @@
 // Un élément qui vise une ressource KOLAKISA garde sa référence (type + object_id) : l'adresse est recalculée à chaque rendu par les
 // résolveurs ci-dessous (slug modifié = lien toujours bon ; ressource supprimée ou non publiée = état signalé, jamais un lien mort).
 const EventEmitter = require("events");
+const { sameScope } = require("./siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 const db = require("../config/database");
 const taxonomy = require("./taxonomy");
 const { slugify } = require("../utils/format");
@@ -108,14 +109,14 @@ function uniqueSlug(base, siteId, exceptId = 0) {
   const root = slugify(base) || "menu";
   for (let n = 1; n < 200; n += 1) {
     const slug = n === 1 ? root : `${root}-${n}`;
-    if (!db.prepare("SELECT 1 FROM nav_menus WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND slug = ? AND id <> ?").get(siteId ?? null, slug, exceptId)) return slug;
+    if (!db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND slug = ? AND id <> ?`).get(siteId ?? null, slug, exceptId)) return slug;
   }
   throw new UserError("Impossible de trouver une adresse libre pour ce menu.");
 }
 function create({ name, description = "", siteId = null, userId = null }) {
   const nm = cleanLabel(name);
   if (!nm) throw new UserError("Donnez un nom au menu.");
-  if (db.prepare("SELECT 1 FROM nav_menus WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE").get(siteId, nm)) throw new UserError(`Un menu « ${nm} » existe déjà.`);
+  if (db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE`).get(siteId, nm)) throw new UserError(`Un menu « ${nm} » existe déjà.`);
   const id = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, description, created_by) VALUES (?, ?, ?, ?, ?)").run(siteId, nm, uniqueSlug(nm, siteId), String(description || "").trim().slice(0, 300), userId).lastInsertRowid);
   emit("menu.created", { menuId: id });
   return menuRow(id);
@@ -125,7 +126,7 @@ function update(id, { name, description, status }) {
   if (!m) throw new UserError("Menu introuvable.");
   const nm = name === undefined ? m.name : cleanLabel(name);
   if (!nm) throw new UserError("Le nom du menu est obligatoire.");
-  if (db.prepare("SELECT 1 FROM nav_menus WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE AND id <> ?").get(m.site_id, nm, id)) throw new UserError(`Un menu « ${nm} » existe déjà.`);
+  if (db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND id <> ?`).get(m.site_id, nm, id)) throw new UserError(`Un menu « ${nm} » existe déjà.`);
   const st = status === undefined ? m.status : ["published", "draft"].includes(status) ? status : m.status;
   db.prepare("UPDATE nav_menus SET name = ?, description = ?, status = ?, updated_at = datetime('now') WHERE id = ?").run(nm, description === undefined ? m.description : String(description).trim().slice(0, 300), st, id);
   emit("menu.updated", { menuId: id });
@@ -145,7 +146,7 @@ function duplicate(id, { userId = null } = {}) {
   if (!m) throw new UserError("Menu introuvable.");
   return transaction(db, () => {
     let name = `${m.name} (copie)`;
-    for (let n = 2; db.prepare("SELECT 1 FROM nav_menus WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE").get(m.site_id, name); n += 1) name = `${m.name} (copie ${n})`;
+    for (let n = 2; db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE`).get(m.site_id, name); n += 1) name = `${m.name} (copie ${n})`;
     const copy = create({ name, description: m.description, siteId: m.site_id, userId });
     db.prepare("UPDATE nav_menus SET status = 'draft' WHERE id = ?").run(copy.id); // la copie n'est jamais publiée toute seule
     const map = new Map();
@@ -350,8 +351,8 @@ function tree(menuId) {
 }
 const flatten = (nodes, depth = 1, out = []) => { for (const n of nodes) { out.push({ ...n, depth }); flatten(n.children, depth + 1, out); } return out; };
 function listMenus({ siteId = null } = {}) {
-  const menus = db.prepare(`SELECT m.*, (SELECT COUNT(*) FROM nav_items i WHERE i.menu_id = m.id) AS items FROM nav_menus m WHERE COALESCE(m.site_id, 0) = COALESCE(?, 0) ORDER BY m.name COLLATE NOCASE`).all(siteId);
-  const locs = db.prepare("SELECT location, menu_id FROM nav_locations WHERE COALESCE(site_id, 0) = COALESCE(?, 0)").all(siteId);
+  const menus = db.prepare(`SELECT m.*, (SELECT COUNT(*) FROM nav_items i WHERE i.menu_id = m.id) AS items FROM nav_menus m WHERE ${sameScope("m.site_id")} ORDER BY m.name COLLATE NOCASE`).all(siteId);
+  const locs = db.prepare(`SELECT location, menu_id FROM nav_locations WHERE ${sameScope("site_id")}`).all(siteId);
   return menus.map((m) => ({ ...m, locations: locs.filter((l) => l.menu_id === m.id).map((l) => l.location), broken: brokenCount(m.id) }));
 }
 function brokenCount(menuId) {
@@ -372,19 +373,19 @@ function assign(location, menuId, { siteId = null } = {}) {
     if ((m.site_id ?? null) !== (siteId ?? null)) throw new UserError("Ce menu appartient à un autre site.");
   }
   transaction(db, () => {
-    db.prepare("DELETE FROM nav_locations WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND location = ?").run(siteId, location);
+    db.prepare(`DELETE FROM nav_locations WHERE ${sameScope("site_id")} AND location = ?`).run(siteId, location);
     if (menuId) db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, ?, ?)").run(siteId, location, Number(menuId));
   });
   emit("menu.assigned", { location, menuId: menuId ? Number(menuId) : null, siteId });
 }
-const assignments = ({ siteId = null } = {}) => Object.fromEntries(db.prepare("SELECT location, menu_id FROM nav_locations WHERE COALESCE(site_id, 0) = COALESCE(?, 0)").all(siteId).map((r) => [r.location, r.menu_id]));
+const assignments = ({ siteId = null } = {}) => Object.fromEntries(db.prepare(`SELECT location, menu_id FROM nav_locations WHERE ${sameScope("site_id")}`).all(siteId).map((r) => [r.location, r.menu_id]));
 
 // ---------- Rendu public : l'arbre VISIBLE d'un emplacement (null = rien d'affecté → l'appelant garde son affichage d'origine) ----------
 // user : session (null = visiteur). Un élément est montré s'il est publié, visible pour ce visiteur et si sa ressource est publiée.
 // Un élément sans lien valide mais avec des sous-éléments visibles devient un simple titre de groupe (jamais un lien mort).
 function forLocation(location, { siteId = null, user = null } = {}) {
   try {
-    const slot = db.prepare(`SELECT m.id, m.name, m.status FROM nav_locations l JOIN nav_menus m ON m.id = l.menu_id WHERE COALESCE(l.site_id, 0) = COALESCE(?, 0) AND l.location = ?`).get(siteId, location);
+    const slot = db.prepare(`SELECT m.id, m.name, m.status FROM nav_locations l JOIN nav_menus m ON m.id = l.menu_id WHERE ${sameScope("l.site_id")} AND l.location = ?`).get(siteId, location);
     if (!slot || slot.status !== "published") return null;
     return { menuId: slot.id, name: slot.name, items: visibleItems(slot.id, user) };
   } catch { return null; } // base de navigation indisponible : le site garde son en-tête d'origine

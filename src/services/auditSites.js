@@ -24,7 +24,7 @@ const CHECKS = [
 
 // Préparation du palier 3 (CMS indépendant par site) — INFORMATIF, jamais compté dans les anomalies, uniquement des NOMBRES.
 // Mesure ce qui existe et surtout les cas AMBIGUS : un média ou un formulaire déjà utilisé par plusieurs sites ne peut pas être rattaché à un seul site sans décision.
-const KEY = (siteId) => (siteId === null || siteId === undefined ? 0 : Number(siteId)); // 0 = site principal
+const { scopeKey: KEY } = require("./siteScope"); // 0 = site principal (R9-2 : définition unique dans siteScope)
 function classify(ownerSets) {
   const c = { inutilises: 0, principal: 0, un_site: 0, plusieurs: 0 };
   for (const owners of ownerSets) {

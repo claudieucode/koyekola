@@ -4,6 +4,7 @@
 // Garanties : aucune suppression, aucun écrasement silencieux (stratégie de conflit explicite), pages et articles toujours créés en
 // BROUILLON, contenu assaini, aucun compte ni droit importé, aucune adresse de domaine importée, remappage des identifiants par références.
 const crypto = require("node:crypto");
+const { sameScope } = require("../siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 const db = require("../../config/database");
 const { transaction } = require("../../marketing/db/tx");
 const { FORMAT, TYPES, ORDER, MAX_PER_TYPE, allowedTypes } = require("./exporter");
@@ -112,7 +113,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
           if (!line(item.name, 60)) it.issues.push("Nom du menu manquant.");
           if (!Array.isArray(item.items)) it.issues.push("Éléments du menu manquants.");
           else if (item.items.length > 500) it.issues.push("Trop d'éléments (500 au plus).");
-          const ex = db.prepare("SELECT id FROM nav_menus WHERE COALESCE(site_id, 0) = COALESCE(?, 0) AND name = ? COLLATE NOCASE").get(siteId, line(item.name, 60));
+          const ex = db.prepare(`SELECT id FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE`).get(siteId, line(item.name, 60));
           if (ex) { it.existing = ex.id; it.action = "conflict"; it.reason = "un menu porte déjà ce nom"; }
           if ((item.locations || []).length) it.warnings.push("Les emplacements du menu (en-tête, pied de page) ne sont pas appliqués : à choisir dans Navigation.");
         } else if (type === "redirects") {
@@ -121,7 +122,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
             const external = /^https?:\/\//i.test(item.target.trim());
             if (external && !ctx.can("redirects.external")) it.issues.push("Redirection vers un site extérieur : réservée aux administrateurs.");
             const v = redirects.validate({ source: item.source, target: item.target, status: item.status, siteId });
-            const exists = v.value.source_path && db.prepare("SELECT id, site_id FROM seo_redirects WHERE source_path = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").get(v.value.source_path, siteId ?? null); // R8 lot 6 : l'ancienne adresse n'est unique que PAR site
+            const exists = v.value.source_path && db.prepare(`SELECT id, site_id FROM seo_redirects WHERE source_path = ? AND ${sameScope("site_id")}`).get(v.value.source_path, siteId ?? null); // R8 lot 6 : l'ancienne adresse n'est unique que PAR site
             if (exists) { it.existing = exists.id; it.action = "conflict"; it.reason = (exists.site_id ?? null) !== (siteId ?? null) ? "une redirection d'un autre site existe déjà pour cette adresse" : "une redirection existe déjà pour cette adresse"; it.crossSite = (exists.site_id ?? null) !== (siteId ?? null); }
             else for (const e of v.errors) it.issues.push(e);
           }

@@ -2,6 +2,7 @@
 // actions groupées, page parente, changement d'adresse sans lien cassé. S'appuie sur le moteur de pages existant
 // (mk_landing_pages, brouillon / publication / versions / corbeille = archived_at) : aucune table parallèle.
 const { MarketingError } = require("../errors");
+const { sameScope } = require("../../services/siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 const { checkCtx, audit } = require("../audience/shared");
 const { notHiddenSql } = require("../visibility"); // R4 : pages des sites dont la personne ne peut pas lire les éléments
 
@@ -108,8 +109,8 @@ function slugChanged(ctx, { id = null, oldSlug, newSlug, status, publishedAt = n
     const db = ctx.db;
     // Une redirection manuelle qui masquerait la nouvelle adresse est retirée ; celles qui visaient l'ancienne visent la nouvelle (pas de chaîne)
     // R8 lot 6 : seules les redirections de LA PORTÉE de la page (son site, ou communes pour une page du principal) sont touchées — jamais celles d'un autre site
-    db.prepare("DELETE FROM seo_redirects WHERE source_path = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").run(`/p/${newSlug}`, siteId);
-    db.prepare("UPDATE seo_redirects SET target = ?, updated_at = datetime('now') WHERE target = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").run(`/p/${newSlug}`, `/p/${oldSlug}`, siteId);
+    db.prepare(`DELETE FROM seo_redirects WHERE source_path = ? AND ${sameScope("site_id")}`).run(`/p/${newSlug}`, siteId);
+    db.prepare(`UPDATE seo_redirects SET target = ?, updated_at = datetime('now') WHERE target = ? AND ${sameScope("site_id")}`).run(`/p/${newSlug}`, `/p/${oldSlug}`, siteId);
     // Historique des adresses (palier 12) : l'ancienne adresse redirige (301) vers l'adresse COURANTE de la page, tant que la page a été en ligne
     if (id) require("../../services/urls").slugChanged("page", id, { oldSlug, newSlug, siteId, wasLive: status === "published" || Boolean(publishedAt), userId: ctx.userId ?? null });
     try { require("../../seo/redirects").invalidate(); } catch { /* module SEO indisponible : le cache se renouvelle au redémarrage */ }
