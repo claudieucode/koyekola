@@ -59,13 +59,17 @@ const heightOf = (id) => {
 
 // ---------- Adresses ----------
 // Adresse demandée (nettoyée) ou tirée du nom ; unique PAR TAXONOMIE (une catégorie « seo » et une étiquette « seo » coexistent)
-function slugFor(taxonomy, { name, wanted, exceptId = 0 }) {
+// Site d'un terme (null = site principal). Le rattachement est écrit par siteContent.adopt juste après la création.
+const siteOfTerm = (id) => { const r = db.prepare("SELECT site_id FROM mk_content_sites WHERE content_type = 'term' AND content_id = ?").get(id); return r ? r.site_id : null; };
+// Les adresses publiques (/blog/categorie/<adresse>) sont communes à tous les sites : une adresse reste donc unique par taxonomie, tous sites confondus.
+// Mais le nom d'un terme d'un AUTRE site n'est jamais révélé dans un message d'erreur. site === undefined : appel historique (noms visibles).
+function slugFor(taxonomy, { name, wanted, exceptId = 0, site }) {
   const taken = (s) => db.prepare("SELECT id, name FROM taxonomy_terms WHERE taxonomy = ? AND slug = ? AND id <> ?").get(taxonomy, s, exceptId);
   if (wanted !== undefined && wanted !== null && String(wanted).trim() !== "") {
     const slug = slugify(String(wanted)).slice(0, 80).replace(/-+$/, "");
     if (!slug) throw new UserError("Adresse invalide : lettres, chiffres et tirets.");
     const hit = taken(slug);
-    if (hit) throw new UserError(`L'adresse « ${slug} » est déjà utilisée par « ${hit.name} ».`);
+    if (hit) throw new UserError(site === undefined || (siteOfTerm(hit.id) ?? null) === (site ?? null) ? `L'adresse « ${slug} » est déjà utilisée par « ${hit.name} ».` : `L'adresse « ${slug} » est déjà utilisée : choisissez-en une autre.`);
     return slug;
   }
   const base = slugify(name).slice(0, 80).replace(/-+$/, "") || "terme";
@@ -87,17 +91,21 @@ function checkParent(taxonomy, parentId, selfId = 0) {
   if (depthOf(parent.id) + 1 + (selfId ? heightOf(selfId) : 0) >= MAX_DEPTH) throw new UserError(`La hiérarchie est limitée à ${MAX_DEPTH} niveaux.`);
   return parent.id;
 }
-function create({ taxonomy, name, slug, description = "", parentId = null }) {
+// Un terme de même nom (casse et accents ignorés) au même endroit : même taxonomie, même parent et MÊME SITE (deux sites peuvent avoir chacun leur « Conseils »)
+function findTwin(taxonomy, parent, nm, site, exceptId = 0) {
+  return db.prepare("SELECT t.id, t.name FROM taxonomy_terms t WHERE t.taxonomy = ? AND COALESCE(t.parent_id, 0) = ? AND t.id <> ?").all(taxonomy, parent ?? 0, exceptId)
+    .find((t) => (site === undefined || (siteOfTerm(t.id) ?? null) === (site ?? null)) && (t.name.toLowerCase() === nm.toLowerCase() || slugify(t.name) === slugify(nm))) || null;
+}
+// site : site du nouveau terme (null = principal) ; undefined = comportement historique (comparaison avec tous les sites)
+function create({ taxonomy, name, slug, description = "", parentId = null, site }) {
   taxonomyOf(taxonomy);
   const nm = clean(name, MAX_NAME);
   if (!nm) throw new UserError(`Le nom ${taxonomy === "tag" ? "de l'étiquette" : "de la catégorie"} est obligatoire.`);
   const parent = checkParent(taxonomy, parentId);
-  // Un nom déjà pris à la même place (même taxonomie et même parent, casse et accents ignorés) est refusé
-  const twin = db.prepare("SELECT name FROM taxonomy_terms WHERE taxonomy = ? AND COALESCE(parent_id, 0) = ? AND LOWER(name) = LOWER(?)").get(taxonomy, parent ?? 0, nm)
-    || db.prepare("SELECT t.name FROM taxonomy_terms t WHERE t.taxonomy = ? AND COALESCE(t.parent_id, 0) = ?").all(taxonomy, parent ?? 0).find((t) => slugify(t.name) === slugify(nm));
+  const twin = findTwin(taxonomy, parent, nm, site);
   if (twin) throw new UserError(`« ${twin.name} » existe déjà${parent ? " dans cette catégorie" : ""}.`);
   const row = db.prepare("INSERT INTO taxonomy_terms (taxonomy, name, slug, description, parent_id) VALUES (?, ?, ?, ?, ?) RETURNING *")
-    .get(taxonomy, nm, slugFor(taxonomy, { name: nm, wanted: slug }), clean(description, 500), parent);
+    .get(taxonomy, nm, slugFor(taxonomy, { name: nm, wanted: slug, site }), clean(description, 500), parent);
   bump(); events.emit("term.created", row);
   return row;
 }
@@ -108,9 +116,10 @@ function update(id, { name, slug, description, parentId } = {}) {
   const nm = name === undefined ? term.name : clean(name, MAX_NAME);
   if (!nm) throw new UserError("Le nom est obligatoire.");
   const parent = parentId === undefined ? term.parent_id : checkParent(term.taxonomy, parentId, id);
-  const twin = db.prepare("SELECT t.id, t.name FROM taxonomy_terms t WHERE t.taxonomy = ? AND COALESCE(t.parent_id, 0) = ? AND t.id <> ?").all(term.taxonomy, parent ?? 0, id).find((t) => slugify(t.name) === slugify(nm));
+  const site = siteOfTerm(id);
+  const twin = findTwin(term.taxonomy, parent, nm, site, id);
   if (twin) throw new UserError(`« ${twin.name} » existe déjà${parent ? " dans cette catégorie" : ""}.`);
-  const nextSlug = slug === undefined || String(slug).trim() === "" ? term.slug : slugFor(term.taxonomy, { name: nm, wanted: slug, exceptId: id });
+  const nextSlug = slug === undefined || String(slug).trim() === "" ? term.slug : slugFor(term.taxonomy, { name: nm, wanted: slug, exceptId: id, site });
   db.prepare("UPDATE taxonomy_terms SET name = ?, slug = ?, description = ?, parent_id = ?, updated_at = datetime('now') WHERE id = ?")
     .run(nm, nextSlug, description === undefined ? term.description : clean(description, 500), parent, id);
   bump(); refreshMirrorsOfSubtree(id);
@@ -163,7 +172,16 @@ function remove(id, { reassignTo = null, kind = "deleted" } = {}) {
 const merge = (sourceId, targetId) => remove(sourceId, { reassignTo: targetId, kind: "merged" });
 
 // ---------- Lecture ----------
-const SORTS = { nom: "t.name COLLATE NOCASE ASC", nom_desc: "t.name COLLATE NOCASE DESC", utilisation: "n DESC, t.name COLLATE NOCASE ASC", recent: "t.id DESC", ancien: "t.id ASC" };
+// Tri : clés fermées (jamais un nom de colonne reçu du navigateur). « n » = nombre de contenus existants (hors corbeille) du terme, calculé dans la requête.
+const SORTS = {
+  nom: "t.name COLLATE NOCASE ASC", nom_desc: "t.name COLLATE NOCASE DESC",
+  slug: "t.slug COLLATE NOCASE ASC", slug_desc: "t.slug COLLATE NOCASE DESC",
+  description: "t.description = '' ASC, t.description COLLATE NOCASE ASC, t.name COLLATE NOCASE ASC", description_desc: "t.description <> '' ASC, t.description COLLATE NOCASE DESC, t.name COLLATE NOCASE ASC",
+  total: "n ASC, t.name COLLATE NOCASE ASC", total_desc: "n DESC, t.name COLLATE NOCASE ASC",
+  utilisation: "n DESC, t.name COLLATE NOCASE ASC", recent: "t.id DESC", ancien: "t.id ASC",
+};
+// Sous-requête « contenus existants du terme » (un article compte une fois, jamais deux : la relation terme/contenu est unique)
+const countSql = () => Object.entries(CONTENT).map(([type, def]) => `(SELECT COUNT(*) FROM taxonomy_relations r JOIN ${def.table} c ON c.id = r.content_id WHERE r.content_type = '${type}' AND r.term_id = t.id AND ${q(def.all)})`).join(" + ") || "0";
 // Liste paginée (recherche par nom, adresse, description) avec le nombre d'utilisations CALCULÉ dans la base ; filtre parent (« 0 » = racines)
 function list({ taxonomy, q = "", sort = "nom", page = 1, perPage = 30, parentId = "", unused = false, scope = null } = {}) {
   taxonomyOf(taxonomy);
@@ -177,7 +195,7 @@ function list({ taxonomy, q = "", sort = "nom", page = 1, perPage = 30, parentId
   const total = db.prepare(`SELECT COUNT(*) n FROM taxonomy_terms t WHERE ${where.join(" AND ")}`).get(...args).n;
   const pages = Math.max(1, Math.ceil(total / perPage));
   const current = Math.min(Math.max(1, Number(page) || 1), pages);
-  const rows = db.prepare(`SELECT t.*, (SELECT COUNT(*) FROM taxonomy_relations r WHERE r.term_id = t.id) AS n, p.name AS parent_name FROM taxonomy_terms t LEFT JOIN taxonomy_terms p ON p.id = t.parent_id
+  const rows = db.prepare(`SELECT t.*, (${countSql()}) AS n, p.name AS parent_name FROM taxonomy_terms t LEFT JOIN taxonomy_terms p ON p.id = t.parent_id
     WHERE ${where.join(" AND ")} ORDER BY ${SORTS[sort] || SORTS.nom} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
   return { rows: withCounts(rows), total, page: current, pages, perPage };
 }

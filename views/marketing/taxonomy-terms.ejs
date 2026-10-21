@@ -6,73 +6,112 @@
   const hier = def.hierarchical;
   const one = key === "tag" ? "étiquette" : "catégorie";
   const S = typeof mkSiteId === "number" ? mkSiteId : ""; const siteQ = S ? "?site=" + S : ""; // site courant (accès limité ou site choisi) : conservé dans tous les liens
-  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { site: S, q: f.q, tri: f.tri === "nom" ? "" : f.tri, inutilises: f.inutilises ? "1" : "", parent: f.parent, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return PATHS[key] + (t ? "?" + t : ""); };
+  const SORT_COLS = /^(nom|description|slug|total)(_desc)?$/;
+  const sortBase = f.tri.replace(/_desc$/, ""), sortDesc = /_desc$/.test(f.tri);
+  const keep = (over = {}) => {
+    const p = new URLSearchParams();
+    const o = { site: S, q: f.q, inutilises: f.inutilises ? "1" : "", parent: f.parent, ...over };
+    if (!("orderby" in over) && !("tri" in over)) { if (SORT_COLS.test(f.tri)) { if (f.tri !== "nom") { o.orderby = sortBase; if (sortDesc) o.order = "desc"; } } else o.tri = f.tri; }
+    Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); });
+    const t = p.toString(); return PATHS[key] + (t ? "?" + t : "");
+  };
+  const sortLink = (col) => keep({ page: "", orderby: col, order: sortBase === col && !sortDesc ? "desc" : "" });
+  const ariaSort = (col) => (sortBase === col ? (sortDesc ? "descending" : "ascending") : "none");
   const filtered = Boolean(f.q || f.inutilises || f.parent);
   const here = keep({ page: page > 1 ? page : "" });
   const n = (v) => Number(v || 0);
   const plural = (v, w) => v + " " + w + (v > 1 ? "s" : "");
+  const th = (col, label, cls) => `<th scope="col" class="${cls || ""}" aria-sort="${ariaSort(col)}"><a class="mk-ar-sort" href="${sortLink(col)}">${label}<span aria-hidden="true"> ${sortBase === col ? (sortDesc ? "▾" : "▴") : "↕"}</span></a></th>`;
 %>
-    <div class="mk-head"><h1><%= def.plural %></h1>
-      <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-tx-new>Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></button></div><% } %></div>
-    <p class="mk-lead"><%= key === "tag" ? "Les étiquettes sont des mots-clés transversaux (Google, Conversion…), sans hiérarchie : un article peut en avoir plusieurs." : "Les catégories classent les articles, de façon structurée : Marketing › SEO › SEO technique. Un article a une catégorie principale et peut en avoir d'autres." %></p>
+    <div class="mk-head"><h1><%= def.plural %></h1></div>
 
     <nav class="mk-tabs mk-cms-tabs" aria-label="Taxonomies">
       <a class="mk-tab" href="<%= PATHS.category + siteQ %>"<%- key === "category" ? ' aria-current="page"' : "" %>>Catégories</a>
       <a class="mk-tab" href="<%= PATHS.tag + siteQ %>"<%- key === "tag" ? ' aria-current="page"' : "" %>>Étiquettes</a>
     </nav>
 
-    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= PATHS[key] %>" role="search" aria-label="Rechercher parmi les <%= def.plural.toLowerCase() %>"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
-      <label class="mk-search"><span class="sr-only">Rechercher (nom, adresse, description)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une <%= one %>"></label>
-      <% if (hier) { %><label class="sr-only" for="tx-f-parent">Catégorie parente</label>
-      <select id="tx-f-parent" name="parent"><option value="">Tous les niveaux</option><option value="0"<%= f.parent === "0" ? " selected" : "" %>>Premier niveau seulement</option><% options.forEach((o) => { %><option value="<%= o.id %>"<%= String(o.id) === f.parent ? " selected" : "" %>>Sous « <%= o.name %> »</option><% }) %></select><% } %>
-      <label class="sr-only" for="tx-f-tri">Trier par</label>
-      <select id="tx-f-tri" name="tri"><% [["nom", "Nom A → Z"], ["nom_desc", "Nom Z → A"], ["utilisation", "Plus utilisées"], ["recent", "Plus récentes"], ["ancien", "Plus anciennes"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
-      <label class="mk-cms-check"><input type="checkbox" name="inutilises" value="1"<%= f.inutilises ? " checked" : "" %>> Inutilisées</label>
-      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "nom") { %><a class="btn btn-ghost btn-sm" href="<%= PATHS[key] + siteQ %>">Réinitialiser</a><% } %>
-    </form>
-
-    <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("tag", { size: 32 }) %><h2><%= filtered ? "Aucun résultat" : key === "tag" ? "Aucun tag" : "Aucune catégorie" %></h2>
-        <p><%= filtered ? "Aucune " + one + " ne correspond à ces critères." : key === "tag" ? "Aucune étiquette pour l'instant : elles se créent ici ou directement dans l'éditeur d'un article." : "Aucune catégorie pour l'instant : créez la première, puis ses sous-catégories." %></p>
-        <% if (canWrite && !filtered) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-tx-new>Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></button></div><% } %></div>
-    <% } else { %>
-      <% if (canDelete) { %>
-      <form id="tx-bulk" class="mk-cms-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-cms-bulk data-cms-delete-text="Aucun article n'est supprimé ; les termes utilisés sont refusés." data-cms-noun="<%= one %>"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
-        <input type="hidden" name="taxonomy" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>">
-        <label class="sr-only" for="tx-bulk-action">Action groupée</label><select id="tx-bulk-action" name="action" disabled><option value="">Action groupée</option><option value="supprimer">Supprimer</option></select>
-        <button type="submit" class="btn btn-outline btn-sm" disabled>Appliquer</button><span class="mk-sub" data-cms-bulk-count aria-live="polite"></span>
-      </form>
+    <div class="mk-tx-layout">
+      <%# ---------- Colonne gauche : « Ajouter une catégorie » (vrai formulaire, créé sur le site courant) ---------- %>
+      <% if (canWrite) { %>
+      <section class="mk-tx-add" aria-labelledby="tx-add-title">
+        <h2 id="tx-add-title">Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></h2>
+        <form method="post" action="/marketing/site-web/articles/termes" data-tx-add><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
+          <input type="hidden" name="taxonomy" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>">
+          <div class="field-group"><label for="tx-add-name">Nom</label><input id="tx-add-name" type="text" name="name" maxlength="60" required autocomplete="off"><span class="field-hint">Le nom est la façon dont il apparaît sur votre site.</span></div>
+          <div class="field-group"><label for="tx-add-slug">Slug</label><input id="tx-add-slug" type="text" name="slug" maxlength="80" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" autocomplete="off"><span class="field-hint">Le « slug » est la version du nom normalisée pour les URL. Il ne contient que des lettres minuscules, des chiffres et des tirets. Laissé vide, il est tiré du nom ; il doit être unique.</span></div>
+          <% if (hier) { %><div class="field-group"><label for="tx-add-parent">Catégorie parente</label>
+            <select id="tx-add-parent" name="parent_id"><option value="">Aucune</option><% options.forEach((o) => { %><option value="<%= o.id %>"><%= "— ".repeat(o.depth) %><%= o.name %></option><% }) %></select>
+            <span class="field-hint">Les catégories, contrairement aux étiquettes, peuvent avoir une hiérarchie. Vous pouvez avoir une catégorie nommée Jazz et, à l'intérieur, plusieurs catégories comme Bebop et Big Band. Ceci est totalement facultatif.</span></div><% } %>
+          <div class="field-group"><label for="tx-add-desc">Description</label><textarea id="tx-add-desc" name="description" rows="5" maxlength="500"></textarea><span class="field-hint">La description est du texte brut (le HTML n'est pas interprété) ; elle n'est pas affichée par défaut, mais certains thèmes peuvent l'afficher.</span></div>
+          <button type="submit" class="btn btn-primary" data-tx-add-submit>Ajouter <%= key === "tag" ? "une étiquette" : "une catégorie" %></button>
+        </form>
+      </section>
       <% } %>
-      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-tx-table">
-        <caption class="sr-only"><%= def.plural %></caption>
-        <thead><tr><% if (canDelete) { %><th scope="col" class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner"></th><% } %><th scope="col">Nom</th><th scope="col">Description</th><% if (hier) { %><th scope="col">Parent</th><% } %><th scope="col" class="mk-num">Articles</th><th scope="col" class="mk-num">En ligne</th><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th></tr></thead>
-        <tbody><% rows.forEach((t) => { const used = n(t.total ?? t.n); const data = { id: t.id, name: t.name, slug: t.slug, description: t.description, parent_id: t.parent_id || "", total: used, children: hier ? n(t.withChildren) : 0 }; %>
-          <tr><% if (canDelete) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= t.id %>" form="tx-bulk" data-cms-row aria-label="Sélectionner « <%= t.name %> »"></td><% } %>
-            <th scope="row" data-label="Nom"><span class="mk-tx-name" style="padding-left:<%= (t.depth || 0) * 18 %>px"><%= (t.depth || 0) ? "↳ " : "" %><a href="<%= base %>/<%= t.slug %>" target="_blank" rel="noopener"><%= t.name %></a><span class="mk-sub"><%= base %>/<%= t.slug %></span></span></th>
-            <td data-label="Description"><%= t.description ? (t.description.length > 70 ? t.description.slice(0, 70) + "…" : t.description) : "—" %></td>
-            <% if (hier) { %><td data-label="Parent"><%= t.parent_name || "—" %></td><% } %>
-            <td class="mk-num" data-label="Articles"><%= used %><% if (hier && n(t.withChildren) > used) { %><span class="mk-sub"><%= n(t.withChildren) %> avec sous-catégories</span><% } %></td>
-            <td class="mk-num" data-label="En ligne"><%= n(t.live) %></td>
-            <td class="mk-row-actions mk-cms-actions-col"><div class="mk-cms-rowbtns">
-              <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-tx-edit="<%= JSON.stringify(data) %>">Modifier</button><% } %>
-              <% if (canDelete) { %><div class="mk-dropdown" data-mk-dropdown>
-                <button type="button" class="btn btn-ghost btn-sm mk-cms-more" aria-haspopup="menu" aria-expanded="false" aria-controls="tx-menu-<%= t.id %>" aria-label="Plus d'actions pour « <%= t.name %> »"><%- icon("moreHorizontal", { size: 18 }) %></button>
-                <div class="mk-menu" id="tx-menu-<%= t.id %>" role="menu" hidden>
-                  <a role="menuitem" href="<%= base %>/<%= t.slug %>" target="_blank" rel="noopener">Voir la page publique</a>
-                  <button type="button" role="menuitem" data-tx-merge="<%= JSON.stringify(data) %>">Fusionner avec…</button>
-                  <button type="button" role="menuitem" data-tx-delete="<%= JSON.stringify(data) %>">Supprimer…</button>
-                </div></div><% } %>
-            </div></td></tr>
-        <% }) %></tbody>
-      </table></div>
-      <nav class="mk-cms-pager" aria-label="Pagination">
-        <span><%= plural(total, one) %></span>
-        <% if (pages > 1) { %><span class="mk-cms-pager-nav">
-          <% if (page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: page - 1 }) %>">Précédent</a><% } %>
-          <span>Page <%= page %> sur <%= pages %></span>
-          <% if (page < pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: page + 1 }) %>">Suivant</a><% } %></span><% } %>
-      </nav>
-    <% } %>
+
+      <%# ---------- Colonne droite : recherche, actions groupées, tableau ---------- %>
+      <section class="mk-tx-list" aria-label="<%= def.plural %> existantes">
+        <form class="mk-ar-search mk-tx-search" method="get" action="<%= PATHS[key] %>" role="search" aria-label="Rechercher parmi les <%= def.plural.toLowerCase() %>"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
+          <% if (f.tri !== "nom") { %><% if (SORT_COLS.test(f.tri)) { %><input type="hidden" name="orderby" value="<%= sortBase %>"><% if (sortDesc) { %><input type="hidden" name="order" value="desc"><% } %><% } else { %><input type="hidden" name="tri" value="<%= f.tri %>"><% } %><% } %>
+          <label class="sr-only" for="tx-q">Rechercher des <%= def.plural.toLowerCase() %> (nom, slug, description)</label>
+          <input id="tx-q" type="search" name="q" value="<%= f.q %>">
+          <button type="submit" class="btn btn-outline btn-sm">Rechercher des <%= def.plural.toLowerCase() %></button>
+          <% if (filtered) { %><a class="btn btn-ghost btn-sm" href="<%= PATHS[key] + siteQ %>">Réinitialiser</a><% } %>
+        </form>
+        <% if (f.q) { %><p class="mk-ar-found">Résultats de recherche pour : <strong><%= f.q %></strong></p><% } %>
+
+        <% if (!rows.length) { %>
+          <div class="mk-empty"><%- icon("tag", { size: 32 }) %><h2><%= filtered ? "Aucun résultat" : key === "tag" ? "Aucun tag" : "Aucune catégorie" %></h2>
+            <p><%= filtered ? "Aucune " + one + " ne correspond à ces critères." : key === "tag" ? "Aucune étiquette pour l'instant : elles se créent ici ou directement dans l'éditeur d'un article." : "Aucune catégorie pour l'instant : créez la première avec le formulaire, puis ses sous-catégories." %></p></div>
+        <% } else { %>
+          <form id="tx-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-tx-bulk data-cms-noun="<%= one %>"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
+            <input type="hidden" name="taxonomy" value="<%= key %>"><input type="hidden" name="retour" value="<%= here %>">
+            <% if (canDelete) { %><div class="mk-ar-actions">
+              <label class="sr-only" for="tx-bulk-action">Actions groupées</label><select id="tx-bulk-action" name="action" disabled data-tx-bulk-select><option value="">Actions groupées</option><option value="supprimer">Supprimer</option></select>
+              <button type="submit" class="btn btn-outline btn-sm" disabled data-tx-bulk-apply>Appliquer</button><span class="mk-sub" data-tx-bulk-count aria-live="polite"></span>
+              <span class="mk-ar-count"><%= plural(total, "élément") %></span></div><% } else { %><div class="mk-ar-actions"><span class="mk-ar-count"><%= plural(total, "élément") %></span></div><% } %>
+            <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-tx-table mk-ar-table">
+              <caption class="sr-only"><%= def.plural %></caption>
+              <% const head = `<tr>${canDelete ? '<td class="mk-cms-check-col"><input type="checkbox" data-tx-select-all aria-label="Tout sélectionner"></td>' : ""}${th("nom", "Nom")}${th("description", "Description")}${th("slug", "Slug")}${th("total", "Total", "mk-num")}</tr>`; %>
+              <thead><%- head %></thead>
+              <tbody><% rows.forEach((t) => { const used = n(t.total ?? t.n); const data = { id: t.id, name: t.name, slug: t.slug, description: t.description, parent_id: t.parent_id || "", total: used, children: hier ? n(t.withChildren) : 0 }; %>
+                <tr><% if (canDelete) { %><td class="mk-cms-check-col"><input type="checkbox" name="ids" value="<%= t.id %>" data-tx-row aria-label="Sélectionner « <%= t.name %> »"></td><% } %>
+                  <th scope="row" data-label="Nom"><span class="mk-tx-name" style="padding-left:<%= (t.depth || 0) * 18 %>px"><strong><%= (t.depth || 0) ? "— " : "" %><a href="<%= base %>/<%= t.slug %>" target="_blank" rel="noopener"><%= t.name %></a></strong>
+                    <% if (flat && t.parent_name) { %><span class="mk-sub">Parent : <%= t.parent_name %></span><% } %>
+                    <span class="mk-ar-rowlinks">
+                      <% if (canWrite) { %><button type="button" class="mk-ar-linkbtn" data-tx-edit="<%= JSON.stringify(data) %>">Modifier</button><% } %>
+                      <% if (canDelete) { %><button type="button" class="mk-ar-linkbtn" data-tx-merge="<%= JSON.stringify(data) %>">Fusionner…</button><button type="button" class="mk-ar-linkbtn is-danger" data-tx-delete="<%= JSON.stringify(data) %>">Supprimer</button><% } %>
+                      <a href="<%= base %>/<%= t.slug %>" target="_blank" rel="noopener">Afficher</a>
+                    </span></span></th>
+                  <td data-label="Description"><%= t.description ? (t.description.length > 120 ? t.description.slice(0, 120) + "…" : t.description) : "—" %></td>
+                  <td data-label="Slug"><%= t.slug %></td>
+                  <td class="mk-num" data-label="Total"><% if (used) { %><a href="/marketing/site-web/articles?<%= key === "category" ? "categorie" : "etiquette" %>=<%= t.id %><%= S ? "&site=" + S : "" %>"><%= used %></a><% } else { %>0<% } %><% if (hier && n(t.withChildren) > used) { %><span class="mk-sub"><%= n(t.withChildren) %> avec sous-catégories</span><% } %></td></tr>
+              <% }) %></tbody>
+              <tfoot><%- head %></tfoot>
+            </table></div>
+            <% if (canDelete) { %><div class="mk-ar-actions mk-ar-actions-foot">
+              <div class="mk-cms-bulk"><label class="sr-only" for="tx-bulk-action2">Actions groupées (bas du tableau)</label><select id="tx-bulk-action2" disabled data-tx-bulk-mirror><option value="">Actions groupées</option></select>
+              <button type="button" class="btn btn-outline btn-sm" disabled data-tx-bulk-apply2>Appliquer</button></div>
+              <span class="mk-ar-count"><%= plural(total, "élément") %></span></div><% } %>
+          </form>
+          <nav class="mk-cms-pager" aria-label="Pagination">
+            <span><%= plural(total, one) %></span>
+            <% if (pages > 1) { %><span class="mk-cms-pager-nav">
+              <% if (page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: page - 1 }) %>">Précédent</a><% } %>
+              <span>Page <%= page %> sur <%= pages %></span>
+              <% if (page < pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: page + 1 }) %>">Suivant</a><% } %></span><% } %>
+          </nav>
+        <% } %>
+
+        <% if (key === "category") { %>
+        <div class="mk-tx-notes">
+          <p>Supprimer une catégorie ne supprime <strong>jamais</strong> les articles. Une catégorie utilisée par des articles ne se supprime qu'en indiquant la catégorie qui les reprend (ou en la fusionnant) ; une catégorie vide se supprime directement. Ses sous-catégories remontent alors d'un niveau.</p>
+          <p>Kolakisa n'impose pas de catégorie par défaut : un article peut n'avoir aucune catégorie. Le « Total » compte les articles existants (brouillons, programmés et publiés), pas ceux de la corbeille ; la liste des articles du site peut être filtrée par catégorie.</p>
+        </div>
+        <% } else { %>
+        <div class="mk-tx-notes"><p>Supprimer une étiquette ne supprime jamais les articles. Pour une étiquette utilisée, utilisez « Fusionner… » : les articles passent à l'étiquette choisie.</p></div>
+        <% } %>
+      </section>
+    </div>
 
     <% if (canWrite || canDelete) { %>
       <%# Une seule fenêtre de saisie (création et modification), une de suppression, une de fusion : remplies par public/js/cms-taxonomy.js %>

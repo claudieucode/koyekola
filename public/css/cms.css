@@ -402,3 +402,17 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label, html[data-sidebar="co
   .mk-ar-rowlinks { opacity: 1; }
   .mk-ar-count { margin-left: 0; }
 }
+
+/* ARTICLES-03 — Catégories / Étiquettes : formulaire d'ajout à gauche, tableau à droite (une colonne sous 900 px) */
+.mk-tx-layout { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.mk-tx-add { background: var(--mk-surface, #fff); border: 1px solid var(--mk-border); border-radius: 8px; padding: 16px 18px; }
+.mk-tx-add h2 { font-size: 1.05rem; margin: 0 0 12px; }
+.mk-tx-add .field-group { margin-bottom: 14px; }
+.mk-tx-add textarea { width: 100%; resize: vertical; }
+.mk-tx-search { justify-content: flex-end; margin: 0 0 10px; flex-wrap: wrap; }
+.mk-tx-table th[scope="col"] a { font-weight: 600; }
+.mk-tx-table td[data-label="Slug"] { word-break: break-all; }
+.mk-tx-table .mk-ar-rowlinks > * { font-size: 0.82rem; }
+.mk-tx-notes { margin-top: 14px; color: var(--muted); font-size: 0.88rem; display: grid; gap: 6px; }
+.mk-tx-notes p { margin: 0; }
+@media (max-width: 900px) { .mk-tx-layout { grid-template-columns: minmax(0, 1fr); } .mk-tx-search { justify-content: flex-start; } }

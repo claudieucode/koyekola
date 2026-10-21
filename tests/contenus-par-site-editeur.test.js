@@ -119,12 +119,16 @@ describe("contenus par site : parcours éditorial d'un accès limité", () => {
       assert.equal((await guestA.post(`${R}/articles`, { title: "Intrus B", site: String(B) })).status, 403);
       assert.equal(one("SELECT COUNT(*) n FROM posts WHERE title = 'Intrus B'").n, 0);
     });
-    test("création directe dans l'éditeur (/nouveau, /api/brouillon) et pages annexes de l'éditeur (liste, SEO, médias) : réservées, refusées à un accès limité", async () => {
-      for (const url of [`${E}/nouveau?site=${A}`, `${E}`, `${E}/api/medias?site=${A}`, `${E}/api/blocs?site=${A}`, `${E}/api/brouillon?site=${A}`]) {
+    test("pages annexes de l'éditeur (liste, SEO, médias) et /api/brouillon : réservées, refusées à un accès limité ; /nouveau ne s'ouvre que pour SON site (ARTICLES-02)", async () => {
+      for (const url of [`${E}`, `${E}/api/medias?site=${A}`, `${E}/api/blocs?site=${A}`, `${E}/api/brouillon?site=${A}`]) {
         const r = await guestA.get(url);
         assert.equal(r.status, 403, url);
       }
-      assert.equal((await save(guestA, 0, { title: "x" }, `${E}/nouveau?site=${A}`)).status, 403);
+      // ARTICLES-02 : ouverture directe de l'éditeur, mais uniquement pour son propre site (jamais celui d'un autre, jamais sans site)
+      assert.equal((await guestA.get(`${E}/nouveau?site=${A}`)).status, 200);
+      assert.equal((await guestA.get(`${E}/nouveau?site=${B}`)).status, 403);
+      assert.equal((await guestA.get(`${E}/nouveau`)).status, 403);
+      assert.equal((await save(guestA, 0, { title: "x" }, `${E}/nouveau?site=${B}`)).status, 403);
       assert.equal((await save(guestA, 0, { title: "x" }, `${E}/api/brouillon?site=${A}`)).status, 403);
     });
     test("classement : terme d'un autre site, du principal, inconnu, ou saisie par noms sur un article de site : refusés sans écriture ; terme du site accepté", async () => {
@@ -205,6 +209,7 @@ describe("contenus par site : parcours éditorial d'un accès limité", () => {
       assert.match(first.text, new RegExp(`<form[^>]*method="get"[^>]*>\\s*<input type="hidden" name="site" value="${A}">`), "formulaire de filtre");
       for (const h of internal.filter((x) => /articles/.test(x))) {
         const r = await guestA.get(h);
+        if (/\/articles\/ajouter/.test(h)) { assert.equal(r.status, 302, h); assert.equal(r.location, `/formateur/blog/nouveau?site=${A}`); continue; } // ARTICLES-02 : ouvre l'éditeur
         assert.equal(r.status, 200, h);
         assert.ok(!r.text.includes("Titre b-un") && !r.text.includes("Titre principal"), `${h} reste limité au site`);
       }

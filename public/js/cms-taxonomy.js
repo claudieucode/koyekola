@@ -76,3 +76,59 @@
     if (e.target.closest("[data-tx-close]")) { var d = e.target.closest("dialog"); if (d) d.close(); }
   });
 })();
+
+// ----- Formulaire « Ajouter » (colonne de gauche) et actions groupées du tableau (haut et bas) -----
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var slugOf = function (v) { return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80); };
+
+  var add = $("[data-tx-add]");
+  if (add) {
+    var name = $("[name=name]", add), slug = $("[name=slug]", add), touched = false;
+    slug.addEventListener("input", function () { touched = slug.value !== ""; });
+    // Le slug proposé suit le nom tant qu'on ne l'a pas saisi soi-même (vide : le serveur le tire du nom)
+    name.addEventListener("input", function () { if (!touched) slug.value = slugOf(name.value); });
+    add.addEventListener("submit", function () { // pas de double envoi ; en cas d'erreur le serveur recharge la page
+      var b = $("[data-tx-add-submit]", add);
+      setTimeout(function () { if (b) b.disabled = true; }, 0);
+    });
+  }
+
+  var bulk = $("[data-tx-bulk]");
+  if (!bulk) return;
+  var noun = bulk.getAttribute("data-cms-noun") || "terme";
+  var rows = $$("[data-tx-row]", bulk), all = $$("[data-tx-select-all]", bulk);
+  var select = $("[data-tx-bulk-select]", bulk), apply = $("[data-tx-bulk-apply]", bulk), count = $("[data-tx-bulk-count]", bulk);
+  var mirror = $("[data-tx-bulk-mirror]", bulk), apply2 = $("[data-tx-bulk-apply2]", bulk);
+  if (!select) return;
+  var picked = function () { return rows.filter(function (r) { return r.checked; }).length; };
+  function refresh() {
+    var n = picked();
+    select.disabled = n === 0; apply.disabled = n === 0 || !select.value;
+    count.textContent = n ? n + " " + noun + (n > 1 ? "s" : "") + " sélectionné" + (n > 1 ? "s" : "") : "";
+    all.forEach(function (a) { a.checked = n > 0 && n === rows.length; a.indeterminate = n > 0 && n < rows.length; });
+    if (mirror) {
+      if (mirror.options.length !== select.options.length) mirror.innerHTML = select.innerHTML;
+      mirror.value = select.value; mirror.disabled = select.disabled; apply2.disabled = apply.disabled;
+    }
+  }
+  all.forEach(function (a) { a.addEventListener("change", function () { rows.forEach(function (r) { r.checked = a.checked; }); refresh(); }); });
+  rows.forEach(function (r) { r.addEventListener("change", refresh); });
+  select.addEventListener("change", refresh);
+  if (mirror) {
+    mirror.addEventListener("change", function () { select.value = mirror.value; refresh(); });
+    apply2.addEventListener("click", function () { if (bulk.requestSubmit) bulk.requestSubmit(apply); else apply.click(); });
+  }
+  var confirmed = false;
+  bulk.addEventListener("submit", function (e) {
+    if (confirmed) return; // deuxième passage (après confirmation) : le formulaire part
+    if (select.value !== "supprimer") return;
+    e.preventDefault();
+    var n = picked();
+    var texts = { title: "Supprimer ?", text: n + " " + noun + (n > 1 ? "s" : "") + " ser" + (n > 1 ? "ont" : "a") + " supprimé" + (n > 1 ? "s" : "") + ". Aucun article n'est supprimé ; les termes utilisés par des articles sont refusés (utilisez « Supprimer » sur la ligne pour choisir où ranger leurs articles).", ok: "Supprimer" };
+    var go = function () { confirmed = true; if (bulk.requestSubmit) bulk.requestSubmit(apply); else bulk.submit(); setTimeout(function () { $$("button", bulk).forEach(function (b) { b.disabled = true; }); }, 0); };
+    if (window.mkConfirm) window.mkConfirm(texts, go); else if (window.confirm(texts.text)) go();
+  });
+  refresh();
+})();

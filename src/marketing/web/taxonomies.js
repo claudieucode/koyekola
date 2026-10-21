@@ -30,6 +30,8 @@ module.exports = () => {
     taxonomy.reconcile(); // articles venus d'une autre voie que l'éditeur
     const scope = siteContent.scopePredicate(req.mk.ctx, "term", "t.id"); // portée de site : listes, arbre, options
     const f = { q: String(req.query.q || "").trim().slice(0, 80), tri: Object.hasOwn(taxonomy.SORTS, req.query.tri) ? req.query.tri : "nom", inutilises: req.query.inutilises === "1", parent: /^\d{1,9}$/.test(String(req.query.parent || "")) || req.query.parent === "0" ? String(req.query.parent) : "" };
+    // Tri par colonne (?orderby=nom|description|slug|total & order=asc|desc) : liste fermée, jamais une colonne reçue telle quelle ; il l'emporte sur l'ancien ?tri=
+    if (["nom", "description", "slug", "total"].includes(req.query.orderby)) f.tri = req.query.orderby + (req.query.order === "desc" ? "_desc" : "");
     let rows, total, page, pages;
     const flat = f.q || f.inutilises || f.parent || f.tri !== "nom" || !def.hierarchical;
     if (flat) {
@@ -70,7 +72,7 @@ module.exports = () => {
     const here = siteContent.siteParam(req.mk.ctx); // site de la création : accès limité, ou site choisi par l'équipe (sinon site principal)
     if (parentId && (siteContent.siteOf(db(), "term", parentId) ?? null) !== (here ?? null)) throw new UserError("La catégorie parente doit appartenir au même site.");
     // Tout ou rien : le terme et son rattachement au site sont écrits ensemble
-    const t = transaction(db(), () => { const created = taxonomy.create({ taxonomy: key, name: req.body.name, slug: req.body.slug, description: req.body.description, parentId }); siteContent.adopt(req.mk.ctx, { type: "term", id: created.id }); return created; });
+    const t = transaction(db(), () => { const created = taxonomy.create({ taxonomy: key, name: req.body.name, slug: req.body.slug, description: req.body.description, parentId, site: here ?? null }); siteContent.adopt(req.mk.ctx, { type: "term", id: created.id }); return created; });
     flash(req, "ok", `${taxonomy.TAXONOMIES[key].label} « ${t.name} » créée.`);
     return key;
   });
@@ -79,7 +81,8 @@ module.exports = () => {
     if (!t || !inScope(req, t.id)) throw new UserError("Terme introuvable.");
     req.body.taxonomy = t.taxonomy;
     if (req.body.parent_id && !sameSite(t.id, Number(req.body.parent_id))) throw new UserError("La catégorie parente doit appartenir au même site.");
-    const u = taxonomy.update(t.id, { name: req.body.name, slug: req.body.slug, description: req.body.description, parentId: taxonomy.TAXONOMIES[t.taxonomy].hierarchical ? (req.body.parent_id ? Number(req.body.parent_id) : null) : undefined });
+    // Champ « parent_id » absent : le parent n'est pas touché (une mise à jour partielle ne remet pas la catégorie à la racine)
+    const u = taxonomy.update(t.id, { name: req.body.name, slug: req.body.slug, description: req.body.description, parentId: taxonomy.TAXONOMIES[t.taxonomy].hierarchical && Object.hasOwn(req.body, "parent_id") ? (req.body.parent_id ? Number(req.body.parent_id) : null) : undefined });
     flash(req, "ok", `« ${u.name} » enregistrée.`);
     return t.taxonomy;
   });
@@ -109,7 +112,7 @@ module.exports = () => {
     try {
       const ids = taxonomy.uniqueIds(req.body.ids).slice(0, 200);
       if (!ids.length) throw new UserError("Sélectionnez au moins un terme.");
-      if (req.body.action !== "supprimer") throw new UserError("Action inconnue.");
+      if ((req.body.action || req.body.action2) !== "supprimer") throw new UserError("Choisissez une action groupée."); // action2 : la barre du bas du tableau
       const done = [], failed = [];
       for (const id of ids) {
         const t = taxonomy.get(id);
