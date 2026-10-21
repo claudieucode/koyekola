@@ -14,8 +14,7 @@ Branche `cms-01-navigation`, issue de `origin/main` (`6adf8df`). Ce document dé
 | Changement | Fichiers |
 |---|---|
 | Ordre des rubriques aligné sur la référence WordPress : Tableau de bord, Pages, Articles, **Médias, Commentaires, Apparence, Extensions**, Utilisateurs, SEO, Redirections, Tests A/B, **Marketing du site, Navigation**, Outils, Paramètres | `cmsNav.js` |
-| Nouvelle rubrique **Extensions** (gestionnaire central, équipe uniquement) : matrice réelle site × module | `cmsNav.js`, `cmsScreens.js`, `cmsData.js` (`moduleMatrix`) |
-| Les rubriques `centralOnly` ne reçoivent jamais le cadre d'un site (`isCentralKey`) | `cmsNav.js`, `helpers.js`, `top.ejs` |
+| Nouvelle rubrique **Extensions** (menu du site principal, fonction centrale : absente du menu d'un site créé ; équipe uniquement) : matrice réelle site × module | `cmsNav.js`, `cmsScreens.js`, `cmsData.js` (`moduleMatrix`) |
 | Entrées `teamOnly` : refus **côté serveur** d'un accès limité à un site | `cmsScreens.js` |
 | Commande « **Replier le menu** » en bas du panneau (en plus du bouton d'en-tête), même état mémorisé | `top.ejs`, `shell.js`, `cms.css` |
 | Tests | `tests/cms-01-navigation.test.js` (nouveau), `tests/cms-interface.test.js` (ordre mis à jour) |
