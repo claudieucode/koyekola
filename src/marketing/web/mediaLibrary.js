@@ -8,9 +8,14 @@ const multer = require("multer");
 const media = require("../media");
 const { MarketingError } = require("../errors");
 const { need } = require("./kit");
+const siteContent = require("../../services/siteContent");
 
 const PER_PAGE = 48;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: media.MAX_UPLOAD, files: 1 } });
+const MAX_FILES = 20; // fichiers par envoi « méthode du navigateur »
+const uploadMany = multer({ storage: multer.memoryStorage(), limits: { fileSize: media.MAX_UPLOAD, files: MAX_FILES } });
+// Les navigateurs envoient le nom en latin1 : on le relit en UTF-8
+const originalNameOf = (file) => { const utf8 = Buffer.from(file.originalname, "latin1").toString("utf8"); return utf8.includes("�") ? file.originalname : utf8; };
 const PERIODS = { jour: "Aujourd'hui", 7: "7 derniers jours", 30: "30 derniers jours", annee: "Cette année" };
 
 // Début de période (UTC, comme les dates de la base)
@@ -22,6 +27,8 @@ function sinceOf(period) {
   if (period === "7" || period === "30") return iso(new Date(now.getTime() - Number(period) * 864e5));
   return "";
 }
+// Adresse de la médiathèque DU SITE administré (le site de la requête, vérifié par le serveur) : sert aux liens « Ouvrir la médiathèque » après un envoi
+const libraryUrl = (ctx) => { const site = siteContent.siteParam(ctx); return `/marketing/site-web/mediatheque${site ? `?site=${site}` : ""}`; };
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
 // Filtres lus dans l'adresse (liste, page et API)
@@ -47,7 +54,7 @@ module.exports = () => {
 
   const fail = (res, next, error) => {
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : error.code === "invalid_state" ? 409 : 422).json({ error: { code: error.code, message: error.message } });
+    res.status(error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : error.code === "invalid_state" ? 409 : error.code === "unavailable" ? 503 : 422).json({ error: { code: error.code, message: error.message } });
   };
   const authorsOf = (ctx, ids) => {
     const list = [...new Set(ids.filter(Boolean))];
@@ -67,13 +74,36 @@ module.exports = () => {
     const authors = authorsOf(ctx, found.items.map((m) => m.createdBy));
     res.render("marketing/media-library", {
       title: "Médiathèque", active, uploadOpen, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: media.orgLevel(ctx) && !Number.isInteger(ctx.siteFilter) && ctx.siteFilter !== "principal", f, found, counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view: req.query.vue === "liste" ? "liste" : "grille",
-      canUpload: req.mk.can("media.upload"), canWrite: req.mk.can("media.write"), canDelete: req.mk.can("media.delete"), formats: media.FORMATS, maxMb: { image: media.MAX_IMAGE / 1048576, document: media.MAX_DOCUMENT / 1048576, audio: media.MAX_AUDIO / 1048576, video: media.MAX_VIDEO / 1048576 },
+      canUpload: req.mk.can("media.upload"), canWrite: req.mk.can("media.write"), canDelete: req.mk.can("media.delete"), uploadCfg: { ...media.uploadConfig(), libraryUrl: libraryUrl(ctx) }, formats: media.FORMATS, maxMb: media.uploadConfig().limits,
       mediaJs: true,
     });
   };
   router.get(base, need("media.read"), page(false, "mediatheque"));
-  // « Ajouter un fichier média » : la même médiathèque, zone d'envoi ouverte (l'écran WordPress « Média → Ajouter »)
-  router.get(`${base}/ajouter`, need("media.upload"), page(true, "mediatheque/ajouter"));
+  // ----- Média → Ajouter un fichier média (« Téléverser un média ») : la même file d'importation et le même service que la médiathèque -----
+  router.get(`${base}/ajouter`, need("media.upload"), (req, res) => {
+    const ctx = req.mk.ctx;
+    res.render("marketing/media-upload", { title: "Téléverser un média", active: "mediatheque/ajouter", cfg: { ...media.uploadConfig(), libraryUrl: libraryUrl(ctx) }, classic: req.query.methode === "navigateur", maxFiles: MAX_FILES, mediaJs: true });
+  });
+  // « Méthode du navigateur » : formulaire classique, sans JavaScript, plusieurs fichiers ; MÊME validation et MÊME enregistrement que l'envoi principal (aucun second système)
+  router.post(`${base}/ajouter`, need("media.upload"), (req, res, next) => {
+    uploadMany.array("files", MAX_FILES)(req, res, (uploadError) => {
+      const ctx = req.mk.ctx, site = siteContent.siteParam(ctx), back = `/marketing/site-web/mediatheque/ajouter?${site ? `site=${site}&` : ""}methode=navigateur`;
+      const flash = (type, text, detail) => { req.session.mkFlash = { type, text, ...(detail ? { detail } : {}), noReopen: true }; res.redirect(back); };
+      if (uploadError) return flash("error", uploadError.code === "LIMIT_FILE_SIZE" ? `Un fichier dépasse la taille maximale d'une requête (${media.MAX_UPLOAD / 1048576} Mo) : rien n'a été enregistré.` : uploadError.code === "LIMIT_FILE_COUNT" ? `Trop de fichiers : ${MAX_FILES} au plus par envoi.` : "Envoi impossible : fichier illisible.");
+      const files = (req.files || []).filter((f) => f.size > 0 && f.originalname);
+      if (!files.length) return flash("error", "Choisissez au moins un fichier.");
+      const done = [], failed = [];
+      for (const file of files) {
+        const originalName = originalNameOf(file);
+        try { done.push(media.saveUpload(ctx, { buffer: file.buffer, originalName, declaredType: file.mimetype, siteId: media.siteOfUpload(ctx) })); }
+        catch (error) { if (!(error instanceof MarketingError)) return next(error); failed.push(`« ${originalName} » : ${error.message}`); }
+      }
+      const head = done.length ? `${done.length} fichier${done.length > 1 ? "s" : ""} enregistré${done.length > 1 ? "s" : ""} dans la médiathèque de ce site.` : "";
+      if (!failed.length) return flash("ok", head);
+      if (!done.length) return flash("error", "Aucun fichier n'a pu être enregistré.", failed.join(" · "));
+      flash("ok", `${head} ${failed.length} refusé${failed.length > 1 ? "s" : ""}.`, failed.join(" · "));
+    });
+  });
 
   // ----- API JSON -----
   router.get(`${base}/liste.json`, need("media.read"), (req, res) => {
@@ -94,8 +124,7 @@ module.exports = () => {
       if (uploadError) return res.status(422).json({ error: { code: "invalid_field", message: uploadError.code === "LIMIT_FILE_SIZE" ? `Le fichier dépasse la taille maximale autorisée (${media.MAX_UPLOAD / 1048576} Mo).` : "Envoi impossible : fichier illisible." } });
       try {
         if (!req.file) throw new MarketingError("invalid_field", "Aucun fichier reçu.");
-        const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8"); // les navigateurs envoient le nom en latin1
-        const originalName = utf8.includes("�") ? req.file.originalname : utf8;
+        const originalName = originalNameOf(req.file);
         let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, siteId: media.siteOfUpload(req.mk.ctx) });
         if (req.body && (req.body.alt || req.body.title)) saved = media.updateMedia(req.mk.ctx, saved.id, { alt: req.body.alt, title: req.body.title });
         res.status(201).json({ media: saved });

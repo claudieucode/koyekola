@@ -56,13 +56,12 @@ describe("media-01 : médiathèque", () => {
       assert.match(t, /Toutes les dates/); assert.match(t, /Sélection groupée/); assert.match(t, /Rechercher des médias/);
       assert.match(t, /Aucun fichier/); assert.doesNotMatch(t, /Speed up|WPForms|Elementor/, "aucune notification promotionnelle");
     });
-    test("Médias → Médiathèque et Ajouter un fichier média : sous-rubriques du menu ; la page d'ajout ouvre la zone d'envoi", async () => {
+    test("Médias → Médiathèque et Ajouter un fichier média : sous-rubriques du menu ; « Ajouter » est une page dédiée (MEDIA-02)", async () => {
       const page = await boss.get(`${L}/ajouter`);
       assert.equal(page.status, 200);
       assert.match(page.text, /aria-current="page"[^>]*>(?:<[^>]+>)*[^<]*Ajouter un fichier média/);
-      assert.match(page.text, /Médiathèque/);
-      assert.doesNotMatch(page.text, /id="ml-upload" hidden/, "zone d'envoi ouverte sur l'écran d'ajout");
-      assert.match((await boss.get(`${L}?site=${A}`)).text, /id="ml-upload" hidden/, "fermée sur la médiathèque, ouverte par le bouton");
+      assert.match(page.text, /<h1>Téléverser un média<\/h1>/);
+      assert.match((await boss.get(`${L}?site=${A}`)).text, /id="ml-upload" hidden/, "sur la médiathèque, la zone d'envoi s'ouvre avec le bouton");
       assert.equal((await viewerA.get(`${L}/ajouter?site=${A}`)).status, 403, "lecteur : pas d'envoi");
     });
     test("le site accompagne chaque appel du navigateur : balise mk-media-site et noyau KWMedia", async () => {

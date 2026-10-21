@@ -152,6 +152,21 @@ function parsePublicPath(ctx, publicPath) {
   return { siteId: m[2] ? Number(m[2]) : null, file: m[3], absolute: path.join(uploadsRoot, "marketing", String(ctx.organizationId), ...(m[2] ? [`site-${m[2]}`] : []), m[3]) };
 }
 
+// Limite EFFECTIVE d'un type de fichier (octets) : le plafond du serveur, abaissé par Paramètres → Médias. Source unique : l'envoi la fait respecter, la page d'envoi l'affiche.
+function effectiveLimit(type) {
+  let max = LIMITS[type];
+  try { const m = require("../../services/settings").main().mediaLimits; const k = type === "pdf" ? "document" : type; if (m[k]) max = Math.min(max, m[k]); } catch { /* réglages indisponibles : plafond du serveur */ }
+  return max;
+}
+// Extension → type : les formats que le serveur accepte (le type RÉEL est toujours relu dans le contenu du fichier : l'extension ne sert qu'à prévenir avant l'envoi)
+const EXT_TYPES = { jpg: "image", jpeg: "image", png: "image", gif: "image", webp: "image", avif: "image", mp4: "video", webm: "video", mp3: "audio", wav: "audio", ogg: "audio", m4a: "audio", pdf: "pdf", doc: "document", docx: "document", xls: "document", xlsx: "document", ppt: "document", pptx: "document" };
+const ACCEPT = Object.keys(EXT_TYPES).map((e) => `.${e}`).join(",");
+// Configuration d'envoi donnée à la page (limites en Mo par type, effectives) : ce que la personne voit est ce que le serveur applique
+function uploadConfig() {
+  const limits = Object.fromEntries(TYPES.map((t) => [t, Math.round((effectiveLimit(t) / 1048576) * 10) / 10]));
+  return { extTypes: EXT_TYPES, accept: ACCEPT, limits, requestMax: Math.round((MAX_UPLOAD / 1048576) * 10) / 10, formats: FORMATS, concurrency: 2 };
+}
+
 // allow : types acceptés par l'appelant (les e-mails n'acceptent que images et PDF) ; sans allow, toute la liste blanche
 function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, siteId } = {}) {
   checkCtx(ctx);
@@ -161,15 +176,18 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, sit
   if (!info) throw new MarketingError("invalid_field", refuse(originalName, declaredType));
   if (allow && info.type === "video" && !allow.includes("video")) throw new MarketingError("invalid_field", "Un e-mail ne peut pas lire de vidéo. Publiez-la (YouTube, Vimeo…) puis utilisez le bloc « Vidéo » avec son adresse : le message affichera une miniature cliquable.");
   if (allow && !allow.includes(info.type)) throw new MarketingError("invalid_field", `Ce fichier est ${LIMIT_WORDS[info.type]} : ici, seuls ${allow.map((t) => TYPE_LABELS[t].toLowerCase()).join(" et ")} sont acceptés. Les autres fichiers s'envoient dans Site Web → Médias.`);
-  // Limite choisie dans Paramètres → Médias (jamais au-delà du plafond du serveur)
-  let max = LIMITS[info.type];
-  try { const m = require("../../services/settings").main().mediaLimits; const k = info.type === "pdf" ? "document" : info.type; if (m[k]) max = Math.min(max, m[k]); } catch { /* réglages indisponibles : plafond du serveur */ }
+  const max = effectiveLimit(info.type); // limite choisie dans Paramètres → Médias, jamais au-delà du plafond du serveur
   if (buffer.length > max) throw new MarketingError("invalid_field", `Fichier trop lourd (${(buffer.length / 1048576).toFixed(1)} Mo) : ${max / 1048576} Mo au plus pour ${LIMIT_WORDS[info.type]}.`);
   if (info.type === "image" && info.mime !== "image/avif" && (!info.width || !info.height)) throw new MarketingError("invalid_field", "Image illisible : ses dimensions n'ont pas pu être lues.");
   const publicPath = newPublicPath(ctx, mediaSite, info.ext); // nom entièrement fabriqué ici
   const where = parsePublicPath(ctx, publicPath);
-  fs.mkdirSync(path.dirname(where.absolute), { recursive: true });
-  fs.writeFileSync(where.absolute, buffer, { flag: "wx" });
+  try {
+    fs.mkdirSync(path.dirname(where.absolute), { recursive: true });
+    fs.writeFileSync(where.absolute, buffer, { flag: "wx" });
+  } catch (error) {
+    if (error.code !== "EEXIST") { try { fs.unlinkSync(where.absolute); } catch { /* rien d'écrit */ } } // jamais de fichier partiel ; mais jamais le fichier d'un autre (EEXIST : le nom est déjà pris, rien n'a été écrit par nous)
+    throw new MarketingError("unavailable", "Le stockage est indisponible : le fichier n'a pas été enregistré. Réessayez dans un instant.");
+  }
   let row;
   try {
     row = ctx.db
@@ -369,5 +387,6 @@ function purgeMedia(ctx, id) {
 
 module.exports = {
   visibleSql, referenceSql, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaMonths, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
+  effectiveLimit, uploadConfig, ACCEPT, EXT_TYPES,
   MAX_IMAGE, MAX_DOCUMENT, MAX_AUDIO, MAX_VIDEO, MAX_UPLOAD, PUBLIC_BASE, TYPES, TYPE_LABELS, FORMATS, SORTS,
 };

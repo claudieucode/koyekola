@@ -49,7 +49,8 @@
           <%- icon("upload", { size: 22 }) %><strong>Déposez les fichiers pour les téléverser</strong><span>ou cliquez pour les choisir · <%= formats %></span>
           <span class="mk-sub">Poids maximal : image <%= maxMb.image %> Mo · document <%= maxMb.document %> Mo · audio <%= maxMb.audio %> Mo · vidéo <%= maxMb.video %> Mo</span>
         </div>
-        <input type="file" class="sr-only" data-ml-input multiple tabindex="-1" aria-label="Choisir des fichiers à envoyer" accept=".jpg,.jpeg,.png,.gif,.webp,.avif,.mp4,.webm,.mp3,.wav,.ogg,.m4a,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+        <input type="file" class="sr-only" data-ml-input multiple tabindex="-1" aria-label="Choisir des fichiers à envoyer" accept="<%= uploadCfg.accept %>">
+        <div class="mk-ml-summary" data-ml-summary role="status" aria-live="polite" hidden></div>
         <ul class="mk-ml-queue" data-ml-queue aria-live="polite" aria-label="Envois en cours" hidden></ul>
       </div>
     <% } %>
@@ -106,5 +107,6 @@
       </div>
       <aside class="mk-panel mk-ml-panel" data-ml-panel hidden aria-label="Détails du fichier" tabindex="-1"></aside>
     </div>
+    <script type="application/json" id="mu-config"><%- JSON.stringify(uploadCfg).replace(/</g, "\\u003c") %></script>
     <script type="application/json" id="ml-config"><%- JSON.stringify({ canUpload, canWrite, canDelete, trashed: f.trashed, type: f.type, hasFilter: Boolean(f.q || f.period || f.month), view, uploadOpen }).replace(/</g, "\\u003c") %></script>
 <%- include("partials/bottom") %>

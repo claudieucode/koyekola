@@ -51,6 +51,7 @@
       xhr.setRequestHeader("Accept", "application/json");
       xhr.withCredentials = true;
       xhr.upload.onprogress = function (e) { if (e.lengthComputable && opts.onProgress) opts.onProgress(e.loaded / e.total); };
+      xhr.upload.onload = function () { if (opts.onSent) opts.onSent(); }; // octets envoyés : le serveur valide et enregistre encore (réussite = sa réponse)
       xhr.onload = function () {
         var data = null; try { data = JSON.parse(xhr.responseText); } catch (e) { data = null; }
         if (xhr.status >= 200 && xhr.status < 300 && data && data.media) return resolve(data.media);

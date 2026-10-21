@@ -20,39 +20,7 @@
   var confirmDialog = function (opts, yes) { if (window.mkConfirm) window.mkConfirm(opts, yes); else if (window.confirm(opts.text)) yes(); };
 
   // ---------------------------------------------------------------- Envoi
-  var drop = $("[data-ml-drop]"), input = $("[data-ml-input]"), queue = $("[data-ml-queue]");
-  var running = 0, waiting = [];
-  function enqueue(files) {
-    Array.prototype.slice.call(files).forEach(function (file) { startItem(file); });
-  }
-  function startItem(file) {
-    queue.hidden = false;
-    var bar = h("progress", { max: "100", value: "0", "aria-label": "Progression de l'envoi de " + file.name });
-    var status = h("span", { class: "mk-ml-q-status", text: "En attente…" });
-    var cancel = h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Annuler" });
-    var retry = h("button", { type: "button", class: "btn btn-outline btn-sm", text: "Réessayer", hidden: "" });
-    var li = h("li", { class: "mk-ml-q-item" }, [h("span", { class: "mk-ml-q-name", text: file.name }), h("span", { class: "mk-sub", text: K.fmtSize(file.size) }), bar, status, cancel, retry]);
-    queue.prepend(li);
-    var job = null;
-    function run() {
-      running++;
-      status.textContent = "Envoi en cours…"; status.className = "mk-ml-q-status"; retry.hidden = true; cancel.hidden = false; bar.value = 0;
-      job = K.upload(file, { onProgress: function (p) { bar.value = Math.round(p * 100); status.textContent = "Envoi : " + Math.round(p * 100) + " %"; } });
-      job.promise.then(function (media) {
-        bar.value = 100; status.textContent = "Enregistré dans la médiathèque."; status.className = "mk-ml-q-status is-ok"; cancel.hidden = true;
-        added(media);
-        setTimeout(function () { li.remove(); if (!queue.children.length) queue.hidden = true; }, 6000);
-      }, function (err) {
-        status.textContent = err.message; status.className = "mk-ml-q-status is-error"; cancel.hidden = true;
-        if (!err.aborted) retry.hidden = false;
-      }).then(function () { running--; pump(); });
-    }
-    cancel.addEventListener("click", function () { if (job && running) job.abort(); else { waiting = waiting.filter(function (w) { return w !== run; }); status.textContent = "Envoi annulé."; status.className = "mk-ml-q-status is-error"; cancel.hidden = true; } });
-    retry.addEventListener("click", function () { waiting.push(run); pump(); });
-    waiting.push(run); pump();
-  }
-  function pump() { while (running < 2 && waiting.length) waiting.shift()(); }
-
+  var drop = $("[data-ml-drop]");
   // Un fichier envoyé apparaît tout de suite dans la liste s'il correspond au filtre en cours
   function added(m) {
     ["all", m.type === "pdf" || m.type === "document" ? "documents" : m.type].forEach(function (k) { var c = $('[data-ml-count="' + k + '"]'); if (c) c.textContent = String(Number(c.textContent) + 1); });
@@ -83,17 +51,10 @@
     }
     toast("« " + m.name + " » ajouté à la médiathèque.", "ok");
   }
-  if (drop) {
-    var browse = function () { input.click(); };
-    drop.addEventListener("click", browse);
-    drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); browse(); } });
-    ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0) { e.preventDefault(); drop.classList.add("is-over"); } }); });
-    ["dragleave", "dragend"].forEach(function (ev) { drop.addEventListener(ev, function () { drop.classList.remove("is-over"); }); });
-    drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("is-over"); if (e.dataTransfer.files.length) enqueue(e.dataTransfer.files); });
-    input.addEventListener("change", function () { if (input.files.length) enqueue(input.files); input.value = ""; });
-    // Un fichier lâché à côté de la zone n'ouvre pas le fichier dans le navigateur
-    ["dragover", "drop"].forEach(function (ev) { window.addEventListener(ev, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0 && !drop.contains(e.target)) e.preventDefault(); }); });
-  }
+  // L'envoi lui-même (zone de dépôt, file, progression, états) est celui de public/js/media-upload.js, commun à la page « Ajouter un fichier média » :
+  // chaque fichier ENREGISTRÉ par le serveur est annoncé ici et apparaît tout de suite dans la liste (sans doublon).
+  window.addEventListener("kw-media-saved", function (e) { if (e.detail && !$('[data-ml-item][data-id="' + e.detail.id + '"]')) added(e.detail); });
+
   // « Ajouter un fichier média » : ouvre / referme la zone d'envoi (comme WordPress) ; le choix des fichiers se fait dans la zone
   var browseBtn = $("[data-ml-browse]"), zone = document.getElementById("ml-upload");
   if (browseBtn && zone) browseBtn.addEventListener("click", function () {
