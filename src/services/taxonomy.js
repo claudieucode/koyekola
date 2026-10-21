@@ -140,7 +140,8 @@ const relationCount = (id) => db.prepare("SELECT COUNT(*) n FROM taxonomy_relati
 
 // Supprime un terme. Utilisé : refusé sauf si on indique où réassigner ses contenus (reassignTo). Ses sous-catégories remontent
 // d'un niveau (chez son parent). Aucune relation n'est jamais laissée orpheline.
-function remove(id, { reassignTo = null, kind = "deleted" } = {}) {
+// detach : un terme utilisé peut être supprimé SANS destination : il est simplement retiré de ses contenus (étiquettes) ; les contenus ne sont jamais supprimés.
+function remove(id, { reassignTo = null, kind = "deleted", detach = false } = {}) {
   const term = get(id);
   if (!term) throw new UserError("Terme introuvable.");
   const used = relationCount(id);
@@ -149,7 +150,7 @@ function remove(id, { reassignTo = null, kind = "deleted" } = {}) {
     target = get(Number(reassignTo));
     if (!target || target.taxonomy !== term.taxonomy) throw new UserError("Terme de destination introuvable.");
     if (target.id === id) throw new UserError("Choisissez un autre terme comme destination.");
-  } else if (used) {
+  } else if (used && !detach) {
     throw new UserError(`« ${term.name} » est utilisé par ${used} contenu${used > 1 ? "s" : ""} : choisissez où les réassigner, ou fusionnez-le avec un autre terme. Rien n'est supprimé.`);
   }
   const affected = db.prepare("SELECT content_type, content_id FROM taxonomy_relations WHERE term_id = ?").all(id);
@@ -167,7 +168,7 @@ function remove(id, { reassignTo = null, kind = "deleted" } = {}) {
   bump();
   for (const a of affected) mirror(a.content_type, a.content_id);
   events.emit(kind === "merged" ? "term.merged" : "term.deleted", term, target);
-  return { moved: used, to: target };
+  return { moved: target ? used : 0, detached: target ? 0 : used, to: target };
 }
 const merge = (sourceId, targetId) => remove(sourceId, { reassignTo: targetId, kind: "merged" });
 
@@ -288,12 +289,13 @@ function setTerms(type, id, { categoryIds, primaryId, tagIds } = {}) {
   if (JSON.stringify(after.categories.map((c) => [c.id, c.isPrimary]).concat(after.tags.map((t) => [t.id, 0]))) !== before) events.emit("content.terms.changed", { type, id, terms: after });
   return after;
 }
-// Étiquette par son nom : l'existante (casse et accents ignorés) ou une nouvelle (création rapide)
-function findOrCreateTag(name) {
+// Étiquette par son nom : l'existante DU MÊME SITE (casse et accents ignorés) ou une nouvelle (création rapide). site : site de l'étiquette (null = site principal).
+// Deux sites peuvent avoir chacun leur étiquette « Conseils » : une étiquette d'un autre site n'est jamais reprise.
+function findOrCreateTag(name, site = null) {
   const nm = clean(name, 40);
   if (!nm) throw new UserError("Le nom de l'étiquette est obligatoire.");
-  const existing = db.prepare("SELECT * FROM taxonomy_terms WHERE taxonomy = 'tag' AND slug = ?").get(slugify(nm).slice(0, 80)) || db.prepare("SELECT * FROM taxonomy_terms WHERE taxonomy = 'tag' AND LOWER(name) = LOWER(?)").get(nm);
-  return existing || create({ taxonomy: "tag", name: nm });
+  const twin = findTwin("tag", null, nm, site);
+  return twin ? get(twin.id) : create({ taxonomy: "tag", name: nm, site });
 }
 // Ancienne saisie en texte (API, formulaires historiques) : catégorie (+ sous-catégorie) et étiquettes par leur nom, créés au besoin
 function assignByNames(type, id, { category, subcategory, tags } = {}) {

@@ -1141,7 +1141,7 @@ router.post("/formateur/blog/api/termes", express.json({ limit: "4kb" }), (req, 
     if (b.parent_id && (siteContent.siteOf(db, "term", Number(b.parent_id)) ?? null) !== (site ?? null)) throw new UserError("La catégorie parente doit appartenir au même site.");
     // Tout ou rien : le terme et son rattachement au site (s'il y en a un) sont écrits ensemble
     const term = siteTransaction(db, () => {
-      const created = key === "tag" ? taxonomy.findOrCreateTag(b.name) : taxonomy.create({ taxonomy: "category", name: b.name, parentId: b.parent_id ? Number(b.parent_id) : null });
+      const created = key === "tag" ? taxonomy.findOrCreateTag(b.name, site ?? null) : taxonomy.create({ taxonomy: "category", name: b.name, parentId: b.parent_id ? Number(b.parent_id) : null });
       const there = siteContent.siteOf(db, "term", created.id) ?? null;
       if (site != null && there !== null && there !== site) throw new UserError("Ce nom n'est pas disponible : choisissez-en un autre."); // étiquette existante d'un autre site : jamais renvoyée
       if (site != null && there === null) siteContent.adopt({ db, organizationId: marketingOrgId(), userId: req.session.user.id, siteScope: site }, { type: "term", id: created.id });

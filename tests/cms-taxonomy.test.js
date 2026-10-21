@@ -194,11 +194,14 @@ describe("compteurs, archives et pages publiques", () => {
 });
 
 describe("suppression, réassignation, fusion", () => {
-  test("terme utilisé : suppression refusée sans réassignation, rien n'est perdu", async () => {
-    const g = term("tag", "Google");
-    await boss.post(`${TERMS}/${g.id}/supprimer`, { retour: TAG });
-    assert.ok(term("tag", "Google"));
-    assert.match(flashOf((await boss.get(TAG)).text), /utilisé|réassign/i);
+  // ARTICLES-04 : une ÉTIQUETTE utilisée se supprime (retirée de ses articles, conservés) ; une CATÉGORIE utilisée exige toujours une destination
+  test("catégorie utilisée : suppression refusée sans réassignation, rien n'est perdu", async () => {
+    await addTerm(boss, "category", "Refus utilisée");
+    const c = term("category", "Refus utilisée"), p = post("Article taxo");
+    db.prepare("INSERT INTO taxonomy_relations (content_type, content_id, term_id, is_primary, position) VALUES ('post', ?, ?, 0, 9)").run(p.id, c.id);
+    await boss.post(`${TERMS}/${c.id}/supprimer`, { retour: CAT });
+    assert.ok(term("category", "Refus utilisée"));
+    assert.match(flashOf((await boss.get(CAT)).text), /utilisé|réassign/i);
   });
   test("catégorie utilisée supprimée avec réassignation : relations transférées, enfants remontés", async () => {
     const s = term("category", "SEO"), m = term("category", "Marketing digital"), t = term("category", "SEO technique");
@@ -226,12 +229,12 @@ describe("suppression, réassignation, fusion", () => {
     await boss.post(`${TERMS}/${r.id}/fusionner`, { target_name: "n'existe pas", retour: TAG });
     assert.ok(term("tag", "Rapide"));
   });
-  test("actions groupées : supprime les termes libres, refuse les utilisés", async () => {
-    await addTerm(boss, "tag", "Libre A"); await addTerm(boss, "tag", "Libre B");
-    const ids = [term("tag", "Libre A").id, term("tag", "Libre B").id, term("tag", "Google").id];
-    await boss.post(`${TERMS}/actions`, { taxonomy: "tag", action: "supprimer", ids, retour: TAG });
-    assert.equal(term("tag", "Libre A"), undefined); assert.equal(term("tag", "Libre B"), undefined);
-    assert.ok(term("tag", "Google"));
+  test("actions groupées (catégories) : supprime les termes libres, refuse les utilisés", async () => {
+    await addTerm(boss, "category", "Libre A"); await addTerm(boss, "category", "Libre B");
+    const ids = [term("category", "Libre A").id, term("category", "Libre B").id, term("category", "Refus utilisée").id];
+    await boss.post(`${TERMS}/actions`, { taxonomy: "category", action: "supprimer", ids, retour: CAT });
+    assert.equal(term("category", "Libre A"), undefined); assert.equal(term("category", "Libre B"), undefined);
+    assert.ok(term("category", "Refus utilisée"));
   });
   test("supprimer définitivement un article supprime ses relations (déclencheur)", async () => {
     await save(boss, { title: "Éphémère", content: "<p>x</p>", tags: "Google" });

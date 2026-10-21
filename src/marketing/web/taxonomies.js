@@ -91,7 +91,9 @@ module.exports = () => {
     if (!t || !inScope(req, t.id)) throw new UserError("Terme introuvable.");
     req.body.taxonomy = t.taxonomy;
     if (req.body.reassign_to && !sameSite(t.id, Number(req.body.reassign_to))) throw new UserError("Terme de destination introuvable."); // destination d'un autre site : même réponse qu'un terme inconnu
-    const r = taxonomy.remove(t.id, { reassignTo: req.body.reassign_to || null });
+    // Étiquette : supprimable même utilisée (retirée de ses articles, qui sont conservés) ; catégorie utilisée : destination obligatoire
+    const r = taxonomy.remove(t.id, { reassignTo: req.body.reassign_to || null, detach: t.taxonomy === "tag" });
+    if (r.detached) { flash(req, "ok", `« ${t.name} » supprimée : retirée de ${r.detached} article${r.detached > 1 ? "s" : ""} (aucun article supprimé).`); return t.taxonomy; }
     flash(req, "ok", r.moved ? `« ${t.name} » supprimée : ${r.moved} article${r.moved > 1 ? "s" : ""} réassigné${r.moved > 1 ? "s" : ""} à « ${r.to.name} ».` : `« ${t.name} » supprimée.`);
     return t.taxonomy;
   });
@@ -116,7 +118,7 @@ module.exports = () => {
       const done = [], failed = [];
       for (const id of ids) {
         const t = taxonomy.get(id);
-        try { if (!t || !inScope(req, id)) throw new UserError("introuvable"); taxonomy.remove(id); done.push(id); } catch (e) { if (!(e instanceof UserError)) throw e; failed.push(`« ${t ? t.name : "#" + id} » : ${e.message}`); }
+        try { if (!t || !inScope(req, id)) throw new UserError("introuvable"); taxonomy.remove(id, { detach: key === "tag" }); done.push(id); } catch (e) { if (!(e instanceof UserError)) throw e; failed.push(`« ${t ? t.name : "#" + id} » : ${e.message}`); }
       }
       const head = done.length ? `${done.length} terme${done.length > 1 ? "s" : ""} supprimé${done.length > 1 ? "s" : ""}.` : "";
       if (!failed.length) flash(req, "ok", head); else if (!done.length) flash(req, "error", "Aucun terme n'a pu être supprimé.", failed.join(" · ")); else flash(req, "ok", `${head} ${failed.length} refusé${failed.length > 1 ? "s" : ""} (utilisés).`, failed.join(" · "));

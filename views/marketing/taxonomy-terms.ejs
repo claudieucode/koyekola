@@ -108,7 +108,10 @@
           <p>Kolakisa n'impose pas de catégorie par défaut : un article peut n'avoir aucune catégorie. Le « Total » compte les articles existants (brouillons, programmés et publiés), pas ceux de la corbeille ; la liste des articles du site peut être filtrée par catégorie.</p>
         </div>
         <% } else { %>
-        <div class="mk-tx-notes"><p>Supprimer une étiquette ne supprime jamais les articles. Pour une étiquette utilisée, utilisez « Fusionner… » : les articles passent à l'étiquette choisie.</p></div>
+        <div class="mk-tx-notes">
+          <p>Supprimer une étiquette ne supprime <strong>jamais</strong> les articles : elle est simplement retirée des articles qui la portaient. « Fusionner… » garde le classement : les articles passent à l'étiquette choisie.</p>
+          <p>Le « Total » compte les articles existants (brouillons, programmés et publiés), pas ceux de la corbeille. Les étiquettes, contrairement aux catégories, n'ont pas de hiérarchie. Chaque site a ses propres étiquettes.</p>
+        </div>
         <% } %>
       </section>
     </div>

@@ -45,12 +45,19 @@
       df.action = BASE + "/" + t.id + "/supprimer";
       $("#tx-delete-title", del).textContent = "Supprimer « " + t.name + " »";
       var used = t.total > 0;
-      txt.textContent = used
-        ? "« " + t.name + " » est utilisée par " + t.total + " article" + (t.total > 1 ? "s" : "") + ". Choisissez où les ranger avant de la supprimer."
-        : "« " + t.name + " » n'est utilisée par aucun article." + (t.children ? " Ses sous-catégories remontent d'un niveau." : "");
-      reassign.hidden = !used; sel.required = used; sel.value = "";
-      [].forEach.call(sel.options, function (o) { o.hidden = o.value === String(t.id); });
-      if (used && tag) { txt.textContent += " Pour une étiquette, utilisez plutôt « Fusionner avec… »."; ok.disabled = true; } else ok.disabled = false;
+      if (tag) {
+        // Étiquette : supprimable même utilisée ; elle est retirée de ses articles, qui sont conservés
+        txt.textContent = used
+          ? "« " + t.name + " » est utilisée par " + t.total + " article" + (t.total > 1 ? "s" : "") + ". La supprimer la retire de ces articles ; aucun article n'est supprimé. Pour garder le classement, utilisez plutôt « Fusionner… »."
+          : "« " + t.name + " » n'est utilisée par aucun article.";
+        reassign.hidden = true; sel.required = false; sel.value = ""; ok.disabled = false;
+      } else {
+        txt.textContent = used
+          ? "« " + t.name + " » est utilisée par " + t.total + " article" + (t.total > 1 ? "s" : "") + ". Choisissez où les ranger avant de la supprimer."
+          : "« " + t.name + " » n'est utilisée par aucun article." + (t.children ? " Ses sous-catégories remontent d'un niveau." : "");
+        reassign.hidden = !used; sel.required = used; sel.value = ""; ok.disabled = false;
+        [].forEach.call(sel.options, function (o) { o.hidden = o.value === String(t.id); });
+      }
       open(del);
     });
   }
@@ -126,7 +133,8 @@
     if (select.value !== "supprimer") return;
     e.preventDefault();
     var n = picked();
-    var texts = { title: "Supprimer ?", text: n + " " + noun + (n > 1 ? "s" : "") + " ser" + (n > 1 ? "ont" : "a") + " supprimé" + (n > 1 ? "s" : "") + ". Aucun article n'est supprimé ; les termes utilisés par des articles sont refusés (utilisez « Supprimer » sur la ligne pour choisir où ranger leurs articles).", ok: "Supprimer" };
+    var isTag = noun === "étiquette";
+    var texts = { title: "Supprimer ?", text: n + " " + noun + (n > 1 ? "s" : "") + " ser" + (n > 1 ? "ont" : "a") + " supprimé" + (n > 1 ? "s" : "") + ". Aucun article n'est supprimé" + (isTag ? " : les étiquettes sont retirées de leurs articles." : " ; les catégories utilisées par des articles sont refusées (utilisez « Supprimer » sur la ligne pour choisir où ranger leurs articles)."), ok: "Supprimer" };
     var go = function () { confirmed = true; if (bulk.requestSubmit) bulk.requestSubmit(apply); else bulk.submit(); setTimeout(function () { $$("button", bulk).forEach(function (b) { b.disabled = true; }); }, 0); };
     if (window.mkConfirm) window.mkConfirm(texts, go); else if (window.confirm(texts.text)) go();
   });
