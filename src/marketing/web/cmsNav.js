@@ -32,7 +32,15 @@ const SECTIONS = [
     ],
   },
   { key: "mediatheque", label: "Médias", icon: "image", items: [leaf("mediatheque", "Médias", `${BASE}/mediatheque`, { permission: "media.read" })] },
-  { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { permission: "navigation.read" })] },
+  {
+    key: "commentaires", label: "Commentaires", icon: "inbox", items: [
+      leaf("commentaires", "Tous", `${BASE}/commentaires`, { permission: "comments.read" }),
+      leaf("commentaires/en-attente", "En attente", `${BASE}/commentaires/en-attente`, { permission: "comments.read" }),
+      leaf("commentaires/approuves", "Approuvés", `${BASE}/commentaires/approuves`, { permission: "comments.read" }),
+      leaf("commentaires/indesirables", "Indésirables", `${BASE}/commentaires/indesirables`, { permission: "comments.read" }),
+      leaf("commentaires/corbeille", "Corbeille", `${BASE}/commentaires/corbeille`, { permission: "comments.read" }),
+    ],
+  },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
@@ -44,15 +52,8 @@ const SECTIONS = [
       leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { permission: "navigation.read" }),
     ],
   },
-  {
-    key: "commentaires", label: "Commentaires", icon: "inbox", items: [
-      leaf("commentaires", "Tous", `${BASE}/commentaires`, { permission: "comments.read" }),
-      leaf("commentaires/en-attente", "En attente", `${BASE}/commentaires/en-attente`, { permission: "comments.read" }),
-      leaf("commentaires/approuves", "Approuvés", `${BASE}/commentaires/approuves`, { permission: "comments.read" }),
-      leaf("commentaires/indesirables", "Indésirables", `${BASE}/commentaires/indesirables`, { permission: "comments.read" }),
-      leaf("commentaires/corbeille", "Corbeille", `${BASE}/commentaires/corbeille`, { permission: "comments.read" }),
-    ],
-  },
+  // Extensions : modules activables PAR SITE (registre fermé siteModules.js). L'activation est réservée à l'équipe de l'organisation ; elle s'ajoute aux permissions et à l'isolation par site.
+  { key: "extensions", label: "Extensions", icon: "plug", items: [leaf("extensions", "Modules", `${BASE}/extensions`, { permission: "sites.modules", teamOnly: true })] },
   {
     key: "utilisateurs", label: "Utilisateurs", icon: "users", items: [
       leaf("utilisateurs", "Tous les utilisateurs", `${BASE}/utilisateurs`, { permission: "users.view" }),
@@ -81,6 +82,7 @@ const SECTIONS = [
     leaf("redirections/permaliens", "Permaliens et adresses", `${BASE}/permaliens`, { permission: "redirects.view" }),
   ] },
   { key: "tests", label: "Tests A/B", icon: "shuffle", items: [leaf("pagetests", "Tests A/B", `${BASE}/tests-ab`)] },
+  { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { permission: "navigation.read" })] },
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
       leaf("outils", "Santé du site", `${BASE}/outils`, { permission: "tools.view" }),
@@ -119,7 +121,7 @@ const itemOf = (key) => ALL.find((i) => i.key === key) || null;
 const isCmsKey = (key) => ALL.some((i) => i.key === key);
 
 // Clés servies par le routeur générique des écrans CMS (cmsScreens) : celles dont la route n'existe pas déjà ailleurs.
-const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils"];
+const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "extensions", "utilisateurs", "seo", "redirections", "outils"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
 function buildCmsNav({ can, active, space = null }) {
@@ -261,6 +263,7 @@ const ABILITY = {
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
   "commentaires/indesirables": { mode: "open", module: "commentaires", sub: "indesirables" },
   "commentaires/corbeille": { mode: "open", module: "commentaires", sub: "corbeille" },
+  extensions: { mode: "central" }, // activation des modules : équipe de l'organisation, depuis le site principal (écran par site : /sites/N/modules)
   "outils/sauvegardes": { mode: "central" },
   "outils/systeme": { mode: "central" },
   "outils/logs": { mode: "central" },
@@ -314,7 +317,7 @@ function projectSections(space) {
   const out = [];
   for (const s of SECTIONS) {
     if (s.centralOnly) continue;
-    if (s.key === "outils") out.push(marketingGroup(space));
+    if (s.key === "navigation") out.push(marketingGroup(space)); // « Marketing du site » vient juste avant Navigation, Outils et Paramètres
     const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
     if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages" });
     if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items });

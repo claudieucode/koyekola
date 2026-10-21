@@ -51,12 +51,12 @@ before(async () => {
 after(() => srv.stop());
 
 describe("1 — le menu d'un site est la projection du registre", () => {
-  test("les 14 groupes du registre, dans l'ordre, plus « Marketing du site » avant Outils", async () => {
+  test("les groupes du registre, dans l'ordre, plus « Marketing du site » avant Navigation (sans Extensions, fonction centrale)", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
     const labels = topLabels(html);
-    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
+    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Navigation", "Outils", "Paramètres"];
     assert.deepEqual(labels, expected);
-    assert.equal(nav.SECTIONS.length, 14, "le registre compte 14 groupes (dont « Mes sites », réservé au gestionnaire central)");
+    assert.equal(nav.SECTIONS.length, 15, "le registre compte 15 groupes (dont « Mes sites », gestionnaire central, et « Extensions », fonction centrale)");
   });
   test("C1 : une entrée pas encore ouverte est visible, grisée « Bientôt », SANS lien ; son ancienne adresse n'affiche ni donnée ni action", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
@@ -212,7 +212,7 @@ describe("7 — site principal et régressions", () => {
     assert.ok(links.has(`${PR}/tableau-de-bord`), "le tableau de bord du principal est celui de son espace"); assert.ok(!links.has(`${SP}`), "pas de « Mes sites » dans le menu d'un espace");
     assert.ok(hasBanner(html, "Site principal"));
   });
-  test("les 66 entrées du menu du principal répondent comme avant (200) avec leurs adresses historiques", async () => {
+  test("les 67 entrées du menu du principal répondent comme avant (200) avec leurs adresses historiques", async () => {
     for (const it of nav.ALL) { const r = await boss.get(it.href); assert.equal(r.status, 200, `${it.label} (${it.href})`); assert.ok(!/mk-site-banner/.test(r.text), `${it.href} : pas de bandeau de site`); }
   });
   test("les écrans partagés servis dans l'espace du principal restent leurs écrans historiques", async () => {

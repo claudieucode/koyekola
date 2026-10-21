@@ -12,21 +12,21 @@
   // ---------- Menu latéral ----------
   var sidebar = document.getElementById("mk-sidebar");
   var overlay = document.querySelector(".mk-overlay");
-  var collapseBtn = document.querySelector("[data-mk-sidebar-collapse]");
+  var collapseBtns = $$("[data-mk-sidebar-collapse]"); // en-tête du menu et, dans le CMS, commande « Replier le menu » en bas du panneau
   var toggleBtn = document.querySelector("[data-mk-sidebar-toggle]");
 
   function setCollapsed(collapsed, remember) {
     if (collapsed) root.setAttribute("data-sidebar", "collapsed"); else root.removeAttribute("data-sidebar");
     if (remember) store("mkSidebar", collapsed ? "collapsed" : "open"); // seul un choix de l'utilisateur est mémorisé
-    if (collapseBtn) {
-      collapseBtn.setAttribute("aria-pressed", collapsed ? "true" : "false");
+    collapseBtns.forEach(function (btn) {
+      btn.setAttribute("aria-pressed", collapsed ? "true" : "false");
       var label = collapsed ? "Déployer le menu" : "Réduire le menu";
-      collapseBtn.setAttribute("aria-label", label); collapseBtn.setAttribute("title", label);
-    }
+      btn.setAttribute("aria-label", label); btn.setAttribute("title", label);
+    });
   }
-  if (collapseBtn) {
+  if (collapseBtns.length) {
     setCollapsed(root.getAttribute("data-sidebar") === "collapsed");
-    collapseBtn.addEventListener("click", function () { setCollapsed(root.getAttribute("data-sidebar") !== "collapsed", true); });
+    collapseBtns.forEach(function (btn) { btn.addEventListener("click", function () { setCollapsed(root.getAttribute("data-sidebar") !== "collapsed", true); }); });
   }
 
   function openDrawer() {

@@ -15,7 +15,7 @@ const OUVERT = ["sites", "sitedash", "landing", "apparence", "apparence/en-tete"
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque",
   "seo", "seo/404", "navigation", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
-const CENTRAL = ["outils/sauvegardes", "outils/systeme", "outils/logs"];
+const CENTRAL = ["extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
 const MOTIFS = {
   "apparence/templates": "modèles de site complets : lot B3 non réalisé", "apparence/patterns": "blocs et patterns partagés/privés : lot B3",
   "apparence/styles": "styles par site : lot P2", "utilisateurs/ajouter": "invitations par site : lot C4", "utilisateurs/roles": "rôles : lot C4", "utilisateurs/permissions": "permissions : lot C4", "utilisateurs/invitations": "invitations : lot C4",

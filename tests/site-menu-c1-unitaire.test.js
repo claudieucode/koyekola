@@ -6,9 +6,11 @@ const nav = require("../src/marketing/web/cmsNav");
 const site = { siteId: 5, principal: false, base: "/marketing/site-web/sites/5", name: "Site Cinq", listHref: "/marketing/site-web/sites" };
 const principal = { siteId: null, principal: true, base: "/marketing/site-web/principal", name: "Site principal", listHref: "/marketing/site-web/sites" };
 const all = () => true;
-const CENTRAL = ["outils/sauvegardes", "outils/systeme", "outils/logs"]; // décision D2 : administration centrale, hors du menu d'un site
+const CENTRAL = ["extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // décision D2 : administration centrale, hors du menu d'un site
 const EXTENSIONS = ["espace/composants"]; // décision D3 : composants propres à chaque site (groupe Pages)
 const registryKeys = nav.SECTIONS.flatMap((s) => s.items.map((i) => i.key));
+// Rubrique dont toutes les entrées sont centrales (« Extensions ») : absente du menu d'un site, présente dans celui du principal
+const siteGroups = () => nav.SECTIONS.filter((s) => !s.centralOnly && !s.items.every((i) => CENTRAL.includes(i.key)));
 
 describe("C1 — une seule définition, deux présentations", () => {
   test("le principal et le site sortent de la MÊME fonction", () => {
@@ -17,16 +19,16 @@ describe("C1 — une seule définition, deux présentations", () => {
   });
   test("mêmes groupes (clé, libellé, icône), dans le même ordre ; seul « Marketing du site » s'ajoute, avant Outils — dans les deux présentations", () => {
     // « Mes sites » (centralOnly) n'est PAS une rubrique du menu d'un espace : il est le gestionnaire central
-    const reg = nav.SECTIONS.filter((s) => !s.centralOnly).map((s) => [s.key, s.label, s.icon]);
+    const reg = (space) => nav.SECTIONS.filter((s) => !s.centralOnly && (space.principal || !s.items.every((i) => CENTRAL.includes(i.key)))).map((s) => [s.key, s.label, s.icon]);
     for (const space of [site, principal]) {
       const got = nav.projectSections(space);
-      assert.deepEqual(got.filter((g) => g.key !== "marketing").map((g) => [g.key, g.label, g.icon]), reg, space.principal ? "principal" : "site");
-      assert.equal(got.findIndex((g) => g.key === "marketing"), got.findIndex((g) => g.key === "outils") - 1);
+      assert.deepEqual(got.filter((g) => g.key !== "marketing").map((g) => [g.key, g.label, g.icon]), reg(space), space.principal ? "principal" : "site");
+      assert.equal(got.findIndex((g) => g.key === "marketing"), got.findIndex((g) => g.key === "navigation") - 1, "Marketing du site vient juste avant Navigation");
     }
   });
   test("mêmes sous-entrées (clés), mêmes libellés, même ordre : le site = le registre − l'administration centrale (+ Composants)", () => {
     const sg = nav.projectSections(site);
-    for (const reg of nav.SECTIONS.filter((s) => !s.centralOnly)) {
+    for (const reg of siteGroups()) {
       const g = sg.find((x) => x.key === reg.key);
       const expected = reg.items.filter((i) => !CENTRAL.includes(i.key));
       const got = g.items.filter((i) => !EXTENSIONS.includes(i.key));
@@ -36,17 +38,17 @@ describe("C1 — une seule définition, deux présentations", () => {
     const dash = sg.find((x) => x.key === "dashboard").items[0];
     assert.equal(dash.label, "Tableau de bord", "seule différence de libellé : le tableau de bord d'un site n'est pas « du site principal »");
   });
-  test("le principal : toutes les entrées du registre, libellés et adresses historiques inchangés (66 + Composants + 10 Marketing)", () => {
+  test("le principal : toutes les entrées du registre, libellés et adresses historiques inchangés (67 + Composants + 10 Marketing)", () => {
     const pg = nav.projectSections(principal);
     const items = pg.flatMap((g) => g.items);
     for (const reg of nav.ALL.filter((i) => i.key !== "sites")) { const got = items.find((i) => i.key === reg.key); assert.ok(got, reg.key); assert.equal(got.permission, reg.permission);
       // seule différence : dans son espace, le principal a le même « Tableau de bord » que les autres sites ; « Mes sites » n'est pas une entrée d'espace
       if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
     assert.ok(!items.some((i) => i.key === "sites"), "pas de « Mes sites » dans le menu du principal")
-    assert.equal(nav.ALL.length, 66);
-    assert.equal(items.length, 65 + 1 + 10); // 65 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(nav.ALL.length, 67);
+    assert.equal(items.length, 66 + 1 + 10); // 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
-  test("les trois fonctions centrales n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
+  test("les quatre fonctions centrales (Extensions, Sauvegardes, Informations système, Journal) n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);
     for (const k of CENTRAL) assert.ok(!keys.includes(k), k);
     assert.deepEqual(registryKeys.filter((k) => !keys.includes(k)), ["sites", ...CENTRAL], "« Mes sites » (gestionnaire central) + les fonctions centrales");

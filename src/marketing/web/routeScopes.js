@@ -156,7 +156,7 @@ const FAMILIES = Object.freeze([
   // — Écrans de l'organisation (aucun site visé) —
   { id: "tableau-de-bord", scope: "organization", pattern: /^\/$/ },
   { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
-  { id: "site-web-organisation", scope: "organization", pattern: /^\/site-web(?:\/(?:utilisateurs|apparence|navigation|redirections|modeles-de-theme|modeles|modeles\.json|liens-casses|corbeille|recherche|permaliens|gabarits|mes-sites|seo)(?:\/|$)|$)/ },
+  { id: "site-web-organisation", scope: "organization", pattern: /^\/site-web(?:\/(?:utilisateurs|apparence|navigation|redirections|extensions|modeles-de-theme|modeles|modeles\.json|liens-casses|corbeille|recherche|permaliens|gabarits|mes-sites|seo)(?:\/|$)|$)/ },
 ]);
 
 function siteOfRequest(db, req) {

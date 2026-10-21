@@ -38,6 +38,18 @@ const SCREENS = {
       table: { caption: "Auteurs", columns: [{ label: "Auteur" }, { label: "Articles", num: true }, { label: "Publiés", num: true }], rows, empty: empty("user", "Aucun auteur", "Un auteur apparaît dès qu'il a écrit un article.") } };
   },
 
+  // ----- Extensions : état réel des modules par site (lecture seule ; l'activation se fait dans l'écran existant de chaque site) -----
+  extensions(req, ctx) {
+    const m = data.moduleMatrix(ctx);
+    const late = m.modules.filter((x) => !x.ready).map((x) => `« ${x.label} » (${x.phase})`);
+    const lead = "Les modules que l'équipe active site par site. Un module est désactivé par défaut ; l'activer pour un site n'a aucun effet sur les autres, et le désactiver conserve ses données."
+      + (late.length ? ` Activable mais pas encore ouvert aux sites : ${late.join(", ")}.` : "");
+    return { title: "Extensions", lead,
+      table: { caption: "Modules activés par site", columns: [{ label: "Site" }, ...m.modules.map((x) => ({ label: x.label }))],
+        rows: m.sites.map((x) => ({ cells: [{ text: x.name, href: `${BASE}/sites/${x.id}` }, ...m.modules.map((mod) => (x.enabled.includes(mod.key) ? { status: { label: "Activé", cls: "mk-status-ok" } } : { status: { label: "Désactivé", cls: "mk-status-off" } }))], actions: [{ label: "Gérer les modules", href: `${BASE}/sites/${x.id}/modules` }] })),
+        empty: empty("globe", "Aucun site", "Créez un site pour pouvoir activer des modules.", { label: "Créer un site", href: `${BASE}/sites#nouveau` }) } };
+  },
+
   // ----- Apparence -----
   apparence(req, ctx, sub) {
     const sites = pages.listSites(ctx);
@@ -135,6 +147,8 @@ module.exports = () => {
     if (!known.has(key)) return next();
     const item = nav.itemOf(key);
     if (!req.mk.can(item.permission)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." });
+    // Entrée réservée à l'équipe de l'organisation (teamOnly) : un accès limité à un site n'y entre jamais, même administrateur de ce site
+    if (item.teamOnly && req.mk.siteOnly) return res.status(403).render("error", { message: "Cet écran est réservé à l'équipe de l'organisation." });
     // R7 lot 4 : le journal d'activité d'un SITE n'est lisible, par un accès limité à ce site, qu'avec la permission « audit.read » du site (rôle Administrateur) — jamais par simple droit « tools.view » ;
     // la liste elle-même est de toute façon réduite aux lignes de CE site (audit.scopeSql). L'équipe de l'organisation garde son accès actuel.
     if (key === "outils/logs" && req.mk.siteOnly && !req.mk.can("audit.read")) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." });

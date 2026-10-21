@@ -19,8 +19,8 @@ before(async () => {
 after(() => srv.stop());
 
 describe("registre et menu", () => {
-  test("le registre couvre la structure cible (14 rubriques) sans adresse en double", () => {
-    assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Navigation", "Apparence", "Commentaires", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
+  test("le registre couvre la structure cible (15 rubriques) sans adresse en double", () => {
+    assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Navigation", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
     assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Éditeur du site", "Templates", "Patterns", "Styles", "En-tête", "Pied de page", "Menus"]);
   });

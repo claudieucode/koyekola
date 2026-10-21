@@ -42,11 +42,11 @@ before(async () => {
 after(() => srv.stop());
 
 describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
-  test("équipe : mêmes titres de groupe, mêmes sous-entrées, même ordre ; seules les 3 fonctions centrales manquent et le tableau de bord est « Tableau de bord »", async () => {
+  test("équipe : mêmes titres de groupe, mêmes sous-entrées, même ordre ; seules les 4 fonctions centrales manquent et le tableau de bord est « Tableau de bord »", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const main = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     assert.ok(site.length >= 14 && main.length >= 14);
-    const strip = (labels) => labels.filter((l) => !["Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
+    const strip = (labels) => labels.filter((l) => !["Modules", "Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
     assert.deepEqual(flatLabels(site), strip(flatLabels(main)));
   });
   test("les groupes Utilisateurs, Outils et Paramètres s'affichent sous LEUR titre, avec leurs sous-entrées (plus d'« Équipe du site », de « Réglages du site » en titre)", async () => {
@@ -93,10 +93,10 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     assert.ok((await memA.get(`${SP}/${B}/tableau-de-bord`)).status >= 403, "éditeur de A refusé sur B");
     assert.ok([403, 404].includes((await outsider.get(`${SP}/${A}/tableau-de-bord`)).status), "sans accès refusé");
   });
-  test("site principal : son menu garde les 66 entrées du registre et ses adresses historiques (régression)", async () => {
+  test("site principal : son menu garde les 67 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
-    assert.equal(entries.length, 65 + 1 + 10); // 65 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(entries.length, 66 + 1 + 10); // 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
     for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(entries.some((e) => e.href === reg.href), reg.href);
     assert.ok(entries.some((e) => e.href === `${PR}/tableau-de-bord`));

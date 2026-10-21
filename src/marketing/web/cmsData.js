@@ -113,7 +113,18 @@ function overview(ctx) {
   };
 }
 
+// ---------- Extensions (modules activables par site, registre fermé siteModules.js) ----------
+// Pour chaque site de l'organisation (hors site principal, hors supprimés) : l'état de chaque module ; une ligne absente = désactivé.
+function moduleMatrix(ctx) {
+  const siteModules = require("../siteModules");
+  const primarySite = require("../../services/primarySite");
+  const sites = safe(() => ctx.db.prepare(`SELECT id, name, status FROM mk_sites WHERE organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(ctx.db)} ORDER BY name COLLATE NOCASE`).all(ctx.organizationId), []);
+  const on = new Set(safe(() => ctx.db.prepare("SELECT site_id, module FROM mk_site_modules WHERE organization_id = ? AND enabled = 1").all(ctx.organizationId).map((r) => `${r.site_id}:${r.module}`), []));
+  const modules = siteModules.KEYS.map((key) => ({ key, label: siteModules.MODULES[key].label, ready: siteModules.MODULES[key].ready, phase: siteModules.MODULES[key].phase, sites: sites.filter((x) => on.has(`${x.id}:${key}`)).length }));
+  return { sites: sites.map((x) => ({ ...x, enabled: siteModules.KEYS.filter((k) => on.has(`${x.id}:${k}`)) })), modules };
+}
+
 module.exports = {
-  POST_STATES, POST_STATUS, postCounts, listPosts, categories, tags, authors, listComments, commentCount,
+  moduleMatrix, POST_STATES, POST_STATUS, postCounts, listPosts, categories, tags, authors, listComments, commentCount,
   ROLE_LABEL, ROLE_TEXT, listTeam, roleMatrix, listRedirects, list404, seoCounts, pagesSeo, auditLog, listBackups, overview,
 };

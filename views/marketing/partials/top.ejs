@@ -86,7 +86,10 @@
       <nav class="mk-nav-list mk-cms-nav" aria-label="Sections du CMS">
         <%- include("cms-nav", { cms }) %>
       </nav>
-      <a class="mk-cms-back" href="/marketing" title="Retour au Marketing"><%- icon("arrowLeft", { size: 16 }) %><span class="mk-nav-label">Retour au Marketing</span></a>
+      <div class="mk-cms-foot">
+        <a class="mk-cms-back" href="/marketing" title="Retour au Marketing"><%- icon("arrowLeft", { size: 16 }) %><span class="mk-nav-label">Retour au Marketing</span></a>
+        <button type="button" class="mk-cms-fold" data-mk-sidebar-collapse aria-pressed="false" aria-label="Réduire le menu" title="Réduire le menu"><%- icon("panelLeft", { size: 16 }) %><span class="mk-nav-label mk-cms-fold-text">Replier le menu</span></button>
+      </div>
       <% } else { %>
       <nav class="mk-nav-list" aria-label="Sections du marketing">
         <% nav.sections.forEach((section) => { %>
