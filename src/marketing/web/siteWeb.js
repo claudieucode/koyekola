@@ -279,7 +279,7 @@ module.exports = () => {
   router.get("/site-web/medias/resolutions.json", need("forms.read"), (req, res) => {
     const variants = require("../media/variants");
     const list = [].concat(req.query.src || []).map(String).slice(0, 24);
-    const vis = media.visibleSql(req.mk.ctx);
+    const vis = media.referenceSql(req.mk.ctx);
     const rows = list.map((src) => (variants.isLocal(src) ? req.mk.ctx.db.prepare(`SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image' AND ${vis.sql}`).get(req.mk.ctx.organizationId, src, ...vis.params) : null));
     const known = rows.filter((r) => r && r.width);
     const complete = list.length > 0 && known.length === list.length;

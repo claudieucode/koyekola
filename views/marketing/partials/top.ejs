@@ -29,6 +29,7 @@
   <title><%= title %> · <%= cms && cms.space ? cms.space.name + " · " : "" %><%= cms ? "CMS" : "Marketing" %> · KOLAKISA</title>
   <meta name="robots" content="noindex, nofollow">
   <% if (mk && mk.ctx && Number.isInteger(mk.ctx.siteScope)) { %><meta name="mk-site" content="<%= mk.ctx.siteScope %>"><% } /* R7 lot 6.2 : accès limité à un site — l'assistant IA envoie ce site (imposé par le serveur, revérifié à chaque appel) */ %>
+  <% { const mediaSite = typeof mkSiteId === "number" ? mkSiteId : (mk && mk.ctx && Number.isInteger(mk.ctx.siteScope) ? mk.ctx.siteScope : null); if (mediaSite) { %><meta name="mk-media-site" content="<%= mediaSite %>"><% } } /* MEDIA-01 : site de la médiathèque, envoyé par le client à chaque appel (le serveur le revérifie) */ %>
   <% if (typeof siteSpace !== "undefined" && siteSpace) { %><meta name="mk-space" content="<%= siteSpace.principal ? "principal" : siteSpace.siteId %>"><% } /* R8 lot 1 : espace CMS ouvert (site vérifié par le serveur), repère pour la navigation et les tests */ %>
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">

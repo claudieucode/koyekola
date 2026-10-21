@@ -28,6 +28,8 @@ describe("registre et menu", () => {
   test("chaque écran du registre répond 200 dans la coque CMS, avec son menu ouvert sur la bonne entrée", async () => {
     for (const item of cmsNav.ALL) {
       const res = await boss.get(item.href);
+      // ARTICLES-02 : « Ajouter un article » ouvre directement l'éditeur (redirection), il n'a plus d'écran dans la coque
+      if (/\/articles\/ajouter(?:[?#]|$)/.test(item.href)) { assert.equal(res.status, 302, item.href); assert.match(res.location, /^\/formateur\/blog\/nouveau/); continue; }
       assert.equal(res.status, 200, item.href);
       assert.match(res.text, /class="mk-body is-cms"/, `${item.href} : coque CMS`);
       assert.match(res.text, /aria-label="Sections du CMS"/);

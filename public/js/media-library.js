@@ -94,7 +94,25 @@
     // Un fichier lâché à côté de la zone n'ouvre pas le fichier dans le navigateur
     ["dragover", "drop"].forEach(function (ev) { window.addEventListener(ev, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, "Files") >= 0 && !drop.contains(e.target)) e.preventDefault(); }); });
   }
-  var browseBtn = $("[data-ml-browse]"); if (browseBtn && input) browseBtn.addEventListener("click", function () { input.click(); });
+  // « Ajouter un fichier média » : ouvre / referme la zone d'envoi (comme WordPress) ; le choix des fichiers se fait dans la zone
+  var browseBtn = $("[data-ml-browse]"), zone = document.getElementById("ml-upload");
+  if (browseBtn && zone) browseBtn.addEventListener("click", function () {
+    var open = zone.hidden; zone.hidden = !open; browseBtn.setAttribute("aria-expanded", String(open));
+    if (open && drop) drop.focus();
+  });
+
+  // Filtres : un changement de type, de date ou de tri s'applique tout de suite (le bouton « Filtrer » reste pour le clavier et sans JavaScript)
+  $$("[data-ml-autosubmit]").forEach(function (sel) { sel.addEventListener("change", function () { var f = sel.form; if (f) { if (f.requestSubmit) f.requestSubmit(); else f.submit(); } }); });
+
+  // « Sélection groupée » : les cases et les actions n'apparaissent que lorsque le mode est activé ; ouvrir un fichier et le sélectionner sont deux gestes distincts
+  var main = $("[data-ml-main]"), selToggle = $("[data-ml-select-toggle]");
+  function selecting() { return Boolean(main && main.classList.contains("is-selecting")); }
+  if (selToggle && main) selToggle.addEventListener("click", function () {
+    var on = !selecting();
+    main.classList.toggle("is-selecting", on); selToggle.setAttribute("aria-pressed", String(on)); selToggle.textContent = on ? "Annuler la sélection" : "Sélection groupée";
+    var b = $("[data-ml-bulk]"); if (b) b.hidden = !on;
+    if (on) closePanelQuiet(); else { checks().forEach(function (c) { c.checked = false; }); refreshBulk(); }
+  });
 
   // ---------------------------------------------------------------- Sélection et actions groupées
   var bulk = $("[data-ml-bulk]");
@@ -133,12 +151,14 @@
   // ---------------------------------------------------------------- Panneau de détails
   var panel = $("[data-ml-panel]");
   var current = null, lastTrigger = null;
+  function closePanelQuiet() { panel.hidden = true; panel.textContent = ""; current = null; $$("[data-ml-item].is-open").forEach(function (i) { i.classList.remove("is-open"); }); }
   function closePanel() { panel.hidden = true; panel.textContent = ""; current = null; $$("[data-ml-item].is-open").forEach(function (i) { i.classList.remove("is-open"); }); if (lastTrigger) lastTrigger.focus(); }
   document.addEventListener("click", function (e) {
     var open = e.target.closest("[data-ml-open]");
     if (!open) return;
     var item = open.closest("[data-ml-item]");
     if (!item) return;
+    if (selecting()) { var c = $("[data-ml-check]", item); if (c) { c.checked = !c.checked; refreshBulk(); } return; } // mode sélection : un clic coche, il n'ouvre pas les détails
     lastTrigger = open;
     openDetail(Number(item.getAttribute("data-id")), item);
   });
@@ -168,6 +188,13 @@
     var locked = !cfg.canWrite || trashed;
     panel.textContent = "";
     var head = h("div", { class: "mk-ml-panel-head" }, [h("h2", { text: m.name }), h("button", { type: "button", class: "btn btn-ghost btn-sm", "aria-label": "Fermer le panneau", text: "Fermer", onclick: closePanel })]);
+    // Précédent / suivant : dans l'ordre de la liste affichée (mêmes filtres, même site) ; les fichiers d'une autre page de résultats ne sont pas atteints d'ici
+    var order = $$("[data-ml-item]"), at = current.item ? order.indexOf(current.item) : -1;
+    var go = function (step) { var next = order[at + step]; if (next) { lastTrigger = $("[data-ml-open]", next); openDetail(Number(next.getAttribute("data-id")), next); } };
+    var pager = at < 0 || order.length < 2 ? null : h("div", { class: "mk-ml-panel-nav", role: "group", "aria-label": "Naviguer entre les fichiers" }, [
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "← Précédent", disabled: at === 0 ? "" : null, onclick: function () { go(-1); } }),
+      h("span", { class: "mk-sub", text: (at + 1) + " / " + order.length }),
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Suivant →", disabled: at === order.length - 1 ? "" : null, onclick: function () { go(1); } })]);
     var status = h("p", { class: "field-hint", role: "status", "aria-live": "polite" });
     var urlInput = h("input", { id: "ml-f-url", type: "text", readonly: "", value: K.absolute(m.path), "aria-label": "Adresse du fichier", onfocus: function () { this.select(); } });
     var copyBtn = h("button", { type: "button", class: "btn btn-outline btn-sm", text: "Copier l'URL", onclick: function () {
@@ -209,7 +236,7 @@
         K.purge(m.id).then(function () { toast("« " + m.name + " » est supprimé.", "ok"); removeFromView(m.id); }, function (err) { status.textContent = err.message; status.className = "mk-ml-error"; toast(err.message, "error"); });
       });
     } }));
-    [head, preview(m), info, h("div", { class: "field-group" }, [h("label", { for: "ml-f-url", text: "Adresse (URL)" }), urlInput]), actions, fName, fTitle, fAlt, fCap, fDesc, save, status, usageBox].forEach(function (n) { if (n) panel.appendChild(n); });
+    [head, pager, preview(m), info, h("div", { class: "field-group" }, [h("label", { for: "ml-f-url", text: "Adresse (URL)" }), urlInput]), actions, fName, fTitle, fAlt, fCap, fDesc, save, status, usageBox].forEach(function (n) { if (n) panel.appendChild(n); });
   }
   // Le fichier a quitté cette vue (corbeille, restauration, suppression) : on le retire de la liste et du panneau
   function removeFromView(id) {

@@ -13,7 +13,7 @@ const one = (sql, ...a) => db.prepare(sql).get(...a);
 const uid = (c) => one("SELECT id FROM users WHERE email = ?", c.email).id;
 const SP = "/marketing/site-web/sites";
 const PR = "/marketing/site-web/principal";
-const DELEGATED = Object.entries(nav.SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => ({ mod: k, to: m.to, reg: m.reg, label: ({ articles: "Tous les articles", commentaires: "Tous", categories: "Catégories", navigation: "Navigation" })[k] || m.label })); // libellé de l'entrée ACTIVE dans le menu (R8 lot 2 : articles et commentaires sont délégués)
+const DELEGATED = Object.entries(nav.SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => ({ mod: k, to: m.to, reg: m.reg, label: ({ articles: "Tous les articles", commentaires: "Tous", categories: "Catégories", navigation: "Navigation", medias: "Médiathèque" })[k] || m.label })); // libellé de l'entrée ACTIVE dans le menu (R8 lot 2 : articles et commentaires sont délégués)
 const mkSite = (name, status = "active") => Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens, status) VALUES (?, ?, ?, '{}', ?)").run(orgId, name, name.toLowerCase().replace(/\W+/g, "-"), status).lastInsertRowid);
 const row = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
 const mkList = (site, name) => row("INSERT INTO mk_lists (organization_id, name, site_id) VALUES (?, ?, ?)", orgId, name, site);
@@ -72,7 +72,7 @@ describe("1 — le menu d'un site est la projection du registre", () => {
       const html = (await who.get(`${SP}/${A}/tableau-de-bord`)).text;
       const links = navLinks(html).filter((h) => h.startsWith(`${SP}/${A}/`) || h.startsWith("/marketing/site-web/sites"));
       assert.ok(links.length >= 8);
-      for (const h of [...new Set(links)]) { const r = await who.get(h); assert.equal(r.status, 200, `${who === boss ? "équipe" : "éditeur"} : ${h}`); }
+      for (const h of [...new Set(links)]) { const r = await who.get(h); assert.equal(r.status, /\/articles\/ajouter(?:[?#]|$)/.test(h) ? 302 : 200, `${who === boss ? "équipe" : "éditeur"} : ${h}`); } // ARTICLES-02 : « Ajouter un article » ouvre l'éditeur (302)
     }
   });
 });
@@ -213,7 +213,7 @@ describe("7 — site principal et régressions", () => {
     assert.ok(hasBanner(html, "Site principal"));
   });
   test("les 67 entrées du menu du principal répondent comme avant (200) avec leurs adresses historiques", async () => {
-    for (const it of nav.ALL) { const r = await boss.get(it.href); assert.equal(r.status, 200, `${it.label} (${it.href})`); assert.ok(!/mk-site-banner/.test(r.text), `${it.href} : pas de bandeau de site`); }
+    for (const it of nav.ALL) { const r = await boss.get(it.href); if (/\/articles\/ajouter(?:[?#]|$)/.test(it.href)) { assert.equal(r.status, 302, it.href); continue; } /* ARTICLES-02 : ouvre l'éditeur */ assert.equal(r.status, 200, `${it.label} (${it.href})`); assert.ok(!/mk-site-banner/.test(r.text), `${it.href} : pas de bandeau de site`); }
   });
   test("les écrans partagés servis dans l'espace du principal restent leurs écrans historiques", async () => {
     for (const d of DELEGATED) { const r = await boss.get(`${PR}/${d.mod}`); assert.ok([200, 302, 404].includes(r.status), d.mod); }

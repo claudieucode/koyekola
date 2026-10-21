@@ -108,12 +108,22 @@ const shape = (ctx, row) => (row ? {
   reach: row.reach || "shared", siteId: row.site_id ?? null, // R5 : médiathèque commune (shared) ou propre à un site
 } : null);
 
-// ---------- Portée de site des médias (R5, décision D6) ----------
-// 'shared' (défaut, tous les médias existants) : médiathèque commune de l'organisation. 'site' : propre à UN site, dossier à part (/uploads/marketing/<organisation>/site-<id>/).
-// Un accès limité à un site (ctx.siteScope, imposé par le serveur) voit les médias communs et ceux de SON site, ne modifie que ceux de son site. L'équipe de l'organisation voit tout ;
-// avec un site choisi (ctx.siteFilter) elle voit la médiathèque de CE site : ses médias et les communs.
+// ---------- Portée de site des médias (R5, révisée par MEDIA-01 : UNE médiathèque distincte par site) ----------
+// Chaque site a SA médiathèque : fichiers 'site' (site_id), dans un dossier à part (/uploads/marketing/<organisation>/site-<id>/). Les fichiers 'shared' (tous les fichiers historiques)
+// forment la médiathèque du SITE PRINCIPAL / de l'organisation : ils ne sont PLUS proposés dans la médiathèque d'un site (plus de bibliothèque globale consultable librement).
+// Leur adresse publique reste servie telle quelle (les pages déjà en ligne ne cassent pas) ; l'équipe peut en attribuer un à un site (setMediaScope).
+// Un accès limité à un site (ctx.siteScope, imposé par le serveur) ne voit et ne modifie QUE les médias de son site. L'équipe de l'organisation voit tout sans site choisi ;
+// avec un site choisi (ctx.siteFilter) elle voit la médiathèque de CE site seulement ; « principal » : la médiathèque commune.
 const orgLevel = (ctx) => !Number.isInteger(ctx.siteScope);
 function visibleSql(ctx) {
+  if (Number.isInteger(ctx.siteScope)) return { sql: "(reach = 'site' AND site_id = ?)", params: [ctx.siteScope] };
+  if (Number.isInteger(ctx.siteFilter)) return { sql: "(reach = 'site' AND site_id = ?)", params: [ctx.siteFilter] };
+  if (ctx.siteFilter === "principal") return { sql: "reach = 'shared'", params: [] };
+  return { sql: "1 = 1", params: [] };
+}
+// Résolution d'une adresse DÉJÀ citée par un contenu (paquet de site, tailles proposables d'une image déjà posée dans une page) : cette lecture n'est pas un parcours de bibliothèque,
+// elle sert à ne pas casser un contenu qui cite un fichier commun historique. Médias de son site + médias communs, jamais ceux d'un autre site.
+function referenceSql(ctx) {
   if (Number.isInteger(ctx.siteScope)) return { sql: "(reach = 'shared' OR site_id = ?)", params: [ctx.siteScope] };
   if (Number.isInteger(ctx.siteFilter)) return { sql: "(reach = 'shared' OR site_id = ?)", params: [ctx.siteFilter] };
   if (ctx.siteFilter === "principal") return { sql: "reach = 'shared'", params: [] };
@@ -173,7 +183,7 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, sit
 const SORTS = { recent: "id DESC", ancien: "id ASC", nom: "name COLLATE NOCASE ASC, id DESC", nom_desc: "name COLLATE NOCASE DESC, id DESC", taille: "size DESC, id DESC" };
 // type : un des TYPES, ou « documents » (PDF + documents Office). kind (historique, e-mails) : « image » ou « document »
 // (PDF et documents Office : jamais les vidéos ni l'audio). trashed : la corbeille. from : date (AAAA-MM-JJ HH:MM:SS) minimale.
-function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", limit = 40, offset = 0, reach = "", siteId } = {}) {
+function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", month = "", limit = 40, offset = 0, reach = "", siteId } = {}) {
   checkCtx(ctx);
   const where = ["organization_id = ?", trashed ? "deleted_at IS NOT NULL" : "deleted_at IS NULL"];
   const args = [ctx.organizationId];
@@ -187,6 +197,7 @@ function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = 
   if (type === "documents") where.push("type IN ('pdf', 'document')");
   else if (TYPES.includes(type)) { where.push("type = ?"); args.push(type); }
   if (/^\d{4}-\d{2}-\d{2}/.test(String(from))) { where.push("created_at >= ?"); args.push(String(from).slice(0, 19)); }
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) { where.push("substr(created_at, 1, 7) = ?"); args.push(String(month)); } // mois d'ajout (AAAA-MM), dates enregistrées en UTC
   const text = String(q || "").trim().slice(0, 100);
   if (text) {
     const like = `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -198,6 +209,12 @@ function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = 
   const rows = ctx.db.prepare(`SELECT * FROM mk_media WHERE ${where.join(" AND ")} ORDER BY ${SORTS[sort] || SORTS.recent} LIMIT ? OFFSET ?`).all(...args, n, o);
   const total = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_media WHERE ${where.join(" AND ")}`).get(...args).n;
   return { items: rows.map((r) => shape(ctx, r)), total, more: o + rows.length < total };
+}
+// Mois (AAAA-MM) où des fichiers ont été ajoutés, parmi les fichiers VISIBLES de cette médiathèque : alimente le filtre « Toutes les dates »
+function mediaMonths(ctx, { trashed = false } = {}) {
+  checkCtx(ctx);
+  const vis = visibleSql(ctx);
+  return ctx.db.prepare(`SELECT substr(created_at, 1, 7) AS month, COUNT(*) n FROM mk_media WHERE organization_id = ? AND ${trashed ? "deleted_at IS NOT NULL" : "deleted_at IS NULL"} AND ${vis.sql} GROUP BY month ORDER BY month DESC`).all(ctx.organizationId, ...vis.params);
 }
 // Compteurs de la bibliothèque (hors corbeille) par type, et corbeille
 function mediaCounts(ctx) {
@@ -219,7 +236,7 @@ const getMedia = (ctx, id) => {
 };
 // Écriture (modifier, corbeille, restaurer, supprimer, changer de portée) : un accès limité à un site ne modifie que les médias de SON site, jamais les médias communs
 function assertWritable(ctx, media) {
-  if (Number.isInteger(ctx.siteScope) && !(media.reach === "site" && media.siteId === ctx.siteScope)) throw new MarketingError("forbidden", "Ce fichier est commun à tous les sites : seule l'équipe de l'organisation peut le modifier.");
+  if (Number.isInteger(ctx.siteScope) && !(media.reach === "site" && media.siteId === ctx.siteScope)) throw new MarketingError("forbidden", "Ce fichier n'appartient pas à la médiathèque de votre site : seule l'équipe de l'organisation peut le modifier.");
 }
 
 function updateMedia(ctx, id, { name, alt, title, caption, description } = {}) {
@@ -351,6 +368,6 @@ function purgeMedia(ctx, id) {
 }
 
 module.exports = {
-  visibleSql, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
+  visibleSql, referenceSql, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaMonths, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
   MAX_IMAGE, MAX_DOCUMENT, MAX_AUDIO, MAX_VIDEO, MAX_UPLOAD, PUBLIC_BASE, TYPES, TYPE_LABELS, FORMATS, SORTS,
 };

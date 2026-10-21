@@ -5,6 +5,17 @@
   var BASE = "/marketing/site-web/mediatheque";
   var TYPE_LABELS = { image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document" };
 
+  // MEDIA-01 : chaque site a SA médiathèque. Le site de la page (ou de l'éditeur) accompagne CHAQUE appel ; le serveur le vérifie contre les droits de la personne
+  // (il n'est jamais cru sur parole) : sans lui, un accès limité à un site est refusé et l'équipe tomberait dans la médiathèque commune.
+  function site() {
+    var m = document.querySelector('meta[name="mk-media-site"]');
+    var v = m && m.getAttribute("content");
+    if (!v) { var f = document.getElementById("be-form"); v = f && f.getAttribute("data-site"); }
+    if (!v) { var q = /[?&]site=(\d{1,12})(?:&|$)/.exec(window.location.search); v = q && q[1]; }
+    return /^\d{1,12}$/.test(String(v || "")) ? String(v) : "";
+  }
+  function withSite(url) { var s = site(); return s && !/[?&]site=/.test(url) ? url + (url.indexOf("?") >= 0 ? "&" : "?") + "site=" + s : url; }
+
   // Réponse JSON ou erreur lisible (jamais de « réussite » sur une réponse en échec)
   function parse(res) {
     return res.text().then(function (text) {
@@ -21,7 +32,7 @@
   function request(method, url, body) {
     var opts = { method: method, credentials: "same-origin", headers: { Accept: "application/json" } };
     if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
-    return fetch(url, opts).then(parse, function () { throw new Error("Connexion impossible : vérifiez votre réseau, puis réessayez."); });
+    return fetch(withSite(url), opts).then(parse, function () { throw new Error("Connexion impossible : vérifiez votre réseau, puis réessayez."); });
   }
   function query(params) {
     var q = [];
@@ -36,7 +47,7 @@
     var promise = new Promise(function (resolve, reject) {
       var fd = new FormData(); fd.append("file", file, file.name);
       if (opts.alt) fd.append("alt", opts.alt);
-      xhr.open("POST", BASE + "/televerser");
+      xhr.open("POST", withSite(BASE + "/televerser"));
       xhr.setRequestHeader("Accept", "application/json");
       xhr.withCredentials = true;
       xhr.upload.onprogress = function (e) { if (e.lengthComputable && opts.onProgress) opts.onProgress(e.loaded / e.total); };
@@ -73,7 +84,7 @@
   function toast(text, type) { if (window.mkToast) window.mkToast(text, type); }
 
   window.KWMedia = {
-    BASE: BASE, TYPE_LABELS: TYPE_LABELS,
+    BASE: BASE, TYPE_LABELS: TYPE_LABELS, site: site, withSite: withSite,
     list: function (params) { return request("GET", BASE + "/liste.json" + query(params)); },
     detail: function (id) { return request("GET", BASE + "/" + id + ".json"); },
     update: function (id, fields) { return request("POST", BASE + "/" + id, fields).then(function (r) { return r.media; }); },

@@ -69,6 +69,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     assert.ok(links.length >= 15, `liens ouverts : ${links.length}`);
     for (const h of links) {
       const r = await boss.get(h.replace(/#.*$/, ""));
+      if (/\/articles\/ajouter(?:[?#]|$)/.test(h)) { assert.equal(r.status, 302, h); assert.match(r.location, /^\/formateur\/blog\/nouveau/); continue; } // ARTICLES-02 : ouvre l'éditeur
       assert.equal(r.status, 200, h);
       assert.match(r.text, /mk-site-banner-name">Site Alpha</, `${h} : bandeau du site`);
       assert.ok(navHtml(r.text).includes("Marketing du site"), `${h} : menu du site (${r.status} ${h})`);
@@ -88,7 +89,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
       const order = flatLabels(m).filter((l) => full.includes(l));
       let at = -1; for (const l of order) { const i = full.indexOf(l, at + 1); assert.ok(i > at, `${name} : ordre de ${l}`); at = i; }
       assert.ok(!navHtml(html).includes(`${SP}/${B}/`), `${name} : aucun lien vers le site B`);
-      for (const e of m.flatMap((g) => g.entrees).filter((x) => x.href && x.href !== SP)) assert.equal((await who.get(e.href.replace(/#.*$/, ""))).status, 200, `${name} : ${e.href}`);
+      for (const e of m.flatMap((g) => g.entrees).filter((x) => x.href && x.href !== SP)) { const r = await who.get(e.href.replace(/#.*$/, "")); assert.equal(r.status, /\/articles\/ajouter(?:[?#]|$)/.test(e.href) ? 302 : 200, `${name} : ${e.href}`); } // ARTICLES-02 : « Ajouter un article » ouvre l'éditeur (302)
     }
     assert.ok((await memA.get(`${SP}/${B}/tableau-de-bord`)).status >= 403, "éditeur de A refusé sur B");
     assert.ok([403, 404].includes((await outsider.get(`${SP}/${A}/tableau-de-bord`)).status), "sans accès refusé");
@@ -96,7 +97,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("site principal : son menu garde les 67 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
-    assert.equal(entries.length, 66 + 1 + 10); // 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(entries.length, 67 + 1 + 10); // 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
     for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(entries.some((e) => e.href === reg.href), reg.href);
     assert.ok(entries.some((e) => e.href === `${PR}/tableau-de-bord`));

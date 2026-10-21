@@ -60,7 +60,7 @@ describe("ouvrir la médiathèque", () => {
     const r = await boss.get(BASE);
     assert.equal(r.status, 200);
     assert.match(r.text, /class="mk-body is-cms"/);
-    assert.match(r.text, /<h1>Médias<\/h1>/);
+    assert.match(r.text, /<h1>Médiathèque<\/h1>/); // MEDIA-01 : « Médiathèque » comme dans WordPress
     assert.match(r.text, /Glissez-déposez vos fichiers ici/);
     assert.match(r.text, /Aucun fichier/);
   });

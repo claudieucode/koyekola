@@ -77,24 +77,23 @@ describe("service médias : portée de site", () => {
     for (const m of [common, mineA, mineB]) assert.ok(fs.existsSync(diskOf(m)), m.path);
   });
 
-  test("visibilité : l'équipe voit tout ; un accès limité voit les communs et SON site ; le filtre d'affichage ne change que l'affichage", () => {
+  test("visibilité (MEDIA-01, une médiathèque par site) : l'équipe voit tout sans site choisi ; un accès limité ne voit QUE son site, jamais les communs ; le filtre d'affichage montre la médiathèque du site choisi", () => {
     const names = (ctx, o) => media.listMedia(ctx, o).items.map((m) => m.name).sort();
     assert.deepEqual(names(team), ["a.pdf", "b.pdf", "commun.pdf"]);
-    assert.deepEqual(names(onlyA), ["a.pdf", "commun.pdf"]);
-    assert.deepEqual(names(onlyB), ["b.pdf", "commun.pdf"]);
-    assert.deepEqual(names({ ...team, siteFilter: 2 }), ["b.pdf", "commun.pdf"]);
+    assert.deepEqual(names(onlyA), ["a.pdf"]);
+    assert.deepEqual(names(onlyB), ["b.pdf"]);
+    assert.deepEqual(names({ ...team, siteFilter: 2 }), ["b.pdf"]);
     assert.deepEqual(names({ ...team, siteFilter: "principal" }), ["commun.pdf"]);
     assert.deepEqual(names(team, { reach: "site", siteId: 1 }), ["a.pdf"]);
     assert.equal(media.getMedia(onlyA, mineB.id), null, "lecture par identifiant d'un média d'un autre site : introuvable");
-    assert.ok(media.getMedia(onlyA, common.id));
-    assert.equal(media.mediaCounts(onlyA).all, 2, "les compteurs suivent la même visibilité que la liste");
+    assert.equal(media.getMedia(onlyA, common.id), null, "un média commun n'est plus proposé dans la médiathèque d'un site");
+    assert.equal(media.mediaCounts(onlyA).all, 1, "les compteurs suivent la même visibilité que la liste");
     assert.equal(media.mediaCounts(team).all, 3);
+    assert.deepEqual(media.mediaMonths(onlyA).map((m) => m.n), [1], "les mois proposés ne viennent que des fichiers visibles");
   });
 
   test("écriture : un accès limité ne modifie que les médias de son site, jamais les communs ni ceux d'un autre site", () => {
-    assert.throws(() => media.updateMedia(onlyA, common.id, { alt: "x" }), /commun/i);
-    assert.throws(() => media.trashMedia(onlyA, common.id), /commun/i);
-    assert.throws(() => media.deleteMedia(onlyA, common.id), /commun/i);
+    for (const run of [() => media.updateMedia(onlyA, common.id, { alt: "x" }), () => media.trashMedia(onlyA, common.id), () => media.deleteMedia(onlyA, common.id)]) assert.throws(run, /introuvable/i, "un média commun est hors de la médiathèque d'un site : introuvable, aucune écriture");
     assert.throws(() => media.updateMedia(onlyA, mineB.id, { alt: "x" }), /introuvable/i);
     assert.equal(media.updateMedia(onlyA, mineA.id, { alt: "texte" }).alt, "texte");
     assert.ok(media.trashMedia(onlyA, mineA.id).deletedAt);

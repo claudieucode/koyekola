@@ -11,11 +11,11 @@ const nav = require("../src/marketing/web/cmsNav");
 // ── INVENTAIRE (clé du registre → décision) ───────────────────────────────────────────────────────────────────────────────────────
 // ouvert        : écran réel dans le cadre du site, isolation démontrée (R5 médias, R6 contenus) ; ouvert-equipe : idem mais absent du menu d'un accès limité ; central : administration centrale (absent du menu d'un site)
 // ferme (motif) : « Bientôt » visible, grisé, sans lien — l'isolation ou l'écran du site n'existe pas encore
-const OUVERT = ["sites", "sitedash", "landing", "apparence", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres",
-  "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque",
+const OUVERT = ["sitedash", "landing", "apparence", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres",
+  "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque", "mediatheque/ajouter",
   "seo", "seo/404", "navigation", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
-const CENTRAL = ["extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
+const CENTRAL = ["sites", "extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
 const MOTIFS = {
   "apparence/templates": "modèles de site complets : lot B3 non réalisé", "apparence/patterns": "blocs et patterns partagés/privés : lot B3",
   "apparence/styles": "styles par site : lot P2", "utilisateurs/ajouter": "invitations par site : lot C4", "utilisateurs/roles": "rôles : lot C4", "utilisateurs/permissions": "permissions : lot C4", "utilisateurs/invitations": "invitations : lot C4",

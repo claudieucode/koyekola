@@ -31,7 +31,7 @@ const SECTIONS = [
       leaf("articles/auteurs", "Auteurs", `${BASE}/articles/auteurs`, { permission: "articles.read" }),
     ],
   },
-  { key: "mediatheque", label: "Médias", icon: "image", items: [leaf("mediatheque", "Médias", `${BASE}/mediatheque`, { permission: "media.read" })] },
+  { key: "mediatheque", label: "Médias", icon: "image", items: [leaf("mediatheque", "Médiathèque", `${BASE}/mediatheque`, { permission: "media.read" }), leaf("mediatheque/ajouter", "Ajouter un fichier média", `${BASE}/mediatheque/ajouter`, { permission: "media.upload" })] },
   {
     key: "commentaires", label: "Commentaires", icon: "inbox", items: [
       leaf("commentaires", "Tous", `${BASE}/commentaires`, { permission: "comments.read" }),
@@ -256,6 +256,7 @@ const ABILITY = {
   "articles/ajouter": { mode: "open", module: "articles", sub: "ajouter" }, // création : permise aux accès limités (éditeur ouvert, contenus-par-site-editeur)
   "articles/auteurs": { mode: "open", module: "articles", sub: "auteurs" },
   mediatheque: { mode: "open", module: "medias" },
+  "mediatheque/ajouter": { mode: "open", module: "medias" },
   navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
   commentaires: { mode: "open", module: "commentaires" },

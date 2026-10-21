@@ -416,3 +416,23 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label, html[data-sidebar="co
 .mk-tx-notes { margin-top: 14px; color: var(--muted); font-size: 0.88rem; display: grid; gap: 6px; }
 .mk-tx-notes p { margin: 0; }
 @media (max-width: 900px) { .mk-tx-layout { grid-template-columns: minmax(0, 1fr); } .mk-tx-search { justify-content: flex-start; } }
+
+/* MEDIA-01 — Médiathèque à la manière de WordPress : barre (icônes liste / grille, type, date, sélection groupée, recherche), mode sélection, détails */
+.mk-ml-toolbar { padding: 10px 12px; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border); border-radius: 8px; }
+.mk-ml-views { margin-left: 0; gap: 2px; }
+.mk-ml-viewbtn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid transparent; border-radius: 6px; color: var(--muted); text-decoration: none; }
+.mk-ml-viewbtn:hover, .mk-ml-viewbtn:focus-visible { color: var(--accent-dark); border-color: var(--mk-border); }
+.mk-ml-viewbtn[aria-current="true"] { color: var(--accent-dark); background: var(--mk-selected); border-color: var(--accent); }
+.mk-ml-toolbar .mk-ml-search { margin-left: auto; flex: 0 1 340px; display: flex; align-items: center; gap: 8px; }
+.mk-ml-searchlabel { font-size: .88rem; color: var(--muted); white-space: nowrap; }
+.mk-ml-search input[type="search"] { min-width: 140px; }
+.mk-ml-sub { margin: 0 0 12px; }
+.mk-ml-upload { margin: 0 0 12px; }
+.mk-ml-upload[hidden] { display: none; }
+.mk-ml-main:not(.is-selecting) .mk-ml-check, .mk-ml-main:not(.is-selecting) .mk-cms-check-col { display: none; }
+.mk-ml-main.is-selecting .mk-ml-thumb { cursor: copy; }
+.mk-ml-bulk[hidden] { display: none; }
+.mk-ml-panel-nav { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 0 0 10px; }
+.mk-ml-item.is-selected .mk-ml-thumb { outline: 3px solid var(--accent); outline-offset: -3px; border-radius: 4px; }
+.mk-ml-thumb img { background: var(--mk-hover); }
+@media (max-width: 700px) { .mk-ml-toolbar .mk-ml-search { margin-left: 0; flex: 1 1 100%; } }

@@ -32,11 +32,12 @@ function filtersOf(query) {
   const sort = Object.hasOwn(media.SORTS, query.tri) ? query.tri : "recent";
   const period = Object.hasOwn(PERIODS, query.periode) ? String(query.periode) : "";
   const q = String(query.q || "").trim().slice(0, 100);
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(query.mois || "")) ? String(query.mois) : ""; // mois d'ajout (AAAA-MM), proposé par la médiathèque elle-même
   const page = Math.max(1, Number(query.page) || 1);
-  return { type, trashed, sort, period, q, page, reach };
+  return { type, trashed, sort, period, q, page, reach, month };
 }
 function search(ctx, f, perPage = PER_PAGE) {
-  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, sort: f.sort, from: sinceOf(f.period), reach: f.reach, limit: perPage, offset: (f.page - 1) * perPage });
+  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, sort: f.sort, from: sinceOf(f.period), month: f.month, reach: f.reach, limit: perPage, offset: (f.page - 1) * perPage });
   return { ...found, pages: Math.max(1, Math.ceil(found.total / perPage)), page: f.page, perPage };
 }
 
@@ -59,17 +60,20 @@ module.exports = () => {
   };
 
   // ----- Page -----
-  router.get(base, need("media.read"), (req, res) => {
+  const page = (uploadOpen, active) => (req, res) => {
     const ctx = req.mk.ctx;
     const f = filtersOf(req.query);
     const found = search(ctx, f);
     const authors = authorsOf(ctx, found.items.map((m) => m.createdBy));
     res.render("marketing/media-library", {
-      title: "Médias", active: "mediatheque", f, found, counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view: req.query.vue === "liste" ? "liste" : "grille",
+      title: "Médiathèque", active, uploadOpen, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: media.orgLevel(ctx) && !Number.isInteger(ctx.siteFilter) && ctx.siteFilter !== "principal", f, found, counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view: req.query.vue === "liste" ? "liste" : "grille",
       canUpload: req.mk.can("media.upload"), canWrite: req.mk.can("media.write"), canDelete: req.mk.can("media.delete"), formats: media.FORMATS, maxMb: { image: media.MAX_IMAGE / 1048576, document: media.MAX_DOCUMENT / 1048576, audio: media.MAX_AUDIO / 1048576, video: media.MAX_VIDEO / 1048576 },
       mediaJs: true,
     });
-  });
+  };
+  router.get(base, need("media.read"), page(false, "mediatheque"));
+  // « Ajouter un fichier média » : la même médiathèque, zone d'envoi ouverte (l'écran WordPress « Média → Ajouter »)
+  router.get(`${base}/ajouter`, need("media.upload"), page(true, "mediatheque/ajouter"));
 
   // ----- API JSON -----
   router.get(`${base}/liste.json`, need("media.read"), (req, res) => {

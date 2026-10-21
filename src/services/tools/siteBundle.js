@@ -44,7 +44,7 @@ async function build(ctx, { siteId }) {
   const wanted = new Map();
   const add = (row) => { if (row && !wanted.has(row.path)) wanted.set(row.path, row); };
   for (const row of db.prepare("SELECT * FROM mk_media WHERE organization_id = ? AND reach = 'site' AND site_id = ? AND deleted_at IS NULL ORDER BY id").all(ctx.organizationId, siteId)) add(row);
-  const vis = media.visibleSql(mctx);
+  const vis = media.referenceSql(mctx);
   for (const p of new Set(JSON.stringify(data.resources).match(REFS) || [])) add(db.prepare(`SELECT * FROM mk_media WHERE organization_id = ? AND path = ? AND deleted_at IS NULL AND ${vis.sql}`).get(ctx.organizationId, p, ...vis.params));
   if (wanted.size > MAX_FILES) throw fail(`Trop de fichiers pour un paquet (${wanted.size}, ${MAX_FILES} au plus).`);
   const files = []; const chunks = []; const missing = []; let offset = 0;
@@ -124,7 +124,7 @@ function plan(ctx, buffer, { siteId }) {
   const ins = inspect(buffer);
   if (ins.errors.length) return { ok: false, errors: ins.errors, warnings: ins.warnings || [] };
   const mctx = mediaCtx(ctx, siteId);
-  const vis = media.visibleSql(mctx);
+  const vis = media.referenceSql(mctx);
   const mapping = []; const reservedNew = new Set();
   for (const { meta, bytes, real } of ins.entries) {
     // 1) même contenu déjà disponible pour CE site (commun ou propre à ce site) : réutilisé, rien n'est dupliqué

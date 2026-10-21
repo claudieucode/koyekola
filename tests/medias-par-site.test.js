@@ -102,10 +102,11 @@ describe("médias par site et sauvegarde par site : bout en bout", () => {
       for (const m of [imgCommon, imgA, imgB]) assert.ok(fs.existsSync(diskOf(m.path)), m.path);
     });
 
-    test("accès limité au site A : voit les communs et ceux d'A, jamais ceux de B ; ne téléverse que dans A", async () => {
+    test("accès limité au site A : ne voit QUE ceux d'A (ni les communs ni ceux de B) ; ne téléverse que dans A", async () => {
       const guestA = await person(A, "admin");
       const names = async (site) => { const r = await guestA.get(`${L}/liste.json?site=${site}`); return { status: r.status, names: r.status === 200 ? JSON.parse(r.text).items.map((m) => m.name).sort() : null }; };
-      assert.deepEqual(await names(A), { status: 200, names: ["alpha.png", "commun.png"] });
+      assert.deepEqual(await names(A), { status: 200, names: ["alpha.png"] });
+      assert.equal((await guestA.get(`${L}/${imgCommon.id}.json`)).status, 403, "un média commun n'est pas dans la médiathèque d'un site");
       assert.equal((await names(B)).status, 403, "le site B lui est fermé");
       assert.equal((await guestA.get(`${L}/${imgB.id}.json`)).status, 403, "lecture d'un média de B par identifiant");
       assert.equal((await upload(guestA, png(13, 13), "x.png", B)).status, 403);
@@ -123,7 +124,7 @@ describe("médias par site et sauvegarde par site : bout en bout", () => {
 
     test("page de la médiathèque : filtre de portée et mention « propre à un site » ", async () => {
       const all_ = (await boss.get(L)).text;
-      assert.match(all_, /Propres à un site/);
+      assert.match(all_, /Fichiers propres à un site/);
       assert.match(all_, /propre à un site/);
       const shared = (await boss.get(`${L}?portee=commun`)).text;
       assert.ok(!shared.includes("alpha.png") && shared.includes("commun.png"), "filtre « communs »");
