@@ -10,6 +10,11 @@
   "use strict";
   var dataNode = document.getElementById("mk-editor-data");
   if (!dataNode) return;
+  // MEDIA-ROUTING : les appels à la médiathèque portent le site du modèle (balise mk-media-site : son site, ou « principal ») ; le serveur le revérifie
+  function mediaUrl(url) {
+    var m = document.querySelector('meta[name="mk-media-site"]'), v = m && m.getAttribute("content");
+    return /^(?:\d{1,12}|principal)$/.test(String(v || "")) && !/[?&]site=/.test(url) ? url + (url.indexOf("?") >= 0 ? "&" : "?") + "site=" + v : url;
+  }
   var data = JSON.parse(dataNode.textContent);
   var readOnly = !!data.readOnly;
   var state = data.template;
@@ -1816,7 +1821,7 @@
   function altFromName(name) { return String(name || "").replace(/\.[a-z0-9]{2,5}$/i, "").replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 120); }
   function uploadOne(file) {
     var fd = new FormData(); fd.append("file", file);
-    return fetch("/marketing/medias", { method: "POST", credentials: "same-origin", body: fd })
+    return fetch(mediaUrl("/marketing/medias"), { method: "POST", credentials: "same-origin", body: fd })
       .then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { if (!res.ok) throw new Error(j.error || "Envoi impossible (" + res.status + ")."); return j.media; }); });
   }
   // opts.at : position d'insertion ; opts.target : id d'un bloc image à remplir (remplacement)
@@ -1869,7 +1874,7 @@
     loadMedia.force = false;
     var offset = more ? mediaCache.length : 0;
     setMediaStatus("Chargement…");
-    fetch("/marketing/medias?limite=30&depuis=" + offset + "&q=" + encodeURIComponent(mediaQ.value) + "&type=" + encodeURIComponent(mediaKind.value), { credentials: "same-origin", headers: { Accept: "application/json" } })
+    fetch(mediaUrl("/marketing/medias?limite=30&depuis=" + offset + "&q=" + encodeURIComponent(mediaQ.value) + "&type=" + encodeURIComponent(mediaKind.value)), { credentials: "same-origin", headers: { Accept: "application/json" } })
       .then(function (res) { return res.json().then(function (j) { if (!res.ok) throw new Error(j.error || "Chargement impossible."); return j; }); })
       .then(function (j) { mediaCache = more ? mediaCache.concat(j.items) : j.items; mediaMore = j.more; mediaLoaded = true; setMediaStatus(j.total ? j.total + " média" + (j.total > 1 ? "s" : "") : "Aucun média : importez une image ou un PDF."); renderMedia(); })
       .catch(function (e) { console.error("[éditeur] médiathèque", e); setMediaStatus("Médiathèque indisponible : " + e.message); });
@@ -1919,11 +1924,11 @@
   function editAlt(m) {
     var text = window.prompt("Texte alternatif de « " + m.name + " » (proposé à chaque insertion de cette image) :", m.alt || "");
     if (text === null) return;
-    postJson("/marketing/medias/" + m.id, { alt: text }).then(function (j) { Object.assign(m, j.media); renderMedia(); toast("Texte alternatif enregistré.", "ok"); }).catch(function (e) { toast(e.message, "error"); });
+    postJson(mediaUrl("/marketing/medias/" + m.id), { alt: text }).then(function (j) { Object.assign(m, j.media); renderMedia(); toast("Texte alternatif enregistré.", "ok"); }).catch(function (e) { toast(e.message, "error"); });
   }
   function deleteMedia(m) {
     var go = function () {
-      postJson("/marketing/medias/" + m.id + "/supprimer").then(function () { mediaCache = mediaCache.filter(function (x) { return x.id !== m.id; }); renderMedia(); toast("Média supprimé.", "ok"); }).catch(function (e) { toast(e.message, "error"); });
+      postJson(mediaUrl("/marketing/medias/" + m.id + "/supprimer")).then(function () { mediaCache = mediaCache.filter(function (x) { return x.id !== m.id; }); renderMedia(); toast("Média supprimé.", "ok"); }).catch(function (e) { toast(e.message, "error"); });
     };
     if (typeof window.mkConfirm === "function") window.mkConfirm({ title: "Supprimer ce média ?", text: "« " + m.name + " » sera retiré de la médiathèque. Un média utilisé par un modèle ne peut pas être supprimé.", ok: "Supprimer" }, go);
     else if (window.confirm("Supprimer « " + m.name + " » ?")) go();

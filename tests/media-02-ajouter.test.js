@@ -56,7 +56,7 @@ describe("media-02 : ajouter un fichier média", () => {
       assert.match(t, /aria-current="page"[^>]*>(?:<[^>]+>)*[^<]*Ajouter un fichier média/);
       assert.doesNotMatch(t, /Speed up|WPForms|Elementor|3 Go/);
       for (const f of ["JPEG, PNG, GIF, WebP, AVIF", "MP4, WebM", "MP3, WAV, OGG, M4A", "PDF, Word, Excel, PowerPoint"]) assert.ok(t.includes(f), f);
-      assert.match(t, /ajouter\?site=\d+&amp;methode=navigateur|ajouter\?site=\d+&methode=navigateur/);
+      assert.match(t, new RegExp(`/marketing/site-web/sites/${A}/medias/ajouter\\?methode=navigateur`), "lien dans le cadre du site, jamais vers le site principal");
     });
     test("les limites affichées SONT les limites effectives du serveur (plafonds, puis Paramètres → Médias)", async () => {
       let t = (await boss.get(AJ)).text;
@@ -75,7 +75,7 @@ describe("media-02 : ajouter un fichier média", () => {
       const lib = (await adminA.get(`${L}?site=${A}`)).text;
       const cfg = JSON.parse(lib.match(/<script type="application\/json" id="mu-config">([\s\S]*?)<\/script>/)[1]);
       assert.ok(Object.keys(cfg.extTypes).length >= 18); assert.ok(cfg.accept.includes(".webp") && cfg.accept.includes(".docx"));
-      assert.match(lib, /data-ml-summary/); assert.equal(cfg.libraryUrl, `${L}?site=${A}`);
+      assert.match(lib, /data-ml-summary/); assert.equal(cfg.libraryUrl, `/marketing/site-web/sites/${A}/medias`, "la médiathèque du site, dans son cadre");
       const js = (await boss.get("/js/media-upload.js")).text; assert.match(js, /En cours de traitement/); assert.match(js, /beforeunload/);
     });
     test("droits : lecteur 403, anonyme refusé ; le site de la page est celui vérifié par le serveur", async () => {

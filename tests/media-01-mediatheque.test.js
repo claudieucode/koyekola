@@ -157,8 +157,9 @@ describe("media-01 : médiathèque", () => {
       assert.ok(mediaRow(mine.id).deleted_at); assert.equal(mediaRow(imgB.id).deleted_at, null); assert.equal(mediaRow(common).deleted_at, null);
       await adminA.postJson(`${L}/${mine.id}/restaurer?site=${A}`, {});
     });
-    test("équipe : sans site choisi elle voit tout ; avec un site choisi, seulement la médiathèque de ce site ; « principal » : les fichiers historiques", async () => {
-      const everything = (await listNames(boss, "")).names;
+    test("équipe : sans site choisi elle voit la médiathèque du SITE PRINCIPAL ; la vue d'ensemble est un choix explicite (?portee=tous) ; avec un site choisi, seulement ce site", async () => {
+      assert.deepEqual((await listNames(boss, "")).names, ["historique-commun.png"], "par défaut : le site principal, jamais tous les sites");
+      const everything = (await listNames(boss, "portee=tous")).names;
       assert.ok(["Mon image.png", "secret-beta.png", "historique-commun.png"].every((n) => everything.includes(n)));
       assert.ok(!(await listNames(boss, `site=${A}`)).names.includes("secret-beta.png"));
       assert.deepEqual((await listNames(boss, `site=${B}`)).names, ["secret-beta.png"]);

@@ -4,7 +4,7 @@
 %><%- include("partials/top", { title, active }) %>
 <%
   const S = typeof mkSiteId === "number" ? mkSiteId : ""; // site de la médiathèque : conservé dans tous les liens (le serveur le revérifie)
-  const keep = (over = {}, path = "/marketing/site-web/mediatheque") => { const p = new URLSearchParams(); const o = { site: S, type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, mois: f.month, vue: view === "liste" ? "liste" : "", portee: f.reach === "shared" ? "commun" : f.reach === "site" ? "site" : "", ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return path + (t ? "?" + t : ""); };
+  const keep = (over = {}, path = spaceBase) => { const p = new URLSearchParams(); const o = { type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, mois: f.month, vue: view === "liste" ? "liste" : "", portee: f.portee, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return path + (t ? "?" + t : ""); };
   const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   const monthName = (m) => MONTHS[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4);
   const typeOptions = [["", "Tous les médias", counts.all], ["image", "Images", counts.image], ["audio", "Audio", counts.audio], ["video", "Vidéo", counts.video], ["documents", "Documents", counts.documents]];
@@ -19,8 +19,8 @@
       <% if (canUpload && !f.trashed) { %><div class="mk-actions"><button type="button" class="btn btn-outline btn-sm" data-ml-browse aria-expanded="<%= uploadOpen ? "true" : "false" %>" aria-controls="ml-upload"><%- icon("upload", { size: 16 }) %> Ajouter un fichier média</button></div><% } %></div>
     <p class="mk-lead">Les fichiers de <strong>ce site</strong> : images, vidéos, audio et documents. Ce sont ceux que vous choisissez dans l'éditeur d'articles et de pages ; ils ne sont jamais partagés avec un autre site.</p>
 
-    <form class="mk-cms-toolbar mk-ml-toolbar" method="get" action="/marketing/site-web/mediatheque" role="search" aria-label="Filtrer et rechercher les médias" data-ml-filters><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
-      <% if (f.trashed) { %><input type="hidden" name="corbeille" value="1"><% } %><% if (view === "liste") { %><input type="hidden" name="vue" value="liste"><% } %><% if (f.reach) { %><input type="hidden" name="portee" value="<%= f.reach === "shared" ? "commun" : "site" %>"><% } %>
+    <form class="mk-cms-toolbar mk-ml-toolbar" method="get" action="<%= spaceBase %>" role="search" aria-label="Filtrer et rechercher les médias" data-ml-filters><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
+      <% if (f.trashed) { %><input type="hidden" name="corbeille" value="1"><% } %><% if (view === "liste") { %><input type="hidden" name="vue" value="liste"><% } %><% if (f.portee) { %><input type="hidden" name="portee" value="<%= f.portee %>"><% } %>
       <span class="mk-ml-views" role="group" aria-label="Mode d'affichage">
         <a class="mk-ml-viewbtn" href="<%= keep({ vue: "liste", page: "" }) %>"<%- view === "liste" ? ' aria-current="true"' : "" %> aria-label="Affichage en liste" title="Affichage en liste"><%- icon("list", { size: 18 }) %></a>
         <a class="mk-ml-viewbtn" href="<%= keep({ vue: "", page: "" }) %>"<%- view === "grille" ? ' aria-current="true"' : "" %> aria-label="Affichage en grille" title="Affichage en grille"><%- icon("grid", { size: 18 }) %></a>
@@ -38,10 +38,10 @@
     </form>
     <p class="mk-sub mk-ml-sub">
       <% if (f.trashed) { %><a href="<%= keep({ corbeille: "", page: "" }) %>">← Retour à la médiathèque</a><% } else { %><a href="<%= keep({ corbeille: "1", type: "", mois: "", page: "" }) %>">Corbeille (<%= counts.trash %>)</a><% } %>
-      <% if (orgView) { %> · Portée :
-        <a href="<%= keep({ portee: "", page: "" }) %>"<%- !f.reach ? ' aria-current="page"' : "" %>>Tous les sites</a> ·
-        <a href="<%= keep({ portee: "commun", page: "" }) %>"<%- f.reach === "shared" ? ' aria-current="page"' : "" %>>Site principal (fichiers historiques)</a> ·
-        <a href="<%= keep({ portee: "site", page: "" }) %>"<%- f.reach === "site" ? ' aria-current="page"' : "" %>>Fichiers propres à un site</a><% } %></p>
+      <% if (orgView) { %> · Médiathèque affichée :
+        <a href="<%= keep({ portee: "", page: "" }) %>"<%- !f.portee || f.portee === "commun" ? ' aria-current="page"' : "" %>>Site principal</a> ·
+        <a href="<%= keep({ portee: "tous", page: "" }) %>"<%- f.portee === "tous" ? ' aria-current="page"' : "" %>>Tous les sites (vue d'ensemble)</a> ·
+        <a href="<%= keep({ portee: "site", page: "" }) %>"<%- f.portee === "site" ? ' aria-current="page"' : "" %>>Fichiers propres à un site</a><% } %></p>
 
     <% if (canUpload && !f.trashed) { %>
       <div class="mk-ml-upload" id="ml-upload" <%= uploadOpen ? "" : "hidden" %>>

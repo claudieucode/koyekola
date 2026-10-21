@@ -30,7 +30,9 @@ const SIZES = {
 const KEYS = Object.keys(SIZES).sort((a, b) => SIZES[a].width - SIZES[b].width);
 const WIDTHS = new Set(KEYS.map((k) => SIZES[k].width));
 const SIZE_CHOICES = ["full", ...KEYS, "auto"]; // full = original (défaut) ; auto = adaptatif (srcset)
-const SRC_RE = /^(\/uploads\/marketing\/(\d{1,9}))\/(\d{10,16}-[0-9a-f]{12})\.(jpg|png|webp|avif)$/; // noms fabriqués par saveUpload
+// noms fabriqués par saveUpload ; MEDIA-ROUTING : les images d'un site (dossier site-<id>) ont leurs versions réduites DANS le dossier de CE site (jamais dans un dossier commun)
+const SRC_RE = /^(\/uploads\/marketing\/(\d{1,9})(?:\/site-(\d{1,9}))?)\/(\d{10,16}-[0-9a-f]{12})\.(jpg|png|webp|avif)$/;
+const folderOf = (org, site) => path.join(uploadsRoot, "marketing", org, ...(site ? [`site-${site}`] : []));
 const VARIANT_RE = /^[0-9]{10,16}-[0-9a-f]{12}$/;
 const EXTS = ["jpg", "png", "webp", "avif"];
 const QUALITY = 80;
@@ -50,7 +52,7 @@ async function selfTest() {
 const isLocal = (src) => SRC_RE.test(String(src || ""));
 const variantUrl = (src, key) => {
   const m = SRC_RE.exec(String(src || ""));
-  return m ? `${m[1]}/v/${SIZES[key].width}/${m[3]}.webp` : null;
+  return m ? `${m[1]}/v/${SIZES[key].width}/${m[4]}.webp` : null;
 };
 
 // Adresse à afficher pour une taille choisie. Renvoie l'original quand la taille ne s'applique pas (« full », adresse
@@ -90,7 +92,7 @@ function dimensions(src) {
   if (sizes.has(src)) return sizes.get(src);
   let d = null;
   try {
-    const fd = fs.openSync(path.join(uploadsRoot, "marketing", m[2], `${m[3]}.${m[4]}`), "r");
+    const fd = fs.openSync(path.join(folderOf(m[2], m[3]), `${m[4]}.${m[5]}`), "r");
     try { const buf = Buffer.alloc(262144); const n = fs.readSync(fd, buf, 0, buf.length, 0); const info = require("./index").sniff(buf.subarray(0, n)); d = info && info.width ? { width: info.width, height: info.height } : null; } finally { fs.closeSync(fd); }
   } catch { d = null; }
   if (sizes.size > 2000) sizes.clear();
@@ -110,7 +112,7 @@ function purge(src) {
   if (!m) return 0;
   let n = 0;
   for (const w of WIDTHS) {
-    const file = path.join(uploadsRoot, "marketing", m[2], "v", String(w), `${m[3]}.webp`);
+    const file = path.join(folderOf(m[2], m[3]), "v", String(w), `${m[4]}.webp`);
     try { fs.unlinkSync(file); n++; } catch { /* absente */ }
   }
   return n;
@@ -134,16 +136,16 @@ function build(origin, target, width) {
 // Intergiciel : GET /uploads/marketing/<org>/v/<largeur>/<nom>.webp, monté AVANT le dossier statique. Une version déjà
 // fabriquée est rendue au dossier statique (mêmes en-têtes, mêmes protections) ; sinon elle est fabriquée ici.
 function middleware(req, res, next) {
-  const m = /^\/(\d{1,9})\/v\/(\d{2,4})\/([^/]+)\.webp$/.exec(req.path);
+  const m = /^\/(\d{1,9})(?:\/site-(\d{1,9}))?\/v\/(\d{2,4})\/([^/]+)\.webp$/.exec(req.path);
   if (!m || (req.method !== "GET" && req.method !== "HEAD")) return next();
-  const [, org, w, base] = m, width = Number(w);
+  const [, org, site, w, base] = m, width = Number(w);
   if (!WIDTHS.has(width) || !VARIANT_RE.test(base)) return next(); // adresse inventée : le dossier statique répondra 404
-  const dir = path.join(uploadsRoot, "marketing", org);
+  const dir = folderOf(org, site);
   const target = path.join(dir, "v", w, `${base}.webp`);
   if (fs.existsSync(target)) return next();
   const ext = EXTS.find((e) => fs.existsSync(path.join(dir, `${base}.${e}`)));
   if (!ext) return next();
-  const origin = path.join(dir, `${base}.${ext}`), originUrl = `/uploads/marketing/${org}/${base}.${ext}`;
+  const origin = path.join(dir, `${base}.${ext}`), originUrl = `/uploads/marketing/${org}${site ? `/site-${site}` : ""}/${base}.${ext}`;
   const original = () => res.set("Cache-Control", "public, max-age=300").redirect(302, originUrl);
   if (!sharp) return original();
   sharp(origin, { failOn: "none" }).metadata().then((meta) => {

@@ -35,7 +35,7 @@ module.exports = () => {
     }
     res.render("marketing/social", {
       title: "Réseaux sociaux", active: "social", posts: social.listPosts(ctx), cfg: social.getSocialView(ctx), siteOnly: req.mk.siteOnly, siteChoices: req.mk.siteOnly ? [] : social.listSiteGrants(ctx).filter((s) => s.moduleEnabled && s.networks.length), NETWORKS: social.NETWORKS, LIMITS: social.LIMITS,
-      images: media.listMedia(ctx, { kind: "image", limit: 60 }).items.map((m) => ({ ...m, url: absolute(base, m.path) })).filter((m) => m.url),
+      images: media.listMedia(require("../media/requestContext").mediaCtx(req), { kind: "image", limit: 60 }).items.map((m) => ({ ...m, url: absolute(base, m.path) })).filter((m) => m.url),
       prefill, canWrite: req.mk.can("campaigns.write"), httpsSite: base.startsWith("https://"),
     });
   });

@@ -11,8 +11,9 @@
     var m = document.querySelector('meta[name="mk-media-site"]');
     var v = m && m.getAttribute("content");
     if (!v) { var f = document.getElementById("be-form"); v = f && f.getAttribute("data-site"); }
-    if (!v) { var q = /[?&]site=(\d{1,12})(?:&|$)/.exec(window.location.search); v = q && q[1]; }
-    return /^\d{1,12}$/.test(String(v || "")) ? String(v) : "";
+    if (!v) { var q = /[?&]site=(\d{1,12}|principal)(?:&|$)/.exec(window.location.search); v = q && q[1]; }
+    if (!v) { var p = /\/sites\/(\d{1,12})\//.exec(window.location.pathname + "/"); v = p && p[1]; } // adresse du cadre d'un site : /sites/<id>/…
+    return /^(?:\d{1,12}|principal)$/.test(String(v || "")) ? String(v) : "";
   }
   function withSite(url) { var s = site(); return s && !/[?&]site=/.test(url) ? url + (url.indexOf("?") >= 0 ? "&" : "?") + "site=" + s : url; }
 

@@ -261,6 +261,7 @@ module.exports = () => {
   // ---------- Médiathèque de l'éditeur (JSON) ----------
   // Une seule bibliothèque d'images pour les pages : la médiathèque Marketing (envoi, texte de remplacement, suppression
   // contrôlée) et, en lecture, celle du site (blog, Centre de gestion). Aucun fichier n'est recopié.
+  const { mediaCtx } = require("../media/requestContext"); // la médiathèque d'UN site (jamais « tous »)
   const mediaError = (res, next, error) => {
     const { MarketingError } = require("../errors");
     if (!(error instanceof MarketingError)) return next(error);
@@ -270,8 +271,9 @@ module.exports = () => {
   router.get("/site-web/medias.json", need("forms.read"), (req, res) => {
     const src = ["marketing", "site"].includes(req.query.source) ? req.query.source : "all";
     const q = String(req.query.q || "").slice(0, 80);
-    const mk = src === "site" ? [] : media.listMedia(req.mk.ctx, { kind: "image", q, limit: 100 }).items.map(marketingItem);
-    const site = src === "marketing" ? [] : siteImages(req.mk.ctx.db, { q, limit: 100 });
+    const mk = src === "site" ? [] : media.listMedia(mediaCtx(req), { kind: "image", q, limit: 100 }).items.map(marketingItem);
+    // Les images de l'ancien blog n'ont pas de site propriétaire : elles ne sont proposées qu'au site PRINCIPAL, jamais dans la médiathèque d'un site
+    const mctx = mediaCtx(req), site = src === "marketing" || Number.isInteger(mctx.siteScope) || Number.isInteger(mctx.siteFilter) ? [] : siteImages(mctx.db, { q, limit: 100 });
     res.set("Cache-Control", "no-store").json({ items: mk.concat(site) });
   });
   // Résolutions proposables pour une ou plusieurs images de la médiathèque (widget Image, Galerie…) : seulement les tailles
@@ -279,8 +281,8 @@ module.exports = () => {
   router.get("/site-web/medias/resolutions.json", need("forms.read"), (req, res) => {
     const variants = require("../media/variants");
     const list = [].concat(req.query.src || []).map(String).slice(0, 24);
-    const vis = media.referenceSql(req.mk.ctx);
-    const rows = list.map((src) => (variants.isLocal(src) ? req.mk.ctx.db.prepare(`SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image' AND ${vis.sql}`).get(req.mk.ctx.organizationId, src, ...vis.params) : null));
+    const vis = media.referenceSql(mediaCtx(req));
+    const rows = list.map((src) => (variants.isLocal(src) ? mediaCtx(req).db.prepare(`SELECT width, height, size FROM mk_media WHERE organization_id = ? AND path = ? AND type = 'image' AND ${vis.sql}`).get(mediaCtx(req).organizationId, src, ...vis.params) : null));
     const known = rows.filter((r) => r && r.width);
     const complete = list.length > 0 && known.length === list.length;
     const min = complete ? Math.min(...known.map((r) => r.width)) : 0;
@@ -291,9 +293,9 @@ module.exports = () => {
   });
   // Où une image est utilisée (pages, composants, modèles, articles, sites) : la même détection que le refus de suppression
   router.get("/site-web/medias/:id(\\d+)/usage.json", need("forms.read"), (req, res) => {
-    const m = media.getMedia(req.mk.ctx, Number(req.params.id));
+    const m = media.getMedia(mediaCtx(req), Number(req.params.id));
     if (!m) return res.status(404).json({ error: { code: "not_found", message: "Fichier introuvable." } });
-    res.set("Cache-Control", "no-store").json({ items: media.mediaUsage(req.mk.ctx, m).map((u) => ({ kind: u.kind, name: u.name, href: media.usageHref(u) })) });
+    res.set("Cache-Control", "no-store").json({ items: media.mediaUsage(mediaCtx(req), m).map((u) => ({ kind: u.kind, name: u.name, href: media.usageHref(u) })) });
   });
   router.post("/site-web/medias", need("forms.write"), (req, res, next) => {
     mediaUpload.single("file")(req, res, (uploadError) => {
@@ -304,17 +306,17 @@ module.exports = () => {
         const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
         const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
         if (media.sniff(req.file.buffer) && media.sniff(req.file.buffer).kind !== "image") throw new MarketingError("invalid_field", "Une page affiche des images : JPEG, PNG, GIF ou WebP. Un PDF se partage par un lien.");
-        let saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image"], siteId: media.siteOfUpload(req.mk.ctx) });
-        if (req.body && typeof req.body.alt === "string" && req.body.alt.trim()) saved = media.updateMedia(req.mk.ctx, saved.id, { alt: req.body.alt });
+        let saved = media.saveUpload(mediaCtx(req), { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image"], siteId: media.siteOfUpload(mediaCtx(req)) });
+        if (req.body && typeof req.body.alt === "string" && req.body.alt.trim()) saved = media.updateMedia(mediaCtx(req), saved.id, { alt: req.body.alt });
         res.status(201).json({ media: marketingItem(saved) });
       } catch (error) { mediaError(res, next, error); }
     });
   });
   router.post("/site-web/medias/:id(\\d+)", need("forms.write"), (req, res, next) => {
-    try { res.json({ media: marketingItem(media.updateMedia(req.mk.ctx, Number(req.params.id), { name: req.body && req.body.name, alt: req.body && req.body.alt })) }); } catch (error) { mediaError(res, next, error); }
+    try { res.json({ media: marketingItem(media.updateMedia(mediaCtx(req), Number(req.params.id), { name: req.body && req.body.name, alt: req.body && req.body.alt })) }); } catch (error) { mediaError(res, next, error); }
   });
   router.post("/site-web/medias/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
-    try { res.json({ ok: media.deleteMedia(req.mk.ctx, Number(req.params.id)) }); } catch (error) { mediaError(res, next, error); }
+    try { res.json({ ok: media.deleteMedia(mediaCtx(req), Number(req.params.id)) }); } catch (error) { mediaError(res, next, error); }
   });
 
   // ---------- Composants réutilisables (éditeur visuel, JSON) ----------

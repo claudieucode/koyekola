@@ -121,6 +121,12 @@ function visibleSql(ctx) {
   if (ctx.siteFilter === "principal") return { sql: "reach = 'shared'", params: [] };
   return { sql: "1 = 1", params: [] };
 }
+// La médiathèque d'UN site pour un contenu donné (page, article, composant…) : l'accès limité reste imposé par le serveur (siteScope) ; l'équipe, elle, est ramenée à la médiathèque
+// DU SITE de ce contenu (null = site principal) — jamais à « tous les sites ». Toute liste d'images affichée dans un éditeur passe par ici.
+function forSite(ctx, siteId) {
+  if (Number.isInteger(ctx.siteScope)) return ctx;
+  return { ...ctx, siteFilter: Number.isInteger(siteId) && siteId > 0 ? siteId : "principal" };
+}
 // Résolution d'une adresse DÉJÀ citée par un contenu (paquet de site, tailles proposables d'une image déjà posée dans une page) : cette lecture n'est pas un parcours de bibliothèque,
 // elle sert à ne pas casser un contenu qui cite un fichier commun historique. Médias de son site + médias communs, jamais ceux d'un autre site.
 function referenceSql(ctx) {
@@ -386,7 +392,7 @@ function purgeMedia(ctx, id) {
 }
 
 module.exports = {
-  visibleSql, referenceSql, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaMonths, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
+  visibleSql, referenceSql, forSite, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaMonths, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
   effectiveLimit, uploadConfig, ACCEPT, EXT_TYPES,
   MAX_IMAGE, MAX_DOCUMENT, MAX_AUDIO, MAX_VIDEO, MAX_UPLOAD, PUBLIC_BASE, TYPES, TYPE_LABELS, FORMATS, SORTS,
 };

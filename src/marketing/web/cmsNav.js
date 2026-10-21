@@ -200,6 +200,7 @@ const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
+  medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
 const FRAMED = new Set();
@@ -256,7 +257,7 @@ const ABILITY = {
   "articles/ajouter": { mode: "open", module: "articles", sub: "ajouter" }, // création : permise aux accès limités (éditeur ouvert, contenus-par-site-editeur)
   "articles/auteurs": { mode: "open", module: "articles", sub: "auteurs" },
   mediatheque: { mode: "open", module: "medias" },
-  "mediatheque/ajouter": { mode: "open", module: "medias" },
+  "mediatheque/ajouter": { mode: "open", module: "medias", sub: "ajouter" },
   navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
   commentaires: { mode: "open", module: "commentaires" },

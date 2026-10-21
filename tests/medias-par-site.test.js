@@ -123,8 +123,11 @@ describe("médias par site et sauvegarde par site : bout en bout", () => {
     });
 
     test("page de la médiathèque : filtre de portée et mention « propre à un site » ", async () => {
-      const all_ = (await boss.get(L)).text;
-      assert.match(all_, /Fichiers propres à un site/);
+      const home = (await boss.get(L)).text;
+      assert.ok(home.includes("commun.png") && !home.includes("alpha.png"), "sans site : la médiathèque du site principal");
+      const all_ = (await boss.get(`${L}?portee=tous`)).text;
+      assert.match(all_, /Fichiers propres à un site/); assert.match(all_, /Tous les sites \(vue d'ensemble\)/);
+      assert.ok(all_.includes("alpha.png") && all_.includes("commun.png"), "vue d'ensemble explicite de l'équipe");
       assert.match(all_, /propre à un site/);
       const shared = (await boss.get(`${L}?portee=commun`)).text;
       assert.ok(!shared.includes("alpha.png") && shared.includes("commun.png"), "filtre « communs »");

@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <% if (page && Number.isInteger(page.site_id) && page.site_id > 0) { %><meta name="mk-media-site" content="<%= page.site_id %>"><% } /* MEDIA-01 : médiathèque du site de cette page */ %>
+  <meta name="mk-media-site" content="<%= page && Number.isInteger(page.site_id) && page.site_id > 0 ? page.site_id : "principal" %>"><%# médiathèque du site de cette page (ou du site principal) %>
   <title><%= title %> · Site Web · KOLAKISA</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">

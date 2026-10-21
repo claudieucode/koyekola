@@ -29,6 +29,7 @@ const { attempt, need, safeJson } = require("./kit");
 const { icon } = require("../../utils/icons");
 const multer = require("multer");
 const media = require("../media");
+const { mediaCtx } = require("../media/requestContext"); // la médiathèque d'UN site (jamais « tous les sites » par défaut)
 
 // Fichiers de la médiathèque : en mémoire le temps de vérifier leur contenu (le type est lu dans le fichier lui-même)
 const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: media.MAX_DOCUMENT, files: 1 } });
@@ -197,7 +198,7 @@ module.exports = ({ db }) => {
       ai: { configured: require("../../services/aiCore").isConfigured() }, // onglet « IA » (point 10)
     };
     res.render("marketing/template-editor", {
-      title: template.name, active: "templates", template, data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: buildPalette(), filters: CATALOG.FILTERS, categories: CATEGORIES,
+      title: template.name, active: "templates", template, mediaSiteOverride: template.site_id || "principal", data: safeJson(data), readOnly: data.readOnly, versions: data.versions, palette: buildPalette(), filters: CATALOG.FILTERS, categories: CATEGORIES,
       recipients: teamRecipients(ctx), currentEmail: String(req.session.user.email || "").toLowerCase(), contacts: data.contacts,
     });
   });
@@ -228,7 +229,7 @@ module.exports = ({ db }) => {
 
   // ---------- Médiathèque (images et PDF des e-mails) ----------
   router.get("/medias", need("templates.read"), (req, res) => {
-    res.json(media.listMedia(req.mk.ctx, { q: req.query.q, kind: req.query.type, limit: req.query.limite, offset: req.query.depuis }));
+    res.json(media.listMedia(mediaCtx(req), { q: req.query.q, kind: req.query.type, limit: req.query.limite, offset: req.query.depuis }));
   });
   router.post("/medias", need("templates.write"), (req, res, next) => {
     mediaUpload.single("file")(req, res, (uploadError) => {
@@ -241,7 +242,7 @@ module.exports = ({ db }) => {
         // multer lit le nom du fichier en latin-1 : « Bannière » arriverait en « BanniÃ¨re » ; on le relit en UTF-8
         const utf8 = Buffer.from(req.file.originalname, "latin1").toString("utf8");
         const originalName = utf8.includes("\uFFFD") ? req.file.originalname : utf8;
-        const saved = media.saveUpload(req.mk.ctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image", "pdf"] });
+        const mctx = mediaCtx(req), saved = media.saveUpload(mctx, { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, allow: ["image", "pdf"], siteId: media.siteOfUpload(mctx) });
         res.status(201).json({ media: saved });
       } catch (error) {
         try { jsonError(res, error); } catch (e) { next(e); }
@@ -249,10 +250,10 @@ module.exports = ({ db }) => {
     });
   });
   router.post("/medias/:id", need("templates.write"), (req, res, next) => {
-    try { res.json({ media: media.updateMedia(req.mk.ctx, intOrNull(req.params.id), req.body || {}) }); } catch (error) { try { jsonError(res, error); } catch (e) { next(e); } }
+    try { res.json({ media: media.updateMedia(mediaCtx(req), intOrNull(req.params.id), req.body || {}) }); } catch (error) { try { jsonError(res, error); } catch (e) { next(e); } }
   });
   router.post("/medias/:id/supprimer", need("templates.write"), (req, res, next) => {
-    try { res.json({ ok: media.deleteMedia(req.mk.ctx, intOrNull(req.params.id)) }); } catch (error) { try { jsonError(res, error); } catch (e) { next(e); } }
+    try { res.json({ ok: media.deleteMedia(mediaCtx(req), intOrNull(req.params.id)) }); } catch (error) { try { jsonError(res, error); } catch (e) { next(e); } }
   });
 
   // E-mail de test vers un membre de l'équipe (jamais une adresse libre)

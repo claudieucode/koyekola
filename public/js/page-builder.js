@@ -71,7 +71,14 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { if (window.KolMotion) window.KolMotion.leave(t, "fade"); t.hidden = true; }, isError ? 6500 : 3200);
   }
+  // MEDIA-ROUTING : les appels à la médiathèque portent le site de la page (balise mk-media-site : son site, ou « principal ») ; le serveur le revérifie
+  function mediaSiteUrl(url) {
+    if (!/^\/marketing\/site-web\/medias/.test(url) || /[?&]site=/.test(url)) return url;
+    var m = document.querySelector('meta[name="mk-media-site"]'), v = m && m.getAttribute("content");
+    return /^(?:\d{1,12}|principal)$/.test(String(v || "")) ? url + (url.indexOf("?") >= 0 ? "&" : "?") + "site=" + v : url;
+  }
   function api(method, url, body, isForm) {
+    url = mediaSiteUrl(url);
     var opts = { method: method, credentials: "same-origin", headers: { Accept: "application/json" } };
     if (body && isForm) opts.body = body;
     else if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }

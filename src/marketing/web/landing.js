@@ -30,7 +30,7 @@ function guardSeo(req, before, after) {
 const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" };
 
 // Section vide mais VALIDE pour chaque type (une section ajoutée s'enregistre tout de suite)
-function blankSection(ctx, type) {
+function blankSection(ctx, type) { // ctx : médiathèque du site de la page (voir media.forSite)
   switch (type) {
     case "hero": return { type, title: "Un titre qui dit ce que la personne y gagne", subtitle: "", image: "", imageAlt: "", buttonLabel: "", buttonUrl: "" };
     case "text": return { type, markdown: "Votre texte ici. Vous pouvez mettre du **gras** et des [liens](https://kolakisa.com)." };
@@ -177,7 +177,7 @@ module.exports = () => {
     const { ctx } = req.mk;
     res.render("marketing/landing", {
       title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_LABELS: Object.fromEntries(Object.entries(pages.TYPES).map(([k, t]) => [k, t.label])),
-      forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(ctx, { kind: "image", limit: 100 }).items,
+      forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(media.forSite(ctx, page.site_id), { kind: "image", limit: 100 }).items, // médiathèque DU site de la page
       pagesHome: pagesHome(page.site_id), sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id), inFunnels: require("../funnels").funnelsOfPage(ctx, page.id),
       variantOf: ctx.db.prepare("SELECT t.id, t.page_id, p.name FROM mk_page_tests t JOIN mk_landing_pages p ON p.id = t.page_id WHERE t.variant_page_id = ? AND t.organization_id = ?").get(page.id, ctx.organizationId) || null,
       openTest: ctx.db.prepare("SELECT id, name, status FROM mk_page_tests WHERE page_id = ? AND organization_id = ? AND status IN ('draft', 'running', 'stopped')").get(page.id, ctx.organizationId) || null,
@@ -283,7 +283,7 @@ module.exports = () => {
           else { const j = m[1] === "up" ? i - 1 : i + 1; if (j >= 0 && j < sections.length) [sections[i], sections[j]] = [sections[j], sections[i]]; anchor = `#section-${Math.max(0, Math.min(sections.length - 1, j))}`; }
         }
       } else if ((m = /^add:([a-z]+)$/.exec(action))) {
-        sections.push(blankSection(req.mk.ctx, m[1]));
+        sections.push(blankSection(media.forSite(req.mk.ctx, page.site_id), m[1]));
         anchor = `#section-${sections.length - 1}`;
       }
       const ctx = req.mk.ctx;
@@ -322,7 +322,7 @@ module.exports = () => {
         abTest: component ? null : (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null,
         // Édition d'un composant : adresses de l'éditeur propres au composant (rendu, enregistrement) et retour à la fiche du site
         ...(component ? { base: `/marketing/site-web/composants/${component.id}`, component: { id: component.id, name: component.name, role: component.role, kind: component.kind, hasDraft: component.hasDraft, version: component.version, instances: pages.componentInstances(ctx, component.id).reduce((n, p) => n + p.count, 0) } } : {}) },
-      content: page.working, types: blanks(ctx), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
+      content: page.working, types: blanks(media.forSite(ctx, page.site_id)), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
       // Permissions exigées par certains widgets (cadenas de la bibliothèque ; revérifiées à l'enregistrement)
       perms: { "pages.code": req.mk.can("pages.code") },
       // Formulaires proposés au widget « Formulaire » (état réel : un brouillon ne s'affiche pas sur la page)

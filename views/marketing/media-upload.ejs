@@ -5,7 +5,8 @@
 %><%- include("partials/top", { title, active }) %>
 <%
   const S = typeof mkSiteId === "number" ? mkSiteId : ""; const siteQ = S ? "?site=" + S : "";
-  const lib = "/marketing/site-web/mediatheque" + siteQ;
+  const lib = spaceBase; // médiathèque DU site administré (cadre du site), jamais celle du principal
+  const addUrl = spaceBase + "/ajouter";
   const word = { image: "image", video: "vidéo", audio: "audio", pdf: "PDF", document: "document" };
   const mo = (n) => String(n).replace(".", ",") + " Mo";
 %>
@@ -22,7 +23,7 @@
     <ul class="mk-ml-queue" data-ml-queue aria-live="polite" aria-label="File d'importation" hidden></ul>
 
     <div class="mk-ml-upload-help" id="mu-help">
-      <p>Vous utilisez l'outil de téléversement multi-fichiers : sélectionnez ou déposez plusieurs fichiers à la fois, ils sont envoyés deux par deux et chacun a son propre résultat. Si vous rencontrez des problèmes, essayez plutôt la <a href="/marketing/site-web/mediatheque/ajouter<%= S ? "?site=" + S + "&" : "?" %>methode=navigateur">méthode du navigateur</a>.</p>
+      <p>Vous utilisez l'outil de téléversement multi-fichiers : sélectionnez ou déposez plusieurs fichiers à la fois, ils sont envoyés deux par deux et chacun a son propre résultat. Si vous rencontrez des problèmes, essayez plutôt la <a href="<%= addUrl %>?methode=navigateur">méthode du navigateur</a>.</p>
       <p>Formats acceptés : <%= cfg.formats %>. Le type est vérifié dans le <strong>contenu</strong> du fichier, pas dans son nom.</p>
       <p>Taille maximale <strong>par fichier</strong> : <%= Object.keys(cfg.limits).filter((t) => t !== "document").map((t) => word[t] + " " + mo(cfg.limits[t])).join(" · ") %> ; document Office <%= mo(cfg.limits.document) %>. Une requête ne peut pas dépasser <%= mo(cfg.requestMax) %>. Ces limites sont celles que le serveur applique (réglables dans Paramètres → Médias, sans dépasser ce plafond).</p>
       <p>Les fichiers sont enregistrés dans la médiathèque de <strong>ce site</strong> uniquement. <a href="<%= lib %>">Ouvrir la médiathèque</a></p>
@@ -33,7 +34,7 @@
       <h2>Méthode du navigateur</h2>
       <p class="mk-sub">Sélection native, sans JavaScript : tous les fichiers sont envoyés en une seule requête (<%= maxFiles %> fichiers au plus, <%= mo(cfg.requestMax) %> par fichier), puis un résumé s'affiche.</p>
       <div class="field-group"><label for="mu-files">Fichiers à téléverser</label><input id="mu-files" type="file" name="files" multiple accept="<%= cfg.accept %>" required></div>
-      <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Téléverser</button><a class="btn btn-ghost btn-sm" href="/marketing/site-web/mediatheque/ajouter<%= siteQ %>">Revenir à l'outil multi-fichiers</a></div>
+      <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Téléverser</button><a class="btn btn-ghost btn-sm" href="<%= addUrl %>">Revenir à l'outil multi-fichiers</a></div>
     </form>
     <% } %>
 
