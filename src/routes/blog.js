@@ -23,6 +23,7 @@ const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const taxonomy = require("../services/taxonomy");
 const siteContent = require("../services/siteContent");
+const primarySite = require("../services/primarySite");
 const urls = require("../services/urls");
 const { transaction: siteTransaction } = require("../marketing/db/tx");
 const themeRender = require("../marketing/web/themeRender");
@@ -485,7 +486,7 @@ function requireBlogAccess(req, res, next) {
   next();
 }
 // Site d'une requête de l'éditeur pour un accès limité à certains sites ; { error } si la requête sort de ses sites. Refus uniformes (aucune fuite d'existence).
-const LIMITED_API = new Set(["/api/termes", "/api/liens", "/api/suggestions", "/api/seo-check"]);
+const LIMITED_API = new Set(["/api/termes", "/api/liens", "/api/suggestions", "/api/seo-check", "/nouveau"]);
 function limitedSite(req, user) {
   const mine = new Set(cmsAccess.siteMemberships(user.id).map((s) => s.site_id));
   const queried = /^\d{1,12}$/.test(String(req.query.site ?? "")) ? Number(req.query.site) : null;
@@ -659,7 +660,17 @@ function loadPost(req, res, next) {
 }
 
 // Site de l'article en cours d'édition (ou du site de la requête pour un nouvel article) ; null = site principal
-const editorSite = (req, post) => (post ? (siteContent.siteOf(db, "post", post.id) ?? null) : (req.blogSite ?? null));
+// Nouvel article : accès limité = son site (imposé par le serveur) ; équipe = « ?site= » entier, vérifié (site existant de l'organisation, jamais le principal) ; sinon site principal
+function newArticleSite(req) {
+  if (req.blogSite !== undefined && req.blogSite !== null) return req.blogSite;
+  const raw = String(req.query.site ?? "");
+  if (!raw) return null;
+  if (!/^\d{1,12}$/.test(raw)) throw new UserError("Site introuvable.");
+  const orgId = marketingOrgId();
+  if (!orgId || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(db)}`).get(Number(raw), orgId)) throw new UserError("Site introuvable.");
+  return Number(raw);
+}
+const editorSite = (req, post) => (post ? (siteContent.siteOf(db, "post", post.id) ?? null) : newArticleSite(req));
 
 function editorData(req, post) {
   const autosave = post ? blog.getAutosave(post.id) : null;
@@ -832,6 +843,7 @@ router.get("/formateur/blog/:id/modifier", loadPost, (req, res) => {
 
 // Création (formulaire classique ou éditeur)
 router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
+  const site = newArticleSite(req);
   const f = readFields(req.body);
   if (req.blogActor) f.author_id = null; // un rédacteur ne signe qu'en son nom
   const st = applyStatus(req.body, null, f);
@@ -849,6 +861,8 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   const newId = transaction(db, () => {
     const info = db.prepare(`INSERT INTO posts (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`).run(...names.map((n) => cols[n]));
     const id = Number(info.lastInsertRowid);
+    // L'article naît dans le site administré (avant le classement : les termes choisis doivent être de ce site)
+    if (site) siteContent.adopt({ db, organizationId: marketingOrgId(), userId: req.session.user.id, siteFilter: site }, { type: "post", id });
     applyTaxonomy(id, req.body);
     return id;
   });

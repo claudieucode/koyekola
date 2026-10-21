@@ -114,7 +114,7 @@ describe("chaque entrée ouverte, par rôle, avec les seules données de son sit
     const global = (await boss.get("/marketing/site-web/articles/auteurs")).text; assert.ok(global.includes(mine) && global.includes(other), "équipe sans site choisi : vue historique inchangée");
   });
   test("Ajouter un article : ouvert dans le cadre du site à l'équipe et à l'administrateur du site (brouillon rattaché au site) ; refusé au lecteur (permission) et à l'administrateur d'un autre site", async () => {
-    for (const c of [boss, adminA]) { const t = await c.get(`${SP}/${A}/articles/ajouter`); assert.equal(t.status, 200); assert.ok(frame(t.text, "Alpha Menu")); }
+    for (const c of [boss, adminA]) { const t = await c.get(`${SP}/${A}/articles/ajouter`); assert.equal(t.status, 302, "ARTICLES-02 : ouverture directe de l'éditeur"); assert.equal(t.location, `/formateur/blog/nouveau?site=${A}`); }
     assert.equal((await viewerA.get(`${SP}/${A}/articles/ajouter`)).status, 403);
     assert.ok(!(await viewerA.get(`${SP}/${A}/articles`)).text.includes("/articles/ajouter"), "le menu du lecteur ne montre pas un lien qui répondrait 403");
     assert.ok((await adminA.get(`${SP}/${A}/articles`)).text.includes(`${SP}/${A}/articles/ajouter`), "l'administrateur du site le voit"); assert.equal((await adminB.get(`${SP}/${A}/articles/ajouter`)).status, 403);

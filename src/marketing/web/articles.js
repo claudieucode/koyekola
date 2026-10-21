@@ -59,7 +59,9 @@ module.exports = () => {
 
   // ----- Création : titre → vrai article en brouillon → éditeur -----
   router.get("/site-web/articles/ajouter", canCreate, (req, res) => {
-    res.render("marketing/article-new", { title: "Nouvel article", active: "articles/ajouter", isCreator: isCreator(req), BASE });
+    // Ouverture directe de l'éditeur : l'article n'est créé en base qu'au premier enregistrement (dans le site administré)
+    const site = siteContent.siteParam(req.mk.ctx);
+    res.redirect(`/formateur/blog/nouveau${site ? `?site=${site}` : ""}`);
   });
   router.post("/site-web/articles", canCreate, (req, res, next) => {
     try {

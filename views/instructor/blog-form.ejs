@@ -36,7 +36,7 @@
   <div class="be wp" data-blog-editor>
     <%# Titre de la page pour les lecteurs d'écran (le titre visible est le champ « Titre de l'article ») %>
     <h1 class="sr-only"><%= post ? "Modifier l'article" : "Nouvel article" %></h1>
-    <form id="be-form"<%- siteId ? ' data-site="' + siteId + '"' : "" %> action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' %>" method="post" enctype="multipart/form-data" novalidate>
+    <form id="be-form"<%- siteId ? ' data-site="' + siteId + '"' : "" %> action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' + (siteId ? '?site=' + siteId : '') %>" method="post" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="content_format" value="html">
       <input type="hidden" name="status" value="<%= status %>" data-field="status">
       <input type="hidden" name="published_at_utc" value="" data-field="published-at">
@@ -50,7 +50,7 @@
 
       <%# ---------- Barre supérieure ---------- %>
       <header class="wp-header" role="region" aria-label="Barre d'outils de l'éditeur">
-        <a href="<%= restrictedSite ? '/marketing/site-web/articles?site=' + restrictedSite : '/formateur/blog' %>" class="wp-site-icon" aria-label="KOLAKISA Blog Studio : retour aux articles" title="Retour aux articles"><span class="wp-brand-mark" aria-hidden="true">K</span><span class="wp-brand-name" aria-hidden="true">KOLAKISA<small>Blog Studio</small></span></a>
+        <a href="<%= siteId ? '/marketing/site-web/articles?site=' + siteId : (restrictedSite ? '/marketing/site-web/articles?site=' + restrictedSite : '/formateur/blog') %>" class="wp-site-icon" aria-label="KOLAKISA Blog Studio : retour aux articles" title="Retour aux articles"><span class="wp-brand-mark" aria-hidden="true">K</span><span class="wp-brand-name" aria-hidden="true">KOLAKISA<small>Blog Studio</small></span></a>
         <div class="wp-header-left">
           <button type="button" class="wp-btn-icon wp-inserter-toggle" data-toggle-inserter aria-pressed="false" aria-label="Ajouter un bloc" title="Ajouter un bloc"><%- icon("plus", { size: 20 }) %></button>
           <button type="button" class="wp-btn-icon" data-undo aria-label="Annuler" title="Annuler (Ctrl+Z)"><%- icon("undo", { size: 20 }) %></button>
@@ -104,7 +104,7 @@
               <button type="button" role="menuitem" data-option="settings">⚙ Réglages de l'éditeur…</button>
               <button type="button" role="menuitem" data-option="appearance">Apparence de l'éditeur…</button>
               <button type="button" role="menuitem" data-option="shortcuts">Raccourcis clavier</button>
-              <a role="menuitem" href="<%= restrictedSite ? '/marketing/site-web/articles?site=' + restrictedSite : '/formateur/blog' %>">Retour aux articles</a>
+              <a role="menuitem" href="<%= siteId ? '/marketing/site-web/articles?site=' + siteId : (restrictedSite ? '/marketing/site-web/articles?site=' + restrictedSite : '/formateur/blog') %>">Retour aux articles</a>
               <a role="menuitem" href="/formateur">Mon espace (vue d'ensemble)</a>
             </div>
           </div>

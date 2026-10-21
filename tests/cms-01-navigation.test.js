@@ -90,7 +90,10 @@ describe("de bout en bout : écran Extensions et pied de panneau", () => {
   });
   test("tous les écrans du registre s'ouvrent encore (200) avec leur entrée courante après le changement d'ordre", async () => {
     for (const item of cmsNav.ALL) {
-      const r = await boss.get(item.href); assert.equal(r.status, 200, `${item.key} ${r.status}`);
+      const r = await boss.get(item.href);
+      // ARTICLES-02 : « Ajouter un article » ouvre directement l'éditeur (redirection), il n'a plus d'écran de cadre
+      if (item.key === "articles/ajouter") { assert.equal(r.status, 302); assert.equal(r.location, "/formateur/blog/nouveau"); continue; }
+      assert.equal(r.status, 200, `${item.key} ${r.status}`);
       assert.match(r.text, /aria-current="page"/, item.key);
     }
   });
