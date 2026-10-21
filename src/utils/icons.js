@@ -2,6 +2,7 @@
 // sans dépendance externe ni police d'icônes. Utilisé partout à la place des emojis.
 
 const ICONS = {
+  messageSquare: { body: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>' },
   search: { body: '<circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>' },
   moreVertical: { body: '<circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none"></circle>' },
   // Étapes des scénarios d'automatisation (même trait que le reste du set : 24 px, contour 2)

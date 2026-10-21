@@ -38,13 +38,20 @@ module.exports = () => {
     const filters = {
       q: String(req.query.q || "").trim().slice(0, 100), auteur: String(req.query.auteur || ""), categorie: String(req.query.categorie || "").trim().slice(0, 60), etiquette: /^\d{1,9}$/.test(String(req.query.etiquette || "")) ? String(req.query.etiquette) : "",
       periode: Object.hasOwn(articles.PERIODS, req.query.periode) ? String(req.query.periode) : "", tri: Object.hasOwn(articles.SORTS, req.query.tri) ? req.query.tri : "modifie",
+      mois: /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.mois || "")) ? String(req.query.mois) : "",
     };
+    // Tri par colonne (?orderby=titre|auteur|commentaires|date & order=asc|desc), validé côté serveur ; il l'emporte sur l'ancien ?tri=
+    if (["titre", "auteur", "commentaires", "date"].includes(req.query.orderby)) filters.tri = req.query.orderby + (req.query.order === "desc" ? "_desc" : "");
+    // Nombre d'articles par page : choisi dans « Options de l'écran », mémorisé dans un cookie de l'administration (borné côté serveur)
+    const cookiePar = /(?:^|;\s*)mk_ar_par=(\d{1,3})/.exec(req.headers.cookie || "");
+    const perPage = articles.clampPerPage(req.query.par || (cookiePar && cookiePar[1]) || articles.PER_PAGE);
+    if (req.query.par) res.cookie("mk_ar_par", String(perPage), { path: "/marketing", sameSite: "lax", httpOnly: true, maxAge: 365 * 864e5 });
     const scope = siteContent.scopePredicate(req.mk.ctx, "post", "p.id"), termScope = siteContent.scopePredicate(req.mk.ctx, "term", "t.id"); // portée de site : liste ET effectifs
-    const result = articles.list({ state, q: filters.q, author: filters.auteur, category: filters.categorie, tag: filters.etiquette, period: filters.periode, sort: filters.tri, page: req.query.page, scope });
+    const result = articles.list({ state, q: filters.q, author: filters.auteur, category: filters.categorie, tag: filters.etiquette, period: filters.periode, month: filters.mois, sort: filters.tri, page: req.query.page, perPage, scope });
     const active = state === "toutes" ? "articles" : `articles/${state}`;
     res.render("marketing/articles", {
-      title: "Articles", active, state, filters, result, rows: result.rows, authors: articles.authors(scope), categories: articles.categoryTree(termScope), STATUSES: blog.STATUSES, BLOG_BASE,
-      canWrite: req.mk.can("articles.write") || req.mk.can("articles.edit_own"), canWriteAll: req.mk.can("articles.write"), me: req.session.user.id, canPublish: req.mk.can("articles.publish"), canDelete: req.mk.can("articles.delete"), isCreator: isCreator(req), cmsPagesJs: true,
+      title: "Articles", active, state, filters, result, rows: result.rows, authors: articles.authors(scope), categories: articles.categoryTree(termScope), tagList: articles.tagList(termScope), months: articles.months(state, scope), perPage, STATUSES: blog.STATUSES, BLOG_BASE,
+      canWrite: req.mk.can("articles.write") || req.mk.can("articles.edit_own"), canWriteAll: req.mk.can("articles.write"), me: req.session.user.id, canPublish: req.mk.can("articles.publish"), canDelete: req.mk.can("articles.delete"), isCreator: isCreator(req), cmsPagesJs: true, cmsArticlesJs: true,
     });
   };
   router.get(BASE.replace("/marketing", ""), need("articles.read"), showList("toutes"));
@@ -64,19 +71,26 @@ module.exports = () => {
 
   // ----- Actions groupées et par article -----
   router.post("/site-web/articles/actions", (req, res, next) => (req.mk.can("articles.write") || req.mk.can("articles.edit_own") ? next() : res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." })), (req, res, next) => {
-    const action = String(req.body.action || "");
-    const needs = { publier: "articles.publish", depublier: "articles.publish", corbeille: "articles.write", restaurer: "articles.write", supprimer: "articles.delete" }[action];
-    const mayDo = ["corbeille", "restaurer"].includes(action) ? req.mk.can("articles.write") || req.mk.can("articles.edit_own") : needs && req.mk.can(needs);
+    const action = String(req.body.action || req.body.action2 || ""); // action2 : la barre du bas du tableau
+    const needs = { publier: "articles.publish", depublier: "articles.publish", corbeille: "articles.write", restaurer: "articles.write", supprimer: "articles.delete", categorie: "articles.write", etiquette: "articles.write" }[action];
+    const mayDo = ["corbeille", "restaurer", "categorie", "etiquette"].includes(action) ? req.mk.can("articles.write") || req.mk.can("articles.edit_own") : needs && req.mk.can(needs);
     if (!mayDo) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
     try {
       // Sans le droit sur TOUS les articles, seules les actions « corbeille » / « restaurer » sur SES articles passent
       let ids = req.body.ids, refused = 0;
-      if (["corbeille", "restaurer"].includes(action) && !req.mk.can("articles.write")) {
+      if (["corbeille", "restaurer", "categorie", "etiquette"].includes(action) && !req.mk.can("articles.write")) {
         const all = [...new Set([].concat(ids || []).flatMap((x) => String(x).split(",")).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
         ids = all.filter((id) => mayManage(req, id)); refused = all.length - ids.length;
         if (!ids.length) throw new UserError("Vous ne pouvez gérer que vos propres articles.");
       }
-      const r = articles.bulk(action, ids, req.session.user.id, req, (id) => siteContent.allowedContent(req.mk.ctx, "post", id)); // hors portée = « article introuvable », sans aucune écriture
+      // Catégorie / étiquette à ajouter : un terme du site courant, vérifié côté serveur (jamais un terme d'un autre site)
+      let extra = null;
+      if (["categorie", "etiquette"].includes(action)) {
+        const termId = Number(action === "categorie" ? req.body.categorie_id : req.body.etiquette_id);
+        if (!Number.isInteger(termId) || !siteContent.allowedContent(req.mk.ctx, "term", termId)) throw new UserError(action === "categorie" ? "Choisissez une catégorie." : "Choisissez une étiquette.");
+        extra = { termId };
+      }
+      const r = articles.bulk(action, ids, req.session.user.id, req, (id) => siteContent.allowedContent(req.mk.ctx, "post", id), extra); // hors portée = « article introuvable », sans aucune écriture
       const n = r.done.length;
       const head = n ? `${n} article${n > 1 ? "s" : ""} ${r.label[n > 1 ? 1 : 0]}.` : "";
       const detail = r.failed.map((f) => `« ${f.title} » : ${f.message}`).join(" · ");
@@ -95,6 +109,22 @@ module.exports = () => {
       if (!siteContent.allowedContent(req.mk.ctx, "post", Number(req.params.id))) throw new UserError("Article introuvable."); // défense en profondeur derrière la garde de portée des routes
       const p = run(Number(req.params.id), req.session.user.id, req);
       flash(req, "ok", typeof okText === "function" ? okText(p) : okText);
+      res.redirect(back(req));
+    } catch (error) { fail(req, res, next, back(req), error); }
+  });
+  // Modification rapide : titre, adresse, catégories, étiquettes, état (brouillon / publié). Droits : « les siens » ou tous ; publier exige articles.publish.
+  router.post("/site-web/articles/:id(\\d+)/modification-rapide", (req, res, next) => {
+    if (!mayManage(req, Number(req.params.id))) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    const wantsStatus = ["published", "draft"].includes(req.body.status) ? req.body.status : undefined;
+    if (wantsStatus && !req.mk.can("articles.publish") && wantsStatus !== (articles.get(Number(req.params.id)) || {}).status && wantsStatus === "published") return res.status(403).render("error", { message: "Vous n'avez pas la permission de publier." });
+    next();
+  }, (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      if (!siteContent.allowedContent(req.mk.ctx, "post", id)) throw new UserError("Article introuvable.");
+      const status = ["published", "draft"].includes(req.body.status) && req.mk.can("articles.publish") ? req.body.status : undefined;
+      const p = articles.quickEdit(id, { title: req.body.title, slug: req.body.slug, categoryIds: req.body.categories_present ? [].concat(req.body.categories || []).flatMap((x) => String(x).split(",")) : undefined, tags: req.body.tags_present ? req.body.tags : undefined, status }, req.session.user.id, req, (t) => siteContent.allowedContent(req.mk.ctx, "term", t));
+      flash(req, "ok", `« ${p.title} » mis à jour.`);
       res.redirect(back(req));
     } catch (error) { fail(req, res, next, back(req), error); }
   });

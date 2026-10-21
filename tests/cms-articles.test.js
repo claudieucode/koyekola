@@ -312,7 +312,7 @@ describe("liste : recherche, filtres, tri, pagination, actions groupées", () =>
     for (let i = 1; i <= 24; i++) await mk(`Pagination ${String(i).padStart(2, "0")}`, { category: "Pagination" });
     db.prepare("UPDATE posts SET created_at = '2020-01-01 10:00:00' WHERE title = 'Alpha du marketing'").run();
   });
-  const titles = (html) => [...html.matchAll(/<span class="mk-ar-cell">[\s\S]*?<span>(?:<a[^>]*>)?([^<]+)/g)].map((m) => m[1].trim());
+  const titles = (html) => [...html.matchAll(/<strong class="mk-ar-title">(?:<a[^>]*>)?([^<]+)/g)].map((m) => m[1].trim());
   test("recherche réelle : titre, adresse, extrait, contenu", async () => {
     assert.ok(titles((await boss.get(`${CMS}?q=Zeta`)).text).includes("Zeta du design"));
     assert.ok(titles((await boss.get(`${CMS}?q=zeta-du-design`)).text).includes("Zeta du design"), "adresse");
@@ -334,7 +334,7 @@ describe("liste : recherche, filtres, tri, pagination, actions groupées", () =>
   });
   test("compteurs d'onglets = vrais comptes de la base", async () => {
     const html = (await boss.get(CMS)).text;
-    const n = (label) => Number(html.match(new RegExp(`${label} <span class="mk-tab-count">(\\d+)`))[1]);
+    const n = (label) => Number(html.match(new RegExp(`${label} <span class="count">\\((\\d+)\\)`))[1]);
     assert.equal(n("Tous"), db.prepare("SELECT COUNT(*) n FROM posts WHERE deleted_at IS NULL").get().n);
     assert.equal(n("Publiés"), db.prepare("SELECT COUNT(*) n FROM posts WHERE deleted_at IS NULL AND status = 'published'").get().n);
     assert.equal(n("Corbeille"), db.prepare("SELECT COUNT(*) n FROM posts WHERE deleted_at IS NOT NULL").get().n);
@@ -387,7 +387,7 @@ describe("droits", () => {
     assert.equal((await viewer.get(CMS)).status, 200);
     assert.match(html, /Article des droits/);
     assert.doesNotMatch(html, /name="ids"/);
-    assert.doesNotMatch(html, /data-mk-modal-open="nouvel-article"/);
+    assert.doesNotMatch(html, /class="[^"]*mk-ar-add[^"]*" href="\/marketing\/site-web\/articles\/ajouter"/);
     for (const [url, form] of [[CMS, { title: "x" }], [`${CMS}/${pid}/publier`, {}], [`${CMS}/${pid}/corbeille`, {}], [`${CMS}/${pid}/dupliquer`, {}], [`${CMS}/${pid}/supprimer`, {}], [`${CMS}/actions`, { action: "corbeille", ids: String(pid) }]]) {
       assert.equal((await viewer.post(url, form)).status, 403, url);
     }
@@ -406,7 +406,7 @@ describe("droits", () => {
     const made = await editor.post(CMS, { title: "Création par un éditeur" });
     assert.equal(made.status, 302); assert.match(made.location, /\/formateur\/blog\/\d+\/modifier/);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM posts").get().n, before + 1, "un éditeur (articles.write) crée un article");
-    assert.match((await editor.get(CMS)).text, /data-mk-modal-open="nouvel-article"/);
+    assert.match((await editor.get(CMS)).text, /class="[^"]*mk-ar-add[^"]*" href="\/marketing\/site-web\/articles\/ajouter"/);
   });
   test("administrateur : supprime définitivement, depuis la corbeille", async () => {
     await admin.post(`${CMS}/${pid}/corbeille`, {});

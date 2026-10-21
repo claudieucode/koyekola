@@ -18,7 +18,16 @@ const SORTS = {
   titre: "p.title COLLATE NOCASE ASC, p.id DESC",
   titre_desc: "p.title COLLATE NOCASE DESC, p.id DESC",
   publie: "(p.published_at IS NULL), p.published_at DESC, p.id DESC",
+  // Tri par colonne (clic sur l'en-tête, comme WordPress) : auteur, commentaires approuvés, date affichée (publication, sinon création)
+  auteur: "u.username COLLATE NOCASE ASC, p.id DESC",
+  auteur_desc: "u.username COLLATE NOCASE DESC, p.id DESC",
+  commentaires: "(SELECT COUNT(*) FROM blog_comments c WHERE c.content_type = 'post' AND c.content_id = p.id AND c.status = 'approved') ASC, p.id DESC",
+  commentaires_desc: "(SELECT COUNT(*) FROM blog_comments c WHERE c.content_type = 'post' AND c.content_id = p.id AND c.status = 'approved') DESC, p.id DESC",
+  date: "COALESCE(p.published_at, p.created_at) ASC, p.id ASC",
+  date_desc: "COALESCE(p.published_at, p.created_at) DESC, p.id DESC",
 };
+const PER_PAGE_MIN = 5, PER_PAGE_MAX = 100;
+const clampPerPage = (v) => { const n = Number(v); return Number.isInteger(n) ? Math.min(PER_PAGE_MAX, Math.max(PER_PAGE_MIN, n)) : PER_PAGE; };
 const stateSql = {
   toutes: "p.deleted_at IS NULL",
   publies: "p.deleted_at IS NULL AND p.status = 'published'",
@@ -41,7 +50,8 @@ function counts(scope = null) {
 }
 
 // Liste filtrée, triée et paginée DANS la base ; le contenu complet n'est jamais chargé (seule la recherche le parcourt)
-function list({ state = "toutes", q = "", author = "", category = "", tag = "", period = "", sort = "modifie", page = 1, perPage = PER_PAGE, scope = null } = {}) {
+function list({ state = "toutes", q = "", author = "", category = "", tag = "", period = "", month = "", sort = "modifie", page = 1, perPage = PER_PAGE, scope = null } = {}) {
+  perPage = clampPerPage(perPage);
   taxonomy.reconcile();
   blog.promoteScheduled(); // un article programmé dont l'heure est passée devient publié avant toute lecture
   if (!STATES.includes(state)) state = "toutes";
@@ -59,6 +69,7 @@ function list({ state = "toutes", q = "", author = "", category = "", tag = "", 
     const since = period === "annee" ? `${new Date().getUTCFullYear()}-01-01 00:00:00` : new Date(Date.now() - PERIODS[period] * 864e5).toISOString().slice(0, 19).replace("T", " ");
     where.push("COALESCE(p.published_at, p.created_at) >= ?"); args.push(since);
   }
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) { where.push("substr(COALESCE(p.published_at, p.created_at), 1, 7) = ?"); args.push(String(month)); } // mois affiché dans la colonne Date
   const total = db.prepare(`SELECT COUNT(*) n FROM posts p WHERE ${where.join(" AND ")}`).get(...args).n;
   const pages = Math.max(1, Math.ceil(total / perPage));
   const current = Math.min(Math.max(1, Number(page) || 1), pages);
@@ -68,10 +79,29 @@ function list({ state = "toutes", q = "", author = "", category = "", tag = "", 
     FROM posts p LEFT JOIN users u ON u.id = p.author_id WHERE ${where.join(" AND ")} ORDER BY ${SORTS[sort] || SORTS.modifie} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
   const cc = require("./comments").countsForPosts(rows.map((r) => r.id));
   for (const r of rows) Object.assign(r, { comments_approved: (cc.get(r.id) || {}).approved || 0, comments_pending: (cc.get(r.id) || {}).pending || 0 });
+  const tagsOf = tagsForPosts(rows.map((r) => r.id)), catsOf = categoriesForPosts(rows.map((r) => r.id));
+  for (const r of rows) Object.assign(r, { tags_list: tagsOf.get(r.id) || [], categories_list: catsOf.get(r.id) || [] });
   return { rows, total, page: current, pages, perPage, counts: counts(scope) };
+}
+// Étiquettes et catégories des articles d'une page, en une requête chacune (jamais une requête par ligne)
+function termsForPosts(ids, taxonomy) {
+  const map = new Map();
+  if (!ids.length) return map;
+  const rows = db.prepare(`SELECT r.content_id id, t.id term_id, t.name, t.slug, r.is_primary FROM taxonomy_relations r JOIN taxonomy_terms t ON t.id = r.term_id
+    WHERE r.content_type = 'post' AND t.taxonomy = ? AND r.content_id IN (${ids.map(() => "?").join(",")}) ORDER BY r.is_primary DESC, r.position, t.name COLLATE NOCASE`).all(taxonomy, ...ids);
+  for (const r of rows) { if (!map.has(r.id)) map.set(r.id, []); map.get(r.id).push({ id: r.term_id, name: r.name, slug: r.slug }); }
+  return map;
+}
+const tagsForPosts = (ids) => termsForPosts(ids, "tag");
+const categoriesForPosts = (ids) => termsForPosts(ids, "category");
+// Mois disponibles pour le filtre de date (mois de la colonne Date), dans la portée de site et l'état affiché
+function months(state = "toutes", scope = null) {
+  if (!STATES.includes(state)) state = "toutes";
+  return db.prepare(`SELECT substr(COALESCE(p.published_at, p.created_at), 1, 7) ym, COUNT(*) n FROM posts p WHERE ${stateSql[state]}${scope ? " AND " + scope.sql : ""} GROUP BY ym ORDER BY ym DESC`).all(...(scope ? scope.params : [])).filter((r) => r.ym);
 }
 const authors = (scope = null) => db.prepare(`SELECT DISTINCT u.id, u.username FROM posts p JOIN users u ON u.id = p.author_id WHERE p.deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY u.username COLLATE NOCASE`).all(...(scope ? scope.params : []));
 const categoryTree = (scope = null) => taxonomy.tree("category", scope); // catégories en arbre (profondeur) pour le filtre
+const tagList = (scope = null) => taxonomy.tree("tag", scope); // étiquettes du site (liste à plat) : modification rapide et actions groupées
 
 const get = (id) => (Number.isInteger(id) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(id) : null);
 
@@ -184,13 +214,41 @@ function unpublish(id, userId) {
   return get(id);
 }
 
+// Modification rapide (comme WordPress) : titre, adresse, catégories, étiquettes et état (brouillon / publié). Même validation que l'éditeur ;
+// une nouvelle adresse garde l'ancienne en redirection si l'article était déjà en ligne. Les catégories et étiquettes doivent exister.
+function quickEdit(id, { title, slug, categoryIds, tags, status } = {}, userId, req, allowTerm = null) {
+  const p = get(id);
+  if (!p) throw new UserError("Article introuvable.");
+  if (p.deleted_at) throw new UserError("L'article est dans la corbeille : restaurez-le d'abord.");
+  const cleanTitle = String(title ?? p.title).replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 150);
+  if (!cleanTitle) throw new UserError("Le titre de l'article est obligatoire.");
+  const { slugify } = require("../utils/format");
+  let newSlug = p.slug;
+  if (slug !== undefined && String(slug).trim() && slugify(String(slug)).slice(0, 120).replace(/-+$/, "") !== p.slug) newSlug = blog.uniqueSlug(String(slug), id);
+  if (categoryIds !== undefined) for (const t of taxonomy.uniqueIds(categoryIds)) if (allowTerm && !allowTerm(t)) throw new UserError("Catégorie introuvable.");
+  transactionSync(() => {
+    if (cleanTitle !== p.title || newSlug !== p.slug) {
+      if (newSlug !== p.slug && p.published_at) { db.prepare("INSERT OR REPLACE INTO post_slug_history (old_slug, post_id) VALUES (?, ?)").run(p.slug, id); db.prepare("DELETE FROM post_slug_history WHERE old_slug = ?").run(newSlug); }
+      db.prepare("UPDATE posts SET title = ?, slug = ?, updated_at = datetime('now') WHERE id = ?").run(cleanTitle, newSlug, id);
+    }
+    if (categoryIds !== undefined) taxonomy.setTerms("post", id, { categoryIds });
+    if (tags !== undefined) taxonomy.assignByNames("post", id, { tags });
+  });
+  blog.addRevision(get(id), userId ?? null, "Modification rapide", "save");
+  if (status === "published" && get(id).status !== "published") publish(id, userId, req);
+  else if (status === "draft" && ["published", "scheduled"].includes(get(id).status)) unpublish(id, userId);
+  return get(id);
+}
+const transactionSync = (fn) => require("../marketing/db/tx").transaction(db, fn);
+
 // Participe passé au singulier et au pluriel (« 1 article publié », « 3 articles publiés »)
 const ACTIONS = { publier: ["publié", "publiés"], depublier: ["remis en brouillon", "remis en brouillon"], corbeille: ["mis à la corbeille", "mis à la corbeille"], restaurer: ["restauré", "restaurés"], supprimer: ["supprimé définitivement", "supprimés définitivement"] };
 // Actions groupées : chaque article est traité à part (un refus n'arrête pas les autres), avec le motif de chaque refus
-function bulk(action, ids, userId, req, allow = null) {
-  if (!Object.hasOwn(ACTIONS, action)) throw new UserError("Action inconnue.");
-  const list = [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
+function bulk(action, ids, userId, req, allow = null, extra = null) {
+  if (!Object.hasOwn(ACTIONS, action) && !["categorie", "etiquette"].includes(action)) throw new UserError("Action inconnue.");
+  const list = [...new Set([].concat(ids ?? []).flatMap((x) => String(x).split(",")).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
   if (!list.length) throw new UserError("Sélectionnez au moins un article.");
+  if (extra && ["categorie", "etiquette"].includes(action)) return bulkTerms(action, list, userId, extra, allow);
   const run = { publier: publish, depublier: unpublish, corbeille: trash, restaurer: restore, supprimer: (id) => purge(id) }[action];
   const done = [], failed = [];
   for (const id of list) {
@@ -207,4 +265,28 @@ function bulk(action, ids, userId, req, allow = null) {
   return { done, failed, label: ACTIONS[action] };
 }
 
-module.exports = { STATES, SORTS, PERIODS, PER_PAGE, counts, list, authors, categoryTree, get, createDraft, applyImported, duplicate, trash, restore, purge, publish, unpublish, bulk, ACTIONS };
+// Ajout d'une catégorie ou d'une étiquette (déjà existante) à plusieurs articles, sans toucher à leurs autres termes
+function bulkTerms(action, list, userId, { termId }, allow) {
+  const term = taxonomy.get(Number(termId));
+  const kind = action === "categorie" ? "category" : "tag";
+  if (!term || term.taxonomy !== kind) throw new UserError(kind === "category" ? "Choisissez une catégorie." : "Choisissez une étiquette.");
+  const done = [], failed = [];
+  for (const id of list) {
+    const p = get(id);
+    try {
+      if (!p || (allow && !allow(id))) throw new UserError("article introuvable");
+      if (p.deleted_at) throw new UserError("article dans la corbeille");
+      const t = taxonomy.termsOf("post", id);
+      if (kind === "category") { const ids = t.categories.map((c) => c.id); if (!ids.includes(term.id)) taxonomy.setTerms("post", id, { categoryIds: [...ids, term.id], primaryId: t.primary ? t.primary.id : undefined }); }
+      else { const ids = t.tags.map((x) => x.id); if (!ids.includes(term.id)) taxonomy.setTerms("post", id, { tagIds: [...ids, term.id] }); }
+      blog.addRevision(get(id), userId ?? null, `${kind === "category" ? "Catégorie" : "Étiquette"} ajoutée : ${term.name}`, "save");
+      done.push(id);
+    } catch (e) {
+      if (!(e instanceof UserError)) throw e;
+      failed.push({ id, title: p ? p.title : `#${id}`, message: e.message.replace(/\.$/, "") });
+    }
+  }
+  return { done, failed, label: [`reçu « ${term.name} »`, `reçu « ${term.name} »`] };
+}
+
+module.exports = { STATES, months, tagList, quickEdit, clampPerPage, PER_PAGE_MIN, PER_PAGE_MAX, SORTS, PERIODS, PER_PAGE, counts, list, authors, categoryTree, get, createDraft, applyImported, duplicate, trash, restore, purge, publish, unpublish, bulk, ACTIONS };
