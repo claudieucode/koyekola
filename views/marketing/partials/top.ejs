@@ -34,6 +34,7 @@
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script>try { if (localStorage.getItem("mkSidebar") === "collapsed") document.documentElement.setAttribute("data-sidebar", "collapsed"); } catch (e) {}</script>
+  <script>/* Thème de l'interface (Clair / Sombre / Automatique) : résolu ici, avant le premier affichage, donc sans flash. Préférence mémorisée dans ce navigateur (clé kolaTheme) ; « Automatique » suit le système. */ try { var kp = localStorage.getItem("kolaTheme"); document.documentElement.setAttribute("data-kola-pref", kp === "dark" || kp === "light" ? kp : "auto"); document.documentElement.setAttribute("data-kola-theme", kp === "dark" || (kp !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"); } catch (e) { document.documentElement.setAttribute("data-kola-theme", "light"); }</script>
   <% if (typeof compactNav !== "undefined" && compactNav) { %><script>/* outil plein écran (éditeur) : sous 1680 px, menu réduit d'office pour laisser la place au travail (sans changer la préférence mémorisée) */ if (window.innerWidth < 1680) document.documentElement.setAttribute("data-sidebar", "collapsed");</script><% } %>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
@@ -42,6 +43,7 @@
   <% if (appRail) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %>
   <% if (typeof appearanceJs !== "undefined" && appearanceJs) { %><link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>"><% } %>
   <% if (theme) { %><link rel="stylesheet" href="<%= asset('/css/marketing-themes.css') %>"><% } %>
+  <link rel="stylesheet" href="<%= asset('/css/kola-ui.css') %>">
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
@@ -84,6 +86,7 @@
         </div>
       <% } %>
       <% if (cms) { %>
+      <%- include("cms-site-switch", { cms, cmsSites, space: cms.space || null }) %>
       <nav class="mk-nav-list mk-cms-nav" aria-label="Sections du CMS">
         <%- include("cms-nav", { cms }) %>
       </nav>
@@ -123,6 +126,7 @@
         <div class="mk-topbar-actions">
           <% if (cms) { %><%- include("cms-topbar", { cms, cmsSites, space: cms.space || null }) %><% } %>
           <% if (!cms && nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
+          <button type="button" class="icon-btn mk-theme-btn" data-kola-theme-cycle aria-label="Thème de l'interface : automatique" title="Thème de l'interface"><span class="mk-theme-ico mk-theme-ico-light"><%- icon("sun", { size: 18 }) %></span><span class="mk-theme-ico mk-theme-ico-dark"><%- icon("moon", { size: 18 }) %></span></button>
           <div class="mk-dropdown" data-mk-dropdown>
             <button type="button" class="mk-user" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-user-menu">
               <span class="avatar avatar-sm" aria-hidden="true" style="background:<%= avatarColor(currentUser.username) %>"><%= currentUser.username.slice(0, 1).toUpperCase() %></span>
@@ -130,9 +134,17 @@
               <%- icon("chevronDown", { size: 14 }) %>
             </button>
             <div class="mk-menu" id="mk-user-menu" role="menu" hidden>
-              <a role="menuitem" href="<%= mySpace.href %>"><%= mySpace.label %></a>
-              <a role="menuitem" href="/">Voir le site</a>
-              <form action="/deconnexion" method="post" role="none"><button type="submit" role="menuitem">Déconnexion</button></form>
+              <a role="menuitem" href="<%= mySpace.href %>"><%- icon("home", { size: 16 }) %><%= mySpace.label %></a>
+              <a role="menuitem" href="/"><%- icon("externalLink", { size: 16 }) %>Voir le site</a>
+              <div class="mk-menu-sep" role="separator"></div>
+              <div class="mk-menu-label" id="mk-theme-label">Thème</div>
+              <div class="mk-theme-seg" role="group" aria-labelledby="mk-theme-label">
+                <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="light"><%- icon("sun", { size: 15 }) %>Clair</button>
+                <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="dark"><%- icon("moon", { size: 15 }) %>Sombre</button>
+                <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="auto"><%- icon("monitor", { size: 15 }) %>Auto</button>
+              </div>
+              <div class="mk-menu-sep" role="separator"></div>
+              <form action="/deconnexion" method="post" role="none"><button type="submit" role="menuitem"><%- icon("logout", { size: 16 }) %>Déconnexion</button></form>
             </div>
           </div>
         </div>

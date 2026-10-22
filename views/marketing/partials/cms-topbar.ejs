@@ -1,4 +1,4 @@
-<%# Barre du haut de KOLAKISA CMS : sélecteur de site, recherche, aperçu, aide, notifications, « Ajouter ». Les commandes sans fonction réelle sont désactivées et le disent. %>
+<%# Barre du haut de KOLAKISA CMS : recherche, aperçu du site, « Ajouter ». Le sélecteur de site vit dans le menu latéral (cms-site-switch) ; aucune commande sans fonction réelle n'est affichée. %>
 <%
   const canWrite = mk.can("forms.write");
   const isFormateur = currentUser && currentUser.role === "formateur";
@@ -13,22 +13,8 @@
     canWrite ? { href: "/marketing/formulaires#nouveau", label: "Formulaire d'inscription", icon: "layout" } : null,
   ].filter(Boolean);
 %>
-<div class="mk-dropdown mk-cms-site" data-mk-dropdown>
-  <button type="button" class="mk-cms-site-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-site-menu" title="Sites">
-    <%- icon("globe", { size: 16 }) %><span class="mk-cms-site-name"><%= inSpace ? space.name : cmsSites.length === 1 ? cmsSites[0].name : cmsSites.length ? "Tous les sites" : "Aucun site" %></span><%- icon("chevronDown", { size: 14 }) %>
-  </button>
-  <div class="mk-menu" id="mk-site-menu" role="menu" hidden>
-    <% if (!cmsSites.length) { %><span class="mk-cms-menu-note" role="none">Aucun site pour l'instant.</span><% } %>
-    <%# Changer de site : uniquement les sites que cette personne a le droit d'ouvrir (liste filtrée par le serveur) ; le site principal est réservé à l'équipe de l'organisation %>
-    <% if (mk.ctx.siteScope === undefined) { %><a role="menuitem" href="/marketing/site-web/principal/tableau-de-bord"<%- inSpace && space.principal ? ' aria-current="true"' : "" %>>Site principal</a><% } %>
-    <% cmsSites.forEach((s) => { %><a role="menuitem" href="/marketing/site-web/sites/<%= s.id %>/tableau-de-bord"<%- inSpace && space.siteId === s.id ? ' aria-current="true"' : "" %>><%= s.name %></a><% }) %>
-    <% if (mk.ctx.siteScope === undefined) { %><a role="menuitem" href="/marketing/site-web/sites">Gérer les sites</a><% } %>
-  </div>
-</div>
 <% if (!inSpace) { %><form class="mk-cms-topsearch" role="search" action="/marketing/site-web/recherche" method="get"><label class="mk-search"><span class="sr-only">Rechercher dans le CMS</span><%- icon("search", { size: 16 }) %><input type="search" name="q" placeholder="Rechercher…" maxlength="80" autocomplete="off"></label></form>
 <a class="icon-btn mk-cms-iconbtn" href="/" target="_blank" rel="noopener" title="Voir le site" aria-label="Voir le site (nouvel onglet)"><%- icon("externalLink", { size: 18 }) %></a><% } else if (space.principal) { %><a class="icon-btn mk-cms-iconbtn" href="/" target="_blank" rel="noopener" title="Voir le site" aria-label="Voir le site (nouvel onglet)"><%- icon("externalLink", { size: 18 }) %></a><% } %>
-<button type="button" class="icon-btn mk-cms-iconbtn" disabled title="Notifications : disponible dans un prochain palier" aria-label="Notifications (bientôt)"><%- icon("bell", { size: 18 }) %></button>
-<button type="button" class="icon-btn mk-cms-iconbtn" disabled title="Aide : disponible dans un prochain palier" aria-label="Aide (bientôt)"><%- icon("help", { size: 18 }) %></button>
 <% if (addItems.length) { %>
 <div class="mk-dropdown" data-mk-dropdown>
   <button type="button" class="btn btn-primary btn-sm mk-cms-add" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-add-menu"><%- icon("plus", { size: 16 }) %><span>Ajouter</span></button>

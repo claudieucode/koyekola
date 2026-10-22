@@ -5,8 +5,8 @@
    Contrastes (WCAG AA) : libellés ≥ 9:1, entrée active ≥ 7:1 sur le fond du menu. */
 
 html[data-mk-theme="nuit"] .mk-sidebar {
-  --mk-surface: #0b2a40; --mk-hover: #123a57; --mk-selected: #17496c;
-  --mk-border: #1c4462; --mk-border-strong: #2f5d80; --mk-text: #f1f6fa; --mk-text-soft: #c9d9e6; --muted: #a9c0d2;
+  --mk-surface: #0a1f35; --mk-hover: #11304f; --mk-selected: #16385a;
+  --mk-border: #183552; --mk-border-strong: #2b5073; --mk-text: #f1f6fa; --mk-text-soft: #c3d3e2; --muted: #96afc4;
 }
 html[data-mk-theme="gris"] .mk-sidebar {
   --mk-surface: #2b2e33; --mk-hover: #363a40; --mk-selected: #41464d;
