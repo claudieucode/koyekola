@@ -29,8 +29,9 @@
 
   // Colonnes affichées : mémorisées dans ce navigateur
   var table = $("[data-ar-table]");
+  var colsKey = (table && table.getAttribute("data-ar-store")) || "mk_ar_cols"; // chaque liste (articles, pages) mémorise ses propres colonnes
   var hidden = [];
-  try { hidden = JSON.parse(store.get("mk_ar_cols") || "[]"); } catch (e) { hidden = []; }
+  try { hidden = JSON.parse(store.get(colsKey) || "[]"); } catch (e) { hidden = []; }
   if (!Array.isArray(hidden)) hidden = [];
   function applyCols() {
     $$("[data-ar-col]").forEach(function (box) { box.checked = hidden.indexOf(box.getAttribute("data-ar-col")) === -1; });
@@ -45,7 +46,7 @@
       var c = box.getAttribute("data-ar-col");
       hidden = hidden.filter(function (x) { return x !== c; });
       if (!box.checked) hidden.push(c);
-      store.set("mk_ar_cols", JSON.stringify(hidden)); applyCols();
+      store.set(colsKey, JSON.stringify(hidden)); applyCols();
     });
   });
   applyCols();

@@ -43,6 +43,7 @@ const SECTIONS = [
   },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
+      leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
       leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
       leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
@@ -160,7 +161,8 @@ function buildCmsNav({ can, active, space = null }) {
 const SOON_PHASE = { B2: "médias", B3: "modèles et blocs", B4: "formulaires et contacts", B5: "blog", B6: "SEO" };
 const SITE_MODULES = {
   "tableau-de-bord": { label: "Tableau de bord", kind: "own", reg: "sitedash", permission: "forms.read" },
-  pages: { label: "Pages", kind: "own", reg: "landing", permission: "forms.read", primary: true },
+  // PAGES-01 : la liste des pages est l'écran partagé /pages ouvert dans le cadre du site (le site vient de l'adresse, jamais du navigateur)
+  pages: { label: "Pages", kind: "delegate", to: "/pages", reg: "landing", permission: "forms.read", primary: true, legacy: "/marketing/pages" },
   composants: { label: "Composants", kind: "own", permission: "forms.read" },
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
   equipe: { label: "Équipe du site", kind: "own", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
@@ -177,6 +179,8 @@ const SITE_MODULES = {
   importer: { label: "Importer des contacts", kind: "own", reg: "import", permission: "contacts.import", legacy: "/marketing/importer" },
   modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
   // R8 lot 4 : Navigation / Menus par site (menus et emplacements PROPRES au site ; ressources limitées à celles du site)
+  // Apparence → Thèmes : écran partagé /site-web/themes ouvert dans le cadre du site (thèmes installés et thème actif de CE site)
+  themes: { label: "Thèmes", kind: "delegate", to: "/site-web/themes", reg: "themes", permission: "appearance.read", legacy: `${BASE}/themes` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
@@ -260,6 +264,7 @@ const ABILITY = {
   "mediatheque/ajouter": { mode: "open", module: "medias", sub: "ajouter" },
   navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
+  "apparence/themes": { mode: "open", module: "themes" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },

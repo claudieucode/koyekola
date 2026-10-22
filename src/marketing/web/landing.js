@@ -72,20 +72,38 @@ function contentFromBody(b, sections, working) {
   };
 }
 
+const siteContent = require("../../services/siteContent");
+const listBase = (siteId, principal = false) => (Number.isInteger(siteId) && siteId > 0 ? `/marketing/site-web/sites/${siteId}/pages` : principal ? "/marketing/site-web/principal/pages" : "/marketing/pages");
+
 module.exports = () => {
   const router = express.Router();
 
-  // Site Web → Pages : toutes les pages (sites, tunnels, pages d'atterrissage), archivées à part
+  // Site Web → Pages : toutes les pages (liste à la manière de WordPress). Le site courant vient du serveur (ctx.siteScope / ctx.siteFilter), jamais du HTML :
+  // un accès limité à un site ne voit que ce site, l'équipe qui a ouvert l'espace d'un site (adresse /sites/<id>/pages) ne voit que ses pages.
   router.get("/pages", need("forms.read"), (req, res) => {
     const ctx = req.mk.ctx;
     pages.promoteScheduledPages(ctx.db, { force: true });
+    const siteId = siteContent.siteParam(ctx); // site courant (null = liste centrale de l'équipe)
+    const principal = !siteId && ctx.siteFilter === "principal"; // espace du site principal : pages sans site, seulement
     // Ancien lien « ?vue=archivees » conservé : c'est la corbeille
     const state = req.query.vue === "archivees" ? "corbeille" : cmsPages.STATES.includes(req.query.etat) ? req.query.etat : "toutes";
-    const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: String(req.query.site || ""), auteur: String(req.query.auteur || ""), tri: Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee", ordre: req.query.ordre === "asc" || (req.query.tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc" };
-    const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, sort: filters.tri, dir: filters.ordre, page: req.query.page });
+    // Tri par colonne (?orderby=titre|auteur|date & order=asc|desc), validé par liste fermée ; l'ancien ?tri= reste accepté
+    const byCol = ["titre", "auteur", "date"].includes(req.query.orderby) ? req.query.orderby : null;
+    const tri = byCol || (Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee");
+    const ordre = byCol ? (req.query.order === "asc" ? "asc" : req.query.order === "desc" ? "desc" : (byCol === "date" ? "desc" : "asc")) : req.query.ordre === "asc" || (tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc";
+    const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(req.query.mois || "")) ? String(req.query.mois) : "";
+    // Sélecteur « Site » de la liste centrale seulement : sur l'espace d'un site, la portée est celle du serveur (le paramètre « site » ne filtre rien de plus)
+    const siteFilterParam = siteId || principal ? "" : String(req.query.site || "");
+    const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: siteFilterParam, auteur: String(req.query.auteur || ""), mois: month, tri, ordre };
+    // Nombre de pages par liste : « Options de l'écran », mémorisé dans un cookie de l'administration (borné côté serveur)
+    const cookiePar = /(?:^|;\s*)mk_pg_par=(\d{1,3})/.exec(req.headers.cookie || "");
+    const perPage = cmsPages.clampPerPage(req.query.par || (cookiePar && cookiePar[1]) || cmsPages.PER_PAGE);
+    if (req.query.par) res.cookie("mk_pg_par", String(perPage), { path: "/marketing", sameSite: "lax", httpOnly: true, maxAge: 365 * 864e5 });
+    const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, month, sort: filters.tri, dir: filters.ordre, page: req.query.page, perPage });
     res.render("marketing/landing-list", { layoutFormats: require("../pages/layoutFormat").FORMATS, newPageOpen: req.query.nouvelle === "1",
-      title: "Pages", active: "landing", state, filters, result, pages: result.rows, authors: cmsPages.authorsOfPages(ctx), sites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
-      userTemplates: pages.listPageTemplates(ctx), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true,
+      title: "Pages", active: "landing", state, filters, result, pages: result.rows, perPage, months: cmsPages.months(ctx, state), authors: cmsPages.authorsOfPages(ctx), sites: siteId || principal ? [] : pages.listSites(ctx), moveSites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
+      userTemplates: pages.listPageTemplates(ctx, siteId ? { siteId } : principal ? { siteId: null } : undefined), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true, cmsArticlesJs: true,
+      fixedSite: siteId ? { id: siteId } : principal ? { id: null } : null, listBase: listBase(siteId, principal),
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
     });
   });
@@ -96,6 +114,9 @@ module.exports = () => {
   const createdOnce = new Map(); // `${compte}:${jeton}` → identifiant de la page (processus unique ; purgé au-delà de 500 entrées)
   const TOKEN = /^[A-Za-z0-9_-]{16,64}$/;
   const MODES = { editeur: (id) => `/marketing/pages/${id}/editeur?retour=pages`, fiche: (id) => `/marketing/pages/${id}` };
+  // Adresse de retour vers la liste après une action : celle fournie par la liste si elle a la forme d'une liste de pages (jamais une adresse libre), sinon la liste du site de la page
+  const LIST_BACK = /^\/marketing\/(?:pages|site-web\/principal\/pages|site-web\/sites\/\d{1,12}\/pages)(?:\?[A-Za-z0-9_=&%.+\-]*)?$/;
+  const listBack = (req, siteId, fallback) => (LIST_BACK.test(String(req.body.retour || "")) ? req.body.retour : fallback !== undefined ? fallback : pagesHome(siteId));
   router.post("/pages", need("forms.write"), (req, res, next) => {
     let created = null;
     const mode = req.body.ouvrir === undefined ? null : String(req.body.ouvrir);
@@ -140,17 +161,20 @@ module.exports = () => {
   // Actions groupées de la liste (publier, mettre hors ligne, corbeille, restaurer, supprimer définitivement) : droits vérifiés par action
   router.post("/pages/actions", need("forms.write"), (req, res, next) => {
     const ctx = req.mk.ctx;
-    const action = String(req.body.action || "");
+    const action = String(req.body.action || req.body.action2 || ""); // action2 : la barre du bas du tableau
     const needs = { publier: "pages.publish", depublier: "pages.publish", corbeille: "forms.write", restaurer: "forms.write", supprimer: "pages.delete" }[action];
     if (!needs || !req.mk.can(needs)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
-    const back = (/^\/marketing\/pages(\?[^#\s]*)?$/.test(String(req.body.retour || "")) ? req.body.retour : "/marketing/pages");
+    // Site de l'opération : celui de la requête vérifié par le serveur (accès limité), sinon le champ « site » (site courant de la liste), validé : jamais une page d'un autre site
+    const rawSite = String(req.body.site || req.query.site || "");
+    const siteLimit = Number.isInteger(ctx.siteScope) ? ctx.siteScope : /^\d{1,12}$/.test(rawSite) ? Number(rawSite) : rawSite === "principal" ? null : undefined;
+    const back = LIST_BACK.test(String(req.body.retour || "")) ? req.body.retour : listBase(Number.isInteger(siteLimit) ? siteLimit : null, siteLimit === null);
     // Message propre aux actions groupées : une erreur ici ne rouvre pas la fenêtre « Nouvelle page » (noReopen)
     const flash = (type, text, detail) => { req.session.mkFlash = { type, text, ...(detail ? { detail } : {}), noReopen: true }; res.redirect(back); };
     try {
       const r = cmsPages.bulk(ctx, action, req.body.ids, {
         publish: (id) => pages.publish(ctx, id), unpublish: (id) => landing.unpublishPage(ctx, id), archive: (id) => pages.archivePage(ctx, id),
         restore: (id) => pages.restorePage(ctx, id), remove: (id) => landing.deletePage(ctx, id),
-      }, (row) => (typeof ctx.canOn === "function" ? ctx.canOn(row.site_id ?? null, needs) : true)); // droit vérifié sur le site de CHAQUE page (plafond de droits compris)
+      }, (row) => (typeof ctx.canOn === "function" ? ctx.canOn(row.site_id ?? null, needs) : true), { siteLimit }); // droit vérifié sur le site de CHAQUE page (plafond de droits compris)
       const n = r.done.length;
       const head = n ? `${n} page${n > 1 ? "s" : ""} ${r.label[n > 1 ? 1 : 0]}.` : "";
       const detail = r.failed.map((f) => `« ${f.name} » : ${f.message}`).join(" · ");
@@ -168,6 +192,24 @@ module.exports = () => {
     if (!p) res.status(404).render("error", { message: "Page introuvable." });
     return p;
   };
+  // Modification rapide (liste) : titre, adresse et état (brouillon / publié) d'UNE page, sans ouvrir l'éditeur. Mêmes services que la fiche de la page
+  // (saveSettings : nom unique, adresse valide et libre, redirection de l'ancienne adresse d'une page en ligne ; publish / unpublish : contrôles de publication).
+  // Droits vérifiés ici : écrire pour le titre et l'adresse ; « pages.publish » pour changer l'état.
+  router.post("/pages/:id(\\d+)/modification-rapide", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    const wants = ["draft", "published"].includes(req.body.status) ? req.body.status : null;
+    const wantsChange = wants && ((wants === "published") !== (page.status === "published"));
+    if (wantsChange && !req.mk.can("pages.publish")) return res.status(403).render("error", { message: "Vous n'avez pas la permission de publier ou de retirer une page." });
+    if (page.archived_at) { req.session.mkFlash = { type: "error", text: "Cette page est dans la corbeille : restaurez-la avant de la modifier." }; return res.redirect(listBack(req, page.site_id)); }
+    attempt(req, res, next, listBack(req, page.site_id), () => {
+      const ctx = req.mk.ctx;
+      const slugGiven = String(req.body.slug ?? "").trim();
+      landing.saveSettings(ctx, page.id, { name: req.body.title, slug: slugGiven || page.slug, formId: page.form_id, tags: page.tags, indexable: page.indexable });
+      if (wantsChange) { if (wants === "published") pages.publish(ctx, page.id); else pages.unpublish(ctx, page.id); }
+      return `« ${pages.getPage(ctx, page.id).name} » mise à jour.`;
+    });
+  });
   // Export / import d'une page (fichier JSON au format kolakisa-page@1, entièrement revalidé à l'import)
   router.get("/pages/:id(\\d+)/exporter", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -471,7 +513,7 @@ module.exports = () => {
   router.post("/pages/:id(\\d+)/publier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+    attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => {
       const { version } = pages.publish(req.mk.ctx, page.id);
       return `Page en ligne (version ${version}) : /p/${page.slug}${page.indexable ? "" : " (non indexée par les moteurs de recherche)"}.`;
     });
@@ -510,7 +552,7 @@ module.exports = () => {
   router.post("/pages/:id(\\d+)/depublier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
+    attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => { pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
   });
   router.post("/pages/:id(\\d+)/depublier.json", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
@@ -545,19 +587,19 @@ module.exports = () => {
   router.post("/pages/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, pagesHome(page.site_id), () => { pages.archivePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
+    attempt(req, res, next, listBack(req, page.site_id), () => { pages.archivePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » archivée (hors ligne). Ses statistiques et versions sont gardées.`; });
   });
   router.post("/pages/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.restorePage(req.mk.ctx, page.id); return "Page restaurée (hors ligne) : publiez-la quand elle est prête."; });
+    attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => { pages.restorePage(req.mk.ctx, page.id); return "Page restaurée (hors ligne) : publiez-la quand elle est prête."; });
   });
   // Suppression DÉFINITIVE : administrateur seulement, et seulement depuis la corbeille (une page n'est jamais effacée d'un seul clic)
   router.post("/pages/:id(\\d+)/supprimer", need("pages.delete"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     if (!page.archived_at) { req.session.mkFlash = { type: "error", text: "Mettez d'abord la page à la corbeille : elle ne peut être supprimée définitivement que depuis la corbeille." }; return res.redirect(`/marketing/pages/${page.id}`); }
-    attempt(req, res, next, pagesHome(page.site_id), () => { landing.deletePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
+    attempt(req, res, next, listBack(req, page.site_id), () => { landing.deletePage(req.mk.ctx, page.id, { detach: req.body.detacher === "on" }); return `Page « ${page.name} » supprimée, avec ses statistiques et ses versions.`; });
   });
   return router;
 };

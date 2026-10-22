@@ -22,7 +22,7 @@ describe("registre et menu", () => {
   test("le registre couvre la structure cible (15 rubriques) sans adresse en double", () => {
     assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Navigation", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
-    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Éditeur du site", "Templates", "Patterns", "Styles", "En-tête", "Pied de page", "Menus"]);
+    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Thèmes", "Éditeur du site", "Templates", "Patterns", "Styles", "En-tête", "Pied de page", "Menus"]);
   });
 
   test("chaque écran du registre répond 200 dans la coque CMS, avec son menu ouvert sur la bonne entrée", async () => {
@@ -101,7 +101,7 @@ describe("existant conservé", () => {
     const list = (await boss.get("/marketing/pages")).text;
     assert.match(list, /is-cms/);
     assert.match(list, /Ma page CMS/);
-    for (const tab of ["Toutes", "Publiées", "Brouillons", "Corbeille"]) assert.match(list, new RegExp(`${tab} <span class="mk-tab-count">`));
+    for (const tab of ["Tous", "Publiées", "Brouillons", "Corbeille"]) assert.match(list, new RegExp(`${tab} <span class="count">`)); // PAGES-01 : états à la manière de WordPress
     assert.match((await boss.get("/marketing/pages?etat=brouillons")).text, /Ma page CMS/);
     assert.doesNotMatch((await boss.get("/marketing/pages?etat=publiees")).text, /Ma page CMS/);
     assert.match((await boss.get("/marketing/pages?q=cms")).text, /Ma page CMS/);

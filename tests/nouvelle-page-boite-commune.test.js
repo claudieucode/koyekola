@@ -34,7 +34,7 @@ describe("boîte « Nouvelle page » commune à tous les sites", () => {
       const d = dialog(r.text); assert.ok(d, `${label} : la boîte est présente`);
       assert.deepEqual(choices(d), central, `${label} : mêmes choix que la liste centrale`);
       assert.doesNotMatch(r.text, /id="cms-create-field"/, `${label} : plus de mini-formulaire à part`);
-      assert.match(r.text, /data-mk-modal-open="nouvelle">Nouvelle page</, `${label} : bouton d'ouverture`);
+      assert.match(r.text, /data-mk-modal-open="nouvelle">Ajouter une page</, `${label} : bouton d'ouverture`);
     }
   });
   test("le site de l'espace est transmis en champ caché (Alpha → Alpha, Bravo → Bravo), pas de choix de site ; le principal n'en transmet aucun", async () => {

@@ -1,0 +1,14 @@
+<%# Aperçu d'un thème, GÉNÉRÉ à partir de ses jetons réels (couleurs, polices, rayons) : ce n'est pas une capture d'écran du site. L'aperçu complet est la page « Prévisualiser ». %>
+<%
+  const c = theme.tokens.colors, f = theme.tokens.fonts, r = theme.tokens.radius;
+  const vars = `--th-bg:${c.background};--th-surface:${c.surface};--th-text:${c.text};--th-muted:${c.muted};--th-primary:${c.primary};--th-secondary:${c.secondary};--th-accent:${c.accent};--th-border:${theme.tokens.border.color};--th-btn:${Math.min(r.button, 20)}px;--th-card:${Math.min(r.card, 14)}px;--th-head:${fontStack(f.heading)};--th-body:${fontStack(f.body)}`;
+%>
+<div class="mk-th-shot" role="img" aria-label="Aperçu généré avec les couleurs et les polices du thème « <%= theme.name %> »" style="<%= vars %>">
+  <div class="mk-th-bar"><i></i><i></i><i></i><span></span></div>
+  <div class="mk-th-page">
+    <strong class="mk-th-h">Apprenez à votre rythme</strong>
+    <span class="mk-th-p">Formations en ligne claires, accessibles où que vous soyez.</span>
+    <span class="mk-th-btn">Découvrir</span>
+    <div class="mk-th-cards"><b><i></i><s></s><s></s></b><b><i></i><s></s><s></s></b><b><i></i><s></s><s></s></b></div>
+  </div>
+</div>

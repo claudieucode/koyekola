@@ -168,6 +168,15 @@ module.exports.attach = (req, res, next) => {
   else if (req.mk.site && Number.isInteger(req.mk.siteId) && req.mk.site.id === req.mk.siteId) res.locals.siteCandidate = describe(req, req.mk.site);
   // Écran historique du site principal (/marketing/pages, /site-web/articles…) sans site vérifié : il s'affiche dans le cadre DU PRINCIPAL (même menu que les autres sites), jamais dans un menu « central » complet
   else if (!req.mk.siteOnly && req.mk.siteId === null) res.locals.principalFrame = { navOnly: true, siteId: null, principal: true, base: `${BASE}/principal`, name: "Site principal", status: "active", deleted: false, slug: null, listHref: listHref(req) };
+  // Pages du site principal : même liste que les autres sites (écran partagé /pages), limitée aux pages du principal (aucun site) ; l'adresse reste celle de l'espace du principal
+  if (space && space.principal && (req.method === "GET" || req.method === "HEAD") && /^\/site-web\/principal\/pages\/?$/.test(req.path)) {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(req.query || {})) if (k !== "site" && typeof v === "string") q.set(k, v);
+    req.query = Object.fromEntries(q);
+    req.url = `/pages${q.toString() ? `?${q}` : ""}`;
+    if (req.mk.ctx.siteScope === undefined) req.mk.ctx.siteFilter = "principal";
+    return next();
+  }
   const m = /^\/site-web\/sites\/(\d{1,12})\/([a-z-]+)(?:\/([a-z0-9-]+))?\/?$/.exec(req.path);
   if (!m || !Object.hasOwn(nav.DELEGATED, m[2]) || (req.method !== "GET" && req.method !== "HEAD")) return next();
   if (m[3] !== undefined && !(Object.hasOwn(nav.NESTED, m[2]) && nav.NESTED[m[2]].includes(m[3]))) return next(); // sous-page hors de la liste fermée : jamais déléguée

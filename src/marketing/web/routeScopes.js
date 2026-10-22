@@ -88,6 +88,10 @@ const SITE_RULES = Object.freeze([
   { id: "composant-par-identifiant", pattern: /^\/site-web\/composants\/(\d+)/, kind: "resource", table: "composant", idGroup: 1 },
   { id: "page-creation-json", pattern: /^\/pages\/(?:creer|importer)\.json$/, methods: ["POST"], kind: "bodySiteIdJson" },
   { id: "page-nom-json", pattern: /^\/pages\/nom\.json$/, methods: ["GET"], kind: "queryGet" },
+  // Liste des pages (PAGES-01), écran partagé ouvert dans le cadre du site comme les autres modules délégués : le site est « ?site= » (lecture) ou le champ « site » de l'action groupée ;
+  // les deux sont revérifiés par le serveur (accès au site, droits, appartenance de chaque page)
+  { id: "pages-liste-du-site", pattern: /^\/pages$/, methods: ["GET"], kind: "queryGet" },
+  { id: "pages-actions-du-site", pattern: /^\/pages\/actions$/, methods: ["POST"], kind: "param" },
   // Modèles de pages enregistrés, PRIVÉS à leur site (site builder) : enregistrement = site du corps (« siteId »), lecture = « ?site= » (les deux revérifiés par le moteur), suppression = site du modèle
   { id: "modele-page-enregistrement", pattern: /^\/site-web\/modeles$/, methods: ["POST"], kind: "bodySiteIdJson" },
   { id: "modele-page-lecture", pattern: /^\/site-web\/modeles(?:\.json|\/\d+\.json)$/, methods: ["GET"], kind: "queryGet" },
@@ -131,6 +135,8 @@ const SITE_RULES = Object.freeze([
   { id: "terme-par-identifiant", pattern: /^\/site-web\/articles\/termes\/(\d{1,12})(?:\/|$)/, kind: "content", contentType: "term", idGroup: 1 },
   { id: "commentaire-par-identifiant", pattern: /^\/site-web\/commentaires\/(\d{1,12})(?:\/|$)/, kind: "comment", idGroup: 1 },
   { id: "articles-et-commentaires-du-site", pattern: /^\/site-web\/(?:articles|commentaires)(?:\/|$)/, kind: "param", terminal: true },
+  // Apparence → Thèmes : thèmes installés et thème actif PAR SITE ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
+  { id: "themes-du-site", pattern: /^\/site-web\/themes(?:\/|$)/, kind: "param", terminal: true },
   { id: "mediatheque-du-site", pattern: /^\/site-web\/(?:mediatheque|medias)(?:\/|\.json$|$)/, kind: "queryGet", terminal: true },
 ]);
 
@@ -151,6 +157,7 @@ const FAMILIES = Object.freeze([
   { id: "revenus-apercu", scope: "site", pattern: /^\/revenus$/ },
   { id: "navigation-du-site", scope: "site", pattern: /^\/site-web\/(?:navigation|apparence\/menus)(?:\/|$)/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
+  { id: "themes-par-site", scope: "site", pattern: /^\/site-web\/themes(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —
