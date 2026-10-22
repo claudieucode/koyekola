@@ -9,8 +9,8 @@
   const self = u.id === me;
   const labels = { "user.invited": "Invitation", "user.role_changed": "Rôle modifié", "user.status_changed": "Statut modifié", "user.removed": "Retiré de l'équipe", "site_access.granted": "Accès à un site accordé", "site_access.revoked": "Accès à un site retiré", "invitation.accepted": "Invitation acceptée" };
 %>
-    <div class="mk-head"><h1><%= u.username %></h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Utilisateurs</a></div></div>
-    <p class="mk-lead"><span class="mk-status <%= stClass[u.status] || "mk-status-off" %>"><%= stLabel[u.status] || u.status %></span> <%= u.email %><%= self ? " · c'est vous" : "" %></p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= u.username %></h1><p class="mk-head-sub"><span class="mk-status <%= stClass[u.status] || "mk-status-off" %>"><%= stLabel[u.status] || u.status %></span> <%= u.email %><%= self ? " · c'est vous" : "" %></p></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Utilisateurs</a></div></div>
 
     <div class="mk-us-grid">
       <section class="mk-ap-card" aria-labelledby="us-id"><h2 id="us-id">Compte</h2>

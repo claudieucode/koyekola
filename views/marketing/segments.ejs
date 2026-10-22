@@ -1,9 +1,9 @@
 <%- include("partials/top", { title, active }) %>
     <div class="mk-head">
-      <h1>Segments <span class="mk-count"><%= segments.length %></span></h1>
+      <div class="mk-head-main"><h1>Segments <span class="mk-count"><%= segments.length %></span></h1><p class="mk-head-sub">Un segment sélectionne des contacts selon des critères (ET / OU / NON). Il est recalculé à chaque usage, donc toujours à jour. Un segment ne donne aucun droit d'envoi : seuls les contacts avec un consentement prouvé sont joignables.</p></div>
+      
     </div>
     <%- include("partials/site-filter", { action: "/marketing/segments" }) %>
-    <p class="mk-lead">Un segment sélectionne des contacts selon des critères (ET / OU / NON). Il est recalculé à chaque usage, donc toujours à jour. Un segment ne donne aucun droit d'envoi : seuls les contacts avec un consentement prouvé sont joignables.</p>
     <% if (!segments.length) { %>
       <div class="mk-empty">
         <%- icon("filter", { size: 32 }) %>

@@ -11,13 +11,13 @@
   const depClass = (ok) => (ok === true ? "is-ok" : ok === false ? "is-missing" : "is-todo");
 %>
     <p class="mk-back"><a href="/marketing/automatisations/parcours">← Parcours tout prêts</a></p>
-    <div class="mk-head"><h1><%= j.label %></h1>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= j.label %></h1><p class="mk-head-sub"><%= j.objective %></p></div>
       <form action="/marketing/automatisations/parcours/<%= j.key %>/favori" method="post" class="mk-fav-form">
         <input type="hidden" name="retour" value="<%= back %>">
         <button type="submit" class="btn btn-ghost btn-sm mk-fav<%= j.favorite ? " is-on" : "" %>" aria-pressed="<%= j.favorite ? "true" : "false" %>"><%- icon(j.favorite ? "star" : "starOutline", { size: 16 }) %> <%= j.favorite ? "Dans mes favoris" : "Ajouter aux favoris" %></button>
       </form>
     </div>
-    <p class="mk-lead"><%= j.objective %></p>
     <p class="mk-lib-meta"><span class="mk-status <%= tone %>"><%= j.statusLabel %></span><% if (j.uses) { %> <span class="field-hint">Utilisé <%= j.uses %> fois dans votre organisation</span><% } %></p>
 
     <% if (!j.usable) { %>

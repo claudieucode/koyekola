@@ -1,10 +1,10 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/contacts">← Contacts</a></p>
     <div class="mk-head">
-      <h1 class="mk-email"><%= contact.email %></h1>
+      <div class="mk-head-main"><h1 class="mk-email"><%= contact.email %></h1><p class="mk-head-sub"><%= mkh.fullName(contact) || "Sans nom" %> · source : <%= contact.source %> · ajouté le <%= mkh.fdate(contact.created_at) %><% if (contact.lms_user_id) { %> · compte KOLAKISA lié<% } %></p></div>
+      
       <span class="badge <%= mkh.statusClass(contact.status) %>"><%= mkh.statusLabel(contact.status) %></span>
     </div>
-    <p class="mk-lead"><%= mkh.fullName(contact) || "Sans nom" %> · source : <%= contact.source %> · ajouté le <%= mkh.fdate(contact.created_at) %><% if (contact.lms_user_id) { %> · compte KOLAKISA lié<% } %></p>
 
     <% if (lms) { %>
     <section class="mk-panel" id="compte" aria-labelledby="lms-title">

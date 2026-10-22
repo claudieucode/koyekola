@@ -10,9 +10,10 @@
   const word = { image: "image", video: "vidéo", audio: "audio", pdf: "PDF", document: "document" };
   const mo = (n) => String(n).replace(".", ",") + " Mo";
 %>
-    <div class="mk-head"><h1>Téléverser un média</h1></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Téléverser un média</h1></div></div>
 
-    <div class="mk-ml-bigdrop" data-ml-drop tabindex="0" role="button" aria-describedby="mu-help" aria-label="Zone de dépôt : déposez vos fichiers ici, ou appuyez sur Entrée pour les choisir">
+    <div class="mk-ml-bigdrop" data-ml-drop role="group" aria-describedby="mu-help" aria-label="Zone de dépôt : déposez vos fichiers ici, ou utilisez le bouton pour les choisir">
       <p class="mk-ml-bigtitle">Déposez vos fichiers pour les téléverser</p>
       <p class="mk-ml-or">ou</p>
       <button type="button" class="btn btn-outline" data-ml-browse-btn>Sélectionnez des fichiers</button>

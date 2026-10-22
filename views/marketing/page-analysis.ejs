@@ -1,8 +1,8 @@
 <%- include("partials/top", { title, active }) %>
 <% const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); const periodLabel = { 7: "7 derniers jours", 30: "30 derniers jours", 90: "90 derniers jours" }; const f = funnel; %>
     <p class="mk-back"><a href="/marketing/pages/<%= page.id %>">← <%= page.name %></a></p>
-    <div class="mk-head"><h1>Analyse de la page</h1></div>
-    <p class="mk-lead">Parcours réel des visiteurs sur <code>/p/<%= page.slug %></code> : jusqu'où ils descendent dans la page, puis s'ils s'inscrivent. Seuls les visiteurs ayant accepté la mesure d'audience sont comptés ; aucune extrapolation.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Analyse de la page</h1><p class="mk-head-sub">Parcours réel des visiteurs sur <code>/p/<%= page.slug %></code> : jusqu'où ils descendent dans la page, puis s'ils s'inscrivent. Seuls les visiteurs ayant accepté la mesure d'audience sont comptés ; aucune extrapolation.</p></div></div>
     <nav class="mk-tabs" aria-label="Période">
       <% [7, 30, 90].forEach((n) => { %><a class="mk-tab" href="/marketing/pages/<%= page.id %>/analyse?periode=<%= n %>"<%- days === n ? ' aria-current="page"' : "" %>><%= periodLabel[n] %></a><% }) %>
     </nav>

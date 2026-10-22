@@ -1,8 +1,8 @@
 <%- include("partials/top", { title, active }) %>
 <% const when = new Date(version.createdAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }); %>
     <p class="mk-back"><a href="/marketing/pages/<%= page.id %>">← <%= page.name %></a></p>
-    <div class="mk-head"><h1>Version <%= version.number %> ↔ état actuel</h1></div>
-    <p class="mk-lead">Ce qui a changé entre la version <%= version.number %> (publiée le <%= when %>) et l'état actuel de la page (<%= page.hasDraft ? "brouillon" : "version en ligne" %>). Chaque section et chaque élément est suivi par son identifiant.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Version <%= version.number %> ↔ état actuel</h1><p class="mk-head-sub">Ce qui a changé entre la version <%= version.number %> (publiée le <%= when %>) et l'état actuel de la page (<%= page.hasDraft ? "brouillon" : "version en ligne" %>). Chaque section et chaque élément est suivi par son identifiant.</p></div></div>
     <div class="mk-row-actions">
       <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/versions/<%= version.number %>/apercu" target="_blank" rel="noopener">Voir la version <%= version.number %></a>
       <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= page.id %>/apercu" target="_blank" rel="noopener">Voir l'état actuel</a>

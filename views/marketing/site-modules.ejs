@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/site-web/sites/<%= site.id %>/reglages">← Réglages du site</a></p>
-    <div class="mk-head"><h1>Modules de « <%= site.name %> »</h1></div>
-    <p class="mk-lead">Un module est <strong>désactivé par défaut</strong> pour un site. Seule l'équipe de l'organisation l'active, explicitement. L'activation <strong>s'ajoute</strong> aux permissions des personnes : elle ne les remplace pas. Désactiver un module <strong>conserve toutes ses données</strong>. Le site principal n'est pas concerné.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Modules de « <%= site.name %> »</h1><p class="mk-head-sub">Un module est <strong>désactivé par défaut</strong> pour un site. Seule l'équipe de l'organisation l'active, explicitement. L'activation <strong>s'ajoute</strong> aux permissions des personnes : elle ne les remplace pas. Désactiver un module <strong>conserve toutes ses données</strong>. Le site principal n'est pas concerné.</p></div></div>
     <div class="mk-table-wrap"><table class="mk-table">
       <caption class="sr-only">Modules et état d'activation</caption>
       <thead><tr><th scope="col">Module</th><th scope="col">État</th><th scope="col">Disponibilité</th><th scope="col">Action</th></tr></thead>

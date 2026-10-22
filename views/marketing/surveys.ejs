@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
 <% const canWrite = mk.can("forms.write"); %>
-    <div class="mk-head"><h1>Sondages</h1><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un sondage</button><% } %></div>
-    <p class="mk-lead">Posez des questions à vos contacts : partagez le lien du sondage, ou insérez un bloc « Sondage » dans un e-mail (chaque réponse est alors rattachée au contact). Les réponses peuvent ajouter des étiquettes automatiquement.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Sondages</h1><p class="mk-head-sub">Posez des questions à vos contacts : partagez le lien du sondage, ou insérez un bloc « Sondage » dans un e-mail (chaque réponse est alors rattachée au contact). Les réponses peuvent ajouter des étiquettes automatiquement.</p></div><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un sondage</button><% } %></div>
     <% if (!items.length) { %>
       <div class="mk-empty"><%- icon("listChecks", { size: 32 }) %><h2>Aucun sondage</h2><p>Par exemple : la satisfaction après une formation, ou les sujets qui intéressent vos abonnés.</p>
         <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un sondage</button></div><% } %></div>

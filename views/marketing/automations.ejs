@@ -2,8 +2,8 @@
 <%
   const canWrite = mk.can("automations.write");
 %>
-    <div class="mk-head"><h1>Automatisations</h1><a class="btn btn-outline btn-sm" href="/marketing/automatisations/parcours"><%- icon("layers", { size: 16 }) %> Parcours tout prêts</a></div>
-    <p class="mk-lead">Un scénario réagit à un événement (compte créé, achat, formation terminée…) et enchaîne des étapes : e-mail, attente, condition, étiquette, liste. Seuls les événements <strong>futurs</strong> les déclenchent.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Automatisations</h1><p class="mk-head-sub">Un scénario réagit à un événement (compte créé, achat, formation terminée…) et enchaîne des étapes : e-mail, attente, condition, étiquette, liste. Seuls les événements <strong>futurs</strong> les déclenchent.</p></div><a class="btn btn-outline btn-sm" href="/marketing/automatisations/parcours"><%- icon("layers", { size: 16 }) %> Parcours tout prêts</a></div>
     <%- include("partials/worker-note", { workerOn, consequence: "aucun scénario ne s'exécutera tant qu'il n'est pas rétabli" }) %>
 
     <%- include("partials/site-filter", { action: "/marketing/automatisations" }) %>

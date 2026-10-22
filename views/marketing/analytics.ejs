@@ -5,8 +5,8 @@
   const url = (days) => `/marketing/analytics?periode=${days}`;
   const periodLabel = { 7: "7 derniers jours", 30: "30 derniers jours", 90: "90 derniers jours" };
 %>
-    <div class="mk-head"><h1>Analytics</h1></div>
-    <p class="mk-lead">Vos envois marketing, toutes campagnes confondues, sur la période choisie. Les chiffres viennent du journal des événements : ils ne dépendent pas d'une campagne encore en cours.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Analytics</h1><p class="mk-head-sub">Vos envois marketing, toutes campagnes confondues, sur la période choisie. Les chiffres viennent du journal des événements : ils ne dépendent pas d'une campagne encore en cours.</p></div></div>
 
     <nav class="mk-tabs" aria-label="Période">
       <% o.period.options.forEach((d) => { %><a class="mk-tab" href="<%= url(d) %>"<%- o.period.days === d ? ' aria-current="page"' : "" %>><%= periodLabel[d] %></a><% }) %>

@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/contacts<%= mk.ctx.siteScope ? '?site=' + mk.ctx.siteScope : '' %>">← Contacts</a></p>
-    <div class="mk-head"><h1>Mes demandes <span class="mk-count"><%= items.length %></span></h1></div>
-    <p class="mk-lead">Quand une adresse ne peut pas être ajoutée directement à votre site, une demande est transmise à l'équipe de l'organisation. Vous voyez ici seulement si elle est <strong>en attente</strong> ou <strong>traitée</strong>. Si l'équipe y donne suite, le contact apparaît dans votre liste.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Mes demandes <span class="mk-count"><%= items.length %></span></h1><p class="mk-head-sub">Quand une adresse ne peut pas être ajoutée directement à votre site, une demande est transmise à l'équipe de l'organisation. Vous voyez ici seulement si elle est <strong>en attente</strong> ou <strong>traitée</strong>. Si l'équipe y donne suite, le contact apparaît dans votre liste.</p></div></div>
     <% if (!items.length) { %>
       <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2>Aucune demande</h2><p>Les demandes apparaissent ici lorsque l'équipe doit intervenir.</p></div>
     <% } else { %>

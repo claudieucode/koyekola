@@ -7,7 +7,8 @@
   const subnav = () => `<nav class="mk-tabs mk-cms-tabs" aria-label="Rôles et permissions"><a class="mk-tab" href="${BASE}">Utilisateurs</a><a class="mk-tab" href="${BASE}/roles"${mode === "list" || mode === "edit" ? ' aria-current="page"' : ""}>Rôles</a><a class="mk-tab" href="${BASE}/permissions"${mode === "matrix" ? ' aria-current="page"' : ""}>Permissions</a></nav>`;
 %>
 <% if (mode === "list") { %>
-    <div class="mk-head"><h1>Rôles</h1><div class="mk-actions"><% if (canManage) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/roles/nouveau">Créer un rôle</a><% } %></div></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Rôles</h1></div><div class="mk-actions"><% if (canManage) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/roles/nouveau">Créer un rôle</a><% } %></div></div>
     <%- subnav() %>
     <p class="mk-lead">Un rôle est un ensemble de permissions. Les rôles du système sont fixes ; vous pouvez créer vos propres rôles (par exemple « Gestionnaire du blog ») avec exactement les droits voulus.</p>
     <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Rôles</caption>
@@ -17,7 +18,8 @@
         <td class="mk-row-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles/<%= r.key %>"><%= r.system || !canManage ? "Voir" : "Modifier" %></a></td></tr><% }) %></tbody></table></div>
 
 <% } else if (mode === "matrix") { %>
-    <div class="mk-head"><h1>Permissions</h1></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Permissions</h1></div></div>
     <%- subnav() %>
     <p class="mk-lead">Ce que chaque rôle peut faire, par domaine et par action. Chaque case reflète les permissions réellement attribuées au rôle.</p>
     <form method="get" action="<%= BASE %>/permissions" class="mk-cms-toolbar"><label for="mx-role">Rôle</label>
@@ -28,7 +30,8 @@
     <p class="field-hint">✓ tous les droits de la colonne · ◐ une partie · — aucun. Le détail permission par permission se voit dans la fiche du rôle.</p>
 
 <% } else if (mode === "edit") { %>
-    <div class="mk-head"><h1><%= role ? role.name : "Nouveau rôle" %></h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles">← Rôles</a>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= role ? role.name : "Nouveau rôle" %></h1></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles">← Rôles</a>
       <% if (role && canManage) { %><form method="post" action="<%= BASE %>/roles/<%= role.key %>/dupliquer" class="mk-cm-form"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form><% } %></div></div>
     <%- subnav() %>
     <% if (role && role.system) { %><p class="mk-lead"><strong>Rôle du système</strong> : fixe, il ne peut pas être modifié. <%= role.description %> Dupliquez-le pour en faire une variante personnalisée.</p>

@@ -4,8 +4,8 @@
   const LABELS = { all: "Tous", draft: "Brouillons", running: "En cours", stopped: "En pause", completed: "Terminés", archived: "Archivés" };
   const qs = (extra) => { const p = new URLSearchParams({ ...(filters.status !== "all" ? { statut: filters.status } : {}), ...(filters.q ? { q: filters.q } : {}), ...(filters.sort !== "recent" ? { tri: filters.sort } : {}), ...extra }); for (const [k, v] of [...p]) if (v === "") p.delete(k); const s = p.toString(); return s ? "?" + s : ""; };
 %>
-    <div class="mk-head"><h1>Tests A/B des pages</h1></div>
-    <p class="mk-lead">Comparez deux versions d'une page (titre, bouton, sections, mise en page, formulaire) : une partie des visiteurs voit la version B. Un gagnant n'est désigné qu'avec assez de données et une différence statistiquement fiable. Pour créer un test, ouvrez une page puis « Test A/B », ou une étape de tunnel puis « Tester en A/B ».</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Tests A/B des pages</h1><p class="mk-head-sub">Comparez deux versions d'une page (titre, bouton, sections, mise en page, formulaire) : une partie des visiteurs voit la version B. Un gagnant n'est désigné qu'avec assez de données et une différence statistiquement fiable. Pour créer un test, ouvrez une page puis « Test A/B », ou une étape de tunnel puis « Tester en A/B ».</p></div></div>
     <% if (!list.counts.all && !list.counts.archived) { %>
       <div class="mk-empty"><%- icon("activity", { size: 32 }) %><h2>Aucune expérience A/B</h2><p>Créez votre première expérience pour comparer deux variantes d'une page.</p>
         <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages">+ Nouvelle expérience (choisir une page)</a></div></div>

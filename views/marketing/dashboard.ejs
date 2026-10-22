@@ -1,13 +1,45 @@
-<%- include("partials/top", { title, active }) %>
+<%#
+  KOLAKISA Marketing → Accueil : un vrai espace de travail. Période au choix, instantané des chiffres, préparation à l'envoi (étapes + détail), audience, automatisations,
+  campagnes récentes, modèles réels de l'organisation, activité. Toutes les données viennent de getOverview (aucun chiffre inventé : sans envoi, pas de taux).
+%><%- include("partials/top", { title, active }) %>
 <%
   const o = overview;
   const c = o.contacts, k = o.campaigns, au = o.automations;
   const firstSteps = c.sendable === 0 && k.recent.length === 0;
   const canImport = mk.can("contacts.import"), canAdd = mk.can("contacts.write"), canCampaign = mk.can("campaigns.write"), canAuto = mk.can("automations.write");
   const showReadiness = mk.can("settings.read");
+  const days = o.period.days;
+  const todo = o.readiness.items.filter((i) => !i.ok);
+  const pctDone = o.readiness.total ? Math.round((o.readiness.done / o.readiness.total) * 100) : 0;
+  const TIME = { template: "2 minutes", domain: "4 minutes", sending: "3 minutes", consent: "2 minutes", contacts: "2 minutes" };
 %>
-    <div class="mk-head"><h1>Accueil</h1></div>
-    <p class="mk-lead">Votre audience et vos envois sur les <%= o.period.days %> derniers jours : qui est là, qui a donné son accord, et ce qui demande votre attention.</p>
+    <div class="mk-head">
+      <div class="mk-head-main">
+        <h1>Accueil</h1>
+        <p class="mk-head-sub">Votre audience et vos envois sur les <%= days %> derniers jours : qui est là, qui a donné son accord, et ce qui demande votre attention.</p>
+      </div>
+      <div class="mk-head-actions">
+        <form class="mk-fchip" method="get" action="/marketing" data-no-live>
+          <label for="dash-periode">Période</label>
+          <select id="dash-periode" name="periode" onchange="this.form.submit()" data-tip="Choisissez la durée prise en compte par les chiffres de cette page. Les taux ne comptent que les messages réellement envoyés sur la période.">
+            <% o.period.choices.forEach((n) => { %><option value="<%= n %>"<%= n === days ? " selected" : "" %>><%= n %> derniers jours</option><% }) %>
+          </select>
+          <noscript><button class="btn btn-ghost btn-sm" type="submit">Appliquer</button></noscript>
+        </form>
+        <% if (canAdd || canImport || canCampaign || canAuto) { %>
+          <details class="mk-dd">
+            <summary class="btn btn-outline" data-tip="Les gestes les plus fréquents, sans quitter l'Accueil.">Actions rapides <%- icon("chevronDown", { size: 14 }) %></summary>
+            <div class="mk-dd-pop" role="menu">
+              <% if (canAdd) { %><a role="menuitem" href="/marketing/contacts/nouveau"><%- icon("user", { size: 16 }) %> Ajouter un contact</a><% } %>
+              <% if (canImport) { %><a role="menuitem" href="/marketing/importer"><%- icon("upload", { size: 16 }) %> Importer un fichier</a><% } %>
+              <% if (canAuto) { %><a role="menuitem" href="/marketing/automatisations#nouveau"><%- icon("zap", { size: 16 }) %> Créer un scénario</a><% } %>
+              <% if (mk.can("templates.read")) { %><a role="menuitem" href="/marketing/modeles"><%- icon("layout", { size: 16 }) %> Ouvrir les modèles</a><% } %>
+            </div>
+          </details>
+        <% } %>
+        <% if (canCampaign) { %><a href="/marketing/campagnes/nouvelle" class="btn btn-primary" data-tip="Lance l'assistant en sept étapes : modèle, destinataires, contrôle avant envoi.">Créer une campagne</a><% } %>
+      </div>
+    </div>
 
     <% if (o.alerts.length) { %>
       <section aria-label="À surveiller" class="mk-alerts">
@@ -24,152 +56,193 @@
       </section>
     <% } %>
 
-    <% if (canAdd || canImport || canCampaign || canAuto) { %>
-      <div class="mk-actions mk-quick" aria-label="Actions rapides" role="group">
-        <% if (canAdd) { %><a href="/marketing/contacts/nouveau" class="btn btn-outline btn-sm">Ajouter un contact</a><% } %>
-        <% if (canImport) { %><a href="/marketing/importer" class="btn btn-outline btn-sm">Importer un fichier</a><% } %>
-        <% if (canCampaign) { %><a href="/marketing/campagnes/nouvelle" class="btn btn-primary btn-sm">Créer une campagne</a><% } %>
-        <% if (canAuto) { %><a href="/marketing/automatisations#nouveau" class="btn btn-outline btn-sm">Créer un scénario</a><% } %>
-      </div>
-    <% } %>
-
-    <% if (firstSteps) { %>
-      <section class="mk-panel mk-firststeps" aria-labelledby="fs-title">
-        <h2 id="fs-title">Premiers pas</h2>
-        <p class="field-hint">Aucun contact joignable et aucune campagne pour l'instant. Voici l'ordre conseillé :</p>
-        <ol class="mk-onboarding">
-          <li class="mk-onboarding-step">
-            <span class="mk-onboarding-num" aria-hidden="true">1</span>
-            <div class="mk-onboarding-body">
-              <h3>Constituez votre audience</h3>
-              <p>Ajoutez des contacts ou importez un fichier CSV, en déclarant leur consentement : sans preuve, aucun message marketing ne peut leur être envoyé.</p>
-              <span class="mk-actions">
-                <% if (canAdd) { %><a href="/marketing/contacts/nouveau" class="btn btn-outline btn-sm">Ajouter un contact</a><% } %>
-                <% if (canImport) { %><a href="/marketing/importer" class="btn btn-outline btn-sm">Importer un fichier</a><% } %>
-              </span>
-            </div>
-          </li>
-          <li class="mk-onboarding-step">
-            <span class="mk-onboarding-num" aria-hidden="true">2</span>
-            <div class="mk-onboarding-body">
-              <h3>Préparez un modèle d'e-mail</h3>
-              <p>Partez d'un modèle de départ et renseignez l'adresse postale de l'organisation.</p>
-              <% if (mk.can("templates.read")) { %><span class="mk-actions"><a href="/marketing/modeles" class="btn btn-outline btn-sm">Ouvrir les modèles</a></span><% } %>
-            </div>
-          </li>
-          <li class="mk-onboarding-step">
-            <span class="mk-onboarding-num" aria-hidden="true">3</span>
-            <div class="mk-onboarding-body">
-              <h3>Créez votre première campagne</h3>
-              <p>Le contrôle avant envoi vous dit ce qui manque, et le mode test n'envoie rien.</p>
-              <% if (canCampaign) { %><span class="mk-actions"><a href="/marketing/campagnes/nouvelle" class="btn btn-primary btn-sm">Créer une campagne</a></span><% } %>
-            </div>
-          </li>
-        </ol>
+    <div class="mk-stack">
+      <%# ---- Instantané : les chiffres clés de la période ---- %>
+      <section class="mk-card" aria-labelledby="snap-title">
+        <div class="mk-card-head">
+          <div><h2 id="snap-title">Instantané marketing</h2><p>Sur les <%= days %> derniers jours · inclut les automatisations</p></div>
+          <% if (mk.can("campaigns.read")) { %><div class="mk-head-actions"><a class="btn btn-outline btn-sm btn-with-arrow" href="/marketing/analytics/global" data-tip="Ouvre le tableau de bord d'analyse : envois, engagement, croissance de l'audience.">Tableau de bord marketing</a></div><% } %>
+        </div>
+        <div class="mk-card-body">
+          <div class="mk-kpis">
+            <div class="mk-kpi is-strong"><span class="mk-kpi-label" data-tip="Toutes les personnes enregistrées, quel que soit leur consentement. Seuls les « joignables » peuvent recevoir un message marketing.">Contacts</span><span class="mk-kpi-value"><%= mkh.fmt(c.total) %></span><span class="mk-kpi-note"><%= mkh.fmt(c.sendable) %> joignable<%= c.sendable > 1 ? "s" : "" %> (consentement valide)</span></div>
+            <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Contacts créés pendant la période choisie (import, formulaire ou ajout manuel).">Nouveaux contacts</span><span class="mk-kpi-value"><%= mkh.fmt(c.newInPeriod) %></span><span class="mk-kpi-note">sur <%= days %> jours</span></div>
+            <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Campagnes dont l'envoi a démarré pendant la période. Les brouillons et campagnes programmées ne comptent pas.">Campagnes lancées</span><span class="mk-kpi-value"><%= mkh.fmt(k.sentInPeriod) %></span><span class="mk-kpi-note"><%= mkh.fmt(k.messagesInPeriod) %> message<%= k.messagesInPeriod > 1 ? "s" : "" %> envoyé<%= k.messagesInPeriod > 1 ? "s" : "" %></span></div>
+            <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Part des messages envoyés sur lesquels au moins un lien a été cliqué (un clic par personne). Pas d'envoi : pas de taux.">Taux de clic</span><span class="mk-kpi-value"><%= mkh.rate(k.clickRate) %></span><span class="mk-kpi-note"><%= k.messagesInPeriod ? "clics uniques sur les messages envoyés" : "aucun message envoyé sur la période" %></span></div>
+            <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Messages refusés par le serveur du destinataire. Au-delà de 2 %, votre réputation d'expéditeur est en danger : nettoyez la liste.">Rebonds</span><span class="mk-kpi-value"><%= mkh.rate(k.bounceRate) %></span><span class="mk-kpi-note">plaintes : <%= mkh.rate(k.complaintRate) %></span></div>
+            <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Personnes qui ont retiré leur accord pendant la période. Elles ne recevront plus de messages marketing.">Désinscriptions</span><span class="mk-kpi-value"><%= mkh.fmt(c.unsubscribedInPeriod) %></span><span class="mk-kpi-note">sur <%= days %> jours · <%= mkh.fmt(c.blocked) %> bloqué<%= c.blocked > 1 ? "s" : "" %></span></div>
+          </div>
+        </div>
       </section>
-    <% } %>
 
-    <div class="mk-stats mk-stats-3">
-      <div class="mk-stat"><span class="mk-stat-label">Contacts</span><span class="mk-stat-value"><%= mkh.fmt(c.total) %></span><span class="mk-stat-hint"><%= mkh.fmt(c.sendable) %> joignable<%= c.sendable > 1 ? "s" : "" %> (consentement prouvé)</span></div>
-      <div class="mk-stat"><span class="mk-stat-label">Nouveaux contacts</span><span class="mk-stat-value"><%= mkh.fmt(c.newInPeriod) %></span><span class="mk-stat-hint">sur <%= o.period.days %> jours</span></div>
-      <div class="mk-stat"><span class="mk-stat-label">Campagnes lancées</span><span class="mk-stat-value"><%= mkh.fmt(k.sentInPeriod) %></span><span class="mk-stat-hint"><%= mkh.fmt(k.messagesInPeriod) %> message<%= k.messagesInPeriod > 1 ? "s" : "" %> envoyé<%= k.messagesInPeriod > 1 ? "s" : "" %></span></div>
-      <div class="mk-stat"><span class="mk-stat-label">Taux de clic</span><span class="mk-stat-value"><%= mkh.rate(k.clickRate) %></span><span class="mk-stat-hint"><%= k.messagesInPeriod ? "clics uniques sur les messages envoyés" : "aucun envoi sur la période" %></span></div>
-      <div class="mk-stat"><span class="mk-stat-label">Rebonds</span><span class="mk-stat-value"><%= mkh.rate(k.bounceRate) %></span><span class="mk-stat-hint">plaintes : <%= mkh.rate(k.complaintRate) %></span></div>
-      <div class="mk-stat"><span class="mk-stat-label">Désinscriptions</span><span class="mk-stat-value"><%= mkh.fmt(c.unsubscribedInPeriod) %></span><span class="mk-stat-hint">sur <%= o.period.days %> jours · <%= mkh.fmt(c.blocked) %> adresse<%= c.blocked > 1 ? "s" : "" %> bloquée<%= c.blocked > 1 ? "s" : "" %></span></div>
-    </div>
-
-    <% if (showReadiness) { %><div class="mk-grid-2"><% } %>
-      <section class="mk-panel" aria-labelledby="growth-title">
-        <h2 id="growth-title">Nouveaux contacts par semaine</h2>
-        <%- mkh.barChart(o.growth, { title: "Nouveaux contacts par semaine (8 dernières semaines)" }) %>
-        <p class="field-hint">Semaines glissantes de 7 jours, la plus récente à droite.</p>
-        <h3 class="mk-breakdown-title">Répartition des contacts</h3>
-        <ul class="mk-breakdown">
-          <li><span class="mk-status mk-status-ok">Abonnés</span> <strong><%= mkh.fmt(c.byStatus.subscribed) %></strong></li>
-          <li><span class="mk-status">Pas de consentement</span> <strong><%= mkh.fmt(c.byStatus.unknown) %></strong></li>
-          <li><span class="mk-status mk-status-warn">Désinscrits</span> <strong><%= mkh.fmt(c.byStatus.unsubscribed) %></strong></li>
-          <li><span class="mk-status mk-status-err">Bloqués</span> <strong><%= mkh.fmt(c.blocked) %></strong></li>
-        </ul>
-      </section>
-      <% if (showReadiness) { %>
-        <section class="mk-panel mk-readiness" aria-labelledby="ready-title">
-          <h2 id="ready-title">Prêt pour un vrai envoi ?</h2>
-          <p class="mk-readiness-score"><strong><%= o.readiness.done %> sur <%= o.readiness.total %></strong> vérifications réussies</p>
-          <div class="mk-progress" role="progressbar" aria-label="Préparation à l'envoi" aria-valuemin="0" aria-valuemax="<%= o.readiness.total %>" aria-valuenow="<%= o.readiness.done %>"><span class="mk-progress-bar" style="width:<%= Math.round(o.readiness.done / o.readiness.total * 100) %>%"></span></div>
-          <ul class="mk-checklist">
+      <%# ---- Préparation à l'envoi : étapes à gauche, détail à droite ---- %>
+      <% if (showReadiness && o.readiness.items.length) { %>
+      <section class="mk-card mk-setup mk-readiness" aria-labelledby="setup-title" data-setup>
+        <div class="mk-setup-head">
+          <h2 id="setup-title"><%= todo.length ? "Préparez vos envois : " + pctDone + " % accompli" : "Tout est prêt pour un vrai envoi" %></h2>
+          <div class="mk-setup-progress">
+            <span>Avancement : <%= o.readiness.done %>/<%= o.readiness.total %></span>
+            <div class="mk-setup-bar" role="progressbar" aria-label="Préparation à l'envoi" aria-valuemin="0" aria-valuemax="<%= o.readiness.total %>" aria-valuenow="<%= o.readiness.done %>"><span style="width:<%= pctDone %>%"></span></div>
+          </div>
+        </div>
+        <div class="mk-setup-body">
+          <ul class="mk-setup-steps" role="tablist" aria-label="Étapes de préparation">
             <% o.readiness.items.forEach((i) => { %>
-              <li class="mk-check <%= i.ok ? 'is-ok' : 'is-todo' %>">
-                <span class="mk-check-mark" aria-hidden="true"><%- icon(i.ok ? "checkCircle" : "alertTriangle", { size: 18 }) %></span>
-                <span class="mk-check-body"><strong><%= i.label %></strong> <span class="sr-only"><%= i.ok ? "— fait." : "— à faire." %></span>
-                  <span class="mk-check-detail"><%= i.detail %></span>
-                  <% if (i.tech) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= i.tech %></p></details><% } %>
-                  <% if (!i.ok && i.href && (!i.permission || mk.can(i.permission))) { %> <a href="<%= i.href %>">Configurer</a><% } %>
-                </span>
+              <li role="presentation"><button type="button" role="tab" class="mk-setup-step<%= i.ok ? " is-done" : "" %>" data-step="<%= i.key %>" aria-selected="false" aria-controls="panel-<%= i.key %>">
+                <span class="mk-ss-mark" aria-hidden="true"><%- icon("check", { size: 13 }) %></span><span class="mk-ss-label"><%= i.label %><span class="sr-only"><%= i.ok ? " — fait" : " — à faire" %></span></span>
+                <% if (!i.ok && TIME[i.key]) { %><span class="mk-ss-time"><%= TIME[i.key] %></span><% } %>
+              </button></li>
+            <% }) %>
+          </ul>
+          <div class="mk-setup-panels">
+            <% o.readiness.items.forEach((i) => { %>
+              <div class="mk-setup-panel" id="panel-<%= i.key %>" role="tabpanel" data-panel="<%= i.key %>" hidden>
+                <h3><%= i.ok ? i.label : i.label %></h3>
+                <p><%= i.detail || (i.ok ? "Cette étape est terminée." : "Cette étape reste à faire avant un vrai envoi.") %></p>
+                <% if (i.tech) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= i.tech %></p></details><% } %>
+                <div class="mk-actions">
+                  <% if (!i.ok && i.href && (!i.permission || mk.can(i.permission))) { %><a class="btn btn-primary" href="<%= i.href %>">Configurer</a><% } %>
+                  <% if (i.ok) { %><span class="mk-status mk-status-ok">Terminé</span><% } %>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+        <div class="mk-card-foot"><span class="field-hint" style="margin:0"><%= o.readiness.note %></span></div>
+      </section>
+      <% } %>
+
+      <div class="mk-grid-2">
+        <%# ---- Audience ---- %>
+        <section class="mk-card" aria-labelledby="aud-title">
+          <div class="mk-card-head">
+            <div><h2 id="aud-title">Audience</h2><p>Qui peut recevoir vos messages</p></div>
+            <% if (mk.can("contacts.read")) { %><div class="mk-head-actions"><a class="btn btn-outline btn-sm btn-with-arrow" href="/marketing/contacts" data-tip="Ouvre la liste complète de vos contacts, avec leurs filtres.">Tous les contacts</a></div><% } %>
+          </div>
+          <div class="mk-card-body">
+            <div class="mk-kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+              <div class="mk-kpi is-strong"><span class="mk-kpi-label" data-tip="Nombre total de fiches contact.">Nombre total de contacts</span><span class="mk-kpi-value"><%= mkh.fmt(c.total) %></span></div>
+              <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Contacts créés pendant la période : la croissance brute de votre audience.">Nouveaux contacts</span><span class="mk-kpi-value"><%= mkh.fmt(c.newInPeriod) %></span></div>
+            </div>
+            <h3 class="mk-breakdown-title" style="margin:18px 0 6px;font-size:.95rem">Nouveaux contacts par semaine</h3>
+            <%- mkh.barChart(o.growth, { title: "Nouveaux contacts par semaine (8 dernières semaines)" }) %>
+            <h3 class="mk-breakdown-title" style="margin:16px 0 4px;font-size:.95rem">Répartition des contacts</h3>
+            <ul class="mk-list-rows">
+              <li><span class="mk-lr-label"><span class="mk-status mk-status-ok">Abonnés</span></span><strong><%= mkh.fmt(c.byStatus.subscribed) %></strong></li>
+              <li><span class="mk-lr-label"><span class="mk-status">Pas de consentement</span></span><strong><%= mkh.fmt(c.byStatus.unknown) %></strong></li>
+              <li><span class="mk-lr-label"><span class="mk-status mk-status-warn">Désinscrits</span></span><strong><%= mkh.fmt(c.byStatus.unsubscribed) %></strong></li>
+              <li><span class="mk-lr-label"><span class="mk-status mk-status-err">Bloqués</span></span><strong><%= mkh.fmt(c.blocked) %></strong></li>
+            </ul>
+          </div>
+        </section>
+
+        <%# ---- Automatisations ---- %>
+        <section class="mk-card" aria-labelledby="auto-title">
+          <div class="mk-card-head">
+            <div><h2 id="auto-title">Automatisations</h2><p>Scénarios qui envoient seuls le bon message</p></div>
+            <% if (mk.can("automations.read")) { %><div class="mk-head-actions"><a class="btn btn-outline btn-sm btn-with-arrow" href="/marketing/automatisations" data-tip="Ouvre tous vos scénarios : actifs, en pause et brouillons.">Toutes les automatisations</a></div><% } %>
+          </div>
+          <div class="mk-card-body">
+            <% if (au.active + au.paused + au.draft === 0) { %>
+              <div class="mk-empty-center"><%- icon("zap", { size: 28 }) %><strong>Aucun scénario pour l'instant</strong><span>Un scénario envoie un message quand quelqu'un s'inscrit, achète ou reste inactif.</span>
+                <% if (canAuto) { %><a class="btn btn-outline btn-sm" href="/marketing/automatisations#nouveau">Créer un scénario</a><% } %></div>
+            <% } else { %>
+              <ul class="mk-list-rows">
+                <li><span class="mk-lr-label"><span class="mk-status mk-status-ok">Actifs</span> scénarios en fonctionnement</span><strong><%= au.active %></strong></li>
+                <li><span class="mk-lr-label"><span class="mk-status mk-status-warn">En pause</span></span><strong><%= au.paused %></strong></li>
+                <li><span class="mk-lr-label"><span class="mk-status">Brouillons</span></span><strong><%= au.draft %></strong></li>
+                <li><span class="mk-lr-label">Contacts en cours de parcours</span><strong><%= mkh.fmt(au.running) %></strong></li>
+                <% if (au.failedRuns) { %><li><span class="mk-lr-label"><span class="mk-status mk-status-err">En échec</span> passages à relancer</span><strong><%= mkh.fmt(au.failedRuns) %></strong></li><% } %>
+              </ul>
+            <% } %>
+          </div>
+        </section>
+      </div>
+
+      <%# ---- Campagnes récentes ---- %>
+      <section class="mk-card" aria-labelledby="camp-title">
+        <div class="mk-card-head">
+          <div><h2 id="camp-title">Campagnes récentes</h2><p>Les cinq dernières campagnes de l'organisation</p></div>
+          <% if (mk.can("campaigns.read")) { %><div class="mk-head-actions"><a class="btn btn-outline btn-sm btn-with-arrow" href="/marketing/campagnes">Toutes les campagnes</a></div><% } %>
+        </div>
+        <div class="mk-card-body<%= k.recent.length ? " is-flush" : "" %>">
+          <% if (!k.recent.length) { %>
+            <div class="mk-empty-split">
+              <div class="mk-es-text">
+                <h3><%= firstSteps ? "Créez votre premier envoi" : "Aucune campagne pour l'instant" %></h3>
+                <p><%= firstSteps ? "Constituez d'abord votre audience (avec preuve de consentement), préparez un modèle, puis lancez une campagne : le contrôle avant envoi vous dit ce qui manque, et le mode test n'envoie rien." : "Une campagne envoie un modèle d'e-mail à une liste ou à un segment." %></p>
+                <div class="mk-actions">
+                  <% if (firstSteps && canAdd) { %><a href="/marketing/contacts/nouveau" class="btn btn-outline">Ajouter un contact</a><% } %>
+                  <% if (firstSteps && canImport) { %><a href="/marketing/importer" class="btn btn-outline">Importer un fichier</a><% } %>
+                  <% if (canCampaign) { %><a href="/marketing/campagnes/nouvelle" class="btn btn-primary">Créer une campagne</a><% } %>
+                </div>
+              </div>
+              <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "email" }) %></div>
+            </div>
+          <% } else { %>
+            <div class="mk-table-wrap" style="border:0;box-shadow:none;border-radius:0">
+              <table class="mk-table mk-datatable">
+                <caption class="sr-only">Cinq dernières campagnes</caption>
+                <thead><tr><th scope="col">Campagne</th><th scope="col" data-tip="L'état actuel de la campagne : brouillon, programmée, en cours d'envoi, envoyée…">Statut</th><th scope="col" class="mk-num" data-tip="Nombre de messages réellement partis.">Envoyés</th><th scope="col" class="mk-num" data-tip="Part des messages envoyés dont au moins un lien a été cliqué.">Clics</th><th scope="col" class="mk-col-actions"><span class="sr-only">Actions</span></th></tr></thead>
+                <tbody>
+                  <% k.recent.forEach((r) => { const st = mkh.campaignStatus(r.status); %>
+                    <tr>
+                      <td data-label="Campagne"><div class="mk-cell-title"><% if (mk.can("campaigns.read")) { %><a href="/marketing/campagnes/<%= r.id %>"><%= r.name %></a><% } else { %><strong><%= r.name %></strong><% } %></div></td>
+                      <td data-label="Statut"><span class="mk-status <%= st.cls %>"><%= st.label %></span></td>
+                      <td class="mk-num" data-label="Envoyés"><%= mkh.fmt(r.sent) %></td>
+                      <td class="mk-num" data-label="Clics"><%= mkh.rate(r.clickRate) %></td>
+                      <td class="mk-col-actions" data-label="Actions"><% if (mk.can("campaigns.read")) { %><a class="btn btn-outline btn-sm" href="/marketing/campagnes/<%= r.id %>">Afficher</a><% } %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </section>
+
+      <%# ---- Modèles réels de l'organisation ---- %>
+      <% if (templates.length) { %>
+      <section class="mk-card" aria-labelledby="tpl-title">
+        <div class="mk-card-head">
+          <div><h2 id="tpl-title">Commencer avec un modèle</h2><p>Vos modèles les plus récemment modifiés</p></div>
+          <div class="mk-head-actions"><a class="btn btn-outline btn-sm btn-with-arrow" href="/marketing/modeles">Voir tous les modèles</a></div>
+        </div>
+        <div class="mk-card-body">
+          <ul class="mk-tplrow">
+            <% templates.slice(0, 6).forEach((t) => { %>
+              <li class="mk-tplcard">
+                <a class="mk-tplcard-art" href="/marketing/modeles/<%= t.id %>" aria-label="Ouvrir le modèle <%= t.name %>"><%- include("partials/empty-art", { kind: "template" }) %></a>
+                <div class="mk-tplcard-body">
+                  <span class="mk-status"><%= t.kind === "transactional" ? "Transactionnel" : "Marketing" %></span>
+                  <a class="mk-tplcard-name" href="/marketing/modeles/<%= t.id %>"><%= t.name %></a>
+                  <span class="mk-tplcard-meta"><%= t.blockCount %> bloc<%= t.blockCount > 1 ? "s" : "" %><%= t.category ? " · " + t.category : "" %></span>
+                </div>
               </li>
             <% }) %>
           </ul>
-          <p class="field-hint"><%= o.readiness.note %></p>
-        </section>
-      <% } %>
-    <% if (showReadiness) { %></div><% } %>
-
-    <div class="mk-grid-2">
-      <section class="mk-panel" aria-labelledby="camp-title">
-        <h2 id="camp-title">Campagnes récentes</h2>
-        <% if (!k.recent.length) { %>
-          <div class="mk-empty mk-empty-sm">
-            <%- icon("send", { size: 28 }) %>
-            <h3>Aucune campagne</h3>
-            <p>Vous n'avez encore lancé aucune campagne.</p>
-            <% if (canCampaign) { %><span class="mk-actions"><a href="/marketing/campagnes/nouvelle" class="btn btn-outline btn-sm">Créer une campagne</a></span><% } %>
-          </div>
-        <% } else { %>
-          <div class="mk-table-wrap">
-            <table class="mk-table mk-datatable">
-              <caption class="sr-only">Cinq dernières campagnes</caption>
-              <thead><tr><th scope="col">Campagne</th><th scope="col">Statut</th><th scope="col" class="mk-num">Envoyés</th><th scope="col" class="mk-num">Clics</th></tr></thead>
-              <tbody>
-                <% k.recent.forEach((r) => { const st = mkh.campaignStatus(r.status); %>
-                  <tr>
-                    <td data-label="Campagne"><% if (mk.can("campaigns.read")) { %><a href="/marketing/campagnes/<%= r.id %>"><%= r.name %></a><% } else { %><%= r.name %><% } %></td>
-                    <td data-label="Statut"><span class="mk-status <%= st.cls %>"><%= st.label %></span></td>
-                    <td class="mk-num" data-label="Envoyés"><%= mkh.fmt(r.sent) %></td>
-                    <td class="mk-num" data-label="Clics"><%= mkh.rate(r.clickRate) %></td>
-                  </tr>
-                <% }) %>
-              </tbody>
-            </table>
-          </div>
-        <% } %>
-        <% if (mk.can("campaigns.read")) { %><p class="mk-more"><a href="/marketing/campagnes">Toutes les campagnes</a></p><% } %>
+        </div>
       </section>
+      <% } %>
 
-      <section class="mk-panel" aria-labelledby="auto-title">
-        <h2 id="auto-title">Automatisations</h2>
-        <ul class="mk-status-list">
-          <li><span class="mk-status mk-status-ok">Actifs</span> <%= au.active %> scénario<%= au.active > 1 ? "s" : "" %></li>
-          <li><span class="mk-status mk-status-warn">En pause</span> <%= au.paused %></li>
-          <li><span class="mk-status">Brouillons</span> <%= au.draft %></li>
-          <li><strong><%= mkh.fmt(au.running) %></strong> contact<%= au.running > 1 ? "s" : "" %> en cours de parcours<% if (au.failedRuns) { %> · <strong><%= mkh.fmt(au.failedRuns) %></strong> passage<%= au.failedRuns > 1 ? "s" : "" %> en échec<% } %></li>
-        </ul>
-        <% if (mk.can("automations.read")) { %><p class="mk-more"><a href="/marketing/automatisations">Toutes les automatisations</a></p><% } %>
+      <%# ---- Activité récente ---- %>
+      <section class="mk-card mk-activity" aria-labelledby="act-title">
+        <div class="mk-card-head"><div><h2 id="act-title">Activité récente</h2><p>Imports, campagnes terminées et événements de KOLAKISA</p></div></div>
+        <div class="mk-card-body">
+          <% if (!o.activity.length) { %>
+            <div class="mk-empty-center"><%- icon("activity", { size: 28 }) %><strong>Aucune activité pour l'instant</strong><span>Les imports, les campagnes terminées et les événements de KOLAKISA apparaîtront ici.</span></div>
+          <% } else { %>
+            <ul class="mk-timeline">
+              <% o.activity.forEach((a) => { %>
+                <li class="mk-timeline-item">
+                  <span class="mk-timeline-mark" aria-hidden="true"><%- icon(a.icon, { size: 16 }) %></span>
+                  <span class="mk-timeline-body"><%= a.text %><% if (a.href && mk.can(a.permission)) { %> <a href="<%= a.href %>">Ouvrir</a><% } %></span>
+                  <time class="mk-timeline-time" datetime="<%= new Date(a.at).toISOString() %>"><%= mkh.fdate(new Date(a.at).toISOString()) %></time>
+                </li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </div>
       </section>
     </div>
-
-    <section class="mk-panel mk-activity" aria-labelledby="act-title">
-      <h2 id="act-title">Activité récente</h2>
-      <% if (!o.activity.length) { %>
-        <p class="field-hint">Aucune activité pour l'instant : les imports, les campagnes terminées et les événements de KOLAKISA apparaîtront ici.</p>
-      <% } else { %>
-        <ul class="mk-timeline">
-          <% o.activity.forEach((a) => { %>
-            <li class="mk-timeline-item">
-              <span class="mk-timeline-mark" aria-hidden="true"><%- icon(a.icon, { size: 16 }) %></span>
-              <span class="mk-timeline-body"><%= a.text %><% if (a.href && mk.can(a.permission)) { %> <a href="<%= a.href %>">Ouvrir</a><% } %></span>
-              <time class="mk-timeline-time" datetime="<%= new Date(a.at).toISOString() %>"><%= mkh.fdate(new Date(a.at).toISOString()) %></time>
-            </li>
-          <% }) %>
-        </ul>
-      <% } %>
-    </section>
 <%- include("partials/bottom") %>

@@ -1,0 +1,40 @@
+<%#
+  Pagination commune des listes de l'administration : « Affichage des résultats 1–25 de 120 », nombre de lignes par page, première / précédente / numéro / suivante / dernière.
+  Variables : result = { total, page, pages, pageSize }, url(changes) = adresse de la liste avec ces paramètres modifiés (les autres filtres sont conservés),
+  sizes (facultatif, défaut 10·25·50·100), sizeParam (défaut « taille »), pageParam (défaut « page »), bare (true : sans fond, hors tableau).
+  Sans JavaScript : le numéro de page et le nombre de lignes se valident par un bouton « Aller » masqué visuellement.
+%><%
+  const P = result.page, N = Math.max(1, result.pages || 1), size = result.pageSize || 25;
+  const SIZE_P = typeof sizeParam !== "undefined" && sizeParam ? sizeParam : "taille", PAGE_P = typeof pageParam !== "undefined" && pageParam ? pageParam : "page";
+  const SIZES = typeof sizes !== "undefined" && sizes ? sizes : [10, 25, 50, 100];
+  const from = result.total ? (P - 1) * size + 1 : 0, to = Math.min(result.total, P * size);
+  const base = String(url({})), at = base.indexOf("?"), action = at < 0 ? base : base.slice(0, at);
+  const keep = [...new URLSearchParams(at < 0 ? "" : base.slice(at + 1)).entries()].filter(([k]) => k !== SIZE_P && k !== PAGE_P);
+  const hid = (skip) => keep.filter(([k]) => k !== skip).map(([k, v]) => `<input type="hidden" name="${mkh.esc(k)}" value="${mkh.esc(v)}">`).join("");
+  const go = (n) => mkh.esc(url({ [PAGE_P]: n > 1 ? n : null }));
+  const I = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const FIRST = I('<path d="M17 18l-6-6 6-6"/><path d="M7 6v12"/>'), LAST = I('<path d="M7 6l6 6-6 6"/><path d="M17 6v12"/>');
+  // Les liens gardent href en premier attribut, rel et un libellé lisible : leur forme est vérifiée par les tests d'accessibilité de la pagination
+  const edge = (label, n, ok, ico) => ok ? `<a href="${go(n)}" class="mk-pb-btn mk-pb-edge" aria-label="${label}">${ico}</a>` : `<span class="mk-pb-btn mk-pb-edge" aria-disabled="true" aria-label="${label}">${ico}</span>`;
+  const step = (text, rel, n, ok) => ok ? `<a href="${go(n)}" rel="${rel}" class="mk-pb-btn mk-pb-step" aria-label="Page ${rel === "prev" ? "précédente" : "suivante"}">${text}</a>` : `<span class="mk-pb-btn mk-pb-step" aria-disabled="true">${text}</span>`;
+%><% if (result.total > 0) { %>
+<div class="mk-pagebar<%= typeof bare !== "undefined" && bare ? " is-bare" : "" %>">
+  <span class="mk-pb-info">Affichage des résultats <%= mkh.fmt(from) %>–<%= mkh.fmt(to) %> sur <%= mkh.fmt(result.total) %></span>
+  <form class="mk-pb-size" method="get" action="<%= action %>" data-no-live>
+    <%- hid() %><label for="pb-size">Afficher</label>
+    <select id="pb-size" name="<%= SIZE_P %>"><% SIZES.forEach((n) => { %><option value="<%= n %>"<%= n === size ? " selected" : "" %>><%= n %> lignes</option><% }) %></select>
+    <noscript><button class="btn btn-ghost btn-sm" type="submit">Appliquer</button></noscript>
+  </form>
+  <% if (N > 1) { %>
+  <nav class="mk-pager-links" aria-label="Pagination">
+    <%- edge("Première page", 1, P > 1, FIRST) %><%- step("Précédent", "prev", P - 1, P > 1) %>
+    <form class="mk-pb-go" method="get" action="<%= action %>" data-no-live>
+      <%- hid() %><input type="hidden" name="<%= SIZE_P %>" value="<%= size %>">
+      <label for="pb-page">Page</label><input id="pb-page" class="mk-pb-page" type="number" name="<%= PAGE_P %>" min="1" max="<%= N %>" value="<%= P %>" inputmode="numeric" aria-label="Numéro de page (sur <%= N %>)"><span>sur <%= N %></span>
+      <noscript><button class="btn btn-ghost btn-sm" type="submit">Aller</button></noscript>
+    </form>
+    <%- step("Suivant", "next", P + 1, P < N) %><%- edge("Dernière page", N, P < N, LAST) %>
+  </nav>
+  <% } %>
+</div>
+<% } %>

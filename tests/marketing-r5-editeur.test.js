@@ -72,14 +72,14 @@ describe("liste : catégories, recherche, tri", () => {
   test("onglets de catégories avec effectifs, onglet courant marqué", async () => {
     const html = (await boss.get("/marketing/modeles")).text;
     assert.match(html, /<nav class="mk-tabs" aria-label="Filtrer par catégorie">/);
-    assert.match(html, /<a class="mk-tab" href="\/marketing\/modeles" aria-current="page">Tous <span class="mk-tab-count">\d+<\/span><\/a>/);
-    assert.match(html, /<a class="mk-tab" href="\/marketing\/modeles\?categorie=promo">Promotion <span class="mk-tab-count">2<\/span><\/a>/);
+    assert.match(html, /<a class="mk-tab" href="\/marketing\/modeles" aria-current="page"[^>]*>Tous <span class="mk-tab-count">\d+<\/span><\/a>/);
+    assert.match(html, /<a class="mk-tab" href="\/marketing\/modeles\?categorie=promo"[^>]*>Promotion <span class="mk-tab-count">2<\/span><\/a>/);
     assert.doesNotMatch(html, />Événement <span class="mk-tab-count">0</, "les catégories vides n'ont pas d'onglet");
   });
   test("filtre par catégorie et par type", async () => {
     const promo = rowNames((await boss.get("/marketing/modeles?categorie=promo")).text).sort();
     assert.deepEqual(promo, ["Départ promo", "Offre d'été"]);
-    assert.match((await boss.get("/marketing/modeles?categorie=promo")).text, /<a class="mk-tab" href="[^"]*categorie=promo[^"]*" aria-current="page">Promotion/);
+    assert.match((await boss.get("/marketing/modeles?categorie=promo")).text, /<a class="mk-tab" href="[^"]*categorie=promo[^"]*" aria-current="page"[^>]*>Promotion/);
     const tx = rowNames((await boss.get("/marketing/modeles?type=transactional")).text);
     assert.ok(tx.includes("Confirmation commande") && !tx.includes("Offre d'été"));
   });

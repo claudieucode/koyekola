@@ -16,7 +16,8 @@
   const withCurrent = (current) => (Object.hasOwn(FONTS, current) ? fontOptions : fontOptions.concat([[current, String(current).replace(/^font\./, "").replace(/-/g, " ")]]));
   const colorRef = (id, name, label, value) => `<div class="field-group"><label for="${id}">${label}</label><input id="${id}" type="text" name="${name}" value="${value || ""}" maxlength="24" placeholder="origine (#rrggbb)" pattern="(#[0-9a-fA-F]{6})?"></div>`;
 %>
-    <div class="mk-head"><h1>Apparence · <%= title %></h1></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Apparence · <%= title %></h1></div></div>
 
     <section class="mk-ap-bar" aria-label="État de l'apparence">
       <div class="mk-ap-state">

@@ -1,13 +1,13 @@
 <%- include("partials/top", { title, active }) %>
 <% const c = d.checks; const badge = (k) => STATE[(c[k] && c[k].state) || "unknown"]; %>
     <div class="mk-head">
-      <h1><%= d.domain %></h1>
+      <div class="mk-head-main"><h1><%= d.domain %></h1><p class="mk-head-sub"><%= isSender ? "C'est le domaine de votre adresse d'expédition actuelle. " : "" %>Publiez les enregistrements ci-dessous chez votre hébergeur DNS (Hostinger : Domaines → DNS / serveurs de noms), puis cliquez sur « Vérifier maintenant ». La propagation peut prendre de quelques minutes à 48 heures.</p></div>
+      
       <div class="mk-actions">
         <span class="mk-status <%= d.status === "authenticated" ? "mk-status-ok" : d.status === "verified" ? "mk-status-warn" : "" %>"><%= d.statusLabel %></span>
         <% if (canWrite) { %><form method="post" action="/marketing/domaines/<%= d.id %>/verifier"><button type="submit" class="btn btn-primary btn-sm">Vérifier maintenant</button></form><% } %>
       </div>
     </div>
-    <p class="mk-lead"><%= isSender ? "C'est le domaine de votre adresse d'expédition actuelle. " : "" %>Publiez les enregistrements ci-dessous chez votre hébergeur DNS (Hostinger : Domaines → DNS / serveurs de noms), puis cliquez sur « Vérifier maintenant ». La propagation peut prendre de quelques minutes à 48 heures.</p>
 
     <section class="mk-panel" aria-labelledby="dom-checks">
       <h2 id="dom-checks">Résultat de la vérification</h2>

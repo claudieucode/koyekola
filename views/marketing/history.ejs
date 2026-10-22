@@ -8,8 +8,8 @@
   const noun = c.type === "page" ? "la page" : c.type === "post" ? "l'article" : c.type === "appearance" ? "l'apparence du site" : "le pattern";
 %>
 <% if (mode === "list") { %>
-    <div class="mk-head"><h1>Historique</h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= editUrl %>">← <%= c.info.title %></a></div></div>
-    <p class="mk-lead">Les modifications de <%= noun %> « <%= c.info.title %> » : chaque point est une vraie sauvegarde, que l'on peut consulter, comparer et restaurer. Restaurer ne supprime rien : l'état actuel est d'abord conservé dans l'historique.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Historique</h1><p class="mk-head-sub">Les modifications de <%= noun %> « <%= c.info.title %> » : chaque point est une vraie sauvegarde, que l'on peut consulter, comparer et restaurer. Restaurer ne supprime rien : l'état actuel est d'abord conservé dans l'historique.</p></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= editUrl %>">← <%= c.info.title %></a></div></div>
     <% if (c.info.trashed) { %><div class="mk-ap-warn" role="status">Ce contenu est dans la corbeille : restaurez-le d'abord pour restaurer une ancienne version.</div><% } %>
     <% if (c.type === "page" && c.info.hasDraft) { %><div class="mk-ap-card"><strong>Brouillon non publié.</strong> Dernière sauvegarde le <%= full(c.info.updatedAt) %>. La version en ligne ne change que si vous publiez.
       <a href="/marketing/pages/<%= c.id %>/apercu" target="_blank" rel="noopener">Prévisualiser le brouillon</a> · <a href="<%= BASE %>/page/<%= c.id %>/comparer?a=live&b=draft">Comparer avec la version en ligne</a></div><% } %>
@@ -55,8 +55,8 @@
     <% } %>
 
 <% } else if (mode === "version") { %>
-    <div class="mk-head"><h1>Version du <%= full(v.at) %></h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">← Historique</a></div></div>
-    <p class="mk-lead"><span class="mk-status mk-status-info"><%= KINDS[v.kind] || v.kind %></span> <%= v.label %><%= v.by ? " · par " + v.by : "" %>. Consultation seulement : rien n'est modifié.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Version du <%= full(v.at) %></h1><p class="mk-head-sub"><span class="mk-status mk-status-info"><%= KINDS[v.kind] || v.kind %></span> <%= v.label %><%= v.by ? " · par " + v.by : "" %>. Consultation seulement : rien n'est modifié.</p></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">← Historique</a></div></div>
     <section class="mk-ap-card" aria-labelledby="hv-sum"><h2 id="hv-sum">Contenu de cette version</h2>
       <dl class="mk-us-dl"><% v.summary.forEach(([k, val]) => { %><dt><%= k %></dt><dd><%= val === undefined || val === null || val === "" ? "—" : val %></dd><% }) %></dl></section>
     <div class="mk-actions">
@@ -67,8 +67,8 @@
     </div>
 
 <% } else if (mode === "compare") { %>
-    <div class="mk-head"><h1>Comparer</h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">← Historique</a></div></div>
-    <p class="mk-lead">Différences réelles entre <strong><%= labels[a] || a %></strong> et <strong><%= labels[b] || b %></strong> (la seconde est la plus récente).</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Comparer</h1><p class="mk-head-sub">Différences réelles entre <strong><%= labels[a] || a %></strong> et <strong><%= labels[b] || b %></strong> (la seconde est la plus récente).</p></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">← Historique</a></div></div>
     <% if (!diff.total) { %><section class="mk-ap-card"><p>Aucune différence : ces deux versions sont identiques.</p></section>
     <% } else { %>
       <p class="mk-sub"><%= diff.total %> différence<%= diff.total > 1 ? "s" : "" %></p>

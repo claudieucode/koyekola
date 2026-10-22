@@ -1,8 +1,8 @@
 <%- include("partials/top", { title, active }) %>
 <% const st = STATUS[a.status]; %>
     <p class="mk-back"><a href="/marketing/automatisations">← Automatisations</a></p>
-    <div class="mk-head"><h1 class="mk-email"><%= a.name %></h1><span class="badge <%= st[1] %>"><%= st[0] %></span></div>
-    <p class="mk-lead"><%= a.kind === "marketing" ? "Scénario marketing : le consentement est revérifié avant chaque e-mail ; une personne désinscrite sort du scénario." : "Scénario transactionnel : pour des messages liés au compte (bienvenue, confirmation). Ne donne aucun consentement marketing ; la liste de suppression est respectée." %></p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1 class="mk-email"><%= a.name %></h1><p class="mk-head-sub"><%= a.kind === "marketing" ? "Scénario marketing : le consentement est revérifié avant chaque e-mail ; une personne désinscrite sort du scénario." : "Scénario transactionnel : pour des messages liés au compte (bienvenue, confirmation). Ne donne aucun consentement marketing ; la liste de suppression est respectée." %></p></div><span class="badge <%= st[1] %>"><%= st[0] %></span></div>
     <% if (a.error) { %><p class="form-error" role="alert"><%= a.error %></p><% } %>
     <p id="au-error" class="form-error" role="alert" hidden></p>
     <noscript><p class="form-error">L'éditeur de scénario demande JavaScript.</p></noscript>

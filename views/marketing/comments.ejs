@@ -24,7 +24,8 @@
   const bulkSelect = (id) => `<label class="sr-only" for="${id}">Action groupée</label><select id="${id}" name="${id === "cm-bulk-action" ? "action" : "action2"}" form="cm-bulk" data-cms-bulk-select disabled><option value="">Actions groupées</option>${bulkKeys.map((k) => `<option value="${k}">${act[k]}</option>`).join("")}</select> <button type="submit" form="cm-bulk" class="btn btn-outline btn-sm" data-cms-bulk-apply disabled>Appliquer</button>`;
   const headRow = `<tr>${canModerate ? '<td class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner (cette page)"></td>' : ""}${sortTh("auteur", "Auteur/autrice")}<th scope="col">Commentaire</th>${sortTh("article", "En réponse à")}${sortTh("date", "Envoyé le")}</tr>`;
 %>
-    <div class="mk-head"><h1>Commentaires</h1>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Commentaires</h1></div>
       <% if (!(typeof mkRestricted !== "undefined" && mkRestricted)) { %><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/parametres/commentaires">Réglages</a></div><% } %></div>
     <% if (canEmail && canDelete && !(typeof mkRestricted !== "undefined" && mkRestricted)) { %><details class="mk-panel"><summary>Effacer les commentaires d'une personne (droit à l'effacement)</summary>
       <form action="/marketing/site-web/commentaires/effacer-invite" method="post">

@@ -9,8 +9,8 @@
   const stateLabel = lib.facets.statuses.find(([k]) => k === q.statut);
 %>
     <p class="mk-back"><a href="/marketing/automatisations">← Automatisations</a></p>
-    <div class="mk-head"><h1>Parcours tout prêts</h1></div>
-    <p class="mk-lead">Une bibliothèque de <strong><%= lib.counts.usable %> parcours</strong> complets — déclencheur, délais, conditions et messages déjà rédigés — reliés aux événements réels de KOLAKISA. « Utiliser ce parcours » le crée <strong>en brouillon</strong> : vous relisez les messages, ajustez si besoin, puis l'activez. Rien n'est envoyé avant.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Parcours tout prêts</h1><p class="mk-head-sub">Une bibliothèque de <strong><%= lib.counts.usable %> parcours</strong> complets — déclencheur, délais, conditions et messages déjà rédigés — reliés aux événements réels de KOLAKISA. « Utiliser ce parcours » le crée <strong>en brouillon</strong> : vous relisez les messages, ajustez si besoin, puis l'activez. Rien n'est envoyé avant.</p></div></div>
 
     <form class="mk-filterbar mk-lib-filters" method="get" action="<%= base %>" role="search" data-journey-filters>
       <% if (q.vue !== "tous") { %><input type="hidden" name="vue" value="<%= q.vue %>"><% } %>

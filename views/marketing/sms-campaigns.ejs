@@ -1,9 +1,9 @@
 <%- include("partials/top", { title, active }) %>
 <% const showCost = (mk.ctx.siteScope === undefined); /* R7 lot 6.1 : prix, coûts et réglages du fournisseur : équipe seulement */ %>
 <% const canWrite = mk.can("campaigns.write"); %>
-    <div class="mk-head"><h1>Campagnes SMS <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Campagnes SMS <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1><p class="mk-head-sub">Un SMS court, envoyé à vos abonnés SMS : idéal pour un rappel, une ouverture d'inscriptions ou une offre limitée. Chaque SMS est payant ; le coût est estimé avant tout envoi.</p></div>
       <% if (canWrite) { %><a class="btn btn-primary" href="#nouvelle"><%- icon("plus", { size: 16 }) %> Créer une campagne SMS</a><% } %></div>
-    <p class="mk-lead">Un SMS court, envoyé à vos abonnés SMS : idéal pour un rappel, une ouverture d'inscriptions ou une offre limitée. Chaque SMS est payant ; le coût est estimé avant tout envoi.</p>
 
     <div class="mk-stats">
       <div class="mk-stat"><span class="mk-stat-label">Abonnés SMS joignables</span><span class="mk-stat-value"><%= mkh.fmt(subscribers) %></span><span class="mk-stat-hint"><a href="/marketing/sms/abonnes">Voir les abonnés</a></span></div>

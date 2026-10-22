@@ -1,6 +1,6 @@
 <%- include("partials/top", { title, active }) %>
-    <div class="mk-head"><h1>Domaines</h1></div>
-    <p class="mk-lead">Le domaine de votre adresse d'expédition (ex. kolakisa.com dans news@kolakisa.com) doit être <strong>vérifié</strong> (il est à vous) puis <strong>authentifié</strong> (SPF, DKIM, DMARC) : sans cela, Gmail, Yahoo et Outlook classent vos e-mails en indésirables, ou les refusent.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Domaines</h1><p class="mk-head-sub">Le domaine de votre adresse d'expédition (ex. kolakisa.com dans news@kolakisa.com) doit être <strong>vérifié</strong> (il est à vous) puis <strong>authentifié</strong> (SPF, DKIM, DMARC) : sans cela, Gmail, Yahoo et Outlook classent vos e-mails en indésirables, ou les refusent.</p></div></div>
 
     <% if (sender) { %>
       <div class="mk-panel">

@@ -321,19 +321,19 @@ describe("page Accueil", () => {
   test("le texte périmé « envoi pas encore disponible » a disparu ; les blocs attendus sont là", async () => {
     const html = (await boss.get("/marketing")).text;
     assert.doesNotMatch(html, /pas encore disponible|jalon suivant/);
-    for (const marker of ["mk-stats", "mk-chart", "mk-readiness", "mk-activity"]) assert.ok(html.includes(marker), marker);
+    for (const marker of ["mk-kpis", "mk-chart", "mk-readiness", "mk-activity"]) assert.ok(html.includes(marker), marker);
     assert.match(html, /<h1>Accueil<\/h1>/);
     assert.match(html, /30 derniers jours/);
   });
   test("préparation à l'envoi : points à faire listés avec un lien vers le bon réglage", async () => {
     const html = (await boss.get("/marketing")).text;
-    assert.match(html, /Prêt pour un vrai envoi/);
+    assert.match(html, /Préparez vos envois/);
     assert.match(html, /href="\/marketing\/envoi"/);
     assert.match(html, /ne garantit/);
   });
   test("sans contact joignable ni campagne : guide de premiers pas avec actions", async () => {
     const html = (await boss.get("/marketing")).text;
-    assert.match(html, /Premiers pas/);
+    assert.match(html, /Créez votre premier envoi/);
     assert.match(html, /href="\/marketing\/importer"/);
     assert.match(html, /href="\/marketing\/contacts\/nouveau"/);
   });
@@ -342,7 +342,7 @@ describe("page Accueil", () => {
     run("INSERT INTO mk_contacts (organization_id, email, status) VALUES (1, 'ok@ex.fr', 'subscribed')");
     run("INSERT INTO mk_consents (organization_id, contact_id, action, source, text_shown) VALUES (1, (SELECT id FROM mk_contacts WHERE email = 'ok@ex.fr'), 'granted', 'form', 'Oui')");
     const html = (await boss.get("/marketing")).text;
-    assert.doesNotMatch(html, /Premiers pas/);
+    assert.doesNotMatch(html, /Créez votre premier envoi/);
     assert.doesNotMatch(html, /<script>alert\(9\)/);
     assert.match(html, /&lt;script&gt;alert\(9\)/);
     assert.match(html, /20 %/);
@@ -350,20 +350,20 @@ describe("page Accueil", () => {
   test("répartition des contacts par statut (aucune information perdue par rapport à l'ancien tableau de bord)", async () => {
     const html = (await boss.get("/marketing")).text;
     assert.match(html, /Répartition des contacts/);
-    for (const label of ["Abonnés", "Pas de consentement", "Désinscrits", "Bloqués"]) assert.match(html, new RegExp(`mk-status[^"]*">${label}</span> <strong>\\d+</strong>`), label);
+    for (const label of ["Abonnés", "Pas de consentement", "Désinscrits", "Bloqués"]) assert.match(html, new RegExp(`mk-status[^"]*">${label}</span>\\s*(?:</span>)?\\s*<strong>\\d+</strong>`), label);
   });
   test("le contact créé par l'interface est compté dans les nouveaux contacts", async () => {
-    const before = Number((await boss.get("/marketing")).text.match(/Nouveaux contacts<\/span><span class="mk-stat-value">(\d+)/)[1]);
+    const before = Number((await boss.get("/marketing")).text.match(/Nouveaux contacts<\/span><span class="mk-kpi-value">(\d+)/)[1]);
     await boss.post("/marketing/contacts", { email: "nouveau@ex.fr" });
-    const after = Number((await boss.get("/marketing")).text.match(/Nouveaux contacts<\/span><span class="mk-stat-value">(\d+)/)[1]);
+    const after = Number((await boss.get("/marketing")).text.match(/Nouveaux contacts<\/span><span class="mk-kpi-value">(\d+)/)[1]);
     assert.equal(after, before + 1);
   });
   test("lecteur : chiffres visibles, mais ni actions rapides ni préparation à l'envoi (réglages réservés aux administrateurs)", async () => {
     const viewer = await member("viewer");
     const html = (await viewer.get("/marketing")).text;
     assert.equal((await viewer.get("/marketing")).status, 200);
-    assert.match(html, /mk-stats/);
-    assert.doesNotMatch(html, /Prêt pour un vrai envoi/);
+    assert.match(html, /mk-kpis/);
+    assert.doesNotMatch(html, /Préparez vos envois/);
     assert.doesNotMatch(html, /href="\/marketing\/contacts\/nouveau"|href="\/marketing\/importer"|href="\/marketing\/envoi"/);
   });
   test("éditeur : actions rapides de création, sans les réglages d'envoi", async () => {

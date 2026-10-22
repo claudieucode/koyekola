@@ -3,8 +3,8 @@
   const ev = t.event;
   const label = mkh.eventLabel(ev.name);
 %>
-    <div class="mk-head"><h1>Diagnostic d'un événement</h1></div>
-    <p class="mk-lead"><a href="/marketing/evenements">← Tous les événements</a> · Ce qui s'est passé (ou se passerait) après cet événement. Lecture seule : rien n'est envoyé ni modifié ici.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Diagnostic d'un événement</h1><p class="mk-head-sub"><a href="/marketing/evenements">← Tous les événements</a> · Ce qui s'est passé (ou se passerait) après cet événement. Lecture seule : rien n'est envoyé ni modifié ici.</p></div></div>
 
     <section class="mk-panel">
       <h2><%= label || "Événement personnalisé" %> <code class="mk-sub"><%= ev.name %></code></h2>

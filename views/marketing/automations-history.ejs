@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/automatisations">← Automatisations</a></p>
-    <div class="mk-head"><h1>Historique des passages <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1></div>
-    <p class="mk-lead">Chaque ligne est un contact entré dans un scénario. Tout vient de la base : états, dates, erreurs. Un contact n'entre qu'une fois dans un même scénario.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Historique des passages <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1><p class="mk-head-sub">Chaque ligne est un contact entré dans un scénario. Tout vient de la base : états, dates, erreurs. Un contact n'entre qu'une fois dans un même scénario.</p></div></div>
     <form class="mk-filterbar" method="get" action="/marketing/automatisations/historique" role="search">
       <div class="field-group"><label for="h-scenario">Scénario</label>
         <select id="h-scenario" name="scenario"><option value="">Tous</option><% automations.forEach((a) => { %><option value="<%= a.id %>" <%= f.automation === a.id ? "selected" : "" %>><%= a.name %></option><% }) %></select></div>

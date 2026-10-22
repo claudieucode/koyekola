@@ -5,13 +5,13 @@
 <%
   const typeSearch = [["page", "Pages"], ["article", "Articles"], ["category", "Catégories"], ["tag", "Étiquettes"]];
 %>
-    <div class="mk-head"><h1><%= menu.name %></h1>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= menu.name %></h1><p class="mk-head-sub"><span class="mk-status <%= menu.status === "published" ? "mk-status-ok" : "mk-status-off" %>"><%= menu.status === "published" ? "Publié" : "Brouillon" %></span>
+      <%= count %> élément<%= count > 1 ? "s" : "" %><% if (broken) { %> · <strong class="mk-nav-warn"><%= broken %> lien<%= broken > 1 ? "s" : "" %> à réparer</strong><% } %>
+      · Emplacements : <%= Object.keys(assigned).filter((k) => assigned[k] === menu.id).map((k) => locations[k].label).join(", ") || "aucun" %></p></div>
       <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Tous les menus</a>
         <% if (canWrite) { %><form method="post" action="<%= BASE %>/menus/<%= menu.id %>/dupliquer" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form><% } %>
         <% if (canDelete) { %><form id="menu-del" method="post" action="<%= BASE %>/menus/<%= menu.id %>/supprimer" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm mk-btn-danger-outline" data-mk-confirm="Le menu « <%= menu.name %> » et ses <%= count %> élément<%= count > 1 ? "s" : "" %> seront supprimés<%= Object.keys(assigned).some((k) => assigned[k] === menu.id) ? " ; ses emplacements reviendront à l'affichage d'origine" : "" %>. Les pages, articles et catégories ne sont pas touchés." data-mk-confirm-title="Supprimer ce menu ?" data-mk-confirm-ok="Supprimer le menu">Supprimer</button></form><% } %></div></div>
-    <p class="mk-lead"><span class="mk-status <%= menu.status === "published" ? "mk-status-ok" : "mk-status-off" %>"><%= menu.status === "published" ? "Publié" : "Brouillon" %></span>
-      <%= count %> élément<%= count > 1 ? "s" : "" %><% if (broken) { %> · <strong class="mk-nav-warn"><%= broken %> lien<%= broken > 1 ? "s" : "" %> à réparer</strong><% } %>
-      · Emplacements : <%= Object.keys(assigned).filter((k) => assigned[k] === menu.id).map((k) => locations[k].label).join(", ") || "aucun" %></p>
 
     <div class="mk-nav-layout">
       <% if (canWrite) { %>

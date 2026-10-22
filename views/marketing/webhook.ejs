@@ -5,7 +5,8 @@
 %>
     <p class="mk-back"><a href="/marketing/webhooks">&larr; Tous les webhooks</a></p>
     <div class="mk-head">
-      <h1><%= endpoint.name %> <span class="mk-status <%= endpoint.enabled ? 'mk-status-ok' : '' %>"><%= endpoint.enabled ? "Actif" : "En pause" %></span></h1>
+      <div class="mk-head-main"><h1><%= endpoint.name %> <span class="mk-status <%= endpoint.enabled ? 'mk-status-ok' : '' %>"><%= endpoint.enabled ? "Actif" : "En pause" %></span></h1></div>
+      
       <div class="mk-actions">
         <% if (mk.can("webhooks.manage")) { %>
           <form action="/marketing/webhooks/<%= endpoint.id %>/tester" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Envoyer un test</button></form>

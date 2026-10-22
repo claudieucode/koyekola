@@ -89,7 +89,7 @@ describe("liste : pagination", () => {
     assert.match(p1, /1–50 sur 120/);
     const p3 = (await boss.get("/marketing/contacts?q=pg&page=3")).text;
     assert.equal(rowEmails(p3).length, 20);
-    assert.match(p3, /<span aria-current="page">3<\/span>/);
+    assert.match(p3, /id="pb-page"[^>]*value="3"/, "page courante : champ de page à 3"); assert.match(p3, /sur 3<\/span>/);
     assert.match(p3, /101–120 sur 120/);
   });
   test("taille de page 25 ou 100 ; taille invalide = 50", async () => {
@@ -135,8 +135,8 @@ describe("liste : filtres et états vides", () => {
     assert.match(html, /<label class="sr-only" for="f-q">/);
   });
   test("filtres secondaires repliables (mobile) : fermés sans filtre, ouverts quand un filtre est actif", async () => {
-    assert.match((await boss.get("/marketing/contacts")).text, /<details class="mk-filter-more" data-mk-desktop-open>\s*<summary>Plus de filtres<\/summary>/);
-    assert.match((await boss.get("/marketing/contacts?source=import")).text, /<details class="mk-filter-more" data-mk-desktop-open open>/);
+    assert.match((await boss.get("/marketing/contacts")).text, /<details class="mk-filter-more">\s*<summary[^>]*>[\s\S]*?Filtres avancés<\/summary>/);
+    assert.match((await boss.get("/marketing/contacts?source=import")).text, /<details class="mk-filter-more" open>/);
   });
   test("étiquettes affichées dans le tableau, échappées", async () => {
     const id = idOf("zed@ex.fr");
