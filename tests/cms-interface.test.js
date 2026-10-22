@@ -22,7 +22,7 @@ describe("registre et menu", () => {
   test("le registre couvre la structure cible (15 rubriques) sans adresse en double", () => {
     assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Navigation", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
-    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Thèmes", "Éditeur du site", "Templates", "Patterns", "Styles", "En-tête", "Pied de page", "Menus"]);
+    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Thèmes", "Éditeur du site", "Templates", "Patterns", "Styles", "En-tête", "Pied de page", "Widgets", "Menus"]);
   });
 
   test("chaque écran du registre répond 200 dans la coque CMS, avec son menu ouvert sur la bonne entrée", async () => {

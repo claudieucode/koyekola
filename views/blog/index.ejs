@@ -2,7 +2,9 @@
 <% const withQ = (url) => (q ? url + (url.includes("?") ? "&" : "?") + "q=" + encodeURIComponent(q) : url); %>
 <% const pageUrl = (n) => withQ(n === 1 ? basePath : basePath + "?page=" + n); %>
 <% const activeCat = filter && filter.type === "category" ? filter.name.toLowerCase() : null; %>
-  <div class="container-wide page-content blog-hub">
+  <% const wSide = typeof widgetZone === "function" ? widgetZone("sidebar") : ""; %>
+  <% const hubClass = "container-wide page-content blog-hub" + (wSide ? " has-widget-sidebar" : ""); %>
+  <div class="<%= hubClass %>">
     <%- include("../partials/breadcrumb", { crumbs }) %>
 
     <header class="blog-hub-head">
@@ -145,6 +147,7 @@
       </div>
     <% } %>
     <% } %>
+    <%- wSide %>
   </div>
 
 <%- include("../partials/footer") %>

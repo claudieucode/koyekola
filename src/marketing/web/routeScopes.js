@@ -137,6 +137,7 @@ const SITE_RULES = Object.freeze([
   { id: "articles-et-commentaires-du-site", pattern: /^\/site-web\/(?:articles|commentaires)(?:\/|$)/, kind: "param", terminal: true },
   // Apparence → Thèmes : thèmes installés et thème actif PAR SITE ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
   { id: "themes-du-site", pattern: /^\/site-web\/themes(?:\/|$)/, kind: "param", terminal: true },
+  { id: "widgets-du-site", pattern: /^\/site-web\/widgets(?:\/|$)/, kind: "param", terminal: true },
   { id: "mediatheque-du-site", pattern: /^\/site-web\/(?:mediatheque|medias)(?:\/|\.json$|$)/, kind: "queryGet", terminal: true },
 ]);
 
@@ -158,6 +159,7 @@ const FAMILIES = Object.freeze([
   { id: "navigation-du-site", scope: "site", pattern: /^\/site-web\/(?:navigation|apparence\/menus)(?:\/|$)/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "themes-par-site", scope: "site", pattern: /^\/site-web\/themes(?:\/|$)/ },
+  { id: "widgets-par-site", scope: "site", pattern: /^\/site-web\/widgets(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —

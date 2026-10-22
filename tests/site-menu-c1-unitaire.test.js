@@ -45,8 +45,8 @@ describe("C1 — une seule définition, deux présentations", () => {
       // seule différence : dans son espace, le principal a le même « Tableau de bord » que les autres sites ; « Mes sites » n'est pas une entrée d'espace
       if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
     assert.ok(!items.some((i) => i.key === "sites"), "pas de « Mes sites » dans le menu du principal")
-    assert.equal(nav.ALL.length, 69); // THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
-    assert.equal(items.length, 68 + 1 + 10); // THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(nav.ALL.length, 70); // WIDGETS : + « Widgets » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
+    assert.equal(items.length, 69 + 1 + 10); // WIDGETS : + « Widgets » ; THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("les quatre fonctions centrales (Extensions, Sauvegardes, Informations système, Journal) n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);
@@ -72,7 +72,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("exactement les écrans dont l'isolation est démontrée sont ouverts ; tout le reste est grisé", () => {
     const items = nav.projectSections(site).flatMap((g) => g.items).filter((i) => registryKeys.includes(i.key));
     const live = items.filter((i) => !i.disabled).map((i) => i.key).sort();
-    assert.deepEqual(live, ["apparence", "apparence/en-tete", "apparence/menus", "apparence/pied-de-page", "apparence/themes", "articles", "articles/ajouter", "articles/auteurs", "articles/brouillons", "articles/categories", "articles/corbeille", "articles/etiquettes", "articles/programmes", "articles/publies", "commentaires", "commentaires/approuves", "commentaires/corbeille", "commentaires/en-attente", "commentaires/indesirables", "landing", "mediatheque", "mediatheque/ajouter", "navigation", "outils", "pagetests", "parametres", "redirections", "seo", "seo/404", "sitedash", "utilisateurs"].sort()); // R8 lot 6C : + SEO du site et erreurs 404 ; R8 lot 2 : + médias, articles, commentaires (isolation R5/R6)
+    assert.deepEqual(live, ["apparence", "apparence/en-tete", "apparence/menus", "apparence/pied-de-page", "apparence/themes", "apparence/widgets", "articles", "articles/ajouter", "articles/auteurs", "articles/brouillons", "articles/categories", "articles/corbeille", "articles/etiquettes", "articles/programmes", "articles/publies", "commentaires", "commentaires/approuves", "commentaires/corbeille", "commentaires/en-attente", "commentaires/indesirables", "landing", "mediatheque", "mediatheque/ajouter", "navigation", "outils", "pagetests", "parametres", "redirections", "seo", "seo/404", "sitedash", "utilisateurs"].sort()); // R8 lot 6C : + SEO du site et erreurs 404 ; R8 lot 2 : + médias, articles, commentaires (isolation R5/R6)
     for (const i of items.filter((x) => x.disabled)) { assert.equal(i.href, null, i.key); assert.equal(i.status, "preview", i.key); assert.ok(i.phase, `${i.key} : lot annoncé`); }
     for (const k of ["corbeille", "seo/meta", "apparence/templates", "utilisateurs/roles", "outils/importer", "parametres/lecture"]) assert.equal(items.find((i) => i.key === k).disabled, true, k);
   });
@@ -82,7 +82,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("aucun aplatissement : Utilisateurs, Outils et Paramètres gardent leur titre de groupe et toutes leurs sous-entrées, même grisées", () => {
     const r = nav.buildSiteNav({ can: all, active: "landing", space: site });
     const g = Object.fromEntries(r.sections.map((s) => [s.key, s]));
-    for (const [k, n] of [["utilisateurs", 5], ["outils", 8], ["parametres", 11], ["apparence", 8], ["articles", 9], ["commentaires", 5], ["seo", 9], ["redirections", 3]]) {
+    for (const [k, n] of [["utilisateurs", 5], ["outils", 8], ["parametres", 11], ["apparence", 9], ["articles", 9], ["commentaires", 5], ["seo", 9], ["redirections", 3]]) {
       assert.equal(g[k].flat, false, `${k} ne doit pas être aplati`); assert.equal(g[k].items.length, n, k);
       assert.equal(g[k].label, nav.SECTIONS.find((s) => s.key === k).label, k);
     }

@@ -50,6 +50,7 @@ const SECTIONS = [
       leaf("apparence/styles", "Styles", `${BASE}/apparence/styles`, { permission: "appearance.read" }),
       leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`, { permission: "appearance.read" }),
       leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`, { permission: "appearance.read" }),
+      leaf("apparence/widgets", "Widgets", `${BASE}/widgets`, { permission: "appearance.read" }),
       leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { permission: "navigation.read" }),
     ],
   },
@@ -181,6 +182,8 @@ const SITE_MODULES = {
   // R8 lot 4 : Navigation / Menus par site (menus et emplacements PROPRES au site ; ressources limitées à celles du site)
   // Apparence → Thèmes : écran partagé /site-web/themes ouvert dans le cadre du site (thèmes installés et thème actif de CE site)
   themes: { label: "Thèmes", kind: "delegate", to: "/site-web/themes", reg: "themes", permission: "appearance.read", legacy: `${BASE}/themes` },
+  // Apparence → Widgets : écran partagé /site-web/widgets ouvert dans le cadre du site (zones, blocs et widgets désactivés de CE site)
+  widgets: { label: "Widgets", kind: "delegate", to: "/site-web/widgets", reg: "widgets", permission: "appearance.read", legacy: `${BASE}/widgets` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
@@ -265,6 +268,7 @@ const ABILITY = {
   navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
+  "apparence/widgets": { mode: "open", module: "widgets" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
