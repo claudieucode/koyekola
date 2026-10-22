@@ -52,6 +52,10 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "cms_themes": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_tool_runs": {
    "siteId": true,
    "classe": "isolee"

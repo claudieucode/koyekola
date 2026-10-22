@@ -211,7 +211,7 @@ function remove(ctx, siteId, key) {
   // Un thème inactif peut servir de « thème précédent » à l'actif : ce lien est retiré (le retour utilisera l'apparence d'origine mémorisée)
   transaction(db, () => {
     db.prepare(`UPDATE cms_themes SET previous_key = '' WHERE ${sameScope("site_id")} AND previous_key = ?`).run(scope(siteId), r.theme_key);
-    db.prepare("DELETE FROM cms_themes WHERE id = ? AND COALESCE(site_id, 0) = COALESCE(?, 0)").run(r.id, scope(siteId));
+    db.prepare(`DELETE FROM cms_themes WHERE id = ? AND ${sameScope("site_id")}`).run(r.id, scope(siteId));
   });
   audit(ctx, siteId, "theme.removed", r.theme_key, { version: r.version });
   return { key: r.theme_key, name: r.name };
