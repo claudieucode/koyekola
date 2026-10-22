@@ -1,5 +1,10 @@
 <%# Menu latéral de KOLAKISA CMS : mêmes classes et même comportement (sections dépliables, menu réduit, tiroir mobile) que le menu Marketing. « Bientôt » = interface prête, fonction d'un prochain palier. %>
-<% cms.sections.forEach((section) => { %>
+<%
+  // Groupes du menu : repères visuels seulement. L'ordre, les routes et les permissions des rubriques viennent du registre (cmsNav.js) et ne changent pas.
+  const GROUP_OF = { pages: "Contenu", articles: "Contenu", mediatheque: "Contenu", commentaires: "Contenu", apparence: "Design", extensions: "Design", utilisateurs: "Équipe et audience", seo: "Équipe et audience", redirections: "Équipe et audience", tests: "Équipe et audience", marketing: "Équipe et audience", navigation: "Équipe et audience", outils: "Système", parametres: "Système" };
+  let lastGroup = null;
+%>
+<% cms.sections.forEach((section) => { const group = GROUP_OF[section.key] || lastGroup; if (group && group !== lastGroup) { %><div class="mk-nav-heading" aria-hidden="true"><%= group %></div><% } lastGroup = group; %>
   <% if (section.flat) { const item = section.items[0]; %>
     <% if (item.disabled) { %>
     <span class="mk-nav-link is-soon" aria-disabled="true" title="<%= item.label %> (bientôt)"<%- item.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= item.label %></span><span class="mk-cms-tag mk-nav-label">Bientôt</span></span>

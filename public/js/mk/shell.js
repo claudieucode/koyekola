@@ -78,7 +78,7 @@
   dropdowns.forEach(function (d) {
     var btn = d.querySelector("[aria-haspopup]"), menu = d.querySelector("[role=menu]");
     if (!btn || !menu) return;
-    function items() { return $$("[role=menuitem]", menu); }
+    function items() { return $$("[role=menuitem], [role=menuitemradio]", menu); }
     btn.addEventListener("click", function () {
       var open = menu.hidden;
       dropdowns.forEach(function (o) { if (o !== d) closeDropdown(o, false); });
@@ -383,4 +383,30 @@
     rows.forEach(function (r) { r.addEventListener("change", refresh); });
     refresh();
   });
+  // ---------- Thème de l'interface : Clair · Sombre · Automatique ----------
+  // L'attribut data-kola-theme (clair/sombre) est posé dans <head> avant le premier affichage ; ici : bascule, mémorisation (kolaTheme), suivi du système.
+  var DARK_MQ = window.matchMedia("(prefers-color-scheme: dark)");
+  var themeCycle = document.querySelector("[data-kola-theme-cycle]");
+  var themeChoices = $$("[data-kola-theme-set]");
+  var THEME_NAME = { light: "clair", dark: "sombre", auto: "automatique" };
+  function currentPref() { var p = root.getAttribute("data-kola-pref"); return p === "light" || p === "dark" ? p : "auto"; }
+  function applyTheme(pref, remember) {
+    var dark = pref === "dark" || (pref === "auto" && DARK_MQ.matches);
+    // pas de fondu entre les deux thèmes : toutes les surfaces changent ensemble, sans clignotement
+    root.setAttribute("data-kola-switching", "");
+    root.setAttribute("data-kola-pref", pref);
+    root.setAttribute("data-kola-theme", dark ? "dark" : "light");
+    if (remember) store("kolaTheme", pref);
+    var meta = document.querySelector("meta[name=theme-color]"); if (meta) meta.setAttribute("content", dark ? "#0d1524" : "#ffffff");
+    themeChoices.forEach(function (b) { b.setAttribute("aria-checked", b.getAttribute("data-kola-theme-set") === pref ? "true" : "false"); });
+    if (themeCycle) { var label = "Thème de l'interface : " + THEME_NAME[pref] + " (cliquer pour changer)"; themeCycle.setAttribute("aria-label", label); themeCycle.setAttribute("title", label); }
+    window.requestAnimationFrame(function () { window.requestAnimationFrame(function () { root.removeAttribute("data-kola-switching"); }); });
+  }
+  applyTheme(currentPref(), false);
+  if (themeCycle) themeCycle.addEventListener("click", function () {
+    // le bouton alterne clair ↔ sombre selon l'affichage actuel ; « Automatique » se choisit dans le menu du compte
+    applyTheme(root.getAttribute("data-kola-theme") === "dark" ? "light" : "dark", true);
+  });
+  themeChoices.forEach(function (b) { b.addEventListener("click", function () { applyTheme(b.getAttribute("data-kola-theme-set"), true); }); });
+  DARK_MQ.addEventListener("change", function () { if (currentPref() === "auto") applyTheme("auto", false); });
 })();
