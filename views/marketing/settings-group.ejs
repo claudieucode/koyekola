@@ -1,7 +1,7 @@
 <%#
   KOLAKISA CMS → Paramètres (palier 14) : un groupe de réglages du site principal ou d'un site. Chaque champ est lu et enregistré par le moteur de
   réglages (validation côté serveur, droits par réglage, confirmation des réglages sensibles). « Enregistré » n'apparaît qu'après la réponse du serveur.
-%><%- include("partials/top", { title, active }) %>
+%><%- include("partials/top", { title, active, layout: "form" }) %>
 <%- include("partials/settings-head", { heading: groupLabel, intro, groups, BASE, q, scope, sites, siteOnly, tabKey: group, tabPath: group === "general" ? "" : "/" + SLUG_OF[group] }) %>
 <% const anyEditable = view.some((f) => f.editable); const errs = errors || []; %>
 <% if (errs.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>Rien n'a été enregistré :</p><ul><% errs.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
