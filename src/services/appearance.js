@@ -76,10 +76,10 @@ function normalizeFooter(input = {}, base = DEFAULT_FOOTER) {
   };
 }
 // Configuration complète et valide ; strict : refuser les valeurs invalides au lieu de les remplacer
-function normalizeConfig(input = {}, { strict = true } = {}) {
+function normalizeConfig(input = {}, { strict = true, siteId } = {}) {
   const s = input && typeof input === "object" ? input : {};
   return {
-    tokens: tokensLib.normalizeTokens(s.tokens || {}, { strict }),
+    tokens: tokensLib.normalizeTokens(s.tokens || {}, { strict, fontScope: siteId === undefined ? undefined : { siteId } }),
     header: normalizeHeader(s.header || {}),
     footer: normalizeFooter(s.footer || {}),
   };
@@ -114,12 +114,12 @@ function saveDraft(siteId, section, data, userId = null, { baseRev } = {}) {
   assertFresh(st, baseRev);
   const next = { ...st.draft };
   if (section === "tokens") {
-    next.tokens = tokensLib.normalizeTokens(mergeTokens(st.draft.tokens, data), { strict: true });
+    next.tokens = tokensLib.normalizeTokens(mergeTokens(st.draft.tokens, data), { strict: true, fontScope: { siteId } });
     assertAccepted(data, next.tokens, []);
   }
   else if (section === "header") next.header = normalizeHeader(data, st.draft.header);
   else next.footer = normalizeFooter(data, st.draft.footer);
-  const normalized = normalizeConfig(next);
+  const normalized = normalizeConfig(next, { siteId });
   writeDraft(siteId, normalized, userId);
   if (siteId === null) require("./revisions").hooks.appearanceDraft(normalized, userId);
   return state(siteId);
@@ -159,7 +159,7 @@ function publish(siteId, userId = null, note = "", { baseRev } = {}) {
   const st = state(siteId);
   assertFresh(st, baseRev);
   if (!st.hasDraft) throw new UserError("Rien à publier : le brouillon est identique à la version en ligne.");
-  const cfg = normalizeConfig(st.draft);
+  const cfg = normalizeConfig(st.draft, { siteId });
   const css = buildCss(cfg);
   transaction(db, () => {
     db.prepare(`INSERT INTO appearance_configs (site_id, published, published_css, revision, published_by, published_at, draft, draft_by, draft_at)
@@ -252,6 +252,7 @@ function buildCss(cfg) {
   const decl = root.length ? `:root{${root.join(";")}}` : "";
   const hasAny = decl || rules.length;
   // Polices de la bibliothèque choisies pour le site : leurs règles @font-face sont livrées avec la feuille
+  // (les polices TÉLÉVERSÉES ne sont pas figées ici : leurs règles sont ajoutées à chaque rendu par parts(), pour suivre les variantes ajoutées ou retirées)
   const faces = hasAny ? require("../utils/fontLibrary").faceCssFor(`${decl}:root{${kw}}`) : "";
   return hasAny ? `${faces}${decl}:root{${kw}}${rules.join("")}` : "";
 }
@@ -280,7 +281,7 @@ function parts({ preview = false } = {}) {
   const cfg = base.cfg;
   const hl = logoPath(cfg.header.logo.mediaId), fb = cfg.footer.brand.mode === "header" ? cfg.header.logo : cfg.footer.brand, fl = logoPath(fb.mediaId);
   return {
-    preview, css: String(base.css || "").replace(/[<>]/g, ""),
+    preview, css: [require("../utils/fontLibrary").customFaceCssFor(base.css, null), String(base.css || "")].filter(Boolean).join("\n").replace(/[<>]/g, ""),
     header: { ...cfg.header, logoImage: cfg.header.logo.mode === "image" ? hl : null },
     footer: { ...cfg.footer, brandResolved: { mode: fb.mode === "image" && fl ? "image" : "text", text: fb.text, alt: fb.alt, image: fb.mode === "image" ? fl : null }, copyrightText: cfg.footer.copyright.replace(/\{ann[ée]e\}/gi, year()) },
   };

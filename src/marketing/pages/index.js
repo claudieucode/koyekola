@@ -494,7 +494,7 @@ function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {})
   if (!newName) throw bad("Le nom du site est obligatoire.");
   const dup = ctx.db.prepare("SELECT id FROM mk_sites WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, newName);
   if (dup && dup.id !== site.id) throw new MarketingError("duplicate", "Un site porte déjà ce nom.");
-  const newTokens = tokens === undefined ? site.tokens : normalizeTokens(tokens, { strict: true });
+  const newTokens = tokens === undefined ? site.tokens : normalizeTokens(tokens, { strict: true, fontScope: { siteId: site.id } });
   const newSlug = slug === undefined ? site.slug : cleanSiteSlug(ctx, slug, { exceptId: site.id });
   const newDesc = description === undefined ? site.description : line(description, 500);
   const newType = siteType === undefined ? site.site_type : cleanSiteType(siteType);
@@ -527,7 +527,7 @@ function saveSiteDesign(ctx, id, { tokens, settings, name, revision } = {}) {
   if (revision !== site.settings_revision) {
     throw new MarketingError("conflict", "Les réglages de ce site ont été modifiés ailleurs (autre onglet ou autre personne) : rechargez-les avant d'enregistrer, vos modifications n'ont pas été enregistrées.");
   }
-  const nextTokens = tokens === undefined ? site.tokens : normalizeTokens(tokens, { strict: true });
+  const nextTokens = tokens === undefined ? site.tokens : normalizeTokens(tokens, { strict: true, fontScope: { siteId: site.id } });
   const nextSettings = settings === undefined ? site.settings : siteSettingsLib.normalizeSettings(settings, { strict: true });
   const nextName = name === undefined ? site.name : line(name, 100);
   if (!nextName) throw bad("Le nom du site est obligatoire.");

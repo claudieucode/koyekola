@@ -1,0 +1,93 @@
+<%#
+  KOLAKISA CMS → Apparence → Polices → fiche d'une police du site : aperçu modifiable, variantes, métadonnées, usages, actions protégées (une police utilisée n'est jamais supprimée ni désactivée).
+%><%- include("partials/top", { title, active }) %>
+<%
+  const WN = { 100: "Thin", 200: "Extra-light", 300: "Light", 400: "Regular", 500: "Medium", 600: "Semi-bold", 700: "Bold", 800: "Extra-bold", 900: "Black" };
+  const catLabel = (k) => (categories.find((c) => c[0] === k) || [k, k])[1];
+  const isUp = font.source === "upload";
+  const dateOf = (s) => String(s || "").slice(0, 10).split("-").reverse().join("/");
+  const sizeOf = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko");
+%>
+<div class="pf" data-pf-root>
+  <header class="pf-crumb"><a href="<%= to("") %>"><%- icon("arrowLeft", { size: 16 }) %> Retour à la bibliothèque</a></header>
+  <% if (!isUp && !font.missing) { %><link rel="stylesheet" href="/polices.css?f=<%= font.key %>"><% } %>
+  <% if (isUp) { %><link rel="stylesheet" href="<%= to("/mes-polices.css") %>"><% } %>
+  <section class="pf-hero">
+    <div class="pf-hero-text">
+      <p class="pf-kicker"><%= isUp ? "Police téléversée" : "Google Fonts" %> · <%= catLabel(font.category) %><%= font.variable ? " · police variable" : "" %></p>
+      <h1 style="font-family:<%= font.stack %>"><%= font.family %></h1>
+      <p>
+        <% if (font.status === "disabled") { %><span class="pf-badge pf-badge--off">Désactivée</span><% } else { %><span class="pf-badge pf-badge--ok"><%- icon("check", { size: 12 }) %> Active</span><% } %>
+        <% if (font.used) { %><span class="pf-badge pf-badge--used">Utilisée par le site</span><% } %>
+      </p>
+    </div>
+    <label class="pf-sample-edit" for="pf-sample">Texte de démonstration
+      <input id="pf-sample" type="text" maxlength="160" value="<%= sample %>" placeholder="Portez ce vieux whisky au juge blond qui fume" data-pf-sample-input></label>
+  </section>
+
+  <section class="pf-block" aria-labelledby="pf-var-t">
+    <h2 id="pf-var-t">Variantes <span class="pf-muted">(<%= font.variants.length %>)</span></h2>
+    <ul class="pf-variants pf-variants--plain">
+      <% font.variants.forEach((v) => { %>
+        <li class="pf-variant">
+          <div class="pf-variant-row">
+            <span class="pf-variant-label"><strong><%= WN[v.weight] || v.weight %><%= v.weightMax ? " – " + (WN[v.weightMax] || v.weightMax) : "" %></strong> <span class="pf-muted"><%= v.weight %><%= v.weightMax ? "–" + v.weightMax : "" %><%= v.style === "italic" ? " · italique" : "" %> · <%= String(v.format).toUpperCase() %><%= v.size ? " · " + sizeOf(v.size) : "" %></span></span>
+            <% if (isUp && canManage && !readOnly) { %>
+              <form method="post" action="<%= BASE %>/<%= font.id %>/variantes/<%= v.fileId %>/supprimer" data-pf-form><%- siteField %><button class="btn btn-ghost btn-sm" type="submit" data-confirm="Supprimer cette variante ? Le fichier sera effacé.">Supprimer</button></form>
+            <% } %>
+          </div>
+          <span class="pf-variant-sample" data-pf-sample style="font-family:<%= font.stack %>;font-weight:<%= v.weight %>;font-style:<%= v.style %>">Portez ce vieux whisky au juge blond qui fume</span>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+
+  <div class="pf-two">
+    <section class="pf-block" aria-labelledby="pf-meta-t">
+      <h2 id="pf-meta-t">Informations</h2>
+      <dl class="pf-dl">
+        <div><dt>Famille</dt><dd><%= font.family %></dd></div>
+        <div><dt>Origine</dt><dd><%= isUp ? "Fichiers importés sur ce site" : "Catalogue Google Fonts, copié sur ce site" %></dd></div>
+        <div><dt>Catégorie (repli)</dt><dd><%= catLabel(font.category) %></dd></div>
+        <div><dt>Format</dt><dd><%= [...new Set(font.variants.map((v) => String(v.format).toUpperCase()))].join(", ") %></dd></div>
+        <% if (font.bytes) { %><div><dt>Poids total</dt><dd><%= sizeOf(font.bytes) %></dd></div><% } %>
+        <% if (font.license) { %><div><dt>Licence</dt><dd><%= font.license %></dd></div><% } %>
+        <div><dt>Ajoutée le</dt><dd><%= dateOf(font.installedAt) %></dd></div>
+        <div><dt>Identifiant</dt><dd><code><%= font.key %></code></dd></div>
+      </dl>
+      <% if (isUp && canInstall && !readOnly) { %>
+        <form class="pf-inline" method="post" action="<%= BASE %>/<%= font.id %>/categorie" data-pf-form><%- siteField %>
+          <label for="pf-cat">Catégorie de repli</label>
+          <select id="pf-cat" name="categorie"><% categories.forEach((c) => { %><option value="<%= c[0] %>"<%= font.category === c[0] ? " selected" : "" %>><%= c[1] %></option><% }) %></select>
+          <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button>
+        </form>
+      <% } %>
+    </section>
+
+    <section class="pf-block" aria-labelledby="pf-use-t">
+      <h2 id="pf-use-t">Utilisation par le site</h2>
+      <% if (font.usage.length) { %>
+        <p class="pf-muted">Cette police est utilisée ici : elle ne peut être ni supprimée ni désactivée tant que ces éléments l'utilisent.</p>
+        <ul class="pf-usage"><% font.usage.forEach((u) => { %><li><% if (u.href) { %><a href="<%= u.href %>"><%= u.label %></a><% } else { %><%= u.label %><% } %></li><% }) %></ul>
+      <% } else { %>
+        <p class="pf-muted">Aucun réglage ni aucune page de ce site n'utilise cette police pour le moment. Choisissez-la dans <a href="/marketing/site-web/apparence<%= T.siteId ? "?site=" + T.siteId : "" %>">les réglages typographiques du site</a> (titres, texte, boutons, liens).</p>
+      <% } %>
+    </section>
+  </div>
+
+  <% if (canManage && !readOnly) { %>
+  <section class="pf-block pf-danger" aria-labelledby="pf-act-t">
+    <h2 id="pf-act-t">Actions</h2>
+    <div class="pf-act-row">
+      <% if (font.status === "active") { %>
+        <form method="post" action="<%= BASE %>/<%= font.id %>/desactiver" data-pf-form><%- siteField %><button class="btn btn-outline" type="submit" data-confirm="Désactiver « <%= font.family %> » ? Elle ne sera plus proposée ni servie.">Désactiver</button></form>
+      <% } else { %>
+        <form method="post" action="<%= BASE %>/<%= font.id %>/activer" data-pf-form><%- siteField %><button class="btn btn-outline" type="submit">Réactiver</button></form>
+      <% } %>
+      <form method="post" action="<%= BASE %>/<%= font.id %>/supprimer" data-pf-form><%- siteField %><button class="btn btn-danger" type="submit" data-confirm="Supprimer « <%= font.family %> » de ce site ?<%= isUp ? " Ses fichiers seront effacés." : "" %>">Supprimer de ce site</button></form>
+    </div>
+    <p class="pf-muted"><%= isUp ? "Supprimer efface définitivement les fichiers importés de ce site." : "Supprimer retire la famille de la bibliothèque de ce site ; elle reste disponible dans le catalogue." %></p>
+  </section>
+  <% } %>
+</div>
+<%- include("partials/bottom") %>

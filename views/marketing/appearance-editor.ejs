@@ -240,5 +240,5 @@
     <% } else { %><ul class="mk-cms-list"><% components.forEach((c) => { %><li><span><strong><%= c.name %></strong> · <%= c.global ? "tous les sites" : "un site" %> · utilisé dans <%= c.uses %> page<%= c.uses > 1 ? "s" : "" %></span></li><% }) %></ul><% } %>
 <% } %>
 <script src="<%= asset('/js/font-manager.js') %>"></script>
-<script>(function () { ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police" }); }); })();</script>
+<script>(function () { ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police", site: true }); }); })();</script>
 <%- include("partials/bottom") %>

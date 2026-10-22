@@ -16,6 +16,25 @@
   function store(key, fallback) { try { var v = JSON.parse(localStorage.getItem("kfonts:" + key)); return v == null ? fallback : v; } catch (e) { return fallback; } }
   function save(key, v) { try { localStorage.setItem("kfonts:" + key, JSON.stringify(v)); } catch (e) { /* stockage indisponible : sans effet */ } }
 
+  // Polices TÉLÉVERSÉES par le site (Apparence → Polices) : proposées seulement aux sélecteurs des réglages typographiques du site (option site: true). Le site vient de
+  // la page (balise mk-media-site, ou attribut data-kfonts-site) et est revérifié par le serveur ; les règles @font-face d'aperçu viennent d'une feuille réservée à ce site.
+  var siteFonts = null, siteLoading = null;
+  function siteQuery() {
+    var m = document.querySelector('meta[name="mk-media-site"]'), v = m ? m.getAttribute("content") : document.documentElement.getAttribute("data-kfonts-site");
+    return /^\d{1,12}$/.test(v || "") ? "?site=" + v : "";
+  }
+  function loadSite() {
+    if (siteFonts) return Promise.resolve(siteFonts);
+    if (!siteLoading) siteLoading = fetch("/marketing/site-web/polices/mes-polices.json" + siteQuery(), { credentials: "same-origin" })
+      .then(function (r) { if (!r.ok) throw new Error("site"); return r.json(); })
+      .then(function (d) {
+        siteFonts = (d.families || []).map(function (f) { f.popularity = 0; f.n = norm(f.family); f.categories = ["upload"]; f.cn = ["upload", "televersee"]; f.italicWeights = null; byId[f.id] = f; return f; });
+        if (siteFonts.length) { var link = document.createElement("link"); link.rel = "stylesheet"; link.href = "/marketing/site-web/polices/mes-polices.css" + siteQuery(); document.head.appendChild(link); }
+        return siteFonts;
+      })
+      .catch(function () { siteFonts = []; return siteFonts; });
+    return siteLoading;
+  }
   function load() {
     if (manifest) return Promise.resolve(manifest);
     if (!loading) loading = fetch("/polices/manifeste.json", { credentials: "same-origin" }).then(function (r) { if (!r.ok) throw new Error("manifeste"); return r.json(); }).then(function (m) {
@@ -29,6 +48,7 @@
   var previewLoaded = {}, previewLinks = [];
   function ensure(ids, preview) {
     var table = preview ? previewLoaded : loaded;
+    ids = ids.filter(function (id) { return !/^font\.u\d/.test(id); }); // polices téléversées : feuille propre au site (loadSite)
     ids.forEach(function (id) { if (!table[id] && queue.indexOf(id) < 0 && !(preview && loaded[id])) queue.push(preview ? "~" + id : id); });
     if (flushTimer || !queue.length) return;
     flushTimer = setTimeout(function () {
@@ -79,11 +99,13 @@
     function paint() {
       // Le nom d'une famille de la bibliothèque n'est connu qu'une fois le manifeste chargé
       if (/^font\./.test(value) && !manifest) load().then(function () { paint(); }).catch(function () {});
+      if (/^font\.u\d/.test(value) && opts.site && !siteFonts) loadSite().then(function () { paint(); });
       name.textContent = labelOf(value);
       var f = byId[value];
       if (f) { ensure([f.id]); name.style.fontFamily = f.stack; } else name.style.fontFamily = "";
     }
     // L'étiquette d'une famille de la bibliothèque est connue après le chargement du manifeste
+    if (opts.site) loadSite();
     paint();
     // Comme un champ de formulaire : .value (lecture / écriture) et événement « change » à chaque choix
     Object.defineProperty(btn, "value", { get: function () { return value; }, set: function (v) { value = v == null ? "" : String(v); paint(); } });
@@ -171,7 +193,8 @@
       function legacyItems() { var st = typeof opts.legacyStacks === "function" ? opts.legacyStacks() : opts.legacyStacks; return legacy.map(function (l) { return { value: l[0], label: l[1], stack: st && st[l[0]] }; }); }
       function compute() {
         var q = norm(query).trim(), catWord = SYN[q] || null;
-        var libs = (manifest ? manifest.families : []).filter(function (f) {
+        var pool = (opts.site && siteFonts ? siteFonts : []).concat(manifest ? manifest.families : []);
+        var libs = pool.filter(function (f) {
           if (cat === "fav" && favs.indexOf(f.id) < 0) return false;
           if (cat === "recent" && recent.indexOf(f.id) < 0) return false;
           if (cat !== "all" && cat !== "popular" && cat !== "fav" && cat !== "recent" && f.categories.indexOf(cat) < 0) return false;
@@ -228,7 +251,7 @@
         windowRows(false);
         var next = body.querySelector('[data-index="' + target + '"]'); if (next) next.focus({ preventScroll: true });
       });
-      CATS.forEach(function (c) {
+      (opts.site && siteFonts && siteFonts.length ? [CATS[0], ["upload", "Téléversées"]].concat(CATS.slice(1)) : CATS).forEach(function (c) {
         var b = el("button", { type: "button", class: "kf-chip" + (c[0] === cat ? " is-on" : ""), "aria-pressed": String(c[0] === cat), text: c[1] });
         b.addEventListener("click", function () { cat = c[0]; [].forEach.call(chips.children, function (x) { var on = x === b; x.classList.toggle("is-on", on); x.setAttribute("aria-pressed", String(on)); }); render(); });
         chips.appendChild(b);
@@ -251,11 +274,11 @@
     opts = opts || {};
     var legacy = [].filter.call(sel.options, function (o) { return !/^font\./.test(o.value); }).map(function (o) { return [o.value, o.textContent]; });
     var hidden = document.createElement("input"); hidden.type = "hidden"; hidden.name = sel.name; hidden.value = sel.value;
-    var p = picker({ value: sel.value, legacy: legacy, disabled: sel.disabled, mode: opts.mode || "web", label: opts.label || (sel.labels && sel.labels[0] ? sel.labels[0].textContent : "Police"), onChange: function (v) { hidden.value = v; } });
+    var p = picker({ value: sel.value, legacy: legacy, disabled: sel.disabled, mode: opts.mode || "web", site: Boolean(opts.site), label: opts.label || (sel.labels && sel.labels[0] ? sel.labels[0].textContent : "Police"), onChange: function (v) { hidden.value = v; } });
     p.id = sel.id; p.setAttribute("data-kf-done", "1");
     sel.parentNode.insertBefore(hidden, sel); sel.parentNode.replaceChild(p, sel);
     return p;
   }
-  window.KFonts = { enhance: enhance, picker: picker, load: load, ensure: ensure, byId: function (id) { return byId[id] || null; }, ready: function () { return Boolean(manifest); },
+  window.KFonts = { loadSite: loadSite, enhance: enhance, picker: picker, load: load, ensure: ensure, byId: function (id) { return byId[id] || null; }, ready: function () { return Boolean(manifest); },
     weightsFor: function (id) { var f = byId[id]; return f ? { weights: f.weights, italic: f.styles.indexOf("italic") >= 0, variable: f.variable } : null; } };
 })();

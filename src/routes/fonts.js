@@ -20,4 +20,15 @@ router.get("/polices.css", (req, res) => {
   res.send(css);
 });
 
+// Polices TÉLÉVERSÉES par un site : /polices/site/<48 caractères aléatoires>.<woff2|woff|ttf|otf>. L'adresse n'est pas devinable et n'est servie que tant que la
+// famille est ACTIVE (désactivée ou supprimée : 404). Un site public doit pouvoir charger ses propres polices : l'isolation entre sites repose sur cet identifiant
+// secret par fichier (aucun fichier n'est partagé entre deux sites) et sur la base, jamais sur un numéro de site lu dans l'adresse.
+router.get("/polices/site/:name", (req, res) => {
+  const m = /^([a-f0-9]{48})(\.(?:woff2|woff|ttf|otf))$/.exec(String(req.params.name));
+  const hit = m ? require("../services/siteFonts").publicFile(m[1], m[2]) : null;
+  if (!hit) return res.status(404).type("text/plain").send("Introuvable");
+  res.set({ "Content-Type": hit.mime, "Cache-Control": "public, max-age=31536000, immutable", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'", "Cross-Origin-Resource-Policy": "same-origin" });
+  res.sendFile(hit.file, { dotfiles: "deny" });
+});
+
 module.exports = router;

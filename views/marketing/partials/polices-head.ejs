@@ -1,0 +1,24 @@
+<%#
+  KOLAKISA CMS → Apparence → Polices : en-tête commun aux trois onglets (titre, site, compteurs, onglets). Le site vient de l'adresse vérifiée par le serveur (T).
+  Variables : T, tabs, tab, counts, to.
+%>
+<header class="pf-head">
+  <div class="pf-title">
+    <span class="pf-title-icon" aria-hidden="true"><%- icon("type", { size: 22 }) %></span>
+    <div>
+      <h1>Polices</h1>
+      <p class="pf-sub">Site : <strong><%= T.name %></strong> · chaque site a sa propre bibliothèque de polices.</p>
+    </div>
+  </div>
+  <dl class="pf-stats" aria-label="Résumé de la bibliothèque">
+    <div><dt>Familles</dt><dd><%= counts.total %></dd></div>
+    <div><dt>Variantes</dt><dd><%= counts.variants %></dd></div>
+    <div><dt>Téléversées</dt><dd><%= counts.upload %></dd></div>
+  </dl>
+</header>
+<nav class="pf-tabs" aria-label="Sections des polices">
+  <% tabs.forEach((t) => { %>
+    <a class="pf-tab<%= tab === t[0] ? " is-on" : "" %>" href="<%= to(t[0]) %>"<%- tab === t[0] ? ' aria-current="page"' : "" %>><%- t[0] === "" ? icon("list", { size: 16 }) : t[0] === "/televerser" ? icon("upload", { size: 16 }) : icon("download", { size: 16 }) %><span><%= t[1] %></span></a>
+  <% }) %>
+</nav>
+<% if (readOnly) { %><div class="pf-note pf-note--warn" role="status"><%- icon("alertTriangle", { size: 16 }) %><p>Ce site est archivé ou supprimé : les polices sont en consultation seule.</p></div><% } %>

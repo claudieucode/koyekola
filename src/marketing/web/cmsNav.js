@@ -48,6 +48,7 @@ const SECTIONS = [
       leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
       leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
       leaf("apparence/styles", "Styles", `${BASE}/apparence/styles`, { permission: "appearance.read" }),
+      leaf("apparence/polices", "Polices", `${BASE}/polices`, { permission: "appearance.read" }),
       leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`, { permission: "appearance.read" }),
       leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`, { permission: "appearance.read" }),
       leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { permission: "navigation.read" }),
@@ -181,6 +182,8 @@ const SITE_MODULES = {
   // R8 lot 4 : Navigation / Menus par site (menus et emplacements PROPRES au site ; ressources limitées à celles du site)
   // Apparence → Thèmes : écran partagé /site-web/themes ouvert dans le cadre du site (thèmes installés et thème actif de CE site)
   themes: { label: "Thèmes", kind: "delegate", to: "/site-web/themes", reg: "themes", permission: "appearance.read", legacy: `${BASE}/themes` },
+  // Apparence → Polices : bibliothèque, téléversement et installation de polices PROPRES au site (écran partagé /site-web/polices)
+  polices: { label: "Polices", kind: "delegate", to: "/site-web/polices", reg: "polices", permission: "appearance.read", legacy: `${BASE}/polices` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
@@ -265,6 +268,7 @@ const ABILITY = {
   navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
+  "apparence/polices": { mode: "open", module: "polices" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
@@ -359,5 +363,6 @@ function buildSiteNav({ can, active, space }) {
 
 for (const [key, a] of Object.entries(ABILITY)) if (a.mode === "open" && a.sub) FRAMED.add(key);
 FRAMED.add("apparence/menus"); // même écran que « Navigation » (clé active distincte)
+FRAMED.add("apparence/polices"); // les trois onglets (adresses « ?site= ») gardent le cadre DU site : menu, bandeau et fil d'Ariane
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

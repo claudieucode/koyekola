@@ -44,6 +44,14 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "cms_font_files": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "cms_fonts": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_maintenance": {
    "siteId": false,
    "classe": "plateforme"

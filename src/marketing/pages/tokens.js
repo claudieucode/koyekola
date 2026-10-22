@@ -76,7 +76,7 @@ const numIn = (v, min, max, fallback) => {
 
 // Jetons complets et valides : toute valeur absente ou invalide reprend la valeur par défaut ; strict = refuser les
 // valeurs invalides (enregistrement depuis l'éditeur) au lieu de les remplacer silencieusement
-function normalizeTokens(input = {}, { strict = false } = {}) {
+function normalizeTokens(input = {}, { strict = false, fontScope } = {}) {
   const src = input && typeof input === "object" ? input : {};
   const D = DEFAULT_TOKENS;
   const colors = {};
@@ -106,7 +106,8 @@ function normalizeTokens(input = {}, { strict = false } = {}) {
   const fonts = {};
   for (const k of FONT_ROLES) {
     const v = src.fonts && src.fonts[k];
-    const known = Object.hasOwn(FONTS, v) || fontLib.isId(v);
+    // Police téléversée (« font.u<n> ») : en écriture (strict) seulement celle du site visé par fontScope ; en relecture, il suffit qu'elle existe
+    const known = Object.hasOwn(FONTS, v) || fontLib.isTokenId(v, strict ? (fontScope || { siteId: NaN }) : undefined);
     if (v !== undefined && !known && strict) throw bad("Police inconnue.");
     fonts[k] = known ? v : D.fonts[k];
   }

@@ -161,5 +161,5 @@
     <section class="mk-panel" aria-labelledby="site-soon"><h2 id="site-soon">À venir pour ce site</h2>
       <p class="field-hint">Pas encore disponibles : articles propres au site, médiathèque propre au site, domaine et SEO par site depuis cet espace, modules activables. Ils seront ajoutés aux prochains paliers ; rien ici ne les simule.</p></section>
 <script src="<%= asset('/js/font-manager.js') %>"></script>
-<script>(function () { ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police" }); }); })();</script>
+<script>(function () { document.documentElement.setAttribute("data-kfonts-site", "<%= site.id %>"); ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police", site: true }); }); })();</script>
 <%- include("partials/bottom") %>
