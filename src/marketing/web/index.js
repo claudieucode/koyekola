@@ -96,6 +96,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
   admin.use(require("./themes")()); // Apparence → Thèmes : thèmes installés et thème actif par site
   admin.use(require("./fonts")()); // Apparence → Polices : bibliothèque, téléversement et installation de polices par site
+  admin.use(require("./adminBar")()); // Barre d'administration : notifications du site actif
   admin.use(require("./customizer")()); // Apparence → Personnaliser : brouillon, aperçu en direct et publication, par site
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
   admin.use(require("./tools")()); // Outils : santé, import, export, diagnostic, maintenance (palier 13)

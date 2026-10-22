@@ -140,6 +140,8 @@ const SITE_RULES = Object.freeze([
   // Apparence → Polices : polices du site (bibliothèque, téléversement, installation) ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
   { id: "polices-du-site", pattern: /^\/site-web\/polices(?:\/|\.|$)/, kind: "param", terminal: true },
   // Apparence → Personnaliser : brouillon et publication PAR SITE ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
+  // Barre d'administration : notifications du site actif ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
+  { id: "barre-du-site", pattern: /^\/barre(?:\/|$)/, kind: "param", terminal: true },
   { id: "personnaliser-du-site", pattern: /^\/site-web\/personnaliser(?:\/|$)/, kind: "param", terminal: true },
   { id: "mediatheque-du-site", pattern: /^\/site-web\/(?:mediatheque|medias)(?:\/|\.json$|$)/, kind: "queryGet", terminal: true },
 ]);
@@ -163,6 +165,7 @@ const FAMILIES = Object.freeze([
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "themes-par-site", scope: "site", pattern: /^\/site-web\/themes(?:\/|$)/ },
   { id: "polices-par-site", scope: "site", pattern: /^\/site-web\/polices(?:\/|$)/ },
+  { id: "barre-par-site", scope: "site", pattern: /^\/barre(?:\/|$)/ },
   { id: "personnaliser-par-site", scope: "site", pattern: /^\/site-web\/personnaliser(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
