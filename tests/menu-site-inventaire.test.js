@@ -11,7 +11,7 @@ const nav = require("../src/marketing/web/cmsNav");
 // ── INVENTAIRE (clé du registre → décision) ───────────────────────────────────────────────────────────────────────────────────────
 // ouvert        : écran réel dans le cadre du site, isolation démontrée (R5 médias, R6 contenus) ; ouvert-equipe : idem mais absent du menu d'un accès limité ; central : administration centrale (absent du menu d'un site)
 // ferme (motif) : « Bientôt » visible, grisé, sans lien — l'isolation ou l'écran du site n'existe pas encore
-const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparence/polices", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres",
+const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparence/widgets", "apparence/polices", "apparence/personnaliser", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres",
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque", "mediatheque/ajouter",
   "seo", "seo/404", "navigation", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
@@ -45,7 +45,7 @@ describe("inventaire : le menu réel = la table", () => {
     assert.deepEqual(live, [...OUVERT, ...OUVERT_EQUIPE].sort());
     for (const i of it.filter((x) => x.disabled)) { assert.equal(i.href, null, i.key); assert.equal(i.status, "preview", i.key); assert.ok(i.phase, i.key); assert.ok(MOTIFS[i.key], `${i.key} : motif documenté`); }
     for (const k of CENTRAL) assert.ok(!it.some((i) => i.key === k), k);
-    for (const i of it.filter((x) => !x.disabled && x.key !== "sites")) assert.ok(i.href.startsWith(`${nav.BASE}/sites/5/`), `${i.key} : ${i.href}`);
+    for (const i of it.filter((x) => !x.disabled && x.key !== "sites")) if (i.key === "apparence/personnaliser") assert.equal(i.href, `${nav.BASE}/personnaliser?site=5`); else assert.ok(i.href.startsWith(`${nav.BASE}/sites/5/`), `${i.key} : ${i.href}`);
   });
   test("menu d'un accès limité : mêmes entrées ouvertes que l'équipe (création d'article comprise : l'éditeur est ouvert aux accès limités depuis R6) — seules les permissions du rôle filtrent", () => {
     assert.deepEqual(items(true).map((i) => i.key), items(false).map((i) => i.key));

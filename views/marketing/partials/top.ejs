@@ -7,6 +7,8 @@
     : (typeof principalFrame !== "undefined" && principalFrame && active !== "sites" && mkh.isCmsKey(active) ? principalFrame : null));
   const cms = mkh.buildCmsNav({ can: mk.can, active, space });
   const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
+  // Barre d'administration supérieure du CMS (une seule implémentation : partials/cms-adminbar.ejs ; données filtrées par les droits côté serveur)
+  const bar = cms ? mkh.adminBar({ mk, user: currentUser, space: cms.space || null, cms, sites: cmsSites, active, content: { page: typeof page !== "undefined" ? page : null } }) : null;
   const crumbs = nav.breadcrumb || [title];
   // Fil d'Ariane cliquable : Mon espace → Marketing → section → page (le dernier élément n'est pas un lien)
   const trail = [];
@@ -40,6 +42,7 @@
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/font-manager.css') %>">
   <% if (cms) { %><link rel="stylesheet" href="<%= asset('/css/cms.css') %>"><% } %>
+  <% if (cms) { %><link rel="stylesheet" href="<%= asset('/css/adminbar.css') %>"><script src="<%= asset('/js/adminbar.js') %>" defer></script><% } %>
   <% if (appRail) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %>
   <% if (typeof appearanceJs !== "undefined" && appearanceJs) { %><link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>"><% } %>
   <% if (theme) { %><link rel="stylesheet" href="<%= asset('/css/marketing-themes.css') %>"><% } %>
@@ -49,6 +52,8 @@
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
+  <%# CMS : barre d'administration (niveau 1) puis fil d'Ariane (niveau 2), tous deux au niveau global de la coque, AVANT menu et contenu ; hors CMS, le fil d'Ariane reste dans la colonne du contenu %>
+  <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><%- include("cms-crumbs", { trail }) %><% } %>
 
   <% const appClass = appRail ? "mk-app has-rail" : "mk-app"; %><div class="<%= appClass %>">
     <% if (appRail) { %><%- include("../../partials/app-rail", { railNav: appRail.nav, railActive: appRail.active, railUnread: appRail.unread, railStyle: appRail.style }) %><% } %>
@@ -88,7 +93,6 @@
         </div>
       <% } %>
       <% if (cms) { %>
-      <%- include("cms-site-switch", { cms, cmsSites, space: cms.space || null }) %>
       <nav class="mk-nav-list mk-cms-nav" aria-label="Sections du CMS">
         <%- include("cms-nav", { cms }) %>
       </nav>
@@ -117,6 +121,7 @@
     <div class="mk-overlay" data-mk-sidebar-close hidden></div>
 
     <div class="mk-main">
+      <% if (!cms) { %>
       <header class="mk-topbar">
         <button type="button" class="icon-btn mk-menu-btn" data-mk-sidebar-toggle aria-controls="mk-sidebar" aria-expanded="false" aria-label="Ouvrir le menu"><%- icon("menu") %></button>
         <nav class="mk-breadcrumb" aria-label="Fil d'Ariane">
@@ -126,8 +131,8 @@
           </ol>
         </nav>
         <div class="mk-topbar-actions">
-          <% if (cms) { %><%- include("cms-topbar", { cms, cmsSites, space: cms.space || null }) %><% } %>
           <% if (!cms && nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
+          <% if (!cms) { %>
           <button type="button" class="icon-btn mk-theme-btn" data-kola-theme-cycle aria-label="Thème de l'interface : automatique" title="Thème de l'interface"><span class="mk-theme-ico mk-theme-ico-light"><%- icon("sun", { size: 18 }) %></span><span class="mk-theme-ico mk-theme-ico-dark"><%- icon("moon", { size: 18 }) %></span></button>
           <div class="mk-dropdown" data-mk-dropdown>
             <button type="button" class="mk-user" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-user-menu">
@@ -149,8 +154,10 @@
               <form action="/deconnexion" method="post" role="none"><button type="submit" role="menuitem"><%- icon("logout", { size: 16 }) %>Déconnexion</button></form>
             </div>
           </div>
+          <% } %>
         </div>
       </header>
+      <% } %>
 
       <main id="main" tabindex="-1" class="mk-content">
         <% if (cms && cms.space && cms.space.navOnly) { %><p class="mk-site-return"><a class="btn btn-ghost btn-sm" href="<%= cms.space.listHref %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a></p>

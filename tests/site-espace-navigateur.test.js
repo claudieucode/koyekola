@@ -96,7 +96,7 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
   test("changement de site sécurisé par le sélecteur : Alpha → Beta, le contenu change entièrement", async () => {
     const { context, page } = await open();
     await page.goto(`${srv.base}${SP}/${A}/pages`);
-    await page.locator(".mk-cms-site-btn").click();
+    await page.locator(".kab-site").click();
     const items = await page.locator("#mk-site-menu a").allInnerTexts();
     assert.ok(items.includes("Site Alpha") && items.includes("Site Beta") && items.includes("Site principal"));
     await shot(page, "b1-03-selecteur-de-site");
@@ -131,7 +131,7 @@ describe("espace d'un site dans un navigateur réel", { skip: SKIP }, () => {
     const { context, page } = await open(memA);
     await page.goto(`${srv.base}${SP}/${A}/tableau-de-bord`);
     assert.ok(await page.locator(".mk-site-banner-name", { hasText: "Site Alpha" }).isVisible());
-    await page.locator(".mk-cms-site-btn").click();
+    await page.locator(".kab-site").click();
     const items = await page.locator("#mk-site-menu a").allInnerTexts();
     assert.deepEqual(items.map((t) => t.trim()), ["Site Alpha"], "le sélecteur ne propose que son site");
     const denied = await page.goto(`${srv.base}${SP}/${B}/pages`);

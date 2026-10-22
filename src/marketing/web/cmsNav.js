@@ -44,6 +44,7 @@ const SECTIONS = [
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
+      leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
       leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
       leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
@@ -51,6 +52,7 @@ const SECTIONS = [
       leaf("apparence/polices", "Polices", `${BASE}/polices`, { permission: "appearance.read" }),
       leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`, { permission: "appearance.read" }),
       leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`, { permission: "appearance.read" }),
+      leaf("apparence/widgets", "Widgets", `${BASE}/widgets`, { permission: "appearance.read" }),
       leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { permission: "navigation.read" }),
     ],
   },
@@ -184,6 +186,8 @@ const SITE_MODULES = {
   themes: { label: "Thèmes", kind: "delegate", to: "/site-web/themes", reg: "themes", permission: "appearance.read", legacy: `${BASE}/themes` },
   // Apparence → Polices : bibliothèque, téléversement et installation de polices PROPRES au site (écran partagé /site-web/polices)
   polices: { label: "Polices", kind: "delegate", to: "/site-web/polices", reg: "polices", permission: "appearance.read", legacy: `${BASE}/polices` },
+  // Apparence → Widgets : écran partagé /site-web/widgets ouvert dans le cadre du site (zones, blocs et widgets désactivés de CE site)
+  widgets: { label: "Widgets", kind: "delegate", to: "/site-web/widgets", reg: "widgets", permission: "appearance.read", legacy: `${BASE}/widgets` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
@@ -269,6 +273,8 @@ const ABILITY = {
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
   "apparence/polices": { mode: "open", module: "polices" },
+  "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
+  "apparence/widgets": { mode: "open", module: "widgets" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
@@ -313,6 +319,7 @@ function projectItem(item, group, space) {
   const a = ABILITY[item.key];
   if (a && a.mode === "central") return null;
   if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
+  if (a && a.mode === "customizer") return { ...base, href: `${BASE}/personnaliser?site=${space.siteId}`, status: "live", external: true };
   if (a && a.mode === "open") {
     if (a.teamOnly && space.limited) return null; // création d'article : réservée à l'équipe (décision A-D9 non approuvée) → absente du menu d'un accès limité
     const m = siteModule(space, a.module);

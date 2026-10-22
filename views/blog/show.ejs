@@ -224,6 +224,8 @@
         </div>
       </section>
     <% } %>
+    <%# Colonne latérale (Apparence → Widgets) : sous l'article sur la page d'un article %>
+    <%- typeof widgetZone === "function" ? widgetZone("sidebar") : "" %>
   </div>
   <script src="<%= asset('/js/blog-article.js') %>" defer></script>
 

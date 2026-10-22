@@ -70,6 +70,11 @@ function injectLocals(req, res, next) {
     return apCache;
   };
   if (req.query && req.query.kwtheme) require("./themePreview").attach(req, res); // aperçu d'un thème (équipe autorisée seulement)
+  if (req.query && req.query.kwcustom === "1") require("./customizerPreview").attach(req, res); // aperçu du personnalisateur (réglages en cours de la session, équipe autorisée seulement)
+  // Zones de widgets (Apparence → Widgets) : HTML déjà validé de la zone DU SITE de la requête (domaine d'un site, sinon site principal) ; « » si rien à afficher.
+  // widgetZoneFor(siteId, zone) : pour les gabarits qui connaissent leur site (pages d'un site). Lecture à la demande, jamais mise en cache.
+  res.locals.widgetZone = (zone) => require("../services/widgets").renderZone(req.kwSite ? req.kwSite.id : null, zone);
+  res.locals.widgetZoneFor = (siteId, zone) => require("../services/widgets").renderZone(Number.isInteger(siteId) && siteId > 0 ? siteId : null, zone);
   // Menus de navigation du CMS par emplacement (header, footer, mobile) : null = aucun menu affecté, la page garde son affichage d'origine.
   // Calculés à la demande (seulement par l'en-tête et le pied de page publics) et une seule fois par requête, toujours à jour.
   const menus = new Map();
