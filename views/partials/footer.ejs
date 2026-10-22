@@ -47,6 +47,9 @@
       </div>
       <% } %>
     </div>
+    <%# Widgets (Apparence → Widgets) : sections 1 et 2 de pied de page du site courant ; rien ne s'affiche si elles sont vides %>
+    <% const wf1 = typeof widgetZone === "function" ? widgetZone("footer-1") : "", wf2 = typeof widgetZone === "function" ? widgetZone("footer-2") : ""; %>
+    <% if (wf1 || wf2) { %><div class="container-wide footer-widgets"><%- wf1 %><%- wf2 %></div><% } %>
     <div class="container-wide footer-bottom">
       <span><%- apF ? "" : "KOLAKISA &copy; 2026 — projet pédagogique, aucun paiement réel n'est traité." %><%= apF ? apF.copyrightText : "" %></span>
       <% if (!apF || apF.cookies) { %><a href="/cookies" data-kw-consent-open>Cookies</a><% } %>

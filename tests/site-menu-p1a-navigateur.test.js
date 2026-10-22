@@ -57,7 +57,7 @@ describe("menu d'un site (P1a) dans un navigateur réel", { skip: SKIP }, () => 
       assert.ok(await banner(page, "Site Alpha"), `${mod} : bandeau`);
       assert.ok(await page.locator(".mk-cms-nav").isVisible(), `${mod} : menu du site`);
       assert.ok(await page.locator(".mk-cms-nav a[aria-current=page]", { hasText: label }).first().isVisible(), `${mod} : entrée active « ${label} »`);
-      assert.ok(await page.locator(".mk-cms-site-name", { hasText: "Site Alpha" }).first().isVisible(), `${mod} : sélecteur de site sur Alpha`);
+      assert.ok(await page.locator(".kab-site-name", { hasText: "Site Alpha" }).first().isVisible(), `${mod} : sélecteur de site sur Alpha`);
       assert.equal(await page.locator("body", { hasText: "Liste Beta" }).count() + await page.locator("body", { hasText: "Liste Principale" }).count(), 0, `${mod} : rien d'un autre site`);
       if (["listes", "campagnes", "tests-ab", "outils"].includes(mod)) await shot(page, `p1a-${mod}-bureau`);
     }
@@ -83,7 +83,7 @@ describe("menu d'un site (P1a) dans un navigateur réel", { skip: SKIP }, () => 
   test("changer de site depuis un écran partagé : le cadre et les données suivent", async () => {
     const { context, page } = await open();
     await page.goto(`${srv.base}${SP}/${A}/campagnes`);
-    await page.locator(".mk-cms-site-switch, .mk-cms-site-btn, [data-mk-dropdown] .mk-cms-site-name").first().click().catch(() => {});
+    await page.locator(".kab-site, .kab-site-name").first().click().catch(() => {});
     await page.locator(`a[href="${SP}/${B}/tableau-de-bord"]`).first().click();
     await page.waitForLoadState("load");
     assert.ok(await banner(page, "Site Beta"));

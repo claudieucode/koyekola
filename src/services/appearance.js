@@ -265,9 +265,12 @@ function logoPath(mediaId) {
 }
 function year() { return String(new Date().getFullYear()); }
 // parts(preview) : { css, header, footer, preview } — la version publiée (mémorisée) ou, en aperçu, le brouillon
-function parts({ preview = false } = {}) {
+// override : configuration complète fournie par l'appelant (aperçu du personnalisateur : rien n'est lu en base ni mémorisé)
+function parts({ preview = false, override = null } = {}) {
   let base;
-  if (preview) {
+  if (override) {
+    base = { css: buildCss(override), cfg: override };
+  } else if (preview) {
     const st = state(null);
     base = { css: buildCss(normalizeConfig(st.draft, { strict: false })), cfg: st.draft };
   } else {
