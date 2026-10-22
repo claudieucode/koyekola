@@ -33,13 +33,13 @@ Feuille `public/css/kola-pages.css` (chargée après `kola-ui.css`, administrati
 
 - Un seul mécanisme, accessible et partagé : tout élément portant `data-tip` reçoit une infobulle (survol après 350 ms, focus clavier immédiat, Échap pour fermer, `role="tooltip"` + `aria-describedby`, placement qui évite les bords et flèche, apparition fluide, mouvement réduit respecté).
 - Écran tactile : pas de survol ; un élément d'information affiche son explication au toucher, les commandes l'affichent à la prise de focus (disparition automatique).
-- **Source unique des textes** : `public/js/kola-tips-data.js` : une infobulle explicite pour chacun des 106 écrans du menu, chacune des 25 rubriques, 38 statuts et les commandes courantes ; les pages ajoutent les leurs par `data-tip="…"` (chiffres, colonnes, filtres, actions).
+- **Source unique des textes** : `public/js/kola-tips-data.js` : une infobulle explicite pour chacun des 108 écrans du menu, chacune des 25 rubriques, 38 statuts et les commandes courantes ; les pages ajoutent les leurs par `data-tip="…"` (chiffres, colonnes, filtres, actions).
 - Les anciens attributs `title` des menus sont repris par le mécanisme (le nom accessible est conservé).
 - Test : `tests/infobulles.test.js` (couverture de tous les écrans, aucun texte générique ou répété).
 
 ## 4. Périmètre
 
-- **Dans le périmètre** : l'espace CMS et l'espace Marketing (zone de contenu à droite de la barre latérale), soit les 106 écrans du registre ci-dessous.
+- **Dans le périmètre** : l'espace CMS et l'espace Marketing (zone de contenu à droite de la barre latérale), soit les 108 écrans du registre ci-dessous.
 - **Hors périmètre de ce chantier** (autres espaces, autre coque) : site public, espace élève, espace formateur (« Mon espace »), pages de connexion. Ils ne sont pas dans le registre et ne sont pas modifiés.
 - Éditeurs spécialisés (Page Builder, éditeur d'articles, éditeur d'e-mails, canevas d'automatisation) : leur intérieur n'est pas touché ; ils reçoivent seulement les composants partagés de leur bande d'en-tête quand elle existe.
 
@@ -69,6 +69,7 @@ Feuille `public/css/kola-pages.css` (chargée après `kola-ui.css`, administrati
 | CMS · Commentaires | Indésirables | `/marketing/site-web/commentaires/indesirables` | Liste / tableau | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Commentaires | Corbeille | `/marketing/site-web/commentaires/corbeille` | Liste / tableau | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Apparence | Thèmes | `/marketing/site-web/themes` | Liste / tableau | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
+| CMS · Apparence | Personnaliser | `/marketing/site-web/personnaliser` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Apparence | Éditeur du site | `/marketing/site-web/apparence` | Réglages / formulaire | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Apparence | Templates | `/marketing/site-web/apparence/templates` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Apparence | Patterns | `/marketing/site-web/apparence/patterns` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
@@ -76,6 +77,7 @@ Feuille `public/css/kola-pages.css` (chargée après `kola-ui.css`, administrati
 | CMS · Apparence | Polices | `/marketing/site-web/polices` | Liste / tableau | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Apparence | En-tête | `/marketing/site-web/apparence/en-tete` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Apparence | Pied de page | `/marketing/site-web/apparence/pied-de-page` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
+| CMS · Apparence | Widgets | `/marketing/site-web/widgets` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Apparence | Menus | `/marketing/site-web/apparence/menus` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Extensions | Modules | `/marketing/site-web/extensions` | Écran spécialisé | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
 | CMS · Utilisateurs | Tous les utilisateurs | `/marketing/site-web/utilisateurs` | Liste / tableau | En cours | Système partagé appliqué (en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu) ; composition propre à reprendre |
