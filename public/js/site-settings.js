@@ -536,7 +536,7 @@
       sample.style.fontFamily = stackOf(T.fonts[role]);
       // Police : bibliothèque centrale (Font Manager) ; les polices historiques du site restent proposées en tête
       var select = window.KFonts
-        ? window.KFonts.picker({ value: T.fonts[role], legacy: Object.keys(C.fonts).map(function (k) { return [k, C.fonts[k].label]; }), legacyStacks: function () { var m = {}; Object.keys(C.fonts).forEach(function (k) { m[k] = C.fonts[k].stack; }); return m; }, disabled: !state.canWrite, label: C.fontLabels[role],
+        ? window.KFonts.picker({ site: true, value: T.fonts[role], legacy: Object.keys(C.fonts).map(function (k) { return [k, C.fonts[k].label]; }), legacyStacks: function () { var m = {}; Object.keys(C.fonts).forEach(function (k) { m[k] = C.fonts[k].stack; }); return m; }, disabled: !state.canWrite, label: C.fontLabels[role],
           onChange: function (v) { change(function (t) { t.fonts[role] = v; }); setTimeout(function () { sample.style.fontFamily = stackOf(v); }, 60); } })
         : h("select", { id: id, disabled: !state.canWrite }, Object.keys(C.fonts).map(function (k) { return h("option", { value: k, selected: T.fonts[role] === k, text: C.fonts[k].label }); }));
       if (!window.KFonts) select.addEventListener("change", function () { var v = select.value; change(function (t) { t.fonts[role] = v; }); sample.style.fontFamily = C.fonts[v].stack; });

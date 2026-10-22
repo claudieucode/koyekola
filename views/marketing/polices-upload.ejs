@@ -1,0 +1,71 @@
+<%#
+  KOLAKISA CMS → Apparence → Polices → Téléversement : zone de dépôt (glisser-déposer ou sélection), liste des fichiers avant envoi (nom, format, taille, état,
+  retrait possible), progression réelle de l'envoi, compte rendu fichier par fichier. Sans JavaScript : le formulaire envoie les fichiers et la page affiche le compte rendu.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const mb = (n) => Math.round(n / 1048576);
+%>
+<div class="pf" data-pf-root>
+  <%- include("partials/polices-head", { T, tabs, tab, counts, to, readOnly }) %>
+
+  <% if (results) { %>
+    <section class="pf-results" aria-labelledby="pf-res-t">
+      <h2 id="pf-res-t">Compte rendu de l'importation</h2>
+      <ul class="pf-result-list">
+        <% results.forEach((r) => { %>
+          <li class="pf-result pf-result--<%= r.ok ? "ok" : "err" %>">
+            <span class="pf-result-ico" aria-hidden="true"><%- icon(r.ok ? "checkCircle" : "alertCircle", { size: 18 }) %></span>
+            <div><strong><%= r.name %></strong>
+              <% if (r.ok) { %><span class="pf-muted">Importée dans « <%= r.family %> » · <%= r.format.toUpperCase() %> · graisse <%= r.weight %><%= r.style === "italic" ? " italique" : "" %><%= r.variable ? " · variable" : "" %></span>
+              <% } else { %><span class="pf-err"><%= r.error %></span><% } %></div>
+          </li>
+        <% }) %>
+      </ul>
+      <p><a class="btn btn-primary btn-sm" href="<%= to("") %>">Voir la bibliothèque</a></p>
+    </section>
+  <% } %>
+
+  <% if (canInstall && !readOnly) { %>
+  <form class="pf-upload" method="post" action="<%= to("/televerser") %>" enctype="multipart/form-data" data-pf-upload
+        data-max-bytes="<%= fontsLimits.fileBytes %>" data-max-files="<%= fontsLimits.perBatch %>" data-endpoint="<%= to("/televerser") %>" data-library="<%= to("") %>">
+    <%- siteField %>
+    <div class="pf-drop" data-pf-drop>
+      <span class="pf-drop-icon" aria-hidden="true"><%- icon("upload", { size: 30 }) %></span>
+      <p class="pf-drop-title">Glissez vos fichiers de police ici</p>
+      <p class="pf-drop-sub">ou</p>
+      <label class="btn btn-primary pf-pick" for="pf-files"><%- icon("plus", { size: 16 }) %> Sélectionner des fichiers</label>
+      <input id="pf-files" class="pf-file-input" type="file" name="polices" multiple accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf" data-pf-input>
+      <p class="pf-drop-hint">Formats : WOFF2, WOFF, TTF, OTF · <%= mb(fontsLimits.fileBytes) %> Mo au plus par fichier · <%= fontsLimits.perBatch %> fichiers par envoi</p>
+    </div>
+
+    <div class="pf-queue" data-pf-queue hidden>
+      <div class="pf-queue-head"><h2>Fichiers sélectionnés <span class="pf-muted" data-pf-qcount></span></h2><button class="btn btn-ghost btn-sm" type="button" data-pf-clear>Tout retirer</button></div>
+      <ul class="pf-queue-list" data-pf-list></ul>
+    </div>
+
+    <div class="pf-upload-opts">
+      <div class="pf-field"><label for="pf-up-cat">Catégorie (police de repli)</label>
+        <select id="pf-up-cat" name="categorie"><% categories.forEach((c) => { %><option value="<%= c[0] %>"><%= c[1] %></option><% }) %></select></div>
+      <div class="pf-field"><label for="pf-up-fam">Nom de la famille <span class="pf-muted">(facultatif)</span></label>
+        <input id="pf-up-fam" type="text" name="famille" maxlength="60" placeholder="Lu dans le fichier si vide" autocomplete="off"></div>
+    </div>
+
+    <div class="pf-progress" data-pf-progress hidden role="status" aria-live="polite"><div class="pf-bar-track"><div class="pf-bar-fill" data-pf-fill style="width:0"></div></div><span data-pf-ptxt>Envoi…</span></div>
+    <div class="pf-submit-row"><button class="btn btn-primary" type="submit" data-pf-submit><%- icon("upload", { size: 16 }) %> <span data-pf-submit-t>Importer</span></button><span class="pf-muted" data-pf-help>Chaque fichier est vérifié sur le serveur avant d'être enregistré.</span></div>
+    <div class="pf-live" data-pf-live aria-live="polite"></div>
+  </form>
+  <% } else if (!readOnly) { %>
+    <div class="pf-note" role="status"><%- icon("lock", { size: 16 }) %><p>Vous pouvez consulter les polices de ce site, mais votre rôle ne permet pas d'en téléverser.</p></div>
+  <% } %>
+
+  <section class="pf-info" aria-labelledby="pf-info-t">
+    <h2 id="pf-info-t">Avant d'importer</h2>
+    <ul>
+      <li><strong>Le format réel est vérifié</strong> sur le serveur : un fichier renommé, tronqué ou qui n'est pas une police est refusé, sans bloquer les autres.</li>
+      <li><strong>Plusieurs graisses</strong> d'une même famille (Regular, Bold, Italic…) sont regroupées automatiquement d'après leurs métadonnées.</li>
+      <li><strong>Isolées par site</strong> : les polices importées ici n'apparaissent que sur « <%= T.name %> ».</li>
+      <li>Assurez-vous de détenir la licence d'utilisation web des polices que vous importez.</li>
+    </ul>
+  </section>
+</div>
+<%- include("partials/bottom") %>

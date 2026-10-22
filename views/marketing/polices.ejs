@@ -1,0 +1,101 @@
+<%#
+  KOLAKISA CMS → Apparence → Polices → Bibliothèque : les polices de CE site (Google Fonts installées + polices téléversées), recherche instantanée,
+  filtres combinables, liste ou grille de prévisualisation, texte de démonstration modifiable, activation, désactivation, suppression protégée.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const q = (extra = {}) => { const o = { q: f.q, origine: f.source, categorie: f.category, statut: f.status, tri: f.sort === "nom" ? "" : f.sort, utilisee: f.used, vue: f.view === "liste" ? "" : f.view, ...extra }; return o; };
+  const pageHref = (n) => to("", q({ page: n > 1 ? n : "" }));
+  const libIds = result.rows.filter((r) => r.source === "google" && !r.missing).map((r) => r.key);
+  const hasUploads = result.rows.some((r) => r.source === "upload");
+  const catLabel = (k) => (categories.find((c) => c[0] === k) || [k, k])[1];
+  const nothing = counts.total === 0;
+%>
+<div class="pf" data-pf-root>
+  <%- include("partials/polices-head", { T, tabs, tab, counts, to, readOnly }) %>
+
+  <% if (nothing) { %>
+    <section class="pf-empty" aria-labelledby="pf-empty-t">
+      <span class="pf-empty-icon" aria-hidden="true"><%- icon("type", { size: 28 }) %></span>
+      <h2 id="pf-empty-t">Aucune police installée sur « <%= T.name %> »</h2>
+      <p>Ajoutez des polices à ce site : installez-en depuis le catalogue Google Fonts (copiées sur votre site, servies par celui-ci) ou téléversez vos propres fichiers.</p>
+      <% if (canInstall && !readOnly) { %>
+        <div class="pf-empty-actions"><a class="btn btn-primary" href="<%= to("/installer") %>"><%- icon("download", { size: 16 }) %> Installer des polices</a><a class="btn btn-outline" href="<%= to("/televerser") %>"><%- icon("upload", { size: 16 }) %> Téléverser des polices</a></div>
+      <% } %>
+    </section>
+  <% } else { %>
+  <form class="pf-toolbar" method="get" action="<%= BASE %>" role="search" data-pf-filter aria-label="Rechercher et filtrer la bibliothèque">
+    <%- siteField %>
+    <div class="pf-field pf-field--search">
+      <label for="pf-q">Rechercher</label>
+      <span class="pf-search"><%- icon("search", { size: 16 }) %><input id="pf-q" type="search" name="q" value="<%= f.q %>" maxlength="80" autocomplete="off" placeholder="Nom de la police…" data-pf-search></span>
+    </div>
+    <div class="pf-field"><label for="pf-origine">Origine</label>
+      <select id="pf-origine" name="origine"><option value="">Toutes</option><option value="google"<%= f.source === "google" ? " selected" : "" %>>Google Fonts</option><option value="upload"<%= f.source === "upload" ? " selected" : "" %>>Téléversées</option></select></div>
+    <div class="pf-field"><label for="pf-categorie">Catégorie</label>
+      <select id="pf-categorie" name="categorie"><option value="">Toutes</option><% categories.forEach((c) => { %><option value="<%= c[0] %>"<%= f.category === c[0] ? " selected" : "" %>><%= c[1] %></option><% }) %></select></div>
+    <div class="pf-field"><label for="pf-statut">Statut</label>
+      <select id="pf-statut" name="statut"><option value="">Tous</option><option value="active"<%= f.status === "active" ? " selected" : "" %>>Actives</option><option value="disabled"<%= f.status === "disabled" ? " selected" : "" %>>Désactivées</option></select></div>
+    <div class="pf-field"><label for="pf-tri">Tri</label>
+      <select id="pf-tri" name="tri"><option value="nom"<%= f.sort === "nom" ? " selected" : "" %>>Nom (A → Z)</option><option value="recent"<%= f.sort === "recent" ? " selected" : "" %>>Ajoutées récemment</option><option value="ancien"<%= f.sort === "ancien" ? " selected" : "" %>>Plus anciennes</option></select></div>
+    <label class="pf-check"><input type="checkbox" name="utilisee" value="1"<%= f.used ? " checked" : "" %>> Utilisées par le site</label>
+    <input type="hidden" name="vue" value="<%= f.view === "liste" ? "" : f.view %>">
+    <noscript><button class="btn btn-primary btn-sm" type="submit">Filtrer</button></noscript>
+    <a class="pf-reset btn btn-ghost btn-sm" href="<%= to("", f.view === "liste" ? {} : { vue: f.view }) %>"<%- filtered ? "" : " hidden" %> data-pf-reset>Réinitialiser</a>
+  </form>
+
+  <div class="pf-bar">
+    <label class="pf-sample-edit" for="pf-sample">Texte de démonstration
+      <input id="pf-sample" type="text" maxlength="120" value="" placeholder="Portez ce vieux whisky au juge blond qui fume" data-pf-sample-input></label>
+    <label class="pf-size" for="pf-size">Taille <input id="pf-size" type="range" min="14" max="56" value="26" data-pf-size aria-valuetext="26 pixels"><output data-pf-size-out>26 px</output></label>
+    <div class="pf-view" role="group" aria-label="Affichage">
+      <a class="pf-view-btn<%= f.view === "liste" ? " is-on" : "" %>" href="<%= to("", q({ vue: "", page: "" })) %>" aria-label="Affichage en liste" <%- f.view === "liste" ? 'aria-current="true"' : "" %>><%- icon("list", { size: 16 }) %></a>
+      <a class="pf-view-btn<%= f.view === "grille" ? " is-on" : "" %>" href="<%= to("", q({ vue: "grille", page: "" })) %>" aria-label="Affichage en grille" <%- f.view === "grille" ? 'aria-current="true"' : "" %>><%- icon("grid", { size: 16 }) %></a>
+    </div>
+  </div>
+
+  <div data-pf-results aria-live="polite" aria-busy="false">
+    <% if (libIds.length) { %><link rel="stylesheet" href="/polices.css?f=<%= libIds.join(",") %>"><% } %>
+    <% if (hasUploads) { %><link rel="stylesheet" href="<%= to("/mes-polices.css") %>"><% } %>
+    <p class="pf-count" data-pf-count><strong><%= result.total %></strong> police<%= result.total > 1 ? "s" : "" %><%= filtered ? " correspondante" + (result.total > 1 ? "s" : "") : "" %> · <%= counts.google %> Google Fonts · <%= counts.upload %> téléversée<%= counts.upload > 1 ? "s" : "" %></p>
+    <% if (!result.rows.length) { %>
+      <div class="pf-none" role="status"><strong>Aucune police ne correspond à ces critères.</strong><p>Modifiez la recherche ou <a href="<%= to("", f.view === "liste" ? {} : { vue: f.view }) %>">réinitialisez les filtres</a>.</p></div>
+    <% } else { %>
+    <ul class="pf-<%= f.view === "grille" ? "grid" : "list" %>">
+      <% result.rows.forEach((r) => { %>
+        <li class="pf-item<%= r.status === "disabled" ? " is-off" : "" %>" data-pf-item>
+          <a class="pf-item-main" href="<%= to("/" + r.id) %>" aria-label="Détails de la police <%= r.family %>">
+            <span class="pf-name" style="font-family:<%= r.stack %>"><%= r.family %></span>
+            <span class="pf-sample" data-pf-sample style="font-family:<%= r.stack %>">Portez ce vieux whisky au juge blond qui fume</span>
+          </a>
+          <div class="pf-meta">
+            <span class="pf-badge pf-badge--<%= r.source %>"><%= r.source === "google" ? "Google Fonts" : "Téléversée" %></span>
+            <span class="pf-badge pf-badge--cat"><%= catLabel(r.category) %></span>
+            <span class="pf-muted"><%= r.variants.length %> variante<%= r.variants.length > 1 ? "s" : "" %><%= r.variable ? " · variable" : "" %></span>
+            <% if (r.used) { %><span class="pf-badge pf-badge--used" title="Cette police est utilisée par le site">Utilisée</span><% } %>
+            <% if (r.status === "disabled") { %><span class="pf-badge pf-badge--off">Désactivée</span><% } %>
+            <% if (r.missing) { %><span class="pf-badge pf-badge--warn" title="Cette famille n'est plus dans le catalogue de Kolakisa">Indisponible</span><% } %>
+          </div>
+          <div class="pf-actions">
+            <a class="btn btn-outline btn-sm" href="<%= to("/" + r.id) %>">Détails</a>
+            <% if (canManage && !readOnly) { %>
+              <details class="pf-menu"><summary class="btn btn-ghost btn-sm" aria-label="Autres actions pour <%= r.family %>"><%- icon("moreHorizontal", { size: 18 }) %></summary>
+                <div class="pf-menu-pop" role="menu">
+                  <% if (r.status === "active") { %>
+                    <form method="post" action="<%= BASE %>/<%= r.id %>/desactiver" data-pf-form><%- siteField %><button role="menuitem" type="submit" data-confirm="Désactiver « <%= r.family %> » ? Elle ne sera plus proposée dans les réglages du site.">Désactiver</button></form>
+                  <% } else { %>
+                    <form method="post" action="<%= BASE %>/<%= r.id %>/activer" data-pf-form><%- siteField %><button role="menuitem" type="submit">Réactiver</button></form>
+                  <% } %>
+                  <form method="post" action="<%= BASE %>/<%= r.id %>/supprimer" data-pf-form><%- siteField %><button role="menuitem" type="submit" class="is-danger" data-confirm="Supprimer « <%= r.family %> » de ce site ?<%= r.source === "upload" ? " Ses fichiers seront effacés." : " Elle restera disponible dans le catalogue." %>">Supprimer</button></form>
+                </div>
+              </details>
+            <% } %>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+    <%- include("partials/polices-pager", { result, pageHref }) %>
+    <% } %>
+  </div>
+  <% } %>
+</div>
+<%- include("partials/bottom") %>

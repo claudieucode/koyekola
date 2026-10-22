@@ -18,27 +18,8 @@ const KEY = /^[a-z][a-z0-9-]{1,39}$/;
 module.exports = () => {
   const router = express.Router();
   const flash = (req, type, text) => { req.session.mkFlash = { type, text, noReopen: true }; };
-  const denied = (res, message) => res.status(403).render("error", { message });
 
-  // Le site visé : accès limité → le sien (jamais un autre) ; équipe → le site choisi (« ?site= » ou champ « site » d'un formulaire), sinon le site principal.
-  // null = introuvable / refusé (réponse déjà envoyée). Rien ici ne vient d'un état global : la valeur est validée puis revérifiée par pages.getSite.
-  function target(req, res) {
-    const ctx = req.mk.ctx;
-    const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
-    const asked = raw === undefined || raw === null || raw === "" ? undefined : /^\d{1,12}$/.test(String(raw)) ? Number(raw) : NaN;
-    let siteId;
-    if (ctx.siteScope !== undefined) {
-      const own = Number.isInteger(ctx.siteScope) && ctx.siteScope > 0 ? ctx.siteScope : null;
-      if (own === null || (asked !== undefined && asked !== own)) { denied(res, "Vous n'avez pas accès à ce site."); return null; }
-      siteId = own;
-    } else if (asked === undefined) siteId = null;
-    else if (Number.isNaN(asked) || asked < 1) { res.status(404).render("error", { message: "Site introuvable." }); return null; }
-    else siteId = asked;
-    if (siteId === null) return { siteId: null, name: "Site principal", principal: true, readOnly: false };
-    const site = pages.getSite(ctx, siteId);
-    if (!site) { res.status(404).render("error", { message: "Site introuvable." }); return null; }
-    return { siteId, name: site.name, principal: false, readOnly: site.status !== "active" || Boolean(site.deleted_at), site };
-  }
+  const target = require("./siteTarget"); // le site visé : vérifié par le serveur (voir siteTarget.js)
   const to = (t, path = "", query = {}) => {
     const q = new URLSearchParams(); if (t.siteId) q.set("site", String(t.siteId));
     for (const [k, v] of Object.entries(query)) if (v !== "" && v != null) q.set(k, String(v));

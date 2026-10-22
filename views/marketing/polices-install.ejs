@@ -1,0 +1,55 @@
+<%#
+  KOLAKISA CMS → Apparence → Polices → Installer des polices : catalogue Google Fonts hébergé par Kolakisa (recherche instantanée, catégories, tri, pagination),
+  chaque ligne montre la police dans son propre style, son nombre de variantes et si elle est déjà installée sur CE site.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const q = (extra = {}) => ({ q: f.q, categorie: f.category === "all" ? "" : f.category, tri: f.sort === "nom" ? "" : f.sort, ...extra });
+  const pageHref = (n) => to("/installer", q({ page: n > 1 ? n : "" }));
+  const ids = result.rows.map((r) => r.id);
+  const CATS = [["all", "Toutes"], ["sans-serif", "Sans empattement"], ["serif", "Serif"], ["display", "Display"], ["cursive", "Manuscrites"], ["monospace", "Monospace"], ["slab-serif", "Slab serif"], ["variable", "Polices variables"]];
+%>
+<div class="pf" data-pf-root>
+  <%- include("partials/polices-head", { T, tabs, tab, counts, to, readOnly }) %>
+
+  <section class="pf-gf" aria-labelledby="pf-gf-t">
+    <div><h2 id="pf-gf-t">Google Fonts</h2>
+      <p>Les polices sont <strong>copiées sur votre site</strong> et servies par celui-ci : vos visiteurs ne contactent jamais Google. Catalogue : <strong><%= result.catalogSize %></strong> familles sous licence ouverte.</p></div>
+  </section>
+
+  <form class="pf-toolbar" method="get" action="<%= BASE %>/installer" role="search" data-pf-filter aria-label="Rechercher dans le catalogue">
+    <%- siteField %>
+    <div class="pf-field pf-field--search"><label for="pf-q">Rechercher</label>
+      <span class="pf-search"><%- icon("search", { size: 16 }) %><input id="pf-q" type="search" name="q" value="<%= f.q %>" maxlength="80" autocomplete="off" placeholder="Nom de la police…" data-pf-search></span></div>
+    <div class="pf-field"><label for="pf-categorie">Catégorie</label>
+      <select id="pf-categorie" name="categorie"><% CATS.forEach((c) => { %><option value="<%= c[0] === "all" ? "" : c[0] %>"<%= f.category === c[0] ? " selected" : "" %>><%= c[1] %></option><% }) %></select></div>
+    <div class="pf-field"><label for="pf-tri">Tri</label>
+      <select id="pf-tri" name="tri"><option value="nom"<%= f.sort === "nom" ? " selected" : "" %>>Nom (A → Z)</option><option value="populaire"<%= f.sort === "populaire" ? " selected" : "" %>>Popularité</option></select></div>
+    <noscript><button class="btn btn-primary btn-sm" type="submit">Rechercher</button></noscript>
+    <a class="pf-reset btn btn-ghost btn-sm" href="<%= to("/installer") %>"<%- f.q || f.category !== "all" || f.sort !== "nom" ? "" : " hidden" %> data-pf-reset>Réinitialiser</a>
+  </form>
+
+  <div data-pf-results aria-live="polite" aria-busy="false">
+    <% if (ids.length) { %><link rel="stylesheet" href="/polices.css?f=<%= ids.join(",") %>"><% } %>
+    <p class="pf-count" data-pf-count><strong><%= result.total %></strong> famille<%= result.total > 1 ? "s" : "" %><%= f.q || f.category !== "all" ? " correspondante" + (result.total > 1 ? "s" : "") : "" %></p>
+    <% if (!result.rows.length) { %>
+      <div class="pf-none" role="status"><strong>Aucune famille ne correspond à « <%= f.q %> ».</strong><p>Vérifiez l'orthographe ou <a href="<%= to("/installer") %>">affichez tout le catalogue</a>.</p></div>
+    <% } else { %>
+    <ul class="pf-catalog">
+      <% result.rows.forEach((r) => { %>
+        <li class="pf-cat-row">
+          <a class="pf-cat-link" href="<%= to("/installer/" + r.id, q({ page: result.page > 1 ? result.page : "" })) %>" aria-label="<%= r.family %> : voir les variantes<%= r.installed ? " (déjà installée)" : "" %>">
+            <span class="pf-cat-name" style="font-family:<%= r.stack %>"><%= r.family %></span>
+            <span class="pf-cat-meta">
+              <% if (r.installed) { %><span class="pf-badge pf-badge--ok"><%- icon("check", { size: 12 }) %> Installée</span><% } %>
+              <span class="pf-muted"><%= r.variantCount %> variante<%= r.variantCount > 1 ? "s" : "" %><%= r.variable ? " · variable" : "" %></span>
+              <%- icon("chevronRight", { size: 16 }) %>
+            </span>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+    <%- include("partials/polices-pager", { result, pageHref }) %>
+    <% } %>
+  </div>
+</div>
+<%- include("partials/bottom") %>

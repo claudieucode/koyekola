@@ -1,0 +1,47 @@
+<%#
+  KOLAKISA CMS → Apparence → Polices → Installer : une famille du catalogue Google Fonts. Aperçu modifiable, choix des variantes, installation réelle sur CE site
+  (les fichiers sont vérifiés sur le serveur avant l'enregistrement).
+%><%- include("partials/top", { title, active }) %>
+<%
+  const WN = { 100: "Thin", 200: "Extra-light", 300: "Light", 400: "Regular", 500: "Medium", 600: "Semi-bold", 700: "Bold", 800: "Extra-bold", 900: "Black" };
+  const free = fam.variants.filter((v) => v.available);
+  const nothingChosen = !fam.installed;
+%>
+<div class="pf" data-pf-root>
+  <header class="pf-crumb"><a href="<%= back %>"><%- icon("arrowLeft", { size: 16 }) %> Retour au catalogue</a></header>
+  <link rel="stylesheet" href="/polices.css?f=<%= fam.id %>">
+  <section class="pf-hero">
+    <div class="pf-hero-text">
+      <p class="pf-kicker">Google Fonts · <%= (categories.find((c) => c[0] === fam.category) || [0, fam.category])[1] %><%= fam.variable ? " · police variable" : "" %></p>
+      <h1 style="font-family:<%= fam.stack %>"><%= fam.family %></h1>
+      <% if (fam.installed) { %><p><span class="pf-badge pf-badge--ok"><%- icon("check", { size: 12 }) %> Installée sur « <%= T.name %> »</span> <a href="<%= to("/" + fam.installedRow) %>">Ouvrir sa fiche</a></p><% } %>
+    </div>
+    <label class="pf-sample-edit" for="pf-sample">Texte de démonstration
+      <input id="pf-sample" type="text" maxlength="120" placeholder="Portez ce vieux whisky au juge blond qui fume" data-pf-sample-input></label>
+  </section>
+
+  <form method="post" action="<%= BASE %>/installer" data-pf-form class="pf-family-form">
+    <%- siteField %><input type="hidden" name="famille" value="<%= fam.id %>">
+    <div class="pf-variants-head"><h2>Variantes <span class="pf-muted">(<%= fam.variants.length %>)</span></h2>
+      <% if (canInstall && !readOnly && free.length > 1) { %><button type="button" class="btn btn-ghost btn-sm" data-pf-all="on">Tout sélectionner</button><button type="button" class="btn btn-ghost btn-sm" data-pf-all="off">Tout désélectionner</button><% } %></div>
+    <ul class="pf-variants">
+      <% fam.variants.forEach((v) => { const id = "v-" + v.weight + "-" + v.style; %>
+        <li class="pf-variant<%= v.chosen ? " is-chosen" : "" %><%= v.available ? "" : " is-off" %>">
+          <label for="<%= id %>">
+            <% if (canInstall && !readOnly) { %><input id="<%= id %>" type="checkbox" name="variantes" value="<%= v.weight %>-<%= v.style %>"<%= v.chosen || (nothingChosen && v.available && v.style === "normal" && (v.weight === 400 || v.weight === 700)) ? " checked" : "" %><%= v.available ? "" : " disabled" %> data-pf-variant><% } %>
+            <span class="pf-variant-label"><strong><%= WN[v.weight] || v.weight %></strong> <span class="pf-muted"><%= v.weight %><%= v.style === "italic" ? " · italique" : "" %></span>
+              <% if (v.chosen) { %><span class="pf-badge pf-badge--ok">Installée</span><% } %><% if (!v.available) { %><span class="pf-badge pf-badge--warn">Fichier indisponible</span><% } %></span>
+            <span class="pf-variant-sample" data-pf-sample style="font-family:'<%= fam.family %>';font-weight:<%= v.weight %>;font-style:<%= v.style %>">Portez ce vieux whisky au juge blond qui fume</span>
+          </label>
+        </li>
+      <% }) %>
+    </ul>
+    <div class="pf-family-foot">
+      <% if (canInstall && !readOnly) { %>
+        <button class="btn btn-primary" type="submit" data-pf-install><%- icon("download", { size: 16 }) %> <%= fam.installed ? "Ajouter les variantes cochées" : "Installer sur « " + T.name + " »" %></button>
+      <% } else { %><p class="pf-muted">Votre rôle ne permet pas d'installer des polices sur ce site.</p><% } %>
+      <p class="pf-muted pf-legal">Licence <%= fam.license || "ouverte" %> · fichiers <%= fam.subset ? "(" + fam.subset + ") " : "" %>hébergés par Kolakisa<% if (fam.sourceUrl) { %> · <a href="<%= fam.sourceUrl %>" rel="noopener noreferrer" target="_blank">Fiche Google Fonts</a><% } %></p>
+    </div>
+  </form>
+</div>
+<%- include("partials/bottom") %>

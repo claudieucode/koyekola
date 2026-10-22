@@ -1,0 +1,10 @@
+<%# Pagination : « Page X sur Y », précédent/suivant, liens conservant tous les filtres. Variables : result, pageHref(n). %>
+<% if (result.pageCount > 1) { %>
+<nav class="pf-pager" aria-label="Pagination">
+  <span class="pf-pager-info">Page <strong><%= result.page %></strong> sur <%= result.pageCount %> · <%= result.total %> résultat<%= result.total > 1 ? "s" : "" %></span>
+  <span class="pf-pager-btns">
+    <% if (result.page > 1) { %><a class="btn btn-outline btn-sm" href="<%= pageHref(1) %>" aria-label="Première page">«</a><a class="btn btn-outline btn-sm" rel="prev" href="<%= pageHref(result.page - 1) %>"><%- icon("chevronLeft", { size: 14 }) %> Précédent</a><% } %>
+    <% if (result.page < result.pageCount) { %><a class="btn btn-outline btn-sm" rel="next" href="<%= pageHref(result.page + 1) %>">Suivant <%- icon("chevronRight", { size: 14 }) %></a><a class="btn btn-outline btn-sm" href="<%= pageHref(result.pageCount) %>" aria-label="Dernière page">»</a><% } %>
+  </span>
+</nav>
+<% } %>
