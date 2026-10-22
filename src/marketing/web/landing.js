@@ -83,7 +83,7 @@ module.exports = () => {
     const state = req.query.vue === "archivees" ? "corbeille" : cmsPages.STATES.includes(req.query.etat) ? req.query.etat : "toutes";
     const filters = { q: String(req.query.q || "").trim().slice(0, 80), site: String(req.query.site || ""), auteur: String(req.query.auteur || ""), tri: Object.hasOwn(cmsPages.SORTS, req.query.tri) ? req.query.tri : "modifiee", ordre: req.query.ordre === "asc" || (req.query.tri === "titre" && req.query.ordre !== "desc") ? "asc" : "desc" };
     const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, sort: filters.tri, dir: filters.ordre, page: req.query.page });
-    res.render("marketing/landing-list", { layoutFormats: require("../pages/layoutFormat").FORMATS,
+    res.render("marketing/landing-list", { layoutFormats: require("../pages/layoutFormat").FORMATS, newPageOpen: req.query.nouvelle === "1",
       title: "Pages", active: "landing", state, filters, result, pages: result.rows, authors: cmsPages.authorsOfPages(ctx), sites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
       userTemplates: pages.listPageTemplates(ctx), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true,
       STATUSES: landing.STATUSES, STATUS_CLASS, KINDS: pages.KINDS,
@@ -91,17 +91,31 @@ module.exports = () => {
   });
   // Liste des pages « de retour » : celle de l'ESPACE DU SITE de la page (jamais la liste centrale, qui est celle du principal) ; sans site : la liste centrale, comme avant
   const pagesHome = (siteId) => (Number.isInteger(siteId) && siteId > 0 ? `/marketing/site-web/sites/${siteId}/pages` : "/marketing/pages");
+  // PAGES-02 — « Créer et ouvrir l'éditeur » : la page est créée UNE SEULE FOIS (jeton d'idempotence du formulaire : double clic, requête répétée, nouvelle tentative = la même page), en un bloc
+  // atomique (aucune page orpheline si le modèle est refusé), dans le site vérifié par le serveur, en BROUILLON ; puis on ouvre l'éditeur du mode choisi (visuel, ou édition par sections).
+  const createdOnce = new Map(); // `${compte}:${jeton}` → identifiant de la page (processus unique ; purgé au-delà de 500 entrées)
+  const TOKEN = /^[A-Za-z0-9_-]{16,64}$/;
+  const MODES = { editeur: (id) => `/marketing/pages/${id}/editeur?retour=pages`, fiche: (id) => `/marketing/pages/${id}` };
   router.post("/pages", need("forms.write"), (req, res, next) => {
     let created = null;
-    // « Nouvelle page » du CMS : la page est créée en base (identifiant réel), puis l'éditeur visuel s'ouvre dessus
-    const toBuilder = req.body.ouvrir === "editeur";
-    attempt(req, res, next, () => (created ? `/marketing/pages/${created.id}${toBuilder ? "/editeur?retour=pages" : ""}` : pagesHome(req.mk.site ? req.mk.site.id : null)), () => {   // échec : retour à l'espace du site vérifié par le serveur
+    const mode = req.body.ouvrir === undefined ? null : String(req.body.ouvrir);
+    const toBuilder = mode === "editeur";
+    attempt(req, res, next, () => (created ? (MODES[mode] ? MODES[mode](created.id) : `/marketing/pages/${created.id}`) : pagesHome(req.mk.site ? req.mk.site.id : null)), () => {   // échec : retour à l'espace du site vérifié par le serveur
+      if (mode !== null && !MODES[mode]) throw new MarketingError("invalid_field", "Mode d'édition inconnu : choisissez l'éditeur visuel ou l'édition par sections. Aucune page n'a été créée.");
+      const token = TOKEN.test(String(req.body.request_id || "")) ? `${req.session.user.id}:${req.body.request_id}` : null;
+      if (token && createdOnce.has(token)) {   // nouvelle tentative du MÊME formulaire : on rouvre la page déjà créée, sans en créer une seconde
+        const row = req.mk.ctx.db.prepare("SELECT id, site_id FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(createdOnce.get(token), req.mk.ctx.organizationId);
+        if (row && (!Number.isInteger(req.mk.ctx.siteScope) || row.site_id === req.mk.ctx.siteScope)) { created = row; return "Cette page a déjà été créée : la voici."; }
+        createdOnce.delete(token);
+      }
       const siteId = intOrNull(req.body.site_id);
       const template = typeof req.body.template === "string" && req.body.template ? req.body.template : null;
       // Nouvelle page du CMS : une page de site (bandeau + texte, publiable tout de suite) ; sans « ouvrir », comportement historique (page d'atterrissage)
-      const layout = req.body.layoutMode === "guided" ? { mode: "guided", format: req.body.layoutFormat, maxWidth: req.body.layoutMax, gutter: req.body.layoutGutter, locked: req.body.layoutLocked === "1" } : null;
-      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || toBuilder ? "page" : "landing", template, layout, blank: toBuilder && !template });
-      return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur visuel, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
+      // La mise en page guidée est un réglage de l'éditeur visuel : elle n'est pas appliquée (ni annoncée) quand on ouvre l'édition par sections
+      const layout = toBuilder && req.body.layoutMode === "guided" ? { mode: "guided", format: req.body.layoutFormat, maxWidth: req.body.layoutMax, gutter: req.body.layoutGutter, locked: req.body.layoutLocked === "1" } : null;
+      created = pages.createPage(req.mk.ctx, { name: req.body.name, siteId, kind: siteId || mode ? "page" : "landing", template, layout, blank: toBuilder && !template });
+      if (token) { createdOnce.set(token, created.id); if (createdOnce.size > 500) createdOnce.delete(createdOnce.keys().next().value); }
+      return template ? "Page créée à partir du modèle (brouillon) : remplacez les textes entre crochets dans l'éditeur, puis publiez-la." : "Page créée (brouillon) : composez-la, puis publiez-la.";
     });
   });
   // Nommage à la création (éditeur) : contrôle en direct du nom (mêmes règles que la création et le renommage) puis création JSON, sans passer par la liste des pages

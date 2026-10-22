@@ -374,7 +374,10 @@ module.exports = () => {
     } catch (error) { jsonError(res, next, error); }
   });
   router.post("/site-web/modeles/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {
-    attempt(req, res, next, "/marketing/pages#nouvelle", () => { pages.deletePageTemplate(req.mk.ctx, Number(req.params.id)); return "Modèle supprimé (les pages déjà créées avec lui ne changent pas)."; });
+    // Retour à la liste des pages DU SITE du modèle (jamais celle du principal), avec la boîte « Nouvelle page » ouverte
+    const own = req.mk.ctx.db.prepare("SELECT site_id FROM mk_page_templates WHERE id = ? AND organization_id = ?").get(Number(req.params.id), req.mk.ctx.organizationId);
+    const home = own && Number.isInteger(own.site_id) && own.site_id > 0 ? `/marketing/site-web/sites/${own.site_id}/pages?nouvelle=1` : "/marketing/pages?nouvelle=1";
+    attempt(req, res, next, home, () => { pages.deletePageTemplate(req.mk.ctx, Number(req.params.id)); return "Modèle supprimé (les pages déjà créées avec lui ne changent pas)."; });
   });
   // Pages et nombre d'instances liées (données réelles : contenu de travail de chaque page)
   router.get("/site-web/composants/:id(\\d+)/instances.json", need("forms.read"), (req, res) => {

@@ -296,14 +296,16 @@ function uniqueName(ctx, table, base) {
 }
 
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
-function createPage(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
+// PAGES-02 : création ATOMIQUE — la page, son contenu de départ (modèle) et sa mise en page sont écrits ensemble ; si l'un échoue (modèle indisponible, section refusée…), aucune page n'est laissée
+function createPage(ctx, input = {}) { return transaction(ctx.db, () => createPageInner(ctx, input)); }
+function createPageInner(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
   assertSiteScope(ctx, siteId);
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   // Gabarit choisi : ses sections (validées par la grammaire commune, comme toute section enregistrée)
   const mine = typeof template === "string" && /^mine:\d+$/.test(template) ? getPageTemplate(ctx, Number(template.slice(5)), { siteId }) : null;
   const fromTemplate = mine ? mine.content.sections : template ? require("./templates").buildTemplate(ctx, template) : null;
-  if (template && !fromTemplate) throw bad("Modèle de page inconnu.");
+  if (template && !fromTemplate) throw bad(typeof template === "string" && template.startsWith("mine:") ? "Ce modèle n'est pas disponible pour ce site (supprimé, ou réservé à un autre site) : choisissez-en un autre. Aucune page n'a été créée." : "Modèle de page inconnu : choisissez-en un dans la liste. Aucune page n'a été créée.");
   const page = landing.createPage(ctx, { name, siteId });
   // Palier 23 : une page de SITE (À propos, Contact…) est indexable par défaut (comme sur WordPress) ; une page d'atterrissage ou une étape de tunnel reste non indexée
   // jusqu'à ce qu'on la rende indexable. La personne peut toujours changer ce réglage dans la fiche de la page.

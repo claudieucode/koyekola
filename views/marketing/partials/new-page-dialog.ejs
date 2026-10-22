@@ -1,19 +1,26 @@
 <%#
   Boîte « Nouvelle page » UNIQUE de KOLAKISA CMS : liste centrale des pages ET écran Pages de chaque espace de site (principal compris).
   Locals : templates, userTemplates, layoutFormats ; sites (liste centrale : sélecteur de site) OU fixedSite = { id } (espace d'un site : le site est celui de l'espace,
-  transmis en champ caché et revérifié côté serveur ; id null = site principal, sans rattachement).
+  transmis en champ caché et revérifié côté serveur ; id null = site principal, sans rattachement). autoOpen / newPageOpen : ouverte dès le rendu (adresse « ?nouvelle=1 », sans dépendre de l'ancre ni de JavaScript).
+  PAGES-02 : jeton d'idempotence (request_id), choix du mode d'édition, validation et protection contre le double envoi (public/js/new-page-dialog.js).
 %>
-<dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" aria-labelledby="lp-new-title">
-        <form action="/marketing/pages" method="post"><input type="hidden" name="ouvrir" value="editeur">
+<% const openNow = (typeof autoOpen !== "undefined" && autoOpen) || (typeof newPageOpen !== "undefined" && newPageOpen); %>
+<dialog class="mk-dialog mk-modal" id="nouvelle" data-mk-modal data-mk-modal-hash="nouvelle" data-np<%= openNow ? " open" : "" %> aria-labelledby="lp-new-title">
+        <form action="/marketing/pages" method="post" data-np-form><input type="hidden" name="request_id" value="<%= mkToken() %>">
           <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="lp-new-title">Nouvelle page</h2><p class="mk-dialog-desc">Un nom pour vous retrouver ; vous composerez la page ensuite. Rien n'est mis en ligne avant la publication.</p></div>
             <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
-          <div class="mk-dialog-body"><div class="field-group"><label for="lp-name">Nom de la page *</label><input id="lp-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit : bien débuter en photo"></div>
+          <div class="mk-dialog-body"><div class="field-group"><label for="lp-name">Nom de la page *</label><input id="lp-name" type="text" name="name" maxlength="100" required autocomplete="off" data-np-name aria-describedby="lp-name-hint" placeholder="Guide gratuit : bien débuter en photo"><span class="field-hint" id="lp-name-hint" data-np-hint>Obligatoire. Les espaces au début et à la fin sont retirés.</span></div>
             <fieldset class="mk-tpl-choice"><legend>Modèle de départ</legend>
-              <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Page vierge</strong><span class="mk-sub">Canevas vide : l'éditeur propose ensuite la création classique ou guidée.</span></span></label>
+              <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Page vierge</strong><span class="mk-sub">Canevas vide : vous composez la page vous-même, en conception libre ou guidée par un format.</span></span></label>
               <% userTemplates.forEach((t) => { %><label class="mk-tpl"><input type="radio" name="template" value="mine:<%= t.id %>"><span><strong><%= t.name %></strong><span class="mk-sub">Mes modèles · <%= t.category %><%= t.description ? " · " + t.description : "" %></span></span></label><% }) %>
               <% templates.forEach((t) => { %><label class="mk-tpl"><input type="radio" name="template" value="<%= t.key %>"><span><strong><%= t.name %></strong><span class="mk-sub"><%= t.category %> · <%= t.description %></span></span></label><% }) %>
             </fieldset>
-            <fieldset class="mk-tpl-choice" data-lp-layout><legend>Mise en page</legend>
+            <fieldset class="mk-tpl-choice" data-np-mode><legend>Éditeur</legend>
+              <label class="mk-tpl"><input type="radio" name="ouvrir" value="editeur" checked><span><strong>Éditeur visuel KOLAKISA</strong><span class="mk-sub">Conteneurs, widgets, aperçu en direct et mise en page : l'éditeur complet des pages.</span></span></label>
+              <label class="mk-tpl"><input type="radio" name="ouvrir" value="fiche"><span><strong>Édition par sections</strong><span class="mk-sub">Un formulaire par section (titre, texte, bouton, formulaire…) : plus simple, sans mise en page libre. Tous les modèles sont compatibles ; la mise en page guidée ne s'applique qu'à l'éditeur visuel.</span></span></label>
+              <p class="mk-sub">L'éditeur de blocs de type Gutenberg est celui des <em>articles</em> : une page est composée de sections, pas de blocs de texte.</p>
+            </fieldset>
+            <fieldset class="mk-tpl-choice" data-lp-layout data-np-layout><legend>Mise en page</legend>
               <label class="mk-tpl"><input type="radio" name="layoutMode" value="free" checked><span><strong>Conception libre</strong><span class="mk-sub">Conteneurs, Flexbox et widgets comme d'habitude : vous réglez tout vous-même.</span></span></label>
               <label class="mk-tpl"><input type="radio" name="layoutMode" value="guided"><span><strong>Guidée par un format</strong><span class="mk-sub">Largeur maximale et marges de départ cohérentes, modifiables et verrouillables. Mêmes widgets.</span></span></label>
               <div class="field-group" data-lp-layout-opts hidden>
@@ -25,7 +32,8 @@
             <script>(function(){var f=document.currentScript.parentNode;var o=f.querySelector("[data-lp-layout-opts]");f.addEventListener("change",function(){o.hidden=f.querySelector('[name=layoutMode]:checked').value!=="guided";});})();</script>
             <% if (typeof fixedSite !== "undefined" && fixedSite) { %><% if (fixedSite.id) { %><input type="hidden" name="site_id" value="<%= fixedSite.id %>"><% } %>
             <% } else if (sites.length) { %><div class="field-group"><label for="lp-new-site">Site</label><select id="lp-new-site" name="site_id"><option value="">Aucun (page d'atterrissage isolée)</option><% sites.forEach((st) => { %><option value="<%= st.id %>"><%= st.name %></option><% }) %></select></div><% } %></div>
-          <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer et ouvrir l’éditeur</button></div>
+          <div class="mk-dialog-actions"><span class="mk-sub" data-np-status role="status" aria-live="polite"></span><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm" data-np-submit>Créer et ouvrir l’éditeur</button></div>
         </form>
 </dialog>
+<script src="<%= asset('/js/new-page-dialog.js') %>" defer></script>
 <%- include("modal-reopen", { id: "nouvelle" }) %>
