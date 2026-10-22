@@ -175,7 +175,8 @@ describe("5 — le cadre ne s'active que sur un site vérifié et un écran prop
     for (const u of ["/marketing/listes?site=987654", "/marketing/listes?site=abc", "/marketing/listes?site=1%20OR%201=1"]) { const r = await boss.get(u); assert.ok(!/mk-site-banner/.test(r.text), u); }
   });
   test("un écran d'organisation qui accepte « ?site= » comme simple filtre n'ouvre pas l'espace du site", async () => {
-    for (const u of [`/marketing/site-web/utilisateurs?site=${A}`, `/marketing/site-web/redirections?site=${A}`, `/marketing/pages?site=${A}`]) assert.ok(!/mk-site-banner/.test((await boss.get(u)).text), u);
+    // PAGES-01 : « Pages » est désormais un écran partagé délégué (cadre du site comme Articles), il n'est donc plus un simple filtre
+    for (const u of [`/marketing/site-web/utilisateurs?site=${A}`, `/marketing/site-web/redirections?site=${A}`]) assert.ok(!/mk-site-banner/.test((await boss.get(u)).text), u);
   });
   test("un membre limité ne reçoit jamais le cadre d'un site qui n'est pas le sien", async () => {
     assert.ok(!/mk-site-banner/.test((await memA.get(`/marketing/listes?site=${B}`)).text));

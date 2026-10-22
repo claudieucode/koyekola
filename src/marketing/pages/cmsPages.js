@@ -6,46 +6,75 @@ const { sameScope } = require("../../services/siteScope"); // R9-2 : égalité d
 const { checkCtx, audit } = require("../audience/shared");
 const { notHiddenSql } = require("../visibility"); // R4 : pages des sites dont la personne ne peut pas lire les éléments
 
-const STATES = ["toutes", "publiees", "brouillons", "corbeille"];
-const SORTS = { modifiee: "p.updated_at", titre: "p.name COLLATE NOCASE", creee: "p.id", publiee: "p.published_at" };
-const PER_PAGE = 25;
+const STATES = ["toutes", "publiees", "programmees", "brouillons", "corbeille"];
+// Date affichée (colonne « Date » de la liste) : publication pour une page en ligne, programmation pour une page programmée, sinon dernière modification
+const DATE_SQL = "CASE WHEN p.status = 'published' THEN COALESCE(p.published_at, p.updated_at) WHEN p.scheduled_at IS NOT NULL THEN p.scheduled_at ELSE p.updated_at END";
+const SORTS = { modifiee: "p.updated_at", titre: "p.name COLLATE NOCASE", creee: "p.id", publiee: "p.published_at", auteur: "u.username COLLATE NOCASE", date: DATE_SQL };
+const PER_PAGE = 25, PER_PAGE_MIN = 5, PER_PAGE_MAX = 100;
+const clampPerPage = (v) => { const n = Number(v); return Number.isInteger(n) ? Math.min(PER_PAGE_MAX, Math.max(PER_PAGE_MIN, n)) : PER_PAGE; };
 const like = (q) => `%${String(q || "").slice(0, 80).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 const bad = (message) => new MarketingError("invalid_field", message);
 
 // Versions B des tests A/B : gérées dans leur test, jamais listées comme pages
 const NOT_VARIANT = "p.id NOT IN (SELECT variant_page_id FROM mk_page_tests WHERE variant_page_id IS NOT NULL)";
 
-// « Brouillons » = pas en ligne et pas à la corbeille : brouillon jamais publié, ou page remise hors ligne
+// « Brouillons » = ni en ligne, ni programmée, ni à la corbeille : brouillon jamais publié, ou page remise hors ligne
 const stateSql = (state) => ({
   toutes: "p.archived_at IS NULL",
   publiees: "p.archived_at IS NULL AND p.status = 'published'",
-  brouillons: "p.archived_at IS NULL AND p.status IN ('draft', 'unpublished')",
+  programmees: "p.archived_at IS NULL AND p.status <> 'published' AND p.scheduled_at IS NOT NULL",
+  brouillons: "p.archived_at IS NULL AND p.status IN ('draft', 'unpublished') AND p.scheduled_at IS NULL",
   corbeille: "p.archived_at IS NOT NULL",
 }[state]);
 
+// Portée de SITE de la liste : un accès limité à un site (ctx.siteScope, imposé par le serveur) ne voit que ce site ; l'équipe qui a choisi un site
+// (ctx.siteFilter : numéro, ou « principal ») ne voit que celui-là ; sans choix, l'équipe voit toutes les pages de l'organisation (liste centrale historique)
+function siteClause(ctx, alias = "p") {
+  const col = `${alias}.site_id`;
+  if (Number.isInteger(ctx.siteScope)) return ctx.siteScope > 0 ? { sql: `${col} = ?`, params: [ctx.siteScope] } : { sql: "0", params: [] };
+  if (Number.isInteger(ctx.siteFilter)) return { sql: `${col} = ?`, params: [ctx.siteFilter] };
+  if (ctx.siteFilter === "principal") return { sql: `${col} IS NULL`, params: [] };
+  return { sql: "1", params: [] };
+}
+
 function counts(ctx) {
   const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
-  const r = ctx.db.prepare(`SELECT COALESCE(SUM(p.archived_at IS NULL), 0) toutes,
-      COALESCE(SUM(p.archived_at IS NULL AND p.status = 'published'), 0) publiees,
-      COALESCE(SUM(p.archived_at IS NULL AND p.status IN ('draft', 'unpublished')), 0) brouillons,
-      COALESCE(SUM(p.archived_at IS NOT NULL), 0) corbeille
-    FROM mk_landing_pages p WHERE p.organization_id = ? AND ${NOT_VARIANT} AND ${hid.sql}`).get(ctx.organizationId, ...hid.params);
-  return { toutes: r.toutes, publiees: r.publiees, brouillons: r.brouillons, corbeille: r.corbeille };
+  const site = siteClause(ctx);
+  const r = ctx.db.prepare(`SELECT COALESCE(SUM(${stateSql("toutes")}), 0) toutes,
+      COALESCE(SUM(${stateSql("publiees")}), 0) publiees,
+      COALESCE(SUM(${stateSql("programmees")}), 0) programmees,
+      COALESCE(SUM(${stateSql("brouillons")}), 0) brouillons,
+      COALESCE(SUM(${stateSql("corbeille")}), 0) corbeille
+    FROM mk_landing_pages p WHERE p.organization_id = ? AND ${NOT_VARIANT} AND ${hid.sql} AND ${site.sql}`).get(ctx.organizationId, ...hid.params, ...site.params);
+  return { toutes: r.toutes, publiees: r.publiees, programmees: r.programmees, brouillons: r.brouillons, corbeille: r.corbeille };
 }
 
 function authorsOfPages(ctx) {
   const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
-  return ctx.db.prepare(`SELECT DISTINCT u.id, u.username FROM mk_landing_pages p JOIN users u ON u.id = p.created_by WHERE p.organization_id = ? AND ${hid.sql} ORDER BY u.username COLLATE NOCASE`).all(ctx.organizationId, ...hid.params);
+  const site = siteClause(ctx);
+  return ctx.db.prepare(`SELECT DISTINCT u.id, u.username FROM mk_landing_pages p JOIN users u ON u.id = p.created_by WHERE p.organization_id = ? AND ${hid.sql} AND ${site.sql} ORDER BY u.username COLLATE NOCASE`).all(ctx.organizationId, ...hid.params, ...site.params);
+}
+
+// Mois (AAAA-MM) réellement présents dans la liste de l'état choisi, selon la date affichée : alimente le filtre « Toutes les dates »
+function months(ctx, state = "toutes") {
+  if (!STATES.includes(state)) state = "toutes";
+  const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
+  const site = siteClause(ctx);
+  return ctx.db.prepare(`SELECT substr(${DATE_SQL}, 1, 7) AS ym, COUNT(*) AS n FROM mk_landing_pages p WHERE p.organization_id = ? AND ${stateSql(state)} AND ${NOT_VARIANT} AND ${hid.sql} AND ${site.sql} AND ${DATE_SQL} IS NOT NULL GROUP BY ym ORDER BY ym DESC`).all(ctx.organizationId, ...hid.params, ...site.params);
 }
 
 // Liste filtrée, triée et paginée DANS la base ; les chiffres de fréquentation ne sont calculés que pour la page affichée
-function queryPages(ctx, { state = "toutes", q = "", siteId = "", authorId = "", sort = "modifiee", dir = "desc", page = 1, perPage = PER_PAGE } = {}) {
+function queryPages(ctx, { state = "toutes", q = "", siteId = "", authorId = "", month = "", sort = "modifiee", dir = "desc", page = 1, perPage = PER_PAGE } = {}) {
   checkCtx(ctx);
+  perPage = clampPerPage(perPage);
   if (!STATES.includes(state)) state = "toutes";
   const where = ["p.organization_id = ?", stateSql(state), NOT_VARIANT];
   const args = [ctx.organizationId];
   const hid = notHiddenSql(ctx.hiddenSites, "p.site_id");
   if (hid.params.length) { where.push(hid.sql); args.push(...hid.params); }
+  const scope = siteClause(ctx);
+  where.push(scope.sql); args.push(...scope.params);
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) { where.push(`substr(${DATE_SQL}, 1, 7) = ?`); args.push(String(month)); }
   const needle = String(q || "").trim();
   if (needle) { where.push("(p.name LIKE ? ESCAPE '\\' OR p.slug LIKE ? ESCAPE '\\' OR p.title LIKE ? ESCAPE '\\')"); args.push(like(needle), like(needle), like(needle)); }
   if (siteId === "none") where.push("p.site_id IS NULL");
@@ -56,7 +85,7 @@ function queryPages(ctx, { state = "toutes", q = "", siteId = "", authorId = "",
   const total = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_landing_pages p WHERE ${where.join(" AND ")}`).get(...args).n;
   const pages = Math.max(1, Math.ceil(total / perPage));
   const current = Math.min(Math.max(1, Number(page) || 1), pages);
-  const rows = ctx.db.prepare(`SELECT p.id, p.name, p.slug, p.title, p.status, p.kind, p.site_id, p.parent_id, p.published_at, p.updated_at, p.archived_at, p.created_by,
+  const rows = ctx.db.prepare(`SELECT p.id, p.name, p.slug, p.title, p.status, p.kind, p.site_id, p.parent_id, p.published_at, p.scheduled_at, p.updated_at, p.archived_at, p.created_by,
       p.draft IS NOT NULL AS has_draft, s.name AS site_name, u.username AS author, par.name AS parent_name
     FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id LEFT JOIN users u ON u.id = p.created_by LEFT JOIN mk_landing_pages par ON par.id = p.parent_id
     WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
@@ -127,14 +156,14 @@ const RUNNERS = { publier: "publish", depublier: "unpublish", corbeille: "archiv
 const ACTIONS = { publier: ["publiée", "publiées"], depublier: ["mise hors ligne", "mises hors ligne"], corbeille: ["mise à la corbeille", "mises à la corbeille"], restaurer: ["restaurée", "restaurées"], supprimer: ["supprimée définitivement", "supprimées définitivement"] };
 // run : { publish, unpublish, archive, restore, remove } fournis par la route (moteur de pages) ; can(action) filtre les droits
 // allow(row, action) : droit de CETTE page (son site), vérifié page par page ; refus individuel signalé sans arrêter les autres
-function bulk(ctx, action, ids, run, allow = null) {
+function bulk(ctx, action, ids, run, allow = null, { siteLimit } = {}) {
   if (!Object.hasOwn(ACTIONS, action)) throw bad("Action inconnue.");
-  const list = [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
+  const list = [...new Set([].concat(ids ?? []).flatMap((x) => String(x).split(",")).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 200);
   if (!list.length) throw bad("Sélectionnez au moins une page.");
   const done = []; const failed = [];
   for (const id of list) {
     const row = ctx.db.prepare("SELECT id, name, archived_at, site_id FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId);
-    if (!row || (Number.isInteger(ctx.siteScope) && (row.site_id ?? null) !== ctx.siteScope)) { failed.push({ id, name: `#${id}`, message: "page introuvable" }); continue; }
+    if (!row || (Number.isInteger(ctx.siteScope) && (row.site_id ?? null) !== ctx.siteScope) || (siteLimit !== undefined && (row.site_id ?? null) !== siteLimit)) { failed.push({ id, name: `#${id}`, message: "page introuvable" }); continue; }
     if (allow && !allow(row, action)) { failed.push({ id, name: row.name, message: "vous n'avez pas ce droit sur le site de cette page" }); continue; }
     try {
       if (action === "supprimer" && !row.archived_at) throw bad("mettez d'abord la page à la corbeille");
@@ -150,4 +179,4 @@ function bulk(ctx, action, ids, run, allow = null) {
   return { done, failed, label: ACTIONS[action] };
 }
 
-module.exports = { STATES, SORTS, PER_PAGE, queryPages, counts, authorsOfPages, setParent, parentChoices, slugChanged, redirectSource, bulk, ACTIONS };
+module.exports = { STATES, SORTS, PER_PAGE, clampPerPage, siteClause, months, queryPages, counts, authorsOfPages, setParent, parentChoices, slugChanged, redirectSource, bulk, ACTIONS };

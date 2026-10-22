@@ -1,97 +1,189 @@
-<%- include("partials/top", { title, active }) %>
-<% const canWrite = mk.can("forms.write"); %>
-    <div class="mk-head"><h1>Pages</h1><% if (canWrite && state !== "corbeille") { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Nouvelle page</button><% } %></div>
-    <p class="mk-lead">Toutes vos pages web hébergées par KOLAKISA (adresse /p/…) : pages de vos sites et pages d'atterrissage. Chaque modification est enregistrée en brouillon ; les visiteurs ne la voient qu'après « Publier ».</p>
-    <%
-      // Adresse de la liste avec ses filtres (les liens d'onglets, de pages et le retour des actions groupées la conservent)
-      const keep = (over = {}) => { const p = new URLSearchParams(); const f = { etat: state === "toutes" ? "" : state, q: filters.q, site: filters.site, auteur: filters.auteur, tri: filters.tri === "modifiee" ? "" : filters.tri, ...over }; Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return "/marketing/pages" + (t ? "?" + t : ""); };
-      const tabs = [["toutes", "Toutes"], ["publiees", "Publiées"], ["brouillons", "Brouillons"], ["corbeille", "Corbeille"]];
-      const fmt = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
-      const filtered = Boolean(filters.q || filters.site || filters.auteur);
-      const inTrash = state === "corbeille";
-    %>
-    <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer les pages par état">
-      <% tabs.forEach(([k, label]) => { %><a class="mk-tab" href="<%= keep({ etat: k === "toutes" ? "" : k, page: "" }) %>"<%- state === k ? ' aria-current="page"' : "" %>><%= label %> <span class="mk-tab-count"><%= result.counts[k] %></span></a>
-      <% }) %>
-    </nav>
+<%#
+  KOLAKISA CMS → Pages → Toutes les pages (palier PAGES-01), à la manière de WordPress. Liste du moteur de pages (mk_landing_pages) : recherche, filtres, tri, pagination faits par la base ;
+  le site courant est celui du serveur (listBase, fixedSite). Actions groupées, modification rapide et actions de ligne passent par les routes du moteur de pages.
+%><%- include("partials/top", { title, active }) %>
+<%
+  // Site archivé ou supprimé (espace d'un site) : consultation seule, aucune création ni action
+  const readOnly = typeof siteSpace !== "undefined" && siteSpace && (siteSpace.status === "archived" || siteSpace.deleted);
+  const canWrite = mk.can("forms.write") && !readOnly;
+  const fixed = Boolean(fixedSite); // espace d'un site (ou du principal) : le site est celui du serveur
+  const S = fixedSite && fixedSite.id ? fixedSite.id : "";
+  const here = listBase;
+  const keep = (over = {}) => { const p = new URLSearchParams(); const f = { etat: state === "toutes" ? "" : state, q: filters.q, site: fixed ? "" : filters.site, auteur: filters.auteur, mois: filters.mois, orderby: ["titre", "auteur", "date"].includes(filters.tri) ? filters.tri : "", order: ["titre", "auteur", "date"].includes(filters.tri) ? filters.ordre : "", tri: ["titre", "auteur", "date"].includes(filters.tri) ? "" : filters.tri === "modifiee" ? "" : filters.tri, ...over }; Object.entries(f).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return t ? "?" + t : ""; };
+  const tabs = [["toutes", "Tous"], ["publiees", "Publiées"], ["programmees", "Programmées"], ["brouillons", "Brouillons"], ["corbeille", "Corbeille"]];
+  const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  const monthLabel = (ym) => MONTHS[Number(ym.slice(5, 7)) - 1] + " " + ym.slice(0, 4);
+  const fd = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
+  const fdt = (v) => (v ? fd(v) + " à " + String(v).slice(11, 13) + "h" + String(v).slice(14, 16) + " UTC" : "—"); // heures enregistrées en UTC : affichées telles quelles, avec leur fuseau
+  const sortCol = ["titre", "auteur", "date"].includes(filters.tri) ? filters.tri : "", sortDir = filters.ordre === "desc" ? "desc" : "asc";
+  const colSort = (col, firstDir) => { const cur = sortCol === col; const dir = cur ? (sortDir === "asc" ? "desc" : "asc") : firstDir; return { href: here + keep({ orderby: col, order: dir, tri: "", page: "" }), aria: cur ? (sortDir === "asc" ? "ascending" : "descending") : "none", arrow: cur ? (sortDir === "asc" ? "▲" : "▼") : "↕" }; };
+  const filtered = Boolean(filters.q || filters.site || filters.auteur || filters.mois);
+  const inTrash = state === "corbeille";
+  const retour = here + keep({ page: result.page > 1 ? result.page : "" });
+  const siteField = fixed ? `<input type="hidden" name="site" value="${S || "principal"}">` : ""; // site courant transmis aux formulaires (revérifié par le serveur)
+%>
+    <div class="mk-ar-top">
+      <div class="mk-head mk-ar-head"><h1>Pages</h1>
+        <% if (canWrite && !inTrash) { %><button type="button" class="btn btn-outline btn-sm mk-ar-add" data-mk-modal-open="nouvelle">Ajouter une page</button><% } %></div>
+      <div class="mk-ar-meta" data-ar-panels>
+        <button type="button" class="btn btn-ghost btn-sm" aria-expanded="false" aria-controls="ar-options" data-ar-panel-toggle>Options de l'écran <span aria-hidden="true">▾</span></button>
+        <button type="button" class="btn btn-ghost btn-sm" aria-expanded="false" aria-controls="ar-aide" data-ar-panel-toggle>Aide <span aria-hidden="true">▾</span></button>
+      </div>
+    </div>
+    <% if (readOnly) { %><p class="field-hint" role="note">Ce site est archivé : ses pages sont hors ligne et aucune création n'est possible. Restaurez-le depuis ses réglages.</p><% } %>
+    <section id="ar-options" class="mk-ar-panel" hidden aria-label="Options de l'écran">
+      <h2>Colonnes</h2>
+      <div class="mk-ar-cols" role="group" aria-label="Colonnes affichées">
+        <% [["auteur", "Auteur/autrice"], ["date", "Date"]].forEach(([k, n]) => { %><label><input type="checkbox" data-ar-col="<%= k %>" checked> <%= n %></label><% }) %>
+      </div>
+      <h2>Pagination</h2>
+      <form method="get" action="<%= here %>" class="mk-ar-perpage"><%- siteField %>
+        <% Object.entries({ etat: state === "toutes" ? "" : state, q: filters.q, site: fixed ? "" : filters.site, auteur: filters.auteur, mois: filters.mois }).forEach(([k, v]) => { if (v) { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% } }) %>
+        <label for="ar-par">Nombre de pages par liste :</label>
+        <input id="ar-par" type="number" name="par" min="5" max="100" step="1" value="<%= perPage %>">
+        <button type="submit" class="btn btn-outline btn-sm">Appliquer</button>
+      </form>
+      <p class="field-hint">Les colonnes masquées sont mémorisées dans ce navigateur ; le nombre de pages par liste est mémorisé pour votre compte sur cet appareil (5 à 100).</p>
+    </section>
+    <section id="ar-aide" class="mk-ar-panel" hidden aria-label="Aide">
+      <h2>Gérer les pages</h2>
+      <ul>
+        <li><strong>États.</strong> « Publiées » est en ligne ; « Programmées » le devient à l'heure prévue ; « Brouillons » regroupe ce qui n'est pas en ligne ; la « Corbeille » est restaurable et ne supprime rien tant que vous ne choisissez pas la suppression définitive.</li>
+        <li><strong>Rechercher.</strong> La recherche porte sur le nom, le titre et l'adresse des pages, avec les filtres et l'état choisis.</li>
+        <li><strong>Trier.</strong> Cliquez sur « Titre », « Auteur/autrice » ou « Date » ; un second clic inverse l'ordre.</li>
+        <li><strong>Modifier.</strong> Ouvre la page dans l'éditeur visuel. « Réglages » ouvre la fiche (adresse, formulaire, SEO, site, page parente).</li>
+        <li><strong>Modification rapide.</strong> Change le titre, l'adresse et l'état sans ouvrir l'éditeur. Une adresse déjà en ligne qui change garde une redirection depuis l'ancienne.</li>
+        <li><strong>Actions groupées.</strong> Cochez des pages puis choisissez l'action : chaque page est contrôlée à part, et le résultat indique ce qui a été fait et ce qui a été refusé.</li>
+        <li><strong>Dates.</strong> Les heures sont enregistrées et affichées en UTC.</li>
+      </ul>
+    </section>
+
+    <div class="mk-ar-bar">
+      <ul class="mk-ar-subsubsub" aria-label="Filtrer les pages par état">
+        <% tabs.forEach(([k, label], i) => { %><li><a href="<%= here + keep({ etat: k === "toutes" ? "" : k, page: "", mois: "" }) %>"<%- state === k ? ' class="is-current" aria-current="page"' : "" %>><%= label %> <span class="count">(<%= result.counts[k] %>)</span></a><%= i < tabs.length - 1 ? " |" : "" %></li><% }) %>
+      </ul>
+      <form class="mk-ar-search" method="get" action="<%= here %>" role="search" aria-label="Rechercher des pages"><%- siteField %>
+        <% Object.entries({ etat: state === "toutes" ? "" : state, site: fixed ? "" : filters.site, auteur: filters.auteur, mois: filters.mois, orderby: sortCol, order: sortCol ? sortDir : "" }).forEach(([k, v]) => { if (v) { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% } }) %>
+        <label class="sr-only" for="ar-q">Rechercher des pages (nom, titre, adresse)</label>
+        <input id="ar-q" type="search" name="q" value="<%= filters.q %>" maxlength="80">
+        <button type="submit" class="btn btn-outline btn-sm">Rechercher des pages</button>
+      </form>
+    </div>
     <% if (inTrash) { %><p class="field-hint">La corbeille garde les pages hors ligne, avec leurs statistiques et leurs versions. Restaurez une page pour la retrouver ; seule la suppression définitive les efface.</p><% } %>
-    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="/marketing/pages" role="search" aria-label="Rechercher et filtrer les pages">
-      <% if (state !== "toutes") { %><input type="hidden" name="etat" value="<%= state %>"><% } %>
-      <label class="mk-search"><span class="sr-only">Rechercher une page (titre ou adresse)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= filters.q %>" placeholder="Rechercher par titre ou adresse"></label>
-      <label class="sr-only" for="pg-site">Site</label>
-      <select id="pg-site" name="site"><option value="">Tous les sites</option><option value="none"<%= filters.site === "none" ? " selected" : "" %>>Sans site</option><% sites.forEach((st) => { %><option value="<%= st.id %>"<%= String(st.id) === filters.site ? " selected" : "" %>><%= st.name %></option><% }) %></select>
-      <% if (authors.length > 1) { %><label class="sr-only" for="pg-auteur">Auteur</label>
-      <select id="pg-auteur" name="auteur"><option value="">Tous les auteurs</option><% authors.forEach((u) => { %><option value="<%= u.id %>"<%= String(u.id) === filters.auteur ? " selected" : "" %>><%= u.username %></option><% }) %></select><% } %>
-      <label class="sr-only" for="pg-tri">Trier par</label>
-      <select id="pg-tri" name="tri"><% [["modifiee", "Plus récemment modifiées"], ["titre", "Titre (A → Z)"], ["creee", "Plus récemment créées"], ["publiee", "Dernières publications"]].forEach(([k, label]) => { %><option value="<%= k %>"<%= filters.tri === k ? " selected" : "" %>><%= label %></option><% }) %></select>
-      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "", site: "", auteur: "", page: "" }) %>">Réinitialiser</a><% } %>
-    </form>
-    <% if (!pages.length) { %>
-      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2><%= filtered ? "Aucune page trouvée" : inTrash ? "La corbeille est vide" : state === "publiees" ? "Aucune page publiée" : state === "brouillons" ? "Aucun brouillon" : "Aucune page" %></h2>
-        <p><%= filtered ? "Aucune page ne correspond à ces critères." : inTrash ? "Les pages mises à la corbeille apparaissent ici ; vous pouvez les restaurer." : state === "toutes" ? "Créez votre première page pour commencer : elle s'ouvre dans l'éditeur visuel, et rien n'est en ligne avant la publication." : "Aucune page dans cet état." %></p>
-        <% if (canWrite && !inTrash && !filtered && state === "toutes") { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Nouvelle page</button></div><% } %></div>
-    <% } else { %>
-      <% if (canWrite) { %>
-      <form id="pages-bulk" class="mk-cms-bulk" action="/marketing/pages/actions" method="post" data-cms-bulk>
-        <input type="hidden" name="retour" value="<%= keep({ page: result.page > 1 ? result.page : "" }) %>">
-        <label class="sr-only" for="pg-bulk">Action groupée</label>
-        <select id="pg-bulk" name="action" disabled>
-          <option value="">Actions groupées</option>
+    <% if (filters.q) { %><p class="mk-ar-found">Résultats de la recherche pour « <strong><%= filters.q %></strong> »</p><% } %>
+
+    <div class="mk-ar-actions">
+      <% if (canWrite && pages.length) { %>
+      <form id="pages-bulk" class="mk-cms-bulk" action="/marketing/pages/actions" method="post" data-cms-bulk data-cms-noun="page"><%- siteField %>
+        <input type="hidden" name="retour" value="<%= retour %>">
+        <label class="sr-only" for="ar-bulk">Action groupée</label>
+        <select id="ar-bulk" name="action" disabled data-ar-bulk-select><option value="">Actions groupées</option>
           <% if (inTrash) { %><option value="restaurer">Restaurer</option><% if (canDelete) { %><option value="supprimer">Supprimer définitivement</option><% } %>
-          <% } else { %><% if (canPublish) { %><option value="publier">Publier</option><option value="depublier">Mettre hors ligne</option><% } %><option value="corbeille">Mettre à la corbeille</option><% } %>
-        </select>
+          <% } else { %><% if (canPublish) { %><option value="publier">Publier</option><option value="depublier">Mettre hors ligne</option><% } %><option value="corbeille">Mettre à la corbeille</option><% } %></select>
         <button type="submit" class="btn btn-outline btn-sm" disabled>Appliquer</button>
         <span class="mk-sub" data-cms-bulk-count aria-live="polite"></span>
       </form>
       <% } %>
-      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
+      <form class="mk-cms-filters mk-ar-filters" method="get" action="<%= here %>" role="search" aria-label="Filtrer les pages"><%- siteField %>
+        <% if (state !== "toutes") { %><input type="hidden" name="etat" value="<%= state %>"><% } %>
+        <% if (filters.q) { %><input type="hidden" name="q" value="<%= filters.q %>"><% } %>
+        <% if (sortCol) { %><input type="hidden" name="orderby" value="<%= sortCol %>"><input type="hidden" name="order" value="<%= sortDir %>"><% } %>
+        <label class="sr-only" for="ar-mois">Filtrer par date</label>
+        <select id="ar-mois" name="mois"><option value="">Toutes les dates</option><% months.forEach((m) => { %><option value="<%= m.ym %>"<%= filters.mois === m.ym ? " selected" : "" %>><%= monthLabel(m.ym) %></option><% }) %></select>
+        <% if (!fixed) { %><label class="sr-only" for="pg-site">Site</label>
+        <select id="pg-site" name="site"><option value="">Tous les sites</option><option value="none"<%= filters.site === "none" ? " selected" : "" %>>Sans site</option><% sites.forEach((st) => { %><option value="<%= st.id %>"<%= String(st.id) === filters.site ? " selected" : "" %>><%= st.name %></option><% }) %></select><% } %>
+        <% if (authors.length > 1) { %><label class="sr-only" for="ar-auteur">Auteur</label>
+        <select id="ar-auteur" name="auteur"><option value="">Tous les auteurs</option><% authors.forEach((u) => { %><option value="<%= u.id %>"<%= String(u.id) === filters.auteur ? " selected" : "" %>><%= u.username %></option><% }) %></select><% } %>
+        <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered) { %><a class="btn btn-ghost btn-sm" href="<%= here + keep({ q: "", site: "", auteur: "", mois: "", page: "" }) %>">Réinitialiser</a><% } %>
+      </form>
+      <span class="mk-ar-count" aria-live="polite"><%= result.total %> élément<%= result.total > 1 ? "s" : "" %></span>
+    </div>
+
+    <% if (!pages.length) { %>
+      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2><%= filtered ? "Aucune page trouvée" : inTrash ? "La corbeille est vide" : state === "publiees" ? "Aucune page publiée" : state === "programmees" ? "Aucune page programmée" : state === "brouillons" ? "Aucun brouillon" : "Aucune page" %></h2>
+        <p><%= filtered ? "Aucune page ne correspond à ces critères." : inTrash ? "Les pages mises à la corbeille apparaissent ici ; vous pouvez les restaurer." : state === "toutes" ? "Créez votre première page pour commencer : elle s'ouvre dans l'éditeur visuel, et rien n'est en ligne avant la publication." : "Aucune page dans cet état." %></p>
+        <% if (canWrite && !inTrash && !filtered && state === "toutes") { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Ajouter une page</button></div><% } %></div>
+    <% } else { %>
+      <% const sT = colSort("titre", "asc"), sA = colSort("auteur", "asc"), sD = colSort("date", "desc"); %>
+      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-ar-table" data-ar-table data-ar-store="mk_pg_cols">
         <caption class="sr-only"><%= inTrash ? "Pages dans la corbeille" : "Pages" %></caption>
-        <thead><tr><% if (canWrite) { %><th scope="col" class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner"></th><% } %><th scope="col">Titre</th><th scope="col">État</th><th scope="col">Auteur</th><th scope="col">Site</th><th scope="col">Modifiée</th><th scope="col">Publiée</th><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Actions</span></th></tr></thead>
-        <tbody><% pages.forEach((p) => { const menuId = "pg-menu-" + p.id; const stClass = inTrash ? "mk-status-off" : STATUS_CLASS[p.status]; %>
-          <tr><% if (canWrite) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.name %> »"></td><% } %>
-            <th scope="row" data-label="Titre"><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a>
-              <span class="mk-sub">/p/<%= p.slug %><% if (p.parent_name) { %> · sous-page de « <%= p.parent_name %> »<% } %><% if (p.has_draft && !inTrash) { %> · modifications non publiées<% } %><% if (p.funnels && p.funnels.length) { %> · utilisée dans <%= p.funnels.length > 1 ? "les tunnels" : "le tunnel" %> « <%= p.funnels.join(" », « ") %> »<% } %></span></th>
-            <td data-label="État"><span class="mk-status <%= stClass %>"><%= inTrash ? "Corbeille" : STATUSES[p.status] %></span></td>
-            <td data-label="Auteur"><%= p.author || "—" %></td><td data-label="Site"><%= p.site_name || "—" %></td>
-            <td data-label="Modifiée"><%= fmt(p.updated_at) %></td><td data-label="Publiée"><%= fmt(p.published_at) %></td>
-            <td class="mk-row-actions mk-cms-actions-col"><div class="mk-cms-rowbtns">
-              <% if (canWrite && !inTrash) { %><a class="btn btn-outline btn-sm" href="/marketing/pages/<%= p.id %>/editeur?retour=pages">Page Builder</a><% } %>
-              <% if (canWrite && inTrash) { %><form class="mk-inline" action="/marketing/pages/<%= p.id %>/restaurer" method="post"><button type="submit" class="btn btn-outline btn-sm">Restaurer</button></form><% } %>
-              <div class="mk-dropdown" data-mk-dropdown>
-                <button type="button" class="btn btn-ghost btn-sm mk-cms-more" aria-haspopup="menu" aria-expanded="false" aria-controls="<%= menuId %>" aria-label="Plus d'actions pour « <%= p.name %> »"><%- icon("moreHorizontal", { size: 18 }) %></button>
-                <div class="mk-menu" id="<%= menuId %>" role="menu" hidden>
-                  <a role="menuitem" href="/marketing/pages/<%= p.id %>">Modifier les réglages</a>
-                  <% if (mk.can("revisions.view")) { %><a role="menuitem" href="/marketing/site-web/historique/page/<%= p.id %>">Historique</a><% } %>
-                  <% if (!inTrash) { %><a role="menuitem" href="/marketing/pages/<%= p.id %>/apercu" target="_blank" rel="noopener">Prévisualiser</a><% } %>
-                  <% if (!inTrash && p.status === "published") { %><a role="menuitem" href="/p/<%= p.slug %>" target="_blank" rel="noopener">Voir la page en ligne</a><% } %>
-                  <% if (canWrite && !inTrash) { %>
-                    <% if (canPublish && p.status !== "published") { %><form action="/marketing/pages/<%= p.id %>/publier" method="post" role="none"><button type="submit" role="menuitem">Publier</button></form><% } %>
-                    <% if (canPublish && p.status === "published") { %><form action="/marketing/pages/<%= p.id %>/depublier" method="post" role="none"><button type="submit" role="menuitem">Mettre hors ligne</button></form><% } %>
-                    <form action="/marketing/pages/<%= p.id %>/dupliquer" method="post" role="none"><button type="submit" role="menuitem">Dupliquer</button></form>
-                    <% if (sites.length) { %><form action="/marketing/pages/<%= p.id %>/deplacer" method="post" role="none" class="mk-cms-move"><label class="sr-only" for="mv-<%= p.id %>">Déplacer « <%= p.name %> » vers</label><select id="mv-<%= p.id %>" name="site_id"><option value="">Aucun site (site principal)</option><% sites.forEach((st) => { if (st.id !== p.site_id) { %><option value="<%= st.id %>"><%= st.name %></option><% } }) %></select><button type="submit" role="menuitem" data-mk-confirm-title="Déplacer cette page ?" data-mk-confirm-ok="Déplacer" data-mk-confirm="La page « <%= p.name %> » changera de site. Son contenu et ses médias sont conservés ; sa place d'accueil et ses liens hiérarchiques avec l'ancien site sont retirés.">Déplacer</button></form><% } %>
-                    <form action="/marketing/pages/<%= p.id %>/archiver" method="post" role="none"><button type="submit" role="menuitem" data-mk-confirm="La page « <%= p.name %> » passera hors ligne et ira à la corbeille. Vous pourrez la restaurer.">Mettre à la corbeille</button></form>
+        <% const headRow = () => { %><tr><% if (canWrite) { %><td class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner (page courante)"></td><% } %>
+          <th scope="col" class="col-titre" aria-sort="<%= sT.aria %>"><a class="mk-ar-sort" href="<%= sT.href %>">Titre <span aria-hidden="true"><%= sT.arrow %></span></a></th>
+          <% if (!fixed) { %><th scope="col" class="col-site">Site</th><% } %>
+          <th scope="col" class="col-auteur" aria-sort="<%= sA.aria %>"><a class="mk-ar-sort" href="<%= sA.href %>">Auteur/autrice <span aria-hidden="true"><%= sA.arrow %></span></a></th>
+          <th scope="col" class="col-date" aria-sort="<%= sD.aria %>"><a class="mk-ar-sort" href="<%= sD.href %>">Date <span aria-hidden="true"><%= sD.arrow %></span></a></th></tr><% }; %>
+        <thead><% headRow(); %></thead>
+        <tbody><% pages.forEach((p) => { const colspan = (canWrite ? 1 : 0) + (fixed ? 3 : 4); const live = p.status === "published"; const sched = !live && p.scheduled_at; %>
+          <tr data-ar-row="<%= p.id %>"><% if (canWrite) { %><td class="mk-cms-check-col"><input type="checkbox" name="ids" value="<%= p.id %>" form="pages-bulk" data-cms-row aria-label="Sélectionner « <%= p.name %> »"></td><% } %>
+            <th scope="row" class="col-titre" data-label="Titre">
+              <strong class="mk-ar-title"><% if (canWrite && !inTrash) { %><a href="/marketing/pages/<%= p.id %>/editeur?retour=pages"><%= p.name %></a><% } else { %><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a><% } %><% if (inTrash) { %> — <span class="mk-ar-state">Corbeille</span><% } else if (sched) { %> — <span class="mk-ar-state">Programmée</span><% } else if (!live) { %> — <span class="mk-ar-state"><%= p.status === "unpublished" ? "Hors ligne" : "Brouillon" %></span><% } %><% if (p.kind === "landing") { %> — <span class="mk-ar-state">Page d'atterrissage</span><% } %></strong>
+              <span class="mk-sub">/p/<%= p.slug %><% if (p.parent_name) { %> · sous-page de « <%= p.parent_name %> »<% } %><% if (p.has_draft && !inTrash) { %> · modifications non publiées<% } %><% if (p.funnels && p.funnels.length) { %> · utilisée dans <%= p.funnels.length > 1 ? "les tunnels" : "le tunnel" %> « <%= p.funnels.join(" », « ") %> »<% } %></span>
+              <div class="mk-ar-rowlinks">
+                <% if (!inTrash) { %>
+                  <% if (canWrite) { %><a href="/marketing/pages/<%= p.id %>/editeur?retour=pages">Modifier</a><a href="/marketing/pages/<%= p.id %>">Réglages</a>
+                    <button type="button" class="mk-ar-linkbtn" data-ar-quick-open="<%= p.id %>" aria-expanded="false">Modification rapide</button>
+                    <form class="mk-inline" action="/marketing/pages/<%= p.id %>/archiver" method="post"><input type="hidden" name="retour" value="<%= retour %>"><button type="submit" class="mk-ar-linkbtn is-danger" data-mk-confirm="La page « <%= p.name %> » passera hors ligne et ira à la corbeille. Vous pourrez la restaurer.">Corbeille</button></form>
+                  <% } else { %><a href="/marketing/pages/<%= p.id %>">Voir la fiche</a><% } %>
+                  <% if (live) { %><a href="/p/<%= p.slug %>" target="_blank" rel="noopener">Afficher</a><% } %><a href="/marketing/pages/<%= p.id %>/apercu" target="_blank" rel="noopener">Prévisualiser</a>
+                  <% if (canWrite) { %>
+                    <% if (canPublish && !live) { %><form class="mk-inline" action="/marketing/pages/<%= p.id %>/publier" method="post"><input type="hidden" name="retour" value="<%= retour %>"><button type="submit" class="mk-ar-linkbtn">Publier</button></form><% } %>
+                    <% if (canPublish && live) { %><form class="mk-inline" action="/marketing/pages/<%= p.id %>/depublier" method="post"><input type="hidden" name="retour" value="<%= retour %>"><button type="submit" class="mk-ar-linkbtn">Mettre hors ligne</button></form><% } %>
+                    <form class="mk-inline" action="/marketing/pages/<%= p.id %>/dupliquer" method="post"><button type="submit" class="mk-ar-linkbtn">Dupliquer</button></form>
                   <% } %>
-                  <% if (inTrash && canDelete) { %><form action="/marketing/pages/<%= p.id %>/supprimer" method="post" role="none"><button type="submit" role="menuitem" data-mk-confirm="« <%= p.name %> » sera supprimée définitivement, avec ses statistiques et ses versions. Cette action est irréversible.">Supprimer définitivement</button></form><% } %>
-                </div>
+                  <% if (mk.can("revisions.view") && !fixed) { %><a href="/marketing/site-web/historique/page/<%= p.id %>">Historique</a><% } %>
+                <% } else { %>
+                  <% if (canWrite) { %><form class="mk-inline" action="/marketing/pages/<%= p.id %>/restaurer" method="post"><input type="hidden" name="retour" value="<%= retour %>"><button type="submit" class="mk-ar-linkbtn">Restaurer</button></form><% } %>
+                  <% if (canDelete) { %><form class="mk-inline" action="/marketing/pages/<%= p.id %>/supprimer" method="post"><input type="hidden" name="retour" value="<%= retour %>"><button type="submit" class="mk-ar-linkbtn is-danger" data-mk-confirm="« <%= p.name %> » sera supprimée définitivement, avec ses statistiques et ses versions. Cette action est irréversible.">Supprimer définitivement</button></form><% } %>
+                <% } %>
               </div>
-            </div></td></tr>
+            </th>
+            <% if (!fixed) { %><td class="col-site" data-label="Site"><%= p.site_name || "—" %></td><% } %>
+            <td class="col-auteur" data-label="Auteur/autrice"><% if (p.author) { %><a href="<%= here + keep({ auteur: p.created_by, page: "" }) %>"><%= p.author %></a><% } else { %>—<% } %></td>
+            <td class="col-date" data-label="Date"><% if (inTrash) { %>Dernière modification<% } else if (live) { %>Publié<% } else if (sched) { %>Programmé<% } else { %>Dernière modification<% } %><br><time datetime="<%= String(inTrash || (!live && !sched) ? p.updated_at : live ? (p.published_at || p.updated_at) : p.scheduled_at).replace(" ", "T") %>Z"><%= inTrash || (!live && !sched) ? fdt(p.updated_at) : live ? fdt(p.published_at || p.updated_at) : fdt(p.scheduled_at) %></time></td>
+          </tr>
+          <% if (canWrite && !inTrash) { %>
+          <tr class="mk-ar-quick" id="ar-quick-<%= p.id %>" hidden><td colspan="<%= colspan %>">
+            <form action="/marketing/pages/<%= p.id %>/modification-rapide" method="post" class="mk-ar-quickform" data-ar-quick-form>
+              <input type="hidden" name="retour" value="<%= retour %>">
+              <h3>Modification rapide</h3>
+              <div class="mk-ar-quickgrid">
+                <div class="field-group"><label for="aq-t-<%= p.id %>">Titre</label><input id="aq-t-<%= p.id %>" type="text" name="title" value="<%= p.name %>" maxlength="100" required></div>
+                <div class="field-group"><label for="aq-s-<%= p.id %>">Adresse (slug)</label><input id="aq-s-<%= p.id %>" type="text" name="slug" value="<%= p.slug %>" maxlength="60"></div>
+                <div class="field-group"><label for="aq-st-<%= p.id %>">État</label>
+                  <select id="aq-st-<%= p.id %>" name="status"<%- canPublish ? "" : " disabled" %>><option value="draft"<%= !live ? " selected" : "" %>>Brouillon</option><option value="published"<%= live ? " selected" : "" %>>Publié</option></select>
+                  <% if (!canPublish) { %><span class="mk-sub">Publier exige le droit de publication.</span><% } %></div>
+              </div>
+              <div class="mk-ar-quickactions"><button type="submit" class="btn btn-primary btn-sm">Mettre à jour</button> <button type="button" class="btn btn-outline btn-sm" data-ar-quick-close="<%= p.id %>">Annuler</button></div>
+            </form>
+            <% if (moveSites.length) { %><form action="/marketing/pages/<%= p.id %>/deplacer" method="post" class="mk-inline mk-cms-move"><input type="hidden" name="retour" value="<%= retour %>">
+              <label for="mv-<%= p.id %>">Déplacer vers un autre site</label>
+              <select id="mv-<%= p.id %>" name="site_id"><option value="">Aucun site (site principal)</option><% moveSites.forEach((st) => { if (st.id !== p.site_id) { %><option value="<%= st.id %>"><%= st.name %></option><% } }) %></select>
+              <button type="submit" class="btn btn-outline btn-sm" data-mk-confirm-title="Déplacer cette page ?" data-mk-confirm-ok="Déplacer" data-mk-confirm="La page « <%= p.name %> » changera de site. Son contenu et ses médias sont conservés ; sa place d'accueil et ses liens hiérarchiques avec l'ancien site sont retirés.">Déplacer</button></form><% } %></td></tr>
+          <% } %>
         <% }) %></tbody>
+        <tfoot><% headRow(); %></tfoot>
       </table></div>
-      <nav class="mk-cms-pager" aria-label="Pagination">
-        <span><%= result.total %> page<%= result.total > 1 ? "s" : "" %></span>
-        <% if (result.pages > 1) { %><span class="mk-cms-pager-nav">
-          <% if (result.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page - 1 }) %>">Précédent</a><% } %>
-          <span>Page <%= result.page %> sur <%= result.pages %></span>
-          <% if (result.page < result.pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %>
-      </nav>
+      <div class="mk-ar-actions mk-ar-actions-foot">
+        <% if (canWrite) { %><div class="mk-cms-bulk" data-ar-bulk-foot>
+          <label class="sr-only" for="ar-bulk2">Action groupée (bas du tableau)</label>
+          <select id="ar-bulk2" disabled data-ar-bulk-mirror><option value="">Actions groupées</option></select>
+          <button type="button" class="btn btn-outline btn-sm" disabled data-ar-bulk-apply2>Appliquer</button></div><% } %>
+        <nav class="mk-cms-pager mk-ar-pager" aria-label="Pagination">
+          <span><%= result.total %> élément<%= result.total > 1 ? "s" : "" %></span>
+          <% if (result.pages > 1) { %><span class="mk-cms-pager-nav">
+            <% if (result.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= here + keep({ page: result.page - 1 }) %>" aria-label="Page précédente">‹</a><% } else { %><span class="btn btn-ghost btn-sm is-disabled" aria-hidden="true">‹</span><% } %>
+            <span>Page <%= result.page %> sur <%= result.pages %></span>
+            <% if (result.page < result.pages) { %><a class="btn btn-ghost btn-sm" href="<%= here + keep({ page: result.page + 1 }) %>" aria-label="Page suivante">›</a><% } else { %><span class="btn btn-ghost btn-sm is-disabled" aria-hidden="true">›</span><% } %></span><% } %>
+        </nav>
+      </div>
     <% } %>
     <% if (canWrite) { %>
-      <%- include("partials/new-page-dialog", { fixedSite: null }) %>
+      <%- include("partials/new-page-dialog", { fixedSite }) %>
     <% } %>
     <% if (userTemplates.length) { %>
       <section class="mk-panel" id="mes-modeles" aria-labelledby="lp-mine">
         <h2 id="lp-mine">Mes modèles de pages</h2>
-        <p class="field-hint">Enregistrés depuis l'éditeur (menu ≡ › « Enregistrer comme modèle »), proposés dans « Nouvelle page ». Supprimer un modèle ne change pas les pages déjà créées avec lui.</p>
+        <p class="field-hint">Enregistrés depuis l'éditeur (menu ≡ › « Enregistrer comme modèle »), proposés dans « Ajouter une page ». Supprimer un modèle ne change pas les pages déjà créées avec lui.</p>
         <ul class="mk-lp-versions"><% userTemplates.forEach((t) => { %><li><span><strong><%= t.name %></strong> <span class="mk-sub"><%= t.category %> · <%= t.content.sections.length %> section(s)</span></span>
           <% if (canWrite) { %><span class="mk-row-actions"><form action="/marketing/site-web/modeles/<%= t.id %>/supprimer" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le modèle « <%= t.name %> » ne sera plus proposé. Les pages déjà créées avec lui ne changent pas." data-mk-confirm-title="Supprimer ce modèle ?" data-mk-confirm-ok="Supprimer">Supprimer<span class="sr-only"> le modèle <%= t.name %></span></button></form></span><% } %></li><% }) %></ul>
       </section>

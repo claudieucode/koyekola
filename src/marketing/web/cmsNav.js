@@ -160,7 +160,8 @@ function buildCmsNav({ can, active, space = null }) {
 const SOON_PHASE = { B2: "médias", B3: "modèles et blocs", B4: "formulaires et contacts", B5: "blog", B6: "SEO" };
 const SITE_MODULES = {
   "tableau-de-bord": { label: "Tableau de bord", kind: "own", reg: "sitedash", permission: "forms.read" },
-  pages: { label: "Pages", kind: "own", reg: "landing", permission: "forms.read", primary: true },
+  // PAGES-01 : la liste des pages est l'écran partagé /pages ouvert dans le cadre du site (le site vient de l'adresse, jamais du navigateur)
+  pages: { label: "Pages", kind: "delegate", to: "/pages", reg: "landing", permission: "forms.read", primary: true, legacy: "/marketing/pages" },
   composants: { label: "Composants", kind: "own", permission: "forms.read" },
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
   equipe: { label: "Équipe du site", kind: "own", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },

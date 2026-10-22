@@ -88,6 +88,10 @@ const SITE_RULES = Object.freeze([
   { id: "composant-par-identifiant", pattern: /^\/site-web\/composants\/(\d+)/, kind: "resource", table: "composant", idGroup: 1 },
   { id: "page-creation-json", pattern: /^\/pages\/(?:creer|importer)\.json$/, methods: ["POST"], kind: "bodySiteIdJson" },
   { id: "page-nom-json", pattern: /^\/pages\/nom\.json$/, methods: ["GET"], kind: "queryGet" },
+  // Liste des pages (PAGES-01), écran partagé ouvert dans le cadre du site comme les autres modules délégués : le site est « ?site= » (lecture) ou le champ « site » de l'action groupée ;
+  // les deux sont revérifiés par le serveur (accès au site, droits, appartenance de chaque page)
+  { id: "pages-liste-du-site", pattern: /^\/pages$/, methods: ["GET"], kind: "queryGet" },
+  { id: "pages-actions-du-site", pattern: /^\/pages\/actions$/, methods: ["POST"], kind: "param" },
   // Modèles de pages enregistrés, PRIVÉS à leur site (site builder) : enregistrement = site du corps (« siteId »), lecture = « ?site= » (les deux revérifiés par le moteur), suppression = site du modèle
   { id: "modele-page-enregistrement", pattern: /^\/site-web\/modeles$/, methods: ["POST"], kind: "bodySiteIdJson" },
   { id: "modele-page-lecture", pattern: /^\/site-web\/modeles(?:\.json|\/\d+\.json)$/, methods: ["GET"], kind: "queryGet" },

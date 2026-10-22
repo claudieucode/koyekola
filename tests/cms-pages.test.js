@@ -261,9 +261,9 @@ describe("liste : recherche, filtres, tri, pagination, actions groupées", () =>
   });
   test("filtre par état : les compteurs des onglets sont les vrais comptes de la base", async () => {
     const html = (await boss.get("/marketing/pages")).text;
-    const n = (label) => Number(html.match(new RegExp(`${label} <span class="mk-tab-count">(\\d+)`))[1]);
+    const n = (label) => Number(html.match(new RegExp(`${label} <span class="count">\\((\\d+)\\)`))[1]);
     const dbCount = db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE archived_at IS NULL AND id NOT IN (SELECT variant_page_id FROM mk_page_tests WHERE variant_page_id IS NOT NULL)").get().n;
-    assert.equal(n("Toutes"), dbCount);
+    assert.equal(n("Tous"), dbCount);
     assert.equal(n("Publiées"), db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE archived_at IS NULL AND status = 'published'").get().n);
     assert.equal(n("Corbeille"), db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE archived_at IS NOT NULL").get().n);
     await boss.post(`/marketing/pages/${a1}/publier.json`, {}).catch(() => {});
