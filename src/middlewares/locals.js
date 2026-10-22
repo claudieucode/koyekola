@@ -69,6 +69,7 @@ function injectLocals(req, res, next) {
     }
     return apCache;
   };
+  if (req.query && req.query.kwtheme) require("./themePreview").attach(req, res); // aperçu d'un thème (équipe autorisée seulement)
   // Menus de navigation du CMS par emplacement (header, footer, mobile) : null = aucun menu affecté, la page garde son affichage d'origine.
   // Calculés à la demande (seulement par l'en-tête et le pied de page publics) et une seule fois par requête, toujours à jour.
   const menus = new Map();

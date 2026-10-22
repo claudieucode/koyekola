@@ -43,6 +43,7 @@ const SECTIONS = [
   },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
+      leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
       leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
       leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
@@ -178,6 +179,8 @@ const SITE_MODULES = {
   importer: { label: "Importer des contacts", kind: "own", reg: "import", permission: "contacts.import", legacy: "/marketing/importer" },
   modeles: { label: "Modèles et blocs", kind: "soon", phase: "B3", permission: "appearance.read", legacy: `${BASE}/apparence/templates` },
   // R8 lot 4 : Navigation / Menus par site (menus et emplacements PROPRES au site ; ressources limitées à celles du site)
+  // Apparence → Thèmes : écran partagé /site-web/themes ouvert dans le cadre du site (thèmes installés et thème actif de CE site)
+  themes: { label: "Thèmes", kind: "delegate", to: "/site-web/themes", reg: "themes", permission: "appearance.read", legacy: `${BASE}/themes` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
@@ -260,6 +263,7 @@ const ABILITY = {
   "mediatheque/ajouter": { mode: "open", module: "medias" },
   navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
+  "apparence/themes": { mode: "open", module: "themes" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },

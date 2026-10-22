@@ -1,0 +1,15 @@
+<%# Aperçu d'un thème : la vraie page du site, affichée avec les jetons du thème (rien n'est enregistré). %><%- include("partials/top", { title, active }) %>
+<div class="mk-th mk-th-previewpage" data-th-root>
+  <div class="mk-th-head"><h1>Aperçu : <%= theme.name %></h1>
+    <a class="btn btn-outline btn-sm" href="<%= to("") %>">← Retour à la liste des thèmes</a>
+    <% if (installed && theme.state === "inactive" && canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/<%= theme.key %>/activer" data-th-form><%- siteField %><button class="btn btn-primary btn-sm" type="submit" data-confirm="Activer « <%= theme.name %> » sur « <%= T.name %> » ? Les couleurs, polices et boutons du site public changent immédiatement.">Activer ce thème</button></form>
+    <% } else if (!installed && canInstall && !readOnly) { %><form method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %><input type="hidden" name="key" value="<%= theme.key %>"><button class="btn btn-primary btn-sm" type="submit" data-busy="Installation…">Installer ce thème</button></form><% } %>
+  </div>
+  <p class="mk-th-site">Site : <strong><%= T.name %></strong> · aperçu non enregistré : le thème actif du site ne change pas.</p>
+  <% if (frame) { %>
+    <div class="mk-th-framewrap"><iframe class="mk-th-frame" title="Aperçu du site avec le thème <%= theme.name %>" src="<%= frame %>" loading="lazy"></iframe></div>
+  <% } else { %>
+    <div class="mk-th-empty" role="status"><strong>Ce site n'a pas encore de page à afficher.</strong><p>L'aperçu utilise le contenu réel du site : créez une page pour pouvoir y voir ce thème. Voici, en attendant, l'aperçu généré à partir des jetons du thème.</p><div class="mk-th-detail-shot"><%- include("partials/theme-shot", { theme, fontStack }) %></div></div>
+  <% } %>
+</div>
+<%- include("partials/bottom") %>

@@ -11,7 +11,7 @@ const nav = require("../src/marketing/web/cmsNav");
 // ── INVENTAIRE (clé du registre → décision) ───────────────────────────────────────────────────────────────────────────────────────
 // ouvert        : écran réel dans le cadre du site, isolation démontrée (R5 médias, R6 contenus) ; ouvert-equipe : idem mais absent du menu d'un accès limité ; central : administration centrale (absent du menu d'un site)
 // ferme (motif) : « Bientôt » visible, grisé, sans lien — l'isolation ou l'écran du site n'existe pas encore
-const OUVERT = ["sitedash", "landing", "apparence", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres",
+const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres",
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque", "mediatheque/ajouter",
   "seo", "seo/404", "navigation", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant

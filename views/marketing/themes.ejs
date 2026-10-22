@@ -1,0 +1,69 @@
+<%#
+  KOLAKISA CMS → Apparence → Thèmes : thèmes installés sur CE site (grille de cartes), recherche, activation, retour au thème précédent, suppression.
+  Le site vient de l'adresse vérifiée (T) ; chaque lien et chaque formulaire le conserve.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const act = activeTheme;
+  const dismissKey = (k) => "mk_th_dismiss_" + (T.siteId || "principal") + "_" + k;
+%>
+<div class="mk-th" data-th-root>
+  <div class="mk-th-head">
+    <h1>Thèmes <span class="mk-th-count" aria-label="<%= all.length %> thème<%= all.length > 1 ? "s" : "" %> installé<%= all.length > 1 ? "s" : "" %>"><%= all.length %></span></h1>
+    <% if (canInstall && !readOnly) { %><a class="btn btn-outline btn-sm" href="<%= to("/ajouter") %>">Ajouter un thème</a><% } %>
+    <button type="button" class="btn btn-ghost btn-sm mk-th-help-btn" aria-expanded="false" aria-controls="th-help" data-th-toggle>Aide <span aria-hidden="true">▾</span></button>
+  </div>
+  <p class="mk-th-site">Site : <strong><%= T.name %></strong> · chaque site a ses propres thèmes installés et son propre thème actif.</p>
+  <section id="th-help" class="mk-th-panel" hidden aria-label="Aide">
+    <p>Un thème change l'apparence du site public : couleurs, polices, boutons, rayons et ombres. Vos pages, articles et médias ne sont jamais modifiés.</p>
+    <ul>
+      <li><strong>Prévisualiser</strong> affiche la vraie page de ce site avec le thème, sans rien enregistrer.</li>
+      <li><strong>Activer</strong> applique le thème à ce site uniquement ; <strong>Revenir au thème précédent</strong> rétablit l'apparence d'avant.</li>
+      <li>Le thème actif ne peut pas être supprimé ; supprimer un thème inactif ne touche à aucun contenu.</li>
+    </ul>
+  </section>
+
+  <div class="mk-th-notices">
+    <% if (readOnly) { %><div class="mk-th-notice mk-th-notice--warn" role="status"><p>Ce site est archivé ou supprimé : les thèmes sont en consultation seule.</p></div><% } %>
+    <% if (draftPending) { %><div class="mk-th-notice mk-th-notice--warn" role="status" data-th-notice="<%= dismissKey("draft") %>"><p>Un brouillon d'apparence est en cours sur le site principal : publiez-le ou annulez-le (Apparence → Éditeur du site) avant d'activer un autre thème.</p><button type="button" class="mk-th-x" aria-label="Fermer cette notification" data-th-dismiss>×</button></div><% } %>
+    <% if (act && act.hasPrevious && canActivate && !readOnly) { %>
+      <div class="mk-th-notice" role="status" data-th-notice="<%= dismissKey("prev") %>"><p>Le thème « <%= act.name %> » vient d'être activé sur ce site. Vous pouvez rétablir l'apparence précédente à tout moment.</p>
+        <form method="post" action="<%= BASE %>/revenir" data-th-form><%- siteField %><button class="btn btn-outline btn-sm" type="submit" data-confirm="Rétablir l'apparence précédente de « <%= T.name %> » ?">Revenir au thème précédent</button></form>
+        <button type="button" class="mk-th-x" aria-label="Fermer cette notification" data-th-dismiss>×</button></div>
+    <% } %>
+  </div>
+
+  <form class="mk-th-search" method="get" action="<%= BASE %>" role="search"><%- siteField %>
+    <label for="th-q">Rechercher des thèmes installés</label>
+    <input id="th-q" type="search" name="q" value="<%= q %>" maxlength="80" autocomplete="off" data-th-search placeholder="Nom, auteur…">
+    <button class="btn btn-outline btn-sm" type="submit">Rechercher</button>
+  </form>
+  <p class="mk-th-status" aria-live="polite" data-th-status></p>
+
+  <% if (!list.length) { %>
+    <div class="mk-th-empty" role="status"><strong>Aucun thème ne correspond à « <%= q %> ».</strong><p>Vérifiez l'orthographe, ou <a href="<%= to("") %>">affichez tous les thèmes installés</a>.</p></div>
+  <% } %>
+  <ul class="mk-th-grid" data-th-grid>
+    <% list.forEach((t) => { %>
+      <li class="mk-th-card mk-th-card--<%= t.state %>" data-th-card data-th-name="<%= (t.name + " " + t.author + " " + t.description).toLowerCase() %>">
+        <a class="mk-th-shotlink" href="<%= to("/" + t.key + "/details") %>" aria-label="Détails du thème <%= t.name %>"><%- include("partials/theme-shot", { theme: t, fontStack }) %></a>
+        <div class="mk-th-body">
+          <h2><%= t.name %><% if (t.state === "incompatible") { %> <span class="badge mk-status-warn">Incompatible</span><% } %></h2>
+          <p class="mk-th-meta">Version <%= t.version %> · <%= t.author %></p>
+        </div>
+        <% if (t.state === "active") { %>
+          <div class="mk-th-foot mk-th-foot--active"><strong>Actif : <%= t.name %></strong><a class="btn btn-sm mk-th-light" href="<%= to("/" + t.key + "/details") %>">Détails</a></div>
+        <% } else { %>
+          <div class="mk-th-foot">
+            <a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/details") %>">Détails</a>
+            <% if (t.state === "inactive") { %>
+              <a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/apercu") %>">Prévisualiser</a>
+              <% if (canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/<%= t.key %>/activer" data-th-form><%- siteField %><button class="btn btn-primary btn-sm" type="submit" data-confirm="Activer « <%= t.name %> » sur « <%= T.name %> » ? Les couleurs, polices et boutons du site public changent immédiatement. Vous pourrez revenir au thème précédent.">Activer</button></form><% } %>
+            <% } %>
+          </div>
+        <% } %>
+      </li>
+    <% }) %>
+    <% if (canInstall && !readOnly && !q) { %><li class="mk-th-card mk-th-add"><a href="<%= to("/ajouter") %>"><span class="mk-th-plus" aria-hidden="true">+</span><span>Ajouter un thème</span></a></li><% } %>
+  </ul>
+</div>
+<%- include("partials/bottom") %>

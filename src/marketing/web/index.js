@@ -93,6 +93,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
+  admin.use(require("./themes")()); // Apparence → Thèmes : thèmes installés et thème actif par site
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
   admin.use(require("./tools")()); // Outils : santé, import, export, diagnostic, maintenance (palier 13)
   admin.use(require("./cmsSearch")()); // Recherche d'administration : pages, articles, médias, menus (palier 23)
