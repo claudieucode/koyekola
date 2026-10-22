@@ -47,11 +47,15 @@ describe("barre d'administration : coque, sites, création, notifications, profi
       const t = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
       assert.equal((t.match(/id="mk-user-menu"/g) || []).length, 1); assert.equal((t.match(/data-kola-theme-cycle/g) || []).length, 1);
       assert.doesNotMatch(t, /mk-cms-site-btn|mk-cms-add|mk-cms-topsearch/);
-      assert.match(t, /<header class="mk-topbar">[\s\S]*mk-breadcrumb/, "le fil d'Ariane reste dans la barre du contenu");
+      // Ordre vertical : (1) barre d'administration, (2) fil d'Ariane, puis rail / menu / contenu ; le fil d'Ariane n'est PAS dans la colonne du contenu
+      const iBar = t.indexOf('<nav class="kab"'), iCrumb = t.indexOf('<header class="mk-topbar kab-crumbbar">'), iApp = t.indexOf('<div class="mk-app'), iMain = t.indexOf('<div class="mk-main">');
+      assert.ok(iBar > 0 && iBar < iCrumb && iCrumb < iApp && iApp < iMain, `ordre : barre ${iBar} < fil ${iCrumb} < coque ${iApp} < contenu ${iMain}`);
+      assert.match(t.slice(iCrumb, iApp), /mk-breadcrumb/); assert.doesNotMatch(t.slice(iMain), /class="mk-topbar/, "plus de second fil d'Ariane dans le contenu");
+      assert.equal((t.match(/class="mk-breadcrumb"/g) || []).length, 1);
     });
     test("les écrans hors CMS (Marketing) gardent leur barre d'origine", async () => {
       const t = (await boss.get("/marketing/campagnes")).text;
-      assert.doesNotMatch(t, /<nav class="kab"/); assert.match(t, /id="mk-user-menu"/);
+      assert.doesNotMatch(t, /<nav class="kab"/); assert.match(t, /id="mk-user-menu"/); assert.match(t, /<div class="mk-main">\s*<header class="mk-topbar">/, "hors CMS, le fil d'Ariane reste dans la colonne du contenu");
     });
   });
 

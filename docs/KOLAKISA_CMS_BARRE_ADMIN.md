@@ -58,12 +58,24 @@ Menus : s'ouvrent sous leur bouton, restent dans l'écran (bascule à droite, ha
 
 `tests/barre-admin.test.js` (24 tests, vraies routes / base / comptes équipe, administrateur, éditeur, lecteur) : présence unique de la barre et exceptions, sélecteur (équipe vs accès limité, échappement), adresse publique (domaine, `/p/…`, désactivée, principal), création selon les droits, actions de contenu avec identifiants exacts, notifications par site (compteurs, isolation, 403, lecture, « tout lu » local, ouverture), profil et déconnexion réelle, accessibilité. Parcours vérifié aussi dans **Chrome** (écrans 1440, 1000 et 390 px, clair et sombre) : barre de 44 px, coque décalée sans chevauchement, menus (Créer, sites avec recherche, notifications, profil), Échap, marquage « lu » avec compteur, aucun défilement horizontal, aucune erreur de console. Tests existants adaptés : sélecteurs des tests navigateur (`.kab-site`) ; aucune assertion affaiblie.
 
+## 6 bis. Correctif de position et flat design (BARRE-ADMIN-2)
+
+**Cause réelle du décalage.** La barre était bien un élément global fixe, mais le **fil d'Ariane était resté dans la colonne du contenu** (`.mk-main > header.mk-topbar`), à droite du rail et du menu latéral : sous la barre, le coin gauche était occupé par l'en-tête du menu et le rail, et le fil d'Ariane démarrait plus bas et plus à droite. L'ordre voulu — barre, puis fil d'Ariane, puis messages, titre, contenu — n'existait donc qu'en partie ; chaque décalage était compensé par des règles de position collantes calculées à partir d'une barre du contenu de 56 px.
+
+**Correction de structure** (pas une retouche de marges) : dans la coque CMS, le fil d'Ariane devient un **second niveau global**, `partials/cms-crumbs.ejs`, rendu juste après la barre et AVANT `.mk-app` (rail, menu, contenu) ; il n'est plus dans `.mk-main` (hors CMS, rien ne change : le Marketing garde son fil d'Ariane dans sa colonne). Les deux niveaux sont fixes (barre 44 px, fil 44 px ; 48 + 42 px sur mobile) ; la coque, le menu et toutes les positions collantes se placent sous leur somme (`--kab-h` + `--kab-crumb-h`, `--mk-topbar-h` = hauteur du fil). Le changement de site ne change donc aucune position. Le fil d'Ariane reste visible sur mobile (il était masqué sous 520 px).
+
+**Flat design** : plus de dégradé (logo), d'ombre intérieure, d'effet `inset`, d'anneau d'ombre (pastille de notifications : bordure de la couleur de la barre), d'ombre d'info-bulle et de message ; contours d'état = `outline` fin ; les menus gardent une seule ombre très légère et une bordure fine.
+
+**Recherche** (global du CMS, site principal seulement — voir limites) : largeur `clamp(200px, 24vw, 340px)` (150–220 px sous 1180 px, masquée sous 860 px où elle passe dans « ··· »), hauteur 32 px comme les autres contrôles, fond uni, aucun contour au repos, icône et texte alignés sur la même ligne, survol et focus par changement de fond + contour d'1 px (aucun changement de taille : 340 × 32 avant et après le focus, mesuré), champ natif débarrassé de son fond blanc, de sa bordure et de ses ombres. Fonctionnement inchangé (`GET /marketing/site-web/recherche`).
+
+**Vérification** (Chrome) : 14 écrans × 3 largeurs (1440, 1000, 390 px), dont un autre site et la fiche d'une page : barre à 0, fil d'Ariane collé dessous, menu latéral et contenu juste après, aucun élément fixe parasite sur ces deux niveaux, aucun défilement horizontal, barre et fil immobiles au défilement, aucun saut des boutons à l'ouverture d'un menu (qui passe devant le fil d'Ariane), aucune erreur de console.
+
 ## 7. Limites connues (non faites, pas simulées)
 
 - **Marketing** : sa coque propre n'a pas cette barre (palier ultérieur possible : même composant, autre jeu de données).
 - **Public** : la barre n'est pas affichée par-dessus le site public (« Modifier cette page » depuis la page publique) : les pages publiques sont une exception volontaire.
 - **Notifications** : pas de temps réel (aucun canal poussé n'existe) ; sources limitées à celles qui existent (commentaires à modérer par site ; activité de la plateforme pour le principal d'un formateur). Les avis sur les formations ne sont pas dans la cloche (non rattachés à un site).
 - **Changement de site** : mène au tableau de bord du site (le même écran dans un autre site n'est pas conservé).
-- **Recherche globale** : reprise de la recherche du CMS (principal seulement) ; pas de palette de commandes.
+- **Recherche globale** : reprise de la recherche du CMS ; elle parcourt les pages, articles, médias et menus de toute l'organisation (sans filtre de site), c'est pourquoi elle n'est affichée que dans l'espace du site principal (équipe) et pas dans l'espace d'un site : l'y proposer mélangerait les données des sites. Une recherche limitée à un site demanderait un moteur de recherche par site (non fait). Pas de palette de commandes.
 - **Aide** : aucune page d'aide centrale n'existe, donc aucune entrée « Aide » n'est affichée.
 - Les anciennes règles CSS du sélecteur de site latéral (`.mk-cms-site*`) subsistent dans `cms.css` (inutilisées).

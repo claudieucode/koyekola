@@ -51,7 +51,8 @@
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
-  <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><% } %>
+  <%# CMS : barre d'administration (niveau 1) puis fil d'Ariane (niveau 2), tous deux au niveau global de la coque, AVANT menu et contenu ; hors CMS, le fil d'Ariane reste dans la colonne du contenu %>
+  <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><%- include("cms-crumbs", { trail }) %><% } %>
 
   <% const appClass = appRail ? "mk-app has-rail" : "mk-app"; %><div class="<%= appClass %>">
     <% if (appRail) { %><%- include("../../partials/app-rail", { railNav: appRail.nav, railActive: appRail.active, railUnread: appRail.unread, railStyle: appRail.style }) %><% } %>
@@ -119,6 +120,7 @@
     <div class="mk-overlay" data-mk-sidebar-close hidden></div>
 
     <div class="mk-main">
+      <% if (!cms) { %>
       <header class="mk-topbar">
         <button type="button" class="icon-btn mk-menu-btn" data-mk-sidebar-toggle aria-controls="mk-sidebar" aria-expanded="false" aria-label="Ouvrir le menu"><%- icon("menu") %></button>
         <nav class="mk-breadcrumb" aria-label="Fil d'Ariane">
@@ -154,6 +156,7 @@
           <% } %>
         </div>
       </header>
+      <% } %>
 
       <main id="main" tabindex="-1" class="mk-content">
         <% if (cms && cms.space && cms.space.navOnly) { %><p class="mk-site-return"><a class="btn btn-ghost btn-sm" href="<%= cms.space.listHref %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a></p>
