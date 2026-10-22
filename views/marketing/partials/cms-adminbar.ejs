@@ -1,0 +1,134 @@
+<%#
+  Barre d'administration supérieure de KOLAKISA CMS — UNE seule implémentation, incluse par la coque (top.ejs) pour tous les écrans du CMS.
+  Données : mkh.adminBar() (services/adminBar.js) : sites autorisés, adresse publique, création, actions liées à l'écran, notifications, profil — filtrés par les droits côté serveur.
+  Comportement : public/js/adminbar.js ; habillage : public/css/adminbar.css. Les éléments secondaires (site public, actions de l'écran, recherche, thème) existent aussi dans le menu « ··· »
+  des écrans étroits : rien n'est masqué sans être accessible autrement. L'état « lu » des notifications est celui du centre d'activité.
+%>
+<%
+  const B = bar;
+  const cur = B.sites.current;
+  const initials = (n) => String(n || "?").trim().slice(0, 1).toUpperCase();
+  const ctxPrimary = B.context.filter((c) => c.primary);
+  const isSpace = Boolean(cms && cms.space);
+%>
+<nav class="kab" id="kab" data-kab data-site="<%= B.siteId || "" %>" data-notif-url="/marketing/barre/notifications.json" aria-label="Barre d'administration">
+  <div class="kab-zone kab-left">
+    <a class="kab-brand kab-btn" href="<%= B.brand.href %>" data-tip="Tableau de bord" aria-label="KOLAKISA — tableau de bord<%= cur ? " de " + cur.name : "" %>"><span class="kab-mark" aria-hidden="true">K</span><span class="kab-brand-text">KOLAKISA</span></a>
+    <span class="kab-sep" aria-hidden="true"></span>
+
+    <%# ---------- Sélecteur de site ---------- %>
+    <% if (B.sites.list.length || cur) { %>
+    <div class="kab-wrap" data-kab-menu>
+      <button type="button" class="kab-btn kab-site" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-site-menu" data-kab-toggle>
+        <span class="kab-favicon" aria-hidden="true"><% if (cur && cur.favicon) { %><img src="<%= cur.favicon %>" alt="" width="16" height="16" loading="lazy"><% } else { %><%- icon("globe", { size: 15 }) %><% } %></span>
+        <span class="kab-site-text"><small>Site</small><span class="kab-site-name"><%= cur ? cur.name : (B.sites.list.length === 1 ? B.sites.list[0].name : "Choisir un site") %></span></span>
+        <%- icon("chevronDown", { size: 13, className: "kab-caret" }) %>
+      </button>
+      <div class="kab-pop kab-pop-site" id="mk-site-menu" role="menu" aria-label="Changer de site" hidden>
+        <% if (B.sites.list.length > 5) { %><div class="kab-search"><%- icon("search", { size: 14 }) %><input type="search" placeholder="Rechercher un site…" aria-label="Rechercher un site" autocomplete="off" maxlength="60" data-kab-filter><span class="kab-sr" role="status" aria-live="polite" data-kab-filter-status></span></div><% } %>
+        <div class="kab-list" data-kab-list>
+          <% if (!B.sites.list.length) { %><span class="kab-note" role="none">Aucun site pour l'instant.</span><% } %>
+          <% B.sites.list.forEach((s) => { %>
+            <a role="menuitem" class="kab-item kab-site-item" href="<%= s.href %>" data-filter="<%= (s.name + " " + s.host).toLowerCase() %>"<%- s.current ? ' aria-current="true"' : "" %>>
+              <span class="kab-favicon" aria-hidden="true"><% if (s.favicon) { %><img src="<%= s.favicon %>" alt="" width="16" height="16" loading="lazy"><% } else { %><%- icon("globe", { size: 15 }) %><% } %></span>
+              <span class="kab-item-text"><strong><%= s.name %></strong><% if (s.host) { %><small><%= s.host %></small><% } %></span>
+              <% if (s.current) { %><span class="kab-check" aria-hidden="true"><%- icon("check", { size: 14 }) %></span><% } %>
+            </a>
+          <% }) %>
+          <span class="kab-note kab-empty" hidden role="none">Aucun site ne correspond.</span>
+        </div>
+        <% if (B.sites.teamLevel) { %><div class="kab-foot"><a role="menuitem" class="kab-item kab-item-quiet" href="/marketing/site-web/sites">Gérer les sites</a></div><% } %>
+      </div>
+    </div>
+    <% } %>
+
+    <%# ---------- Accès au site public ---------- %>
+    <% if (isSpace) { %>
+      <% if (B.publicLink.href) { %>
+        <a class="kab-btn kab-public kab-collapse" href="<%= B.publicLink.href %>" target="_blank" rel="noopener" data-tip="Ouvrir le site public<%= B.publicLink.host ? " (" + B.publicLink.host + ")" : "" %> dans un nouvel onglet" aria-label="Voir le site public (nouvel onglet)"><%- icon("externalLink", { size: 15 }) %><span class="kab-label">Voir le site</span></a>
+      <% } else { %>
+        <span class="kab-btn kab-public kab-collapse is-disabled" role="link" aria-disabled="true" tabindex="0" data-tip="<%= B.publicLink.why %>"><%- icon("externalLink", { size: 15 }) %><span class="kab-label">Voir le site</span></span>
+      <% } %>
+    <% } %>
+
+    <%# ---------- Création rapide ---------- %>
+    <% if (B.create.length) { %>
+    <div class="kab-wrap" data-kab-menu>
+      <button type="button" class="kab-btn kab-create" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-add-menu" data-kab-toggle><%- icon("plus", { size: 15 }) %><span class="kab-label">Créer</span></button>
+      <div class="kab-pop kab-pop-create" id="mk-add-menu" role="menu" aria-label="Créer" hidden>
+        <% B.create.forEach((c) => { %>
+          <a role="menuitem" class="kab-item" href="<%= c.href %>" data-kab-create="<%= c.key %>"><span class="kab-item-ico" aria-hidden="true"><%- icon(c.icon, { size: 16 }) %></span><span class="kab-item-text"><strong><%= c.label %></strong><small><%= c.hint %></small></span></a>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+
+    <%# ---------- Actions liées à l'écran ou au contenu consulté ---------- %>
+    <% B.context.forEach((c) => { %>
+      <a class="kab-btn kab-ctx kab-collapse<%= c.primary ? " is-primary" : "" %>" href="<%= c.href %>"<%- c.newTab ? ' target="_blank" rel="noopener"' : "" %> data-kab-ctx="<%= c.key %>" data-tip="<%= c.label %>"><%- icon(c.icon, { size: 15 }) %><span class="kab-label"><%= c.short || c.label %></span></a>
+    <% }) %>
+  </div>
+
+  <div class="kab-zone kab-right">
+    <% if (!isSpace || cms.space.principal) { %>
+    <form class="kab-searchform kab-collapse" role="search" action="/marketing/site-web/recherche" method="get"><label><span class="kab-sr">Rechercher dans le CMS</span><%- icon("search", { size: 14 }) %><input type="search" name="q" placeholder="Rechercher…" maxlength="80" autocomplete="off"></label></form>
+    <% } %>
+
+    <%# ---------- Notifications ---------- %>
+    <% if (B.notifications.enabled) { %>
+    <div class="kab-wrap" data-kab-menu data-kab-notif>
+      <button type="button" class="kab-btn kab-icon kab-bell" aria-haspopup="dialog" aria-expanded="false" aria-controls="kab-notif-panel" data-kab-toggle data-tip="Notifications" aria-label="Notifications<%= B.notifications.unread ? " : " + B.notifications.unread + " non lue" + (B.notifications.unread > 1 ? "s" : "") : "" %>">
+        <%- icon("bell", { size: 17 }) %><span class="kab-badge" data-kab-badge<%- B.notifications.unread ? "" : " hidden" %>><%= B.notifications.label %></span>
+      </button>
+      <div class="kab-pop kab-pop-notif" id="kab-notif-panel" role="dialog" aria-label="Notifications de <%= cur ? cur.name : "KOLAKISA" %>" hidden>
+        <div class="kab-notif-head"><strong>Notifications</strong><button type="button" class="kab-link" data-kab-readall disabled>Tout marquer comme lu</button></div>
+        <div class="kab-notif-body" data-kab-notif-body aria-live="polite"></div>
+        <% if (B.notifications.more) { %><div class="kab-foot"><a class="kab-item kab-item-quiet" href="<%= B.notifications.more.href %>"><%= B.notifications.more.label %></a></div><% } %>
+      </div>
+    </div>
+    <% } %>
+
+    <%# ---------- Thème (clair / sombre / auto) ---------- %>
+    <button type="button" class="kab-btn kab-icon kab-collapse mk-theme-btn" data-kola-theme-cycle aria-label="Thème de l'interface : automatique"><span class="mk-theme-ico mk-theme-ico-light"><%- icon("sun", { size: 17 }) %></span><span class="mk-theme-ico mk-theme-ico-dark"><%- icon("moon", { size: 17 }) %></span></button>
+
+    <%# ---------- Menu « ··· » des écrans étroits : reprend le site public, les actions de l'écran, la recherche et le thème ---------- %>
+    <div class="kab-wrap kab-more" data-kab-menu>
+      <button type="button" class="kab-btn kab-icon" aria-haspopup="menu" aria-expanded="false" aria-controls="kab-more-menu" data-kab-toggle data-tip="Plus d'actions" aria-label="Plus d'actions"><%- icon("moreHorizontal", { size: 17 }) %></button>
+      <div class="kab-pop kab-pop-more" id="kab-more-menu" role="menu" aria-label="Plus d'actions" hidden>
+        <% if (isSpace && B.publicLink.href) { %><a role="menuitem" class="kab-item" href="<%= B.publicLink.href %>" target="_blank" rel="noopener"><span class="kab-item-ico" aria-hidden="true"><%- icon("externalLink", { size: 16 }) %></span><span class="kab-item-text"><strong>Voir le site</strong><% if (B.publicLink.host) { %><small><%= B.publicLink.host %></small><% } %></span></a><% } %>
+        <% B.context.forEach((c) => { %><a role="menuitem" class="kab-item" href="<%= c.href %>"<%- c.newTab ? ' target="_blank" rel="noopener"' : "" %>><span class="kab-item-ico" aria-hidden="true"><%- icon(c.icon, { size: 16 }) %></span><span class="kab-item-text"><strong><%= c.label %></strong></span></a><% }) %>
+        <% if (!isSpace || cms.space.principal) { %><a role="menuitem" class="kab-item" href="/marketing/site-web/recherche"><span class="kab-item-ico" aria-hidden="true"><%- icon("search", { size: 16 }) %></span><span class="kab-item-text"><strong>Rechercher</strong></span></a><% } %>
+        <div class="kab-theme-seg" role="group" aria-label="Thème de l'interface">
+          <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="light"><%- icon("sun", { size: 14 }) %>Clair</button>
+          <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="dark"><%- icon("moon", { size: 14 }) %>Sombre</button>
+          <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="auto"><%- icon("monitor", { size: 14 }) %>Auto</button>
+        </div>
+      </div>
+    </div>
+
+    <%# ---------- Profil ---------- %>
+    <div class="kab-wrap" data-kab-menu>
+      <button type="button" class="kab-btn kab-user" aria-haspopup="menu" aria-expanded="false" aria-controls="mk-user-menu" data-kab-toggle>
+        <span class="avatar avatar-sm kab-avatar" aria-hidden="true" style="background:<%= avatarColor(B.user.name) %>"><%= B.user.initial %></span>
+        <span class="kab-user-text"><span class="kab-user-name"><%= B.user.name %></span><% if (B.user.role) { %><small><%= B.user.role %></small><% } %></span>
+        <%- icon("chevronDown", { size: 13, className: "kab-caret" }) %>
+      </button>
+      <div class="kab-pop kab-pop-user" id="mk-user-menu" role="menu" aria-label="Mon compte" hidden>
+        <div class="kab-user-card" role="none"><span class="avatar kab-avatar kab-avatar-lg" aria-hidden="true" style="background:<%= avatarColor(B.user.name) %>"><%= B.user.initial %></span><span class="kab-item-text"><strong><%= B.user.name %></strong><% if (B.user.role) { %><small><%= B.user.role %></small><% } %></span></div>
+        <a role="menuitem" class="kab-item" href="<%= B.user.profileHref %>"><span class="kab-item-ico" aria-hidden="true"><%- icon("user", { size: 16 }) %></span><span class="kab-item-text"><strong>Mon profil</strong></span></a>
+        <% if (B.user.isFormateur) { %><a role="menuitem" class="kab-item" href="<%= B.user.accountHref %>"><span class="kab-item-ico" aria-hidden="true"><%- icon("settings", { size: 16 }) %></span><span class="kab-item-text"><strong>Paramètres du compte</strong></span></a><% } %>
+        <div class="kab-theme-label" id="kab-theme-label">Thème</div>
+        <div class="kab-theme-seg" role="group" aria-label="Thème de l'interface">
+          <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="light"><%- icon("sun", { size: 14 }) %>Clair</button>
+          <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="dark"><%- icon("moon", { size: 14 }) %>Sombre</button>
+          <button type="button" role="menuitemradio" aria-checked="false" data-kola-theme-set="auto"><%- icon("monitor", { size: 14 }) %>Auto</button>
+        </div>
+        <a role="menuitem" class="kab-item" href="<%= B.user.mySpace.href %>"><span class="kab-item-ico" aria-hidden="true"><%- icon("home", { size: 16 }) %></span><span class="kab-item-text"><strong><%= B.user.mySpace.label %></strong></span></a>
+        <div class="kab-foot">
+          <form action="/deconnexion" method="post" role="none"><button type="submit" role="menuitem" class="kab-item kab-item-danger"><span class="kab-item-ico" aria-hidden="true"><%- icon("logout", { size: 16 }) %></span><span class="kab-item-text"><strong>Déconnexion</strong></span></button></form>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+<div class="kab-toasts" id="kab-toasts" aria-live="polite"></div>

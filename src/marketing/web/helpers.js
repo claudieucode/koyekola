@@ -90,4 +90,5 @@ const campaignStatus = (status) => CAMPAIGN_STATUS[status] ?? { label: String(st
 
 const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 
-module.exports = { WORKER_DETAIL, workerHuman, buildNav, buildCmsNav, isSiteScopedKey, isCmsKey, cmsSites, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, euros, maskEmail, fullName, STATUS };
+const adminBar = (args) => require("../../services/adminBar").build(args); // barre d'administration supérieure du CMS
+module.exports = { adminBar, WORKER_DETAIL, workerHuman, buildNav, buildCmsNav, isSiteScopedKey, isCmsKey, cmsSites, barChart, columnChart, rate, campaignStatus, contactStatus, esc, statusLabel, statusClass, reasonLabel, sourceLabel, fdate, fdatetime, eventLabel, eventSourceLabel, fmt, euros, maskEmail, fullName, STATUS };
