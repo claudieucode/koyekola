@@ -18,12 +18,10 @@
     </div>
 
     <% if (!o.totals.orders) { %>
-      <div class="mk-empty">
-        <%- icon("coin", { size: 32 }) %>
-        <h2>Aucune vente attribuée sur cette période</h2>
-        <p>Dès qu'une personne achète une formation après avoir cliqué dans l'un de vos e-mails (campagne ou automatisation), la vente apparaît ici, avec la campagne qui l'a déclenchée.</p>
-        <% if (mk.can("campaigns.write")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle">Créer une campagne</a></div><% } %>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucune vente attribuée sur cette période</h2><p>Dès qu'une personne achète une formation après avoir cliqué dans l'un de vos e-mails (campagne ou automatisation), la vente apparaît ici, avec la campagne qui l'a déclenchée.</p><% if (mk.can("campaigns.write")) { %><div class="mk-actions"><a class="btn btn-primary" href="/marketing/campagnes/nouvelle">Créer une campagne</a></div><% } %></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "chart" }) %></div>
+      </div></div>
     <% } else { %>
       <section class="mk-panel" aria-labelledby="rev-camp">
         <h2 id="rev-camp">Par campagne</h2>

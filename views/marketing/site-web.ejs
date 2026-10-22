@@ -58,12 +58,10 @@
     </div>
 
     <% if (!d.counts.pages) { %>
-      <div class="mk-empty">
-        <%- icon("globe", { size: 32 }) %>
-        <h2>Aucune page pour l'instant</h2>
-        <p>Créez un site pour regrouper vos pages sous un même design, ou une page d'atterrissage isolée pour une offre précise.</p>
-        <% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages#nouvelle">Créer une page</a></div><% } %>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucune page pour l'instant</h2><p>Créez un site pour regrouper vos pages sous un même design, ou une page d'atterrissage isolée pour une offre précise.</p><% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary" href="/marketing/pages#nouvelle">Créer une page</a></div><% } %></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "folder" }) %></div>
+      </div></div>
     <% } else { %>
       <section class="mk-panel" aria-labelledby="sw-trend">
         <h2 id="sw-trend">Visiteurs uniques par jour</h2>

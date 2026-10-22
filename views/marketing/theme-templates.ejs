@@ -2,7 +2,10 @@
     <div class="mk-head">
       <div class="mk-head-main"><h1>Modèles de thème</h1><p class="mk-head-sub">Choisissez une page du Page Builder comme modèle d'une famille de pages du site : l'article du blog, la liste du blog ou la page introuvable. Vous pouvez limiter un modèle à une catégorie ou à un public. Sans modèle <strong>en ligne</strong>, le site garde son affichage d'origine : un modèle ne peut pas casser le blog.</p></div></div>
     <% if (!templates.length) { %>
-      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2>Aucun modèle</h2><p>Le blog et la page introuvable utilisent leur affichage d'origine. Ajoutez un modèle ci-dessous.</p></div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucun modèle</h2><p>Le blog et la page introuvable utilisent leur affichage d'origine. Ajoutez un modèle ci-dessous.</p></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "template" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable">
         <caption class="sr-only">Modèles de thème</caption>

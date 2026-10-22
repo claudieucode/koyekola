@@ -13,12 +13,10 @@
     </nav>
 
     <% if (c.sent === 0) { %>
-      <div class="mk-empty">
-        <%- icon("activity", { size: 32 }) %>
-        <h2>Aucun envoi sur cette période</h2>
-        <p>Lancez une campagne ou activez un scénario pour voir apparaître ici les taux d'ouverture, de clic et de rebond.</p>
-        <% if (mk.can("campaigns.write")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle">Créer une campagne</a></div><% } %>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucun envoi sur cette période</h2><p>Lancez une campagne ou activez un scénario pour voir apparaître ici les taux d'ouverture, de clic et de rebond.</p><% if (mk.can("campaigns.write")) { %><div class="mk-actions"><a class="btn btn-primary" href="/marketing/campagnes/nouvelle">Créer une campagne</a></div><% } %></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "chart" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-stats mk-stats-3">
         <div class="mk-stat"><span class="mk-stat-label">Envoyés</span><span class="mk-stat-value"><%= mkh.fmt(c.sent) %></span><span class="mk-stat-hint"><%= mkh.fmt(c.delivered) %> délivré<%= c.delivered > 1 ? "s" : "" %> (<%= mkh.rate(r.delivery) %>)</span></div>

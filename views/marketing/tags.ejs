@@ -3,15 +3,15 @@
   const canWrite = mk.can("lists.write");
 %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Étiquettes <span class="mk-count"><%= tags.length %></span></h1><p class="mk-head-sub">Des mots-clés libres à poser sur les contacts (VIP, webinaire…). Elles servent aussi aux segments.</p></div></div>
+      <div class="mk-head-main"><h1>Étiquettes <span class="mk-count"><%= tags.length %></span></h1><p class="mk-head-sub">Des mots-clés libres à poser sur les contacts (VIP, webinaire…). Elles servent aussi aux segments.</p></div>
+      <div class="mk-head-actions"><% if (canWrite) { %><button type="button" class="btn btn-primary" data-mk-modal-open="nouvelle" data-tip="Crée une étiquette à poser ensuite sur des contacts, seul ou par action groupée.">Créer une étiquette</button><% } %></div>
+    </div>
 
     <% if (!tags.length) { %>
-      <div class="mk-empty">
-        <%- icon("tag", { size: 32 }) %>
-        <h2>Aucune étiquette</h2>
-        <p>Créez-en une ici, ou ajoutez-en directement depuis la fiche d'un contact ou par une action groupée.</p>
-        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une étiquette</button></div><% } %>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucune étiquette</h2><p>Créez-en une ici, ou ajoutez-en directement depuis la fiche d'un contact ou par une action groupée.</p><% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary" data-mk-modal-open="nouvelle">Créer une étiquette</button></div><% } %></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "people" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap">
         <table class="mk-table mk-datatable">

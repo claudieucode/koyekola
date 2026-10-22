@@ -1,35 +1,66 @@
 <%- include("partials/top", { title, active }) %>
 <%
   const canWrite = mk.can("forms.write");
+  const pub = items.filter((f) => f.status === "published"), views = items.reduce((n, f) => n + (f.viewCount || 0), 0), subs = items.reduce((n, f) => n + (f.submitCount || 0), 0);
+  const conv = (v, s_) => mkh.rate(v > 0 ? Math.round((s_ / v) * 10000) / 100 : null);
 %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Formulaires <span class="mk-count"><%= items.length %></span></h1><p class="mk-head-sub">Un formulaire publié est accessible à l'adresse <code>/f/son-adresse</code> : partagez ce lien pour faire grandir votre audience, avec preuve de consentement à chaque inscription.</p></div></div>
+      <div class="mk-head-main"><h1>Formulaires <span class="mk-count"><%= items.length %></span></h1><p class="mk-head-sub">Un formulaire publié est accessible à l'adresse <code>/f/son-adresse</code> : partagez ce lien pour faire grandir votre audience, avec preuve de consentement à chaque inscription. Un formulaire peut aussi s'afficher en pop-up sur votre site.</p></div>
+      <div class="mk-head-actions">
+        <% if (mk.can("contacts.read")) { %><a class="btn btn-outline" href="/marketing/contacts" data-tip="Les personnes inscrites par vos formulaires rejoignent vos contacts, avec la preuve de leur consentement.">Voir les contacts</a><% } %>
+        <% if (canWrite) { %><button type="button" class="btn btn-primary" data-mk-modal-open="nouveau" data-tip="Crée un formulaire d'inscription : champs, liste de destination, remerciement et pop-up se règlent ensuite.">Créer un formulaire</button><% } %>
+      </div>
+    </div>
 
     <% if (!items.length) { %>
-      <div class="mk-empty">
-        <%- icon("layout", { size: 32 }) %>
-        <h2>Aucun formulaire</h2>
-        <p>Créez-en un pour récolter des inscriptions depuis une adresse publique, avec preuve de consentement.</p>
-        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un formulaire</button></div><% } %>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text">
+          <h2>Aucun formulaire</h2>
+          <p>Créez-en un pour récolter des inscriptions depuis une adresse publique, avec preuve de consentement.</p>
+          <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary" data-mk-modal-open="nouveau">Créer un formulaire</button></div><% } %>
+        </div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "list" }) %></div>
+      </div></div>
     <% } else { %>
-      <div class="mk-table-wrap">
-        <table class="mk-table mk-datatable">
-          <caption class="sr-only">Formulaires</caption>
-          <thead><tr><th scope="col">Nom</th><th scope="col">État</th><th scope="col" class="mk-num">Vues</th><th scope="col" class="mk-num">Inscriptions</th><th scope="col" class="mk-num">Conversion</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-          <tbody>
-            <% items.forEach((f) => { %>
-              <tr>
-                <td data-label="Nom"><a href="/marketing/formulaires/<%= f.id %>"><%= f.name %></a></td>
-                <td data-label="État"><span class="mk-status <%= f.status === 'published' ? 'mk-status-ok' : '' %>"><%= f.status === 'published' ? "Publié" : "Brouillon" %></span></td>
-                <td class="mk-num" data-label="Vues"><%= mkh.fmt(f.viewCount) %></td>
-                <td class="mk-num" data-label="Inscriptions"><%= mkh.fmt(f.submitCount) %></td>
-                <td class="mk-num" data-label="Conversion"><%= mkh.rate(f.viewCount > 0 ? Math.round((f.submitCount / f.viewCount) * 10000) / 100 : null) %></td>
-                <td data-label="Actions"><a class="btn btn-outline btn-sm" href="/marketing/formulaires/<%= f.id %>">Détails</a></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
+      <section class="mk-card" style="margin-bottom:16px" aria-labelledby="fm-kpi">
+        <div class="mk-card-head"><div><h2 id="fm-kpi">Résultats de vos formulaires</h2><p>Depuis leur création · aucun chiffre estimé</p></div></div>
+        <div class="mk-card-body"><div class="mk-kpis">
+          <div class="mk-kpi is-strong"><span class="mk-kpi-label" data-tip="Formulaires accessibles au public à leur adresse, et affichés en pop-up s'ils sont configurés ainsi.">Formulaires publiés</span><span class="mk-kpi-value"><%= pub.length %></span><span class="mk-kpi-note">sur <%= items.length %> au total</span></div>
+          <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Nombre de fois où un formulaire a été affiché à un visiteur.">Vues</span><span class="mk-kpi-value"><%= mkh.fmt(views) %></span></div>
+          <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Inscriptions reçues. Avec double confirmation, la personne n'est abonnée qu'après avoir cliqué sur le lien reçu par e-mail.">Inscriptions</span><span class="mk-kpi-value"><%= mkh.fmt(subs) %></span></div>
+          <div class="mk-kpi"><span class="mk-kpi-label" data-tip="Part des vues qui ont conduit à une inscription. Sans vue enregistrée, aucun taux n'est affiché.">Taux de conversion</span><span class="mk-kpi-value"><%= conv(views, subs) %></span></div>
+        </div></div>
+      </section>
+
+      <div data-kfilter data-kf-noun="formulaire">
+        <div class="mk-filterbar">
+          <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="fm-q">Rechercher un formulaire</label><input id="fm-q" type="search" data-kf-search placeholder="Rechercher un formulaire" maxlength="100" autocomplete="off"></div>
+          <div class="mk-seg" role="group" aria-label="Filtrer par état">
+            <button type="button" class="is-on" aria-pressed="true" data-kf-status="" data-tip="Tous les formulaires, quel que soit leur état.">Tous</button>
+            <button type="button" aria-pressed="false" data-kf-status="published" data-tip="Formulaires en ligne : visibles à leur adresse publique.">Publiés</button>
+            <button type="button" aria-pressed="false" data-kf-status="draft" data-tip="Formulaires encore en préparation : personne ne peut s'inscrire.">Brouillons</button>
+          </div>
+        </div>
+        <p class="mk-filter-count" role="status" data-kf-count><%= items.length %> formulaire<%= items.length > 1 ? "s" : "" %></p>
+        <div class="mk-table-wrap">
+          <table class="mk-table mk-datatable">
+            <caption class="sr-only">Formulaires</caption>
+            <thead><tr><th scope="col">Nom</th><th scope="col" data-tip="Publié : accessible au public. Brouillon : en préparation.">État</th><th scope="col" class="mk-num">Vues</th><th scope="col" class="mk-num">Inscriptions</th><th scope="col" class="mk-num" data-tip="Inscriptions divisées par les vues.">Conversion</th><th scope="col" class="mk-col-actions"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+              <% items.forEach((f) => { %>
+                <tr data-kf-row data-status="<%= f.status %>" data-text="<%= f.name %> <%= f.slug %>">
+                  <td data-label="Nom"><div class="mk-cell-title"><a href="/marketing/formulaires/<%= f.id %>"><%= f.name %></a><span class="mk-cell-meta"><%- icon(f.popupEnabled ? "layout" : "link", { size: 14 }) %> <%= f.popupEnabled ? "Pop-up" : "Page" %> · <code>/f/<%= f.slug %></code></span></div></td>
+                  <td data-label="État"><span class="mk-status <%= f.status === 'published' ? 'mk-status-ok' : '' %>"><%= f.status === 'published' ? "Publié" : "Brouillon" %></span></td>
+                  <td class="mk-num" data-label="Vues"><%= mkh.fmt(f.viewCount) %></td>
+                  <td class="mk-num" data-label="Inscriptions"><%= mkh.fmt(f.submitCount) %></td>
+                  <td class="mk-num" data-label="Conversion"><%= conv(f.viewCount, f.submitCount) %></td>
+                  <td data-label="Actions" class="mk-col-actions mk-row-actions"><div class="mk-split"><a class="btn btn-outline btn-sm" href="/marketing/formulaires/<%= f.id %>">Détails</a><% if (f.status === "published") { %><a class="btn btn-outline btn-sm btn-icon" href="/f/<%= f.slug %>" target="_blank" rel="noopener" aria-label="Ouvrir la page publique de <%= f.name %>" data-tip="Ouvre la page publique du formulaire dans un nouvel onglet."><%- icon("externalLink", { size: 16 }) %></a><% } %></div></td>
+                </tr>
+              <% }) %>
+              <tr data-kf-empty hidden><td colspan="6"><div class="mk-empty-center"><strong>Aucun formulaire ne correspond</strong><span>Modifiez la recherche ou l'état choisi.</span></div></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     <% } %>
 

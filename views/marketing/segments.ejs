@@ -2,15 +2,15 @@
     <div class="mk-head">
       <div class="mk-head-main"><h1>Segments <span class="mk-count"><%= segments.length %></span></h1><p class="mk-head-sub">Un segment sélectionne des contacts selon des critères (ET / OU / NON). Il est recalculé à chaque usage, donc toujours à jour. Un segment ne donne aucun droit d'envoi : seuls les contacts avec un consentement prouvé sont joignables.</p></div>
       
+    
+      <div class="mk-head-actions"><% if (mk.can("lists.read")) { %><a class="btn btn-outline" href="/marketing/listes" data-tip="Une liste ne change que si vous y ajoutez ou retirez des contacts ; un segment se met à jour tout seul.">Voir les listes</a><% } %><% if (mk.can("segments.write")) { %><a class="btn btn-primary" href="/marketing/segments/nouveau" data-tip="Définissez des critères (ET / OU / NON) : le segment se recalcule à chaque usage.">Créer un segment</a><% } %></div>
     </div>
     <%- include("partials/site-filter", { action: "/marketing/segments" }) %>
     <% if (!segments.length) { %>
-      <div class="mk-empty">
-        <%- icon("filter", { size: 32 }) %>
-        <h2>Aucun segment</h2>
-        <p>Créez par exemple « Élèves ayant terminé une formation », « Contacts sans clic depuis 90 jours » ou « Clients ayant dépensé plus de 100 € ».</p>
-        <% if (mk.can("segments.write")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/segments/nouveau">Créer un segment</a></div><% } %>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucun segment</h2><p>Créez par exemple « Élèves ayant terminé une formation », « Contacts sans clic depuis 90 jours » ou « Clients ayant dépensé plus de 100 € ».</p><% if (mk.can("segments.write")) { %><div class="mk-actions"><a class="btn btn-primary" href="/marketing/segments/nouveau">Créer un segment</a></div><% } %></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "list" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap">
         <table class="mk-table mk-datatable">

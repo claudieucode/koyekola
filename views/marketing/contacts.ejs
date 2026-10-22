@@ -143,15 +143,14 @@
           <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/contacts">Réinitialiser les filtres</a></div>
         </div>
       <% } else { %>
-        <div class="mk-empty">
-          <%- icon("users", { size: 32 }) %>
-          <h2>Aucun contact pour l'instant</h2>
-          <p>Ajoutez un contact ou importez un fichier CSV pour constituer votre audience. Sans preuve de consentement, aucun message marketing ne pourra leur être envoyé.</p>
-          <div class="mk-actions">
-            <% if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/contacts/nouveau">Ajouter un contact</a><% } %>
-            <% if (mk.can("contacts.import")) { %><a class="btn btn-outline btn-sm" href="/marketing/importer">Importer un fichier</a><% } %>
+        <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucun contact pour l'instant</h2><p>Ajoutez un contact ou importez un fichier CSV pour constituer votre audience. Sans preuve de consentement, aucun message marketing ne pourra leur être envoyé.</p><div class="mk-actions">
+            <% if (canWrite) { %><a class="btn btn-primary" href="/marketing/contacts/nouveau">Ajouter un contact</a><% } %>
+            <% if (mk.can("contacts.import")) { %><a class="btn btn-outline" href="/marketing/importer">Importer un fichier</a><% } %>
           </div>
         </div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "people" }) %></div>
+      </div></div>
       <% } %>
     <% } else { %>
       <div class="mk-table-wrap">

@@ -7,8 +7,10 @@
     <div class="mk-head">
       <div class="mk-head-main"><h1>Tests A/B des pages</h1><p class="mk-head-sub">Comparez deux versions d'une page (titre, bouton, sections, mise en page, formulaire) : une partie des visiteurs voit la version B. Un gagnant n'est désigné qu'avec assez de données et une différence statistiquement fiable. Pour créer un test, ouvrez une page puis « Test A/B », ou une étape de tunnel puis « Tester en A/B ».</p></div></div>
     <% if (!list.counts.all && !list.counts.archived) { %>
-      <div class="mk-empty"><%- icon("activity", { size: 32 }) %><h2>Aucune expérience A/B</h2><p>Créez votre première expérience pour comparer deux variantes d'une page.</p>
-        <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages">+ Nouvelle expérience (choisir une page)</a></div></div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucune expérience A/B</h2><p>Créez votre première expérience pour comparer deux variantes d'une page.</p><div class="mk-actions"><a class="btn btn-primary" href="/marketing/pages">+ Nouvelle expérience (choisir une page)</a></div></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "chart" }) %></div>
+      </div></div>
     <% } else { %>
       <nav class="mk-tabs" aria-label="Filtrer les tests par état">
         <% STATUS_FILTERS.forEach((k) => { %><a class="mk-tab" href="/marketing/site-web/tests-ab<%= qs({ statut: k === "all" ? "" : k, page: "" }) %>"<%- filters.status === k ? ' aria-current="page"' : "" %>><%= LABELS[k] %> <span class="mk-tab-count"><%= list.counts[k] || 0 %></span></a><% }) %>

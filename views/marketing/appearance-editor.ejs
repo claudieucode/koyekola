@@ -179,7 +179,10 @@
     <div class="mk-ap-card"><h2>Quel template s'applique ?</h2>
       <p>Si plusieurs conviennent, le plus précis gagne : <strong>article précis</strong> › <strong>catégorie</strong> (celle de l'article avant ses catégories parentes) › <strong>étiquette</strong> › <strong>public</strong> › template général. À précision égale, le plus ancien. Un template n'agit que si sa page est <em>en ligne</em> ; sans template, le site utilise son affichage par défaut. L'en-tête et le pied de page sont communs à tous les templates : modifier l'en-tête les change partout.</p></div>
     <% if (!templates.length) { %>
-      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2>Utiliser le template par défaut</h2><p>Aucun template personnalisé : le blog, les archives, la page « À propos » et la page introuvable utilisent leur affichage d'origine.</p></div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Utiliser le template par défaut</h2><p>Aucun template personnalisé : le blog, les archives, la page « À propos » et la page introuvable utilisent leur affichage d'origine.</p></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "template" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Templates affectés</caption>
         <thead><tr><th scope="col">Famille de pages</th><th scope="col">Page modèle</th><th scope="col">Conditions</th><th scope="col">État</th><% if (canTemplates) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
@@ -212,7 +215,10 @@
     <div class="mk-ap-card"><strong>Mode statique :</strong> à l'insertion, le pattern est <em>copié</em> dans la page : la copie est indépendante, modifier le pattern ne change pas les pages déjà construites.
       <strong>Mode synchronisé :</strong> utilisez un <em>composant</em> du Page Builder (section enregistrée comme composant) : toutes ses instances suivent ses modifications. Les composants du site sont listés plus bas.</div>
     <h2>Mes patterns</h2>
-    <% if (!userPatterns.length) { %><div class="mk-empty"><%- icon("layers", { size: 32 }) %><h2>Aucun pattern.</h2><p>Enregistrez une section d'une page ci-dessous pour créer le premier.</p></div>
+    <% if (!userPatterns.length) { %><div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucun pattern.</h2><p>Enregistrez une section d'une page ci-dessous pour créer le premier.</p></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "template" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Mes patterns</caption>
         <thead><tr><th scope="col">Pattern</th><th scope="col">Mode</th><th scope="col" class="mk-num">Sections</th><th scope="col">Créé le</th><% if (canPatterns) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>

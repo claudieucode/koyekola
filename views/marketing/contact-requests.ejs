@@ -3,7 +3,10 @@
     <div class="mk-head">
       <div class="mk-head-main"><h1>Mes demandes <span class="mk-count"><%= items.length %></span></h1><p class="mk-head-sub">Quand une adresse ne peut pas être ajoutée directement à votre site, une demande est transmise à l'équipe de l'organisation. Vous voyez ici seulement si elle est <strong>en attente</strong> ou <strong>traitée</strong>. Si l'équipe y donne suite, le contact apparaît dans votre liste.</p></div></div>
     <% if (!items.length) { %>
-      <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2>Aucune demande</h2><p>Les demandes apparaissent ici lorsque l'équipe doit intervenir.</p></div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucune demande</h2><p>Les demandes apparaissent ici lorsque l'équipe doit intervenir.</p></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "people" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table">
         <caption class="sr-only">Vos demandes</caption>

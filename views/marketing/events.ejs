@@ -33,11 +33,10 @@
 
     <h2 class="mk-h2">Événements récents</h2>
     <% if (!events.length) { %>
-      <div class="mk-empty">
-        <%- icon("activity", { size: 32 }) %>
-        <h2>Aucun événement</h2>
-        <p>Ils apparaîtront ici dès que quelque chose se passera : un compte créé, une commande, une inscription à une formation, un contact qui s'abonne…</p>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucun événement</h2><p>Ils apparaîtront ici dès que quelque chose se passera : un compte créé, une commande, une inscription à une formation, un contact qui s'abonne…</p></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "chart" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Événements récents (100 au plus)</caption>
         <thead><tr><th scope="col">Événement</th><th scope="col">Contact</th><th scope="col">Origine</th><th scope="col">Date</th><th scope="col">État</th></tr></thead>

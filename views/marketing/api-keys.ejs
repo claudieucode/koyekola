@@ -12,8 +12,10 @@
     <% } %>
 
     <% if (!keys.length) { %>
-      <div class="mk-empty"><%- icon("plug", { size: 32 }) %><h2>Aucune clé d'API</h2><p>Créez-en une pour brancher un outil externe (formulaire, automatisation, tableur…) à vos contacts et vos événements.</p>
-        <div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une clé</button></div></div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text"><h2>Aucune clé d'API</h2><p>Créez-en une pour brancher un outil externe (formulaire, automatisation, tableur…) à vos contacts et vos événements.</p><div class="mk-actions"><button type="button" class="btn btn-primary" data-mk-modal-open="nouvelle">Créer une clé</button></div></div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "folder" }) %></div>
+      </div></div>
     <% } else { %>
       <div class="mk-table-wrap">
         <table class="mk-table mk-datatable">
