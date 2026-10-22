@@ -216,6 +216,7 @@ const get = (id) => db.prepare("SELECT * FROM blog_comments WHERE id = ?").get(i
 // Chaque action ne compte que les commentaires réellement modifiés (jamais de succès annoncé sans changement)
 const ACTIONS = {
   approve: { from: ["pending", "spam", "trash"], event: "comment.approved" },
+  unapprove: { from: ["approved"], event: "comment.unapproved" }, // « Désapprouver » : retour en attente de modération (contenu, auteur et fil conservés)
   spam: { from: ["pending", "approved", "trash"], event: "comment.spam" },
   trash: { from: ["pending", "approved", "spam"], event: "comment.deleted" },
   restore: { from: ["spam", "trash"], event: "comment.restored" },
@@ -232,6 +233,7 @@ function moderate(ids, action, actorId = null, allow = null) {
     const payload = { commentId: c.id, contentType: c.content_type, contentId: c.content_id, parentId: c.parent_id, userId: c.user_id, actorId, from: c.status };
     if (action === "delete") { db.prepare("DELETE FROM blog_comments WHERE id = ?").run(c.id); emit("comment.purged", payload); done.push(id); continue; }
     if (action === "approve") db.prepare("UPDATE blog_comments SET status = 'approved', prev_status = '', deleted_at = NULL, approved_at = datetime('now'), approved_by = ?, updated_at = datetime('now') WHERE id = ?").run(actorId, c.id);
+    else if (action === "unapprove") db.prepare("UPDATE blog_comments SET status = 'pending', prev_status = '', approved_at = NULL, approved_by = NULL, updated_at = datetime('now') WHERE id = ?").run(c.id);
     else if (action === "restore") {
       const back = ["pending", "approved"].includes(c.prev_status) ? c.prev_status : "pending";
       db.prepare("UPDATE blog_comments SET status = ?, prev_status = '', deleted_at = NULL, updated_at = datetime('now') WHERE id = ?").run(back, c.id);
@@ -263,41 +265,104 @@ function purgeGuest(email) {
   return rows.length;
 }
 
+
+// ---------- Modification (modération) ----------
+// Champs modifiables : texte ; nom et e-mail d'un INVITÉ seulement (ceux d'un membre viennent de son compte) ; statut parmi en attente / approuvé / indésirable.
+// Rien n'est écrit si rien ne change ; la corbeille passe par son action dédiée (réversible), jamais par ce formulaire.
+function edit(id, fields = {}, { actorId = null, canEmail = false } = {}) {
+  const c = get(id);
+  if (!c) throw new UserError("Commentaire introuvable.");
+  if (c.status === "trash") throw new UserError("Restaurez ce commentaire avant de le modifier.");
+  const next = {}, changed = [];
+  if (fields.body !== undefined) {
+    const text = clean(fields.body);
+    if (text.length < 2) throw new UserError("Le commentaire est vide.");
+    if (text.length > COMMENT_MAX) throw new UserError(`Le commentaire dépasse ${COMMENT_MAX} caractères.`);
+    if (text !== c.body) { next.body = text; changed.push("texte"); }
+  }
+  if (!c.user_id) {
+    if (fields.author_name !== undefined) {
+      const name = clean(fields.author_name).replace(/\s+/g, " ").slice(0, 60);
+      if (name.length < 2) throw new UserError("Indiquez le nom de l'auteur (2 caractères au moins).");
+      if (name !== c.author_name) { next.author_name = name; changed.push("nom"); }
+    }
+    if (canEmail && fields.author_email !== undefined) {
+      const mail = String(fields.author_email || "").trim().toLowerCase().slice(0, 120);
+      if (!EMAIL_RE.test(mail)) throw new UserError("Indiquez une adresse e-mail valide.");
+      if (mail !== c.author_email) { next.author_email = mail; changed.push("e-mail"); }
+    }
+  }
+  let statusChange = null;
+  if (fields.status !== undefined && fields.status !== "" && fields.status !== c.status) {
+    if (!["pending", "approved", "spam"].includes(fields.status)) throw new UserError("Statut inconnu.");
+    statusChange = fields.status; changed.push("statut");
+  }
+  if (!changed.length) return { changed: [], unchanged: true };
+  if (Object.keys(next).length) {
+    db.prepare(`UPDATE blog_comments SET ${Object.keys(next).map((k) => `${k} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ?`).run(...Object.values(next), c.id);
+  }
+  if (statusChange) moderate([c.id], statusChange === "approved" ? "approve" : statusChange === "pending" ? "unapprove" : "spam", actorId);
+  emit("comment.edited", { commentId: c.id, contentType: c.content_type, contentId: c.content_id, actorId, fields: changed });
+  return { changed, unchanged: false };
+}
+
 // ---------- Liste d'administration : recherche, filtres, tri, pagination — tout dans la base ----------
 const PERIODS = { "7": "-7 days", "30": "-30 days", "90": "-90 days", "365": "-365 days" };
-const SORTS = { recent: "c.created_at DESC, c.id DESC", ancien: "c.created_at ASC, c.id ASC", auteur: "author COLLATE NOCASE ASC, c.id DESC", contenu: "content_title COLLATE NOCASE ASC, c.id DESC" };
+const SORTS = {
+  recent: "c.created_at DESC, c.id DESC", ancien: "c.created_at ASC, c.id ASC",
+  auteur: "author COLLATE NOCASE ASC, c.id DESC", "auteur-desc": "author COLLATE NOCASE DESC, c.id DESC",
+  contenu: "content_title COLLATE NOCASE ASC, c.id DESC", "contenu-desc": "content_title COLLATE NOCASE DESC, c.id DESC",
+};
+// Types de commentaires réellement présents : un commentaire de premier niveau, ou une réponse à un autre commentaire (il n'y a ni ping ni rétrolien)
+const TYPES = Object.freeze({ commentaire: "Commentaires", reponse: "Réponses" });
+// Recherche sans accent ni casse : le texte cherché et les colonnes sont ramenés à la même forme (SQLite ne plie que les lettres ASCII)
+const FOLD_FROM = "àâäáãåçéèêëíìîïñóòôöõúùûüýÿÀÂÄÁÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸ", FOLD_TO = "aaaaaaceeeeiiiinooooouuuuyyaaaaaaceeeeiiiinooooouuuuyy";
+const foldText = (v) => String(v || "").normalize("NFC").replace(/\s+/g, " ").trim().split("").map((ch) => { const i = FOLD_FROM.indexOf(ch); return i >= 0 ? FOLD_TO[i] : ch; }).join("").toLowerCase();
+const foldSql = (col) => { let e = `COALESCE(${col}, '')`; for (let i = 0; i < FOLD_FROM.length; i += 1) e = `REPLACE(${e}, '${FOLD_FROM[i]}', '${FOLD_TO[i]}')`; return `LOWER(${e})`; };
 const like = (s) => `%${String(s).replace(/[\\%_]/g, "\\$&")}%`;
-function list({ status = "", q = "", content = "", author = "", period = "", sort = "recent", page = 1, perPage = PER_PAGE_ADMIN, includeEmail = false, scope = null } = {}) {
+function list({ status = "", q = "", content = "", author = "", period = "", sort = "recent", page = 1, perPage = PER_PAGE_ADMIN, includeEmail = false, scope = null, mine = null, type = "" } = {}) {
   const where = [], args = [];
   if (scope) { where.push(scope.sql); args.push(...scope.params); } // portée de site (R6 lot 2) : seulement les commentaires des articles de ce site
   if (STATUSES.includes(status)) { where.push("c.status = ?"); args.push(status); } else where.push("c.status <> 'trash'"); // « Tous » : tout sauf la corbeille
   const m = /^([a-z_]{1,20}):(\d{1,9})$/.exec(String(content));
   if (m) { where.push("c.content_type = ? AND c.content_id = ?"); args.push(m[1], Number(m[2])); }
+  if (Number.isInteger(mine) && mine > 0) { where.push("c.user_id = ?"); args.push(mine); } // « Les miens » : écrits par le compte connecté
+  if (type === "commentaire") where.push("c.parent_id IS NULL"); else if (type === "reponse") where.push("c.parent_id IS NOT NULL");
   if (/^\d{1,9}$/.test(String(author))) { where.push("c.user_id = ?"); args.push(Number(author)); }
   else if (author) { where.push("(u.username LIKE ? ESCAPE '\\' OR c.author_name LIKE ? ESCAPE '\\')"); args.push(like(author), like(author)); }
   if (PERIODS[period]) { where.push("c.created_at >= datetime('now', ?)"); args.push(PERIODS[period]); }
-  if (q) {
-    const parts = ["c.body LIKE ? ESCAPE '\\'", "u.username LIKE ? ESCAPE '\\'", "c.author_name LIKE ? ESCAPE '\\'", "p.title LIKE ? ESCAPE '\\'"];
-    const qa = [like(q), like(q), like(q), like(q)];
-    if (includeEmail) { parts.push("c.author_email LIKE ? ESCAPE '\\'", "u.email LIKE ? ESCAPE '\\'"); qa.push(like(q), like(q)); }
-    where.push(`(${parts.join(" OR ")})`); args.push(...qa);
+  const needle = foldText(q);
+  if (needle) {
+    const cols = ["c.body", "u.username", "c.author_name", "p.title"].concat(includeEmail ? ["c.author_email", "u.email"] : []);
+    where.push(`(${cols.map((col) => `${foldSql(col)} LIKE ? ESCAPE '\\'`).join(" OR ")})`); args.push(...cols.map(() => like(needle)));
   }
-  const from = `FROM blog_comments c LEFT JOIN users u ON u.id = c.user_id LEFT JOIN posts p ON c.content_type = 'post' AND p.id = c.content_id LEFT JOIN users ap ON ap.id = c.approved_by ${where.length ? "WHERE " + where.join(" AND ") : ""}`;
+  const from = `FROM blog_comments c LEFT JOIN users u ON u.id = c.user_id LEFT JOIN posts p ON c.content_type = 'post' AND p.id = c.content_id LEFT JOIN users ap ON ap.id = c.approved_by LEFT JOIN blog_comments pc ON pc.id = c.parent_id LEFT JOIN users pu ON pu.id = pc.user_id ${where.length ? "WHERE " + where.join(" AND ") : ""}`;
   const total = db.prepare(`SELECT COUNT(*) n ${from}`).get(...args).n;
   const pages = Math.max(1, Math.ceil(total / perPage));
   const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
   const rows = db.prepare(`SELECT c.id, c.content_type, c.content_id, c.parent_id, c.user_id, c.body, c.status, c.created_at, c.approved_at, c.approved_by, c.author_name, ${includeEmail ? "COALESCE(NULLIF(c.author_email, ''), u.email, '')" : "''"} AS email,
-      COALESCE(u.username, NULLIF(c.author_name, ''), 'Anonyme') AS author, p.title AS content_title, p.slug AS content_slug, ap.username AS approver
+      COALESCE(u.username, NULLIF(c.author_name, ''), 'Anonyme') AS author, p.title AS content_title, p.slug AS content_slug, p.published AS content_published, c.updated_at, c.author_email AS guest_email, u.avatar_path, ap.username AS approver,
+      COALESCE(pu.username, NULLIF(pc.author_name, ''), CASE WHEN pc.id IS NOT NULL THEN 'Anonyme' END) AS parent_author,
+      (SELECT COUNT(*) FROM blog_comments k WHERE k.content_type = c.content_type AND k.content_id = c.content_id AND k.status = 'approved') AS thread_total,
+      (SELECT COUNT(*) FROM blog_comments k WHERE k.content_type = c.content_type AND k.content_id = c.content_id AND k.status = 'pending') AS thread_pending
     ${from} ORDER BY ${SORTS[sort] || SORTS.recent} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
   return { rows, total, page: current, pages };
 }
 // Effectifs par statut (onglets) : une seule requête groupée
-function counts(content = "", scope = null) {
+function counts(content = "", scope = null, mine = null) {
   const m = /^([a-z_]{1,20}):(\d{1,9})$/.exec(String(content));
   const rows = scope ? db.prepare(`SELECT c.status, COUNT(*) n FROM blog_comments c WHERE ${m ? "c.content_type = ? AND c.content_id = ? AND " : ""}${scope.sql} GROUP BY c.status`).all(...(m ? [m[1], Number(m[2])] : []), ...scope.params) : m ? db.prepare("SELECT status, COUNT(*) n FROM blog_comments WHERE content_type = ? AND content_id = ? GROUP BY status").all(m[1], Number(m[2])) : db.prepare("SELECT status, COUNT(*) n FROM blog_comments GROUP BY status").all();
   const out = { pending: 0, approved: 0, spam: 0, trash: 0 };
   for (const r of rows) out[r.status] = r.n;
   out.all = out.pending + out.approved + out.spam;
+  // « Les miens » : mes commentaires hors corbeille, dans la même portée de site et le même filtre de contenu que les autres effectifs
+  out.mine = 0;
+  if (Number.isInteger(mine) && mine > 0) {
+    const w = ["c.user_id = ?", "c.status <> 'trash'"], a = [mine];
+    if (m) { w.push("c.content_type = ? AND c.content_id = ?"); a.push(m[1], Number(m[2])); }
+    if (scope) { w.push(scope.sql); a.push(...scope.params); }
+    out.mine = db.prepare(`SELECT COUNT(*) n FROM blog_comments c WHERE ${w.join(" AND ")}`).get(...a).n;
+  }
   return out;
 }
 // Éléments pour le filtre « contenu » : articles qui ont des commentaires
@@ -320,6 +385,6 @@ function countsForPosts(ids) {
 
 module.exports = {
   COMMENT_MAX, STATUSES, STATUS_LABELS, MAX_LINKS, IP_RETENTION_DAYS, PER_PAGE_PUBLIC, PER_PAGE_ADMIN, PERIODS, SORTS, DEFAULTS,
-  CONTENT, registerContent, events, settings, saveSettings, resetCache,
+  CONTENT, TYPES, registerContent, events, edit, foldText, settings, saveSettings, resetCache,
   clean, html, linksIn, ipHash, levelOf, create, thread, count, get, moderate, reply, purge, purgeGuest, list, counts, commentedContents, contentInfo, countsForPosts, uniqueIds,
 };

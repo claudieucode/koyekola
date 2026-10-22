@@ -1,0 +1,23 @@
+<%#
+  KOLAKISA CMS → Commentaires → Modifier (COMMENTAIRES-01). Texte, statut, et nom / e-mail d'un invité (l'e-mail seulement avec le droit
+  comments.email). Les données d'un membre viennent de son compte et ne se modifient pas ici. Tout est échappé.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const S = typeof mkSiteId === "number" ? mkSiteId : ""; const siteQ = S ? "?site=" + S : "";
+  const siteField = typeof mkSiteField === "string" ? mkSiteField : "";
+  const trashed = c.status === "trash";
+%>
+    <div class="mk-head"><h1>Modifier le commentaire</h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %><%= siteQ %>#cm-<%= c.id %>">Retour aux commentaires</a></div></div>
+    <% if (trashed) { %><p class="mk-sub" role="status">Ce commentaire est dans la corbeille : restaurez-le avant de le modifier.</p><% } %>
+    <form class="mk-panel mk-cm-edit" method="post" action="<%= BASE %>/<%= c.id %>/modifier<%= siteQ %>" data-cm-once><%- siteField %>
+      <% if (!c.user_id) { %>
+        <div class="field-group"><label for="ce-name">Nom</label><input id="ce-name" type="text" name="author_name" value="<%= c.author_name %>" maxlength="60" required<%= trashed ? " disabled" : "" %>></div>
+        <% if (canEmail) { %><div class="field-group"><label for="ce-email">E-mail</label><input id="ce-email" type="email" name="author_email" value="<%= c.author_email %>" maxlength="120" required<%= trashed ? " disabled" : "" %>></div><% } %>
+      <% } else { %><p class="mk-sub">Auteur : <strong><%= c.username || "Membre supprimé" %></strong> (membre : nom et e-mail viennent de son compte).</p><% } %>
+      <div class="field-group"><label for="ce-body">Commentaire</label><textarea id="ce-body" name="body" rows="8" maxlength="<%= COMMENT_MAX %>" required<%= trashed ? " disabled" : "" %>><%= c.body %></textarea><span class="field-hint">Texte brut : jamais interprété comme du HTML. <%= COMMENT_MAX %> caractères au plus.</span></div>
+      <% if (!trashed) { %><div class="field-group"><label for="ce-status">Statut</label><select id="ce-status" name="status"><% [["pending", "En attente"], ["approved", "Approuvé"], ["spam", "Indésirable"]].forEach(([v, n]) => { %><option value="<%= v %>"<%= c.status === v ? " selected" : "" %>><%= n %></option><% }) %></select></div><% } %>
+      <p class="mk-sub">Article : <% if (c.content_title) { %><a href="/formateur/blog/<%= c.content_id %>/modifier<%= siteQ %>"><%= c.content_title %></a><% } else { %>contenu supprimé ou introuvable<% } %> · Envoyé le <%= String(c.created_at).slice(0, 16).replace("T", " ") %> UTC · Statut actuel : <%= STATUS_LABELS[c.status] %></p>
+      <% if (!trashed) { %><button type="submit" class="btn btn-primary">Mettre à jour</button><% } %>
+    </form>
+<script src="/js/cms-comments.js" defer></script>
+<%- include("partials/bottom") %>

@@ -172,7 +172,7 @@ describe("modération (CMS → Commentaires)", () => {
     }
     const all = (await boss.get(ADMIN)).text;
     const n = one("SELECT COUNT(*) n FROM blog_comments WHERE status <> 'trash'").n;
-    assert.match(all, new RegExp(`Tous <span class="mk-tab-count">${n}</span>`));
+    assert.match(all, new RegExp(`Tous</a> <span class="mk-tab-count">\\(${n}\\)</span>`));
   });
   test("actions : indésirable, restauration, corbeille, suppression définitive — statuts réels et exclusion du public", async () => {
     await setSettings({ guests_allowed: "1", moderation: "all" });
@@ -266,11 +266,11 @@ describe("droits d'accès et confidentialité", () => {
     await guest("Pour les droits", {}, new Client(srv.base));
     const c = byBody("Pour les droits");
     const v = await viewer.get(ADMIN);
-    assert.equal(v.status, 200); assert.doesNotMatch(v.text, /camille@example\.com/); assert.doesNotMatch(v.text, /data-cms-bulk/);
+    assert.equal(v.status, 200); assert.doesNotMatch(v.text, /camille@example\.com/); assert.doesNotMatch(v.text, /id="cm-bulk"/);
     assert.equal((await viewer.post(`${ADMIN}/${c.id}/approuver`, { retour: ADMIN })).status, 403);
     assert.equal(byBody("Pour les droits").status, "pending");
     const e = await editor.get(ADMIN);
-    assert.doesNotMatch(e.text, /camille@example\.com/); assert.match(e.text, /data-cms-bulk/);
+    assert.doesNotMatch(e.text, /camille@example\.com/); assert.match(e.text, /id="cm-bulk"/);
     await editor.post(`${ADMIN}/${c.id}/approuver`, { retour: ADMIN });
     assert.equal(byBody("Pour les droits").status, "approved");
     await editor.post(`${ADMIN}/${c.id}/corbeille`, { retour: ADMIN });

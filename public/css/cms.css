@@ -459,3 +459,39 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label, html[data-sidebar="co
 .mk-ml-q-actions { display: inline-flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .mk-ml-q-item progress[hidden] { display: none; }
 @media (max-width: 700px) { .mk-ml-bigdrop { min-height: 170px; padding: 18px 12px; } .mk-ml-bigtitle { font-size: 1.15rem; } .mk-ml-q-item { grid-template-columns: minmax(0, 1fr) auto; } .mk-ml-q-text, .mk-ml-q-actions { grid-column: 1 / -1; justify-content: flex-start; } }
+
+/* COMMENTAIRES-01 : liste de modération façon WordPress (états en texte, barre d'outils, actions sous le texte, volets) */
+.mk-cm-topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; }
+.mk-cm-states { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; }
+.mk-cm-states a { color: var(--mk-primary, #0a76b2); text-decoration: none; }
+.mk-cm-states a:hover, .mk-cm-states a:focus-visible { text-decoration: underline; }
+.mk-cm-states a.is-current { color: inherit; font-weight: 700; }
+.mk-cm-search { display: flex; gap: 6px; flex-wrap: wrap; }
+.mk-cm-search input[type="search"] { min-width: 200px; }
+.mk-cm-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 8px 0; }
+.mk-cm-bulkbar, .mk-cm-filters { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mk-cm-total { margin-left: auto; }
+.sr-only-form { display: none; }
+.mk-cm-sort { color: inherit; text-decoration: none; font-weight: 600; }
+.mk-cm-sort:hover, .mk-cm-sort:focus-visible { text-decoration: underline; }
+.mk-cm-author { display: flex; gap: 10px; align-items: flex-start; }
+.mk-cm-avatar { flex: none; width: 32px; height: 32px; border-radius: 50%; background: #0b2a4a; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; overflow: hidden; }
+.mk-cm-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.mk-cm-row.is-pending { background: rgba(214, 158, 46, 0.08); box-shadow: inset 3px 0 0 #d69e2e; }
+.mk-cm-ops { margin-top: 6px; font-size: 0.86rem; opacity: 0.85; }
+.mk-cm-row:hover .mk-cm-ops, .mk-cm-row:focus-within .mk-cm-ops { opacity: 1; }
+.mk-cm-link { background: none; border: 0; padding: 0; font: inherit; color: var(--mk-primary, #0a76b2); cursor: pointer; text-decoration: none; }
+.mk-cm-link:hover, .mk-cm-link:focus-visible { text-decoration: underline; }
+.mk-cm-link.is-ok { color: #1a7f4b; } .mk-cm-link.is-warn { color: #8a5a00; } .mk-cm-link.is-bad { color: #b32d2e; }
+.mk-cm-panel { margin-top: 8px; padding: 10px; border: 1px solid var(--mk-border, #d5dbe3); border-radius: 8px; background: #f7f9fc; max-width: 52ch; }
+.mk-cm-panel form { display: flex; flex-direction: column; gap: 6px; }
+.mk-cm-panel textarea, .mk-cm-panel input, .mk-cm-panel select { width: 100%; }
+.mk-cm-panel-actions { display: flex; gap: 8px; }
+.mk-cm-more summary { cursor: pointer; font-size: 0.86rem; color: var(--mk-primary, #0a76b2); }
+.mk-cm-parent { margin: 0 0 4px; }
+.mk-cm-on { min-width: 150px; }
+.mk-cm-on a, .mk-cm-on span { display: block; }
+.mk-cm-bubble { display: inline-flex !important; align-items: center; justify-content: center; min-width: 24px; height: 22px; margin-top: 6px; padding: 0 6px; border-radius: 6px; background: #0b2a4a; color: #fff; font-size: 0.78rem; text-decoration: none; }
+.mk-cm-edit { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.mk-cm-edit textarea, .mk-cm-edit input, .mk-cm-edit select { width: 100%; }
+@media (max-width: 720px) { .mk-cm-total { margin-left: 0; } }

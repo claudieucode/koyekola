@@ -198,7 +198,7 @@ const SCOPED_KEYS = new Set(Object.values(SITE_MODULES).filter((m) => m.kind ===
 // Sous-pages (une seule position) d'un module délégué, ouvertes dans le cadre du site : liste FERMÉE, jamais déduite de l'adresse
 const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
-  commentaires: ["en-attente", "approuves", "indesirables", "corbeille"],
+  commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
