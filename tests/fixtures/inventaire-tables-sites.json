@@ -44,6 +44,14 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "cms_customizer_drafts": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "cms_customizer_versions": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_font_files": {
    "siteId": false,
    "classe": "plateforme"

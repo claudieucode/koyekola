@@ -44,6 +44,7 @@ const SECTIONS = [
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
+      leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
       leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
       leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
@@ -269,6 +270,7 @@ const ABILITY = {
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
   "apparence/polices": { mode: "open", module: "polices" },
+  "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
@@ -313,6 +315,7 @@ function projectItem(item, group, space) {
   const a = ABILITY[item.key];
   if (a && a.mode === "central") return null;
   if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
+  if (a && a.mode === "customizer") return { ...base, href: `${BASE}/personnaliser?site=${space.siteId}`, status: "live", external: true };
   if (a && a.mode === "open") {
     if (a.teamOnly && space.limited) return null; // création d'article : réservée à l'équipe (décision A-D9 non approuvée) → absente du menu d'un accès limité
     const m = siteModule(space, a.module);

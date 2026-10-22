@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr" data-kola-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="mk-media-site" content="<%= mediaSite %>"><%# médiathèque du site personnalisé (ou du site principal) : le sélecteur d'images ne lit jamais une autre médiathèque %>
+  <title><%= title %> · KOLAKISA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script>/* Thème de l'interface (Clair / Sombre / Automatique) : même préférence que l'administration (clé kolaTheme), résolue avant le premier affichage. */ try { var kp = localStorage.getItem("kolaTheme"); document.documentElement.setAttribute("data-kola-theme", kp === "dark" || (kp !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"); } catch (e) {}</script>
+  <link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/customizer.css') %>">
+</head>
+<body class="kwc-body">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-desktop" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-mobile" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 18.5h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></symbol>
+      <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="11" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 16c.6-1.4 1.8-2 3-2s2.400.6 3 2M15 10h3M15 14h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1.200 0 1.800-.8 1.800-1.700 0-1-.8-1.300-.8-2.200 0-.9.700-1.600 1.700-1.600H17a4 4 0 004-4c0-4.100-4-8.500-9-8.500z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="7.500" cy="11" r="1.200" fill="currentColor"/><circle cx="10.500" cy="7.500" r="1.200" fill="currentColor"/><circle cx="15" cy="7.500" r="1.200" fill="currentColor"/></symbol>
+      <symbol id="i-type" viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9h18M9 9v11" stroke="currentColor" stroke-width="2"/></symbol>
+      <symbol id="i-header" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 9h18" stroke="currentColor" stroke-width="2"/><path d="M6 6.500h3" stroke="currentColor" stroke-width="1.600" stroke-linecap="round"/></symbol>
+      <symbol id="i-footer" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 15h18" stroke="currentColor" stroke-width="2"/><path d="M6 17.500h3" stroke="currentColor" stroke-width="1.600" stroke-linecap="round"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-button" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 12h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="1.800" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 16l-5-5-8 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 108-8H7M7 4L4 7l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 4v16" stroke="currentColor" stroke-width="2"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    </defs>
+  </svg>
+  <a class="kwc-skip" href="#kwc-panel">Aller aux réglages</a>
+
+  <%# ---------- Barre supérieure ---------- %>
+  <header class="kwc-top" role="banner">
+    <div class="kwc-top-l">
+      <a class="kwc-iconbtn" id="kwc-close" href="<%= boot.links.back %>" aria-label="Quitter le personnalisateur et revenir au tableau de bord" title="Retour au tableau de bord"><svg class="kwc-i" aria-hidden="true"><use href="#i-back"/></svg></a>
+      <div class="kwc-title"><span class="kwc-kicker">Vous personnalisez</span><strong id="kwc-site"><%= T.name %></strong></div>
+      <span class="kwc-status" id="kwc-status" role="status" aria-live="polite" data-state="live"><span class="kwc-dot" aria-hidden="true"></span><span id="kwc-status-text">Publié</span></span>
+    </div>
+    <div class="kwc-top-c" role="group" aria-label="Taille de l'aperçu">
+      <button type="button" class="kwc-iconbtn" data-device="desktop" aria-pressed="true" title="Ordinateur" aria-label="Aperçu ordinateur"><svg class="kwc-i" aria-hidden="true"><use href="#i-desktop"/></svg></button>
+      <button type="button" class="kwc-iconbtn" data-device="tablet" aria-pressed="false" title="Tablette (768 px)" aria-label="Aperçu tablette"><svg class="kwc-i" aria-hidden="true"><use href="#i-tablet"/></svg></button>
+      <button type="button" class="kwc-iconbtn" data-device="mobile" aria-pressed="false" title="Mobile (390 px)" aria-label="Aperçu mobile"><svg class="kwc-i" aria-hidden="true"><use href="#i-mobile"/></svg></button>
+      <span class="kwc-sep" aria-hidden="true"></span>
+      <label class="kwc-pick"><span class="kwc-sr">Page à prévisualiser</span><select id="kwc-page"></select></label>
+    </div>
+    <div class="kwc-top-r">
+      <button type="button" class="kwc-iconbtn" id="kwc-undo" title="Annuler (Ctrl/⌘ + Z)" aria-label="Annuler" disabled><svg class="kwc-i" aria-hidden="true"><use href="#i-undo"/></svg></button>
+      <button type="button" class="kwc-iconbtn" id="kwc-redo" title="Rétablir (Ctrl/⌘ + Y)" aria-label="Rétablir" disabled><svg class="kwc-i" aria-hidden="true"><use href="#i-redo"/></svg></button>
+      <button type="button" class="kwc-btn" id="kwc-save" disabled>Enregistrer le brouillon</button>
+      <button type="button" class="kwc-btn kwc-btn-primary" id="kwc-publish" disabled>Publier</button>
+      <div class="kwc-menuwrap">
+        <button type="button" class="kwc-iconbtn" id="kwc-more" aria-haspopup="menu" aria-expanded="false" aria-controls="kwc-moremenu" title="Options" aria-label="Options supplémentaires"><svg class="kwc-i" aria-hidden="true"><use href="#i-more"/></svg></button>
+        <div class="kwc-menu" id="kwc-moremenu" role="menu" hidden>
+          <button type="button" role="menuitem" data-act="refresh">Actualiser l'aperçu</button>
+          <button type="button" role="menuitem" data-act="versions">Versions publiées…</button>
+          <button type="button" role="menuitem" data-act="discard">Annuler le brouillon</button>
+          <a role="menuitem" href="<%= boot.links.themes %>" target="_blank" rel="noopener">Changer de thème <svg class="kwc-i kwc-i-s" aria-hidden="true"><use href="#i-ext"/></svg></a>
+          <button type="button" role="menuitem" data-act="open-page">Ouvrir cette page dans un onglet <svg class="kwc-i kwc-i-s" aria-hidden="true"><use href="#i-ext"/></svg></button>
+          <button type="button" role="menuitem" data-act="theme-mode">Mode : <span id="kwc-mode-label">clair</span></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="kwc-main" id="kwc-main">
+    <%# ---------- Panneau de réglages ---------- %>
+    <aside class="kwc-side" id="kwc-side" aria-label="Réglages du site">
+      <div class="kwc-banners" id="kwc-banners"></div>
+      <nav class="kwc-panel" id="kwc-panel" tabindex="-1"></nav>
+      <div class="kwc-sidefoot"><button type="button" class="kwc-link" id="kwc-collapse"><svg class="kwc-i kwc-i-s" aria-hidden="true"><use href="#i-panel"/></svg> Masquer les contrôles</button></div>
+    </aside>
+    <%# ---------- Aperçu : la vraie page du site ---------- %>
+    <section class="kwc-stage" id="kwc-stage" aria-label="Aperçu du site">
+      <button type="button" class="kwc-expand" id="kwc-expand" hidden aria-label="Afficher les contrôles" title="Afficher les contrôles"><svg class="kwc-i" aria-hidden="true"><use href="#i-panel"/></svg></button>
+      <div class="kwc-frame" id="kwc-frame" data-device="desktop">
+        <iframe id="kwc-iframe" title="Aperçu du site <%= T.name %>" referrerpolicy="same-origin"></iframe>
+        <div class="kwc-loading" id="kwc-loading" aria-hidden="true"><span class="kwc-spin"></span></div>
+        <div class="kwc-empty" id="kwc-empty" hidden><strong>Ce site n'a pas encore de page à afficher.</strong><p>L'aperçu utilise le contenu réel du site : créez une page pour la voir ici. Les réglages restent modifiables et enregistrables.</p></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="kwc-toasts" id="kwc-toasts" aria-live="polite"></div>
+  <div class="kwc-modal" id="kwc-modal" hidden role="dialog" aria-modal="true" aria-labelledby="kwc-modal-title"><div class="kwc-modal-box"><h2 id="kwc-modal-title"></h2><div id="kwc-modal-body"></div><div class="kwc-modal-act" id="kwc-modal-act"></div></div></div>
+
+  <script type="application/json" id="kwc-boot"><%- bootJson %></script>
+  <script src="<%= asset('/js/kwmedia.js') %>" defer></script>
+  <script src="<%= asset('/js/media-picker.js') %>" defer></script>
+  <script src="<%= asset('/js/customizer.js') %>" defer></script>
+</body>
+</html>

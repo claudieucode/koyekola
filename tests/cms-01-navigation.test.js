@@ -91,6 +91,7 @@ describe("de bout en bout : écran Extensions et pied de panneau", () => {
   test("tous les écrans du registre s'ouvrent encore (200) avec leur entrée courante après le changement d'ordre", async () => {
     for (const item of cmsNav.ALL) {
       const r = await boss.get(item.href);
+      if (item.fullscreen) { assert.equal(r.status, 200, item.key); assert.match(r.text, /id="kwc-boot"/, item.key); continue; } // écran plein cadre : hors coque du CMS
       // ARTICLES-02 : « Ajouter un article » ouvre directement l'éditeur (redirection), il n'a plus d'écran de cadre
       if (item.key === "articles/ajouter") { assert.equal(r.status, 302); assert.equal(r.location, "/formateur/blog/nouveau"); continue; }
       assert.equal(r.status, 200, `${item.key} ${r.status}`);
