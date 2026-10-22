@@ -4,8 +4,8 @@
   const periodLabel = { 30: "30 derniers jours", 90: "90 derniers jours", 365: "12 derniers mois" };
   const when = (ms) => new Date(ms).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "UTC" });
 %>
-    <div class="mk-head"><h1>Revenus</h1></div>
-    <p class="mk-lead">Les ventes de formations générées par vos e-mails. Comme chez Mailchimp, une commande est attribuée au <strong>dernier e-mail cliqué</strong> par l'acheteur dans les <strong><%= o.windowDays %> jour<%= o.windowDays > 1 ? "s" : "" %></strong> qui précèdent son achat.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Revenus</h1><p class="mk-head-sub">Les ventes de formations générées par vos e-mails. Comme chez Mailchimp, une commande est attribuée au <strong>dernier e-mail cliqué</strong> par l'acheteur dans les <strong><%= o.windowDays %> jour<%= o.windowDays > 1 ? "s" : "" %></strong> qui précèdent son achat.</p></div></div>
 
     <nav class="mk-tabs" aria-label="Période">
       <% o.periods.forEach((d) => { %><a class="mk-tab" href="/marketing/revenus?periode=<%= d %>"<%- o.period === d ? ' aria-current="page"' : "" %>><%= periodLabel[d] %></a><% }) %>

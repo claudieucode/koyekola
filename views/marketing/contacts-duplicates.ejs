@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/contacts">← Contacts</a></p>
-    <div class="mk-head"><h1>Doublons possibles <span class="mk-count"><%= groups.length %></span></h1></div>
-    <p class="mk-lead">KOLAKISA repère les fiches qui semblent concerner la même personne. Rien n'est fusionné automatiquement : vous comparez, puis vous décidez. Une fusion ne supprime aucune fiche.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Doublons possibles <span class="mk-count"><%= groups.length %></span></h1><p class="mk-head-sub">KOLAKISA repère les fiches qui semblent concerner la même personne. Rien n'est fusionné automatiquement : vous comparez, puis vous décidez. Une fusion ne supprime aucune fiche.</p></div></div>
     <% if (!groups.length) { %>
       <div class="mk-empty">
         <%- icon("users", { size: 32 }) %>

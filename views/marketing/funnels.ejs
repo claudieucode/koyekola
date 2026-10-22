@@ -1,8 +1,8 @@
 <%- include("partials/top", { title, active }) %>
 <% const canWrite = mk.can("funnels.write"); const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`); %>
-    <div class="mk-head"><h1>Tunnels</h1><% if (canWrite && !archived) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un tunnel</button><% } %></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Tunnels</h1><p class="mk-head-sub">Un tunnel conduit le visiteur d'étape en étape : page d'atterrissage, inscription, remerciement, page de vente, formation… Chaque étape est une vraie page, composée dans le même éditeur visuel que Site Web.</p></div><% if (canWrite && !archived) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un tunnel</button><% } %></div>
     <%- include("partials/site-filter", { action: "/marketing/tunnels" }) %>
-    <p class="mk-lead">Un tunnel conduit le visiteur d'étape en étape : page d'atterrissage, inscription, remerciement, page de vente, formation… Chaque étape est une vraie page, composée dans le même éditeur visuel que Site Web.</p>
     <nav class="mk-tabs" aria-label="Tunnels actifs ou archivés">
       <a class="mk-tab" href="/marketing/tunnels"<%- archived ? "" : ' aria-current="page"' %>>Tunnels</a>
       <a class="mk-tab" href="/marketing/tunnels?vue=archives"<%- archived ? ' aria-current="page"' : "" %>>Archivés</a>

@@ -36,8 +36,11 @@ module.exports = ({ db }) => {
   router.get("/", need("contacts.read"), (req, res) => {
     let keyOk = true;
     try { parseKey(process.env.ENCRYPTION_KEY); } catch { keyOk = false; }
-    const overview = getOverview(req.mk.ctx, { workerOn: process.env.MARKETING_WORKER === "on", smtpAvailable: Boolean(process.env.SMTP_HOST), keyOk, can: req.mk.can });
-    res.render("marketing/dashboard", { title: "Accueil", active: "dashboard", overview });
+    const overview = getOverview(req.mk.ctx, { workerOn: process.env.MARKETING_WORKER === "on", smtpAvailable: Boolean(process.env.SMTP_HOST), keyOk, can: req.mk.can, days: req.query.periode });
+    // Modèles proposés en bas de l'Accueil : les vrais modèles de l'organisation (aucun modèle fictif)
+    let templates = [];
+    try { if (req.mk.can("templates.read")) templates = require("../templates").listTemplates(req.mk.ctx).slice(0, 12); } catch { templates = []; }
+    res.render("marketing/dashboard", { title: "Accueil", active: "dashboard", overview, templates });
   });
 
   // ---------- Contacts ----------

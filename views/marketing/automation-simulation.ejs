@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/automatisations/<%= a.id %>">← <%= a.name %></a></p>
-    <div class="mk-head"><h1>Simulation</h1></div>
-    <p class="mk-lead">Voyez ce que ce scénario ferait pour un contact réel, <strong>sans rien envoyer ni modifier</strong>. Les conditions sont évaluées sur les vraies données du contact ; le consentement est vraiment contrôlé ; les actions qui écrivent sont seulement annoncées.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Simulation</h1><p class="mk-head-sub">Voyez ce que ce scénario ferait pour un contact réel, <strong>sans rien envoyer ni modifier</strong>. Les conditions sont évaluées sur les vraies données du contact ; le consentement est vraiment contrôlé ; les actions qui écrivent sont seulement annoncées.</p></div></div>
     <form class="mk-form" method="get" action="/marketing/automatisations/<%= a.id %>/simulation">
       <div class="field-group"><label for="sim-contact">Contact (adresse e-mail exacte ou numéro de fiche)</label>
         <input id="sim-contact" type="text" name="contact" value="<%= raw %>" maxlength="254" required autocomplete="off"></div>

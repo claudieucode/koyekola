@@ -2,8 +2,8 @@
 <%
   const canWrite = mk.can("lists.write");
 %>
-    <div class="mk-head"><h1>Étiquettes <span class="mk-count"><%= tags.length %></span></h1></div>
-    <p class="mk-lead">Des mots-clés libres à poser sur les contacts (VIP, webinaire…). Elles servent aussi aux segments.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Étiquettes <span class="mk-count"><%= tags.length %></span></h1><p class="mk-head-sub">Des mots-clés libres à poser sur les contacts (VIP, webinaire…). Elles servent aussi aux segments.</p></div></div>
 
     <% if (!tags.length) { %>
       <div class="mk-empty">

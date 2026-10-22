@@ -7,7 +7,8 @@
   const siteField = typeof mkSiteField === "string" ? mkSiteField : "";
   const trashed = c.status === "trash";
 %>
-    <div class="mk-head"><h1>Modifier le commentaire</h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %><%= siteQ %>#cm-<%= c.id %>">Retour aux commentaires</a></div></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Modifier le commentaire</h1></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %><%= siteQ %>#cm-<%= c.id %>">Retour aux commentaires</a></div></div>
     <% if (trashed) { %><p class="mk-sub" role="status">Ce commentaire est dans la corbeille : restaurez-le avant de le modifier.</p><% } %>
     <form class="mk-panel mk-cm-edit" method="post" action="<%= BASE %>/<%= c.id %>/modifier<%= siteQ %>" data-cm-once><%- siteField %>
       <% if (!c.user_id) { %>

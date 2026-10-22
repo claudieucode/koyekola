@@ -10,9 +10,9 @@
   const stLabel = { active: "Actif", suspended: "Suspendu", disabled: "Désactivé" };
 %>
 <% if (mode === "list") { %>
-    <div class="mk-head"><h1>Utilisateurs</h1>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Utilisateurs</h1><p class="mk-head-sub">L'équipe qui gère le site : comptes du site auxquels un rôle donne accès au CMS, globalement ou pour un seul site.</p></div>
       <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles">Rôles</a><% if (canCreate) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/ajouter">Inviter</a><% } %></div></div>
-    <p class="mk-lead">L'équipe qui gère le site : comptes du site auxquels un rôle donne accès au CMS, globalement ou pour un seul site.</p>
     <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer par statut">
       <% tabs.forEach(([k, name, ck]) => { %><a class="mk-tab" href="<%= keep({ statut: k, page: "" }) %>"<%- f.statut === k ? ' aria-current="page"' : "" %>><%= name %> <span class="mk-tab-count"><%= counts[ck] || 0 %></span></a>
       <% }) %>
@@ -56,8 +56,8 @@
     <% } %>
 
 <% } else if (mode === "invite") { %>
-    <div class="mk-head"><h1>Inviter quelqu'un</h1><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Utilisateurs</a></div></div>
-    <p class="mk-lead">La personne reçoit un e-mail avec un lien personnel (valable <%= days %> jours, à usage unique) pour créer son compte. Si elle a déjà un compte, l'accès lui est donné tout de suite. Vous ne pouvez attribuer que des rôles dont vous possédez tous les droits.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Inviter quelqu'un</h1><p class="mk-head-sub">La personne reçoit un e-mail avec un lien personnel (valable <%= days %> jours, à usage unique) pour créer son compte. Si elle a déjà un compte, l'accès lui est donné tout de suite. Vous ne pouvez attribuer que des rôles dont vous possédez tous les droits.</p></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Utilisateurs</a></div></div>
     <form method="post" action="<%= BASE %>/inviter" class="mk-form mk-us-form">
       <div class="field-group"><label for="iv-email">Adresse e-mail *</label><input id="iv-email" type="email" name="email" required maxlength="120" autocomplete="off"></div>
       <div class="field-group"><label for="iv-role">Rôle *</label>
@@ -69,8 +69,8 @@
     </form>
 
 <% } else if (mode === "invitations") { %>
-    <div class="mk-head"><h1>Invitations</h1><div class="mk-actions"><% if (canCreate) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/ajouter">Inviter</a><% } %></div></div>
-    <p class="mk-lead">Invitations envoyées pour rejoindre l'équipe. Un lien ne fonctionne qu'une fois ; « Renvoyer » crée un nouveau lien et annule l'ancien.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Invitations</h1><p class="mk-head-sub">Invitations envoyées pour rejoindre l'équipe. Un lien ne fonctionne qu'une fois ; « Renvoyer » crée un nouveau lien et annule l'ancien.</p></div><div class="mk-actions"><% if (canCreate) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/ajouter">Inviter</a><% } %></div></div>
     <% if (!invitations.length) { %><div class="mk-empty"><%- icon("mail", { size: 32 }) %><h2>Aucune invitation.</h2><p>Les invitations apparaissent ici dès que vous invitez quelqu'un.</p></div>
     <% } else { %>
     <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Invitations</caption>
@@ -84,8 +84,8 @@
     <% } %>
 
 <% } else if (mode === "mysites") { %>
-    <div class="mk-head"><h1>Mes sites</h1></div>
-    <p class="mk-lead">Les sites auxquels votre compte donne accès, avec votre rôle sur chacun.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Mes sites</h1><p class="mk-head-sub">Les sites auxquels votre compte donne accès, avec votre rôle sur chacun.</p></div></div>
     <% if (!mine.length) { %><div class="mk-empty"><%- icon("globe", { size: 32 }) %><h2>Aucun site.</h2><p>Votre compte n'a accès à aucun site pour l'instant.</p></div>
     <% } else { %><ul class="mk-cms-list"><% mine.forEach((s) => { %><li><span><a href="/marketing/site-web/sites/<%= s.site_id %>"><strong><%= s.site_name %></strong></a> · <%= roleName(s.role) %></span></li><% }) %></ul><% } %>
 <% } %>

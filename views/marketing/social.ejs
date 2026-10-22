@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
 <% const connected = Object.keys(NETWORKS).filter((n) => cfg[n].connected); const sq = siteOnly ? "?site=" + mk.ctx.siteScope : ""; const siteHidden = siteOnly ? `<input type="hidden" name="site" value="${mk.ctx.siteScope}">` : ""; %>
-    <div class="mk-head"><h1>Réseaux sociaux</h1></div>
-    <p class="mk-lead">Écrivez une publication une fois, publiez-la tout de suite ou programmez-la sur votre page Facebook, votre compte Instagram professionnel et LinkedIn. Le lien éventuel est raccourci et ses clics sont comptés ici.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Réseaux sociaux</h1><p class="mk-head-sub">Écrivez une publication une fois, publiez-la tout de suite ou programmez-la sur votre page Facebook, votre compte Instagram professionnel et LinkedIn. Le lien éventuel est raccourci et ses clics sont comptés ici.</p></div></div>
 
     <% if (canWrite) { %>
     <section class="mk-panel" id="nouvelle" aria-labelledby="soc-new">

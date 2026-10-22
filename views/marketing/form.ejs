@@ -7,7 +7,8 @@
 %>
     <p class="mk-back"><a href="/marketing/formulaires">&larr; Tous les formulaires</a></p>
     <div class="mk-head">
-      <h1><%= item.name %> <span class="mk-status <%= item.status === 'published' ? 'mk-status-ok' : '' %>"><%= item.status === 'published' ? "Publié" : "Brouillon" %></span></h1>
+      <div class="mk-head-main"><h1><%= item.name %> <span class="mk-status <%= item.status === 'published' ? 'mk-status-ok' : '' %>"><%= item.status === 'published' ? "Publié" : "Brouillon" %></span></h1></div>
+      
       <% if (mk.can("forms.write")) { %>
         <div class="mk-actions">
           <form action="/marketing/formulaires/<%= item.id %>/<%= item.status === 'published' ? 'depublier' : 'publier' %>" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm"><%= item.status === 'published' ? "Dépublier" : "Publier" %></button></form>

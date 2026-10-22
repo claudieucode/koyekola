@@ -52,7 +52,7 @@ describe("liste : état vide, onglets, effectifs", () => {
     for (const [label, n] of [["Toutes", 9], ["Brouillons", 2], ["Programmées", 1], ["En cours", 2], ["Envoyées", 2], ["Interrompues", 2]]) {
       assert.match(html, new RegExp(`<a class="mk-tab"[^>]*>${label} <span class="mk-tab-count">${n}</span></a>`), label);
     }
-    assert.match(html, /<a class="mk-tab" href="\/marketing\/campagnes" aria-current="page">Toutes/);
+    assert.match(html, /<a class="mk-tab" href="\/marketing\/campagnes" aria-current="page"[^>]*>Toutes/);
   });
   test("chaque onglet filtre la liste", async () => {
     const of = async (s) => rowNames((await boss.get(`/marketing/campagnes?statut=${s}`)).text).sort();
@@ -60,7 +60,7 @@ describe("liste : état vide, onglets, effectifs", () => {
     assert.deepEqual(await of("running"), ["Cours", "Pause"]);
     assert.deepEqual(await of("sent"), ["Fin 1", "Fin 2"]);
     assert.deepEqual(await of("stopped"), ["Annulée", "Ratée"]);
-    assert.match((await boss.get("/marketing/campagnes?statut=sent")).text, /<a class="mk-tab" href="[^"]*statut=sent[^"]*" aria-current="page">Envoyées/);
+    assert.match((await boss.get("/marketing/campagnes?statut=sent")).text, /<a class="mk-tab" href="[^"]*statut=sent[^"]*" aria-current="page"[^>]*>Envoyées/);
   });
   test("onglet inconnu ou injection : toutes les campagnes, sans erreur", async () => {
     for (const s of ["zzz", "sent'; DROP TABLE mk_campaigns;--", ""]) {
@@ -78,8 +78,8 @@ describe("liste : tableau, recherche, tri, pagination", () => {
     assert.match(html, /<table class="mk-table mk-datatable">/);
     for (const h of ["Campagne", "Statut", "Destinataires", "Ouvertures", "Clics", "Créée le"]) assert.match(html, new RegExp(`<th[^>]*>(?:<a [^>]+>)?${h}`), h);
     assert.match(html, /E-mail classique · /);
-    assert.match(html, /<a class="btn btn-outline btn-sm" href="\/marketing\/campagnes\/\d+">Modifier<\/a>/, "brouillon : Modifier");
-    assert.match(html, /<a class="btn btn-outline btn-sm" href="\/marketing\/campagnes\/\d+">Voir le rapport<\/a>/, "envoyée : rapport");
+    assert.match(html, /<a class="btn btn-outline btn-sm" href="\/marketing\/campagnes\/\d+"[^>]*>Modifier<\/a>/, "brouillon : Modifier");
+    assert.match(html, /<a class="btn btn-outline btn-sm" href="\/marketing\/campagnes\/\d+"[^>]*>Voir le rapport<\/a>/, "envoyée : rapport");
     assert.match(html, /non suivies/, "ouvertures non suivies : jamais un faux 0 %");
     assert.match(html, /<span class="mk-status mk-status-ok">Envoyée<\/span>/);
     assert.match(html, /25 %/);
@@ -96,7 +96,7 @@ describe("liste : tableau, recherche, tri, pagination", () => {
   test("la recherche se combine avec l'onglet et est conservée dans les liens des onglets", async () => {
     const html = (await boss.get("/marketing/campagnes?statut=draft&q=A")).text;
     assert.deepEqual(rowNames(html), ["Brouillon A"]);
-    assert.match(html, /<a class="mk-tab" href="[^"]*q=A[^"]*">Toutes/);
+    assert.match(html, /<a class="mk-tab" href="[^"]*q=A[^"]*"[^>]*>Toutes/);
   });
   test("tri par nom (sens indiqué dans l'en-tête), tri inconnu ignoré", async () => {
     const asc = (await boss.get("/marketing/campagnes?tri=name&sens=asc")).text;

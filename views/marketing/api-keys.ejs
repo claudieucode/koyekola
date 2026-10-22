@@ -1,6 +1,6 @@
 <%- include("partials/top", { title, active }) %>
-    <div class="mk-head"><h1>Clés d'API <span class="mk-count"><%= keys.length %></span></h1></div>
-    <p class="mk-lead">Une clé donne accès à <code>/api/v1</code> depuis l'extérieur (contacts, événements), jamais aux pages de cet espace. Portée « lecture » ou « lecture/écriture », révocable à tout moment.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Clés d'API <span class="mk-count"><%= keys.length %></span></h1><p class="mk-head-sub">Une clé donne accès à <code>/api/v1</code> depuis l'extérieur (contacts, événements), jamais aux pages de cet espace. Portée « lecture » ou « lecture/écriture », révocable à tout moment.</p></div></div>
 
     <% if (created) { %>
       <section class="mk-panel mk-verdict is-ok" aria-labelledby="new-key-title">

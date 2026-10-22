@@ -17,8 +17,8 @@
   const fmtTs = (ms) => (ms ? mkh.fdatetime(ms) : "");
   const errorBox = (s) => s && s.error;
 %>
-    <div class="mk-head"><h1>Tableau de bord Analytics</h1></div>
-    <p class="mk-lead">Une seule lecture de ce que fait réellement KOLAKISA : visites, parcours, boutique, e-mails et scénarios. Rien n'est estimé : sans donnée, la page le dit.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Tableau de bord Analytics</h1><p class="mk-head-sub">Une seule lecture de ce que fait réellement KOLAKISA : visites, parcours, boutique, e-mails et scénarios. Rien n'est estimé : sans donnée, la page le dit.</p></div></div>
     <% if (flash) { %><p class="mk-note" role="status"><%= flash %></p><% } %>
 
     <form class="mk-filterbar" method="get" action="/marketing/analytics/global" aria-label="Filtres">

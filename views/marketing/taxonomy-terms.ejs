@@ -23,7 +23,8 @@
   const plural = (v, w) => v + " " + w + (v > 1 ? "s" : "");
   const th = (col, label, cls) => `<th scope="col" class="${cls || ""}" aria-sort="${ariaSort(col)}"><a class="mk-ar-sort" href="${sortLink(col)}">${label}<span aria-hidden="true"> ${sortBase === col ? (sortDesc ? "▾" : "▴") : "↕"}</span></a></th>`;
 %>
-    <div class="mk-head"><h1><%= def.plural %></h1></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= def.plural %></h1></div></div>
 
     <nav class="mk-tabs mk-cms-tabs" aria-label="Taxonomies">
       <a class="mk-tab" href="<%= PATHS.category + siteQ %>"<%- key === "category" ? ' aria-current="page"' : "" %>>Catégories</a>

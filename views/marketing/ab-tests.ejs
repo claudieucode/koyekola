@@ -1,10 +1,10 @@
 <%- include("partials/top", { title, active }) %>
 <% const canWrite = mk.can("campaigns.write"); %>
     <div class="mk-head">
-      <h1>Tests A/B <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1>
+      <div class="mk-head-main"><h1>Tests A/B <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1><p class="mk-head-sub">Comparez 2 ou 3 versions d'un e-mail sur une partie de votre audience, puis envoyez automatiquement la meilleure à tous les autres.</p></div>
+      
       <% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle?ab=1">Créer un test A/B</a></div><% } %>
     </div>
-    <p class="mk-lead">Comparez 2 ou 3 versions d'un e-mail sur une partie de votre audience, puis envoyez automatiquement la meilleure à tous les autres.</p>
     <%- include("partials/worker-note", { workerOn, consequence: "aucun test ne partira tant qu'il n'est pas rétabli" }) %>
 
     <ol class="mk-ab-steps" aria-label="Fonctionnement d'un test A/B">

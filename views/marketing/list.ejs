@@ -1,7 +1,8 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/listes">← Listes</a></p>
     <div class="mk-head">
-      <h1><%= list.name %> <span class="mk-count"><%= mkh.fmt(count) %></span></h1>
+      <div class="mk-head-main"><h1><%= list.name %> <span class="mk-count"><%= mkh.fmt(count) %></span></h1></div>
+      
       <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/contacts?liste=<%= list.id %>">Voir dans Contacts</a></div>
     </div>
     <% if (list.description) { %><p class="mk-lead"><%= list.description %></p><% } %>

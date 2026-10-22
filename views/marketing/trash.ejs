@@ -9,8 +9,8 @@
   const total = Object.values(counts).reduce((n, v) => n + v, 0);
   const canRestoreAny = Object.keys(types).some((t) => can(t, "write")), canDeleteAny = Object.keys(types).some((t) => can(t, "del"));
 %>
-    <div class="mk-head"><h1>Corbeille</h1></div>
-    <p class="mk-lead">Les contenus supprimés restent ici, intacts, jusqu'à leur suppression définitive. Restaurer un contenu le remet <strong>hors ligne</strong> (jamais republié d'office) ; si une dépendance a disparu entre-temps, le problème est signalé clairement.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Corbeille</h1><p class="mk-head-sub">Les contenus supprimés restent ici, intacts, jusqu'à leur suppression définitive. Restaurer un contenu le remet <strong>hors ligne</strong> (jamais republié d'office) ; si une dépendance a disparu entre-temps, le problème est signalé clairement.</p></div></div>
     <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer par type">
       <a class="mk-tab" href="<%= keep({ type: "", page: "" }) %>"<%- !type ? ' aria-current="page"' : "" %>>Tout <span class="mk-tab-count"><%= total %></span></a>
       <% Object.entries(types).forEach(([k, t]) => { %><a class="mk-tab" href="<%= keep({ type: k, page: "" }) %>"<%- type === k ? ' aria-current="page"' : "" %>><%= t.label %>s <span class="mk-tab-count"><%= counts[k] %></span></a><% }) %>

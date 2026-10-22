@@ -11,69 +11,101 @@
   const canWrite = mk.can("templates.write");
 %>
     <div class="mk-head">
-      <h1>Modèles d'e-mails <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1>
-      <div class="mk-actions"><a href="/marketing/modeles/bibliotheque" class="btn btn-outline btn-sm">Parcourir la bibliothèque</a></div>
+      <div class="mk-head-main"><h1>Modèles d'e-mails <span class="mk-count"><%= mkh.fmt(counts.all) %></span></h1><p class="mk-head-sub">Composez vos e-mails par blocs (titre, texte, image, vidéo, bouton, citation, liste, réseaux sociaux, formation du catalogue…). Le lien de désinscription et l'adresse postale sont ajoutés automatiquement aux e-mails marketing.</p></div>
+      <div class="mk-head-actions">
+        <a href="/marketing/modeles/bibliotheque" class="btn btn-outline" data-tip="Parcourez les modèles de départ avec leur aperçu réel, puis copiez celui qui vous convient.">Parcourir la bibliothèque</a>
+        <% if (canWrite) { %><button type="button" class="btn btn-primary" data-mk-modal-open="creer" data-tip="Crée un modèle à partir d'un modèle de départ, à personnaliser bloc par bloc.">Créer un modèle</button><% } %>
+      </div>
     </div>
     <%- include("partials/site-filter", { action: "/marketing/modeles" }) %>
-    <p class="mk-lead">Composez vos e-mails par blocs (titre, texte, image, vidéo, bouton, citation, liste, réseaux sociaux, formation du catalogue…). Le lien de désinscription est ajouté automatiquement en bas de chaque e-mail marketing.</p>
 
     <% if (counts.all === 0) { %>
-      <div class="mk-empty">
-        <%- icon("fileText", { size: 32 }) %>
-        <h2>Aucun modèle</h2>
-        <p>Choisissez un modèle de départ dans la bibliothèque, puis personnalisez-le dans l'éditeur par blocs.</p>
-        <div class="mk-actions"><% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="creer">Créer un modèle</button><% } %><a class="btn btn-outline btn-sm" href="/marketing/modeles/bibliotheque">Ouvrir la bibliothèque</a></div>
-      </div>
+      <div class="mk-empty"><div class="mk-empty-split">
+        <div class="mk-es-text">
+          <h2>Aucun modèle</h2>
+          <p>Choisissez un modèle de départ dans la bibliothèque, puis personnalisez-le dans l'éditeur par blocs.</p>
+          <div class="mk-actions"><% if (canWrite) { %><button type="button" class="btn btn-primary" data-mk-modal-open="creer">Créer un modèle</button><% } %><a class="btn btn-outline" href="/marketing/modeles/bibliotheque">Ouvrir la bibliothèque</a></div>
+        </div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "template" }) %></div>
+      </div></div>
     <% } else { %>
       <nav class="mk-tabs" aria-label="Filtrer par catégorie">
-        <a class="mk-tab" href="<%= url({ categorie: null }) %>"<%- categorie === "" ? ' aria-current="page"' : "" %>>Tous <span class="mk-tab-count"><%= counts.all %></span></a>
-        <% categories.filter((c) => counts[c.key]).forEach((c) => { %><a class="mk-tab" href="<%= url({ categorie: c.key }) %>"<%- categorie === c.key ? ' aria-current="page"' : "" %>><%= c.label %> <span class="mk-tab-count"><%= counts[c.key] %></span></a>
+        <a class="mk-tab" href="<%= url({ categorie: null }) %>"<%- categorie === "" ? ' aria-current="page"' : "" %> data-tip="Tous vos modèles, toutes catégories confondues.">Tous <span class="mk-tab-count"><%= counts.all %></span></a>
+        <% categories.filter((c) => counts[c.key]).forEach((c) => { %><a class="mk-tab" href="<%= url({ categorie: c.key }) %>"<%- categorie === c.key ? ' aria-current="page"' : "" %> data-tip="Les modèles classés « <%= c.label %> »."><%= c.label %> <span class="mk-tab-count"><%= counts[c.key] %></span></a>
         <% }) %>
-        <% if (counts.none) { %><a class="mk-tab" href="<%= url({ categorie: "none" }) %>"<%- categorie === "none" ? ' aria-current="page"' : "" %>>Sans catégorie <span class="mk-tab-count"><%= counts.none %></span></a><% } %>
+        <% if (counts.none) { %><a class="mk-tab" href="<%= url({ categorie: "none" }) %>"<%- categorie === "none" ? ' aria-current="page"' : "" %> data-tip="Les modèles auxquels aucune catégorie n'est attribuée.">Sans catégorie <span class="mk-tab-count"><%= counts.none %></span></a><% } %>
       </nav>
 
       <form class="mk-filterbar" method="get" action="/marketing/modeles" role="search">
         <% if (categorie) { %><input type="hidden" name="categorie" value="<%= categorie %>"><% } %>
-        <% if (view.tri) { %><input type="hidden" name="tri" value="<%= view.tri %>"><input type="hidden" name="sens" value="<%= view.sens %>"><% } %>
-        <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="f-q">Rechercher un modèle</label><input id="f-q" type="search" name="q" value="<%= q %>" placeholder="Nom ou objet" maxlength="100"></div>
-        <div class="field-group"><label for="f-type">Type</label>
+        <% if (vue === "grille") { %><input type="hidden" name="vue" value="grille"><% } %>
+        <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="f-q">Rechercher un modèle</label><input id="f-q" type="search" name="q" value="<%= q %>" placeholder="Rechercher parmi les modèles" maxlength="100"></div>
+        <div class="field-group" data-tip="Marketing : avec lien de désinscription, pour vos envois à l'audience. Transactionnel : message lié à un compte (confirmation, reçu)."><label for="f-type">Type</label>
           <select id="f-type" name="type"><option value="">Tous</option><option value="marketing" <%= type === "marketing" ? "selected" : "" %>>Marketing</option><option value="transactional" <%= type === "transactional" ? "selected" : "" %>>Transactionnel</option></select></div>
+        <div class="mk-toolbar-right">
+          <div class="field-group"><label for="f-tri">Trier par</label>
+            <select id="f-tri" name="tri"><% [["updated", "Le plus récent"], ["name", "Nom"], ["category", "Catégorie"], ["kind", "Type"]].forEach(([k, l]) => { %><option value="<%= k %>"<%= sortKey === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+          <input type="hidden" name="sens" value="<%= dirKey %>">
+          <div class="mk-viewtoggle" role="group" aria-label="Affichage">
+            <a href="<%= url({ vue: null }) %>" class="<%= vue === "liste" ? "is-on" : "" %>" aria-label="Affichage en liste"<%- vue === "liste" ? ' aria-current="true"' : "" %> data-tip="Affiche les modèles dans un tableau."><%- icon("list", { size: 16 }) %></a>
+            <a href="<%= url({ vue: "grille" }) %>" class="<%= vue === "grille" ? "is-on" : "" %>" aria-label="Affichage en grille"<%- vue === "grille" ? ' aria-current="true"' : "" %> data-tip="Affiche les modèles en cartes avec un aperçu."><%- icon("grid", { size: 16 }) %></a>
+          </div>
+        </div>
         <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
-        <% if (hasFilters) { %><a href="/marketing/modeles" class="btn btn-ghost btn-sm">Réinitialiser</a><% } %>
+        <% if (hasFilters) { %><a href="<%= url({ q: null, categorie: null, type: null }) %>" class="mk-filter-clear">Effacer</a><% } %>
       </form>
       <p class="mk-filter-count" role="status"><%= rows.length %> modèle<%= rows.length > 1 ? "s" : "" %><%= hasFilters ? " correspondant aux filtres" : "" %></p>
 
       <% if (!rows.length) { %>
-        <div class="mk-empty"><%- icon("search", { size: 32 }) %><h2>Aucun modèle ne correspond</h2><p>Élargissez la recherche ou changez de catégorie.</p><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/modeles">Réinitialiser les filtres</a></div></div>
+        <div class="mk-empty-center mk-card" style="padding:40px 20px"><%- icon("search", { size: 28 }) %><strong>Aucun modèle ne correspond</strong><span>Élargissez la recherche ou changez de catégorie.</span><a class="btn btn-outline btn-sm" href="/marketing/modeles">Réinitialiser les filtres</a></div>
+      <% } else if (vue === "grille") { %>
+        <ul class="mk-tplgrid">
+          <% rows.forEach((t) => { %>
+            <li class="mk-tplcard">
+              <a class="mk-thumb mk-thumb-lg" href="/marketing/modeles/<%= t.id %>" aria-label="Ouvrir le modèle <%= t.name %>"><iframe src="/marketing/modeles/<%= t.id %>/apercu" loading="lazy" title="" tabindex="-1" aria-hidden="true"></iframe></a>
+              <div class="mk-tplcard-body">
+                <span class="mk-status"><%= kindLabel[t.kind] %></span>
+                <a class="mk-tplcard-name" href="/marketing/modeles/<%= t.id %>"><%= t.name %></a>
+                <span class="mk-tplcard-meta"><%= labelOf(t.category) %> · <%= t.blockCount %> bloc<%= t.blockCount > 1 ? "s" : "" %> · modifié le <%= mkh.fdate(t.updated_at) %></span>
+                <span class="mk-tplcard-meta"><%= t.usedBy ? "Utilisé par " + t.usedBy + " campagne" + (t.usedBy > 1 ? "s" : "") : "Pas encore utilisé" %></span>
+              </div>
+            </li>
+          <% }) %>
+        </ul>
       <% } else { %>
         <div class="mk-table-wrap">
           <table class="mk-table mk-datatable">
             <caption class="sr-only">Modèles d'e-mails</caption>
             <thead><tr>
+              <th scope="col" style="width:104px">Aperçu</th>
               <%- sortHead("name", "Modèle") %>
               <%- sortHead("category", "Catégorie") %>
               <%- sortHead("kind", "Type") %>
-              <th scope="col" class="mk-num">Blocs</th>
-              <th scope="col">Utilisé par</th>
+              <th scope="col" class="mk-num" data-tip="Nombre de blocs (titre, texte, image, bouton…) qui composent le modèle.">Blocs</th>
+              <th scope="col" data-tip="Les campagnes qui envoient ce modèle. Un modèle utilisé ne se supprime qu'après confirmation.">Utilisé par</th>
               <%- sortHead("updated", "Modifié le") %>
-              <% if (canWrite) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %>
+              <% if (canWrite) { %><th scope="col" class="mk-col-actions"><span class="sr-only">Actions</span></th><% } %>
             </tr></thead>
             <tbody>
               <% rows.forEach((t) => { %>
                 <tr>
-                  <td data-label="Modèle"><a href="/marketing/modeles/<%= t.id %>"><%= t.name %></a><% if (t.subject) { %><span class="mk-sub">Objet : <%= t.subject %></span><% } %></td>
+                  <td data-label="Aperçu"><a class="mk-thumb" href="/marketing/modeles/<%= t.id %>" aria-label="Ouvrir le modèle <%= t.name %>"><iframe src="/marketing/modeles/<%= t.id %>/apercu" loading="lazy" title="" tabindex="-1" aria-hidden="true"></iframe></a></td>
+                  <td data-label="Modèle"><div class="mk-cell-title"><a href="/marketing/modeles/<%= t.id %>"><%= t.name %></a><% if (t.subject) { %><span class="mk-cell-meta">Objet : <%= t.subject %></span><% } %><span class="mk-cell-meta">Modifié le <%= mkh.fdate(t.updated_at) %></span></div></td>
                   <td data-label="Catégorie"><%= labelOf(t.category) %></td>
-                  <td data-label="Type"><%= kindLabel[t.kind] %></td>
+                  <td data-label="Type"><span class="mk-status"><%= kindLabel[t.kind] %></span></td>
                   <td class="mk-num" data-label="Blocs"><%= t.blockCount %></td>
                   <td data-label="Utilisé par"><%= t.usedBy ? t.usedBy + " campagne" + (t.usedBy > 1 ? "s" : "") : "—" %></td>
-                  <td data-label="Modifié le"><%= mkh.fdate(t.updated_at) %></td>
-                  <% if (canWrite) { %><td data-label="Actions" class="mk-row-actions">
-                    <div class="mk-dropdown" data-mk-dropdown>
-                      <button type="button" class="icon-btn btn-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-modele-<%= t.id %>" aria-label="Actions pour le modèle <%= t.name %>"><%- icon("moreVertical", { size: 18 }) %></button>
-                      <div class="mk-menu" id="menu-modele-<%= t.id %>" role="menu" hidden>
-                        <a role="menuitem" href="/marketing/modeles/<%= t.id %>">Ouvrir</a>
-                        <form action="/marketing/modeles/<%= t.id %>/dupliquer" method="post" role="none"><button type="submit" role="menuitem">Dupliquer</button></form>
-                        <form action="/marketing/modeles/<%= t.id %>/supprimer" method="post" role="none"><button type="submit" role="menuitem" class="mk-menu-danger" data-mk-confirm="<%= t.usedBy ? "Le modèle « " + t.name + " » est utilisé par " + t.usedBy + " campagne" + (t.usedBy > 1 ? "s" : "") + " : elles gardent leur contenu figé, mais ne pourront plus être modifiées avec ce modèle." : "Le modèle « " + t.name + " » sera supprimé." %>" data-mk-confirm-title="Supprimer ce modèle ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+                  <td data-label="Modifié le" class="mk-nowrap"><%= mkh.fdate(t.updated_at) %></td>
+                  <% if (canWrite) { %><td data-label="Actions" class="mk-row-actions mk-col-actions">
+                    <div class="mk-split">
+                      <a class="btn btn-outline btn-sm" href="/marketing/modeles/<%= t.id %>" data-tip="Ouvre l'éditeur par blocs pour modifier ce modèle.">Modifier</a>
+                      <div class="mk-dropdown" data-mk-dropdown>
+                        <button type="button" class="icon-btn btn-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-modele-<%= t.id %>" aria-label="Actions pour le modèle <%= t.name %>"><%- icon("chevronDown", { size: 16 }) %></button>
+                        <div class="mk-menu" id="menu-modele-<%= t.id %>" role="menu" hidden>
+                          <a role="menuitem" href="/marketing/modeles/<%= t.id %>">Ouvrir</a>
+                          <form action="/marketing/modeles/<%= t.id %>/dupliquer" method="post" role="none"><button type="submit" role="menuitem">Dupliquer</button></form>
+                          <form action="/marketing/modeles/<%= t.id %>/supprimer" method="post" role="none"><button type="submit" role="menuitem" class="mk-menu-danger" data-mk-confirm="<%= t.usedBy ? "Le modèle « " + t.name + " » est utilisé par " + t.usedBy + " campagne" + (t.usedBy > 1 ? "s" : "") + " : elles gardent leur contenu figé, mais ne pourront plus être modifiées avec ce modèle." : "Le modèle « " + t.name + " » sera supprimé." %>" data-mk-confirm-title="Supprimer ce modèle ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+                        </div>
                       </div>
                     </div>
                   </td><% } %>

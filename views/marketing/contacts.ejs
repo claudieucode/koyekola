@@ -30,8 +30,8 @@
   if (filters.joignables) activeChips.push({ label: null, value: "Joignables seulement", clear: url({ joignables: null, page: null }) });
 %>
     <div class="mk-head">
-      <h1>Contacts <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1>
-      <div class="mk-actions">
+      <div class="mk-head-main"><h1>Contacts <span class="mk-count"><%= mkh.fmt(result.total) %></span></h1><p class="mk-head-sub">Toutes les personnes de votre audience, avec leur consentement, leurs étiquettes et leur dernière activité.</p></div>
+      <div class="mk-head-actions">
         <% if (mk.can("contacts.merge") && !siteScoped) { %><a href="/marketing/contacts/doublons" class="btn btn-outline btn-sm">Doublons</a><% } %>
         <% if (siteScoped) { %><a href="/marketing/contacts/demandes?site=<%= mk.ctx.siteScope %>" class="btn btn-outline btn-sm">Mes demandes</a><% } else if (mk.can("contacts.requests")) { %><a href="/marketing/contacts/demandes/traiter" class="btn btn-outline btn-sm">Demandes de rattachement</a><% } %>
         <% if (mk.can("contacts.import") && !siteScoped) { %><a href="/marketing/importer" class="btn btn-outline btn-sm">Importer</a><% } %>
@@ -42,11 +42,6 @@
     <form class="mk-filterbar" method="get" action="/marketing/contacts" role="search">
       <% if (view.tri) { %><input type="hidden" name="tri" value="<%= view.tri %>"><input type="hidden" name="sens" value="<%= view.sens %>"><% } %>
       <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="f-q">Rechercher un contact</label><input id="f-q" type="search" name="q" value="<%= filters.q %>" placeholder="E-mail, nom, société" maxlength="100"></div>
-      <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
-      <% if (hasFilters) { %><a href="/marketing/contacts" class="btn btn-ghost btn-sm">Réinitialiser</a><% } %>
-      <details class="mk-filter-more" data-mk-desktop-open<%= hasFilters ? " open" : "" %>>
-        <summary>Plus de filtres</summary>
-        <div class="mk-filter-fields">
       <div class="field-group"><label for="f-status">Statut</label>
         <select id="f-status" name="status"><option value="">Tous</option>
           <% statuses.forEach((s) => { %><option value="<%= s %>" <%= filters.status === s ? "selected" : "" %>><%= mkh.statusLabel(s) %></option><% }) %>
@@ -67,6 +62,10 @@
         <select id="f-source" name="source"><option value="">Toutes</option>
           <% sources.forEach((s) => { %><option value="<%= s %>" <%= filters.source === s ? "selected" : "" %>><%= mkh.sourceLabel(s) %></option><% }) %>
         </select></div>
+      <button type="submit" class="btn btn-primary btn-sm">Filtrer</button>
+      <details class="mk-filter-more"<%= hasFilters ? " open" : "" %>>
+        <summary data-tip="Affine la liste par cycle de vie, consentement, dates, activité, site et état de la fiche."><%- icon("sliders", { size: 16 }) %> Filtres avancés</summary>
+        <div class="mk-filter-fields">
       <div class="field-group"><label for="f-cycle">Cycle de vie</label>
         <select id="f-cycle" name="cycle"><option value="">Tous</option>
           <% Object.entries(lifecycles).forEach(([k, label]) => { %><option value="<%= k %>" <%= filters.cycle === k ? "selected" : "" %>><%= label %></option><% }) %>
@@ -94,11 +93,11 @@
         <select id="f-depuis" name="depuis"><option value="">Depuis toujours</option>
           <% [7, 30, 90].forEach((d) => { %><option value="<%= d %>" <%= String(filters.depuis) === String(d) ? "selected" : "" %>>Depuis <%= d %> jours</option><% }) %>
         </select></div>
-      <div class="field-group"><label for="f-taille">Par page</label>
-        <select id="f-taille" name="taille"><% [25, 50, 100].forEach((n) => { %><option value="<%= n %>" <%= result.pageSize === n ? "selected" : "" %>><%= n %></option><% }) %></select></div>
+      <% if (result.pageSize !== 25) { %><input type="hidden" name="taille" value="<%= result.pageSize %>"><% } %>
       <label class="checkbox-row mk-filter-check" for="f-join"><input id="f-join" type="checkbox" name="joignables" value="1" <%= filters.joignables ? "checked" : "" %>> Joignables seulement</label>
         </div>
       </details>
+      <% if (hasFilters) { %><a href="/marketing/contacts" class="mk-filter-clear">Effacer</a><% } %>
     </form>
     <% if (activeChips.length) { %>
       <div class="mk-filter-chips" role="group" aria-label="Filtres actifs">
@@ -185,18 +184,7 @@
             <% }) %>
           </tbody>
         </table>
-      </div>
-      <div class="mk-pager">
-        <span><%= mkh.fmt(range.from) %>–<%= mkh.fmt(range.to) %> sur <%= mkh.fmt(result.total) %></span>
-        <% if (result.pages > 1) { %>
-          <nav class="mk-pager-links" aria-label="Pagination">
-            <% if (result.page > 1) { %><a href="<%= url({ page: result.page - 1 }) %>" rel="prev" aria-label="Page précédente">Précédent</a><% } %>
-            <% let last = 0; pageNumbers.forEach((p) => { if (p - last > 1) { %><span aria-hidden="true">…</span><% } last = p; %>
-              <% if (p === result.page) { %><span aria-current="page"><%= p %></span><% } else { %><a href="<%= url({ page: p }) %>" aria-label="Page <%= p %>"><%= p %></a><% } %>
-            <% }) %>
-            <% if (result.page < result.pages) { %><a href="<%= url({ page: result.page + 1 }) %>" rel="next" aria-label="Page suivante">Suivant</a><% } %>
-          </nav>
-        <% } %>
+        <%- include("partials/pager", { result, url, sizes: [25, 50, 100] }) %>
       </div>
     <% } %>
 <%- include("partials/bottom") %>

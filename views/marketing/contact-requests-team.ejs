@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
     <p class="mk-back"><a href="/marketing/contacts">← Contacts</a></p>
-    <div class="mk-head"><h1>Demandes de rattachement <span class="mk-count"><%= items.length %></span></h1></div>
-    <p class="mk-lead">Un site demande une adresse déjà connue d'un autre site. <strong>Accepter</strong> donne au site une <strong>lecture seule</strong> de la fiche (jamais de modification, ni des données, ni des consentements). <strong>Refuser</strong> ne change rien. Rien n'est fusionné.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Demandes de rattachement <span class="mk-count"><%= items.length %></span></h1><p class="mk-head-sub">Un site demande une adresse déjà connue d'un autre site. <strong>Accepter</strong> donne au site une <strong>lecture seule</strong> de la fiche (jamais de modification, ni des données, ni des consentements). <strong>Refuser</strong> ne change rien. Rien n'est fusionné.</p></div></div>
     <% if (!items.length) { %>
       <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2>Aucune demande en attente</h2></div>
     <% } else { %>

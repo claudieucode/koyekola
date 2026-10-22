@@ -1,8 +1,8 @@
 <%- include("partials/top", { title, active }) %>
 <% const canWrite = mk.can("templates.write"); %>
     <p class="mk-back"><a href="/marketing/modeles">← Modèles</a></p>
-    <div class="mk-head"><h1>Bibliothèque de modèles</h1></div>
-    <p class="mk-lead">Des points de départ à personnaliser dans l'éditeur par blocs. Les aperçus utilisent des données d'exemple ; les adresses « exemple.fr » sont à remplacer par les vôtres.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Bibliothèque de modèles</h1><p class="mk-head-sub">Des points de départ à personnaliser dans l'éditeur par blocs. Les aperçus utilisent des données d'exemple ; les adresses « exemple.fr » sont à remplacer par les vôtres.</p></div></div>
 
     <nav class="mk-tabs" aria-label="Catégories de la bibliothèque">
       <% groups.forEach((g) => { %><a class="mk-tab" href="#cat-<%= g.category.key %>"><%= g.category.label %> <span class="mk-tab-count"><%= g.starters.length %></span></a>

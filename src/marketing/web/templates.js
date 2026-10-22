@@ -77,7 +77,8 @@ module.exports = ({ db }) => {
     const rows = templates.searchTemplates(ctx, { q, kind: type || undefined, category: categorie || undefined }, { sort: req.query.tri, dir: req.query.sens });
     const sortKey = ["name", "kind", "category", "updated"].includes(req.query.tri) ? req.query.tri : "updated";
     const dirKey = req.query.sens === "asc" || req.query.sens === "desc" ? req.query.sens : (sortKey === "updated" ? "desc" : "asc");
-    const view = { ...(q && { q }), ...(categorie && { categorie }), ...(type && { type }), ...(req.query.tri && { tri: sortKey, sens: dirKey }) };
+    const vue = req.query.vue === "grille" ? "grille" : "liste"; // présentation seulement : liste (tableau) ou grille (cartes avec aperçu)
+    const view = { ...(q && { q }), ...(categorie && { categorie }), ...(type && { type }), ...(req.query.tri && { tri: sortKey, sens: dirKey }), ...(vue === "grille" && { vue }) };
     const url = (changes = {}) => {
       const merged = { ...view, ...changes };
       const qs = new URLSearchParams(Object.entries(merged).filter(([, v]) => v !== null && v !== undefined && v !== "").map(([k, v]) => [k, String(v)])).toString();
@@ -85,7 +86,7 @@ module.exports = ({ db }) => {
     };
     const counts = templates.templateCategoryCounts(ctx);
     res.render("marketing/templates", {
-      title: "Modèles", active: "templates", templates: rows, rows, counts, categories: CATEGORIES, categorie, type, q, view, url, sortKey, dirKey, hasFilters: Boolean(q || categorie || type),
+      title: "Modèles", active: "templates", templates: rows, rows, counts, categories: CATEGORIES, categorie, type, q, view, url, sortKey, dirKey, vue, hasFilters: Boolean(q || categorie || type),
       starterGroups: library.starterLibrary(), address: templates.getOrgProfile(ctx).address, kindLabel: KIND_LABEL,
     });
   });

@@ -13,9 +13,9 @@
   };
 %>
     <div class="mk-head">
-      <h1>Listes <span class="mk-count"><%= lists.length %></span></h1>
+      <div class="mk-head-main"><h1>Listes <span class="mk-count"><%= lists.length %></span></h1><p class="mk-head-sub">Organisez vos contacts en groupes pour faciliter la gestion de votre audience et vos campagnes.</p></div>
+      
     </div>
-    <p class="mk-lead">Organisez vos contacts en groupes pour faciliter la gestion de votre audience et vos campagnes.</p>
     <%- include("partials/site-filter", { action: "/marketing/listes" }) %>
 
     <div class="mk-callout">

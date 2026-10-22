@@ -8,8 +8,8 @@
   const money = (v) => v === null ? "—" : v.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + cfg.currency;
 %>
     <p class="mk-back"><a href="/marketing/sms">← Campagnes SMS</a></p>
-    <div class="mk-head"><h1><%= c.name %></h1><span class="badge badge-muted">Brouillon</span></div>
-    <p class="mk-lead">Écrivez votre SMS, choisissez les destinataires, vérifiez le contrôle avant envoi, puis envoyez ou programmez.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= c.name %></h1><p class="mk-head-sub">Écrivez votre SMS, choisissez les destinataires, vérifiez le contrôle avant envoi, puis envoyez ou programmez.</p></div><span class="badge badge-muted">Brouillon</span></div>
 
     <div class="mk-sms-layout">
       <form action="/marketing/sms/campagnes/<%= c.id %>" method="post" class="mk-form mk-sms-main" id="sms-form">

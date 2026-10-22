@@ -11,6 +11,9 @@ const { WORKER_DETAIL, workerHuman } = require("../workerNotice");
 const DAY = 86_400_000;
 const WEEK = 7 * DAY;
 const PERIOD_DAYS = 30;
+// Périodes proposées par le sélecteur de l'Accueil (liste fermée : toute autre valeur retombe sur 30 jours)
+const PERIODS = [7, 30, 90];
+const periodOf = (v) => (PERIODS.includes(Number(v)) ? Number(v) : PERIOD_DAYS);
 const WEEKS = 8;
 const RECENT_CAMPAIGNS = 5;
 const ACTIVITY_LIMIT = 10;
@@ -29,9 +32,9 @@ function shortDate(ms) {
   return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-function contactFigures(ctx, now) {
+function contactFigures(ctx, now, days = PERIOD_DAYS) {
   const org = ctx.organizationId;
-  const since = sqlDate(now - PERIOD_DAYS * DAY);
+  const since = sqlDate(now - days * DAY);
   const byStatus = Object.fromEntries(ctx.db.prepare("SELECT status, COUNT(*) n FROM mk_contacts WHERE organization_id = ? GROUP BY status").all(org).map((r) => [r.status, r.n]));
   const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
   const { sql, params } = sendableSql("c");
@@ -53,9 +56,9 @@ function growth(ctx, now) {
   return counts.map((count, i) => ({ label: shortDate(now - (WEEKS - i) * WEEK + 1), count }));
 }
 
-function campaignFigures(ctx, now) {
+function campaignFigures(ctx, now, days = PERIOD_DAYS) {
   const org = ctx.organizationId;
-  const since = now - PERIOD_DAYS * DAY;
+  const since = now - days * DAY;
   const a = ctx.db
     .prepare(
       `SELECT COUNT(*) AS n, COALESCE(SUM(sent_count), 0) AS sent, COALESCE(SUM(unique_click_count), 0) AS clicks, COALESCE(SUM(bounced_count), 0) AS bounced,
@@ -157,14 +160,15 @@ function activityOf(ctx) {
   return items.sort((a, b) => b.at - a.at).slice(0, ACTIVITY_LIMIT);
 }
 
-function getOverview(ctx, { workerOn = false, smtpAvailable = false, keyOk = true, can = () => true } = {}) {
+function getOverview(ctx, { workerOn = false, smtpAvailable = false, keyOk = true, can = () => true, days = PERIOD_DAYS } = {}) {
   checkCtx(ctx);
   const now = nowOf(ctx);
-  const contacts = contactFigures(ctx, now);
-  const campaigns = campaignFigures(ctx, now);
+  const period = periodOf(days);
+  const contacts = contactFigures(ctx, now, period);
+  const campaigns = campaignFigures(ctx, now, period);
   const automations = automationFigures(ctx);
   return {
-    period: { days: PERIOD_DAYS, sinceMs: now - PERIOD_DAYS * DAY },
+    period: { days: period, sinceMs: now - period * DAY, choices: PERIODS },
     contacts, growth: growth(ctx, now), campaigns, automations,
     readiness: readinessOf(ctx, { workerOn, smtpAvailable, keyOk }, contacts.sendable),
     alerts: alertsOf(ctx, { workerOn, keyOk, can }, { campaigns, automations, now }),
@@ -172,4 +176,4 @@ function getOverview(ctx, { workerOn = false, smtpAvailable = false, keyOk = tru
   };
 }
 
-module.exports = { getOverview, PERIOD_DAYS, WEEKS };
+module.exports = { getOverview, PERIOD_DAYS, PERIODS, periodOf, WEEKS };

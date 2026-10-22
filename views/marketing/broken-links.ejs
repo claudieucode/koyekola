@@ -8,9 +8,9 @@
   const broken = issues.filter((i) => i.status === "broken");
   const moved = issues.filter((i) => i.status === "redirected");
 %>
-    <div class="mk-head"><h1>Liens cassés</h1>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Liens cassés</h1><p class="mk-head-sub">Vérifie les liens internes connus : éléments de menus, boutons et liens des pages en ligne, liens des articles publiés. Un lien cassé mène à une page introuvable, à la corbeille ou à une ressource non publiée ; un lien redirigé fonctionne mais gagne à être mis à jour.</p></div>
       <div class="mk-actions"><form method="post" action="/marketing/site-web/liens-casses/analyser" data-ur-scan><button type="submit" class="btn btn-primary btn-sm"><%- icon("search", { size: 16 }) %> <%= report ? "Relancer l'analyse" : "Analyser les liens" %></button></form></div></div>
-    <p class="mk-lead">Vérifie les liens internes connus : éléments de menus, boutons et liens des pages en ligne, liens des articles publiés. Un lien cassé mène à une page introuvable, à la corbeille ou à une ressource non publiée ; un lien redirigé fonctionne mais gagne à être mis à jour.</p>
 
     <nav class="mk-tabs mk-cms-tabs" aria-label="Adresses">
       <a class="mk-tab" href="/marketing/site-web/redirections">Redirections</a>

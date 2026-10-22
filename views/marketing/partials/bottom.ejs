@@ -14,6 +14,8 @@
   <% if (typeof settingsJs !== "undefined" && settingsJs) { %><script src="<%= asset('/js/cms-settings.js') %>" defer></script><% } %>
   <% if (typeof urlsJs !== "undefined" && urlsJs) { %><script src="<%= asset('/js/cms-urls.js') %>" defer></script><% } %>
   <% if (typeof cmsPagesJs !== "undefined" && cmsPagesJs) { %><script src="<%= asset('/js/cms-pages.js') %>" defer></script><% } %>
+  <script src="<%= asset('/js/kola-tips-data.js') %>" defer></script>
+  <script src="<%= asset('/js/kola-pages.js') %>" defer></script>
   <% if (typeof cmsPolices !== "undefined" && cmsPolices) { %><script src="<%= asset('/js/cms-polices.js') %>" defer></script><% } %>
   <% if (typeof cmsThemesJs !== "undefined" && cmsThemesJs) { %><script src="<%= asset('/js/cms-themes.js') %>" defer></script><% } %>
   <% if (typeof cmsArticlesJs !== "undefined" && cmsArticlesJs) { %><script src="<%= asset('/js/cms-articles.js') %>" defer></script><% } %>

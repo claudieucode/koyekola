@@ -1,7 +1,7 @@
 <%- include("partials/top", { title, active }) %>
 <% const SOURCES = { form: "formulaire", admin: "équipe", import: "import", api: "API", signup: "inscription", checkout: "commande", preference_center: "préférences", sms_keyword: "réponse START" }; %>
-    <div class="mk-head"><h1>Abonnés SMS</h1></div>
-    <p class="mk-lead">Les contacts qui ont accepté de recevoir vos SMS. L'accord SMS est distinct de l'accord e-mail : chacun a le sien, avec sa preuve.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Abonnés SMS</h1><p class="mk-head-sub">Les contacts qui ont accepté de recevoir vos SMS. L'accord SMS est distinct de l'accord e-mail : chacun a le sien, avec sa preuve.</p></div></div>
 
     <div class="mk-stats">
       <div class="mk-stat"><span class="mk-stat-label">Joignables par SMS</span><span class="mk-stat-value"><%= mkh.fmt(counts.sendable) %></span></div>

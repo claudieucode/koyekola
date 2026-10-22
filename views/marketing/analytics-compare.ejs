@@ -9,12 +9,12 @@
   const exportUrl = saved ? `/marketing/analytics/comparer/export.csv?rapport=${saved.id}` : `/marketing/analytics/comparer/export.csv?${r.query}`;
 %>
     <div class="mk-head">
-      <h1><%= saved ? saved.name : "Rapports comparatifs" %></h1>
+      <div class="mk-head-main"><h1><%= saved ? saved.name : "Rapports comparatifs" %></h1><p class="mk-head-sub">Comparez vos campagnes e-mail et SMS terminées : côte à côte, ou regroupées par mois, jour, heure d'envoi, audience, étiquette ou canal. Les taux d'un groupe sont recalculés sur ses totaux.</p></div>
+      
       <div class="mk-actions">
         <a class="btn btn-outline btn-sm" href="<%= exportUrl %>" download><%- icon("download", { size: 16 }) %> Exporter (CSV)</a>
       </div>
     </div>
-    <p class="mk-lead">Comparez vos campagnes e-mail et SMS terminées : côte à côte, ou regroupées par mois, jour, heure d'envoi, audience, étiquette ou canal. Les taux d'un groupe sont recalculés sur ses totaux.</p>
 
     <form class="mk-filterbar" method="get" action="/marketing/analytics/comparer" aria-label="Filtres du rapport">
       <div class="field-group"><label for="cmp-from">Du</label><input id="cmp-from" type="date" name="from" value="<%= f.from %>" required></div>

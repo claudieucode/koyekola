@@ -3,8 +3,8 @@
 <% const fmtMs = (ms) => (ms ? new Date(ms).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "medium" }) : "—"); %>
 <% const ACTION_LABELS = { sent: "E-mail envoyé", already_sent: "Déjà envoyé (rejeu sans effet)", failed: "Échec", skipped: "Ignoré (liste de suppression)", wait: "Attente", condition: "Condition évaluée", add_tag: "Étiquette ajoutée", remove_tag: "Étiquette retirée", add_to_list: "Ajouté à une liste", remove_from_list: "Retiré d'une liste", completed: "Passage terminé", exited: "Sortie du scénario" }; %>
     <p class="mk-back"><a href="/marketing/automatisations/<%= a.id %>">← <%= a.name %></a></p>
-    <div class="mk-head"><h1 class="mk-email">Passage de <%= run.email %></h1><span class="badge <%= st[1] %>"><%= st[0] %></span></div>
-    <p class="mk-lead">Ce que le moteur a réellement fait, étape par étape, pour ce contact dans ce scénario.</p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1 class="mk-email">Passage de <%= run.email %></h1><p class="mk-head-sub">Ce que le moteur a réellement fait, étape par étape, pour ce contact dans ce scénario.</p></div><span class="badge <%= st[1] %>"><%= st[0] %></span></div>
 
     <section class="mk-panel">
       <h2>Résumé</h2>

@@ -1,5 +1,6 @@
 <%- include("partials/top", { title, active }) %>
-    <div class="mk-head"><h1>Recherche</h1></div>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Recherche</h1></div></div>
     <% if (!q) { %>
       <p class="mk-lead">Saisissez un mot dans la barre du haut pour retrouver une page, un article, un média ou un menu.</p>
     <% } else if (!total) { %>
