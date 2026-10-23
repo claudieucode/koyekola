@@ -1132,3 +1132,13 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 .mk-st-form .btn, .mk-st-actions .btn { transition: background-color .15s ease, color .15s ease, opacity .15s ease, transform .1s ease; }
 .mk-st-form .btn:active { transform: scale(.98); }
 @media (prefers-reduced-motion: reduce) { .mk-st-form, .mk-st-recap, .mk-st-tools, .mk-st-confirm, .mk-nav-group.is-open > .mk-nav-sub { animation: none; } .mk-st-form .btn, .mk-st-actions .btn { transition: none; } }
+
+/* ---- Utilisateurs : invitations (formulaire, états d'envoi), site, finitions ---- */
+.mk-us-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 20px; max-width: 760px; }
+.mk-us-wide { grid-column: 1 / -1; }
+.mk-us-grid textarea { width: 100%; resize: vertical; }
+.mk-us-dl { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; background: #eef1f5; color: #475569; }
+.mk-us-dl-ok { background: #e6f5ec; color: #14532d; } .mk-us-dl-wait { background: #eef4ff; color: #0f2a5c; } .mk-us-dl-bad { background: #fdf1ef; color: #7a1f14; }
+.mk-us-form { animation: mk-st-in .2s ease both; transform-origin: 50% 0; }
+@media (max-width: 720px) { .mk-us-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .mk-us-form { animation: none; } }

@@ -8,6 +8,7 @@ const db = require("../config/database");
 const access = require("../services/cmsAccess");
 const { openSession } = require("../middlewares/sessionUser");
 const { createRateLimiter } = require("../middlewares/security");
+const { UserError } = require("../utils/errors");
 
 const router = express.Router();
 const limiter = createRateLimiter(10, 15 * 60 * 1000);
@@ -41,8 +42,10 @@ router.post("/invitation/:token", (req, res, next) => {
     if (password.length < 8) return view("Le mot de passe doit contenir au moins 8 caractères.");
     if (db.prepare("SELECT 1 FROM users WHERE username = ?").get(username)) return view("Ce nom d'utilisateur est déjà pris.");
     const hash = bcrypt.hashSync(password, 10);
-    const id = Number(db.prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'etudiant')").run(username, ctx.inv.email, hash).lastInsertRowid);
-    access.acceptInvitation(ctx.inv, id);
+    // Compte, accès et état « acceptée » dans UNE transaction : si l'un échoue, aucun compte n'est laissé sans accès
+    let id;
+    try { id = access.acceptInvitation(ctx.inv, () => Number(db.prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, 'etudiant')").run(username, ctx.inv.email, hash).lastInsertRowid)); }
+    catch (error) { if (error instanceof UserError) return view(error.message, 410); throw error; }
     openSession(req, { id, username, email: ctx.inv.email, role: "etudiant", password_hash: hash }, (error) => {
       if (error) return next(error);
       res.redirect(ctx.inv.site_id ? "/marketing/site-web/mes-sites" : "/marketing/site-web");

@@ -1,0 +1,48 @@
+<%#
+  Liste des invitations partagée (central et site). Paramètres : result {rows,total,page,pages,counts}, f {q,statut,role,site}, roles, sites (central) | null, roleName, listUrl (adresse de la liste, sans requête),
+  postBase (adresse des actions ; « /<id>/renvoyer », « /<id>/revoquer »), hidden {nom: valeur} (champs cachés des formulaires d'action et de filtre), canCreate, inviteUrl.
+  « Envoyé » = accepté par le serveur d'envoi ; l'état « Acceptée » est distinct et n'existe qu'après la création réelle du compte ou de l'accès.
+%>
+<%
+  const fdt = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") + " à " + String(v).slice(11, 16) + " UTC" : "—");
+  const keep = (over = {}) => { const p = new URLSearchParams(); const o = { q: f.q, etat: f.statut, role: f.role, site: f.site, ...over }; Object.entries({ ...(hidden || {}), ...o }).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return listUrl + (t ? "?" + t : ""); };
+  const states = { pending: ["En attente", "mk-status-warn"], accepted: ["Acceptée", "mk-status-ok"], revoked: ["Révoquée", "mk-status-off"], expired: ["Expirée", "mk-status-off"] };
+  const delivery = { queued: ["E-mail en file d'envoi", "mk-us-dl-wait"], sent: ["E-mail envoyé", "mk-us-dl-ok"], failed: ["Échec d'envoi", "mk-us-dl-bad"], none: ["Pas d'e-mail", "mk-us-dl-wait"] };
+  const tabs = [["", "Toutes", (result.counts.pending || 0) + (result.counts.accepted || 0) + (result.counts.expired || 0) + (result.counts.revoked || 0)], ["pending", "En attente", result.counts.pending || 0], ["accepted", "Acceptées", result.counts.accepted || 0], ["expired", "Expirées", result.counts.expired || 0], ["revoked", "Révoquées", result.counts.revoked || 0]];
+%>
+<nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer par état">
+  <% tabs.forEach(([k, name, n]) => { %><a class="mk-tab" href="<%= keep({ etat: k, page: "" }) %>"<%- f.statut === k ? ' aria-current="page"' : "" %>><%= name %> <span class="mk-tab-count"><%= n %></span></a><% }) %>
+</nav>
+<form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= listUrl %>" role="search" aria-label="Rechercher dans les invitations">
+  <% Object.entries(hidden || {}).forEach(([k, v]) => { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% }) %>
+  <input type="hidden" name="etat" value="<%= f.statut %>">
+  <label class="mk-search"><span class="sr-only">Rechercher (e-mail, nom)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une adresse"></label>
+  <label class="sr-only" for="inv-role">Rôle</label>
+  <select id="inv-role" name="role"><option value="">Tous les rôles</option><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= f.role === r.key ? " selected" : "" %>><%= r.name %></option><% }) %></select>
+  <% if (sites) { %><label class="sr-only" for="inv-site">Site</label><select id="inv-site" name="site"><option value="">Tous les sites</option><% sites.forEach((s) => { %><option value="<%= s.id %>"<%= String(f.site) === String(s.id) ? " selected" : "" %>><%= s.name %></option><% }) %></select><% } %>
+  <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (f.q || f.role || f.site) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "", role: "", site: "", page: "" }) %>">Réinitialiser</a><% } %>
+</form>
+<% if (!result.rows.length) { %><div class="mk-empty"><div class="mk-empty-split">
+    <div class="mk-es-text"><h2><%= result.total === 0 && !f.q && !f.statut && !f.role && !f.site ? "Aucune invitation." : "Aucun résultat." %></h2><p><%= result.total === 0 && !f.q && !f.statut && !f.role && !f.site ? "Les invitations apparaissent ici dès que vous invitez quelqu'un." : "Aucune invitation ne correspond à ces critères." %></p></div>
+    <div class="mk-empty-art" aria-hidden="true"><%- include("empty-art", { kind: "email" }) %></div>
+  </div></div>
+<% } else { %>
+<div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Invitations</caption>
+  <thead><tr><th scope="col">Personne invitée</th><th scope="col">Rôle</th><% if (sites) { %><th scope="col">Site</th><% } %><th scope="col">État</th><th scope="col">Envoi</th><th scope="col">Expire le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+  <tbody><% result.rows.forEach((i) => { const st = states[i.state], dl = delivery[i.delivery] || delivery.none; %>
+    <tr><th scope="row" data-label="Personne invitée"><span class="mk-tx-name"><%= i.email %><% if (i.invited_name) { %><span class="mk-sub"><%= i.invited_name %></span><% } %></span></th>
+      <td data-label="Rôle"><%= roleName(i.role) %></td><% if (sites) { %><td data-label="Site"><%= i.site_name || "Toute l'équipe" %></td><% } %>
+      <td data-label="État"><span class="mk-status <%= st[1] %>"><%= st[0] %></span></td>
+      <td data-label="Envoi"><% if (i.state === "accepted") { %>—<% } else { %><span class="mk-us-dl <%= dl[1] %>"><%= dl[0] %></span><% if (i.delivery === "failed" && i.delivery_error) { %><span class="mk-sub"><%= i.delivery_error %></span><% } %><span class="mk-sub"><%= i.send_count %> envoi<%= i.send_count > 1 ? "s" : "" %><%= i.invited_by_name ? " · par " + i.invited_by_name : "" %></span><% } %></td>
+      <td data-label="Expire le"><%= i.state === "accepted" ? "Acceptée le " + fdt(i.accepted_at) : i.state === "revoked" ? "Révoquée le " + fdt(i.revoked_at) : fdt(i.expires_at) %></td>
+      <td class="mk-row-actions"><% if (canCreate && (i.state === "pending" || i.state === "expired")) { %>
+        <form method="post" action="<%= postBase %>/<%= i.id %>/renvoyer" class="mk-cm-form"><% Object.entries(hidden || {}).forEach(([k, v]) => { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% }) %><button type="submit" class="btn btn-outline btn-sm"><%= i.state === "expired" ? "Renouveler" : "Renvoyer" %></button></form>
+        <% if (i.state === "pending") { %><form method="post" action="<%= postBase %>/<%= i.id %>/revoquer" class="mk-cm-form"><% Object.entries(hidden || {}).forEach(([k, v]) => { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% }) %><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le lien de cette invitation ne fonctionnera plus." data-mk-confirm-title="Révoquer l'invitation ?" data-mk-confirm-ok="Révoquer">Révoquer</button></form><% } %>
+      <% } %></td></tr>
+  <% }) %></tbody></table></div>
+<nav class="mk-cms-pager" aria-label="Pagination"><span><%= result.total %> invitation<%= result.total > 1 ? "s" : "" %></span>
+  <% if (result.pages > 1) { %><span class="mk-cms-pager-nav">
+    <% if (result.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page - 1 }) %>">Précédent</a><% } %>
+    <span>Page <%= result.page %> sur <%= result.pages %></span>
+    <% if (result.page < result.pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %></nav>
+<% } %>

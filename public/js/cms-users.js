@@ -12,5 +12,23 @@
     form.addEventListener("change", refresh);
     refresh();
   }
+  // Invitation : un seul envoi à la fois (double clic, touche Entrée répétée) ; le bouton se réactive si la page revient de l'historique
+  $$("[data-us-invite]").forEach(function (f) {
+    var btn = f.querySelector("[data-us-send]"), state = f.querySelector("[data-us-state]"), sent = false;
+    f.addEventListener("submit", function (e) {
+      if (sent) { e.preventDefault(); return; }
+      var email = f.querySelector('input[name="email"]');
+      if (email && !email.checkValidity()) { e.preventDefault(); email.focus(); if (state) state.textContent = "Indiquez une adresse e-mail valide."; return; }
+      sent = true; if (btn) btn.disabled = true; if (state) state.textContent = "Envoi…";
+    });
+    window.addEventListener("pageshow", function () { sent = false; if (btn) btn.disabled = false; if (state) state.textContent = ""; });
+  });
+  // Rôle : modifications non enregistrées signalées avant de quitter la page
+  if (form) {
+    var snap = function () { return $$("input,textarea,select", form).map(function (el) { return el.name + "=" + (el.type === "checkbox" ? el.checked : el.value); }).join("&"); };
+    var initial = snap(), saving = false;
+    form.addEventListener("submit", function () { saving = true; });
+    window.addEventListener("beforeunload", function (e) { if (!saving && snap() !== initial) { e.preventDefault(); e.returnValue = ""; } });
+  }
   $$("[data-us-autosubmit]").forEach(function (s) { s.addEventListener("change", function () { s.form.submit(); }); });
 })();

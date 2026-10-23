@@ -116,13 +116,14 @@ function sendSubscriptionConfirmation(db, { to, formName, url }) {
 }
 
 // Invitation à rejoindre l'équipe du site (CMS → Utilisateurs). Le lien est à usage unique : l'e-mail est « sensible » (texte effacé après envoi).
-function sendInvitationEmail(db, { to, inviter, roleName, siteName, url, days }) {
+function sendInvitationEmail(db, { to, inviter, roleName, siteName, url, days, name = "", message = "" }) {
   return queueMail(db, {
     kind: "team_invitation", to, subject: "Invitation à rejoindre l'équipe KOLAKISA", sensitive: true,
     text: [
-      "Bonjour,", "",
+      name ? `Bonjour ${oneLine(name)},` : "Bonjour,", "",
       `${oneLine(inviter)} vous invite à rejoindre l'équipe KOLAKISA avec le rôle « ${oneLine(roleName)} »${siteName ? ` sur le site « ${oneLine(siteName)} »` : ""}.`, "",
       `Pour créer votre compte et accepter l'invitation (lien personnel, valable ${days} jours, utilisable une seule fois) :`, "", url, "",
+      ...(message ? ["", `Message de ${oneLine(inviter)} :`, ...String(message).split(/\r?\n/).map((l) => `> ${oneLine(l)}`).slice(0, 8)] : []), "",
       "Si vous n'attendiez pas cette invitation, ignorez cet e-mail : aucun compte ne sera créé.",
     ].join("\n"),
   });

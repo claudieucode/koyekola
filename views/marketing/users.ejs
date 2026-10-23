@@ -64,33 +64,12 @@
 <% } else if (mode === "invite") { %>
     <div class="mk-head">
       <div class="mk-head-main"><h1>Inviter quelqu'un</h1><p class="mk-head-sub">La personne reçoit un e-mail avec un lien personnel (valable <%= days %> jours, à usage unique) pour créer son compte. Si elle a déjà un compte, l'accès lui est donné tout de suite. Vous ne pouvez attribuer que des rôles dont vous possédez tous les droits.</p></div><div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Utilisateurs</a></div></div>
-    <form method="post" action="<%= BASE %>/inviter" class="mk-form mk-us-form">
-      <div class="field-group"><label for="iv-email">Adresse e-mail *</label><input id="iv-email" type="email" name="email" required maxlength="120" autocomplete="off"></div>
-      <div class="field-group"><label for="iv-role">Rôle *</label>
-        <select id="iv-role" name="role" required><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.ok ? "" : " disabled" %><%= r.key === "viewer" ? " selected" : "" %>><%= r.name %><%= r.ok ? "" : " (droits supérieurs aux vôtres)" %></option><% }) %></select></div>
-      <div class="field-group"><label for="iv-site">Accès</label>
-        <select id="iv-site" name="site_id"><option value="">Toute l'équipe (tous les sites)</option><% sites.forEach((s) => { %><option value="<%= s.id %>">Seulement le site « <%= s.name %> »</option><% }) %></select>
-        <span class="field-hint">Un accès limité à un site ne donne aucun droit sur les autres sites.</span></div>
-      <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Envoyer l'invitation</button></div>
-    </form>
+    <%- include("partials/invite-form", { action: BASE + "/inviter", roles, sites, fixedSite: null, days, hidden: {} }) %>
 
 <% } else if (mode === "invitations") { %>
     <div class="mk-head">
       <div class="mk-head-main"><h1>Invitations</h1><p class="mk-head-sub">Invitations envoyées pour rejoindre l'équipe. Un lien ne fonctionne qu'une fois ; « Renvoyer » crée un nouveau lien et annule l'ancien.</p></div><div class="mk-actions"><% if (canCreate) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/ajouter">Inviter</a><% } %></div></div>
-    <% if (!invitations.length) { %><div class="mk-empty"><div class="mk-empty-split">
-        <div class="mk-es-text"><h2>Aucune invitation.</h2><p>Les invitations apparaissent ici dès que vous invitez quelqu'un.</p></div>
-        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "email" }) %></div>
-      </div></div>
-    <% } else { %>
-    <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Invitations</caption>
-      <thead><tr><th scope="col">E-mail</th><th scope="col">Rôle</th><th scope="col">Site</th><th scope="col">État</th><th scope="col">Envoyée le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-      <tbody><% invitations.forEach((i) => { const states = { pending: ["En attente", "mk-status-warn"], accepted: ["Acceptée", "mk-status-ok"], revoked: ["Révoquée", "mk-status-off"], expired: ["Expirée", "mk-status-off"] }; %>
-        <tr><th scope="row" data-label="E-mail"><%= i.email %></th><td data-label="Rôle"><%= roleName(i.role) %></td><td data-label="Site"><%= i.site_name || "Toute l'équipe" %></td>
-          <td data-label="État"><span class="mk-status <%= states[i.state][1] %>"><%= states[i.state][0] %></span></td><td data-label="Envoyée le"><%= fdt(i.created_at) %><% if (i.invited_by_name) { %><span class="mk-sub">par <%= i.invited_by_name %></span><% } %></td>
-          <td class="mk-row-actions"><% if (canCreate && (i.state === "pending" || i.state === "expired")) { %><form method="post" action="<%= BASE %>/invitations/<%= i.id %>/renvoyer" class="mk-cm-form"><button type="submit" class="btn btn-outline btn-sm">Renvoyer</button></form>
-            <% if (i.state === "pending") { %><form method="post" action="<%= BASE %>/invitations/<%= i.id %>/revoquer" class="mk-cm-form"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le lien de cette invitation ne fonctionnera plus." data-mk-confirm-title="Révoquer l'invitation ?" data-mk-confirm-ok="Révoquer">Révoquer</button></form><% } %><% } %></td></tr>
-      <% }) %></tbody></table></div>
-    <% } %>
+    <%- include("partials/invitations-panel", { result, f, roles, sites, roleName, listUrl: BASE + "/invitations", postBase: BASE + "/invitations", hidden: {}, canCreate, inviteUrl: BASE + "/ajouter" }) %>
 
 <% } else if (mode === "mysites") { %>
     <div class="mk-head">
