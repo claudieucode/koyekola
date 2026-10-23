@@ -80,7 +80,7 @@ function injectLocals(req, res, next) {
   // Calculés à la demande (seulement par l'en-tête et le pied de page publics) et une seule fois par requête, toujours à jour.
   const menus = new Map();
   res.locals.navMenu = (location) => {
-    if (!menus.has(location)) menus.set(location, navigation.forLocation(location, { user: req.session && req.session.user ? req.session.user : null }));
+    if (!menus.has(location)) menus.set(location, navigation.forLocation(location, { siteId: req.kwSite ? req.kwSite.id : null, user: req.session && req.session.user ? req.session.user : null }));
     return menus.get(location);
   };
   // Élément « courant » : son adresse (sans paramètres ni ancre) est celle de la page affichée
