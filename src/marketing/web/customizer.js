@@ -15,6 +15,21 @@ const { need } = require("./kit");
 const BASE = "/marketing/site-web/personnaliser";
 const MAX_BODY_CHANGES = 200;
 
+// Pages réelles à prévisualiser : l'accueil et ce que CE site contient vraiment
+function previewTargets(req, t) {
+  if (t.principal) {
+    const db = req.mk.ctx.db;
+    const out = [{ url: "/", label: "Accueil" }, { url: "/blog", label: "Blog" }, { url: "/catalogue", label: "Catalogue" }, { url: "/a-propos", label: "À propos" }];
+    try {
+      const post = db.prepare("SELECT slug, title FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = p.id) ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1").get();
+      if (post) out.push({ url: `/blog/${post.slug}`, label: `Article : ${post.title}` });
+    } catch { /* pas d'article */ }
+    return out;
+  }
+  const list = pages.listPages(req.mk.ctx, { siteId: t.siteId }).filter((p) => p.kind !== "step" && !p.archived_at).sort((a, b) => (a.id === (t.site && t.site.home_page_id) ? -1 : b.id === (t.site && t.site.home_page_id) ? 1 : a.id - b.id));
+  return list.slice(0, 40).map((p) => ({ url: `/marketing/pages/${p.id}/apercu`, label: p.name + (p.id === (t.site && t.site.home_page_id) ? " (accueil)" : "") }));
+}
+
 module.exports = () => {
   const router = express.Router();
   const denied = (res, message, json) => (json ? res.status(403).json({ error: { code: "forbidden", message } }) : res.status(403).render("error", { message }));
@@ -54,21 +69,6 @@ module.exports = () => {
     try { recordAudit(req.mk.ctx.db, { organizationId: req.mk.ctx.organizationId, userId: req.session.user.id, action, resourceType: "site", resourceId: t.siteId, metadata, siteId: t.siteId }); } catch { /* la journalisation ne fait jamais échouer l'action */ }
   };
   const readOnlyMsg = "Ce site est archivé ou supprimé : restaurez-le avant de le personnaliser.";
-
-  // Pages réelles à prévisualiser : l'accueil et ce que CE site contient vraiment
-  function previewTargets(req, t) {
-    if (t.principal) {
-      const db = req.mk.ctx.db;
-      const out = [{ url: "/", label: "Accueil" }, { url: "/blog", label: "Blog" }, { url: "/catalogue", label: "Catalogue" }, { url: "/a-propos", label: "À propos" }];
-      try {
-        const post = db.prepare("SELECT slug, title FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = p.id) ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1").get();
-        if (post) out.push({ url: `/blog/${post.slug}`, label: `Article : ${post.title}` });
-      } catch { /* pas d'article */ }
-      return out;
-    }
-    const list = pages.listPages(req.mk.ctx, { siteId: t.siteId }).filter((p) => p.kind !== "step" && !p.archived_at).sort((a, b) => (a.id === (t.site && t.site.home_page_id) ? -1 : b.id === (t.site && t.site.home_page_id) ? 1 : a.id - b.id));
-    return list.slice(0, 40).map((p) => ({ url: `/marketing/pages/${p.id}/apercu`, label: p.name + (p.id === (t.site && t.site.home_page_id) ? " (accueil)" : "") }));
-  }
 
   // ----- L'écran -----
   router.get("/site-web/personnaliser", need("appearance.read"), (req, res) => {
@@ -149,3 +149,4 @@ module.exports = () => {
   return router;
 };
 module.exports.BASE = BASE;
+module.exports.previewTargets = previewTargets; // partagé avec Apparence → Styles (mêmes pages réelles à prévisualiser)

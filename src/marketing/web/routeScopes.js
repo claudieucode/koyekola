@@ -144,6 +144,7 @@ const SITE_RULES = Object.freeze([
   { id: "barre-du-site", pattern: /^\/barre(?:\/|$)/, kind: "param", terminal: true },
   { id: "personnaliser-du-site", pattern: /^\/site-web\/personnaliser(?:\/|$)/, kind: "param", terminal: true },
   { id: "widgets-du-site", pattern: /^\/site-web\/widgets(?:\/|$)/, kind: "param", terminal: true },
+  { id: "styles-du-site", pattern: /^\/site-web\/styles(?:\/|$)/, kind: "param", terminal: true },
   { id: "mediatheque-du-site", pattern: /^\/site-web\/(?:mediatheque|medias)(?:\/|\.json$|$)/, kind: "queryGet", terminal: true },
 ]);
 
@@ -169,6 +170,7 @@ const FAMILIES = Object.freeze([
   { id: "barre-par-site", scope: "site", pattern: /^\/barre(?:\/|$)/ },
   { id: "personnaliser-par-site", scope: "site", pattern: /^\/site-web\/personnaliser(?:\/|$)/ },
   { id: "widgets-par-site", scope: "site", pattern: /^\/site-web\/widgets(?:\/|$)/ },
+  { id: "styles-par-site", scope: "site", pattern: /^\/site-web\/styles(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —

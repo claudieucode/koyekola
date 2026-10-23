@@ -99,6 +99,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./adminBar")()); // Barre d'administration : notifications du site actif
   admin.use(require("./customizer")()); // Apparence → Personnaliser : brouillon, aperçu en direct et publication, par site
   admin.use(require("./widgets")()); // Apparence → Widgets : zones, blocs et widgets désactivés par site
+  admin.use(require("./styles")()); // Apparence → Styles : gestionnaire de styles globaux par site (brouillon partagé avec Personnaliser)
   admin.use(require("./appearanceEditor")()); // Apparence : éditeur du site, styles, en-tête, pied de page, templates, patterns (palier 8)
   admin.use(require("./tools")()); // Outils : santé, import, export, diagnostic, maintenance (palier 13)
   admin.use(require("./cmsSearch")()); // Recherche d'administration : pages, articles, médias, menus (palier 23)
