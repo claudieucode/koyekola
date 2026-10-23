@@ -23,7 +23,7 @@ describe("projection du registre (menu d'un site)", () => {
   test("tout module ouvert par la table d'aptitude existe ; tout module délégué porte la clé de l'écran existant et figure parmi les écrans propres au site", () => {
     for (const [key, a] of Object.entries(nav.ABILITY)) { assert.ok(nav.ALL.some((i) => i.key === key), `clé hors registre : ${key}`); if (a.mode === "open") assert.ok(nav.SITE_MODULES[a.module], `module inconnu : ${a.module}`); }
     for (const [mod, m] of Object.entries(nav.SITE_MODULES)) if (m.kind === "delegate") { assert.ok(m.reg, mod); assert.ok(nav.isSiteScopedKey(m.reg), mod); assert.equal(nav.DELEGATED[mod], m.to); }
-    for (const k of ["dashboard", "utilisateurs", "parametres", "seo"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+    for (const k of ["dashboard", "parametres", "seo"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
     assert.equal(nav.isSiteScopedKey("apparence"), true, "« Éditeur du site » (Apparence) est un écran partagé ouvert dans le cadre du site");
     // « landing » (écran d'UNE page et son éditeur) prend le cadre du site de la page, mais seulement si le serveur a vérifié un site (voir creation-page-contexte-site) : la liste centrale « ?site= » reste centrale
     assert.equal(nav.isSiteScopedKey("landing"), true);
@@ -31,14 +31,14 @@ describe("projection du registre (menu d'un site)", () => {
   });
   test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
     const items = flat(nav.siteSections(site));
-    for (const k of ["seo/meta", "utilisateurs/roles", "outils/importer", "outils/exporter", "corbeille"]) {
+    for (const k of ["seo/meta", "seo/analyse", "outils/importer", "outils/exporter", "corbeille"]) {
       const i = items.find((x) => x.key === k); assert.ok(i, k); assert.equal(i.status, "preview", k); assert.equal(i.disabled, true, k); assert.equal(i.href, null, k);
       assert.equal(i.label, nav.ALL.find((x) => x.key === k).label, `${k} : libellé du registre`);
     }
   });
   test("ce qui est réservé à l'administration centrale ou à un lot suivant n'a AUCUN lien dans un site", () => {
     const hrefs = flat(nav.siteSections(site)).map((i) => i.href || "").join(" ");
-    for (const w of ["sauvegardes", "logs", "systeme", "outils/importer", "exporter", "diagnostic", "maintenance", "roles", "permissions", "invitations", "liens-casses", "/permaliens", "/parametres/"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
+    for (const w of ["sauvegardes", "logs", "systeme", "outils/importer", "exporter", "diagnostic", "maintenance", "/utilisateurs/roles", "/utilisateurs/permissions", "/utilisateurs/invitations", "liens-casses", "/permaliens", "/parametres/"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
     assert.ok(!flat(nav.siteSections(site)).some((i) => i.href === `${site.base}/corbeille`), "la corbeille du site (Outils) reste fermée ; seules celles des articles et des commentaires sont ouvertes");
     const keys = flat(nav.siteSections(site)).map((i) => i.key);
     for (const k of ["outils/sauvegardes", "outils/systeme", "outils/logs"]) assert.ok(!keys.includes(k), `${k} reste dans l'administration centrale`);

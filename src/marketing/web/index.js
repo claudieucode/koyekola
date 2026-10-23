@@ -94,6 +94,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
+  admin.use(require("./siteUsers")()); // Utilisateurs d'UN site : équipe locale, invitations, rôles et permissions (lecture)
   admin.use(require("./themes")()); // Apparence → Thèmes : thèmes installés et thème actif par site
   admin.use(require("./fonts")()); // Apparence → Polices : bibliothèque, téléversement et installation de polices par site
   admin.use(require("./adminBar")()); // Barre d'administration : notifications du site actif

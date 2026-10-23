@@ -168,7 +168,12 @@ const SITE_MODULES = {
   pages: { label: "Pages", kind: "delegate", to: "/pages", reg: "landing", permission: "forms.read", primary: true, legacy: "/marketing/pages" },
   composants: { label: "Composants", kind: "own", permission: "forms.read" },
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
-  equipe: { label: "Équipe du site", kind: "own", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  // Utilisateurs d'un site : écrans partagés /site-web/equipe-site (équipe locale, invitations de CE site, rôles et permissions en lecture) ouverts dans le cadre du site
+  equipe: { label: "Tous les utilisateurs", kind: "delegate", to: "/site-web/equipe-site", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  "equipe-inviter": { label: "Inviter", kind: "delegate", to: "/site-web/equipe-site/inviter", reg: "utilisateurs/ajouter", permission: "users.create", legacy: `${BASE}/utilisateurs/ajouter` },
+  "equipe-invitations": { label: "Invitations", kind: "delegate", to: "/site-web/equipe-site/invitations", reg: "utilisateurs/invitations", permission: "users.view", legacy: `${BASE}/utilisateurs/invitations` },
+  "equipe-roles": { label: "Rôles", kind: "delegate", to: "/site-web/equipe-site/roles", reg: "utilisateurs/roles", permission: "users.view", legacy: `${BASE}/utilisateurs/roles` },
+  "equipe-permissions": { label: "Permissions", kind: "delegate", to: "/site-web/equipe-site/permissions", reg: "utilisateurs/permissions", permission: "users.view", legacy: `${BASE}/utilisateurs/permissions` },
   reglages: { label: "Réglages du site", kind: "own", permission: "settings.read", legacy: `${BASE}/parametres`, legacyLabel: "Paramètres du site principal" },
   // R8 lot 2 : Articles, Commentaires et Médias s'ouvrent dans le cadre du site (écrans existants, isolation R5/R6 : le site vient de l'adresse, jamais du navigateur)
   articles: { label: "Articles", kind: "delegate", to: "/site-web/articles", reg: "articles", permission: "articles.read", legacy: `${BASE}/articles` },
@@ -277,6 +282,10 @@ const ABILITY = {
   seo: { mode: "open", module: "seo" },
   "seo/404": { mode: "open", module: "seo", sub: "404" },
   utilisateurs: { mode: "open", module: "equipe" },
+  "utilisateurs/ajouter": { mode: "open", module: "equipe-inviter" },
+  "utilisateurs/invitations": { mode: "open", module: "equipe-invitations" },
+  "utilisateurs/roles": { mode: "open", module: "equipe-roles" },
+  "utilisateurs/permissions": { mode: "open", module: "equipe-permissions" },
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
   corbeille: { mode: "open", module: "corbeille" },
@@ -426,6 +435,7 @@ FRAMED.add("parametres/indexation");
 FRAMED.add("parametres/emailing");
 FRAMED.add("parametres/tunnels");
 FRAMED.add("parametres/avance");
+FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
 FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

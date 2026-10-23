@@ -30,5 +30,13 @@
     form.addEventListener("submit", function () { saving = true; });
     window.addEventListener("beforeunload", function (e) { if (!saving && snap() !== initial) { e.preventDefault(); e.returnValue = ""; } });
   }
+  // Fiche d'une personne d'un site : « Enregistrer » ne s'active qu'après un vrai changement de rôle ; envoi unique
+  $$("[data-su-roleform]").forEach(function (f) {
+    var sel = f.querySelector("select"), btn = f.querySelector("[data-su-save]"), state = f.querySelector("[data-su-state]"), start = sel ? sel.value : "", sent = false;
+    if (!sel || !btn) return;
+    sel.addEventListener("change", function () { var d = sel.value !== start; btn.disabled = !d; if (state) state.textContent = d ? "Modification non enregistrée" : ""; });
+    f.addEventListener("submit", function (e) { if (sent) { e.preventDefault(); return; } sent = true; btn.disabled = true; if (state) state.textContent = "Enregistrement…"; });
+    window.addEventListener("beforeunload", function (e) { if (!sent && sel.value !== start) { e.preventDefault(); e.returnValue = ""; } });
+  });
   $$("[data-us-autosubmit]").forEach(function (s) { s.addEventListener("change", function () { s.form.submit(); }); });
 })();

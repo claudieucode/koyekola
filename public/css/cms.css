@@ -1142,3 +1142,22 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 .mk-us-form { animation: mk-st-in .2s ease both; transform-origin: 50% 0; }
 @media (max-width: 720px) { .mk-us-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .mk-us-form { animation: none; } }
+.mk-su { max-width: 1100px; }
+.mk-su-person { display: flex; align-items: center; gap: 10px; }
+.mk-su-avatar { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--mk-navy, #0f2a5c); color: #fff; font-size: 0.75rem; font-weight: 700; flex: none; letter-spacing: .02em; }
+.mk-su-avatar--lg { width: 44px; height: 44px; font-size: 0.95rem; margin-right: 8px; vertical-align: middle; }
+.mk-su-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; margin-bottom: 16px; }
+.mk-su-card { animation: mk-st-in .2s ease both; transform-origin: 50% 0; }
+.mk-su-remove { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--mk-border, #dbe4ea); }
+.mk-su-group { border-top: 1px solid var(--mk-border, #dbe4ea); }
+.mk-su-group:first-child { border-top: 0; }
+.mk-su-group summary { display: flex; justify-content: space-between; gap: 12px; padding: 12px 4px; cursor: pointer; font-weight: 600; color: var(--mk-navy, #0f2a5c); list-style: none; transition: background-color .15s ease; }
+.mk-su-group summary::-webkit-details-marker { display: none; }
+.mk-su-group summary:hover { background: var(--mk-hover, #f6f9fc); }
+.mk-su-group ul { list-style: none; margin: 0 0 10px; padding: 0 4px 0 8px; display: grid; gap: 4px; }
+.mk-su-group li.is-off { color: var(--mk-muted, #5a687d); opacity: .75; }
+.mk-su-tick { display: inline-block; width: 18px; font-weight: 700; color: #1f7a45; } .is-off .mk-su-tick { color: #94a3b8; }
+.mk-su-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+@media (max-width: 860px) { .mk-su-cols { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .mk-su-card { animation: none; } .mk-su-group summary { transition: none; } }
+.mk-su-perms { margin-top: 8px; }

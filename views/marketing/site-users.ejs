@@ -1,0 +1,115 @@
+<%#
+  KOLAKISA CMS → Utilisateurs d'un site (administration locale). Modes : list, detail, invite, invitations, roles, permissions. Données réelles (mk_site_members, users, mk_invitations, rôles) ;
+  rien d'un autre site n'est jamais affiché. Les droits affichés sont ceux de la personne SUR CE SITE ; « Retirer » n'enlève que l'accès à ce site.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const fd = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
+  const fdt = (v) => (v ? fd(v) + " à " + String(v).slice(11, 16) + " UTC" : "—");
+  const stClass = { active: "mk-status-ok", suspended: "mk-status-warn", disabled: "mk-status-off" };
+  const stLabel = { active: "Actif", suspended: "Suspendu", disabled: "Désactivé" };
+  const initials = (n) => String(n || "?").trim().slice(0, 2).toUpperCase();
+  const hidden = { site: SITE.id };
+  const actionLabel = { "site_access.granted": "Rôle attribué", "site_access.revoked": "Accès retiré", "site_access.mode_changed": "Mode d'accès modifié" };
+%>
+<div class="mk-su" data-su-root>
+<% if (SITE.readOnly) { %><p class="mk-sg-note" role="status">Ce site est archivé : son équipe est en lecture seule.</p><% } %>
+
+<% if (mode === "list") { %>
+  <% const keep = (over = {}) => { const p = new URLSearchParams(); const o = { q: f.q, role: f.role, statut: f.statut, tri: f.tri === "nom" ? "" : f.tri, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return frameUrl("list", t ? "?" + t : ""); }; %>
+  <div class="mk-head">
+    <div class="mk-head-main"><h1>Utilisateurs</h1><p class="mk-head-sub">Les personnes qui ont un rôle propre à <strong><%= SITE.name %></strong>. L'équipe de l'organisation a accès à tous les sites et se gère depuis le site principal.</p></div>
+    <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= frameUrl("invitations") %>">Invitations</a><% if (canInvite) { %><a class="btn btn-primary btn-sm" href="<%= frameUrl("invite") %>">Inviter</a><% } %></div></div>
+  <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer par statut du compte">
+    <% [["", "Tous", counts.all], ["active", "Actifs", counts.active], ["suspended", "Suspendus", counts.suspended], ["disabled", "Désactivés", counts.disabled]].forEach(([k, name, n]) => { %><a class="mk-tab" href="<%= keep({ statut: k, page: "" }) %>"<%- f.statut === k ? ' aria-current="page"' : "" %>><%= name %> <span class="mk-tab-count"><%= n %></span></a><% }) %>
+  </nav>
+  <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= frameUrl("list") %>" role="search" aria-label="Rechercher et filtrer les utilisateurs du site">
+    <input type="hidden" name="statut" value="<%= f.statut %>">
+    <label class="mk-search"><span class="sr-only">Rechercher (nom, e-mail)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une personne"></label>
+    <label class="sr-only" for="su-role">Rôle</label><select id="su-role" name="role"><option value="">Tous les rôles</option><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= f.role === r.key ? " selected" : "" %>><%= r.name %></option><% }) %></select>
+    <label class="sr-only" for="su-tri">Trier par</label><select id="su-tri" name="tri"><% [["nom", "Nom A → Z"], ["recent", "Plus récents"], ["activite", "Activité récente"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
+    <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (f.q || f.role) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "", role: "", page: "" }) %>">Réinitialiser</a><% } %>
+  </form>
+  <% if (!rows.length) { %><div class="mk-empty"><div class="mk-empty-split">
+      <div class="mk-es-text"><h2><%= counts.all === 0 ? "Aucune personne rattachée." : "Aucun résultat." %></h2><p><%= counts.all === 0 ? "Aucun rôle propre à ce site n'est attribué : seule l'équipe de l'organisation y accède." : "Aucune personne ne correspond à ces critères." %></p></div>
+      <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "people" }) %></div></div></div>
+  <% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-us-table"><caption class="sr-only">Utilisateurs de <%= SITE.name %></caption>
+    <thead><tr><th scope="col">Personne</th><th scope="col">Rôle sur ce site</th><th scope="col">Compte</th><th scope="col">Dernière activité</th><th scope="col">Depuis le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody><% rows.forEach((u) => { %>
+      <tr><th scope="row" data-label="Personne"><span class="mk-su-person"><span class="mk-su-avatar" aria-hidden="true"><%= initials(u.username) %></span><span class="mk-tx-name"><a href="<%= frameUrl("list", "?membre=" + u.id) %>"><%= u.username %></a><span class="mk-sub"><%= u.email %></span></span></span></th>
+        <td data-label="Rôle sur ce site"><%= roleName(u.role) %><% if (u.mode === "limit") { %> <span class="mk-sub">(plafonné)</span><% } %></td>
+        <td data-label="Compte"><span class="mk-status <%= stClass[u.status] || "mk-status-off" %>"><%= stLabel[u.status] || u.status %></span></td>
+        <td data-label="Dernière activité"><%= u.last_seen_at ? fdt(u.last_seen_at) : "Jamais" %></td><td data-label="Depuis le"><%= fd(u.since) %></td>
+        <td class="mk-row-actions"><a class="btn btn-outline btn-sm" href="<%= frameUrl("list", "?membre=" + u.id) %>">Voir</a></td></tr>
+    <% }) %></tbody></table></div>
+  <nav class="mk-cms-pager" aria-label="Pagination"><span><%= result.total %> personne<%= result.total > 1 ? "s" : "" %></span>
+    <% if (result.pages > 1) { %><span class="mk-cms-pager-nav"><% if (result.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page - 1 }) %>">Précédent</a><% } %><span>Page <%= result.page %> sur <%= result.pages %></span><% if (result.page < result.pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %></nav>
+  <% } %>
+
+<% } else if (mode === "detail") { %>
+  <div class="mk-head"><div class="mk-head-main"><p class="mk-crumb"><a href="<%= frameUrl("list") %>">← Utilisateurs</a></p><h1><span class="mk-su-avatar mk-su-avatar--lg" aria-hidden="true"><%= initials(member.username) %></span> <%= member.username %></h1><p class="mk-head-sub"><%= member.email %></p></div></div>
+  <div class="mk-su-cols">
+    <section class="mk-panel mk-su-card" aria-labelledby="su-d-p"><h2 id="su-d-p">Profil</h2>
+      <dl class="mk-tl-dl"><div><dt>Compte</dt><dd><span class="mk-status <%= stClass[member.status] || "mk-status-off" %>"><%= stLabel[member.status] || member.status %></span></dd></div>
+        <div><dt>Accès à ce site depuis</dt><dd><%= fd(member.since) %><%= member.added_by ? " (ajouté par " + member.added_by : "" %><%= member.added_by ? ")" : "" %></dd></div>
+        <div><dt>Dernière connexion</dt><dd><%= member.last_login_at ? fdt(member.last_login_at) : "Jamais" %></dd></div>
+        <div><dt>Dernière activité</dt><dd><%= member.last_seen_at ? fdt(member.last_seen_at) : "Jamais" %></dd></div>
+        <% if (member.bio) { %><div><dt>Présentation</dt><dd><%= member.bio %></dd></div><% } %></dl>
+      <% if (member.in_team) { %><p class="mk-sub">Cette personne fait aussi partie de l'équipe de l'organisation (accès à tous les sites) : son rôle d'équipe se gère depuis le site principal.</p><% } %>
+      <p class="mk-sub">Le statut du compte (suspendre, désactiver) est décidé par l'administration centrale ; ici, vous gérez seulement l'accès à ce site.</p>
+    </section>
+    <section class="mk-panel mk-su-card" aria-labelledby="su-d-r"><h2 id="su-d-r">Rôle sur <%= SITE.name %></h2>
+      <form method="post" action="<%= BASE %>/<%= member.id %>/role" class="mk-form" data-su-roleform>
+        <input type="hidden" name="site" value="<%= SITE.id %>">
+        <div class="field-group"><label for="su-r">Rôle</label>
+          <select id="su-r" name="role"<%= canEdit ? "" : " disabled" %>><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.key === member.site_role ? " selected" : "" %><%= r.ok || r.key === member.site_role ? "" : " disabled" %>><%= r.name %><%= r.ok ? "" : " (droits supérieurs aux vôtres)" %></option><% }) %></select>
+          <span class="field-hint"><%= canEdit ? "Vous ne pouvez attribuer que des rôles dont vous possédez tous les droits. Le changement s'applique tout de suite." : (member.id === me ? "Vous ne pouvez pas modifier votre propre rôle : demandez à un autre administrateur." : "Lecture seule : la permission « Attribuer des rôles » est requise.") %></span></div>
+        <div class="mk-actions"><% if (canEdit) { %><button type="submit" class="btn btn-primary btn-sm" data-su-save disabled>Enregistrer le rôle</button><% } %><span class="mk-sub" data-su-state role="status" aria-live="polite"></span></div>
+      </form>
+      <% if (canRemove) { %><form method="post" action="<%= BASE %>/<%= member.id %>/retirer" class="mk-su-remove"><input type="hidden" name="site" value="<%= SITE.id %>">
+        <button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Cette personne perd l'accès à « <%= SITE.name %> ». Son compte, ses autres sites et son appartenance à l'équipe ne changent pas." data-mk-confirm-title="Retirer l'accès à ce site ?" data-mk-confirm-ok="Retirer">Retirer l'accès à ce site</button></form><% } %>
+    </section>
+  </div>
+  <section class="mk-panel mk-su-card" aria-labelledby="su-d-e"><h2 id="su-d-e">Permissions effectives sur ce site</h2>
+    <p class="mk-sub">Ce que cette personne peut réellement faire ici (rôle de site <%= member.in_team ? "et rôle d'équipe " : "" %>réunis). <%= member.permissions.size %> permission<%= member.permissions.size > 1 ? "s" : "" %>.</p>
+    <div class="mk-pv-acc-group mk-su-perms">
+      <% groups.forEach((g) => { const has = g.perms.filter((p) => member.permissions.has(p[0])); if (!has.length) return; %>
+      <details class="mk-su-group"><summary><span><%= g.label %></span><span class="mk-sub"><%= has.length %> / <%= g.perms.length %></span></summary>
+        <ul><% g.perms.forEach((p) => { %><li class="<%= member.permissions.has(p[0]) ? "is-on" : "is-off" %>"><span class="mk-su-tick" aria-hidden="true"><%= member.permissions.has(p[0]) ? "✓" : "–" %></span><%= p[1] %><span class="sr-only"><%= member.permissions.has(p[0]) ? " (autorisé)" : " (non autorisé)" %></span></li><% }) %></ul></details>
+      <% }) %>
+    </div>
+  </section>
+  <section class="mk-panel mk-su-card" aria-labelledby="su-d-h"><h2 id="su-d-h">Historique sur ce site</h2>
+    <% if (!member.history.length) { %><p class="mk-sub">Aucune opération administrative enregistrée pour cette personne sur ce site.</p>
+    <% } else { %><ul class="mk-su-history"><% member.history.forEach((h) => { %><li><strong><%= actionLabel[h.action] || h.action %></strong><%= h.role ? " : " + roleName(h.role) : "" %><span class="mk-sub"> · par <%= h.actor %> · <%= fdt(h.at) %></span></li><% }) %></ul><% } %>
+  </section>
+
+<% } else if (mode === "invite") { %>
+  <div class="mk-head"><div class="mk-head-main"><h1>Inviter quelqu'un</h1><p class="mk-head-sub">L'invitation ne donne accès qu'à <strong><%= SITE.name %></strong>. La personne reçoit un lien personnel (à usage unique) pour créer son compte ; si elle en a déjà un, l'accès lui est donné tout de suite.</p></div></div>
+  <% if (!canInvite) { %><p class="mk-sg-note">Ce site est archivé : on n'y invite plus personne.</p><% } else { %>
+  <%- include("partials/invite-form", { action: BASE + "/inviter", roles, sites: null, fixedSite: { id: SITE.id, name: SITE.name }, days, hidden }) %>
+  <% } %>
+
+<% } else if (mode === "invitations") { %>
+  <div class="mk-head"><div class="mk-head-main"><h1>Invitations</h1><p class="mk-head-sub">Les invitations pour <strong><%= SITE.name %></strong>. Un lien ne fonctionne qu'une fois ; « Renvoyer » crée un nouveau lien et annule l'ancien. « E-mail envoyé » veut dire accepté par le serveur d'envoi.</p></div><div class="mk-actions"><% if (canInvite) { %><a class="btn btn-primary btn-sm" href="<%= frameUrl("invite") %>">Inviter</a><% } %></div></div>
+  <%- include("partials/invitations-panel", { result, f, roles, sites: null, roleName, listUrl: frameUrl("invitations"), postBase: BASE + "/invitations", hidden, canCreate: canInvite, inviteUrl: frameUrl("invite") }) %>
+
+<% } else if (mode === "roles") { %>
+  <div class="mk-head"><div class="mk-head-main"><h1>Rôles</h1><p class="mk-head-sub">Les rôles sont communs à tous les sites de l'organisation : on les consulte ici, on ne les modifie pas depuis un site.<% if (teamUser && can("roles.manage")) { %> Pour en créer ou en modifier, ouvrez <a href="/marketing/site-web/utilisateurs/roles">Utilisateurs → Rôles</a> du site principal.<% } %></p></div></div>
+  <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table"><caption class="sr-only">Rôles</caption>
+    <thead><tr><th scope="col">Rôle</th><th scope="col">Description</th><th scope="col">Type</th><th scope="col">Permissions</th><th scope="col">Sur ce site</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody><% roles.forEach((r) => { %><tr><th scope="row" data-label="Rôle"><%= r.name %></th><td data-label="Description"><%= r.description || "—" %></td><td data-label="Type"><%= r.system ? "Système" : "Personnalisé" %></td><td data-label="Permissions"><%= r.count %></td>
+      <td data-label="Sur ce site"><%= r.here %> personne<%= r.here > 1 ? "s" : "" %></td><td class="mk-row-actions"><a class="btn btn-outline btn-sm" href="<%= frameUrl("permissions", "?role=" + r.key) %>">Voir les permissions</a></td></tr><% }) %></tbody></table></div>
+
+<% } else if (mode === "permissions") { %>
+  <div class="mk-head"><div class="mk-head-main"><h1>Permissions</h1><p class="mk-head-sub">Ce que permet chaque rôle (lecture). Votre propre accès sur <%= SITE.name %> : <strong><%= mine.size %> permission<%= mine.size > 1 ? "s" : "" %></strong>.</p></div></div>
+  <form class="mk-cms-toolbar" method="get" action="<%= frameUrl("permissions") %>" aria-label="Choisir un rôle">
+    <label for="su-pr">Rôle</label><select id="su-pr" name="role" data-us-autosubmit><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.key === roleKey ? " selected" : "" %>><%= r.name %></option><% }) %></select><button type="submit" class="btn btn-outline btn-sm">Afficher</button></form>
+  <p class="mk-sub"><%= role.description %> <%= role.permissions.size %> permission<%= role.permissions.size > 1 ? "s" : "" %>.</p>
+  <div class="mk-pv-acc-group mk-su-perms"><% groups.forEach((g) => { const has = g.perms.filter((p) => role.permissions.has(p[0])); %>
+    <details class="mk-su-group"<%= has.length ? " open" : "" %>><summary><span><%= g.label %></span><span class="mk-sub"><%= has.length %> / <%= g.perms.length %></span></summary>
+      <ul><% g.perms.forEach((p) => { %><li class="<%= role.permissions.has(p[0]) ? "is-on" : "is-off" %>"><span class="mk-su-tick" aria-hidden="true"><%= role.permissions.has(p[0]) ? "✓" : "–" %></span><%= p[1] %><span class="sr-only"><%= role.permissions.has(p[0]) ? " (autorisé)" : " (non autorisé)" %></span><% if (role.permissions.has(p[0]) && !mine.has(p[0])) { %><span class="mk-sub"> · vous ne l'avez pas</span><% } %></li><% }) %></ul></details>
+  <% }) %></div>
+<% } %>
+</div>
+<%- include("partials/bottom") %>

@@ -140,10 +140,13 @@ function assertNotLastOwner(organizationId, userId, why) {
   if (owners.length <= 1 && owners.includes(userId)) throw new UserError(`Impossible : c'est le dernier Super administrateur actif. ${why}`);
 }
 // Modifier un compte (rôle, statut, retrait) : jamais soi-même, jamais un niveau supérieur ou égal sans en avoir tous les droits
-function assertCanManage(actorId, actorPerms, organizationId, targetId, { self = "vous-même" } = {}) {
+// `siteId` : quand on agit sur l'accès à UN site, le rôle que la cible y possède déjà compte aussi (sinon une personne peu dotée rétrograderait ou retirerait un administrateur du site)
+function assertCanManage(actorId, actorPerms, organizationId, targetId, { self = "vous-même", siteId = null } = {}) {
   if (actorId === targetId) throw new UserError(`Vous ne pouvez pas modifier ${self} : demandez à un autre administrateur.`);
   const target = membershipOf(targetId, organizationId);
   if (target && getRole(target.role) && !subset(getRole(target.role).permissions, actorPerms)) throw new UserError("Cette personne a des droits que vous n'avez pas vous-même : vous ne pouvez pas la modifier.");
+  const onSite = Number.isInteger(siteId) ? siteRoleOf(targetId, siteId) : null;
+  if (onSite && getRole(onSite.role) && !subset(getRole(onSite.role).permissions, actorPerms)) throw new UserError("Cette personne a, sur ce site, des droits que vous n'avez pas vous-même : vous ne pouvez pas la modifier.");
 }
 const audit = (organizationId, actorId, action, resourceType, resourceId, metadata, siteId) => {
   try { recordAudit(db, { organizationId, userId: actorId, action, resourceType, resourceId, metadata, siteId }); } catch { /* la journalisation ne casse jamais l'action */ }
@@ -272,7 +275,7 @@ const SITE_MODES = Object.freeze(["add", "limit"]);
 function setSiteRole(organizationId, actor, targetId, siteId, roleKey, { mode } = {}) {
   const site = db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId);
   if (!site) throw new UserError("Site introuvable.");
-  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
+  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès", siteId });
   assertCanGrantRole(actor.perms, roleKey);
   if (roleKey === "owner") throw new UserError("Le rôle Super administrateur ne s'attribue pas à un seul site.");
   if (!db.prepare("SELECT 1 FROM users WHERE id = ?").get(targetId)) throw new UserError("Compte introuvable.");
@@ -298,7 +301,7 @@ function setSiteMode(organizationId, actor, targetId, siteId, mode) {
   if (!row) throw new UserError("Cette personne n'a pas d'accès propre à ce site.");
   const site = db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId);
   if (!site) throw new UserError("Site introuvable.");
-  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
+  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès", siteId });
   if (mode === "limit") assertCanLimit(organizationId, targetId);
   else if (row.mode === "limit") assertCanGrantRole(actor.perms, row.role); // retirer un plafond élargit les droits : même règle anti-escalade qu'un octroi
   db.prepare("UPDATE mk_site_members SET mode = ? WHERE site_id = ? AND user_id = ?").run(mode, siteId, targetId);
@@ -306,10 +309,40 @@ function setSiteMode(organizationId, actor, targetId, siteId, mode) {
   return site;
 }
 function removeSiteRole(organizationId, actor, targetId, siteId) {
-  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
+  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès", siteId });
   const info = db.prepare("DELETE FROM mk_site_members WHERE site_id = ? AND user_id = ?").run(siteId, targetId);
   if (!info.changes) throw new UserError("Aucun accès à retirer.");
   audit(organizationId, actor.id, "site_access.revoked", "user", targetId, { siteId }, siteId);
+}
+
+
+// ---------- Administration LOCALE d'un site : personnes qui ont un rôle propre à CE site (jamais celles d'un autre site, jamais le détail de l'équipe centrale) ----------
+function listSiteMembers(organizationId, siteId, { q = "", role = "", status = "", sort = "nom", page = 1, perPage = 25 } = {}) {
+  const where = ["sm.site_id = ?"], args = [organizationId, siteId];
+  if (q) { where.push("(u.username LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\')"); args.push(like(q), like(q)); }
+  if (role) { where.push("sm.role = ?"); args.push(role); }
+  if (["active", "suspended", "disabled"].includes(status)) { where.push("u.status = ?"); args.push(status); }
+  const base = `FROM mk_site_members sm JOIN users u ON u.id = sm.user_id JOIN mk_sites s ON s.id = sm.site_id AND s.organization_id = ? WHERE ${where.join(" AND ")}`;
+  const total = db.prepare(`SELECT COUNT(*) n ${base}`).get(...args).n;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
+  const order = { nom: "u.username COLLATE NOCASE ASC", recent: "sm.created_at DESC, u.id DESC", activite: "COALESCE(u.last_seen_at, '') DESC, u.username COLLATE NOCASE" }[sort] || "u.username COLLATE NOCASE ASC";
+  const rows = db.prepare(`SELECT u.id, u.username, u.email, u.status, sm.role, sm.mode, sm.created_at AS since, u.last_seen_at ${base} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
+  return { rows, total, page: current, pages };
+}
+const siteStatusCounts = (siteId) => { const out = { all: 0, active: 0, suspended: 0, disabled: 0 }; for (const r of db.prepare("SELECT u.status, COUNT(*) n FROM mk_site_members sm JOIN users u ON u.id = sm.user_id WHERE sm.site_id = ? GROUP BY u.status").all(siteId)) { out[r.status] = r.n; out.all += r.n; } return out; };
+const siteRoleCounts = (siteId) => Object.fromEntries(db.prepare("SELECT role, COUNT(*) n FROM mk_site_members WHERE site_id = ? GROUP BY role").all(siteId).map((r) => [r.role, r.n]));
+// Fiche d'une personne DU SITE : null si elle n'y a pas de rôle propre (on ne révèle jamais l'existence d'un compte hors du site)
+function siteMemberDetail(organizationId, siteId, userId) {
+  const row = db.prepare("SELECT sm.role, sm.mode, sm.created_at AS since, sm.created_by FROM mk_site_members sm JOIN mk_sites s ON s.id = sm.site_id AND s.organization_id = ? WHERE sm.site_id = ? AND sm.user_id = ?").get(organizationId, siteId, userId);
+  if (!row) return null;
+  const u = db.prepare("SELECT id, username, email, status, bio, created_at, last_login_at, last_seen_at FROM users WHERE id = ?").get(userId);
+  if (!u) return null;
+  const by = row.created_by ? db.prepare("SELECT username FROM users WHERE id = ?").get(row.created_by) : null;
+  const team = membershipOf(userId, organizationId);
+  const history = db.prepare("SELECT l.action, l.created_at, l.metadata, a.username AS actor FROM mk_audit_logs l LEFT JOIN users a ON a.id = l.user_id WHERE l.organization_id = ? AND l.site_id = ? AND l.resource_type = 'user' AND l.resource_id = ? ORDER BY l.id DESC LIMIT 15").all(organizationId, siteId, String(userId))
+    .map((h) => { let m = {}; try { m = JSON.parse(h.metadata); } catch { /* métadonnées illisibles : ignorées */ } return { action: h.action, at: h.created_at, actor: h.actor || "—", role: m.role || null, mode: m.mode || null }; });
+  return { ...u, site_role: row.role, mode: row.mode, since: row.since, added_by: by ? by.username : null, in_team: Boolean(team), permissions: effectivePermissions(userId, { organizationId, siteId }), history };
 }
 
 // ---------- Invitations ----------
@@ -447,5 +480,5 @@ module.exports = {
   GROUPS, LABELS, ACTIONS, OWNER_ONLY, ASSIGNABLE, SYSTEM_ROLES, INVITE_DAYS, INVITE_MAX_PER_HOUR, RESEND_COOLDOWN_SECONDS, MAX_SENDS, recordDelivery,
   getRole, allRoles, customRoles, invalidate, cacheInfo, permissionsOf, membershipOf, siteRoleOf, siteMemberships, effectivePermissions, can, subset,
   assertCanGrantRole, assertNotLastOwner, assertCanManage, createRole, updateRole, deleteRole, roleUsage, listMembers, statusCounts, memberDetail,
-  setOrgRole, setStatus, removeFromTeam, setSiteRole, setSiteMode, SITE_MODES, removeSiteRole, invite, reissue, revoke, listInvitations, invitationByToken, acceptInvitation, matrix, activeOwners,
+  listSiteMembers, siteStatusCounts, siteRoleCounts, siteMemberDetail, setOrgRole, setStatus, removeFromTeam, setSiteRole, setSiteMode, SITE_MODES, removeSiteRole, invite, reissue, revoke, listInvitations, invitationByToken, acceptInvitation, matrix, activeOwners,
 };

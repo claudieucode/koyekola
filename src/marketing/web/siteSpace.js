@@ -87,14 +87,6 @@ const SCREENS = {
         rows: rows.map((r) => ({ cells: [r.source_path, r.target, String(r.status), r.enabled ? { status: { label: "Active", cls: "mk-status-ok" } } : { status: { label: "Désactivée", cls: "" } }, String(r.hits || 0), fdate(r.created_at)] })),
         empty: empty("arrowRightLeft", "Aucune redirection", "Ce site n'a aucune redirection.") } };
   },
-
-  equipe(req, space) {
-    const rows = req.mk.ctx.db.prepare("SELECT u.username, m.role, m.created_at FROM mk_site_members m JOIN users u ON u.id = m.user_id WHERE m.site_id = ? ORDER BY u.username COLLATE NOCASE").all(space.siteId);
-    return { title: "Équipe du site", lead: "Les personnes qui ont un rôle sur ce site. L'équipe de l'organisation a accès à tous les sites.", note: readOnlyNote(space),
-      table: { caption: "Équipe du site", columns: [{ label: "Personne" }, { label: "Rôle" }, { label: "Depuis le" }],
-        rows: rows.map((r) => ({ cells: [r.username, data.ROLE_LABEL[r.role] || r.role, fdate(r.created_at)] })),
-        empty: empty("users", "Aucune personne rattachée", "Aucun rôle propre à ce site n'est attribué : seule l'équipe de l'organisation y accède.") } };
-  },
 };
 
 const SOON_TEXT = {

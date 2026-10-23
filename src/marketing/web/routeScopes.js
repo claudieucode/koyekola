@@ -97,6 +97,7 @@ const SITE_RULES = Object.freeze([
   { id: "modele-page-lecture", pattern: /^\/site-web\/modeles(?:\.json|\/\d+\.json)$/, methods: ["GET"], kind: "queryGet" },
   { id: "modele-page-suppression", pattern: /^\/site-web\/modeles\/(\d+)\/supprimer$/, methods: ["POST"], kind: "resource", table: "modelePage", idGroup: 1 },
   { id: "outils-et-parametres", pattern: /^\/site-web\/(?:outils|parametres)(?:\/|$)/, kind: "param", terminal: true },
+  { id: "equipe-du-site", pattern: /^\/site-web\/equipe-site(?:\/|$)/, kind: "param", terminal: true }, // Utilisateurs d'un site : le site est le paramètre validé (?site= / champ « site »), revérifié par siteTarget
   { id: "email-par-identifiant", pattern: new RegExp(`^\\/(${EMAIL_FAMILIES})\\/(\\d{1,12})(?:\\/|$)`), kind: "resource", table: "byFamily", idGroup: 2 },
   { id: "tests-ab-du-site", pattern: /^\/site-web\/tests-ab$/, methods: ["GET"], kind: "queryGet" },
   { id: "test-ab-par-identifiant", pattern: /^\/tests-ab\/(\d{1,12})(?:\/|$)/, kind: "resource", table: "test", idGroup: 1 },
@@ -178,7 +179,7 @@ const FAMILIES = Object.freeze([
   { id: "templates-par-site", scope: "site", pattern: /^\/site-web\/templates(?:\/|$)/ },
   { id: "editeur-du-site-par-site", scope: "site", pattern: /^\/site-web\/editeur-du-site(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
-  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
+  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|equipe-site|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —
   { id: "tableau-de-bord", scope: "organization", pattern: /^\/$/ },
   { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
