@@ -222,8 +222,8 @@
 .color-field input[type="color"] { width: 44px; height: 36px; padding: 2px; border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-card); cursor: pointer; }
 .color-field input[type="text"] { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-card); color: var(--dash-text); font-family: ui-monospace, Menlo, monospace; font-size: 14px; text-transform: uppercase; }
 .color-field input[aria-invalid="true"] { border-color: var(--dash-danger); }
-.preview-frame { display: grid; grid-template-columns: 30% 1fr; height: 200px; border-radius: var(--dash-radius); overflow: hidden; border: 1px solid var(--dash-border); box-shadow: var(--dash-shadow); }
-.preview-side { display: grid; min-width: 0; overflow-wrap: anywhere; align-content: start; gap: 8px; padding: 14px 10px; background: var(--dash-sidebar); color: var(--dash-sidebar-text); font-size: 12px; }
+.preview-frame { display: grid; grid-template-columns: 40% 1fr; min-height: 200px; border-radius: var(--dash-radius); overflow: hidden; border: 1px solid var(--dash-border); box-shadow: var(--dash-shadow); }
+.preview-side { display: grid; min-width: 0; overflow-wrap: break-word; align-content: start; gap: 8px; padding: 14px 10px; background: var(--dash-sidebar); color: var(--dash-sidebar-text); font-size: 12px; }
 .preview-side b { font-family: var(--font-display); }
 .preview-side span { padding: 5px 8px; border-radius: 6px; }
 .preview-side span.on { background: var(--dash-active-bg); color: var(--dash-active-text); font-weight: 700; }

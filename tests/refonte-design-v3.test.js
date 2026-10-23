@@ -139,3 +139,24 @@ describe("design v3 : pages publiques, élève, authentification, erreurs, compt
     });
   });
 });
+
+describe("design v3 — Lot D : administration (formateur, gestion, SEO, CMS)", () => {
+  const css = (f) => fs.readFileSync(path.join(__dirname, "..", "public", "css", f), "utf8");
+  test("aucun texte de l'administration n'est composé sous 0,72 rem (11,5 px)", () => {
+    for (const f of ["kola-ui.css", "cms.css", "adminbar.css", "dashboard.css", "app-rail.css"]) {
+      const small = [...css(f).matchAll(/font-size:\s*(0?\.\d+)rem/g)].filter((m) => parseFloat(m[1]) < 0.72).map((m) => m[0]);
+      const px = [...css(f).matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)].filter((m) => parseFloat(m[1]) < 11).map((m) => m[0]);
+      assert.deepEqual([...small, ...px], [], `${f} : texte trop petit`);
+    }
+  });
+  test("la marque du CMS est un carré plein, comme sur le site public (pas de dégradé ni de reflet)", () => {
+    const m = /\.mk-sidebar \.mk-brand-mark, html\[data-mk-theme\] \.mk-sidebar \.mk-brand-mark \{([^}]*)\}/.exec(css("kola-ui.css"));
+    assert.ok(m);
+    assert.doesNotMatch(m[1], /gradient|inset/); assert.match(m[1], /box-shadow:\s*none/);
+  });
+  test("l'aperçu de l'apparence ne coupe plus les mots et ne rogne plus ses lignes", () => {
+    const D = css("dashboard.css");
+    assert.match(D, /\.preview-frame \{[^}]*min-height: 200px/); assert.doesNotMatch(D, /\.preview-frame \{[^}]*[^-]height: 200px/);
+    assert.doesNotMatch(D, /\.preview-side \{[^}]*overflow-wrap: anywhere/);
+  });
+});
