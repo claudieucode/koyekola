@@ -65,7 +65,8 @@ describe("écrans et accès", () => {
     const main = (await jget(boss, API)).body.settings.map((s) => s.key);
     const sub = (await jget(boss, `${API}${qs(site)}`)).body.settings.map((s) => s.key);
     assert.ok(main.includes("posts_per_page") && main.includes("comments_moderation") && main.includes("admin_email") && main.includes("media_max_image_mb"));
-    assert.ok(!sub.includes("posts_per_page") && !sub.includes("comments_moderation") && !sub.includes("admin_email"), "le contenu de l'organisation n'est pas un réglage de site");
+    assert.ok(sub.includes("posts_per_page") && sub.includes("feed_items"), "la lecture (articles par page, flux) est propre à chaque site");
+    assert.ok(!sub.includes("comments_moderation") && !sub.includes("admin_email"), "le contenu de l'organisation n'est pas un réglage de site");
     assert.ok(sub.includes("public_url") && sub.includes("logo") && sub.includes("favicon") && !main.includes("public_url"));
     assert.equal((await apiPut(boss, "SITE_URL", "https://evil.example")).status, 404, "la configuration de la plateforme n'est pas un réglage");
     assert.equal((await apiPut(boss, "ENCRYPTION_KEY", "x")).status, 404);

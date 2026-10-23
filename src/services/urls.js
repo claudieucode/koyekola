@@ -79,7 +79,9 @@ function loadSites() {
       let host = "";
       const url = conf.seo && conf.seo.publicUrl;
       if (url) { try { const u = new URL(url); if (u.protocol === "https:") { base = u.origin; host = u.hostname.toLowerCase(); } } catch { /* adresse invalide : ignorée */ } }
-      const info = { id: s.id, name: s.name, active: s.status === "active" && !s.deleted_at, homePageId: s.home_page_id, base, host, noindex: Boolean(conf.extras && conf.extras.noindex) };
+      const rd = conf.reading || {};
+      const front = rd.showOnFront === "posts" ? "posts" : "page";
+      const info = { id: s.id, name: s.name, active: s.status === "active" && !s.deleted_at, homePageId: front === "posts" ? null : s.home_page_id, front, postsPage: Number.isInteger(rd.postsPage) ? rd.postsPage : null, postsPerPage: Number.isInteger(rd.postsPerPage) && rd.postsPerPage >= 1 && rd.postsPerPage <= 50 ? rd.postsPerPage : 10, feedItems: Number.isInteger(rd.feedItems) && rd.feedItems >= 1 && rd.feedItems <= 50 ? rd.feedItems : 20, feedContent: rd.feedContent === "full" ? "full" : "excerpt", base, host, noindex: Boolean(conf.extras && conf.extras.noindex) };
       byId.set(s.id, info);
       if (host && info.active && !byHost.has(host)) byHost.set(host, info);
       else if (host && !info.active) retired.add(host);
@@ -111,7 +113,7 @@ const taxonomy = () => require("./taxonomy");
 // Page : « /p/<adresse> » ; page d'un site à domaine propre : racine (« / » pour son accueil, « /<adresse> » sinon)
 function pagePath(page, { hostSite = undefined } = {}) {
   // Page d'accueil du site principal (Paramètres → Lecture) : son adresse est « / »
-  if (page && page.id && (page.site_id === null || page.site_id === undefined) && (page.status === undefined || page.status === "published") && !page.archived_at) { try { if (require("./settings").main().homepagePage === page.id) return "/"; } catch { /* réglages indisponibles */ } }
+  if (page && page.id && (page.site_id === null || page.site_id === undefined) && (page.status === undefined || page.status === "published") && !page.archived_at) { try { if (require("./settings").main().homeId === page.id) return "/"; } catch { /* réglages indisponibles */ } }
   const site = siteInfo(page.site_id);
   const own = site && site.base ? site : null;
   // hostSite : site de la requête (domaine propre). Une page n'est servie à la racine que sur le domaine de SON site.

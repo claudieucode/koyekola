@@ -76,9 +76,18 @@ module.exports = () => {
       title: `Paramètres · ${engine.GROUPS[group].label}`, active: group === "general" ? "parametres" : `parametres/${SLUG_OF[group]}`, group, groupLabel: engine.GROUPS[group].label, intro: engine.GROUPS[group].intro, view,
       scope, q: q(scope), BASE, SLUG_OF, SLUGS, sites: sitesFor(req), siteOnly: req.mk.siteOnly, groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), choices: choices(req, scope), TIMEZONES: engine.TIMEZONES,
       structure: group === "permalinks" ? permalinkStructure() : null, settingsJs: true, pending: extra.pending || null, errors: extra.errors || [], formValues: extra.formValues || null,
+      ...(group === "reading" ? readingExtras(req, scope, extra.frame) : {}),
       frame: Boolean(extra.frame), recap: scope.siteId ? platformRecap(req, group, scope) : null, canTeam: !req.mk.siteOnly,
     });
   };
+  // Lecture : état de la visibilité (même réglage que Paramètres → Indexation), adresse du flux réel, lien vers l'écran d'indexation
+  function readingExtras(req, scope, frame) {
+    const vis = engine.readAll(scope, ctxOf(req)).search_visibility.value;
+    const info = scope.siteId ? require("../../services/urls").siteInfo(scope.siteId) : null;
+    const feedUrl = scope.siteId ? (info && info.base ? `${info.base}/blog/feed.xml` : null) : "/blog/feed.xml";
+    const visibilityUrl = frame && scope.siteId ? `/marketing/site-web/sites/${scope.siteId}/parametres-indexation` : `${BASE}/indexation${q(scope)}`;
+    return { visibility: vis === "closed" ? "closed" : "open", visibilityUrl, feedUrl };
+  }
   function permalinkStructure() {
     const tx = require("../../services/taxonomy");
     return [["Page du CMS", "/p/<adresse>"], ["Article", "/blog/<adresse>"], ["Formation", "/cours/<adresse>"], ...Object.values(tx.TAXONOMIES).map((t) => [t.label, `${tx.baseOf(t.key)}/<adresse>`])];

@@ -30,7 +30,8 @@
 <form method="post" action="<%= BASE %><%= group === "general" ? "" : "/" + SLUG_OF[group] %><%= q %>" class="mk-panel mk-st-form" data-st-form novalidate>
   <fieldset class="mk-st-fieldset"<%= anyEditable ? "" : " disabled" %>>
     <legend class="sr-only"><%= groupLabel %></legend>
-    <% view.forEach((f) => { const id = "st-" + f.key; const hid = id + "-h"; const dis = f.editable ? "" : " disabled"; %>
+    <% if (group === "reading") { %><%- include("partials/reading-fields", { view, choices, scope, visibility, visibilityUrl, feedUrl }) %><% } %>
+    <% (group === "reading" ? [] : view).forEach((f) => { const id = "st-" + f.key; const hid = id + "-h"; const dis = f.editable ? "" : " disabled"; %>
       <div class="field-group mk-st-field">
         <% if (f.type === "boolean") { %>
           <input type="hidden" name="_b_<%= f.key %>" value="1"<%- f.editable ? "" : " disabled" %>>

@@ -51,7 +51,9 @@ function guardPublication(fields, status, req, extra = {}) {
 
 const router = express.Router();
 // Articles par page : réglage « Lecture » (Paramètres), 10 par défaut
-const perPage = () => require("../services/settings").main().postsPerPage;
+// Lecture (Paramètres → Lecture) : valeurs du site de la requête (domaine propre) ou du site principal
+const readingOf = (req) => (req && req.kwSite ? req.kwSite : require("../services/settings").main());
+const perPage = (req) => readingOf(req).postsPerPage;
 const MAX_MARKDOWN = 50000;
 const MAX_HTML = 250000;
 const NEWSLETTER_KEY = "blog.newsletter_form";
@@ -146,7 +148,7 @@ function renderList(req, res, { filter = null } = {}) {
     rows = rows.filter((p) => p.id !== featured.id);
   }
   const total = rows.length;
-  const PER_PAGE = perPage();
+  const PER_PAGE = perPage(req);
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const asked = Number.parseInt(req.query.page, 10);
   const page = Number.isInteger(asked) && asked >= 1 && asked <= pages ? asked : 1;
@@ -157,8 +159,9 @@ function renderList(req, res, { filter = null } = {}) {
     theme: themeFor({ name: p.category || "", slug: p.category ? slugify(p.category) : "" }),
   });
   const posts = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(decorate);
-  const basePath = filter ? filter.path : "/blog";
-  const heading = filter ? filter.heading : "Blog";
+  const listed0 = req.kwList || null; // accueil en mode articles, ou page des articles : l'adresse publique n'est pas /blog
+  const basePath = filter ? filter.path : listed0 ? listed0.basePath : "/blog";
+  const heading = filter ? filter.heading : listed0 && listed0.title ? listed0.title : "Blog";
   const crumbs = filter ? [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }, ...(filter.ancestors || []), { name: filter.label }] : [{ name: "Accueil", url: "/" }, { name: "Blog" }];
   // Données structurées : l'article à la une fait partie de la liste (en tête), comme les autres articles de la page
   const listed = featured && page === 1 ? [featured, ...posts] : posts;
@@ -228,16 +231,17 @@ router.get("/recherche", (req, res) => {
 router.get("/blog/feed.xml", (req, res) => {
   const { escapeXml } = require("../utils/seo");
   const feedScope = urls.contentScope("post", "posts.id", req.kwSite || null); // le flux d'un domaine ne contient que les articles de ce domaine
-  const rows = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${feedScope ? " AND " + feedScope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT 20`).all(...(feedScope ? feedScope.params : []));
+  const rows = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${feedScope ? " AND " + feedScope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT ?`).all(...(feedScope ? feedScope.params : []), readingOf(req).feedItems);
+  const full = readingOf(req).feedContent === "full"; // Paramètres → Lecture : texte complet ou extrait
   const siteName = (req.kwSite && req.kwSite.name) || require("../seo/settings").get("site_name") || "KOLAKISA";
   const date = (value) => { const d = new Date(String(value || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(value)) ? "" : "Z")); return Number.isNaN(d.getTime()) ? new Date(0).toUTCString() : d.toUTCString(); };
   const items = rows.map((p) => {
     const url = absoluteUrl(req, `/blog/${encodeURIComponent(urls.publicHomeOf("post", p.id) ? urls.addressOf("post", p) : p.slug)}`);
-    return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description></item>`;
+    return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description>${full ? `<content:encoded><![CDATA[${String(blog.renderPost(p).html || "").replace(/\]\]>/g, "]]]]><![CDATA[>")}]]></content:encoded>` : ""}</item>`;
   }).join("");
   const channelLast = rows.length ? date(rows[0].published_at) : new Date(0).toUTCString();
-  res.set("Content-Type", "application/rss+xml; charset=utf-8").set("Cache-Control", "public, max-age=300");
-  res.send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>${escapeXml(siteName)} — Blog</title><link>${escapeXml(absoluteUrl(req, "/blog"))}</link><description>Les derniers articles du blog.</description><language>fr</language><lastBuildDate>${channelLast}</lastBuildDate><atom:link href="${escapeXml(absoluteUrl(req, "/blog/feed.xml"))}" rel="self" type="application/rss+xml"/>${items}</channel></rss>`);
+  res.set("Content-Type", "application/rss+xml; charset=utf-8").set("Cache-Control", "public, no-cache");
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>${escapeXml(siteName)} — Blog</title><link>${escapeXml(absoluteUrl(req, "/blog"))}</link><description>Les derniers articles du blog.</description><language>fr</language><lastBuildDate>${channelLast}</lastBuildDate><atom:link href="${escapeXml(absoluteUrl(req, "/blog/feed.xml"))}" rel="self" type="application/rss+xml"/>${items}</channel></rss>`);
 });
 
 // Archives : adresses configurables (taxonomy.baseOf) ; un terme inexistant est une vraie 404 (jamais une archive « vide » inventée)

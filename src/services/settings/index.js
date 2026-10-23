@@ -15,7 +15,7 @@ const PREFIX = "cms.";
 const MAX_VALUE = 8192;
 const GROUPS = {
   general: { label: "Général", intro: "Identité du site, langue, fuseau horaire et formats de date." },
-  reading: { label: "Lecture", intro: "Page d'accueil et affichage des archives du blog." },
+  reading: { label: "Lecture", intro: "Ce que le site affiche à son accueil, combien d'articles par page, et ce que contient le flux de syndication." },
   comments: { label: "Commentaires", intro: "Réglages globaux du moteur de commentaires (la modération se fait dans Commentaires)." },
   media: { label: "Médias", intro: "Limites d'envoi des fichiers dans la médiathèque." },
   permalinks: { label: "Permaliens", intro: "Normalisation des adresses ; la structure est gérée par le moteur d'adresses." },
@@ -116,7 +116,27 @@ def({ key: "public_url", group: "general", label: "Domaine personnalisé", type:
 def({ key: "homepage_page", group: "reading", label: "Page d'accueil", type: "page", sensitive: true, nullable: true, help: "Une page publiée du CMS affichée à la racine (« / »). Vide : l'accueil standard de KOLAKISA (site principal) ou aucune (site du CMS).",
   impact: "L'adresse « / » affichera cette page. Si la page est dépubliée ou supprimée plus tard, l'accueil standard reprend automatiquement.",
   ...mainKv("homepage_page", ""), readSite: (s) => s.home_page_id || null, writeSite: (v, ctx, siteId) => pages().setHomePage(ctx, siteId, v ? Number(v) : null), defaultSite: null });
-def({ key: "posts_per_page", group: "reading", label: "Articles par page", type: "integer", min: 1, max: 50, scopes: ["main"], help: "Nombre d'articles affichés sur chaque page du blog et de ses archives.", ...mainKv("posts_per_page", 10) });
+const readingMain = (k) => kvAll()[k];
+const readingSite = (field, writer) => ({ readSite: (s) => s.settings.reading[field], writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.reading[field] = writer ? writer(v) : v; }) });
+const FRONT_MODES = (scope) => (scope.siteId
+  ? [["page", "Une page statique (choisir ci-dessous)"], ["posts", "Les derniers articles"]]
+  : [["standard", "L'accueil standard de KOLAKISA (formations)"], ["page", "Une page statique (choisir ci-dessous)"], ["posts", "Les derniers articles"]]);
+def({ key: "show_on_front", group: "reading", label: "La page d'accueil affiche", type: "enum", sensitive: true, options: FRONT_MODES,
+  help: "Les derniers articles publiés, une page statique du CMS, ou (site principal) l'accueil standard de KOLAKISA. Changer de mode ne supprime ni la page choisie ni ses réglages.",
+  impact: "L'adresse « / » change de contenu. Les pages choisies restent enregistrées : revenir au mode précédent est immédiat.",
+  readMain: () => readingMain("show_on_front") || (/^\d+$/.test(readingMain("homepage_page") || "") ? "page" : "standard"), writeMain: (v) => kvSet("show_on_front", v), defaultMain: "standard",
+  ...readingSite("showOnFront"), defaultSite: "page" });
+def({ key: "posts_page", group: "reading", label: "Page des articles", type: "page", nullable: true,
+  help: "Page publiée dont l'adresse affiche la liste des articles (le blog). Vide : le blog reste à son adresse /blog. Doit être différente de la page d'accueil.",
+  readMain: () => readingMain("posts_page") || "", writeMain: (v) => (v === "" || v === null ? kvDel("posts_page") : kvSet("posts_page", v)), defaultMain: "",
+  ...readingSite("postsPage", (v) => (v ? Number(v) : null)), defaultSite: null });
+def({ key: "posts_per_page", group: "reading", label: "Articles par page", type: "integer", min: 1, max: 50, help: "Articles affichés sur chaque page de la liste du blog, de l'accueil en mode articles et des archives (catégories, étiquettes, auteurs). Les résultats de recherche et les flux ont leurs propres limites.",
+  ...mainKv("posts_per_page", 10), ...readingSite("postsPerPage"), defaultSite: 10 });
+def({ key: "feed_items", group: "reading", label: "Éléments dans les flux de syndication", type: "integer", min: 1, max: 50, help: "Nombre d'articles publiés les plus récents présents dans le flux RSS du blog (adresse /blog/feed.xml). Distinct du nombre d'articles par page.",
+  ...mainKv("feed_items", 20), ...readingSite("feedItems"), defaultSite: 20 });
+def({ key: "feed_content", group: "reading", label: "Dans chaque publication du flux, inclure", type: "enum", options: () => [["full", "Le texte complet"], ["excerpt", "Un extrait"]],
+  help: "Le texte complet expose tout l'article aux lecteurs de flux ; l'extrait n'en donne que le début. Ne change pas l'affichage des pages du site.",
+  ...mainKv("feed_content", "excerpt"), ...readingSite("feedContent"), defaultSite: "excerpt" });
 
 // --- Commentaires (moteur propriétaire : services/comments.js) ---
 const comment = (key, label, extra) => def({ key: `comments_${key}`, group: "comments", label, scopes: ["main"], readMain: () => comments().settings()[key], writeMain: (v) => { comments().saveSettings({ [key]: v }); }, defaultMain: comments().DEFAULTS[key], ...extra });
@@ -263,7 +283,7 @@ function validate(d, raw, scope, ctx) {
       if (p.archived_at) return fail("cette page est à la corbeille.");
       // Politique de confidentialité : un brouillon peut être associé (on la rédige avant de la publier) ; le lien public n'apparaît qu'une fois la page en ligne
       if (p.status !== "published" && !d.allowDraft) return fail("cette page n'est pas publiée : elle serait introuvable pour les visiteurs.");
-      if (p.kind === "step") return fail("une étape de tunnel ne peut pas servir de page d'accueil.");
+      if (p.kind === "step") return fail("une étape de tunnel ne peut pas être choisie ici.");
       if ((p.site_id ?? null) !== (scope.siteId ?? null)) return fail("cette page n'appartient pas à ce site.");
       return { ok: true, value: id };
     }
@@ -327,7 +347,10 @@ function computeMain(kv) {
     locale, htmlLang: locale.split("_")[0], timezone: tz,
     dateFormat: require("../../utils/format").isValidDateFormat(kv.date_format) ? kv.date_format : "long", timeFormat: kv.time_format === "12h" ? "12h" : "24h",
     weekStart: ["monday", "sunday", "saturday"].includes(kv.week_start) ? kv.week_start : "monday", registrationOpen: kv.registration_open !== "false" && kv.registration_open !== "0",
-    postsPerPage: num("posts_per_page", 10, 1, 50), homepagePage: /^\d+$/.test(kv.homepage_page || "") ? Number(kv.homepage_page) : null,
+    postsPerPage: num("posts_per_page", 10, 1, 50), feedItems: num("feed_items", 20, 1, 50), feedContent: kv.feed_content === "full" ? "full" : "excerpt",
+    postsPage: /^\d+$/.test(kv.posts_page || "") ? Number(kv.posts_page) : null,
+    showOnFront: ["standard", "page", "posts"].includes(kv.show_on_front) ? kv.show_on_front : /^\d+$/.test(kv.homepage_page || "") ? "page" : "standard", homepagePage: /^\d+$/.test(kv.homepage_page || "") ? Number(kv.homepage_page) : null,
+    homeId: (kv.show_on_front || (/^\d+$/.test(kv.homepage_page || "") ? "page" : "standard")) === "page" && /^\d+$/.test(kv.homepage_page || "") ? Number(kv.homepage_page) : null,
     searchVisibility: kv.search_visibility === "closed" ? "closed" : "open", adminEmail: kv.admin_email || "", privacyPage: /^\d+$/.test(kv.privacy_page || "") ? Number(kv.privacy_page) : null,
     normalizePaths: kv.normalize_paths !== "false" && kv.normalize_paths !== "0",
     mediaLimits: { image: mb("media_max_image_mb", cap(() => media().MAX_IMAGE)), document: mb("media_max_document_mb", cap(() => media().MAX_DOCUMENT)), audio: mb("media_max_audio_mb", cap(() => media().MAX_AUDIO)), video: mb("media_max_video_mb", cap(() => media().MAX_VIDEO)) },
@@ -337,6 +360,17 @@ function computeMain(kv) {
 // ---------- Écriture ----------
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const display = (d, v) => (d.type === "boolean" ? (v ? "oui" : "non") : v === null || v === undefined || v === "" ? "(vide)" : String(v).slice(0, 120));
+
+// Cohérence de la lecture : valeurs EFFECTIVES (celles du lot, sinon celles qui sont enregistrées) ; jamais une configuration qui laisserait l'accueil vide
+function readingConflicts(scope, current, plan) {
+  if (!plan.some((p) => p.d.group === "reading")) return [];
+  const eff = (k) => { const hit = plan.find((p) => p.d.key === k); return hit ? hit.value : current[k].value; };
+  const mode = eff("show_on_front"), home = eff("homepage_page"), posts = eff("posts_page"), out = [];
+  const touched = (k) => plan.some((p) => p.d.key === k);
+  if (touched("show_on_front") && mode === "page" && !home) out.push("Page d'accueil : choisissez la page statique à afficher, ou passez à « Les derniers articles ».");
+  if ((touched("homepage_page") || touched("posts_page") || touched("show_on_front")) && mode === "page" && home && posts && Number(home) === Number(posts)) out.push("Page des articles : elle doit être différente de la page d'accueil (une même page ne peut pas afficher à la fois son contenu et la liste des articles).");
+  return out;
+}
 
 // Applique un lot de changements d'UN périmètre, tout ou rien. patch : { clé: valeur }. ctx : { can, orgLevel, organizationId, userId }.
 function update(scope, patch, ctx, { confirm = false, actor = null } = {}) {
@@ -354,6 +388,7 @@ function update(scope, patch, ctx, { confirm = false, actor = null } = {}) {
     if (same(v.value === "" ? "" : v.value, current[key].value === null ? "" : current[key].value)) continue;
     plan.push({ d, value: v.value, before: current[key].value });
   }
+  if (!errors.length) errors.push(...readingConflicts(scope, current, plan));
   if (errors.length) return { ok: false, errors };
   const needConfirm = plan.filter((p) => p.d.sensitive);
   if (needConfirm.length && !confirm) return { ok: false, confirmRequired: needConfirm.map((p) => ({ key: p.d.key, label: p.d.label, impact: p.d.impact || "Ce réglage peut changer le comportement du site.", before: display(p.d, p.before), after: display(p.d, p.value) })) };
