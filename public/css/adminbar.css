@@ -191,3 +191,9 @@ html[data-kola-theme="dark"] .is-cms { --kab-bg: #061425; --kab-bg-2: #0d2540; }
   .kab, .kab * { transition-duration: 0.001ms !important; transition-delay: 0s !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
 }
 @media print { .kab, .kab-toasts { display: none; } .is-cms .mk-app { padding-top: 0; } }
+
+/* ----- Gabarits des menus (largeurs propres à chaque menu, lignes de site) ----- */
+.kab-pop-create { min-width: 280px; }
+.kab-pop-more { min-width: 260px; }
+.kab-site-item { min-height: 48px; }
+.kab-empty { text-align: center; }

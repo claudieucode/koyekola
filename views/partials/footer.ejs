@@ -7,7 +7,7 @@
       <div class="footer-brand">
         <% const apF = (typeof appearance === "function" && appearance()) ? appearance().footer : null; %>
         <% if (apF && apF.brandResolved.mode === "image" && apF.brandResolved.image) { %><p class="logo footer-logo-img"><img src="<%= apF.brandResolved.image.src %>" alt="<%= apF.brandResolved.alt || apF.brandResolved.text %>"></p>
-        <% } else { %><p class="logo"><%= apF ? apF.brandResolved.text : "KOLAKISA" %></p><% } %>
+        <% } else { %><p class="logo" data-initial="<%= String(apF ? apF.brandResolved.text : "KOLAKISA").trim().slice(0, 1).toUpperCase() %>"><%= apF ? apF.brandResolved.text : "KOLAKISA" %></p><% } %>
         <% if (!apF || apF.tagline) { %><p class="footer-tagline"><%= apF ? apF.tagline : "Mes formations en ligne : apprenez à votre rythme, où que vous soyez." %></p><% } %>
       </div>
       <%# Navigation du CMS : un menu affecté au pied de page remplace les colonnes de liens d'origine (même structure : titre + liens) ; sinon rien ne change %>

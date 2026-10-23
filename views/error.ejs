@@ -2,11 +2,31 @@
 
   <%# Modèle de thème « Page introuvable (404) » (Page Builder), seulement pour l'erreur 404 générale ; sinon page d'origine %>
   <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><div class="container"><%- themeTemplate %></div><% } else { %>
+  <%
+    const status = typeof httpStatus === "function" ? httpStatus() : 500;
+    const KINDS = { 400: "Requête incorrecte", 401: "Connexion requise", 403: "Accès refusé", 404: "Page introuvable", 409: "Conflit", 413: "Fichier trop volumineux", 429: "Trop de requêtes", 503: "Service momentanément indisponible" };
+    const heading = KINDS[status] || (status >= 500 ? "Un problème est survenu" : "Une erreur est survenue");
+    const DEFAULTS = { 401: "Connectez-vous pour accéder à cette page.", 403: "Vous n'avez pas l'autorisation d'ouvrir cette page.", 404: "La page demandée n'existe pas ou a été déplacée.", 429: "Merci de patienter un instant avant de réessayer." };
+    // Le message d'origine est conservé ; s'il ne fait que répéter le titre, une phrase utile le remplace
+    const plain = (t) => String(t || "").replace(/[.\s]+$/, "").toLowerCase();
+    const shown = !message || plain(message) === plain(heading) ? (DEFAULTS[status] || "Vous pouvez retourner à l'accueil ou réessayer dans un instant.") : message;
+  %>
   <div class="container error-page">
-    <p class="code">Oups</p>
-    <h1>Une erreur est survenue</h1>
-    <p style="color:var(--muted);"><%= message %></p>
-    <a href="/" class="btn btn-primary" style="margin-top:16px;">Retour à l'accueil</a>
+    <p class="code">Erreur <%= status %></p>
+    <h1><%= heading %></h1>
+    <p class="kv-error-msg"><%= shown %></p>
+    <% if (status === 404) { %>
+      <form class="kv-error-search" action="/catalogue" method="get" role="search">
+        <label for="err-q" class="sr-only">Rechercher une formation</label>
+        <input id="err-q" type="search" name="q" placeholder="Rechercher une formation…" maxlength="100" autocomplete="off">
+        <button type="submit" class="btn btn-primary">Rechercher</button>
+      </form>
+    <% } %>
+    <div class="kv-error-links">
+      <a href="/" class="btn btn-primary"><%- icon("home", { size: 16 }) %> Retour à l'accueil</a>
+      <a href="/catalogue" class="btn btn-outline">Voir le catalogue</a>
+      <% if ((status === 401 || status === 403) && !(typeof currentUser !== "undefined" && currentUser)) { %><a href="/connexion" class="btn btn-outline">Se connecter</a><% } else { %><a href="/support" class="btn btn-outline">Contacter le support</a><% } %>
+    </div>
   </div>
   <% } %>
 

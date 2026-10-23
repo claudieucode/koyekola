@@ -3,9 +3,9 @@
   <div class="container confirmation-box">
     <div class="check-badge"><%- icon('check', { size: 34 }) %></div>
     <h1>Merci pour votre achat !</h1>
-    <p style="color:var(--muted);">Votre commande #<%= order.id %> a bien été enregistrée. Vos formations sont maintenant disponibles dans votre espace « Mes formations ».</p>
+    <p class="kv-error-msg" style="margin-inline:auto;">Votre commande #<%= order.id %> a bien été enregistrée. Vos formations sont maintenant disponibles dans votre espace « Mes formations ».</p>
 
-    <div class="card card-pad" style="text-align:left;margin-top:24px;">
+    <div class="card card-pad kv-receipt">
       <% items.forEach(item => { %>
         <div class="order-item-row">
           <a href="/cours/<%= item.slug %>" style="text-decoration:none;color:var(--text);font-weight:600;"><%= item.title %></a>
@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <a href="/mes-cours" class="btn btn-primary btn-lg" style="margin-top:28px;">Accéder à mes formations</a>
+    <p style="margin-top:28px;"><a href="/mes-cours" class="btn btn-primary btn-lg">Accéder à mes formations</a></p>
   </div>
 
 <%- include("partials/footer") %>

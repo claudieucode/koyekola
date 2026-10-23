@@ -1,6 +1,9 @@
 <%- include("partials/header", { title: "Connexion" }) %>
 
   <div class="auth-page">
+   <div class="kv-auth">
+    <%- include("partials/auth-aside", { asideTitle: 'Content de vous revoir parmi nous.' }) %>
+    <div class="kv-auth-main">
     <div class="auth-card">
       <h1>Content de vous revoir</h1>
       <p class="subtitle">Connectez-vous pour accéder à vos formations.</p>
@@ -21,6 +24,8 @@
       </form>
       <p class="form-footer">Pas encore de compte ? <a href="/inscription<%= redirect ? `?redirect=${encodeURIComponent(redirect)}` : "" %>">Créer un compte</a></p>
     </div>
+    </div>
+   </div>
   </div>
 
 <%- include("partials/footer") %>

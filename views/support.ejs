@@ -1,16 +1,20 @@
 <%- include("partials/header", { title: "Aide et support", seo: { noindex: true } }) %>
 
-  <div class="container" style="max-width:820px;padding:40px 20px 60px;">
-    <h1>Aide et support</h1>
-    <p style="color:var(--muted);">Une question sur une formation, un paiement ou votre compte ? Écrivez au formateur : vous serez prévenu(e) de sa réponse dans vos notifications.</p>
+  <div class="container-wide kv-pagehead">
+    <div>
+      <h1>Aide et support</h1>
+      <p>Une question sur une formation, un paiement ou votre compte ? Écrivez au formateur : vous serez prévenu(e) de sa réponse dans vos notifications.</p>
+    </div>
+  </div>
 
-    <form action="/support" method="post" class="card card-pad" novalidate aria-labelledby="t-form-title">
-      <h2 id="t-form-title" style="margin-top:0;">Nouvelle demande</h2>
+  <div class="container-wide kv-support">
+    <form action="/support" method="post" class="card card-pad kv-support-form" novalidate aria-labelledby="t-form-title">
+      <h2 id="t-form-title">Nouvelle demande</h2>
       <% if (errors.form) { %><p class="field-error" role="alert"><%= errors.form %></p><% } %>
       <% if (errors.course_id && !courses.length) { %><p class="field-error" role="alert"><%= errors.course_id %></p><% } %>
       <div class="field-group">
         <label for="t-subject">Sujet</label>
-        <input id="t-subject" name="subject" maxlength="120" required value="<%= form.subject || "" %>"<%- errors.subject ? ' aria-invalid="true" aria-describedby="t-subject-err"' : "" %>>
+        <input id="t-subject" type="text" name="subject" maxlength="120" required value="<%= form.subject || "" %>"<%- errors.subject ? ' aria-invalid="true" aria-describedby="t-subject-err"' : "" %>>
         <% if (errors.subject) { %><small class="field-error" id="t-subject-err"><%= errors.subject %></small><% } %>
       </div>
       <% if (courses.length) { %>
@@ -28,20 +32,28 @@
       <button type="submit" class="btn btn-primary">Envoyer la demande</button>
     </form>
 
-    <h2 style="margin-top:32px;">Mes demandes</h2>
-    <% if (!tickets.length) { %>
-      <p class="field-hint">Vous n'avez encore envoyé aucune demande.</p>
-    <% } else { %>
-      <ul class="dlist">
-        <% tickets.forEach((t) => { %>
-          <li class="card card-pad" style="margin-bottom:10px;">
-            <a href="/support/<%= t.id %>"><strong><%= t.subject %></strong></a>
-            <span class="dash-status <%= t.status === "closed" ? "is-archived" : t.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[t.status] %></span><br>
-            <small>#<%= t.id %> · <%= t.message_count %> message<%= t.message_count > 1 ? "s" : "" %> · mise à jour le <%= formatDateTime(t.updated_at) %><%= t.course_title ? " · " + t.course_title : "" %></small>
-          </li>
-        <% }) %>
-      </ul>
-    <% } %>
+    <section class="kv-support-list" aria-labelledby="t-list-title">
+      <h2 id="t-list-title">Mes demandes <% if (tickets.length) { %><span class="kv-count"><%= tickets.length %></span><% } %></h2>
+      <% if (!tickets.length) { %>
+        <div class="empty-state" style="margin:0;">
+          <span class="kv-empty-ico" aria-hidden="true"><%- icon("messageSquare", { size: 26 }) %></span>
+          <h3>Aucune demande</h3>
+          <p>Vous n'avez encore envoyé aucune demande.</p>
+        </div>
+      <% } else { %>
+        <ul class="kv-list">
+          <% tickets.forEach((t) => { %>
+            <li class="kv-row">
+              <div class="kv-row-main">
+                <a href="/support/<%= t.id %>"><strong><%= t.subject %></strong></a>
+                <small>#<%= t.id %> · <%= t.message_count %> message<%= t.message_count > 1 ? "s" : "" %> · mise à jour le <%= formatDateTime(t.updated_at) %><%= t.course_title ? " · " + t.course_title : "" %></small>
+              </div>
+              <span class="dash-status <%= t.status === "closed" ? "is-archived" : t.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[t.status] %></span>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
   </div>
 
 <%- include("partials/footer") %>

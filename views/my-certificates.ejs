@@ -1,21 +1,37 @@
 <%- include("partials/header", { title: "Mes certificats", seo: { noindex: true } }) %>
 
-  <div class="container" style="max-width:760px;padding:40px 20px 60px;">
-    <h1>Mes certificats</h1>
+  <div class="container-wide kv-pagehead">
+    <div>
+      <h1>Mes certificats</h1>
+      <p>Vos certificats de réussite, à afficher, télécharger ou faire vérifier.</p>
+    </div>
+    <div class="kv-pagehead-actions"><a href="/mes-cours" class="btn btn-outline"><%- icon("arrowLeft", { size: 16 }) %> Mes formations</a></div>
+  </div>
+
+  <div class="container-wide learner-space">
     <% if (!list.length) { %>
-      <div class="card card-pad"><p style="margin:0;">Vous n'avez pas encore de certificat. Terminez tous les sous-chapitres d'une formation (et réussissez ses quiz) pour l'obtenir.</p>
-      <p><a href="/mes-cours" class="btn btn-primary">Mes formations</a></p></div>
+      <div class="empty-state">
+        <span class="kv-empty-ico" aria-hidden="true"><%- icon("trophy", { size: 26 }) %></span>
+        <h3>Aucun certificat pour l'instant</h3>
+        <p>Vous n'avez pas encore de certificat. Terminez tous les sous-chapitres d'une formation (et réussissez ses quiz) pour l'obtenir.</p>
+        <a href="/mes-cours" class="btn btn-primary">Mes formations</a>
+      </div>
     <% } else { %>
-      <ul class="dlist">
+      <ul class="kv-list">
         <% list.forEach((c) => { %>
-          <li class="card card-pad" style="margin-bottom:12px;">
-            <strong><%= c.course_title %></strong>
-            <% if (c.revoked_at) { %><span class="dash-status is-archived">Révoqué</span><% } %><br>
-            <small>Délivré le <%= formatDate(c.issued_at) %> · n° <%= c.code %></small><br>
-            <% if (!c.revoked_at && c.course_slug) { %>
-              <a href="/certificat/<%= c.course_slug %>">Afficher</a> · <a href="/certificat/<%= c.course_slug %>/telecharger">Télécharger le PDF</a> ·
-            <% } %>
-            <a href="/certificat/verifier/<%= c.code %>">Page de vérification</a>
+          <li class="kv-row">
+            <span class="kv-row-ico" aria-hidden="true"><%- icon("trophy", { size: 20 }) %></span>
+            <div class="kv-row-main">
+              <strong><%= c.course_title %></strong><% if (c.revoked_at) { %> <span class="dash-status is-archived">Révoqué</span><% } %>
+              <small>Délivré le <%= formatDate(c.issued_at) %> · n° <%= c.code %></small>
+            </div>
+            <div class="kv-row-actions">
+              <% if (!c.revoked_at && c.course_slug) { %>
+                <a href="/certificat/<%= c.course_slug %>" class="btn btn-outline btn-sm">Afficher</a>
+                <a href="/certificat/<%= c.course_slug %>/telecharger" class="btn btn-outline btn-sm">Télécharger le PDF</a>
+              <% } %>
+              <a href="/certificat/verifier/<%= c.code %>" class="btn btn-ghost btn-sm">Page de vérification</a>
+            </div>
           </li>
         <% }) %>
       </ul>

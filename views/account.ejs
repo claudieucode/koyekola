@@ -5,7 +5,13 @@
     <p>Vos informations et vos données personnelles.</p>
   </div>
 
-  <div class="container-wide section-tight account-page">
+  <div class="container-wide kv-account">
+    <nav class="kv-account-nav" aria-label="Sections du compte">
+      <a href="#acc-info">Informations</a>
+      <a href="#acc-data">Mes données</a>
+      <a href="#acc-delete" class="is-danger">Supprimer mon compte</a>
+    </nav>
+  <div class="account-page">
     <% if (error) { %><p class="field-error" role="alert"><%= error %></p><% } %>
     <% if (notice) { %><p class="account-notice" role="status"><%= notice %></p><% } %>
 
@@ -48,6 +54,7 @@
         </form>
       <% } %>
     </section>
+  </div>
   </div>
 
 <%- include("partials/footer") %>
