@@ -45,8 +45,8 @@ describe("C1 — une seule définition, deux présentations", () => {
       // seule différence : dans son espace, le principal a le même « Tableau de bord » que les autres sites ; « Mes sites » n'est pas une entrée d'espace
       if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
     assert.ok(!items.some((i) => i.key === "sites"), "pas de « Mes sites » dans le menu du principal")
-    assert.equal(nav.ALL.length, 72); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
-    assert.equal(items.length, 71 + 1 + 10); // THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(nav.ALL.length, 73); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
+    assert.equal(items.length, 72 + 1 + 10); // THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("les quatre fonctions centrales (Extensions, Sauvegardes, Informations système, Journal) n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);
@@ -82,7 +82,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("aucun aplatissement : Utilisateurs, Outils et Paramètres gardent leur titre de groupe et toutes leurs sous-entrées, même grisées", () => {
     const r = nav.buildSiteNav({ can: all, active: "landing", space: site });
     const g = Object.fromEntries(r.sections.map((s) => [s.key, s]));
-    for (const [k, n] of [["utilisateurs", 5], ["outils", 8], ["parametres", 12], ["apparence", 11], ["articles", 9], ["commentaires", 5], ["seo", 9], ["redirections", 3]]) {
+    for (const [k, n] of [["utilisateurs", 5], ["outils", 8], ["parametres", 13], ["apparence", 11], ["articles", 9], ["commentaires", 5], ["seo", 9], ["redirections", 3]]) {
       assert.equal(g[k].flat, false, `${k} ne doit pas être aplati`); assert.equal(g[k].items.length, n, k);
       assert.equal(g[k].label, nav.SECTIONS.find((s) => s.key === k).label, k);
     }

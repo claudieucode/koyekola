@@ -70,9 +70,9 @@ describe("espace du site principal", () => {
     // Le tableau de bord du principal est celui de SON espace ; « Mes sites » n'est pas une entrée d'espace
     for (const it of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(hrefs.has(it.href), it.href);
     assert.ok(hrefs.has(`${principal.base}/tableau-de-bord`)); assert.ok(!hrefs.has(`${nav.BASE}/sites`));
-    assert.equal(nav.ALL.length, 72); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
+    assert.equal(nav.ALL.length, 73); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
     assert.equal(r.sections.length, 14);
-    assert.equal(flat(r.sections).length, 71 + 1 + 10); // THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(flat(r.sections).length, 72 + 1 + 10); // THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
     const g = nav.buildCmsNav({ can: all, active: "sites" });

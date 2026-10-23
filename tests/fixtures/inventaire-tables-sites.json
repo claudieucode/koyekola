@@ -64,6 +64,10 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "cms_ping_log": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_revisions": {
    "siteId": true,
    "classe": "isolee"
