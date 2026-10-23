@@ -164,4 +164,7 @@ describe("design v3 — Lot D : administration (formateur, gestion, SEO, CMS)", 
     assert.match(C, /\.mk-body fieldset \+ \.field-group[^{]*\{ margin-top: 18px; \}/);
     assert.match(C, /\.mk-sms-ai > summary::after \{ content: ""/); assert.match(C, /\.mk-sms-ai\[open\] > summary::after/);
   });
+  test("sur mobile, le fil d'Ariane de la barre du haut est retiré de la mise en page (et non seulement masqué)", () => {
+    assert.match(css("kola-ui.css"), /@media \(max-width: 520px\) \{ \.mk-topbar > \.mk-breadcrumb \{ display: none; \} \}/);
+  });
 });

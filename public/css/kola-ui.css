@@ -599,3 +599,5 @@ html[data-kola-theme="dark"] .mk-sidebar { box-shadow: none; }
 .mk-sms-ai > summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform var(--kv-dur, 150ms); }
 .mk-sms-ai[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
 @media (prefers-reduced-motion: reduce) { .mk-sms-ai > summary::after { transition: none; } }
+/* Sur mobile le fil d'Ariane de la barre du haut n'était que masqué (visibility) : il gardait sa place, s'empilait sur 60 px de large et rendait la barre haute de 90 à 145 px. Il est retiré ; le titre de la page dit où l'on est. */
+@media (max-width: 520px) { .mk-topbar > .mk-breadcrumb { display: none; } }
