@@ -12,7 +12,7 @@ const target = require("./siteTarget");
 
 const BASE = "/marketing/site-web/parametres";
 // Adresses des groupes (français) → clés du moteur
-const SLUGS = { general: "general", lecture: "reading", commentaires: "comments", medias: "media", permaliens: "permalinks", seo: "seo", confidentialite: "privacy", indexation: "indexation", emailing: "email", tunnels: "tunnels" };
+const SLUGS = { general: "general", ecriture: "writing", lecture: "reading", commentaires: "comments", medias: "media", permaliens: "permalinks", seo: "seo", confidentialite: "privacy", indexation: "indexation", emailing: "email", tunnels: "tunnels" };
 const SLUG_OF = Object.fromEntries(Object.entries(SLUGS).map(([s, g]) => [g, s]));
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 // Anciens noms de champs du formulaire des commentaires (palier 6) : toujours acceptés
@@ -76,7 +76,7 @@ module.exports = () => {
       title: `Paramètres · ${engine.GROUPS[group].label}`, active: group === "general" ? "parametres" : `parametres/${SLUG_OF[group]}`, group, groupLabel: engine.GROUPS[group].label, intro: engine.GROUPS[group].intro, view,
       scope, q: q(scope), BASE, SLUG_OF, SLUGS, sites: sitesFor(req), siteOnly: req.mk.siteOnly, groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), choices: choices(req, scope), TIMEZONES: engine.TIMEZONES,
       structure: group === "permalinks" ? permalinkStructure() : null, settingsJs: true, pending: extra.pending || null, errors: extra.errors || [], formValues: extra.formValues || null,
-      frame: Boolean(extra.frame), recap: scope.siteId ? platformRecap(req, group, scope) : null, canTeam: !req.mk.siteOnly,
+      frame: Boolean(extra.frame), pingLog: group === "writing" ? require("../../services/writing").log(scope.siteId) : null, recap: scope.siteId ? platformRecap(req, group, scope) : null, canTeam: !req.mk.siteOnly,
     });
   };
   function permalinkStructure() {

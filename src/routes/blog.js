@@ -677,6 +677,12 @@ function newArticleSite(req) {
   if (!orgId || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(db)}`).get(Number(raw), orgId)) throw new UserError("Site introuvable.");
   return Number(raw);
 }
+// Nouvel article : la catégorie par défaut du site est cochée d'avance (l'auteur peut la décocher ou en choisir une autre)
+function defaultSelection(siteId) {
+  const id = require("../services/writing").defaultCategoryId(siteId ?? null);
+  const t = id ? taxonomy.get(id) : null;
+  return t ? { categories: [{ ...t, isPrimary: true }], tags: [], primary: { ...t, isPrimary: true } } : { categories: [], tags: [], primary: null };
+}
 const editorSite = (req, post) => (post ? (siteContent.siteOf(db, "post", post.id) ?? null) : newArticleSite(req));
 
 // Premier jour de la semaine du calendrier de l'éditeur : réglage « La semaine commence le » (Paramètres → Général) du site de l'article, sinon du site principal
@@ -703,7 +709,7 @@ function editorData(req, post) {
     // Les listes de l'éditeur ne montrent que ce qui appartient au site de l'article (aucun terme ni suggestion d'un autre site) ; accès limité : pas de listes globales
     siteId: editorSite(req, post), restrictedSite: req.blogSite ?? null,
     instructors: blog.instructors(), categories: req.blogSite ? [] : blog.categories(), subcategories: req.blogSite ? [] : blog.subcategories(), tags: req.blogSite ? [] : blog.allTags(),
-    taxo: { categories: taxonomy.tree("category", siteContent.scopeForSite("term", "t.id", editorSite(req, post))).map(termJson), selected: post ? taxonomy.termsOf("post", post.id) : { categories: [], tags: [], primary: null } },
+    taxo: { categories: taxonomy.tree("category", siteContent.scopeForSite("term", "t.id", editorSite(req, post))).map(termJson), selected: post ? taxonomy.termsOf("post", post.id) : defaultSelection(editorSite(req, post)) },
     courses: db.prepare("SELECT slug, title FROM courses WHERE published = 1 AND archived = 0 ORDER BY title COLLATE NOCASE").all(),
     statuses: blog.STATUSES, languages: Object.keys(LANGUAGES), currentUserId: req.session.user.id,
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
@@ -884,6 +890,7 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
     // L'article naît dans le site administré (avant le classement : les termes choisis doivent être de ce site)
     if (site) siteContent.adopt({ db, organizationId: marketingOrgId(), userId: req.session.user.id, siteFilter: site }, { type: "post", id });
     applyTaxonomy(id, req.body);
+    require("../services/writing").applyDefaults(id); // aucune catégorie choisie : celle du site par défaut
     return id;
   });
   const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(newId);

@@ -104,6 +104,7 @@ const SECTIONS = [
   {
     key: "parametres", label: "Paramètres", icon: "settings", items: [
       leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read" }),
+      leaf("parametres/ecriture", "Écriture", `${BASE}/parametres/ecriture`, { permission: "settings.read" }),
       leaf("parametres/lecture", "Lecture", `${BASE}/parametres/lecture`, { permission: "settings.read" }),
       leaf("parametres/commentaires", "Commentaires", `${BASE}/parametres/commentaires`, { permission: "settings.read" }),
       leaf("parametres/medias", "Médias", `${BASE}/parametres/medias`, { permission: "settings.read" }),
@@ -215,6 +216,7 @@ const SITE_MODULES = {
   analytics: { label: "Analytics", kind: "delegate", to: "/analytics/global", reg: "analytics-global", permission: "analytics.read", legacy: "/marketing/analytics/global" },
   // Paramètres → Confidentialité : écran partagé /site-web/parametres/confidentialite ouvert dans le cadre du site (page de politique, guide, de CE site)
   // Paramètres → Lecture, Commentaires, Médias, Permaliens, SEO, Indexation, Emailing, Tunnels, Avancé : écrans partagés ouverts dans le cadre du site (réglages propres au site, ou ce qui s'applique réellement à lui, en lecture seule)
+  "parametres-ecriture": { label: "Écriture", kind: "delegate", to: "/site-web/parametres/ecriture", reg: "parametres/ecriture", permission: "settings.read", legacy: `${BASE}/parametres/ecriture` },
   "parametres-lecture": { label: "Lecture", kind: "delegate", to: "/site-web/parametres/lecture", reg: "parametres/lecture", permission: "settings.read", legacy: `${BASE}/parametres/lecture` },
   "parametres-commentaires": { label: "Commentaires", kind: "delegate", to: "/site-web/parametres/commentaires", reg: "parametres/commentaires", permission: "settings.read", legacy: `${BASE}/parametres/commentaires` },
   "parametres-medias": { label: "Médias", kind: "delegate", to: "/site-web/parametres/medias", reg: "parametres/medias", permission: "settings.read", legacy: `${BASE}/parametres/medias` },
@@ -297,6 +299,7 @@ const ABILITY = {
   "outils/contenu": { mode: "open", module: "outils", sub: "contenu" },
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
+  "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },
   "parametres/lecture": { mode: "open", module: "parametres-lecture" },
   "parametres/commentaires": { mode: "open", module: "parametres-commentaires" },
   "parametres/medias": { mode: "open", module: "parametres-medias" },
