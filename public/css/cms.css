@@ -718,7 +718,7 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 .mk-nm-toggle:hover { background: var(--mk-hover, #f1f6fa); }
 .mk-nm-label { font-weight: 600; overflow-wrap: anywhere; }
 .mk-nm-type { font-size: 12px; color: var(--mk-text-soft, #5b6b78); }
-.mk-nm-chip { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--mk-border, #dbe4ea); background: var(--mk-surface, #fff); color: var(--mk-text-soft, #5b6b78); }
+.mk-nm-chip { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--mk-border, #dbe4ea); background: var(--mk-surface, #fff); color: var(--mk-text-soft, #5b6b78); }
 .mk-nm-chip.is-err { border-color: var(--warning, #d99a00); color: var(--warning-text, #6a4a00); }
 .mk-nm-moves { display: flex; gap: 2px; flex: none; }
 .mk-nm-mv { width: 34px; min-height: 34px; border: 1px solid var(--mk-border, #dbe4ea); background: var(--mk-surface, #fff); border-radius: 6px; font: inherit; cursor: pointer; color: inherit; }
