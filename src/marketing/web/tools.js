@@ -258,7 +258,8 @@ module.exports = () => {
   // ----- Diagnostic : intégrité, orphelins, file de travaux -----
   router.get("/site-web/outils/diagnostic", need("tools.view"), (req, res) => withSite(req, res, (siteId) => {
     const ctx = req.mk.ctx;
-    const last = runs.latest(ctx.organizationId, "integrity", null);
+    // Le rapport d'intégrité concerne toute l'organisation (noms de menus, d'adresses d'autres sites) : jamais montré à un accès limité à un site
+    const last = req.mk.siteOnly ? null : runs.latest(ctx.organizationId, "integrity", null);
     res.render("marketing/tools-diagnostic", { title: "Diagnostic", active: "outils", ...shell(req, siteId, "diagnostic"), last: last ? runs.get(ctx.organizationId, last.id) : null, jobs: system.jobsDiagnostic(), canFix: req.mk.can("tools.content"), canRun: req.mk.can("tools.health"), FIXES: integrity.FIXES });
   }));
   router.post("/site-web/outils/diagnostic/integrite", need("tools.health"), (req, res) => withSite(req, res, (siteId) => {

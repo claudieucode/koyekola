@@ -62,3 +62,22 @@ describe("rubriques Outils dans l'espace d'un site", () => {
     }
   });
 });
+
+describe("diagnostic : qualité du contenu et confidentialité du rapport", () => {
+  test("contenus sans titre / sans adresse détectés et proposés (rien n'est modifié) ; articles de même titre signalés à titre d'information", async () => {
+    const ins = db.prepare("INSERT INTO posts (title, slug, content, status) VALUES (?, ?, 'x', 'draft')");
+    ins.run("", "sans-titre-test"); ins.run("Sans adresse test", ""); ins.run("Doublon test", "doublon-1"); ins.run("doublon TEST", "doublon-2");
+    const r = await boss.post("/marketing/site-web/outils/diagnostic/integrite", {});
+    assert.equal(r.status, 302, r.text.slice(0, 200));
+    const id = Number(String(r.location).match(/analyse=(\d+)/)[1]);
+    let run;
+    for (let i = 0; i < 100; i++) { run = JSON.parse((await boss.get(`/marketing/site-web/outils/operations/${id}.json`)).text); if (run.finished) break; await new Promise((x) => setTimeout(x, 150)); }
+    assert.equal(run.status, "done", JSON.stringify(run));
+    const page = (await boss.get("/marketing/site-web/outils/diagnostic")).text;
+    assert.match(page, /Contenus sans titre/);
+    assert.match(page, /Contenus sans adresse/);
+    assert.match(page, /Articles de même titre/);
+    assert.equal(one("SELECT title FROM posts WHERE slug = 'sans-titre-test'").title, "", "aucun titre n'a été inventé");
+    assert.equal(one("SELECT slug FROM posts WHERE title = 'Sans adresse test'").slug, "", "aucune adresse n'a été inventée");
+  });
+});

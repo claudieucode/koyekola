@@ -69,6 +69,19 @@ function scan({ quick = false } = {}) {
   // 9. Menus sans emplacement
   const menus = safe(() => db.prepare("SELECT m.id, m.name FROM nav_menus m WHERE NOT EXISTS (SELECT 1 FROM nav_locations l WHERE l.menu_id = m.id)").all(), []);
   groups.push(group("unassigned_menus", "Menus sans emplacement", menus.map((m) => ({ title: m.name, href: `/marketing/site-web/navigation/menus/${m.id}` })), { info: true, help: "Menus créés mais affichés nulle part." }));
+  // Qualité du contenu : propositions de correction (aucune modification automatique)
+  const untitled = safe(() => [
+    ...db.prepare("SELECT id, 'Page' AS kind FROM mk_landing_pages WHERE archived_at IS NULL AND kind <> 'step' AND TRIM(COALESCE(name, '')) = ''").all().map((r) => ({ title: `Page n° ${r.id} sans titre`, href: `/marketing/pages/${r.id}` })),
+    ...db.prepare("SELECT id FROM posts WHERE deleted_at IS NULL AND TRIM(COALESCE(title, '')) = ''").all().map((r) => ({ title: `Article n° ${r.id} sans titre`, href: `/marketing/site-web/articles?s=${r.id}` })),
+  ], []);
+  groups.push(group("untitled", "Contenus sans titre", untitled, { help: "Donnez-leur un titre depuis leur éditeur : rien n'est renommé automatiquement." }));
+  const noSlug = safe(() => [
+    ...db.prepare("SELECT id, name FROM mk_landing_pages WHERE archived_at IS NULL AND kind <> 'step' AND TRIM(COALESCE(slug, '')) = ''").all().map((r) => ({ title: `Page « ${r.name || r.id} » sans adresse`, href: `/marketing/pages/${r.id}` })),
+    ...db.prepare("SELECT id, title FROM posts WHERE deleted_at IS NULL AND TRIM(COALESCE(slug, '')) = ''").all().map((r) => ({ title: `Article « ${r.title || r.id} » sans adresse` })),
+  ], []);
+  groups.push(group("no_slug", "Contenus sans adresse (slug)", noSlug, { help: "Ouvrez le contenu et enregistrez-le : une adresse est proposée d'après son titre." }));
+  const dupTitles = safe(() => db.prepare("SELECT title, COUNT(*) n FROM posts WHERE deleted_at IS NULL AND TRIM(COALESCE(title, '')) <> '' GROUP BY LOWER(title) HAVING n > 1 ORDER BY n DESC").all(), []);
+  groups.push(group("duplicate_titles", "Articles de même titre", dupTitles.map((r) => ({ title: `« ${r.title} » ×${r.n}` })), { info: true, help: "Deux articles au même titre ne sont pas une erreur, mais peuvent être un doublon." }));
   if (!quick) {
     // 10. Médias inutilisés (lecture de tous les contenus : plus long)
     const media = unusedMedia();
