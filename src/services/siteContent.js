@@ -213,4 +213,4 @@ function inventory(db) {
   return out;
 }
 
-module.exports = { TYPES, ensureCoreTriggers, siteOf, assign, clear, adopt, siteParam, scopePredicate, scopeForSite, termsOutsideSite, commentPredicate, restricted, allowedContent, allowedComment, listPosts, listTerms, listComments, siteOfComment, requirePostInScope, requireTermInScope, inventory, visibleSql };
+module.exports = { TYPES, listSite, ensureCoreTriggers, siteOf, assign, clear, adopt, siteParam, scopePredicate, scopeForSite, termsOutsideSite, commentPredicate, restricted, allowedContent, allowedComment, listPosts, listTerms, listComments, siteOfComment, requirePostInScope, requireTermInScope, inventory, visibleSql };

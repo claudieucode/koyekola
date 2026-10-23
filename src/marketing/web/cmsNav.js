@@ -221,6 +221,8 @@ const SITE_MODULES = {
   "parametres-avance": { label: "Avancé", kind: "delegate", to: "/site-web/parametres/avance", reg: "parametres/avance", permission: "settings.read", legacy: `${BASE}/parametres/avance` },
   confidentialite: { label: "Confidentialité", kind: "delegate", to: "/site-web/parametres/confidentialite", reg: "parametres/confidentialite", permission: "settings.read", legacy: `${BASE}/parametres/confidentialite` },
   outils: { label: "Santé du site", kind: "delegate", to: "/site-web/outils", reg: "outils", permission: "tools.view", legacy: `${BASE}/outils` },
+  // Corbeille : écran partagé /site-web/corbeille ; il ne liste et ne traite que les éléments de CE site (portée vérifiée par le serveur)
+  corbeille: { label: "Corbeille", kind: "delegate", to: "/site-web/corbeille", reg: "corbeille", permission: "revisions.view", legacy: `${BASE}/corbeille` },
 };
 // Modules délégués : tables lues par le serveur (délégation) et par la vue (écrans à afficher dans le cadre du site)
 const DELEGATED = Object.fromEntries(Object.entries(SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => [k, m.to]));
@@ -231,6 +233,7 @@ const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
+  outils: ["importer", "exporter", "diagnostic", "maintenance", "cache", "contenu"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
@@ -276,6 +279,13 @@ const ABILITY = {
   utilisateurs: { mode: "open", module: "equipe" },
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
+  corbeille: { mode: "open", module: "corbeille" },
+  "outils/importer": { mode: "open", module: "outils", sub: "importer" },
+  "outils/exporter": { mode: "open", module: "outils", sub: "exporter" },
+  "outils/diagnostic": { mode: "open", module: "outils", sub: "diagnostic" },
+  "outils/maintenance": { mode: "open", module: "outils", sub: "maintenance" },
+  "outils/cache": { mode: "open", module: "outils", sub: "cache" },
+  "outils/contenu": { mode: "open", module: "outils", sub: "contenu" },
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   "parametres/lecture": { mode: "open", module: "parametres-lecture" },

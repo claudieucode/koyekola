@@ -314,23 +314,46 @@ const hooks = {
 };
 
 // ---------- Corbeille commune ----------
-const TRASH_TYPES = {
-  page: { label: "Page", del: "pages.delete", write: "forms.write", count: () => db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE archived_at IS NOT NULL AND kind <> 'step'").get().n },
-  post: { label: "Article", del: "articles.delete", write: "articles.write", count: () => db.prepare("SELECT COUNT(*) n FROM posts WHERE deleted_at IS NOT NULL").get().n },
-  media: { label: "Média", del: "media.delete", write: "media.write", count: () => db.prepare("SELECT COUNT(*) n FROM mk_media WHERE deleted_at IS NOT NULL").get().n },
-  comment: { label: "Commentaire", del: "comments.delete", write: "comments.moderate", count: () => db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE status = 'trash'").get().n },
-  pattern: { label: "Pattern", del: "appearance.patterns", write: "appearance.patterns", count: () => db.prepare("SELECT COUNT(*) n FROM appearance_patterns WHERE deleted_at IS NOT NULL").get().n },
-};
 const like = (s) => `%${String(s).replace(/[\\%_]/g, "\\$&")}%`;
-function trashList({ type = "", q = "", page = 1, perPage = 25 } = {}) {
+// Portée de site de la corbeille : l'organisation de la requête, puis le site (accès limité = son site ; équipe = site choisi, sinon tous). Sans contexte : aucune restriction (usage interne).
+const siteWhere = (ctx, col) => {
+  const site = ctx ? require("./siteContent").listSite(ctx) : null;
+  return site === null ? { sql: "", params: [] } : site === 0 ? { sql: ` AND ${col} IS NULL`, params: [] } : { sql: ` AND ${col} = ?`, params: [site] };
+};
+const orgWhere = (ctx, col) => (ctx && ctx.organizationId ? { sql: ` AND ${col} = ?`, params: [ctx.organizationId] } : { sql: "", params: [] });
+const trashParts = (ctx) => {
+  const sc = require("./siteContent");
+  const post = ctx ? sc.scopePredicate(ctx, "post", "p.id") : null, com = ctx ? sc.commentPredicate(ctx, "c") : null;
+  const pg = siteWhere(ctx, "p.site_id"), pgo = orgWhere(ctx, "p.organization_id"), md = siteWhere(ctx, "m.site_id"), mdo = orgWhere(ctx, "m.organization_id"), pt = siteWhere(ctx, "t.site_id");
+  return {
+    page: { from: `mk_landing_pages p WHERE p.archived_at IS NOT NULL AND p.kind <> 'step'${pg.sql}${pgo.sql}`, params: [...pg.params, ...pgo.params] },
+    post: { from: `posts p WHERE p.deleted_at IS NOT NULL${post ? ` AND ${post.sql}` : ""}`, params: post ? post.params : [] },
+    media: { from: `mk_media m WHERE m.deleted_at IS NOT NULL${md.sql}${mdo.sql}`, params: [...md.params, ...mdo.params] },
+    comment: { from: `blog_comments c WHERE c.status = 'trash'${com ? ` AND ${com.sql}` : ""}`, params: com ? com.params : [] },
+    pattern: { from: `appearance_patterns t WHERE t.deleted_at IS NOT NULL${pt.sql}`, params: pt.params },
+  };
+};
+const TRASH_TYPES = {
+  page: { label: "Page", del: "pages.delete", write: "forms.write" },
+  post: { label: "Article", del: "articles.delete", write: "articles.write" },
+  media: { label: "Média", del: "media.delete", write: "media.write" },
+  comment: { label: "Commentaire", del: "comments.delete", write: "comments.moderate" },
+  pattern: { label: "Pattern", del: "appearance.patterns", write: "appearance.patterns" },
+};
+function trashList({ type = "", q = "", page = 1, perPage = 25, ctx = null } = {}) {
   const parts = [], args = [];
-  const add = (t, sql, ...a) => { if (!type || type === t) { parts.push(sql); args.push(...a); } };
-  const term = q ? like(q) : null;
-  add("page", `SELECT 'page' AS type, p.id, p.name AS title, COALESCE(s.name, '') AS detail, p.archived_at AS deleted_at FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id WHERE p.archived_at IS NOT NULL AND p.kind <> 'step'${term ? " AND p.name LIKE ? ESCAPE '\\'" : ""}`, ...(term ? [term] : []));
-  add("post", `SELECT 'post' AS type, id, title, COALESCE(NULLIF(category, ''), '') AS detail, deleted_at FROM posts WHERE deleted_at IS NOT NULL${term ? " AND title LIKE ? ESCAPE '\\'" : ""}`, ...(term ? [term] : []));
-  add("media", `SELECT 'media' AS type, id, COALESCE(NULLIF(title, ''), name) AS title, type AS detail, deleted_at FROM mk_media WHERE deleted_at IS NOT NULL${term ? " AND (name LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\')" : ""}`, ...(term ? [term, term] : []));
-  add("comment", `SELECT 'comment' AS type, c.id, substr(c.body, 1, 80) AS title, COALESCE(NULLIF(c.author_name, ''), u.username, 'Anonyme') AS detail, COALESCE(c.deleted_at, c.updated_at) AS deleted_at FROM blog_comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.status = 'trash'${term ? " AND c.body LIKE ? ESCAPE '\\'" : ""}`, ...(term ? [term] : []));
-  add("pattern", `SELECT 'pattern' AS type, id, name AS title, category AS detail, deleted_at FROM appearance_patterns WHERE deleted_at IS NOT NULL${term ? " AND name LIKE ? ESCAPE '\\'" : ""}`, ...(term ? [term] : []));
+  const P = trashParts(ctx);
+  const add = (t, select, search) => {
+    if (type && type !== t) return;
+    const term = q ? like(q) : null;
+    parts.push(`SELECT ${select} FROM ${P[t].from}${term ? ` AND (${search.map((c) => `${c} LIKE ? ESCAPE '\\'`).join(" OR ")})` : ""}`);
+    args.push(...P[t].params, ...(term ? search.map(() => term) : []));
+  };
+  add("page", "'page' AS type, p.id, p.name AS title, COALESCE((SELECT name FROM mk_sites WHERE id = p.site_id), '') AS detail, p.archived_at AS deleted_at", ["p.name"]);
+  add("post", "'post' AS type, p.id, p.title, COALESCE(NULLIF(p.category, ''), '') AS detail, p.deleted_at", ["p.title"]);
+  add("media", "'media' AS type, m.id, COALESCE(NULLIF(m.title, ''), m.name) AS title, m.type AS detail, m.deleted_at", ["m.name", "m.title"]);
+  add("comment", "'comment' AS type, c.id, substr(c.body, 1, 80) AS title, COALESCE(NULLIF(c.author_name, ''), (SELECT username FROM users WHERE id = c.user_id), 'Anonyme') AS detail, COALESCE(c.deleted_at, c.updated_at) AS deleted_at", ["c.body"]);
+  add("pattern", "'pattern' AS type, t.id, t.name AS title, t.category AS detail, t.deleted_at", ["t.name"]);
   if (!parts.length) return { rows: [], total: 0, page: 1, pages: 1 };
   const base = parts.join(" UNION ALL ");
   const total = db.prepare(`SELECT COUNT(*) n FROM (${base})`).get(...args).n;
@@ -338,7 +361,9 @@ function trashList({ type = "", q = "", page = 1, perPage = 25 } = {}) {
   const rows = db.prepare(`SELECT * FROM (${base}) ORDER BY deleted_at DESC, id DESC LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
   return { rows: rows.map((r) => ({ ...r, typeLabel: TRASH_TYPES[r.type].label })), total, page: current, pages };
 }
-const trashCounts = () => Object.fromEntries(Object.entries(TRASH_TYPES).map(([k, v]) => [k, v.count()]));
+const trashCounts = (ctx = null) => { const P = trashParts(ctx); return Object.fromEntries(Object.keys(TRASH_TYPES).map((k) => [k, db.prepare(`SELECT COUNT(*) n FROM ${P[k].from}`).get(...P[k].params).n])); };
+// L'élément est-il dans la corbeille ET dans la portée (organisation, site) de la requête ? Sert à refuser toute restauration / suppression hors périmètre.
+const inTrash = (ctx, type, id) => Object.hasOwn(TRASH_TYPES, type) && Boolean(db.prepare(`SELECT 1 FROM ${trashParts(ctx)[type].from} AND ${{ page: "p", post: "p", media: "m", comment: "c", pattern: "t" }[type]}.id = ?`).get(...trashParts(ctx)[type].params, id));
 
 // Dépendances d'un élément à restaurer : bloquantes (rien n'est restauré) ou à signaler (restauré, mais le problème est dit clairement)
 function dependencies(ctx, type, id) {
@@ -365,5 +390,5 @@ function dependencies(ctx, type, id) {
 }
 
 module.exports = {
-  KINDS, DRAFT_WINDOW_MIN, MAX_DRAFT_POINTS, PER_PAGE, TRASH_TYPES, TYPES, adapter, record, safely, hooks, lineDiff, plain, history, deleteRevision, trashList, trashCounts, dependencies, patternData, fp,
+  KINDS, DRAFT_WINDOW_MIN, MAX_DRAFT_POINTS, PER_PAGE, TRASH_TYPES, TYPES, adapter, record, safely, hooks, lineDiff, plain, history, deleteRevision, trashList, trashCounts, inTrash, dependencies, patternData, fp,
 };
