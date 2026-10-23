@@ -77,11 +77,20 @@
     $("[data-nm-help]").textContent = CAN && count() > 1 ? "Glissez un élément par sa poignée, ou utilisez les boutons ↑ ↓ ← → (Alt + flèches au clavier). Un élément déposé au milieu d'un autre devient son sous-élément (" + MAX + " niveaux au plus)." : "";
     document.title = (d ? "• " : "") + document.title.replace(/^• /, "");
   }
-  window.addEventListener("beforeunload", function (e) { if (dirty()) { e.preventDefault(); e.returnValue = ""; } });
+  function guard(e) { if (dirty()) { e.preventDefault(); e.returnValue = ""; } }
+  window.addEventListener("beforeunload", guard);
   document.addEventListener("click", function (e) {
     var a = e.target.closest("a[href]");
     if (a && dirty() && !a.target && !confirm("Des modifications du menu ne sont pas enregistrées. Quitter cette page sans les enregistrer ?")) e.preventDefault();
   }, true);
+  // Sélecteur de menu : avertit avant de quitter un menu modifié (Annuler remet le menu actuel dans la liste)
+  $$("[data-nm-pick]").forEach(function (sel) {
+    var here = sel.value;
+    sel.addEventListener("change", function () {
+      if (dirty() && !confirm("Des modifications du menu ne sont pas enregistrées. Changer de menu sans les enregistrer ?")) { sel.value = here; return; }
+      window.removeEventListener("beforeunload", guard); location.href = sel.value;
+    });
+  });
   $$("[data-nm-dirty-guard]").forEach(function (f) { f.addEventListener("submit", function (e) { if (dirty() && !confirm("Des modifications du menu ne sont pas enregistrées. La copie ne les contiendra pas. Continuer ?")) e.preventDefault(); }); });
 
   // ---------- Historique (structure : ajout, retrait, déplacement, duplication) ----------

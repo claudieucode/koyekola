@@ -591,3 +591,11 @@ html[data-kola-theme="dark"] .mk-sidebar { box-shadow: none; }
   .mk-body *, .mk-body *::before, .mk-body *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
 
+/* Lot D — finitions partagées de l'administration */
+/* Un bloc de champs suivi d'un champ ne colle plus : même intervalle que entre deux champs (tunnels, campagnes RSS…) */
+.mk-body fieldset + .field-group, .mk-body fieldset + .mk-grid-2 { margin-top: 18px; }
+/* « Rédiger avec l'IA » : le résumé en flex n'affichait plus aucun repère d'ouverture ; chevron dessiné, tourné à l'ouverture */
+.mk-sms-ai > summary { gap: 8px; }
+.mk-sms-ai > summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform var(--kv-dur, 150ms); }
+.mk-sms-ai[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+@media (prefers-reduced-motion: reduce) { .mk-sms-ai > summary::after { transition: none; } }

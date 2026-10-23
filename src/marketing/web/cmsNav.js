@@ -86,7 +86,6 @@ const SECTIONS = [
     leaf("redirections/permaliens", "Permaliens et adresses", `${BASE}/permaliens`, { permission: "redirects.view" }),
   ] },
   { key: "tests", label: "Tests A/B", icon: "shuffle", items: [leaf("pagetests", "Tests A/B", `${BASE}/tests-ab`)] },
-  { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { permission: "navigation.read" })] },
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
       leaf("outils", "Santé du site", `${BASE}/outils`, { permission: "tools.view" }),
@@ -125,11 +124,12 @@ const itemOf = (key) => ALL.find((i) => i.key === key) || null;
 const isCmsKey = (key) => ALL.some((i) => i.key === key);
 
 // Clés servies par le routeur générique des écrans CMS (cmsScreens) : celles dont la route n'existe pas déjà ailleurs.
-const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "extensions", "utilisateurs", "seo", "redirections", "outils"];
+const GENERIC_SECTIONS = ["articles", "apparence", "commentaires", "extensions", "utilisateurs", "seo", "redirections", "outils"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
 function buildCmsNav({ can, active, space = null }) {
   if (space) return buildSiteNav({ can, active, space });
+  if (active === "navigation") active = "apparence/menus"; // ancienne entrée « Navigation » : même écran, sous Apparence → Menus
   const current = itemOf(active);
   if (!current) return null;
   const sections = [];
@@ -196,7 +196,7 @@ const SITE_MODULES = {
   templates: { label: "Templates", kind: "delegate", to: "/site-web/templates", reg: "apparence/templates", permission: "appearance.read", legacy: `${BASE}/templates` },
   patterns: { label: "Patterns", kind: "delegate", to: "/site-web/patterns", reg: "patterns", permission: "appearance.read", legacy: `${BASE}/patterns` },
   styles: { label: "Styles", kind: "delegate", to: "/site-web/styles", reg: "styles", permission: "appearance.read", legacy: `${BASE}/styles` },
-  navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
+  navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "apparence/menus", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
@@ -223,7 +223,7 @@ const NESTED = Object.freeze({
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
 const FRAMED = new Set();
-const isSiteScopedKey = (key) => SCOPED_KEYS.has(key) || FRAMED.has(key);
+const isSiteScopedKey = (key) => SCOPED_KEYS.has(key) || FRAMED.has(key) || key === "navigation"; // « navigation » : ancienne entrée, désormais Apparence → Menus (même écran)
 
 // Un module vu depuis un espace : { key, label, href, status, phase, permission, external, reg, primary }
 function siteModule(space, mod) {
@@ -277,7 +277,6 @@ const ABILITY = {
   "articles/auteurs": { mode: "open", module: "articles", sub: "auteurs" },
   mediatheque: { mode: "open", module: "medias" },
   "mediatheque/ajouter": { mode: "open", module: "medias", sub: "ajouter" },
-  navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
   "apparence/polices": { mode: "open", module: "polices" },
@@ -302,13 +301,13 @@ const soonPhase = (key) => {
   if (key === "mediatheque") return "B2";
   if (key === "apparence/templates" || key === "apparence/patterns") return "B3";
   if (key === "apparence/styles") return "P2";
-  if (key === "navigation" || key === "apparence/menus") return "menus";
+  if (key === "apparence/menus") return "menus";
   if (key.startsWith("seo")) return "B6";
   if (key === "corbeille") return "corbeille";
   return "C4";
 };
 // Anciennes adresses d'écrans « Bientôt » (/sites/N/articles, …) : elles continuent d'afficher leur explication
-const SOON_SLUG = { articles: "articles", mediatheque: "medias", navigation: "navigation", commentaires: "commentaires", seo: "seo" };
+const SOON_SLUG = { articles: "articles", mediatheque: "medias", commentaires: "commentaires", seo: "seo" };
 
 // Extensions de l'espace, communes au principal et aux sites (hors registre) : Composants (groupe Pages) et le groupe « Marketing du site »
 const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires", "contacts", "importer"];
@@ -346,7 +345,7 @@ function projectSections(space) {
   const out = [];
   for (const s of SECTIONS) {
     if (s.centralOnly) continue;
-    if (s.key === "navigation") out.push(marketingGroup(space)); // « Marketing du site » vient juste avant Navigation, Outils et Paramètres
+    if (s.key === "outils") out.push(marketingGroup(space)); // « Marketing du site » vient juste avant Outils et Paramètres
     const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
     if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages" });
     if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items });
@@ -359,6 +358,7 @@ const principalSections = projectSections;
 const PRINCIPAL_ALIAS = { "espace/tableau-de-bord": "sitedash", "espace/pages": "landing", "espace/redirections": "redirections" };
 
 function buildSiteNav({ can, active, space }) {
+  if (active === "navigation") active = "apparence/menus"; // ancienne entrée « Navigation » : même écran, sous Apparence → Menus
   const all = projectSections(space);
   const flat = all.flatMap((sec) => sec.items.map((i) => ({ ...i, section: sec.key })));
   // Un écran existant garde son cadre : on retrouve son entrée par sa clé `active` propre OU par la clé qu'il porte déjà dans le registre

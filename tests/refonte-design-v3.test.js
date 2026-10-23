@@ -159,4 +159,9 @@ describe("design v3 — Lot D : administration (formateur, gestion, SEO, CMS)", 
     assert.match(D, /\.preview-frame \{[^}]*min-height: 200px/); assert.doesNotMatch(D, /\.preview-frame \{[^}]*[^-]height: 200px/);
     assert.doesNotMatch(D, /\.preview-side \{[^}]*overflow-wrap: anywhere/);
   });
+  test("un bloc de champs suivi d'un champ garde un intervalle ; le résumé « Rédiger avec l'IA » montre un repère d'ouverture", () => {
+    const C = css("kola-ui.css");
+    assert.match(C, /\.mk-body fieldset \+ \.field-group[^{]*\{ margin-top: 18px; \}/);
+    assert.match(C, /\.mk-sms-ai > summary::after \{ content: ""/); assert.match(C, /\.mk-sms-ai\[open\] > summary::after/);
+  });
 });

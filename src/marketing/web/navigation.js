@@ -34,7 +34,7 @@ module.exports = () => {
   };
 
   // ----- Liste des menus et emplacements -----
-  // Le même écran est l'entrée « Navigation » et « Apparence → Menus » du menu latéral
+  // Un seul écran : « Apparence → Menus » (l'ancienne adresse /navigation reste valide et l'ouvre)
   const showList = (active) => (req, res) => {
     const q = String(req.query.q || "").trim().slice(0, 80), sort = Object.hasOwn(navigation.MENU_SORTS, req.query.sort) ? req.query.sort : "nom";
     const menus = navigation.listMenus({ siteId: req.navSite, q, sort });
@@ -43,7 +43,7 @@ module.exports = () => {
       canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), canDelete: req.mk.can("navigation.delete"),
     });
   };
-  router.get("/site-web/navigation", need("navigation.read"), showList("navigation"));
+  router.get("/site-web/navigation", need("navigation.read"), showList("apparence/menus")); // ancienne adresse : même écran, affiché sous Apparence → Menus
   router.get("/site-web/apparence/menus", need("navigation.read"), showList("apparence/menus"));
 
   router.post("/site-web/navigation/menus", need("navigation.write"), (req, res, next) => {
@@ -97,6 +97,7 @@ module.exports = () => {
     res.render("marketing/navigation-menu", {
       title: menu.name, active: "apparence/menus", menu, BASE, navSite: req.navSite, canWrite: data.canWrite, canDelete: data.canDelete, navJs: true,
       locNames: data.locations.filter((l) => l.on).map((l) => l.label),
+      siblings: navigation.listMenus({ siteId: req.navSite }).map((m) => ({ id: m.id, name: m.name })),
       count: flat.length, broken: flat.filter((n) => n.resource.state !== "ok" && ["page", "article", "category", "tag"].includes(n.type)).length,
       dataJson: JSON.stringify(data).replace(/</g, "\\u003c").replace(/\u2028|\u2029/g, ""),
     });
