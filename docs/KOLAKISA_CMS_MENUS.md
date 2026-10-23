@@ -98,7 +98,17 @@ node --test --test-concurrency=1 tests/apparence-menus-navigateur.test.js tests/
 
 Couverture : voir l'en-tête des fichiers. L'accessibilité clavier, le mobile et le glisser-déposer sont vérifiés dans un vrai Chrome.
 
+## 9 bis. MENUS-02 — « Navigation » n'est plus une entrée du menu latéral
+
+- **Cause du défaut signalé** : MENUS-01 avait ouvert Apparence → Menus mais laissé l'ancienne rubrique « Navigation » dans le registre du menu latéral (`cmsNav.js`) : deux entrées ouvraient le même écran.
+- **Fait** : la rubrique `navigation` est retirée du registre ; « Marketing du site » se place maintenant juste avant « Outils ». L'ancienne adresse `/navigation` (principal et `/sites/N/navigation`) continue de s'ouvrir et affiche **Apparence → Menus** comme entrée active (alias `navigation` → `apparence/menus` dans `buildCmsNav` / `buildSiteNav`).
+- **Sélecteur de menu** dans l'éditeur (menus DU site seulement) : un changement avec des modifications non enregistrées demande confirmation (refuser = rester sur le menu).
+- Tests : `apparence-menus-integration` (API) et `apparence-menus-selecteur-navigateur` (Chrome) ; tests de structure mis à jour (14 rubriques, 66 entrées de registre).
+- Un menu latéral qui affiche encore « Navigation » ou « BIENTÔT » sur Templates / Patterns / Styles vient d'un serveur qui n'a pas la dernière version (copie locale non à jour), pas du code actuel.
+
 ## 10. Limites connues (non faites, pas simulées)
+
+- Pas d'**ajout automatique des pages de premier niveau** au menu (option de WordPress) : non développée, donc absente de l'écran.
 
 - Pas de **types de contenus personnalisés** ni de taxonomies autres que catégories et étiquettes : le CMS n'en a pas.
 - Pas de **menu du compte utilisateur** : le gabarit d'en-tête n'a pas d'emplacement correspondant (ajouter un emplacement avant de brancher un gabarit serait trompeur).

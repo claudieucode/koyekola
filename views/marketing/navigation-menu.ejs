@@ -7,6 +7,10 @@
     <div class="mk-head-main">
       <p class="mk-nm-crumb"><a href="<%= BASE %><%= navSite === null ? "" : "?site=" + navSite %>">← Tous les menus</a></p>
       <h1 data-nm-title><%= menu.name %></h1>
+      <% if (siblings.length > 1) { %><p class="mk-nm-switch"><label for="nm-pick">Menu à modifier</label>
+        <select id="nm-pick" data-nm-pick>
+          <% siblings.forEach(function (m) { %><option value="<%= BASE %>/menus/<%= m.id %><%= navSite === null ? "" : "?site=" + navSite %>"<%= m.id === menu.id ? " selected" : "" %>><%= m.name %></option><% }) %>
+        </select></p><% } %>
       <p class="mk-head-sub" data-nm-summary><span class="mk-status <%= menu.status === "published" ? "mk-status-ok" : "mk-status-off" %>"><%= menu.status === "published" ? "Publié" : "Brouillon" %></span>
         <%= count %> élément<%= count > 1 ? "s" : "" %><% if (broken) { %> · <strong class="mk-nav-warn"><%= broken %> lien<%= broken > 1 ? "s" : "" %> à réparer</strong><% } %> · Emplacements : <%= locNames.join(", ") || "aucun" %></p>
     </div>

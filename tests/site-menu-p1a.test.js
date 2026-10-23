@@ -13,7 +13,7 @@ const one = (sql, ...a) => db.prepare(sql).get(...a);
 const uid = (c) => one("SELECT id FROM users WHERE email = ?", c.email).id;
 const SP = "/marketing/site-web/sites";
 const PR = "/marketing/site-web/principal";
-const DELEGATED = Object.entries(nav.SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => ({ mod: k, to: m.to, reg: m.reg, label: ({ articles: "Tous les articles", commentaires: "Tous", categories: "Catégories", navigation: "Navigation", medias: "Médiathèque" })[k] || m.label })); // libellé de l'entrée ACTIVE dans le menu (R8 lot 2 : articles et commentaires sont délégués)
+const DELEGATED = Object.entries(nav.SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => ({ mod: k, to: m.to, reg: m.reg, label: ({ articles: "Tous les articles", commentaires: "Tous", categories: "Catégories", navigation: "Menus", medias: "Médiathèque" })[k] || m.label })); // libellé de l'entrée ACTIVE dans le menu (R8 lot 2 : articles et commentaires sont délégués)
 const mkSite = (name, status = "active") => Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens, status) VALUES (?, ?, ?, '{}', ?)").run(orgId, name, name.toLowerCase().replace(/\W+/g, "-"), status).lastInsertRowid);
 const row = (sql, ...a) => Number(db.prepare(sql).run(...a).lastInsertRowid);
 const mkList = (site, name) => row("INSERT INTO mk_lists (organization_id, name, site_id) VALUES (?, ?, ?)", orgId, name, site);
@@ -51,12 +51,12 @@ before(async () => {
 after(() => srv.stop());
 
 describe("1 — le menu d'un site est la projection du registre", () => {
-  test("les groupes du registre, dans l'ordre, plus « Marketing du site » avant Navigation (sans Extensions, fonction centrale)", async () => {
+  test("les groupes du registre, dans l'ordre, plus « Marketing du site » avant Outils (sans Extensions, fonction centrale)", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
     const labels = topLabels(html);
-    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Navigation", "Outils", "Paramètres"];
+    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
     assert.deepEqual(labels, expected);
-    assert.equal(nav.SECTIONS.length, 15, "le registre compte 15 groupes (dont « Mes sites », gestionnaire central, et « Extensions », fonction centrale)");
+    assert.equal(nav.SECTIONS.length, 14, "le registre compte 14 groupes (dont « Mes sites », gestionnaire central, et « Extensions », fonction centrale)");
   });
   test("C1 : une entrée pas encore ouverte est visible, grisée « Bientôt », SANS lien ; son ancienne adresse n'affiche ni donnée ni action", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
