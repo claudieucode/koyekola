@@ -64,7 +64,7 @@ describe("menu d'un site (C1) dans un navigateur réel", { skip: SKIP }, () => {
 
   test("bureau : Utilisateurs, Outils et Paramètres se déplient avec leurs sous-entrées ; les non-prêtes sont grisées et ne bougent pas, les prêtes ouvrent le site", async () => {
     const { context, page } = await open(); await page.goto(`${srv.base}${SP}/${A}/tableau-de-bord`);
-    for (const [g, label, n] of [["utilisateurs", "Utilisateurs", 5], ["outils", "Outils", 8], ["parametres", "Paramètres", 11]]) {
+    for (const [g, label, n] of [["utilisateurs", "Utilisateurs", 5], ["outils", "Outils", 8], ["parametres", "Paramètres", 12]]) {
       await openGroup(page, label);
       const s = await subs(page, g);
       assert.equal(s.length, n, `${label} : ${n} sous-entrées`);

@@ -206,6 +206,7 @@ function addRevision(post, userId, note, kind = "save") {
       for (const p of revisionImages(dropped)) releaseImage(p); // images qui n'étaient plus gardées que pour ces révisions
     }
   }
+  if (kind === "publish") require("./writing").sweepSoon(); // notifications de première publication (arrière-plan)
   return Number(info.lastInsertRowid);
 }
 // Images (couverture, Facebook, X) citées par des révisions

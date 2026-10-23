@@ -44,6 +44,8 @@
             <select id="<%= id %>" name="<%= f.key %>"<%- dis %> aria-describedby="<%= hid %>"><option value="">Aucune (valeur par défaut)</option><% choices.pages.forEach((p) => { %><option value="<%= p.id %>"<%= Number(f.value) === p.id ? " selected" : "" %>><%= p.name %></option><% }) %></select>
           <% } else if (f.type === "image") { %>
             <select id="<%= id %>" name="<%= f.key %>"<%- dis %> aria-describedby="<%= hid %>"><option value="">Aucune</option><% if (f.value && !choices.images.some((i) => i.path === f.value)) { %><option value="<%= f.value %>" selected><%= f.value %></option><% } %><% choices.images.forEach((i) => { %><option value="<%= i.path %>"<%= f.value === i.path ? " selected" : "" %>><%= i.name %></option><% }) %></select>
+          <% } else if (f.type === "urllist") { %>
+            <textarea id="<%= id %>" name="<%= f.key %>" rows="4" maxlength="1200" spellcheck="false" autocomplete="off" placeholder="https://service.exemple.org/ping"<%- dis %> aria-describedby="<%= hid %>"><%= f.value %></textarea>
           <% } else if (f.type === "text") { %>
             <textarea id="<%= id %>" name="<%= f.key %>" rows="3" maxlength="<%= f.max %>"<%- dis %> aria-describedby="<%= hid %>"><%= f.value %></textarea>
           <% } else if (f.type === "integer") { %>
@@ -76,6 +78,25 @@
   <% if (scope.siteId) { %><input type="hidden" name="site" value="<%= scope.siteId %>"><% } %>
   <% if (typeof frame !== "undefined" && frame) { %><input type="hidden" name="frame" value="1"><% } %>
 </form>
+<% } %>
+<% if (group === "writing") { %>
+<section class="mk-panel mk-st-tools" aria-labelledby="wr-fmt-h">
+  <h2 id="wr-fmt-h">Format par défaut des articles</h2>
+  <p class="mk-sub">Non proposé : Kolakisa n'a pas de « formats d'article » à la WordPress (standard, galerie, citation…). Un article est un texte riche dans l'éditeur du blog, où images, vidéos, citations et listes s'insèrent comme blocs. Aucun format n'est inventé pour remplir un menu.</p>
+</section>
+<section class="mk-panel mk-st-tools" aria-labelledby="wr-mail-h">
+  <h2 id="wr-mail-h">Publier par e-mail</h2>
+  <p class="mk-sub"><span class="mk-status mk-status-off">Non disponible</span> Aucun client de réception (POP3 ou IMAP) n'est installé et une adresse secrète ne suffit pas comme authentification : rien n'est simulé. La rédaction se fait dans l'éditeur ; les contenus peuvent aussi être importés depuis Outils → Importer. Par conséquent, il n'y a pas non plus de « catégorie par défaut des articles envoyés par e-mail ».</p>
+</section>
+<section class="mk-panel mk-st-tools" aria-labelledby="wr-log-h">
+  <h2 id="wr-log-h">Journal des notifications</h2>
+  <% if (!pingLog || !pingLog.length) { %><p class="mk-sub">Aucune notification envoyée pour ce site.</p>
+  <% } else { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Dernières notifications de publication</caption>
+    <thead><tr><th scope="col">Article</th><th scope="col">Destination</th><th scope="col">État</th><th scope="col">Essais</th><th scope="col">Détail</th></tr></thead>
+    <tbody><% pingLog.forEach((l) => { const lbl = { sent: "Envoyée", failed: l.attempts >= 3 ? "Échec définitif" : "Échec, nouvel essai", queued: "En attente", skipped: "Ignorée" }[l.status] || l.status; const cls = { sent: "mk-status-ok", failed: "mk-status-warn", queued: "mk-status-info", skipped: "mk-status-off" }[l.status] || "mk-status-off"; %>
+      <tr><th scope="row"><%= l.title || ("Article n° " + l.post_id) %></th><td><%= l.url %></td><td><span class="mk-status <%= cls %>"><%= lbl %></span></td><td><%= l.attempts %></td><td><%= l.error || (l.http_status ? "HTTP " + l.http_status : "—") %></td></tr>
+    <% }) %></tbody></table></div><% } %>
+</section>
 <% } %>
 <% if (group === "email" || group === "tunnels") { const T = group === "email"
   ? [["/marketing/envoi", "Fournisseur d'envoi, clés secrètes et e-mail de test", "Choisissez le fournisseur, enregistrez les clés (jamais affichées en clair) et envoyez un e-mail de test : la réussite n'est annoncée qu'après la réponse du fournisseur."], ["/marketing/domaines", "Domaines d'envoi : SPF, DKIM et DMARC", "Ajoutez votre domaine et vérifiez ses enregistrements DNS : le CMS lit le DNS réel et indique ce qui manque."]]

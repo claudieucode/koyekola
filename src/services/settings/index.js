@@ -15,6 +15,7 @@ const PREFIX = "cms.";
 const MAX_VALUE = 8192;
 const GROUPS = {
   general: { label: "Général", intro: "Identité du site, langue, fuseau horaire et formats de date." },
+  writing: { label: "Écriture", intro: "Valeurs par défaut de la rédaction et notifications de publication, propres à chaque site." },
   reading: { label: "Lecture", intro: "Ce que le site affiche à son accueil, combien d'articles par page, et ce que contient le flux de syndication." },
   comments: { label: "Commentaires", intro: "Réglages globaux du moteur de commentaires (la modération se fait dans Commentaires)." },
   media: { label: "Médias", intro: "Limites d'envoi des fichiers dans la médiathèque." },
@@ -111,6 +112,23 @@ def({ key: "favicon", group: "general", label: "Favicon", type: "image", scopes:
 def({ key: "public_url", group: "general", label: "Domaine personnalisé", type: "url", scopes: ["site"], sensitive: true, help: "https://… sans chemin. Détermine le domaine servant ce site (adresses canoniques, plan du site, accueil à la racine).",
   impact: "Les adresses canoniques, le plan du site et l'accueil du site suivent ce domaine. Un domaine mal réglé fait sortir le site des moteurs de recherche.",
   readSite: (s) => s.settings.seo.publicUrl, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.seo.publicUrl = v; }), defaultSite: "" });
+
+// --- Écriture ---
+const writing = () => require("../writing");
+def({ key: "writing_default_category", group: "writing", label: "Catégorie par défaut des articles", type: "enum", help: "Appliquée à un nouvel article quand l'auteur n'en choisit aucune. Les articles existants ne changent pas. Si la catégorie est supprimée, les nouveaux articles restent sans catégorie.",
+  options: (scope) => [["", "Aucune (non classé)"], ...writing().categoryChoices(scope.siteId)],
+  readMain: (ctx) => String(writing().defaultCategoryId(null, ctx) || ""), writeMain: (v, ctx) => writing().setDefaultCategory(null, v, ctx), defaultMain: "",
+  readSite: (s, ctx) => String(writing().defaultCategoryId(s.id, ctx) || ""), writeSite: (v, ctx, siteId) => writing().setDefaultCategory(siteId, v, ctx), defaultSite: "" });
+def({ key: "writing_ping_enabled", group: "writing", label: "Notifier un service de mise à jour à chaque nouvel article publié", type: "boolean", sensitive: true,
+  help: "Envoie une notification (ping) aux destinations ci-dessous, une seule fois par article, à sa première publication. Un enregistrement ou une mise à jour ne renvoie rien. Les articles déjà publiés ne sont pas notifiés. L'échec d'un service n'empêche jamais la publication.",
+  impact: "Le site contactera des services externes à chaque nouvelle publication (adresse du site et titre du site transmis).",
+  readMain: (ctx) => writing().getPing(null, ctx).enabled, writeMain: (v, ctx) => writing().setPingEnabled(null, v, ctx), defaultMain: false,
+  readSite: (s, ctx) => writing().getPing(s.id, ctx).enabled, writeSite: (v, ctx, siteId) => writing().setPingEnabled(siteId, v, ctx), defaultSite: false });
+def({ key: "writing_ping_urls", group: "writing", label: "Services à notifier", type: "urllist", sensitive: true, nullable: true,
+  help: "Une adresse https:// par ligne (5 au plus), protocole « weblogUpdates.ping ». Aucune destination n'est préremplie : les anciens services de ping de WordPress sont souvent inactifs ou sources de spam, n'ajoutez que des services que vous avez vérifiés. Les adresses privées sont refusées.",
+  impact: "Seules ces adresses recevront les notifications de ce site.",
+  readMain: (ctx) => writing().getPing(null, ctx).urls.join("\n"), writeMain: (v, ctx) => writing().setPingUrls(null, writing().parseUrls(v).urls, ctx), defaultMain: "",
+  readSite: (s, ctx) => writing().getPing(s.id, ctx).urls.join("\n"), writeSite: (v, ctx, siteId) => writing().setPingUrls(siteId, writing().parseUrls(v).urls, ctx), defaultSite: "" });
 
 // --- Lecture ---
 def({ key: "homepage_page", group: "reading", label: "Page d'accueil", type: "page", sensitive: true, nullable: true, help: "Une page publiée du CMS affichée à la racine (« / »). Vide : l'accueil standard de KOLAKISA (site principal) ou aucune (site du CMS).",
@@ -258,6 +276,10 @@ function validate(d, raw, scope, ctx) {
       const v = clean(raw, 200);
       if (!v) return { ok: true, value: "" };
       return /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{2,5})?$/i.test(v) ? { ok: true, value: v.replace(/\/+$/, "") } : fail("une adresse https:// sans chemin (ex. https://www.monsite.com).");
+    }
+    case "urllist": {
+      const r = writing().parseUrls(raw);
+      return r.errors.length ? fail(r.errors.join(" ")) : { ok: true, value: r.urls.join("\n") };
     }
     case "string": case "text": {
       const max = scope.siteId && d.maxSite ? d.maxSite : d.max || 300;

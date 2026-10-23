@@ -1,4 +1,4 @@
-// KOLAKISA CMS — Paramètres dans l'espace d'un site : les neuf sections (Lecture, Commentaires, Médias, Permaliens, SEO, Indexation, Emailing, Tunnels, Avancé) sont ouvertes (plus « Bientôt »),
+// KOLAKISA CMS — Paramètres dans l'espace d'un site : les dix sections (Écriture, Lecture, Commentaires, Médias, Permaliens, SEO, Indexation, Emailing, Tunnels, Avancé) sont ouvertes (plus « Bientôt »),
 // montrent les réglages PROPRES au site (enregistrés, validés, isolés) et, pour le reste, ce qui s'applique réellement à lui en lecture seule ; aucune écriture d'un réglage commun depuis un site.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -9,7 +9,7 @@ describe("Paramètres : sections ouvertes dans l'espace d'un site", () => {
   let srv, boss, db, orgId, A, B, adminA, viewerA, outsider, anon;
   const one = (sql, ...a) => db.prepare(sql).get(...a);
   const R = "/marketing/site-web";
-  const SECTIONS = { lecture: "Lecture", commentaires: "Commentaires", medias: "Médias", permaliens: "Permaliens", seo: "SEO", indexation: "Indexation", emailing: "Emailing", tunnels: "Tunnels", avance: "Avancé" };
+  const SECTIONS = { ecriture: "Écriture", lecture: "Lecture", commentaires: "Commentaires", medias: "Médias", permaliens: "Permaliens", seo: "SEO", indexation: "Indexation", emailing: "Emailing", tunnels: "Tunnels", avance: "Avancé" };
   const frame = (site, k) => `${R}/sites/${site}/parametres-${k}`;
   const settingsOf = (id) => JSON.parse(one("SELECT settings FROM mk_sites WHERE id = ?", id).settings || "{}");
   const emailOf = (id) => JSON.stringify(db.prepare("SELECT key, value FROM mk_settings WHERE organization_id = ? AND key LIKE ?").all(orgId, `email.site_${id}.%`));
@@ -28,7 +28,7 @@ describe("Paramètres : sections ouvertes dans l'espace d'un site", () => {
   });
   after(() => { db.close(); return srv.stop(); });
 
-  test("le menu d'un site : les neuf entrées sont des liens vers le cadre du site, plus aucune « Bientôt » dans Paramètres", async () => {
+  test("le menu d'un site : les dix entrées sont des liens vers le cadre du site, plus aucune « Bientôt » dans Paramètres", async () => {
     const menu = (await boss.get(`${R}/sites/${A}/reglages`)).text;
     for (const k of Object.keys(SECTIONS)) assert.match(menu, new RegExp(`href="${frame(A, k)}"`), k);
     assert.ok(!/Lecture<\/span><span class="mk-cms-tag">Bientôt/.test(menu) && !/Tunnels<\/span><span class="mk-cms-tag">Bientôt/.test(menu), "Lecture et Tunnels ne portent plus « Bientôt »");
