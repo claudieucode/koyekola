@@ -31,15 +31,15 @@ describe("projection du registre (menu d'un site)", () => {
   });
   test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
     const items = flat(nav.siteSections(site));
-    for (const k of ["seo/meta", "seo/analyse", "outils/importer", "outils/exporter", "corbeille"]) {
+    for (const k of ["seo/meta", "seo/analyse", "seo/sitemap", "redirections/liens-casses", "redirections/permaliens"]) {
       const i = items.find((x) => x.key === k); assert.ok(i, k); assert.equal(i.status, "preview", k); assert.equal(i.disabled, true, k); assert.equal(i.href, null, k);
       assert.equal(i.label, nav.ALL.find((x) => x.key === k).label, `${k} : libellé du registre`);
     }
   });
   test("ce qui est réservé à l'administration centrale ou à un lot suivant n'a AUCUN lien dans un site", () => {
     const hrefs = flat(nav.siteSections(site)).map((i) => i.href || "").join(" ");
-    for (const w of ["sauvegardes", "logs", "systeme", "outils/importer", "exporter", "diagnostic", "maintenance", "/utilisateurs/roles", "/utilisateurs/permissions", "/utilisateurs/invitations", "liens-casses", "/permaliens", "/parametres/"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
-    assert.ok(!flat(nav.siteSections(site)).some((i) => i.href === `${site.base}/corbeille`), "la corbeille du site (Outils) reste fermée ; seules celles des articles et des commentaires sont ouvertes");
+    for (const w of ["sauvegardes", "logs", "systeme", "/utilisateurs/roles", "/utilisateurs/permissions", "/utilisateurs/invitations", "liens-casses", "/permaliens", "/parametres/"]) assert.ok(!hrefs.includes(w), `ne doit pas apparaître : ${w}`);
+    assert.ok(flat(nav.siteSections(site)).some((i) => i.href === `${site.base}/corbeille`), "la corbeille du site (Outils) est ouverte depuis « Outils dans un site » (cloisonnée par site)");
     const keys = flat(nav.siteSections(site)).map((i) => i.key);
     for (const k of ["outils/sauvegardes", "outils/systeme", "outils/logs"]) assert.ok(!keys.includes(k), `${k} reste dans l'administration centrale`);
   });
