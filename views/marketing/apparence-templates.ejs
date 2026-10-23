@@ -1,0 +1,54 @@
+<%#
+  KOLAKISA CMS → Apparence → Templates : bibliothèque de modèles d'un site (packs de site, gabarits de pages, « Mes modèles »). Les données (modèles, historique, droits) sont dans le bloc JSON
+  ci-dessous ; public/js/cms-templates.js construit l'écran. L'importation crée de vraies pages, un menu et un brouillon de styles, par le serveur, sans rien remplacer.
+%><%- include("partials/top", { title, active }) %>
+<div class="mk-pt mk-tp" data-tp-root>
+  <header class="mk-pt-head">
+    <div class="mk-head-main"><h1>Templates</h1><p class="mk-head-sub">Des modèles de pages et de sites complets pour <strong><%= T.name %></strong>. Un import crée de vraies pages modifiables dans le Page Builder ; il ne remplace ni ne supprime rien de ce qui existe, et rien n'est publié.</p></div>
+  </header>
+  <div class="mk-wd-banner" data-tp-banner hidden role="alert"><span data-tp-banner-text></span></div>
+  <p class="mk-wd-loading" data-tp-loading>Chargement de la bibliothèque…</p>
+  <div data-tp-main hidden>
+    <div class="mk-pt-tools">
+      <div class="mk-pt-filters" role="tablist" aria-label="Type de modèle" data-tp-sources></div>
+      <label class="sr-only" for="tp-search">Rechercher un modèle</label><input id="tp-search" type="search" placeholder="Rechercher un modèle…" autocomplete="off" data-tp-search>
+      <label class="sr-only" for="tp-cat">Catégorie</label><select id="tp-cat" data-tp-cat></select>
+    </div>
+    <p class="field-hint" data-tp-count role="status" aria-live="polite"></p>
+    <ul class="mk-pt-grid" data-tp-grid aria-label="Modèles"></ul>
+    <p class="mk-pt-empty" data-tp-empty hidden></p>
+    <section class="mk-tp-history" data-tp-history hidden aria-labelledby="tp-hist-title"><h2 id="tp-hist-title">Imports récents</h2><ul data-tp-history-list></ul></section>
+  </div>
+  <p class="sr-only" role="status" aria-live="assertive" data-tp-live></p>
+
+  <dialog class="mk-dialog mk-modal mk-pt-dialog mk-pt-dialog--wide" data-tp-dlg-preview aria-labelledby="tp-prev-title">
+    <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-prev-title" data-tp-prev-title>Aperçu</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
+    <div class="mk-dialog-body">
+      <div class="mk-tp-prevtools"><div class="mk-st-tabs mk-st-tabs--small" role="tablist" aria-label="Pages du modèle" data-tp-prev-tabs></div>
+        <div class="mk-st-devices" role="group" aria-label="Appareil" data-tp-devices><button type="button" aria-pressed="true" data-tp-device="desktop">Ordinateur</button><button type="button" aria-pressed="false" data-tp-device="tablet">Tablette</button><button type="button" aria-pressed="false" data-tp-device="mobile">Mobile</button></div></div>
+      <div class="mk-pt-prevwrap" data-tp-prevwrap><iframe title="Aperçu du modèle" data-tp-prev-frame referrerpolicy="same-origin"></iframe></div>
+    </div>
+    <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Fermer</button><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-tp-prev-import hidden>Importer ce modèle…</button></div>
+  </dialog>
+  <dialog class="mk-dialog mk-modal mk-pt-dialog" data-tp-dlg-import aria-labelledby="tp-imp-title">
+    <form method="dialog" data-tp-form-import>
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-imp-title" data-tp-imp-title>Importer</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
+      <div class="mk-dialog-body mk-pt-form">
+        <p class="field-hint" data-tp-imp-what></p>
+        <p class="mk-wd-banner" data-tp-imp-warn hidden role="status"></p>
+        <div data-tp-imp-single class="field-group" hidden><label for="tp-imp-name">Nom de la page</label><input id="tp-imp-name" type="text" maxlength="110" autocomplete="off" data-tp-imp-name></div>
+        <div data-tp-imp-list></div>
+        <fieldset class="mk-pt-radio" data-tp-imp-options hidden><legend>Options du pack</legend>
+          <label class="mk-cms-check"><input type="checkbox" data-tp-imp-menu> Créer un menu qui relie ces pages (non affecté à l'en-tête : vous choisissez ensuite)</label>
+          <label class="mk-cms-check"><input type="checkbox" data-tp-imp-styles> Préparer le style du pack dans le BROUILLON de Styles (rien n'est publié)</label>
+        </fieldset>
+        <p class="field-hint">Les pages sont créées en brouillon, avec de nouveaux noms si ceux-ci existent déjà : aucune page existante n'est remplacée. Les modèles ne contiennent aucune image : vous les choisissez dans la médiathèque.</p>
+        <p class="mk-st-err" role="alert" data-tp-imp-err hidden></p>
+        <div class="mk-tp-result" data-tp-imp-result hidden role="status"></div>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Fermer</button><button type="submit" class="mk-wd-btn mk-wd-btn--primary" data-tp-imp-ok>Importer</button></div>
+    </form>
+  </dialog>
+  <script type="application/json" id="tp-data"><%- bootJson %></script>
+</div>
+<%- include("partials/bottom") %>

@@ -51,7 +51,7 @@ function pagesOf(ctx, siteId) {
 }
 function pageOf(ctx, siteId, pageId) {
   const page = pagesLib().getPage(ctx, Number(pageId));
-  if (!page || page.archived_at || (page.site_id ?? null) !== (siteId ?? null)) throw new UserError("Page introuvable pour ce site.");
+  if (!page || page.archived_at || page.kind === "step" || (page.site_id ?? null) !== (siteId ?? null)) throw new UserError("Page introuvable pour ce site.");
   return page;
 }
 

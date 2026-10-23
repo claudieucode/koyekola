@@ -72,6 +72,10 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "cms_template_imports": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_themes": {
    "siteId": true,
    "classe": "isolee"

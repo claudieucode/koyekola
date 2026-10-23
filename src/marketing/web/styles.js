@@ -9,7 +9,7 @@ const palettes = require("../../services/stylePalettes");
 const tokensLib = require("../pages/tokens");
 const customizerWeb = require("./customizer");
 const target = require("./siteTarget");
-const { need } = require("./kit");
+const { need, safeJson } = require("./kit");
 
 const BASE = "/marketing/site-web/styles";
 // Les quatre familles de réglages de design (le reste — identité, en-tête, pied de page, CSS — reste dans Personnaliser)
@@ -45,7 +45,7 @@ module.exports = () => {
     };
     res.set("Cache-Control", "no-store");
     // « < » et les séparateurs de ligne sont échappés : le JSON ne peut jamais fermer la balise qui le contient
-    const bootJson = JSON.stringify(boot).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+    const bootJson = safeJson(boot);
     res.render("marketing/styles", { title: "Styles", active: "apparence/styles", T: t, BASE, bootJson, stylesJs: true, mediaSite: t.siteId ? String(t.siteId) : "principal" });
   });
   return router;

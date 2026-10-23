@@ -1,0 +1,75 @@
+<%#
+  KOLAKISA CMS → Apparence → Patterns : bibliothèque de compositions réutilisables d'un site. Les données (patterns intégrés, compositions du site, corbeille, pages du site, droits)
+  sont dans le bloc JSON ci-dessous ; public/js/cms-patterns.js construit l'écran. Toute écriture passe par le serveur, qui revalide et limite chaque action au site.
+%><%- include("partials/top", { title, active }) %>
+<div class="mk-pt" data-pt-root>
+  <header class="mk-pt-head">
+    <div class="mk-head-main"><h1>Patterns</h1><p class="mk-head-sub">Des compositions prêtes à insérer dans les pages de <strong><%= T.name %></strong>. Un pattern inséré devient des sections normales de la page : modifiables comme le reste, sans lien avec l'original.</p></div>
+    <div class="mk-pt-actions"><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-pt-create disabled>Enregistrer une composition</button></div>
+  </header>
+  <div class="mk-wd-banner" data-pt-banner hidden role="alert"><span data-pt-banner-text></span></div>
+  <p class="mk-wd-loading" data-pt-loading>Chargement de la bibliothèque…</p>
+  <div data-pt-main hidden>
+    <div class="mk-pt-tools">
+      <div class="mk-pt-filters" role="tablist" aria-label="Source des patterns" data-pt-sources></div>
+      <label class="sr-only" for="pt-search">Rechercher un pattern</label><input id="pt-search" type="search" placeholder="Rechercher un pattern…" autocomplete="off" data-pt-search>
+      <label class="sr-only" for="pt-cat">Catégorie</label><select id="pt-cat" data-pt-cat></select>
+    </div>
+    <p class="field-hint" data-pt-count role="status" aria-live="polite"></p>
+    <ul class="mk-pt-grid" data-pt-grid aria-label="Patterns"></ul>
+    <p class="mk-pt-empty" data-pt-empty hidden></p>
+  </div>
+  <p class="sr-only" role="status" aria-live="assertive" data-pt-live></p>
+
+  <dialog class="mk-dialog mk-modal mk-pt-dialog mk-pt-dialog--wide" data-pt-dlg-preview aria-labelledby="pt-prev-title">
+    <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="pt-prev-title" data-pt-prev-title>Aperçu</h2></div><button type="button" class="mk-dialog-close" data-pt-close aria-label="Fermer">×</button></header>
+    <div class="mk-dialog-body"><div class="mk-st-devices" role="group" aria-label="Appareil" data-pt-devices><button type="button" aria-pressed="true" data-pt-device="desktop">Ordinateur</button><button type="button" aria-pressed="false" data-pt-device="tablet">Tablette</button><button type="button" aria-pressed="false" data-pt-device="mobile">Mobile</button></div>
+      <div class="mk-pt-prevwrap" data-pt-prevwrap><iframe title="Aperçu du pattern" data-pt-prev-frame referrerpolicy="same-origin"></iframe></div></div>
+    <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-pt-close>Fermer</button><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-pt-prev-insert hidden>Insérer dans une page…</button></div>
+  </dialog>
+  <dialog class="mk-dialog mk-modal mk-pt-dialog" data-pt-dlg-insert aria-labelledby="pt-ins-title">
+    <form method="dialog" data-pt-form-insert>
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="pt-ins-title">Insérer dans une page</h2></div><button type="button" class="mk-dialog-close" data-pt-close aria-label="Fermer">×</button></header>
+      <div class="mk-dialog-body mk-pt-form">
+        <p class="field-hint" data-pt-ins-what></p>
+        <div class="field-group"><label for="pt-ins-page">Page</label><select id="pt-ins-page" data-pt-ins-page required></select></div>
+        <fieldset class="mk-pt-radio"><legend>Emplacement</legend>
+          <label><input type="radio" name="pos" value="end" checked> À la fin de la page</label>
+          <label><input type="radio" name="pos" value="start"> Au début de la page</label>
+          <label><input type="radio" name="pos" value="after"> Après la section :</label>
+        </fieldset>
+        <div class="field-group"><label class="sr-only" for="pt-ins-after">Section de repère</label><select id="pt-ins-after" data-pt-ins-after disabled></select></div>
+        <p class="field-hint">Les sections sont ajoutées au BROUILLON de la page : rien n'est publié. Vous pourrez les modifier dans le Page Builder.</p>
+        <p class="mk-st-err" role="alert" data-pt-ins-err hidden></p>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-pt-close>Annuler</button><button type="submit" class="mk-wd-btn mk-wd-btn--primary" data-pt-ins-ok>Insérer</button></div>
+    </form>
+  </dialog>
+  <dialog class="mk-dialog mk-modal mk-pt-dialog" data-pt-dlg-create aria-labelledby="pt-cr-title">
+    <form method="dialog" data-pt-form-create>
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="pt-cr-title">Enregistrer une composition</h2></div><button type="button" class="mk-dialog-close" data-pt-close aria-label="Fermer">×</button></header>
+      <div class="mk-dialog-body mk-pt-form">
+        <p class="field-hint">Copie indépendante de sections d'une page de ce site : la page d'origine ne change pas, et la composition reste privée à ce site.</p>
+        <div class="field-group"><label for="pt-cr-page">Page source</label><select id="pt-cr-page" data-pt-cr-page required></select></div>
+        <fieldset class="mk-pt-radio"><legend>Sections à enregistrer</legend><div data-pt-cr-sections></div></fieldset>
+        <div class="field-group"><label for="pt-cr-name">Nom</label><input id="pt-cr-name" type="text" maxlength="60" required autocomplete="off" data-pt-cr-name></div>
+        <div class="field-group"><label for="pt-cr-desc">Description (facultative)</label><input id="pt-cr-desc" type="text" maxlength="200" autocomplete="off" data-pt-cr-desc></div>
+        <p class="mk-st-err" role="alert" data-pt-cr-err hidden></p>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-pt-close>Annuler</button><button type="submit" class="mk-wd-btn mk-wd-btn--primary" data-pt-cr-ok>Enregistrer</button></div>
+    </form>
+  </dialog>
+  <dialog class="mk-dialog mk-modal mk-pt-dialog" data-pt-dlg-rename aria-labelledby="pt-rn-title">
+    <form method="dialog" data-pt-form-rename>
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="pt-rn-title">Renommer</h2></div><button type="button" class="mk-dialog-close" data-pt-close aria-label="Fermer">×</button></header>
+      <div class="mk-dialog-body mk-pt-form">
+        <div class="field-group"><label for="pt-rn-name">Nom</label><input id="pt-rn-name" type="text" maxlength="60" required autocomplete="off" data-pt-rn-name></div>
+        <div class="field-group"><label for="pt-rn-desc">Description</label><input id="pt-rn-desc" type="text" maxlength="200" autocomplete="off" data-pt-rn-desc></div>
+        <p class="mk-st-err" role="alert" data-pt-rn-err hidden></p>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-pt-close>Annuler</button><button type="submit" class="mk-wd-btn mk-wd-btn--primary">Enregistrer</button></div>
+    </form>
+  </dialog>
+  <script type="application/json" id="pt-data"><%- bootJson %></script>
+</div>
+<%- include("partials/bottom") %>
