@@ -7,6 +7,7 @@ const pages = require("../pages");
 const db = require("../../config/database");
 const { need } = require("./kit");
 const general = require("./generalSettings");
+const privacy = require("./privacy");
 const target = require("./siteTarget");
 
 const BASE = "/marketing/site-web/parametres";
@@ -80,6 +81,11 @@ module.exports = () => {
     if (group === "general") {
       const t = target(req, res); if (!t) return;
       return general.render(req, res, t, "parametres", { settingsHead: { heading: "Général", intro: "", groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(s.scope), scope: s.scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "general", tabPath: "" } });
+    }
+    // Confidentialité : deux onglets (Réglages · Guide de politique) ; le formulaire générique ne sert plus à ce groupe
+    if (group === "privacy") {
+      const t = target(req, res); if (!t) return;
+      return privacy.render(req, res, t, { settingsHead: { heading: "Confidentialité", intro: "", groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(s.scope), scope: s.scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "privacy", tabPath: "/confidentialite" } });
     }
     render(req, res, group, s.scope);
   });
@@ -169,6 +175,7 @@ module.exports = () => {
       json(res, 200, { ok: true, changed: result.changed, values: Object.fromEntries(general.KEYS.filter((k) => k in now).map((k) => [k, now[k].value])) });
     } catch (error) { if (error.status) return json(res, error.status, { error: error.message }); next(error); }
   });
+  privacy.apiRoutes(api);
   api.get("/:key", (req, res) => {
     const scope = scopeJson(req, res); if (!scope) return;
     const d = engine.byKey(scope, req.params.key);

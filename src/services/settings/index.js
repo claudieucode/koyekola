@@ -153,7 +153,7 @@ def({ key: "seo_follow", group: "seo", label: "Autoriser le suivi des liens", ty
   readSite: (s) => s.settings.seo.follow !== false, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.seo.follow = v; }), defaultSite: true });
 
 // --- Confidentialité ---
-def({ key: "privacy_page", group: "privacy", label: "Page de politique de confidentialité", type: "page", nullable: true, help: "Une page publiée du CMS : un lien « Confidentialité » est ajouté au bandeau de consentement (site principal) ou au pied de page des pages du site. Aucune conformité juridique n'est déduite.",
+def({ key: "privacy_page", group: "privacy", label: "Page de politique de confidentialité", type: "page", nullable: true, allowDraft: true, help: "Une page du CMS : un lien « Confidentialité » est ajouté au bandeau de consentement (site principal) ou au pied de page des pages du site, dès que la page est publiée. Aucune conformité juridique n'est déduite.",
   ...mainKv("privacy_page", ""), readSite: (s) => s.settings.general.privacyPageId || null, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.privacyPageId = v ? Number(v) : null; }), defaultSite: null });
 
 // --- Indexation ---
@@ -261,7 +261,8 @@ function validate(d, raw, scope, ctx) {
       const p = db.prepare("SELECT id, site_id, status, archived_at, kind, organization_id FROM mk_landing_pages WHERE id = ?").get(id);
       if (!p || p.organization_id !== ctx.organizationId) return fail("page introuvable.");
       if (p.archived_at) return fail("cette page est à la corbeille.");
-      if (p.status !== "published") return fail("cette page n'est pas publiée : elle serait introuvable pour les visiteurs.");
+      // Politique de confidentialité : un brouillon peut être associé (on la rédige avant de la publier) ; le lien public n'apparaît qu'une fois la page en ligne
+      if (p.status !== "published" && !d.allowDraft) return fail("cette page n'est pas publiée : elle serait introuvable pour les visiteurs.");
       if (p.kind === "step") return fail("une étape de tunnel ne peut pas servir de page d'accueil.");
       if ((p.site_id ?? null) !== (scope.siteId ?? null)) return fail("cette page n'appartient pas à ce site.");
       return { ok: true, value: id };

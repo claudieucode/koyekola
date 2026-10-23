@@ -1,0 +1,145 @@
+<%#
+  KOLAKISA CMS → Paramètres → Confidentialité : onglets « Réglages » et « Guide de politique ». L'état, la page associée et les recommandations viennent du serveur (src/marketing/web/privacy.js,
+  src/services/privacy) ; public/js/cms-privacy.js ajoute les onglets sans rechargement, la création de page, l'association et la protection des modifications non enregistrées.
+%><%- include("partials/top", { title, active }) %>
+<% const pol = P.policy; const stateCls = { none: "is-none", draft_available: "is-warn", draft: "is-warn", published: "is-ok", unavailable: "is-bad" }[pol.state] || "is-none";
+   const statusChip = { detected: ["Détecté dans Kolakisa", "is-detected"], not_detected: ["Non détecté, à confirmer", "is-undetected"], general: ["Recommandation générale", "is-general"], unknown: ["Détection impossible, à confirmer", "is-undetected"] };
+   const byId = Object.fromEntries(P.guide.map((m) => [m.id, m]));
+   const topics = [
+     ["Informations collectées", "Listez chaque catégorie de données que le site reçoit (identité, coordonnées, messages, données de navigation).", ["forms", "accounts", "comments"]],
+     ["Finalités de la collecte", "Pour chaque catégorie, dites à quoi elle sert. Une donnée sans finalité claire est à ne pas collecter.", []],
+     ["Formulaires et comptes utilisateurs", "Décrivez les champs demandés, le texte de consentement et ce qu'il advient des réponses.", ["forms", "accounts"]],
+     ["Commentaires", "Précisez ce qui est enregistré et affiché (nom, e-mail, texte) et comment faire retirer un commentaire.", ["comments"]],
+     ["Cookies et technologies similaires", "Listez les cookies utilisés, leur rôle et leur durée, et la façon de retirer son consentement.", ["analytics"]],
+     ["Statistiques et outils d'analyse", "Nommez les outils de mesure réellement utilisés. Kolakisa ne détecte pas ceux que vous ajoutez vous-même.", ["analytics"]],
+     ["Services externes intégrés", "Hébergement de vidéo, cartes, paiement, e-mail, réseaux sociaux : nom, finalité et données transmises.", ["media"]],
+     ["Communications et newsletters", "Indiquez qui reçoit des e-mails, avec quel accord, et comment se désinscrire.", ["emailing"]],
+     ["Durées de conservation", "Donnez une durée par catégorie de données, ou le critère qui la fixe.", ["analytics"]],
+     ["Droits et demandes des personnes", "Expliquez comment demander l'accès, la correction ou l'effacement, et sous quel délai vous répondez.", []],
+     ["Coordonnées de contact", "Indiquez le responsable du site et une adresse pour les questions sur les données.", []],
+     ["Mesures de protection", "Décrivez uniquement les mesures que vous appliquez réellement.", []],
+   ]; %>
+<% if (typeof settingsHead !== "undefined" && settingsHead) { %><%- include("partials/settings-head", settingsHead) %><% } %>
+<div class="mk-pv" data-pv-root>
+  <header class="mk-pv-head">
+    <p class="mk-pv-sub">Politique de confidentialité de <strong><%= T.name %></strong>.</p>
+  </header>
+  <div class="mk-pv-tabs" role="tablist" aria-label="Sections de la confidentialité">
+    <a class="mk-pv-tab" role="tab" id="pv-tab-reglages" aria-controls="pv-panel-reglages" aria-selected="<%= tab === "reglages" %>" tabindex="<%= tab === "reglages" ? 0 : -1 %>" href="?<%= P.siteId ? "site=" + P.siteId + "&" : "" %>onglet=reglages" data-pv-tab="reglages">Réglages</a>
+    <a class="mk-pv-tab" role="tab" id="pv-tab-guide" aria-controls="pv-panel-guide" aria-selected="<%= tab === "guide" %>" tabindex="<%= tab === "guide" ? 0 : -1 %>" href="?<%= P.siteId ? "site=" + P.siteId + "&" : "" %>onglet=guide" data-pv-tab="guide">Guide de politique</a>
+  </div>
+  <p class="mk-pv-flash" data-pv-flash role="status" aria-live="polite" hidden></p>
+
+  <%# =================== RÉGLAGES =================== %>
+  <section class="mk-pv-panel" role="tabpanel" id="pv-panel-reglages" aria-labelledby="pv-tab-reglages"<%- tab === "reglages" ? "" : " hidden" %> data-pv-panel="reglages">
+    <% if (P.readOnly) { %><p class="mk-pv-note" role="status">Ce site est archivé : ses réglages sont en lecture seule.</p>
+    <% } else if (!P.canSelect && !P.canCreate) { %><p class="mk-pv-note" role="status">Lecture seule : vous pouvez consulter cette page, mais pas la modifier (permissions « settings.write » et « forms.write » requises).</p><% } %>
+    <div class="mk-pv-card mk-pv-intro">
+      <h2>Réglages de confidentialité</h2>
+      <p>En tant que propriétaire du site, vous pouvez avoir à respecter des règles nationales ou internationales sur la vie privée, par exemple publier une politique de confidentialité. Si vous en avez déjà une, sélectionnez-la ci-dessous. Sinon, créez-en une : Kolakisa prépare un modèle à compléter.</p>
+      <p><strong>Ce modèle n'est ni un avis juridique ni une garantie de conformité.</strong> C'est à vous de le compléter avec les pratiques réelles du site, de le relire régulièrement et de le tenir à jour. Pour savoir quoi y inclure, consultez le <a href="?<%= P.siteId ? "site=" + P.siteId + "&" : "" %>onglet=guide" data-pv-goto="guide">guide de politique</a>.</p>
+    </div>
+
+    <div class="mk-pv-card" aria-labelledby="pv-state-h">
+      <div class="mk-pv-state <%= stateCls %>" data-pv-state>
+        <div class="mk-pv-state-main">
+          <h2 id="pv-state-h">État de la politique</h2>
+          <p class="mk-pv-state-label"><span class="mk-pv-dot" aria-hidden="true"></span><strong data-pv-state-label><%= pol.label %></strong></p>
+          <p class="mk-pv-state-detail" data-pv-state-detail><%= pol.detail %></p>
+        </div>
+        <p class="mk-pv-state-links" data-pv-state-links>
+          <% if (pol.page) { %><a href="<%= pol.page.edit %>">Modifier</a> · <a href="<%= pol.page.preview %>" target="_blank" rel="noopener">Prévisualiser</a><% if (pol.page.publicUrl) { %> · <a href="<%= pol.page.publicUrl %>" target="_blank" rel="noopener">Voir en ligne</a><% } %><% } %>
+        </p>
+      </div>
+    </div>
+
+    <div class="mk-pv-card">
+      <div class="mk-pv-row">
+        <div class="mk-pv-rowtext"><h2>Créer une nouvelle page de politique de confidentialité</h2><p>Crée une vraie page du site, en brouillon, avec un modèle structuré à compléter. Elle apparaît dans « Pages » et s'ouvre dans l'éditeur habituel.</p></div>
+        <div class="mk-pv-rowctl"><button type="button" class="mk-pv-btn mk-pv-btn--outline" data-pv-create<%= P.canCreate ? "" : " disabled" %>>Créer une page</button></div>
+      </div>
+      <div class="mk-pv-exists" data-pv-exists hidden role="alert">
+        <p><strong>Une page de politique existe déjà.</strong> Ouvrez-la plutôt que d'en créer une deuxième, ou confirmez la création d'une autre page.</p>
+        <ul data-pv-exists-list></ul>
+        <p class="mk-pv-exists-actions"><button type="button" class="mk-pv-btn mk-pv-btn--outline" data-pv-create-anyway>Créer quand même une autre page</button> <button type="button" class="mk-pv-btn mk-pv-btn--ghost" data-pv-exists-cancel>Annuler</button></p>
+      </div>
+    </div>
+
+    <div class="mk-pv-card">
+      <div class="mk-pv-row">
+        <div class="mk-pv-rowtext"><h2><label for="pv-select">Choisir la page de politique de confidentialité</label></h2><p>Seules les pages de ce site sont proposées. Une page en brouillon peut être associée, mais son lien n'apparaît qu'une fois publiée. Choisir une autre page ne supprime jamais l'ancienne.</p></div>
+        <div class="mk-pv-rowctl mk-pv-rowctl--wide">
+          <select id="pv-select" data-pv-select<%= P.canSelect ? "" : " disabled" %> aria-describedby="pv-select-hint">
+            <option value="">— Aucune page —</option>
+            <% if (pol.id && !P.pages.some((p) => p.id === pol.id)) { %><option value="<%= pol.id %>" selected>Page n° <%= pol.id %> (indisponible)</option><% } %>
+            <% P.pages.forEach((p) => { %><option value="<%= p.id %>"<%= pol.id === p.id ? " selected" : "" %>><%= p.name %><%= p.published ? "" : " (brouillon)" %></option><% }) %>
+          </select>
+          <button type="button" class="mk-pv-btn mk-pv-btn--primary" data-pv-use disabled>Utiliser cette page</button>
+          <p class="mk-pv-hint" id="pv-select-hint" data-pv-select-hint>La sélection actuelle est enregistrée.</p>
+        </div>
+      </div>
+    </div>
+
+    <% if (P.retention) { %>
+    <div class="mk-pv-card" id="reglages-conservation">
+      <div class="mk-pv-row">
+        <div class="mk-pv-rowtext"><h2><label for="pv-retention">Conservation des visites suivies</label></h2><p>Durée, en jours, pendant laquelle les visites des personnes ayant accepté la mesure sont conservées. Au-delà, elles sont supprimées chaque jour. Par défaut <%= P.retention.def %> jours.</p></div>
+        <div class="mk-pv-rowctl mk-pv-rowctl--wide">
+          <input id="pv-retention" type="number" inputmode="numeric" min="<%= P.retention.min %>" max="<%= P.retention.max %>" value="<%= P.retention.value %>" data-pv-retention data-pv-saved="<%= P.retention.value %>"<%= P.retention.editable ? "" : " disabled" %>>
+          <button type="button" class="mk-pv-btn mk-pv-btn--primary" data-pv-retention-save disabled>Enregistrer</button>
+          <p class="mk-pv-hint">Entre <%= P.retention.min %> et <%= P.retention.max %> jours.</p>
+        </div>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="mk-pv-card mk-pv-where">
+      <h2>Où le lien apparaît</h2>
+      <p><%= P.principal ? "Quand la page associée est publiée, un lien « Politique de confidentialité » s'ajoute au bandeau de consentement du site principal." : "Quand la page associée est publiée, un lien « Confidentialité » s'ajoute au pied de page des pages de ce site." %> Kolakisa ne modifie jamais vos menus ni votre pied de page : pour ajouter la page à un menu, utilisez <a href="<%= P.links.menus %>">Apparence → Menus</a>.</p>
+    </div>
+  </section>
+
+  <%# =================== GUIDE =================== %>
+  <section class="mk-pv-panel" role="tabpanel" id="pv-panel-guide" aria-labelledby="pv-tab-guide"<%- tab === "guide" ? "" : " hidden" %> data-pv-panel="guide">
+    <div class="mk-pv-card mk-pv-intro">
+      <h2>Guide de la politique de confidentialité</h2>
+      <p>Ce guide propose une structure de rédaction et des points à vérifier, adaptés aux fonctions réellement présentes sur <strong><%= T.name %></strong>. Il ne remplace pas un avis juridique et ne garantit pas la conformité à lui seul.</p>
+      <p>Trois sortes d'informations y sont distinguées : ce que Kolakisa <strong>détecte</strong> dans ce site, les <strong>recommandations générales</strong>, et ce que <strong>vous devez confirmer</strong> vous-même. Les services externes que vous ajoutez (outils d'analyse, pixels, intégrations) ne sont pas détectés automatiquement. Il vous appartient de vérifier le texte et de le maintenir à jour.</p>
+    </div>
+
+    <div class="mk-pv-acc-group">
+      <div class="mk-pv-acc" data-pv-acc>
+        <h3><button type="button" class="mk-pv-acc-btn" aria-expanded="false" aria-controls="pv-acc-main" id="pv-acc-main-btn" data-pv-acc-btn><span>Guide de la politique de confidentialité</span><svg class="mk-pv-chev" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h3>
+        <div class="mk-pv-acc-panel" id="pv-acc-main" role="region" aria-labelledby="pv-acc-main-btn"><div class="mk-pv-acc-inner"><div class="mk-pv-acc-content">
+          <p>Points à examiner pour rédiger votre politique. Une étiquette « Détecté » signale une fonction présente dans ce site ; les autres points sont à confirmer.</p>
+          <ol class="mk-pv-topics">
+            <% topics.forEach((t) => { const hits = t[2].map((id) => byId[id]).filter((m) => m && m.status === "detected"); %>
+            <li><strong><%= t[0] %></strong><% hits.forEach((m) => { %> <span class="mk-pv-chip is-detected"><%= m.title %> détecté</span><% }) %><br><span><%= t[1] %></span></li>
+            <% }) %>
+          </ol>
+        </div></div></div>
+      </div>
+    </div>
+
+    <h2 class="mk-pv-h2">Recommandations par source</h2>
+    <div class="mk-pv-acc-group">
+      <% P.guide.forEach((m) => { const chip = statusChip[m.status] || statusChip.unknown; %>
+      <div class="mk-pv-acc" data-pv-acc data-pv-module="<%= m.id %>">
+        <h3><button type="button" class="mk-pv-acc-btn" aria-expanded="false" aria-controls="pv-acc-<%= m.id %>" id="pv-acc-<%= m.id %>-btn" data-pv-acc-btn><span class="mk-pv-acc-title"><%= m.title %> <small><%= m.source %></small></span><span class="mk-pv-chip <%= chip[1] %>"><%= chip[0] %></span><svg class="mk-pv-chev" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h3>
+        <div class="mk-pv-acc-panel" id="pv-acc-<%= m.id %>" role="region" aria-labelledby="pv-acc-<%= m.id %>-btn"><div class="mk-pv-acc-inner"><div class="mk-pv-acc-content">
+          <% if (m.intro) { %><p><%= m.intro %></p><% } %>
+          <% if (m.facts.length) { %><div class="mk-pv-facts"><h4>Détecté dans ce site</h4><ul><% m.facts.forEach((f) => { %><li><%= f %></li><% }) %></ul></div>
+          <% } else if (m.status === "not_detected" || m.status === "unknown") { %><p class="mk-pv-nofact"><%= m.status === "unknown" ? "La détection n'a pas pu être effectuée : confirmez vous-même si cette fonction existe sur le site." : "Aucune utilisation de cette fonction n'a été détectée sur ce site. Si vous l'utilisez autrement (par exemple via un service externe), ajoutez-la à votre politique." %></p><% } %>
+          <% if (m.collects.length) { %><h4>Données potentiellement concernées</h4><ul><% m.collects.forEach((x) => { %><li><%= x %></li><% }) %></ul><% } %>
+          <% if (m.verify.length) { %><h4>À vérifier par vous</h4><ul><% m.verify.forEach((x) => { %><li><%= x %></li><% }) %></ul><% } %>
+          <% if (m.document.length) { %><h4>À documenter dans la politique</h4><ul><% m.document.forEach((x) => { %><li><%= x %></li><% }) %></ul><% } %>
+          <% if (m.link) { %><p class="mk-pv-link"><a href="<%= m.link.href.startsWith("#") || m.link.href.includes("?") ? m.link.href : m.link.href + P.q %>" data-pv-link><%= m.link.label %> →</a></p><% } %>
+        </div></div></div>
+      </div>
+      <% }) %>
+    </div>
+    <p class="mk-pv-foot">Cette liste reflète les fonctions de Kolakisa présentes sur le site. Les modules qui traitent des données personnelles y ajoutent eux-mêmes leurs recommandations : une nouvelle fonction apparaît ici sans modification de cet écran.</p>
+  </section>
+</div>
+<script type="application/json" id="pv-data"><%- bootJson %></script>
+<%- include("partials/bottom") %>
