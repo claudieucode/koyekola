@@ -813,6 +813,7 @@ db.exec(`
 // Colonnes additives à valeur par défaut, ajoutées ici (comme les tables ci-dessus, qui ne sont pas créées par les migrations du marketing). Annulation : DROP COLUMN.
 const navMenuColumns = db.prepare("PRAGMA table_info(nav_menus)").all().map((c) => c.name);
 if (!navMenuColumns.includes("revision")) db.exec("ALTER TABLE nav_menus ADD COLUMN revision INTEGER NOT NULL DEFAULT 1");
+if (!navMenuColumns.includes("auto_add_pages")) db.exec("ALTER TABLE nav_menus ADD COLUMN auto_add_pages INTEGER NOT NULL DEFAULT 0");
 const navItemColumns = db.prepare("PRAGMA table_info(nav_items)").all().map((c) => c.name);
 if (!navItemColumns.includes("css_class")) db.exec("ALTER TABLE nav_items ADD COLUMN css_class TEXT NOT NULL DEFAULT ''");
 if (!navItemColumns.includes("title_attr")) db.exec("ALTER TABLE nav_items ADD COLUMN title_attr TEXT NOT NULL DEFAULT ''");

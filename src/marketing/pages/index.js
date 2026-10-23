@@ -193,6 +193,7 @@ function publish(ctx, id) {
     // Historique borné : les plus anciennes versions au-delà de MAX_VERSIONS sont effacées
     ctx.db.prepare("DELETE FROM mk_page_versions WHERE page_id = ? AND number <= ?").run(id, number - MAX_VERSIONS);
     audit(ctx, "page.published", "landing", id, { version: number, slug: page.slug });
+    if (!page.published_at) { try { require("../../services/navigation").autoAddPage(id); } catch { /* l'ajout au menu ne bloque jamais la publication */ } }
     return { version: number };
   });
 }

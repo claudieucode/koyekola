@@ -49,7 +49,7 @@ describe("menus : sélecteur et menu latéral (navigateur)", { skip: SKIP }, () 
     assert.deepEqual((await pick.locator("option").allTextContents()).sort(), ["Menu deux", "Menu un"]);
     // menu non modifié : changement direct, sans confirmation
     let asked = 0; page.on("dialog", async (d) => { asked++; await d.dismiss(); });
-    await Promise.all([page.waitForURL(new RegExp(`/menus/${m2}`)), pick.selectOption({ label: "Menu deux" })]);
+    await Promise.all([page.waitForURL(new RegExp(`menu=${m2}`)), pick.selectOption({ label: "Menu deux" })]);
     assert.equal(asked, 0, "aucune confirmation sans modification");
     // modification : le nom change → confirmation, refusée : on reste sur le menu et le sélecteur reprend sa valeur
     await page.locator("#nm-name, [data-nm-name]").first().fill("Menu deux modifié");
@@ -57,11 +57,11 @@ describe("menus : sélecteur et menu latéral (navigateur)", { skip: SKIP }, () 
     await page.locator("[data-nm-pick]").selectOption({ label: "Menu un" });
     await page.waitForTimeout(300);
     assert.equal(asked, 1, "confirmation demandée");
-    assert.match(page.url(), new RegExp(`/menus/${m2}`), "refus : on reste");
+    assert.match(page.url(), new RegExp(`menu=${m2}`), "refus : on reste");
     assert.equal(await page.locator("[data-nm-pick] option:checked").innerText(), "Menu deux");
     // accepter : on change
     page.removeAllListeners("dialog"); page.on("dialog", (d) => d.accept());
-    await Promise.all([page.waitForURL(new RegExp(`/menus/${m1}`)), page.locator("[data-nm-pick]").selectOption({ label: "Menu un" })]);
+    await Promise.all([page.waitForURL(new RegExp(`menu=${m1}`)), page.locator("[data-nm-pick]").selectOption({ label: "Menu un" })]);
     assert.equal(db.prepare("SELECT name FROM nav_menus WHERE id = ?").get(m2).name, "Menu deux", "rien n'a été enregistré sans accord");
     await page.context().close();
   });

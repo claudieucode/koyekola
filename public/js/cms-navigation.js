@@ -18,7 +18,7 @@
   var seq = 0, nk = function () { return "k" + (++seq); };
 
   // ---------- Modèle ----------
-  var S = { revision: D.menu.revision, name: D.menu.name, description: D.menu.description, status: D.menu.status, locations: {}, items: [] };
+  var S = { revision: D.menu.revision, name: D.menu.name, description: D.menu.description, status: D.menu.status, auto: !!D.menu.autoAddPages, locations: {}, items: [] };
   D.locations.forEach(function (l) { S.locations[l.key] = l.on; });
   function build(flat) {
     var by = {}, roots = [];
@@ -36,8 +36,8 @@
       return o;
     });
   }
-  var payload = function () { var p = { revision: S.revision, name: S.name, description: S.description, status: S.status, items: ser(S.items) }; if (D.canPublish) p.locations = S.locations; return p; };
-  var snap = function () { return JSON.stringify({ n: S.name, d: S.description, s: S.status, l: S.locations, i: ser(S.items, true) }); };
+  var payload = function () { var p = { revision: S.revision, name: S.name, description: S.description, status: S.status, autoAddPages: S.auto, items: ser(S.items) }; if (D.canPublish) p.locations = S.locations; return p; };
+  var snap = function () { return JSON.stringify({ n: S.name, d: S.description, s: S.status, a: S.auto, l: S.locations, i: ser(S.items, true) }); };
   var saved = snap(), saving = false, conflict = false, savedAt = "";
   var undo = [], redo = [];
   var flatten = function (nodes, out) { out = out || []; nodes.forEach(function (n) { out.push(n); flatten(n.children, out); }); return out; };
@@ -407,6 +407,8 @@
   nameI.addEventListener("input", function () { S.name = nameI.value; refresh(); });
   descI.addEventListener("input", function () { S.description = descI.value; refresh(); });
   statI.addEventListener("change", function () { S.status = statI.value; refresh(); });
+  var autoI = $("[data-nm-autoadd]");
+  if (autoI) { autoI.checked = S.auto; autoI.disabled = !CAN; autoI.addEventListener("change", function () { S.auto = autoI.checked; refresh(); }); }
   var slots = $("[data-nm-locations]");
   D.locations.forEach(function (l) {
     var id = "nm-loc-" + l.key, c = h("input", { type: "checkbox", id: id });

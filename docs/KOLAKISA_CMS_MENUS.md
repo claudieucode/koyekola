@@ -108,11 +108,41 @@ Couverture : voir l'en-tête des fichiers. L'accessibilité clavier, le mobile e
 
 ## 10. Limites connues (non faites, pas simulées)
 
-- Pas d'**ajout automatique des pages de premier niveau** au menu (option de WordPress) : non développée, donc absente de l'écran.
-
 - Pas de **types de contenus personnalisés** ni de taxonomies autres que catégories et étiquettes : le CMS n'en a pas.
 - Pas de **menu du compte utilisateur** : le gabarit d'en-tête n'a pas d'emplacement correspondant (ajouter un emplacement avant de brancher un gabarit serait trompeur).
 - Pas d'**aperçu en direct** dans le site (le « personnalisateur » existe à part) : l'aperçu montre le menu enregistré.
 - **Pas de brouillon de structure** : enregistrer publie (le menu lui-même peut être mis en « Brouillon »). Seul le journal d'audit garde qui a enregistré, quand, et combien d'éléments.
 - Le volet d'options est dans la page (pas de fenêtre flottante) ; sur un menu de 300 éléments l'éditeur reconstruit la liste à chaque déplacement (mesuré rapide ; voir le test de performance).
 - Une modification des **emplacements** faite ailleurs pendant l'édition est signalée comme conflit de version, jamais écrasée.
+
+## 11. MENUS-03 — reprise : l'écran « Menus » façon WordPress + ajout automatique des pages
+
+**Défaut constaté** : MENUS-01/02 avaient un éditeur complet, mais l'écran d'entrée de « Menus » était une *liste* suivie d'un éditeur séparé, la création passait par une fenêtre, et l'option « Ajouter automatiquement les pages de premier niveau » manquait. Rien du moteur n'a été jeté : l'écran a été remodelé et la fonction manquante ajoutée.
+
+### Matrice de parité (référence : capture « apparence menu.png »)
+
+| Fonction WordPress | Kolakisa | Où | Preuve |
+|---|---|---|---|
+| Titre « Menus », onglet « Modifier les menus » | ✔ (+ onglet « Tous les menus » : liste, tri, recherche, duplication) | `navigation-menu.ejs`, `navigation-create.ejs` | `apparence-menus-wp` |
+| « Créez votre premier menu ci-dessous » + nom + « Créer le menu » | ✔ création sur place, erreurs réelles (nom vide / en double) | `navigation-create.ejs`, `POST /navigation/menus` | `apparence-menus-wp` 1–3 |
+| Sélection d'un menu existant / « créer un nouveau menu » | ✔ sélecteur (même avec un seul menu) + lien ; changement avec modifications non enregistrées → confirmation | `#nm-pick`, `?menu=ID`, `?nouveau=1` | `apparence-menus-integration`, `apparence-menus-selecteur-navigateur` |
+| Ajouter : Pages / Articles / Liens personnalisés / Catégories (récentes, recherche, sélection multiple) | ✔ (déjà MENUS-01) + Étiquettes + sources d'extension | `cms-navigation.js` | `apparence-menus(-navigateur)` |
+| Structure : hiérarchie, ordre, glisser-déposer, clavier, options par élément | ✔ (MENUS-01) | `cms-navigation.js` | idem |
+| Nom du menu | ✔ | éditeur | idem |
+| **Ajouter automatiquement les pages de premier niveau** | ✔ **nouveau** : réglage enregistré, effet réel à la première publication | `nav_menus.auto_add_pages`, `navigation.autoAddPage`, `pages.publish` | `apparence-menus-wp` 4–6 |
+| Emplacement du menu (principal, secondaire, hors-champ, compte, pied) | ✔ **seulement ceux qui ont un rendu réel** : En-tête, Pied de page, Menu mobile ; remplacement d'un emplacement occupé annoncé avant l'enregistrement | `LOCATIONS` | `apparence-menus-wp` 2–3 |
+| Supprimer le menu, enregistrer, quitter sans enregistrer | ✔ | éditeur | `apparence-menus` |
+| Menu secondaire / hors-champ / compte connecté | ✘ **non proposés** : le gabarit public n'a aucun point de rendu pour eux (voir §10) | — | — |
+
+### Ajout automatique des pages (comportement exact)
+- Réglage **par menu** (`nav_menus.auto_add_pages`, défaut 0) : case à cocher à la création et dans les réglages du menu, écrite avec l'enregistrement (valeur non booléenne refusée, 400).
+- Déclencheur : **première publication** d'une page (`published_at` encore vide) — manuelle, groupée ou programmée (toutes passent par `pages.publish`).
+- Conditions : nature « page » (pas les pages d'atterrissage ni les étapes de tunnel), **sans parent** (premier niveau), publiée, non archivée, **du même site que le menu** (page du principal → menus du principal seulement).
+- Ajout en **fin de premier niveau**, jamais de doublon, menu plein (300) ignoré, version du menu incrémentée (un éditeur ouvert voit un conflit, jamais d'écrasement). Un élément retiré à la main n'est **pas** remis par une republication. L'échec de l'ajout ne bloque jamais la publication.
+- Les pages brouillon ne sont pas ajoutées ; une page dépubliée puis republiée n'est pas ajoutée une seconde fois.
+
+### Données / migration
+`nav_menus.auto_add_pages INTEGER NOT NULL DEFAULT 0` : ajoutée au démarrage par `ALTER TABLE` gardé (comme `revision`, §2), sans fichier de migration (les tables `nav_*` n'en ont pas). Retour arrière : `ALTER TABLE nav_menus DROP COLUMN auto_add_pages`.
+
+### Routes
+`GET /site-web/apparence/menus[?menu=ID|?nouveau=1]` = écran unique ; `POST /navigation/menus` accepte `auto_add_pages=1` et `locations[]` (droit `navigation.publish` requis pour les emplacements, sinon refus sans rien créer) ; `POST …/enregistrer` accepte `autoAddPages`.

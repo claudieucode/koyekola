@@ -1,0 +1,48 @@
+<%#
+  KOLAKISA CMS → Apparence → Menus → création d'un menu (premier menu, ou « créer un nouveau menu »). Même disposition que l'éditeur : à gauche les
+  contenus à ajouter (disponibles dès que le menu existe), à droite le nom et les réglages. Le formulaire écrit réellement (POST /menus) :
+  nom, ajout automatique des pages, emplacements ; puis l'éditeur du menu s'ouvre. Aucune donnée simulée.
+%><%- include("partials/top", { title, active }) %>
+<% const qs = navSite === null ? "" : "?site=" + navSite; const pick = (id) => APP + "?menu=" + id + (navSite === null ? "" : "&site=" + navSite); %>
+<div class="mk-nm">
+  <div class="mk-nm-head"><div class="mk-head-main"><h1>Menus</h1>
+    <nav class="mk-nm-tabs" aria-label="Menus"><a class="is-active" href="<%= APP %><%= hasMenus ? "?nouveau=1" + (navSite === null ? "" : "&site=" + navSite) : qs %>" aria-current="page"><%= hasMenus ? "Nouveau menu" : "Modifier les menus" %></a><% if (hasMenus) { %><a href="<%= BASE %><%= qs %>">Tous les menus</a><% } %></nav></div></div>
+
+  <% if (hasMenus) { %>
+    <div class="mk-nm-selectbar"><label for="nm-pick">Sélectionnez un menu à modifier :</label>
+      <select id="nm-pick" onchange="if (this.value) location.href = this.value"><option value="">— choisir un menu —</option><% menus.forEach((m) => { %><option value="<%= pick(m.id) %>"><%= m.name %></option><% }) %></select>
+      <span class="mk-nm-or">ou</span> <strong>créer un nouveau menu</strong></div>
+  <% } else { %><p class="mk-nm-first" role="status">Créez votre premier menu ci-dessous.</p><% } %>
+
+  <div class="mk-nm-layout">
+    <aside class="mk-nm-add" aria-labelledby="nm-add-title">
+      <h2 id="nm-add-title">Ajouter des éléments de menu</h2>
+      <ul class="mk-nm-pending" aria-label="Contenus ajoutables">
+        <li>Pages</li><li>Articles</li><li>Liens personnalisés</li><li>Catégories et étiquettes</li></ul>
+      <p class="field-hint">Ces contenus s'ajoutent dès que le menu est créé.</p>
+    </aside>
+
+    <section class="mk-nm-structure" aria-labelledby="nm-structure-title">
+      <h2 id="nm-structure-title">Structure du menu</h2>
+      <% if (!canWrite) { %><p class="mk-empty-line">Vous n'avez pas le droit de créer des menus.</p><% } else { %>
+      <form method="post" action="<%= BASE %>/menus<%= qs %>" class="mk-nm-createform">
+        <input type="hidden" name="depuis" value="ecran">
+        <div class="mk-nm-meta"><div class="field-group mk-nm-meta-wide"><label for="menu-name">Nom du menu</label>
+          <input id="menu-name" type="text" name="name" maxlength="80" required autocomplete="off" autofocus placeholder="Menu principal"></div></div>
+        <p class="field-hint">Donnez un nom à votre menu, puis cliquez sur « Créer le menu ».</p>
+        <h3 class="mk-nm-h3">Réglages du menu</h3>
+        <div class="mk-nm-setting"><span class="mk-nm-setting-label">Ajoutez automatiquement des pages</span>
+          <label class="mk-nm-check"><input type="checkbox" name="auto_add_pages" value="1"> Ajouter automatiquement les pages de premier niveau à ce menu</label></div>
+        <fieldset class="mk-nm-slots"><legend>Emplacement du menu</legend>
+          <% Object.values(locations).forEach((loc) => { %>
+            <div class="mk-nm-slot"><label class="mk-cms-check" for="loc-<%= loc.key %>"><input type="checkbox" id="loc-<%= loc.key %>" name="locations" value="<%= loc.key %>"<%= canPublish ? "" : " disabled" %>> <%= loc.label %></label>
+              <span class="field-hint"><%= loc.hint %><% if (assigned[loc.key]) { %> Cet emplacement est déjà occupé : il sera remplacé par ce menu.<% } %></span></div>
+          <% }) %>
+          <% if (!canPublish) { %><p class="field-hint">Seuls les administrateurs affectent un menu à un emplacement.</p><% } %>
+        </fieldset>
+        <div class="mk-actions"><button type="submit" class="mk-wd-btn mk-wd-btn--primary">Créer le menu</button></div>
+      </form><% } %>
+    </section>
+  </div>
+</div>
+<%- include("partials/bottom") %>

@@ -113,11 +113,11 @@ function uniqueSlug(base, siteId, exceptId = 0) {
   }
   throw new UserError("Impossible de trouver une adresse libre pour ce menu.");
 }
-function create({ name, description = "", siteId = null, userId = null }) {
+function create({ name, description = "", siteId = null, userId = null, autoAddPages = false }) {
   const nm = cleanLabel(name);
   if (!nm) throw new UserError("Donnez un nom au menu.");
   if (db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE`).get(siteId, nm)) throw new UserError(`Un menu « ${nm} » existe déjà.`);
-  const id = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, description, created_by) VALUES (?, ?, ?, ?, ?)").run(siteId, nm, uniqueSlug(nm, siteId), String(description || "").trim().slice(0, 300), userId).lastInsertRowid);
+  const id = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, description, created_by, auto_add_pages) VALUES (?, ?, ?, ?, ?, ?)").run(siteId, nm, uniqueSlug(nm, siteId), String(description || "").trim().slice(0, 300), userId, autoAddPages ? 1 : 0).lastInsertRowid);
   emit("menu.created", { menuId: id });
   return menuRow(id);
 }
@@ -354,6 +354,8 @@ function saveMenu(menuId, payload, { canPublish = false, userId = null } = {}) {
   const description = body.description === undefined ? m.description : String(body.description).trim().slice(0, 300);
   const status = body.status === undefined ? m.status : ["published", "draft"].includes(body.status) ? body.status : null;
   if (!status) throw new UserError("État du menu invalide.");
+  if (body.autoAddPages !== undefined && typeof body.autoAddPages !== "boolean") throw new UserError("Réglage « ajout automatique des pages » invalide.");
+  const autoAdd = body.autoAddPages === undefined ? m.auto_add_pages : body.autoAddPages ? 1 : 0;
 
   const existing = new Map(db.prepare("SELECT * FROM nav_items WHERE menu_id = ?").all(menuId).map((r) => [r.id, r]));
   const seen = new Set(), plan = [];
@@ -406,13 +408,33 @@ function saveMenu(menuId, payload, { canPublish = false, userId = null } = {}) {
     for (const [id] of existing) if (!seen.has(id)) db.prepare("DELETE FROM nav_items WHERE id = ?").run(id);
     const upd = db.prepare("UPDATE nav_items SET parent_id = ?, position = ?, object_id = ?, url = ?, label = ?, status = ?, new_tab = ?, rel = ?, visibility = ?, css_class = ?, title_attr = ?, updated_at = datetime('now') WHERE id = ?");
     for (const p of plan) upd.run(p.parentRef === null ? null : ids.get(p.parentRef), p.index, p.base.object_id, p.base.url, p.label, p.status, p.newTab ? 1 : 0, p.rel, p.visibility, p.css, p.title, ids.get(p.ref));
-    db.prepare("UPDATE nav_menus SET name = ?, description = ?, status = ?, updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(name, description, status, menuId);
+    db.prepare("UPDATE nav_menus SET name = ?, description = ?, status = ?, auto_add_pages = ?, updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(name, description, status, autoAdd, menuId);
     for (const [key, on] of Object.entries(wanted)) assign(key, on ? menuId : null, { siteId: m.site_id });
     if (Object.keys(wanted).length) db.prepare("UPDATE nav_menus SET revision = revision - ? WHERE id = ?").run(new Set(Object.keys(wanted)).size, menuId); // assign() a compté chaque emplacement : une seule version par enregistrement
   });
   emit("items.changed", { menuId });
   emit("menu.updated", { menuId, userId });
   return { menu: menuRow(menuId), count: plan.length, created: plan.filter((p) => !p.row).length, removed: [...existing.keys()].filter((id) => !seen.has(id)).length, idMap: Object.fromEntries(plan.filter((p) => !p.row).map((p) => [p.ref, ids.get(p.ref)])) };
+}
+
+// Ajout automatique (réglage « Ajouter automatiquement les pages de premier niveau à ce menu », comme WordPress) : à la PREMIÈRE publication d'une
+// page ordinaire sans parent, elle est ajoutée en fin de premier niveau des menus du MÊME site qui ont l'option. Jamais de doublon ; un élément retiré
+// à la main n'est pas remis par une republication (seule la première publication déclenche l'ajout). Retourne les identifiants des menus modifiés.
+function autoAddPage(pageId) {
+  const page = db.prepare("SELECT id, site_id, kind, parent_id, status, archived_at FROM mk_landing_pages WHERE id = ?").get(Number(pageId));
+  if (!page || page.kind !== "page" || page.parent_id !== null || page.status !== "published" || page.archived_at) return [];
+  const changed = [];
+  for (const m of db.prepare(`SELECT id FROM nav_menus WHERE auto_add_pages = 1 AND ${sameScope("site_id")}`).all(page.site_id ?? null)) {
+    if (db.prepare("SELECT 1 FROM nav_items WHERE menu_id = ? AND type = 'page' AND object_id = ?").get(m.id, page.id)) continue;
+    if (db.prepare("SELECT COUNT(*) n FROM nav_items WHERE menu_id = ?").get(m.id).n >= MAX_ITEMS) continue;
+    transaction(db, () => {
+      db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label) VALUES (?, NULL, ?, 'page', ?, '', '')").run(m.id, siblingsCount(m.id, null), page.id);
+      db.prepare("UPDATE nav_menus SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(m.id);
+    });
+    changed.push(m.id);
+    emit("items.changed", { menuId: m.id });
+  }
+  return changed;
 }
 
 // Sources d'extensions : un module activé propose des liens (boutique, catégories de produits…) ; ils sont ajoutés au menu comme LIENS PERSONNALISÉS
@@ -559,5 +581,5 @@ function importCurrentSite({ userId = null, siteId = null } = {}) {
 module.exports = {
   MAX_DEPTH, MAX_ITEMS, MAX_LABEL, LOCATIONS, TYPES, STATE_LABELS, REL_ALLOWED, events, registerLocation, registerType,
   cleanUrl, isExternal, create, update, remove, duplicate, menuRow, itemRow, add, updateItem, removeItem, move, shift, reorder, tree, flatten, listMenus, brokenCount, usageOf,
-  saveMenu, preview, registerSource, unregisterSource, sourcesFor, searchSource, cleanClasses, MENU_SORTS, assign, assignments, forLocation, forMenu, importCurrentSite, subtreeIds, depthOf, search: (type, q, limit = 20, { siteId = null, offset = 0 } = {}) => (TYPES[type] && TYPES[type].search ? TYPES[type].search(String(q || "").trim().slice(0, 80), Math.min(Number(limit) || 20, 50) + 1 + Math.max(0, Math.min(Number(offset) || 0, 500)), Number.isInteger(siteId) ? siteId : null).slice(Math.max(0, Math.min(Number(offset) || 0, 500))) : []), inSiteScope,
+  saveMenu, autoAddPage, preview, registerSource, unregisterSource, sourcesFor, searchSource, cleanClasses, MENU_SORTS, assign, assignments, forLocation, forMenu, importCurrentSite, subtreeIds, depthOf, search: (type, q, limit = 20, { siteId = null, offset = 0 } = {}) => (TYPES[type] && TYPES[type].search ? TYPES[type].search(String(q || "").trim().slice(0, 80), Math.min(Number(limit) || 20, 50) + 1 + Math.max(0, Math.min(Number(offset) || 0, 500)), Number.isInteger(siteId) ? siteId : null).slice(Math.max(0, Math.min(Number(offset) || 0, 500))) : []), inSiteScope,
 };

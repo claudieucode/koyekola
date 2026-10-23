@@ -10,6 +10,7 @@ const db = require("../../config/database");
 const { recordAudit } = require("../audit");
 
 const BASE = "/marketing/site-web/navigation";
+const APP = "/marketing/site-web/apparence/menus";
 
 module.exports = () => {
   const router = express.Router();
@@ -44,14 +45,30 @@ module.exports = () => {
     });
   };
   router.get("/site-web/navigation", need("navigation.read"), showList("apparence/menus")); // ancienne adresse : même écran, affiché sous Apparence → Menus
-  router.get("/site-web/apparence/menus", need("navigation.read"), showList("apparence/menus"));
+  // Écran unique « Menus » (comme WordPress) : choix du menu en haut, ajout à gauche, structure et réglages à droite ; sans menu (ou « ?nouveau=1 ») :
+  // création sur place. La liste complète (tri, recherche, duplication) reste sous « Tous les menus ».
+  router.get("/site-web/apparence/menus", need("navigation.read"), (req, res) => {
+    const all = navigation.listMenus({ siteId: req.navSite, sort: "nom" });
+    const want = Number(req.query.menu);
+    const menu = all.length && req.query.nouveau !== "1" ? navigation.menuRow((all.find((m) => m.id === want) || all[0]).id) : null;
+    if (menu) return renderEditor(req, res, menu);
+    res.render("marketing/navigation-create", {
+      title: "Menus", active: "apparence/menus", BASE, APP, navSite: req.navSite, menus: all, locations: navigation.LOCATIONS, assigned: navigation.assignments({ siteId: req.navSite }),
+      canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), hasMenus: all.length > 0,
+    });
+  });
 
   router.post("/site-web/navigation/menus", need("navigation.write"), (req, res, next) => {
+    const siteQs = req.navSite === null ? "" : `?site=${req.navSite}`;
+    const wantedSlots = Object.keys(navigation.LOCATIONS).filter((k) => [].concat(req.body.locations || []).includes(k));
     try {
-      const menu = navigation.create({ name: req.body.name, description: req.body.description, siteId: req.navSite, userId: req.session.user.id });
+      if (wantedSlots.length && !req.mk.can("navigation.publish")) throw new UserError("Seuls les administrateurs affectent un menu à un emplacement.");
+      const menu = navigation.create({ name: req.body.name, description: req.body.description, siteId: req.navSite, userId: req.session.user.id, autoAddPages: req.body.auto_add_pages === "1" });
+      for (const key of wantedSlots) navigation.assign(key, menu.id, { siteId: req.navSite });
       flash(req, "ok", `Menu « ${menu.name} » créé.`);
-      res.redirect(`${BASE}/menus/${menu.id}`);
-    } catch (error) { fail(req, res, next, BASE, error); }
+      // Écran « Menus » : retour sur l'écran unique ; formulaires historiques (liste, intégrations) : adresse de l'éditeur, inchangée
+      res.redirect(req.body.depuis === "ecran" ? `${APP}?menu=${menu.id}${siteQs ? "&" + siteQs.slice(1) : ""}` : `${BASE}/menus/${menu.id}${siteQs}`);
+    } catch (error) { fail(req, res, next, req.body.depuis === "ecran" ? `${APP}?nouveau=1${siteQs ? "&" + siteQs.slice(1) : ""}` : BASE, error); }
   });
   router.post("/site-web/navigation/importer", need("navigation.write"), (req, res, next) => {
     try {
@@ -77,9 +94,7 @@ module.exports = () => {
   });
 
   // ----- Éditeur d'un menu -----
-  router.get("/site-web/navigation/menus/:id(\\d+)", need("navigation.read"), (req, res) => {
-    const menu = menuOr404(req, res);
-    if (!menu) return;
+  const renderEditor = (req, res, menu) => {
     const flat = [];
     const walk = (nodes, parent) => nodes.forEach((n) => { flat.push({ id: n.id, parent, type: n.type, object_id: n.object_id, url: n.url, label: n.label, title_attr: n.title_attr, css_class: n.css_class, new_tab: Boolean(n.new_tab), rel: n.rel, visibility: n.visibility, status: n.status, resource: { title: n.resource.title, url: n.resource.url, state: n.resource.state }, stateLabel: n.stateLabel }); walk(n.children, n.id); });
     walk(navigation.tree(menu.id), null);
@@ -87,7 +102,7 @@ module.exports = () => {
     const types = Object.fromEntries(Object.entries(navigation.TYPES).map(([k, d]) => [k, { label: d.label, needsObject: Boolean(d.needsObject) }]));
     const qs = req.navSite === null ? "" : `?site=${req.navSite}`;
     const data = {
-      menu: { id: menu.id, name: menu.name, description: menu.description, status: menu.status, revision: menu.revision, updatedAt: menu.updated_at },
+      menu: { id: menu.id, name: menu.name, description: menu.description, status: menu.status, autoAddPages: Boolean(menu.auto_add_pages), revision: menu.revision, updatedAt: menu.updated_at },
       items: flat, types, maxDepth: navigation.MAX_DEPTH, maxItems: navigation.MAX_ITEMS, rel: navigation.REL_ALLOWED.filter((r) => !["noopener", "external"].includes(r)),
       locations: Object.values(navigation.LOCATIONS).map((l) => ({ key: l.key, label: l.label, hint: l.hint, on: assigned[l.key] === menu.id, takenBy: assigned[l.key] && assigned[l.key] !== menu.id ? (navigation.menuRow(assigned[l.key]) || {}).name || "" : "" })),
       sources: navigation.sourcesFor(req.navSite),
@@ -100,7 +115,12 @@ module.exports = () => {
       siblings: navigation.listMenus({ siteId: req.navSite }).map((m) => ({ id: m.id, name: m.name })),
       count: flat.length, broken: flat.filter((n) => n.resource.state !== "ok" && ["page", "article", "category", "tag"].includes(n.type)).length,
       dataJson: JSON.stringify(data).replace(/</g, "\\u003c").replace(/\u2028|\u2029/g, ""),
+      APP, newUrl: `${APP}?nouveau=1${req.navSite === null ? "" : `&site=${req.navSite}`}`, pickUrl: (id) => `${APP}?menu=${id}${req.navSite === null ? "" : `&site=${req.navSite}`}`,
     });
+  };
+  router.get("/site-web/navigation/menus/:id(\\d+)", need("navigation.read"), (req, res) => {
+    const menu = menuOr404(req, res);
+    if (menu) renderEditor(req, res, menu);
   });
   // Enregistrement de l'éditeur (JSON) : tout ou rien ; version périmée = 409 ; le site est celui du menu, vérifié plus haut
   router.post("/site-web/navigation/menus/:id(\\d+)/enregistrer", need("navigation.write"), express.json({ limit: "1mb" }), (req, res, next) => {

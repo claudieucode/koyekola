@@ -47,12 +47,13 @@ describe("Apparence → Menus : seule entrée, ancienne adresse conservée, sél
     const r = await boss.get(`${R}/navigation/menus/${mA1}?site=${A}`); assert.equal(r.status, 200);
     const sel = /<select id="nm-pick"[\s\S]*?<\/select>/.exec(r.text); assert.ok(sel, "sélecteur présent");
     assert.match(sel[0], /Principal Alpha/); assert.match(sel[0], /Pied Alpha/); assert.doesNotMatch(sel[0], /Secret Beta/);
-    assert.match(sel[0], new RegExp(`menus/${mA2}\\?site=${A}`));
+    assert.match(sel[0], new RegExp(`apparence/menus\\?menu=${mA2}&amp;site=${A}`));
     assert.equal((await boss.get(`${R}/sites/${A}/navigation/menus/${mB}`)).status, 404, "dans l'espace de A, le menu de B est introuvable");
   });
 
-  test("un site qui n'a qu'un menu n'affiche pas de sélecteur inutile", async () => {
+  test("un site qui n'a qu'un menu garde le sélecteur (comme WordPress), avec ce seul menu", async () => {
     const r = await boss.get(`${R}/navigation/menus/${mB}?site=${B}`); assert.equal(r.status, 200);
-    assert.ok(!r.text.includes('id="nm-pick"'));
+    const sel = /<select id="nm-pick"[\s\S]*?<\/select>/.exec(r.text); assert.ok(sel);
+    assert.equal((sel[0].match(/<option/g) || []).length, 1);
   });
 });

@@ -18,7 +18,7 @@ describe("menus (navigateur)", { skip: SKIP }, () => {
   const one = (sql, ...a) => db.prepare(sql).get(...a);
   const all = (sql, ...a) => db.prepare(sql).all(...a);
   const open = async (width = 1280, client = boss) => {
-    const context = await browser.newContext({ viewport: { width, height: 900 }, hasTouch: width < 600 });
+    const context = await browser.newContext({ viewport: { width, height: 1200 }, hasTouch: width < 600 });
     await context.addCookies([...client.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
     context.setDefaultTimeout(8000); // un contrôle introuvable échoue vite (au lieu d'attendre 30 s)
     const page = await context.newPage();
@@ -248,7 +248,7 @@ describe("menus (navigateur)", { skip: SKIP }, () => {
     await page.fill("[data-nm-desc]", "brouillon de description");
     assert.equal(await prevented(), true);
     page.once("dialog", (d) => d.dismiss());
-    await page.locator(".mk-nm-crumb a").click(); // lien interne : confirmation, refusée → on reste
+    await page.locator(".mk-nm-tabs a", { hasText: "Tous les menus" }).click(); // lien interne : confirmation, refusée → on reste
     assert.match(page.url(), /\/menus\/\d+/);
     await page.fill("[data-nm-desc]", initial);
     assert.equal(await prevented(), false, "revenir à la valeur enregistrée supprime l'alerte");

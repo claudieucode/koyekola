@@ -1016,3 +1016,24 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 
 .mk-sg-form { display: block; }
 .mk-sg-dialog .mk-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--mk-border, #dbe4ea); }
+
+/* MENUS-03 : écran unique « Menus » (onglets, choix du menu, création sur place, réglages) */
+.mk-nm-tabs { display: flex; gap: 4px; margin-top: 8px; border-bottom: 1px solid var(--mk-border, #dbe4ea); }
+.mk-nm-tabs a { padding: 8px 14px; font-size: 0.875rem; font-weight: 600; color: var(--mk-muted, #5a687d); text-decoration: none; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; margin-bottom: -1px; }
+.mk-nm-tabs a:hover { color: var(--mk-navy, #0f2a5c); }
+.mk-nm-tabs a.is-active { color: var(--mk-navy, #0f2a5c); background: #fff; border-color: var(--mk-border, #dbe4ea); }
+.mk-nm-selectbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 14px; margin: 0 0 10px; background: #fff; border: 1px solid var(--mk-border, #dbe4ea); border-radius: var(--mk-r, 8px); font-size: 0.875rem; }
+.mk-nm-selectbar select { min-width: 220px; max-width: 100%; }
+.mk-nm-or { color: var(--mk-muted, #5a687d); }
+.mk-nm-newlink { font-weight: 600; color: var(--mk-navy, #0f2a5c); }
+.mk-nm-first { margin: 0 0 12px; padding: 12px 14px; background: #fff; border: 1px solid var(--mk-border, #dbe4ea); border-radius: var(--mk-r, 8px); font-size: 0.875rem; }
+.mk-nm-pending { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.mk-nm-pending li { padding: 10px 12px; border: 1px dashed var(--mk-border, #dbe4ea); border-radius: 8px; color: var(--mk-muted, #5a687d); font-weight: 600; font-size: 0.875rem; }
+.mk-nm-createform { display: grid; gap: 12px; }
+.mk-nm-setting { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 4px 16px; align-items: start; padding: 10px 0; }
+.mk-nm-setting-label { color: var(--mk-muted, #5a687d); font-size: 0.875rem; }
+.mk-nm-check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; }
+.mk-nm-setting .field-hint { grid-column: 2; margin: 0; }
+@media (max-width: 700px) { .mk-nm-setting { grid-template-columns: minmax(0, 1fr); } .mk-nm-setting .field-hint { grid-column: 1; } }
+.mk-nm-selectbar select { width: auto; }
+.mk-nm-selectbar label { margin: 0; }
