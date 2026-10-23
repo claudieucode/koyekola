@@ -209,6 +209,16 @@ const SITE_MODULES = {
   "tests-ab": { label: "Tests A/B", kind: "delegate", to: "/site-web/tests-ab", reg: "pagetests", permission: "forms.read", legacy: `${BASE}/tests-ab` },
   analytics: { label: "Analytics", kind: "delegate", to: "/analytics/global", reg: "analytics-global", permission: "analytics.read", legacy: "/marketing/analytics/global" },
   // Paramètres → Confidentialité : écran partagé /site-web/parametres/confidentialite ouvert dans le cadre du site (page de politique, guide, de CE site)
+  // Paramètres → Lecture, Commentaires, Médias, Permaliens, SEO, Indexation, Emailing, Tunnels, Avancé : écrans partagés ouverts dans le cadre du site (réglages propres au site, ou ce qui s'applique réellement à lui, en lecture seule)
+  "parametres-lecture": { label: "Lecture", kind: "delegate", to: "/site-web/parametres/lecture", reg: "parametres/lecture", permission: "settings.read", legacy: `${BASE}/parametres/lecture` },
+  "parametres-commentaires": { label: "Commentaires", kind: "delegate", to: "/site-web/parametres/commentaires", reg: "parametres/commentaires", permission: "settings.read", legacy: `${BASE}/parametres/commentaires` },
+  "parametres-medias": { label: "Médias", kind: "delegate", to: "/site-web/parametres/medias", reg: "parametres/medias", permission: "settings.read", legacy: `${BASE}/parametres/medias` },
+  "parametres-permaliens": { label: "Permaliens", kind: "delegate", to: "/site-web/parametres/permaliens", reg: "parametres/permaliens", permission: "settings.read", legacy: `${BASE}/parametres/permaliens` },
+  "parametres-seo": { label: "SEO", kind: "delegate", to: "/site-web/parametres/seo", reg: "parametres/seo", permission: "settings.read", legacy: `${BASE}/parametres/seo` },
+  "parametres-indexation": { label: "Indexation", kind: "delegate", to: "/site-web/parametres/indexation", reg: "parametres/indexation", permission: "settings.read", legacy: `${BASE}/parametres/indexation` },
+  "parametres-emailing": { label: "Emailing", kind: "delegate", to: "/site-web/parametres/emailing", reg: "parametres/emailing", permission: "settings.read", legacy: `${BASE}/parametres/emailing` },
+  "parametres-tunnels": { label: "Tunnels", kind: "delegate", to: "/site-web/parametres/tunnels", reg: "parametres/tunnels", permission: "settings.read", legacy: `${BASE}/parametres/tunnels` },
+  "parametres-avance": { label: "Avancé", kind: "delegate", to: "/site-web/parametres/avance", reg: "parametres/avance", permission: "settings.read", legacy: `${BASE}/parametres/avance` },
   confidentialite: { label: "Confidentialité", kind: "delegate", to: "/site-web/parametres/confidentialite", reg: "parametres/confidentialite", permission: "settings.read", legacy: `${BASE}/parametres/confidentialite` },
   outils: { label: "Santé du site", kind: "delegate", to: "/site-web/outils", reg: "outils", permission: "tools.view", legacy: `${BASE}/outils` },
 };
@@ -268,6 +278,15 @@ const ABILITY = {
   outils: { mode: "open", module: "outils" },
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
+  "parametres/lecture": { mode: "open", module: "parametres-lecture" },
+  "parametres/commentaires": { mode: "open", module: "parametres-commentaires" },
+  "parametres/medias": { mode: "open", module: "parametres-medias" },
+  "parametres/permaliens": { mode: "open", module: "parametres-permaliens" },
+  "parametres/seo": { mode: "open", module: "parametres-seo" },
+  "parametres/indexation": { mode: "open", module: "parametres-indexation" },
+  "parametres/emailing": { mode: "open", module: "parametres-emailing" },
+  "parametres/tunnels": { mode: "open", module: "parametres-tunnels" },
+  "parametres/avance": { mode: "open", module: "parametres-avance" },
   // R8 lot 2 : contenus déjà isolés par site (R5 médias, R6 articles/termes/commentaires), ouverts par délégation (`sub` = sous-page de la liste fermée NESTED)
   articles: { mode: "open", module: "articles" },
   "articles/brouillons": { mode: "open", module: "articles", sub: "brouillons" },
@@ -388,6 +407,15 @@ FRAMED.add("apparence/templates"); // bibliothèque de templates : garde le cadr
 FRAMED.add("apparence/patterns"); // bibliothèque de patterns : garde le cadre DU site
 FRAMED.add("apparence/styles"); // gestionnaire de styles : garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("apparence/polices"); // les trois onglets (adresses « ?site= ») gardent le cadre DU site : menu, bandeau et fil d'Ariane
+FRAMED.add("parametres/lecture");
+FRAMED.add("parametres/commentaires");
+FRAMED.add("parametres/medias");
+FRAMED.add("parametres/permaliens");
+FRAMED.add("parametres/seo");
+FRAMED.add("parametres/indexation");
+FRAMED.add("parametres/emailing");
+FRAMED.add("parametres/tunnels");
+FRAMED.add("parametres/avance");
 FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

@@ -11,7 +11,7 @@ const nav = require("../src/marketing/web/cmsNav");
 // ── INVENTAIRE (clé du registre → décision) ───────────────────────────────────────────────────────────────────────────────────────
 // ouvert        : écran réel dans le cadre du site, isolation démontrée (R5 médias, R6 contenus) ; ouvert-equipe : idem mais absent du menu d'un accès limité ; central : administration centrale (absent du menu d'un site)
 // ferme (motif) : « Bientôt » visible, grisé, sans lien — l'isolation ou l'écran du site n'existe pas encore
-const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparence/widgets", "apparence/styles", "apparence/patterns", "apparence/templates", "apparence/polices", "apparence/personnaliser", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres", "parametres/confidentialite",
+const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparence/widgets", "apparence/styles", "apparence/patterns", "apparence/templates", "apparence/polices", "apparence/personnaliser", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "parametres", "parametres/confidentialite", "parametres/avance", "parametres/commentaires", "parametres/emailing", "parametres/indexation", "parametres/lecture", "parametres/medias", "parametres/permaliens", "parametres/seo", "parametres/tunnels",
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque", "mediatheque/ajouter",
   "seo", "seo/404", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
@@ -24,7 +24,6 @@ const MOTIFS = {
   "redirections/liens-casses": "lot C4", "redirections/permaliens": "lot C4", corbeille: "corbeille globale : ne sera activée qu'une fois démontré qu'un site ne voit pas la corbeille d'un autre", "outils/importer": "lot C4", "outils/exporter": "lot C4",
   "outils/diagnostic": "lot C4", "outils/maintenance": "lot C4", "outils/cache": "lot C4", "outils/contenu": "lot C4",
 };
-for (const k of ["lecture", "commentaires", "medias", "permaliens", "seo", "indexation", "emailing", "tunnels", "avance"]) MOTIFS[`parametres/${k}`] = "réglages détaillés par site : lot C4";
 
 const png = (() => {
   const table = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });

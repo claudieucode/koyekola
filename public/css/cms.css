@@ -1119,3 +1119,16 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 .mk-pv-state-main { flex: 1 1 320px; min-width: 0; }
 .mk-pv-exists-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .mk-pv-acc-title { display: block; }
+
+/* ---- Paramètres : finitions communes (animations légères, outils liés) ---- */
+.mk-st-recap-list { margin: 12px 0 0; }
+.mk-st-toollist { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
+.mk-st-toollist li { display: grid; gap: 2px; }
+.mk-st-toollist a { font-weight: 600; width: fit-content; transition: color .15s ease; }
+.mk-st-form, .mk-st-recap, .mk-st-tools, .mk-st-confirm { animation: mk-st-in .2s ease both; transform-origin: 50% 0; }
+@keyframes mk-st-in { from { opacity: 0; transform: scale(.985) translateY(4px); } to { opacity: 1; transform: none; } }
+.mk-nav-group.is-open > .mk-nav-sub { animation: mk-nav-open .16s ease both; }
+@keyframes mk-nav-open { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+.mk-st-form .btn, .mk-st-actions .btn { transition: background-color .15s ease, color .15s ease, opacity .15s ease, transform .1s ease; }
+.mk-st-form .btn:active { transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) { .mk-st-form, .mk-st-recap, .mk-st-tools, .mk-st-confirm, .mk-nav-group.is-open > .mk-nav-sub { animation: none; } .mk-st-form .btn, .mk-st-actions .btn { transition: none; } }

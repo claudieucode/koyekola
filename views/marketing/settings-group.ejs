@@ -2,7 +2,7 @@
   KOLAKISA CMS → Paramètres (palier 14) : un groupe de réglages du site principal ou d'un site. Chaque champ est lu et enregistré par le moteur de
   réglages (validation côté serveur, droits par réglage, confirmation des réglages sensibles). « Enregistré » n'apparaît qu'après la réponse du serveur.
 %><%- include("partials/top", { title, active, layout: "form" }) %>
-<%- include("partials/settings-head", { heading: groupLabel, intro, groups, BASE, q, scope, sites, siteOnly, tabKey: group, tabPath: group === "general" ? "" : "/" + SLUG_OF[group] }) %>
+<% if (typeof frame === "undefined" || !frame) { %><%- include("partials/settings-head", { heading: groupLabel, intro, groups, BASE, q, scope, sites, siteOnly, tabKey: group, tabPath: group === "general" ? "" : "/" + SLUG_OF[group] }) %><% } else { %><div class="mk-head"><h1><%= groupLabel %></h1></div><% if (intro) { %><p class="mk-lead"><%= intro %></p><% } %><% } %>
 <% const anyEditable = view.some((f) => f.editable); const errs = errors || []; %>
 <% if (errs.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>Rien n'a été enregistré :</p><ul><% errs.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
 <% if (pending) { %>
@@ -12,12 +12,21 @@
   <ul class="mk-st-impacts"><% pending.forEach((p) => { %><li><strong><%= p.label %></strong> : <%= p.before %> → <strong><%= p.after %></strong><br><span class="mk-sub">Impact : <%= p.impact %></span></li><% }) %></ul>
   <form method="post" action="<%= BASE %><%= group === "general" ? "" : "/" + SLUG_OF[group] %><%= q %>" class="mk-tl-form">
     <% view.forEach((f) => { if (!f.editable) return; %><% if (f.type === "boolean") { %><input type="hidden" name="_b_<%= f.key %>" value="1"><% if (f.value) { %><input type="hidden" name="<%= f.key %>" value="1"><% } %><% } else { %><input type="hidden" name="<%= f.key %>" value="<%= f.value === null || f.value === undefined ? "" : f.value %>"><% } %><% }) %>
+    <% if (typeof frame !== "undefined" && frame) { %><input type="hidden" name="frame" value="1"><% } %>
     <div class="mk-tl-option"><input type="checkbox" id="st-confirm" name="confirm" value="1" required><label for="st-confirm">Je comprends l'impact et je confirme ces changements.</label></div>
     <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Confirmer et enregistrer</button> <a class="btn btn-ghost btn-sm" href="<%= BASE %><%= group === "general" ? "" : "/" + SLUG_OF[group] %><%= q %>">Annuler</a></div>
   </form>
 </section>
 <% } %>
 
+<% if (scope.siteId && recap && recap.length) { %>
+<section class="mk-panel mk-st-recap" aria-labelledby="st-recap-h">
+  <h2 id="st-recap-h"><%= view.length ? "Réglages communs à toute la plateforme" : "Ce qui s'applique à ce site" %></h2>
+  <p class="mk-sub"><%= view.length ? "Ces réglages-ci ne se règlent pas site par site : ils sont communs à tous les sites de l'organisation et s'appliquent aussi à ce site." : "Aucun réglage de cette section n'est propre à un site : les valeurs ci-dessous sont communes à tous les sites de l'organisation et s'appliquent aussi à celui-ci. Elles sont affichées en lecture seule." %><% if (canTeam) { %> L'équipe peut les modifier depuis le <a href="<%= BASE %>/<%= SLUG_OF[group] %>">site principal</a> : le changement touche alors tous les sites.<% } else { %> Elles se modifient depuis le site principal, par l'équipe de l'organisation.<% } %></p>
+  <dl class="mk-tl-dl mk-st-recap-list"><% recap.forEach((r) => { %><div><dt><%= r.label %></dt><dd><strong><%= r.value %></strong><br><span class="mk-sub"><%= r.help %></span></dd></div><% }) %></dl>
+</section>
+<% } %>
+<% if (view.length) { %>
 <form method="post" action="<%= BASE %><%= group === "general" ? "" : "/" + SLUG_OF[group] %><%= q %>" class="mk-panel mk-st-form" data-st-form novalidate>
   <fieldset class="mk-st-fieldset"<%= anyEditable ? "" : " disabled" %>>
     <legend class="sr-only"><%= groupLabel %></legend>
@@ -64,5 +73,16 @@
     <% if (anyEditable) { %><button type="submit" class="btn btn-ghost btn-sm" formaction="<%= BASE %>/reinitialiser<%= q %>" name="target" value="<%= group %>" formnovalidate data-st-reset>Restaurer les valeurs par défaut du groupe</button><% } %>
   </div>
   <% if (scope.siteId) { %><input type="hidden" name="site" value="<%= scope.siteId %>"><% } %>
+  <% if (typeof frame !== "undefined" && frame) { %><input type="hidden" name="frame" value="1"><% } %>
 </form>
+<% } %>
+<% if (group === "email" || group === "tunnels") { const T = group === "email"
+  ? [["/marketing/envoi", "Fournisseur d'envoi, clés secrètes et e-mail de test", "Choisissez le fournisseur, enregistrez les clés (jamais affichées en clair) et envoyez un e-mail de test : la réussite n'est annoncée qu'après la réponse du fournisseur."], ["/marketing/domaines", "Domaines d'envoi : SPF, DKIM et DMARC", "Ajoutez votre domaine et vérifiez ses enregistrements DNS : le CMS lit le DNS réel et indique ce qui manque."]]
+  : [["/marketing/tunnels", "Tunnels de vente et de conversion", "Les étapes, les pages et les transitions se construisent dans l'écran Tunnels ; les délais ci-dessus règlent seulement quand un parcours est considéré comme abandonné."], ["/marketing/analytics/global", "Suivi des conversions", "Les événements réellement déclenchés (étape atteinte, achat, abandon) s'observent dans Analytics."]]; %>
+<section class="mk-panel mk-st-tools" aria-labelledby="st-tools-h">
+  <h2 id="st-tools-h"><%= group === "email" ? "Outils d'envoi" : "Outils liés" %></h2>
+  <% if (canTeam) { %><ul class="mk-st-toollist"><% T.forEach((t) => { %><li><a href="<%= t[0] %>"><%= t[1] %> →</a><span class="mk-sub"><%= t[2] %></span></li><% }) %></ul>
+  <% } else { %><p class="mk-sub">Ces outils sont communs à l'organisation : ils sont réservés à l'équipe, depuis le site principal.</p><% } %>
+</section>
+<% } %>
 <%- include("partials/bottom") %>
