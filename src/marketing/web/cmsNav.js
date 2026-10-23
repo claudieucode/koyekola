@@ -104,6 +104,7 @@ const SECTIONS = [
   {
     key: "parametres", label: "Paramètres", icon: "settings", items: [
       leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read" }),
+      leaf("parametres/connecteurs", "Connecteurs", `${BASE}/parametres/connecteurs`, { permission: "settings.read" }),
       leaf("parametres/ecriture", "Écriture", `${BASE}/parametres/ecriture`, { permission: "settings.read" }),
       leaf("parametres/lecture", "Lecture", `${BASE}/parametres/lecture`, { permission: "settings.read" }),
       leaf("parametres/commentaires", "Commentaires", `${BASE}/parametres/commentaires`, { permission: "settings.read" }),
@@ -226,6 +227,8 @@ const SITE_MODULES = {
   "parametres-emailing": { label: "Emailing", kind: "delegate", to: "/site-web/parametres/emailing", reg: "parametres/emailing", permission: "settings.read", legacy: `${BASE}/parametres/emailing` },
   "parametres-tunnels": { label: "Tunnels", kind: "delegate", to: "/site-web/parametres/tunnels", reg: "parametres/tunnels", permission: "settings.read", legacy: `${BASE}/parametres/tunnels` },
   "parametres-avance": { label: "Avancé", kind: "delegate", to: "/site-web/parametres/avance", reg: "parametres/avance", permission: "settings.read", legacy: `${BASE}/parametres/avance` },
+  // Paramètres → Connecteurs : centre d'intégrations ; écran partagé ouvert dans le cadre du site (connexions PROPRES au site, secrets isolés)
+  "parametres-connecteurs": { label: "Connecteurs", kind: "delegate", to: "/site-web/parametres/connecteurs", reg: "parametres/connecteurs", permission: "settings.read", legacy: `${BASE}/parametres/connecteurs` },
   confidentialite: { label: "Confidentialité", kind: "delegate", to: "/site-web/parametres/confidentialite", reg: "parametres/confidentialite", permission: "settings.read", legacy: `${BASE}/parametres/confidentialite` },
   outils: { label: "Santé du site", kind: "delegate", to: "/site-web/outils", reg: "outils", permission: "tools.view", legacy: `${BASE}/outils` },
   // Corbeille : écran partagé /site-web/corbeille ; il ne liste et ne traite que les éléments de CE site (portée vérifiée par le serveur)
@@ -300,6 +303,7 @@ const ABILITY = {
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },
+  "parametres/connecteurs": { mode: "open", module: "parametres-connecteurs" },
   "parametres/lecture": { mode: "open", module: "parametres-lecture" },
   "parametres/commentaires": { mode: "open", module: "parametres-commentaires" },
   "parametres/medias": { mode: "open", module: "parametres-medias" },
@@ -439,6 +443,7 @@ FRAMED.add("parametres/emailing");
 FRAMED.add("parametres/tunnels");
 FRAMED.add("parametres/avance");
 FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
+FRAMED.add("parametres/connecteurs");
 FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

@@ -68,10 +68,6 @@
    "siteId": true,
    "classe": "isolee"
   },
-  "cms_widget_layouts": {
-   "siteId": true,
-   "classe": "isolee"
-  },
   "cms_template_imports": {
    "siteId": true,
    "classe": "isolee"
@@ -85,6 +81,10 @@
    "classe": "isolee"
   },
   "cms_url_history": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "cms_widget_layouts": {
    "siteId": true,
    "classe": "isolee"
   },
@@ -189,6 +189,14 @@
    "classe": "plateforme"
   },
   "mk_campaigns": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_connections": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_connector_prefs": {
    "siteId": true,
    "classe": "isolee"
   },

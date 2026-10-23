@@ -54,7 +54,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const g = Object.fromEntries(site.filter((x) => !x.flat).map((x) => [x.cle, x]));
     assert.deepEqual(g.utilisateurs.entrees.map((e) => e.libelle), ["Tous les utilisateurs", "Inviter", "Rôles", "Permissions", "Invitations"]);
     assert.deepEqual(g.outils.entrees.map((e) => e.libelle), ["Santé du site", "Corbeille", "Importer", "Exporter", "Diagnostic", "Maintenance", "Caches", "Outils de contenu"]);
-    assert.deepEqual(g.parametres.entrees.map((e) => e.libelle), ["Général", "Écriture", "Lecture", "Commentaires", "Médias", "Permaliens", "SEO", "Confidentialité", "Indexation", "Emailing", "Tunnels", "Avancé"]);
+    assert.deepEqual(g.parametres.entrees.map((e) => e.libelle), ["Général", "Connecteurs", "Écriture", "Lecture", "Commentaires", "Médias", "Permaliens", "SEO", "Confidentialité", "Indexation", "Emailing", "Tunnels", "Avancé"]);
     assert.ok(!site.some((x) => /Équipe du site|Réglages du site|Design du site/.test(x.titre)), "aucun libellé propre au site en titre");
   });
   test("les entrées non ouvertes sont des éléments grisés SANS lien ; les entrées ouvertes ont toutes un lien dans le cadre du site", async () => {
@@ -96,7 +96,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     assert.ok((await memA.get(`${SP}/${B}/tableau-de-bord`)).status >= 403, "éditeur de A refusé sur B");
     assert.ok([403, 404].includes((await outsider.get(`${SP}/${A}/tableau-de-bord`)).status), "sans accès refusé");
   });
-  test("site principal : son menu garde les 66 entrées du registre et ses adresses historiques (régression)", async () => {
+  test("site principal : son menu garde les 67 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
     assert.equal(entries.length, 71 + 1 + 10); // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing

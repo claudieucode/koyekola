@@ -8,6 +8,7 @@ const db = require("../../config/database");
 const { need } = require("./kit");
 const general = require("./generalSettings");
 const privacy = require("./privacy");
+const connectorsWeb = require("./connectors");
 const target = require("./siteTarget");
 
 const BASE = "/marketing/site-web/parametres";
@@ -94,6 +95,8 @@ module.exports = () => {
   }
 
   // ----- Écrans -----
+  // Connecteurs : page propre (centre d'intégrations) ; le niveau (central ou un site) vient de l'adresse vérifiée
+  router.get("/site-web/parametres/connecteurs", (req, res) => connectorsWeb.render(req, res));
   const groupRoute = new RegExp(`^/site-web/parametres(?:/(${Object.keys(SLUGS).join("|")}))?/?$`);
   router.get(groupRoute, (req, res) => {
     const group = SLUGS[req.params[0] || "general"];
@@ -205,6 +208,7 @@ module.exports = () => {
     } catch (error) { if (error.status) return json(res, error.status, { error: error.message }); next(error); }
   });
   privacy.apiRoutes(api);
+  connectorsWeb.apiRoutes(api);
   api.get("/:key", (req, res) => {
     const scope = scopeJson(req, res); if (!scope) return;
     const d = engine.byKey(scope, req.params.key);

@@ -1,0 +1,24 @@
+<%#
+  KOLAKISA CMS → Réglages → Connecteurs. Le serveur pose l'état réel (JSON #cn-data : catalogue, connexions, droits, niveau) ; public/js/cms-connectors.js construit la liste, les fiches et les formulaires sans jamais
+  injecter de HTML (textContent seulement) et n'affiche JAMAIS une valeur secrète : le serveur ne les renvoie pas.
+%><%- include("partials/top", { title, active }) %>
+<div class="mk-cn" data-cn-root>
+  <header class="mk-cn-head">
+    <h1>Connecteurs</h1>
+    <p class="mk-cn-lead">Toutes vos clés d'API et informations de connexion sont enregistrées ici, chiffrées côté serveur, et partagées entre les modules autorisés : configurez-les une seule fois, utilisez-les partout.</p>
+    <p class="mk-cn-scope" data-cn-scope><%= C.scope.central ? "Niveau central (site principal et organisation)" : "Site « " + C.scope.name + " »" %></p>
+  </header>
+  <noscript><p class="mk-cn-note">Cet écran a besoin de JavaScript pour afficher et configurer les connecteurs.</p></noscript>
+  <p class="mk-cn-flash" data-cn-flash role="status" aria-live="polite" hidden></p>
+  <div class="mk-cn-toolbar">
+    <label class="mk-cn-search"><span class="sr-only">Rechercher un connecteur (nom, fournisseur, capacité)</span><%- icon("search", { size: 16 }) %><input type="search" data-cn-search placeholder="Rechercher un connecteur" autocomplete="off"></label>
+    <label class="sr-only" for="cn-cat">Catégorie</label><select id="cn-cat" data-cn-cat><option value="">Toutes les catégories</option></select>
+  </div>
+  <nav class="mk-cn-filters" aria-label="Filtrer les connecteurs" data-cn-filters></nav>
+  <section class="mk-cn-caps" data-cn-caps hidden aria-labelledby="cn-caps-h"><h2 id="cn-caps-h">Fournisseur d'une fonction</h2><p class="mk-cn-sub">Quand plusieurs connecteurs offrent la même fonction, choisissez celui que Kolakisa utilise. Aucun basculement automatique vers un autre fournisseur : une panne est signalée, jamais contournée en silence (coûts, données et préférences du site respectés).</p><div data-cn-caps-list></div></section>
+  <div class="mk-cn-list" data-cn-list aria-live="polite"></div>
+  <p class="mk-cn-empty" data-cn-empty hidden>Aucun connecteur ne correspond à cette recherche.</p>
+  <p class="mk-cn-foot">Un fournisseur qui ne figure pas dans la liste n'est pas encore pris en charge par Kolakisa : un connecteur s'ajoute par un adaptateur validé, jamais par une adresse libre.</p>
+</div>
+<script type="application/json" id="cn-data"><%- bootJson %></script>
+<%- include("partials/bottom") %>
