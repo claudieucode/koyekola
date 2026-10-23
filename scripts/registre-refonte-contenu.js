@@ -13,11 +13,13 @@ const FAMILY = [
 const familyOf = (href) => { for (const [re, f] of FAMILY) if (re.test(href)) return f; return "Écran spécialisé"; };
 
 // État de chaque écran : « Refondue et testée » | « En cours » (système partagé appliqué, composition propre à reprendre) | « À auditer »
-const DONE = new Set(["/marketing", "/marketing/campagnes", "/marketing/contacts", "/marketing/modeles"]);
+const DONE = new Set(["/marketing", "/marketing/campagnes", "/marketing/contacts", "/marketing/modeles", "/marketing/formulaires", "/marketing/listes"]);
 const DONE_NOTE = {
   "/marketing": "Recomposé : sélecteur de période, instantané des chiffres (infobulles), préparation à l'envoi (étapes + détail, données réelles), audience, scénarios, campagnes récentes, modèles réels, activité.",
   "/marketing/campagnes": "Recomposé : en-tête à actions, onglets d'état, recherche + tri, tableau (nom + type + dates / audience / ouvertures / clics), actions fendues, pagination complète.",
   "/marketing/contacts": "Recomposé : filtres principaux en ligne, filtres avancés repliables, tableau avec sélection et actions groupées, pagination complète.",
+  "/marketing/formulaires": "Recomposé : indicateur réel (formulaires actifs), recherche + statuts instantanés, titre + lien public, actions Détails / lien, état vide illustré.",
+  "/marketing/listes": "Recomposé : actions d'en-tête, bandeau fermable, actions fendues, état vide illustré.",
   "/marketing/modeles": "Recomposé : onglets de catégories, recherche + type + tri, bascule liste / grille avec aperçus réels, actions fendues.",
 };
 const SHARED = "en-tête en bande (titre, description, actions), cases à cocher, filtres en texte, infobulle de menu";

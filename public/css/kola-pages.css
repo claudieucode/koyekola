@@ -88,7 +88,7 @@ html[data-kola-theme="dark"] .mk-body .mk-seg [aria-current="page"], html[data-k
 .mk-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; }
 .mk-switch-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .mk-switch-ui { position: relative; width: 38px; height: 22px; border-radius: 999px; background: var(--field-border); transition: background var(--k-dur); flex: none; }
-.mk-switch-ui::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform var(--k-dur) var(--k-ease); }
+.mk-switch-ui::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(11, 29, 58, 0.28); transition: transform var(--k-dur) var(--k-ease); }
 .mk-switch-input:checked + .mk-switch-ui { background: var(--k-accent-solid); }
 .mk-switch-input:checked + .mk-switch-ui::after { transform: translateX(16px); }
 .mk-switch-input:focus-visible + .mk-switch-ui { box-shadow: var(--mk-focus); }
@@ -128,7 +128,7 @@ html[data-kola-theme="dark"] .mk-body .mk-seg [aria-current="page"], html[data-k
 .mk-body .mk-kpi-delta { font-size: 0.78rem; font-weight: 650; }
 .mk-body .mk-kpi-delta.is-up { color: var(--success); } .mk-body .mk-kpi-delta.is-down { color: var(--danger); } .mk-body .mk-kpi-delta.is-flat { color: var(--muted); }
 .mk-body .mk-kpi.is-strong { background: var(--mk-selected); }
-.mk-body .mk-stat-label[data-tip], .mk-body .mk-kpi-label[data-tip], .mk-body .mk-dotted[data-tip] { text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--muted) 70%, transparent); cursor: help; width: fit-content; }
+.mk-body .mk-kpi.is-strong .mk-kpi-label, .mk-body .mk-kpi.is-strong .mk-kpi-note { color: var(--mk-text); }.mk-body .mk-stat-label[data-tip], .mk-body .mk-kpi-label[data-tip], .mk-body .mk-dotted[data-tip] { text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 4px; text-decoration-color: color-mix(in srgb, var(--muted) 70%, transparent); cursor: help; width: fit-content; }
 .mk-body .mk-stats .mk-stat { border-radius: 12px; }
 .mk-body .mk-list-rows { list-style: none; margin: 0; padding: 0; }
 .mk-body .mk-list-rows > li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--mk-border); font-size: 0.9rem; }
