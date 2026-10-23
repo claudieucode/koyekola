@@ -144,6 +144,8 @@
     if (boot.pendingEngineDraft) body.appendChild(h("p", { class: "mk-wd-banner" }, "Un brouillon de l'ancien éditeur est en cours pour le site principal : publiez-le ou annulez-le avant de publier ici."));
     if (tab === "couleurs") renderPalette(p); else if (tab === "typographie") renderGeneric(p, "Polices et échelle typographique. Les polices téléversées se gèrent dans Polices.", boot.links.polices, "Gérer les polices"); else if (tab === "boutons") renderGeneric(p, "Forme et états des boutons, et style des liens.", null); else renderGeneric(p, "Arrondis, ombres, espacements et largeurs du site.", null);
     var ga = groupActions(p); if (ga) body.appendChild(ga);
+    // Échelle complète (titres 4 à 6, légende, espacements XS à XXL, rayons, ombres) : écran « Design system avancé » du site (mêmes valeurs, enregistrées une seule fois)
+    if (boot.links.designSystem && (tab === "typographie" || tab === "mise-en-page")) body.appendChild(h("p", { class: "field-hint" }, ["Réglages avancés du site : ", h("a", { href: boot.links.designSystem, text: "Design system avancé →" })]));
   }
   function renderGeneric(p, intro, href, hrefLabel) {
     body.appendChild(h("p", { class: "field-hint", text: intro }));

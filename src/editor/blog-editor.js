@@ -2193,7 +2193,7 @@ function start() {
   }
   const initialDate = dateInput.value;
   // Calendrier de l'éditeur (aux couleurs du thème) : il pilote ce champ, dont la valeur reste en heure locale
-  const datePicker = attachDatePicker(dateInput, { empty: "Immédiatement", label: "Date de publication" });
+  const datePicker = attachDatePicker(dateInput, { empty: "Immédiatement", label: "Date de publication", weekStart: DATA.weekStart });
   const isFuture = (v) => { const p = parseLocal(v); return Boolean(p) && new Date(p.y, p.mo, p.d, p.h, p.mi) > new Date(); };
   // Statut choisi (liste « Statut ») = ce qui sera enregistré. Les boutons et l'étiquette du document suivent toujours ce choix.
   const ONLINE = new Set(["published", "scheduled"]);

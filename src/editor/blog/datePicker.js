@@ -4,7 +4,9 @@
 // Accessible : grille de jours au clavier (flèches, Page préc./suiv., Début/Fin), Échap ferme et rend le focus.
 
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
-const DAYS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."];
+const DAYS_SUN_FIRST = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+// Premier jour de la semaine du site (Paramètres → Général) : index JavaScript de getDay() (0 = dimanche)
+const WEEK_START = { monday: 1, sunday: 0, saturday: 6 };
 const pad = (n) => String(n).padStart(2, "0");
 // « AAAA-MM-JJTHH:MM » ↔ composantes locales (jamais d'objet Date en UTC : pas de décalage de jour)
 export const parseLocal = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(String(v || "")); return m ? { y: +m[1], mo: +m[2] - 1, d: +m[3], h: +m[4], mi: +m[5] } : null; };
@@ -20,7 +22,10 @@ export const describe = (v) => {
 export const timeZoneLabel = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, " "); } catch { return "heure locale"; } };
 
 // input : champ existant (sa valeur est la source de vérité) ; empty : texte affiché quand il est vide
-export function attachDatePicker(input, { empty = "Immédiatement", label = "Date de publication", onChange = () => {} } = {}) {
+export function attachDatePicker(input, { empty = "Immédiatement", label = "Date de publication", onChange = () => {}, weekStart = "monday" } = {}) {
+  const startIdx = Object.hasOwn(WEEK_START, weekStart) ? WEEK_START[weekStart] : 1;
+  const DAYS = Array.from({ length: 7 }, (_, i) => DAYS_SUN_FIRST[(startIdx + i) % 7]);
+  const weekdayIndex = (date) => (date.getDay() - startIdx + 7) % 7; // 0 = premier jour affiché
   const trigger = document.createElement("button");
   trigger.type = "button";
   trigger.className = "kdp-trigger";
@@ -71,7 +76,7 @@ export function attachDatePicker(input, { empty = "Immédiatement", label = "Dat
     const grid = pop.querySelector("[data-kdp-grid]");
     grid.replaceChildren();
     const first = new Date(view.y, view.mo, 1);
-    const offset = (first.getDay() + 6) % 7; // semaine commençant le lundi
+    const offset = weekdayIndex(first); // la semaine commence le jour choisi dans les réglages du site
     const start = new Date(view.y, view.mo, 1 - offset);
     for (let w = 0; w < 6; w++) {
       const row = document.createElement("div");
@@ -187,8 +192,8 @@ export function attachDatePicker(input, { empty = "Immédiatement", label = "Dat
       if (keys[e.key]) { e.preventDefault(); moveFocus(keys[e.key]); }
       else if (e.key === "PageUp") { e.preventDefault(); moveFocus(0, -1); }
       else if (e.key === "PageDown") { e.preventDefault(); moveFocus(0, 1); }
-      else if (e.key === "Home") { e.preventDefault(); const base = focusDay; const wd = (new Date(base.y, base.mo, base.d).getDay() + 6) % 7; moveFocus(-wd); }
-      else if (e.key === "End") { e.preventDefault(); const base = focusDay; const wd = (new Date(base.y, base.mo, base.d).getDay() + 6) % 7; moveFocus(6 - wd); }
+      else if (e.key === "Home") { e.preventDefault(); const base = focusDay; const wd = weekdayIndex(new Date(base.y, base.mo, base.d)); moveFocus(-wd); }
+      else if (e.key === "End") { e.preventDefault(); const base = focusDay; const wd = weekdayIndex(new Date(base.y, base.mo, base.d)); moveFocus(6 - wd); }
     });
     if (!cur) syncTime(9, 0); // aucune date : 09:00 proposé par défaut
     draw();

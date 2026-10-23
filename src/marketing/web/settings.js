@@ -6,6 +6,8 @@ const access = require("../../services/cmsAccess");
 const pages = require("../pages");
 const db = require("../../config/database");
 const { need } = require("./kit");
+const general = require("./generalSettings");
+const target = require("./siteTarget");
 
 const BASE = "/marketing/site-web/parametres";
 // Adresses des groupes (français) → clés du moteur
@@ -74,6 +76,11 @@ module.exports = () => {
     if (!canRead(req, group)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." });
     if (!s.scope.siteId && req.mk.siteOnly) return res.redirect("/marketing/site-web/mes-sites");
     if (!engine.defsFor(s.scope).some((d) => d.group === group)) return res.redirect(`${BASE}${q(s.scope)}`);
+    // Général : le centre de configuration (sections, aperçus, enregistrement en une fois) ; les autres groupes gardent leur formulaire
+    if (group === "general") {
+      const t = target(req, res); if (!t) return;
+      return general.render(req, res, t, "parametres", { settingsHead: { heading: "Général", intro: "", groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(s.scope), scope: s.scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "general", tabPath: "" } });
+    }
     render(req, res, group, s.scope);
   });
 
@@ -146,6 +153,21 @@ module.exports = () => {
     const foreign = Object.keys(values).filter((k) => !engine.defsFor(scope).some((d) => d.key === k && d.group === group));
     if (foreign.length) return json(res, 422, { ok: false, errors: [`Réglage étranger à ce groupe : ${foreign.map((k) => String(k).slice(0, 30)).join(", ")}.`] });
     try { respond(res, engine.update(scope, values, ctxOf(req), { confirm: req.body.confirm === true, actor: req })); } catch (error) { if (error.status) return json(res, error.status, { error: error.message }); next(error); }
+  });
+  // Général : un enregistrement unique de tous les champs modifiés (tout ou rien) ; la réponse renvoie les valeurs RÉELLEMENT enregistrées
+  api.put("/general", (req, res, next) => {
+    const scope = scopeJson(req, res); if (!scope) return;
+    const values = req.body && typeof req.body.values === "object" && req.body.values && !Array.isArray(req.body.values) ? req.body.values : null;
+    if (!values) return json(res, 422, { ok: false, errors: ["Corps invalide : { values: { clé: valeur } } attendu."] });
+    const foreign = Object.keys(values).filter((k) => !general.KEYS.includes(k));
+    if (foreign.length) return json(res, 422, { ok: false, errors: [`Réglage étranger à cet écran : ${foreign.map((k) => String(k).slice(0, 30)).join(", ")}.`] });
+    try {
+      const ctx = ctxOf(req);
+      const result = engine.update(scope, values, ctx, { confirm: req.body.confirm === true, actor: req });
+      if (!result.ok) return respond(res, result);
+      const now = engine.readAll(scope, ctx);
+      json(res, 200, { ok: true, changed: result.changed, values: Object.fromEntries(general.KEYS.filter((k) => k in now).map((k) => [k, now[k].value])) });
+    } catch (error) { if (error.status) return json(res, error.status, { error: error.message }); next(error); }
   });
   api.get("/:key", (req, res) => {
     const scope = scopeJson(req, res); if (!scope) return;

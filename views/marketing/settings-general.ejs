@@ -1,0 +1,187 @@
+<%#
+  KOLAKISA CMS → Paramètres → Général : centre de configuration générale (identité, adresses, comptes, langue, dates). Chaque champ est un réglage du moteur de réglages : le serveur
+  revalide tout et enregistre en une seule opération (tout ou rien). public/js/cms-general.js ajoute l'enregistrement sans rechargement, les aperçus et la protection des modifications.
+%><%- include("partials/top", { title, active }) %>
+<% const F = G.fields; const val = (k) => (F[k] ? F[k].value : ""); const has = (k) => Boolean(F[k]); const dis = (k) => (F[k] && F[k].editable ? "" : " disabled");
+   const site = T.site || null; const archived = site ? (site.status === "archived" || Boolean(site.deleted_at)) : false;
+   const badge = (k) => (F[k] && F[k].sensitive ? '<span class="mk-sg-badge" title="Réglage sensible : une confirmation est demandée">Sensible</span>' : "");
+   const help = (k, extra) => (F[k] ? '<p class="mk-sg-help" id="sg-h-' + k + '">' + (F[k].help ? F[k].help.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "") + (extra || "") + "</p>" : ""); %>
+<% if (typeof settingsHead !== "undefined" && settingsHead) { %><%- include("partials/settings-head", settingsHead) %><% } %>
+<div class="mk-sg" data-sg-root>
+  <header class="mk-sg-head">
+    <div class="mk-head-main">
+      <% if (typeof settingsHead === "undefined" || !settingsHead) { %><h1>Général</h1><% } %>
+      <p class="mk-head-sub">Identité, adresses, comptes, langue et formats de <strong><%= T.name %></strong>. Ces réglages sont ceux de ce site seulement<%= T.principal ? " (le site principal est réservé à l'équipe)" : "" %>.</p>
+    </div>
+    <p class="mk-sg-state" data-sg-state role="status" aria-live="polite">Aucune modification</p>
+  </header>
+  <% if (G.readOnly) { %><p class="mk-sg-note" role="status"><%= archived ? "Ce site est archivé ou supprimé : ses réglages sont en lecture seule. Restaurez-le (en bas de page) pour les modifier." : "Lecture seule." %></p>
+  <% } else if (!G.canSave) { %><p class="mk-sg-note" role="status">Lecture seule : vous pouvez consulter ces réglages mais pas les modifier (la permission « settings.write » est requise).</p><% } %>
+  <div class="mk-sg-banner" data-sg-banner hidden role="alert"><strong data-sg-banner-title></strong><ul data-sg-banner-list></ul></div>
+
+  <form class="mk-sg-form" data-sg-form method="post" action="/marketing/site-web/parametres<%= T.siteId ? "?site=" + T.siteId : "" %>" novalidate>
+    <input type="hidden" name="site" value="<%= T.siteId || "" %>">
+
+    <%# ---------- 1. Identité ---------- %>
+    <section class="mk-sg-section" aria-labelledby="sg-t-id" id="identite">
+      <div class="mk-sg-section-head"><h2 id="sg-t-id">Identité du site</h2><p>Le nom, le slogan et l'icône que voient les visiteurs et les moteurs de recherche.</p></div>
+      <div class="mk-sg-fields">
+        <% if (has("site_name")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-site_name">Nom du site</label></div>
+          <div class="mk-sg-control"><input id="sg-site_name" type="text" name="site_name" maxlength="<%= F.site_name.max %>" autocomplete="off" value="<%= val("site_name") %>" data-sg-field="site_name" aria-describedby="sg-h-site_name sg-e-site_name" required<%= dis("site_name") %>>
+            <%- help("site_name", T.siteId ? " Le nom de la plateforme KOLAKISA n'est pas modifié." : "") %><p class="mk-sg-err" id="sg-e-site_name" data-sg-err="site_name" hidden></p></div></div><% } %>
+        <% if (has("description")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-description">Slogan et description courte</label></div>
+          <div class="mk-sg-control"><textarea id="sg-description" name="description" rows="2" maxlength="<%= F.description.max %>" data-sg-field="description" aria-describedby="sg-h-description sg-e-description"<%= dis("description") %>><%= val("description") %></textarea>
+            <p class="mk-sg-count" data-sg-count="description" aria-hidden="true"></p><%- help("description") %><p class="mk-sg-err" id="sg-e-description" data-sg-err="description" hidden></p></div></div><% } %>
+        <% ["favicon", "logo"].forEach(function (k) { if (!has(k)) return; %><div class="mk-sg-row"><div class="mk-sg-label"><span id="sg-l-<%= k %>"><%= k === "favicon" ? "Icône du site" : "Logo du site" %></span></div>
+          <div class="mk-sg-control"><div class="mk-sg-image" data-sg-image="<%= k %>">
+              <span class="mk-sg-thumb" data-sg-thumb aria-hidden="true"><img alt="" data-sg-thumb-img hidden><span data-sg-thumb-empty>Aucune</span></span>
+              <div class="mk-sg-image-actions">
+                <button type="button" class="mk-wd-btn" data-sg-pick="<%= k %>" aria-describedby="sg-l-<%= k %>"<%= dis(k) %>>Choisir une image</button>
+                <button type="button" class="mk-wd-btn" data-sg-clear="<%= k %>"<%= dis(k) %> hidden>Retirer</button>
+              </div>
+              <input type="hidden" name="<%= k %>" value="<%= val(k) %>" data-sg-field="<%= k %>"></div>
+            <p class="mk-sg-help" id="sg-h-<%= k %>"><%= k === "favicon" ? "Carrée, d'au moins 512 × 512 pixels de préférence (PNG, SVG, ICO, WebP ou JPEG). Elle s'affiche dans l'onglet du navigateur et les marque-pages." : "Image de la médiathèque, affichée dans le pied de page des pages du site." %> <a href="<%= G.links.media %>">Ajouter une image à la médiathèque</a></p>
+            <p class="mk-sg-err" data-sg-err="<%= k %>" hidden></p></div></div><% }); %>
+        <% if (!T.siteId) { %><p class="mk-sg-help mk-sg-flat">L'icône et le logo du site principal se règlent dans <a href="<%= G.links.customizer %>">Apparence → Personnaliser</a>.</p><% } %>
+        <% if (has("site_slug")) { %><div class="mk-sg-row">
+          <div class="mk-sg-label"><label for="sg-site_slug">Identifiant du site</label><%- badge("site_slug") %></div>
+          <div class="mk-sg-control"><input id="sg-site_slug" type="text" name="site_slug" maxlength="60" autocomplete="off" spellcheck="false" value="<%= val("site_slug") %>" data-sg-field="site_slug" aria-describedby="sg-h-site_slug sg-e-site_slug" required<%= dis("site_slug") %>>
+            <%- help("site_slug") %><p class="mk-sg-err" id="sg-e-site_slug" data-sg-err="site_slug" hidden></p></div></div><% } %>
+        <% if (has("site_type")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-site_type">Type de site</label></div>
+          <div class="mk-sg-control"><select id="sg-site_type" name="site_type" data-sg-field="site_type" aria-describedby="sg-h-site_type"<%= dis("site_type") %>><% F.site_type.options.forEach(function (o) { %><option value="<%= o[0] %>"<%= String(val("site_type")) === String(o[0]) ? " selected" : "" %>><%= o[1] %></option><% }) %></select>
+            <%- help("site_type") %><p class="mk-sg-err" data-sg-err="site_type" hidden></p></div></div><% } %>
+        <% if (has("site_note")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-site_note">Note interne</label></div>
+          <div class="mk-sg-control"><textarea id="sg-site_note" name="site_note" rows="2" maxlength="<%= F.site_note.max %>" data-sg-field="site_note" aria-describedby="sg-h-site_note"<%= dis("site_note") %>><%= val("site_note") %></textarea>
+            <%- help("site_note") %><p class="mk-sg-err" data-sg-err="site_note" hidden></p></div></div><% } %>
+      </div>
+    </section>
+
+    <%# ---------- 2. Adresses et URL ---------- %>
+    <section class="mk-sg-section" aria-labelledby="sg-t-url" id="adresses">
+      <div class="mk-sg-section-head"><h2 id="sg-t-url">Adresses et URL</h2><p>Où le site est publié. Les adresses techniques sont calculées par le système et ne se modifient pas ici.</p></div>
+      <div class="mk-sg-fields">
+        <div class="mk-sg-row"><div class="mk-sg-label"><span>Adresse publique</span></div>
+          <div class="mk-sg-control"><p class="mk-sg-value" data-sg-public><%= G.info.publicAddress || "Non définie" %></p>
+            <p class="mk-sg-help"><%= G.info.principal ? "Adresse du site principal : définie par l'hébergement (variable SITE_URL), jamais modifiable depuis le CMS." : G.info.customDomain ? "Domaine du site (réglé ci-dessous). Les pages du CMS s'y affichent sous /p/…" : "Ce site est servi par la plateforme : ses pages sont sous " + G.info.hostedAddress + "… Un domaine personnalisé peut être ajouté ci-dessous." %></p></div></div>
+        <div class="mk-sg-row"><div class="mk-sg-label"><span>Adresse de l'administration</span></div>
+          <div class="mk-sg-control"><p class="mk-sg-value"><a href="<%= G.info.admin %>"><%= (G.info.platformUrl || "") + G.info.admin %></a></p>
+            <p class="mk-sg-help">Cette adresse ne dépend pas du domaine public : changer le domaine n'enlève jamais l'accès à l'administration.</p></div></div>
+        <% if (has("homepage_page")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-homepage_page">Page d'accueil</label><%- badge("homepage_page") %></div>
+          <div class="mk-sg-control"><select id="sg-homepage_page" name="homepage_page" data-sg-field="homepage_page" aria-describedby="sg-h-homepage_page"<%= dis("homepage_page") %>>
+              <option value="">Aucune<%= T.siteId ? "" : " (accueil standard de KOLAKISA)" %></option>
+              <% G.choices.pages.forEach(function (p) { %><option value="<%= p.id %>"<%= String(val("homepage_page")) === String(p.id) ? " selected" : "" %>><%= p.name %></option><% }) %></select>
+            <%- help("homepage_page") %><p class="mk-sg-err" data-sg-err="homepage_page" hidden></p></div></div><% } %>
+        <% if (has("public_url")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-public_url">Domaine personnalisé</label><%- badge("public_url") %></div>
+          <div class="mk-sg-control"><input id="sg-public_url" type="url" inputmode="url" name="public_url" maxlength="200" placeholder="https://www.monsite.com" autocomplete="off" spellcheck="false" value="<%= val("public_url") %>" data-sg-field="public_url" aria-describedby="sg-h-public_url sg-e-public_url"<%= dis("public_url") %>>
+            <%- help("public_url", F.public_url.locked ? " " + F.public_url.locked : "") %><p class="mk-sg-err" id="sg-e-public_url" data-sg-err="public_url" hidden></p></div></div><% } %>
+      </div>
+    </section>
+
+    <%# ---------- 3. Comptes et inscriptions ---------- %>
+    <section class="mk-sg-section" aria-labelledby="sg-t-acc" id="comptes">
+      <div class="mk-sg-section-head"><h2 id="sg-t-acc">Comptes et inscriptions</h2><p>Qui peut créer un compte, et avec quels droits.</p></div>
+      <div class="mk-sg-fields">
+        <% if (has("registration_open")) { %><div class="mk-sg-row"><div class="mk-sg-label"><span id="sg-l-reg">Inscriptions publiques</span><%- badge("registration_open") %></div>
+          <div class="mk-sg-control"><label class="mk-sg-check"><input type="checkbox" name="registration_open" value="1" data-sg-field="registration_open" aria-describedby="sg-h-registration_open"<%= val("registration_open") === true || val("registration_open") === "true" ? " checked" : "" %><%= dis("registration_open") %>> Tout le monde peut créer un compte étudiant</label>
+            <%- help("registration_open") %><p class="mk-sg-err" data-sg-err="registration_open" hidden></p></div></div><% } %>
+        <div class="mk-sg-row"><div class="mk-sg-label"><span>Rôle des nouveaux comptes</span></div>
+          <div class="mk-sg-control"><p class="mk-sg-value">Étudiant</p>
+            <p class="mk-sg-help"><%= T.principal ? "Une inscription publique crée toujours un compte étudiant : il suit les formations qu'il a achetées et n'a aucun accès à l'administration. Ce rôle est fixé par le serveur, personne ne peut s'attribuer un autre rôle en s'inscrivant. " : "Les inscriptions publiques concernent la plateforme KOLAKISA (site principal), pas les sites du CMS. " %>Les droits d'équipe (administrateur, éditeur…) s'attribuent dans <a href="<%= G.links.users %>">Utilisateurs</a>.</p></div></div>
+        <% if (has("admin_email")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-admin_email">E-mail administratif</label></div>
+          <div class="mk-sg-control"><input id="sg-admin_email" type="email" name="admin_email" maxlength="254" autocomplete="off" value="<%= val("admin_email") %>" data-sg-field="admin_email" aria-describedby="sg-h-admin_email sg-e-admin_email"<%= dis("admin_email") %>>
+            <%- help("admin_email") %><p class="mk-sg-err" id="sg-e-admin_email" data-sg-err="admin_email" hidden></p></div></div><% } %>
+      </div>
+    </section>
+
+    <%# ---------- 4. Langue et localisation ---------- %>
+    <section class="mk-sg-section" aria-labelledby="sg-t-lang" id="langue">
+      <div class="mk-sg-section-head"><h2 id="sg-t-lang">Langue et localisation</h2><p>La langue déclarée par le site et son fuseau horaire.</p></div>
+      <div class="mk-sg-fields">
+        <% if (has("language")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-language">Langue du site</label></div>
+          <div class="mk-sg-control"><select id="sg-language" name="language" data-sg-field="language" aria-describedby="sg-h-language"<%= dis("language") %>><% F.language.options.forEach(function (o) { %><option value="<%= o[0] %>"<%= String(val("language")) === String(o[0]) ? " selected" : "" %>><%= o[1] %></option><% }) %></select>
+            <%- help("language", " L'interface d'administration reste en français : la langue du site ne la change pas.") %><p class="mk-sg-err" data-sg-err="language" hidden></p></div></div><% } %>
+        <% if (has("timezone")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-timezone">Fuseau horaire</label></div>
+          <div class="mk-sg-control"><select id="sg-timezone" name="timezone" data-sg-field="timezone" aria-describedby="sg-h-timezone sg-clock"<%= dis("timezone") %>>
+              <option value="UTC"<%= val("timezone") === "UTC" ? " selected" : "" %>>UTC (temps universel)</option>
+              <% G.timezones.forEach(function (g) { %><optgroup label="<%= g.zone %>"><% g.list.forEach(function (tz) { %><option value="<%= tz %>"<%= val("timezone") === tz ? " selected" : "" %>><%= tz.replace(/_/g, " ").replace(/\//g, " / ") %></option><% }) %></optgroup><% }) %>
+            </select>
+            <p class="mk-sg-clock" id="sg-clock" data-sg-clock aria-live="off"></p>
+            <%- help("timezone", " Les changements d'heure saisonniers sont gérés automatiquement.") %><p class="mk-sg-err" data-sg-err="timezone" hidden></p></div></div><% } %>
+      </div>
+    </section>
+
+    <%# ---------- 5. Dates, heures et calendrier ---------- %>
+    <section class="mk-sg-section" aria-labelledby="sg-t-date" id="dates">
+      <div class="mk-sg-section-head"><h2 id="sg-t-date">Dates, heures et calendrier</h2><p>La façon d'afficher les dates. Les dates enregistrées ne changent pas : seul leur affichage est modifié.</p></div>
+      <div class="mk-sg-fields">
+        <% if (has("date_format")) { %><div class="mk-sg-row"><div class="mk-sg-label"><span id="sg-l-date">Format de date</span></div>
+          <div class="mk-sg-control"><div class="mk-sg-radios" role="radiogroup" aria-labelledby="sg-l-date"><% F.date_format.options.forEach(function (o) { %>
+              <label class="mk-sg-radio"><input type="radio" name="date_format" value="<%= o[0] %>" data-sg-field="date_format"<%= String(val("date_format")) === String(o[0]) ? " checked" : "" %><%= dis("date_format") %>> <span><%= o[1].replace(/\s*\(.*\)$/, "") %></span> <output class="mk-sg-example" data-sg-example-date="<%= o[0] %>"></output></label><% }) %></div>
+            <p class="mk-sg-err" data-sg-err="date_format" hidden></p></div></div><% } %>
+        <% if (has("time_format")) { %><div class="mk-sg-row"><div class="mk-sg-label"><span id="sg-l-time">Format de l'heure</span></div>
+          <div class="mk-sg-control"><div class="mk-sg-radios" role="radiogroup" aria-labelledby="sg-l-time"><% F.time_format.options.forEach(function (o) { %>
+              <label class="mk-sg-radio"><input type="radio" name="time_format" value="<%= o[0] %>" data-sg-field="time_format"<%= String(val("time_format")) === String(o[0]) ? " checked" : "" %><%= dis("time_format") %>> <span><%= o[1].replace(/\s*\(.*\)$/, "") %></span> <output class="mk-sg-example" data-sg-example-time="<%= o[0] %>"></output></label><% }) %></div>
+            <p class="mk-sg-err" data-sg-err="time_format" hidden></p></div></div><% } %>
+        <% if (has("week_start")) { %><div class="mk-sg-row"><div class="mk-sg-label"><label for="sg-week_start">La semaine commence le</label></div>
+          <div class="mk-sg-control mk-sg-week"><div><select id="sg-week_start" name="week_start" data-sg-field="week_start" aria-describedby="sg-h-week_start"<%= dis("week_start") %>><% F.week_start.options.forEach(function (o) { %><option value="<%= o[0] %>"<%= String(val("week_start")) === String(o[0]) ? " selected" : "" %>><%= o[1] %></option><% }) %></select>
+              <%- help("week_start") %><p class="mk-sg-err" data-sg-err="week_start" hidden></p></div>
+            <div class="mk-sg-cal" data-sg-cal aria-hidden="true"></div></div></div><% } %>
+        <p class="mk-sg-preview" data-sg-preview aria-live="polite"></p>
+      </div>
+    </section>
+
+    <div class="mk-sg-bar" role="region" aria-label="Enregistrement">
+      <p class="mk-sg-bar-state" data-sg-bar-state aria-hidden="true"></p>
+      <button type="button" class="mk-wd-btn" data-sg-cancel disabled>Annuler les modifications</button>
+      <button type="submit" class="mk-wd-btn mk-wd-btn--primary" data-sg-save disabled>Enregistrer les modifications</button>
+    </div>
+  </form>
+
+  <section class="mk-sg-section mk-sg-links" aria-labelledby="sg-t-more">
+    <div class="mk-sg-section-head"><h2 id="sg-t-more">Réglages liés</h2><p>Ces réglages ont leur propre écran : une seule source, pas de doublon ici.</p></div>
+    <ul class="mk-sg-linklist">
+      <li><a href="<%= G.links.header %>">En-tête<span>Le composant affiché en haut des pages, ses variantes et exceptions.</span></a></li>
+      <li><a href="<%= G.links.footer %>">Pied de page<span>Le composant affiché en bas des pages.</span></a></li>
+      <li><a href="<%= G.links.styles %>">Styles<span>Couleurs, typographie, formes et boutons.</span></a></li>
+      <% if (G.links.designSystem) { %><li><a href="<%= G.links.designSystem %>">Design system avancé<span>Échelle typographique, espacements, rayons et ombres.</span></a></li><% } %>
+      <li><a href="<%= G.links.pages %>">Pages<span>La liste des pages et la création d'une nouvelle page.</span></a></li>
+    </ul>
+  </section>
+
+  <% if (site && mk.can("forms.write")) { %>
+  <section class="mk-sg-section" aria-labelledby="sg-t-life" id="gestion">
+    <div class="mk-sg-section-head"><h2 id="sg-t-life">Gestion du site</h2><p>Copier, archiver ou supprimer ce site. Rien n'est effacé sans confirmation.</p></div>
+    <div class="mk-sg-life">
+      <% if (!mk.ctx.siteScope && mk.can("sites.modules")) { %><a class="mk-wd-btn" href="/marketing/site-web/sites/<%= site.id %>/modules">Modules du site</a><% } %>
+      <% if (site.deleted_at) { %><form action="/marketing/site-web/sites/<%= site.id %>/recuperer" method="post"><button type="submit" class="mk-wd-btn mk-wd-btn--primary">Récupérer le site</button></form>
+      <% } else if (archived) { %><form action="/marketing/site-web/sites/<%= site.id %>/restaurer" method="post"><button type="submit" class="mk-wd-btn mk-wd-btn--primary">Restaurer le site</button></form>
+      <% } else { %>
+        <form action="/marketing/site-web/sites/<%= site.id %>/dupliquer" method="post" class="mk-sg-inline"><label class="sr-only" for="sg-dup">Contenu à copier</label><select id="sg-dup" name="contenu"><option value="pages">Réglages + pages (brouillons)</option><option value="configuration">Réglages seulement</option></select><button type="submit" class="mk-wd-btn">Dupliquer</button></form>
+        <form action="/marketing/site-web/sites/<%= site.id %>/archiver" method="post"><button type="submit" class="mk-wd-btn" data-mk-confirm="Les pages en ligne du site passent hors ligne. Rien n'est effacé : vous pourrez restaurer le site, puis republier ses pages." data-mk-confirm-title="Archiver ce site ?" data-mk-confirm-ok="Archiver">Archiver</button></form>
+      <% } %>
+    </div>
+    <% if (archived && !site.deleted_at && !mk.ctx.siteScope && mk.can("pages.delete")) { %>
+    <form action="/marketing/site-web/sites/<%= site.id %>/supprimer" method="post" class="mk-sg-danger">
+      <p class="mk-sg-help">Le site disparaît de vos listes mais reste récupérable dans <em>Mes sites → Supprimés</em> : ses pages et ses accès ne sont pas effacés. Seul un site archivé peut être supprimé.</p>
+      <label for="sg-confirm">Tapez le nom du site pour confirmer : <strong><%= site.name %></strong></label>
+      <div class="mk-sg-inline"><input id="sg-confirm" type="text" name="confirmation" autocomplete="off" required><button type="submit" class="mk-wd-btn mk-wd-btn--danger">Supprimer le site</button></div>
+    </form><% } %>
+  </section>
+  <% } %>
+
+  <dialog class="mk-dialog mk-modal mk-sg-dialog" data-sg-dlg-image aria-labelledby="sg-img-title">
+    <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="sg-img-title">Choisir une image</h2></div><button type="button" class="mk-dialog-close" data-sg-close aria-label="Fermer">×</button></header>
+    <div class="mk-dialog-body">
+      <label class="sr-only" for="sg-img-search">Rechercher une image</label><input id="sg-img-search" type="search" placeholder="Rechercher par nom…" autocomplete="off" data-sg-img-search>
+      <ul class="mk-sg-imggrid" data-sg-imggrid></ul>
+      <p class="mk-sg-help" data-sg-img-empty hidden>Aucune image. Ajoutez-en depuis la médiathèque.</p>
+    </div>
+  </dialog>
+  <dialog class="mk-dialog mk-modal mk-sg-dialog" data-sg-dlg-confirm aria-labelledby="sg-conf-title">
+    <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="sg-conf-title">Confirmer ces changements sensibles</h2></div><button type="button" class="mk-dialog-close" data-sg-close aria-label="Fermer">×</button></header>
+    <div class="mk-dialog-body"><ul class="mk-sg-confirm" data-sg-confirm-list></ul></div>
+    <footer class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-sg-close>Retour</button><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-sg-confirm-ok>Confirmer et enregistrer</button></footer>
+  </dialog>
+</div>
+<script type="application/json" id="sg-data"><%- bootJson %></script>
+<%- include("partials/bottom") %>

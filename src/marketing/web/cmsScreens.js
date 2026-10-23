@@ -67,9 +67,9 @@ const SCREENS = {
       return { title: "Patterns", lead: "Les blocs prêts à l'emploi du Page Builder, regroupés par catégorie. Ils s'insèrent depuis l'éditeur.", actions: [{ label: "Ouvrir les pages", href: "/marketing/pages", variant: "primary" }],
         table: { caption: "Patterns", columns: [{ label: "Pattern" }, { label: "Catégorie" }, { label: "Sections", num: true }], rows: list.map((p) => ({ cells: [p.label, p.category, String(p.sections.length)] })), empty: empty("layers", "Aucun pattern", "") } };
     }
-    if (sub === "styles") return { title: "Styles", lead: "Le design system de chaque site : couleurs, polices, tailles, espacements, boutons. Ouvrez un site pour le modifier.", table: siteTable("Styles par site", "#design", "Modifier les styles") };
-    if (sub === "en-tete") return { title: "En-tête", lead: "L'en-tête de chaque site, avec ses variantes par page.", table: siteTable("En-têtes par site", "#entete", "Modifier l'en-tête") };
-    if (sub === "pied-de-page") return { title: "Pied de page", lead: "Le pied de page de chaque site.", table: siteTable("Pieds de page par site", "#parties", "Modifier le pied de page") };
+    if (sub === "styles") return { title: "Styles", lead: "Le design system de chaque site : couleurs, polices, tailles, espacements, boutons. Ouvrez un site pour le modifier.", table: siteTable("Styles par site", "/design-system", "Modifier les styles") };
+    if (sub === "en-tete") return { title: "En-tête", lead: "L'en-tête de chaque site, avec ses variantes par page.", table: siteTable("En-têtes par site", "/en-tete#entete", "Modifier l'en-tête") };
+    if (sub === "pied-de-page") return { title: "Pied de page", lead: "Le pied de page de chaque site.", table: siteTable("Pieds de page par site", "/pied-de-page#parties", "Modifier le pied de page") };
     return { title: "Éditeur du site", lead: "Chaque page de vos sites s'édite dans l'éditeur visuel KOLAKISA (Page Builder). Les réglages communs d'un site se trouvent dans sa fiche.",
       cards: [{ icon: "layout", title: "Éditer une page", text: "Choisissez une page : elle s'ouvre dans l'éditeur visuel.", href: "/marketing/pages", label: "Ouvrir les pages" },
         { icon: "palette", title: "Styles du site", text: "Couleurs, polices, tailles et boutons.", href: `${BASE}/apparence/styles`, label: "Ouvrir les styles" },

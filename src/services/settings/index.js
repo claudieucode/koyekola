@@ -75,7 +75,7 @@ const seoField = (name) => ({ adapterValidate: (v) => seo().validate(name, typeo
 // --- Général ---
 def({ key: "site_name", group: "general", label: "Nom du site", type: "string", max: 60, required: true, help: "Affiché dans les titres, le partage et les données structurées.",
   ...seoField("site_name"), readSite: (s) => s.name, writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { name: v }), defaultSite: "" });
-def({ key: "description", group: "general", label: "Description du site", type: "text", max: 160, maxSite: 300, help: "Utilisée par les pages qui n'ont pas leur propre description.",
+def({ key: "description", group: "general", label: "Slogan et description courte", type: "text", max: 160, maxSite: 300, help: "En quelques mots, ce que représente le site. Utilisé par les pages qui n'ont pas leur propre description (référencement, partage) : il n'est pas affiché automatiquement sur le site.",
   ...seoField("default_description"), readSite: (s) => s.settings.identity.description, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.identity.description = v; }), defaultSite: "" });
 def({ key: "language", group: "general", label: "Langue du site", type: "enum", help: "Langue déclarée dans chaque page (lecteurs d'écran, moteurs de recherche) et utilisée pour les dates. L'interface n'est pas traduite automatiquement.",
   options: (scope) => (scope.siteId ? Object.entries(siteSettings().LANGUAGES) : Object.entries(LOCALES)),
@@ -83,17 +83,32 @@ def({ key: "language", group: "general", label: "Langue du site", type: "enum", 
 def({ key: "timezone", group: "general", label: "Fuseau horaire", type: "timezone", help: "Fuseau d'affichage des dates. Les dates enregistrées restent en temps universel (UTC) : rien n'est converti en base.",
   ...mainKv("timezone", "Europe/Paris"), readSite: (s) => s.settings.general.timezone, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.timezone = v; }), defaultSite: "Europe/Paris" });
 def({ key: "date_format", group: "general", label: "Format de date", type: "enum", help: "Appliqué à toutes les dates affichées.",
-  options: () => [["long", "Longue (9 octobre 2026)"], ["medium", "Moyenne (9 oct. 2026)"], ["short", "Courte (09/10/2026)"]],
+  options: () => [["long", "Longue (9 octobre 2026)"], ["medium", "Moyenne (9 oct. 2026)"], ["short", "Courte, selon la langue (09/10/2026)"], ["iso", "AAAA-MM-JJ (2026-10-09)"], ["dmy", "JJ/MM/AAAA (09/10/2026)"], ["mdy", "MM/JJ/AAAA (10/09/2026)"], ["dots", "JJ.MM.AAAA (09.10.2026)"]],
   ...mainKv("date_format", "long"), readSite: (s) => s.settings.general.dateFormat, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.dateFormat = v; }), defaultSite: "long" });
 def({ key: "time_format", group: "general", label: "Format de l'heure", type: "enum", help: "24 heures ou 12 heures (AM / PM).",
   options: () => [["24h", "24 heures (14:30)"], ["12h", "12 heures (2:30 PM)"]],
   ...mainKv("time_format", "24h"), readSite: (s) => s.settings.general.timeFormat, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.timeFormat = v; }), defaultSite: "24h" });
+def({ key: "week_start", group: "general", label: "La semaine commence le", type: "enum", help: "Premier jour affiché dans les calendriers (sélecteur de date de l'éditeur d'articles).",
+  options: () => [["monday", "Lundi"], ["sunday", "Dimanche"], ["saturday", "Samedi"]],
+  ...mainKv("week_start", "monday"), readSite: (s) => s.settings.general.weekStart, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.weekStart = v; }), defaultSite: "monday" });
+def({ key: "site_slug", group: "general", label: "Identifiant du site", type: "slug", scopes: ["site"], sensitive: true, required: true, max: 60,
+  help: "Lettres minuscules, chiffres et tirets. Il sert dans les adresses internes du site ; l'identifiant interne (n°) ne change jamais.",
+  impact: "L'identifiant fait partie des adresses du site hébergé par KOLAKISA : les liens déjà diffusés avec l'ancien identifiant peuvent cesser de fonctionner.",
+  readSite: (s) => s.slug, writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { slug: v }), defaultSite: "" });
+def({ key: "site_type", group: "general", label: "Type de site", type: "enum", scopes: ["site"], help: "Indicatif : aide à retrouver le site dans « Mes sites ».",
+  options: () => Object.entries(pages().SITE_TYPES), readSite: (s) => s.site_type || "", writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { siteType: v }), defaultSite: "" });
+def({ key: "site_note", group: "general", label: "Note interne", type: "text", scopes: ["site"], max: 500, help: "Visible seulement dans « Mes sites » (jamais sur le site public).",
+  readSite: (s) => s.description || "", writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { description: v }), defaultSite: "" });
+def({ key: "registration_open", group: "general", label: "Inscriptions publiques", type: "boolean", scopes: ["main"], sensitive: true,
+  help: "Permet à tout visiteur de créer un compte étudiant (page « Inscription »). Décoché : la page d'inscription est fermée ; les comptes existants et les invitations de l'équipe ne changent pas.",
+  impact: "Fermer les inscriptions empêche toute nouvelle personne de créer un compte étudiant sur la plateforme.",
+  ...mainKv("registration_open", true) });
 def({ key: "admin_email", group: "general", label: "E-mail administratif", type: "email", scopes: ["main"], help: "Reçoit les messages du formulaire de contact du site. Vide : l'adresse configurée par l'hébergeur est utilisée.", ...mainKv("admin_email", "") });
 def({ key: "logo", group: "general", label: "Logo du site", type: "image", scopes: ["site"], help: "Image de la médiathèque (affichée dans le pied de page des pages du site). Le logo du site principal se règle dans Apparence.",
   readSite: (s) => s.settings.identity.logoUrl, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.identity.logoUrl = v; }), defaultSite: "" });
 def({ key: "favicon", group: "general", label: "Favicon", type: "image", scopes: ["site"], help: "Petite icône de l'onglet (PNG, SVG, ICO).",
   readSite: (s) => s.settings.identity.faviconUrl, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.identity.faviconUrl = v; }), defaultSite: "" });
-def({ key: "public_url", group: "general", label: "Adresse publique (domaine)", type: "url", scopes: ["site"], sensitive: true, help: "https://… sans chemin. Détermine le domaine servant ce site (adresses canoniques, plan du site, accueil à la racine).",
+def({ key: "public_url", group: "general", label: "Domaine personnalisé", type: "url", scopes: ["site"], sensitive: true, help: "https://… sans chemin. Détermine le domaine servant ce site (adresses canoniques, plan du site, accueil à la racine).",
   impact: "Les adresses canoniques, le plan du site et l'accueil du site suivent ce domaine. Un domaine mal réglé fait sortir le site des moteurs de recherche.",
   readSite: (s) => s.settings.seo.publicUrl, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.seo.publicUrl = v; }), defaultSite: "" });
 
@@ -208,6 +223,11 @@ function validate(d, raw, scope, ctx) {
       const opts = d.options(scope).map((o) => String(o[0]));
       return opts.includes(String(raw)) ? { ok: true, value: String(raw) } : fail("choix invalide.");
     }
+    case "slug": {
+      const v = clean(raw, d.max || 60).toLowerCase();
+      if (!v) return fail("obligatoire.");
+      return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(v) && v.length <= (d.max || 60) ? { ok: true, value: v } : fail("lettres minuscules, chiffres et tirets seulement (ex. mon-site).");
+    }
     case "timezone": return validTimezone(String(raw)) ? { ok: true, value: String(raw) } : fail("fuseau horaire inconnu (ex. Europe/Paris, America/Chicago).");
     case "email": {
       const v = clean(raw, 254);
@@ -304,7 +324,8 @@ function computeMain(kv) {
   const mb = (k, hard) => { const n = Number(kv[k]); return Number.isInteger(n) && n >= 1 ? Math.min(n * 1048576, hard) : hard; };
   return {
     locale, htmlLang: locale.split("_")[0], timezone: tz,
-    dateFormat: ["long", "medium", "short"].includes(kv.date_format) ? kv.date_format : "long", timeFormat: kv.time_format === "12h" ? "12h" : "24h",
+    dateFormat: require("../../utils/format").isValidDateFormat(kv.date_format) ? kv.date_format : "long", timeFormat: kv.time_format === "12h" ? "12h" : "24h",
+    weekStart: ["monday", "sunday", "saturday"].includes(kv.week_start) ? kv.week_start : "monday", registrationOpen: kv.registration_open !== "false" && kv.registration_open !== "0",
     postsPerPage: num("posts_per_page", 10, 1, 50), homepagePage: /^\d+$/.test(kv.homepage_page || "") ? Number(kv.homepage_page) : null,
     searchVisibility: kv.search_visibility === "closed" ? "closed" : "open", adminEmail: kv.admin_email || "", privacyPage: /^\d+$/.test(kv.privacy_page || "") ? Number(kv.privacy_page) : null,
     normalizePaths: kv.normalize_paths !== "false" && kv.normalize_paths !== "0",

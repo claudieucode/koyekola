@@ -256,8 +256,8 @@ const ABILITY = {
   sitedash: { mode: "open", module: "tableau-de-bord", label: "Tableau de bord" },
   landing: { mode: "open", module: "pages" },
   apparence: { mode: "open", module: "editeur-du-site" },
-  "apparence/en-tete": { mode: "open", module: "reglages", hash: "entete" },
-  "apparence/pied-de-page": { mode: "open", module: "reglages", hash: "entete" },
+  "apparence/en-tete": { mode: "open", module: "reglages", sub: "en-tete", hash: "entete" },
+  "apparence/pied-de-page": { mode: "open", module: "reglages", sub: "pied-de-page", hash: "parties" },
   redirections: { mode: "open", module: "redirections" },
   seo: { mode: "open", module: "seo" },
   "seo/404": { mode: "open", module: "seo", sub: "404" },
@@ -334,7 +334,7 @@ function projectItem(item, group, space) {
     if (a.teamOnly && space.limited) return null; // création d'article : réservée à l'équipe (décision A-D9 non approuvée) → absente du menu d'un accès limité
     const m = siteModule(space, a.module);
     const href = a.sub ? `${m.href}/${a.sub}` : m.href;
-    return { ...base, label: a.label || item.label, href: a.hash ? `${m.href}#${a.hash}` : href, status: "live", external: m.external, ...(a.hash || a.sub ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
+    return { ...base, label: a.label || item.label, href: a.hash ? `${href}#${a.hash}` : href, status: "live", external: m.external, ...(a.hash || a.sub ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
   }
   const slug = SOON_SLUG[item.key];
   return { ...base, href: null, status: "preview", disabled: true, phase: soonPhase(item.key), ...(slug ? { alias: `espace/${slug}`, module: slug } : {}) };

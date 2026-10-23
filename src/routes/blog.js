@@ -679,10 +679,22 @@ function newArticleSite(req) {
 }
 const editorSite = (req, post) => (post ? (siteContent.siteOf(db, "post", post.id) ?? null) : newArticleSite(req));
 
+// Premier jour de la semaine du calendrier de l'éditeur : réglage « La semaine commence le » (Paramètres → Général) du site de l'article, sinon du site principal
+function weekStartOf(req) {
+  try {
+    const engine = require("../services/settings");
+    if (Number.isInteger(req.blogSite) && req.blogSite > 0) {
+      const org = db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get();
+      return engine.readAll({ siteId: req.blogSite }, { organizationId: org && org.id, can: () => true, orgLevel: true }).week_start.value;
+    }
+    return engine.main().weekStart;
+  } catch { return "monday"; }
+}
 function editorData(req, post) {
   const autosave = post ? blog.getAutosave(post.id) : null;
   const marketing = req.app.locals.marketing;
   return {
+    weekStart: weekStartOf(req),
     post,
     editorHtml: post ? (post.content_format === "html" ? post.content : markdownToEditorHtml(post.content)) : "",
     // Sauvegarde automatique plus récente que la dernière version enregistrée : proposée à la restauration

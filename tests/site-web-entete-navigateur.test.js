@@ -29,7 +29,7 @@ async function until(check, { timeout = 15000, every = 150, what = "condition" }
 describe("en-tête du site : fiche du site et éditeur (navigateur)", { skip: SKIP }, () => {
   let srv, boss, browser, context, page, errors, siteId, accueil, tunnel, headerId;
   const db = () => srv.db();
-  const sitePage = () => `${srv.base}/marketing/site-web/sites/${siteId}/reglages`;
+  const sitePage = () => `${srv.base}/marketing/site-web/sites/${siteId}/reglages/en-tete`;
   const slugOf = (id) => db().prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(id).slug;
   const publicHtml = async (id) => { const c = await browser.newContext({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/120 Safari/537.36" }); const p = await c.newPage(); await p.goto(`${srv.base}/p/${slugOf(id)}`); const h = await p.content(); await c.close(); return h; };
   const ready = () => page.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder"); }, null, { timeout: 15000 });
@@ -74,7 +74,7 @@ describe("en-tête du site : fiche du site et éditeur (navigateur)", { skip: SK
     assert.match(await page.locator("[data-pb-status]").innerText(), /Composant · appliqué à toutes les pages/);
     assert.equal(await page.locator(".pb-publish-group").isVisible(), false, "aucune publication : chaque enregistrement s'applique tout de suite");
     assert.equal(await page.locator("#pb-tab-page").isVisible(), false, "pas d'onglet « Page » (SEO, adresse…)");
-    assert.match(await page.locator(".pb-back").getAttribute("href"), new RegExp(`/sites/${siteId}/reglages#entete`));
+    assert.match(await page.locator(".pb-back").getAttribute("href"), new RegExp(`/sites/${siteId}/reglages/en-tete#entete`));
     const inFrame = await page.evaluate(() => { const d = document.querySelector("[data-pb-frame]").contentDocument; return { header: d.querySelectorAll(".lp-site-header").length, logo: d.querySelectorAll(".kw-sitelogo, .kw-sitetitle").length }; });
     assert.equal(inFrame.header, 0, "pas d'en-tête du site en double autour de la source");
     assert.ok(inFrame.logo >= 1, "la source (logo, nom du site) est affichée et modifiable");
@@ -94,7 +94,7 @@ describe("en-tête du site : fiche du site et éditeur (navigateur)", { skip: SK
     assert.ok(labels.some((l) => /Retour à la fiche du site/.test(l)));
     assert.ok(!labels.some((l) => /Versions|Exporter|Importer|modèle/i.test(l)), "aucune entrée propre aux pages");
     await page.locator(".pb-menu-item", { hasText: "Retour à la fiche du site" }).click();
-    await page.waitForURL(new RegExp(`/sites/${siteId}/reglages#entete`));
+    await page.waitForURL(new RegExp(`/sites/${siteId}/reglages/en-tete#entete`));
   });
 
   test("B4 exception depuis la fiche : « Aucun en-tête » pour une page (liste déroulante + Appliquer), visible dans « Exceptions »", async () => {

@@ -7674,8 +7674,8 @@
       });
     } else {
       box.appendChild(h("p", { class: "pb-note", text: "Couleurs, polices, tailles de titres, boutons et espacements viennent du design system du site « " + PAGE.siteName + " » : les modifier là les applique à toutes ses pages." }));
-      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "#design", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"));
-      box.appendChild(h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "#parties", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site"));
+      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/design-system", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"));
+      box.appendChild(h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/pied-de-page#parties", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site"));
     }
     // CSS de la page : confiné au contenu de la page, vérifié à l'enregistrement (aucune ressource externe)
     box.appendChild(h("p", { class: "pb-sub", text: "CSS de la page" }));

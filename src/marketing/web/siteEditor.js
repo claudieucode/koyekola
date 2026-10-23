@@ -26,7 +26,7 @@ module.exports = () => {
       can: { edit: can("forms.write") && !t.readOnly, publish: can("pages.publish") && !t.readOnly },
       urls: { pageEditor: "/marketing/pages", componentEditor: "/marketing/site-web/composants", preview: "/marketing/pages", settings: t.siteId ? `/marketing/site-web/sites/${t.siteId}/reglages` : "/marketing/site-web/parametres" },
       links: { pages: t.siteId ? `/marketing/site-web/sites/${t.siteId}/pages` : "/marketing/pages", menus: `/marketing/site-web/navigation${q}`, styles: `/marketing/site-web/styles${q}`, patterns: `/marketing/site-web/patterns${q}`, templates: `/marketing/site-web/templates${q}`,
-        widgets: `/marketing/site-web/widgets${q}`, themes: `/marketing/site-web/themes${q}`, fonts: `/marketing/site-web/polices${q}`, customizer: `/marketing/site-web/personnaliser${q}`, header: t.siteId ? `/marketing/site-web/sites/${t.siteId}/reglages#entete` : "/marketing/site-web/apparence/en-tete", footer: t.siteId ? `/marketing/site-web/sites/${t.siteId}/reglages#entete` : "/marketing/site-web/apparence/pied-de-page" },
+        widgets: `/marketing/site-web/widgets${q}`, themes: `/marketing/site-web/themes${q}`, fonts: `/marketing/site-web/polices${q}`, customizer: `/marketing/site-web/personnaliser${q}`, header: t.siteId ? `/marketing/site-web/sites/${t.siteId}/reglages/en-tete#entete` : "/marketing/site-web/apparence/en-tete", footer: t.siteId ? `/marketing/site-web/sites/${t.siteId}/reglages/pied-de-page#parties` : "/marketing/site-web/apparence/pied-de-page" },
     };
     res.set("Cache-Control", "no-store").render("marketing/site-editor", { title: "Éditeur du site", active: "apparence", T: t, BASE, bootJson: safeJson(boot), siteEditorJs: true });
   });

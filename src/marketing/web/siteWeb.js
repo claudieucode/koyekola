@@ -101,15 +101,25 @@ module.exports = () => {
     if (!site) return;
     res.redirect(`/marketing/site-web/sites/${site.id}/tableau-de-bord`);
   });
+  // Paramètres → Général d'un site : centre de configuration (le site vient de l'adresse, vérifié par `load`)
   router.get("/site-web/sites/:id(\\d+)/reglages", need("forms.read"), (req, res) => {
     const site = load(req, res);
     if (!site) return;
-    res.render("marketing/site", {
-      title: "Réglages du site", active: "espace/reglages", site, siteTypes: pages.SITE_TYPES, canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"), sitePages: pages.listPages(req.mk.ctx, { siteId: site.id }), canWrite: req.mk.can("forms.write"),
-      T: tokens, cssVars: tokens.tokensToCss(site.tokens), templates: require("../pages/templates").catalog(),
-      components: pages.listComponents(req.mk.ctx, { siteId: site.id }), headerOverview: pages.headerOverview(req.mk.ctx, site.id),
-    });
+    const readOnly = site.status !== "active" || Boolean(site.deleted_at);
+    require("./generalSettings").render(req, res, { siteId: site.id, name: site.name, principal: false, readOnly, site }, "espace/reglages");
   });
+  // Les trois écrans qui vivaient sur l'ancienne fiche « Réglages » : leurs formulaires et leurs données n'ont pas changé, seul leur emplacement (Apparence) a changé
+  const partsPage = (view, active, title) => (req, res) => {
+    const site = load(req, res);
+    if (!site) return;
+    res.render(view, {
+      title, active, site, canWrite: req.mk.can("forms.write"), T: tokens, cssVars: tokens.tokensToCss(site.tokens), headerOverview: pages.headerOverview(req.mk.ctx, site.id),
+      components: pages.listComponents(req.mk.ctx, { siteId: site.id }),
+    });
+  };
+  router.get("/site-web/sites/:id(\\d+)/reglages/en-tete", need("forms.read"), partsPage("marketing/site-header", "apparence/en-tete", "En-tête"));
+  router.get("/site-web/sites/:id(\\d+)/reglages/pied-de-page", need("forms.read"), partsPage("marketing/site-footer", "apparence/pied-de-page", "Pied de page"));
+  router.get("/site-web/sites/:id(\\d+)/reglages/design-system", need("forms.read"), partsPage("marketing/site-design", "apparence/styles", "Design system avancé"));
   router.post("/site-web/sites/:id(\\d+)", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
@@ -122,7 +132,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/design", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#design`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/design-system`, () => {
       const t = req.body.reset === "1" ? tokens.DEFAULT_TOKENS : tokensFromBody(req.body, site.tokens);
       pages.updateSite(req.mk.ctx, site.id, { tokens: t });
       const live = pages.listPages(req.mk.ctx, { siteId: site.id }).filter((p) => p.status === "published").length;
@@ -182,7 +192,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#parties`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/pied-de-page#parties`, () => {
       pages.setSiteParts(req.mk.ctx, site.id, { header: intOrNull(req.body.header), footer: intOrNull(req.body.footer) });
       return "En-tête et pied de page enregistrés : ils s'affichent sur toutes les pages du site.";
     });
@@ -193,7 +203,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/entete/creer", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/en-tete#entete`, () => {
       if (site.header_component_id) throw new (require("../errors").MarketingError)("invalid", "Ce site a déjà un en-tête.");
       let name = "En-tête principal", n = 1;
       while (req.mk.ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(req.mk.ctx.organizationId, name)) { n += 1; name = `En-tête principal ${n}`; }
@@ -206,7 +216,7 @@ module.exports = () => {
     const site = load(req, res);
     if (!site) return;
     let variant = null;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/en-tete#entete`, () => {
       variant = pages.createHeaderVariant(req.mk.ctx, site.id, { name: req.body.name });
       return `Variante « ${variant.name} » créée (copie de l'en-tête du site). Modifiez-la, puis choisissez les pages qui l'utilisent.`;
     });
@@ -214,7 +224,7 @@ module.exports = () => {
   router.post("/site-web/sites/:id(\\d+)/entete/pages/:pageId(\\d+)", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages#entete`, () => {
+    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/en-tete#entete`, () => {
       const page = pages.requirePage(req.mk.ctx, Number(req.params.pageId));
       if (page.site_id !== site.id) throw new (require("../errors").MarketingError)("invalid", "Cette page n'appartient pas à ce site.");
       const choice = String(req.body.choice || "inherit");

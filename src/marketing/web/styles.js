@@ -41,7 +41,7 @@ module.exports = () => {
       draft: st.draft, revision: st.revision, stale: st.stale, pendingEngineDraft: st.pendingEngineDraft, perControl: st.can,
       can: { edit: can("appearance.styles") && !t.readOnly, publish: can("appearance.publish") && !t.readOnly },
       defaults, fontStacks, palettes: palettes.forScope(t.siteId), previews: customizerWeb.previewTargets(req, t), history: customizer.history(t.siteId, 8),
-      links: { personnaliser: `/marketing/site-web/personnaliser${q}`, polices: `/marketing/site-web/polices${q}`, themes: `/marketing/site-web/themes${q}` },
+      links: { designSystem: t.principal ? null : `/marketing/site-web/sites/${t.siteId}/reglages/design-system`, personnaliser: `/marketing/site-web/personnaliser${q}`, polices: `/marketing/site-web/polices${q}`, themes: `/marketing/site-web/themes${q}` },
     };
     res.set("Cache-Control", "no-store");
     // « < » et les séparateurs de ligne sont échappés : le JSON ne peut jamais fermer la balise qui le contient

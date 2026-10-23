@@ -1,0 +1,53 @@
+<%- include("partials/top", { title, active }) %>
+<% const archived = site.status === "archived" || Boolean(site.deleted_at); const dis = canWrite && !archived ? "" : " disabled"; const t = site.tokens; %>
+<div class="mk-head"><div class="mk-builder-title"><h1>Design system avancé</h1><% if (site.deleted_at) { %><span class="mk-status mk-status-warn">Supprimé</span><% } else if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
+  <p class="mk-head-sub">Échelle typographique, espacements, rayons et ombres du site. Les couleurs, polices principales, formes et boutons se règlent aussi dans Apparence → Styles : c'est la même valeur, enregistrée une seule fois.</p></div>
+<div class="mk-sg-sub">
+    <section class="mk-panel" id="design" aria-labelledby="site-design">
+      <h2 id="site-design">Design system</h2>
+      <p class="mk-lead">Ces réglages s'appliquent à toutes les pages du site, y compris celles déjà en ligne : modifiez une couleur ici, elle change partout.</p>
+      <form action="/marketing/site-web/sites/<%= site.id %>/design" method="post" class="mk-form">
+        <fieldset class="mk-sd-group"><legend>Couleurs</legend>
+          <div class="mk-sd-colors">
+            <% T.COLOR_KEYS.forEach((k) => { %><div class="field-group"><label for="c-<%= k %>"><%= T.COLOR_LABELS[k] %></label><input id="c-<%= k %>" type="color" name="color_<%= k %>" value="<%= t.colors[k] %>"<%= dis %>></div><% }) %>
+          </div>
+        </fieldset>
+        <fieldset class="mk-sd-group"><legend>Typographies</legend>
+          <div class="field-row">
+            <% [["heading", "Police des titres"], ["body", "Police du texte"]].forEach(([k, label]) => { %><div class="field-group"><label for="f-<%= k %>"><%= label %></label><select id="f-<%= k %>" name="font_<%= k %>"<%= dis %>><% Object.entries(T.FONTS).forEach(([key, f]) => { %><option value="<%= key %>"<%= t.fonts[k] === key ? " selected" : "" %>><%= f.label %></option><% }) %><% if (!Object.hasOwn(T.FONTS, t.fonts[k])) { %><option value="<%= t.fonts[k] %>" selected><%= String(t.fonts[k]).replace(/^font\./, "").replace(/-/g, " ") %></option><% } %></select></div><% }) %>
+          </div>
+          <div class="mk-table-wrap"><table class="mk-table mk-sd-type">
+            <caption class="sr-only">Taille et graisse de chaque style de texte</caption>
+            <thead><tr><th scope="col">Style</th><th scope="col">Taille (px)</th><th scope="col">Graisse</th></tr></thead>
+            <tbody><% T.TYPE_KEYS.forEach((k) => { %><tr><th scope="row"><%= T.TYPE_LABELS[k] %></th>
+              <td><label class="sr-only" for="ts-<%= k %>">Taille du style <%= T.TYPE_LABELS[k] %></label><input id="ts-<%= k %>" type="number" name="type_<%= k %>_size" min="10" max="96" value="<%= t.type[k].size %>"<%= dis %>></td>
+              <td><label class="sr-only" for="tw-<%= k %>">Graisse du style <%= T.TYPE_LABELS[k] %></label><select id="tw-<%= k %>" name="type_<%= k %>_weight"<%= dis %>><% [400, 500, 600, 700, 800].forEach((w) => { %><option value="<%= w %>"<%= t.type[k].weight === w ? " selected" : "" %>><%= w %></option><% }) %></select></td></tr><% }) %></tbody>
+          </table></div>
+        </fieldset>
+        <fieldset class="mk-sd-group"><legend>Espacements (px)</legend>
+          <div class="mk-sd-colors"><% T.SPACE_KEYS.forEach((k) => { %><div class="field-group"><label for="sp-<%= k %>"><%= k.toUpperCase() %></label><input id="sp-<%= k %>" type="number" name="space_<%= k %>" min="0" max="200" value="<%= t.space[k] %>"<%= dis %>></div><% }) %></div>
+        </fieldset>
+        <fieldset class="mk-sd-group"><legend>Rayons (px) et ombres</legend>
+          <div class="mk-sd-colors">
+            <% [["sm", "Petit"], ["md", "Moyen"], ["lg", "Grand"], ["button", "Boutons"], ["field", "Champs"], ["card", "Cartes"]].forEach(([k, label]) => { %><div class="field-group"><label for="r-<%= k %>"><%= label %></label><input id="r-<%= k %>" type="number" name="radius_<%= k %>" min="0" max="48" value="<%= t.radius[k] %>"<%= dis %>></div><% }) %>
+            <% [["card", "Ombre des cartes"], ["button", "Ombre des boutons"]].forEach(([k, label]) => { %><div class="field-group"><label for="sh-<%= k %>"><%= label %></label><select id="sh-<%= k %>" name="shadow_<%= k %>"<%= dis %>><% [["none", "Aucune"], ["sm", "Légère"], ["md", "Moyenne"], ["lg", "Forte"]].forEach(([v, l]) => { %><option value="<%= v %>"<%= t.shadow[k] === v ? " selected" : "" %>><%= l %></option><% }) %></select></div><% }) %>
+          </div>
+        </fieldset>
+        <% if (canWrite && !archived) { %><div class="mk-actions">
+          <button type="submit" class="btn btn-primary btn-sm">Enregistrer le design system</button>
+          <button type="submit" name="reset" value="1" class="btn btn-ghost btn-sm" data-mk-confirm="Toutes les valeurs reviennent à celles de KOLAKISA, sur toutes les pages du site." data-mk-confirm-title="Revenir aux valeurs par défaut ?" data-mk-confirm-ok="Réinitialiser">Valeurs par défaut</button>
+        </div><% } %>
+      </form>
+
+      <h3 class="mk-journey-sub">Aperçu avec les valeurs enregistrées</h3>
+      <div class="mk-sd-preview" style="<%= cssVars %>">
+        <p class="mk-sd-h1">Titre de page</p>
+        <p class="mk-sd-h2">Intertitre de section</p>
+        <p class="mk-sd-body">Texte courant de vos pages : il utilise la police, la taille et l'interligne choisis ci-dessus.</p>
+        <div class="mk-sd-card"><p class="mk-sd-h3">Carte</p><p class="mk-sd-caption">Légende : rayon, bordure et ombre des cartes.</p><span class="mk-sd-btn">Bouton principal</span></div>
+      </div>
+    </section>
+</div>
+<script src="<%= asset('/js/font-manager.js') %>"></script>
+<script>(function () { document.documentElement.setAttribute("data-kfonts-site", "<%= site.id %>"); ["f-heading", "f-body"].forEach(function (id) { var s = document.getElementById(id); if (s && window.KFonts) window.KFonts.enhance(s, { label: "Police", site: true }); }); })();</script>
+<%- include("partials/bottom") %>
