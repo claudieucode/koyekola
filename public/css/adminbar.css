@@ -38,12 +38,12 @@ html[data-kola-theme="dark"] .is-cms { --kab-bg: #061425; --kab-bg-2: #0d2540; }
 .kab-favicon { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 6px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
 .kab-favicon img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; }
 .kab-site-text, .kab-user-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
-.kab-site-text small, .kab-user-text small { font-size: 0.62rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--kab-muted); }
+.kab-site-text small, .kab-user-text small { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--kab-muted); }
 .kab-site-name, .kab-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; font-size: 0.82rem; }
 .kab-caret { transition: transform 0.18s ease; }
 [aria-expanded="true"] > .kab-caret { transform: rotate(180deg); }
 .kab-user { padding: 0 8px 0 4px; gap: 8px; }
-.kab-user .kab-user-text small { text-transform: none; letter-spacing: 0; font-size: 0.68rem; }
+.kab-user .kab-user-text small { text-transform: none; letter-spacing: 0; font-size: 0.72rem; }
 .kab-avatar { width: 26px; height: 26px; font-size: 0.78rem; flex: none; }
 .kab-avatar-lg { width: 36px; height: 36px; font-size: 0.95rem; }
 .kab-searchform { width: clamp(200px, 24vw, 340px); flex: 0 1 auto; margin-right: 6px; }
@@ -58,7 +58,7 @@ html[data-kola-theme="dark"] .is-cms { --kab-bg: #061425; --kab-bg-2: #0d2540; }
 
 /* ----- Pastille de notifications ----- */
 .kab-bell { overflow: visible; }
-.kab-badge { position: absolute; top: 0; right: -1px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: #e5484d; color: #fff; font-size: 0.64rem; font-weight: 800; line-height: 12px; text-align: center; border: 2px solid var(--kab-bg); animation: kab-pop 0.22s ease both; }
+.kab-badge { position: absolute; top: 0; right: -1px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: #e5484d; color: #fff; font-size: 0.72rem; font-weight: 800; line-height: 12px; text-align: center; border: 2px solid var(--kab-bg); animation: kab-pop 0.22s ease both; }
 .kab-badge[hidden] { display: none; }
 @keyframes kab-pop { from { transform: scale(0.6); opacity: 0; } }
 
@@ -104,7 +104,7 @@ html[data-kola-theme="dark"] .is-cms { --kab-bg: #061425; --kab-bg-2: #0d2540; }
 .kab-list { max-height: min(360px, calc(100vh - var(--kab-h) - 130px)); overflow: auto; }
 .kab-user-card { display: flex; align-items: center; gap: 11px; padding: 10px; margin-bottom: 4px; border-bottom: 1px solid var(--mk-border, #e1e7ef); }
 .kab-theme-seg { display: flex; gap: 2px; margin: 4px 4px 6px; padding: 3px; background: var(--mk-hover, #f0f4f9); border-radius: 8px; }
-.kab-theme-label { padding: 8px 10px 2px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #5a6b80); }
+.kab-theme-label { padding: 8px 10px 2px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #5a6b80); }
 .kab-theme-seg button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 30px; padding: 4px 6px; border: 0; border-radius: 7px; background: transparent; color: var(--muted, #5a6b80); font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
 .kab-theme-seg button[aria-checked="true"] { background: var(--mk-surface, #fff); color: var(--mk-text, #0f1f33); outline: 1px solid var(--mk-border-strong, #c5d0de); outline-offset: -1px; }
 
