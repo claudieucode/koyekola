@@ -23,7 +23,7 @@ describe("menus : service", () => {
     S1 = site("Un"); S2 = site("Deux");
   });
 
-  test("la migration 098 ajoute les trois colonnes avec des valeurs par défaut ; les menus existants gardent la version 1", () => {
+  test("les trois colonnes de l'éditeur existent avec des valeurs par défaut (ajoutées au démarrage, sans migration) ; un menu neuf est en version 1", () => {
     const cols = (t) => db.prepare(`PRAGMA table_info(${t})`).all().reduce((o, c) => ({ ...o, [c.name]: c.dflt_value }), {});
     assert.equal(cols("nav_menus").revision, "1"); assert.equal(cols("nav_items").css_class, "''"); assert.equal(cols("nav_items").title_attr, "''");
     assert.equal(nav.create({ name: "Neuf" }).revision, 1);

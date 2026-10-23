@@ -673,6 +673,7 @@ textarea.mk-wd-input { min-height: 90px; resize: vertical; }
 @media (prefers-reduced-motion: reduce) { .mk-wd-chev { transition: none; } }
 
 /* ---------- Apparence → Menus : éditeur d'un menu (.mk-nm-*) — mêmes jetons que Widgets (.mk-wd-*) ---------- */
+.mk-nm { min-width: 0; }
 .mk-nm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 .mk-nm-head h1 { margin: 0; font-size: 24px; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .mk-nm-crumb { margin: 0 0 4px; font-size: 13px; }

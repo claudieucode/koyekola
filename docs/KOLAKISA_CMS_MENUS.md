@@ -28,7 +28,7 @@ Branche `apparence-menus-01`, issue de `main` (`0f8ee26`). Référence : l'écra
 
 ## 2. Modèle de données
 
-Migration **`098_menus_editeur.sql`** (additive, trois colonnes à valeur par défaut) :
+**Aucun fichier de migration.** Les tables `nav_*` sont créées par `src/config/database.js` (pas par les migrations du marketing) : les trois colonnes y sont donc ajoutées au démarrage par des `ALTER TABLE … ADD COLUMN` gardés (additifs, valeur par défaut, sans effet s'ils existent déjà). Un fichier `098_….sql` ferait échouer les bases construites par les seules migrations (« no such table: nav_menus »). Colonnes :
 
 - `nav_menus.revision` (entier, défaut 1) : incrémenté à chaque modification du menu (éditeur, anciennes routes, changement d'emplacement). Un enregistrement fait avec une version périmée est refusé.
 - `nav_items.css_class` (texte, défaut `''`) : jusqu'à 5 classes, chacune `[A-Za-z_][A-Za-z0-9_-]{0,39}`.
