@@ -1,17 +1,20 @@
 <%- include("partials/header", { title: "Confirmer votre adresse e-mail" }) %>
 
-  <div class="container-wide section-tight account-page">
-    <div class="card card-pad account-section">
+  <div class="container kv-narrow">
+    <div class="card card-pad account-section kv-state">
       <% if (!valid) { %>
+        <span class="kv-state-ico is-warn" aria-hidden="true"><%- icon("alertTriangle", { size: 24 }) %></span>
         <h1>Lien invalide ou expiré</h1>
         <p>Ce lien de confirmation n'est plus valable (il expire au bout de 7 jours, et ne vaut plus rien si l'adresse du compte a changé).</p>
         <p><%= currentUser ? "Demandez-en un nouveau depuis votre compte." : "Connectez-vous, puis demandez-en un nouveau depuis « Mon compte »." %></p>
         <a href="<%= currentUser ? "/mon-compte" : "/connexion?redirect=%2Fmon-compte" %>" class="btn btn-primary"><%= currentUser ? "Mon compte" : "Se connecter" %></a>
       <% } else if (result) { %>
+        <span class="kv-state-ico is-ok" aria-hidden="true"><%- icon("checkCircle", { size: 24 }) %></span>
         <h1>Adresse e-mail confirmée</h1>
         <p><%= result === "deja" ? "Votre adresse était déjà confirmée." : "Merci : votre adresse e-mail est confirmée." %></p>
         <a href="/mes-cours" class="btn btn-primary">Mes formations</a>
       <% } else { %>
+        <span class="kv-state-ico" aria-hidden="true"><%- icon("lock", { size: 24 }) %></span>
         <h1>Confirmer votre adresse e-mail</h1>
         <p>Cliquez sur le bouton pour confirmer que cette adresse e-mail est bien la vôtre.</p>
         <form method="post" action="/confirmer-email/<%= encodeURIComponent(token) %>">

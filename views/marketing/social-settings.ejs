@@ -1,4 +1,4 @@
-<%- include("partials/top", { title, active }) %>
+<%- include("partials/top", { title, active, layout: "form" }) %>
 <% const dis = canWrite ? "" : " disabled"; const state = (on) => on ? '<span class="mk-status mk-status-ok">Relié</span>' : '<span class="mk-status">Non relié</span>'; %>
     <div class="mk-head">
       <div class="mk-head-main"><h1>Réseaux sociaux</h1><p class="mk-head-sub">Reliez vos comptes pour publier depuis Campagnes → Réseaux sociaux. Les jetons d'accès sont chiffrés, jamais affichés ni journalisés. Sans eux, vous pouvez toujours partager une campagne avec les boutons de partage de sa version web.</p></div></div>

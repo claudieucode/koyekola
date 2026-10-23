@@ -1,0 +1,36 @@
+<%#
+  KOLAKISA CMS → Apparence → Éditeur du site : espace de travail d'un site autour du VRAI Page Builder (affiché dans le cadre, enregistrement automatique conservé). Les données (pages, parties
+  globales, menus, styles, publication, droits) sont dans le bloc JSON ci-dessous ; public/js/cms-site-editor.js construit l'écran. Aucun second éditeur.
+%><%- include("partials/top", { title, active }) %>
+<div class="mk-se" data-se-root>
+  <header class="mk-se-head">
+    <div class="mk-head-main"><h1>Éditeur du site</h1><p class="mk-head-sub">Modifiez <strong><%= T.name %></strong> dans le vrai Page Builder : choisissez une page ou une partie globale à gauche, vérifiez l'aperçu par appareil, puis publiez ce qui est prêt.</p></div>
+    <p class="mk-se-state" data-se-state role="status" aria-live="polite"></p>
+  </header>
+  <div class="mk-wd-banner" data-se-banner hidden role="alert"><span data-se-banner-text></span></div>
+  <p class="mk-wd-loading" data-se-loading>Chargement de l'espace de travail…</p>
+  <div class="mk-se-layout" data-se-layout hidden>
+    <aside class="mk-se-rail" aria-label="Navigation du site">
+      <div class="mk-st-tabs mk-st-tabs--small" role="tablist" aria-label="Sections" data-se-tabs></div>
+      <div class="mk-se-railbody" data-se-railbody role="tabpanel"></div>
+    </aside>
+    <section class="mk-se-work" aria-label="Zone de travail">
+      <div class="mk-se-toolbar">
+        <div class="mk-se-title"><strong data-se-title>Aucune page</strong> <span class="mk-nm-chip" data-se-chip hidden></span></div>
+        <div class="mk-st-devices" role="group" aria-label="Mode" data-se-modes><button type="button" aria-pressed="true" data-se-mode="edit">Modifier</button><button type="button" aria-pressed="false" data-se-mode="preview">Aperçu</button></div>
+        <div class="mk-st-devices" role="group" aria-label="Appareil de l'aperçu" data-se-devices hidden><button type="button" aria-pressed="true" data-se-device="desktop">Ordinateur</button><button type="button" aria-pressed="false" data-se-device="tablet">Tablette</button><button type="button" aria-pressed="false" data-se-device="mobile">Mobile</button></div>
+        <span class="mk-se-links"><a data-se-full href="#" target="_blank" rel="noopener" hidden>Plein écran ↗</a> <a data-se-live href="#" target="_blank" rel="noopener" hidden>Voir en ligne ↗</a></span>
+      </div>
+      <div class="mk-se-stagewrap" data-se-stagewrap>
+        <p class="mk-se-empty" data-se-empty>Choisissez une page à gauche pour l'ouvrir dans l'éditeur.</p>
+        <div class="mk-se-stage" data-se-stage data-device="desktop" hidden>
+          <p class="mk-se-loadingframe" data-se-frameload role="status">Ouverture de l'éditeur…</p>
+          <iframe title="Éditeur ou aperçu de la page" data-se-frame referrerpolicy="same-origin"></iframe>
+        </div>
+      </div>
+    </section>
+  </div>
+  <p class="sr-only" role="status" aria-live="assertive" data-se-live-region></p>
+  <script type="application/json" id="se-data"><%- bootJson %></script>
+</div>
+<%- include("partials/bottom") %>

@@ -55,6 +55,7 @@ function injectLocals(req, res, next) {
   res.locals.nodeLinkCount = (node) => { try { return require("../marketing/landing").linksOf({ sections: [{ type: "layout", children: [node] }] }).length; } catch { return 0; } }; // liens cliquables d'un élément (recalage du compteur si son rendu échoue)
   res.locals.imageSource = imageSource; // résolution choisie d'un widget image (src, srcset, sizes)
   res.locals.asset = asset;
+  res.locals.httpStatus = () => res.statusCode; // code de la réponse en cours (pages d'erreur : titre et message adaptés)
   // Apparence du site (CMS → Apparence) : styles, en-tête, pied de page. Version publiée ; en aperçu (?kwpreview=1, équipe seulement) le brouillon.
   // Une configuration absente = l'affichage d'origine, intact. Une seule lecture par requête.
   let apCache = null;
@@ -79,7 +80,7 @@ function injectLocals(req, res, next) {
   // Calculés à la demande (seulement par l'en-tête et le pied de page publics) et une seule fois par requête, toujours à jour.
   const menus = new Map();
   res.locals.navMenu = (location) => {
-    if (!menus.has(location)) menus.set(location, navigation.forLocation(location, { user: req.session && req.session.user ? req.session.user : null }));
+    if (!menus.has(location)) menus.set(location, navigation.forLocation(location, { siteId: req.kwSite ? req.kwSite.id : null, user: req.session && req.session.user ? req.session.user : null }));
     return menus.get(location);
   };
   // Élément « courant » : son adresse (sans paramètres ni ancre) est celle de la page affichée

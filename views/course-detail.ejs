@@ -41,7 +41,7 @@
       <%# ---- Résumé : les chiffres essentiels d'un coup d'œil (données réelles de la formation) ---- %>
       <section class="course-summary" aria-labelledby="summaryTitle">
         <span class="eyebrow">Résumé de la formation</span>
-        <h2 id="summaryTitle"><%= course.title %></h2>
+        <h2 id="summaryTitle" class="sr-only"><%= course.title %></h2><%# le titre est déjà le grand titre de la page : il ne reste dans le résumé que comme nom accessible (plus de doublon visible) %>
         <% if (promise) { %><p class="course-summary-promise"><%= promise %></p><% } %>
         <dl class="summary-stats">
           <div class="summary-stat">

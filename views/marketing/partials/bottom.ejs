@@ -18,6 +18,10 @@
   <script src="<%= asset('/js/kola-pages.js') %>" defer></script>
   <% if (typeof cmsPolices !== "undefined" && cmsPolices) { %><script src="<%= asset('/js/cms-polices.js') %>" defer></script><% } %>
   <% if (typeof cmsWidgetsJs !== "undefined" && cmsWidgetsJs) { %><script src="<%= asset('/js/cms-widgets.js') %>" defer></script><% } %>
+  <% if (typeof siteEditorJs !== "undefined" && siteEditorJs) { %><script src="<%= asset('/js/cms-site-editor.js') %>" defer></script><% } %>
+  <% if (typeof templatesJs !== "undefined" && templatesJs) { %><script src="<%= asset('/js/cms-templates.js') %>" defer></script><% } %>
+  <% if (typeof patternsJs !== "undefined" && patternsJs) { %><script src="<%= asset('/js/cms-patterns.js') %>" defer></script><% } %>
+  <% if (typeof stylesJs !== "undefined" && stylesJs) { %><script src="<%= asset('/js/cms-styles.js') %>" defer></script><% } %>
   <% if (typeof cmsThemesJs !== "undefined" && cmsThemesJs) { %><script src="<%= asset('/js/cms-themes.js') %>" defer></script><% } %>
   <% if (typeof cmsArticlesJs !== "undefined" && cmsArticlesJs) { %><script src="<%= asset('/js/cms-articles.js') %>" defer></script><% } %>
 </body>

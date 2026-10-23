@@ -7,9 +7,9 @@
    ===================================================================================================================== */
 
 /* ===== 1. Mise en page et en-tête de page ===== */
-.mk-content { --kp-x: 40px; --kp-t: 28px; }
-@media (max-width: 1100px) { .mk-content { --kp-x: 28px; --kp-t: 24px; } }
-@media (max-width: 640px) { .mk-content { --kp-x: 16px; --kp-t: 20px; } }
+.mk-content { --kp-x: var(--kg-pad); --kp-t: 28px; } /* la marge latérale vient de la grille unique (--kg-pad, marketing.css) */
+@media (max-width: 1100px) { .mk-content { --kp-t: 24px; } }
+@media (max-width: 640px) { .mk-content { --kp-t: 20px; } }
 /* L'en-tête de page occupe toute la largeur de la zone de contenu : titre et description à gauche, actions à droite, filet en dessous */
 .mk-body .mk-content > .mk-head:first-child {
   margin: calc(var(--kp-t) * -1) calc(var(--kp-x) * -1) 24px; padding: 16px var(--kp-x); min-height: 68px;

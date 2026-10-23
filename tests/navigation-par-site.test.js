@@ -102,11 +102,13 @@ describe("navigation par site", () => {
   });
   test("éditeur d'un menu de site : les liens, formulaires et redirections gardent le site ; chaque lien suivi reste dans le site ; le sélecteur de ressources reçoit le site du menu", async () => {
     const r = await adminA.get(`${NAV}/menus/${ids.mA}?site=${A}`); assert.equal(r.status, 200); assert.ok(frame(r.text, "Alpha Nav"));
-    assert.match(r.text, new RegExp(`data-nav-tree data-site="${A}"`), "le site du menu est posé par le serveur pour le script");
-    const blocks = r.text.match(/<form\b[^>]*>[\s\S]*?<\/form>/g) || []; const mine = blocks.filter((b) => /action="\/marketing\/site-web\/navigation/.test(b)); assert.ok(mine.length >= 3);
+    const dataOf = (html) => JSON.parse(/<script type="application\/json" id="nm-data">([\s\S]*?)<\/script>/.exec(html)[1].replace(/\\u003c/g, "<"));
+    const urls = dataOf(r.text).urls;
+    for (const k of ["save", "resources", "preview"]) assert.match(urls[k], new RegExp(`[?&]site=${A}$`), `le site du menu est posé par le serveur pour l'éditeur (${k})`);
+    const blocks = r.text.match(/<form\b[^>]*>[\s\S]*?<\/form>/g) || []; const mine = blocks.filter((b) => /action="\/marketing\/site-web\/navigation/.test(b)); assert.ok(mine.length >= 2);
     for (const b of mine) assert.match(b, new RegExp(`name="site" value="${A}"`), "formulaire sans site");
     const edit = await adminA.post(`${NAV}/menus/${ids.mA}?site=${A}`, { site: A, name: "Menu Alpha", description: "ok", status: "published" }); assert.equal(edit.status, 302); assert.match(edit.location, new RegExp(`site=${A}`), "retour avec le site");
-    const principal = await boss.get(`${NAV}/menus/${ids.mP}`); assert.match(principal.text, /data-site=""/, "menu du principal : pas de site");
+    const principal = await boss.get(`${NAV}/menus/${ids.mP}`); for (const k of ["save", "resources", "preview"]) assert.doesNotMatch(dataOf(principal.text).urls[k], /site=/, `menu du principal : pas de site (${k})`);
   });
   test("lecture seule : le lecteur voit les menus et leurs éléments sans bouton d'écriture ; les routes d'écriture lui répondent 403 (selon son droit navigation.write)", async () => {
     const r = await viewerA.get(`${NAV}/menus/${ids.mA}?site=${A}`); assert.equal(r.status, canRole("viewer", "navigation.read") ? 200 : 403);

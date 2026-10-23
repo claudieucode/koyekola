@@ -1,0 +1,51 @@
+<%#
+  KOLAKISA CMS → Apparence → Styles : gestionnaire de styles globaux du site (palette, typographie, formes, boutons). Les données (réglages, valeurs en ligne, brouillon, palettes)
+  sont dans le bloc JSON ci-dessous ; public/js/cms-styles.js construit l'écran. Les enregistrements passent par les routes de Personnaliser (validation et publication par le serveur).
+%><%- include("partials/top", { title, active }) %>
+<div class="mk-st" data-st-root>
+  <header class="mk-st-head">
+    <div class="mk-head-main"><h1>Styles</h1><p class="mk-head-sub">Le système de design de <strong><%= T.name %></strong> : couleurs, typographie, formes et boutons. Les réglages sont partagés avec Personnaliser (un seul brouillon, une seule valeur par réglage).</p></div>
+    <div class="mk-st-actions">
+      <p class="mk-st-state" data-st-state role="status" aria-live="polite">Chargement…</p>
+      <button type="button" class="mk-wd-btn" data-st-undo disabled>Annuler</button>
+      <button type="button" class="mk-wd-btn" data-st-redo disabled>Rétablir</button>
+      <button type="button" class="mk-wd-btn" data-st-discard disabled>Abandonner le brouillon</button>
+      <button type="button" class="mk-wd-btn" data-st-save disabled>Enregistrer le brouillon</button>
+      <button type="button" class="mk-wd-btn mk-wd-btn--primary" data-st-publish disabled>Publier</button>
+    </div>
+  </header>
+  <div class="mk-wd-banner" data-st-banner hidden role="alert"><span data-st-banner-text></span><button type="button" class="mk-wd-btn" data-st-banner-action hidden></button></div>
+  <noscript><p class="mk-wd-banner">Le gestionnaire de styles a besoin de JavaScript.</p></noscript>
+  <p class="mk-wd-loading" data-st-loading>Chargement des styles…</p>
+  <div class="mk-st-layout" data-st-layout hidden>
+    <section class="mk-st-panel" aria-label="Réglages de style">
+      <div class="mk-st-tabs" role="tablist" aria-label="Familles de réglages" data-st-tabs></div>
+      <div class="mk-st-body" data-st-body role="tabpanel"></div>
+    </section>
+    <section class="mk-st-preview" aria-label="Aperçu">
+      <div class="mk-st-ptools">
+        <div class="mk-st-tabs mk-st-tabs--small" role="tablist" aria-label="Type d'aperçu">
+          <button type="button" role="tab" id="st-ptab-guide" aria-selected="true" aria-controls="st-guide" data-st-ptab="guide">Guide de style</button>
+          <button type="button" role="tab" id="st-ptab-page" aria-selected="false" aria-controls="st-page" data-st-ptab="page">Page du site</button>
+        </div>
+        <div class="mk-st-devices" role="group" aria-label="Appareil" data-st-devices>
+          <button type="button" aria-pressed="true" data-st-device="desktop">Ordinateur</button>
+          <button type="button" aria-pressed="false" data-st-device="tablet">Tablette</button>
+          <button type="button" aria-pressed="false" data-st-device="mobile">Mobile</button>
+        </div>
+      </div>
+      <div class="mk-st-stagewrap" data-st-stagewrap><div class="mk-st-stage" data-st-stage data-device="desktop">
+        <div class="mk-st-guide" id="st-guide" role="tabpanel" aria-labelledby="st-ptab-guide" data-st-guide></div>
+        <div class="mk-st-page" id="st-page" role="tabpanel" aria-labelledby="st-ptab-page" hidden>
+          <label class="sr-only" for="st-page-select">Page à prévisualiser</label>
+          <select id="st-page-select" data-st-page-select></select>
+          <p class="mk-st-empty" data-st-page-empty hidden>Ce site n'a encore aucune page à prévisualiser.</p>
+          <div class="mk-st-frame"><iframe title="Aperçu de la page du site" data-st-iframe referrerpolicy="same-origin"></iframe></div>
+        </div>
+      </div></div>
+    </section>
+  </div>
+  <p class="sr-only" role="status" aria-live="assertive" data-st-live></p>
+  <script type="application/json" id="st-data"><%- bootJson %></script>
+</div>
+<%- include("partials/bottom") %>

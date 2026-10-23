@@ -2192,3 +2192,6 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-name-dlg .pb-comp-dlg-foot .btn[aria-busy="true"] { cursor: progress; }
 @media (max-width: 520px) { .pb-name-dlg .pb-comp-dlg-foot { flex-direction: column-reverse; } .pb-name-dlg .pb-comp-dlg-foot .btn { width: 100%; } .pb-name-dlg .pb-modal-head, .pb-name-dlg .pb-comp-dlg-body, .pb-name-dlg .pb-comp-dlg-foot { padding-inline: 18px; } }
 @media (prefers-reduced-motion: reduce) { .pb-name-dlg .pb-field input[type="text"] { transition: none; } }
+
+/* Éditeur affiché DANS « Apparence → Éditeur du site » (?cadre=1) : le cadre fournit lui-même la navigation, les boutons « Retour » de l'éditeur seraient trompeurs */
+.pb-embedded .pb-back, .pb-embedded .pb-back-sites { display: none; }

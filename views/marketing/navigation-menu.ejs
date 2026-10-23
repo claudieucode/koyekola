@@ -1,74 +1,62 @@
 <%#
-  KOLAKISA CMS → Navigation → un menu (palier 7) : ajouter des éléments (recherche réelle côté serveur), organiser (boutons et
-  glisser-déposer, enregistrés en base), réglages du menu, emplacements. La structure est rendue par nav-item.ejs (récursif).
+  KOLAKISA CMS → Apparence → Menus → un menu. L'éditeur (public/js/cms-navigation.js) est construit à partir du JSON #nm-data posé par le serveur :
+  il garde la structure en mémoire et l'écrit EN UNE FOIS (« Enregistrer le menu », tout ou rien, version contrôlée). Aucune donnée simulée.
 %><%- include("partials/top", { title, active }) %>
-<%
-  const typeSearch = [["page", "Pages"], ["article", "Articles"], ["category", "Catégories"], ["tag", "Étiquettes"]];
-%>
-    <div class="mk-head">
-      <div class="mk-head-main"><h1><%= menu.name %></h1><p class="mk-head-sub"><span class="mk-status <%= menu.status === "published" ? "mk-status-ok" : "mk-status-off" %>"><%= menu.status === "published" ? "Publié" : "Brouillon" %></span>
-      <%= count %> élément<%= count > 1 ? "s" : "" %><% if (broken) { %> · <strong class="mk-nav-warn"><%= broken %> lien<%= broken > 1 ? "s" : "" %> à réparer</strong><% } %>
-      · Emplacements : <%= Object.keys(assigned).filter((k) => assigned[k] === menu.id).map((k) => locations[k].label).join(", ") || "aucun" %></p></div>
-      <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>">← Tous les menus</a>
-        <% if (canWrite) { %><form method="post" action="<%= BASE %>/menus/<%= menu.id %>/dupliquer" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Dupliquer</button></form><% } %>
-        <% if (canDelete) { %><form id="menu-del" method="post" action="<%= BASE %>/menus/<%= menu.id %>/supprimer" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm mk-btn-danger-outline" data-mk-confirm="Le menu « <%= menu.name %> » et ses <%= count %> élément<%= count > 1 ? "s" : "" %> seront supprimés<%= Object.keys(assigned).some((k) => assigned[k] === menu.id) ? " ; ses emplacements reviendront à l'affichage d'origine" : "" %>. Les pages, articles et catégories ne sont pas touchés." data-mk-confirm-title="Supprimer ce menu ?" data-mk-confirm-ok="Supprimer le menu">Supprimer</button></form><% } %></div></div>
-
-    <div class="mk-nav-layout">
-      <% if (canWrite) { %>
-      <aside class="mk-nav-add" aria-label="Ajouter des éléments">
-        <h2>Ajouter des éléments</h2>
-        <% typeSearch.forEach(([type, label]) => { %>
-        <details class="mk-nav-section"<%= type === "page" ? " open" : "" %>><summary><%= label %></summary>
-          <form method="post" action="<%= BASE %>/menus/<%= menu.id %>/elements" data-nav-picker data-type="<%= type %>">
-            <input type="hidden" name="type" value="<%= type %>">
-            <label class="sr-only" for="ns-<%= type %>">Rechercher parmi : <%= label.toLowerCase() %></label>
-            <input id="ns-<%= type %>" type="search" placeholder="Rechercher…" autocomplete="off" data-nav-search>
-            <ul class="mk-nav-results" data-nav-results aria-live="polite"></ul>
-            <button type="submit" class="btn btn-outline btn-sm" disabled>Ajouter au menu</button>
-          </form>
-        </details>
-        <% }) %>
-        <details class="mk-nav-section"><summary>Accueil</summary>
-          <form method="post" action="<%= BASE %>/menus/<%= menu.id %>/elements"><input type="hidden" name="type" value="home"><button type="submit" class="btn btn-outline btn-sm">Ajouter « Accueil »</button></form></details>
-        <details class="mk-nav-section"><summary>Lien personnalisé</summary>
-          <form method="post" action="<%= BASE %>/menus/<%= menu.id %>/elements" class="mk-form">
-            <input type="hidden" name="type" value="custom">
-            <div class="field-group"><label for="cu-label">Texte du lien *</label><input id="cu-label" type="text" name="label" maxlength="80" required></div>
-            <div class="field-group"><label for="cu-url">Adresse *</label><input id="cu-url" type="text" name="url" maxlength="500" required placeholder="/contact, https://… ou #tarifs"><span class="field-hint">Page du site (/contact), site externe (https://…), ancre (#tarifs ou /page#tarifs), mailto: ou tel:.</span></div>
-            <label class="mk-cms-check"><input type="checkbox" name="new_tab" value="1"> Ouvrir dans un nouvel onglet</label>
-            <button type="submit" class="btn btn-outline btn-sm">Ajouter au menu</button>
-          </form></details>
-      </aside>
-      <% } %>
-
-      <section class="mk-nav-structure" aria-labelledby="structure-title">
-        <h2 id="structure-title">Structure du menu</h2>
-        <% if (canWrite && count > 1) { %><p class="field-hint">Glissez les éléments par la poignée pour les réorganiser (un élément déposé sur un autre devient son sous-élément), ou utilisez les flèches. <span data-nav-status role="status" aria-live="polite"></span></p><% } %>
-        <% if (!count) { %><p class="mk-empty-line" data-nav-empty>Ce menu ne contient aucun élément.</p><% } %>
-        <ol class="mk-nav-tree" data-nav-tree data-site="<%= navSite === null ? "" : navSite %>" data-menu="<%= menu.id %>" data-max-depth="<%= maxDepth %>" data-save="<%= BASE %>/menus/<%= menu.id %>/organiser" data-can-write="<%= canWrite ? 1 : 0 %>">
-          <% nodes.forEach((n) => { %><%- include("nav-item", { node: n, depth: 1, BASE, types, canWrite, REL }) %><% }) %>
-        </ol>
-      </section>
+<div class="mk-nm" data-nm data-can-write="<%= canWrite ? "1" : "0" %>">
+  <div class="mk-nm-head">
+    <div class="mk-head-main">
+      <p class="mk-nm-crumb"><a href="<%= BASE %><%= navSite === null ? "" : "?site=" + navSite %>">← Tous les menus</a></p>
+      <h1 data-nm-title><%= menu.name %></h1>
+      <p class="mk-head-sub" data-nm-summary><span class="mk-status <%= menu.status === "published" ? "mk-status-ok" : "mk-status-off" %>"><%= menu.status === "published" ? "Publié" : "Brouillon" %></span>
+        <%= count %> élément<%= count > 1 ? "s" : "" %><% if (broken) { %> · <strong class="mk-nav-warn"><%= broken %> lien<%= broken > 1 ? "s" : "" %> à réparer</strong><% } %> · Emplacements : <%= locNames.join(", ") || "aucun" %></p>
     </div>
+    <div class="mk-nm-actions">
+      <button type="button" class="mk-wd-btn" data-nm-preview>Aperçu</button>
+      <% if (canWrite) { %><form method="post" action="<%= BASE %>/menus/<%= menu.id %>/dupliquer<%= navSite === null ? "" : "?site=" + navSite %>" class="mk-inline" data-nm-dirty-guard><button type="submit" class="mk-wd-btn">Dupliquer</button></form><% } %>
+      <% if (canDelete) { %><form method="post" action="<%= BASE %>/menus/<%= menu.id %>/supprimer<%= navSite === null ? "" : "?site=" + navSite %>" class="mk-inline"><button type="submit" class="mk-wd-btn mk-wd-btn--danger" data-mk-confirm="Le menu « <%= menu.name %> » et ses <%= count %> élément<%= count > 1 ? "s" : "" %> seront supprimés ; ses emplacements reviendront à l'affichage d'origine. Les pages, articles et catégories ne sont pas touchés." data-mk-confirm-title="Supprimer ce menu ?" data-mk-confirm-ok="Supprimer le menu">Supprimer</button></form><% } %>
+    </div>
+  </div>
 
-    <section class="mk-nav-slots" aria-labelledby="menu-settings">
-      <h2 id="menu-settings">Réglages du menu</h2>
-      <form method="post" action="<%= BASE %>/menus/<%= menu.id %>" class="mk-form">
-        <fieldset<%= canWrite ? "" : " disabled" %>>
-          <div class="field-group"><label for="m-name">Nom</label><input id="m-name" type="text" name="name" value="<%= menu.name %>" maxlength="80" required></div>
-          <div class="field-group"><label for="m-desc">Description</label><input id="m-desc" type="text" name="description" value="<%= menu.description %>" maxlength="300"></div>
-          <div class="field-group"><label for="m-status">État</label><select id="m-status" name="status"><option value="published"<%= menu.status === "published" ? " selected" : "" %>>Publié</option><option value="draft"<%= menu.status === "draft" ? " selected" : "" %>>Brouillon (jamais affiché sur le site)</option></select></div>
-        </fieldset>
-        <% if (canWrite) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div><% } %>
-      </form>
-      <h3>Afficher ce menu sur le site</h3>
-      <form method="post" action="<%= BASE %>/emplacements" class="mk-form">
-        <input type="hidden" name="retour" value="<%= BASE %>/menus/<%= menu.id %>"><input type="hidden" name="menu" value="<%= menu.id %>">
-        <% Object.values(locations).forEach((loc) => { const cur = assigned[loc.key]; %>
-          <div class="field-group"><input type="hidden" name="<%= loc.key %>" value=""><label class="mk-cms-check"><input type="checkbox" name="<%= loc.key %>" value="<%= menu.id %>"<%= cur === menu.id ? " checked" : "" %><%= canPublish ? "" : " disabled" %>> <%= loc.label %></label>
-            <span class="field-hint"><%= loc.hint %><% if (cur && cur !== menu.id) { %> Occupé par « <%= (menus.find((m) => m.id === cur) || {}).name %> » : cocher le remplace.<% } %></span></div>
-        <% }) %>
-        <% if (canPublish) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Appliquer au site</button></div><% } else { %><p class="field-hint">Seuls les administrateurs affectent un menu à un emplacement.</p><% } %>
-      </form>
+  <div class="mk-wd-bar mk-nm-bar" role="toolbar" aria-label="Enregistrement du menu">
+    <p class="mk-wd-state" data-nm-state role="status" aria-live="polite">Aucune modification.</p>
+    <div class="mk-wd-actions">
+      <button type="button" class="mk-wd-btn" data-nm-undo disabled>Annuler</button>
+      <button type="button" class="mk-wd-btn" data-nm-redo disabled>Rétablir</button>
+      <% if (canWrite) { %><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-nm-save disabled>Enregistrer le menu</button><% } else { %><span class="mk-wd-state">Lecture seule : vous ne pouvez pas modifier les menus.</span><% } %>
+    </div>
+  </div>
+  <div class="mk-wd-banner" data-nm-banner hidden role="alert"><span data-nm-banner-text></span><button type="button" class="mk-wd-btn" data-nm-banner-action hidden></button></div>
+
+  <noscript><p class="mk-wd-banner">L'éditeur de menus a besoin de JavaScript.</p></noscript>
+  <p class="mk-wd-loading" data-nm-loading>Chargement du menu…</p>
+
+  <div class="mk-nm-layout" data-nm-layout hidden>
+    <% if (canWrite) { %><aside class="mk-nm-add" aria-labelledby="nm-add-title">
+      <h2 id="nm-add-title">Ajouter des éléments</h2>
+      <div data-nm-sections></div>
+    </aside><% } %>
+
+    <section class="mk-nm-structure" aria-labelledby="nm-structure-title">
+      <h2 id="nm-structure-title">Structure du menu</h2>
+      <div class="mk-nm-meta">
+        <div class="field-group"><label for="nm-name">Nom du menu</label><input id="nm-name" type="text" maxlength="80" autocomplete="off" data-nm-name></div>
+        <div class="field-group"><label for="nm-status">État</label><select id="nm-status" data-nm-status><option value="published">Publié</option><option value="draft">Brouillon (jamais affiché)</option></select></div>
+        <div class="field-group mk-nm-meta-wide"><label for="nm-desc">Description</label><input id="nm-desc" type="text" maxlength="300" autocomplete="off" data-nm-desc></div>
+      </div>
+      <p class="field-hint" data-nm-help></p>
+      <div data-nm-empty class="mk-empty-line" hidden>Ce menu ne contient aucun élément. Ajoutez des pages, des articles, des catégories ou des liens depuis le panneau « Ajouter des éléments ».</div>
+      <ol class="mk-nm-tree" data-nm-tree aria-label="Éléments du menu"></ol>
+
+      <h3 class="mk-nm-h3">Réglages du menu</h3>
+      <fieldset class="mk-nm-slots" data-nm-locations><legend>Emplacements d'affichage</legend></fieldset>
     </section>
+  </div>
+  <p class="sr-only" role="status" aria-live="assertive" data-nm-live></p>
+
+  <dialog class="mk-dialog mk-modal mk-nm-dialog" data-nm-dialog aria-labelledby="nm-preview-title">
+    <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="nm-preview-title">Aperçu du menu</h2></div><button type="button" class="mk-dialog-close" data-nm-dialog-close aria-label="Fermer">×</button></header>
+    <div class="mk-dialog-body"><p class="field-hint" data-nm-preview-note></p><div class="mk-nm-preview" data-nm-preview-body></div></div>
+  </dialog>
+  <script type="application/json" id="nm-data"><%- dataJson %></script>
+</div>
 <%- include("partials/bottom") %>

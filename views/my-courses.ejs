@@ -1,14 +1,20 @@
 <%- include("partials/header", { title: "Mes formations" }) %>
 
-  <div class="container-wide dashboard-header">
-    <h1>Mes formations</h1>
-    <p><a href="/mes-certificats">Mes certificats</a></p>
-    <p>Reprenez où vous en étiez.</p>
+  <div class="container-wide kv-pagehead">
+    <div>
+      <h1>Mes formations</h1>
+      <p>Reprenez où vous en étiez.</p>
+    </div>
+    <div class="kv-pagehead-actions">
+      <a href="/mes-certificats" class="btn btn-outline"><%- icon("trophy", { size: 16 }) %> Mes certificats</a>
+      <a href="/catalogue" class="btn btn-primary">Explorer le catalogue</a>
+    </div>
   </div>
 
   <div class="container-wide section-tight learner-space">
     <% if (courses.length === 0 && favorites.length === 0) { %>
       <div class="empty-state">
+        <span class="kv-empty-ico" aria-hidden="true"><%- icon("graduation", { size: 26 }) %></span>
         <h3>Vous n'avez pas encore de formation</h3>
         <p>Direction le catalogue pour trouver votre prochaine compétence à apprendre.</p>
         <a href="/catalogue" class="btn btn-primary">Voir le catalogue</a>

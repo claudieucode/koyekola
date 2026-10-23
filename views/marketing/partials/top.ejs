@@ -159,7 +159,7 @@
       </header>
       <% } %>
 
-      <main id="main" tabindex="-1" class="mk-content">
+      <main id="main" tabindex="-1" class="mk-content<%= typeof layout !== "undefined" && /^(form|wide)$/.test(layout) ? " mk-content--" + layout : "" %>">
         <% if (cms && cms.space && cms.space.navOnly) { %><p class="mk-site-return"><a class="btn btn-ghost btn-sm" href="<%= cms.space.listHref %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a></p>
         <% } else if (cms && cms.space) { %><%- include("site-banner", { siteSpace: cms.space }) %><% } %>
         <% if (typeof flash !== "undefined" && flash) { %>

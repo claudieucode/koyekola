@@ -23,7 +23,8 @@ describe("projection du registre (menu d'un site)", () => {
   test("tout module ouvert par la table d'aptitude existe ; tout module délégué porte la clé de l'écran existant et figure parmi les écrans propres au site", () => {
     for (const [key, a] of Object.entries(nav.ABILITY)) { assert.ok(nav.ALL.some((i) => i.key === key), `clé hors registre : ${key}`); if (a.mode === "open") assert.ok(nav.SITE_MODULES[a.module], `module inconnu : ${a.module}`); }
     for (const [mod, m] of Object.entries(nav.SITE_MODULES)) if (m.kind === "delegate") { assert.ok(m.reg, mod); assert.ok(nav.isSiteScopedKey(m.reg), mod); assert.equal(nav.DELEGATED[mod], m.to); }
-    for (const k of ["dashboard", "utilisateurs", "apparence", "parametres", "seo"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+    for (const k of ["dashboard", "utilisateurs", "parametres", "seo"]) assert.equal(nav.isSiteScopedKey(k), false, `${k} n'ouvre pas l'espace d'un site`);
+    assert.equal(nav.isSiteScopedKey("apparence"), true, "« Éditeur du site » (Apparence) est un écran partagé ouvert dans le cadre du site");
     // « landing » (écran d'UNE page et son éditeur) prend le cadre du site de la page, mais seulement si le serveur a vérifié un site (voir creation-page-contexte-site) : la liste centrale « ?site= » reste centrale
     assert.equal(nav.isSiteScopedKey("landing"), true);
     for (const k of ["navigation", "apparence/menus", "forms", "contacts", "articles", "articles/brouillons", "articles/categories", "articles/auteurs", "mediatheque", "commentaires", "commentaires/en-attente"]) assert.equal(nav.isSiteScopedKey(k), true, `${k} : contenu isolé par site (R5/R6), ouvert dans le cadre du site (R8 lot 2)`);

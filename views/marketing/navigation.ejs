@@ -2,27 +2,40 @@
   KOLAKISA CMS → Navigation (palier 7). Liste des menus (éléments, liens à réparer, emplacements) et choix du menu affiché à chaque
   emplacement du site. Aucune donnée simulée : tout vient des tables nav_menus / nav_items / nav_locations.
 %><%- include("partials/top", { title, active }) %>
+    <% const qs = navSite === null ? "" : "?site=" + navSite; %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Navigation</h1><p class="mk-head-sub">Les menus du site : en-tête, pied de page, menu mobile. Un menu pointe vers vos pages, articles, catégories et étiquettes par référence : si une adresse change, le lien suit. Sans menu affecté à un emplacement, le site garde son affichage d'origine.</p></div>
-      <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Nouveau menu</button></div><% } %></div>
+      <div class="mk-head-main"><h1>Menus</h1><p class="mk-head-sub">Les menus de navigation du site : en-tête, pied de page, menu mobile. Un menu pointe vers vos pages, articles, catégories et étiquettes par référence : si une adresse change, le lien suit. Sans menu affecté à un emplacement, le site garde son affichage d'origine.</p></div>
+      <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Créer un menu</button></div><% } %></div>
 
-    <% if (!menus.length) { %>
+    <% if (!total) { %>
       <div class="mk-empty"><%- icon("menu", { size: 32 }) %><h2>Aucun menu.</h2>
         <p>Créez un menu vide, ou reprenez les liens actuels de l'en-tête et du pied de page du site pour partir d'une base réelle.</p>
-        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Nouveau menu</button>
-          <form action="<%= BASE %>/importer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Créer à partir du site actuel</button></form></div><% } %></div>
+        <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Créer un menu</button>
+          <% if (navSite === null) { %><form action="<%= BASE %>/importer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Créer à partir du site actuel</button></form><% } %></div><% } %></div>
     <% } else { %>
+      <form method="get" class="mk-nm-filter" role="search" aria-label="Rechercher un menu">
+        <% if (navSite !== null) { %><input type="hidden" name="site" value="<%= navSite %>"><% } %>
+        <label class="sr-only" for="mq">Rechercher un menu</label><input id="mq" type="search" name="q" value="<%= q %>" placeholder="Rechercher un menu…" maxlength="80" autocomplete="off">
+        <label class="sr-only" for="ms">Trier par</label><select id="ms" name="sort"><option value="nom"<%= sort === "nom" ? " selected" : "" %>>Nom</option><option value="recent"<%= sort === "recent" ? " selected" : "" %>>Dernière modification</option><option value="elements"<%= sort === "elements" ? " selected" : "" %>>Nombre d'éléments</option></select>
+        <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (q) { %><a class="btn btn-ghost btn-sm" href="<%= BASE %><%= qs %>">Effacer</a><% } %>
+      </form>
+      <% if (!menus.length) { %><div class="mk-empty-line">Aucun menu ne correspond à « <%= q %> ».</div><% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
         <caption class="sr-only">Menus</caption>
-        <thead><tr><th scope="col">Menu</th><th scope="col" class="mk-num">Éléments</th><th scope="col">Emplacements</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <thead><tr><th scope="col">Menu</th><th scope="col" class="mk-num">Éléments</th><th scope="col">Emplacements</th><th scope="col">Modifié</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
         <tbody><% menus.forEach((m) => { %>
-          <tr><th scope="row" data-label="Menu"><span class="mk-tx-name"><a href="<%= BASE %>/menus/<%= m.id %>"><%= m.name %></a><% if (m.description) { %><span class="mk-sub"><%= m.description %></span><% } %></span></th>
+          <tr><th scope="row" data-label="Menu"><span class="mk-tx-name"><a href="<%= BASE %>/menus/<%= m.id %><%= qs %>"><%= m.name %></a><% if (m.description) { %><span class="mk-sub"><%= m.description %></span><% } %></span></th>
             <td class="mk-num" data-label="Éléments"><%= m.items %><% if (m.broken) { %><span class="mk-sub mk-nav-warn"><%= m.broken %> lien<%= m.broken > 1 ? "s" : "" %> à réparer</span><% } %></td>
             <td data-label="Emplacements"><%= m.locations.length ? m.locations.map((l) => locations[l] ? locations[l].label : l).join(", ") : "—" %></td>
+            <td data-label="Modifié"><%= String(m.updated_at || "").slice(0, 16).replace("T", " ") %></td>
             <td data-label="État"><span class="mk-status <%= m.status === "published" ? "mk-status-ok" : "mk-status-off" %>"><%= m.status === "published" ? "Publié" : "Brouillon" %></span></td>
-            <td class="mk-row-actions mk-cms-actions-col"><a class="btn btn-outline btn-sm" href="<%= BASE %>/menus/<%= m.id %>"><%= canWrite ? "Modifier" : "Voir" %></a></td></tr>
+            <td class="mk-row-actions mk-cms-actions-col">
+              <a class="btn btn-outline btn-sm" href="<%= BASE %>/menus/<%= m.id %><%= qs %>"><%= canWrite ? "Modifier" : "Voir" %></a>
+              <a class="btn btn-ghost btn-sm" href="<%= BASE %>/menus/<%= m.id %><%= qs %><%= qs ? "&" : "?" %>apercu=1" aria-label="Aperçu de <%= m.name %>">Aperçu</a>
+              <% if (canWrite) { %><form method="post" action="<%= BASE %>/menus/<%= m.id %>/dupliquer<%= qs %>" class="mk-inline"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Dupliquer <%= m.name %>">Dupliquer</button></form><% } %>
+              <% if (canDelete) { %><form method="post" action="<%= BASE %>/menus/<%= m.id %>/supprimer<%= qs %>" class="mk-inline"><button type="submit" class="btn btn-ghost btn-sm mk-btn-danger-outline" aria-label="Supprimer <%= m.name %>" data-mk-confirm="Le menu « <%= m.name %> » et ses <%= m.items %> élément<%= m.items > 1 ? "s" : "" %> seront supprimés<%= m.locations.length ? " ; ses emplacements reviendront à l'affichage d'origine" : "" %>. Les pages, articles et catégories ne sont pas touchés." data-mk-confirm-title="Supprimer ce menu ?" data-mk-confirm-ok="Supprimer le menu">Supprimer</button></form><% } %></td></tr>
         <% }) %></tbody>
-      </table></div>
+      </table></div><% } %>
 
       <section class="mk-nav-slots" aria-labelledby="slots-title">
         <h2 id="slots-title">Emplacements</h2>

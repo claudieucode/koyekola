@@ -45,10 +45,10 @@ const SECTIONS = [
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
       leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
-      leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
-      leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
-      leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
-      leaf("apparence/styles", "Styles", `${BASE}/apparence/styles`, { permission: "appearance.read" }),
+      leaf("apparence", "Éditeur du site", `${BASE}/editeur-du-site`, { permission: "appearance.read" }),
+      leaf("apparence/templates", "Templates", `${BASE}/templates`, { permission: "appearance.read" }),
+      leaf("apparence/patterns", "Patterns", `${BASE}/patterns`, { permission: "appearance.read" }),
+      leaf("apparence/styles", "Styles", `${BASE}/styles`, { permission: "appearance.read" }),
       leaf("apparence/polices", "Polices", `${BASE}/polices`, { permission: "appearance.read" }),
       leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`, { permission: "appearance.read" }),
       leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`, { permission: "appearance.read" }),
@@ -188,6 +188,14 @@ const SITE_MODULES = {
   polices: { label: "Polices", kind: "delegate", to: "/site-web/polices", reg: "polices", permission: "appearance.read", legacy: `${BASE}/polices` },
   // Apparence → Widgets : écran partagé /site-web/widgets ouvert dans le cadre du site (zones, blocs et widgets désactivés de CE site)
   widgets: { label: "Widgets", kind: "delegate", to: "/site-web/widgets", reg: "widgets", permission: "appearance.read", legacy: `${BASE}/widgets` },
+  // Apparence → Styles : gestionnaire de styles globaux (palette, typographie, formes, boutons) ; écran partagé /site-web/styles ouvert dans le cadre du site (brouillon partagé avec Personnaliser)
+  // Apparence → Patterns : bibliothèque de compositions réutilisables ; écran partagé /site-web/patterns ouvert dans le cadre du site (compositions et pages de CE site)
+  // Apparence → Templates : packs de site, gabarits de pages et « Mes modèles » ; écran partagé /site-web/templates ouvert dans le cadre du site (importation dans CE site)
+  // Apparence → Éditeur du site : espace de travail par site autour du Page Builder ; écran partagé /site-web/editeur-du-site ouvert dans le cadre du site
+  "editeur-du-site": { label: "Éditeur du site", kind: "delegate", to: "/site-web/editeur-du-site", reg: "apparence", permission: "appearance.read", legacy: `${BASE}/editeur-du-site` },
+  templates: { label: "Templates", kind: "delegate", to: "/site-web/templates", reg: "apparence/templates", permission: "appearance.read", legacy: `${BASE}/templates` },
+  patterns: { label: "Patterns", kind: "delegate", to: "/site-web/patterns", reg: "patterns", permission: "appearance.read", legacy: `${BASE}/patterns` },
+  styles: { label: "Styles", kind: "delegate", to: "/site-web/styles", reg: "styles", permission: "appearance.read", legacy: `${BASE}/styles` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
@@ -247,7 +255,7 @@ const ABILITY = {
   sites: { mode: "link" },
   sitedash: { mode: "open", module: "tableau-de-bord", label: "Tableau de bord" },
   landing: { mode: "open", module: "pages" },
-  apparence: { mode: "open", module: "reglages", hash: "design" },
+  apparence: { mode: "open", module: "editeur-du-site" },
   "apparence/en-tete": { mode: "open", module: "reglages", hash: "entete" },
   "apparence/pied-de-page": { mode: "open", module: "reglages", hash: "entete" },
   redirections: { mode: "open", module: "redirections" },
@@ -275,6 +283,9 @@ const ABILITY = {
   "apparence/polices": { mode: "open", module: "polices" },
   "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
   "apparence/widgets": { mode: "open", module: "widgets" },
+  "apparence/styles": { mode: "open", module: "styles" },
+  "apparence/patterns": { mode: "open", module: "patterns" },
+  "apparence/templates": { mode: "open", module: "templates" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
@@ -370,6 +381,9 @@ function buildSiteNav({ can, active, space }) {
 
 for (const [key, a] of Object.entries(ABILITY)) if (a.mode === "open" && a.sub) FRAMED.add(key);
 FRAMED.add("apparence/menus"); // même écran que « Navigation » (clé active distincte)
+FRAMED.add("apparence/templates"); // bibliothèque de templates : garde le cadre DU site
+FRAMED.add("apparence/patterns"); // bibliothèque de patterns : garde le cadre DU site
+FRAMED.add("apparence/styles"); // gestionnaire de styles : garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("apparence/polices"); // les trois onglets (adresses « ?site= ») gardent le cadre DU site : menu, bandeau et fil d'Ariane
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

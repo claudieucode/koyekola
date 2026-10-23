@@ -20,10 +20,10 @@ describe("entrées fermées du menu d'un site : preuves", () => {
   });
   after(() => { db.close(); return srv.stop(); });
 
-  test("décompte exact : 33 entrées fermées sur 67 du registre, par groupe", () => {
+  test("décompte exact : 30 entrées fermées sur 67 du registre, par groupe", () => {
     const list = closed(); const by = {}; for (const i of list) by[i.group] = (by[i.group] || 0) + 1;
-    assert.equal(list.length, 33);
-    assert.deepEqual(by, { Apparence: 3, Utilisateurs: 4, SEO: 7, Redirections: 2, Outils: 7, "Paramètres": 10 });
+    assert.equal(list.length, 30);
+    assert.deepEqual(by, { Utilisateurs: 4, SEO: 7, Redirections: 2, Outils: 7, "Paramètres": 10 });
     assert.equal(nav.projectSections(space()).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key)).length, 67);
   });
   test("chaque entrée fermée : grisée « Bientôt » sans lien dans le menu rendu (équipe et administrateur du site), avec la permission du registre ; aucune adresse directe ne prétend fonctionner", async () => {
@@ -51,6 +51,6 @@ describe("entrées fermées du menu d'un site : preuves", () => {
       inventory.push({ group: e.group, key: e.key, label: e.label, phase: e.phase, permission: e.permission, centrale: reg.href, adminSite: central.status, directes: direct });
     }
     if (process.env.INVENTAIRE_SORTIE) fs.writeFileSync(process.env.INVENTAIRE_SORTIE, JSON.stringify(inventory, null, 1));
-    assert.equal(inventory.length, 33);
+    assert.equal(inventory.length, 30);
   });
 });
