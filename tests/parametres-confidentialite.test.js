@@ -167,3 +167,33 @@ describe("Paramètres → Confidentialité", () => {
     assert.match(tA, /1 formulaire publié/); assert.match(tA, /à confirmer/i);
   });
 });
+
+describe("Paramètres → Confidentialité dans l'espace d'un site", () => {
+  let srv, boss, db, A, B, adminA, outsider;
+  const R = "/marketing/site-web";
+  before(async () => {
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "", ALLOW_INDEXING: "1" });
+    boss = await loginInstructor(srv); db = srv.db();
+    const org = db.prepare("SELECT id FROM mk_organizations").get().id;
+    const site = (n) => Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (?, ?, ?, '{}')").run(org, n, n.toLowerCase()).lastInsertRowid);
+    A = site("Alpha"); B = site("Beta");
+    adminA = await newStudent(srv); outsider = await newStudent(srv);
+    db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'admin')").run(A, db.prepare("SELECT id FROM users WHERE email = ?").get(adminA.email).id);
+  });
+  after(() => { db.close(); return srv.stop(); });
+
+  test("l'entrée du menu d'un site est ouverte (plus « Bientôt ») et mène à l'écran du site, sans onglets centraux", async () => {
+    const menu = (await boss.get(`${R}/sites/${A}/reglages`)).text;
+    assert.match(menu, new RegExp(`href="${R}/sites/${A}/confidentialite"`), "lien actif vers l'écran du site");
+    const r = await boss.get(`${R}/sites/${A}/confidentialite`); assert.equal(r.status, 200);
+    assert.match(r.text, /data-pv-root/); assert.ok(!/Réglages de<\/label>/.test(r.text), "pas de choix de site central dans l'espace d'un site");
+    assert.equal(JSON.parse(/id="pv-data">([\s\S]*?)<\/script>/.exec(r.text)[1].replace(/\\u003c/g, "<")).siteId, A);
+  });
+
+  test("l'admin d'Alpha l'ouvre pour Alpha ; jamais pour Beta ; l'étranger et l'anonyme sont refusés", async () => {
+    assert.equal((await adminA.get(`${R}/sites/${A}/confidentialite`)).status, 200);
+    assert.notEqual((await adminA.get(`${R}/sites/${B}/confidentialite`)).status, 200);
+    assert.notEqual((await outsider.get(`${R}/sites/${A}/confidentialite`)).status, 200);
+    assert.notEqual((await new Client(srv.base).get(`${R}/sites/${A}/confidentialite`)).status, 200);
+  });
+});

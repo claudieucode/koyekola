@@ -85,7 +85,9 @@ module.exports = () => {
     // Confidentialité : deux onglets (Réglages · Guide de politique) ; le formulaire générique ne sert plus à ce groupe
     if (group === "privacy") {
       const t = target(req, res); if (!t) return;
-      return privacy.render(req, res, t, { settingsHead: { heading: "Confidentialité", intro: "", groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(s.scope), scope: s.scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "privacy", tabPath: "/confidentialite" } });
+      // Dans l'espace d'un site (adresse /sites/<id>/confidentialite), pas d'onglets centraux ni de choix de site : le site est celui du cadre
+      const inSite = /\/sites\/\d+\//.test(req.originalUrl || "");
+      return privacy.render(req, res, t, inSite ? {} : { settingsHead: { heading: "Confidentialité", intro: "", groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(s.scope), scope: s.scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "privacy", tabPath: "/confidentialite" } });
     }
     render(req, res, group, s.scope);
   });

@@ -208,6 +208,8 @@ const SITE_MODULES = {
   tunnels: { label: "Tunnels", kind: "delegate", to: "/tunnels", reg: "funnels", permission: "funnels.read", legacy: "/marketing/tunnels" },
   "tests-ab": { label: "Tests A/B", kind: "delegate", to: "/site-web/tests-ab", reg: "pagetests", permission: "forms.read", legacy: `${BASE}/tests-ab` },
   analytics: { label: "Analytics", kind: "delegate", to: "/analytics/global", reg: "analytics-global", permission: "analytics.read", legacy: "/marketing/analytics/global" },
+  // Paramètres → Confidentialité : écran partagé /site-web/parametres/confidentialite ouvert dans le cadre du site (page de politique, guide, de CE site)
+  confidentialite: { label: "Confidentialité", kind: "delegate", to: "/site-web/parametres/confidentialite", reg: "parametres/confidentialite", permission: "settings.read", legacy: `${BASE}/parametres/confidentialite` },
   outils: { label: "Santé du site", kind: "delegate", to: "/site-web/outils", reg: "outils", permission: "tools.view", legacy: `${BASE}/outils` },
 };
 // Modules délégués : tables lues par le serveur (délégation) et par la vue (écrans à afficher dans le cadre du site)
@@ -265,6 +267,7 @@ const ABILITY = {
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
   parametres: { mode: "open", module: "reglages" },
+  "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   // R8 lot 2 : contenus déjà isolés par site (R5 médias, R6 articles/termes/commentaires), ouverts par délégation (`sub` = sous-page de la liste fermée NESTED)
   articles: { mode: "open", module: "articles" },
   "articles/brouillons": { mode: "open", module: "articles", sub: "brouillons" },
@@ -385,5 +388,6 @@ FRAMED.add("apparence/templates"); // bibliothèque de templates : garde le cadr
 FRAMED.add("apparence/patterns"); // bibliothèque de patterns : garde le cadre DU site
 FRAMED.add("apparence/styles"); // gestionnaire de styles : garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("apparence/polices"); // les trois onglets (adresses « ?site= ») gardent le cadre DU site : menu, bandeau et fil d'Ariane
+FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

@@ -181,7 +181,7 @@ describe("4 — modules « Bientôt » : aucune donnée, aucune action simulée"
     const space = { siteId: A, principal: false, base: `${SP}/${A}`, name: "Site Alpha", listHref: "/marketing/site-web/sites" };
     const soon = nav.projectSections(space).flatMap((x) => x.items).filter((i) => i.disabled).length;
     assert.equal((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon);
-    assert.equal(soon, 30, "R8 lots 2 à 6 : 53 − 15 (articles, médias, commentaires) − 1 (formulaires) − 2 (navigation, menus) − 2 (SEO du site, erreurs 404) − 3 (Styles, Patterns et Templates, Apparence)");
+    assert.equal(soon, 29, "Confidentialité ouverte (−1) ; R8 lots 2 à 6 : 53 − 15 (articles, médias, commentaires) − 1 (formulaires) − 2 (navigation, menus) − 2 (SEO du site, erreurs 404) − 3 (Styles, Patterns et Templates, Apparence)");
   });
 });
 
