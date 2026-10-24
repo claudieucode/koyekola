@@ -1,10 +1,12 @@
 <%- include("partials/header", { title: "Mon panier" }) %>
 
-  <div class="container-wide cart-layout">
+  <% const cartClass = items.length === 0 ? "cart-layout cart-layout--empty" : "cart-layout"; %>
+  <div class="container-wide <%= cartClass %>">
     <div>
-      <h1 style="margin-top:36px;">Mon panier</h1>
+      <div class="kv-pagehead" style="padding-inline:0;"><div><h1>Mon panier</h1><% if (items.length) { %><p><%= items.length %> formation<%= items.length > 1 ? "s" : "" %> prête<%= items.length > 1 ? "s" : "" %> à être commandée<%= items.length > 1 ? "s" : "" %>.</p><% } %></div></div>
       <% if (items.length === 0) { %>
         <div class="empty-state">
+          <span class="kv-empty-ico" aria-hidden="true"><%- icon("cart", { size: 26 }) %></span>
           <h3>Votre panier est vide</h3>
           <p>Parcourez le catalogue pour trouver votre prochaine formation.</p>
           <a href="/catalogue" class="btn btn-primary">Voir le catalogue</a>

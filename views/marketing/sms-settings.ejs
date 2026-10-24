@@ -1,4 +1,4 @@
-<%- include("partials/top", { title, active }) %>
+<%- include("partials/top", { title, active, layout: "form" }) %>
 <% const hours = Array.from({ length: 24 }, (_, h) => h); const dis = canEdit ? "" : "disabled"; %>
     <div class="mk-head">
       <div class="mk-head-main"><h1>Réglages SMS</h1><p class="mk-head-sub">Par quel service partent vos SMS, sous quel nom, à quelles heures et à quel rythme. Contrairement à l'e-mail, <strong>chaque SMS est payant</strong> : les garde-fous ci-dessous protègent votre budget autant que vos contacts.</p></div></div>

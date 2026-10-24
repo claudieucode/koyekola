@@ -101,9 +101,9 @@ module.exports = () => {
     if (!req.mk.can("revisions.view")) return deny(res);
     const type = Object.hasOwn(revisions.TRASH_TYPES, req.query.type) ? String(req.query.type) : "";
     const q = String(req.query.q || "").trim().slice(0, 80);
-    const result = revisions.trashList({ type, q, page: req.query.page });
+    const result = revisions.trashList({ type, q, page: req.query.page, ctx: req.mk.ctx });
     const can = (t, k) => req.mk.can(revisions.TRASH_TYPES[t][k]);
-    res.render("marketing/trash", { title: "Corbeille", active: "corbeille", result, rows: result.rows, counts: revisions.trashCounts(), types: revisions.TRASH_TYPES, type, q, TRASH, can, cmsPagesJs: true,
+    res.render("marketing/trash", { title: "Corbeille", active: "corbeille", result, rows: result.rows, counts: revisions.trashCounts(req.mk.ctx), types: revisions.TRASH_TYPES, type, q, TRASH, siteQ: Number.isInteger(req.mk.ctx.siteFilter) ? `site=${req.mk.ctx.siteFilter}` : req.mk.ctx.siteFilter === "principal" ? "site=principal" : "", can, cmsPagesJs: true,
       canOwn: (row) => row.type !== "post" || req.mk.can("articles.write") || false });
   });
   const reportTrash = (req, label, done, failed) => {
@@ -125,6 +125,8 @@ module.exports = () => {
       const [type, rawId] = item.split(":"), id = Number(rawId), t = revisions.TRASH_TYPES[type];
       if (!t) { failed.push(`${item} : type inconnu`); continue; }
       if (!req.mk.can(action === "restaurer" ? t.write : t.del)) { failed.push(`${t.label} #${id} : droit insuffisant`); continue; }
+      // Périmètre : l'élément doit être dans la corbeille DE CETTE organisation et DE CE site (jamais d'après l'identifiant seul)
+      if (!revisions.inTrash(ctx, type, id)) { failed.push(`${t.label} #${id} : introuvable dans la corbeille de ce site`); continue; }
       try {
         if (action === "restaurer") {
           const dep = revisions.dependencies(ctx, type, id);

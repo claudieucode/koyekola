@@ -6,8 +6,11 @@ const express = require("express");
 const navigation = require("../../services/navigation");
 const { UserError } = require("../../utils/errors");
 const { need } = require("./kit");
+const db = require("../../config/database");
+const { recordAudit } = require("../audit");
 
 const BASE = "/marketing/site-web/navigation";
+const APP = "/marketing/site-web/apparence/menus";
 
 module.exports = () => {
   const router = express.Router();
@@ -32,23 +35,40 @@ module.exports = () => {
   };
 
   // ----- Liste des menus et emplacements -----
-  // Le même écran est l'entrée « Navigation » et « Apparence → Menus » du menu latéral
+  // Un seul écran : « Apparence → Menus » (l'ancienne adresse /navigation reste valide et l'ouvre)
   const showList = (active) => (req, res) => {
-    const menus = navigation.listMenus({ siteId: req.navSite });
+    const q = String(req.query.q || "").trim().slice(0, 80), sort = Object.hasOwn(navigation.MENU_SORTS, req.query.sort) ? req.query.sort : "nom";
+    const menus = navigation.listMenus({ siteId: req.navSite, q, sort });
     res.render("marketing/navigation", {
-      title: "Navigation", active, menus, locations: navigation.LOCATIONS, assigned: navigation.assignments({ siteId: req.navSite }), BASE, navSite: req.navSite,
+      title: "Menus", active, menus, q, sort, total: q ? navigation.listMenus({ siteId: req.navSite }).length : menus.length, locations: navigation.LOCATIONS, assigned: navigation.assignments({ siteId: req.navSite }), BASE, navSite: req.navSite,
       canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), canDelete: req.mk.can("navigation.delete"),
     });
   };
-  router.get("/site-web/navigation", need("navigation.read"), showList("navigation"));
-  router.get("/site-web/apparence/menus", need("navigation.read"), showList("apparence/menus"));
+  router.get("/site-web/navigation", need("navigation.read"), showList("apparence/menus")); // ancienne adresse : même écran, affiché sous Apparence → Menus
+  // Écran unique « Menus » (comme WordPress) : choix du menu en haut, ajout à gauche, structure et réglages à droite ; sans menu (ou « ?nouveau=1 ») :
+  // création sur place. La liste complète (tri, recherche, duplication) reste sous « Tous les menus ».
+  router.get("/site-web/apparence/menus", need("navigation.read"), (req, res) => {
+    const all = navigation.listMenus({ siteId: req.navSite, sort: "nom" });
+    const want = Number(req.query.menu);
+    const menu = all.length && req.query.nouveau !== "1" ? navigation.menuRow((all.find((m) => m.id === want) || all[0]).id) : null;
+    if (menu) return renderEditor(req, res, menu);
+    res.render("marketing/navigation-create", {
+      title: "Menus", active: "apparence/menus", BASE, APP, navSite: req.navSite, menus: all, locations: navigation.LOCATIONS, assigned: navigation.assignments({ siteId: req.navSite }),
+      canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), hasMenus: all.length > 0,
+    });
+  });
 
   router.post("/site-web/navigation/menus", need("navigation.write"), (req, res, next) => {
+    const siteQs = req.navSite === null ? "" : `?site=${req.navSite}`;
+    const wantedSlots = Object.keys(navigation.LOCATIONS).filter((k) => [].concat(req.body.locations || []).includes(k));
     try {
-      const menu = navigation.create({ name: req.body.name, description: req.body.description, siteId: req.navSite, userId: req.session.user.id });
+      if (wantedSlots.length && !req.mk.can("navigation.publish")) throw new UserError("Seuls les administrateurs affectent un menu à un emplacement.");
+      const menu = navigation.create({ name: req.body.name, description: req.body.description, siteId: req.navSite, userId: req.session.user.id, autoAddPages: req.body.auto_add_pages === "1" });
+      for (const key of wantedSlots) navigation.assign(key, menu.id, { siteId: req.navSite });
       flash(req, "ok", `Menu « ${menu.name} » créé.`);
-      res.redirect(`${BASE}/menus/${menu.id}`);
-    } catch (error) { fail(req, res, next, BASE, error); }
+      // Écran « Menus » : retour sur l'écran unique ; formulaires historiques (liste, intégrations) : adresse de l'éditeur, inchangée
+      res.redirect(req.body.depuis === "ecran" ? `${APP}?menu=${menu.id}${siteQs ? "&" + siteQs.slice(1) : ""}` : `${BASE}/menus/${menu.id}${siteQs}`);
+    } catch (error) { fail(req, res, next, req.body.depuis === "ecran" ? `${APP}?nouveau=1${siteQs ? "&" + siteQs.slice(1) : ""}` : BASE, error); }
   });
   router.post("/site-web/navigation/importer", need("navigation.write"), (req, res, next) => {
     try {
@@ -74,18 +94,53 @@ module.exports = () => {
   });
 
   // ----- Éditeur d'un menu -----
+  const renderEditor = (req, res, menu) => {
+    const flat = [];
+    const walk = (nodes, parent) => nodes.forEach((n) => { flat.push({ id: n.id, parent, type: n.type, object_id: n.object_id, url: n.url, label: n.label, title_attr: n.title_attr, css_class: n.css_class, new_tab: Boolean(n.new_tab), rel: n.rel, visibility: n.visibility, status: n.status, resource: { title: n.resource.title, url: n.resource.url, state: n.resource.state }, stateLabel: n.stateLabel }); walk(n.children, n.id); });
+    walk(navigation.tree(menu.id), null);
+    const assigned = navigation.assignments({ siteId: req.navSite });
+    const types = Object.fromEntries(Object.entries(navigation.TYPES).map(([k, d]) => [k, { label: d.label, needsObject: Boolean(d.needsObject) }]));
+    const qs = req.navSite === null ? "" : `?site=${req.navSite}`;
+    const data = {
+      menu: { id: menu.id, name: menu.name, description: menu.description, status: menu.status, autoAddPages: Boolean(menu.auto_add_pages), revision: menu.revision, updatedAt: menu.updated_at },
+      items: flat, types, maxDepth: navigation.MAX_DEPTH, maxItems: navigation.MAX_ITEMS, rel: navigation.REL_ALLOWED.filter((r) => !["noopener", "external"].includes(r)),
+      locations: Object.values(navigation.LOCATIONS).map((l) => ({ key: l.key, label: l.label, hint: l.hint, on: assigned[l.key] === menu.id, takenBy: assigned[l.key] && assigned[l.key] !== menu.id ? (navigation.menuRow(assigned[l.key]) || {}).name || "" : "" })),
+      sources: navigation.sourcesFor(req.navSite),
+      canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), canDelete: req.mk.can("navigation.delete"),
+      urls: { save: `${BASE}/menus/${menu.id}/enregistrer${qs}`, resources: `${BASE}/ressources${qs}`, preview: `${BASE}/menus/${menu.id}/apercu${qs}`, list: `${BASE}${qs}` },
+    };
+    res.render("marketing/navigation-menu", {
+      title: menu.name, active: "apparence/menus", menu, BASE, navSite: req.navSite, canWrite: data.canWrite, canDelete: data.canDelete, navJs: true,
+      locNames: data.locations.filter((l) => l.on).map((l) => l.label),
+      siblings: navigation.listMenus({ siteId: req.navSite }).map((m) => ({ id: m.id, name: m.name })),
+      count: flat.length, broken: flat.filter((n) => n.resource.state !== "ok" && ["page", "article", "category", "tag"].includes(n.type)).length,
+      dataJson: JSON.stringify(data).replace(/</g, "\\u003c").replace(/\u2028|\u2029/g, ""),
+      APP, newUrl: `${APP}?nouveau=1${req.navSite === null ? "" : `&site=${req.navSite}`}`, pickUrl: (id) => `${APP}?menu=${id}${req.navSite === null ? "" : `&site=${req.navSite}`}`,
+    });
+  };
   router.get("/site-web/navigation/menus/:id(\\d+)", need("navigation.read"), (req, res) => {
     const menu = menuOr404(req, res);
-    if (!menu) return;
-    const nodes = navigation.tree(menu.id);
-    const flat = navigation.flatten(nodes);
-    res.render("marketing/navigation-menu", {
-      title: menu.name, active: "navigation", menu, nodes, count: flat.length, broken: flat.filter((n) => n.resource.state !== "ok" && ["page", "article", "category", "tag"].includes(n.type)).length,
-      locations: navigation.LOCATIONS, assigned: navigation.assignments({ siteId: req.navSite }), types: navigation.TYPES, maxDepth: navigation.MAX_DEPTH, BASE, REL: navigation.REL_ALLOWED, navSite: req.navSite,
-      menus: navigation.listMenus({ siteId: req.navSite }), canWrite: req.mk.can("navigation.write"), canPublish: req.mk.can("navigation.publish"), canDelete: req.mk.can("navigation.delete"),
-      navJs: true,
-    });
+    if (menu) renderEditor(req, res, menu);
   });
+  // Enregistrement de l'éditeur (JSON) : tout ou rien ; version périmée = 409 ; le site est celui du menu, vérifié plus haut
+  router.post("/site-web/navigation/menus/:id(\\d+)/enregistrer", need("navigation.write"), express.json({ limit: "1mb" }), (req, res, next) => {
+    if (!menuOr404(req, res, true)) return;
+    try {
+      const out = navigation.saveMenu(Number(req.params.id), req.body, { canPublish: req.mk.can("navigation.publish"), userId: req.session.user.id });
+      try { recordAudit(db, { organizationId: req.mk.ctx.organizationId, userId: req.session.user.id, action: "menu.saved", resourceType: "menu", resourceId: String(out.menu.id), siteId: req.navSite, metadata: { items: out.count, created: out.created, removed: out.removed } }); } catch { /* la journalisation ne bloque jamais l'enregistrement */ }
+      res.json({ ok: true, revision: out.menu.revision, name: out.menu.name, updatedAt: out.menu.updated_at, count: out.count, created: out.created, removed: out.removed, idMap: out.idMap });
+    } catch (error) {
+      if (!(error instanceof UserError)) return next(error);
+      res.status(error.status || 400).json({ ok: false, error: error.message, conflict: error.status === 409 });
+    }
+  });
+  // Aperçu : le rendu public du menu (même gabarit que l'en-tête), éléments masqués ou non publiés exclus ; rien n'est enregistré
+  router.get("/site-web/navigation/menus/:id(\\d+)/apercu", need("navigation.read"), (req, res, next) => {
+    const menu = menuOr404(req, res, true);
+    if (!menu) return;
+    res.render("partials/nav-menu", { items: navigation.preview(menu.id), level: 1, prefix: "pv", menuClass: "nav-menu--preview", menuLabel: "Aperçu du menu", navIsCurrent: () => false }, (err, html) => (err ? next(err) : res.json({ ok: true, html })));
+  });
+
   router.post("/site-web/navigation/menus/:id(\\d+)", need("navigation.write"), (req, res, next) => {
     const back = `${BASE}/menus/${req.params.id}`;
     if (!menuOr404(req, res)) return;
@@ -160,9 +215,15 @@ module.exports = () => {
 
   // ----- Recherche de ressources (jamais toute la liste dans le navigateur) -----
   router.get("/site-web/navigation/ressources", need("navigation.read"), (req, res) => {
-    const type = String(req.query.type || "");
+    const type = String(req.query.type || ""), source = String(req.query.source || "");
+    const offset = Math.max(0, Math.min(Number(req.query.offset) || 0, 500)), limit = 20;
+    if (source) {
+      const rows = navigation.searchSource(source, req.query.q, limit + 1 + offset, { siteId: req.navSite }).slice(offset);
+      return res.json({ results: rows.slice(0, limit), hasMore: rows.length > limit });
+    }
     if (!navigation.TYPES[type] || !navigation.TYPES[type].search) return res.status(400).json({ error: "Type inconnu." });
-    res.json({ results: navigation.search(type, req.query.q, 20, { siteId: req.navSite }) });
+    const rows = navigation.search(type, req.query.q, limit, { siteId: req.navSite, offset });
+    res.json({ results: rows.slice(0, limit), hasMore: rows.length > limit });
   });
   return router;
 };

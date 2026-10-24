@@ -64,11 +64,15 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "cms_ping_log": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_revisions": {
    "siteId": true,
    "classe": "isolee"
   },
-  "cms_widget_layouts": {
+  "cms_template_imports": {
    "siteId": true,
    "classe": "isolee"
   },
@@ -80,7 +84,15 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "cms_ping_log": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_url_history": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "cms_widget_layouts": {
    "siteId": true,
    "classe": "isolee"
   },
@@ -185,6 +197,14 @@
    "classe": "plateforme"
   },
   "mk_campaigns": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_connections": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_connector_prefs": {
    "siteId": true,
    "classe": "isolee"
   },
@@ -621,6 +641,10 @@
    "classe": "a-isoler-B6"
   },
   "seo_site_settings": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "seo_site_sitemaps": {
    "siteId": true,
    "classe": "isolee"
   },

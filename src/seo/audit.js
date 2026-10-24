@@ -46,6 +46,7 @@ const KIND_CATEGORIES = { technical: ["technical", "indexability", "metadata"], 
 const MAX_PAGES = 400;
 const PRIVATE = robots.PRIVATE;
 let running = null;
+let runningSite = null; // site de l'analyse en cours (null = analyse centrale) : une seule analyse à la fois pour toute la plateforme (charge du serveur)
 
 // Lien d'une page → chemin interne (null si externe, ancre, mailto…)
 function internalPath(href, hosts) {
@@ -78,30 +79,48 @@ async function checkExternal(url) {
   return r;
 }
 
-async function crawl({ host, onProgress }) {
+// Périmètre d'UN site (écran SEO du site) : ses pages en ligne seulement. Le site vient de l'appelant (adresse vérifiée par le serveur), jamais d'une saisie.
+// Un site à domaine propre est lu sous son domaine ; un site sans domaine est lu sous l'hôte de la requête, à l'adresse /p/<adresse> de ses pages.
+function siteScope(siteId, req) {
+  if (!Number.isInteger(siteId)) throw new Error("Analyse d'un site : site non vérifié.");
+  const urls = require("../services/urls");
+  const info = urls.siteInfo(siteId);
+  const rows = db.prepare("SELECT id, slug, name, title, site_id, status, archived_at FROM mk_landing_pages WHERE site_id = ? AND status = 'published' AND archived_at IS NULL ORDER BY id").all(siteId);
+  const inventory = rows.map((r) => ({ type: "web_page", key: String(r.id), name: r.title || r.name, path: urls.pageCanonicalPath(r) }));
+  let host = req.get("host");
+  if (info && info.base) { try { host = new URL(info.base).host; } catch { /* adresse illisible : l'hôte de la requête est conservé */ } }
+  return { siteId, info, host, inventory, paths: new Set(inventory.map((e) => e.path)) };
+}
+const MAX_FOREIGN = 100; // adresses hors du site inspectées seulement pour connaître leur statut (liens cassés) : jamais explorées ni évaluées
+
+async function crawl({ host, onProgress, scope = null }) {
   const hosts = [host, String(process.env.SITE_URL || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "")].filter(Boolean);
-  const inventory = entities.list();
+  const inventory = scope ? scope.inventory : entities.list();
   const byPath = new Map(inventory.map((e) => [e.path, e]));
-  const queue = [...new Set(["/", ...inventory.map((e) => e.path)])];
+  const queue = scope ? [...new Set(inventory.map((e) => e.path))] : [...new Set(["/", ...inventory.map((e) => e.path)])];
+  if (scope && !queue.length) return { pages: new Map(), hosts, inventory };
+  let foreign = 0;
   const seen = new Set();
   const pages = new Map();
   // Garde-fou : si le site ne peut pas lire sa propre page d'accueil, l'audit s'arrête (aucun faux problème)
-  const first = await inspect("/", { host });
+  const first = await inspect(scope ? queue[0] : "/", { host });
   if (!first.ok || first.status === 0) throw new Error(`le serveur n'a pas pu lire ses propres pages (${first.error || "aucune réponse"}). Vérifiez la variable SITE_URL.`);
   while (queue.length && pages.size < MAX_PAGES) {
     const path = queue.shift();
     if (seen.has(path) || isPrivate(path)) continue;
     seen.add(path);
+    const own = !scope || scope.paths.has(path);
+    if (!own && ++foreign > MAX_FOREIGN) continue;
     const r = await inspect(path, { host });
-    pages.set(path, { ...r, entity: byPath.get(path) || null });
+    pages.set(path, { ...r, entity: byPath.get(path) || null, foreign: !own });
     if (pages.size % 10 === 0 && onProgress) onProgress(pages.size);
-    if (r.page) for (const l of r.page.allLinks) { const p = internalPath(l.href, hosts); if (p && !seen.has(p) && !isPrivate(p)) queue.push(p); }
+    if (own && r.page) for (const l of r.page.allLinks) { const p = internalPath(l.href, hosts); if (p && !seen.has(p) && !isPrivate(p)) queue.push(p); }
   }
   return { pages, hosts, inventory };
 }
 
 // Évalue toutes les règles. Renvoie { issues, checks } ; checks[catégorie] = { total, passed } pondérés par gravité
-async function evaluate({ pages, hosts }, { kind = "full", req }) {
+async function evaluate({ pages, hosts }, { kind = "full", req, scope = null }) {
   const issues = [];
   const checks = Object.fromEntries(Object.keys(CATEGORIES).map((c) => [c, { total: 0, passed: 0, count: 0, failed: 0 }]));
   const wanted = KIND_CATEGORIES[kind] || Object.keys(CATEGORIES);
@@ -114,10 +133,11 @@ async function evaluate({ pages, hosts }, { kind = "full", req }) {
     c.total += w; c.count++;
     if (result) { c.failed++; issues.push({ rule_id: ruleId, category: rule.category, severity: rule.severity, path, detail: String(result).slice(0, 500), data }); } else c.passed += w;
   };
-  const map = sitemap.entries();
+  const map = scope ? sitemap.entriesForSite(scope.siteId) : sitemap.entries();
   const inSitemap = new Set(map.included.map((e) => e.path));
-  const blocked = new Set(robots.conflicts(req, [...inSitemap]));
-  const ok = [...pages.values()].filter((p) => p.status === 200 && p.page);
+  const blocked = new Set(robots.conflicts(req, [...inSitemap], scope ? { siteId: scope.siteId, preview: true, base: scope.info && scope.info.base } : {}));
+  const mine = [...pages.values()].filter((p) => !p.foreign); // pages du périmètre analysé ; les autres ne servent qu'à connaître le statut d'une cible de lien
+  const ok = mine.filter((p) => p.status === 200 && p.page);
   const indexable = ok.filter((p) => !(p.page.robots || "").includes("noindex"));
   const statusOf = (path) => (pages.get(path) ? pages.get(path).status : null);
   const toPath = (url) => internalPath(url, hosts);
@@ -136,7 +156,7 @@ async function evaluate({ pages, hosts }, { kind = "full", req }) {
     if (l.inMain) inboundMain.set(t, (inboundMain.get(t) || 0) + 1);
   }
 
-  for (const p of pages.values()) {
+  for (const p of mine) {
     const inMap = inSitemap.has(p.path);
     if (inMap) {
       run("sitemap_url_error", p.path, p.status === 200 ? false : `Réponse ${p.status || "aucune"}${p.location ? ` → ${p.location}` : ""}`);
@@ -275,8 +295,8 @@ async function evaluate({ pages, hosts }, { kind = "full", req }) {
     }
   }
   // Site : chaînes de redirections gérées, adresses introuvables visitées par des personnes (30 derniers jours)
-  for (const c of redirects.chains().filter((x) => !x.loop && x.id)) run("redirect_chain", c.source, c.path.join(" → "), { redirectId: c.id });
-  for (const r of db.prepare(`SELECT path, hits_human, last_seen FROM seo_404 WHERE ignored = 0 AND hits_human > 0 AND last_seen >= datetime('now', '-30 days')${require("./store").siteSchemaReady() ? " AND site_id IS NULL" : ""} ORDER BY hits_human DESC LIMIT 50`).all()) run("not_found_hits", r.path, `${r.hits_human} visite(s) de personnes, dernière le ${r.last_seen}`);
+  for (const c of redirects.chains(scope ? scope.siteId : null).filter((x) => !x.loop && x.id)) run("redirect_chain", c.source, c.path.join(" → "), { redirectId: c.id });
+  for (const r of db.prepare(`SELECT path, hits_human, last_seen FROM seo_404 WHERE ignored = 0 AND hits_human > 0 AND last_seen >= datetime('now', '-30 days')${require("./store").siteSchemaReady() ? (scope ? ` AND site_id = ${scope.siteId}` : " AND site_id IS NULL") : ""} ORDER BY hits_human DESC LIMIT 50`).all()) run("not_found_hits", r.path, `${r.hits_human} visite(s) de personnes, dernière le ${r.last_seen}`);
   return { issues, checks };
 }
 
@@ -293,16 +313,25 @@ function scoresOf(checks) {
   return out;
 }
 
-async function runAudit({ kind = "full", userId = null, req, source = "admin" }) {
-  if (running) return { ok: false, error: "Un audit est déjà en cours." };
+// siteId : analyse d'UN site (vérifié par l'appelant) — ses pages seulement, résultats rattachés à ce site. Sans siteId : analyse centrale (comportement historique).
+async function runAudit({ kind = "full", userId = null, req, source = "admin", siteId = null }) {
+  if (running) return { ok: false, error: runningSite && runningSite !== siteId ? "Une analyse est déjà en cours pour un autre site : patientez quelques minutes avant de relancer." : "Une analyse est déjà en cours." };
   if (!KINDS[kind]) return { ok: false, error: "Type de scan inconnu." };
-  const id = Number(db.prepare("INSERT INTO seo_audits (kind, triggered_by, source) VALUES (?, ?, ?)").run(kind, userId, source).lastInsertRowid);
+  let scope = null;
+  if (siteId !== null) {
+    if (!require("./store").hasSiteColumn("seo_audits")) return { ok: false, error: "Les analyses par site ne sont pas disponibles : la mise à jour de la base n'est pas terminée." };
+    scope = siteScope(siteId, req);
+  }
+  const id = Number((scope
+    ? db.prepare("INSERT INTO seo_audits (kind, triggered_by, source, site_id) VALUES (?, ?, ?, ?)").run(kind, userId, source, scope.siteId)
+    : db.prepare("INSERT INTO seo_audits (kind, triggered_by, source) VALUES (?, ?, ?)").run(kind, userId, source)).lastInsertRowid);
   running = id;
-  const host = req.get("host");
+  runningSite = scope ? scope.siteId : null;
+  const host = scope ? scope.host : req.get("host");
   const done = (async () => {
     try {
-      const site = await crawl({ host, onProgress: (n) => db.prepare("UPDATE seo_audits SET pages = ? WHERE id = ?").run(n, id) });
-      const { issues, checks } = await evaluate(site, { kind, req });
+      const site = await crawl({ host, scope, onProgress: (n) => db.prepare("UPDATE seo_audits SET pages = ? WHERE id = ?").run(n, id) });
+      const { issues, checks } = await evaluate(site, { kind, req, scope });
       const insert = db.prepare("INSERT INTO seo_issues (audit_id, rule_id, category, severity, path, detail, data) VALUES (?, ?, ?, ?, ?, ?, ?)");
       db.exec("BEGIN");
       for (const i of issues) insert.run(id, i.rule_id, i.category, i.severity, i.path, i.detail, i.data ? JSON.stringify(i.data) : null);
@@ -312,7 +341,7 @@ async function runAudit({ kind = "full", userId = null, req, source = "admin" })
       try { db.exec("ROLLBACK"); } catch { /* aucune transaction ouverte */ }
       console.error("[KOLAKISA] Audit SEO en échec :", error && error.message);
       db.prepare("UPDATE seo_audits SET status = 'failed', error = ?, finished_at = datetime('now') WHERE id = ?").run(String(error && error.message || "Erreur inconnue").slice(0, 300), id);
-    } finally { running = null; }
+    } finally { running = null; runningSite = null; }
   })();
   return { ok: true, id, done };
 }
@@ -331,8 +360,16 @@ async function analyzePage(path, req) {
   return { status: r.status, error: r.error || null, issues: issues.filter((i) => i.path === path && !["orphan_page", "weak_inlinks", "redirect_chain", "not_found_hits"].includes(i.rule_id)), scores: scoresOf(checks) };
 }
 
-const list = (limit = 30) => db.prepare("SELECT a.*, u.username FROM seo_audits a LEFT JOIN users u ON u.id = a.triggered_by ORDER BY a.id DESC LIMIT ?").all(limit).map((a) => ({ ...a, scores: a.scores ? JSON.parse(a.scores) : null }));
-const get = (id) => { const a = db.prepare("SELECT * FROM seo_audits WHERE id = ?").get(id); return a ? { ...a, scores: a.scores ? JSON.parse(a.scores) : null } : null; };
+// Périmètre d'une lecture : site undefined = toutes les analyses ; null = analyses centrales (par défaut) ; entier = CE site seulement
+const siteSql = (site, alias = "") => {
+  if (site === undefined || !require("./store").hasSiteColumn("seo_audits")) return { sql: "", params: [] };
+  const col = `${alias}site_id`;
+  return Number.isInteger(site) ? { sql: ` AND ${col} = ?`, params: [site] } : { sql: ` AND ${col} IS NULL`, params: [] };
+};
+const parseScores = (a) => ({ ...a, scores: a.scores ? JSON.parse(a.scores) : null });
+const list = (limit = 30, { site = null } = {}) => { const sc = siteSql(site, "a."); return db.prepare(`SELECT a.*, u.username FROM seo_audits a LEFT JOIN users u ON u.id = a.triggered_by WHERE 1 = 1${sc.sql} ORDER BY a.id DESC LIMIT ?`).all(...sc.params, limit).map(parseScores); };
+// get(id) : sans périmètre, toute analyse (équipe centrale) ; get(id, { site }) : seulement si elle appartient à ce périmètre (jamais l'analyse d'un autre site)
+const get = (id, { site } = {}) => { const sc = siteSql(site); const a = db.prepare(`SELECT * FROM seo_audits WHERE id = ?${sc.sql}`).get(id, ...sc.params); return a ? parseScores(a) : null; };
 const issuesOf = (id, { severity = "", category = "", q = "" } = {}) => {
   const where = ["audit_id = ?"];
   const params = [id];
@@ -342,7 +379,7 @@ const issuesOf = (id, { severity = "", category = "", q = "" } = {}) => {
   const order = "CASE severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END";
   return db.prepare(`SELECT * FROM seo_issues WHERE ${where.join(" AND ")} ORDER BY ${order}, rule_id, path LIMIT 2000`).all(...params).map((i) => ({ ...i, data: i.data ? JSON.parse(i.data) : null }));
 };
-const latest = () => db.prepare("SELECT id FROM seo_audits WHERE status = 'done' ORDER BY id DESC LIMIT 1").get();
+const latest = ({ site = null } = {}) => { const sc = siteSql(site); return db.prepare(`SELECT id FROM seo_audits WHERE status = 'done'${sc.sql} ORDER BY id DESC LIMIT 1`).get(...sc.params); };
 
 // Corrections automatiques réelles (modifient les données, journalisées)
 function fix(issueId, userId) {
@@ -373,4 +410,4 @@ function fix(issueId, userId) {
   return { ok: true };
 }
 
-module.exports = { KIND_CATEGORIES, runAudit, analyzePage, list, get, issuesOf, latest, fix, KINDS, isRunning: () => running, scoresOf, internalPath, checkExternal };
+module.exports = { KIND_CATEGORIES, runAudit, analyzePage, list, get, issuesOf, latest, fix, KINDS, isRunning: () => running, runningSiteId: () => runningSite, scoresOf, internalPath, checkExternal };

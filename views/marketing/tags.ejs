@@ -3,7 +3,9 @@
   const canWrite = mk.can("lists.write");
 %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Étiquettes <span class="mk-count"><%= tags.length %></span></h1><p class="mk-head-sub">Des mots-clés libres à poser sur les contacts (VIP, webinaire…). Elles servent aussi aux segments.</p></div></div>
+      <div class="mk-head-main"><h1>Étiquettes <span class="mk-count"><%= tags.length %></span></h1><p class="mk-head-sub">Des mots-clés libres à poser sur les contacts (VIP, webinaire…). Elles servent aussi aux segments.</p></div>
+      <div class="mk-head-actions"><% if (canWrite) { %><button type="button" class="btn btn-primary" data-mk-modal-open="nouvelle" data-tip="Crée une étiquette à poser ensuite sur des contacts, seul ou par action groupée.">Créer une étiquette</button><% } %></div>
+    </div>
 
     <% if (!tags.length) { %>
       <div class="mk-empty">

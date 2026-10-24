@@ -51,7 +51,9 @@ function guardPublication(fields, status, req, extra = {}) {
 
 const router = express.Router();
 // Articles par page : réglage « Lecture » (Paramètres), 10 par défaut
-const perPage = () => require("../services/settings").main().postsPerPage;
+// Lecture (Paramètres → Lecture) : valeurs du site de la requête (domaine propre) ou du site principal
+const readingOf = (req) => (req && req.kwSite ? req.kwSite : require("../services/settings").main());
+const perPage = (req) => readingOf(req).postsPerPage;
 const MAX_MARKDOWN = 50000;
 const MAX_HTML = 250000;
 const NEWSLETTER_KEY = "blog.newsletter_form";
@@ -146,7 +148,7 @@ function renderList(req, res, { filter = null } = {}) {
     rows = rows.filter((p) => p.id !== featured.id);
   }
   const total = rows.length;
-  const PER_PAGE = perPage();
+  const PER_PAGE = perPage(req);
   const pages = Math.max(1, Math.ceil(total / PER_PAGE));
   const asked = Number.parseInt(req.query.page, 10);
   const page = Number.isInteger(asked) && asked >= 1 && asked <= pages ? asked : 1;
@@ -157,8 +159,9 @@ function renderList(req, res, { filter = null } = {}) {
     theme: themeFor({ name: p.category || "", slug: p.category ? slugify(p.category) : "" }),
   });
   const posts = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(decorate);
-  const basePath = filter ? filter.path : "/blog";
-  const heading = filter ? filter.heading : "Blog";
+  const listed0 = req.kwList || null; // accueil en mode articles, ou page des articles : l'adresse publique n'est pas /blog
+  const basePath = filter ? filter.path : listed0 ? listed0.basePath : "/blog";
+  const heading = filter ? filter.heading : listed0 && listed0.title ? listed0.title : "Blog";
   const crumbs = filter ? [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }, ...(filter.ancestors || []), { name: filter.label }] : [{ name: "Accueil", url: "/" }, { name: "Blog" }];
   // Données structurées : l'article à la une fait partie de la liste (en tête), comme les autres articles de la page
   const listed = featured && page === 1 ? [featured, ...posts] : posts;
@@ -217,7 +220,7 @@ router.get("/recherche", (req, res) => {
     const scope = urls.contentScope("post", "posts.id", req.kwSite || null);
     articles = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC`).all(...(scope ? scope.params : []))
       .filter((p) => matches([p.title, p.excerpt, p.category, p.subcategory, p.tags, blog.textOf(p)])).slice(0, 30)
-      .map((p) => ({ title: p.title, url: `/blog/${encodeURIComponent(urls.publicHomeOf("post", p.id) ? urls.addressOf("post", p) : p.slug)}`, summary: excerptOf(p) }));
+      .map((p) => ({ title: p.title, url: urls.publicPath("post", p), summary: excerptOf(p) }));
     pages = db.prepare("SELECT name, title, slug, description FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL AND kind = 'page' AND site_id IS NULL ORDER BY published_at DESC, id DESC").all()
       .filter((p) => matches([p.name, p.title, p.description])).slice(0, 30)
       .map((p) => ({ title: p.title || p.name, url: `/p/${encodeURIComponent(p.slug)}`, summary: p.description || "" }));
@@ -228,21 +231,22 @@ router.get("/recherche", (req, res) => {
 router.get("/blog/feed.xml", (req, res) => {
   const { escapeXml } = require("../utils/seo");
   const feedScope = urls.contentScope("post", "posts.id", req.kwSite || null); // le flux d'un domaine ne contient que les articles de ce domaine
-  const rows = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${feedScope ? " AND " + feedScope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT 20`).all(...(feedScope ? feedScope.params : []));
+  const rows = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${feedScope ? " AND " + feedScope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT ?`).all(...(feedScope ? feedScope.params : []), readingOf(req).feedItems);
+  const full = readingOf(req).feedContent === "full"; // Paramètres → Lecture : texte complet ou extrait
   const siteName = (req.kwSite && req.kwSite.name) || require("../seo/settings").get("site_name") || "KOLAKISA";
   const date = (value) => { const d = new Date(String(value || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(value)) ? "" : "Z")); return Number.isNaN(d.getTime()) ? new Date(0).toUTCString() : d.toUTCString(); };
   const items = rows.map((p) => {
-    const url = absoluteUrl(req, `/blog/${encodeURIComponent(urls.publicHomeOf("post", p.id) ? urls.addressOf("post", p) : p.slug)}`);
-    return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description></item>`;
+    const url = absoluteUrl(req, urls.publicPath("post", p));
+    return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description>${full ? `<content:encoded><![CDATA[${String(blog.renderPost(p).html || "").replace(/\]\]>/g, "]]]]><![CDATA[>")}]]></content:encoded>` : ""}</item>`;
   }).join("");
   const channelLast = rows.length ? date(rows[0].published_at) : new Date(0).toUTCString();
-  res.set("Content-Type", "application/rss+xml; charset=utf-8").set("Cache-Control", "public, max-age=300");
-  res.send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>${escapeXml(siteName)} — Blog</title><link>${escapeXml(absoluteUrl(req, "/blog"))}</link><description>Les derniers articles du blog.</description><language>fr</language><lastBuildDate>${channelLast}</lastBuildDate><atom:link href="${escapeXml(absoluteUrl(req, "/blog/feed.xml"))}" rel="self" type="application/rss+xml"/>${items}</channel></rss>`);
+  res.set("Content-Type", "application/rss+xml; charset=utf-8").set("Cache-Control", "public, no-cache");
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>${escapeXml(siteName)} — Blog</title><link>${escapeXml(absoluteUrl(req, "/blog"))}</link><description>Les derniers articles du blog.</description><language>fr</language><lastBuildDate>${channelLast}</lastBuildDate><atom:link href="${escapeXml(absoluteUrl(req, "/blog/feed.xml"))}" rel="self" type="application/rss+xml"/>${items}</channel></rss>`);
 });
 
 // Archives : adresses configurables (taxonomy.baseOf) ; un terme inexistant est une vraie 404 (jamais une archive « vide » inventée)
-const categoryBase = taxonomy.baseOf("category");
-const tagBase = taxonomy.baseOf("tag");
+const categoryBase = taxonomy.defaultBase("category");
+const tagBase = taxonomy.defaultBase("tag");
 router.get(`${categoryBase}/:slug`, (req, res) => {
   const term = urls.resolveTerm("category", req.params.slug, req.kwSite || null);
   if (!term) return res.status(404).render("error", { message: "Catégorie introuvable." });
@@ -265,6 +269,7 @@ router.get("/blog/auteur/:id", (req, res) => {
 
 // Page d'un article (aussi utilisée par l'aperçu de l'éditeur : preview = true)
 function renderPostPage(req, res, post, { preview = false } = {}) {
+  const commentCfgNow = commentsEngine.settingsOf("post", post.id); // réglages du site de CET article
   const commentThread = commentsEngine.thread("post", post.id, { page: req.query.cpage });
   // « Répondre » : le formulaire se prépare pour ce commentaire (il doit être approuvé et son fil prolongeable)
   let replyTarget = null;
@@ -288,7 +293,7 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   if (postTerms.primary) { const root = taxonomy.ancestors(postTerms.primary.id)[0]; crumbs.push(root ? { name: root.name, url: taxonomy.urlOf(root) } : { name: postTerms.primary.name, url: postTerms.primary.url }); } // fil d'Ariane : catégorie racine, comme avant
   else if (post.category) crumbs.push({ name: post.category, url: `${taxonomy.baseOf("category")}/${taxonomy.categorySlugOfName(post.category)}` });
   crumbs.push({ name: post.title });
-  const ownUrl = absoluteUrl(req, `/blog/${urls.publicHomeOf("post", post.id) ? urls.addressOf("post", post) : post.slug}`);
+  const ownUrl = absoluteUrl(req, urls.publicPath("post", post));
   const canonical = post.canonical_url && /^https:\/\//i.test(post.canonical_url) ? post.canonical_url : ownUrl;
   const cover = post.cover_path ? absoluteUrl(req, post.cover_path) : null;
   const socialImage = post.og_image_path ? absoluteUrl(req, post.og_image_path) : cover;
@@ -363,11 +368,13 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     similar: post.published ? blog.similar(post, 3, pageScope) : [],
     comments: commentThread,
     replyTo: replyTarget,
-    commentHtml: (body) => commentsEngine.html(body, { links: commentsEngine.settings().links_allowed }),
-    commentCfg: commentsEngine.settings(),
+    commentHtml: (body) => commentsEngine.html(body, { links: commentCfgNow.links_allowed }),
+    commentCfg: commentCfgNow,
+    commentClosedByAge: commentsEngine.closedByAge(post, commentCfgNow),
+    commenterCookie: commentCfgNow.cookie_consent ? readCommenterCookie(req) : null,
     commentForm: req.session.commentForm || {},
     commentToken: antispam.issue(),
-    commentsOpen: Boolean(post.comments_enabled && post.published && !preview),
+    commentsOpen: Boolean(post.comments_enabled && post.published && !preview && !commentsEngine.closedByAge(post, commentCfgNow)),
     commentMax: blog.COMMENT_MAX,
     commentError: req.session.commentError || null,
     commentDraft: req.session.commentDraft || "",
@@ -385,13 +392,27 @@ const guestLimiter = createRateLimiter(3, 10 * 60 * 1000);   // invités : 3 com
 const burstLimiter = createRateLimiter(1, 5 * 1000);         // jamais deux envois en moins de 5 secondes depuis la même adresse (invités)
 // Un formateur ou un membre de l'équipe (éditeur et plus) est publié tout de suite
 const canModerate = (user) => Boolean(user && (user.role === "formateur" || (marketingOrgId() && cmsAccess.can(user.id, "comments.moderate", { organizationId: marketingOrgId() }))));
+// Cookie du commentateur (nom et e-mail mémorisés) : écrit SEULEMENT si le site propose la case et que la personne l'a cochée ; sinon jamais, et un ancien cookie est effacé.
+// HttpOnly, SameSite=Lax, « Secure » en HTTPS, 180 jours, 300 octets au plus.
+const COMMENTER_COOKIE = "kw_commenter";
+function readCommenterCookie(req) {
+  const m = new RegExp(`(?:^|;\\s*)${COMMENTER_COOKIE}=([^;]{1,400})`).exec(String(req.headers.cookie || ""));
+  if (!m) return null;
+  try { const v = JSON.parse(decodeURIComponent(m[1])); return { name: String(v.n || "").slice(0, 60), email: String(v.e || "").slice(0, 120) }; } catch { return null; }
+}
+function writeCommenterCookie(req, res, cfg, user, remember, name, email) {
+  const opts = { httpOnly: true, sameSite: "lax", secure: req.secure, path: "/" };
+  if (user || !cfg.cookie_consent || !remember) { if (readCommenterCookie(req)) res.clearCookie(COMMENTER_COOKIE, opts); return; }
+  const value = JSON.stringify({ n: String(name || "").slice(0, 60), e: String(email || "").slice(0, 120) }); // res.cookie() encode la valeur
+  if (encodeURIComponent(value).length <= 300) res.cookie(COMMENTER_COOKIE, value, { ...opts, maxAge: 180 * 86400000 });
+}
 router.post("/blog/:slug/commentaires", (req, res) => {
   const found = urls.resolvePost(req.params.slug, req.kwSite || null); // même résolution que la page : un article d'un autre domaine est « introuvable » (aucun commentaire déposé ailleurs)
   const post = found && !found.redirect && found.row.published ? found.row : null;
   if (!post) return res.status(404).render("error", { message: "Article introuvable." });
   const back = `/blog/${req.params.slug}`;
   const user = req.session.user || null;
-  const cfg = commentsEngine.settings();
+  const cfg = commentsEngine.settingsOf("post", post.id);
   if (!user && !cfg.guests_allowed) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
   if (!post.comments_enabled) return res.redirect(`${back}#commentaires`);
   const ip = req.ip;
@@ -399,8 +420,9 @@ router.post("/blog/:slug/commentaires", (req, res) => {
   try {
     if (user ? commentLimiter.isLimited(key) : guestLimiter.isLimited(key) || burstLimiter.isLimited(key)) throw new UserError("Vous avez publié beaucoup de commentaires en peu de temps : réessayez dans quelques minutes.");
     const full = user ? db.prepare("SELECT id, username, email, role FROM users WHERE id = ?").get(user.id) : null;
-    const result = commentsEngine.create({ type: "post", contentId: post.id, parentId: /^\d{1,9}$/.test(String(req.body.parent_id || "")) ? Number(req.body.parent_id) : null, user: full, name: req.body.author_name, email: req.body.author_email, body: req.body.body, ip, honeypot: String(req.body.contact_url || "").trim() ? "honeypot" : (!user && !antispam.check(req.body.form_token) ? "timing" : ""), trusted: canModerate(full) });
+    const result = commentsEngine.create({ type: "post", contentId: post.id, parentId: /^\d{1,9}$/.test(String(req.body.parent_id || "")) ? Number(req.body.parent_id) : null, user: full, name: req.body.author_name, email: req.body.author_email, body: req.body.body, ip, userAgent: String(req.headers["user-agent"] || "").slice(0, 300), honeypot: String(req.body.contact_url || "").trim() ? "honeypot" : (!user && !antispam.check(req.body.form_token) ? "timing" : ""), trusted: canModerate(full) });
     if (user) commentLimiter.hit(key); else { guestLimiter.hit(key); burstLimiter.hit(key); }
+    writeCommenterCookie(req, res, cfg, user, req.body.remember === "1", req.body.author_name, req.body.author_email);
     if (result.status === "approved") return res.redirect(`${back}#commentaire-${result.id}`);
     req.session.commentNotice = result.status === "spam" ? "Votre commentaire a bien été reçu." : "Merci ! Votre commentaire est en attente de modération : il apparaîtra dès qu'il sera approuvé.";
     res.redirect(`${back}#commentaires`);
@@ -441,9 +463,9 @@ router.sitemapEntries = () => {
     { path: "/blog" },
     ...taxonomy.publicTerms("category").map((t) => ({ path: taxonomy.urlOf(t) })),
     ...db
-      .prepare("SELECT slug, updated_at FROM posts WHERE published = 1 AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
+      .prepare("SELECT * FROM posts WHERE published = 1 AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
       .all()
-      .map((p) => ({ path: `/blog/${p.slug}`, lastmod: isoDate(p.updated_at) })),
+      .map((p) => ({ path: urls.publicPath("post", p), lastmod: isoDate(p.updated_at) })),
   ];
 };
 
@@ -677,12 +699,30 @@ function newArticleSite(req) {
   if (!orgId || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(db)}`).get(Number(raw), orgId)) throw new UserError("Site introuvable.");
   return Number(raw);
 }
+// Nouvel article : la catégorie par défaut du site est cochée d'avance (l'auteur peut la décocher ou en choisir une autre)
+function defaultSelection(siteId) {
+  const id = require("../services/writing").defaultCategoryId(siteId ?? null);
+  const t = id ? taxonomy.get(id) : null;
+  return t ? { categories: [{ ...t, isPrimary: true }], tags: [], primary: { ...t, isPrimary: true } } : { categories: [], tags: [], primary: null };
+}
 const editorSite = (req, post) => (post ? (siteContent.siteOf(db, "post", post.id) ?? null) : newArticleSite(req));
 
+// Premier jour de la semaine du calendrier de l'éditeur : réglage « La semaine commence le » (Paramètres → Général) du site de l'article, sinon du site principal
+function weekStartOf(req) {
+  try {
+    const engine = require("../services/settings");
+    if (Number.isInteger(req.blogSite) && req.blogSite > 0) {
+      const org = db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get();
+      return engine.readAll({ siteId: req.blogSite }, { organizationId: org && org.id, can: () => true, orgLevel: true }).week_start.value;
+    }
+    return engine.main().weekStart;
+  } catch { return "monday"; }
+}
 function editorData(req, post) {
   const autosave = post ? blog.getAutosave(post.id) : null;
   const marketing = req.app.locals.marketing;
   return {
+    weekStart: weekStartOf(req),
     post,
     editorHtml: post ? (post.content_format === "html" ? post.content : markdownToEditorHtml(post.content)) : "",
     // Sauvegarde automatique plus récente que la dernière version enregistrée : proposée à la restauration
@@ -691,7 +731,7 @@ function editorData(req, post) {
     // Les listes de l'éditeur ne montrent que ce qui appartient au site de l'article (aucun terme ni suggestion d'un autre site) ; accès limité : pas de listes globales
     siteId: editorSite(req, post), restrictedSite: req.blogSite ?? null,
     instructors: blog.instructors(), categories: req.blogSite ? [] : blog.categories(), subcategories: req.blogSite ? [] : blog.subcategories(), tags: req.blogSite ? [] : blog.allTags(),
-    taxo: { categories: taxonomy.tree("category", siteContent.scopeForSite("term", "t.id", editorSite(req, post))).map(termJson), selected: post ? taxonomy.termsOf("post", post.id) : { categories: [], tags: [], primary: null } },
+    taxo: { categories: taxonomy.tree("category", siteContent.scopeForSite("term", "t.id", editorSite(req, post))).map(termJson), selected: post ? taxonomy.termsOf("post", post.id) : defaultSelection(editorSite(req, post)) },
     courses: db.prepare("SELECT slug, title FROM courses WHERE published = 1 AND archived = 0 ORDER BY title COLLATE NOCASE").all(),
     statuses: blog.STATUSES, languages: Object.keys(LANGUAGES), currentUserId: req.session.user.id,
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
@@ -872,6 +912,7 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
     // L'article naît dans le site administré (avant le classement : les termes choisis doivent être de ce site)
     if (site) siteContent.adopt({ db, organizationId: marketingOrgId(), userId: req.session.user.id, siteFilter: site }, { type: "post", id });
     applyTaxonomy(id, req.body);
+    require("../services/writing").applyDefaults(id); // aucune catégorie choisie : celle du site par défaut
     return id;
   });
   const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(newId);

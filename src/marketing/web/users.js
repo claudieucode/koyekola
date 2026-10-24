@@ -6,7 +6,7 @@
 const express = require("express");
 const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const access = require("../../services/cmsAccess");
-const mailer = require("../../utils/mailer");
+const invites = require("./inviteFlow");
 const { listAudit } = require("../audit");
 const { MarketingError } = require("../errors");
 const { UserError } = require("../../utils/errors");
@@ -24,7 +24,7 @@ module.exports = () => {
   const actor = (req) => ({ id: req.session.user.id, perms: req.mk.perms });
   const org = (req) => req.mk.ctx.organizationId;
   const guard = (req, res, next, back, action) => {
-    try { const m = action(); if (m) flash(req, "ok", typeof m === "string" ? m : m.text, typeof m === "string" ? undefined : m.detail); res.redirect(typeof back === "function" ? back() : back); }
+    try { const m = action(); if (m) flash(req, typeof m === "string" ? "ok" : m.type || "ok", typeof m === "string" ? m : m.text, typeof m === "string" ? undefined : m.detail); res.redirect(typeof back === "function" ? back() : back); }
     catch (error) {
       if (!(error instanceof UserError) && !(error instanceof MarketingError)) return next(error);
       flash(req, "error", error.message); res.redirect(typeof back === "function" ? back() : back);
@@ -35,6 +35,7 @@ module.exports = () => {
   const grantable = (req) => access.allRoles().map((r) => ({ ...r, ok: access.subset(r.permissions, req.mk.perms) }));
   const roleName = (key) => (access.getRole(key) ? access.getRole(key).name : key);
 
+  router.use("/site-web/utilisateurs", (req, res, next) => { res.locals.usersJs = true; next(); }); // script des écrans (envoi unique, modifications non enregistrées)
   // ----- Liste -----
   router.get("/site-web/utilisateurs", need("users.view"), (req, res) => {
     const sub = String(req.query.statut || "");
@@ -42,7 +43,7 @@ module.exports = () => {
     const counts = access.statusCounts(org(req));
     const result = f.statut === "en-attente" ? null : access.listMembers(org(req), { q: f.q, status: STATUS[f.statut], role: f.role, siteId: f.site, sort: f.tri, page: req.query.page });
     res.render("marketing/users", {
-      title: "Utilisateurs", active: "utilisateurs", mode: "list", f, tabs: TABS, counts, result, rows: result ? result.rows : [], invitations: f.statut === "en-attente" ? access.listInvitations(org(req)).filter((i) => i.state === "pending") : [],
+      title: "Utilisateurs", active: "utilisateurs", mode: "list", f, tabs: TABS, counts, result, rows: result ? result.rows : [], invitations: f.statut === "en-attente" ? access.listInvitations(org(req), { state: "pending", perPage: 200 }).rows : [],
       roles: access.allRoles(), sites: sites(req), roleName, BASE, me: req.session.user.id, canCreate: req.mk.can("users.create"), canEdit: req.mk.can("users.edit"), usersJs: true,
     });
   });
@@ -54,25 +55,25 @@ module.exports = () => {
   router.post("/site-web/utilisateurs/inviter", need("users.create"), (req, res, next) => {
     guard(req, res, next, `${BASE}/invitations`, () => {
       const siteId = intOrNull(req.body.site_id);
-      const r = access.invite(org(req), actor(req), { email: req.body.email, role: String(req.body.role || ""), siteId });
+      const r = access.invite(org(req), actor(req), { email: req.body.email, role: String(req.body.role || ""), siteId, name: req.body.name, message: req.body.message, days: Number(req.body.days) || access.INVITE_DAYS });
       if (r.added) return `${r.user.username} a déjà un compte : accès accordé tout de suite (rôle « ${roleName(req.body.role)} »).`;
-      const url = `${mailer.siteUrl()}/invitation/${r.token}`;
       const site = siteId ? sites(req).find((s) => s.id === siteId) : null;
-      mailer.sendInvitationEmail(db, { to: r.email, inviter: req.session.user.username, roleName: roleName(req.body.role), siteName: site ? site.name : "", url, days: access.INVITE_DAYS });
-      return { text: `Invitation créée pour ${r.email}. Un e-mail part avec le lien (valable ${access.INVITE_DAYS} jours).`, detail: `Si l'e-mail n'arrive pas (serveur d'e-mail non configuré), transmettez ce lien personnel : ${url}` };
+      const d = invites.deliver(db, { invitation: r, inviterName: req.session.user.username, roleName: roleName(req.body.role), siteName: site ? site.name : "" });
+      return invites.summary(r.email, d, r.days);
     });
   });
   router.get("/site-web/utilisateurs/invitations", need("users.view"), (req, res) => {
-    res.render("marketing/users", { title: "Invitations", active: "utilisateurs/invitations", mode: "invitations", invitations: access.listInvitations(org(req)), roleName, BASE, canCreate: req.mk.can("users.create"), f: {}, tabs: [], counts: {}, rows: [], roles: [], sites: [], canEdit: false, me: 0 });
+    const f = { q: String(req.query.q || "").trim().slice(0, 80), statut: ["pending", "accepted", "expired", "revoked"].includes(req.query.etat) ? req.query.etat : "", role: String(req.query.role || ""), site: intOrNull(req.query.site) };
+    const result = access.listInvitations(org(req), { q: f.q, state: f.statut, role: f.role, siteId: f.site, page: req.query.page });
+    res.render("marketing/users", { title: "Invitations", active: "utilisateurs/invitations", mode: "invitations", result, invitations: result.rows, f, roleName, BASE, canCreate: req.mk.can("users.create"), tabs: [], counts: {}, rows: [], roles: access.allRoles(), sites: sites(req), frame: false });
   });
   router.post("/site-web/utilisateurs/invitations/:id(\\d+)/renvoyer", need("users.create"), (req, res, next) => {
     guard(req, res, next, `${BASE}/invitations`, () => {
       const r = access.reissue(org(req), actor(req), Number(req.params.id));
       const inv = db.prepare("SELECT role, site_id FROM mk_invitations WHERE id = ?").get(r.id);
       const site = inv.site_id ? sites(req).find((s) => s.id === inv.site_id) : null;
-      const url = `${mailer.siteUrl()}/invitation/${r.token}`;
-      mailer.sendInvitationEmail(db, { to: r.email, inviter: req.session.user.username, roleName: roleName(inv.role), siteName: site ? site.name : "", url, days: access.INVITE_DAYS });
-      return { text: `Nouvelle invitation envoyée à ${r.email} (l'ancien lien ne fonctionne plus).`, detail: `Lien personnel : ${url}` };
+      const d = invites.deliver(db, { invitation: { ...r, days: access.INVITE_DAYS }, inviterName: req.session.user.username, roleName: roleName(inv.role), siteName: site ? site.name : "" });
+      return invites.summary(r.email, d, access.INVITE_DAYS, { resent: true });
     });
   });
   router.post("/site-web/utilisateurs/invitations/:id(\\d+)/revoquer", need("users.create"), (req, res, next) => {

@@ -1,0 +1,40 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+<% const fmt = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—"); %>
+<% const s = ov; const sc = s.scores && s.scores.overall ? s.scores.overall.score : null; %>
+    <% if (s.envClosed) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p><strong>Environnement non public.</strong> Ici (adresse locale ou visibilité masquée), le serveur demande aux moteurs de ne rien indexer, même si les réglages du site l'autorisent. Les tableaux montrent les réglages du site tels qu'ils s'appliqueront sur son domaine public.</p></div><% } %>
+    <% if (s.siteNoindex) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p><strong>Tout le site est en noindex.</strong> Aucune page de ce site ne sera proposée par les moteurs de recherche. <a href="<%= space.base %>/seo/indexation">Voir l'indexation</a></p></div><% } %>
+    <% if (s.truncated) { %><div class="mk-cms-soon" role="note"><p>Ce site compte plus de 500 pages en ligne : les chiffres ci-dessous portent sur les 500 premières.</p></div><% } %>
+
+    <div class="mk-stats mk-stats-4 mk-seo-appear">
+      <a class="mk-stat" href="<%= space.base %>/seo/meta"><span class="mk-stat-label">Pages en ligne</span><span class="mk-stat-value"><%= s.pages.analysed %></span><span class="mk-stat-hint">lues dans la base, telles que publiées</span></a>
+      <a class="mk-stat" href="<%= space.base %>/seo/indexation"><span class="mk-stat-label">Indexables</span><span class="mk-stat-value"><%= s.pages.indexable %></span><span class="mk-stat-hint"><%= s.pages.excluded %> exclue(s)</span></a>
+      <a class="mk-stat" href="<%= space.base %>/seo/meta"><span class="mk-stat-label">Sans description propre</span><span class="mk-stat-value"><%= s.pages.missingDescription %></span><span class="mk-stat-hint"><%= s.pages.dupTitle %> titre(s) et <%= s.pages.dupDescription %> description(s) en double</span></a>
+      <a class="mk-stat" href="<%= space.base %>/seo/404"><span class="mk-stat-label">Erreurs 404 à traiter</span><span class="mk-stat-value"><%= s.notFound.urls %></span><span class="mk-stat-hint"><%= s.notFound.human %> visite(s) de personnes</span></a>
+    </div>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="seo-state"><h2 id="seo-state">État par rubrique</h2>
+      <div class="mk-table-wrap"><table class="mk-table mk-seo-table"><caption class="sr-only">État du référencement du site par rubrique</caption>
+        <thead><tr><th scope="col">Rubrique</th><th scope="col">Constat</th><th scope="col">État</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><a href="<%= space.base %>/seo/meta">Meta</a></th><td><%= s.pages.longTitle %> titre(s) long(s) · <%= s.pages.dupTitle %> en double</td><td><span class="mk-status <%= s.pages.dupTitle || s.pages.dupDescription ? 'mk-status-warn' : 'mk-status-ok' %>"><%= s.pages.dupTitle || s.pages.dupDescription ? "À vérifier" : "Cohérent" %></span></td></tr>
+          <tr><th scope="row"><a href="<%= space.base %>/seo/indexation">Indexation</a></th><td><%= s.pages.indexable %> indexable(s) sur <%= s.pages.analysed %></td><td><span class="mk-status <%= s.siteNoindex ? 'mk-status-off' : 'mk-status-ok' %>"><%= s.siteNoindex ? "Site fermé" : "Ouvert" %></span></td></tr>
+          <tr><th scope="row"><a href="<%= space.base %>/seo/sitemap">Sitemap</a></th><td><%= s.sitemap.urls %> adresse(s), <%= s.sitemap.excluded %> exclue(s) · dernier contrôle : <%= fmt(s.sitemap.checkedAt) %></td><td><span class="mk-status <%= s.sitemap.valid === false ? 'mk-status-warn' : s.sitemap.valid ? 'mk-status-ok' : 'mk-status-off' %>"><%= s.sitemap.valid === false ? "Invalide" : s.sitemap.valid ? "Contrôlé" : "Jamais contrôlé" %></span></td></tr>
+          <tr><th scope="row"><a href="<%= space.base %>/seo/schema">Schema</a></th><td><%= s.schema.withData %> page(s) avec données structurées · <%= s.schema.invalid %> avec problème</td><td><span class="mk-status <%= s.schema.invalid ? 'mk-status-warn' : 'mk-status-ok' %>"><%= s.schema.invalid ? "À corriger" : "Valide" %></span></td></tr>
+          <tr><th scope="row"><a href="<%= space.base %>/seo/robots">Robots</a></th><td><%= s.robots.custom ? "Règles propres à ce site" : "Règles par défaut" %><%= s.robots.domain ? " · domaine " + s.robots.domain : " · domaine principal" %></td><td><span class="mk-status mk-status-ok">Servi</span></td></tr>
+          <tr><th scope="row"><a href="<%= space.base %>/redirections">Redirections</a></th><td><%= s.redirects %> redirection(s) active(s)</td><td><span class="mk-status mk-status-ok">En place</span></td></tr>
+        </tbody></table></div>
+    </section>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="seo-last"><h2 id="seo-last">Dernière analyse</h2>
+      <% if (!s.lastAudit) { %>
+        <p class="field-hint">Aucune analyse n'a encore été lancée pour ce site : aucune note n'est affichée tant qu'elle n'a pas été calculée à partir des pages réellement lues.</p>
+      <% } else if (s.lastAudit.status === "running") { %>
+        <p class="field-hint">Une analyse est en cours (<%= s.lastAudit.pages %> page(s) lue(s)). <a href="<%= space.base %>/seo/analyse?analyse=<%= s.lastAudit.id %>">Suivre la progression</a></p>
+      <% } else if (s.lastDone) { %>
+        <p><strong><%= fmt(s.lastDone.finished_at) %></strong> · <%= s.lastDone.pages %> page(s) lue(s) · <%= s.lastDone.issues %> constat(s)<% if (sc !== null) { %> · repère interne : <strong><%= sc %> / 100</strong><% } %></p>
+        <p class="field-hint">Le repère est la part des contrôles réussis ; ce n'est ni une note officielle ni une prévision de classement.</p>
+      <% } else { %><p class="field-hint">La dernière analyse a échoué : <%= s.lastAudit.error || "erreur inconnue" %>. Relancez-la.</p><% } %>
+      <div class="mk-actions"><a class="btn btn-primary btn-sm" href="<%= space.base %>/seo/analyse">Ouvrir l'analyse SEO</a></div>
+    </section>
+<%- include("../partials/bottom") %>

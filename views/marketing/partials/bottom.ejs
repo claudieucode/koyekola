@@ -11,13 +11,22 @@
   <% if (typeof navJs !== "undefined" && navJs) { %><script src="<%= asset('/js/cms-navigation.js') %>" defer></script><% } %>
   <% if (typeof taxoJs !== "undefined" && taxoJs) { %><script src="<%= asset('/js/cms-pages.js') %>" defer></script><script src="<%= asset('/js/cms-taxonomy.js') %>" defer></script><% } %>
   <% if (typeof toolsJs !== "undefined" && toolsJs) { %><script src="<%= asset('/js/cms-tools.js') %>" defer></script><% } %>
+  <% if (typeof permalinksJs !== "undefined" && permalinksJs) { %><script src="<%= asset('/js/cms-permalinks.js') %>" defer></script><% } %>
   <% if (typeof settingsJs !== "undefined" && settingsJs) { %><script src="<%= asset('/js/cms-settings.js') %>" defer></script><% } %>
+  <% if (typeof seoSiteJs !== "undefined" && seoSiteJs) { %><script src="<%= asset('/js/cms-seo-site.js') %>" defer></script><% } %>
   <% if (typeof urlsJs !== "undefined" && urlsJs) { %><script src="<%= asset('/js/cms-urls.js') %>" defer></script><% } %>
   <% if (typeof cmsPagesJs !== "undefined" && cmsPagesJs) { %><script src="<%= asset('/js/cms-pages.js') %>" defer></script><% } %>
   <script src="<%= asset('/js/kola-tips-data.js') %>" defer></script>
   <script src="<%= asset('/js/kola-pages.js') %>" defer></script>
   <% if (typeof cmsPolices !== "undefined" && cmsPolices) { %><script src="<%= asset('/js/cms-polices.js') %>" defer></script><% } %>
   <% if (typeof cmsWidgetsJs !== "undefined" && cmsWidgetsJs) { %><script src="<%= asset('/js/cms-widgets.js') %>" defer></script><% } %>
+  <% if (typeof siteEditorJs !== "undefined" && siteEditorJs) { %><script src="<%= asset('/js/cms-site-editor.js') %>" defer></script><% } %>
+  <% if (typeof templatesJs !== "undefined" && templatesJs) { %><script src="<%= asset('/js/cms-templates.js') %>" defer></script><% } %>
+  <% if (typeof patternsJs !== "undefined" && patternsJs) { %><script src="<%= asset('/js/cms-patterns.js') %>" defer></script><% } %>
+  <% if (typeof generalJs !== "undefined" && generalJs) { %><script src="<%= asset('/js/cms-general.js') %>" defer></script><% } %>
+  <% if (typeof privacyJs !== "undefined" && privacyJs) { %><script src="<%= asset('/js/cms-privacy.js') %>" defer></script><% } %>
+  <% if (typeof connectorsJs !== "undefined" && connectorsJs) { %><script src="<%= asset('/js/cms-connectors.js') %>" defer></script><% } %>
+  <% if (typeof stylesJs !== "undefined" && stylesJs) { %><script src="<%= asset('/js/cms-styles.js') %>" defer></script><% } %>
   <% if (typeof cmsThemesJs !== "undefined" && cmsThemesJs) { %><script src="<%= asset('/js/cms-themes.js') %>" defer></script><% } %>
   <% if (typeof cmsArticlesJs !== "undefined" && cmsArticlesJs) { %><script src="<%= asset('/js/cms-articles.js') %>" defer></script><% } %>
 </body>

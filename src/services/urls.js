@@ -79,7 +79,9 @@ function loadSites() {
       let host = "";
       const url = conf.seo && conf.seo.publicUrl;
       if (url) { try { const u = new URL(url); if (u.protocol === "https:") { base = u.origin; host = u.hostname.toLowerCase(); } } catch { /* adresse invalide : ignorée */ } }
-      const info = { id: s.id, name: s.name, active: s.status === "active" && !s.deleted_at, homePageId: s.home_page_id, base, host, noindex: Boolean(conf.extras && conf.extras.noindex) };
+      const rd = conf.reading || {};
+      const front = rd.showOnFront === "posts" ? "posts" : "page";
+      const info = { id: s.id, name: s.name, active: s.status === "active" && !s.deleted_at, homePageId: front === "posts" ? null : s.home_page_id, front, postsPage: Number.isInteger(rd.postsPage) ? rd.postsPage : null, postsPerPage: Number.isInteger(rd.postsPerPage) && rd.postsPerPage >= 1 && rd.postsPerPage <= 50 ? rd.postsPerPage : 10, feedItems: Number.isInteger(rd.feedItems) && rd.feedItems >= 1 && rd.feedItems <= 50 ? rd.feedItems : 20, feedContent: rd.feedContent === "full" ? "full" : "excerpt", base, host, noindex: Boolean(conf.extras && conf.extras.noindex) };
       byId.set(s.id, info);
       if (host && info.active && !byHost.has(host)) byHost.set(host, info);
       else if (host && !info.active) retired.add(host);
@@ -111,7 +113,7 @@ const taxonomy = () => require("./taxonomy");
 // Page : « /p/<adresse> » ; page d'un site à domaine propre : racine (« / » pour son accueil, « /<adresse> » sinon)
 function pagePath(page, { hostSite = undefined } = {}) {
   // Page d'accueil du site principal (Paramètres → Lecture) : son adresse est « / »
-  if (page && page.id && (page.site_id === null || page.site_id === undefined) && (page.status === undefined || page.status === "published") && !page.archived_at) { try { if (require("./settings").main().homepagePage === page.id) return "/"; } catch { /* réglages indisponibles */ } }
+  if (page && page.id && (page.site_id === null || page.site_id === undefined) && (page.status === undefined || page.status === "published") && !page.archived_at) { try { if (require("./settings").main().homeId === page.id) return "/"; } catch { /* réglages indisponibles */ } }
   const site = siteInfo(page.site_id);
   const own = site && site.base ? site : null;
   // hostSite : site de la requête (domaine propre). Une page n'est servie à la racine que sur le domaine de SON site.
@@ -126,9 +128,9 @@ function baseOfPage(page) { const s = siteInfo(page.site_id); return s && s.base
 function publicPath(type, row, opts = {}) {
   switch (type) {
     case "page": return pagePath(row, opts);
-    case "post": return `/blog/${publicHomeOf("post", row.id) ? addressOf("post", row) : row.slug}`; // adresse logique du site seulement sur son domaine
+    case "post": return require("./permalinks").postPath(row); // structure des permaliens du site qui sert l'article (adresse logique du site seulement sur son domaine)
     case "course": return `/cours/${row.slug}`;
-    default: return taxonomy().TAXONOMIES[type] ? `${taxonomy().baseOf(type)}/${row.slug}` : null;
+    default: return taxonomy().TAXONOMIES[type] ? `${taxonomy().baseOf(type, row)}/${row.slug}` : null;
   }
 }
 // Adresse absolue : base du site (domaine propre) sinon celle de la requête / SITE_URL
@@ -238,6 +240,9 @@ function resolve(pathname, { hostSite = null } = {}) {
     const row = pageBySlug(m[1]);
     if (row) return { type: "page", id: row.id, row, state: pageState(row, hostSite), path: pagePath(row, { hostSite }), siteId: row.site_id };
   }
+  // Permalien d'un article selon la structure du site (ou une ancienne structure) : même résolution que le routeur
+  { const pr = require("./permalinks").rowForPath(p, hostSite);
+    if (pr) { const owner = (attachedSite("post", pr.id) || {}).site_id ?? null; return { type: "post", id: pr.id, row: pr, state: pr.deleted_at ? "trashed" : pr.published ? "live" : "draft", path: require("./permalinks").postPath(pr), siteId: owner }; } }
   if ((m = /^\/blog\/([a-z0-9][a-z0-9-]*)$/.exec(p)) && !["categorie", "etiquette", "auteur"].includes(m[1])) {
     // Contenus par site (R6 lot 4) : l'article est résolu dans le contexte du domaine demandé ; celui d'un autre domaine est « foreign » (comme une page d'un autre site)
     const r = resolvePost(m[1], hostSite);
@@ -246,7 +251,7 @@ function resolve(pathname, { hostSite = null } = {}) {
       const owner = (attachedSite("post", row.id) || {}).site_id ?? null;
       if (r.foreign) return { type: "post", id: row.id, row, state: "foreign", path: r.redirect, siteId: owner };
       if (r.moved) return { type: "post", id: row.id, state: !dead ? "moved" : "trashed", path: r.redirect, siteId: owner };
-      return { type: "post", id: row.id, row, state: row.deleted_at ? "trashed" : row.published ? "live" : "draft", path: r.redirect || `/blog/${row.slug}`, siteId: owner };
+      return { type: "post", id: row.id, row, state: row.deleted_at ? "trashed" : row.published ? "live" : "draft", path: r.redirect || require("./permalinks").postPath(row), siteId: owner };
     }
   }
   if ((m = /^\/cours\/([a-z0-9][a-z0-9-]*)$/.exec(p))) {
@@ -257,7 +262,7 @@ function resolve(pathname, { hostSite = null } = {}) {
   }
   const tx = taxonomy();
   for (const key of Object.keys(tx.TAXONOMIES)) {
-    const base = tx.baseOf(key);
+    const base = [tx.defaultBase(key), tx.baseOf(key)].find((b) => p.startsWith(`${b}/`)) || tx.defaultBase(key);
     if (p.startsWith(`${base}/`) && (m = /^\/([a-z0-9][a-z0-9-]*)$/.exec(p.slice(base.length)))) {
       const row = resolveTerm(key, m[1], hostSite);
       if (row) return { type: key, id: row.id, row, state: "live", path: tx.urlOf(row), siteId: (attachedSite("term", row.id) || {}).site_id ?? null };
@@ -286,7 +291,7 @@ function movedTarget(p, { hostSite = null } = {}) {
   }
   const tx = taxonomy();
   for (const key of Object.keys(tx.TAXONOMIES)) {
-    const base = tx.baseOf(key);
+    const base = [tx.defaultBase(key), tx.baseOf(key)].find((x) => p.startsWith(`${x}/`)) || tx.defaultBase(key);
     if (p.startsWith(`${base}/`) && (m = /^\/([a-z0-9][a-z0-9-]*)$/.exec(p.slice(base.length)))) {
       const h = db.prepare("SELECT resource_id FROM cms_url_history WHERE resource_type = ? AND old_slug = ?").get(key, m[1]);
       const row = h && tx.get(h.resource_id);
@@ -346,6 +351,6 @@ module.exports = {
   RESERVED, isReserved, normalizeSlug, checkSlug, uniqueSlug, isTaken,
   siteForHost, isRetiredHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
   pagePath, pageCanonicalPath, baseOfPage, publicPath, publicUrl,
-  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, addressOf, contentScope, resolvePost, resolveTerm,
+  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, attachedSite, addressOf, contentScope, resolvePost, resolveTerm,
   slugChanged, slugMovedTo, historyOf, purgeHistory,
 };

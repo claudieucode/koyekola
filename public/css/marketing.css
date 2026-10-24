@@ -35,6 +35,16 @@
   --mk-field-h: 40px;
 }
 
+/* ===== Grille de l'interface : UNE seule définition des marges et des largeurs (barres, fil d'Ariane, contenu) =====
+   --kg-gutter : marge entre le bord de la fenêtre et les barres (barre d'administration, fil d'Ariane) ;
+   --kg-pad    : marge latérale du contenu ; --kg-max : largeur maximale d'une page de données (le contenu est CENTRÉ dans la zone de travail, après le menu) ;
+   --kg-max-form : largeur maximale d'un formulaire / de réglages (classe .mk-content--form). Valeurs adaptées par largeur d'écran, jamais nulles. */
+:root { --kg-gutter: 24px; --kg-pad: 44px; --kg-max: 1600px; --kg-max-form: 1200px; }
+@media (min-width: 1700px) { :root { --kg-gutter: 32px; --kg-pad: 56px; } }
+@media (max-width: 1180px) { :root { --kg-gutter: 20px; --kg-pad: 32px; } }
+@media (max-width: 860px) { :root { --kg-gutter: 14px; --kg-pad: 20px; } }
+@media (max-width: 480px) { :root { --kg-gutter: 12px; --kg-pad: 16px; } }
+
 /* Focus (tout l'espace Marketing, y compris les fenêtres ajoutées au <body>) : toujours visible, jamais agressif.
    Boutons, liens, cases : anneau fin de 2 px. Champs de saisie : bordure d'accent + halo léger (voir « Champs de
    formulaire ») — pas de contour supplémentaire, donc plus de double cadre bleu. */
@@ -47,7 +57,7 @@
 .mk-app { display: grid; grid-template-columns: var(--mk-sidebar-w) minmax(0, 1fr); min-height: 100vh; }
 html[data-sidebar="collapsed"] .mk-app { grid-template-columns: var(--mk-sidebar-w-collapsed) minmax(0, 1fr); }
 .mk-main { min-width: 0; display: flex; flex-direction: column; }
-.mk-content { padding: 32px 40px 72px; max-width: 1760px; width: 100%; margin-inline: auto; }
+.mk-content { padding: 32px var(--kg-pad) 72px; max-width: var(--kg-max); width: 100%; margin-inline: auto; box-sizing: border-box; }
 .mk-content:focus { outline: 2px solid transparent; }
 
 /* ===== Menu latéral (clair, à la Mailchimp) ===== */
@@ -101,7 +111,7 @@ html[data-sidebar="collapsed"] .mk-create-btn { padding: 8px 0; }
 html[data-sidebar="collapsed"] .mk-create-menu { left: calc(100% - 4px); right: auto; top: 4px; min-width: 240px; }
 
 /* ===== Barre du haut ===== */
-.mk-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: 12px; min-height: var(--mk-topbar-h); padding: 8px 40px; background: var(--mk-surface); border-bottom: 1px solid var(--mk-border); }
+.mk-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; align-items: center; gap: 12px; min-height: var(--mk-topbar-h); padding: 8px var(--kg-pad); background: var(--mk-surface); border-bottom: 1px solid var(--mk-border); }
 .mk-menu-btn { display: none; color: var(--mk-text); }
 .mk-breadcrumb { flex: 1 1 0; min-width: 0; } /* prend l'espace restant, jamais celui des actions (menu du compte) */
 .mk-breadcrumb ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.88rem; color: var(--muted); }
@@ -357,8 +367,6 @@ html:has(.mk-dialog[open]) { overflow: hidden; } /* la page derrière ne défile
   .mk-menu-btn { display: inline-flex; }
   .mk-collapse-btn { display: none; }
   .mk-close-btn { display: inline-flex; }
-  .mk-topbar { padding: 8px 12px; }
-  .mk-content { padding: 20px 16px 48px; }
   .mk-user-name { display: none; }
   /* le mode « réduit » n'a pas de sens dans le tiroir : libellés toujours visibles */
   html[data-sidebar="collapsed"] .mk-brand-text, html[data-sidebar="collapsed"] .mk-nav-label { display: initial; }
@@ -907,7 +915,7 @@ details.mk-cl-item[open] > .mk-cl-summary .mk-cl-edit { visibility: hidden; }
 
 /* Très petits écrans : le bouton d'action principal se replie sur une ligne de texte plus courte, sans déborder */
 @media (max-width: 400px) {
-  .mk-topbar { gap: 6px; padding: 8px 10px; }
+  .mk-topbar { gap: 6px; }
   .mk-topbar-actions { gap: 4px; min-width: 0; }
   .mk-topbar-actions .mk-primary { min-width: 0; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
   .mk-user { padding: 4px; }

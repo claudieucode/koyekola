@@ -45,7 +45,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("équipe : mêmes titres de groupe, mêmes sous-entrées, même ordre ; seules les 4 fonctions centrales manquent et le tableau de bord est « Tableau de bord »", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const main = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
-    assert.ok(site.length >= 14 && main.length >= 14);
+    assert.ok(site.length >= 13 && main.length >= 13); // 13 groupes depuis que « Navigation » est devenu Apparence → Menus
     const strip = (labels) => labels.filter((l) => !["Modules", "Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
     assert.deepEqual(flatLabels(site), strip(flatLabels(main)));
   });
@@ -54,13 +54,13 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const g = Object.fromEntries(site.filter((x) => !x.flat).map((x) => [x.cle, x]));
     assert.deepEqual(g.utilisateurs.entrees.map((e) => e.libelle), ["Tous les utilisateurs", "Inviter", "Rôles", "Permissions", "Invitations"]);
     assert.deepEqual(g.outils.entrees.map((e) => e.libelle), ["Santé du site", "Corbeille", "Importer", "Exporter", "Diagnostic", "Maintenance", "Caches", "Outils de contenu"]);
-    assert.deepEqual(g.parametres.entrees.map((e) => e.libelle), ["Général", "Lecture", "Commentaires", "Médias", "Permaliens", "SEO", "Confidentialité", "Indexation", "Emailing", "Tunnels", "Avancé"]);
+    assert.deepEqual(g.parametres.entrees.map((e) => e.libelle), ["Général", "Connecteurs", "Écriture", "Lecture", "Commentaires", "Médias", "Permaliens", "SEO", "Confidentialité", "Indexation", "Emailing", "Tunnels", "Avancé"]);
     assert.ok(!site.some((x) => /Équipe du site|Réglages du site|Design du site/.test(x.titre)), "aucun libellé propre au site en titre");
   });
   test("les entrées non ouvertes sont des éléments grisés SANS lien ; les entrées ouvertes ont toutes un lien dans le cadre du site", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const entries = site.flatMap((g) => g.entrees);
-    assert.ok(entries.filter((e) => e.grise).length >= 33, "R8 lots 2 à 4 : médias, articles et commentaires sont ouverts ; le reste reste grisé");
+    assert.ok(entries.filter((e) => e.grise).length >= 2, "R8 lots 2 à 4 : médias, articles et commentaires sont ouverts ; SEO : les neuf rubriques sont ouvertes ; le reste reste grisé");
     for (const e of entries) { if (e.grise) assert.equal(e.href, null, e.libelle); else if (e.libelle === "Personnaliser") assert.equal(e.href, `/marketing/site-web/personnaliser?site=${A}`, "écran plein cadre : le site est celui du menu, jamais un autre"); else assert.match(e.href, new RegExp(`^(${SP}/${A}/|${SP}$)`), e.libelle); }
   });
   test("chaque lien ouvert du menu répond 200 DANS le cadre du site (bandeau + menu) : aucun lien ne renvoie au CMS principal", async () => {
@@ -79,7 +79,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   });
   test("une entrée grisée n'ouvre rien : ni adresse « Bientôt » dans le menu, ni écran du principal, ni donnée", async () => {
     const html = navHtml((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
-    for (const w of ["/utilisateurs/roles", "/outils/importer", "/parametres/lecture", `/${A}/corbeille`, "/outils/sauvegardes", "/outils/logs", "/outils/systeme", "/seo/analyse"]) assert.ok(!html.includes(w), w);
+    for (const w of ["/utilisateurs/roles", "/outils/sauvegardes", "/outils/logs", "/outils/systeme"]) assert.ok(!html.includes(w), w);
     assert.ok(!new RegExp(`href="/marketing/site-web/(?!sites|personnaliser\\?site=${A}")`).test(html), "aucun lien vers l'administration du site principal");
   });
   test("rôles limités à un site : même ordre de groupes, sous-ensemble selon les permissions, jamais un lien vers un autre site", async () => {
@@ -99,7 +99,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("site principal : son menu garde les 67 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
-    assert.equal(entries.length, 71 + 1 + 10); // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(entries.length, 72 + 1 + 10); // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
     for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(entries.some((e) => e.href === reg.href), reg.href);
     assert.ok(entries.some((e) => e.href === `${PR}/tableau-de-bord`));

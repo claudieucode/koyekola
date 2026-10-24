@@ -124,6 +124,7 @@ app.use("/uploads/marketing", express.static(path.join(uploadsRoot, "marketing")
 app.use(require("./src/seo/notfound").middleware);
 app.use(require("./src/seo/redirects").middleware);
 app.use(siteHost.siteIsolation); // domaine d'un site : jamais le contenu du site principal ; domaine retiré : rien
+app.use(require("./src/services/permalinks").middleware); // permaliens du site (structure des articles, préfixes des archives) : réécriture vers le routeur du blog ou 301 vers l'adresse canonique
 app.use(siteHost.homeRouting); // page d'accueil choisie dans les réglages (site principal)
 app.use(siteHost.siteRouting); // domaine d'un site : accueil et pages à la racine
 app.use(siteHost.movedFallback); // ancienne adresse d'une page ou d'un terme → 301 vers l'adresse courante (avant les routes, qui répondraient 404 elles-mêmes)
@@ -174,6 +175,7 @@ app.use(learningRoutes);
 app.use(supportRoutes);
 app.use(favoritesRoutes);
 app.use(pagesRoutes);
+app.use("/avatar", require("./src/routes/avatars"));
 app.use(blogRoutes);
 app.use(profileRoutes);
 app.use(accountRoutes); // Mon compte : données personnelles, suppression du compte
@@ -231,6 +233,8 @@ app.listen(PORT, () => {
   const outbox = require("./src/utils/outbox");
   outbox.processOutbox(db).catch((error) => console.error("[KOLAKISA] File d'envoi :", error.message));
   outbox.startOutboxTimer(db);
+  // Notifications de première publication (réglages d'écriture) : arrière-plan, une fois par article et par destination
+  require("./src/services/writing").start();
   // Copie automatique quotidienne de la base (Centre de gestion → Sauvegardes) ; SAUVEGARDE_AUTO=0 pour la couper
   require("./src/services/backups").startDailyBackups();
   // Suivi des visiteurs : effacement automatique au-delà de 13 mois (au démarrage, puis chaque jour)

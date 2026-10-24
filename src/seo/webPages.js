@@ -68,7 +68,7 @@ function inputs(req, { page, site = null, preview = false }) {
   const pageTitle = page.title || page.name;
   const own = urls.pageCanonicalPath(page); // adresse de référence de la page (racine du domaine du site, sinon /p/<adresse>)
   const ix = indexing(page, site, { preview });
-  const s = { siteId: site ? site.id : null, siteName: siteLabel, locale: LOCALES[(sx && sx.extras && sx.extras.language) || "fr"] || st.og_locale };
+  const s = { siteId: site ? site.id : null, siteName: siteLabel, locale: (site && settings.storedFor(site.id).og_locale) || LOCALES[(sx && sx.extras && sx.extras.language) || "fr"] || st.og_locale }; // langue de partage : réglage explicite du site (rubrique Open Graph) → langue du site → défaut
   // Titre : SEO personnalisé (complet) → titre de la page + nom du site
   if (seo.title) s.rawTitle = seo.title;
   else s.rawTitle = render(st.title_template, { title: pageTitle, sep: st.title_separator, site_name: siteLabel });

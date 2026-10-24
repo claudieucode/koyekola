@@ -45,10 +45,10 @@ const SECTIONS = [
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
       leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
-      leaf("apparence", "Éditeur du site", `${BASE}/apparence`, { permission: "appearance.read" }),
-      leaf("apparence/templates", "Templates", `${BASE}/apparence/templates`, { permission: "appearance.read" }),
-      leaf("apparence/patterns", "Patterns", `${BASE}/apparence/patterns`, { permission: "appearance.read" }),
-      leaf("apparence/styles", "Styles", `${BASE}/apparence/styles`, { permission: "appearance.read" }),
+      leaf("apparence", "Éditeur du site", `${BASE}/editeur-du-site`, { permission: "appearance.read" }),
+      leaf("apparence/templates", "Templates", `${BASE}/templates`, { permission: "appearance.read" }),
+      leaf("apparence/patterns", "Patterns", `${BASE}/patterns`, { permission: "appearance.read" }),
+      leaf("apparence/styles", "Styles", `${BASE}/styles`, { permission: "appearance.read" }),
       leaf("apparence/polices", "Polices", `${BASE}/polices`, { permission: "appearance.read" }),
       leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`, { permission: "appearance.read" }),
       leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`, { permission: "appearance.read" }),
@@ -70,13 +70,13 @@ const SECTIONS = [
   {
     key: "seo", label: "SEO", icon: "searchCheck", items: [
       leaf("seo", "Vue générale", `${BASE}/seo`, { permission: "seo.view" }),
-      leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`),
-      leaf("seo/meta", "Meta", `${BASE}/seo/meta`),
-      leaf("seo/indexation", "Indexation", `${BASE}/seo/indexation`),
-      leaf("seo/sitemap", "Sitemap", `${BASE}/seo/sitemap`),
-      leaf("seo/schema", "Schema", `${BASE}/seo/schema`),
-      leaf("seo/open-graph", "Open Graph", `${BASE}/seo/open-graph`),
-      leaf("seo/robots", "Robots", `${BASE}/seo/robots`),
+      leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`, { permission: "seo.view" }),
+      leaf("seo/meta", "Meta", `${BASE}/seo/meta`, { permission: "seo.view" }),
+      leaf("seo/indexation", "Indexation", `${BASE}/seo/indexation`, { permission: "seo.view" }),
+      leaf("seo/sitemap", "Sitemap", `${BASE}/seo/sitemap`, { permission: "seo.view" }),
+      leaf("seo/schema", "Schema", `${BASE}/seo/schema`, { permission: "seo.view" }),
+      leaf("seo/open-graph", "Open Graph", `${BASE}/seo/open-graph`, { permission: "seo.view" }),
+      leaf("seo/robots", "Robots", `${BASE}/seo/robots`, { permission: "seo.view" }),
       leaf("seo/404", "Erreurs 404", `${BASE}/seo/404`, { permission: "seo.view" }),
     ],
   },
@@ -86,7 +86,6 @@ const SECTIONS = [
     leaf("redirections/permaliens", "Permaliens et adresses", `${BASE}/permaliens`, { permission: "redirects.view" }),
   ] },
   { key: "tests", label: "Tests A/B", icon: "shuffle", items: [leaf("pagetests", "Tests A/B", `${BASE}/tests-ab`)] },
-  { key: "navigation", label: "Navigation", icon: "menu", items: [leaf("navigation", "Navigation", `${BASE}/navigation`, { permission: "navigation.read" })] },
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
       leaf("outils", "Santé du site", `${BASE}/outils`, { permission: "tools.view" }),
@@ -105,6 +104,8 @@ const SECTIONS = [
   {
     key: "parametres", label: "Paramètres", icon: "settings", items: [
       leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read" }),
+      leaf("parametres/connecteurs", "Connecteurs", `${BASE}/parametres/connecteurs`, { permission: "settings.read" }),
+      leaf("parametres/ecriture", "Écriture", `${BASE}/parametres/ecriture`, { permission: "settings.read" }),
       leaf("parametres/lecture", "Lecture", `${BASE}/parametres/lecture`, { permission: "settings.read" }),
       leaf("parametres/commentaires", "Commentaires", `${BASE}/parametres/commentaires`, { permission: "settings.read" }),
       leaf("parametres/medias", "Médias", `${BASE}/parametres/medias`, { permission: "settings.read" }),
@@ -125,11 +126,12 @@ const itemOf = (key) => ALL.find((i) => i.key === key) || null;
 const isCmsKey = (key) => ALL.some((i) => i.key === key);
 
 // Clés servies par le routeur générique des écrans CMS (cmsScreens) : celles dont la route n'existe pas déjà ailleurs.
-const GENERIC_SECTIONS = ["articles", "navigation", "apparence", "commentaires", "extensions", "utilisateurs", "seo", "redirections", "outils"];
+const GENERIC_SECTIONS = ["articles", "apparence", "commentaires", "extensions", "utilisateurs", "seo", "redirections", "outils"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
 function buildCmsNav({ can, active, space = null }) {
   if (space) return buildSiteNav({ can, active, space });
+  if (active === "navigation") active = "apparence/menus"; // ancienne entrée « Navigation » : même écran, sous Apparence → Menus
   const current = itemOf(active);
   if (!current) return null;
   const sections = [];
@@ -168,7 +170,12 @@ const SITE_MODULES = {
   pages: { label: "Pages", kind: "delegate", to: "/pages", reg: "landing", permission: "forms.read", primary: true, legacy: "/marketing/pages" },
   composants: { label: "Composants", kind: "own", permission: "forms.read" },
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
-  equipe: { label: "Équipe du site", kind: "own", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  // Utilisateurs d'un site : écrans partagés /site-web/equipe-site (équipe locale, invitations de CE site, rôles et permissions en lecture) ouverts dans le cadre du site
+  equipe: { label: "Tous les utilisateurs", kind: "delegate", to: "/site-web/equipe-site", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  "equipe-inviter": { label: "Inviter", kind: "delegate", to: "/site-web/equipe-site/inviter", reg: "utilisateurs/ajouter", permission: "users.create", legacy: `${BASE}/utilisateurs/ajouter` },
+  "equipe-invitations": { label: "Invitations", kind: "delegate", to: "/site-web/equipe-site/invitations", reg: "utilisateurs/invitations", permission: "users.view", legacy: `${BASE}/utilisateurs/invitations` },
+  "equipe-roles": { label: "Rôles", kind: "delegate", to: "/site-web/equipe-site/roles", reg: "utilisateurs/roles", permission: "users.view", legacy: `${BASE}/utilisateurs/roles` },
+  "equipe-permissions": { label: "Permissions", kind: "delegate", to: "/site-web/equipe-site/permissions", reg: "utilisateurs/permissions", permission: "users.view", legacy: `${BASE}/utilisateurs/permissions` },
   reglages: { label: "Réglages du site", kind: "own", permission: "settings.read", legacy: `${BASE}/parametres`, legacyLabel: "Paramètres du site principal" },
   // R8 lot 2 : Articles, Commentaires et Médias s'ouvrent dans le cadre du site (écrans existants, isolation R5/R6 : le site vient de l'adresse, jamais du navigateur)
   articles: { label: "Articles", kind: "delegate", to: "/site-web/articles", reg: "articles", permission: "articles.read", legacy: `${BASE}/articles` },
@@ -188,8 +195,16 @@ const SITE_MODULES = {
   polices: { label: "Polices", kind: "delegate", to: "/site-web/polices", reg: "polices", permission: "appearance.read", legacy: `${BASE}/polices` },
   // Apparence → Widgets : écran partagé /site-web/widgets ouvert dans le cadre du site (zones, blocs et widgets désactivés de CE site)
   widgets: { label: "Widgets", kind: "delegate", to: "/site-web/widgets", reg: "widgets", permission: "appearance.read", legacy: `${BASE}/widgets` },
-  navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "navigation", permission: "navigation.read", legacy: `${BASE}/navigation` },
-  // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
+  // Apparence → Styles : gestionnaire de styles globaux (palette, typographie, formes, boutons) ; écran partagé /site-web/styles ouvert dans le cadre du site (brouillon partagé avec Personnaliser)
+  // Apparence → Patterns : bibliothèque de compositions réutilisables ; écran partagé /site-web/patterns ouvert dans le cadre du site (compositions et pages de CE site)
+  // Apparence → Templates : packs de site, gabarits de pages et « Mes modèles » ; écran partagé /site-web/templates ouvert dans le cadre du site (importation dans CE site)
+  // Apparence → Éditeur du site : espace de travail par site autour du Page Builder ; écran partagé /site-web/editeur-du-site ouvert dans le cadre du site
+  "editeur-du-site": { label: "Éditeur du site", kind: "delegate", to: "/site-web/editeur-du-site", reg: "apparence", permission: "appearance.read", legacy: `${BASE}/editeur-du-site` },
+  templates: { label: "Templates", kind: "delegate", to: "/site-web/templates", reg: "apparence/templates", permission: "appearance.read", legacy: `${BASE}/templates` },
+  patterns: { label: "Patterns", kind: "delegate", to: "/site-web/patterns", reg: "patterns", permission: "appearance.read", legacy: `${BASE}/patterns` },
+  styles: { label: "Styles", kind: "delegate", to: "/site-web/styles", reg: "styles", permission: "appearance.read", legacy: `${BASE}/styles` },
+  navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "apparence/menus", permission: "navigation.read", legacy: `${BASE}/navigation` },
+  // SEO du site : les neuf rubriques (vue générale, analyse, meta, indexation, sitemap, schema, Open Graph, robots, 404) sont ouvertes ; chacune lit et écrit uniquement les données du site de l'adresse (voir siteSeo.js et seo/siteTools.js)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
   listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
@@ -200,7 +215,24 @@ const SITE_MODULES = {
   tunnels: { label: "Tunnels", kind: "delegate", to: "/tunnels", reg: "funnels", permission: "funnels.read", legacy: "/marketing/tunnels" },
   "tests-ab": { label: "Tests A/B", kind: "delegate", to: "/site-web/tests-ab", reg: "pagetests", permission: "forms.read", legacy: `${BASE}/tests-ab` },
   analytics: { label: "Analytics", kind: "delegate", to: "/analytics/global", reg: "analytics-global", permission: "analytics.read", legacy: "/marketing/analytics/global" },
+  // Paramètres → Confidentialité : écran partagé /site-web/parametres/confidentialite ouvert dans le cadre du site (page de politique, guide, de CE site)
+  // Paramètres → Lecture, Commentaires, Médias, Permaliens, SEO, Indexation, Emailing, Tunnels, Avancé : écrans partagés ouverts dans le cadre du site (réglages propres au site, ou ce qui s'applique réellement à lui, en lecture seule)
+  "parametres-ecriture": { label: "Écriture", kind: "delegate", to: "/site-web/parametres/ecriture", reg: "parametres/ecriture", permission: "settings.read", legacy: `${BASE}/parametres/ecriture` },
+  "parametres-lecture": { label: "Lecture", kind: "delegate", to: "/site-web/parametres/lecture", reg: "parametres/lecture", permission: "settings.read", legacy: `${BASE}/parametres/lecture` },
+  "parametres-commentaires": { label: "Commentaires", kind: "delegate", to: "/site-web/parametres/commentaires", reg: "parametres/commentaires", permission: "settings.read", legacy: `${BASE}/parametres/commentaires` },
+  "parametres-medias": { label: "Médias", kind: "delegate", to: "/site-web/parametres/medias", reg: "parametres/medias", permission: "settings.read", legacy: `${BASE}/parametres/medias` },
+  "parametres-permaliens": { label: "Permaliens", kind: "delegate", to: "/site-web/parametres/permaliens", reg: "parametres/permaliens", permission: "settings.read", legacy: `${BASE}/parametres/permaliens` },
+  "parametres-seo": { label: "SEO", kind: "delegate", to: "/site-web/parametres/seo", reg: "parametres/seo", permission: "settings.read", legacy: `${BASE}/parametres/seo` },
+  "parametres-indexation": { label: "Indexation", kind: "delegate", to: "/site-web/parametres/indexation", reg: "parametres/indexation", permission: "settings.read", legacy: `${BASE}/parametres/indexation` },
+  "parametres-emailing": { label: "Emailing", kind: "delegate", to: "/site-web/parametres/emailing", reg: "parametres/emailing", permission: "settings.read", legacy: `${BASE}/parametres/emailing` },
+  "parametres-tunnels": { label: "Tunnels", kind: "delegate", to: "/site-web/parametres/tunnels", reg: "parametres/tunnels", permission: "settings.read", legacy: `${BASE}/parametres/tunnels` },
+  "parametres-avance": { label: "Avancé", kind: "delegate", to: "/site-web/parametres/avance", reg: "parametres/avance", permission: "settings.read", legacy: `${BASE}/parametres/avance` },
+  // Paramètres → Connecteurs : centre d'intégrations ; écran partagé ouvert dans le cadre du site (connexions PROPRES au site, secrets isolés)
+  "parametres-connecteurs": { label: "Connecteurs", kind: "delegate", to: "/site-web/parametres/connecteurs", reg: "parametres/connecteurs", permission: "settings.read", legacy: `${BASE}/parametres/connecteurs` },
+  confidentialite: { label: "Confidentialité", kind: "delegate", to: "/site-web/parametres/confidentialite", reg: "parametres/confidentialite", permission: "settings.read", legacy: `${BASE}/parametres/confidentialite` },
   outils: { label: "Santé du site", kind: "delegate", to: "/site-web/outils", reg: "outils", permission: "tools.view", legacy: `${BASE}/outils` },
+  // Corbeille : écran partagé /site-web/corbeille ; il ne liste et ne traite que les éléments de CE site (portée vérifiée par le serveur)
+  corbeille: { label: "Corbeille", kind: "delegate", to: "/site-web/corbeille", reg: "corbeille", permission: "revisions.view", legacy: `${BASE}/corbeille` },
 };
 // Modules délégués : tables lues par le serveur (délégation) et par la vue (écrans à afficher dans le cadre du site)
 const DELEGATED = Object.fromEntries(Object.entries(SITE_MODULES).filter(([, m]) => m.kind === "delegate").map(([k, m]) => [k, m.to]));
@@ -211,11 +243,12 @@ const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
+  outils: ["importer", "exporter", "diagnostic", "maintenance", "cache", "contenu"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
 const FRAMED = new Set();
-const isSiteScopedKey = (key) => SCOPED_KEYS.has(key) || FRAMED.has(key);
+const isSiteScopedKey = (key) => SCOPED_KEYS.has(key) || FRAMED.has(key) || key === "navigation"; // « navigation » : ancienne entrée, désormais Apparence → Menus (même écran)
 
 // Un module vu depuis un espace : { key, label, href, status, phase, permission, external, reg, primary }
 function siteModule(space, mod) {
@@ -247,16 +280,46 @@ const ABILITY = {
   sites: { mode: "link" },
   sitedash: { mode: "open", module: "tableau-de-bord", label: "Tableau de bord" },
   landing: { mode: "open", module: "pages" },
-  apparence: { mode: "open", module: "reglages", hash: "design" },
-  "apparence/en-tete": { mode: "open", module: "reglages", hash: "entete" },
-  "apparence/pied-de-page": { mode: "open", module: "reglages", hash: "entete" },
+  apparence: { mode: "open", module: "editeur-du-site" },
+  "apparence/en-tete": { mode: "open", module: "reglages", sub: "en-tete", hash: "entete" },
+  "apparence/pied-de-page": { mode: "open", module: "reglages", sub: "pied-de-page", hash: "parties" },
   redirections: { mode: "open", module: "redirections" },
   seo: { mode: "open", module: "seo" },
+  "seo/analyse": { mode: "open", module: "seo", sub: "analyse" },
+  "seo/meta": { mode: "open", module: "seo", sub: "meta" },
+  "seo/indexation": { mode: "open", module: "seo", sub: "indexation" },
+  "seo/sitemap": { mode: "open", module: "seo", sub: "sitemap" },
+  "seo/schema": { mode: "open", module: "seo", sub: "schema" },
+  "seo/open-graph": { mode: "open", module: "seo", sub: "open-graph" },
+  "seo/robots": { mode: "open", module: "seo", sub: "robots" },
   "seo/404": { mode: "open", module: "seo", sub: "404" },
   utilisateurs: { mode: "open", module: "equipe" },
+  "utilisateurs/ajouter": { mode: "open", module: "equipe-inviter" },
+  "utilisateurs/invitations": { mode: "open", module: "equipe-invitations" },
+  "utilisateurs/roles": { mode: "open", module: "equipe-roles" },
+  "utilisateurs/permissions": { mode: "open", module: "equipe-permissions" },
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
+  corbeille: { mode: "open", module: "corbeille" },
+  "outils/importer": { mode: "open", module: "outils", sub: "importer" },
+  "outils/exporter": { mode: "open", module: "outils", sub: "exporter" },
+  "outils/diagnostic": { mode: "open", module: "outils", sub: "diagnostic" },
+  "outils/maintenance": { mode: "open", module: "outils", sub: "maintenance" },
+  "outils/cache": { mode: "open", module: "outils", sub: "cache" },
+  "outils/contenu": { mode: "open", module: "outils", sub: "contenu" },
   parametres: { mode: "open", module: "reglages" },
+  "parametres/confidentialite": { mode: "open", module: "confidentialite" },
+  "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },
+  "parametres/connecteurs": { mode: "open", module: "parametres-connecteurs" },
+  "parametres/lecture": { mode: "open", module: "parametres-lecture" },
+  "parametres/commentaires": { mode: "open", module: "parametres-commentaires" },
+  "parametres/medias": { mode: "open", module: "parametres-medias" },
+  "parametres/permaliens": { mode: "open", module: "parametres-permaliens" },
+  "parametres/seo": { mode: "open", module: "parametres-seo" },
+  "parametres/indexation": { mode: "open", module: "parametres-indexation" },
+  "parametres/emailing": { mode: "open", module: "parametres-emailing" },
+  "parametres/tunnels": { mode: "open", module: "parametres-tunnels" },
+  "parametres/avance": { mode: "open", module: "parametres-avance" },
   // R8 lot 2 : contenus déjà isolés par site (R5 médias, R6 articles/termes/commentaires), ouverts par délégation (`sub` = sous-page de la liste fermée NESTED)
   articles: { mode: "open", module: "articles" },
   "articles/brouillons": { mode: "open", module: "articles", sub: "brouillons" },
@@ -269,12 +332,14 @@ const ABILITY = {
   "articles/auteurs": { mode: "open", module: "articles", sub: "auteurs" },
   mediatheque: { mode: "open", module: "medias" },
   "mediatheque/ajouter": { mode: "open", module: "medias", sub: "ajouter" },
-  navigation: { mode: "open", module: "navigation" },
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
   "apparence/polices": { mode: "open", module: "polices" },
   "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
   "apparence/widgets": { mode: "open", module: "widgets" },
+  "apparence/styles": { mode: "open", module: "styles" },
+  "apparence/patterns": { mode: "open", module: "patterns" },
+  "apparence/templates": { mode: "open", module: "templates" },
   commentaires: { mode: "open", module: "commentaires" },
   "commentaires/en-attente": { mode: "open", module: "commentaires", sub: "en-attente" },
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
@@ -291,13 +356,13 @@ const soonPhase = (key) => {
   if (key === "mediatheque") return "B2";
   if (key === "apparence/templates" || key === "apparence/patterns") return "B3";
   if (key === "apparence/styles") return "P2";
-  if (key === "navigation" || key === "apparence/menus") return "menus";
+  if (key === "apparence/menus") return "menus";
   if (key.startsWith("seo")) return "B6";
   if (key === "corbeille") return "corbeille";
   return "C4";
 };
 // Anciennes adresses d'écrans « Bientôt » (/sites/N/articles, …) : elles continuent d'afficher leur explication
-const SOON_SLUG = { articles: "articles", mediatheque: "medias", navigation: "navigation", commentaires: "commentaires", seo: "seo" };
+const SOON_SLUG = { articles: "articles", mediatheque: "medias", commentaires: "commentaires", seo: "seo" };
 
 // Extensions de l'espace, communes au principal et aux sites (hors registre) : Composants (groupe Pages) et le groupe « Marketing du site »
 const MARKETING_MODULES = ["listes", "segments", "modeles-email", "campagnes", "automatisations", "tunnels", "analytics", "formulaires", "contacts", "importer"];
@@ -324,7 +389,7 @@ function projectItem(item, group, space) {
     if (a.teamOnly && space.limited) return null; // création d'article : réservée à l'équipe (décision A-D9 non approuvée) → absente du menu d'un accès limité
     const m = siteModule(space, a.module);
     const href = a.sub ? `${m.href}/${a.sub}` : m.href;
-    return { ...base, label: a.label || item.label, href: a.hash ? `${m.href}#${a.hash}` : href, status: "live", external: m.external, ...(a.hash || a.sub ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
+    return { ...base, label: a.label || item.label, href: a.hash ? `${href}#${a.hash}` : href, status: "live", external: m.external, ...(a.hash || a.sub ? {} : { alias: `espace/${a.module}` }), module: a.module, ...(m.primary ? { primary: m.primary } : {}) };
   }
   const slug = SOON_SLUG[item.key];
   return { ...base, href: null, status: "preview", disabled: true, phase: soonPhase(item.key), ...(slug ? { alias: `espace/${slug}`, module: slug } : {}) };
@@ -335,7 +400,7 @@ function projectSections(space) {
   const out = [];
   for (const s of SECTIONS) {
     if (s.centralOnly) continue;
-    if (s.key === "navigation") out.push(marketingGroup(space)); // « Marketing du site » vient juste avant Navigation, Outils et Paramètres
+    if (s.key === "outils") out.push(marketingGroup(space)); // « Marketing du site » vient juste avant Outils et Paramètres
     const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
     if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages" });
     if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items });
@@ -348,6 +413,7 @@ const principalSections = projectSections;
 const PRINCIPAL_ALIAS = { "espace/tableau-de-bord": "sitedash", "espace/pages": "landing", "espace/redirections": "redirections" };
 
 function buildSiteNav({ can, active, space }) {
+  if (active === "navigation") active = "apparence/menus"; // ancienne entrée « Navigation » : même écran, sous Apparence → Menus
   const all = projectSections(space);
   const flat = all.flatMap((sec) => sec.items.map((i) => ({ ...i, section: sec.key })));
   // Un écran existant garde son cadre : on retrouve son entrée par sa clé `active` propre OU par la clé qu'il porte déjà dans le registre
@@ -370,6 +436,21 @@ function buildSiteNav({ can, active, space }) {
 
 for (const [key, a] of Object.entries(ABILITY)) if (a.mode === "open" && a.sub) FRAMED.add(key);
 FRAMED.add("apparence/menus"); // même écran que « Navigation » (clé active distincte)
+FRAMED.add("apparence/templates"); // bibliothèque de templates : garde le cadre DU site
+FRAMED.add("apparence/patterns"); // bibliothèque de patterns : garde le cadre DU site
+FRAMED.add("apparence/styles"); // gestionnaire de styles : garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("apparence/polices"); // les trois onglets (adresses « ?site= ») gardent le cadre DU site : menu, bandeau et fil d'Ariane
+FRAMED.add("parametres/lecture");
+FRAMED.add("parametres/commentaires");
+FRAMED.add("parametres/medias");
+FRAMED.add("parametres/permaliens");
+FRAMED.add("parametres/seo");
+FRAMED.add("parametres/indexation");
+FRAMED.add("parametres/emailing");
+FRAMED.add("parametres/tunnels");
+FRAMED.add("parametres/avance");
+FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
+FRAMED.add("parametres/connecteurs");
+FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

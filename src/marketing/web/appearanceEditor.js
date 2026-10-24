@@ -111,7 +111,7 @@ module.exports = () => {
     const db = require("../../config/database");
     const out = [{ url: "/", label: "Accueil" }, { url: "/blog", label: "Blog" }, { url: "/catalogue", label: "Catalogue" }, { url: "/a-propos", label: "À propos" }];
     const post = db.prepare("SELECT slug, title FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1").get();
-    if (post) out.push({ url: `/blog/${post.slug}`, label: `Article : ${post.title}` });
+    if (post) out.push({ url: require("../../services/urls").publicPath("post", post), label: `Article : ${post.title}` });
     const cat = taxonomy.publicTerms("category")[0], tag = taxonomy.publicTerms("tag")[0];
     if (cat) out.push({ url: taxonomy.urlOf(cat), label: `Catégorie : ${cat.name}` });
     if (tag) out.push({ url: taxonomy.urlOf(tag), label: `Étiquette : ${tag.name}` });

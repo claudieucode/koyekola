@@ -65,6 +65,16 @@ function siteRouting(req, res, next) {
   const site = req.kwSite;
   if (!site || !isRead(req)) return next();
   const r = urls.resolve(req.path, { hostSite: site });
+  if (site.front === "posts" && req.path === "/") { req.url = `/blog${queryOf(req)}`; req.kwList = { basePath: "/" }; return next(); }
+  if (site.front !== "posts" && site.postsPage) {
+    let pr = null;
+    try { pr = postsPageOf(site.id, site.homePageId, site.postsPage); } catch { pr = null; }
+    if (pr) {
+      const where = urls.pagePath(pr, { hostSite: site });
+      if (req.path === where || req.path === `/p/${pr.slug}`) { req.url = `/blog${queryOf(req)}`; req.kwList = { basePath: where, title: pr.title || pr.name }; return next(); }
+      if (req.path === "/blog") return res.redirect(301, `${where}${queryOf(req)}`);
+    }
+  }
   if (req.path === "/" ) {
     if (r.type === "page" && r.state === "live") { req.url = `/p/${r.row.slug}${queryOf(req)}`; return next(); }
     req.url = MISSING; return next();
@@ -89,7 +99,7 @@ function siteRouting(req, res, next) {
 // les formulaires et le suivi, la connexion et les comptes (communs à la plateforme), les pages techniques.
 // R7 lot 6.6 : « commande » (paiement, retour du fournisseur, confirmation) rejoint la liste — le parcours d'achat reste entièrement sur l'hôte principal (voir docs/r7-contacts-par-site-2026-10-16/15-rapport-R7-lot-6-6-commerce.md)
 const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|commande|favoris|formations?)(\/|$)/i;
-const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg))(\/|$|\.)/i;
+const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg)|avatar)(\/|$|\.)/i;
 const refusedLogged = new Set();
 // Blog propre à un site (R6 lot 4) : le domaine d'un site sert SON blog (articles rattachés à ce site, adresses logiques du site) dès que ce site a au moins un article en ligne ;
 // sans article, le blog reste introuvable sur ce domaine (comme avant). Il ne sert jamais le blog du site principal ni celui d'un autre site (portée appliquée par les routes du blog).
@@ -123,15 +133,31 @@ function siteIsolation(req, res, next) {
 // 2 bis. Page d'accueil du site principal choisie dans Paramètres → Lecture : « / » affiche cette page (réécriture interne, comme sur le domaine
 // d'un site) ; son adresse /p/<adresse> redirige vers « / » (une seule adresse). Si la page n'est plus publiée, l'accueil standard reprend.
 function mainHome() {
-  const id = require("../services/settings").main().homepagePage;
+  const id = require("../services/settings").main().homeId;
   if (!id) return null;
   const row = require("../config/database").prepare("SELECT id, slug, status, archived_at, site_id, kind FROM mk_landing_pages WHERE id = ?").get(id);
   return row && row.status === "published" && !row.archived_at && row.site_id === null && row.kind !== "step" ? row : null;
 }
+// Page des articles (Paramètres → Lecture) : page publiée, de ce site, différente de l'accueil ; seulement quand l'accueil est une page statique
+function postsPageOf(siteId, homeId, postsId) {
+  if (!postsId || postsId === homeId) return null;
+  const row = require("../config/database").prepare("SELECT id, slug, name, title, status, archived_at, site_id, kind FROM mk_landing_pages WHERE id = ?").get(postsId);
+  return row && row.status === "published" && !row.archived_at && (row.site_id ?? null) === (siteId ?? null) && row.kind !== "step" ? row : null;
+}
 function homeRouting(req, res, next) {
   if (req.kwSite || !isRead(req)) return next();
-  let home = null;
-  try { home = mainHome(); } catch { return next(); }
+  let mode = "standard", home = null, postsRow = null;
+  try {
+    const st = require("../services/settings").main();
+    mode = st.showOnFront; home = mainHome();
+    if (mode === "page") postsRow = postsPageOf(null, home && home.id, st.postsPage);
+  } catch { return next(); }
+  if (mode === "posts" && req.path === "/") { req.url = `/blog${queryOf(req)}`; req.kwList = { basePath: "/" }; return next(); }
+  if (postsRow) {
+    const where = `/p/${postsRow.slug}`;
+    if (req.path === where) { req.url = `/blog${queryOf(req)}`; req.kwList = { basePath: where, title: postsRow.title || postsRow.name }; return next(); }
+    if (req.path === "/blog") return res.redirect(301, `${where}${queryOf(req)}`);
+  }
   if (!home) return next();
   if (req.path === "/") { req.url = `/p/${home.slug}${queryOf(req)}`; return next(); }
   if (req.path === `/p/${home.slug}`) return res.redirect(301, `/${queryOf(req)}`);
@@ -144,7 +170,8 @@ function normalizePaths(req, res, next) {
   if (!isRead(req)) return next();
   try { if (!require("../services/settings").main().normalizePaths) return next(); } catch { /* réglage indisponible : normalisation active */ }
   const raw = req.path;
-  if (raw.includes("%")) return next(); // adresse encodée : jamais réécrite (les séquences %XX ne sont pas de la « casse »)
+  if (raw.includes("%")) return next();
+  if (require("../services/permalinks").owns(raw, req.kwSite || null)) return next(); // permalien actif d'un article : sa forme canonique est celle de la structure du site // adresse encodée : jamais réécrite (les séquences %XX ne sont pas de la « casse »)
   const single = req.kwSite && /^\/[A-Za-z0-9-]+\/?$/.test(raw);
   if (!NORMALIZED.test(raw.toLowerCase()) && !single) return next();
   let fixed = raw;

@@ -15,6 +15,21 @@ const { need } = require("./kit");
 const BASE = "/marketing/site-web/personnaliser";
 const MAX_BODY_CHANGES = 200;
 
+// Pages réelles à prévisualiser : l'accueil et ce que CE site contient vraiment
+function previewTargets(req, t) {
+  if (t.principal) {
+    const db = req.mk.ctx.db;
+    const out = [{ url: "/", label: "Accueil" }, { url: "/blog", label: "Blog" }, { url: "/catalogue", label: "Catalogue" }, { url: "/a-propos", label: "À propos" }];
+    try {
+      const post = db.prepare("SELECT slug, title FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = p.id) ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1").get();
+      if (post) out.push({ url: require("../../services/urls").publicPath("post", post), label: `Article : ${post.title}` });
+    } catch { /* pas d'article */ }
+    return out;
+  }
+  const list = pages.listPages(req.mk.ctx, { siteId: t.siteId }).filter((p) => p.kind !== "step" && !p.archived_at).sort((a, b) => (a.id === (t.site && t.site.home_page_id) ? -1 : b.id === (t.site && t.site.home_page_id) ? 1 : a.id - b.id));
+  return list.slice(0, 40).map((p) => ({ url: `/marketing/pages/${p.id}/apercu`, label: p.name + (p.id === (t.site && t.site.home_page_id) ? " (accueil)" : "") }));
+}
+
 module.exports = () => {
   const router = express.Router();
   const denied = (res, message, json) => (json ? res.status(403).json({ error: { code: "forbidden", message } }) : res.status(403).render("error", { message }));
@@ -55,21 +70,6 @@ module.exports = () => {
   };
   const readOnlyMsg = "Ce site est archivé ou supprimé : restaurez-le avant de le personnaliser.";
 
-  // Pages réelles à prévisualiser : l'accueil et ce que CE site contient vraiment
-  function previewTargets(req, t) {
-    if (t.principal) {
-      const db = req.mk.ctx.db;
-      const out = [{ url: "/", label: "Accueil" }, { url: "/blog", label: "Blog" }, { url: "/catalogue", label: "Catalogue" }, { url: "/a-propos", label: "À propos" }];
-      try {
-        const post = db.prepare("SELECT slug, title FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = p.id) ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1").get();
-        if (post) out.push({ url: `/blog/${post.slug}`, label: `Article : ${post.title}` });
-      } catch { /* pas d'article */ }
-      return out;
-    }
-    const list = pages.listPages(req.mk.ctx, { siteId: t.siteId }).filter((p) => p.kind !== "step" && !p.archived_at).sort((a, b) => (a.id === (t.site && t.site.home_page_id) ? -1 : b.id === (t.site && t.site.home_page_id) ? 1 : a.id - b.id));
-    return list.slice(0, 40).map((p) => ({ url: `/marketing/pages/${p.id}/apercu`, label: p.name + (p.id === (t.site && t.site.home_page_id) ? " (accueil)" : "") }));
-  }
-
   // ----- L'écran -----
   router.get("/site-web/personnaliser", need("appearance.read"), (req, res) => {
     const t = target(req, res); if (!t) return;
@@ -88,7 +88,7 @@ module.exports = () => {
       links: {
         back: t.principal ? "/marketing" : `/marketing/site-web/sites/${t.siteId}/tableau-de-bord`,
         menus: t.principal ? "/marketing/site-web/navigation" : `/marketing/site-web/navigation?site=${t.siteId}`,
-        themes: `/marketing/site-web/themes${q}`, pageBuilder: t.principal ? null : `/marketing/site-web/sites/${t.siteId}/reglages#entete`,
+        themes: `/marketing/site-web/themes${q}`, pageBuilder: t.principal ? null : `/marketing/site-web/sites/${t.siteId}/reglages/en-tete#entete`,
       },
     };
     res.set("Cache-Control", "no-store");
@@ -149,3 +149,4 @@ module.exports = () => {
   return router;
 };
 module.exports.BASE = BASE;
+module.exports.previewTargets = previewTargets; // partagé avec Apparence → Styles (mêmes pages réelles à prévisualiser)

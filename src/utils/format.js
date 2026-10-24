@@ -40,12 +40,27 @@ function current() {
   } catch { return FALLBACK; }
 }
 const refresh = () => {};
+// Formats de date « motifs » (en plus des styles longs / moyens / courts de la langue) : la mise en forme est faite à partir des composantes calculées dans le fuseau du site
+const DATE_PATTERNS = { iso: "y-m-d", dmy: "d/m/y", mdy: "m/d/y", dots: "d.m.y" };
+const DATE_STYLES = ["long", "medium", "short"];
+const isValidDateFormat = (v) => DATE_STYLES.includes(v) || Object.hasOwn(DATE_PATTERNS, v);
+const WEEK_STARTS = ["monday", "sunday", "saturday"];
+function patternDate(date, cfg) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: cfg.timeZone }).formatToParts(date).map((p) => [p.type, p.value]));
+  return DATE_PATTERNS[cfg.dateFormat].replace("y", parts.year).replace("m", parts.month).replace("d", parts.day);
+}
 const optsFor = (cfg, withTime) => ({ dateStyle: withTime && cfg.dateFormat === "long" ? "medium" : cfg.dateFormat, ...(withTime ? { timeStyle: "short", hour12: cfg.timeFormat === "12h" } : {}), timeZone: cfg.timeZone });
 // Date d'un instant (millisecondes ou texte UTC) selon la configuration d'un site (ou du site principal)
 function formatInstant(value, cfg = null, { withTime = false } = {}) {
   const c = cfg || current();
   const date = typeof value === "number" ? new Date(value) : new Date(String(value).replace(" ", "T").replace(/Z?$/, "Z"));
   if (Number.isNaN(date.getTime())) return "";
+  if (Object.hasOwn(DATE_PATTERNS, c.dateFormat)) {
+    try {
+      const day = patternDate(date, c);
+      return withTime ? `${day} ${date.toLocaleTimeString(c.locale, { timeStyle: "short", hour12: c.timeFormat === "12h", timeZone: c.timeZone })}` : day;
+    } catch { /* fuseau ou langue invalide : repli ci-dessous */ }
+  }
   try { return date.toLocaleString(c.locale, optsFor(c, withTime)); } catch { return date.toLocaleString("fr-FR", optsFor(FALLBACK, withTime)); }
 }
 function formatDate(iso) {
@@ -90,4 +105,4 @@ function levelLabel(level) {
   return LEVEL_LABELS[level] || level;
 }
 
-module.exports = { refresh, formatInstant, LANGUAGES, cleanLanguage, languageLabel, avatarColor, slugify, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel };
+module.exports = { refresh, formatInstant, DATE_PATTERNS, DATE_STYLES, WEEK_STARTS, isValidDateFormat, LANGUAGES, cleanLanguage, languageLabel, avatarColor, slugify, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel };

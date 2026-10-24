@@ -206,6 +206,7 @@ function addRevision(post, userId, note, kind = "save") {
       for (const p of revisionImages(dropped)) releaseImage(p); // images qui n'étaient plus gardées que pour ces révisions
     }
   }
+  if (kind === "publish") require("./writing").sweepSoon(); // notifications de première publication (arrière-plan)
   return Number(info.lastInsertRowid);
 }
 // Images (couverture, Facebook, X) citées par des révisions
@@ -346,7 +347,7 @@ function searchLinks(q, limit = 8) {
   const needle = norm(q);
   const match = (title) => !needle || norm(title).includes(needle);
   const results = [];
-  for (const p of db.prepare("SELECT title, slug FROM posts WHERE published = 1 ORDER BY published_at DESC LIMIT 300").all()) if (match(p.title)) results.push({ type: "article", label: "Article", title: p.title, url: `/blog/${p.slug}` });
+  for (const p of db.prepare("SELECT id, title, slug FROM posts WHERE published = 1 ORDER BY published_at DESC LIMIT 300").all()) if (match(p.title)) results.push({ type: "article", label: "Article", title: p.title, url: require("./urls").publicPath("post", p) });
   for (const c of db.prepare("SELECT title, slug FROM courses WHERE published = 1 AND archived = 0 ORDER BY title LIMIT 300").all()) if (match(c.title)) results.push({ type: "formation", label: "Formation", title: c.title, url: `/cours/${c.slug}` });
   for (const c of categories()) if (match(c.name)) results.push({ type: "categorie", label: "Catégorie du blog", title: c.name, url: `/blog/categorie/${c.slug}` });
   for (const p of PAGES) if (match(p.title)) results.push({ type: "page", label: "Page", title: p.title, url: p.url });
@@ -373,7 +374,7 @@ function suggestLinks({ text = "", postId = 0, alreadyLinked = [] } = {}) {
     if (score >= 0.5) out.push({ type, label, title, url, score: Math.round(score * 100) / 100, reason: `Le texte parle de « ${hits.slice(0, 3).join(", ")} »` });
   };
   for (const c of db.prepare("SELECT title, slug FROM courses WHERE published = 1 AND archived = 0").all()) consider("formation", "Formation", c.title, `/cours/${c.slug}`);
-  for (const p of db.prepare("SELECT title, slug FROM posts WHERE published = 1 AND id != ?").all(postId)) consider("article", "Article", p.title, `/blog/${p.slug}`);
+  for (const p of db.prepare("SELECT id, title, slug FROM posts WHERE published = 1 AND id != ?").all(postId)) consider("article", "Article", p.title, require("./urls").publicPath("post", p));
   for (const c of categories()) consider("categorie", "Catégorie", c.name, `/blog/categorie/${c.slug}`);
   if (/ formation| cours| apprendre/.test(body) && !linked.has("/catalogue")) out.push({ type: "page", label: "Page", title: "Catalogue des formations", url: "/catalogue", score: 0.4, reason: "Page importante : l'article parle de formation" });
   return out.sort((a, b) => b.score - a.score).slice(0, 8);

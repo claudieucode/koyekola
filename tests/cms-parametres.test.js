@@ -65,7 +65,8 @@ describe("écrans et accès", () => {
     const main = (await jget(boss, API)).body.settings.map((s) => s.key);
     const sub = (await jget(boss, `${API}${qs(site)}`)).body.settings.map((s) => s.key);
     assert.ok(main.includes("posts_per_page") && main.includes("comments_moderation") && main.includes("admin_email") && main.includes("media_max_image_mb"));
-    assert.ok(!sub.includes("posts_per_page") && !sub.includes("comments_moderation") && !sub.includes("admin_email"), "le contenu de l'organisation n'est pas un réglage de site");
+    assert.ok(sub.includes("posts_per_page") && sub.includes("feed_items"), "la lecture (articles par page, flux) est propre à chaque site");
+    assert.ok(!sub.includes("admin_email"), "le contenu de l'organisation n'est pas un réglage de site");
     assert.ok(sub.includes("public_url") && sub.includes("logo") && sub.includes("favicon") && !main.includes("public_url"));
     assert.equal((await apiPut(boss, "SITE_URL", "https://evil.example")).status, 404, "la configuration de la plateforme n'est pas un réglage");
     assert.equal((await apiPut(boss, "ENCRYPTION_KEY", "x")).status, 404);
@@ -216,8 +217,8 @@ describe("commentaires, médias, permaliens, SEO, confidentialité", () => {
     assert.equal(legacy.status, 302);
     const s2 = JSON.parse(one("SELECT value FROM mk_settings WHERE key = 'comments.settings'").value);
     assert.deepEqual([s2.moderation, s2.guests_allowed, s2.max_depth, s2.links_allowed], ["first", true, 2, true]);
-    assert.match((await boss.get(`${P}/commentaires`)).text, /value="first" selected/);
-    assert.equal((await apiPut(boss, "comments_max_depth", 9)).status, 422);
+    assert.match((await boss.get(`${P}/commentaires`)).text, /value="first"[^>]*(selected|checked)/);
+    assert.equal((await apiPut(boss, "comments_max_depth", 11)).status, 422);
   });
   test("médias : la limite choisie est appliquée à l'envoi (jamais au-delà du plafond du serveur)", async () => {
     assert.equal((await apiPut(boss, "media_max_image_mb", 999)).status, 422, "au-delà du plafond de 5 Mo : refusé");
@@ -239,7 +240,7 @@ describe("commentaires, médias, permaliens, SEO, confidentialité", () => {
     assert.notEqual((await anon.get("/Blog/")).status, 301);
     await boss.request(`${API}/normalize_paths?confirm=1`, { method: "DELETE" });
     assert.equal((await anon.get("/Blog/")).status, 301);
-    assert.match((await boss.get(`${P}/permaliens`)).text, /\/p\/&lt;adresse&gt;/);
+    assert.match((await boss.get(`${P}/permaliens`)).text, /Réglages les plus courants/);
   });
   test("SEO : séparateur et modèle de titre → titres publics ; indexation des étiquettes → plan du site ; droit seo.edit distinct de settings.write", async () => {
     await apiPut(boss, "title_separator", " | ");

@@ -97,6 +97,8 @@ const SITE_RULES = Object.freeze([
   { id: "modele-page-lecture", pattern: /^\/site-web\/modeles(?:\.json|\/\d+\.json)$/, methods: ["GET"], kind: "queryGet" },
   { id: "modele-page-suppression", pattern: /^\/site-web\/modeles\/(\d+)\/supprimer$/, methods: ["POST"], kind: "resource", table: "modelePage", idGroup: 1 },
   { id: "outils-et-parametres", pattern: /^\/site-web\/(?:outils|parametres)(?:\/|$)/, kind: "param", terminal: true },
+  { id: "corbeille-du-site", pattern: /^\/site-web\/corbeille(?:\/|$)/, kind: "param", terminal: true }, // Corbeille cloisonnée : le site est le paramètre validé (?site=), revérifié par la portée de la corbeille
+  { id: "equipe-du-site", pattern: /^\/site-web\/equipe-site(?:\/|$)/, kind: "param", terminal: true }, // Utilisateurs d'un site : le site est le paramètre validé (?site= / champ « site »), revérifié par siteTarget
   { id: "email-par-identifiant", pattern: new RegExp(`^\\/(${EMAIL_FAMILIES})\\/(\\d{1,12})(?:\\/|$)`), kind: "resource", table: "byFamily", idGroup: 2 },
   { id: "tests-ab-du-site", pattern: /^\/site-web\/tests-ab$/, methods: ["GET"], kind: "queryGet" },
   { id: "test-ab-par-identifiant", pattern: /^\/tests-ab\/(\d{1,12})(?:\/|$)/, kind: "resource", table: "test", idGroup: 1 },
@@ -144,6 +146,10 @@ const SITE_RULES = Object.freeze([
   { id: "barre-du-site", pattern: /^\/barre(?:\/|$)/, kind: "param", terminal: true },
   { id: "personnaliser-du-site", pattern: /^\/site-web\/personnaliser(?:\/|$)/, kind: "param", terminal: true },
   { id: "widgets-du-site", pattern: /^\/site-web\/widgets(?:\/|$)/, kind: "param", terminal: true },
+  { id: "styles-du-site", pattern: /^\/site-web\/styles(?:\/|$)/, kind: "param", terminal: true },
+  { id: "patterns-du-site", pattern: /^\/site-web\/patterns(?:\/|$)/, kind: "param", terminal: true },
+  { id: "templates-du-site", pattern: /^\/site-web\/templates(?:\/|$)/, kind: "param", terminal: true },
+  { id: "editeur-du-site", pattern: /^\/site-web\/editeur-du-site(?:\/|$)/, kind: "param", terminal: true },
   { id: "mediatheque-du-site", pattern: /^\/site-web\/(?:mediatheque|medias)(?:\/|\.json$|$)/, kind: "queryGet", terminal: true },
 ]);
 
@@ -169,12 +175,16 @@ const FAMILIES = Object.freeze([
   { id: "barre-par-site", scope: "site", pattern: /^\/barre(?:\/|$)/ },
   { id: "personnaliser-par-site", scope: "site", pattern: /^\/site-web\/personnaliser(?:\/|$)/ },
   { id: "widgets-par-site", scope: "site", pattern: /^\/site-web\/widgets(?:\/|$)/ },
+  { id: "styles-par-site", scope: "site", pattern: /^\/site-web\/styles(?:\/|$)/ },
+  { id: "patterns-par-site", scope: "site", pattern: /^\/site-web\/patterns(?:\/|$)/ },
+  { id: "templates-par-site", scope: "site", pattern: /^\/site-web\/templates(?:\/|$)/ },
+  { id: "editeur-du-site-par-site", scope: "site", pattern: /^\/site-web\/editeur-du-site(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
-  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|outils|parametres|tests-ab)(?:\/|$)/ },
+  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|corbeille|outils|parametres|equipe-site|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —
   { id: "tableau-de-bord", scope: "organization", pattern: /^\/$/ },
   { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
-  { id: "site-web-organisation", scope: "organization", pattern: /^\/site-web(?:\/(?:utilisateurs|apparence|navigation|redirections|extensions|modeles-de-theme|modeles|modeles\.json|liens-casses|corbeille|recherche|permaliens|gabarits|mes-sites|seo)(?:\/|$)|$)/ },
+  { id: "site-web-organisation", scope: "organization", pattern: /^\/site-web(?:\/(?:utilisateurs|apparence|navigation|redirections|extensions|modeles-de-theme|modeles|modeles\.json|liens-casses|recherche|permaliens|gabarits|mes-sites|seo)(?:\/|$)|$)/ },
 ]);
 
 function siteOfRequest(db, req) {

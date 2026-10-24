@@ -6,7 +6,9 @@
   const typeLabel = (d) => (d.format ? FORMAT_LABEL[d.format] : d.type === "select" && d.multiple === 1 ? "Choix multiple" : TYPE_LABEL[d.type]);
 %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Propriétés personnalisées <span class="mk-count"><%= defs.length %></span></h1><p class="mk-head-sub">Des champs supplémentaires sur vos contacts (niveau, ville, date de naissance…), typés et utilisables dans les segments.</p></div></div>
+      <div class="mk-head-main"><h1>Propriétés personnalisées <span class="mk-count"><%= defs.length %></span></h1><p class="mk-head-sub">Des champs supplémentaires sur vos contacts (niveau, ville, date de naissance…), typés et utilisables dans les segments.</p></div>
+      <div class="mk-head-actions"><% if (canWrite) { %><button type="button" class="btn btn-primary" data-mk-modal-open="nouvelle" data-tip="Ajoute un champ (texte, nombre, date, choix…) à la fiche de tous vos contacts.">Créer une propriété</button><% } %></div>
+    </div>
 
     <% if (!defs.length) { %>
       <div class="mk-empty">

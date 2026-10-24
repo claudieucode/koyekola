@@ -2201,6 +2201,19 @@
         break;
       case "menu":
         box.appendChild(textField("Nom du menu (lecteurs d'écran)", p.label, set("label"), { max: 60, disabled: disabled }));
+        // Source des liens : le menu AFFECTÉ à un emplacement dans Apparence → Menus (une seule source de vérité, recommandé), un menu précis, ou une liste écrite ici
+        var menuSource = p.source === "location" || p.source === "name" ? p.source : "manual";
+        box.appendChild(selectField("Source des liens", menuSource, [["location", "Menu du CMS affecté à un emplacement (recommandé)"], ["name", "Un menu précis du CMS"], ["manual", "Liste de liens écrite ici"]], function (v) {
+          // Passer à une liste manuelle sans lien la rendrait invalide : un premier lien à modifier est proposé ; vers un emplacement, « en-tête » est choisi par défaut
+          change(function () { var pr = byId(it.id).props; pr.source = v; if (v === "location" && !pr.location) pr.location = "header"; if (v === "manual" && !(pr.items || []).length) pr.items = [{ label: "Nouveau lien", url: "/" }]; }, { label: "Menu : source des liens" });
+        }, { disabled: disabled }));
+        if (menuSource === "location") {
+          box.appendChild(selectField("Emplacement", p.location || "header", [["header", "En-tête du site"], ["footer", "Pied de page"], ["mobile", "Menu mobile"]], function (v) { setProp(it.id, "location", v); }, { disabled: disabled }));
+          box.appendChild(h("p", { class: "pb-hint", text: "Les liens, leur ordre et les sous-menus viennent du menu affecté à cet emplacement du site (Apparence → Menus) : modifiez-le là, la page publiée suit." }));
+        } else if (menuSource === "name") {
+          box.appendChild(textField("Nom du menu", p.menuName, set("menuName"), { max: 80, disabled: disabled }));
+          box.appendChild(h("p", { class: "pb-hint", text: "Un menu de CE site, publié, retrouvé par son nom (Apparence → Menus)." }));
+        } else {
         repeatEditor(box, it, "items", [["label", "Texte du lien", 60], ["url", "Adresse (/page, https://… ou #ancre)", 500]], { label: "Nouveau lien", url: "/" }, 12, disabled);
         // Sous-menus : un niveau, sous chaque lien
         (p.items || []).forEach(function (m, i) {
@@ -2223,6 +2236,7 @@
           change(function () { var x = byId(it.id).props; pagesOnSite.forEach(function (l) { x.items.push({ label: l.label.replace(/^Page « |»$/g, "").trim(), url: l.url }); }); });
           toast(pagesOnSite.length + " page(s) publiée(s) ajoutée(s) au menu.");
         } }, "Ajouter les pages publiées"));
+        }
         box.appendChild(checkField("Liens les uns sous les autres", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled }));
         box.appendChild(checkField("Sur mobile, replier derrière un bouton « Menu »", p.mobileToggle, function (v) { setProp(it.id, "mobileToggle", v); }, { disabled: disabled }));
         break;
@@ -7674,8 +7688,8 @@
       });
     } else {
       box.appendChild(h("p", { class: "pb-note", text: "Couleurs, polices, tailles de titres, boutons et espacements viennent du design system du site « " + PAGE.siteName + " » : les modifier là les applique à toutes ses pages." }));
-      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "#design", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"));
-      box.appendChild(h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "#parties", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site"));
+      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/design-system", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"));
+      box.appendChild(h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/pied-de-page#parties", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site"));
     }
     // CSS de la page : confiné au contenu de la page, vérifié à l'enregistrement (aucune ressource externe)
     box.appendChild(h("p", { class: "pb-sub", text: "CSS de la page" }));

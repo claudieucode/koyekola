@@ -9,8 +9,8 @@ const cmsNav = require("../src/marketing/web/cmsNav");
 const labels = (arr) => arr.map((s) => s.label);
 
 describe("registre : ordre des rubriques et absence de doublon", () => {
-  test("ordre cible : Médias, Commentaires, Apparence, Extensions, Utilisateurs, …, Tests A/B, Navigation, Outils, Paramètres", () => {
-    assert.deepEqual(labels(cmsNav.SECTIONS), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Navigation", "Outils", "Paramètres"]);
+  test("ordre cible : Médias, Commentaires, Apparence, Extensions, Utilisateurs, …, Tests A/B, Outils, Paramètres (Navigation n'est plus une entrée : Apparence → Menus)", () => {
+    assert.deepEqual(labels(cmsNav.SECTIONS), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
   });
   test("clés de rubrique et clés d'entrée uniques ; aucune adresse en double", () => {
     const sk = cmsNav.SECTIONS.map((s) => s.key); assert.equal(new Set(sk).size, sk.length);
@@ -26,11 +26,11 @@ describe("registre : ordre des rubriques et absence de doublon", () => {
     assert.ok(!keysOf({ siteId: 4, principal: false, base: "/s/4", name: "S" }).includes("extensions"), "pas d'Extensions dans l'espace d'un site");
     assert.deepEqual(cmsNav.buildCmsNav({ can: () => true, active: "sites" }).sections.map((s) => s.key), ["sites"], "le menu central reste « Mes sites » seulement");
   });
-  test("« Marketing du site » vient juste avant Navigation, dans le menu du principal comme dans celui d'un site", () => {
+  test("« Marketing du site » vient juste avant Outils, dans le menu du principal comme dans celui d'un site", () => {
     for (const space of [{ principal: true, base: "/p" }, { siteId: 4, principal: false, base: "/s/4", name: "S" }]) {
       const order = cmsNav.projectSections(space).map((s) => s.key);
-      assert.equal(order.indexOf("marketing") + 1, order.indexOf("navigation"));
-      assert.ok(order.indexOf("tests") < order.indexOf("marketing") && order.indexOf("navigation") < order.indexOf("outils"));
+      assert.equal(order.indexOf("marketing") + 1, order.indexOf("outils"));
+      assert.ok(order.indexOf("tests") < order.indexOf("marketing") && !order.includes("navigation"), "plus d'entrée autonome « Navigation »");
     }
   });
   test("chaque entrée du registre a une permission, un libellé, une icône de rubrique et une adresse sous /marketing", () => {

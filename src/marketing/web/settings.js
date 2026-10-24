@@ -6,10 +6,15 @@ const access = require("../../services/cmsAccess");
 const pages = require("../pages");
 const db = require("../../config/database");
 const { need } = require("./kit");
+const general = require("./generalSettings");
+const privacy = require("./privacy");
+const connectorsWeb = require("./connectors");
+const target = require("./siteTarget");
+const permalinksUi = require("./permalinksSettings");
 
 const BASE = "/marketing/site-web/parametres";
 // Adresses des groupes (français) → clés du moteur
-const SLUGS = { general: "general", lecture: "reading", commentaires: "comments", medias: "media", permaliens: "permalinks", seo: "seo", confidentialite: "privacy", indexation: "indexation", emailing: "email", tunnels: "tunnels" };
+const SLUGS = { general: "general", ecriture: "writing", lecture: "reading", commentaires: "comments", medias: "media", permaliens: "permalinks", seo: "seo", confidentialite: "privacy", indexation: "indexation", emailing: "email", tunnels: "tunnels" };
 const SLUG_OF = Object.fromEntries(Object.entries(SLUGS).map(([s, g]) => [g, s]));
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 // Anciens noms de champs du formulaire des commentaires (palier 6) : toujours acceptés
@@ -34,6 +39,21 @@ module.exports = () => {
   };
   const visibleGroups = (req, scope) => Object.entries(engine.GROUPS).filter(([g]) => engine.defsFor(scope).some((d) => d.group === g)).filter(([g]) => req.mk.can("settings.read") || (g === "seo" && req.mk.can("seo.view")));
   const canRead = (req, group) => req.mk.can("settings.read") || (group === "seo" && req.mk.can("seo.view"));
+  // Écran ouvert dans le cadre d'un site (/sites/<id>/parametres-<groupe>) : le site est celui du cadre ; formulaires et redirections y restent
+  const inFrame = (req) => /\/sites\/\d+\//.test(req.originalUrl || "");
+  const landing = (req, slug, scope) => (req.body && req.body.frame === "1" && scope.siteId ? (slug ? `/marketing/site-web/sites/${scope.siteId}/parametres-${slug}` : `/marketing/site-web/sites/${scope.siteId}/reglages`) : `${BASE}${slug ? `/${slug}` : ""}${q(scope)}`);
+  // Réglages COMMUNS À TOUTE LA PLATEFORME qui s'appliquent aussi à un site (lecture seule dans l'espace d'un site : une modification se fait depuis le site principal, par l'équipe)
+  const platformRecap = (req, group, siteScope) => {
+    const ctx = { ...ctxOf(req), orgLevel: true };
+    const scope = { siteId: null };
+    const values = engine.readAll(scope, ctx);
+    const own = new Set(siteScope ? engine.defsFor(siteScope).map((d) => d.key) : []); // déjà réglés PAR le site : pas répétés ici
+    return engine.defsFor(scope).filter((d) => d.group === group && !own.has(d.key)).map((d) => {
+      const v = values[d.key].value;
+      const opt = d.type === "enum" ? (d.options(scope).find(([k]) => String(k) === String(v)) || [])[1] : null;
+      return { key: d.key, label: d.label, help: d.help || "", value: d.type === "boolean" ? (v ? "Oui" : "Non") : opt || (v === null || v === "" || v === undefined ? "Non défini" : String(v)), sensitive: Boolean(d.sensitive) };
+    });
+  };
   const fail = (res, error) => res.status(error.status || 422).render("error", { message: error.message });
 
   // Valeurs proposées pour les réglages « page » et « image »
@@ -58,14 +78,47 @@ module.exports = () => {
       title: `Paramètres · ${engine.GROUPS[group].label}`, active: group === "general" ? "parametres" : `parametres/${SLUG_OF[group]}`, group, groupLabel: engine.GROUPS[group].label, intro: engine.GROUPS[group].intro, view,
       scope, q: q(scope), BASE, SLUG_OF, SLUGS, sites: sitesFor(req), siteOnly: req.mk.siteOnly, groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), choices: choices(req, scope), TIMEZONES: engine.TIMEZONES,
       structure: group === "permalinks" ? permalinkStructure() : null, settingsJs: true, pending: extra.pending || null, errors: extra.errors || [], formValues: extra.formValues || null,
+      ...(group === "reading" ? readingExtras(req, scope, extra.frame) : {}),
+      ...(group === "comments" ? commentsExtras(req, scope, extra, values) : {}),
+      frame: Boolean(extra.frame), pingLog: group === "writing" ? require("../../services/writing").log(scope.siteId) : null, recap: scope.siteId ? platformRecap(req, group, scope) : null, canTeam: !req.mk.siteOnly,
     });
   };
+  // Lecture : état de la visibilité (même réglage que Paramètres → Indexation), adresse du flux réel, lien vers l'écran d'indexation
+  function readingExtras(req, scope, frame) {
+    const vis = engine.readAll(scope, ctxOf(req)).search_visibility.value;
+    const info = scope.siteId ? require("../../services/urls").siteInfo(scope.siteId) : null;
+    const feedUrl = scope.siteId ? (info && info.base ? `${info.base}/blog/feed.xml` : null) : "/blog/feed.xml";
+    const visibilityUrl = frame && scope.siteId ? `/marketing/site-web/sites/${scope.siteId}/parametres-indexation` : `${BASE}/indexation${q(scope)}`;
+    return { visibility: vis === "closed" ? "closed" : "open", visibilityUrl, feedUrl };
+  }
+  // Commentaires : aperçus des avatars (locaux = dessinés ici ; Gravatar = seulement si le site l'a accepté), liens vers la modération
+  function commentsExtras(req, scope, extra, values) {
+    const av = require("../../services/avatars"), cm = require("../../services/comments");
+    const external = Boolean(extra.formValues && "comments_avatar_external" in extra.formValues ? extra.formValues.comments_avatar_external : values.comments_avatar_external.value);
+    const seed = av.seedOf("apercu");
+    const avatarChoices = cm.AVATAR_DEFAULTS.map((key) => {
+      const isExt = av.EXTERNAL.includes(key);
+      return { key, label: av.LABELS[key], external: isExt, available: !isExt || external,
+        preview: !isExt ? `/avatar/l/${key}/${seed}.svg${key === "initials" ? "?i=AB" : ""}` : external ? `/avatar/preview/${key}.png` : null };
+    });
+    return { listMax: cm.LIST_MAX_LINES, avatarChoices, commentsUrl: `/marketing/site-web/commentaires/indesirables${q(scope)}` };
+  }
   function permalinkStructure() {
     const tx = require("../../services/taxonomy");
     return [["Page du CMS", "/p/<adresse>"], ["Article", "/blog/<adresse>"], ["Formation", "/cours/<adresse>"], ...Object.values(tx.TAXONOMIES).map((t) => [t.label, `${tx.baseOf(t.key)}/<adresse>`])];
   }
 
+  // En-tête des Paramètres autour de l'écran des permaliens (absent dans le cadre d'un site : le menu du site tient lieu d'onglets)
+  const permalinksHead = (req, scope) => (inFrame(req) ? { frame: true } : { settingsHead: { heading: "Permaliens", intro: "", groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(scope), scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "permalinks", tabPath: "/permaliens" } });
+  // Aperçu et validation à la volée (JSON, aucune écriture)
+  router.post("/site-web/parametres/permaliens/apercu", (req, res) => {
+    if (!req.mk.can("settings.read")) return res.status(403).json({ ok: false, errors: ["Permission requise."] });
+    const t = target(req, res, { json: true }); if (!t) return;
+    permalinksUi.preview(req, res, t);
+  });
   // ----- Écrans -----
+  // Connecteurs : page propre (centre d'intégrations) ; le niveau (central ou un site) vient de l'adresse vérifiée
+  router.get("/site-web/parametres/connecteurs", (req, res) => connectorsWeb.render(req, res));
   const groupRoute = new RegExp(`^/site-web/parametres(?:/(${Object.keys(SLUGS).join("|")}))?/?$`);
   router.get(groupRoute, (req, res) => {
     const group = SLUGS[req.params[0] || "general"];
@@ -73,8 +126,26 @@ module.exports = () => {
     if (s.missing) return res.status(404).render("error", { message: "Site introuvable." });
     if (!canRead(req, group)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." });
     if (!s.scope.siteId && req.mk.siteOnly) return res.redirect("/marketing/site-web/mes-sites");
-    if (!engine.defsFor(s.scope).some((d) => d.group === group)) return res.redirect(`${BASE}${q(s.scope)}`);
-    render(req, res, group, s.scope);
+    // Permaliens : écran dédié (structure des articles, préfixes des archives) au-dessus du moteur unique services/permalinks
+    if (group === "permalinks") {
+      const t = target(req, res); if (!t) return;
+      return permalinksUi.render(req, res, t, permalinksHead(req, s.scope));
+    }
+    // Un groupe sans réglage propre au site (commentaires, médias…) s'affiche tout de même pour un site : il montre ce qui s'applique réellement, en lecture seule
+    if (!engine.defsFor(s.scope).some((d) => d.group === group) && !(s.scope.siteId && platformRecap(req, group, s.scope).length)) return res.redirect(`${BASE}${q(s.scope)}`);
+    // Général : le centre de configuration (sections, aperçus, enregistrement en une fois) ; les autres groupes gardent leur formulaire
+    if (group === "general") {
+      const t = target(req, res); if (!t) return;
+      return general.render(req, res, t, "parametres", { settingsHead: { heading: "Général", intro: "", groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(s.scope), scope: s.scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "general", tabPath: "" } });
+    }
+    // Confidentialité : deux onglets (Réglages · Guide de politique) ; le formulaire générique ne sert plus à ce groupe
+    if (group === "privacy") {
+      const t = target(req, res); if (!t) return;
+      // Dans l'espace d'un site (adresse /sites/<id>/confidentialite), pas d'onglets centraux ni de choix de site : le site est celui du cadre
+      const inSite = /\/sites\/\d+\//.test(req.originalUrl || "");
+      return privacy.render(req, res, t, inSite ? {} : { settingsHead: { heading: "Confidentialité", intro: "", groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(s.scope), scope: s.scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "privacy", tabPath: "/confidentialite" } });
+    }
+    render(req, res, group, s.scope, { frame: inFrame(req) });
   });
 
   // Enregistrement d'un groupe (formulaire) : tout ou rien ; réglage sensible = confirmation explicite
@@ -83,6 +154,13 @@ module.exports = () => {
     const s = scopeOf(req);
     if (s.missing) return res.status(404).render("error", { message: "Site introuvable." });
     if (!req.mk.can("settings.write") && !(group === "seo" && req.mk.can("seo.edit"))) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    // Formulaire de l'écran Permaliens (structure, préfixes) ; un envoi qui ne porte que « normalize_paths » (ancien formulaire, API) suit le chemin générique ci-dessous
+    if (group === "permalinks" && req.body && ("preset" in req.body || "structure" in req.body || "category_base" in req.body || "tag_base" in req.body)) {
+      const t = target(req, res); if (!t) return;
+      const out = permalinksUi.save(Object.assign(req, { permalinksHead: permalinksHead(req, s.scope).settingsHead }), res, t, next);
+      if (out && out.redirect) return res.redirect(landing(req, req.params[0], s.scope));
+      return;
+    }
     const ctx = ctxOf(req);
     const body = { ...(req.body || {}) };
     if (group === "comments") for (const [from, to] of Object.entries(LEGACY)) if (from in body && !(to in body)) body[to] = body[from];
@@ -90,7 +168,7 @@ module.exports = () => {
     for (const d of engine.defsFor(s.scope).filter((x) => x.group === group)) {
       if (!ctx.can(d.perm) || (d.sensitive && !ctx.can("settings.sensitive"))) continue; // champ non modifiable pour cette personne : ignoré (le moteur le refuserait)
       if (d.type === "boolean") {
-        const shown = `_b_${d.key}` in body || group === "comments"; // case décochée = absente du formulaire : seul le marqueur prouve que le champ était affiché
+        const shown = `_b_${d.key}` in body || (group === "comments" && Object.values(LEGACY).includes(d.key)); // case décochée = absente du formulaire : seul le marqueur prouve que le champ était affiché (l'ancien formulaire des commentaires n'en portait pas)
         if (shown) patch[d.key] = body[d.key] === "1" || body[d.key] === "on" || body[d.key] === "true";
       } else if (d.key in body) patch[d.key] = body[d.key];
     }
@@ -98,10 +176,11 @@ module.exports = () => {
     try { result = engine.update(s.scope, patch, ctx, { confirm: body.confirm === "1", actor: req }); } catch (error) { if (error.status) return fail(res, error); return next(error); }
     if (result.ok) {
       flash(req, "ok", result.changed.length ? `Réglages enregistrés (${result.changed.length} modification${result.changed.length > 1 ? "s" : ""}).` : "Aucune modification à enregistrer.");
-      return res.redirect(`${BASE}${req.params[0] ? `/${req.params[0]}` : ""}${q(s.scope)}`);
+      return res.redirect(landing(req, req.params[0], s.scope));
     }
-    if (result.confirmRequired) return render(req, res.status(409), group, s.scope, { pending: result.confirmRequired, formValues: patch });
-    return render(req, res.status(422), group, s.scope, { errors: result.errors, formValues: patch });
+    const frame = req.body.frame === "1";
+    if (result.confirmRequired) return render(req, res.status(409), group, s.scope, { pending: result.confirmRequired, formValues: patch, frame });
+    return render(req, res.status(422), group, s.scope, { errors: result.errors, formValues: patch, frame });
   });
 
   // ----- API JSON -----
@@ -147,6 +226,23 @@ module.exports = () => {
     if (foreign.length) return json(res, 422, { ok: false, errors: [`Réglage étranger à ce groupe : ${foreign.map((k) => String(k).slice(0, 30)).join(", ")}.`] });
     try { respond(res, engine.update(scope, values, ctxOf(req), { confirm: req.body.confirm === true, actor: req })); } catch (error) { if (error.status) return json(res, error.status, { error: error.message }); next(error); }
   });
+  // Général : un enregistrement unique de tous les champs modifiés (tout ou rien) ; la réponse renvoie les valeurs RÉELLEMENT enregistrées
+  api.put("/general", (req, res, next) => {
+    const scope = scopeJson(req, res); if (!scope) return;
+    const values = req.body && typeof req.body.values === "object" && req.body.values && !Array.isArray(req.body.values) ? req.body.values : null;
+    if (!values) return json(res, 422, { ok: false, errors: ["Corps invalide : { values: { clé: valeur } } attendu."] });
+    const foreign = Object.keys(values).filter((k) => !general.KEYS.includes(k));
+    if (foreign.length) return json(res, 422, { ok: false, errors: [`Réglage étranger à cet écran : ${foreign.map((k) => String(k).slice(0, 30)).join(", ")}.`] });
+    try {
+      const ctx = ctxOf(req);
+      const result = engine.update(scope, values, ctx, { confirm: req.body.confirm === true, actor: req });
+      if (!result.ok) return respond(res, result);
+      const now = engine.readAll(scope, ctx);
+      json(res, 200, { ok: true, changed: result.changed, values: Object.fromEntries(general.KEYS.filter((k) => k in now).map((k) => [k, now[k].value])) });
+    } catch (error) { if (error.status) return json(res, error.status, { error: error.message }); next(error); }
+  });
+  privacy.apiRoutes(api);
+  connectorsWeb.apiRoutes(api);
   api.get("/:key", (req, res) => {
     const scope = scopeJson(req, res); if (!scope) return;
     const d = engine.byKey(scope, req.params.key);
@@ -172,7 +268,7 @@ module.exports = () => {
     const s = scopeOf(req);
     if (s.missing) return res.status(404).render("error", { message: "Site introuvable." });
     const target = String(req.body.target || "");
-    const back = `${BASE}${SLUG_OF[engine.byKey(s.scope, target) ? engine.byKey(s.scope, target).group : target] ? `/${SLUG_OF[engine.byKey(s.scope, target) ? engine.byKey(s.scope, target).group : target]}` : ""}${q(s.scope)}`;
+    const back = landing(req, SLUG_OF[engine.byKey(s.scope, target) ? engine.byKey(s.scope, target).group : target] || "", s.scope);
     try {
       const r = engine.reset(s.scope, target, ctxOf(req), { confirm: req.body.confirm === "1", actor: req });
       if (r.ok) flash(req, "ok", r.changed.length ? "Valeur par défaut rétablie." : "Ce réglage a déjà sa valeur par défaut.");
@@ -186,7 +282,7 @@ module.exports = () => {
   router.get("/site-web/parametres/avance", need("settings.read"), (req, res) => {
     const s = scopeOf(req);
     if (s.missing) return res.status(404).render("error", { message: "Site introuvable." });
-    res.render("marketing/settings-advanced", { title: "Paramètres · Avancé", active: "parametres/avance", BASE, SLUGS, SLUG_OF, scope: s.scope, q: q(s.scope), sites: sitesFor(req), siteOnly: req.mk.siteOnly, groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), platform: engine.platform(), prefs: engine.userPrefs(req.session.user.id), settingsJs: true });
+    res.render("marketing/settings-advanced", { title: "Paramètres · Avancé", active: "parametres/avance", BASE, SLUGS, SLUG_OF, scope: s.scope, q: q(s.scope), sites: sitesFor(req), siteOnly: req.mk.siteOnly, groups: visibleGroups(req, s.scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), platform: engine.platform(), prefs: engine.userPrefs(req.session.user.id), settingsJs: true, frame: inFrame(req), canTeam: !req.mk.siteOnly });
   });
 
   return router;

@@ -106,10 +106,10 @@ const tagList = (scope = null) => taxonomy.tree("tag", scope); // étiquettes du
 const get = (id) => (Number.isInteger(id) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(id) : null);
 
 // Titre → article en brouillon (identifiant réel), prêt à s'ouvrir dans l'éditeur
-function createDraft({ title, userId }) {
+function createDraft({ title, userId, siteId = null }) {
   const clean = String(title || "").replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 150);
   if (!clean) throw new UserError("Le titre de l'article est obligatoire.");
-  const id = Number(db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id, comments_enabled) VALUES (?, ?, 'html', 'draft', ?, ?)").run(blog.uniqueSlug(clean), clean, userId ?? null, require("./comments").settings().enabled_default ? 1 : 0).lastInsertRowid);
+  const id = Number(db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id, comments_enabled) VALUES (?, ?, 'html', 'draft', ?, ?)").run(blog.uniqueSlug(clean), clean, userId ?? null, require("./comments").settingsFor(siteId).enabled_default ? 1 : 0).lastInsertRowid);
   blog.addRevision(get(id), userId ?? null, "Création de l'article", "create");
   return get(id);
 }

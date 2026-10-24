@@ -48,14 +48,35 @@ function check(custom) {
   return problems;
 }
 
-function text(req) {
+// opts.siteId : fichier d'UN site (aperçu de l'administration, site vérifié par l'appelant) ; opts.preview : ignore la politique d'hôte (développement / adresse locale)
+// pour montrer le fichier tel qu'il serait servi sur le domaine public ; opts.base : adresse publique du site (sinon celle de la requête)
+function text(req, opts = {}) {
   // Environnement non public (développement, adresse locale) : tout est interdit, aucun plan du site n'est annoncé
-  if (!require("../middlewares/siteHost").indexingAllowed(req)) return "User-agent: *\nDisallow: /\n";
-  const custom = settings.forRequest(req).robots_custom || ""; // R8 lot 6 : les règles supplémentaires du domaine d'un site sont les SIENNES (vides par défaut), jamais celles du site principal
+  if (!opts.preview && !require("../middlewares/siteHost").indexingAllowed(req)) return "User-agent: *\nDisallow: /\n";
+  const custom = (Number.isInteger(opts.siteId) ? settings.allFor(opts.siteId) : settings.forRequest(req)).robots_custom || ""; // R8 lot 6 : les règles supplémentaires du domaine d'un site sont les SIENNES (vides par défaut), jamais celles du site principal
   const lines = ["User-agent: *", ...PRIVATE.map((p) => `Disallow: ${p}`), ""];
   if (custom) lines.push(custom, "");
-  lines.push(`Sitemap: ${absoluteUrl(req, "/sitemap.xml")}`, "");
+  lines.push(`Sitemap: ${opts.base ? `${opts.base.replace(/\/+$/, "")}/sitemap.xml` : absoluteUrl(req, "/sitemap.xml")}`, "");
   return lines.join("\n");
+}
+
+// Avertissements sur des règles saisies (en plus de check) : blocage large, ressources nécessaires au rendu, contradictions Allow/Disallow
+function warnings(custom) {
+  const { groups } = parse(custom);
+  const out = [];
+  const RENDER = ["/uploads", "/css", "/js", "/img", "/fonts", "/assets", "/static"];
+  for (const g of groups) {
+    const all = g.agents.includes("*") || g.agents.some((a) => /^(googlebot|bingbot)$/i.test(a));
+    for (const r of g.rules) {
+      if (r.type !== "disallow" || !r.path) continue;
+      if (all && RENDER.some((x) => r.path === x || r.path === `${x}/` || r.path.startsWith(`${x}/`) || (r.path.startsWith("/*") && /\.(css|js)\b/.test(r.path)))) out.push({ level: "warning", message: `« Disallow: ${r.path} » peut empêcher Google de charger des fichiers nécessaires à l'affichage des pages (styles, scripts, images).` });
+      if (all && r.path !== "/" && (r.path === "/*" || r.path === "/p" || r.path === "/p/" || r.path === "/blog" || r.path === "/blog/")) out.push({ level: "warning", message: `« Disallow: ${r.path} » bloque un grand nombre de pages publiques de ce site.` });
+    }
+    const allows = g.rules.filter((r) => r.type === "allow" && r.path);
+    for (const r of g.rules) if (r.type === "disallow" && r.path && allows.some((a) => a.path === r.path)) out.push({ level: "warning", message: `Règles contradictoires : « Allow: ${r.path} » et « Disallow: ${r.path} » (Google applique Allow).` });
+  }
+  out.push({ level: "info", message: "robots.txt n'est pas un moyen de rendre une page privée : une page bloquée peut quand même être connue des moteurs. Protégez un contenu privé par une connexion." });
+  return out;
 }
 
 // Règle Google : la règle la plus spécifique (longue) l'emporte ; à égalité, Allow
@@ -78,9 +99,9 @@ function allowed(rulesText, agent, path) {
 }
 
 // Adresses du plan du site interdites à Googlebot par robots.txt
-function conflicts(req, paths) {
-  const rules = text(req).split("\n").filter((l) => !/^sitemap:/i.test(l)).join("\n");
+function conflicts(req, paths, opts = {}) {
+  const rules = text(req, opts).split("\n").filter((l) => !/^sitemap:/i.test(l)).join("\n");
   return paths.filter((p) => !allowed(rules, "Googlebot", p));
 }
 
-module.exports = { text, check, parse, allowed, conflicts, PRIVATE };
+module.exports = { text, check, warnings, parse, allowed, conflicts, PRIVATE };

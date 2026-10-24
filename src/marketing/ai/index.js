@@ -47,7 +47,7 @@ function getAiSettings(ctx) {
   checkCtx(ctx);
   const s = ctx.settings;
   const limit = Number(s ? s.get(ctx.organizationId, LIMIT_KEY, DEFAULT_LIMIT) : DEFAULT_LIMIT);
-  return { voice: s ? String(s.get(ctx.organizationId, VOICE_KEY, "") || "") : "", dailyLimit: Number.isInteger(limit) && limit >= 1 ? limit : DEFAULT_LIMIT, configured: isConfigured(), model: MODEL };
+  return { voice: s ? String(s.get(ctx.organizationId, VOICE_KEY, "") || "") : "", dailyLimit: Number.isInteger(limit) && limit >= 1 ? limit : DEFAULT_LIMIT, configured: isConfigured() || Boolean(connectorKey(ctx, limited(ctx) ? ctx.siteScope : null)), model: MODEL };
 }
 function saveAiSettings(ctx, { voice, dailyLimit }) {
   checkCtx(ctx);
@@ -87,20 +87,25 @@ function systemFor(ctx, channel) {
   ].filter(Boolean).join(" ");
 }
 
+// Clé d'API Anthropic du site : d'abord le centre de connecteurs (connexion du site, ou connexion centrale PARTAGÉE avec les sites), sinon la variable d'environnement historique (comportement inchangé)
+function connectorKey(ctx, site) {
+  try { const c = require("../../services/connectors").credentialsFor(ctx, { siteId: site ?? null }, "anthropic"); return c && c.secrets.apiKey ? c.secrets.apiKey : null; } catch { return null; }
+}
 async function call(ctx, action, { channel = "email", prompt, schema, effort = "medium", system = null, siteId } = {}) {
   checkCtx(ctx);
   // R7 lot 6.2 — un accès LIMITÉ à un site n'utilise l'IA que si le module est activé pour CE site (chemin unique : e-mails, SMS, studio de pages)
   siteModules.assertEnabled(ctx, "ai");
   const now = nowOf(ctx);
   const settings = getAiSettings(ctx);
-  if (!settings.configured) throw new AiError("not_configured", "L'assistant IA n'est pas activé : ajoutez la variable ANTHROPIC_API_KEY (clé de console.anthropic.com) dans la configuration du serveur.");
-  if (orgLast24h(ctx, now) >= settings.dailyLimit) throw new AiError("quota", `Plafond atteint : ${settings.dailyLimit} demandes à l'IA sur les dernières 24 heures (réglable dans Paramètres → Assistant IA).`);
   // Site de la consommation : jamais lu d'une requête — site explicite d'un appelant interne (ex. site de la page éditée, relu en base), sinon le site imposé à un accès limité ; toujours revalidé
   // (un accès LIMITÉ est toujours attribué à SON site, quoi qu'un appelant interne passe ; l'équipe : site explicite relu en base, sinon aucun)
   const site = limited(ctx) ? validSite(ctx.db, ctx.organizationId, ctx.siteScope) : validSite(ctx.db, ctx.organizationId, siteId);
+  const apiKey = connectorKey(ctx, site);
+  if (!settings.configured && !apiKey) throw new AiError("not_configured", "L'assistant IA n'est pas activé : ajoutez un connecteur Anthropic dans Réglages → Connecteurs (ou la variable ANTHROPIC_API_KEY sur le serveur).");
+  if (orgLast24h(ctx, now) >= settings.dailyLimit) throw new AiError("quota", `Plafond atteint : ${settings.dailyLimit} demandes à l'IA sur les dernières 24 heures (réglable dans Paramètres → Assistant IA).`);
   const log = (ok, code = "", out = 0) => ctx.db.prepare("INSERT INTO mk_ai_requests (organization_id, user_id, action, ok, error_code, input_chars, output_tokens, created_at, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(ctx.organizationId, ctx.userId ?? null, action, ok ? 1 : 0, code, prompt.length, out, now, site);
   try {
-    const r = await runJson({ system: system || systemFor(ctx, channel), prompt, schema, effort });
+    const r = await runJson({ system: system || systemFor(ctx, channel), prompt, schema, effort, apiKey });
     log(true, "", (r.usage && r.usage.output_tokens) || 0);
     return r.data;
   } catch (error) {

@@ -2,7 +2,9 @@
 <% const canWrite = mk.can("campaigns.write");
    const when = (r) => r.frequency === "daily" ? `Chaque jour à ${r.send_time}` : r.frequency === "weekly" ? `Chaque ${r.days.map((d) => WEEKDAYS[d - 1]).join(", ")} à ${r.send_time}` : `Le ${r.month_day} de chaque mois à ${r.send_time}`; %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Campagnes RSS</h1><p class="mk-head-sub">Vos nouveaux articles (blog KOLAKISA ou autre flux) envoyés automatiquement selon une fréquence. Chaque envoi est une campagne ordinaire, visible dans Toutes les campagnes avec son rapport.</p></div><% if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/rss/nouvelle">Créer une campagne RSS</a><% } %></div>
+      <div class="mk-head-main"><h1>Campagnes RSS</h1><p class="mk-head-sub">Vos nouveaux articles (blog KOLAKISA ou autre flux) envoyés automatiquement selon une fréquence. Chaque envoi est une campagne ordinaire, visible dans Toutes les campagnes avec son rapport.</p></div>
+      <div class="mk-head-actions"><% if (canWrite) { %><a class="btn btn-primary" href="/marketing/rss/nouvelle" data-tip="Choisissez la source (votre blog ou un flux) et la fréquence : chaque nouvel article partira tout seul.">Créer une campagne RSS</a><% } %></div>
+    </div>
     <%- include("partials/worker-note", { workerOn, consequence: "aucune campagne RSS ne sera vérifiée ni envoyée tant qu'il n'est pas rétabli" }) %>
     <% if (!items.length) { %>
       <div class="mk-empty"><%- illu("layers", { className: "kx-empty-ill" }) %><h2>Aucune campagne RSS</h2><p>Créez-en une pour que chaque nouvel article parte automatiquement à vos abonnés.</p>

@@ -113,11 +113,11 @@ function uniqueSlug(base, siteId, exceptId = 0) {
   }
   throw new UserError("Impossible de trouver une adresse libre pour ce menu.");
 }
-function create({ name, description = "", siteId = null, userId = null }) {
+function create({ name, description = "", siteId = null, userId = null, autoAddPages = false }) {
   const nm = cleanLabel(name);
   if (!nm) throw new UserError("Donnez un nom au menu.");
   if (db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE`).get(siteId, nm)) throw new UserError(`Un menu « ${nm} » existe déjà.`);
-  const id = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, description, created_by) VALUES (?, ?, ?, ?, ?)").run(siteId, nm, uniqueSlug(nm, siteId), String(description || "").trim().slice(0, 300), userId).lastInsertRowid);
+  const id = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, description, created_by, auto_add_pages) VALUES (?, ?, ?, ?, ?, ?)").run(siteId, nm, uniqueSlug(nm, siteId), String(description || "").trim().slice(0, 300), userId, autoAddPages ? 1 : 0).lastInsertRowid);
   emit("menu.created", { menuId: id });
   return menuRow(id);
 }
@@ -128,7 +128,7 @@ function update(id, { name, description, status }) {
   if (!nm) throw new UserError("Le nom du menu est obligatoire.");
   if (db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND id <> ?`).get(m.site_id, nm, id)) throw new UserError(`Un menu « ${nm} » existe déjà.`);
   const st = status === undefined ? m.status : ["published", "draft"].includes(status) ? status : m.status;
-  db.prepare("UPDATE nav_menus SET name = ?, description = ?, status = ?, updated_at = datetime('now') WHERE id = ?").run(nm, description === undefined ? m.description : String(description).trim().slice(0, 300), st, id);
+  db.prepare("UPDATE nav_menus SET name = ?, description = ?, status = ?, updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(nm, description === undefined ? m.description : String(description).trim().slice(0, 300), st, id);
   emit("menu.updated", { menuId: id });
   return menuRow(id);
 }
@@ -151,7 +151,7 @@ function duplicate(id, { userId = null } = {}) {
     db.prepare("UPDATE nav_menus SET status = 'draft' WHERE id = ?").run(copy.id); // la copie n'est jamais publiée toute seule
     const map = new Map();
     const items = db.prepare("SELECT * FROM nav_items WHERE menu_id = ? ORDER BY (parent_id IS NOT NULL), position, id").all(id);
-    const ins = db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label, status, new_tab, rel, icon, visibility, description, media_id, meta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    const ins = db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label, status, new_tab, rel, icon, visibility, description, media_id, meta, css_class, title_attr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     // Parents d'abord (profondeur croissante) pour que la nouvelle hiérarchie existe au moment d'insérer les enfants
     const pending = [...items];
     while (pending.length) {
@@ -159,7 +159,7 @@ function duplicate(id, { userId = null } = {}) {
       for (let i = pending.length - 1; i >= 0; i -= 1) {
         const it = pending[i];
         if (it.parent_id && !map.has(it.parent_id)) continue;
-        map.set(it.id, Number(ins.run(copy.id, it.parent_id ? map.get(it.parent_id) : null, it.position, it.type, it.object_id, it.url, it.label, it.status, it.new_tab, it.rel, it.icon, it.visibility, it.description, it.media_id, it.meta).lastInsertRowid));
+        map.set(it.id, Number(ins.run(copy.id, it.parent_id ? map.get(it.parent_id) : null, it.position, it.type, it.object_id, it.url, it.label, it.status, it.new_tab, it.rel, it.icon, it.visibility, it.description, it.media_id, it.meta, it.css_class, it.title_attr).lastInsertRowid));
         pending.splice(i, 1);
       }
       if (pending.length === before) break; // données incohérentes : on ne boucle jamais
@@ -221,7 +221,7 @@ function add(menuId, input) {
   const newTab = input.new_tab === undefined ? external : Boolean(input.new_tab);
   const id = Number(db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label, new_tab, rel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
     .run(menuId, parentId, siblingsCount(menuId, parentId), base.type, base.object_id, base.url, label, newTab ? 1 : 0, cleanRel(input.rel)).lastInsertRowid);
-  db.prepare("UPDATE nav_menus SET updated_at = datetime('now') WHERE id = ?").run(menuId);
+  db.prepare("UPDATE nav_menus SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(menuId);
   emit("items.changed", { menuId });
   return itemRow(id);
 }
@@ -236,7 +236,7 @@ function updateItem(id, input) {
   const icon = input.icon === undefined ? it.icon : (String(input.icon).trim() && ICON_RE.test(String(input.icon).trim()) ? String(input.icon).trim() : "");
   db.prepare("UPDATE nav_items SET object_id = ?, url = ?, label = ?, status = ?, new_tab = ?, rel = ?, icon = ?, visibility = ?, description = ?, updated_at = datetime('now') WHERE id = ?")
     .run(base.object_id, base.url, label, status, input.new_tab === undefined ? it.new_tab : (input.new_tab ? 1 : 0), input.rel === undefined ? it.rel : cleanRel(input.rel), icon, visibility, input.description === undefined ? it.description : String(input.description).trim().slice(0, 200), id);
-  db.prepare("UPDATE nav_menus SET updated_at = datetime('now') WHERE id = ?").run(it.menu_id);
+  db.prepare("UPDATE nav_menus SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(it.menu_id);
   emit("items.changed", { menuId: it.menu_id });
   return itemRow(id);
 }
@@ -244,7 +244,7 @@ function updateItem(id, input) {
 function removeItem(id) {
   const it = itemRow(id);
   if (!it) throw new UserError("Élément introuvable.");
-  transaction(db, () => { db.prepare("DELETE FROM nav_items WHERE id = ?").run(id); renumber(it.menu_id); });
+  transaction(db, () => { db.prepare("DELETE FROM nav_items WHERE id = ?").run(id); renumber(it.menu_id); db.prepare("UPDATE nav_menus SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(it.menu_id); });
   emit("items.changed", { menuId: it.menu_id });
   return it;
 }
@@ -274,7 +274,7 @@ function move(id, { parentId = null, index = null }) {
     db.prepare("UPDATE nav_items SET parent_id = ?, updated_at = datetime('now') WHERE id = ?").run(target, it.id);
     sibs.forEach((sid, n) => db.prepare("UPDATE nav_items SET position = ? WHERE id = ?").run(n, sid));
     renumber(it.menu_id);
-    db.prepare("UPDATE nav_menus SET updated_at = datetime('now') WHERE id = ?").run(it.menu_id);
+    db.prepare("UPDATE nav_menus SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(it.menu_id);
   });
   emit("items.changed", { menuId: it.menu_id });
   return itemRow(id);
@@ -321,10 +321,140 @@ function reorder(menuId, tree) {
   transaction(db, () => {
     const upd = db.prepare("UPDATE nav_items SET parent_id = ?, position = ?, updated_at = datetime('now') WHERE id = ?");
     for (const f of flat) upd.run(f.parent, f.index, f.id);
-    db.prepare("UPDATE nav_menus SET updated_at = datetime('now') WHERE id = ?").run(menuId);
+    db.prepare("UPDATE nav_menus SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(menuId);
   });
   emit("items.changed", { menuId });
   return flat.length;
+}
+
+// ---------- Enregistrement de l'éditeur : un seul bloc, tout ou rien, version contrôlée ----------
+const CLASS_TOKEN = /^[A-Za-z_][A-Za-z0-9_-]{0,39}$/;
+function cleanClasses(input) {
+  const tokens = String(input || "").split(/\s+/).filter(Boolean);
+  if (tokens.length > 5) throw new UserError("Cinq classes CSS au plus par élément.");
+  for (const t of tokens) if (!CLASS_TOKEN.test(t)) throw new UserError(`Classe CSS invalide « ${t.slice(0, 40)} » : lettres, chiffres, tiret et soulignement seulement.`);
+  return [...new Set(tokens)].join(" ");
+}
+const cleanTitle = (s) => cleanLabel(s).slice(0, 120);
+const ITEM_KEYS = new Set(["id", "key", "type", "object_id", "url", "label", "title_attr", "css_class", "new_tab", "rel", "visibility", "status", "children"]);
+// Écrit le menu entier tel que l'éditeur le montre : { revision, name?, description?, status?, items: [{ id?|key, type, …, children }], locations?: { clé: booléen } }.
+// Un élément porteur d'un « id » doit appartenir à CE menu ; un élément sans « id » est créé. Tout est validé avant la première écriture ; une erreur n'écrit rien.
+// canPublish : sans ce droit, une demande qui changerait un emplacement est refusée (403), les emplacements restant tels quels.
+function saveMenu(menuId, payload, { canPublish = false, userId = null } = {}) {
+  const m = menuRow(menuId);
+  if (!m) throw new UserError("Menu introuvable.", 404);
+  const body = payload && typeof payload === "object" ? payload : {};
+  if (!Number.isInteger(body.revision)) throw new UserError("Version du menu manquante : rechargez la page.", 400);
+  if (body.revision !== m.revision) throw new UserError("Ce menu a été modifié ailleurs depuis l'ouverture de cette page. Rechargez-la pour voir la dernière version avant d'enregistrer : vos modifications ne sont pas écrites.", 409);
+  if (!Array.isArray(body.items)) throw new UserError("Structure invalide.", 400);
+
+  const name = body.name === undefined ? m.name : cleanLabel(body.name);
+  if (!name) throw new UserError("Le nom du menu est obligatoire.");
+  if (db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE AND id <> ?`).get(m.site_id, name, menuId)) throw new UserError(`Un menu « ${name} » existe déjà.`);
+  const description = body.description === undefined ? m.description : String(body.description).trim().slice(0, 300);
+  const status = body.status === undefined ? m.status : ["published", "draft"].includes(body.status) ? body.status : null;
+  if (!status) throw new UserError("État du menu invalide.");
+  if (body.autoAddPages !== undefined && typeof body.autoAddPages !== "boolean") throw new UserError("Réglage « ajout automatique des pages » invalide.");
+  const autoAdd = body.autoAddPages === undefined ? m.auto_add_pages : body.autoAddPages ? 1 : 0;
+
+  const existing = new Map(db.prepare("SELECT * FROM nav_items WHERE menu_id = ?").all(menuId).map((r) => [r.id, r]));
+  const seen = new Set(), plan = [];
+  const walk = (nodes, parentRef, depth) => {
+    if (!Array.isArray(nodes)) throw new UserError("Structure invalide.");
+    nodes.forEach((n, index) => {
+      if (depth > MAX_DEPTH) throw new UserError(`Un menu a ${MAX_DEPTH} niveaux au plus.`);
+      if (!n || typeof n !== "object") throw new UserError("Structure invalide.");
+      if (plan.length >= MAX_ITEMS) throw new UserError(`Un menu contient ${MAX_ITEMS} éléments au plus.`);
+      for (const k of Object.keys(n)) if (!ITEM_KEYS.has(k)) throw new UserError("Champ d'élément inconnu.");
+      let row = null;
+      if (n.id !== undefined && n.id !== null) {
+        const id = Number(n.id);
+        row = existing.get(id);
+        if (!row) throw new UserError("Élément inconnu dans ce menu : rechargez la page.");
+        if (seen.has(id)) throw new UserError("Élément en double : la structure formerait une boucle.");
+        seen.add(id);
+      }
+      const base = normalizeItem(row ? { ...n, type: row.type } : n, row, m.site_id);
+      const label = cleanLabel(n.label);
+      if (base.type === "custom" && !label) throw new UserError("Donnez un texte à chaque lien personnalisé.");
+      const external = base.type === "custom" && isExternal(base.url);
+      const visibility = n.visibility === undefined ? "all" : ["all", "guests", "members"].includes(n.visibility) ? n.visibility : null;
+      const st = n.status === undefined ? "published" : ["published", "hidden"].includes(n.status) ? n.status : null;
+      if (!visibility || !st) throw new UserError("Valeur d'option invalide.");
+      const ref = row ? row.id : `n${plan.length}`;
+      plan.push({ row, ref, parentRef, index, base, label, newTab: n.new_tab === undefined ? external : Boolean(n.new_tab), rel: cleanRel(n.rel), visibility, status: st, css: cleanClasses(n.css_class), title: cleanTitle(n.title_attr) });
+      walk(n.children === undefined ? [] : n.children, ref, depth + 1);
+    });
+  };
+  walk(body.items, null, 1);
+
+  // Emplacements : état voulu de CE menu (clé → booléen), appliqué dans la même transaction
+  const current = assignments({ siteId: m.site_id });
+  const wanted = {};
+  if (body.locations !== undefined) {
+    if (!body.locations || typeof body.locations !== "object" || Array.isArray(body.locations)) throw new UserError("Emplacements invalides.");
+    for (const [key, v] of Object.entries(body.locations)) {
+      if (!LOCATIONS[key]) throw new UserError("Emplacement inconnu.");
+      const on = Boolean(v);
+      if (on !== (current[key] === menuId)) wanted[key] = on;
+    }
+    if (Object.keys(wanted).length && !canPublish) throw new UserError("Seuls les administrateurs affectent un menu à un emplacement.", 403);
+  }
+
+  const ids = new Map();
+  transaction(db, () => {
+    const ins = db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label) VALUES (?, NULL, 0, ?, ?, ?, ?)");
+    for (const p of plan) ids.set(p.ref, p.row ? p.row.id : Number(ins.run(menuId, p.base.type, p.base.object_id, p.base.url, p.label).lastInsertRowid));
+    for (const [id] of existing) if (!seen.has(id)) db.prepare("DELETE FROM nav_items WHERE id = ?").run(id);
+    const upd = db.prepare("UPDATE nav_items SET parent_id = ?, position = ?, object_id = ?, url = ?, label = ?, status = ?, new_tab = ?, rel = ?, visibility = ?, css_class = ?, title_attr = ?, updated_at = datetime('now') WHERE id = ?");
+    for (const p of plan) upd.run(p.parentRef === null ? null : ids.get(p.parentRef), p.index, p.base.object_id, p.base.url, p.label, p.status, p.newTab ? 1 : 0, p.rel, p.visibility, p.css, p.title, ids.get(p.ref));
+    db.prepare("UPDATE nav_menus SET name = ?, description = ?, status = ?, auto_add_pages = ?, updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(name, description, status, autoAdd, menuId);
+    for (const [key, on] of Object.entries(wanted)) assign(key, on ? menuId : null, { siteId: m.site_id });
+    if (Object.keys(wanted).length) db.prepare("UPDATE nav_menus SET revision = revision - ? WHERE id = ?").run(new Set(Object.keys(wanted)).size, menuId); // assign() a compté chaque emplacement : une seule version par enregistrement
+  });
+  emit("items.changed", { menuId });
+  emit("menu.updated", { menuId, userId });
+  return { menu: menuRow(menuId), count: plan.length, created: plan.filter((p) => !p.row).length, removed: [...existing.keys()].filter((id) => !seen.has(id)).length, idMap: Object.fromEntries(plan.filter((p) => !p.row).map((p) => [p.ref, ids.get(p.ref)])) };
+}
+
+// Ajout automatique (réglage « Ajouter automatiquement les pages de premier niveau à ce menu », comme WordPress) : à la PREMIÈRE publication d'une
+// page ordinaire sans parent, elle est ajoutée en fin de premier niveau des menus du MÊME site qui ont l'option. Jamais de doublon ; un élément retiré
+// à la main n'est pas remis par une republication (seule la première publication déclenche l'ajout). Retourne les identifiants des menus modifiés.
+function autoAddPage(pageId) {
+  const page = db.prepare("SELECT id, site_id, kind, parent_id, status, archived_at FROM mk_landing_pages WHERE id = ?").get(Number(pageId));
+  if (!page || page.kind !== "page" || page.parent_id !== null || page.status !== "published" || page.archived_at) return [];
+  const changed = [];
+  for (const m of db.prepare(`SELECT id FROM nav_menus WHERE auto_add_pages = 1 AND ${sameScope("site_id")}`).all(page.site_id ?? null)) {
+    if (db.prepare("SELECT 1 FROM nav_items WHERE menu_id = ? AND type = 'page' AND object_id = ?").get(m.id, page.id)) continue;
+    if (db.prepare("SELECT COUNT(*) n FROM nav_items WHERE menu_id = ?").get(m.id).n >= MAX_ITEMS) continue;
+    transaction(db, () => {
+      db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label) VALUES (?, NULL, ?, 'page', ?, '', '')").run(m.id, siblingsCount(m.id, null), page.id);
+      db.prepare("UPDATE nav_menus SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(m.id);
+    });
+    changed.push(m.id);
+    emit("items.changed", { menuId: m.id });
+  }
+  return changed;
+}
+
+// Sources d'extensions : un module activé propose des liens (boutique, catégories de produits…) ; ils sont ajoutés au menu comme LIENS PERSONNALISÉS
+// (adresse validée, copiée) : désactiver le module ne casse jamais un menu, et le moteur ne dépend d'aucune extension.
+const SOURCES = {};
+function registerSource(key, def) {
+  if (!/^[a-z][a-z0-9_-]{1,30}$/.test(key) || !def || typeof def.search !== "function" || !def.label) throw new Error("Source de menu invalide.");
+  SOURCES[key] = def;
+}
+const unregisterSource = (key) => { delete SOURCES[key]; };
+function sourcesFor(siteId = null) {
+  return Object.entries(SOURCES).filter(([, d]) => { try { return typeof d.available !== "function" || d.available(siteId); } catch { return false; } }).map(([key, d]) => ({ key, label: d.label }));
+}
+function searchSource(key, q, limit, { siteId = null } = {}) {
+  if (!sourcesFor(siteId).some((s) => s.key === key)) return [];
+  let rows = [];
+  try { rows = SOURCES[key].search(String(q || "").trim().slice(0, 80), Math.min(Number(limit) || 20, 50), siteId) || []; } catch { return []; }
+  const out = [];
+  for (const r of rows) { try { out.push({ id: String(r.id ?? r.url), title: cleanLabel(r.title), url: cleanUrl(r.url), detail: r.url }); } catch { /* adresse refusée : ignorée */ } }
+  return out;
 }
 
 // ---------- Lecture : arbre résolu ----------
@@ -350,8 +480,10 @@ function tree(menuId) {
   return roots;
 }
 const flatten = (nodes, depth = 1, out = []) => { for (const n of nodes) { out.push({ ...n, depth }); flatten(n.children, depth + 1, out); } return out; };
-function listMenus({ siteId = null } = {}) {
-  const menus = db.prepare(`SELECT m.*, (SELECT COUNT(*) FROM nav_items i WHERE i.menu_id = m.id) AS items FROM nav_menus m WHERE ${sameScope("m.site_id")} ORDER BY m.name COLLATE NOCASE`).all(siteId);
+const MENU_SORTS = { nom: "m.name COLLATE NOCASE", recent: "m.updated_at DESC, m.id DESC", elements: "items DESC, m.name COLLATE NOCASE" };
+function listMenus({ siteId = null, q = "", sort = "nom" } = {}) {
+  const term = String(q || "").trim().slice(0, 80);
+  const menus = db.prepare(`SELECT m.*, (SELECT COUNT(*) FROM nav_items i WHERE i.menu_id = m.id) AS items FROM nav_menus m WHERE ${sameScope("m.site_id")} AND (? = '' OR m.name LIKE ? ESCAPE '\\' OR m.description LIKE ? ESCAPE '\\') ORDER BY ${MENU_SORTS[sort] || MENU_SORTS.nom}`).all(siteId, term, like(term), like(term));
   const locs = db.prepare(`SELECT location, menu_id FROM nav_locations WHERE ${sameScope("site_id")}`).all(siteId);
   return menus.map((m) => ({ ...m, locations: locs.filter((l) => l.menu_id === m.id).map((l) => l.location), broken: brokenCount(m.id) }));
 }
@@ -373,6 +505,8 @@ function assign(location, menuId, { siteId = null } = {}) {
     if ((m.site_id ?? null) !== (siteId ?? null)) throw new UserError("Ce menu appartient à un autre site.");
   }
   transaction(db, () => {
+    const before = db.prepare(`SELECT menu_id FROM nav_locations WHERE ${sameScope("site_id")} AND location = ?`).get(siteId, location);
+    for (const id of new Set([before && before.menu_id, menuId ? Number(menuId) : null].filter(Boolean))) db.prepare("UPDATE nav_menus SET revision = revision + 1 WHERE id = ?").run(id);
     db.prepare(`DELETE FROM nav_locations WHERE ${sameScope("site_id")} AND location = ?`).run(siteId, location);
     if (menuId) db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, ?, ?)").run(siteId, location, Number(menuId));
   });
@@ -384,12 +518,14 @@ const assignments = ({ siteId = null } = {}) => Object.fromEntries(db.prepare(`S
 // user : session (null = visiteur). Un élément est montré s'il est publié, visible pour ce visiteur et si sa ressource est publiée.
 // Un élément sans lien valide mais avec des sous-éléments visibles devient un simple titre de groupe (jamais un lien mort).
 function forLocation(location, { siteId = null, user = null } = {}) {
+  if (!LOCATIONS[location]) return null; // emplacement retiré du registre (thème, module) : les données restent, rien ne s'affiche
   try {
     const slot = db.prepare(`SELECT m.id, m.name, m.status FROM nav_locations l JOIN nav_menus m ON m.id = l.menu_id WHERE ${sameScope("l.site_id")} AND l.location = ?`).get(siteId, location);
     if (!slot || slot.status !== "published") return null;
     return { menuId: slot.id, name: slot.name, items: visibleItems(slot.id, user) };
   } catch { return null; } // base de navigation indisponible : le site garde son en-tête d'origine
 }
+const preview = (menuId) => visibleItems(menuId, null);
 // Point d'intégration pour tout composant qui veut afficher un menu précis (widget du Page Builder, futur éditeur du site, menus contextuels)
 function forMenu(menuId, { user = null } = {}) {
   try {
@@ -403,7 +539,7 @@ function visibleItems(menuId, user) {
   const nodes = new Map();
   for (const r of rows) {
     const t = resolve(r);
-    nodes.set(r.id, { id: r.id, parent_id: r.parent_id, label: r.label || t.title, href: t.state === "ok" ? t.url : "", valid: t.state === "ok", newTab: Boolean(r.new_tab), rel: relFor(r, t.url), icon: r.icon, description: r.description, status: r.status, visibility: r.visibility, children: [] });
+    nodes.set(r.id, { id: r.id, parent_id: r.parent_id, label: r.label || t.title, href: t.state === "ok" ? t.url : "", valid: t.state === "ok", newTab: Boolean(r.new_tab), rel: relFor(r, t.url), icon: r.icon, description: r.description, cssClass: r.css_class, titleAttr: r.title_attr, status: r.status, visibility: r.visibility, children: [] });
   }
   const allowed = (n) => n.status === "published" && (n.visibility === "all" || (n.visibility === "members" ? Boolean(user) : !user));
   const roots = [];
@@ -445,5 +581,5 @@ function importCurrentSite({ userId = null, siteId = null } = {}) {
 module.exports = {
   MAX_DEPTH, MAX_ITEMS, MAX_LABEL, LOCATIONS, TYPES, STATE_LABELS, REL_ALLOWED, events, registerLocation, registerType,
   cleanUrl, isExternal, create, update, remove, duplicate, menuRow, itemRow, add, updateItem, removeItem, move, shift, reorder, tree, flatten, listMenus, brokenCount, usageOf,
-  assign, assignments, forLocation, forMenu, importCurrentSite, subtreeIds, depthOf, search: (type, q, limit = 20, { siteId = null } = {}) => (TYPES[type] && TYPES[type].search ? TYPES[type].search(String(q || "").trim().slice(0, 80), Math.min(Number(limit) || 20, 50), Number.isInteger(siteId) ? siteId : null) : []), inSiteScope,
+  saveMenu, autoAddPage, preview, registerSource, unregisterSource, sourcesFor, searchSource, cleanClasses, MENU_SORTS, assign, assignments, forLocation, forMenu, importCurrentSite, subtreeIds, depthOf, search: (type, q, limit = 20, { siteId = null, offset = 0 } = {}) => (TYPES[type] && TYPES[type].search ? TYPES[type].search(String(q || "").trim().slice(0, 80), Math.min(Number(limit) || 20, 50) + 1 + Math.max(0, Math.min(Number(offset) || 0, 500)), Number.isInteger(siteId) ? siteId : null).slice(Math.max(0, Math.min(Number(offset) || 0, 500))) : []), inSiteScope,
 };

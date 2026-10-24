@@ -230,6 +230,36 @@
     el.addEventListener("change", function () { if (el.form) { if (el.form.requestSubmit) el.form.requestSubmit(); else el.form.submit(); } });
   });
 
+  // ===================================================================================================================
+  // 8. Listes complètes (sans pagination serveur) : recherche instantanée + pastilles de statut, côté navigateur
+  //    <div data-kfilter> … <input data-kf-search> … <button data-kf-status="published"> … <tr data-kf-row data-status="published" data-text="nom …"> …
+  //    <p data-kf-count> et <tr|div data-kf-empty hidden>. Sans JavaScript, toute la liste reste affichée.
+  // ===================================================================================================================
+  $$("[data-kfilter]").forEach(function (box) {
+    var input = box.querySelector("[data-kf-search]"), pills = $$("[data-kf-status]", box), rows = $$("[data-kf-row]", box);
+    var count = box.querySelector("[data-kf-count]"), empty = box.querySelector("[data-kf-empty]"), noun = box.getAttribute("data-kf-noun") || "élément";
+    var status = "";
+    var fold = function (t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); };
+    function apply() {
+      var q = fold(input ? input.value.trim() : ""), n = 0;
+      rows.forEach(function (r) {
+        var ok = (!status || r.getAttribute("data-status") === status) && (!q || fold(r.getAttribute("data-text")).indexOf(q) !== -1);
+        r.hidden = !ok; if (ok) n++;
+      });
+      if (count) count.textContent = n + " " + noun + (n > 1 ? "s" : "") + (q || status ? " correspondant" + (n > 1 ? "s" : "") + " aux filtres" : "");
+      if (empty) empty.hidden = n !== 0;
+    }
+    if (input) input.addEventListener("input", apply);
+    pills.forEach(function (b) {
+      b.addEventListener("click", function () {
+        status = b.getAttribute("data-kf-status");
+        pills.forEach(function (x) { var on = x === b; x.classList.toggle("is-on", on); x.setAttribute("aria-pressed", String(on)); });
+        apply();
+      });
+    });
+    apply();
+  });
+
   prepare();
   // Contenus ajoutés après coup (aperçus, résultats rechargés) : les nouvelles commandes reçoivent aussi leur infobulle
   if (window.MutationObserver) {

@@ -1,17 +1,17 @@
 <%- include("partials/header", { title: title, seo: { noindex: true } }) %>
 
-  <div class="container" style="padding-top:32px;padding-bottom:48px;">
+  <div class="container kv-search">
     <h1>Recherche</h1>
-    <form action="/recherche" method="get" role="search" style="display:flex;gap:8px;margin:16px 0 24px;">
+    <form class="kv-error-search" action="/recherche" method="get" role="search">
       <label for="site-search" class="sr-only">Rechercher dans le site</label>
-      <input id="site-search" type="search" name="q" value="<%= q %>" maxlength="100" placeholder="Rechercher un article ou une page" style="flex:1;min-width:0;padding:10px 12px;">
+      <input id="site-search" type="search" name="q" value="<%= q %>" maxlength="100" placeholder="Rechercher un article ou une page">
       <button type="submit" class="btn btn-primary">Rechercher</button>
     </form>
 
     <% if (!q) { %>
-      <p style="color:var(--muted);">Saisissez un mot pour chercher dans les articles et les pages du site.</p>
+      <p class="kv-error-msg">Saisissez un mot pour chercher dans les articles et les pages du site.</p>
     <% } else if (!articles.length && !pages.length) { %>
-      <p>Aucun résultat pour « <%= q %> ».</p>
+      <div class="empty-state"><span class="kv-empty-ico" aria-hidden="true"><%- icon("search", { size: 26 }) %></span><h3>Aucun résultat</h3><p>Aucun résultat pour « <%= q %> ».</p><a href="/catalogue" class="btn btn-outline">Voir le catalogue</a></div>
     <% } else { %>
       <% if (articles.length) { %>
         <h2>Articles (<%= articles.length %>)</h2>

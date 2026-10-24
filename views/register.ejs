@@ -1,9 +1,15 @@
 <%- include("partials/header", { title: "Inscription" }) %>
 
   <div class="auth-page">
+   <div class="kv-auth">
+    <%- include("partials/auth-aside", { asideTitle: 'Rejoignez KOLAKISA et commencez à apprendre.' }) %>
+    <div class="kv-auth-main">
     <div class="auth-card">
       <h1>Créer un compte</h1>
       <p class="subtitle">Créez votre compte pour acheter et suivre les formations.</p>
+      <% if (typeof closed !== "undefined" && closed) { %>
+      <p class="form-error" role="status">Les inscriptions sont fermées pour le moment. Si vous avez déjà un compte ou une invitation, connectez-vous.</p>
+      <% } else { %>
       <% if (error) { %><p class="form-error"><%= error %></p><% } %>
 
       <form action="/inscription" method="post"><input type="hidden" name="tz" data-tz>
@@ -28,8 +34,11 @@
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg">Créer mon compte</button>
       </form>
+      <% } %>
       <p class="form-footer">Déjà inscrit ? <a href="/connexion<%= typeof redirect !== "undefined" && redirect ? `?redirect=${encodeURIComponent(redirect)}` : "" %>">Se connecter</a></p>
     </div>
+    </div>
+   </div>
   </div>
 
 <%- include("partials/footer") %>

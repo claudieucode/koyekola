@@ -140,10 +140,13 @@ function assertNotLastOwner(organizationId, userId, why) {
   if (owners.length <= 1 && owners.includes(userId)) throw new UserError(`Impossible : c'est le dernier Super administrateur actif. ${why}`);
 }
 // Modifier un compte (rôle, statut, retrait) : jamais soi-même, jamais un niveau supérieur ou égal sans en avoir tous les droits
-function assertCanManage(actorId, actorPerms, organizationId, targetId, { self = "vous-même" } = {}) {
+// `siteId` : quand on agit sur l'accès à UN site, le rôle que la cible y possède déjà compte aussi (sinon une personne peu dotée rétrograderait ou retirerait un administrateur du site)
+function assertCanManage(actorId, actorPerms, organizationId, targetId, { self = "vous-même", siteId = null } = {}) {
   if (actorId === targetId) throw new UserError(`Vous ne pouvez pas modifier ${self} : demandez à un autre administrateur.`);
   const target = membershipOf(targetId, organizationId);
   if (target && getRole(target.role) && !subset(getRole(target.role).permissions, actorPerms)) throw new UserError("Cette personne a des droits que vous n'avez pas vous-même : vous ne pouvez pas la modifier.");
+  const onSite = Number.isInteger(siteId) ? siteRoleOf(targetId, siteId) : null;
+  if (onSite && getRole(onSite.role) && !subset(getRole(onSite.role).permissions, actorPerms)) throw new UserError("Cette personne a, sur ce site, des droits que vous n'avez pas vous-même : vous ne pouvez pas la modifier.");
 }
 const audit = (organizationId, actorId, action, resourceType, resourceId, metadata, siteId) => {
   try { recordAudit(db, { organizationId, userId: actorId, action, resourceType, resourceId, metadata, siteId }); } catch { /* la journalisation ne casse jamais l'action */ }
@@ -272,7 +275,7 @@ const SITE_MODES = Object.freeze(["add", "limit"]);
 function setSiteRole(organizationId, actor, targetId, siteId, roleKey, { mode } = {}) {
   const site = db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId);
   if (!site) throw new UserError("Site introuvable.");
-  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
+  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès", siteId });
   assertCanGrantRole(actor.perms, roleKey);
   if (roleKey === "owner") throw new UserError("Le rôle Super administrateur ne s'attribue pas à un seul site.");
   if (!db.prepare("SELECT 1 FROM users WHERE id = ?").get(targetId)) throw new UserError("Compte introuvable.");
@@ -298,7 +301,7 @@ function setSiteMode(organizationId, actor, targetId, siteId, mode) {
   if (!row) throw new UserError("Cette personne n'a pas d'accès propre à ce site.");
   const site = db.prepare(`SELECT id, name FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId);
   if (!site) throw new UserError("Site introuvable.");
-  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
+  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès", siteId });
   if (mode === "limit") assertCanLimit(organizationId, targetId);
   else if (row.mode === "limit") assertCanGrantRole(actor.perms, row.role); // retirer un plafond élargit les droits : même règle anti-escalade qu'un octroi
   db.prepare("UPDATE mk_site_members SET mode = ? WHERE site_id = ? AND user_id = ?").run(mode, siteId, targetId);
@@ -306,20 +309,62 @@ function setSiteMode(organizationId, actor, targetId, siteId, mode) {
   return site;
 }
 function removeSiteRole(organizationId, actor, targetId, siteId) {
-  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès" });
+  assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre accès", siteId });
   const info = db.prepare("DELETE FROM mk_site_members WHERE site_id = ? AND user_id = ?").run(siteId, targetId);
   if (!info.changes) throw new UserError("Aucun accès à retirer.");
   audit(organizationId, actor.id, "site_access.revoked", "user", targetId, { siteId }, siteId);
+}
+
+
+// ---------- Administration LOCALE d'un site : personnes qui ont un rôle propre à CE site (jamais celles d'un autre site, jamais le détail de l'équipe centrale) ----------
+function listSiteMembers(organizationId, siteId, { q = "", role = "", status = "", sort = "nom", page = 1, perPage = 25 } = {}) {
+  const where = ["sm.site_id = ?"], args = [organizationId, siteId];
+  if (q) { where.push("(u.username LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\')"); args.push(like(q), like(q)); }
+  if (role) { where.push("sm.role = ?"); args.push(role); }
+  if (["active", "suspended", "disabled"].includes(status)) { where.push("u.status = ?"); args.push(status); }
+  const base = `FROM mk_site_members sm JOIN users u ON u.id = sm.user_id JOIN mk_sites s ON s.id = sm.site_id AND s.organization_id = ? WHERE ${where.join(" AND ")}`;
+  const total = db.prepare(`SELECT COUNT(*) n ${base}`).get(...args).n;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
+  const order = { nom: "u.username COLLATE NOCASE ASC", recent: "sm.created_at DESC, u.id DESC", activite: "COALESCE(u.last_seen_at, '') DESC, u.username COLLATE NOCASE" }[sort] || "u.username COLLATE NOCASE ASC";
+  const rows = db.prepare(`SELECT u.id, u.username, u.email, u.status, sm.role, sm.mode, sm.created_at AS since, u.last_seen_at ${base} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
+  return { rows, total, page: current, pages };
+}
+const siteStatusCounts = (siteId) => { const out = { all: 0, active: 0, suspended: 0, disabled: 0 }; for (const r of db.prepare("SELECT u.status, COUNT(*) n FROM mk_site_members sm JOIN users u ON u.id = sm.user_id WHERE sm.site_id = ? GROUP BY u.status").all(siteId)) { out[r.status] = r.n; out.all += r.n; } return out; };
+const siteRoleCounts = (siteId) => Object.fromEntries(db.prepare("SELECT role, COUNT(*) n FROM mk_site_members WHERE site_id = ? GROUP BY role").all(siteId).map((r) => [r.role, r.n]));
+// Fiche d'une personne DU SITE : null si elle n'y a pas de rôle propre (on ne révèle jamais l'existence d'un compte hors du site)
+function siteMemberDetail(organizationId, siteId, userId) {
+  const row = db.prepare("SELECT sm.role, sm.mode, sm.created_at AS since, sm.created_by FROM mk_site_members sm JOIN mk_sites s ON s.id = sm.site_id AND s.organization_id = ? WHERE sm.site_id = ? AND sm.user_id = ?").get(organizationId, siteId, userId);
+  if (!row) return null;
+  const u = db.prepare("SELECT id, username, email, status, bio, created_at, last_login_at, last_seen_at FROM users WHERE id = ?").get(userId);
+  if (!u) return null;
+  const by = row.created_by ? db.prepare("SELECT username FROM users WHERE id = ?").get(row.created_by) : null;
+  const team = membershipOf(userId, organizationId);
+  const history = db.prepare("SELECT l.action, l.created_at, l.metadata, a.username AS actor FROM mk_audit_logs l LEFT JOIN users a ON a.id = l.user_id WHERE l.organization_id = ? AND l.site_id = ? AND l.resource_type = 'user' AND l.resource_id = ? ORDER BY l.id DESC LIMIT 15").all(organizationId, siteId, String(userId))
+    .map((h) => { let m = {}; try { m = JSON.parse(h.metadata); } catch { /* métadonnées illisibles : ignorées */ } return { action: h.action, at: h.created_at, actor: h.actor || "—", role: m.role || null, mode: m.mode || null }; });
+  return { ...u, site_role: row.role, mode: row.mode, since: row.since, added_by: by ? by.username : null, in_team: Boolean(team), permissions: effectivePermissions(userId, { organizationId, siteId }), history };
 }
 
 // ---------- Invitations ----------
 const INVITE_DAYS = 7;
 const tokenHash = (t) => crypto.createHash("sha256").update(String(t)).digest("hex");
 const EMAIL_RE = /^[^\s@<>]{1,64}@[^\s@<>]+\.[^\s@<>]{2,}$/;
-function invite(organizationId, actor, { email, role, siteId = null }) {
+// Limites : jamais d'envoi en rafale (abus de la messagerie du CMS) ; l'inviteur est identifié par son compte, pas par une adresse IP
+const INVITE_MAX_PER_HOUR = 30, RESEND_COOLDOWN_SECONDS = 60, MAX_SENDS = 6;
+function assertInviteQuota(organizationId, actorId) {
+  const n = db.prepare("SELECT COUNT(*) n FROM mk_invitations WHERE organization_id = ? AND invited_by = ? AND created_at > datetime('now', '-1 hour')").get(organizationId, actorId).n;
+  if (n >= INVITE_MAX_PER_HOUR) throw new UserError(`Limite atteinte : ${INVITE_MAX_PER_HOUR} invitations par heure. Réessayez plus tard.`);
+}
+// scopeSiteId : un administrateur LOCAL n'invite que pour SON site (le serveur l'impose ; le navigateur n'en décide jamais)
+function invite(organizationId, actor, { email, role, siteId = null, name = "", message = "", days = INVITE_DAYS, scopeSiteId = null }) {
   const mail = String(email || "").trim().toLowerCase().slice(0, 120);
   if (!EMAIL_RE.test(mail)) throw new UserError("Indiquez une adresse e-mail valide.");
+  if (scopeSiteId !== null && siteId !== scopeSiteId) throw new UserError("Vous ne pouvez inviter que sur ce site.");
+  const invitedName = String(name || "").replace(/[\r\n\t]+/g, " ").trim().slice(0, 80);
+  const note = String(message || "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim().slice(0, 500);
+  const lifetime = Number.isInteger(Number(days)) && Number(days) >= 1 && Number(days) <= 30 ? Number(days) : INVITE_DAYS;
   assertCanGrantRole(actor.perms, role);
+  assertInviteQuota(organizationId, actor.id);
   if (siteId !== null) {
     if (!db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(siteId, organizationId)) throw new UserError("Site introuvable.");
     if (role === "owner") throw new UserError("Le rôle Super administrateur ne s'attribue pas à un seul site.");
@@ -336,41 +381,86 @@ function invite(organizationId, actor, { email, role, siteId = null }) {
   }
   if (db.prepare("SELECT 1 FROM mk_invitations WHERE organization_id = ? AND email = ? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > datetime('now')").get(organizationId, mail)) throw new UserError("Une invitation est déjà en attente pour cette adresse : renvoyez-la ou révoquez-la.");
   const token = crypto.randomBytes(24).toString("base64url");
-  const id = Number(db.prepare("INSERT INTO mk_invitations (organization_id, email, role, site_id, token_hash, invited_by, expires_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now', ?))").run(organizationId, mail, role, siteId, tokenHash(token), actor.id, `+${INVITE_DAYS} days`).lastInsertRowid);
-  audit(organizationId, actor.id, "user.invited", "invitation", id, { email: mail, role, siteId }, siteId);
-  return { added: false, token, email: mail, id };
+  const id = Number(db.prepare("INSERT INTO mk_invitations (organization_id, email, role, site_id, token_hash, invited_by, expires_at, invited_name, message) VALUES (?, ?, ?, ?, ?, ?, datetime('now', ?), ?, ?)").run(organizationId, mail, role, siteId, tokenHash(token), actor.id, `+${lifetime} days`, invitedName, note).lastInsertRowid);
+  audit(organizationId, actor.id, "user.invited", "invitation", id, { email: mail, role, siteId, days: lifetime }, siteId); // jamais le jeton ni le message
+  return { added: false, token, email: mail, id, days: lifetime, name: invitedName, message: note };
 }
 // Nouveau lien pour une invitation (l'ancien cesse de fonctionner)
-function reissue(organizationId, actor, invitationId) {
-  const inv = db.prepare("SELECT * FROM mk_invitations WHERE id = ? AND organization_id = ? AND accepted_at IS NULL AND revoked_at IS NULL").get(invitationId, organizationId);
+// scopeSiteId (administrateur local) : seules les invitations de CE site sont visibles et modifiables ; une autre (ou celle de l'équipe) est « introuvable »
+const scopeSql = (scopeSiteId) => (scopeSiteId === null || scopeSiteId === undefined ? "" : " AND site_id = ?");
+function reissue(organizationId, actor, invitationId, { scopeSiteId = null } = {}) {
+  const inv = db.prepare(`SELECT * FROM mk_invitations WHERE id = ? AND organization_id = ? AND accepted_at IS NULL AND revoked_at IS NULL${scopeSql(scopeSiteId)}`).get(...[invitationId, organizationId, ...(scopeSql(scopeSiteId) ? [scopeSiteId] : [])]);
   if (!inv) throw new UserError("Invitation introuvable ou déjà utilisée.");
   assertCanGrantRole(actor.perms, inv.role);
+  if (inv.send_count >= MAX_SENDS) throw new UserError(`Cette invitation a déjà été envoyée ${MAX_SENDS} fois : révoquez-la et créez-en une nouvelle si la personne ne l'a pas reçue.`);
+  if (inv.last_sent_at && db.prepare("SELECT (julianday('now') - julianday(?)) * 86400 AS s").get(inv.last_sent_at).s < RESEND_COOLDOWN_SECONDS) throw new UserError(`Patientez ${RESEND_COOLDOWN_SECONDS} secondes entre deux envois.`);
+  assertInviteQuota(organizationId, actor.id);
   const token = crypto.randomBytes(24).toString("base64url");
+  // Nouveau jeton = l'ancien lien cesse de fonctionner (même s'il n'était pas encore expiré) ; l'invitation expirée est ainsi renouvelée
   db.prepare("UPDATE mk_invitations SET token_hash = ?, expires_at = datetime('now', ?) WHERE id = ?").run(tokenHash(token), `+${INVITE_DAYS} days`, invitationId);
-  audit(organizationId, actor.id, "user.invited", "invitation", invitationId, { email: inv.email, role: inv.role, resent: true });
-  return { token, email: inv.email, id: invitationId };
+  audit(organizationId, actor.id, "user.invited", "invitation", invitationId, { email: inv.email, role: inv.role, resent: true }, inv.site_id);
+  return { token, email: inv.email, id: invitationId, name: inv.invited_name, message: inv.message };
 }
-function revoke(organizationId, actor, invitationId) {
-  const info = db.prepare("UPDATE mk_invitations SET revoked_at = datetime('now') WHERE id = ? AND organization_id = ? AND accepted_at IS NULL AND revoked_at IS NULL").run(invitationId, organizationId);
+function revoke(organizationId, actor, invitationId, { scopeSiteId = null } = {}) {
+  const info = db.prepare(`UPDATE mk_invitations SET revoked_at = datetime('now') WHERE id = ? AND organization_id = ? AND accepted_at IS NULL AND revoked_at IS NULL${scopeSql(scopeSiteId)}`).run(...[invitationId, organizationId, ...(scopeSql(scopeSiteId) ? [scopeSiteId] : [])]);
   if (!info.changes) throw new UserError("Invitation introuvable ou déjà utilisée.");
-  audit(organizationId, actor.id, "invitation.revoked", "invitation", invitationId, {});
+  audit(organizationId, actor.id, "invitation.revoked", "invitation", invitationId, {}, scopeSiteId);
 }
-function listInvitations(organizationId) {
-  return db.prepare(`SELECT i.id, i.email, i.role, i.site_id, s.name AS site_name, i.created_at, i.expires_at, i.accepted_at, i.revoked_at, u.username AS invited_by_name,
-      CASE WHEN i.accepted_at IS NOT NULL THEN 'accepted' WHEN i.revoked_at IS NOT NULL THEN 'revoked' WHEN i.expires_at <= datetime('now') THEN 'expired' ELSE 'pending' END AS state
-    FROM mk_invitations i LEFT JOIN mk_sites s ON s.id = i.site_id LEFT JOIN users u ON u.id = i.invited_by WHERE i.organization_id = ? ORDER BY i.id DESC LIMIT 200`).all(organizationId);
+// État RÉEL de l'envoi du dernier e-mail : queued (en file ou en cours) · sent (remis au serveur d'envoi) · failed (refusé ou en échec) · none (jamais envoyé)
+// « sent » veut dire que le serveur d'envoi a accepté le message — jamais que la personne l'a lu ni reçu dans sa boîte.
+function recordDelivery(invitationId, queued) {
+  if (queued && queued.queued) db.prepare("UPDATE mk_invitations SET mail_id = ?, send_error = '', send_count = send_count + 1, last_sent_at = datetime('now') WHERE id = ?").run(queued.id, invitationId);
+  else db.prepare("UPDATE mk_invitations SET mail_id = NULL, send_error = ?, send_count = send_count + 1, last_sent_at = datetime('now') WHERE id = ?").run(queued && queued.reason === "invalid_recipient" ? "adresse refusée" : "e-mail non mis en file", invitationId);
+}
+// Liste filtrée : recherche (e-mail, nom), état de l'invitation, rôle, site ; pagination. scopeSiteId = administrateur local (CE site seulement).
+const DELIVERY_SQL = `CASE WHEN i.mail_id IS NULL THEN (CASE WHEN i.send_error <> '' THEN 'failed' ELSE 'none' END) WHEN o.status IN ('pending', 'sending') THEN 'queued' WHEN o.status = 'sent' THEN 'sent' WHEN o.id IS NULL THEN 'none' ELSE 'failed' END`;
+const STATE_SQL = "CASE WHEN i.accepted_at IS NOT NULL THEN 'accepted' WHEN i.revoked_at IS NOT NULL THEN 'revoked' WHEN i.expires_at <= datetime('now') THEN 'expired' ELSE 'pending' END";
+function listInvitations(organizationId, { scopeSiteId = null, q = "", state = "", role = "", siteId = null, page = 1, perPage = 25 } = {}) {
+  require("../utils/outbox").ensureTable(db);
+  const where = ["i.organization_id = ?"], args = [organizationId];
+  if (scopeSiteId !== null) { where.push("i.site_id = ?"); args.push(scopeSiteId); }
+  else if (Number.isInteger(siteId)) { where.push("i.site_id = ?"); args.push(siteId); }
+  if (q) { where.push("(i.email LIKE ? ESCAPE '\\' OR i.invited_name LIKE ? ESCAPE '\\')"); args.push(like(q), like(q)); }
+  if (role) { where.push("i.role = ?"); args.push(role); }
+  const base = `FROM mk_invitations i LEFT JOIN mk_sites s ON s.id = i.site_id LEFT JOIN users u ON u.id = i.invited_by LEFT JOIN mail_outbox o ON o.id = i.mail_id WHERE ${where.join(" AND ")}`;
+  const counts = Object.fromEntries(["pending", "accepted", "expired", "revoked"].map((k) => [k, 0]));
+  for (const r of db.prepare(`SELECT ${STATE_SQL} AS state, COUNT(*) n ${base} GROUP BY 1`).all(...args)) counts[r.state] = r.n;
+  const filter = ["pending", "accepted", "expired", "revoked"].includes(state) ? ` AND ${STATE_SQL} = '${state}'` : "";
+  const total = db.prepare(`SELECT COUNT(*) n ${base}${filter}`).get(...args).n;
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
+  const rows = db.prepare(`SELECT i.id, i.email, i.invited_name, i.message, i.role, i.site_id, s.name AS site_name, i.created_at, i.expires_at, i.accepted_at, i.revoked_at, i.send_count, i.last_sent_at, i.send_error, u.username AS invited_by_name,
+      ${STATE_SQL} AS state, ${DELIVERY_SQL} AS delivery, COALESCE(NULLIF(o.last_error, ''), i.send_error) AS delivery_error
+    ${base}${filter} ORDER BY i.id DESC LIMIT ? OFFSET ?`).all(...args, perPage, (current - 1) * perPage);
+  return { rows, total, page: current, pages, counts };
 }
 function invitationByToken(token) {
   return db.prepare("SELECT * FROM mk_invitations WHERE token_hash = ? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > datetime('now')").get(tokenHash(token)) || null;
 }
-// Acceptation : le compte est créé par l'appelant (mêmes règles d'inscription que le site), l'accès est donné ici
-function acceptInvitation(inv, userId) {
+// Acceptation ATOMIQUE : (création du compte,) accès accordé et état « acceptée » sont écrits ensemble ou pas du tout. Le jeton se « consomme » par une écriture conditionnelle
+// (deux envois simultanés du même lien : un seul réussit). À l'acceptation on revérifie ce qui a pu changer depuis l'envoi : l'invitation est toujours valable, le rôle existe encore
+// et la personne qui l'a envoyée a encore tous les droits de ce rôle (jamais plus que ce qui a été approuvé) ; sinon rien n'est accordé.
+// `account` : identifiant d'un compte existant, OU fonction qui crée le compte et renvoie son identifiant (exécutée dans la même transaction).
+function acceptInvitation(inv, account) {
+  let userId = null;
   transaction(db, () => {
-    if (inv.site_id) db.prepare("INSERT INTO mk_site_members (site_id, user_id, role, created_by) VALUES (?, ?, ?, ?) ON CONFLICT (site_id, user_id) DO UPDATE SET role = excluded.role").run(inv.site_id, userId, inv.role, inv.invited_by);
-    else db.prepare("INSERT INTO mk_org_members (organization_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT (organization_id, user_id) DO UPDATE SET role = excluded.role").run(inv.organization_id, userId, inv.role);
-    db.prepare("UPDATE mk_invitations SET accepted_at = datetime('now'), accepted_user_id = ? WHERE id = ?").run(userId, inv.id);
+    const live = db.prepare("SELECT * FROM mk_invitations WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > datetime('now')").get(inv.id);
+    if (!live) throw new UserError("Cette invitation n'est plus valable (expirée, déjà utilisée ou révoquée). Demandez-en une nouvelle.");
+    const role = getRole(live.role);
+    if (!role) throw new UserError("Le rôle de cette invitation n'existe plus : demandez-en une nouvelle.");
+    if (live.invited_by) {
+      const inviter = effectivePermissions(live.invited_by, { organizationId: live.organization_id, siteId: live.site_id });
+      if (!subset(role.permissions, inviter)) throw new UserError("Cette invitation n'est plus valable : la personne qui l'a envoyée ne peut plus accorder ce rôle. Demandez-en une nouvelle.");
+    }
+    if (live.site_id && !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND status = 'active'${primarySite.excludeSql(db)}`).get(live.site_id, live.organization_id)) throw new UserError("Le site de cette invitation n'est plus disponible.");
+    userId = typeof account === "function" ? account() : account;
+    const claim = db.prepare("UPDATE mk_invitations SET accepted_at = datetime('now'), accepted_user_id = ? WHERE id = ? AND accepted_at IS NULL AND revoked_at IS NULL").run(userId, live.id);
+    if (claim.changes !== 1) throw new UserError("Cette invitation vient d'être utilisée.");
+    if (live.site_id) db.prepare("INSERT INTO mk_site_members (site_id, user_id, role, created_by) VALUES (?, ?, ?, ?) ON CONFLICT (site_id, user_id) DO UPDATE SET role = excluded.role").run(live.site_id, userId, live.role, live.invited_by);
+    else db.prepare("INSERT INTO mk_org_members (organization_id, user_id, role) VALUES (?, ?, ?) ON CONFLICT (organization_id, user_id) DO UPDATE SET role = excluded.role").run(live.organization_id, userId, live.role);
   });
-  audit(inv.organization_id, userId, "invitation.accepted", "invitation", inv.id, { role: inv.role, siteId: inv.site_id });
+  audit(inv.organization_id, userId, "invitation.accepted", "invitation", inv.id, { role: inv.role, siteId: inv.site_id }, inv.site_id);
+  return userId;
 }
 
 // ---------- Matrice : domaine × action, alimentée par les permissions réelles du rôle ----------
@@ -387,8 +477,8 @@ function matrix(roleKey) {
 }
 
 module.exports = {
-  GROUPS, LABELS, ACTIONS, OWNER_ONLY, ASSIGNABLE, SYSTEM_ROLES, INVITE_DAYS,
+  GROUPS, LABELS, ACTIONS, OWNER_ONLY, ASSIGNABLE, SYSTEM_ROLES, INVITE_DAYS, INVITE_MAX_PER_HOUR, RESEND_COOLDOWN_SECONDS, MAX_SENDS, recordDelivery,
   getRole, allRoles, customRoles, invalidate, cacheInfo, permissionsOf, membershipOf, siteRoleOf, siteMemberships, effectivePermissions, can, subset,
   assertCanGrantRole, assertNotLastOwner, assertCanManage, createRole, updateRole, deleteRole, roleUsage, listMembers, statusCounts, memberDetail,
-  setOrgRole, setStatus, removeFromTeam, setSiteRole, setSiteMode, SITE_MODES, removeSiteRole, invite, reissue, revoke, listInvitations, invitationByToken, acceptInvitation, matrix, activeOwners,
+  listSiteMembers, siteStatusCounts, siteRoleCounts, siteMemberDetail, setOrgRole, setStatus, removeFromTeam, setSiteRole, setSiteMode, SITE_MODES, removeSiteRole, invite, reissue, revoke, listInvitations, invitationByToken, acceptInvitation, matrix, activeOwners,
 };

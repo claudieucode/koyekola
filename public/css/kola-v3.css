@@ -1,0 +1,193 @@
+/* =====================================================================================================================
+   KOLAKISA — Design system v3 « Marine, à plat » : site public, espace élève, pages de compte et d'authentification, pages d'erreur.
+   Chargé APRÈS style.css par partials/header.ejs. Même source de couleurs (--primary marine, --accent bleu d'action : ils suivent Apparence → Personnaliser),
+   même esprit que l'administration (kola-ui.css v2) : plat, filets fins, une hiérarchie portée par la couleur, la typographie et l'espace — plus de dégradés
+   décoratifs, de reflets ni de halos. Sommaire : 1 Jetons · 2 Marque et pied de page · 3 En-tête de page et mises en page · 4 États vides · 5 Authentification ·
+   6 Pages d'erreur · 7 Compte et espace élève · 8 Finitions (focus, boutons) · 9 Écrans étroits et mouvement réduit
+   ===================================================================================================================== */
+
+/* ===== 1. Jetons ===== */
+:root {
+  --kv-r-sm: 8px; --kv-r: 12px; --kv-r-lg: 16px;           /* champs et boutons < cartes < grands panneaux (pastille : 999) */
+  --kv-line: var(--border);                                  /* un seul filet, partout */
+  --kv-ink: var(--text); --kv-ink-soft: var(--muted);
+  --kv-gap: 24px; --kv-gap-lg: 40px;                         /* intervalle entre blocs / entre sections */
+  --kv-dur: 150ms; --kv-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Élévation : quasi absente (la hiérarchie vient du filet et de la couleur) */
+  --shadow-sm: 0 1px 2px rgba(11, 42, 64, 0.05);
+  --shadow-md: 0 4px 16px rgba(11, 42, 64, 0.08);
+  --shadow-lg: 0 8px 28px rgba(11, 42, 64, 0.10);
+}
+
+/* ===== 2. Marque et pied de page ===== */
+/* Pastille de marque : carré plein à l'initiale, identique à celle de l'administration (plus de dégradé ni de reflet) */
+.logo::before { content: attr(data-initial); display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 0.95rem; font-weight: 800; letter-spacing: 0; box-shadow: none; }
+.logo:not([data-initial])::before { content: ""; }
+.logo-img::before, .footer-logo-img::before { content: none; display: none; }
+.site-footer { border-radius: 0; background: var(--primary); margin-top: clamp(56px, 8vw, 96px); }
+.site-footer::before { content: none; }
+.footer-grid { padding-block: 56px 32px; gap: 40px; }
+.footer-bottom { border-top-color: rgba(255, 255, 255, 0.14); }
+.footer-col a:hover { transform: none; text-decoration: underline; text-underline-offset: 4px; }
+.btn-primary { box-shadow: none; }
+.btn-primary:hover { box-shadow: none; }
+.card { box-shadow: none; }
+
+/* ===== 3. En-tête de page et mises en page ===== */
+/* Titre + sous-titre + actions : un seul gabarit pour l'espace élève, le compte, le panier, les notifications */
+.dashboard-header { padding-block: 44px 8px; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; }
+.dashboard-header > :where(h1, p) { flex: 1 1 100%; }
+.dashboard-header h1 { font-size: clamp(1.8rem, 3.4vw, 2.3rem); letter-spacing: -0.03em; margin: 0; }
+.dashboard-header p { margin: 4px 0 0; font-size: 1rem; max-width: 62ch; }
+.kv-pagehead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 24px; padding-block: 44px 20px; }
+.kv-pagehead h1 { margin: 0; font-size: clamp(1.8rem, 3.4vw, 2.3rem); letter-spacing: -0.03em; }
+.kv-pagehead p { margin: 4px 0 0; color: var(--kv-ink-soft); max-width: 62ch; }
+.kv-pagehead-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.kv-eyebrow { margin: 0 0 6px; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-dark); }
+.kv-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 var(--kv-gap); padding: 0; list-style: none; border-bottom: 1px solid var(--kv-line); }
+.kv-tabs a { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--kv-ink-soft); font-weight: 600; text-decoration: none; transition: color var(--kv-dur) var(--kv-ease), border-color var(--kv-dur) var(--kv-ease); }
+.kv-tabs a:hover { color: var(--kv-ink); }
+.kv-tabs a[aria-current="page"] { color: var(--accent-dark); border-bottom-color: var(--accent); }
+.kv-count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--accent-light); color: var(--accent-dark); font-size: 0.78rem; font-weight: 700; }
+
+/* ===== 4. États vides : une composition centrée, jamais décalée dans une grille ===== */
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 520px; margin: clamp(24px, 6vw, 64px) auto; padding: 40px 28px; text-align: center; border: 1px dashed var(--kv-line); border-radius: var(--kv-r-lg); background: var(--surface); color: var(--kv-ink-soft); }
+.empty-state .kv-empty-ico { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 10px; border-radius: 14px; background: var(--accent-light); color: var(--accent-dark); }
+.empty-state h3 { margin: 0; color: var(--primary); font-size: 1.25rem; letter-spacing: -0.02em; }
+.empty-state p { margin: 0 0 14px; max-width: 42ch; }
+.empty-state .btn { margin-top: 4px; }
+.cart-layout--empty { display: block; }
+
+/* ===== 5. Authentification : volet de valeur à gauche, formulaire à droite ===== */
+.auth-page { display: block; min-height: 0; padding: 0; background: none; }
+.kv-auth { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); min-height: calc(100vh - var(--header-h) - 120px); margin-top: 0; }
+.kv-auth-aside { display: flex; flex-direction: column; justify-content: center; gap: 28px; padding: clamp(32px, 6vw, 72px); background: var(--primary); color: #e6eff6; }
+.kv-auth-aside h2 { margin: 0; color: #fff; font-size: clamp(1.5rem, 2.6vw, 2.1rem); letter-spacing: -0.03em; line-height: 1.15; }
+.kv-auth-aside ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 16px; }
+.kv-auth-aside li { display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: start; }
+.kv-auth-aside .kv-ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 255, 255, 0.1); color: #fff; }
+.kv-auth-aside strong { display: block; color: #fff; font-size: 0.98rem; }
+.kv-auth-aside span.kv-sub { display: block; margin-top: 2px; color: #b6cadb; font-size: 0.9rem; line-height: 1.45; }
+.kv-auth-main { display: flex; align-items: center; justify-content: center; padding: clamp(28px, 6vw, 64px) 20px; background: var(--bg); }
+.auth-card { max-width: 440px; border-radius: var(--kv-r-lg); border: 1px solid var(--kv-line); box-shadow: none; padding: clamp(24px, 4vw, 36px); background: var(--surface); }
+.auth-card h1 { font-size: 1.7rem; }
+.auth-card .field-hint { display: inline-block; margin-top: 6px; }
+.auth-card .form-footer { margin: 20px 0 0; text-align: center; color: var(--kv-ink-soft); }
+
+/* ===== 6. Pages d'erreur ===== */
+.error-page { max-width: 560px; margin: 0 auto; padding-block: clamp(56px, 10vw, 112px); text-align: left; }
+.error-page .code { margin: 0 0 10px; font-family: var(--font-display); font-size: 0.9rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-dark); background: none; -webkit-text-fill-color: currentColor; line-height: 1.2; }
+.error-page h1 { margin: 0 0 10px; font-size: clamp(2rem, 4.4vw, 2.8rem); letter-spacing: -0.035em; line-height: 1.1; }
+.error-page .kv-error-msg { margin: 0 0 24px; color: var(--kv-ink-soft); font-size: 1.05rem; max-width: 52ch; }
+.error-page .kv-error-search { display: flex; gap: 8px; margin: 0 0 20px; }
+.error-page .kv-error-search input { flex: 1; min-width: 0; }
+.error-page .kv-error-links { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ===== 7. Compte et espace élève ===== */
+.kv-account { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--kv-gap-lg); align-items: start; padding-block: 8px 72px; }
+.kv-account-nav { position: sticky; top: calc(var(--header-h) + 20px); display: flex; flex-direction: column; gap: 2px; }
+.kv-account-nav a { display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: var(--kv-r-sm); color: var(--kv-ink-soft); font-weight: 600; text-decoration: none; transition: background var(--kv-dur) var(--kv-ease), color var(--kv-dur) var(--kv-ease); }
+.kv-account-nav a:hover { background: var(--surface-alt); color: var(--kv-ink); }
+.kv-account-nav a.is-danger:hover { background: var(--danger-light); color: var(--danger); }
+.kv-account .account-page { max-width: none; margin: 0; padding: 0; gap: var(--kv-gap); }
+.account-section { scroll-margin-top: calc(var(--header-h) + 20px); }
+.account-facts { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.kv-learner-head-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.learner-space { padding-block: 16px 72px; }
+.learner-space section { margin-top: var(--kv-gap-lg); }
+.learner-space h2 { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; }
+.resume-card { border-radius: var(--kv-r-lg); background: var(--primary); }
+.resume-card::after { content: none; }
+.learner-list > * { border-radius: var(--kv-r-lg); }
+
+/* ===== 8. Finitions ===== */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn { transition: background-color var(--kv-dur) var(--kv-ease), border-color var(--kv-dur) var(--kv-ease), color var(--kv-dur) var(--kv-ease), transform 0.1s var(--kv-ease); }
+.btn:active { transform: translateY(1px); }
+
+/* ===== 9. Écrans étroits et mouvement réduit ===== */
+@media (max-width: 860px) {
+  .kv-auth { grid-template-columns: 1fr; min-height: 0; }
+  .kv-auth-aside { padding: 28px 20px; gap: 18px; }
+  .kv-auth-aside ul { display: none; }
+  .kv-account { grid-template-columns: 1fr; gap: 16px; }
+  .kv-account-nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--kv-line); }
+  .kv-account-nav a { flex: none; }
+}
+@media (max-width: 480px) {
+  .error-page .kv-error-search { flex-direction: column; }
+  .empty-state { margin-inline: 0; padding: 32px 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .btn, .kv-tabs a, .kv-account-nav a { transition-duration: 0.001ms; } }
+
+/* ===== 10. Listes d'éléments (certificats, notifications…), reçu, recherche ===== */
+.kv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.kv-row { display: flex; align-items: center; gap: 16px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--kv-line); border-radius: var(--kv-r); transition: border-color var(--kv-dur) var(--kv-ease), background-color var(--kv-dur) var(--kv-ease); }
+.kv-row:hover { border-color: var(--line, var(--border)); }
+.kv-row.is-unread { background: color-mix(in srgb, var(--accent-light) 55%, var(--surface)); }
+.kv-row-ico { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 10px; background: var(--accent-light); color: var(--accent-dark); }
+.kv-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: transparent; }
+.kv-row.is-unread .kv-dot { background: var(--accent); }
+.kv-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.kv-row-main strong { font-size: 1rem; }
+.kv-row-main small, .kv-row-text { color: var(--kv-ink-soft); font-size: 0.9rem; }
+.kv-row-actions { display: flex; flex-wrap: wrap; gap: 8px; flex: none; justify-content: flex-end; }
+.kv-receipt { max-width: 560px; margin: 24px auto 0; text-align: left; }
+.kv-search { padding-block: 40px 56px; }
+.kv-search h1 { margin: 0; font-size: clamp(1.8rem, 3.4vw, 2.3rem); letter-spacing: -0.03em; }
+.kv-search .kv-error-search { display: flex; gap: 8px; margin: 18px 0 28px; }
+.kv-search .kv-error-search input { flex: 1; min-width: 0; }
+.kv-search h2 { margin: 28px 0 12px; font-size: 1.2rem; }
+@media (max-width: 640px) {
+  .kv-row { flex-wrap: wrap; align-items: flex-start; }
+  .kv-row-actions { width: 100%; justify-content: flex-start; }
+}
+
+/* ===== 11. Page d'une formation : bandeau uni (plus de grille ni de halo), résumé sans doublon de titre ===== */
+.course-hero { background: var(--primary); border-radius: 0; }
+.course-hero::before, .course-hero::after { content: none; }
+.course-summary .eyebrow { display: block; margin-bottom: 10px; }
+.summary-stat { border-radius: var(--kv-r); }
+
+/* ===== 12. Retouches issues de la vérification visuelle ===== */
+body:has(.kv-auth) .site-footer { margin-top: 0; }
+.error-page { max-width: 640px; }
+
+/* ===== 13. Accueil : bandeau sans quadrillage ni ombre portée (la photo et le voile marine portent l'identité) ===== */
+.hero-stage { background: var(--primary); box-shadow: none; }
+.hero-stage::before { content: none; }
+.hero-slides::after { background: linear-gradient(90deg, rgba(10, 31, 53, 0.92) 0%, rgba(10, 31, 53, 0.84) 58%, rgba(10, 31, 53, 0.78) 100%); }
+
+/* ===== 14. Aide et support ===== */
+.kv-support { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--kv-gap-lg); align-items: start; padding-block: 8px 72px; }
+.kv-support-form h2, .kv-support-list h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 1.25rem; letter-spacing: -0.02em; }
+.kv-support-list .kv-row-main a { text-decoration: none; color: var(--kv-ink); }
+.kv-support-list .kv-row-main a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.kv-ticket { padding-block: 24px 72px; max-width: 760px; }
+.kv-ticket h1 { margin: 6px 0 4px; font-size: clamp(1.6rem, 3vw, 2.1rem); letter-spacing: -0.03em; }
+.kv-thread { list-style: none; margin: 20px 0; padding: 0; display: grid; gap: 12px; }
+.kv-msg { padding: 16px 18px; background: var(--surface); border: 1px solid var(--kv-line); border-radius: var(--kv-r); }
+.kv-msg.is-staff { background: color-mix(in srgb, var(--accent-light) 55%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 30%, var(--kv-line)); }
+.kv-msg small { color: var(--kv-ink-soft); }
+.kv-msg-body { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kv-ticket-close { margin-top: 14px; }
+@media (max-width: 960px) { .kv-support { grid-template-columns: 1fr; } }
+
+/* ===== 15. Pastilles d'état (les mêmes que dans l'espace formateur) ===== */
+.dash-status { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; line-height: 1.5; background: var(--surface-alt); color: var(--kv-ink-soft); white-space: nowrap; }
+.dash-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.dash-status.is-published { background: var(--success-light); color: var(--success-dark); }
+.dash-status.is-draft { background: var(--accent-light); color: var(--accent-dark); }
+.dash-status.is-archived { background: var(--surface-alt); color: var(--kv-ink-soft); }
+
+/* ===== 16. Petits états en ligne, carte d'état, pied de page ===== */
+p.empty-state { display: block; max-width: none; margin: 0; padding: 24px 0; border: 0; background: none; text-align: center; }
+.page-cta { display: block; }
+.page-cta .btn { margin: 6px 10px 0 0; }
+.kv-narrow { max-width: 560px; margin: clamp(32px, 8vw, 88px) auto; }
+.kv-state { text-align: left; }
+.kv-state h1 { margin: 0 0 10px; font-size: clamp(1.6rem, 3.4vw, 2.1rem); letter-spacing: -0.03em; }
+.kv-state p { color: var(--kv-ink-soft); }
+.kv-state-ico { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: 14px; border-radius: 12px; background: var(--accent-light); color: var(--accent-dark); }
+.kv-state-ico.is-warn { background: var(--warning-bg, #fff6dd); color: var(--warning-text, #6a4a00); }
+.kv-state-ico.is-ok { background: var(--success-light); color: var(--success-dark); }

@@ -152,6 +152,8 @@
             <% if (mk.can("contacts.import")) { %><a class="btn btn-outline btn-sm" href="/marketing/importer">Importer un fichier</a><% } %>
           </div>
         </div>
+        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "people" }) %></div>
+      </div></div>
       <% } %>
     <% } else { %>
       <div class="mk-table-wrap">

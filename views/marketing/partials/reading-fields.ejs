@@ -1,0 +1,61 @@
+<%#
+  KOLAKISA CMS → Paramètres → Lecture : champs du groupe « reading » (le formulaire, la confirmation des réglages sensibles et l'enregistrement sont ceux de settings-group).
+  Chaque contrôle porte le nom du réglage du moteur ; rien n'est décoratif. Sans JavaScript, tous les volets sont visibles.
+%><%
+  const F = Object.fromEntries(view.map((f) => [f.key, f]));
+  const mode = F.show_on_front, home = F.homepage_page, postsPg = F.posts_page, perPageF = F.posts_per_page, feedN = F.feed_items, feedC = F.feed_content;
+  const known = (id) => !id || choices.pages.some((p) => p.id === Number(id));
+  const lostHome = home.value && !known(home.value), lostPosts = postsPg.value && !known(postsPg.value);
+  const pageOptions = (f, none) => `<option value="">${none}</option>` + (f.value && !known(f.value) ? `<option value="${f.value}" selected>Page n° ${f.value} (indisponible)</option>` : "") + choices.pages.map((p) => `<option value="${p.id}"${Number(f.value) === p.id ? " selected" : ""}>${p.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</option>`).join("");
+%>
+<div class="mk-read" data-read>
+  <section class="mk-read-card" aria-labelledby="rd-front-h">
+    <header><h2 id="rd-front-h">Page d'accueil</h2><p class="mk-sub">Ce que les visiteurs voient à l'adresse « / » <%= scope.siteId ? "de ce site" : "du site" %>.</p></header>
+    <fieldset class="mk-read-modes" <%= mode.editable ? "" : "disabled" %>>
+      <legend class="sr-only"><%= mode.label %></legend>
+      <% mode.options.forEach(([v, l]) => { %>
+        <label class="mk-read-mode"><input type="radio" name="show_on_front" value="<%= v %>" data-read-mode<%= String(mode.value) === String(v) ? " checked" : "" %>><span><strong><%= l.replace(/ \(choisir ci-dessous\)$/, "") %></strong><small><%= v === "posts" ? "Les articles publiés, du plus récent au plus ancien, avec pagination." : v === "page" ? "Une page du CMS choisie ci-dessous devient l'accueil." : "La page d'accueil habituelle de KOLAKISA, avec les formations." %></small></span></label>
+      <% }) %>
+    </fieldset>
+    <div class="mk-read-panel" data-read-panel="page"<%= String(mode.value) === "page" ? "" : " data-off" %>>
+      <div class="field-group"><label for="rd-home">Page d'accueil</label>
+        <select id="rd-home" name="homepage_page"<%= home.editable ? "" : " disabled" %> aria-describedby="rd-home-h"><%- pageOptions(home, "— Sélectionner —") %></select>
+        <p class="field-hint" id="rd-home-h">Seules les pages publiées <%= scope.siteId ? "de ce site" : "du site principal" %> sont proposées.</p>
+        <% if (lostHome) { %><p class="mk-read-warn" role="alert">La page d'accueil enregistrée n'est plus disponible (dépubliée, supprimée ou déplacée). Le site affiche l'accueil de secours : choisissez une autre page.</p><% } %></div>
+      <div class="field-group"><label for="rd-posts">Page des articles</label>
+        <select id="rd-posts" name="posts_page"<%= postsPg.editable ? "" : " disabled" %> aria-describedby="rd-posts-h"><%- pageOptions(postsPg, "— Aucune : le blog reste à /blog —") %></select>
+        <p class="field-hint" id="rd-posts-h">L'adresse de cette page affiche la liste des articles (son contenu n'est pas utilisé) ; /blog y renvoie. Elle doit différer de la page d'accueil.</p>
+        <% if (lostPosts) { %><p class="mk-read-warn" role="alert">La page des articles enregistrée n'est plus disponible : le blog est servi à /blog. Choisissez une autre page ou videz ce champ.</p><% } %></div>
+    </div>
+    <p class="mk-sub mk-read-note" data-read-panel="posts"<%= String(mode.value) === "posts" ? "" : " data-off" %>>Le nombre d'articles par page se règle ci-dessous. La page d'accueil et la page des articles choisies sont conservées : repasser à « Une page statique » les retrouve.</p>
+    <% if (mode.sensitive && mode.impact) { %><p class="field-hint"><strong>Impact :</strong> <%= mode.impact %></p><% } %>
+  </section>
+
+  <section class="mk-read-card" aria-labelledby="rd-list-h">
+    <header><h2 id="rd-list-h">Articles et archives</h2><p class="mk-sub">Combien d'articles par page ? Valable pour l'accueil en mode articles, la page des articles et les archives (catégories, étiquettes, auteurs).</p></header>
+    <div class="field-group mk-read-num"><label for="rd-per">Nombre d'articles par page</label>
+      <input id="rd-per" type="number" name="posts_per_page" min="<%= perPageF.min %>" max="<%= perPageF.max %>" step="1" value="<%= perPageF.value %>" inputmode="numeric"<%= perPageF.editable ? "" : " disabled" %> aria-describedby="rd-per-h"></div>
+    <p class="field-hint" id="rd-per-h">Entre <%= perPageF.min %> et <%= perPageF.max %>. Ne change ni les résultats de recherche ni les flux.</p>
+  </section>
+
+  <section class="mk-read-card" aria-labelledby="rd-feed-h">
+    <header><h2 id="rd-feed-h">Flux de syndication</h2><p class="mk-sub">Le flux RSS du blog que lisent les lecteurs de flux et les agrégateurs.</p></header>
+    <div class="field-group mk-read-num"><label for="rd-fn">Éléments les plus récents dans le flux</label>
+      <input id="rd-fn" type="number" name="feed_items" min="<%= feedN.min %>" max="<%= feedN.max %>" step="1" value="<%= feedN.value %>" inputmode="numeric"<%= feedN.editable ? "" : " disabled" %> aria-describedby="rd-fn-h"></div>
+    <p class="field-hint" id="rd-fn-h">Entre <%= feedN.min %> et <%= feedN.max %>. Seuls les articles publiés y figurent.</p>
+    <fieldset class="mk-read-modes mk-read-inline"<%= feedC.editable ? "" : " disabled" %>>
+      <legend>Dans chaque publication du flux, inclure</legend>
+      <% feedC.options.forEach(([v, l]) => { %><label class="mk-read-mode"><input type="radio" name="feed_content" value="<%= v %>"<%= String(feedC.value) === String(v) ? " checked" : "" %>><span><strong><%= l %></strong><small><%= v === "full" ? "Tout l'article est lisible dans le lecteur de flux." : "Le début de l'article ; le lecteur doit ouvrir le site pour la suite." %></small></span></label><% }) %>
+    </fieldset>
+    <p class="field-hint">Le choix ne change pas l'affichage des pages du site.<% if (feedUrl) { %> <a href="<%= feedUrl %>" target="_blank" rel="noopener">Voir le flux réel</a><% } else { %> Le flux d'un site est servi à l'adresse publique du site (à renseigner dans Général).<% } %></p>
+  </section>
+
+  <section class="mk-read-card" aria-labelledby="rd-vis-h">
+    <header><h2 id="rd-vis-h">Visibilité pour les moteurs de recherche</h2>
+      <p class="mk-sub">État actuel : <strong class="mk-read-pill <%= visibility === "closed" ? "is-closed" : "is-open" %>"><%= visibility === "closed" ? "Masqué aux moteurs de recherche" : "Visible : indexation autorisée" %></strong></p></header>
+    <p class="mk-sub">Ce réglage est celui de <strong>Paramètres → Indexation</strong> (une seule valeur, partagée avec le module SEO). Activé, il demande aux moteurs de ne pas indexer le site : balise et en-tête « noindex », retrait du plan du site. Ce n'est pas un mécanisme de confidentialité : certains moteurs peuvent l'ignorer, et une page privée doit être protégée par une vraie authentification.</p>
+    <% if (visibility === "closed") { %><p class="mk-read-warn" role="status">Ce site est actuellement retiré des résultats de recherche. Pensez à le rouvrir avant la mise en production.</p><% } %>
+    <p><a class="btn btn-ghost btn-sm" href="<%= visibilityUrl %>">Modifier la visibilité →</a></p>
+  </section>
+</div>
+<script src="/js/cms-lecture.js" defer></script>

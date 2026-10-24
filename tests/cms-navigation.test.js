@@ -155,8 +155,8 @@ describe("hiérarchie et ordre", () => {
     assert.deepEqual(labels(menu.id), ["B", "A"]);
     assert.deepEqual(labels(menu.id, ids.A), ["C"]);
     assert.deepEqual([pos(ids.B), pos(ids.A), pos(ids.C)].map((p) => [p.parent_id, p.position]), [[null, 0], [null, 1], [ids.A, 0]]);
-    const html = (await boss.get(`${NAV}/menus/${menu.id}`)).text;
-    assert.ok(html.indexOf(">B<") < html.indexOf(">A<") && html.indexOf(">A<") < html.indexOf(">C<"));
+    const d = JSON.parse(/<script type="application\/json" id="nm-data">([\s\S]*?)<\/script>/.exec((await boss.get(`${NAV}/menus/${menu.id}`)).text)[1].replace(/\\u003c/g, "<"));
+    assert.deepEqual(d.items.map((i) => [i.id, i.parent]), [[ids.B, null], [ids.A, null], [ids.C, ids.A]], "l'éditeur recharge exactement la structure enregistrée");
   });
   test("sous-menus : imbriquer (→) et remonter (←) ; déplacer dans un sous-menu persiste", async () => {
     await boss.post(`${NAV}/elements/${ids.C}/deplacer`, { direction: "out" });
@@ -335,7 +335,7 @@ describe("ressources modifiées ou supprimées", () => {
     const html = navHtml(await header());
     assert.doesNotMatch(html, /article-renomme/); assert.doesNotMatch(html, /etiquette\/google/);
     const page = (await boss.get(`${NAV}/menus/${menu.id}`)).text;
-    assert.match(page, /Ressource introuvable/); assert.match(page, /2 liens à réparer/); assert.match(page, /Réparer/);
+    assert.match(page, /Ressource introuvable/); assert.match(page, /2 liens à réparer/); assert.match(page, /"state":"missing"/, "l'état de chaque lien cassé est fourni à l'éditeur, qui propose de le réparer");
     assert.match((await boss.get(NAV)).text, /2 liens à réparer/);
     assert.equal(one("SELECT COUNT(*) n FROM nav_items WHERE type = 'article'").n, 1, "l'élément reste, signalé : rien n'est supprimé en silence");
   });

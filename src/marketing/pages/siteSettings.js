@@ -27,7 +27,11 @@ const DEFAULT_SETTINGS = Object.freeze({
   // l'interdiction d'indexer tout le site est extras.noindex : une seule source pour chaque valeur.
   seo: { title: "", ogImage: "", publicUrl: "", follow: true },
   // Réglages généraux du site (palier 14) : fuseau horaire, formats de date et d'heure, page de confidentialité
-  general: { timezone: "Europe/Paris", dateFormat: "long", timeFormat: "24h", privacyPageId: null },
+  general: { timezone: "Europe/Paris", dateFormat: "long", timeFormat: "24h", weekStart: "monday", privacyPageId: null },
+  // Lecture (Paramètres → Lecture) : ce que l'accueil affiche, page des articles, nombre d'articles par page, flux de syndication. La page d'accueil
+  // elle-même reste mk_sites.home_page_id (une seule source) ; ici : le mode et les valeurs propres à la lecture.
+  reading: { showOnFront: "page", postsPage: null, postsPerPage: 10, feedItems: 20, feedContent: "excerpt" },
+  comments: null,
 });
 
 // Fuseau horaire reconnu par le moteur d'internationalisation du serveur (jamais une valeur libre)
@@ -148,11 +152,24 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   if (!validTimezone(timezone)) { if (strict) throw bad("Fuseau horaire inconnu."); }
   const general = {
     timezone: validTimezone(timezone) ? timezone : "Europe/Paris",
-    dateFormat: oneOf(gx.dateFormat, ["long", "medium", "short"], "Format de date", strict, "long"),
+    dateFormat: oneOf(gx.dateFormat, ["long", "medium", "short", "iso", "dmy", "mdy", "dots"], "Format de date", strict, "long"),
+    weekStart: oneOf(gx.weekStart, ["monday", "sunday", "saturday"], "Premier jour de la semaine", strict, "monday"),
     timeFormat: oneOf(gx.timeFormat, ["24h", "12h"], "Format de l'heure", strict, "24h"),
     privacyPageId: Number.isInteger(Number(gx.privacyPageId)) && Number(gx.privacyPageId) > 0 ? Number(gx.privacyPageId) : null,
   };
-  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo, general };
+  const rx = src.reading || {};
+  const posId = (v) => (Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : null);
+  const reading = {
+    showOnFront: oneOf(rx.showOnFront, ["page", "posts"], "Affichage de l'accueil", strict, "page"),
+    postsPage: posId(rx.postsPage),
+    postsPerPage: num(rx.postsPerPage, 1, 50, "Articles par page", strict, D.reading.postsPerPage),
+    feedItems: num(rx.feedItems, 1, 50, "Éléments des flux", strict, D.reading.feedItems),
+    feedContent: oneOf(rx.feedContent, ["excerpt", "full"], "Contenu des flux", strict, "excerpt"),
+  };
+  // Commentaires du site : bloc complet (voir services/comments) ou null = le site hérite du site principal
+  let commentsBlock = null;
+  if (src.comments && typeof src.comments === "object") { try { commentsBlock = require("../../services/comments").normalizeSettings(src.comments); } catch { commentsBlock = null; } }
+  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo, general, reading, comments: commentsBlock };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus

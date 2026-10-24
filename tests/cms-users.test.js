@@ -349,6 +349,8 @@ describe("invitations", () => {
     const inv = one("SELECT id FROM mk_invitations WHERE email = 'autre@exemple.test'");
     const t1 = (flashOf((await boss.get(`${U}/invitations`)).text).match(/\/invitation\/([A-Za-z0-9_-]+)/) || [])[1];
     assert.equal((await new Client(srv.base).get(`/invitation/${t1}`)).status, 200);
+    const waited = () => db.prepare("UPDATE mk_invitations SET last_sent_at = datetime('now', '-2 minutes') WHERE id = ?").run(inv.id); // le délai minimal entre deux envois (60 s) est testé dans utilisateurs-invitations
+    waited();
     await boss.post(`${U}/invitations/${inv.id}/renvoyer`, {});
     const t2 = (flashOf((await boss.get(`${U}/invitations`)).text).match(/\/invitation\/([A-Za-z0-9_-]+)/) || [])[1];
     assert.notEqual(t1, t2);
@@ -356,6 +358,7 @@ describe("invitations", () => {
     assert.equal((await new Client(srv.base).get(`/invitation/${t2}`)).status, 200);
     db.prepare("UPDATE mk_invitations SET expires_at = datetime('now', '-1 hour') WHERE id = ?").run(inv.id);
     assert.equal((await new Client(srv.base).get(`/invitation/${t2}`)).status, 404, "expirée");
+    waited();
     await boss.post(`${U}/invitations/${inv.id}/renvoyer`, {});
     const t3 = (flashOf((await boss.get(`${U}/invitations`)).text).match(/\/invitation\/([A-Za-z0-9_-]+)/) || [])[1];
     await boss.post(`${U}/invitations/${inv.id}/revoquer`, {});

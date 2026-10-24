@@ -1,0 +1,29 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><strong>robots.txt n'est pas un moyen de rendre une page privée.</strong> Une page bloquée peut quand même être connue des moteurs de recherche (par exemple via un lien). Protégez un contenu privé par une connexion, et utilisez noindex pour demander de ne pas l'indexer.</p></div>
+    <% if (v.envClosed) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p><strong>Environnement non public.</strong> Ici, le serveur répond « Disallow: / » à tout le monde ; le fichier ci-dessous est celui qui sera servi sur le domaine public.</p></div><% } %>
+    <% if (v.siteNoindex) { %><div class="mk-cms-soon" role="note"><p>Tout le site est en noindex (rubrique Indexation). Ne bloquez pas ses pages ici : Google ne pourrait plus lire la consigne noindex.</p></div><% } %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="rb-served"><h2 id="rb-served">Fichier réellement servi <%= v.domain ? "sur " + v.domain : "sur le domaine principal" %></h2>
+      <pre class="mk-seo-code" data-robots-served><code><%= v.served %></code></pre>
+      <p class="field-hint">Les espaces privés de la plateforme sont toujours interdits. Les règles supplémentaires ci-dessous sont propres à ce site<%= v.domain ? "" : " (ce site n'ayant pas de domaine propre, elles ne s'appliquent que si le domaine du site est configuré : le robots.txt du domaine principal reste celui du site principal)" %>.</p>
+      <% if (v.blocked.length) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p>Ces adresses du plan du site sont interdites à Google par robots.txt : <%= v.blocked.join(", ") %></p></div><% } %>
+    </section>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="rb-edit"><h2 id="rb-edit">Règles supplémentaires de ce site</h2>
+      <form method="post" action="<%= space.base %>/seo/robots" class="mk-form" data-dirty-form data-busy-form data-robots-form data-preview-url="<%= space.base %>/seo/robots/apercu">
+        <div class="field-group"><label for="rb-text">Règles (une directive par ligne : User-agent, Allow, Disallow, Crawl-delay)</label>
+          <textarea id="rb-text" name="robots_custom" rows="7" spellcheck="false" maxlength="4000" <%= canEdit ? "" : "readonly" %> placeholder="User-agent: GPTBot&#10;Disallow: /"><%= v.custom %></textarea>
+          <small>La ligne « Sitemap » est ajoutée automatiquement. <%= v.stored ? "Ce site a ses propres règles." : "Ce site n'a pas encore de règles propres (valeur neutre : aucune)." %></small></div>
+        <div class="mk-seo-live" data-robots-live aria-live="polite"></div>
+        <div class="field-group mk-seo-confirm" data-robots-confirm hidden><label><input type="checkbox" name="confirm" value="1"> Je comprends que cette règle peut bloquer tout le site ou un grand nombre de pages pour les moteurs de recherche.</label></div>
+        <% if (canEdit) { %><div class="mk-actions"><button type="button" class="btn btn-outline btn-sm" data-robots-preview>Prévisualiser</button><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><span class="mk-seo-dirty" data-dirty-note hidden>Modifications non enregistrées</span></div><% } else { %><p class="mk-lead">Lecture seule : la permission « modifier les réglages SEO » est nécessaire.</p><% } %>
+      </form>
+      <% v.warnings.filter((w) => w.level !== "info").forEach((w) => { %><span class="mk-seo-note mk-seo-note-warning"><%= w.message %></span><% }) %>
+    </section>
+    <% if (v.history.length) { %>
+    <details class="mk-seo-details"><summary>Versions précédentes de ces règles (<%= v.history.length %>)</summary>
+      <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Historique de robots.txt</caption><thead><tr><th scope="col">Date</th><th scope="col">Par</th><th scope="col">Avant</th><th scope="col"></th></tr></thead>
+        <tbody><% v.history.forEach((h) => { let old = h.old_value; try { const p = JSON.parse(old); if (typeof p === "string") old = p; } catch (e) {} %><tr><td data-label="Date"><%= String(h.created_at).slice(0, 16) %></td><td data-label="Par"><%= h.username || "—" %></td><td data-label="Avant"><code><%= old ? String(old).slice(0, 120) : "(aucune règle)" %></code></td>
+          <td><% if (canEdit) { %><form method="post" action="<%= space.base %>/seo/robots/restaurer" data-confirm="Rétablir cette version ?"><input type="hidden" name="change" value="<%= h.id %>"><button type="submit" class="btn btn-outline btn-sm">Rétablir</button></form><% } %></td></tr><% }) %></tbody></table></div>
+    </details>
+    <% } %>
+<%- include("../partials/bottom") %>

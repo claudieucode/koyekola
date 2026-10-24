@@ -25,14 +25,19 @@ function journal(req, action, userId, extra = {}) {
   } catch { /* le journal ne doit jamais faire échouer la connexion */ }
 }
 
+// Réglage « Inscriptions publiques » (Paramètres → Général) : lu par le serveur à CHAQUE demande, jamais par le navigateur
+const signupOpen = () => { try { return require("../services/settings").main().registrationOpen; } catch { return true; } };
+
 router.get("/inscription", (req, res) => {
   if (req.session.user) return res.redirect("/");
+  if (!signupOpen()) return res.status(403).render("register", { error: null, closed: true, formValues: {}, consentText: SIGNUP_CONSENT_TEXT, redirect: "" });
   res.render("register", { error: null, formValues: {}, consentText: SIGNUP_CONSENT_TEXT, redirect: safePath(req.query.redirect, "") });
 });
 
 // L'inscription publique ne crée que des comptes étudiants : ce site n'a qu'un seul
 // créateur (vous), dont le compte "formateur" est créé une fois via le script de seed.
 router.post("/inscription", (req, res, next) => {
+  if (!signupOpen()) return res.status(403).render("register", { error: null, closed: true, formValues: {}, consentText: SIGNUP_CONSENT_TEXT, redirect: "" });
   const { username, email, password } = req.body;
 
   if (!username || !email || !password) {

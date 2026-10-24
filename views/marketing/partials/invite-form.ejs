@@ -1,0 +1,25 @@
+<%#
+  Formulaire d'invitation partagé (écran central et écran d'un site). Paramètres : action, roles [{key,name,ok}], sites [{id,name}] (central) OU fixedSite {id,name} (site : l'invitation ne vaut que pour lui), days, hidden {nom: valeur}.
+  Le site d'un administrateur local n'est jamais choisi par le navigateur : le serveur l'impose.
+%>
+<form method="post" action="<%= action %>" class="mk-form mk-us-form" data-us-invite novalidate>
+  <% Object.entries(hidden || {}).forEach(([k, v]) => { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% }) %>
+  <div class="mk-us-grid">
+    <div class="field-group"><label for="iv-email">Adresse e-mail *</label><input id="iv-email" type="email" name="email" required maxlength="120" autocomplete="off" aria-describedby="iv-email-h"><span class="field-hint" id="iv-email-h">Un lien personnel et à usage unique lui est envoyé.</span></div>
+    <div class="field-group"><label for="iv-name">Nom de la personne</label><input id="iv-name" type="text" name="name" maxlength="80" autocomplete="off"><span class="field-hint">Facultatif : affiché dans l'e-mail.</span></div>
+    <div class="field-group"><label for="iv-role">Rôle *</label>
+      <select id="iv-role" name="role" required aria-describedby="iv-role-h"><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.ok ? "" : " disabled" %><%= r.key === "viewer" ? " selected" : "" %>><%= r.name %><%= r.ok ? "" : " (droits supérieurs aux vôtres)" %></option><% }) %></select>
+      <span class="field-hint" id="iv-role-h">Vous ne pouvez attribuer que des rôles dont vous possédez tous les droits.</span></div>
+    <% if (fixedSite) { %>
+    <div class="field-group"><label for="iv-site-fixed">Site</label><input id="iv-site-fixed" type="text" value="<%= fixedSite.name %>" readonly><span class="field-hint">L'accès ne vaut que pour ce site : aucun droit sur les autres.</span></div>
+    <% } else { %>
+    <div class="field-group"><label for="iv-site">Accès</label>
+      <select id="iv-site" name="site_id"><option value="">Toute l'équipe (tous les sites)</option><% sites.forEach((s) => { %><option value="<%= s.id %>">Seulement le site « <%= s.name %> »</option><% }) %></select>
+      <span class="field-hint">Un accès limité à un site ne donne aucun droit sur les autres sites.</span></div>
+    <% } %>
+    <div class="field-group"><label for="iv-days">Validité du lien</label>
+      <select id="iv-days" name="days"><% [[1, "1 jour"], [3, "3 jours"], [7, "7 jours"], [14, "14 jours"], [30, "30 jours"]].forEach(([n, l]) => { %><option value="<%= n %>"<%= Number(days) === n ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+    <div class="field-group mk-us-wide"><label for="iv-msg">Message personnel</label><textarea id="iv-msg" name="message" rows="3" maxlength="500" aria-describedby="iv-msg-h"></textarea><span class="field-hint" id="iv-msg-h">Facultatif, 500 caractères au plus : ajouté tel quel à l'e-mail.</span></div>
+  </div>
+  <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm" data-us-send>Envoyer l'invitation</button><span class="mk-sub" data-us-state role="status" aria-live="polite"></span></div>
+</form>

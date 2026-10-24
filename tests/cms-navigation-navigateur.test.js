@@ -32,45 +32,13 @@ describe("navigation (navigateur)", { skip: SKIP }, () => {
   });
   after(async () => { if (browser) await browser.close(); await srv.stop(); });
 
-  test("administration : créer un menu, ajouter une page trouvée par la recherche, un lien personnalisé ; tout persiste", async () => {
-    const page = await open(1280, true);
-    await page.goto(`${srv.base}${NAV}`);
-    await page.click("[data-mk-modal-open=nouveau-menu]");
-    await page.fill("#menu-name", "Menu navigateur");
-    await page.click("#nouveau-menu button[type=submit]");
-    await page.waitForSelector("[data-nav-tree]", { state: "attached" });
-    menuId = db.prepare("SELECT id FROM nav_menus WHERE name = 'Menu navigateur'").get().id;
-    await page.fill("#ns-page", "tarifs");
-    await page.waitForSelector("[data-nav-picker][data-type=page] input[type=checkbox]");
-    await page.check("[data-nav-picker][data-type=page] input[type=checkbox]");
-    await page.click("[data-nav-picker][data-type=page] button[type=submit]");
-    await page.waitForSelector(".mk-nav-item", { state: "attached" });
-    await page.locator("summary", { hasText: "Lien personnalisé" }).click();
-    await page.fill("#cu-label", "Contact");
-    await page.fill("#cu-url", "/contact");
-    await page.locator("form:has(#cu-label) button[type=submit]").click();
-    await page.waitForFunction(() => document.querySelectorAll(".mk-nav-item").length >= 2);
-    assert.equal(db.prepare("SELECT COUNT(*) n FROM nav_items WHERE menu_id = ?").get(menuId).n, 2);
-    await page.reload();
-    assert.equal(await page.locator(".mk-nav-item").count(), 2);
-  });
-
-  test("glisser-déposer : l'ordre et l'imbrication sont écrits en base et survivent au rechargement", async () => {
-    const page = await open(1280, true);
-    await page.goto(`${srv.base}${NAV}/menus/${menuId}`);
-    const first = page.locator(".mk-nav-item").nth(0), second = page.locator(".mk-nav-item").nth(1);
-    const firstLabel = (await first.locator(".mk-nav-label").first().innerText()).trim();
-    await second.locator("[data-nav-handle]").first().dragTo(first.locator(".mk-nav-row").first(), { targetPosition: { x: 40, y: 3 } });
-    await page.waitForFunction(() => /Ordre enregistré/.test(document.querySelector("[data-nav-status]").textContent));
-    assert.equal(labels()[0], "Contact");
-    await page.reload();
-    assert.equal((await page.locator(".mk-nav-item .mk-nav-label").first().innerText()).trim(), "Contact");
-    // dépôt « dans » un élément : devient son sous-élément
-    const items = page.locator(".mk-nav-tree > .mk-nav-item");
-    await items.nth(1).locator("[data-nav-handle]").first().dragTo(items.nth(0).locator(".mk-nav-row").first());
-    await page.waitForFunction(() => /Ordre enregistré/.test(document.querySelector("[data-nav-status]").textContent));
-    assert.equal(db.prepare("SELECT COUNT(*) n FROM nav_items WHERE menu_id = ? AND parent_id IS NOT NULL").get(menuId).n, 1);
-    assert.ok(firstLabel);
+  // L'éditeur d'administration est vérifié dans tests/apparence-menus-navigateur.test.js ; ici, un menu réel (avec sous-menu) sert aux parcours du site public.
+  before(() => {
+    menuId = Number(db.prepare("INSERT INTO nav_menus (name, slug) VALUES ('Menu navigateur', 'menu-navigateur')").run().lastInsertRowid);
+    const pageId = db.prepare("SELECT id FROM mk_landing_pages WHERE slug = 'tarifs'").get().id;
+    const parent = Number(db.prepare("INSERT INTO nav_items (menu_id, position, type, object_id) VALUES (?, 0, 'page', ?)").run(menuId, pageId).lastInsertRowid);
+    db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label) VALUES (?, ?, 0, 'custom', '/contact', 'Contact')").run(menuId, parent);
+    db.prepare("INSERT INTO nav_items (menu_id, position, type, url, label) VALUES (?, 1, 'custom', '/blog', 'Blog')").run(menuId);
   });
 
   test("affectation à l'en-tête puis site public : bureau, sous-menu au clavier (Tab, Entrée, Échap, focus), aucun défilement horizontal", async () => {

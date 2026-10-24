@@ -1,0 +1,70 @@
+<%- include("partials/top", { title, active }) %>
+<% const archived = site.status === "archived" || Boolean(site.deleted_at); const dis = canWrite && !archived ? "" : " disabled"; const t = site.tokens; %>
+<div class="mk-head"><div class="mk-builder-title"><h1>En-tête</h1><% if (site.deleted_at) { %><span class="mk-status mk-status-warn">Supprimé</span><% } else if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
+  <p class="mk-head-sub">Le composant affiché en haut de toutes les pages du site, ses variantes et ses exceptions par page. Il appartient à ce site seulement.</p></div>
+<div class="mk-sg-sub">
+    <%# ---------- En-tête du site : état réel, pages concernées, exceptions, variantes ---------- %>
+    <% const H = headerOverview; const stLabel = (st) => (st === "published" ? "En ligne" : st === "unpublished" ? "Hors ligne" : "Brouillon"); %>
+    <section class="mk-panel" id="entete" aria-labelledby="site-entete">
+      <h2 id="site-entete">En-tête du site</h2>
+      <% if (!H.header) { %>
+        <p class="mk-lead">Ce site n'a pas encore d'en-tête. Un en-tête s'affiche en haut de <strong>toutes</strong> les pages du site ; certaines pages peuvent ensuite faire exception.</p>
+        <% if (canWrite) { %><form action="/marketing/site-web/sites/<%= site.id %>/entete/creer" method="post"><button type="submit" class="btn btn-primary btn-sm">Créer un en-tête</button></form>
+        <p class="field-hint">Ou choisissez un composant déjà enregistré dans « En-tête et pied de page », plus bas.</p><% } %>
+      <% } else { %>
+        <dl class="mk-facts" data-header-facts>
+          <div><dt>En-tête</dt><dd data-header-name><%= H.header.name %></dd></div>
+          <div><dt>Statut</dt><dd data-header-status><%= H.status === "published" ? "Publié" : "Aucun" %></dd></div>
+          <div><dt>Type</dt><dd data-header-type><%= H.type === "global" ? "Global" : "" %></dd></div>
+          <div><dt>Utilisé par</dt><dd data-header-count><%= H.using.length %> page<%= H.using.length > 1 ? "s" : "" %> sur <%= H.total %></dd></div>
+        </dl>
+        <p class="field-hint">Un en-tête est un composant synchronisé : le modifier le met à jour sur toutes les pages qui l'utilisent, tout de suite.</p>
+        <p><% if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/site-web/composants/<%= H.header.id %>/editeur" data-header-edit>Modifier l'en-tête</a><% } %></p>
+
+        <% const choiceCell = (p, current) => { %>
+          <form action="/marketing/site-web/sites/<%= site.id %>/entete/pages/<%= p.id %>" method="post" class="mk-inline-form">
+            <label class="sr-only" for="h-<%= p.id %>">En-tête de la page « <%= p.name %> »</label>
+            <select id="h-<%= p.id %>" name="choice"<%= canWrite ? "" : " disabled" %>>
+              <option value="inherit"<%= current === "inherit" ? " selected" : "" %>>En-tête du site</option>
+              <option value="none"<%= current === "none" ? " selected" : "" %>>Aucun en-tête</option>
+              <% H.variants.forEach((v) => { %><option value="variant:<%= v.id %>"<%= current === "variant:" + v.id ? " selected" : "" %>>Variante : <%= v.name %></option><% }) %>
+            </select>
+            <% if (canWrite) { %><button type="submit" class="btn btn-outline btn-sm">Appliquer</button><% } %>
+          </form>
+        <% }; %>
+
+        <h3>Pages utilisant cet en-tête</h3>
+        <% if (!H.using.length) { %><p class="field-hint">Aucune page : toutes les pages du site font exception, ou le site n'a pas encore de page.</p><% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table" data-header-using>
+          <thead><tr><th scope="col">Page</th><th scope="col">État de la page</th><th scope="col">En-tête</th></tr></thead>
+          <tbody><% H.using.forEach((p) => { %><tr><td><span aria-hidden="true">✓</span> <a href="/marketing/pages/<%= p.id %>"><%= p.name %></a></td><td><%= stLabel(p.status) %></td><td><% choiceCell(p, "inherit") %></td></tr><% }) %></tbody>
+        </table></div><% } %>
+
+        <h3>Exceptions</h3>
+        <% if (!H.exceptions.length) { %><p class="field-hint">Aucune exception : toutes les pages du site affichent l'en-tête du site. Choisissez « Aucun en-tête » ou une variante pour une page (tunnel, page de campagne…) dans la liste ci-dessus.</p><% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table" data-header-exceptions>
+          <thead><tr><th scope="col">Page</th><th scope="col">En-tête</th><th scope="col">Changer</th></tr></thead>
+          <tbody><% H.exceptions.forEach((p) => { %><tr><td>• <a href="/marketing/pages/<%= p.id %>"><%= p.name %></a></td><td><%= p.mode === "none" ? "Aucun en-tête" : "Variante : " + p.variant.name %></td><td><% choiceCell(p, p.mode === "none" ? "none" : "variant:" + p.variant.id) %></td></tr><% }) %></tbody>
+        </table></div><% } %>
+
+        <h3>Variantes</h3>
+        <% if (!H.variants.length) { %><p class="field-hint">Une variante est une copie de l'en-tête que vous pouvez modifier sans toucher à l'en-tête du site, puis affecter à certaines pages.</p><% } else { %>
+        <ul class="mk-list" data-header-variants><% H.variants.forEach((v) => { %><li><%= v.name %> — <%= v.pages %> page<%= v.pages > 1 ? "s" : "" %><% if (canWrite) { %> · <a href="/marketing/site-web/composants/<%= v.id %>/editeur">Modifier</a><% } %></li><% }) %></ul><% } %>
+        <% if (canWrite) { %><form action="/marketing/site-web/sites/<%= site.id %>/entete/variante" method="post" class="mk-inline-form"><button type="submit" class="btn btn-outline btn-sm">Créer une variante</button></form><% } %>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" id="parties" aria-labelledby="site-parts">
+      <h2 id="site-parts">En-tête et pied de page</h2>
+      <p class="field-hint">Un composant réutilisable (enregistré depuis l'éditeur : inspecteur › Avancé › « Enregistrer comme composant ») affiché en haut ou en bas de <strong>toutes</strong> les pages de ce site. Le modifier dans une page qui l'utilise le met à jour partout.</p>
+      <% if (!components.length) { %><p class="field-hint">Aucun composant pour l'instant : créez par exemple une section avec un menu, puis enregistrez-la comme composant.</p><% } else { %>
+      <form action="/marketing/site-web/sites/<%= site.id %>/parties" method="post" class="mk-form-row">
+        <div class="field-group"><label for="site-header">En-tête du site</label><select id="site-header" name="header"<%= canWrite ? "" : " disabled" %>><option value="">Aucun</option><% components.forEach((c) => { %><option value="<%= c.id %>"<%= site.header_component_id === c.id ? " selected" : "" %>><%= c.name %><%= c.global ? " (global)" : "" %></option><% }) %></select></div>
+        <div class="field-group"><label for="site-footer">Pied de page du site</label><select id="site-footer" name="footer"<%= canWrite ? "" : " disabled" %>><option value="">Aucun</option><% components.forEach((c) => { %><option value="<%= c.id %>"<%= site.footer_component_id === c.id ? " selected" : "" %>><%= c.name %><%= c.global ? " (global)" : "" %></option><% }) %></select></div>
+        <% if (canWrite) { %><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><% } %>
+      </form><% } %>
+    </section>
+
+</div>
+
+<%- include("partials/bottom") %>

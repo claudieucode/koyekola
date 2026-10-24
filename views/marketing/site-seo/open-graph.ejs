@@ -1,0 +1,36 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <p class="field-hint mk-seo-lead">Ordre de priorité de l'image : <strong>1.</strong> image de partage de la page · <strong>2.</strong> bandeau de la page · <strong>3.</strong> image de partage du site (ci-dessous) · <strong>4.</strong> logo du site. Les balises sont produites une seule fois, par le moteur commun.</p>
+    <% if (v.truncated) { %><div class="mk-cms-soon" role="note"><p>Plus de 500 pages en ligne : seules les 500 premières sont listées.</p></div><% } %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="og-site"><h2 id="og-site">Valeurs globales du site</h2>
+      <form method="post" action="<%= space.base %>/seo/open-graph" class="mk-form" data-dirty-form data-busy-form>
+        <input type="hidden" name="revision" value="<%= v.revision %>">
+        <% fields.forEach((f) => { %>
+        <div class="field-group"><label for="seo-<%= f.key %>"><%= f.label %> <span class="mk-status <%= f.own ? 'mk-status-ok' : 'mk-status-off' %>"><%= f.own ? "personnalisé" : "valeur par défaut" %></span></label>
+          <select id="seo-<%= f.key %>" name="<%= f.key %>" <%= canEdit ? "" : "disabled" %>><option value="">Valeur par défaut</option><% f.choices.forEach((c) => { %><option value="<%= c %>" <%= f.own && f.value === c ? "selected" : "" %>><%= c %></option><% }) %></select></div>
+        <% }) %>
+        <div class="field-group"><label for="og-image">Image de partage du site</label>
+          <select id="og-image" name="og_image" <%= canEdit ? "" : "disabled" %> data-og-select>
+            <option value="">Aucune (logo du site en secours)</option>
+            <% library.forEach((m) => { %><option value="<%= m.path %>" <%= v.siteImage === m.path ? "selected" : "" %> data-src="<%= m.path %>"><%= m.name %><%= m.width ? " (" + m.width + "×" + m.height + ")" : "" %></option><% }) %>
+            <% if (v.siteImage && !library.some((m) => m.path === v.siteImage)) { %><option value="<%= v.siteImage %>" selected>Image actuelle (hors médiathèque du site)</option><% } %>
+          </select>
+          <small>Choisie dans la médiathèque de ce site. Idéalement 1200 × 630 pixels. <% if (v.siteImageOk === false) { %><strong>Le fichier actuel est introuvable.</strong><% } %></small>
+          <% if (v.siteImage && v.siteImageOk) { %><img class="mk-seo-thumb" src="<%= v.siteImage %>" alt="Image de partage actuelle du site" loading="lazy"><% } %></div>
+        <% if (canEdit) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><span class="mk-seo-dirty" data-dirty-note hidden>Modifications non enregistrées</span></div><% } else { %><p class="mk-lead">Lecture seule : la permission « modifier les réglages SEO » est nécessaire.</p><% } %>
+      </form>
+    </section>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="og-pages"><h2 id="og-pages">Aperçu du partage par page</h2>
+      <p class="field-hint"><%= v.totals.withImage %> page(s) sur <%= v.totals.pages %> ont une image de partage · <%= v.totals.custom %> avec des valeurs de partage propres. Le titre et l'image d'une page se règlent dans son éditeur (volet SEO).</p>
+      <% if (!v.rows.length) { %><div class="mk-empty"><%- icon("share2", { size: 32 }) %><p>Ce site n'a encore aucune page en ligne.</p></div><% } else { %>
+      <div class="mk-seo-cards"><% v.rows.forEach((r) => { %>
+        <article class="mk-seo-share">
+          <div class="mk-seo-share-img"><% if (r.image) { %><img src="<%= r.image %>" alt="" loading="lazy"><% } else { %><span>Aucune image</span><% } %></div>
+          <div class="mk-seo-share-body"><span class="mk-seo-share-site"><%= r.siteName %></span><strong><%= r.title %></strong><span><%= r.description %></span>
+            <span class="field-hint">Image : <%= r.source %> · carte <%= r.card %><%= r.imageW ? " · " + r.imageW + "×" + r.imageH : "" %></span>
+            <% r.notes.forEach((n) => { %><span class="mk-seo-note mk-seo-note-<%= n.level %>"><%= n.text %></span><% }) %>
+            <a href="/marketing/pages/<%= r.id %>">Modifier « <%= r.name %> »</a></div>
+        </article><% }) %></div>
+      <% } %>
+    </section>
+<%- include("../partials/bottom") %>

@@ -16,7 +16,8 @@
   <link rel="stylesheet" href="<%= asset('/css/page-builder-menu.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/site-settings.css') %>">
 </head>
-<body class="pb-body">
+<% const bodyClass = typeof embedded !== "undefined" && embedded ? "pb-body pb-embedded" : "pb-body"; %>
+<body class="<%= bodyClass %>">
   <a class="skip-link" href="#pb-canvas">Aller au canevas</a>
   <%# ---------- Barre supérieure : actions permanentes + zone contextuelle (selon la sélection) ---------- %>
   <header class="pb-top">

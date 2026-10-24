@@ -76,18 +76,20 @@ const roleMatrix = () => {
 };
 
 // ---------- SEO / redirections (tables du moteur SEO existant) ----------
+// Écrans du CMS CENTRAL (site principal) : seulement les données du site principal (site_id NULL). Celles des autres sites ne sont lisibles que dans leur propre espace.
+const principalOnly = (db, table) => (db.prepare(`SELECT 1 FROM pragma_table_info('${table}') WHERE name = 'site_id'`).get() ? "site_id IS NULL" : "1 = 1");
 function listRedirects(db, { q } = {}) {
   return safe(() => db.prepare(`SELECT id, source_path, target, status, enabled, hits, last_hit_at, created_at FROM seo_redirects
-      ${q ? "WHERE source_path LIKE ? ESCAPE '\\' OR target LIKE ? ESCAPE '\\'" : ""} ORDER BY id DESC LIMIT 500`).all(...(q ? [like(q), like(q)] : [])), []);
+      WHERE ${principalOnly(db, "seo_redirects")}${q ? " AND (source_path LIKE ? ESCAPE '\\' OR target LIKE ? ESCAPE '\\')" : ""} ORDER BY id DESC LIMIT 500`).all(...(q ? [like(q), like(q)] : [])), []);
 }
-const list404 = (db) => safe(() => db.prepare("SELECT path, hits_human, hits_bot, last_seen FROM seo_404 WHERE ignored = 0 ORDER BY hits_human DESC, last_seen DESC LIMIT 200").all(), []);
+const list404 = (db) => safe(() => db.prepare(`SELECT path, hits_human, hits_bot, last_seen FROM seo_404 WHERE ignored = 0 AND ${principalOnly(db, "seo_404")} ORDER BY hits_human DESC, last_seen DESC LIMIT 200`).all(), []);
 const seoCounts = (db) => ({
-  redirects: safe(() => db.prepare("SELECT COUNT(*) n FROM seo_redirects WHERE enabled = 1").get().n, 0),
-  errors404: safe(() => db.prepare("SELECT COUNT(*) n FROM seo_404 WHERE ignored = 0").get().n, 0),
+  redirects: safe(() => db.prepare(`SELECT COUNT(*) n FROM seo_redirects WHERE enabled = 1 AND ${principalOnly(db, "seo_redirects")}`).get().n, 0),
+  errors404: safe(() => db.prepare(`SELECT COUNT(*) n FROM seo_404 WHERE ignored = 0 AND ${principalOnly(db, "seo_404")}`).get().n, 0),
 });
 // Métadonnées SEO des pages publiées (colonne seo + titre/description de la page) : ce que le moteur de pages sert réellement
 function pagesSeo(ctx) {
-  return safe(() => ctx.db.prepare("SELECT id, name, slug, title, description, seo, indexable, status FROM mk_landing_pages WHERE organization_id = ? AND archived_at IS NULL ORDER BY updated_at DESC LIMIT 500").all(ctx.organizationId)
+  return safe(() => ctx.db.prepare("SELECT id, name, slug, title, description, seo, indexable, status FROM mk_landing_pages WHERE organization_id = ? AND archived_at IS NULL AND site_id IS NULL ORDER BY updated_at DESC LIMIT 500").all(ctx.organizationId)
     .map((p) => { let seo = {}; try { seo = JSON.parse(p.seo || "{}"); } catch { /* seo illisible : traité comme vide */ } return { ...p, seoParsed: seo }; }), []);
 }
 

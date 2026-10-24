@@ -15,7 +15,8 @@ const PREFIX = "cms.";
 const MAX_VALUE = 8192;
 const GROUPS = {
   general: { label: "Général", intro: "Identité du site, langue, fuseau horaire et formats de date." },
-  reading: { label: "Lecture", intro: "Page d'accueil et affichage des archives du blog." },
+  writing: { label: "Écriture", intro: "Valeurs par défaut de la rédaction et notifications de publication, propres à chaque site." },
+  reading: { label: "Lecture", intro: "Ce que le site affiche à son accueil, combien d'articles par page, et ce que contient le flux de syndication." },
   comments: { label: "Commentaires", intro: "Réglages globaux du moteur de commentaires (la modération se fait dans Commentaires)." },
   media: { label: "Médias", intro: "Limites d'envoi des fichiers dans la médiathèque." },
   permalinks: { label: "Permaliens", intro: "Normalisation des adresses ; la structure est gérée par le moteur d'adresses." },
@@ -75,7 +76,7 @@ const seoField = (name) => ({ adapterValidate: (v) => seo().validate(name, typeo
 // --- Général ---
 def({ key: "site_name", group: "general", label: "Nom du site", type: "string", max: 60, required: true, help: "Affiché dans les titres, le partage et les données structurées.",
   ...seoField("site_name"), readSite: (s) => s.name, writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { name: v }), defaultSite: "" });
-def({ key: "description", group: "general", label: "Description du site", type: "text", max: 160, maxSite: 300, help: "Utilisée par les pages qui n'ont pas leur propre description.",
+def({ key: "description", group: "general", label: "Slogan et description courte", type: "text", max: 160, maxSite: 300, help: "En quelques mots, ce que représente le site. Utilisé par les pages qui n'ont pas leur propre description (référencement, partage) : il n'est pas affiché automatiquement sur le site.",
   ...seoField("default_description"), readSite: (s) => s.settings.identity.description, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.identity.description = v; }), defaultSite: "" });
 def({ key: "language", group: "general", label: "Langue du site", type: "enum", help: "Langue déclarée dans chaque page (lecteurs d'écran, moteurs de recherche) et utilisée pour les dates. L'interface n'est pas traduite automatiquement.",
   options: (scope) => (scope.siteId ? Object.entries(siteSettings().LANGUAGES) : Object.entries(LOCALES)),
@@ -83,34 +84,108 @@ def({ key: "language", group: "general", label: "Langue du site", type: "enum", 
 def({ key: "timezone", group: "general", label: "Fuseau horaire", type: "timezone", help: "Fuseau d'affichage des dates. Les dates enregistrées restent en temps universel (UTC) : rien n'est converti en base.",
   ...mainKv("timezone", "Europe/Paris"), readSite: (s) => s.settings.general.timezone, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.timezone = v; }), defaultSite: "Europe/Paris" });
 def({ key: "date_format", group: "general", label: "Format de date", type: "enum", help: "Appliqué à toutes les dates affichées.",
-  options: () => [["long", "Longue (9 octobre 2026)"], ["medium", "Moyenne (9 oct. 2026)"], ["short", "Courte (09/10/2026)"]],
+  options: () => [["long", "Longue (9 octobre 2026)"], ["medium", "Moyenne (9 oct. 2026)"], ["short", "Courte, selon la langue (09/10/2026)"], ["iso", "AAAA-MM-JJ (2026-10-09)"], ["dmy", "JJ/MM/AAAA (09/10/2026)"], ["mdy", "MM/JJ/AAAA (10/09/2026)"], ["dots", "JJ.MM.AAAA (09.10.2026)"]],
   ...mainKv("date_format", "long"), readSite: (s) => s.settings.general.dateFormat, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.dateFormat = v; }), defaultSite: "long" });
 def({ key: "time_format", group: "general", label: "Format de l'heure", type: "enum", help: "24 heures ou 12 heures (AM / PM).",
   options: () => [["24h", "24 heures (14:30)"], ["12h", "12 heures (2:30 PM)"]],
   ...mainKv("time_format", "24h"), readSite: (s) => s.settings.general.timeFormat, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.timeFormat = v; }), defaultSite: "24h" });
+def({ key: "week_start", group: "general", label: "La semaine commence le", type: "enum", help: "Premier jour affiché dans les calendriers (sélecteur de date de l'éditeur d'articles).",
+  options: () => [["monday", "Lundi"], ["sunday", "Dimanche"], ["saturday", "Samedi"]],
+  ...mainKv("week_start", "monday"), readSite: (s) => s.settings.general.weekStart, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.weekStart = v; }), defaultSite: "monday" });
+def({ key: "site_slug", group: "general", label: "Identifiant du site", type: "slug", scopes: ["site"], sensitive: true, required: true, max: 60,
+  help: "Lettres minuscules, chiffres et tirets. Il sert dans les adresses internes du site ; l'identifiant interne (n°) ne change jamais.",
+  impact: "L'identifiant fait partie des adresses du site hébergé par KOLAKISA : les liens déjà diffusés avec l'ancien identifiant peuvent cesser de fonctionner.",
+  readSite: (s) => s.slug, writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { slug: v }), defaultSite: "" });
+def({ key: "site_type", group: "general", label: "Type de site", type: "enum", scopes: ["site"], help: "Indicatif : aide à retrouver le site dans « Mes sites ».",
+  options: () => Object.entries(pages().SITE_TYPES), readSite: (s) => s.site_type || "", writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { siteType: v }), defaultSite: "" });
+def({ key: "site_note", group: "general", label: "Note interne", type: "text", scopes: ["site"], max: 500, help: "Visible seulement dans « Mes sites » (jamais sur le site public).",
+  readSite: (s) => s.description || "", writeSite: (v, ctx, siteId) => pages().updateSite(ctx, siteId, { description: v }), defaultSite: "" });
+def({ key: "registration_open", group: "general", label: "Inscriptions publiques", type: "boolean", scopes: ["main"], sensitive: true,
+  help: "Permet à tout visiteur de créer un compte étudiant (page « Inscription »). Décoché : la page d'inscription est fermée ; les comptes existants et les invitations de l'équipe ne changent pas.",
+  impact: "Fermer les inscriptions empêche toute nouvelle personne de créer un compte étudiant sur la plateforme.",
+  ...mainKv("registration_open", true) });
 def({ key: "admin_email", group: "general", label: "E-mail administratif", type: "email", scopes: ["main"], help: "Reçoit les messages du formulaire de contact du site. Vide : l'adresse configurée par l'hébergeur est utilisée.", ...mainKv("admin_email", "") });
 def({ key: "logo", group: "general", label: "Logo du site", type: "image", scopes: ["site"], help: "Image de la médiathèque (affichée dans le pied de page des pages du site). Le logo du site principal se règle dans Apparence.",
   readSite: (s) => s.settings.identity.logoUrl, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.identity.logoUrl = v; }), defaultSite: "" });
 def({ key: "favicon", group: "general", label: "Favicon", type: "image", scopes: ["site"], help: "Petite icône de l'onglet (PNG, SVG, ICO).",
   readSite: (s) => s.settings.identity.faviconUrl, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.identity.faviconUrl = v; }), defaultSite: "" });
-def({ key: "public_url", group: "general", label: "Adresse publique (domaine)", type: "url", scopes: ["site"], sensitive: true, help: "https://… sans chemin. Détermine le domaine servant ce site (adresses canoniques, plan du site, accueil à la racine).",
+def({ key: "public_url", group: "general", label: "Domaine personnalisé", type: "url", scopes: ["site"], sensitive: true, help: "https://… sans chemin. Détermine le domaine servant ce site (adresses canoniques, plan du site, accueil à la racine).",
   impact: "Les adresses canoniques, le plan du site et l'accueil du site suivent ce domaine. Un domaine mal réglé fait sortir le site des moteurs de recherche.",
   readSite: (s) => s.settings.seo.publicUrl, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.seo.publicUrl = v; }), defaultSite: "" });
+
+// --- Écriture ---
+const writing = () => require("../writing");
+def({ key: "writing_default_category", group: "writing", label: "Catégorie par défaut des articles", type: "enum", help: "Appliquée à un nouvel article quand l'auteur n'en choisit aucune. Les articles existants ne changent pas. Si la catégorie est supprimée, les nouveaux articles restent sans catégorie.",
+  options: (scope) => [["", "Aucune (non classé)"], ...writing().categoryChoices(scope.siteId)],
+  readMain: (ctx) => String(writing().defaultCategoryId(null, ctx) || ""), writeMain: (v, ctx) => writing().setDefaultCategory(null, v, ctx), defaultMain: "",
+  readSite: (s, ctx) => String(writing().defaultCategoryId(s.id, ctx) || ""), writeSite: (v, ctx, siteId) => writing().setDefaultCategory(siteId, v, ctx), defaultSite: "" });
+def({ key: "writing_ping_enabled", group: "writing", label: "Notifier un service de mise à jour à chaque nouvel article publié", type: "boolean", sensitive: true,
+  help: "Envoie une notification (ping) aux destinations ci-dessous, une seule fois par article, à sa première publication. Un enregistrement ou une mise à jour ne renvoie rien. Les articles déjà publiés ne sont pas notifiés. L'échec d'un service n'empêche jamais la publication.",
+  impact: "Le site contactera des services externes à chaque nouvelle publication (adresse du site et titre du site transmis).",
+  readMain: (ctx) => writing().getPing(null, ctx).enabled, writeMain: (v, ctx) => writing().setPingEnabled(null, v, ctx), defaultMain: false,
+  readSite: (s, ctx) => writing().getPing(s.id, ctx).enabled, writeSite: (v, ctx, siteId) => writing().setPingEnabled(siteId, v, ctx), defaultSite: false });
+def({ key: "writing_ping_urls", group: "writing", label: "Services à notifier", type: "urllist", sensitive: true, nullable: true,
+  help: "Une adresse https:// par ligne (5 au plus), protocole « weblogUpdates.ping ». Aucune destination n'est préremplie : les anciens services de ping de WordPress sont souvent inactifs ou sources de spam, n'ajoutez que des services que vous avez vérifiés. Les adresses privées sont refusées.",
+  impact: "Seules ces adresses recevront les notifications de ce site.",
+  readMain: (ctx) => writing().getPing(null, ctx).urls.join("\n"), writeMain: (v, ctx) => writing().setPingUrls(null, writing().parseUrls(v).urls, ctx), defaultMain: "",
+  readSite: (s, ctx) => writing().getPing(s.id, ctx).urls.join("\n"), writeSite: (v, ctx, siteId) => writing().setPingUrls(siteId, writing().parseUrls(v).urls, ctx), defaultSite: "" });
 
 // --- Lecture ---
 def({ key: "homepage_page", group: "reading", label: "Page d'accueil", type: "page", sensitive: true, nullable: true, help: "Une page publiée du CMS affichée à la racine (« / »). Vide : l'accueil standard de KOLAKISA (site principal) ou aucune (site du CMS).",
   impact: "L'adresse « / » affichera cette page. Si la page est dépubliée ou supprimée plus tard, l'accueil standard reprend automatiquement.",
   ...mainKv("homepage_page", ""), readSite: (s) => s.home_page_id || null, writeSite: (v, ctx, siteId) => pages().setHomePage(ctx, siteId, v ? Number(v) : null), defaultSite: null });
-def({ key: "posts_per_page", group: "reading", label: "Articles par page", type: "integer", min: 1, max: 50, scopes: ["main"], help: "Nombre d'articles affichés sur chaque page du blog et de ses archives.", ...mainKv("posts_per_page", 10) });
+const readingMain = (k) => kvAll()[k];
+const readingSite = (field, writer) => ({ readSite: (s) => s.settings.reading[field], writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.reading[field] = writer ? writer(v) : v; }) });
+const FRONT_MODES = (scope) => (scope.siteId
+  ? [["page", "Une page statique (choisir ci-dessous)"], ["posts", "Les derniers articles"]]
+  : [["standard", "L'accueil standard de KOLAKISA (formations)"], ["page", "Une page statique (choisir ci-dessous)"], ["posts", "Les derniers articles"]]);
+def({ key: "show_on_front", group: "reading", label: "La page d'accueil affiche", type: "enum", sensitive: true, options: FRONT_MODES,
+  help: "Les derniers articles publiés, une page statique du CMS, ou (site principal) l'accueil standard de KOLAKISA. Changer de mode ne supprime ni la page choisie ni ses réglages.",
+  impact: "L'adresse « / » change de contenu. Les pages choisies restent enregistrées : revenir au mode précédent est immédiat.",
+  readMain: () => readingMain("show_on_front") || (/^\d+$/.test(readingMain("homepage_page") || "") ? "page" : "standard"), writeMain: (v) => kvSet("show_on_front", v), defaultMain: "standard",
+  ...readingSite("showOnFront"), defaultSite: "page" });
+def({ key: "posts_page", group: "reading", label: "Page des articles", type: "page", nullable: true,
+  help: "Page publiée dont l'adresse affiche la liste des articles (le blog). Vide : le blog reste à son adresse /blog. Doit être différente de la page d'accueil.",
+  readMain: () => readingMain("posts_page") || "", writeMain: (v) => (v === "" || v === null ? kvDel("posts_page") : kvSet("posts_page", v)), defaultMain: "",
+  ...readingSite("postsPage", (v) => (v ? Number(v) : null)), defaultSite: null });
+def({ key: "posts_per_page", group: "reading", label: "Articles par page", type: "integer", min: 1, max: 50, help: "Articles affichés sur chaque page de la liste du blog, de l'accueil en mode articles et des archives (catégories, étiquettes, auteurs). Les résultats de recherche et les flux ont leurs propres limites.",
+  ...mainKv("posts_per_page", 10), ...readingSite("postsPerPage"), defaultSite: 10 });
+def({ key: "feed_items", group: "reading", label: "Éléments dans les flux de syndication", type: "integer", min: 1, max: 50, help: "Nombre d'articles publiés les plus récents présents dans le flux RSS du blog (adresse /blog/feed.xml). Distinct du nombre d'articles par page.",
+  ...mainKv("feed_items", 20), ...readingSite("feedItems"), defaultSite: 20 });
+def({ key: "feed_content", group: "reading", label: "Dans chaque publication du flux, inclure", type: "enum", options: () => [["full", "Le texte complet"], ["excerpt", "Un extrait"]],
+  help: "Le texte complet expose tout l'article aux lecteurs de flux ; l'extrait n'en donne que le début. Ne change pas l'affichage des pages du site.",
+  ...mainKv("feed_content", "excerpt"), ...readingSite("feedContent"), defaultSite: "excerpt" });
 
-// --- Commentaires (moteur propriétaire : services/comments.js) ---
-const comment = (key, label, extra) => def({ key: `comments_${key}`, group: "comments", label, scopes: ["main"], readMain: () => comments().settings()[key], writeMain: (v) => { comments().saveSettings({ [key]: v }); }, defaultMain: comments().DEFAULTS[key], ...extra });
-comment("enabled_default", "Commentaires ouverts par défaut", { type: "boolean", help: "Pour chaque nouvel article." });
-comment("guests_allowed", "Commentaires d'invités", { type: "boolean", help: "Autoriser les commentaires sans compte (avec nom et e-mail)." });
-comment("moderation", "Modération", { type: "enum", options: () => [["none", "Aucune : publication immédiate"], ["first", "Premier commentaire d'une personne"], ["all", "Tous les commentaires"]], help: "Les commentaires en attente sont à approuver dans Commentaires." });
-comment("replies_allowed", "Réponses imbriquées", { type: "boolean", help: "Autoriser de répondre à un commentaire." });
-comment("max_depth", "Niveaux de réponses", { type: "integer", min: 1, max: 5, help: "1 = pas de réponses imbriquées." });
-comment("links_allowed", "Liens dans les commentaires", { type: "boolean", help: "Sinon, un commentaire contenant un lien est refusé." });
+// --- Commentaires (moteur propriétaire : services/comments.js ; réglages PAR SITE : un site sans réglage propre hérite du site principal jusqu'à sa première modification) ---
+const comment = (key, label, extra) => def({ key: `comments_${key}`, group: "comments", label, scopes: ["main", "site"],
+  readMain: () => comments().settings()[key], writeMain: (v) => { comments().saveSettings({ [key]: v }); }, defaultMain: comments().DEFAULTS[key],
+  readSite: (s) => comments().settingsFor(s.id)[key], defaultSite: comments().DEFAULTS[key],
+  writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.comments = comments().normalizeSettings({ ...(x.comments || comments().settings()), [key]: v }); }), ...extra });
+const MOD_OPTIONS = () => [["none", "Publication immédiate"], ["first", "Un auteur sans commentaire approuvé attend la modération"], ["all", "Chaque commentaire est approuvé manuellement"]];
+comment("enabled_default", "Autoriser les commentaires sur les nouvelles publications", { type: "boolean", help: "Valeur de départ des NOUVEAUX articles ; chaque article peut la remplacer, et un changement ici ne modifie jamais les articles existants." });
+comment("guests_allowed", "Les visiteurs sans compte peuvent commenter", { type: "boolean", help: "Décoché : un compte inscrit et connecté est obligatoire (refusé côté serveur, pas seulement masqué)." });
+comment("require_name_email", "Nom et adresse e-mail obligatoires", { type: "boolean", help: "Pour les visiteurs sans compte. Décoché : facultatifs, mais une adresse saisie doit rester valide. L'adresse n'est jamais vérifiée ni affichée." });
+comment("close_enabled", "Fermer automatiquement les commentaires des publications anciennes", { type: "boolean", help: "Les commentaires déjà publiés restent visibles ; seuls les nouveaux sont refusés." });
+comment("close_days", "Fermer après (jours)", { type: "integer", min: 1, max: 3650, help: "Nombre de jours après la date de publication de l'article (heure du serveur, UTC)." });
+comment("cookie_consent", "Proposer de mémoriser le nom et l'e-mail du commentateur", { type: "boolean", help: "Affiche une case à cocher sur le formulaire ; le cookie n'est écrit que si elle est cochée, et jamais sinon. C'est un outil, pas une garantie de conformité juridique." });
+comment("replies_allowed", "Activer les commentaires en fil (imbriqués)", { type: "boolean", help: "Autoriser de répondre à un commentaire." });
+comment("max_depth", "Nombre de niveaux de réponses", { type: "integer", min: 1, max: 10, help: "1 = pas de réponses imbriquées. Au-delà de 4 niveaux, l'indentation s'arrête sur mobile." });
+comment("paginate", "Diviser les commentaires en pages", { type: "boolean", help: "Décoché : tous les commentaires s'affichent sur une seule page (1 000 de premier niveau au plus)." });
+comment("per_page", "Commentaires de premier niveau par page", { type: "integer", min: 1, max: 100, help: "Les réponses suivent leur commentaire parent et ne sont pas comptées." });
+comment("default_page", "Page affichée par défaut", { type: "enum", options: () => [["first", "Première page"], ["last", "Dernière page"]], help: "La page ouverte quand le visiteur n'en choisit pas." });
+comment("order", "Commentaires en haut de chaque page", { type: "enum", options: () => [["oldest", "Les plus anciens"], ["newest", "Les plus récents"]], help: "Ordre des commentaires de premier niveau ; les réponses restent dans l'ordre chronologique." });
+comment("notify_published", "M'envoyer un e-mail quand un nouveau commentaire est publié", { type: "boolean", help: "Un e-mail par commentaire de visiteur publié, à l'adresse administrative (Général). Envoi par la file d'envoi : un échec est noté et réessayé." });
+comment("notify_pending", "M'envoyer un e-mail quand un commentaire attend la modération", { type: "boolean", help: "Au plus un e-mail toutes les 10 minutes, qui annonce le nombre de commentaires en attente." });
+comment("moderation", "Avant la publication d'un commentaire", { type: "enum", options: MOD_OPTIONS, help: "« Tous » l'emporte sur « auteur sans commentaire approuvé ». Un visiteur est reconnu par son e-mail ET son nom, jamais par l'e-mail seul. Les règles de liens, de modération et de blocage s'appliquent dans tous les cas." });
+comment("max_links", "Liens autorisés avant modération", { type: "integer", min: 0, max: 50, help: "Un commentaire qui contient PLUS de liens que ce nombre attend la modération (jamais supprimé). 0 : le moindre lien. Les adresses « www. » et encodées comptent." });
+comment("mod_keys", "Termes qui mettent un commentaire en modération", { type: "lines", help: "Un terme, une adresse e-mail, un domaine ou une adresse IP par ligne. Comparaison dans le texte, le nom, l'e-mail et l'agent utilisateur, À L'INTÉRIEUR des mots (« press » trouve « WordPress »)." });
+comment("block_keys", "Termes qui classent un commentaire comme indésirable", { type: "lines", help: "Même forme, mais le commentaire est classé indésirable : jamais publié, jamais supprimé, restaurable dans Commentaires → Indésirables." });
+comment("links_allowed", "Liens cliquables dans les commentaires", { type: "boolean", help: "Décoché, un commentaire contenant un lien est refusé." });
+comment("show_avatars", "Afficher les avatars", { type: "boolean", help: "Décoché, aucun avatar n'apparaît dans les commentaires publics." });
+comment("avatar_external", "Autoriser Gravatar (service externe)", { type: "boolean", sensitive: true, help: "Envoie à gravatar.com, par le serveur, une empreinte (SHA-256) de l'e-mail des commentateurs pour obtenir leur avatar ou un avatar généré. Désactivé par défaut : sans lui, seuls les avatars locaux existent.",
+  impact: "Une empreinte de l'adresse e-mail de chaque commentateur dont l'avatar s'affiche est transmise à gravatar.com (Automattic). À déclarer dans votre politique de confidentialité." });
+comment("avatar_rating", "Classement maximal des avatars Gravatar", { type: "enum", options: () => [["G", "G — visibles par tous"], ["PG", "PG — possiblement offensants"], ["R", "R — réservés aux plus de 17 ans"], ["X", "X — réservés aux adultes"]], help: "Transmis à Gravatar, seul à connaître la classification d'une image. Les avatars locaux sont tous de classement G." });
+comment("avatar_default", "Avatar par défaut", { type: "enum", options: () => comments().AVATAR_DEFAULTS.map((k) => [k, require("../avatars").LABELS[k]]), help: "Pour les comptes sans photo. Logo Gravatar, Wavatar, MonsterID, Rétro et RoboHash exigent « Autoriser Gravatar » ; sans lui, la personne mystère s'affiche." });
 
 // --- Médias (le moteur propriétaire : marketing/media) ---
 const media = () => require("../../marketing/media");
@@ -138,7 +213,7 @@ def({ key: "seo_follow", group: "seo", label: "Autoriser le suivi des liens", ty
   readSite: (s) => s.settings.seo.follow !== false, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.seo.follow = v; }), defaultSite: true });
 
 // --- Confidentialité ---
-def({ key: "privacy_page", group: "privacy", label: "Page de politique de confidentialité", type: "page", nullable: true, help: "Une page publiée du CMS : un lien « Confidentialité » est ajouté au bandeau de consentement (site principal) ou au pied de page des pages du site. Aucune conformité juridique n'est déduite.",
+def({ key: "privacy_page", group: "privacy", label: "Page de politique de confidentialité", type: "page", nullable: true, allowDraft: true, help: "Une page du CMS : un lien « Confidentialité » est ajouté au bandeau de consentement (site principal) ou au pied de page des pages du site, dès que la page est publiée. Aucune conformité juridique n'est déduite.",
   ...mainKv("privacy_page", ""), readSite: (s) => s.settings.general.privacyPageId || null, writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.general.privacyPageId = v ? Number(v) : null; }), defaultSite: null });
 
 // --- Indexation ---
@@ -208,6 +283,11 @@ function validate(d, raw, scope, ctx) {
       const opts = d.options(scope).map((o) => String(o[0]));
       return opts.includes(String(raw)) ? { ok: true, value: String(raw) } : fail("choix invalide.");
     }
+    case "slug": {
+      const v = clean(raw, d.max || 60).toLowerCase();
+      if (!v) return fail("obligatoire.");
+      return /^[a-z0-9]+(-[a-z0-9]+)*$/.test(v) && v.length <= (d.max || 60) ? { ok: true, value: v } : fail("lettres minuscules, chiffres et tirets seulement (ex. mon-site).");
+    }
     case "timezone": return validTimezone(String(raw)) ? { ok: true, value: String(raw) } : fail("fuseau horaire inconnu (ex. Europe/Paris, America/Chicago).");
     case "email": {
       const v = clean(raw, 254);
@@ -218,6 +298,17 @@ function validate(d, raw, scope, ctx) {
       const v = clean(raw, 200);
       if (!v) return { ok: true, value: "" };
       return /^https:\/\/[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{2,5})?$/i.test(v) ? { ok: true, value: v.replace(/\/+$/, "") } : fail("une adresse https:// sans chemin (ex. https://www.monsite.com).");
+    }
+    case "urllist": {
+      const r = writing().parseUrls(raw);
+      return r.errors.length ? fail(r.errors.join(" ")) : { ok: true, value: r.urls.join("\n") };
+    }
+    case "lines": {
+      const raw0 = String(raw ?? "");
+      if (raw0.length > 40000) return fail("liste trop longue.");
+      const n = raw0.split(/\r?\n/).filter((l) => l.trim()).length;
+      if (n > comments().LIST_MAX_LINES) return fail(`${comments().LIST_MAX_LINES} lignes au plus (${n} saisies).`);
+      return { ok: true, value: comments().normalizeList(raw0) };
     }
     case "string": case "text": {
       const max = scope.siteId && d.maxSite ? d.maxSite : d.max || 300;
@@ -241,8 +332,9 @@ function validate(d, raw, scope, ctx) {
       const p = db.prepare("SELECT id, site_id, status, archived_at, kind, organization_id FROM mk_landing_pages WHERE id = ?").get(id);
       if (!p || p.organization_id !== ctx.organizationId) return fail("page introuvable.");
       if (p.archived_at) return fail("cette page est à la corbeille.");
-      if (p.status !== "published") return fail("cette page n'est pas publiée : elle serait introuvable pour les visiteurs.");
-      if (p.kind === "step") return fail("une étape de tunnel ne peut pas servir de page d'accueil.");
+      // Politique de confidentialité : un brouillon peut être associé (on la rédige avant de la publier) ; le lien public n'apparaît qu'une fois la page en ligne
+      if (p.status !== "published" && !d.allowDraft) return fail("cette page n'est pas publiée : elle serait introuvable pour les visiteurs.");
+      if (p.kind === "step") return fail("une étape de tunnel ne peut pas être choisie ici.");
       if ((p.site_id ?? null) !== (scope.siteId ?? null)) return fail("cette page n'appartient pas à ce site.");
       return { ok: true, value: id };
     }
@@ -304,8 +396,12 @@ function computeMain(kv) {
   const mb = (k, hard) => { const n = Number(kv[k]); return Number.isInteger(n) && n >= 1 ? Math.min(n * 1048576, hard) : hard; };
   return {
     locale, htmlLang: locale.split("_")[0], timezone: tz,
-    dateFormat: ["long", "medium", "short"].includes(kv.date_format) ? kv.date_format : "long", timeFormat: kv.time_format === "12h" ? "12h" : "24h",
-    postsPerPage: num("posts_per_page", 10, 1, 50), homepagePage: /^\d+$/.test(kv.homepage_page || "") ? Number(kv.homepage_page) : null,
+    dateFormat: require("../../utils/format").isValidDateFormat(kv.date_format) ? kv.date_format : "long", timeFormat: kv.time_format === "12h" ? "12h" : "24h",
+    weekStart: ["monday", "sunday", "saturday"].includes(kv.week_start) ? kv.week_start : "monday", registrationOpen: kv.registration_open !== "false" && kv.registration_open !== "0",
+    postsPerPage: num("posts_per_page", 10, 1, 50), feedItems: num("feed_items", 20, 1, 50), feedContent: kv.feed_content === "full" ? "full" : "excerpt",
+    postsPage: /^\d+$/.test(kv.posts_page || "") ? Number(kv.posts_page) : null,
+    showOnFront: ["standard", "page", "posts"].includes(kv.show_on_front) ? kv.show_on_front : /^\d+$/.test(kv.homepage_page || "") ? "page" : "standard", homepagePage: /^\d+$/.test(kv.homepage_page || "") ? Number(kv.homepage_page) : null,
+    homeId: (kv.show_on_front || (/^\d+$/.test(kv.homepage_page || "") ? "page" : "standard")) === "page" && /^\d+$/.test(kv.homepage_page || "") ? Number(kv.homepage_page) : null,
     searchVisibility: kv.search_visibility === "closed" ? "closed" : "open", adminEmail: kv.admin_email || "", privacyPage: /^\d+$/.test(kv.privacy_page || "") ? Number(kv.privacy_page) : null,
     normalizePaths: kv.normalize_paths !== "false" && kv.normalize_paths !== "0",
     mediaLimits: { image: mb("media_max_image_mb", cap(() => media().MAX_IMAGE)), document: mb("media_max_document_mb", cap(() => media().MAX_DOCUMENT)), audio: mb("media_max_audio_mb", cap(() => media().MAX_AUDIO)), video: mb("media_max_video_mb", cap(() => media().MAX_VIDEO)) },
@@ -315,6 +411,17 @@ function computeMain(kv) {
 // ---------- Écriture ----------
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const display = (d, v) => (d.type === "boolean" ? (v ? "oui" : "non") : v === null || v === undefined || v === "" ? "(vide)" : String(v).slice(0, 120));
+
+// Cohérence de la lecture : valeurs EFFECTIVES (celles du lot, sinon celles qui sont enregistrées) ; jamais une configuration qui laisserait l'accueil vide
+function readingConflicts(scope, current, plan) {
+  if (!plan.some((p) => p.d.group === "reading")) return [];
+  const eff = (k) => { const hit = plan.find((p) => p.d.key === k); return hit ? hit.value : current[k].value; };
+  const mode = eff("show_on_front"), home = eff("homepage_page"), posts = eff("posts_page"), out = [];
+  const touched = (k) => plan.some((p) => p.d.key === k);
+  if (touched("show_on_front") && mode === "page" && !home) out.push("Page d'accueil : choisissez la page statique à afficher, ou passez à « Les derniers articles ».");
+  if ((touched("homepage_page") || touched("posts_page") || touched("show_on_front")) && mode === "page" && home && posts && Number(home) === Number(posts)) out.push("Page des articles : elle doit être différente de la page d'accueil (une même page ne peut pas afficher à la fois son contenu et la liste des articles).");
+  return out;
+}
 
 // Applique un lot de changements d'UN périmètre, tout ou rien. patch : { clé: valeur }. ctx : { can, orgLevel, organizationId, userId }.
 function update(scope, patch, ctx, { confirm = false, actor = null } = {}) {
@@ -332,6 +439,7 @@ function update(scope, patch, ctx, { confirm = false, actor = null } = {}) {
     if (same(v.value === "" ? "" : v.value, current[key].value === null ? "" : current[key].value)) continue;
     plan.push({ d, value: v.value, before: current[key].value });
   }
+  if (!errors.length) errors.push(...readingConflicts(scope, current, plan));
   if (errors.length) return { ok: false, errors };
   const needConfirm = plan.filter((p) => p.d.sensitive);
   if (needConfirm.length && !confirm) return { ok: false, confirmRequired: needConfirm.map((p) => ({ key: p.d.key, label: p.d.label, impact: p.d.impact || "Ce réglage peut changer le comportement du site.", before: display(p.d, p.before), after: display(p.d, p.value) })) };

@@ -143,7 +143,8 @@ html[data-kola-switching] *, html[data-kola-switching] *::before, html[data-kola
 
 /* ===== 4. Coque ===== */
 /* 4.1 Contenu */
-.mk-content { padding: 28px 40px 80px; max-width: 1560px; }
+.mk-content { padding: 28px var(--kg-pad) 80px; max-width: var(--kg-max); }
+.mk-content--form { max-width: var(--kg-max-form); } /* formulaires et réglages : colonne de lecture confortable, centrée dans la zone de travail */
 .mk-body .mk-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin: 0 0 20px; }
 .mk-body .mk-head:has(+ .mk-lead) { margin-bottom: 6px; }
 .mk-body .mk-lead { max-width: 74ch; margin: 0 0 24px; color: var(--muted); font-size: 0.9375rem; line-height: 1.55; }
@@ -153,9 +154,9 @@ html[data-kola-switching] *, html[data-kola-switching] *::before, html[data-kola
 .mk-sidebar { border-right: 1px solid var(--mk-border); }
 .mk-sidebar-head { padding: 14px 14px 12px 16px; min-height: var(--mk-topbar-h); gap: 6px; }
 .mk-brand { gap: 11px; }
-.mk-sidebar .mk-brand-mark, html[data-mk-theme] .mk-sidebar .mk-brand-mark { width: 34px; height: 34px; border-radius: 10px; font-size: 1.05rem; background: linear-gradient(145deg, #35a9ee 0%, #0a6aa8 100%); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 10px -4px rgba(2, 119, 182, 0.6); }
+.mk-sidebar .mk-brand-mark, html[data-mk-theme] .mk-sidebar .mk-brand-mark { width: 34px; height: 34px; border-radius: 10px; font-size: 1.05rem; background: var(--accent, #0a6aa8); color: #fff; box-shadow: none; }
 .mk-brand-text { font-size: 1.02rem; letter-spacing: -0.015em; }
-.mk-brand-text small { margin-top: 2px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mk-brand-text small { margin-top: 2px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .mk-collapse-btn, .mk-close-btn { min-width: 32px; min-height: 32px; border-radius: 8px; }
 
 /* Sélecteur de site (espace de travail), en tête du menu du CMS */
@@ -165,7 +166,7 @@ html[data-kola-switching] *, html[data-kola-switching] *::before, html[data-kola
 .mk-cms-site-ico { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--accent); }
 html:not([data-kola-theme="dark"]) .mk-sidebar .mk-cms-site-ico { color: var(--accent-dark); }
 .mk-cms-site-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
-.mk-cms-site-text small { font-size: 0.64rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.mk-cms-site-text small { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .mk-cms-site-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; font-weight: 650; }
 .mk-cms-site-caret { flex: none; color: var(--muted); transition: transform var(--k-dur-fast) ease; }
 .mk-cms-site-btn[aria-expanded="true"] .mk-cms-site-caret { transform: rotate(180deg); }
@@ -178,7 +179,7 @@ html[data-sidebar="collapsed"] .mk-cms-site .mk-menu { left: calc(100% - 4px); r
 
 /* Rubriques */
 .mk-nav-list { padding: 4px 10px 20px; gap: 1px; border-top: 0; }
-.mk-nav-heading { padding: 16px 12px 6px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); opacity: 0.85; user-select: none; }
+.mk-nav-heading { padding: 16px 12px 6px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); opacity: 0.85; user-select: none; }
 html[data-sidebar="collapsed"] .mk-nav-heading { height: 1px; margin: 10px 12px; padding: 0; overflow: hidden; font-size: 0; background: var(--mk-border); opacity: 1; }
 .mk-sidebar .mk-nav-link, .mk-sidebar .mk-nav-head, .is-cms .mk-nav-link, .is-cms .mk-nav-head { position: relative; min-height: 36px; padding: 7px 10px; gap: 11px; font-size: 0.875rem; font-weight: 550; color: var(--mk-text-soft); border-radius: 8px; }
 .mk-sidebar .mk-nav-link:hover, .mk-sidebar .mk-nav-head:hover { background: color-mix(in srgb, var(--mk-text) 7%, transparent); color: var(--mk-text); }
@@ -195,7 +196,7 @@ html[data-sidebar="collapsed"] .mk-nav-heading { height: 1px; margin: 10px 12px;
 .mk-sidebar .mk-nav-sublink:hover { background: color-mix(in srgb, var(--mk-text) 7%, transparent); color: var(--mk-text); }
 .mk-sidebar .mk-nav-sublink[aria-current="page"] { background: var(--mk-selected); color: var(--mk-text); font-weight: 650; }
 .mk-nav-link.is-soon, .mk-nav-sublink.is-soon { opacity: 0.5; }
-.mk-cms-tag { padding: 1px 6px; font-size: 0.6rem; letter-spacing: 0.06em; border-radius: 999px; }
+.mk-cms-tag { padding: 1px 6px; font-size: 0.72rem; letter-spacing: 0.06em; border-radius: 999px; }
 /* Pied : retour au Marketing, repli */
 .mk-cms-foot { margin-top: auto; padding: 8px 10px 12px; border-top: 1px solid var(--mk-border); gap: 1px; }
 .mk-cms-back, .mk-cms-fold { min-height: 34px; padding: 6px 10px; font-size: 0.84rem; font-weight: 500; border-radius: 8px; color: var(--muted); }
@@ -209,7 +210,7 @@ html[data-sidebar="collapsed"] .mk-nav-heading { height: 1px; margin: 10px 12px;
 .app-rail-link .icon { stroke-width: 1.75; }
 
 /* 4.4 Barre du haut */
-.mk-topbar { min-height: var(--mk-topbar-h); padding: 8px 32px; gap: 10px; background: var(--mk-surface); border-bottom: 1px solid var(--mk-border); }
+.mk-topbar { min-height: var(--mk-topbar-h); padding: 8px var(--kg-pad); gap: 10px; background: var(--mk-surface); border-bottom: 1px solid var(--mk-border); }
 .mk-breadcrumb ol { gap: 6px; font-size: 0.84rem; }
 .mk-breadcrumb li + li::before { content: ""; width: 5px; height: 5px; margin: 0 4px 0 0; border-top: 1.5px solid var(--mk-border-strong); border-right: 1.5px solid var(--mk-border-strong); transform: rotate(45deg) scale(0.9); display: inline-block; vertical-align: middle; }
 .mk-breadcrumb a { color: var(--muted); text-decoration: none; border-radius: 6px; }
@@ -236,7 +237,7 @@ html[data-kola-theme="dark"] .mk-theme-ico-dark { display: inline-flex; }
 
 /* Menu du compte : choix du thème */
 .mk-menu-sep { height: 1px; margin: 6px 4px; background: var(--mk-border); }
-.mk-menu-label { padding: 4px 12px 2px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mk-menu-label { padding: 4px 12px 2px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .mk-theme-seg { display: flex; gap: 2px; margin: 4px 6px 2px; padding: 3px; background: var(--mk-hover); border-radius: 8px; }
 .mk-menu .mk-theme-seg button { flex: 1 1 0; min-height: 30px; padding: 4px 6px; justify-content: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--muted); border-radius: 8px; }
 .mk-menu .mk-theme-seg button:hover { background: transparent; color: var(--mk-text); }
@@ -565,8 +566,6 @@ html[data-kola-theme="dark"] .mk-sidebar { box-shadow: none; }
 
 /* ===== 10. Écrans étroits et mouvement réduit ===== */
 @media (max-width: 1100px) {
-  .mk-content { padding: 24px 28px 72px; }
-  .mk-topbar { padding: 8px 20px; }
   .mk-cms-topsearch { display: none; }
 }
 @media (max-width: 960px) {
@@ -576,8 +575,6 @@ html[data-kola-theme="dark"] .mk-sidebar { box-shadow: none; }
 }
 @media (max-width: 760px) {
   .mk-cms-site-name { display: block; } /* cms.css masque ce nom sous 760 px ; dans le tiroir il est indispensable */
-  .mk-content { padding: 20px 16px 64px; }
-  .mk-topbar { padding: 8px 12px; }
   .mk-user-name { display: none; }
   .mk-cms-add span { display: none; }
   .mk-cms-add { padding: 0 10px; }
@@ -593,3 +590,14 @@ html[data-kola-theme="dark"] .mk-sidebar { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) {
   .mk-body *, .mk-body *::before, .mk-body *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
+
+/* Lot D — finitions partagées de l'administration */
+/* Un bloc de champs suivi d'un champ ne colle plus : même intervalle que entre deux champs (tunnels, campagnes RSS…) */
+.mk-body fieldset + .field-group, .mk-body fieldset + .mk-grid-2 { margin-top: 18px; }
+/* « Rédiger avec l'IA » : le résumé en flex n'affichait plus aucun repère d'ouverture ; chevron dessiné, tourné à l'ouverture */
+.mk-sms-ai > summary { gap: 8px; }
+.mk-sms-ai > summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform var(--kv-dur, 150ms); }
+.mk-sms-ai[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+@media (prefers-reduced-motion: reduce) { .mk-sms-ai > summary::after { transition: none; } }
+/* Sur mobile le fil d'Ariane de la barre du haut n'était que masqué (visibility) : il gardait sa place, s'empilait sur 60 px de large et rendait la barre haute de 90 à 145 px. Il est retiré ; le titre de la page dit où l'on est. */
+@media (max-width: 520px) { .mk-topbar > .mk-breadcrumb { display: none; } }

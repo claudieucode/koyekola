@@ -402,7 +402,7 @@ module.exports = () => {
     };
     res.set("Cache-Control", "no-store");
     const { ICONS } = require("../../utils/icons");
-    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, page, backTo: !component && req.query.retour === "pages" ? pagesHome(page.site_id) : null, sitesHome: req.mk.siteOnly ? "/marketing/site-web/mes-sites" : "/marketing/site-web/sites", boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
+    res.render("marketing/page-builder", { title: `Éditeur — ${page.name}`, embedded: req.query.cadre === "1", page, backTo: !component && req.query.retour === "pages" ? pagesHome(page.site_id) : null, sitesHome: req.mk.siteOnly ? "/marketing/site-web/mes-sites" : "/marketing/site-web/sites", boot: safeJson(boot), spec: boot.spec, iconExists: (n) => Object.hasOwn(ICONS, n) });
   };
   // ---------- IA Kolakisa : l'IA PROPOSE, l'éditeur applique (une étape d'historique) — rien n'est enregistré ici ----------
   const IA_STATUS = { not_configured: 503, quota: 429, rate: 429, conflict: 409, busy: 429 };
@@ -444,7 +444,7 @@ module.exports = () => {
     const site = c.site_id ? pages.getSite(ctx, c.site_id) : null;
     const role = site && site.header_component_id === c.id ? "header" : site && site.footer_component_id === c.id ? "footer" : c.variant_of ? "variant" : "component";
     return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: 0, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
-      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/reglages#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
+      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/reglages/en-tete#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
   };
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const c = loadComponent(req, res);

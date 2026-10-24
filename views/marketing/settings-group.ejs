@@ -1,8 +1,8 @@
 <%#
   KOLAKISA CMS → Paramètres (palier 14) : un groupe de réglages du site principal ou d'un site. Chaque champ est lu et enregistré par le moteur de
   réglages (validation côté serveur, droits par réglage, confirmation des réglages sensibles). « Enregistré » n'apparaît qu'après la réponse du serveur.
-%><%- include("partials/top", { title, active }) %>
-<%- include("partials/settings-head", { heading: groupLabel, intro, groups, BASE, q, scope, sites, siteOnly, tabKey: group, tabPath: group === "general" ? "" : "/" + SLUG_OF[group] }) %>
+%><%- include("partials/top", { title, active, layout: "form" }) %>
+<% if (typeof frame === "undefined" || !frame) { %><%- include("partials/settings-head", { heading: groupLabel, intro, groups, BASE, q, scope, sites, siteOnly, tabKey: group, tabPath: group === "general" ? "" : "/" + SLUG_OF[group] }) %><% } else { %><div class="mk-head"><h1><%= groupLabel %></h1></div><% if (intro) { %><p class="mk-lead"><%= intro %></p><% } %><% } %>
 <% const anyEditable = view.some((f) => f.editable); const errs = errors || []; %>
 <% if (errs.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>Rien n'a été enregistré :</p><ul><% errs.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
 <% if (pending) { %>
@@ -12,16 +12,27 @@
   <ul class="mk-st-impacts"><% pending.forEach((p) => { %><li><strong><%= p.label %></strong> : <%= p.before %> → <strong><%= p.after %></strong><br><span class="mk-sub">Impact : <%= p.impact %></span></li><% }) %></ul>
   <form method="post" action="<%= BASE %><%= group === "general" ? "" : "/" + SLUG_OF[group] %><%= q %>" class="mk-tl-form">
     <% view.forEach((f) => { if (!f.editable) return; %><% if (f.type === "boolean") { %><input type="hidden" name="_b_<%= f.key %>" value="1"><% if (f.value) { %><input type="hidden" name="<%= f.key %>" value="1"><% } %><% } else { %><input type="hidden" name="<%= f.key %>" value="<%= f.value === null || f.value === undefined ? "" : f.value %>"><% } %><% }) %>
+    <% if (typeof frame !== "undefined" && frame) { %><input type="hidden" name="frame" value="1"><% } %>
     <div class="mk-tl-option"><input type="checkbox" id="st-confirm" name="confirm" value="1" required><label for="st-confirm">Je comprends l'impact et je confirme ces changements.</label></div>
     <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Confirmer et enregistrer</button> <a class="btn btn-ghost btn-sm" href="<%= BASE %><%= group === "general" ? "" : "/" + SLUG_OF[group] %><%= q %>">Annuler</a></div>
   </form>
 </section>
 <% } %>
 
+<% if (scope.siteId && recap && recap.length) { %>
+<section class="mk-panel mk-st-recap" aria-labelledby="st-recap-h">
+  <h2 id="st-recap-h"><%= view.length ? "Réglages communs à toute la plateforme" : "Ce qui s'applique à ce site" %></h2>
+  <p class="mk-sub"><%= view.length ? "Ces réglages-ci ne se règlent pas site par site : ils sont communs à tous les sites de l'organisation et s'appliquent aussi à ce site." : "Aucun réglage de cette section n'est propre à un site : les valeurs ci-dessous sont communes à tous les sites de l'organisation et s'appliquent aussi à celui-ci. Elles sont affichées en lecture seule." %><% if (canTeam) { %> L'équipe peut les modifier depuis le <a href="<%= BASE %>/<%= SLUG_OF[group] %>">site principal</a> : le changement touche alors tous les sites.<% } else { %> Elles se modifient depuis le site principal, par l'équipe de l'organisation.<% } %></p>
+  <dl class="mk-tl-dl mk-st-recap-list"><% recap.forEach((r) => { %><div><dt><%= r.label %></dt><dd><strong><%= r.value %></strong><br><span class="mk-sub"><%= r.help %></span></dd></div><% }) %></dl>
+</section>
+<% } %>
+<% if (view.length) { %>
 <form method="post" action="<%= BASE %><%= group === "general" ? "" : "/" + SLUG_OF[group] %><%= q %>" class="mk-panel mk-st-form" data-st-form novalidate>
   <fieldset class="mk-st-fieldset"<%= anyEditable ? "" : " disabled" %>>
     <legend class="sr-only"><%= groupLabel %></legend>
-    <% view.forEach((f) => { const id = "st-" + f.key; const hid = id + "-h"; const dis = f.editable ? "" : " disabled"; %>
+    <% if (group === "reading") { %><%- include("partials/reading-fields", { view, choices, scope, visibility, visibilityUrl, feedUrl }) %><% } %>
+    <% if (group === "comments") { %><%- include("partials/comments-fields", { view, settingsBase: BASE, q, listMax, commentsUrl, avatarChoices }) %><% } %>
+    <% (group === "reading" || group === "comments" ? [] : view).forEach((f) => { const id = "st-" + f.key; const hid = id + "-h"; const dis = f.editable ? "" : " disabled"; %>
       <div class="field-group mk-st-field">
         <% if (f.type === "boolean") { %>
           <input type="hidden" name="_b_<%= f.key %>" value="1"<%- f.editable ? "" : " disabled" %>>
@@ -34,6 +45,8 @@
             <select id="<%= id %>" name="<%= f.key %>"<%- dis %> aria-describedby="<%= hid %>"><option value="">Aucune (valeur par défaut)</option><% choices.pages.forEach((p) => { %><option value="<%= p.id %>"<%= Number(f.value) === p.id ? " selected" : "" %>><%= p.name %></option><% }) %></select>
           <% } else if (f.type === "image") { %>
             <select id="<%= id %>" name="<%= f.key %>"<%- dis %> aria-describedby="<%= hid %>"><option value="">Aucune</option><% if (f.value && !choices.images.some((i) => i.path === f.value)) { %><option value="<%= f.value %>" selected><%= f.value %></option><% } %><% choices.images.forEach((i) => { %><option value="<%= i.path %>"<%= f.value === i.path ? " selected" : "" %>><%= i.name %></option><% }) %></select>
+          <% } else if (f.type === "urllist") { %>
+            <textarea id="<%= id %>" name="<%= f.key %>" rows="4" maxlength="1200" spellcheck="false" autocomplete="off" placeholder="https://service.exemple.org/ping"<%- dis %> aria-describedby="<%= hid %>"><%= f.value %></textarea>
           <% } else if (f.type === "text") { %>
             <textarea id="<%= id %>" name="<%= f.key %>" rows="3" maxlength="<%= f.max %>"<%- dis %> aria-describedby="<%= hid %>"><%= f.value %></textarea>
           <% } else if (f.type === "integer") { %>
@@ -64,5 +77,35 @@
     <% if (anyEditable) { %><button type="submit" class="btn btn-ghost btn-sm" formaction="<%= BASE %>/reinitialiser<%= q %>" name="target" value="<%= group %>" formnovalidate data-st-reset>Restaurer les valeurs par défaut du groupe</button><% } %>
   </div>
   <% if (scope.siteId) { %><input type="hidden" name="site" value="<%= scope.siteId %>"><% } %>
+  <% if (typeof frame !== "undefined" && frame) { %><input type="hidden" name="frame" value="1"><% } %>
 </form>
+<% } %>
+<% if (group === "writing") { %>
+<section class="mk-panel mk-st-tools" aria-labelledby="wr-fmt-h">
+  <h2 id="wr-fmt-h">Format par défaut des articles</h2>
+  <p class="mk-sub">Non proposé : Kolakisa n'a pas de « formats d'article » à la WordPress (standard, galerie, citation…). Un article est un texte riche dans l'éditeur du blog, où images, vidéos, citations et listes s'insèrent comme blocs. Aucun format n'est inventé pour remplir un menu.</p>
+</section>
+<section class="mk-panel mk-st-tools" aria-labelledby="wr-mail-h">
+  <h2 id="wr-mail-h">Publier par e-mail</h2>
+  <p class="mk-sub"><span class="mk-status mk-status-off">Non disponible</span> Aucun client de réception (POP3 ou IMAP) n'est installé et une adresse secrète ne suffit pas comme authentification : rien n'est simulé. La rédaction se fait dans l'éditeur ; les contenus peuvent aussi être importés depuis Outils → Importer. Par conséquent, il n'y a pas non plus de « catégorie par défaut des articles envoyés par e-mail ».</p>
+</section>
+<section class="mk-panel mk-st-tools" aria-labelledby="wr-log-h">
+  <h2 id="wr-log-h">Journal des notifications</h2>
+  <% if (!pingLog || !pingLog.length) { %><p class="mk-sub">Aucune notification envoyée pour ce site.</p>
+  <% } else { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Dernières notifications de publication</caption>
+    <thead><tr><th scope="col">Article</th><th scope="col">Destination</th><th scope="col">État</th><th scope="col">Essais</th><th scope="col">Détail</th></tr></thead>
+    <tbody><% pingLog.forEach((l) => { const lbl = { sent: "Envoyée", failed: l.attempts >= 3 ? "Échec définitif" : "Échec, nouvel essai", queued: "En attente", skipped: "Ignorée" }[l.status] || l.status; const cls = { sent: "mk-status-ok", failed: "mk-status-warn", queued: "mk-status-info", skipped: "mk-status-off" }[l.status] || "mk-status-off"; %>
+      <tr><th scope="row"><%= l.title || ("Article n° " + l.post_id) %></th><td><%= l.url %></td><td><span class="mk-status <%= cls %>"><%= lbl %></span></td><td><%= l.attempts %></td><td><%= l.error || (l.http_status ? "HTTP " + l.http_status : "—") %></td></tr>
+    <% }) %></tbody></table></div><% } %>
+</section>
+<% } %>
+<% if (group === "email" || group === "tunnels") { const T = group === "email"
+  ? [["/marketing/envoi", "Fournisseur d'envoi, clés secrètes et e-mail de test", "Choisissez le fournisseur, enregistrez les clés (jamais affichées en clair) et envoyez un e-mail de test : la réussite n'est annoncée qu'après la réponse du fournisseur."], ["/marketing/domaines", "Domaines d'envoi : SPF, DKIM et DMARC", "Ajoutez votre domaine et vérifiez ses enregistrements DNS : le CMS lit le DNS réel et indique ce qui manque."]]
+  : [["/marketing/tunnels", "Tunnels de vente et de conversion", "Les étapes, les pages et les transitions se construisent dans l'écran Tunnels ; les délais ci-dessus règlent seulement quand un parcours est considéré comme abandonné."], ["/marketing/analytics/global", "Suivi des conversions", "Les événements réellement déclenchés (étape atteinte, achat, abandon) s'observent dans Analytics."]]; %>
+<section class="mk-panel mk-st-tools" aria-labelledby="st-tools-h">
+  <h2 id="st-tools-h"><%= group === "email" ? "Outils d'envoi" : "Outils liés" %></h2>
+  <% if (canTeam) { %><ul class="mk-st-toollist"><% T.forEach((t) => { %><li><a href="<%= t[0] %>"><%= t[1] %> →</a><span class="mk-sub"><%= t[2] %></span></li><% }) %></ul>
+  <% } else { %><p class="mk-sub">Ces outils sont communs à l'organisation : ils sont réservés à l'équipe, depuis le site principal.</p><% } %>
+</section>
+<% } %>
 <%- include("partials/bottom") %>

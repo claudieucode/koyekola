@@ -14,6 +14,7 @@
   <link rel="preload" href="/fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
+  <% if (!(typeof dash !== "undefined" && dash)) { %><link rel="stylesheet" href="<%= asset('/css/kola-v3.css') %>"><% } /* design system v3 : site public et espace élève (l'espace formateur garde son habillage dashboard) */ %>
   <% const ap = typeof appearance === "function" ? appearance() : null; %><% if (ap && ap.css) { %><style id="kw-appearance"><%- ap.css %></style><% } %>
   <% if (ap && ap.preview) { %><meta name="robots" content="noindex, nofollow"><% } %>
   <% if (typeof dash !== "undefined" && dash) { %><link rel="stylesheet" href="<%= asset('/css/dashboard.css') %>"><% if (dash.module) { %><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% } %><% if (dash.seo) { %><link rel="stylesheet" href="<%= asset('/css/seo-workspace.css') %>"><% } %><% } %>
@@ -30,7 +31,7 @@
       <button class="icon-btn only-mobile" id="openMenuBtn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="headerNav"><%- icon('menu') %></button>
 
       <% if (apH.logo.mode === "image" && apH.logoImage) { %><a href="/" class="logo logo-img" aria-label="<%= apH.logo.alt || apH.logo.text %> — accueil"><img src="<%= apH.logoImage.src %>" alt="<%= apH.logo.alt %>"<%- apH.logoImage.width ? ` width="${apH.logoImage.width}"` : "" %><%- apH.logoImage.height ? ` height="${apH.logoImage.height}"` : "" %>></a>
-      <% } else { %><a href="/" class="logo"><%= apH.logo.text %></a><% } %>
+      <% } else { %><a href="/" class="logo" data-initial="<%= String(apH.logo.text || "K").trim().slice(0, 1).toUpperCase() %>"><%= apH.logo.text %></a><% } %>
 
       <% if (apH.search) { %><form action="/catalogue" method="get" class="header-search" role="search">
         <span class="search-icon" aria-hidden="true"><%- icon('search', { size: 16 }) %></span>

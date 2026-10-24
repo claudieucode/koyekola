@@ -193,6 +193,7 @@ function publish(ctx, id) {
     // Historique borné : les plus anciennes versions au-delà de MAX_VERSIONS sont effacées
     ctx.db.prepare("DELETE FROM mk_page_versions WHERE page_id = ? AND number <= ?").run(id, number - MAX_VERSIONS);
     audit(ctx, "page.published", "landing", id, { version: number, slug: page.slug });
+    if (!page.published_at) { try { require("../../services/navigation").autoAddPage(id); } catch { /* l'ajout au menu ne bloque jamais la publication */ } }
     return { version: number };
   });
 }
@@ -298,7 +299,7 @@ function uniqueName(ctx, table, base) {
 // Nouvelle page dans un site (ou isolée) : même création que les pages d'atterrissage, avec sa nature
 // PAGES-02 : création ATOMIQUE — la page, son contenu de départ (modèle) et sa mise en page sont écrits ensemble ; si l'un échoue (modèle indisponible, section refusée…), aucune page n'est laissée
 function createPage(ctx, input = {}) { return transaction(ctx.db, () => createPageInner(ctx, input)); }
-function createPageInner(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false } = {}) {
+function createPageInner(ctx, { name, siteId = null, kind = "page", template = null, layout = null, blank = false, sections = null } = {}) {
   if (!Object.hasOwn(KINDS, kind)) throw bad("Nature de page inconnue.");
   assertSiteScope(ctx, siteId);
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
@@ -317,6 +318,13 @@ function createPageInner(ctx, { name, siteId = null, kind = "page", template = n
     ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(sections), page.id);
     if (mine && mine.content.theme) ctx.db.prepare("UPDATE mk_landing_pages SET theme = ? WHERE id = ?").run(JSON.stringify(normalizeTheme(mine.content.theme)), page.id);
     audit(ctx, "page.created_from_template", "landing", page.id, { template });
+    return withLayout(ctx, page.id, layout);
+  }
+  // Contenu de départ fourni par l'appelant (ex. modèle de politique de confidentialité) : validé comme toute section, écrit avec la page
+  if (Array.isArray(sections) && sections.length) {
+    const own = normalizeSections(ctx, sections.map((x) => ({ ...x, id: newSectionId() })));
+    ctx.db.prepare("UPDATE mk_landing_pages SET sections = ? WHERE id = ?").run(JSON.stringify(own), page.id);
+    audit(ctx, "page.created_with_content", "landing", page.id, { kind });
     return withLayout(ctx, page.id, layout);
   }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
