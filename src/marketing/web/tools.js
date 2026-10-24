@@ -7,6 +7,7 @@ const access = require("../../services/cmsAccess");
 const runs = require("../../services/tools/runs");
 const exchange = require("../../services/tools/exchange");
 const exporter = require("../../services/tools/exporter");
+const wxr = require("../../services/tools/wxr");
 const importer = require("../../services/tools/importer");
 const health = require("../../services/tools/health");
 const integrity = require("../../services/tools/integrity");
@@ -199,23 +200,60 @@ module.exports = () => {
   }));
 
   // ----- Export -----
-  router.get("/site-web/outils/exporter", need("tools.export"), (req, res) => withSite(req, res, (siteId) => {
+  // Données de l'écran d'export : types réellement exportables pour CE site et CES droits, choix de filtres alimentés par les données du site
+  const exportScreen = (req, res, siteId, extra = {}) => {
     const ctx = toolsCtx(req);
     const allowed = exporter.allowedTypes(ctx, { siteId, mode: "export" });
-    const types = exporter.ORDER.map((t) => ({ key: t, label: exporter.TYPES[t].label, scope: exporter.TYPES[t].scope, sensitive: Boolean(exporter.TYPES[t].sensitive), allowed: allowed.includes(t), count: allowed.includes(t) ? exporter.count(ctx, t, siteId) : null }));
-    res.render("marketing/tools-export", { title: "Exporter", active: "outils", ...shell(req, siteId, "exporter"), types, recent: runs.list(ctx.organizationId, "export", { limit: 8 }) });
-  }));
+    const other = exporter.ORDER.filter((t) => !["articles", "pages"].includes(t) && allowed.includes(t)).map((t) => ({ key: t, label: exporter.TYPES[t].label, sensitive: Boolean(exporter.TYPES[t].sensitive), count: exporter.count(ctx, t, siteId), wxr: wxr.SUPPORTED.includes(t) }));
+    const includes = exporter.ORDER.filter((t) => allowed.includes(t) && !exporter.TYPES[t].sensitive).map((t) => exporter.TYPES[t].label.replace(/ \(.*\)$/, "").toLowerCase());
+    const canArticles = allowed.includes("articles"), canPages = allowed.includes("pages");
+    const form = { scope: "all", other: "", status: "", author: "", category: "", from: "", to: "", format: "json", media: false, ...(extra.form || {}) };
+    res.status(extra.status || 200).render("marketing/tools-export", {
+      title: "Exporter", active: "outils", ...shell(req, siteId, "exporter"), other, includes, canArticles, canPages, form, errors: extra.errors || [], exportJs: true,
+      options: { articles: canArticles ? exporter.filterOptions(ctx, siteId, "articles") : null, pages: canPages ? exporter.filterOptions(ctx, siteId, "pages") : null },
+      counts: { articles: canArticles ? exporter.count(ctx, "articles", siteId) : 0, pages: canPages ? exporter.count(ctx, "pages", siteId) : 0 },
+      hasMedia: allowed.includes("media") || canArticles || canPages, recent: runs.list(ctx.organizationId, "export", { limit: 8 }),
+    });
+  };
+  const exportInput = (req) => {
+    const b = req.body || {};
+    // « choice » (écran) : all | articles | pages | other:<type> ; sinon « scope » + « other » (API) ; sinon liste de types explicite (API historique)
+    let scope = ["all", "articles", "pages", "other"].includes(b.scope) ? b.scope : (b.types ? null : "all"), other = String(b.other || "");
+    const m = /^(all|articles|pages)$|^other:([a-z]{2,20})$/.exec(String(b.choice || ""));
+    if (m) { if (m[1]) scope = m[1]; else { scope = "other"; other = m[2]; } }
+    return { scope, other, types: typesOf(req), filters: scope === "pages" ? { status: b.status_pages, author: b.author_pages, from: b.from_pages, to: b.to_pages } : { status: b.status, author: b.author, category: b.category, from: b.from, to: b.to }, format: b.format === "wxr" ? "wxr" : "json", mediaFiles: b.media === "1" };
+  };
+  router.get("/site-web/outils/exporter", need("tools.export"), (req, res) => withSite(req, res, (siteId) => exportScreen(req, res, siteId)));
   router.post("/site-web/outils/exporter", need("tools.export"), (req, res) => withSite(req, res, (siteId) => {
-    const list = typesOf(req);
+    const input = exportInput(req);
     try {
-      const run = exchange.startExport(toolsCtx(req), { siteId, types: list });
-      toolsAudit.log(req, "export_start", `Export lancé (${list.join(", ")})`, { runId: run.id, siteId });
+      const run = exchange.startExport(toolsCtx(req), { siteId, ...input });
+      toolsAudit.log(req, "export_start", `Export lancé (${(input.scope || "types")}, ${input.format}${input.mediaFiles ? ", médias" : ""})`, { runId: run.id, siteId });
       res.redirect(`${BASE}/exporter/${run.id}${q(siteId)}`);
     } catch (error) {
       if (!error.user) throw error;
-      flash(req, "error", error.message);
-      res.redirect(`${BASE}/exporter${q(siteId)}`);
+      // Appel par liste de types (API historique) : message puis retour à l'écran
+      if (input.scope === null) { flash(req, "error", error.message); return res.redirect(`${BASE}/exporter${q(siteId)}`); }
+      // Depuis l'écran : la sélection de la personne est conservée (elle corrige et relance)
+      const b = req.body || {};
+      exportScreen(req, res, siteId, { status: 422, errors: [error.message], form: { scope: input.scope || "all", other: input.other, status: input.filters.status || "", author: input.filters.author || "", category: input.filters.category || "", from: input.filters.from || "", to: input.filters.to || "", format: input.format, media: input.mediaFiles } });
     }
+  }));
+  // Aperçu du périmètre (aucune exportation, aucune écriture) : combien d'éléments correspondent, et les erreurs de filtre
+  router.post("/site-web/outils/exporter/apercu", need("tools.export"), (req, res) => withSite(req, res, (siteId) => {
+    const ctx = toolsCtx(req);
+    const input = exportInput(req);
+    const allowed = exporter.allowedTypes(ctx, { siteId, mode: "export" });
+    const scope = input.scope || "all";
+    const nf = exporter.normalizeFilters(ctx, siteId, scope, input.filters);
+    const out = { ok: nf.ok, errors: nf.errors, count: null, empty: false, format: input.format };
+    if (nf.ok) {
+      if (scope === "articles" || scope === "pages") { out.count = allowed.includes(scope) ? exporter.count(ctx, scope, siteId, nf.filters) : 0; out.empty = out.count === 0; }
+      else if (scope === "other") out.count = allowed.includes(input.other) ? exporter.count(ctx, input.other, siteId) : null;
+      else out.count = exporter.ORDER.filter((t) => allowed.includes(t) && !exporter.TYPES[t].sensitive).reduce((n, t) => n + exporter.count(ctx, t, siteId), 0);
+      if (input.format === "wxr" && scope === "other" && !wxr.SUPPORTED.includes(input.other)) { out.ok = false; out.errors = [`« ${(exporter.TYPES[input.other] || {}).label || input.other} » n'existe que dans le format natif Kolakisa.`]; }
+    }
+    res.set("Cache-Control", "no-store").json(out);
   }));
   router.get("/site-web/outils/exporter/:id(\\d+)", need("tools.export"), (req, res) => {
     const r = loadRun(req, res, "export");
@@ -228,8 +266,23 @@ module.exports = () => {
     if (!r.run.result) return res.status(410).render("error", { message: "Ce fichier d'export n'est plus disponible (il est conservé 24 heures). Relancez l'export." });
     const site = r.run.site_id ? (pages.getSite(req.mk.ctx, r.run.site_id) || {}).name : "site-principal";
     const slug = String(site || "site").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "site";
-    toolsAudit.log(req, "export_download", `Export téléchargé (${slug})`, { runId: r.run.id });
-    res.set({ "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="kolakisa-${slug}-${new Date().toISOString().slice(0, 10)}.json"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).send(r.run.result);
+    const rep = r.run.report || {};
+    const opts = r.run.options || {};
+    const isFile = String(r.run.result).startsWith("@file:");
+    const ext = isFile ? "zip" : rep.ext || "json";
+    const scope = opts.scope && opts.scope !== "all" ? `-${opts.scope}` : "";
+    const filename = `kolakisa-${slug}${scope}-${new Date().toISOString().slice(0, 10)}.${ext}`;
+    const headers = { "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
+    toolsAudit.log(req, "export_download", `Export téléchargé (${slug}, ${ext})`, { runId: r.run.id });
+    if (isFile) {
+      // Archive : lue dans le dossier PRIVÉ des exports, nom contrôlé (jamais un chemin fourni par le navigateur ni par la base sans vérification)
+      const name = require("node:path").basename(String(r.run.result).slice(6));
+      if (!/^export-\d+-[0-9a-f]{16}\.zip$/.test(name) || !name.startsWith(`export-${r.run.id}-`)) return res.status(410).render("error", { message: "Ce fichier d'export n'est plus disponible. Relancez l'export." });
+      const file = require("node:path").join(exchange.EXPORT_DIR, name);
+      if (!require("node:fs").existsSync(file)) return res.status(410).render("error", { message: "Ce fichier d'export n'est plus disponible (il est conservé 24 heures). Relancez l'export." });
+      return res.set({ ...headers, "Content-Type": "application/zip" }).sendFile(file);
+    }
+    res.set({ ...headers, "Content-Type": `${rep.mime || "application/json"}; charset=utf-8` }).send(r.run.result);
   });
 
   // ----- Import -----
