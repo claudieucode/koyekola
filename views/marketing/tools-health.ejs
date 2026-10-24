@@ -1,51 +1,132 @@
+<%# Santé du site : deux onglets (État, Informations). Les contrôles viennent de services/tools/health.js, les informations de services/tools/siteInfo.js ; cette vue n'invente aucune donnée. %>
 <%- include("partials/top", { title, active }) %>
 <%- include("partials/tools-head", { heading: "Santé du site", intro: "Des contrôles réels (le serveur interroge ses propres pages, la base et les fichiers) : rien n'est « OK » sans avoir été vérifié, et rien n'est corrigé automatiquement.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
 <%
   const running = last && ["queued", "running"].includes(last.status);
   const rep = last && last.report;
   const results = rep && rep.results ? rep.results : [];
-  const order = { critical: 0, warning: 1, info: 2, good: 3 };
-  const statusClass = { good: "mk-status-ok", warning: "mk-status-warn", critical: "mk-status-bad", info: "" };
-  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+  const sum = rep && rep.summary ? rep.summary : null;
+  const fdate = (v) => (v ? new Date(/Z|[+-]\d\d:?\d\d$/.test(String(v)) ? v : String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+  const sev = { critical: "Critique", warning: "Amélioration recommandée", good: "Réussi", info: "Non concluant" };
+  const crit = results.filter((r) => r.status === "critical");
+  const warn = results.filter((r) => r.status === "warning");
+  const good = results.filter((r) => r.status === "good");
+  const unv = results.filter((r) => r.status === "info");
+  const partial = last && (last.status === "cancelled" || last.status === "failed" || (rep && rep.partial) || (results.length && results.length < expected));
+  const overall = !sum ? "none" : sum.critical ? "critical" : sum.warning ? "warning" : "good";
+  const label = { none: "Non analysé", critical: "Problèmes critiques", warning: "Améliorations recommandées", good: "Bon état" }[overall];
+  const tq = (o) => `${BASE}${siteId ? `?site=${siteId}&` : "?"}onglet=${o}`;
 %>
-<section class="mk-panel" aria-labelledby="tl-h-run">
-  <h2 id="tl-h-run">Analyse</h2>
-  <% if (canRun) { %><form method="post" action="<%= BASE %>/sante<%= q %>" class="mk-tl-actions"><button type="submit" class="btn btn-primary btn-sm"<%= running ? " disabled" : "" %>><%- icon("activity", { size: 16 }) %> Analyser maintenant</button></form><% } else { %><p class="mk-sub">Lancer une analyse demande la permission « tools.health ».</p><% } %>
-  <% if (running) { %>
-    <%- include("partials/tools-progress", { run: { id: last.id, percent: last.total ? Math.min(99, Math.round(100 * (last.done + last.failed) / last.total)) : 0, done: last.done, failed: last.failed, skipped: last.skipped, total: last.total, message: last.message, status: last.status, finished: false, awaiting: false }, BASE, q }) %>
-    <p class="mk-sub">Analyse en cours… la page se met à jour toute seule.</p>
-  <% } else if (last) { %>
-    <p class="mk-sub">Dernière analyse : <%= fdate(last.finished_at || last.created_at) %><%= last.status === "failed" ? " — échec : " + (last.message || "") : last.status === "cancelled" ? " — annulée" : "" %>.</p>
-  <% } else { %>
-    <p class="mk-sub">Aucune analyse pour l'instant : lancez-la pour voir l'état réel du site.</p>
-  <% } %>
-</section>
+<div class="mk-sh">
+  <div class="mk-sh-hero" role="status">
+    <span class="mk-sh-dot mk-sh-dot-<%= overall %>" aria-hidden="true"></span>
+    <strong class="mk-sh-state"><%= label %></strong>
+    <% if (siteName) { %><span class="mk-sub">· <%= siteName %></span><% } %>
+  </div>
+  <nav class="mk-sh-tabs" aria-label="Santé du site">
+    <a class="mk-sh-tab" href="<%= tq("etat") %>"<%- onglet === "etat" ? ' aria-current="page"' : "" %>>État</a>
+    <a class="mk-sh-tab" href="<%= tq("informations") %>"<%- onglet === "informations" ? ' aria-current="page"' : "" %>>Informations</a>
+  </nav>
 
-<% if (rep && rep.summary) { %>
-<section class="mk-panel" aria-labelledby="tl-h-sum">
-  <h2 id="tl-h-sum">Résultat : <span class="mk-status <%= statusClass[rep.summary.overall] %>"><%= { good: "Bon", warning: "À surveiller", critical: "Critique" }[rep.summary.overall] %></span></h2>
-  <ul class="mk-tl-tally">
-    <li><span class="mk-status mk-status-bad">Critique</span> <%= rep.summary.critical %></li>
-    <li><span class="mk-status mk-status-warn">À surveiller</span> <%= rep.summary.warning %></li>
-    <li><span class="mk-status mk-status-ok">Bon</span> <%= rep.summary.good %></li>
-    <li><span class="mk-status">Information</span> <%= rep.summary.info %></li>
+<% if (onglet === "etat") { %>
+  <section class="mk-sh-card" aria-labelledby="sh-run">
+    <h2 id="sh-run">État de santé du site</h2>
+    <p class="mk-sub">Chaque résultat repose sur une vérification concrète. Un contrôle impossible à réaliser est classé « non concluant », jamais « réussi ».</p>
+    <% if (canRun) { %><form method="post" action="<%= BASE %>/sante<%= q %>" class="mk-tl-actions"><button type="submit" class="btn btn-primary btn-sm"<%= running ? " disabled" : "" %>><%- icon("activity", { size: 16 }) %> <%= running ? "Analyse en cours…" : last ? "Relancer l'analyse" : "Analyser maintenant" %></button></form><% } else { %><p class="mk-sub">Lancer une analyse demande la permission « tools.health ».</p><% } %>
+    <% if (running) { %>
+      <%- include("partials/tools-progress", { run: { id: last.id, percent: last.total ? Math.min(99, Math.round(100 * (last.done + last.failed) / last.total)) : 0, done: last.done, failed: last.failed, skipped: last.skipped, total: last.total, message: last.message, status: last.status, finished: false, awaiting: false }, BASE, q }) %>
+      <p class="mk-sub">Analyse en cours… la page se met à jour toute seule.</p>
+    <% } else if (last) { %>
+      <p class="mk-sub">Dernière analyse : <%= fdate(last.finished_at || last.created_at) %><%= last.status === "failed" ? " — échec : " + (last.message || "") : last.status === "cancelled" ? " — annulée" : "" %>.
+        <% if (sum) { %><%= partial ? `Analyse partielle : ${results.length} contrôle(s) sur ${expected} attendus.` : `Analyse complète : ${results.length} contrôle(s).` %><% } %></p>
+    <% } else { %>
+      <p class="mk-sub">Aucune analyse pour l'instant : lancez-la pour voir l'état réel du site.</p>
+    <% } %>
+  </section>
+
+<% if (sum) { %>
+  <ul class="mk-sh-tally" aria-label="Résumé">
+    <li class="mk-sh-chip mk-sh-chip-critical"><strong><%= sum.critical %></strong> problème<%= sum.critical > 1 ? "s" : "" %> critique<%= sum.critical > 1 ? "s" : "" %></li>
+    <li class="mk-sh-chip mk-sh-chip-warning"><strong><%= sum.warning %></strong> amélioration<%= sum.warning > 1 ? "s" : "" %> recommandée<%= sum.warning > 1 ? "s" : "" %></li>
+    <li class="mk-sh-chip mk-sh-chip-good"><strong><%= sum.good %></strong> contrôle<%= sum.good > 1 ? "s" : "" %> réussi<%= sum.good > 1 ? "s" : "" %></li>
+    <li class="mk-sh-chip"><strong><%= sum.info %></strong> non concluant<%= sum.info > 1 ? "s" : "" %></li>
   </ul>
-</section>
-<% Object.keys(CATEGORIES).forEach((cat) => { const list = results.filter((r) => r.category === cat).sort((a, b) => order[a.status] - order[b.status]); if (!list.length) return; %>
-<section class="mk-panel" aria-labelledby="tl-c-<%= cat %>">
-  <h2 id="tl-c-<%= cat %>"><%= CATEGORIES[cat] %></h2>
-  <ul class="mk-tl-checks">
-    <% list.forEach((r) => { %>
-      <li class="mk-tl-check">
-        <div class="mk-tl-check-head"><span class="mk-status <%= statusClass[r.status] %>"><%= STATUS[r.status] %></span> <strong><%= r.title %></strong></div>
-        <p><%= r.detail %></p>
-        <% if (r.impact) { %><p class="mk-sub"><strong>Impact :</strong> <%= r.impact %></p><% } %>
-        <% if (r.recommendation) { %><p class="mk-sub"><strong>Recommandation :</strong> <%= r.recommendation %></p><% } %>
-        <% if (r.action) { %><p><a class="btn btn-outline btn-sm" href="<%= r.action.href %>"><%= r.action.label %></a></p><% } %>
-      </li>
-    <% }) %>
-  </ul>
-</section>
-<% }) %>
+
+  <% const group = (list, id, heading, intro) => { %>
+  <% if (list.length) { %>
+  <section class="mk-sh-card" aria-labelledby="<%= id %>">
+    <h2 id="<%= id %>"><%= list.length %> <%= heading %></h2>
+    <p class="mk-sub"><%= intro %></p>
+    <div class="mk-sh-list">
+      <% list.forEach((r) => { %>
+      <details class="mk-sh-item mk-sh-item-<%= r.status %>">
+        <summary><span class="mk-sh-item-title"><%= r.title %></span><span class="mk-sh-badge"><%= CATEGORIES[r.category] || r.category %></span><span class="mk-sh-chev" aria-hidden="true"><%- icon("chevronDown", { size: 18 }) %></span></summary>
+        <div class="mk-sh-body">
+          <dl class="mk-sh-facts">
+            <div><dt>Gravité</dt><dd><%= sev[r.status] %></dd></div>
+            <div><dt>Catégorie</dt><dd><%= CATEGORIES[r.category] || r.category %></dd></div>
+            <div><dt>Constat</dt><dd><%= r.detail %></dd></div>
+            <% if (r.impact) { %><div><dt>Conséquences possibles</dt><dd><%= r.impact %></dd></div><% } %>
+            <% if (r.recommendation) { %><div><dt>Comment résoudre</dt><dd><%= r.recommendation %></dd></div><% } %>
+            <% if (r.at) { %><div><dt>Vérifié le</dt><dd><%= fdate(r.at) %></dd></div><% } %>
+          </dl>
+          <% if (r.action) { %><p><a class="btn btn-outline btn-sm" href="<%= r.action.href %>"><%= r.action.label %></a></p><% } %>
+        </div>
+      </details>
+      <% }) %>
+    </div>
+  </section>
+  <% } %>
+  <% }; %>
+  <% group(crit, "sh-crit", crit.length > 1 ? "problèmes critiques" : "problème critique", "Ces éléments peuvent affecter gravement la sécurité, la disponibilité ou le fonctionnement du site : à traiter en priorité.") %>
+  <% group(warn, "sh-warn", warn.length > 1 ? "améliorations recommandées" : "amélioration recommandée", "Ces éléments sont bénéfiques pour le site. Moins prioritaires que les problèmes critiques, ils concernent la sécurité, les performances ou la maintenance.") %>
+  <% group(unv, "sh-unv", unv.length > 1 ? "contrôles non concluants ou informatifs" : "contrôle non concluant ou informatif", "Ces contrôles n'ont pas pu conclure (non mesurable, non configuré, ou simple information) : ils ne comptent ni comme réussis ni comme problèmes.") %>
+
+  <details class="mk-sh-passed">
+    <summary class="btn btn-outline">Tests passés avec succès (<%= good.length %>) <span class="mk-sh-chev" aria-hidden="true"><%- icon("chevronDown", { size: 16 }) %></span></summary>
+    <div class="mk-sh-list">
+      <% good.forEach((r) => { %>
+      <details class="mk-sh-item mk-sh-item-good">
+        <summary><span class="mk-sh-item-title"><%= r.title %></span><span class="mk-sh-badge"><%= CATEGORIES[r.category] || r.category %></span><span class="mk-sh-chev" aria-hidden="true"><%- icon("chevronDown", { size: 18 }) %></span></summary>
+        <div class="mk-sh-body"><dl class="mk-sh-facts"><div><dt>Résultat</dt><dd><%= r.detail %></dd></div><% if (r.at) { %><div><dt>Vérifié le</dt><dd><%= fdate(r.at) %></dd></div><% } %></dl></div>
+      </details>
+      <% }) %>
+      <% if (!good.length) { %><p class="mk-sub">Aucun contrôle réussi dans cette analyse.</p><% } %>
+    </div>
+  </details>
 <% } %>
-<%- include("partials/bottom") %>
+
+<% } else { %>
+  <section class="mk-sh-card" aria-labelledby="sh-info">
+    <h2 id="sh-info">Informations de santé du site</h2>
+    <p class="mk-sub">Cette page montre la configuration technique réelle de ce site. Pour toute amélioration, consultez l'onglet <a href="<%= tq("etat") %>">État</a>. Aucun mot de passe, jeton, clé ni chaîne de connexion n'est jamais affiché ni copié.</p>
+    <p class="mk-sub">Pour exporter ces informations, copiez-les dans le presse-papiers puis collez-les dans un fichier texte, un e-mail à votre support technique ou une discussion avec un développeur.</p>
+    <div class="mk-sh-copybar">
+      <button type="button" class="btn btn-outline" data-sh-copy-all data-url="<%= BASE %>/sante/informations.txt<%= q %>"><%- icon("copy", { size: 16 }) %> Copier les informations du site dans le presse-papiers</button>
+      <span class="mk-sh-copystate" data-sh-copystate role="status" aria-live="polite"></span>
+    </div>
+    <div class="mk-sh-fallback" data-sh-fallback hidden>
+      <label for="sh-fallback-text">Copie automatique refusée par le navigateur : sélectionnez le texte ci-dessous (Ctrl/Cmd + A, puis Ctrl/Cmd + C).</label>
+      <textarea id="sh-fallback-text" rows="10" readonly></textarea>
+    </div>
+    <p class="mk-sub">Relevé du <%= fdate(info.at) %>.</p>
+  </section>
+  <div class="mk-sh-list mk-sh-info">
+    <% info.sections.forEach((s) => { %>
+    <details class="mk-sh-item" id="info-<%= s.id %>">
+      <summary><span class="mk-sh-item-title"><%= s.title %><%= s.count !== null ? ` (${s.count})` : "" %></span><% if (s.status !== "ok") { %><span class="mk-sh-badge mk-sh-badge-warn">Indisponible</span><% } %><span class="mk-sh-chev" aria-hidden="true"><%- icon("chevronDown", { size: 18 }) %></span></summary>
+      <div class="mk-sh-body">
+        <% if (s.status !== "ok") { %><p class="mk-sub"><%= s.note %></p>
+        <% } else if (!s.rows.length) { %><p class="mk-sub">Aucun élément.</p>
+        <% } else { %>
+        <dl class="mk-sh-facts">
+          <% s.rows.forEach((r) => { %><div><dt><%= r.label %></dt><dd><span class="mk-sh-val"><%= r.value %></span><button type="button" class="mk-sh-copy" data-sh-copy="<%= r.value %>" aria-label="Copier la valeur : <%= r.label %>" title="Copier la valeur"><%- icon("copy", { size: 14 }) %></button></dd></div><% }) %>
+        </dl>
+        <% } %>
+      </div>
+    </details>
+    <% }) %>
+  </div>
+<% } %>
+</div>
+<%- include("partials/bottom", { santeJs: true }) %>

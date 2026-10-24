@@ -43,11 +43,11 @@ describe("outils du CMS (navigateur)", { skip: SKIP }, () => {
     const page = await open();
     await page.goto(`${srv.base}${O}`);
     await page.click('button:has-text("Analyser maintenant")');
-    await page.waitForSelector(".mk-tl-checks", { timeout: 90000 });
-    assert.match(await page.locator("main").innerText(), /Résultat :/);
-    const checks = await page.locator(".mk-tl-check").count();
+    await page.waitForSelector(".mk-sh-tally", { timeout: 90000 }); // écran « Santé du site » (SANTE-SITE-01) : résumé, détails dépliables, « Tests passés »
+    assert.match(await page.locator("main").innerText(), /contrôles? réussis?/);
+    const checks = await page.locator(".mk-sh-item").count();
     assert.ok(checks >= 20, `${checks} contrôles réels affichés`);
-    assert.ok(await page.locator(".mk-tl-check .mk-status").first().isVisible());
+    assert.ok(await page.locator(".mk-sh-item .mk-sh-badge").first().isVisible() || await page.locator(".mk-sh-passed > summary").isVisible());
     assert.equal(db.prepare("SELECT status FROM cms_tool_runs WHERE kind = 'health' ORDER BY id DESC").get().status, "done");
     await page.context().close();
   });
