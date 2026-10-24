@@ -7,6 +7,7 @@ const express = require("express");
 const primarySite = require("../../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
 const access = require("../../services/cmsAccess");
 const invites = require("./inviteFlow");
+const accountNew = require("./accountNew");
 const { listAudit } = require("../audit");
 const { MarketingError } = require("../errors");
 const { UserError } = require("../../utils/errors");
@@ -47,6 +48,12 @@ module.exports = () => {
       roles: access.allRoles(), sites: sites(req), roleName, BASE, me: req.session.user.id, canCreate: req.mk.can("users.create"), canEdit: req.mk.can("users.edit"), usersJs: true,
     });
   });
+
+  // ----- Ajouter un compte (création directe, avec ou sans e-mail d'activation) -----
+  const accountCtx = (req) => ({ mode: "central", org: org(req), actor: { id: req.session.user.id, name: req.session.user.username, perms: req.mk.perms }, scopeSiteId: null, siteName: "", roles: grantable(req), sites: sites(req),
+    action: `${BASE}/nouveau`, listUrl: BASE, canCreate: true, detailUrl: (id, role) => (role ? `${BASE}/${id}` : `${BASE}/nouveau?cree=${id}`), BASE });
+  router.get("/site-web/utilisateurs/nouveau", need("users.create"), (req, res) => accountNew.show(req, res, accountCtx(req), { created: accountNew.createdOf(req) }));
+  router.post("/site-web/utilisateurs/nouveau", need("users.create"), (req, res, next) => accountNew.submit(req, res, next, accountCtx(req)));
 
   // ----- Inviter / ajouter -----
   router.get("/site-web/utilisateurs/ajouter", need("users.create"), (req, res) => {

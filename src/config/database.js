@@ -818,6 +818,13 @@ const navItemColumns = db.prepare("PRAGMA table_info(nav_items)").all().map((c) 
 if (!navItemColumns.includes("css_class")) db.exec("ALTER TABLE nav_items ADD COLUMN css_class TEXT NOT NULL DEFAULT ''");
 if (!navItemColumns.includes("title_attr")) db.exec("ALTER TABLE nav_items ADD COLUMN title_attr TEXT NOT NULL DEFAULT ''");
 
+// Profil d'un compte créé par un administrateur (CMS → Utilisateurs → Ajouter un compte) : prénom, nom, site web, langue préférée.
+// Colonnes additives à valeur par défaut (les comptes existants gardent '' = « non renseigné », langue '' = valeur par défaut du site). Annulation : DROP COLUMN.
+const accountProfileColumns = db.prepare("PRAGMA table_info(users)").all().map((c) => c.name);
+for (const [col, ddl] of [["first_name", "TEXT NOT NULL DEFAULT ''"], ["last_name", "TEXT NOT NULL DEFAULT ''"], ["website", "TEXT NOT NULL DEFAULT ''"], ["language", "TEXT NOT NULL DEFAULT ''"]]) {
+  if (!accountProfileColumns.includes(col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${ddl}`);
+}
+
 // ---------- Moteur de commentaires (palier 6) ----------
 // Le système de commentaires existant (blog_comments : membres connectés, publication immédiate) est RÉUTILISÉ et étendu, pas doublé :
 // même table, mêmes lignes (toutes conservées, statut « approved »), mais rattachée à un contenu générique (content_type + content_id),

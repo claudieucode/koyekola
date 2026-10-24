@@ -7,13 +7,14 @@
 const express = require("express");
 const access = require("../../services/cmsAccess");
 const invites = require("./inviteFlow");
+const accountNew = require("./accountNew");
 const target = require("./siteTarget");
 const { MarketingError } = require("../errors");
 const { UserError } = require("../../utils/errors");
 
 const BASE = "/marketing/site-web/equipe-site";
 const intOrNull = (v) => (/^\d{1,9}$/.test(String(v ?? "")) ? Number(v) : null);
-const FRAME = { list: "equipe", invite: "equipe-inviter", invitations: "equipe-invitations", roles: "equipe-roles", permissions: "equipe-permissions" };
+const FRAME = { list: "equipe", create: "equipe-ajouter", invite: "equipe-inviter", invitations: "equipe-invitations", roles: "equipe-roles", permissions: "equipe-permissions" };
 const frameUrl = (siteId, screen, qs = "") => `/marketing/site-web/sites/${siteId}/${FRAME[screen]}${qs}`;
 
 module.exports = () => {
@@ -83,6 +84,19 @@ module.exports = () => {
       access.removeSiteRole(c.org, c.actor, id, c.siteId);
       return "Accès retiré à ce site. Le compte lui-même, ses autres sites et son appartenance à l'équipe de l'organisation ne changent pas.";
     });
+  });
+
+  // ----- Ajouter un compte (pour CE site) : le site vient de l'adresse vérifiée, un administrateur local ne crée que pour le sien -----
+  const accountCtx = (c) => ({ mode: "site", org: c.org, actor: { id: c.actor.id, name: undefined, perms: c.perms }, scopeSiteId: c.siteId, siteName: c.t.name, roles: grantable(c), sites: [],
+    action: `${BASE}/nouveau?site=${c.siteId}`, listUrl: frameUrl(c.siteId, "list"), canCreate: !c.t.readOnly, detailUrl: (id, role) => (role ? frameUrl(c.siteId, "list", `?membre=${id}`) : frameUrl(c.siteId, "create", `?cree=${id}`)), BASE });
+  router.get("/site-web/equipe-site/nouveau", (req, res) => {
+    const c = open(req, res, "users.create"); if (!c) return;
+    accountNew.show(req, res, accountCtx(c), { created: accountNew.createdOf(req) });
+  });
+  router.post("/site-web/equipe-site/nouveau", (req, res, next) => {
+    const c = open(req, res, "users.create"); if (!c) return;
+    const ctx = accountCtx(c); ctx.actor.name = req.session.user.username;
+    accountNew.submit(req, res, next, ctx);
   });
 
   // ----- Inviter (pour CE site) -----
