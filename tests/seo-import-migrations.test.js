@@ -53,7 +53,9 @@ function seeded() {
   db.prepare("INSERT INTO mk_import_rejects (organization_id, import_id, line, email, reason) VALUES (1, 2, 3, 'x@ex.cd', 'r')").run();
   return db;
 }
-const up = (db) => migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet });
+// Ces tests portent sur la plage 090–091 : seules les migrations jusqu'à 091 sont appliquées (les suivantes, d'autres modules, ont leurs propres tests)
+const UPTO_091 = (() => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mig-r8-091-")); for (const f of fs.readdirSync(MIGRATIONS)) if (f < "092") fs.copyFileSync(path.join(MIGRATIONS, f), path.join(dir, f)); return dir; })();
+const up = (db) => migrate(db, { dir: UPTO_091, dbPath: ":memory:", log: quiet });
 const down = (db, f) => db.exec(fs.readFileSync(path.join(DOWN, f), "utf8"));
 
 describe("migrations 090 / 091 : préservation de l'historique", () => {

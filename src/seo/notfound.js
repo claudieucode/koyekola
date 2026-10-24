@@ -18,6 +18,7 @@ db.exec(`
 `);
 
 const MAX_ROWS = 5000;
+const MAX_ROWS_PER_SITE = 1500; // protection contre les abus : un site qui reçoit un flot d'adresses inventées ne peut pas évincer le journal des autres sites
 const BOT = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quora link|whatsapp|telegrambot|python-requests|curl|wget|httpclient|headless|lighthouse|monitor|scan/i;
 // Fichiers que les robots réclament sans cesse (aucun intérêt à les journaliser)
 const NOISE = /^\/(wp-|xmlrpc|\.env|\.git|apple-touch-icon|favicon|ads\.txt|\.well-known)/i;
@@ -42,6 +43,11 @@ function record(req) {
         last_referrer = COALESCE(excluded.last_referrer, last_referrer), last_user_agent = excluded.last_user_agent`).run(path, bot ? 0 : 1, bot ? 1 : 0, ref, ua);
   }
   if (++writes % 200 === 0) {
+    // Borne par site d'abord (le site qui déborde est le seul touché), puis borne globale
+    if (siteSchemaReady()) {
+      const over = db.prepare("SELECT site_id, COUNT(*) n FROM seo_404 GROUP BY site_id HAVING COUNT(*) > ?").all(MAX_ROWS_PER_SITE);
+      for (const o of over) db.prepare(`DELETE FROM seo_404 WHERE rowid IN (SELECT rowid FROM seo_404 WHERE COALESCE(site_id, 0) = COALESCE(?, 0) ORDER BY (${hasStateColumns() ? "handled_at IS NOT NULL OR ignored = 1" : "ignored = 1"}) DESC, (hits_human + hits_bot) ASC, last_seen ASC LIMIT ?)`).run(o.site_id, o.n - MAX_ROWS_PER_SITE);
+    }
     const n = db.prepare("SELECT COUNT(*) n FROM seo_404").get().n;
     if (n > MAX_ROWS) db.prepare("DELETE FROM seo_404 WHERE rowid IN (SELECT rowid FROM seo_404 ORDER BY (hits_human + hits_bot) ASC, last_seen ASC LIMIT ?)").run(n - MAX_ROWS);
   }
@@ -82,4 +88,17 @@ function stats({ site } = {}) {
 const setIgnored = (path, ignored, { site = null } = {}) => { const sc = scopeSql(site === undefined ? null : site); return db.prepare(`UPDATE seo_404 SET ignored = ? WHERE path = ? AND ${sc.sql}`).run(ignored ? 1 : 0, path, ...sc.params).changes > 0; };
 const remove = (path, { site = null } = {}) => { const sc = scopeSql(site === undefined ? null : site); return db.prepare(`DELETE FROM seo_404 WHERE path = ? AND ${sc.sql}`).run(path, ...sc.params).changes > 0; };
 
-module.exports = { middleware, record, list, stats, setIgnored, remove, BOT };
+// États de traitement (colonnes de la migration 101) — l'historique des visites n'est jamais effacé par un changement d'état
+const hasStateColumns = () => db.prepare("SELECT 1 FROM pragma_table_info('seo_404') WHERE name = 'handled_at'").get() !== undefined;
+function setHandled(path, handled, { site, userId = null } = {}) {
+  if (!Number.isInteger(site) || !hasStateColumns()) return false;
+  return db.prepare("UPDATE seo_404 SET handled_at = CASE WHEN ? THEN datetime('now') ELSE NULL END, handled_by = CASE WHEN ? THEN ? ELSE NULL END WHERE path = ? AND site_id = ?").run(handled ? 1 : 0, handled ? 1 : 0, userId, path, site).changes > 0;
+}
+// Politique de conservation : les adresses traitées, ignorées ou revenues en ligne, sans visite depuis `days` jours, sont supprimées ; les adresses encore à traiter sont conservées.
+function purge({ site, days = 180 } = {}) {
+  if (!Number.isInteger(site) || !hasStateColumns()) return 0;
+  const d = Math.max(30, Math.min(730, Number(days) || 180));
+  return db.prepare("DELETE FROM seo_404 WHERE site_id = ? AND (ignored = 1 OR handled_at IS NOT NULL OR recovered_at IS NOT NULL) AND last_seen < datetime('now', ?)").run(site, `-${d} days`).changes;
+}
+
+module.exports = { middleware, record, list, stats, setIgnored, setHandled, purge, remove, BOT, MAX_ROWS_PER_SITE };

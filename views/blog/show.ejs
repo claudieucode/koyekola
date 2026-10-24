@@ -43,7 +43,7 @@
         <%# Modèle de thème (Page Builder) : remplace l'en-tête, l'image à la une, le sommaire mobile et le texte ; sinon affichage d'origine %>
         <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
         <header class="article-header">
-          <% if (postTerms.primary) { %><a class="article-category" href="<%= postTerms.primary.url %>"><%= postTerms.primary.name %></a><% } else if (post.category) { %><a class="article-category" href="/blog/categorie/<%= categorySlug %>"><%= post.category %></a><% } %>
+          <% if (postTerms.primary) { %><a class="article-category" href="<%= postTerms.primary.url %>"><%= postTerms.primary.name %></a><% } else if (post.category) { %><a class="article-category" href="<%= termUrl("category", categorySlug) %>"><%= post.category %></a><% } %>
           <h1 class="post-title"><%= post.title %></h1>
           <% if (post.excerpt) { %><p class="article-lead"><%= post.excerpt %></p><% } %>
           <p class="post-meta article-meta">
@@ -97,8 +97,8 @@
 
         <% if ((previous || next) && !tplHtml.includes("kw-postnav")) { %>
           <nav class="article-pager" aria-label="Articles précédent et suivant">
-            <% if (previous) { %><a class="article-pager-link" href="/blog/<%= previous.slug %>" rel="prev"><span class="article-pager-dir"><%- icon("arrowLeft", { size: 14 }) %> Article précédent</span><span class="article-pager-title"><%= previous.title %></span></a><% } else { %><span></span><% } %>
-            <% if (next) { %><a class="article-pager-link article-pager-next" href="/blog/<%= next.slug %>" rel="next"><span class="article-pager-dir">Article suivant <%- icon("arrowRight", { size: 14 }) %></span><span class="article-pager-title"><%= next.title %></span></a><% } %>
+            <% if (previous) { %><a class="article-pager-link" href="<%= postUrl(previous) %>" rel="prev"><span class="article-pager-dir"><%- icon("arrowLeft", { size: 14 }) %> Article précédent</span><span class="article-pager-title"><%= previous.title %></span></a><% } else { %><span></span><% } %>
+            <% if (next) { %><a class="article-pager-link article-pager-next" href="<%= postUrl(next) %>" rel="next"><span class="article-pager-dir">Article suivant <%- icon("arrowRight", { size: 14 }) %></span><span class="article-pager-title"><%= next.title %></span></a><% } %>
           </nav>
         <% } %>
 
@@ -128,7 +128,7 @@
               <form method="post" action="/blog/<%= post.slug %>/commentaires" class="comment-form" id="commentaire-form" novalidate>
                 <% if (replyTo) { %>
                   <input type="hidden" name="parent_id" value="<%= replyTo.id %>">
-                  <p class="comment-replying" role="status">Réponse à <strong><%= replyTo.name %></strong> · <a href="/blog/<%= post.slug %>#commentaires">Annuler</a></p>
+                  <p class="comment-replying" role="status">Réponse à <strong><%= replyTo.name %></strong> · <a href="<%= postUrl(post) %>#commentaires">Annuler</a></p>
                 <% } %>
                 <% if (commentError) { %><p class="form-error" role="alert" id="comment-error"><%= commentError %></p><% } %>
                 <% if (!me) { const req2 = commentCfg.require_name_email; const ck = commenterCookie || {}; %>
@@ -171,19 +171,19 @@
           <% if (sidebar.popular.length) { %>
             <section class="side-block">
               <h2 class="side-title">Articles populaires</h2>
-              <ol class="side-list side-list-numbered"><% sidebar.popular.forEach((p) => { %><li><a href="/blog/<%= p.slug %>"><%= p.title %></a></li><% }) %></ol>
+              <ol class="side-list side-list-numbered"><% sidebar.popular.forEach((p) => { %><li><a href="<%= postUrl(p) %>"><%= p.title %></a></li><% }) %></ol>
             </section>
           <% } %>
           <% if (sidebar.recent.length) { %>
             <section class="side-block">
               <h2 class="side-title">Articles récents</h2>
-              <ul class="side-list"><% sidebar.recent.forEach((p) => { %><li><a href="/blog/<%= p.slug %>"><%= p.title %></a><time datetime="<%= iso(p.published_at) %>"><%= formatDate(p.published_at) %></time></li><% }) %></ul>
+              <ul class="side-list"><% sidebar.recent.forEach((p) => { %><li><a href="<%= postUrl(p) %>"><%= p.title %></a><time datetime="<%= iso(p.published_at) %>"><%= formatDate(p.published_at) %></time></li><% }) %></ul>
             </section>
           <% } %>
           <% if (sidebar.categories.length) { %>
             <section class="side-block">
               <h2 class="side-title">Catégories</h2>
-              <ul class="side-chips"><% sidebar.categories.forEach((c) => { %><li><a href="/blog/categorie/<%= c.slug %>"<%- c.slug === categorySlug ? ' aria-current="page"' : "" %>><%= c.name %> <span class="side-count"><%= c.count %></span></a></li><% }) %></ul>
+              <ul class="side-chips"><% sidebar.categories.forEach((c) => { %><li><a href="<%= termUrl("category", c.slug) %>"<%- c.slug === categorySlug ? ' aria-current="page"' : "" %>><%= c.name %> <span class="side-count"><%= c.count %></span></a></li><% }) %></ul>
             </section>
           <% } %>
           <% if (sidebar.newsletter) { %>
@@ -214,13 +214,13 @@
         <div class="post-grid">
           <% similar.forEach((p) => { %>
             <article class="post-card">
-              <% if (p.cover_path) { %><a href="/blog/<%= p.slug %>" class="post-card-cover" tabindex="-1" aria-hidden="true"><img src="<%= p.cover_path %>" alt="" loading="lazy" width="640" height="360"></a>
+              <% if (p.cover_path) { %><a href="<%= postUrl(p) %>" class="post-card-cover" tabindex="-1" aria-hidden="true"><img src="<%= p.cover_path %>" alt="" loading="lazy" width="640" height="360"></a>
               <% } else { %><span class="post-card-cover post-card-cover-empty" aria-hidden="true"></span><% } %>
               <div class="post-card-body">
                 <% if (p.category) { %><span class="post-card-category"><%= p.category %></span><% } %>
-                <h3><a href="/blog/<%= p.slug %>"><%= p.title %></a></h3>
+                <h3><a href="<%= postUrl(p) %>"><%= p.title %></a></h3>
                 <p><%= p.summary %></p>
-                <p class="post-card-foot"><time datetime="<%= iso(p.published_at) %>"><%= formatDate(p.published_at) %></time> <a href="/blog/<%= p.slug %>" class="post-card-more" aria-label="Lire l'article « <%= p.title %> »">Lire l'article</a></p>
+                <p class="post-card-foot"><time datetime="<%= iso(p.published_at) %>"><%= formatDate(p.published_at) %></time> <a href="<%= postUrl(p) %>" class="post-card-more" aria-label="Lire l'article « <%= p.title %> »">Lire l'article</a></p>
               </div>
             </article>
           <% }) %>

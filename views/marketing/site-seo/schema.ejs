@@ -1,0 +1,42 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <p class="field-hint mk-seo-lead">Les données structurées (schema.org, JSON-LD) sont construites uniquement à partir des informations réelles du site et de chaque page. Aucune note, aucun avis, aucun prix ni aucune information d'entreprise n'est inventé. Les moteurs restent libres d'afficher ou non des résultats enrichis.</p>
+    <% if (v.truncated) { %><div class="mk-cms-soon" role="note"><p>Plus de 500 pages en ligne : seules les 500 premières sont listées.</p></div><% } %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="sc-org"><h2 id="sc-org">Organisation du site</h2>
+      <form method="post" action="<%= space.base %>/seo/schema" class="mk-form" data-dirty-form data-busy-form>
+        <% fields.forEach((f) => { %>
+        <div class="field-group"><label for="seo-<%= f.key %>"><%= f.label %> <span class="mk-status <%= f.own ? 'mk-status-ok' : 'mk-status-off' %>"><%= f.own ? "personnalisé" : "valeur par défaut" %></span></label>
+          <% if (f.type === "choice") { %><select id="seo-<%= f.key %>" name="<%= f.key %>" <%= canEdit ? "" : "disabled" %>><option value="">Valeur par défaut</option><% f.choices.forEach((c) => { %><option value="<%= c %>" <%= f.own && f.value === c ? "selected" : "" %>><%= c %></option><% }) %></select>
+          <% } else if (f.type === "urls") { %><textarea id="seo-<%= f.key %>" name="<%= f.key %>" rows="3" placeholder="https://…" <%= canEdit ? "" : "readonly" %>><%= Array.isArray(f.value) ? f.value.join("\n") : "" %></textarea>
+          <% } else { %><input id="seo-<%= f.key %>" type="text" name="<%= f.key %>" maxlength="<%= f.max || 200 %>" value="<%= f.own ? f.value : '' %>" placeholder="<%= f.effective %>" <%= canEdit ? "" : "readonly" %>><% } %>
+          <% if (f.help) { %><small><%= f.help %></small><% } %></div>
+        <% }) %>
+        <% if (canEdit) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><span class="mk-seo-dirty" data-dirty-note hidden>Modifications non enregistrées</span></div><% } else { %><p class="mk-lead">Lecture seule : la permission « modifier les réglages SEO » est nécessaire.</p><% } %>
+      </form>
+      <details class="mk-seo-details"><summary>JSON-LD de l'organisation (<%= v.org["@type"] %>)</summary><pre class="mk-seo-code"><code><%= JSON.stringify(v.org, null, 2) %></code></pre>
+        <% v.orgProblems.forEach((p) => { %><span class="mk-seo-note mk-seo-note-<%= p.level === 'info' ? 'info' : 'warning' %>"><%= p.message %></span><% }) %></details>
+    </section>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="sc-pages"><h2 id="sc-pages">Données structurées par page</h2>
+      <p class="field-hint"><%= v.totals.withData %> page(s) avec données structurées sur <%= v.totals.pages %> · <%= v.totals.invalid %> avec un problème de validité.</p>
+      <% if (!v.rows.length) { %><div class="mk-empty"><%- icon("fileText", { size: 32 }) %><p>Ce site n'a encore aucune page en ligne.</p></div><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-seo-table"><caption class="sr-only">Données structurées par page</caption>
+        <thead><tr><th scope="col">Page</th><th scope="col">Types générés</th><th scope="col">Validation</th><th scope="col"></th></tr></thead>
+        <tbody><% v.rows.forEach((r) => { %><tr<%- v.sel && v.sel.id === r.id ? ' class="is-selected"' : "" %>>
+          <td data-label="Page"><strong><%= r.name %></strong><br><code><%= r.path %></code></td>
+          <td data-label="Types"><%= r.types.length ? r.types.join(", ") : "—" %><% if (r.why) { %><br><span class="field-hint"><%= r.why %></span><% } %></td>
+          <td data-label="Validation"><% if (r.none) { %><span class="mk-status mk-status-off">Aucune</span><% } else if (r.problems.length) { %><span class="mk-status mk-status-warn"><%= r.problems.length %> problème(s)</span><% } else { %><span class="mk-status mk-status-ok">Valide</span><% } %></td>
+          <td><a class="btn btn-outline btn-sm" href="?page=<%= r.id %>#sc-json">Prévisualiser</a></td></tr><% }) %></tbody></table></div>
+      <% } %>
+    </section>
+    <% if (v.sel) { %>
+    <section class="mk-panel mk-seo-appear" id="sc-json" aria-labelledby="sc-json-h"><h2 id="sc-json-h">JSON-LD publié pour « <%= v.sel.name %> »</h2>
+      <% if (!v.selJson) { %><p class="field-hint"><%= v.sel.why %></p><% } else { %>
+      <pre class="mk-seo-code"><code><%= v.selJson %></code></pre>
+      <% v.sel.problems.forEach((p) => { %><span class="mk-seo-note mk-seo-note-warning"><%= p.message %></span><% }) %>
+      <% v.selRecommended.forEach((p) => { %><span class="mk-seo-note mk-seo-note-info"><%= p.message %></span><% }) %>
+      <% if (!v.sel.problems.length) { %><p class="field-hint">La syntaxe est valide et les propriétés obligatoires sont présentes (contrôle interne ; ce n'est pas une garantie de résultat enrichi).</p><% } %>
+      <% } %>
+    </section>
+    <% } %>
+<%- include("../partials/bottom") %>

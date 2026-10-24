@@ -42,12 +42,15 @@ describe("Paramètres : sections ouvertes dans l'espace d'un site", () => {
     }
   });
 
-  test("sections sans réglage propre au site (Commentaires, Médias, Permaliens, Tunnels) : valeurs réelles de la plateforme en lecture seule, aucun formulaire ; impossible de les modifier depuis un site", async () => {
-    for (const k of ["commentaires", "medias", "permaliens", "tunnels"]) {
+  test("sections sans réglage propre au site (Commentaires, Médias, Tunnels) : valeurs réelles de la plateforme en lecture seule, aucun formulaire ; impossible de les modifier depuis un site", async () => {
+    for (const k of ["commentaires", "medias", "tunnels"]) {
       const r = await adminA.get(frame(A, k)); assert.equal(r.status, 200);
       assert.match(r.text, /Ce qui s(?:'|&#39;)applique à ce site/); assert.ok(!/data-st-form/.test(r.text), `${k} : aucun formulaire`);
       assert.match(r.text, /réservées? à l'équipe|depuis le site principal|Elles se modifient/, k);
     }
+    // Permaliens : écran dédié et complet pour tout site (sans domaine propre, la structure s'applique à SES articles sous le domaine principal)
+    const pl = await adminA.get(frame(A, "permaliens")); assert.equal(pl.status, 200);
+    assert.match(pl.text, /n'a pas de domaine propre/); assert.match(pl.text, /<button[^>]*data-pl-save/, "permaliens : formulaire complet");
     const before = one("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'cms.media_max_image_mb'", orgId);
     for (const [slug, body] of [["medias", { media_max_image_mb: "1" }], ["commentaires", { comments_moderation: "all" }]]) {
       const r = await form(adminA, slug, A, body); assert.ok([200, 302, 303, 403].includes(r.status), `${slug} : ${r.status}`);

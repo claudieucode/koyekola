@@ -170,7 +170,8 @@ function normalizePaths(req, res, next) {
   if (!isRead(req)) return next();
   try { if (!require("../services/settings").main().normalizePaths) return next(); } catch { /* réglage indisponible : normalisation active */ }
   const raw = req.path;
-  if (raw.includes("%")) return next(); // adresse encodée : jamais réécrite (les séquences %XX ne sont pas de la « casse »)
+  if (raw.includes("%")) return next();
+  if (require("../services/permalinks").owns(raw, req.kwSite || null)) return next(); // permalien actif d'un article : sa forme canonique est celle de la structure du site // adresse encodée : jamais réécrite (les séquences %XX ne sont pas de la « casse »)
   const single = req.kwSite && /^\/[A-Za-z0-9-]+\/?$/.test(raw);
   if (!NORMALIZED.test(raw.toLowerCase()) && !single) return next();
   let fixed = raw;

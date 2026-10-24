@@ -1294,3 +1294,17 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-popup-corner::backdrop, .kw-popup-bar::backdrop { display: none; }
 /* Élément dont le rendu a échoué (éditeur seulement) : repère discret, sélectionnable et supprimable */
 .lp-builder .kw-node-error { padding: 10px 12px; border: 1px dashed #b45309; border-radius: 6px; background: #fffbeb; color: #78350f; font: 13px/1.4 system-ui, sans-serif; }
+
+/* Navigation AUTOMATIQUE des emplacements du CMS (menu affecté à « En-tête du site » / « Pied de page » quand la page ne compose pas le sien) : mise en page sobre, couleurs héritées du thème du site */
+.lp-autohead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 28px; padding: 16px 24px; border-bottom: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+.lp-autohead-brand { font-weight: 700; font-size: 1.125rem; text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+.lp-autohead-brand img { height: 36px; width: auto; max-width: 180px; object-fit: contain; }
+.lp-autohead-nav .kw-menu-list, .lp-foot-nav .kw-menu-list { display: flex; flex-wrap: wrap; gap: 6px 22px; list-style: none; margin: 0; padding: 0; }
+.lp-autohead-nav .kw-menu-link, .lp-foot-nav .kw-menu-link { color: inherit; text-decoration: none; padding: 6px 0; display: inline-block; }
+.lp-autohead-nav .kw-menu-link:hover, .lp-foot-nav .kw-menu-link:hover, .lp-autohead-nav .kw-menu-link:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
+.lp-autohead-nav .has-sub { position: relative; }
+.lp-autohead-nav .kw-submenu { display: none; position: absolute; left: 0; top: 100%; z-index: 20; min-width: 200px; margin: 0; padding: 8px 14px; list-style: none; background: #fff; color: #1b2b45; border: 1px solid rgba(0, 0, 0, .12); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+.lp-autohead-nav .has-sub:hover > .kw-submenu, .lp-autohead-nav .has-sub:focus-within > .kw-submenu { display: block; }
+.lp-foot-nav { margin: 0 0 14px; } .lp-foot-nav .kw-menu-list { justify-content: center; }
+.lp-foot-nav .kw-submenu { list-style: none; margin: 2px 0 0; padding: 0; font-size: 0.875em; opacity: .85; }
+@media (max-width: 720px) { .lp-autohead { padding: 12px 16px; } .lp-autohead-nav .kw-menu-list { gap: 2px 16px; } .lp-autohead-nav .kw-submenu { position: static; box-shadow: none; border: 0; background: transparent; color: inherit; display: block; padding: 0 0 0 12px; } }

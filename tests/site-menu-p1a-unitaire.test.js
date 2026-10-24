@@ -31,7 +31,7 @@ describe("projection du registre (menu d'un site)", () => {
   });
   test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
     const items = flat(nav.siteSections(site));
-    for (const k of ["seo/meta", "seo/analyse", "seo/sitemap", "redirections/liens-casses", "redirections/permaliens"]) {
+    for (const k of ["redirections/liens-casses", "redirections/permaliens"]) {
       const i = items.find((x) => x.key === k); assert.ok(i, k); assert.equal(i.status, "preview", k); assert.equal(i.disabled, true, k); assert.equal(i.href, null, k);
       assert.equal(i.label, nav.ALL.find((x) => x.key === k).label, `${k} : libellé du registre`);
     }
@@ -58,7 +58,8 @@ describe("projection du registre (menu d'un site)", () => {
   test("chaque écran existant retrouve son entrée par la clé qu'il porte déjà", () => {
     const expected = { pagetests: "pagetests", outils: "outils", lists: "espace/listes", segments: "espace/segments", templates: "espace/modeles-email", campaigns: "espace/campagnes", automations: "espace/automatisations", funnels: "espace/tunnels", "analytics-global": "espace/analytics", landing: "landing", sitedash: "sitedash", redirections: "redirections", utilisateurs: "utilisateurs" };
     for (const [active, key] of Object.entries(expected)) assert.equal(nav.buildSiteNav({ can: all, active, space: site }).current.key, key, active);
-    assert.equal(nav.buildSiteNav({ can: all, active: "seo/meta", space: site }).current.disabled, true, "entrée grisée du menu, sans écran");
+    assert.equal(nav.buildSiteNav({ can: all, active: "redirections/liens-casses", space: site }).current.disabled, true, "entrée grisée du menu, sans écran");
+    assert.equal(nav.buildSiteNav({ can: all, active: "seo/meta", space: site }).current.href, `${site.base}/seo/meta`, "SEO : rubrique ouverte dans le cadre du site");
     assert.equal(nav.buildSiteNav({ can: all, active: "articles/ajouter", space: site }).current.href, `${site.base}/articles/ajouter`, "ouverte (équipe)");
   });
 });
@@ -70,9 +71,9 @@ describe("espace du site principal", () => {
     // Le tableau de bord du principal est celui de SON espace ; « Mes sites » n'est pas une entrée d'espace
     for (const it of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(hrefs.has(it.href), it.href);
     assert.ok(hrefs.has(`${principal.base}/tableau-de-bord`)); assert.ok(!hrefs.has(`${nav.BASE}/sites`));
-    assert.equal(nav.ALL.length, 71); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
+    assert.equal(nav.ALL.length, 73); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
     assert.equal(r.sections.length, 14);
-    assert.equal(flat(r.sections).length, 70 + 1 + 10); // THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(flat(r.sections).length, 72 + 1 + 10); // THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
     const g = nav.buildCmsNav({ can: all, active: "sites" });

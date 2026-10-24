@@ -1,0 +1,35 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <% if (v.envClosed) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p><strong>Environnement non public.</strong> Ici, le serveur envoie noindex à tout le monde, quels que soient les réglages. Le tableau montre ce que les réglages du site produiront sur son domaine public.</p></div><% } %>
+    <% if (v.truncated) { %><div class="mk-cms-soon" role="note"><p>Plus de 500 pages en ligne : seules les 500 premières sont listées.</p></div><% } %>
+    <div class="mk-stats mk-stats-4 mk-seo-appear">
+      <div class="mk-stat"><span class="mk-stat-label">Pages en ligne</span><span class="mk-stat-value"><%= v.totals.pages %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Indexables</span><span class="mk-stat-value"><%= v.totals.indexable %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Exclues</span><span class="mk-stat-value"><%= v.totals.excluded %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Conflits détectés</span><span class="mk-stat-value"><%= v.totals.conflicts %></span></div>
+    </div>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="ix-site"><h2 id="ix-site">Réglage de tout le site</h2>
+      <form method="post" action="<%= space.base %>/seo/indexation" class="mk-form" data-dirty-form data-busy-form data-confirm-field="noindex" data-confirm-box="ix-confirm">
+        <input type="hidden" name="revision" value="<%= v.revision %>">
+        <div class="field-group"><label><input type="checkbox" name="noindex" value="1" id="ix-noindex" <%= v.siteNoindex ? "checked" : "" %> <%= canEdit ? "" : "disabled" %>> Ne pas indexer ce site (noindex sur toutes ses pages)</label>
+          <small>Les moteurs de recherche sont invités à ne proposer aucune page de ce site. Cette consigne est un signal, pas une protection : un contenu privé doit être protégé par une connexion.</small></div>
+        <div class="field-group mk-seo-confirm" id="ix-confirm" <%= v.siteNoindex ? "hidden" : "hidden" %>><label><input type="checkbox" name="confirm" value="1"> Je confirme vouloir retirer <strong>tout ce site</strong> des moteurs de recherche.</label></div>
+        <div class="field-group"><label><input type="checkbox" name="follow" value="1" <%= v.siteFollow ? "checked" : "" %> <%= canEdit ? "" : "disabled" %>> Autoriser les moteurs à suivre les liens du site</label></div>
+        <% if (canEdit) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><span class="mk-seo-dirty" data-dirty-note hidden>Modifications non enregistrées</span></div><% } else { %><p class="mk-lead">Lecture seule : la permission « modifier les réglages SEO » est nécessaire.</p><% } %>
+      </form>
+      <p class="field-hint">Pour une page précise, l'option « Autoriser les moteurs de recherche » et le noindex se règlent dans l'éditeur de la page. Aucune action ici ne modifie toutes les pages d'un coup.</p>
+    </section>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="ix-pages"><h2 id="ix-pages">Directives réellement publiées</h2>
+      <% if (!v.rows.length) { %><div class="mk-empty"><%- icon("fileText", { size: 32 }) %><p>Ce site n'a encore aucune page en ligne.</p></div><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-seo-table"><caption class="sr-only">Indexation des pages</caption>
+        <thead><tr><th scope="col">Page</th><th scope="col">Directive publiée</th><th scope="col">Plan du site</th><th scope="col">Raisons / conflits</th></tr></thead>
+        <tbody><% v.rows.forEach((r) => { %><tr>
+          <td data-label="Page"><strong><%= r.name %></strong><br><code><%= r.path %></code><br><a href="/marketing/pages/<%= r.id %>">Modifier dans l'éditeur</a></td>
+          <td data-label="Directive"><span class="mk-status <%= r.indexable ? 'mk-status-ok' : 'mk-status-off' %>"><%= r.indexable ? "Indexable" : "Non indexée" %></span><br><code><%= r.directive %></code></td>
+          <td data-label="Plan du site"><%= r.inSitemap ? "Incluse" : "Exclue" %></td>
+          <td data-label="Raisons"><% r.reasons.forEach((x) => { %><span class="mk-seo-note mk-seo-note-info"><%= x %></span><% }) %><% r.conflicts.forEach((x) => { %><span class="mk-seo-note mk-seo-note-warning"><%= x %></span><% }) %><% if (!r.reasons.length && !r.conflicts.length) { %><span class="mk-status mk-status-ok">Cohérent</span><% } %></td></tr><% }) %></tbody></table></div>
+      <% } %>
+    </section>
+<%- include("../partials/bottom") %>

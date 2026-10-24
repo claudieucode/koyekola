@@ -114,6 +114,7 @@ window.KOLA_TIPS = {
     "/site-web/parametres/medias": "Les tailles d'image générées et les formats de fichiers acceptés.",
     "/site-web/parametres/permaliens": "La structure des adresses des pages et des articles.",
     "/site-web/parametres/seo": "Les valeurs de référencement par défaut du site.",
+    "/site-web/parametres/connecteurs": "Clés d'API et connexions aux services externes (IA…), chiffrées et partagées entre les modules.",
     "/site-web/parametres/confidentialite": "Cookies, mentions légales et gestion des données personnelles.",
     "/site-web/parametres/indexation": "Autorise ou bloque l'indexation du site par les moteurs de recherche.",
     "/site-web/parametres/emailing": "Le lien entre ce site et vos envois d'e-mails.",

@@ -193,8 +193,8 @@ function remove(id, userId) {
 }
 
 // Chaînes : une adresse qui mène à une autre redirection. Correction : pointer directement vers la destination finale.
-function chains() {
-  const edges = graph();
+function chains(siteId = null) {
+  const edges = graph(siteId); // siteId : chaînes des redirections communes + de CE site (jamais d'un autre)
   const out = [];
   for (const [src, e] of edges) {
     const f = follow(src, edges);

@@ -70,13 +70,13 @@ const SECTIONS = [
   {
     key: "seo", label: "SEO", icon: "searchCheck", items: [
       leaf("seo", "Vue générale", `${BASE}/seo`, { permission: "seo.view" }),
-      leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`),
-      leaf("seo/meta", "Meta", `${BASE}/seo/meta`),
-      leaf("seo/indexation", "Indexation", `${BASE}/seo/indexation`),
-      leaf("seo/sitemap", "Sitemap", `${BASE}/seo/sitemap`),
-      leaf("seo/schema", "Schema", `${BASE}/seo/schema`),
-      leaf("seo/open-graph", "Open Graph", `${BASE}/seo/open-graph`),
-      leaf("seo/robots", "Robots", `${BASE}/seo/robots`),
+      leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`, { permission: "seo.view" }),
+      leaf("seo/meta", "Meta", `${BASE}/seo/meta`, { permission: "seo.view" }),
+      leaf("seo/indexation", "Indexation", `${BASE}/seo/indexation`, { permission: "seo.view" }),
+      leaf("seo/sitemap", "Sitemap", `${BASE}/seo/sitemap`, { permission: "seo.view" }),
+      leaf("seo/schema", "Schema", `${BASE}/seo/schema`, { permission: "seo.view" }),
+      leaf("seo/open-graph", "Open Graph", `${BASE}/seo/open-graph`, { permission: "seo.view" }),
+      leaf("seo/robots", "Robots", `${BASE}/seo/robots`, { permission: "seo.view" }),
       leaf("seo/404", "Erreurs 404", `${BASE}/seo/404`, { permission: "seo.view" }),
     ],
   },
@@ -104,6 +104,7 @@ const SECTIONS = [
   {
     key: "parametres", label: "Paramètres", icon: "settings", items: [
       leaf("parametres", "Général", `${BASE}/parametres`, { permission: "settings.read" }),
+      leaf("parametres/connecteurs", "Connecteurs", `${BASE}/parametres/connecteurs`, { permission: "settings.read" }),
       leaf("parametres/ecriture", "Écriture", `${BASE}/parametres/ecriture`, { permission: "settings.read" }),
       leaf("parametres/lecture", "Lecture", `${BASE}/parametres/lecture`, { permission: "settings.read" }),
       leaf("parametres/commentaires", "Commentaires", `${BASE}/parametres/commentaires`, { permission: "settings.read" }),
@@ -203,7 +204,7 @@ const SITE_MODULES = {
   patterns: { label: "Patterns", kind: "delegate", to: "/site-web/patterns", reg: "patterns", permission: "appearance.read", legacy: `${BASE}/patterns` },
   styles: { label: "Styles", kind: "delegate", to: "/site-web/styles", reg: "styles", permission: "appearance.read", legacy: `${BASE}/styles` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "apparence/menus", permission: "navigation.read", legacy: `${BASE}/navigation` },
-  // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
+  // SEO du site : les neuf rubriques (vue générale, analyse, meta, indexation, sitemap, schema, Open Graph, robots, 404) sont ouvertes ; chacune lit et écrit uniquement les données du site de l'adresse (voir siteSeo.js et seo/siteTools.js)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
   listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
@@ -226,6 +227,8 @@ const SITE_MODULES = {
   "parametres-emailing": { label: "Emailing", kind: "delegate", to: "/site-web/parametres/emailing", reg: "parametres/emailing", permission: "settings.read", legacy: `${BASE}/parametres/emailing` },
   "parametres-tunnels": { label: "Tunnels", kind: "delegate", to: "/site-web/parametres/tunnels", reg: "parametres/tunnels", permission: "settings.read", legacy: `${BASE}/parametres/tunnels` },
   "parametres-avance": { label: "Avancé", kind: "delegate", to: "/site-web/parametres/avance", reg: "parametres/avance", permission: "settings.read", legacy: `${BASE}/parametres/avance` },
+  // Paramètres → Connecteurs : centre d'intégrations ; écran partagé ouvert dans le cadre du site (connexions PROPRES au site, secrets isolés)
+  "parametres-connecteurs": { label: "Connecteurs", kind: "delegate", to: "/site-web/parametres/connecteurs", reg: "parametres/connecteurs", permission: "settings.read", legacy: `${BASE}/parametres/connecteurs` },
   confidentialite: { label: "Confidentialité", kind: "delegate", to: "/site-web/parametres/confidentialite", reg: "parametres/confidentialite", permission: "settings.read", legacy: `${BASE}/parametres/confidentialite` },
   outils: { label: "Santé du site", kind: "delegate", to: "/site-web/outils", reg: "outils", permission: "tools.view", legacy: `${BASE}/outils` },
   // Corbeille : écran partagé /site-web/corbeille ; il ne liste et ne traite que les éléments de CE site (portée vérifiée par le serveur)
@@ -282,6 +285,13 @@ const ABILITY = {
   "apparence/pied-de-page": { mode: "open", module: "reglages", sub: "pied-de-page", hash: "parties" },
   redirections: { mode: "open", module: "redirections" },
   seo: { mode: "open", module: "seo" },
+  "seo/analyse": { mode: "open", module: "seo", sub: "analyse" },
+  "seo/meta": { mode: "open", module: "seo", sub: "meta" },
+  "seo/indexation": { mode: "open", module: "seo", sub: "indexation" },
+  "seo/sitemap": { mode: "open", module: "seo", sub: "sitemap" },
+  "seo/schema": { mode: "open", module: "seo", sub: "schema" },
+  "seo/open-graph": { mode: "open", module: "seo", sub: "open-graph" },
+  "seo/robots": { mode: "open", module: "seo", sub: "robots" },
   "seo/404": { mode: "open", module: "seo", sub: "404" },
   utilisateurs: { mode: "open", module: "equipe" },
   "utilisateurs/ajouter": { mode: "open", module: "equipe-inviter" },
@@ -300,6 +310,7 @@ const ABILITY = {
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },
+  "parametres/connecteurs": { mode: "open", module: "parametres-connecteurs" },
   "parametres/lecture": { mode: "open", module: "parametres-lecture" },
   "parametres/commentaires": { mode: "open", module: "parametres-commentaires" },
   "parametres/medias": { mode: "open", module: "parametres-medias" },
@@ -439,6 +450,7 @@ FRAMED.add("parametres/emailing");
 FRAMED.add("parametres/tunnels");
 FRAMED.add("parametres/avance");
 FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
+FRAMED.add("parametres/connecteurs");
 FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal
 module.exports = { NESTED, BASE, SECTIONS, ALL, GENERIC_SECTIONS, SOON_PHASE, SITE_MODULES, ABILITY, DELEGATED, buildCmsNav, buildSiteNav, projectSections, siteSections, principalSections, siteModuleOf, isSiteScopedKey, isCmsKey, itemOf, sectionOf };

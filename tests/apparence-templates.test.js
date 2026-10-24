@@ -104,7 +104,7 @@ describe("templates : bibliothèque, aperçu, importation, idempotence, isolatio
       const menu = one("SELECT * FROM nav_menus WHERE id = ?", first.menu.id); assert.equal(menu.site_id, A); assert.equal(menu.name, "Formation en ligne — menu");
       const items = all("SELECT type, object_id FROM nav_items WHERE menu_id = ? ORDER BY position", menu.id);
       assert.deepEqual(items.map((i) => i.object_id), pack.menu.map((mk) => first.pages.find((p) => p.key === mk).id)); assert.ok(items.every((i) => i.type === "page"));
-      assert.equal(all("SELECT * FROM nav_locations WHERE menu_id = ?", menu.id).length, 0, "menu non affecté à un emplacement");
+      assert.deepEqual(all("SELECT location FROM nav_locations WHERE menu_id = ?", menu.id).map((r) => r.location), ["header"], "menu affecté EXPLICITEMENT à l'en-tête du site (emplacement libre) : affectation persistante, jamais en remplaçant un menu déjà affecté");
       // styles : brouillon seulement
       const d = JSON.parse(draftOf(A).changes); assert.equal(d["tokens.colors.primary"], "#0b2a40");
       const stBoot = JSON.parse(/<script type="application\/json" id="st-data">([\s\S]*?)<\/script>/.exec((await adminA.get(`/marketing/site-web/styles?site=${A}`)).text)[1].replace(/\\u003c/g, "<"));

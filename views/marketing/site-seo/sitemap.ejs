@@ -1,0 +1,33 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+<% const last = v.last; %>
+    <div class="mk-stats mk-stats-4 mk-seo-appear">
+      <div class="mk-stat"><span class="mk-stat-label">Adresses incluses</span><span class="mk-stat-value"><%= v.total %></span><span class="mk-stat-hint">limite d'un fichier : <%= v.limit %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Adresses exclues</span><span class="mk-stat-value"><%= v.excluded.length %></span></div>
+      <div class="mk-stat"><span class="mk-stat-label">XML</span><span class="mk-stat-value"><%= v.check.valid ? "Valide" : "Invalide" %></span><span class="mk-stat-hint">contrôle fait à l'ouverture de cette page</span></div>
+      <div class="mk-stat"><span class="mk-stat-label">Dernière génération</span><span class="mk-stat-value mk-seo-small"><%= last ? String(last.generated_at).slice(0, 16).replace("T", " ") : "—" %></span><span class="mk-stat-hint"><%= last ? last.urls + " adresse(s)" : "jamais enregistrée" %></span></div>
+    </div>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="sm-main"><h2 id="sm-main">Plan du site de ce site</h2>
+      <p>Adresse publique : <code><%= v.publicUrl %></code><% if (!v.ownDomain) { %> <span class="field-hint">— ce site n'a pas de domaine propre : ses pages sont listées dans le plan du domaine principal.</span><% } %></p>
+      <p class="field-hint">Le plan est calculé à chaque lecture depuis les pages réellement publiées : une publication, une modification ou un retrait le met à jour sans action de votre part (les moteurs peuvent garder l'ancienne version en cache jusqu'à 5 minutes). Seules les adresses publiques, indexables et sans canonical vers ailleurs y figurent. Aucune date de modification n'est inventée ; les champs « priority » et « changefreq » ne sont pas utilisés.</p>
+      <% if (!v.check.valid) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p><%= v.check.problems.join(" ") %></p></div><% } %>
+      <div class="mk-actions">
+        <% if (canEdit) { %><form method="post" action="<%= space.base %>/seo/sitemap/regenerer" data-busy-form><button type="submit" class="btn btn-primary btn-sm">Régénérer et contrôler</button></form><% } %>
+        <a class="btn btn-outline btn-sm" href="<%= space.base %>/seo/sitemap/apercu.xml" target="_blank" rel="noopener">Voir le XML</a>
+      </div>
+      <% if (last && !last.valid) { %><p class="field-hint">Le dernier contrôle enregistré signalait : <%= last.problems.join(" ") %></p><% } %>
+    </section>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="sm-in"><h2 id="sm-in">Adresses incluses</h2>
+      <% if (!v.included.length) { %><div class="mk-empty"><%- icon("map", { size: 32 }) %><p>Aucune adresse à publier : ce site n'a pas de page en ligne et indexable.</p></div><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Adresses du plan du site</caption><thead><tr><th scope="col">Adresse</th><th scope="col">Type</th><th scope="col">Dernière modification</th></tr></thead>
+        <tbody><% v.included.slice(0, 200).forEach((e) => { %><tr><td data-label="Adresse"><code><%= e.path %></code></td><td data-label="Type"><%= e.type %></td><td data-label="Modifiée"><%= e.lastmod || "—" %></td></tr><% }) %></tbody></table></div>
+      <% if (v.included.length > 200) { %><p class="field-hint"><%= v.included.length - 200 %> adresse(s) de plus dans le fichier XML.</p><% } %>
+      <% } %>
+    </section>
+    <% if (v.excluded.length) { %>
+    <details class="mk-seo-details"><summary>Adresses exclues et raison (<%= v.excluded.length %>)</summary>
+      <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Adresses exclues</caption><thead><tr><th scope="col">Adresse</th><th scope="col">Raison</th></tr></thead>
+        <tbody><% v.excluded.slice(0, 200).forEach((e) => { %><tr><td data-label="Adresse"><code><%= e.path %></code></td><td data-label="Raison"><%= e.reason %></td></tr><% }) %></tbody></table></div>
+    </details>
+    <% } %>
+<%- include("../partials/bottom") %>

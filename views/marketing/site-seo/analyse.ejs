@@ -1,0 +1,68 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+<% const cur = v.current; const run = v.running; const qs = (o) => { const p = new URLSearchParams({ ...(cur ? { analyse: cur.id } : {}), ...(v.severity ? { gravite: v.severity } : {}), ...(v.category ? { categorie: v.category } : {}), ...(v.q ? { q: v.q } : {}), ...o }); [...p.keys()].forEach((k) => { if (!p.get(k)) p.delete(k); }); const s = p.toString(); return s ? "?" + s : ""; }; %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="an-run"><h2 id="an-run">Lancer une analyse</h2>
+      <p class="field-hint">L'analyse lit les <%= v.knownPages %> page(s) en ligne de ce site, comme un moteur de recherche (titres, descriptions, canonical, H1, images, liens, données structurées). Elle ne lit aucune page d'un autre site ni de ressource privée. Les constats sont observés ; les recommandations sont calculées.</p>
+      <% if (run) { %>
+        <div class="mk-seo-progress" data-poll-url="<%= space.base %>/seo/analyse/etat?id=<%= run.id %>" data-poll-done="<%= space.base %>/seo/analyse?analyse=<%= run.id %>" role="status" aria-live="polite">
+          <div class="mk-seo-bar"><span style="width:<%= Math.min(100, v.knownPages ? Math.round(100 * run.pages / Math.max(v.knownPages, run.pages, 1)) : 5) %>%" data-bar></span></div>
+          <p><span data-poll-text><%= run.pages %> page(s) lue(s)</span> sur environ <%= v.knownPages %> connue(s) — l'analyse continue en arrière-plan, vous pouvez quitter cette page.</p>
+        </div>
+      <% } else if (v.runningElsewhere) { %>
+        <p class="mk-cms-soon" role="note">Une analyse est déjà en cours pour un autre site. Pour ne pas surcharger le serveur, une seule analyse tourne à la fois : réessayez dans quelques minutes.</p>
+      <% } else if (canEdit) { %>
+        <form method="post" action="<%= space.base %>/seo/analyse" class="mk-actions" data-busy-form>
+          <button type="submit" class="btn btn-primary btn-sm"><%= cur ? "Relancer l'analyse" : "Lancer l'analyse" %></button>
+          <% if (cur) { %><label class="field-hint"><input type="checkbox" name="force" value="1"> Relancer même si aucune page n'a changé</label><% } %>
+        </form>
+      <% } else { %><p class="field-hint">Lecture seule : la permission « modifier les réglages SEO » est nécessaire pour lancer une analyse.</p><% } %>
+    </section>
+
+    <% if (!cur && !run) { %>
+      <div class="mk-empty mk-seo-appear"><%- icon("searchCheck", { size: 32 }) %><h2>Aucune analyse pour ce site</h2><p>Lancez une première analyse : les résultats, leurs dates et l'historique s'afficheront ici. Aucun chiffre n'est affiché avant.</p></div>
+    <% } %>
+
+    <% if (cur && cur.status === "done") { %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="an-sum"><h2 id="an-sum">Résultats du <%= String(cur.finished_at).slice(0, 16).replace("T", " ") %></h2>
+      <div class="mk-stats mk-stats-4">
+        <div class="mk-stat"><span class="mk-stat-label">Pages lues</span><span class="mk-stat-value"><%= cur.pages %></span></div>
+        <a class="mk-stat" href="<%= qs({ gravite: 'critique' }) %>"><span class="mk-stat-label">Critiques</span><span class="mk-stat-value"><%= v.counts.critique %></span></a>
+        <a class="mk-stat" href="<%= qs({ gravite: 'avertissement' }) %>"><span class="mk-stat-label">Avertissements</span><span class="mk-stat-value"><%= v.counts.avertissement %></span></a>
+        <a class="mk-stat" href="<%= qs({ gravite: 'recommandation' }) %>"><span class="mk-stat-label">Recommandations</span><span class="mk-stat-value"><%= v.counts.recommandation %></span></a>
+      </div>
+      <% if (cur.scores && cur.scores.overall) { %><p class="field-hint">Repère interne : <strong><%= cur.scores.overall.score %> / 100</strong> (part pondérée des contrôles réussis ; ni note officielle, ni prévision de classement).</p><% } %>
+      <% if (v.comparison) { %><p class="mk-seo-compare"><%- icon("check", { size: 16 }) %> Par rapport à l'analyse du <%= String(v.comparison.prev.finished_at).slice(0, 16).replace("T", " ") %> : <strong><%= v.comparison.resolved %></strong> problème(s) résolu(s), <strong><%= v.comparison.added %></strong> nouveau(x)<% if (v.comparison.scoreBefore !== null && v.comparison.scoreNow !== null) { %> · repère <%= v.comparison.scoreBefore %> → <%= v.comparison.scoreNow %><% } %>.</p><% } %>
+    </section>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="an-list"><h2 id="an-list">Constats</h2>
+      <form method="get" class="mk-cms-toolbar mk-seo-filters" role="search">
+        <input type="hidden" name="analyse" value="<%= cur.id %>">
+        <label class="sr-only" for="an-g">Gravité</label>
+        <select id="an-g" name="gravite"><option value="">Toutes les gravités</option><% Object.entries(v.LEVELS).forEach(([k, l]) => { %><option value="<%= k %>" <%= v.severity === k ? "selected" : "" %>><%= l %></option><% }) %></select>
+        <label class="sr-only" for="an-c">Type</label>
+        <select id="an-c" name="categorie"><option value="">Tous les types</option><% Object.entries(v.categories).forEach(([k, l]) => { %><option value="<%= k %>" <%= v.category === k ? "selected" : "" %>><%= l %></option><% }) %></select>
+        <label class="mk-search"><span class="sr-only">Adresse</span><input type="search" name="q" value="<%= v.q %>" placeholder="Adresse ou détail"></label>
+        <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (v.severity || v.category || v.q) { %><a class="btn btn-ghost btn-sm" href="?analyse=<%= cur.id %>">Effacer</a><% } %>
+      </form>
+      <% if (!v.issues.length) { %><p class="field-hint">Aucun constat ne correspond à ces filtres<% if (!v.counts.critique && !v.counts.avertissement && !v.counts.recommandation) { %> — aucun problème détecté sur les pages lues<% } %>.</p><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-seo-table"><caption class="sr-only">Constats de l'analyse</caption>
+        <thead><tr><th scope="col">Gravité</th><th scope="col">Constat (observé)</th><th scope="col">Page</th><th scope="col">Recommandation (calculée)</th></tr></thead>
+        <tbody><% v.issues.slice(0, 300).forEach((i) => { %><tr>
+          <td data-label="Gravité"><span class="mk-status <%= i.level === 'critique' ? 'mk-status-off' : i.level === 'avertissement' ? 'mk-status-warn' : 'mk-status-ok' %>"><%= v.LEVELS[i.level] %></span></td>
+          <td data-label="Constat"><strong><%= i.rule ? i.rule.title : i.rule_id %></strong><br><span class="field-hint"><%= i.detail %></span></td>
+          <td data-label="Page"><code><%= i.path %></code><% if (i.pageId) { %><br><a href="/marketing/pages/<%= i.pageId %>">Corriger dans l'éditeur</a><% } %></td>
+          <td data-label="Recommandation"><%= i.rule ? i.rule.recommendation : "" %></td></tr><% }) %></tbody></table></div>
+      <% if (v.issues.length > 300) { %><p class="field-hint"><%= v.issues.length - 300 %> constat(s) de plus : affinez les filtres.</p><% } %>
+      <% } %>
+    </section>
+    <% } else if (cur && cur.status === "failed") { %>
+      <div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p>L'analyse a échoué : <%= cur.error || "erreur inconnue" %>. Relancez-la.</p></div>
+    <% } %>
+
+    <% if (v.history.length) { %>
+    <details class="mk-seo-details"><summary>Historique des analyses de ce site (<%= v.history.length %>)</summary>
+      <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Analyses précédentes</caption><thead><tr><th scope="col">Date</th><th scope="col">État</th><th scope="col">Pages</th><th scope="col">Constats</th><th scope="col"></th></tr></thead>
+        <tbody><% v.history.forEach((a) => { %><tr><td data-label="Date"><%= String(a.started_at).slice(0, 16).replace("T", " ") %></td><td data-label="État"><%= a.status === "done" ? "Terminée" : a.status === "running" ? "En cours" : "Échouée" %></td><td data-label="Pages"><%= a.pages %></td><td data-label="Constats"><%= a.status === "done" ? a.issues : "—" %></td><td><% if (a.status === "done") { %><a href="?analyse=<%= a.id %>">Voir</a><% } %></td></tr><% }) %></tbody></table></div>
+    </details>
+    <% } %>
+<%- include("../partials/bottom") %>

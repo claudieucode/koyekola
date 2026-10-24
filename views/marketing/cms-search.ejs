@@ -11,7 +11,7 @@
         <% found.pages.forEach((p) => { %><li><a href="/marketing/pages/<%= p.id %>"><%= p.name %></a> <span class="mk-sub">/p/<%= p.slug %> · <%= p.status === "published" ? "en ligne" : "brouillon" %></span></li><% }) %>
       </ul></section><% } %>
       <% if (found.articles.length) { %><section class="mk-panel"><h2>Articles</h2><ul>
-        <% found.articles.forEach((p) => { %><li><a href="/marketing/site-web/articles?q=<%= encodeURIComponent(p.title) %>"><%= p.title %></a> <span class="mk-sub">/blog/<%= p.slug %> · <%= p.status === "published" ? "en ligne" : p.status === "scheduled" ? "programmé" : "brouillon" %></span></li><% }) %>
+        <% found.articles.forEach((p) => { %><li><a href="/marketing/site-web/articles?q=<%= encodeURIComponent(p.title) %>"><%= p.title %></a> <span class="mk-sub"><%= postUrl(p) %> · <%= p.status === "published" ? "en ligne" : p.status === "scheduled" ? "programmé" : "brouillon" %></span></li><% }) %>
       </ul></section><% } %>
       <% if (found.media.length) { %><section class="mk-panel"><h2>Médias</h2><ul>
         <% found.media.forEach((m) => { %><li><a href="/marketing/site-web/mediatheque?q=<%= encodeURIComponent(m.name) %>"><%= m.name %></a></li><% }) %>

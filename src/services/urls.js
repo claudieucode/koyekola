@@ -128,9 +128,9 @@ function baseOfPage(page) { const s = siteInfo(page.site_id); return s && s.base
 function publicPath(type, row, opts = {}) {
   switch (type) {
     case "page": return pagePath(row, opts);
-    case "post": return `/blog/${publicHomeOf("post", row.id) ? addressOf("post", row) : row.slug}`; // adresse logique du site seulement sur son domaine
+    case "post": return require("./permalinks").postPath(row); // structure des permaliens du site qui sert l'article (adresse logique du site seulement sur son domaine)
     case "course": return `/cours/${row.slug}`;
-    default: return taxonomy().TAXONOMIES[type] ? `${taxonomy().baseOf(type)}/${row.slug}` : null;
+    default: return taxonomy().TAXONOMIES[type] ? `${taxonomy().baseOf(type, row)}/${row.slug}` : null;
   }
 }
 // Adresse absolue : base du site (domaine propre) sinon celle de la requête / SITE_URL
@@ -240,6 +240,9 @@ function resolve(pathname, { hostSite = null } = {}) {
     const row = pageBySlug(m[1]);
     if (row) return { type: "page", id: row.id, row, state: pageState(row, hostSite), path: pagePath(row, { hostSite }), siteId: row.site_id };
   }
+  // Permalien d'un article selon la structure du site (ou une ancienne structure) : même résolution que le routeur
+  { const pr = require("./permalinks").rowForPath(p, hostSite);
+    if (pr) { const owner = (attachedSite("post", pr.id) || {}).site_id ?? null; return { type: "post", id: pr.id, row: pr, state: pr.deleted_at ? "trashed" : pr.published ? "live" : "draft", path: require("./permalinks").postPath(pr), siteId: owner }; } }
   if ((m = /^\/blog\/([a-z0-9][a-z0-9-]*)$/.exec(p)) && !["categorie", "etiquette", "auteur"].includes(m[1])) {
     // Contenus par site (R6 lot 4) : l'article est résolu dans le contexte du domaine demandé ; celui d'un autre domaine est « foreign » (comme une page d'un autre site)
     const r = resolvePost(m[1], hostSite);
@@ -248,7 +251,7 @@ function resolve(pathname, { hostSite = null } = {}) {
       const owner = (attachedSite("post", row.id) || {}).site_id ?? null;
       if (r.foreign) return { type: "post", id: row.id, row, state: "foreign", path: r.redirect, siteId: owner };
       if (r.moved) return { type: "post", id: row.id, state: !dead ? "moved" : "trashed", path: r.redirect, siteId: owner };
-      return { type: "post", id: row.id, row, state: row.deleted_at ? "trashed" : row.published ? "live" : "draft", path: r.redirect || `/blog/${row.slug}`, siteId: owner };
+      return { type: "post", id: row.id, row, state: row.deleted_at ? "trashed" : row.published ? "live" : "draft", path: r.redirect || require("./permalinks").postPath(row), siteId: owner };
     }
   }
   if ((m = /^\/cours\/([a-z0-9][a-z0-9-]*)$/.exec(p))) {
@@ -259,7 +262,7 @@ function resolve(pathname, { hostSite = null } = {}) {
   }
   const tx = taxonomy();
   for (const key of Object.keys(tx.TAXONOMIES)) {
-    const base = tx.baseOf(key);
+    const base = [tx.defaultBase(key), tx.baseOf(key)].find((b) => p.startsWith(`${b}/`)) || tx.defaultBase(key);
     if (p.startsWith(`${base}/`) && (m = /^\/([a-z0-9][a-z0-9-]*)$/.exec(p.slice(base.length)))) {
       const row = resolveTerm(key, m[1], hostSite);
       if (row) return { type: key, id: row.id, row, state: "live", path: tx.urlOf(row), siteId: (attachedSite("term", row.id) || {}).site_id ?? null };
@@ -288,7 +291,7 @@ function movedTarget(p, { hostSite = null } = {}) {
   }
   const tx = taxonomy();
   for (const key of Object.keys(tx.TAXONOMIES)) {
-    const base = tx.baseOf(key);
+    const base = [tx.defaultBase(key), tx.baseOf(key)].find((x) => p.startsWith(`${x}/`)) || tx.defaultBase(key);
     if (p.startsWith(`${base}/`) && (m = /^\/([a-z0-9][a-z0-9-]*)$/.exec(p.slice(base.length)))) {
       const h = db.prepare("SELECT resource_id FROM cms_url_history WHERE resource_type = ? AND old_slug = ?").get(key, m[1]);
       const row = h && tx.get(h.resource_id);

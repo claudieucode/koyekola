@@ -74,4 +74,4 @@ function listChanges({ entityType = null, entityKey = null, limit = 50, site } =
     .all(...params, Math.min(500, Math.max(1, limit)));
 }
 
-module.exports = { db, logChange, listChanges, siteSchemaReady };
+module.exports = { db, logChange, listChanges, siteSchemaReady, hasSiteColumn };

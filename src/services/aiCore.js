@@ -39,15 +39,17 @@ function setClientForTests(client) { injectedClient = client; }
 
 const isConfigured = () => Boolean(injectedClient || process.env.ANTHROPIC_API_KEY);
 
-function clientOf() {
+// `apiKey` : clé fournie par le centre de connecteurs (Réglages → Connecteurs) pour le site concerné ; sinon, comportement historique : variable d'environnement ANTHROPIC_API_KEY
+function clientOf(apiKey) {
   if (injectedClient) return injectedClient;
+  if (apiKey) return new AnthropicClient({ apiKey, timeout: 120000, maxRetries: 2 });
   if (!process.env.ANTHROPIC_API_KEY) throw new AiError("not_configured", "L'assistant IA n'est pas activé : ajoutez la variable ANTHROPIC_API_KEY (clé de console.anthropic.com) dans la configuration du serveur.");
   return new AnthropicClient({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: 120000, maxRetries: 2 });
 }
 
 // Une demande, une réponse JSON conforme au schéma. Renvoie { data, model, usage }.
-async function runJson({ system, prompt, schema, effort = "medium", maxTokens = 16000, tooLong = "La réponse de l'IA a été coupée : raccourcissez le texte fourni." }) {
-  const client = clientOf();
+async function runJson({ system, prompt, schema, effort = "medium", maxTokens = 16000, tooLong = "La réponse de l'IA a été coupée : raccourcissez le texte fourni.", apiKey = null }) {
+  const client = clientOf(apiKey);
   const params = {
     model: MODEL,
     max_tokens: maxTokens,
