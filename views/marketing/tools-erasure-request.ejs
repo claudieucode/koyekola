@@ -1,0 +1,108 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Demande d'effacement", intro: "", tab, TABS, BASE, sites, siteId, q, siteOnly, noSite: true }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }) : "—");
+  const cls = { pending: "mk-status-warn", confirmed: "", failed: "mk-status-bad", completed: "mk-status-ok" };
+  const how = { email: "par la personne, via le lien reçu par e-mail", admin: "par un administrateur (sans e-mail)", force: "forcée par un administrateur, sans confirmation de la personne" };
+  const taskCls = { done: "mk-status-ok", failed: "mk-status-bad", running: "mk-status-warn", pending: "" };
+  const taskLabel = { done: "Terminé", failed: "Échec", running: "En cours", pending: "À faire" };
+  const mailLabel = { pending: "en attente d'envoi", sending: "en cours d'envoi", sent: "envoyé", failed: "NON envoyé", skipped: "NON envoyé (aucun serveur d'e-mail configuré)" };
+  const inProgress = r.status === "confirmed" && r.started_at;
+%>
+<p><a href="<%= BASE_ER %><%= r.site_id ? "?site=" + r.site_id : "" %>">&larr; Retour à la liste</a></p>
+
+<section class="mk-panel" aria-labelledby="erd-head">
+  <h2 id="erd-head">Demande concernant <strong><%= r.subject_label %></strong></h2>
+  <dl class="mk-er-facts">
+    <div><dt>État</dt><dd><span class="mk-status <%= cls[r.status] %>"><%= r.statusLabel %></span><% if (r.failureLabel) { %> — <%= r.failureLabel %><% } %></dd></div>
+    <div><dt>Demande envoyée</dt><dd><%= fdate(r.requested_at) %></dd></div>
+    <% if (r.confirmed_at) { %><div><dt>Confirmée</dt><dd><%= fdate(r.confirmed_at) %> — <%= how[r.confirmed_by] || "" %></dd></div><% } %>
+    <% if (r.status === "pending" && r.token_expires_at) { %><div><dt>Lien valable jusqu'au</dt><dd><%= fdate(r.token_expires_at) %> (<%= r.send_count %> envoi<%= r.send_count > 1 ? "s" : "" %>)</dd></div><% } %>
+    <% if (mailState) { %><div><dt>Dernier e-mail de confirmation</dt><dd class="<%= ["failed", "skipped"].includes(mailState) ? "mk-er-bad" : "" %>"><%= mailLabel[mailState] || mailState %></dd></div><% } %>
+    <% if (r.completed_at) { %><div><dt>Terminée</dt><dd><%= fdate(r.completed_at) %></dd></div><% } %>
+  </dl>
+  <% if (r.failure_note) { %><p class="mk-er-note mk-er-note-warn" role="status"><%- icon("alertTriangle", { size: 16 }) %> <%= r.failure_note %></p><% } %>
+  <% if (r.status === "pending") { %><p class="mk-sub">En attente de la confirmation de la personne : rien ne peut être effacé avant.</p><% } %>
+</section>
+
+<% if (prog.total) { %>
+<section class="mk-panel" aria-labelledby="erd-prog">
+  <h2 id="erd-prog">Progression</h2>
+  <% if (inProgress) { %><div data-er-run="<%= BASE_ER %>/<%= r.id %>/traiter<%= r.site_id ? "?site=" + r.site_id : "" %>"></div><% } %>
+  <progress id="er-bar" max="100" value="<%= prog.percent %>" aria-labelledby="er-bar-label"><%= prog.percent %> %</progress>
+  <p id="er-bar-label" class="mk-sub"><%= prog.done %> catégorie(s) sur <%= prog.total %> traitée(s) — <%= prog.erased %> effacé(s), <%= prog.anonymized %> anonymisé(s)</p>
+  <p id="er-live" class="sr-only" role="status" aria-live="polite"></p>
+  <ul class="mk-er-tasks">
+    <% prog.tasks.forEach((t) => { %><li><span class="mk-status <%= taskCls[t.status] %>"><%= taskLabel[t.status] %></span> <strong><%= t.title %></strong> — <%= t.erased %> effacé(s), <%= t.anonymized %> anonymisé(s)<% if (t.error) { %> <span class="mk-er-bad">(<%= t.error %>)</span><% } %></li><% }) %>
+  </ul>
+  <% if (inProgress && can.erase) { %><form method="post" action="<%= BASE_ER %>/<%= r.id %>/traiter<%= r.site_id ? "?site=" + r.site_id : "" %>"><button type="submit" class="btn btn-outline btn-sm">Continuer le traitement</button></form><% } %>
+  <% if (elig.resume && can.erase) { %><form method="post" action="<%= BASE_ER %>/<%= r.id %>/reprendre<%= r.site_id ? "?site=" + r.site_id : "" %>"><button type="submit" class="btn btn-primary btn-sm">Reprendre les catégories en échec</button></form><% } %>
+</section>
+<% } %>
+
+<% if (r.status === "completed") { %>
+<section class="mk-panel" aria-labelledby="erd-res">
+  <h2 id="erd-res">Résultat</h2>
+  <% if (summary.manual && summary.note) { %><p class="mk-er-note mk-er-note-warn"><%= summary.note %></p><% } %>
+  <p><strong><%= summary.erased || 0 %></strong> élément(s) effacé(s), <strong><%= summary.anonymized || 0 %></strong> anonymisé(s) — terminé le <%= fdate(r.completed_at) %>.</p>
+  <% if ((summary.categories || []).length) { %><h3>Catégories traitées</h3><ul><% summary.categories.forEach((c) => { %><li><%= c.title %> : <%= c.erased %> effacé(s), <%= c.anonymized %> anonymisé(s)</li><% }) %></ul><% } %>
+  <% if ((summary.retained || []).length) { %><h3>Données conservées, et pourquoi</h3><ul><% summary.retained.forEach((x) => { %><li><strong><%= x.label %></strong><%= x.count ? " (" + x.count + ")" : "" %> — <%= x.reason %></li><% }) %></ul><% } %>
+  <% if ((summary.notProcessed || []).length) { %><h3>Catégories non traitées pour ce site</h3><ul><% summary.notProcessed.forEach((x) => { %><li><%= x %> — données de la plateforme, à traiter depuis le site principal.</li><% }) %></ul><% } %>
+  <% if ((summary.manual || []).length) { %><h3>Actions manuelles ou externes restantes</h3><ul><% summary.manual.forEach((x) => { %><li><strong><%= x.label %></strong><%= x.count ? " (" + x.count + ")" : "" %> — <%= x.reason %></li><% }) %></ul><% } %>
+</section>
+<% } %>
+
+<% if (pv) { %>
+<section class="mk-panel" aria-labelledby="erd-pv">
+  <h2 id="erd-pv">Récapitulatif de ce qui serait traité</h2>
+  <p class="mk-sub">Comptages réels au moment de l'affichage. Aucune donnée n'est modifiée tant que vous n'avez pas lancé le traitement.</p>
+  <div class="mk-table-wrap"><table class="mk-table mk-er-table">
+    <caption class="sr-only">Catégories de données</caption>
+    <thead><tr><th scope="col">Catégorie</th><th scope="col" class="num">Effacés</th><th scope="col" class="num">Anonymisés</th><th scope="col">Conservé ou à traiter à la main</th></tr></thead>
+    <tbody>
+      <% pv.items.forEach((i) => { %><tr>
+        <td data-label="Catégorie"><strong><%= i.title %></strong><br><span class="mk-sub"><%= i.description %></span><% if (i.error) { %><br><span class="mk-er-bad">Comptage indisponible.</span><% } %></td>
+        <td class="num" data-label="Effacés"><%= i.erase %></td><td class="num" data-label="Anonymisés"><%= i.anonymize %></td>
+        <td data-label="Conservé"><% if (!i.retained.length && !i.manual.length) { %><span class="mk-sub">—</span><% } %><% i.retained.forEach((x) => { %><div><strong><%= x.label %></strong><%= x.count ? " (" + x.count + ")" : "" %> — <%= x.reason %></div><% }) %><% i.manual.forEach((x) => { %><div class="mk-er-manual"><strong>À traiter à la main : <%= x.label %></strong><%= x.count ? " (" + x.count + ")" : "" %> — <%= x.reason %></div><% }) %></td>
+      </tr><% }) %>
+      <% pv.outOfScope.forEach((o) => { %><tr><td data-label="Catégorie"><strong><%= o.title %></strong></td><td class="num" data-label="Effacés">—</td><td class="num" data-label="Anonymisés">—</td><td data-label="Conservé"><%= o.reason %></td></tr><% }) %>
+    </tbody>
+  </table></div>
+  <h3>Hors du périmètre de Kolakisa</h3>
+  <ul><% pv.external.forEach((x) => { %><li><strong><%= x.label %></strong> — <%= x.reason %></li><% }) %></ul>
+</section>
+
+<% if (!inProgress && ((elig.execute && can.erase) || (elig.force && can.force))) { %>
+<section class="mk-panel mk-er-run" id="er-run" aria-labelledby="erd-run">
+  <h2 id="erd-run"><%= elig.execute ? "Lancer l'effacement" : "Forcer l'effacement" %></h2>
+  <% if (!elig.execute) { %><p class="mk-er-note mk-er-note-warn"><%- icon("alertTriangle", { size: 16 }) %> La personne n'a pas confirmé cette demande. Forcer l'effacement engage votre responsabilité : l'opération est tracée au journal d'activité avec votre nom.</p><% } %>
+  <p>L'effacement est <strong>définitif</strong> pour les éléments effacés. Le compte de la personne n'est pas supprimé.</p>
+  <form method="post" action="<%= BASE_ER %>/<%= r.id %>/executer<%= r.site_id ? "?site=" + r.site_id : "" %>" data-er-once>
+    <% if (!elig.execute) { %><input type="hidden" name="force" value="1"><% } %>
+    <fieldset class="mk-er-fieldset"><legend>Commentaires de la personne</legend>
+      <label class="mk-er-check"><input type="radio" name="comments" value="anonymize" checked> Anonymiser l'auteur et garder le texte (recommandé)</label>
+      <label class="mk-er-check"><input type="radio" name="comments" value="delete"> Anonymiser l'auteur et remplacer le texte par « Commentaire supprimé »</label>
+    </fieldset>
+    <label class="mk-er-check"><input type="checkbox" name="confirm" value="1" required> J'ai relu le récapitulatif ci-dessus.</label>
+    <div class="field-group"><label for="er-word">Pour confirmer, saisissez <strong><%= CONFIRM_WORD %></strong></label><input type="text" id="er-word" name="confirm_word" autocomplete="off" spellcheck="false" required pattern="<%= CONFIRM_WORD %>" aria-describedby="er-word-hint"><p class="field-hint" id="er-word-hint">Une confirmation écrite évite un effacement par erreur.</p></div>
+    <button type="submit" class="btn btn-primary mk-er-danger-solid"><%= elig.execute ? "Effacer les données" : "Forcer l'effacement" %></button>
+  </form>
+</section>
+<% } %>
+<% } %>
+
+<% if ((elig.complete || elig.remove) && can.erase) { %>
+<section class="mk-panel" aria-labelledby="erd-other">
+  <h2 id="erd-other">Autres actions</h2>
+  <div class="mk-er-actions">
+    <% if (elig.resend && can.request) { %><form method="post" action="<%= BASE_ER %>/<%= r.id %>/renvoyer<%= r.site_id ? "?site=" + r.site_id : "" %>" data-er-once><button type="submit" class="btn btn-outline btn-sm"><%= r.status === "failed" ? "Relancer la confirmation (nouveau lien)" : "Renvoyer l'e-mail de confirmation" %></button></form><% } %>
+    <% if (elig.complete) { %><form method="post" action="<%= BASE_ER %>/<%= r.id %>/terminer<%= r.site_id ? "?site=" + r.site_id : "" %>" data-er-once><button type="submit" class="btn btn-outline btn-sm">Marquer comme terminée à la main</button></form><% } %>
+    <% if (elig.remove) { %><form method="post" action="<%= BASE_ER %>/<%= r.id %>/supprimer<%= r.site_id ? "?site=" + r.site_id : "" %>" data-er-once><button type="submit" class="btn btn-outline btn-sm mk-er-danger">Supprimer de la liste</button></form><% } %>
+  </div>
+  <p class="mk-sub">« Marquer comme terminée » n'efface rien : à utiliser quand la demande a été traitée par un autre moyen. « Supprimer de la liste » n'efface aucune donnée personnelle.</p>
+</section>
+<% } else if (elig.resend && can.request) { %>
+<section class="mk-panel"><form method="post" action="<%= BASE_ER %>/<%= r.id %>/renvoyer<%= r.site_id ? "?site=" + r.site_id : "" %>" data-er-once><button type="submit" class="btn btn-outline btn-sm">Renvoyer l'e-mail de confirmation</button></form></section>
+<% } %>
+<script src="<%= asset('/js/cms-effacement.js') %>" defer></script>
+<%- include("partials/bottom") %>

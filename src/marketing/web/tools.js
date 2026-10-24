@@ -24,7 +24,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: imp
 const TABS = [
   ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
   ["diagnostic", "Diagnostic", "tools.view"], ["systeme", "Informations système", "tools.view"], ["maintenance", "Maintenance", "tools.maintenance"],
-  ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["logs", "Journal d'activité", "tools.view"],
+  ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["effacer-donnees", "Effacer les données", "privacy.view"], ["logs", "Journal d'activité", "tools.view"],
 ];
 
 module.exports = () => {
@@ -359,6 +359,8 @@ module.exports = () => {
     } catch (error) { if (!error.user) return next(error); flash(req, "error", error.message); }
     res.redirect(`${BASE}/contenu${q(siteId)}`);
   }));
+
+  router.use(require("./erasure")({ BASE, withSite, shell, toolsCtx, q, flash })); // Outils → Effacer les données (demandes d'effacement de données personnelles)
 
   return router;
 };

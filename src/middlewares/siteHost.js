@@ -99,7 +99,7 @@ function siteRouting(req, res, next) {
 // les formulaires et le suivi, la connexion et les comptes (communs à la plateforme), les pages techniques.
 // R7 lot 6.6 : « commande » (paiement, retour du fournisseur, confirmation) rejoint la liste — le parcours d'achat reste entièrement sur l'hôte principal (voir docs/r7-contacts-par-site-2026-10-16/15-rapport-R7-lot-6-6-commerce.md)
 const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|commande|favoris|formations?)(\/|$)/i;
-const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg)|avatar)(\/|$|\.)/i;
+const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg)|avatar|effacement)(\/|$|\.)/i;
 const refusedLogged = new Set();
 // Blog propre à un site (R6 lot 4) : le domaine d'un site sert SON blog (articles rattachés à ce site, adresses logiques du site) dès que ce site a au moins un article en ligne ;
 // sans article, le blog reste introuvable sur ce domaine (comme avant). Il ne sert jamais le blog du site principal ni celui d'un autre site (portée appliquée par les routes du blog).

@@ -99,6 +99,7 @@ window.KOLA_TIPS = {
     "/site-web/outils": "Un contrôle de santé du site : ce qui fonctionne et ce qui demande votre attention.",
     "/site-web/corbeille": "Les contenus supprimés du site, à restaurer ou à effacer définitivement.",
     "/site-web/outils/importer": "Importez du contenu depuis une autre plateforme ou un fichier d'export.",
+    "/site-web/outils/effacer-donnees": "Gérez les demandes d'effacement de données personnelles : confirmation par la personne, récapitulatif, puis traitement.",
     "/site-web/outils/exporter": "Téléchargez le contenu de ce site pour le sauvegarder ou le migrer.",
     "/site-web/outils/sauvegardes": "Créez et téléchargez des sauvegardes de la base et des fichiers.",
     "/site-web/outils/diagnostic": "Lance des vérifications techniques et affiche le compte rendu.",

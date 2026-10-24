@@ -98,6 +98,7 @@ const SECTIONS = [
       leaf("outils/maintenance", "Maintenance", `${BASE}/outils/maintenance`, { permission: "tools.maintenance" }),
       leaf("outils/cache", "Caches", `${BASE}/outils/cache`, { permission: "tools.cache" }),
       leaf("outils/contenu", "Outils de contenu", `${BASE}/outils/contenu`, { permission: "tools.content" }),
+      leaf("outils/effacer-donnees", "Effacer les données", `${BASE}/outils/effacer-donnees`, { permission: "privacy.view" }),
       leaf("outils/logs", "Journal d'activité", `${BASE}/outils/logs`, { permission: "tools.view" }),
     ],
   },
@@ -243,7 +244,7 @@ const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
-  outils: ["importer", "exporter", "diagnostic", "maintenance", "cache", "contenu"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
+  outils: ["importer", "exporter", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
@@ -307,6 +308,7 @@ const ABILITY = {
   "outils/maintenance": { mode: "open", module: "outils", sub: "maintenance" },
   "outils/cache": { mode: "open", module: "outils", sub: "cache" },
   "outils/contenu": { mode: "open", module: "outils", sub: "contenu" },
+  "outils/effacer-donnees": { mode: "open", module: "outils", sub: "effacer-donnees" },
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },
