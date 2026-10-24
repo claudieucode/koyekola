@@ -32,6 +32,7 @@
   <% if (typeof connectorsJs !== "undefined" && connectorsJs) { %><script src="<%= asset('/js/cms-connectors.js') %>" defer></script><% } %>
   <% if (typeof stylesJs !== "undefined" && stylesJs) { %><script src="<%= asset('/js/cms-styles.js') %>" defer></script><% } %>
   <% if (typeof cmsThemesJs !== "undefined" && cmsThemesJs) { %><script src="<%= asset('/js/cms-themes.js') %>" defer></script><% } %>
+  <% if (typeof codeEditorJs !== "undefined" && codeEditorJs) { %><script src="<%= asset('/js/theme-code-editor.js') %>" defer></script><script src="<%= asset('/js/cms-theme-files.js') %>" defer></script><% } %>
   <% if (typeof cmsArticlesJs !== "undefined" && cmsArticlesJs) { %><script src="<%= asset('/js/cms-articles.js') %>" defer></script><% } %>
 </body>
 </html>

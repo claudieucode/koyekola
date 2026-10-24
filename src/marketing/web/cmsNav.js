@@ -44,6 +44,7 @@ const SECTIONS = [
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
+      leaf("apparence/fichiers", "Éditeur de fichiers", `${BASE}/themes/fichiers`, { permission: "appearance.read" }), // fichiers JSON virtuels d'un thème installé (services/themeFiles.js)
       leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
       leaf("apparence", "Éditeur du site", `${BASE}/editeur-du-site`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/templates`, { permission: "appearance.read" }),
@@ -247,6 +248,7 @@ const NESTED = Object.freeze({
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
   outils: ["importer", "exporter", "donnees", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees", "notes"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
+  themes: ["fichiers"], // Apparence → Éditeur de fichiers des thèmes : s'ouvre dans le cadre DU site (/sites/<id>/themes/fichiers)
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
@@ -340,6 +342,7 @@ const ABILITY = {
   "mediatheque/ajouter": { mode: "open", module: "medias", sub: "ajouter" },
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
+  "apparence/fichiers": { mode: "open", module: "themes", sub: "fichiers" },
   "apparence/polices": { mode: "open", module: "polices" },
   "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
   "apparence/widgets": { mode: "open", module: "widgets" },

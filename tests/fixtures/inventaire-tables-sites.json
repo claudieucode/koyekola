@@ -80,6 +80,10 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "cms_theme_revisions": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_themes": {
    "siteId": true,
    "classe": "isolee"

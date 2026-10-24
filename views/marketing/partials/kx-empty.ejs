@@ -1,7 +1,7 @@
 <%#
   État vide illustré (design system v3). Paramètres : art (scène, voir src/utils/illustrations.js), title, text, primary { label, href } (facultatif),
   secondary { label, href } (facultatif), compact (facultatif), role="status" posé d'office. Les actions doivent mener à une vraie fonction.
-%><div class="mk-empty kx-empty<%= typeof compact !== "undefined" && compact ? " is-compact" : "" %><%= !art ? " is-plain" : "" %>" role="status">
+%><% const emptyClass = "mk-empty kx-empty" + (typeof compact !== "undefined" && compact ? " is-compact" : "") + (!art ? " is-plain" : ""); %><div class="<%= emptyClass %>" role="status">
   <% if (art) { %><div class="kx-empty-art" aria-hidden="true"><%- illu(art) %></div><% } %>
   <div class="kx-empty-copy">
     <h2><%= title %></h2>
