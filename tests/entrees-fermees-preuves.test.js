@@ -20,11 +20,11 @@ describe("entrées fermées du menu d'un site : preuves", () => {
   });
   after(() => { db.close(); return srv.stop(); });
 
-  test("décompte exact : 2 entrées fermées sur 71 du registre, par groupe", () => {
+  test("décompte exact : 2 entrées fermées sur 72 du registre, par groupe", () => {
     const list = closed(); const by = {}; for (const i of list) by[i.group] = (by[i.group] || 0) + 1;
     assert.equal(list.length, 2);
     assert.deepEqual(by, { Redirections: 2 });
-    assert.equal(nav.projectSections(space()).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key)).length, 71);
+    assert.equal(nav.projectSections(space()).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key)).length, 72);
   });
   test("chaque entrée fermée : grisée « Bientôt » sans lien dans le menu rendu (équipe et administrateur du site), avec la permission du registre ; aucune adresse directe ne prétend fonctionner", async () => {
     const inventory = [];
