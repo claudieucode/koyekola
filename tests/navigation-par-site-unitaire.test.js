@@ -56,12 +56,12 @@ describe("navigation par site : service et widget « Menu du CMS »", () => {
     nav.assign("header", mS1, { siteId: S1 });
     assert.deepEqual(nav.assignments({ siteId: S1 }), { header: mS1 }); assert.deepEqual(nav.assignments({ siteId: S2 }), {}); assert.deepEqual(nav.assignments(), {});
   });
-  test("widget « Menu du CMS » : une page d'un site utilise d'abord ses menus ; sans menu propre, repli sur le menu du principal (comportement d'avant) ; une page du principal n'utilise jamais le menu d'un site", () => {
+  test("widget « Menu du CMS » : une page d'un site utilise d'abord ses menus ; sans menu propre : RIEN (jamais le menu du principal ni celui d'un autre site) ; une page du principal n'utilise jamais le menu d'un site", () => {
     nav.add(mS1, { type: "custom", url: "/un", label: "Lien Un" }); nav.add(mP, { type: "custom", url: "/principal", label: "Lien Principal" });
     nav.assign("header", mP, { siteId: null });
     const labels = (page) => ((W.data({}, { location: "header" }, { page, visitor: null }).menu || { items: [] }).items || []).map((i) => i.label || i.title);
     assert.ok(labels({ site_id: S1 }).includes("Lien Un") && !labels({ site_id: S1 }).includes("Lien Principal"), "site avec menu propre");
-    assert.ok(labels({ site_id: S2 }).includes("Lien Principal"), "site sans menu propre : repli historique");
+    assert.deepEqual(labels({ site_id: S2 }), [], "site sans menu propre : aucun repli vers le menu du site principal");
     assert.ok(labels({ site_id: null }).includes("Lien Principal") && !labels({ site_id: null }).includes("Lien Un"), "page du principal : menu du principal");
     assert.ok(!labels({ site_id: S2 }).includes("Lien Un"), "jamais le menu d'un autre site");
     const named = (page) => (W.data({}, { location: "name", menuName: "Menu Un" }, { page, visitor: null }).menu || { items: [] }).items.map((i) => i.label);

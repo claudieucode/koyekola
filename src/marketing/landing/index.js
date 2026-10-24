@@ -299,6 +299,7 @@ function nodeView(ctx, nodes, visitor, page, scope) {
       return { ...n, children, loopInfo: { empty: !found.items.length, message: loop.empty, paginate: Boolean(loop.paginate) && found.pages > 1, pagination: loop.pagination || "numbers", pageNo: found.pageNo, pages: found.pages,
         base: Object.entries((visitor && visitor.query) || {}).filter(([k]) => k !== `lp-${n.id}`).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&") } };
     }
+    if (n.type === "menu") { const r = resolveMenuNode(n, page, visitor); if (r) n = r; }
     const dyn = dynamicProps(ctx, n, visitor, page);
     if (dyn) n = { ...n, props: dyn };
     // Code : coloration calculée à l'affichage (texte échappé + <span class="kw-tok-…"> générés par highlight.js) ; jamais enregistrée
@@ -325,6 +326,60 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     return n.children ? { ...m, children: nodeView(ctx, n.children, visitor, page, scope) } : m;
   }).filter(Boolean);
 }
+// ---------- Navigation du CMS dans les pages publiques ----------
+// UNE source : le moteur de navigation (services/navigation). Le widget « Menu », l'en-tête et le pied de page automatiques et l'aperçu passent tous ici (viewModel) : aucune liste de liens n'est recopiée.
+// Isolation : un menu est cherché UNIQUEMENT dans le site de la page (site_id NULL = site principal) ; sans menu affecté on n'affiche RIEN (jamais le menu d'un autre site, jamais un menu « par défaut »).
+const navService = () => require("../../services/navigation");
+const cmsLinks = (items) => (items || []).filter((it) => it.href || (it.children || []).length).map((it) => {
+  const out = { label: it.label, url: it.href || "#" };
+  if (it.newTab) out.newTab = true;
+  if (it.rel) out.rel = String(it.rel).replace(/[^a-z ]/g, "");
+  const kids = cmsLinks(it.children).filter((c) => c.url !== "#");
+  if (kids.length) out.children = kids;
+  return out;
+});
+const visitorUser = (visitor) => (visitor && visitor.loggedIn ? {} : null);
+function menuFor(page, visitor, { source = "location", location = "header", menuName = "" } = {}) {
+  const siteId = page && Number.isInteger(page.site_id) ? page.site_id : null;
+  const nav = navService();
+  try {
+    if (source === "name") {
+      const wanted = String(menuName || "").trim().toLowerCase();
+      const m = wanted ? nav.listMenus({ siteId }).find((x) => String(x.name).toLowerCase() === wanted) : null;
+      return m ? nav.forMenu(m.id, { user: visitorUser(visitor) }) : null;
+    }
+    return nav.forLocation(location, { siteId, user: visitorUser(visitor) });
+  } catch { return null; }
+}
+// Widget « Menu » (nœud menu) : source « emplacement » / « menu précis », ou ancienne liste de démonstration non modifiée (traitée comme « en-tête »). Une liste manuelle explicite n'est jamais touchée.
+function resolveMenuNode(n, page, visitor) {
+  const p = n.props || {};
+  const demo = pageNodes.isDemoMenu(p);
+  const source = demo ? "location" : p.source;
+  if (!source || source === "manual") return null;
+  const found = menuFor(page, visitor, { source, location: demo ? "header" : p.location, menuName: p.menuName });
+  const items = cmsLinks(found && found.items);
+  return { ...n, props: { ...p, items, cms: { source, location: demo ? "header" : p.location || "", name: found ? found.name : "", found: items.length > 0, demo } } };
+}
+// En-tête / pied de page AUTOMATIQUES : une page de site sans en-tête (ou sans pied de page) composé affiche tout de même le menu AFFECTÉ à l'emplacement (c'est le rôle d'une affectation). Rien n'est ajouté si la page
+// montre déjà ce menu (widget Menu ou Menu du CMS pour cet emplacement : jamais deux fois), si l'en-tête a été retiré pour cette page, ou pour une page d'atterrissage / une étape de tunnel.
+function autoNavigation(page, sections, visitor) {
+  const out = { header: null, footer: null };
+  if (page.kind && page.kind !== "page") return out;
+  const has = { header: false, footer: false };
+  for (const s of sections) {
+    if (s.sitePart === "header") has.header = true;
+    if (s.sitePart === "footer") has.footer = true;
+    if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+      if (n.type === "menu" && n.props && n.props.cms && n.props.cms.location) has[n.props.cms.location] = true;
+      if (n.type === "cmsmenu" && n.props && ["header", "footer"].includes(n.props.location)) has[n.props.location] = true;
+    });
+  }
+  if (!has.header && page.header_mode !== "none") { const m = menuFor(page, visitor, { location: "header" }); const items = cmsLinks(m && m.items); if (items.length) out.header = { name: m.name, items }; }
+  if (!has.footer) { const m = menuFor(page, visitor, { location: "footer" }); const items = cmsLinks(m && m.items); if (items.length) out.footer = { name: m.name, items }; }
+  return out;
+}
+
 // Contexte des étiquettes dynamiques d'une page : visiteur, page, site, date, adresse (+ article ou formation d'un modèle de thème)
 function baseScope(ctx, visitor, page) {
   return { visitor, page, site: siteInfo(ctx, page), now: new Date(), query: (visitor && visitor.query) || {}, ...((page && page.scope) || {}) };
@@ -360,7 +415,7 @@ function viewModel(ctx, page) {
   // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
   const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
   const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
-  return { ...page, sections, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss };
+  return { ...page, sections, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {

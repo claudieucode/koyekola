@@ -598,8 +598,14 @@ const NODE_TYPES = {
       const children = (Array.isArray(x.children) ? x.children : []).slice(0, 10).map((c, j) => item(c, `lien ${i + 1}.${j + 1}`)).filter(Boolean);
       return children.length ? { ...it, children } : it;
     }).filter(Boolean);
-    if (!items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
-    return { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
+    // Source des liens : « manual » (liste écrite ici : état historique, valeur par défaut des éléments déjà enregistrés), « location » (le menu AFFECTÉ à un emplacement dans Apparence → Menus) ou « name » (un menu précis du site).
+    // Pour les deux dernières, la liste n'est PAS écrite dans la page : elle est lue dans le moteur de navigation à l'affichage (une seule source de vérité) ; les liens manuels éventuels sont conservés mais non affichés.
+    const source = ["manual", "location", "name"].includes(p.source) ? p.source : "manual";
+    if (source === "manual" && !items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
+    const out = { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
+    if (source === "location") { out.source = source; out.location = ["header", "footer", "mobile"].includes(p.location) ? p.location : "header"; }
+    else if (source === "name") { out.source = source; out.menuName = line(p.menuName, 80); }
+    return out;
   } },
   carousel: { label: "Carrousel d'images", category: "media", props: (p, at, h) => {
     const images = (Array.isArray(p.images) ? p.images : []).slice(0, 24).map((im, i) => {
@@ -1153,7 +1159,8 @@ const PALETTE = {
   badge: { icon: "tag", blank: () => ({ props: { text: "Nouveau", tone: "primary" } }) },
   timeline: { icon: "history", blank: () => ({ props: { items: [{ date: "Étape 1", title: "Inscription", text: "Ce qui se passe à cette étape." }, { date: "Étape 2", title: "Premier module", text: "Ce qui se passe ensuite." }] } }) },
   progress: { icon: "activity", blank: () => ({ props: { label: "Progression", value: 60, showValue: true } }) },
-  menu: { icon: "menu", blank: () => ({ props: { label: "Menu de la page", items: [{ label: "Programme", url: "/catalogue" }, { label: "Blog", url: "/blog" }] } }) },
+  // Nouveau widget Menu : il affiche le menu AFFECTÉ à l'emplacement choisi (en-tête par défaut) — aucun lien de démonstration : le contenu vient d'Apparence → Menus
+  menu: { icon: "menu", blank: () => ({ props: { label: "Navigation", source: "location", location: "header", items: [] } }) },
   carousel: { icon: "image", asks: "images", blank: () => ({ props: {} }) },
   toggle: { icon: "chevronDown", blank: () => ({ props: { title: "Afficher les détails", text: "Le contenu qui apparaît quand on ouvre.", open: false } }) },
   alert: { icon: "info", blank: () => ({ props: { tone: "info", title: "À savoir", text: "Une information importante pour la personne qui lit." } }) },
@@ -2091,8 +2098,18 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   return css.replace(/</g, "");
 }
 
+// Ancien widget Menu NON TOUCHÉ : sa valeur par défaut était une liste de démonstration (Programme → /catalogue, Blog → /blog), enregistrée telle quelle dans l'en-tête de nombreux sites.
+// Ce n'est pas une navigation configurée par une personne : à l'affichage, elle cède la place au menu affecté à l'emplacement (voir landing/index.js). Toute liste modifiée, même d'un seul mot, reste une liste explicite.
+function isDemoMenu(props) {
+  const p = props || {};
+  if (p.source && p.source !== "manual") return false;
+  const items = Array.isArray(p.items) ? p.items : [];
+  const same = (x, label, url) => x && x.label === label && x.url === url && !(x.children && x.children.length);
+  return items.length === 2 && same(items[0], "Programme", "/catalogue") && same(items[1], "Blog", "/blog") && ["Menu de la page", "Menu"].includes(p.label || "Menu");
+}
+
 module.exports = {
-  dynamic, registerCondition, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
+  isDemoMenu, dynamic, registerCondition, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

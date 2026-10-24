@@ -109,6 +109,9 @@ function importTemplate(ctx, siteId, { ref, importKey, name = "", menu = false, 
       const nav = navigation(), m = nav.create({ name: freeMenuName(siteId, `${pack.name} — menu`), siteId, userId });
       for (const k of pack.menu) { const pg = created.find((x) => x.key === k); if (pg) nav.add(m.id, { type: "page", object_id: pg.id }); }
       result.menu = { id: m.id, name: m.name };
+      // Affectation EXPLICITE et persistante : le menu du pack devient celui de l'en-tête du site s'il n'en a pas encore (jamais en remplaçant un menu déjà affecté). Il reste en brouillon tant que ses pages ne sont pas publiées :
+      // l'emplacement n'affiche rien avant la publication du menu (Apparence → Menus).
+      if (!nav.assignments({ siteId }).header) { nav.assign("header", m.id, { siteId }); result.menu.assigned = ["header"]; }
     }
     if (pack && styles) {
       const c = customizer(), draft = c.state(ctx, siteId, { can: () => true }).changes;
