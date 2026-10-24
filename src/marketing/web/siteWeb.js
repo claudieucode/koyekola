@@ -57,7 +57,7 @@ module.exports = () => {
     const main = !req.mk.siteOnly ? manager.mainSite(req.mk.ctx) : null;
     const showMain = Boolean(main) && (view === "actifs" || view === "tous") && (!q || /principal|site principal/i.test(q) || main.name.toLowerCase().includes(q.toLowerCase()));
     res.render("marketing/sites", {
-      title: "Mes sites", active: "sites", view, q, sites: manager.enrich(req.mk.ctx, pages.listSites(req.mk.ctx, { view, q })), counts, main: showMain ? main : null, totals: manager.totals(req.mk.ctx, counts), canModules: !req.mk.siteOnly && req.mk.can("sites.modules"), MODULES: require("../siteModules").MODULES,
+      title: "Mes sites", active: "sites", marketingShell: true, view, q, sites: manager.enrich(req.mk.ctx, pages.listSites(req.mk.ctx, { view, q })), counts, main: showMain ? main : null, totals: manager.totals(req.mk.ctx, counts), canModules: !req.mk.siteOnly && req.mk.can("sites.modules"), MODULES: require("../siteModules").MODULES,
       siteTypes: pages.SITE_TYPES, canWrite: req.mk.can("forms.write"), canDelete: !req.mk.siteOnly && req.mk.can("forms.write") && req.mk.can("pages.delete"),
     });
   });

@@ -36,12 +36,12 @@ describe("barre d'administration : coque, sites, création, notifications, profi
 
   describe("intégration dans la coque", () => {
     test("une seule barre sur les écrans du CMS (principal, site, listes, fiche de page) ; aucune sur le site public, la connexion ni les éditeurs plein cadre", async () => {
-      for (const u of ["/marketing/site-web/principal/tableau-de-bord", `${SP}/${A}/tableau-de-bord`, "/marketing/site-web/sites", `${SP}/${A}/pages`, "/marketing/site-web/articles", "/marketing/site-web/mediatheque", `/marketing/pages/${pageA}`]) {
+      for (const u of ["/marketing/site-web/principal/tableau-de-bord", `${SP}/${A}/tableau-de-bord`, `${SP}/${A}/pages`, "/marketing/site-web/articles", "/marketing/site-web/mediatheque", `/marketing/pages/${pageA}`]) {
         const r = await boss.get(u); assert.equal(r.status, 200, u);
         assert.equal((r.text.match(/<nav class="kab"/g) || []).length, 1, `${u} : une seule barre`);
         assert.match(r.text, /href="[^"]*adminbar\.css/); assert.match(r.text, /src="[^"]*adminbar\.js/);
       }
-      for (const u of ["/", "/connexion", `/marketing/pages/${pageA}/apercu`, `/marketing/site-web/personnaliser?site=${A}`]) assert.doesNotMatch((await boss.get(u)).text, /<nav class="kab"/, `${u} : pas de barre`);
+      for (const u of ["/", "/connexion", "/marketing/site-web/sites", `/marketing/pages/${pageA}/apercu`, `/marketing/site-web/personnaliser?site=${A}`]) assert.doesNotMatch((await boss.get(u)).text, /<nav class="kab"/, `${u} : pas de barre`);
     });
     test("plus de doublon dans la barre du haut : un seul menu de compte, un seul bouton de thème, plus de sélecteur de site dans le menu latéral", async () => {
       const t = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;

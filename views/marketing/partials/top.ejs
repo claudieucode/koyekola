@@ -5,7 +5,9 @@
   // Espace d'un site (palier 3, B1) : le menu est celui du site de l'adresse (siteSpace), jamais un site choisi ailleurs
   const space = typeof siteSpace !== "undefined" && siteSpace ? siteSpace : (typeof siteCandidate !== "undefined" && siteCandidate && mkh.isSiteScopedKey(active) ? siteCandidate
     : (typeof principalFrame !== "undefined" && principalFrame && active !== "sites" && mkh.isCmsKey(active) ? principalFrame : null));
-  const cms = mkh.buildCmsNav({ can: mk.can, active, space });
+  // « Mes sites » (liste globale) est une destination du menu MARKETING (Site Web → Mes sites) : l'écran le demande (marketingShell) et garde la palette Marketing,
+  // au lieu de la coque CMS dont le menu ne contenait que cette entrée. L'administration d'UN site (Ouvrir) garde sa coque CMS.
+  const cms = typeof marketingShell !== "undefined" && marketingShell ? null : mkh.buildCmsNav({ can: mk.can, active, space });
   const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
   // Barre d'administration supérieure du CMS (une seule implémentation : partials/cms-adminbar.ejs ; données filtrées par les droits côté serveur)
   const bar = cms ? mkh.adminBar({ mk, user: currentUser, space: cms.space || null, cms, sites: cmsSites, active, content: { page: typeof page !== "undefined" ? page : null } }) : null;
@@ -144,7 +146,7 @@
           </ol>
         </nav>
         <div class="mk-topbar-actions">
-          <% if (!cms && nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
+          <% if (!cms && nav.primary && !(typeof marketingShell !== "undefined" && marketingShell)) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
           <% if (!cms) { %>
           <button type="button" class="icon-btn mk-theme-btn" data-kola-theme-cycle aria-label="Thème de l'interface : automatique" title="Thème de l'interface"><span class="mk-theme-ico mk-theme-ico-light"><%- icon("sun", { size: 18 }) %></span><span class="mk-theme-ico mk-theme-ico-dark"><%- icon("moon", { size: 18 }) %></span></button>
           <div class="mk-dropdown" data-mk-dropdown>

@@ -27,6 +27,8 @@ describe("registre et menu", () => {
 
   test("chaque écran du registre répond 200 dans la coque CMS, avec son menu ouvert sur la bonne entrée", async () => {
     for (const item of cmsNav.ALL) {
+      // « Mes sites » (liste globale) est une destination du menu Marketing : elle n'a plus de coque CMS (voir « Sites et Tests A/B »)
+      if (item.key === "sites") { assert.equal((await boss.get(item.href)).status, 200, item.href); continue; }
       const res = await boss.get(item.href);
       // Personnaliser est un écran plein cadre (aperçu du site) : il répond 200 mais n'est pas dans la coque du CMS
       if (item.fullscreen) { assert.equal(res.status, 200, item.href); assert.match(res.text, /id="kwc-boot"/, `${item.href} : personnalisateur`); continue; }
@@ -119,7 +121,8 @@ describe("existant conservé", () => {
   });
 
   test("Sites et Tests A/B : écrans existants dans la coque CMS", async () => {
-    assert.match((await boss.get("/marketing/site-web/sites")).text, /is-cms/);
+    const sites = (await boss.get("/marketing/site-web/sites")).text;
+    assert.doesNotMatch(sites, /class="mk-body is-cms"/, "Mes sites : palette Marketing, pas de coque CMS"); assert.match(sites, /mk-nav-split-link/);
     assert.match((await boss.get("/marketing/site-web/tests-ab")).text, /is-cms/);
   });
 });
