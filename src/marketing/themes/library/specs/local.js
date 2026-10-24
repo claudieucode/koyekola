@@ -219,7 +219,7 @@ module.exports = [
     key: "cartons-malins", name: "Cartons Malins", category: "local", tags: ["ludique", "moderne"], siteType: "Déménageur",
     description: "Déménageur de proximité : orange vif et vert profond, titres arrondis, formules en comparatif et étapes claires du devis au carton.",
     brand: "Cartons Malins Déménagement",
-    tokens: { colors: { primary: "#c2410c", secondary: "#0f3d33", accent: "#fbbf24", background: "#fffaf4", surface: "#ffffff", text: "#1c2a26", muted: "#556560" }, fonts: { heading: "font.fredoka", body: "font.rubik", button: "font.fredoka", link: "font.rubik" }, radius: { sm: 8, md: 14, lg: 22, button: 14, field: 10, card: 18 }, shadow: { card: "md", button: "sm" } },
+    tokens: { colors: { primary: "#be123c", secondary: "#0f3d33", accent: "#fbbf24", background: "#fffaf4", surface: "#ffffff", text: "#1c2a26", muted: "#556560" }, fonts: { heading: "font.fredoka", body: "font.rubik", button: "font.fredoka", link: "font.rubik" }, radius: { sm: 8, md: 14, lg: 22, button: 14, field: 10, card: 18 }, shadow: { card: "md", button: "sm" } },
     dna: { scale: "l", pad: "normal", align: "left", shape: "soft" }, art: { seed: "cartons-malins", motifs: ["plates", "objects", "rays"] },
     head: ["head:bar", {}], foot: ["foot:big", { title: "CARTONS MALINS" }],
     menu: [["Accueil", "/"], ["Formules", "/formules"], ["Zone et tarifs", "/tarifs"], ["Questions", "/questions"], ["Devis", "/contact"]], cta: ["Devis gratuit", "/contact"],

@@ -101,7 +101,7 @@ module.exports = [
     social: ["instagram", "facebook"],
     pages: [
       { key: "accueil", name: "Accueil", blocks: [
-        ["hero:split-left", { eyebrow: "Salon de coiffure à Nantes", title: "Une coupe qui vous ressemble.", sub: "Coupe, couleur végétale, barbier : un diagnostic offert à chaque première visite.", cta: ["Réserver", "/contact"], cta2: ["Voir les tarifs", "/tarifs"] }],
+        ["hero:split-left", { eyebrow: "Salon de coiffure à Nantes", title: "Votre style, notre coup de ciseaux.", sub: "Coupe, couleur végétale, barbier : un diagnostic offert à chaque première visite.", cta: ["Réserver", "/contact"], cta2: ["Voir les tarifs", "/tarifs"] }],
         ["feat:grid-icons", { eyebrow: "Au salon", title: "Ce que nous faisons le mieux", items: [{ icon: "sparkles", t: "Coloration végétale", x: "Pigments d'origine naturelle, sans ammoniaque." }, { icon: "star", t: "Coupe sur mesure", x: "Selon votre visage et votre quotidien." }, { icon: "user", t: "Barbier", x: "Taille de barbe à la serviette chaude." }, { icon: "heart", t: "Soins profonds", x: "Rituels hydratants de 30 minutes." }] }],
         ["proof:statsbar", { items: [["12", "ans au même quai"], ["6", "coiffeuses et barbiers"], ["4,9 / 5", "note moyenne (exemple)"]] }],
         ["gal:wall", { title: "Réalisations récentes", items: [{ t: "Carré plongeant" }, { t: "Balayage miel" }, { t: "Dégradé barbe" }, { t: "Boucles naturelles" }] }],

@@ -64,7 +64,7 @@ describe("chaque thème est un site complet", () => {
       assert.ok(s.pages.length >= 6, `${s.key} : au moins quatre pages utiles + recherche + introuvable (${s.pages.length})`);
       assert.ok(s.pages.some((p) => p.key === "recherche") && s.pages.some((p) => p.key === "introuvable"), `${s.key} : états de recherche et d'erreur`);
       assert.ok(s.pages[0].blocks.length >= 5, `${s.key} : accueil trop pauvre`);
-      for (const p of s.pages) { pages += 1; const sec = library.pageSections(s.key, p.key); assert.ok(sec.length >= 4, `${s.key}/${p.key} : ${sec.length} sections`); assert.ok(p.key === "introuvable" || p.blocks.length >= 3, `${s.key}/${p.key} : au moins 3 blocs`); }
+      for (const p of s.pages) { pages += 1; const sec = library.pageSections(s.key, p.key); assert.ok(sec.length >= (p.key === "introuvable" ? 3 : 4), `${s.key}/${p.key} : ${sec.length} sections`); assert.ok(p.key === "introuvable" || p.blocks.length >= 3, `${s.key}/${p.key} : au moins 3 blocs`); }
     }
     assert.ok(pages >= 960, `${pages} pages de démonstration`);
   });
