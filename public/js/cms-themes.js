@@ -58,3 +58,49 @@
     r.readAsText(f);
   });
 })();
+
+// ---- Bibliothèque : filtres sans rechargement (le même écran existe côté serveur), changement d'appareil de l'aperçu complet ----
+(function () {
+  "use strict";
+  var root = document.querySelector("[data-tg-url]");
+  if (root) {
+    var form = root.querySelector("[data-tg-form]"), box = root.querySelector("[data-tg-results]"), cat = form.querySelector("[data-tg-cat]"), timer = null, seq = 0;
+    var load = function (pushUrl) {
+      var qs = new URLSearchParams(new FormData(form)); qs.delete("fragment");
+      var clean = new URLSearchParams(); qs.forEach(function (v, k) { if (v !== "") clean.set(k, v); });
+      var site = root.getAttribute("data-tg-site"); if (site) clean.set("site", site);
+      var page = pushUrl && pushUrl.page; if (page) clean.set("page", page);
+      var frag = new URLSearchParams(clean); frag.set("fragment", "1");
+      var mine = ++seq; box.setAttribute("aria-busy", "true");
+      fetch(root.getAttribute("data-tg-url") + "?" + frag.toString(), { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.text(); })
+        .then(function (html) { if (mine !== seq) return; box.innerHTML = html; box.setAttribute("aria-busy", "false"); try { window.history.replaceState(null, "", root.getAttribute("data-tg-url") + (clean.toString() ? "?" + clean.toString() : "")); } catch (e) { /* adresse inchangée */ } wire(); })
+        .catch(function () { box.setAttribute("aria-busy", "false"); form.submit(); });
+    };
+    var setCat = function (key) {
+      cat.value = key || "";
+      root.querySelectorAll("[data-tg-catlink]").forEach(function (a) { var on = a.getAttribute("data-tg-catlink") === (key || ""); a.classList.toggle("is-active", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
+    };
+    form.addEventListener("submit", function (e) { e.preventDefault(); load(); });
+    var q = form.querySelector("[data-tg-search]");
+    if (q) q.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(load, 250); });
+    form.querySelectorAll("[data-tg-auto]").forEach(function (s) { s.addEventListener("change", function () { load(); }); });
+    root.querySelectorAll("[data-tg-catlink]").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); setCat(a.getAttribute("data-tg-catlink")); load(); }); });
+    var wire = function () {
+      box.querySelectorAll(".mk-tg-pager a").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); var u = new URL(a.href, window.location.href); load({ page: u.searchParams.get("page") }); window.scrollTo({ top: root.querySelector(".mk-tg-cats").offsetTop - 12, behavior: "smooth" }); }); });
+      box.querySelectorAll("form[data-th-form]").forEach(function (f) { f.addEventListener("submit", function (e) { var b = e.submitter || f.querySelector("button[type=submit]"); var msg = b && b.getAttribute("data-confirm"); if (msg && !window.confirm(msg)) { e.preventDefault(); return; } if (f.getAttribute("data-busy-now") === "1") { e.preventDefault(); return; } f.setAttribute("data-busy-now", "1"); if (b) { b.setAttribute("aria-busy", "true"); b.textContent = b.getAttribute("data-busy") || "En cours…"; setTimeout(function () { b.disabled = true; }, 0); } }); });
+    };
+    wire();
+  }
+  // Aperçu complet : largeur du cadre selon l'appareil
+  var stage = document.querySelector("[data-tp-stage]");
+  if (stage) {
+    var frame = stage.querySelector("[data-tp-frame]");
+    document.querySelectorAll("[data-tp-width]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        frame.style.width = b.getAttribute("data-tp-width");
+        document.querySelectorAll("[data-tp-width]").forEach(function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
+      });
+    });
+  }
+})();

@@ -187,6 +187,8 @@ const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet"
 // Identité du site d'une page : nom (site de la page, sinon nom du site dans les réglages SEO), page d'accueil du site
 // (si elle est en ligne, sinon l'accueil de la plateforme), logo de l'organisation (réglages SEO, adresse vérifiée)
 function siteInfo(ctx, page) {
+  // Aperçu de démonstration d'un thème (Apparence → Thèmes) : la marque fictive du thème, jamais le nom d'un vrai site
+  if (ctx && ctx.demoBrand) return { name: String(ctx.demoBrand), homeUrl: "/", logo: "" };
   let seo = {};
   try { seo = require("../../seo/settings").all(); } catch { seo = {}; }
   const site = page && page.site_id ? ctx.db.prepare(`SELECT name, home_page_id, settings FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(page.site_id, ctx.organizationId) : null;

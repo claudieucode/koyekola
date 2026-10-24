@@ -96,6 +96,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
   admin.use(require("./siteUsers")()); // Utilisateurs d'UN site : équipe locale, invitations, rôles et permissions (lecture)
   admin.use(require("./themes")()); // Apparence → Thèmes : thèmes installés et thème actif par site
+  admin.use(require("./themeDemo")()); // Apparence → Thèmes : aperçu complet (site de démonstration isolé) d'un thème de la bibliothèque
   admin.use(require("./fonts")()); // Apparence → Polices : bibliothèque, téléversement et installation de polices par site
   admin.use(require("./adminBar")()); // Barre d'administration : notifications du site actif
   admin.use(require("./customizer")()); // Apparence → Personnaliser : brouillon, aperçu en direct et publication, par site
@@ -136,6 +137,7 @@ function createMarketingRouters({ db }) {
   publicRoutes.use(require("./surveysPublic")({ db }));
   publicRoutes.use(require("./smsPublic")({ db }));
   publicRoutes.use(require("./socialPublic")({ db }));
+  publicRoutes.use(require("./themeArtPublic")()); // visuels originaux des thèmes de la bibliothèque (SVG générés)
   publicRoutes.use(require("./privacyExportPublic")({ db })); // confirmation et téléchargement d'un export de données personnelles (lien à jeton)
   // API /api/v1 : authentification par clé, jamais par cookie — montée séparément (voir server.js)
   const { createApiRouter } = require("../api/router");

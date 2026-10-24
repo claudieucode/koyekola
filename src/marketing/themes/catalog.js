@@ -66,7 +66,10 @@ const RAW = [
   { key: "editorial", name: "Éditorial", version: "1.0.0", author: "Équipe Kolakisa", description: "Mise en page de magazine : fond blanc, titres serif larges, angles francs.",
     tokens: { colors: { primary: "#9f1239", secondary: "#111827", accent: "#1d4ed8", background: "#ffffff", surface: "#f8fafc", text: "#111827", muted: "#4b5563" }, fonts: { heading: "georgia", body: "georgia", button: "figtree", link: "georgia" }, type: { h1: { size: 52, weight: 700, lineHeight: 1.1 }, h2: { size: 36, weight: 700, lineHeight: 1.15 } }, radius: { sm: 2, md: 4, lg: 6, button: 2, field: 2, card: 4 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#d1d5db" } } },
 ];
-const CATALOG = Object.freeze(RAW.map((m) => Object.freeze(validateManifest(m))));
+// Bibliothèque de thèmes complets (themes/library) : ses manifestes (jetons) rejoignent le catalogue ; les cinq thèmes historiques gardent leur identifiant (une fiche de la bibliothèque de même clé les remplace)
+const library = require("./library");
+const fromLibrary = new Set(library.manifests().map((m) => m.key));
+const CATALOG = Object.freeze([...RAW.filter((m) => !fromLibrary.has(m.key)), ...library.manifests()].map((m) => Object.freeze(validateManifest(m))));
 
 const catalog = () => CATALOG;
 const fromCatalog = (key) => CATALOG.find((m) => m.key === key) || null;

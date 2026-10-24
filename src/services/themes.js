@@ -8,6 +8,7 @@
 // de la requête (jamais déduit ici). Les codes d'accès (permissions, accès limité) sont contrôlés par les routes.
 const db = require("../config/database");
 const catalog = require("../marketing/themes/catalog");
+const library = require("../marketing/themes/library");
 const tokensLib = require("../marketing/pages/tokens");
 const appearance = require("./appearance");
 const { sameScope } = require("./siteScope");
@@ -226,4 +227,78 @@ function previewTokens(siteId, key, baseTokens) {
   return { theme: m, tokens: tokensLib.normalizeTokens({ ...m.tokens, customColors: (baseTokens && baseTokens.customColors) || [] }, { strict: false }) };
 }
 
-module.exports = { installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens };
+// ---------- Bibliothèque : galerie filtrable, détails, site de démonstration ----------
+const fold = (v) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+// Les thèmes historiques (catalogue d'avant la bibliothèque) restent affichés tant que leur fiche complète n'existe pas : catégorie déduite, aperçu en pastilles de couleur
+const LEGACY = { ocean: "education", ardoise: "tech", savane: "restaurant", foret: "agriculture", editorial: "magazine" };
+function metaOf(manifest) {
+  const m = library.meta(manifest.key);
+  if (m) return m;
+  const cat = library.CATEGORIES.find((c) => c.key === LEGACY[manifest.key]) || library.CATEGORIES[0];
+  const c = manifest.tokens.colors;
+  return { key: manifest.key, name: manifest.name, category: cat.key, categoryLabel: cat.label, tags: ["moderne"], siteType: cat.label, description: manifest.description, featured: false, isNew: false, order: 900, modules: [], pages: [], palette: [c.primary, c.secondary, c.accent, c.background], fonts: { heading: manifest.tokens.fonts.heading, body: manifest.tokens.fonts.body }, dark: false, previews: null, legacy: true };
+}
+function stateOf(siteId, key, compatible) {
+  const act = activeKey(siteId);
+  const have = key === catalog.DEFAULT_KEY || Boolean(rowOf(siteId, key));
+  return key === act ? "active" : !compatible ? "incompatible" : have ? "installed" : "available";
+}
+// Galerie : tous les thèmes du catalogue pour CE site (état réel : actif, installé, disponible), filtres, tri et pagination côté serveur
+function gallery(siteId, { q = "", category = "", style = "", state = "", sort = "relevance", page = 1, perPage = 24 } = {}) {
+  const sid = scope(siteId);
+  const all = [{ manifest: catalog.ORIGINAL, meta: { key: catalog.DEFAULT_KEY, name: catalog.ORIGINAL.name, category: "kolakisa", categoryLabel: "Thème d'origine", tags: ["moderne"], siteType: "Tous types de sites", description: catalog.ORIGINAL.description, featured: false, isNew: false, order: -1, modules: [], pages: [], palette: [catalog.ORIGINAL.tokens.colors.primary, catalog.ORIGINAL.tokens.colors.secondary, catalog.ORIGINAL.tokens.colors.accent, catalog.ORIGINAL.tokens.colors.background], fonts: { heading: "bricolage", body: "figtree" }, dark: false, previews: null, builtin: true } },
+    ...catalog.catalog().map((m) => ({ manifest: m, meta: metaOf(m) }))];
+  const items = all.map(({ manifest, meta }) => { const compatible = catalog.isCompatible(manifest); const st = stateOf(sid, manifest.key, compatible); return { ...meta, version: manifest.version, author: manifest.author, state: st, installed: st === "active" || st === "installed", compatible, hasDemo: meta.pages.length > 0 }; });
+  const needle = fold(q).trim();
+  const cats = Object.fromEntries(library.CATEGORIES.map((c) => [c.key, 0]));
+  const searched = items.filter((t) => !needle || fold([t.name, t.description, t.categoryLabel, t.siteType, t.tags.join(" ")].join(" ")).includes(needle));
+  for (const t of searched) if (Object.hasOwn(cats, t.category)) cats[t.category] += 1;
+  const byState = { all: searched.length, installed: searched.filter((t) => t.installed).length, available: searched.filter((t) => t.state === "available").length };
+  let list = searched.filter((t) => (!category || t.category === category) && (!style || t.tags.includes(style)) && (!state || (state === "installed" ? t.installed : t.state === state)));
+  const byName = (a, b) => a.name.localeCompare(b.name, "fr");
+  list.sort(sort === "name" ? byName : sort === "new" ? (a, b) => Number(b.isNew) - Number(a.isNew) || b.order - a.order || byName(a, b) : (a, b) => Number(b.state === "active") - Number(a.state === "active") || Number(b.featured) - Number(a.featured) || a.order - b.order || byName(a, b));
+  const size = Math.min(60, Math.max(6, Number(perPage) || 24)), pages = Math.max(1, Math.ceil(list.length / size)), current = Math.min(pages, Math.max(1, Number(page) || 1));
+  return { items: list.slice((current - 1) * size, current * size), total: list.length, page: current, pages, perPage: size, categories: cats, byState, activeKey: activeKey(sid), featured: items.filter((t) => t.featured && t.state !== "active").slice(0, 4), libraryCount: library.load().specs.length };
+}
+// Un thème de la bibliothèque (ou du catalogue) pour CE site, avec ses détails d'affichage
+function libraryItem(siteId, key) {
+  const sid = scope(siteId);
+  if (key === catalog.DEFAULT_KEY) return null;
+  const manifest = catalog.fromCatalog(String(key));
+  if (!manifest) return null;
+  const compatible = catalog.isCompatible(manifest);
+  const meta = metaOf(manifest);
+  return { ...meta, version: manifest.version, author: manifest.author, tokens: tokensLib.normalizeTokens(manifest.tokens, { strict: false }), compatible, state: stateOf(sid, manifest.key, compatible), installed: Boolean(rowOf(sid, manifest.key)) || manifest.key === activeKey(sid), hasDemo: meta.pages.length > 0 };
+}
+
+// Site de démonstration : ajoute les pages du thème comme BROUILLONS (jamais publiées, jamais en remplacement) et, si demandé, un menu (nouveau nom). Rien d'existant n'est modifié.
+function installDemo(ctx, siteId, key, { menu = false, can = () => true } = {}) {
+  const sid = scope(siteId);
+  writableSite(ctx, sid);
+  const spec = library.specOf(String(key));
+  if (!spec) throw new UserError("Ce thème n'a pas de site de démonstration à installer.");
+  if (menu && !can("navigation.write")) throw new UserError("Vous n'avez pas le droit de créer un menu (navigation.write) : décochez cette option.");
+  const taken = new Set(pages().listPages(ctx, { siteId: sid }).map((p) => String(p.name).toLowerCase()));
+  const freeName = (base) => { let n = base, i = 2; while (taken.has(n.toLowerCase())) { n = `${base} (${i})`; i += 1; } taken.add(n.toLowerCase()); return n; };
+  return transaction(db, () => {
+    const created = spec.pages.map((p) => {
+      const name = freeName(`${p.name} · ${spec.name}`);
+      const sections = library.pageSections(spec.key, p.key);
+      const page = pages().createPage({ ...ctx, demoBrand: undefined }, { name, siteId: sid, kind: "page", sections });
+      return { key: p.key, id: page.id, name };
+    });
+    const out = { theme: spec.name, pages: created, menu: null };
+    if (menu) {
+      const nav = require("./navigation");
+      let mname = `${spec.name} — menu`.slice(0, 80);
+      for (let n = 2; db.prepare(`SELECT 1 FROM nav_menus WHERE ${sameScope("site_id")} AND name = ? COLLATE NOCASE`).get(sid, mname) && n < 100; n += 1) mname = `${spec.name} — menu (${n})`.slice(0, 80);
+      const m = nav.create({ name: mname, siteId: sid, userId: ctx.userId ?? null });
+      for (const [, url] of spec.menu) { const slug = url === "/" ? "accueil" : String(url).replace(/^\//, ""); const pg = created.find((x) => x.key === slug); if (pg) nav.add(m.id, { type: "page", object_id: pg.id }); }
+      out.menu = { id: m.id, name: m.name };
+    }
+    audit(ctx, sid, "theme.demo_installed", spec.key, { pages: created.length, menu: Boolean(out.menu) });
+    return out;
+  });
+}
+
+module.exports = { installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens, gallery, libraryItem, installDemo };

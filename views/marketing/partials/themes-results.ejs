@@ -1,0 +1,25 @@
+<%# Résultats de la galerie (cartes + pagination) : rendus en entier ou en fragment (?fragment=1) pour la recherche instantanée. %>
+<p class="mk-th-status" aria-live="polite" data-th-status><%= hasFilter ? (g.total ? g.total + " thème" + (g.total > 1 ? "s" : "") + " trouvé" + (g.total > 1 ? "s" : "") + "." : "Aucun thème ne correspond à cette recherche.") : "" %></p>
+<% if (!hasFilter && g.page === 1 && g.featured.length) { %>
+<section class="mk-tg-featured" aria-labelledby="tg-feat">
+  <h2 id="tg-feat">Recommandés</h2>
+  <ul class="mk-tg-grid mk-tg-grid--feat">
+    <% g.featured.forEach((t) => { %><%- include("themes-card", { t }) %><% }) %>
+  </ul>
+</section>
+<% } %>
+<% if (!g.items.length) { %>
+  <div class="mk-th-empty" role="status"><strong>Aucun thème ne correspond à cette recherche.</strong><p>Vérifiez l'orthographe, choisissez une autre catégorie, ou <a href="<%= to("") %>">affichez tous les thèmes</a>.</p></div>
+<% } else { %>
+  <h2 class="mk-tg-all" id="tg-all"><%= hasFilter ? "Résultats" : "Tous les thèmes" %> <small>(<%= g.total %>)</small></h2>
+  <ul class="mk-tg-grid" data-th-grid aria-labelledby="tg-all">
+    <% g.items.forEach((t) => { %><%- include("themes-card", { t }) %><% }) %>
+  </ul>
+  <% if (g.pages > 1) { %>
+  <nav class="mk-tg-pager" aria-label="Pages de résultats">
+    <% if (g.page > 1) { %><a class="btn btn-outline btn-sm" href="<%= url({ page: g.page - 1 }) %>" rel="prev">← Précédent</a><% } %>
+    <span>Page <%= g.page %> sur <%= g.pages %></span>
+    <% if (g.page < g.pages) { %><a class="btn btn-outline btn-sm" href="<%= url({ page: g.page + 1 }) %>" rel="next">Suivant →</a><% } %>
+  </nav>
+  <% } %>
+<% } %>

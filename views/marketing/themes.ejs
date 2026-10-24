@@ -1,36 +1,36 @@
 <%#
-  KOLAKISA CMS → Apparence → Thèmes : thèmes installés sur CE site (grille de cartes), recherche, activation, retour au thème précédent, suppression.
-  Le site vient de l'adresse vérifiée (T) ; chaque lien et chaque formulaire le conserve.
+  KOLAKISA CMS → Apparence → Thèmes : bibliothèque de thèmes. Le catalogue est partagé ; l'état (actif, installé, disponible) est celui de CE site, vérifié par le serveur (T).
+  Recherche, catégories, styles, état, tri et pagination sont faits côté serveur (le script ne fait qu'éviter le rechargement de la page).
 %><%- include("partials/top", { title, active }) %>
 <%
-  const act = activeTheme;
   const dismissKey = (k) => "mk_th_dismiss_" + (T.siteId || "principal") + "_" + k;
+  const act = active;
 %>
-<div class="mk-th" data-th-root>
+<div class="mk-th mk-tg" data-th-root data-tg-url="<%= BASE %>" data-tg-site="<%= T.siteId || "" %>">
   <header class="kx-hero is-compact mk-th-head">
     <div class="kx-hero-body">
       <p class="kx-eyebrow"><%= T.name %></p>
-      <h1>Thèmes <span class="mk-th-count" aria-label="<%= all.length %> thème<%= all.length > 1 ? "s" : "" %> installé<%= all.length > 1 ? "s" : "" %>"><%= all.length %></span></h1>
-      <p class="kx-hero-lead mk-th-site">Site : <strong><%= T.name %></strong> · chaque site a ses propres thèmes installés et son propre thème actif.</p>
+      <h1>Thèmes <span class="mk-th-count" aria-label="<%= g.libraryCount %> thèmes dans la bibliothèque"><%= g.libraryCount %></span></h1>
+      <p class="kx-hero-lead mk-th-site">Site : <strong><%= T.name %></strong> · le catalogue est commun à tous les sites ; chaque site a ses propres thèmes installés, son thème actif et ses réglages.</p>
       <div class="kx-hero-actions mk-actions">
-        <% if (canInstall && !readOnly) { %><a class="btn btn-primary btn-sm" href="<%= to("/ajouter") %>"><%- icon("plus", { size: 16 }) %>Ajouter un thème</a><% } %>
+        <% if (canInstall && !readOnly) { %><a class="btn btn-outline btn-sm" href="<%= to("/ajouter") %>"><%- icon("upload", { size: 16 }) %>Importer un paquet de thème</a><% } %>
         <button type="button" class="btn btn-outline btn-sm mk-th-help-btn" aria-expanded="false" aria-controls="th-help" data-th-toggle>Aide <span aria-hidden="true">▾</span></button>
       </div>
     </div>
     <div class="kx-hero-art" aria-hidden="true"><%- illu("themes") %></div>
   </header>
   <section id="th-help" class="mk-th-panel" hidden aria-label="Aide">
-    <p>Un thème change l'apparence du site public : couleurs, polices, boutons, rayons et ombres. Vos pages, articles et médias ne sont jamais modifiés.</p>
+    <p>Un thème donne au site public son apparence : couleurs, polices, boutons, rayons et ombres. Chaque thème de la bibliothèque propose aussi un site de démonstration complet (accueil, pages intérieures, contact…) à parcourir avant de choisir.</p>
     <ul>
-      <li><strong>Prévisualiser</strong> affiche la vraie page de ce site avec le thème, sans rien enregistrer.</li>
-      <li><strong>Activer</strong> applique le thème à ce site uniquement ; <strong>Revenir au thème précédent</strong> rétablit l'apparence d'avant.</li>
-      <li>Le thème actif ne peut pas être supprimé ; supprimer un thème inactif ne touche à aucun contenu.</li>
+      <li><strong>Prévisualiser</strong> ouvre ce site de démonstration, isolé du vôtre : rien n'est enregistré ni publié.</li>
+      <li><strong>Installer</strong> ajoute le thème à ce site ; <strong>Utiliser ce thème</strong> l'active (uniquement pour ce site) et vous pouvez ajouter ses pages de démonstration en brouillon.</li>
+      <li>Vos pages, articles, médias, comptes et réglages ne sont jamais supprimés. <strong>Revenir au thème précédent</strong> rétablit l'apparence d'avant.</li>
     </ul>
   </section>
 
   <div class="mk-th-notices">
     <% if (readOnly) { %><div class="mk-th-notice mk-th-notice--warn" role="status"><p>Ce site est archivé ou supprimé : les thèmes sont en consultation seule.</p></div><% } %>
-    <% if (draftPending) { %><div class="mk-th-notice mk-th-notice--warn" role="status" data-th-notice="<%= dismissKey("draft") %>"><p>Un brouillon d'apparence est en cours sur le site principal : publiez-le ou annulez-le (Apparence → Éditeur du site) avant d'activer un autre thème.</p><button type="button" class="mk-th-x" aria-label="Fermer cette notification" data-th-dismiss>×</button></div><% } %>
+    <% if (draftPending) { %><div class="mk-th-notice mk-th-notice--warn" role="status" data-th-notice="<%= dismissKey("draft") %>"><p>Un brouillon d'apparence est en cours sur le site principal : publiez-le ou annulez-le (Apparence → Éditeur du site) avant d'activer un thème.</p><button type="button" class="mk-th-x" aria-label="Fermer cette notification" data-th-dismiss>×</button></div><% } %>
     <% if (act && act.hasPrevious && canActivate && !readOnly) { %>
       <div class="mk-th-notice" role="status" data-th-notice="<%= dismissKey("prev") %>"><p>Le thème « <%= act.name %> » vient d'être activé sur ce site. Vous pouvez rétablir l'apparence précédente à tout moment.</p>
         <form method="post" action="<%= BASE %>/revenir" data-th-form><%- siteField %><button class="btn btn-outline btn-sm" type="submit" data-confirm="Rétablir l'apparence précédente de « <%= T.name %> » ?">Revenir au thème précédent</button></form>
@@ -38,38 +38,49 @@
     <% } %>
   </div>
 
-  <form class="mk-th-search" method="get" action="<%= BASE %>" role="search"><%- siteField %>
-    <label for="th-q">Rechercher des thèmes installés</label>
-    <input id="th-q" type="search" name="q" value="<%= q %>" maxlength="80" autocomplete="off" data-th-search placeholder="Nom, auteur…">
-    <button class="btn btn-outline btn-sm" type="submit">Rechercher</button>
-  </form>
-  <p class="mk-th-status" aria-live="polite" data-th-status></p>
-
-  <% if (!list.length) { %>
-    <div class="mk-th-empty" role="status"><strong>Aucun thème ne correspond à « <%= q %> ».</strong><p>Vérifiez l'orthographe, ou <a href="<%= to("") %>">affichez tous les thèmes installés</a>.</p></div>
+  <% if (act) { %>
+  <section class="mk-tg-active" aria-label="Thème actif">
+    <% if (act.previews) { %><img class="mk-tg-active-shot" src="<%= act.previews.home %>" width="480" height="300" alt="Aperçu du thème actif « <%= act.name %> »" decoding="async"><% } else { %><div class="mk-tg-active-shot mk-tg-swatch" aria-hidden="true"><% (act.palette || []).forEach((c) => { %><i style="background:<%= c %>"></i><% }) %></div><% } %>
+    <div class="mk-tg-active-body">
+      <p class="mk-tg-kicker">Thème actif</p>
+      <h2><%= act.name %></h2>
+      <p class="mk-sub"><%= act.description %></p>
+      <div class="mk-tg-actions">
+        <a class="btn btn-primary btn-sm" href="/marketing/site-web/personnaliser<%= T.siteId ? "?site=" + T.siteId : "" %>"><%- icon("palette", { size: 16 }) %>Personnaliser</a>
+        <a class="btn btn-outline btn-sm" href="<%= to("/" + act.key + "/details") %>">Informations</a>
+        <% if (act.hasDemo) { %><a class="btn btn-outline btn-sm" href="<%= to("/" + act.key + "/apercu") %>">Revoir la démonstration</a><% } %>
+      </div>
+    </div>
+  </section>
   <% } %>
-  <ul class="mk-th-grid" data-th-grid>
-    <% list.forEach((t) => { %>
-      <li class="mk-th-card mk-th-card--<%= t.state %>" data-th-card data-th-name="<%= (t.name + " " + t.author + " " + t.description).toLowerCase() %>">
-        <a class="mk-th-shotlink" href="<%= to("/" + t.key + "/details") %>" aria-label="Détails du thème <%= t.name %>"><%- include("partials/theme-shot", { theme: t, fontStack }) %></a>
-        <div class="mk-th-body">
-          <h2><%= t.name %><% if (t.state === "incompatible") { %> <span class="badge mk-status-warn">Incompatible</span><% } %></h2>
-          <p class="mk-th-meta">Version <%= t.version %> · <%= t.author %></p>
-        </div>
-        <% if (t.state === "active") { %>
-          <div class="mk-th-foot mk-th-foot--active"><strong>Actif : <%= t.name %></strong><a class="btn btn-sm mk-th-light" href="<%= to("/" + t.key + "/details") %>">Détails</a></div>
-        <% } else { %>
-          <div class="mk-th-foot">
-            <a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/details") %>">Détails</a>
-            <% if (t.state === "inactive") { %>
-              <a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/apercu") %>">Prévisualiser</a>
-              <% if (canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/<%= t.key %>/activer" data-th-form><%- siteField %><button class="btn btn-primary btn-sm" type="submit" data-confirm="Activer « <%= t.name %> » sur « <%= T.name %> » ? Les couleurs, polices et boutons du site public changent immédiatement. Vous pourrez revenir au thème précédent.">Activer</button></form><% } %>
-            <% } %>
-          </div>
-        <% } %>
-      </li>
-    <% }) %>
-    <% if (canInstall && !readOnly && !q) { %><li class="mk-th-card mk-th-add"><a href="<%= to("/ajouter") %>"><span class="mk-th-plus" aria-hidden="true">+</span><span>Ajouter un thème</span></a></li><% } %>
-  </ul>
+
+  <form class="mk-tg-filters" method="get" action="<%= BASE %>" role="search" data-tg-form>
+    <%- siteField %>
+    <div class="mk-tg-search">
+      <label for="th-q" class="mk-tg-lbl">Rechercher un thème</label>
+      <input id="th-q" type="search" name="q" value="<%= f.q %>" maxlength="80" autocomplete="off" data-tg-search placeholder="Nom, secteur, style (ex. restaurant, sombre, portfolio)">
+    </div>
+    <div class="mk-tg-sel">
+      <label for="th-style" class="mk-tg-lbl">Style</label>
+      <select id="th-style" name="style" data-tg-auto><option value="">Tous les styles</option><% Object.keys(STYLE_LABELS).forEach((k) => { %><option value="<%= k %>"<%= f.style === k ? " selected" : "" %>><%= STYLE_LABELS[k] %></option><% }) %></select>
+    </div>
+    <div class="mk-tg-sel">
+      <label for="th-etat" class="mk-tg-lbl">Affichage</label>
+      <select id="th-etat" name="etat" data-tg-auto><% Object.keys(STATES).forEach((k) => { %><option value="<%= k %>"<%= f.state === k ? " selected" : "" %>><%= STATES[k] %><%= k === "" ? " (" + g.byState.all + ")" : k === "installed" ? " (" + g.byState.installed + ")" : " (" + g.byState.available + ")" %></option><% }) %></select>
+    </div>
+    <div class="mk-tg-sel">
+      <label for="th-tri" class="mk-tg-lbl">Trier par</label>
+      <select id="th-tri" name="tri" data-tg-auto><% Object.keys(SORTS).forEach((k) => { %><option value="<%= k %>"<%= f.sort === k ? " selected" : "" %>><%= SORTS[k] %></option><% }) %></select>
+    </div>
+    <input type="hidden" name="categorie" value="<%= f.category %>" data-tg-cat>
+    <button class="btn btn-outline btn-sm mk-tg-go" type="submit">Rechercher</button>
+  </form>
+
+  <nav class="mk-tg-cats" aria-label="Catégories de thèmes" data-tg-cats>
+    <a href="<%= url({ categorie: "" }) %>" data-tg-catlink="" class="<%= !f.category ? "is-active" : "" %>"<%- !f.category ? ' aria-current="true"' : "" %>>Toutes <span><%= g.byState.all %></span></a>
+    <% CATEGORIES.forEach((c) => { if (g.categories[c.key]) { %><a href="<%= url({ categorie: c.key }) %>" data-tg-catlink="<%= c.key %>" class="<%= f.category === c.key ? "is-active" : "" %>"<%- f.category === c.key ? ' aria-current="true"' : "" %>><%= c.label %> <span><%= g.categories[c.key] %></span></a><% } }) %>
+  </nav>
+
+  <div data-tg-results aria-busy="false"><%- include("partials/themes-results") %></div>
 </div>
 <%- include("partials/bottom") %>

@@ -1,15 +1,24 @@
-<%# Aperçu d'un thème : la vraie page du site, affichée avec les jetons du thème (rien n'est enregistré). %><%- include("partials/top", { title, active }) %>
-<div class="mk-th mk-th-previewpage" data-th-root>
-  <div class="mk-th-head"><h1>Aperçu : <%= theme.name %></h1>
-    <a class="btn btn-outline btn-sm" href="<%= to("") %>">← Retour à la liste des thèmes</a>
-    <% if (installed && theme.state === "inactive" && canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/<%= theme.key %>/activer" data-th-form><%- siteField %><button class="btn btn-primary btn-sm" type="submit" data-confirm="Activer « <%= theme.name %> » sur « <%= T.name %> » ? Les couleurs, polices et boutons du site public changent immédiatement.">Activer ce thème</button></form>
-    <% } else if (!installed && canInstall && !readOnly) { %><form method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %><input type="hidden" name="key" value="<%= theme.key %>"><button class="btn btn-primary btn-sm" type="submit" data-busy="Installation…">Installer ce thème</button></form><% } %>
-  </div>
-  <p class="mk-th-site">Site : <strong><%= T.name %></strong> · aperçu non enregistré : le thème actif du site ne change pas.</p>
-  <% if (frame) { %>
-    <div class="mk-th-framewrap"><iframe class="mk-th-frame" title="Aperçu du site avec le thème <%= theme.name %>" src="<%= frame %>" loading="lazy"></iframe></div>
-  <% } else { %>
-    <div class="mk-th-empty" role="status"><strong>Ce site n'a pas encore de page à afficher.</strong><p>L'aperçu utilise le contenu réel du site : créez une page pour pouvoir y voir ce thème. Voici, en attendant, l'aperçu généré à partir des jetons du thème.</p><div class="mk-th-detail-shot"><%- include("partials/theme-shot", { theme, fontStack }) %></div></div>
-  <% } %>
+<%# Aperçu COMPLET d'un thème de la bibliothèque : son site de démonstration, isolé du site (aucun contenu lu, rien d'enregistré), page par page et par appareil. %><%- include("partials/top", { title, active }) %>
+<div class="mk-th mk-tp" data-th-root>
+  <header class="mk-tp-bar">
+    <a class="btn btn-outline btn-sm" href="<%= to("") %>">← Thèmes</a>
+    <div class="mk-tp-title"><h1><%= theme.name %></h1><span><%= theme.categoryLabel %></span></div>
+    <nav class="mk-tp-pages" aria-label="Pages du site de démonstration">
+      <% theme.pages.forEach((p) => { %><a href="<%= to("/" + theme.key + "/apercu", { page: p.key }) %>" data-tp-page="<%= p.key %>"<%- p.key === pageKey ? ' aria-current="page"' : "" %>><%= p.name %></a><% }) %>
+    </nav>
+    <div class="mk-tp-devices" role="group" aria-label="Appareil d'aperçu">
+      <button type="button" class="btn btn-outline btn-sm" data-tp-width="100%" aria-pressed="true"><%- icon("monitor", { size: 16 }) %><span>Ordinateur</span></button>
+      <button type="button" class="btn btn-outline btn-sm" data-tp-width="820px" aria-pressed="false"><%- icon("tablet", { size: 16 }) %><span>Tablette</span></button>
+      <button type="button" class="btn btn-outline btn-sm" data-tp-width="390px" aria-pressed="false"><%- icon("smartphone", { size: 16 }) %><span>Mobile</span></button>
+    </div>
+    <div class="mk-tp-actions">
+      <a class="btn btn-outline btn-sm" href="<%= to("/" + theme.key + "/details") %>">Détails</a>
+      <% if (theme.state === "active") { %><span class="badge mk-status-ok">Thème actif</span>
+      <% } else if (theme.state === "installed" && canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/<%= theme.key %>/activer" data-th-form><%- siteField %><button class="btn btn-primary btn-sm" type="submit" data-confirm="Utiliser « <%= theme.name %> » sur « <%= T.name %> » ? Vos contenus ne sont pas modifiés ; l'apparence du site change." data-busy="Activation…">Utiliser ce thème</button></form>
+      <% } else if (theme.state === "available" && canInstall && !readOnly) { %><form method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %><input type="hidden" name="key" value="<%= theme.key %>"><button class="btn btn-primary btn-sm" type="submit" data-busy="Installation…">Installer</button></form><% } %>
+    </div>
+  </header>
+  <p class="mk-th-site">Site de démonstration isolé : textes, chiffres, personnes et coordonnées sont fictifs, et rien de votre site <strong>« <%= T.name %> »</strong> n'est utilisé ni modifié. <a href="<%= to("/" + theme.key + "/apercu", { mode: "site" }) %>">Voir ce thème avec le contenu de mon site</a></p>
+  <div class="mk-tp-stage" data-tp-stage><iframe class="mk-tp-frame" data-tp-frame title="Aperçu du thème <%= theme.name %> : page « <%= (theme.pages.find((p) => p.key === pageKey) || {}).name %> »" src="<%= frame %>"></iframe></div>
 </div>
 <%- include("partials/bottom") %>

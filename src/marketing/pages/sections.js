@@ -31,6 +31,8 @@ function imageUrl(v, label) {
   if (!url) return "";
   if (/^\/uploads\/marketing\/\d+\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9._-]+$/.test(url)) return url;
   if (/^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(url)) return url;
+  // Visuels originaux des thèmes de la bibliothèque (Apparence → Thèmes) : SVG générés par Kolakisa, adresse de forme fixe (themes/library/art.js)
+  if (/^\/themes-art\/[a-z][a-z0-9-]{1,39}\/(?:hero|wide|card|square|portrait|avatar|banner)(?:-(?:[1-9]|1[0-9]|2[0-4]))?\.svg$/.test(url)) return url;
   if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
   throw bad(`${label} : l'image doit venir de la médiathèque ou d'une adresse https://.`);
 }

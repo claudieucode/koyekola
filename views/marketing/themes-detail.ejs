@@ -1,30 +1,49 @@
-<%# Fiche d'un thème : informations, état et actions. %><%- include("partials/top", { title, active }) %>
-<div class="mk-th" data-th-root>
-  <div class="mk-th-head"><h1><%= theme.name %></h1><a class="btn btn-outline btn-sm" href="<%= to("") %>">← Thèmes installés</a></div>
-  <p class="mk-th-site">Site : <strong><%= T.name %></strong></p>
-  <div class="mk-th-detail">
-    <div class="mk-th-detail-shot"><%- include("partials/theme-shot", { theme, fontStack }) %></div>
-    <div>
-      <p class="mk-th-state"><span class="badge <%= theme.state === "active" ? "mk-status-ok" : theme.state === "incompatible" ? "mk-status-warn" : "mk-status-off" %>"><%= theme.state === "active" ? "Actif" : theme.state === "incompatible" ? "Incompatible" : "Installé (inactif)" %></span></p>
-      <dl class="mk-th-dl">
-        <dt>Version</dt><dd><%= theme.version %></dd>
-        <dt>Auteur</dt><dd><%= theme.author %></dd>
-        <dt>Source</dt><dd><%= theme.source === "integre" ? "Intégré à Kolakisa" : theme.source === "catalogue" ? "Catalogue Kolakisa" : "Paquet importé" %></dd>
-        <dt>Compatibilité</dt><dd><%= theme.compatible ? "Compatible (format " + theme.api + ")" : "Incompatible : format " + theme.api + " plus récent que celui de ce Kolakisa" %></dd>
-        <% if (theme.installedAt) { %><dt>Installé le</dt><dd><%= String(theme.installedAt).slice(0, 10).split("-").reverse().join("/") %></dd><% } %>
-        <dt>Description</dt><dd><%= theme.description || "—" %></dd>
-        <dt>Couleurs</dt><dd class="mk-th-sw"><% ["primary", "secondary", "accent", "background", "surface", "text"].forEach((k) => { %><span title="<%= k %> : <%= theme.tokens.colors[k] %>" style="background:<%= theme.tokens.colors[k] %>"></span><% }) %></dd>
-      </dl>
+<%# Fiche d'un thème de la bibliothèque : aperçus réels, pages, couleurs, polices, compatibilité, crédits, état sur CE site et actions. %><%- include("partials/top", { title, active }) %>
+<div class="mk-th mk-td" data-th-root>
+  <div class="mk-th-head"><h1><%= theme.name %></h1><a class="btn btn-outline btn-sm" href="<%= to("") %>">← Bibliothèque de thèmes</a></div>
+  <p class="mk-th-site">Site : <strong><%= T.name %></strong> · <%= theme.categoryLabel %> · <%= theme.siteType %></p>
+  <div class="mk-td-grid">
+    <div class="mk-td-media">
+      <% if (theme.previews) { %>
+        <img class="mk-td-main" src="<%= theme.previews.home %>" width="960" height="600" decoding="async" alt="Aperçu de la page d'accueil du thème <%= theme.name %>">
+        <div class="mk-td-more">
+          <img src="<%= theme.previews.inner %>" width="400" height="250" loading="lazy" decoding="async" alt="Aperçu d'une page intérieure du thème <%= theme.name %>">
+          <img class="mk-td-phone" src="<%= theme.previews.mobile %>" width="140" height="304" loading="lazy" decoding="async" alt="Aperçu mobile du thème <%= theme.name %>">
+        </div>
+      <% } %>
+    </div>
+    <div class="mk-td-info">
+      <p class="mk-th-state"><span class="badge <%= theme.state === "active" ? "mk-status-ok" : theme.state === "incompatible" ? "mk-status-warn" : "mk-status-off" %>"><%= theme.state === "active" ? "Actif sur ce site" : theme.state === "installed" ? "Installé sur ce site" : theme.state === "incompatible" ? "Incompatible" : "Disponible" %></span></p>
+      <p><%= theme.description %></p>
+      <p class="mk-tg-tags"><% theme.tags.forEach((k) => { %><span class="mk-tg-tag"><%= STYLE_LABELS[k] || k %></span><% }) %></p>
       <div class="mk-th-actions">
-        <% if (theme.state === "inactive") { %>
-          <a class="btn btn-outline" href="<%= to("/" + theme.key + "/apercu") %>">Prévisualiser</a>
-          <% if (canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/<%= theme.key %>/activer" data-th-form><%- siteField %><button class="btn btn-primary" type="submit" data-confirm="Activer « <%= theme.name %> » sur « <%= T.name %> » ? Les couleurs, polices et boutons du site public changent immédiatement. Vous pourrez revenir au thème précédent.">Activer</button></form><% } %>
+        <a class="btn btn-outline" href="<%= to("/" + theme.key + "/apercu") %>">Prévisualiser</a>
+        <% if (theme.state === "available" && canInstall && !readOnly) { %><form method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %><input type="hidden" name="key" value="<%= theme.key %>"><button class="btn btn-primary" type="submit" data-busy="Installation…">Installer</button></form><% } %>
+        <% if (theme.state === "installed" && canActivate && !readOnly) { %>
+          <form method="post" action="<%= BASE %>/<%= theme.key %>/activer" data-th-form class="mk-td-activate"><%- siteField %>
+            <label class="mk-th-check"><input type="checkbox" name="demo" value="1"> Ajouter aussi les pages de démonstration (brouillons)</label>
+            <label class="mk-th-check"><input type="checkbox" name="menu" value="1"> Créer le menu du thème</label>
+            <button class="btn btn-primary" type="submit" data-confirm="Utiliser « <%= theme.name %> » sur « <%= T.name %> » ? Vos contenus ne sont pas modifiés ; l'apparence du site change." data-busy="Activation…">Utiliser ce thème</button>
+          </form>
         <% } %>
-        <% if (theme.state === "active" && theme.hasPrevious && canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/revenir" data-th-form><%- siteField %><button class="btn btn-outline" type="submit" data-confirm="Rétablir l'apparence précédente de « <%= T.name %> » ?">Revenir au thème précédent</button></form><% } %>
-        <% if (theme.removable && canDelete && !readOnly) { %><form method="post" action="<%= BASE %>/<%= theme.key %>/supprimer" data-th-form><%- siteField %><button class="btn btn-danger" type="submit" data-confirm="Supprimer le thème « <%= theme.name %> » de « <%= T.name %> » ? Les pages, médias et réglages du site ne sont pas touchés.">Supprimer</button></form><% } %>
+        <% if (theme.state === "active") { %><a class="btn btn-primary" href="/marketing/site-web/personnaliser<%= T.siteId ? "?site=" + T.siteId : "" %>">Personnaliser</a><% } %>
       </div>
-      <% if (theme.state === "active") { %><p class="mk-th-note">Le thème actif ne peut pas être supprimé : activez d'abord un autre thème.</p><% } %>
-      <% if (theme.builtin) { %><p class="mk-th-note">Le thème d'origine fait partie de Kolakisa : il ne peut pas être supprimé.</p><% } %>
+      <% if (theme.state === "active" && canDemo && !readOnly) { %>
+        <form method="post" action="<%= BASE %>/<%= theme.key %>/demo" data-th-form class="mk-td-demo"><%- siteField %>
+          <label class="mk-th-check"><input type="checkbox" name="menu" value="1"> Créer aussi le menu du thème</label>
+          <button class="btn btn-outline btn-sm" type="submit" data-confirm="Ajouter les pages de démonstration de « <%= theme.name %> » à « <%= T.name %> » ? Elles sont créées en brouillon, sans toucher à vos pages." data-busy="Ajout…">Ajouter les pages de démonstration</button>
+        </form>
+      <% } %>
+      <dl class="mk-th-dl">
+        <dt>Pages de démonstration</dt><dd><ul class="mk-td-pages"><% theme.pages.forEach((p) => { %><li><a href="<%= to("/" + theme.key + "/apercu", { page: p.key }) %>"><%= p.name %></a></li><% }) %></ul></dd>
+        <dt>Couleurs</dt><dd class="mk-th-sw"><% ["primary", "secondary", "accent", "background", "surface", "text"].forEach((k) => { %><span title="<%= k %> : <%= theme.tokens.colors[k] %>" style="background:<%= theme.tokens.colors[k] %>"></span><% }) %></dd>
+        <dt>Polices</dt><dd>Titres : <strong style="font-family:<%= fontStack(theme.fonts.heading) %>"><%= fontName(theme.fonts.heading) %></strong> · Texte : <strong style="font-family:<%= fontStack(theme.fonts.body) %>"><%= fontName(theme.fonts.body) %></strong></dd>
+        <dt>Version</dt><dd><%= theme.version %> · <%= theme.author %></dd>
+        <dt>Compatibilité</dt><dd><%= theme.compatible ? "Compatible avec ce Kolakisa. Chaque site garde son propre thème actif et ses réglages." : "Incompatible : format plus récent que celui de ce Kolakisa." %></dd>
+        <% if (theme.modules && theme.modules.length) { %><dt>Modules requis</dt><dd><%= theme.modules.join(" · ") %></dd><% } %>
+        <dt>Crédits et licences</dt><dd>Visuels : illustrations originales générées par Kolakisa pour ce thème (aucune photographie ni image tierce, aucune attribution requise). Polices : bibliothèque de polices libres de Kolakisa (licence OFL), hébergées localement.</dd>
+      </dl>
+      <p class="mk-th-note">Changer de thème ne supprime jamais vos pages, articles, médias, comptes ou réglages : seule l'apparence (couleurs, polices, boutons, formes) est remplacée, et « Revenir au thème précédent » la rétablit.</p>
     </div>
   </div>
 </div>

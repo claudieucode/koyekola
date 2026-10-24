@@ -1,0 +1,59 @@
+// Production des aperçus visuels de la bibliothèque de thèmes : captures du RENDU RÉEL (site de démonstration de chaque thème) en vrai Chrome, converties en WebP.
+//   node scripts/themes-previews.js [clé-de-thème …]          (sans argument : tous les thèmes ; ceux dont les images existent déjà sont refaits)
+// Variables : PX_OUT = dossier de sortie (défaut public/img/theme-previews) ; CHROME_PATH ; NODE_PATH doit permettre de trouver « playwright-core ».
+// Le script démarre le banc d'essai léger (scripts/lib/themeHarness.js : base temporaire, mêmes routes de rendu que l'application), ouvre l'aperçu isolé de chaque thème et enregistre trois vues :
+// accueil (ordinateur, haut de page), page intérieure (ordinateur) et mobile (390 px). Aucune donnée de production n'est lue ni écrite.
+const fs = require("node:fs");
+const path = require("node:path");
+const ROOT = path.join(__dirname, "..");
+const { startHarness } = require("./lib/themeHarness");
+const sharp = require(path.join(ROOT, "node_modules", "sharp"));
+const library = require(path.join(ROOT, "src", "marketing", "themes", "library"));
+const { chromium } = require("playwright-core");
+
+const OUT = process.env.PX_OUT || path.join(ROOT, "public", "img", "theme-previews");
+const CHROME = process.env.CHROME_PATH || ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"].find((p) => fs.existsSync(p));
+const VIEWS = [
+  { name: "home", width: 1440, height: 900, page: (s) => "accueil", out: 960, quality: 80 },
+  { name: "inner", width: 1440, height: 900, page: (s) => (s.preview && s.preview.inner) || s.pages[1].key, out: 800, quality: 78 },
+  { name: "mobile", width: 390, height: 844, page: (s) => "accueil", out: 390, quality: 78 },
+];
+
+(async () => {
+  const wanted = process.argv.slice(2);
+  const specs = library.load().specs.filter((s) => !wanted.length || wanted.includes(s.key));
+  if (!specs.length) throw new Error("Aucun thème à photographier.");
+  fs.mkdirSync(OUT, { recursive: true });
+  const srv = await startHarness();
+  const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  let done = 0;
+  try {
+    for (const s of specs) {
+      // Contrôle visuel : PX_FULL=1 enregistre chaque page du thème en entier (ordinateur, 1440 px) sans produire les aperçus de la galerie
+      if (process.env.PX_FULL) {
+        for (const pg of s.pages) {
+          const ctx = await browser.newContext({ viewport: { width: Number(process.env.PX_WIDTH) || 1440, height: 900 }, reducedMotion: "reduce" });
+          const page = await ctx.newPage();
+          try { await page.goto(`${srv.base}/marketing/site-web/themes/${s.key}/demo/${pg.key}`, { waitUntil: "load", timeout: 60000 }); await page.evaluate(() => document.fonts && document.fonts.ready); await page.addStyleTag({ content: ".lp-preview-bar{display:none!important}" }); await page.waitForTimeout(200); await page.screenshot({ path: path.join(OUT, `${s.key}-${pg.key}-full.png`), fullPage: true }); } finally { await ctx.close(); }
+        }
+        done += 1; continue;
+      }
+      for (const v of VIEWS) {
+        const ctx = await browser.newContext({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: v.name === "mobile" ? 2 : 1, reducedMotion: "reduce" });
+        const page = await ctx.newPage();
+        try {
+          const r = await page.goto(`${srv.base}/marketing/site-web/themes/${s.key}/demo/${v.page(s)}`, { waitUntil: "load", timeout: 60000 });
+          if (!r || r.status() !== 200) throw new Error(`HTTP ${r && r.status()}`);
+          await page.evaluate(() => document.fonts && document.fonts.ready);
+          await page.addStyleTag({ content: ".lp-preview-bar{display:none!important}" });
+          await page.waitForTimeout(250);
+          const png = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: v.width, height: v.height } });
+          await sharp(png).resize({ width: v.out }).webp({ quality: v.quality }).toFile(path.join(OUT, `${s.key}-${v.name}.webp`));
+        } finally { await ctx.close(); }
+      }
+      done += 1;
+      if (done % 5 === 0) console.log(`${done}/${specs.length}`);
+    }
+    console.log(`Aperçus produits pour ${done} thème(s) dans ${OUT}`);
+  } finally { await browser.close(); await srv.stop(); }
+})().catch((e) => { console.error(e); process.exit(1); });
