@@ -1,0 +1,12 @@
+<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOLAKISA" } }) %>
+  <div class="auth-page">
+    <div class="auth-card">
+      <h1>Vos données personnelles</h1>
+      <p class="subtitle">L'export des données personnelles que « <%= siteName %> » détient à votre sujet est prêt. C'est une archive ZIP : ouvrez « donnees-personnelles.html » dans votre navigateur pour la lire.</p>
+      <form method="post">
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Télécharger l'archive</button>
+      </form>
+      <p class="form-footer">Ce lien est personnel et temporaire (jusqu'au <%= new Date(String(expiresAt).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) %>). Ne le partagez pas : l'archive contient vos informations personnelles.</p>
+    </div>
+  </div>
+<%- include("../partials/footer") %>

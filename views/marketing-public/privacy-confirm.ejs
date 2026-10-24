@@ -1,0 +1,17 @@
+<%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOLAKISA" } }) %>
+  <div class="auth-page">
+    <div class="auth-card">
+      <% if (done) { %>
+        <h1>Demande confirmée</h1>
+        <p class="subtitle">Merci. Votre demande d'export de données personnelles sur « <%= siteName %> » est confirmée. Les responsables du site vont préparer l'archive, puis vous enverront un lien de téléchargement par e-mail.</p>
+      <% } else { %>
+        <h1>Confirmer votre demande</h1>
+        <p class="subtitle">Vous avez demandé l'export des données personnelles que « <%= siteName %> » détient à votre sujet. Confirmez-vous cette demande ?</p>
+        <form method="post">
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Oui, je confirme ma demande</button>
+        </form>
+        <p class="form-footer">Si vous n'êtes pas à l'origine de cette demande, fermez simplement cette page : rien ne sera exporté.</p>
+      <% } %>
+    </div>
+  </div>
+<%- include("../partials/footer") %>

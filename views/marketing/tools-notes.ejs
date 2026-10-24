@@ -1,0 +1,91 @@
+<%# Outils → Admin Notes : notes internes du site. Texte échappé (jamais interprété comme HTML) ; suppression avec confirmation sur le serveur ; JS = confort seulement. %>
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Admin Notes", intro: "Notes internes de ce site : instructions techniques, rappels, décisions, tâches à faire. Elles ne sont visibles que par les administrateurs autorisés de ce site et ne sont jamais publiées.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+  const sep = siteId ? "&" : "?";
+  const link = (extra) => `${BASE}/notes${q}${extra ? sep + extra : ""}`;
+%>
+<div class="mk-nt">
+  <% if (message) { %><p class="mk-nt-alert" role="alert"><%= message %></p><% } %>
+
+  <% if (confirmDelete) { %>
+  <section class="mk-nt-card mk-nt-confirm" aria-labelledby="nt-del">
+    <h2 id="nt-del">Supprimer cette note ?</h2>
+    <p>La note « <strong><%= confirmDelete.title %></strong> » (créée le <%= fdate(confirmDelete.created_at) %>) sera <strong>supprimée définitivement</strong>. Cette action est irréversible.</p>
+    <form method="post" action="<%= BASE %>/notes/<%= confirmDelete.id %>/supprimer<%= q %>" class="mk-nt-actions" data-nt-once>
+      <input type="hidden" name="confirm" value="1">
+      <button type="submit" class="btn btn-danger btn-sm">Supprimer définitivement</button>
+      <a class="btn btn-outline btn-sm" href="<%= link("") %>">Annuler</a>
+    </form>
+  </section>
+  <% } %>
+
+  <% if (can.create && !editId) { %>
+  <section class="mk-nt-card" aria-labelledby="nt-new">
+    <h2 id="nt-new">Ajouter une nouvelle note</h2>
+    <form method="post" action="<%= BASE %>/notes<%= q %>" class="mk-nt-form" data-nt-once novalidate>
+      <div class="mk-nt-field">
+        <label for="nt-title">Titre</label>
+        <input id="nt-title" name="title" type="text" maxlength="<%= limits.title %>" required value="<%= draft.title %>" aria-describedby="nt-title-hint<%= errors.title ? " nt-title-err" : "" %>"<%- errors.title ? ' aria-invalid="true"' : "" %>>
+        <p class="mk-sub" id="nt-title-hint"><span data-nt-count="nt-title"><%= draft.title.length %></span> / <%= limits.title %> caractères</p>
+        <% if (errors.title) { %><p class="mk-nt-err" id="nt-title-err" role="alert"><%= errors.title %></p><% } %>
+      </div>
+      <div class="mk-nt-field">
+        <label for="nt-body">Contenu</label>
+        <textarea id="nt-body" name="body" rows="7" maxlength="<%= limits.body + 2000 %>" required aria-describedby="nt-body-hint<%= errors.body ? " nt-body-err" : "" %>"<%- errors.body ? ' aria-invalid="true"' : "" %>><%= draft.body %></textarea>
+        <p class="mk-sub" id="nt-body-hint"><span data-nt-count="nt-body"><%= draft.body.length %></span> / <%= limits.body %> caractères · les retours à la ligne sont conservés</p>
+        <% if (errors.body) { %><p class="mk-nt-err" id="nt-body-err" role="alert"><%= errors.body %></p><% } %>
+      </div>
+      <div class="mk-nt-actions"><button type="submit" class="btn btn-primary" data-nt-submit>Ajouter la note</button></div>
+    </form>
+  </section>
+  <% } %>
+
+  <section aria-labelledby="nt-list">
+    <h2 id="nt-list">Notes existantes <span class="mk-sub">(<%= data.total %>)</span></h2>
+    <% if (!data.total) { %>
+      <div class="mk-nt-empty"><p><strong>Aucune note pour ce site.</strong></p><p class="mk-sub"><%= can.create ? "Utilisez le formulaire ci-dessus pour ajouter la première : un rappel, une consigne technique, une décision de projet." : "Vous n'avez pas le droit d'ajouter des notes." %></p></div>
+    <% } else { %>
+    <div class="mk-nt-list">
+      <% data.notes.forEach((n) => { %>
+      <article class="mk-nt-note" id="note-<%= n.id %>">
+        <% if (editId === n.id) { %>
+        <form method="post" action="<%= BASE %>/notes/<%= n.id %>/modifier<%= q %>" class="mk-nt-form" data-nt-once novalidate>
+          <div class="mk-nt-field">
+            <label for="nt-e-title">Titre</label>
+            <input id="nt-e-title" name="title" type="text" maxlength="<%= limits.title %>" required value="<%= draft.title %>"<%- errors.title ? ' aria-invalid="true"' : "" %>>
+            <% if (errors.title) { %><p class="mk-nt-err" role="alert"><%= errors.title %></p><% } %>
+          </div>
+          <div class="mk-nt-field">
+            <label for="nt-e-body">Contenu</label>
+            <textarea id="nt-e-body" name="body" rows="9" maxlength="<%= limits.body + 2000 %>" required<%- errors.body ? ' aria-invalid="true"' : "" %>><%= draft.body %></textarea>
+            <% if (errors.body) { %><p class="mk-nt-err" role="alert"><%= errors.body %></p><% } %>
+          </div>
+          <div class="mk-nt-actions"><button type="submit" class="btn btn-primary btn-sm" data-nt-submit>Enregistrer les modifications</button><a class="btn btn-outline btn-sm" href="<%= link("") %>#note-<%= n.id %>">Annuler</a></div>
+        </form>
+        <% } else { %>
+        <header class="mk-nt-head">
+          <h3><%= n.title %></h3>
+          <p class="mk-sub mk-nt-meta">Créée le <%= fdate(n.created_at) %><%= n.author_name ? " par " + n.author_name : "" %><%= n.updated_at ? " · modifiée le " + fdate(n.updated_at) : "" %></p>
+        </header>
+        <div class="mk-nt-body" data-nt-body><%= n.body %></div>
+        <div class="mk-nt-actions">
+          <% if (can.edit) { %><a class="btn btn-outline btn-sm" href="<%= link("modifier=" + n.id) %>#note-<%= n.id %>">Modifier</a><% } %>
+          <% if (can.delete) { %><a class="btn btn-outline btn-sm mk-nt-del" href="<%= link("supprimer=" + n.id) %>" aria-label="Supprimer la note « <%= n.title %> »">Supprimer</a><% } %>
+        </div>
+        <% } %>
+      </article>
+      <% }) %>
+    </div>
+    <% if (data.pages > 1) { %>
+    <nav class="mk-nt-pager" aria-label="Pagination des notes">
+      <% if (data.page > 1) { %><a class="btn btn-outline btn-sm" href="<%= link("page=" + (data.page - 1)) %>">← Plus récentes</a><% } %>
+      <span class="mk-sub">Page <%= data.page %> sur <%= data.pages %></span>
+      <% if (data.page < data.pages) { %><a class="btn btn-outline btn-sm" href="<%= link("page=" + (data.page + 1)) %>">Plus anciennes →</a><% } %>
+    </nav>
+    <% } %>
+    <% } %>
+  </section>
+</div>
+<%- include("partials/bottom", { noteJs: true }) %>

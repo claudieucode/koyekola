@@ -1,0 +1,133 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Exporter les données", intro: "Cet outil aide les propriétaires de sites à respecter les lois et réglementations locales en exportant les données connues d'une personne dans un fichier ZIP. L'export n'est préparé qu'après la confirmation de la personne concernée, puis remis par un lien temporaire." }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+  const size = (b) => (b >= 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko");
+  const STEP = { resend: ["Renvoyer l'e-mail de confirmation", "renvoyer", "mail"], generate: ["Générer l'export", "generer", "archive"], retry: ["Réessayer l'export", "generer", "refresh"], send: ["Envoyer le lien à la personne", "envoyer", "mail"], restart: ["Relancer la demande", "relancer", "refresh"], delete: ["Supprimer", "supprimer", "trash"] };
+  const stateClass = { pending_confirmation: "warn", confirmed: "info", running: "info", ready: "ok", sent: "ok", expired: "off", failed: "bad", no_data: "off" };
+  const filterLabel = data.filter ? STATUS_LABELS[data.filter] : "";
+%>
+
+<section class="mk-panel mk-px-new" aria-labelledby="px-add">
+  <h2 id="px-add">Ajouter une demande d'exportation de données</h2>
+  <form id="px-new" method="post" action="<%= PAGE %><%= q %>" novalidate data-px-form class="mk-px-form">
+    <div class="mk-px-field">
+      <label for="px-id">Identifiant ou adresse e-mail</label>
+      <div>
+        <input id="px-id" name="identifiant" type="text" maxlength="254" required autocomplete="off" spellcheck="false" aria-describedby="px-id-help px-id-error">
+        <p id="px-id-help" class="mk-sub">L'adresse e-mail de la personne, ou l'identifiant de son compte sur la plateforme.</p>
+        <p id="px-id-error" class="mk-px-error" role="alert" data-px-error hidden></p>
+      </div>
+    </div>
+    <div class="mk-px-field">
+      <span class="mk-px-label">E-mail de confirmation</span>
+      <div>
+        <label class="mk-px-check"><input type="checkbox" name="envoyer_email" value="1" checked data-px-email> Envoyer un e-mail de confirmation d'exportation des données personnelles.</label>
+        <div class="mk-px-direct" data-px-direct hidden>
+          <label class="mk-px-check"><input type="checkbox" name="confirmer_admin" value="1" data-px-admin> Je confirme avoir vérifié l'identité de cette personne : aucun e-mail ne lui sera envoyé et la demande sera considérée comme confirmée.</label>
+          <p class="mk-sub">Cette confirmation est enregistrée dans le journal d'activité à votre nom.</p>
+        </div>
+        <noscript><style>.mk-px-direct[hidden]{display:block}</style></noscript>
+      </div>
+    </div>
+    <div><button type="submit" class="btn btn-outline" data-px-submit data-label-email="Envoyer la demande de confirmation" data-label-direct="Créer la demande confirmée">Envoyer la demande de confirmation</button></div>
+  </form>
+</section>
+
+<section class="mk-panel mk-px-list" aria-labelledby="px-list-title">
+  <h2 id="px-list-title" class="mk-px-visually">Demandes d'exportation</h2>
+  <ul class="mk-px-filters" aria-label="Filtrer par état">
+    <li><a href="<%= url({ etat: "", page: "" }) %>"<%- !data.filter ? ' aria-current="page"' : "" %>>Toutes <span class="mk-px-count">(<%= data.total %>)</span></a></li>
+    <% Object.keys(STATUS_LABELS).forEach((s) => { if (data.counts[s]) { %>
+      <li><a href="<%= url({ etat: s, page: "" }) %>"<%- data.filter === s ? ' aria-current="page"' : "" %>><%= STATUS_LABELS[s] %> <span class="mk-px-count">(<%= data.counts[s] %>)</span></a></li>
+    <% } }) %>
+  </ul>
+
+  <% if (data.rows.length) { %>
+  <form id="px-bulk" method="post" action="<%= PAGE %>/groupe<%= q %>" class="mk-px-bulk" data-px-bulk>
+    <label for="px-bulk-action" class="mk-px-visually">Action groupée</label>
+    <select id="px-bulk-action" name="action_groupee">
+      <option value="">Actions groupées</option>
+      <option value="renvoyer">Renvoyer les e-mails de confirmation</option>
+      <option value="generer">Générer les exports des demandes confirmées</option>
+      <option value="envoyer">Envoyer les liens des exports prêts</option>
+      <option value="supprimer">Supprimer les demandes terminées</option>
+    </select>
+    <button type="submit" class="btn btn-outline btn-sm">Appliquer</button>
+    <p class="mk-px-error" role="alert" data-px-bulk-error hidden></p>
+  </form>
+  <% } %>
+
+  <% if (!data.rows.length) { %>
+  <div class="mk-px-empty" id="px-empty">
+    <strong><%= data.filter ? "Aucune demande « " + filterLabel + " »." : "Aucune demande d'exportation pour ce site." %></strong>
+    <span class="mk-sub"><%= data.filter ? "Choisissez « Toutes » pour voir les autres demandes." : "Saisissez une adresse e-mail ou un identifiant ci-dessus pour en créer une." %></span>
+  </div>
+  <% } else { %>
+  <div class="mk-px-scroll">
+  <table class="mk-table mk-datatable mk-px-table" id="px-table" data-px-rows="<%= data.rows.map((r) => r.id + ":" + r.status + ":" + ((r.deliveryMail || r.confirmMail || {}).state || "")).join(",") %>">
+    <thead><tr>
+      <td class="mk-px-cb"><input type="checkbox" data-px-all aria-label="Tout sélectionner"<%= data.rows.length ? "" : " disabled" %>></td>
+      <th scope="col" aria-sort="<%= data.sort === "origin" ? (data.dir === "asc" ? "ascending" : "descending") : "none" %>"><a href="<%= sortUrl("origin") %>">Origine de la demande <span aria-hidden="true" class="mk-px-sort"><%= data.sort === "origin" ? (data.dir === "asc" ? "▲" : "▼") : "↕" %></span></a></th>
+      <th scope="col">État</th>
+      <th scope="col" aria-sort="<%= data.sort === "sent" ? (data.dir === "asc" ? "ascending" : "descending") : "none" %>"><a href="<%= sortUrl("sent") %>">Demande envoyée <span aria-hidden="true" class="mk-px-sort"><%= data.sort === "sent" ? (data.dir === "asc" ? "▲" : "▼") : "↕" %></span></a></th>
+      <th scope="col">Étapes suivantes</th>
+    </tr></thead>
+    <tbody>
+    <% data.rows.forEach((r) => { %>
+      <tr data-px-row="<%= r.id %>">
+        <td class="mk-px-cb"><input type="checkbox" name="ids" value="<%= r.id %>" form="px-bulk" data-px-one aria-label="Sélectionner la demande n°<%= r.id %>"></td>
+        <td class="mk-px-origin">
+          <a href="<%= PAGE %>/<%= r.id %><%= q %>" class="mk-px-email"><%= r.email %></a>
+          <span class="mk-sub"><%= r.inputKind === "username" ? "Demandée par identifiant · " : "" %><%= r.confirmMode === "email" ? "Confirmation par e-mail" : "Confirmée par un administrateur" %></span>
+        </td>
+        <td>
+          <span class="mk-status mk-px-st mk-px-st-<%= stateClass[r.status] %>"><%= r.statusLabel %></span>
+          <% if (r.status === "pending_confirmation") { %><span class="mk-sub">Lien valable jusqu'au <%= fdate(r.confirmExpiresAt) %></span><% } %>
+          <% if (r.archiveExpiresAt) { %><span class="mk-sub">Archive (<%= size(r.archiveBytes) %>) conservée jusqu'au <%= fdate(r.archiveExpiresAt) %></span><% } %>
+          <% const mail = r.deliveryMail || (r.status === "pending_confirmation" ? r.confirmMail : null); if (mail) { %><span class="mk-sub mk-px-mail mk-px-mail-<%= mail.state %>"><%= mail.label %></span><% } %>
+          <% if (r.deliveryError && !(r.deliveryMail && r.deliveryMail.state === "failed")) { %><span class="mk-sub mk-px-mail mk-px-mail-failed"><%= r.deliveryError %></span><% } %>
+          <% if ((r.status === "failed" || r.status === "no_data" || (r.status === "pending_confirmation" && r.error)) && r.error) { %><span class="mk-sub mk-px-mail mk-px-mail-failed"><%= r.error %></span><% } %>
+          <% if (r.report.summary && r.report.summary.failed) { %><span class="mk-sub mk-px-mail mk-px-mail-failed">Export incomplet : <%= r.report.summary.failed %> catégorie(s) en échec</span><% } %>
+        </td>
+        <td class="mk-px-date"><time datetime="<%= String(r.createdAt).replace(" ", "T") %>Z"><%= fdate(r.createdAt) %></time></td>
+        <td class="mk-px-steps">
+          <% r.steps.forEach((s) => { %>
+            <% if (s === "download") { %>
+              <a class="btn btn-outline btn-sm" href="<%= PAGE %>/<%= r.id %>/archive<%= q %>"><%- icon("download", { size: 14 }) %> Télécharger l'archive</a>
+            <% } else { const [label, action] = STEP[s]; %>
+              <form method="post" action="<%= PAGE %>/<%= r.id %>/<%= action %><%= q %>" class="mk-px-inline"<%- s === "delete" ? ' data-px-confirm="Supprimer cette demande et son archive ? Les données sources ne sont pas modifiées."' : "" %>>
+                <% if (s === "restart" && r.confirmMode === "admin") { %><label class="mk-px-check mk-sub"><input type="checkbox" name="confirmer_admin" value="1" required> Identité vérifiée</label><% } %>
+                <button type="submit" class="btn <%= s === "delete" ? "btn-ghost" : "btn-outline" %> btn-sm"><%= label %></button>
+              </form>
+            <% } %>
+          <% }) %>
+          <a class="mk-px-more" href="<%= PAGE %>/<%= r.id %><%= q %>">Détails</a>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+    <tfoot><tr>
+      <td class="mk-px-cb"><input type="checkbox" data-px-all aria-label="Tout sélectionner"<%= data.rows.length ? "" : " disabled" %>></td>
+      <th scope="col">Origine de la demande</th><th scope="col">État</th><th scope="col">Demande envoyée</th><th scope="col">Étapes suivantes</th>
+    </tr></tfoot>
+  </table>
+  </div>
+  <% } %>
+  <% if (pager.pages > 1) { %><%- include("partials/pager", { result: pager, url }) %><% } %>
+</section>
+
+<section class="mk-panel" aria-labelledby="px-set">
+  <details class="mk-px-settings">
+    <summary id="px-set">Durées et conservation pour ce site</summary>
+    <form method="post" action="<%= PAGE %>/reglages<%= q %>" class="mk-px-settings-form">
+      <% Object.keys(SETTING_LABELS).forEach((k) => { %>
+        <div class="mk-px-set"><label for="px-s-<%= k %>"><%= SETTING_LABELS[k] %></label><input id="px-s-<%= k %>" name="<%= k %>" type="number" inputmode="numeric" min="1" value="<%= settings[k] %>" required></div>
+      <% }) %>
+      <p class="mk-sub">À l'expiration, l'archive est supprimée automatiquement. Les demandes terminées sont supprimées après leur durée de conservation. Les sauvegardes quotidiennes de la plateforme ne sont pas modifiées.</p>
+      <button type="submit" class="btn btn-outline btn-sm">Enregistrer les durées</button>
+    </form>
+  </details>
+  <p class="mk-sub mk-px-foot">Le rapport contient les données de <%= sourcesCount %> catégories possibles (compte, formations, commandes, commentaires, contacts, activité…) ; chaque demande indique ce qui a été exporté, ce qui est vide et ce que Kolakisa ne peut pas lire (services externes).</p>
+</section>
+<%- include("partials/bottom") %>

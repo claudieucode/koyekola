@@ -92,6 +92,7 @@ const SECTIONS = [
       leaf("corbeille", "Corbeille", `${BASE}/corbeille`, { permission: "revisions.view" }),
       leaf("outils/importer", "Importer", `${BASE}/outils/importer`, { permission: "tools.import" }),
       leaf("outils/exporter", "Exporter", `${BASE}/outils/exporter`, { permission: "tools.export" }),
+      leaf("outils/donnees", "Exporter les données", `${BASE}/outils/donnees`, { permission: "tools.export" }),
       leaf("outils/sauvegardes", "Sauvegardes", `${BASE}/outils/sauvegardes`, { permission: "tools.view" }),
       leaf("outils/diagnostic", "Diagnostic", `${BASE}/outils/diagnostic`, { permission: "tools.view" }),
       leaf("outils/systeme", "Informations système", `${BASE}/outils/systeme`, { permission: "tools.view" }),
@@ -99,6 +100,7 @@ const SECTIONS = [
       leaf("outils/cache", "Caches", `${BASE}/outils/cache`, { permission: "tools.cache" }),
       leaf("outils/contenu", "Outils de contenu", `${BASE}/outils/contenu`, { permission: "tools.content" }),
       leaf("outils/effacer-donnees", "Effacer les données", `${BASE}/outils/effacer-donnees`, { permission: "privacy.view" }),
+      leaf("outils/notes", "Admin Notes", `${BASE}/outils/notes`, { permission: "notes.view" }),
       leaf("outils/logs", "Journal d'activité", `${BASE}/outils/logs`, { permission: "tools.view" }),
     ],
   },
@@ -244,7 +246,7 @@ const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
-  outils: ["importer", "exporter", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
+  outils: ["importer", "exporter", "donnees", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees", "notes"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
@@ -304,11 +306,13 @@ const ABILITY = {
   corbeille: { mode: "open", module: "corbeille" },
   "outils/importer": { mode: "open", module: "outils", sub: "importer" },
   "outils/exporter": { mode: "open", module: "outils", sub: "exporter" },
+  "outils/donnees": { mode: "open", module: "outils", sub: "donnees" },
   "outils/diagnostic": { mode: "open", module: "outils", sub: "diagnostic" },
   "outils/maintenance": { mode: "open", module: "outils", sub: "maintenance" },
   "outils/cache": { mode: "open", module: "outils", sub: "cache" },
   "outils/contenu": { mode: "open", module: "outils", sub: "contenu" },
   "outils/effacer-donnees": { mode: "open", module: "outils", sub: "effacer-donnees" },
+  "outils/notes": { mode: "open", module: "outils", sub: "notes" },
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },

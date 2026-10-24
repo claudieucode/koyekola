@@ -1,0 +1,66 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Demande d'export n°" + item.id, intro: "Suivi d'une demande d'export de données personnelles : état réel, résultat par catégorie et actions possibles." }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Paris" }) : "—");
+  const size = (b) => (b >= 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(b / 1024)) + " Ko");
+  const stateClass = { pending_confirmation: "warn", confirmed: "info", running: "info", ready: "ok", sent: "ok", expired: "off", failed: "bad", no_data: "off" };
+  const CAT = { exported: ["Exportée", "ok"], empty: ["Aucune donnée", "off"], unsupported: ["Non applicable à ce site", "off"], denied: ["Non autorisée", "warn"], failed: ["Échec", "bad"] };
+  const STEP = { resend: ["Renvoyer l'e-mail de confirmation", "renvoyer"], generate: ["Générer l'export", "generer"], retry: ["Réessayer l'export", "generer"], send: [item.status === "sent" ? "Renvoyer un lien à la personne" : "Envoyer le lien à la personne", "envoyer"], restart: ["Relancer la demande", "relancer"], delete: ["Supprimer la demande", "supprimer"] };
+  const sum = (item.report && item.report.summary) || null;
+%>
+<p><a href="<%= PAGE %><%= q %>">← Retour aux demandes</a></p>
+
+<section class="mk-panel" aria-labelledby="pxd-s">
+  <h2 id="pxd-s">Résumé</h2>
+  <dl class="mk-tl-dl">
+    <div><dt>Personne concernée</dt><dd><%= item.email %></dd></div>
+    <div><dt>État</dt><dd><span class="mk-status mk-px-st mk-px-st-<%= stateClass[item.status] %>"><%= item.statusLabel %></span></dd></div>
+    <div><dt>Demande envoyée</dt><dd><%= fdate(item.createdAt) %></dd></div>
+    <div><dt>Confirmation</dt><dd><%= item.confirmMode === "email" ? "Par e-mail" : "Directe, par un administrateur" %><%= item.confirmedAt ? " — confirmée le " + fdate(item.confirmedAt) : "" %></dd></div>
+    <% if (item.confirmMail) { %><div><dt>E-mail de confirmation</dt><dd><%= item.confirmMail.label %></dd></div><% } %>
+    <% if (item.generatedAt) { %><div><dt>Archive générée le</dt><dd><%= fdate(item.generatedAt) %><%= item.archiveBytes ? " (" + size(item.archiveBytes) + ")" : "" %></dd></div><% } %>
+    <% if (item.archiveExpiresAt) { %><div><dt>Archive supprimée automatiquement le</dt><dd><%= fdate(item.archiveExpiresAt) %></dd></div><% } %>
+    <% if (item.deliveryMail) { %><div><dt>Lien envoyé à la personne</dt><dd><%= item.deliveryMail.label %><%= item.linkExpiresAt ? " — lien valable jusqu'au " + fdate(item.linkExpiresAt) : "" %><%= item.downloads ? " — téléchargé " + item.downloads + " fois" : "" %></dd></div><% } %>
+    <% if (item.error) { %><div><dt>Message</dt><dd><%= item.error %></dd></div><% } %>
+  </dl>
+  <div class="mk-px-steps mk-px-detail-steps">
+    <% item.steps.forEach((s) => { %>
+      <% if (s === "download") { %>
+        <a class="btn btn-primary btn-sm" href="<%= PAGE %>/<%= item.id %>/archive<%= q %>"><%- icon("download", { size: 14 }) %> Télécharger l'archive</a>
+      <% } else { const [label, action] = STEP[s]; %>
+        <form method="post" action="<%= PAGE %>/<%= item.id %>/<%= action %><%= q %>" class="mk-px-inline"<%- s === "delete" ? ' data-px-confirm="Supprimer cette demande et son archive ? Les données sources ne sont pas modifiées."' : "" %>>
+          <input type="hidden" name="retour" value="detail">
+          <% if (s === "restart" && item.confirmMode === "admin") { %><label class="mk-px-check mk-sub"><input type="checkbox" name="confirmer_admin" value="1" required> Identité vérifiée</label><% } %>
+          <button type="submit" class="btn <%= s === "delete" ? "btn-ghost" : "btn-outline" %> btn-sm"><%= label %></button>
+        </form>
+      <% } %>
+    <% }) %>
+  </div>
+</section>
+
+<% if (sum) { %>
+<section class="mk-panel" aria-labelledby="pxd-r">
+  <h2 id="pxd-r">Résultat de l'export</h2>
+  <ul class="mk-tl-tally">
+    <li><strong><%= sum.exported %></strong> catégorie(s) exportée(s)</li>
+    <li><strong><%= sum.empty %></strong> sans donnée</li>
+    <li><strong><%= sum.unsupported %></strong> non applicable(s) à ce site</li>
+    <li><strong><%= sum.denied %></strong> non autorisée(s)</li>
+    <li><strong><%= sum.failed %></strong> en échec</li>
+    <li><strong><%= sum.records %></strong> ligne(s) de données</li>
+  </ul>
+  <div class="mk-px-scroll"><table class="mk-table mk-datatable mk-px-table">
+    <thead><tr><th scope="col">Catégorie</th><th scope="col">Résultat</th><th scope="col">Lignes</th><th scope="col">Précision</th></tr></thead>
+    <tbody>
+      <% item.report.collectors.forEach((c) => { const [label, cls] = CAT[c.status] || [c.status, "off"]; %>
+        <tr><td><%= c.title %></td><td><span class="mk-status mk-px-st mk-px-st-<%= cls %>"><%= label %></span></td><td><%= c.total %></td><td><%= c.error || c.note || "" %></td></tr>
+      <% }) %>
+    </tbody>
+  </table></div>
+  <% if (item.report.externals && item.report.externals.length) { %>
+    <h3>Sources externes (non lues par Kolakisa)</h3>
+    <ul class="mk-tl-list"><% item.report.externals.forEach((e) => { %><li><%= e.title %> — voir le rapport de l'archive pour la démarche à suivre.</li><% }) %></ul>
+  <% } %>
+</section>
+<% } %>
+<%- include("partials/bottom") %>

@@ -40,6 +40,8 @@ const PERMISSIONS = Object.freeze({
   "tools.view": "editor", "tools.health": "editor", "tools.export": "admin", "tools.import": "admin", "tools.overwrite": "admin", "tools.maintenance": "admin", "tools.content": "admin", "tools.cache": "admin",
   // Effacement de données personnelles : voir, demander et traiter = administrateur ; forcer sans confirmation de la personne = propriétaire
   "privacy.view": "admin", "privacy.request": "admin", "privacy.erase": "admin", "privacy.force": "owner",
+  // Admin Notes (notes internes du site) : droits distincts, administrateur
+  "notes.view": "admin", "notes.create": "admin", "notes.edit": "admin", "notes.delete": "admin",
   "redirects.view": "editor", "redirects.create": "editor", "redirects.edit": "editor", "redirects.delete": "admin", "redirects.external": "admin",
   "articles.read": "viewer", "articles.write": "editor", "articles.publish": "editor", "articles.delete": "admin",
   "media.read": "viewer", "media.upload": "editor", "media.write": "editor", "media.delete": "admin",
