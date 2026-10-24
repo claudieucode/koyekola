@@ -1587,7 +1587,7 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 }
 @media (prefers-reduced-motion: reduce) { .mk-body .mk-px-table tbody tr { transition: none; } }
 
-/* =====================================================================================================================
+/* ==============================================================================================================
    Outils → Exporter (views/marketing/tools-export.ejs, public/js/cms-export.js) — réutilise les composants de l'écran des permaliens (.pl-*).
    ===================================================================================================================== */
 .ex-count { display: inline-flex; align-items: center; padding: 0 8px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border); color: var(--muted); font-size: .76rem; font-weight: 700; margin-left: 4px; }
@@ -1649,3 +1649,26 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
   .mk-pf-themes { grid-template-columns: minmax(0, 1fr); }
   .mk-pf-ctl > input[type="text"], .mk-pf-ctl > input[type="email"], .mk-pf-ctl > select, .mk-pf-ctl > textarea { max-width: none; }
 }
+
+=======
+
+/* ---- Outils → Outils disponibles (mk-tc-*) : catalogue en grille ---- */
+.mk-tc { max-width: 1040px; margin: 0 auto; padding: 4px 0 56px; }
+.mk-tc-group { margin: 0 0 26px; }
+.mk-tc-group h2 { color: var(--primary, #0b2a40); font-size: 1.1rem; margin: 6px 0 12px; }
+.mk-tc-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.mk-tc-card { display: flex; gap: 14px; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border, #e1e7ef); border-radius: var(--mk-r, 10px); padding: 16px 18px; transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s; }
+.mk-tc-available:hover { border-color: var(--primary, #0b2a40); box-shadow: 0 6px 18px rgba(11, 42, 64, 0.1); transform: translateY(-1px); }
+.mk-tc-planned, .mk-tc-disabled { background: var(--mk-hover, #f3f6fa); border-style: dashed; }
+.mk-tc-icon { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: var(--accent-light, #e0f2fe); color: var(--primary, #0b2a40); }
+.mk-tc-planned .mk-tc-icon, .mk-tc-disabled .mk-tc-icon { background: var(--mk-border, #e1e7ef); color: var(--mk-text-soft, #3f5168); }
+.mk-tc-text { min-width: 0; }
+.mk-tc-text h3 { margin: 0 0 4px; font-size: 1rem; }
+.mk-tc-text h3 a { color: var(--primary, #0b2a40); text-decoration: none; }
+.mk-tc-text h3 a:hover, .mk-tc-text h3 a:focus-visible { text-decoration: underline; }
+.mk-tc-text p { margin: 0 0 8px; overflow-wrap: anywhere; line-height: 1.45; }
+.mk-tc-src { font-size: 0.85rem; }
+.mk-tc-state, .mk-tc-open { margin-top: 4px; }
+.mk-tc-empty { text-align: center; padding: 34px 16px; border: 1px dashed var(--mk-border, #e1e7ef); border-radius: var(--mk-r, 10px); }
+@media (max-width: 640px) { .mk-tc-grid { grid-template-columns: 1fr; } .mk-tc-card { padding: 14px; } }
+@media (prefers-reduced-motion: reduce) { .mk-tc-card { transition: none; } .mk-tc-available:hover { transform: none; } }

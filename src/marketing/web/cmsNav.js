@@ -90,6 +90,7 @@ const SECTIONS = [
   { key: "tests", label: "Tests A/B", icon: "shuffle", items: [leaf("pagetests", "Tests A/B", `${BASE}/tests-ab`)] },
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
+      leaf("outils/disponibles", "Outils disponibles", `${BASE}/outils/disponibles`, { permission: "tools.view" }),
       leaf("outils", "Santé du site", `${BASE}/outils`, { permission: "tools.view" }),
       leaf("corbeille", "Corbeille", `${BASE}/corbeille`, { permission: "revisions.view" }),
       leaf("outils/importer", "Importer", `${BASE}/outils/importer`, { permission: "tools.import" }),
@@ -249,7 +250,7 @@ const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
-  outils: ["importer", "exporter", "donnees", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees", "notes"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
+  outils: ["importer", "exporter", "donnees", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees", "notes", "disponibles"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
   themes: ["fichiers"], // Apparence → Éditeur de fichiers des thèmes : s'ouvre dans le cadre DU site (/sites/<id>/themes/fichiers)
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
@@ -318,6 +319,7 @@ const ABILITY = {
   "outils/contenu": { mode: "open", module: "outils", sub: "contenu" },
   "outils/effacer-donnees": { mode: "open", module: "outils", sub: "effacer-donnees" },
   "outils/notes": { mode: "open", module: "outils", sub: "notes" },
+  "outils/disponibles": { mode: "open", module: "outils", sub: "disponibles" },
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },
