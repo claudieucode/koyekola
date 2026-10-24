@@ -13,7 +13,7 @@ function unusedMedia() {
   const all = safe(() => db.prepare("SELECT id, path, name FROM mk_media WHERE deleted_at IS NULL").all(), []);
   if (!all.length) return [];
   const unused = new Map(all.map((m) => [m.path, m]));
-  const PATH = /\/uploads\/marketing\/\d+\/[A-Za-z0-9_.-]+/g;
+  const PATH = /\/uploads\/marketing\/\d+\/(?:site-\d+\/)?(?:\d{4}\/\d{2}\/)?[A-Za-z0-9_.-]+/g;
   const eat = (text) => { if (!text) return; for (const m of String(text).matchAll(PATH)) unused.delete(m[0]); };
   const scan = (sql) => safe(() => { for (const r of db.prepare(sql).iterate()) for (const v of Object.values(r)) eat(v); }, null);
   scan("SELECT content, cover_path, og_image_path, twitter_image_path FROM posts");

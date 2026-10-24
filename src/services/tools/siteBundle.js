@@ -23,7 +23,7 @@ const MAX_TOTAL = 400 * 1024 * 1024;
 const SITE_TYPES = ["site", "settings", "pages", "menus", "redirects"]; // types d'export de portée « site »
 const sha = (buffer) => crypto.createHash("sha256").update(buffer).digest("hex");
 const SHA = /^[0-9a-f]{64}$/;
-const ORIGIN = /^\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?[A-Za-z0-9][A-Za-z0-9_.-]{0,150}$/;
+const ORIGIN = /^\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9][A-Za-z0-9_.-]{0,150}$/;
 const REFS = /\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?[A-Za-z0-9][A-Za-z0-9_.-]{0,150}/g;
 const LIMITS = { image: media.MAX_IMAGE, pdf: media.MAX_DOCUMENT, document: media.MAX_DOCUMENT, audio: media.MAX_AUDIO, video: media.MAX_VIDEO };
 const fail = (message) => Object.assign(new Error(message), { user: true });

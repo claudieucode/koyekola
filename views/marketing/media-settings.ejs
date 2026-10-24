@@ -1,0 +1,105 @@
+<%#
+  KOLAKISA CMS → Paramètres → Médias. Écran dédié au-dessus de services/mediaSettings (tailles, organisation des envois) et du moteur média (media/variants.js).
+  Les dimensions enregistrées ici sont CELLES que le moteur applique aux images du site ; l'aperçu des proportions reprend ses règles (public/js/cms-media-settings.js).
+  Sans JavaScript, le formulaire fonctionne (envoi classique, validation serveur).
+%><%- include("partials/top", { title, active, layout: "form" }) %>
+<% if (typeof settingsHead !== "undefined" && settingsHead) { %><%- include("partials/settings-head", settingsHead) %><% } else { %><div class="mk-head"><h1>Médias</h1></div><% } %>
+<%
+  const f = st.form;
+  const frameFlag = typeof frame !== "undefined" && frame;
+  const siteQ = st.siteId ? "?site=" + st.siteId : "";
+  const dis = st.writable ? "" : " disabled";
+  const groups = [
+    { id: "thumb", title: "Taille des miniatures", wl: "Largeur", hl: "Hauteur", note: "Utilisées dans les listes et les aperçus de la médiathèque, des articles et des pages.", crop: true },
+    { id: "medium", title: "Taille moyenne", wl: "Largeur maximale", hl: "Hauteur maximale", note: "Limites maximales : l'image garde ses proportions (une photo en paysage peut mesurer moins que la hauteur indiquée)." },
+    { id: "large", title: "Grande taille", wl: "Largeur maximale", hl: "Hauteur maximale", note: "Pour l'affichage pleine largeur. Une image plus petite que ces limites n'est jamais agrandie." },
+  ];
+%>
+<% if (errors.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>Rien n'a été enregistré :</p><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
+<% if (!st.engine.available) { %><p class="pl-note">Le service de traitement d'images (sharp) n'est pas installé sur ce serveur : les tailles sont enregistrées mais aucune version réduite n'est fabriquée, les images d'origine sont servies telles quelles.</p><% } %>
+<form id="md-form" class="pl md" method="post" action="/marketing/site-web/parametres/medias<%= siteQ %>" novalidate data-md-form<%- st.writable ? "" : " data-md-readonly" %>>
+  <% if (frameFlag) { %><input type="hidden" name="frame" value="1"><% } %>
+  <% if (st.siteId) { %><input type="hidden" name="site" value="<%= st.siteId %>"><% } %>
+  <fieldset class="pl-fieldset"<%= st.writable ? "" : " disabled" %>>
+    <legend class="sr-only">Réglages des médias de <%= st.siteName %></legend>
+
+    <section class="pl-section" aria-labelledby="md-sizes-h">
+      <h2 id="md-sizes-h">Tailles des images</h2>
+      <p class="pl-lead">Les tailles précisées ci-dessous déterminent les dimensions maximales (en pixels) des versions fabriquées pour <strong><%= st.siteName %></strong>. L'image originale n'est jamais modifiée.</p>
+
+      <!-- Aperçu des proportions : les trois tailles appliquées à une photo d'exemple -->
+      <div class="md-preview" aria-labelledby="md-prev-h">
+        <div class="md-prev-head">
+          <h3 id="md-prev-h">Aperçu avec une photo d'exemple</h3>
+          <div class="md-orient" role="radiogroup" aria-label="Orientation de la photo d'exemple">
+            <label><input type="radio" name="md_orient" value="landscape" checked> Paysage <span class="md-dim">4000 × 3000</span></label>
+            <label><input type="radio" name="md_orient" value="portrait"> Portrait <span class="md-dim">3000 × 4000</span></label>
+            <label><input type="radio" name="md_orient" value="square"> Carrée <span class="md-dim">3000 × 3000</span></label>
+          </div>
+        </div>
+        <ul class="md-tiles" role="list">
+          <% [["thumb", "Miniature"], ["medium", "Moyenne"], ["large", "Grande"]].forEach(([id, label]) => { %>
+          <li class="md-tile" data-md-tile="<%= id %>">
+            <div class="md-frame"><div class="md-img" data-md-img></div></div>
+            <p class="md-tile-label"><%= label %></p>
+            <p class="md-tile-dim" data-md-out>—</p>
+            <p class="md-tile-note" data-md-note></p>
+          </li>
+          <% }) %>
+        </ul>
+      </div>
+
+      <% groups.forEach((g) => { const wk = g.id + "_w", hk = g.id + "_h"; %>
+      <div class="md-row">
+        <div class="md-row-title"><h3><%= g.title %></h3><p class="pl-help"><%= g.note %></p></div>
+        <div class="md-row-fields">
+          <div class="md-field"><label for="md-<%= wk %>"><%= g.wl %></label><span class="pl-input md-num"><input id="md-<%= wk %>" type="number" inputmode="numeric" name="<%= wk %>" value="<%= f[wk] %>" min="<%= st.min %>" max="<%= st.maxPx %>" step="1" data-md-num="<%= wk %>" aria-describedby="md-msg-<%= g.id %>"><span class="md-unit" aria-hidden="true">px</span></span></div>
+          <div class="md-field"><label for="md-<%= hk %>"><%= g.hl %></label><span class="pl-input md-num"><input id="md-<%= hk %>" type="number" inputmode="numeric" name="<%= hk %>" value="<%= f[hk] %>" min="0" max="<%= st.maxPx %>" step="1" data-md-num="<%= hk %>" aria-describedby="md-msg-<%= g.id %> md-hfree"><span class="md-unit" aria-hidden="true">px</span></span></div>
+          <% if (g.crop) { %>
+          <label class="mk-cms-check md-crop" for="md-crop"><input type="checkbox" id="md-crop" name="thumb_crop" value="1"<%= f.thumb_crop ? " checked" : "" %> data-md-num="thumb_crop"> <span>Recadrer les miniatures pour parvenir aux dimensions exactes <span class="md-sub">(par défaut, elles gardent les proportions de l'image)</span></span></label>
+          <% } %>
+          <p class="pl-msg" id="md-msg-<%= g.id %>" role="status" aria-live="polite" data-md-msg="<%= g.id %>"></p>
+        </div>
+      </div>
+      <% }) %>
+      <p class="pl-help" id="md-hfree">Hauteur <strong>0</strong> : pas de limite de hauteur, seule la largeur borne l'image (comportement d'origine de Kolakisa). Valeurs acceptées : de <%= st.min %> à <%= st.maxPx %> px.</p>
+    </section>
+
+    <section class="pl-section" aria-labelledby="md-up-h">
+      <h2 id="md-up-h">Téléversement des médias</h2>
+      <label class="mk-cms-check" for="md-organize"><input type="checkbox" id="md-organize" name="organize" value="1"<%= f.organize ? " checked" : "" %> data-md-num="organize"> Organiser mes téléversements dans des dossiers mensuels et annuels</label>
+      <p class="pl-help">Les nouveaux fichiers sont rangés dans <code>…/<%= st.siteId ? "site-" + st.siteId + "/" : "" %>2026/10/</code> (date du serveur). <strong>Les fichiers déjà envoyés ne sont pas déplacés</strong> et leurs adresses restent valides.</p>
+
+      <% if (st.limits.length) { %>
+      <h3 class="md-sub-h">Poids maximal d'un fichier</h3>
+      <% if (st.limitsEditable) { %>
+      <div class="md-limits">
+        <% st.limits.forEach((l) => { %><div class="md-field"><label for="md-<%= l.key %>"><%= l.label %></label><span class="pl-input md-num"><input id="md-<%= l.key %>" type="number" inputmode="numeric" name="<%= l.key %>" value="<%= l.value %>" min="1"<%= l.max ? ` max=${l.max}` : "" %> step="1"><span class="md-unit" aria-hidden="true">Mo</span></span></div><% }) %>
+      </div>
+      <p class="pl-help">Limites communes à tous les sites, sans dépasser le plafond du serveur.</p>
+      <% } else { %>
+      <ul class="md-limits-ro"><% st.limits.forEach((l) => { %><li><span><%= l.label %></span><strong><%= l.value %> Mo</strong></li><% }) %></ul>
+      <p class="pl-help">Limites communes à tous les sites : l'équipe les modifie depuis le site principal.</p>
+      <% } %>
+      <% } %>
+    </section>
+
+    <section class="pl-section md-know" aria-labelledby="md-know-h">
+      <h2 id="md-know-h">Bon à savoir</h2>
+      <ul class="md-list">
+        <li><strong>Les images existantes</strong> ne sont pas retraitées en bloc : une version est fabriquée à la première demande puis conservée. Les nouvelles dimensions s'appliquent donc dès la prochaine demande, et les anciennes versions déjà publiées restent valides.</li>
+        <li><strong>L'original</strong> n'est jamais modifié ni remplacé ; choisir « Taille originale » dans un éditeur sert toujours le fichier source.</li>
+        <li><strong>Aucun agrandissement</strong> : une image plus petite que la taille demandée est servie telle quelle.</li>
+        <li><strong>Formats</strong> : versions réduites en WebP pour JPEG, PNG, WebP et AVIF ; les GIF (animés) sont servis tels quels ; les SVG ne sont pas acceptés par la médiathèque.</li>
+        <li>Ces réglages sont propres à <strong><%= st.siteName %></strong> ; un autre site garde les siens.</li>
+      </ul>
+    </section>
+  </fieldset>
+
+  <div class="pl-savebar" data-md-savebar>
+    <p class="pl-status" role="status" aria-live="polite" data-md-status><%= st.writable ? "Aucune modification." : (st.readOnly ? "Site archivé : lecture seule." : "Lecture seule : la permission « settings.write » est requise.") %></p>
+    <% if (st.writable) { %><button type="submit" class="btn btn-primary" data-md-save disabled><span class="md-save-label">Enregistrer les modifications</span></button><% } %>
+  </div>
+</form>
+<script type="application/json" id="md-data"><%- json.replace(/</g, "\\u003c") %></script>
+<%- include("partials/bottom") %>
