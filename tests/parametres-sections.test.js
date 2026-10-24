@@ -42,8 +42,8 @@ describe("Paramètres : sections ouvertes dans l'espace d'un site", () => {
     }
   });
 
-  test("sections sans réglage propre au site (Commentaires, Médias, Tunnels) : valeurs réelles de la plateforme en lecture seule, aucun formulaire ; impossible de les modifier depuis un site", async () => {
-    for (const k of ["commentaires", "medias", "tunnels"]) {
+  test("sections sans réglage propre au site (Médias, Tunnels) : valeurs réelles de la plateforme en lecture seule, aucun formulaire ; impossible de les modifier depuis un site", async () => {
+    for (const k of ["medias", "tunnels"]) {
       const r = await adminA.get(frame(A, k)); assert.equal(r.status, 200);
       assert.match(r.text, /Ce qui s(?:'|&#39;)applique à ce site/); assert.ok(!/data-st-form/.test(r.text), `${k} : aucun formulaire`);
       assert.match(r.text, /réservées? à l'équipe|depuis le site principal|Elles se modifient/, k);
@@ -52,12 +52,13 @@ describe("Paramètres : sections ouvertes dans l'espace d'un site", () => {
     const pl = await adminA.get(frame(A, "permaliens")); assert.equal(pl.status, 200);
     assert.match(pl.text, /n'a pas de domaine propre/); assert.match(pl.text, /<button[^>]*data-pl-save/, "permaliens : formulaire complet");
     const before = one("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'cms.media_max_image_mb'", orgId);
-    for (const [slug, body] of [["medias", { media_max_image_mb: "1" }], ["commentaires", { comments_moderation: "all" }]]) {
+    for (const [slug, body] of [["medias", { media_max_image_mb: "1" }]]) {
       const r = await form(adminA, slug, A, body); assert.ok([200, 302, 303, 403].includes(r.status), `${slug} : ${r.status}`);
     }
     assert.deepEqual(one("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'cms.media_max_image_mb'", orgId), before, "le réglage commun n'a pas bougé");
-    const comments = await boss.get(`${R}/parametres/commentaires`); assert.ok(!/<strong>Toutes<\/strong>/.test(comments.text)); // l'écran central garde son formulaire
-    assert.match(comments.text, /data-st-form/);
+    // Commentaires : réglages propres au site (écran modifiable dans le cadre du site)
+    const cm = await adminA.get(frame(A, "commentaires")); assert.equal(cm.status, 200); assert.match(cm.text, /<h1>Commentaires<\/h1>/);
+    const comments = await boss.get(`${R}/parametres/commentaires`); assert.match(comments.text, /data-st-form/);
   });
 
   test("Emailing : le site règle SES propres expéditeur et réponse, enregistrés, validés, isolés ; l'enregistrement reste dans le cadre du site ; le site voisin est intact", async () => {
