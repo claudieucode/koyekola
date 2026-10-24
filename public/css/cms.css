@@ -1671,7 +1671,7 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .mk-tc-empty { text-align: center; padding: 34px 16px; border: 1px dashed var(--mk-border, #e1e7ef); border-radius: var(--mk-r, 10px); }
 @media (max-width: 640px) { .mk-tc-grid { grid-template-columns: 1fr; } .mk-tc-card { padding: 14px; } }
 @media (prefers-reduced-motion: reduce) { .mk-tc-card { transition: none; } .mk-tc-available:hover { transform: none; } }
-/* =====================================================================================================================
+/* ==============================================================================================================
    Utilisateurs → Ajouter un compte (views/marketing/account-new.ejs, public/js/cms-account-new.js) — compact : deux colonnes, champs à largeur utile.
    ===================================================================================================================== */
 .ac { display: grid; gap: 16px; max-width: 1040px; }
@@ -1705,3 +1705,14 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .ac-bar { max-width: 1040px; }
 @media (max-width: 820px) { .ac-grid { grid-template-columns: minmax(0, 1fr); } .ac-card { padding: 16px; } .ac-pw input { max-width: none; } }
 @media (prefers-reduced-motion: reduce) { .ac-meter-bar, .ac-field input, .ac-field select { transition: none; } }
+=======
+
+/* ---- Chemin (fil d'Ariane) dans la zone de contenu : intégré au bandeau de contexte du site ---- */
+.mk-site-banner .mk-cms-crumbs { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; margin-left: auto; padding-left: 14px; border-left: 1px solid var(--mk-border, #e1e7ef); }
+.mk-site-banner .mk-cms-crumbs ol { margin: 0; padding: 0; list-style: none; display: flex; align-items: center; flex-wrap: nowrap; min-width: 0; }
+.mk-site-banner .mk-cms-crumbs li { min-width: 0; white-space: nowrap; }
+.mk-site-return .mk-cms-crumbs { display: inline-block; margin-left: 14px; vertical-align: middle; }
+.mk-site-return .mk-cms-crumbs ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: nowrap; }
+.mk-cms-crumbrow { margin: 0 0 14px; }
+.mk-cms-crumbrow .mk-cms-crumbs ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; }
+@media (max-width: 760px) { .mk-site-banner .mk-cms-crumbs { flex-basis: 100%; margin-left: 0; padding-left: 0; border-left: 0; order: 5; } }

@@ -1,10 +1,7 @@
-<%# Fil d'Ariane du CMS : directement sous la barre d'administration, sur toute la largeur de la coque (au-dessus du rail, du menu et du contenu). Mêmes classes qu'avant (mk-topbar, mk-breadcrumb). %>
-<header class="mk-topbar kab-crumbbar">
-  <button type="button" class="icon-btn mk-menu-btn" data-mk-sidebar-toggle aria-controls="mk-sidebar" aria-expanded="false" aria-label="Ouvrir le menu"><%- icon("menu") %></button>
-  <nav class="mk-breadcrumb" aria-label="Fil d'Ariane">
-    <ol>
-      <% trail.forEach((c, i) => { const last = i === trail.length - 1; %><li<%- last ? ' aria-current="page"' : "" %>><% if (c.href && !last) { %><a href="<%= c.href %>"><%= c.label %></a><% } else { %><%= c.label %><% } %></li>
-      <% }) %>
-    </ol>
-  </nav>
-</header>
+<%# Fil d'Ariane du CMS : intégré à la zone de contenu (bandeau de contexte du site), jamais une barre globale au-dessus du menu. Paramètre : trail. %>
+<nav class="mk-breadcrumb mk-cms-crumbs" aria-label="Fil d'Ariane">
+  <ol>
+    <% trail.forEach((c, i) => { const last = i === trail.length - 1; %><li<%- last ? ' aria-current="page"' : "" %>><% if (c.href && !last) { %><a href="<%= c.href %>"><%= c.label %></a><% } else { %><%= c.label %><% } %></li>
+    <% }) %>
+  </ol>
+</nav>

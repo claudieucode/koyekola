@@ -54,7 +54,7 @@
 <body class="mk-body<%= cms ? ' is-cms' : '' %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
   <%# CMS : barre d'administration (niveau 1) puis fil d'Ariane (niveau 2), tous deux au niveau global de la coque, AVANT menu et contenu ; hors CMS, le fil d'Ariane reste dans la colonne du contenu %>
-  <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><%- include("cms-crumbs", { trail }) %><% } %>
+  <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><% } %>
 
   <% const appClass = appRail ? "mk-app has-rail" : "mk-app"; %><div class="<%= appClass %>">
     <% if (appRail) { %><%- include("../../partials/app-rail", { railNav: appRail.nav, railActive: appRail.active, railUnread: appRail.unread, railStyle: appRail.style }) %><% } %>
@@ -173,8 +173,9 @@
       <% } %>
 
       <main id="main" tabindex="-1" class="mk-content<%= typeof layout !== "undefined" && /^(form|wide)$/.test(layout) ? " mk-content--" + layout : "" %>">
-        <% if (cms && cms.space && cms.space.navOnly) { %><p class="mk-site-return"><a class="btn btn-ghost btn-sm" href="<%= cms.space.listHref %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a></p>
-        <% } else if (cms && cms.space) { %><%- include("site-banner", { siteSpace: cms.space }) %><% } %>
+        <% if (cms && cms.space && cms.space.navOnly) { %><p class="mk-site-return"><a class="btn btn-ghost btn-sm" href="<%= cms.space.listHref %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a><%- include("cms-crumbs", { trail }) %></p>
+        <% } else if (cms && cms.space) { %><%- include("site-banner", { siteSpace: cms.space, trail }) %>
+        <% } else if (cms) { %><div class="mk-cms-crumbrow"><%- include("cms-crumbs", { trail }) %></div><% } %>
         <% if (typeof flash !== "undefined" && flash) { %>
           <% if (flash.type === "error") { %>
             <div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 18 }) %></span><span class="mk-flash-body"><p><%= flash.text %></p><% if (flash.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= flash.detail %></p></details><% } %></span></div>

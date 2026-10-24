@@ -13,6 +13,7 @@
 %>
 <nav class="kab" id="kab" data-kab data-site="<%= B.siteId || "" %>" data-notif-url="/marketing/barre/notifications.json" aria-label="Barre d'administration">
   <div class="kab-zone kab-left">
+    <button type="button" class="kab-btn kab-menu-btn" data-mk-sidebar-toggle aria-controls="mk-sidebar" aria-expanded="false" aria-label="Ouvrir le menu"><%- icon("menu", { size: 18 }) %></button>
     <a class="kab-brand kab-btn" href="<%= B.brand.href %>" data-tip="Tableau de bord" aria-label="KOLAKISA — tableau de bord<%= cur ? " de " + cur.name : "" %>"><span class="kab-mark" aria-hidden="true">K</span><span class="kab-brand-text">KOLAKISA</span></a>
     <span class="kab-sep" aria-hidden="true"></span>
 

@@ -26,7 +26,7 @@ describe("grille : jetons et règles uniques (CSS)", () => {
       assert.doesNotMatch(src, /\.mk-topbar \{[^}]*padding: 8px (?:10|12|20|32|40)px/, "marge latérale fixe sur .mk-topbar");
     }
     assert.match(BAR, /\.kab \{[^}]*padding: 0 var\(--kg-gutter\)/);
-    assert.match(BAR, /\.kab-crumbbar \{[^}]*padding: 0 var\(--kg-gutter\)/);
+    assert.doesNotMatch(BAR, /\.kab-crumbbar \{/, "plus de barre de chemin globale (CADRE-CMS-01)");
     assert.doesNotMatch(BAR, /\.kab \{ padding: 0 6px/);
   });
   test("le gabarit accepte « layout » (form | wide) et ignore toute autre valeur", () => {
@@ -47,7 +47,7 @@ describe("grille : marges mesurées dans un vrai navigateur", { skip: SKIP }, ()
   const measure = () => page.evaluate(() => {
     const box = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { l: Math.round(r.left), r: Math.round(r.right), w: Math.round(r.width) }; };
     const q = (s) => document.querySelector(s);
-    const bar = q(".kab-left"), barR = q(".kab-right"), crumb = q(".kab-crumbbar .mk-breadcrumb"), content = q(".mk-content"), side = q(".mk-sidebar");
+    const bar = q(".kab-left"), barR = q(".kab-right"), crumb = q(".mk-cms-crumbs"), content = q(".mk-content"), side = q(".mk-sidebar");
     const cs = getComputedStyle(content);
     return { vw: window.innerWidth, over: document.documentElement.scrollWidth - window.innerWidth, bar: box(bar), barR: box(barR), crumb: box(crumb), content: box(content), side: box(side), padL: parseFloat(cs.paddingLeft), padR: parseFloat(cs.paddingRight), form: /mk-content--form/.test(content.className) };
   });
@@ -71,7 +71,7 @@ describe("grille : marges mesurées dans un vrai navigateur", { skip: SKIP }, ()
         assert.equal(m.over, 0, `${url} : défilement horizontal de ${m.over}px`);
         assert.equal(m.bar.l, gutter, `${url} : marge gauche de la barre`);
         assert.equal(m.vw - m.barR.r, gutter, `${url} : marge droite de la barre`);
-        if (w > 480) assert.equal(m.crumb.l, gutter, `${url} : le fil d'Ariane suit la marge de la barre`);
+        if (w > 480 && m.crumb) assert.ok(m.crumb.l >= m.content.l && m.crumb.r <= m.content.r, `${url} : le fil d'Ariane reste dans la zone de contenu`);
         assert.ok(m.padL >= 16 && m.padR >= 16, `${url} : marge latérale du contenu ${m.padL}/${m.padR}`);
         const left = m.content.l - m.side.r, right = m.vw - m.content.r;
         assert.ok(Math.abs(left - right) <= 1 || w <= 1440, `${url} : contenu non centré dans la zone de travail (${left} / ${right})`);

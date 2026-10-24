@@ -11,6 +11,7 @@
     <strong class="mk-site-banner-name"><%= siteSpace.name %></strong>
     <% if (siteSpace.slug) { %><span class="mk-sub"><%= siteSpace.slug %></span><% } %>
   </div>
+  <% if (typeof trail !== "undefined" && trail && trail.length) { %><%- include("cms-crumbs", { trail }) %><% } %>
   <span class="mk-status <%= stateCls %>"><%= siteSpace.principal ? "Site principal" : stateLabel %></span>
   <a class="btn btn-ghost btn-sm mk-site-back" href="<%= siteSpace.listHref || "/marketing/site-web/sites" %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a>
 </section>
