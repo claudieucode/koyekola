@@ -68,6 +68,10 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "cms_privacy_requests": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_revisions": {
    "siteId": true,
    "classe": "isolee"
@@ -81,10 +85,6 @@
    "classe": "isolee"
   },
   "cms_tool_runs": {
-   "siteId": true,
-   "classe": "isolee"
-  },
-  "cms_ping_log": {
    "siteId": true,
    "classe": "isolee"
   },

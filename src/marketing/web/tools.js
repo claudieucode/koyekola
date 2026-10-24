@@ -24,7 +24,7 @@ const BASE = "/marketing/site-web/outils";
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: importer.MAX_BYTES, files: 1 } });
 const TABS = [
-  ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
+  ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["donnees", "Exporter les données", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
   ["diagnostic", "Diagnostic", "tools.view"], ["systeme", "Informations système", "tools.view"], ["maintenance", "Maintenance", "tools.maintenance"],
   ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["effacer-donnees", "Effacer les données", "privacy.view"], ["notes", "Admin Notes", "notes.view"], ["logs", "Journal d'activité", "tools.view"],
 ];
@@ -57,6 +57,9 @@ module.exports = () => {
     return all.filter((s) => mine.has(s.id));
   };
   const shell = (req, siteId, tab) => ({ BASE, TABS: TABS.filter(([, , perm]) => req.mk.can(perm) || perm === "tools.view"), tab, sites: sitesFor(req), siteId, q: q(siteId), siteOnly: req.mk.siteOnly, can: req.mk.can, toolsJs: true });
+
+  // Exporter les données personnelles (demandes, confirmation, archive ZIP) : écrans dans ./privacyExport, moteur dans services/privacy
+  router.use(require("./privacyExport")({ BASE, withSite, shell, flash, q }));
 
   // Droits sur une opération : dans le contexte de SON site (jamais celui de l'URL) ; une autre organisation ne la voit pas (IDOR)
   const loadRun = (req, res, kind) => {

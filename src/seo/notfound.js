@@ -46,7 +46,7 @@ function record(req) {
     // Borne par site d'abord (le site qui déborde est le seul touché), puis borne globale
     if (siteSchemaReady()) {
       const over = db.prepare("SELECT site_id, COUNT(*) n FROM seo_404 GROUP BY site_id HAVING COUNT(*) > ?").all(MAX_ROWS_PER_SITE);
-      for (const o of over) db.prepare(`DELETE FROM seo_404 WHERE rowid IN (SELECT rowid FROM seo_404 WHERE COALESCE(site_id, 0) = COALESCE(?, 0) ORDER BY (${hasStateColumns() ? "handled_at IS NOT NULL OR ignored = 1" : "ignored = 1"}) DESC, (hits_human + hits_bot) ASC, last_seen ASC LIMIT ?)`).run(o.site_id, o.n - MAX_ROWS_PER_SITE);
+      for (const o of over) db.prepare(`DELETE FROM seo_404 WHERE rowid IN (SELECT rowid FROM seo_404 WHERE ${require("../services/siteScope").sameScope("site_id")} ORDER BY (${hasStateColumns() ? "handled_at IS NOT NULL OR ignored = 1" : "ignored = 1"}) DESC, (hits_human + hits_bot) ASC, last_seen ASC LIMIT ?)`).run(o.site_id, o.n - MAX_ROWS_PER_SITE);
     }
     const n = db.prepare("SELECT COUNT(*) n FROM seo_404").get().n;
     if (n > MAX_ROWS) db.prepare("DELETE FROM seo_404 WHERE rowid IN (SELECT rowid FROM seo_404 ORDER BY (hits_human + hits_bot) ASC, last_seen ASC LIMIT ?)").run(n - MAX_ROWS);
