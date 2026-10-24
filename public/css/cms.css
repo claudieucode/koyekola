@@ -1285,7 +1285,7 @@ button.is-busy { opacity: .7; cursor: progress; }
 @media (prefers-reduced-motion: reduce) { .mk-seo-appear, .mk-seo-dirty, .mk-seo-confirm, .mk-seo-details[open] > :not(summary) { animation: none; } .mk-seo-bar > span, .mk-seo-share { transition: none; } .mk-seo-share:hover { transform: none; } }
 
 
-/* =======================================================================================================
+/* ==============================================================================================================
    Paramètres → Permaliens (views/marketing/permalinks-settings.ejs, public/js/cms-permalinks.js) — jetons de kola-ui.css, aucune couleur nouvelle.
    Mise en page stable : aucune hauteur ne dépend de l'aperçu (une seule ligne), la barre d'enregistrement est collante sans déplacer le contenu.
    ===================================================================================================================== */
@@ -1659,7 +1659,6 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 @media (max-width: 980px) { .mk-tg-filters { grid-template-columns: 1fr 1fr; } .mk-tg-search { grid-column: 1 / -1; } .mk-td-grid, .mk-tg-active { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .mk-tg-grid, .mk-tg-grid--feat { grid-template-columns: 1fr; } .mk-tg-filters { grid-template-columns: 1fr; } .mk-tp-devices span { display: none; } .mk-tp-frame { height: calc(100vh - 300px); } }
 @media (prefers-reduced-motion: reduce) { .mk-tg-card, .mk-tp-frame, .mk-tg-cats a, [data-tg-results][aria-busy="true"] { transition: none; } .mk-tg-card:hover, .mk-tg-card:focus-within { transform: none; } }
-=======
 /* ==============================================================================================================
    Outils → Exporter (views/marketing/tools-export.ejs, public/js/cms-export.js) — réutilise les composants de l'écran des permaliens (.pl-*).
    ===================================================================================================================== */
