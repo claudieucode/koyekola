@@ -11,6 +11,7 @@ const privacy = require("./privacy");
 const connectorsWeb = require("./connectors");
 const target = require("./siteTarget");
 const permalinksUi = require("./permalinksSettings");
+const mediaUi = require("./mediaSettingsUi");
 
 const BASE = "/marketing/site-web/parametres";
 // Adresses des groupes (français) → clés du moteur
@@ -109,7 +110,9 @@ module.exports = () => {
   }
 
   // En-tête des Paramètres autour de l'écran des permaliens (absent dans le cadre d'un site : le menu du site tient lieu d'onglets)
-  const permalinksHead = (req, scope) => (inFrame(req) ? { frame: true } : { settingsHead: { heading: "Permaliens", intro: "", groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(scope), scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "permalinks", tabPath: "/permaliens" } });
+  const headOf = (req, scope, heading, tabKey, tabPath) => (inFrame(req) ? { frame: true } : { settingsHead: { heading, intro: "", groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(scope), scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey, tabPath } });
+  const permalinksHead = (req, scope) => headOf(req, scope, "Permaliens", "permalinks", "/permaliens");
+  const mediaHead = (req, scope) => headOf(req, scope, "Médias", "media", "/medias");
   // Aperçu et validation à la volée (JSON, aucune écriture)
   router.post("/site-web/parametres/permaliens/apercu", (req, res) => {
     if (!req.mk.can("settings.read")) return res.status(403).json({ ok: false, errors: ["Permission requise."] });
@@ -130,6 +133,11 @@ module.exports = () => {
     if (group === "permalinks") {
       const t = target(req, res); if (!t) return;
       return permalinksUi.render(req, res, t, permalinksHead(req, s.scope));
+    }
+    // Médias : écran dédié (tailles des images, téléversement, limites)
+    if (group === "media") {
+      const t = target(req, res); if (!t) return;
+      return mediaUi.render(req, res, t, mediaHead(req, s.scope));
     }
     // Un groupe sans réglage propre au site (commentaires, médias…) s'affiche tout de même pour un site : il montre ce qui s'applique réellement, en lecture seule
     if (!engine.defsFor(s.scope).some((d) => d.group === group) && !(s.scope.siteId && platformRecap(req, group, s.scope).length)) return res.redirect(`${BASE}${q(s.scope)}`);
@@ -158,6 +166,12 @@ module.exports = () => {
     if (group === "permalinks" && req.body && ("preset" in req.body || "structure" in req.body || "category_base" in req.body || "tag_base" in req.body)) {
       const t = target(req, res); if (!t) return;
       const out = permalinksUi.save(Object.assign(req, { permalinksHead: permalinksHead(req, s.scope).settingsHead }), res, t, next);
+      if (out && out.redirect) return res.redirect(landing(req, req.params[0], s.scope));
+      return;
+    }
+    if (group === "media" && req.body && ("thumb_w" in req.body || "medium_w" in req.body || "large_w" in req.body)) {
+      const t = target(req, res); if (!t) return;
+      const out = mediaUi.save(Object.assign(req, { mediaHead: mediaHead(req, s.scope).settingsHead }), res, t, next);
       if (out && out.redirect) return res.redirect(landing(req, req.params[0], s.scope));
       return;
     }

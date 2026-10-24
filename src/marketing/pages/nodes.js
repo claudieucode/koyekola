@@ -12,8 +12,8 @@ const { parseVideoUrl } = require("../../utils/video");
 const dynamic = require("./dynamic");
 
 // Fichiers vidéo et audio de la médiathèque du CMS : adresse locale permanente (/uploads/marketing/<organisation>/<fichier>)
-const LOCAL_VIDEO = /^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+\.(mp4|webm)$/i;
-const LOCAL_AUDIO = /^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+\.(mp3|m4a|ogg|wav)$/i;
+const LOCAL_VIDEO = /^\/uploads\/marketing\/\d+\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9._-]+\.(mp4|webm)$/i;
+const LOCAL_AUDIO = /^\/uploads\/marketing\/\d+\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9._-]+\.(mp3|m4a|ogg|wav)$/i;
 const MAX_NODES = 400;   // éléments d'une page (toutes sections libres confondues)
 const MAX_DEPTH = 8;
 const NODE_ID = /^[a-z0-9]{6,20}$/;

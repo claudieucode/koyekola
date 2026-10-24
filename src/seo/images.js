@@ -11,7 +11,7 @@ function fileOf(publicPath) {
   const m = /^\/uploads\/(thumbnails|blog)\/([A-Za-z0-9_.-]{1,200})$/.exec(String(publicPath || ""));
   if (m) return path.join(uploadsRoot, m[1], m[2]);
   // Médiathèque du CMS : /uploads/marketing/<organisation>/<fichier>
-  const cms = /^\/uploads\/marketing\/(\d{1,9})\/([A-Za-z0-9_.-]{1,200})$/.exec(String(publicPath || ""));
+  const cms = /^\/uploads\/marketing\/(\d{1,9})\/((?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9_.-]{1,200})$/.exec(String(publicPath || ""));
   return cms ? path.join(uploadsRoot, "marketing", cms[1], cms[2]) : null;
 }
 

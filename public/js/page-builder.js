@@ -2662,7 +2662,7 @@
       var cur = io ? io.get() : ((it.props && it.props.size) || "full");
       var sizes = (info && info.sizes) || [];
       var opts = [["full", "Taille originale" + (info && info.width && list.length === 1 ? " (" + info.width + " × " + info.height + " px)" : "")]];
-      sizes.forEach(function (z) { opts.push([z.key, z.label + " (" + z.width + " px)"]); });
+      sizes.forEach(function (z) { opts.push([z.key, z.label + " (" + z.width + (z.height ? " × " + z.height : "") + " px" + (z.crop ? ", recadrée" : "") + ")"]); });
       if (sizes.length && !(io && io.noAuto)) opts.push(["auto", "Adaptative (selon l'écran)"]);
       if (!opts.some(function (o) { return o[0] === cur; })) opts.push([cur, "Indisponible pour cette image (original affiché)"]);
       var hint = !info ? "Chargement des tailles…" : !info.available ? "Les versions réduites ne sont pas disponibles sur ce serveur : l'image d'origine est affichée." : !info.complete ? "Disponible pour les images de la médiathèque." : !sizes.length ? "Cette image est déjà petite : seule la taille originale est proposée." : "Une version plus légère charge plus vite. L'image d'origine n'est pas modifiée.";

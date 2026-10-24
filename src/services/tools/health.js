@@ -12,6 +12,7 @@ const probe = require("../../seo/probe");
 const STATUS = { good: "Bon", warning: "À surveiller", critical: "Critique", info: "Information" };
 const CATEGORIES = { configuration: "Configuration", security: "Sécurité", database: "Base de données", urls: "Adresses et indexation", seo: "Référencement", content: "Contenu", media: "Médias", performance: "Performance", integrations: "Intégrations" };
 const CHECKS = [];
+const CHECK_TIMEOUT_MS = Number(process.env.HEALTH_CHECK_TIMEOUT_MS) || 20000;
 const check = (id, category, title, fn, { site = true } = {}) => CHECKS.push({ id, category, title, fn, site });
 const R = (status, detail, extra = {}) => ({ status, detail, impact: "", recommendation: "", action: null, ...extra });
 const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
@@ -85,7 +86,7 @@ const settingsScope = (c) => ({ siteId: c.siteId });
 check("settings_homepage", "configuration", "Page d'accueil choisie", async (c) => {
   const engine = require("../settings");
   const scope = settingsScope(c);
-  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const ctx = { db, organizationId: c.organizationId, can: () => true, orgLevel: true };
   const id = engine.readAll(scope, ctx).homepage_page.value;
   if (!id) return R("info", c.siteId ? "Aucune page d'accueil choisie pour ce site." : "L'accueil standard de KOLAKISA est affiché (aucune page choisie dans Paramètres → Lecture).");
   const p = db.prepare("SELECT status, archived_at, site_id, name FROM mk_landing_pages WHERE id = ?").get(Number(id));
@@ -96,14 +97,14 @@ check("settings_homepage", "configuration", "Page d'accueil choisie", async (c) 
 });
 check("settings_locale", "configuration", "Langue et fuseau horaire", async (c) => {
   const engine = require("../settings");
-  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const ctx = { db, organizationId: c.organizationId, can: () => true, orgLevel: true };
   const v = engine.readAll(settingsScope(c), ctx);
   if (!engine.validTimezone(String(v.timezone.value))) return R("critical", `Fuseau horaire inconnu : ${String(v.timezone.value).slice(0, 40)}.`, { impact: "Les dates sont affichées avec le fuseau de Paris par défaut.", recommendation: "Choisir un fuseau reconnu dans Paramètres → Général." });
   return R("good", `Langue « ${v.language.value} », fuseau « ${v.timezone.value} », date ${v.date_format.value}, heure ${v.time_format.value}.`);
 });
 check("settings_visibility", "configuration", "Visibilité pour les moteurs de recherche", async (c) => {
   const engine = require("../settings");
-  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const ctx = { db, organizationId: c.organizationId, can: () => true, orgLevel: true };
   const closed = engine.readAll(settingsScope(c), ctx).search_visibility.value === "closed";
   const production = process.env.NODE_ENV === "production";
   if (closed) return R(production ? "critical" : "warning", "Le site est masqué aux moteurs de recherche (Paramètres → Indexation).", { impact: "Aucune page n'apparaît dans les résultats de recherche.", recommendation: "Si ce n'est pas voulu, rendre le site visible.", action: { label: "Ouvrir les paramètres", href: `/marketing/site-web/parametres/indexation${c.siteId ? `?site=${c.siteId}` : ""}` } });
@@ -117,7 +118,7 @@ check("settings_admin_email", "configuration", "E-mail administratif", async (c)
 }, { site: true });
 check("settings_privacy_page", "configuration", "Page de confidentialité", async (c) => {
   const engine = require("../settings");
-  const ctx = { organizationId: c.organizationId, can: () => true, orgLevel: true };
+  const ctx = { db, organizationId: c.organizationId, can: () => true, orgLevel: true };
   const id = engine.readAll(settingsScope(c), ctx).privacy_page.value;
   if (!id) return R("info", "Aucune page de confidentialité choisie.", { recommendation: "Si le site collecte des données, choisir la page qui présente votre politique (Paramètres → Confidentialité)." });
   const p = db.prepare("SELECT status, archived_at, name FROM mk_landing_pages WHERE id = ?").get(Number(id));
@@ -335,11 +336,61 @@ check("integrity", "database", "Références entre contenus", async () => {
   return r.total ? R("warning", `${plural(r.total, "anomalie", "anomalies")} de références détectée(s) (${r.groups.filter((g) => g.count).map((g) => `${g.count} ${g.label.toLowerCase()}`).slice(0, 3).join(", ")}).`, { impact: "Éléments qui pointent vers des ressources supprimées.", recommendation: "Ouvrir le diagnostic pour voir le détail ; rien n'est corrigé automatiquement.", action: { label: "Ouvrir le diagnostic", href: "/marketing/site-web/outils/diagnostic" } }) : R("good", "Aucune référence brisée détectée entre menus, articles, catégories, révisions et commentaires.");
 }, { site: false });
 
+// ---------- Fiabilité de l'installation (santé du site, lot 1) : lecture seule, aucune écriture, aucun changement de droits ----------
+check("db_connection", "database", "Connexion à la base de données", async () => {
+  try { const v = db.prepare("SELECT sqlite_version() v").get().v; return R("good", `La base répond (SQLite ${v}).`); } catch (error) { return R("critical", `La base de données ne répond pas : ${runner.messageOf(error)}.`, { impact: "Plus aucune page ne peut s'afficher correctement.", recommendation: "Vérifier le dossier de données (DATA_DIR) et ses droits chez l'hébergeur, puis redémarrer l'application." }); }
+}, { site: false });
+check("migrations", "database", "Migrations de la base", async () => {
+  const dir = path.join(__dirname, "..", "..", "marketing", "migrations");
+  let files = null, applied = null;
+  try { files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).length; } catch { return R("info", "Dossier des migrations illisible : état non vérifiable.", { measured: false }); }
+  try { applied = db.prepare("SELECT COUNT(*) n FROM schema_migrations WHERE scope = 'marketing'").get().n; } catch { return R("info", "Table des migrations illisible : état non vérifiable.", { measured: false }); }
+  return applied >= files ? R("good", `${applied} migration(s) appliquée(s) sur ${files} livrée(s).`) : R("critical", `${files - applied} migration(s) livrée(s) ne sont pas appliquées (${applied}/${files}).`, { impact: "Des fonctions s'appuient sur des tables ou colonnes absentes.", recommendation: "Redémarrer l'application : les migrations s'appliquent au démarrage. Si cela persiste, consulter le journal de démarrage." });
+}, { site: false });
+check("fs_permissions", "configuration", "Droits d'écriture des dossiers de données", async () => {
+  const paths = require("../../config/paths");
+  const bad = [];
+  for (const [label, p] of [["données", paths.dataDir], ["fichiers envoyés", paths.uploadsRoot]]) { try { fs.accessSync(p, fs.constants.R_OK | fs.constants.W_OK); } catch { bad.push(label); } }
+  return bad.length ? R("critical", `Écriture impossible dans le dossier : ${bad.join(", ")}.`, { impact: "Impossible d'enregistrer des données ou d'envoyer des médias.", recommendation: "Donner à l'application le droit d'écrire dans ces dossiers (chez l'hébergeur). Ce contrôle ne modifie aucun droit." }) : R("good", "L'application peut lire et écrire dans ses dossiers de données et de fichiers envoyés (droits non modifiés).");
+}, { site: false });
+check("node_version", "security", "Version de Node.js", async () => {
+  const major = Number(process.versions.node.split(".")[0]);
+  const engines = require("../../../package.json").engines && require("../../../package.json").engines.node;
+  const min = Number(String(engines || "").replace(/[^0-9.]/g, "").split(".")[0]) || 22;
+  if (major < min) return R("critical", `Node.js ${process.version} est inférieur au minimum requis (${engines}).`, { impact: "Fonctions indisponibles et correctifs de sécurité absents.", recommendation: "Choisir une version de Node.js plus récente chez l'hébergeur." });
+  return major % 2 === 1 ? R("warning", `Node.js ${process.version} est une version de développement (non LTS).`, { impact: "Pas de maintenance de sécurité à long terme.", recommendation: "Choisir une version LTS (numéro pair) chez l'hébergeur." }) : R("good", `Node.js ${process.version} (version LTS, minimum requis ${engines}).`);
+}, { site: false });
+check("image_processing", "media", "Traitement des images", async () => {
+  const v = require("../../marketing/media/variants");
+  if (!v.available()) return R("warning", "La bibliothèque de redimensionnement (sharp) est absente : seules les images d'origine sont servies.", { impact: "Images plus lourdes, pas de variantes WebP.", recommendation: "Réinstaller les dépendances optionnelles (npm install) chez l'hébergeur." });
+  return (await v.selfTest()) ? R("good", "La fabrication d'images WebP fonctionne (essai réel).") : R("warning", "sharp est présent mais l'essai de fabrication d'une image a échoué.", { impact: "Les variantes d'images retombent sur l'original.", recommendation: "Réinstaller sharp pour la plate-forme du serveur." });
+}, { site: false });
+check("inactive_themes", "configuration", "Thèmes installés mais inactifs", async (c) => {
+  const unused = require("../themes").installed(c.siteId).filter((t) => t.state !== "active" && !t.builtin);
+  return unused.length ? R("warning", `${plural(unused.length, "thème installé n'est pas utilisé", "thèmes installés ne sont pas utilisés")} : ${unused.slice(0, 4).map((t) => t.name).join(", ")}.`, { impact: "Aucun risque direct : des thèmes inutilisés alourdissent seulement la liste et sont à mettre à jour s'ils sont réactivés.", recommendation: "Retirer les thèmes dont vous n'avez plus l'usage.", action: { label: "Ouvrir les thèmes", href: `/marketing/site-web/apparence/themes${c.siteId ? `?site=${c.siteId}` : ""}` } }) : R("good", "Aucun thème installé inutilisé.");
+});
+check("inactive_modules", "configuration", "Modules activés sans effet", async (c) => {
+  if (c.siteId === null) return R("info", "Le site principal n'est pas soumis à l'activation des modules.");
+  const M = require("../../marketing/siteModules");
+  const idle = Object.keys(M.MODULES).filter((k) => !M.MODULES[k].ready && M.isEnabled(db, c.organizationId, c.siteId, k)).map((k) => M.MODULES[k].label);
+  return idle.length ? R("warning", `Module(s) activé(s) mais sans effet visible pour l'instant : ${idle.join(", ")}.`, { impact: "Aucun effet sur le site tant que la livraison du module n'est pas terminée.", recommendation: "Désactiver ces modules si vous n'en avez pas besoin." }) : R("good", "Tous les modules activés sur ce site sont opérationnels.");
+});
+
 // ---------- Exécution ----------
 function summarize(results) {
   const by = { good: 0, warning: 0, critical: 0, info: 0 };
   for (const r of results) by[r.status]++;
-  return { ...by, overall: by.critical ? "critical" : by.warning ? "warning" : "good" };
+  return { ...by, improvements: by.warning, passed: by.good, unverified: by.info, overall: by.critical ? "critical" : by.warning ? "warning" : "good" };
+}
+
+// Un contrôle isolé : délai maximal, erreur et résultat anormal deviennent « non concluant » (jamais « réussi » par défaut)
+async function runCheck(k, c, timeoutMs = CHECK_TIMEOUT_MS) {
+  let timer;
+  try {
+    const r = await Promise.race([Promise.resolve().then(() => k.fn(c)), new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(`délai de ${Math.round(timeoutMs / 100) / 10} s dépassé`)), timeoutMs); })]);
+    if (!r || !["good", "warning", "critical", "info"].includes(r.status)) return R("info", "Le contrôle a renvoyé un résultat inexploitable.", { measured: false });
+    return r;
+  } catch (error) { return R("info", `Contrôle impossible ou expiré : ${runner.messageOf(error)}`, { measured: false }); } finally { clearTimeout(timer); }
 }
 
 runner.register("health", async (run, api) => {
@@ -356,8 +407,8 @@ runner.register("health", async (run, api) => {
     if (api.cancelled()) return { status: "cancelled", report: { results, summary: summarize(results), partial: true }, message: "Analyse annulée." };
     api.message(`Contrôle : ${k.title}`);
     let r;
-    try { r = await k.fn(c); } catch (error) { r = R("info", `Contrôle impossible : ${runner.messageOf(error)}`, { measured: false }); }
-    results.push({ id: k.id, category: k.category, title: k.title, ...r });
+    r = await runCheck(k, c);
+    results.push({ id: k.id, category: k.category, title: k.title, at: new Date().toISOString(), measured: r.measured !== false, ...r });
     api.advance({ done: 1, failed: r.status === "critical" ? 1 : 0 });
     await api.yieldTurn();
   }
@@ -365,9 +416,12 @@ runner.register("health", async (run, api) => {
 });
 
 function start(ctx, { siteId = null, port }) {
+  // Une seule analyse à la fois par site : relancer pendant qu'elle tourne renvoie celle en cours (pas de contrôles en double)
+  const current = runs.latest(ctx.organizationId, "health", siteId);
+  if (current && ["queued", "running"].includes(current.status)) return current;
   const run = runs.create({ organizationId: ctx.organizationId, siteId, userId: ctx.userId, kind: "health", options: { port } });
   runner.start(run, "health");
   return run;
 }
 
-module.exports = { start, CHECKS, CATEGORIES, STATUS, summarize };
+module.exports = { start, runCheck, CHECK_TIMEOUT_MS, CHECKS, CATEGORIES, STATUS, summarize };
