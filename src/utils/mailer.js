@@ -142,7 +142,24 @@ function sendInvitationEmail(db, { to, inviter, roleName, siteName, url, days, n
   });
 }
 
+// Compte créé par un administrateur : JAMAIS le mot de passe (ni en clair, ni sous aucune forme) — un lien personnel, valable plusieurs jours, pour choisir le sien
+// (lien de définition du mot de passe, à usage unique) et un lien de confirmation de l'adresse. Le texte est effacé dès que l'e-mail est parti (sensible).
+function sendAccountCreatedEmail(db, { to, username, creator, siteName = "", activateUrl, verifyUrl = null, days = 7, choosePassword = true }) {
+  return queueMail(db, {
+    kind: "account_created", to, subject: `Votre compte KOLAKISA${siteName ? ` — ${oneLine(siteName)}` : ""}`, sensitive: true,
+    text: [
+      `Bonjour ${oneLine(username)},`, "",
+      `${oneLine(creator)} vient de créer un compte pour vous sur KOLAKISA${siteName ? ` (site « ${oneLine(siteName)} »)` : ""}.`,
+      `Votre identifiant : ${oneLine(username)}`, "",
+      choosePassword ? `Pour choisir votre mot de passe et activer votre accès (lien personnel, valable ${days} jours, utilisable une seule fois) :` : "Pour vous connecter, utilisez le mot de passe que la personne qui a créé votre compte vous a communiqué. Vous pourrez le changer après connexion. Pour définir un nouveau mot de passe tout de suite (lien personnel, usage unique) :", "", activateUrl,
+      ...(verifyUrl ? ["", "Pour confirmer que cette adresse e-mail est bien la vôtre :", "", verifyUrl] : []), "",
+      "Si vous n'attendiez pas ce compte, ignorez cet e-mail : sans ce lien, personne ne peut se connecter à votre place.",
+    ].join("\n"),
+  });
+}
+
 module.exports = {
+  sendAccountCreatedEmail,
   sendInvitationEmail, TIMEOUTS, buildTransport, fromAddress, siteUrl,
   sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendEmailChange, sendPasswordResetEmail, sendSubscriptionConfirmation,
 };

@@ -62,6 +62,7 @@ const SECTIONS = [
   {
     key: "utilisateurs", label: "Utilisateurs", icon: "users", items: [
       leaf("utilisateurs", "Tous les utilisateurs", `${BASE}/utilisateurs`, { permission: "users.view" }),
+      leaf("utilisateurs/nouveau", "Ajouter un compte", `${BASE}/utilisateurs/nouveau`, { permission: "users.create" }),
       leaf("utilisateurs/ajouter", "Inviter", `${BASE}/utilisateurs/ajouter`, { permission: "users.create" }),
       leaf("utilisateurs/roles", "Rôles", `${BASE}/utilisateurs/roles`, { permission: "users.view" }),
       leaf("utilisateurs/permissions", "Permissions", `${BASE}/utilisateurs/permissions`, { permission: "users.view" }),
@@ -178,6 +179,7 @@ const SITE_MODULES = {
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
   // Utilisateurs d'un site : écrans partagés /site-web/equipe-site (équipe locale, invitations de CE site, rôles et permissions en lecture) ouverts dans le cadre du site
   equipe: { label: "Tous les utilisateurs", kind: "delegate", to: "/site-web/equipe-site", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  "equipe-ajouter": { label: "Ajouter un compte", kind: "delegate", to: "/site-web/equipe-site/nouveau", reg: "utilisateurs/nouveau", permission: "users.create", legacy: `${BASE}/utilisateurs/nouveau` },
   "equipe-inviter": { label: "Inviter", kind: "delegate", to: "/site-web/equipe-site/inviter", reg: "utilisateurs/ajouter", permission: "users.create", legacy: `${BASE}/utilisateurs/ajouter` },
   "equipe-invitations": { label: "Invitations", kind: "delegate", to: "/site-web/equipe-site/invitations", reg: "utilisateurs/invitations", permission: "users.view", legacy: `${BASE}/utilisateurs/invitations` },
   "equipe-roles": { label: "Rôles", kind: "delegate", to: "/site-web/equipe-site/roles", reg: "utilisateurs/roles", permission: "users.view", legacy: `${BASE}/utilisateurs/roles` },
@@ -302,6 +304,7 @@ const ABILITY = {
   "seo/robots": { mode: "open", module: "seo", sub: "robots" },
   "seo/404": { mode: "open", module: "seo", sub: "404" },
   utilisateurs: { mode: "open", module: "equipe" },
+  "utilisateurs/nouveau": { mode: "open", module: "equipe-ajouter" },
   "utilisateurs/ajouter": { mode: "open", module: "equipe-inviter" },
   "utilisateurs/invitations": { mode: "open", module: "equipe-invitations" },
   "utilisateurs/roles": { mode: "open", module: "equipe-roles" },
@@ -464,7 +467,7 @@ FRAMED.add("parametres/indexation");
 FRAMED.add("parametres/emailing");
 FRAMED.add("parametres/tunnels");
 FRAMED.add("parametres/avance");
-FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
+FRAMED.add("utilisateurs/nouveau"); FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
 FRAMED.add("parametres/connecteurs");
 FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal

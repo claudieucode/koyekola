@@ -58,7 +58,11 @@ module.exports = () => {
     const mine = new Set(access.siteMemberships(req.session.user.id).map((m) => m.site_id));
     return all.filter((s) => mine.has(s.id));
   };
-  const shell = (req, siteId, tab) => ({ BASE, TABS: TABS.filter(([, , perm]) => req.mk.can(perm) || perm === "tools.view"), tab, sites: sitesFor(req), siteId, q: q(siteId), siteOnly: req.mk.siteOnly, can: req.mk.can, toolsJs: true });
+  // Entrée du menu latéral correspondant à l'onglet affiché (UNE seule source : l'onglet que la route fournit). Avant, toutes les pages d'outils portaient la clé « outils »
+  // (= Santé du site) : cette entrée restait sélectionnée quelle que soit la page. « Sauvegarde du site » n'a pas d'entrée propre : elle se rattache à « Exporter ».
+  const TAB_NAV = { "": "outils", disponibles: "outils/disponibles", importer: "outils/importer", exporter: "outils/exporter", "sauvegarde-site": "outils/exporter", donnees: "outils/donnees", sauvegardes: "outils/sauvegardes",
+    diagnostic: "outils/diagnostic", systeme: "outils/systeme", maintenance: "outils/maintenance", cache: "outils/cache", contenu: "outils/contenu", "effacer-donnees": "outils/effacer-donnees", notes: "outils/notes", logs: "outils/logs" };
+  const shell = (req, siteId, tab) => ({ active: TAB_NAV[tab] || "outils", BASE, TABS: TABS.filter(([, , perm]) => req.mk.can(perm) || perm === "tools.view"), tab, sites: sitesFor(req), siteId, q: q(siteId), siteOnly: req.mk.siteOnly, can: req.mk.can, toolsJs: true });
 
   // Exporter les données personnelles (demandes, confirmation, archive ZIP) : écrans dans ./privacyExport, moteur dans services/privacy
   router.use(require("./privacyExport")({ BASE, withSite, shell, flash, q }));

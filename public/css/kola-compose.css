@@ -45,9 +45,8 @@ html[data-kola-theme="dark"] {
 }
 
 /* ===== 3. Coque : barre de chemin, contenu, menu ===== */
-.is-cms { --kab-crumb-h: 40px; }
-.is-cms .kab-crumbbar { background: color-mix(in srgb, var(--mk-bg) 86%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px); border-bottom-color: color-mix(in srgb, var(--mk-border) 80%, transparent); }
-.is-cms .kab-crumbbar .mk-breadcrumb ol { font-size: 0.8rem; }
+.is-cms { --kab-crumb-h: 0px; } /* plus de barre de chemin globale : le chemin est dans le bandeau de contexte */
+.is-cms .mk-cms-crumbs ol { font-size: 0.8rem; }
 .is-cms .mk-breadcrumb li[aria-current="page"] { font-weight: 650; }
 /* Les bandes pleine largeur de kola-pages.css se calent sur --kp-x / --kp-t : on règle ces variables, jamais le remplissage seul */
 .mk-content { --kp-x: var(--kg-pad); --kp-t: 20px; padding: var(--kp-t) var(--kp-x) 56px; max-width: var(--kg-max); margin-inline: auto; } /* marges et largeur : jetons --kg-* (marketing.css), jamais de valeur propre */
