@@ -1,0 +1,93 @@
+<%#
+  KOLAKISA CMS → Utilisateurs → Ajouter un compte (central et espace d'un site). Création directe d'un compte, avec ou sans e-mail d'activation.
+  Toute la logique est côté serveur (services/accounts + cmsAccess) ; public/js/cms-account-new.js ajoute le générateur de mot de passe, l'affichage / masquage, le repère de robustesse,
+  la validation à la saisie et le verrou de double soumission. Sans JavaScript, le formulaire fonctionne (envoi classique, validation serveur).
+%><%- include("partials/top", { title, active }) %>
+<%
+  const v = values || {};
+  const fe = fieldErrors || {};
+  const fieldAttrs = (k) => (fe[k] ? ` aria-invalid="true" aria-describedby="ac-${k}-err"` : "");
+  const siteWord = ctx.mode === "site" ? ctx.siteName : "";
+%>
+<div class="mk-head"><div class="mk-head-main">
+  <p class="mk-crumb"><a href="<%= ctx.listUrl %>">← Utilisateurs</a></p>
+  <h1>Ajouter un compte</h1>
+  <p class="mk-head-sub">Créer un nouveau compte<%= siteWord ? " et l'ajouter à « " + siteWord + " »" : "" %>. Rien n'est envoyé ni créé tant que vous n'avez pas validé le formulaire.</p>
+</div></div>
+<% if (created) { %>
+<section class="mk-panel ac-done" aria-labelledby="ac-done-h" role="status">
+  <h2 id="ac-done-h"><%- icon("checkCircle", { size: 18 }) %> Compte créé</h2>
+  <p><strong><%= created.username %></strong> (<%= created.email %>) peut se connecter. Ce compte n'a pas d'accès à l'administration : il apparaît dans le <a href="/formateur/gestion/eleves">centre de gestion (élèves)</a>.</p>
+  <p class="ac-actions"><a class="btn btn-primary btn-sm" href="<%= ctx.action %>">Créer un autre compte</a><a class="btn btn-outline btn-sm" href="<%= ctx.listUrl %>">Retour aux utilisateurs</a></p>
+</section>
+<% } %>
+<% if (errors.length || Object.keys(fe).length) { %>
+<div class="mk-flash mk-flash-error" role="alert" id="ac-summary"><span class="mk-flash-body"><p>Le compte n'a pas été créé<%= Object.keys(fe).length ? " : corrigez les champs signalés." : "." %></p><% if (errors.length) { %><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul><% } else { %><ul><% Object.entries(fe).forEach(([k, m]) => { %><li><a href="#ac-<%= k %>"><%= m %></a></li><% }) %></ul><% } %></span></div>
+<% } %>
+<% if (!ctx.canCreate) { %><p class="pl-note">Ce site est archivé : on n'y ajoute plus de compte.</p><% } %>
+<form id="ac-form" class="ac" method="post" action="<%= ctx.action %>" novalidate autocomplete="off" data-ac-form data-ac-min="<%= pwMin %>" data-ac-max="<%= pwMax %>">
+  <input type="hidden" name="request_id" value="<%= requestId %>">
+  <% if (ctx.mode === "site") { %><input type="hidden" name="site" value="<%= ctx.scopeSiteId %>"><% } %>
+  <fieldset class="ac-fieldset"<%= ctx.canCreate ? "" : " disabled" %>>
+    <legend class="sr-only">Nouveau compte</legend>
+
+    <section class="mk-panel ac-card" aria-labelledby="ac-info-h">
+      <h2 id="ac-info-h">Informations du compte</h2>
+      <div class="ac-grid">
+        <div class="ac-field"><label for="ac-username">Identifiant <span class="ac-req">(nécessaire)</span></label>
+          <input id="ac-username" name="username" type="text" value="<%= v.username || "" %>" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" required<%- fieldAttrs("username") %>>
+          <p class="ac-err" id="ac-username-err" role="alert" data-ac-err="username"><%= fe.username || "" %></p></div>
+        <div class="ac-field"><label for="ac-email">E-mail <span class="ac-req">(nécessaire)</span></label>
+          <input id="ac-email" name="email" type="email" value="<%= v.email || "" %>" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" required<%- fieldAttrs("email") %>>
+          <p class="ac-err" id="ac-email-err" role="alert" data-ac-err="email"><%= fe.email || "" %></p></div>
+        <div class="ac-field"><label for="ac-first">Prénom</label><input id="ac-first" name="first_name" type="text" value="<%= v.first_name || "" %>" maxlength="60" autocomplete="off"></div>
+        <div class="ac-field"><label for="ac-last">Nom de famille</label><input id="ac-last" name="last_name" type="text" value="<%= v.last_name || "" %>" maxlength="60" autocomplete="off"></div>
+        <div class="ac-field"><label for="ac-website">Site web</label>
+          <input id="ac-website" name="website" type="url" value="<%= v.website || "" %>" maxlength="200" placeholder="https://" autocomplete="off" spellcheck="false"<%- fieldAttrs("website") %>>
+          <p class="ac-err" id="ac-website-err" role="alert" data-ac-err="website"><%= fe.website || "" %></p></div>
+        <div class="ac-field"><label for="ac-language">Langue</label>
+          <select id="ac-language" name="language"><option value="">Valeur par défaut du site</option><% languages.forEach(([code, label]) => { %><option value="<%= code %>"<%= v.language === code ? " selected" : "" %>><%= label %></option><% }) %></select>
+          <p class="ac-err" id="ac-language-err" role="alert" data-ac-err="language"><%= fe.language || "" %></p></div>
+      </div>
+    </section>
+
+    <section class="mk-panel ac-card" aria-labelledby="ac-sec-h">
+      <h2 id="ac-sec-h">Accès et sécurité</h2>
+      <div class="ac-grid ac-grid--access">
+        <div class="ac-field ac-field--wide"><label for="ac-password">Mot de passe</label>
+          <div class="ac-pw">
+            <input id="ac-password" name="password" type="password" value="" autocomplete="new-password" autocapitalize="off" spellcheck="false" maxlength="<%= pwMax %>" aria-describedby="ac-pw-meter ac-password-err"<%- fe.password ? ' aria-invalid="true"' : "" %> data-ac-password>
+            <button type="button" class="btn btn-outline btn-sm ac-toggle" data-ac-toggle aria-controls="ac-password" aria-pressed="false"><%- icon("eye", { size: 15 }) %><span>Afficher</span></button>
+            <button type="button" class="btn btn-outline btn-sm" data-ac-generate hidden><%- icon("sparkles", { size: 15 }) %> Générer un mot de passe</button>
+          </div>
+          <div class="ac-meter" id="ac-pw-meter" data-ac-meter aria-live="polite"><span class="ac-track"><span class="ac-meter-bar" data-ac-bar></span></span><span class="ac-meter-label" data-ac-label>Saisissez ou générez un mot de passe.</span></div>
+          <p class="ac-hint" data-ac-pwhint>Au moins <%= pwMin %> caractères. Le repère de robustesse est indicatif : seule la longueur minimale est exigée.</p>
+          <p class="ac-err" id="ac-password-err" role="alert" data-ac-err="password"><%= fe.password || "" %></p></div>
+
+        <div class="ac-field ac-field--wide"><span class="ac-label" id="ac-notify-l">Notification</span>
+          <label class="mk-cms-check" for="ac-notify"><input type="checkbox" id="ac-notify" name="notify" value="1"<%= v.notify ? " checked" : "" %> data-ac-notify aria-describedby="ac-notify-h"> Envoyer un e-mail à la personne à propos de son nouveau compte</label>
+          <p class="ac-hint" id="ac-notify-h">Le message contient un lien personnel (usage unique, valable 7 jours) pour <strong>choisir son mot de passe</strong> et confirmer l'adresse : le mot de passe n'est jamais envoyé par e-mail.<% if (!smtp) { %> <strong class="ac-warn">Aucun serveur d'e-mail n'est configuré : le message ne partira pas, le lien vous sera montré pour que vous le transmettiez vous-même.</strong><% } %></p></div>
+
+        <div class="ac-field"><label for="ac-role">Rôle</label>
+          <select id="ac-role" name="role" aria-describedby="ac-role-h"<%- fe.role ? ' aria-invalid="true"' : "" %>>
+            <option value="">Compte ordinaire (sans accès à l'administration)</option>
+            <% ctx.roles.forEach((r) => { if (!r.ok) return; %><option value="<%= r.key %>"<%= v.role === r.key ? " selected" : "" %>><%= r.name %></option><% }) %>
+          </select>
+          <p class="ac-hint" id="ac-role-h">Par défaut, aucun accès : le compte se connecte au site comme un élève. Vous ne pouvez attribuer que des rôles dont vous avez vous-même tous les droits.</p></div>
+        <% if (ctx.mode === "central") { %>
+        <div class="ac-field"><label for="ac-site">Accès à l'administration pour</label>
+          <select id="ac-site" name="site_id" data-ac-site><option value="">Toute l'organisation (équipe)</option><% ctx.sites.forEach((s) => { %><option value="<%= s.id %>"<%= String(v.site_id) === String(s.id) ? " selected" : "" %>><%= s.name %></option><% }) %></select>
+          <p class="ac-hint">Utile seulement avec un rôle ci-contre : le rôle s'applique à ce site, ou à toute l'équipe.</p></div>
+        <% } else { %>
+        <div class="ac-field"><span class="ac-label">Site</span><p class="ac-static"><strong><%= ctx.siteName %></strong></p><p class="ac-hint">Le rôle ne vaut que pour ce site.</p></div>
+        <% } %>
+      </div>
+    </section>
+  </fieldset>
+
+  <div class="pl-savebar ac-bar">
+    <p class="pl-status" role="status" aria-live="polite" data-ac-status>Remplissez les champs nécessaires.</p>
+    <% if (ctx.canCreate) { %><button type="submit" class="btn btn-primary" data-ac-submit><span class="ac-label-btn">Ajouter un compte</span></button><% } %>
+  </div>
+</form>
+<%- include("partials/bottom") %>
