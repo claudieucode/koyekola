@@ -110,8 +110,8 @@ class Client {
       const i = pair.indexOf("=");
       this.cookies.set(pair.slice(0, i), pair.slice(i + 1));
     }
-    const text = await res.text();
-    return { status: res.status, location: res.headers.get("location"), headers: res.headers, text };
+    const raw = Buffer.from(await res.arrayBuffer()); // octets bruts (fichiers binaires : archives, images) en plus du texte
+    return { status: res.status, location: res.headers.get("location"), headers: res.headers, text: raw.toString("utf8"), body: raw };
   }
 
   get(url, opts) { return this.request(url, { ...opts, method: "GET" }); }

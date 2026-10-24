@@ -1,0 +1,122 @@
+<%#
+  KOLAKISA CMS → Comptes → Profil : profil personnel de la personne connectée. Données réelles (users, mk_user_profiles, sessions) ; aucune donnée simulée.
+  Un seul formulaire principal (#pf-main, multipart) : ses champs sont répartis dans les sections par l'attribut form="pf-main". E-mail, mot de passe et sessions ont leur propre formulaire.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const e = (k) => (errors && errors[k]) || "";
+  const bad = (k) => (e(k) ? ' aria-invalid="true" aria-describedby="pf-err-' + k + '"' : "");
+  const err = (k) => (e(k) ? '<p class="field-error" id="pf-err-' + k + '" role="alert">' + String(e(k)).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]) + "</p>" : "");
+  const fd = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
+  const fdt = (ms) => { const d = new Date(ms); return d.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) + " " + d.toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }); };
+  const themeLabel = { auto: "Automatique", light: "Clair", dark: "Sombre" };
+  const themeHint = { auto: "Suit le réglage de votre appareil.", light: "Fond clair, texte marine.", dark: "Fond marine profond, texte clair." };
+  const initial = String(p.nickname || p.username || "?").slice(0, 1).toUpperCase();
+  const others = sessions.filter((s) => !s.current);
+%>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Profil</h1><p class="mk-head-sub">Vos informations personnelles et vos préférences. Elles ne concernent que votre compte, quel que soit le site ouvert.</p></div>
+    </div>
+
+    <form id="pf-main" method="post" action="<%= BASE %>" enctype="multipart/form-data" novalidate></form>
+
+    <div class="mk-pf">
+      <section class="mk-ap-card mk-pf-card" aria-labelledby="pf-prefs">
+        <h2 id="pf-prefs">Options personnelles</h2>
+        <div class="mk-pf-row">
+          <div class="mk-pf-label" id="pf-theme-l">Thème de l'administration</div>
+          <div class="mk-pf-ctl">
+            <div class="mk-pf-themes" role="radiogroup" aria-labelledby="pf-theme-l">
+              <% themes.forEach((t) => { %><label class="mk-pf-theme<%= p.theme === t ? " is-on" : "" %>"><input type="radio" name="theme" value="<%= t %>" form="pf-main"<%= p.theme === t ? " checked" : "" %>><span class="mk-pf-theme-sw mk-pf-theme-sw--<%= t %>" aria-hidden="true"></span><span><strong><%= themeLabel[t] %></strong><small><%= themeHint[t] %></small></span></label><% }) %>
+            </div><%- err("theme") %>
+          </div>
+        </div>
+        <div class="mk-pf-row">
+          <div class="mk-pf-label">Langue</div>
+          <div class="mk-pf-ctl"><p class="field-hint">Français : la seule langue de l'administration pour le moment. Aucun choix n'est proposé tant qu'une autre langue n'est pas disponible.</p></div>
+        </div>
+      </section>
+
+      <section class="mk-ap-card mk-pf-card" aria-labelledby="pf-name">
+        <h2 id="pf-name">Nom</h2>
+        <div class="mk-pf-row"><label class="mk-pf-label" for="pf-username">Identifiant</label><div class="mk-pf-ctl"><input type="text" id="pf-username" value="<%= p.username %>" disabled><p class="field-hint">Un identifiant ne peut pas être modifié : il sert à la connexion et aux journaux.</p></div></div>
+        <div class="mk-pf-row"><label class="mk-pf-label" for="pf-first">Prénom</label><div class="mk-pf-ctl"><input type="text" id="pf-first" name="first_name" form="pf-main" maxlength="80" autocomplete="given-name" value="<%= p.firstName %>"<%- bad("first_name") %>><%- err("first_name") %></div></div>
+        <div class="mk-pf-row"><label class="mk-pf-label" for="pf-last">Nom de famille</label><div class="mk-pf-ctl"><input type="text" id="pf-last" name="last_name" form="pf-main" maxlength="80" autocomplete="family-name" value="<%= p.lastName %>"<%- bad("last_name") %>><%- err("last_name") %></div></div>
+        <div class="mk-pf-row"><label class="mk-pf-label" for="pf-nick">Pseudo <span class="mk-pf-req">(nécessaire)</span></label><div class="mk-pf-ctl"><input type="text" id="pf-nick" name="nickname" form="pf-main" maxlength="80" required value="<%= p.nickname %>"<%- bad("nickname") %>><%- err("nickname") %></div></div>
+        <div class="mk-pf-row"><label class="mk-pf-label" for="pf-display">Nom à afficher</label><div class="mk-pf-ctl"><select id="pf-display" name="display_name" form="pf-main"<%- bad("display_name") %>><% displayOptions.forEach((o) => { %><option value="<%= o %>"<%= (p.displayName || p.nickname) === o ? " selected" : "" %>><%= o %></option><% }) %></select><%- err("display_name") %><p class="field-hint">La liste suit les noms saisis ci-dessus ; enregistrez pour la mettre à jour.</p></div></div>
+      </section>
+
+      <section class="mk-ap-card mk-pf-card" aria-labelledby="pf-contact">
+        <h2 id="pf-contact">Informations de contact</h2>
+        <div class="mk-pf-row">
+          <label class="mk-pf-label" for="pf-email">E-mail <span class="mk-pf-req">(nécessaire)</span></label>
+          <div class="mk-pf-ctl">
+            <form method="post" action="<%= BASE %>/email" class="mk-pf-inline" novalidate>
+              <input type="email" id="pf-email" name="email" required maxlength="254" autocomplete="email" value="<%= emailValue || (p.pendingEmail || p.email) %>"<%- bad("email") %>>
+              <button type="submit" class="btn btn-outline btn-sm">Changer l'adresse</button>
+            </form><%- err("email") %>
+            <p class="field-hint">Adresse actuelle : <strong><%= p.email %></strong> · <%= p.email_verified_at ? "confirmée" : "non confirmée" %>. Si vous la modifiez, un e-mail de confirmation est envoyé à la nouvelle adresse ; <strong>elle n'est active qu'après confirmation</strong>.</p>
+            <% if (p.pendingEmail) { %><div class="mk-pf-pending" role="status"><span>En attente de confirmation : <strong><%= p.pendingEmail %></strong></span>
+              <form method="post" action="<%= BASE %>/email/annuler"><button type="submit" class="btn btn-ghost btn-sm">Annuler la demande</button></form></div><% } %>
+          </div>
+        </div>
+        <div class="mk-pf-row"><label class="mk-pf-label" for="pf-web">Site web</label><div class="mk-pf-ctl"><input type="text" inputmode="url" id="pf-web" name="website" form="pf-main" maxlength="300" placeholder="https://" value="<%= p.website %>"<%- bad("website") %>><%- err("website") %></div></div>
+      </section>
+
+      <section class="mk-ap-card mk-pf-card" aria-labelledby="pf-about">
+        <h2 id="pf-about">À propos de vous</h2>
+        <div class="mk-pf-row"><label class="mk-pf-label" for="pf-bio">Informations biographiques</label><div class="mk-pf-ctl"><textarea id="pf-bio" name="bio" form="pf-main" rows="4" maxlength="<%= maxBio * 4 %>"<%- bad("bio") %>><%= p.bio %></textarea><%- err("bio") %><p class="field-hint">Texte brut, <%= maxBio %> caractères au plus. Il peut être affiché publiquement (page d'une formation) : les balises HTML sont supprimées.</p></div></div>
+        <div class="mk-pf-row"><div class="mk-pf-label" id="pf-av-l">Illustration du profil</div>
+          <div class="mk-pf-ctl mk-pf-avatar">
+            <% if (p.avatar_path) { %><img src="<%= p.avatar_path %>" alt="Votre photo actuelle" width="72" height="72"><% } else { %><span class="mk-pf-initial" aria-hidden="true"><%= initial %></span><% } %>
+            <div>
+              <input type="file" id="pf-file" name="thumbnail" form="pf-main" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" aria-labelledby="pf-av-l">
+              <p class="field-hint">JPEG, PNG, GIF, WebP ou AVIF · 2 Mo au plus. Le type est vérifié sur le contenu du fichier.</p>
+              <% if (p.avatar_path) { %><label class="checkbox-row"><input type="checkbox" name="remove_avatar" value="1" form="pf-main"> Supprimer ma photo</label><% } %>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="mk-pf-save"><button type="submit" form="pf-main" class="btn btn-primary">Mettre à jour le profil</button></div>
+
+      <section class="mk-ap-card mk-pf-card" aria-labelledby="pf-account">
+        <h2 id="pf-account">Gestion du compte</h2>
+        <div class="mk-pf-row">
+          <div class="mk-pf-label">Nouveau mot de passe</div>
+          <div class="mk-pf-ctl">
+            <details class="mk-pf-details"<%= formSection === "password" ? " open" : "" %>><summary class="btn btn-outline btn-sm">Définir un nouveau mot de passe</summary>
+              <form method="post" action="<%= BASE %>/mot-de-passe" class="mk-pf-pwd" novalidate>
+                <div class="field-group"><label for="pf-cur">Mot de passe actuel</label><input type="password" id="pf-cur" name="current_password" autocomplete="current-password" required<%- bad("current") %>><%- err("current") %></div>
+                <div class="field-group"><label for="pf-new">Nouveau mot de passe</label><input type="password" id="pf-new" name="new_password" autocomplete="new-password" minlength="<%= minPassword %>" maxlength="200" required<%- bad("next") %>><%- err("next") %><p class="field-hint"><%= minPassword %> caractères au minimum.</p></div>
+                <div class="field-group"><label for="pf-conf">Confirmer le nouveau mot de passe</label><input type="password" id="pf-conf" name="confirm_password" autocomplete="new-password" required<%- bad("confirm") %>><%- err("confirm") %></div>
+                <button type="submit" class="btn btn-primary btn-sm">Changer le mot de passe</button>
+                <p class="field-hint">Vos autres sessions seront déconnectées ; celle-ci reste ouverte.</p>
+              </form>
+            </details>
+          </div>
+        </div>
+        <div class="mk-pf-row">
+          <div class="mk-pf-label">Sessions</div>
+          <div class="mk-pf-ctl">
+            <ul class="mk-pf-sessions">
+              <% sessions.forEach((s) => { %><li><span><strong><%= s.device ? s.device.label : "Appareil inconnu" %></strong><%= s.current ? " · cette session" : "" %><small>Expire le <%= fdt(s.expiresAt) %><%= s.device && s.device.at ? " · ouverte le " + fd(s.device.at) : "" %></small></span>
+                <% if (!s.current) { %><form method="post" action="<%= BASE %>/sessions/<%= s.key %>/revoquer"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Déconnecter la session <%= s.device ? s.device.label : "" %>">Déconnecter</button></form><% } %></li><% }) %>
+            </ul>
+            <% if (others.length) { %><form method="post" action="<%= BASE %>/sessions/revoquer"><button type="submit" class="btn btn-outline btn-sm">Déconnecter partout ailleurs</button></form>
+            <% } else { %><p class="field-hint">Vous n'êtes connecté·e qu'à cet emplacement.</p><% } %>
+          </div>
+        </div>
+      </section>
+
+      <section class="mk-ap-card mk-pf-card" aria-labelledby="pf-api">
+        <h2 id="pf-api">Mots de passe d'application</h2>
+        <p class="field-hint">KOLAKISA ne propose pas de mots de passe d'application : les accès non interactifs (applications, intégrations) passent par des clés d'API à portée limitée, qui ne donnent jamais le mot de passe du compte.</p>
+        <% if (canApiKeys) { %><p><a class="btn btn-outline btn-sm" href="/marketing/api">Gérer les clés d'API</a></p><% } %>
+      </section>
+    </div>
+<% if (appliedTheme) { %><script>
+  /* Thème enregistré : appliqué tout de suite sur cet appareil (les autres appareils le prennent à leur prochaine ouverture). */
+  try { var t = "<%= appliedTheme %>"; if (t === "auto") localStorage.removeItem("kolaTheme"); else localStorage.setItem("kolaTheme", t);
+    var h = document.documentElement; h.setAttribute("data-kola-pref", t); h.setAttribute("data-kola-theme", t === "dark" || (t === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"); } catch (e) { /* stockage indisponible */ }
+</script><% } %>
+<%- include("partials/bottom") %>

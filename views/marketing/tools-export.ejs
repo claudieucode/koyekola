@@ -1,27 +1,94 @@
-<%- include("partials/top", { title, active }) %>
-<%- include("partials/tools-head", { heading: "Exporter", intro: "Un fichier JSON structuré (format kolakisa-site@1), réimportable dans un autre site : les liens entre contenus sont gardés par références. Jamais de mot de passe, d'e-mail de compte ni de clé secrète. Les fichiers médias ne sont pas inclus : seuls leurs chemins et leurs métadonnées le sont.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%#
+  KOLAKISA CMS → Outils → Exporter (à la manière de WordPress). Sélection (tout, articles, pages, un autre type), filtres validés par le serveur, format natif ou WXR, médias en archive.
+  Rien n'est simulé : le périmètre annoncé vient du serveur (aperçu), le fichier est produit par le moteur d'export (services/tools/exporter) et téléchargé depuis un emplacement privé.
+%><%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Exporter", intro: "", tab, TABS, BASE, sites, siteId, q, siteOnly, noSite: false }) %>
 <%
   const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
-  const scopeLabel = { site: siteId ? "ce site" : "site principal", org: "organisation" };
+  const choice = form.scope === "other" && form.other ? "other:" + form.other : form.scope;
+  const on = (v) => choice === v;
+  const labelOf = { articles: "articles", pages: "pages" };
+  const scopeNote = siteId ? "ce site" : "le site principal";
 %>
-<section class="mk-panel" aria-labelledby="tl-x">
-  <h2 id="tl-x">Que faut-il exporter ?</h2>
-  <form method="post" action="<%= BASE %>/exporter<%= q %>" class="mk-tl-form">
-    <fieldset class="mk-tl-fieldset"><legend>Ressources</legend>
-      <% types.forEach((t) => { %>
-        <div class="mk-tl-option">
-          <input type="checkbox" id="tl-t-<%= t.key %>" name="types" value="<%= t.key %>"<%= t.allowed ? (t.sensitive ? "" : " checked") : " disabled" %>>
-          <label for="tl-t-<%= t.key %>"><%= t.label %><% if (t.allowed) { %> <span class="mk-sub">(<%= t.count %> · <%= scopeLabel[t.scope] %><%= t.sensitive ? " · à cocher volontairement : contient adresses e-mail et numéros" : "" %>)</span><% } else { %> <span class="mk-sub">— indisponible pour ce site ou pour votre rôle</span><% } %></label>
+<div class="pl ex" data-ex-root data-ex-url="<%= BASE %>/exporter/apercu<%= q %>">
+  <p class="pl-lead">Exportez le contenu de <strong><%= scopeNote %></strong> dans un fichier téléchargeable afin de conserver vos données ou de les transférer vers un autre site compatible. L'exportation ne supprime ni ne modifie le contenu original.</p>
+  <% if (errors.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>L'export n'a pas été lancé :</p><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
+
+  <form method="post" action="<%= BASE %>/exporter<%= q %>" class="pl-fieldset" data-ex-form novalidate>
+    <% if (siteId) { %><input type="hidden" name="site" value="<%= siteId %>"><% } %>
+    <section class="pl-section" aria-labelledby="ex-h">
+      <h2 id="ex-h">Choisir les données à exporter</h2>
+      <div class="pl-opts" role="radiogroup" aria-labelledby="ex-h">
+
+        <label class="pl-opt<%= on("all") ? " is-on" : "" %>" data-ex-opt="all">
+          <input type="radio" name="choice" value="all"<%= on("all") ? " checked" : "" %>>
+          <span class="pl-opt-body"><span class="pl-opt-title">Tout le contenu</span>
+            <span class="pl-opt-help">Il contiendra tout ce qui est exportable pour <%= scopeNote %> : <%= includes.join(", ") %>. Les données personnelles (contacts) ne sont jamais incluses d'office.</span></span>
+        </label>
+
+        <% if (canArticles) { %>
+        <div class="pl-opt pl-opt-custom<%= on("articles") ? " is-on" : "" %>" data-ex-opt="articles">
+          <label class="pl-opt-head"><input type="radio" name="choice" value="articles"<%= on("articles") ? " checked" : "" %>>
+            <span class="pl-opt-body"><span class="pl-opt-title">Articles <span class="ex-count"><%= counts.articles %></span></span><span class="pl-opt-help">Avec leurs catégories et étiquettes (et leurs commentaires approuvés au format WXR).</span></span></label>
+          <div class="ex-filters" data-ex-filters="articles">
+            <div class="ex-grid">
+              <div class="ex-field"><label for="ex-a-cat">Catégorie</label><select id="ex-a-cat" name="category"><option value="">Toutes</option><% options.articles.categories.forEach((c) => { %><option value="<%= c.id %>"<%= String(form.category) === String(c.id) ? " selected" : "" %>><%= "— ".repeat(c.depth) %><%= c.name %></option><% }) %></select></div>
+              <div class="ex-field"><label for="ex-a-auth">Auteur</label><select id="ex-a-auth" name="author"><option value="">Tous</option><% options.articles.authors.forEach((a) => { %><option value="<%= a.id %>"<%= String(form.author) === String(a.id) ? " selected" : "" %>><%= a.name %></option><% }) %></select></div>
+              <div class="ex-field"><label for="ex-a-from">Date de début</label><input id="ex-a-from" type="date" name="from" value="<%= form.from %>"></div>
+              <div class="ex-field"><label for="ex-a-to">Date de fin</label><input id="ex-a-to" type="date" name="to" value="<%= form.to %>"></div>
+              <div class="ex-field"><label for="ex-a-status">Statut</label><select id="ex-a-status" name="status"><option value="">Tous</option><% options.articles.statuses.forEach((st) => { %><option value="<%= st.key %>"<%= form.status === st.key ? " selected" : "" %>><%= st.label %></option><% }) %></select></div>
+            </div>
+            <p class="pl-help">Les dates suivent le fuseau du site (<%= options.articles.timezone %>) et portent sur la date de publication (ou de création pour un brouillon).</p>
+          </div>
         </div>
-      <% }) %>
-    </fieldset>
-    <p class="mk-sub">Seul ce qui concerne le site choisi ci-dessus est exporté ; le contenu partagé de l'organisation (articles, catégories, médias) n'est proposé qu'à l'équipe de l'organisation. Les commentaires ne contiennent ni e-mail ni adresse IP et ne peuvent pas être réimportés.</p>
-    <button type="submit" class="btn btn-primary btn-sm"><%- icon("download", { size: 16 }) %> Lancer l'export</button>
+        <% } %>
+
+        <% if (canPages) { %>
+        <div class="pl-opt pl-opt-custom<%= on("pages") ? " is-on" : "" %>" data-ex-opt="pages">
+          <label class="pl-opt-head"><input type="radio" name="choice" value="pages"<%= on("pages") ? " checked" : "" %>>
+            <span class="pl-opt-body"><span class="pl-opt-title">Pages <span class="ex-count"><%= counts.pages %></span></span><span class="pl-opt-help">La hiérarchie des pages (page parente) est conservée dans le fichier.</span></span></label>
+          <div class="ex-filters" data-ex-filters="pages">
+            <div class="ex-grid">
+              <div class="ex-field"><label for="ex-p-auth">Auteur</label><select id="ex-p-auth" name="author_pages" data-ex-alias="author"><option value="">Tous</option><% options.pages.authors.forEach((a) => { %><option value="<%= a.id %>"<%= String(form.author) === String(a.id) ? " selected" : "" %>><%= a.name %></option><% }) %></select></div>
+              <div class="ex-field"><label for="ex-p-status">Statut</label><select id="ex-p-status" name="status_pages" data-ex-alias="status"><option value="">Tous</option><% options.pages.statuses.forEach((st) => { %><option value="<%= st.key %>"<%= form.status === st.key ? " selected" : "" %>><%= st.label %></option><% }) %></select></div>
+              <div class="ex-field"><label for="ex-p-from">Date de début</label><input id="ex-p-from" type="date" name="from_pages" data-ex-alias="from" value="<%= form.from %>"></div>
+              <div class="ex-field"><label for="ex-p-to">Date de fin</label><input id="ex-p-to" type="date" name="to_pages" data-ex-alias="to" value="<%= form.to %>"></div>
+            </div>
+          </div>
+        </div>
+        <% } %>
+
+        <% other.forEach((o) => { const v = "other:" + o.key; %>
+        <label class="pl-opt<%= on(v) ? " is-on" : "" %>" data-ex-opt="<%= v %>" data-ex-wxr="<%= o.wxr ? "1" : "0" %>">
+          <input type="radio" name="choice" value="<%= v %>"<%= on(v) ? " checked" : "" %>>
+          <span class="pl-opt-body"><span class="pl-opt-title"><%= o.label %> <span class="ex-count"><%= o.count %></span><% if (o.sensitive) { %> <span class="pl-badge ex-warn">Données personnelles</span><% } %></span>
+            <% if (o.sensitive) { %><span class="pl-opt-help">À choisir volontairement : contient des adresses e-mail et des numéros. Format natif seulement.</span><% } else if (!o.wxr) { %><span class="pl-opt-help">Format natif Kolakisa seulement.</span><% } %></span>
+        </label>
+        <% }) %>
+      </div>
+    </section>
+
+    <section class="pl-section" aria-labelledby="ex-f-h">
+      <h2 id="ex-f-h">Format du fichier</h2>
+      <div class="pl-opts" role="radiogroup" aria-labelledby="ex-f-h">
+        <label class="pl-opt<%= form.format === "json" ? " is-on" : "" %>" data-ex-format="json"><input type="radio" name="format" value="json"<%= form.format === "json" ? " checked" : "" %>><span class="pl-opt-body"><span class="pl-opt-title">Format Kolakisa (JSON) <span class="pl-badge">Recommandé</span></span><span class="pl-opt-help">Réimportable dans un autre site Kolakisa (Outils → Importer) : liens entre contenus, mise en page de l'éditeur, taxonomies et menus conservés par références.</span></span></label>
+        <label class="pl-opt<%= form.format === "wxr" ? " is-on" : "" %>" data-ex-format="wxr"><input type="radio" name="format" value="wxr"<%= form.format === "wxr" ? " checked" : "" %>><span class="pl-opt-body"><span class="pl-opt-title">WordPress (WXR, XML)</span><span class="pl-opt-help">Articles, pages (texte seulement), catégories, étiquettes, commentaires, médias et menus. La mise en page de l'éditeur visuel, les réglages, les redirections et le référencement n'existent que dans le format Kolakisa. Aucune adresse e-mail n'est exportée.</span></span></label>
+      </div>
+      <% if (hasMedia) { %>
+      <label class="mk-cms-check ex-media" for="ex-media"><input type="checkbox" id="ex-media" name="media" value="1"<%= form.media ? " checked" : "" %>> <span>Inclure les fichiers médias dans une archive ZIP <span class="ex-sub">(sinon : chemins et métadonnées seulement)</span></span></label>
+      <p class="pl-help">L'archive contient le fichier d'export, le dossier <code>media/</code> des fichiers <%= siteId ? "de ce site" : "du site principal" %> (jamais ceux d'un autre site) et un manifeste indiquant ce qui est inclus ou manquant. Ce n'est pas une sauvegarde du serveur.</p>
+      <% } %>
+    </section>
+
+    <div class="pl-savebar">
+      <p class="pl-status" role="status" aria-live="polite" data-ex-status>Choisissez ce qu'il faut exporter.</p>
+      <button type="submit" class="btn btn-primary" data-ex-submit><span class="ex-label">Télécharger le fichier d'exportation</span></button>
+    </div>
   </form>
-</section>
+</div>
 <% if (recent.length) { %>
 <section class="mk-panel" aria-labelledby="tl-xr"><h2 id="tl-xr">Exports récents</h2>
-  <ul class="mk-tl-list"><% recent.forEach((r) => { %><li><a href="<%= BASE %>/exporter/<%= r.id %><%= r.site_id ? "?site=" + r.site_id : "" %>">Export du <%= fdate(r.created_at) %></a> — <%= { queued: "en attente", running: "en cours", done: r.hasResult ? "terminé" : "terminé (fichier expiré)", failed: "échec", cancelled: "annulé" }[r.status] %></li><% }) %></ul>
+  <ul class="mk-tl-list"><% recent.forEach((r) => { %><li><a href="<%= BASE %>/exporter/<%= r.id %><%= r.site_id ? "?site=" + r.site_id : "" %>">Export du <%= fdate(r.created_at) %></a> — <%= { queued: "en attente", running: "en cours", done: r.hasResult ? "terminé, à télécharger (24 h)" : "terminé (fichier expiré)", failed: "échec", cancelled: "annulé" }[r.status] || r.status %></li><% }) %></ul>
 </section>
 <% } %>
 <%- include("partials/bottom") %>

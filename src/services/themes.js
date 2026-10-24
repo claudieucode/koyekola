@@ -303,4 +303,44 @@ function installDemo(ctx, siteId, key, { menu = false, can = () => true } = {}) 
   });
 }
 
-module.exports = { installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens, gallery, libraryItem, installDemo };
+
+// ---------- Éditeur de fichiers : manifeste brut et enregistrement ----------
+// Manifeste complet d'un thème de CE site (brut, tel qu'enregistré) ; le thème d'origine est intégré au moteur : lisible, jamais modifiable.
+function manifestOf(siteId, key) {
+  if (key === catalog.DEFAULT_KEY) return { manifest: ORIGINAL, builtin: true, active: activeKey(siteId) === ORIGINAL.key, source: "integre" };
+  const r = rowOf(siteId, key);
+  const m = r && parse(r.manifest);
+  return m ? { manifest: m, builtin: false, active: r.active === 1, source: r.source, row: r } : null;
+}
+// Remplace le manifeste d'un thème installé par une version DÉJÀ validée (catalog.validateManifest). Si le thème est actif, ses jetons sont
+// appliqués au rendu (vérifié ; sinon l'état précédent est rétabli). Tout ou rien : rien n'est enregistré si l'application échoue.
+function saveManifest(ctx, siteId, key, next, { revisions } = {}) {
+  writableSite(ctx, siteId);
+  const row = rowOf(siteId, String(key));
+  if (!row) throw new UserError("Ce thème n'est pas installé sur ce site.");
+  if (next.key !== row.theme_key) throw new UserError("L'identifiant d'un thème ne peut pas être modifié.");
+  if (!catalog.isCompatible(next)) throw new UserError(`Le format (api ${next.api}) est plus récent que celui de ce Kolakisa : enregistrement refusé.`);
+  const wasActive = row.active === 1;
+  const before = wasActive ? currentTokens(ctx, siteId) : null;
+  let applied = null;
+  try {
+    transaction(db, () => {
+      const info = db.prepare(`UPDATE cms_themes SET name = ?, version = ?, manifest = ?, checksum = ? WHERE id = ? AND checksum = ?`).run(next.name, next.version, JSON.stringify(next), catalog.checksumOf(next), row.id, row.checksum);
+      if (info.changes !== 1) throw new UserError("Ce thème vient d'être modifié par une autre personne : rechargez le fichier.");
+      if (wasActive) applied = applyTokens(ctx, siteId, next.tokens, `Thème « ${next.name} » (fichier modifié)`);
+      if (typeof revisions === "function") revisions();
+    });
+  } catch (e) {
+    if (wasActive && applied) { try { rollbackTokens(ctx, siteId, before); } catch { /* état d'origine déjà en place */ } }
+    throw e;
+  }
+  if (wasActive && !verifyApplied(ctx, siteId, applied)) {
+    try { rollbackTokens(ctx, siteId, before); } catch { /* ignoré */ }
+    db.prepare("UPDATE cms_themes SET name = ?, version = ?, manifest = ?, checksum = ? WHERE id = ?").run(row.name, row.version, row.manifest, row.checksum, row.id);
+    throw new UserError("Le rendu du site n'a pas pris en compte la modification : le thème a été rétabli tel qu'avant.");
+  }
+  audit(ctx, siteId, "theme.file_saved", row.theme_key, { version: next.version, checksum: catalog.checksumOf(next), active: wasActive });
+  return get(siteId, row.theme_key);
+}
+
+module.exports = { installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens, manifestOf, saveManifest, audit, gallery, libraryItem, installDemo };

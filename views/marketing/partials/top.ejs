@@ -5,7 +5,9 @@
   // Espace d'un site (palier 3, B1) : le menu est celui du site de l'adresse (siteSpace), jamais un site choisi ailleurs
   const space = typeof siteSpace !== "undefined" && siteSpace ? siteSpace : (typeof siteCandidate !== "undefined" && siteCandidate && mkh.isSiteScopedKey(active) ? siteCandidate
     : (typeof principalFrame !== "undefined" && principalFrame && active !== "sites" && mkh.isCmsKey(active) ? principalFrame : null));
-  const cms = mkh.buildCmsNav({ can: mk.can, active, space });
+  // « Mes sites » (liste globale) est une destination du menu MARKETING (Site Web → Mes sites) : l'écran le demande (marketingShell) et garde la palette Marketing,
+  // au lieu de la coque CMS dont le menu ne contenait que cette entrée. L'administration d'UN site (Ouvrir) garde sa coque CMS.
+  const cms = typeof marketingShell !== "undefined" && marketingShell ? null : mkh.buildCmsNav({ can: mk.can, active, space });
   const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
   // Barre d'administration supérieure du CMS (une seule implémentation : partials/cms-adminbar.ejs ; données filtrées par les droits côté serveur)
   const bar = cms ? mkh.adminBar({ mk, user: currentUser, space: cms.space || null, cms, sites: cmsSites, active, content: { page: typeof page !== "undefined" ? page : null } }) : null;
@@ -36,7 +38,7 @@
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script>try { if (localStorage.getItem("mkSidebar") === "collapsed") document.documentElement.setAttribute("data-sidebar", "collapsed"); } catch (e) {}</script>
-  <script>/* Thème de l'interface (Clair / Sombre / Automatique) : résolu ici, avant le premier affichage, donc sans flash. Préférence mémorisée dans ce navigateur (clé kolaTheme) ; « Automatique » suit le système. */ try { var kp = localStorage.getItem("kolaTheme"); document.documentElement.setAttribute("data-kola-pref", kp === "dark" || kp === "light" ? kp : "auto"); document.documentElement.setAttribute("data-kola-theme", kp === "dark" || (kp !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"); } catch (e) { document.documentElement.setAttribute("data-kola-theme", "light"); }</script>
+  <script>/* Thème de l'interface (Clair / Sombre / Automatique) : résolu ici, avant le premier affichage, donc sans flash. Préférence mémorisée dans ce navigateur (clé kolaTheme) ; « Automatique » suit le système. */ try { var kp = localStorage.getItem("kolaTheme") || "<%= typeof mkUserTheme !== "undefined" && /^(?:light|dark)$/.test(mkUserTheme) ? mkUserTheme : "auto" %>"; document.documentElement.setAttribute("data-kola-pref", kp === "dark" || kp === "light" ? kp : "auto"); document.documentElement.setAttribute("data-kola-theme", kp === "dark" || (kp !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"); } catch (e) { document.documentElement.setAttribute("data-kola-theme", "light"); }</script>
   <% if (typeof compactNav !== "undefined" && compactNav) { %><script>/* outil plein écran (éditeur) : sous 1680 px, menu réduit d'office pour laisser la place au travail (sans changer la préférence mémorisée) */ if (window.innerWidth < 1680) document.documentElement.setAttribute("data-sidebar", "collapsed");</script><% } %>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
@@ -54,7 +56,7 @@
 <body class="mk-body<%= cms ? ' is-cms' : '' %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
   <%# CMS : barre d'administration (niveau 1) puis fil d'Ariane (niveau 2), tous deux au niveau global de la coque, AVANT menu et contenu ; hors CMS, le fil d'Ariane reste dans la colonne du contenu %>
-  <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><%- include("cms-crumbs", { trail }) %><% } %>
+  <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><% } %>
 
   <% const appClass = appRail ? "mk-app has-rail" : "mk-app"; %><div class="<%= appClass %>">
     <% if (appRail) { %><%- include("../../partials/app-rail", { railNav: appRail.nav, railActive: appRail.active, railUnread: appRail.unread, railStyle: appRail.style }) %><% } %>
@@ -106,6 +108,18 @@
         <% nav.sections.forEach((section) => { %>
           <% if (section.flat) { const item = section.items[0]; %>
             <a class="mk-nav-link" href="<%= item.href %>" title="<%= item.label %>"<%- item.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= item.label %></span></a>
+          <% } else if (section.key === "site" && section.items.length) { const home = section.items.find((i) => i.key === "sites") || section.items[0]; %>
+            <%# « Site Web » : le libellé est un lien direct vers « Mes sites » ; le chevron, un bouton distinct, ouvre ou ferme l'accordéon sans changer de page. %>
+            <div class="mk-nav-group mk-nav-split<%= section.open ? ' is-open' : '' %>" data-mk-group="<%= section.key %>">
+              <div class="mk-nav-headrow">
+                <a class="mk-nav-link mk-nav-split-link" href="<%= home.href %>" title="<%= section.label %>"<%- home.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= section.label %></span></a>
+                <button type="button" class="mk-nav-caret-btn" aria-expanded="<%= section.open ? 'true' : 'false' %>" aria-controls="mk-sub-<%= section.key %>" aria-label="Afficher ou masquer les sous-menus de <%= section.label %>"><%- icon("chevronDown", { size: 14, className: "mk-nav-caret" }) %></button>
+              </div>
+              <div class="mk-nav-sub" id="mk-sub-<%= section.key %>">
+                <% section.items.forEach((item) => { %><a class="mk-nav-sublink" href="<%= item.href %>"<%- item.current ? ' aria-current="page"' : "" %>><%= item.label %></a>
+                <% }) %>
+              </div>
+            </div>
           <% } else { %>
             <div class="mk-nav-group<%= section.open ? ' is-open' : '' %>" data-mk-group="<%= section.key %>">
               <button type="button" class="mk-nav-head" aria-expanded="<%= section.open ? 'true' : 'false' %>" aria-controls="mk-sub-<%= section.key %>" title="<%= section.label %>"><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= section.label %></span><%- icon("chevronDown", { size: 14, className: "mk-nav-caret" }) %></button>
@@ -132,7 +146,7 @@
           </ol>
         </nav>
         <div class="mk-topbar-actions">
-          <% if (!cms && nav.primary) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
+          <% if (!cms && nav.primary && !(typeof marketingShell !== "undefined" && marketingShell)) { %><a class="btn btn-primary btn-sm mk-primary" href="<%= nav.primary.href %>"><%= nav.primary.label %></a><% } %>
           <% if (!cms) { %>
           <button type="button" class="icon-btn mk-theme-btn" data-kola-theme-cycle aria-label="Thème de l'interface : automatique" title="Thème de l'interface"><span class="mk-theme-ico mk-theme-ico-light"><%- icon("sun", { size: 18 }) %></span><span class="mk-theme-ico mk-theme-ico-dark"><%- icon("moon", { size: 18 }) %></span></button>
           <div class="mk-dropdown" data-mk-dropdown>
@@ -161,8 +175,9 @@
       <% } %>
 
       <main id="main" tabindex="-1" class="mk-content<%= typeof layout !== "undefined" && /^(form|wide)$/.test(layout) ? " mk-content--" + layout : "" %>">
-        <% if (cms && cms.space && cms.space.navOnly) { %><p class="mk-site-return"><a class="btn btn-ghost btn-sm" href="<%= cms.space.listHref %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a></p>
-        <% } else if (cms && cms.space) { %><%- include("site-banner", { siteSpace: cms.space }) %><% } %>
+        <% if (cms && cms.space && cms.space.navOnly) { %><p class="mk-site-return"><a class="btn btn-ghost btn-sm" href="<%= cms.space.listHref %>" data-mk-back-to-sites><%- icon("arrowLeft", { size: 14 }) %> Retour à Mes sites</a><%- include("cms-crumbs", { trail }) %></p>
+        <% } else if (cms && cms.space) { %><%- include("site-banner", { siteSpace: cms.space, trail }) %>
+        <% } else if (cms) { %><div class="mk-cms-crumbrow"><%- include("cms-crumbs", { trail }) %></div><% } %>
         <% if (typeof flash !== "undefined" && flash) { %>
           <% if (flash.type === "error") { %>
             <div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 18 }) %></span><span class="mk-flash-body"><p><%= flash.text %></p><% if (flash.detail) { %><details class="mk-flash-details"><summary>Détails techniques</summary><p><%= flash.detail %></p></details><% } %></span></div>

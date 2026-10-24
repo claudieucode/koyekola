@@ -37,11 +37,14 @@ function isPublicAddress(ip) {
   }
   return false;
 }
+// Seul le bouclage 127.0.0.1 peut être autorisé, et UNIQUEMENT par les tests automatiques (NODE_ENV=test ET KOLA_TEST_ALLOW_LOOPBACK=1) : jamais en production.
+const testLoopback = (ip) => process.env.NODE_ENV === "test" && process.env.KOLA_TEST_ALLOW_LOOPBACK === "1" && ip === "127.0.0.1";
+const reachable = (ip) => isPublicAddress(ip) || testLoopback(ip);
 function safeLookup(hostname, options, callback) {
   dns.lookup(hostname, { ...options, all: true }, (err, addresses) => {
     if (err) return callback(err);
     const list = Array.isArray(addresses) ? addresses : [{ address: addresses, family: options.family || 4 }];
-    const ok = list.filter((a) => isPublicAddress(a.address));
+    const ok = list.filter((a) => reachable(a.address));
     if (!ok.length) return callback(Object.assign(new Error("adresse interne refusée"), { code: "EPRIVATE" }));
     if (options.all) return callback(null, ok);
     return callback(null, ok[0].address, ok[0].family);
@@ -52,8 +55,9 @@ function checkUrl(raw) {
   let url;
   try { url = new URL(String(raw || "").trim()); } catch { throw new MarketingError("invalid_field", "Adresse du flux invalide (exemple : https://www.youtube.com/feeds/videos.xml?channel_id=…)."); }
   if (!["http:", "https:"].includes(url.protocol)) throw new MarketingError("invalid_field", "Le flux doit commencer par https:// (ou http://).");
+  if (/^(localhost|.*\.(localhost|local|internal|lan|home\.arpa))$/i.test(url.hostname.replace(/\.$/, ""))) throw new MarketingError("invalid_field", "Adresse refusée (nom réservé au réseau interne).");
   if (url.username || url.password) throw new MarketingError("invalid_field", "Adresse du flux invalide (identifiants interdits dans l'adresse).");
-  if (net.isIP(url.hostname.replace(/^\[|\]$/g, "")) && !isPublicAddress(url.hostname.replace(/^\[|\]$/g, ""))) throw new MarketingError("invalid_field", "Adresse du flux refusée (réseau interne).");
+  if (net.isIP(url.hostname.replace(/^\[|\]$/g, "")) && !reachable(url.hostname.replace(/^\[|\]$/g, ""))) throw new MarketingError("invalid_field", "Adresse du flux refusée (réseau interne).");
   if (url.href.length > 500) throw new MarketingError("invalid_field", "Adresse du flux trop longue.");
   return url;
 }
@@ -137,4 +141,31 @@ async function fetchFeed(rawUrl, { fetcher = download } = {}) {
   return parseFeed(await fetcher(url));
 }
 
-module.exports = { fetchFeed, parseFeed, checkUrl, isPublicAddress, MAX_BYTES };
+// Téléchargement binaire borné (importation de médias, flux) : MÊMES garde-fous que le flux RSS — adresse IP vérifiée à la connexion (réseau interne, bouclage,
+// métadonnées cloud 169.254.x refusés, y compris après redirection ou changement DNS), redirections et durée limitées, taille plafonnée, aucun identifiant dans l'adresse.
+function fetchBuffer(rawUrl, { maxBytes = 8 * 1024 * 1024, timeoutMs = 15000, accept = "*/*" } = {}) {
+  const get = (url, redirects) => new Promise((resolve, reject) => {
+    const lib = url.protocol === "https:" ? https : http;
+    const req = lib.get(url, { lookup: safeLookup, timeout: timeoutMs, headers: { "User-Agent": "KOLAKISA-Import/1.0", Accept: accept } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        if (redirects >= MAX_REDIRECTS) return reject(new MarketingError("fetch_error", "Trop de redirections."));
+        let next;
+        try { next = checkUrl(new URL(res.headers.location, url).href); } catch (e) { return reject(e); }
+        return resolve(get(next, redirects + 1));
+      }
+      if (res.statusCode !== 200) { res.resume(); return reject(new MarketingError("fetch_error", `Le serveur répond « ${res.statusCode} ».`)); }
+      const declared = Number(res.headers["content-length"]);
+      if (Number.isFinite(declared) && declared > maxBytes) { res.resume(); return reject(new MarketingError("fetch_error", `Fichier trop volumineux (${Math.round(maxBytes / 1048576)} Mo au plus).`)); }
+      const chunks = []; let size = 0;
+      res.on("data", (c) => { size += c.length; if (size > maxBytes) { req.destroy(); reject(new MarketingError("fetch_error", `Fichier trop volumineux (${Math.round(maxBytes / 1048576)} Mo au plus).`)); return; } chunks.push(c); });
+      res.on("end", () => resolve({ buffer: Buffer.concat(chunks), contentType: String(res.headers["content-type"] || "") }));
+      res.on("error", reject);
+    });
+    req.on("timeout", () => req.destroy(new MarketingError("fetch_error", `Pas de réponse en ${Math.round(timeoutMs / 1000)} s.`)));
+    req.on("error", (e) => reject(e instanceof MarketingError ? e : new MarketingError("fetch_error", e.code === "EPRIVATE" ? "Adresse refusée (réseau interne)." : `Injoignable (${e.code || "erreur réseau"}).`)));
+  });
+  return Promise.resolve().then(() => get(checkUrl(rawUrl), 0));
+}
+
+module.exports = { fetchFeed, parseFeed, checkUrl, isPublicAddress, MAX_BYTES, fetchBuffer };

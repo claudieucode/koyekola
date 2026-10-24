@@ -17,7 +17,7 @@
 <% if (mode === "list") { %>
   <% const keep = (over = {}) => { const p = new URLSearchParams(); const o = { q: f.q, role: f.role, statut: f.statut, tri: f.tri === "nom" ? "" : f.tri, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return frameUrl("list", t ? "?" + t : ""); }; %>
   <div class="mk-head">
-    <div class="mk-head-main"><h1>Utilisateurs</h1><p class="mk-head-sub">Les personnes qui ont un rôle propre à <strong><%= SITE.name %></strong>. L'équipe de l'organisation a accès à tous les sites et se gère depuis le site principal.</p></div>
+    <div class="mk-head-main"><h1>Comptes</h1><p class="mk-head-sub">Les personnes qui ont un rôle propre à <strong><%= SITE.name %></strong>. L'équipe de l'organisation a accès à tous les sites et se gère depuis le site principal.</p></div>
     <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= frameUrl("invitations") %>">Invitations</a><% if (canInvite) { %><a class="btn btn-primary btn-sm" href="<%= frameUrl("invite") %>">Inviter</a><% } %></div></div>
   <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer par statut du compte">
     <% [["", "Tous", counts.all], ["active", "Actifs", counts.active], ["suspended", "Suspendus", counts.suspended], ["disabled", "Désactivés", counts.disabled]].forEach(([k, name, n]) => { %><a class="mk-tab" href="<%= keep({ statut: k, page: "" }) %>"<%- f.statut === k ? ' aria-current="page"' : "" %>><%= name %> <span class="mk-tab-count"><%= n %></span></a><% }) %>

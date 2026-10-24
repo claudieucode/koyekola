@@ -90,7 +90,7 @@ describe("chaque classe utilisée par les pages a un style", () => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         const p = path.join(dir, entry.name);
         if (entry.isDirectory()) walk(p);
-        else if (/\.(ejs|js)$/.test(entry.name) && !/(?:course-editor|automation-flow)\.js$/.test(entry.name) && !(entry.name === "blog-editor.js" && dir.endsWith(path.join("public", "js")))) {
+        else if (/\.(ejs|js)$/.test(entry.name) && !/(?:course-editor|automation-flow|theme-code-editor)\.js$/.test(entry.name) && !(entry.name === "blog-editor.js" && dir.endsWith(path.join("public", "js")))) {
           const src = fs.readFileSync(p, "utf8");
           for (const m of src.matchAll(/class="([^"]*)"/g)) m[1].replace(/<%[^%]*%>/g, " ").split(/\s+/).forEach((c) => /^[a-z][\w-]*$/i.test(c) && used.add(c));
           for (const m of src.matchAll(/classList\.(?:add|toggle|remove|contains)\("([^"]+)"/g)) used.add(m[1]);

@@ -36,22 +36,25 @@ describe("barre d'administration : coque, sites, création, notifications, profi
 
   describe("intégration dans la coque", () => {
     test("une seule barre sur les écrans du CMS (principal, site, listes, fiche de page) ; aucune sur le site public, la connexion ni les éditeurs plein cadre", async () => {
-      for (const u of ["/marketing/site-web/principal/tableau-de-bord", `${SP}/${A}/tableau-de-bord`, "/marketing/site-web/sites", `${SP}/${A}/pages`, "/marketing/site-web/articles", "/marketing/site-web/mediatheque", `/marketing/pages/${pageA}`]) {
+      for (const u of ["/marketing/site-web/principal/tableau-de-bord", `${SP}/${A}/tableau-de-bord`, `${SP}/${A}/pages`, "/marketing/site-web/articles", "/marketing/site-web/mediatheque", `/marketing/pages/${pageA}`]) {
         const r = await boss.get(u); assert.equal(r.status, 200, u);
         assert.equal((r.text.match(/<nav class="kab"/g) || []).length, 1, `${u} : une seule barre`);
         assert.match(r.text, /href="[^"]*adminbar\.css/); assert.match(r.text, /src="[^"]*adminbar\.js/);
       }
-      for (const u of ["/", "/connexion", `/marketing/pages/${pageA}/apercu`, `/marketing/site-web/personnaliser?site=${A}`]) assert.doesNotMatch((await boss.get(u)).text, /<nav class="kab"/, `${u} : pas de barre`);
+      for (const u of ["/", "/connexion", "/marketing/site-web/sites", `/marketing/pages/${pageA}/apercu`, `/marketing/site-web/personnaliser?site=${A}`]) assert.doesNotMatch((await boss.get(u)).text, /<nav class="kab"/, `${u} : pas de barre`);
     });
     test("plus de doublon dans la barre du haut : un seul menu de compte, un seul bouton de thème, plus de sélecteur de site dans le menu latéral", async () => {
       const t = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
       assert.equal((t.match(/id="mk-user-menu"/g) || []).length, 1); assert.equal((t.match(/data-kola-theme-cycle/g) || []).length, 1);
       assert.doesNotMatch(t, /mk-cms-site-btn|mk-cms-add|mk-cms-topsearch/);
-      // Ordre vertical : (1) barre d'administration, (2) fil d'Ariane, puis rail / menu / contenu ; le fil d'Ariane n'est PAS dans la colonne du contenu
-      const iBar = t.indexOf('<nav class="kab"'), iCrumb = t.indexOf('<header class="mk-topbar kab-crumbbar">'), iApp = t.indexOf('<div class="mk-app'), iMain = t.indexOf('<div class="mk-main">');
-      assert.ok(iBar > 0 && iBar < iCrumb && iCrumb < iApp && iApp < iMain, `ordre : barre ${iBar} < fil ${iCrumb} < coque ${iApp} < contenu ${iMain}`);
-      assert.match(t.slice(iCrumb, iApp), /mk-breadcrumb/); assert.doesNotMatch(t.slice(iMain), /class="mk-topbar/, "plus de second fil d'Ariane dans le contenu");
-      assert.equal((t.match(/class="mk-breadcrumb"/g) || []).length, 1);
+      // Ordre vertical : (1) barre d'administration globale, puis la coque (rail / menu / contenu). Plus de barre de chemin globale :
+      // le fil d'Ariane est dans le bandeau de contexte, en haut de la zone de contenu (CADRE-CMS-01)
+      const iBar = t.indexOf('<nav class="kab"'), iApp = t.indexOf('<div class="mk-app'), iMain = t.indexOf('<div class="mk-main">');
+      assert.ok(iBar > 0 && iBar < iApp && iApp < iMain, `ordre : barre ${iBar} < coque ${iApp} < contenu ${iMain}`);
+      assert.doesNotMatch(t, /kab-crumbbar/, "plus de barre de chemin globale");
+      assert.doesNotMatch(t.slice(iApp, iMain), /mk-breadcrumb/, "aucun fil d'Ariane au-dessus du contenu (menu et rail compris)");
+      assert.doesNotMatch(t.slice(iMain), /class="mk-topbar/);
+      assert.equal((t.match(/class="mk-breadcrumb mk-cms-crumbs"/g) || []).length, 1, "un seul fil d'Ariane, dans la zone de contenu");
     });
     test("les écrans hors CMS (Marketing) gardent leur barre d'origine", async () => {
       const t = (await boss.get("/marketing/campagnes")).text;

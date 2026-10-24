@@ -502,7 +502,22 @@ function countsForPosts(ids) {
   return out;
 }
 
+// Import d'un commentaire existant (Outils → Importer) : écrit tel quel, SANS notification, SANS règle de modération (le statut d'origine est conservé),
+// sans adresse IP ; l'e-mail de l'auteur n'est jamais affiché. Le contenu doit exister et accepter les commentaires (vérifié par l'appelant).
+function importOne({ postId, parentId = null, name = "", email = "", body, status = "pending", date = null }) {
+  const text = clean(body).slice(0, COMMENT_MAX);
+  if (text.length < 2) throw new UserError("Commentaire vide.");
+  const st = ["approved", "pending", "spam"].includes(status) ? status : "pending";
+  const em = String(email || "").trim().toLowerCase().slice(0, 120);
+  const when = date && Number.isFinite(Date.parse(date)) ? new Date(date).toISOString().slice(0, 19).replace("T", " ") : null;
+  const info = db.prepare(`INSERT INTO blog_comments (post_id, content_type, content_id, parent_id, user_id, author_name, author_email, ip_hash, body, status, approved_at, metadata, created_at, updated_at)
+    VALUES (?, 'post', ?, ?, NULL, ?, ?, '', ?, ?, ${st === "approved" ? "COALESCE(?, datetime('now'))" : "NULL"}, ?, COALESCE(?, datetime('now')), COALESCE(?, datetime('now')))`)
+    .run(...[postId, postId, parentId, clean(name).replace(/\s+/g, " ").slice(0, 60) || "Anonyme", EMAIL_RE.test(em) ? em : "", text, st, ...(st === "approved" ? [when] : []), JSON.stringify({ imported: true }), when, when]);
+  return Number(info.lastInsertRowid);
+}
+
 module.exports = {
+  importOne,
   COMMENT_MAX, STATUSES, STATUS_LABELS, MAX_LINKS, IP_RETENTION_DAYS, PER_PAGE_PUBLIC, PER_PAGE_ADMIN, PERIODS, SORTS, DEFAULTS,
   CONTENT, TYPES, registerContent, events, edit, foldText, settings, settingsFor, settingsOf, siteOwn, siteIdOf, normalizeSettings, normalizeList, matchList, closedByAge, AVATAR_DEFAULTS, AVATAR_EXTERNAL, LIST_MAX_LINES, saveSettings, resetCache,
   clean, html, linksIn, ipHash, levelOf, create, thread, count, get, moderate, reply, purge, purgeGuest, list, counts, commentedContents, contentInfo, countsForPosts, uniqueIds,

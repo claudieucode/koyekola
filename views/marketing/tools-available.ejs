@@ -1,0 +1,45 @@
+<%# Outils → Outils disponibles : catalogue généré par services/toolsCatalog (aucune liste écrite ici). Une carte « disponible » est un lien ; les autres états n'ont jamais de lien d'ouverture. %>
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Outils disponibles", intro: "Les outils d'administration auxquels votre compte a accès pour ce site. Chaque carte ouvre l'outil existant : rien n'est dupliqué ici.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<div class="mk-tc">
+  <% if (cat.empty) { %>
+    <div class="mk-tc-empty" role="status"><p><strong>Aucun outil n'est actuellement disponible pour votre compte.</strong></p><p class="mk-sub">Les outils dépendent de vos droits et des extensions activées sur ce site. Contactez un administrateur si vous pensez en avoir besoin.</p></div>
+  <% } %>
+  <% cat.groups.forEach((g) => { %>
+  <section class="mk-tc-group" aria-labelledby="tc-<%= g.key %>">
+    <h2 id="tc-<%= g.key %>"><%= g.label %></h2>
+    <ul class="mk-tc-grid">
+      <% g.tools.forEach((t) => { %>
+      <li class="mk-tc-card mk-tc-<%= t.state %>" data-tool="<%= t.id %>">
+        <span class="mk-tc-icon" aria-hidden="true"><%- icon(t.icon || "sliders", { size: 20 }) %></span>
+        <div class="mk-tc-text">
+          <h3><% if (t.state === "available") { %><a href="<%= t.href %>"><%= t.name %></a><% } else { %><%= t.name %><% } %></h3>
+          <p><%= t.description %></p>
+          <% if (t.source && t.source !== "core") { %><p class="mk-sub mk-tc-src">Fournie par l'extension « <%= t.source.replace(/^extension:/, "") %> »</p><% } %>
+          <% if (t.state !== "available") { %>
+            <p class="mk-tc-state"><span class="mk-status"><%= t.stateLabel %></span><% if (t.enable) { %> <a class="btn btn-outline btn-sm" href="<%= t.enable %>">Gérer les modules du site</a><% } %></p>
+          <% } else { %>
+            <p class="mk-tc-open"><a class="btn btn-outline btn-sm" href="<%= t.href %>" aria-label="Ouvrir : <%= t.name %>">Ouvrir</a></p>
+          <% } %>
+        </div>
+      </li>
+      <% }) %>
+    </ul>
+  </section>
+  <% }) %>
+  <% if (cat.planned.length) { %>
+  <section class="mk-tc-group" aria-labelledby="tc-planned">
+    <h2 id="tc-planned">Pas encore disponibles</h2>
+    <p class="mk-sub">Ces outils existent dans d'autres CMS mais ne sont pas encore développés dans Kolakisa : aucune action n'est proposée.</p>
+    <ul class="mk-tc-grid">
+      <% cat.planned.forEach((t) => { %>
+      <li class="mk-tc-card mk-tc-planned" data-tool="<%= t.id %>">
+        <span class="mk-tc-icon" aria-hidden="true"><%- icon(t.icon || "sliders", { size: 20 }) %></span>
+        <div class="mk-tc-text"><h3><%= t.name %></h3><p><%= t.description %></p><p class="mk-tc-state"><span class="mk-status"><%= t.stateLabel %></span></p></div>
+      </li>
+      <% }) %>
+    </ul>
+  </section>
+  <% } %>
+</div>
+<%- include("partials/bottom") %>

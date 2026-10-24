@@ -4,6 +4,7 @@
 // Toute écriture est limitée au site de la requête ; un accès limité à un site ne peut agir que sur le sien (contrôlé ici ET par la garde de portée des routes).
 const express = require("express");
 const themes = require("../../services/themes");
+const themeFiles = require("../../services/themeFiles");
 const catalog = require("../themes/catalog");
 const library = require("../themes/library");
 const tokensLib = require("../pages/tokens");
@@ -168,5 +169,59 @@ module.exports = () => {
       return `Thème « ${r.name} » supprimé de « ${t.name} ». Les pages, médias et réglages du site ne sont pas touchés.`;
     });
   });
+
+  // ----- Éditeur de fichiers des thèmes : fichiers JSON virtuels du manifeste (voir services/themeFiles.js) ; aucun accès au disque -----
+  // Lecture : appearance.read · écriture et restauration : appearance.publish (même droit que l'activation d'un thème, qui change le rendu public).
+  const jsonErr = (res, status, code, message) => res.status(status).json({ ok: false, error: { code, message } });
+  const guard = (req, res, fn) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    try { return fn(t); } catch (error) {
+      if (error instanceof UserError || error instanceof MarketingError) return jsonErr(res, error.code === "conflit" ? 409 : 422, error.code === "conflit" ? "conflit" : "invalid", error.message);
+      console.error("[KOLAKISA] Éditeur de fichiers des thèmes :", error && error.message);
+      return jsonErr(res, 500, "server", "Une erreur est survenue. Rien n'a été modifié.");
+    }
+  };
+  const str = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
+  const keyOf = (v) => { const k = str(v, 40); return KEY.test(k) ? k : ""; };
+  // Avertissement avant l'éditeur : chaque ENTRÉE demande une confirmation. Le consentement est à usage unique (session serveur, 10 minutes, lié à la personne et au site) :
+  // il n'est jamais mémorisé dans le navigateur ni en base. Il ne remplace AUCUN contrôle : les droits et l'isolation s'appliquent à chaque lecture et écriture.
+  const ACK_TTL = 10 * 60 * 1000;
+  const ackKey = (req, t) => `${req.session.user.id}:${t.siteId || 0}`;
+  router.post("/site-web/themes/fichiers/acces", need("appearance.read"), (req, res) => {
+    const t = target(req, res); if (!t) return;
+    req.session.themeFilesAck = { k: ackKey(req, t), at: Date.now() };
+    res.redirect(to(t, "/fichiers", { theme: keyOf(req.body.theme), fichier: str(req.body.fichier, 80) }));
+  });
+  router.get("/site-web/themes/fichiers", need("appearance.read"), (req, res) => {
+    const t = target(req, res); if (!t) return;
+    const ack = req.session.themeFilesAck;
+    const confirmed = Boolean(ack && ack.k === ackKey(req, t) && Date.now() - ack.at < ACK_TTL);
+    if (req.session.themeFilesAck) delete req.session.themeFilesAck; // à usage unique, même s'il ne correspondait pas
+    if (!confirmed) {
+      res.set("Cache-Control", "no-store");
+      return res.render("marketing/themes-files", { ...base(req, t, { active: "apparence/fichiers" }), title: "Éditeur de fichiers des thèmes", gate: true, themesList: [], chosen: null, tree: null, first: null, readOnly: t.readOnly, canWrite: false, maxKb: 0, codeEditorJs: false, themeGateJs: true,
+        carry: { theme: keyOf(req.query.theme), fichier: str(req.query.fichier, 80) }, backHref: to(t, "") });
+    }
+    const all = themes.installed(t.siteId);
+    const wanted = keyOf(req.query.theme);
+    const chosen = all.find((x) => x.key === wanted) || all.find((x) => x.state === "active") || all[0];
+    let tree = null, first = null;
+    try { tree = themeFiles.tree(t.siteId, chosen.key); first = themeFiles.read(t.siteId, chosen.key, tree.files.some((f) => f.path === req.query.fichier) ? String(req.query.fichier) : "theme.json"); } catch { /* thème illisible : liste vide */ }
+    res.set("Cache-Control", "no-store");
+    res.render("marketing/themes-files", { ...base(req, t, { active: "apparence/fichiers" }), title: "Éditeur de fichiers des thèmes", themesList: all, chosen, tree, first, readOnly: t.readOnly, canWrite: req.mk.can("appearance.publish") && !t.readOnly, gate: false, maxKb: themeFiles.MAX_FILE_BYTES / 1024, codeEditorJs: true });
+  });
+  router.get("/site-web/themes/fichiers/arbre", need("appearance.read"), (req, res) => guard(req, res, (t) => res.set("Cache-Control", "no-store").json({ ok: true, ...themeFiles.tree(t.siteId, keyOf(req.query.theme)) })));
+  router.get("/site-web/themes/fichiers/lire", need("appearance.read"), (req, res) => guard(req, res, (t) => res.set("Cache-Control", "no-store").json({ ok: true, file: themeFiles.read(t.siteId, keyOf(req.query.theme), str(req.query.fichier, 80)), revisions: themeFiles.revisions(t.siteId, keyOf(req.query.theme), str(req.query.fichier, 80)) })));
+  router.get("/site-web/themes/fichiers/version", need("appearance.read"), (req, res) => guard(req, res, (t) => res.set("Cache-Control", "no-store").json({ ok: true, revision: themeFiles.revision(t.siteId, keyOf(req.query.theme), str(req.query.fichier, 80), Number(req.query.id)) })));
+  router.post("/site-web/themes/fichiers/enregistrer", need("appearance.publish"), (req, res) => guard(req, res, (t) => {
+    if (t.readOnly) return jsonErr(res, 422, "invalid", "Ce site est archivé ou supprimé : restaurez-le avant de modifier ses thèmes.");
+    const r = themeFiles.write(req.mk.ctx, t.siteId, keyOf(req.body.theme), str(req.body.fichier, 80), req.body.content, str(req.body.etag, 80));
+    res.set("Cache-Control", "no-store").json({ ok: true, file: r, revisions: themeFiles.revisions(t.siteId, keyOf(req.body.theme), str(req.body.fichier, 80)), message: r.changed ? "Enregistré : le thème a été mis à jour." : "Aucun changement : le fichier est déjà à jour." });
+  }));
+  router.post("/site-web/themes/fichiers/restaurer", need("appearance.publish"), (req, res) => guard(req, res, (t) => {
+    if (t.readOnly) return jsonErr(res, 422, "invalid", "Ce site est archivé ou supprimé : restaurez-le avant de modifier ses thèmes.");
+    const r = themeFiles.restore(req.mk.ctx, t.siteId, keyOf(req.body.theme), str(req.body.fichier, 80), Number(req.body.id), str(req.body.etag, 80));
+    res.set("Cache-Control", "no-store").json({ ok: true, file: r, revisions: themeFiles.revisions(t.siteId, keyOf(req.body.theme), str(req.body.fichier, 80)), message: "Version restaurée et enregistrée." });
+  }));
   return router;
 };

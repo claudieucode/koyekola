@@ -30,11 +30,11 @@ function createMarketingRouters({ db }) {
     const siteId = scope && Number.isInteger(scope.siteId) ? scope.siteId : null;
     // Personne qui n'a accès qu'à certains sites : seules les adresses d'un de SES sites (et son écran « Mes sites ») sont ouvertes
     if (!membership) {
-      const allowedHere = req.path === "/site-web/mes-sites" || (siteId !== null && mySites.some((s) => s.site_id === siteId));
+      const allowedHere = req.path === "/site-web/mes-sites" || /^\/site-web\/profil(?:\/|$)/.test(req.path) || (siteId !== null && mySites.some((s) => s.site_id === siteId));
       if (!allowedHere) return (scope || req.method !== "GET") ? res.status(403).render("error", { message: "Vous n'avez pas accès à cette ressource." }) : res.redirect("/marketing/site-web/mes-sites");
     }
     const perms = access.effectivePermissions(user.id, { organizationId: orgId, siteId });
-    const allowed = (permission) => perms.has(permission);
+    const allowed = (permission) => permission === "profile.self" || perms.has(permission); // « profile.self » : son PROPRE profil, ouvert à toute personne connectée qui a accès à l'administration
     const role = membership ? membership.role : "site";
     // Contexte de site (palier 2) : calculé pour CETTE requête seulement, à partir de la base (jamais d'état partagé). req.mk.site = le site visé,
     // ou null (site principal / écran sans site) ; req.mk.siteContext = le détail du contrôle (reason : not_found, deleted, archived, forbidden).
@@ -58,6 +58,7 @@ function createMarketingRouters({ db }) {
     // Email Engine (palier 16) : sites proposés / site imposé, disponibles pour les écrans des audiences, segments, modèles et campagnes
     if (/^\/(?:campagnes|listes|segments|modeles|automatisations|tunnels)(?:\/|$)/.test(req.path)) Object.assign(res.locals, require("./kit").siteChoices(req));
     res.locals.mkTheme = themeOf(marketing.settings, orgId, user.id); // Paramètres → Apparence
+    res.locals.mkUserTheme = require("../../services/accountProfile").themeOf(user.id); // Comptes → Profil : thème enregistré (repris sur chaque appareil sans choix local)
     res.locals.mkh = helpers;
     // Message « flash » : affiché une seule fois après une action
     res.locals.flash = req.session.mkFlash ?? null;
@@ -94,6 +95,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)
   admin.use(require("./history")()); // Historique des modifications et corbeille commune (palier 10)
   admin.use(require("./users")()); // Utilisateurs, rôles, permissions, invitations (palier 9)
+  admin.use(require("./profile")()); // Comptes → Profil : profil personnel de la personne connectée
   admin.use(require("./siteUsers")()); // Utilisateurs d'UN site : équipe locale, invitations, rôles et permissions (lecture)
   admin.use(require("./themes")()); // Apparence → Thèmes : thèmes installés et thème actif par site
   admin.use(require("./themeDemo")()); // Apparence → Thèmes : aperçu complet (site de démonstration isolé) d'un thème de la bibliothèque

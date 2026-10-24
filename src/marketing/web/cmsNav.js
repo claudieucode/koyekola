@@ -44,6 +44,7 @@ const SECTIONS = [
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
+      leaf("apparence/fichiers", "Éditeur de fichiers", `${BASE}/themes/fichiers`, { permission: "appearance.read" }), // fichiers JSON virtuels d'un thème installé (services/themeFiles.js)
       leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
       leaf("apparence", "Éditeur du site", `${BASE}/editeur-du-site`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/templates`, { permission: "appearance.read" }),
@@ -59,12 +60,14 @@ const SECTIONS = [
   // Extensions : modules activables PAR SITE (registre fermé siteModules.js). L'activation est réservée à l'équipe de l'organisation ; elle s'ajoute aux permissions et à l'isolation par site.
   { key: "extensions", label: "Extensions", icon: "plug", items: [leaf("extensions", "Modules", `${BASE}/extensions`, { permission: "sites.modules", teamOnly: true })] },
   {
-    key: "utilisateurs", label: "Utilisateurs", icon: "users", items: [
-      leaf("utilisateurs", "Tous les utilisateurs", `${BASE}/utilisateurs`, { permission: "users.view" }),
+    key: "utilisateurs", label: "Comptes", icon: "users", items: [
+      leaf("utilisateurs", "Tous les comptes", `${BASE}/utilisateurs`, { permission: "users.view" }),
+      leaf("utilisateurs/nouveau", "Ajouter un compte", `${BASE}/utilisateurs/nouveau`, { permission: "users.create" }),
       leaf("utilisateurs/ajouter", "Inviter", `${BASE}/utilisateurs/ajouter`, { permission: "users.create" }),
       leaf("utilisateurs/roles", "Rôles", `${BASE}/utilisateurs/roles`, { permission: "users.view" }),
       leaf("utilisateurs/permissions", "Permissions", `${BASE}/utilisateurs/permissions`, { permission: "users.view" }),
       leaf("utilisateurs/invitations", "Invitations", `${BASE}/utilisateurs/invitations`, { permission: "users.view" }),
+      leaf("utilisateurs/profil", "Profil", `${BASE}/profil`, { permission: "profile.self" }), // Comptes → Profil : son propre profil (toute personne ayant accès à l'administration)
     ],
   },
   {
@@ -88,6 +91,7 @@ const SECTIONS = [
   { key: "tests", label: "Tests A/B", icon: "shuffle", items: [leaf("pagetests", "Tests A/B", `${BASE}/tests-ab`)] },
   {
     key: "outils", label: "Outils", icon: "sliders", items: [
+      leaf("outils/disponibles", "Outils disponibles", `${BASE}/outils/disponibles`, { permission: "tools.view" }),
       leaf("outils", "Santé du site", `${BASE}/outils`, { permission: "tools.view" }),
       leaf("corbeille", "Corbeille", `${BASE}/corbeille`, { permission: "revisions.view" }),
       leaf("outils/importer", "Importer", `${BASE}/outils/importer`, { permission: "tools.import" }),
@@ -146,7 +150,7 @@ function buildCmsNav({ can, active, space = null }) {
   }
   const section = sectionOf(current.section);
   // Fil d'Ariane : Site Web (le CMS) → rubrique → écran
-  const trail = [{ label: "Site Web", href: BASE }];
+  const trail = [{ label: "Site Web", href: `${BASE}/sites` }];
   if (current.key !== "sitedash") {
     if (section.items.length > 1) trail.push({ label: section.label, href: section.items[0].href });
     if (section.items.length === 1 || current.key !== section.items[0].key) trail.push({ label: current.label, href: current.href });
@@ -174,10 +178,12 @@ const SITE_MODULES = {
   composants: { label: "Composants", kind: "own", permission: "forms.read" },
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
   // Utilisateurs d'un site : écrans partagés /site-web/equipe-site (équipe locale, invitations de CE site, rôles et permissions en lecture) ouverts dans le cadre du site
-  equipe: { label: "Tous les utilisateurs", kind: "delegate", to: "/site-web/equipe-site", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  equipe: { label: "Tous les comptes", kind: "delegate", to: "/site-web/equipe-site", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  "equipe-ajouter": { label: "Ajouter un compte", kind: "delegate", to: "/site-web/equipe-site/nouveau", reg: "utilisateurs/nouveau", permission: "users.create", legacy: `${BASE}/utilisateurs/nouveau` },
   "equipe-inviter": { label: "Inviter", kind: "delegate", to: "/site-web/equipe-site/inviter", reg: "utilisateurs/ajouter", permission: "users.create", legacy: `${BASE}/utilisateurs/ajouter` },
   "equipe-invitations": { label: "Invitations", kind: "delegate", to: "/site-web/equipe-site/invitations", reg: "utilisateurs/invitations", permission: "users.view", legacy: `${BASE}/utilisateurs/invitations` },
   "equipe-roles": { label: "Rôles", kind: "delegate", to: "/site-web/equipe-site/roles", reg: "utilisateurs/roles", permission: "users.view", legacy: `${BASE}/utilisateurs/roles` },
+  "equipe-profil": { label: "Profil", kind: "delegate", to: "/site-web/profil", reg: "utilisateurs/profil", permission: "profile.self", legacy: `${BASE}/profil` },
   "equipe-permissions": { label: "Permissions", kind: "delegate", to: "/site-web/equipe-site/permissions", reg: "utilisateurs/permissions", permission: "users.view", legacy: `${BASE}/utilisateurs/permissions` },
   reglages: { label: "Réglages du site", kind: "own", permission: "settings.read", legacy: `${BASE}/parametres`, legacyLabel: "Paramètres du site principal" },
   // R8 lot 2 : Articles, Commentaires et Médias s'ouvrent dans le cadre du site (écrans existants, isolation R5/R6 : le site vient de l'adresse, jamais du navigateur)
@@ -246,7 +252,8 @@ const NESTED = Object.freeze({
   articles: ["ajouter", "brouillons", "programmes", "publies", "corbeille", "categories", "etiquettes", "auteurs"],
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
-  outils: ["importer", "exporter", "donnees", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees", "notes"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
+  outils: ["importer", "exporter", "donnees", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees", "notes", "disponibles"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
+  themes: ["fichiers"], // Apparence → Éditeur de fichiers des thèmes : s'ouvre dans le cadre DU site (/sites/<id>/themes/fichiers)
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
@@ -297,10 +304,12 @@ const ABILITY = {
   "seo/robots": { mode: "open", module: "seo", sub: "robots" },
   "seo/404": { mode: "open", module: "seo", sub: "404" },
   utilisateurs: { mode: "open", module: "equipe" },
+  "utilisateurs/nouveau": { mode: "open", module: "equipe-ajouter" },
   "utilisateurs/ajouter": { mode: "open", module: "equipe-inviter" },
   "utilisateurs/invitations": { mode: "open", module: "equipe-invitations" },
   "utilisateurs/roles": { mode: "open", module: "equipe-roles" },
   "utilisateurs/permissions": { mode: "open", module: "equipe-permissions" },
+  "utilisateurs/profil": { mode: "open", module: "equipe-profil" },
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
   corbeille: { mode: "open", module: "corbeille" },
@@ -313,6 +322,7 @@ const ABILITY = {
   "outils/contenu": { mode: "open", module: "outils", sub: "contenu" },
   "outils/effacer-donnees": { mode: "open", module: "outils", sub: "effacer-donnees" },
   "outils/notes": { mode: "open", module: "outils", sub: "notes" },
+  "outils/disponibles": { mode: "open", module: "outils", sub: "disponibles" },
   parametres: { mode: "open", module: "reglages" },
   "parametres/confidentialite": { mode: "open", module: "confidentialite" },
   "parametres/ecriture": { mode: "open", module: "parametres-ecriture" },
@@ -340,6 +350,7 @@ const ABILITY = {
   "mediatheque/ajouter": { mode: "open", module: "medias", sub: "ajouter" },
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
+  "apparence/fichiers": { mode: "open", module: "themes", sub: "fichiers" },
   "apparence/polices": { mode: "open", module: "polices" },
   "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
   "apparence/widgets": { mode: "open", module: "widgets" },
@@ -435,7 +446,7 @@ function buildSiteNav({ can, active, space }) {
     sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1 && !sec.group, open: items.some((i) => i.current) || sec.items.some((i) => i.hidden && i.key === current.key), soon: items.length === 1 && items[0].status === "preview" });
   }
   const sec = all.find((x) => x.key === current.section);
-  const trail = [{ label: "Site Web", href: BASE }, { label: "Mes sites", href: space.listHref || `${BASE}/sites` }, { label: space.name, href: `${space.base}/tableau-de-bord` }];
+  const trail = [{ label: "Site Web", href: `${BASE}/sites` }, { label: "Mes sites", href: space.listHref || `${BASE}/sites` }, { label: space.name, href: `${space.base}/tableau-de-bord` }];
   if (current.module !== "tableau-de-bord") { if (sec.items.length > 1 && sec.label !== current.label) trail.push({ label: sec.label }); trail.push({ label: current.label, href: current.href }); }
   const primary = current.primary && can(current.primary.permission) ? { label: current.primary.label, href: current.primary.href } : null;
   return { sections, trail, primary, current, section: sec, space };
@@ -456,7 +467,7 @@ FRAMED.add("parametres/indexation");
 FRAMED.add("parametres/emailing");
 FRAMED.add("parametres/tunnels");
 FRAMED.add("parametres/avance");
-FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
+FRAMED.add("utilisateurs/nouveau"); FRAMED.add("utilisateurs/ajouter"); FRAMED.add("utilisateurs/invitations"); FRAMED.add("utilisateurs/roles"); FRAMED.add("utilisateurs/permissions"); // écrans de l'équipe d'un site : gardent le cadre DU site
 FRAMED.add("parametres/connecteurs");
 FRAMED.add("parametres/confidentialite"); // l'écran garde le cadre DU site (menu, bandeau, fil d'Ariane)
 FRAMED.add("landing"); // écran d'une page (et son éditeur) : une page d'un site garde le cadre DE CE SITE (menu, bandeau, tableau de bord) au lieu du cadre central du principal

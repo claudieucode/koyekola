@@ -27,8 +27,11 @@ describe("navigation contextuelle central / site", () => {
 
   test("1. Mes sites : navigation centrale uniquement (aucun menu de contenu, aucun tableau de bord de site), principal listé avec son badge et « Ouvrir »", async () => {
     const r = await boss.get(SP); assert.equal(r.status, 200);
-    assert.deepEqual(links(r.text).map((l) => l.label), ["Mes sites"]);
-    assert.doesNotMatch(nav(r.text), /Pages|Articles|Tableau de bord|Apparence|Paramètres/);
+    // « Mes sites » est servi DANS le menu Marketing (Site Web → Mes sites) : une seule palette (celle du Marketing), aucune coque CMS ni second menu
+    assert.doesNotMatch(r.text, /class="mk-body is-cms"/); assert.doesNotMatch(r.text, /aria-label="Sections du CMS"/);
+    assert.equal((r.text.match(/<aside class="mk-sidebar"/g) || []).length, 1, "une seule palette latérale");
+    assert.match(r.text, /<a class="mk-nav-link mk-nav-split-link" href="\/marketing\/site-web\/sites"[^>]*aria-current="page"/, "Site Web actif");
+    assert.match(r.text, /<a class="mk-nav-sublink" href="\/marketing\/site-web\/sites" aria-current="page">Mes sites<\/a>/);
     assert.equal(banner(r.text), null, "pas de bandeau de site dans le gestionnaire");
     const row = (r.text.match(/<tr data-site="principal">[\s\S]*?<\/tr>/) || [""])[0];
     assert.match(row, /Principal/); assert.match(row, new RegExp(`href="${PR}/tableau-de-bord"[^>]*>Ouvrir`));
@@ -38,7 +41,7 @@ describe("navigation contextuelle central / site", () => {
     const r = await boss.get(`${PR}/tableau-de-bord`); const l = links(r.text);
     assert.equal(banner(r.text), "Site principal");
     assert.ok(l.some((x) => x.label === "Tableau de bord" && x.href === `${PR}/tableau-de-bord`));
-    assert.ok(l.some((x) => x.label === "Pages") && l.some((x) => x.label === "Tous les articles"));
+    assert.ok(l.some((x) => x.label === "Toutes les pages") && l.some((x) => x.label === "Tous les articles"));
     assert.ok(!l.some((x) => x.label === "Mes sites" || x.href === SP), "« Mes sites » n'est pas une entrée du menu");
     assert.deepEqual(back(r.text), [SP], "action « Retour à Mes sites » dans l'en-tête");
     assert.match(r.text, /Retour à Mes sites/);
@@ -46,7 +49,7 @@ describe("navigation contextuelle central / site", () => {
   test("3. Site secondaire : menu propre à CE site, sans « Mes sites », avec « Retour à Mes sites »", async () => {
     const r = await boss.get(`${SP}/${A}/tableau-de-bord`); const l = links(r.text);
     assert.equal(banner(r.text), "Alpha Ctx");
-    assert.ok(l.some((x) => x.label === "Tableau de bord" && x.href === `${SP}/${A}/tableau-de-bord`) && l.some((x) => x.label === "Pages" && x.href === `${SP}/${A}/pages`));
+    assert.ok(l.some((x) => x.label === "Tableau de bord" && x.href === `${SP}/${A}/tableau-de-bord`) && l.some((x) => x.label === "Toutes les pages" && x.href === `${SP}/${A}/pages`));
     assert.ok(!l.some((x) => x.label === "Mes sites" || x.href === SP));
     assert.deepEqual(back(r.text), [SP]);
   });

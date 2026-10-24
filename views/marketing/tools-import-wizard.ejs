@@ -1,0 +1,41 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Importer · " + imp.name, intro: imp.description, tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<p><a href="<%= BASE %>/importer<%= q %>">&larr; Retour aux importateurs</a> · <a href="<%= BASE %>/importer/<%= imp.id %>/details<%= q %>">Détails et limites</a></p>
+<section class="mk-panel" aria-labelledby="iw-h">
+  <h2 id="iw-h">1. Source à importer</h2>
+  <form method="post" action="<%= BASE %>/importer/<%= imp.id %><%= q %>" enctype="multipart/form-data" class="mk-tl-form" data-im-form>
+    <div class="field-group"><label for="iw-file">Fichier (<%= imp.formats.join(", ") %> ; <%= maxMb %> Mo au plus)<%= imp.id === "wordpress" ? " *" : "" %></label>
+      <input id="iw-file" type="file" name="file" accept="<%= imp.formats.join(",") %>"<%= imp.id === "wordpress" ? " required" : "" %>>
+      <% if (imp.id === "wordpress") { %><span class="field-hint">Dans WordPress : Outils → Exporter → « Tout le contenu » → Télécharger le fichier d'exportation.</span><% } %>
+    </div>
+    <% if (imp.id === "flux") { %>
+    <div class="field-group"><label for="iw-url">…ou adresse du flux (https://…)</label><input id="iw-url" type="url" name="feed_url" maxlength="500" placeholder="https://exemple.fr/feed/" autocomplete="off">
+      <label class="mk-er-check" for="iw-consent"><input type="checkbox" id="iw-consent" name="consent_fetch" value="1"> J'autorise le serveur à télécharger ce flux depuis Internet (adresses privées, locales et services internes refusés ; 10 Mo, 15 s au plus).</label></div>
+    <% } %>
+    <fieldset class="mk-tl-fieldset"><legend>2. Contenus à importer dans ce site</legend>
+      <% types.filter((t) => ({ wordpress: ["taxonomies", "pages", "articles", "media", "comments"], flux: ["taxonomies", "articles"] }[imp.id] || []).includes(t.key)).forEach((t) => { %>
+        <div class="mk-tl-option"><input type="checkbox" id="iw-t-<%= t.key %>" name="types" value="<%= t.key %>"<%= t.allowed ? " checked" : " disabled" %>>
+          <label for="iw-t-<%= t.key %>"><%= t.label %><% if (!t.allowed) { %> <span class="mk-sub">— indisponible pour ce site ou pour votre rôle</span><% } %></label></div>
+      <% }) %>
+      <span class="field-hint">Les catégories et étiquettes déjà présentes sont réutilisées, jamais écrasées. Seuls les types détectés dans le fichier apparaissent dans le rapport.</span>
+    </fieldset>
+    <% if (imp.id === "wordpress") { %>
+    <fieldset class="mk-tl-fieldset"><legend>3. Médias</legend>
+      <label class="mk-er-check" for="iw-dl"><input type="checkbox" id="iw-dl" name="download_media" value="1"<%= canMedia ? "" : " disabled" %> data-im-media> Télécharger les fichiers médias depuis le site d'origine (par défaut : non — les liens restent vers l'ancien site).</label>
+      <div class="mk-im-consent" data-im-media-consent hidden>
+        <label class="mk-er-check" for="iw-dlc"><input type="checkbox" id="iw-dlc" name="consent_media" value="1"> Je comprends que le serveur va télécharger ces fichiers (200 au plus, 12 Mo chacun, 150 Mo en tout ; réseau public seulement ; type vérifié par le contenu réel). Un échec n'arrête pas l'import : l'article garde le lien d'origine.</label>
+      </div>
+      <% if (!canMedia) { %><span class="field-hint">Permission « media.upload » requise.</span><% } %>
+    </fieldset>
+    <% } %>
+    <fieldset class="mk-tl-fieldset"><legend><%= imp.id === "wordpress" ? "4" : "3" %>. Statuts et doublons</legend>
+      <label class="mk-er-check" for="iw-pub"><input type="checkbox" id="iw-pub" name="keep_published" value="1"<%= canPublish ? "" : " disabled" %>> Publier les articles qui l'étaient à l'origine (par défaut : tout arrive en brouillon).<%= canPublish ? "" : " Permission de publication requise." %></label>
+      <div class="field-group"><label for="iw-conf">Si une adresse existe déjà dans ce site</label><select id="iw-conf" name="on_conflict"><% Object.entries(STRATEGIES).forEach(([k, label]) => { %><option value="<%= k %>"><%= label %></option><% }) %></select>
+        <span class="field-hint">Rien n'est jamais remplacé ni supprimé. Un contenu déjà importé depuis la même source est reconnu par son identifiant d'origine (pas par son titre) et n'est pas recréé.</span></div>
+    </fieldset>
+    <p class="mk-sub">À l'étape suivante : analyse sans rien écrire, aperçu de ce qui sera créé, ignoré ou converti, correspondance des auteurs, puis confirmation.</p>
+    <button type="submit" class="btn btn-primary btn-sm" data-im-submit><%- icon("upload", { size: 16 }) %> Analyser</button>
+  </form>
+</section>
+<script src="<%= asset('/js/cms-import.js') %>" defer></script>
+<%- include("partials/bottom") %>

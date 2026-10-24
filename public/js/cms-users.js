@@ -39,4 +39,24 @@
     window.addEventListener("beforeunload", function (e) { if (!sent && sel.value !== start) { e.preventDefault(); e.returnValue = ""; } });
   });
   $$("[data-us-autosubmit]").forEach(function (s) { s.addEventListener("change", function () { s.form.submit(); }); });
+  // Comptes → liste : sélection (une, plusieurs, toutes les lignes de la page) et actions groupées. Le serveur revérifie CHAQUE personne et CHAQUE droit : ce script ne fait que guider.
+  $$("[data-us-bulk]").forEach(function (bulk) {
+    var rows = $$("[data-us-row]"), all = document.querySelector("[data-us-all]"), act = bulk.querySelector('[name="action"]'), role = bulk.querySelector('[name="role"]');
+    var conf = bulk.querySelector("[data-us-confirm]"), ok = bulk.querySelector('[name="confirm"]'), apply = bulk.querySelector("[data-us-apply]"), count = bulk.querySelector("[data-us-count]");
+    var checked = function () { return rows.filter(function (r) { return r.checked; }); };
+    var refresh = function () {
+      var n = checked().length, a = act.value;
+      if (role) role.hidden = a !== "role";
+      if (conf) conf.hidden = a !== "retirer";
+      if (count) count.textContent = n ? n + " compte" + (n > 1 ? "s" : "") + " coché" + (n > 1 ? "s" : "") : "Aucun compte coché";
+      apply.disabled = !(n && a && (a !== "role" || (role && role.value)) && (a !== "retirer" || (ok && ok.checked)));
+      if (all) { all.checked = n > 0 && n === rows.length; all.indeterminate = n > 0 && n < rows.length; }
+    };
+    rows.forEach(function (r) { r.addEventListener("change", refresh); });
+    if (all) all.addEventListener("change", function () { rows.forEach(function (r) { r.checked = all.checked; }); refresh(); });
+    [act, role, ok].forEach(function (el) { if (el) el.addEventListener("change", refresh); });
+    bulk.addEventListener("submit", function (e) { if (apply.disabled) { e.preventDefault(); return; } apply.disabled = true; });
+    window.addEventListener("pageshow", refresh);
+    refresh();
+  });
 })();

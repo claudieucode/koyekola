@@ -1,0 +1,39 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Importer", intro: "Si vous avez des articles, des pages ou des commentaires dans un autre système, Kolakisa peut les importer dans ce site. Choisissez d'abord une source ci-dessous : le fichier est toujours ANALYSÉ avant toute création, vous lisez le rapport, puis vous confirmez.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+  const kindLabel = { native: "Fichier Kolakisa", file: "Fichier d'export", url: "Fichier ou adresse", tool: "Outil" };
+%>
+<section class="mk-panel" aria-labelledby="im-list">
+  <h2 id="im-list">Sources disponibles</h2>
+  <ul class="mk-im-list">
+    <% importers.forEach((m) => { const ok = m.state.compatible && m.state.enabled && m.usable; %>
+    <li class="mk-im-row" data-importer="<%= m.id %>">
+      <div class="mk-im-main">
+        <h3><%= m.name %> <span class="mk-im-kind"><%= kindLabel[m.kind] %></span></h3>
+        <p><%= m.description %></p>
+        <div class="mk-im-actions">
+          <% if (ok) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/importer/<%= m.id %><%= q %>"><%= m.kind === "tool" ? "Ouvrir l'outil" : "Lancer l'importateur" %></a><% } else { %><span class="btn btn-outline btn-sm" aria-disabled="true"><%= !m.state.compatible ? "Incompatible" : !m.state.enabled ? "Désactivé" : "Non autorisé" %></span><% } %>
+          <a href="<%= BASE %>/importer/<%= m.id %>/details<%= q %>">Détails</a>
+          <% if (canToggle) { %><form method="post" action="<%= BASE %>/importer/<%= m.id %>/<%= m.state.enabled ? "desactiver" : "activer" %><%= q %>" class="mk-im-toggle"><button type="submit" class="mk-im-link"><%= m.state.enabled ? "Désactiver" : "Activer" %></button></form><% } %>
+        </div>
+      </div>
+      <div class="mk-im-state"><span class="mk-status <%= ok ? "mk-status-ok" : "mk-status-warn" %>"><%= m.state.label %></span><span class="mk-sub">v<%= m.version %></span><% if (m.state.reason) { %><span class="mk-sub"><%= m.state.reason %></span><% } %></div>
+    </li>
+    <% }) %>
+  </ul>
+</section>
+
+<section class="mk-panel" aria-labelledby="im-un">
+  <h2 id="im-un">Sources non prises en charge</h2>
+  <p class="mk-sub">Ces plateformes ne sont pas des importateurs : aucune importation depuis un compte distant n'est possible sans authentification et accès réellement opérationnels.</p>
+  <ul class="mk-im-unsupported"><% unsupported.forEach((u) => { %><li><strong><%= u.name %></strong> — <%= u.reason %></li><% }) %></ul>
+  <p class="mk-sub">Une extension peut ajouter son propre importateur au registre : il apparaît alors dans la liste ci-dessus, avec ses détails.</p>
+</section>
+
+<% if (recent.length) { %>
+<section class="mk-panel" aria-labelledby="im-recent"><h2 id="im-recent">Imports récents</h2>
+  <ul class="mk-tl-list"><% recent.forEach((r) => { %><li><a href="<%= BASE %>/importer/<%= r.id %><%= r.site_id ? "?site=" + r.site_id : "" %>">Import <%= (r.options && r.options.source) || "kolakisa" %> du <%= fdate(r.created_at) %></a> — <%= { queued: "en attente", running: r.phase === "analyse" ? "analyse en cours" : "en cours", awaiting: "analysé, en attente de confirmation", done: "terminé", failed: "échec", cancelled: "annulé" }[r.status] %></li><% }) %></ul>
+</section>
+<% } %>
+<%- include("partials/bottom") %>

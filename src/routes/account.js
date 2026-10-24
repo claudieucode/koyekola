@@ -51,6 +51,17 @@ router.post("/confirmer-email/:token", noStore, (req, res) => {
   res.status(result ? 200 : 410).render("confirm-email", { token: req.params.token, valid: Boolean(result), result });
 });
 
+// Changement d'adresse demandé depuis Comptes → Profil : même principe (un clic sur « Confirmer », jamais l'ouverture seule du lien)
+const profile = require("../services/accountProfile");
+router.get("/mon-compte/changer-email/:token", noStore, (req, res) => {
+  const t = profile.readEmailToken(req.params.token);
+  res.status(t ? 200 : 410).render("confirm-email-change", { token: req.params.token, valid: Boolean(t), email: t ? t.email : "", result: null });
+});
+router.post("/mon-compte/changer-email/:token", noStore, (req, res) => {
+  const result = profile.confirmEmailChange(req.params.token);
+  res.status(result === "invalide" ? 410 : 200).render("confirm-email-change", { token: req.params.token, valid: result !== "invalide", email: "", result });
+});
+
 router.get("/mon-compte/mes-donnees.json", requireAuth, (req, res) => {
   const data = account.exportData(req.session.user.id, req.app.locals.marketing);
   res.set({ "Content-Disposition": `attachment; filename="mes-donnees-kolakisa-${new Date().toISOString().slice(0, 10)}.json"`, "Cache-Control": "no-store" });

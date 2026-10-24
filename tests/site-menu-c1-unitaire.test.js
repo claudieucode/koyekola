@@ -38,15 +38,15 @@ describe("C1 — une seule définition, deux présentations", () => {
     const dash = sg.find((x) => x.key === "dashboard").items[0];
     assert.equal(dash.label, "Tableau de bord", "seule différence de libellé : le tableau de bord d'un site n'est pas « du site principal »");
   });
-  test("le principal : toutes les entrées du registre, libellés et adresses historiques inchangés (69 + Composants + 10 Marketing)", () => {
+  test("le principal : toutes les entrées du registre, libellés et adresses historiques inchangés (70 + Composants + 10 Marketing)", () => {
     const pg = nav.projectSections(principal);
     const items = pg.flatMap((g) => g.items);
     for (const reg of nav.ALL.filter((i) => i.key !== "sites")) { const got = items.find((i) => i.key === reg.key); assert.ok(got, reg.key); assert.equal(got.permission, reg.permission);
       // seule différence : dans son espace, le principal a le même « Tableau de bord » que les autres sites ; « Mes sites » n'est pas une entrée d'espace
       if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
     assert.ok(!items.some((i) => i.key === "sites"), "pas de « Mes sites » dans le menu du principal")
-    assert.equal(nav.ALL.length, 76); // ADMIN-NOTES : + « Admin Notes » // // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
-    assert.equal(items.length, 75 + 1 + 10); // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(nav.ALL.length, 80); // FICHIERS-THEMES : + « Éditeur de fichiers »;  // ADMIN-NOTES : + « Admin Notes » // // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
+    assert.equal(items.length, 79 + 1 + 10); // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("les quatre fonctions centrales (Extensions, Sauvegardes, Informations système, Journal) n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);
@@ -72,7 +72,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("exactement les écrans dont l'isolation est démontrée sont ouverts ; tout le reste est grisé", () => {
     const items = nav.projectSections(site).flatMap((g) => g.items).filter((i) => registryKeys.includes(i.key));
     const live = items.filter((i) => !i.disabled).map((i) => i.key).sort();
-    assert.deepEqual(live, ["apparence", "apparence/en-tete", "apparence/menus", "apparence/personnaliser", "apparence/pied-de-page", "apparence/patterns", "apparence/polices", "apparence/styles", "apparence/templates", "apparence/themes", "apparence/widgets", "articles", "articles/ajouter", "articles/auteurs", "articles/brouillons", "articles/categories", "articles/corbeille", "articles/etiquettes", "articles/programmes", "articles/publies", "commentaires", "commentaires/approuves", "commentaires/corbeille", "commentaires/en-attente", "commentaires/indesirables", "corbeille", "landing", "mediatheque", "mediatheque/ajouter", "outils", "outils/cache", "outils/contenu", "outils/diagnostic", "outils/donnees", "outils/effacer-donnees", "outils/notes", "outils/exporter", "outils/importer", "outils/maintenance", "pagetests", "parametres", "parametres/avance", "parametres/ecriture", "parametres/commentaires", "parametres/connecteurs", "parametres/confidentialite", "parametres/emailing", "parametres/indexation", "parametres/lecture", "parametres/medias", "parametres/permaliens", "parametres/seo", "parametres/tunnels", "redirections", "seo", "seo/404", "seo/analyse", "seo/meta", "seo/indexation", "seo/sitemap", "seo/schema", "seo/open-graph", "seo/robots", "sitedash", "utilisateurs", "utilisateurs/ajouter", "utilisateurs/invitations", "utilisateurs/permissions", "utilisateurs/roles"].sort()); // R8 lot 6C : + SEO du site et erreurs 404 ; R8 lot 2 : + médias, articles, commentaires (isolation R5/R6)
+    assert.deepEqual(live, ["apparence", "apparence/en-tete", "apparence/fichiers", "apparence/menus", "apparence/personnaliser", "apparence/pied-de-page", "apparence/patterns", "apparence/polices", "apparence/styles", "apparence/templates", "apparence/themes", "apparence/widgets", "articles", "articles/ajouter", "articles/auteurs", "articles/brouillons", "articles/categories", "articles/corbeille", "articles/etiquettes", "articles/programmes", "articles/publies", "commentaires", "commentaires/approuves", "commentaires/corbeille", "commentaires/en-attente", "commentaires/indesirables", "corbeille", "landing", "mediatheque", "mediatheque/ajouter", "outils", "outils/cache", "outils/contenu", "outils/diagnostic", "outils/disponibles", "outils/donnees", "outils/effacer-donnees", "outils/notes", "outils/exporter", "outils/importer", "outils/maintenance", "pagetests", "parametres", "parametres/avance", "parametres/ecriture", "parametres/commentaires", "parametres/connecteurs", "parametres/confidentialite", "parametres/emailing", "parametres/indexation", "parametres/lecture", "parametres/medias", "parametres/permaliens", "parametres/seo", "parametres/tunnels", "redirections", "seo", "seo/404", "seo/analyse", "seo/meta", "seo/indexation", "seo/sitemap", "seo/schema", "seo/open-graph", "seo/robots", "sitedash", "utilisateurs", "utilisateurs/ajouter", "utilisateurs/nouveau", "utilisateurs/invitations", "utilisateurs/permissions", "utilisateurs/profil", "utilisateurs/roles"].sort()); // R8 lot 6C : + SEO du site et erreurs 404 ; R8 lot 2 : + médias, articles, commentaires (isolation R5/R6)
     for (const i of items.filter((x) => x.disabled)) { assert.equal(i.href, null, i.key); assert.equal(i.status, "preview", i.key); assert.ok(i.phase, `${i.key} : lot annoncé`); }
     for (const k of ["redirections/liens-casses", "redirections/permaliens"]) assert.equal(items.find((i) => i.key === k).disabled, true, k);
   });
@@ -82,7 +82,7 @@ describe("C1 — une seule définition, deux présentations", () => {
   test("aucun aplatissement : Utilisateurs, Outils et Paramètres gardent leur titre de groupe et toutes leurs sous-entrées, même grisées", () => {
     const r = nav.buildSiteNav({ can: all, active: "landing", space: site });
     const g = Object.fromEntries(r.sections.map((s) => [s.key, s]));
-    for (const [k, n] of [["utilisateurs", 5], ["outils", 11], ["parametres", 13], ["apparence", 11], ["articles", 9], ["commentaires", 5], ["seo", 9], ["redirections", 3]]) {
+    for (const [k, n] of [["utilisateurs", 7], ["outils", 12], ["parametres", 13], ["apparence", 12], ["articles", 9], ["commentaires", 5], ["seo", 9], ["redirections", 3]]) {
       assert.equal(g[k].flat, false, `${k} ne doit pas être aplati`); assert.equal(g[k].items.length, n, k);
       assert.equal(g[k].label, nav.SECTIONS.find((s) => s.key === k).label, k);
     }

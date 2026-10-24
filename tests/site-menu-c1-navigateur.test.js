@@ -56,7 +56,7 @@ describe("menu d'un site (C1) dans un navigateur réel", { skip: SKIP }, () => {
     const site = await groupTitles(a.page), main = await groupTitles(b.page);
     const norm = (l) => l.filter((t) => t !== "Marketing du site").map((t) => (t === "Tableau de bord du site principal" ? "Tableau de bord" : t));
     assert.deepEqual(norm(site), norm(main));
-    for (const t of ["Utilisateurs", "Outils", "Paramètres", "Apparence", "Articles"]) assert.ok(site.includes(t), `titre de groupe : ${t}`);
+    for (const t of ["Comptes", "Outils", "Paramètres", "Apparence", "Articles"]) assert.ok(site.includes(t), `titre de groupe : ${t}`);
     for (const t of ["Équipe du site", "Réglages du site", "Santé du site"]) assert.ok(!site.includes(t), `plus de titre de groupe « ${t} »`);
     await shot(a.page, "c1-menu-site-bureau"); await shot(b.page, "c1-menu-principal-bureau");
     await a.context.close(); await b.context.close();
@@ -64,7 +64,7 @@ describe("menu d'un site (C1) dans un navigateur réel", { skip: SKIP }, () => {
 
   test("bureau : Utilisateurs, Outils et Paramètres se déplient avec leurs sous-entrées ; les non-prêtes sont grisées et ne bougent pas, les prêtes ouvrent le site", async () => {
     const { context, page } = await open(); await page.goto(`${srv.base}${SP}/${A}/tableau-de-bord`);
-    for (const [g, label, n] of [["utilisateurs", "Utilisateurs", 5], ["outils", "Outils", 8], ["parametres", "Paramètres", 12]]) {
+    for (const [g, label, n] of [["utilisateurs", "Comptes", 6], ["outils", "Outils", 8], ["parametres", "Paramètres", 12]]) {
       await openGroup(page, label);
       const s = await subs(page, g);
       assert.equal(s.length, n, `${label} : ${n} sous-entrées`);
@@ -79,8 +79,8 @@ describe("menu d'un site (C1) dans un navigateur réel", { skip: SKIP }, () => {
     assert.ok(await page.locator(".mk-cms-nav a[aria-current=page]", { hasText: "Santé du site" }).first().isVisible());
     await go(page, "Paramètres", `${SP}/${A}/reglages`);
     assert.ok(await banner(page, "Site Alpha")); assert.ok(await page.locator(".mk-cms-nav a[aria-current=page]", { hasText: "Général" }).first().isVisible());
-    await go(page, "Utilisateurs", `${SP}/${A}/equipe`);
-    assert.ok(await banner(page, "Site Alpha")); assert.ok(await page.locator(".mk-cms-nav a[aria-current=page]", { hasText: "Tous les utilisateurs" }).first().isVisible());
+    await go(page, "Comptes", `${SP}/${A}/equipe`);
+    assert.ok(await banner(page, "Site Alpha")); assert.ok(await page.locator(".mk-cms-nav a[aria-current=page]", { hasText: "Tous les comptes" }).first().isVisible());
     await shot(page, "c1-utilisateurs-deplie");
     await context.close();
   });
@@ -100,7 +100,7 @@ describe("menu d'un site (C1) dans un navigateur réel", { skip: SKIP }, () => {
     await page.goto(`${srv.base}${SP}/${A}/tableau-de-bord`);
     assert.ok(await noHScroll(page));
     await page.locator("[data-mk-sidebar-toggle]").first().click(); await page.waitForTimeout(400);
-    await openGroup(page, "Utilisateurs");
+    await openGroup(page, "Comptes");
     assert.ok(await page.locator(".mk-cms-nav .mk-nav-sublink.is-soon", { hasText: "Rôles" }).first().isVisible());
     assert.ok(await page.locator(".mk-cms-nav .mk-nav-head", { hasText: "Paramètres" }).first().isVisible());
     await shot(page, "c1-menu-site-mobile");

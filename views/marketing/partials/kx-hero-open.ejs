@@ -2,7 +2,7 @@
   En-tête de module illustré (design system v3). S'emploie par paire, comme dash-open et dash-close :
   kx-hero-open (title, lead, eyebrow), puis les boutons d'action, puis kx-hero-close (art : nom de la scène).
   À réserver aux écrans d'accueil d'un module (liste, vue d'ensemble) : jamais aux formulaires techniques ni aux éditeurs.
-%><header class="kx-hero<%= typeof compact !== "undefined" && compact ? " is-compact" : "" %>">
+%><% const heroClass = typeof compact !== "undefined" && compact ? "kx-hero is-compact" : "kx-hero"; %><header class="<%= heroClass %>">
   <div class="kx-hero-body">
     <% if (typeof eyebrow !== "undefined" && eyebrow) { %><p class="kx-eyebrow"><%= eyebrow %></p><% } %>
     <h1><%= title %></h1>

@@ -111,7 +111,7 @@ describe("menu d'un site (P1a) dans un navigateur réel", { skip: SKIP }, () => 
     const { context, page } = await open();
     await page.goto(`${srv.base}/marketing/site-web/principal/tableau-de-bord`);
     assert.ok(await banner(page, "Site principal"));
-    for (const label of ["Articles", "Médias", "Apparence", "Utilisateurs", "SEO", "Redirections", "Outils", "Paramètres", "Marketing du site"]) assert.ok(await page.locator(".mk-cms-nav", { hasText: label }).count(), `menu principal : ${label}`);
+    for (const label of ["Articles", "Médias", "Apparence", "Comptes", "SEO", "Redirections", "Outils", "Paramètres", "Marketing du site"]) assert.ok(await page.locator(".mk-cms-nav", { hasText: label }).count(), `menu principal : ${label}`);
     await go(page, "Marketing du site", "/marketing/listes");
     assert.equal(await page.locator(".mk-site-banner").count(), 0);
     assert.ok(await page.locator("main", { hasText: "Liste Principale" }).first().isVisible());

@@ -10,6 +10,7 @@ const { transaction } = require("../../marketing/db/tx");
 const { FORMAT, TYPES, ORDER, MAX_PER_TYPE, allowedTypes } = require("./exporter");
 
 const MAX_BYTES = 20 * 1024 * 1024;
+const MAX_MEDIA = 200;
 const STRATEGIES = { skip: "Ignorer les éléments déjà présents", update: "Mettre à jour les éléments déjà présents", duplicate: "Créer des copies", stop: "Tout arrêter s'il y a un conflit" };
 const REF = /^[a-z]{1,2}\d{1,12}$/;
 const clip = (v, n) => String(v ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").slice(0, n);
@@ -40,17 +41,20 @@ function parseFile(text) {
 }
 
 // ---------- Plan (analyse à blanc) ----------
-const labelOf = { settings: () => "Paramètres du site", pages: (i) => i.name || i.slug, taxonomies: (i) => `${i.taxonomy} · ${i.name}`, articles: (i) => i.title, menus: (i) => i.name, redirects: (i) => `${i.source} → ${i.target}`, media: (i) => i.path, seo: (i) => `${i.entityType} · ${i.entityKey}`, site: (i) => i.name || "Réglages du site", comments: () => "" };
+const labelOf = {
+  comments: (i) => `${i.author_name || "Anonyme"} : ${String(i.body || "").replace(/\s+/g, " ").slice(0, 60)}`, settings: () => "Paramètres du site", pages: (i) => i.name || i.slug, taxonomies: (i) => `${i.taxonomy} · ${i.name}`, articles: (i) => i.title, menus: (i) => i.name, redirects: (i) => `${i.source} → ${i.target}`, media: (i) => i.path || i.name || i.remoteUrl, seo: (i) => `${i.entityType} · ${i.entityKey}`, site: (i) => i.name || "Réglages du site" };
 
 // Retourne { items: [{ type, ref, label, action, existing, issues, warnings, data }], counts, blocked }
-function analyse(ctx, data, { siteId, types, onConflict }) {
+function analyse(ctx, data, { siteId, types, onConflict, opts = {} }) {
   const pagesLib = require("../../marketing/pages");
   const nodes = require("../../marketing/pages/nodes");
   const taxonomy = require("../taxonomy");
   const redirects = require("../../seo/redirects");
   const seoMeta = require("../../seo/meta");
   const urls = require("../urls");
-  const allowed = allowedTypes(ctx, { siteId, mode: "import" });
+  const external = Boolean(data.external);
+  const allowed = allowedTypes(ctx, { siteId, mode: "import", external });
+  let mediaPlanned = 0;
   const items = [];
   const refs = new Map(); // références du fichier : ref → { type }
   const warnings = [];
@@ -58,7 +62,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
   const skippedTypes = [];
   for (const t of Object.keys(data.resources)) if (!selected.includes(t)) skippedTypes.push(t);
 
-  const push = (type, item, base) => { const it = { type, ref: item.ref || null, label: line(labelOf[type](item), 120), action: "create", existing: null, issues: [], warnings: [], ...base }; items.push(it); return it; };
+  const push = (type, item, base) => { const it = { type, ref: item.ref || null, sourceKey: item.sourceKey || null, sourceStatus: item.sourceStatus || null, label: line(labelOf[type](item), 120), action: "create", existing: null, issues: [], warnings: [], ...base }; items.push(it); return it; };
   const dupRef = new Set();
 
   for (const type of selected) {
@@ -76,7 +80,22 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
         else { dupRef.add(item.ref); refs.set(item.ref, { type }); }
       }
       try {
-        if (type === "pages") {
+        if (type === "comments") {
+          const body = String(item.body || "").trim();
+          if (body.length < 2) it.issues.push("Commentaire vide.");
+          else if (body.length > 10000) it.issues.push("Commentaire trop long (10 000 caractères au plus).");
+          if (!item.articleRef || !REF.test(String(item.articleRef))) { it.action = "skip"; it.reason = "article d'origine introuvable dans le fichier"; }
+          if (!["approved", "pending", "spam"].includes(item.status)) it.issues.push("Statut de commentaire inconnu.");
+          if (item.status === "spam") it.warnings.push("Commentaire indésirable à l'origine : importé dans « Indésirables ».");
+        } else if (type === "media" && item.remoteUrl !== undefined) {
+          try {
+            require("../../marketing/rss/feed").checkUrl(item.remoteUrl);
+            if (!ctx.can("media.upload")) { it.action = "skip"; it.reason = "permission « media.upload » requise pour importer des fichiers"; }
+            else if (!opts.downloadMedia) { it.action = "skip"; it.reason = "téléchargement non demandé : les liens restent vers le site d'origine"; }
+            else if (++mediaPlanned > MAX_MEDIA) { it.action = "skip"; it.reason = `limite de ${MAX_MEDIA} fichiers par import atteinte`; }
+            else it.warnings.push("Fichier téléchargé depuis le site d'origine (adresse vérifiée : réseau public seulement).");
+          } catch (error) { it.action = "skip"; it.reason = `adresse refusée (${clip(error.message, 80)})`; }
+        } else if (type === "pages") {
           if (!line(item.name, 100)) it.issues.push("Nom de la page manquant.");
           if (!item.content || !Array.isArray(item.content.sections)) it.issues.push("Contenu de la page manquant.");
           else {
@@ -172,6 +191,18 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
     }
   }
 
+  // Doublons : un contenu déjà importé depuis la même source (identifiant source, jamais le titre seul) n'est pas recréé, même relancé après une interruption
+  const platform = opts.source || (data.source && data.source.platform);
+  if (external && platform) {
+    const exists = { articles: "SELECT 1 FROM posts WHERE id = ? AND deleted_at IS NULL", pages: "SELECT 1 FROM mk_landing_pages WHERE id = ? AND archived_at IS NULL", taxonomies: "SELECT 1 FROM taxonomy_terms WHERE id = ?", comments: "SELECT 1 FROM blog_comments WHERE id = ?", media: "SELECT 1 FROM mk_media WHERE id = ? AND deleted_at IS NULL" };
+    const find = db.prepare("SELECT local_id, local_ref, created_at FROM mk_import_sources WHERE organization_id = ? AND site_key = ? AND source = ? AND resource_type = ? AND source_key = ?");
+    for (const it of items) {
+      if (!it.sourceKey || it.action === "error" || !exists[it.type]) continue;
+      const row = find.get(ctx.organizationId, siteId || 0, platform, it.type, it.sourceKey);
+      if (row && row.local_id && db.prepare(exists[it.type]).get(row.local_id)) { it.action = "skip"; it.existing = row.local_id; it.already = true; it.reason = `déjà importé le ${String(row.created_at).slice(0, 10)} (identifiant source reconnu)`; }
+    }
+  }
+
   // Références croisées : une catégorie, une page ou un article cité doit exister dans le fichier ou dans le site
   const known = (ref) => refs.has(ref);
   for (const it of items) {
@@ -186,6 +217,8 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
   // Décision selon la stratégie de conflit (jamais d'écrasement silencieux : « update » exige le droit « tools.overwrite »)
   for (const it of items) {
     if (it.action !== "conflict") continue;
+    if (external && it.type === "taxonomies") { it.action = "skip"; it.reason = "terme déjà présent : réutilisé tel quel"; continue; }
+    if (external && onConflict === "update") { it.action = "error"; it.issues.push("Une source externe ne met jamais à jour l'existant (choisissez « Créer des copies » ou « Ignorer »)."); continue; }
     if (onConflict === "update") {
       if (!ctx.can("tools.overwrite")) { it.action = "error"; it.issues.push("Mettre à jour des éléments existants exige la permission « tools.overwrite »."); }
       else if ((it.type === "pages" || it.type === "redirects") && (it.crossSite || it.trashed)) { it.action = "skip"; it.warnings.push(`Non modifiée : ${it.reason}.`); }
@@ -204,4 +237,4 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
   return { items, counts, conflicts, errors: items.filter((i) => i.action === "error").length, blocked, skippedTypes, warnings, refs: [...refs.keys()].length };
 }
 
-module.exports = { MAX_BYTES, STRATEGIES, parseFile, analyse, clip, line };
+module.exports = { MAX_MEDIA, MAX_BYTES, STRATEGIES, parseFile, analyse, clip, line };

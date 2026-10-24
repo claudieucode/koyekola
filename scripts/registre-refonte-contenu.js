@@ -13,13 +13,14 @@ const FAMILY = [
 const familyOf = (href) => { for (const [re, f] of FAMILY) if (re.test(href)) return f; return "Écran spécialisé"; };
 
 // État de chaque écran : « Refondue et testée » | « En cours » (système partagé appliqué, composition propre à reprendre) | « À auditer »
-const DONE = new Set(["/marketing", "/marketing/campagnes", "/marketing/contacts", "/marketing/modeles", "/marketing/formulaires", "/marketing/listes", "/marketing/site-web/outils/effacer-donnees"]);
+const DONE = new Set(["/marketing", "/marketing/campagnes", "/marketing/contacts", "/marketing/modeles", "/marketing/formulaires", "/marketing/listes", "/marketing/site-web/outils/effacer-donnees", "/marketing/site-web/outils/importer"]);
 const DONE_NOTE = {
   "/marketing": "Recomposé : sélecteur de période, instantané des chiffres (infobulles), préparation à l'envoi (étapes + détail, données réelles), audience, scénarios, campagnes récentes, modèles réels, activité.",
   "/marketing/campagnes": "Recomposé : en-tête à actions, onglets d'état, recherche + tri, tableau (nom + type + dates / audience / ouvertures / clics), actions fendues, pagination complète.",
   "/marketing/contacts": "Recomposé : filtres principaux en ligne, filtres avancés repliables, tableau avec sélection et actions groupées, pagination complète.",
   "/marketing/formulaires": "Recomposé : indicateur réel (formulaires actifs), recherche + statuts instantanés, titre + lien public, actions Détails / lien, état vide illustré.",
   "/marketing/site-web/outils/effacer-donnees": "Écran créé selon le système partagé : formulaire, filtres d'état, tableau triable avec actions groupées, détail avec récapitulatif, progression réelle et résultats.",
+  "/marketing/site-web/outils/importer": "Recomposé : catalogue réel des importateurs (état, détails, activation), parcours par source, rapport d'analyse, correspondance des auteurs, résultat honnête et rapport téléchargeable.",
   "/marketing/listes": "Recomposé : actions d'en-tête, bandeau fermable, actions fendues, état vide illustré.",
   "/marketing/modeles": "Recomposé : onglets de catégories, recherche + type + tri, bascule liste / grille avec aperçus réels, actions fendues.",
 };

@@ -1,0 +1,22 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Importer · " + imp.name, intro: imp.description, tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<p><a href="<%= BASE %>/importer<%= q %>">&larr; Retour aux importateurs</a></p>
+<section class="mk-panel" aria-labelledby="imd-h">
+  <h2 id="imd-h">Détails</h2>
+  <dl class="mk-er-facts">
+    <div><dt>État</dt><dd><span class="mk-status <%= imp.state.compatible && imp.state.enabled ? "mk-status-ok" : "mk-status-warn" %>"><%= imp.state.label %></span></dd></div>
+    <div><dt>Version</dt><dd><%= imp.version %></dd></div>
+    <div><dt>Formats acceptés</dt><dd><%= imp.formats.length ? imp.formats.join(", ") : "Aucun fichier : outil agissant sur le site" %><%= mime.length ? " (types : " + mime.join(", ") + ")" : "" %></dd></div>
+    <div><dt>Permissions requises</dt><dd><%= imp.permissions.join(", ") %></dd></div>
+    <div><dt>Dépendances</dt><dd><%= imp.dependencies.length ? imp.dependencies.join(", ") : "Aucune (fourni avec Kolakisa)" %></dd></div>
+  </dl>
+  <h3>Données prises en charge</h3>
+  <ul><% imp.supports.forEach((s) => { %><li><%= s %></li><% }) %></ul>
+  <h3>Limites connues</h3>
+  <ul><% imp.limits.forEach((s) => { %><li><%= s %></li><% }) %></ul>
+  <div class="mk-im-actions">
+    <% if (imp.state.compatible && imp.state.enabled && imp.usable) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/importer/<%= imp.id %><%= q %>"><%= imp.kind === "tool" ? "Ouvrir l'outil" : "Lancer l'importateur" %></a><% } %>
+    <% if (canToggle) { %><form method="post" action="<%= BASE %>/importer/<%= imp.id %>/<%= imp.state.enabled ? "desactiver" : "activer" %><%= q %>"><button type="submit" class="btn btn-outline btn-sm"><%= imp.state.enabled ? "Désactiver" : "Activer" %></button></form><% } %>
+  </div>
+</section>
+<%- include("partials/bottom") %>
