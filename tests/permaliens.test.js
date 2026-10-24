@@ -307,12 +307,29 @@ describe("multi-sites : configuration, domaine et résolution isolés", () => {
     assert.equal(page.status, 200); assert.match(page.text, /<input type="radio" name="preset" value="postname"[^>]*checked/);
     assert.match(page.text, new RegExp(HA.replace(/\./g, "\\.")), "exemples avec le domaine du site");
     const pageB = await boss.get(`${P}?site=${B}`); assert.match(pageB.text, /<input type="radio" name="preset" value="blog"[^>]*checked/);
-    const noDomain = await boss.get(`${P}?site=${C}`); assert.match(noDomain.text, /suit les permaliens du site principal/);
-    const write = await setStructure("/%postname%/", { preset: "postname" }, C);
-    assert.equal(write.status, 409);
-    assert.equal(one(`SELECT value FROM mk_settings WHERE key = 'permalinks.site_${C}.structure'`), undefined);
+    const noDomain = await boss.get(`${P}?site=${C}`);
+    assert.equal(noDomain.status, 200); assert.match(noDomain.text, /n'a pas de domaine propre/); assert.match(noDomain.text, /<button[^>]*data-pl-save/, "écran complet et modifiable, comme un site à domaine");
     assert.equal((await boss.get(`${P}?site=999999`)).status, 404);
     assert.equal((await boss.request(`${P}/apercu?site=${A}`, { method: "POST", json: { structure: "/%postname%/" } })).status, 200);
+  });
+  test("un site SANS domaine propre a sa propre structure : elle s'applique à SES articles sous le domaine principal, sans toucher ceux du principal ni des autres sites", async () => {
+    const r = await setStructure("/chroniques/%year%/%postname%/", { preset: "custom" }, C);
+    assert.equal(r.status, 302, r.text.slice(0, 300));
+    assert.equal(one(`SELECT value FROM mk_settings WHERE key = 'permalinks.site_${C}.structure'`).value, "/chroniques/%year%/%postname%/");
+    const ok = await get("/chroniques/2026/article-c/");
+    assert.equal(ok.status, 200); assert.match(ok.text, /Titre article-c/);
+    const legacy = await get("/blog/article-c"); assert.equal(legacy.status, 301); assert.equal(legacy.location, "/chroniques/2026/article-c/");
+    assert.equal((await get("/blog/article-principal")).status, 200, "le principal garde /blog/<adresse>");
+    const noMain = await get("/chroniques/2026/article-principal/");
+    assert.notEqual(noMain.status, 200, "un article du principal n'est jamais servi sous la structure du site C");
+    assert.ok(noMain.status === 404 || noMain.location === "/blog/article-principal", `404, ou redirection d'une ancienne structure du principal vers son adresse canonique (${noMain.status} ${noMain.location})`);
+    assert.equal((await get("/chroniques/2026/article-alpha/")).status, 404, "ni celui d'un autre site");
+    const page = await boss.get(`${P}?site=${C}`);
+    assert.match(page.text, /<input id="pl-structure"[^>]*value="\/chroniques\/%year%\/%postname%\/"/);
+    assert.match((await get("/blog")).text, /href="\/chroniques\/2026\/article-c\/"/);
+    // retour à l'adresse historique : l'ancienne structure du site redirige encore
+    assert.equal((await setStructure("/blog/%postname%", { preset: "blog" }, C)).status, 302);
+    const back = await get("/chroniques/2026/article-c/"); assert.equal(back.status, 301); assert.equal(back.location, "/blog/article-c");
   });
   test("un identifiant de site envoyé par le navigateur n'est jamais une preuve : un accès limité au site A ne peut ni lire ni modifier B, un lecteur n'écrit rien", async () => {
     const member = async (site, role) => { const c = await newStudent(srv); db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, ?)").run(site, one("SELECT id FROM users WHERE email = ?", c.email).id, role); return c; };

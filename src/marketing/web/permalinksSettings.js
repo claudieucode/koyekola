@@ -1,8 +1,8 @@
 // KOLAKISA CMS → Paramètres → Permaliens : écran dédié (structure des articles, préfixes des archives, normalisation) au-dessus du MOTEUR UNIQUE
 // src/services/permalinks. L'écran ne contient aucune règle : la validation, l'aperçu, l'impact et l'enregistrement viennent du moteur.
 // Droits : lecture « settings.read » ; écriture « settings.write » ET « settings.sensitive » (une structure change des adresses publiques : SEO).
-// Périmètre : le site vient de la barrière d'accès (siteTarget), jamais d'un identifiant envoyé par le navigateur ; un site SANS domaine propre est servi
-// sous le domaine principal : il suit les permaliens du site principal (écran en lecture seule).
+// Périmètre : le site vient de la barrière d'accès (siteTarget), jamais d'un identifiant envoyé par le navigateur. Un site SANS domaine propre est servi sous
+// le domaine principal : sa structure s'applique à SES articles (reconnus par leur site propriétaire), sans toucher à ceux du principal ni des autres sites.
 const engine = require("../../services/settings");
 const permalinks = require("../../services/permalinks");
 const urls = require("../../services/urls");
@@ -14,8 +14,7 @@ const siteBase = (req, siteId) => {
   try { return require("../../utils/seo").siteBase(req).replace(/\/+$/, ""); } catch { return `${req.protocol}://${req.get("host")}`; }
 };
 const canWrite = (req) => req.mk.can("settings.write") && req.mk.can("settings.sensitive");
-// Un site sans domaine propre est servi sous le domaine principal : ses articles suivent la configuration du principal
-const ownsDomain = (siteId) => !siteId || Boolean((urls.siteInfo(siteId) || {}).base);
+const hasDomain = (siteId) => Boolean(siteId && (urls.siteInfo(siteId) || {}).base);
 
 // Données de l'écran (aussi renvoyées par l'API d'aperçu)
 function state(req, t, form = null) {
@@ -32,7 +31,7 @@ function state(req, t, form = null) {
     form: form || { structure: cfg.structure, category_base: cfg.categoryBase, tag_base: cfg.tagBase },
     presets, tags,
     sample: { real: sample.real, title: sample.post.title, slug: sample.post.slug, id: sample.post.id, date: sample.post.published_at || sample.post.created_at, category: permalinks.categoryPath(sample.post.id), author: "auteur" },
-    own: ownsDomain(siteId), writable: canWrite(req) && !t.readOnly && ownsDomain(siteId), readOnly: Boolean(t.readOnly),
+    domain: !siteId || hasDomain(siteId), writable: canWrite(req) && !t.readOnly, readOnly: Boolean(t.readOnly),
     normalize: mainSettings ? Boolean(mainSettings.normalize_paths && mainSettings.normalize_paths.value) : null,
     defaults: { category: permalinks.DEFAULT_BASES.category, tag: permalinks.DEFAULT_BASES.tag },
     reserved: ["blog", "p", "cours", "catalogue"],
@@ -41,9 +40,8 @@ function state(req, t, form = null) {
 
 function render(req, res, t, view = {}, extra = {}) {
   const st = state(req, t, extra.form);
-  const mainRecap = !st.own ? permalinks.get(null) : null;
   res.status(extra.status || 200).render("marketing/permalinks-settings", {
-    title: "Paramètres · Permaliens", active: "parametres/permaliens", permalinksJs: true, ...view, st, mainRecap,
+    title: "Paramètres · Permaliens", active: "parametres/permaliens", permalinksJs: true, ...view, st,
     errors: extra.errors || [], warnings: extra.warnings || [], impact: extra.impact || null, confirmRequired: Boolean(extra.confirmRequired), saved: Boolean(extra.saved),
     json: JSON.stringify({ ...st, form: undefined }),
   });
@@ -52,7 +50,6 @@ function render(req, res, t, view = {}, extra = {}) {
 // Aperçu et validation à la volée : même moteur que l'enregistrement, aucune écriture
 function preview(req, res, t) {
   const st = state(req, t);
-  if (!ownsDomain(t.siteId)) return res.status(409).json({ ok: false, errors: ["Ce site est servi sous le domaine principal : il suit les permaliens du site principal."] });
   const body = req.body || {};
   const p = permalinks.plan(t.siteId, { structure: body.structure, category_base: body.category_base, tag_base: body.tag_base });
   const norm = permalinks.validateStructure(body.structure);
@@ -71,7 +68,6 @@ function save(req, res, t, next) {
   const body = req.body || {};
   if (!canWrite(req)) return res.status(403).render("error", { message: "Vous n'avez pas la permission de modifier les permaliens (réglage sensible)." });
   if (t.readOnly) return res.status(403).render("error", { message: "Ce site est archivé : ses réglages ne se modifient plus." });
-  if (!ownsDomain(t.siteId)) return res.status(409).render("error", { message: "Ce site est servi sous le domaine principal : ses articles suivent les permaliens du site principal." });
   const preset = permalinks.PRESETS.find((p) => p.key === body.preset);
   const structure = preset ? preset.structure : body.structure;
   const input = { structure, category_base: body.category_base, tag_base: body.tag_base };

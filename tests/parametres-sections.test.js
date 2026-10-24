@@ -48,9 +48,9 @@ describe("Paramètres : sections ouvertes dans l'espace d'un site", () => {
       assert.match(r.text, /Ce qui s(?:'|&#39;)applique à ce site/); assert.ok(!/data-st-form/.test(r.text), `${k} : aucun formulaire`);
       assert.match(r.text, /réservées? à l'équipe|depuis le site principal|Elles se modifient/, k);
     }
-    // Permaliens : écran dédié ; un site sans domaine propre suit les permaliens du principal, en lecture seule, sans bouton d'enregistrement
+    // Permaliens : écran dédié et complet pour tout site (sans domaine propre, la structure s'applique à SES articles sous le domaine principal)
     const pl = await adminA.get(frame(A, "permaliens")); assert.equal(pl.status, 200);
-    assert.match(pl.text, /suit les permaliens du site principal/); assert.ok(!/<button[^>]*data-pl-save/.test(pl.text), "permaliens : aucun enregistrement possible");
+    assert.match(pl.text, /n'a pas de domaine propre/); assert.match(pl.text, /<button[^>]*data-pl-save/, "permaliens : formulaire complet");
     const before = one("SELECT value FROM mk_settings WHERE organization_id = ? AND key = 'cms.media_max_image_mb'", orgId);
     for (const [slug, body] of [["medias", { media_max_image_mb: "1" }], ["commentaires", { comments_moderation: "all" }]]) {
       const r = await form(adminA, slug, A, body); assert.ok([200, 302, 303, 403].includes(r.status), `${slug} : ${r.status}`);

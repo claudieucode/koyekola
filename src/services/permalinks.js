@@ -155,7 +155,17 @@ const authorSlug = (post) => {
 };
 const urlsSvc = () => require("./urls");
 // Site dont la configuration s'applique : celui qui sert l'article sur SON domaine ; sinon le site principal (null)
-const homeOf = (postId) => urlsSvc().publicHomeOf("post", postId);
+const homeOf = (postId) => urlsSvc().publicHomeOf("post", postId); // site qui sert l'article sur SON domaine
+// Site propriétaire d'un contenu (rattachement), avec ou sans domaine propre ; null = site principal. C'est sa configuration qui s'applique.
+const ownerOf = (type, id) => { try { const r = db.prepare("SELECT site_id FROM mk_content_sites WHERE content_type = ? AND content_id = ?").get(type, id); return r ? r.site_id : null; } catch { return null; } };
+// Sites SANS domaine propre qui ont une configuration de permaliens : leurs articles sont servis sous le domaine principal, avec leur propre structure
+function domainlessConfigured() {
+  let ids = [];
+  try { ids = db.prepare("SELECT DISTINCT key FROM mk_settings WHERE key LIKE 'permalinks.site_%'").all().map((r) => { const m = /^permalinks\.site_(\d+)\./.exec(r.key); return m ? Number(m[1]) : null; }).filter(Boolean); } catch { ids = []; }
+  return [...new Set(ids)].filter((id) => { const i = urlsSvc().siteInfo(id); return i && !i.base; });
+}
+// Configurations à essayer pour une requête : le site du domaine demandé ; sur le domaine principal, le principal puis les sites sans domaine configurés
+const candidates = (hostSite) => (hostSite ? [hostSite.id] : [null, ...domainlessConfigured()]);
 const nameOf = (post) => (homeOf(post.id) ? urlsSvc().addressOf("post", post) : post.slug);
 function buildPath(structure, post, name) {
   if (structure === PLAIN) return `/?p=${post.id}`;
@@ -182,13 +192,13 @@ function full(post) {
   return row || post;
 }
 function postPath(input, opts = {}) {
-  const post = (opts.config && opts.config.structure === DEFAULT_STRUCTURE) || (!opts.config && get(opts.siteId !== undefined ? opts.siteId : (input && input.id ? homeOf(input.id) : null)).structure === DEFAULT_STRUCTURE) ? input : full(input);
-  const home = opts.siteId !== undefined ? opts.siteId : homeOf(post.id);
-  const cfg = opts.config || get(home || null);
+  const owner = opts.siteId !== undefined ? opts.siteId : (input && input.id ? ownerOf("post", input.id) : null);
+  const cfg = opts.config || get(owner || null);
+  const post = cfg.structure === DEFAULT_STRUCTURE ? input : full(input);
   const name = nameOf(post);
   if (cfg.structure === DEFAULT_STRUCTURE) return `/blog/${name}`;
   const p = buildPath(cfg.structure, post, name);
-  if (collides(p, cfg.structure, home || null)) return `/blog/${name}`;
+  if (collides(p, cfg.structure, homeOf(post.id) || null)) return `/blog/${name}`;
   return p;
 }
 function collides(path, structure, home) {
@@ -210,8 +220,8 @@ function baseFor(key, siteId = null) {
 }
 // Base d'un terme : la configuration du site qui le sert sur son domaine, sinon du principal ; sinon la base par défaut (env ou historique)
 function termBase(term, defaultBase) {
-  const home = term && term.id ? urlsSvc().publicHomeOf("term", term.id) : null;
-  return baseFor(term.taxonomy, home) || defaultBase;
+  const owner = term && term.id ? ownerOf("term", term.id) : null;
+  return baseFor(term.taxonomy, owner) || defaultBase;
 }
 
 // ---------- Résolution ----------
@@ -230,7 +240,7 @@ function compile(structure) {
 }
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 // Cherche l'article désigné par un chemin selon UNE structure ; ne vérifie PAS l'état (publié ou non) : l'appelant décide
-function lookup(path, structure, hostSite) {
+function lookup(path, structure, hostSite, cfgSite = hostSite ? hostSite.id : null) {
   if (structure === PLAIN) return null;
   const m = compile(structure).exec(path);
   if (!m) return null;
@@ -240,8 +250,9 @@ function lookup(path, structure, hostSite) {
   else if (g.postname && SLUG.test(g.postname)) { const r = urlsSvc().resolvePost(g.postname, hostSite || null); row = r ? r.row : null; }
   if (!row) return null;
   // L'article doit être servi par CE domaine (jamais le contenu d'un autre site)
-  const home = homeOf(row.id);
-  if ((hostSite ? hostSite.id : null) !== (home || null)) return null;
+  // Servi par CE domaine, et propriétaire = le site dont c'est la structure (un article d'un autre site n'est jamais reconnu)
+  if ((hostSite ? hostSite.id : null) !== (homeOf(row.id) || null)) return null;
+  if ((ownerOf("post", row.id) || null) !== (cfgSite || null)) return null;
   return row;
 }
 const withQuery = (path, req) => { const i = req.originalUrl.indexOf("?"); const q = i >= 0 ? req.originalUrl.slice(i) : ""; return `${path}${path.includes("?") ? q.replace(/^\?/, "&") : q}`; };
@@ -255,55 +266,61 @@ function middleware(req, res, next) {
   if (!isRead(req)) return next();
   try {
     const hostSite = req.kwSite || null;
-    const siteId = hostSite ? hostSite.id : null;
-    const cfg = get(siteId);
+    const hostId = hostSite ? hostSite.id : null;
+    const cands = candidates(hostSite);
+    const cfgs = cands.map((id) => ({ id, cfg: get(id) }));
     const path = req.path;
-    // 1. Adresse simple « /?p=<id> »
+    // 1. Adresse simple « /?p=<id> » : l'article est cherché dans le périmètre du domaine ; sa structure est celle de SON site
     if (path === "/" && /^\d{1,9}$/.test(String(req.query.p || ""))) {
       const row = db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(req.query.p));
-      const home = row ? homeOf(row.id) : undefined;
-      if (row && (home || null) === siteId) {
+      if (row && (homeOf(row.id) || null) === hostId) {
+        const owner = ownerOf("post", row.id) || null;
+        const cfg = get(owner);
         if (cfg.structure === PLAIN) { const q = new URLSearchParams(); for (const [k, v] of Object.entries(req.query)) if (k !== "p" && typeof v === "string") q.set(k, v); req.url = `/blog/${nameOf(row)}${q.toString() ? `?${q}` : ""}`; return next(); }
-        if (live(row)) return res.redirect(301, `${postPath(row, { siteId: home, config: cfg })}`);
+        if (live(row)) return res.redirect(301, postPath(row, { siteId: owner, config: cfg }));
       }
       return next();
     }
-    // 2. Archives : préfixe de catégories / d'étiquettes du site
+    // 2. Archives : préfixe de catégories / d'étiquettes (du domaine, ou du principal et des sites sans domaine)
     for (const key of ["category", "tag"]) {
-      const custom = baseFor(key, siteId);
       const std = DEFAULT_BASES[key];
-      if (custom && path.startsWith(`${custom}/`)) {
-        const m = /^\/([a-z0-9][a-z0-9-]*)\/?$/.exec(path.slice(custom.length));
-        if (m) { req.url = withQuery(`${std}/${m[1]}`, req); return next(); }
-      }
-      if (custom && path.startsWith(`${std}/`)) {
-        const m = /^\/([a-z0-9][a-z0-9-]*)\/?$/.exec(path.slice(std.length));
-        if (m && urlsSvc().resolveTerm(key, m[1], hostSite)) return res.redirect(301, withQuery(`${custom}/${m[1]}`, req));
+      for (const { id, cfg } of cfgs) {
+        const custom = key === "category" ? cfg.categoryBase : cfg.tagBase;
+        if (!custom) continue;
+        const base = `/${custom}`;
+        if (path.startsWith(`${base}/`)) { const m = /^\/([a-z0-9][a-z0-9-]*)\/?$/.exec(path.slice(base.length)); if (m) { req.url = withQuery(`${std}/${m[1]}`, req); return next(); } }
+        if (path.startsWith(`${std}/`)) {
+          const m = /^\/([a-z0-9][a-z0-9-]*)\/?$/.exec(path.slice(std.length));
+          const term = m ? urlsSvc().resolveTerm(key, m[1], hostSite) : null;
+          if (term && (hostSite ? id === hostId : (ownerOf("term", term.id) || null) === (id || null))) return res.redirect(301, withQuery(`${base}/${m[1]}`, req));
+        }
       }
     }
-    // 3. Adresse historique /blog/<adresse> quand la structure du site est autre
+    // 3. Adresse historique /blog/<adresse> quand la structure du site propriétaire est autre
     let m;
-    if (cfg.structure !== DEFAULT_STRUCTURE && (m = /^\/blog\/([a-z0-9][a-z0-9-]*)\/?$/.exec(path)) && !NOT_POSTS.test(path)) {
+    if ((m = /^\/blog\/([a-z0-9][a-z0-9-]*)\/?$/.exec(path)) && !NOT_POSTS.test(path)) {
       const found = urlsSvc().resolvePost(m[1], hostSite);
-      if (found && found.row && live(found.row) && (homeOf(found.row.id) || null) === siteId) {
-        const target = postPath(found.row, { siteId, config: cfg });
-        if (target !== path && target !== `${path}/`) return res.redirect(301, withQuery(target, req));
+      const row = found && found.row;
+      if (row && live(row) && (homeOf(row.id) || null) === hostId) {
+        const owner = ownerOf("post", row.id) || null;
+        const cfg = get(owner);
+        if (cfg.structure !== DEFAULT_STRUCTURE) { const target = postPath(row, { siteId: owner, config: cfg }); if (target !== path && target !== `${path}/`) return res.redirect(301, withQuery(target, req)); }
       }
       return next();
     }
     // 4. Structure du site (ou ancienne structure) : l'article est servi par le routeur du blog, ou redirigé vers son adresse canonique
-    if (cfg.structure !== DEFAULT_STRUCTURE && cfg.structure !== PLAIN || cfg.previous.length) {
-      if (path === "/" || /^\/(p|cours|catalogue|marketing|formateur|api|uploads|css|js|img|fonts|connexion|inscription)(\/|$)/.test(path) || path.includes(".")) return next();
-      // Sur le domaine d'un site, une PAGE de ce site à cette adresse l'emporte toujours
-      const rooted = path.split("/").filter(Boolean).length === 1;
-      if (siteId && rooted) { const pg = urlsSvc().resolve(path, { hostSite }); if (pg.type === "page" && pg.state === "live") return next(); }
-      const structures = [cfg.structure, ...cfg.previous].filter((s) => s !== PLAIN && s !== DEFAULT_STRUCTURE);
-      for (const [i, structure] of structures.entries()) {
-        const first = path.split("/").filter(Boolean)[0] || "";
-        if (rooted && reserved(first.toLowerCase())) break;
-        const row = lookup(path, structure, hostSite);
+    if (!cfgs.some(({ cfg }) => cfg.structure !== DEFAULT_STRUCTURE && cfg.structure !== PLAIN || cfg.previous.length)) return next();
+    if (path === "/" || /^\/(p|cours|catalogue|marketing|formateur|api|uploads|css|js|img|fonts|connexion|inscription)(\/|$)/.test(path) || path.includes(".")) return next();
+    const rooted = path.split("/").filter(Boolean).length === 1;
+    // Sur le domaine d'un site, une PAGE de ce site à cette adresse l'emporte toujours
+    if (hostId && rooted) { const pg = urlsSvc().resolve(path, { hostSite }); if (pg.type === "page" && pg.state === "live") return next(); }
+    const first = path.split("/").filter(Boolean)[0] || "";
+    for (const { id, cfg } of cfgs) {
+      for (const structure of [cfg.structure, ...cfg.previous].filter((x) => x !== PLAIN && x !== DEFAULT_STRUCTURE)) {
+        if (/%/.test(structure.split("/").filter(Boolean)[0] || "") && reserved(first.toLowerCase())) continue;
+        const row = lookup(path, structure, hostSite, id);
         if (!row) continue;
-        const canonical = postPath(row, { siteId, config: cfg });
+        const canonical = postPath(row, { siteId: id, config: cfg });
         if (live(row)) {
           if (canonical !== path) return res.redirect(301, withQuery(canonical, req));
           req.url = withQuery(`/blog/${nameOf(row)}`, req);
@@ -320,34 +337,47 @@ function middleware(req, res, next) {
 // Article désigné par un chemin selon la structure du site (ou une ancienne) — pour le moteur d'adresses (résolution, trace) ; null sinon
 function rowForPath(path, hostSite) {
   try {
-    const cfg = get(hostSite ? hostSite.id : null);
-    for (const st of [cfg.structure, ...cfg.previous]) { if (st === DEFAULT_STRUCTURE || st === PLAIN) continue; const sf = st.split("/").filter(Boolean)[0] || "", f = path.split("/").filter(Boolean)[0] || ""; if (/%/.test(sf) && reserved(f.toLowerCase())) continue; const row = lookup(path, st, hostSite || null); if (row) return row; }
+    for (const id of candidates(hostSite)) {
+      const cfg = get(id);
+      for (const st of [cfg.structure, ...cfg.previous]) {
+        if (st === DEFAULT_STRUCTURE || st === PLAIN) continue;
+        const sf = st.split("/").filter(Boolean)[0] || "", f = path.split("/").filter(Boolean)[0] || "";
+        if (/%/.test(sf) && reserved(f.toLowerCase())) continue;
+        const row = lookup(path, st, hostSite || null, id);
+        if (row) return row;
+      }
+    }
   } catch { /* structure illisible : résolution historique */ }
   return null;
 }
 // L'adresse est-elle un permalien actif d'un article en ligne ? (la normalisation des adresses ne doit pas la réécrire)
 function owns(path, hostSite) {
   try {
-    const cfg = get(hostSite ? hostSite.id : null);
-    if (cfg.structure === DEFAULT_STRUCTURE || cfg.structure === PLAIN) return false;
-    const row = lookup(path, cfg.structure, hostSite || null);
-    return Boolean(live(row)) && postPath(row, { siteId: hostSite ? hostSite.id : null, config: cfg }) === path;
-  } catch { return false; }
+    for (const id of candidates(hostSite || null)) {
+      const cfg = get(id);
+      if (cfg.structure === DEFAULT_STRUCTURE || cfg.structure === PLAIN) continue;
+      const row = lookup(path, cfg.structure, hostSite || null, id);
+      if (live(row) && postPath(row, { siteId: id, config: cfg }) === path) return true;
+    }
+  } catch { /* sans effet */ }
+  return false;
 }
 
 // ---------- Aperçu, impact, conflits ----------
+// Articles dont CE site est propriétaire (null = site principal : aucun rattachement)
+const ownedBy = (siteId) => (siteId ? { sql: "EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = p.id AND cs.site_id = ?)", params: [Number(siteId)] } : { sql: "NOT EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = p.id)", params: [] });
 const sampleOf = (siteId) => {
-  const scope = urlsSvc().contentScope("post", "p.id", siteId ? urlsSvc().siteInfo(siteId) : null);
-  const row = db.prepare(`SELECT p.* FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL${scope ? ` AND ${scope.sql}` : ""} ORDER BY p.published_at DESC LIMIT 1`).get(...(scope ? scope.params : []));
+  const scope = ownedBy(siteId);
+  const row = db.prepare(`SELECT p.* FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL AND ${scope.sql} ORDER BY p.published_at DESC LIMIT 1`).get(...scope.params);
   if (row) return { post: row, real: true };
   const d = new Date();
   const iso = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
   return { post: { id: 123, slug: "exemple-article", title: "Exemple d'article", published_at: iso, created_at: iso, author_id: null }, real: false };
 };
-// Articles servis par le domaine de ce site (ou du principal) : publiés et non supprimés
+// Articles de ce site (ou du principal) : publiés et non supprimés
 function livePosts(siteId, limit = 5000) {
-  const scope = urlsSvc().contentScope("post", "p.id", siteId ? urlsSvc().siteInfo(siteId) : null);
-  return db.prepare(`SELECT p.* FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL${scope ? ` AND ${scope.sql}` : ""} ORDER BY p.id LIMIT ?`).all(...(scope ? scope.params : []), limit);
+  const scope = ownedBy(siteId);
+  return db.prepare(`SELECT p.* FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL AND ${scope.sql} ORDER BY p.id LIMIT ?`).all(...scope.params, limit);
 }
 // Effet d'un changement : combien d'adresses publiées changent, redirections manuelles en conflit, articles qui retombent sur /blog/ (collision)
 function impact(siteId, next) {
@@ -407,4 +437,4 @@ function save(siteId, input, { ctx = null, confirm = false, actor = null } = {})
   return { ...p, saved: true, config: get(siteId || null) };
 }
 
-module.exports = { rowForPath, TAGS, TAG_NAMES, PRESETS, PLAIN, DEFAULT_STRUCTURE, DEFAULT_BASES, presetOf, get, save, plan, validateStructure, validatePrefix, postPath, termBase, baseFor, buildPath, sampleOf, impact, livePosts, middleware, owns, invalidate, lookup, categoryPath, nameOf, homeOf };
+module.exports = { ownerOf, rowForPath, TAGS, TAG_NAMES, PRESETS, PLAIN, DEFAULT_STRUCTURE, DEFAULT_BASES, presetOf, get, save, plan, validateStructure, validatePrefix, postPath, termBase, baseFor, buildPath, sampleOf, impact, livePosts, middleware, owns, invalidate, lookup, categoryPath, nameOf, homeOf };

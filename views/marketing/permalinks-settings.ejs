@@ -14,11 +14,8 @@
   const fdate = (v) => String(v || "").slice(0, 10).split("-").reverse().join("/");
 %>
 <% if (errors.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>Rien n'a été enregistré :</p><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
-<% if (!st.own) { %>
-  <section class="mk-panel pl-notice" aria-labelledby="pl-own-h">
-    <h2 id="pl-own-h">Ce site suit les permaliens du site principal</h2>
-    <p>« <%= st.siteName %> » n'a pas de domaine propre : ses articles sont servis sous le domaine principal et utilisent sa structure (<code><%= mainRecap.structure %></code>). Une structure propre au site devient possible dès qu'un domaine lui est attribué (Réglages du site → Référencement).</p>
-  </section>
+<% if (!st.domain) { %>
+  <p class="pl-note"><strong>« <%= st.siteName %> »</strong> n'a pas de domaine propre : ses articles sont servis sous <code><%= hostLabel %></code>. Cette structure ne concerne que les articles de ce site, jamais ceux du site principal ni des autres sites.</p>
 <% } %>
 <form id="pl-form" class="pl" method="post" action="<%= "/marketing/site-web/parametres/permaliens" + siteQ %>" novalidate data-pl-form data-pl-url="/marketing/site-web/parametres/permaliens/apercu<%= siteQ %>"<%- st.writable ? "" : " data-pl-readonly" %>>
   <% if (frameFlag) { %><input type="hidden" name="frame" value="1"><% } %>
@@ -123,7 +120,7 @@
   </fieldset>
 
   <div class="pl-savebar" data-pl-savebar>
-    <p class="pl-status" role="status" aria-live="polite" data-pl-status><%= st.writable ? "Aucune modification." : (st.readOnly ? "Site archivé : lecture seule." : !st.own ? "Lecture seule." : "Lecture seule : la permission « settings.sensitive » est requise pour modifier les permaliens.") %></p>
+    <p class="pl-status" role="status" aria-live="polite" data-pl-status><%= st.writable ? "Aucune modification." : (st.readOnly ? "Site archivé : lecture seule." : "Lecture seule : la permission « settings.sensitive » est requise pour modifier les permaliens.") %></p>
     <% if (st.writable) { %><button type="submit" class="btn btn-primary" data-pl-save disabled><span class="pl-save-label">Enregistrer les modifications</span></button><% } %>
   </div>
 </form>
