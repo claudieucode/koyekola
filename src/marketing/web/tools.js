@@ -17,6 +17,7 @@ const maintenance = require("../../services/tools/maintenance");
 const system = require("../../services/tools/system");
 const siteInfo = require("../../services/tools/siteInfo");
 const notes = require("../../services/adminNotes");
+const toolsCatalog = require("../../services/toolsCatalog");
 const toolsAudit = require("../../services/tools/audit");
 const pages = require("../pages");
 const { need } = require("./kit");
@@ -25,7 +26,7 @@ const BASE = "/marketing/site-web/outils";
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: importer.MAX_BYTES, files: 1 } });
 const TABS = [
-  ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["donnees", "Exporter les données", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
+  ["disponibles", "Outils disponibles", "tools.view"], ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["donnees", "Exporter les données", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
   ["diagnostic", "Diagnostic", "tools.view"], ["systeme", "Informations système", "tools.view"], ["maintenance", "Maintenance", "tools.maintenance"],
   ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["effacer-donnees", "Effacer les données", "privacy.view"], ["notes", "Admin Notes", "notes.view"], ["logs", "Journal d'activité", "tools.view"],
 ];
@@ -139,13 +140,22 @@ module.exports = () => {
   }));
 
 
+
+  // ----- Outils disponibles : catalogue généré par le REGISTRE (services/toolsCatalog). Les cartes ne donnent aucun droit : chaque destination contrôle les siennes. -----
+  router.get("/site-web/outils/disponibles", (req, res) => withSite(req, res, (siteId) => {
+    if (denySite(req, res, siteId)) return;
+    const site = siteId ? sitesFor(req).find((x) => x.id === siteId) : null;
+    const cat = toolsCatalog.catalog({ can: req.mk.can, siteId, siteOnly: req.mk.siteOnly, organizationId: req.mk.ctx.organizationId, siteName: site ? site.name : "" });
+    res.set("Cache-Control", "no-store").render("marketing/tools-available", { title: "Outils disponibles", active: "outils/disponibles", ...shell(req, siteId, "disponibles"), cat, siteName: siteId ? (site ? site.name : "") : "Site principal" });
+  }));
+
   // ----- Admin Notes : notes internes PAR SITE. Droits distincts (voir, créer, modifier, supprimer), portée vérifiée à chaque requête, texte échappé à l'affichage,
   // contenu jamais écrit dans le journal d'activité (seuls l'action et l'identifiant le sont). -----
   const noteScope = (req) => ({ organizationId: req.mk.ctx.organizationId, userId: req.session.user.id });
   const renderNotes = (req, res, siteId, { status = 200, draft = { title: "", body: "" }, errors = {}, editId = null, edit = null, message = null, confirmDelete = null } = {}) => {
     const page = /^\d{1,6}$/.test(String(req.query.page || "")) ? Number(req.query.page) : 1;
     const data = notes.list(req.mk.ctx.organizationId, siteId, { page });
-    res.status(status).set("Cache-Control", "no-store").render("marketing/tools-notes", { title: "Admin Notes", active: "outils", ...shell(req, siteId, "notes"), data, draft, errors, editId, edit, message, confirmDelete, limits: { title: notes.TITLE_MAX, body: notes.BODY_MAX }, can: { create: req.mk.can("notes.create"), edit: req.mk.can("notes.edit"), delete: req.mk.can("notes.delete") }, noteJs: true });
+    res.status(status).set("Cache-Control", "no-store").render("marketing/tools-notes", { title: "Admin Notes", active: "outils/notes", ...shell(req, siteId, "notes"), data, draft, errors, editId, edit, message, confirmDelete, limits: { title: notes.TITLE_MAX, body: notes.BODY_MAX }, can: { create: req.mk.can("notes.create"), edit: req.mk.can("notes.edit"), delete: req.mk.can("notes.delete") }, noteJs: true });
   };
   // Échec technique (stockage…) : jamais présenté comme un succès ; la saisie est conservée ; le contenu n'est pas journalisé
   const storageFail = (req, res, siteId, error, extra = {}) => { console.error("[notes] échec d'enregistrement :", String(error && error.message).slice(0, 200)); renderNotes(req, res, siteId, { status: 500, message: "L'opération a échoué : rien n'a été enregistré. Votre saisie est conservée, réessayez dans un instant.", ...extra }); };

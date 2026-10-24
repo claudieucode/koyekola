@@ -53,7 +53,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const g = Object.fromEntries(site.filter((x) => !x.flat).map((x) => [x.cle, x]));
     assert.deepEqual(g.utilisateurs.entrees.map((e) => e.libelle), ["Tous les utilisateurs", "Inviter", "Rôles", "Permissions", "Invitations"]);
-    assert.deepEqual(g.outils.entrees.map((e) => e.libelle), ["Santé du site", "Corbeille", "Importer", "Exporter", "Exporter les données", "Diagnostic", "Maintenance", "Caches", "Outils de contenu", "Effacer les données", "Admin Notes"]);
+    assert.deepEqual(g.outils.entrees.map((e) => e.libelle), ["Outils disponibles", "Santé du site", "Corbeille", "Importer", "Exporter", "Exporter les données", "Diagnostic", "Maintenance", "Caches", "Outils de contenu", "Effacer les données", "Admin Notes"]);
     assert.deepEqual(g.parametres.entrees.map((e) => e.libelle), ["Général", "Connecteurs", "Écriture", "Lecture", "Commentaires", "Médias", "Permaliens", "SEO", "Confidentialité", "Indexation", "Emailing", "Tunnels", "Avancé"]);
     assert.ok(!site.some((x) => /Équipe du site|Réglages du site|Design du site/.test(x.titre)), "aucun libellé propre au site en titre");
   });
