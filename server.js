@@ -242,6 +242,8 @@ app.listen(PORT, () => {
   const purgeVisits = () => { try { if (marketing.ready) require("./src/marketing/visitors").purge(db); } catch (error) { console.error("[KOLAKISA] Effacement des anciennes visites :", error.message); } };
   purgeVisits();
   setInterval(purgeVisits, 24 * 60 * 60 * 1000).unref();
+  // Exports de données personnelles : expiration des liens et des archives, nettoyage des fichiers temporaires, conservation des demandes (au démarrage, puis toutes les 15 minutes)
+  if (marketing.ready) require("./src/services/privacy/exportRequests").startTimer(db);
   // Fichiers envoyés retrouvés dans le dossier du projet ou d'anciennes versions : recopiés dans le dossier conservé
   // Médias : recopie des fichiers restés dans d'anciens builds, puis diagnostic (emplacement, fichiers introuvables)
   require("./src/config/recoverUploads").recoverUploads()

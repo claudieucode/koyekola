@@ -30,7 +30,7 @@
 <section class="mk-panel" aria-labelledby="tl-x-done">
   <h2 id="tl-x-done">Fichier prêt</h2>
   <% if (rep.counts) { %><ul class="mk-tl-list"><% Object.entries(rep.counts).forEach(([k, n]) => { %><li><%= TL[k] || k %> : <strong><%= n %></strong></li><% }) %></ul><% } %>
-  <% if (run.hasResult) { %><p><a class="btn btn-primary btn-sm" href="<%= BASE %>/exporter/<%= run.id %>/fichier<%= run.site_id ? "?site=" + run.site_id : "" %>"><%- icon("download", { size: 16 }) %> Télécharger le fichier (<%= Math.round((rep.bytes || 0) / 1024) %> Ko)</a></p><p class="mk-sub">Conservé 24 heures. Les médias ne sont pas inclus (chemins et métadonnées seulement).</p>
+  <% if (run.hasResult) { %><p><a class="btn btn-primary btn-sm" href="<%= BASE %>/exporter/<%= run.id %>/fichier<%= run.site_id ? "?site=" + run.site_id : "" %>"><%- icon("download", { size: 16 }) %> Télécharger le fichier <%= rep.archive ? "ZIP" : rep.format === "wxr" ? "XML" : "JSON" %> (<%= Math.round((rep.bytes || 0) / 1024) %> Ko)</a></p><p class="mk-sub">Conservé 24 heures dans un emplacement privé (téléchargement réservé aux personnes autorisées). <%= rep.archive ? "Archive ZIP : " + rep.archive.includedFiles + " fichier(s) média inclus" + (rep.archive.missingFiles ? ", " + rep.archive.missingFiles + " introuvable(s) sur le disque (listés dans manifest.json)" : "") + "." : "Les fichiers médias ne sont pas inclus (chemins et métadonnées seulement)." %> <%= rep.format === "wxr" ? "Format WordPress (WXR)." : "Format Kolakisa (JSON)." %></p>
   <% } else { %><p class="mk-sub">Le fichier a expiré (24 heures) : relancez l'export.</p><% } %>
 </section>
 <% } %>

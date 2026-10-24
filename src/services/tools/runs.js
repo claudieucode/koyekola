@@ -70,6 +70,16 @@ const latest = (organizationId, kind, siteId = null) => list(organizationId, kin
 const requestCancel = (organizationId, id) => db.prepare("UPDATE cms_tool_runs SET cancel_requested = 1 WHERE id = ? AND organization_id = ? AND status IN ('queued', 'running', 'awaiting')").run(Number(id), organizationId).changes > 0;
 // Exports expirés et anciennes exécutions : nettoyés (les rapports récents restent consultables)
 function purge({ keepDays = 60 } = {}) {
+  // Archives d'export (fichiers privés) : supprimées du disque AVANT d'effacer la référence
+  try {
+    const fs = require("node:fs"), path = require("node:path");
+    const dir = path.join(require("../../config/paths").dataDir, "exports");
+    for (const r of db.prepare("SELECT id, result FROM cms_tool_runs WHERE result LIKE '@file:%' AND ((expires_at IS NOT NULL AND expires_at < datetime('now')) OR (finished_at IS NOT NULL AND finished_at < datetime('now', ?)))").all(`-${Number(keepDays)} days`)) {
+      const name = path.basename(String(r.result).slice(6));
+      if (/^export-\d+-[0-9a-f]{16}\.zip$/.test(name)) { try { fs.unlinkSync(path.join(dir, name)); } catch { /* déjà absent */ } }
+      db.prepare("UPDATE cms_tool_runs SET result = NULL WHERE id = ?").run(r.id);
+    }
+  } catch { /* nettoyage des fichiers : sans effet sur la suite */ }
   const a = db.prepare("UPDATE cms_tool_runs SET result = NULL WHERE result IS NOT NULL AND expires_at IS NOT NULL AND expires_at < datetime('now')").run().changes;
   const b = db.prepare("DELETE FROM cms_tool_runs WHERE finished_at IS NOT NULL AND finished_at < datetime('now', ?)").run(`-${Number(keepDays)} days`).changes;
   return { expiredFiles: a, deletedRuns: b };
