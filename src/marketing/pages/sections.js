@@ -29,7 +29,7 @@ function linkUrl(v, label) {
 function imageUrl(v, label) {
   const url = line(v, 2000);
   if (!url) return "";
-  if (/^\/uploads\/marketing\/\d+\/[A-Za-z0-9._-]+$/.test(url)) return url;
+  if (/^\/uploads\/marketing\/\d+\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9._-]+$/.test(url)) return url;
   if (/^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(url)) return url;
   if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
   throw bad(`${label} : l'image doit venir de la médiathèque ou d'une adresse https://.`);

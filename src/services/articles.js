@@ -136,7 +136,7 @@ function duplicate(id, userId) {
 // Import (palier 13) : écrit les champs d'un article importé, VALIDÉS et assainis ; jamais de publication, d'auteur ni de date importés.
 // Liste blanche de colonnes ; le contenu passe par l'assainisseur du blog ; une révision « Import » garde l'état précédent.
 const IMPORT_TEXT = { excerpt: 500, cover_alt: 200, seo_title: 120, seo_description: 300, focus_keyword: 80, secondary_keywords: 400, og_title: 120, og_description: 300, twitter_title: 120, twitter_description: 300, toc_title: 80 };
-const IMPORT_IMG = /^\/uploads\/(?:thumbnails|blog|marketing\/\d{1,9})\/[A-Za-z0-9_.-]{1,200}$/;
+const IMPORT_IMG = /^\/uploads\/(?:thumbnails|blog|marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?)[A-Za-z0-9_.-]{1,200}$/;
 function applyImported(id, f, userId) {
   const cur = get(id);
   if (!cur) throw new UserError("Article introuvable.");

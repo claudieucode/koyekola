@@ -127,7 +127,7 @@ function analyse(ctx, data, { siteId, types, onConflict }) {
             else for (const e of v.errors) it.issues.push(e);
           }
         } else if (type === "media") {
-          if (typeof item.path !== "string" || !/^\/uploads\/marketing\/\d{1,9}\/[A-Za-z0-9_.-]{1,200}$/.test(item.path)) it.issues.push("Chemin de fichier invalide.");
+          if (typeof item.path !== "string" || !/^\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9_.-]{1,200}$/.test(item.path)) it.issues.push("Chemin de fichier invalide.");
           else {
             const ex = db.prepare("SELECT id FROM mk_media WHERE organization_id = ? AND path = ? AND deleted_at IS NULL").get(ctx.organizationId, item.path);
             if (!ex) { it.action = "skip"; it.reason = "fichier absent de la médiathèque (les fichiers ne sont pas importés)"; }

@@ -298,7 +298,7 @@ module.exports = () => {
     const min = complete ? Math.min(...known.map((r) => r.width)) : 0;
     res.set("Cache-Control", "no-store").json({
       available: variants.available(), complete, width: complete ? min : null, height: complete && list.length === 1 ? known[0].height : null, bytes: complete && list.length === 1 ? known[0].size : null,
-      sizes: complete ? variants.offered(min) : [],
+      sizes: complete ? variants.offered(min, variants.siteOf(list[0])) : [],
     });
   });
   // Où une image est utilisée (pages, composants, modèles, articles, sites) : la même détection que le refus de suppression

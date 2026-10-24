@@ -60,7 +60,7 @@ const NEWSLETTER_KEY = "blog.newsletter_form";
 const LANGUAGES = { fr: "fr-FR", en: "en", es: "es", pt: "pt", de: "de", it: "it", ln: "ln" };
 const IMG_PATH = /^\/uploads\/thumbnails\/[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i;
 // Image de la médiathèque du CMS : /uploads/marketing/<organisation>/[site-<id>/]<fichier> ; elle doit exister dans mk_media
-const CMS_IMG_PATH = /^\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i;
+const CMS_IMG_PATH = /^\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i;
 // Fiche de la médiathèque pour cette adresse (sans contrôle de site : sert à retrouver l'identifiant d'une image DÉJÀ choisie)
 const cmsMediaRow = (value) => {
   if (!CMS_IMG_PATH.test(String(value || ""))) return null;

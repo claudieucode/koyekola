@@ -7,7 +7,7 @@ const crypto = require("crypto");
 const { uploadsRoot } = require("../../config/paths");
 const media = require("./index");
 
-const FOLDER = /^\/uploads\/marketing\/(\d{1,9})(?:\/site-(\d{1,9}))?\/[^/]+$/;
+const FOLDER = /^\/uploads\/marketing\/(\d{1,9})(?:\/site-(\d{1,9}))?(?:\/\d{4}\/(?:0[1-9]|1[0-2]))?\/[^/]+$/;
 
 function audit(ctx) {
   const db = ctx.db, org = ctx.organizationId;
@@ -38,7 +38,11 @@ function audit(ctx) {
     let names = [];
     try { names = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const e of names) {
-      if (e.isDirectory()) { if (/^site-\d{1,9}$/.test(e.name) && owner === null) scan(path.join(dir, e.name), `${urlBase}/${e.name}`, Number(e.name.slice(5))); continue; }
+      if (e.isDirectory()) {
+        if (/^site-\d{1,9}$/.test(e.name) && owner === null) scan(path.join(dir, e.name), `${urlBase}/${e.name}`, Number(e.name.slice(5)));
+        else if (/^\d{4}$/.test(e.name) || (/^(0[1-9]|1[0-2])$/.test(e.name) && /\/\d{4}$/.test(urlBase))) scan(path.join(dir, e.name), `${urlBase}/${e.name}`, owner); // dossiers aaaa/mm (option « organiser par mois et année »)
+        continue;
+      }
       if (!known.has(`${urlBase}/${e.name}`)) add("fichier_sans_fiche", null, `${urlBase}/${e.name} (${owner === null ? "dossier commun : propriétaire indéterminé" : "dossier du site " + owner}) — conservé, non attribué`);
     }
   };

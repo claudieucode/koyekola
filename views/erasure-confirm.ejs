@@ -1,0 +1,32 @@
+<%- include("partials/header", { title }) %>
+
+  <div class="container kv-narrow">
+    <div class="card card-pad account-section kv-state">
+      <% if (state === "ready") { %>
+        <span class="kv-state-ico" aria-hidden="true"><%- icon("lock", { size: 24 }) %></span>
+        <h1>Confirmer la suppression de vos données</h1>
+        <p>En confirmant, vous demandez au site d'effacer ou d'anonymiser les données personnelles associées à votre adresse e-mail. Rien n'est effacé tout de suite : l'équipe du site examine puis traite votre demande.</p>
+        <form method="post" action="/effacement/confirmer/<%= encodeURIComponent(token) %>">
+          <button type="submit" class="btn btn-primary">Confirmer ma demande</button>
+        </form>
+      <% } else if (state === "done") { %>
+        <span class="kv-state-ico is-ok" aria-hidden="true"><%- icon("checkCircle", { size: 24 }) %></span>
+        <h1>Demande confirmée</h1>
+        <p>Merci. Votre demande est enregistrée ; vous recevrez un message lorsqu'elle aura été traitée.</p>
+      <% } else if (state === "already") { %>
+        <span class="kv-state-ico is-ok" aria-hidden="true"><%- icon("checkCircle", { size: 24 }) %></span>
+        <h1>Demande déjà confirmée</h1>
+        <p>Ce lien a déjà été utilisé : votre demande est bien enregistrée, il n'y a rien d'autre à faire.</p>
+      <% } else if (state === "expired") { %>
+        <span class="kv-state-ico is-warn" aria-hidden="true"><%- icon("alertTriangle", { size: 24 }) %></span>
+        <h1>Lien expiré</h1>
+        <p>Ce lien de confirmation n'est plus valable. Contactez le site pour qu'un nouveau lien vous soit envoyé.</p>
+      <% } else { %>
+        <span class="kv-state-ico is-warn" aria-hidden="true"><%- icon("alertTriangle", { size: 24 }) %></span>
+        <h1>Lien invalide</h1>
+        <p>Ce lien de confirmation n'est pas valable.</p>
+      <% } %>
+    </div>
+  </div>
+
+<%- include("partials/footer") %>

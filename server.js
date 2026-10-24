@@ -176,6 +176,7 @@ app.use(supportRoutes);
 app.use(favoritesRoutes);
 app.use(pagesRoutes);
 app.use("/avatar", require("./src/routes/avatars"));
+app.use("/effacement", require("./src/routes/erasure")); // confirmation publique d'une demande d'effacement de données (Outils → Effacer les données)
 app.use(blogRoutes);
 app.use(profileRoutes);
 app.use(accountRoutes); // Mon compte : données personnelles, suppression du compte

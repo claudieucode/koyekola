@@ -14,6 +14,7 @@ const content = require("../../services/tools/content");
 const caches = require("../../services/tools/caches");
 const maintenance = require("../../services/tools/maintenance");
 const system = require("../../services/tools/system");
+const siteInfo = require("../../services/tools/siteInfo");
 const toolsAudit = require("../../services/tools/audit");
 const pages = require("../pages");
 const { need } = require("./kit");
@@ -24,7 +25,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: imp
 const TABS = [
   ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
   ["diagnostic", "Diagnostic", "tools.view"], ["systeme", "Informations système", "tools.view"], ["maintenance", "Maintenance", "tools.maintenance"],
-  ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["logs", "Journal d'activité", "tools.view"],
+  ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["effacer-donnees", "Effacer les données", "privacy.view"], ["logs", "Journal d'activité", "tools.view"],
 ];
 
 module.exports = () => {
@@ -85,14 +86,49 @@ module.exports = () => {
   });
 
   // ----- Santé du site -----
-  router.get("/site-web/outils", need("tools.view"), (req, res) => withSite(req, res, (siteId) => {
-    const ctx = req.mk.ctx;
-    require("../../services/tools/runner").recoverStuck();
-    const last = runs.latest(ctx.organizationId, "health", siteId);
-    const full = last ? runs.get(ctx.organizationId, last.id) : null;
-    res.render("marketing/tools-health", { title: "Santé du site", active: "outils", ...shell(req, siteId, ""), last: full, CATEGORIES: health.CATEGORIES, STATUS: health.STATUS, canRun: req.mk.can("tools.health") });
+  // Informations techniques d'UN site : mêmes données pour l'écran, l'API et le texte copié. Un accès limité à un site ne voit jamais le site principal,
+  // un autre site ni les détails de l'infrastructure centrale (chemins, serveur, base, constantes).
+  const INFO_TTL = process.env.HEALTH_INFO_TTL_MS !== undefined ? Number(process.env.HEALTH_INFO_TTL_MS) || 0 : 5000, infoCache = new Map(), infoPending = new Map();
+  const infoOf = async (req, siteId) => {
+    const central = !req.mk.siteOnly;
+    const key = `${req.mk.ctx.organizationId}|${siteId ?? "main"}|${central ? "c" : "s"}`;
+    const hit = infoCache.get(key);
+    if (hit && Date.now() - hit.at < INFO_TTL) return hit.value;
+    if (!infoPending.has(key)) infoPending.set(key, siteInfo.collect({ organizationId: req.mk.ctx.organizationId, siteId, showPaths: central, showCentral: central }).then((value) => { infoCache.set(key, { at: Date.now(), value }); return value; }).finally(() => infoPending.delete(key)));
+    return infoPending.get(key);
+  };
+  const denySite = (req, res, siteId) => {
+    if (req.mk.siteOnly && (siteId === null || !sitesFor(req).some((s) => s.id === siteId))) { res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." }); return true; }
+    return false;
+  };
+  const siteName = (req, siteId) => (siteId ? (sitesFor(req).find((s) => s.id === siteId) || {}).name || "" : "Site principal");
+
+  router.get("/site-web/outils", need("tools.view"), (req, res, next) => withSite(req, res, async (siteId) => {
+    try {
+      if (denySite(req, res, siteId)) return;
+      const ctx = req.mk.ctx;
+      require("../../services/tools/runner").recoverStuck();
+      const last = runs.latest(ctx.organizationId, "health", siteId);
+      const full = last ? runs.get(ctx.organizationId, last.id) : null;
+      const onglet = req.query.onglet === "informations" ? "informations" : "etat";
+      const info = onglet === "informations" ? await infoOf(req, siteId) : null;
+      res.set("Cache-Control", "no-store").render("marketing/tools-health", { title: "Santé du site", active: "outils", ...shell(req, siteId, ""), last: full, CATEGORIES: health.CATEGORIES, STATUS: health.STATUS, canRun: req.mk.can("tools.health"), onglet, info, expected: health.CHECKS.filter((k) => siteId === null || k.site).length, siteName: siteName(req, siteId) });
+    } catch (error) { next(error); }
+  }));
+  router.get("/site-web/outils/sante/informations.txt", need("tools.view"), (req, res, next) => withSite(req, res, async (siteId) => {
+    try {
+      if (denySite(req, res, siteId)) return;
+      res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).type("text/plain; charset=utf-8").send(siteInfo.toText(await infoOf(req, siteId), { siteName: siteName(req, siteId) }));
+    } catch (error) { next(error); }
+  }));
+  router.get("/site-web/outils/sante/informations.json", need("tools.view"), (req, res, next) => withSite(req, res, async (siteId) => {
+    try {
+      if (denySite(req, res, siteId)) return;
+      res.set("Cache-Control", "no-store").json(await infoOf(req, siteId));
+    } catch (error) { next(error); }
   }));
   router.post("/site-web/outils/sante", need("tools.health"), (req, res) => withSite(req, res, (siteId) => {
+    if (denySite(req, res, siteId)) return;
     const run = health.start(toolsCtx(req), { siteId, port: req.socket.localPort });
     res.redirect(`${BASE}${q(siteId)}${siteId ? "&" : "?"}analyse=${run.id}`);
   }));
@@ -359,6 +395,8 @@ module.exports = () => {
     } catch (error) { if (!error.user) return next(error); flash(req, "error", error.message); }
     res.redirect(`${BASE}/contenu${q(siteId)}`);
   }));
+
+  router.use(require("./erasure")({ BASE, withSite, shell, toolsCtx, q, flash })); // Outils → Effacer les données (demandes d'effacement de données personnelles)
 
   return router;
 };

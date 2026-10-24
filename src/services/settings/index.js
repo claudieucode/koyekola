@@ -18,7 +18,7 @@ const GROUPS = {
   writing: { label: "Écriture", intro: "Valeurs par défaut de la rédaction et notifications de publication, propres à chaque site." },
   reading: { label: "Lecture", intro: "Ce que le site affiche à son accueil, combien d'articles par page, et ce que contient le flux de syndication." },
   comments: { label: "Commentaires", intro: "Réglages globaux du moteur de commentaires (la modération se fait dans Commentaires)." },
-  media: { label: "Médias", intro: "Limites d'envoi des fichiers dans la médiathèque." },
+  media: { label: "Médias", intro: "Tailles des images, organisation des envois et limites d'envoi de la médiathèque." },
   permalinks: { label: "Permaliens", intro: "Normalisation des adresses ; la structure est gérée par le moteur d'adresses." },
   seo: { label: "SEO", intro: "Valeurs par défaut du référencement (le moteur SEO reste la référence)." },
   privacy: { label: "Confidentialité", intro: "Page de politique de confidentialité, liée depuis le bandeau et le pied de page." },
@@ -193,6 +193,16 @@ const mediaLimit = (key, label, cap) => def({ key, group: "media", label, type: 
 mediaLimit("media_max_image_mb", "Taille maximale d'une image", () => media().MAX_IMAGE);
 mediaLimit("media_max_document_mb", "Taille maximale d'un document", () => media().MAX_DOCUMENT);
 mediaLimit("media_max_audio_mb", "Taille maximale d'un fichier audio", () => media().MAX_AUDIO);
+// Tailles des images et organisation des envois : PAR SITE (services/mediaSettings ; le moteur de traitement est media/variants.js)
+const msize = () => require("../mediaSettings");
+const sizeField = (field, label, extra) => def({ key: `media_${field}`, group: "media", label, help: "En pixels (0 = hauteur libre : les proportions de l'image sont conservées).", min: msize().MIN, max: msize().MAX,
+  readMain: () => msize().get(null)[field], writeMain: (v, ctx) => msize().setField(null, field, v, ctx), defaultMain: msize().DEFAULTS[field],
+  readSite: (s) => msize().get(s.id)[field], writeSite: (v, ctx, siteId) => msize().setField(siteId, field, v, ctx), defaultSite: msize().DEFAULTS[field], type: "integer", ...extra });
+sizeField("thumb_w", "Miniatures · largeur", {}); sizeField("thumb_h", "Miniatures · hauteur", { min: 0 });
+def({ key: "media_thumb_crop", group: "media", label: "Recadrer les miniatures aux dimensions exactes", type: "boolean", help: "Sinon, la miniature garde les proportions de l'image.", readMain: () => msize().get(null).thumb_crop, writeMain: (v, ctx) => msize().setField(null, "thumb_crop", v, ctx), defaultMain: false, readSite: (s) => msize().get(s.id).thumb_crop, writeSite: (v, ctx, siteId) => msize().setField(siteId, "thumb_crop", v, ctx), defaultSite: false });
+sizeField("medium_w", "Taille moyenne · largeur maximale", {}); sizeField("medium_h", "Taille moyenne · hauteur maximale", { min: 0 });
+sizeField("large_w", "Grande taille · largeur maximale", {}); sizeField("large_h", "Grande taille · hauteur maximale", { min: 0 });
+def({ key: "media_organize", group: "media", label: "Organiser les nouveaux envois par année et par mois", type: "boolean", help: "Concerne les nouveaux envois seulement : les fichiers existants ne sont pas déplacés.", readMain: () => msize().get(null).organize, writeMain: (v, ctx) => msize().setField(null, "organize", v, ctx), defaultMain: false, readSite: (s) => msize().get(s.id).organize, writeSite: (v, ctx, siteId) => msize().setField(siteId, "organize", v, ctx), defaultSite: false });
 mediaLimit("media_max_video_mb", "Taille maximale d'une vidéo", () => media().MAX_VIDEO);
 
 // --- Permaliens ---
@@ -320,7 +330,7 @@ function validate(d, raw, scope, ctx) {
       const v = String(raw ?? "").trim();
       if (!v) return { ok: true, value: "" };
       // Médiathèque du site : le fichier doit exister et ne pas être dans la corbeille (jamais une adresse arbitraire)
-      if (/^\/uploads\/marketing\/\d{1,9}\/[A-Za-z0-9_.-]{1,200}$/.test(v) && db.prepare("SELECT 1 FROM mk_media WHERE path = ? AND deleted_at IS NULL").get(v)) return { ok: true, value: v };
+      if (/^\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9_.-]{1,200}$/.test(v) && db.prepare("SELECT 1 FROM mk_media WHERE path = ? AND deleted_at IS NULL").get(v)) return { ok: true, value: v };
       if (/^\/uploads\/thumbnails\/[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i.test(v)) return { ok: true, value: v };
       return fail("choisissez un fichier de la médiathèque.");
     }

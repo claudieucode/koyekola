@@ -146,16 +146,21 @@ function uploadSite(ctx, siteId) {
 }
 const siteFolder = (siteId) => (siteId ? `site-${siteId}` : null);
 // Adresse publique d'un nouveau fichier : jamais un nom venu du navigateur (nom entièrement fabriqué ici)
+// Option « organiser les envois par année et par mois » (Paramètres → Médias, propre au site) : /<org>[/site-<id>]/<aaaa>/<mm>/<fichier>. La date est celle du SERVEUR (UTC), jamais celle du navigateur ;
+// l'option ne concerne que les NOUVEAUX envois (les fichiers existants ne bougent pas, leurs adresses restent valides).
 function newPublicPath(ctx, siteId, ext) {
-  const file = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`;
-  return [PUBLIC_BASE, String(ctx.organizationId), siteFolder(siteId), file].filter(Boolean).join("/");
+  const now = new Date();
+  const file = `${now.getTime()}-${crypto.randomBytes(6).toString("hex")}${ext}`;
+  let dated = [];
+  try { if (require("../../services/mediaSettings").get(siteId || null).organize) dated = [String(now.getUTCFullYear()), String(now.getUTCMonth() + 1).padStart(2, "0")]; } catch { /* réglage indisponible : dossier unique */ }
+  return [PUBLIC_BASE, String(ctx.organizationId), siteFolder(siteId), ...dated, file].filter(Boolean).join("/");
 }
 // Chemin sur le disque d'une adresse publique de la médiathèque de CETTE organisation ; null si l'adresse n'a pas exactement la forme attendue (jamais de « .. », de sous-dossier libre)
-const SAFE_PUBLIC = /^\/uploads\/marketing\/(\d{1,9})\/(?:site-(\d{1,9})\/)?([A-Za-z0-9][A-Za-z0-9_.-]{0,150})$/;
+const SAFE_PUBLIC = /^\/uploads\/marketing\/(\d{1,9})\/(?:site-(\d{1,9})\/)?(?:(\d{4})\/(0[1-9]|1[0-2])\/)?([A-Za-z0-9][A-Za-z0-9_.-]{0,150})$/;
 function parsePublicPath(ctx, publicPath) {
   const m = SAFE_PUBLIC.exec(String(publicPath || ""));
-  if (!m || Number(m[1]) !== ctx.organizationId || m[3].includes("..")) return null;
-  return { siteId: m[2] ? Number(m[2]) : null, file: m[3], absolute: path.join(uploadsRoot, "marketing", String(ctx.organizationId), ...(m[2] ? [`site-${m[2]}`] : []), m[3]) };
+  if (!m || Number(m[1]) !== ctx.organizationId || m[5].includes("..")) return null;
+  return { siteId: m[2] ? Number(m[2]) : null, file: m[5], absolute: path.join(uploadsRoot, "marketing", String(ctx.organizationId), ...(m[2] ? [`site-${m[2]}`] : []), ...(m[3] ? [m[3], m[4]] : []), m[5]) };
 }
 
 // Limite EFFECTIVE d'un type de fichier (octets) : le plafond du serveur, abaissé par Paramètres → Médias. Source unique : l'envoi la fait respecter, la page d'envoi l'affiche.

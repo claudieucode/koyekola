@@ -42,12 +42,15 @@ describe("Paramètres : sections ouvertes dans l'espace d'un site", () => {
     }
   });
 
-  test("sections sans réglage propre au site (Médias, Tunnels) : valeurs réelles de la plateforme en lecture seule, aucun formulaire ; impossible de les modifier depuis un site", async () => {
-    for (const k of ["medias", "tunnels"]) {
+  test("sections sans réglage propre au site (Tunnels) : valeurs réelles de la plateforme en lecture seule, aucun formulaire ; impossible de les modifier depuis un site", async () => {
+    for (const k of ["tunnels"]) {
       const r = await adminA.get(frame(A, k)); assert.equal(r.status, 200);
       assert.match(r.text, /Ce qui s(?:'|&#39;)applique à ce site/); assert.ok(!/data-st-form/.test(r.text), `${k} : aucun formulaire`);
       assert.match(r.text, /réservées? à l'équipe|depuis le site principal|Elles se modifient/, k);
     }
+    // Médias : écran dédié, complet et propre au site (tailles, organisation des envois) ; les limites d'envoi, communes, y sont en lecture seule
+    const md = await adminA.get(frame(A, "medias")); assert.equal(md.status, 200);
+    assert.match(md.text, /Taille des miniatures/); assert.match(md.text, /<button[^>]*data-md-save/); assert.match(md.text, /Limites communes à tous les sites/); assert.doesNotMatch(md.text, /name="media_max_image_mb"/);
     // Permaliens : écran dédié et complet pour tout site (sans domaine propre, la structure s'applique à SES articles sous le domaine principal)
     const pl = await adminA.get(frame(A, "permaliens")); assert.equal(pl.status, 200);
     assert.match(pl.text, /n'a pas de domaine propre/); assert.match(pl.text, /<button[^>]*data-pl-save/, "permaliens : formulaire complet");

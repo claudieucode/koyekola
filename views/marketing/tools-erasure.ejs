@@ -1,0 +1,116 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Effacer les données", intro: "Cet outil aide à respecter les lois et réglementations sur les données personnelles en effaçant ou en anonymisant ce que le site connaît d'une personne. Une demande est d'abord confirmée par la personne, puis traitée par un administrateur après un récapitulatif : rien n'est jamais effacé en un seul clic.", tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).replace(" ", "T") + "Z").toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }) : "");
+  const cls = { pending: "mk-status-warn", confirmed: "", failed: "mk-status-bad", completed: "mk-status-ok" };
+  const actionLabel = { resend: "Renvoyer la confirmation", execute: "Examiner et effacer", resume: "Reprendre", force: "Forcer l'effacement", complete: "Marquer terminée", remove: "Supprimer de la liste" };
+  const sortLink = (key) => { const same = page.sort === key; const dir = same && page.dir === "asc" ? "desc" : "asc"; return `${BASE_ER}?${siteId ? "site=" + siteId + "&" : ""}${page.filter ? "etat=" + page.filter + "&" : ""}tri=${key}&ordre=${dir}`; };
+  const sortAttr = (key) => (page.sort === key ? (page.dir === "asc" ? "ascending" : "descending") : "none");
+%>
+<% if (!mailReady) { %><p class="mk-er-note mk-er-note-warn" role="status"><%- icon("alertTriangle", { size: 16 }) %> Aucun serveur d'e-mail n'est configuré sur cette installation : les e-mails de confirmation ne peuvent pas partir. Vous pouvez décocher l'envoi et traiter la demande comme confirmée par vous-même.</p><% } %>
+
+<% if (canRequest) { %>
+<section class="mk-panel mk-er-form" aria-labelledby="er-new">
+  <h2 id="er-new">Ajout d'une demande d'effacement de données</h2>
+  <form method="post" action="<%= BASE_ER %><%= q %>" data-er-form novalidate>
+    <div class="field-group">
+      <label for="er-identifier">Identifiant ou adresse e-mail</label>
+      <input type="text" id="er-identifier" name="identifier" maxlength="254" required autocomplete="off" spellcheck="false" aria-describedby="er-id-hint er-id-err">
+      <p class="field-hint" id="er-id-hint">Le nom d'utilisateur d'un compte, ou l'adresse e-mail de la personne (visiteur, contact, auteur de commentaire).</p>
+      <p class="mk-er-error" id="er-id-err" role="alert" hidden>Saisissez un identifiant ou une adresse e-mail valide.</p>
+    </div>
+    <div class="field-group">
+      <span class="mk-er-label" id="er-mail-label">E-mail de confirmation</span>
+      <label class="mk-er-check" for="er-send"><input type="hidden" name="_b_send_email" value="1"><input type="checkbox" id="er-send" name="send_email" value="1" checked aria-describedby="er-send-hint"> Envoyer l'e-mail de confirmation de la suppression des données personnelles.</label>
+      <p class="field-hint" id="er-send-hint">Un lien à usage unique, valable <%= tokenHours %> heures, est envoyé à la personne. Décochée, la demande est créée comme confirmée par vous, mais rien n'est effacé sans votre validation explicite.</p>
+    </div>
+    <button type="submit" class="btn btn-primary" data-er-submit>Envoyer la demande de confirmation</button>
+  </form>
+</section>
+<% } %>
+
+<section class="mk-panel" aria-labelledby="er-list">
+  <h2 id="er-list">Demandes</h2>
+  <ul class="mk-er-filters" aria-label="Filtrer par état">
+    <li><a href="<%= BASE_ER %><%= q %>"<%- !page.filter ? ' aria-current="page"' : "" %>>Toutes <span class="mk-er-count">(<%= page.all %>)</span></a></li>
+    <% STATUSES.forEach((s) => { %><li><a href="<%= BASE_ER %>?<%= siteId ? "site=" + siteId + "&" : "" %>etat=<%= s %>"<%- page.filter === s ? ' aria-current="page"' : "" %>><%= { pending: "En attente", confirmed: "Confirmées", failed: "Échouées", completed: "Terminées" }[s] %> <span class="mk-er-count">(<%= page.counts[s] %>)</span></a></li><% }) %>
+  </ul>
+  <form method="post" action="<%= BASE_ER %>/actions<%= q %>" data-er-bulk>
+    <% if (rows.length && (canRequest || canErase)) { %>
+    <div class="mk-er-bulk">
+      <label for="er-bulk-action" class="sr-only">Actions groupées</label>
+      <select id="er-bulk-action" name="action">
+        <option value="">Actions groupées</option>
+        <% if (canRequest) { %><option value="renvoyer">Renvoyer les e-mails de confirmation</option><% } %>
+        <% if (canErase) { %><option value="terminer">Marquer comme terminées</option><option value="supprimer">Supprimer de la liste (aucune donnée effacée)</option><% } %>
+      </select>
+      <button type="submit" class="btn btn-outline btn-sm">Appliquer</button>
+    </div>
+    <% } %>
+    <div class="mk-table-wrap">
+      <table class="mk-table mk-datatable mk-er-table">
+        <caption class="sr-only">Demandes d'effacement de données</caption>
+        <thead><tr>
+          <th scope="col" class="mk-col-check"><input type="checkbox" data-er-all aria-label="Tout sélectionner"></th>
+          <th scope="col" aria-sort="<%= sortAttr("origin") %>"><a href="<%= sortLink("origin") %>">Origine de la demande</a></th>
+          <th scope="col" aria-sort="<%= sortAttr("status") %>"><a href="<%= sortLink("status") %>">État</a></th>
+          <th scope="col" aria-sort="<%= sortAttr("date") %>"><a href="<%= sortLink("date") %>">Demande envoyée</a></th>
+          <th scope="col">Étapes suivantes</th>
+        </tr></thead>
+        <tbody>
+          <% if (!rows.length) { %>
+            <tr><td colspan="5" class="mk-er-empty"><%- icon("shield", { size: 20 }) %> <%= page.filter ? "Aucune demande dans cet état." : "Aucune demande d'effacement pour l'instant." %></td></tr>
+          <% } %>
+          <% rows.forEach((r) => { %>
+          <tr data-er-row="<%= r.id %>">
+            <td class="mk-col-check" data-label="Sélection"><input type="checkbox" name="ids" value="<%= r.id %>" data-er-pick aria-label="Sélectionner la demande de <%= r.subject_label %>"></td>
+            <td data-label="Origine"><a href="<%= BASE_ER %>/<%= r.id %><%= q %>"><strong><%= r.subject_label %></strong></a><br><span class="mk-sub"><%= r.subject_kind === "username" ? "Compte (identifiant)" : "Adresse e-mail" %></span></td>
+            <td data-label="État"><span class="mk-status <%= cls[r.status] %>"><%= r.statusLabel %></span><% if (r.failureLabel) { %><br><span class="mk-sub"><%= r.failureLabel %></span><% } %><% if (r.status === "confirmed" && r.started_at) { %><br><span class="mk-sub">Traitement commencé</span><% } %><% if (r.mailState && (r.status === "pending" || r.mailFailed)) { %><br><span class="mk-sub<%= r.mailFailed ? " mk-er-bad" : "" %>"><%= r.mailState.charAt(0).toUpperCase() + r.mailState.slice(1) %></span><% } %></td>
+            <td data-label="Envoyée le"><%= fdate(r.requested_at) %></td>
+            <td data-label="Étapes suivantes" class="mk-er-actions">
+              <a class="btn btn-outline btn-sm" href="<%= BASE_ER %>/<%= r.id %><%= q %>">Détails</a>
+              <% r.actions.forEach((a) => { %><% if (a === "execute" || a === "force") { %><a class="btn btn-outline btn-sm" href="<%= BASE_ER %>/<%= r.id %><%= q %>#er-run"><%= actionLabel[a] %></a><% } else { %><button type="submit" class="btn btn-outline btn-sm<%= a === "remove" ? " mk-er-danger" : "" %>" formaction="<%= BASE_ER %>/<%= r.id %>/<%= { resend: "renvoyer", resume: "reprendre", complete: "terminer", remove: "supprimer" }[a] %><%= q %>" formnovalidate data-er-one<%= a === "remove" ? " data-confirm=\"Supprimer cette demande de la liste ? Aucune donnée personnelle ne sera effacée.\"" : "" %>><%= actionLabel[a] %></button><% } %><% }) %>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+        <% if (rows.length > 4) { %><tfoot><tr>
+          <th scope="col" class="mk-col-check"><input type="checkbox" data-er-all aria-label="Tout sélectionner"></th><th scope="col">Origine de la demande</th><th scope="col">État</th><th scope="col">Demande envoyée</th><th scope="col">Étapes suivantes</th>
+        </tr></tfoot><% } %>
+      </table>
+    </div>
+  </form>
+  <% if (page.pages > 1) { %>
+  <nav class="mk-er-pager" aria-label="Pagination">
+    <% for (let p = 1; p <= page.pages; p++) { %><a href="<%= BASE_ER %>?<%= siteId ? "site=" + siteId + "&" : "" %><%= page.filter ? "etat=" + page.filter + "&" : "" %>tri=<%= page.sort %>&ordre=<%= page.dir %>&page=<%= p %>"<%- p === page.page ? ' aria-current="page"' : "" %>><%= p %></a><% } %>
+  </nav>
+  <% } %>
+  <p class="mk-sub">Les demandes terminées ou échouées sont retirées de la liste après <%= retentionDays %> jours ; l'adresse de la personne n'y est plus conservée une fois la demande terminée.</p>
+</section>
+
+<section class="mk-panel mk-er-scope" aria-labelledby="er-scope">
+  <h2 id="er-scope">Ce que cet outil ne peut pas faire</h2>
+  <p>Effacer des données dans Kolakisa ne garantit pas leur disparition ailleurs. Restent à traiter à part : les <strong>sauvegardes et archives</strong>, le <strong>fournisseur d'envoi d'e-mails</strong> et les journaux de l'hébergeur, les <strong>outils d'analyse</strong>, les <strong>prestataires de paiement</strong> et tout service tiers connecté au site. Les pièces comptables (commandes) sont conservées : la loi l'exige. Effacer des données ne supprime pas le compte de la personne : ce sont deux opérations distinctes.</p>
+  <% if (siteId) { %><p class="mk-sub">Cette liste concerne le site « <%= siteName %> » : seules les données de ce site sont traitées. Les données de la plateforme (comptes, formulaire de contact) se traitent depuis le site principal.</p><% } %>
+</section>
+
+<% if (templates) { %>
+<section class="mk-panel" id="er-modeles" aria-labelledby="er-tpl">
+  <h2 id="er-tpl">Modèles d'e-mails (<%= locale === "en" ? "anglais" : "français" %>)</h2>
+  <p class="mk-sub">La langue suit celle du site. Variables disponibles : <%= VARS.join(", ") %>. Le lien de confirmation est obligatoire dans le premier modèle.</p>
+  <% templates.forEach((t) => { %>
+  <details class="mk-er-tpl">
+    <summary><%= t.label %><%= t.custom ? " — personnalisé" : "" %></summary>
+    <form method="post" action="<%= BASE_ER %>/modeles<%= q %>">
+      <input type="hidden" name="locale" value="<%= locale %>"><input type="hidden" name="name" value="<%= t.name %>">
+      <div class="field-group"><label for="er-t-s-<%= t.name %>">Objet</label><input type="text" id="er-t-s-<%= t.name %>" name="subject" maxlength="200" value="<%= t.subject %>"></div>
+      <div class="field-group"><label for="er-t-b-<%= t.name %>">Message</label><textarea id="er-t-b-<%= t.name %>" name="body" rows="8" maxlength="4000"><%= t.body %></textarea></div>
+      <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+      <% if (t.custom) { %><button type="submit" name="reset" value="1" class="btn btn-outline btn-sm" formnovalidate>Rétablir le texte d'origine</button><% } %>
+    </form>
+  </details>
+  <% }) %>
+</section>
+<% } %>
+<script src="<%= asset('/js/cms-effacement.js') %>" defer></script>
+<%- include("partials/bottom") %>
