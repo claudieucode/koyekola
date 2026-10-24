@@ -1,29 +1,9 @@
-<%# Ajouter un thème : catalogue Kolakisa (thèmes réellement installables) et paquet JSON (données de design validées). Aucun code n'est jamais exécuté. %><%- include("partials/top", { title, active }) %>
+<%# Importer un paquet de thème (JSON de données de design validées). Le catalogue Kolakisa est dans la bibliothèque (galerie). Aucun code n'est jamais exécuté. %><%- include("partials/top", { title, active }) %>
 <div class="mk-th" data-th-root>
-  <div class="mk-th-head"><h1>Ajouter un thème</h1><a class="btn btn-outline btn-sm" href="<%= to("") %>">← Thèmes installés</a></div>
+  <div class="mk-th-head"><h1>Importer un paquet de thème</h1><a class="btn btn-outline btn-sm" href="<%= to("") %>">← Bibliothèque de thèmes</a></div>
   <p class="mk-th-site">Installation sur : <strong><%= T.name %></strong>. Un thème installé ici n'apparaît pas sur les autres sites.</p>
   <% if (readOnly) { %><div class="mk-th-notice mk-th-notice--warn" role="status"><p>Ce site est archivé ou supprimé : aucune installation n'est possible.</p></div><% } %>
-  <form class="mk-th-search" method="get" action="<%= BASE %>/ajouter" role="search"><%- siteField %>
-    <label for="th-q">Rechercher dans le catalogue</label>
-    <input id="th-q" type="search" name="q" value="<%= q %>" maxlength="80" autocomplete="off" placeholder="Nom, style…">
-    <button class="btn btn-outline btn-sm" type="submit">Rechercher</button>
-  </form>
-  <h2 class="mk-th-sub">Catalogue Kolakisa <span class="mk-th-count"><%= offers.length %></span></h2>
-  <% if (!offers.length) { %><div class="mk-th-empty" role="status"><strong>Aucun thème du catalogue ne correspond à « <%= q %> ».</strong><p><a href="<%= to("/ajouter") %>">Afficher tout le catalogue</a></p></div><% } %>
-  <ul class="mk-th-grid">
-    <% offers.forEach((t) => { %>
-      <li class="mk-th-card">
-        <a class="mk-th-shotlink" href="<%= to("/" + t.key + "/apercu") %>" aria-label="Prévisualiser <%= t.name %>"><%- include("partials/theme-shot", { theme: t, fontStack }) %></a>
-        <div class="mk-th-body"><h2><%= t.name %><% if (t.installed) { %> <span class="badge mk-status-ok">Installé</span><% } %></h2>
-          <p class="mk-th-meta">Version <%= t.version %> · <%= t.author %> · compatible (format <%= t.api %>)</p><p class="mk-th-desc"><%= t.description %></p></div>
-        <div class="mk-th-foot">
-          <a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/apercu") %>">Prévisualiser</a>
-          <% if (t.installed) { %><a class="btn btn-outline btn-sm" href="<%= to("") %>">Voir dans la liste</a>
-          <% } else if (canInstall && !readOnly) { %><form method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %><input type="hidden" name="key" value="<%= t.key %>"><button class="btn btn-primary btn-sm" type="submit" data-busy="Installation…">Installer</button></form><% } %>
-        </div>
-      </li>
-    <% }) %>
-  </ul>
+  <p class="mk-th-lead">Les thèmes du catalogue Kolakisa se choisissent dans la <a href="<%= to("") %>">bibliothèque de thèmes</a> (recherche, catégories, aperçu complet). Cette page sert à importer un paquet de thème reçu d'ailleurs.</p>
   <% if (canInstall && !readOnly) { %>
   <h2 class="mk-th-sub">Importer un paquet de thème</h2>
   <form class="mk-th-import" method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %>

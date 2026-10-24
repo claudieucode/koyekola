@@ -25,7 +25,10 @@ const VIEWS = [
   if (!specs.length) throw new Error("Aucun thème à photographier.");
   fs.mkdirSync(OUT, { recursive: true });
   const srv = await startHarness();
-  const browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  let browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  const relaunch = async () => { try { await browser.close(); } catch { /* déjà fermé */ } browser = await chromium.launch({ executablePath: CHROME, headless: true }); };
+  // Machine chargée : une capture peut échouer (« Target page… closed ») ; on relance le navigateur et on réessaie, sans jamais enregistrer une image vide
+  const attempt = async (label, fn) => { let last; for (let n = 1; n <= 4; n += 1) { try { return await fn(); } catch (e) { last = e; console.error(`  (essai ${n}/4 : ${label} : ${String(e.message).split("\n")[0].slice(0, 100)})`); await relaunch(); } } throw last; };
   let done = 0;
   try {
     for (const s of specs) {
@@ -34,22 +37,26 @@ const VIEWS = [
         for (const pg of s.pages) {
           const ctx = await browser.newContext({ viewport: { width: Number(process.env.PX_WIDTH) || 1440, height: 900 }, reducedMotion: "reduce" });
           const page = await ctx.newPage();
-          try { await page.goto(`${srv.base}/marketing/site-web/themes/${s.key}/demo/${pg.key}`, { waitUntil: "load", timeout: 60000 }); await page.evaluate(() => document.fonts && document.fonts.ready); await page.addStyleTag({ content: ".lp-preview-bar{display:none!important}" }); await page.waitForTimeout(200); await page.screenshot({ path: path.join(OUT, `${s.key}-${pg.key}-full.png`), fullPage: true }); } finally { await ctx.close(); }
+          try { await page.goto(`${srv.base}/marketing/site-web/themes/${s.key}/demo/${pg.key}`, { waitUntil: "load", timeout: 60000 }); await page.evaluate(() => document.fonts && document.fonts.ready); await page.addStyleTag({ content: ".lp-preview-bar{display:none!important}" }); await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 500) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 50)); } window.scrollTo(0, 0); await Promise.race([new Promise((r) => setTimeout(r, 4000)), Promise.all([...document.images].filter((im) => im.offsetParent !== null).map((im) => (im.complete ? 1 : new Promise((r) => { im.onload = im.onerror = r; }))))]); }); await page.waitForTimeout(150); await page.screenshot({ path: path.join(OUT, `${s.key}-${pg.key}-full.png`), fullPage: true }); } finally { await ctx.close(); }
         }
         done += 1; continue;
       }
       for (const v of VIEWS) {
-        const ctx = await browser.newContext({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: v.name === "mobile" ? 2 : 1, reducedMotion: "reduce" });
-        const page = await ctx.newPage();
-        try {
-          const r = await page.goto(`${srv.base}/marketing/site-web/themes/${s.key}/demo/${v.page(s)}`, { waitUntil: "load", timeout: 60000 });
-          if (!r || r.status() !== 200) throw new Error(`HTTP ${r && r.status()}`);
-          await page.evaluate(() => document.fonts && document.fonts.ready);
-          await page.addStyleTag({ content: ".lp-preview-bar{display:none!important}" });
-          await page.waitForTimeout(250);
-          const png = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: v.width, height: v.height } });
-          await sharp(png).resize({ width: v.out }).webp({ quality: v.quality }).toFile(path.join(OUT, `${s.key}-${v.name}.webp`));
-        } finally { await ctx.close(); }
+        await attempt(`${s.key}-${v.name}`, async () => {
+          const ctx = await browser.newContext({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: v.name === "mobile" ? 2 : 1, reducedMotion: "reduce" });
+          const page = await ctx.newPage();
+          try {
+            const r = await page.goto(`${srv.base}/marketing/site-web/themes/${s.key}/demo/${v.page(s)}`, { waitUntil: "load", timeout: 60000 });
+            if (!r || r.status() !== 200) throw new Error(`HTTP ${r && r.status()}`);
+            await page.evaluate(() => document.fonts && document.fonts.ready);
+            await page.addStyleTag({ content: ".lp-preview-bar{display:none!important}" });
+            await page.waitForTimeout(250);
+            const png = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: v.width, height: v.height } });
+            const out = await sharp(png).resize({ width: v.out }).webp({ quality: v.quality }).toBuffer();
+            if (out.length < 2500) throw new Error("image vide ou trop légère");
+            fs.writeFileSync(path.join(OUT, `${s.key}-${v.name}.webp`), out);
+          } finally { try { await ctx.close(); } catch { /* navigateur déjà fermé */ } }
+        });
       }
       done += 1;
       if (done % 5 === 0) console.log(`${done}/${specs.length}`);

@@ -12,10 +12,14 @@ db.exec("INSERT INTO mk_organizations (name, slug) VALUES ('O', 'o')");
 const library = require(path.join(ROOT, "src", "marketing", "themes", "library"));
 const { verify } = require(path.join(ROOT, "src", "marketing", "themes", "library", "verify"));
 const args = process.argv.slice(2), strict = args.includes("--strict"), keys = args.filter((a) => !a.startsWith("--"));
+const probs = library.problems().filter((p) => !keys.length || keys.some((k) => (p.key || "") === k || String(p.message).includes(`« ${k} »`)));
+for (const p of probs) console.log(`FICHE ÉCARTÉE ${p.file}${p.key ? ` (${p.key})` : ""} : ${p.message}`);
+const missing = keys.filter((k) => !library.has(k));
+for (const k of missing) console.log(`THÈME INTROUVABLE « ${k} » : fiche absente ou écartée (voir ci-dessus).`);
 const r = verify({ db, organizationId: 1, userId: 1, can: () => true }, { onlyKeys: keys.length ? keys : null });
 console.log(`Thèmes : ${r.total} / ${r.target}`);
 for (const c of library.CATEGORIES) if (!keys.length) console.log(`  ${String(r.counts[c.key]).padStart(2)} / ${String(c.count).padStart(2)}  ${c.label}`);
-let bad = 0;
+let bad = probs.length + missing.length;
 for (const t of r.invalid) { bad += 1; console.log(`PAGES INVALIDES ${t.key} :`); t.invalidPages.forEach((p) => console.log(`   ${p}`)); }
 for (const t of r.lowContrast) { bad += 1; console.log(`CONTRASTE ${t.key} : ${t.contrast.join(" ; ")}`); }
 for (const t of r.fontPairDuplicates) { bad += 1; console.log(`POLICES EN DOUBLE ${t.key} : ${t.fontPairDuplicate}`); }

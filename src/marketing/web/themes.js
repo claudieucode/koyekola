@@ -58,19 +58,21 @@ module.exports = () => {
     const g = themes.gallery(t.siteId, f);
     const all = themes.installed(t.siteId);
     const st = t.siteId === null ? appearance.state(null) : null;
-    const url = (changes = {}) => { const m = { q: f.q, categorie: f.category, style: f.style, etat: f.state, tri: f.sort === "relevance" ? "" : f.sort, page: "", ...changes }; return to("", Object.fromEntries(Object.entries(m).filter(([, v]) => v !== "" && v != null))); };
-    const active = themes.libraryItem(t.siteId, g.activeKey) || (themes.get(t.siteId, g.activeKey) ? { ...themes.get(t.siteId, g.activeKey), categoryLabel: "", previews: null, pages: [], palette: [], legacy: true } : null);
-    const model = { ...base(req, t, {}), title: "Thèmes", f, g, url, STYLE_LABELS, SORTS, STATES, CATEGORIES: library.CATEGORIES, all, readOnly: t.readOnly, draftPending: Boolean(st && st.hasDraft), active, hasFilter: Boolean(f.q || f.category || f.style || f.state) };
+    const url = (changes = {}) => { const m = { q: f.q, categorie: f.category, style: f.style, etat: f.state, tri: f.sort === "relevance" ? "" : f.sort, page: "", ...changes }; return to(t, "", Object.fromEntries(Object.entries(m).filter(([, v]) => v !== "" && v != null))); };
+    const cur = themes.get(t.siteId, g.activeKey);
+    const lib = themes.libraryItem(t.siteId, g.activeKey);
+    const palette = (x) => ["primary", "secondary", "accent", "background"].map((k) => x.tokens.colors[k]);
+    const active = lib ? { ...lib, hasPrevious: Boolean(cur && cur.hasPrevious) } : cur ? { ...cur, categoryLabel: "", previews: null, pages: [], palette: palette(cur), hasDemo: false } : null;
+    const model = { ...base(req, t, {}), title: "Thèmes", f, g, url, STYLE_LABELS, SORTS, STATES, CATEGORIES: library.CATEGORIES, all, readOnly: t.readOnly, draftPending: Boolean(st && st.hasDraft), activeTheme: active, hasFilter: Boolean(f.q || f.category || f.style || f.state) };
     res.set("Cache-Control", "no-store");
     if (req.query.fragment === "1") return res.render("marketing/partials/themes-results", model);
     res.render("marketing/themes", model);
   });
 
-  // ----- Ajouter un thème : catalogue Kolakisa + paquet JSON -----
+  // ----- Importer un paquet de thème (le catalogue Kolakisa est dans la galerie) -----
   router.get("/site-web/themes/ajouter", need("appearance.read"), (req, res) => {
     const t = target(req, res); if (!t) return;
-    const q = String(req.query.q || "").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 80);
-    res.render("marketing/themes-add", { ...base(req, t, {}), title: "Ajouter un thème", q, offers: themes.available(t.siteId, { q }), readOnly: t.readOnly, maxKb: catalog.MAX_PACKAGE_BYTES / 1024 });
+    res.render("marketing/themes-add", { ...base(req, t, {}), title: "Importer un paquet de thème", readOnly: t.readOnly, maxKb: catalog.MAX_PACKAGE_BYTES / 1024 });
   });
   router.post("/site-web/themes/installer", need("appearance.styles"), (req, res, next) => {
     const t = target(req, res); if (!t) return;

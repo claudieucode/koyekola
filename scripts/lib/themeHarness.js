@@ -17,6 +17,7 @@ async function startHarness() {
   const { injectLocals } = require(path.join(ROOT, "src", "middlewares", "locals"));
   const app = express();
   app.set("view engine", "ejs"); app.set("views", path.join(ROOT, "views")); app.set("trust proxy", 1);
+  app.locals.fontFacesFor = (css, siteId) => require(path.join(ROOT, "src", "utils", "fontLibrary")).faceCssFor(css, { siteId }); // @font-face des familles citées (comme server.js)
   app.use((req, res, next) => { req.session = { user: { id: 1, username: "formateur", role: "formateur" } }; next(); });
   app.use(injectLocals);
   app.use("/fonts/library", express.static(path.join(ROOT, "public", "fonts", "library"), { maxAge: "30d", immutable: true, index: false }));

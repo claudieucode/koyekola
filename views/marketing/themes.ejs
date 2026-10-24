@@ -4,7 +4,7 @@
 %><%- include("partials/top", { title, active }) %>
 <%
   const dismissKey = (k) => "mk_th_dismiss_" + (T.siteId || "principal") + "_" + k;
-  const act = active;
+  const act = activeTheme;
 %>
 <div class="mk-th mk-tg" data-th-root data-tg-url="<%= BASE %>" data-tg-site="<%= T.siteId || "" %>">
   <header class="kx-hero is-compact mk-th-head">

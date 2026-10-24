@@ -247,8 +247,10 @@ function stateOf(siteId, key, compatible) {
 function gallery(siteId, { q = "", category = "", style = "", state = "", sort = "relevance", page = 1, perPage = 24 } = {}) {
   const sid = scope(siteId);
   const all = [{ manifest: catalog.ORIGINAL, meta: { key: catalog.DEFAULT_KEY, name: catalog.ORIGINAL.name, category: "kolakisa", categoryLabel: "Thème d'origine", tags: ["moderne"], siteType: "Tous types de sites", description: catalog.ORIGINAL.description, featured: false, isNew: false, order: -1, modules: [], pages: [], palette: [catalog.ORIGINAL.tokens.colors.primary, catalog.ORIGINAL.tokens.colors.secondary, catalog.ORIGINAL.tokens.colors.accent, catalog.ORIGINAL.tokens.colors.background], fonts: { heading: "bricolage", body: "figtree" }, dark: false, previews: null, builtin: true } },
-    ...catalog.catalog().map((m) => ({ manifest: m, meta: metaOf(m) }))];
-  const items = all.map(({ manifest, meta }) => { const compatible = catalog.isCompatible(manifest); const st = stateOf(sid, manifest.key, compatible); return { ...meta, version: manifest.version, author: manifest.author, state: st, installed: st === "active" || st === "installed", compatible, hasDemo: meta.pages.length > 0 }; });
+    ...catalog.catalog().map((m) => ({ manifest: m, meta: metaOf(m) })),
+    // Paquets importés et installés sur CE site (hors catalogue Kolakisa) : ils doivent rester visibles, activables et supprimables
+    ...rows(sid).map((r) => ({ r, m: parse(r.manifest) })).filter(({ m }) => m && !catalog.fromCatalog(m.key)).map(({ m }) => ({ manifest: { ...m, tokens: tokensLib.normalizeTokens(m.tokens || {}, { strict: false }) }, meta: { ...metaOf({ ...m, tokens: tokensLib.normalizeTokens(m.tokens || {}, { strict: false }) }), category: "import", categoryLabel: "Paquet importé", legacy: true, order: 950 } }))];
+  const items = all.map(({ manifest, meta }) => { const compatible = catalog.isCompatible(manifest); const st = stateOf(sid, manifest.key, compatible); return { ...meta, version: manifest.version, author: manifest.author, state: st, installed: st === "active" || st === "installed" || (st === "incompatible" && Boolean(rowOf(sid, manifest.key))), compatible, hasDemo: meta.pages.length > 0 }; });
   const needle = fold(q).trim();
   const cats = Object.fromEntries(library.CATEGORIES.map((c) => [c.key, 0]));
   const searched = items.filter((t) => !needle || fold([t.name, t.description, t.categoryLabel, t.siteType, t.tags.join(" ")].join(" ")).includes(needle));

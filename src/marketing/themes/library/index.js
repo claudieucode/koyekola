@@ -40,10 +40,16 @@ const VERSION = "1.0.0";
 const AUTHOR = "Équipe Kolakisa";
 
 let cache = null;
-function specsOnDisk() {
+// Un fichier ou une fiche invalide n'empêche JAMAIS le reste de la bibliothèque de se charger : il est écarté et listé dans problems() (les tests exigent que la liste soit vide)
+function specsOnDisk(problems) {
   const dir = path.join(__dirname, "specs");
   const list = [];
-  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".js")).sort()) for (const spec of require(path.join(dir, file))) list.push({ ...spec, file });
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".js")).sort()) {
+    let arr;
+    try { arr = require(path.join(dir, file)); } catch (e) { problems.push({ file, message: `fichier illisible : ${String(e.message).slice(0, 200)}` }); continue; }
+    if (!Array.isArray(arr)) { problems.push({ file, message: "le fichier doit exporter un tableau de fiches" }); continue; }
+    for (const spec of arr) list.push({ ...spec, file });
+  }
   return list;
 }
 
@@ -63,7 +69,12 @@ function check(spec) {
   const keys = new Set();
   for (const p of spec.pages) { if (!PAGE_KEY.test(String(p.key)) || keys.has(p.key)) bad(`page « ${p.key} » invalide ou en double`); keys.add(p.key); if (!p.name || !Array.isArray(p.blocks) || !p.blocks.length) bad(`page « ${p.key} » sans nom ou sans bloc`); }
   if (!Array.isArray(spec.menu) || !spec.menu.length) bad("menu manquant");
-  for (const [label, url] of spec.menu) { if (!label) bad("entrée de menu sans libellé"); const slug = String(url).replace(/^\//, ""); if (url !== "/" && !keys.has(slug)) bad(`le menu pointe vers « ${url} » qui n'est pas une page du thème`); }
+  for (const [label, url] of spec.menu) { if (!label) bad("entrée de menu sans libellé"); const slug = String(url).replace(/^\//, ""); if (url !== "/" && !keys.has(slug) && slug !== "recherche" && slug !== "introuvable") bad(`le menu pointe vers « ${url} » qui n'est pas une page du thème`); }
+  // Toutes les variantes et tous les identifiants de police doivent exister (jamais de bloc inconnu au moment du rendu)
+  const fontLib = require("../../../utils/fontLibrary");
+  for (const role of ["heading", "body", "button", "link"]) { const f = spec.tokens.fonts[role]; if (f !== undefined && !(Object.hasOwn(tokensLib.FONTS, f) || fontLib.isId(f))) bad(`police « ${f} » inconnue (${role})`); }
+  for (const p of spec.pages) for (const b of p.blocks) { const name = Array.isArray(b) ? b[0] : b; if (!Object.hasOwn(compose.BLOCKS, name)) bad(`variante inconnue « ${name} » (page ${p.key})`); }
+  for (const part of [spec.head, spec.foot]) if (part && !Object.hasOwn(compose.BLOCKS, part[0])) bad(`variante inconnue « ${part[0]} »`);
   return spec;
 }
 
@@ -78,15 +89,21 @@ function withStandardPages(spec) {
 
 function load() {
   if (cache) return cache;
-  const specs = specsOnDisk().map(check).map(withStandardPages);
-  const seen = new Set();
-  for (const s of specs) { if (seen.has(s.key)) throw new Error(`Thème « ${s.key} » déclaré deux fois`); seen.add(s.key); }
+  const problems = [];
+  const specs = [], seen = new Set();
+  for (const raw of specsOnDisk(problems)) {
+    try {
+      const s = withStandardPages(check(raw));
+      if (seen.has(s.key)) throw new Error(`Thème « ${s.key} » (${raw.file}) : identifiant déjà déclaré dans un autre fichier`);
+      seen.add(s.key); specs.push(s);
+    } catch (e) { problems.push({ file: raw.file, key: raw.key, message: String(e.message) }); }
+  }
   const byKey = new Map(specs.map((s) => [s.key, s]));
   const manifests = specs.map((s) => ({
     key: s.key, name: s.name, version: VERSION, author: AUTHOR, description: s.description,
     tokens: tokensLib.normalizeTokens(s.tokens, { strict: false }),
   }));
-  cache = { specs, byKey, manifests };
+  cache = { specs, byKey, manifests, problems };
   return cache;
 }
 const reload = () => { cache = null; return load(); };
@@ -135,4 +152,5 @@ function signature(spec) {
   return { variants: [...new Set([...(spec.head ? [spec.head[0]] : ["head:bar"]), ...(spec.foot ? [spec.foot[0]] : ["foot:simple"]), ...variants])], heading: spec.tokens.fonts.heading, body: spec.tokens.fonts.body, primary: spec.tokens.colors.primary, home: (spec.pages[0].blocks || []).map((b) => (Array.isArray(b) ? b[0] : b)).join(">"), dna: JSON.stringify(spec.dna || {}) };
 }
 
-module.exports = { CATEGORIES, TARGET_TOTAL, STYLES, load, reload, specOf, has, manifests, meta, allMeta, pageSections, demoPageTokens, artFor, signature, VERSION, AUTHOR };
+const problems = () => load().problems;
+module.exports = { problems, CATEGORIES, TARGET_TOTAL, STYLES, load, reload, specOf, has, manifests, meta, allMeta, pageSections, demoPageTokens, artFor, signature, VERSION, AUTHOR };
