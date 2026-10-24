@@ -39,11 +39,10 @@
    --kg-gutter : marge entre le bord de la fenêtre et les barres (barre d'administration, fil d'Ariane) ;
    --kg-pad    : marge latérale du contenu ; --kg-max : largeur maximale d'une page de données (le contenu est CENTRÉ dans la zone de travail, après le menu) ;
    --kg-max-form : largeur maximale d'un formulaire / de réglages (classe .mk-content--form). Valeurs adaptées par largeur d'écran, jamais nulles. */
-:root { --kg-gutter: 24px; --kg-pad: 44px; --kg-max: 1600px; --kg-max-form: 1200px; }
-@media (min-width: 1700px) { :root { --kg-gutter: 32px; --kg-pad: 56px; } }
-@media (max-width: 1180px) { :root { --kg-gutter: 20px; --kg-pad: 32px; } }
-@media (max-width: 860px) { :root { --kg-gutter: 14px; --kg-pad: 20px; } }
-@media (max-width: 480px) { :root { --kg-gutter: 12px; --kg-pad: 16px; } }
+:root { --kg-gutter: 20px; --kg-pad: 24px; --kg-max: 2400px; --kg-max-form: 1280px; }
+@media (max-width: 1180px) { :root { --kg-gutter: 20px; --kg-pad: 20px; } }
+@media (max-width: 860px) { :root { --kg-gutter: 16px; --kg-pad: 16px; } }
+@media (max-width: 480px) { :root { --kg-gutter: 12px; --kg-pad: 12px; } }
 
 /* Focus (tout l'espace Marketing, y compris les fenêtres ajoutées au <body>) : toujours visible, jamais agressif.
    Boutons, liens, cases : anneau fin de 2 px. Champs de saisie : bordure d'accent + halo léger (voir « Champs de
@@ -57,7 +56,7 @@
 .mk-app { display: grid; grid-template-columns: var(--mk-sidebar-w) minmax(0, 1fr); min-height: 100vh; }
 html[data-sidebar="collapsed"] .mk-app { grid-template-columns: var(--mk-sidebar-w-collapsed) minmax(0, 1fr); }
 .mk-main { min-width: 0; display: flex; flex-direction: column; }
-.mk-content { padding: 32px var(--kg-pad) 72px; max-width: var(--kg-max); width: 100%; margin-inline: auto; box-sizing: border-box; }
+.mk-content { padding: 20px var(--kg-pad) 56px; max-width: var(--kg-max); width: 100%; margin-inline: auto; box-sizing: border-box; }
 .mk-content:focus { outline: 2px solid transparent; }
 
 /* ===== Menu latéral (clair, à la Mailchimp) ===== */

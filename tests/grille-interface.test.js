@@ -13,13 +13,13 @@ const MK = css("marketing.css"), UI = css("kola-ui.css"), BAR = css("adminbar.cs
 
 describe("grille : jetons et règles uniques (CSS)", () => {
   test("les jetons de la grille existent et s'adaptent à cinq largeurs d'écran, sans jamais valoir 0", () => {
-    assert.match(MK, /:root \{ --kg-gutter: 24px; --kg-pad: 44px; --kg-max: 1600px; --kg-max-form: 1200px; \}/);
-    for (const mq of ["(min-width: 1700px)", "(max-width: 1180px)", "(max-width: 860px)", "(max-width: 480px)"]) assert.ok(MK.includes(`@media ${mq} { :root { --kg-gutter:`), mq);
+    assert.match(MK, /:root \{ --kg-gutter: 20px; --kg-pad: 24px; --kg-max: 2400px; --kg-max-form: 1280px; \}/);
+    for (const mq of ["(max-width: 1180px)", "(max-width: 860px)", "(max-width: 480px)"]) assert.ok(MK.includes(`@media ${mq} { :root { --kg-gutter:`), mq);
     for (const [, v] of MK.matchAll(/--kg-(?:gutter|pad): (\d+)px/g)) assert.ok(Number(v) >= 12, `marge latérale trop petite : ${v}px`);
   });
   test("le contenu et la barre du haut lisent les jetons : plus de marge latérale fixe, ni de redéfinition par largeur", () => {
-    assert.match(MK, /\.mk-content \{ padding: 32px var\(--kg-pad\) 72px; max-width: var\(--kg-max\); width: 100%; margin-inline: auto;/);
-    assert.match(UI, /\.mk-content \{ padding: 28px var\(--kg-pad\) 80px; max-width: var\(--kg-max\); \}/);
+    assert.match(MK, /\.mk-content \{ padding: 20px var\(--kg-pad\) 56px; max-width: var\(--kg-max\); width: 100%; margin-inline: auto;/);
+    assert.match(UI, /\.mk-content \{ padding: 20px var\(--kg-pad\) 56px; max-width: var\(--kg-max\); \}/);
     assert.match(UI, /\.mk-content--form \{ max-width: var\(--kg-max-form\); \}/);
     for (const src of [MK, UI]) {
       assert.doesNotMatch(src, /\.mk-content \{[^}]*padding: \d+px \d+px/, "marge latérale fixe sur .mk-content");
