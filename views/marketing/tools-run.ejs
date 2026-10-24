@@ -8,6 +8,7 @@
   const rep = run.report || {};
   const an = rep.analysis;
   const TL = { pages: "Pages", taxonomies: "Catégories et étiquettes", articles: "Articles", menus: "Menus", redirects: "Redirections", media: "Médias (métadonnées)", seo: "Référencement", site: "Réglages du site", comments: "Commentaires" };
+  const SRC = { wordpress: "WordPress", flux: "Flux RSS / Atom", kolakisa: "Kolakisa" };
   const ACT = { create: "Créés", update: "Mis à jour", duplicate: "Copies", skip: "Ignorés", conflict: "Conflits", error: "Erreurs" };
 %>
 <section class="mk-panel" aria-labelledby="tl-r-h">
@@ -19,6 +20,10 @@
   <% } %>
   <% if (run.status === "failed") { %><p class="mk-ur-bad" role="alert"><%= run.message %></p><% } %>
   <% if (run.status === "cancelled") { %><p class="mk-sub"><%= run.message %></p><% } %>
+  <% if (mode === "import" && (run.options || {}).source && (run.options || {}).source !== "kolakisa" && ["failed", "cancelled"].includes(run.status)) { %>
+    <form method="post" action="<%= BASE %>/importer/<%= run.id %>/reprendre<%= run.site_id ? "?site=" + run.site_id : "" %>"><button type="submit" class="btn btn-primary btn-sm">Reprendre cet import</button>
+      <span class="mk-sub">Nouvelle analyse du même fichier : ce qui est déjà importé est reconnu (identifiant d'origine) et n'est pas recréé.</span></form>
+  <% } %>
 </section>
 
 <% if (mode === "export" && run.status === "done") { %>
@@ -33,7 +38,7 @@
 <% if (mode === "import" && an) { %>
 <section class="mk-panel" aria-labelledby="tl-a-h">
   <h2 id="tl-a-h">Rapport d'analyse <span class="mk-sub">(simulation : rien n'a été modifié)</span></h2>
-  <% if (rep.source && (rep.source.siteName || rep.source.exportedAt)) { %><p class="mk-sub">Fichier exporté depuis « <%= rep.source.siteName || "?" %> »<%= rep.source.exportedAt ? " le " + String(rep.source.exportedAt).slice(0, 10) : "" %>.</p><% } %>
+  <% if (rep.source && (rep.source.siteName || rep.source.exportedAt || rep.source.platform)) { %><p class="mk-sub">Source : <%= SRC[rep.source.platform] || "Kolakisa" %><%= rep.source.version ? " (" + rep.source.version + ")" : "" %> — « <%= rep.source.siteName || "?" %> »<%= rep.source.exportedAt ? ", exporté le " + String(rep.source.exportedAt).slice(0, 10) : "" %>.</p><% } %>
   <div class="mk-table-wrap"><table class="mk-table mk-datatable">
     <caption class="sr-only">Ressources détectées par type</caption>
     <thead><tr><th scope="col">Type</th><th scope="col" class="mk-num">Détectés</th><% Object.entries(ACT).forEach(([k, l]) => { %><th scope="col" class="mk-num"><%= l %></th><% }) %></tr></thead>
@@ -51,17 +56,36 @@
   <% } %>
   <% if (an.blocked) { %><p class="mk-ur-bad" role="alert">Des conflits existent et la stratégie choisie est « tout arrêter » : relancez l'analyse avec une autre stratégie.</p>
   <% } else if (run.status === "awaiting") { %>
+    <% const ext = (run.options || {}).source && (run.options || {}).source !== "kolakisa"; const extras = rep.extras || {}; %>
+    <% if (ext) { %>
+      <% if ((extras.unsupported || []).length) { %>
+        <h3>Éléments non convertibles fidèlement</h3>
+        <ul class="mk-tl-list"><% extras.unsupported.forEach((u) => { %><li><strong><%= u.label %></strong> : <%= u.count %><% if (u.detail && u.detail.length) { %> <span class="mk-sub">(<%= u.detail.map((d) => d.name + " ×" + d.count).join(", ") %>)</span><% } %></li><% }) %></ul>
+      <% } %>
+      <p class="mk-sub">Options : <%= (run.options || {}).downloadMedia ? "médias téléchargés depuis la source" : "médias NON téléchargés (liens conservés)" %> · <%= (run.options || {}).keepPublished ? "publication des articles qui l'étaient (si vous en avez le droit)" : "tout arrive en brouillon" %> · destination : <%= run.site_id ? "ce site" : "site principal" %>.</p>
+    <% } %>
     <form method="post" action="<%= BASE %>/importer/<%= run.id %>/confirmer<%= run.site_id ? "?site=" + run.site_id : "" %>" class="mk-tl-form">
-      <div class="mk-tl-option"><input type="checkbox" id="tl-confirm" name="confirm" value="1" required><label for="tl-confirm">J'ai lu le rapport : je confirme l'import (stratégie : <%= STRATEGIES[(run.options || {}).onConflict] %>). Les pages et articles seront créés en brouillon.</label></div>
+      <% if (ext) { %>
+      <fieldset class="mk-tl-fieldset"><legend>Correspondance des auteurs</legend>
+        <p class="mk-sub">Aucun compte n'est créé : associez chaque auteur de la source à un compte existant de l'équipe. Les mots de passe ne sont jamais importés.</p>
+        <% (extras.authors || []).forEach((a, i) => { %>
+          <div class="field-group"><input type="hidden" name="author_key_<%= i %>" value="<%= a.key %>"><label for="im-au-<%= i %>"><%= a.name %><% if (a.email) { %> <span class="mk-sub">(<%= a.email %>)</span><% } %></label>
+            <select id="im-au-<%= i %>" name="author_<%= i %>"><option value="">Auteur par défaut</option><% authorsList.forEach((u) => { %><option value="<%= u.id %>"><%= u.username %></option><% }) %></select></div>
+        <% }) %>
+        <div class="field-group"><label for="im-au-def">Auteur par défaut (contenus sans correspondance)</label><select id="im-au-def" name="default_author"><% authorsList.forEach((u) => { %><option value="<%= u.id %>"<%= u.id === me ? " selected" : "" %>><%= u.username %></option><% }) %></select></div>
+      </fieldset>
+      <% } %>
+      <div class="mk-tl-option"><input type="checkbox" id="tl-confirm" name="confirm" value="1" required><label for="tl-confirm">J'ai lu le rapport : je confirme l'import (stratégie : <%= STRATEGIES[(run.options || {}).onConflict] %>). Les pages et articles sont créés en brouillon sauf demande contraire ; rien n'est supprimé ni remplacé.</label></div>
       <button type="submit" class="btn btn-primary btn-sm">Lancer l'import</button>
     </form>
   <% } %>
 </section>
 <% } %>
 
-<% if (mode === "import" && run.phase === "apply" && ["done", "cancelled"].includes(run.status) && rep.per) { %>
+<% if (mode === "import" && run.phase === "apply" && ["done", "cancelled", "failed"].includes(run.status) && rep.per) { %>
 <section class="mk-panel" aria-labelledby="tl-f-h">
   <h2 id="tl-f-h">Résultat de l'import</h2>
+  <p class="mk-sub"><%= run.status === "done" && !Object.values(rep.per).some((c) => c.failed) ? "Import terminé sans erreur." : run.status === "done" ? "Import terminé AVEC des échecs : voir ci-dessous." : "Import interrompu : ce rapport montre ce qui a été fait avant l'arrêt." %> <a href="<%= BASE %>/importer/<%= run.id %>/rapport.json<%= run.site_id ? "?site=" + run.site_id : "" %>">Télécharger le rapport détaillé (JSON)</a></p>
   <div class="mk-table-wrap"><table class="mk-table mk-datatable">
     <caption class="sr-only">Résultat par type</caption>
     <thead><tr><th scope="col">Type</th><th scope="col" class="mk-num">Importés</th><th scope="col" class="mk-num">Mis à jour</th><th scope="col" class="mk-num">Ignorés</th><th scope="col" class="mk-num">Échecs</th></tr></thead>
@@ -72,7 +96,7 @@
   <% } %>
   <details><summary>Détail de chaque élément (<%= (rep.results || []).length %>)</summary>
     <ul class="mk-tl-list"><% (rep.results || []).slice(0, 200).forEach((r) => { %><li><%= TL[r.type] || r.type %> — <%= r.label %> : <%= { created: "créé", updated: "mis à jour", skipped: "ignoré", failed: "échec" }[r.result] || r.result %><%= r.message ? " (" + r.message + ")" : "" %></li><% }) %></ul></details>
-  <% if (!undone && rep.created && (rep.created.pages.length || rep.created.articles.length || rep.created.menus.length || rep.created.redirects.length || rep.created.taxonomies.length)) { %>
+  <% if (!undone && rep.created && (rep.created.pages.length || rep.created.articles.length || rep.created.menus.length || rep.created.redirects.length || rep.created.taxonomies.length || (rep.created.comments || []).length || (rep.created.media || []).length)) { %>
     <form method="post" action="<%= BASE %>/importer/<%= run.id %>/defaire<%= run.site_id ? "?site=" + run.site_id : "" %>" class="mk-tl-form">
       <h3>Annuler cet import</h3>
       <p class="mk-sub">Met à la corbeille les pages et articles créés, supprime les menus, redirections et termes créés. Ce qui existait avant n'est jamais touché ; les mises à jour d'éléments existants se retrouvent dans l'Historique.</p>

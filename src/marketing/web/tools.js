@@ -230,12 +230,8 @@ module.exports = () => {
   });
 
   // ----- Import -----
-  router.get("/site-web/outils/importer", need("tools.import"), (req, res) => withSite(req, res, (siteId) => {
-    const ctx = toolsCtx(req);
-    const allowed = exporter.allowedTypes(ctx, { siteId, mode: "import" });
-    const types = exporter.ORDER.filter((t) => exporter.TYPES[t].write).map((t) => ({ key: t, label: exporter.TYPES[t].label, scope: exporter.TYPES[t].scope, allowed: allowed.includes(t) }));
-    res.render("marketing/tools-import", { title: "Importer", active: "outils", ...shell(req, siteId, "importer"), types, STRATEGIES: importer.STRATEGIES, maxMb: importer.MAX_BYTES / 1048576, canOverwrite: req.mk.can("tools.overwrite"), recent: runs.list(ctx.organizationId, "import", { limit: 8 }) });
-  }));
+  // Catalogue, parcours par importateur, détails, activation, reprise et rapport : src/marketing/web/importers.js (registre réel des importateurs ; même moteur d'import)
+  router.use(require("./importers")({ BASE, withSite, shell, toolsCtx, q, flash, siteOf, typesOf, loadRun, publicRun }));
   router.post("/site-web/outils/importer", need("tools.import"), (req, res, next) => {
     upload.single("file")(req, res, (uploadError) => {
       const s = siteOf(req);
@@ -260,7 +256,7 @@ module.exports = () => {
     const r = loadRun(req, res, "import");
     if (!r) return;
     const undone = Boolean(require("../../config/database").prepare("SELECT 1 FROM cms_tool_runs WHERE kind = 'import-undo' AND organization_id = ? AND options LIKE ?").get(req.mk.ctx.organizationId, `%"of":${r.run.id}%`));
-    res.render("marketing/tools-run", { title: "Import", active: "outils", ...shell(req, r.run.site_id, "importer"), run: r.run, run_pub: publicRun(r.run), mode: "import", STRATEGIES: importer.STRATEGIES, TYPES: exporter.TYPES, undone });
+    res.render("marketing/tools-run", { title: "Import", active: "outils", ...shell(req, r.run.site_id, "importer"), run: r.run, run_pub: publicRun(r.run), mode: "import", STRATEGIES: importer.STRATEGIES, TYPES: exporter.TYPES, undone, authorsList: require("./importers").eligibleAuthors(req.mk.ctx.db), me: req.session.user.id });
   });
   router.post("/site-web/outils/importer/:id(\\d+)/confirmer", need("tools.import"), (req, res, next) => {
     const r = loadRun(req, res, "import");

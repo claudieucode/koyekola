@@ -27,12 +27,13 @@ const TYPES = {
 const ORDER = ["site", "settings", "taxonomies", "pages", "articles", "menus", "redirects", "media", "seo", "comments", "contacts"];
 
 // Types qu'une personne peut exporter / importer pour CE site : droit « tools.* » + droit de la ressource + portée
-function allowedTypes(ctx, { siteId = null, mode = "export" } = {}) {
+function allowedTypes(ctx, { siteId = null, mode = "export", external = false } = {}) {
   const gate = mode === "export" ? "tools.export" : "tools.import";
   if (!ctx.can(gate)) return [];
   return ORDER.filter((t) => {
     const m = TYPES[t];
     if (m.needsSite && siteId === null) return false;
+    if (mode === "import" && external && t === "comments") return Boolean(ctx.orgLevel && ctx.can("comments.moderate")); // sources externes seulement : l'import natif ne reprend jamais de commentaires
     if (mode === "import" && !m.write) return false;
     if (m.mainOk && siteId === null && !ctx.orgLevel) return false; // réglages du site principal : équipe de l'organisation seulement
     if (m.sensitive && !ctx.can("contacts.view_sensitive")) return false;

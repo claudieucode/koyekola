@@ -1,0 +1,30 @@
+<%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Importer · " + imp.name, intro: imp.description, tab, TABS, BASE, sites, siteId, q, siteOnly }) %>
+<p><a href="<%= BASE %>/importer<%= q %>">&larr; Retour aux importateurs</a></p>
+<nav class="mk-tabs" aria-label="Sens de la conversion"><% Object.entries(DIRECTIONS).forEach(([k, d]) => { %><a class="mk-tab" href="<%= BASE %>/importer/convertisseur<%= siteId ? "?site=" + siteId + "&" : "?" %>sens=<%= k %>"<%- direction === k ? ' aria-current="page"' : "" %>><%= d.label %></a><% }) %></nav>
+<% if (plan) { %>
+<section class="mk-panel" aria-labelledby="cv-plan"><h2 id="cv-plan">Conséquences — rien n'est encore modifié</h2>
+  <ul class="mk-tl-list"><% plan.forEach((p) => { %><li><span class="mk-status <%= p.action === "refuse" ? "mk-status-bad" : p.action === "merge" ? "mk-status-warn" : "mk-status-ok" %>"><%= { convert: "Converti", merge: "Fusionné", refuse: "Refusé" }[p.action] %></span> <strong><%= p.name %></strong> — <%= p.reason %></li><% }) %></ul>
+  <% if (!plan.some((p) => p.action === "refuse")) { %>
+  <form method="post" action="<%= BASE %>/importer/convertisseur<%= q %>" class="mk-tl-form">
+    <input type="hidden" name="sens" value="<%= direction %>"><% plan.forEach((p) => { %><input type="hidden" name="ids" value="<%= p.id %>"><% }) %>
+    <label class="mk-er-check" for="cv-ok"><input type="checkbox" id="cv-ok" name="confirm" value="1" required> Je confirme cette conversion (les articles associés conservent leur lien).</label>
+    <button type="submit" class="btn btn-primary btn-sm">Convertir</button>
+  </form>
+  <% } else { %><p class="mk-er-bad" role="alert">Retirez les termes refusés de la sélection pour continuer.</p><% } %>
+</section>
+<% } %>
+<section class="mk-panel" aria-labelledby="cv-list"><h2 id="cv-list"><%= DIRECTIONS[direction].label %></h2>
+  <% if (!terms.length) { %><p class="mk-sub">Aucun terme à convertir dans ce sens pour ce site.</p><% } else { %>
+  <form method="post" action="<%= BASE %>/importer/convertisseur<%= q %>" class="mk-tl-form">
+    <input type="hidden" name="sens" value="<%= direction %>">
+    <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Termes convertibles</caption>
+      <thead><tr><th scope="col" class="mk-col-check"><span class="sr-only">Sélection</span></th><th scope="col">Nom</th><th scope="col" class="mk-num">Contenus</th><th scope="col">Remarque</th></tr></thead>
+      <tbody><% terms.forEach((t) => { %><tr><td class="mk-col-check"><input type="checkbox" name="ids" value="<%= t.id %>" id="cv-<%= t.id %>"<%= picked.includes(t.id) ? " checked" : "" %><%= t.children ? " disabled" : "" %> aria-label="Convertir <%= t.name %>"></td>
+        <td><label for="cv-<%= t.id %>"><%= t.name %></label> <span class="mk-sub">/<%= t.slug %></span></td><td class="mk-num"><%= t.uses %></td><td><%= t.children ? "A des sous-catégories : non convertible" : "" %></td></tr><% }) %></tbody>
+    </table></div>
+    <button type="submit" class="btn btn-outline btn-sm">Voir les conséquences</button>
+  </form>
+  <% } %>
+</section>
+<%- include("partials/bottom") %>

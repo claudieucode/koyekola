@@ -457,3 +457,18 @@ html[data-kola-theme="dark"] { --k-tip-bg: #e8eef6; --k-tip-fg: #0b1626; --k-tip
 .mk-er-filters a { white-space: nowrap; }
 .mk-er-count { display: inline; color: var(--text-muted, #5b667d); font-size: 13px; }
 .mk-er-scope { border-left: 4px solid var(--navy, #14284b); }
+
+/* ===== Outils → Importer (.mk-im*) ===== */
+.mk-im-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.mk-im-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 24px; padding: 16px 4px; border-top: 1px solid var(--border, #d8deea); }
+.mk-im-row:first-child { border-top: 0; }
+.mk-im-row h3 { margin: 0 0 4px; font-size: 16px; }
+.mk-im-row p { margin: 0 0 8px; }
+.mk-im-kind { font-size: 12px; font-weight: 500; color: var(--text-muted, #5b667d); margin-left: 8px; }
+.mk-im-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.mk-im-actions form { margin: 0; }
+.mk-im-link { background: none; border: 0; padding: 0; color: var(--navy, #14284b); text-decoration: underline; cursor: pointer; font: inherit; }
+.mk-im-state { display: grid; gap: 4px; justify-items: end; align-content: start; text-align: right; }
+.mk-im-unsupported { margin: 8px 0; padding-left: 18px; }
+.mk-im-consent { margin: 8px 0 0 24px; padding: 8px 12px; border-radius: 8px; background: var(--warning-bg, #fff6e0); color: var(--warning-text, #6b4a00); }
+@media (max-width: 720px) { .mk-im-row { grid-template-columns: 1fr; } .mk-im-state { justify-items: start; text-align: left; } }
