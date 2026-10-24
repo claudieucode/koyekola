@@ -12,6 +12,14 @@
   const pageHref = (n) => { const p = new URLSearchParams(query || {}); p.set("page", n); return "?" + p; };
   const cellOf = (c) => (c !== null && typeof c === "object" ? c : { text: String(c ?? "") });
 %>
+    <% const heroArt = typeof art !== "undefined" && art ? art : null; const isDash = typeof dashboard !== "undefined" && Boolean(dashboard); %>
+    <% if (isDash) { %>
+      <%- include("partials/kx-dashboard", { stats, table: typeof table !== "undefined" ? table : null, activity: typeof activity !== "undefined" ? activity : null, quick, shortcuts, siteName, lead, note: typeof note !== "undefined" ? note : null }) %>
+    <% } else if (heroArt) { %><%- include("partials/kx-hero-open", { title, lead: typeof lead !== "undefined" ? lead : "", eyebrow: typeof siteSpace !== "undefined" && siteSpace ? siteSpace.name : "" }) %>
+      <% if (typeof newPage !== "undefined" && newPage) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Nouvelle page</button><% } %>
+      <% if (typeof actions !== "undefined" && actions && actions.length) { %><% actions.forEach((a) => { %><% if (a.disabled) { %><button type="button" class="btn btn-outline btn-sm" disabled title="<%= a.title || soonTitle %>"><%= a.label %></button><% } else { %><a class="btn <%= a.variant === 'primary' ? 'btn-primary' : 'btn-outline' %> btn-sm" href="<%= a.href %>"><%= a.label %></a><% } %><% }) %><% } %>
+    <%- include("partials/kx-hero-close", { art: heroArt }) %>
+    <% } else { %>
     <div class="mk-head">
       <div class="mk-head-main"><h1><%= title %></h1></div>
       
@@ -24,7 +32,8 @@
     </div>
     <% if (typeof lead !== "undefined" && lead) { %><p class="mk-lead"><%= lead %></p><% } %>
 
-    <% if (typeof note !== "undefined" && note) { %>
+    <% } %>
+    <% if (!isDash && typeof note !== "undefined" && note) { %>
       <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><%= note %></p></div>
     <% } %>
     <% if (typeof newPage !== "undefined" && newPage) { %><%- include("partials/new-page-dialog", newPage) %><% } %>
@@ -56,13 +65,13 @@
       </form>
     <% } %>
 
-    <% if (typeof stats !== "undefined" && stats) { %>
+    <% if (!isDash && typeof stats !== "undefined" && stats) { %>
       <div class="mk-stats mk-stats-4"><% stats.forEach((s) => { %>
         <a class="mk-stat mk-cms-stat" href="<%= s.href %>"><span class="mk-stat-label"><%= s.label %></span><span class="mk-stat-value"><%= s.value === null || s.value === undefined ? "—" : mkh.fmt(s.value) %></span><% if (s.hint) { %><span class="mk-stat-hint"><%= s.hint %></span><% } %></a>
       <% }) %></div>
     <% } %>
 
-    <% if (typeof activity !== "undefined" && activity) { %>
+    <% if (!isDash && typeof activity !== "undefined" && activity) { %>
       <section class="mk-panel" aria-labelledby="cms-activity"><h2 id="cms-activity">Activité récente</h2>
         <% if (activity.unavailable) { %><p class="field-hint">Le journal d'activité est momentanément indisponible.</p>
         <% } else if (!activity.rows.length) { %><p class="field-hint">Aucune activité enregistrée pour ce site.</p>
@@ -85,12 +94,10 @@
       </div>
     <% } %>
 
-    <% if (typeof table !== "undefined" && table) { %>
+    <% if (!isDash && typeof table !== "undefined" && table) { %>
       <% if (!rowsAll.length) { %>
-        <div class="mk-empty"><%- icon(table.empty.icon || "inbox", { size: 32 }) %><% if (table.empty.title) { %><h2><%= table.empty.title %></h2><% } %>
-          <% if (table.empty.text) { %><p><%= table.empty.text %></p><% } %>
-          <% if (table.empty.cta) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="<%= table.empty.cta.href %>"><%= table.empty.cta.label %></a></div><% } %></div>
-        <div class="mk-table-wrap mk-cms-ghost" aria-hidden="true"><table class="mk-table"><thead><tr><% table.columns.forEach((c) => { %><th scope="col"<%- c.num ? ' class="mk-num"' : "" %>><%= c.label %></th><% }) %></tr></thead></table></div>
+        <% const emptyArt = table.empty.art || table.empty.icon || "recherche"; const sameAsHero = heroArt && illu(emptyArt) === illu(heroArt); %>
+        <%- include("partials/kx-empty", { art: sameAsHero ? null : emptyArt, compact: Boolean(heroArt), title: table.empty.title || "Rien à afficher", text: table.empty.text || "", primary: table.empty.cta ? { label: table.empty.cta.label, href: table.empty.cta.href } : null }) %>
       <% } else { %>
         <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
           <caption class="sr-only"><%= table.caption %></caption>

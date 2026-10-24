@@ -7,12 +7,18 @@
   const dismissKey = (k) => "mk_th_dismiss_" + (T.siteId || "principal") + "_" + k;
 %>
 <div class="mk-th" data-th-root>
-  <div class="mk-th-head">
-    <h1>Thèmes <span class="mk-th-count" aria-label="<%= all.length %> thème<%= all.length > 1 ? "s" : "" %> installé<%= all.length > 1 ? "s" : "" %>"><%= all.length %></span></h1>
-    <% if (canInstall && !readOnly) { %><a class="btn btn-outline btn-sm" href="<%= to("/ajouter") %>">Ajouter un thème</a><% } %>
-    <button type="button" class="btn btn-ghost btn-sm mk-th-help-btn" aria-expanded="false" aria-controls="th-help" data-th-toggle>Aide <span aria-hidden="true">▾</span></button>
-  </div>
-  <p class="mk-th-site">Site : <strong><%= T.name %></strong> · chaque site a ses propres thèmes installés et son propre thème actif.</p>
+  <header class="kx-hero is-compact mk-th-head">
+    <div class="kx-hero-body">
+      <p class="kx-eyebrow"><%= T.name %></p>
+      <h1>Thèmes <span class="mk-th-count" aria-label="<%= all.length %> thème<%= all.length > 1 ? "s" : "" %> installé<%= all.length > 1 ? "s" : "" %>"><%= all.length %></span></h1>
+      <p class="kx-hero-lead mk-th-site">Site : <strong><%= T.name %></strong> · chaque site a ses propres thèmes installés et son propre thème actif.</p>
+      <div class="kx-hero-actions mk-actions">
+        <% if (canInstall && !readOnly) { %><a class="btn btn-primary btn-sm" href="<%= to("/ajouter") %>"><%- icon("plus", { size: 16 }) %>Ajouter un thème</a><% } %>
+        <button type="button" class="btn btn-outline btn-sm mk-th-help-btn" aria-expanded="false" aria-controls="th-help" data-th-toggle>Aide <span aria-hidden="true">▾</span></button>
+      </div>
+    </div>
+    <div class="kx-hero-art" aria-hidden="true"><%- illu("themes") %></div>
+  </header>
   <section id="th-help" class="mk-th-panel" hidden aria-label="Aide">
     <p>Un thème change l'apparence du site public : couleurs, polices, boutons, rayons et ombres. Vos pages, articles et médias ne sont jamais modifiés.</p>
     <ul>

@@ -16,7 +16,7 @@
       <a class="mk-tab" href="/marketing/sms/abonnes?statut=unsubscribed"<%- filter === "unsubscribed" ? ' aria-current="page"' : "" %>>Désinscrits</a>
     </nav>
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("smartphone", { size: 32 }) %><h2><%= filter === "subscribed" ? "Aucun abonné SMS pour l'instant" : "Aucun désinscrit" %></h2></div>
+      <div class="mk-empty"><%- illu("smartphone", { className: "kx-empty-ill" }) %><h2><%= filter === "subscribed" ? "Aucun abonné SMS pour l'instant" : "Aucun désinscrit" %></h2></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table">
         <caption class="sr-only"><%= filter === "subscribed" ? "Abonnés SMS" : "Désinscrits des SMS" %></caption>

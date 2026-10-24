@@ -37,14 +37,14 @@
     <% if (!lists.length) { %>
       <% if (hasQuery) { %>
         <div class="mk-empty">
-          <%- icon("search", { size: 32 }) %>
+          <%- illu("search", { className: "kx-empty-ill" }) %>
           <h2>Aucune liste ne correspond</h2>
           <p>Aucune liste ne correspond à « <%= q %> ». Essayez un autre terme ou réinitialisez la recherche.</p>
           <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/listes">Réinitialiser la recherche</a></div>
         </div>
       <% } else { %>
         <div class="mk-empty">
-          <%- icon("list", { size: 32 }) %>
+          <%- illu("list", { className: "kx-empty-ill" }) %>
           <h2>Aucune liste pour le moment</h2>
           <p>Créez votre première liste pour organiser vos contacts. Exemples : Newsletter, Participants au webinaire, Clients, Prospects, VIP.</p>
           <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une liste</button></div><% } %>

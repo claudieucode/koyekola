@@ -14,7 +14,7 @@
 
     <% if (c.sent === 0) { %>
       <div class="mk-empty">
-        <%- icon("activity", { size: 32 }) %>
+        <%- illu("activity", { className: "kx-empty-ill" }) %>
         <h2>Aucun envoi sur cette période</h2>
         <p>Lancez une campagne ou activez un scénario pour voir apparaître ici les taux d'ouverture, de clic et de rebond.</p>
         <% if (mk.can("campaigns.write")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle">Créer une campagne</a></div><% } %>

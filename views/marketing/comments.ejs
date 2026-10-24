@@ -61,7 +61,7 @@
     </div>
 
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("inbox", { size: 32 }) %><h2><%= filtered ? "Aucun commentaire trouvé" : empties[key] %></h2>
+      <div class="mk-empty"><%- illu("inbox", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucun commentaire trouvé" : empties[key] %></h2>
         <p><%= filtered ? "Aucun commentaire ne correspond à ces critères." : key === "" ? "Les commentaires laissés sous vos articles apparaîtront ici." : "" %></p></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-cm-table">

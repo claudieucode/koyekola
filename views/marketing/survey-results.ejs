@@ -3,7 +3,7 @@
     <p class="mk-back"><a href="/marketing/sondages/<%= S.id %>">← <%= S.name %></a></p>
     <div class="mk-head">
       <div class="mk-head-main"><h1>Résultats</h1><p class="mk-head-sub"><strong><%= mkh.fmt(r.total) %></strong> réponse<%= r.total > 1 ? "s" : "" %>, dont <%= mkh.fmt(r.known) %> de contacts identifiés (lien personnel ou adresse donnée) et <%= mkh.fmt(r.total - r.known) %> anonyme<%= r.total - r.known > 1 ? "s" : "" %>.</p></div><% if (canExport && r.total) { %><a class="btn btn-outline btn-sm" href="/marketing/sondages/<%= S.id %>/export.csv">Exporter (CSV)</a><% } %></div>
-    <% if (!r.total) { %><div class="mk-empty"><%- icon("listChecks", { size: 32 }) %><h2>Aucune réponse pour l'instant</h2><p>Partagez le lien du sondage ou insérez un bloc « Sondage » dans une campagne.</p></div><% } %>
+    <% if (!r.total) { %><div class="mk-empty"><%- illu("listChecks", { className: "kx-empty-ill" }) %><h2>Aucune réponse pour l'instant</h2><p>Partagez le lien du sondage ou insérez un bloc « Sondage » dans une campagne.</p></div><% } %>
     <% r.questions.forEach((q) => { %>
       <section class="mk-panel mk-sv-q" aria-labelledby="sv-r<%= q.index %>">
         <h2 id="sv-r<%= q.index %>"><%= q.index + 1 %>. <%= q.text %></h2>

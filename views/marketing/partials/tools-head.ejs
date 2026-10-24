@@ -1,6 +1,8 @@
 <%# En-tête commun des outils (palier 13) : titre, onglets (selon les droits) et choix du site. Paramètres : heading, intro, tab, TABS, BASE, sites, siteId, siteOnly, noSite. %>
-<div class="mk-head"><h1><%= heading %></h1></div>
-<% if (typeof intro !== "undefined" && intro) { %><p class="mk-lead"><%= intro %></p><% } %>
+<% const TOOL_ART = { "": "diagnostic", diagnostic: "diagnostic", sauvegardes: "sauvegardes", "sauvegarde-site": "sauvegardes", importer: "echanges", exporter: "echanges", systeme: "outils", maintenance: "outils", cache: "outils", contenu: "outils" }; const toolArt = TOOL_ART[tab]; %>
+<% if (toolArt) { %><%- include("kx-hero-open", { eyebrow: "Outils", title: heading, lead: typeof intro !== "undefined" ? intro : "", compact: true }) %><%- include("kx-hero-close", { art: toolArt }) %>
+<% } else { %><div class="mk-head"><h1><%= heading %></h1></div>
+<% if (typeof intro !== "undefined" && intro) { %><p class="mk-lead"><%= intro %></p><% } %><% } %>
 <nav class="mk-tabs mk-cms-tabs mk-tl-tabs" aria-label="Outils">
   <% TABS.forEach(([key, label]) => { %><a class="mk-tab" href="<%= BASE %><%= key ? "/" + key : "" %><%= q %>"<%- tab === key ? ' aria-current="page"' : "" %>><%= label %></a><% }) %>
 </nav>

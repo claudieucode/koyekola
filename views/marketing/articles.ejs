@@ -103,7 +103,7 @@
     </div>
 
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("fileText", { size: 32 }) %><h2><%= filtered ? "Aucun article trouvé" : inTrash ? "La corbeille est vide" : state === "toutes" ? "Aucun article" : "Aucun article dans cet état" %></h2>
+      <div class="mk-empty"><%- illu("fileText", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucun article trouvé" : inTrash ? "La corbeille est vide" : state === "toutes" ? "Aucun article" : "Aucun article dans cet état" %></h2>
         <p><%= filtered ? "Aucun article ne correspond à ces critères." : inTrash ? "Les articles mis à la corbeille apparaissent ici ; vous pouvez les restaurer." : state === "toutes" ? "Créez votre premier article pour commencer." : "Rien à afficher pour l'instant." %></p>
         <% if (canWrite && isCreator && !inTrash && !filtered && state === "toutes") { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/site-web/articles/ajouter<%= siteQ %>">Ajouter un article</a></div><% } %></div>
     <% } else { %>

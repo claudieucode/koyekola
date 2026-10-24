@@ -7,7 +7,7 @@
 
     <% if (!items.length) { %>
       <div class="mk-empty">
-        <%- icon("layout", { size: 32 }) %>
+        <%- illu("layout", { className: "kx-empty-ill" }) %>
         <h2>Aucun formulaire</h2>
         <p>Créez-en un pour récolter des inscriptions depuis une adresse publique, avec preuve de consentement.</p>
         <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un formulaire</button></div><% } %>

@@ -21,7 +21,7 @@
       <button type="submit" class="btn btn-outline btn-sm">Rechercher</button><% if (q) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "" }) %>">Réinitialiser</a><% } %>
     </form>
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("trash", { size: 32 }) %><h2><%= q ? "Aucun résultat." : "La corbeille est vide." %></h2><p><%= q ? "Aucun élément supprimé ne correspond." : "Les éléments que vous supprimez apparaissent ici." %></p></div>
+      <div class="mk-empty"><%- illu("trash", { className: "kx-empty-ill" }) %><h2><%= q ? "Aucun résultat." : "La corbeille est vide." %></h2><p><%= q ? "Aucun élément supprimé ne correspond." : "Les éléments que vous supprimez apparaissent ici." %></p></div>
     <% } else { %>
       <form id="tr-bulk" class="mk-cms-bulk" action="<%= TRASH %>/actions" method="post" data-cms-bulk data-cms-noun="élément" data-cms-delete-text="Cette action est irréversible : ils ne pourront pas être récupérés.">
         <input type="hidden" name="retour" value="<%= here %>">

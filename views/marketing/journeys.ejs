@@ -62,7 +62,7 @@
     <% } %>
 
     <% if (!lib.entries.length) { %>
-      <div class="mk-empty"><%- icon("search", { size: 32 }) %>
+      <div class="mk-empty"><%- illu("search", { className: "kx-empty-ill" }) %>
         <h2><%= q.vue === "favoris" ? "Aucun favori pour le moment" : q.vue === "recents" ? "Aucun parcours utilisé pour le moment" : "Aucun parcours ne correspond" %></h2>
         <p><%= q.vue === "favoris" ? "Cliquez sur l'étoile d'un parcours pour le retrouver ici." : q.vue === "recents" ? "Les parcours que vous créez avec « Utiliser ce parcours » apparaissent ici." : "Essayez un autre mot, ou retirez un filtre." %></p>
         <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= q.vue === "tous" ? base : link({ vue: "tous" }) %>"><%= q.vue === "tous" ? "Réinitialiser les filtres" : "Voir tous les parcours" %></a></div>

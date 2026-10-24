@@ -12,7 +12,7 @@
     <% } %>
 
     <% if (!keys.length) { %>
-      <div class="mk-empty"><%- icon("plug", { size: 32 }) %><h2>Aucune clé d'API</h2><p>Créez-en une pour brancher un outil externe (formulaire, automatisation, tableur…) à vos contacts et vos événements.</p>
+      <div class="mk-empty"><%- illu("plug", { className: "kx-empty-ill" }) %><h2>Aucune clé d'API</h2><p>Créez-en une pour brancher un outil externe (formulaire, automatisation, tableur…) à vos contacts et vos événements.</p>
         <div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une clé</button></div></div>
     <% } else { %>
       <div class="mk-table-wrap">

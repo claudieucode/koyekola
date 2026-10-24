@@ -79,7 +79,7 @@
     <% } %>
 
     <% if (!sites.length) { %>
-      <div class="mk-empty"><%- icon("globe", { size: 32 }) %>
+      <div class="mk-empty"><%- illu("globe", { className: "kx-empty-ill" }) %>
         <h2><%= q ? "Aucun site ne correspond à « " + q + " »" : VIDE[view] %></h2>
         <p><%= q ? "Essayez un autre mot, ou changez de filtre." : view === "supprimes" ? "Un site supprimé reste ici, récupérable." : view === "archives" ? "Un site archivé a ses pages hors ligne ; rien n'est effacé." : "Créez votre premier site : vous y rattacherez des pages et réglerez son design system." %></p>
         <% if (canWrite && !q && (view === "actifs" || view === "tous")) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button></div><% } %></div>

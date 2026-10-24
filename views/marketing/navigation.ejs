@@ -2,12 +2,12 @@
   KOLAKISA CMS → Navigation (palier 7). Liste des menus (éléments, liens à réparer, emplacements) et choix du menu affiché à chaque
   emplacement du site. Aucune donnée simulée : tout vient des tables nav_menus / nav_items / nav_locations.
 %><%- include("partials/top", { title, active }) %>
-    <div class="mk-head">
-      <div class="mk-head-main"><h1>Navigation</h1><p class="mk-head-sub">Les menus du site : en-tête, pied de page, menu mobile. Un menu pointe vers vos pages, articles, catégories et étiquettes par référence : si une adresse change, le lien suit. Sans menu affecté à un emplacement, le site garde son affichage d'origine.</p></div>
-      <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Nouveau menu</button></div><% } %></div>
+    <%- include("partials/kx-hero-open", { title: "Navigation", lead: "Les menus du site : en-tête, pied de page, menu mobile. Un menu pointe vers vos pages, articles, catégories et étiquettes par référence : si une adresse change, le lien suit. Sans menu affecté à un emplacement, le site garde son affichage d'origine.", compact: true }) %>
+      <% if (canWrite) { %><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu"><%- icon("plus", { size: 16 }) %>Nouveau menu</button><% } %>
+    <%- include("partials/kx-hero-close", { art: "navigation" }) %>
 
     <% if (!menus.length) { %>
-      <div class="mk-empty"><%- icon("menu", { size: 32 }) %><h2>Aucun menu.</h2>
+      <div class="mk-empty"><%- illu("menu", { className: "kx-empty-ill" }) %><h2>Aucun menu.</h2>
         <p>Créez un menu vide, ou reprenez les liens actuels de l'en-tête et du pied de page du site pour partir d'une base réelle.</p>
         <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Nouveau menu</button>
           <form action="<%= BASE %>/importer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Créer à partir du site actuel</button></form></div><% } %></div>

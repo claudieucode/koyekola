@@ -61,7 +61,7 @@
         <% if (f.q) { %><p class="mk-ar-found">Résultats de recherche pour : <strong><%= f.q %></strong></p><% } %>
 
         <% if (!rows.length) { %>
-          <div class="mk-empty"><%- icon("tag", { size: 32 }) %><h2><%= filtered ? "Aucun résultat" : key === "tag" ? "Aucun tag" : "Aucune catégorie" %></h2>
+          <div class="mk-empty"><%- illu("tag", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucun résultat" : key === "tag" ? "Aucun tag" : "Aucune catégorie" %></h2>
             <p><%= filtered ? "Aucune " + one + " ne correspond à ces critères." : key === "tag" ? "Aucune étiquette pour l'instant : elles se créent ici ou directement dans l'éditeur d'un article." : "Aucune catégorie pour l'instant : créez la première avec le formulaire, puis ses sous-catégories." %></p></div>
         <% } else { %>
           <form id="tx-bulk" action="/marketing/site-web/articles/termes/actions" method="post" data-tx-bulk data-cms-noun="<%= one %>"><%- typeof mkSiteField === "string" ? mkSiteField : "" %>

@@ -95,3 +95,46 @@ Tests : voir le rapport de livraison (section « Tests »).
 - **Rail « Mon espace »** (barre d'icônes à gauche) : conservé, seulement affiné (rayons, trait).
 - **Écrans que je n'ai pas pu exercer avec des données** : certaines vues ne se remplissent qu'avec des intégrations externes (envoi réel, réseaux sociaux, paiements) ; leur coque est vérifiée, pas leur contenu réel.
 - **Préférence de thème** : mémorisée par navigateur (pas par compte), comme le repli du menu.
+
+---
+
+# v3 « Marine & lumière — Atelier » : recomposition des écrans
+
+La v2 posait les jetons et les composants ; la v3 **recompose les écrans** (en-têtes, tableau de bord, états vides, réglages, mouvement) et introduit une **bibliothèque d'illustrations**. La charte (marine, bleu d'action, Bricolage Grotesque / Figtree) est inchangée.
+
+## Fichiers
+
+| Fichier | Rôle |
+|---|---|
+| `public/css/kola-compose.css` | Feuille de composition, chargée après `kola-pages.css` (voir `partials/top.ejs`). Sommaire : illustrations · jetons `--kx-*` · menu et coque · en-têtes · états vides · tableau de bord · cartes · listes et tableaux · réglages et interrupteurs · mouvement · écrans étroits. |
+| `src/utils/illustrations.js` | 24 scènes SVG en ligne, helper `illu(nom, { label?, className? })` exposé aux vues (`middlewares/locals.js`). Couleurs via variables `--a-*` : clair et sombre automatiques. Les noms d'icônes (`icon()`) servent d'alias de scène. |
+| `views/marketing/partials/kx-hero-open.ejs` / `kx-hero-close.ejs` | En-tête de module illustré (paire ouvrante / fermante). |
+| `views/marketing/partials/kx-empty.ejs` | État vide : scène, titre, texte, action principale et secondaire. |
+| `views/marketing/partials/kx-dashboard.ejs` | Tableau de bord d'un site (modèle fourni par `siteSpace.js`). |
+
+## Règles d'usage des illustrations
+
+- Une scène par **accueil de module** (en-tête illustré) et par **état vide** ; jamais dans un tableau dense, un formulaire technique ni un éditeur.
+- Un en-tête illustré et l'état vide du même écran n'utilisent jamais la même scène (l'état vide perd alors sa scène).
+- Décoratives par défaut (`aria-hidden`) ; ajouter `label` seulement si la scène porte une information.
+- Pour ajouter une scène : une fonction dans `SCENES`, un alias éventuel dans `ALIASES`, une vérification sur la planche (clair + sombre).
+
+## Écrans recomposés
+
+Tableau de bord du site, SEO (vue générale), Extensions, Éditeur du site (Apparence), Redirections, Thèmes, Médiathèque, Utilisateurs, Navigation, Outils (Santé du site, Diagnostic, Sauvegardes, Importer, Exporter, Informations système, Maintenance, Caches, Outils de contenu), Paramètres (Général), Commentaires (barre d'états et de filtres). États vides illustrés : 52 emplacements dans 45 vues.
+
+## Mouvement
+
+Entrées de 0,3 à 0,5 s (opacité + déplacement de 8 px, propriétés composées), survol des cartes (élévation de 2 px), menus et fenêtres (0,16 à 0,2 s), flottement lent des scènes de l'en-tête. `prefers-reduced-motion: reduce` coupe tout.
+
+## Corrections de défauts existants
+
+- `adminbar.css` : l'info-bulle de la barre d'administration s'appliquait à **tous** les `[data-tip]` de la page et créait un défilement horizontal de 34 px (Redirections, Médiathèque). Elle est désormais limitée à `.kab`.
+- Barre d'outils des Commentaires : sélecteurs pleine largeur empilés → barre d'états en pastilles + filtres sur une ligne.
+- Barres d'onglets Outils et Paramètres : plus de retour à la ligne sur deux rangées.
+
+## Limites (v3)
+
+- **Éditeurs plein écran** (Page Builder, Blog Studio, Personnaliser, canevas d'automatisation) : non recomposés ; ils héritent seulement des correctifs communs.
+- Les anciennes règles de `marketing.css` / `cms.css` redéfinies par les couches suivantes ne sont pas élaguées.
+- Les listes d'articles et de pages gardent leur bande d'en-tête (kola-pages.css) : pas d'illustration, seulement leur état vide.

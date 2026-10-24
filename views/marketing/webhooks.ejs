@@ -7,7 +7,7 @@
 
     <% if (!endpoints.length) { %>
       <div class="mk-empty">
-        <%- icon("plug", { size: 32 }) %>
+        <%- illu("plug", { className: "kx-empty-ill" }) %>
         <h2>Aucun webhook</h2>
         <p>Créez-en un pour notifier un outil externe de ce qui se passe ici, en temps réel.</p>
         <% if (canManage) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un webhook</button></div><% } %>

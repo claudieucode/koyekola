@@ -36,7 +36,7 @@
     </section>
 
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("users", { size: 32 }) %><h2><%= etat ? "Aucun contact dans cet état" : "Liste vide" %></h2><p><%= etat ? "Aucun membre de cette audience n'est dans cet état." : "Aucun contact n'est dans cette liste." %></p></div>
+      <div class="mk-empty"><%- illu("users", { className: "kx-empty-ill" }) %><h2><%= etat ? "Aucun contact dans cet état" : "Liste vide" %></h2><p><%= etat ? "Aucun membre de cette audience n'est dans cet état." : "Aucun contact n'est dans cette liste." %></p></div>
     <% } else { %>
       <div class="mk-table-wrap">
         <table class="mk-table mk-datatable">

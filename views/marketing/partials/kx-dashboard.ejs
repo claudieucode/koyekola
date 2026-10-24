@@ -1,0 +1,80 @@
+<%#
+  Tableau de bord d'un site (design system v3). Données 100 % réelles : indicateurs, pages récentes et activité viennent du modèle d'écran
+  (siteSpace.js → tableau-de-bord). Rien n'est inventé : une source vide est dite telle quelle. Paramètres : stats, table, activity, quick, shortcuts, siteName, lead, note.
+%><%
+  const ICON_OF = [[/pages? en ligne/i, "layout"], [/brouillon/i, "edit"], [/article/i, "fileText"], [/commentaire/i, "messageSquare"], [/m[ée]dias?/i, "image"], [/contact/i, "users"], [/formulaire/i, "listChecks"], [/composant/i, "layers"], [/redirection/i, "arrowRightLeft"], [/liste/i, "list"], [/campagne/i, "send"]];
+  const iconFor = (label) => { const m = ICON_OF.find(([re]) => re.test(label)); return m ? m[1] : "activity"; };
+  const PRIMARY = [/pages? en ligne/i, /brouillon/i, /article/i, /commentaire/i];
+  const kpis = stats.filter((s) => PRIMARY.some((re) => re.test(s.label))).slice(0, 4);
+  const others = stats.filter((s) => !kpis.includes(s));
+  const num = (s) => (s.value === null || s.value === undefined ? "—" : mkh.fmt(s.value));
+  const n = (re) => { const s = stats.find((x) => re.test(x.label)); return s && s.value ? s : null; };
+  const todo = [];
+  { const d = n(/brouillon/i); if (d) todo.push({ icon: "edit", text: `${mkh.fmt(d.value)} page${d.value > 1 ? "s" : ""} en brouillon à terminer`, href: d.href, cta: "Ouvrir" }); }
+  { const c = n(/commentaire/i); if (c) todo.push({ icon: "messageSquare", text: `${mkh.fmt(c.value)} commentaire${c.value > 1 ? "s" : ""} en attente de modération`, href: c.href, cta: "Modérer" }); }
+  const rows = table && table.rows ? table.rows : [];
+  const noPages = !rows.length;
+%>
+<section class="kx-dash" aria-label="Tableau de bord">
+  <header class="kx-hero kx-welcome">
+    <div class="kx-hero-body">
+      <p class="kx-eyebrow"><%= siteName %></p>
+      <h1>Tableau de bord</h1>
+      <p class="kx-hero-lead"><%= lead %></p>
+      <div class="kx-hero-actions mk-actions">
+        <% (quick || []).forEach((q, i) => { %><a class="btn <%= q.primary ? "btn-primary" : "btn-outline" %> btn-sm" href="<%= q.href %>"<%- q.external ? ' target="_blank" rel="noopener"' : "" %>><%- icon(q.icon, { size: 16 }) %><%= q.label %></a><% }) %>
+      </div>
+    </div>
+    <div class="kx-hero-art" aria-hidden="true"><%- illu("dashboard") %></div>
+  </header>
+
+  <% if (typeof note !== "undefined" && note) { %><div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><%= note %></p></div><% } %>
+
+  <%# Contrat de balisage conservé (tests/tableau-de-bord-site.test.js) : chaque indicateur est un <a class="mk-stat mk-cms-stat"> avec libellé, valeur et précision dans cet ordre ; la présentation vient du CSS. %>
+  <% if (kpis.length) { %><ul class="kx-kpis" aria-label="Indicateurs">
+    <% kpis.forEach((s) => { %><li><a class="mk-stat mk-cms-stat"<%- !s.value ? " data-zero" : "" %> href="<%= s.href %>"><span class="mk-stat-label"><%= s.label %></span><span class="mk-stat-value"><%= num(s) %></span><% if (s.hint) { %><span class="mk-stat-hint"><%= s.hint %></span><% } %><span class="kx-kpi-icon" aria-hidden="true"><%- icon(iconFor(s.label), { size: 18 }) %></span></a></li><% }) %>
+  </ul><% } %>
+
+  <div class="kx-dash-grid">
+    <section class="kx-card kx-recent" aria-labelledby="kxd-recent">
+      <header class="kx-card-head"><h2 id="kxd-recent">Pages récentes</h2><% if (shortcuts && shortcuts.pages) { %><a class="kx-link" href="<%= shortcuts.pages %>">Toutes les pages <%- icon("arrowRight", { size: 14 }) %></a><% } %></header>
+      <% if (noPages) { %>
+        <%- include("kx-empty", Object.assign({ art: "pages", compact: true, title: table && table.empty ? table.empty.title : "Aucune page pour l'instant", text: table && table.empty ? table.empty.text : "", primary: table && table.empty && table.empty.cta ? Object.assign({ icon: "plus" }, table.empty.cta) : null })) %>
+      <% } else { %><ul class="kx-rows">
+        <% rows.forEach((r) => { const c = r.cells[0], st = r.cells[1] && r.cells[1].status, when = r.cells[2]; %><li>
+          <span class="kx-row-icon" aria-hidden="true"><%- icon("layout", { size: 16 }) %></span>
+          <span class="kx-row-main"><a href="<%= c.href %>"><%= c.text %></a><% if (c.sub) { %><span class="mk-sub"><%= c.sub %></span><% } %></span>
+          <% if (st) { %><span class="mk-status <%= st.cls %>"><%= st.label %></span><% } %>
+          <time class="kx-row-date"><%= typeof when === "string" ? when : "" %></time>
+        </li><% }) %>
+      </ul><% } %>
+    </section>
+
+    <div class="kx-side">
+      <section class="kx-card kx-todo" aria-labelledby="kxd-todo">
+        <header class="kx-card-head"><h2 id="kxd-todo">À traiter</h2></header>
+        <% if (!todo.length) { %><p class="kx-allgood"><span class="kx-allgood-icon" aria-hidden="true"><%- icon("checkCircle", { size: 20 }) %></span><span><strong>Rien en attente.</strong> Aucun brouillon ni commentaire ne demande votre attention.</span></p>
+        <% } else { %><ul class="kx-todo-list"><% todo.forEach((t) => { %><li><span class="kx-row-icon is-warn" aria-hidden="true"><%- icon(t.icon, { size: 16 }) %></span><span><%= t.text %></span><a class="btn btn-outline btn-sm" href="<%= t.href %>"><%= t.cta %></a></li><% }) %></ul><% } %>
+      </section>
+
+      <% if (activity && !activity.unavailable && activity.rows.length) { %>
+      <section class="kx-card kx-activity" aria-labelledby="kxd-act">
+        <header class="kx-card-head"><h2 id="kxd-act">Activité récente</h2></header>
+        <ol class="kx-timeline"><% activity.rows.slice(0, 6).forEach((r) => { %><li><span class="kx-tl-dot" aria-hidden="true"></span><span class="kx-tl-text"><code><%= r.action %></code><span class="mk-sub"><%= r.who %></span></span><time><%= r.at %></time></li><% }) %></ol>
+      </section>
+      <% } else if (activity && activity.unavailable) { %>
+      <section class="kx-card"><header class="kx-card-head"><h2>Activité récente</h2></header><p class="field-hint">Le journal d'activité est momentanément indisponible.</p></section>
+      <% } else if (shortcuts && shortcuts.list && shortcuts.list.length) { %>
+      <section class="kx-card kx-access" aria-labelledby="kxd-acc">
+        <header class="kx-card-head"><h2 id="kxd-acc">Accès rapides</h2></header>
+        <ul class="kx-access-list"><% shortcuts.list.forEach((a) => { %><li><a href="<%= a.href %>"><span class="kx-row-icon" aria-hidden="true"><%- icon(a.icon, { size: 16 }) %></span><span class="kx-access-text"><strong><%= a.label %></strong><span class="mk-sub"><%= a.text %></span></span><%- icon("chevronRight", { size: 16, className: "kx-access-go" }) %></a></li><% }) %></ul>
+      </section>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (others.length) { %><section class="kx-card kx-others" aria-labelledby="kxd-oth">
+    <header class="kx-card-head"><h2 id="kxd-oth">Autres contenus du site</h2></header>
+    <ul class="kx-chips"><% others.forEach((s) => { %><li><a class="mk-stat mk-cms-stat"<%- !s.value ? " data-zero" : "" %> href="<%= s.href %>"<%- s.hint ? ` title="${s.hint.replace(/"/g, "&quot;")}"` : "" %>><span class="mk-stat-label"><%= s.label %></span><span class="mk-stat-value"><%= num(s) %></span><% if (s.hint) { %><span class="mk-stat-hint"><%= s.hint %></span><% } %><span class="kx-chip-icon" aria-hidden="true"><%- icon(iconFor(s.label), { size: 15 }) %></span></a></li><% }) %></ul>
+  </section><% } %>
+</section>

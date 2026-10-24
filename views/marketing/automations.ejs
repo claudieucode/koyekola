@@ -10,7 +10,7 @@
     <p><a href="/marketing/automatisations/historique">Historique de tous les passages</a></p>
     <% if (!automations.length) { %>
       <div class="mk-empty">
-        <%- icon("zap", { size: 32 }) %>
+        <%- illu("zap", { className: "kx-empty-ill" }) %>
         <h2>Aucun scénario</h2>
         <p>Partez d'un parcours tout prêt (bienvenue, suivi après achat, relance…) ou créez votre propre scénario.</p>
         <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/automatisations/parcours">Voir les parcours tout prêts</a><% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-mk-modal-open="nouveau">Créer un scénario</button><% } %></div>

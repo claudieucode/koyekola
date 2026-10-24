@@ -63,7 +63,7 @@
       <h2 id="an-traffic">Trafic</h2>
       <% if (errorBox(T)) { %><p class="mk-note" role="alert"><%= T.error %></p>
       <% } else if (T.noData) { %>
-        <div class="mk-empty"><%- icon("activity", { size: 32 }) %><h2><%= NODATA %></h2>
+        <div class="mk-empty"><%- illu("activity", { className: "kx-empty-ill" }) %><h2><%= NODATA %></h2>
           <p><%= T.tracked ? "Aucune visite suivie sur cette période (avec ces filtres)." : "Analytics commence à collecter les visites dès qu'un visiteur accepte la mesure d'audience dans le bandeau du site." %></p></div>
       <% } else { %>
         <%- mkh.columnChart(T.series.map((s) => ({ label: s.ymd.slice(8, 10) + "/" + s.ymd.slice(5, 7), count: s.pageViews })), { title: "Pages vues par jour", unit: " page(s) vue(s)" }) %>

@@ -7,7 +7,7 @@
 
     <% if (!tags.length) { %>
       <div class="mk-empty">
-        <%- icon("tag", { size: 32 }) %>
+        <%- illu("tag", { className: "kx-empty-ill" }) %>
         <h2>Aucune étiquette</h2>
         <p>Créez-en une ici, ou ajoutez-en directement depuis la fiche d'un contact ou par une action groupée.</p>
         <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une étiquette</button></div><% } %>

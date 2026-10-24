@@ -15,7 +15,7 @@
 
     <% if (!rows.length) { %>
       <div class="mk-empty">
-        <%- icon("activity", { size: 32 }) %>
+        <%- illu("activity", { className: "kx-empty-ill" }) %>
         <h2>Aucun test A/B</h2>
         <p>Créez votre premier test, ou ajoutez un test A/B à un brouillon existant depuis sa liste de contrôle (ligne « Test A/B »).</p>
         <% if (canWrite) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/campagnes/nouvelle?ab=1">Créer un test A/B</a></div><% } %>

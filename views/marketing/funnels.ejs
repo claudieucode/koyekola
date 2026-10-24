@@ -8,7 +8,7 @@
       <a class="mk-tab" href="/marketing/tunnels?vue=archives"<%- archived ? ' aria-current="page"' : "" %>>Archivés</a>
     </nav>
     <% if (!list.length) { %>
-      <div class="mk-empty"><%- icon("filter", { size: 32 }) %><h2><%= archived ? "Aucun tunnel archivé" : "Aucun tunnel" %></h2>
+      <div class="mk-empty"><%- illu("filter", { className: "kx-empty-ill" }) %><h2><%= archived ? "Aucun tunnel archivé" : "Aucun tunnel" %></h2>
         <p><%= archived ? "Un tunnel archivé garde ses étapes et ses statistiques ; rien n'est effacé." : "Créez votre premier tunnel, vide ou à partir d'un modèle qui crée les vraies pages de chaque étape." %></p>
         <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un tunnel</button></div><% } %></div>
     <% } else { %>

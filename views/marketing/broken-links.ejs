@@ -19,12 +19,12 @@
     </nav>
 
     <% if (!report) { %>
-      <div class="mk-empty"><%- icon("search", { size: 32 }) %><h2>Aucune analyse pour l'instant</h2><p>Lancez l'analyse : elle vérifie chaque lien interne connu auprès du serveur et affiche ce qu'il faut corriger.</p></div>
+      <div class="mk-empty"><%- illu("search", { className: "kx-empty-ill" }) %><h2>Aucune analyse pour l'instant</h2><p>Lancez l'analyse : elle vérifie chaque lien interne connu auprès du serveur et affiche ce qu'il faut corriger.</p></div>
     <% } else { %>
       <p class="mk-sub" role="status">Dernière analyse : <%= fdate(report.at) %> — <%= report.links %> lien<%= report.links > 1 ? "s" : "" %> examiné<%= report.links > 1 ? "s" : "" %> (<%= report.checked %> adresse<%= report.checked > 1 ? "s" : "" %> vérifiée<%= report.checked > 1 ? "s" : "" %>).
         <strong><%= broken.length %> cassé<%= broken.length > 1 ? "s" : "" %></strong>, <strong><%= moved.length %> redirigé<%= moved.length > 1 ? "s" : "" %></strong>.<% if (report.truncated) { %> Liste limitée aux 500 premiers.<% } %></p>
       <% if (!issues.length) { %>
-        <div class="mk-empty"><%- icon("checkCircle", { size: 32 }) %><h2>Aucun lien à corriger</h2><p>Tous les liens internes connus répondent normalement.</p></div>
+        <div class="mk-empty"><%- illu("checkCircle", { className: "kx-empty-ill" }) %><h2>Aucun lien à corriger</h2><p>Tous les liens internes connus répondent normalement.</p></div>
       <% } else { %>
         <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table">
           <caption class="sr-only">Liens à corriger</caption>

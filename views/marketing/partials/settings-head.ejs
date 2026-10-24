@@ -1,6 +1,7 @@
 <%# En-tête commun des Paramètres (palier 14) : titre, onglets des groupes disponibles pour ce périmètre, choix du site. %>
-<div class="mk-head"><h1><%= heading %></h1></div>
-<% if (typeof intro !== "undefined" && intro) { %><p class="mk-lead"><%= intro %></p><% } %>
+<% if (tabKey === "general") { %><%- include("kx-hero-open", { eyebrow: "Paramètres", title: heading, lead: typeof intro !== "undefined" ? intro : "", compact: true }) %><%- include("kx-hero-close", { art: "parametres" }) %>
+<% } else { %><div class="mk-head"><h1><%= heading %></h1></div>
+<% if (typeof intro !== "undefined" && intro) { %><p class="mk-lead"><%= intro %></p><% } %><% } %>
 <nav class="mk-tabs mk-cms-tabs mk-st-tabs" aria-label="Groupes de paramètres">
   <% groups.forEach((g) => { %><a class="mk-tab" href="<%= BASE %><%= g.key === "general" ? "" : "/" + g.slug %><%= q %>"<%- tabKey === g.key ? ' aria-current="page"' : "" %>><%= g.label %></a><% }) %>
   <a class="mk-tab" href="<%= BASE %>/avance<%= q %>"<%- tabKey === "advanced" ? ' aria-current="page"' : "" %>>Avancé</a>

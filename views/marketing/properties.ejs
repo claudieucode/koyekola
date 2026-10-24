@@ -10,7 +10,7 @@
 
     <% if (!defs.length) { %>
       <div class="mk-empty">
-        <%- icon("sliders", { size: 32 }) %>
+        <%- illu("sliders", { className: "kx-empty-ill" }) %>
         <h2>Aucune propriété</h2>
         <p>Ajoutez par exemple « Niveau » (choix), « Ville » (texte) ou « Date de naissance » (date) : elles apparaîtront sur la fiche des contacts et dans les segments.</p>
         <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Créer une propriété</button></div><% } %>

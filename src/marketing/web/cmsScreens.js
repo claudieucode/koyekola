@@ -19,7 +19,7 @@ const SOON = "Cette fonctionnalité arrive dans un prochain palier. L'interface 
 const isInstructor = (req) => req.session.user && req.session.user.role === "formateur";
 const fdate = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
 const size = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1).replace(".", ",")} Mo` : n >= 1024 ? `${Math.round(n / 1024)} Ko` : `${n || 0} o`);
-const empty = (icon, title, text, cta) => ({ icon, title, text, cta: cta || null });
+const empty = (icon, title, text, cta, art) => ({ icon, title, text, cta: cta || null, art: art || null });
 const dis = (label, title = "Disponible dans un prochain palier") => ({ label, disabled: true, title });
 
 // Onglets d'une rubrique : la sous-page courante est marquée
@@ -44,7 +44,7 @@ const SCREENS = {
     const late = m.modules.filter((x) => !x.ready).map((x) => `« ${x.label} » (${x.phase})`);
     const lead = "Les modules que l'équipe active site par site. Un module est désactivé par défaut ; l'activer pour un site n'a aucun effet sur les autres, et le désactiver conserve ses données."
       + (late.length ? ` Activable mais pas encore ouvert aux sites : ${late.join(", ")}.` : "");
-    return { title: "Extensions", lead,
+    return { title: "Extensions", art: "extensions", lead,
       table: { caption: "Modules activés par site", columns: [{ label: "Site" }, ...m.modules.map((x) => ({ label: x.label }))],
         rows: m.sites.map((x) => ({ cells: [{ text: x.name, href: `${BASE}/sites/${x.id}` }, ...m.modules.map((mod) => (x.enabled.includes(mod.key) ? { status: { label: "Activé", cls: "mk-status-ok" } } : { status: { label: "Désactivé", cls: "mk-status-off" } }))], actions: [{ label: "Gérer les modules", href: `${BASE}/sites/${x.id}/modules` }] })),
         empty: empty("globe", "Aucun site", "Créez un site pour pouvoir activer des modules.", { label: "Créer un site", href: `${BASE}/sites#nouveau` }) } };
@@ -70,7 +70,7 @@ const SCREENS = {
     if (sub === "styles") return { title: "Styles", lead: "Le design system de chaque site : couleurs, polices, tailles, espacements, boutons. Ouvrez un site pour le modifier.", table: siteTable("Styles par site", "#design", "Modifier les styles") };
     if (sub === "en-tete") return { title: "En-tête", lead: "L'en-tête de chaque site, avec ses variantes par page.", table: siteTable("En-têtes par site", "#entete", "Modifier l'en-tête") };
     if (sub === "pied-de-page") return { title: "Pied de page", lead: "Le pied de page de chaque site.", table: siteTable("Pieds de page par site", "#parties", "Modifier le pied de page") };
-    return { title: "Éditeur du site", lead: "Chaque page de vos sites s'édite dans l'éditeur visuel KOLAKISA (Page Builder). Les réglages communs d'un site se trouvent dans sa fiche.",
+    return { title: "Éditeur du site", art: "themes", lead: "Chaque page de vos sites s'édite dans l'éditeur visuel KOLAKISA (Page Builder). Les réglages communs d'un site se trouvent dans sa fiche.",
       cards: [{ icon: "layout", title: "Éditer une page", text: "Choisissez une page : elle s'ouvre dans l'éditeur visuel.", href: "/marketing/pages", label: "Ouvrir les pages" },
         { icon: "palette", title: "Styles du site", text: "Couleurs, polices, tailles et boutons.", href: `${BASE}/apparence/styles`, label: "Ouvrir les styles" },
         { icon: "layers", title: "En-tête et pied de page", text: "Composants affichés en haut et en bas de chaque page du site.", href: `${BASE}/apparence/en-tete`, label: "Ouvrir l'en-tête" }],
@@ -86,7 +86,17 @@ const SCREENS = {
     const pagesList = data.pagesSeo(ctx);
     const pageTable = (caption, columns, cell) => ({ caption, columns, rows: pagesList.map((p) => ({ cells: [{ text: p.name, href: `/marketing/pages/${p.id}`, sub: `/p/${p.slug}` }, ...cell(p)] })), empty: empty("layout", "Aucune page", "Les pages de vos sites apparaissent ici.") });
     const ok = (v) => (v ? { status: { label: "Renseigné", cls: "mk-status-ok" } } : { status: { label: "Manquant", cls: "mk-status-warn" } });
-    const engine = (path, label) => ({ icon: "searchCheck", title: label, text: "Ouvre l'Espace SEO existant.", href: seoTool(path), label: "Ouvrir", disabledText: "Réservé au compte créateur." });
+    // Une carte par outil du moteur SEO existant : icône et description propres à chaque outil (le lien reste celui de l'Espace SEO)
+    const ENGINE_COPY = {
+      "Espace SEO": ["searchCheck", "Le moteur SEO complet : réglages, audit et suivi de toutes vos pages."],
+      "Audit du site": ["listChecks", "Contrôle les titres, descriptions, liens et images de chaque page."],
+      "Redirections": ["arrowRightLeft", "Envoyez les anciennes adresses vers les nouvelles, sans perdre de visiteurs."],
+      "Audit SEO du site": ["listChecks", "Lance un contrôle complet et classe les problèmes par priorité."],
+      "Analyse d'une adresse": ["search", "Analyse une adresse précise : balises, contenu, données structurées."],
+      "Règles de contrôle": ["sliders", "Choisissez les règles que l'audit applique à vos pages."],
+      "Données structurées (schema.org)": ["layers", "Vérifiez les données que lisent les moteurs de recherche."],
+    };
+    const engine = (path, label) => { const [icon, text] = ENGINE_COPY[label] || ["searchCheck", "Ouvre l'Espace SEO existant."]; return { icon, title: label, text, href: seoTool(path), label: "Ouvrir", disabledText: "Réservé au compte créateur." }; };
     switch (sub) {
       case "analyse": return { title: "Analyse SEO", lead: note, tabs, cards: [engine("/audit", "Audit SEO du site"), engine("/analyse", "Analyse d'une adresse"), engine("/regles", "Règles de contrôle")] };
       case "meta": return { title: "Meta", lead: "Titre et description de chaque page de vos sites, tels que le moteur de pages les sert (lecture seule).", tabs,
@@ -103,7 +113,7 @@ const SCREENS = {
         return { title: "Erreurs 404", lead: "Adresses demandées qui n'existent pas, relevées par le moteur SEO (lecture seule).", tabs, actions: seoTool("/erreurs-404") ? [{ label: "Gérer les erreurs 404", href: seoTool("/erreurs-404"), variant: "primary" }] : [],
           table: { caption: "Erreurs 404", columns: [{ label: "Adresse" }, { label: "Visites", num: true }, { label: "Robots", num: true }, { label: "Dernière" }], rows, empty: empty("searchCheck", "Aucune erreur 404", "Aucune adresse inexistante n'a été demandée.") } };
       }
-      default: return { title: "SEO", lead: note, tabs, stats: [{ label: "Redirections actives", value: c.redirects, href: `${BASE}/redirections` }, { label: "Adresses en erreur 404", value: c.errors404, href: `${BASE}/seo/404` }, { label: "Pages suivies", value: pagesList.length, href: `${BASE}/seo/meta` }],
+      default: return { title: "SEO", art: "seo", lead: note, tabs, stats: [{ label: "Redirections actives", value: c.redirects, href: `${BASE}/redirections` }, { label: "Adresses en erreur 404", value: c.errors404, href: `${BASE}/seo/404` }, { label: "Pages suivies", value: pagesList.length, href: `${BASE}/seo/meta` }],
         cards: [engine("", "Espace SEO"), engine("/audit", "Audit du site"), engine("/redirections", "Redirections")] };
     }
   },
@@ -113,7 +123,7 @@ const SCREENS = {
     const q = String(req.query.q || "").trim();
     const rows = data.listRedirects(ctx.db, { q }).map((r) => ({ cells: [r.source_path, r.target, String(r.status), r.enabled ? { status: { label: "Active", cls: "mk-status-ok" } } : { status: { label: "Désactivée", cls: "mk-status-off" } }, String(r.hits), fdate(r.created_at)] }));
     const manage = instructorLink(req, "/formateur/seo/redirections");
-    return { title: "Redirections", lead: "Les redirections appliquées à votre site (lecture seule). Elles se créent et se modifient dans l'Espace SEO existant.", actions: manage ? [{ label: "Gérer les redirections", href: manage, variant: "primary" }] : [dis("Ajouter une redirection", "Réservé au compte créateur")],
+    return { title: "Redirections", art: "redirections", lead: "Les redirections appliquées à votre site (lecture seule). Elles se créent et se modifient dans l'Espace SEO existant.", actions: manage ? [{ label: "Gérer les redirections", href: manage, variant: "primary" }] : [dis("Ajouter une redirection", "Réservé au compte créateur")],
       search: { enabled: true, placeholder: "Rechercher une adresse", q },
       table: { caption: "Redirections", columns: [{ label: "Ancienne URL" }, { label: "Nouvelle URL" }, { label: "Type" }, { label: "Statut" }, { label: "Visites", num: true }, { label: "Créée le" }], rows, empty: empty("arrowRightLeft", q ? "Aucune redirection trouvée" : "Aucune redirection", "Une redirection envoie les visiteurs d'une ancienne adresse vers la nouvelle.", manage ? { label: "Ajouter une redirection", href: manage } : null) } };
   },

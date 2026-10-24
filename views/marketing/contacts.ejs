@@ -137,14 +137,14 @@
     <% if (!rows.length) { %>
       <% if (hasFilters) { %>
         <div class="mk-empty">
-          <%- icon("search", { size: 32 }) %>
+          <%- illu("search", { className: "kx-empty-ill" }) %>
           <h2>Aucun contact ne correspond</h2>
           <p>Aucun contact ne correspond à ces critères. Élargissez la recherche ou retirez un filtre.</p>
           <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/contacts">Réinitialiser les filtres</a></div>
         </div>
       <% } else { %>
         <div class="mk-empty">
-          <%- icon("users", { size: 32 }) %>
+          <%- illu("users", { className: "kx-empty-ill" }) %>
           <h2>Aucun contact pour l'instant</h2>
           <p>Ajoutez un contact ou importez un fichier CSV pour constituer votre audience. Sans preuve de consentement, aucun message marketing ne pourra leur être envoyé.</p>
           <div class="mk-actions">

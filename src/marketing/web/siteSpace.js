@@ -16,7 +16,7 @@ const data = require("./cmsData");
 
 const BASE = nav.BASE;
 const fdate = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
-const empty = (icon, title, text, cta) => ({ icon, title, text, cta: cta || null });
+const empty = (icon, title, text, cta, art) => ({ icon, title, text, cta: cta || null, art: art || null });
 const PAGE_STATUS = { published: { label: "En ligne", cls: "mk-status-ok" }, draft: { label: "Brouillon", cls: "" }, unpublished: { label: "Hors ligne", cls: "mk-status-warn" }, scheduled: { label: "Programmée", cls: "mk-status-info" } };
 const pageStatus = (p) => ({ status: PAGE_STATUS[p.status] || { label: String(p.status), cls: "" } });
 
@@ -55,7 +55,20 @@ const SCREENS = {
       { label: "Listes d'envoi", value: own("mk_lists"), href: space.principal ? "/marketing/listes?site=principal" : `${space.base}/listes` },
       { label: "Campagnes", value: own("mk_campaigns"), href: space.principal ? "/marketing/campagnes?site=principal" : `${space.base}/campagnes` },
     ];
-    return { title: "Tableau de bord", actions: [{ label: "Aperçu du site", href: `${space.base}/apercu` }], lead: `Vue d'ensemble de « ${space.name} » : uniquement les contenus de ce site.`, note: readOnlyNote(space), stats, activity: dash.activity(req, space),
+    // Présentation « pilotage » (partials/kx-dashboard.ejs) : actions rapides et accès réels, filtrés selon les droits et l'état du site
+    const canCreate = space.status === "active" && !space.deleted && req.mk.can("forms.write");
+    const quick = [];
+    if (canCreate) quick.push({ label: "Ajouter une page", href: `${space.base}/pages#nouvelle`, icon: "plus", primary: true });
+    if (space.principal && req.mk.can("articles.write")) quick.push({ label: "Écrire un article", href: `${BASE}/articles/ajouter`, icon: "edit" });
+    if (space.principal && req.mk.can("media.upload")) quick.push({ label: "Ajouter un média", href: `${BASE}/mediatheque/ajouter`, icon: "image" });
+    quick.push({ label: "Aperçu du site", href: `${space.base}/apercu`, icon: "externalLink", external: true });
+    const shortcuts = { pages: `${space.base}/pages`, list: space.principal ? [
+      { label: "Apparence", text: "Thèmes, styles, en-tête et pied de page", href: `${BASE}/apparence`, icon: "palette" },
+      { label: "SEO", text: "Analyse, métadonnées, indexation", href: `${BASE}/seo`, icon: "searchCheck" },
+      { label: "Outils", text: "Santé du site, sauvegardes, maintenance", href: `${BASE}/outils`, icon: "sliders" },
+      { label: "Paramètres", text: "Identité, lecture, confidentialité", href: `${BASE}/parametres`, icon: "settings" },
+    ] : [] };
+    return { title: "Tableau de bord", dashboard: true, quick, shortcuts, siteName: space.name, actions: [{ label: "Aperçu du site", href: `${space.base}/apercu` }], lead: `Vue d'ensemble de « ${space.name} » : uniquement les contenus de ce site.`, note: readOnlyNote(space), stats, activity: dash.activity(req, space),
       table: { caption: "Pages récemment modifiées", columns: [{ label: "Page" }, { label: "État" }, { label: "Modifiée le" }], rows: recent.map((p) => ({ cells: [{ text: p.name, href: `/marketing/pages/${p.id}`, sub: `/${p.slug}` }, pageStatus(p), fdate(p.updated_at)] })),
         empty: empty("layout", "Aucune page pour l'instant", "Les pages de ce site apparaîtront ici dès leur création.", space.status === "active" && req.mk.can("forms.write") ? { label: "Ajouter une page", href: `${space.base}/pages#nouvelle` } : null) } };
   },

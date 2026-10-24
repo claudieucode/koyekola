@@ -8,7 +8,7 @@
       <h2 id="soc-new">Nouvelle publication</h2>
       <% if (!connected.length) { %>
         <div class="mk-empty">
-          <%- icon("send", { size: 32 }) %>
+          <%- illu("send", { className: "kx-empty-ill" }) %>
           <h2><%= siteOnly ? "Aucun réseau autorisé pour ce site" : "Aucun réseau relié" %></h2>
           <p><%- siteOnly ? "L'équipe de l'organisation relie les comptes et autorise chaque site à publier sur un réseau donné : demandez-lui l'autorisation pour ce site." : "Reliez votre page Facebook, votre compte Instagram professionnel ou LinkedIn dans Paramètres → Réseaux sociaux (un jeton d'accès suffit ; il est chiffré et jamais affiché)." %></p>
           <% if (!siteOnly && mk.can("settings.read")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/reseaux/reglages">Relier un réseau</a></div><% } %>

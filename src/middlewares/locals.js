@@ -1,5 +1,6 @@
 const { LANGUAGES, languageLabel, avatarColor, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel } = require("../utils/format");
 const { icon, starRow } = require("../utils/icons");
+const { illu } = require("../utils/illustrations");
 const db = require("../config/database");
 const { parseVideoUrl } = require("../utils/video");
 const { asset } = require("../utils/assets");
@@ -138,6 +139,7 @@ function injectLocals(req, res, next) {
   res.locals.isNewCourse = isNewCourse;
   res.locals.levelLabel = levelLabel;
   res.locals.icon = icon;
+  res.locals.illu = illu; // illustrations de l'administration (src/utils/illustrations.js)
   res.locals.starRow = starRow;
   next();
 }

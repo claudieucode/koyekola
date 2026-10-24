@@ -21,7 +21,7 @@
       <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (kind) { %><a class="btn btn-ghost btn-sm" href="<%= BASE %>/<%= c.type %>/<%= c.id %>">Tout voir</a><% } %>
     </form>
     <% if (!h.rows.length) { %>
-      <div class="mk-empty"><%- icon("clock", { size: 32 }) %><h2>Aucun point d'historique.</h2><p>Les modifications apparaîtront ici dès qu'elles seront enregistrées.</p></div>
+      <div class="mk-empty"><%- illu("clock", { className: "kx-empty-ill" }) %><h2>Aucun point d'historique.</h2><p>Les modifications apparaîtront ici dès qu'elles seront enregistrées.</p></div>
     <% } else { %>
     <form method="get" action="<%= BASE %>/<%= c.type %>/<%= c.id %>/comparer" data-hi-compare>
       <% groups.forEach((g) => { %>

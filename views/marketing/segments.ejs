@@ -6,7 +6,7 @@
     <%- include("partials/site-filter", { action: "/marketing/segments" }) %>
     <% if (!segments.length) { %>
       <div class="mk-empty">
-        <%- icon("filter", { size: 32 }) %>
+        <%- illu("filter", { className: "kx-empty-ill" }) %>
         <h2>Aucun segment</h2>
         <p>Créez par exemple « Élèves ayant terminé une formation », « Contacts sans clic depuis 90 jours » ou « Clients ayant dépensé plus de 100 € ».</p>
         <% if (mk.can("segments.write")) { %><div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/segments/nouveau">Créer un segment</a></div><% } %>

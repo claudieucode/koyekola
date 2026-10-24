@@ -100,7 +100,7 @@
     </div>
 
     <% if (!pages.length) { %>
-      <div class="mk-empty"><%- icon("layout", { size: 32 }) %><h2><%= filtered ? "Aucune page trouvée" : inTrash ? "La corbeille est vide" : state === "publiees" ? "Aucune page publiée" : state === "programmees" ? "Aucune page programmée" : state === "brouillons" ? "Aucun brouillon" : "Aucune page" %></h2>
+      <div class="mk-empty"><%- illu("layout", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucune page trouvée" : inTrash ? "La corbeille est vide" : state === "publiees" ? "Aucune page publiée" : state === "programmees" ? "Aucune page programmée" : state === "brouillons" ? "Aucun brouillon" : "Aucune page" %></h2>
         <p><%= filtered ? "Aucune page ne correspond à ces critères." : inTrash ? "Les pages mises à la corbeille apparaissent ici ; vous pouvez les restaurer." : state === "toutes" ? "Créez votre première page pour commencer : elle s'ouvre dans l'éditeur visuel, et rien n'est en ligne avant la publication." : "Aucune page dans cet état." %></p>
         <% if (canWrite && !inTrash && !filtered && state === "toutes") { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouvelle">Ajouter une page</button></div><% } %></div>
     <% } else { %>

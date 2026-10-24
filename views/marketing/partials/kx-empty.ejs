@@ -1,0 +1,14 @@
+<%#
+  État vide illustré (design system v3). Paramètres : art (scène, voir src/utils/illustrations.js), title, text, primary { label, href } (facultatif),
+  secondary { label, href } (facultatif), compact (facultatif), role="status" posé d'office. Les actions doivent mener à une vraie fonction.
+%><div class="mk-empty kx-empty<%= typeof compact !== "undefined" && compact ? " is-compact" : "" %><%= !art ? " is-plain" : "" %>" role="status">
+  <% if (art) { %><div class="kx-empty-art" aria-hidden="true"><%- illu(art) %></div><% } %>
+  <div class="kx-empty-copy">
+    <h2><%= title %></h2>
+    <% if (typeof text !== "undefined" && text) { %><p><%= text %></p><% } %>
+    <% const _p = typeof primary !== "undefined" ? primary : null, _s = typeof secondary !== "undefined" ? secondary : null; if (_p || _s) { %><div class="mk-actions">
+      <% if (_p) { %><a class="btn btn-primary btn-sm" href="<%= _p.href %>"<%- _p.attrs ? " " + _p.attrs : "" %>><% if (_p.icon) { %><%- icon(_p.icon, { size: 16 }) %><% } %><%= _p.label %></a><% } %>
+      <% if (_s) { %><a class="btn btn-outline btn-sm" href="<%= _s.href %>"<%- _s.attrs ? " " + _s.attrs : "" %>><%= _s.label %></a><% } %>
+    </div><% } %>
+  </div>
+</div>

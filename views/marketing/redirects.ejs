@@ -34,7 +34,7 @@
     </form>
 
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- icon("arrowRightLeft", { size: 32 }) %><h2><%= filtered ? "Aucun résultat" : "Aucune redirection" %></h2>
+      <div class="mk-empty"><%- illu("arrowRightLeft", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucun résultat" : "Aucune redirection" %></h2>
         <p><%= filtered ? "Aucune redirection ne correspond à ces critères." : "Aucune redirection pour l'instant : elles apparaissent ici dès que vous en ajoutez une." %></p>
         <% if (can.create && !filtered) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-ur-new>Ajouter une redirection</button></div><% } %></div>
     <% } else { %>

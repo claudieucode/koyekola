@@ -15,9 +15,9 @@
   const ext = (m) => { const e = String(m.path).split(".").pop().toUpperCase(); return e.length <= 5 ? e : label(m).toUpperCase(); };
   const fdate = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
 %>
-    <div class="mk-head">
-      <div class="mk-head-main"><h1>Médiathèque</h1><p class="mk-head-sub">Les fichiers de <strong>ce site</strong> : images, vidéos, audio et documents. Ce sont ceux que vous choisissez dans l'éditeur d'articles et de pages ; ils ne sont jamais partagés avec un autre site.</p></div>
-      <% if (canUpload && !f.trashed) { %><div class="mk-actions"><button type="button" class="btn btn-outline btn-sm" data-ml-browse aria-expanded="<%= uploadOpen ? "true" : "false" %>" aria-controls="ml-upload"><%- icon("upload", { size: 16 }) %> Ajouter un fichier média</button></div><% } %></div>
+    <%- include("partials/kx-hero-open", { title: "Médiathèque", lead: "Les fichiers de ce site : images, vidéos, audio et documents. Ce sont ceux que vous choisissez dans l'éditeur d'articles et de pages ; ils ne sont jamais partagés avec un autre site.", compact: true }) %>
+      <% if (canUpload && !f.trashed) { %><button type="button" class="btn btn-primary btn-sm" data-ml-browse aria-expanded="<%= uploadOpen ? "true" : "false" %>" aria-controls="ml-upload"><%- icon("upload", { size: 16 }) %> Ajouter un fichier média</button><% } %>
+    <%- include("partials/kx-hero-close", { art: "media" }) %>
 
     <form class="mk-cms-toolbar mk-ml-toolbar" method="get" action="<%= spaceBase %>" role="search" aria-label="Filtrer et rechercher les médias" data-ml-filters><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
       <% if (f.trashed) { %><input type="hidden" name="corbeille" value="1"><% } %><% if (view === "liste") { %><input type="hidden" name="vue" value="liste"><% } %><% if (f.portee) { %><input type="hidden" name="portee" value="<%= f.portee %>"><% } %>
@@ -58,7 +58,7 @@
     <div class="mk-ml-layout">
       <div class="mk-ml-main" data-ml-main>
         <% if (!found.items.length) { %>
-          <div class="mk-empty"><%- icon("image", { size: 32 }) %><h2><%= f.trashed ? "La corbeille est vide" : filtered ? "Aucun fichier trouvé" : "Aucun fichier" %></h2>
+          <div class="mk-empty"><%- illu("image", { className: "kx-empty-ill" }) %><h2><%= f.trashed ? "La corbeille est vide" : filtered ? "Aucun fichier trouvé" : "Aucun fichier" %></h2>
             <p><%= f.trashed ? "Les fichiers mis à la corbeille apparaissent ici ; vous pouvez les restaurer." : filtered ? "Aucun fichier ne correspond à ces critères." : "Envoyez votre premier fichier : glissez-le dans la zone ci-dessus." %></p></div>
         <% } else { %>
           <% if (canWrite) { %>
