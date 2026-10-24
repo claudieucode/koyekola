@@ -1526,7 +1526,6 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 @media (max-width: 640px) { .mk-nt-card, .mk-nt-note { padding: 14px; } .mk-nt-actions .btn { flex: 1 1 auto; } }
 .mk-sh-state { font-size: 1.2rem; font-weight: 700; color: var(--primary, #0b2a40); }
 .mk-sh-info { margin-top: 4px; }
-=======
 /* ---------- Outils → Exporter les données personnelles ---------- */
 .mk-px-visually { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .mk-px-form { display: grid; gap: 18px; margin-top: 12px; }
