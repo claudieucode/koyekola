@@ -10,13 +10,16 @@
   const stLabel = { active: "Actif", suspended: "Suspendu", disabled: "Désactivé" };
 %>
 <% if (mode === "list") { %>
-    <%- include("partials/kx-hero-open", { title: "Utilisateurs", lead: "L'équipe qui gère le site : comptes du site auxquels un rôle donne accès au CMS, globalement ou pour un seul site.", compact: true }) %>
-      <% if (canCreate) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/ajouter"><%- icon("plus", { size: 16 }) %>Inviter</a><% } %><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles">Rôles</a>
+    <%- include("partials/kx-hero-open", { title: "Comptes", lead: "L'équipe qui gère le site : comptes du site auxquels un rôle donne accès au CMS, globalement ou pour un seul site.", compact: true }) %>
+      <% if (canCreate) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/nouveau"><%- icon("plus", { size: 16 }) %>Ajouter un compte</a><a class="btn btn-outline btn-sm" href="<%= BASE %>/ajouter">Inviter</a><% } %><a class="btn btn-outline btn-sm" href="<%= BASE %>/roles">Rôles</a>
     <%- include("partials/kx-hero-close", { art: "utilisateurs" }) %>
     <nav class="mk-tabs mk-cms-tabs" aria-label="Filtrer par statut">
       <% tabs.forEach(([k, name, ck]) => { %><a class="mk-tab" href="<%= keep({ statut: k, page: "" }) %>"<%- f.statut === k ? ' aria-current="page"' : "" %>><%= name %> <span class="mk-tab-count"><%= counts[ck] || 0 %></span></a>
       <% }) %>
     </nav>
+    <% if (roleCounts && roleCounts.roles.length) { %><nav class="mk-us-roles" aria-label="Filtrer par rôle"><span class="mk-us-roles-l">Rôle</span>
+      <a href="<%= keep({ role: "", page: "" }) %>"<%- !f.role ? ' aria-current="true"' : "" %>>Tous <span>(<%= roleCounts.total %>)</span></a>
+      <% roleCounts.roles.forEach((r) => { %><a href="<%= keep({ role: r.key, page: "" }) %>"<%- f.role === r.key ? ' aria-current="true"' : "" %>><%= r.name %> <span>(<%= r.n %>)</span></a><% }) %></nav><% } %>
     <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= BASE %>" role="search" aria-label="Rechercher et filtrer l'équipe">
       <input type="hidden" name="statut" value="<%= f.statut %>">
       <label class="mk-search"><span class="sr-only">Rechercher (nom, e-mail)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une personne"></label>
@@ -24,7 +27,7 @@
       <select id="u-role" name="role"><option value="">Tous les rôles</option><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= f.role === r.key ? " selected" : "" %>><%= r.name %></option><% }) %></select>
       <% if (sites.length) { %><label class="sr-only" for="u-site">Site</label><select id="u-site" name="site"><option value="">Tous les sites</option><% sites.forEach((s) => { %><option value="<%= s.id %>"<%= String(f.site) === String(s.id) ? " selected" : "" %>><%= s.name %></option><% }) %></select><% } %>
       <label class="sr-only" for="u-tri">Trier par</label>
-      <select id="u-tri" name="tri"><% [["nom", "Nom A → Z"], ["recent", "Plus récents"], ["activite", "Activité récente"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
+      <select id="u-tri" name="tri"><% [["nom", "Identifiant A → Z"], ["email", "E-mail A → Z"], ["role", "Rôle"], ["recent", "Plus récents"], ["activite", "Activité récente"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.tri === k ? " selected" : "" %>><%= name %></option><% }) %></select>
       <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (f.q || f.role || f.site) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "", role: "", site: "" }) %>">Réinitialiser</a><% } %>
     </form>
     <% if (f.statut === "en-attente") { %>
@@ -37,16 +40,35 @@
     <% } else if (!rows.length) { %>
       <div class="mk-empty"><%- illu("users", { className: "kx-empty-ill" }) %><h2>Aucun résultat.</h2><p>Aucune personne ne correspond à ces critères.</p></div>
     <% } else { %>
+      <% const canBulk = canEdit || canRoles || canDelete; const sortLink = (k, label) => '<a href="' + keep({ tri: k === "nom" ? "" : k, page: "" }) + '"' + ((f.tri === k) ? ' aria-sort="ascending"' : "") + '>' + label + (f.tri === k ? ' <span aria-hidden="true">↑</span>' : "") + '</a>'; %>
+      <% if (canBulk) { %>
+      <form id="us-bulk" class="mk-us-bulk" method="post" action="<%= BASE %>/groupe" data-us-bulk aria-label="Actions groupées sur les comptes cochés">
+        <label class="sr-only" for="us-act">Actions groupées</label>
+        <select id="us-act" name="action"><option value="">Actions groupées</option>
+          <% if (canRoles) { %><option value="role">Changer de rôle pour…</option><% } %>
+          <% if (canEdit) { %><option value="suspended">Suspendre</option><option value="disabled">Désactiver</option><option value="active">Réactiver</option><% } %>
+          <% if (canDelete) { %><option value="retirer">Retirer de l'équipe</option><% } %></select>
+        <% if (canRoles) { %><label class="sr-only" for="us-brole">Rôle à attribuer</label><select id="us-brole" name="role" hidden><option value="">Rôle…</option><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.ok === false ? " disabled" : "" %>><%= r.name %></option><% }) %></select><% } %>
+        <label class="checkbox-row" data-us-confirm hidden><input type="checkbox" name="confirm" value="1"> Je confirme le retrait</label>
+        <button type="submit" class="btn btn-outline btn-sm" data-us-apply disabled>Appliquer</button>
+        <span class="mk-us-bulk-n" data-us-count aria-live="polite">Aucun compte coché</span>
+      </form>
+      <% } %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-us-table">
-        <caption class="sr-only">Équipe</caption>
-        <thead><tr><th scope="col">Nom</th><th scope="col">Rôle</th><th scope="col">Sites</th><th scope="col">Statut</th><th scope="col">Dernière activité</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-        <tbody><% rows.forEach((u) => { %>
-          <tr><th scope="row" data-label="Nom"><span class="mk-tx-name"><a href="<%= BASE %>/<%= u.id %>"><%= u.username %></a><span class="mk-sub"><%= u.email %></span></span></th>
+        <caption class="sr-only">Comptes de l'équipe (<%= result.total %>)</caption>
+        <thead><tr><% if (canBulk) { %><td class="mk-us-check"><input type="checkbox" data-us-all aria-label="Tout cocher sur cette page"></td><% } %><th scope="col"><%- sortLink("nom", "Identifiant") %></th><th scope="col">Nom</th><th scope="col"><%- sortLink("email", "E-mail") %></th><th scope="col"><%- sortLink("role", "Rôle") %></th><th scope="col">Sites</th><th scope="col">Statut</th><th scope="col" class="mk-us-num">Articles</th><th scope="col"><%- sortLink("recent", "Inscription") %></th><th scope="col"><%- sortLink("activite", "Dernière activité") %></th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% rows.forEach((u) => { const mine = u.id === me; %>
+          <tr><% if (canBulk) { %><td class="mk-us-check"><input type="checkbox" name="ids" value="<%= u.id %>" form="us-bulk" data-us-row aria-label="Cocher <%= u.username %>"<%= mine ? " disabled" : "" %>></td><% } %>
+            <th scope="row" data-label="Identifiant"><span class="mk-us-who"><% if (u.avatar_path) { %><img class="mk-us-av" src="<%= u.avatar_path %>" alt="" width="32" height="32" loading="lazy"><% } else { %><span class="mk-us-av mk-us-av--i" aria-hidden="true"><%= String(u.display || u.username).slice(0, 1).toUpperCase() %></span><% } %><span class="mk-tx-name"><a href="<%= BASE %>/<%= u.id %>"><%= u.username %></a><%= mine ? " (vous)" : "" %><% if (u.display && u.display !== u.username) { %><span class="mk-sub"><%= u.display %></span><% } %></span></span></th>
+            <td data-label="Nom"><%= u.fullName || "—" %></td>
+            <td data-label="E-mail"><a href="mailto:<%= u.email %>"><%= u.email %></a></td>
             <td data-label="Rôle"><%= u.org_role ? roleName(u.org_role) : "—" %></td>
             <td data-label="Sites"><%= u.sites.length ? u.sites.map((s) => s.name + " (" + roleName(s.role) + ")").join(", ") : (u.org_role ? "Tous" : "—") %></td>
             <td data-label="Statut"><span class="mk-status <%= stClass[u.status] || "mk-status-off" %>"><%= stLabel[u.status] || u.status %></span></td>
+            <td data-label="Articles" class="mk-us-num"><%= u.articles %></td>
+            <td data-label="Inscription"><%= fd(u.joined_at) %></td>
             <td data-label="Dernière activité"><%= u.last_seen_at ? fdt(u.last_seen_at) : "Jamais" %></td>
-            <td class="mk-row-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= u.id %>">Voir</a></td></tr>
+            <td class="mk-row-actions"><a class="btn btn-outline btn-sm" href="<%= BASE %>/<%= u.id %>">Modifier</a></td></tr>
         <% }) %></tbody></table></div>
       <nav class="mk-cms-pager" aria-label="Pagination"><span><%= result.total %> personne<%= result.total > 1 ? "s" : "" %></span>
         <% if (result.pages > 1) { %><span class="mk-cms-pager-nav">

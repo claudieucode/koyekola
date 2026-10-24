@@ -20,7 +20,7 @@ after(() => srv.stop());
 
 describe("registre et menu", () => {
   test("le registre couvre la structure cible (14 rubriques : « Navigation » est devenu Apparence → Menus) sans adresse en double", () => {
-    assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
+    assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
     assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Thèmes", "Personnaliser", "Éditeur du site", "Templates", "Patterns", "Styles", "Polices", "En-tête", "Pied de page", "Widgets", "Menus"]);
   });

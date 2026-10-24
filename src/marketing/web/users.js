@@ -36,16 +36,26 @@ module.exports = () => {
   const grantable = (req) => access.allRoles().map((r) => ({ ...r, ok: access.subset(r.permissions, req.mk.perms) }));
   const roleName = (key) => (access.getRole(key) ? access.getRole(key).name : key);
 
+  // Données d'affichage de la liste (réelles) : nom affiché et photo du profil, nombre d'articles dont la personne est l'auteur
+  const enrich = (rows) => {
+    if (!rows.length) return rows;
+    const ids = rows.map((r) => r.id), marks = ids.map(() => "?").join(",");
+    const prof = new Map(db.prepare(`SELECT u.id, u.avatar_path, p.display_name, p.nickname, p.first_name, p.last_name FROM users u LEFT JOIN mk_user_profiles p ON p.user_id = u.id WHERE u.id IN (${marks})`).all(...ids).map((r) => [r.id, r]));
+    const posts = new Map(db.prepare(`SELECT author_id, COUNT(*) n FROM posts WHERE author_id IN (${marks}) GROUP BY author_id`).all(...ids).map((r) => [r.author_id, r.n]));
+    return rows.map((r) => { const p = prof.get(r.id) || {}; return { ...r, avatar_path: p.avatar_path || null, display: p.display_name || p.nickname || "", fullName: [p.first_name, p.last_name].filter(Boolean).join(" "), articles: posts.get(r.id) || 0 }; });
+  };
+
   router.use("/site-web/utilisateurs", (req, res, next) => { res.locals.usersJs = true; next(); }); // script des écrans (envoi unique, modifications non enregistrées)
   // ----- Liste -----
   router.get("/site-web/utilisateurs", need("users.view"), (req, res) => {
     const sub = String(req.query.statut || "");
-    const f = { q: String(req.query.q || "").trim().slice(0, 80), role: String(req.query.role || ""), site: intOrNull(req.query.site), tri: ["nom", "recent", "activite"].includes(req.query.tri) ? req.query.tri : "nom", statut: Object.hasOwn(STATUS, sub) || sub === "en-attente" ? sub : "" };
-    const counts = access.statusCounts(org(req));
+    const f = { q: String(req.query.q || "").trim().slice(0, 80), role: String(req.query.role || ""), site: intOrNull(req.query.site), tri: ["nom", "email", "role", "recent", "activite"].includes(req.query.tri) ? req.query.tri : "nom", statut: Object.hasOwn(STATUS, sub) || sub === "en-attente" ? sub : "" };
+    const counts = access.statusCounts(org(req)), roleCounts = access.roleCounts(org(req));
     const result = f.statut === "en-attente" ? null : access.listMembers(org(req), { q: f.q, status: STATUS[f.statut], role: f.role, siteId: f.site, sort: f.tri, page: req.query.page });
+    const rowsPlus = result ? enrich(result.rows) : [];
     res.render("marketing/users", {
-      title: "Utilisateurs", active: "utilisateurs", mode: "list", f, tabs: TABS, counts, result, rows: result ? result.rows : [], invitations: f.statut === "en-attente" ? access.listInvitations(org(req), { state: "pending", perPage: 200 }).rows : [],
-      roles: access.allRoles(), sites: sites(req), roleName, BASE, me: req.session.user.id, canCreate: req.mk.can("users.create"), canEdit: req.mk.can("users.edit"), usersJs: true,
+      title: "Comptes", active: "utilisateurs", mode: "list", f, tabs: TABS, counts, roleCounts, result, rows: rowsPlus, invitations: f.statut === "en-attente" ? access.listInvitations(org(req), { state: "pending", perPage: 200 }).rows : [],
+      roles: grantable(req), sites: sites(req), roleName, BASE, me: req.session.user.id, canCreate: req.mk.can("users.create"), canEdit: req.mk.can("users.edit"), canRoles: req.mk.can("users.manage_roles"), canDelete: req.mk.can("users.delete"), usersJs: true,
     });
   });
 
@@ -54,6 +64,40 @@ module.exports = () => {
     action: `${BASE}/nouveau`, listUrl: BASE, canCreate: true, detailUrl: (id, role) => (role ? `${BASE}/${id}` : `${BASE}/nouveau?cree=${id}`), BASE });
   router.get("/site-web/utilisateurs/nouveau", need("users.create"), (req, res) => accountNew.show(req, res, accountCtx(req), { created: accountNew.createdOf(req) }));
   router.post("/site-web/utilisateurs/nouveau", need("users.create"), (req, res, next) => accountNew.submit(req, res, next, accountCtx(req)));
+
+  // ----- Actions groupées : chaque personne passe par la MÊME fonction (et les mêmes garde-fous) que la fiche individuelle ; un refus n'arrête pas les autres -----
+  const BULK = { role: ["users.manage_roles", "Changer de rôle"], active: ["users.edit", "Réactiver"], suspended: ["users.edit", "Suspendre"], disabled: ["users.edit", "Désactiver"], retirer: ["users.delete", "Retirer de l'équipe"] };
+  router.post("/site-web/utilisateurs/groupe", need("users.view"), (req, res, next) => {
+    const back = (() => { try { const u = new URL(req.get("referer") || "", "http://x.invalid"); return u.pathname === BASE ? BASE + u.search : BASE; } catch { return BASE; } })();
+    try {
+      const action = String(req.body.action || "");
+      if (!Object.hasOwn(BULK, action)) { flash(req, "error", "Choisissez une action à appliquer."); return res.redirect(back); }
+      if (!req.mk.can(BULK[action][0])) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+      const ids = [...new Set([].concat(req.body.ids || []).map((v) => intOrNull(v)).filter((v) => v !== null))].slice(0, 100);
+      if (!ids.length) { flash(req, "error", "Cochez au moins une personne."); return res.redirect(back); }
+      if (action === "retirer" && req.body.confirm !== "1") { flash(req, "error", "Confirmez le retrait de l'équipe en cochant la case prévue."); return res.redirect(back); }
+      if (action === "role" && !access.getRole(String(req.body.role || ""))) { flash(req, "error", "Choisissez le rôle à attribuer."); return res.redirect(back); }
+      let done = 0; const refused = [];
+      for (const id of ids) {
+        try {
+          if (!access.memberDetail(org(req), id)) throw new UserError("Cette personne ne fait pas partie de l'équipe.");
+          if (action === "role") access.setOrgRole(org(req), actor(req), id, String(req.body.role));
+          else if (action === "retirer") access.removeFromTeam(org(req), actor(req), id);
+          else access.setStatus(org(req), actor(req), id, action);
+          done++;
+        } catch (error) {
+          if (!(error instanceof UserError) && !(error instanceof MarketingError)) throw error;
+          const u = db.prepare("SELECT username FROM users WHERE id = ?").get(id);
+          refused.push(`${u ? u.username : "#" + id} : ${error.message}`);
+        }
+      }
+      const label = BULK[action][1];
+      if (done && !refused.length) flash(req, "ok", `${label} : ${done} compte${done > 1 ? "s" : ""}.`);
+      else if (done) req.session.mkFlash = { type: "ok", text: `${label} : ${done} compte${done > 1 ? "s" : ""} modifié${done > 1 ? "s" : ""}, ${refused.length} refusé${refused.length > 1 ? "s" : ""}.`, detail: refused.join("\n"), noReopen: true };
+      else req.session.mkFlash = { type: "error", text: `Aucun compte modifié : ${refused[0]}`, detail: refused.length > 1 ? refused.join("\n") : undefined, noReopen: true };
+      res.redirect(back);
+    } catch (error) { next(error); }
+  });
 
   // ----- Inviter / ajouter -----
   router.get("/site-web/utilisateurs/ajouter", need("users.create"), (req, res) => {

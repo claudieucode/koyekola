@@ -39,7 +39,7 @@ describe("utilisateurs d'un site (navigateur)", { skip: SKIP }, () => {
     const page = await open(); await page.goto(S("tableau-de-bord"));
     const head = page.locator('[data-mk-group="utilisateurs"] > .mk-nav-head'); assert.equal(await head.getAttribute("aria-expanded"), "false", "groupe replié au départ");
     await head.click(); assert.equal(await head.getAttribute("aria-expanded"), "true"); await page.locator("#mk-sub-utilisateurs").waitFor({ state: "visible" });
-    for (const [label, h1] of [["Tous les utilisateurs", "Utilisateurs"], ["Inviter", "Inviter quelqu'un"], ["Rôles", "Rôles"], ["Permissions", "Permissions"], ["Invitations", "Invitations"]]) {
+    for (const [label, h1] of [["Tous les comptes", "Comptes"], ["Ajouter un compte", "Ajouter un compte"], ["Inviter", "Inviter quelqu'un"], ["Rôles", "Rôles"], ["Permissions", "Permissions"], ["Invitations", "Invitations"]]) {
       const link = page.locator("#mk-sub-utilisateurs a.mk-nav-sublink", { hasText: new RegExp(`^${label}$`) }); assert.equal(await link.count(), 1, label);
       await link.click(); await page.waitForFunction((t) => { const h = document.querySelector("h1"); return h && h.textContent.trim() === t; }, h1); assert.equal(await page.locator('#mk-sub-utilisateurs a[aria-current="page"]').innerText(), label);
     }

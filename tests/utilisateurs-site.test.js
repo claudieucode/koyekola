@@ -31,10 +31,10 @@ describe("Utilisateurs d'un site", () => {
   });
   after(() => { db.close(); return srv.stop(); });
 
-  test("le menu d'un site : Tous les utilisateurs, Inviter, Rôles, Permissions, Invitations sont des liens ; plus aucune entrée « Bientôt » dans Utilisateurs", async () => {
+  test("le menu d'un site : Tous les comptes, Ajouter un compte, Inviter, Rôles, Permissions, Invitations, Profil sont des liens ; plus aucune entrée « Bientôt » dans Comptes", async () => {
     const menu = (await adminA.get(S(A, "tableau-de-bord"))).text;
     for (const k of ["equipe", "equipe-inviter", "equipe-roles", "equipe-permissions", "equipe-invitations"]) assert.match(menu, new RegExp(`href="${S(A, k)}"`), k);
-    const soon = ["Inviter", "Rôles", "Permissions", "Invitations"].filter((l) => new RegExp(`title="${l} \\(bientôt\\)"`).test(menu));
+    const soon = ["Ajouter un compte", "Inviter", "Rôles", "Permissions", "Invitations", "Profil"].filter((l) => new RegExp(`title="${l} \\(bientôt\\)"`).test(menu));
     assert.deepEqual(soon, [], "aucune entrée grisée");
     for (const k of ["equipe", "equipe-inviter", "equipe-roles", "equipe-permissions", "equipe-invitations"]) assert.equal((await adminA.get(S(A, k))).status, 200, k);
   });

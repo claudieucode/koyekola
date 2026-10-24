@@ -60,8 +60,8 @@ const SECTIONS = [
   // Extensions : modules activables PAR SITE (registre fermé siteModules.js). L'activation est réservée à l'équipe de l'organisation ; elle s'ajoute aux permissions et à l'isolation par site.
   { key: "extensions", label: "Extensions", icon: "plug", items: [leaf("extensions", "Modules", `${BASE}/extensions`, { permission: "sites.modules", teamOnly: true })] },
   {
-    key: "utilisateurs", label: "Utilisateurs", icon: "users", items: [
-      leaf("utilisateurs", "Tous les utilisateurs", `${BASE}/utilisateurs`, { permission: "users.view" }),
+    key: "utilisateurs", label: "Comptes", icon: "users", items: [
+      leaf("utilisateurs", "Tous les comptes", `${BASE}/utilisateurs`, { permission: "users.view" }),
       leaf("utilisateurs/nouveau", "Ajouter un compte", `${BASE}/utilisateurs/nouveau`, { permission: "users.create" }),
       leaf("utilisateurs/ajouter", "Inviter", `${BASE}/utilisateurs/ajouter`, { permission: "users.create" }),
       leaf("utilisateurs/roles", "Rôles", `${BASE}/utilisateurs/roles`, { permission: "users.view" }),
@@ -178,7 +178,7 @@ const SITE_MODULES = {
   composants: { label: "Composants", kind: "own", permission: "forms.read" },
   redirections: { label: "Redirections", kind: "own", reg: "redirections", permission: "redirects.view" },
   // Utilisateurs d'un site : écrans partagés /site-web/equipe-site (équipe locale, invitations de CE site, rôles et permissions en lecture) ouverts dans le cadre du site
-  equipe: { label: "Tous les utilisateurs", kind: "delegate", to: "/site-web/equipe-site", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
+  equipe: { label: "Tous les comptes", kind: "delegate", to: "/site-web/equipe-site", reg: "utilisateurs", permission: "users.view", legacy: `${BASE}/utilisateurs` },
   "equipe-ajouter": { label: "Ajouter un compte", kind: "delegate", to: "/site-web/equipe-site/nouveau", reg: "utilisateurs/nouveau", permission: "users.create", legacy: `${BASE}/utilisateurs/nouveau` },
   "equipe-inviter": { label: "Inviter", kind: "delegate", to: "/site-web/equipe-site/inviter", reg: "utilisateurs/ajouter", permission: "users.create", legacy: `${BASE}/utilisateurs/ajouter` },
   "equipe-invitations": { label: "Invitations", kind: "delegate", to: "/site-web/equipe-site/invitations", reg: "utilisateurs/invitations", permission: "users.view", legacy: `${BASE}/utilisateurs/invitations` },

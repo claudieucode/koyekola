@@ -45,7 +45,7 @@ module.exports = () => {
   };
   const render = (req, res, c, view, extra = {}) => {
     res.set("Cache-Control", "no-store");
-    res.render("marketing/site-users", { title: extra.title || "Utilisateurs", active: extra.active || "utilisateurs", siteUsersJs: true, usersJs: true, mode: view, T: c.t, SITE: { id: c.siteId, name: c.t.name, readOnly: c.t.readOnly }, FRAME, frameUrl: (s, qs) => frameUrl(c.siteId, s, qs), BASE, roleName,
+    res.render("marketing/site-users", { title: extra.title || "Comptes", active: extra.active || "utilisateurs", siteUsersJs: true, usersJs: true, mode: view, T: c.t, SITE: { id: c.siteId, name: c.t.name, readOnly: c.t.readOnly }, FRAME, frameUrl: (s, qs) => frameUrl(c.siteId, s, qs), BASE, roleName,
       can: (p) => c.perms.has(p), teamUser: !req.mk.siteOnly, ...extra });
   };
   // Les formulaires de ce module postent vers BASE (adresse centrale) avec le site en champ caché : le serveur le revérifie (siteTarget) avant tout.

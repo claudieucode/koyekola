@@ -54,7 +54,7 @@ describe("1 — le menu d'un site est la projection du registre", () => {
   test("les groupes du registre, dans l'ordre, plus « Marketing du site » avant Outils (sans Extensions, fonction centrale)", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
     const labels = topLabels(html);
-    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Utilisateurs", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
+    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Comptes", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
     assert.deepEqual(labels, expected);
     assert.equal(nav.SECTIONS.length, 14, "le registre compte 14 groupes (dont « Mes sites », gestionnaire central, et « Extensions », fonction centrale)");
   });

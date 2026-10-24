@@ -41,7 +41,7 @@ module.exports = () => {
     const form = req.session.profileForm || null;
     delete req.session.profileForm;
     const v = form && form.section === "profile" ? form.values : {};
-    const merged = { ...p, firstName: v.first_name ?? p.firstName, lastName: v.last_name ?? p.lastName, nickname: v.nickname ?? p.nickname, website: v.website ?? p.website, bio: v.bio ?? p.bio, displayName: v.display_name ?? p.displayName, theme: v.theme ?? p.prefs.theme };
+    const merged = { ...p, firstName: v.first_name ?? p.firstName, lastName: v.last_name ?? p.lastName, nickname: v.nickname ?? (p.nickname || p.username), website: v.website ?? p.website, bio: v.bio ?? p.bio, displayName: v.display_name ?? p.displayName, theme: v.theme ?? p.prefs.theme };
     res.render("marketing/profile", {
       title: "Profil", active: "utilisateurs/profil", p: merged, BASE, errors: form ? form.errors : {}, formSection: form ? form.section : "",
       emailValue: form && form.section === "email" ? form.values.email : "", sessions: profile.sessionsOf(me(req), req.sessionID), displayOptions: profile.displayOptions(merged),

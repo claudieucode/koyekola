@@ -1621,7 +1621,7 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .mk-pf-inline input { flex: 1 1 260px; min-width: 0; max-width: 480px; }
 .mk-pf-pending { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 8px 12px; border: 1px solid var(--k-warn-bd); border-radius: var(--mk-r-sm); background: var(--k-warn-bg); color: var(--k-warn-fg); font-size: 0.88rem; }
 .mk-pf-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 220px)); gap: 10px; }
-.mk-pf-theme { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r); background: var(--mk-surface); cursor: pointer; }
+.mk-pf-theme { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--mk-border-strong); border-radius: var(--mk-r); background: var(--mk-surface); cursor: pointer; }
 .mk-pf-theme:has(input:checked) { border-color: var(--accent); box-shadow: var(--mk-focus); }
 .mk-pf-theme:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mk-pf-theme input { position: absolute; opacity: 0; pointer-events: none; }
@@ -1647,6 +1647,8 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
   .mk-pf-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
   .mk-pf-label { padding-top: 0; }
   .mk-pf-themes { grid-template-columns: minmax(0, 1fr); }
+  .mk-pf-avatar { grid-auto-flow: row; justify-items: start; }
+  .mk-pf-avatar > div, .mk-pf-avatar input[type="file"] { min-width: 0; max-width: 100%; }
   .mk-pf-ctl > input[type="text"], .mk-pf-ctl > input[type="email"], .mk-pf-ctl > select, .mk-pf-ctl > textarea { max-width: none; }
 }
 
@@ -1705,7 +1707,6 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .ac-bar { max-width: 1040px; }
 @media (max-width: 820px) { .ac-grid { grid-template-columns: minmax(0, 1fr); } .ac-card { padding: 16px; } .ac-pw input { max-width: none; } }
 @media (prefers-reduced-motion: reduce) { .ac-meter-bar, .ac-field input, .ac-field select { transition: none; } }
-=======
 
 /* ---- Chemin (fil d'Ariane) dans la zone de contenu : intégré au bandeau de contexte du site ---- */
 .mk-site-banner .mk-cms-crumbs { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow: hidden; margin-left: auto; padding-left: 14px; border-left: 1px solid var(--mk-border, #e1e7ef); }
@@ -1716,3 +1717,20 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .mk-cms-crumbrow { margin: 0 0 14px; }
 .mk-cms-crumbrow .mk-cms-crumbs ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; }
 @media (max-width: 760px) { .mk-site-banner .mk-cms-crumbs { flex-basis: 100%; margin-left: 0; padding-left: 0; border-left: 0; order: 5; } }
+=======
+/* ===== Comptes → liste : filtres par rôle, actions groupées, identité compacte (views/marketing/users.ejs) ===== */
+.mk-us-roles { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0 0 8px; font-size: 0.88rem; }
+.mk-us-roles-l { font-weight: 700; color: var(--muted); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.mk-us-roles a { color: var(--accent-dark); text-decoration: none; }
+.mk-us-roles a[aria-current="true"] { color: var(--mk-text); font-weight: 700; }
+.mk-us-roles a span { color: var(--muted); font-weight: 400; }
+.mk-us-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; }
+.mk-us-bulk select { width: auto; min-width: 180px; max-width: 260px; }
+.mk-us-bulk-n { margin-left: auto; font-size: 0.84rem; color: var(--muted); }
+.mk-us-table th a { color: inherit; text-decoration: none; }
+.mk-us-table th a:hover { color: var(--accent-dark); }
+.mk-us-check { width: 36px; padding-right: 0 !important; }
+.mk-us-num { text-align: right; font-variant-numeric: tabular-nums; }
+.mk-us-who { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.mk-us-av { flex: none; width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--mk-border); }
+.mk-us-av--i { display: inline-flex; align-items: center; justify-content: center; background: var(--accent-light); color: var(--accent-dark); font-size: 0.85rem; font-weight: 700; }

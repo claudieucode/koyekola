@@ -52,7 +52,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("les groupes Utilisateurs, Outils et Paramètres s'affichent sous LEUR titre, avec leurs sous-entrées (plus d'« Équipe du site », de « Réglages du site » en titre)", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const g = Object.fromEntries(site.filter((x) => !x.flat).map((x) => [x.cle, x]));
-    assert.deepEqual(g.utilisateurs.entrees.map((e) => e.libelle), ["Tous les utilisateurs", "Ajouter un compte", "Inviter", "Rôles", "Permissions", "Invitations", "Profil"]);
+    assert.deepEqual(g.utilisateurs.entrees.map((e) => e.libelle), ["Tous les comptes", "Ajouter un compte", "Inviter", "Rôles", "Permissions", "Invitations", "Profil"]);
     assert.deepEqual(g.outils.entrees.map((e) => e.libelle), ["Outils disponibles", "Santé du site", "Corbeille", "Importer", "Exporter", "Exporter les données", "Diagnostic", "Maintenance", "Caches", "Outils de contenu", "Effacer les données", "Admin Notes"]);
     assert.deepEqual(g.parametres.entrees.map((e) => e.libelle), ["Général", "Connecteurs", "Écriture", "Lecture", "Commentaires", "Médias", "Permaliens", "SEO", "Confidentialité", "Indexation", "Emailing", "Tunnels", "Avancé"]);
     assert.ok(!site.some((x) => /Équipe du site|Réglages du site|Design du site/.test(x.titre)), "aucun libellé propre au site en titre");

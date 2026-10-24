@@ -54,7 +54,7 @@ describe("palette Outils : l'entrée active suit la page affichée", () => {
     assert.match(h, /aria-expanded="true" aria-controls="mk-sub-outils"/);
     // Une page hors Outils (Paramètres) : le groupe Outils n'est pas déplié et aucune de ses entrées n'est active
     const p = await open(`${R}/parametres`); assert.ok(!/<div class="mk-nav-group is-open" data-mk-group="outils">/.test(p), "Outils replié hors de ses pages");
-    for (const [path, label] of [["parametres", "Général"], ["redirections", "Redirections"], ["utilisateurs", "Utilisateurs"]]) {
+    for (const [path, label] of [["parametres", "Général"], ["redirections", "Redirections"], ["utilisateurs", "Tous les comptes"]]) {
       const c = currents(await open(`${R}/${path}`));
       assert.ok(c.length >= 1 && !c.some((x) => PAGES.some(([, l]) => l === x) && x !== label), `${path} : ${c.join(",")}`);
     }

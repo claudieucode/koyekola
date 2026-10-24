@@ -206,7 +206,7 @@ function deleteRole(organizationId, actor, key) {
 
 // ---------- Équipe : liste, fiche, changements ----------
 const like = (s) => `%${String(s).replace(/[\\%_]/g, "\\$&")}%`;
-const SORTS = { nom: "u.username COLLATE NOCASE ASC", recent: "u.created_at DESC, u.id DESC", activite: "COALESCE(u.last_seen_at, '') DESC, u.username COLLATE NOCASE" };
+const SORTS = { nom: "u.username COLLATE NOCASE ASC", email: "u.email COLLATE NOCASE ASC, u.id", role: "COALESCE(m.role, '~') COLLATE NOCASE ASC, u.username COLLATE NOCASE", recent: "u.created_at DESC, u.id DESC", activite: "COALESCE(u.last_seen_at, '') DESC, u.username COLLATE NOCASE" };
 function listMembers(organizationId, { q = "", status = "", role = "", siteId = null, sort = "nom", page = 1, perPage = 25 } = {}) {
   const where = [], args = [organizationId];
   // « Équipe » = membres de l'organisation ET personnes qui n'ont qu'un accès de site
@@ -224,6 +224,13 @@ function listMembers(organizationId, { q = "", status = "", role = "", siteId = 
   const sitesOf = ids.length ? db.prepare(`SELECT sm.user_id, sm.role, s.id AS site_id, s.name FROM mk_site_members sm JOIN mk_sites s ON s.id = sm.site_id WHERE sm.user_id IN (${ids.map(() => "?").join(",")}) ORDER BY s.name`).all(...ids) : [];
   for (const r of rows) r.sites = sitesOf.filter((s) => s.user_id === r.id);
   return { rows, total, page: current, pages };
+}
+// Nombre de personnes par rôle : mêmes critères que le filtre « rôle » de la liste (rôle d'équipe OU rôle sur un site) ; { key, name, n } pour chaque rôle utilisé
+function roleCounts(organizationId) {
+  const base = "FROM users u LEFT JOIN mk_org_members m ON m.user_id = u.id AND m.organization_id = ? WHERE (m.user_id IS NOT NULL OR EXISTS (SELECT 1 FROM mk_site_members sm0 WHERE sm0.user_id = u.id))";
+  const total = db.prepare(`SELECT COUNT(*) n ${base}`).get(organizationId).n;
+  const per = allRoles().map((r) => ({ key: r.key, name: r.name, n: db.prepare(`SELECT COUNT(*) n ${base} AND (m.role = ? OR EXISTS (SELECT 1 FROM mk_site_members sm1 WHERE sm1.user_id = u.id AND sm1.role = ?))`).get(organizationId, r.key, r.key).n })).filter((r) => r.n > 0);
+  return { total, roles: per };
 }
 function statusCounts(organizationId) {
   const rows = db.prepare("SELECT u.status, COUNT(*) n FROM users u WHERE EXISTS (SELECT 1 FROM mk_org_members m WHERE m.user_id = u.id AND m.organization_id = ?) OR EXISTS (SELECT 1 FROM mk_site_members sm WHERE sm.user_id = u.id) GROUP BY u.status").all(organizationId);
@@ -482,6 +489,6 @@ function matrix(roleKey) {
 module.exports = {
   GROUPS, LABELS, ACTIONS, OWNER_ONLY, ASSIGNABLE, SYSTEM_ROLES, INVITE_DAYS, INVITE_MAX_PER_HOUR, RESEND_COOLDOWN_SECONDS, MAX_SENDS, recordDelivery,
   getRole, allRoles, customRoles, invalidate, cacheInfo, permissionsOf, membershipOf, siteRoleOf, siteMemberships, effectivePermissions, can, subset,
-  assertCanGrantRole, assertNotLastOwner, assertCanManage, createRole, updateRole, deleteRole, roleUsage, listMembers, statusCounts, memberDetail,
+  assertCanGrantRole, assertNotLastOwner, assertCanManage, createRole, updateRole, deleteRole, roleUsage, listMembers, roleCounts, statusCounts, memberDetail,
   listSiteMembers, siteStatusCounts, siteRoleCounts, siteMemberDetail, setOrgRole, setStatus, removeFromTeam, setSiteRole, setSiteMode, SITE_MODES, removeSiteRole, invite, reissue, revoke, listInvitations, invitationByToken, acceptInvitation, matrix, activeOwners,
 };
