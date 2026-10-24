@@ -66,7 +66,7 @@ module.exports = () => {
   router.post("/site-web/articles", canCreate, (req, res, next) => {
     try {
       // Tout ou rien : l'article et son rattachement au site choisi (si l'équipe a choisi un site) sont écrits ensemble
-      const post = transaction(req.mk.ctx.db, () => { const p = articles.createDraft({ title: req.body.title, userId: req.session.user.id }); siteContent.adopt(req.mk.ctx, { type: "post", id: p.id }); require("../../services/writing").applyDefaults(p.id, req.mk.ctx); return p; });
+      const post = transaction(req.mk.ctx.db, () => { const p = articles.createDraft({ title: req.body.title, userId: req.session.user.id, siteId: Number.isInteger(req.mk.ctx.siteScope) ? req.mk.ctx.siteScope : Number.isInteger(req.mk.ctx.siteFilter) ? req.mk.ctx.siteFilter : null }); siteContent.adopt(req.mk.ctx, { type: "post", id: p.id }); require("../../services/writing").applyDefaults(p.id, req.mk.ctx); return p; });
       res.redirect(`/formateur/blog/${post.id}/modifier`);
     } catch (error) { fail(req, res, next, BASE, error); }
   });

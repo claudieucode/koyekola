@@ -21,7 +21,7 @@ const CONTENT = {
   post: {
     table: "posts", label: "article",
     // Un contenu accepte des commentaires s'il est publié ET que ses commentaires sont ouverts
-    row: (id) => db.prepare("SELECT id, slug, title, published, comments_enabled FROM posts WHERE id = ?").get(id),
+    row: (id) => db.prepare("SELECT id, slug, title, published, published_at, comments_enabled FROM posts WHERE id = ?").get(id),
     published: (r) => Boolean(r.published), open: (r) => Boolean(r.comments_enabled),
     url: (r) => `/blog/${r.slug}`, titleOf: (r) => r.title,
   },
@@ -32,44 +32,108 @@ const registerContent = (type, def) => { CONTENT[type] = def; };
 const events = new EventEmitter();
 const emit = (name, payload) => { try { events.emit(name, { event: name, at: new Date().toISOString(), ...payload }); } catch { /* un abonné ne casse jamais l'action */ } };
 
-// ---------- Prévenir la modération (palier 23) ----------
-// Un commentaire « en attente » prévient l'adresse administrative (Paramètres → Général, sinon celle de l'hébergeur) par la file d'envoi existante.
-// Au plus UN e-mail par tranche de 10 minutes, qui annonce le nombre total de commentaires en attente (jamais le texte du commentaire : il vient d'un inconnu).
-// COMMENT_NOTIFY=0 coupe cette alerte. Un échec d'envoi ne gêne jamais l'envoi du commentaire.
+// ---------- Prévenir l'équipe (palier 23, réglages par site) ----------
+// « Un commentaire est en attente de modération » : au plus UN e-mail par tranche de 10 minutes ET PAR SITE, qui annonce le nombre de commentaires en attente (jamais le
+// texte : il vient d'un inconnu). « Un nouveau commentaire est publié » : un e-mail par commentaire publié par un visiteur (jamais pour un modérateur qui se répond à lui-même).
+// Les deux passent par la file d'envoi existante (échec noté et réessayé : Outils → journal d'envoi) ; chaque événement ne compte que si le réglage DU SITE du contenu l'a activé.
+// Destinataire : l'adresse administrative (Paramètres → Général, sinon celle de l'hébergeur). COMMENT_NOTIFY=0 coupe tout. Un échec d'envoi ne gêne jamais l'envoi du commentaire.
 const NOTIFY_EVERY_MS = 10 * 60 * 1000;
-let lastNotified = 0;
-events.on("comment.pending", () => {
+const lastNotified = new Map();
+function recipient() {
+  const mailer = require("../utils/mailer");
+  let to = "";
+  try { to = require("./settings").main().adminEmail; } catch { to = ""; }
+  return to || process.env.CONTACT_EMAIL || mailer.fromAddress();
+}
+events.on("comment.pending", (p) => {
   try {
-    if (process.env.COMMENT_NOTIFY === "0" || Date.now() - lastNotified < NOTIFY_EVERY_MS) return;
+    if (process.env.COMMENT_NOTIFY === "0") return;
+    const site = siteIdOf(p.contentType, p.contentId);
+    if (!settingsFor(site).notify_pending) return;
+    if (Date.now() - (lastNotified.get(site || 0) || 0) < NOTIFY_EVERY_MS) return;
     const mailer = require("../utils/mailer");
-    let to = "";
-    try { to = require("./settings").main().adminEmail; } catch { to = ""; }
-    to = to || process.env.CONTACT_EMAIL || mailer.fromAddress();
+    const to = recipient();
     if (!to) return;
-    const waiting = db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE status = 'pending'").get().n;
+    const waiting = db.prepare(`SELECT COUNT(*) n FROM blog_comments c WHERE c.status = 'pending' AND ${siteFilterSql(site)}`).get().n;
     if (!waiting) return;
-    lastNotified = Date.now();
+    lastNotified.set(site || 0, Date.now());
     require("../utils/outbox").queueMail(db, {
       kind: "comment_pending", to,
       subject: `[KOLAKISA] ${waiting} commentaire${waiting > 1 ? "s" : ""} en attente de modération`,
-      text: `${waiting} commentaire${waiting > 1 ? "s attendent" : " attend"} votre modération.\n\nOuvrir la modération : ${mailer.siteUrl()}/marketing/site-web/commentaires/en-attente\n\n(Au plus un e-mail toutes les 10 minutes. Pour couper cette alerte : COMMENT_NOTIFY=0.)`,
+      text: `${waiting} commentaire${waiting > 1 ? "s attendent" : " attend"} votre modération.\n\nOuvrir la modération : ${mailer.siteUrl()}/marketing/site-web/commentaires/en-attente\n\n(Au plus un e-mail toutes les 10 minutes. Pour couper cette alerte : Paramètres → Commentaires.)`,
     });
   } catch { /* l'alerte ne doit jamais gêner le commentaire */ }
 });
-
-// ---------- Réglages (une ligne par clé dans mk_settings, organisation par défaut) ----------
-const DEFAULTS = Object.freeze({
-  enabled_default: true,   // nouveaux articles : commentaires ouverts
-  guests_allowed: false,   // visiteurs sans compte (nom + e-mail)
-  moderation: "none",      // none | first | all
-  replies_allowed: true,
-  max_depth: 3,            // niveaux de discussion (1 = pas de réponses imbriquées)
-  links_allowed: true,     // liens http(s) cliquables (rel nofollow ugc) ; sinon un commentaire avec lien est refusé
+events.on("comment.created", (p) => {
+  try {
+    if (process.env.COMMENT_NOTIFY === "0" || p.status !== "approved" || p.trusted) return;
+    const site = siteIdOf(p.contentType, p.contentId);
+    if (!settingsFor(site).notify_published) return;
+    const to = recipient();
+    if (!to) return;
+    const def = CONTENT[p.contentType], row = def && def.row(p.contentId);
+    const mailer = require("../utils/mailer");
+    require("../utils/outbox").queueMail(db, {
+      kind: "comment_published", to,
+      subject: `[KOLAKISA] Nouveau commentaire sur « ${row ? String(def.titleOf(row)).slice(0, 80) : "un contenu"} »`,
+      text: `Un nouveau commentaire vient d'être publié${row ? ` sur « ${def.titleOf(row)} »` : ""}.\n\nLe lire ou le modérer : ${mailer.siteUrl()}/marketing/site-web/commentaires\n\n(Pour couper cet e-mail : Paramètres → Commentaires.)`,
+    });
+  } catch { /* idem */ }
 });
+
+// ---------- Réglages (propres à chaque site) ----------
+// Site principal : une ligne JSON dans mk_settings (clé comments.settings, comme avant). Site du CMS : bloc « comments » de mk_sites.settings, créé à la première
+// modification depuis les valeurs du site principal (jusque-là le site HÉRITE du principal, comme avant l'arrivée des réglages par site). Les réglages individuels d'un contenu
+// (comments_enabled d'un article) priment toujours sur la valeur par défaut et ne sont JAMAIS réécrits par un changement de réglage.
+const DEFAULTS = Object.freeze({
+  enabled_default: true,    // nouveaux articles : commentaires ouverts
+  guests_allowed: false,    // visiteurs sans compte ; faux = « un compte connecté est obligatoire »
+  require_name_email: true, // visiteurs : nom et e-mail obligatoires (sinon facultatifs ; un e-mail saisi doit rester valide)
+  close_enabled: false, close_days: 14, // fermeture automatique, N jours après la publication de l'article (UTC)
+  cookie_consent: false,    // case « mémoriser mon nom et mon e-mail » : le cookie n'est écrit que si elle est cochée
+  replies_allowed: true,
+  max_depth: 3,             // niveaux de discussion (1 = pas de réponses imbriquées), 1 à 10
+  paginate: true, per_page: 20, default_page: "first", order: "oldest", // pagination par commentaires de premier niveau
+  notify_published: false, notify_pending: true,
+  moderation: "none",       // none | first (auteur sans commentaire approuvé) | all (approbation manuelle) ; « all » l'emporte
+  max_links: 2,             // au-delà (strictement plus de N liens), le commentaire attend la modération
+  mod_keys: "", block_keys: "", // listes distinctes : modération (en attente) et blocage (indésirable)
+  links_allowed: true,      // liens http(s) cliquables (rel nofollow ugc) ; sinon un commentaire avec lien est refusé
+  show_avatars: true, avatar_rating: "G", avatar_default: "mystery", avatar_external: false,
+});
+const AVATAR_DEFAULTS = Object.freeze(["mystery", "blank", "gravatar", "identicon", "wavatar", "monsterid", "retro", "robohash", "initials", "color"]);
+const AVATAR_EXTERNAL = Object.freeze(["gravatar", "wavatar", "monsterid", "retro", "robohash"]); // produits par un service tiers (Gravatar) : jamais sans l'accord explicite
+const LIST_MAX_LINES = 500, LIST_MAX_LINE = 200;
 const SETTING_KEY = "comments.settings";
 const orgId = () => (db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get() || {}).id || null;
+// Liste de termes : une entrée par ligne, sans doublon, bornée (jamais de liste sans fin : chaque commentaire la parcourt)
+function normalizeList(v) {
+  const seen = new Set(), out = [];
+  for (const raw of String(v || "").replace(/\r\n?/g, "\n").split("\n")) {
+    const line = raw.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, LIST_MAX_LINE);
+    const key = line.toLowerCase();
+    if (line && !seen.has(key)) { seen.add(key); out.push(line); }
+    if (out.length >= LIST_MAX_LINES) break;
+  }
+  return out.join("\n");
+}
+const clampInt = (v, min, max, fallback) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback; };
+function normalizeSettings(s) {
+  const d = DEFAULTS, one = (v, list, f) => (list.includes(v) ? v : f), bool = (v, f) => (v === undefined || v === null ? f : Boolean(v));
+  return {
+    enabled_default: bool(s.enabled_default, d.enabled_default), guests_allowed: bool(s.guests_allowed, d.guests_allowed), require_name_email: bool(s.require_name_email, d.require_name_email),
+    close_enabled: bool(s.close_enabled, d.close_enabled), close_days: clampInt(s.close_days, 1, 3650, d.close_days), cookie_consent: bool(s.cookie_consent, d.cookie_consent),
+    replies_allowed: bool(s.replies_allowed, d.replies_allowed), max_depth: clampInt(s.max_depth, 1, 10, d.max_depth),
+    paginate: bool(s.paginate, d.paginate), per_page: clampInt(s.per_page, 1, 100, d.per_page), default_page: one(s.default_page, ["first", "last"], d.default_page), order: one(s.order, ["oldest", "newest"], d.order),
+    notify_published: bool(s.notify_published, d.notify_published), notify_pending: bool(s.notify_pending, d.notify_pending),
+    moderation: one(s.moderation, ["none", "first", "all"], d.moderation), max_links: clampInt(s.max_links, 0, 50, d.max_links),
+    mod_keys: normalizeList(s.mod_keys), block_keys: normalizeList(s.block_keys), links_allowed: bool(s.links_allowed, d.links_allowed),
+    show_avatars: bool(s.show_avatars, d.show_avatars), avatar_rating: one(s.avatar_rating, ["G", "PG", "R", "X"], d.avatar_rating),
+    avatar_default: one(s.avatar_default, AVATAR_DEFAULTS, d.avatar_default), avatar_external: bool(s.avatar_external, d.avatar_external),
+  };
+}
 let cache = null;
-function settings() {
+function mainSettings() {
   if (cache) return cache;
   const org = orgId();
   let saved = {};
@@ -77,18 +141,24 @@ function settings() {
   cache = normalizeSettings({ ...DEFAULTS, ...saved });
   return cache;
 }
-function normalizeSettings(s) {
-  return {
-    enabled_default: Boolean(s.enabled_default), guests_allowed: Boolean(s.guests_allowed),
-    moderation: ["none", "first", "all"].includes(s.moderation) ? s.moderation : DEFAULTS.moderation,
-    replies_allowed: Boolean(s.replies_allowed), max_depth: Math.min(5, Math.max(1, Math.round(Number(s.max_depth)) || DEFAULTS.max_depth)),
-    links_allowed: Boolean(s.links_allowed),
-  };
+// Réglages PROPRES à un site, ou null (il hérite alors du site principal)
+function siteOwn(siteId) {
+  try {
+    const row = db.prepare("SELECT settings FROM mk_sites WHERE id = ?").get(siteId);
+    const c = row && JSON.parse(row.settings || "{}").comments;
+    return c && typeof c === "object" ? normalizeSettings(c) : null;
+  } catch { return null; }
 }
-function saveSettings(input) {
+const settingsFor = (siteId) => (siteId ? siteOwn(siteId) || mainSettings() : mainSettings());
+const settings = (siteId = null) => settingsFor(siteId);
+const siteIdOf = (type, contentId) => { try { const r = require("./urls").attachedSite(type, contentId); return r && r.site_id ? r.site_id : null; } catch { return null; } };
+const settingsOf = (type, contentId) => settingsFor(siteIdOf(type, contentId));
+// Contenus d'un site (SQL) : le site principal = ceux qui ne sont rattachés à aucun site
+const siteFilterSql = (siteId) => (siteId ? `EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = c.content_type AND cs.content_id = c.content_id AND cs.site_id = ${Number(siteId)})` : "NOT EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = c.content_type AND cs.content_id = c.content_id AND cs.site_id IS NOT NULL)");
+function saveSettings(input) { // site principal
   const org = orgId();
   if (!org) throw new UserError("Aucune organisation.");
-  const next = normalizeSettings({ ...settings(), ...input });
+  const next = normalizeSettings({ ...mainSettings(), ...input });
   db.prepare("INSERT INTO mk_settings (organization_id, key, value, is_secret) VALUES (?, ?, ?, 0) ON CONFLICT (organization_id, key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')").run(org, SETTING_KEY, JSON.stringify(next));
   cache = next;
   return next;
@@ -100,7 +170,14 @@ function clean(text) {
   return String(text || "").replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi;
-const linksIn = (text) => (String(text).match(URL_RE) || []).length;
+// Liens comptés pour la modération : adresses http(s):// et « www.… » nues, y compris encodées (%68ttp…) ; chaque adresse compte une fois
+const linksIn = (text) => {
+  let t = String(text);
+  try { t = decodeURIComponent(t.replace(/%(?![0-9a-f]{2})/gi, "%25")); } catch { /* texte non décodable : compté tel quel */ }
+  const found = new Set();
+  for (const m of t.match(/\b(?:https?:\/\/|www\.)[^\s<>"']+/gi) || []) found.add(m.toLowerCase().replace(/[.,;:!?)\]]+$/, ""));
+  return found.size;
+};
 const escapeHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 // HTML d'un commentaire : TOUT est échappé d'abord ; seules les adresses http(s) deviennent des liens (liste blanche de schémas)
 function html(body, { links = true } = {}) {
@@ -121,6 +198,29 @@ function purgeOldHashes() {
 let purgedAt = 0;
 const EMAIL_RE = /^[^\s@<>]{1,64}@[^\s@<>]+\.[^\s@<>]{2,}$/;
 
+// ---------- Listes de termes : modération et blocage ----------
+// Une entrée par ligne : un mot, une adresse e-mail, un domaine ou une adresse IP. Comparaison sans casse ni accents, À L'INTÉRIEUR des mots (« press » trouve « WordPress » :
+// risque de faux positifs, à choisir avec soin) ; une adresse IP s'écrit en entier et se compare à l'adresse de l'envoi (jamais stockée : seule son empreinte l'est).
+// Champs examinés : texte, nom, e-mail et agent utilisateur de l'envoi (jamais conservé). Retourne l'entrée trouvée ou "".
+function matchList(list, fields) {
+  const lines = String(list || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return "";
+  const hay = foldText([fields.body, fields.name, fields.email, fields.userAgent].join(" \n "));
+  const ip = String(fields.ip || "").trim().toLowerCase().replace(/^::ffff:/, "");
+  for (const line of lines) {
+    if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(line) || (line.includes(":") && /^[0-9a-f:]{3,45}$/i.test(line))) { if (ip && ip === line.toLowerCase().replace(/^::ffff:/, "")) return line; continue; }
+    const needle = foldText(line);
+    if (needle && hay.includes(needle)) return line;
+  }
+  return "";
+}
+// Fermeture automatique : N jours après la publication (UTC, calcul serveur) ; sans date de publication, jamais fermé
+function closedByAge(content, cfg, now = Date.now()) {
+  if (!cfg.close_enabled || !content || !content.published_at) return false;
+  const t = Date.parse(String(content.published_at).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(content.published_at)) ? "" : "Z"));
+  return Number.isFinite(t) && now - t > cfg.close_days * 86400000;
+}
+
 // ---------- Profondeur ----------
 function levelOf(commentId) {
   let level = 0, id = commentId;
@@ -130,13 +230,14 @@ function levelOf(commentId) {
 
 // ---------- Création ----------
 // user : membre connecté ({ id, username, email }) ou null (invité) ; trusted : l'auteur peut modérer (publication immédiate)
-function create({ type = "post", contentId, parentId = null, user = null, name = "", email = "", body, ip = "", honeypot = "", trusted = false, bypassClosed = false }) {
+function create({ type = "post", contentId, parentId = null, user = null, name = "", email = "", body, ip = "", userAgent = "", honeypot = "", trusted = false, bypassClosed = false }) {
   const def = CONTENT[type];
   if (!def) throw new UserError("Ce contenu n'accepte pas de commentaires.");
   const content = def.row(contentId);
   if (!content || !def.published(content)) throw new UserError("Contenu introuvable.");
   if (!bypassClosed && !def.open(content)) throw new UserError("Les commentaires sont fermés sur ce contenu.");
-  const cfg = settings();
+  const cfg = settingsOf(type, contentId);
+  if (!bypassClosed && closedByAge(content, cfg)) throw new UserError(`Les commentaires sont fermés : cette publication date de plus de ${cfg.close_days} jours.`);
   if (!user && !cfg.guests_allowed) throw new UserError("Connectez-vous pour commenter.");
   const text = clean(body);
   if (text.length < 2) throw new UserError("Votre commentaire est vide.");
@@ -145,8 +246,13 @@ function create({ type = "post", contentId, parentId = null, user = null, name =
   if (!user) {
     authorName = clean(name).replace(/\s+/g, " ").slice(0, 60);
     authorEmail = String(email || "").trim().toLowerCase().slice(0, 120);
-    if (authorName.length < 2) throw new UserError("Indiquez votre nom (2 caractères au moins).");
-    if (!EMAIL_RE.test(authorEmail)) throw new UserError("Indiquez une adresse e-mail valide (elle ne sera jamais affichée).");
+    if (cfg.require_name_email) {
+      if (authorName.length < 2) throw new UserError("Indiquez votre nom (2 caractères au moins).");
+      if (!EMAIL_RE.test(authorEmail)) throw new UserError("Indiquez une adresse e-mail valide (elle ne sera jamais affichée).");
+    } else {
+      if (authorName && authorName.length < 2) throw new UserError("Votre nom doit compter 2 caractères au moins (ou laissez-le vide).");
+      if (authorEmail && !EMAIL_RE.test(authorEmail)) throw new UserError("Cette adresse e-mail n'est pas valide (ou laissez le champ vide).");
+    }
   }
   let parent = null;
   if (parentId) {
@@ -160,19 +266,24 @@ function create({ type = "post", contentId, parentId = null, user = null, name =
   // Même texte déjà envoyé par la même personne sur ce contenu : pas de doublon (double clic, rechargement)
   const twin = user
     ? db.prepare("SELECT id, status FROM blog_comments WHERE content_type = ? AND content_id = ? AND user_id = ? AND body = ? AND status <> 'trash'").get(type, contentId, user.id, text)
-    : db.prepare("SELECT id, status FROM blog_comments WHERE content_type = ? AND content_id = ? AND author_email = ? AND body = ? AND status <> 'trash'").get(type, contentId, authorEmail, text);
+    : db.prepare("SELECT id, status FROM blog_comments WHERE content_type = ? AND content_id = ? AND user_id IS NULL AND author_email = ? AND author_name = ? AND body = ? AND status <> 'trash'").get(type, contentId, authorEmail, authorName, text);
   if (twin) return { id: twin.id, status: twin.status, duplicate: true };
 
-  // Statut : piège à robots → indésirable ; membre de confiance → publié ; sinon selon le réglage de modération
+  // Statut, par ordre de priorité (la règle la plus sévère gagne) : piège à robots ou liste de blocage → indésirable (jamais publié, restaurable) ; membre de confiance → publié ;
+  // liste de modération, approbation manuelle, auteur sans commentaire approuvé, trop de liens → en attente. Un commentaire n'est JAMAIS supprimé automatiquement.
   let status = "approved", reason = "";
+  const sample = { body: text, name: authorName || (user ? user.username : ""), email: authorEmail || (user ? user.email : ""), userAgent, ip };
   if (honeypot) { status = "spam"; reason = String(honeypot).slice(0, 20); } // robot détecté (piège ou envoi trop rapide) : conservé comme indésirable, jamais publié
+  else if (!trusted && matchList(cfg.block_keys, sample)) { status = "spam"; reason = "blocklist"; }
   else if (!trusted) {
-    if (cfg.moderation === "all") { status = "pending"; reason = "moderation"; }
+    if (matchList(cfg.mod_keys, sample)) { status = "pending"; reason = "keywords"; }
+    else if (cfg.moderation === "all") { status = "pending"; reason = "moderation"; }
     else if (cfg.moderation === "first") {
-      const known = user ? db.prepare("SELECT 1 FROM blog_comments WHERE user_id = ? AND status = 'approved' LIMIT 1").get(user.id) : db.prepare("SELECT 1 FROM blog_comments WHERE author_email = ? AND status = 'approved' LIMIT 1").get(authorEmail);
+      // « A déjà un commentaire approuvé » : un membre = son compte ; un visiteur = même e-mail ET même nom (un e-mail seul ne prouve rien : n'importe qui peut l'écrire)
+      const known = user ? db.prepare("SELECT 1 FROM blog_comments WHERE user_id = ? AND status = 'approved' LIMIT 1").get(user.id) : authorEmail ? db.prepare("SELECT 1 FROM blog_comments WHERE user_id IS NULL AND author_email = ? AND lower(author_name) = lower(?) AND status = 'approved' LIMIT 1").get(authorEmail, authorName) : null;
       if (!known) { status = "pending"; reason = "first"; }
     }
-    if (status === "approved" && links >= MAX_LINKS) { status = "pending"; reason = "links"; }
+    if (status === "approved" && links > cfg.max_links) { status = "pending"; reason = "links"; }
   }
   const authorId = user ? user.id : null;
   const info = db.prepare(`INSERT INTO blog_comments (post_id, content_type, content_id, parent_id, user_id, author_name, author_email, ip_hash, body, status, approved_at, approved_by, metadata)
@@ -180,7 +291,7 @@ function create({ type = "post", contentId, parentId = null, user = null, name =
     .run(type === "post" ? contentId : null, type, contentId, parent ? parent.id : null, authorId, authorName, authorEmail, ipHash(ip), text, status, status === "approved" && trusted ? authorId : null, JSON.stringify(reason ? { reason } : {}));
   const id = Number(info.lastInsertRowid);
   if (Date.now() - purgedAt > 3600 * 1000) { purgedAt = Date.now(); purgeOldHashes(); }
-  const payload = { commentId: id, contentType: type, contentId: Number(contentId), parentId: parent ? parent.id : null, status, userId: authorId };
+  const payload = { commentId: id, contentType: type, contentId: Number(contentId), parentId: parent ? parent.id : null, status, userId: authorId, trusted: Boolean(trusted) };
   emit("comment.created", payload);
   emit(status === "pending" ? "comment.pending" : status === "spam" ? "comment.spam" : "comment.approved", payload);
   if (parent) emit("comment.replied", payload);
@@ -189,25 +300,33 @@ function create({ type = "post", contentId, parentId = null, user = null, name =
 
 // ---------- Lecture publique : discussion paginée par commentaires de premier niveau ----------
 function nameOf(c) { return c.user_id ? c.username || "Membre supprimé" : c.author_name || "Anonyme"; }
-function thread(type, contentId, { page = 1 } = {}) {
+function thread(type, contentId, { page = null } = {}) {
+  const cfg = settingsOf(type, contentId);
   const total = db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE content_type = ? AND content_id = ? AND status = 'approved'").get(type, contentId).n;
   const rootsTotal = db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE content_type = ? AND content_id = ? AND status = 'approved' AND parent_id IS NULL").get(type, contentId).n;
-  const pages = Math.max(1, Math.ceil(rootsTotal / PER_PAGE_PUBLIC));
-  const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
+  // Pagination par commentaires de PREMIER NIVEAU (leurs réponses suivent leur parent, sur la même page). Sans pagination : tous (1 000 au plus, jamais sans limite).
+  const size = cfg.paginate ? cfg.per_page : 1000;
+  const pages = cfg.paginate ? Math.max(1, Math.ceil(rootsTotal / size)) : 1;
+  const asked = Math.floor(Number(page));
+  const current = Number.isFinite(asked) && asked >= 1 ? Math.min(asked, pages) : cfg.default_page === "last" ? pages : 1;
+  const dir = cfg.order === "newest" ? "DESC" : "ASC";
   // Racines de la page, puis leurs réponses approuvées (un fil dont un maillon n'est pas approuvé s'arrête à ce maillon)
-  const rows = db.prepare(`WITH RECURSIVE roots(id) AS (
-      SELECT id FROM blog_comments WHERE content_type = ? AND content_id = ? AND status = 'approved' AND parent_id IS NULL ORDER BY created_at, id LIMIT ? OFFSET ?
-    ), tree(id, level) AS (
-      SELECT id, 1 FROM roots
-      UNION ALL SELECT c.id, t.level + 1 FROM blog_comments c JOIN tree t ON c.parent_id = t.id WHERE c.status = 'approved' AND t.level < 20
+  const rows = db.prepare(`WITH RECURSIVE roots(id, pos) AS (
+      SELECT id, ROW_NUMBER() OVER (ORDER BY created_at ${dir}, id ${dir}) FROM (SELECT id, created_at FROM blog_comments WHERE content_type = ? AND content_id = ? AND status = 'approved' AND parent_id IS NULL ORDER BY created_at ${dir}, id ${dir} LIMIT ? OFFSET ?)
+    ), tree(id, level, pos) AS (
+      SELECT id, 1, pos FROM roots
+      UNION ALL SELECT c.id, t.level + 1, t.pos FROM blog_comments c JOIN tree t ON c.parent_id = t.id WHERE c.status = 'approved' AND t.level < 20
     )
-    SELECT c.id, c.parent_id, c.body, c.created_at, c.user_id, c.author_name, u.username, u.avatar_path, u.role, t.level
-    FROM tree t JOIN blog_comments c ON c.id = t.id LEFT JOIN users u ON u.id = c.user_id ORDER BY c.created_at, c.id`)
-    .all(type, contentId, PER_PAGE_PUBLIC, (current - 1) * PER_PAGE_PUBLIC);
+    SELECT c.id, c.parent_id, c.body, c.created_at, c.user_id, c.author_name, c.author_email, u.username, u.email AS user_email, u.avatar_path, u.role, t.level, t.pos
+    FROM tree t JOIN blog_comments c ON c.id = t.id LEFT JOIN users u ON u.id = c.user_id ORDER BY t.pos, t.level, c.created_at, c.id`)
+    .all(type, contentId, size, (current - 1) * size);
   const byId = new Map(rows.map((r) => [r.id, { ...r, name: nameOf(r), children: [] }]));
   const roots = [];
   for (const r of byId.values()) { const parent = byId.get(r.parent_id); if (parent) parent.children.push(r); else roots.push(r); }
-  return { roots, total, page: current, pages, maxDepth: settings().max_depth, repliesAllowed: settings().replies_allowed };
+  // L'e-mail ne quitte jamais le serveur : il sert seulement à l'empreinte de l'avatar (voir services/avatars)
+  const avatars = require("./avatars");
+  for (const r of byId.values()) { r.avatar = avatars.forComment(r, cfg); delete r.author_email; delete r.user_email; }
+  return { roots, total, page: current, pages, rootsTotal, paginate: cfg.paginate, order: cfg.order, maxDepth: cfg.max_depth, repliesAllowed: cfg.replies_allowed, showAvatars: cfg.show_avatars };
 }
 const count = (type, contentId) => db.prepare("SELECT COUNT(*) n FROM blog_comments WHERE content_type = ? AND content_id = ? AND status = 'approved'").get(type, contentId).n;
 const get = (id) => db.prepare("SELECT * FROM blog_comments WHERE id = ?").get(id);
@@ -385,6 +504,6 @@ function countsForPosts(ids) {
 
 module.exports = {
   COMMENT_MAX, STATUSES, STATUS_LABELS, MAX_LINKS, IP_RETENTION_DAYS, PER_PAGE_PUBLIC, PER_PAGE_ADMIN, PERIODS, SORTS, DEFAULTS,
-  CONTENT, TYPES, registerContent, events, edit, foldText, settings, saveSettings, resetCache,
+  CONTENT, TYPES, registerContent, events, edit, foldText, settings, settingsFor, settingsOf, siteOwn, siteIdOf, normalizeSettings, normalizeList, matchList, closedByAge, AVATAR_DEFAULTS, AVATAR_EXTERNAL, LIST_MAX_LINES, saveSettings, resetCache,
   clean, html, linksIn, ipHash, levelOf, create, thread, count, get, moderate, reply, purge, purgeGuest, list, counts, commentedContents, contentInfo, countsForPosts, uniqueIds,
 };

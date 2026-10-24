@@ -156,14 +156,36 @@ def({ key: "feed_content", group: "reading", label: "Dans chaque publication du 
   help: "Le texte complet expose tout l'article aux lecteurs de flux ; l'extrait n'en donne que le début. Ne change pas l'affichage des pages du site.",
   ...mainKv("feed_content", "excerpt"), ...readingSite("feedContent"), defaultSite: "excerpt" });
 
-// --- Commentaires (moteur propriétaire : services/comments.js) ---
-const comment = (key, label, extra) => def({ key: `comments_${key}`, group: "comments", label, scopes: ["main"], readMain: () => comments().settings()[key], writeMain: (v) => { comments().saveSettings({ [key]: v }); }, defaultMain: comments().DEFAULTS[key], ...extra });
-comment("enabled_default", "Commentaires ouverts par défaut", { type: "boolean", help: "Pour chaque nouvel article." });
-comment("guests_allowed", "Commentaires d'invités", { type: "boolean", help: "Autoriser les commentaires sans compte (avec nom et e-mail)." });
-comment("moderation", "Modération", { type: "enum", options: () => [["none", "Aucune : publication immédiate"], ["first", "Premier commentaire d'une personne"], ["all", "Tous les commentaires"]], help: "Les commentaires en attente sont à approuver dans Commentaires." });
-comment("replies_allowed", "Réponses imbriquées", { type: "boolean", help: "Autoriser de répondre à un commentaire." });
-comment("max_depth", "Niveaux de réponses", { type: "integer", min: 1, max: 5, help: "1 = pas de réponses imbriquées." });
-comment("links_allowed", "Liens dans les commentaires", { type: "boolean", help: "Sinon, un commentaire contenant un lien est refusé." });
+// --- Commentaires (moteur propriétaire : services/comments.js ; réglages PAR SITE : un site sans réglage propre hérite du site principal jusqu'à sa première modification) ---
+const comment = (key, label, extra) => def({ key: `comments_${key}`, group: "comments", label, scopes: ["main", "site"],
+  readMain: () => comments().settings()[key], writeMain: (v) => { comments().saveSettings({ [key]: v }); }, defaultMain: comments().DEFAULTS[key],
+  readSite: (s) => comments().settingsFor(s.id)[key], defaultSite: comments().DEFAULTS[key],
+  writeSite: (v, ctx, siteId) => writeSite(ctx, siteId, (x) => { x.comments = comments().normalizeSettings({ ...(x.comments || comments().settings()), [key]: v }); }), ...extra });
+const MOD_OPTIONS = () => [["none", "Publication immédiate"], ["first", "Un auteur sans commentaire approuvé attend la modération"], ["all", "Chaque commentaire est approuvé manuellement"]];
+comment("enabled_default", "Autoriser les commentaires sur les nouvelles publications", { type: "boolean", help: "Valeur de départ des NOUVEAUX articles ; chaque article peut la remplacer, et un changement ici ne modifie jamais les articles existants." });
+comment("guests_allowed", "Les visiteurs sans compte peuvent commenter", { type: "boolean", help: "Décoché : un compte inscrit et connecté est obligatoire (refusé côté serveur, pas seulement masqué)." });
+comment("require_name_email", "Nom et adresse e-mail obligatoires", { type: "boolean", help: "Pour les visiteurs sans compte. Décoché : facultatifs, mais une adresse saisie doit rester valide. L'adresse n'est jamais vérifiée ni affichée." });
+comment("close_enabled", "Fermer automatiquement les commentaires des publications anciennes", { type: "boolean", help: "Les commentaires déjà publiés restent visibles ; seuls les nouveaux sont refusés." });
+comment("close_days", "Fermer après (jours)", { type: "integer", min: 1, max: 3650, help: "Nombre de jours après la date de publication de l'article (heure du serveur, UTC)." });
+comment("cookie_consent", "Proposer de mémoriser le nom et l'e-mail du commentateur", { type: "boolean", help: "Affiche une case à cocher sur le formulaire ; le cookie n'est écrit que si elle est cochée, et jamais sinon. C'est un outil, pas une garantie de conformité juridique." });
+comment("replies_allowed", "Activer les commentaires en fil (imbriqués)", { type: "boolean", help: "Autoriser de répondre à un commentaire." });
+comment("max_depth", "Nombre de niveaux de réponses", { type: "integer", min: 1, max: 10, help: "1 = pas de réponses imbriquées. Au-delà de 4 niveaux, l'indentation s'arrête sur mobile." });
+comment("paginate", "Diviser les commentaires en pages", { type: "boolean", help: "Décoché : tous les commentaires s'affichent sur une seule page (1 000 de premier niveau au plus)." });
+comment("per_page", "Commentaires de premier niveau par page", { type: "integer", min: 1, max: 100, help: "Les réponses suivent leur commentaire parent et ne sont pas comptées." });
+comment("default_page", "Page affichée par défaut", { type: "enum", options: () => [["first", "Première page"], ["last", "Dernière page"]], help: "La page ouverte quand le visiteur n'en choisit pas." });
+comment("order", "Commentaires en haut de chaque page", { type: "enum", options: () => [["oldest", "Les plus anciens"], ["newest", "Les plus récents"]], help: "Ordre des commentaires de premier niveau ; les réponses restent dans l'ordre chronologique." });
+comment("notify_published", "M'envoyer un e-mail quand un nouveau commentaire est publié", { type: "boolean", help: "Un e-mail par commentaire de visiteur publié, à l'adresse administrative (Général). Envoi par la file d'envoi : un échec est noté et réessayé." });
+comment("notify_pending", "M'envoyer un e-mail quand un commentaire attend la modération", { type: "boolean", help: "Au plus un e-mail toutes les 10 minutes, qui annonce le nombre de commentaires en attente." });
+comment("moderation", "Avant la publication d'un commentaire", { type: "enum", options: MOD_OPTIONS, help: "« Tous » l'emporte sur « auteur sans commentaire approuvé ». Un visiteur est reconnu par son e-mail ET son nom, jamais par l'e-mail seul. Les règles de liens, de modération et de blocage s'appliquent dans tous les cas." });
+comment("max_links", "Liens autorisés avant modération", { type: "integer", min: 0, max: 50, help: "Un commentaire qui contient PLUS de liens que ce nombre attend la modération (jamais supprimé). 0 : le moindre lien. Les adresses « www. » et encodées comptent." });
+comment("mod_keys", "Termes qui mettent un commentaire en modération", { type: "lines", help: "Un terme, une adresse e-mail, un domaine ou une adresse IP par ligne. Comparaison dans le texte, le nom, l'e-mail et l'agent utilisateur, À L'INTÉRIEUR des mots (« press » trouve « WordPress »)." });
+comment("block_keys", "Termes qui classent un commentaire comme indésirable", { type: "lines", help: "Même forme, mais le commentaire est classé indésirable : jamais publié, jamais supprimé, restaurable dans Commentaires → Indésirables." });
+comment("links_allowed", "Liens cliquables dans les commentaires", { type: "boolean", help: "Décoché, un commentaire contenant un lien est refusé." });
+comment("show_avatars", "Afficher les avatars", { type: "boolean", help: "Décoché, aucun avatar n'apparaît dans les commentaires publics." });
+comment("avatar_external", "Autoriser Gravatar (service externe)", { type: "boolean", sensitive: true, help: "Envoie à gravatar.com, par le serveur, une empreinte (SHA-256) de l'e-mail des commentateurs pour obtenir leur avatar ou un avatar généré. Désactivé par défaut : sans lui, seuls les avatars locaux existent.",
+  impact: "Une empreinte de l'adresse e-mail de chaque commentateur dont l'avatar s'affiche est transmise à gravatar.com (Automattic). À déclarer dans votre politique de confidentialité." });
+comment("avatar_rating", "Classement maximal des avatars Gravatar", { type: "enum", options: () => [["G", "G — visibles par tous"], ["PG", "PG — possiblement offensants"], ["R", "R — réservés aux plus de 17 ans"], ["X", "X — réservés aux adultes"]], help: "Transmis à Gravatar, seul à connaître la classification d'une image. Les avatars locaux sont tous de classement G." });
+comment("avatar_default", "Avatar par défaut", { type: "enum", options: () => comments().AVATAR_DEFAULTS.map((k) => [k, require("../avatars").LABELS[k]]), help: "Pour les comptes sans photo. Logo Gravatar, Wavatar, MonsterID, Rétro et RoboHash exigent « Autoriser Gravatar » ; sans lui, la personne mystère s'affiche." });
 
 // --- Médias (le moteur propriétaire : marketing/media) ---
 const media = () => require("../../marketing/media");
@@ -280,6 +302,13 @@ function validate(d, raw, scope, ctx) {
     case "urllist": {
       const r = writing().parseUrls(raw);
       return r.errors.length ? fail(r.errors.join(" ")) : { ok: true, value: r.urls.join("\n") };
+    }
+    case "lines": {
+      const raw0 = String(raw ?? "");
+      if (raw0.length > 40000) return fail("liste trop longue.");
+      const n = raw0.split(/\r?\n/).filter((l) => l.trim()).length;
+      if (n > comments().LIST_MAX_LINES) return fail(`${comments().LIST_MAX_LINES} lignes au plus (${n} saisies).`);
+      return { ok: true, value: comments().normalizeList(raw0) };
     }
     case "string": case "text": {
       const max = scope.siteId && d.maxSite ? d.maxSite : d.max || 300;

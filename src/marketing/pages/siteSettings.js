@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   // Lecture (Paramètres → Lecture) : ce que l'accueil affiche, page des articles, nombre d'articles par page, flux de syndication. La page d'accueil
   // elle-même reste mk_sites.home_page_id (une seule source) ; ici : le mode et les valeurs propres à la lecture.
   reading: { showOnFront: "page", postsPage: null, postsPerPage: 10, feedItems: 20, feedContent: "excerpt" },
+  comments: null,
 });
 
 // Fuseau horaire reconnu par le moteur d'internationalisation du serveur (jamais une valeur libre)
@@ -165,7 +166,10 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
     feedItems: num(rx.feedItems, 1, 50, "Éléments des flux", strict, D.reading.feedItems),
     feedContent: oneOf(rx.feedContent, ["excerpt", "full"], "Contenu des flux", strict, "excerpt"),
   };
-  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo, general, reading };
+  // Commentaires du site : bloc complet (voir services/comments) ou null = le site hérite du site principal
+  let commentsBlock = null;
+  if (src.comments && typeof src.comments === "object") { try { commentsBlock = require("../../services/comments").normalizeSettings(src.comments); } catch { commentsBlock = null; } }
+  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo, general, reading, comments: commentsBlock };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus

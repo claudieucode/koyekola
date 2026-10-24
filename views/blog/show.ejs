@@ -131,18 +131,21 @@
                   <p class="comment-replying" role="status">Réponse à <strong><%= replyTo.name %></strong> · <a href="/blog/<%= post.slug %>#commentaires">Annuler</a></p>
                 <% } %>
                 <% if (commentError) { %><p class="form-error" role="alert" id="comment-error"><%= commentError %></p><% } %>
-                <% if (!me) { %>
+                <% if (!me) { const req2 = commentCfg.require_name_email; const ck = commenterCookie || {}; %>
                   <div class="comment-form-row">
-                    <div><label for="comment-name">Nom *</label><input id="comment-name" type="text" name="author_name" maxlength="60" required autocomplete="name" value="<%= commentForm.name || '' %>"></div>
-                    <div><label for="comment-email">E-mail * <span class="field-hint">(jamais affiché)</span></label><input id="comment-email" type="email" name="author_email" maxlength="120" required autocomplete="email" value="<%= commentForm.email || '' %>"></div>
+                    <div><label for="comment-name">Nom<%= req2 ? " *" : " (facultatif)" %></label><input id="comment-name" type="text" name="author_name" maxlength="60"<%= req2 ? " required" : "" %> autocomplete="name" value="<%= commentForm.name || ck.name || '' %>"></div>
+                    <div><label for="comment-email">E-mail<%= req2 ? " *" : " (facultatif)" %> <span class="field-hint">(jamais affiché)</span></label><input id="comment-email" type="email" name="author_email" maxlength="120"<%= req2 ? " required" : "" %> autocomplete="email" value="<%= commentForm.email || ck.email || '' %>"></div>
                   </div>
                 <% } %>
                 <label for="comment-body"><%= replyTo ? "Votre réponse" : "Votre commentaire" %></label>
                 <textarea id="comment-body" name="body" rows="4" maxlength="<%= commentMax %>" required<%- commentError ? ' aria-describedby="comment-error"' : '' %> placeholder="Partagez votre avis, une question, une expérience…"><%= commentDraft %></textarea>
                 <% if (!me) { %><input type="hidden" name="form_token" value="<%= commentToken %>"><% } %>
                 <div class="comment-hp" aria-hidden="true"><label>Ne pas remplir <input type="text" name="contact_url" tabindex="-1" autocomplete="off"></label></div>
+                <% if (!me && commentCfg.cookie_consent) { %><p class="comment-consent"><label><input type="checkbox" name="remember" value="1"<%= commenterCookie ? " checked" : "" %>> Enregistrer mon nom et mon e-mail dans ce navigateur pour mon prochain commentaire.</label></p><% } %>
                 <div class="comment-form-foot"><span class="field-hint"><% if (me) { %>Publié sous le nom <strong><%= me.username %></strong>. <% } %>Texte seul, <%= commentMax %> caractères au plus.<%= commentCfg.moderation === "all" || (commentCfg.moderation === "first" && !me) ? " Les commentaires sont relus avant d'apparaître." : "" %></span><button type="submit" class="btn btn-primary"><%= replyTo ? "Publier la réponse" : "Publier le commentaire" %></button></div>
               </form>
+            <% } else if (commentClosedByAge) { %>
+              <p class="comment-empty">Les commentaires sont fermés : cette publication date de plus de <%= commentCfg.close_days %> jours.</p>
             <% } else if (commentsOpen) { %>
               <div class="comment-login">
                 <p>Connectez-vous pour laisser un commentaire. Pas encore membre ? L'inscription est gratuite.</p>

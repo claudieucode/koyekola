@@ -2253,3 +2253,10 @@ a.post-card-category:hover { text-decoration: underline; }
 
 /* Contour des champs de saisie : contraste ≥ 3:1 (A-02). Les filets, cartes et boutons gardent --line. */
 input[type=text], input[type=email], input[type=password], input[type=number], input[type=date], input[type=time], input[type=url], input[type=tel], input[type=search], textarea, select { border-color: var(--field-border); }
+
+/* Commentaires : avatars désactivés, case de mémorisation, fils profonds sur petit écran */
+.comment--no-avatar { grid-template-columns: minmax(0, 1fr); }
+.comment--no-avatar > .comment-replies { grid-column: 1; }
+.comment-consent { margin: 4px 0 0; font-size: 0.9rem; }
+.comment-consent label { font-weight: 400; color: var(--text, inherit); display: flex; gap: 8px; align-items: flex-start; }
+@media (max-width: 640px) { .comment[data-level="5"] > .comment-replies, .comment[data-level="6"] > .comment-replies, .comment[data-level="7"] > .comment-replies, .comment[data-level="8"] > .comment-replies, .comment[data-level="9"] > .comment-replies { margin-left: 0; padding-left: 0; } }

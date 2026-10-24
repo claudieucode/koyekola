@@ -1,0 +1,86 @@
+<%#
+  KOLAKISA CMS → Paramètres → Commentaires : champs du groupe « comments » (formulaire, confirmation des réglages sensibles et enregistrement : settings-group).
+  Chaque contrôle porte le nom d'un réglage du moteur de commentaires ; rien n'est décoratif. Sans JavaScript, tous les volets restent visibles.
+%><%
+  const F = Object.fromEntries(view.map((f) => [f.key, f]));
+  const n = (k) => "comments_" + k, f = (k) => F[n(k)];
+  const dis = (k) => (f(k).editable ? "" : " disabled");
+  const chk = (k) => (f(k).value ? " checked" : "");
+  const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const lines = (v) => String(v || "").split("\n").filter((l) => l.trim()).length;
+  const toggle = (k, label, help, extra) => `<div class="mk-cm-row"><label class="mk-cm-switch"><input type="checkbox" name="${n(k)}" value="1"${chk(k)}${dis(k)}${extra || ""}><span class="mk-cm-ui" aria-hidden="true"></span><span class="mk-cm-text"><strong>${label}</strong>${help ? `<small>${help}</small>` : ""}</span></label><input type="hidden" name="_b_${n(k)}" value="1"></div>`;
+  const num = (k, label, help) => `<div class="field-group mk-cm-num"><label for="cm-${k}">${label}</label><input id="cm-${k}" type="number" name="${n(k)}" min="${f(k).min}" max="${f(k).max}" step="1" value="${f(k).value}" inputmode="numeric"${dis(k)}${help ? ` aria-describedby="cm-${k}-h"` : ""}>${help ? `<p class="field-hint" id="cm-${k}-h">${help}</p>` : ""}</div>`;
+  const sel = (k, label) => `<div class="field-group mk-cm-num"><label for="cm-${k}">${label}</label><select id="cm-${k}" name="${n(k)}"${dis(k)}>${f(k).options.map(([v, l]) => `<option value="${v}"${String(f(k).value) === String(v) ? " selected" : ""}>${esc(l)}</option>`).join("")}</select></div>`;
+%>
+<div class="mk-cm" data-cm>
+  <section class="mk-cm-card" aria-labelledby="cm-pub-h">
+    <header><h2 id="cm-pub-h">Publication et accès</h2><p class="mk-sub">Qui peut commenter, et sur quels contenus.</p></header>
+    <%- toggle("enabled_default", "Autoriser les commentaires sur les nouvelles publications", "Valeur de départ des nouveaux articles. Chaque article peut la remplacer ; un changement ici ne modifie jamais les articles existants.") %>
+    <%- toggle("guests_allowed", "Les visiteurs sans compte peuvent commenter", "Décoché : un compte inscrit et connecté est obligatoire, y compris pour un envoi forgé (refus côté serveur).") %>
+    <div data-cm-panel="guests"<%= f("guests_allowed").value ? "" : " data-off" %>><%- toggle("require_name_email", "Nom et adresse e-mail obligatoires", "Pour les visiteurs sans compte. L'adresse n'est jamais vérifiée ni affichée ; si elle est facultative, une adresse saisie doit rester valide.") %></div>
+    <%- toggle("close_enabled", "Fermer automatiquement les commentaires des publications anciennes", "Les commentaires déjà publiés restent visibles ; seuls les nouveaux sont refusés.", ' data-cm-ctl="close"') %>
+    <div class="mk-cm-sub" data-cm-panel="close"<%= f("close_enabled").value ? "" : " data-off" %>><%- num("close_days", "Fermer quand la publication date de plus de (jours)", "Entre " + f("close_days").min + " et " + f("close_days").max + ", compté depuis la date de publication (heure du serveur, UTC).") %></div>
+    <%- toggle("cookie_consent", "Proposer de mémoriser le nom et l'e-mail du commentateur", "Une case à cocher apparaît sur le formulaire ; le cookie n'est écrit que si elle est cochée. C'est un outil de consentement, pas une garantie de conformité juridique.") %>
+    <p class="field-hint mk-cm-note">Notifier les sites liés depuis une publication se règle dans <a href="<%= settingsBase %>/ecriture<%= q %>">Paramètres → Écriture</a>. Kolakisa ne reçoit pas les pings ni rétroliens d'autres blogs : ce choix n'est donc pas proposé ici.</p>
+  </section>
+
+  <section class="mk-cm-card" aria-labelledby="cm-thread-h">
+    <header><h2 id="cm-thread-h">Fil de discussion et pagination</h2><p class="mk-sub">La façon dont les commentaires s'affichent sous l'article.</p></header>
+    <%- toggle("replies_allowed", "Activer les commentaires en fil (imbriqués)", "Autoriser de répondre à un commentaire.", ' data-cm-ctl="replies"') %>
+    <div class="mk-cm-sub" data-cm-panel="replies"<%= f("replies_allowed").value ? "" : " data-off" %>><%- num("max_depth", "Nombre de niveaux de réponses", "De 1 à 10. Sur mobile, l'indentation s'arrête à 4 niveaux.") %></div>
+    <%- toggle("paginate", "Diviser les commentaires en pages", "Décoché : tout s'affiche sur une page (1 000 commentaires de premier niveau au plus).", ' data-cm-ctl="paginate"') %>
+    <div class="mk-cm-sub mk-cm-grid" data-cm-panel="paginate"<%= f("paginate").value ? "" : " data-off" %>>
+      <%- num("per_page", "Commentaires de premier niveau par page", "Les réponses suivent leur commentaire parent et ne sont pas comptées.") %>
+      <%- sel("default_page", "Page affichée par défaut") %>
+    </div>
+    <div class="mk-cm-sub"><%- sel("order", "Commentaires en haut de chaque page") %></div>
+  </section>
+
+  <section class="mk-cm-card" aria-labelledby="cm-mod-h">
+    <header><h2 id="cm-mod-h">Modération et lutte contre le courrier indésirable</h2><p class="mk-sub">Ce qui est publié tout de suite, retenu pour relecture, ou classé indésirable. Rien n'est jamais supprimé automatiquement.</p></header>
+    <fieldset class="mk-cm-modes"<%= f("moderation").editable ? "" : " disabled" %>>
+      <legend>Avant la publication d'un commentaire</legend>
+      <% f("moderation").options.forEach(([v, l]) => { %><label class="mk-cm-mode"><input type="radio" name="<%= n("moderation") %>" value="<%= v %>"<%= f("moderation").value === v ? " checked" : "" %>><span><strong><%= l %></strong><small><%= v === "all" ? "Rien n'est visible avant l'approbation d'une personne autorisée." : v === "first" ? "Reconnu par son compte, ou par son e-mail ET son nom pour un visiteur." : "Les règles ci-dessous s'appliquent tout de même." %></small></span></label><% }) %>
+    </fieldset>
+    <%- num("max_links", "Liens autorisés avant modération", "Un commentaire qui en contient plus attend la modération. 0 : le moindre lien. « www. » et adresses encodées comptent.") %>
+    <%- toggle("links_allowed", "Liens cliquables dans les commentaires", "Décoché : un commentaire qui contient un lien est refusé.") %>
+    <div class="field-group"><label for="cm-mod_keys">Liste de modération <span class="mk-cm-count" data-cm-count="cm-mod_keys"><%= lines(f("mod_keys").value) %> / <%= listMax %></span></label>
+      <textarea id="cm-mod_keys" name="<%= n("mod_keys") %>" rows="6" spellcheck="false" aria-describedby="cm-mod_keys-h"<%= dis("mod_keys") %>><%= f("mod_keys").value %></textarea>
+      <p class="field-hint" id="cm-mod_keys-h">Un terme, une adresse e-mail, un domaine ou une adresse IP par ligne. Cherché dans le texte, le nom, l'e-mail et l'agent utilisateur, <strong>à l'intérieur des mots</strong> (« press » trouve « WordPress ») : choisissez des termes précis pour éviter les faux positifs. Une adresse IP s'écrit en entier. Le commentaire est mis <strong>en attente</strong>.</p></div>
+    <div class="field-group"><label for="cm-block_keys">Liste de blocage <span class="mk-cm-count" data-cm-count="cm-block_keys"><%= lines(f("block_keys").value) %> / <%= listMax %></span></label>
+      <textarea id="cm-block_keys" name="<%= n("block_keys") %>" rows="6" spellcheck="false" aria-describedby="cm-block_keys-h"<%= dis("block_keys") %>><%= f("block_keys").value %></textarea>
+      <p class="field-hint" id="cm-block_keys-h">Même forme, mais le commentaire est classé <strong>indésirable</strong> : jamais publié, jamais supprimé. Retrouvez-le dans <a href="<%= commentsUrl %>">Commentaires → Indésirables</a> pour le restaurer. La liste est propre à ce site ; les adresses IP ne sont jamais conservées en clair.</p></div>
+  </section>
+
+  <section class="mk-cm-card" aria-labelledby="cm-mail-h">
+    <header><h2 id="cm-mail-h">Notifications par e-mail</h2><p class="mk-sub">Envoyées à l'adresse administrative (Paramètres → Général) par la file d'envoi : un échec est noté et réessayé.</p></header>
+    <%- toggle("notify_published", "Un nouveau commentaire est publié", "Un e-mail par commentaire de visiteur publié (jamais pour une réponse d'un modérateur).") %>
+    <%- toggle("notify_pending", "Un commentaire est en attente de modération", "Au plus un e-mail toutes les 10 minutes, avec le nombre de commentaires en attente.") %>
+    <p class="field-hint mk-cm-note">Il n'y a pas de notation par étoiles dans Kolakisa : l'option WordPress « n'importe qui peut publier une note » n'a pas d'équivalent.</p>
+  </section>
+
+  <section class="mk-cm-card" aria-labelledby="cm-av-h">
+    <header><h2 id="cm-av-h">Avatars</h2><p class="mk-sub">L'image de chaque commentateur dans les commentaires publics.</p></header>
+    <%- toggle("show_avatars", "Afficher les avatars", "Décoché, aucun avatar n'apparaît dans les commentaires.", ' data-cm-ctl="avatars"') %>
+    <div data-cm-panel="avatars"<%= f("show_avatars").value ? "" : " data-off" %>>
+      <%- toggle("avatar_external", "Autoriser Gravatar (service externe)", "Le serveur envoie à gravatar.com une empreinte (SHA-256) de l'e-mail du commentateur pour obtenir son avatar ; le navigateur du visiteur ne contacte jamais Gravatar. Désactivé : seuls les avatars locaux existent. À mentionner dans votre politique de confidentialité.", ' data-cm-ctl="ext"') %>
+      <fieldset class="mk-cm-modes mk-cm-inline" data-cm-panel="ext"<%= f("avatar_external").value ? "" : " data-off" %><%= f("avatar_rating").editable ? "" : " disabled" %>>
+        <legend>Classement maximal des avatars Gravatar</legend>
+        <% f("avatar_rating").options.forEach(([v, l]) => { %><label class="mk-cm-mode"><input type="radio" name="<%= n("avatar_rating") %>" value="<%= v %>"<%= f("avatar_rating").value === v ? " checked" : "" %>><span><strong><%= l.split(" — ")[0] %></strong><small><%= l.split(" — ")[1] %></small></span></label><% }) %>
+        <p class="field-hint">Transmis à Gravatar, seul à connaître la classification d'une image. Les avatars locaux sont tous de classement G.</p>
+      </fieldset>
+      <fieldset class="mk-cm-avatars"<%= f("avatar_default").editable ? "" : " disabled" %>>
+        <legend>Avatar par défaut</legend>
+        <p class="field-hint">Pour les personnes sans photo : un logo générique ou un avatar calculé à partir d'une empreinte de leur e-mail (jamais l'adresse elle-même).</p>
+        <div class="mk-cm-av-grid">
+        <% avatarChoices.forEach((a) => { %>
+          <label class="mk-cm-av<%= a.available ? "" : " is-locked" %>"><input type="radio" name="<%= n("avatar_default") %>" value="<%= a.key %>"<%= f("avatar_default").value === a.key ? " checked" : "" %>>
+            <span class="mk-cm-av-img"><% if (a.preview) { %><img src="<%= a.preview %>" alt="" width="40" height="40"><% } else { %><span class="mk-cm-av-lock" aria-hidden="true">G</span><% } %></span>
+            <span><strong><%= a.label %></strong><small><%= a.external ? (a.available ? "Service externe (Gravatar)" : "Nécessite « Autoriser Gravatar »") : "Généré par Kolakisa" %></small></span></label>
+        <% }) %>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+</div>
+<script src="/js/cms-commentaires.js" defer></script>

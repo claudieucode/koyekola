@@ -174,6 +174,7 @@ app.use(learningRoutes);
 app.use(supportRoutes);
 app.use(favoritesRoutes);
 app.use(pagesRoutes);
+app.use("/avatar", require("./src/routes/avatars"));
 app.use(blogRoutes);
 app.use(profileRoutes);
 app.use(accountRoutes); // Mon compte : données personnelles, suppression du compte

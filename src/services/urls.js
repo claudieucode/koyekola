@@ -348,6 +348,6 @@ module.exports = {
   RESERVED, isReserved, normalizeSlug, checkSlug, uniqueSlug, isTaken,
   siteForHost, isRetiredHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
   pagePath, pageCanonicalPath, baseOfPage, publicPath, publicUrl,
-  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, addressOf, contentScope, resolvePost, resolveTerm,
+  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, attachedSite, addressOf, contentScope, resolvePost, resolveTerm,
   slugChanged, slugMovedTo, historyOf, purgeHistory,
 };

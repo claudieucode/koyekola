@@ -1,8 +1,7 @@
 <%# Un commentaire et, dessous, ses réponses approuvées (récursif). Aucune donnée privée : ni e-mail, ni adresse. %>
 <% const initials = (name) => String(name || "?").trim().slice(0, 1).toUpperCase(); %>
-<li class="comment" id="commentaire-<%= c.id %>" data-level="<%= level %>">
-  <% if (c.avatar_path) { %><img class="comment-avatar" src="<%= c.avatar_path %>" alt="" width="40" height="40" loading="lazy">
-  <% } else { %><span class="comment-avatar comment-initials" style="background:<%= avatarColor(c.name) %>" aria-hidden="true"><%= initials(c.name) %></span><% } %>
+<li class="comment<%= comments.showAvatars && c.avatar ? "" : " comment--no-avatar" %>" id="commentaire-<%= c.id %>" data-level="<%= level %>">
+  <% if (comments.showAvatars && c.avatar) { %><img class="comment-avatar" src="<%= c.avatar %>" alt="" width="40" height="40" loading="lazy" decoding="async"><% } %>
   <div class="comment-main">
     <p class="comment-meta"><strong><%= c.name %></strong><% if (c.role === "formateur") { %> <span class="comment-badge">Auteur</span><% } %> · <time datetime="<%= c.created_at.replace(' ', 'T') %>Z"><%= formatDateTime(c.created_at) %></time></p>
     <div class="comment-body"><%- commentHtml(c.body) %></div>

@@ -77,6 +77,7 @@ module.exports = () => {
       scope, q: q(scope), BASE, SLUG_OF, SLUGS, sites: sitesFor(req), siteOnly: req.mk.siteOnly, groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), choices: choices(req, scope), TIMEZONES: engine.TIMEZONES,
       structure: group === "permalinks" ? permalinkStructure() : null, settingsJs: true, pending: extra.pending || null, errors: extra.errors || [], formValues: extra.formValues || null,
       ...(group === "reading" ? readingExtras(req, scope, extra.frame) : {}),
+      ...(group === "comments" ? commentsExtras(req, scope, extra, values) : {}),
       frame: Boolean(extra.frame), pingLog: group === "writing" ? require("../../services/writing").log(scope.siteId) : null, recap: scope.siteId ? platformRecap(req, group, scope) : null, canTeam: !req.mk.siteOnly,
     });
   };
@@ -87,6 +88,18 @@ module.exports = () => {
     const feedUrl = scope.siteId ? (info && info.base ? `${info.base}/blog/feed.xml` : null) : "/blog/feed.xml";
     const visibilityUrl = frame && scope.siteId ? `/marketing/site-web/sites/${scope.siteId}/parametres-indexation` : `${BASE}/indexation${q(scope)}`;
     return { visibility: vis === "closed" ? "closed" : "open", visibilityUrl, feedUrl };
+  }
+  // Commentaires : aperçus des avatars (locaux = dessinés ici ; Gravatar = seulement si le site l'a accepté), liens vers la modération
+  function commentsExtras(req, scope, extra, values) {
+    const av = require("../../services/avatars"), cm = require("../../services/comments");
+    const external = Boolean(extra.formValues && "comments_avatar_external" in extra.formValues ? extra.formValues.comments_avatar_external : values.comments_avatar_external.value);
+    const seed = av.seedOf("apercu");
+    const avatarChoices = cm.AVATAR_DEFAULTS.map((key) => {
+      const isExt = av.EXTERNAL.includes(key);
+      return { key, label: av.LABELS[key], external: isExt, available: !isExt || external,
+        preview: !isExt ? `/avatar/l/${key}/${seed}.svg${key === "initials" ? "?i=AB" : ""}` : external ? `/avatar/preview/${key}.png` : null };
+    });
+    return { listMax: cm.LIST_MAX_LINES, avatarChoices, commentsUrl: `/marketing/site-web/commentaires/indesirables${q(scope)}` };
   }
   function permalinkStructure() {
     const tx = require("../../services/taxonomy");
@@ -131,7 +144,7 @@ module.exports = () => {
     for (const d of engine.defsFor(s.scope).filter((x) => x.group === group)) {
       if (!ctx.can(d.perm) || (d.sensitive && !ctx.can("settings.sensitive"))) continue; // champ non modifiable pour cette personne : ignoré (le moteur le refuserait)
       if (d.type === "boolean") {
-        const shown = `_b_${d.key}` in body || group === "comments"; // case décochée = absente du formulaire : seul le marqueur prouve que le champ était affiché
+        const shown = `_b_${d.key}` in body || (group === "comments" && Object.values(LEGACY).includes(d.key)); // case décochée = absente du formulaire : seul le marqueur prouve que le champ était affiché (l'ancien formulaire des commentaires n'en portait pas)
         if (shown) patch[d.key] = body[d.key] === "1" || body[d.key] === "on" || body[d.key] === "true";
       } else if (d.key in body) patch[d.key] = body[d.key];
     }

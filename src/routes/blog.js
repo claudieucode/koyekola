@@ -269,6 +269,7 @@ router.get("/blog/auteur/:id", (req, res) => {
 
 // Page d'un article (aussi utilisée par l'aperçu de l'éditeur : preview = true)
 function renderPostPage(req, res, post, { preview = false } = {}) {
+  const commentCfgNow = commentsEngine.settingsOf("post", post.id); // réglages du site de CET article
   const commentThread = commentsEngine.thread("post", post.id, { page: req.query.cpage });
   // « Répondre » : le formulaire se prépare pour ce commentaire (il doit être approuvé et son fil prolongeable)
   let replyTarget = null;
@@ -367,11 +368,13 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     similar: post.published ? blog.similar(post, 3, pageScope) : [],
     comments: commentThread,
     replyTo: replyTarget,
-    commentHtml: (body) => commentsEngine.html(body, { links: commentsEngine.settings().links_allowed }),
-    commentCfg: commentsEngine.settings(),
+    commentHtml: (body) => commentsEngine.html(body, { links: commentCfgNow.links_allowed }),
+    commentCfg: commentCfgNow,
+    commentClosedByAge: commentsEngine.closedByAge(post, commentCfgNow),
+    commenterCookie: commentCfgNow.cookie_consent ? readCommenterCookie(req) : null,
     commentForm: req.session.commentForm || {},
     commentToken: antispam.issue(),
-    commentsOpen: Boolean(post.comments_enabled && post.published && !preview),
+    commentsOpen: Boolean(post.comments_enabled && post.published && !preview && !commentsEngine.closedByAge(post, commentCfgNow)),
     commentMax: blog.COMMENT_MAX,
     commentError: req.session.commentError || null,
     commentDraft: req.session.commentDraft || "",
@@ -389,13 +392,27 @@ const guestLimiter = createRateLimiter(3, 10 * 60 * 1000);   // invités : 3 com
 const burstLimiter = createRateLimiter(1, 5 * 1000);         // jamais deux envois en moins de 5 secondes depuis la même adresse (invités)
 // Un formateur ou un membre de l'équipe (éditeur et plus) est publié tout de suite
 const canModerate = (user) => Boolean(user && (user.role === "formateur" || (marketingOrgId() && cmsAccess.can(user.id, "comments.moderate", { organizationId: marketingOrgId() }))));
+// Cookie du commentateur (nom et e-mail mémorisés) : écrit SEULEMENT si le site propose la case et que la personne l'a cochée ; sinon jamais, et un ancien cookie est effacé.
+// HttpOnly, SameSite=Lax, « Secure » en HTTPS, 180 jours, 300 octets au plus.
+const COMMENTER_COOKIE = "kw_commenter";
+function readCommenterCookie(req) {
+  const m = new RegExp(`(?:^|;\\s*)${COMMENTER_COOKIE}=([^;]{1,400})`).exec(String(req.headers.cookie || ""));
+  if (!m) return null;
+  try { const v = JSON.parse(decodeURIComponent(m[1])); return { name: String(v.n || "").slice(0, 60), email: String(v.e || "").slice(0, 120) }; } catch { return null; }
+}
+function writeCommenterCookie(req, res, cfg, user, remember, name, email) {
+  const opts = { httpOnly: true, sameSite: "lax", secure: req.secure, path: "/" };
+  if (user || !cfg.cookie_consent || !remember) { if (readCommenterCookie(req)) res.clearCookie(COMMENTER_COOKIE, opts); return; }
+  const value = JSON.stringify({ n: String(name || "").slice(0, 60), e: String(email || "").slice(0, 120) }); // res.cookie() encode la valeur
+  if (encodeURIComponent(value).length <= 300) res.cookie(COMMENTER_COOKIE, value, { ...opts, maxAge: 180 * 86400000 });
+}
 router.post("/blog/:slug/commentaires", (req, res) => {
   const found = urls.resolvePost(req.params.slug, req.kwSite || null); // même résolution que la page : un article d'un autre domaine est « introuvable » (aucun commentaire déposé ailleurs)
   const post = found && !found.redirect && found.row.published ? found.row : null;
   if (!post) return res.status(404).render("error", { message: "Article introuvable." });
   const back = `/blog/${req.params.slug}`;
   const user = req.session.user || null;
-  const cfg = commentsEngine.settings();
+  const cfg = commentsEngine.settingsOf("post", post.id);
   if (!user && !cfg.guests_allowed) return res.redirect(`/connexion?redirect=${encodeURIComponent(`${back}#commentaires`)}`);
   if (!post.comments_enabled) return res.redirect(`${back}#commentaires`);
   const ip = req.ip;
@@ -403,8 +420,9 @@ router.post("/blog/:slug/commentaires", (req, res) => {
   try {
     if (user ? commentLimiter.isLimited(key) : guestLimiter.isLimited(key) || burstLimiter.isLimited(key)) throw new UserError("Vous avez publié beaucoup de commentaires en peu de temps : réessayez dans quelques minutes.");
     const full = user ? db.prepare("SELECT id, username, email, role FROM users WHERE id = ?").get(user.id) : null;
-    const result = commentsEngine.create({ type: "post", contentId: post.id, parentId: /^\d{1,9}$/.test(String(req.body.parent_id || "")) ? Number(req.body.parent_id) : null, user: full, name: req.body.author_name, email: req.body.author_email, body: req.body.body, ip, honeypot: String(req.body.contact_url || "").trim() ? "honeypot" : (!user && !antispam.check(req.body.form_token) ? "timing" : ""), trusted: canModerate(full) });
+    const result = commentsEngine.create({ type: "post", contentId: post.id, parentId: /^\d{1,9}$/.test(String(req.body.parent_id || "")) ? Number(req.body.parent_id) : null, user: full, name: req.body.author_name, email: req.body.author_email, body: req.body.body, ip, userAgent: String(req.headers["user-agent"] || "").slice(0, 300), honeypot: String(req.body.contact_url || "").trim() ? "honeypot" : (!user && !antispam.check(req.body.form_token) ? "timing" : ""), trusted: canModerate(full) });
     if (user) commentLimiter.hit(key); else { guestLimiter.hit(key); burstLimiter.hit(key); }
+    writeCommenterCookie(req, res, cfg, user, req.body.remember === "1", req.body.author_name, req.body.author_email);
     if (result.status === "approved") return res.redirect(`${back}#commentaire-${result.id}`);
     req.session.commentNotice = result.status === "spam" ? "Votre commentaire a bien été reçu." : "Merci ! Votre commentaire est en attente de modération : il apparaîtra dès qu'il sera approuvé.";
     res.redirect(`${back}#commentaires`);
