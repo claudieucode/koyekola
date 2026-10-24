@@ -1,0 +1,31 @@
+<%- include("partials/header", { title: "Confirmer votre nouvelle adresse e-mail" }) %>
+
+  <div class="container kv-narrow">
+    <div class="card card-pad account-section kv-state">
+      <% if (result === "ok") { %>
+        <span class="kv-state-ico is-ok" aria-hidden="true"><%- icon("checkCircle", { size: 24 }) %></span>
+        <h1>Nouvelle adresse confirmée</h1>
+        <p>Votre adresse e-mail est maintenant celle que vous venez de confirmer. Utilisez-la pour vous connecter.</p>
+        <a href="<%= currentUser ? "/marketing/site-web/profil" : "/connexion" %>" class="btn btn-primary"><%= currentUser ? "Mon profil" : "Se connecter" %></a>
+      <% } else if (result === "pris") { %>
+        <span class="kv-state-ico is-warn" aria-hidden="true"><%- icon("alertTriangle", { size: 24 }) %></span>
+        <h1>Adresse indisponible</h1>
+        <p>Cette adresse ne peut plus être utilisée pour ce compte. Votre adresse actuelle reste inchangée.</p>
+        <a href="/marketing/site-web/profil" class="btn btn-primary">Mon profil</a>
+      <% } else if (!valid) { %>
+        <span class="kv-state-ico is-warn" aria-hidden="true"><%- icon("alertTriangle", { size: 24 }) %></span>
+        <h1>Lien invalide ou expiré</h1>
+        <p>Ce lien n'est plus valable (il expire au bout de 24 heures et ne vaut plus rien si la demande a été annulée ou remplacée). Votre adresse actuelle reste inchangée.</p>
+        <a href="/marketing/site-web/profil" class="btn btn-primary">Mon profil</a>
+      <% } else { %>
+        <span class="kv-state-ico" aria-hidden="true"><%- icon("lock", { size: 24 }) %></span>
+        <h1>Confirmer votre nouvelle adresse</h1>
+        <p>Cliquez sur le bouton pour utiliser <strong><%= email %></strong> comme adresse de votre compte.</p>
+        <form method="post" action="/mon-compte/changer-email/<%= encodeURIComponent(token) %>">
+          <button type="submit" class="btn btn-primary">Confirmer la nouvelle adresse</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+<%- include("partials/footer") %>

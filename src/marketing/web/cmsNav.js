@@ -66,6 +66,7 @@ const SECTIONS = [
       leaf("utilisateurs/roles", "Rôles", `${BASE}/utilisateurs/roles`, { permission: "users.view" }),
       leaf("utilisateurs/permissions", "Permissions", `${BASE}/utilisateurs/permissions`, { permission: "users.view" }),
       leaf("utilisateurs/invitations", "Invitations", `${BASE}/utilisateurs/invitations`, { permission: "users.view" }),
+      leaf("utilisateurs/profil", "Profil", `${BASE}/profil`, { permission: "profile.self" }), // Comptes → Profil : son propre profil (toute personne ayant accès à l'administration)
     ],
   },
   {
@@ -179,6 +180,7 @@ const SITE_MODULES = {
   "equipe-inviter": { label: "Inviter", kind: "delegate", to: "/site-web/equipe-site/inviter", reg: "utilisateurs/ajouter", permission: "users.create", legacy: `${BASE}/utilisateurs/ajouter` },
   "equipe-invitations": { label: "Invitations", kind: "delegate", to: "/site-web/equipe-site/invitations", reg: "utilisateurs/invitations", permission: "users.view", legacy: `${BASE}/utilisateurs/invitations` },
   "equipe-roles": { label: "Rôles", kind: "delegate", to: "/site-web/equipe-site/roles", reg: "utilisateurs/roles", permission: "users.view", legacy: `${BASE}/utilisateurs/roles` },
+  "equipe-profil": { label: "Profil", kind: "delegate", to: "/site-web/profil", reg: "utilisateurs/profil", permission: "profile.self", legacy: `${BASE}/profil` },
   "equipe-permissions": { label: "Permissions", kind: "delegate", to: "/site-web/equipe-site/permissions", reg: "utilisateurs/permissions", permission: "users.view", legacy: `${BASE}/utilisateurs/permissions` },
   reglages: { label: "Réglages du site", kind: "own", permission: "settings.read", legacy: `${BASE}/parametres`, legacyLabel: "Paramètres du site principal" },
   // R8 lot 2 : Articles, Commentaires et Médias s'ouvrent dans le cadre du site (écrans existants, isolation R5/R6 : le site vient de l'adresse, jamais du navigateur)
@@ -303,6 +305,7 @@ const ABILITY = {
   "utilisateurs/invitations": { mode: "open", module: "equipe-invitations" },
   "utilisateurs/roles": { mode: "open", module: "equipe-roles" },
   "utilisateurs/permissions": { mode: "open", module: "equipe-permissions" },
+  "utilisateurs/profil": { mode: "open", module: "equipe-profil" },
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
   corbeille: { mode: "open", module: "corbeille" },

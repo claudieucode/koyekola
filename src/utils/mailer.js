@@ -89,6 +89,19 @@ function sendEmailVerification(db, { to, username, verifyUrl }) {
   });
 }
 
+// Changement d'adresse e-mail (Comptes → Profil) : envoyé à la NOUVELLE adresse ; tant que le lien n'est pas ouvert, l'adresse du compte ne change pas.
+function sendEmailChange(db, { to, username, url }) {
+  return queueMail(db, {
+    kind: "email_change", to, subject: "Confirmez votre nouvelle adresse e-mail KOLAKISA", sensitive: true,
+    text: [
+      `Bonjour ${oneLine(username)},`, "",
+      "Vous avez demandé à utiliser cette adresse pour votre compte KOLAKISA. Pour la confirmer (lien valable 24 heures) :", "", url, "",
+      "Tant que vous n'ouvrez pas ce lien, votre adresse actuelle reste inchangée.",
+      "Si vous n'avez rien demandé, ignorez cet e-mail.",
+    ].join("\n"),
+  });
+}
+
 // Lien de réinitialisation (valable 1 heure, usage unique). Le texte est effacé de la file une fois l'e-mail parti.
 function sendPasswordResetEmail(db, { to, username, url }) {
   return queueMail(db, {
@@ -131,5 +144,5 @@ function sendInvitationEmail(db, { to, inviter, roleName, siteName, url, days, n
 
 module.exports = {
   sendInvitationEmail, TIMEOUTS, buildTransport, fromAddress, siteUrl,
-  sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendPasswordResetEmail, sendSubscriptionConfirmation,
+  sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendEmailChange, sendPasswordResetEmail, sendSubscriptionConfirmation,
 };
