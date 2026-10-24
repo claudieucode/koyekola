@@ -256,6 +256,10 @@ function buildPage(c, blocks) {
     if (!fn) throw new Error(`Variante inconnue : ${name}`);
     out.push(...fn(c, params));
   }
+  // Un seul titre de niveau 1 par page (accessibilité, référencement) : les suivants deviennent des titres de niveau 2 sans changer leur apparence
+  let seenH1 = false;
+  const walk = (n) => { if (Array.isArray(n)) return n.forEach(walk); if (!n || typeof n !== "object") return; if (n.type === "heading" && n.props && n.props.level === "1") { if (seenH1) n.props.level = "2"; else seenH1 = true; } if (n.children) walk(n.children); };
+  walk(out);
   // La colonne de page ajoute un retrait en haut et en bas (.lp-main) : la première et la dernière bande le reprennent pour toucher les bords
   const box = (sec) => (sec && sec.type === "layout" && sec.children && sec.children[0] && sec.children[0].styles) || null;
   const first = box(out[0]), last = box(out[out.length - 1]);

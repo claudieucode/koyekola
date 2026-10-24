@@ -115,7 +115,7 @@ describe("Thèmes : navigateur réel", { skip: SKIP }, () => {
     await page.waitForURL(new RegExp(`page=${s.pages[1].key}`));
     assert.match(await page.frameLocator("[data-tp-frame]").locator("h1").first().innerText(), /\S/);
     const font = require("../src/utils/fontLibrary").byId(s.tokens.fonts.heading);
-    if (font) assert.equal(await page.frames().find((f) => f !== page.mainFrame()).evaluate((fam) => document.fonts.check(`16px "${fam}"`), font.family), true, "police de titre chargée");
+    if (font) assert.equal(await page.frames().find((f) => f !== page.mainFrame()).evaluate((fam) => [...document.fonts].some((f) => f.family.replace(/["']/g, "") === fam && f.status === "loaded"), font.family), true, "police de titre chargée");
     await shot(page, "apercu-bureau");
     await page.context().close();
     assert.deepEqual(errors, [], errors.join("\n"));

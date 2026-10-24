@@ -32,7 +32,7 @@ const WIDTHS = [["ordinateur", 1440, 900], ["tablette", 820, 1100], ["telephone"
           overflow: document.documentElement.scrollWidth - window.innerWidth,
           broken: [...document.images].filter((im) => im.offsetParent !== null && im.complete && im.naturalWidth === 0).length,
           h1: document.querySelectorAll("h1").length,
-          font: family ? document.fonts.check(`16px "${family}"`) : true,
+          font: family ? [...document.fonts].some((f) => f.family.replace(/['"]/g, "") === family && f.status === "loaded") : true,
           title: document.title.length > 0,
         }), heading ? heading.family : null);
         await ctx.close();
