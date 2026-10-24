@@ -20,7 +20,7 @@
   <% } %>
   <% if (run.status === "failed") { %><p class="mk-ur-bad" role="alert"><%= run.message %></p><% } %>
   <% if (run.status === "cancelled") { %><p class="mk-sub"><%= run.message %></p><% } %>
-  <% if (mode === "import" && (run.options || {}).source && (run.options || {}).source !== "kolakisa" && ["failed", "cancelled"].includes(run.status)) { %>
+  <% if (mode === "import" && (run.options || {}).source && (run.options || {}).source !== "kolakisa" && run.phase === "apply" && ["failed", "cancelled"].includes(run.status)) { %>
     <form method="post" action="<%= BASE %>/importer/<%= run.id %>/reprendre<%= run.site_id ? "?site=" + run.site_id : "" %>"><button type="submit" class="btn btn-primary btn-sm">Reprendre cet import</button>
       <span class="mk-sub">Nouvelle analyse du même fichier : ce qui est déjà importé est reconnu (identifiant d'origine) et n'est pas recréé.</span></form>
   <% } %>

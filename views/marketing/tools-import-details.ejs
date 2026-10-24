@@ -14,9 +14,9 @@
   <ul><% imp.supports.forEach((s) => { %><li><%= s %></li><% }) %></ul>
   <h3>Limites connues</h3>
   <ul><% imp.limits.forEach((s) => { %><li><%= s %></li><% }) %></ul>
-  <p class="mk-im-actions">
+  <div class="mk-im-actions">
     <% if (imp.state.compatible && imp.state.enabled && imp.usable) { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/importer/<%= imp.id %><%= q %>"><%= imp.kind === "tool" ? "Ouvrir l'outil" : "Lancer l'importateur" %></a><% } %>
     <% if (canToggle) { %><form method="post" action="<%= BASE %>/importer/<%= imp.id %>/<%= imp.state.enabled ? "desactiver" : "activer" %><%= q %>"><button type="submit" class="btn btn-outline btn-sm"><%= imp.state.enabled ? "Désactiver" : "Activer" %></button></form><% } %>
-  </p>
+  </div>
 </section>
 <%- include("partials/bottom") %>

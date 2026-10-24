@@ -42,7 +42,7 @@ function parseFile(text) {
 
 // ---------- Plan (analyse à blanc) ----------
 const labelOf = {
-  comments: (i) => `${i.author_name || "Anonyme"} : ${String(i.body || "").replace(/\s+/g, " ").slice(0, 60)}`, settings: () => "Paramètres du site", pages: (i) => i.name || i.slug, taxonomies: (i) => `${i.taxonomy} · ${i.name}`, articles: (i) => i.title, menus: (i) => i.name, redirects: (i) => `${i.source} → ${i.target}`, media: (i) => i.path || i.name || i.remoteUrl, seo: (i) => `${i.entityType} · ${i.entityKey}`, site: (i) => i.name || "Réglages du site", comments: () => "" };
+  comments: (i) => `${i.author_name || "Anonyme"} : ${String(i.body || "").replace(/\s+/g, " ").slice(0, 60)}`, settings: () => "Paramètres du site", pages: (i) => i.name || i.slug, taxonomies: (i) => `${i.taxonomy} · ${i.name}`, articles: (i) => i.title, menus: (i) => i.name, redirects: (i) => `${i.source} → ${i.target}`, media: (i) => i.path || i.name || i.remoteUrl, seo: (i) => `${i.entityType} · ${i.entityKey}`, site: (i) => i.name || "Réglages du site" };
 
 // Retourne { items: [{ type, ref, label, action, existing, issues, warnings, data }], counts, blocked }
 function analyse(ctx, data, { siteId, types, onConflict, opts = {} }) {
