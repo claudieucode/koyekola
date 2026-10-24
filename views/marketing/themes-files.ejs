@@ -18,7 +18,33 @@
     <div class="kx-hero-art" aria-hidden="true"><%- illu("themes") %></div>
   </header>
 
-  <% if (!chosen || !tree) { %>
+  <% if (typeof gate !== "undefined" && gate) { %>
+  <%# Avertissement obligatoire AVANT l'éditeur : aucun contenu de fichier, aucun script d'édition n'est envoyé tant que la personne n'a pas confirmé (voir la route POST /fichiers/acces). %>
+  <dialog class="tf-warn" data-tf-gate open aria-labelledby="tf-warn-title" aria-describedby="tf-warn-desc" data-tf-back="<%= backHref %>">
+    <form method="post" action="<%= BASE %>/fichiers/acces<%= T.siteId ? "?site=" + T.siteId : "" %>" data-tf-gate-form>
+      <% if (T.siteId) { %><input type="hidden" name="site" value="<%= T.siteId %>"><% } %>
+      <input type="hidden" name="theme" value="<%= carry.theme %>"><input type="hidden" name="fichier" value="<%= carry.fichier %>">
+      <div class="tf-warn-head"><span class="tf-warn-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 22 }) %></span><h2 id="tf-warn-title">Attention : modification des fichiers d'un thème</h2></div>
+      <div id="tf-warn-desc" class="tf-warn-body">
+        <p>La modification directe des fichiers d'un thème est une opération avancée qui peut affecter le fonctionnement, la sécurité et la stabilité de votre site.</p>
+        <p>Une modification incorrecte peut provoquer des erreurs, rendre certaines fonctionnalités indisponibles ou empêcher le site de s'afficher correctement.</p>
+        <p>Les modifications effectuées directement dans les fichiers peuvent également être écrasées lors d'une mise à jour du thème.</p>
+        <h3>Conseils de sécurité</h3>
+        <ul>
+          <li>Effectuez une sauvegarde vérifiée avant toute modification.</li>
+          <li>Testez les changements dans un environnement de préproduction lorsque cela est possible.</li>
+          <li>Ne modifiez que les fichiers que vous comprenez.</li>
+          <li>Privilégiez les paramètres du thème (Personnaliser, Styles) lorsqu'ils permettent d'obtenir le même résultat.</li>
+          <li>En cas de problème, assurez-vous de disposer d'une méthode de restauration : l'historique des versions de chaque fichier.</li>
+        </ul>
+      </div>
+      <div class="tf-warn-actions">
+        <a class="btn btn-outline" href="<%= backHref %>" data-tf-gate-back>Retour en sécurité</a>
+        <button type="submit" class="btn btn-primary" data-tf-gate-continue>Je comprends les risques, continuer</button>
+      </div>
+    </form>
+  </dialog>
+  <% } else if (!chosen || !tree) { %>
     <%- include("partials/kx-empty", { art: "themes", title: "Aucun thème à afficher", text: "Installez un thème pour pouvoir consulter ses fichiers.", primary: { label: "Ajouter un thème", href: to("/ajouter") } }) %>
   <% } else { %>
   <% if (readOnly) { %><div class="mk-th-notice mk-th-notice--warn" role="status"><p>Ce site est archivé ou supprimé : les fichiers sont en consultation seule.</p></div><% } else if (!canWrite) { %><div class="mk-th-notice" role="status"><p>Vous pouvez consulter les fichiers ; la modification demande le droit de publier l'apparence.</p></div><% } %>

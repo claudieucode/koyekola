@@ -29,7 +29,33 @@ describe("éditeur de fichiers des thèmes", () => {
   });
   after(() => { db.close(); return srv.stop(); });
 
+  const confirmer = (c, site, theme = "ocean") => c.post(`${F}/acces?${q(site)}`, { theme, ...(site ? { site: String(site) } : {}) });
+  test("avertissement : sans confirmation, la page n'envoie ni éditeur ni contenu de fichier ; la boîte annonce titre, conseils et deux actions", async () => {
+    const r = await boss.get(`${F}?${q(A, { theme: "ocean" })}`);
+    assert.equal(r.status, 200);
+    assert.match(r.text, /<dialog class="tf-warn"[^>]*open[^>]*aria-labelledby="tf-warn-title"[^>]*aria-describedby="tf-warn-desc"/);
+    assert.match(r.text, /Attention : modification des fichiers d'un thème/); assert.match(r.text, /Conseils de sécurité/);
+    assert.match(r.text, /Retour en sécurité/); assert.match(r.text, /Je comprends les risques, continuer/);
+    assert.match(r.text, /cms-theme-files-gate\.js/);
+    assert.doesNotMatch(r.text, /data-tf-path=|theme-code-editor\.js|cms-theme-files\.js|"primary"|tokens\/colors/, "aucun contenu ni script d'édition avant confirmation");
+    assert.match(r.text, new RegExp(`href="${TH}\\?site=${A}"[^>]*data-tf-gate-back`));
+  });
+  test("confirmation : à usage unique, liée à la personne et au site ; jamais mémorisée dans un cookie ni dans la base", async () => {
+    const ack = await confirmer(boss, A);
+    assert.equal(ack.status, 302); assert.match(ack.location, /\/fichiers\?/);
+    assert.ok(![...boss.cookies.keys()].some((k) => /ack|fichiers|confirm/i.test(k)), "aucun cookie de consentement");
+    const open1 = await boss.get(`${F}?${q(A, { theme: "ocean" })}`); assert.match(open1.text, /data-tf-path="theme\.json"/); assert.doesNotMatch(open1.text, /tf-warn-title/);
+    const again = await boss.get(`${F}?${q(A, { theme: "ocean" })}`); assert.match(again.text, /tf-warn-title/, "une nouvelle entrée redemande la confirmation");
+    await confirmer(boss, A); const other = await boss.get(`${F}?${q(B, { theme: "savane" })}`); assert.match(other.text, /tf-warn-title/, "la confirmation de CE site n'ouvre pas un autre site");
+    const anon = await new (require("./helpers").Client)(srv.base).post(`${F}/acces?${q(A)}`, { theme: "ocean" }); assert.ok([302, 401, 403].includes(anon.status)); assert.doesNotMatch(String(anon.location || ""), /fichiers\?/);
+  });
+  test("la boîte ne protège rien à elle seule : les API de lecture et d'écriture répondent sans confirmation avec leurs propres droits", async () => {
+    const w = await ecrire(viewerA, A, "ocean", "theme.json", "{}", "x"); assert.equal(w.status, 403, "écriture refusée sans le droit, confirmée ou non");
+    assert.equal((await lire(boss, A, "ocean", "../x")).status, 422);
+    const ok = await lire(adminA, B, "savane", "theme.json"); assert.equal(ok.status, 403, "autre site : refusé");
+  });
   test("ouverture : page rendue côté serveur avec le thème, l'arborescence autorisée et l'éditeur", async () => {
+    await confirmer(boss, A);
     const r = await boss.get(`${F}?${q(A, { theme: "ocean" })}`);
     assert.equal(r.status, 200);
     assert.match(r.text, /Éditeur de fichiers des thèmes/);

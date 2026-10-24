@@ -391,3 +391,20 @@ html[data-kola-theme="dark"] .tf { --tf-bg: #0f1a2c; --tf-text: #dbe6f3; --tf-gu
 /* Crochets de structure du tableau de bord et de l'éditeur de fichiers (mise en page portée par leur parent) */
 .kx-recent, .kx-todo, .kx-activity, .kx-access, .kx-others { min-width: 0; }
 .tf-version-view { margin-top: 6px; }
+
+/* Avertissement avant l'éditeur de fichiers des thèmes (views/marketing/themes-files.ejs, public/js/cms-theme-files-gate.js) */
+.tf-warn { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; padding: 0; color: var(--mk-text); background: var(--mk-surface); border: 1px solid var(--mk-border-strong); border-radius: var(--kx-r-xl); box-shadow: var(--mk-pop); }
+.tf-warn:not([open]) { display: none; }
+.tf-warn[open]:not(:modal) { position: relative; margin: 8px auto 24px; box-shadow: var(--k-shadow-sm); }
+.tf-warn::backdrop { background: rgba(6, 20, 37, 0.6); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.tf-warn form { display: grid; gap: 14px; padding: 22px 24px 20px; }
+.tf-warn-head { display: flex; align-items: center; gap: 12px; }
+.tf-warn-head h2 { margin: 0; font-size: 1.12rem; line-height: 1.3; letter-spacing: -0.012em; }
+.tf-warn-icon { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; color: var(--k-warn-fg); background: var(--k-warn-bg); box-shadow: inset 0 0 0 1px var(--k-warn-bd); }
+.tf-warn-body p { margin: 0 0 8px; color: var(--mk-text-soft); font-size: 0.92rem; line-height: 1.55; }
+.tf-warn-body h3 { margin: 14px 0 6px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.tf-warn-body ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--mk-text-soft); font-size: 0.9rem; line-height: 1.5; }
+.tf-warn-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1px solid var(--mk-border); }
+.tf-warn-actions .btn { min-height: 40px; }
+@media (prefers-reduced-motion: no-preference) { .tf-warn[open]:modal { animation: kx-pop 0.18s var(--kx-ease) backwards; } .tf-warn[open]:modal::backdrop { animation: kx-fade 0.18s ease backwards; } }
+@media (max-width: 520px) { .tf-warn form { padding: 18px 16px 16px; } .tf-warn-actions { flex-direction: column-reverse; } .tf-warn-actions .btn { width: 100%; } }

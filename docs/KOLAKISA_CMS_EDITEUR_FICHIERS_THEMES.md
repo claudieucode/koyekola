@@ -54,3 +54,13 @@ Barre : thème (nom, état actif/inactif/incompatible, version), fichier ouvert,
 - Pas de comparaison visuelle (diff) entre versions : consultation et restauration seulement.
 - Pas de rétablissement automatique garanti hors du cas « thème actif non appliqué au rendu ».
 - Les jetons sont normalisés par le moteur : le contenu enregistré peut différer légèrement du texte saisi (l'éditeur affiche alors la version canonique).
+
+## 8. Avertissement avant l'éditeur
+
+Audit : Kolakisa n'a **pas d'éditeur de fichiers d'extensions** (les extensions sont des modules activables par site, sans fichiers) ; l'avertissement a donc été branché sur le seul éditeur de fichiers existant, celui des thèmes.
+
+- Chaque **entrée** dans l'éditeur affiche d'abord une boîte de dialogue (titre, risques, conseils de sécurité, « Retour en sécurité » / « Je comprends les risques, continuer »). Tant qu'elle n'est pas confirmée, la page n'envoie **ni contenu de fichier ni script d'édition**.
+- La confirmation (`POST …/fichiers/acces`) est enregistrée **côté serveur, en session**, à usage unique, pendant 10 minutes, liée à la personne et au site. Elle n'est mémorisée ni dans le navigateur ni en base ; un rechargement ou une nouvelle entrée redemandent la confirmation ; cliquer dans l'éditeur ne la redemande pas.
+- **Elle ne remplace aucun contrôle** : les routes de lecture et d'écriture gardent leurs droits (`appearance.read` / `appearance.publish`), l'isolation par site, la validation des chemins et la protection d'origine (CSRF) — testé : un lecteur ne peut pas écrire, un autre site reste fermé, même sans passer par la boîte.
+- Accessibilité : `<dialog>` modal (focus piégé, arrière-plan inerte), focus initial sur l'action sûre, titre et description associés, Échap = « Retour en sécurité » (jamais une confirmation), bouton désactivé pendant l'envoi (pas de double ouverture). Sans JavaScript, la boîte reste affichée dans la page.
+- Fichiers : `views/marketing/themes-files.ejs` (mode `gate`), `public/js/cms-theme-files-gate.js`, styles `.tf-warn*` de `kola-compose.css`, routes dans `src/marketing/web/themes.js`.
