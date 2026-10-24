@@ -2,7 +2,9 @@
 //   export  : build() par lots → fichier JSON conservé 24 h pour téléchargement (jamais de secret) ;
 //   import  : phase « analyse » (aucune écriture : rapport, conflits, erreurs) → attente de CONFIRMATION → phase « apply » (par lots, annulable) ;
 //   annuler un import : met à la corbeille ce que l'import a créé (pages, articles) et supprime ses menus, redirections et termes inutilisés.
+const path = require("node:path");
 const db = require("../../config/database");
+const { dataDir } = require("../../config/paths");
 const { sameScope } = require("../siteScope"); // R9-2 : égalité de portée « principal ou site » (siteScope)
 const { transaction } = require("../../marketing/db/tx");
 const runs = require("./runs");
@@ -10,6 +12,7 @@ const runner = require("./runner");
 const exporter = require("./exporter");
 const importer = require("./importer");
 
+const EXPORT_DIR = path.join(dataDir, "exports"); // privé : hors de uploads/, jamais servi par le serveur de fichiers
 const BATCH = 20;
 const MAX_STORED_ITEMS = 3000;
 const light = (it) => ({ type: it.type, ref: it.ref, label: it.label, action: it.action, reason: it.reason || null, issues: it.issues, warnings: it.warnings, existing: it.existing || null });
@@ -18,9 +21,12 @@ const summarize = (a) => ({ counts: a.counts, conflicts: a.conflicts, errors: a.
 // ---------- Export ----------
 runner.register("export", async (run, api) => {
   const opts = run.options ? JSON.parse(run.options) : {};
-  const out = await exporter.build(api.ctx, api, { types: opts.types || [], siteId: run.site_id });
+  const out = await exporter.build(api.ctx, api, { types: opts.types || [], siteId: run.site_id, filters: opts.filters || {}, scope: opts.scope || "all", format: opts.format || "json", mediaFiles: Boolean(opts.mediaFiles), archiveDir: EXPORT_DIR, runId: run.id });
   if (out.cancelled) return { status: "cancelled", message: "Export annulé : aucun fichier produit." };
-  return { status: "done", result: out.text, report: { counts: out.counts, bytes: Buffer.byteLength(out.text) }, message: "Export terminé." };
+  const base = { counts: out.counts, format: out.format, mime: out.mime, ext: out.ext, matched: out.matched, skippedFormat: out.skippedFormat };
+  // Archive avec médias : le fichier reste dans un dossier PRIVÉ (hors de uploads/, jamais servi statiquement) ; la base ne garde que son nom
+  if (out.archive) return { status: "done", result: `@file:${path.basename(out.archive.file)}`, report: { ...base, bytes: out.archive.bytes, archive: { entries: out.archive.entries, includedFiles: out.archive.includedFiles, missingFiles: out.archive.missingFiles } }, message: "Export terminé : archive prête." };
+  return { status: "done", result: out.text, report: { ...base, bytes: Buffer.byteLength(out.text) }, message: "Export terminé." };
 });
 
 // ---------- Import ----------
@@ -308,11 +314,24 @@ function undoCreated(ctx, c) {
 }
 
 // ---------- Création des opérations (appelées par les routes) ----------
-function startExport(ctx, { siteId, types }) {
+// scope : « all » (tout ce qui est exportable et non sensible), « articles », « pages », « other » (un seul type, `other`) ; sans scope : liste de types explicite (API historique)
+function startExport(ctx, { siteId, types = [], scope = null, other = null, filters = {}, format = "json", mediaFiles = false }) {
   const allowed = exporter.allowedTypes(ctx, { siteId, mode: "export" });
-  const chosen = exporter.ORDER.filter((t) => types.includes(t) && allowed.includes(t));
+  let wanted = types;
+  if (scope === "all") wanted = allowed.filter((t) => !exporter.TYPES[t].sensitive);
+  else if (scope === "articles") wanted = ["articles"];
+  else if (scope === "pages") wanted = ["pages"];
+  else if (scope === "other") wanted = other ? [String(other)] : [];
+  else if (scope !== null) throw Object.assign(new Error("Sélection inconnue."), { user: true });
+  const chosen = exporter.ORDER.filter((t) => wanted.includes(t) && allowed.includes(t));
   if (!chosen.length) throw Object.assign(new Error("Aucune ressource exportable dans cette sélection (droits ou portée)."), { user: true });
-  const run = runs.create({ organizationId: ctx.organizationId, siteId, userId: ctx.userId, kind: "export", options: { types: chosen }, expiresInHours: 24 });
+  if (!["json", "wxr"].includes(format)) throw Object.assign(new Error("Format inconnu : choisissez le format natif Kolakisa ou WXR."), { user: true });
+  if (format === "wxr" && scope === "other") { const bad = chosen.find((t) => !require("./wxr").SUPPORTED.includes(t)); if (bad) throw Object.assign(new Error(`« ${exporter.TYPES[bad].label} » n'existe que dans le format natif Kolakisa : choisissez ce format.`), { user: true }); }
+  const s = scope || "all";
+  const nf = exporter.normalizeFilters(ctx, siteId, s, filters);
+  if (!nf.ok) throw Object.assign(new Error(nf.errors.join(" ")), { user: true });
+  if (["articles", "pages"].includes(s) && exporter.count(ctx, s, siteId, nf.filters) === 0) throw Object.assign(new Error("Aucun contenu ne correspond à cette sélection : modifiez les filtres."), { user: true, empty: true });
+  const run = runs.create({ organizationId: ctx.organizationId, siteId, userId: ctx.userId, kind: "export", options: { types: chosen, scope: s, filters: ["articles", "pages"].includes(s) ? filters : {}, format, mediaFiles: Boolean(mediaFiles) }, expiresInHours: 24 });
   runner.start(run, "export");
   return run;
 }
@@ -343,4 +362,4 @@ function startUndo(ctx, id) {
   return run;
 }
 
-module.exports = { applyNow, startExport, startImport, confirmImport, startUndo, STRATEGIES: importer.STRATEGIES, TYPES: exporter.TYPES, ORDER: exporter.ORDER };
+module.exports = { EXPORT_DIR, applyNow, startExport, startImport, confirmImport, startUndo, STRATEGIES: importer.STRATEGIES, TYPES: exporter.TYPES, ORDER: exporter.ORDER };

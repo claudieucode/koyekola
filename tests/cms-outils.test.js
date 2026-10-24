@@ -127,6 +127,9 @@ describe("export : contenu, relations, périmètre, secrets", () => {
     tagId = one("SELECT id FROM taxonomy_terms WHERE slug = 'photoshop'").id;
     art1 = Number(db.prepare("INSERT INTO posts (slug, title, content, content_format, status, published, published_at, excerpt, seo_title, seo_description, language) VALUES ('article-un', 'Article un', '<p>Texte <strong>riche</strong> un.</p>', 'html', 'published', 1, datetime('now'), 'Résumé un', 'Titre SEO un', 'Description SEO un', 'fr')").run().lastInsertRowid);
     art2 = Number(db.prepare("INSERT INTO posts (slug, title, content, content_format, status, published) VALUES ('article-deux', 'Article deux', '<p>Texte deux.</p>', 'html', 'draft', 0)").run().lastInsertRowid);
+    // Les articles et leurs termes appartiennent au site A (l'export d'un site ne contient QUE son contenu) ; rattachés avant de poser les relations (la base refuse une relation entre sites)
+    const own = db.prepare("INSERT INTO mk_content_sites (content_type, content_id, organization_id, site_id, scope) VALUES (?, ?, ?, ?, ?)");
+    own.run("term", catId, orgId, siteA, "category"); own.run("term", tagId, orgId, siteA, "tag"); own.run("post", art1, orgId, siteA, ""); own.run("post", art2, orgId, siteA, "");
     db.prepare("INSERT INTO taxonomy_relations (content_type, content_id, term_id, is_primary, position) VALUES ('post', ?, ?, 1, 0), ('post', ?, ?, 0, 0)").run(art1, catId, art1, tagId);
     // menu du site A avec une page, un article, une catégorie et un lien libre
     const m = await boss.post("/marketing/site-web/navigation/menus", { name: "Menu A" });
@@ -136,7 +139,7 @@ describe("export : contenu, relations, périmètre, secrets", () => {
     for (const [type, oid, label, url] of [["page", pA1, "Offre", ""], ["article", art1, "Article", ""], ["category", catId, "Marketing", ""], ["custom", null, "Contact", "/contact"]])
       db.prepare("INSERT INTO nav_items (menu_id, position, type, object_id, url, label) VALUES (?, 0, ?, ?, ?, ?)").run(menuId, type, oid, url, label);
     await boss.post("/marketing/site-web/redirections", { source: "/ancienne-offre-a", target: "/catalogue", status: "301", site_id: String(siteA) });
-    db.prepare("INSERT INTO mk_media (organization_id, kind, path, name, mime, size, alt, type) VALUES (?, 'image', '/uploads/marketing/1/photo-export.png', 'photo-export.png', 'image/png', 1000, 'Une photo', 'image')").run(orgId);
+    db.prepare("INSERT INTO mk_media (organization_id, kind, path, name, mime, size, alt, type, site_id, reach) VALUES (?, 'image', ?, 'photo-export.png', 'image/png', 1000, 'Une photo', 'image', ?, 'site')").run(orgId, `/uploads/marketing/1/site-${siteA}/photo-export.png`, siteA);
   });
   test("export du site A : pages du site A seulement, réglages, menus, redirections ; format et références", async () => {
     const e = await doExport(boss, { site: siteA, types: ["site", "pages", "menus", "redirects"] });
@@ -153,13 +156,13 @@ describe("export : contenu, relations, périmètre, secrets", () => {
     assert.equal(e.headers.get("cache-control"), "no-store");
   });
   test("export des articles et taxonomies : relations par références, SEO, aucun secret ni compte", async () => {
-    const e = await doExport(boss, { types: ["taxonomies", "articles", "media", "seo", "comments"] });
+    const e = await doExport(boss, { site: siteA, types: ["taxonomies", "articles", "media", "comments"] });
     const a1 = e.data.resources.articles.find((a) => a.slug === "article-un");
     assert.deepEqual(a1.categoryRefs, [`t${catId}`]);
     assert.deepEqual(a1.tagRefs, [`t${tagId}`]);
     assert.equal(a1.seo_title, "Titre SEO un");
     assert.ok(e.data.resources.taxonomies.some((t) => t.ref === `t${catId}` && t.name === "Marketing"));
-    assert.ok(e.data.resources.media.some((m) => m.path === "/uploads/marketing/1/photo-export.png" && m.alt === "Une photo"));
+    assert.ok(e.data.resources.media.some((m) => m.path === `/uploads/marketing/1/site-${siteA}/photo-export.png` && m.alt === "Une photo"));
     // aucun secret / compte
     const text = e.text;
     assert.doesNotMatch(text, /\$2[aby]\$\d{2}\$/, "aucun hash de mot de passe");
@@ -540,7 +543,9 @@ describe("santé du site : contrôles réels, état normal et problèmes simulé
 
 describe("diagnostic : intégrité et orphelins (lecture seule, corrections confirmées)", () => {
   test("détecte relations brisées, révisions orphelines, historiques d'adresses morts ; ne modifie rien", async () => {
-    db.prepare("INSERT INTO taxonomy_relations (content_type, content_id, term_id, is_primary, position) VALUES ('post', 424242, ?, 0, 0)").run(catId);
+    // relation orpheline : un terme du site principal (non rattaché) vers un article qui n'existe pas
+    const orphanTerm = Number(db.prepare("INSERT INTO taxonomy_terms (taxonomy, name, slug) VALUES ('category', 'Orpheline', 'orpheline-diagnostic')").run().lastInsertRowid);
+    db.prepare("INSERT INTO taxonomy_relations (content_type, content_id, term_id, is_primary, position) VALUES ('post', 424242, ?, 0, 0)").run(orphanTerm);
     db.prepare("INSERT INTO cms_revisions (content_type, content_id, kind, label, data, fingerprint) VALUES ('page', 424242, 'draft', 'x', '{}', 'f1')").run();
     db.prepare("INSERT INTO cms_url_history (resource_type, resource_id, old_slug) VALUES ('page', 424242, 'adresse-morte')").run();
     const before = { rel: count("SELECT COUNT(*) n FROM taxonomy_relations"), rev: count("SELECT COUNT(*) n FROM cms_revisions"), hist: count("SELECT COUNT(*) n FROM cms_url_history") };
@@ -582,7 +587,7 @@ describe("diagnostic : intégrité et orphelins (lecture seule, corrections conf
     const r = require("child_process"); void r;
     const html = (await boss.get(`${O}/diagnostic`)).text;
     assert.match(html, /Médias potentiellement inutilisés/);
-    assert.equal(count("SELECT COUNT(*) n FROM mk_media WHERE path = '/uploads/marketing/1/photo-export.png'"), 1, "le média est toujours là");
+    assert.equal(count("SELECT COUNT(*) n FROM mk_media WHERE path = ?", `/uploads/marketing/1/site-${siteA}/photo-export.png`), 1, "le média est toujours là");
   });
 });
 
