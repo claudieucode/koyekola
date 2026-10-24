@@ -49,8 +49,9 @@ describe("menu de l'espace d'un site (buildSiteNav)", () => {
     assert.ok(keys.includes("landing")); assert.ok(!keys.includes("utilisateurs")); assert.ok(!keys.includes("espace/seo") === false || true);
     // P1a : l'écran « Pages » du registre (clé « landing ») trouve son entrée dans le menu du site ; une clé que le site n'ouvre pas n'y trouve rien
     assert.equal(nav.buildCmsNav({ can: all, active: "landing", space }).current.key, "landing");
-    // C1 : « Meta » (SEO) est une entrée du menu, grisée « Bientôt » : elle existe, mais n'ouvre rien ; « Ajouter » (Articles) est ouverte depuis R8 lot 2
-    assert.equal(nav.buildCmsNav({ can: all, active: "seo/meta", space }).current.disabled, true);
+    // C1 : « Liens cassés » (Redirections) est une entrée du menu, grisée « Bientôt » : elle existe, mais n'ouvre rien ; « Meta » (SEO) et « Ajouter » (Articles) sont ouvertes
+    assert.equal(nav.buildCmsNav({ can: all, active: "redirections/liens-casses", space }).current.disabled, true);
+    assert.equal(nav.buildCmsNav({ can: all, active: "seo/meta", space }).current.disabled, undefined);
     assert.equal(nav.buildCmsNav({ can: all, active: "articles/ajouter", space }).current.disabled, undefined);
     assert.equal(nav.buildCmsNav({ can: all, active: "espace/inconnu", space }), null);
   });

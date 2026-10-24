@@ -640,6 +640,10 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "seo_site_sitemaps": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "seo_tasks_done": {
    "siteId": false,
    "classe": "plateforme"

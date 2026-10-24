@@ -1,0 +1,40 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <p class="field-hint mk-seo-lead">Ordre de priorité : <strong>1.</strong> réglage de la page · <strong>2.</strong> modèle du site (ci-dessous) · <strong>3.</strong> valeurs par défaut du site · <strong>4.</strong> valeur de secours sûre. Les longueurs sont des repères indicatifs, pas des règles de classement.</p>
+    <% if (v.truncated) { %><div class="mk-cms-soon" role="note"><p>Plus de 500 pages en ligne : seules les 500 premières sont listées.</p></div><% } %>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="meta-model"><h2 id="meta-model">Modèles du site</h2>
+      <form method="post" action="<%= space.base %>/seo/meta" class="mk-form" data-dirty-form data-busy-form>
+        <% fields.forEach((f) => { %>
+        <div class="field-group">
+          <label for="seo-<%= f.key %>"><%= f.label %> <span class="mk-status <%= f.own ? 'mk-status-ok' : 'mk-status-off' %>"><%= f.own ? "personnalisé" : "valeur par défaut" %></span></label>
+          <% if (f.type === "choice") { %>
+            <select id="seo-<%= f.key %>" name="<%= f.key %>" <%= canEdit ? "" : "disabled" %>><option value="">Valeur par défaut</option><% f.choices.forEach((c) => { %><option value="<%= c %>" <%= f.own && f.value === c ? "selected" : "" %>><%= c %></option><% }) %></select>
+          <% } else { %>
+            <input id="seo-<%= f.key %>" type="text" name="<%= f.key %>" maxlength="<%= f.max || 200 %>" value="<%= f.own ? f.value : '' %>" placeholder="<%= f.effective %>" <%= canEdit ? "" : "readonly" %> data-counter="<%= f.key === 'default_description' ? 160 : f.key === 'site_name' ? 60 : 0 %>">
+            <% if (f.key === "default_description" || f.key === "site_name") { %><small class="mk-seo-count" data-count-for="seo-<%= f.key %>" aria-live="polite"></small><% } %>
+          <% } %>
+          <% if (f.help) { %><small><%= f.help %></small><% } %>
+        </div>
+        <% }) %>
+        <div class="mk-seo-serp" aria-label="Aperçu dans les résultats de recherche"><span class="mk-seo-serp-label">Aperçu indicatif</span>
+          <span class="mk-seo-serp-title" data-serp-title data-template="<%= v.settings.title_template %>" data-sep="<%= v.settings.title_separator %>" data-site="<%= v.settings.site_name %>">Titre de la page<%= v.settings.title_separator %><%= v.settings.site_name %></span>
+          <span class="mk-seo-serp-url">votre-site › page</span>
+          <span class="mk-seo-serp-desc" data-serp-desc><%= v.settings.default_description || "Aucune description par défaut : le moteur de recherche choisira lui-même un extrait." %></span></div>
+        <% if (canEdit) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><span class="mk-seo-dirty" data-dirty-note hidden>Modifications non enregistrées</span></div><% } else { %><p class="mk-lead">Lecture seule : la permission « modifier les réglages SEO » est nécessaire.</p><% } %>
+      </form>
+    </section>
+
+    <section class="mk-panel mk-seo-appear" aria-labelledby="meta-pages"><h2 id="meta-pages">Titres et descriptions publiés (<%= v.totals.pages %> page(s))</h2>
+      <p class="field-hint"><%= v.totals.customTitle %> titre(s) et <%= v.totals.customDescription %> description(s) propres à la page · <%= v.totals.warnings %> page(s) à vérifier. Un titre « hérité du modèle » est composé automatiquement à partir du titre de la page et du modèle du site. Le titre et la description d'une page se modifient dans son éditeur (volet SEO).</p>
+      <% if (!v.rows.length) { %><div class="mk-empty"><%- icon("fileText", { size: 32 }) %><p>Ce site n'a encore aucune page en ligne.</p></div><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table mk-seo-table"><caption class="sr-only">Métadonnées publiées par page</caption>
+        <thead><tr><th scope="col">Page</th><th scope="col">Titre publié</th><th scope="col">Description publiée</th><th scope="col">Remarques</th></tr></thead>
+        <tbody><% v.rows.forEach((r) => { %><tr>
+          <td data-label="Page"><strong><%= r.name %></strong><br><code><%= r.path %></code><br><a href="/marketing/pages/<%= r.id %>">Modifier dans l'éditeur</a></td>
+          <td data-label="Titre"><%= r.title %><br><span class="field-hint"><%= r.titleLen %> car. · <span class="mk-status <%= r.titleSource === 'page' ? 'mk-status-ok' : 'mk-status-off' %>"><%= r.titleSource === "page" ? "personnalisé" : "hérité du modèle" %></span></span></td>
+          <td data-label="Description"><%= r.description || "—" %><br><span class="field-hint"><%= r.descLen %> car. · <span class="mk-status <%= r.descSource === 'page' ? 'mk-status-ok' : 'mk-status-off' %>"><%= r.descSource === "page" ? "personnalisée" : r.descSource === "contenu" ? "reprise du contenu" : "valeur du site" %></span></span></td>
+          <td data-label="Remarques"><% if (!r.notes.length) { %><span class="mk-status mk-status-ok">RAS</span><% } %><% r.notes.forEach((n) => { %><span class="mk-seo-note mk-seo-note-<%= n.level %>"><%= n.text %></span><% }) %></td></tr><% }) %></tbody></table></div>
+      <% } %>
+    </section>
+<%- include("../partials/bottom") %>

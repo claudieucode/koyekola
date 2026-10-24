@@ -1228,3 +1228,58 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 @media (prefers-reduced-motion: reduce) { .mk-cn-card { animation: none; } .mk-cn-panel, .mk-cn-chev, .mk-cn-filter, .mk-cn-btn, .mk-cn-act, .mk-cn-state { transition: none; } }
 .mk-cn-search input[type="search"] { border: 0; box-shadow: none; background: transparent; padding: 0; min-height: 0; height: auto; width: auto; flex: 1 1 auto; }
 .mk-cn-toolbar select { width: auto; flex: 0 0 auto; min-width: 200px; }
+/* ---- SEO d'un site : neuf rubriques (vue générale, analyse, meta, indexation, sitemap, schema, Open Graph, robots, 404) ----
+   Transitions courtes (≤ 0,2 s) sur opacité et transformation uniquement : aucun décalage de mise en page. */
+.mk-seo-tabs { flex-wrap: wrap; margin-bottom: 16px; }
+.mk-seo-subtabs { margin: 0 0 12px; }
+.mk-seo-lead { max-width: 78ch; margin: 0 0 14px; }
+.mk-seo-alert { background: var(--warning-bg); color: var(--warning-text); }
+.mk-seo-appear { animation: mk-seo-in .18s ease both; }
+@keyframes mk-seo-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.mk-seo-table th[scope="row"] { font-weight: 600; text-align: left; }
+.mk-seo-table td, .mk-seo-table th { vertical-align: top; }
+.mk-seo-small { font-size: .95rem; }
+.mk-seo-count { display: block; margin-top: 4px; color: var(--mk-text-soft); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.mk-seo-count.is-over { color: var(--warning-text); }
+.mk-seo-dirty { margin-left: 10px; color: var(--warning-text); font-size: .8125rem; animation: mk-seo-in .15s ease both; }
+.mk-seo-dirty[hidden], .mk-seo-confirm[hidden] { display: none; }
+.mk-seo-confirm { padding: 10px 12px; border: 1px solid var(--mk-border); border-radius: 6px; background: var(--warning-bg); animation: mk-seo-in .15s ease both; }
+.mk-seo-note { display: block; margin: 4px 0; padding: 4px 8px; border-radius: 4px; font-size: .8125rem; line-height: 1.4; }
+.mk-seo-note-warning { background: var(--warning-bg); color: var(--warning-text); }
+.mk-seo-note-info { background: var(--accent-light); color: var(--accent-dark); }
+.mk-seo-code { margin: 10px 0; padding: 12px 14px; max-height: 360px; overflow: auto; border: 1px solid var(--mk-border); border-radius: 6px; background: var(--mk-hover); font-size: .8125rem; line-height: 1.5; white-space: pre; tab-size: 2; }
+.mk-seo-code, .mk-seo-code code { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; display: block; background: transparent; padding: 0; border: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.mk-seo-code { padding: 12px 14px; background: var(--mk-hover); border: 1px solid var(--mk-border); }
+.mk-seo-table td[data-label="Page"], .mk-seo-table td[data-label="Adresse"] { min-width: 190px; }
+.mk-seo-table td[data-label="Page"] a { white-space: nowrap; }
+.mk-seo-table td code { overflow-wrap: anywhere; }
+.mk-seo-table td[data-label="Visites"], .mk-seo-table td[data-label="Gravité"], .mk-seo-table td[data-label="Plan du site"] { min-width: 110px; white-space: nowrap; }
+.mk-seo-table td[data-label="Titre"], .mk-seo-table td[data-label="Description"], .mk-seo-table td[data-label="Remarques"] { min-width: 200px; }
+.mk-seo-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
+.mk-seo-filters select, .mk-seo-filters input[type="search"] { width: auto; min-width: 180px; max-width: 100%; }
+.mk-seo-filters .mk-search { flex: 1 1 220px; }
+.mk-seo-details { margin: 12px 0; }
+.mk-seo-details > summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.mk-seo-details[open] > :not(summary) { animation: mk-seo-in .16s ease both; }
+.mk-seo-serp { display: flex; flex-direction: column; gap: 2px; margin: 12px 0; padding: 14px 16px; max-width: 640px; border: 1px solid var(--mk-border); border-radius: 8px; background: var(--mk-surface); }
+.mk-seo-serp-label { color: var(--mk-text-soft); font-size: .75rem; }
+.mk-seo-serp-title { color: var(--primary); font-size: 1.125rem; line-height: 1.3; overflow-wrap: anywhere; }
+.mk-seo-serp-url { color: var(--success-dark); font-size: .8125rem; }
+.mk-seo-serp-desc { color: var(--mk-text); font-size: .875rem; line-height: 1.45; overflow-wrap: anywhere; }
+.mk-seo-progress { margin: 12px 0; }
+.mk-seo-bar { height: 8px; border-radius: 99px; background: var(--mk-hover); overflow: hidden; }
+.mk-seo-bar > span { display: block; height: 100%; background: var(--primary); border-radius: inherit; transition: width .4s ease; }
+.mk-seo-compare { display: flex; gap: 6px; align-items: center; margin: 8px 0 0; }
+.mk-seo-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.mk-seo-share { display: flex; flex-direction: column; border: 1px solid var(--mk-border); border-radius: 8px; overflow: hidden; background: var(--mk-surface); transition: transform .15s ease, box-shadow .15s ease; }
+.mk-seo-share:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0, 0, 0, .08); }
+.mk-seo-share-img { aspect-ratio: 1.91 / 1; background: var(--mk-hover); display: flex; align-items: center; justify-content: center; color: var(--mk-text-soft); font-size: .8125rem; }
+.mk-seo-share-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mk-seo-share-body { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px 12px; }
+.mk-seo-share-site { color: var(--mk-text-soft); font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; }
+.mk-seo-thumb { display: block; margin-top: 8px; max-width: 280px; max-height: 150px; border: 1px solid var(--mk-border); border-radius: 6px; }
+.mk-seo-actions form { display: inline-flex; gap: 6px; flex-wrap: wrap; margin: 2px 0; }
+.mk-seo-table tr.is-selected { background: var(--accent-light); }
+button.is-busy { opacity: .7; cursor: progress; }
+@media (max-width: 720px) { .mk-seo-tabs { overflow-x: auto; flex-wrap: nowrap; } .mk-seo-serp { max-width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .mk-seo-appear, .mk-seo-dirty, .mk-seo-confirm, .mk-seo-details[open] > :not(summary) { animation: none; } .mk-seo-bar > span, .mk-seo-share { transition: none; } .mk-seo-share:hover { transform: none; } }

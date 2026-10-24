@@ -46,16 +46,16 @@ describe("SEO d'un site : espace, droits, rendu par domaine", () => {
   });
   after(() => { db.close(); return srv.stop(); });
 
-  test("menu et accès : les entrées SEO ouvertes selon les droits réels ; autre site, sans accès et anonyme refusés ; les autres écrans SEO restent « Bientôt »", async () => {
+  test("menu et accès : les entrées SEO ouvertes selon les droits réels ; autre site, sans accès et anonyme refusés ; les neuf rubriques SEO sont ouvertes", async () => {
     const page = (await adminA.get(`${SP}/${A}/seo`)); assert.equal(page.status, 200);
     assert.match(page.text, /SEO du site/); assert.match(page.text, new RegExp(`${SP}/${A}/seo/404`));
-    assert.doesNotMatch(page.text, new RegExp(`href="${SP}/${A}/seo/(analyse|meta|indexation|sitemap|schema|open-graph|robots)"`), "les autres écrans SEO ne sont pas ouverts");
+    assert.match(page.text, new RegExp(`href="${SP}/${A}/seo/(analyse|meta|indexation|sitemap|schema|open-graph|robots)"`), "les neuf rubriques SEO sont ouvertes (voir seo-site-outils.test.js)");
     for (const [who, c, role] of [["éditeur", editorA, "editor"], ["lecteur", viewerA, "viewer"]]) {
       const r = await c.get(`${SP}/${A}/seo`); assert.equal(r.status, can(role, "seo.view") ? 200 : 403, who);
     }
     assert.equal((await adminB.get(`${SP}/${A}/seo`)).status, 403); assert.equal((await adminA.get(`${SP}/${B}/seo`)).status, 403);
     assert.equal((await outsider.get(`${SP}/${A}/seo`)).status, 403); const a = await anon.get(`${SP}/${A}/seo`); assert.equal(a.status, 302); assert.match(a.location, /connexion/);
-    for (const p of ["seo/analyse", "seo/meta", "seo/robots", "seo/sitemap"]) assert.notEqual((await adminA.get(`${SP}/${A}/${p}`)).status, 200, p);
+    for (const p of ["seo/analyse", "seo/meta", "seo/robots", "seo/sitemap"]) { assert.equal((await adminA.get(`${SP}/${A}/${p}`)).status, 200, p); assert.equal((await adminB.get(`${SP}/${A}/${p}`)).status, 403, p); }
   });
   test("réglages : écriture réservée à seo.edit, bornée au site de l'adresse ; un site_id/site du formulaire est ignoré ; une clé globale est ignorée ; un refus ne modifie rien", async () => {
     const globalBefore = JSON.stringify(db.prepare("SELECT key, value FROM seo_settings ORDER BY key").all());
@@ -72,7 +72,7 @@ describe("SEO d'un site : espace, droits, rendu par domaine", () => {
     const e = await editorA.post(`${SP}/${A}/seo`, { org_description: "Par l'éditeur" }); assert.equal(e.status, can("editor", "seo.edit") ? 302 : 403);
     const bad = await adminA.post(`${SP}/${A}/seo`, { title_template: "{inconnu}", site_name: "Autre Nom" });
     assert.equal(bad.status, 302); assert.equal(own(A, "site_name"), "Alpha Officiel", "lot refusé = rien d'enregistré");
-    assert.ok((await adminA.get(`${SP}/${A}/seo`)).text.includes("Alpha Officiel"));
+    assert.ok((await adminA.get(`${SP}/${A}/seo/meta`)).text.includes("Alpha Officiel"));
     assert.ok(db.prepare("SELECT COUNT(*) n FROM seo_changes WHERE site_id = ? AND entity_type = 'settings'").get(A).n >= 2, "journal avec le site");
     // archivé : lecture seule
     db.prepare("UPDATE mk_sites SET status = 'archived' WHERE id = ?").run(A);

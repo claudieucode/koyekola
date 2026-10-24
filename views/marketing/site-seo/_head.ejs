@@ -1,0 +1,15 @@
+<%#
+  En-tête commun des neuf rubriques SEO d'un site : titre, onglets (rubrique active), note d'état du site.
+  Aucun formulaire n'envoie d'identifiant de site : le serveur le déduit de l'adresse vérifiée (space).
+%><%
+  const TABS = [["", "Vue générale", "seo"], ["/analyse", "Analyse SEO", "analyse"], ["/meta", "Meta", "meta"], ["/indexation", "Indexation", "indexation"], ["/sitemap", "Sitemap", "sitemap"], ["/schema", "Schema", "schema"], ["/open-graph", "Open Graph", "open-graph"], ["/robots", "Robots", "robots"], ["/404", "Erreurs 404", "notfound"]];
+  const here = mode === "overview" ? "seo" : mode;
+  const fmt = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—");
+%>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= title %></h1><p class="mk-head-sub">Site « <%= space.name %> » : tout ce qui est affiché et enregistré ici ne concerne que ce site.</p></div>
+    </div>
+    <nav class="mk-tabs mk-cms-tabs mk-seo-tabs" aria-label="Rubriques SEO du site">
+      <% TABS.forEach((t) => { %><a class="mk-tab" href="<%= space.base %>/seo<%= t[0] %>"<%- t[2] === here ? ' aria-current="page"' : "" %>><%= t[1] %></a><% }) %>
+    </nav>
+    <% if (note) { %><div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><%= note %></p></div><% } %>

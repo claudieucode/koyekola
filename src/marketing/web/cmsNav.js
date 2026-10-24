@@ -70,13 +70,13 @@ const SECTIONS = [
   {
     key: "seo", label: "SEO", icon: "searchCheck", items: [
       leaf("seo", "Vue générale", `${BASE}/seo`, { permission: "seo.view" }),
-      leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`),
-      leaf("seo/meta", "Meta", `${BASE}/seo/meta`),
-      leaf("seo/indexation", "Indexation", `${BASE}/seo/indexation`),
-      leaf("seo/sitemap", "Sitemap", `${BASE}/seo/sitemap`),
-      leaf("seo/schema", "Schema", `${BASE}/seo/schema`),
-      leaf("seo/open-graph", "Open Graph", `${BASE}/seo/open-graph`),
-      leaf("seo/robots", "Robots", `${BASE}/seo/robots`),
+      leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`, { permission: "seo.view" }),
+      leaf("seo/meta", "Meta", `${BASE}/seo/meta`, { permission: "seo.view" }),
+      leaf("seo/indexation", "Indexation", `${BASE}/seo/indexation`, { permission: "seo.view" }),
+      leaf("seo/sitemap", "Sitemap", `${BASE}/seo/sitemap`, { permission: "seo.view" }),
+      leaf("seo/schema", "Schema", `${BASE}/seo/schema`, { permission: "seo.view" }),
+      leaf("seo/open-graph", "Open Graph", `${BASE}/seo/open-graph`, { permission: "seo.view" }),
+      leaf("seo/robots", "Robots", `${BASE}/seo/robots`, { permission: "seo.view" }),
       leaf("seo/404", "Erreurs 404", `${BASE}/seo/404`, { permission: "seo.view" }),
     ],
   },
@@ -204,7 +204,7 @@ const SITE_MODULES = {
   patterns: { label: "Patterns", kind: "delegate", to: "/site-web/patterns", reg: "patterns", permission: "appearance.read", legacy: `${BASE}/patterns` },
   styles: { label: "Styles", kind: "delegate", to: "/site-web/styles", reg: "styles", permission: "appearance.read", legacy: `${BASE}/styles` },
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "apparence/menus", permission: "navigation.read", legacy: `${BASE}/navigation` },
-  // R8 lot 6C : SEO du site = réglages SEO du site + erreurs 404 du site (les autres écrans SEO restent « Bientôt » : leur isolation n'est pas démontrée)
+  // SEO du site : les neuf rubriques (vue générale, analyse, meta, indexation, sitemap, schema, Open Graph, robots, 404) sont ouvertes ; chacune lit et écrit uniquement les données du site de l'adresse (voir siteSeo.js et seo/siteTools.js)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
   listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
@@ -285,6 +285,13 @@ const ABILITY = {
   "apparence/pied-de-page": { mode: "open", module: "reglages", sub: "pied-de-page", hash: "parties" },
   redirections: { mode: "open", module: "redirections" },
   seo: { mode: "open", module: "seo" },
+  "seo/analyse": { mode: "open", module: "seo", sub: "analyse" },
+  "seo/meta": { mode: "open", module: "seo", sub: "meta" },
+  "seo/indexation": { mode: "open", module: "seo", sub: "indexation" },
+  "seo/sitemap": { mode: "open", module: "seo", sub: "sitemap" },
+  "seo/schema": { mode: "open", module: "seo", sub: "schema" },
+  "seo/open-graph": { mode: "open", module: "seo", sub: "open-graph" },
+  "seo/robots": { mode: "open", module: "seo", sub: "robots" },
   "seo/404": { mode: "open", module: "seo", sub: "404" },
   utilisateurs: { mode: "open", module: "equipe" },
   "utilisateurs/ajouter": { mode: "open", module: "equipe-inviter" },

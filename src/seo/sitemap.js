@@ -134,4 +134,45 @@ function xml(req, part = null) {
     ...groups.map((g) => `  <sitemap><loc>${escapeXml(absoluteUrl(req, `/sitemap-${g}.xml`))}</loc>${latest(g) ? `<lastmod>${latest(g)}</lastmod>` : ""}</sitemap>`), "</sitemapindex>", ""].join("\n");
 }
 
-module.exports = { entries, xml, GROUPS, SPLIT_AT };
+// ---------- Plan du site d'UN site (écran SEO du site) ----------
+// Réutilise le même calcul que le plan servi : un site à domaine propre a le plan de son domaine ; un site sans domaine est listé dans le plan du domaine principal.
+// Dans les deux cas, SEULES les adresses de CE site sont renvoyées (siteId vérifié par l'appelant) : aucune adresse d'un autre site n'est lue ni affichée.
+function entriesForSite(siteId) {
+  if (!Number.isInteger(siteId)) throw new Error("Plan du site d'un site : site non vérifié.");
+  const info = urls.siteInfo(siteId);
+  const all = entries({ hostSite: info && info.base ? info : null });
+  return { included: all.included.filter((e) => e.siteId === siteId), excluded: all.excluded.filter((e) => e.siteId === siteId), ownDomain: Boolean(info && info.base), base: info && info.base ? info.base : "" };
+}
+// Contenu XML du plan d'un site (même rendu que /sitemap.xml ; jamais d'index de sous-plans ici : un site reste sous la limite d'un fichier)
+function xmlForSite(req, siteId) {
+  const { included } = entriesForSite(siteId);
+  return urlset(req, included.slice(0, MAX_URLS));
+}
+// Contrôle d'un document de plan du site : XML bien formé, racine <urlset>, adresses absolues uniques, dates valides, limites du protocole
+function validateXml(text) {
+  const problems = [];
+  const body = String(text || "");
+  if (!body.trim()) return { valid: false, urls: 0, problems: ["Le plan du site est vide."] };
+  if (Buffer.byteLength(body) > 50 * 1024 * 1024) problems.push("Le fichier dépasse 50 Mo (limite du protocole).");
+  const { parseDocument } = require("htmlparser2");
+  const DomUtils = require("domutils");
+  const doc = parseDocument(body, { xmlMode: true });
+  const root = doc.children.find((n) => n.type === "tag");
+  if (!root || root.name !== "urlset") return { valid: false, urls: 0, problems: ["La racine du document doit être <urlset>."] };
+  const seen = new Set();
+  let count = 0;
+  for (const u of DomUtils.findAll((n) => n.name === "url", root.children)) {
+    count++;
+    const loc = DomUtils.textContent(DomUtils.findOne((n) => n.name === "loc", u.children) || { children: [] }).trim();
+    if (!/^https?:\/\/[^\s]+$/i.test(loc)) problems.push(`Adresse non absolue ou illisible : « ${loc.slice(0, 80)} ».`);
+    else if (loc.length > 2048) problems.push("Une adresse dépasse 2 048 caractères.");
+    if (seen.has(loc)) problems.push(`Adresse en double : ${loc.slice(0, 80)}.`);
+    seen.add(loc);
+    const lm = DomUtils.findOne((n) => n.name === "lastmod", u.children);
+    if (lm && !/^\d{4}-\d{2}-\d{2}(T[\d:.+\-Z]+)?$/.test(DomUtils.textContent(lm).trim())) problems.push(`Date de dernière modification invalide pour ${loc.slice(0, 80)}.`);
+  }
+  if (count > 50000) problems.push("Plus de 50 000 adresses dans un seul fichier.");
+  return { valid: problems.length === 0, urls: count, problems: [...new Set(problems)].slice(0, 20) };
+}
+
+module.exports = { entries, xml, entriesForSite, xmlForSite, validateXml, GROUPS, SPLIT_AT };

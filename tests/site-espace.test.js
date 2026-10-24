@@ -57,7 +57,7 @@ describe("1 — « Ouvrir » mène à l'espace du site (unitaires + intégration
     for (const m of ["articles", "medias", "commentaires"]) assert.match(r.text, new RegExp(`href="${SP}/${A}/${m}"`), `${m} : lien ouvert`);
     assert.match(r.text, new RegExp(`href="${SP}/${A}/navigation"`), "navigation : lien ouvert (R8 lot 4)");
     for (const m of ["modeles"]) assert.doesNotMatch(r.text, new RegExp(`href="${SP}/${A}/${m}"`), `${m} : pas de lien`); // R8 lot 6C : « seo » est ouvert
-    assert.match(r.text, /is-soon" aria-disabled="true" title="Meta \(bientôt\)"/);
+    assert.match(r.text, /is-soon" aria-disabled="true" title="Liens cassés \(bientôt\)"/); // SEO : Meta est ouvert (seo-site-outils) ; Liens cassés reste annoncé
     assert.match(r.text, /Pages en ligne/);
   });
   test("chaque module disponible répond 200 pour l'équipe, avec le bandeau du bon site", async () => {
@@ -181,7 +181,7 @@ describe("4 — modules « Bientôt » : aucune donnée, aucune action simulée"
     const space = { siteId: A, principal: false, base: `${SP}/${A}`, name: "Site Alpha", listHref: "/marketing/site-web/sites" };
     const soon = nav.projectSections(space).flatMap((x) => x.items).filter((i) => i.disabled).length;
     assert.equal((html.match(/mk-cms-tag[^>]*>Bientôt/g) || []).length, soon);
-    assert.equal(soon, 9, "Utilisateurs : Inviter, Rôles, Permissions, Invitations ouverts (−4) ; Outils : corbeille, importer, exporter, diagnostic, maintenance, caches, contenu ouverts (−7) ; Paramètres : les 10 sections ouvertes (−10) ; R8 lots 2 à 6 : 53 − 15 (articles, médias, commentaires) − 1 (formulaires) − 2 (navigation, menus) − 2 (SEO du site, erreurs 404) − 3 (Styles, Patterns et Templates, Apparence)");
+    assert.equal(soon, 2, "SEO : les 7 rubriques Analyse, Meta, Indexation, Sitemap, Schema, Open Graph, Robots ouvertes (−7) ; Utilisateurs : Inviter, Rôles, Permissions, Invitations ouverts (−4) ; Outils : corbeille, importer, exporter, diagnostic, maintenance, caches, contenu ouverts (−7) ; Paramètres : les 10 sections ouvertes (−10) ; R8 lots 2 à 6 : 53 − 15 (articles, médias, commentaires) − 1 (formulaires) − 2 (navigation, menus) − 2 (SEO du site, erreurs 404) − 3 (Styles, Patterns et Templates, Apparence)");
   });
 });
 
@@ -218,9 +218,9 @@ describe("audit des sites : libellé clair", () => {
 });
 
 describe("6 — aucune migration, aucun changement de structure", () => {
-  test("le dossier des migrations s'arrête à 100 (100 = connecteurs : connexions et préférences de fournisseur ; 099 = suivi des invitations : nom, message, état d'envoi réel ; 098 = imports de templates par site, Apparence → Templates ; 097 = widgets par site, Apparence → Widgets ; 096 = personnalisateur : brouillons et versions par site, Apparence → Personnaliser ; 095 = polices par site, Apparence → Polices ; 094 = thèmes par site, Apparence → Thèmes ; 093 = modèles de pages privés à leur site, site builder ; 092 = réservée à la migration manuelle R9-3, hors dossier ; 091 = imports par site et 090 = SEO par site, R8 lot 6A ; 089 = revenus par site, R7 lot 6.5 ; 088 = score par site, R7 lot 6.4 ; 087 = réseaux sociaux par site, R7 lot 6.3 ; 086 = IA par site, R7 lot 6.2 ; 085 = SMS par site, R7 lot 6.1 ; 084 = modules par site, R7 lot 6.0 ; 083 = demandes de rattachement de contacts, R7 lot 5 ; 082 = journal d'audit par site, R7 lot 4 ; 081 = formulaires par site, R7 lot 2 ; 080 = contacts par site, R7 lot 1 ; 079 = index des médias par site, lot 7C ; 075 = R6 lot 1 ; 072, 073 et 074 = R2, R3 et R5 ; 076 à 078 réservées aux reconstructions)", () => {
+  test("le dossier des migrations s'arrête à 101 (101 = outils SEO par site : états des 404, état du sitemap, index du personnalisateur ; 100 = connecteurs : connexions et préférences de fournisseur ; 099 = suivi des invitations : nom, message, état d'envoi réel ; 098 = imports de templates par site, Apparence → Templates ; 097 = widgets par site, Apparence → Widgets ; 096 = personnalisateur : brouillons et versions par site, Apparence → Personnaliser ; 095 = polices par site, Apparence → Polices ; 094 = thèmes par site, Apparence → Thèmes ; 093 = modèles de pages privés à leur site, site builder ; 092 = réservée à la migration manuelle R9-3, hors dossier ; 091 = imports par site et 090 = SEO par site, R8 lot 6A ; 089 = revenus par site, R7 lot 6.5 ; 088 = score par site, R7 lot 6.4 ; 087 = réseaux sociaux par site, R7 lot 6.3 ; 086 = IA par site, R7 lot 6.2 ; 085 = SMS par site, R7 lot 6.1 ; 084 = modules par site, R7 lot 6.0 ; 083 = demandes de rattachement de contacts, R7 lot 5 ; 082 = journal d'audit par site, R7 lot 4 ; 081 = formulaires par site, R7 lot 2 ; 080 = contacts par site, R7 lot 1 ; 079 = index des médias par site, lot 7C ; 075 = R6 lot 1 ; 072, 073 et 074 = R2, R3 et R5 ; 076 à 078 réservées aux reconstructions)", () => {
     const files = fs.readdirSync(path.join(__dirname, "..", "src", "marketing", "migrations")).filter((f) => /^\d+_/.test(f)).sort();
-    assert.match(files[files.length - 1], /^100_/);
+    assert.match(files[files.length - 1], /^101_/);
     assert.ok(!files.some((f) => /^07[678]_/.test(f)), "076 à 078 restent réservées aux reconstructions");
   });
   test("le schéma de la base ne change pas en parcourant l'espace", async () => {

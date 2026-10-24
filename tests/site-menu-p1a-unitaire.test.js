@@ -31,7 +31,7 @@ describe("projection du registre (menu d'un site)", () => {
   });
   test("C1 : les entrées du registre non ouvertes à un site sont toutes visibles, grisées « Bientôt », sans lien ; une clé absente de la table est « Bientôt »", () => {
     const items = flat(nav.siteSections(site));
-    for (const k of ["seo/meta", "seo/analyse", "seo/sitemap", "redirections/liens-casses", "redirections/permaliens"]) {
+    for (const k of ["redirections/liens-casses", "redirections/permaliens"]) {
       const i = items.find((x) => x.key === k); assert.ok(i, k); assert.equal(i.status, "preview", k); assert.equal(i.disabled, true, k); assert.equal(i.href, null, k);
       assert.equal(i.label, nav.ALL.find((x) => x.key === k).label, `${k} : libellé du registre`);
     }
@@ -58,7 +58,8 @@ describe("projection du registre (menu d'un site)", () => {
   test("chaque écran existant retrouve son entrée par la clé qu'il porte déjà", () => {
     const expected = { pagetests: "pagetests", outils: "outils", lists: "espace/listes", segments: "espace/segments", templates: "espace/modeles-email", campaigns: "espace/campagnes", automations: "espace/automatisations", funnels: "espace/tunnels", "analytics-global": "espace/analytics", landing: "landing", sitedash: "sitedash", redirections: "redirections", utilisateurs: "utilisateurs" };
     for (const [active, key] of Object.entries(expected)) assert.equal(nav.buildSiteNav({ can: all, active, space: site }).current.key, key, active);
-    assert.equal(nav.buildSiteNav({ can: all, active: "seo/meta", space: site }).current.disabled, true, "entrée grisée du menu, sans écran");
+    assert.equal(nav.buildSiteNav({ can: all, active: "redirections/liens-casses", space: site }).current.disabled, true, "entrée grisée du menu, sans écran");
+    assert.equal(nav.buildSiteNav({ can: all, active: "seo/meta", space: site }).current.href, `${site.base}/seo/meta`, "SEO : rubrique ouverte dans le cadre du site");
     assert.equal(nav.buildSiteNav({ can: all, active: "articles/ajouter", space: site }).current.href, `${site.base}/articles/ajouter`, "ouverte (équipe)");
   });
 });

@@ -1,0 +1,45 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+<% const fmt = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—"); %>
+<% const ST = { open: "À traiter", handled: "Traitées", recovered: "Revenues en ligne", ignored: "Ignorées", all: "Toutes" }; %>
+    <p class="field-hint mk-seo-lead"><%= v.stats.urls %> adresse(s) à traiter · <%= v.stats.human %> visite(s) de personnes · <%= v.stats.bot %> de robots. Le journal ne conserve ni adresse IP ni donnée personnelle. Une adresse supprimée sans équivalent peut légitimement rester une 404 : ne redirigez que vers une page qui existe vraiment.</p>
+    <nav class="mk-tabs mk-seo-subtabs" aria-label="État des erreurs">
+      <% Object.entries(ST).forEach(([k, l]) => { %><a class="mk-tab" href="?etat=<%= k %><%= v.q ? '&q=' + encodeURIComponent(v.q) : '' %>"<%- v.state === k ? ' aria-current="page"' : "" %>><%= l %></a><% }) %>
+    </nav>
+    <form method="get" class="mk-cms-toolbar mk-seo-filters" role="search"><input type="hidden" name="etat" value="<%= v.state %>">
+      <label class="mk-search"><span class="sr-only">Rechercher une adresse</span><input type="search" name="q" value="<%= v.q %>" placeholder="Rechercher une adresse"></label>
+      <label class="sr-only" for="nf-f">Visiteurs</label><select id="nf-f" name="filtre"><option value="all" <%= v.filter === "all" ? "selected" : "" %>>Tous les visiteurs</option><option value="human" <%= v.filter === "human" ? "selected" : "" %>>Personnes seulement</option><option value="bot" <%= v.filter === "bot" ? "selected" : "" %>>Robots seulement</option></select>
+      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (v.q) { %><a class="btn btn-ghost btn-sm" href="?etat=<%= v.state %>">Effacer</a><% } %>
+    </form>
+    <% if (!v.rows.length) { %>
+      <div class="mk-empty mk-seo-appear"><%- icon("searchCheck", { size: 32 }) %><h2>Aucune erreur 404 dans cette liste</h2><p>Les adresses introuvables demandées sur ce site apparaissent ici dès qu'elles sont visitées.</p></div>
+    <% } else { %>
+    <div class="mk-table-wrap mk-seo-appear"><table class="mk-table mk-seo-table" id="seo-404-table"><caption class="sr-only">Adresses introuvables de ce site</caption>
+      <thead><tr><th scope="col">Adresse</th><th scope="col">Visites</th><th scope="col">Origine</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead>
+      <tbody><% v.rows.forEach((r) => { %><tr data-nf="<%= r.path %>">
+        <td data-label="Adresse"><code><%= r.path %></code><br><span class="field-hint">Première : <%= fmt(r.first_seen) %> · dernière : <%= fmt(r.last_seen) %></span><% if (r.recurrent) { %><br><span class="mk-seo-note mk-seo-note-info">Erreur récurrente</span><% } %></td>
+        <td data-label="Visites"><%= r.hits_human %> personnes<br><%= r.hits_bot %> robots</td>
+        <td data-label="Origine"><%= r.last_referrer ? String(r.last_referrer).replace(/^https?:\/\//, "").slice(0, 60) : "inconnue" %></td>
+        <td data-label="État"><span class="mk-status <%= r.state === 'open' ? 'mk-status-warn' : r.state === 'ignored' ? 'mk-status-off' : 'mk-status-ok' %>"><%= v.states[r.state] %></span>
+          <% if (r.redirect) { %><br><span class="field-hint">Redirigée (<%= r.redirect.status %>) vers <code><%= r.redirect.target %></code></span><% } %>
+          <% if (r.last_checked_at) { %><br><span class="field-hint">Vérifiée le <%= fmt(r.last_checked_at) %> : HTTP <%= r.last_check_status || "aucune réponse" %></span><% } %></td>
+        <td data-label="Actions" class="mk-seo-actions">
+          <% if (canEdit) { %>
+          <% if (canRedirect && !r.redirect && r.state === "open") { %><details class="mk-seo-details"><summary>Rediriger</summary>
+            <form method="post" action="<%= space.base %>/seo/404/rediriger" class="mk-form" data-busy-form>
+              <input type="hidden" name="path" value="<%= r.path %>">
+              <label class="sr-only" for="nf-t-<%= r.path %>">Nouvelle adresse</label><input id="nf-t-<%= r.path %>" type="text" name="target" maxlength="500" required placeholder="/page-existante" list="nf-s-<%= encodeURIComponent(r.path) %>">
+              <datalist id="nf-s-<%= encodeURIComponent(r.path) %>"><% (v.suggestions[r.path] || []).forEach((s) => { %><option value="<%= s.path %>"><%= s.name %></option><% }) %></datalist>
+              <select name="status" aria-label="Type"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option></select>
+              <button type="submit" class="btn btn-primary btn-sm">Créer</button>
+              <% if ((v.suggestions[r.path] || []).length) { %><span class="field-hint">Suggestion : <% v.suggestions[r.path].forEach((s) => { %><code><%= s.path %></code> <% }) %></span><% } %>
+              <span class="field-hint">La destination est vérifiée avant création.</span></form></details><% } %>
+          <% if (r.state === "open") { %><form method="post" action="<%= space.base %>/seo/404/action"><input type="hidden" name="path" value="<%= r.path %>"><button name="action" value="traitee" class="btn btn-outline btn-sm">Marquer traitée</button><button name="action" value="ignorer" class="btn btn-ghost btn-sm">Ignorer</button></form>
+          <% } else { %><form method="post" action="<%= space.base %>/seo/404/action"><input type="hidden" name="path" value="<%= r.path %>"><button name="action" value="rouvrir" class="btn btn-outline btn-sm">Rouvrir</button><button name="action" value="supprimer" class="btn btn-ghost btn-sm" data-confirm="Supprimer cette ligne du journal ?">Supprimer</button></form><% } %>
+          <% } %></td></tr><% }) %></tbody></table></div>
+    <% if (canEdit) { %><div class="mk-actions">
+      <form method="post" action="<%= space.base %>/seo/404/verifier" data-busy-form><% v.rows.filter((r) => r.state !== "open" && r.state !== "ignored").slice(0, 25).forEach((r) => { %><input type="hidden" name="path" value="<%= r.path %>"><% }) %><button class="btn btn-outline btn-sm" type="submit">Vérifier les adresses traitées</button></form>
+      <form method="post" action="<%= space.base %>/seo/404/purger" data-confirm="Supprimer du journal les adresses traitées, ignorées ou revenues en ligne sans visite depuis 180 jours ?"><input type="hidden" name="days" value="180"><button class="btn btn-ghost btn-sm" type="submit">Purger l'historique ancien</button></form></div>
+    <p class="field-hint">Le journal est borné à <%= 1500 %> adresses par site. Les adresses traitées, ignorées ou revenues en ligne sont purgées en premier ; celles à traiter sont conservées.</p><% } %>
+    <% } %>
+<%- include("../partials/bottom") %>

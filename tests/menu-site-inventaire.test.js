@@ -13,13 +13,12 @@ const nav = require("../src/marketing/web/cmsNav");
 // ferme (motif) : « Bientôt » visible, grisé, sans lien — l'isolation ou l'écran du site n'existe pas encore
 const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparence/widgets", "apparence/styles", "apparence/patterns", "apparence/templates", "apparence/polices", "apparence/personnaliser", "apparence/en-tete", "apparence/pied-de-page", "redirections", "utilisateurs", "pagetests", "outils", "corbeille", "utilisateurs/ajouter", "utilisateurs/roles", "utilisateurs/permissions", "utilisateurs/invitations", "outils/importer", "outils/exporter", "outils/diagnostic", "outils/maintenance", "outils/cache", "outils/contenu", "parametres", "parametres/confidentialite", "parametres/connecteurs", "parametres/avance", "parametres/ecriture", "parametres/commentaires", "parametres/emailing", "parametres/indexation", "parametres/lecture", "parametres/medias", "parametres/permaliens", "parametres/seo", "parametres/tunnels",
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque", "mediatheque/ajouter",
-  "seo", "seo/404", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
+  "seo", "seo/404", "seo/analyse", "seo/meta", "seo/indexation", "seo/sitemap", "seo/schema", "seo/open-graph", "seo/robots", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
 const CENTRAL = ["sites", "extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
 const MOTIFS = {
   
-  // R8 lot 6C : « SEO » (réglages du site) et « Erreurs 404 » sont ouverts (isolation démontrée, seo-par-site-espace) ; les autres écrans SEO ne sont pas isolés par site
-  "seo/analyse": "audit/analyse : explore l'hôte principal, équipe seulement", "seo/meta": "métadonnées de contenu : écran global", "seo/indexation": "indexation : écran global", "seo/sitemap": "plan du site : écran global", "seo/schema": "données structurées : écran global", "seo/open-graph": "partage : écran global", "seo/robots": "robots.txt : écran global (la règle supplémentaire du site est dans ses réglages SEO)",
+  // SEO : les neuf rubriques sont ouvertes (isolation démontrée, seo-par-site-espace et seo-site-outils)
   "redirections/liens-casses": "lot C4", "redirections/permaliens": "lot C4", 
 };
 
