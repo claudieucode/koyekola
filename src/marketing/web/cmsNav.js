@@ -149,7 +149,7 @@ function buildCmsNav({ can, active, space = null }) {
   }
   const section = sectionOf(current.section);
   // Fil d'Ariane : Site Web (le CMS) → rubrique → écran
-  const trail = [{ label: "Site Web", href: BASE }];
+  const trail = [{ label: "Site Web", href: `${BASE}/sites` }];
   if (current.key !== "sitedash") {
     if (section.items.length > 1) trail.push({ label: section.label, href: section.items[0].href });
     if (section.items.length === 1 || current.key !== section.items[0].key) trail.push({ label: current.label, href: current.href });
@@ -443,7 +443,7 @@ function buildSiteNav({ can, active, space }) {
     sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1 && !sec.group, open: items.some((i) => i.current) || sec.items.some((i) => i.hidden && i.key === current.key), soon: items.length === 1 && items[0].status === "preview" });
   }
   const sec = all.find((x) => x.key === current.section);
-  const trail = [{ label: "Site Web", href: BASE }, { label: "Mes sites", href: space.listHref || `${BASE}/sites` }, { label: space.name, href: `${space.base}/tableau-de-bord` }];
+  const trail = [{ label: "Site Web", href: `${BASE}/sites` }, { label: "Mes sites", href: space.listHref || `${BASE}/sites` }, { label: space.name, href: `${space.base}/tableau-de-bord` }];
   if (current.module !== "tableau-de-bord") { if (sec.items.length > 1 && sec.label !== current.label) trail.push({ label: sec.label }); trail.push({ label: current.label, href: current.href }); }
   const primary = current.primary && can(current.primary.permission) ? { label: current.primary.label, href: current.primary.href } : null;
   return { sections, trail, primary, current, section: sec, space };

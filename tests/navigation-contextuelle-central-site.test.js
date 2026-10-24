@@ -38,7 +38,7 @@ describe("navigation contextuelle central / site", () => {
     const r = await boss.get(`${PR}/tableau-de-bord`); const l = links(r.text);
     assert.equal(banner(r.text), "Site principal");
     assert.ok(l.some((x) => x.label === "Tableau de bord" && x.href === `${PR}/tableau-de-bord`));
-    assert.ok(l.some((x) => x.label === "Pages") && l.some((x) => x.label === "Tous les articles"));
+    assert.ok(l.some((x) => x.label === "Toutes les pages") && l.some((x) => x.label === "Tous les articles"));
     assert.ok(!l.some((x) => x.label === "Mes sites" || x.href === SP), "« Mes sites » n'est pas une entrée du menu");
     assert.deepEqual(back(r.text), [SP], "action « Retour à Mes sites » dans l'en-tête");
     assert.match(r.text, /Retour à Mes sites/);
@@ -46,7 +46,7 @@ describe("navigation contextuelle central / site", () => {
   test("3. Site secondaire : menu propre à CE site, sans « Mes sites », avec « Retour à Mes sites »", async () => {
     const r = await boss.get(`${SP}/${A}/tableau-de-bord`); const l = links(r.text);
     assert.equal(banner(r.text), "Alpha Ctx");
-    assert.ok(l.some((x) => x.label === "Tableau de bord" && x.href === `${SP}/${A}/tableau-de-bord`) && l.some((x) => x.label === "Pages" && x.href === `${SP}/${A}/pages`));
+    assert.ok(l.some((x) => x.label === "Tableau de bord" && x.href === `${SP}/${A}/tableau-de-bord`) && l.some((x) => x.label === "Toutes les pages" && x.href === `${SP}/${A}/pages`));
     assert.ok(!l.some((x) => x.label === "Mes sites" || x.href === SP));
     assert.deepEqual(back(r.text), [SP]);
   });

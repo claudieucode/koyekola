@@ -55,6 +55,16 @@
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
     // sections dépliables (ouvertes seules dans le menu réduit : un clic redéploie le menu)
+    // « Site Web » : le chevron (bouton distinct du lien) ouvre ou ferme l'accordéon sans navigation
+    $$(".mk-nav-caret-btn", sidebar).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var group = btn.closest(".mk-nav-group");
+        if (DESKTOP.matches && root.getAttribute("data-sidebar") === "collapsed") { setCollapsed(false, true); group.classList.add("is-open"); btn.setAttribute("aria-expanded", "true"); return; }
+        var open = !group.classList.contains("is-open");
+        group.classList.toggle("is-open", open);
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    });
     $$(".mk-nav-head", sidebar).forEach(function (head) {
       head.addEventListener("click", function () {
         var group = head.closest(".mk-nav-group");

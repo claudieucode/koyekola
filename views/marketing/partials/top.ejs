@@ -106,6 +106,18 @@
         <% nav.sections.forEach((section) => { %>
           <% if (section.flat) { const item = section.items[0]; %>
             <a class="mk-nav-link" href="<%= item.href %>" title="<%= item.label %>"<%- item.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= item.label %></span></a>
+          <% } else if (section.key === "site" && section.items.length) { const home = section.items.find((i) => i.key === "sites") || section.items[0]; %>
+            <%# « Site Web » : le libellé est un lien direct vers « Mes sites » ; le chevron, un bouton distinct, ouvre ou ferme l'accordéon sans changer de page. %>
+            <div class="mk-nav-group mk-nav-split<%= section.open ? ' is-open' : '' %>" data-mk-group="<%= section.key %>">
+              <div class="mk-nav-headrow">
+                <a class="mk-nav-link mk-nav-split-link" href="<%= home.href %>" title="<%= section.label %>"<%- home.current ? ' aria-current="page"' : "" %>><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= section.label %></span></a>
+                <button type="button" class="mk-nav-caret-btn" aria-expanded="<%= section.open ? 'true' : 'false' %>" aria-controls="mk-sub-<%= section.key %>" aria-label="Afficher ou masquer les sous-menus de <%= section.label %>"><%- icon("chevronDown", { size: 14, className: "mk-nav-caret" }) %></button>
+              </div>
+              <div class="mk-nav-sub" id="mk-sub-<%= section.key %>">
+                <% section.items.forEach((item) => { %><a class="mk-nav-sublink" href="<%= item.href %>"<%- item.current ? ' aria-current="page"' : "" %>><%= item.label %></a>
+                <% }) %>
+              </div>
+            </div>
           <% } else { %>
             <div class="mk-nav-group<%= section.open ? ' is-open' : '' %>" data-mk-group="<%= section.key %>">
               <button type="button" class="mk-nav-head" aria-expanded="<%= section.open ? 'true' : 'false' %>" aria-controls="mk-sub-<%= section.key %>" title="<%= section.label %>"><%- icon(section.icon, { size: 18 }) %><span class="mk-nav-label"><%= section.label %></span><%- icon("chevronDown", { size: 14, className: "mk-nav-caret" }) %></button>

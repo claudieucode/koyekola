@@ -408,3 +408,15 @@ html[data-kola-theme="dark"] .tf { --tf-bg: #0f1a2c; --tf-text: #dbe6f3; --tf-gu
 .tf-warn-actions .btn { min-height: 40px; }
 @media (prefers-reduced-motion: no-preference) { .tf-warn[open]:modal { animation: kx-pop 0.18s var(--kx-ease) backwards; } .tf-warn[open]:modal::backdrop { animation: kx-fade 0.18s ease backwards; } }
 @media (max-width: 520px) { .tf-warn form { padding: 18px 16px 16px; } .tf-warn-actions { flex-direction: column-reverse; } .tf-warn-actions .btn { width: 100%; } }
+
+/* Menu Marketing : « Site Web » = lien direct vers « Mes sites » + chevron d'accordéon distinct (views/marketing/partials/top.ejs, public/js/mk/shell.js) */
+.mk-sidebar .mk-nav-headrow { display: flex; align-items: center; gap: 2px; }
+.mk-sidebar .mk-nav-split-link { flex: 1 1 auto; min-width: 0; }
+.mk-sidebar .mk-nav-caret-btn { flex: none; display: grid; place-items: center; width: 32px; height: 36px; padding: 0; color: var(--muted); background: none; border: 0; border-radius: 9px; cursor: pointer; transition: background var(--kx-dur) var(--kx-ease), color var(--kx-dur) var(--kx-ease); }
+.mk-sidebar .mk-nav-caret-btn:hover { background: color-mix(in srgb, var(--mk-text) 9%, transparent); color: var(--mk-text); }
+.mk-sidebar .mk-nav-caret-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mk-sidebar .mk-nav-caret-btn .mk-nav-caret { width: 14px; height: 14px; opacity: 0.75; transition: transform var(--kx-dur) var(--kx-ease); }
+.mk-sidebar .mk-nav-split.is-open .mk-nav-caret-btn .mk-nav-caret { transform: rotate(180deg); }
+.mk-sidebar .mk-nav-split.is-open > .mk-nav-headrow > .mk-nav-split-link:not([aria-current="page"]) .icon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-caret-btn { display: none; }
+html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-split-link { flex: 1; }
