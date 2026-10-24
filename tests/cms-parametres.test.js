@@ -240,7 +240,7 @@ describe("commentaires, médias, permaliens, SEO, confidentialité", () => {
     assert.notEqual((await anon.get("/Blog/")).status, 301);
     await boss.request(`${API}/normalize_paths?confirm=1`, { method: "DELETE" });
     assert.equal((await anon.get("/Blog/")).status, 301);
-    assert.match((await boss.get(`${P}/permaliens`)).text, /\/p\/&lt;adresse&gt;/);
+    assert.match((await boss.get(`${P}/permaliens`)).text, /Réglages les plus courants/);
   });
   test("SEO : séparateur et modèle de titre → titres publics ; indexation des étiquettes → plan du site ; droit seo.edit distinct de settings.write", async () => {
     await apiPut(boss, "title_separator", " | ");

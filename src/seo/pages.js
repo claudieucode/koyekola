@@ -90,7 +90,7 @@ function blogList(req, { filter, page, basePath, heading, crumbs, posts }) {
   if (page > 1) s = { ...s, title: `${s.title} (page ${page})` };
   if (!s.canonical || page > 1) s.canonical = absoluteUrl(req, page > 1 ? `${basePath}?page=${page}` : basePath);
   const url = absoluteUrl(req, basePath);
-  const main = [itemList(url, posts.map((p) => ({ url: absoluteUrl(req, `/blog/${p.slug}`), name: p.title })))];
+  const main = [itemList(url, posts.map((p) => ({ url: absoluteUrl(req, require("../services/urls").publicPath("post", p)), name: p.title })))];
   if (filter && filter.type === "author") main.push({ "@type": "Person", "@id": `${schema.ids(req).base}/#/person/${filter.id}`, name: filter.label, url });
   const isAuthor = filter && filter.type === "author";
   s.graph = { page: { type: isAuthor ? "ProfilePage" : "CollectionPage", url: s.canonical, crumbs, mainEntity: isAuthor ? `${schema.ids(req).base}/#/person/${filter.id}` : null }, main };

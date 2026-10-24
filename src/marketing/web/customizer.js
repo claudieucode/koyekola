@@ -22,7 +22,7 @@ function previewTargets(req, t) {
     const out = [{ url: "/", label: "Accueil" }, { url: "/blog", label: "Blog" }, { url: "/catalogue", label: "Catalogue" }, { url: "/a-propos", label: "À propos" }];
     try {
       const post = db.prepare("SELECT slug, title FROM posts p WHERE p.published = 1 AND p.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM mk_content_sites cs WHERE cs.content_type = 'post' AND cs.content_id = p.id) ORDER BY COALESCE(published_at, created_at) DESC LIMIT 1").get();
-      if (post) out.push({ url: `/blog/${post.slug}`, label: `Article : ${post.title}` });
+      if (post) out.push({ url: require("../../services/urls").publicPath("post", post), label: `Article : ${post.title}` });
     } catch { /* pas d'article */ }
     return out;
   }

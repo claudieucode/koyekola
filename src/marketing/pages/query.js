@@ -149,7 +149,7 @@ registerQuerySource("posts", {
     const user = ctx.db.prepare("SELECT id, username, bio, avatar_path FROM users WHERE id = ?");
     return { total, items: rows.map((p) => {
       let author = null; try { author = p.author_id ? authorView(user.get(p.author_id), base) : null; } catch { author = null; }
-      return { id: p.id, authorId: p.author_id || null, title: p.title, url: `${base}/blog/${encodeURIComponent(p.slug)}`, slug: p.slug, excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      return { id: p.id, authorId: p.author_id || null, title: p.title, url: `${base}${require("../../services/urls").publicPath("post", p)}`, slug: p.slug, excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
         image: safeImage(p.cover_path, base), imageAlt: p.cover_alt || p.title, date: ms(p.published_at), modified: ms(p.updated_at), category: p.category || "", categoryUrl: p.category ? termUrl("category", p.category, base) : "",
         tags: csv(p.tags), author: author ? author.name : "", authorView: author, minutes: p.reading_minutes || null, views: p.views || 0, commentsCount: p.comments_count || 0, commentsOpen: p.comments_enabled !== 0 };
     }) };

@@ -220,7 +220,7 @@ router.get("/recherche", (req, res) => {
     const scope = urls.contentScope("post", "posts.id", req.kwSite || null);
     articles = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC`).all(...(scope ? scope.params : []))
       .filter((p) => matches([p.title, p.excerpt, p.category, p.subcategory, p.tags, blog.textOf(p)])).slice(0, 30)
-      .map((p) => ({ title: p.title, url: `/blog/${encodeURIComponent(urls.publicHomeOf("post", p.id) ? urls.addressOf("post", p) : p.slug)}`, summary: excerptOf(p) }));
+      .map((p) => ({ title: p.title, url: urls.publicPath("post", p), summary: excerptOf(p) }));
     pages = db.prepare("SELECT name, title, slug, description FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL AND kind = 'page' AND site_id IS NULL ORDER BY published_at DESC, id DESC").all()
       .filter((p) => matches([p.name, p.title, p.description])).slice(0, 30)
       .map((p) => ({ title: p.title || p.name, url: `/p/${encodeURIComponent(p.slug)}`, summary: p.description || "" }));
@@ -236,7 +236,7 @@ router.get("/blog/feed.xml", (req, res) => {
   const siteName = (req.kwSite && req.kwSite.name) || require("../seo/settings").get("site_name") || "KOLAKISA";
   const date = (value) => { const d = new Date(String(value || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(value)) ? "" : "Z")); return Number.isNaN(d.getTime()) ? new Date(0).toUTCString() : d.toUTCString(); };
   const items = rows.map((p) => {
-    const url = absoluteUrl(req, `/blog/${encodeURIComponent(urls.publicHomeOf("post", p.id) ? urls.addressOf("post", p) : p.slug)}`);
+    const url = absoluteUrl(req, urls.publicPath("post", p));
     return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description>${full ? `<content:encoded><![CDATA[${String(blog.renderPost(p).html || "").replace(/\]\]>/g, "]]]]><![CDATA[>")}]]></content:encoded>` : ""}</item>`;
   }).join("");
   const channelLast = rows.length ? date(rows[0].published_at) : new Date(0).toUTCString();
@@ -245,8 +245,8 @@ router.get("/blog/feed.xml", (req, res) => {
 });
 
 // Archives : adresses configurables (taxonomy.baseOf) ; un terme inexistant est une vraie 404 (jamais une archive « vide » inventée)
-const categoryBase = taxonomy.baseOf("category");
-const tagBase = taxonomy.baseOf("tag");
+const categoryBase = taxonomy.defaultBase("category");
+const tagBase = taxonomy.defaultBase("tag");
 router.get(`${categoryBase}/:slug`, (req, res) => {
   const term = urls.resolveTerm("category", req.params.slug, req.kwSite || null);
   if (!term) return res.status(404).render("error", { message: "Catégorie introuvable." });
@@ -292,7 +292,7 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   if (postTerms.primary) { const root = taxonomy.ancestors(postTerms.primary.id)[0]; crumbs.push(root ? { name: root.name, url: taxonomy.urlOf(root) } : { name: postTerms.primary.name, url: postTerms.primary.url }); } // fil d'Ariane : catégorie racine, comme avant
   else if (post.category) crumbs.push({ name: post.category, url: `${taxonomy.baseOf("category")}/${taxonomy.categorySlugOfName(post.category)}` });
   crumbs.push({ name: post.title });
-  const ownUrl = absoluteUrl(req, `/blog/${urls.publicHomeOf("post", post.id) ? urls.addressOf("post", post) : post.slug}`);
+  const ownUrl = absoluteUrl(req, urls.publicPath("post", post));
   const canonical = post.canonical_url && /^https:\/\//i.test(post.canonical_url) ? post.canonical_url : ownUrl;
   const cover = post.cover_path ? absoluteUrl(req, post.cover_path) : null;
   const socialImage = post.og_image_path ? absoluteUrl(req, post.og_image_path) : cover;
@@ -445,9 +445,9 @@ router.sitemapEntries = () => {
     { path: "/blog" },
     ...taxonomy.publicTerms("category").map((t) => ({ path: taxonomy.urlOf(t) })),
     ...db
-      .prepare("SELECT slug, updated_at FROM posts WHERE published = 1 AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
+      .prepare("SELECT * FROM posts WHERE published = 1 AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
       .all()
-      .map((p) => ({ path: `/blog/${p.slug}`, lastmod: isoDate(p.updated_at) })),
+      .map((p) => ({ path: urls.publicPath("post", p), lastmod: isoDate(p.updated_at) })),
   ];
 };
 

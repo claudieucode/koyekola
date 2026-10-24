@@ -139,6 +139,10 @@ function injectLocals(req, res, next) {
   res.locals.isNewCourse = isNewCourse;
   res.locals.levelLabel = levelLabel;
   res.locals.icon = icon;
+  // Adresses publiques des articles et des archives : celles du moteur de permaliens (structure et préfixes du site), jamais un « /blog/… » écrit à la main
+  const urlsSvc = require("../services/urls");
+  res.locals.postUrl = (post) => urlsSvc.publicPath("post", post);
+  res.locals.termUrl = (key, slug) => `${require("../services/permalinks").baseFor(key, req.kwSite ? req.kwSite.id : null) || require("../services/taxonomy").defaultBase(key)}/${slug}`;
   res.locals.starRow = starRow;
   next();
 }

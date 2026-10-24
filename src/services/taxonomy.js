@@ -23,8 +23,10 @@ const CONTENT = {
 };
 const registerTaxonomy = (def) => { TAXONOMIES[def.key] = { hierarchical: false, plural: def.label, ...def }; if (def.base) bases[def.key] = def.base; };
 const registerContent = (type, def) => { CONTENT[type] = def; };
-const baseOf = (taxonomy) => bases[taxonomy] || `/${taxonomy}`;
-const urlOf = (term) => `${baseOf(term.taxonomy)}/${term.slug}`;
+const defaultBase = (taxonomy) => bases[taxonomy] || `/${taxonomy}`; // base interne des routes (les préfixes de Paramètres → Permaliens sont réécrits vers elle)
+// Base publique : sans terme, celle du site principal (préfixe réglé dans Permaliens, sinon la base par défaut) ; avec un terme, celle du site qui le sert
+const baseOf = (taxonomy, term = null) => { const pl = require("./permalinks"); const d = defaultBase(taxonomy); return term ? pl.termBase({ ...term, taxonomy }, d) : (pl.baseFor(taxonomy, null) || d); };
+const urlOf = (term) => `${baseOf(term.taxonomy, term)}/${term.slug}`;
 
 const events = new EventEmitter(); // term.created / term.updated / term.deleted / term.merged / content.terms.changed (points d'accroche futurs)
 const MAX_DEPTH = 10;
@@ -350,7 +352,7 @@ function categorySlugOfName(name) {
 }
 
 module.exports = {
-  TAXONOMIES, CONTENT, registerTaxonomy, registerContent, baseOf, urlOf, events,
+  TAXONOMIES, CONTENT, registerTaxonomy, registerContent, baseOf, defaultBase, urlOf, events,
   get, bySlug, create, update, remove, merge, usage, list, tree, counts: withCounts, SORTS, subtreeIds, subtreeCount, ancestors, contentFilter, publicTerms, search,
   termsOf, reconcile, setTerms, findOrCreateTag, assignByNames, categorySlugOfName, mirror, uniqueIds, version: () => version,
 };

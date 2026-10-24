@@ -113,7 +113,7 @@ const ORDER = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 const bySeverity = (a, b) => (ORDER[a.severity] ?? 9) - (ORDER[b.severity] ?? 9);
 
 function auditPart(post) {
-  const path = `/blog/${post.slug}`;
+  const path = require("../services/urls").publicPath("post", post);
   const last = audit.latest();
   const a = last ? audit.get(last.id) : null;
   const issues = a ? seoDb.prepare("SELECT * FROM seo_issues WHERE audit_id = ? AND path = ? AND fixed_at IS NULL").all(a.id, path).map(issueJson).sort(bySeverity) : [];
@@ -127,7 +127,7 @@ function auditPart(post) {
 
 // Page réellement servie aux visiteurs : statut, balises, données structurées, robots.txt, plan du site, redirections
 async function pagePart(post, req) {
-  const path = `/blog/${post.slug}`;
+  const path = require("../services/urls").publicPath("post", post);
   const map = sitemap.entries();
   const inMap = map.included.find((e) => e.path === path);
   const excluded = map.excluded.find((e) => e.path === path);
@@ -156,11 +156,11 @@ async function gscPart(post) {
   if (st.state !== "connected") return { state: st.state, label: st.label, data: null };
   if (!post.published) return { state: st.state, label: st.label, data: null, reason: "Article non publié : aucune donnée de recherche." };
   if (!siteBase()) return { state: st.state, label: st.label, data: null, reason: "Configuration requise : SITE_URL." };
-  try { return { state: st.state, label: st.label, data: await integrations.pageReport(`${siteBase()}/blog/${post.slug}`) }; } catch (e) { return { state: "error", label: "Erreur", data: null, reason: e.message }; }
+  try { return { state: st.state, label: st.label, data: await integrations.pageReport(`${siteBase()}${require("../services/urls").publicPath("post", post)}`) }; } catch (e) { return { state: "error", label: "Erreur", data: null, reason: e.message }; }
 }
 
 function psiPart(post) {
-  const url = siteBase() ? `${siteBase()}/blog/${post.slug}` : null;
+  const url = siteBase() ? `${siteBase()}${require("../services/urls").publicPath("post", post)}` : null;
   const st = integrations.status("pagespeed");
   return { url, canRun: Boolean(post.published && url && /^https:\/\//.test(url)), reason: !url || !/^https:\/\//.test(url) ? "Configuration requise : SITE_URL en https." : !post.published ? "Article non publié." : null, label: st.label, history: url ? integrations.pageSpeedHistory(10, url) : [] };
 }

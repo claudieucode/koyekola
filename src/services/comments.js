@@ -23,7 +23,7 @@ const CONTENT = {
     // Un contenu accepte des commentaires s'il est publié ET que ses commentaires sont ouverts
     row: (id) => db.prepare("SELECT id, slug, title, published, comments_enabled FROM posts WHERE id = ?").get(id),
     published: (r) => Boolean(r.published), open: (r) => Boolean(r.comments_enabled),
-    url: (r) => `/blog/${r.slug}`, titleOf: (r) => r.title,
+    url: (r) => require("./urls").publicPath("post", r), titleOf: (r) => r.title,
   },
 };
 const registerContent = (type, def) => { CONTENT[type] = def; };

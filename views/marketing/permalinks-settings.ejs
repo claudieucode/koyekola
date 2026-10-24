@@ -1,0 +1,131 @@
+<%#
+  KOLAKISA CMS → Paramètres → Permaliens. Écran dédié au-dessus du moteur unique src/services/permalinks (structure des adresses d'articles, préfixes des archives).
+  Rien n'est simulé : l'aperçu, la validation, l'impact et l'enregistrement viennent du serveur ; public/js/cms-permalinks.js ajoute l'insertion des balises,
+  l'aperçu instantané, la détection des modifications non enregistrées et la protection contre la double soumission. Sans JavaScript, le formulaire fonctionne.
+%><%- include("partials/top", { title, active, layout: "form" }) %>
+<% if (typeof settingsHead !== "undefined" && settingsHead) { %><%- include("partials/settings-head", settingsHead) %><% } else { %><div class="mk-head"><h1>Permaliens</h1></div><% } %>
+<%
+  const f = st.form;
+  const isCustom = !st.presets.some((p) => p.structure === f.structure);
+  const checkedKey = isCustom ? "custom" : st.presets.find((p) => p.structure === f.structure).key;
+  const hostLabel = st.base.replace(/^https?:\/\//, "");
+  const frameFlag = typeof frame !== "undefined" && frame;
+  const siteQ = st.siteId ? "?site=" + st.siteId : "";
+  const fdate = (v) => String(v || "").slice(0, 10).split("-").reverse().join("/");
+%>
+<% if (errors.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>Rien n'a été enregistré :</p><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
+<% if (!st.own) { %>
+  <section class="mk-panel pl-notice" aria-labelledby="pl-own-h">
+    <h2 id="pl-own-h">Ce site suit les permaliens du site principal</h2>
+    <p>« <%= st.siteName %> » n'a pas de domaine propre : ses articles sont servis sous le domaine principal et utilisent sa structure (<code><%= mainRecap.structure %></code>). Une structure propre au site devient possible dès qu'un domaine lui est attribué (Réglages du site → Référencement).</p>
+  </section>
+<% } %>
+<form id="pl-form" class="pl" method="post" action="<%= "/marketing/site-web/parametres/permaliens" + siteQ %>" novalidate data-pl-form data-pl-url="/marketing/site-web/parametres/permaliens/apercu<%= siteQ %>"<%- st.writable ? "" : " data-pl-readonly" %>>
+  <% if (frameFlag) { %><input type="hidden" name="frame" value="1"><% } %>
+  <% if (st.siteId) { %><input type="hidden" name="site" value="<%= st.siteId %>"><% } %>
+  <fieldset class="pl-fieldset"<%= st.writable ? "" : " disabled" %>>
+    <legend class="sr-only">Permaliens de <%= st.siteName %></legend>
+
+    <!-- Anatomie de l'adresse : illustration vivante de la structure choisie -->
+    <section class="pl-hero" aria-labelledby="pl-hero-h">
+      <div class="pl-hero-text">
+        <h2 id="pl-hero-h">L'adresse de vos articles</h2>
+        <p>Une adresse claire se lit, se partage et se retient. Choisissez sa forme : l'aperçu ci-dessous suit votre choix, sans rien enregistrer.</p>
+      </div>
+      <div class="pl-bar" aria-live="polite" aria-atomic="true">
+        <span class="pl-bar-lock" aria-hidden="true"><%- icon("lock", { size: 14 }) %></span>
+        <span class="pl-seg pl-seg-host" data-pl-host><%= hostLabel %></span><span class="pl-seg pl-seg-path" data-pl-path></span><span class="pl-seg pl-seg-slug" data-pl-slug></span>
+        <button type="button" class="pl-copy" data-pl-copy aria-label="Copier l'adresse d'exemple"><%- icon("copy", { size: 15 }) %><span class="pl-copy-label">Copier</span></button>
+      </div>
+      <p class="pl-sample" data-pl-sample><%= st.sample.real ? "Exemple d'après votre article « " + st.sample.title + " » (publié le " + fdate(st.sample.date) + ")." : "Données de démonstration : aucun article publié sur ce site, l'exemple utilise « exemple-article » et la date du jour." %></p>
+      <svg class="pl-art" viewBox="0 0 160 96" aria-hidden="true" focusable="false"><rect x="6" y="14" width="148" height="68" rx="10" fill="none" stroke="currentColor" stroke-width="2" opacity=".35"/><rect x="18" y="28" width="52" height="10" rx="5" fill="currentColor" opacity=".85"/><rect x="76" y="28" width="30" height="10" rx="5" fill="currentColor" opacity=".45"/><rect x="112" y="28" width="30" height="10" rx="5" fill="currentColor" opacity=".25"/><rect x="18" y="50" width="124" height="6" rx="3" fill="currentColor" opacity=".18"/><rect x="18" y="62" width="88" height="6" rx="3" fill="currentColor" opacity=".18"/></svg>
+    </section>
+
+    <!-- Structures courantes -->
+    <section class="pl-section" aria-labelledby="pl-struct-h">
+      <h2 id="pl-struct-h">Réglages les plus courants</h2>
+      <p class="pl-lead">Sélectionnez la structure des permaliens de vos articles. Inclure le titre (<code>%postname%</code>) rend les liens plus lisibles et aide le référencement. Les pages, les formations et les routes du site gardent leur propre système d'adresses.</p>
+      <div class="pl-opts" role="radiogroup" aria-labelledby="pl-struct-h">
+        <% st.presets.forEach((p) => { const on = checkedKey === p.key; %>
+        <label class="pl-opt<%= on ? " is-on" : "" %>" data-pl-opt="<%= p.key %>">
+          <input type="radio" name="preset" value="<%= p.key %>" data-pl-structure="<%= p.structure %>"<%= on ? " checked" : "" %>>
+          <span class="pl-opt-body">
+            <span class="pl-opt-title"><%= p.label %><% if (st.current.structure === p.structure) { %> <span class="pl-badge">Actuelle</span><% } %></span>
+            <span class="pl-opt-help"><%= p.help %></span>
+            <code class="pl-url"><span class="pl-url-host"><%= hostLabel %></span><span data-pl-example><%= p.example %></span></code>
+          </span>
+        </label>
+        <% }) %>
+        <div class="pl-opt pl-opt-custom<%= checkedKey === "custom" ? " is-on" : "" %>" data-pl-opt="custom">
+          <label class="pl-opt-head">
+            <input type="radio" name="preset" value="custom"<%= checkedKey === "custom" ? " checked" : "" %> data-pl-custom-radio>
+            <span class="pl-opt-body"><span class="pl-opt-title">Structure personnalisée<% if (isCustom && st.current.structure === f.structure) { %> <span class="pl-badge">Actuelle</span><% } %></span>
+            <span class="pl-opt-help">Composez votre propre structure avec les balises ci-dessous.</span></span>
+          </label>
+          <div class="pl-custom">
+            <label class="pl-field" for="pl-structure"><span class="sr-only">Structure personnalisée</span>
+              <span class="pl-input"><span class="pl-input-host" aria-hidden="true"><%= hostLabel %></span>
+              <input id="pl-structure" type="text" name="structure" value="<%= f.structure %>" maxlength="120" spellcheck="false" autocomplete="off" autocapitalize="off" aria-describedby="pl-struct-msg pl-struct-help" data-pl-input></span>
+            </label>
+            <p class="pl-help" id="pl-struct-help">Balises disponibles — cliquez pour les insérer à la position du curseur :</p>
+            <ul class="pl-tags" role="list">
+              <% st.tags.forEach((t) => { %><li><button type="button" class="pl-chip" data-pl-tag="<%= t.name %>" title="<%= t.help %> Exemple : <%= t.value %>"><span class="pl-chip-name">%<%= t.name %>%</span><span class="pl-chip-ex"><%= t.example %></span></button></li><% }) %>
+            </ul>
+            <p class="pl-msg" id="pl-struct-msg" role="status" aria-live="polite" data-pl-msg></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Préfixes -->
+    <section class="pl-section" aria-labelledby="pl-opt-h">
+      <h2 id="pl-opt-h">Facultatif</h2>
+      <p class="pl-lead">Vous pouvez choisir un préfixe pour les archives de catégories et d'étiquettes. Par exemple, avec <code>sujets</code> comme préfixe des catégories, l'adresse devient <code><%= hostLabel %>/sujets/actualites</code>. Laissez vide pour garder l'adresse par défaut de Kolakisa.</p>
+      <div class="pl-prefixes">
+        <div class="pl-pf">
+          <label for="pl-cat">Préfixe des catégories</label>
+          <span class="pl-input"><span class="pl-input-host" aria-hidden="true">/</span><input id="pl-cat" type="text" name="category_base" value="<%= f.category_base %>" maxlength="40" spellcheck="false" autocomplete="off" placeholder="blog/categorie" aria-describedby="pl-cat-help" data-pl-prefix="category"></span>
+          <p class="pl-help" id="pl-cat-help">Aperçu : <code data-pl-prefix-preview="category"></code> <span class="pl-sub">Par défaut : <code><%= st.defaults.category %></code></span></p>
+        </div>
+        <div class="pl-pf">
+          <label for="pl-tag">Préfixe des étiquettes</label>
+          <span class="pl-input"><span class="pl-input-host" aria-hidden="true">/</span><input id="pl-tag" type="text" name="tag_base" value="<%= f.tag_base %>" maxlength="40" spellcheck="false" autocomplete="off" placeholder="blog/etiquette" aria-describedby="pl-tag-help" data-pl-prefix="tag"></span>
+          <p class="pl-help" id="pl-tag-help">Aperçu : <code data-pl-prefix-preview="tag"></code> <span class="pl-sub">Par défaut : <code><%= st.defaults.tag %></code></span></p>
+        </div>
+      </div>
+      <p class="pl-msg" role="status" aria-live="polite" data-pl-prefix-msg></p>
+    </section>
+
+    <% if (st.normalize !== null) { %>
+    <section class="pl-section" aria-labelledby="pl-norm-h">
+      <h2 id="pl-norm-h">Normalisation</h2>
+      <input type="hidden" name="_b_normalize_paths" value="1">
+      <label class="mk-cms-check" for="pl-norm"><input type="checkbox" id="pl-norm" name="normalize_paths" value="1"<%= st.normalize ? " checked" : "" %>> Normaliser les adresses du contenu (casse et barre finale)</label>
+      <p class="pl-help">Redirige (301) les adresses en majuscules ou avec une barre finale vers leur forme propre. Une structure qui se termine par « / » garde sa barre finale : c'est sa forme canonique.</p>
+    </section>
+    <% } %>
+
+    <!-- Effet du changement -->
+    <section class="pl-section pl-impact" id="pl-impact" aria-labelledby="pl-impact-h" aria-live="polite"<%= impact || confirmRequired ? "" : " hidden" %>>
+      <h2 id="pl-impact-h">Ce que ce changement modifie</h2>
+      <div data-pl-impact-body>
+        <% if (impact) { %>
+          <p><%= impact.changed %> article<%= impact.changed > 1 ? "s" : "" %> publié<%= impact.changed > 1 ? "s" : "" %> sur <%= impact.total %> change<%= impact.changed > 1 ? "nt" : "" %> d'adresse.<% if (impact.changed) { %> Les anciennes adresses (<code>/blog/…</code>, l'ancienne structure et <code>/?p=…</code>) redirigent automatiquement en 301 vers la nouvelle : aucun lien partagé n'est perdu, sans chaîne ni boucle.<% } %></p>
+          <% if (impact.examples.length) { %><ul class="pl-ex"><% impact.examples.forEach((e) => { %><li><span class="pl-ex-title"><%= e.title %></span><code><%= e.before %></code> <span aria-hidden="true">→</span><span class="sr-only">devient</span> <code><%= e.after %></code></li><% }) %></ul><% } %>
+          <% if (impact.collisions) { %><p class="pl-warn"><%= impact.collisions %> article<%= impact.collisions > 1 ? "s" : "" %> garde<%= impact.collisions > 1 ? "nt" : "" %> l'adresse <code>/blog/…</code> : leur titre entrerait en conflit avec une route du site ou une page.</p><% } %>
+        <% } %>
+      </div>
+      <% if (warnings.length) { %><ul class="pl-warns"><% warnings.forEach((w) => { %><li><%= w %></li><% }) %></ul><% } %>
+      <% if (confirmRequired) { %>
+        <label class="mk-cms-check pl-confirm" for="pl-confirm"><input type="checkbox" id="pl-confirm" name="confirm" value="1" required> Je comprends que <%= impact ? impact.changed : "" %> adresse<%= impact && impact.changed > 1 ? "s" : "" %> publiée<%= impact && impact.changed > 1 ? "s" : "" %> change<%= impact && impact.changed > 1 ? "nt" : "" %> et que les anciennes redirigent en 301.</label>
+      <% } %>
+    </section>
+  </fieldset>
+
+  <div class="pl-savebar" data-pl-savebar>
+    <p class="pl-status" role="status" aria-live="polite" data-pl-status><%= st.writable ? "Aucune modification." : (st.readOnly ? "Site archivé : lecture seule." : !st.own ? "Lecture seule." : "Lecture seule : la permission « settings.sensitive » est requise pour modifier les permaliens.") %></p>
+    <% if (st.writable) { %><button type="submit" class="btn btn-primary" data-pl-save disabled><span class="pl-save-label">Enregistrer les modifications</span></button><% } %>
+  </div>
+</form>
+<script type="application/json" id="pl-data"><%- json.replace(/</g, "\\u003c") %></script>
+<%- include("partials/bottom") %>

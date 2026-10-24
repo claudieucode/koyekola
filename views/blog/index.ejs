@@ -18,7 +18,7 @@
         <nav class="blog-cats" aria-label="Catégories du blog">
           <ul>
             <li><a href="/blog"<%- !filter ? ' aria-current="page"' : "" %>>Tous</a></li>
-            <% categories.forEach((c) => { %><li><a href="/blog/categorie/<%= c.slug %>"<%- activeCat === c.name.toLowerCase() ? ' aria-current="page"' : "" %>><%= c.name %> <span class="blog-cats-count"><%= c.count %></span></a></li><% }) %>
+            <% categories.forEach((c) => { %><li><a href="<%= termUrl("category", c.slug) %>"<%- activeCat === c.name.toLowerCase() ? ' aria-current="page"' : "" %>><%= c.name %> <span class="blog-cats-count"><%= c.count %></span></a></li><% }) %>
           </ul>
         </nav>
       <% } %>
@@ -43,14 +43,14 @@
       <section class="blog-section" aria-labelledby="blog-featured-title">
         <h2 id="blog-featured-title" class="sr-only">À la une</h2>
         <article class="blog-featured">
-          <a href="/blog/<%= featured.slug %>" class="blog-featured-cover" tabindex="-1" aria-hidden="true"><%- include("partials/cover", { post: featured, eager: true, w: 960, h: 540 }) %></a>
+          <a href="<%= postUrl(featured) %>" class="blog-featured-cover" tabindex="-1" aria-hidden="true"><%- include("partials/cover", { post: featured, eager: true, w: 960, h: 540 }) %></a>
           <div class="blog-featured-body">
             <span class="blog-featured-label">À la une</span>
-            <% if (featured.category) { %><a class="post-card-category" href="/blog/categorie/<%= featured.categorySlug %>"><%= featured.category %></a><% } %>
-            <h3><a href="/blog/<%= featured.slug %>"><%= featured.title %></a></h3>
+            <% if (featured.category) { %><a class="post-card-category" href="<%= termUrl("category", featured.categorySlug) %>"><%= featured.category %></a><% } %>
+            <h3><a href="<%= postUrl(featured) %>"><%= featured.title %></a></h3>
             <p class="blog-featured-excerpt"><%= featured.summary %></p>
             <%- include("partials/meta", { post: featured }) %>
-            <a class="btn btn-primary blog-featured-cta" href="/blog/<%= featured.slug %>">Lire l'article <%- icon("arrowRight", { size: 18 }) %><span class="sr-only"> : <%= featured.title %></span></a>
+            <a class="btn btn-primary blog-featured-cta" href="<%= postUrl(featured) %>">Lire l'article <%- icon("arrowRight", { size: 18 }) %><span class="sr-only"> : <%= featured.title %></span></a>
           </div>
         </article>
       </section>
@@ -87,7 +87,7 @@
         <ul class="blog-themes">
           <% categories.forEach((c) => { %>
             <li>
-              <a class="blog-theme" href="/blog/categorie/<%= c.slug %>">
+              <a class="blog-theme" href="<%= termUrl("category", c.slug) %>">
                 <span class="blog-theme-icon"><%- icon(c.theme.icon, { size: 22 }) %></span>
                 <span class="blog-theme-text">
                   <strong><%= c.name %></strong>
@@ -112,7 +112,7 @@
                 <li>
                   <span class="blog-rank" aria-hidden="true"><%= String(i + 1).padStart(2, "0") %></span>
                   <div>
-                    <h3><a href="/blog/<%= post.slug %>"><%= post.title %></a></h3>
+                    <h3><a href="<%= postUrl(post) %>"><%= post.title %></a></h3>
                     <p class="blog-meta"><% if (post.category) { %><span><%= post.category %></span><span aria-hidden="true">·</span><% } %><span><%= post.minutes %> min de lecture</span></p>
                   </div>
                 </li>
@@ -125,10 +125,10 @@
             <div class="blog-section-head"><h2 id="blog-discover-title">À découvrir</h2></div>
             <% if (discover.type === "post") { const d = discover.post; %>
               <article class="blog-discover-card">
-                <a href="/blog/<%= d.slug %>" class="blog-discover-cover" tabindex="-1" aria-hidden="true"><%- include("partials/cover", { post: d }) %></a>
+                <a href="<%= postUrl(d) %>" class="blog-discover-cover" tabindex="-1" aria-hidden="true"><%- include("partials/cover", { post: d }) %></a>
                 <div>
-                  <% if (d.category) { %><a class="post-card-category" href="/blog/categorie/<%= d.categorySlug %>"><%= d.category %></a><% } %>
-                  <h3><a href="/blog/<%= d.slug %>"><%= d.title %></a></h3>
+                  <% if (d.category) { %><a class="post-card-category" href="<%= termUrl("category", d.categorySlug) %>"><%= d.category %></a><% } %>
+                  <h3><a href="<%= postUrl(d) %>"><%= d.title %></a></h3>
                   <%- include("partials/meta", { post: d }) %>
                 </div>
               </article>

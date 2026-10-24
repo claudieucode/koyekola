@@ -84,6 +84,10 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "cms_ping_log": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "cms_url_history": {
    "siteId": true,
    "classe": "isolee"

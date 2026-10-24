@@ -45,10 +45,10 @@ function entries({ hostSite = null } = {}) {
   const siteTag = (home) => (home ? { siteId: home, base: urls.siteInfo(home).base } : {});
   for (const t of taxonomy.publicTerms("category")) { const home = homeOf("term", t.id); add({ path: home ? `${taxonomy.baseOf("category")}/${urls.addressOf("term", t)}` : taxonomy.urlOf(t), type: "Catégorie d'articles", ...siteTag(home) }, metaIndex("blog_category", t.slug)); }
   const blogSites = new Set();
-  for (const p of db.prepare("SELECT id, slug, updated_at, robots_index, canonical_url, cover_path, title FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
+  for (const p of db.prepare("SELECT * FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
     const home = homeOf("post", p.id);
     if (home) blogSites.add(home);
-    const e = { path: `/blog/${home ? urls.addressOf("post", p) : p.slug}`, type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title, ...siteTag(home) };
+    const e = { path: urls.publicPath("post", p), type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title, ...siteTag(home) };
     if (!p.robots_index) excluded.push({ ...e, reason: "Réglé en noindex" });
     else if (p.canonical_url) excluded.push({ ...e, reason: `Canonical vers ${p.canonical_url}` });
     else included.push(e);

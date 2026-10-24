@@ -10,6 +10,7 @@ const general = require("./generalSettings");
 const privacy = require("./privacy");
 const connectorsWeb = require("./connectors");
 const target = require("./siteTarget");
+const permalinksUi = require("./permalinksSettings");
 
 const BASE = "/marketing/site-web/parametres";
 // Adresses des groupes (français) → clés du moteur
@@ -94,6 +95,14 @@ module.exports = () => {
     return [["Page du CMS", "/p/<adresse>"], ["Article", "/blog/<adresse>"], ["Formation", "/cours/<adresse>"], ...Object.values(tx.TAXONOMIES).map((t) => [t.label, `${tx.baseOf(t.key)}/<adresse>`])];
   }
 
+  // En-tête des Paramètres autour de l'écran des permaliens (absent dans le cadre d'un site : le menu du site tient lieu d'onglets)
+  const permalinksHead = (req, scope) => (inFrame(req) ? { frame: true } : { settingsHead: { heading: "Permaliens", intro: "", groups: visibleGroups(req, scope).map(([g, d]) => ({ key: g, label: d.label, slug: SLUG_OF[g] })), BASE, q: q(scope), scope, sites: sitesFor(req), siteOnly: req.mk.siteOnly, tabKey: "permalinks", tabPath: "/permaliens" } });
+  // Aperçu et validation à la volée (JSON, aucune écriture)
+  router.post("/site-web/parametres/permaliens/apercu", (req, res) => {
+    if (!req.mk.can("settings.read")) return res.status(403).json({ ok: false, errors: ["Permission requise."] });
+    const t = target(req, res, { json: true }); if (!t) return;
+    permalinksUi.preview(req, res, t);
+  });
   // ----- Écrans -----
   // Connecteurs : page propre (centre d'intégrations) ; le niveau (central ou un site) vient de l'adresse vérifiée
   router.get("/site-web/parametres/connecteurs", (req, res) => connectorsWeb.render(req, res));
@@ -104,6 +113,11 @@ module.exports = () => {
     if (s.missing) return res.status(404).render("error", { message: "Site introuvable." });
     if (!canRead(req, group)) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." });
     if (!s.scope.siteId && req.mk.siteOnly) return res.redirect("/marketing/site-web/mes-sites");
+    // Permaliens : écran dédié (structure des articles, préfixes des archives) au-dessus du moteur unique services/permalinks
+    if (group === "permalinks") {
+      const t = target(req, res); if (!t) return;
+      return permalinksUi.render(req, res, t, permalinksHead(req, s.scope));
+    }
     // Un groupe sans réglage propre au site (commentaires, médias…) s'affiche tout de même pour un site : il montre ce qui s'applique réellement, en lecture seule
     if (!engine.defsFor(s.scope).some((d) => d.group === group) && !(s.scope.siteId && platformRecap(req, group, s.scope).length)) return res.redirect(`${BASE}${q(s.scope)}`);
     // Général : le centre de configuration (sections, aperçus, enregistrement en une fois) ; les autres groupes gardent leur formulaire
@@ -127,6 +141,13 @@ module.exports = () => {
     const s = scopeOf(req);
     if (s.missing) return res.status(404).render("error", { message: "Site introuvable." });
     if (!req.mk.can("settings.write") && !(group === "seo" && req.mk.can("seo.edit"))) return res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
+    // Formulaire de l'écran Permaliens (structure, préfixes) ; un envoi qui ne porte que « normalize_paths » (ancien formulaire, API) suit le chemin générique ci-dessous
+    if (group === "permalinks" && req.body && ("preset" in req.body || "structure" in req.body || "category_base" in req.body || "tag_base" in req.body)) {
+      const t = target(req, res); if (!t) return;
+      const out = permalinksUi.save(Object.assign(req, { permalinksHead: permalinksHead(req, s.scope).settingsHead }), res, t, next);
+      if (out && out.redirect) return res.redirect(landing(req, req.params[0], s.scope));
+      return;
+    }
     const ctx = ctxOf(req);
     const body = { ...(req.body || {}) };
     if (group === "comments") for (const [from, to] of Object.entries(LEGACY)) if (from in body && !(to in body)) body[to] = body[from];

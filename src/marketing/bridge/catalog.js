@@ -74,7 +74,7 @@ function listPosts(ctx, { since = null, limit = 20, category = "" } = {}) {
   try {
     return ctx.db.prepare(`SELECT id, slug, title, excerpt, cover_path, published_at FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC LIMIT ?`).all(...args, Math.min(Math.max(limit, 1), 50))
       .map((p) => ({
-        key: `post:${p.id}`, title: p.title, url: `${base}/blog/${encodeURIComponent(p.slug)}`,
+        key: `post:${p.id}`, title: p.title, url: `${base}${require("../../services/urls").publicPath("post", p)}`,
         excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
         image: p.cover_path ? (/^https?:\/\//i.test(p.cover_path) ? p.cover_path : `${base}${p.cover_path.startsWith("/") ? "" : "/"}${p.cover_path}`) : "",
         date: SQL_DATE(p.published_at),
@@ -153,7 +153,7 @@ function queryPosts(ctx, { limit = 6, offset = 0, category = "", search = "", so
     const rows = ctx.db.prepare(`SELECT id, slug, title, excerpt, cover_path, published_at, category, author_id, reading_minutes FROM posts WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...args, lim, off);
     const author = (id) => { try { const u = ctx.db.prepare("SELECT username FROM users WHERE id = ?").get(id); return u ? u.username : ""; } catch { return ""; } };
     return { total, items: rows.map((p) => ({
-      title: p.title, url: `${base}/blog/${encodeURIComponent(p.slug)}`, excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
+      title: p.title, url: `${base}${require("../../services/urls").publicPath("post", p)}`, excerpt: String(p.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300),
       image: p.cover_path ? (/^https?:\/\//i.test(p.cover_path) ? p.cover_path : `${base}${p.cover_path.startsWith("/") ? "" : "/"}${p.cover_path}`) : "",
       date: SQL_DATE(p.published_at), category: p.category || "", author: p.author_id ? author(p.author_id) : "", minutes: p.reading_minutes || null,
     })) };

@@ -224,7 +224,7 @@ check("posts_reachable", "content", "Articles publiés accessibles", async (c) =
   const rows = db.prepare("SELECT id, slug, title FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY id DESC LIMIT 40").all();
   if (!rows.length) return R("info", "Aucun article publié.");
   const bad = [];
-  for (const p of rows) { const r = await probe.request(c.port, `/blog/${p.slug}`, { host: c.host }); if (r.status !== 200) bad.push(`${p.title} (${r.status || "?"})`); }
+  for (const p of rows) { const r = await probe.request(c.port, require("../urls").publicPath("post", p), { host: c.host }); if (r.status !== 200) bad.push(`${p.title} (${r.status || "?"})`); }
   return bad.length ? R("critical", `${plural(bad.length, "article publié inaccessible", "articles publiés inaccessibles")} : ${bad.slice(0, 3).join(", ")}.`, { recommendation: "Ouvrir ces articles et corriger." }) : R("good", `${plural(rows.length, "article vérifié", "articles vérifiés")} : tous répondent 200.`);
 });
 check("broken_links", "urls", "Liens internes cassés", async (c) => {

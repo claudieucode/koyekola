@@ -121,8 +121,8 @@ const BLOCKS = [
     fields: [F.title, { name: "count", label: "Nombre d'articles", type: "number", min: 1, max: 15 }, { name: "showDate", label: "Afficher la date", type: "checkbox" }],
     clean: (s) => ({ title: oneLine(s.title, 80), count: int(s.count, 1, 15, 5), showDate: bool(s.showDate) }),
     render: (s, env) => {
-      const rows = env.db.prepare(`SELECT p.title, p.slug, p.published_at FROM posts p WHERE ${postsWhere(env)} ORDER BY p.published_at DESC, p.id DESC LIMIT ?`).all(...sp(env), s.count);
-      return rows.length ? `${title(s)}<ul class="kw-widget-list kw-widget-posts">${rows.map((r) => `<li><a href="/blog/${esc(encodeURIComponent(r.slug))}">${esc(r.title)}</a>${s.showDate && r.published_at ? ` <time datetime="${esc(String(r.published_at).slice(0, 10))}">${esc(String(r.published_at).slice(0, 10).split("-").reverse().join("/"))}</time>` : ""}</li>`).join("")}</ul>` : `${title(s)}<p class="kw-widget-empty">Aucun article publié pour l'instant.</p>`;
+      const rows = env.db.prepare(`SELECT p.id, p.title, p.slug, p.published_at FROM posts p WHERE ${postsWhere(env)} ORDER BY p.published_at DESC, p.id DESC LIMIT ?`).all(...sp(env), s.count);
+      return rows.length ? `${title(s)}<ul class="kw-widget-list kw-widget-posts">${rows.map((r) => `<li><a href="${esc(require("../../services/urls").publicPath("post", r))}">${esc(r.title)}</a>${s.showDate && r.published_at ? ` <time datetime="${esc(String(r.published_at).slice(0, 10))}">${esc(String(r.published_at).slice(0, 10).split("-").reverse().join("/"))}</time>` : ""}</li>`).join("")}</ul>` : `${title(s)}<p class="kw-widget-empty">Aucun article publié pour l'instant.</p>`;
     } },
   { key: "recent-comments", label: "Commentaires récents", category: "dynamique", icon: "comment", description: "Les derniers commentaires approuvés.", defaults: { title: "Commentaires récents", count: 5 },
     fields: [F.title, { name: "count", label: "Nombre de commentaires", type: "number", min: 1, max: 15 }],
