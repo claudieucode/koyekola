@@ -46,7 +46,7 @@ describe("C1 — une seule définition, deux présentations", () => {
       if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
     assert.ok(!items.some((i) => i.key === "sites"), "pas de « Mes sites » dans le menu du principal")
     assert.equal(nav.ALL.length, 74); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
-    assert.equal(items.length, 73 + 1 + 10); // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(items.length, 73 + 1 + 10); // « Composants » : entrée résolvable mais masquée du menu (hidden) // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("les quatre fonctions centrales (Extensions, Sauvegardes, Informations système, Journal) n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);

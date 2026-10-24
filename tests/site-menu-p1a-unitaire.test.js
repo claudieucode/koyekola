@@ -73,7 +73,7 @@ describe("espace du site principal", () => {
     assert.ok(hrefs.has(`${principal.base}/tableau-de-bord`)); assert.ok(!hrefs.has(`${nav.BASE}/sites`));
     assert.equal(nav.ALL.length, 74); // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
     assert.equal(r.sections.length, 14);
-    assert.equal(flat(r.sections).length, 73 + 1 + 10); // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(flat(r.sections).length, 73 + 10); // « Composants » a quitté le menu (sa route reste) // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
     const g = nav.buildCmsNav({ can: all, active: "sites" });

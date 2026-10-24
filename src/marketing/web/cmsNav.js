@@ -16,7 +16,7 @@ const SECTIONS = [
   // centralOnly : « Mes sites » est l'unique rubrique du gestionnaire central ; elle n'est PAS une entrée du menu d'un site (le retour se fait par « Retour à Mes sites » dans l'en-tête du site)
   { key: "sites", label: "Mes sites", icon: "globe", centralOnly: true, items: [leaf("sites", "Mes sites", `${BASE}/sites`, { primary: { label: "Créer un site", href: `${BASE}/sites#nouveau`, permission: "forms.write" } })] },
   { key: "dashboard", label: "Site principal", icon: "activity", items: [leaf("sitedash", "Tableau de bord du site principal", BASE)] },
-  { key: "pages", label: "Pages", icon: "layout", items: [leaf("landing", "Pages", "/marketing/pages", { primary: { label: "Ajouter une page", href: "/marketing/pages#nouvelle", permission: "forms.write" } })] },
+  { key: "pages", label: "Pages", icon: "layout", group: true, items: [leaf("landing", "Toutes les pages", "/marketing/pages", { primary: { label: "Ajouter une page", href: "/marketing/pages#nouvelle", permission: "forms.write" } })] },
   {
     key: "articles", label: "Articles", icon: "fileText", items: [
       leaf("articles", "Tous les articles", `${BASE}/articles`, { permission: "articles.read", primary: { label: "Nouvel article", href: `${BASE}/articles/ajouter`, permission: "articles.write" } }),
@@ -404,8 +404,9 @@ function projectSections(space) {
     if (s.centralOnly) continue;
     if (s.key === "outils") out.push(marketingGroup(space)); // « Marketing du site » vient juste avant Outils et Paramètres
     const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
-    if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages" });
-    if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items });
+    // « Composants » n'est plus affiché dans le menu (hidden) mais reste une entrée résolvable : sa route, son fil d'Ariane et ses droits sont inchangés ; « Pages » reste un groupe déployable même avec une seule entrée
+    if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages", hidden: true });
+    if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items, ...(s.group ? { group: true } : {}) });
   }
   return out;
 }
@@ -425,9 +426,9 @@ function buildSiteNav({ can, active, space }) {
   if (!current) return null;
   const sections = [];
   for (const sec of all) {
-    const items = sec.items.filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
+    const items = sec.items.filter((i) => !i.hidden).filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
     if (!items.length) continue;
-    sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1, open: items.some((i) => i.current), soon: items.length === 1 && items[0].status === "preview" });
+    sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1 && !sec.group, open: items.some((i) => i.current) || sec.items.some((i) => i.hidden && i.key === current.key), soon: items.length === 1 && items[0].status === "preview" });
   }
   const sec = all.find((x) => x.key === current.section);
   const trail = [{ label: "Site Web", href: BASE }, { label: "Mes sites", href: space.listHref || `${BASE}/sites` }, { label: space.name, href: `${space.base}/tableau-de-bord` }];
