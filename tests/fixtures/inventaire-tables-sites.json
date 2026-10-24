@@ -256,6 +256,14 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_erasure_requests": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_erasure_tasks": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
   "mk_events": {
    "siteId": true,
    "classe": "isolee"
