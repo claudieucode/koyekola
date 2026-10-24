@@ -15,6 +15,7 @@ const caches = require("../../services/tools/caches");
 const maintenance = require("../../services/tools/maintenance");
 const system = require("../../services/tools/system");
 const siteInfo = require("../../services/tools/siteInfo");
+const notes = require("../../services/adminNotes");
 const toolsAudit = require("../../services/tools/audit");
 const pages = require("../pages");
 const { need } = require("./kit");
@@ -25,7 +26,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: imp
 const TABS = [
   ["", "Santé du site", "tools.view"], ["importer", "Importer", "tools.import"], ["exporter", "Exporter", "tools.export"], ["sauvegarde-site", "Sauvegarde du site", "tools.export"], ["sauvegardes", "Sauvegardes", "tools.view"],
   ["diagnostic", "Diagnostic", "tools.view"], ["systeme", "Informations système", "tools.view"], ["maintenance", "Maintenance", "tools.maintenance"],
-  ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["effacer-donnees", "Effacer les données", "privacy.view"], ["logs", "Journal d'activité", "tools.view"],
+  ["cache", "Caches", "tools.cache"], ["contenu", "Outils de contenu", "tools.content"], ["effacer-donnees", "Effacer les données", "privacy.view"], ["notes", "Admin Notes", "notes.view"], ["logs", "Journal d'activité", "tools.view"],
 ];
 
 module.exports = () => {
@@ -131,6 +132,67 @@ module.exports = () => {
     if (denySite(req, res, siteId)) return;
     const run = health.start(toolsCtx(req), { siteId, port: req.socket.localPort });
     res.redirect(`${BASE}${q(siteId)}${siteId ? "&" : "?"}analyse=${run.id}`);
+  }));
+
+
+  // ----- Admin Notes : notes internes PAR SITE. Droits distincts (voir, créer, modifier, supprimer), portée vérifiée à chaque requête, texte échappé à l'affichage,
+  // contenu jamais écrit dans le journal d'activité (seuls l'action et l'identifiant le sont). -----
+  const noteScope = (req) => ({ organizationId: req.mk.ctx.organizationId, userId: req.session.user.id });
+  const renderNotes = (req, res, siteId, { status = 200, draft = { title: "", body: "" }, errors = {}, editId = null, edit = null, message = null, confirmDelete = null } = {}) => {
+    const page = /^\d{1,6}$/.test(String(req.query.page || "")) ? Number(req.query.page) : 1;
+    const data = notes.list(req.mk.ctx.organizationId, siteId, { page });
+    res.status(status).set("Cache-Control", "no-store").render("marketing/tools-notes", { title: "Admin Notes", active: "outils", ...shell(req, siteId, "notes"), data, draft, errors, editId, edit, message, confirmDelete, limits: { title: notes.TITLE_MAX, body: notes.BODY_MAX }, can: { create: req.mk.can("notes.create"), edit: req.mk.can("notes.edit"), delete: req.mk.can("notes.delete") }, noteJs: true });
+  };
+  // Échec technique (stockage…) : jamais présenté comme un succès ; la saisie est conservée ; le contenu n'est pas journalisé
+  const storageFail = (req, res, siteId, error, extra = {}) => { console.error("[notes] échec d'enregistrement :", String(error && error.message).slice(0, 200)); renderNotes(req, res, siteId, { status: 500, message: "L'opération a échoué : rien n'a été enregistré. Votre saisie est conservée, réessayez dans un instant.", ...extra }); };
+  const notesFlash = (req, res, siteId, text) => { flash(req, "ok", text); res.redirect(`${BASE}/notes${q(siteId)}`); };
+  const noteId = (req) => (/^\d{1,12}$/.test(String(req.params.id)) ? Number(req.params.id) : null);
+  router.get("/site-web/outils/notes", need("notes.view"), (req, res) => withSite(req, res, (siteId) => {
+    if (denySite(req, res, siteId)) return;
+    const editId = /^\d{1,12}$/.test(String(req.query.modifier || "")) && req.mk.can("notes.edit") ? Number(req.query.modifier) : null;
+    const edit = editId ? notes.get(req.mk.ctx.organizationId, siteId, editId) : null;
+    const delId = /^\d{1,12}$/.test(String(req.query.supprimer || "")) && req.mk.can("notes.delete") ? Number(req.query.supprimer) : null;
+    const confirmDelete = delId ? notes.get(req.mk.ctx.organizationId, siteId, delId) : null;
+    renderNotes(req, res, siteId, { editId: edit ? editId : null, edit, confirmDelete, draft: edit ? { title: edit.title, body: edit.body } : undefined });
+  }));
+  router.post("/site-web/outils/notes", need("notes.create"), (req, res) => withSite(req, res, (siteId) => {
+    if (denySite(req, res, siteId)) return;
+    const draft = { title: String(req.body.title ?? ""), body: String(req.body.body ?? "") };
+    try {
+      const r = notes.create(req.mk.ctx.organizationId, siteId, req.session.user.id, draft);
+      if (!r.duplicate) toolsAudit.log(req, "note_create", "Note d'administration ajoutée", { noteId: r.id, siteId });
+      notesFlash(req, res, siteId, r.duplicate ? "Cette note vient d'être enregistrée : elle n'a pas été ajoutée une seconde fois." : "Note ajoutée.");
+    } catch (error) {
+      if (!error.fields && error.name !== "UserError") return storageFail(req, res, siteId, error, { draft });
+      renderNotes(req, res, siteId, { status: 422, draft, errors: error.fields || {}, message: error.fields ? null : error.message });
+    }
+  }));
+  router.post("/site-web/outils/notes/:id/modifier", need("notes.edit"), (req, res) => withSite(req, res, (siteId) => {
+    if (denySite(req, res, siteId)) return;
+    const id = noteId(req), draft = { title: String(req.body.title ?? ""), body: String(req.body.body ?? "") };
+    try {
+      notes.update(req.mk.ctx.organizationId, siteId, req.session.user.id, id, draft);
+      toolsAudit.log(req, "note_update", "Note d'administration modifiée", { noteId: id, siteId });
+      notesFlash(req, res, siteId, "Note modifiée.");
+    } catch (error) {
+      if (error.status === 404) { flash(req, "error", error.message); return res.redirect(`${BASE}/notes${q(siteId)}`); }
+      if (!error.fields && error.name !== "UserError") return storageFail(req, res, siteId, error, { draft, editId: id, edit: (() => { try { return notes.get(req.mk.ctx.organizationId, siteId, id); } catch { return null; } })() });
+      renderNotes(req, res, siteId, { status: 422, draft, errors: error.fields || {}, editId: id, edit: notes.get(req.mk.ctx.organizationId, siteId, id), message: error.fields ? null : error.message });
+    }
+  }));
+  router.post("/site-web/outils/notes/:id/supprimer", need("notes.delete"), (req, res) => withSite(req, res, (siteId) => {
+    if (denySite(req, res, siteId)) return;
+    const id = noteId(req);
+    if (req.body.confirm !== "1") return res.redirect(`${BASE}/notes${q(siteId)}${siteId ? "&" : "?"}supprimer=${id}`); // jamais de suppression sans confirmation explicite
+    try {
+      notes.remove(req.mk.ctx.organizationId, siteId, id);
+      toolsAudit.log(req, "note_delete", "Note d'administration supprimée", { noteId: id, siteId });
+      notesFlash(req, res, siteId, "Note supprimée.");
+    } catch (error) {
+      if (error.name !== "UserError") { console.error("[notes] échec de suppression :", String(error.message).slice(0, 200)); flash(req, "error", "La suppression a échoué : la note n'a pas été supprimée."); return res.redirect(`${BASE}/notes${q(siteId)}`); }
+      flash(req, "error", error.message);
+      res.redirect(`${BASE}/notes${q(siteId)}`);
+    }
   }));
 
   // ----- Export -----
