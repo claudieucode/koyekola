@@ -44,6 +44,7 @@ const SECTIONS = [
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
+      leaf("apparence/fichiers", "Éditeur de fichiers", `${BASE}/themes/fichiers`, { permission: "appearance.read" }), // fichiers JSON virtuels d'un thème installé (services/themeFiles.js)
       leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
       leaf("apparence", "Éditeur du site", `${BASE}/editeur-du-site`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/templates`, { permission: "appearance.read" }),
@@ -65,6 +66,7 @@ const SECTIONS = [
       leaf("utilisateurs/roles", "Rôles", `${BASE}/utilisateurs/roles`, { permission: "users.view" }),
       leaf("utilisateurs/permissions", "Permissions", `${BASE}/utilisateurs/permissions`, { permission: "users.view" }),
       leaf("utilisateurs/invitations", "Invitations", `${BASE}/utilisateurs/invitations`, { permission: "users.view" }),
+      leaf("utilisateurs/profil", "Profil", `${BASE}/profil`, { permission: "profile.self" }), // Comptes → Profil : son propre profil (toute personne ayant accès à l'administration)
     ],
   },
   {
@@ -178,6 +180,7 @@ const SITE_MODULES = {
   "equipe-inviter": { label: "Inviter", kind: "delegate", to: "/site-web/equipe-site/inviter", reg: "utilisateurs/ajouter", permission: "users.create", legacy: `${BASE}/utilisateurs/ajouter` },
   "equipe-invitations": { label: "Invitations", kind: "delegate", to: "/site-web/equipe-site/invitations", reg: "utilisateurs/invitations", permission: "users.view", legacy: `${BASE}/utilisateurs/invitations` },
   "equipe-roles": { label: "Rôles", kind: "delegate", to: "/site-web/equipe-site/roles", reg: "utilisateurs/roles", permission: "users.view", legacy: `${BASE}/utilisateurs/roles` },
+  "equipe-profil": { label: "Profil", kind: "delegate", to: "/site-web/profil", reg: "utilisateurs/profil", permission: "profile.self", legacy: `${BASE}/profil` },
   "equipe-permissions": { label: "Permissions", kind: "delegate", to: "/site-web/equipe-site/permissions", reg: "utilisateurs/permissions", permission: "users.view", legacy: `${BASE}/utilisateurs/permissions` },
   reglages: { label: "Réglages du site", kind: "own", permission: "settings.read", legacy: `${BASE}/parametres`, legacyLabel: "Paramètres du site principal" },
   // R8 lot 2 : Articles, Commentaires et Médias s'ouvrent dans le cadre du site (écrans existants, isolation R5/R6 : le site vient de l'adresse, jamais du navigateur)
@@ -247,6 +250,7 @@ const NESTED = Object.freeze({
   commentaires: ["les-miens", "en-attente", "approuves", "indesirables", "corbeille"],
   contacts: ["nouveau", "demandes"],
   outils: ["importer", "exporter", "donnees", "diagnostic", "maintenance", "cache", "contenu", "effacer-donnees", "notes"], // Outils : mêmes écrans que le site principal, site fixé par l'adresse
+  themes: ["fichiers"], // Apparence → Éditeur de fichiers des thèmes : s'ouvre dans le cadre DU site (/sites/<id>/themes/fichiers)
   medias: ["ajouter"], // MEDIA-ROUTING : « Ajouter un fichier média » s'ouvre dans le cadre DU site (/sites/<id>/medias/ajouter)
 });
 // Entrées du registre ouvertes comme sous-pages déléguées : leur clé `active` prend aussi le cadre du site quand le serveur a vérifié un site
@@ -301,6 +305,7 @@ const ABILITY = {
   "utilisateurs/invitations": { mode: "open", module: "equipe-invitations" },
   "utilisateurs/roles": { mode: "open", module: "equipe-roles" },
   "utilisateurs/permissions": { mode: "open", module: "equipe-permissions" },
+  "utilisateurs/profil": { mode: "open", module: "equipe-profil" },
   pagetests: { mode: "open", module: "tests-ab" },
   outils: { mode: "open", module: "outils" },
   corbeille: { mode: "open", module: "corbeille" },
@@ -340,6 +345,7 @@ const ABILITY = {
   "mediatheque/ajouter": { mode: "open", module: "medias", sub: "ajouter" },
   "apparence/menus": { mode: "open", module: "navigation" },
   "apparence/themes": { mode: "open", module: "themes" },
+  "apparence/fichiers": { mode: "open", module: "themes", sub: "fichiers" },
   "apparence/polices": { mode: "open", module: "polices" },
   "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
   "apparence/widgets": { mode: "open", module: "widgets" },

@@ -18,6 +18,7 @@ function openSession(req, user, done) {
     if (error) return done(error);
     req.session.user = { id: user.id, username: user.username, email: user.email, role: user.role };
     req.session.pwStamp = passwordStamp(user.password_hash);
+    req.session.device = require("../services/accountProfile").deviceOf(req.get("user-agent")); // « Chrome sur macOS » : affiché dans Comptes → Profil → Sessions
     db.prepare("UPDATE users SET last_login_at = datetime('now'), last_seen_at = datetime('now') WHERE id = ?").run(user.id);
     done();
   });
