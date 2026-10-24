@@ -1717,7 +1717,6 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .mk-cms-crumbrow { margin: 0 0 14px; }
 .mk-cms-crumbrow .mk-cms-crumbs ol { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; }
 @media (max-width: 760px) { .mk-site-banner .mk-cms-crumbs { flex-basis: 100%; margin-left: 0; padding-left: 0; border-left: 0; order: 5; } }
-=======
 /* ===== Comptes → liste : filtres par rôle, actions groupées, identité compacte (views/marketing/users.ejs) ===== */
 .mk-us-roles { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0 0 8px; font-size: 0.88rem; }
 .mk-us-roles-l { font-weight: 700; color: var(--muted); font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; }
