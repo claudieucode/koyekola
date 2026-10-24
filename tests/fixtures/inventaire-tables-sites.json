@@ -160,6 +160,10 @@
    "siteId": false,
    "classe": "a-isoler-B2"
   },
+  "mk_admin_notes": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_ai_requests": {
    "siteId": true,
    "classe": "a-decider"
