@@ -63,8 +63,8 @@ html[data-kola-theme="dark"] {
 .mk-body .mk-tab:hover { color: var(--kb-navy); }
 .mk-body .mk-tab[aria-current="page"] { color: var(--kb-navy); font-weight: 700; }
 .mk-body .mk-tab[aria-current="page"]::after { height: 3px; border-radius: 3px 3px 0 0; background: var(--kb-navy); }
-.mk-body .mk-tab-count { background: none; padding: 0 0 0 4px; color: var(--kb-ink-3); font-variant-numeric: tabular-nums; font-weight: 600; }
-.mk-body .mk-tab[aria-current="page"] .mk-tab-count { background: none; color: var(--kb-ink-2); }
+.mk-body .mk-tab-count { background: none; padding: 0 0 0 4px; color: color-mix(in srgb, currentColor 72%, transparent); font-variant-numeric: tabular-nums; font-weight: 600; }   /* hérite la couleur de l'onglet (aussi dans les onglets en pastille pleine) */
+.mk-body .mk-tab[aria-current="page"] .mk-tab-count { background: none; color: color-mix(in srgb, currentColor 82%, transparent); }
 
 /* ---------- Panneaux : un filet, pas d'ombre, titre en police d'affichage ---------- */
 .mk-body :is(.mk-panel, .mk-card, .mk-cms-card) { background: var(--surface); border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); box-shadow: none; }
@@ -171,3 +171,58 @@ html[data-kola-theme="dark"] {
 .mk-body .mk-tg-kicker { color: var(--kb-live); font-weight: 650; font-size: 0.82rem; }
 .mk-body .mk-tab { gap: 6px; }
 .mk-body .kx-hero, .mk-body .kx-hero.is-compact { padding-top: 14px; }
+
+/* ---------- Mode sombre : surfaces et remplissages qui étaient écrits en dur ----------
+   Cause racine confirmée par scripts/audit-qualite.js : des composants du CMS posent `background: var(--primary); color: #fff`
+   (le marine du mode clair devient clair en mode sombre → texte blanc sur fond clair, contraste 1,2) ou un fond `#fff` fixe avec le texte du
+   thème (texte clair sur fond blanc). Les corrections ci-dessous donnent à chaque composant ses valeurs sombres, sans toucher au mode clair. */
+html[data-kola-theme="dark"] :is(.mk-wd-btn--primary, .mk-wd-chip[aria-pressed="true"], .mk-st-count, .mk-st-devices button[aria-pressed="true"], .mk-pt-filters button[aria-selected="true"], .pl-badge, .mk-sg-cal-grid b.is-today) {
+  background: var(--k-accent-solid); border-color: var(--k-accent-solid); color: #fff;
+}
+html[data-kola-theme="dark"] .mk-wd-btn--primary:hover:not(:disabled) { background: var(--k-accent-solid-hover); }
+html[data-kola-theme="dark"] :is(.mk-toast, .mk-bulkbar, [data-tooltip]:hover::after, [data-tooltip]:focus-visible::after) { background: var(--surface-alt); color: var(--text); border: 1px solid var(--line); }
+html[data-kola-theme="dark"] :is(.mk-tg-active, .mk-tg-card, .mk-tg-cats a, .mk-cn-search, .mk-cn-caps, .mk-cn-card, .mk-cn-filter, .mk-pv-card, .mk-pv-btn--outline, .pl-bar, .mk-nm-first, .kwc-empty, .kwc-frame) {
+  background: var(--surface); color: var(--text); border-color: var(--border);
+}
+html[data-kola-theme="dark"] :is(.mk-tg-cats a.is-active, .mk-tg-cats a:hover) { background: var(--k-accent-solid); border-color: var(--k-accent-solid); color: #fff; }
+html[data-kola-theme="dark"] :is(.mk-tg-cats a span, .mk-tg-cat, .mk-tg-meta, .mk-tg-desc, .mk-sub) { color: var(--kb-ink-2); }
+html[data-kola-theme="dark"] :is(.pl-seg-slug, .mk-cn-tag--cap) { background: var(--accent-light); color: var(--accent-dark); }
+html[data-kola-theme="dark"] :is(.pl-copy, .mk-cn-tag, .mk-cn-state.is-idle) { background: var(--surface-alt); color: var(--kb-ink-2); border-color: var(--line); }
+html[data-kola-theme="dark"] .mk-sg-badge { background: var(--k-warn-bg); color: var(--k-warn-fg); }
+html[data-kola-theme="dark"] .mk-read-pill.is-open { background: var(--k-ok-bg); color: var(--k-ok-fg); }
+html[data-kola-theme="dark"] .mk-cm-av-img { background: var(--surface-alt); }
+html[data-kola-theme="dark"] .skip-link { background: var(--k-accent-solid); color: #fff; }
+html[data-kola-theme="dark"] .mk-content :is(h2, h3, summary, label, strong, .mk-px-label, .mk-cn-name, .mk-tg-active h2, .mk-cn-card h3) { color: var(--text); }
+html[data-kola-theme="dark"] :is(.mk-cn-sub, .mk-cn-desc, .mk-nm-setting-label, .mk-pv-hint, .mk-pv-state-detail, .mk-im-kind, .mk-er-count, .pl-seg-host, .pl-seg-path, .mk-nm-pending li, .mk-pv-card p) { color: var(--kb-ink-2); }
+html[data-kola-theme="dark"] :is(a.g-link, button.mk-im-link) { color: var(--accent-dark); }
+html[data-kola-theme="dark"] .mk-tg-cats a.is-active span { color: #fff; }
+/* Commentaires : le compteur du filtre courant est à côté de la pastille, pas dedans (il était écrit en blanc sur fond blanc : invisible) */
+.mk-body .mk-cm-states a.is-current + .mk-tab-count { color: var(--kb-ink-2); }
+
+/* Mes sites sur tablette (640–899 px) : la ligne de registre se replie sur quatre colonnes, plus de tableau coupé à droite */
+@media (min-width: 640px) and (max-width: 899px) {
+  .mk-body .mk-site-manager, .mk-body .mk-site-manager tbody { display: block; width: 100%; }
+  .mk-body .mk-site-manager thead, .mk-body .mk-site-manager caption { display: none; }
+  .mk-body .mk-site-manager tbody tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; padding: 18px 20px; border-bottom: 1px solid var(--kb-rule); }
+  .mk-body .mk-site-manager tbody tr:last-child { border-bottom: 0; }
+  .mk-body .mk-site-manager.mk-table tbody tr > :is(td, th) { display: block; min-width: 0; padding: 0; border: 0; background: none; text-align: left; }
+  .mk-body .mk-site-manager th[scope="row"] { grid-column: 1 / -1; }
+  .mk-body .mk-site-manager th[scope="row"] > a { font-family: var(--kb-display); font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em; color: var(--kb-navy); text-decoration: none; }
+  .mk-body .mk-site-manager th[scope="row"] .mk-sub { display: block; margin-top: 4px; font-weight: 400; color: var(--kb-ink-2); font-size: 0.86rem; line-height: 1.45; }
+  .mk-body .mk-site-manager td.mk-num { font-family: var(--kb-display); font-weight: 700; font-size: 1.5rem; line-height: 1.1; color: var(--kb-navy); font-variant-numeric: tabular-nums; }
+  .mk-body .mk-site-manager td.mk-num::before { content: attr(data-label); display: block; margin-bottom: 2px; font-family: var(--font-body); font-weight: 600; font-size: 0.76rem; color: var(--kb-ink-3); }
+  .mk-body .mk-site-manager td[data-label="État"] { grid-column: 1 / span 2; grid-row: 2; }
+  .mk-body .mk-site-manager td[data-label="Domaine"] { grid-column: 3 / span 2; grid-row: 2; color: var(--kb-ink-2); font-size: 0.86rem; overflow-wrap: anywhere; }
+  .mk-body .mk-site-manager td[data-label="Modifié le"] { grid-column: 1 / span 2; grid-row: 4; color: var(--kb-ink-3); font-size: 0.82rem; }
+  .mk-body .mk-site-manager td[data-label="Modules"] { grid-column: 3 / span 2; grid-row: 4; display: flex; flex-wrap: wrap; gap: 4px 6px; }
+  .mk-body .mk-site-manager td[data-label="Actions"] { grid-column: 1 / -1; grid-row: 5; }
+  .mk-body .mk-site-manager td[data-label="Pages"] { grid-column: 1; grid-row: 3; } .mk-body .mk-site-manager td[data-label="En ligne"] { grid-column: 2; grid-row: 3; } .mk-body .mk-site-manager td[data-label="Équipe"] { grid-column: 3; grid-row: 3; } .mk-body .mk-site-manager td[data-label="Contacts"] { grid-column: 4; grid-row: 3; }
+  .mk-body .mk-site-manager th[scope="row"] { grid-row: 1; }
+  .mk-body .mk-site-manager td:is([data-label="Domaine"], [data-label="Modifié le"], [data-label="Modules"])::before { content: attr(data-label) " : "; color: var(--kb-ink-3); font-size: 0.8rem; }
+}
+
+html[data-kola-theme="dark"] .mk-nm-pending li { background: var(--surface-alt); border-color: var(--line); }
+/* Aperçu des tailles d'images (Réglages → Médias) : bloc marine fixe dans les deux modes (en sombre, --k-navy-900 devenait clair sous du texte blanc) */
+.md-preview { background: #0a1f35; color: #fff; }
+.md-preview :is(label, span, h3) { color: inherit; }
+html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked), html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked) .md-dim { color: #0b2a40; }

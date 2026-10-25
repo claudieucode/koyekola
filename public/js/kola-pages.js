@@ -53,9 +53,10 @@
       if (!el.hasAttribute("aria-label") && !hasVisibleText(el) && (el.tagName === "BUTTON" || el.tagName === "A")) el.setAttribute("aria-label", title);
       el.setAttribute("data-tip", title); el.removeAttribute("title");
     });
-    $$(".mk-content button[aria-label], .mk-content a[aria-label], .mk-topbar button[aria-label], .mk-topbar a[aria-label]").forEach(function (el) {
+    $$(".mk-content button[aria-label], .mk-content a[aria-label], .mk-topbar button[aria-label], .mk-topbar a[aria-label], .mk-sidebar .mk-nav-caret-btn[aria-label]").forEach(function (el) {
       if (el.hasAttribute("data-tip") || hasVisibleText(el)) return;
-      el.setAttribute("data-tip", el.getAttribute("aria-label"));
+      el.setAttribute("data-tip", el.getAttribute("aria-label").replace(/ de .*$/, ""));
+      if (el.classList.contains("mk-nav-caret-btn")) el.setAttribute("data-tip-side", "right");
     });
     $$(".mk-content :is(.btn, .mk-filter-clear, a.mk-pb-btn)").forEach(function (el) {
       if (el.hasAttribute("data-tip") || el.querySelector("[data-tip]")) return;
