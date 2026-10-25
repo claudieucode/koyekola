@@ -47,7 +47,7 @@ html[data-kola-theme="dark"] .is-cms { --kab-bg: #061425; --kab-bg-2: #0d2540; }
 .kab-avatar { width: 26px; height: 26px; font-size: 0.78rem; flex: none; }
 .kab-avatar-lg { width: 36px; height: 36px; font-size: 0.95rem; }
 .kab-searchform { width: clamp(200px, 24vw, 340px); flex: 0 1 auto; margin-right: 6px; }
-.kab-searchform label { display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: var(--kab-muted); transition: background-color 0.15s ease, color 0.15s ease, outline-color 0.15s ease; outline: 1px solid transparent; outline-offset: -1px; cursor: text; }
+.kab-searchform label { display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box; padding: 0 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: var(--kab-muted); transition: background-color 0.15s ease, color 0.15s ease, outline-color 0.15s ease; outline: 2px solid transparent; outline-offset: -2px; cursor: text; }
 .kab-searchform label:hover { background: rgba(255, 255, 255, 0.12); }
 .kab-searchform label:focus-within { background: rgba(255, 255, 255, 0.14); color: #fff; outline-color: #7dc4f5; }
 .kab-searchform svg { flex: none; }

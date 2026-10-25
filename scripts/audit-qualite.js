@@ -69,12 +69,15 @@ async function focusAudit(page) {
   for (let i = 0; i < 22; i += 1) {
     const before = await page.evaluate(() => window.__fa = null);
     await page.keyboard.press("Tab");
+    await page.waitForTimeout(220); // laisse finir les transitions d'anneau (0,15 s)
     const r = await page.evaluate(() => {
       const e = document.activeElement; if (!e || e === document.body) return null;
       const cs = getComputedStyle(e); const rect = e.getBoundingClientRect(); if (!rect.width || !rect.height) return null;
       const ring = (cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0) || (cs.boxShadow && cs.boxShadow !== "none");
+      // champ enveloppé dans un libellé qui porte l'anneau (:focus-within) : l'anneau visible est celui du libellé
+      const wrap = e.closest("label"); const wcs = wrap && wrap !== e ? getComputedStyle(wrap) : null; const wrapRing = !!wcs && wcs.outlineStyle !== "none" && parseFloat(wcs.outlineWidth) >= 2 && !/rgba\([^)]*, 0\)$/.test(wcs.outlineColor) && wcs.outlineColor !== "transparent";
       const sel = e.tagName.toLowerCase() + (e.id ? "#" + e.id : "") + "." + String(e.className).split(/\s+/).filter(Boolean).slice(0, 2).join(".");
-      return { sel, ring, skip: /skip/.test(String(e.className)) };
+      return { sel, ring: ring || wrapRing, skip: /skip/.test(String(e.className)) };
     });
     if (r && !r.ring && !r.skip) bad.push(r.sel);
   }
