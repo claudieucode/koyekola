@@ -66,11 +66,7 @@ router.post("/formateur/pages/:slug", (req, res) => {
 });
 
 // ---------- FAQ ----------
-
-const listFaqs = (courseId) =>
-  courseId
-    ? db.prepare("SELECT * FROM faqs WHERE course_id = ? ORDER BY position, id").all(courseId)
-    : db.prepare("SELECT * FROM faqs WHERE course_id IS NULL ORDER BY position, id").all();
+const faqs = require("../services/faqs");
 
 // Cookies et mesure d'audience : ce qui est mesuré, avec ou sans accord, et comment changer d'avis
 router.get("/cookies", (req, res) => {
@@ -78,11 +74,11 @@ router.get("/cookies", (req, res) => {
 });
 
 router.get("/faq", (req, res) => {
-  const faqs = listFaqs(null);
+  const list = faqs.listPublic(null);
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Questions fréquentes" }];
   res.render("pages/faq", {
-    faqs, crumbs,
-    seo: seoPages.faqPage(req, faqs, crumbs),
+    faqs: list, groups: faqs.grouped(list), crumbs,
+    seo: seoPages.faqPage(req, list, crumbs),
   });
 });
 
@@ -93,40 +89,69 @@ function loadCourseOr404(req, res, courseId) {
   return course;
 }
 
-router.get("/formateur/faq", (req, res) => {
-  res.render("instructor/faq-admin", { faqs: listFaqs(null), course: null });
-});
+// Administration : une page par périmètre (questions générales, ou celles d'une formation). Messages d'action gardés en session, lus une seule fois.
+const faqFlash = (req) => { const f = req.session.faqFlash || null; delete req.session.faqFlash; return f; };
+const faqBack = (faq) => (faq && faq.course_id ? `/formateur/cours/${faq.course_id}/faq` : "/formateur/faq");
+function renderFaqAdmin(req, res, course, over = {}) {
+  res.status(over.status || 200).render("instructor/faq-admin", { faqs: faqs.listAll(course ? course.id : null), course, categories: faqs.categories(), flash: faqFlash(req), errors: {}, values: {}, ...over });
+}
+// Question ciblée : introuvable → 404 ; hors de son périmètre (formation d'un autre formateur) → 404 aussi (aucune information sur son existence)
+function loadFaq(req, res) {
+  const faq = faqs.get(Number(req.params.id));
+  if (!faq || !faqs.canManage(req.session.user, faq)) { res.status(404).render("error", { message: "Question introuvable." }); return null; }
+  return faq;
+}
+
+router.get("/formateur/faq", (req, res) => renderFaqAdmin(req, res, null));
 
 router.get("/formateur/cours/:id/faq", (req, res) => {
   const course = loadCourseOr404(req, res, req.params.id);
   if (!course) return;
-  res.render("instructor/faq-admin", { faqs: listFaqs(course.id), course });
+  renderFaqAdmin(req, res, course);
 });
 
 router.post("/formateur/faq/ajouter", (req, res) => {
-  const question = String(req.body.question || "").trim();
-  const answer = String(req.body.answer || "").trim();
-  if (!question || question.length > 300) throw new UserError("La question est obligatoire (300 caractères au plus).");
-  if (!answer || answer.length > 5000) throw new UserError("La réponse est obligatoire (5 000 caractères au plus).");
-
-  let courseId = null;
-  if (String(req.body.course_id || "").trim()) {
-    const course = loadCourseOr404(req, res, req.body.course_id);
-    if (!course) return;
-    courseId = course.id;
-  }
-  const next = courseId
-    ? db.prepare("SELECT COALESCE(MAX(position), -1) + 1 AS n FROM faqs WHERE course_id = ?").get(courseId).n
-    : db.prepare("SELECT COALESCE(MAX(position), -1) + 1 AS n FROM faqs WHERE course_id IS NULL").get().n;
-  db.prepare("INSERT INTO faqs (course_id, question, answer, position) VALUES (?, ?, ?, ?)").run(courseId, question, answer, next);
-  res.redirect(courseId ? `/formateur/cours/${courseId}/faq` : "/formateur/faq");
+  let course = null;
+  if (String(req.body.course_id || "").trim()) { course = loadCourseOr404(req, res, req.body.course_id); if (!course) return; }
+  const r = faqs.create(course ? course.id : null, req.body);
+  if (r.errors) return renderFaqAdmin(req, res, course, { status: 400, errors: r.errors, values: r.values });
+  req.session.faqFlash = { type: "ok", text: "Question ajoutée." };
+  res.redirect(course ? `/formateur/cours/${course.id}/faq` : "/formateur/faq");
 });
 
-router.post("/formateur/faq/:id/supprimer", (req, res) => {
-  const faq = db.prepare("SELECT * FROM faqs WHERE id = ?").get(Number(req.params.id));
-  if (!faq) return res.status(404).render("error", { message: "Question introuvable." });
-  db.prepare("DELETE FROM faqs WHERE id = ?").run(faq.id);
-  res.redirect(faq.course_id ? `/formateur/cours/${faq.course_id}/faq` : "/formateur/faq");
+router.get("/formateur/faq/:id(\\d+)/modifier", (req, res) => {
+  const faq = loadFaq(req, res); if (!faq) return;
+  const course = faq.course_id ? loadCourseOr404(req, res, faq.course_id) : null;
+  if (faq.course_id && !course) return;
+  res.render("instructor/faq-edit", { faq, course, categories: faqs.categories(), errors: {}, values: faq });
+});
+router.post("/formateur/faq/:id(\\d+)/modifier", (req, res) => {
+  const faq = loadFaq(req, res); if (!faq) return;
+  const course = faq.course_id ? loadCourseOr404(req, res, faq.course_id) : null;
+  if (faq.course_id && !course) return;
+  const r = faqs.update(faq, req.body);
+  if (r.errors) return res.status(400).render("instructor/faq-edit", { faq, course, categories: faqs.categories(), errors: r.errors, values: r.values });
+  req.session.faqFlash = { type: "ok", text: "Question enregistrée." };
+  res.redirect(faqBack(faq));
+});
+router.post("/formateur/faq/:id(\\d+)/publier", (req, res) => {
+  const faq = loadFaq(req, res); if (!faq) return;
+  const on = req.body.published !== "0";
+  faqs.setPublished(faq, on);
+  req.session.faqFlash = { type: "ok", text: on ? "Question publiée." : "Question retirée du site (brouillon)." };
+  res.redirect(faqBack(faq));
+});
+router.post("/formateur/faq/:id(\\d+)/:dir(monter|descendre)", (req, res) => {
+  const faq = loadFaq(req, res); if (!faq) return;
+  const moved = faqs.move(faq, req.params.dir === "monter" ? "up" : "down");
+  req.session.faqFlash = moved ? { type: "ok", text: "Ordre modifié." } : { type: "info", text: "Cette question est déjà " + (req.params.dir === "monter" ? "la première." : "la dernière.") };
+  res.redirect(faqBack(faq));
+});
+router.post("/formateur/faq/:id(\\d+)/supprimer", (req, res) => {
+  const faq = loadFaq(req, res); if (!faq) return;
+  faqs.remove(faq);
+  req.session.faqFlash = { type: "ok", text: "Question supprimée." };
+  res.redirect(faqBack(faq));
 });
 
 // ---------- Contact ----------

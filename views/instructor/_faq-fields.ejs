@@ -1,0 +1,24 @@
+<%# Champs d'une question (ajout et modification). Paramètres : course, errors, values, categories, idp (préfixe des identifiants) %>
+<% if (course) { %><input type="hidden" name="course_id" value="<%= course.id %>"><% } %>
+<div class="field-group">
+  <label for="<%= idp %>-question">Question <span class="fa-req" aria-hidden="true">*</span></label>
+  <input id="<%= idp %>-question" type="text" name="question" required maxlength="300" value="<%= values.question || "" %>"<%- errors.question ? ` aria-invalid="true" aria-describedby="${idp}-question-err"` : "" %>>
+  <% if (errors.question) { %><small class="field-error" id="<%= idp %>-question-err" role="alert"><%= errors.question %></small><% } %>
+</div>
+<% if (!course) { %>
+<div class="field-group">
+  <label for="<%= idp %>-category">Catégorie <span class="field-hint">(facultatif : regroupe les questions sur la page publique)</span></label>
+  <input id="<%= idp %>-category" type="text" name="category" maxlength="60" list="<%= idp %>-cats" value="<%= values.category || "" %>"<%- errors.category ? ` aria-invalid="true" aria-describedby="${idp}-category-err"` : "" %>>
+  <datalist id="<%= idp %>-cats"><% categories.forEach((c) => { %><option value="<%= c.name %>"><% }) %></datalist>
+  <% if (errors.category) { %><small class="field-error" id="<%= idp %>-category-err" role="alert"><%= errors.category %></small><% } %>
+</div>
+<% } %>
+<div class="field-group">
+  <label for="<%= idp %>-answer">Réponse <span class="fa-req" aria-hidden="true">*</span> <span class="field-hint">(**gras**, *italique*, - liste, [lien](https://…))</span></label>
+  <textarea id="<%= idp %>-answer" name="answer" rows="6" required maxlength="5000" data-count="<%= idp %>-count"<%- errors.answer ? ` aria-invalid="true" aria-describedby="${idp}-answer-err"` : "" %>><%= values.answer || "" %></textarea>
+  <div class="fa-count-row"><% if (errors.answer) { %><small class="field-error" id="<%= idp %>-answer-err" role="alert"><%= errors.answer %></small><% } else { %><span></span><% } %><small id="<%= idp %>-count" aria-hidden="true"></small></div>
+</div>
+<div class="field-group fa-check">
+  <label><input type="checkbox" name="published" value="1"<%= values.published === 0 || values.published === "0" ? "" : " checked" %>> Publiée (visible sur le site)</label>
+  <input type="hidden" name="published_present" value="1">
+</div>

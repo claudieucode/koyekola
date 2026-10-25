@@ -1,0 +1,11 @@
+<%- include("../partials/header", { title: "Modifier la question" }) %>
+  <div class="container fa">
+    <p><a class="btn btn-ghost btn-sm" href="<%= course ? "/formateur/cours/" + course.id + "/faq" : "/formateur/faq" %>"><%- icon("arrowLeft", { size: 16 }) %> Retour à la liste</a></p>
+    <h1>Modifier la question</h1>
+    <form action="/formateur/faq/<%= faq.id %>/modifier" method="post" class="content-card fa-form" novalidate>
+      <%- include("_faq-fields", { course, errors, values, categories, idp: "fe" }) %>
+      <div class="fa-form-actions"><button type="submit" class="btn btn-primary">Enregistrer</button><a class="btn btn-outline" href="<%= course ? "/formateur/cours/" + course.id + "/faq" : "/formateur/faq" %>">Annuler</a></div>
+    </form>
+  </div>
+  <script src="<%= asset('/js/faq-admin.js') %>" defer></script>
+<%- include("../partials/footer") %>

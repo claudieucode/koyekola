@@ -232,7 +232,7 @@ router.get("/cours/:slug", (req, res) => {
   // Promesse du résumé : le sous-titre, à défaut le début de la description (texte brut)
   const promise = course.subtitle || (texts.isRich ? htmlText(course.description, 150) : plainText(course.description, 150));
 
-  const faqs = db.prepare("SELECT * FROM faqs WHERE course_id = ? ORDER BY position, id").all(course.id);
+  const faqs = require("../services/faqs").listPublic(course.id);
   const description = course.seo_description || plainText(course.subtitle || (texts.isRich ? htmlText(course.description, 160) : course.description), 160) || `Formation ${course.title} sur ${SITE_NAME}.`;
   const crumbs = [
     { name: "Accueil", url: "/" },

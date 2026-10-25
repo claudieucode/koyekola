@@ -1,10 +1,30 @@
 <%- include("../partials/header", { title: "Questions fréquentes" }) %>
-
-  <div class="container page-content">
+<% const named = groups.filter((g) => g.name); const searchable = faqs.length >= 6; %>
+  <div class="container page-content faq-page">
     <%- include("../partials/breadcrumb", { crumbs }) %>
     <h1>Questions fréquentes</h1>
+    <p class="faq-intro">Accès aux formations, paiement, certificats… Retrouvez ici les réponses les plus courantes.</p>
     <% if (faqs.length) { %>
-      <%- include("../partials/faq-list", { faqs }) %>
+      <div class="faq-tools" data-faq-tools hidden>
+        <% if (searchable) { %><label class="faq-search"><span class="sr-only">Rechercher dans les questions</span><%- icon("search", { size: 16 }) %><input type="search" placeholder="Rechercher une question ou un mot…" autocomplete="off" data-faq-q maxlength="80"></label><% } %>
+        <% if (named.length) { %><div class="faq-cats" role="group" aria-label="Filtrer par catégorie"><button type="button" class="faq-chip" data-faq-cat="" aria-pressed="true">Toutes <b><%= faqs.length %></b></button><% named.forEach((g) => { %><button type="button" class="faq-chip" data-faq-cat="<%= g.name %>" aria-pressed="false"><%= g.name %> <b><%= g.items.length %></b></button><% }) %></div><% } %>
+        <% if (faqs.length >= 3) { %><button type="button" class="btn btn-ghost btn-sm faq-toggle" data-faq-toggle aria-pressed="false">Tout déplier</button><% } %>
+      </div>
+      <p class="faq-status" role="status" aria-live="polite" data-faq-live></p>
+      <div data-faq-root>
+        <% groups.forEach((g) => { %>
+          <section class="faq-group" data-faq-group="<%= g.name %>"<% if (g.name) { %> aria-labelledby="faq-g-<%= groups.indexOf(g) %>"<% } %>>
+            <% if (g.name) { %><h2 id="faq-g-<%= groups.indexOf(g) %>"><%= g.name %></h2><% } else if (named.length) { %><h2>Autres questions</h2><% } %>
+            <%- include("../partials/faq-list", { faqs: g.items, searchable }) %>
+          </section>
+        <% }) %>
+      </div>
+      <div class="empty-state faq-none" hidden data-faq-none>
+        <span class="kv-empty-ico" aria-hidden="true"><%- icon("search", { size: 26 }) %></span>
+        <h3>Aucune question ne correspond</h3>
+        <p>Essayez un autre mot, ou <a href="/contact">posez-nous la question</a>.</p>
+        <button type="button" class="btn btn-outline" data-faq-reset>Réinitialiser la recherche</button>
+      </div>
     <% } else { %>
       <div class="empty-state">
         <span class="kv-empty-ico" aria-hidden="true"><%- icon("help", { size: 26 }) %></span>
@@ -12,7 +32,8 @@
         <p>N'hésitez pas à <a href="/contact">nous écrire</a>.</p>
       </div>
     <% } %>
-    <p class="page-cta">Vous ne trouvez pas votre réponse ? <a href="/contact">Contactez-nous</a>.</p>
+    <p class="page-cta">Vous ne trouvez pas votre réponse ? <a href="/contact">Contactez-nous</a> ou ouvrez une <a href="/support">demande de support</a> si vous avez un compte.</p>
   </div>
+  <% if (faqs.length) { %><script src="<%= asset('/js/faq.js') %>" defer></script><% } %>
 
 <%- include("../partials/footer") %>

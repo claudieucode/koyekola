@@ -753,10 +753,6 @@ textarea { resize: vertical; font-family: inherit; }
 .content-card .faq-item { background: var(--bg); }
 .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .contact-form .field-hint { margin: 0 0 14px; }
-.faq-admin-list { list-style: none; margin: 0 0 24px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.faq-admin-list li { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; padding: 16px 18px; background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-radius: var(--radius-lg); }
-.faq-admin-question { margin: 0 0 4px; font-weight: 800; overflow-wrap: anywhere; }
-.faq-admin-answer { margin: 0; color: var(--muted); font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .lesson-text { margin: 4px 0 22px; }
 .attachment-list, .attachment-admin-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -2282,3 +2278,26 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
 .comment-consent { margin: 4px 0 0; font-size: 0.9rem; }
 .comment-consent label { font-weight: 400; color: var(--text, inherit); display: flex; gap: 8px; align-items: flex-start; }
 @media (max-width: 640px) { .comment[data-level="5"] > .comment-replies, .comment[data-level="6"] > .comment-replies, .comment[data-level="7"] > .comment-replies, .comment[data-level="8"] > .comment-replies, .comment[data-level="9"] > .comment-replies { margin-left: 0; padding-left: 0; } }
+
+/* ===== FAQ : administration (liste, modification) ===== */
+.fa h2 { margin-top: 0; }
+.fa-flash { margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: var(--success-light); color: var(--success-dark); font-weight: 600; }
+.fa-count { margin: 0 0 10px; color: var(--muted); }
+.fa-list { list-style: none; margin: 0 0 24px; padding: 0; display: grid; gap: 10px; }
+.fa-item { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 16px 18px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.fa-item.is-draft { background: var(--surface-alt); border-style: dashed; }
+.fa-main { min-width: 0; flex: 1; }
+.fa-q { margin: 0 0 6px; font-weight: 800; overflow-wrap: anywhere; }
+.fa-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.fa-badge { display: inline-flex; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+.fa-badge.is-live { background: var(--success-light); border-color: transparent; color: var(--success-dark); }
+.fa-a { margin: 0; color: var(--muted); font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fa-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: none; max-width: 300px; }
+.fa-actions form { margin: 0; }
+.fa-actions .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+.fa-form h2 { font-size: 1.1rem; }
+.fa-form-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.fa-count-row { display: flex; justify-content: space-between; gap: 12px; margin-top: 4px; color: var(--muted); font-size: 0.82rem; }
+.fa-req { color: #c4161f; }
+.fa-check label { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+@media (max-width: 760px) { .fa-item { flex-direction: column; } .fa-actions { justify-content: flex-start; max-width: none; } }

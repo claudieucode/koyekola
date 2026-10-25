@@ -1,9 +1,14 @@
-<%# Questions fréquentes en accordéon accessible (natif, sans JavaScript). Paramètre : faqs [{ question, answer }] %>
+<%# Questions fréquentes en accordéon accessible (natif <details>, utilisable sans JavaScript). Paramètres : faqs [{ id, question, answer }], searchable (facultatif : ajoute les données de recherche). %>
+<%
+  const norm = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[*_#`>\[\]()]/g, " ").replace(/\s+/g, " ").trim();
+  const search = typeof searchable !== "undefined" && searchable;
+%>
 <div class="faq-list">
   <% faqs.forEach((faq) => { %>
-    <details class="faq-item">
+    <details class="faq-item" id="faq-<%= faq.id %>"<% if (search) { %> data-faq data-text="<%= norm(faq.question + " " + faq.answer) %>"<% } %>>
       <summary><%= faq.question %></summary>
-      <div class="markdown"><%- renderMarkdown(faq.answer) %></div>
+      <div class="faq-answer"><div class="markdown"><%- renderMarkdown(faq.answer) %></div>
+        <a class="faq-permalink" href="#faq-<%= faq.id %>" aria-label="Lien direct vers la question : <%= faq.question %>"><%- icon("link", { size: 14 }) %> Lien vers cette question</a></div>
     </details>
   <% }) %>
 </div>
