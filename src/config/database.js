@@ -279,6 +279,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_contact_read ON contact_messages(read_at, created_at);
 `);
 
+// FAQ : catégorie (questions générales) et publication — colonnes AJOUTÉES avec des valeurs par défaut qui conservent le comportement d'avant (publiée, sans catégorie)
+const faqColumns = db.prepare("PRAGMA table_info(faqs)").all().map((col) => col.name);
+if (!faqColumns.includes("category")) db.exec("ALTER TABLE faqs ADD COLUMN category TEXT NOT NULL DEFAULT ''");
+if (!faqColumns.includes("published")) db.exec("ALTER TABLE faqs ADD COLUMN published INTEGER NOT NULL DEFAULT 1 CHECK (published IN (0, 1))");
+
 // Migration : l'ancienne « ressource téléchargeable » (une seule par leçon) devient une pièce jointe.
 // Sans danger à chaque démarrage : une ressource déjà migrée n'est jamais recopiée.
 db.exec(`
