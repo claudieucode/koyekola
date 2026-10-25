@@ -190,9 +190,13 @@ for (const [action, fn, text] of [["revoquer", (id, req) => certificates.revoke(
 router.get("/formateur/gestion/journal", page("gestion/journal", "Journal d'activité", (req) => {
   const q = common.cleanQ(req.query.q);
   const type = audit.TYPES[req.query.type] ? req.query.type : "";
-  const total = audit.list({ type, q, limit: 1 }).total;
+  const result = audit.RESULTS[req.query.resultat] ? req.query.resultat : "";
+  const du = common.isYmd(req.query.du) ? req.query.du : "", au = common.isYmd(req.query.au) ? req.query.au : "";
+  // Dates saisies = jours à Paris ; la base est en UTC (borne haute exclue : lendemain minuit)
+  const from = du ? common.sqlUtc(common.parisDayStart(du)) : "", to = au ? common.sqlUtc(common.parisDayStart(common.addDays(au, 1))) : "";
+  const total = audit.list({ type, q, result, from, to, limit: 1 }).total;
   const pg = common.paginate(total, common.page(req.query), 50);
-  return { log: { ...audit.list({ type, q, limit: pg.limit, offset: pg.offset }), ...pg }, types: audit.TYPES, filters: { type, q } };
+  return { log: { ...audit.list({ type, q, result, from, to, limit: pg.limit, offset: pg.offset }), ...pg }, types: audit.TYPES, results: audit.RESULTS, filters: { type, q, result, du, au } };
 }));
 
 // ---------- Support (tickets des élèves) : le formateur ne voit que les tickets qui lui sont adressés ----------

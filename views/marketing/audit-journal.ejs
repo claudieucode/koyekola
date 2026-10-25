@@ -1,0 +1,52 @@
+<%#
+  Journal d'activité (CMS → Outils). Données : src/marketing/auditJournal.js (lecture seule, portée imposée par le serveur). Le niveau et le libellé sont DÉDUITS de l'action ;
+  la gravité s'affiche toujours avec un mot et une icône (jamais la couleur seule).
+%><%- include("partials/top", { title, active }) %>
+<%- include("partials/tools-head", { heading: "Journal d'activité", intro: "Qui a fait quoi, quand et sur quel élément. Le journal est en écriture seule : aucune entrée ne peut être modifiée ni effacée depuis l'application.", tab, TABS, BASE, sites, siteId, siteOnly, noSite: true, q: "" }) %>
+<% const F = data.filters; const chips = [];
+   if (F.q) chips.push(["Recherche : « " + F.q + " »", { q: "" }]);
+   if (F.level) chips.push(["Niveau : " + LEVELS[F.level].label, { niveau: "" }]);
+   if (F.category) { const c = opts.categories.find((x) => x.key === F.category); chips.push(["Catégorie : " + (c ? c.label : F.category), { categorie: "" }]); }
+   if (F.actor) { const a = opts.actors.find((x) => x.id === F.actor); chips.push(["Acteur : " + (a ? a.name : "n° " + F.actor), { acteur: "" }]); }
+   if (F.site) chips.push(["Site : " + (F.site === "principal" ? "organisation / site principal" : ((sites.find((s) => s.id === F.site) || {}).name || "n° " + F.site)), { site: "" }]);
+   if (F.du || F.au) chips.push(["Période : " + (F.du || "…") + " → " + (F.au || "…"), { du: "", au: "" }]);
+   const without = (ch) => { const keep = { ...F, ...Object.fromEntries(Object.keys(ch).map((k) => [({ niveau: "level", categorie: "category", acteur: "actor", q: "q", site: "site", du: "du", au: "au" })[k], k === "acteur" ? null : ""])), page: 1 }; return keep; }; %>
+<section class="mk-panel aj" aria-labelledby="aj-t">
+  <h2 id="aj-t" class="sr-only">Événements</h2>
+  <form class="aj-filters" method="get" action="<%= PAGE %>" role="search" aria-label="Filtrer le journal">
+    <div class="aj-field aj-grow"><label for="aj-q">Rechercher</label><input id="aj-q" type="search" name="q" value="<%= F.q %>" placeholder="Action, personne, élément ou n° d'événement" maxlength="80"></div>
+    <div class="aj-field"><label for="aj-niveau">Niveau</label><select id="aj-niveau" name="niveau"><option value="">Tous</option><% Object.entries(LEVELS).forEach(([k, v]) => { %><option value="<%= k %>"<%= F.level === k ? " selected" : "" %>><%= v.label %> — <%= v.hint %></option><% }) %></select></div>
+    <div class="aj-field"><label for="aj-cat">Catégorie</label><select id="aj-cat" name="categorie"><option value="">Toutes</option><% opts.categories.forEach((c) => { %><option value="<%= c.key %>"<%= F.category === c.key ? " selected" : "" %>><%= c.label %></option><% }) %></select></div>
+    <div class="aj-field"><label for="aj-act">Acteur</label><select id="aj-act" name="acteur"><option value="">Tous</option><% opts.actors.forEach((a) => { %><option value="<%= a.id %>"<%= F.actor === a.id ? " selected" : "" %>><%= a.name %></option><% }) %></select></div>
+    <% if (!siteOnly) { %><div class="aj-field"><label for="aj-site">Site</label><select id="aj-site" name="site"><option value="">Tous</option><option value="principal"<%= F.site === "principal" ? " selected" : "" %>>Organisation / site principal</option><% sites.forEach((s) => { %><option value="<%= s.id %>"<%= F.site === s.id ? " selected" : "" %>><%= s.name %></option><% }) %></select></div><% } %>
+    <div class="aj-field"><label for="aj-du">Du</label><input id="aj-du" type="date" name="du" value="<%= F.du %>"></div>
+    <div class="aj-field"><label for="aj-au">Au</label><input id="aj-au" type="date" name="au" value="<%= F.au %>"></div>
+    <div class="aj-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><% if (filtered) { %><a class="btn btn-outline btn-sm" href="<%= PAGE %>">Réinitialiser</a><% } %><% if (canExport && data.total > 0) { %><a class="btn btn-ghost btn-sm" href="<%= exportUrl %>"><%- icon("download", { size: 15 }) %> Exporter (CSV)</a><% } %></div>
+  </form>
+  <p class="aj-note">Les dates sont affichées et filtrées à l'heure de Paris. Le niveau est déduit du type d'événement (voir la légende ci-dessous).</p>
+  <% if (chips.length) { %><ul class="aj-chips" aria-label="Filtres actifs"><% chips.forEach(([text, drop]) => { %><li><span><%= text %></span> <a href="<%= url({ ...Object.fromEntries(Object.keys(drop).map((k) => [k, ""])), page: "" }).replace(/([?&])$/, "") %>" aria-label="Retirer le filtre : <%= text %>"><%- icon("close", { size: 12 }) %></a></li><% }) %></ul><% } %>
+  <p class="aj-count" role="status"><strong><%= mkh.fmt(data.total) %></strong> événement<%= data.total > 1 ? "s" : "" %><%= filtered ? " correspondant aux filtres" : "" %></p>
+  <% if (!data.rows.length) { %>
+    <div class="aj-empty"><%- icon("list", { size: 26 }) %><h3><%= filtered ? "Aucun événement ne correspond" : "Aucun événement" %></h3><p><%= filtered ? "Élargissez la période ou retirez un filtre." : "Les opérations importantes (connexions de l'équipe, publications, changements de droits, réglages…) apparaîtront ici." %></p><% if (filtered) { %><a class="btn btn-outline btn-sm" href="<%= PAGE %>">Réinitialiser les filtres</a><% } %></div>
+  <% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table aj-table">
+    <caption class="sr-only">Journal d'activité, du plus récent au plus ancien</caption>
+    <thead><tr><th scope="col">Date</th><th scope="col">Niveau</th><th scope="col">Événement</th><th scope="col">Acteur</th><th scope="col">Site</th><th scope="col">Élément</th><th scope="col"><span class="sr-only">Détail</span></th></tr></thead>
+    <tbody><% data.rows.forEach((r) => { %><tr>
+      <td data-label="Date"><time datetime="<%= r.created_at.replace(" ", "T") %>Z"><%= formatDateTime(r.created_at) %></time></td>
+      <td data-label="Niveau"><span class="aj-level aj-level--<%= r.level %>" title="<%= r.levelInfo.hint %>"><%- icon(r.levelInfo.icon, { size: 13 }) %> <%= r.levelInfo.label %></span></td>
+      <td data-label="Événement"><a href="<%= PAGE %>/<%= r.id %><%= here ? "?" + here + (data.page > 1 ? "&page=" + data.page : "") : (data.page > 1 ? "?page=" + data.page : "") %>"><strong><%= r.label %></strong></a><br><small><code><%= r.action %></code></small></td>
+      <td data-label="Acteur"><%= r.actorKnown ? r.actor : (r.user_id ? r.actor : "Aucun compte associé") %></td>
+      <td data-label="Site"><%= r.site_id ? r.siteLabel : "Organisation" %></td>
+      <td data-label="Élément"><%= r.element %></td>
+      <td class="mk-row-actions"><a class="btn btn-ghost btn-sm" href="<%= PAGE %>/<%= r.id %><%= here ? "?" + here + (data.page > 1 ? "&page=" + data.page : "") : (data.page > 1 ? "?page=" + data.page : "") %>">Détail<span class="sr-only"> de l'événement n° <%= r.id %></span></a></td>
+    </tr><% }) %></tbody>
+  </table></div>
+  <%- include("partials/pager", { result: { total: data.total, page: data.page, pages: data.pages, pageSize: data.limit }, url, sizes: [25, 50, 100] }) %>
+  <% } %>
+  <details class="aj-legend"><summary>Légende des niveaux</summary>
+    <ul><% Object.entries(LEVELS).forEach(([k, v]) => { %><li><span class="aj-level aj-level--<%= k %>"><%- icon(v.icon, { size: 13 }) %> <%= v.label %></span> <%= v.hint %>.</li><% }) %></ul>
+    <p>Un acteur « aucun compte associé » signifie qu'aucun compte n'a été enregistré avec l'événement (action automatique, visiteur, clé d'API). Il n'existe pas d'identifiant de corrélation : le détail propose les autres événements du même élément.</p>
+  </details>
+</section>
+<%- include("partials/bottom") %>

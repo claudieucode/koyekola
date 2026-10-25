@@ -116,6 +116,7 @@ router.post("/connexion", async (req, res, next) => {
 });
 
 router.post("/deconnexion", (req, res) => {
+  if (req.session && req.session.user) journal(req, "auth.logout", req.session.user.id); // équipe seulement (voir journal()) ; avant la destruction de la session
   req.session.destroy(() => res.redirect("/"));
 });
 

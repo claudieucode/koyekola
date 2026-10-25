@@ -1,0 +1,25 @@
+<%- include("partials/top", { title: "Événement n° " + e.id, active }) %>
+<%- include("partials/tools-head", { heading: "Journal d'activité", intro: "", tab, TABS, BASE, sites, siteId, siteOnly, noSite: true, q: "" }) %>
+<p><a class="btn btn-ghost btn-sm" href="<%= back %>"><%- icon("arrowLeft", { size: 16 }) %> Retour à la liste (filtres conservés)</a></p>
+<section class="mk-panel aj" aria-labelledby="aj-d">
+  <h2 id="aj-d"><%= e.label %></h2>
+  <p><span class="aj-level aj-level--<%= e.level %>"><%- icon(e.levelInfo.icon, { size: 13 }) %> <%= e.levelInfo.label %></span> <span class="mk-sub"><%= e.levelInfo.hint %></span></p>
+  <dl class="aj-dl">
+    <dt>Événement n°</dt><dd><%= e.id %></dd>
+    <dt>Date</dt><dd><time datetime="<%= e.created_at.replace(" ", "T") %>Z"><%= formatDateTime(e.created_at) %></time> <span class="mk-sub">(heure de Paris)</span></dd>
+    <dt>Action</dt><dd><code><%= e.action %></code></dd>
+    <dt>Catégorie</dt><dd><%= e.categoryLabel %></dd>
+    <dt>Acteur</dt><dd><%= e.actor %></dd>
+    <dt>Site</dt><dd><%= e.siteLabel %></dd>
+    <dt>Élément</dt><dd><%= e.element %></dd>
+    <dt>Résultat</dt><dd><%= e.level === "alert" ? "Échec, refus ou tentative hors périmètre (d'après le type d'événement)" : "Enregistré (le journal ne conserve pas de champ « résultat » distinct)" %></dd>
+  </dl>
+  <h3>Informations enregistrées</h3>
+  <% if (!e.meta.length) { %><p class="mk-sub">Aucune information complémentaire n'a été enregistrée avec cet événement.</p>
+  <% } else { %><dl class="aj-dl"><% e.meta.forEach((m) => { %><dt><%= m.k %></dt><dd><%= m.v %><%= m.masked ? " (masqué par sécurité)" : "" %></dd><% }) %></dl><% } %>
+  <p class="mk-sub">Les mots de passe, jetons, clés et cookies ne sont jamais conservés dans le journal ; les adresses réseau ne le sont que sous forme d'empreinte non réversible.</p>
+  <h3>Autres événements du même élément</h3>
+  <% if (!e.related.length) { %><p class="mk-sub">Aucun autre événement pour cet élément dans ce que vous pouvez consulter.</p>
+  <% } else { %><ul class="aj-related"><% e.related.forEach((r) => { %><li><time datetime="<%= r.created_at.replace(" ", "T") %>Z"><%= formatDateTime(r.created_at) %></time> — <a href="<%= PAGE %>/<%= r.id %><%= here ? "?" + here : "" %>"><%= r.label %></a> <span class="mk-sub">· <%= r.actor %></span></li><% }) %></ul><% } %>
+</section>
+<%- include("partials/bottom") %>

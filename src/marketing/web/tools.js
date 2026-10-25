@@ -66,6 +66,8 @@ module.exports = () => {
 
   // Exporter les données personnelles (demandes, confirmation, archive ZIP) : écrans dans ./privacyExport, moteur dans services/privacy
   router.use(require("./privacyExport")({ BASE, withSite, shell, flash, q }));
+  // Journal d'activité : liste filtrée, détail, export CSV (./auditJournal)
+  router.use(require("./auditJournal")({ BASE, shell }));
 
   // Droits sur une opération : dans le contexte de SON site (jamais celui de l'URL) ; une autre organisation ne la voit pas (IDOR)
   const loadRun = (req, res, kind) => {

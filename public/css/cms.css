@@ -1816,3 +1816,27 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .mk-seo-prio { margin: 8px 0 0; padding-left: 1.25rem; display: grid; gap: 8px; }
 .mk-seo-prio li { line-height: 1.5; overflow-wrap: anywhere; }
 @media (min-width: 761px) { .mk-seo-prio-table td:nth-child(3), .mk-seo-prio-table td:nth-child(5) { white-space: nowrap; } }
+/* ===== Journal d'activité (CMS → Outils) ===== */
+.aj-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin: 0 0 12px; }
+.aj-field { display: grid; gap: 4px; min-width: 150px; }
+.aj-field label { font-size: 0.82rem; font-weight: 650; }
+.aj-grow { flex: 1 1 260px; }
+.aj-field input, .aj-field select { min-height: 40px; max-width: 100%; }
+.aj-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.aj-note, .aj-count { margin: 0 0 8px; color: var(--mk-muted, #44596b); font-size: 0.86rem; }
+.aj-chips { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0 0 10px; padding: 0; }
+.aj-chips li { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--mk-line, #dde6ed); border-radius: 999px; font-size: 0.82rem; }
+.aj-chips a { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: inherit; }
+.aj-chips a:hover { background: #dde6ed; }
+.aj-level { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px; border: 1px solid #dde6ed; font-size: 0.78rem; font-weight: 700; white-space: nowrap; background: #f4f8fb; color: #44596b; }
+.aj-level--alert { border-color: #c4161f; color: #c4161f; background: #fff; }
+.aj-level--sensitive { border-color: #0e7490; color: #0e7490; background: #fff; }
+.aj-empty { display: grid; justify-items: center; gap: 6px; padding: 40px 16px; text-align: center; border: 1px dashed #dde6ed; border-radius: 12px; color: #44596b; }
+.aj-empty h3 { margin: 0; color: inherit; }
+.aj-dl { display: grid; grid-template-columns: minmax(150px, 220px) 1fr; gap: 8px 16px; margin: 0 0 16px; }
+.aj-dl dt { font-weight: 650; color: #44596b; }
+.aj-dl dd { margin: 0; overflow-wrap: anywhere; }
+.aj-related { margin: 0 0 12px; padding-left: 18px; }
+.aj-legend { margin-top: 16px; }
+.aj-legend ul { list-style: none; padding: 0; display: grid; gap: 6px; }
+@media (max-width: 640px) { .aj-dl { grid-template-columns: 1fr; gap: 2px; } .aj-dl dd { margin-bottom: 8px; } .aj-field { flex: 1 1 100%; } .aj-actions .btn { flex: 1 1 auto; justify-content: center; } }
