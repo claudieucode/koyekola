@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>">
   <meta name="mk-media-site" content="<%= siteId ? siteId : "principal" %>"><%# MEDIA-ROUTING : médiathèque de l'article (son site, ou le site principal) %>
   <link rel="stylesheet" href="<%= asset('/css/taxonomy-picker.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/kola-brand-editors.css') %>">
 </head>
 <body class="wp-body"<%- editorTheme.key !== "clair" ? ` data-ed-theme="${editorTheme.key}" data-ed-contrast="${editorTheme.contrast}" style="--ed-base: ${editorTheme.color}"` : "" %>>
   <div class="be wp" data-blog-editor>

@@ -162,3 +162,12 @@ html[data-kola-theme="dark"] {
 /* ---------- Retour aux sites : même surface que le contenu, collé au fil d'Ariane ---------- */
 .mk-body .mk-content > .mk-site-return:first-child { background: none; padding-bottom: 0; margin-bottom: 2px; }
 .mk-body .mk-content > .mk-site-return:first-child + :is(.mk-head, .mk-ar-top) { background: none; border-bottom: 0; }
+
+/* ---------- Lot 2 : étiquettes restantes, onglets, en-têtes dans un site ---------- */
+.mk-body :is(.mk-tg-kicker, .mk-us-roles-l, .mk-palette-title-text, .mk-palette-count, .mk-pal-cat, .mk-pal-cat span, .mk-flow-exit-label, .mk-step-section-title, .mk-b-section-title, .mk-pv-acc-content h4, .mk-fam dt, dl dt) {
+  text-transform: none; letter-spacing: 0;
+}
+.mk-body :is(.mk-palette-title-text, .mk-pal-cat, .mk-b-section-title, .mk-step-section-title) { font-size: 0.82rem; font-weight: 650; }   /* la couleur reste celle de l'éditeur (ses panneaux ont leurs propres modes clair/sombre) */
+.mk-body .mk-tg-kicker { color: var(--kb-live); font-weight: 650; font-size: 0.82rem; }
+.mk-body .mk-tab { gap: 6px; }
+.mk-body .kx-hero, .mk-body .kx-hero.is-compact { padding-top: 14px; }

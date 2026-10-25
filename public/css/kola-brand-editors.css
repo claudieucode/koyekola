@@ -1,0 +1,11 @@
+/* KOLAKISA — registre marine dans les éditeurs plein écran (pages, articles) : seulement la typographie des étiquettes et les jetons.
+   Aucune dimension, aucune position et aucun comportement ne change (les éditeurs gardent leur géométrie de travail). */
+.pb-pal-subhead, .pb-pal-count, .pb-pal-foot-label, .pb-insp-bar-label, .wp-label, label.wp-label, span.wp-label { text-transform: none; letter-spacing: 0; }
+.pb-pal-subhead, .pb-pal-foot-label, .pb-insp-bar-label, .wp-label { font-weight: 650; }
+.pb-pal-subhead { font-size: 0.78rem; }
+.wp-label { font-size: 0.82rem; color: var(--ed-muted, var(--muted)); }
+/* Page Builder : toutes les étiquettes de panneaux, d'onglets et de rubriques en minuscules grasses */
+.pb-ctx-name, .pb-sub, .pb-pal-toggle, .pb-pal-toggle span, .pb-panel-head h2, .pb-cmd-head h2, .pb-cmd-cat, .pb-kind, .pb-insp-tabs button, .pb-cpop-label,
+.pb-blk-kind, .pb-menu-heading, .pb-sc-cols, .pb-sc-group h3, .pb-acc-sub, .pb-rules-sec h3, .pb-amenu-cat, .pb-dyn-group, .pb-insp-head .pb-kind,
+.pb-pop-title, .pb-rules-subhead, .pb-media-meta h3, .pb-q-cat, .pb-home-label { text-transform: none; letter-spacing: 0; }
+.pb-panel-head h2, .pb-pal-toggle, .pb-insp-tabs button, .pb-kind { font-size: 0.82rem; font-weight: 650; }
