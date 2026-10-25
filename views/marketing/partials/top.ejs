@@ -9,6 +9,8 @@
   // au lieu de la coque CMS dont le menu ne contenait que cette entrée. L'administration d'UN site (Ouvrir) garde sa coque CMS.
   const cms = typeof marketingShell !== "undefined" && marketingShell ? null : mkh.buildCmsNav({ can: mk.can, active, space });
   const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
+  // Espace de travail pour la direction chromatique (jetons --kb-mod* de kola-brand.css) : le bleu marine reste le fil conducteur, chaque espace ajoute son accent
+  const kbModule = (() => { const a = String(typeof active !== "undefined" ? active : ""); if (/^apparence/.test(a) || a === "appearance" || a === "components") return "design"; if (/^analytics/.test(a) || a === "revenue" || a === "compare") return "analytics"; if (/^(dashboard|contacts|contactdupes|lists|segments|tags|properties|forms|surveys|scoring|import|campaigns|templates|ab|rss|social|smscampaigns|smsaudience|sms|automations|journeys|funnels|events|api|webhooks|sending|domains|compliance|ai|socialsettings)$/.test(a)) return "marketing"; return cms ? "site" : "marketing"; })();
   // Barre d'administration supérieure du CMS (une seule implémentation : partials/cms-adminbar.ejs ; données filtrées par les droits côté serveur)
   const bar = cms ? mkh.adminBar({ mk, user: currentUser, space: cms.space || null, cms, sites: cmsSites, active, content: { page: typeof page !== "undefined" ? page : null } }) : null;
   const crumbs = nav.breadcrumb || [title];
@@ -56,7 +58,7 @@
   <link rel="stylesheet" href="<%= asset('/css/kola-stable.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-brand.css') %>">
 </head>
-<body class="mk-body<%= cms ? ' is-cms' : '' %>">
+<body class="mk-body<%= cms ? ' is-cms' : '' %>" data-kb-module="<%= kbModule %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>
   <%# CMS : barre d'administration (niveau 1) puis fil d'Ariane (niveau 2), tous deux au niveau global de la coque, AVANT menu et contenu ; hors CMS, le fil d'Ariane reste dans la colonne du contenu %>
   <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><% } %>

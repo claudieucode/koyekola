@@ -242,3 +242,55 @@ html[data-kola-theme="dark"] .mk-nm-pending li { background: var(--surface-alt);
 @keyframes kb-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .mk-body dialog.mk-modal[open], .mk-body dialog.mk-modal[open]::backdrop { animation: none; } }
 html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked), html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked) .md-dim { color: #0b2a40; }
+
+/* ==========================================================================================================================================
+   Direction chromatique « Marine & pierres fines » (passe finale)
+   Le bleu marine reste la structure de toutes les pages. Chaque espace de travail ajoute UN accent (jeton --kb-mod*), posé sur <body data-kb-module>
+   par partials/top.ejs, et utilisé seulement à ces endroits : repère au-dessus du titre, icône active du menu, soulignement des onglets,
+   barres des graphiques, étiquette de rubrique, teinte des illustrations. Les boutons d'action restent bleus, le focus reste bleu, les couleurs
+   d'état gardent leur sens partout (sarcelle = en ligne, ambre = brouillon, rouge = erreur, vert = succès).
+     site       Site Web, médias, utilisateurs, SEO, outils     marine lumière  #1d5f8f
+     marketing  campagnes, audience, SMS, automatisations         baie            #b83280
+     analytics  statistiques, revenus, comparaisons               émeraude        #0b8a63
+     design     Apparence, thèmes, styles, composants             violet          #7048c8
+   Trois valeurs par espace : --kb-mod (remplissage, repères, barres) ; --kb-mod-ink (texte : ≥ 4,5:1 sur fond clair, éclairci en sombre) ;
+   --kb-mod-ui (icône pleine sur le menu marine).
+   ========================================================================================================================================== */
+:root {
+  --kb-navy-mid: #164a6e; --kb-navy-soft: #e4edf4;
+  /* sémantique : alias des jetons existants, à utiliser dans les nouveaux composants */
+  --kb-ok: var(--success); --kb-warn: var(--kb-draft); --kb-err: var(--kb-alert); --kb-info: var(--kb-action);
+  /* visualisation de données : six teintes distinctes, dans cet ordre */
+  --kb-data-1: #1d5f8f; --kb-data-2: #b83280; --kb-data-3: #0b8a63; --kb-data-4: #7048c8; --kb-data-5: #c98a00; --kb-data-6: #0e7490;
+}
+body[data-kb-module="site"]      { --kb-mod: #1d5f8f; --kb-mod-ink: #1d5f8f; --kb-mod-ui: #0277b6; }
+body[data-kb-module="marketing"] { --kb-mod: #b83280; --kb-mod-ink: #a02a6f; --kb-mod-ui: #c43d8f; }
+body[data-kb-module="analytics"] { --kb-mod: #0b8a63; --kb-mod-ink: #087554; --kb-mod-ui: #12a578; }
+body[data-kb-module="design"]    { --kb-mod: #7048c8; --kb-mod-ink: #6439bb; --kb-mod-ui: #8a63e0; }
+html[data-kola-theme="dark"] body[data-kb-module="site"]      { --kb-mod: #4aa3dc; --kb-mod-ink: #7dbbea; }
+html[data-kola-theme="dark"] body[data-kb-module="marketing"] { --kb-mod: #e66aa8; --kb-mod-ink: #f08cc0; }
+html[data-kola-theme="dark"] body[data-kb-module="analytics"] { --kb-mod: #34c79a; --kb-mod-ink: #6fdcb4; }
+html[data-kola-theme="dark"] body[data-kb-module="design"]    { --kb-mod: #9b7ae8; --kb-mod-ink: #b7a0f2; }
+
+/* 1. repère de l'espace : un liseré vertical devant le titre de page */
+.mk-body :is(.mk-head h1, .kx-hero h1) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; }
+.mk-body :is(.mk-head h1, .kx-hero h1)::before { content: ""; flex: none; width: 4px; height: 0.82em; border-radius: 2px; background: var(--kb-mod); }
+/* 2. menu latéral : l'icône de l'entrée active et son liseré prennent l'accent de l'espace (le menu reste marine) */
+html[data-mk-theme] body[data-kb-module="marketing"] .mk-sidebar { --accent: #ee7ab6; --accent-dark: #f6a6cf; --accent-light: rgba(238, 122, 182, 0.16); }
+html[data-mk-theme] body[data-kb-module="analytics"] .mk-sidebar { --accent: #4fd8ad; --accent-dark: #86e7c8; --accent-light: rgba(79, 216, 173, 0.16); }
+html[data-mk-theme] body[data-kb-module="design"] .mk-sidebar    { --accent: #b39af2; --accent-dark: #cdbcf7; --accent-light: rgba(179, 154, 242, 0.16); }
+/* (l'espace « site » garde le bleu clair #5cbdf5 du menu : c'est la couleur de référence du marine) */
+/* le bouton « Créer » et la pastille de marque restent bleus dans tous les espaces : c'est l'action et la signature, pas l'accent de l'espace */
+html[data-mk-theme] body[data-kb-module] .mk-sidebar :is(.mk-create-btn, .mk-brand-mark) { background: #5cbdf5; color: #04121d; }
+html[data-mk-theme] body[data-kb-module] .mk-sidebar .mk-create-btn:hover { background: #93d4fb; }
+/* 3. étiquette de rubrique, soulignement des onglets, graphiques */
+.mk-body :is(.kx-eyebrow, .mk-tg-kicker) { color: var(--kb-mod-ink); }
+.mk-body .mk-tab[aria-current="page"]::after { background: var(--kb-mod); }
+.mk-body .mk-col-bar { background: var(--kb-mod); }
+/* 4. illustrations : les formes principales prennent l'accent de l'espace ; le marine et l'étincelle dorée restent communs */
+body[data-kb-module="marketing"] .kx-art { --a-blue: #b83280; --a-sky: #f0a3cc; --a-ice: #fbe6f1; }
+body[data-kb-module="analytics"] .kx-art { --a-blue: #0b8a63; --a-sky: #8fe0c2; --a-ice: #def5ec; }
+body[data-kb-module="design"] .kx-art    { --a-blue: #7048c8; --a-sky: #c3b0f2; --a-ice: #ece6fa; }
+html[data-kola-theme="dark"] body[data-kb-module="marketing"] .kx-art { --a-blue: #e66aa8; --a-sky: #f4b5d6; --a-ice: rgba(230, 106, 168, 0.14); }
+html[data-kola-theme="dark"] body[data-kb-module="analytics"] .kx-art { --a-blue: #34c79a; --a-sky: #9ae6cc; --a-ice: rgba(52, 199, 154, 0.14); }
+html[data-kola-theme="dark"] body[data-kb-module="design"] .kx-art    { --a-blue: #9b7ae8; --a-sky: #c9b8f4; --a-ice: rgba(155, 122, 232, 0.14); }

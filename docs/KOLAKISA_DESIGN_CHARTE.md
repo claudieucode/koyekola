@@ -24,6 +24,20 @@ Règles : le sens d'une teinte ne change jamais d'un module à l'autre. Tout tex
 **Piège connu** : `background: var(--primary); color: #fff` devient du blanc sur fond clair en mode sombre, et un fond `#fff` écrit en dur avec le texte du thème devient du texte clair sur blanc.
 Utiliser `--k-accent-solid` pour les remplissages pleins et `--surface` pour les surfaces ; jamais `#fff` en dur.
 
+### 2 bis. Direction chromatique « Marine & pierres fines » (accents par espace de travail)
+Le bleu marine reste la structure de toutes les pages (menus, titres, filets, chiffres). Chaque espace de travail ajoute **un seul** accent, posé par `partials/top.ejs` sur `<body data-kb-module="…">` (jetons `--kb-mod`, `--kb-mod-ink`, `--kb-mod-ui` dans `kola-brand.css`).
+| Espace | Pages concernées (clé `active`) | Remplissage / repères | Texte (clair → sombre) | Icône sur menu marine |
+|---|---|---|---|---|
+| `site` — marine lumière | Site Web, médias, utilisateurs, SEO, outils, réglages | `#1d5f8f` (sombre `#4aa3dc`) | `#1d5f8f` → `#7dbbea` | bleu `#5cbdf5` (référence) |
+| `marketing` — baie | accueil Marketing, audience, campagnes, SMS, automatisations, tunnels, intégrations | `#b83280` (sombre `#e66aa8`) | `#a02a6f` → `#f08cc0` | `#ee7ab6` |
+| `analytics` — émeraude | statistiques, revenus, comparaisons | `#0b8a63` (sombre `#34c79a`) | `#087554` → `#6fdcb4` | `#4fd8ad` |
+| `design` — violet | Apparence, thèmes, styles, composants | `#7048c8` (sombre `#9b7ae8`) | `#6439bb` → `#b7a0f2` | `#b39af2` |
+**Où l'accent apparaît, et seulement là** : liseré vertical devant le titre de page, icône et liseré de l'entrée active du menu, soulignement de l'onglet courant, barres des graphiques, étiquette de rubrique (`kx-eyebrow`), teinte des illustrations (`--a-blue`, `--a-sky`, `--a-ice`).
+**Ce qui ne change jamais d'un espace à l'autre** : boutons d'action et focus (bleu), bouton « Créer » et pastille de marque (bleu), couleurs d'état (sarcelle = en ligne, ambre = brouillon, rouge = erreur, vert = succès), surfaces, filets, texte.
+**Sémantique** : `--kb-ok` (succès), `--kb-warn` (ambre), `--kb-err` (rouge), `--kb-info` (bleu d'action). **Données** : six teintes distinctes dans cet ordre, `--kb-data-1..6` = marine lumière `#1d5f8f`, baie `#b83280`, émeraude `#0b8a63`, violet `#7048c8`, or `#c98a00`, lagon `#0e7490`. **Neutres** : `--kb-canvas`, `--kb-rule`, `--kb-ink*`, `--kb-navy-soft` (`#e4edf4`) et `--kb-navy-mid` (`#164a6e`, états sélectionnés).
+**À éviter** : un accent d'espace sur un bouton, un lien ou un état ; deux accents d'espace sur un même écran ; un texte d'accent sous 4,5:1 (utiliser `--kb-mod-ink`, jamais `--kb-mod`) ; une information transmise par la seule couleur ; un dégradé décoratif.
+**Ajouter un espace** : ajouter ses trois jetons (clair + sombre) dans `kola-brand.css`, l'ajouter à la fonction `kbModule` de `top.ejs`, ses teintes d'illustration, puis relancer `scripts/audit-qualite.js`.
+
 ## 3. Typographie
 Bricolage Grotesque : titres, chiffres clés, noms de sites. Figtree : interface. Titre de page `clamp(1.7rem, 1.3rem + 1.1vw, 2.15rem)`, interlettrage −0,025 em, graisse 700. Titre de panneau 1,05–1,25 rem. Texte 0,875–0,95 rem ; aide 0,8 rem au plus petit.
 Lignes de 62 caractères au plus pour les textes d'aide. Chiffres tabulaires pour toute donnée. **Pas de capitales espacées** : étiquettes en minuscules grasses (0,78–0,82 rem, graisse 650) ; seule exception, le sigle de marque.
