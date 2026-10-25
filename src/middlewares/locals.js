@@ -1,6 +1,7 @@
 const { LANGUAGES, languageLabel, avatarColor, formatPrice, formatAmount, formatDate, formatDateTime, formatDuration, formatClock, isNewCourse, levelLabel } = require("../utils/format");
 const { icon, starRow } = require("../utils/icons");
 const { illu } = require("../utils/illustrations");
+const { dockIcon } = require("../utils/dockIcons");
 const db = require("../config/database");
 const { parseVideoUrl } = require("../utils/video");
 const { asset } = require("../utils/assets");
@@ -140,6 +141,7 @@ function injectLocals(req, res, next) {
   res.locals.isNewCourse = isNewCourse;
   res.locals.levelLabel = levelLabel;
   res.locals.icon = icon;
+  res.locals.dockIcon = dockIcon; // icônes illustrées du rail de navigation (src/utils/dockIcons.js)
   res.locals.illu = illu; // illustrations de l'administration (src/utils/illustrations.js)
   // Adresses publiques des articles et des archives : celles du moteur de permaliens (structure et préfixes du site), jamais un « /blog/… » écrit à la main
   const urlsSvc = require("../services/urls");

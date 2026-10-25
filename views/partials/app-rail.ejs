@@ -6,12 +6,23 @@
   <ul class="app-rail-list">
     <% railNav.forEach((g, gi) => { if (gi) { %><li class="app-rail-sep" role="separator" aria-hidden="true"></li><% } %>
       <% g.items.forEach((it) => { const on = it.key === railActive; const unread = it.badge === "unread" && typeof railUnread !== "undefined" ? railUnread : 0; %>
-        <li><a href="<%= it.href %>" class="app-rail-link" data-tip="<%= it.label %>" aria-label="<%= it.label %><%= unread ? ` (${unread} non lu(s))` : "" %>"<%- on ? ' aria-current="true"' : "" %>><%- icon(it.icon, { size: 18 }) %><% if (unread) { %><span class="app-rail-dot" aria-hidden="true"></span><% } %></a></li>
+        <li><a href="<%= it.href %>" class="app-rail-link" data-tip="<%= it.label %>" aria-label="<%= it.label %><%= unread ? ` (${unread} non lu(s))` : "" %>"<%- on ? ' aria-current="true"' : "" %>><%- dockIcon(it.key) || icon(it.icon, { size: 18 }) %><% if (unread) { %><span class="app-rail-dot" aria-hidden="true"></span><% } %></a></li>
       <% }) %>
     <% }) %>
   </ul>
   <div class="app-rail-foot">
-    <a href="/" class="app-rail-link" data-tip="Voir le site" aria-label="Voir le site"><%- icon('globe', { size: 18 }) %></a>
-    <form action="/deconnexion" method="post"><button type="submit" class="app-rail-link" data-tip="Déconnexion" aria-label="Déconnexion"><%- icon('logout', { size: 18 }) %></button></form>
+    <a href="/" class="app-rail-link" data-tip="Voir le site" aria-label="Voir le site"><%- dockIcon('site') %></a>
+    <button type="button" class="app-rail-link app-rail-dockpos" data-dock-pos aria-pressed="false" data-tip="Placer la barre en bas de l'écran" aria-label="Placer la barre en bas de l'écran"><%- dockIcon('dockpos') %></button>
+    <form action="/deconnexion" method="post"><button type="submit" class="app-rail-link" data-tip="Déconnexion" aria-label="Déconnexion"><%- dockIcon('logout') %></button></form>
   </div>
 </nav>
+<%# Barre rapide des téléphones et tablettes (< 961 px) : les quatre destinations les plus utiles + « Plus » (ouvre le menu complet, le même que le bouton ☰). Même données, mêmes permissions, mêmes liens que le rail. %>
+<% { const flat = railNav.flatMap((g) => g.items); const quick = [["overview", "Accueil"], ["marketing", "Marketing"], ["messages", "Messages"], ["gestion", "Gestion"]]; %>
+<nav class="app-dock-m" aria-label="Navigation rapide">
+  <% quick.forEach(([k, short]) => { const it = flat.find((i) => i.key === k); if (!it) return; const on = it.key === railActive; const unread = it.badge === "unread" && typeof railUnread !== "undefined" ? railUnread : 0; %>
+    <a href="<%= it.href %>" class="app-dock-m-link" aria-label="<%= it.label %><%= unread ? ` (${unread} non lu(s))` : "" %>"<%- on ? ' aria-current="true"' : "" %>><%- dockIcon(k) %><span><%= short %></span><% if (unread) { %><i class="app-rail-dot" aria-hidden="true"></i><% } %></a>
+  <% }) %>
+  <button type="button" class="app-dock-m-link" data-dock-more aria-label="Plus de rubriques : ouvrir le menu complet"><%- dockIcon('more') %><span>Plus</span></button>
+</nav>
+<% } %>
+<script src="<%= asset('/js/kb-dock.js') %>" defer></script>
