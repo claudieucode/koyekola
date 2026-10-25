@@ -492,47 +492,142 @@ router.get("/formateur/cours/:id/curriculum", loadOwnedCourse, (req, res) => {
   res.render("instructor/curriculum", { course: req.course, sections, selected, saved: req.query.enregistre === "1" });
 });
 
+// ---- Structure du programme : titres, ordre et déplacements ----
+// Les écrans enrichis (public/js/curriculum.js) appellent ces routes en JSON et mettent la page à jour sans la recharger ;
+// sans JavaScript, les mêmes routes répondent par une redirection vers le programme.
+const TITLE_MAX = 120;
+const wantsJson = (req) => req.is("application/json") || /json/.test(req.get("accept") || "");
+// Titre saisi : espaces normalisés, caractères de contrôle retirés, borné à TITLE_MAX caractères. Vide = refusé.
+function cleanTitle(value) {
+  const sep = String.fromCharCode(0x2028, 0x2029);
+  return Array.from(String(value == null ? "" : value)).map((c) => (c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127 || sep.includes(c) ? " " : c)).join("").replace(/\s+/g, " ").trim().slice(0, TITLE_MAX);
+}
+const curriculumUrl = (courseId, lessonId) => `/formateur/cours/${courseId}/curriculum${lessonId ? `?lecon=${lessonId}` : ""}`;
+function fail(req, res, courseId, status, message) {
+  if (wantsJson(req)) return res.status(status).json({ ok: false, error: message });
+  throw new UserError(message);
+}
+const sectionIdsOf = (courseId) => db.prepare("SELECT id FROM sections WHERE course_id = ? ORDER BY position, id").all(courseId).map((r) => r.id);
+// Liste d'identifiants entiers positifs, sans doublon
+function idList(value) {
+  if (!Array.isArray(value)) return null;
+  const ids = value.map((v) => Number(v));
+  if (ids.some((n) => !Number.isInteger(n) || n <= 0) || new Set(ids).size !== ids.length) return null;
+  return ids;
+}
+// Tout ou rien : un ordre à moitié écrit (doublons de position, chapitre perdu) n'est jamais laissé en base.
+function atomically(work) {
+  return (...args) => {
+    db.exec("BEGIN IMMEDIATE");
+    try { const out = work(...args); db.exec("COMMIT"); return out; } catch (e) { db.exec("ROLLBACK"); throw e; }
+  };
+}
+const writeSectionOrder = atomically((courseId, ids) => {
+  const update = db.prepare("UPDATE sections SET position = ? WHERE id = ? AND course_id = ?");
+  ids.forEach((id, index) => update.run(index, id, courseId));
+});
+// Place les leçons `ids` (dans cet ordre) à la fin de la liste d'un chapitre ; renumérote les chapitres d'origine.
+const writeLessonOrder = atomically((courseId, sectionId, ids) => {
+  const sources = new Set(db.prepare(`SELECT DISTINCT section_id FROM lessons WHERE id IN (${ids.map(() => "?").join(",") || "NULL"})`).all(...ids).map((r) => r.section_id));
+  const update = db.prepare("UPDATE lessons SET section_id = ?, position = ? WHERE id = ?");
+  ids.forEach((id, index) => update.run(sectionId, index, id));
+  sources.delete(sectionId);
+  const renumber = db.prepare("UPDATE lessons SET position = ? WHERE id = ?");
+  for (const src of sources) db.prepare("SELECT id FROM lessons WHERE section_id = ? ORDER BY position, id").all(src).forEach((l, i) => renumber.run(i, l.id));
+});
+const lessonsOf = (sectionId) => db.prepare("SELECT id FROM lessons WHERE section_id = ? ORDER BY position, id").all(sectionId).map((l) => l.id);
+
 router.post("/formateur/cours/:id/sections", loadOwnedCourse, (req, res) => {
-  const title = (req.body.title || "").trim();
-  if (title) {
-    const maxPos = db.prepare("SELECT COALESCE(MAX(position), -1) m FROM sections WHERE course_id = ?").get(req.course.id).m;
-    db.prepare("INSERT INTO sections (course_id, title, position) VALUES (?, ?, ?)").run(req.course.id, title, maxPos + 1);
-  }
-  res.redirect(`/formateur/cours/${req.course.id}/curriculum`);
+  const title = cleanTitle(req.body.title);
+  if (!title) return fail(req, res, req.course.id, 400, "Le titre du chapitre est obligatoire.");
+  const maxPos = db.prepare("SELECT COALESCE(MAX(position), -1) m FROM sections WHERE course_id = ?").get(req.course.id).m;
+  const info = db.prepare("INSERT INTO sections (course_id, title, position) VALUES (?, ?, ?)").run(req.course.id, title, maxPos + 1);
+  if (wantsJson(req)) return res.status(201).json({ ok: true, id: Number(info.lastInsertRowid), title });
+  res.redirect(curriculumUrl(req.course.id));
 });
 
 router.post("/formateur/cours/:id/sections/reorder", loadOwnedCourse, (req, res) => {
-  const order = Array.isArray(req.body.order) ? req.body.order : [];
-  const update = db.prepare("UPDATE sections SET position = ? WHERE id = ? AND course_id = ?");
-  order.forEach((sectionId, index) => update.run(index, Number(sectionId), req.course.id));
+  const ids = idList(req.body.order);
+  const current = sectionIdsOf(req.course.id);
+  // L'ordre doit désigner exactement les chapitres de cette formation : un chapitre manquant, en trop ou étranger est refusé
+  if (!ids || ids.length !== current.length || !ids.every((id) => current.includes(id))) {
+    return fail(req, res, req.course.id, 400, "Ordre refusé : la liste des chapitres ne correspond pas à la formation. Rechargez la page.");
+  }
+  writeSectionOrder(req.course.id, ids);
   res.json({ ok: true });
+});
+
+router.post("/formateur/sections/:sectionId/renommer", loadOwnedSection, (req, res) => {
+  const title = cleanTitle(req.body.title);
+  if (!title) return fail(req, res, req.section.course_id, 400, "Le titre du chapitre est obligatoire.");
+  db.prepare("UPDATE sections SET title = ? WHERE id = ?").run(title, req.section.id);
+  if (wantsJson(req)) return res.json({ ok: true, title });
+  res.redirect(curriculumUrl(req.section.course_id));
+});
+
+// Monte ou descend un chapitre d'un rang (alternative au glisser-déposer : clavier, lecteur d'écran, écran tactile)
+router.post("/formateur/sections/:sectionId/deplacer", loadOwnedSection, (req, res) => {
+  const dir = req.body.direction === "haut" ? -1 : req.body.direction === "bas" ? 1 : 0;
+  if (!dir) return fail(req, res, req.section.course_id, 400, "Direction inconnue.");
+  const ids = sectionIdsOf(req.section.course_id);
+  const from = ids.indexOf(req.section.id);
+  const to = from + dir;
+  if (to >= 0 && to < ids.length) {
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    writeSectionOrder(req.section.course_id, ids);
+  }
+  if (wantsJson(req)) return res.json({ ok: true, order: ids });
+  res.redirect(curriculumUrl(req.section.course_id));
 });
 
 router.post("/formateur/sections/:sectionId/supprimer", loadOwnedSection, (req, res) => {
   const files = filesOfLessons(db.prepare("SELECT id FROM lessons WHERE section_id = ?").all(req.section.id).map((l) => l.id));
   deleteThenRemoveFiles(files, () => db.prepare("DELETE FROM sections WHERE id = ?").run(req.section.id));
-  res.redirect(`/formateur/cours/${req.section.course_id}/curriculum`);
+  writeSectionOrder(req.section.course_id, sectionIdsOf(req.section.course_id));
+  if (wantsJson(req)) return res.json({ ok: true });
+  res.redirect(curriculumUrl(req.section.course_id));
 });
 
 router.post("/formateur/sections/:sectionId/lecons", loadOwnedSection, (req, res) => {
-  const title = (req.body.title || "").trim();
-  if (!title) return res.redirect(`/formateur/cours/${req.section.course_id}/curriculum`);
-
+  const title = cleanTitle(req.body.title);
+  if (!title) return fail(req, res, req.section.course_id, 400, "Le titre du sous-chapitre est obligatoire.");
   const maxPos = db.prepare("SELECT COALESCE(MAX(position), -1) m FROM lessons WHERE section_id = ?").get(req.section.id).m;
-  const info = db
-    .prepare(`INSERT INTO lessons (section_id, title, position) VALUES (?, ?, ?)`)
-    .run(req.section.id, title, maxPos + 1);
-
-  res.redirect(`/formateur/cours/${req.section.course_id}/curriculum?lecon=${info.lastInsertRowid}`);
+  const info = db.prepare(`INSERT INTO lessons (section_id, title, position) VALUES (?, ?, ?)`).run(req.section.id, title, maxPos + 1);
+  res.redirect(curriculumUrl(req.section.course_id, info.lastInsertRowid));
 });
 
+// Ordre des sous-chapitres d'un chapitre. Un sous-chapitre d'un AUTRE chapitre de la même formation peut y être déposé ;
+// un identifiant étranger à la formation est refusé (aucune modification).
 router.post("/formateur/sections/:sectionId/lecons/reorder", loadOwnedSection, (req, res) => {
-  const order = Array.isArray(req.body.order) ? req.body.order : [];
-  const update = db.prepare(
-    `UPDATE lessons SET section_id = ?, position = ? WHERE id = ? AND section_id IN (SELECT id FROM sections WHERE course_id = ?)`
-  );
-  order.forEach((lessonId, index) => update.run(req.section.id, index, Number(lessonId), req.section.course_id));
+  const ids = idList(req.body.order);
+  if (!ids) return fail(req, res, req.section.course_id, 400, "Ordre refusé : liste de sous-chapitres invalide.");
+  const inCourse = new Set(db.prepare("SELECT lessons.id FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = ?").all(req.section.course_id).map((r) => r.id));
+  if (!ids.every((id) => inCourse.has(id))) return fail(req, res, req.section.course_id, 400, "Ordre refusé : un sous-chapitre n'appartient pas à cette formation.");
+  // Les sous-chapitres déjà présents mais absents de la liste restent à la suite (rien n'est perdu)
+  const rest = lessonsOf(req.section.id).filter((id) => !ids.includes(id));
+  writeLessonOrder(req.section.course_id, req.section.id, [...ids, ...rest]);
   res.json({ ok: true });
+});
+
+// Monte ou descend un sous-chapitre dans son chapitre ; passe au chapitre voisin en bout de liste
+router.post("/formateur/lecons/:lessonId/deplacer", loadOwnedLesson, (req, res) => {
+  const dir = req.body.direction === "haut" ? -1 : req.body.direction === "bas" ? 1 : 0;
+  if (!dir) return fail(req, res, req.lesson.course_id, 400, "Direction inconnue.");
+  const sections = sectionIdsOf(req.lesson.course_id);
+  const si = sections.indexOf(req.lesson.section_id);
+  const list = lessonsOf(req.lesson.section_id);
+  const at = list.indexOf(req.lesson.id);
+  if (at + dir >= 0 && at + dir < list.length) {
+    list.splice(at + dir, 0, list.splice(at, 1)[0]);
+    writeLessonOrder(req.lesson.course_id, req.lesson.section_id, list);
+  } else if (sections[si + dir] !== undefined) {
+    const target = sections[si + dir];
+    const targetList = lessonsOf(target);
+    if (dir < 0) targetList.push(req.lesson.id); else targetList.unshift(req.lesson.id);
+    writeLessonOrder(req.lesson.course_id, target, targetList);
+  }
+  if (wantsJson(req)) return res.json({ ok: true });
+  res.redirect(curriculumUrl(req.lesson.course_id, req.lesson.id));
 });
 
 router.post(
@@ -540,8 +635,9 @@ router.post(
   loadOwnedLesson,
   upload.fields([{ name: "video", maxCount: 1 }]),
   (req, res) => {
-    const { title, description, duration_minutes, video_url } = req.body;
-    if (!title || !title.trim()) {
+    const { description, duration_minutes, video_url } = req.body;
+    const title = cleanTitle(req.body.title);
+    if (!title) {
       return res.redirect(`/formateur/cours/${req.lesson.course_id}/curriculum?lecon=${req.lesson.id}`);
     }
 
@@ -574,7 +670,13 @@ router.post(
     db.prepare(
       `UPDATE lessons SET title = ?, description = ?, duration_minutes = ?, is_preview = ?, video_path = ?, video_url = ?
        WHERE id = ?`
-    ).run(title.trim(), description || "", parseInt(duration_minutes, 10) || 0, req.body.is_preview ? 1 : 0, videoPath, videoUrl, req.lesson.id);
+    ).run(title, description || "", parseInt(duration_minutes, 10) || 0, req.body.is_preview ? 1 : 0, videoPath, videoUrl, req.lesson.id);
+
+    // Changement de chapitre (liste « Chapitre » de l'éditeur) : le sous-chapitre passe à la fin du chapitre choisi, s'il appartient à la même formation
+    const targetSection = parseInt(req.body.section_id, 10);
+    if (targetSection && targetSection !== req.lesson.section_id && sectionIdsOf(req.lesson.course_id).includes(targetSection)) {
+      writeLessonOrder(req.lesson.course_id, targetSection, [...lessonsOf(targetSection), req.lesson.id]);
+    }
 
     res.redirect(`/formateur/cours/${req.lesson.course_id}/curriculum?lecon=${req.lesson.id}&enregistre=1`);
   }

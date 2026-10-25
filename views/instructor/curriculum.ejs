@@ -1,4 +1,4 @@
-<% const totalLessons = sections.reduce((s, sec) => s + sec.lessons.length, 0); %>
+<% const totalLessons = sections.reduce((s, sec) => s + sec.lessons.length, 0); const totalMinutes = sections.reduce((s, sec) => s + sec.lessons.reduce((n, l) => n + (l.duration_minutes || 0), 0), 0); %>
 <%- include("../partials/header", { title: "Constructeur — " + course.title }) %>
 
   <div class="container-wide">
@@ -6,8 +6,8 @@
 
     <div class="curriculum-header">
       <div>
-        <h2 style="margin:0 0 4px;">Programme</h2>
-        <p class="field-hint" style="margin:0;">Organisez votre formation en chapitres et sous-chapitres vidéo.</p>
+        <h2 class="cur-title">Programme</h2>
+        <p class="cur-summary" data-cur-summary><%= sections.length %> chapitre<%= sections.length > 1 ? "s" : "" %> · <%= totalLessons %> sous-chapitre<%= totalLessons > 1 ? "s" : "" %><% if (totalMinutes) { %> · <%= totalMinutes >= 60 ? Math.floor(totalMinutes / 60) + " h " + String(totalMinutes % 60).padStart(2, "0") : totalMinutes + " min" %><% } %></p>
       </div>
       <div class="publish-status">
         <% if (course.published) { %>
@@ -26,41 +26,66 @@
   </div>
 
   <div class="container-wide builder-layout">
-    <aside class="builder-outline" data-course-id="<%= course.id %>">
+    <aside class="builder-outline" data-course-id="<%= course.id %>" aria-label="Plan de la formation">
+      <div class="cur-bar">
+        <p class="cur-status" role="status" aria-live="polite" data-cur-status></p>
+        <% if (sections.length > 1) { %><button type="button" class="cur-link" data-cur-toggle-all aria-pressed="false">Tout replier</button><% } %>
+      </div>
       <% if (sections.length === 0) { %>
-        <p class="empty-state" style="padding:24px 10px;">Ajoutez un premier chapitre pour commencer.</p>
+        <p class="cur-empty" data-cur-empty>Aucun chapitre pour l'instant. Donnez un titre au premier chapitre ci-dessous, puis ajoutez-y vos sous-chapitres.</p>
       <% } %>
-      <div id="sectionList">
-        <% sections.forEach((section, sIndex) => { %>
-          <div class="chapter-block" draggable="true" data-section-id="<%= section.id %>">
+      <div id="sectionList" class="cur-sections">
+        <% sections.forEach((section, sIndex) => { const mins = section.lessons.reduce((n, l) => n + (l.duration_minutes || 0), 0); %>
+          <section class="chapter-block" draggable="true" data-section-id="<%= section.id %>" data-title="<%= section.title %>" aria-labelledby="chapter-title-<%= section.id %>">
             <div class="chapter-block-header">
-              <span class="drag-handle" title="Glisser pour réordonner"><%- icon('grip', { size: 16 }) %></span>
-              <span class="chapter-name">Chapitre <%= sIndex + 1 %> — <%= section.title %></span>
-              <form action="/formateur/sections/<%= section.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer ce chapitre et ses sous-chapitres ?');">
-                <button type="submit" class="icon-btn small" title="Supprimer le chapitre"><%- icon('trash', { size: 15 }) %></button>
+              <button type="button" class="cur-fold" data-cur-fold aria-expanded="true" aria-controls="chapter-body-<%= section.id %>" aria-label="Replier le chapitre <%= section.title %>"><%- icon('chevronDown', { size: 16 }) %></button>
+              <span class="cur-num" data-cur-num aria-hidden="true"><%= sIndex + 1 %></span>
+              <div class="cur-heading">
+                <h3 class="chapter-name" id="chapter-title-<%= section.id %>"><span class="sr-only">Chapitre <span data-cur-num-sr><%= sIndex + 1 %></span> : </span><span data-cur-title><%= section.title %></span></h3>
+                <p class="cur-meta" data-cur-meta><%= section.lessons.length %> sous-chapitre<%= section.lessons.length > 1 ? "s" : "" %><% if (mins) { %> · <%= mins %> min<% } %></p>
+              </div>
+              <div class="cur-actions">
+                <form action="/formateur/sections/<%= section.id %>/deplacer" method="post" class="inline-form"><input type="hidden" name="direction" value="haut"><button type="submit" class="cur-tool" data-cur-move="up" aria-label="Monter le chapitre <%= section.title %>" title="Monter"><%- icon('arrowUp', { size: 15 }) %></button></form>
+                <form action="/formateur/sections/<%= section.id %>/deplacer" method="post" class="inline-form"><input type="hidden" name="direction" value="bas"><button type="submit" class="cur-tool" data-cur-move="down" aria-label="Descendre le chapitre <%= section.title %>" title="Descendre"><%- icon('arrowDown', { size: 15 }) %></button></form>
+                <button type="button" class="cur-tool" data-cur-rename aria-label="Renommer le chapitre <%= section.title %>" title="Renommer"><%- icon('edit', { size: 15 }) %></button>
+                <form action="/formateur/sections/<%= section.id %>/supprimer" method="post" class="inline-form" data-cur-confirm data-confirm-title="Supprimer le chapitre « <%= section.title %> » ?" data-confirm-text="<%= section.lessons.length ? "Ses " + section.lessons.length + " sous-chapitre" + (section.lessons.length > 1 ? "s" : "") + ", leurs vidéos, ressources et quiz seront supprimés définitivement." : "Ce chapitre est vide." %>">
+                  <button type="submit" class="cur-tool cur-tool-danger" aria-label="Supprimer le chapitre <%= section.title %>" title="Supprimer"><%- icon('trash', { size: 15 }) %></button>
+                </form>
+              </div>
+            </div>
+
+            <div class="chapter-body" id="chapter-body-<%= section.id %>">
+              <div class="lesson-list" data-section-id="<%= section.id %>">
+                <% if (!section.lessons.length) { %><p class="cur-lesson-empty" data-cur-lesson-empty>Aucun sous-chapitre dans ce chapitre.</p><% } %>
+                <% section.lessons.forEach(lesson => { const hasVideo = !!(lesson.video_path || lesson.video_url); const active = selected && selected.lesson.id === lesson.id; %>
+                  <div class="cur-lesson<%= active ? ' is-active' : '' %>" draggable="true" data-lesson-id="<%= lesson.id %>" data-min="<%= lesson.duration_minutes || 0 %>">
+                    <a class="lesson-item <%= active ? 'is-active' : '' %>" draggable="false" href="?lecon=<%= lesson.id %>"<%- active ? ' aria-current="page"' : "" %>>
+                      <span class="drag-handle" aria-hidden="true"><%- icon('grip', { size: 14 }) %></span>
+                      <span class="lesson-item-icon <%= hasVideo ? '' : 'is-empty' %>" aria-hidden="true"><%- icon('video', { size: 14 }) %></span>
+                      <span class="lesson-item-title"><%= lesson.title %></span>
+                      <span class="sr-only"><%= hasVideo ? "Vidéo ajoutée." : "Pas encore de vidéo." %></span>
+                      <% if (lesson.quiz) { %><span class="mini-badge">Quiz</span><% } %>
+                      <% if (lesson.is_preview) { %><span class="mini-badge mini-badge-soft">Aperçu</span><% } %>
+                      <% if (lesson.duration_minutes) { %><span class="lesson-min"><%= lesson.duration_minutes %> min</span><% } %>
+                    </a>
+                    <span class="lesson-tools">
+                      <form action="/formateur/lecons/<%= lesson.id %>/deplacer" method="post" class="inline-form"><input type="hidden" name="direction" value="haut"><button type="submit" class="cur-tool" data-cur-move="up" aria-label="Monter le sous-chapitre <%= lesson.title %>" title="Monter"><%- icon('arrowUp', { size: 14 }) %></button></form>
+                      <form action="/formateur/lecons/<%= lesson.id %>/deplacer" method="post" class="inline-form"><input type="hidden" name="direction" value="bas"><button type="submit" class="cur-tool" data-cur-move="down" aria-label="Descendre le sous-chapitre <%= lesson.title %>" title="Descendre"><%- icon('arrowDown', { size: 14 }) %></button></form>
+                    </span>
+                  </div>
+                <% }) %>
+              </div>
+
+              <form action="/formateur/sections/<%= section.id %>/lecons" method="post" class="quick-add-form" data-cur-add="lesson">
+                <input type="text" name="title" placeholder="+ Ajouter un sous-chapitre" aria-label="Ajouter un sous-chapitre au chapitre <%= section.title %>" required maxlength="120" autocomplete="off">
               </form>
             </div>
-
-            <div class="lesson-list" data-section-id="<%= section.id %>">
-              <% section.lessons.forEach(lesson => { %>
-                <a class="lesson-item <%= selected && selected.lesson.id === lesson.id ? 'is-active' : '' %>" href="?lecon=<%= lesson.id %>" draggable="true" data-lesson-id="<%= lesson.id %>">
-                  <span class="drag-handle"><%- icon('grip', { size: 14 }) %></span>
-                  <span class="lesson-item-icon"><%- lesson.video_path || lesson.video_url ? icon('video', { size: 14 }) : icon('video', { size: 14, className: 'is-empty' }) %></span>
-                  <span class="lesson-item-title"><%= lesson.title %></span>
-                  <% if (lesson.quiz) { %><span class="mini-badge">Quiz</span><% } %>
-                </a>
-              <% }) %>
-            </div>
-
-            <form action="/formateur/sections/<%= section.id %>/lecons" method="post" class="quick-add-form">
-              <input type="text" name="title" placeholder="+ Ajouter un sous-chapitre" aria-label="Ajouter un sous-chapitre au chapitre <%= section.title %>" required maxlength="120">
-            </form>
-          </div>
+          </section>
         <% }) %>
       </div>
 
-      <form action="/formateur/cours/<%= course.id %>/sections" method="post" class="quick-add-form quick-add-chapter">
-        <input type="text" name="title" placeholder="+ Ajouter un chapitre" aria-label="Ajouter un chapitre" required maxlength="120">
+      <form action="/formateur/cours/<%= course.id %>/sections" method="post" class="quick-add-form quick-add-chapter" data-cur-add="chapter">
+        <input type="text" name="title" placeholder="+ Ajouter un chapitre" aria-label="Ajouter un chapitre" required maxlength="120" autocomplete="off">
       </form>
     </aside>
 
@@ -77,6 +102,12 @@
           <div class="field-group">
             <label for="f-curriculum-1">Titre du sous-chapitre</label>
             <input id="f-curriculum-1" type="text" name="title" value="<%= selected.lesson.title %>" required maxlength="120">
+          </div>
+          <div class="field-group">
+            <label for="f-lesson-section">Chapitre</label>
+            <select id="f-lesson-section" name="section_id">
+              <% sections.forEach((sec, i) => { %><option value="<%= sec.id %>"<%= sec.id === selected.lesson.section_id ? " selected" : "" %>>Chapitre <%= i + 1 %> — <%= sec.title %></option><% }) %>
+            </select>
           </div>
           <div class="field-group">
             <label for="f-curriculum-2">Contenu de la leçon <span class="field-hint">(affiché sous la vidéo ; **gras**, *italique*, ## titre, - liste, [lien](https://…))</span></label>
@@ -117,7 +148,7 @@
               <% selected.attachments.forEach((a) => { %>
                 <li>
                   <span class="attachment-name"><%- icon(a.kind === 'link' ? 'arrowRight' : 'clip', { size: 15 }) %> <%= a.title %> <span class="field-hint">(<%= a.kind === 'link' ? a.url : 'fichier' %>)</span></span>
-                  <form action="/formateur/pieces-jointes/<%= a.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer cette ressource ?');">
+                  <form action="/formateur/pieces-jointes/<%= a.id %>/supprimer" method="post" class="inline-form" data-cur-confirm data-confirm-title="Supprimer cette ressource ?" data-confirm-text="Le fichier ou le lien sera retiré de la leçon.">
                     <button type="submit" class="icon-btn small" title="Supprimer la ressource" aria-label="Supprimer <%= a.title %>"><%- icon('trash', { size: 15 }) %></button>
                   </form>
                 </li>
@@ -148,27 +179,29 @@
               <button type="submit" class="btn btn-secondary">+ Ajouter un quiz</button>
             </form>
           <% } else { %>
-            <form action="/formateur/quiz/<%= selected.quiz.id %>/parametres" method="post" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
-              <input type="text" name="title" value="<%= selected.quiz.title %>" aria-label="Titre du quiz" style="max-width:200px;">
-              <label class="field-hint" style="display:flex;align-items:center;gap:6px;">
-                Seuil de réussite
-                <input type="number" name="pass_percentage" min="0" max="100" value="<%= selected.quiz.pass_percentage %>" style="width:70px;">%
-              </label>
-              <label class="field-hint" style="display:flex;align-items:center;gap:6px;">
-                Tentatives max.
-                <input type="number" name="max_attempts" min="1" max="100" value="<%= selected.quiz.max_attempts || "" %>" placeholder="Illimité" style="width:90px;">
-              </label>
-              <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
-              <form action="/formateur/quiz/<%= selected.quiz.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer ce quiz ?');" style="margin-left:auto;">
+            <div class="quiz-settings">
+              <form action="/formateur/quiz/<%= selected.quiz.id %>/parametres" method="post" class="quiz-settings-form">
+                <input type="text" name="title" value="<%= selected.quiz.title %>" aria-label="Titre du quiz" class="quiz-title-input">
+                <label class="field-hint quiz-setting">
+                  Seuil de réussite
+                  <input type="number" name="pass_percentage" min="0" max="100" value="<%= selected.quiz.pass_percentage %>" class="quiz-num">%
+                </label>
+                <label class="field-hint quiz-setting">
+                  Tentatives max.
+                  <input type="number" name="max_attempts" min="1" max="100" value="<%= selected.quiz.max_attempts || "" %>" placeholder="Illimité" class="quiz-num quiz-num-wide">
+                </label>
+                <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+              </form>
+              <form action="/formateur/quiz/<%= selected.quiz.id %>/supprimer" method="post" class="inline-form" data-cur-confirm data-confirm-title="Supprimer ce quiz ?" data-confirm-text="Le quiz, ses questions et les tentatives enregistrées seront supprimés.">
                 <button type="submit" class="btn btn-danger btn-sm">Supprimer le quiz</button>
               </form>
-            </form>
+            </div>
 
             <% selected.quiz.questions.forEach((q, qi) => { %>
               <div class="quiz-question-row">
                 <div style="display:flex;justify-content:space-between;gap:10px;">
                   <strong>Q<%= qi + 1 %>. <%= q.question %></strong>
-                  <form action="/formateur/quiz-questions/<%= q.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer cette question ?');">
+                  <form action="/formateur/quiz-questions/<%= q.id %>/supprimer" method="post" class="inline-form" data-cur-confirm data-confirm-title="Supprimer cette question ?" data-confirm-text="La question et ses réponses seront supprimées.">
                     <button type="submit" class="btn btn-ghost btn-sm">Supprimer</button>
                   </form>
                 </div>
@@ -207,11 +240,23 @@
           <% } %>
         </div>
 
-        <form action="/formateur/lecons/<%= selected.lesson.id %>/supprimer" method="post" onsubmit="return confirm('Supprimer ce sous-chapitre ?');">
+        <form action="/formateur/lecons/<%= selected.lesson.id %>/supprimer" method="post" data-cur-confirm data-confirm-title="Supprimer le sous-chapitre « <%= selected.lesson.title %> » ?" data-confirm-text="Sa vidéo, ses ressources et son quiz seront supprimés définitivement.">
           <button type="submit" class="btn btn-danger">Supprimer ce sous-chapitre</button>
         </form>
       <% } %>
     </section>
   </div>
+
+<dialog class="cur-dialog" id="curDialog" aria-labelledby="curDialogTitle" aria-describedby="curDialogText">
+  <form method="dialog">
+    <h2 id="curDialogTitle"></h2>
+    <p id="curDialogText"></p>
+    <div class="cur-dialog-actions">
+      <button type="submit" value="cancel" class="btn btn-outline" autofocus>Annuler</button>
+      <button type="submit" value="ok" class="btn btn-danger" data-cur-dialog-ok>Supprimer</button>
+    </div>
+  </form>
+</dialog>
+<script src="<%= asset('/js/curriculum.js') %>" defer></script>
 
 <%- include("../partials/footer") %>
