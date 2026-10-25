@@ -1,0 +1,18 @@
+<%# Ligne d'une formation dans la Vue d'ensemble de « Mon espace ». Paramètre : course (avec student_count, lesson_count, revenue_cents, sales_count…). Menu d'actions partagé avec la carte. %>
+<% const status = course.published ? ["is-published", "Publiée"] : ["is-draft", "Brouillon"];
+   const sold = course.sales_count > 0 || course.student_count > 0; %>
+<tr class="ov-row">
+  <td><div class="ov-course-cell">
+    <a class="ov-thumb" href="/formateur/cours/<%= course.id %>" tabindex="-1" aria-hidden="true"><% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" loading="lazy" decoding="async" width="72" height="40"><% } else { %><%- icon('book', { size: 18 }) %><% } %></a>
+    <span class="ov-course-text">
+      <a class="ov-course-title" href="/formateur/cours/<%= course.id %>"><%= course.title %></a>
+      <span class="ov-course-meta"><span class="dash-status <%= status[0] %>"><%= status[1] %></span><span><%= formatPrice(course.price_cents) %></span><span><%= course.lesson_count %> sous-chapitre<%= course.lesson_count > 1 ? "s" : "" %></span></span>
+    </span>
+  </div></td>
+  <td class="ov-num" data-label="Élèves"><%= course.student_count %></td>
+  <td class="ov-num" data-label="Revenus"><%= formatAmount(course.revenue_cents) %></td>
+  <td class="ov-act">
+    <a href="/formateur/cours/<%= course.id %>/modifier" class="btn btn-outline btn-sm">Modifier</a>
+    <%- include("_course-menu", { course, sold }) %>
+  </td>
+</tr>

@@ -1,7 +1,7 @@
 // « Mon espace » (tableau de bord du formateur) : apparence personnelle, navigation, statistiques réelles.
 // L'apparence est enregistrée sur le compte (table dashboard_prefs) ; elle ne concerne que l'espace de gestion.
 const db = require("../config/database");
-const { parisToday, parisDayStart, sqlUtc } = require("./gestion/common");
+const { parisToday, parisDayStart, sqlUtc, addDays } = require("./gestion/common");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS dashboard_prefs (
@@ -264,4 +264,43 @@ function stats(userId, now = new Date()) {
   };
 }
 
-module.exports = { ratio, ensure, fill, THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, SEO_NAV, seoActiveKey, isSeoPath, GESTION_NAV, gestionActiveKey, isGestionPath, MODULES, crumbs, stats, cleanColors };
+// ---------- Vue d'ensemble : rythme des ventes, activité récente, éléments à traiter ----------
+// Données RÉELLES uniquement (commandes, messages, formations) : rien n'est simulé, une période sans vente donne une série à zéro (jamais une tendance inventée).
+// Les jours sont ceux de Paris (une vente à 23 h 30 UTC appartient au jour suivant à Paris), comme le Centre de gestion.
+const utcDate = (sqlDate) => new Date(String(sqlDate).replace(" ", "T") + "Z");
+function overview(userId, now = new Date(), { days = 30, activityLimit = 6 } = {}) {
+  const today = parisToday(now);
+  const first = addDays(today, -(days - 1));
+  const since = sqlUtc(parisDayStart(first));
+  const series = Array.from({ length: days }, (_, i) => ({ day: addDays(first, i), sales: 0, cents: 0 }));
+  const at = new Map(series.map((d, i) => [d.day, i]));
+  const rows = db.prepare("SELECT o.created_at, oi.price_cents FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ? AND o.created_at >= ?").all(userId, since);
+  for (const r of rows) { const i = at.get(parisToday(utcDate(r.created_at))); if (i !== undefined) { series[i].sales += 1; series[i].cents += r.price_cents; } }
+  const totals = series.reduce((t, d) => ({ sales: t.sales + d.sales, cents: t.cents + d.cents, peak: Math.max(t.peak, d.cents) }), { sales: 0, cents: 0, peak: 0 });
+  // Activité : ventes et messages reçus, du plus récent au plus ancien
+  const sales = db.prepare(`SELECT o.id AS order_id, o.created_at, oi.price_cents, u.username AS buyer, c.title AS course_title, c.id AS course_id
+    FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id JOIN users u ON u.id = o.user_id
+    WHERE c.instructor_id = ? ORDER BY o.created_at DESC, oi.id DESC LIMIT ?`).all(userId, activityLimit);
+  const messages = db.prepare("SELECT id, name, subject, created_at, read_at FROM contact_messages ORDER BY created_at DESC, id DESC LIMIT ?").all(activityLimit);
+  const activity = [
+    ...sales.map((r) => ({ kind: "sale", at: r.created_at, who: r.buyer, what: r.course_title, cents: r.price_cents, href: `/formateur/gestion/ventes/commandes/${r.order_id}` })),
+    ...messages.map((m) => ({ kind: "message", at: m.created_at, who: m.name, what: m.subject || "Sans objet", unread: !m.read_at, href: "/formateur/messages" })),
+  ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)).slice(0, activityLimit);
+  return { series, totals, activity, today, periodStart: first };
+}
+
+// « Il y a 2 h », « hier à 14:05 », « 22 oct. » : repère court pour une date UTC de la base, calculé à l'heure de Paris
+function ago(sqlDate, now = new Date()) {
+  const d = utcDate(sqlDate), diff = now - d;
+  if (!(diff >= 0)) return { text: "à l'instant", iso: d.toISOString() };
+  const min = Math.floor(diff / 60000), h = Math.floor(min / 60);
+  const dayGap = Math.round((Date.parse(parisToday(now)) - Date.parse(parisToday(d))) / 86400000);
+  const hm = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }).format(d);
+  let text;
+  if (min < 1) text = "à l'instant"; else if (min < 60) text = `il y a ${min} min`; else if (dayGap === 0) text = `il y a ${h} h`;
+  else if (dayGap === 1) text = `hier à ${hm}`; else if (dayGap < 7) text = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", weekday: "long" }).format(d) + ` à ${hm}`;
+  else text = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "numeric", month: "short" }).format(d);
+  return { text, iso: d.toISOString() };
+}
+
+module.exports = { overview, ago, ratio, ensure, fill, THEMES, COLOR_KEYS, prefsOf, savePrefs, tokens, style, NAV, activeKey, SEO_NAV, seoActiveKey, isSeoPath, GESTION_NAV, gestionActiveKey, isGestionPath, MODULES, crumbs, stats, cleanColors };
