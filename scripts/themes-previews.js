@@ -13,10 +13,10 @@ const { chromium } = require("playwright-core");
 
 const OUT = process.env.PX_OUT || path.join(ROOT, "public", "img", "theme-previews");
 const CHROME = process.env.CHROME_PATH || ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"].find((p) => fs.existsSync(p));
-const VIEWS = [
-  { name: "home", width: 1440, height: 900, page: (s) => "accueil", out: 960, quality: 80 },
-  { name: "inner", width: 1440, height: 900, page: (s) => (s.preview && s.preview.inner) || s.pages[1].key, out: 800, quality: 78 },
-  { name: "mobile", width: 390, height: 844, page: (s) => "accueil", out: 390, quality: 78 },
+const VIEWS = [   // capture à 2× (netteté sur écran Retina) puis réduction : aucune image n'est jamais étirée à l'affichage
+  { name: "home", width: 1440, height: 900, page: (s) => "accueil", out: 1440, quality: 82, dpr: 2, extras: [["card", 480, 300, 80], ["card2", 720, 450, 82]] },
+  { name: "inner", width: 1440, height: 900, page: (s) => (s.preview && s.preview.inner) || s.pages[1].key, out: 1200, quality: 80, dpr: 2 },
+  { name: "mobile", width: 390, height: 844, page: (s) => "accueil", out: 390, quality: 80, dpr: 2, extras: [["phone", 192, 416, 80]] },
 ];
 
 (async () => {
@@ -41,9 +41,9 @@ const VIEWS = [
         }
         done += 1; continue;
       }
-      for (const v of VIEWS) {
+      for (const v of VIEWS.filter((x) => !process.env.PX_ONLY || process.env.PX_ONLY.split(",").includes(x.name))) {
         await attempt(`${s.key}-${v.name}`, async () => {
-          const ctx = await browser.newContext({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: v.name === "mobile" ? 2 : 1, reducedMotion: "reduce" });
+          const ctx = await browser.newContext({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: v.dpr || 1, reducedMotion: "reduce" });
           const page = await ctx.newPage();
           try {
             const r = await page.goto(`${srv.base}/marketing/site-web/themes/${s.key}/demo/${v.page(s)}`, { waitUntil: "load", timeout: 60000 });
@@ -55,6 +55,7 @@ const VIEWS = [
             const out = await sharp(png).resize({ width: v.out }).webp({ quality: v.quality }).toBuffer();
             if (out.length < 2500) throw new Error("image vide ou trop légère");
             fs.writeFileSync(path.join(OUT, `${s.key}-${v.name}.webp`), out);
+            for (const [suffix, w, h, q] of v.extras || []) fs.writeFileSync(path.join(OUT, `${s.key}-${suffix}.webp`), await sharp(png).resize(w, h, { fit: "cover", position: "top" }).webp({ quality: q, effort: 5 }).toBuffer());
           } finally { try { await ctx.close(); } catch { /* navigateur déjà fermé */ } }
         });
       }

@@ -7,7 +7,7 @@
   </div>
   <p class="mk-th-site">Site : <strong><%= T.name %></strong> · aperçu non enregistré : le thème actif du site ne change pas.</p>
   <% if (frame) { %>
-    <div class="mk-th-framewrap"><iframe class="mk-th-frame" title="Aperçu du site avec le thème <%= theme.name %>" src="<%= frame %>" loading="lazy"></iframe></div>
+    <div class="mk-th-framewrap"><iframe sandbox="allow-scripts allow-forms" class="mk-th-frame" title="Aperçu du site avec le thème <%= theme.name %>" src="<%= frame %>" loading="lazy"></iframe></div>
   <% } else { %>
     <div class="mk-th-empty" role="status"><strong>Ce site n'a pas encore de page à afficher.</strong><p>L'aperçu utilise le contenu réel du site : créez une page pour pouvoir y voir ce thème. Voici, en attendant, l'aperçu généré à partir des jetons du thème.</p><div class="mk-th-detail-shot"><%- include("partials/theme-shot", { theme, fontStack }) %></div></div>
   <% } %>

@@ -314,3 +314,13 @@ html[data-kb-motion="lite"] :is(.mk-toast, .mk-pop, .mk-menu, .mk-dialog) { box-
 html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"]),
 html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::before,
 html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::after { transition: none !important; animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+
+/* ---------- Fiche d'un thème : rendu RÉEL en direct (cadre isolé mis à l'échelle) ; la capture n'est qu'une image de présentation affichée au chargement ou en secours ---------- */
+.mk-body .mk-td-live { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); background: var(--surface-alt); }
+.mk-body .mk-td-live .mk-td-fallback { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; object-fit: cover; object-position: top; border: 0; border-radius: 0; }
+.mk-body .mk-td-frame { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; border: 0; background: #fff; transform-origin: 0 0; transform: scale(var(--td-s, 0.5)); opacity: 0; pointer-events: none; transition: opacity var(--kb-dur, 180ms) var(--kb-ease, ease); }
+.mk-body .mk-td-live.is-live .mk-td-frame { opacity: 1; }
+.mk-body .mk-td-open { position: absolute; right: 10px; bottom: 10px; z-index: 2; padding: 7px 12px; border-radius: 999px; background: var(--kb-navy-deep, #06192a); color: #fff; font-size: 0.8125rem; font-weight: 650; text-decoration: none; box-shadow: 0 2px 8px rgba(3, 12, 22, 0.35); }
+.mk-body .mk-td-open:hover { background: #0b2a40; color: #fff; }
+.mk-body .mk-td-caption { margin: 8px 0 0; font-size: 0.8125rem; color: var(--kb-ink-3); }
+@media (pointer: coarse) { .mk-body .mk-td-open { min-height: 44px; display: inline-flex; align-items: center; } }

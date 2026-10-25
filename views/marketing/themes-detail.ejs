@@ -5,7 +5,13 @@
   <div class="mk-td-grid">
     <div class="mk-td-media">
       <% if (theme.previews) { %>
-        <img class="mk-td-main" src="<%= theme.previews.home %>" width="960" height="600" decoding="async" alt="Aperçu de la page d'accueil du thème <%= theme.name %>">
+        <%# Rendu RÉEL du thème (site de démonstration isolé), à l'échelle ; la capture n'est qu'une image de présentation affichée le temps du chargement, ou si le rendu échoue. %>
+        <div class="mk-td-live" data-td-live data-td-vw="1280">
+          <img class="mk-td-main mk-td-fallback" src="<%= theme.previews.home %>" width="1440" height="900" decoding="async" alt="Image de présentation de la page d'accueil du thème <%= theme.name %> (le rendu en direct se charge)">
+          <iframe class="mk-td-frame" data-td-frame src="<%= to("/" + theme.key + "/demo/" + theme.pages[0].key) %>" title="Rendu en direct du thème <%= theme.name %> : page d'accueil du site de démonstration" sandbox="allow-scripts" loading="lazy" tabindex="-1" aria-hidden="false"></iframe>
+          <a class="mk-td-open" href="<%= to("/" + theme.key + "/apercu") %>">Ouvrir la prévisualisation complète</a>
+        </div>
+        <p class="mk-td-caption" data-td-caption>Rendu en direct du thème, avec un contenu de démonstration fictif.</p>
         <div class="mk-td-more">
           <img src="<%= theme.previews.inner %>" width="400" height="250" loading="lazy" decoding="async" alt="Aperçu d'une page intérieure du thème <%= theme.name %>">
           <img class="mk-td-phone" src="<%= theme.previews.mobile %>" width="140" height="304" loading="lazy" decoding="async" alt="Aperçu mobile du thème <%= theme.name %>">

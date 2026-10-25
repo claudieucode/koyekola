@@ -19,6 +19,6 @@
     </div>
   </header>
   <p class="mk-th-site">Site de démonstration isolé : textes, chiffres, personnes et coordonnées sont fictifs, et rien de votre site <strong>« <%= T.name %> »</strong> n'est utilisé ni modifié. <a href="<%= to("/" + theme.key + "/apercu", { mode: "site" }) %>">Voir ce thème avec le contenu de mon site</a></p>
-  <div class="mk-tp-stage" data-tp-stage><iframe class="mk-tp-frame" data-tp-frame title="Aperçu du thème <%= theme.name %> : page « <%= (theme.pages.find((p) => p.key === pageKey) || {}).name %> »" src="<%= frame %>"></iframe></div>
+  <div class="mk-tp-stage" data-tp-stage><iframe class="mk-tp-frame" data-tp-frame sandbox="allow-scripts allow-forms" title="Aperçu du thème <%= theme.name %> : page « <%= (theme.pages.find((p) => p.key === pageKey) || {}).name %> »" src="<%= frame %>"></iframe></div>
 </div>
 <%- include("partials/bottom") %>

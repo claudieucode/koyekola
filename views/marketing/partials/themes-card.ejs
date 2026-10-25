@@ -2,7 +2,7 @@
 <li class="mk-tg-card mk-tg-card--<%= t.state %>" data-th-card>
   <a class="mk-tg-shotlink" href="<%= to("/" + t.key + "/details") %>" aria-label="Détails du thème <%= t.name %>">
     <% if (t.previews) { %>
-      <img class="mk-tg-shot" src="<%= t.previews.card || t.previews.home %>" width="480" height="300" loading="lazy" decoding="async" alt="Aperçu de la page d'accueil du thème <%= t.name %>">
+      <img class="mk-tg-shot" src="<%= t.previews.card || t.previews.home %>"<% if (t.previews.card && t.previews.card2) { %> srcset="<%= t.previews.card %> 480w, <%= t.previews.card2 %> 720w" sizes="(min-width: 1100px) 340px, (min-width: 700px) 45vw, 92vw"<% } %> width="480" height="300" loading="lazy" decoding="async" alt="Aperçu de la page d'accueil du thème <%= t.name %>">
       <img class="mk-tg-phone" src="<%= t.previews.phone || t.previews.mobile %>" width="64" height="139" loading="lazy" decoding="async" alt="">
     <% } else { %>
       <span class="mk-tg-shot mk-tg-swatch" aria-hidden="true"><% t.palette.forEach((c) => { %><i style="background:<%= c %>"></i><% }) %><b style="font-family:<%= fontStack(t.fonts.heading) %>"><%= t.name %></b></span>

@@ -97,6 +97,8 @@ app.use((req, res, next) => {
 });
 // Photos du site (diaporama de l'accueil) : 30 jours
 // Bibliothèque typographique (Font Manager) : fichiers WOFF2 versionnés avec l'application, cache long
+// Polices publiques (bibliothèque libre + polices du site) : lisibles depuis un cadre d'aperçu isolé (sandbox sans allow-same-origin = origine opaque, donc « autre origine » pour les polices)
+app.use("/fonts", (req, res, next) => { res.set("Access-Control-Allow-Origin", "*"); next(); });
 app.use("/fonts/library", express.static(path.join(__dirname, "public", "fonts", "library"), { maxAge: "30d", immutable: true, index: false }));
 app.use(require("./src/routes/fonts"));
 app.locals.fontFacesFor = (css, siteId) => require("./src/utils/fontLibrary").faceCssFor(css, { siteId }); // @font-face des familles citées dans un texte CSS (siteId : les polices téléversées de CE site s'y ajoutent)

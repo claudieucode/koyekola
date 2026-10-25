@@ -21,18 +21,45 @@
     if (x) x.addEventListener("click", function () { n.hidden = true; store(function (s) { s.setItem(k, "1"); }); });
   });
 
-  // Confirmation puis anti double envoi
-  root.querySelectorAll("form[data-th-form]").forEach(function (f) {
-    f.addEventListener("submit", function (e) {
-      var b = e.submitter || f.querySelector("button[type=submit]");
-      var msg = b && b.getAttribute("data-confirm");
-      if (msg && !window.confirm(msg)) { e.preventDefault(); return; }
-      if (f.getAttribute("data-busy-now") === "1") { e.preventDefault(); return; }
-      f.setAttribute("data-busy-now", "1");
-      if (b) { b.setAttribute("aria-busy", "true"); b.textContent = b.getAttribute("data-busy") || "En cours…"; setTimeout(function () { b.disabled = true; }, 0); }
-      say("Opération en cours…");
-    });
+  // Actions (installer, utiliser, revenir, supprimer) : UNE SEULE écoute déléguée sur la racine, valable pour les cartes d'origine comme pour celles
+  // rechargées par les filtres. (Avant : deux écouteurs sur chaque formulaire de carte ; le second voyait le drapeau « occupé » posé par le premier et annulait
+  // l'envoi : le bouton restait sur « Installation… » sans que rien ne parte.) L'envoi est un vrai POST (fetch) avec états terminaux garantis :
+  // redirection du serveur → on y va ; erreur HTTP, réseau coupé ou délai dépassé → le bouton est rendu et un message d'erreur reste affiché.
+  var TIMEOUT_MS = Number(window.__thTimeoutMs) || 45000;   // (window.__thTimeoutMs : réglage réservé aux tests)
+  var alertBox = null;
+  var showError = function (text) {
+    if (!alertBox) { alertBox = document.createElement("div"); alertBox.className = "mk-th-notice mk-th-notice--warn"; alertBox.setAttribute("role", "alert"); var head = root.querySelector(".mk-th-notices") || root.firstElementChild; head.parentNode.insertBefore(alertBox, head.nextSibling); }
+    alertBox.textContent = text; alertBox.hidden = false; say(text);
+  };
+  var setBusy = function (f, b, on) {
+    if (on) { f.setAttribute("data-busy-now", "1"); if (b) { if (!b.hasAttribute("data-label")) b.setAttribute("data-label", b.textContent); b.setAttribute("aria-busy", "true"); b.textContent = b.getAttribute("data-busy") || "En cours…"; b.disabled = true; } say("Opération en cours…"); }
+    else { f.removeAttribute("data-busy-now"); if (b) { b.removeAttribute("aria-busy"); if (b.hasAttribute("data-label")) b.textContent = b.getAttribute("data-label"); b.disabled = false; } }
+  };
+  var send = function (f, b) {
+    var ctl = typeof AbortController === "function" ? new AbortController() : null, timer = setTimeout(function () { if (ctl) ctl.abort(); }, TIMEOUT_MS);
+    setBusy(f, b, true); if (alertBox) alertBox.hidden = true;
+    fetch(f.action, { method: "POST", credentials: "same-origin", headers: { "X-Requested-With": "kolakisa-fetch", "Accept": "application/json" }, body: new URLSearchParams(new FormData(f)), signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error("http " + r.status); if (!/json/.test(r.headers.get("content-type") || "")) throw new Error("session"); return r.json(); })
+      .then(function (j) { clearTimeout(timer); if (j && j.redirect) window.location.assign(j.redirect); else window.location.reload(); })
+      .catch(function (err) {
+        clearTimeout(timer); setBusy(f, b, false);
+        showError(err && err.name === "AbortError" ? "Le serveur met trop de temps à répondre : l'opération n'a pas été confirmée. Vérifiez l'état du thème dans la bibliothèque, puis réessayez."
+          : err && err.message === "session" ? "Votre session a expiré : reconnectez-vous, puis réessayez (rien n'a été modifié)."
+          : "L'opération a échoué (" + (err && /^http (\d+)/.test(err.message) ? "erreur " + err.message.slice(5) : "connexion interrompue") + "). Rien n'a été modifié ; vous pouvez réessayer.");
+      });
+  };
+  root.addEventListener("submit", function (e) {
+    var f = e.target && e.target.closest ? e.target.closest("form[data-th-form]") : null;
+    if (!f) return;
+    e.preventDefault();
+    var b = e.submitter || f.querySelector("button[type=submit]");
+    var msg = b && b.getAttribute("data-confirm");
+    if (msg && !window.confirm(msg)) return;
+    if (f.getAttribute("data-busy-now") === "1") return;          // second clic pendant l'opération : ignoré, la première continue
+    send(f, b);
   });
+  // retour arrière / cache de navigation : jamais de bouton resté « en cours »
+  window.addEventListener("pageshow", function (e) { if (e.persisted) root.querySelectorAll("form[data-th-form][data-busy-now]").forEach(function (f) { setBusy(f, f.querySelector("button[type=submit]"), false); }); });
 
   // Recherche instantanée dans la grille (le formulaire fonctionne aussi côté serveur)
   var input = root.querySelector("[data-th-search]"), cards = root.querySelectorAll("[data-th-card]");
@@ -88,17 +115,28 @@
     root.querySelectorAll("[data-tg-catlink]").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); setCat(a.getAttribute("data-tg-catlink")); load(); }); });
     var wire = function () {
       box.querySelectorAll(".mk-tg-pager a").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); var u = new URL(a.href, window.location.href); load({ page: u.searchParams.get("page") }); window.scrollTo({ top: root.querySelector(".mk-tg-cats").offsetTop - 12, behavior: "smooth" }); }); });
-      box.querySelectorAll("form[data-th-form]").forEach(function (f) { f.addEventListener("submit", function (e) { var b = e.submitter || f.querySelector("button[type=submit]"); var msg = b && b.getAttribute("data-confirm"); if (msg && !window.confirm(msg)) { e.preventDefault(); return; } if (f.getAttribute("data-busy-now") === "1") { e.preventDefault(); return; } f.setAttribute("data-busy-now", "1"); if (b) { b.setAttribute("aria-busy", "true"); b.textContent = b.getAttribute("data-busy") || "En cours…"; setTimeout(function () { b.disabled = true; }, 0); } }); });
     };
     wire();
   }
+  // Fiche d'un thème : le cadre de rendu en direct (1280 px de large virtuels) est mis à l'échelle de son conteneur ; la capture reste affichée tant que le rendu n'est pas prêt
+  document.querySelectorAll("[data-td-live]").forEach(function (live) {
+    var frame = live.querySelector("[data-td-frame]"), cap = document.querySelector("[data-td-caption]"), vw = Number(live.getAttribute("data-td-vw")) || 1280, ready = false;
+    var scale = function () { live.style.setProperty("--td-s", String(Math.max(0.05, live.clientWidth / vw))); if (frame) frame.style.height = Math.round(live.clientHeight / Math.max(0.05, live.clientWidth / vw)) + "px"; };
+    scale();
+    if (typeof ResizeObserver === "function") new ResizeObserver(scale).observe(live); else window.addEventListener("resize", scale);
+    if (!frame) return;
+    frame.addEventListener("load", function () { ready = true; live.classList.add("is-live"); });
+    setTimeout(function () { if (!ready && cap) cap.textContent = "Le rendu en direct n'a pas pu se charger : voici l'image de présentation du thème (ce n'est pas un rendu interactif). Utilisez « Prévisualiser » pour réessayer."; }, 15000);
+  });
   // Aperçu complet : largeur du cadre selon l'appareil
   var stage = document.querySelector("[data-tp-stage]");
   if (stage) {
     var frame = stage.querySelector("[data-tp-frame]");
     document.querySelectorAll("[data-tp-width]").forEach(function (b) {
       b.addEventListener("click", function () {
-        frame.style.width = b.getAttribute("data-tp-width");
+        var w = b.getAttribute("data-tp-width");
+        frame.style.boxSizing = /px$/.test(w) ? "content-box" : "border-box";   // la largeur de l'appareil est celle du rendu : la bordure du cadre ne la rogne pas (820 px choisis = 820 px de viewport)
+        frame.style.width = w;
         document.querySelectorAll("[data-tp-width]").forEach(function (o) { o.setAttribute("aria-pressed", o === b ? "true" : "false"); });
       });
     });

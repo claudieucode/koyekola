@@ -7,7 +7,7 @@ const { startServer, loginInstructor } = require("../tests/helpers");
 const { TEST_KEY } = require("../tests/marketing-helpers");
 const { chromium } = require("playwright-core");
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
-const OUT = arg("--out", "/tmp/perf.json"); const RUNS = Number(arg("--runs", "3"));
+const OUT = arg("--out", "/tmp/perf.json"); const RUNS = Number(arg("--runs", "3")); const ONLY = arg("--only", "");
 const ROUTES = ["/marketing", "/marketing/site-web", "/marketing/site-web/sites", "/marketing/pages", "/marketing/contacts", "/marketing/campagnes", "/marketing/site-web/themes", "/marketing/site-web/mediatheque", "/marketing/site-web/parametres", "/marketing/site-web/utilisateurs", "/marketing/analytics", "/marketing/site-web/outils", "/marketing/site-web/commentaires"];
 const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
 
@@ -19,7 +19,7 @@ const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.fl
   const sections = require("../src/marketing/themes/library").pageSections("meridien", "accueil");
   const pageId = Number(db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, status, kind, site_id) VALUES (?, 'Accueil perf', 'accueil-perf', 'Accueil', ?, 'draft', 'page', ?)").run(orgId, JSON.stringify(sections), site).lastInsertRowid);
   const tpl = Number((await boss.post("/marketing/modeles", { name: "Modèle perf", starter: "blank", kind: "marketing" })).location.match(/(\d+)$/)[1]);
-  const all = [...ROUTES, `/marketing/pages/${pageId}/editeur`, `/marketing/modeles/${tpl}`, "/marketing/site-web/articles/ajouter"];
+  const all = ONLY ? [...ROUTES, `/marketing/site-web/themes/meridien/details`, `/marketing/site-web/themes/meridien/apercu`].filter((r) => r.includes(ONLY)) : [...ROUTES, `/marketing/pages/${pageId}/editeur`, `/marketing/modeles/${tpl}`, "/marketing/site-web/articles/ajouter"];
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
   const report = { date: new Date().toISOString(), runs: RUNS, pages: [], interactions: [] };
 
@@ -55,6 +55,7 @@ const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.fl
     report.pages.push({ route, dcl: med("dcl"), load: med("load"), fcp: med("fcp"), lcp: med("lcp"), cls: med("cls"), tbt: med("tbt"), script: med("script"), layout: med("layout"), style: med("style"), styleCount: med("styleCount"), heapMB: med("heapMB"), requests: med("requests"), dom: med("dom"), kb: ok[0].kb, kbTotal: Object.values(ok[0].kb).reduce((s, v) => s + v, 0) });
   }
 
+  if (ONLY) { await browser.close(); db.close(); await srv.stop(); fs.writeFileSync(OUT, JSON.stringify(report)); for (const p of report.pages) console.log(p.error ? `${p.route} ERREUR ${p.error}` : `${p.route.slice(0, 50).padEnd(50)} KB ${String(p.kbTotal).padStart(5)} (img ${p.kb.img}, css ${p.kb.css}, js ${p.kb.js}) req ${p.requests} DCL ${p.dcl} load ${p.load} LCP ${p.lcp} CLS ${p.cls} TBT ${p.tbt} script ${p.script} layout ${p.layout}`); return; }
   // latence des interactions : clic → deux images affichées (proche de l'INP), médiane de 5 essais, page chaude
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));

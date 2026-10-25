@@ -19,6 +19,14 @@ const KEY = /^[a-z][a-z0-9-]{1,39}$/;
 
 module.exports = () => {
   const router = express.Router();
+  // Envois du gestionnaire (public/js/cms-themes.js) : le script poste en fetch avec « X-Requested-With: kolakisa-fetch » ; toute redirection du serveur (succès ou erreur
+  // annoncés par message éclair) devient alors une réponse JSON { ok, redirect }, que le script suit lui-même. Sans cet en-tête (formulaire classique), rien ne change.
+  router.use((req, res, next) => {
+    if (req.method === "POST" && req.get("X-Requested-With") === "kolakisa-fetch") {
+      res.redirect = function redirect(a, b) { const url = typeof a === "number" ? b : a; return res.status(200).json({ ok: true, redirect: String(url) }); };
+    }
+    next();
+  });
   const flash = (req, type, text) => { req.session.mkFlash = { type, text, noReopen: true }; };
 
   const target = require("./siteTarget"); // le site visé : vérifié par le serveur (voir siteTarget.js)
