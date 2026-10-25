@@ -284,7 +284,7 @@ function overview(userId, now = new Date(), { days = 30, activityLimit = 6 } = {
   const messages = db.prepare("SELECT id, name, subject, created_at, read_at FROM contact_messages ORDER BY created_at DESC, id DESC LIMIT ?").all(activityLimit);
   const activity = [
     ...sales.map((r) => ({ kind: "sale", at: r.created_at, who: r.buyer, what: r.course_title, cents: r.price_cents, href: `/formateur/gestion/ventes/commandes/${r.order_id}` })),
-    ...messages.map((m) => ({ kind: "message", at: m.created_at, who: m.name, what: m.subject || "Sans objet", unread: !m.read_at, href: "/formateur/messages" })),
+    ...messages.map((m) => ({ kind: "message", at: m.created_at, who: m.name, what: m.subject || "Sans objet", unread: !m.read_at, href: `/formateur/messages?id=${m.id}` })),
   ].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)).slice(0, activityLimit);
   return { series, totals, activity, today, periodStart: first };
 }

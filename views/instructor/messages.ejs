@@ -1,31 +1,104 @@
-<%- include("../partials/header", { title: "Messages reçus" }) %>
+<%#
+  Messages reçus de Mon espace (/formateur/messages) : boîte de réception du formulaire de contact. Deux volets : la liste (recherche, filtre « non lus », pagination) et la lecture du message
+  ouvert. Sur petit écran, un seul volet à la fois (la liste, ou le message avec un lien de retour). Données réelles : aucune conversation, réponse envoyée ou pièce jointe n'existe ici,
+  la réponse se fait par e-mail (lien mailto) depuis la messagerie du formateur.
+%><%- include("../partials/header", { title: "Messages reçus" }) %>
+<%
+  const plural = (n, one, many) => `${n} ${n > 1 ? many : one}`;
+  const filtered = Boolean(state.q || state.unreadOnly);
+  const link = (patch, id) => inboxUrl({ ...state, page: 1, ...patch }, id);
+%>
+<header class="mb-head">
+  <h1>Messages reçus</h1>
+  <p class="mb-lede"><%= totals.total ? `${plural(totals.total, "message", "messages")} au total, ${totals.unread ? plural(totals.unread, "non lu", "non lus") : "tous lus"}.` : "Les messages envoyés par le formulaire de contact apparaîtront ici." %></p>
+</header>
 
-  <div class="container">
-    <h1>Messages reçus</h1>
+<% if (missing) { %><p class="mb-notice" role="status">Ce message n'existe plus : il a peut-être été supprimé. Les autres messages sont dans la liste.</p><% } %>
 
-    <% if (!messages.length) { %>
-      <p class="empty-state" style="padding:24px 0;">Aucun message pour le moment.</p>
+<div class="mb-shell<%= open ? " has-open" : "" %>">
+  <section class="mb-list" aria-label="Liste des messages">
+    <form class="mb-search" method="get" action="/formateur/messages" role="search">
+      <label class="sr-only" for="mb-q">Rechercher dans les messages</label>
+      <input id="mb-q" type="search" name="q" value="<%= state.q %>" placeholder="Nom, e-mail, objet ou texte" maxlength="100" autocomplete="off">
+      <% if (state.unreadOnly) { %><input type="hidden" name="filtre" value="non-lus"><% } %>
+      <button type="submit" class="btn btn-outline btn-sm">Rechercher</button>
+    </form>
+    <nav class="mb-tabs" aria-label="Filtrer les messages">
+      <a href="<%= link({ unreadOnly: false }) %>"<%- !state.unreadOnly ? ' aria-current="true"' : "" %>>Tous <span><%= totals.total %></span></a>
+      <a href="<%= link({ unreadOnly: true }) %>"<%- state.unreadOnly ? ' aria-current="true"' : "" %>>Non lus <span><%= totals.unread %></span></a>
+    </nav>
+
+    <% if (!result.rows.length) { %>
+      <div class="mb-empty">
+        <% if (filtered) { %>
+          <p><strong>Aucun message ne correspond.</strong> <%= state.q ? `Aucun résultat pour « ${state.q} ».` : "Tous vos messages ont été lus." %></p>
+          <a class="btn btn-outline btn-sm" href="/formateur/messages">Réinitialiser les filtres</a>
+        <% } else { %>
+          <p><strong>Aucun message pour le moment.</strong> Chaque message envoyé depuis la page Contact de votre site arrive ici.</p>
+          <a class="btn btn-outline btn-sm" href="/contact" target="_blank" rel="noopener">Voir la page Contact</a>
+        <% } %>
+      </div>
+    <% } else { %>
+      <p class="mb-count" aria-live="polite"><%= filtered ? plural(result.total, "résultat", "résultats") : `Page ${result.page} sur ${result.pages}` %></p>
+      <ul class="mb-items">
+        <% result.rows.forEach((m) => { const when = shortDate(m.created_at); const unread = !m.read_at; const here = open && open.id === m.id; %>
+          <li>
+            <a class="mb-item<%= unread ? " is-unread" : "" %><%= here ? " is-open" : "" %>" href="<%= inboxUrl(state, m.id) %>"<%- here ? ' aria-current="true"' : "" %>>
+              <span class="mb-avatar" aria-hidden="true"><%= m.initials %></span>
+              <span class="mb-item-main">
+                <span class="mb-item-top"><span class="mb-name"><%= m.name %></span><time datetime="<%= when.iso %>"><%= when.text %></time></span>
+                <span class="mb-subject"><% if (unread) { %><span class="mb-dot" aria-hidden="true"></span><span class="sr-only">Non lu : </span><% } %><%= m.subject || "(sans objet)" %></span>
+                <span class="mb-preview"><%= m.preview %></span>
+              </span>
+            </a>
+          </li>
+        <% }) %>
+      </ul>
+      <% if (result.pages > 1) { %>
+        <nav class="mb-pager" aria-label="Pages de messages">
+          <% if (result.page > 1) { %><a class="btn btn-outline btn-sm" href="<%= inboxUrl({ ...state, page: result.page - 1 }) %>" rel="prev">Plus récents</a><% } else { %><span></span><% } %>
+          <% if (result.page < result.pages) { %><a class="btn btn-outline btn-sm" href="<%= inboxUrl({ ...state, page: result.page + 1 }) %>" rel="next">Plus anciens</a><% } %>
+        </nav>
+      <% } %>
     <% } %>
-    <ul class="message-list">
-      <% messages.forEach((m) => { %>
-        <li class="message-item<%= m.read_at ? '' : ' is-unread' %>" id="message-<%= m.id %>">
-          <div class="message-head">
-            <strong><%= m.name %></strong>
-            <a href="mailto:<%= m.email %>"><%= m.email %></a>
-            <span class="field-hint"><%= formatDateTime(m.created_at) %></span>
-            <% if (!m.read_at) { %><span class="badge">Non lu</span><% } %>
+  </section>
+
+  <section class="mb-reader" aria-label="Message ouvert">
+    <% if (!open) { %>
+      <div class="mb-placeholder">
+        <p><strong>Choisissez un message</strong></p>
+        <p>Sélectionnez un message dans la liste pour le lire et y répondre par e-mail.</p>
+      </div>
+    <% } else { %>
+      <a class="mb-back" href="<%= inboxUrl(state) %>"><%- icon('arrowLeft', { size: 16 }) %> Tous les messages</a>
+      <article class="mb-message" aria-labelledby="mb-title">
+        <header class="mb-message-head">
+          <span class="mb-avatar mb-avatar-lg" aria-hidden="true"><%= open.initials %></span>
+          <div class="mb-from">
+            <h2 id="mb-title"><%= open.subject || "(sans objet)" %></h2>
+            <p><strong><%= open.name %></strong> · <a href="mailto:<%= open.email %>"><%= open.email %></a></p>
+            <p class="mb-meta"><time datetime="<%= shortDate(open.created_at).iso %>"><%= formatDateTime(open.created_at) %></time><span class="badge <%= open.read_at ? "badge-muted" : "" %>"><%= open.read_at ? "Lu" : "Non lu" %></span></p>
           </div>
-          <% if (m.subject) { %><p class="message-subject"><%= m.subject %></p><% } %>
-          <p class="message-body"><%= m.message %></p>
-          <div class="message-actions">
-            <% if (!m.read_at) { %>
-              <form action="/formateur/messages/<%= m.id %>/lu" method="post" class="inline-form"><button type="submit" class="btn btn-outline btn-sm">Marquer comme lu</button></form>
-            <% } %>
-            <form action="/formateur/messages/<%= m.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer ce message ?');"><button type="submit" class="btn btn-danger btn-sm">Supprimer</button></form>
-          </div>
-        </li>
-      <% }) %>
-    </ul>
-  </div>
+        </header>
+        <div class="mb-body"><%= open.message %></div>
+        <footer class="mb-actions">
+          <a class="btn btn-primary" href="<%= replyHref %>"><%- icon('mail', { size: 16 }) %> Répondre par e-mail</a>
+          <form action="/formateur/messages/<%= open.id %>/<%= open.read_at ? "non-lu" : "lu" %>" method="post" class="inline-form">
+            <input type="hidden" name="q" value="<%= state.q %>"><% if (state.unreadOnly) { %><input type="hidden" name="filtre" value="non-lus"><% } %><input type="hidden" name="page" value="<%= state.page %>">
+            <button type="submit" class="btn btn-outline"><%= open.read_at ? "Marquer comme non lu" : "Marquer comme lu" %></button>
+          </form>
+          <details class="mb-delete">
+            <summary class="btn btn-outline">Supprimer</summary>
+            <form action="/formateur/messages/<%= open.id %>/supprimer" method="post" class="mb-delete-box">
+              <input type="hidden" name="q" value="<%= state.q %>"><% if (state.unreadOnly) { %><input type="hidden" name="filtre" value="non-lus"><% } %><input type="hidden" name="page" value="<%= state.page %>">
+              <p>Supprimer définitivement ce message ? Cette action est irréversible.</p>
+              <button type="submit" class="btn btn-danger btn-sm">Oui, supprimer</button>
+            </form>
+          </details>
+        </footer>
+      </article>
+    <% } %>
+  </section>
+</div>
 
 <%- include("../partials/footer") %>

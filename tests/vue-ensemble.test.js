@@ -126,7 +126,7 @@ describe("Vue d'ensemble : page (serveur réel)", () => {
     assert.match(html, /<span class="ov-todo-n">1<\/span><span class="ov-todo-t">formation en brouillon</); assert.match(html, /<span class="ov-todo-n">1<\/span><span class="ov-todo-t">message non lu</);
     assert.equal((html.match(/<li class="ov-ev ov-ev--sale">/g) || []).length, 3, "trois ventes réelles dans l'activité");
     assert.match(html, /<li class="ov-ev ov-ev--message">/);
-    for (const l of html.matchAll(/<a class="ov-ev-body" href="([^"]+)"/g)) assert.match(l[1], /^\/formateur\/(?:messages|gestion\/ventes\/commandes\/\d+)$/, "chaque ligne mène à une vraie page");
+    for (const l of html.matchAll(/<a class="ov-ev-body" href="([^"]+)"/g)) assert.match(l[1], /^\/formateur\/(?:messages(?:\?id=\d+)?|gestion\/ventes\/commandes\/\d+)$/, "chaque ligne mène à une vraie page");
   });
 
   test("le contenu saisi (titre de formation, nom d'un expéditeur) est échappé", async () => {
@@ -162,7 +162,8 @@ describe("Vue d'ensemble : page (serveur réel)", () => {
 
   test("styles : uniquement les variables du thème (--dash-*), animation limitée au graphique et désactivée en mouvement réduit", () => {
     const css = read("public", "css", "dashboard.css");
-    const block = css.slice(css.indexOf("Vue d'ensemble de « Mon espace »"));
+    const start = css.indexOf("Vue d'ensemble de « Mon espace »"), end = css.indexOf("/* =====", start);
+    const block = css.slice(start, end < 0 ? undefined : end); // jusqu'au bloc suivant
     assert.doesNotMatch(block.replace(/rgba?\([^)]*\)/g, ""), /#[0-9a-fA-F]{3,8}\b/, "aucune couleur écrite en dur dans le bloc");
     assert.match(block, /@media \(prefers-reduced-motion: no-preference\) \{\s*\.ov-bar:not\(\.is-zero\)/);
     assert.equal((block.match(/animation:/g) || []).length, 1, "un seul moment animé");

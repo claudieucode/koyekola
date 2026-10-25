@@ -175,20 +175,57 @@ router.post("/contact", async (req, res, next) => {
 });
 
 // ---------- Boîte de réception ----------
+// Messages du formulaire de contact : liste paginée + lecture (services/inbox). Ouvrir un message le marque comme lu (« Marquer comme non lu » le rétablit).
+// Sans id, rien n'est ouvert ni modifié. Les redirections reconstruisent l'adresse à partir de paramètres validés (jamais d'adresse libre : pas de redirection ouverte).
+
+const inbox = require("../services/inbox");
+
+const inboxState = (src) => ({
+  q: String(src.q || "").trim().slice(0, 100),
+  unreadOnly: src.filtre === "non-lus",
+  page: Math.max(1, Number.parseInt(src.page, 10) || 1),
+});
+const inboxUrl = (state, id) => {
+  const qs = new URLSearchParams();
+  if (state.q) qs.set("q", state.q);
+  if (state.unreadOnly) qs.set("filtre", "non-lus");
+  if (state.page > 1) qs.set("page", String(state.page));
+  if (id) qs.set("id", String(id));
+  const text = qs.toString();
+  return `/formateur/messages${text ? `?${text}` : ""}`;
+};
 
 router.get("/formateur/messages", (req, res) => {
-  const messages = db.prepare("SELECT * FROM contact_messages ORDER BY (read_at IS NOT NULL), created_at DESC, id DESC LIMIT 200").all();
-  res.render("instructor/messages", { messages });
+  const state = inboxState(req.query);
+  let open = null, missing = false;
+  if (req.query.id !== undefined) {
+    open = inbox.get(req.query.id);
+    if (!open) missing = true;
+    else if (!open.read_at) { inbox.markRead(open.id); open = inbox.get(open.id); }
+  }
+  const totals = inbox.counts();
+  // La pastille de la navigation a été calculée avant cette lecture : on la remet à jour pour cette réponse
+  if (res.locals.dash) res.locals.dash.unread = totals.unread;
+  if (res.locals.appRail) res.locals.appRail.unread = totals.unread;
+  // Lien direct vers un message (sans page demandée) : la liste s'ouvre à la page qui le contient
+  if (open && req.query.page === undefined) state.page = inbox.pageOf(open.id, state);
+  const result = inbox.list({ ...state, keepId: open ? open.id : 0 });
+  res.render("instructor/messages", { result, totals, open, missing, state: { ...state, page: result.page }, replyHref: open ? inbox.replyHref(open) : "", inboxUrl, shortDate: inbox.shortDate });
 });
 
 router.post("/formateur/messages/:id/lu", (req, res) => {
-  db.prepare("UPDATE contact_messages SET read_at = COALESCE(read_at, datetime('now')) WHERE id = ?").run(Number(req.params.id));
-  res.redirect("/formateur/messages");
+  inbox.markRead(req.params.id);
+  res.redirect(inboxUrl(inboxState(req.body), req.params.id));
+});
+
+router.post("/formateur/messages/:id/non-lu", (req, res) => {
+  inbox.markUnread(req.params.id);
+  res.redirect(inboxUrl(inboxState(req.body), req.params.id));
 });
 
 router.post("/formateur/messages/:id/supprimer", (req, res) => {
-  db.prepare("DELETE FROM contact_messages WHERE id = ?").run(Number(req.params.id));
-  res.redirect("/formateur/messages");
+  inbox.remove(req.params.id);
+  res.redirect(inboxUrl(inboxState(req.body)));
 });
 
 module.exports = router;

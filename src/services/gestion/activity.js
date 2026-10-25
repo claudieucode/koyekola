@@ -30,7 +30,7 @@ const SOURCES = [
     `],
   ["Messages", `
     SELECT 'message:' || m.id AS key, 'message' AS kind, 'messages' AS type, m.created_at AS at, 'Nouveau message : ' || CASE WHEN m.subject <> '' THEN m.subject ELSE 'sans objet' END AS title, m.name AS detail,
-      '/formateur/messages#message-' || m.id AS href, 1 AS notif, NULL AS amount
+      '/formateur/messages?id=' || m.id AS href, 1 AS notif, NULL AS amount
     FROM contact_messages m
     `],
   ["Avis", `
