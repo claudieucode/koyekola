@@ -729,4 +729,24 @@
   .mb-item, .mb-tabs a { transition: background-color 0.12s ease; }
   .mb-message { animation: mb-in 0.16s ease-out; }
   @keyframes mb-in { from { opacity: 0; } }
+/* ---------- Support (Centre de gestion) ---------- */
+.g-support-kpis { margin-bottom: var(--s4); }
+.g-support-tabs { margin-bottom: var(--s3); }
+.g-prio { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; background: color-mix(in srgb, var(--dash-muted) 12%, var(--dash-card)); color: var(--dash-muted); }
+.g-prio--high { background: color-mix(in srgb, #c4161f 12%, var(--dash-card)); color: #c4161f; }
+.g-prio--normal { color: var(--dash-text); }
+.g-thread { list-style: none; margin: 0 0 var(--s4); padding: 0; display: grid; gap: var(--s3); }
+.g-msg { padding: var(--s3) var(--s4); background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: var(--dash-radius); }
+.g-msg.is-staff { border-left: 4px solid var(--dash-accent); background: color-mix(in srgb, var(--dash-accent) 6%, var(--dash-card)); }
+.g-msg-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 14px; }
+.g-msg-head time { color: var(--dash-muted); font-size: 12.5px; }
+.g-msg-body { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.g-hint { color: var(--dash-muted); font-size: 12.5px; }
+.g-ticket aside form + form { margin-top: var(--s3); }
+.g-table td[data-label="Statut"] .dash-status { white-space: normal; }
+@media (min-width: 761px) { .g-table td[data-label="Statut"] { min-width: 200px; } }
+.g-ticket aside .g-form { margin-top: var(--s4); }
+@media (max-width: 640px) {
+  .g-ticket .g-filter-actions { flex-direction: column; align-items: stretch; }
+  .g-ticket .btn { width: 100%; justify-content: center; }
 }

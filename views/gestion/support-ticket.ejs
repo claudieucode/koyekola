@@ -1,40 +1,49 @@
 <%- include("../partials/header", { title }) %>
 <%- include("_head", { heading: ticket.subject, subtitle: `Demande #${ticket.id} de ${ticket.student_name} (${ticket.student_email})${ticket.course_title ? " · " + ticket.course_title : ""}` }) %>
-<div class="dash-grid-2">
+<% const tone = ticket.status === "closed" ? "is-archived" : ticket.status === "answered" ? "is-published" : "is-draft"; %>
+<div class="dash-grid-2 g-ticket">
   <section class="dpanel" aria-labelledby="s-thread">
     <h2 id="s-thread">Échanges</h2>
-    <ol style="list-style:none;padding:0;">
+    <ol class="g-thread" aria-label="Du plus ancien au plus récent">
       <% messages.forEach((m) => { %>
-        <li class="dpanel" style="margin-bottom:10px;<%= m.is_staff ? "border-left:4px solid var(--dash-accent);" : "" %>">
-          <strong><%= m.is_staff ? "Vous" : ticket.student_name %></strong> <small>· <%= formatDateTime(m.created_at) %></small>
-          <p style="white-space:pre-wrap;margin:8px 0 0;"><%= m.body %></p>
+        <li class="g-msg<%= m.is_staff ? " is-staff" : "" %>">
+          <div class="g-msg-head"><strong><%= m.is_staff ? "Vous" : ticket.student_name %></strong><time datetime="<%= m.created_at %>"><%= formatDateTime(m.created_at) %></time></div>
+          <p class="g-msg-body"><%= m.body %></p>
         </li>
       <% }) %>
     </ol>
     <% if (ticket.status !== "closed") { %>
-    <form method="post" action="/formateur/gestion/support/<%= ticket.id %>/repondre" class="g-form">
-      <div class="g-field"><label for="s-reply">Votre réponse</label><textarea id="s-reply" name="message" rows="5" maxlength="5000" required></textarea></div>
-      <div class="g-filter-actions"><button type="submit" class="btn btn-primary">Envoyer la réponse</button></div>
+    <form method="post" action="/formateur/gestion/support/<%= ticket.id %>/repondre" class="g-form" data-support-form>
+      <div class="g-field"><label for="s-reply">Votre réponse</label><textarea id="s-reply" name="message" rows="5" maxlength="5000" required data-count="s-count" data-ctrl-enter></textarea><small class="g-hint"><span>Ctrl + Entrée pour envoyer</span> · <span id="s-count" aria-hidden="true"></span></small></div>
+      <div class="g-filter-actions">
+        <button type="submit" class="btn btn-primary" data-pending="Envoi…">Envoyer la réponse</button>
+        <button type="submit" class="btn btn-outline" name="resolve" value="1" data-pending="Envoi…">Envoyer et résoudre</button>
+      </div>
     </form>
+    <% } else { %>
+      <p class="g-hint">Cette demande est résolue. Rouvrez-la (colonne de droite) pour répondre.</p>
     <% } %>
   </section>
   <aside class="dpanel" aria-labelledby="s-side">
     <h2 id="s-side">Suivi</h2>
     <dl class="g-dl">
-      <dt>Statut</dt><dd><span class="dash-status <%= ticket.status === "closed" ? "is-archived" : ticket.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[ticket.status] %></span></dd>
+      <dt>Statut</dt><dd><span class="dash-status <%= tone %>"><%= statuses[ticket.status] %></span></dd>
       <dt>Créée le</dt><dd><%= formatDateTime(ticket.created_at) %></dd>
-      <% if (ticket.closed_at) { %><dt>Close le</dt><dd><%= formatDateTime(ticket.closed_at) %></dd><% } %>
+      <dt>Dernière activité</dt><dd><%= formatDateTime(ticket.updated_at) %></dd>
+      <% if (ticket.closed_at) { %><dt>Résolue le</dt><dd><%= formatDateTime(ticket.closed_at) %></dd><% } %>
+      <dt>Messages</dt><dd><%= ticket.message_count %></dd>
       <dt>Élève</dt><dd><a href="/formateur/gestion/eleves/<%= ticket.user_id %>"><%= ticket.student_name %></a></dd>
     </dl>
     <form method="post" action="/formateur/gestion/support/<%= ticket.id %>/priorite" class="g-form">
       <div class="g-field"><label for="s-prio">Priorité</label><select id="s-prio" name="priority"><% Object.entries(priorities).forEach(([k, v]) => { %><option value="<%= k %>"<%= ticket.priority === k ? " selected" : "" %>><%= v %></option><% }) %></select></div>
-      <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+      <button type="submit" class="btn btn-outline btn-sm">Enregistrer la priorité</button>
     </form>
     <% if (ticket.status === "closed") { %>
-      <form method="post" action="/formateur/gestion/support/<%= ticket.id %>/rouvrir"><button type="submit" class="btn btn-outline btn-sm">Rouvrir</button></form>
+      <form method="post" action="/formateur/gestion/support/<%= ticket.id %>/rouvrir"><button type="submit" class="btn btn-primary btn-sm" data-pending="Réouverture…">Rouvrir la demande</button></form>
     <% } else { %>
-      <form method="post" action="/formateur/gestion/support/<%= ticket.id %>/fermer"><button type="submit" class="btn btn-outline btn-sm">Clore la demande</button></form>
+      <form method="post" action="/formateur/gestion/support/<%= ticket.id %>/fermer"><button type="submit" class="btn btn-outline btn-sm">Marquer comme résolue</button></form>
     <% } %>
   </aside>
 </div>
+<script src="<%= asset('/js/support.js') %>" defer></script>
 <%- include("../partials/footer") %>

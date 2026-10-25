@@ -1,23 +1,38 @@
 <%- include("../partials/header", { title }) %>
-<%- include("_head", { heading: "Support", subtitle: "Demandes de vos élèves. Répondez ici : l'élève est prévenu dans ses notifications." }) %>
-<form class="g-filters" method="get" action="/formateur/gestion/support" role="search" aria-label="Filtrer les demandes">
-  <div class="g-field g-field-grow"><label for="s-q">Rechercher</label><input id="s-q" type="search" name="q" value="<%= filters.q %>" placeholder="Sujet, élève, e-mail"></div>
-  <div class="g-field"><label for="s-st">Statut</label><select id="s-st" name="statut"><option value="">Tous</option><% Object.entries(statuses).forEach(([k, v]) => { %><option value="<%= k %>"<%= filters.statut === k ? " selected" : "" %>><%= v %></option><% }) %></select></div>
-  <div class="g-filter-actions"><button type="submit" class="btn btn-primary">Filtrer</button></div>
+<%- include("_head", { heading: "Support", subtitle: "Demandes de vos élèves. Répondez ici : l'élève est prévenu dans ses notifications (et par e-mail si l'envoi est configuré)." }) %>
+<% const L = list, filtered = Boolean(filters.statut || filters.q || filters.urgent);
+   const tab = (key, label, count) => `<a class="dash-chip" href="${url({ statut: key, urgent: "", page: "" })}"${(filters.statut === key && !filters.urgent) ? ' aria-current="page"' : ""}>${label} <span class="dash-chip-count">${count}</span></a>`; %>
+<section class="dash-kpis g-kpis g-support-kpis" aria-label="État des demandes">
+  <div class="kpi"><span class="kpi-icon" aria-hidden="true"><%- icon("messageSquare", { size: 20 }) %></span><span class="kpi-label">À traiter</span><span class="kpi-value"><%= stats.open %></span><span class="kpi-trend"><%= stats.oldestOpen ? "plus ancienne : " + ageLabel(stats.oldestOpen) : "rien en attente" %></span></div>
+  <div class="kpi"><span class="kpi-icon" aria-hidden="true"><%- icon("alertTriangle", { size: 20 }) %></span><span class="kpi-label">Priorité haute</span><span class="kpi-value"><%= stats.urgent %></span><span class="kpi-trend">en attente de réponse</span></div>
+  <div class="kpi"><span class="kpi-icon" aria-hidden="true"><%- icon("mail", { size: 20 }) %></span><span class="kpi-label">Répondues</span><span class="kpi-value"><%= stats.answered %></span><span class="kpi-trend">en attente de l'élève</span></div>
+  <div class="kpi"><span class="kpi-icon" aria-hidden="true"><%- icon("check", { size: 20 }) %></span><span class="kpi-label">Résolues</span><span class="kpi-value"><%= stats.closed %></span><span class="kpi-trend"><%= stats.total %> demande<%= stats.total > 1 ? "s" : "" %> au total</span></div>
+</section>
+<nav class="dash-filters g-support-tabs" aria-label="Filtrer par statut">
+  <a class="dash-chip" href="<%= url({ statut: "", urgent: "", page: "" }) %>"<%- !filters.statut && !filters.urgent ? ' aria-current="page"' : "" %>>Toutes <span class="dash-chip-count"><%= stats.total %></span></a>
+  <%- tab("open", "À traiter", stats.open) %><%- tab("answered", "Répondues", stats.answered) %><%- tab("closed", "Résolues", stats.closed) %>
+  <a class="dash-chip" href="<%= url({ statut: "", urgent: "1", page: "" }) %>"<%- filters.urgent ? ' aria-current="page"' : "" %>>Priorité haute <span class="dash-chip-count"><%= stats.urgent %></span></a>
+</nav>
+<form class="g-filters" method="get" action="/formateur/gestion/support" role="search" aria-label="Rechercher une demande">
+  <% if (filters.statut) { %><input type="hidden" name="statut" value="<%= filters.statut %>"><% } %><% if (filters.urgent) { %><input type="hidden" name="urgent" value="1"><% } %>
+  <div class="g-field g-field-grow"><label for="s-q">Rechercher</label><input id="s-q" type="search" name="q" value="<%= filters.q %>" placeholder="Sujet, élève, e-mail ou numéro"></div>
+  <div class="g-filter-actions"><button type="submit" class="btn btn-primary">Rechercher</button><% if (filtered) { %><a class="btn btn-outline" href="/formateur/gestion/support">Réinitialiser</a><% } %></div>
 </form>
-<% if (!tickets.length) { %>
-  <div class="dash-empty g-state"><h3>Aucune demande</h3><p><%= filters.q || filters.statut ? "Aucune demande ne correspond à ces filtres." : "Quand un élève vous écrit depuis la page Aide, sa demande apparaît ici." %></p></div>
+<p class="g-summary" role="status"><strong><%= L.total %></strong> demande<%= L.total > 1 ? "s" : "" %><%= filters.q ? ` · recherche « ${filters.q} »` : "" %></p>
+<% if (!L.rows.length) { %>
+  <div class="dash-empty g-state"><h3><%= filtered ? "Aucune demande ne correspond" : "Aucune demande" %></h3><p><%= filtered ? "Modifiez la recherche ou le filtre." : "Quand un élève vous écrit depuis la page Aide, sa demande apparaît ici." %></p></div>
 <% } else { %>
   <div class="dtable-wrap"><table class="dtable g-table">
-    <caption class="sr-only">Demandes de support</caption>
+    <caption class="sr-only">Demandes de support : les demandes en attente de réponse d'abord</caption>
     <thead><tr><th scope="col">Demande</th><th scope="col">Élève</th><th scope="col">Statut</th><th scope="col">Priorité</th><th scope="col">Dernière activité</th></tr></thead>
-    <tbody><% tickets.forEach((t) => { %><tr>
+    <tbody><% L.rows.forEach((t) => { %><tr>
       <td data-label="Demande"><a href="/formateur/gestion/support/<%= t.id %>"><strong><%= t.subject %></strong></a><br><small>#<%= t.id %> · <%= t.message_count %> message<%= t.message_count > 1 ? "s" : "" %><%= t.course_title ? " · " + t.course_title : "" %></small></td>
       <td data-label="Élève"><%= t.student_name %><br><small><%= t.student_email %></small></td>
-      <td data-label="Statut"><span class="dash-status <%= t.status === "closed" ? "is-archived" : t.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[t.status] %></span></td>
-      <td data-label="Priorité"><%= priorities[t.priority] %></td>
+      <td data-label="Statut"><span class="dash-status <%= t.status === "closed" ? "is-archived" : t.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[t.status] %></span><% if (t.status === "open" && t.age) { %><br><small>depuis <%= t.age %></small><% } %></td>
+      <td data-label="Priorité"><span class="g-prio g-prio--<%= t.priority %>"><%= priorities[t.priority] %></span></td>
       <td data-label="Dernière activité"><%= formatDateTime(t.updated_at) %></td>
     </tr><% }) %></tbody>
   </table></div>
+  <%- include("_pager", { pages: L.pages, pageNum: L.page, total: L.total }) %>
 <% } %>
 <%- include("../partials/footer") %>
