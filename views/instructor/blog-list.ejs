@@ -1,50 +1,155 @@
-<%- include("../partials/header", { title: "Blog" }) %>
-
-  <div class="container">
-    <div class="dashboard-toolbar">
-      <h1 style="margin:0;">Blog</h1>
-      <a href="/formateur/blog/nouveau" class="btn btn-primary">+ Nouvel article</a>
-    </div>
-
-    <% if (saved) { %><p class="form-success" role="status">Réglage enregistré.</p><% } %>
-    <% if (newsletter) { %>
-      <form action="/formateur/blog/newsletter" method="post" class="content-card blog-newsletter-setting">
-        <div class="field-group">
-          <label for="blog-newsletter">Formulaire d'inscription affiché dans les articles (bloc « newsletter »)</label>
-          <select id="blog-newsletter" name="form">
-            <option value="">Automatique : le dernier formulaire publié</option>
-            <% newsletter.forms.forEach((f) => { %><option value="<%= f.slug %>" <%= newsletter.chosen === f.slug ? "selected" : "" %>><%= f.name %></option><% }) %>
-          </select>
-          <span class="field-hint"><% if (!newsletter.forms.length) { %>Aucun formulaire publié : créez-en un dans Marketing → Audience → Formulaires d'inscription, sinon le bloc newsletter n'apparaît pas.<% } else { %>Les inscriptions passent par ce formulaire marketing (preuve de consentement, double confirmation).<% } %></span>
-        </div>
-        <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
-      </form>
-    <% } %>
-
-    <% if (posts.length) { %>
-      <ul class="faq-admin-list">
-        <% posts.forEach((post) => { %>
-          <li>
-            <div>
-              <p class="faq-admin-question"><%= post.title %></p>
-              <p class="faq-admin-answer"><%= post.published ? "Publié le " + formatDate(post.published_at) : post.status === "scheduled" && post.published_at ? "Programmé pour le " + formatDate(post.published_at) : (typeof statuses !== "undefined" && statuses[post.status]) || "Brouillon" %><%= post.category ? " · " + post.category : "" %> · /blog/<%= post.slug %><%= post.views ? " · " + post.views + " lecture" + (post.views > 1 ? "s" : "") : "" %></p>
-            </div>
-            <div class="row-actions">
-              <a class="btn btn-outline btn-sm" href="/formateur/blog/<%= post.id %>/modifier">Modifier</a>
-              <a class="btn btn-outline btn-sm" href="/blog/<%= post.slug %>"><%= post.published ? "Voir" : "Aperçu" %></a>
-              <form action="/formateur/blog/<%= post.id %>/publier" method="post" class="inline-form">
-                <button type="submit" class="btn btn-outline btn-sm"><%= post.published ? "Dépublier" : "Publier" %></button>
-              </form>
-              <form action="/formateur/blog/<%= post.id %>/supprimer" method="post" class="inline-form" onsubmit="return confirm('Supprimer définitivement cet article ?');">
-                <button type="submit" class="btn btn-danger btn-sm" aria-label="Supprimer l'article : <%= post.title %>">Supprimer</button>
-              </form>
-            </div>
-          </li>
-        <% }) %>
-      </ul>
-    <% } else { %>
-      <p class="empty-state" style="padding:24px 0;">Aucun article. Rédigez le premier !</p>
-    <% } %>
+<%#
+  Blog de Mon espace (/formateur/blog) : espace de travail éditorial. La liste, les effectifs et les actions viennent du service partagé avec le CMS (services/articles) : recherche, onglets d'état,
+  tri et pagination se font dans la base ; le contenu des articles n'est jamais chargé. « Supprimer » met à la corbeille (réversible) ; la suppression définitive se fait depuis la corbeille.
+  La modification rapide, les actions groupées, les filtres par auteur / catégorie / mois sont dans « Gestion avancée » (CMS) : ils ne sont pas dupliqués ici.
+%><%- include("../partials/header", { title: "Blog" }) %>
+<%
+  const { counts } = result;
+  const inTrash = state.etat === "corbeille";
+  const filtered = Boolean(state.q);
+  const tabs = ["toutes", "publies", "programmes", "brouillons", "corbeille"];
+  const stateLabel = { published: "Publié", scheduled: "Programmé", draft: "Brouillon", review: "En relecture", archived: "Archivé" }; // mêmes mots que les onglets
+  const badge = { published: "is-published", scheduled: "is-scheduled", draft: "is-draft", review: "is-review", archived: "is-draft" };
+  const when = (p) => {
+    if (p.deleted_at) return { label: "Supprimé le", at: p.deleted_at, full: false };
+    if (p.status === "published") return { label: "Publié le", at: p.published_at, full: false };
+    if (p.status === "scheduled") return { label: "Programmé pour le", at: p.published_at, full: true };
+    return { label: "Modifié le", at: p.updated_at, full: false };
+  };
+  const hidden = `<input type="hidden" name="etat" value="${state.etat}"><input type="hidden" name="q" value="${state.q.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")}"><input type="hidden" name="tri" value="${state.tri}"><input type="hidden" name="page" value="${state.page}">`;
+%>
+<header class="bl-head">
+  <div>
+    <h1>Blog</h1>
+    <p class="bl-lede"><%= workspace.summary(counts) %></p>
   </div>
+  <div class="bl-head-actions">
+    <a href="/marketing/site-web/articles" class="btn btn-outline" title="Modification rapide, actions groupées, filtres par auteur, catégorie et mois">Gestion avancée</a>
+    <a href="/formateur/blog/nouveau" class="btn btn-primary"><%- icon('plus', { size: 16 }) %> Nouvel article</a>
+  </div>
+</header>
 
+<% if (flash) { %>
+  <div class="bl-flash is-<%= flash.type %>" role="<%= flash.type === "error" ? "alert" : "status" %>">
+    <span><%= flash.text %></span>
+    <% if (flash.undo) { %><form action="<%= flash.undo %>" method="post"><%- hidden %><button type="submit" class="btn btn-outline btn-sm">Annuler</button></form><% } %>
+    <% if (flash.open) { %><a class="btn btn-outline btn-sm" href="<%= flash.open %>">Ouvrir la copie</a><% } %>
+  </div>
+<% } %>
+<% if (saved) { %><p class="bl-flash is-ok" role="status"><span>Réglage enregistré.</span></p><% } %>
+
+<section class="bl-card" aria-label="Articles">
+  <nav class="bl-tabs" aria-label="Filtrer par état">
+    <% tabs.forEach((key) => { %>
+      <a href="<%= workspace.url(state, { etat: key, page: 1 }) %>"<%- state.etat === key ? ' aria-current="true"' : "" %>><%= workspace.STATE_LABELS[key] %> <span><%= counts[key] %></span></a>
+    <% }) %>
+  </nav>
+
+  <form class="bl-tools" method="get" action="/formateur/blog" role="search">
+    <% if (state.etat !== "toutes") { %><input type="hidden" name="etat" value="<%= state.etat %>"><% } %>
+    <label class="sr-only" for="bl-q">Rechercher un article</label>
+    <input id="bl-q" type="search" name="q" value="<%= state.q %>" placeholder="Titre, adresse, résumé ou texte" maxlength="100" autocomplete="off">
+    <label class="sr-only" for="bl-tri">Trier les articles</label>
+    <select id="bl-tri" name="tri" data-autosubmit>
+      <% Object.entries(workspace.SORT_LABELS).forEach(([key, label]) => { %><option value="<%= key %>"<%= state.tri === key ? " selected" : "" %>><%= label %></option><% }) %>
+    </select>
+    <button type="submit" class="btn btn-outline btn-sm">Rechercher</button>
+  </form>
+
+  <% if (inTrash && result.rows.length) { %><p class="bl-note">Les articles de la corbeille ne sont plus visibles du public. Restaurez-les (ils reviennent en brouillon) ou supprimez-les définitivement.</p><% } %>
+
+  <% if (!result.rows.length) { %>
+    <div class="bl-empty">
+      <% if (filtered) { %>
+        <p><strong>Aucun article ne correspond.</strong> Aucun résultat pour « <%= state.q %> »<%= state.etat !== "toutes" ? ` dans « ${workspace.STATE_LABELS[state.etat]} »` : "" %>.</p>
+        <a class="btn btn-outline btn-sm" href="<%= workspace.url({ etat: state.etat, tri: state.tri, page: 1, q: "" }) %>">Réinitialiser la recherche</a>
+      <% } else if (inTrash) { %>
+        <p><strong>La corbeille est vide.</strong> Les articles que vous supprimez arrivent ici et peuvent être restaurés.</p>
+      <% } else if (state.etat !== "toutes") { %>
+        <p><strong>Aucun article dans « <%= workspace.STATE_LABELS[state.etat] %> ».</strong></p>
+        <a class="btn btn-outline btn-sm" href="<%= workspace.url({ tri: state.tri }) %>">Voir tous les articles</a>
+      <% } else { %>
+        <p><strong>Aucun article pour le moment.</strong> Rédigez le premier : il reste en brouillon tant que vous ne le publiez pas.</p>
+        <a class="btn btn-primary btn-sm" href="/formateur/blog/nouveau"><%- icon('plus', { size: 16 }) %> Rédiger le premier article</a>
+      <% } %>
+    </div>
+  <% } else { %>
+    <p class="bl-count" aria-live="polite"><%= filtered ? `${result.total} résultat${result.total > 1 ? "s" : ""}` : `${result.total} article${result.total > 1 ? "s" : ""}` %><%= result.pages > 1 ? ` · page ${result.page} sur ${result.pages}` : "" %></p>
+    <table class="bl-table">
+      <caption class="sr-only">Articles du blog</caption>
+      <thead><tr><th scope="col">Article</th><th scope="col">État</th><th scope="col">Auteur</th><th scope="col">Date</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody>
+        <% result.rows.forEach((p) => { const w = when(p); const site = sites.get(p.id); const cats = (p.categories_list || []).map((c) => c.name || c).slice(0, 3);
+              const live = p.status === "published", scheduled = p.status === "scheduled"; %>
+          <tr class="bl-row<%= p.deleted_at ? " is-trashed" : "" %>">
+            <td class="bl-main">
+              <% if (p.deleted_at) { %><span class="bl-title"><%= p.title || "(sans titre)" %></span>
+              <% } else { %><a class="bl-title" href="/formateur/blog/<%= p.id %>/modifier"><%= p.title || "(sans titre)" %></a><% } %>
+              <span class="bl-sub">
+                <span class="bl-slug">/blog/<%= p.slug %></span>
+                <% if (cats.length) { %><span><%= cats.join(", ") %></span><% } %>
+                <% if (site) { %><span class="bl-site" title="Cet article appartient à un autre site">Site : <%= site.name %></span><% } %>
+                <% if (p.comments_pending) { %><span class="bl-pending"><%= p.comments_pending %> commentaire<%= p.comments_pending > 1 ? "s" : "" %> à modérer</span><% } %>
+              </span>
+            </td>
+            <td data-label="État"><% if (p.deleted_at) { %><span class="dash-status is-draft">Corbeille</span><% } else { %><span class="dash-status <%= badge[p.status] || "is-draft" %>"><%= stateLabel[p.status] || statuses[p.status] || p.status %></span><% } %></td>
+            <td data-label="Auteur" class="bl-muted"><%= p.author || "—" %></td>
+            <td data-label="Date" class="bl-muted"><% if (w.at) { %><%= w.label %> <%= w.full ? formatDateTime(w.at) : formatDate(w.at) %><% } else { %>—<% } %></td>
+            <td class="bl-act">
+              <% if (p.deleted_at) { %>
+                <form action="/formateur/blog/<%= p.id %>/restaurer" method="post"><%- hidden %><button type="submit" class="btn btn-outline btn-sm">Restaurer</button></form>
+              <% } else { %>
+                <a href="/formateur/blog/<%= p.id %>/modifier" class="btn btn-outline btn-sm">Modifier</a>
+              <% } %>
+              <div class="dmenu">
+                <button type="button" class="dmenu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Autres actions : <%= p.title %>" title="Autres actions"><%- icon('moreVertical', { size: 18 }) %></button>
+                <div class="dmenu-list" role="menu" hidden>
+                  <% if (p.deleted_at) { %>
+                    <form action="/formateur/blog/<%= p.id %>/supprimer-definitivement" method="post" data-confirm="Supprimer définitivement « <%= p.title %> » ? L'article et ses versions seront effacés. Cette action est irréversible."><%- hidden %><button type="submit" role="menuitem" class="is-danger"><%- icon('trash', { size: 16 }) %> Supprimer définitivement</button></form>
+                  <% } else { %>
+                    <a role="menuitem" href="<%= live ? `/blog/${p.slug}` : `/formateur/blog/${p.id}/apercu` %>" target="_blank" rel="noopener"><%- icon('eye', { size: 16 }) %> <%= live ? "Voir l'article" : "Aperçu" %></a>
+                    <% if (live || scheduled) { %>
+                      <% if (scheduled) { %><form action="/formateur/blog/<%= p.id %>/publier" method="post"><%- hidden %><button type="submit" role="menuitem"><%- icon('send', { size: 16 }) %> Publier maintenant</button></form><% } %>
+                      <form action="/formateur/blog/<%= p.id %>/depublier" method="post"><%- hidden %><button type="submit" role="menuitem"><%- icon('inbox', { size: 16 }) %> <%= scheduled ? "Annuler la programmation" : "Dépublier" %></button></form>
+                    <% } else { %>
+                      <form action="/formateur/blog/<%= p.id %>/publier" method="post"><%- hidden %><button type="submit" role="menuitem"><%- icon('send', { size: 16 }) %> Publier</button></form>
+                    <% } %>
+                    <form action="/formateur/blog/<%= p.id %>/dupliquer" method="post"><%- hidden %><button type="submit" role="menuitem" title="Crée une copie en brouillon, avec ses catégories et étiquettes"><%- icon('clip', { size: 16 }) %> Dupliquer</button></form>
+                    <hr>
+                    <form action="/formateur/blog/<%= p.id %>/supprimer" method="post"><%- hidden %><button type="submit" role="menuitem" class="is-danger" title="L'article est mis à la corbeille : vous pouvez le restaurer"><%- icon('trash', { size: 16 }) %> Mettre à la corbeille</button></form>
+                  <% } %>
+                </div>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% if (result.pages > 1) { %>
+      <nav class="bl-pager" aria-label="Pages d'articles">
+        <% if (result.page > 1) { %><a class="btn btn-outline btn-sm" href="<%= workspace.url(state, { page: result.page - 1 }) %>" rel="prev">Précédente</a><% } else { %><span></span><% } %>
+        <span class="bl-muted">Page <%= result.page %> sur <%= result.pages %></span>
+        <% if (result.page < result.pages) { %><a class="btn btn-outline btn-sm" href="<%= workspace.url(state, { page: result.page + 1 }) %>" rel="next">Suivante</a><% } else { %><span></span><% } %>
+      </nav>
+    <% } %>
+  <% } %>
+</section>
+
+<% if (newsletter) { %>
+  <details class="bl-settings"<%= saved ? " open" : "" %>>
+    <summary>Réglages du blog</summary>
+    <form action="/formateur/blog/newsletter" method="post" class="blog-newsletter-setting">
+      <div class="field-group">
+        <label for="blog-newsletter">Formulaire d'inscription affiché dans les articles (bloc « newsletter »)</label>
+        <select id="blog-newsletter" name="form">
+          <option value="">Automatique : le dernier formulaire publié</option>
+          <% newsletter.forms.forEach((f) => { %><option value="<%= f.slug %>" <%= newsletter.chosen === f.slug ? "selected" : "" %>><%= f.name %></option><% }) %>
+        </select>
+        <span class="field-hint"><% if (!newsletter.forms.length) { %>Aucun formulaire publié : créez-en un dans Marketing → Audience → Formulaires d'inscription, sinon le bloc newsletter n'apparaît pas.<% } else { %>Les inscriptions passent par ce formulaire marketing (preuve de consentement, double confirmation).<% } %></span>
+      </div>
+      <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+    </form>
+  </details>
+<% } %>
+<script src="<%= asset('/js/dash-blog.js') %>" defer></script>
 <%- include("../partials/footer") %>
