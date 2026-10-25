@@ -1,8 +1,9 @@
 <%# Coquille de « Mon espace » : barre latérale (repliable, tiroir sur mobile), barre du haut, zone de travail %>
-<% const dashClass = dash.module ? `dash has-rail dash-${dash.module.key}` : "dash";
+<% const dashClass = dash.module ? `dash has-rail dash-${dash.module.key}` : "dash dash-dock";
    const trail = dash.crumbs(typeof title !== "undefined" ? title : ""); %><div class="<%= dashClass %>" id="dash" style="<%= dash.style %>">
   <script>try { if (localStorage.getItem("kolakisa-dash-collapsed") === "1" && window.innerWidth > 1100) document.getElementById("dash").classList.add("is-collapsed"); } catch (e) { /* stockage indisponible */ }</script>
-  <% if (dash.module) { %><%- include("app-rail", { railNav: dash.globalNav, railActive: dash.module.key, railUnread: dash.unread }) %><% } %>
+  <%# barre de navigation permanente : sur toutes les pages de Mon espace (avec un module : rail à gauche ou en bas ; sans module : barre en bas / barre rapide mobile, la colonne du menu étant déjà la navigation générale) %>
+  <%- include("app-rail", { railNav: dash.globalNav, railActive: dash.module ? dash.module.key : dash.activeKey, railUnread: dash.unread }) %>
   <aside class="dash-sidebar" id="dashSidebar" aria-label="<%= dash.seo ? "Navigation de l'espace SEO" : "Navigation de Mon espace" %>">
     <div class="dash-brand">
       <% if (dash.module) { %><a href="<%= dash.module.home %>" class="dash-module-head" aria-label="<%= dash.module.label %> — vue d'ensemble du module"><span class="dash-module-icon" aria-hidden="true"><%- icon(dash.module.icon, { size: 18 }) %></span><span class="dash-module-text"><strong><%= dash.module.label %></strong><small><%= dash.module.subtitle %></small></span></a>

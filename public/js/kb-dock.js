@@ -1,4 +1,4 @@
-// KOLAKISA — rail de navigation : « Plus » de la barre rapide mobile (ouvre le menu complet existant) et position du rail (gauche / en bas, grands écrans).
+// KOLAKISA — rail de navigation : « Plus » de la barre rapide mobile (ouvre le menu complet existant) et position du rail (en bas par défaut sur grands écrans ; retour à gauche possible).
 // Aucune écoute globale, aucune boucle : deux gestionnaires de clic. La position choisie est mémorisée dans ce navigateur (localStorage.kbDock).
 (function () {
   "use strict";

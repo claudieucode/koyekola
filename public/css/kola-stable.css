@@ -57,3 +57,10 @@
    du panneau des éléments (débordement de 63 px à 1024 px). Les colonnes suivent maintenant la largeur du conteneur : une seule colonne s'il est étroit. */
 .mk-body .mk-nm-setting { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
 .mk-body .mk-nm-setting .field-hint { grid-column: auto; }
+
+/* 1 ter. cibles tactiles hors du gabarit .mk-body : puces et filtres des listes, vignettes/aperçus, copie de lien (audit responsive : 30 à 36 px) */
+@media (pointer: coarse) {
+  .mk-body.mk-body :is(.mk-chip, .mk-filter-clear, .mk-fav, .mk-ml-viewbtn, .mk-cn-filter, .pl-copy, .mk-im-link) { min-height: 44px; }
+  .mk-body.mk-body :is(.mk-fav, .mk-ml-viewbtn) { min-width: 44px; }
+  .mk-body.mk-body .mk-chip-removable { align-items: center; }
+}

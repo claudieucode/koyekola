@@ -193,3 +193,9 @@ html[data-kola-theme="dark"] .kwc-toast-error { background: #7a1f29; color: #fff
   .kwc-kicker, .kwc-status { font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* Écran tactile : 44 px de côté pour les commandes du personnalisateur (le bureau garde ses 36 px) */
+@media (pointer: coarse) {
+  :is(.kwc-iconbtn, .kwc-btn, .kwc-link, .kwc-theme-link, summary) { min-height: 44px; }
+  .kwc-iconbtn { min-width: 44px; }
+}

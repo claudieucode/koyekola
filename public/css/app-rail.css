@@ -71,45 +71,29 @@ html[data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: 64px va
 .app-rail-foot { border-top-color: color-mix(in srgb, var(--dash-sidebar-text, #fff) 16%, transparent); }
 
 /* ==========================================================================================================================================
-   Dock illustré : tuiles à plat (src/utils/dockIcons.js), effet de grossissement discret au survol (inspiré du Dock de macOS, transposé à une colonne)
-   Aucune boucle d'animation, seulement transform (jamais de dimension de mise en page) ; coupé en mouvement réduit, en niveau « lite » / « off »
-   (public/js/kb-motion.js) et sur écran tactile (aucune fonction ne dépend du survol).
+   Survol façon Dock : seul le MOUVEMENT est repris (grossissement léger de l'icône survolée, très léger des voisines), jamais l'apparence.
+   Icônes d'origine, aucune couleur ajoutée. Uniquement `transform` (aucune dimension de mise en page), aucune boucle d'animation ; coupé en mouvement
+   réduit, en niveau « lite » / « off » (public/js/kb-motion.js) et sur écran tactile (aucune fonction ne dépend du survol).
    ========================================================================================================================================== */
-.dk { display: block; width: 40px; height: 40px; overflow: visible; }
-.dk-tile { fill: var(--dk-bg); }
-.dk--marine { --dk-bg: #2a6fa3; } .dk--lagon { --dk-bg: #0e7490; } .dk--baie { --dk-bg: #b83280; }
-.dk--emeraude { --dk-bg: #0b8a63; } .dk--violet { --dk-bg: #7048c8; } .dk--ardoise { --dk-bg: #52657c; }
-.dk-w { fill: #fff; } .dk-s { fill: #fff; opacity: 0.62; } .dk-g { fill: #f4b740; } .dk-t { fill: var(--dk-bg); }
-.dk-sw, .dk-sg, .dk-st { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.dk-sw { stroke: #fff; } .dk-sg { stroke: #f4b740; } .dk-st { stroke: var(--dk-bg); }
-/* le lien porte la tuile : plus de fond ni d'opacité réduite, un anneau blanc pour l'entrée active (visible aussi sans animation) */
-.app-rail-link:has(.dk) { padding: 0; background: none; opacity: 0.92; transition: transform var(--kb-dur-fast, 120ms) var(--kb-ease, ease), opacity var(--kb-dur-fast, 120ms) var(--kb-ease, ease); }
-.app-rail-link:has(.dk):hover { background: none; opacity: 1; }
-.app-rail-link[aria-current="true"]:has(.dk) { background: none; opacity: 1; outline: 2px solid #fff; outline-offset: 2px; }
-.app-rail .app-rail-link:has(.dk):focus-visible, .app-rail .app-rail-brand:focus-visible { outline: 3px solid #7dd3fc; outline-offset: 2px; }   /* ciel clair : lisible sur le marine ; sélecteur relevé (la couche kola-brand pose sinon un contour bleu d'action, trop sombre ici) */
-.app-rail .app-rail-link[aria-current="true"]:has(.dk):focus-visible { outline: 3px solid #7dd3fc; outline-offset: 3px; box-shadow: 0 0 0 2px #fff; }   /* entrée active + focus : l'anneau blanc de l'entrée active reste, le contour bleu s'y ajoute */
-.app-rail-link[data-tip="Centre de gestion"]:has(.dk):not([aria-current="true"]), .app-rail-link[data-tip="Centre de gestion"]:has(.dk):not([aria-current="true"]):hover { background: none; box-shadow: none; }
-.app-rail-list { gap: 4px; }
-.app-rail-dot { top: -3px; right: -3px; width: 10px; height: 10px; background: #c4161f; box-shadow: 0 0 0 2px var(--dash-sidebar, #0b2538); }
-.app-rail-foot { gap: 4px; }
-/* grossissement : l'icône survolée à 1,16 ; ses deux voisines à 1,06 (une seule règle par état : pas de calcul, pas de script) */
+.app-rail-link { transition: transform 140ms cubic-bezier(0.2, 0.7, 0.3, 1), opacity 140ms ease, background-color 140ms ease; }
+.app-rail-dot { top: 6px; right: 6px; }
+.app-rail .app-rail-link:focus-visible, .app-rail .app-rail-brand:focus-visible { outline: 2px solid var(--dash-accent, #0b83c6); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .app-rail-link:has(.dk):hover,
-  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .app-rail-link:has(.dk):focus-visible { transform: scale(1.16); z-index: 2; }
-  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) li:hover + li > .app-rail-link:has(.dk),
-  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) li:has(+ li:hover) > .app-rail-link:has(.dk) { transform: scale(1.06); }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .app-rail-link:hover,
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .app-rail-link:focus-visible { transform: scale(1.18); z-index: 2; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) li:hover + li > .app-rail-link,
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) li:has(+ li:hover) > .app-rail-link { transform: scale(1.07); }
 }
-/* écrans peu hauts : tuiles de 34 px (≤ 860 px de haut), puis 30 px (≤ 740 px) pour que la colonne tienne sans défilement */
-@media (max-height: 860px) { .app-rail-link:has(.dk) { width: 34px; height: 34px; margin: 0 15px; } .dk { width: 34px; height: 34px; } }
-@media (max-height: 740px) { .app-rail-link:has(.dk) { width: 30px; height: 30px; margin: 0 17px; } .dk { width: 30px; height: 30px; } .app-rail-list { gap: 3px; } }
+html[data-kb-motion="lite"] .app-rail-link, html[data-kb-motion="off"] .app-rail-link { transition: none; }
+@media (prefers-reduced-motion: reduce) { .app-rail-link { transition: none; } }
 
 /* ---------- Barre rapide des téléphones et tablettes (< 961 px) : le rail est alors un tiroir ; ces cinq entrées restent à portée de pouce ---------- */
 .app-dock-m { display: none; }
 .app-dock-m-link { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; flex: 1 1 0; min-width: 0; min-height: 56px; padding: 6px 2px; border: 0; background: none; color: var(--dash-sidebar-text, #fff); font: inherit; font-size: 0.75rem; font-weight: 600; line-height: 1.1; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.app-dock-m-link .dk { width: 30px; height: 30px; }
+.app-dock-m-link svg { width: 22px; height: 22px; }
 .app-dock-m-link span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.82; }
 .app-dock-m-link[aria-current="true"] span { opacity: 1; font-weight: 800; }
-.app-dock-m-link[aria-current="true"] .dk { outline: 2px solid #fff; outline-offset: 2px; border-radius: 9px; }
+.app-dock-m-link[aria-current="true"] svg { color: var(--dash-accent, #0b83c6); }
 .app-dock-m .app-dock-m-link:focus-visible { outline: 3px solid #7dd3fc; outline-offset: -3px; border-radius: 10px; }
 .app-dock-m .app-rail-dot { top: 6px; right: calc(50% - 22px); }
 @media (max-width: 960px) {
@@ -125,12 +109,12 @@ html[data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: 64px va
 }
 .app-dock-m { position: fixed; left: 0; right: 0; bottom: 0; z-index: 39; height: calc(60px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); background: var(--dash-sidebar, #0b2538); border-top: 1px solid color-mix(in srgb, var(--dash-sidebar-text, #fff) 16%, transparent); }
 
-/* ---------- Dock en bas (choix de l'utilisateur, grands écrans à pointeur précis uniquement ≥ 1360 px) ----------
+/* ---------- Dock en bas (choix de l'utilisateur, grands écrans à pointeur précis uniquement ≥ 1280 px) ----------
    Raisons du choix « option » et non « défaut » : barres d'enregistrement collantes, éditeurs et fenêtres partagent le bas de l'écran ; la colonne reste la
    disposition la plus sûre pour 15 rubriques. En bas, le dock est centré SUR LA ZONE DE CONTENU (pas sur la fenêtre : il ne recouvre jamais le menu latéral),
    le contenu réserve sa hauteur et les barres collantes remontent au-dessus de lui. */
 .app-rail-dockpos { display: none; }
-@media (min-width: 1360px) and (hover: hover) and (pointer: fine) {
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   .app-rail-dockpos { display: grid; }
   html[data-kb-dock="bottom"] .mk-app.has-rail { grid-template-columns: var(--mk-sidebar-w) minmax(0, 1fr); --kb-dock-left: var(--mk-sidebar-w); }
   html[data-kb-dock="bottom"][data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: var(--mk-sidebar-w-collapsed) minmax(0, 1fr); --kb-dock-left: var(--mk-sidebar-w-collapsed); }
@@ -138,16 +122,16 @@ html[data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: 64px va
   html[data-kb-dock="bottom"] .dash.has-rail.is-collapsed { grid-template-columns: var(--dash-sidebar-w-collapsed) minmax(0, 1fr); --kb-dock-left: var(--dash-sidebar-w-collapsed); }
   html[data-kb-dock="bottom"] .app-rail {
     position: fixed; top: auto; bottom: 14px; left: calc(var(--kb-dock-left, 252px) + (100vw - var(--kb-dock-left, 252px)) / 2); transform: translateX(-50%);
-    flex-direction: row; align-items: center; width: auto; height: auto; max-width: calc(100vw - var(--kb-dock-left, 252px) - 32px); padding: 8px 12px; gap: 6px;
-    border-radius: 20px; border: 1px solid color-mix(in srgb, var(--dash-sidebar-text, #fff) 16%, transparent); box-shadow: 0 14px 34px -14px rgba(3, 12, 22, 0.65); overflow: visible; z-index: 41;
+    flex-direction: row; align-items: center; width: auto; height: auto; max-width: calc(100vw - var(--kb-dock-left, 252px) - 32px); padding: 6px 10px; gap: 8px;
+    border-radius: 16px; border: 1px solid color-mix(in srgb, var(--dash-sidebar-text, #fff) 14%, transparent); box-shadow: 0 6px 16px -10px rgba(3, 12, 22, 0.5); overflow: visible; z-index: 41;
   }
   html[data-kb-dock="bottom"] .app-rail-brand { margin: 0 4px 0 0; }
-  html[data-kb-dock="bottom"] .app-rail-list { display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 0; overflow: visible; }
+  html[data-kb-dock="bottom"] .app-rail-list { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 0; overflow: visible; }
   html[data-kb-dock="bottom"] .app-rail-sep { width: 1px; height: 30px; margin: 0 4px; }
   html[data-kb-dock="bottom"] .app-rail-link { margin: 0; }
   html[data-kb-dock="bottom"] .app-rail-foot { display: flex; gap: 6px; padding: 0 0 0 8px; border-top: 0; border-left: 1px solid color-mix(in srgb, var(--dash-sidebar-text, #fff) 16%, transparent); }
   html[data-kb-dock="bottom"] .app-rail-link[aria-current="true"]::before { left: 50%; top: auto; bottom: -9px; width: 5px; height: 5px; border-radius: 50%; transform: translateX(-50%); }
-  html[data-kb-dock="bottom"] .app-rail-link:has(.dk):hover, html[data-kb-dock="bottom"] .app-rail-link:has(.dk):focus-visible { transform-origin: 50% 100%; }
+  html[data-kb-dock="bottom"] .app-rail-link:hover, html[data-kb-dock="bottom"] .app-rail-link:focus-visible { transform-origin: 50% 100%; }
   /* l'infobulle s'affiche AU-DESSUS de l'icône */
   html[data-kb-dock="bottom"] .app-rail-link:hover::after, html[data-kb-dock="bottom"] .app-rail-link:focus-visible::after, html[data-kb-dock="bottom"] .app-rail-brand:hover::after, html[data-kb-dock="bottom"] .app-rail-brand:focus-visible::after {
     position: absolute; left: 50%; bottom: calc(100% + 14px); top: auto; transform: translateX(-50%); white-space: nowrap; z-index: 5;
@@ -155,4 +139,16 @@ html[data-sidebar="collapsed"] .mk-app.has-rail { grid-template-columns: 64px va
   html[data-kb-dock="bottom"] :is(.mk-main, .dash-main) { padding-bottom: 96px; }
   html[data-kb-dock="bottom"] :is(.pl-savebar, .mk-st-form > .mk-actions, .mk-st-form > .mk-st-actions) { bottom: 88px; }
 }
-html[data-kb-motion="lite"] .app-rail-link:has(.dk), html[data-kb-motion="off"] .app-rail-link:has(.dk) { transition: none; }
+
+/* ---------- Pages de « Mon espace » sans module (le menu latéral est déjà la navigation générale) : pas de colonne de rail, mais la barre en bas et la barre rapide mobile restent présentes ---------- */
+.dash-dock > .app-rail { display: none; }
+@media (max-width: 760px) {
+  .dash-dock .app-dock-m { display: flex; }
+  .dash-dock .dash-main { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .dash-dock.is-drawer .app-dock-m, .dash-dock:has(input:focus, textarea:focus, select:focus) .app-dock-m { display: none; }
+}
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  html[data-kb-dock="bottom"] .dash-dock > .app-rail { display: flex; }
+  html[data-kb-dock="bottom"] .dash-dock { --kb-dock-left: var(--dash-sidebar-w); }
+  html[data-kb-dock="bottom"] .dash-dock.is-collapsed { --kb-dock-left: var(--dash-sidebar-w-collapsed); }
+}
