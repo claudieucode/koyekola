@@ -277,7 +277,23 @@ function reapStale(siteId) {
   const running = audit.isRunning();
   db.prepare("UPDATE seo_audits SET status = 'failed', error = 'Analyse interrompue (redémarrage du serveur). Relancez-la.', finished_at = datetime('now') WHERE site_id = ? AND status = 'running' AND id <> ? AND started_at < datetime('now', '-20 minutes')").run(siteId, running || 0);
 }
-function analysisView(req, ctx, siteId, { auditId = null, severity = "", category = "", q = "" } = {}) {
+// Priorités : les constats regroupés par règle. Ordre = gravité (critique d'abord), puis nombre de pages concernées, puis titre.
+// Aucune note arbitraire : une règle qui touche plus de pages passe avant une règle de même gravité qui en touche moins.
+const SEVERITY_RANK = { critique: 0, avertissement: 1, recommandation: 2 };
+function priorityGroups(all) {
+  const by = new Map();
+  for (const i of all) {
+    const level = LEVEL_OF[i.severity] || "recommandation";
+    const g = by.get(i.rule_id) || { rule_id: i.rule_id, rule: BY_ID[i.rule_id] || null, level, severity: i.severity, pages: new Set(), sample: i.detail };
+    g.pages.add(i.path);
+    if ((SEVERITY_RANK[level] ?? 2) < (SEVERITY_RANK[g.level] ?? 2)) g.level = level;
+    by.set(i.rule_id, g);
+  }
+  return [...by.values()].map((g) => ({ rule_id: g.rule_id, rule: g.rule, level: g.level, count: g.pages.size, sample: g.sample }))
+    .sort((a, b) => (SEVERITY_RANK[a.level] - SEVERITY_RANK[b.level]) || (b.count - a.count) || String((a.rule && a.rule.title) || a.rule_id).localeCompare(String((b.rule && b.rule.title) || b.rule_id), "fr"));
+}
+
+function analysisView(req, ctx, siteId, { auditId = null, severity = "", category = "", q = "", rule = "" } = {}) {
   needSite(siteId);
   reapStale(siteId);
   const hasCol = store.hasSiteColumn("seo_audits");
@@ -288,13 +304,15 @@ function analysisView(req, ctx, siteId, { auditId = null, severity = "", categor
   const ev = (() => { const known = db.prepare("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id = ? AND archived_at IS NULL AND status = 'published'").get(siteId).n; return { known }; })();
   let issues = [];
   let counts = { critique: 0, avertissement: 0, recommandation: 0 };
+  let groups = [];
   let pageOf = new Map();
   if (current && current.status === "done") {
     const pages = db.prepare("SELECT id, slug, site_id, status, archived_at FROM mk_landing_pages WHERE site_id = ? AND archived_at IS NULL").all(siteId);
     pageOf = new Map(pages.map((p) => [urls.pageCanonicalPath(p), p.id]));
     const all = audit.issuesOf(current.id, { category }).filter((i) => !i.fixed_at);
     for (const i of all) counts[LEVEL_OF[i.severity] || "recommandation"]++;
-    issues = all.filter((i) => (!severity || (LEVEL_OF[i.severity] || "recommandation") === severity) && (!q || i.path.includes(q) || i.detail.toLowerCase().includes(q.toLowerCase())))
+    groups = priorityGroups(all.filter((i) => i.severity !== "info"));
+    issues = all.filter((i) => (!rule || i.rule_id === rule) && (!severity || (LEVEL_OF[i.severity] || "recommandation") === severity) && (!q || i.path.includes(q) || i.detail.toLowerCase().includes(q.toLowerCase())))
       .map((i) => ({ ...i, level: LEVEL_OF[i.severity] || "recommandation", rule: BY_ID[i.rule_id] || null, pageId: pageOf.get(i.path.split("?")[0]) || null }));
   }
   // Comparaison avec l'analyse précédente (mêmes règles, même site) : nouveaux problèmes / problèmes résolus
@@ -309,7 +327,7 @@ function analysisView(req, ctx, siteId, { auditId = null, severity = "", categor
       comparison = { prev, resolved: [...a].filter((k) => !b.has(k)).length, added: [...b].filter((k) => !a.has(k)).length, scoreBefore: prev.scores && prev.scores.overall ? prev.scores.overall.score : null, scoreNow: current.scores && current.scores.overall ? current.scores.overall.score : null };
     }
   }
-  return { history, current, running, runningElsewhere: audit.isRunning() && !running ? audit.runningSiteId() !== siteId : false, issues, counts, comparison, knownPages: ev.known, LEVELS, categories: CATEGORIES, severity, category, q };
+  return { history, current, running, runningElsewhere: audit.isRunning() && !running ? audit.runningSiteId() !== siteId : false, issues, counts, groups, comparison, knownPages: ev.known, LEVELS, categories: CATEGORIES, severity, category, q, rule };
 }
 // Lance une analyse du site. Évite les relances inutiles : si rien n'a changé depuis la dernière analyse terminée (moins de 15 minutes), elle est réutilisée sauf demande explicite.
 async function startAnalysis(req, siteId, userId, { force = false } = {}) {
@@ -407,9 +425,10 @@ function overview(req, ctx, siteId) {
   const redirectsCount = db.prepare("SELECT COUNT(*) n FROM seo_redirects WHERE site_id = ? AND enabled = 1").get(siteId).n;
   const robotsCustom = settings.allFor(siteId).robots_custom || "";
   const sm = db.prepare("SELECT generated_at, valid FROM seo_site_sitemaps WHERE site_id = ?").get(siteId) || null;
+  const topPriorities = lastDone && store.hasSiteColumn("seo_audits") ? priorityGroups(audit.issuesOf(lastDone.id).filter((i) => !i.fixed_at && i.severity !== "info")).slice(0, 3) : [];
   const missingDesc = ev.rows.filter((r) => !r.seo.description && !r.page.description).length;
   return {
-    site: ev.site, truncated: ev.truncated, lastAudit, lastDone, scores: lastDone && lastDone.scores ? lastDone.scores : null,
+    site: ev.site, truncated: ev.truncated, lastAudit, lastDone, topPriorities, scores: lastDone && lastDone.scores ? lastDone.scores : null,
     pages: { analysed: ev.rows.length, indexable: ev.rows.filter((r) => r.ix.indexable).length, excluded: ev.rows.filter((r) => !r.ix.indexable).length,
       missingDescription: missingDesc, longTitle: ev.rows.filter((r) => (r.h.title || "").length > TITLE_MAX).length, dupTitle: dupT.size, dupDescription: dupD.size },
     sitemap: { urls: map.included.length, excluded: map.excluded.length, checkedAt: sm ? sm.generated_at : null, valid: sm ? Boolean(sm.valid) : null },

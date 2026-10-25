@@ -1811,3 +1811,8 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .ac-grid--access { align-items: start; }
 .ac-toggle { white-space: nowrap; }
 .ac-label-btn { display: inline-block; }
+
+/* SEO d'un site : problèmes à traiter en premier (liste ordonnée, lisible sans dépendre de la couleur : le niveau est écrit) */
+.mk-seo-prio { margin: 8px 0 0; padding-left: 1.25rem; display: grid; gap: 8px; }
+.mk-seo-prio li { line-height: 1.5; overflow-wrap: anywhere; }
+@media (min-width: 761px) { .mk-seo-prio-table td:nth-child(3), .mk-seo-prio-table td:nth-child(5) { white-space: nowrap; } }

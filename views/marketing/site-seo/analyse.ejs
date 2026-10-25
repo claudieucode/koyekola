@@ -1,6 +1,6 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head") %>
-<% const cur = v.current; const run = v.running; const qs = (o) => { const p = new URLSearchParams({ ...(cur ? { analyse: cur.id } : {}), ...(v.severity ? { gravite: v.severity } : {}), ...(v.category ? { categorie: v.category } : {}), ...(v.q ? { q: v.q } : {}), ...o }); [...p.keys()].forEach((k) => { if (!p.get(k)) p.delete(k); }); const s = p.toString(); return s ? "?" + s : ""; }; %>
+<% const cur = v.current; const run = v.running; const qs = (o) => { const p = new URLSearchParams({ ...(cur ? { analyse: cur.id } : {}), ...(v.severity ? { gravite: v.severity } : {}), ...(v.category ? { categorie: v.category } : {}), ...(v.q ? { q: v.q } : {}), ...(v.rule ? { regle: v.rule } : {}), ...o }); [...p.keys()].forEach((k) => { if (!p.get(k)) p.delete(k); }); const s = p.toString(); return s ? "?" + s : ""; }; %>
     <section class="mk-panel mk-seo-appear" aria-labelledby="an-run"><h2 id="an-run">Lancer une analyse</h2>
       <p class="field-hint">L'analyse lit les <%= v.knownPages %> page(s) en ligne de ce site, comme un moteur de recherche (titres, descriptions, canonical, H1, images, liens, données structurées). Elle ne lit aucune page d'un autre site ni de ressource privée. Les constats sont observés ; les recommandations sont calculées.</p>
       <% if (run) { %>
@@ -34,15 +34,30 @@
       <% if (v.comparison) { %><p class="mk-seo-compare"><%- icon("check", { size: 16 }) %> Par rapport à l'analyse du <%= String(v.comparison.prev.finished_at).slice(0, 16).replace("T", " ") %> : <strong><%= v.comparison.resolved %></strong> problème(s) résolu(s), <strong><%= v.comparison.added %></strong> nouveau(x)<% if (v.comparison.scoreBefore !== null && v.comparison.scoreNow !== null) { %> · repère <%= v.comparison.scoreBefore %> → <%= v.comparison.scoreNow %><% } %>.</p><% } %>
     </section>
 
+    <% if (v.groups.length) { %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="an-prio"><h2 id="an-prio">À traiter en priorité</h2>
+      <p class="field-hint">Problèmes regroupés par type. L'ordre suit la gravité, puis le nombre de pages concernées : corriger la première ligne améliore le plus de pages. Après correction, relancez l'analyse : la ligne disparaît et le décompte « résolus » ci-dessus augmente.</p>
+      <div class="mk-table-wrap"><table class="mk-table mk-seo-table mk-seo-prio-table"><caption class="sr-only">Problèmes à traiter, du plus important au moins important</caption>
+        <thead><tr><th scope="col">Gravité</th><th scope="col">Problème</th><th scope="col">Pages</th><th scope="col">Correction proposée</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+        <tbody><% v.groups.slice(0, 8).forEach((g) => { %><tr>
+          <td data-label="Gravité"><span class="mk-status <%= g.level === 'critique' ? 'mk-status-off' : g.level === 'avertissement' ? 'mk-status-warn' : 'mk-status-ok' %>"><%= v.LEVELS[g.level] %></span></td>
+          <td data-label="Problème"><strong><%= g.rule ? g.rule.title : g.rule_id %></strong></td>
+          <td data-label="Pages"><%= g.count %> page<%= g.count > 1 ? "s" : "" %></td>
+          <td data-label="Correction proposée"><%= g.rule ? g.rule.recommendation : "" %></td>
+          <td data-label="Action"><a href="<%= qs({ regle: g.rule_id }) %>#an-list">Voir <%= g.count > 1 ? "les pages" : "la page" %></a></td></tr><% }) %></tbody></table></div>
+      <% if (v.groups.length > 8) { %><p class="field-hint"><%= v.groups.length - 8 %> autre(s) type(s) de problème dans la liste ci-dessous.</p><% } %>
+    </section>
+    <% } %>
+
     <section class="mk-panel mk-seo-appear" aria-labelledby="an-list"><h2 id="an-list">Constats</h2>
       <form method="get" class="mk-cms-toolbar mk-seo-filters" role="search">
-        <input type="hidden" name="analyse" value="<%= cur.id %>">
+        <input type="hidden" name="analyse" value="<%= cur.id %>"><% if (v.rule) { %><input type="hidden" name="regle" value="<%= v.rule %>"><% } %>
         <label class="sr-only" for="an-g">Gravité</label>
         <select id="an-g" name="gravite"><option value="">Toutes les gravités</option><% Object.entries(v.LEVELS).forEach(([k, l]) => { %><option value="<%= k %>" <%= v.severity === k ? "selected" : "" %>><%= l %></option><% }) %></select>
         <label class="sr-only" for="an-c">Type</label>
         <select id="an-c" name="categorie"><option value="">Tous les types</option><% Object.entries(v.categories).forEach(([k, l]) => { %><option value="<%= k %>" <%= v.category === k ? "selected" : "" %>><%= l %></option><% }) %></select>
         <label class="mk-search"><span class="sr-only">Adresse</span><input type="search" name="q" value="<%= v.q %>" placeholder="Adresse ou détail"></label>
-        <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (v.severity || v.category || v.q) { %><a class="btn btn-ghost btn-sm" href="?analyse=<%= cur.id %>">Effacer</a><% } %>
+        <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (v.severity || v.category || v.q || v.rule) { %><a class="btn btn-ghost btn-sm" href="?analyse=<%= cur.id %>">Effacer</a><% } %>
       </form>
       <% if (!v.issues.length) { %><p class="field-hint">Aucun constat ne correspond à ces filtres<% if (!v.counts.critique && !v.counts.avertissement && !v.counts.recommandation) { %> — aucun problème détecté sur les pages lues<% } %>.</p><% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-seo-table"><caption class="sr-only">Constats de l'analyse</caption>

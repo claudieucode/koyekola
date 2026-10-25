@@ -90,7 +90,7 @@ module.exports = () => {
 
   // ---------- Analyse SEO ----------
   router.get(`${P}/seo/analyse`, need("seo.view"), (req, res) => {
-    const v = tools.analysisView(req, req.mk.ctx, sid(req), { auditId: Number(req.query.analyse) || null, severity: String(req.query.gravite || ""), category: String(req.query.categorie || ""), q: String(req.query.q || "").slice(0, 120) });
+    const v = tools.analysisView(req, req.mk.ctx, sid(req), { auditId: Number(req.query.analyse) || null, severity: String(req.query.gravite || ""), category: String(req.query.categorie || ""), rule: String(req.query.regle || "").replace(/[^a-z0-9_]/gi, "").slice(0, 60), q: String(req.query.q || "").slice(0, 120) });
     render(req, res, "analyse", "Analyse SEO", { v });
   });
   router.post(`${P}/seo/analyse`, need("seo.edit"), async (req, res, next) => {
