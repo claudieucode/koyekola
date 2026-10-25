@@ -10,7 +10,7 @@
 .mk-body { --kx-ctl-h: 36px; }
 
 /* 1. hauteur unique des commandes d'une rangée d'outils */
-.mk-body :is(.mk-cms-toolbar, .mk-filterbar, .mk-cms-filters, .mk-cms-bulk, .mk-ar-filters, .mk-ml-toolbar, .mk-cm-filters, .mk-cm-bulkbar, .mk-pf-inline, .mk-tl-site)
+.mk-body :is(.mk-cms-toolbar, .mk-filterbar, .mk-cms-filters, .mk-cms-bulk, .mk-ar-filters, .mk-ml-toolbar, .mk-cm-filters, .mk-cm-bulkbar, .mk-pf-inline, .mk-tl-site, .mk-inline-form)
   :is(select, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]), button.btn, a.btn) {
   box-sizing: border-box; min-height: var(--kx-ctl-h); height: var(--kx-ctl-h);
 }

@@ -13,11 +13,12 @@ const [dir, spec] = process.argv.slice(2);
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
   for (const item of spec.split(",")) {
     const [route, w] = item.split("@"); const width = Number(w || 1440);
-    const ctx = await browser.newContext({ viewport: { width, height: 900 } });
+    const ctx = await browser.newContext({ viewport: { width, height: 900 }, colorScheme: process.env.THEME === "dark" ? "dark" : "light" });
+    if (process.env.THEME) await ctx.addInitScript((t) => { try { localStorage.setItem("kolaTheme", t); } catch {} }, process.env.THEME);
     await ctx.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
     const page = await ctx.newPage();
     await page.goto(`${srv.base}${route}${route.includes("?") ? "&" : "?"}site=${site}`, { waitUntil: "load" }); await page.waitForTimeout(800);
-    await page.screenshot({ path: path.join(dir, `${route.replace(/[^a-z0-9]+/gi, "_")}_${width}.png`) });
+    await page.screenshot({ path: path.join(dir, `${route.replace(/[^a-z0-9]+/gi, "_")}_${width}${process.env.THEME ? "_" + process.env.THEME : ""}.png`) });
     await ctx.close();
   }
   await browser.close(); db.close(); await srv.stop(); console.log("ok");

@@ -1,0 +1,164 @@
+/* KOLAKISA — direction artistique « Registre marine » (refonte visuelle, lot 1).
+   Couche finale de l'administration, chargée après kola-stable.css. Elle ne change ni les routes, ni le balisage des écrans, ni les
+   comportements : elle règle la typographie, la hiérarchie, les composants communs et quelques compositions.
+
+   Principes (détail dans docs/KOLAKISA_ADMIN_DESIGN_SYSTEM.md §« Registre marine ») :
+   1. Le bleu marine fait la structure (menus, titres, filets) ; le bleu d'action ne sert qu'à ce qui se clique ou se sélectionne.
+   2. Sens fixe des teintes : sarcelle = en ligne / actif ; ambre = brouillon / à surveiller ; gris = archivé ; rouge = suppression et erreur.
+   3. Un titre de page fort (Bricolage Grotesque), un texte d'aide de 62 caractères au plus, aucune illustration dans les en-têtes
+      (elles restent dans les états vides, où elles guident vers l'action).
+   4. Pas de capitales espacées : les étiquettes s'écrivent en minuscules grasses, la hiérarchie vient de la taille et du poids.
+   5. Les chiffres clés forment un registre d'un seul tenant (une bande à filets), pas quatre cartes identiques.
+   6. Aucun mouvement ajouté : seuls les états (survol, focus, sélection) changent, sans modifier la géométrie. */
+
+/* ---------- Jetons ---------- */
+:root {
+  --kb-navy: #0b2a40;          /* titres, structure */
+  --kb-navy-deep: #06192a;     /* menus, barre du haut */
+  --kb-action: #0277b6;        /* ce qui se clique */
+  --kb-live: #0e7490;          /* en ligne, actif */
+  --kb-alert: #c4161f;         /* suppression, erreur */
+  --kb-canvas: #f4f8fb;        /* surface de travail */
+  --kb-rule: #dde6ed;          /* filet unique */
+  --kb-ink: #0f1f33;
+  --kb-ink-2: #44596b;         /* texte secondaire */
+  --kb-ink-3: #5b6b7c;         /* aide, métadonnées */
+  --kb-live-bg: #e3f3f6;
+  --kb-draft: #8a5a00; --kb-draft-bg: #fff4d6;
+  --kb-r-ctl: 8px; --kb-r-panel: 12px;
+  --kb-display: var(--font-display, "Bricolage Grotesque", system-ui, sans-serif);
+}
+html[data-kola-theme="light"], html:not([data-kola-theme]) { --bg: var(--kb-canvas); --mk-bg: var(--kb-canvas); --border: var(--kb-rule); --mk-border: var(--kb-rule); --muted: var(--kb-ink-3); --mk-text-soft: var(--kb-ink-2); }
+html[data-kola-theme="dark"] {
+  --kb-navy: #e8eef7; --kb-live: #5fc4d8; --kb-alert: #f06670; --kb-canvas: #0d1524; --kb-rule: #243349;
+  --kb-ink: #e6edf6; --kb-ink-2: #b3c1d3; --kb-ink-3: #8fa1b6;
+  --kb-live-bg: rgba(95, 196, 216, 0.14); --kb-draft: #f1c766; --kb-draft-bg: rgba(240, 180, 60, 0.15);
+}
+
+/* ---------- Titre de page : l'élément le plus lisible de l'écran ---------- */
+.mk-body :is(.mk-head h1, .kx-hero h1, .mk-head-main h1) {
+  font-family: var(--kb-display); font-weight: 700; font-size: clamp(1.7rem, 1.3rem + 1.1vw, 2.15rem);
+  line-height: 1.08; letter-spacing: -0.025em; color: var(--kb-navy);
+}
+.mk-body :is(.mk-head-sub, .mk-lead, .kx-hero-lead) { max-width: 62ch; margin-top: 8px; color: var(--kb-ink-2); font-size: 0.95rem; line-height: 1.55; }
+
+/* En-têtes illustrés : à plat, texte seul (l'illustration revient dans les états vides) */
+.mk-body .kx-hero { min-height: 0; padding: 4px 0 18px; margin: 0 0 18px; background: none; border: 0; border-bottom: 1px solid var(--kb-rule); border-radius: 0; box-shadow: none; }
+.mk-body .kx-hero::before, .mk-body .kx-hero::after { display: none; }
+.mk-body .kx-hero-body { max-width: none; gap: 6px; }
+.mk-body .kx-hero-actions:not(:has(*)) { display: none; }
+.mk-body .kx-hero-art, .mk-body .kx-welcome .kx-hero-art { display: none; }
+.mk-body .kx-hero.is-compact { padding: 4px 0 16px; }
+
+/* Étiquettes : minuscules grasses, jamais de capitales espacées */
+.mk-body :is(.kx-eyebrow, .mk-nav-heading, .mk-menu-label, .mk-cms-site-text small, .mk-ar-panel h2, .mk-wd-cat, .mk-st-guide .g-eyebrow) {
+  text-transform: none; letter-spacing: 0; font-size: 0.78rem; font-weight: 650;
+}
+.mk-body .kx-eyebrow { color: var(--kb-live); }
+.mk-body .mk-nav-heading { padding: 18px 12px 6px; font-size: 0.8rem; opacity: 0.72; }
+
+/* ---------- Onglets : un seul soulignement, des effectifs discrets ---------- */
+.mk-body .mk-tabs { gap: 4px; border-bottom: 1px solid var(--kb-rule); }
+.mk-body .mk-tab { font-weight: 600; color: var(--kb-ink-2); }
+.mk-body .mk-tab:hover { color: var(--kb-navy); }
+.mk-body .mk-tab[aria-current="page"] { color: var(--kb-navy); font-weight: 700; }
+.mk-body .mk-tab[aria-current="page"]::after { height: 3px; border-radius: 3px 3px 0 0; background: var(--kb-navy); }
+.mk-body .mk-tab-count { background: none; padding: 0 0 0 4px; color: var(--kb-ink-3); font-variant-numeric: tabular-nums; font-weight: 600; }
+.mk-body .mk-tab[aria-current="page"] .mk-tab-count { background: none; color: var(--kb-ink-2); }
+
+/* ---------- Panneaux : un filet, pas d'ombre, titre en police d'affichage ---------- */
+.mk-body :is(.mk-panel, .mk-card, .mk-cms-card) { background: var(--surface); border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); box-shadow: none; }
+.mk-body :is(.mk-panel, .mk-card) > :is(h2, h3):first-child, .mk-body .mk-panel-head :is(h2, h3) { font-family: var(--kb-display); font-weight: 700; letter-spacing: -0.015em; color: var(--kb-navy); }
+
+/* ---------- Registre de chiffres : une bande à filets au lieu de cartes identiques ---------- */
+.mk-body .mk-stats:not(.kx-kpis):not(.kx-chips) {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1px; margin: 0 0 20px; padding: 0;
+  background: var(--kb-rule); border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); overflow: hidden;   /* le filet entre les chiffres est le fond du conteneur vu par l'espace de 1 px : propre à toutes les largeurs */
+}
+.mk-body .mk-stats:not(.kx-kpis):not(.kx-chips) > .mk-stat {
+  min-width: 0; border: 0; border-radius: 0; box-shadow: none; background: var(--surface); padding: 16px 20px;
+}
+.mk-body .mk-stats:not(.kx-kpis):not(.kx-chips) > .mk-stat::before { display: none; }
+.mk-body .mk-stat-label { color: var(--kb-ink-2); font-size: 0.82rem; font-weight: 600; }
+.mk-body .mk-stat-value { font-family: var(--kb-display); font-weight: 700; font-size: 2rem; line-height: 1.05; letter-spacing: -0.03em; color: var(--kb-navy); font-variant-numeric: tabular-nums; }
+.mk-body .mk-stat-hint { color: var(--kb-ink-3); font-size: 0.8rem; }
+
+/* ---------- Tableaux : en-têtes sobres, chiffres alignés ---------- */
+.mk-body .mk-table thead th { background: none; text-transform: none; letter-spacing: 0; font-size: 0.8rem; font-weight: 650; color: var(--kb-ink-3); border-bottom: 1px solid var(--kb-rule); }
+.mk-body .mk-table tbody tr { transition: background-color var(--k-dur-fast, 120ms); }
+.mk-body .mk-table tbody tr:hover { background: color-mix(in srgb, var(--kb-navy) 3.5%, transparent); }
+.mk-body .mk-table .mk-num { font-variant-numeric: tabular-nums; }
+.mk-body .mk-table-wrap { border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); box-shadow: none; }
+
+/* ---------- États : sens fixe des teintes ---------- */
+.mk-body .mk-status { font-weight: 650; border-radius: 999px; }
+.mk-body .mk-status-ok { background: var(--kb-live-bg); color: var(--kb-live); }
+.mk-body .mk-status-warn { background: var(--kb-draft-bg); color: var(--kb-draft); }
+
+/* ---------- Boutons : l'action principale se voit, le reste reste calme ---------- */
+.mk-body .btn { font-weight: 650; border-radius: var(--kb-r-ctl); }
+.mk-body .btn-primary { background: var(--kb-action); border-color: var(--kb-action); color: #fff; box-shadow: none; }
+.mk-body .btn-primary:hover { background: #02639a; border-color: #02639a; }
+.mk-body .btn-outline { background: var(--surface); color: var(--kb-navy); border-color: var(--kb-rule); }
+.mk-body .btn-outline:hover { border-color: var(--kb-navy); background: var(--surface); color: var(--kb-navy); }
+.mk-body .btn-ghost { color: var(--kb-ink-2); }
+.mk-body .btn-ghost:hover { background: color-mix(in srgb, var(--kb-navy) 6%, transparent); color: var(--kb-navy); }
+.mk-body .btn-danger { background: var(--surface); color: var(--kb-alert); border-color: color-mix(in srgb, var(--kb-alert) 45%, var(--kb-rule)); }
+.mk-body .btn-danger:hover { background: var(--kb-alert); border-color: var(--kb-alert); color: #fff; }
+.mk-body :is(.btn, .mk-tab, a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--kb-action); outline-offset: 2px; box-shadow: none; }
+
+/* ---------- États vides : une consigne claire, l'illustration en retrait ---------- */
+.mk-body .mk-empty { padding: 36px 24px; background: var(--surface); border: 1px dashed var(--kb-rule); border-radius: var(--kb-r-panel); }
+.mk-body .mk-empty :is(.kx-empty-ill, .kx-art, svg.kx-art) { max-width: 132px; height: auto; margin-bottom: 4px; }
+.mk-body .mk-empty h2 { font-family: var(--kb-display); font-weight: 700; font-size: 1.25rem; letter-spacing: -0.015em; color: var(--kb-navy); }
+.mk-body .mk-empty p { max-width: 52ch; margin-inline: auto; color: var(--kb-ink-2); }
+
+/* ---------- Barres de filtres : une seule bande ---------- */
+.mk-body :is(.mk-filterbar, .mk-cms-toolbar) { background: var(--surface); border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); box-shadow: none; }
+
+/* ---------- Mes sites : chaque site est une ligne de registre, plus un tableau de dix colonnes ----------
+   Même balisage (tableau, étiquettes data-label, boutons) : seule la composition change. Aucune donnée n'est retirée. */
+@media (min-width: 900px) {
+  .mk-body .mk-site-manager, .mk-body .mk-site-manager tbody { display: block; width: 100%; }
+  .mk-body .mk-site-manager thead, .mk-body .mk-site-manager caption { display: none; }
+  .mk-body .mk-site-manager tbody tr {
+    display: grid; grid-template-columns: minmax(220px, 1.9fr) repeat(4, minmax(64px, 84px)) minmax(150px, 1.1fr);
+    grid-auto-flow: row; gap: 10px 16px; align-items: start; padding: 18px 22px; border-bottom: 1px solid var(--kb-rule);
+  }
+  .mk-body .mk-site-manager tbody tr:last-child { border-bottom: 0; }
+  .mk-body .mk-site-manager.mk-table tbody tr > :is(td, th) { display: block; min-width: 0; padding: 0; border: 0; background: none; text-align: left; }
+  .mk-body .mk-site-manager th[scope="row"] { grid-column: 1; grid-row: 1; }
+  .mk-body .mk-site-manager th[scope="row"] > a { font-family: var(--kb-display); font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em; color: var(--kb-navy); text-decoration: none; }
+  .mk-body .mk-site-manager th[scope="row"] > a:hover { text-decoration: underline; }
+  .mk-body .mk-site-manager th[scope="row"] .mk-sub { display: block; max-width: 60ch; margin-top: 4px; font-weight: 400; color: var(--kb-ink-2); font-size: 0.86rem; line-height: 1.45; }
+  /* chiffres : étiquette au-dessus, valeur en police d'affichage */
+  .mk-body .mk-site-manager td.mk-num { grid-row: 1; text-align: left; font-family: var(--kb-display); font-weight: 700; font-size: 1.5rem; line-height: 1.1; letter-spacing: -0.02em; color: var(--kb-navy); font-variant-numeric: tabular-nums; }
+  .mk-body .mk-site-manager td.mk-num::before { content: attr(data-label); display: block; margin-bottom: 2px; font-family: var(--font-body); font-weight: 600; font-size: 0.76rem; letter-spacing: 0; color: var(--kb-ink-3); }
+  .mk-body .mk-site-manager td[data-label="Pages"] { grid-column: 2; }
+  .mk-body .mk-site-manager td[data-label="En ligne"] { grid-column: 3; }
+  .mk-body .mk-site-manager td[data-label="Équipe"] { grid-column: 4; }
+  .mk-body .mk-site-manager td[data-label="Contacts"] { grid-column: 5; }
+  .mk-body .mk-site-manager td[data-label="Actions"] { grid-column: 6; grid-row: 1 / span 3; justify-self: end; }
+  .mk-body .mk-site-manager td[data-label="Actions"] .mk-actions { flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+  /* deuxième ligne : état, domaine, dernière modification ; troisième : modules */
+  .mk-body .mk-site-manager td[data-label="État"] { grid-column: 1; grid-row: 2; }
+  .mk-body .mk-site-manager td[data-label="Domaine"] { grid-column: 2 / span 2; grid-row: 2; color: var(--kb-ink-2); font-size: 0.86rem; overflow-wrap: anywhere; }
+  .mk-body .mk-site-manager td[data-label="Modifié le"] { grid-column: 4 / span 2; grid-row: 2; color: var(--kb-ink-3); font-size: 0.82rem; }
+  .mk-body .mk-site-manager td[data-label="Modules"] { grid-column: 1 / span 5; grid-row: 3; }
+  .mk-body .mk-site-manager td:is([data-label="Domaine"], [data-label="Modifié le"], [data-label="Modules"])::before { content: attr(data-label) " : "; color: var(--kb-ink-3); font-size: 0.8rem; }
+  .mk-body .mk-site-manager.mk-table tbody tr > td[data-label="Modules"] { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+}
+
+/* ---------- Tableau de bord du site : un seul document à deux colonnes, pas six cartes identiques ----------
+   Même balisage : les six panneaux deviennent des rubriques séparées par des filets, réparties sur deux colonnes. */
+@media (min-width: 900px) {
+  .mk-body .mk-cms-dash { display: block; column-count: 2; column-gap: 0; column-rule: 1px solid var(--kb-rule); margin: 0 0 24px; background: var(--surface); border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); overflow: hidden; }
+  .mk-body .mk-cms-dash > .mk-panel { break-inside: avoid; margin: 0 0 -1px; padding: 20px 24px; border: 0; border-bottom: 1px solid var(--kb-rule); border-radius: 0; background: none; }
+  .mk-body .mk-cms-dash h2 { margin: 0 0 12px; font-size: 1.05rem; }
+  .mk-body .mk-cms-dash .mk-cms-list > li { padding: 8px 0; }
+  .mk-body .mk-cms-dash .mk-cms-list strong { font-family: var(--kb-display); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+}
+
+/* ---------- Retour aux sites : même surface que le contenu, collé au fil d'Ariane ---------- */
+.mk-body .mk-content > .mk-site-return:first-child { background: none; padding-bottom: 0; margin-bottom: 2px; }
+.mk-body .mk-content > .mk-site-return:first-child + :is(.mk-head, .mk-ar-top) { background: none; border-bottom: 0; }

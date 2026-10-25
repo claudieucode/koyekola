@@ -138,3 +138,24 @@ Entrées de 0,3 à 0,5 s (opacité + déplacement de 8 px, propriétés composé
 - **Éditeurs plein écran** (Page Builder, Blog Studio, Personnaliser, canevas d'automatisation) : non recomposés ; ils héritent seulement des correctifs communs.
 - Les anciennes règles de `marketing.css` / `cms.css` redéfinies par les couches suivantes ne sont pas élaguées.
 - Les listes d'articles et de pages gardent leur bande d'en-tête (kola-pages.css) : pas d'illustration, seulement leur état vide.
+
+---
+
+# Registre marine — refonte visuelle (lot 1, 24/10/2026)
+
+Couche finale `public/css/kola-brand.css` (chargée après `kola-stable.css` dans `views/marketing/partials/top.ejs`). Elle ne change ni les routes
+ni le balisage ni les comportements ; elle règle la typographie, la hiérarchie, les composants communs et trois compositions.
+
+## Direction
+- **Marine pour la structure, bleu d'action pour ce qui se clique.** Marine (`#0b2a40`, `#06192a`) : menus, titres, filets, chiffres. Bleu d'action (`#0277b6`) : boutons principaux, liens, focus.
+- **Sens fixe des teintes** (jetons `--kb-*`) : sarcelle `#0e7490` = en ligne / actif ; ambre = brouillon / à surveiller ; gris = archivé ; rouge `#c4161f` = suppression et erreur. Fonds `#f4f8fb`, filets `#dde6ed`, textes `#0f1f33` / `#44596b` / `#5b6b7c`. Mode sombre : mêmes jetons, valeurs redéfinies.
+- **Typographie** : Bricolage Grotesque (titres, chiffres clés, noms de sites) et Figtree (interface). Titre de page `clamp(1.7rem…2.15rem)`, interlettrage −0,025 em ; aide de 62 caractères au plus ; chiffres tabulaires. Plus de capitales espacées : étiquettes en minuscules grasses.
+- **Pas d'illustration dans les en-têtes** (elles restent dans les états vides, réduites à 132 px).
+- **Un registre plutôt que des cartes identiques** : bande de chiffres à filets (`.mk-stats`), tableau de bord du site en document à deux colonnes (`.mk-cms-dash`), « Mes sites » en lignes de registre (`.mk-site-manager`).
+- **Aucun mouvement ajouté** ; seuls les états (survol, focus, sélection) changent, sans toucher à la géométrie.
+
+## Écrans traités dans ce lot
+Mes sites, Tableau de bord du site, Paramètres (en-tête), et — par les composants partagés — tous les écrans qui utilisent : titre de page, en-têtes illustrés `kx-hero`, onglets, panneaux, bande de chiffres, tableaux, pastilles d'état, boutons, barres de filtres, états vides.
+
+## À traiter dans les lots suivants (non faits)
+Éditeurs (pages, e-mails, scénarios, articles : barres d'outils et panneaux), galerie de thèmes, écrans Marketing denses (campagnes, contacts), formulaires longs, impression/exports.
