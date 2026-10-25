@@ -479,3 +479,50 @@
 .dlist a.grow:hover { text-decoration: underline; text-underline-offset: 3px; }
 .dlist li { transition: background-color 0.12s ease; }
 .dash .btn:active:not(:disabled) { transform: translateY(1px); }
+
+/* Catégories (formateur) : barre d'outils, liste en tableau qui devient une pile de cartes sur petit écran, page de modification */
+.cat-toolbar { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; margin-bottom: var(--s3); }
+.cat-search { flex: 1 1 240px; max-width: 360px; }
+.cat-search input { width: 100%; padding: 8px 12px; border: 1px solid var(--dash-border); border-radius: 999px; background: var(--dash-card); color: var(--dash-text); font: inherit; }
+.cat-sort label { white-space: nowrap; }
+.cat-sort { display: flex; align-items: center; gap: var(--s2); margin-left: auto; font-size: 14px; color: var(--dash-muted); }
+.cat-sort select { padding: 7px 10px; border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-card); color: var(--dash-text); font: inherit; }
+.cat-hint { margin: 0 0 var(--s3); }
+.cat-panel { padding: 0; overflow: hidden; }
+.cat-table th[scope="row"] { font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--dash-text); text-align: left; vertical-align: top; }
+.cat-name { min-width: 0; max-width: 360px; }
+.cat-title { display: block; overflow-wrap: anywhere; font-size: 15px; }
+.cat-url { display: block; margin-top: 2px; font-size: 12px; font-weight: 500; color: var(--dash-muted); overflow-wrap: anywhere; text-decoration: none; }
+.cat-url:hover { text-decoration: underline; text-underline-offset: 3px; }
+.cat-flag { display: block; width: fit-content; max-width: 100%; margin-top: 6px; padding: 2px 8px; border: 1px solid var(--dash-border); border-radius: 999px; font-size: 12px; font-weight: 500; color: var(--dash-muted); overflow-wrap: anywhere; }
+.cat-flag--warn { border-color: #c4161f; color: #8f0f16; }
+.cat-split { color: var(--dash-muted); }
+.cat-badge { display: inline-block; padding: 2px 10px; border: 1px solid var(--dash-border); border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--dash-muted); white-space: nowrap; }
+.cat-badge--ok { border-color: #0e7490; color: #0b5b72; background: rgba(14, 116, 144, 0.08); }
+.cat-actions { text-align: right; white-space: nowrap; }
+.cat-table tbody tr { transition: background-color 0.12s ease; }
+.cat-table tbody tr:hover { background: rgba(14, 116, 144, 0.05); }
+.cat-back { margin: 0 0 var(--s2); font-size: 14px; }
+.cat-edit .field-group input[type="text"] { width: 100%; }
+.cat-form-actions { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s4); }
+.cat-merge { margin-top: var(--s3); padding: var(--s3); border: 1px solid #c4161f; border-radius: 10px; background: rgba(196, 22, 31, 0.05); }
+.cat-merge h2 { margin: 0 0 var(--s2); font-size: 16px; }
+.cat-merge p { margin: 0 0 var(--s2); }
+.cat-check { display: flex; align-items: flex-start; gap: var(--s2); font-weight: 600; }
+.cat-check input { margin-top: 3px; flex: none; }
+.cat-courses { margin: 0 0 var(--s3); padding-left: 1.1em; overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .cat-sort { margin-left: 0; width: 100%; }
+  .cat-sort select { flex: 1 1 auto; min-width: 0; }
+  .cat-search { max-width: none; flex-basis: 100%; }
+  .cat-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cat-table, .cat-table tbody, .cat-table tr, .cat-table th, .cat-table td { display: block; width: 100%; }
+  .cat-table tr { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--dash-border); }
+  .cat-table tr:last-child { border-bottom: 0; }
+  .cat-table th, .cat-table td { padding: 2px 0; border: 0; text-align: left; }
+  .cat-name { max-width: none; }
+  .cat-table td[data-label]:not([data-label=""])::before { content: attr(data-label) " : "; color: var(--dash-muted); font-size: 12px; }
+  .cat-table .g-num { text-align: left; }
+  .cat-actions { margin-top: var(--s2); }
+}
+@media (prefers-reduced-motion: reduce) { .cat-table tbody tr { transition: none; } }

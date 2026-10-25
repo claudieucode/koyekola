@@ -5,10 +5,11 @@
 </div>
 <div class="dash-filters">
   <% Object.entries(filters).forEach(([key, label]) => { %>
-    <a class="dash-chip" href="/formateur/formations?statut=<%= key %><%= q ? `&q=${encodeURIComponent(q)}` : "" %>"<%- statut === key ? ' aria-current="page"' : "" %>><%= label %> <span class="dash-chip-count"><%= counts[key] %></span></a>
+    <a class="dash-chip" href="/formateur/formations?statut=<%= key %><%= q ? `&q=${encodeURIComponent(q)}` : "" %><%= categorie ? `&categorie=${encodeURIComponent(categorie)}` : "" %>"<%- statut === key ? ' aria-current="page"' : "" %>><%= label %> <span class="dash-chip-count"><%= counts[key] %></span></a>
   <% }) %>
-  <form class="dash-search" role="search" method="get"><input type="hidden" name="statut" value="<%= statut %>"><label class="sr-only" for="dash-q">Rechercher une formation</label><input type="search" id="dash-q" name="q" value="<%= q %>" placeholder="Rechercher une formation…"></form>
+  <form class="dash-search" role="search" method="get"><input type="hidden" name="statut" value="<%= statut %>"><% if (categorie) { %><input type="hidden" name="categorie" value="<%= categorie %>"><% } %><label class="sr-only" for="dash-q">Rechercher une formation</label><input type="search" id="dash-q" name="q" value="<%= q %>" placeholder="Rechercher une formation…"></form>
 </div>
+<% if (categorie) { %><p class="field-hint">Catégorie : <strong><%= categorie %></strong> · <a href="/formateur/formations?statut=<%= statut %>">retirer ce filtre</a></p><% } %>
 <% if (statut === "archivees") { %><p class="field-hint">Hors catalogue et non achetables. Vos étudiants gardent leur accès et l'historique des ventes est conservé.</p><% } %>
 <% if (!courses.length) { %>
   <div class="dash-empty">

@@ -1,17 +1,55 @@
 <%- include("../partials/header", { title: "Catégories" }) %>
-<div class="dash-head"><div><h1>Catégories</h1><p>Les catégories de vos formations, telles qu'elles apparaissent dans le catalogue et le menu du site.</p></div></div>
+<div class="dash-head">
+  <div><h1>Catégories</h1><p>Elles regroupent vos formations dans le catalogue et le menu du site. Une catégorie existe tant qu'une de vos formations la porte.</p></div>
+  <div class="dash-head-actions"><a href="/formateur/cours/nouveau" class="btn btn-primary"><%- icon('plus', { size: 16 }) %> Nouvelle formation</a></div>
+</div>
 <% if (done) { %><p class="form-success" role="status"><%= done %></p><% } %>
 <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
-<% if (!categories.length) { %>
-  <div class="dash-empty"><p>Aucune catégorie : elles se créent en choisissant la catégorie d'une formation.</p></div>
+<% if (!total) { %>
+  <div class="dash-empty">
+    <h3>Aucune catégorie pour le moment</h3>
+    <p>Une catégorie se crée en choisissant « Nouvelle catégorie… » dans le formulaire d'une formation. Elle apparaît ici dès qu'une formation la porte.</p>
+    <a href="/formateur/cours/nouveau" class="btn btn-primary">Créer une formation</a>
+  </div>
 <% } else { %>
-  <div class="dpanel"><div class="dtable-wrap"><table class="dtable">
-    <thead><tr><th scope="col">Catégorie</th><th scope="col">Formations</th><th scope="col">Publiées</th><th scope="col">Renommer</th></tr></thead>
-    <tbody><% categories.forEach((c, i) => { %>
-      <tr><td><a href="/categorie/<%= slugify(c.category) %>" target="_blank" rel="noopener"><%= c.category %></a></td><td><%= c.n %></td><td><%= c.pub || 0 %></td>
-        <td><form method="post" action="/formateur/categories/renommer" class="dash-inline-form"><input type="hidden" name="from" value="<%= c.category %>"><label class="sr-only" for="cat-<%= i %>">Nouveau nom pour <%= c.category %></label><input type="text" id="cat-<%= i %>" name="to" value="<%= c.category %>" maxlength="60" required><button type="submit" class="btn btn-outline btn-sm">Renommer</button></form></td></tr>
-    <% }) %></tbody>
-  </table></div></div>
-  <p class="field-hint">Renommer une catégorie la modifie dans toutes vos formations concernées. Pour créer une catégorie, choisissez-la dans « Contenu et paramètres » d'une formation.</p>
+  <form class="cat-toolbar" method="get" action="/formateur/categories" role="search" data-cat-form>
+    <input type="hidden" name="filtre" value="<%= filter %>">
+    <div class="cat-search"><label class="sr-only" for="cat-q">Rechercher une catégorie</label><input type="search" id="cat-q" name="q" value="<%= q %>" placeholder="Rechercher une catégorie…" maxlength="60" autocomplete="off"></div>
+    <div class="cat-sort"><label for="cat-tri">Trier par</label>
+      <select id="cat-tri" name="tri" data-cat-sort><% Object.entries(sorts).forEach(([k, label]) => { %><option value="<%= k %>" <%= sort === k ? "selected" : "" %>><%= label %></option><% }) %></select>
+      <button type="submit" class="btn btn-outline btn-sm" data-cat-apply>Appliquer</button>
+    </div>
+  </form>
+  <nav class="dash-filters" aria-label="Filtrer les catégories">
+    <% Object.entries(filters).forEach(([key, label]) => { if (key === "verifier" && !counts.verifier) return; %>
+      <a class="dash-chip" href="<%= catUrl(Object.fromEntries(Object.entries({ filtre: key, q, tri: sort }).filter(([, v]) => v && v !== "toutes" && v !== "nom"))) %>"<%- filter === key ? ' aria-current="page"' : "" %>><%= label %> <span class="dash-chip-count"><%= counts[key] %></span></a>
+    <% }) %>
+  </nav>
+  <% if (counts.verifier) { %><p class="field-hint cat-hint">« À vérifier » : des noms presque identiques ou qui mènent à la même page publique. Les regrouper évite de disperser vos formations.</p><% } %>
+  <% if (!rows.length) { %>
+    <div class="dash-empty"><p>Aucune catégorie ne correspond<%= q ? ` à « ${q} »` : "" %>.</p><a class="btn btn-outline btn-sm" href="/formateur/categories">Réinitialiser la recherche et les filtres</a></div>
+  <% } else { %>
+    <div class="dpanel cat-panel"><p class="sr-only" role="status" aria-live="polite"><%= rows.length %> catégorie<%= rows.length > 1 ? "s" : "" %> affichée<%= rows.length > 1 ? "s" : "" %> sur <%= total %>.</p>
+      <div class="dtable-wrap"><table class="dtable cat-table">
+        <thead><tr><th scope="col">Catégorie</th><th scope="col" class="g-num">Formations</th><th scope="col">Répartition</th><th scope="col">Dans le catalogue</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% rows.forEach((c) => { const edit = "/formateur/categories/modifier?nom=" + encodeURIComponent(c.name); %>
+          <tr>
+            <th scope="row" class="cat-name" data-label="Catégorie">
+              <span class="cat-title" title="<%= c.name %>"><%= c.name %></span>
+              <% if (c.visible) { %><a class="cat-url" href="/categorie/<%= c.slug %>" target="_blank" rel="noopener">/categorie/<%= c.slug %><span class="sr-only"> (page publique, nouvel onglet)</span></a><% } %>
+              <% c.sameAddress.forEach((n) => { %><span class="cat-flag cat-flag--warn">Même page publique que « <%= n %> »</span><% }) %>
+              <% c.similar.forEach((n) => { %><span class="cat-flag">Nom proche de « <%= n %> »</span><% }) %>
+            </th>
+            <td class="g-num" data-label="Formations"><a href="/formateur/formations?statut=toutes&categorie=<%= encodeURIComponent(c.name) %>" aria-label="Voir les <%= c.total %> formation<%= c.total > 1 ? 's' : '' %> de la catégorie <%= c.name %>"><%= c.total %></a></td>
+            <td class="cat-split" data-label="Répartition"><%= c.visible %> publiée<%= c.visible > 1 ? "s" : "" %><% if (c.drafts) { %> · <%= c.drafts %> brouillon<%= c.drafts > 1 ? "s" : "" %><% } %><% if (c.archived) { %> · <%= c.archived %> archivée<%= c.archived > 1 ? "s" : "" %><% } %></td>
+            <td data-label="Dans le catalogue"><% if (c.visible) { %><span class="cat-badge cat-badge--ok">Visible</span><% } else { %><span class="cat-badge" title="Aucune formation publiée : la page publique n'existe pas">Non visible</span><% } %></td>
+            <td class="cat-actions" data-label=""><a class="btn btn-outline btn-sm" href="<%= edit %>">Modifier<span class="sr-only"> la catégorie <%= c.name %></span></a></td>
+          </tr>
+        <% }) %></tbody>
+      </table></div>
+    </div>
+  <% } %>
+  <p class="field-hint">Compteurs : uniquement vos formations. Renommer une catégorie la change dans toutes vos formations concernées ; son adresse publique change aussi, et l'ancienne redirige vers la nouvelle.</p>
 <% } %>
+<script>(function(){var f=document.querySelector("[data-cat-form]");if(!f)return;var s=f.querySelector("[data-cat-sort]"),b=f.querySelector("[data-cat-apply]");if(b)b.hidden=true;if(s)s.addEventListener("change",function(){f.submit();});})();</script>
 <%- include("../partials/footer") %>

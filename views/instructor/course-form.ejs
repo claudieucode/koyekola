@@ -1,5 +1,6 @@
 <%
-  const categories = ["Développement", "Design", "Business", "Marketing", "Musique", "Photographie", "Bien-être", "Langues", "Autre"];
+  const categories = categoryChoices;
+  const wantsNew = course && course.category === "__nouvelle";
   const isEdit = Boolean(course && course.id);
 %>
 <%- include("../partials/header", { title: isEdit ? "Modifier la formation" : "Nouvelle formation" }) %>
@@ -70,11 +71,14 @@
           <div class="field-row">
             <div class="field-group">
               <label for="f-course-form-5">Catégorie</label>
-              <select id="f-course-form-5" name="category">
+              <select id="f-course-form-5" name="category" data-cat-select>
                 <% categories.forEach(cat => { %>
                   <option value="<%= cat %>" <%= course && course.category === cat ? "selected" : "" %>><%= cat %></option>
                 <% }) %>
+                <option value="__nouvelle" <%= wantsNew ? "selected" : "" %>>Nouvelle catégorie…</option>
               </select>
+              <input type="text" name="category_new" data-cat-new maxlength="60" placeholder="Nom de la nouvelle catégorie" aria-label="Nom de la nouvelle catégorie" value="<%= course && course.category_new || '' %>" <%= wantsNew ? "" : "hidden" %> style="margin-top: var(--s2)">
+              <script>(function(){var s=document.querySelector("[data-cat-select]"),i=document.querySelector("[data-cat-new]");if(!s||!i)return;var f=function(){var on=s.value==="__nouvelle";i.hidden=!on;i.required=on;if(on)i.focus();};s.addEventListener("change",f);i.required=!i.hidden;})();</script>
             </div>
             <div class="field-group">
               <label for="f-course-form-6">Niveau</label>

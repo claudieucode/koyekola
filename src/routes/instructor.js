@@ -8,6 +8,7 @@ const { parseVideoUrl } = require("../utils/video");
 const { UserError } = require("../utils/errors");
 const { duplicateCourse } = require("../services/courses");
 const offers = require("../services/offers");
+const categoriesSvc = require("../services/courseCategories");
 const audit = require("../services/auditLog");
 const { recordSlugChange } = require("../services/slugs");
 const { removeUploadedFile } = require("../utils/uploads");
@@ -114,9 +115,11 @@ router.get("/formateur/formations", (req, res) => {
   const statut = STATUS_FILTERS[req.query.statut] ? req.query.statut : "toutes";
   const q = String(req.query.q || "").trim();
   const match = (c) => ({ toutes: !c.archived, publiees: c.published && !c.archived, brouillons: !c.published && !c.archived, archivees: c.archived })[statut];
-  const counts = { toutes: all.filter((c) => !c.archived).length, publiees: all.filter((c) => c.published && !c.archived).length, brouillons: all.filter((c) => !c.published && !c.archived).length, archivees: all.filter((c) => c.archived).length };
-  const courses = all.filter(match).filter((c) => !q || c.title.toLowerCase().includes(q.toLowerCase()));
-  res.render("instructor/courses", { courses, statut, q, counts, filters: STATUS_FILTERS });
+  const categorie = String(req.query.categorie || "").slice(0, 80);
+  const pool = categorie ? all.filter((c) => c.category === categorie) : all;
+  const counts = { toutes: pool.filter((c) => !c.archived).length, publiees: pool.filter((c) => c.published && !c.archived).length, brouillons: pool.filter((c) => !c.published && !c.archived).length, archivees: pool.filter((c) => c.archived).length };
+  const courses = all.filter(match).filter((c) => !q || c.title.toLowerCase().includes(q.toLowerCase())).filter((c) => !categorie || c.category === categorie);
+  res.render("instructor/courses", { courses, statut, q, categorie, counts, filters: STATUS_FILTERS });
 });
 
 // Gestion d'une formation : vue d'ensemble, étudiants, ventes
@@ -194,16 +197,40 @@ router.get("/formateur/chapitres", (req, res) => {
   res.render("instructor/chapters", { courses: coursesOf(req.session.user.id) });
 });
 
+// Catégories : liste, recherche, tri, filtres (côté serveur, une seule requête groupée) ; modification = page dédiée avec les conséquences exactes
+const CAT_SORTS = { nom: "Nom (A → Z)", formations: "Plus de formations", recentes: "Modifiées récemment" };
+const CAT_FILTERS = { toutes: "Toutes", visibles: "Visibles au catalogue", masquees: "Non visibles", verifier: "À vérifier" };
+const catUrl = (extra) => `/formateur/categories?${new URLSearchParams(extra).toString()}`;
 router.get("/formateur/categories", (req, res) => {
-  const categories = db.prepare("SELECT category, COUNT(*) AS n, SUM(published) AS pub FROM courses WHERE instructor_id = ? GROUP BY category ORDER BY category COLLATE NOCASE").all(req.session.user.id);
-  res.render("instructor/categories", { categories, done: req.query.ok || null, error: req.query.erreur || null });
+  const all = categoriesSvc.list(req.session.user.id);
+  const q = String(req.query.q || "").trim().slice(0, 60);
+  const sort = CAT_SORTS[req.query.tri] ? req.query.tri : "nom";
+  const filter = CAT_FILTERS[req.query.filtre] ? req.query.filtre : "toutes";
+  const flagged = (c) => c.sameAddress.length || c.similar.length;
+  const counts = { toutes: all.length, visibles: all.filter((c) => c.visible).length, masquees: all.filter((c) => !c.visible).length, verifier: all.filter(flagged).length };
+  const needle = categoriesSvc.nearKey(q), plain = q.toLowerCase();
+  let rows = all.filter(({ visible }, i) => ({ toutes: true, visibles: visible > 0, masquees: visible === 0, verifier: Boolean(flagged(all[i])) })[filter]);
+  if (q) rows = rows.filter((c) => c.name.toLowerCase().includes(plain) || c.slug.includes(slugify(q)) || (needle && categoriesSvc.nearKey(c.name).includes(needle)));
+  if (sort === "formations") rows.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "fr"));
+  else if (sort === "recentes") rows.sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)) || a.name.localeCompare(b.name, "fr"));
+  res.render("instructor/categories", { rows, total: all.length, counts, q, sort, filter, sorts: CAT_SORTS, filters: CAT_FILTERS, catUrl, done: req.query.ok || null, error: req.query.erreur || null });
+});
+router.get("/formateur/categories/modifier", (req, res) => {
+  const name = String(req.query.nom || "");
+  const cat = categoriesSvc.impact(req.session.user.id, name);
+  if (!cat) return res.redirect(`/formateur/categories?erreur=${encodeURIComponent("Cette catégorie n'existe plus parmi vos formations.")}`);
+  res.render("instructor/category-edit", { cat, to: String(req.query.vers || cat.name).slice(0, 80), mergeWith: req.query.fusion ? String(req.query.fusion) : null, error: req.query.erreur || null, max: categoriesSvc.MAX });
 });
 router.post("/formateur/categories/renommer", (req, res) => {
   const from = String(req.body.from || "");
-  const to = String(req.body.to || "").trim().replace(/\s+/g, " ");
-  if (!to || to.length > 60) return res.redirect(`/formateur/categories?erreur=${encodeURIComponent("Nouveau nom : 1 à 60 caractères.")}`);
-  const r = db.prepare("UPDATE courses SET category = ? WHERE instructor_id = ? AND category = ?").run(to, req.session.user.id, from);
-  res.redirect(`/formateur/categories?ok=${encodeURIComponent(`« ${from} » renommée en « ${to} » (${r.changes} formation${r.changes > 1 ? "s" : ""}).`)}`);
+  const to = String(req.body.to || "");
+  const back = (extra) => `/formateur/categories/modifier?${new URLSearchParams({ nom: from, vers: to.slice(0, 80), ...extra }).toString()}`;
+  const r = categoriesSvc.rename(req, from, to, { merge: req.body.merge === "1" });
+  if (r.needsMerge) return res.redirect(back({ fusion: r.target }));
+  if (!r.ok) return res.redirect(back({ erreur: r.error }));
+  const n = `${r.moved} formation${r.moved > 1 ? "s" : ""}`;
+  const text = r.merged ? `« ${r.from} » fusionnée dans « ${r.name} » (${n}).` : `« ${r.from} » renommée en « ${r.name} » (${n}).`;
+  res.redirect(catUrl({ ok: text + (r.redirected ? " L'ancienne adresse publique redirige vers la nouvelle." : "") }));
 });
 
 router.get("/formateur/apparence", (req, res) => {
@@ -216,7 +243,7 @@ router.post("/formateur/apparence", express.json({ limit: "4kb" }), (req, res) =
 // ---------- Formation : création / édition ----------
 
 router.get("/formateur/cours/nouveau", (req, res) => {
-  res.render("instructor/course-form", { course: null, error: null, sources: editorSources(null) });
+  res.render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: null, error: null, sources: editorSources(null) });
 });
 
 // Champs « liste » (un élément par ligne) et vidéo de présentation, communs à la création et à la modification.
@@ -263,12 +290,15 @@ function courseListFields(body) {
   };
 }
 
+// Catégorie choisie dans le formulaire : une existante, ou « Nouvelle catégorie… » (category_new). Champ absent = la catégorie actuelle est conservée
+const NEW_CATEGORY = "__nouvelle";
+const pickCategory = (userId, body, current) => body.category === undefined && current ? current : categoriesSvc.canonical(userId, body.category === NEW_CATEGORY ? body.category_new : body.category);
 router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) => {
   const { title, subtitle, category, level, price } = req.body;
   const lists = courseListFields(req.body);
   const texts = courseTextFields(req.body, null);
   if (!title || !title.trim()) {
-    return res.status(400).render("instructor/course-form", { course: { ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.body, ...texts }) });
+    return res.status(400).render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: { ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.body, ...texts }) });
   }
 
   const baseSlug = slugify(title) || "formation";
@@ -290,7 +320,7 @@ router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) =
     .run(
       req.session.user.id, title.trim(), slug, subtitle || "", texts.description,
       texts.objectives, texts.prerequisites, texts.target_audience, texts.skills, texts.rich_text, lists.intro_video, lists.seo_title, lists.seo_description,
-      category || "Autre", level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language)
+      pickCategory(req.session.user.id, req.body, null), level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language)
     );
 
   audit.record(req, { action: "course.created", resourceType: "course", resourceId: info.lastInsertRowid, summary: `Formation « ${title.trim()} » créée (prix ${(priceCents / 100).toFixed(2)} €)`, details: { price_cents: priceCents } });
@@ -298,7 +328,7 @@ router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) =
 });
 
 router.get("/formateur/cours/:id/modifier", loadOwnedCourse, (req, res) => {
-  res.render("instructor/course-form", { course: req.course, error: null, saved: req.query.enregistre === "1", sources: editorSources(req.course) });
+  res.render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: req.course, error: null, saved: req.query.enregistre === "1", sources: editorSources(req.course) });
 });
 
 router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thumbnail"), (req, res) => {
@@ -306,7 +336,7 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
   const lists = courseListFields(req.body);
   const texts = courseTextFields(req.body, req.course);
   if (!title || !title.trim()) {
-    return res.status(400).render("instructor/course-form", { course: { ...req.course, ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.course, ...req.body, ...texts }) });
+    return res.status(400).render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: { ...req.course, ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.course, ...req.body, ...texts }) });
   }
 
   // Adresse modifiable : un champ vide ou sans lettre conserve l'adresse actuelle ; une adresse déjà utilisée est refusée
@@ -330,6 +360,7 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
     thumbnailPath = `/uploads/thumbnails/${req.file.filename}`;
   }
 
+  const newCategory = pickCategory(req.course.instructor_id, req.body, req.course.category);
   db.prepare(
     `UPDATE courses SET title = ?, slug = ?, subtitle = ?, description = ?, objectives = ?, prerequisites = ?, target_audience = ?, skills = ?, rich_text = ?, intro_video = ?,
        seo_title = ?, seo_description = ?, category = ?, level = ?, price_cents = ?, thumbnail_path = ?, language = ?, updated_at = datetime('now')
@@ -337,12 +368,12 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
   ).run(
     title.trim(), newSlug, subtitle || "", texts.description,
     texts.objectives, texts.prerequisites, texts.target_audience, texts.skills, texts.rich_text, lists.intro_video, lists.seo_title, lists.seo_description,
-    category || "Autre", level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language), req.course.id
+    newCategory, level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language), req.course.id
   );
   recordSlugChange(req.course.id, req.course.slug, newSlug);
   // Journal d'activité : champs modifiés (avant → après) ; un changement de PRIX a sa propre entrée
   const changes = {};
-  for (const [field, now] of Object.entries({ title: title.trim(), slug: newSlug, category: category || "Autre", level: level || "debutant", language: cleanLanguage(req.body.language) })) {
+  for (const [field, now] of Object.entries({ title: title.trim(), slug: newSlug, category: newCategory, level: level || "debutant", language: cleanLanguage(req.body.language) })) {
     if ((req.course[field] ?? null) !== now) changes[field] = { avant: req.course[field] ?? null, apres: now };
   }
   if (req.course.price_cents !== priceCents) {

@@ -1,0 +1,37 @@
+<%- include("../partials/header", { title: "Modifier la catégorie" }) %>
+<div class="dash-head">
+  <div><p class="cat-back"><a href="/formateur/categories">← Toutes les catégories</a></p><h1>Modifier « <%= cat.name %> »</h1></div>
+</div>
+<% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
+<div class="dash-grid-2 cat-edit">
+  <form method="post" action="/formateur/categories/renommer" class="dpanel" data-cat-edit>
+    <input type="hidden" name="from" value="<%= cat.name %>">
+    <div class="field-group">
+      <label for="cat-to">Nom de la catégorie <span class="field-hint">(<%= max %> caractères au plus)</span></label>
+      <input type="text" id="cat-to" name="to" value="<%= to %>" maxlength="<%= max %>" required aria-describedby="cat-to-hint" <%= mergeWith ? "aria-invalid=true" : "" %>>
+      <p class="field-hint" id="cat-to-hint">Adresse publique actuelle : <code>/categorie/<%= cat.slug %></code>. Si le nom change, elle change aussi ; l'ancienne redirige vers la nouvelle.</p>
+    </div>
+    <% if (mergeWith) { %>
+      <div class="cat-merge" role="group" aria-labelledby="cat-merge-t">
+        <h2 id="cat-merge-t">« <%= mergeWith %> » existe déjà : fusionner ?</h2>
+        <p>Vos <%= cat.total %> formation<%= cat.total > 1 ? "s" : "" %> de « <%= cat.name %> » passeront dans « <%= mergeWith %> », et « <%= cat.name %> » n'existera plus. Aucune formation n'est supprimée. Pour annuler, il faudra les re-sélectionner une par une.</p>
+        <label class="cat-check"><input type="checkbox" name="merge" value="1" required> Oui, fusionner « <%= cat.name %> » dans « <%= mergeWith %> »</label>
+      </div>
+    <% } %>
+    <div class="cat-form-actions">
+      <button type="submit" class="btn btn-primary"><%= mergeWith ? "Fusionner" : "Enregistrer" %></button>
+      <a href="/formateur/categories" class="btn btn-outline">Annuler</a>
+    </div>
+  </form>
+  <aside class="dpanel" aria-labelledby="cat-impact">
+    <h2 id="cat-impact">Ce que cela change</h2>
+    <p><strong><%= cat.total %></strong> formation<%= cat.total > 1 ? "s" : "" %> : <%= cat.visible %> publiée<%= cat.visible > 1 ? "s" : "" %>, <%= cat.drafts %> brouillon<%= cat.drafts > 1 ? "s" : "" %>, <%= cat.archived %> archivée<%= cat.archived > 1 ? "s" : "" %>.</p>
+    <ul class="cat-courses">
+      <% cat.courses.forEach((c) => { %><li><a href="/formateur/cours/<%= c.id %>/modifier"><%= c.title %></a></li><% }) %>
+      <% if (cat.total > cat.courses.length) { %><li><a href="/formateur/formations?statut=toutes&categorie=<%= encodeURIComponent(cat.name) %>">Voir les <%= cat.total %> formations</a></li><% } %>
+    </ul>
+    <% if (cat.otherInstructors) { %><p class="field-hint">Cette catégorie est aussi utilisée par d'autres formateurs : leur page publique <code>/categorie/<%= cat.slug %></code> reste en place, et seules vos formations changent de catégorie.</p><% } %>
+    <% if (cat.sameAddress.length || cat.similar.length) { %><p class="field-hint">Voisines : <%= [...cat.sameAddress, ...cat.similar].map((n) => "« " + n + " »").join(", ") %>. Saisir l'un de ces noms propose la fusion.</p><% } %>
+  </aside>
+</div>
+<%- include("../partials/footer") %>
