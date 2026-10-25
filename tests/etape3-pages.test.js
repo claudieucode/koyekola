@@ -27,7 +27,8 @@ describe("page À propos", () => {
   test("page publique avec un texte par défaut, un H1 et un fil d'Ariane", async () => {
     const r = await anon().get("/a-propos");
     assert.equal(r.status, 200);
-    assert.match(r.text, /<h1[^>]*>À propos<\/h1>/);
+    assert.match(r.text, /<h1[^>]*>KOLAKISA, la plateforme pour apprendre à votre rythme<\/h1>/);   // titre distinctif (le fil d'Ariane et la balise title disent « À propos »)
+    assert.match(r.text, /<span[^>]*aria-current="page"[^>]*>À propos<|À propos<\/(span|li)>/);
     assert.match(r.text, /KOLAKISA/);
     assert.match(r.text, /aria-label="Fil d'Ariane"/);
     assert.match(r.text, /<link rel="canonical" href="[^"]+\/a-propos">/);
@@ -39,7 +40,7 @@ describe("page À propos", () => {
     const r = await prof.post("/formateur/pages/a-propos", { content: "## Mon histoire\nJe suis **passionné**.\n\n<script>alert(1)</script>", seo_description: "Qui suis-je ?" });
     assert.equal(r.status, 302);
     const html = (await anon().get("/a-propos")).text;
-    assert.match(html, /<h3>Mon histoire<\/h3>/);
+    assert.match(html, /<h2 id="ap-mon-histoire">Mon histoire<\/h2>/);   // chaque « ## » devient une partie de la page
     assert.match(html, /<strong>passionné<\/strong>/);
     assert.doesNotMatch(html, /<script>alert\(1\)/);
     assert.match(html, /<meta name="description" content="Qui suis-je \?">/);
@@ -47,7 +48,7 @@ describe("page À propos", () => {
   });
   test("un contenu vidé rétablit le texte par défaut", async () => {
     await prof.post("/formateur/pages/a-propos", { content: "   ", seo_description: "" });
-    assert.match((await anon().get("/a-propos")).text, /plateforme de formation/i);
+    assert.match((await anon().get("/a-propos")).text, /KOLAKISA, la plateforme pour apprendre/);
   });
   test("réservée au formateur", async () => {
     assert.equal((await eleve.get("/formateur/pages/a-propos")).status, 403);

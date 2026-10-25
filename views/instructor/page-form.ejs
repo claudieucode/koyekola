@@ -2,20 +2,36 @@
 
   <div class="container">
     <h1>Modifier la page « <%= title %> »</h1>
-    <% if (saved) { %><p class="form-success" role="status">Page enregistrée.</p><% } %>
+    <% if (saved) { %><p class="form-success" role="status">Page enregistrée. <a href="/a-propos" target="_blank" rel="noopener">Voir la page<span class="sr-only"> (nouvel onglet)</span></a></p><% } %>
+    <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
 
-    <form action="/formateur/pages/<%= slug %>" method="post" class="content-card">
+    <form action="/formateur/pages/<%= slug %>" method="post" class="content-card" data-page-form>
       <div class="field-group">
-        <label for="page-content">Contenu <span class="field-hint">(mise en forme possible : **gras**, *italique*, ## titre, - liste, [lien](https://…) ; laissez vide pour le texte par défaut)</span></label>
-        <textarea id="page-content" name="content" rows="14"><%= content %></textarea>
+        <label for="page-content">Contenu <span class="field-hint">(laissez vide pour afficher le texte par défaut)</span></label>
+        <p class="field-hint" id="page-help">La première ligne <code># Titre</code> devient le titre de la page, le premier paragraphe son introduction, et chaque <code>## Section</code> une partie avec son titre. Mise en forme : **gras**, *italique*, - liste, [lien](https://…).</p>
+        <div class="page-tools" role="group" aria-label="Ajouter une partie">
+          <button type="button" class="btn btn-outline btn-sm" data-ins="# Titre de la page&#10;&#10;Une phrase d'introduction.&#10;&#10;">Titre et introduction</button>
+          <button type="button" class="btn btn-outline btn-sm" data-ins="## Titre de la partie&#10;&#10;">Nouvelle partie</button>
+          <button type="button" class="btn btn-outline btn-sm" data-ins="## Notre histoire&#10;&#10;">Notre histoire</button>
+          <button type="button" class="btn btn-outline btn-sm" data-ins="## Notre mission&#10;&#10;">Notre mission</button>
+          <button type="button" class="btn btn-outline btn-sm" data-ins="## Nos valeurs&#10;&#10;">Nos valeurs</button>
+        </div>
+        <p class="field-hint">Ces boutons ajoutent seulement un titre : écrivez ensuite ce qui est vrai (dates, personnes, chiffres). Rien n'est inventé à votre place.</p>
+        <textarea id="page-content" name="content" rows="16" maxlength="<%= max %>" aria-describedby="page-help page-count" data-page-content><%= content %></textarea>
+        <p class="field-hint" id="page-count" aria-live="polite"><span data-page-count>0</span> / <%= max %> caractères</p>
       </div>
       <div class="field-group">
-        <label for="page-desc">Description pour Google <span class="field-hint">(160 caractères au plus)</span></label>
-        <textarea id="page-desc" name="seo_description" rows="2" maxlength="160"><%= description %></textarea>
+        <label for="page-desc">Description pour Google <span class="field-hint">(160 caractères au plus ; sinon une description par défaut est utilisée)</span></label>
+        <textarea id="page-desc" name="seo_description" rows="2" maxlength="160" aria-describedby="page-desc-count" data-page-desc><%= description %></textarea>
+        <p class="field-hint" id="page-desc-count" aria-live="polite"><span data-page-desc-count>0</span> / 160</p>
       </div>
-      <button type="submit" class="btn btn-primary">Enregistrer</button>
-      <a href="/a-propos" class="btn btn-outline">Voir la page</a>
+      <div class="page-actions">
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <a href="/a-propos" class="btn btn-outline" target="_blank" rel="noopener">Voir la page<span class="sr-only"> (nouvel onglet)</span></a>
+        <button type="button" class="btn btn-ghost" data-page-default data-confirm-text="Remplacer votre texte par le texte par défaut ? Votre contenu actuel sera effacé de ce formulaire (rien n'est enregistré avant de cliquer sur Enregistrer).">Revenir au texte par défaut</button>
+      </div>
     </form>
   </div>
+  <script src="<%= asset('/js/page-editor.js') %>" defer></script>
 
 <%- include("../partials/footer") %>

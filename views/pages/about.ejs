@@ -1,18 +1,41 @@
 <%- include("../partials/header", { title: "À propos" }) %>
 
+  <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %>
   <div class="container page-content">
     <%- include("../partials/breadcrumb", { crumbs }) %>
-    <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
-    <h1>À propos</h1>
-    <div class="markdown"><%- renderMarkdown(about.content) %></div>
-    <% } %>
-    <% if (creator && creator.bio) { %>
-      <section class="creator-card">
-        <h2><%= creator.username %></h2>
-        <p><%= creator.bio %></p>
-      </section>
-    <% } %>
-    <p class="page-cta"><a href="/catalogue" class="btn btn-primary">Découvrir les formations</a> <a href="/contact" class="btn btn-outline">Nous écrire</a></p>
+    <%- themeTemplate %>
+    <p class="page-cta"><a href="/catalogue" class="btn btn-primary">Découvrir les formations</a> <a href="/contact" class="btn btn-outline">Contact</a></p>
   </div>
+  <% } else { %>
+  <div class="container-wide about">
+    <%- include("../partials/breadcrumb", { crumbs }) %>
+    <header class="about-hero">
+      <h1><%= model.title %></h1>
+      <% if (model.lead) { %><div class="about-lead markdown"><%- model.lead %></div><% } %>
+      <% if (model.stats.courses > 0) { %><p class="about-fact"><a href="/catalogue"><%= model.stats.courses %> formation<%= model.stats.courses > 1 ? "s" : "" %> au catalogue<% if (model.stats.categories > 1) { %>, dans <%= model.stats.categories %> catégories<% } %></a></p><% } %>
+    </header>
+
+    <div class="about-body">
+      <% if (model.intro) { %><section class="about-section about-section--intro"><div class="about-text markdown"><%- model.intro %></div></section><% } %>
+      <% model.sections.forEach((s) => { %>
+        <section class="about-section" aria-labelledby="ap-<%= s.id %>">
+          <h2 id="ap-<%= s.id %>"><%= s.title %></h2>
+          <div class="about-text markdown"><%- s.html %></div>
+        </section>
+      <% }) %>
+      <% if (creator && creator.bio && creator.bio.trim()) { %>
+        <section class="about-section about-section--person" aria-labelledby="ap-person">
+          <h2 id="ap-person"><%= creator.username %></h2>
+          <div class="about-text"><p><%= creator.bio %></p></div>
+        </section>
+      <% } %>
+    </div>
+
+    <aside class="about-close" aria-label="Nous contacter">
+      <p>Une question, une suggestion ? Chaque message est lu.</p>
+      <p class="about-close-actions"><a href="/contact" class="btn btn-primary">Écrire un message</a><a href="/faq" class="btn btn-outline">Foire aux questions</a></p>
+    </aside>
+  </div>
+  <% } %>
 
 <%- include("../partials/footer") %>

@@ -15,15 +15,10 @@ router.use("/formateur", (req, res, next) => (req.path === "/blog" || req.path.s
 
 // ---------- À propos ----------
 
-const DEFAULT_ABOUT = `KOLAKISA est une plateforme de formation en ligne : des cours vidéo à suivre à votre rythme, avec des quiz, des ressources à télécharger et un certificat de réussite.
+const { DEFAULT_ABOUT, DEFAULT_TITLE, parse: parseAbout, stats: aboutStats } = require("../services/aboutPage");
 
-## Notre approche
-
-- Des formations concrètes, construites pour être appliquées tout de suite.
-- Un accès illimité à chaque formation achetée, sur ordinateur, tablette et mobile.
-- Votre progression est enregistrée : vous reprenez exactement là où vous vous étiez arrêté.`;
-
-const ABOUT_DESCRIPTION = "Découvrez KOLAKISA, la plateforme de formation en ligne : nos formations vidéo, notre approche et la personne qui les conçoit.";
+const ABOUT_MAX = 20000;
+const ABOUT_DESCRIPTION = "KOLAKISA : formations vidéo à suivre à votre rythme, avec quiz, ressources à télécharger et certificat de réussite vérifiable.";
 
 function loadAbout() {
   const row = db.prepare("SELECT * FROM site_pages WHERE slug = 'a-propos'").get();
@@ -33,13 +28,15 @@ function loadAbout() {
 router.get("/a-propos", (req, res) => {
   const about = loadAbout();
   const creator = db.prepare("SELECT username, bio FROM users WHERE role = 'formateur' ORDER BY id LIMIT 1").get();
+  const doc = parseAbout(about.content);
+  const model = { ...doc, title: doc.title || DEFAULT_TITLE, stats: aboutStats(db) };
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "À propos" }];
   // Modèle de thème « Page du site » (Page Builder, Apparence → Templates) : remplace le texte de la page ; sans modèle en ligne, rien ne change
   let contentHtml = "";
   try { contentHtml = require("../utils/markdown").renderMarkdown(about.content); } catch { contentHtml = ""; }
   require("../marketing/web/themeRender").renderRegion(req, res, db, "static_page", { scope: { post: { title: "À propos", url: "/a-propos", excerpt: about.description || "", image: "", date: null, category: "", author: "", minutes: null, contentHtml } } }, (themeTemplate) => {
     res.render("pages/about", {
-      about, creator, crumbs, themeTemplate,
+      about, creator, crumbs, themeTemplate, model,
       seo: seoPages.staticPage(req, "a-propos", { title: "À propos", description: about.description || ABOUT_DESCRIPTION, type: "AboutPage", crumbs }),
     });
   });
@@ -51,12 +48,13 @@ const EDITABLE_PAGES = { "a-propos": "À propos" };
 router.get("/formateur/pages/:slug", (req, res) => {
   if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
   const about = loadAbout();
-  res.render("instructor/page-form", { title: EDITABLE_PAGES[req.params.slug], slug: req.params.slug, content: about.raw, description: about.description, saved: req.query.enregistre === "1" });
+  res.render("instructor/page-form", { title: EDITABLE_PAGES[req.params.slug], slug: req.params.slug, content: about.raw, description: about.description, saved: req.query.enregistre === "1", error: req.query.erreur || null, defaultText: DEFAULT_ABOUT, defaultTitle: DEFAULT_TITLE, max: ABOUT_MAX });
 });
 
 router.post("/formateur/pages/:slug", (req, res) => {
   if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
-  const content = String(req.body.content || "").slice(0, 20000);
+  const content = String(req.body.content || "");
+  if (content.length > ABOUT_MAX) return res.redirect(`/formateur/pages/${req.params.slug}?erreur=${encodeURIComponent(`Le texte fait ${content.length} caractères : la limite est de ${ABOUT_MAX}. Rien n'a été enregistré ; raccourcissez-le puis réessayez.`)}`);
   const description = String(req.body.seo_description || "").trim().slice(0, 160);
   db.prepare(
     `INSERT INTO site_pages (slug, title, content, seo_description, updated_at) VALUES (?, ?, ?, ?, datetime('now'))
