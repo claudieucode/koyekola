@@ -1,0 +1,3 @@
+<%# Alerte : le niveau est écrit en toutes lettres (jamais la couleur seule) %>
+<% const lv = a.level === "error" ? ["is-error", "Bloquant"] : a.level === "warning" ? ["is-warning", "À surveiller"] : ["", "Information"]; %>
+<li class="<%= lv[0] %>"><span class="g-alert-level"><%= lv[1] %></span><a href="<%= a.href %>"><%= a.title %></a><% if (a.detail) { %><small><%= a.detail %></small><% } %></li>

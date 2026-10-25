@@ -6,8 +6,8 @@
   <a class="dash-chip" href="/formateur/gestion/activite?vue=alertes"<%- view === "alertes" ? ' aria-current="page"' : "" %>>Alertes <span class="dash-chip-count"><%= alerts.length %></span></a>
 </nav>
 <% if (view === "alertes") { %>
-  <% if (!alerts.length) { %><div class="dash-empty g-state"><h2>Aucune alerte</h2><p>Tout est en ordre : aucun message en attente, aucun fichier manquant, aucun code promo sur le point d'expirer.</p></div><% } else { %>
-    <ul class="g-alerts g-alerts-page"><% alerts.forEach((a) => { %><li class="<%= a.level === "error" ? "is-error" : a.level === "warning" ? "is-warning" : "" %>"><a href="<%= a.href %>"><%= a.title %></a><% if (a.detail) { %><small><%= a.detail %></small><% } %></li><% }) %></ul>
+  <% if (!alerts.length) { %><div class="dash-empty g-state"><h2>Aucune alerte</h2><p>Tout est en ordre : aucun message en attente, aucun fichier manquant, sauvegardes à jour, aucun code promo sur le point d'expirer.</p></div><% } else { %>
+    <ul class="g-alerts g-alerts-page"><% alerts.forEach((a) => { %><%- include("_alert-item", { a }) %><% }) %></ul>
   <% } %>
 <% } else { const F = feed; %>
   <% (F.problems || []).forEach((pb) => { %><p class="g-flash is-error" role="alert"><strong><%= pb.label %> : événements indisponibles.</strong> Les autres sources sont affichées. Détail technique : <%= pb.message %></p><% }) %>

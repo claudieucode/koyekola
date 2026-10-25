@@ -730,3 +730,22 @@
   .mb-message { animation: mb-in 0.16s ease-out; }
   @keyframes mb-in { from { opacity: 0; } }
 }
+
+/* Centre de gestion : niveau d'une alerte écrit en toutes lettres (jamais la couleur seule) */
+.g-alert-level { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: var(--dash-muted); }
+.g-alerts li.is-error .g-alert-level { color: var(--dash-danger); }
+.g-alerts li.is-warning .g-alert-level { color: var(--dash-warning); }
+.g-module-figure { overflow-wrap: anywhere; }
+
+/* Mon espace (formateur) au pointeur grossier (téléphone, tablette) : champs ≥ 16 px (sinon iOS zoome au focus) et cibles ≥ 44 px ; le bureau ne change pas.
+   Même principe que l'espace Marketing (kola-stable.css), appliqué à la coquille « Mon espace ». */
+@media (pointer: coarse) {
+  .dash :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]), select, textarea) { font-size: max(16px, 1em); }
+  .dash :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]), select) { min-height: 44px; }
+  .dash :is(.btn, .dash-chip, summary) { min-height: 44px; }
+  .dash summary { display: flex; align-items: center; }
+  .dash .dmenu-btn { min-height: 44px; min-width: 44px; }
+  .dash .dash-search input, .dash .g-filters input, .dash .g-filters select { font-size: max(16px, 1em); }
+}
+.g-module-text { align-content: start; min-width: 0; }
+.g-module-figure--clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }

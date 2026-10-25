@@ -30,6 +30,7 @@ const analytics = require("../services/gestion/analytics");
 const resources = require("../services/gestion/resources");
 const activity = require("../services/gestion/activity");
 const backups = require("../services/backups");
+const health = require("../services/gestion/health");
 
 const router = express.Router();
 router.use("/formateur/gestion", requireInstructor);
@@ -108,6 +109,11 @@ router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req
       // Nombre de fichiers seulement : les utilisations (coûteuses) ne sont calculées que dans Ressources
       resources: safe("Ressources", () => { const all = resources.allResources(id); if (all.problems.length) throw new Error(all.problems.map((x) => `${x.label} : ${x.message}`).join(" · ")); return all.filter((r) => r.exists).length; }),
       resourcesTodo: safe("Ressources", () => resources.allResources(id).filter((r) => !r.exists).length, 0),
+      // Tendance : 30 derniers jours comparés aux 30 précédents (sur les mêmes ventes) ; pas de pourcentage si la période précédente est vide
+      revenuePrev30: safe("Ventes", () => { const d = new Date(p30.from.replace(" ", "T") + "Z"), from = new Date(d.getTime() - (new Date(p30.to.replace(" ", "T") + "Z") - d)).toISOString().slice(0, 19).replace("T", " "); return one(`SELECT COALESCE(SUM(oi.price_cents), 0) s ${SALES} AND o.created_at >= ? AND o.created_at < ?`, id, from, p30.from).s; }),
+      supportOpen: safe("Support", () => support.openCount(id)),
+      backup: safe("Sauvegardes", () => health.backupStatus(backups.list(), { auto: process.env.SAUVEGARDE_AUTO !== "0" })),
+      lastLog: safe("Journal", () => audit.list({ limit: 1 }).rows[0] || false),
       unread: safe("Notifications", () => activity.unreadCount(id)),
       alerts: safe("Alertes", () => activity.alerts(id), []),
       recent: safe("Activité récente", () => activity.feed(id, { page: 1 }).rows.slice(0, 6), []),
