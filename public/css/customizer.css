@@ -186,8 +186,13 @@ html[data-kola-theme="dark"] .kwc-toast-error { background: #7a1f29; color: #fff
 /* ---------- Petits écrans : le panneau passe sous l'aperçu ---------- */
 @media (max-width: 860px) {
   :root { --kwc-side: 100%; }
-  .kwc-top { grid-template-columns: 1fr auto; height: auto; padding: 6px 8px; }
+  /* Deux rangées : identité et état en haut, actions dessous (sur 360 px, tout sur une ligne écrasait le titre et coupait « Enregistrer le brouillon ») */
+  .kwc-top { grid-template-columns: minmax(0, 1fr); row-gap: 6px; height: auto; padding: 6px 8px; }
   .kwc-top-c { display: none; }
+  .kwc-top-l { flex-wrap: nowrap; }
+  .kwc-top-l .kwc-title { flex: 1 1 auto; }
+  .kwc-top-r { flex-wrap: wrap; justify-content: flex-end; }
+  .kwc-top-r .kwc-btn { white-space: nowrap; }
   .kwc-main { grid-template-columns: 1fr; grid-template-rows: minmax(160px, 42%) minmax(0, 1fr); }
   .kwc-main .kwc-stage { order: -1; }
   .kwc-main.is-collapsed { grid-template-columns: 1fr; grid-template-rows: 0 minmax(0, 1fr); }
