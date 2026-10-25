@@ -8,7 +8,7 @@ Les **icônes d'origine** du CMS (`icon(it.icon)`, trait simple) : aucune tuile 
 ## Disposition
 | Contexte | Disposition |
 |---|---|
-| Grand écran (≥ 1280 px, pointeur précis) | **barre horizontale en bas par défaut**, centrée sur la zone de contenu (jamais sur le menu latéral), compacte, mêmes couleurs marine que le rail ; l'infobulle s'affiche au-dessus de l'icône ; l'entrée active garde son fond et un point sous l'icône. Le bouton « Placer la barre à gauche » (mémorisé : `localStorage.kbDock = "left"`) ramène la colonne. |
+| Grand écran (≥ 1280 px, pointeur précis) | **barre verticale à gauche par défaut (bouton de position pour la passer en bas)**, centrée sur la zone de contenu (jamais sur le menu latéral), compacte, mêmes couleurs marine que le rail ; l'infobulle s'affiche au-dessus de l'icône ; l'entrée active garde son fond et un point sous l'icône. Le bouton « Placer la barre à gauche » (mémorisé : `localStorage.kbDock = "left"`) ramène la colonne. |
 | 961 – 1279 px | colonne à gauche, comme avant. |
 | Tablette et téléphone (< 961 px ; < 761 px dans « Mon espace ») | le rail est un tiroir (inchangé) ; une barre rapide de 5 entrées (Accueil, Marketing, Messages avec badge, Gestion, Plus) reste sous le pouce, zone de sécurité iOS respectée ; « Plus » ouvre le menu complet. |
 

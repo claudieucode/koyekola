@@ -36,8 +36,10 @@ describe("navigation principale (navigateur)", { skip: SKIP }, () => {
     await context.close();
   });
 
-  test("barre en bas par défaut (≥ 1280 px) : centrée sur la zone de contenu, sans recouvrir le menu ; retour à gauche mémorisé", async () => {
+  test("barre à gauche par défaut, en bas sur choix (≥ 1280 px) : centrée sur la zone de contenu, sans recouvrir le menu ; retour à gauche mémorisé", async () => {
     const { context, page } = await open({}, "/marketing/site-web");
+    assert.equal(await page.evaluate(() => document.documentElement.getAttribute("data-kb-dock")), null, "à gauche par défaut");
+    await page.evaluate(() => localStorage.setItem("kbDock", "bottom")); await page.reload({ waitUntil: "load" });
     const g = await page.evaluate(() => { const r = document.querySelector(".app-rail").getBoundingClientRect(), s = document.querySelector(".mk-sidebar").getBoundingClientRect(); return { mode: document.documentElement.getAttribute("data-kb-dock"), left: r.left, right: r.right, bottom: r.bottom, h: r.height, w: r.width, sidebarRight: s.right, vw: innerWidth, vh: innerHeight }; });
     assert.equal(g.mode, "bottom"); assert.ok(g.h < 90 && g.w > 300, `barre horizontale compacte (${g.w}×${g.h})`); assert.ok(g.left >= g.sidebarRight - 1, `la barre recouvre le menu latéral (${g.left} < ${g.sidebarRight})`); assert.ok(g.right <= g.vw && g.bottom <= g.vh, "dans la fenêtre");
     await page.click("[data-dock-pos]"); await page.waitForTimeout(300);

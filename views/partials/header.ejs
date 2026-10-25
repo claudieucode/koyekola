@@ -13,7 +13,7 @@
   <link rel="alternate" type="application/rss+xml" title="Blog — flux RSS" href="/blog/feed.xml">
   <link rel="preload" href="/fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <script>/* barre de navigation : en bas par défaut sur grand écran (CSS ≥ 1280 px, pointeur précis) ; « left » mémorisé = barre à gauche */ document.documentElement.setAttribute("data-kb-dock", "bottom"); try { if (localStorage.getItem("kbDock") === "left") document.documentElement.removeAttribute("data-kb-dock"); } catch (e) {}</script>
+  <script>/* barre de navigation : à gauche par défaut ; « bottom » mémorisé (bouton de position) = barre en bas sur grand écran (CSS ≥ 1280 px, pointeur précis) */ try { if (localStorage.getItem("kbDock") === "bottom") document.documentElement.setAttribute("data-kb-dock", "bottom"); } catch (e) {}</script>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <% if (!(typeof dash !== "undefined" && dash)) { %><link rel="stylesheet" href="<%= asset('/css/kola-v3.css') %>"><% } /* design system v3 : site public et espace élève (l'espace formateur garde son habillage dashboard) */ %>
   <% const ap = typeof appearance === "function" ? appearance() : null; %><% if (ap && ap.css) { %><style id="kw-appearance"><%- ap.css %></style><% } %>
