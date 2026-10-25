@@ -1805,3 +1805,13 @@
 }
 /* Mode Document : annuler / rétablir sont dans le ruban (pas en double dans la barre supérieure) */
 .is-doc-mode .wp-header-left [data-undo], .is-doc-mode .wp-header-left [data-redo] { display: none; }
+
+/* Écran tactile : 44 px de côté pour tout ce qui se touche dans l'éditeur d'articles (le bureau garde ses 36 px) */
+@media (pointer: coarse) {
+  .wp-body :is(.wp-btn-primary, .wp-btn-secondary, .wp-btn-tertiary, .wp-btn-danger, .wp-btn-link, .wp-btn-icon, .wp-rail-btn, .wp-site-icon) { min-height: 44px; }
+  .wp-body :is(.wp-btn-icon, .wp-btn-icon.wp-inserter-toggle) { min-width: 44px; }
+  .wp-body .wp-btn-icon.wp-inserter-toggle { height: 44px; }
+  .wp-body :is(.wp-btn-primary, .wp-btn-secondary, .wp-btn-tertiary, .wp-btn-danger) { min-width: 44px; }
+  .wp-body .wp-site-icon { min-width: 44px; }
+  .wp-body [data-edit-mode] { min-height: 44px; min-width: 44px; }
+}
