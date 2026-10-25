@@ -412,7 +412,7 @@ describe("accès par site (multi-site)", () => {
     assert.equal(mine.status, 200); assert.match(mine.text, /Site A/); assert.doesNotMatch(mine.text, /Site B/);
   });
   test("le site A voit ses pages dans la fiche du site ; le site B n'apparaît jamais", async () => {
-    const r = await userA.get(`/marketing/site-web/sites/${siteA}/reglages`);
+    const r = await userA.get(`/marketing/site-web/sites/${siteA}/pages`);
     assert.match(r.text, /Page du site A/); assert.doesNotMatch(r.text, /Page du site B/);
   });
   test("rôle par site différent : Éditeur du site A, Lecteur du site B, rien sur C — le même compte", async () => {
