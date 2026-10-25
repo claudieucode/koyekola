@@ -168,6 +168,18 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_import_sources": {
+    "siteId": true,
+    "classe": "isolee"
+  },
+  "mk_importer_state": {
+    "siteId": false,
+    "classe": "plateforme"
+  },
+  "mk_user_profiles": {
+    "siteId": false,
+    "classe": "plateforme"
+  },
   "mk_ai_requests": {
    "siteId": true,
    "classe": "a-decider"
