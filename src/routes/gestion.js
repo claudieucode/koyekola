@@ -58,7 +58,7 @@ function page(view, title, build) {
     }
     if (data === null) return res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: backOf(req.path) });
     if (data === undefined) return; // réponse déjà envoyée (redirection)
-    res.render(view, { title, flash: takeFlash(req), query: req.query, url: urlFor(req), ...data });
+    res.render(view, { title, flash: takeFlash(req), query: req.query, url: urlFor(req), ageLabel: support.ageLabel, ...data });
   };
 }
 // Action (formulaire) : une erreur inattendue ne montre jamais une page brute ; le formateur revient sur la page
@@ -196,16 +196,21 @@ for (const [action, fn, text] of [["revoquer", (id, req) => certificates.revoke(
 router.get("/formateur/gestion/journal", page("gestion/journal", "Journal d'activité", (req) => {
   const q = common.cleanQ(req.query.q);
   const type = audit.TYPES[req.query.type] ? req.query.type : "";
-  const total = audit.list({ type, q, limit: 1 }).total;
+  const result = audit.RESULTS[req.query.resultat] ? req.query.resultat : "";
+  const du = common.isYmd(req.query.du) ? req.query.du : "", au = common.isYmd(req.query.au) ? req.query.au : "";
+  // Dates saisies = jours à Paris ; la base est en UTC (borne haute exclue : lendemain minuit)
+  const from = du ? common.sqlUtc(common.parisDayStart(du)) : "", to = au ? common.sqlUtc(common.parisDayStart(common.addDays(au, 1))) : "";
+  const total = audit.list({ type, q, result, from, to, limit: 1 }).total;
   const pg = common.paginate(total, common.page(req.query), 50);
-  return { log: { ...audit.list({ type, q, limit: pg.limit, offset: pg.offset }), ...pg }, types: audit.TYPES, filters: { type, q } };
+  return { log: { ...audit.list({ type, q, result, from, to, limit: pg.limit, offset: pg.offset }), ...pg }, types: audit.TYPES, results: audit.RESULTS, filters: { type, q, result, du, au } };
 }));
 
 // ---------- Support (tickets des élèves) : le formateur ne voit que les tickets qui lui sont adressés ----------
-router.get("/formateur/gestion/support", page("gestion/support", "Support", (req) => ({
-  tickets: support.listForInstructor(me(req), { status: req.query.statut, q: req.query.q }), statuses: support.STATUSES, priorities: support.PRIORITIES,
-  filters: { statut: support.STATUSES[req.query.statut] ? req.query.statut : "", q: String(req.query.q || "").slice(0, 80) },
-})));
+router.get("/formateur/gestion/support", page("gestion/support", "Support", (req) => {
+  const filters = { statut: support.STATUSES[req.query.statut] ? req.query.statut : "", q: String(req.query.q || "").slice(0, 80), urgent: req.query.urgent === "1" };
+  const list = support.listForInstructor(me(req), { status: filters.statut, q: filters.q, urgent: filters.urgent }, { page: common.page(req.query) });
+  return { list, stats: support.stats(me(req)), statuses: support.STATUSES, priorities: support.PRIORITIES, filters };
+}));
 router.get("/formateur/gestion/support/:id(\\d+)", page("gestion/support-ticket", "Demande de support", (req) => {
   const ticket = support.getForInstructor(me(req), Number(req.params.id));
   return ticket ? { ticket, title: `Demande #${ticket.id}`, messages: support.messagesOf(ticket.id), statuses: support.STATUSES, priorities: support.PRIORITIES } : null;
@@ -217,17 +222,18 @@ const ownTicket = (req, res) => {
 };
 router.post("/formateur/gestion/support/:id(\\d+)/repondre", safely("/formateur/gestion/support", (req, res) => {
   const ticket = ownTicket(req, res); if (!ticket) return;
-  const r = support.addMessage(ticket, req.session.user, req.body.message, { staff: true });
-  flash(req, r.error ? "error" : "ok", r.error || "Réponse envoyée : l'élève est prévenu.");
+  const resolve = req.body.resolve === "1";
+  const r = support.addMessage(ticket, req.session.user, req.body.message, { staff: true, resolve });
+  flash(req, r.error ? "error" : "ok", r.error || (r.duplicate ? "Cette réponse venait déjà d'être envoyée." : resolve ? "Réponse envoyée et demande résolue : l'élève est prévenu dans ses notifications." : "Réponse envoyée : l'élève est prévenu dans ses notifications."));
   res.redirect(`/formateur/gestion/support/${ticket.id}`);
 }));
 router.post("/formateur/gestion/support/:id(\\d+)/fermer", safely("/formateur/gestion/support", (req, res) => {
   const ticket = ownTicket(req, res); if (!ticket) return;
-  support.close(ticket.id); flash(req, "ok", "Demande close."); res.redirect(`/formateur/gestion/support/${ticket.id}`);
+  const done = support.close(ticket.id); flash(req, done ? "ok" : "error", done ? "Demande résolue." : "Cette demande était déjà résolue."); res.redirect(`/formateur/gestion/support/${ticket.id}`);
 }));
 router.post("/formateur/gestion/support/:id(\\d+)/rouvrir", safely("/formateur/gestion/support", (req, res) => {
   const ticket = ownTicket(req, res); if (!ticket) return;
-  support.reopen(ticket.id); flash(req, "ok", "Demande rouverte."); res.redirect(`/formateur/gestion/support/${ticket.id}`);
+  const done = support.reopen(ticket.id); flash(req, done ? "ok" : "error", done ? "Demande rouverte." : "Cette demande n'est pas résolue."); res.redirect(`/formateur/gestion/support/${ticket.id}`);
 }));
 router.post("/formateur/gestion/support/:id(\\d+)/priorite", safely("/formateur/gestion/support", (req, res) => {
   const ticket = ownTicket(req, res); if (!ticket) return;

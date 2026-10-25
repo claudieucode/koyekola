@@ -13,6 +13,13 @@
       <a class="mk-stat" href="<%= space.base %>/seo/404"><span class="mk-stat-label">Erreurs 404 à traiter</span><span class="mk-stat-value"><%= s.notFound.urls %></span><span class="mk-stat-hint"><%= s.notFound.human %> visite(s) de personnes</span></a>
     </div>
 
+    <% if (s.topPriorities && s.topPriorities.length) { %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="seo-prio"><h2 id="seo-prio">À traiter en premier</h2>
+      <p class="field-hint">D'après l'analyse du <%= fmt(s.lastDone.finished_at) %> (constats observés sur les pages en ligne, ordre : gravité puis nombre de pages concernées).</p>
+      <ol class="mk-seo-prio"><% s.topPriorities.forEach((g) => { %><li><span class="mk-status <%= g.level === 'critique' ? 'mk-status-off' : g.level === 'avertissement' ? 'mk-status-warn' : 'mk-status-ok' %>"><%= g.level === "critique" ? "Critique" : g.level === "avertissement" ? "Avertissement" : "Recommandation" %></span> <strong><%= g.rule ? g.rule.title : g.rule_id %></strong> — <%= g.count %> page<%= g.count > 1 ? "s" : "" %>. <a href="<%= space.base %>/seo/analyse?analyse=<%= s.lastDone.id %>&amp;regle=<%= g.rule_id %>#an-list">Voir et corriger</a></li><% }) %></ol>
+    </section>
+    <% } %>
+
     <section class="mk-panel mk-seo-appear" aria-labelledby="seo-state"><h2 id="seo-state">État par rubrique</h2>
       <div class="mk-table-wrap"><table class="mk-table mk-seo-table"><caption class="sr-only">État du référencement du site par rubrique</caption>
         <thead><tr><th scope="col">Rubrique</th><th scope="col">Constat</th><th scope="col">État</th></tr></thead>

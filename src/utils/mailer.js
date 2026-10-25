@@ -115,6 +115,21 @@ function sendPasswordResetEmail(db, { to, username, url }) {
   });
 }
 
+// Support : réponse du formateur à l'élève (le texte du message est repris tel quel ; le lien mène au ticket, connexion demandée)
+function sendSupportReplyEmail(db, { to, ticketId, subject, text }) {
+  return queueMail(db, {
+    kind: "support_reply", to, subject: `Réponse à votre demande : ${oneLine(subject)}`.slice(0, 200),
+    text: [`Le formateur a répondu à votre demande #${ticketId} « ${oneLine(subject)} » :`, "", String(text).slice(0, 1500), "", `Pour lui répondre : ${siteUrl()}/support/${ticketId}`].join("\n"),
+  });
+}
+// Support : nouvelle demande ou nouvelle réponse d'un élève, adressée au formateur (Répondre à = l'élève)
+function sendSupportStaffEmail(db, { to, ticketId, student, subject, text, isReply, replyTo = "" }) {
+  return queueMail(db, {
+    kind: "support_staff", to, replyTo, subject: `${isReply ? "Nouvelle réponse" : "Nouvelle demande"} de support #${ticketId} : ${oneLine(subject)}`.slice(0, 200),
+    text: [`${oneLine(student)} ${isReply ? "a répondu à la" : "a envoyé une"} demande #${ticketId} « ${oneLine(subject)} » :`, "", String(text).slice(0, 1500), "", `Répondre : ${siteUrl()}/formateur/gestion/support/${ticketId}`].join("\n"),
+  });
+}
+
 // Double confirmation (double opt-in) d'une inscription à la newsletter
 function sendSubscriptionConfirmation(db, { to, formName, url }) {
   return queueMail(db, {
@@ -159,6 +174,7 @@ function sendAccountCreatedEmail(db, { to, username, creator, siteName = "", act
 }
 
 module.exports = {
+  sendSupportReplyEmail, sendSupportStaffEmail,
   sendAccountCreatedEmail,
   sendInvitationEmail, TIMEOUTS, buildTransport, fromAddress, siteUrl,
   sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendEmailChange, sendPasswordResetEmail, sendSubscriptionConfirmation,

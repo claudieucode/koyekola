@@ -253,11 +253,14 @@ describe("sitemap, liens, suppression", () => {
     assert.match((await anon().get("/")).text, /<footer[\s\S]*href="\/blog"/);
     assert.match((await prof.get("/formateur")).text, /href="\/formateur\/blog"/);
   });
-  test("supprimer un article efface la ligne et son image", async () => {
+  test("supprimer met l'article à la corbeille (réversible, image conservée) ; la suppression définitive efface la ligne et son image", async () => {
     await createPost(prof, { title: "À supprimer" }, { name: "x.png", type: "image/png" });
     const p = post("À supprimer");
     assert.ok(onDisk(p.cover_path));
     await prof.post(`/formateur/blog/${p.id}/supprimer`, {});
+    assert.notEqual(q("SELECT deleted_at FROM posts WHERE id = ?", p.id)[0].deleted_at, null, "à la corbeille, pas effacé");
+    assert.ok(onDisk(p.cover_path), "l'image est conservée tant que l'article peut être restauré");
+    await prof.post(`/formateur/blog/${p.id}/supprimer-definitivement`, {});
     assert.equal(q("SELECT COUNT(*) n FROM posts WHERE id = ?", p.id)[0].n, 0);
     assert.equal(onDisk(p.cover_path), false);
   });

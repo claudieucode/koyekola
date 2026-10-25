@@ -40,10 +40,11 @@ describe("SEO et import d'un site dans un navigateur réel", { skip: SKIP }, () 
     const page = await context.newPage();
     page.on("pageerror", (e) => errors.push(e.message)); page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 200)); });
     // réglages
-    await page.goto(srv.base + `${SP}/${A}/seo`);
+    // le nom du site dans les résultats se règle dans la rubrique Meta (la vue générale est un état des lieux)
+    await page.goto(srv.base + `${SP}/${A}/seo/meta`);
     assert.ok(await page.locator(".mk-site-banner-name", { hasText: "Alpha Chrome" }).isVisible());
-    await page.locator("#seo-site_name").fill("Alpha Officiel Chrome"); await page.locator("#seo-org_name").fill("Alpha SA");
-    await page.locator('#seo-site-form button[type="submit"]').click(); await page.waitForURL(new RegExp(`/sites/${A}/seo`));
+    await page.locator("#seo-site_name").fill("Alpha Officiel Chrome");
+    await page.locator('form[action$="/seo/meta"] button[type="submit"]').first().click(); await page.waitForURL(new RegExp(`/sites/${A}/seo/meta`));
     assert.equal(one("SELECT value v FROM seo_site_settings WHERE site_id = ? AND key = 'site_name'", A).v, JSON.stringify("Alpha Officiel Chrome"));
     assert.match(await page.locator("main").innerText(), /enregistrés/);
     // redirection

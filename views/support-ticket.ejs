@@ -1,30 +1,35 @@
 <%- include("partials/header", { title: "Demande #" + ticket.id, seo: { noindex: true } }) %>
-
+<% const tone = ticket.status === "closed" ? "is-archived" : ticket.status === "answered" ? "is-published" : "is-draft"; %>
   <div class="container kv-ticket">
     <p><a href="/support" class="btn btn-ghost btn-sm"><%- icon("arrowLeft", { size: 16 }) %> Mes demandes</a></p>
-    <h1><%= ticket.subject %></h1>
-    <p style="color:var(--muted);margin-top:0;">Demande #<%= ticket.id %> · <span class="dash-status <%= ticket.status === "closed" ? "is-archived" : ticket.status === "answered" ? "is-published" : "is-draft" %>"><%= statuses[ticket.status] %></span><%= ticket.course_title ? " · " + ticket.course_title : "" %></p>
+    <header class="kv-ticket-head">
+      <h1><%= ticket.subject %></h1>
+      <p class="kv-ticket-meta"><span>Demande #<%= ticket.id %></span><span class="dash-status <%= tone %>"><%= statuses[ticket.status] %></span><% if (ticket.course_title) { %><span><%= ticket.course_title %></span><% } %><span>Ouverte le <%= formatDateTime(ticket.created_at) %></span><% if (ticket.closed_at) { %><span>Résolue le <%= formatDateTime(ticket.closed_at) %></span><% } %></p>
+    </header>
+    <% if (ok) { %><p class="kv-notice" role="status"><%- icon("check", { size: 16 }) %> <%= ok %></p><% } %>
 
-    <ol class="kv-thread">
+    <ol class="kv-thread" aria-label="Échanges, du plus ancien au plus récent">
       <% messages.forEach((m) => { %>
         <li class="kv-msg<%= m.is_staff ? " is-staff" : "" %>">
-          <strong><%= m.is_staff ? "Formateur" : "Vous" %></strong> <small style="color:var(--muted);">· <%= formatDateTime(m.created_at) %></small>
+          <div class="kv-msg-head"><strong><%= m.is_staff ? "Formateur" : "Vous" %></strong><time datetime="<%= m.created_at %>"><%= formatDateTime(m.created_at) %></time></div>
           <p class="kv-msg-body"><%= m.body %></p>
         </li>
       <% }) %>
     </ol>
 
-    <% if (error) { %><p class="field-error" role="alert"><%= error %></p><% } %>
     <% if (ticket.status === "closed") { %>
-      <div class="card card-pad"><p style="margin-top:0;">Cette demande est close. Vous pouvez la rouvrir si le problème persiste.</p>
-      <form action="/support/<%= ticket.id %>/rouvrir" method="post"><button type="submit" class="btn btn-primary">Rouvrir la demande</button></form></div>
+      <div class="card card-pad"><p class="kv-ticket-note">Cette demande est résolue. Vous pouvez la rouvrir si le problème persiste.</p>
+      <form action="/support/<%= ticket.id %>/rouvrir" method="post"><button type="submit" class="btn btn-primary" data-pending="Réouverture…">Rouvrir la demande</button></form></div>
     <% } else { %>
-      <form action="/support/<%= ticket.id %>/repondre" method="post" class="card card-pad">
-        <div class="field-group"><label for="r-message">Votre réponse</label><textarea id="r-message" name="message" rows="5" maxlength="5000" required></textarea></div>
-        <button type="submit" class="btn btn-primary">Envoyer</button>
+      <form action="/support/<%= ticket.id %>/repondre" method="post" class="card card-pad kv-reply" id="reponse" data-support-form>
+        <% if (error) { %><p class="field-error" role="alert"><%= error %></p><% } %>
+        <div class="field-group"><label for="r-message">Votre réponse</label><textarea id="r-message" name="message" rows="5" maxlength="5000" required data-count="r-count" data-ctrl-enter<%- error ? " autofocus" : "" %>><%= replyDraft %></textarea>
+          <div class="kv-count-row"><small>Ctrl + Entrée pour envoyer</small><small id="r-count" aria-hidden="true"></small></div></div>
+        <button type="submit" class="btn btn-primary" data-pending="Envoi…">Envoyer</button>
       </form>
-      <form action="/support/<%= ticket.id %>/fermer" method="post" class="kv-ticket-close"><button type="submit" class="btn btn-outline btn-sm">Marquer comme résolue (clore)</button></form>
+      <form action="/support/<%= ticket.id %>/fermer" method="post" class="kv-ticket-close"><button type="submit" class="btn btn-outline btn-sm" data-pending="Enregistrement…">Marquer comme résolue</button></form>
     <% } %>
   </div>
+  <script src="<%= asset('/js/support.js') %>" defer></script>
 
 <%- include("partials/footer") %>

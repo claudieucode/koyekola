@@ -1,0 +1,15 @@
+# Support Kolakisa — audit et refonte
+
+## État initial (audit)
+Ce qui existe : **tickets élève → formateur** (`support_tickets`, `support_messages`), notifications dans l'application (`services/notifications.js`, partagé avec commandes et certificats), FAQ publique modifiable (`/faq`, `/formateur/faq`), page élève `/support`, Centre de gestion `/formateur/gestion/support`. Isolation : chaque lecture/écriture filtre sur le compte (élève = auteur ; formateur = destinataire) dans le SQL ; CSRF par contrôle d'origine global.
+Ce qui n'existe pas (et n'a pas été inventé) : assignation à plusieurs agents (un seul formateur destinataire, pas de modèle d'équipe), pièces jointes (nécessiteraient stockage privé, validation et téléchargement contrôlé — non fait), temps réel (aucun, donc aucun faux « en direct »), colonne de site sur les tickets (le support est celui de la plateforme de formation ; les sites du CMS marketing n'ont pas de tickets).
+Défauts relevés : aucun indicateur ; liste du formateur plafonnée à 300 sans pagination ; une réponse du formateur sur une demande clôturée la rouvrait silencieusement côté serveur (seul le formulaire était masqué) ; contrôle anti-doublon hors transaction ; création de ticket non protégée contre le double envoi ; aucune limite de réponses ; message refusé = texte perdu ; erreurs/confirmations sans lien avec le ticket ; aucun e-mail ; mise en page de la conversation en styles en ligne.
+
+## Changements
+- **Service** (`src/services/support.js`) : doublon de création écarté (même sujet+message < 2 min) ; réponse entièrement transactionnelle (statut relu, doublon, limite 30/h) ; réponse refusée côté serveur sur une demande résolue ; « Envoyer et résoudre » ; indicateurs réels `stats()` (à traiter, priorité haute, répondues, résolues, plus ancienne attente) ; liste paginée (25) triée par priorité puis ancienneté d'attente ; recherche aussi par numéro ; filtres élève ; libellés par point de vue (élève : « En attente du formateur / Réponse reçue / Résolue »).
+- **E-mails** : nouvelle demande / réponse de l'élève → formateur, réponse du formateur → élève, via la file d'envoi partagée (`utils/outbox.js`, enregistrée et réessayée). L'interface ne dit jamais « e-mail envoyé » : seule la notification dans l'application est affirmée.
+- **Interface** : élève (`views/support*.ejs`) — lien FAQ, filtres avec compteurs, en-tête de demande, conversation à bulles alignées, confirmation liée au ticket, brouillon conservé, bouton « Envoi… » inactif, compteur, Ctrl+Entrée (`public/js/support.js`) ; formateur (`views/gestion/support*.ejs`) — 4 indicateurs, onglets, recherche, pagination, priorité en pastille, ancienneté, colonne de suivi.
+- **Tests** : `tests/support-notifications.test.js` (13, inchangés) + `tests/support-refonte.test.js` (8).
+
+## Reporté / limites
+Pièces jointes, assignation multi-agents, notification dans l'application pour le formateur (il est prévenu par e-mail et par le badge du menu), préférences de notification, base de connaissances au-delà de la FAQ existante, test navigateur automatisé.

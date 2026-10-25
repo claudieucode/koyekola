@@ -42,9 +42,12 @@ function record(actor, spec) {
 
 const LIKE = (v) => `%${String(v).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 // Filtres : type (préfixe d'action, ex. « course »), q (texte libre), page. → { rows, total }
-function list({ type = "", q = "", limit = 50, offset = 0 } = {}) {
+function list({ type = "", q = "", result = "", from = "", to = "", limit = 50, offset = 0 } = {}) {
   const where = [], args = [];
   if (/^[a-z_]{1,30}$/.test(type)) { where.push("action LIKE ? ESCAPE '\\'"); args.push(`${type}.%`); }
+  if (RESULTS[result]) { where.push("result = ?"); args.push(result); }
+  if (from) { where.push("at >= ?"); args.push(from); }
+  if (to) { where.push("at < ?"); args.push(to); }
   const text = String(q || "").trim().slice(0, 80);
   if (text) { where.push("(summary LIKE ? ESCAPE '\\' OR actor_name LIKE ? ESCAPE '\\' OR action LIKE ? ESCAPE '\\')"); args.push(LIKE(text), LIKE(text), LIKE(text)); }
   const w = where.length ? `WHERE ${where.join(" AND ")}` : "";
@@ -54,6 +57,7 @@ function list({ type = "", q = "", limit = 50, offset = 0 } = {}) {
   };
 }
 const safeParse = (t) => { try { return JSON.parse(t); } catch { return {}; } };
-const TYPES = { course: "Formations", offer: "Offres", coupon: "Codes promo", certificate: "Certificats", quiz: "Quiz", order: "Commandes" };
+const TYPES = { course: "Formations", offer: "Offres", coupon: "Codes promo", certificate: "Certificats", quiz: "Quiz", order: "Commandes", category: "Catégories", tools: "Outils (exports, données personnelles)" };
+const RESULTS = { ok: "Réussi", refused: "Refusé", error: "Erreur" };
 
-module.exports = { record, list, TYPES };
+module.exports = { record, list, TYPES, RESULTS };

@@ -1,12 +1,17 @@
 <%- include("../partials/header", { title }) %>
 <%- include("_head", { heading: "Journal d'activité", subtitle: "Qui a fait quoi, et quand. Le journal est en lecture seule : aucune entrée ne peut être modifiée ni effacée." }) %>
+<% const filtered = Boolean(filters.q || filters.type || filters.result || filters.du || filters.au); %>
 <form class="g-filters" method="get" action="/formateur/gestion/journal" role="search" aria-label="Filtrer le journal">
   <div class="g-field g-field-grow"><label for="j-q">Rechercher</label><input id="j-q" type="search" name="q" value="<%= filters.q %>" placeholder="Formation, offre, code, personne…"></div>
   <div class="g-field"><label for="j-type">Type</label><select id="j-type" name="type"><option value="">Tous</option><% Object.entries(types).forEach(([k, v]) => { %><option value="<%= k %>"<%= filters.type === k ? " selected" : "" %>><%= v %></option><% }) %></select></div>
-  <div class="g-filter-actions"><button type="submit" class="btn btn-primary">Filtrer</button></div>
+  <div class="g-field"><label for="j-res">Résultat</label><select id="j-res" name="resultat"><option value="">Tous</option><% Object.entries(results).forEach(([k, v]) => { %><option value="<%= k %>"<%= filters.result === k ? " selected" : "" %>><%= v %></option><% }) %></select></div>
+  <div class="g-field"><label for="j-du">Du</label><input id="j-du" type="date" name="du" value="<%= filters.du %>"></div>
+  <div class="g-field"><label for="j-au">Au</label><input id="j-au" type="date" name="au" value="<%= filters.au %>"></div>
+  <div class="g-filter-actions"><button type="submit" class="btn btn-primary">Filtrer</button><% if (filtered) { %><a class="btn btn-outline" href="/formateur/gestion/journal">Réinitialiser</a><% } %></div>
 </form>
+<p class="g-summary" role="status"><strong><%= log.total %></strong> entrée<%= log.total > 1 ? "s" : "" %><%= filtered ? " correspondant aux filtres" : "" %> · dates à l'heure de Paris</p>
 <% if (!log.rows.length) { %>
-  <div class="dash-empty g-state"><h3>Aucune entrée</h3><p><%= filters.q || filters.type ? "Aucune entrée ne correspond à ces filtres." : "Les modifications importantes (prix, publication, offres, codes promo, certificats) apparaîtront ici." %></p></div>
+  <div class="dash-empty g-state"><h3>Aucune entrée</h3><p><%= filtered ? "Aucune entrée ne correspond à ces filtres : élargissez la période ou réinitialisez." : "Les modifications importantes (prix, publication, offres, codes promo, certificats) apparaîtront ici." %></p></div>
 <% } else { %>
   <div class="dtable-wrap"><table class="dtable g-table">
     <caption class="sr-only">Journal d'activité</caption>
@@ -14,7 +19,8 @@
     <tbody><% log.rows.forEach((r) => { %><tr>
       <td data-label="Date"><%= formatDateTime(r.at) %></td>
       <td data-label="Qui"><%= r.actor_name || "Système" %></td>
-      <td data-label="Action"><%= r.summary %><br><small><code><%= r.action %></code><%= r.resource_id ? " · n° " + r.resource_id : "" %></small></td>
+      <td data-label="Action"><%= r.summary %><br><small><code><%= r.action %></code><%= r.resource_id ? " · n° " + r.resource_id : "" %></small>
+        <% const det = Object.entries(r.details || {}).filter(([k]) => !k.startsWith("_")); if (det.length) { %><details class="g-details"><summary>Détails enregistrés</summary><dl class="g-dl"><% det.slice(0, 20).forEach(([k, v]) => { %><dt><%= k.replace(/_/g, " ") %></dt><dd><%= typeof v === "object" && v !== null ? JSON.stringify(v).slice(0, 200) : String(v).slice(0, 200) %></dd><% }) %></dl></details><% } %></td>
       <td data-label="Résultat"><span class="dash-status <%= r.result === "ok" ? "is-published" : "is-archived" %>"><%= r.result === "ok" ? "Réussi" : r.result === "refused" ? "Refusé" : "Erreur" %></span></td>
     </tr><% }) %></tbody>
   </table></div>

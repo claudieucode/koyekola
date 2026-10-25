@@ -21,6 +21,8 @@ const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/se
 const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
+const articles = require("../services/articles");
+const workspace = require("../services/blogWorkspace");
 const taxonomy = require("../services/taxonomy");
 const siteContent = require("../services/siteContent");
 const primarySite = require("../services/primarySite");
@@ -867,8 +869,13 @@ router.get("/formateur/blog", (req, res) => {
       chosen: marketing.settings.get(marketing.organizationId, NEWSLETTER_KEY, ""),
     };
   }
-  blog.promoteScheduled();
-  res.render("instructor/blog-list", { posts: db.prepare("SELECT * FROM posts WHERE deleted_at IS NULL ORDER BY id DESC").all(), newsletter, saved: req.query.enregistre === "1", statuses: blog.STATUSES });
+  // Liste filtrée, triée et paginée DANS la base par le service partagé avec le CMS (le contenu des articles n'est jamais chargé)
+  const state = workspace.parse(req.query);
+  const result = articles.list({ state: state.etat, q: state.q, sort: state.tri, page: state.page, perPage: workspace.PER_PAGE });
+  const flash = req.session.blogFlash || null; delete req.session.blogFlash; // message de la dernière action : affiché une seule fois
+  res.render("instructor/blog-list", {
+    result, state: { ...state, page: result.page }, flash, newsletter, saved: req.query.enregistre === "1", statuses: blog.STATUSES, workspace, sites: workspace.siteLabels(result.rows.map((r) => r.id)),
+  });
 });
 
 // Formulaire d'inscription affiché dans le blog (bloc « newsletter ») : choisi parmi les formulaires publiés du marketing
@@ -975,22 +982,29 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
 }));
 
 // Publier / dépublier (liste des articles) ; la date de première publication est conservée
-router.post("/formateur/blog/:id/publier", loadPost, (req, res) => {
-  const p = req.post;
-  const publish = !p.published;
-  if (publish && !String(p.content || "").replace(/<[^>]*>/g, "").trim()) throw new UserError("Impossible de publier un article vide.");
-  db.prepare("UPDATE posts SET published = ?, status = ?, published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, datetime('now')) ELSE published_at END, updated_at = datetime('now') WHERE id = ?")
-    .run(publish ? 1 : 0, publish ? "published" : "draft", publish ? 1 : 0, p.id);
-  blog.addRevision(db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id), req.session.user.id, publish ? "Statut : Publié" : "Statut : Brouillon", publish ? "publish" : "status");
-  res.redirect("/formateur/blog");
-});
-
-router.post("/formateur/blog/:id/supprimer", loadPost, (req, res) => {
-  const kept = blog.revisionImages(db.prepare("SELECT meta FROM post_revisions WHERE post_id = ?").all(req.post.id));
-  db.prepare("DELETE FROM posts WHERE id = ?").run(req.post.id); // révisions supprimées avec l'article (ON DELETE CASCADE)
-  for (const p of new Set([...["cover_path", "og_image_path", "twitter_image_path"].map((col) => req.post[col]).filter(Boolean), ...kept])) forgetIfUnused(p);
-  res.redirect("/formateur/blog");
-});
+// Actions de la liste : mêmes règles que le CMS (services/articles : contrôle SEO avant publication, corbeille réversible). Le résultat est mémorisé en session (affiché une fois) ;
+// le retour reconstruit la liste (état, recherche, tri, page) à partir de paramètres validés.
+function listAction(name, run) {
+  router.post(`/formateur/blog/:id(\\d+)/${name}`, loadPost, (req, res, next) => {
+    const to = workspace.url(workspace.parse(req.body));
+    try { req.session.blogFlash = run(req.post, req.session.user.id, req); } catch (error) {
+      if (!(error instanceof UserError)) return next(error);
+      req.session.blogFlash = { type: "error", text: error.message };
+    }
+    res.redirect(to);
+  });
+}
+const named = (p) => `« ${p.title} »`;
+// Bascule historique : un article publié repasse en brouillon ; sinon il est publié maintenant (un article programmé est publié tout de suite)
+listAction("publier", (p, userId, req) => (p.status === "published"
+  ? (articles.unpublish(p.id, userId), { type: "ok", text: `${named(p)} est repassé en brouillon.` })
+  : (articles.publish(p.id, userId, req), { type: "ok", text: `${named(p)} est publié.` })));
+listAction("depublier", (p, userId) => (articles.unpublish(p.id, userId), { type: "ok", text: p.status === "scheduled" ? `La programmation de ${named(p)} est annulée : l'article est en brouillon.` : `${named(p)} est repassé en brouillon.` }));
+// « Supprimer » met à la corbeille : réversible (restaurer), comme dans le CMS. La suppression définitive se fait depuis la corbeille seulement.
+listAction("supprimer", (p, userId) => (articles.trash(p.id, userId), { type: "ok", text: `${named(p)} est dans la corbeille.`, undo: `/formateur/blog/${p.id}/restaurer` }));
+listAction("restaurer", (p, userId) => (articles.restore(p.id, userId), { type: "ok", text: `${named(p)} est restauré en brouillon : il n'est pas republié automatiquement.` }));
+listAction("dupliquer", (p, userId) => { const copy = articles.duplicate(p.id, userId); return { type: "ok", text: `Copie créée : ${named(copy)} (brouillon).`, open: `/formateur/blog/${copy.id}/modifier` }; });
+listAction("supprimer-definitivement", (p) => { articles.purge(p.id); return { type: "ok", text: `${named(p)} est supprimé définitivement.` }; });
 
 // ---------- Sauvegarde automatique ----------
 // Un nouvel article reçoit un brouillon dès la première sauvegarde automatique (rien n'est perdu en cas de rafraîchissement)
