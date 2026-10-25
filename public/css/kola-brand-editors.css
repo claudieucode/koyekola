@@ -15,3 +15,13 @@ html[data-kb-motion="lite"] *, html[data-kb-motion="lite"] *::before, html[data-
 html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"]),
 html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::before,
 html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::after { transition: none !important; animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+
+/* Éditeur d'articles sur téléphone : « Enregistrer le brouillon » devient « Enregistrer » sous 560 px (l'en-tête débordait de 70 px à 320 px) ; le libellé complet reste lu par les lecteurs d'écran */
+@media (max-width: 560px) { .wp-btn-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } .wp-header-right { gap: 0; } .wp-header .wp-btn-tertiary { padding-inline: 8px; } }
+/* Très petits téléphones (≤ 380 px) : l'en-tête de l'éditeur d'articles tient en 320 px (385 px avant) ; cibles de 32 px, au-dessus du minimum de 24 px de WCAG 2.2 */
+@media (max-width: 380px) {
+  .wp-site-icon { width: 36px; }
+  .wp-header-left { gap: 2px; padding-left: 2px; }
+  .wp-header .wp-btn-icon { width: 32px; min-width: 32px; }
+  .wp-header .wp-header-right .wp-btn-primary[data-publish] { padding-inline: 8px; min-width: 0; }
+}

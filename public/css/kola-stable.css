@@ -25,3 +25,35 @@
 @media (min-width: 1300px) {
   .mk-body :is(.mk-tl-tabs, .mk-st-tabs) { flex-wrap: wrap; overflow-x: visible; }
 }
+
+/* ==========================================================================================================================================
+   Responsive (audit scripts/audit-responsive.js : 116 écrans × 11 largeurs de 320 à 1920 px, tactile émulé jusqu'à 768 px)
+   Principes : la disposition suit la LARGEUR DU CONTENU (grilles auto-fit, min-width: 0), pas une liste d'appareils ; l'écran tactile se détecte par
+   `pointer: coarse` (pas par la largeur : une fenêtre de bureau étroite garde la densité du bureau) ; les champs font au moins 16 px au tactile
+   (en dessous, iOS zoome la page à la prise de focus).
+   ========================================================================================================================================== */
+/* 1. cibles tactiles : 44 px de côté pour tout ce qui se touche (le bureau ne change pas) */
+@media (pointer: coarse) {
+  .mk-body :is(.btn, .btn-sm, .icon-btn, .mk-menu-btn, .mk-theme-btn, .mk-user, .kab-btn, .mk-tab, summary, .mk-menu button, [role="menu"] button, [role="menu"] a) { min-height: 44px; }
+  .mk-body :is(.icon-btn, .mk-menu-btn, .mk-theme-btn, .kab-btn.kab-icon, .kab-menu-btn, .kab-create, .kab-brand) { min-width: 44px; }
+  .mk-body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]), select, textarea) { font-size: max(16px, 1em); }
+  .mk-body :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]), select) { min-height: 44px; }
+  .mk-body :is(.mk-cms-toolbar, .mk-filterbar, .mk-cms-filters, .mk-cms-bulk, .mk-ar-filters, .mk-ml-toolbar, .mk-cm-filters, .mk-cm-bulkbar, .mk-pf-inline, .mk-tl-site, .mk-inline-form) :is(select, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]), button.btn, a.btn) { height: auto; min-height: 44px; }
+}
+/* 1 bis. même règle, spécificité relevée : certains écrans (kola-pages, cms) fixaient 28 à 38 px sur des boutons de leur en-tête ou de leurs listes */
+@media (pointer: coarse) {
+  .mk-body.mk-body.mk-body :is(.btn, .btn-sm, .mk-wd-btn, .mk-wd-chip, .mk-pv-btn, .mk-banner-x, .mk-site-return .btn, .mk-cm-states a, .mk-tab, .mk-head .btn, .mk-head-actions .btn) { min-height: 44px; }
+  .mk-body.mk-body.mk-body :is(.mk-banner-x, .mk-wd-icon) { min-width: 44px; }
+  .mk-body.mk-body .mk-breadcrumb a, .mk-body.mk-body .mk-cms-crumbs a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+/* 2. grilles qui suivent la largeur réelle du contenu (et non celle de la fenêtre : le menu latéral en retire plus de 300 px) */
+.mk-body .mk-tg-filters { grid-template-columns: minmax(180px, 2fr) repeat(auto-fit, minmax(130px, 1fr)); }
+.mk-body .mk-tg-search { grid-column: auto; }
+.mk-body .mk-sg-example { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+/* une grille sans colonnes déclarées prend la largeur de son plus large contenu (min-width: auto des éléments de grille) : colonne unique bornée */
+.mk-body .mk-nm-createform { grid-template-columns: minmax(0, 1fr); }
+.mk-body .mk-nm-setting > * { min-width: 0; }
+/* Menus : la ligne de réglage (libellé | case) se calait sur la largeur de la FENÊTRE ; la colonne de droite tombait à 38 px dans la zone étroite à côté du menu latéral et
+   du panneau des éléments (débordement de 63 px à 1024 px). Les colonnes suivent maintenant la largeur du conteneur : une seule colonne s'il est étroit. */
+.mk-body .mk-nm-setting { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.mk-body .mk-nm-setting .field-hint { grid-column: auto; }

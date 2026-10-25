@@ -66,6 +66,7 @@ Référence détaillée : `docs/KOLAKISA_MOTION.md` (jetons, trois niveaux adapt
 Durées 120–180 ms, courbe `cubic-bezier(.22,.8,.3,1)`. On n'anime que la couleur, l'opacité et `transform` : jamais `width`, `height`, `top`, `left`, `margin`, `padding` ni `transition: all`. Tout mouvement non déclenché par l'utilisateur est interdit hors état vide. `prefers-reduced-motion` coupe les animations. Aucun scintillement au changement de thème (le thème est résolu avant le premier affichage).
 
 ## 9. Responsive
+Référence détaillée : `docs/KOLAKISA_RESPONSIVE.md`.
 Points de rupture : 1300 · 1100 · 900 · 640 px. Aucun défilement horizontal de page. Les tableaux denses se replient en lignes de registre (≥ 640 px) puis en cartes (< 640 px) en gardant toutes les données.
 
 ## 10. Accessibilité
