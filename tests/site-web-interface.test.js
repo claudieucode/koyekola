@@ -61,8 +61,10 @@ describe("sites et design system", () => {
     assert.equal(row(pageId).kind, "page");
     assert.deepEqual(JSON.parse(row(pageId).sections).map((x) => x.type), ["hero", "text"], "page de site : publiable sans formulaire");
     await boss.post(`/marketing/site-web/sites/${siteId}`, { name: "Académie Photo", home_page_id: String(pageId) });
-    const html = (await boss.get(`/marketing/site-web/sites/${siteId}/reglages`)).text;
-    assert.match(html, /Accueil Photo<\/a> <span class="mk-status">Accueil<\/span>/);
+    // La page d'accueil est PERSISTÉE (base) puis relue par la liste des pages du site (la fiche « Général » ne liste plus les pages)
+    assert.equal(db.prepare("SELECT home_page_id h FROM mk_sites WHERE id = ?").get(siteId).h, pageId);
+    const html = (await boss.get(`/marketing/site-web/sites/${siteId}/pages`)).text;
+    assert.match(html, /Accueil Photo/);
   });
 
   test("design system : une couleur modifiée s'applique à la page EN LIGNE du site ; valeur invalide refusée", async () => {

@@ -308,6 +308,6 @@ describe("intégration au serveur", () => {
     // Colonnes du schéma du LMS lui-même (src/config/database.js) : « timezone » (fuseau du navigateur relevé à
     // l'inscription) et « deleted_at » (compte supprimé à la demande de la personne, RGPD) « email_verified_at » (adresse confirmée), « status » (compte actif / suspendu / désactivé par l'équipe), « last_login_at » et « last_seen_at » (dernière connexion et activité, palier 9) y sont ajoutées par le site,
     // jamais par le module marketing, qui ne fait que les lire
-    assert.deepEqual(users, ["id", "username", "email", "password_hash", "role", "bio", "created_at", "avatar_path", "status", "last_login_at", "last_seen_at", "timezone", "deleted_at", "email_verified_at"]);
+    assert.deepEqual(users, ["id", "username", "email", "password_hash", "role", "bio", "created_at", "avatar_path", "status", "last_login_at", "last_seen_at", "timezone", "deleted_at", "email_verified_at", "first_name", "last_name", "website", "language"]); // + profil du compte (prénom, nom, site, langue) : colonnes du schéma du LMS, src/config/database.js
   });
 });

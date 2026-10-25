@@ -46,8 +46,9 @@ const invalidate = () => { memo = new Map(); };
 function readRaw(siteId) {
   const k = scopeKey(siteId);
   if (memo.has(k)) return memo.get(k);
-  const org = orgId();
-  const rows = org ? db.prepare("SELECT key, value FROM mk_settings WHERE organization_id = ? AND key LIKE ?").all(org, `permalinks.${k}.%`) : [];
+  // Base pas encore migrée (tables des réglages absentes) : structure par défaut plutôt qu'une exception qui viderait silencieusement les listes d'articles
+  let rows = [];
+  try { const org = orgId(); rows = org ? db.prepare("SELECT key, value FROM mk_settings WHERE organization_id = ? AND key LIKE ?").all(org, `permalinks.${k}.%`) : []; } catch (e) { if (!/no such table/i.test(String(e.message))) throw e; return {}; } // pas mémorisé : la base peut être migrée ensuite
   const m = Object.fromEntries(rows.map((r) => [r.key.slice(`permalinks.${k}.`.length), r.value]));
   memo.set(k, m);
   return m;

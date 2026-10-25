@@ -79,8 +79,9 @@ function listPosts(ctx, { since = null, limit = 20, category = "" } = {}) {
         image: p.cover_path ? (/^https?:\/\//i.test(p.cover_path) ? p.cover_path : `${base}${p.cover_path.startsWith("/") ? "" : "/"}${p.cover_path}`) : "",
         date: SQL_DATE(p.published_at),
       }));
-  } catch {
-    return [];
+  } catch (e) {
+    if (/no such table: posts/i.test(String(e.message))) return []; // LMS sans blog
+    throw e; // toute autre erreur doit se voir (sinon une campagne RSS « n'a rien à envoyer » sans explication)
   }
 }
 // Catégories du blog réellement utilisées (filtre d'une campagne RSS)

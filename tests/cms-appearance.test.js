@@ -50,7 +50,7 @@ describe("éditeur du site : écrans", () => {
   });
   test("sans configuration publiée, le site public est identique à l'origine (aucune feuille d'apparence)", async () => {
     const html = await get("/");
-    assert.equal(styleOf(html), ""); assert.match(html, /<a href="\/" class="logo">KOLAKISA<\/a>/); assert.match(html, /Mes formations en ligne : apprenez/);
+    assert.equal(styleOf(html), ""); assert.match(html, /<a href="\/" class="logo"[^>]*>KOLAKISA<\/a>/); assert.match(html, /Mes formations en ligne : apprenez/);
     assert.match(html, /class="header-search"/); assert.match(html, /href="\/panier"/);
   });
 });
@@ -141,7 +141,7 @@ describe("en-tête et pied de page", () => {
     assert.match(preview, /MA MARQUE/); assert.match(preview, /Soldes de rentrée/);
     await publish();
     const html = await get("/");
-    assert.match(html, /<a href="\/" class="logo">MA MARQUE<\/a>/); assert.match(html, /class="site-announcement"[\s\S]*href="\/catalogue">Soldes de rentrée/);
+    assert.match(html, /<a href="\/" class="logo"[^>]*>MA MARQUE<\/a>/); assert.match(html, /class="site-announcement"[\s\S]*href="\/catalogue">Soldes de rentrée/);
     assert.match(html, /class="btn btn-outline btn-sm header-cta" href="\/inscription">Essayer/); assert.match(html, /header-cta-mobile/);
     assert.doesNotMatch(html, /class="header-search"/); assert.doesNotMatch(html, /href="\/panier"/);
     assert.match((await boss.get(`${AP}/en-tete`)).text, /value="MA MARQUE"/, "persistance au rechargement");
@@ -174,7 +174,7 @@ describe("en-tête et pied de page", () => {
     assert.match(await get("/"), /class="logo logo-img"[^>]*><img src="\/uploads\/marketing\/1\/logo-test\.png" alt="Mon logo" width="120" height="40">/);
     db.prepare("UPDATE mk_media SET deleted_at = datetime('now') WHERE id = ?").run(mid);
     const html = await get("/");
-    assert.match(html, /<a href="\/" class="logo">KOLAKISA<\/a>/, "média à la corbeille : texte");
+    assert.match(html, /<a href="\/" class="logo"[^>]*>KOLAKISA<\/a>/, "média à la corbeille : texte");
     await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "KOLAKISA", search: "1", cart: "1", account: "1", mobile_cta: "1" });
     await publish();
   });
@@ -377,7 +377,7 @@ describe("publication, historique, droits, isolation", () => {
     assert.match(flashOf((await boss.get(AP)).text), /Rien à publier/);
     const count = one("SELECT COUNT(*) n FROM appearance_revisions").n;
     await boss.post(`${AP}/retirer`, {});
-    assert.equal(styleOf(await get("/")), ""); assert.match(await get("/"), /<a href="\/" class="logo">KOLAKISA<\/a>/);
+    assert.equal(styleOf(await get("/")), ""); assert.match(await get("/"), /<a href="\/" class="logo"[^>]*>KOLAKISA<\/a>/);
     assert.equal(one("SELECT COUNT(*) n FROM appearance_revisions").n, count);
   });
   test("droits : lecteur voit sans modifier ; éditeur modifie le brouillon sans publier ; administrateur publie ; membre simple refusé", async () => {

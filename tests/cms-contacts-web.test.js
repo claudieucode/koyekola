@@ -264,7 +264,8 @@ describe("export vers les Outils", () => {
     db.prepare("INSERT INTO mk_consents (organization_id, contact_id, purpose, action, source, text_shown, ip) VALUES (?, ?, 'marketing', 'granted', 'form', 'TEXTE-DE-PREUVE-UNIQUE', '203.0.113.0')").run(orgId, id);
     db.prepare("INSERT INTO mk_contact_notes (organization_id, contact_id, body) VALUES (?, ?, 'NOTE-INTERNE-UNIQUE')").run(orgId, id);
     const page = (await boss.get(`${O}/exporter`)).text;
-    assert.match(page, /id="tl-t-contacts" name="types" value="contacts">/, "présent mais non coché");
+    assert.match(page, /<input type="radio" name="choice" value="other:contacts">/, "proposé mais non choisi d'office");
+    assert.match(page, /Données personnelles/, "signalé comme donnée personnelle");
     const r = await boss.post(`${O}/exporter`, { types: "contacts" });
     assert.equal(r.status, 302, r.text.slice(0, 200));
     const runId = Number(String(r.location).match(/exporter\/(\d+)/)[1]);
@@ -278,7 +279,7 @@ describe("export vers les Outils", () => {
     // droits : administrateur d'outils sans les droits contacts
     const noContacts = await customMember("Outils sans contacts", ["tools.view", "tools.export", "contacts.read", "settings.read", "articles.read"]);
     const p2 = (await noContacts.get(`${O}/exporter`)).text;
-    assert.match(p2, /id="tl-t-contacts"[^>]*disabled/);
+    assert.doesNotMatch(p2, /value="other:contacts"/, "sans les droits : l'option n'est même pas proposée");
     const r2 = await noContacts.post(`${O}/exporter`, { types: "contacts" });
     assert.equal(r2.status, 302); assert.doesNotMatch(String(r2.location), /exporter\/\d+/, "refusé : pas d'opération lancée");
   });

@@ -44,7 +44,8 @@ describe("parcours Templates → Éditeur → Patterns → Styles → publicatio
     assert.deepEqual(hub.pages.map((p) => p.name).sort(), imported.pages.map((p) => p.name).sort());
     assert.ok(hub.pages.every((p) => !p.published));
     for (const p of imported.pages) { const ed = await adminA.get(`/marketing/pages/${p.id}/editeur?cadre=1`); assert.equal(ed.status, 200); assert.ok(ed.text.includes("data-pb-save") && ed.text.includes("pb-embedded")); }
-    assert.equal(hub.menus.header, undefined, "le menu importé n'est affecté à aucun emplacement tant que vous ne le décidez pas");
+    assert.equal(hub.menus.header && hub.menus.header.id, imported.menu.id, "le menu du pack est affecté à l'en-tête s'il est libre (fb47836), jamais au pied de page");
+    assert.equal(hub.menus.footer, undefined);
   });
 
   test("3. Patterns : insérer un pattern dans la page d'accueil importée — sections natives ajoutées au brouillon, modifiables", async () => {
