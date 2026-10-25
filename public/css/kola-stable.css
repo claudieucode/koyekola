@@ -1,0 +1,27 @@
+/* KOLAKISA — stabilisation de l'agencement de l'administration (chargé en dernier, après kola-compose.css).
+   Ne change ni la charte ni les couleurs : corrige des défauts mesurés dans un vrai Chrome (scripts/audit-interface.js).
+   1. Une seule hauteur de commande dans les barres d'outils et de filtres : les listes déroulantes (38 px mesurés) et les
+      petits boutons (32 px) se désalignaient sur toutes les rangées de filtres du CMS.
+   2. Un bouton n'occupe pas toute la largeur d'une colonne ou d'une grille de formulaire sans raison : élément de grille ou de
+      flex en colonne, il s'étirait (jusqu'à 1 500 px). Spécificité nulle (:where) : toute règle explicite de largeur gagne encore
+      (.btn-block, barres d'enregistrement mobiles, boutons d'accordéon).
+   3. Onglets du CMS : plus de texte coupé net sans indice entre 1 300 px de fenêtre et la largeur où ils tiennent. */
+
+.mk-body { --kx-ctl-h: 36px; }
+
+/* 1. hauteur unique des commandes d'une rangée d'outils */
+.mk-body :is(.mk-cms-toolbar, .mk-filterbar, .mk-cms-filters, .mk-cms-bulk, .mk-ar-filters, .mk-ml-toolbar, .mk-cm-filters, .mk-cm-bulkbar, .mk-pf-inline, .mk-tl-site)
+  :is(select, input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]), button.btn, a.btn) {
+  box-sizing: border-box; min-height: var(--kx-ctl-h); height: var(--kx-ctl-h);
+}
+@media (max-width: 640px) {
+  .mk-body { --kx-ctl-h: 44px; }
+}
+
+/* 2. boutons à leur largeur naturelle */
+:where(.mk-body .btn:not(.btn-block)) { width: fit-content; max-width: 100%; }
+
+/* 3. onglets : à partir de 1 300 px le fondu de bord est retiré ; les onglets passent alors à la ligne au lieu d'être tronqués */
+@media (min-width: 1300px) {
+  .mk-body :is(.mk-tl-tabs, .mk-st-tabs) { flex-wrap: wrap; overflow-x: visible; }
+}

@@ -1392,6 +1392,9 @@ button.is-busy { opacity: .7; cursor: progress; }
   .pl-bar { flex-wrap: wrap; border-radius: 16px; font-size: .86rem; }
   .pl-copy { margin-left: 0; }
   .pl-input-host { max-width: 38%; }
+}
+/* barre d'enregistrement empilée : seulement sur téléphone (à 820 px un bouton de 750 px de large n'avait aucune raison d'être) */
+@media (max-width: 640px) {
   .pl-savebar { flex-direction: column; align-items: stretch; }
   .pl-savebar .btn { width: 100%; }
 }

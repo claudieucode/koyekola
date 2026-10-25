@@ -40,6 +40,7 @@
   <script>try { if (localStorage.getItem("mkSidebar") === "collapsed") document.documentElement.setAttribute("data-sidebar", "collapsed"); } catch (e) {}</script>
   <script>/* Thème de l'interface (Clair / Sombre / Automatique) : résolu ici, avant le premier affichage, donc sans flash. Préférence mémorisée dans ce navigateur (clé kolaTheme) ; « Automatique » suit le système. */ try { var kp = localStorage.getItem("kolaTheme") || "<%= typeof mkUserTheme !== "undefined" && /^(?:light|dark)$/.test(mkUserTheme) ? mkUserTheme : "auto" %>"; document.documentElement.setAttribute("data-kola-pref", kp === "dark" || kp === "light" ? kp : "auto"); document.documentElement.setAttribute("data-kola-theme", kp === "dark" || (kp !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light"); } catch (e) { document.documentElement.setAttribute("data-kola-theme", "light"); }</script>
   <% if (typeof compactNav !== "undefined" && compactNav) { %><script>/* outil plein écran (éditeur) : sous 1680 px, menu réduit d'office pour laisser la place au travail (sans changer la préférence mémorisée) */ if (window.innerWidth < 1680) document.documentElement.setAttribute("data-sidebar", "collapsed");</script><% } %>
+  <%- include("../../partials/font-preload") %>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/marketing.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/font-manager.css') %>">
@@ -52,6 +53,7 @@
   <link rel="stylesheet" href="<%= asset('/css/kola-ui.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-pages.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-compose.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/kola-stable.css') %>">
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %>">
   <a class="skip-link" href="#main">Aller au contenu principal</a>

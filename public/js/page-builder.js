@@ -28,6 +28,24 @@
   var $ = function (sel, root) { return (root || document).querySelector(sel); };
   var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
   var clone = function (v) { return JSON.parse(JSON.stringify(v)); };
+  // Fait défiler SEULEMENT le conteneur défilant le plus proche de l'élément (la liste, ou le document du canevas s'il est dans le cadre).
+  // Element.scrollIntoView fait aussi défiler tous les ancêtres, fenêtre comprise : en disposition empilée (≤ 1100 px) sélectionner un bloc
+  // faisait sauter toute la page de ~350 px (barre d'outils hors de l'écran). Le défilement natif est conservé (il gère le zoom, les
+  // transformations…) ; la position des autres ancêtres est ensuite rétablie. Mesuré dans Chrome (scripts/audit-editeurs.js).
+  function scrollInside(el, smooth) {
+    if (!el || !el.isConnected) return;
+    var doc = el.ownerDocument, scroller = null, others = [];
+    for (var p = el.parentElement; p; p = p.parentElement) {
+      var cs = doc.defaultView.getComputedStyle(p);
+      if (!scroller && /(auto|scroll)/.test(cs.overflowY) && p.scrollHeight > p.clientHeight && p !== doc.documentElement && p !== doc.body) scroller = p;
+      else others.push([p, p.scrollTop, p.scrollLeft]);
+    }
+    var inFrame = doc !== document, wx = window.scrollX, wy = window.scrollY;
+    el.scrollIntoView({ block: "nearest", behavior: smooth ? "smooth" : "auto" });
+    // le document du cadre (le canevas) est le seul « conteneur » voulu quand l'élément y est ; sinon on rétablit tout ce qui est au-dessus du conteneur trouvé
+    others.forEach(function (o) { if (!(inFrame && (o[0] === doc.documentElement || o[0] === doc.body))) { o[0].scrollTop = o[1]; o[0].scrollLeft = o[2]; } });
+    if (window.scrollX !== wx || window.scrollY !== wy) window.scrollTo(wx, wy);
+  }
   var newId = function () { var a = new Uint8Array(6); crypto.getRandomValues(a); return Array.prototype.map.call(a, function (b) { return ("0" + b.toString(16)).slice(-2); }).join(""); };
   var norm = function (s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); };
   var store = {
@@ -1227,7 +1245,7 @@
       if (treeTab && treeTab.isConnected) treeTab.tabIndex = -1; else $$(".pb-row-item", treeEl).forEach(function (r) { r.tabIndex = -1; });
       cur.tabIndex = 0; treeTab = cur;
       // Faire apparaître la ligne : au prochain affichage (le défilement impose une mise en page, inutile en plein traitement du clic)
-      if (!noScroll) requestAnimationFrame(function () { if (cur.isConnected) cur.scrollIntoView({ block: "nearest" }); });
+      if (!noScroll) requestAnimationFrame(function () { scrollInside(cur); });
     }
   }
   function toggleCollapse(id, value) {
@@ -5858,7 +5876,7 @@
     if (group) { store.set("open-" + group, true); pendingReveal = group; }
     renderInspector();
     var target = group ? $("[data-pb-inspector] details[data-group='" + group + "']") : $("[data-pb-inspector] .pb-insp-body");
-    if (target) { target.scrollIntoView({ block: "nearest" }); var f = target.querySelector("input, select, textarea, button"); if (f) f.focus({ preventScroll: true }); }
+    if (target) { scrollInside(target); var f = target.querySelector("input, select, textarea, button"); if (f) f.focus({ preventScroll: true }); }
   }
 
   // Outil « main » : faire défiler la page en la glissant
@@ -6132,7 +6150,7 @@
     if (mode !== "structure") return;
     $$(".pb-blk.is-selected", docEl).forEach(function (b) { b.classList.remove("is-selected"); });
     selection.forEach(function (id) { var b = docEl.querySelector('.pb-blk[data-id="' + id + '"]'); if (b) b.classList.add("is-selected"); });
-    if (scroll && selection.length) { var f = docEl.querySelector('.pb-blk[data-id="' + selection[0] + '"]'); if (f) f.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+    if (scroll && selection.length) { var f = docEl.querySelector('.pb-blk[data-id="' + selection[0] + '"]'); scrollInside(f, true); }
   }
   // Sélection : un clic sur un bloc (ou dans un de ses champs) le sélectionne — inspecteur et calques suivent
   docEl.addEventListener("mousedown", function (e) {
@@ -8146,7 +8164,7 @@
     q.setAttribute("aria-activedescendant", el ? el.id : "");
     if (!el) return;
     el.classList.add("is-active"); el.setAttribute("aria-selected", "true");
-    if (top && i === 0) $("[data-pb-cmd-list]").scrollTop = 0; else el.scrollIntoView({ block: "nearest" });
+    if (top && i === 0) $("[data-pb-cmd-list]").scrollTop = 0; else scrollInside(el);
   }
   function runCommand(i) {
     var c = cmdShown[i]; if (!c) return;

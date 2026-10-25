@@ -9,6 +9,7 @@
   <meta name="mk-media-site" content="<%= page && Number.isInteger(page.site_id) && page.site_id > 0 ? page.site_id : "principal" %>"><%# médiathèque du site de cette page (ou du site principal) %>
   <title><%= title %> · Site Web · KOLAKISA</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <%- include("../partials/font-preload") %>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/page-builder.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/font-manager.css') %>">
@@ -60,7 +61,11 @@
       <button type="button" class="pb-icon-btn" data-pb-command data-tip="Commandes (Ctrl/⌘ + K)" aria-label="Rechercher une commande"><%- icon("search", { size: 16 }) %></button>
       <button type="button" class="btn btn-outline btn-sm" data-pb-save-now>Enregistrer</button>
       <button type="button" class="btn btn-outline btn-sm" data-pb-preview>Aperçu</button>
-      <span class="pb-publish-group"><button type="button" class="btn btn-primary btn-sm" data-pb-publish hidden>Publier</button><button type="button" class="btn btn-primary btn-sm pb-publish-more" data-pb-publish-menu aria-haspopup="menu" aria-label="Plus d'options de publication" data-tip="Publication : dépublier, voir la page en ligne…"><%- icon("chevronDown", { size: 15 }) %></button></span>
+      <%# État initial du bouton « Publier » calculé côté serveur comme le fait page-builder.js (updateStatus) : sans cela le bouton apparaissait après le chargement du script et la barre d'outils passait de 2 à 3 lignes (décalage de mise en page mesuré 0,8 à 820 px) %>
+      <% const pbBoot = (() => { try { return JSON.parse(boot); } catch { return {}; } })(); const pbPg = pbBoot.page || {}; const pbCm = pbPg.component || null; const pbLive = pbPg.status === "published"; const pbCan = Boolean(pbBoot.canWrite);
+         const pbPubHidden = pbCm ? (pbCm.role !== "component" || !pbCan || !pbCm.hasDraft) : (!pbCan || (pbLive && !pbPg.hasDraft) || Boolean(pbPg.abTest));
+         const pbPubLabel = pbCm ? (pbCm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle") : (pbLive ? "Publier les modifications" : "Publier"); %>
+      <span class="pb-publish-group"><button type="button" class="btn btn-primary btn-sm" data-pb-publish<%= pbPubHidden ? " hidden" : "" %>><%= pbPubLabel %></button><button type="button" class="btn btn-primary btn-sm pb-publish-more" data-pb-publish-menu aria-haspopup="menu" aria-label="Plus d'options de publication" data-tip="Publication : dépublier, voir la page en ligne…"><%- icon("chevronDown", { size: 15 }) %></button></span>
     </div>
   </header>
 

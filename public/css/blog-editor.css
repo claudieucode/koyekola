@@ -1641,7 +1641,8 @@
 @media (prefers-reduced-motion: reduce) { .wp-header .wp-save-state.is-saving::before { animation: none; } }
 /* Blog Studio — adaptation : mêmes dispositions qu'avant (rail horizontal sous la barre sur petit écran,
    panneaux en plein écran), avec le nouveau langage visuel */
-@media (max-width: 1100px) { .wp-header .wp-save-state { max-width: 150px; } }
+/* entre 783 et 1 100 px la barre d'en-tête débordait de ~100 px : l'état d'enregistrement se réduit au point de couleur (comme sous 782 px) */
+@media (max-width: 1100px) { .wp-header .wp-save-state { width: 28px; padding: 0; justify-content: center; font-size: 0; background: none; } }
 @media (max-width: 782px) {
   .wp-header { gap: 4px; }
   .wp-site-icon { padding: 0 4px 0 12px; }
