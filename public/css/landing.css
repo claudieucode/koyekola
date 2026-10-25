@@ -1303,7 +1303,7 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .lp-autohead-nav .kw-menu-link, .lp-foot-nav .kw-menu-link { color: inherit; text-decoration: none; padding: 6px 0; display: inline-block; }
 .lp-autohead-nav .kw-menu-link:hover, .lp-foot-nav .kw-menu-link:hover, .lp-autohead-nav .kw-menu-link:focus-visible { text-decoration: underline; text-underline-offset: 4px; }
 .lp-autohead-nav .has-sub { position: relative; }
-.lp-autohead-nav .kw-submenu { display: none; position: absolute; left: 0; top: 100%; z-index: 20; min-width: 200px; margin: 0; padding: 8px 14px; list-style: none; background: #fff; color: #1b2b45; border: 1px solid rgba(0, 0, 0, .12); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+.lp-autohead-nav .kw-submenu { display: none; position: absolute; left: 0; top: 100%; z-index: 20; min-width: 200px; margin: 0; padding: 8px 14px; list-style: none; background: #fff; color: #1b2b45; border: 1px solid rgba(0, 0, 0, .12); border-radius: 8px; box-shadow: 0 8px 24px rgba(11, 42, 64, .12); }
 .lp-autohead-nav .has-sub:hover > .kw-submenu, .lp-autohead-nav .has-sub:focus-within > .kw-submenu { display: block; }
 .lp-foot-nav { margin: 0 0 14px; } .lp-foot-nav .kw-menu-list { justify-content: center; }
 .lp-foot-nav .kw-submenu { list-style: none; margin: 2px 0 0; padding: 0; font-size: 0.875em; opacity: .85; }
