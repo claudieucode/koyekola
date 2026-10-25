@@ -419,3 +419,9 @@ html[data-kola-theme="dark"] .tf { --tf-bg: #0f1a2c; --tf-text: #dbe6f3; --tf-gu
 .mk-sidebar .mk-nav-split.is-open > .mk-nav-headrow > .mk-nav-split-link:not([aria-current="page"]) .icon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
 html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-caret-btn { display: none; }
 html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-split-link { flex: 1; }
+
+/* ---------- Styles : l'exemple de page est celui du SITE, jamais celui de l'administration ----------
+   En thème sombre de l'administration, les liens et libellés de l'exemple reprenaient les couleurs de l'admin (contraste 1,6:1 sur le fond clair du site). */
+.mk-body .mk-content .mk-st-guide .g-page :is(p, li, div) a.g-link:not(.btn) { color: var(--g-link); text-decoration: var(--g-underline); }
+.mk-body .mk-content .mk-st-guide .g-page :is(p, li, div) a.g-link:not(.btn):hover { color: var(--g-link-hover); }
+.mk-body .mk-st-guide .g-page label, .mk-body .mk-st-guide .g-page .g-form > label { color: var(--g-text); }

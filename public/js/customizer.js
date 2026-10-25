@@ -166,11 +166,14 @@
     var v = values[c.id] || "";
     var pick = h("input", { type: "color", class: "kwc-swatch", "aria-label": c.label + " : sélecteur de couleur", value: /^#[0-9a-f]{6}$/i.test(v) ? v : "#000000", disabled: disabled });
     var hex = h("input", { type: "text", id: lid, class: "kwc-hex", value: v, placeholder: c.allowEmpty ? "d'origine" : "#rrggbb", maxlength: 7, spellcheck: "false", autocomplete: "off", disabled: disabled, "aria-describedby": lid + "-err" });
-    pick.addEventListener("input", function () { hex.value = pick.value; hex.classList.remove("is-bad"); set(c.id, pick.value); });
+    // Couleur vide = valeur d'origine du site : le sélecteur est atténué (sinon il afficherait un noir qui n'est pas la couleur réellement appliquée)
+    function syncEmpty(x) { var empty = !/^#[0-9a-f]{6}$/i.test(x); pick.classList.toggle("is-empty", empty); pick.title = empty ? "Couleur d'origine du site (aucune valeur personnalisée)" : ""; }
+    syncEmpty(v);
+    pick.addEventListener("input", function () { hex.value = pick.value; hex.classList.remove("is-bad"); syncEmpty(pick.value); set(c.id, pick.value); });
     hex.addEventListener("input", function () {
       var x = hex.value.trim(); if (x && x[0] !== "#") x = "#" + x;
-      if (x === "" && c.allowEmpty) { clearError(c.id); set(c.id, ""); return; }
-      if (/^#[0-9a-f]{6}$/i.test(x)) { pick.value = x; clearError(c.id); set(c.id, x.toLowerCase()); }
+      if (x === "" && c.allowEmpty) { clearError(c.id); syncEmpty(""); set(c.id, ""); return; }
+      if (/^#[0-9a-f]{6}$/i.test(x)) { pick.value = x; syncEmpty(x); clearError(c.id); set(c.id, x.toLowerCase()); }
       else setError(c.id, c.label + " : code hexadécimal attendu (ex. #0277b6).", true);
     });
     hex.addEventListener("blur", function () { if (!errors[c.id]) hex.value = values[c.id] || ""; });

@@ -31,7 +31,7 @@ html, body { height: 100%; }
 .kwc-top { flex: none; height: var(--kwc-top); display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 0 12px; background: var(--kwc-surface); border-bottom: 1px solid var(--kwc-line); z-index: 20; }
 .kwc-top-l, .kwc-top-c, .kwc-top-r { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .kwc-top-r { justify-content: flex-end; gap: 8px; }
-.kwc-title { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; margin: 0 6px; }
+.kwc-title { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; margin: 0 6px; font-size: inherit; font-weight: inherit; }
 .kwc-title strong { font-size: 14px; color: var(--kwc-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kwc-kicker { font-size: 11px; letter-spacing: .02em; color: var(--kwc-muted); }
 .kwc-iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--kwc-navy); cursor: pointer; text-decoration: none; transition: background .15s, border-color .15s, color .15s; }
@@ -113,6 +113,7 @@ html[data-kola-theme="dark"] .kwc-badge { color: #04121d; }
 .kwc-field [aria-invalid="true"] { border-color: var(--kwc-err) !important; }
 .kwc-field input:disabled, .kwc-field select:disabled, .kwc-field textarea:disabled { opacity: .6; background: var(--kwc-surface-2); }
 .kwc-colorrow { display: flex; align-items: center; gap: 8px; }
+.kwc-swatch.is-empty { opacity: .4; border-style: dashed; }
 .kwc-swatch { width: 44px; height: 38px; padding: 2px; border: 1px solid var(--kwc-line-2); border-radius: 8px; background: var(--kwc-surface); cursor: pointer; }
 .kwc-hex { font-family: ui-monospace, Menlo, Consolas, monospace !important; text-transform: lowercase; }
 .kwc-numrow { display: grid; grid-template-columns: 1fr 84px auto; align-items: center; gap: 10px; }

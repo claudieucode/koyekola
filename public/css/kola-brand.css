@@ -55,7 +55,7 @@ html[data-kola-theme="dark"] {
   text-transform: none; letter-spacing: 0; font-size: 0.78rem; font-weight: 650;
 }
 .mk-body .kx-eyebrow { color: var(--kb-live); }
-.mk-body .mk-nav-heading { padding: 18px 12px 6px; font-size: 0.8rem; opacity: 0.72; }
+.mk-body .mk-nav-heading { padding: 18px 12px 6px; font-size: 0.8rem; opacity: 0.82; } /* 0,72 donnait 4,46:1 sur le fond du menu (AA : 4,5:1) */
 
 /* ---------- Onglets : un seul soulignement, des effectifs discrets ---------- */
 .mk-body .mk-tabs { gap: 4px; border-bottom: 1px solid var(--kb-rule); }
