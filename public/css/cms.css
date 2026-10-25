@@ -1808,3 +1808,6 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .mk-us-who { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
 .mk-us-av { flex: none; width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--mk-border); }
 .mk-us-av--i { display: inline-flex; align-items: center; justify-content: center; background: var(--accent-light); color: var(--accent-dark); font-size: 0.85rem; font-weight: 700; }
+.ac-grid--access { align-items: start; }
+.ac-toggle { white-space: nowrap; }
+.ac-label-btn { display: inline-block; }
