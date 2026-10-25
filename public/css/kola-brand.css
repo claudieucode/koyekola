@@ -225,4 +225,20 @@ html[data-kola-theme="dark"] .mk-nm-pending li { background: var(--surface-alt);
 /* Aperçu des tailles d'images (Réglages → Médias) : bloc marine fixe dans les deux modes (en sombre, --k-navy-900 devenait clair sous du texte blanc) */
 .md-preview { background: #0a1f35; color: #fff; }
 .md-preview :is(label, span, h3) { color: inherit; }
+
+/* ---------- Mouvement : un seul vocabulaire de transitions ----------
+   Durées 120 ms (survol, focus) et 180 ms (ouverture) ; courbe unique ; seules la couleur, l'opacité et transform sont animées.
+   Le changement de thème coupe déjà toutes les transitions pendant deux images (html[data-kola-switching], kola-ui.css) : aucun scintillement. */
+:root { --kb-dur-fast: 120ms; --kb-dur: 180ms; --kb-ease: cubic-bezier(0.22, 0.8, 0.3, 1); }
+.mk-body :is(.btn, .mk-tab, .mk-nav-link, .mk-nav-sublink, .mk-nav-head, .mk-table tbody tr, .mk-filterbar a, .mk-cms-card) { transition: background-color var(--kb-dur-fast) var(--kb-ease), border-color var(--kb-dur-fast) var(--kb-ease), color var(--kb-dur-fast) var(--kb-ease), opacity var(--kb-dur-fast) var(--kb-ease); }
+.mk-body dialog.mk-modal[open] { animation: kb-dialog-in var(--kb-dur) var(--kb-ease); }
+.mk-body dialog.mk-modal[open]::backdrop { animation: kb-fade-in var(--kb-dur) var(--kb-ease); }
+/* Galerie de thèmes : le thème actif est un panneau comme les autres (filet unique, plus de barre marine épaisse), aperçu plus compact */
+.mk-body .mk-tg-active { border-left: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); box-shadow: none; padding: 16px; gap: 24px; background: var(--surface); }
+@media (min-width: 981px) { .mk-body .mk-tg-active { grid-template-columns: minmax(200px, 300px) minmax(0, 1fr); } }   /* sous 981 px la règle d'origine empile aperçu et texte (sinon 44 px de défilement horizontal sur téléphone) */
+.mk-body .mk-tg-active h2 { font-family: var(--kb-display); font-weight: 700; letter-spacing: -0.02em; color: var(--kb-navy); }
+.mk-body .mk-tg-active .mk-tg-swatch { border-radius: 10px; overflow: hidden; border: 1px solid var(--kb-rule); }
+@keyframes kb-dialog-in { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes kb-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mk-body dialog.mk-modal[open], .mk-body dialog.mk-modal[open]::backdrop { animation: none; } }
 html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked), html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked) .md-dim { color: #0b2a40; }

@@ -47,7 +47,7 @@ describe("Thèmes : navigateur réel", { skip: SKIP }, () => {
       await page.goto(`${srv.base}${TH}?site=${A}`, { waitUntil: "load" });
       assert.match(await page.locator("h1").first().innerText(), /Thèmes/);
       assert.ok((await page.locator("[data-th-card]").count()) >= 12, "au moins douze cartes");
-      await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 500) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 60)); } window.scrollTo(0, 0); });
+      await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 500) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 160)); } window.scrollTo(0, 0); });
       await page.waitForTimeout(400);
       const broken = await page.evaluate(() => [...document.querySelectorAll(".mk-tg-shot")].filter((i) => i.tagName === "IMG" && i.complete && i.naturalWidth === 0).length);
       assert.equal(broken, 0, "aucun aperçu cassé");

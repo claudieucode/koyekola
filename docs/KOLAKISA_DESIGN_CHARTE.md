@@ -59,5 +59,12 @@ Focus clavier toujours visible (anneau 2 px bleu décalé de 2 px) ; noms access
 ## 11. Illustrations
 Une illustration par écran de présentation ou d'état vide, jamais dans un écran de travail. SVG originaux en ligne (`illu("nom")`, 38 scènes, `partials/empty-art.ejs`), couleurs prises dans les jetons, rendu clair et sombre. Aucune image lourde ni bibliothèque supplémentaire.
 
-## 12. Validation visuelle obligatoire avant livraison
+## 12. Performance (règles et mesures)
+- **Mesurer avant d'optimiser** : `scripts/audit-performance.js` (poids par type, requêtes, DCL / load / FCP / LCP / CLS, tâches longues, durées de script, de mise en page et de recalcul de style, latence d'interactions) et `scripts/audit-css-usage.js` (part de CSS utilisée). Les chiffres d'une machine chargée se comparent entre eux, ils ne sont pas des temps de production.
+- **Référence mesurée (24/10/2026)** : écran d'administration 220–280 Ko transférés (CSS 127–165 Ko, polices 61 Ko, JavaScript 24–36 Ko exécuté en 10–35 ms) ; interactions 11–25 ms ; décalage de mise en page ≤ 0,02. Le coût dominant est le CSS qui bloque l'affichage, pas le JavaScript.
+- **Images** : jamais une image plus grande que son emplacement. Les cartes de la galerie de thèmes utilisent `<clé>-card.webp` (480×300) et `<clé>-phone.webp` (128×277), générées par `scripts/themes-thumbs.js` ; les aperçus complets ne servent qu'à la page d'aperçu.
+- **Listes longues** : ne pas utiliser `content-visibility: auto` sur des cartes à images différées (essayé : les images hors écran se chargent plus tard, cartes vides au défilement rapide, test de la galerie en échec) ; pas de `contain: layout` sur les panneaux (il casse les menus et fenêtres positionnés à l'intérieur).
+- **Polices** préchargées (`partials/font-preload.ejs`) ; thème résolu avant le premier affichage ; aucune propriété de mise en page animée.
+
+## 13. Validation visuelle obligatoire avant livraison
 `scripts/audit-interface.js` (géométrie, 4 largeurs) · `scripts/audit-qualite.js` (contrastes clair/sombre, noms, focus, dialogues, animations) · `scripts/audit-editeurs.js` (éditeurs) · `scripts/audit-captures.js` (captures, `THEME=dark`). Puis les tests `tests/*navigateur*` concernés. Ne jamais déclarer un écran vérifié sans capture ni mesure.
