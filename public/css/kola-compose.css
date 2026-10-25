@@ -71,7 +71,7 @@ html[data-mk-theme] .mk-sidebar .mk-nav-link[aria-current="page"] .icon, html[da
 .mk-sidebar .mk-nav-sublink:hover { padding-left: 13px; }
 .mk-sidebar .mk-nav-sublink[aria-current="page"] { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--mk-text); }
 .mk-sidebar .mk-nav-sublink[aria-current="page"]::before { background: var(--accent); height: 2px; opacity: 1; }
-@media (prefers-reduced-motion: no-preference) { @starting-style { .mk-nav-group.is-open > .mk-nav-sub { opacity: 0; transform: translateY(-4px); } } .mk-nav-sub { transition: opacity 0.2s ease, transform 0.22s var(--kx-ease), display 0.2s allow-discrete; } }
+@media (prefers-reduced-motion: no-preference) { @starting-style { .mk-nav-group.is-open > .mk-nav-sub { opacity: 0; transform: translateY(-4px); } } .mk-nav-sub { transition: opacity 0.2s var(--kb-ease), transform 0.22s var(--kx-ease), display 0.2s allow-discrete; } }
 html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-link .icon, html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-head .icon:not(.mk-nav-caret) { margin-inline: auto; }
 .mk-cms-foot { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--mk-text) 3%, transparent)); }
 .mk-create-btn { box-shadow: var(--kx-glow); }
@@ -206,7 +206,7 @@ html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-link .icon, html[data-sidebar
 .mk-body .mk-table thead th { padding: 8px 14px; font-size: 0.7rem; letter-spacing: 0.08em; background: linear-gradient(180deg, var(--mk-surface-2), var(--mk-surface)); }
 .mk-body .mk-table td, .mk-body .mk-table tbody th[scope="row"] { padding: 8px 14px; }
 @media (max-width: 640px) { .mk-body .mk-panel { padding: 12px; } .mk-body .mk-table thead th, .mk-body .mk-table td, .mk-body .mk-table tbody th[scope="row"] { padding: 8px 10px; } .mk-body .mk-panel > .mk-table-wrap > .mk-seo-table { min-width: 460px; } } /* petits écrans : moins de marge perdue autour des tableaux ; le tableau SEO défile plutôt que d'écraser ses colonnes */
-.mk-body .mk-table tbody tr { transition: background var(--k-dur-fast) ease; }
+.mk-body .mk-table tbody tr { transition: background var(--k-dur-fast) var(--kb-ease); }
 .mk-body .mk-table tbody tr:hover > * { background: var(--kx-tint); }
 .mk-body .mk-table tbody th[scope="row"] a, .mk-body .mk-table tbody th[scope="row"] { font-size: 0.93rem; }
 .mk-body .mk-table .mk-sub { display: block; margin-top: 2px; font-size: 0.78rem; font-weight: 450; color: var(--muted); }

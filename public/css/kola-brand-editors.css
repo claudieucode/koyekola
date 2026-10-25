@@ -9,3 +9,9 @@
 .pb-blk-kind, .pb-menu-heading, .pb-sc-cols, .pb-sc-group h3, .pb-acc-sub, .pb-rules-sec h3, .pb-amenu-cat, .pb-dyn-group, .pb-insp-head .pb-kind,
 .pb-pop-title, .pb-rules-subhead, .pb-media-meta h3, .pb-q-cat, .pb-home-label { text-transform: none; letter-spacing: 0; }
 .pb-panel-head h2, .pb-pal-toggle, .pb-insp-tabs button, .pb-kind { font-size: 0.82rem; font-weight: 650; }
+
+/* Mouvement adaptatif dans les éditeurs plein écran (même niveaux que la coque : voir kola-brand.css) */
+html[data-kb-motion="lite"] *, html[data-kb-motion="lite"] *::before, html[data-kb-motion="lite"] *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"]),
+html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::before,
+html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::after { transition: none !important; animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }

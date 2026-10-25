@@ -62,6 +62,7 @@ Panneaux latéraux : largeurs fixes par type, états actif / survolé / sélecti
 Système existant : `public/js/kola-tips-data.js` (registre) et `public/js/kola-pages.js` (attribut `data-tip`). Règles : une icône sans libellé a toujours une infobulle (`data-tip`) ; texte court, sans répéter le libellé ; au survol et au focus clavier ; accès tactile sans dépendre du survol ; jamais d'empilement. Les procédures longues vont dans un texte d'aide ou un lien de documentation.
 
 ## 8. Animation
+Référence détaillée : `docs/KOLAKISA_MOTION.md` (jetons, trois niveaux adaptatifs, glisser-déposer).
 Durées 120–180 ms, courbe `cubic-bezier(.22,.8,.3,1)`. On n'anime que la couleur, l'opacité et `transform` : jamais `width`, `height`, `top`, `left`, `margin`, `padding` ni `transition: all`. Tout mouvement non déclenché par l'utilisateur est interdit hors état vide. `prefers-reduced-motion` coupe les animations. Aucun scintillement au changement de thème (le thème est résolu avant le premier affichage).
 
 ## 9. Responsive

@@ -294,3 +294,23 @@ body[data-kb-module="design"] .kx-art    { --a-blue: #7048c8; --a-sky: #c3b0f2; 
 html[data-kola-theme="dark"] body[data-kb-module="marketing"] .kx-art { --a-blue: #e66aa8; --a-sky: #f4b5d6; --a-ice: rgba(230, 106, 168, 0.14); }
 html[data-kola-theme="dark"] body[data-kb-module="analytics"] .kx-art { --a-blue: #34c79a; --a-sky: #9ae6cc; --a-ice: rgba(52, 199, 154, 0.14); }
 html[data-kola-theme="dark"] body[data-kb-module="design"] .kx-art    { --a-blue: #9b7ae8; --a-sky: #c9b8f4; --a-ice: rgba(155, 122, 232, 0.14); }
+
+/* ==========================================================================================================================================
+   Mouvement adaptatif (public/js/kb-motion.js pose html[data-kb-motion="full" | "lite" | "off"])
+   Vocabulaire : 120 ms (survol, focus, couleur) · 180 ms (ouverture : menus, fenêtres, panneaux) · 260 ms (changement de vue) ; une seule courbe
+   (--kb-ease). Seuls transform, opacité et couleur s'animent. Les trois niveaux ne retirent aucune fonction : ils retirent du coût.
+   ========================================================================================================================================== */
+:root { --kb-dur-slow: 260ms; }
+/* menus déroulants : fondu + glissement de 4 px à l'ouverture ; la propriété individuelle `translate` se combine avec le transform propre du menu (centrage, positionnement) sans le remplacer */
+@keyframes kb-pop-in { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
+.mk-body [role="menu"]:not([hidden]) { animation: kb-pop-in var(--kb-dur-fast) var(--kb-ease); }
+html[data-kb-motion="lite"] .mk-body [role="menu"]:not([hidden]) { animation: none; }
+html[data-kb-motion="lite"] { --kb-dur-fast: 80ms; --kb-dur: 100ms; --kb-dur-slow: 140ms; }
+html[data-kb-motion="lite"] .mk-body dialog.mk-modal[open], html[data-kb-motion="lite"] .mk-body dialog.mk-modal[open]::backdrop { animation: none; }
+html[data-kb-motion="lite"] :is(.kx-art, .kx-hero-art .kx-art) { animation: none; filter: none; }
+html[data-kb-motion="lite"] *, html[data-kb-motion="lite"] *::before, html[data-kb-motion="lite"] *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html[data-kb-motion="lite"] :is(.mk-toast, .mk-pop, .mk-menu, .mk-dialog) { box-shadow: 0 2px 8px rgba(10, 31, 53, 0.18); }
+/* off : aucun mouvement ; les indicateurs de chargement et d'enregistrement gardent leur rotation (ils signalent un état réel) */
+html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"]),
+html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::before,
+html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="true"])::after { transition: none !important; animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }

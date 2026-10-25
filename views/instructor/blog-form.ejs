@@ -28,6 +28,7 @@
   <title><%= post ? `Modifier l'article « ${post.title} »` : "Nouvel article" %> · KOLAKISA</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <%- include("../partials/font-preload") %>
+  <script src="<%= asset('/js/kb-motion.js') %>" defer></script>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/blog-editor.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/media-picker.css') %>">
