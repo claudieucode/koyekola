@@ -139,3 +139,16 @@ html[data-kb-motion="lite"] .app-rail-link, html[data-kb-motion="off"] .app-rail
   html[data-kb-dock="bottom"] :is(.mk-main, .dash-main) { padding-bottom: 96px; }
   html[data-kb-dock="bottom"] :is(.pl-savebar, .mk-st-form > .mk-actions, .mk-st-form > .mk-st-actions) { bottom: 88px; }
 }
+
+/* ---------- Pages de « Mon espace » sans module (le menu latéral est déjà la navigation générale) : pas de colonne de rail, mais la barre en bas et la barre rapide mobile restent présentes ---------- */
+.dash-dock > .app-rail { display: none; }
+@media (max-width: 760px) {
+  .dash-dock .app-dock-m { display: flex; }
+  .dash-dock .dash-main { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  .dash-dock.is-drawer .app-dock-m, .dash-dock:has(input:focus, textarea:focus, select:focus) .app-dock-m { display: none; }
+}
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  html[data-kb-dock="bottom"] .dash-dock > .app-rail { display: flex; }
+  html[data-kb-dock="bottom"] .dash-dock { --kb-dock-left: var(--dash-sidebar-w); }
+  html[data-kb-dock="bottom"] .dash-dock.is-collapsed { --kb-dock-left: var(--dash-sidebar-w-collapsed); }
+}

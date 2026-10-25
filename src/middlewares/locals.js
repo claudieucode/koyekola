@@ -111,7 +111,7 @@ function injectLocals(req, res, next) {
     const seo = dashboard.isSeoPath(req.path);
     const gestion = dashboard.isGestionPath(req.path);
     res.locals.dash = {
-      seo, gestion, module: seo ? dashboard.MODULES.seo : gestion ? dashboard.MODULES.gestion : null, globalNav: dashboard.NAV, path: req.path, crumbs: (title) => dashboard.crumbs(req.path, title),
+      seo, gestion, module: seo ? dashboard.MODULES.seo : gestion ? dashboard.MODULES.gestion : null, globalNav: dashboard.NAV, activeKey: dashboard.activeKey(req.path), path: req.path, crumbs: (title) => dashboard.crumbs(req.path, title),
       active: seo ? dashboard.seoActiveKey(req.path) : gestion ? dashboard.gestionActiveKey(req.path) : dashboard.activeKey(req.path), nav: seo ? dashboard.SEO_NAV : gestion ? dashboard.GESTION_NAV : dashboard.NAV, prefs, style: dashboard.style(prefs),
       tasks: seo ? require("../seo/tasks").openCount() : 0,
       support: (() => { try { return require("../services/support").openCount(req.session.user.id); } catch { return 0; } })(), // tickets en attente de réponse

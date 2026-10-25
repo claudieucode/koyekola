@@ -73,9 +73,9 @@ describe("Modules avec leur propre menu : le contexte général reste visible", 
     assert.deepEqual(trailOf(html), [{ label: "Mon espace", href: "/formateur" }, { label: "Marketing", href: "/marketing" }, { label: "Audience", href: "/marketing/contacts" }, { label: "Segments", href: null }]);
     assert.deepEqual(trailOf((await prof.get("/marketing")).text), [{ label: "Mon espace", href: "/formateur" }, { label: "Marketing", href: null }]);
   });
-  test("pages ordinaires : barre complète, pas de rail", async () => {
+  test("pages ordinaires : menu complet, pas de colonne de rail, mais la barre de navigation permanente (en bas sur grand écran, barre rapide sur mobile)", async () => {
     const html = (await prof.get("/formateur/formations")).text;
-    assert.doesNotMatch(html, /class="app-rail"/);
+    assert.match(html, /<div class="dash dash-dock"/); assert.doesNotMatch(html, /class="dash has-rail/); assert.match(html, /class="app-rail"/); assert.match(html, /class="app-dock-m"/);
     assert.match(html, /href="\/formateur\/formations" class="dash-link" data-tip="Mes formations" aria-current="page"/);
   });
   test("marketing : fil d'Ariane avec adresses (fonction pure)", () => {
