@@ -246,7 +246,7 @@ describe("export CSV", () => {
     assert.equal(r.status, 200);
     assert.match(r.headers.get("content-type"), /text\/csv; charset=utf-8/);
     assert.match(r.headers.get("content-disposition"), /attachment; filename="contacts-\d{4}-\d{2}-\d{2}\.csv"/);
-    assert.ok(r.text.startsWith("E-mail,Prénom,Nom,"), "le BOM est retiré par fetch ; il est vérifié dans le test de données");
+    assert.ok(r.text.replace(/^\uFEFF/, "").startsWith("E-mail,Prénom,Nom,"), "en-tête attendu (le BOM UTF-8 pour Excel est conservé ou retiré selon le client ; il est vérifié dans le test de données)");
     assert.equal(r.text.trim().split(/\r?\n/).length, 61, "en-tête + 60 contacts « import »");
     assert.doesNotMatch(r.text, /pg000@ex\.fr/, "pg000 est de source « form »");
   });

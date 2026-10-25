@@ -135,18 +135,19 @@ describe("espace apprenant : en cours / terminées", () => {
     await etudiant.post(`/apprendre/lecon/${enCours.lessons[0].id}/terminer`, {});
   });
 
-  test("les formations sont réparties entre « En cours » et « Terminées »", async () => {
+  test("les formations sont réparties entre « En cours » et « Terminées » (état porté par chaque carte de la bibliothèque)", async () => {
     const html = (await etudiant.get("/mes-cours")).text;
-    const sections = html.split(/<h2[^>]*>/);
-    const bloc = (titre) => sections.find((s) => s.startsWith(titre)) || "";
-    assert.match(bloc("En cours"), /Encore en route/);
-    assert.doesNotMatch(bloc("En cours"), /Déjà finie/);
-    assert.match(bloc("Terminées"), /Déjà finie/);
-    assert.doesNotMatch(bloc("Terminées"), /Encore en route/);
+    const cartes = html.split(/<article class="mc-card"/).slice(1);
+    const carte = (titre) => cartes.find((c) => c.includes(`>${titre}</a>`)) || "";
+    assert.match(carte("Encore en route"), /data-status="started"/);
+    assert.match(carte("Déjà finie"), /data-status="finished"/);
+    assert.match(carte("Déjà finie"), /Terminée/);
   });
   test("progression affichée pour chaque formation en cours", async () => {
     const html = (await etudiant.get("/mes-cours")).text;
-    assert.match(html, /1 \/ 3 sous-chapitres terminés \(33%\)/);
+    const carte = html.split(/<article class="mc-card"/).slice(1).find((c) => c.includes(">Encore en route</a>")) || "";
+    assert.match(carte, /data-pct="33"/);
+    assert.match(carte, /aria-valuenow="33"/);
   });
   test("une formation terminée propose le certificat", async () => {
     const html = (await etudiant.get("/mes-cours")).text;
