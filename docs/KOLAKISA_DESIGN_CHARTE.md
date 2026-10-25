@@ -84,3 +84,9 @@ Une illustration par écran de présentation ou d'état vide, jamais dans un éc
 
 ## 13. Validation visuelle obligatoire avant livraison
 `scripts/audit-interface.js` (géométrie, 4 largeurs) · `scripts/audit-qualite.js` (contrastes clair/sombre, noms, focus, dialogues, animations) · `scripts/audit-editeurs.js` (éditeurs) · `scripts/audit-captures.js` (captures, `THEME=dark`). Puis les tests `tests/*navigateur*` concernés. Ne jamais déclarer un écran vérifié sans capture ni mesure.
+
+## 7. Règles ajoutées par la passe de finition (design-finition-01)
+- **Cibles tactiles** : `@media (pointer: coarse)` donne 44 px de côté à tout ce qui se touche. Les gabarits `.mk-body` sont couverts par `kola-stable.css` ; les éditeurs qui ne chargent pas ce fichier (articles `.wp-body`, personnalisateur `.kwc-*`) portent leur propre bloc à la fin de leur feuille. Tout nouveau contrôle d'un éditeur doit y être ajouté. Les liens dans une phrase en sont exemptés.
+- **Anneau de focus** : un champ enveloppé dans un libellé qui dessine l'anneau (`:focus-within`) doit avoir un anneau d'au moins 2 px (barre globale).
+- **Ombres** : jamais `rgba(0,0,0,…)` ; utiliser `rgba(11, 42, 64, …)` (testé par `refonte-design.test.js`).
+- **Écarts connus, non traités** : `refonte-design.test.js` signale des classes sans style (dont `mk-crumb`, `col-site`, `md-know`, `pl-field`, `mk-px-*`) venues d'autres modules ; `grille-interface.test.js` échoue sur les marges.
