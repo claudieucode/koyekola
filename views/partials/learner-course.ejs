@@ -1,19 +1,28 @@
-<%# Carte d'une formation suivie, dans l'espace apprenant. Paramètre : course (avec pct, finished, resume) %>
-<div class="my-course-card">
-  <div class="thumb"><% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" loading="lazy" decoding="async" width="640" height="360"><% } %></div>
-  <div class="info">
-    <p class="title"><%= course.title %></p>
-    <p class="instructor">Par <%= course.instructor_name %></p>
-    <div class="progress-bar"><div class="progress-bar-fill" style="width:<%= course.pct %>%"></div></div>
-    <p class="progress-label"><%= course.completed_lessons %> / <%= course.total_lessons %> sous-chapitres terminés (<%= course.pct %>%)</p>
-    <% if (!course.finished && course.resume) { %><p class="progress-label">Dernière leçon : <%= course.resume.title %></p><% } %>
+<%# Carte d'une formation suivie, dans l'espace apprenant. Paramètres : course (avec pct, status, finished, resume), i (rang : les premières images ne sont pas différées) %>
+<article class="mc-card" data-mc-card data-status="<%= course.status %>" data-title="<%= course.title.toLowerCase() %>" data-pct="<%= course.pct %>" data-act="<%= course.activity %>" data-rank="<%= i %>">
+  <a class="mc-cover" href="/apprendre/<%= course.slug %>" tabindex="-1" aria-hidden="true">
+    <% if (course.thumbnail_path) { %><img src="<%= course.thumbnail_path %>" alt="" width="640" height="360" decoding="async" <%- i < 3 ? "" : 'loading="lazy"' %>><span class="mc-cover-ph" hidden><%- icon("graduation", { size: 30 }) %></span><% } else { %><span class="mc-cover-ph"><%- icon("graduation", { size: 30 }) %></span><% } %>
+  </a>
+  <div class="mc-body">
+    <p class="mc-badges">
+      <% if (course.status === "finished") { %><span class="mc-badge mc-badge--done"><%- icon("check", { size: 12 }) %> Terminée</span>
+      <% } else if (course.status === "started") { %><span class="mc-badge mc-badge--live">En cours</span>
+      <% } else { %><span class="mc-badge">À commencer</span><% } %>
+      <% if (course.archived) { %><span class="mc-badge">Archivée</span><% } %>
+      <% if (!course.published) { %><span class="mc-badge">Hors ligne</span><% } %>
+    </p>
+    <h3 class="mc-title"><a href="/apprendre/<%= course.slug %>"><%= course.title %></a></h3>
+    <p class="mc-by">Par <%= course.instructor_name %></p>
+    <div class="mc-bar" role="progressbar" aria-label="Progression de <%= course.title %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= course.pct %>"><span style="width:<%= course.pct %>%"></span></div>
+    <p class="mc-meta"><b><%= course.pct %>%</b> · <%= course.completed_lessons %> / <%= course.total_lessons %> sous-chapitres</p>
+    <% if (!course.finished && course.resume) { %><p class="mc-last">Dernière leçon : <%= course.resume.title %></p><% } %>
   </div>
-  <% if (course.finished) { %>
-    <div class="my-course-actions">
-      <a href="/certificat/<%= course.slug %>" class="btn btn-success"><%- icon('trophy', { size: 15 }) %> Certificat</a>
-      <a href="/apprendre/<%= course.slug %>" class="btn btn-outline">Revoir</a>
-    </div>
-  <% } else { %>
-    <a href="/apprendre/<%= course.slug %>" class="btn <%= course.pct > 0 || course.resume ? 'btn-primary' : 'btn-secondary' %>"><%= course.pct > 0 || course.resume ? "Continuer" : "Commencer" %></a>
-  <% } %>
-</div>
+  <div class="mc-actions">
+    <% if (course.finished) { %>
+      <a href="/certificat/<%= course.slug %>" class="btn btn-success btn-sm"><%- icon('trophy', { size: 15 }) %> Certificat</a>
+      <a href="/apprendre/<%= course.slug %>" class="btn btn-outline btn-sm">Revoir</a>
+    <% } else { %>
+      <a href="/apprendre/<%= course.slug %>" class="btn <%= course.status === 'started' ? 'btn-primary' : 'btn-secondary' %> btn-sm"><%= course.status === "started" ? "Continuer" : "Commencer" %><span class="sr-only"> <%= course.title %></span></a>
+    <% } %>
+  </div>
+</article>

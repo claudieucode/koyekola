@@ -1,0 +1,23 @@
+<%# Menu « autres actions » d'une formation (mon espace) : partagé par la carte (Mes formations) et la ligne de la Vue d'ensemble. Paramètres : course, sold (vendue ou inscrite : suppression impossible). %>
+<div class="dmenu">
+  <button type="button" class="dmenu-btn" aria-haspopup="true" aria-expanded="false" aria-label="Autres actions : <%= course.title %>" title="Autres actions"><%- icon('moreVertical', { size: 18 }) %></button>
+  <div class="dmenu-list" role="menu" hidden>
+    <a role="menuitem" href="/formateur/cours/<%= course.id %>/curriculum"><%- icon('list', { size: 16 }) %> Gérer les chapitres</a>
+    <a role="menuitem" href="/formateur/cours/<%= course.id %>/modifier"><%- icon('fileText', { size: 16 }) %> Modifier</a>
+    <a role="menuitem" href="/formateur/cours/<%= course.id %>/faq"><%- icon('help', { size: 16 }) %> FAQ</a>
+    <% if (!course.archived) { %><a role="menuitem" href="/cours/<%= course.slug %>" target="_blank" rel="noopener"><%- icon('eye', { size: 16 }) %> Aperçu</a><% } %>
+    <a role="menuitem" href="/formateur/cours/<%= course.id %>/etudiants"><%- icon('users', { size: 16 }) %> Étudiants</a>
+    <hr>
+    <form action="/formateur/cours/<%= course.id %>/dupliquer" method="post"><button type="submit" role="menuitem" title="Crée une copie en brouillon : chapitres, leçons, quiz et fichiers"><%- icon('clip', { size: 16 }) %> Dupliquer</button></form>
+    <% if (course.archived) { %>
+      <form action="/formateur/cours/<%= course.id %>/restaurer" method="post"><button type="submit" role="menuitem"><%- icon('inbox', { size: 16 }) %> Restaurer</button></form>
+    <% } else { %>
+      <form action="/formateur/cours/<%= course.id %>/archiver" method="post" data-confirm="Archiver « <%= course.title %> » ? Elle quitte le catalogue et ne peut plus être achetée, mais ses étudiants gardent leur accès."><button type="submit" role="menuitem"><%- icon('inbox', { size: 16 }) %> Archiver</button></form>
+    <% } %>
+    <% if (sold) { %>
+      <p class="dmenu-note" title="Une formation achetée ne peut pas être supprimée : archivez-la pour la retirer du catalogue.">Déjà vendue : suppression impossible (archivez-la).</p>
+    <% } else { %>
+      <form action="/formateur/cours/<%= course.id %>/supprimer" method="post" data-confirm="Supprimer définitivement « <%= course.title %> » ? Chapitres, leçons et fichiers seront effacés. Cette action est irréversible."><button type="submit" role="menuitem" class="is-danger"><%- icon('trash', { size: 16 }) %> Supprimer</button></form>
+    <% } %>
+  </div>
+</div>

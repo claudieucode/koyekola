@@ -104,9 +104,20 @@ const coursesOf = (userId) => db
   .all(userId);
 
 router.get("/formateur", (req, res) => {
+  const now = new Date();
   const courses = coursesOf(req.session.user.id);
-  const messages = db.prepare("SELECT id, name, subject, created_at, read_at FROM contact_messages ORDER BY id DESC LIMIT 4").all();
-  res.render("instructor/dashboard", { courses, recent: courses.filter((c) => !c.archived).slice(0, 3), stats: dashboard.stats(req.session.user.id), messages, unreadMessages: res.locals.dash ? res.locals.dash.unread : 0 });
+  const ov = dashboard.overview(req.session.user.id, now);
+  const dash = res.locals.dash || {};
+  const stats = dashboard.stats(req.session.user.id, now);
+  // « À traiter » : uniquement ce qui attend réellement une action (compteurs réels, jamais de valeur de remplissage)
+  const todo = [
+    { n: dash.unread || 0, one: "message non lu", many: "messages non lus", href: "/formateur/messages", icon: "mail" },
+    { n: dash.support || 0, one: "demande de support en attente de réponse", many: "demandes de support en attente de réponse", href: "/formateur/gestion/support", icon: "help" },
+    { n: stats.drafts, one: "formation en brouillon", many: "formations en brouillon", href: "/formateur/formations?statut=brouillons", icon: "edit" },
+    { n: dash.notifications || 0, one: "nouveauté dans le centre de gestion", many: "nouveautés dans le centre de gestion", href: "/formateur/gestion", icon: "bell" },
+  ].filter((t) => t.n > 0);
+  const activity = ov.activity.map((e) => ({ ...e, when: dashboard.ago(e.at, now) }));
+  res.render("instructor/dashboard", { courses, visible: courses.filter((c) => !c.archived), stats, ov: { ...ov, activity }, todo });
 });
 
 const STATUS_FILTERS = { toutes: "Toutes", publiees: "Publiées", brouillons: "Brouillons", archivees: "Archivées" };

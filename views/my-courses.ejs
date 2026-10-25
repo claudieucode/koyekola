@@ -22,28 +22,48 @@
     <% } %>
 
     <% if (resumeCourse) { %>
-      <div class="resume-card">
-        <div>
-          <p class="resume-label">Reprendre là où vous vous étiez arrêté</p>
-          <p class="resume-title"><%= resumeCourse.resume.title %></p>
-          <p class="resume-course"><%= resumeCourse.title %> · <%= resumeCourse.pct %>% terminé</p>
+      <section class="mc-resume" aria-labelledby="mc-resume-h">
+        <div class="mc-resume-cover"><% if (resumeCourse.thumbnail_path) { %><img src="<%= resumeCourse.thumbnail_path %>" alt="" width="640" height="360" decoding="async"><span class="mc-cover-ph" hidden><%- icon("graduation", { size: 34 }) %></span><% } else { %><span class="mc-cover-ph"><%- icon("graduation", { size: 34 }) %></span><% } %></div>
+        <div class="mc-resume-body">
+          <p class="mc-resume-label" id="mc-resume-h">Reprendre là où vous vous étiez arrêté</p>
+          <p class="mc-resume-title"><%= resumeCourse.resume.title %></p>
+          <p class="mc-resume-course"><%= resumeCourse.title %></p>
+          <div class="mc-bar" role="progressbar" aria-label="Progression de <%= resumeCourse.title %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= resumeCourse.pct %>"><span style="width:<%= resumeCourse.pct %>%"></span></div>
+          <p class="mc-resume-pct"><%= resumeCourse.pct %>% terminé · <%= resumeCourse.completed_lessons %> / <%= resumeCourse.total_lessons %> sous-chapitres</p>
         </div>
-        <a href="/apprendre/<%= resumeCourse.slug %>/<%= resumeCourse.resume.id %>" class="btn btn-primary btn-lg">Reprendre</a>
-      </div>
-    <% } %>
-
-    <% if (inProgress.length) { %>
-      <section>
-        <h2>En cours</h2>
-        <div class="learner-list"><% inProgress.forEach((course) => { %><%- include("partials/learner-course", { course }) %><% }) %></div>
+        <a href="/apprendre/<%= resumeCourse.slug %>/<%= resumeCourse.resume.id %>" class="btn btn-primary btn-lg mc-resume-cta">Reprendre <%- icon("arrowRight", { size: 16 }) %></a>
       </section>
     <% } %>
 
-    <% if (finished.length) { %>
-      <section>
-        <h2>Terminées</h2>
-        <div class="learner-list"><% finished.forEach((course) => { %><%- include("partials/learner-course", { course }) %><% }) %></div>
+    <% if (library.length) { %>
+      <section class="mc-library" aria-labelledby="mc-lib-h" data-mc>
+        <div class="mc-head">
+          <h2 id="mc-lib-h">Ma bibliothèque <span class="kv-count"><%= counts.all %></span></h2>
+        </div>
+        <div class="mc-tools" role="search" hidden data-mc-tools>
+          <label class="mc-search"><span class="sr-only">Rechercher une formation</span><%- icon("search", { size: 16 }) %><input type="search" placeholder="Rechercher une formation" autocomplete="off" data-mc-q></label>
+          <div class="mc-filters" role="group" aria-label="Filtrer par état">
+            <button type="button" class="mc-chip" data-mc-f="all" aria-pressed="true">Toutes <b><%= counts.all %></b></button>
+            <% if (counts.started) { %><button type="button" class="mc-chip" data-mc-f="started" aria-pressed="false">En cours <b><%= counts.started %></b></button><% } %>
+            <% if (counts.new) { %><button type="button" class="mc-chip" data-mc-f="new" aria-pressed="false">À commencer <b><%= counts.new %></b></button><% } %>
+            <% if (counts.finished) { %><button type="button" class="mc-chip" data-mc-f="finished" aria-pressed="false">Terminées <b><%= counts.finished %></b></button><% } %>
+          </div>
+          <label class="mc-sort"><span class="sr-only">Trier</span>
+            <select data-mc-s><option value="default">Activité récente</option><option value="az">Ordre alphabétique</option><option value="pct">Progression</option></select>
+          </label>
+        </div>
+        <p class="mc-status" role="status" aria-live="polite" data-mc-live></p>
+        <div class="mc-grid" data-mc-grid>
+          <% library.forEach((course, i) => { %><%- include("partials/learner-course", { course, i }) %><% }) %>
+        </div>
+        <div class="empty-state mc-noresult" hidden data-mc-none>
+          <span class="kv-empty-ico" aria-hidden="true"><%- icon("search", { size: 26 }) %></span>
+          <h3>Aucune formation ne correspond</h3>
+          <p>Essayez un autre mot ou retirez le filtre.</p>
+          <button type="button" class="btn btn-outline" data-mc-reset>Réinitialiser les filtres</button>
+        </div>
       </section>
+      <script src="<%= asset('/js/mes-cours.js') %>" defer></script>
     <% } %>
 
     <% if (favorites.length) { %>

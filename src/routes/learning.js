@@ -18,7 +18,7 @@ router.get("/mes-cours", requireAuth, (req, res) => {
   const userId = req.session.user.id;
   const courses = db
     .prepare(
-      `SELECT courses.*, users.username AS instructor_name,
+      `SELECT courses.*, users.username AS instructor_name, enrollments.created_at AS enrolled_at,
         (SELECT COUNT(*) FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = courses.id) AS total_lessons,
         (SELECT COUNT(*) FROM lesson_progress
            JOIN lessons ON lessons.id = lesson_progress.lesson_id
@@ -44,11 +44,18 @@ router.get("/mes-cours", requireAuth, (req, res) => {
     c.pct = c.total_lessons > 0 ? Math.round((c.completed_lessons / c.total_lessons) * 100) : 0;
     c.finished = c.total_lessons > 0 && c.completed_lessons >= c.total_lessons;
     c.resume = lastStmt.get(userId, c.id) || null;
+    // État affiché : terminée / en cours (progression ou leçon déjà ouverte) / à commencer
+    c.status = c.finished ? "finished" : c.pct > 0 || c.resume ? "started" : "new";
+    c.activity = c.resume ? Number(c.resume.updated_at) || 0 : 0;
   });
   const inProgress = courses.filter((c) => !c.finished);
   const finished = courses.filter((c) => c.finished);
   // La formation à reprendre en priorité : celle consultée le plus récemment parmi celles en cours
   const resumeCourse = inProgress.filter((c) => c.resume).sort((a, b) => b.resume.updated_at - a.resume.updated_at)[0] || null;
+  // Ordre d'affichage par défaut : en cours (activité récente d'abord), puis à commencer (inscription récente), puis terminées
+  const rank = { started: 0, new: 1, finished: 2 };
+  const library = [...courses].sort((a, b) => rank[a.status] - rank[b.status] || b.activity - a.activity || String(b.enrolled_at).localeCompare(String(a.enrolled_at)));
+  const counts = { all: courses.length, started: courses.filter((c) => c.status === "started").length, new: courses.filter((c) => c.status === "new").length, finished: finished.length };
 
   const favorites = applyEffectivePrices(db
     .prepare(
@@ -71,7 +78,7 @@ router.get("/mes-cours", requireAuth, (req, res) => {
     )
     .all(userId);
 
-  res.render("my-courses", { courses, inProgress, finished, resumeCourse, favorites, notes });
+  res.render("my-courses", { courses, inProgress, finished, resumeCourse, library, counts, favorites, notes });
 });
 
 function loadCurriculum(courseId) {

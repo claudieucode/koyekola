@@ -71,11 +71,11 @@ describe("Mise en page de l'espace", () => {
 describe("Vue d'ensemble et formations", () => {
   test("indicateurs réels : formations, publiées, élèves, revenus", async () => {
     const r = await prof.get("/formateur");
-    const kpi = (label) => (r.text.match(new RegExp(`kpi-label">${label}</span><span class="kpi-value">([^<]+)<`)) || [])[1];
-    assert.equal(kpi("Formations créées"), "2");
-    assert.equal(kpi("Publiées"), "1");
-    assert.equal(kpi("Élèves inscrits"), "1");
-    assert.match(kpi("Revenus"), /^49,00\s€$/);
+    const fact = (label) => (r.text.match(new RegExp(`<dt>${label}</dt><dd>([^<]+)</dd>`)) || [])[1];
+    assert.equal(fact("Formations"), "2");
+    assert.match(r.text, /<dd class="ov-note">1 publiée, 1 en brouillon<\/dd>/);
+    assert.equal(fact("Élèves inscrits"), "1");
+    assert.match((r.text.match(/class="ov-big">([^<]+)</) || [])[1], /^49,00\s€$/);
     assert.match(r.text, /49,00\s€/);
     assert.match(r.text, /Nouvelle formation/);
   });

@@ -1,0 +1,9 @@
+# Mes formations (espace élève, `/mes-cours`)
+
+**Données (inchangées, côté serveur, filtrées par `req.session.user.id`)** : inscriptions (`enrollments`), progression (`lesson_progress`, un sous-chapitre terminé = une ligne), dernière leçon ouverte (`lesson_state`). Rien n'est inventé : état = *terminée* (tous les sous-chapitres faits) / *en cours* (progression ou leçon déjà ouverte) / *à commencer*.
+
+**Page** : bandeau « Reprendre » (formation consultée le plus récemment, lien direct vers la leçon) → bibliothèque en grille (couverture 16/9 avec visuel de remplacement si absente ou introuvable, état, titre sur 2 lignes, formateur, barre de progression, dernière leçon, action *Continuer / Commencer / Certificat + Revoir*) → favoris → notes.
+**Recherche, filtres (Toutes / En cours / À commencer / Terminées, avec compteurs) et tri** : `public/js/mes-cours.js`, entièrement côté navigateur sur les cartes déjà présentes (aucune requête) ; état gardé dans l'adresse (`#etat=…&q=…&tri=…`) ; sans JavaScript, toutes les formations restent visibles dans l'ordre du serveur (en cours par activité récente, puis à commencer, puis terminées). Visible seulement à partir de 2 formations.
+**Mouvement** : remplissage des barres (700 ms, `transform`), léger soulèvement des cartes au survol (pointeur précis uniquement) ; désactivés avec « réduire les animations ».
+**Fichiers** : `src/routes/learning.js` · `views/my-courses.ejs` · `views/partials/learner-course.ejs` · `public/css/kola-v3.css` (§ 7b) · `public/js/mes-cours.js` · `tests/mes-formations.test.js`.
+**Limites** : pas de pagination (la liste est chargée d'un bloc ; une requête par formation pour la dernière leçon) ; pas de « dernier chapitre » au-delà de la dernière leçon ouverte ; le test navigateur n'est pas automatisé (vérifié par Chrome en CDP à 320–1920 px).
