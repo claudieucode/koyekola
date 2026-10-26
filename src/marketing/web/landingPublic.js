@@ -87,8 +87,8 @@ module.exports = ({ db }) => {
     // Retour sur la page après sa propre inscription : pas une nouvelle visite. Arrivée sur l'étape suivante d'un tunnel
     // (remerciement…) : c'est bien une visite de cette page.
     const selfReturn = thanks && (widget || page.sections.some((s) => s.type === "form"));
-    const exposure = Boolean(test) && !selfReturn && !landing.isBot(req);
-    if (!selfReturn && !landing.isBot(req)) {
+    const exposure = Boolean(test) && !selfReturn && !landing.isBot(req) && !req.kwShared;
+    if (!selfReturn && !landing.isBot(req) && !req.kwShared) {
       landing.record(db, page, "view", landing.visitorOf(req, secret()));
     }
     show(req, res, page, { thanks, widget });

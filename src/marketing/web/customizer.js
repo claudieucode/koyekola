@@ -74,6 +74,7 @@ module.exports = () => {
   router.get("/site-web/personnaliser", need("appearance.read"), (req, res) => {
     const t = target(req, res); if (!t) return;
     const can = canOf(req);
+    try { customizer.runDue({ organizationId: req.mk.ctx.organizationId }); } catch { /* une planification en échec ne bloque jamais l'écran (elle est annulée et signalée) */ }
     const st = customizer.state(req.mk.ctx, t.siteId, { can });
     const menus = navigation.listMenus({ siteId: t.siteId }).map((m) => ({ id: m.id, name: m.name, items: m.items, locations: m.locations, broken: m.broken }));
     const q = t.siteId ? `?site=${t.siteId}` : "";
@@ -145,6 +146,37 @@ module.exports = () => {
       audit(req, t, "customizer.version_restored", { version: Number(req.body.version) });
       res.set("Cache-Control", "no-store").json({ ok: true });
     } catch (error) { fail(res, next, error); }
+  });
+  // ----- Publication planifiée -----
+  router.post("/site-web/personnaliser/planifier", need("appearance.publish"), (req, res, next) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    if (t.readOnly) return res.status(409).json({ error: { code: "invalid_state", message: readOnlyMsg } });
+    try {
+      const r = customizer.schedule(t.siteId, req.session.user.id, req.body.at, { rev: Number.isInteger(req.body.rev) ? req.body.rev : undefined });
+      audit(req, t, "customizer.scheduled", { at: r.publishAt });
+      res.set("Cache-Control", "no-store").json({ ok: true, publishAt: r.publishAt });
+    } catch (error) { fail(res, next, error); }
+  });
+  router.post("/site-web/personnaliser/deplanifier", need("appearance.publish"), (req, res, next) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    try { customizer.unschedule(t.siteId); audit(req, t, "customizer.unscheduled", {}); res.set("Cache-Control", "no-store").json({ ok: true }); } catch (error) { fail(res, next, error); }
+  });
+  // ----- Lien d'aperçu partageable (sites seulement) -----
+  router.post("/site-web/personnaliser/partager", need("appearance.publish"), (req, res, next) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    if (t.readOnly) return res.status(409).json({ error: { code: "invalid_state", message: readOnlyMsg } });
+    try {
+      const home = t.site && t.site.home_page_id;
+      const row = req.mk.ctx.db.prepare("SELECT slug FROM mk_landing_pages WHERE site_id = ? AND status = 'published' AND archived_at IS NULL ORDER BY (id = ?) DESC, id LIMIT 1").get(t.siteId, home || 0);
+      if (!row) throw new UserError("Publiez au moins une page de ce site : le lien d'aperçu s'appuie sur une page publiée.");
+      const r = customizer.createShare(t.siteId, req.session.user.id, { days: Number(req.body.days) || 7 });
+      audit(req, t, "customizer.share_created", { days: r.days });
+      res.set("Cache-Control", "no-store").json({ ok: true, days: r.days, url: `${req.protocol}://${req.get("host")}/p/${row.slug}?kwshare=${r.token}` });
+    } catch (error) { fail(res, next, error); }
+  });
+  router.post("/site-web/personnaliser/revoquer-partage", need("appearance.publish"), (req, res, next) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    try { const n = customizer.revokeShares(t.siteId); audit(req, t, "customizer.share_revoked", { count: n }); res.set("Cache-Control", "no-store").json({ ok: true, revoked: n }); } catch (error) { fail(res, next, error); }
   });
   return router;
 };

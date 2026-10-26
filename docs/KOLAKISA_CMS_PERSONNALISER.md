@@ -90,3 +90,6 @@ Non-régression : lot de 183 fichiers puis relance en isolation des fichiers tou
 - **Principal** : si un brouillon de l'Éditeur du site est en cours, la publication depuis Personnaliser est refusée avec un message (pour ne pas publier ce travail par erreur).
 - **Domaines personnalisés** : l'aperçu s'ouvre dans le domaine d'administration (même origine, nécessaire au contrôle du cadre) ; le site public d'un domaine personnalisé lit les mêmes jetons publiés (moteur inchangé).
 - **Thèmes** : activer un thème (Apparence → Thèmes) remplace les jetons du site, comme avant ; un brouillon du personnalisateur en attente garde ses valeurs (revalidées à la publication).
+
+## 7. Suite (mission TITAN XVIII)
+Réglages supplémentaires, valeurs par appareil, mode sombre, palette, en-tête/pied, sélection directe, planification et lien d'aperçu partageable : voir `KOLAKISA_PERSONNALISER_TITAN18.md` et la référence `wordpress-customizer/`. Les limites « réglages par appareil », « en-tête et pied d'un site » et « CSS additionnel » du §6 ci-dessus sont levées pour les sites.

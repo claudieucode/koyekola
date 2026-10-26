@@ -72,7 +72,7 @@ function injectLocals(req, res, next) {
     return apCache;
   };
   if (req.query && req.query.kwtheme) require("./themePreview").attach(req, res); // aperçu d'un thème (équipe autorisée seulement)
-  if (req.query && req.query.kwcustom === "1") require("./customizerPreview").attach(req, res); // aperçu du personnalisateur (réglages en cours de la session, équipe autorisée seulement)
+  if (req.query && (req.query.kwcustom === "1" || typeof req.query.kwshare === "string")) require("./customizerPreview").attach(req, res); // aperçu du personnalisateur (session de l'équipe) ou lien d'aperçu partageable (jeton)
   // Zones de widgets (Apparence → Widgets) : HTML déjà validé de la zone DU SITE de la requête (domaine d'un site, sinon site principal) ; « » si rien à afficher.
   // widgetZoneFor(siteId, zone) : pour les gabarits qui connaissent leur site (pages d'un site). Lecture à la demande, jamais mise en cache.
   res.locals.widgetZone = (zone) => require("../services/widgets").renderZone(req.kwSite ? req.kwSite.id : null, zone);
@@ -146,6 +146,8 @@ function injectLocals(req, res, next) {
   res.locals.postUrl = (post) => urlsSvc.publicPath("post", post);
   res.locals.termUrl = (key, slug) => `${require("../services/permalinks").baseFor(key, req.kwSite ? req.kwSite.id : null) || require("../services/taxonomy").defaultBase(key)}/${slug}`;
   res.locals.starRow = starRow;
+  // Aperçu du personnalisateur (en-tête / pied choisis) : la suite de la requête s'exécute avec ces remplacements, jamais les autres requêtes
+  if (req.kwPartsPreview) return require("../services/previewParts").run(req.kwPartsPreview, next);
   next();
 }
 
