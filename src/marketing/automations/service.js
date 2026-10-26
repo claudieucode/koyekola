@@ -10,7 +10,7 @@ const { allowedFor, getOrgProfile } = require("../templates/context");
 const { parseKey } = require("../security/crypto");
 const { getSendingConfig, getSecrets } = require("../sending/config");
 const { trackedLinks, snapshotOf } = require("../sending/dispatch");
-const { TRIGGERS } = require("./catalog");
+const { TRIGGERS, SERVICE_TRIGGERS } = require("./catalog");
 const { validateSteps, STEP_LABELS } = require("./steps");
 const { incompleteNodes, orphanNodes } = require("./graph");
 const { enqueueRun } = require("./jobs");
@@ -69,6 +69,13 @@ function validateTriggers(triggers) {
   });
 }
 
+// Un scénario « transactionnel » contourne le consentement marketing : il n'est donc permis que pour des événements de service (audit B6)
+function assertServiceTriggers(kind, triggers) {
+  if (kind !== "transactional") return;
+  const bad = triggers.find((t) => !SERVICE_TRIGGERS.has(t.event));
+  if (bad) throw new MarketingError("invalid_automation", `« ${(TRIGGERS[bad.event] || {}).label || bad.event} » n'est pas un événement de service : un message promotionnel ou de relance doit être un scénario de type Marketing (consentement vérifié, désinscription respectée). Un scénario Transactionnel est réservé aux messages liés à un compte, une commande, un accès ou un certificat.`);
+}
+
 // Un scénario d'un SITE n'agit que sur les ressources de ce site : audiences du même site, modèles du site ou sans site, scénarios du même site.
 // (Un scénario d'organisation, sans site, n'est pas restreint.)
 function checkStepsSite(ctx, steps, siteId) {
@@ -96,6 +103,7 @@ function createAutomation(ctx, input = {}) {
   const kind = input.kind === undefined ? "marketing" : input.kind;
   if (!KINDS.includes(kind)) throw new MarketingError("invalid_automation", "Type de scénario invalide (marketing ou transactional).");
   const triggers = validateTriggers(input.triggers !== undefined ? input.triggers : [{ event: input.triggerEvent, filter: input.triggerFilter }]);
+  assertServiceTriggers(kind, triggers);
   const steps = validateSteps(ctx, input.steps ?? [], kind);
   const siteId = resolveSite(ctx, input.siteId);
   checkStepsSite(ctx, steps, siteId);
@@ -145,6 +153,7 @@ function updateAutomation(ctx, id, patch = {}) {
   // les éventuels 2e/3e restent inchangés.
   if (patch.triggers !== undefined) {
     const triggers = validateTriggers(patch.triggers);
+    assertServiceTriggers(a.kind, triggers);
     fields.triggers = JSON.stringify(triggers);
     fields.trigger_event = triggers[0].event;
     fields.trigger_filter = JSON.stringify(triggers[0].filter);
@@ -152,6 +161,7 @@ function updateAutomation(ctx, id, patch = {}) {
     const event = patch.triggerEvent ?? a.trigger_event;
     const filter = patch.triggerFilter !== undefined ? patch.triggerFilter : patch.triggerEvent !== undefined ? {} : a.triggerFilter;
     const triggers = validateTriggers([{ event, filter }, ...a.triggers.slice(1)]);
+    assertServiceTriggers(a.kind, triggers);
     fields.triggers = JSON.stringify(triggers);
     fields.trigger_event = triggers[0].event;
     fields.trigger_filter = JSON.stringify(triggers[0].filter);

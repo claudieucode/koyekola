@@ -50,7 +50,9 @@ function registerLmsUser(ctx, user, { optIn = false, ip } = {}) {
     const { contact } = require("../contactcore").identify(ctx, { email: user.email, first_name: user.username, source: "signup", sourceDetail: "inscription", userId: user.id });
     if (ctx.bus) require("../contactcore").recordEvent({ ...ctx, audit: false }, { type: "user.registered", contactId: contact.id, source: "registration", objectType: "user", objectId: user.id, actorUserId: user.id, idempotencyKey: `user.registered:${ctx.organizationId}:${user.id}` });
     let subscribed = false;
-    if (optIn) subscribed = recordConsent(ctx, contact.id, { source: "signup", textShown: SIGNUP_CONSENT_TEXT, ip }).ok;
+    // L'adresse saisie à l'inscription n'est pas encore vérifiée : quelqu'un d'autre pourrait la taper. Une personne déjà DÉSINSCRITE n'est donc jamais
+    // réabonnée par cette case ; elle le fait elle-même (formulaire avec confirmation, centre de préférences). (audit B2)
+    if (optIn && contact.status !== "unsubscribed") subscribed = recordConsent(ctx, contact.id, { source: "signup", textShown: SIGNUP_CONSENT_TEXT, ip }).ok;
     return { ok: true, contactId: contact.id, subscribed };
   });
 }

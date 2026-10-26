@@ -53,7 +53,7 @@ function buildMessage(ctx, { campaign, compiled, contact, message, config, linkM
 }
 
 // Nom / adresse / réponse du site de la campagne ; chaque champ vide retombe sur la configuration de l'organisation. L'adresse du site n'est reprise
-// que si son domaine est encore autorisé (domaine déclaré ou domaine de l'organisation) : une modification de domaines ne laisse jamais partir un envoi usurpé.
+// que si son domaine est encore autorisé (domaine de l'organisation, ou domaine dont la PROPRIÉTÉ est prouvée : un domaine « à vérifier » ne suffit pas) : une modification de domaines ne laisse jamais partir un envoi usurpé.
 function siteIdentity(ctx, campaign, config) {
   const base = { from: config.from, replyTo: config.replyTo };
   if (!Number.isInteger(campaign.site_id) || !ctx.settings) return base;
@@ -64,7 +64,7 @@ function siteIdentity(ctx, campaign, config) {
   if (address || name) {
     const email = address || (org && org.email) || "";
     const domain = email.split("@").pop().toLowerCase();
-    const allowed = email && ((org && org.email.split("@").pop().toLowerCase() === domain) || ctx.db.prepare("SELECT 1 FROM mk_sending_domains WHERE organization_id = ? AND domain = ?").get(ctx.organizationId, domain));
+    const allowed = email && ((org && org.email.split("@").pop().toLowerCase() === domain) || ctx.db.prepare("SELECT 1 FROM mk_sending_domains WHERE organization_id = ? AND domain = ? AND status IN ('verified', 'authenticated')").get(ctx.organizationId, domain));
     if (allowed) from = `${(name || (org && org.name) || "").replace(/[<>"\r\n]/g, "")} <${email}>`.trim().replace(/^<(.+)>$/, "$1");
   }
   return { from, replyTo: reply || base.replyTo };

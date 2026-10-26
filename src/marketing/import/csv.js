@@ -87,7 +87,8 @@ function parseCsv(input, { delimiter, maxRows = DEFAULT_LIMITS.maxRows, maxColum
 function toCsv(rows) {
   const cell = (value) => {
     let text = value === null || value === undefined ? "" : String(value);
-    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+    // Un numéro international (« + » puis chiffres et séparateurs usuels seulement) ne peut contenir aucune formule : il reste intact (audit B3)
+    if (/^[=+\-@\t\r]/.test(text) && !/^\+[0-9][0-9 ().-]{5,24}$/.test(text)) text = `'${text}`;
     return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   return rows.map((r) => `${r.map(cell).join(",")}\r\n`).join("");

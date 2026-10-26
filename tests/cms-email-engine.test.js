@@ -208,7 +208,9 @@ describe("identité d'expédition par site", () => {
     set("email.site_1.from_address", "news@autre-domaine.fr");
     assert.equal(siteIdentity(A, { site_id: 1 }, cfg).from, "KOLAKISA <hello@kola.fr>", "domaine non autorisé : l'identité de l'organisation est conservée");
     db.prepare("INSERT INTO mk_sending_domains (organization_id, domain, status, token) VALUES (1, 'autre-domaine.fr', 'pending', 'tok')").run();
-    assert.match(siteIdentity(A, { site_id: 1 }, cfg).from, /news@autre-domaine\.fr/, "domaine déclaré : accepté");
+    assert.equal(siteIdentity(A, { site_id: 1 }, cfg).from, "KOLAKISA <hello@kola.fr>", "domaine déclaré mais NON vérifié (pending) : refusé, sinon n'importe qui usurperait un domaine (audit B5)");
+    db.prepare("UPDATE mk_sending_domains SET status = 'verified' WHERE domain = 'autre-domaine.fr'").run();
+    assert.match(siteIdentity(A, { site_id: 1 }, cfg).from, /news@autre-domaine\.fr/, "domaine dont la propriété est prouvée : accepté");
     assert.deepEqual(siteIdentity(A, { site_id: null }, cfg), cfg, "site principal : identité de l'organisation");
     assert.deepEqual(siteIdentity(A, { site_id: 2 }, cfg), cfg, "site sans identité propre : celle de l'organisation");
     // injection d'en-têtes dans le nom

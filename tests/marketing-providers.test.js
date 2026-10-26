@@ -48,7 +48,10 @@ describe("fournisseur SMTP", () => {
     assert.equal(await kind(Object.assign(new Error("x"), { code: "ECONNECTION" })), "temporary");
     assert.equal(await kind(Object.assign(new Error("x"), { code: "ETIMEDOUT" })), "temporary");
     assert.equal(await kind(Object.assign(new Error("no such user"), { responseCode: 550 })), "recipient_rejected");
-    assert.equal(await kind(Object.assign(new Error("x"), { responseCode: 553 })), "recipient_rejected");
+    assert.equal(await kind(Object.assign(new Error("x"), { responseCode: 553 })), "permanent", "553 sans détail : ambigu, pas de suppression définitive du destinataire (audit B7)");
+    assert.equal(await kind(Object.assign(new Error("x"), { responseCode: 550, response: "550 5.1.1 The email account does not exist" })), "recipient_rejected");
+    assert.equal(await kind(Object.assign(new Error("x"), { responseCode: 550, response: "550 5.7.1 Message rejected due to sender reputation" })), "permanent", "rejet de politique côté expéditeur : le destinataire n'est pas en cause");
+    assert.equal(await kind(Object.assign(new Error("x"), { responseCode: 550, response: "550 5.1.8 Bad sender address" })), "permanent");
     assert.equal(await kind(Object.assign(new Error("policy"), { responseCode: 554 })), "permanent");
     assert.equal(await kind(new Error("inconnue")), "temporary");
   });

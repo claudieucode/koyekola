@@ -323,7 +323,9 @@ function submitForm(ctx, formId, input = {}) {
   }
   if (upload) storeUpload(ctx, form, contact.id, upload);
   // Double confirmation : rien n'est accordé maintenant ; un lien est envoyé (par l'appelant, qui connaît l'adresse du site)
-  if (form.doubleOptin && contact.status !== "subscribed") {
+  // Une personne DÉSINSCRITE ne redevient jamais abonnée sur la seule foi d'une adresse saisie dans un formulaire (n'importe qui peut taper l'adresse d'un tiers) :
+  // même sans double confirmation configurée, elle passe par le lien envoyé à sa boîte (audit B2).
+  if ((form.doubleOptin || contact.status === "unsubscribed") && contact.status !== "subscribed") {
     if (BLOCKED.has(contact.status) || ctx.db.prepare("SELECT 1 FROM mk_suppressions WHERE organization_id = ? AND email = ?").get(ctx.organizationId, contact.email)) {
       return { ok: false, reason: "suppressed" };
     }

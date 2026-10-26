@@ -1,6 +1,6 @@
 <%- include("partials/top", { title, active }) %>
 <% const st = mkh.campaignStatus(campaign.status);
-   const labels = { not_subscribed: "sans consentement", unsubscribed: "désinscrits", blocked: "adresses bloquées (rebond, plainte, blocage)", list_unsubscribed: "désinscrits de cette liste", category_opted_out: "ayant refusé la catégorie", no_consent: "sans preuve de consentement" };
+   const labels = { inactive_record: "fiches archivées ou fusionnées", not_subscribed: "sans consentement", unsubscribed: "désinscrits", blocked: "adresses bloquées (rebond, plainte, blocage)", list_unsubscribed: "désinscrits de cette liste", category_opted_out: "ayant refusé la catégorie", no_consent: "sans preuve de consentement" };
    const reasonLabel = { unsubscribed: "désinscrit entre-temps", suppressed: "bloqué entre-temps", not_subscribed: "consentement retiré", list_unsubscribed: "désinscrit de la liste", category_opted_out: "catégorie refusée", cancelled: "campagne annulée", contact_removed: "contact supprimé", interrupted: "envoi interrompu (non renvoyé par sécurité)", temporary_exhausted: "échec temporaire répété", rejected: "adresse refusée par le serveur", permanent: "refusé par le serveur", error: "erreur interne", no_consent: "sans preuve de consentement" }; %>
     <p class="mk-back"><a href="/marketing/campagnes">← Toutes les campagnes</a></p>
 
@@ -375,6 +375,9 @@
               <p>Test envoyé. <% if (a.metric === "manual") { %>Choisissez la version gagnante : elle partira aussitôt aux <%= mkh.fmt(a.held) %> contacts restants.<% } else { %>Le gagnant (<%= a.metricLabel.toLowerCase() %>) sera choisi automatiquement le <strong><%= new Date(a.decideAt).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" }) %> (UTC)</strong> et partira aux <%= mkh.fmt(a.held) %> contacts restants. Vous pouvez aussi le choisir dès maintenant.<% } %></p>
             <% } else { %>
               <p><strong>Version <%= a.winnerLetter %> gagnante</strong> (<%= a.decidedBy === "manual" ? "choisie par l'équipe" : "choisie automatiquement : " + a.metricLabel.toLowerCase() %>) : envoyée au reste de la cible.</p>
+            <% if (a.evidence && a.evidence.level !== "not_tested") { %>
+                <p class="mk-callout <%= a.evidence.level === "significant" ? "mk-callout-info" : "mk-callout-warn" %>"><span><%= a.evidence.level === "significant" ? "Avantage établi : l'écart avec la meilleure autre version est significatif à 95 % (valeur p = " + String(a.evidence.p.toFixed(3)).replace(".", ",") + ")." : a.evidence.caveat %><% if (a.evidence.level === "significant" && a.evidence.caveat) { %> <%= a.evidence.caveat %><% } %></span></p>
+              <% } else if (a.evidence && a.evidence.caveat) { %><p class="field-hint"><%= a.evidence.caveat %></p><% } %>
             <% } %>
             <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Résultats par version</caption>
               <thead><tr><th scope="col">Version</th><th scope="col">Objet</th><th scope="col">Contenu</th><th scope="col" class="mk-num">Envoyés</th><th scope="col" class="mk-num">Clics uniques</th><th scope="col" class="mk-num">Ouvertures (indicatif)</th><th scope="col" class="mk-num">Revenus</th><% if (canChoose) { %><th scope="col"><span class="sr-only">Choisir</span></th><% } %></tr></thead>

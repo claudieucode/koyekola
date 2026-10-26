@@ -46,6 +46,7 @@ function audienceSummary(ctx, target) {
   const rows = ctx.db
     .prepare(
       `SELECT CASE
+         WHEN c.record_status != 'active' THEN 'inactive_record'
          WHEN c.status IN ('bounced', 'complained', 'suppressed') OR EXISTS (SELECT 1 FROM mk_suppressions x WHERE x.organization_id = c.organization_id AND x.email = c.email) THEN 'blocked'
          WHEN c.status = 'unsubscribed' THEN 'unsubscribed'
          WHEN c.status = 'unknown' THEN 'not_subscribed'
@@ -55,7 +56,7 @@ function audienceSummary(ctx, target) {
        ${t.from} AND NOT (${s.sql}) GROUP BY reason`
     )
     .all(...(t.listId === undefined ? [] : [t.listId]), ...t.params, ...s.params);
-  const excluded = { total: 0, not_subscribed: 0, unsubscribed: 0, blocked: 0, list_unsubscribed: 0, category_opted_out: 0, no_consent: 0 };
+  const excluded = { total: 0, inactive_record: 0, not_subscribed: 0, unsubscribed: 0, blocked: 0, list_unsubscribed: 0, category_opted_out: 0, no_consent: 0 };
   for (const r of rows) { excluded[r.reason] = r.n; excluded.total += r.n; }
   return { targetTotal, sendable, excluded };
 }

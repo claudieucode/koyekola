@@ -6,6 +6,7 @@ const { transaction } = require("../db/tx");
 const { addSuppression } = require("../compliance/suppression");
 const { recordEvent, bump } = require("./events");
 const { emitMessageEvent } = require("./tracking");
+const reputation = require("./reputation");
 
 function applyEvent(ctx, event) {
   if (!event || event.kind === "ignored") return "ignored";
@@ -37,6 +38,7 @@ function applyEvent(ctx, event) {
     }
     // Contact Core (palier 16) : livraison, rebond et plainte entrent dans le journal du contact (idempotent : un webhook rejoué n'ajoute rien)
     emitMessageEvent(ctx, message, `email.${type}`, `email.${type}:${message.id}`, { campaignId: message.campaign_id, ...(event.kind === "bounced" ? { hard: Boolean(event.hard) } : {}) });
+    if (event.kind === "complained" || (event.kind === "bounced" && event.hard)) reputation.guardCampaign(ctx, message.campaign_id); // plaintes tardives : coupe aussi entre deux lots
     return "applied";
   });
 }

@@ -53,6 +53,17 @@ const TRIGGERS = {
   "order.refunded": { label: "Une commande est remboursée en totalité", filters: [] },
   "order.partially_refunded": { label: "Une commande est remboursée en partie", filters: [] },
 };
+// Événements qui justifient un message DE SERVICE (compte, commande, accès, certificat, paiement) : seuls ces déclencheurs sont acceptés pour un scénario
+// « transactionnel », qui s'envoie sans consentement marketing. Tout le reste (abandon, favori, score, visite, étiquette, inactivité…) est de la promotion
+// et exige le type « marketing » (consentement vérifié, désinscription respectée). Audit B6.
+const SERVICE_TRIGGERS = new Set([
+  "lms.user_registered", "user.registered", "lms.order_completed", "purchase.completed", "lms.course_enrolled", "lms.course_completed",
+  "lms.certificate_issued", "payment.failed", "refund.completed", "order.refunded", "order.partially_refunded",
+  // Activité de l'élève sur SON compte et suivi de ses demandes : utilisés par les parcours livrés avec l'application (bibliothèque)
+  "lms.lesson_completed", "lms.review_posted", "support.ticket_cree", "support.ticket_resolu",
+]);
+// Limite connue : certains parcours livrés en « transactionnel » contiennent des relances d'engagement (« Reprenez votre formation ») qui relèvent plutôt du
+// marketing dans plusieurs pays. Seul le DÉCLENCHEUR est contrôlé ici, pas le contenu : voir docs/email-marketing/13_KNOWN_LIMITATIONS.md.
 // D'où vient le déclencheur : affiché dans le scénario (le tunnel produit, le Contact Core conserve, l'automatisation décide)
 const SOURCE_LABELS = { cms: "CMS", funnel: "Tunnel", email: "E-mail", commerce: "Boutique", contact: "Contact Core", lms: "KOLAKISA (formations)", site: "Site Web" };
 function sourceOf(event) {
@@ -71,4 +82,4 @@ function filterMatches(md, filter) {
   if (String(data[filter.key]) === String(filter.value)) return true;
   return filter.key === "courseId" && Array.isArray(data.courseIds) && data.courseIds.map(String).includes(String(filter.value));
 }
-module.exports = { TRIGGERS, SOURCE_LABELS, sourceOf, filterMatches };
+module.exports = { TRIGGERS, SERVICE_TRIGGERS, SOURCE_LABELS, sourceOf, filterMatches };

@@ -75,11 +75,11 @@ describe("validation des scénarios", () => {
     assert.equal(code(() => make({ name: "L2", steps: [{ type: "add_to_list", listId: 999 }] })), "not_found");
   });
   test("déclencheur : événement connu, ou événement personnalisé bien formé ; filtre limité aux clés prévues", () => {
-    assert.ok(make({ name: "T0", triggerEvent: "mon_evenement.special" }), "événement personnalisé hors catalogue mais bien formé : accepté");
+    assert.ok(make({ name: "T0", kind: "marketing", steps: [{ type: "email", templateId: tplM.id }], triggerEvent: "mon_evenement.special" }), "événement personnalisé hors catalogue mais bien formé : accepté");
     assert.equal(code(() => make({ name: "T1", triggerEvent: "N IMPORTE QUOI !" })), "invalid_automation", "mal formé (espaces, majuscules, ponctuation) : refusé");
     assert.equal(code(() => make({ name: "T2", triggerEvent: "lms.user_registered", triggerFilter: { key: "courseId", value: "1" } })), "invalid_automation");
     assert.ok(make({ name: "T3", triggerEvent: "lms.course_completed", triggerFilter: { key: "courseId", value: "12" } }));
-    assert.ok(make({ name: "T4", triggerEvent: "tag.added", triggerFilter: { key: "tag", value: "vip" } }));
+    assert.ok(make({ name: "T4", kind: "marketing", steps: [{ type: "email", templateId: tplM.id }], triggerEvent: "tag.added", triggerFilter: { key: "tag", value: "vip" } }));
     assert.equal(code(() => make({ name: "T5", triggerEvent: "tag.added", triggerFilter: { key: "constructor", value: "x" } })), "invalid_automation");
   });
   test("nom obligatoire et unique ; isolation entre organisations", () => {
@@ -171,7 +171,7 @@ describe("déclenchement par un événement", () => {
   });
   test("plusieurs déclencheurs (jusqu'à 3) : n'importe lequel démarre le scénario, chacun son propre filtre", () => {
     const a = live({
-      name: "Multi",
+      name: "Multi", kind: "marketing", steps: [{ type: "email", templateId: tplM.id }], 
       triggerEvent: undefined,
       triggers: [
         { event: "lms.user_registered" },
@@ -196,7 +196,7 @@ describe("déclenchement par un événement", () => {
     assert.equal(code(() => make({ name: `X${Math.random()}`, triggers: [] })), "invalid_automation", "aucun déclencheur : refusé");
   });
   test("mise à jour d'un seul déclencheur (compatibilité triggerEvent/triggerFilter) préserve les autres ; mise à jour de la liste complète les remplace tous", () => {
-    const a = make({ triggers: [{ event: "lms.user_registered" }, { event: "lms.order_completed" }] });
+    const a = make({ kind: "marketing", steps: [{ type: "email", templateId: tplM.id }], triggers: [{ event: "lms.user_registered" }, { event: "lms.order_completed" }] });
     auto.updateAutomation(A, a.id, { triggerEvent: "lms.course_enrolled" });
     const reloaded1 = auto.getAutomation(A, a.id);
     assert.deepEqual(reloaded1.triggers.map((t) => t.event), ["lms.course_enrolled", "lms.order_completed"], "seul le 1er a changé");
@@ -291,7 +291,7 @@ describe("moteur : déroulé d'un scénario", () => {
   });
   test("étiquettes et listes : ajout/retrait exécutés, idempotents, JAMAIS d'événement en cascade (pas de boucle entre scénarios)", async () => {
     live({ name: "Actions", steps: [{ type: "add_tag", tag: "a" }, { type: "add_to_list", listId: list.id }, { type: "remove_tag", tag: "a" }, { type: "add_tag", tag: "b" }, { type: "remove_from_list", listId: list.id }] });
-    live({ name: "Écoute tag", triggerEvent: "tag.added", steps: [{ type: "add_tag", tag: "boucle" }] });
+    live({ name: "Écoute tag", kind: "marketing", triggerEvent: "tag.added", steps: [{ type: "add_tag", tag: "boucle" }] });
     const c = contact("act@ex.fr");
     const before = count("mk_events");
     auto.onEvent(A, event("lms.user_registered", c));
@@ -443,6 +443,24 @@ describe("pannes, reprises, garde-fous d'envoi", () => {
     assert.ok(logs(runOf(c2)).some((l) => l.action === "failed"));
     assert.deepEqual(audience.tagsOf(A, c2.id).map((t) => t.name), ["apres2"]);
   });
+  test("message réservé par un envoi interrompu : jamais renvoyé, marqué échoué, le scénario continue (audit B4)", async () => {
+    const c = setup({ steps: [{ type: "email", templateId: tplT.id }, { type: "add_tag", tag: "apres-crash" }] });
+    const campaign = m.db.prepare("SELECT id FROM mk_campaigns WHERE automation_id IS NOT NULL ORDER BY id DESC LIMIT 1").get();
+    m.db.prepare("INSERT INTO mk_messages (organization_id, campaign_id, contact_id, email, provider, status, claimed_at) VALUES (1, ?, ?, ?, 'fake', 'pending', '2026-01-01')").run(campaign.id, c.id, c.email);
+    const spy = scripted(() => ({ providerMessageId: "ne-doit-pas-partir" }));
+    await step(c, { provider: spy });
+    assert.equal(spy.sent.length, 0, "aucun renvoi après une interruption");
+    assert.equal(m.db.prepare("SELECT status FROM mk_messages WHERE contact_id = ?").get(c.id).status, "failed");
+    assert.deepEqual(audience.tagsOf(A, c.id).map((t) => t.name), ["apres-crash"]);
+  });
+  test("une erreur temporaire lève la réservation : la reprise peut envoyer", async () => {
+    const c = setup();
+    await step(c, { provider: scripted(() => { throw new SendError("temporary"); }) });
+    assert.equal(m.db.prepare("SELECT claimed_at FROM mk_messages WHERE contact_id = ?").get(c.id).claimed_at, null);
+    const good = ok();
+    await step(c, { provider: good, now: T0 + 10 * 60000 });
+    assert.equal(good.sent.length, 1);
+  });
   test("adresse refusée : suppression + sortie ; refus permanent : étape échouée puis suite ; limitation : attente demandée", async () => {
     const c = setup();
     await step(c, { provider: scripted(() => { throw new SendError("recipient_rejected"); }) });
@@ -527,5 +545,23 @@ describe("chaîne complète via le worker", () => {
     await worker.drain();
     assert.deepEqual(shared.sent.map((s) => s.to), ["nouvelle@ex.fr"]);
     assert.equal(count("mk_automation_runs", "status = 'completed'"), 1);
+  });
+});
+
+describe("scénario transactionnel : réservé aux événements de service (audit B6)", () => {
+  const create = (kind, triggerEvent) => code(() => auto.createAutomation(A, { name: `T${Math.random()}`, kind, triggerEvent, steps: [{ type: "email", templateId: kind === "transactional" ? tplT.id : tplM.id }] }));
+  test("événements de service acceptés en transactionnel", () => {
+    for (const ev of ["lms.user_registered", "lms.order_completed", "purchase.completed", "lms.certificate_issued", "payment.failed", "order.refunded"]) assert.equal(create("transactional", ev), null, ev);
+  });
+  test("relance ou promotion refusées en transactionnel, acceptées en marketing", () => {
+    for (const ev of ["cart.abandoned", "checkout.abandoned", "lms.favorite_added", "tag.added", "contact.score_level_changed", "funnel.abandoned"]) {
+      assert.equal(create("transactional", ev), "invalid_automation", ev);
+    }
+    assert.equal(create("marketing", "cart.abandoned"), null);
+  });
+  test("modifier le déclencheur d'un scénario transactionnel vers une relance est refusé", () => {
+    const a = make({ name: `Mod${Math.random()}` });
+    assert.equal(code(() => auto.updateAutomation(A, a.id, { triggerEvent: "cart.abandoned" })), "invalid_automation");
+    assert.equal(code(() => auto.updateAutomation(A, a.id, { triggers: [{ event: "lms.favorite_added", filter: {} }] })), "invalid_automation");
   });
 });

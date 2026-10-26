@@ -4,8 +4,8 @@
 // être récupérée après coup : c'est normal, elle est hachée en base).
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const { membershipsOf } = require("../organizations");
-const { createApiKey, listApiKeys } = require("./keys");
+const { membershipsOf, can } = require("../organizations");
+const { createApiKey } = require("./keys");
 const { loginBlocked, recordLoginFailure, clearLoginFailures } = require("../../middlewares/security");
 
 const MOBILE_KEY_NAME = "App Mobile";
@@ -55,6 +55,11 @@ function createMobileAuthRouter({ db }) {
         return res.status(403).json({ error: { code: "forbidden", message: "Cet utilisateur n'a pas accès au module marketing. Ajoutez-le dans Marketing → Équipe." } });
       }
 
+      // Même règle que l'écran « Clés d'API » : seul un administrateur de l'organisation peut en obtenir une
+      if (!can(membership.role, "api_keys.manage")) {
+        return res.status(403).json({ error: { code: "forbidden", message: "Votre rôle dans l'organisation ne permet pas de créer une clé d'API." } });
+      }
+
       const ctx = {
         db,
         organizationId: marketing.organizationId,
@@ -63,18 +68,22 @@ function createMobileAuthRouter({ db }) {
         settings: marketing.settings,
       };
 
-      // Révoquer toutes les clés mobiles existantes pour ce compte
-      const existingKeys = listApiKeys(ctx).filter((k) => k.name === MOBILE_KEY_NAME && !k.revoked_at);
-      for (const k of existingKeys) {
-        db.prepare("UPDATE mk_api_keys SET revoked_at = datetime('now') WHERE id = ?").run(k.id);
+      // Une clé mobile PAR utilisateur (le nom en porte l'identifiant : la contrainte d'unicité (organisation, nom) ne mélange jamais deux comptes).
+      // Les anciennes clés de CET utilisateur sont révoquées puis renommées : un nom de clé révoquée reste réservé par la contrainte et
+      // bloquait la deuxième connexion (erreur 500).
+      const keyName = `${MOBILE_KEY_NAME} #${user.id}`;
+      const previous = db.prepare("SELECT id FROM mk_api_keys WHERE organization_id = ? AND (name = ? OR name LIKE ?)").all(ctx.organizationId, keyName, `${keyName} (ancienne %`);
+      for (const k of previous) {
+        db.prepare("UPDATE mk_api_keys SET revoked_at = COALESCE(revoked_at, datetime('now')), name = ? WHERE id = ?").run(`${keyName} (ancienne ${k.id})`, k.id);
       }
 
-      // Créer une nouvelle clé mobile (scope « write » pour piloter les campagnes)
-      const result = createApiKey(ctx, { name: MOBILE_KEY_NAME, scope: "write" });
+      const scope = "write";
+      const result = createApiKey(ctx, { name: keyName, scope });
 
       return res.json({
         data: {
           token: result.key, // mk_live_… : à stocker côté app, jamais récupérable ensuite
+          scope,
           user: { id: user.id, username: user.username, email: user.email, role: user.role },
         },
       });

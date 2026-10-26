@@ -44,6 +44,13 @@ async function sendEmailStep(ctx, { run, automation, step, contact, provider, no
   ctx.db.prepare("INSERT OR IGNORE INTO mk_messages (organization_id, campaign_id, contact_id, email, provider, status) VALUES (?, ?, ?, ?, ?, 'pending')").run(org, campaign.id, contact.id, contact.email, provider.name);
   const message = ctx.db.prepare("SELECT * FROM mk_messages WHERE campaign_id = ? AND contact_id = ?").get(campaign.id, contact.id);
   if (message.status !== "pending") return { next: true, log: ["already_sent", `message ${message.id}`] };
+  // Réservé par un appel précédent resté sans réponse (serveur arrêté pendant l'envoi) : on ne sait pas si le message est parti, donc on ne le renvoie JAMAIS (audit B4)
+  if (message.claimed_at) {
+    ctx.db.prepare("UPDATE mk_messages SET status = 'failed' WHERE id = ? AND status = 'pending'").run(message.id);
+    bump(ctx, campaign.id, "failed_count");
+    recordEvent(ctx, { messageId: message.id, campaignId: campaign.id, type: "failed", detail: { kind: "interrupted" }, at: now });
+    return { next: true, log: ["failed", "interrupted"] };
+  }
 
   const cfg = getSendingConfig(ctx);
   const cap = capacity(ctx, cfg, now, { ignoreDaily: transactional });
@@ -60,6 +67,8 @@ async function sendEmailStep(ctx, { run, automation, step, contact, provider, no
   try {
     const linkMap = new Map(ctx.db.prepare("SELECT id, url FROM mk_links WHERE campaign_id = ?").all(campaign.id).map((l) => [l.url, l.id]));
     const built = buildMessage(ctx, { campaign, compiled: compiledFor(ctx, campaign), contact, message, config: cfg, linkMap, event: JSON.parse(run.event_data || "{}"), transactional });
+    // Réservation atomique juste avant l'appel : si deux exécutions se croisent, une seule envoie
+    if (ctx.db.prepare("UPDATE mk_messages SET claimed_at = ? WHERE id = ? AND status = 'pending' AND claimed_at IS NULL").run(String(now), message.id).changes === 0) return { next: true, log: ["already_sent", `message ${message.id}`] };
     const result = await provider.send(built);
     transaction(ctx.db, () => {
       ctx.db.prepare("UPDATE mk_messages SET status = 'sent', sent_at = ?, provider_message_id = ?, subject = ? WHERE id = ?").run(now, result.providerMessageId, built.subject.slice(0, 300), message.id);
@@ -74,6 +83,8 @@ async function sendEmailStep(ctx, { run, automation, step, contact, provider, no
       fail("failed", "failed_count", "failed", { kind: "error" });
       return { next: true, log: ["failed", "error"] };
     }
+    // Erreur connue du fournisseur : le message n'est PAS parti, la réservation est levée (une reprise reste possible)
+    if (error.kind === "temporary" || error.kind === "rate_limited" || error.kind === "config") ctx.db.prepare("UPDATE mk_messages SET claimed_at = NULL WHERE id = ? AND status = 'pending'").run(message.id);
     switch (error.kind) {
       case "temporary": {
         if (attempts + 1 >= MAX_ATTEMPTS) { fail("failed", "failed_count", "failed", { kind: "temporary" }); return { next: true, log: ["failed", "temporary_exhausted"] }; }

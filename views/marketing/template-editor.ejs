@@ -286,7 +286,7 @@
             <div class="mk-pv-test"><label class="sr-only" for="mk-pv-test-to">Destinataire du test</label><select id="mk-pv-test-to" class="mk-pv-select"><% recipients.forEach((r) => { %><option value="<%= r %>" <%= r === currentEmail ? "selected" : "" %>><%= r %></option><% }) %></select><button type="button" class="btn btn-primary btn-sm" id="mk-pv-test-send">Envoyer le test</button></div>
             <p class="mk-pv-muted">Uniquement aux membres de l'équipe · objet préfixé [TEST] · version enregistrée (enregistrement automatique avant l'envoi).</p>
             <p class="mk-pv-test-msg" id="mk-pv-test-msg" role="status" aria-live="polite"></p></section><% } %>
-          <section class="mk-pv-sec" aria-labelledby="mk-pv-h-links"><h3 id="mk-pv-h-links">Liens <span class="mk-pv-count" id="mk-pv-links-count">0</span></h3><div id="mk-pv-links"></div></section>
+          <section class="mk-pv-sec" aria-labelledby="mk-pv-h-links"><h3 id="mk-pv-h-links">Liens <span class="mk-pv-count" id="mk-pv-links-count">0</span></h3><div id="mk-pv-links"></div><% if (!readOnly) { %><p class="mk-pv-linkcheck"><button type="button" class="btn btn-outline btn-sm" id="mk-pv-linkcheck">Vérifier que les liens répondent</button> <span class="mk-pv-muted" id="mk-pv-linkcheck-msg" role="status" aria-live="polite"></span></p><% } %></section>
           <section class="mk-pv-sec" aria-labelledby="mk-pv-h-tags"><h3 id="mk-pv-h-tags">Balises de fusion</h3><div id="mk-pv-tags"></div></section>
           <details class="mk-pv-sec mk-b-preview-text"><summary>Version texte brut</summary><pre id="mk-text" class="mk-text"></pre></details>
         </aside>

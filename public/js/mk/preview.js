@@ -193,6 +193,24 @@
       });
       box.appendChild(ul);
     }
+    // Vérification HTTP des liens (à la demande : elle fait sortir le serveur vers Internet). Le résultat s'ajoute sous chaque adresse déjà listée.
+    var checkBtn = $("mk-pv-linkcheck"), checkMsg = $("mk-pv-linkcheck-msg");
+    if (checkBtn) checkBtn.addEventListener("click", function () {
+      checkBtn.disabled = true; checkMsg.textContent = "Vérification en cours…";
+      api.postJson("/marketing/modeles/apercu/liens", { template: api.payload() }).then(function (j) {
+        var byUrl = {}; (j.results || []).forEach(function (r) { byUrl[r.url] = r; });
+        [].forEach.call($("mk-pv-links").querySelectorAll("li"), function (li) {
+          var href = li.querySelector(".mk-pv-href"); if (!href) return;
+          var old = li.querySelector(".mk-pv-probe"); if (old) old.remove();
+          var key; try { key = new URL(href.textContent).toString(); } catch (e) { return; }
+          var r = byUrl[key]; if (!r) return;
+          var word = r.state === "ok" ? "Répond" : r.state === "error" ? "Ne répond pas correctement" : "À vérifier à la main";
+          li.querySelector("div").appendChild(el("span", { "class": "mk-pv-muted mk-pv-probe" }, word + " — " + r.message + (r.finalUrl ? " Adresse finale : " + r.finalUrl : "")));
+        });
+        var bad = (j.results || []).filter(function (r) { return r.state === "error"; }).length, warn = (j.results || []).filter(function (r) { return r.state === "warning"; }).length;
+        checkMsg.textContent = j.checked + " adresse" + (j.checked > 1 ? "s" : "") + " testée" + (j.checked > 1 ? "s" : "") + " : " + bad + " en erreur, " + warn + " à vérifier." + (j.skipped ? " " + j.skipped + " non testée" + (j.skipped > 1 ? "s" : "") + " (limite de 25)." : "");
+      }, function (e) { checkMsg.textContent = (e && e.message) || "Vérification impossible."; }).then(function () { checkBtn.disabled = false; });
+    });
     function row(dl, label, value, cls) { dl.appendChild(el("dt", {}, label)); dl.appendChild(el("dd", cls ? { "class": cls } : {}, value)); }
     function renderInfo(j, error) {
       var dl = $("mk-pv-info"); dl.textContent = "";

@@ -14,6 +14,7 @@ const { markdownToRich } = require("../templates/richtext");
 const { FONTS } = require("../templates/blocks");
 const CATALOG = require("../templates/catalog");
 const saved = require("../templates/saved");
+const linkcheck = require("../templates/linkcheck");
 // Ouverture dans l'éditeur : un texte (ou des colonnes) encore en Markdown est présenté en texte riche. Rien n'est
 // modifié en base tant que l'auteur n'enregistre pas (le rendu Markdown reste valable jusque-là).
 function forEditor(blocks) {
@@ -148,6 +149,24 @@ module.exports = ({ db }) => {
       res.json(body);
     } catch (error) {
       // Pour l'aperçu, toute erreur métier (contact ou contenu invalide) est une erreur de saisie : 400
+      if (error instanceof MarketingError) return res.status(400).json({ error: error.message });
+      next(error);
+    }
+  });
+
+  // Vérification HTTP des liens du message affiché (statut seulement, jamais le contenu des pages). 6 vérifications par heure et par personne :
+  // l'appel sort du serveur vers Internet, il ne doit pas servir à sonder un site.
+  const linkLimiter = createRateLimiter(6, 60 * 60 * 1000);
+  router.post("/modeles/apercu/liens", need("templates.write"), async (req, res, next) => {
+    try {
+      const key = String(req.session.user.id);
+      if (linkLimiter.isLimited(key)) return res.status(429).json({ error: "Trop de vérifications de liens : 6 par heure au plus. Réessayez plus tard." });
+      linkLimiter.hit(key);
+      const r = templates.previewTemplate(req.mk.ctx, req.body.template, { contact: null, tolerant: true });
+      // Les liens système (désabonnement, préférences, version web) sont des adresses d'exemple dans l'aperçu : ils ne sont pas testés
+      const out = await linkcheck.checkLinks(inspect.analyzeLinks(r.html).filter((l) => !/^Lien système/.test(l.reason || "")));
+      res.json(out);
+    } catch (error) {
       if (error instanceof MarketingError) return res.status(400).json({ error: error.message });
       next(error);
     }

@@ -24,6 +24,7 @@ const { buildMessage } = require("./builder");
 const { recordEvent, bump } = require("./events");
 const sendtime = require("./sendtime");
 const abtest = require("./abtest");
+const reputation = require("./reputation");
 
 const DAY = 86400000;
 const MINUTE = 60000;
@@ -226,6 +227,9 @@ async function dispatchBatch(ctx, campaignId, { provider, now = Date.now(), batc
   // Envois interrompus : marqués échoués, jamais renvoyés d'office (un doublon est pire qu'un échec signalé)
   const stuck = ctx.db.prepare("UPDATE mk_campaign_recipients SET status = 'failed', reason = 'interrupted', updated_at = ? WHERE campaign_id = ? AND status = 'sending' AND updated_at < ?").run(now, campaignId, now - STUCK_MS).changes;
   if (stuck) bump(ctx, campaignId, "failed_count", stuck);
+
+  // Réputation : des plaintes ou des rebonds en excès arrêtent l'envoi AVANT le lot suivant (reprise manuelle)
+  if (reputation.guardCampaign(ctx, campaignId).paused) return { done: false, paused: true, reason: "reputation" };
 
   const cfg = getSendingConfig(ctx);
   const linkMap = new Map(ctx.db.prepare("SELECT id, url FROM mk_links WHERE campaign_id = ?").all(campaignId).map((l) => [l.url, l.id]));

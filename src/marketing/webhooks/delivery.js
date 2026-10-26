@@ -5,6 +5,8 @@
 const crypto = require("crypto");
 const dns = require("dns");
 const net = require("net");
+const http = require("http");
+const https = require("https");
 const { enqueue } = require("../queue/jobs");
 const { UnrecoverableError } = require("../queue/worker");
 const { decryptSecret } = require("../security/crypto");
@@ -26,6 +28,10 @@ function isPrivateAddress(ip) {
     if (a === 169 && b === 254) return true;
     if (a === 172 && b >= 16 && b <= 31) return true;
     if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;           // 100.64.0.0/10 : partage d'adresses des opérateurs (CGNAT)
+    if (a === 192 && b === 0) return true;                        // 192.0.0.0/24 et 192.0.2.0/24 : réservées / documentation
+    if (a === 198 && (b === 18 || b === 19 || b === 51)) return true; // bancs d'essai et documentation
+    if (a === 203 && b === 0) return true;                        // 203.0.113.0/24 : documentation
     return false;
   }
   if (net.isIPv6(ip)) {
@@ -42,7 +48,7 @@ function isPrivateAddress(ip) {
 async function assertPublicHost(hostname, { lookup = dns.promises.lookup } = {}) {
   if (net.isIP(hostname)) {
     if (isPrivateAddress(hostname)) throw new SsrfError(`Adresse interdite (privée ou locale) : ${hostname}.`);
-    return;
+    return [{ address: hostname, family: net.isIPv6(hostname) ? 6 : 4 }];
   }
   let addresses;
   try {
@@ -52,16 +58,40 @@ async function assertPublicHost(hostname, { lookup = dns.promises.lookup } = {})
   }
   if (!addresses.length) throw new Error(`Nom introuvable : ${hostname}.`);
   for (const { address } of addresses) if (isPrivateAddress(address)) throw new SsrfError(`« ${hostname} » pointe vers une adresse privée ou locale (${address}) : refusé.`);
+  return addresses;
 }
 
 function signPayload(body, secret, timestamp) {
   return crypto.createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex");
 }
 
+// Requête POST qui se connecte à l'adresse DÉJÀ validée (jamais une seconde résolution DNS : un nom qui change de réponse entre la vérification
+// et la connexion ne peut pas rediriger l'envoi vers une adresse interne) et qui ne suit aucune redirection. Le nom d'hôte reste celui de l'URL
+// (en-tête Host, SNI, certificat). Même contrat minimal que fetch : { status }.
+function pinnedFetch(addresses) {
+  return (url, { method = "POST", headers = {}, body, signal } = {}) => new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const lib = u.protocol === "https:" ? https : http;
+    const first = addresses[0];
+    const sent = { ...headers };
+    if (body !== undefined) sent["Content-Length"] = Buffer.byteLength(body);
+    const req = lib.request(u, { method, headers: sent, signal,
+      lookup: (_host, _opts, cb) => (_opts && _opts.all ? cb(null, [{ address: first.address, family: first.family }]) : cb(null, first.address, first.family)) }, (res) => {
+      const location = res.headers.location ? String(res.headers.location) : "";
+      res.destroy(); // seul l'état compte : le corps n'est jamais lu
+      resolve({ status: res.statusCode, location });
+    });
+    req.on("error", reject);
+    req.end(body);
+  });
+}
+
 // Un seul essai HTTP (les reprises sont gérées par l'appelant, via la file). `lookup`/`fetchImpl` injectables pour les tests.
-async function sendWebhook({ url, secret, eventName, eventId, occurredAt, metadata, lookup, fetchImpl = globalThis.fetch }) {
+async function sendWebhook({ url, secret, eventName, eventId, occurredAt, metadata, lookup, fetchImpl }) {
   const parsed = new URL(url);
-  await assertPublicHost(parsed.hostname, { lookup });
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new SsrfError("Seules les adresses http(s) sont acceptées.");
+  const addresses = await assertPublicHost(parsed.hostname, { lookup });
+  if (!fetchImpl) fetchImpl = pinnedFetch(addresses);
   const body = JSON.stringify({ id: `evt_${eventId}`, event: eventName, occurred_at: occurredAt, data: metadata || {} });
   const timestamp = Math.floor(Date.now() / 1000);
   const signature = signPayload(body, secret, timestamp);
@@ -81,7 +111,10 @@ async function sendWebhook({ url, secret, eventName, eventId, occurredAt, metada
     clearTimeout(timer);
   }
   if (res.status >= 200 && res.status < 300) return { status: res.status };
-  if (res.status >= 400 && res.status < 500) throw new UnrecoverableError(`Le point d'accès a répondu ${res.status} : erreur du côté du destinataire, aucune reprise (corrigez sa configuration).`);
+  // Une redirection n'est jamais suivie (la cible n'aurait pas été vérifiée) : à corriger du côté du destinataire
+  if (res.status >= 300 && res.status < 400) throw new UnrecoverableError(`Le point d'accès a répondu ${res.status} (redirection) : les redirections ne sont pas suivies, indiquez l'adresse finale.`);
+  // 408 (délai) et 429 (trop de requêtes) sont temporaires : on réessaie comme une erreur serveur
+  if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) throw new UnrecoverableError(`Le point d'accès a répondu ${res.status} : erreur du côté du destinataire, aucune reprise (corrigez sa configuration).`);
   throw new Error(`Le point d'accès a répondu ${res.status}.`);
 }
 
@@ -135,4 +168,4 @@ function jobHandlers({ db, env = process.env, lookup, fetchImpl } = {}) {
   };
 }
 
-module.exports = { sendWebhook, signPayload, isPrivateAddress, assertPublicHost, SsrfError, eventHandler, jobHandlers, sendTestEvent };
+module.exports = { pinnedFetch, sendWebhook, signPayload, isPrivateAddress, assertPublicHost, SsrfError, eventHandler, jobHandlers, sendTestEvent };

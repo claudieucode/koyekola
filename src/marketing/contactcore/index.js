@@ -285,6 +285,10 @@ function mergeContacts(ctx, masterId, sourceId) {
     }
     ctx.db.prepare("INSERT OR IGNORE INTO mk_contact_tags (organization_id, contact_id, tag_id) SELECT organization_id, ?, tag_id FROM mk_contact_tags WHERE contact_id = ?").run(master.id, source.id);
     ctx.db.prepare("INSERT OR IGNORE INTO mk_list_members (organization_id, list_id, contact_id) SELECT organization_id, list_id, ? FROM mk_list_members WHERE contact_id = ?").run(master.id, source.id);
+    // Les refus de la source suivent le maître (audit B1) : une personne désinscrite d'une liste ou d'une catégorie ne redevient jamais joignable par une fusion.
+    ctx.db.prepare("INSERT OR IGNORE INTO mk_unsubscribes (organization_id, contact_id, scope, list_id, source) SELECT organization_id, ?, scope, list_id, source FROM mk_unsubscribes WHERE contact_id = ?").run(master.id, source.id);
+    ctx.db.prepare("INSERT OR IGNORE INTO mk_contact_preferences (organization_id, contact_id, category_id, subscribed) SELECT organization_id, ?, category_id, subscribed FROM mk_contact_preferences WHERE contact_id = ?").run(master.id, source.id);
+    ctx.db.prepare("UPDATE mk_contact_preferences SET subscribed = 0, updated_at = datetime('now') WHERE contact_id = ? AND subscribed = 1 AND category_id IN (SELECT category_id FROM mk_contact_preferences WHERE contact_id = ? AND subscribed = 0)").run(master.id, source.id);
     ctx.db.prepare("INSERT OR IGNORE INTO mk_contact_property_values (organization_id, contact_id, property_id, value_text, value_number, value_date, value_boolean) SELECT organization_id, ?, property_id, value_text, value_number, value_date, value_boolean FROM mk_contact_property_values WHERE contact_id = ?").run(master.id, source.id);
     ctx.db.prepare("UPDATE mk_contact_notes SET contact_id = ? WHERE organization_id = ? AND contact_id = ?").run(master.id, org, source.id);
     ctx.db.prepare("UPDATE mk_events SET contact_id = ? WHERE organization_id = ? AND contact_id = ?").run(master.id, org, source.id);

@@ -11,6 +11,7 @@ const { audit } = require("../audience/shared");
 const { enqueue } = require("../queue/jobs");
 const templates = require("../templates");
 const { requireCampaign } = require("./campaigns");
+const stats = require("../pages/abstats");
 const { variantRevenue } = require("../revenue");
 
 const LETTERS = ["A", "B", "C"];
@@ -172,6 +173,26 @@ function pickWinner(results, metric) {
   return [...results].sort((a, b) => b[main] - a[main] || b[other] - a[other] || a.index - b.index)[0].index;
 }
 
+// Valeur probante du résultat (audit : le gagnant n'était que le meilleur taux brut, sans seuil). Comparaison du gagnant à la meilleure AUTRE version par le
+// test du Z sur deux proportions de pages/abstats.js (même méthode que les tests de pages). Elle ne bloque jamais l'envoi du reste de la cible : elle dit
+// seulement si l'avantage observé est établi.
+//  - ouvertures : mesure biaisée (protection de la vie privée des clients de messagerie, ouvertures automatiques) ; elle est signalée comme indicative ;
+//  - revenu : distribution trop asymétrique pour un test de proportions, le chiffre est décrit, pas « prouvé ».
+function evidence(results, metric, winnerIndex) {
+  const base = { level: "not_tested", p: null, confidence: 95, caveat: "" };
+  if (!Array.isArray(results) || results.length < 2 || !results[winnerIndex]) return base;
+  if (metric === "revenue") return { ...base, caveat: "Le chiffre d'affaires est décrit, pas testé statistiquement : il est trop irrégulier pour une comparaison fiable sur de petits envois." };
+  if (metric === "manual") return { ...base, caveat: "Version choisie par l'équipe." };
+  const key = metric === "opens" ? "opens" : "clicks";
+  const win = results[winnerIndex];
+  const rival = results.filter((r) => r.index !== winnerIndex).sort((a, b) => (b[key] / (b.sent || 1)) - (a[key] / (a.sent || 1)))[0];
+  const a = { views: rival.sent, conversions: rival[key] }, b = { views: win.sent, conversions: win[key] };
+  const caveat = metric === "opens" ? "Les ouvertures sont une mesure indicative : certains clients de messagerie les déclenchent automatiquement." : "";
+  if (!stats.approximationValid(a, b)) return { ...base, level: "insufficient", caveat: `Données insuffisantes : il faut au moins 5 ${key === "clicks" ? "clics" : "ouvertures"} et 5 messages sans, dans chaque version, pour conclure. ${caveat}`.trim() };
+  const c = stats.compare(a, b, 95);
+  return { level: c.significant && c.diff > 0 ? "significant" : "not_significant", p: c.p, confidence: 95, caveat: c.significant && c.diff > 0 ? caveat : `Écart non significatif au seuil de 95 % : la différence observée peut venir du hasard. ${caveat}`.trim() };
+}
+
 // Choix du gagnant (automatique : tâche programmée ; manuel : bouton de l'équipe). Le reste de la cible reçoit la version gagnante.
 function decideWinner(ctx, id, { manualIndex, now = Date.now(), enqueueDispatch } = {}) {
   const campaign = requireCampaign(ctx, id);
@@ -193,7 +214,7 @@ function decideWinner(ctx, id, { manualIndex, now = Date.now(), enqueueDispatch 
     if (!set.changes) return { winner: requireCampaign(ctx, id).ab_winner, already: true };
     const released = ctx.db.prepare("UPDATE mk_campaign_recipients SET variant = ?, held = 0, updated_at = ? WHERE campaign_id = ? AND held = 1 AND status = 'queued'").run(winner, now, id).changes;
     if (released && enqueueDispatch) enqueueDispatch(ctx, id, { runAt: now, key: `campaign:${id}:ab_winner` });
-    audit(ctx, "campaign.ab_winner", "campaign", id, { winner: LETTERS[winner], by: manual ? "manual" : "auto", released, results: results.map((r) => ({ v: r.letter, sent: r.sent, clicks: r.clicks, opens: r.opens })) });
+    audit(ctx, "campaign.ab_winner", "campaign", id, { winner: LETTERS[winner], by: manual ? "manual" : "auto", released, evidence: evidence(results, campaign.ab_metric, winner), results: results.map((r) => ({ v: r.letter, sent: r.sent, clicks: r.clicks, opens: r.opens })) });
     return { winner, released };
   });
 }
@@ -203,15 +224,17 @@ function abSummary(ctx, campaign) {
   if (!isAbTest(campaign)) return null;
   const held = ctx.db.prepare("SELECT COUNT(*) n FROM mk_campaign_recipients WHERE campaign_id = ? AND held = 1").get(campaign.id).n;
   const decided = campaign.ab_winner !== null && campaign.ab_winner !== undefined;
+  const results = variantResults(ctx, campaign);
   const phase = decided ? "decided" : campaign.ab_decide_at ? "waiting" : "testing";
   return {
     phase, metric: campaign.ab_metric, metricLabel: METRICS[campaign.ab_metric] || campaign.ab_metric, percent: campaign.ab_test_percent,
     waitMinutes: campaign.ab_wait_minutes, decideAt: campaign.ab_decide_at, decidedBy: campaign.ab_decided_by,
-    winner: decided ? campaign.ab_winner : null, winnerLetter: decided ? LETTERS[campaign.ab_winner] : null, held, results: variantResults(ctx, campaign),
+    winner: decided ? campaign.ab_winner : null, winnerLetter: decided ? LETTERS[campaign.ab_winner] : null, held, results,
+    evidence: decided ? evidence(results, campaign.ab_metric, campaign.ab_winner) : null,
   };
 }
 
 module.exports = {
   LETTERS, METRICS, MIN_PERCENT, MAX_PERCENT, MIN_WAIT, MAX_WAIT, MIN_PER_VARIANT,
-  variantsOf, isAbTest, templateIdOf, saveAbTest, testSize, abPreflight, assignVariants, scheduleDecision, variantResults, pickWinner, decideWinner, abSummary,
+  variantsOf, isAbTest, templateIdOf, saveAbTest, testSize, abPreflight, assignVariants, scheduleDecision, variantResults, pickWinner, evidence, decideWinner, abSummary,
 };
