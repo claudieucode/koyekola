@@ -2,12 +2,14 @@
 
   <div class="container-wide dashboard-header">
     <h1>Mon compte</h1>
-    <p>Vos informations et vos données personnelles.</p>
+    <p>Votre profil, la sécurité de votre compte et vos données personnelles.</p>
   </div>
 
   <div class="container-wide kv-account">
     <nav class="kv-account-nav" aria-label="Sections du compte">
-      <a href="#acc-info">Informations</a>
+      <a href="#acc-profile">Profil</a>
+      <a href="#acc-security">Sécurité</a>
+      <a href="#acc-sessions">Sessions</a>
       <a href="#acc-data">Mes données</a>
       <a href="#acc-delete" class="is-danger">Supprimer mon compte</a>
     </nav>
@@ -15,22 +17,44 @@
     <% if (error) { %><p class="field-error" role="alert"><%= error %></p><% } %>
     <% if (notice) { %><p class="account-notice" role="status"><%= notice %></p><% } %>
 
-    <section class="card card-pad account-section" aria-labelledby="acc-info">
-      <h2 id="acc-info">Informations</h2>
+    <%
+      const e = (k) => (errors && errors[k]) || "";
+      const bad = (k) => (e(k) ? ' aria-invalid="true" aria-describedby="ac-err-' + k + '"' : "");
+      const err = (k) => (e(k) ? '<p class="field-error" id="ac-err-' + k + '" role="alert">' + String(e(k)).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]) + "</p>" : "");
+      const fdt = (ms) => { const d = new Date(ms); return d.toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" }) + " " + d.toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" }); };
+      const others = sessions.filter((s) => !s.current);
+    %>
+    <section class="card card-pad account-section" aria-labelledby="acc-profile">
+      <h2 id="acc-profile">Profil</h2>
+      <p class="field-hint">Ces informations n'apparaissent que là où le site les affiche (par exemple à côté de vos avis et de vos commentaires).</p>
+      <form method="post" action="/mon-compte/profil" enctype="multipart/form-data" class="account-form" novalidate>
+        <div class="account-avatar">
+          <% if (p.avatar_path) { %><img src="<%= p.avatar_path %>" alt="Votre photo actuelle" width="72" height="72"><% } else { %><span class="avatar avatar-lg" aria-hidden="true" style="background:<%= avatarColor(p.username) %>"><%= p.username.slice(0, 1).toUpperCase() %></span><% } %>
+          <div>
+            <label for="ac-file">Photo de profil</label>
+            <input type="file" id="ac-file" name="thumbnail" accept="image/jpeg,image/png,image/gif,image/webp,image/avif">
+            <p class="field-hint">JPEG, PNG, GIF, WebP ou AVIF · 2 Mo au plus. Le type est vérifié sur le contenu du fichier.</p>
+            <% if (p.avatar_path) { %><label class="checkbox-row"><input type="checkbox" name="remove_avatar" value="1"> Supprimer ma photo</label><% } %>
+          </div>
+        </div>
+        <div class="account-grid">
+          <div class="field-group"><label for="ac-first">Prénom</label><input type="text" id="ac-first" name="first_name" maxlength="80" autocomplete="given-name" value="<%= p.firstName %>"<%- bad("first_name") %>><%- err("first_name") %></div>
+          <div class="field-group"><label for="ac-last">Nom de famille</label><input type="text" id="ac-last" name="last_name" maxlength="80" autocomplete="family-name" value="<%= p.lastName %>"<%- bad("last_name") %>><%- err("last_name") %></div>
+          <div class="field-group"><label for="ac-nick">Pseudo <span class="field-hint">(nécessaire)</span></label><input type="text" id="ac-nick" name="nickname" maxlength="80" required value="<%= p.nickname %>"<%- bad("nickname") %>><%- err("nickname") %></div>
+          <div class="field-group"><label for="ac-display">Nom à afficher</label><select id="ac-display" name="display_name"<%- bad("display_name") %>><% displayOptions.forEach((o) => { %><option value="<%= o %>"<%= o === (p.displayName || p.nickname) ? " selected" : "" %>><%= o %></option><% }) %></select><%- err("display_name") %></div>
+        </div>
+        <div class="field-group"><label for="ac-web">Site web</label><input type="text" inputmode="url" id="ac-web" name="website" maxlength="300" placeholder="https://" value="<%= p.website %>"<%- bad("website") %>><%- err("website") %></div>
+        <div class="field-group"><label for="ac-bio">À propos de vous <span class="field-hint">(<%= maxBio %> caractères au plus)</span></label><textarea id="ac-bio" name="bio" rows="4" maxlength="<%= maxBio * 4 %>"<%- bad("bio") %>><%= p.bio %></textarea><%- err("bio") %></div>
+        <button type="submit" class="btn btn-primary">Enregistrer le profil</button>
+      </form>
       <dl class="account-facts">
-        <div><dt>Nom d'utilisateur</dt><dd><%= account.username %></dd></div>
-        <div><dt>Adresse e-mail</dt><dd><%= account.email %> <span class="badge <%= account.email_verified_at ? "badge-success" : "badge-warning" %>"><%= account.email_verified_at ? "Confirmée" : "Non confirmée" %></span></dd></div>
+        <div><dt>Identifiant</dt><dd><%= account.username %></dd></div>
         <div><dt>Compte créé le</dt><dd><%= formatDate(account.created_at) %></dd></div>
         <div><dt>Formations suivies</dt><dd><%= stats.courses %></dd></div>
       </dl>
-      <% if (!account.email_verified_at) { %>
-        <form method="post" action="/mon-compte/confirmer-email" class="account-inline-form">
-          <span class="field-hint">Confirmez votre adresse avec le lien reçu à l'inscription.</span>
-          <button type="submit" class="btn btn-outline btn-sm">Recevoir un nouveau lien</button>
-        </form>
-      <% } %>
-      <p class="field-hint">Mot de passe oublié ou à changer ? <a href="/mot-de-passe-oublie">Recevoir un lien de réinitialisation</a>.</p>
     </section>
+
+    <%- include("partials/account-security") %>
 
     <section class="card card-pad account-section" aria-labelledby="acc-data">
       <h2 id="acc-data">Mes données</h2>

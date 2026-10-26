@@ -99,6 +99,20 @@ function checkImageFile(file) {
   if (!SIGNATURES.some(([, test]) => test(head))) throw new UserError("Ce fichier n'est pas une image JPEG, PNG, GIF, WebP ou AVIF.");
 }
 
+// Applique une photo envoyée (fichier déjà validé par checkImageFile) ou sa suppression : la base est mise à jour d'abord, l'ancien fichier n'est effacé qu'ensuite.
+// Renvoie true si la photo a changé. Ne touche que le compte passé en paramètre.
+function applyAvatar(userId, { file = null, remove = false } = {}) {
+  const row = db.prepare("SELECT avatar_path FROM users WHERE id = ?").get(userId);
+  if (!row) throw new UserError("Compte introuvable.");
+  let avatar = row.avatar_path;
+  if (file) avatar = `/uploads/thumbnails/${file.filename}`;
+  else if (remove) avatar = null;
+  if (avatar === row.avatar_path) return false;
+  db.prepare("UPDATE users SET avatar_path = ? WHERE id = ?").run(avatar, userId);
+  if (row.avatar_path) require("../utils/uploads").removeUploadedFile(row.avatar_path);
+  return true;
+}
+
 // ----- Adresse e-mail : l'adresse vérifiée n'est remplacée qu'après ouverture du lien envoyé à la NOUVELLE adresse -----
 const EMAIL_TTL_MS = 24 * 60 * 60 * 1000;
 const secret = () => process.env.SESSION_SECRET || "dev-secret";
@@ -195,4 +209,4 @@ function themeOf(userId) {
   return row ? prefsOf(row.prefs).theme : "auto";
 }
 
-module.exports = { profileOf, displayOptions, shownName, saveProfile, checkImageFile, requestEmailChange, cancelEmailChange, confirmEmailChange, readEmailToken, changePassword, sessionsOf, revokeSessions, deviceOf, themeOf, THEMES, MAX_BIO, MAX_AVATAR, MIN_PASSWORD };
+module.exports = { profileOf, displayOptions, shownName, saveProfile, checkImageFile, applyAvatar, requestEmailChange, cancelEmailChange, confirmEmailChange, readEmailToken, changePassword, sessionsOf, revokeSessions, deviceOf, themeOf, THEMES, MAX_BIO, MAX_AVATAR, MIN_PASSWORD };

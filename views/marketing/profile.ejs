@@ -52,8 +52,9 @@
           <div class="mk-pf-ctl">
             <form method="post" action="<%= BASE %>/email" class="mk-pf-inline" novalidate>
               <input type="email" id="pf-email" name="email" required maxlength="254" autocomplete="email" value="<%= emailValue || (p.pendingEmail || p.email) %>"<%- bad("email") %>>
+              <input type="password" id="pf-email-pwd" name="current_password" required autocomplete="current-password" placeholder="Mot de passe actuel" aria-label="Mot de passe actuel (nécessaire pour changer l'adresse)"<%- bad("emailPassword") %>>
               <button type="submit" class="btn btn-outline btn-sm">Changer l'adresse</button>
-            </form><%- err("email") %>
+            </form><%- err("email") %><%- err("emailPassword") %>
             <p class="field-hint">Adresse actuelle : <strong><%= p.email %></strong> · <%= p.email_verified_at ? "confirmée" : "non confirmée" %>. Si vous la modifiez, un e-mail de confirmation est envoyé à la nouvelle adresse ; <strong>elle n'est active qu'après confirmation</strong>.</p>
             <% if (p.pendingEmail) { %><div class="mk-pf-pending" role="status"><span>En attente de confirmation : <strong><%= p.pendingEmail %></strong></span>
               <form method="post" action="<%= BASE %>/email/annuler"><button type="submit" class="btn btn-ghost btn-sm">Annuler la demande</button></form></div><% } %>

@@ -107,7 +107,8 @@
   .kv-auth { grid-template-columns: 1fr; min-height: 0; }
   .kv-auth-aside { padding: 28px 20px; gap: 18px; }
   .kv-auth-aside ul { display: none; }
-  .kv-account { grid-template-columns: 1fr; gap: 16px; }
+  .kv-account { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .kv-account > * { min-width: 0; }
   .kv-account-nav { position: static; flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--kv-line); }
   .kv-account-nav a { flex: none; }
 }

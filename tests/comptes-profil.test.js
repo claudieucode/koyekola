@@ -156,7 +156,7 @@ describe("Profil : photo", () => {
 describe("Profil : adresse e-mail", () => {
   test("la demande n'active rien : l'adresse vérifiée reste, la nouvelle est « en attente » et visible", async () => {
     const a = await member("editor"), id = idOf(a), old = a.email;
-    const r = await a.post(`${P}/email`, { email: "Nouvelle.Adresse@Exemple.fr" });
+    const r = await a.post(`${P}/email`, { current_password: "MotDePasseEleve123", email: "Nouvelle.Adresse@Exemple.fr" });
     assert.equal(r.status, 302);
     assert.equal(one("SELECT email FROM users WHERE id = ?", id).email, old, "adresse inchangée avant confirmation");
     assert.equal(one("SELECT pending_email FROM mk_user_profiles WHERE user_id = ?", id).pending_email, "Nouvelle.Adresse@Exemple.fr");
@@ -164,17 +164,27 @@ describe("Profil : adresse e-mail", () => {
     assert.ok(one("SELECT 1 x FROM mail_outbox WHERE kind = 'email_change' AND lower(to_email) = 'nouvelle.adresse@exemple.fr'"), "e-mail de confirmation envoyé à la NOUVELLE adresse, pas à l'ancienne");
     assert.equal(one("SELECT COUNT(*) n FROM mail_outbox WHERE kind = 'email_change' AND lower(to_email) = ?", old.toLowerCase()).n, 0);
   });
+  test("réauthentification : sans mot de passe actuel, ou avec un faux, l'adresse n'est pas demandée et aucun e-mail ne part", async () => {
+    const a = await member("editor"), id = idOf(a);
+    for (const body of [{ email: "pirate@exemple.fr" }, { email: "pirate@exemple.fr", current_password: "faux" }]) {
+      const r = await a.post(`${P}/email`, body);
+      assert.equal(r.status, 302);
+    }
+    assert.equal(one("SELECT 1 x FROM mk_user_profiles WHERE user_id = ? AND pending_email IS NOT NULL", id), undefined, "rien en attente");
+    assert.equal(one("SELECT COUNT(*) n FROM mail_outbox WHERE lower(to_email) = 'pirate@exemple.fr'").n, 0, "aucun e-mail envoyé à la nouvelle adresse");
+    assert.match((await a.get(P)).text, /mot de passe actuel est incorrect/);
+  });
   test("adresse invalide, identique ou déjà prise : refusée avec message près du champ", async () => {
     const a = await member("editor"), b = await member("editor");
     for (const [bad, re] of [["pas-une-adresse", /pas valide/], [a.email, /déjà l'adresse/], [b.email, /ne peut pas être utilisée/]]) {
-      await a.post(`${P}/email`, { email: bad });
+      await a.post(`${P}/email`, { current_password: "MotDePasseEleve123", email: bad });
       assert.match((await a.get(P)).text, re, bad);
     }
     assert.equal(one("SELECT 1 x FROM mk_user_profiles WHERE user_id = ? AND pending_email IS NOT NULL", idOf(a)), undefined);
   });
   test("le lien exige un clic de confirmation, change l'adresse une seule fois, et un lien falsifié ou périmé échoue", async () => {
     const a = await member("editor"), id = idOf(a);
-    await a.post(`${P}/email`, { email: "confirme@exemple.fr" });
+    await a.post(`${P}/email`, { current_password: "MotDePasseEleve123", email: "confirme@exemple.fr" });
     const anon = new Client(srv.base), token = emailToken(id, "confirme@exemple.fr");
     const view = await anon.get(`/mon-compte/changer-email/${token}`);
     assert.equal(view.status, 200); assert.match(view.text, /Confirmer la nouvelle adresse/);

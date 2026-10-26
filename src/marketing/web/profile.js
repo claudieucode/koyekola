@@ -5,6 +5,7 @@
 const express = require("express");
 const db = require("../../config/database");
 const profile = require("../../services/accountProfile");
+const account = require("../../services/account");
 const { upload } = require("../../middlewares/upload");
 const { createRateLimiter } = require("../../middlewares/security");
 const { removeUploadedFile } = require("../../utils/uploads");
@@ -62,15 +63,8 @@ module.exports = () => {
       if (file) profile.checkImageFile(file);
       const result = profile.saveProfile(me(req), req.body);
       if (!result.ok) { discard(); stash(req, "profile", req.body, result.errors); flash(req, "error", "Le profil n'a pas été enregistré : corrigez les champs indiqués."); return res.redirect(back(req)); }
-      const row = db.prepare("SELECT avatar_path FROM users WHERE id = ?").get(me(req));
-      let avatar = row.avatar_path;
-      if (file) avatar = `/uploads/thumbnails/${file.filename}`;
-      else if (req.body.remove_avatar) avatar = null;
-      if (avatar !== row.avatar_path) {
-        db.prepare("UPDATE users SET avatar_path = ? WHERE id = ?").run(avatar, me(req));
-        if (row.avatar_path) removeUploadedFile(row.avatar_path); // l'ancienne photo n'est effacée qu'une fois la base à jour (et seulement si elle est à ce compte)
-      }
-      audit(req, "profile.updated", { avatar: avatar !== row.avatar_path });
+      const avatarChanged = profile.applyAvatar(me(req), { file, remove: Boolean(req.body.remove_avatar) });
+      audit(req, "profile.updated", { avatar: avatarChanged });
       flash(req, "ok", "Profil enregistré.");
       res.redirect(`${back(req)}?theme=1`);
     } catch (error) {
@@ -100,11 +94,20 @@ module.exports = () => {
   });
 
   // Adresse e-mail : l'adresse actuelle reste active jusqu'à l'ouverture du lien envoyé à la nouvelle
-  router.post("/site-web/profil/email", (req, res, next) => {
+  // Le mot de passe actuel est exigé (réauthentification) : une session volée ne doit pas suffire à détourner l'adresse, puis le compte via « mot de passe oublié »
+  router.post("/site-web/profil/email", async (req, res, next) => {
     try {
       const key = `mail:${me(req)}`;
       if (emailLimiter.isLimited(key)) { flash(req, "error", "Trop de demandes : réessayez dans une heure."); return res.redirect(back(req)); }
       emailLimiter.hit(key);
+      const pwdKey = `pwd:${me(req)}`;
+      if (passwordLimiter.isLimited(pwdKey)) { flash(req, "error", "Trop d'essais : réessayez dans une heure."); return res.redirect(back(req)); }
+      if (!(await account.checkPassword(me(req), req.body.current_password))) {
+        passwordLimiter.hit(pwdKey);
+        stash(req, "email", { email: String(req.body.email || "").slice(0, 254) }, { emailPassword: "Le mot de passe actuel est incorrect." });
+        flash(req, "error", "L'adresse n'a pas été modifiée : confirmez avec votre mot de passe actuel.");
+        return res.redirect(back(req));
+      }
       let r;
       try { r = profile.requestEmailChange(me(req), req.body.email); } catch (error) {
         if (!(error instanceof UserError)) throw error;

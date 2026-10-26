@@ -1,13 +1,25 @@
-<%- include("../partials/header", { title: "Mon profil" }) %>
+<%- include("../partials/header", { title: "Profil et paramètres" }) %>
 
   <div class="container">
-    <h1>Mon profil</h1>
-    <p class="field-hint" style="margin-top:-6px;">Ces informations sont affichées dans la section « Votre formateur » de chacune de vos formations.</p>
+    <h1>Profil et paramètres</h1>
+    <p class="field-hint" style="margin-top:-6px;">Votre profil de formateur, la sécurité de votre compte et vos sessions.</p>
+    <nav class="account-tabs" aria-label="Sections">
+      <a href="#fp-public">Profil formateur</a>
+      <a href="#acc-security">Sécurité</a>
+      <a href="#acc-sessions">Sessions</a>
+      <a href="/mon-compte">Identité, mes données, suppression du compte</a>
+    </nav>
+    <% if (flash && flash.type === "ok") { %><p class="form-success" role="status"><%= flash.text %></p><% } %>
+    <% if (flash && flash.type === "error") { %><p class="field-error" role="alert"><%= flash.text %></p><% } %>
     <% if (saved) { %><p class="form-success" role="status">Profil enregistré.</p><% } %>
+    <% if (error) { %><p class="field-error" role="alert"><%= error %> Rien n'a été enregistré.</p><% } %>
 
+    <section class="account-section" id="fp-public" aria-labelledby="fp-public-h">
+    <h2 id="fp-public-h">Profil formateur</h2>
+    <p class="field-hint">Ces informations sont affichées dans la section « Votre formateur » de chacune de vos formations.</p>
     <form action="/formateur/profil" method="post" enctype="multipart/form-data" class="content-card">
       <div class="field-group">
-        <label for="profile-photo">Photo <span class="field-hint">(JPEG, PNG, WebP, GIF ou AVIF ; carrée de préférence)</span></label>
+        <label for="profile-photo">Photo <span class="field-hint">(JPEG, PNG, WebP, GIF ou AVIF · 2 Mo au plus ; carrée de préférence)</span></label>
         <div class="profile-photo-row">
           <% if (profile.avatar_path) { %>
             <img class="profile-photo" src="<%= profile.avatar_path %>" alt="Photo actuelle" width="84" height="84">
@@ -28,6 +40,10 @@
       </div>
       <button type="submit" class="btn btn-primary">Enregistrer</button>
     </form>
+    </section>
+    <div class="instructor-account">
+      <%- include("../partials/account-security") %>
+    </div>
   </div>
 
 <%- include("../partials/footer") %>

@@ -31,7 +31,7 @@
 .dash-collapse { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: var(--dash-radius-sm); background: none; color: inherit; opacity: 0.7; cursor: pointer; transition: background var(--dash-ease), opacity var(--dash-ease); }
 .dash-collapse:hover { background: var(--dash-hover); opacity: 1; }
 .dash-nav { flex: 1; overflow-y: auto; padding: 0 var(--s3) var(--s3); }
-.dash-group { margin: var(--s4) var(--s2) var(--s1); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.55; white-space: nowrap; }
+.dash-group { margin: var(--s4) var(--s2) var(--s1); font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; white-space: nowrap; } /* 0,55 : contraste insuffisant (AA) sur le fond du menu */
 .dash-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .dash-link { position: relative; display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 38px; padding: 0 var(--s3); border: 0; border-radius: var(--dash-radius-sm); background: none; color: inherit; font: inherit; font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; text-align: left; transition: background var(--dash-ease), color var(--dash-ease); }
 .dash-link .icon { flex: none; opacity: 0.8; }

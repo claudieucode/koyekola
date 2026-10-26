@@ -78,7 +78,7 @@ describe("design v3 : pages publiques, élève, authentification, erreurs, compt
     test("Mon compte : navigation de sections dont chaque ancre existe, sections et formulaires d'origine", async () => {
       const t = await text(student, "/mon-compte");
       assert.match(t, /class="kv-account-nav"/);
-      for (const id of ["acc-info", "acc-data", "acc-delete"]) { assert.ok(t.includes(`href="#${id}"`), `lien #${id}`); assert.ok(t.includes(`id="${id}"`), `cible #${id}`); }
+      for (const id of ["acc-profile", "acc-security", "acc-sessions", "acc-data", "acc-delete"]) { assert.ok(t.includes(`href="#${id}"`), `lien #${id}`); assert.ok(t.includes(`id="${id}"`), `cible #${id}`); }
       assert.match(t, /action="\/mon-compte\/confirmer-email"/);
     });
   });
