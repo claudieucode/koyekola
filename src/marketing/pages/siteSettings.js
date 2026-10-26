@@ -20,6 +20,10 @@ const DEFAULT_SETTINGS = Object.freeze({
   layout: { fullWidth: false, contentWidth: 760, containerWidth: 1100, gutter: 16, breakpoints: { tablet: 1023, mobile: 767, wide: 1920 } },
   lightbox: { enabled: true, overlay: "#050c14", overlayOpacity: 82, arrows: true, closeOnOverlay: true, captions: true, animation: "fade" },
   transitions: { type: "none", duration: 300 },
+  // Valeurs propres à la tablette et au mobile (null = valeur globale). Appliquées sous les points de rupture du site (layout.breakpoints).
+  responsive: { tablet: { h1: null, h2: null, h3: null, body: null, gutter: null, spaceLg: null, spaceXl: null }, mobile: { h1: null, h2: null, h3: null, body: null, gutter: null, spaceLg: null, spaceXl: null } },
+  // Mode sombre du site : "off" = jamais ; "auto" = suit la préférence de la personne (système). Couleurs vides = couleur du site inchangée.
+  dark: { mode: "off", background: "", surface: "", text: "", muted: "", primary: "" },
   customCss: "",
   classes: [],
   extras: { language: "fr", smoothScroll: false, noindex: false },
@@ -132,6 +136,23 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   };
   const tr = src.transitions || {};
   const transitions = { type: oneOf(tr.type, TRANSITION_TYPES, "Transition de page", strict, "none"), duration: num(tr.duration, 100, 1000, "Transition : durée", strict, D.transitions.duration) };
+  const rs = src.responsive || {};
+  const RESP = { h1: [10, 96, "Titre 1"], h2: [10, 96, "Titre 2"], h3: [10, 96, "Titre 3"], body: [10, 40, "Texte courant"], gutter: [0, 80, "Marge latérale"], spaceLg: [0, 200, "Espacement L"], spaceXl: [0, 200, "Espacement XL"] };
+  const responsive = {};
+  for (const dev of ["tablet", "mobile"]) {
+    responsive[dev] = {};
+    for (const [k, [lo, hi, label]] of Object.entries(RESP)) {
+      const v = rs[dev] && rs[dev][k];
+      if (v === undefined || v === null || v === "") { responsive[dev][k] = null; continue; }
+      const n = Number(v);
+      if (Number.isFinite(n) && n >= lo && n <= hi) responsive[dev][k] = Math.round(n);
+      else if (strict) throw bad(`${label} (${dev === "tablet" ? "tablette" : "mobile"}) : un nombre entre ${lo} et ${hi} est attendu.`);
+      else responsive[dev][k] = null;
+    }
+  }
+  const dk = src.dark || {};
+  const darkHex = (v, label) => { const x = v === undefined || v === null ? "" : String(v).trim().toLowerCase(); if (!x) return ""; if (/^#[0-9a-f]{6}$/.test(x)) return x; if (strict) throw bad(`${label} : code hexadécimal attendu (ex. #101820).`); return ""; };
+  const dark = { mode: oneOf(dk.mode, ["off", "auto"], "Mode sombre", strict, "off"), background: darkHex(dk.background, "Mode sombre : fond"), surface: darkHex(dk.surface, "Mode sombre : surface"), text: darkHex(dk.text, "Mode sombre : texte"), muted: darkHex(dk.muted, "Mode sombre : texte discret"), primary: darkHex(dk.primary, "Mode sombre : couleur principale") };
   let customCss = "";
   const rawCss = src.customCss === undefined || src.customCss === null ? "" : String(src.customCss).replace(/\r\n?/g, "\n");
   if (rawCss.trim()) {
@@ -169,7 +190,7 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   // Commentaires du site : bloc complet (voir services/comments) ou null = le site hérite du site principal
   let commentsBlock = null;
   if (src.comments && typeof src.comments === "object") { try { commentsBlock = require("../../services/comments").normalizeSettings(src.comments); } catch { commentsBlock = null; } }
-  return { identity, background, layout, lightbox, transitions, customCss, classes, extras, seo, general, reading, comments: commentsBlock };
+  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, classes, extras, seo, general, reading, comments: commentsBlock };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus
@@ -197,6 +218,36 @@ function layoutCss(settings) {
   if (main.length) out.push(`.lp-site .lp-main{${main.join(";")}}`);
   if (L.containerWidth !== D.containerWidth) out.push(`.lp-site{--kw-band-w:${L.containerWidth}px}`);
   if (L.containerWidth !== D.containerWidth) out.push(`.lp-site :where(.kw-container:not(.kw-full):not(.kw-band):not(.kw-container .kw-container)){max-width:${L.containerWidth}px}`);
+  // Valeurs par appareil : variables posées en !important (les jetons du site sont en style de l'élément <body>), sous les points de rupture du site
+  const bp = breakpointsOf(s), R = s.responsive;
+  if (R) {
+    const dev = (max, r) => {
+      const v = [];
+      for (const k of ["h1", "h2", "h3"]) if (r[k] !== null) v.push(`--kw-${k}-size:${r[k]}px!important`);
+      if (r.body !== null) v.push(`--kw-body-size:${r.body}px!important`);
+      if (r.spaceLg !== null) v.push(`--kw-space-lg:${r.spaceLg}px!important`);
+      if (r.spaceXl !== null) v.push(`--kw-space-xl:${r.spaceXl}px!important`);
+      const parts = [];
+      if (v.length) parts.push(`.lp-site{${v.join(";")}}`);
+      if (r.gutter !== null) parts.push(`.lp-site .lp-main{padding-left:${r.gutter}px;padding-right:${r.gutter}px}`);
+      if (parts.length) out.push(`@media (max-width:${max}px){${parts.join("")}}`);
+    };
+    dev(bp.tablet, R.tablet); dev(bp.mobile, R.mobile);
+  }
+  // Mode sombre : couleurs du site remplacées quand la personne préfère un thème sombre (ou quand l'aperçu le force)
+  const D2 = s.dark;
+  if (D2 && D2.mode === "auto") {
+    const v = [];
+    if (D2.background) v.push(`--kw-background:${D2.background}!important`, `--lp-bg:${D2.background}!important`);
+    if (D2.surface) v.push(`--kw-surface:${D2.surface}!important`);
+    if (D2.text) v.push(`--kw-text:${D2.text}!important`, `--lp-text:${D2.text}!important`);
+    if (D2.muted) v.push(`--kw-muted:${D2.muted}!important`);
+    if (D2.primary) v.push(`--kw-primary:${D2.primary}!important`, `--kw-on-primary:${require("./tokens").onColor(D2.primary)}!important`);
+    if (v.length) {
+      out.push(`@media (prefers-color-scheme:dark){.lp-site{${v.join(";")};color-scheme:dark}}`);
+      out.push(`html[data-kw-force-dark] .lp-site{${v.join(";")};color-scheme:dark}`);
+    }
+  }
   if (s.extras.smoothScroll) out.push(`@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}`);
   return out.join("\n");
 }

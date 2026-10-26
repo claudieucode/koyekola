@@ -33,7 +33,10 @@ const PANELS = [
   { id: "arriere-plan", label: "Arrière-plan", icon: "image", hint: "Couleur, dégradé et image de fond des pages." },
   { id: "images", label: "Images", icon: "image", hint: "Arrondi, bordure, ombre et cadrage des images." },
   { id: "formulaires", label: "Champs de formulaire", icon: "form", hint: "Apparence des champs (inscription, recherche)." },
-  { id: "en-tete", label: "En-tête", icon: "header", hint: "Logo, annonce et boutons de l'en-tête." },
+  { id: "appareils", label: "Tablette et mobile", icon: "tablet", hint: "Tailles et marges propres à la tablette et au mobile." },
+  { id: "mode-sombre", label: "Mode sombre", icon: "moon", hint: "Couleurs du site pour les visiteurs qui préfèrent un thème sombre." },
+  { id: "palette", label: "Palette du site", icon: "palette", hint: "Couleurs nommées, réutilisables dans tout le site." },
+  { id: "en-tete", label: "En-tête", icon: "header", hint: "Logo, annonce et boutons de l'en-tête (site principal) ; composant d'en-tête (sites)." },
   { id: "menus", label: "Menus", icon: "menu", hint: "Menus du site et emplacements." },
   { id: "pied", label: "Pied de page", icon: "footer", hint: "Marque, texte et mentions du pied de page." },
   { id: "boutons", label: "Boutons", icon: "button", hint: "Forme, couleurs et états des boutons." },
@@ -122,6 +125,11 @@ add("header.cta.url", "en-tete", "text", "Adresse du bouton", { scope: ["princip
 add("header.cta.style", "en-tete", "select", "Style du bouton", { scope: ["principal"], live: false, options: [["primary", "Principal"], ["secondary", "Secondaire"], ["outline", "Contour"]], showIf: { "header.cta.enabled": true } });
 add("header.mobile.showCta", "en-tete", "toggle", "Bouton d'action sur mobile", { scope: ["principal"], live: false });
 
+// En-tête et pied d'un SITE : quel composant réutilisable du Page Builder sert d'en-tête / de pied (le contenu du composant se compose dans le Page Builder)
+const partOptions = (siteId) => [["", "Aucun"], ...db.prepare("SELECT id, name FROM mk_web_components WHERE (site_id IS NULL OR site_id = ?) AND organization_id = (SELECT organization_id FROM mk_sites WHERE id = ?) ORDER BY name COLLATE NOCASE").all(siteId, siteId).map((c) => [c.id, c.name])];
+add("parts.header", "en-tete", "select", "Composant d'en-tête du site", { scope: ["site"], live: false, part: true, options: partOptions, help: "Affiché en haut de chaque page du site (sauf exception de page). Son contenu se modifie dans le Page Builder." });
+add("parts.footer", "pied", "select", "Composant de pied de page du site", { scope: ["site"], live: false, part: true, options: partOptions, help: "Affiché en bas de chaque page du site. Son contenu se modifie dans le Page Builder." });
+
 // Pied de page
 add("footer.brand.mode", "pied", "select", "Marque du pied de page", { scope: ["principal"], live: false, options: [["text", "Texte"], ["image", "Image de la médiathèque"], ["header", "Comme l'en-tête"]] });
 add("footer.brand.text", "pied", "text", "Nom affiché", { scope: ["principal"], max: 40, live: false });
@@ -181,26 +189,42 @@ add("tokens.forms.placeholderColor", "formulaires", "color", "Aide à la saisie"
 add("tokens.forms.labelColor", "formulaires", "color", "Libellés", { scope: ["site"], allowEmpty: true });
 add("tokens.forms.accent", "formulaires", "color", "Cases et boutons radio", { scope: ["site"], allowEmpty: true });
 
+// Valeurs par appareil (rendues sous les points de rupture du site par siteSettings.layoutCss)
+for (const [dev, name] of [["tablet", "tablette"], ["mobile", "mobile"]]) {
+  for (const [k, label, lo, hi] of [["h1", "Titre 1", 10, 96], ["h2", "Titre 2", 10, 96], ["h3", "Titre 3", 10, 96], ["body", "Texte courant", 10, 40]]) add(`settings.responsive.${dev}.${k}`, "appareils", "number", `${label} — ${name}`, { scope: ["site"], min: lo, max: hi, unit: "px", nullable: true, help: k === "h1" ? "Vide : la taille globale s'applique." : undefined });
+  add(`settings.responsive.${dev}.gutter`, "appareils", "number", `Marge latérale — ${name}`, { scope: ["site"], min: 0, max: 80, unit: "px", nullable: true });
+  add(`settings.responsive.${dev}.spaceLg`, "appareils", "number", `Espacement L — ${name}`, { scope: ["site"], min: 0, max: 200, unit: "px", nullable: true });
+  add(`settings.responsive.${dev}.spaceXl`, "appareils", "number", `Espacement XL — ${name}`, { scope: ["site"], min: 0, max: 200, unit: "px", nullable: true });
+}
+
+// Mode sombre du site
+add("settings.dark.mode", "mode-sombre", "select", "Mode sombre", { scope: ["site"], options: [["off", "Désactivé"], ["auto", "Selon la préférence du visiteur"]], help: "Activé : les couleurs ci-dessous remplacent celles du site chez les visiteurs dont l'appareil est en thème sombre." });
+for (const [k, label] of [["background", "Fond"], ["surface", "Surface (cartes)"], ["text", "Texte"], ["muted", "Texte discret"], ["primary", "Couleur principale"]]) add(`settings.dark.${k}`, "mode-sombre", "color", label, { scope: ["site"], allowEmpty: true, showIf: { "settings.dark.mode": "auto" } });
+
+// Palette nommée du site (jetons « customColors » : utilisables dans les styles des éléments)
+add("tokens.customColors", "palette", "palette", "Couleurs de la palette", { scope: ["site"], max: tokensLib.MAX_CUSTOM_COLORS, help: "Donnez un nom à une couleur pour la réutiliser. Les couleurs nommées sont proposées dans les sélecteurs de couleur de cet écran." });
+
 // CSS (un site : réglage « customCss » du site ; le principal n'a pas de CSS additionnel enregistrable)
 add("settings.customCss", "css", "css", "CSS additionnel du site", { scope: ["site"], perm: "pages.code", max: 20000, help: "Règles « .ma-classe { … } » appliquées aux pages du site (aucun @, aucune ressource externe)." });
 
 const BY_ID = new Map(controls.map((c) => [c.id, c]));
-const ROOTS = ["tokens", "header", "footer", "settings", "name"];
+const ROOTS = ["tokens", "header", "footer", "settings", "name", "parts"];
 
 // Ce que le moteur ne sait PAS rendre : affiché tel quel dans le personnalisateur (jamais une option sans effet)
 const UNSUPPORTED = {
   principal: [
     ["Logo pour fonds sombres", "Le site principal n'a pas de variante sombre de son logo."],
+    ["Mode sombre du site", "Le moteur d'apparence du site principal n'a pas de jeu de couleurs sombre (réservé aux sites)."],
     ["Favicon", "L'icône de l'onglet du site principal est un fichier du projet (/favicon.svg), pas un réglage."],
     ["Hauteur, ombre et comportement au défilement de l'en-tête", "L'en-tête du site principal a une mise en forme fixe."],
     ["CSS additionnel", "Le moteur d'apparence du site principal n'enregistre pas de CSS libre."],
     ["Options des articles, archives et pagination", "Les gabarits du blog n'exposent pas de réglages de thème (ils se règlent dans Apparence → Templates)."],
-    ["Valeurs différentes par appareil", "Les réglages sont globaux : le moteur n'a pas de jeu de valeurs propre à la tablette ou au mobile (l'aperçu montre le comportement responsive réel)."],
+    ["Valeurs différentes par appareil", "Les réglages du site principal sont globaux (l'aperçu montre le comportement responsive réel) ; les valeurs par appareil existent pour les sites."],
+    ["Lien d'aperçu partageable", "Réservé aux sites : une page publiée du site sert de support au lien."],
   ],
   site: [
-    ["Logo pour fonds sombres", "Les sites n'ont pas de variante sombre du logo."],
-    ["En-tête et pied de page", "Ils sont composés dans le Page Builder (composants du site) : ils se modifient là, pas ici."],
-    ["Valeurs différentes par appareil", "Les réglages sont globaux : le moteur n'a pas de jeu de valeurs propre à la tablette ou au mobile (l'aperçu montre le comportement responsive réel). Les points de rupture se règlent dans les réglages du site."],
+    ["Logo pour fonds sombres", "Les sites n'ont pas de variante sombre du logo (le mode sombre change les couleurs, pas les images)."],
+    ["Contenu de l'en-tête et du pied de page", "Ce sont des composants du Page Builder : on choisit ici lesquels s'affichent ; leur contenu se compose là-bas."],
     ["Options des articles, archives et pagination", "Les gabarits du blog n'exposent pas de réglages de thème (ils se règlent dans Apparence → Templates)."],
   ],
 };
@@ -232,17 +256,27 @@ function liveConfig(ctx, siteId) {
     return { config: clone({ tokens: st.published.tokens, header: st.published.header, footer: st.published.footer }), revision: st.revision, pendingEngineDraft: st.hasDraft };
   }
   const site = pages().requireSite(ctx, siteId);
-  return { config: clone({ name: site.name, tokens: site.tokens, settings: site.settings }), revision: site.settings_revision, site, pendingEngineDraft: false };
+  return { config: clone({ name: site.name, tokens: site.tokens, settings: site.settings, parts: { header: site.header_component_id || null, footer: site.footer_component_id || null } }), revision: site.settings_revision, site, pendingEngineDraft: false };
 }
 
 // ---------- Validation d'un ensemble de changements ----------
 // Chaque chemin doit exister dans le catalogue de CE site ; la valeur est convertie puis validée par le moteur lui-même (validation stricte).
 function coerce(c, raw, siteId) {
+  if (c.kind === "palette") {
+    if (!Array.isArray(raw) || raw.length > c.max) throw new UserError(`${c.label} : ${c.max} couleurs au plus.`);
+    return raw.map((x) => ({ key: String((x && x.key) || ""), label: String((x && x.label) || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40), hex: String((x && x.hex) || "").trim().toLowerCase() }));
+  }
   if (c.kind === "toggle") return raw === true || raw === "1" || raw === 1 || raw === "true" || raw === "on";
   if (c.kind === "number") {
     if (raw === "" || raw === null || raw === undefined) { if (c.nullable || c.id.startsWith("tokens.link") || c.id.startsWith("tokens.type")) return null; throw new UserError(`${c.label} : une valeur est attendue.`); }
     const n = Number(raw);
     if (!Number.isFinite(n) || n < c.min || n > c.max) throw new UserError(`${c.label} : un nombre entre ${c.min} et ${c.max} est attendu.`);
+    return n;
+  }
+  if (c.kind === "select" && c.part) {
+    if (raw === "" || raw === null || raw === undefined) return "";
+    const n = Number(raw);
+    if (!Number.isInteger(n) || !c.options(siteId).some(([v]) => v === n)) throw new UserError(`${c.label} : composant inconnu pour ce site.`);
     return n;
   }
   if (c.kind === "select") {
@@ -309,7 +343,8 @@ function applyChanges(config, changes, siteId) {
   const name = String(next.name || "").trim();
   if (!name) throw new UserError("Le nom du site est obligatoire.");
   if (settings.customCss) { try { siteSettings().normalizeSiteCss(settings.customCss, { strict: true }); } catch (e) { throw new UserError(e.message); } }
-  return { config: { name, tokens, settings } };
+  const parts = { header: next.parts && next.parts.header ? Number(next.parts.header) : null, footer: next.parts && next.parts.footer ? Number(next.parts.footer) : null };
+  return { config: { name, tokens, settings, parts } };
 }
 // Les jetons sont « normalisés » : une valeur remplacée par un défaut (hors limites) est une erreur, pas une correction silencieuse
 function assertTokensKept(sent, normalized, changes) {
@@ -326,6 +361,7 @@ function diffAgainst(live, changes) {
   const out = {};
   for (const [id, v] of Object.entries(changes)) {
     const cur = getPath(live, id);
+    if (Array.isArray(v)) { if (JSON.stringify(v) !== JSON.stringify(Array.isArray(cur) ? cur.map((x) => ({ key: x.key, label: x.label, hex: x.hex })) : [])) out[id] = v; continue; }
     const same = typeof v === "number" ? Number(cur) === v : (v === null || v === "") ? (cur === null || cur === undefined || cur === "") : String(cur) === String(v);
     if (!same) out[id] = v;
   }
@@ -340,7 +376,7 @@ const resolveColor = (v, config) => {
   const custom = (t.customColors || []).find((c) => c.key === key);
   return (custom && custom.hex) || (t.colors && t.colors[key]) || "";
 };
-const valuesOf = (siteId, config) => Object.fromEntries(catalog(siteId).map((c) => { const v = getPath(config, c.id); return [c.id, v === undefined || v === null ? (c.kind === "toggle" ? false : "") : (c.kind === "color" ? resolveColor(v, config) : v)]; }));
+const valuesOf = (siteId, config) => Object.fromEntries(catalog(siteId).map((c) => { const v = getPath(config, c.id); return [c.id, v === undefined || v === null ? (c.kind === "toggle" ? false : "") : (c.kind === "color" ? resolveColor(v, config) : v)]; }).map(([id, v]) => [id, v === "" && BY_ID.get(id).kind === "palette" ? [] : v]));
 
 // ---------- Brouillon ----------
 const draftRow = (siteId) => db.prepare(`SELECT * FROM cms_customizer_drafts WHERE ${sameScope("site_id")}`).get(siteId);
@@ -358,8 +394,8 @@ function state(ctx, siteId, { can = () => true } = {}) {
   return {
     siteId, panels: panelsFor(siteId), unsupported: UNSUPPORTED[scopeName(siteId)],
     live: valuesOf(siteId, live.config), values: valuesOf(siteId, effective), changes,
-    draft: row ? { rev: row.rev, baseRev: row.base_rev, updatedAt: row.updated_at, updatedBy: row.updated_by, count: Object.keys(changes).length } : { rev: 0, baseRev: live.revision, updatedAt: null, count: 0 },
-    revision: live.revision, stale, pendingEngineDraft: live.pendingEngineDraft, can: Object.fromEntries(catalog(siteId).filter((c) => c.perm).map((c) => [c.id, Boolean(can(c.perm))])),
+    draft: row ? { rev: row.rev, baseRev: row.base_rev, updatedAt: row.updated_at, updatedBy: row.updated_by, count: Object.keys(changes).length, publishAt: row.publish_at ? `${row.publish_at.replace(" ", "T")}Z` : null, scheduleError: row.publish_error || null } : { rev: 0, baseRev: live.revision, updatedAt: null, count: 0 },
+    revision: live.revision, shares: activeShares(siteId), stale, pendingEngineDraft: live.pendingEngineDraft, can: Object.fromEntries(catalog(siteId).filter((c) => c.perm).map((c) => [c.id, Boolean(can(c.perm))])),
   };
 }
 
@@ -373,7 +409,7 @@ function saveDraft(ctx, siteId, rawChanges, userId, { rev, can } = {}) {
   if (!row && Number.isInteger(rev) && rev > 0) throw new UserError("Le brouillon a été supprimé ou publié depuis que vous l'avez ouvert. Rechargez le personnalisateur : vos modifications n'ont pas été enregistrées.");
   if (!Object.keys(changes).length) { discardDraft(siteId); return { rev: 0, count: 0 }; }
   const json = JSON.stringify(changes);
-  if (row) db.prepare("UPDATE cms_customizer_drafts SET changes = ?, rev = rev + 1, updated_by = ?, updated_at = datetime('now') WHERE id = ?").run(json, userId, row.id);
+  if (row) db.prepare("UPDATE cms_customizer_drafts SET changes = ?, rev = rev + 1, updated_by = ?, updated_at = datetime('now'), publish_at = NULL, scheduled_by = NULL WHERE id = ?").run(json, userId, row.id);
   else db.prepare("INSERT INTO cms_customizer_drafts (site_id, changes, rev, base_rev, updated_by) VALUES (?, ?, 1, ?, ?)").run(siteId, json, live.revision, userId);
   const now = draftRow(siteId);
   return { rev: now.rev, count: Object.keys(changes).length, updatedAt: now.updated_at };
@@ -430,6 +466,8 @@ function publish(ctx, siteId, userId, { rev, note = "", can = () => true } = {})
       appearance.publish(null, userId, note || "Personnaliser");
     } else {
       pages().saveSiteDesign(ctx, siteId, { tokens: config.tokens, settings: config.settings, name: config.name, revision: live.revision });
+      const lp = live.config.parts || {};
+      if ((lp.header || null) !== config.parts.header || (lp.footer || null) !== config.parts.footer) pages().setSiteParts(ctx, siteId, { header: config.parts.header, footer: config.parts.footer });
     }
     db.prepare("INSERT INTO cms_customizer_versions (site_id, changes, previous, note, published_by) VALUES (?, ?, ?, ?, ?)").run(siteId, JSON.stringify(changes), JSON.stringify(previous), String(note || "").slice(0, 120), userId);
     db.prepare(`DELETE FROM cms_customizer_versions WHERE ${sameScope("site_id")} AND id NOT IN (SELECT id FROM cms_customizer_versions WHERE ${sameScope("site_id")} ORDER BY id DESC LIMIT ?)`).run(siteId, siteId, MAX_VERSIONS);
@@ -446,11 +484,78 @@ function restoreVersion(ctx, siteId, versionId, userId, { can } = {}) {
   const r = db.prepare(`SELECT previous FROM cms_customizer_versions WHERE id = ? AND ${sameScope("site_id")}`).get(Number(versionId), siteId);
   if (!r) throw new UserError("Version introuvable.");
   const prev = parse(r.previous);
-  const usable = Object.fromEntries(Object.entries(prev).filter(([id]) => BY_ID.has(id) && BY_ID.get(id).scope.includes(scopeName(siteId))).map(([id, v]) => [id, v === null ? (BY_ID.get(id).kind === "toggle" ? false : "") : v]));
+  const usable = Object.fromEntries(Object.entries(prev).filter(([id]) => BY_ID.has(id) && BY_ID.get(id).scope.includes(scopeName(siteId))).map(([id, v]) => [id, v === null ? (BY_ID.get(id).kind === "toggle" ? false : BY_ID.get(id).kind === "palette" ? [] : "") : v]));
   if (!Object.keys(usable).length) throw new UserError("Cette version ne contient aucun réglage restaurable.");
   const row = draftRow(siteId);
   const merged = { ...(row ? parse(row.changes) : {}), ...usable };
   return saveDraft(ctx, siteId, merged, userId, { can });
 }
 
-module.exports = { PANELS, UNSUPPORTED, catalog, panelsFor, state, saveDraft, discardDraft, previewFor, publish, history, restoreVersion, cleanChanges, applyChanges, assetsOf, controlById: (id) => BY_ID.get(id) || null, MAX_VERSIONS };
+// ---------- Publication planifiée ----------
+// Le brouillon ENREGISTRÉ est publié à l'heure choisie, avec les droits de la personne qui l'a planifiée (revérifiés à ce moment-là).
+// Toute modification du brouillon annule la planification (on ne publie jamais un état que personne n'a relu). Un échec n'est jamais rejoué en silence :
+// la planification est annulée et la raison est conservée (publish_error) pour être affichée.
+const sqlUtc = (ms) => new Date(ms).toISOString().slice(0, 19).replace("T", " ");
+function schedule(siteId, userId, at, { rev, now = Date.now() } = {}) {
+  const row = draftRow(siteId);
+  if (!row) throw new UserError("Enregistrez d'abord un brouillon : rien à planifier.");
+  if (Number.isInteger(rev) && rev !== row.rev) throw new UserError("Le brouillon a changé depuis que vous l'avez ouvert : rechargez le personnalisateur avant de planifier.");
+  const t = Date.parse(String(at || ""));
+  if (!Number.isFinite(t)) throw new UserError("Date de publication invalide.");
+  if (t < now + 60_000) throw new UserError("Choisissez une date dans le futur (au moins une minute).");
+  if (t > now + 366 * 86_400_000) throw new UserError("La publication ne peut pas être planifiée à plus d'un an.");
+  db.prepare("UPDATE cms_customizer_drafts SET publish_at = ?, scheduled_by = ?, publish_error = NULL WHERE id = ?").run(sqlUtc(t), userId, row.id);
+  return { publishAt: new Date(t).toISOString() };
+}
+function unschedule(siteId) {
+  db.prepare(`UPDATE cms_customizer_drafts SET publish_at = NULL, scheduled_by = NULL WHERE ${sameScope("site_id")}`).run(siteId);
+}
+// Publie les brouillons dont l'heure est venue. Appelée chaque minute par le serveur ; testée directement.
+function runDue({ organizationId, now = Date.now(), can } = {}) {
+  const cmsAccess = require("./cmsAccess");
+  const due = db.prepare("SELECT * FROM cms_customizer_drafts WHERE publish_at IS NOT NULL AND publish_at <= ? ORDER BY publish_at").all(sqlUtc(now));
+  const out = [];
+  for (const row of due) {
+    const siteId = row.site_id === null ? null : Number(row.site_id);
+    const userId = row.scheduled_by;
+    const allowed = (perm) => (can ? can(perm, userId, siteId) : cmsAccess.can(userId, perm, { organizationId, siteId }));
+    try {
+      if (!userId || !allowed("appearance.publish")) throw new UserError("La personne qui a planifié cette publication n'a plus le droit de publier.");
+      const ctx = { db, organizationId, userId, bus: null, settings: null };
+      if (siteId !== null && !pages().getSite(ctx, siteId)) throw new UserError("Le site n'existe plus.");
+      const r = publish(ctx, siteId, userId, { rev: row.rev, note: "Publication planifiée", can: allowed });
+      try { require("../marketing/audit").recordAudit(db, { organizationId, userId, action: "customizer.published_scheduled", resourceType: "site", resourceId: siteId, metadata: { settings: r.changed }, siteId }); } catch { /* journal non bloquant */ }
+      out.push({ siteId, ok: true });
+    } catch (e) {
+      db.prepare("UPDATE cms_customizer_drafts SET publish_at = NULL, scheduled_by = NULL, publish_error = ? WHERE id = ?").run(String(e.message || "Échec de la publication planifiée.").slice(0, 300), row.id);
+      out.push({ siteId, ok: false, error: e.message });
+    }
+  }
+  return out;
+}
+
+// ---------- Lien d'aperçu partageable ----------
+// Un lien (jeton secret, 7 jours par défaut, révocable) permet de voir le site avec le brouillon ENREGISTRÉ, sans compte, en lecture seule. Le jeton n'est jamais stocké (empreinte seulement).
+const crypto = require("node:crypto");
+const hashToken = (t) => crypto.createHash("sha256").update(String(t)).digest("hex");
+function createShare(siteId, userId, { days = 7 } = {}) {
+  if (siteId === null) throw new UserError("Le lien d'aperçu partageable n'est disponible que pour les sites.");
+  const row = draftRow(siteId);
+  if (!row) throw new UserError("Enregistrez d'abord un brouillon : rien à partager.");
+  const changes = cleanChanges(parse(row.changes), siteId);
+  if (!Object.keys(changes).length) throw new UserError("Le brouillon est vide : rien à partager.");
+  const d = Math.max(1, Math.min(30, Number(days) || 7));
+  const token = crypto.randomBytes(24).toString("hex");
+  db.prepare("INSERT INTO cms_customizer_shares (site_id, token_hash, changes, created_by, expires_at) VALUES (?, ?, ?, ?, datetime('now', ?))").run(siteId, hashToken(token), JSON.stringify(changes), userId, `+${d} days`);
+  return { token, days: d };
+}
+function shareLookup(token) {
+  if (!/^[a-f0-9]{48}$/.test(String(token || ""))) return null;
+  const r = db.prepare("SELECT site_id, changes FROM cms_customizer_shares WHERE token_hash = ? AND revoked_at IS NULL AND expires_at > datetime('now')").get(hashToken(token));
+  if (!r) return null;
+  try { return { siteId: Number(r.site_id), changes: cleanChanges(parse(r.changes), Number(r.site_id)) }; } catch { return null; }
+}
+const revokeShares = (siteId) => db.prepare("UPDATE cms_customizer_shares SET revoked_at = datetime('now') WHERE site_id = ? AND revoked_at IS NULL").run(siteId).changes;
+const activeShares = (siteId) => (siteId === null ? 0 : db.prepare("SELECT COUNT(*) AS n FROM cms_customizer_shares WHERE site_id = ? AND revoked_at IS NULL AND expires_at > datetime('now')").get(siteId).n);
+
+module.exports = { schedule, unschedule, runDue, createShare, shareLookup, revokeShares, activeShares, PANELS, UNSUPPORTED, catalog, panelsFor, state, saveDraft, discardDraft, previewFor, publish, history, restoreVersion, cleanChanges, applyChanges, assetsOf, controlById: (id) => BY_ID.get(id) || null, MAX_VERSIONS };

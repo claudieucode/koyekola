@@ -893,6 +893,12 @@ function siteParts(ctx, siteId) {
 // Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
 function withSiteParts(ctx, page, sections) {
   const p = siteParts(ctx, page && page.site_id);
+  // Aperçu du personnalisateur : en-tête / pied choisis dans le travail en cours de la personne (cette requête seulement)
+  const over = page && page.site_id ? require("../../services/previewParts").of(page.site_id) : null;
+  if (over) {
+    if (Object.hasOwn(over, "header")) p.header = partOf(ctx, over.header, "header");
+    if (Object.hasOwn(over, "footer")) p.footer = partOf(ctx, over.footer, "footer");
+  }
   let header = p.header;
   if (page && page.site_id && header) {
     if (page.header_mode === "none") header = null;

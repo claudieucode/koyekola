@@ -21,7 +21,7 @@
   var busy = false, seq = 0, applied = 0, warnings = [];
   var device = "desktop", openPanel = null;
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
-  function same(a, b) { return String(a === null || a === undefined ? "" : a) === String(b === null || b === undefined ? "" : b); }
+  function same(a, b) { var x = a === null || a === undefined ? "" : a, y = b === null || b === undefined ? "" : b; if (typeof x === "object" || typeof y === "object") return JSON.stringify(x) === JSON.stringify(y); return String(x) === String(y); }
   // Condition d'affichage : valeur exacte, liste de valeurs acceptées, ou « * » (n'importe quelle valeur non vide)
   function wants(v, want) { if (want === "*") return v !== null && v !== undefined && v !== ""; if (Array.isArray(want)) return want.some(function (w) { return same(v, w); }); return same(v, want); }
   function work() { var o = {}; Object.keys(values).forEach(function (id) { if (!same(values[id], live[id])) o[id] = values[id]; }); return o; }
@@ -156,6 +156,7 @@
     else if (c.kind === "toggle") input = toggleInput(c, lid, disabled);
     else if (c.kind === "media") input = mediaInput(c, lid, disabled);
     else if (c.kind === "css") input = cssInput(c, lid, disabled);
+    else if (c.kind === "palette") input = paletteInput(c, lid, disabled);
     else input = textInput(c, lid, disabled);
     wrap.appendChild(input);
     if (c.help) wrap.appendChild(h("small", { class: "kwc-help", text: c.help }));
@@ -179,7 +180,35 @@
       else setError(c.id, c.label + " : code hexadécimal attendu (ex. #0277b6).", true);
     });
     hex.addEventListener("blur", function () { if (!errors[c.id]) hex.value = values[c.id] || ""; });
-    return h("div", { class: "kwc-colorrow" }, [pick, hex]);
+    var rowEl = h("div", { class: "kwc-colorrow" }, [pick, hex]);
+    // Couleurs nommées de la palette du site : choix en un clic
+    var pal = c.id === "tokens.customColors" ? [] : (values["tokens.customColors"] || []);
+    if (!pal.length || disabled) return rowEl;
+    var chips = h("div", { class: "kwc-chips", role: "group", "aria-label": "Couleurs de la palette du site" }, pal.map(function (p) {
+      return h("button", { type: "button", class: "kwc-chip", title: p.label + " " + p.hex, "aria-label": "Utiliser la couleur « " + p.label + " » (" + p.hex + ")", style: "background:" + p.hex, onclick: function () { hex.value = p.hex; pick.value = p.hex; syncEmpty(p.hex); clearError(c.id); set(c.id, p.hex); } });
+    }));
+    return h("div", null, [rowEl, chips]);
+  }
+  // Palette nommée du site : liste de couleurs (nom + couleur), ajout, suppression
+  function paletteInput(c, lid, disabled) {
+    var list = clone(values[c.id] || []);
+    var box = h("div", { class: "kwc-palette", id: lid });
+    function commit() { set(c.id, clone(list)); }
+    list.forEach(function (item, i) {
+      var pick = h("input", { type: "color", class: "kwc-swatch", "aria-label": "Couleur « " + item.label + " »", value: /^#[0-9a-f]{6}$/i.test(item.hex) ? item.hex : "#000000", disabled: disabled });
+      var name = h("input", { type: "text", class: "kwc-palname", maxlength: 40, value: item.label, placeholder: "Nom (ex. Corail)", "aria-label": "Nom de la couleur", disabled: disabled, autocomplete: "off" });
+      var del = h("button", { type: "button", class: "kwc-iconbtn", "aria-label": "Supprimer la couleur « " + item.label + " »", title: "Supprimer", disabled: disabled, onclick: function () { list.splice(i, 1); commit(); refreshField(c); } }, [icon("x")]);
+      pick.addEventListener("input", function () { item.hex = pick.value; commit(); });
+      name.addEventListener("input", function () { item.label = name.value; clearError(c.id); commit(); });
+      box.appendChild(h("div", { class: "kwc-palrow" }, [pick, name, del]));
+    });
+    if (!list.length) box.appendChild(h("p", { class: "kwc-help", text: "Aucune couleur nommée pour l'instant." }));
+    box.appendChild(h("button", { type: "button", class: "kwc-btn", disabled: disabled || list.length >= c.max, text: "Ajouter une couleur", onclick: function () {
+      var n = list.length + 1, names = list.map(function (x) { return x.label; });
+      while (names.indexOf("Couleur " + n) >= 0) n++;
+      list.push({ key: "c-" + Math.random().toString(36).slice(2, 8), label: "Couleur " + n, hex: "#0277b6" }); commit(); refreshField(c);
+    } }));
+    return box;
   }
   function numberInput(c, lid, disabled) {
     var v = values[c.id]; v = v === null || v === undefined ? "" : v;
@@ -333,8 +362,11 @@
     $("#kwc-loading").classList.remove("on");
     var w, doc = frameDoc(); if (!doc) return; w = iframe.contentWindow;
     if (scrollKeep !== null) { try { w.scrollTo(0, scrollKeep); } catch (e) { /* ignoré */ } scrollKeep = null; }
+    if (forceDark) doc.documentElement.setAttribute("data-kw-force-dark", "");
+    installPick(doc, w);
     // La navigation reste dans l'aperçu (les réglages en cours restent appliqués) ; les liens externes ne quittent pas le personnalisateur ; aucun envoi de formulaire
     doc.addEventListener("click", function (e) {
+      if (pickMode) { e.preventDefault(); e.stopPropagation(); selectElement(e.target); return; }
       var a = e.target.closest && e.target.closest("a[href]"); if (!a) return;
       var href = a.getAttribute("href") || "";
       if (href.charAt(0) === "#" || /^(mailto:|tel:|javascript:)/i.test(href)) { if (/^javascript:/i.test(href)) e.preventDefault(); return; }
@@ -425,9 +457,13 @@
     if (act === "refresh") reloadFrame();
     else if (act === "versions") versions();
     else if (act === "discard") discard();
+    else if (act === "preview-dark") setDark(!forceDark);
+    else if (act === "plan") planModal();
+    else if (act === "share") shareModal();
     else if (act === "open-page") window.open(currentPage(), "_blank", "noopener");
     else if (act === "theme-mode") { var dark = document.documentElement.getAttribute("data-kola-theme") !== "dark"; document.documentElement.setAttribute("data-kola-theme", dark ? "dark" : "light"); try { localStorage.setItem("kolaTheme", dark ? "dark" : "light"); } catch (x) { /* préférence non mémorisée */ } $("#kwc-mode-label").textContent = dark ? "sombre" : "clair"; }
   });
+  if (boot.principal) { $$("[data-sites-only]").forEach(function (b) { b.hidden = true; }); }
   $("#kwc-mode-label").textContent = document.documentElement.getAttribute("data-kola-theme") === "dark" ? "sombre" : "clair";
   function collapse(on) { $("#kwc-main").classList.toggle("is-collapsed", on); $("#kwc-expand").hidden = !on; }
   $("#kwc-collapse").addEventListener("click", function () { collapse(true); $("#kwc-expand").focus(); });
@@ -452,6 +488,103 @@
   window.addEventListener("offline", function () { toast("Connexion perdue : vos modifications restent dans cette page.", "error"); });
   window.addEventListener("online", function () { toast("Connexion rétablie.", "ok"); if (dirty()) schedulePreview(); });
 
+
+  // ---------- Sélection directe dans l'aperçu ----------
+  // Chaque élément de la page réelle est rattaché au réglage qui le gouverne (d'après les balises et classes que le moteur de rendu produit) ; cliquer ouvre ce réglage.
+  var pickMode = false, hl = null;
+  function pickTarget(el) {
+    var p = boot.principal, n = el;
+    function T(label, panel, ctl) { if (ctl && !controls[ctl]) ctl = null; if (!boot.panels.some(function (x) { return x.id === panel; })) { panel = p ? "couleurs" : "arriere-plan"; ctl = null; } return { label: label, panel: panel, ctl: ctl }; }
+    while (n && n.nodeType === 1) {
+      var t = n.tagName.toLowerCase(), cls = " " + (typeof n.className === "string" ? n.className : "") + " ";
+      if (/^h[1-6]$/.test(t)) return T("Titre " + t.charAt(1), "typographie", "tokens.type." + t + ".size");
+      if (t === "button" || /\s(kw-button|lp-btn|btn)\s/.test(cls) || (t === "a" && /\sbtn[-\w]*\s/.test(cls))) return T("Bouton", "boutons", "tokens.buttons.normal.bg");
+      if (t === "input" || t === "select" || t === "textarea") return p ? T("Champ", "couleurs", "tokens.colors.surface") : T("Champ de formulaire", "formulaires", "tokens.forms.bg");
+      if (t === "img") return p ? T("Image", "mise-en-page", "tokens.radius.md") : T("Image", "images", "tokens.images.radius");
+      if (t === "a") return n.closest("nav, header, footer") ? T("Lien de navigation", "menus", null) : T("Lien", "typographie", "tokens.link.color");
+      if (t === "header") return p ? T("En-tête", "en-tete", "header.logo.text") : T("En-tête", "en-tete", "parts.header");
+      if (t === "footer") return p ? T("Pied de page", "pied", "footer.copyright") : T("Pied de page", "pied", "parts.footer");
+      if (t === "figcaption") return T("Légende", "typographie", "tokens.type.caption.size");
+      if (/^(p|li|blockquote)$/.test(t)) return T("Texte", "typographie", "tokens.type.body.size");
+      n = n.parentElement;
+    }
+    return p ? T("Fond de la page", "couleurs", "tokens.colors.background") : T("Fond de la page", "arriere-plan", "settings.background.color");
+  }
+  function pathOf(el) { var out = [], n = el; while (n && n.nodeType === 1 && out.length < 4 && n.tagName.toLowerCase() !== "html") { out.unshift(n.tagName.toLowerCase()); n = n.parentElement; } return out.join(" › "); }
+  function selectElement(el) {
+    var t = pickTarget(el);
+    var bar = $("#kwc-selbar"); bar.hidden = false; bar.textContent = "Sélection : " + pathOf(el) + " — " + t.label;
+    collapse(false); renderPanel(t.panel);
+    if (t.ctl) { var row = $('[data-ctl="' + t.ctl + '"]'); if (row) { row.scrollIntoView({ block: "center" }); row.classList.add("is-flash"); setTimeout(function () { row.classList.remove("is-flash"); }, 1400); var f = row.querySelector('input:not([tabindex="-1"]),select,textarea,button:not(.kwc-reset)'); if (f) setTimeout(function () { f.focus({ preventScroll: true }); }, 80); } }
+  }
+  function installPick(doc, w) {
+    hl = doc.createElement("div"); hl.setAttribute("data-kwc-hl", "");
+    hl.style.cssText = "position:absolute;z-index:2147483647;pointer-events:none;outline:2px solid #0277b6;outline-offset:1px;background:rgba(2,119,182,.10);display:none;border-radius:2px";
+    var tip = doc.createElement("div"); tip.style.cssText = "position:absolute;left:0;top:-24px;background:#0b2a40;color:#fff;font:600 12px/1 system-ui,sans-serif;padding:5px 8px;border-radius:5px;white-space:nowrap"; hl.appendChild(tip);
+    doc.body.appendChild(hl);
+    doc.addEventListener("mousemove", function (e) {
+      if (!pickMode) { hl.style.display = "none"; return; }
+      var el = e.target; if (!el || el === doc.body || el === doc.documentElement || el === hl || hl.contains(el)) { hl.style.display = "none"; return; }
+      var r = el.getBoundingClientRect();
+      hl.style.cssText += ";display:block;left:" + (r.left + w.scrollX) + "px;top:" + (r.top + w.scrollY) + "px;width:" + r.width + "px;height:" + r.height + "px";
+      tip.textContent = pickTarget(el).label;
+    }, true);
+    doc.addEventListener("mouseleave", function () { hl.style.display = "none"; });
+  }
+  function setPick(on) {
+    pickMode = on; var b = $("#kwc-pick"); b.setAttribute("aria-pressed", String(on)); b.classList.toggle("is-on", on);
+    $("#kwc-frame").classList.toggle("is-picking", on);
+    if (!on) { var bar = $("#kwc-selbar"); bar.hidden = true; if (hl) hl.style.display = "none"; }
+    else toast("Cliquez sur un élément de la page pour ouvrir son réglage. Échap pour quitter.", "ok");
+  }
+  $("#kwc-pick").addEventListener("click", function () { setPick(!pickMode); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && pickMode && $("#kwc-modal").hidden) setPick(false); });
+
+  // ---------- Aperçu en mode sombre ----------
+  var forceDark = false;
+  function setDark(on) { forceDark = on; var doc = frameDoc(); if (doc) { if (on) doc.documentElement.setAttribute("data-kw-force-dark", ""); else doc.documentElement.removeAttribute("data-kw-force-dark"); } $("#kwc-dark-label").textContent = on ? "oui" : "non"; }
+
+  // ---------- Publication planifiée et lien d'aperçu partageable ----------
+  function fmtDate(iso) { try { return new Date(iso).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" }); } catch (e) { return iso; } }
+  function needSaved() {
+    if (dirty()) { toast("Enregistrez d'abord le brouillon (bouton « Enregistrer le brouillon »).", "error"); return false; }
+    if (!Object.keys(saved).length) { toast("Aucun brouillon enregistré : modifiez un réglage, puis enregistrez.", "error"); return false; }
+    return true;
+  }
+  function renderSchedule() {
+    var old = $("#kwc-schedban"); if (old) old.remove();
+    var box = $("#kwc-banners");
+    if (boot.draft.publishAt) box.appendChild(h("div", { id: "kwc-schedban", class: "kwc-banner kwc-banner-info", role: "status" }, ["Publication planifiée le " + fmtDate(boot.draft.publishAt) + ". ", h("button", { type: "button", class: "kwc-link", text: "Annuler la planification", onclick: unschedule })]));
+    else if (boot.draft.scheduleError) box.appendChild(h("div", { id: "kwc-schedban", class: "kwc-banner kwc-banner-warn", role: "alert", text: "La dernière publication planifiée n'a pas eu lieu : " + boot.draft.scheduleError }));
+  }
+  function unschedule() { post("/deplanifier", {}).then(function () { boot.draft.publishAt = null; renderSchedule(); toast("Planification annulée.", "ok"); }, function (e) { toast(e.message, "error"); }); }
+  function planModal() {
+    if (!boot.can.publish) { toast("La publication est réservée aux comptes autorisés.", "error"); return; }
+    if (!needSaved()) return;
+    var d = new Date(Date.now() + 3600000); d.setMinutes(0, 0, 0);
+    var local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    var input = h("input", { type: "datetime-local", id: "kwc-sched", value: local, class: "kwc-sched" });
+    modal("Planifier la publication", ["Le brouillon enregistré sera publié à la date choisie, avec vos droits. Toute modification du brouillon annule la planification.", h("label", { for: "kwc-sched", class: "kwc-sched-l", text: "Date et heure (heure de votre appareil)" }), input], [{ label: "Annuler" }, { label: "Planifier", primary: true, run: function () {
+      var t = new Date(input.value); if (isNaN(t.getTime())) { toast("Date invalide.", "error"); return; }
+      post("/planifier", { at: t.toISOString(), rev: rev }).then(function (r) { boot.draft.publishAt = r.publishAt; boot.draft.scheduleError = null; renderSchedule(); toast("Publication planifiée.", "ok"); }, function (e) { toast(e.message, "error"); });
+    } }]);
+  }
+  function shareModal() {
+    if (boot.principal) { toast("Le lien d'aperçu partageable est réservé aux sites.", "error"); return; }
+    if (!boot.can.publish) { toast("Le partage est réservé aux comptes autorisés.", "error"); return; }
+    if (!needSaved()) return;
+    modal("Lien d'aperçu partageable", ["Toute personne qui a ce lien verra le site avec votre brouillon enregistré, sans compte, pendant 7 jours. Le lien est secret : ne le publiez pas."], [
+      { label: "Fermer" },
+      { label: "Révoquer les liens existants", run: function () { post("/revoquer-partage", {}).then(function (r) { toast(r.revoked ? "Liens révoqués." : "Aucun lien actif.", "ok"); }, function (e) { toast(e.message, "error"); }); } },
+      { label: "Créer le lien", primary: true, run: function () {
+        post("/partager", { days: 7 }).then(function (r) {
+          var field = h("input", { type: "text", readonly: true, class: "kwc-sharelink", value: r.url, "aria-label": "Lien d'aperçu partageable" });
+          modal("Lien créé (valable " + r.days + " jours)", [field], [{ label: "Fermer" }, { label: "Copier le lien", primary: true, run: function () { field.select(); var done = function () { toast("Lien copié.", "ok"); }; if (navigator.clipboard) navigator.clipboard.writeText(r.url).then(done, function () { try { document.execCommand("copy"); done(); } catch (e) { toast("Copiez le lien manuellement.", "error"); } }); else { try { document.execCommand("copy"); done(); } catch (e) { toast("Copiez le lien manuellement.", "error"); } } } }]);
+        }, function (e) { toast(e.message, "error"); });
+      } },
+    ]);
+  }
+
   // ---------- Bannières d'état ----------
   (function () {
     var box = $("#kwc-banners");
@@ -460,6 +593,7 @@
     else if (!boot.can.edit) ban("Vous pouvez voir ce site, mais pas le modifier (permission « appearance.styles »).", "warn");
     else if (!boot.can.publish) ban("Vous pouvez enregistrer des brouillons ; la publication est réservée aux administrateurs.", "info");
     if (boot.stale) ban("Un ancien brouillon n'était plus valide et n'a pas été repris : " + boot.stale, "warn");
+    renderSchedule();
     if (boot.pendingEngineDraft) ban("Un brouillon de l'Éditeur du site est en cours : publiez-le ou annulez-le d'abord pour pouvoir publier d'ici.", "warn");
   })();
 

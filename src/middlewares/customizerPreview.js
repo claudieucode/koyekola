@@ -7,12 +7,20 @@ const cmsAccess = require("../services/cmsAccess");
 
 function attach(req, res) {
   const user = req.session && req.session.user;
-  const work = req.session && req.session.kwCustomizer;
-  if (!user || !work || typeof work !== "object") return;
+  let work = req.session && req.session.kwCustomizer;
   let orgId = null;
   try { orgId = (db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get() || {}).id; } catch { return; }
   if (!orgId) return;
-  const can = (perm, siteId) => { try { return cmsAccess.can(user.id, perm, { organizationId: orgId, siteId }); } catch { return false; } };
+  let can = (perm, siteId) => { try { return cmsAccess.can(user.id, perm, { organizationId: orgId, siteId }); } catch { return false; } };
+  // Lien d'aperçu partageable (?kwshare=<jeton>) : le jeton est l'accréditation ; il ne donne accès qu'à l'aperçu en lecture de SON site, avec les réglages figés au partage
+  const token = req.query && typeof req.query.kwshare === "string" ? req.query.kwshare : "";
+  if (token) {
+    const shared = require("../services/customizer").shareLookup(token);
+    if (!shared) return;
+    work = { [String(shared.siteId)]: shared.changes };
+    can = (perm, siteId) => perm === "appearance.read" && siteId === shared.siteId;
+    req.kwShared = true; // le comptage des vues ignore ces visites
+  } else if (!user || !work || typeof work !== "object") return;
   res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" });
   const customizer = require("../services/customizer");
   const appearance = require("../services/appearance");
@@ -28,6 +36,18 @@ function attach(req, res) {
       } catch { return prev(); }
     };
   }
+  // En-tête et pied choisis (composants) : remplacements pour cette requête seulement
+  const store = {};
+  for (const [key, changes] of Object.entries(work)) {
+    if (key === "p" || !changes || typeof changes !== "object") continue;
+    const sid = Number(key);
+    if (!Number.isInteger(sid) || !can("appearance.read", sid)) continue;
+    const o = {};
+    if (Object.hasOwn(changes, "parts.header")) o.header = changes["parts.header"] === "" || changes["parts.header"] === null ? null : Number(changes["parts.header"]);
+    if (Object.hasOwn(changes, "parts.footer")) o.footer = changes["parts.footer"] === "" || changes["parts.footer"] === null ? null : Number(changes["parts.footer"]);
+    if (Object.keys(o).length) store[String(sid)] = o;
+  }
+  if (Object.keys(store).length) req.kwPartsPreview = store;
   // Site secondaire : le site donné à la vue reçoit son nom, ses jetons, ses réglages et ses feuilles de style recalculés
   const render = res.render.bind(res);
   res.render = (view, options, cb) => {
