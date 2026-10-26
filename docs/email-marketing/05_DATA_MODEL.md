@@ -1,10 +1,10 @@
 # 05 — Modèle de données
 
-Le schéma complet est décrit dans `EMAIL_MARKETING_DATABASE.md` (racine du dépôt) et dans les migrations `src/marketing/migrations/001…110`. Principes inchangés : toutes les tables sont préfixées `mk_`, chaque ligne porte `organization_id`, le journal d'audit est en écriture seule (déclencheurs `BEFORE UPDATE/DELETE`), les preuves de consentement ne se modifient pas.
+Le schéma complet est décrit dans `EMAIL_MARKETING_DATABASE.md` (racine du dépôt) et dans les migrations `src/marketing/migrations/001…111`. Principes inchangés : toutes les tables sont préfixées `mk_`, chaque ligne porte `organization_id`, le journal d'audit est en écriture seule (déclencheurs `BEFORE UPDATE/DELETE`), les preuves de consentement ne se modifient pas.
 
 ## Changement de cette mission
 
-`110_message_reserve.sql` : `ALTER TABLE mk_messages ADD COLUMN claimed_at TEXT;`
+`111_message_reserve.sql` : `ALTER TABLE mk_messages ADD COLUMN claimed_at TEXT;`
 
 - Rôle : réserver un message d'e-mail de scénario juste avant l'appel au fournisseur (voir `02_FUNCTIONAL_SPECIFICATIONS.md`, F7).
 - Pourquoi une colonne et non un nouvel état : la contrainte `CHECK (status IN (…))` de `mk_messages` ne contient pas « sending » ; la modifier exige de reconstruire la table (risque et durée inutiles).

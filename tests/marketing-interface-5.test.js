@@ -140,6 +140,11 @@ describe("éditeur", () => {
     assert.equal(bad.status, 400);
   });
   test("déclencheur personnalisé depuis le nœud déclencheur (enregistrement JSON du canevas)", async () => {
+    // Un scénario « transactionnel » (message de service) refuse un déclencheur personnalisé : il faut le type Marketing (audit B6)
+    const refused = await boss.postJson(`/marketing/automatisations/${id}`, { triggerEvent: "webhook.recu", triggerFilter: {}, steps: [] });
+    assert.equal(refused.status, 400);
+    assert.match(JSON.parse(refused.text).error, /pas un événement de service/);
+    sql("UPDATE mk_automations SET kind = 'marketing' WHERE id = ?", id);
     const ok = await boss.postJson(`/marketing/automatisations/${id}`, { name: "Bienvenue élève", triggerEvent: "webhook.recu", triggerFilter: {}, steps: [] });
     assert.equal(ok.status, 200);
     assert.equal(sql("SELECT trigger_event FROM mk_automations WHERE id = ?", id)[0].trigger_event, "webhook.recu");
@@ -148,10 +153,12 @@ describe("éditeur", () => {
     assert.match(JSON.parse(badTrigger.text).error, /Déclencheur inconnu/);
     // remis dans l'état attendu par les tests suivants
     await boss.postJson(`/marketing/automatisations/${id}`, { triggerEvent: "lms.user_registered", triggerFilter: {}, steps: [] });
+    sql("UPDATE mk_automations SET kind = 'transactional' WHERE id = ?", id);
   });
   test("plusieurs déclencheurs (jusqu'à 3) depuis le nœud déclencheur : payload fourni au client, aller-retour complet", async () => {
     const before = data((await boss.get(`/marketing/automatisations/${id}`)).text);
     assert.equal(before.automation.triggers.length, 1, "un seul déclencheur par défaut, comme avant cette phase");
+    sql("UPDATE mk_automations SET kind = 'marketing' WHERE id = ?", id); // déclencheurs hors événements de service : type Marketing (audit B6)
     const ok = await boss.postJson(`/marketing/automatisations/${id}`, {
       name: "Bienvenue élève",
       triggers: [{ event: "lms.user_registered", filter: {} }, { event: "lms.order_completed", filter: {} }, { event: "demo.custom_event", filter: {} }],
@@ -164,8 +171,9 @@ describe("éditeur", () => {
     // un 4e déclencheur : refusé
     const tooMany = await boss.postJson(`/marketing/automatisations/${id}`, { triggers: [{ event: "a.b" }, { event: "c.d" }, { event: "e.f" }, { event: "g.h" }], steps: [] });
     assert.equal(tooMany.status, 400);
-    // remis dans l'état attendu par les tests suivants
-    await boss.postJson(`/marketing/automatisations/${id}`, { triggerEvent: "lms.user_registered", triggerFilter: {}, steps: [] });
+    // remis dans l'état attendu par les tests suivants (liste complète : les 2e et 3e déclencheurs ne sont pas des événements de service)
+    await boss.postJson(`/marketing/automatisations/${id}`, { triggers: [{ event: "lms.user_registered", filter: {} }], steps: [] });
+    sql("UPDATE mk_automations SET kind = 'transactional' WHERE id = ?", id);
   });
   test("enregistrement JSON : étapes validées et normalisées ; erreur avec le numéro d'étape", async () => {
     const ok = await boss.postJson(`/marketing/automatisations/${id}`, { triggerEvent: "lms.user_registered", steps: [{ type: "email", templateId: tplId, junk: 1 }, { type: "wait", amount: 1, unit: "days" }, { type: "add_tag", tag: "Élève" }] });

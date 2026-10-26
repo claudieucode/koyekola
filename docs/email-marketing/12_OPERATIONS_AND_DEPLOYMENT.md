@@ -4,10 +4,10 @@
 
 | Changement | Nature | Risque | Retour arrière |
 |---|---|---|---|
-| Migration `110_message_reserve.sql` : colonne `mk_messages.claimed_at` (nulle par défaut) | additive, aucune ligne touchée | très faible | `ALTER TABLE mk_messages DROP COLUMN claimed_at` (SQLite ≥ 3.35) ; le code ignore la colonne si elle est vide |
+| Migration `111_message_reserve.sql` : colonne `mk_messages.claimed_at` (nulle par défaut) | additive, aucune ligne touchée | très faible | `ALTER TABLE mk_messages DROP COLUMN claimed_at` (SQLite ≥ 3.35) ; le code ignore la colonne si elle est vide |
 | Comportement : connexion mobile, expéditeur, webhooks, fusion, réinscription, A/B, pause de réputation, vérification des liens | code | modéré (voir ci-dessous) | revenir au commit précédent ; aucune donnée n'est réécrite |
 
-Les migrations marketing sont **figées** : une migration déjà appliquée ne doit jamais être modifiée (même un commentaire), sinon le serveur désactive tout le module marketing (incident du 2026-10-03). La 110 est nouvelle ; ne plus la modifier après publication.
+Les migrations marketing sont **figées** : une migration déjà appliquée ne doit jamais être modifiée (même un commentaire), sinon le serveur désactive tout le module marketing (incident du 2026-10-03). La 111 est nouvelle ; ne plus la modifier après publication.
 
 ## Effets visibles pour les utilisateurs
 

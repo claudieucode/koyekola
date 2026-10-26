@@ -104,11 +104,12 @@ describe("inscription", () => {
     assert.deepEqual(m.db.prepare("SELECT name FROM mk_events ORDER BY id").all().map((e) => e.name), ["contact.created", "user.registered", "contact.subscribed"]); // Contact Core : l'inscription est journalisée
     assert.equal(compliance.isSendable(A, c.id).ok, true);
   });
-  test("un ancien désinscrit qui coche la case lui-même se réabonne (c'est bien la personne) ; un supprimé, jamais", () => {
+  test("un ancien désinscrit qui coche la case à l'inscription n'est PAS réabonné (l'adresse saisie n'est pas vérifiée : n'importe qui peut la taper) ; un supprimé, jamais", () => {
     const { contact } = audience.upsertContact(A, { email: "awa@exemple.fr" });
     compliance.unsubscribe(A, contact.id, { source: "link" });
     const id = addUser("Awa", "awa@exemple.fr");
-    assert.equal(bridge.registerLmsUser(A, { id, username: "Awa", email: "awa@exemple.fr" }, { optIn: true }).subscribed, true);
+    assert.equal(bridge.registerLmsUser(A, { id, username: "Awa", email: "awa@exemple.fr" }, { optIn: true }).subscribed, false);
+    assert.equal(audience.getContact(A, contact.id).status, "unsubscribed");
     const { contact: b } = audience.upsertContact(A, { email: "bob@exemple.fr" });
     compliance.addSuppression(A, { email: "bob@exemple.fr", reason: "complained" });
     const idB = addUser("Bob", "bob@exemple.fr");

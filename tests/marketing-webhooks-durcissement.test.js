@@ -3,7 +3,7 @@
 const { test, describe } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
-const { sendWebhook, isPrivateAddress, SsrfError } = require("../src/marketing/webhooks/delivery");
+const { sendWebhook, isPrivateAddress, SsrfError, pinnedFetch } = require("../src/marketing/webhooks/delivery");
 const { UnrecoverableError } = require("../src/marketing/queue/worker");
 
 const base = { url: "https://exemple.fr/hook", secret: "whsec_t", eventName: "x", eventId: 1, occurredAt: "2026-01-01T00:00:00Z", metadata: {}, lookup: async () => [{ address: "93.184.216.34", family: 4 }] };
@@ -48,5 +48,27 @@ describe("connexion épinglée (sans fetchImpl)", () => {
     await assert.rejects(() => sendWebhook({ ...base, url: `http://127.0.0.1:${port}/h` }), SsrfError);
     assert.equal(hit, 0);
     srv.close();
+  });
+});
+
+describe("pinnedFetch : vraie connexion", () => {
+  test("se connecte à l'adresse épinglée même si le nom de l'URL n'existe pas, sans suivre la redirection", async () => {
+    const seen = [];
+    const srv = http.createServer((q, r) => { seen.push({ host: q.headers.host, method: q.method, url: q.url }); r.statusCode = 302; r.setHeader("Location", "http://127.0.0.1:1/ailleurs"); r.end("corps ignoré"); });
+    await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+    const port = srv.address().port;
+    const res = await pinnedFetch([{ address: "127.0.0.1", family: 4 }])(`http://nom-qui-nexiste-pas.invalid:${port}/chemin`, { method: "HEAD", headers: { "User-Agent": "t" } });
+    srv.close();
+    assert.equal(res.status, 302);
+    assert.equal(res.location, "http://127.0.0.1:1/ailleurs");
+    assert.deepEqual(seen, [{ host: `nom-qui-nexiste-pas.invalid:${port}`, method: "HEAD", url: "/chemin" }], "une seule requête, Host conservé, redirection non suivie");
+  });
+  test("POST avec corps : Content-Length correct", async () => {
+    let got = "";
+    const srv = http.createServer((q, r) => { q.on("data", (c) => { got += c; }); q.on("end", () => { r.statusCode = 204; r.end(); }); });
+    await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+    const res = await pinnedFetch([{ address: "127.0.0.1", family: 4 }])(`http://x.invalid:${srv.address().port}/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: '{"é":1}' });
+    srv.close();
+    assert.equal(res.status, 204); assert.equal(got, '{"é":1}');
   });
 });

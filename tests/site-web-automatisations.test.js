@@ -40,11 +40,11 @@ describe("déclencheurs (sans serveur)", () => {
   test("automatisation filtrée sur une étape : seul le contact qui atteint CETTE étape entre dans le scénario", () => {
     const { db, A } = freshMarketing();
     templates.setOrgAddress(A, "12 rue des Écoles, Paris");
-    const tpl = templates.createTemplate(A, { name: "Merci", kind: "transactional", subject: "Merci", blocks: [{ type: "text", markdown: "Merci de votre visite." }] });
+    const tpl = templates.createTemplate(A, { name: "Merci", kind: "marketing", subject: "Merci", blocks: [{ type: "text", markdown: "Merci de votre visite." }] });
     const f = funnels.createFunnel(A, { name: "Webinaire", template: "webinaire" });
     const [s1, s2] = f.steps;
     assert.ok(auto.TRIGGERS["funnel.step_reached"]);
-    const a = auto.createAutomation(A, { name: "Relance étape 2", kind: "transactional", triggerEvent: "funnel.step_reached", triggerFilter: { key: "stepId", value: String(s2.id) }, steps: [{ type: "email", templateId: tpl.id }] });
+    const a = auto.createAutomation(A, { name: "Relance étape 2", kind: "marketing", triggerEvent: "funnel.step_reached", triggerFilter: { key: "stepId", value: String(s2.id) }, steps: [{ type: "email", templateId: tpl.id }] });
     auto.activateAutomation(A, a.id, { workerOn: true, smtpAvailable: true });
     const c1 = audience.upsertContact(A, { email: "un@ex.fr" }).contact;
     const c2 = audience.upsertContact(A, { email: "deux@ex.fr" }).contact;
