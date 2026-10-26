@@ -32,6 +32,11 @@ function rewriteLinks(html, spec, base, query) {
   });
 }
 
+// Le rendu d'une page de démonstration ne dépend que du thème, de la page, de l'organisation et du site visé (adresses des liens) : il est gardé en mémoire quelques minutes
+// (60 entrées au plus), ce qui rend instantanés les allers-retours entre pages et thèmes de l'aperçu. Aucune donnée du site n'y entre.
+const MEMO_TTL = 10 * 60 * 1000, MEMO_MAX = 60;
+const memo = new Map();
+
 module.exports = () => {
   const router = express.Router();
   const target = require("./siteTarget");
@@ -41,6 +46,10 @@ module.exports = () => {
     const key = String(req.params.key), pageKey = String(req.params.page || "accueil");
     const spec = KEY.test(key) && PAGE.test(pageKey) ? library.specOf(key) : null;
     if (!spec || !spec.pages.some((p) => p.key === pageKey)) return res.status(404).render("error", { message: "Ce thème ou cette page de démonstration n'existe pas." });
+    const memoKey = `${req.mk.ctx.organizationId}|${key}|${pageKey}|${t.siteId || 0}`;
+    const hit = memo.get(memoKey);
+    res.set({ "Cache-Control": "private, max-age=120", "X-Robots-Tag": "noindex, nofollow" });
+    if (hit && Date.now() - hit.at < MEMO_TTL) return res.send(hit.html);
     try {
       const ctx = { ...req.mk.ctx, demoBrand: spec.brand || spec.name };
       const raw = library.pageSections(key, pageKey);
@@ -51,11 +60,13 @@ module.exports = () => {
         id: 0, organization_id: ctx.organizationId, name: spec.pages.find((p) => p.key === pageKey).name, slug: pageKey, title: spec.pages.find((p) => p.key === pageKey).name, description: "", status: "draft", kind: "page", site_id: null, form_id: null, tags: [], indexable: 0,
         theme: pagesLib.normalizeTheme({}), seo: pagesLib.normalizeSeo({}), sections: resolved, scope: {},
       });
-      res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" });
       const query = t.siteId ? `?site=${t.siteId}` : "";
       res.render("marketing-public/landing", { page, site: demoSite(spec, tokens), tokensToCss, form: null, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: `Site de démonstration « ${esc(spec.name)} » : textes, chiffres et témoignages sont fictifs. —` }, (err, html) => {
         if (err) return next(err);
-        res.send(rewriteLinks(html, spec, `${BASE}/${key}/demo`, query));
+        const out = rewriteLinks(html, spec, `${BASE}/${key}/demo`, query);
+        if (memo.size >= MEMO_MAX) memo.delete(memo.keys().next().value);
+        memo.set(memoKey, { at: Date.now(), html: out });
+        res.send(out);
       });
     } catch (error) { next(error); }
   });

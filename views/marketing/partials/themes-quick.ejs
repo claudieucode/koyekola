@@ -1,0 +1,36 @@
+<%# Aperçu rapide d'un thème, sans quitter la bibliothèque : fenêtre modale (<dialog>) qui affiche le site de démonstration ISOLÉ du thème (même route que l'aperçu complet).
+    Le cadre est créé à l'ouverture, remplacé à chaque changement de page ou de thème, et DÉTRUIT à la fermeture : aucune page invisible ne reste en mémoire.
+    Sans JavaScript, le lien « Prévisualiser » mène à l'aperçu complet. Rien n'est enregistré par l'aperçu. %>
+<dialog class="tq" data-tq aria-labelledby="tq-title">
+  <div class="tq-box">
+    <header class="tq-bar">
+      <div class="tq-id"><h2 id="tq-title" data-tq-name tabindex="-1"></h2><span data-tq-cat></span></div>
+      <div class="tq-nav" role="group" aria-label="Changer de thème">
+        <button type="button" class="btn btn-outline btn-sm" data-tq-prev aria-label="Thème précédent"><%- icon("chevronLeft", { size: 16 }) %></button>
+        <span class="tq-count" data-tq-count aria-live="polite"></span>
+        <button type="button" class="btn btn-outline btn-sm" data-tq-next aria-label="Thème suivant"><%- icon("chevronRight", { size: 16 }) %></button>
+      </div>
+      <div class="tq-devices" role="group" aria-label="Appareil d'aperçu">
+        <button type="button" class="btn btn-outline btn-sm" data-tq-width="100%" aria-pressed="true" aria-label="Ordinateur"><%- icon("monitor", { size: 16 }) %><span>Ordinateur</span></button>
+        <button type="button" class="btn btn-outline btn-sm" data-tq-width="820px" aria-pressed="false" aria-label="Tablette"><%- icon("tablet", { size: 16 }) %><span>Tablette</span></button>
+        <button type="button" class="btn btn-outline btn-sm" data-tq-width="390px" aria-pressed="false" aria-label="Mobile"><%- icon("smartphone", { size: 16 }) %><span>Mobile</span></button>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm tq-close" data-tq-close aria-label="Fermer l'aperçu"><%- icon("close", { size: 16 }) %><span>Fermer</span></button>
+    </header>
+    <div class="tq-sub">
+      <nav class="tq-pages" aria-label="Pages du site de démonstration" data-tq-pages></nav>
+      <div class="tq-actions" data-tq-actions></div>
+    </div>
+    <div class="tq-stage" data-tq-stage>
+      <div class="tq-view" data-tq-view>
+        <img class="tq-poster" data-tq-poster alt="" width="480" height="300" hidden>
+        <div class="tq-skel" data-tq-skel aria-hidden="true"></div>
+      </div>
+      <div class="tq-state" data-tq-state role="status" hidden>
+        <p data-tq-msg></p>
+        <button type="button" class="btn btn-outline btn-sm" data-tq-retry hidden>Réessayer</button>
+      </div>
+    </div>
+    <p class="tq-foot">Site de démonstration isolé : textes, chiffres et personnes sont fictifs ; rien de « <%= T.name %> » n'est utilisé ni modifié. <a href="#" data-tq-full>Ouvrir en pleine page</a><span class="tq-more"> · <a href="#" data-tq-details>Détails du thème</a></span></p>
+  </div>
+</dialog>

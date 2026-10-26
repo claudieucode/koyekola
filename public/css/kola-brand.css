@@ -324,3 +324,10 @@ html[data-kb-motion="off"] *:not(.kab-spin):not(.pb-ai-spin):not([aria-busy="tru
 .mk-body .mk-td-open:hover { background: #0b2a40; color: #fff; }
 .mk-body .mk-td-caption { margin: 8px 0 0; font-size: 0.8125rem; color: var(--kb-ink-3); }
 @media (pointer: coarse) { .mk-body .mk-td-open { min-height: 44px; display: inline-flex; align-items: center; } }
+/* Thèmes (refonte) : aperçu rapide et sélecteur d'affichage en thème sombre */
+html[data-kola-theme="dark"] :is(.tq-box, .tq-state, .mk-tg-seg-row) { background: var(--surface); color: var(--text); border-color: var(--border); }
+html[data-kola-theme="dark"] :is(.tq-bar, .tq-sub, .tq-foot, .mk-tg-seg-row label + label) { border-color: var(--border); }
+html[data-kola-theme="dark"] :is(.tq-id h2, .tq-pages button, .mk-tg-seg-row span, .mk-tg-reset) { color: var(--text); }
+html[data-kola-theme="dark"] :is(.tq-id span, .tq-count, .tq-foot) { color: var(--kb-ink-2); }
+html[data-kola-theme="dark"] :is(.tq-pages button[aria-current="page"], .tq-devices button[aria-pressed="true"], .mk-tg-seg-row input:checked + span) { background: var(--k-accent-solid); border-color: var(--k-accent-solid); color: #fff; }
+html[data-kola-theme="dark"] .tq-pages button:hover, html[data-kola-theme="dark"] .mk-tg-seg-row label:hover span { background: var(--kb-rule); }

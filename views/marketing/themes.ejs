@@ -40,7 +40,7 @@
 
   <% if (act) { %>
   <section class="mk-tg-active" aria-label="Thème actif">
-    <% if (act.previews) { %><img class="mk-tg-active-shot" src="<%= act.previews.home %>" width="480" height="300" alt="Aperçu du thème actif « <%= act.name %> »" decoding="async"><% } else { %><div class="mk-tg-active-shot mk-tg-swatch" aria-hidden="true"><% (act.palette || []).forEach((c) => { %><i style="background:<%= c %>"></i><% }) %></div><% } %>
+    <% if (act.previews) { %><img class="mk-tg-active-shot" src="<%= act.previews.card || act.previews.home %>"<% if (act.previews.card && act.previews.card2) { %> srcset="<%= act.previews.card %> 480w, <%= act.previews.card2 %> 720w" sizes="(min-width: 980px) 360px, 92vw"<% } %> width="480" height="300" fetchpriority="high" decoding="async" alt="Aperçu du thème actif « <%= act.name %> »"><% } else { %><div class="mk-tg-active-shot mk-tg-swatch" aria-hidden="true"><% (act.palette || []).forEach((c) => { %><i style="background:<%= c %>"></i><% }) %></div><% } %>
     <div class="mk-tg-active-body">
       <p class="mk-tg-kicker">Thème actif</p>
       <h2><%= act.name %></h2>
@@ -58,29 +58,31 @@
     <%- siteField %>
     <div class="mk-tg-search">
       <label for="th-q" class="mk-tg-lbl">Rechercher un thème</label>
-      <input id="th-q" type="search" name="q" value="<%= f.q %>" maxlength="80" autocomplete="off" data-tg-search placeholder="Nom, secteur, style (ex. restaurant, sombre, portfolio)">
+      <input id="th-q" type="search" name="q" value="<%= f.q %>" maxlength="80" autocomplete="off" enterkeyhint="search" data-tg-search placeholder="Nom, secteur, style (ex. restaurant, sombre, portfolio)">
     </div>
     <div class="mk-tg-sel">
       <label for="th-style" class="mk-tg-lbl">Style</label>
-      <select id="th-style" name="style" data-tg-auto><option value="">Tous les styles</option><% Object.keys(STYLE_LABELS).forEach((k) => { %><option value="<%= k %>"<%= f.style === k ? " selected" : "" %>><%= STYLE_LABELS[k] %></option><% }) %></select>
-    </div>
-    <div class="mk-tg-sel">
-      <label for="th-etat" class="mk-tg-lbl">Affichage</label>
-      <select id="th-etat" name="etat" data-tg-auto><% Object.keys(STATES).forEach((k) => { %><option value="<%= k %>"<%= f.state === k ? " selected" : "" %>><%= STATES[k] %><%= k === "" ? " (" + g.byState.all + ")" : k === "installed" ? " (" + g.byState.installed + ")" : " (" + g.byState.available + ")" %></option><% }) %></select>
+      <select id="th-style" name="style" data-tg-auto><option value="">Tous les styles</option><% Object.keys(STYLE_LABELS).forEach((k) => { const n = g.styles[k] || 0; %><option value="<%= k %>" data-tg-style="<%= k %>"<%= f.style === k ? " selected" : "" %><%= n === 0 && f.style !== k ? " disabled" : "" %>><%= STYLE_LABELS[k] %> (<%= n %>)</option><% }) %></select>
     </div>
     <div class="mk-tg-sel">
       <label for="th-tri" class="mk-tg-lbl">Trier par</label>
       <select id="th-tri" name="tri" data-tg-auto><% Object.keys(SORTS).forEach((k) => { %><option value="<%= k %>"<%= f.sort === k ? " selected" : "" %>><%= SORTS[k] %></option><% }) %></select>
     </div>
+    <fieldset class="mk-tg-seg">
+      <legend class="mk-tg-lbl">Affichage</legend>
+      <div class="mk-tg-seg-row"><% Object.keys(STATES).forEach((k) => { const n = k === "" ? g.byState.all : k === "installed" ? g.byState.installed : g.byState.available; %><label><input type="radio" name="etat" value="<%= k %>" data-tg-auto<%= f.state === k ? " checked" : "" %>><span><%= STATES[k] %> <b data-tg-n="state:<%= k || "all" %>"><%= n %></b></span></label><% }) %></div>
+    </fieldset>
     <input type="hidden" name="categorie" value="<%= f.category %>" data-tg-cat>
     <button class="btn btn-outline btn-sm mk-tg-go" type="submit">Rechercher</button>
   </form>
 
   <nav class="mk-tg-cats" aria-label="Catégories de thèmes" data-tg-cats>
-    <a href="<%= url({ categorie: "" }) %>" data-tg-catlink="" class="<%= !f.category ? "is-active" : "" %>"<%- !f.category ? ' aria-current="true"' : "" %>>Toutes <span><%= g.byState.all %></span></a>
-    <% CATEGORIES.forEach((c) => { if (g.categories[c.key]) { %><a href="<%= url({ categorie: c.key }) %>" data-tg-catlink="<%= c.key %>" class="<%= f.category === c.key ? "is-active" : "" %>"<%- f.category === c.key ? ' aria-current="true"' : "" %>><%= c.label %> <span><%= g.categories[c.key] %></span></a><% } }) %>
+    <a href="<%= url({ categorie: "" }) %>" data-tg-catlink="" class="<%= !f.category ? "is-active" : "" %>"<%- !f.category ? ' aria-current="true"' : "" %>>Toutes <span data-tg-n="all"><%= g.categoryTotal %></span></a>
+    <% CATEGORIES.forEach((c) => { const n = g.categories[c.key] || 0, off = n === 0 && f.category !== c.key; %><a href="<%= url({ categorie: c.key }) %>" data-tg-catlink="<%= c.key %>" class="<%= f.category === c.key ? "is-active" : "" %><%= off ? " is-empty" : "" %>"<%- f.category === c.key ? ' aria-current="true"' : "" %><%- off ? ' aria-disabled="true" tabindex="-1"' : "" %>><%= c.label %> <span data-tg-n="cat:<%= c.key %>"><%= n %></span></a><% }) %>
   </nav>
 
+  <div class="mk-tg-progress" data-tg-progress hidden></div>
   <div data-tg-results aria-busy="false"><%- include("partials/themes-results") %></div>
+  <%- include("partials/themes-quick") %>
 </div>
 <%- include("partials/bottom") %>

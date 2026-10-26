@@ -252,15 +252,24 @@ function gallery(siteId, { q = "", category = "", style = "", state = "", sort =
     ...rows(sid).map((r) => ({ r, m: parse(r.manifest) })).filter(({ m }) => m && !catalog.fromCatalog(m.key)).map(({ m }) => ({ manifest: { ...m, tokens: tokensLib.normalizeTokens(m.tokens || {}, { strict: false }) }, meta: { ...metaOf({ ...m, tokens: tokensLib.normalizeTokens(m.tokens || {}, { strict: false }) }), category: "import", categoryLabel: "Paquet importé", legacy: true, order: 950 } }))];
   const items = all.map(({ manifest, meta }) => { const compatible = catalog.isCompatible(manifest); const st = stateOf(sid, manifest.key, compatible); return { ...meta, version: manifest.version, author: manifest.author, state: st, installed: st === "active" || st === "installed" || (st === "incompatible" && Boolean(rowOf(sid, manifest.key))), compatible, hasDemo: meta.pages.length > 0 }; });
   const needle = fold(q).trim();
+  // Facettes : chaque compteur tient compte de TOUS les autres filtres (recherche, style, état, catégorie) sauf du sien, pour que le nombre affiché soit celui des résultats réels
+  const okQ = (t) => !needle || fold([t.name, t.description, t.categoryLabel, t.siteType, t.tags.join(" ")].join(" ")).includes(needle);
+  const okStyle = (t) => !style || t.tags.includes(style);
+  const okCat = (t) => !category || t.category === category;
+  const okState = (t) => !state || (state === "installed" ? t.installed : t.state === state);
+  const searched = items.filter(okQ);
   const cats = Object.fromEntries(library.CATEGORIES.map((c) => [c.key, 0]));
-  const searched = items.filter((t) => !needle || fold([t.name, t.description, t.categoryLabel, t.siteType, t.tags.join(" ")].join(" ")).includes(needle));
-  for (const t of searched) if (Object.hasOwn(cats, t.category)) cats[t.category] += 1;
-  const byState = { all: searched.length, installed: searched.filter((t) => t.installed).length, available: searched.filter((t) => t.state === "available").length };
-  let list = searched.filter((t) => (!category || t.category === category) && (!style || t.tags.includes(style)) && (!state || (state === "installed" ? t.installed : t.state === state)));
+  for (const t of searched) if (okStyle(t) && okState(t) && Object.hasOwn(cats, t.category)) cats[t.category] += 1;
+  const forState = searched.filter((t) => okStyle(t) && okCat(t));
+  const byState = { all: forState.length, installed: forState.filter((t) => t.installed).length, available: forState.filter((t) => t.state === "available").length };
+  const styles = {};
+  for (const t of searched) if (okCat(t) && okState(t)) for (const k of t.tags) styles[k] = (styles[k] || 0) + 1;
+  const categoryTotal = searched.filter((t) => okStyle(t) && okState(t)).length;
+  let list = searched.filter((t) => okStyle(t) && okCat(t) && okState(t));
   const byName = (a, b) => a.name.localeCompare(b.name, "fr");
   list.sort(sort === "name" ? byName : sort === "new" ? (a, b) => Number(b.isNew) - Number(a.isNew) || b.order - a.order || byName(a, b) : (a, b) => Number(b.state === "active") - Number(a.state === "active") || Number(b.featured) - Number(a.featured) || a.order - b.order || byName(a, b));
   const size = Math.min(60, Math.max(6, Number(perPage) || 24)), pages = Math.max(1, Math.ceil(list.length / size)), current = Math.min(pages, Math.max(1, Number(page) || 1));
-  return { items: list.slice((current - 1) * size, current * size), total: list.length, page: current, pages, perPage: size, categories: cats, byState, activeKey: activeKey(sid), featured: items.filter((t) => t.featured && t.state !== "active").slice(0, 4), libraryCount: library.load().specs.length };
+  return { items: list.slice((current - 1) * size, current * size), total: list.length, page: current, pages, perPage: size, categories: cats, categoryTotal, styles, byState, activeKey: activeKey(sid), featured: items.filter((t) => t.featured && t.state !== "active").slice(0, 4), libraryCount: library.load().specs.length };
 }
 // Un thème de la bibliothèque (ou du catalogue) pour CE site, avec ses détails d'affichage
 function libraryItem(siteId, key) {

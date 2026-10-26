@@ -1,4 +1,4 @@
-// KOLAKISA CMS → Apparence → Thèmes : confirmation des actions, anti double envoi, recherche instantanée, notifications fermables, lecture du fichier de paquet.
+// KOLAKISA CMS → Apparence → Thèmes : confirmation des actions, anti double envoi, filtres, notifications fermables, lecture du fichier de paquet.
 // Tout fonctionne aussi sans ce script (formulaires et recherche côté serveur) ; il ne fait qu'améliorer l'usage.
 (function () {
   "use strict";
@@ -61,19 +61,6 @@
   // retour arrière / cache de navigation : jamais de bouton resté « en cours »
   window.addEventListener("pageshow", function (e) { if (e.persisted) root.querySelectorAll("form[data-th-form][data-busy-now]").forEach(function (f) { setBusy(f, f.querySelector("button[type=submit]"), false); }); });
 
-  // Recherche instantanée dans la grille (le formulaire fonctionne aussi côté serveur)
-  var input = root.querySelector("[data-th-search]"), cards = root.querySelectorAll("[data-th-card]");
-  if (input && cards.length) {
-    var filter = function () {
-      var q = input.value.trim().toLowerCase(), n = 0;
-      cards.forEach(function (c) { var ok = !q || c.getAttribute("data-th-name").indexOf(q) !== -1; c.hidden = !ok; if (ok) n++; });
-      var add = root.querySelector(".mk-th-add"); if (add) add.hidden = Boolean(q);
-      say(q ? (n ? n + " thème" + (n > 1 ? "s" : "") + " trouvé" + (n > 1 ? "s" : "") + "." : "Aucun thème ne correspond à cette recherche.") : "");
-    };
-    input.addEventListener("input", filter);
-    if (input.value) filter();
-  }
-
   // Fichier de paquet → zone de texte (lecture locale, bornée ; la validation reste celle du serveur)
   var file = root.querySelector("[data-th-file]"), area = root.querySelector("#th-pkg");
   if (file && area) file.addEventListener("change", function () {
@@ -91,32 +78,190 @@
   "use strict";
   var root = document.querySelector("[data-tg-url]");
   if (root) {
-    var form = root.querySelector("[data-tg-form]"), box = root.querySelector("[data-tg-results]"), cat = form.querySelector("[data-tg-cat]"), timer = null, seq = 0;
-    var load = function (pushUrl) {
-      var qs = new URLSearchParams(new FormData(form)); qs.delete("fragment");
-      var clean = new URLSearchParams(); qs.forEach(function (v, k) { if (v !== "") clean.set(k, v); });
-      var site = root.getAttribute("data-tg-site"); if (site) clean.set("site", site);
-      var page = pushUrl && pushUrl.page; if (page) clean.set("page", page);
-      var frag = new URLSearchParams(clean); frag.set("fragment", "1");
-      var mine = ++seq; box.setAttribute("aria-busy", "true");
-      fetch(root.getAttribute("data-tg-url") + "?" + frag.toString(), { credentials: "same-origin" })
-        .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.text(); })
-        .then(function (html) { if (mine !== seq) return; box.innerHTML = html; box.setAttribute("aria-busy", "false"); try { window.history.replaceState(null, "", root.getAttribute("data-tg-url") + (clean.toString() ? "?" + clean.toString() : "")); } catch (e) { /* adresse inchangée */ } wire(); })
-        .catch(function () { box.setAttribute("aria-busy", "false"); form.submit(); });
+    var BASE = root.getAttribute("data-tg-url"), SITE = root.getAttribute("data-tg-site");
+    var form = root.querySelector("[data-tg-form]"), box = root.querySelector("[data-tg-results]"), cat = form.querySelector("[data-tg-cat]"), bar = root.querySelector("[data-tg-progress]");
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    form.classList.add("is-live");
+
+    // ---- Filtres sans rechargement : une requête à la fois (la précédente est ANNULÉE), réponses récentes gardées en mémoire, erreur affichée avec « Réessayer » ----
+    var seq = 0, ctl = null, timer = null, slow = null, cache = new Map(), TTL = 60000, errBox = null, last = null;
+    var query = function (page) {
+      var qs = new URLSearchParams(new FormData(form)), out = new URLSearchParams();
+      qs.forEach(function (v, k) { if (v !== "" && !(k === "tri" && v === "relevance")) out.set(k, v); });
+      if (SITE) out.set("site", SITE);
+      if (page && Number(page) > 1) out.set("page", page);
+      return out;
     };
+    var setBusy = function (on) {
+      box.setAttribute("aria-busy", on ? "true" : "false");
+      clearTimeout(slow);
+      if (on) slow = setTimeout(function () { bar.hidden = false; }, 150); else bar.hidden = true;   // la barre n'apparaît que si la réponse tarde (> 150 ms) : pas de clignotement
+    };
+    var showError = function (retry) {
+      if (!errBox) {
+        errBox = document.createElement("div"); errBox.className = "mk-th-notice mk-th-notice--warn mk-tg-error"; errBox.setAttribute("role", "alert");
+        errBox.innerHTML = '<p>Les thèmes n\'ont pas pu être chargés (connexion interrompue ou serveur indisponible). Vos filtres sont conservés.</p><button type="button" class="btn btn-outline btn-sm">Réessayer</button>';
+        box.parentNode.insertBefore(errBox, box);
+        errBox.querySelector("button").addEventListener("click", function () { if (last) load(last.page, true); });
+      }
+      errBox.hidden = false;
+    };
+    var applyMeta = function (m) {
+      var set = function (k, n) { root.querySelectorAll('[data-tg-n="' + k + '"]').forEach(function (e) { e.textContent = String(n); }); };
+      set("all", m.all); set("state:all", m.state.all); set("state:installed", m.state.installed); set("state:available", m.state.available);
+      Object.keys(m.cats).forEach(function (k) {
+        set("cat:" + k, m.cats[k]);
+        var a = root.querySelector('[data-tg-catlink="' + k + '"]'); if (!a) return;
+        var off = m.cats[k] === 0 && !a.classList.contains("is-active");
+        a.classList.toggle("is-empty", off);
+        if (off) { a.setAttribute("aria-disabled", "true"); a.setAttribute("tabindex", "-1"); } else { a.removeAttribute("aria-disabled"); a.removeAttribute("tabindex"); }
+      });
+      form.querySelectorAll("[data-tg-style]").forEach(function (o) {
+        var k = o.getAttribute("data-tg-style"), n = m.styles[k] || 0;
+        if (!o.hasAttribute("data-label")) o.setAttribute("data-label", o.textContent.replace(/\s*\(\d+\)$/, ""));
+        o.textContent = o.getAttribute("data-label") + " (" + n + ")"; o.disabled = n === 0 && !o.selected;
+      });
+    };
+    var apply = function (html, qs, mine) {
+      if (mine !== seq) return;
+      box.innerHTML = html;
+      try { var meta = JSON.parse(box.querySelector("[data-tg-meta]").textContent); applyMeta(meta); } catch (e) { /* compteurs inchangés */ }
+      if (errBox) errBox.hidden = true;
+      setBusy(false);
+      try { window.history.replaceState(null, "", BASE + (qs.toString() ? "?" + qs.toString() : "")); } catch (e) { /* adresse inchangée */ }
+    };
+    function load(page, force) {
+      var qs = query(page), key = qs.toString(), mine = ++seq;
+      last = { page: page };
+      if (ctl) ctl.abort();                                                  // la requête précédente n'a plus d'intérêt : on la libère
+      var hit = !force && cache.get(key);
+      if (hit && Date.now() - hit.at < TTL) { ctl = null; apply(hit.html, qs, mine); return; }
+      var frag = new URLSearchParams(qs); frag.set("fragment", "1");
+      ctl = typeof AbortController === "function" ? new AbortController() : null;
+      setBusy(true);
+      fetch(BASE + "?" + frag.toString(), { credentials: "same-origin", signal: ctl ? ctl.signal : undefined })
+        .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.text(); })
+        .then(function (html) {
+          if (cache.size > 40) cache.delete(cache.keys().next().value);
+          cache.set(key, { at: Date.now(), html: html }); apply(html, qs, mine);
+        })
+        .catch(function (err) { if ((err && err.name === "AbortError") || mine !== seq) return; setBusy(false); showError(); });
+    }
     var setCat = function (key) {
       cat.value = key || "";
       root.querySelectorAll("[data-tg-catlink]").forEach(function (a) { var on = a.getAttribute("data-tg-catlink") === (key || ""); a.classList.toggle("is-active", on); if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
     };
-    form.addEventListener("submit", function (e) { e.preventDefault(); load(); });
-    var q = form.querySelector("[data-tg-search]");
-    if (q) q.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(load, 250); });
-    form.querySelectorAll("[data-tg-auto]").forEach(function (s) { s.addEventListener("change", function () { load(); }); });
-    root.querySelectorAll("[data-tg-catlink]").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); setCat(a.getAttribute("data-tg-catlink")); load(); }); });
-    var wire = function () {
-      box.querySelectorAll(".mk-tg-pager a").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); var u = new URL(a.href, window.location.href); load({ page: u.searchParams.get("page") }); window.scrollTo({ top: root.querySelector(".mk-tg-cats").offsetTop - 12, behavior: "smooth" }); }); });
+    var reset = function () {
+      form.querySelector("[data-tg-search]").value = ""; form.querySelector("[name=style]").value = ""; form.querySelector("[name=tri]").value = "relevance";
+      var all = form.querySelector('[name=etat][value=""]'); if (all) all.checked = true;
+      setCat(""); load();
     };
-    wire();
+    form.addEventListener("submit", function (e) { e.preventDefault(); clearTimeout(timer); load(); });
+    var q = form.querySelector("[data-tg-search]"), lastQ = q ? q.value : "";
+    if (q) q.addEventListener("input", function () { clearTimeout(timer); if (q.value === lastQ) return; lastQ = q.value; timer = setTimeout(function () { load(); }, 120); });
+    form.querySelectorAll("[data-tg-auto]").forEach(function (s) { s.addEventListener("change", function () { load(); }); });
+    root.addEventListener("click", function (e) {
+      var a = e.target.closest ? e.target.closest("a") : null; if (!a || !root.contains(a)) return;
+      if (a.hasAttribute("data-tg-catlink")) { e.preventDefault(); if (a.getAttribute("aria-disabled") === "true") return; setCat(a.getAttribute("data-tg-catlink")); load(); return; }
+      if (a.hasAttribute("data-tg-reset")) { e.preventDefault(); reset(); return; }
+      if (a.closest(".mk-tg-pager") && /[?&]page=/.test(a.href)) {
+        e.preventDefault(); load(new URL(a.href, window.location.href).searchParams.get("page"));
+        var top = root.querySelector(".mk-tg-cats"); if (top && top.scrollIntoView) top.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+      }
+    });
+
+    // ---- Aperçu rapide : site de démonstration isolé dans un cadre créé à l'ouverture et DÉTRUIT à la fermeture ----
+    var dlg = root.querySelector("[data-tq]");
+    if (dlg && typeof dlg.showModal === "function") {
+      var $ = function (s) { return dlg.querySelector(s); };
+      var view = $("[data-tq-view]"), poster = $("[data-tq-poster]"), skel = $("[data-tq-skel]"), stateBox = $("[data-tq-state]"), msg = $("[data-tq-msg]"), retry = $("[data-tq-retry]"), pagesNav = $("[data-tq-pages]"), actions = $("[data-tq-actions]");
+      var list = [], idx = 0, pageKey = "", token = 0, frame = null, opener = null, wait = null;
+      var qsite = SITE ? "?site=" + encodeURIComponent(SITE) : "";
+      var info = function (a) { var pages = []; try { pages = JSON.parse(a.getAttribute("data-th-pages") || "[]"); } catch (e) { pages = []; } return { key: a.closest("[data-th-card]").getAttribute("data-th-key"), name: a.getAttribute("data-th-label"), cat: a.getAttribute("data-th-cat"), poster: a.getAttribute("data-th-poster"), pages: pages, card: a.closest("[data-th-card]") }; };
+      var destroy = function () {                                          // arrête le chargement en cours et libère la page de démonstration
+        token++; clearTimeout(wait);
+        if (frame) { try { frame.src = "about:blank"; } catch (e) { /* déjà détaché */ } frame.remove(); frame = null; }
+      };
+      var say = function (text, canRetry) { msg.textContent = text || ""; retry.hidden = !canRetry; stateBox.hidden = !text; };
+      var mount = function () {
+        destroy();
+        var t = token, th = list[idx];
+        view.classList.remove("is-ready"); skel.hidden = false;
+        if (th.poster && pageKey === th.pages[0][0]) { poster.src = th.poster; poster.hidden = false; } else { poster.hidden = true; poster.removeAttribute("src"); }
+        say("Chargement du rendu…", false);
+        var fr = document.createElement("iframe");
+        fr.className = "tq-frame"; fr.setAttribute("sandbox", "allow-scripts allow-forms"); fr.setAttribute("referrerpolicy", "no-referrer");
+        fr.title = "Rendu du thème " + th.name + " : page « " + ((th.pages.filter(function (p) { return p[0] === pageKey; })[0] || [0, ""])[1]) + " » du site de démonstration";
+        fr.addEventListener("load", function () {
+          if (t !== token || fr.getAttribute("src") === "about:blank") return;      // chargement d'un cadre déjà remplacé : ignoré (jamais d'ancien aperçu après le nouveau)
+          clearTimeout(wait); view.classList.add("is-ready"); say("", false);
+          setTimeout(function () { if (t === token) { skel.hidden = true; poster.hidden = true; poster.removeAttribute("src"); } }, reduced ? 0 : 180);
+        });
+        wait = setTimeout(function () { if (t === token && !view.classList.contains("is-ready")) say("Le rendu met plus de temps que prévu à s'afficher. Vous pouvez continuer à attendre ou réessayer.", true); }, 12000);
+        frame = fr; fr.src = BASE + "/" + th.key + "/demo/" + pageKey + qsite; view.appendChild(fr);
+      };
+      var tabs = function () {
+        var th = list[idx]; pagesNav.textContent = "";
+        th.pages.forEach(function (p) {
+          var b = document.createElement("button"); b.type = "button"; b.textContent = p[1]; b.setAttribute("data-tq-page", p[0]);
+          if (p[0] === pageKey) b.setAttribute("aria-current", "page");
+          pagesNav.appendChild(b);
+        });
+      };
+      var fill = function () {
+        var th = list[idx];
+        $("[data-tq-name]").textContent = th.name; $("[data-tq-cat]").textContent = th.cat;
+        $("[data-tq-count]").textContent = (idx + 1) + " / " + list.length;
+        $("[data-tq-prev]").disabled = list.length < 2; $("[data-tq-next]").disabled = list.length < 2;
+        $("[data-tq-full]").href = BASE + "/" + th.key + "/apercu" + qsite; $("[data-tq-details]").href = BASE + "/" + th.key + "/details" + qsite;
+        actions.textContent = "";
+        var src = th.card.querySelector("form[data-th-form]") || th.card.querySelector(".mk-tg-foot a.btn-primary");   // la VRAIE action de la carte (installer, utiliser, personnaliser)
+        if (src) actions.appendChild(src.cloneNode(true));
+      };
+      var show = function (i) {
+        idx = (i + list.length) % list.length;
+        var th = list[idx]; if (!th.pages.some(function (p) { return p[0] === pageKey; })) pageKey = th.pages[0][0];
+        fill(); tabs(); mount();
+      };
+      var collect = function () { var seen = {}; list = []; box.querySelectorAll("[data-th-card] [data-th-preview]").forEach(function (a) { var t = info(a); if (!seen[t.key]) { seen[t.key] = 1; list.push(t); } }); };
+      // Intention d'ouvrir (survol ou focus) : UNE requête légère par thème réchauffe la page de démonstration (rendu serveur gardé en mémoire + cache HTTP privé) ; jamais en mode économie de données
+      var warmed = {};
+      var warm = function (e) {
+        var a = e.target.closest ? e.target.closest("[data-th-preview]") : null; if (!a || (navigator.connection && navigator.connection.saveData)) return;
+        var t = info(a), first = t.pages[0] && t.pages[0][0]; if (!first || warmed[t.key]) return; warmed[t.key] = 1;
+        try { fetch(BASE + "/" + t.key + "/demo/" + first + qsite, { credentials: "same-origin", priority: "low" }).catch(function () { warmed[t.key] = 0; }); } catch (err) { /* sans objet */ }
+      };
+      root.addEventListener("mouseover", warm); root.addEventListener("focusin", warm);
+      root.addEventListener("click", function (e) {
+        var a = e.target.closest ? e.target.closest("[data-th-preview]") : null;
+        if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;     // clic modifié : le lien normal (nouvel onglet) reste disponible
+        e.preventDefault(); opener = a; collect();
+        var key = info(a).key; idx = 0; list.forEach(function (t, i) { if (t.key === key) idx = i; });
+        pageKey = list[idx].pages[0][0];
+        dlg.showModal(); show(idx);
+        var h = $("[data-tq-name]"); if (h) h.focus();
+      });
+      dlg.addEventListener("click", function (e) {
+        if (e.target === dlg) { dlg.close(); return; }
+        var t = e.target.closest ? e.target.closest("button") : null; if (!t || !dlg.contains(t)) return;
+        if (t.hasAttribute("data-tq-close")) dlg.close();
+        else if (t.hasAttribute("data-tq-prev")) show(idx - 1);
+        else if (t.hasAttribute("data-tq-next")) show(idx + 1);
+        else if (t.hasAttribute("data-tq-retry")) mount();
+        else if (t.hasAttribute("data-tq-page")) { pageKey = t.getAttribute("data-tq-page"); tabs(); mount(); }
+        else if (t.hasAttribute("data-tq-width")) {
+          view.style.width = t.getAttribute("data-tq-width");
+          dlg.querySelectorAll("[data-tq-width]").forEach(function (o) { o.setAttribute("aria-pressed", o === t ? "true" : "false"); });
+        }
+      });
+      dlg.addEventListener("keydown", function (e) {
+        if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.altKey && !e.ctrlKey && !e.metaKey && !(e.target.closest && e.target.closest("input, select, textarea"))) { e.preventDefault(); show(idx + (e.key === "ArrowRight" ? 1 : -1)); }
+      });
+      dlg.addEventListener("close", function () {                          // fermeture (bouton, Échap, arrière-plan) : plus aucun cadre, plus d'image, focus rendu à la carte
+        destroy(); poster.removeAttribute("src"); view.classList.remove("is-ready"); actions.textContent = ""; say("", false);
+        if (opener && document.contains(opener)) opener.focus(); opener = null;
+      });
+    }
   }
   // Fiche d'un thème : le cadre de rendu en direct (1280 px de large virtuels) est mis à l'échelle de son conteneur ; la capture reste affichée tant que le rendu n'est pas prêt
   document.querySelectorAll("[data-td-live]").forEach(function (live) {

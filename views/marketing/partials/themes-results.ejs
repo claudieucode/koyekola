@@ -1,19 +1,24 @@
-<%# Résultats de la galerie (cartes + pagination) : rendus en entier ou en fragment (?fragment=1) pour la recherche instantanée. %>
-<p class="mk-th-status" aria-live="polite" data-th-status><%= hasFilter ? (g.total ? g.total + " thème" + (g.total > 1 ? "s" : "") + " trouvé" + (g.total > 1 ? "s" : "") + "." : "Aucun thème ne correspond à cette recherche.") : "" %></p>
+<%# Résultats de la galerie (cartes + pagination) : rendus en entier ou en fragment (?fragment=1) pour les filtres sans rechargement.
+    Le fragment porte aussi les compteurs EXACTS (catégories, états, styles) calculés avec tous les autres filtres : le script ne fait que les afficher. %>
+<script type="application/json" data-tg-meta><%- JSON.stringify({ total: g.total, page: g.page, pages: g.pages, all: g.categoryTotal, cats: g.categories, state: g.byState, styles: g.styles }) %></script>
+<div class="mk-tg-bar">
+  <p class="mk-th-status" aria-live="polite" data-th-status><%= hasFilter ? (g.total ? g.total + " thème" + (g.total > 1 ? "s" : "") + " trouvé" + (g.total > 1 ? "s" : "") + "." : "Aucun thème ne correspond à cette recherche.") : "" %></p>
+  <% if (hasFilter) { %><a class="mk-tg-reset" href="<%= to("") %>" data-tg-reset>Réinitialiser les filtres</a><% } %>
+</div>
 <% if (!hasFilter && g.page === 1 && g.featured.length) { %>
 <section class="mk-tg-featured" aria-labelledby="tg-feat">
   <h2 id="tg-feat">Recommandés</h2>
   <ul class="mk-tg-grid mk-tg-grid--feat">
-    <% g.featured.forEach((t) => { %><%- include("themes-card", { t }) %><% }) %>
+    <% g.featured.forEach((t) => { %><%- include("themes-card", { t, eager: true }) %><% }) %>
   </ul>
 </section>
 <% } %>
 <% if (!g.items.length) { %>
-  <div class="mk-th-empty" role="status"><strong>Aucun thème ne correspond à cette recherche.</strong><p>Vérifiez l'orthographe, choisissez une autre catégorie, ou <a href="<%= to("") %>">affichez tous les thèmes</a>.</p></div>
+  <div class="mk-th-empty" role="status"><strong>Aucun thème ne correspond à cette recherche.</strong><p>Vérifiez l'orthographe, choisissez une autre catégorie, ou <a href="<%= to("") %>" data-tg-reset>affichez tous les thèmes</a>.</p></div>
 <% } else { %>
   <h2 class="mk-tg-all" id="tg-all"><%= hasFilter ? "Résultats" : "Tous les thèmes" %> <small>(<%= g.total %>)</small></h2>
   <ul class="mk-tg-grid" data-th-grid aria-labelledby="tg-all">
-    <% g.items.forEach((t) => { %><%- include("themes-card", { t }) %><% }) %>
+    <% g.items.forEach((t, i) => { %><%- include("themes-card", { t, eager: i < 3 && (hasFilter || g.page > 1 || !g.featured.length) }) %><% }) %>
   </ul>
   <% if (g.pages > 1) { %>
   <nav class="mk-tg-pager" aria-label="Pages de résultats">

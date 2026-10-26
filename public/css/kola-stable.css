@@ -47,8 +47,6 @@
   .mk-body.mk-body .mk-breadcrumb a, .mk-body.mk-body .mk-cms-crumbs a { display: inline-flex; align-items: center; min-height: 44px; }
 }
 /* 2. grilles qui suivent la largeur réelle du contenu (et non celle de la fenêtre : le menu latéral en retire plus de 300 px) */
-.mk-body .mk-tg-filters { grid-template-columns: minmax(180px, 2fr) repeat(auto-fit, minmax(130px, 1fr)); }
-.mk-body .mk-tg-search { grid-column: auto; }
 .mk-body .mk-sg-example { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 /* une grille sans colonnes déclarées prend la largeur de son plus large contenu (min-width: auto des éléments de grille) : colonne unique bornée */
 .mk-body .mk-nm-createform { grid-template-columns: minmax(0, 1fr); }

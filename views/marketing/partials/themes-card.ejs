@@ -1,9 +1,9 @@
-<%# Carte d'un thème : aperçu réel (capture du rendu), nom, catégorie, description, état et actions adaptées à l'état RÉEL. %>
-<li class="mk-tg-card mk-tg-card--<%= t.state %>" data-th-card>
+<%# Carte d'un thème : aperçu réel (vignette du rendu), nom, catégorie, description, état et actions adaptées à l'état RÉEL. Dimensions fixes : aucune carte ne change de hauteur selon son contenu.
+    « eager » : les premières cartes visibles sont chargées tout de suite, les autres au défilement. %>
+<li class="mk-tg-card mk-tg-card--<%= t.state %>" data-th-card data-th-key="<%= t.key %>">
   <a class="mk-tg-shotlink" href="<%= to("/" + t.key + "/details") %>" aria-label="Détails du thème <%= t.name %>">
     <% if (t.previews) { %>
-      <img class="mk-tg-shot" src="<%= t.previews.card || t.previews.home %>"<% if (t.previews.card && t.previews.card2) { %> srcset="<%= t.previews.card %> 480w, <%= t.previews.card2 %> 720w" sizes="(min-width: 1100px) 340px, (min-width: 700px) 45vw, 92vw"<% } %> width="480" height="300" loading="lazy" decoding="async" alt="Aperçu de la page d'accueil du thème <%= t.name %>">
-      <img class="mk-tg-phone" src="<%= t.previews.phone || t.previews.mobile %>" width="64" height="139" loading="lazy" decoding="async" alt="">
+      <img class="mk-tg-shot" src="<%= t.previews.card || t.previews.home %>"<% if (t.previews.card && t.previews.card2) { %> srcset="<%= t.previews.card %> 480w, <%= t.previews.card2 %> 720w" sizes="(min-width: 1100px) 380px, (min-width: 700px) 46vw, 92vw"<% } %> width="480" height="300" <%- typeof eager !== "undefined" && eager ? 'fetchpriority="high"' : 'loading="lazy"' %> decoding="async" alt="Aperçu de la page d'accueil du thème <%= t.name %>">
     <% } else { %>
       <span class="mk-tg-shot mk-tg-swatch" aria-hidden="true"><% t.palette.forEach((c) => { %><i style="background:<%= c %>"></i><% }) %><b style="font-family:<%= fontStack(t.fonts.heading) %>"><%= t.name %></b></span>
     <% } %>
@@ -11,12 +11,11 @@
   </a>
   <div class="mk-tg-body">
     <h3><a href="<%= to("/" + t.key + "/details") %>"><%= t.name %></a><% if (t.state === "incompatible") { %> <span class="badge mk-status-warn">Incompatible</span><% } %></h3>
-    <p class="mk-tg-cat"><%= t.categoryLabel %></p>
+    <p class="mk-tg-cat"><%= t.categoryLabel %><% if (t.pages.length) { %> · <%= t.pages.length %> pages<% } %></p>
     <p class="mk-tg-desc"><%= t.description %></p>
-    <% if (t.pages.length) { %><p class="mk-tg-meta"><%= t.pages.length %> pages : <%= t.pages.slice(0, 4).map((p) => p.name).join(", ") %><%= t.pages.length > 4 ? "…" : "" %></p><% } %>
   </div>
   <div class="mk-tg-foot">
-    <% if (t.hasDemo) { %><a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/apercu") %>">Prévisualiser</a><% } %>
+    <a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/apercu") %>"<% if (t.hasDemo) { %> data-th-preview data-th-pages="<%= JSON.stringify(t.pages.map((p) => [p.key, p.name])) %>" data-th-label="<%= t.name %>" data-th-cat="<%= t.categoryLabel %>" data-th-poster="<%= t.previews ? t.previews.card : "" %>" aria-haspopup="dialog"<% } %>>Prévisualiser</a>
     <% if (t.state === "active") { %>
       <a class="btn btn-primary btn-sm" href="/marketing/site-web/personnaliser<%= T.siteId ? "?site=" + T.siteId : "" %>">Personnaliser</a>
     <% } else if (t.state === "installed" && canActivate && !readOnly) { %>
@@ -24,6 +23,5 @@
     <% } else if (t.state === "available" && canInstall && !readOnly) { %>
       <form method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %><input type="hidden" name="key" value="<%= t.key %>"><button class="btn btn-primary btn-sm" type="submit" data-busy="Installation…">Installer</button></form>
     <% } %>
-    <% if (!t.hasDemo) { %><a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/apercu") %>">Prévisualiser</a><% } %>
   </div>
 </li>
