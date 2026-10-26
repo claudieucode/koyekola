@@ -11,7 +11,7 @@
     <div class="kx-hero-body">
       <p class="kx-eyebrow"><%= T.name %></p>
       <h1>Thèmes <span class="mk-th-count" aria-label="<%= g.libraryCount %> thèmes dans la bibliothèque"><%= g.libraryCount %></span></h1>
-      <p class="kx-hero-lead mk-th-site">Site : <strong><%= T.name %></strong> · le catalogue est commun à tous les sites ; chaque site a ses propres thèmes installés, son thème actif et ses réglages.</p>
+      <p class="kx-hero-lead mk-th-site">Site : <strong><%= T.name %></strong> · catalogue commun, thème actif et réglages propres à ce site.</p>
       <div class="kx-hero-actions mk-actions">
         <% if (canInstall && !readOnly) { %><a class="btn btn-outline btn-sm" href="<%= to("/ajouter") %>"><%- icon("upload", { size: 16 }) %>Importer un paquet de thème</a><% } %>
         <button type="button" class="btn btn-outline btn-sm mk-th-help-btn" aria-expanded="false" aria-controls="th-help" data-th-toggle>Aide <span aria-hidden="true">▾</span></button>

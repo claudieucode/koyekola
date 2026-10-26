@@ -11,6 +11,11 @@
 - **Correctif** : une règle héritée de `kola-stable.css` imposait des colonnes minimales aux filtres et provoquait 16 px de défilement horizontal à 320 px ; supprimée.
 - Thème sombre : `kola-brand.css` couvre les nouveaux composants.
 
+## Passe TITAN XVII (complément)
+- Pastilles de filtres actifs (une par filtre, retirable seule) et lien « Réinitialiser » ; miniature indisponible = état « Aperçu indisponible » aux dimensions de la carte (jamais une fausse capture).
+- En-tête plus court ; fiche d'un thème : actions séparées des informations, pages en pastilles ; aperçu complet : titre, appareils et actions sur une rangée, pages défilantes sur la suivante (appareils masqués sous 720 px).
+- Vérifié avec Chrome piloté : retrait d'une pastille (les autres filtres restent), image cassée remplacée, aperçu complet et fiche à 1440 et 390 px.
+
 ## Mesures (Chrome 1440×900, serveur de test local, machine chargée : valeurs indicatives, une série par état)
 | Mesure | Avant | Après |
 |---|---|---|

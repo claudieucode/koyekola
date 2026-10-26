@@ -160,7 +160,22 @@
     var q = form.querySelector("[data-tg-search]"), lastQ = q ? q.value : "";
     if (q) q.addEventListener("input", function () { clearTimeout(timer); if (q.value === lastQ) return; lastQ = q.value; timer = setTimeout(function () { load(); }, 120); });
     form.querySelectorAll("[data-tg-auto]").forEach(function (s) { s.addEventListener("change", function () { load(); }); });
+    // Retrait d'UN filtre actif (pastille) : les autres sont conservés
+    var clear = function (what) {
+      if (what === "q") { var qi = form.querySelector("[data-tg-search]"); qi.value = ""; lastQ = ""; }
+      else if (what === "style") form.querySelector("[name=style]").value = "";
+      else if (what === "etat") { var all = form.querySelector('[name=etat][value=""]'); if (all) all.checked = true; }
+      else if (what === "categorie") setCat("");
+      load();
+    };
+    // Miniature qui ne se charge pas : état honnête (jamais une fausse capture), dimensions conservées
+    root.addEventListener("error", function (e) {
+      var img = e.target; if (!img || img.tagName !== "IMG" || !/mk-tg-(shot|active-shot)/.test(img.className)) return;
+      var ph = document.createElement("span"); ph.className = img.className + " mk-tg-missing"; ph.setAttribute("role", "img"); ph.setAttribute("aria-label", "Aperçu indisponible"); ph.textContent = "Aperçu indisponible";
+      img.replaceWith(ph);
+    }, true);
     root.addEventListener("click", function (e) {
+      var rm = e.target.closest ? e.target.closest("[data-tg-remove]") : null; if (rm) { e.preventDefault(); clear(rm.getAttribute("data-tg-remove")); return; }
       var a = e.target.closest ? e.target.closest("a") : null; if (!a || !root.contains(a)) return;
       if (a.hasAttribute("data-tg-catlink")) { e.preventDefault(); if (a.getAttribute("aria-disabled") === "true") return; setCat(a.getAttribute("data-tg-catlink")); load(); return; }
       if (a.hasAttribute("data-tg-reset")) { e.preventDefault(); reset(); return; }

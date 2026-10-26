@@ -5,6 +5,13 @@
   <p class="mk-th-status" aria-live="polite" data-th-status><%= hasFilter ? (g.total ? g.total + " thème" + (g.total > 1 ? "s" : "") + " trouvé" + (g.total > 1 ? "s" : "") + "." : "Aucun thème ne correspond à cette recherche.") : "" %></p>
   <% if (hasFilter) { %><a class="mk-tg-reset" href="<%= to("") %>" data-tg-reset>Réinitialiser les filtres</a><% } %>
 </div>
+<% if (hasFilter) { const chips = [];
+  if (f.q) chips.push(["q", "Recherche : « " + f.q + " »"]);
+  if (f.category) chips.push(["categorie", (CATEGORIES.find((c) => c.key === f.category) || {}).label || f.category]);
+  if (f.style) chips.push(["style", "Style : " + (STYLE_LABELS[f.style] || f.style)]);
+  if (f.state) chips.push(["etat", STATES[f.state]]); %>
+<ul class="mk-tg-chips" aria-label="Filtres actifs"><% chips.forEach((c) => { %><li><button type="button" data-tg-remove="<%= c[0] %>" aria-label="Retirer le filtre : <%= c[1] %>"><span><%= c[1] %></span><%- icon("close", { size: 12 }) %></button></li><% }) %></ul>
+<% } %>
 <% if (!hasFilter && g.page === 1 && g.featured.length) { %>
 <section class="mk-tg-featured" aria-labelledby="tg-feat">
   <h2 id="tg-feat">Recommandés</h2>

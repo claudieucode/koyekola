@@ -51,6 +51,14 @@ describe("Thèmes : galerie refaite", () => {
     assert.match(html, /name="etat" value="installed"/, "affichage : choix à un clic");
   });
 
+  test("filtres actifs : une pastille par filtre, retirable seule ; rien sans filtre ; réinitialisation proposée", async () => {
+    const none = (await adminA.get(`${TH}?site=${A}&fragment=1`)).text;
+    assert.doesNotMatch(none, /mk-tg-chips/); assert.doesNotMatch(none, /data-tg-reset/);
+    const f = decode((await adminA.get(`${TH}?site=${A}&fragment=1&q=restaurant&style=chaleureux&etat=available&categorie=restaurant`)).text);
+    assert.deepEqual([...f.matchAll(/data-tg-remove="([a-z]+)"/g)].map((m) => m[1]), ["q", "categorie", "style", "etat"]);
+    assert.match(f, /aria-label="Retirer le filtre : Recherche : « restaurant »"/); assert.match(f, /data-tg-reset/);
+  });
+
   test("carte : une seule image, pas de pastille mobile ni de ligne de pages ; l'aperçu rapide est proposé avec ses pages ; le lien reste valable sans script", async () => {
     const html = (await adminA.get(`${TH}?site=${A}`)).text;
     assert.doesNotMatch(html, /mk-tg-phone/); assert.doesNotMatch(html, /class="mk-tg-meta"/);
