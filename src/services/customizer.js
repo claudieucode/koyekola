@@ -29,7 +29,10 @@ const PANELS = [
   { id: "identite", label: "Identité du site", icon: "id", hint: "Nom, slogan, logos et icône de l'onglet." },
   { id: "couleurs", label: "Couleurs", icon: "palette", hint: "Couleurs globales, liens et bordures." },
   { id: "typographie", label: "Typographie", icon: "type", hint: "Polices, tailles, graisses et interlignes." },
-  { id: "mise-en-page", label: "Mise en page", icon: "layout", hint: "Largeurs et espacements globaux." },
+  { id: "mise-en-page", label: "Mise en page", icon: "layout", hint: "Largeurs, espacements, arrondis et points de rupture." },
+  { id: "arriere-plan", label: "Arrière-plan", icon: "image", hint: "Couleur, dégradé et image de fond des pages." },
+  { id: "images", label: "Images", icon: "image", hint: "Arrondi, bordure, ombre et cadrage des images." },
+  { id: "formulaires", label: "Champs de formulaire", icon: "form", hint: "Apparence des champs (inscription, recherche)." },
   { id: "en-tete", label: "En-tête", icon: "header", hint: "Logo, annonce et boutons de l'en-tête." },
   { id: "menus", label: "Menus", icon: "menu", hint: "Menus du site et emplacements." },
   { id: "pied", label: "Pied de page", icon: "footer", hint: "Marque, texte et mentions du pied de page." },
@@ -58,6 +61,7 @@ for (const k of ["primary", "secondary", "accent", "background", "surface", "tex
 add("tokens.link.color", "couleurs", "color", "Liens", { ...colorOpt, help: "Vide : couleur d'origine du site." });
 add("tokens.link.hoverColor", "couleurs", "color", "Liens au survol", colorOpt);
 add("tokens.border.color", "couleurs", "color", "Bordures", { help: "Couleur des filets et des cartes." });
+for (const k of ["success", "warning", "error"]) add(`tokens.colors.${k}`, "couleurs", "color", `${C[k]} (messages)`, { scope: ["site"], help: "Couleur des messages de confirmation, d'avertissement et d'erreur du site." });
 
 // Typographie
 // Polices proposées : celles du système, la bibliothèque, et les polices TÉLÉVERSÉES par CE site (jamais celles d'un autre site)
@@ -69,6 +73,14 @@ for (const k of ["h1", "h2", "h3"]) {
   add(`tokens.type.${k}.weight`, "typographie", "select", `Graisse — ${tokensLib.TYPE_LABELS[k]}`, { options: [[400, "Normale"], [500, "Moyenne"], [600, "Demi-grasse"], [700, "Grasse"], [800, "Très grasse"]], number: true });
   add(`tokens.type.${k}.lineHeight`, "typographie", "number", `Interligne — ${tokensLib.TYPE_LABELS[k]}`, { min: 1, max: 2, step: 0.05 });
 }
+for (const k of ["h4", "h5", "h6"]) {
+  add(`tokens.type.${k}.size`, "typographie", "number", `Taille — ${tokensLib.TYPE_LABELS[k]}`, { scope: ["site"], min: 10, max: 96, unit: "px" });
+  add(`tokens.type.${k}.weight`, "typographie", "select", `Graisse — ${tokensLib.TYPE_LABELS[k]}`, { scope: ["site"], options: [[400, "Normale"], [500, "Moyenne"], [600, "Demi-grasse"], [700, "Grasse"], [800, "Très grasse"]], number: true });
+}
+add("tokens.type.caption.size", "typographie", "number", "Taille des légendes", { scope: ["site"], min: 10, max: 96, unit: "px" });
+add("tokens.fonts.button", "typographie", "select", "Police des boutons", { scope: ["site"], options: fontOptions });
+add("tokens.fonts.link", "typographie", "select", "Police des liens", { scope: ["site"], options: fontOptions });
+for (const k of ["h1", "h2", "h3"]) add(`tokens.type.${k}.transform`, "typographie", "select", `Casse — ${tokensLib.TYPE_LABELS[k]}`, { scope: ["site"], options: [["none", "D'origine"], ["uppercase", "MAJUSCULES"], ["lowercase", "minuscules"], ["capitalize", "Initiales en capitale"]] });
 add("tokens.type.body.size", "typographie", "number", "Taille du texte courant", { min: 10, max: 96, unit: "px" });
 add("tokens.type.body.lineHeight", "typographie", "number", "Interligne du texte courant", { min: 1, max: 2, step: 0.05 });
 add("tokens.type.h1.letterSpacing", "typographie", "number", "Espacement des lettres — Titre 1", { scope: ["site"], min: -0.1, max: 0.5, step: 0.01, unit: "em" });
@@ -85,6 +97,16 @@ add("settings.layout.gutter", "mise-en-page", "number", "Marge latérale (écran
 for (const k of ["sm", "md", "lg", "xl"]) add(`tokens.space.${k}`, "mise-en-page", "number", `Espacement ${k.toUpperCase()}`, { scope: ["site"], min: 0, max: 200, unit: "px" });
 add("tokens.radius.md", "mise-en-page", "number", "Arrondi des cartes et champs", { min: 0, max: 48, unit: "px" });
 add("tokens.radius.lg", "mise-en-page", "number", "Arrondi des grands blocs", { min: 0, max: 48, unit: "px" });
+add("tokens.radius.sm", "mise-en-page", "number", "Arrondi des petits éléments", { scope: ["site"], min: 0, max: 48, unit: "px" });
+add("tokens.radius.field", "mise-en-page", "number", "Arrondi des champs", { scope: ["site"], min: 0, max: 48, unit: "px" });
+add("tokens.radius.card", "mise-en-page", "number", "Arrondi des cartes", { scope: ["site"], min: 0, max: 48, unit: "px" });
+add("tokens.border.width", "mise-en-page", "number", "Épaisseur des bordures", { scope: ["site"], min: 0, max: 4, unit: "px" });
+add("tokens.sizes.buttonHeight", "mise-en-page", "number", "Hauteur des boutons", { scope: ["site"], min: 32, max: 72, unit: "px" });
+add("tokens.sizes.fieldHeight", "mise-en-page", "number", "Hauteur des champs", { scope: ["site"], min: 32, max: 72, unit: "px" });
+add("settings.layout.breakpoints.tablet", "mise-en-page", "number", "Point de rupture : tablette", { scope: ["site"], min: 820, max: 1279, unit: "px", help: "Largeur en dessous de laquelle le site passe en disposition tablette." });
+add("settings.layout.breakpoints.mobile", "mise-en-page", "number", "Point de rupture : mobile", { scope: ["site"], min: 400, max: 767, unit: "px", help: "Doit rester inférieur à celui de la tablette." });
+add("settings.transitions.type", "mise-en-page", "select", "Transition entre les pages", { scope: ["site"], options: [["none", "Aucune"], ["fade", "Fondu"], ["slide", "Glissement"]], help: "Désactivée pour les personnes qui demandent moins d'animations." });
+add("settings.transitions.duration", "mise-en-page", "number", "Durée de la transition", { scope: ["site"], min: 100, max: 1000, unit: "ms", showIf: { "settings.transitions.type": ["fade", "slide"] } });
 add("tokens.shadow.card", "mise-en-page", "select", "Ombre des cartes", { options: [["none", "Aucune"], ["sm", "Légère"], ["md", "Moyenne"], ["lg", "Forte"]] });
 
 // En-tête (principal : composé par le moteur d'apparence ; un site compose son en-tête dans le Page Builder)
@@ -117,10 +139,47 @@ add("tokens.buttons.normal.color", "boutons", "color", "Texte", colorOpt);
 add("tokens.buttons.normal.border", "boutons", "color", "Bordure", colorOpt);
 add("tokens.buttons.hover.bg", "boutons", "color", "Fond au survol", colorOpt);
 add("tokens.buttons.hover.color", "boutons", "color", "Texte au survol", colorOpt);
+add("tokens.buttons.hover.border", "boutons", "color", "Bordure au survol", { ...colorOpt, scope: ["site"] });
+add("tokens.buttons.active.bg", "boutons", "color", "Fond au clic", { ...colorOpt, scope: ["site"] });
+add("tokens.buttons.active.color", "boutons", "color", "Texte au clic", { ...colorOpt, scope: ["site"] });
+add("tokens.buttons.active.border", "boutons", "color", "Bordure au clic", { ...colorOpt, scope: ["site"] });
 add("tokens.buttons.focus.color", "boutons", "color", "Contour au focus clavier", colorOpt);
 add("tokens.buttons.focus.width", "boutons", "number", "Épaisseur du contour au focus", { min: 0, max: 8, unit: "px", nullable: true });
 add("tokens.buttons.borderWidth", "boutons", "number", "Épaisseur de bordure", { scope: ["site"], min: 0, max: 6, unit: "px", nullable: true });
 add("tokens.shadow.button", "boutons", "select", "Ombre des boutons", { scope: ["site"], options: [["none", "Aucune"], ["sm", "Légère"], ["md", "Moyenne"], ["lg", "Forte"]] });
+
+// Arrière-plan des pages d'un site (rendu par layoutCss)
+add("settings.background.color", "arriere-plan", "color", "Couleur de fond", { scope: ["site"], allowEmpty: true, help: "Vide : la couleur « Fond » des Couleurs." });
+add("settings.background.gradient.enabled", "arriere-plan", "toggle", "Dégradé", { scope: ["site"] });
+add("settings.background.gradient.from", "arriere-plan", "color", "Dégradé : début", { scope: ["site"], showIf: { "settings.background.gradient.enabled": true } });
+add("settings.background.gradient.to", "arriere-plan", "color", "Dégradé : fin", { scope: ["site"], showIf: { "settings.background.gradient.enabled": true } });
+add("settings.background.gradient.angle", "arriere-plan", "number", "Dégradé : angle", { scope: ["site"], min: 0, max: 360, unit: "°", showIf: { "settings.background.gradient.enabled": true } });
+add("settings.background.image", "arriere-plan", "media", "Image de fond", { scope: ["site"], store: "url", help: "Image de la médiathèque de CE site." });
+add("settings.background.position", "arriere-plan", "select", "Position de l'image", { scope: ["site"], options: [["center", "Centre"], ["top", "Haut"], ["bottom", "Bas"], ["left", "Gauche"], ["right", "Droite"]], showIf: { "settings.background.image": "*" } });
+add("settings.background.size", "arriere-plan", "select", "Taille de l'image", { scope: ["site"], options: [["cover", "Remplir"], ["contain", "Contenir"], ["auto", "Taille d'origine"]], showIf: { "settings.background.image": "*" } });
+add("settings.background.repeat", "arriere-plan", "select", "Répétition de l'image", { scope: ["site"], options: [["no-repeat", "Aucune"], ["repeat", "Mosaïque"], ["repeat-x", "Horizontale"], ["repeat-y", "Verticale"]], showIf: { "settings.background.image": "*" } });
+add("settings.background.fixed", "arriere-plan", "toggle", "Image fixe au défilement", { scope: ["site"], showIf: { "settings.background.image": "*" }, help: "Appliqué sur écran large seulement." });
+
+// Images (rendu par themeCss)
+add("tokens.images.radius", "images", "number", "Arrondi des images", { scope: ["site"], min: 0, max: 48, unit: "px", nullable: true });
+add("tokens.images.borderWidth", "images", "number", "Épaisseur de bordure", { scope: ["site"], min: 0, max: 8, unit: "px", nullable: true });
+add("tokens.images.borderColor", "images", "color", "Couleur de bordure", { scope: ["site"], allowEmpty: true });
+add("tokens.images.shadow", "images", "select", "Ombre des images", { scope: ["site"], options: [["", "D'origine"], ["none", "Aucune"], ["sm", "Légère"], ["md", "Moyenne"], ["lg", "Forte"]] });
+add("tokens.images.fit", "images", "select", "Cadrage (galeries et cartes)", { scope: ["site"], options: [["", "D'origine"], ["cover", "Remplir"], ["contain", "Contenir"], ["fill", "Étirer"], ["scale-down", "Réduire si besoin"]] });
+add("tokens.images.position", "images", "select", "Position du cadrage", { scope: ["site"], options: [["", "D'origine"], ["center", "Centre"], ["top", "Haut"], ["bottom", "Bas"], ["left", "Gauche"], ["right", "Droite"]] });
+
+// Champs de formulaire (rendu par themeCss : formulaire d'inscription et recherche)
+add("tokens.forms.bg", "formulaires", "color", "Fond des champs", { scope: ["site"], allowEmpty: true });
+add("tokens.forms.color", "formulaires", "color", "Texte des champs", { scope: ["site"], allowEmpty: true });
+add("tokens.forms.borderColor", "formulaires", "color", "Bordure des champs", { scope: ["site"], allowEmpty: true });
+add("tokens.forms.borderWidth", "formulaires", "number", "Épaisseur de bordure", { scope: ["site"], min: 0, max: 4, unit: "px", nullable: true });
+add("tokens.forms.radius", "formulaires", "number", "Arrondi des champs", { scope: ["site"], min: 0, max: 32, unit: "px", nullable: true });
+add("tokens.forms.paddingY", "formulaires", "number", "Marge intérieure verticale", { scope: ["site"], min: 4, max: 24, unit: "px", nullable: true });
+add("tokens.forms.paddingX", "formulaires", "number", "Marge intérieure horizontale", { scope: ["site"], min: 6, max: 32, unit: "px", nullable: true });
+add("tokens.forms.focusColor", "formulaires", "color", "Contour au focus clavier", { scope: ["site"], allowEmpty: true });
+add("tokens.forms.placeholderColor", "formulaires", "color", "Aide à la saisie", { scope: ["site"], allowEmpty: true });
+add("tokens.forms.labelColor", "formulaires", "color", "Libellés", { scope: ["site"], allowEmpty: true });
+add("tokens.forms.accent", "formulaires", "color", "Cases et boutons radio", { scope: ["site"], allowEmpty: true });
 
 // CSS (un site : réglage « customCss » du site ; le principal n'a pas de CSS additionnel enregistrable)
 add("settings.customCss", "css", "css", "CSS additionnel du site", { scope: ["site"], perm: "pages.code", max: 20000, help: "Règles « .ma-classe { … } » appliquées aux pages du site (aucun @, aucune ressource externe)." });
@@ -195,6 +254,9 @@ function coerce(c, raw, siteId) {
   if (c.kind === "color") {
     const v = String(raw ?? "").trim().toLowerCase();
     if (v === "") { if (c.allowEmpty) return ""; throw new UserError(`${c.label} : un code couleur est attendu (ex. #0277b6).`); }
+    // Les couleurs de base du site sont toujours des codes hexadécimaux ; les autres champs acceptent aussi une couleur du site (« token:primary »), que le moteur valide
+    const hexOnly = c.id.startsWith("tokens.colors.") || c.id === "tokens.border.color";
+    if (!hexOnly && /^token:[a-z0-9-]{1,24}$/.test(v)) return v;
     if (!/^#[0-9a-f]{6}$/.test(v)) throw new UserError(`${c.label} : code hexadécimal attendu (ex. #0277b6).`);
     return v;
   }
@@ -269,7 +331,16 @@ function diffAgainst(live, changes) {
   }
   return out;
 }
-const valuesOf = (siteId, config) => Object.fromEntries(catalog(siteId).map((c) => { const v = getPath(config, c.id); return [c.id, v === undefined ? (c.kind === "toggle" ? false : "") : v]; }));
+// Une couleur peut référencer une couleur du site (« token:primary ») : l'écran affiche le code hexadécimal correspondant
+const resolveColor = (v, config) => {
+  if (typeof v !== "string" || !v.startsWith("token:")) return v;
+  const key = v.slice(6), t = (config && config.tokens) || {};
+  if (key === "on-primary") return tokensLib.onColor(t.colors.primary);
+  if (key === "on-accent") return tokensLib.onColor(t.colors.accent);
+  const custom = (t.customColors || []).find((c) => c.key === key);
+  return (custom && custom.hex) || (t.colors && t.colors[key]) || "";
+};
+const valuesOf = (siteId, config) => Object.fromEntries(catalog(siteId).map((c) => { const v = getPath(config, c.id); return [c.id, v === undefined || v === null ? (c.kind === "toggle" ? false : "") : (c.kind === "color" ? resolveColor(v, config) : v)]; }));
 
 // ---------- Brouillon ----------
 const draftRow = (siteId) => db.prepare(`SELECT * FROM cms_customizer_drafts WHERE ${sameScope("site_id")}`).get(siteId);

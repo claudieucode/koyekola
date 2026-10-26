@@ -22,6 +22,8 @@
   var device = "desktop", openPanel = null;
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
   function same(a, b) { return String(a === null || a === undefined ? "" : a) === String(b === null || b === undefined ? "" : b); }
+  // Condition d'affichage : valeur exacte, liste de valeurs acceptées, ou « * » (n'importe quelle valeur non vide)
+  function wants(v, want) { if (want === "*") return v !== null && v !== undefined && v !== ""; if (Array.isArray(want)) return want.some(function (w) { return same(v, w); }); return same(v, want); }
   function work() { var o = {}; Object.keys(values).forEach(function (id) { if (!same(values[id], live[id])) o[id] = values[id]; }); return o; }
   function sameChanges(a, b) { var ka = Object.keys(a), kb = Object.keys(b); return ka.length === kb.length && ka.every(function (k) { return k in b && same(a[k], b[k]); }); }
   function dirty() { return !sameChanges(work(), saved); }
@@ -247,7 +249,7 @@
   function updateVisibility() {
     $$("[data-ctl]").forEach(function (row) {
       var c = controls[row.getAttribute("data-ctl")]; if (!c || !c.showIf) return;
-      var ok = Object.keys(c.showIf).every(function (k) { return same(values[k], c.showIf[k]); });
+      var ok = Object.keys(c.showIf).every(function (k) { return wants(values[k], c.showIf[k]); });
       row.hidden = !ok;
     });
     $$(".kwc-toggle-txt").forEach(function (t) { var cb = t.parentNode.querySelector("input"); if (cb) t.textContent = cb.checked ? "Activé" : "Désactivé"; });
