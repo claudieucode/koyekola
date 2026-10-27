@@ -167,7 +167,8 @@ describe("Sécurité et intégrité", () => {
   });
 
   test("article supprimé : ses révisions aussi (pas de révision orpheline)", async () => {
-    await prof.post(`/formateur/blog/${b}/supprimer`, {});
+    await prof.post(`/formateur/blog/${b}/supprimer`, {}); // corbeille, puis suppression définitive
+    await prof.post(`/formateur/blog/${b}/supprimer-definitivement`, {});
     assert.equal(q("SELECT COUNT(*) n FROM post_revisions WHERE post_id = ?", b)[0].n, 0);
   });
 
@@ -220,7 +221,8 @@ describe("Image mise en avant", () => {
     assert.ok(onDisk(first), "ancienne image gardée (citée par une révision)");
     await restore(prof, id, revs(id)[0].id);
     assert.equal(post(id).cover_path, first, "image d'origine restaurée");
-    await prof.post(`/formateur/blog/${id}/supprimer`, {});
+    await prof.post(`/formateur/blog/${id}/supprimer`, {}); // corbeille, puis suppression définitive
+    await prof.post(`/formateur/blog/${id}/supprimer-definitivement`, {});
     assert.equal(onDisk(first), false);
     assert.equal(onDisk(second), false, "plus aucun article ni révision : images libérées");
   });

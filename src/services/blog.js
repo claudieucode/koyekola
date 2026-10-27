@@ -304,8 +304,12 @@ function getAutosave(postId) {
   if (!row) return null;
   try { return { data: JSON.parse(row.payload), saved_at: row.saved_at }; } catch { return null; }
 }
+// Capacité d'une sauvegarde automatique (JSON). Trop grosse : REFUSÉE (UserError) plutôt que tronquée, car un JSON coupé est invalide
+// et serait perdu sans bruit à la relecture alors que l'éditeur affiche « Sauvegarde automatique ».
+const AUTOSAVE_MAX = 2000000;
 function setAutosave(postId, userId, data) {
-  const payload = JSON.stringify(data).slice(0, 400000);
+  const payload = JSON.stringify(data);
+  if (payload.length > AUTOSAVE_MAX) throw new UserError("Le contenu est trop volumineux pour la sauvegarde automatique : enregistrez l'article avec le bouton « Enregistrer ». Votre copie locale est conservée.");
   db.prepare("INSERT INTO post_autosaves (post_id, user_id, payload, saved_at) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(post_id) DO UPDATE SET user_id = excluded.user_id, payload = excluded.payload, saved_at = excluded.saved_at").run(postId, userId ?? null, payload);
   return db.prepare("SELECT saved_at FROM post_autosaves WHERE post_id = ?").get(postId).saved_at;
 }

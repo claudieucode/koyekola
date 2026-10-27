@@ -132,6 +132,11 @@ function start() {
     if (!res.ok) throw new Error((data && data.error) || `Erreur ${res.status} : l'opération n'a pas abouti.`);
     return data || {};
   }
+  // Nouvel article ouvert dans un site : le site accompagne la création (le serveur le valide ; il n'est jamais cru sur parole)
+  function siteQuery() {
+    const siteId = (document.getElementById("be-form") || { dataset: {} }).dataset.site;
+    return siteId ? `?site=${encodeURIComponent(siteId)}` : "";
+  }
   const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
   const fmtDate = (sqlUtc) => (sqlUtc ? new Date(`${sqlUtc.replace(" ", "T")}Z`).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "—");
   const slugify = (t) => norm(t).replace(/'/g, "").trim().replace(/\s+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);
@@ -2570,8 +2575,10 @@ function start() {
     read() { try { return JSON.parse(localStorage.getItem(this.key()) || "null"); } catch { return null; } },
     clear() { try { localStorage.removeItem(this.key()); localStorage.removeItem("be-draft-nouveau"); } catch { /* rien */ } },
   };
+  let changeRev = 0; // compteur de modifications : une frappe faite pendant un enregistrement ne doit pas être déclarée enregistrée
   function changed() {
     dirty = true;
+    changeRev += 1;
     setState("Modifications non enregistrées", "is-dirty");
     localDraft.write();
     scheduleAutosave();
@@ -2642,12 +2649,13 @@ function start() {
     if (!(await commitAllReusableEdits())) return false;
     saving = true;
     setState("Enregistrement…", "is-saving");
+    const revAtSend = changeRev;
     try {
-      const url = postId ? `/formateur/blog/${postId}/modifier` : "/formateur/blog/nouveau";
+      const url = postId ? `/formateur/blog/${postId}/modifier` : `/formateur/blog/nouveau${siteQuery()}`;
       const r = await api(url, { method: "POST", body: formPayload({ withFiles: true }), headers: { "x-blog-editor": "1" } });
       if (!postId) adopt({ id: r.id });
-      dirty = false;
-      localDraft.clear();
+      const untouched = changeRev === revAtSend; // rien n'a été tapé pendant l'envoi
+      if (untouched) { dirty = false; localDraft.clear(); }
       DATA.status = r.status;
       seoSiteLoaded = false;
       if (seoData) { seoData.invalidate(); seoData.emit("saved", { status: r.status }); }
@@ -2659,7 +2667,8 @@ function start() {
       for (const [key, col] of [["cover", "coverPath"], ["og", "ogImagePath"], ["twitter", "twitterImagePath"]]) if (r[col] !== undefined) imagePicks[key].saved(r[col]);
       if (r.slug) { field("slug").value = r.slug; if (r.publishedAt) $("[data-slug-hint]").textContent = "Article en ligne : si vous changez le lien, l'ancienne adresse redirigera vers la nouvelle."; }
       field("remove_cover").value = ""; field("remove_og_image").value = ""; field("remove_twitter_image").value = "";
-      setState("Enregistré", "is-saved");
+      if (untouched) setState("Enregistré", "is-saved");
+      else { setState("Modifications non enregistrées", "is-dirty"); scheduleAutosave(); } // frappes arrivées pendant l'envoi : elles restent à sauvegarder
       syncStatus();
       refreshPublication();
       refreshPreviews();

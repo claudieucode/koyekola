@@ -37,7 +37,8 @@ describe("protection des images du blog", () => {
     const p = await post({ title: "Article A", cover_media: a.path });
     assert.ok(p.id);
     run("INSERT INTO blog_reusable_blocks (name, content) VALUES (?, ?)", "Bandeau", JSON.stringify({ type: "image", attrs: { src: a.path } }));
-    await prof.post(`/formateur/blog/${p.id}/supprimer`, {});
+    await prof.post(`/formateur/blog/${p.id}/supprimer`, {}); // corbeille, puis suppression définitive
+    await prof.post(`/formateur/blog/${p.id}/supprimer-definitivement`, {});
     assert.equal(sql("SELECT COUNT(*) n FROM posts WHERE id = ?", p.id)[0].n, 0, "article supprimé");
     assert.equal(await served(a.path), 200, "l'image du bloc réutilisable est toujours là");
     assert.equal(sql("SELECT COUNT(*) n FROM media WHERE path = ?", a.path)[0].n, 1);

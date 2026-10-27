@@ -1010,8 +1010,14 @@ listAction("supprimer-definitivement", (p) => { articles.purge(p.id); return { t
 // Un nouvel article reçoit un brouillon dès la première sauvegarde automatique (rien n'est perdu en cas de rafraîchissement)
 router.post("/formateur/blog/api/brouillon", upload.none(), (req, res) => {
   const title = oneLine(req.body.title, 150) || "Article sans titre";
-  const info = db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id) VALUES (?, ?, 'html', 'draft', ?)").run(uniqueSlug(title), title, req.session.user.id);
-  const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(Number(info.lastInsertRowid));
+  const site = newArticleSite(req); // même règle que la création : le site est validé côté serveur, jamais cru sur parole
+  // Le brouillon naît dans le site de l'éditeur, dans la même transaction que sa création (comme POST /nouveau)
+  const post = transaction(db, () => {
+    const info = db.prepare("INSERT INTO posts (slug, title, content_format, status, author_id) VALUES (?, ?, 'html', 'draft', ?)").run(uniqueSlug(title), title, req.session.user.id);
+    const id = Number(info.lastInsertRowid);
+    if (site) siteContent.adopt({ db, organizationId: marketingOrgId(), userId: req.session.user.id, siteFilter: site }, { type: "post", id });
+    return db.prepare("SELECT * FROM posts WHERE id = ?").get(id);
+  });
   blog.addRevision(post, req.session.user.id, "Création de l'article (sauvegarde automatique)", "create");
   res.json({ ok: true, id: post.id, slug: post.slug, editUrl: `/formateur/blog/${post.id}/modifier` });
 });
@@ -1020,7 +1026,11 @@ router.post("/formateur/blog/:id/autosave", loadPost, upload.none(), (req, res) 
   const data = {};
   for (const [k, v] of Object.entries(req.body)) if (typeof v === "string" && /^[a-z_]{1,40}$/.test(k)) data[k] = v.slice(0, k === "content" ? MAX_HTML : 5000);
   if (data.content) data.content = reusable.pruneMissing(sanitizeBlogHtml(data.content));
-  const savedAt = blog.setAutosave(req.post.id, req.session.user.id, data);
+  let savedAt;
+  try { savedAt = blog.setAutosave(req.post.id, req.session.user.id, data); } catch (error) {
+    if (!(error instanceof UserError)) throw error;
+    return res.status(413).json({ error: error.message }); // refus explicite : l'éditeur affiche l'erreur et garde sa copie locale
+  }
   res.json({ ok: true, savedAt });
 });
 
