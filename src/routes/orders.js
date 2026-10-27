@@ -26,13 +26,14 @@ function payMode(total) {
 function getPurchasableItems(req) {
   const ids = Object.keys(req.session.cart || {});
   if (!ids.length) return [];
+  const sc = require("../services/lmsSites").scopeSql(req.lmsSite, "courses"); // seules les formations de CE site (domaine) sont achetables ici
   const courses = db
     .prepare(
       `SELECT * FROM courses
-       WHERE id IN (${ids.map(() => "?").join(",")}) AND published = 1
+       WHERE id IN (${ids.map(() => "?").join(",")}) AND published = 1 AND ${sc.sql}
          AND id NOT IN (SELECT course_id FROM enrollments WHERE user_id = ?)`
     )
-    .all(...ids, req.session.user.id);
+    .all(...ids, ...sc.params, req.session.user.id);
   // price_cents = prix à payer (offre en cours comprise) ; standard_price_cents = prix du catalogue ; offer = offre appliquée ou null
   return applyEffectivePrices(courses);
 }

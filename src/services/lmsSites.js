@@ -50,10 +50,32 @@ function assignCourse(ctx, courseId, siteId) {
   return { changed: true };
 }
 
+// Sites proposés pour y publier des formations : de l'organisation, non supprimés, module « lms » activé (jamais la ligne dédiée du site principal)
+function siteChoices(db, organizationId) {
+  if (!Number.isInteger(organizationId)) return [];
+  return db.prepare(`SELECT s.id, s.name FROM mk_sites s JOIN mk_site_modules m ON m.site_id = s.id AND m.module = 'lms' AND m.enabled = 1
+    WHERE s.organization_id = ? AND s.deleted_at IS NULL${primarySite.excludeSql(db, "s")} ORDER BY s.name COLLATE NOCASE`).all(organizationId).map((r) => ({ id: r.id, name: r.name }));
+}
+
 // Lignes dont la formation n'existe plus (aucune donnée de formation n'est touchée).
 function purgeOrphans(db) {
   if (!hasTable(db)) return 0;
   return Number(db.prepare("DELETE FROM mk_course_sites WHERE course_id NOT IN (SELECT id FROM courses)").run().changes);
 }
 
-module.exports = { siteOfCourse, scopeSql, belongsTo, assignCourse, purgeOrphans, hasTable };
+// Contexte de site d'une requête, déduit du DOMAINE résolu côté serveur (req.kwSite), jamais d'un paramètre : null = site principal ;
+// identifiant = site dont le module « lms » est activé ; 0 = domaine de site SANS module actif (aucune formation visible, refus de tout accès : fermé par défaut).
+function contextFor(db, kwSite) {
+  if (!kwSite) return null;
+  const siteId = Number(kwSite.id);
+  if (!isSiteId(siteId)) return 0;
+  try {
+    const row = db.prepare("SELECT organization_id FROM mk_sites WHERE id = ? AND deleted_at IS NULL").get(siteId);
+    return row && siteModules.isEnabled(db, row.organization_id, siteId, "lms") ? siteId : 0;
+  } catch { return 0; }
+}
+function attach(db) {
+  return (req, res, next) => { req.lmsSite = contextFor(db, req.kwSite); next(); };
+}
+
+module.exports = { contextFor, attach, siteOfCourse, scopeSql, belongsTo, assignCourse, siteChoices, purgeOrphans, hasTable };

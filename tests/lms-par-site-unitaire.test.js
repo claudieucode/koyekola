@@ -73,3 +73,22 @@ describe("isolation par site", () => {
     assert.equal(env.db.prepare("SELECT COUNT(*) n FROM mk_course_sites").get().n, 2);
   });
 });
+
+describe("pont du catalogue (sélecteurs du page builder, e-mails) : portée de site", () => {
+  const catalog = require("../src/marketing/bridge/catalog");
+  const titles = (ctx) => catalog.listCourses(ctx).map((c) => c.title).sort();
+  test("une personne limitée au site A ne voit que les formations du site A ; B idem ; jamais le principal", () => {
+    assert.deepEqual(titles({ ...env.A, siteScope: ids.A }), ["Cours A"]);
+    assert.deepEqual(titles({ ...env.A, siteScope: ids.B }), ["Cours B"]);
+    assert.equal(catalog.countPublished({ ...env.A, siteScope: ids.A }, "courses"), 1);
+    assert.equal(catalog.getCourseBySlug({ ...env.A, siteScope: ids.A }, "cours-b"), null, "adresse d'une formation d'un autre site : introuvable");
+    assert.equal(catalog.getCourseBySlug({ ...env.A, siteScope: ids.A }, "cours-a").title, "Cours A");
+  });
+  test("page d'un site (lmsSite) : ses formations seulement ; page du principal (null) : celles du principal", () => {
+    assert.deepEqual(titles({ ...env.A, lmsSite: ids.B }), ["Cours B"]);
+    assert.deepEqual(titles({ ...env.A, lmsSite: null }), ["Principal"]);
+  });
+  test("équipe sans portée : vue d'ensemble historique inchangée", () => {
+    assert.deepEqual(titles(env.A), ["Cours A", "Cours B", "Principal"]);
+  });
+});

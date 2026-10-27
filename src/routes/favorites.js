@@ -17,6 +17,7 @@ router.post("/favoris/:courseId", requireAuth, (req, res) => {
     db.prepare("DELETE FROM favorites WHERE user_id = ? AND course_id = ?").run(userId, courseId);
   } else {
     const course = Number.isInteger(courseId) && db.prepare("SELECT id FROM courses WHERE id = ? AND published = 1 AND archived = 0").get(courseId);
+    if (course && !require("../services/lmsSites").belongsTo(db, course.id, req.lmsSite)) return res.status(404).render("error", { message: "Formation introuvable." });
     if (!course) return res.status(404).render("error", { message: "Formation introuvable." });
     db.prepare("INSERT INTO favorites (user_id, course_id) VALUES (?, ?)").run(userId, courseId);
   }
