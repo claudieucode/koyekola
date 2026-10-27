@@ -29,6 +29,12 @@ import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
 import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS, TONES, supportsStyle } from "./blog/supports";
 import { STYLE_PROPS, GROUPS as STYLE_GROUPS } from "../shared/blockStyles";
+import { PROVIDERS as EMBED_PROVIDERS, embedProviderFor } from "../shared/embedProviders";
+
+// Type de bloc à créer pour une adresse collée : YouTube / Vimeo → Vidéo ; carte Google Maps ou autre service reconnu → Contenu embarqué ; sinon rien (l'adresse reste du texte)
+const YT_VIMEO = /^https:\/\/(?:(?:www\.|m\.|music\.)?youtube\.com\/(?:watch\?[^\s]*v=|embed\/|shorts\/|live\/)|youtu\.be\/|(?:www\.)?youtube-nocookie\.com\/embed\/|(?:www\.)?vimeo\.com\/\d+|player\.vimeo\.com\/video\/\d+)/i;
+const MAPS_EMBED = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~:-]{10,2000}$/;
+export const embedKindFor = (url) => (YT_VIMEO.test(url) ? "kbVideo" : MAPS_EMBED.test(url) || embedProviderFor(url) ? "kbEmbed" : "");
 import { PATTERNS, PATTERN_CATEGORIES } from "./blog/patterns";
 import { NotesBadges, setNoteCounts } from "./blog/notes";
 import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
@@ -372,15 +378,10 @@ function start() {
     { id: "steps", title: "Étapes", cat: "KOLAKISA", brand: true, icon: "steps", desc: "Guide pas à pas (données structurées HowTo).", keywords: "howto tutoriel", run: () => blk({ type: "kbSteps", attrs: { title: "" }, content: [1, 2, 3].map((n) => ({ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: `Étape ${n}`, marks: [{ type: "bold" }] }, { type: "text", text: " : ce qu'il faut faire." }] }] })) }) },
     { id: "course", title: "Formation recommandée", cat: "KOLAKISA", brand: true, icon: "course", desc: "Carte d'une formation du catalogue.", keywords: "cours produit", run: () => { if (!DATA.courses.length) return toast("Aucune formation publiée à recommander.", "error"); return blk({ type: "kbCourse", attrs: { slug: DATA.courses[0].slug } }); } },
     { id: "newsletter", title: "Newsletter", cat: "KOLAKISA", brand: true, icon: "newsletter", desc: "Formulaire d'inscription à la newsletter.", keywords: "inscription email", run: () => blk({ type: "kbNewsletter" }) },
-    { id: "embed", title: "Contenu embarqué", cat: "Intégrations", icon: "embed", desc: "Intégrez un contenu externe (YouTube et Vimeo deviennent un lecteur, le reste un lien).", keywords: "embed intégration", run: () => urlPrompt("Contenu embarqué", "Adresse du contenu", "https://…", (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } })) },
+    { id: "embed", title: "Contenu embarqué", cat: "Intégrations", icon: "embed", desc: `Intégrez un contenu externe : les ${EMBED_PROVIDERS.length + 3} services reconnus deviennent un lecteur, le reste un lien.`, keywords: `embed intégration ${EMBED_PROVIDERS.map((p) => p.label).join(" ")}`, run: () => urlPrompt("Contenu embarqué", "Adresse du contenu", "https://…", (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } })) },
     { id: "youtube", title: "YouTube", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo YouTube.", run: () => urlPrompt("YouTube", "Adresse de la vidéo YouTube", "https://www.youtube.com/watch?v=…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
-    ...[
-      ["spotify", "Spotify", "Morceau, album, playlist ou épisode Spotify.", "https://open.spotify.com/track/…", /^https:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:track|album|playlist|episode|show|artist)\/[A-Za-z0-9]{10,30}\/?(?:\?.*)?$/, "musique podcast son"],
-      ["soundcloud", "SoundCloud", "Titre ou playlist SoundCloud.", "https://soundcloud.com/artiste/titre", /^https:\/\/(?:www\.)?soundcloud\.com\/[A-Za-z0-9_-]{2,50}\/(?:sets\/)?[A-Za-z0-9_-]{2,100}\/?(?:\?.*)?$/, "musique podcast son"],
-      ["dailymotion", "Dailymotion", "Vidéo Dailymotion.", "https://www.dailymotion.com/video/…", /^https:\/\/(?:www\.dailymotion\.com\/(?:embed\/)?video\/|dai\.ly\/)[a-z0-9]{5,12}\/?(?:\?.*)?$/i, "vidéo"],
-      ["loom", "Loom", "Vidéo Loom (démonstration d'écran).", "https://www.loom.com/share/…", /^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/[a-f0-9]{32}\/?(?:\?.*)?$/i, "vidéo écran démonstration"],
-      ["ted", "TED", "Conférence TED.", "https://www.ted.com/talks/…", /^https:\/\/(?:www\.)?ted\.com\/talks\/[a-z0-9_]{3,120}\/?(?:\?.*)?$/i, "conférence vidéo"],
-    ].map(([id, title, desc, placeholder, re, keywords]) => ({ id, title, cat: "Intégrations", icon: "video", desc, keywords, run: () => urlPrompt(title, `Adresse du contenu ${title}`, placeholder, (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } }), { check: (v) => re.test(v), error: `Ce n'est pas une adresse ${title} reconnue (${placeholder}).` }) })),
+    // Un bloc par service (comme Gutenberg), dérivé de la table des services du serveur : une adresse d'un autre service est refusée avec un message clair
+    ...EMBED_PROVIDERS.map((p) => ({ id: p.id, title: p.label, cat: "Intégrations", icon: "video", desc: `Contenu ${p.label}.`, keywords: p.keywords, run: () => urlPrompt(p.label, `Adresse du contenu ${p.label}`, p.example, (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } }), { check: (v) => { const e = embedProviderFor(v); return Boolean(e && e.provider === p.id); }, error: `Ce n'est pas une adresse ${p.label} reconnue (${p.example}).` }) })),
     { id: "vimeo", title: "Vimeo", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo Vimeo.", run: () => urlPrompt("Vimeo", "Adresse de la vidéo Vimeo", "https://vimeo.com/…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
   ];
   const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Mise en page", "Intégrations"];
@@ -1628,6 +1629,20 @@ function start() {
       },
       handlePaste: (view, event) => {
         const files = event.clipboardData ? [...event.clipboardData.files] : [];
+        // Adresse collée seule dans un paragraphe vide : si elle est reconnue (vidéo, publication, musique…), elle devient directement un lecteur (comme Gutenberg)
+        if (!files.length && event.clipboardData) {
+          const url = (event.clipboardData.getData("text/plain") || "").trim();
+          const { $from, empty } = view.state.selection;
+          if (empty && /^https:\/\/\S+$/.test(url) && $from.parent.type.name === "paragraph" && $from.parent.content.size === 0 && $from.depth === 1) {
+            const kind = embedKindFor(url);
+            if (kind) {
+              event.preventDefault();
+              editor.chain().insertContentAt({ from: $from.before(), to: $from.after() }, { type: kind, attrs: { url, caption: "" } }).run();
+              toast(kind === "kbVideo" ? "Vidéo intégrée." : "Contenu intégré.");
+              return true;
+            }
+          }
+        }
         if (!files.length) return false;
         event.preventDefault();
         insertFiles(files, blockEndAt(editor.state.selection.from));
@@ -2149,7 +2164,7 @@ function start() {
         })),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ multiple: true, onSelectMany: (list) => set({ images: [...a.images, ...list.map((m) => ({ src: m.path, alt: m.alt || "", caption: m.caption || "" }))] }) }) }, "Ajouter des images")));
     } else if (t === "kbVideo" || t === "kbEmbed") {
-      inspector.append(section("Réglages", control("Adresse", bind(input({ value: a.url || "", type: "url" }), "url"), t === "kbVideo" ? "YouTube, Vimeo, ou un fichier vidéo téléversé." : "YouTube, Vimeo et les cartes Google Maps deviennent un lecteur ; les autres adresses s'affichent comme un lien (sécurité)."), control("Légende", bind(input({ value: a.caption || "" }), "caption"))));
+      inspector.append(section("Réglages", control("Adresse", bind(input({ value: a.url || "", type: "url" }), "url"), t === "kbVideo" ? "YouTube, Vimeo, ou un fichier vidéo téléversé." : "YouTube, Vimeo, Google Maps et une vingtaine de services (Spotify, X, Instagram, TikTok, Facebook, Reddit, CodePen…) deviennent un lecteur ; les autres adresses s'affichent comme un lien (sécurité)."), control("Légende", bind(input({ value: a.caption || "" }), "caption"))));
       if (t === "kbVideo") {
         const isFile = /^\/uploads\/blog\//.test(a.url || "");
         const flag = (k) => (v) => set({ [k]: v ? "true" : "" });

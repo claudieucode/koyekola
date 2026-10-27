@@ -457,7 +457,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       else if (embedProvider(url)) {
         // Autres lecteurs reconnus (Spotify, SoundCloud, Dailymotion, Loom, TED) : adresse reconstruite par le serveur
         const e = embedProvider(url);
-        const frame = el("iframe", { src: e.src, title: node.attribs["data-caption"] || e.title, loading: "lazy", allow: "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture", allowfullscreen: "", referrerpolicy: "strict-origin-when-cross-origin" });
+        const frame = el("iframe", { src: e.src, title: node.attribs["data-caption"] || e.title, loading: "lazy", allow: "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture", allowfullscreen: "", referrerpolicy: "strict-origin-when-cross-origin", ...(e.sandboxAttr ? { sandbox: e.sandboxAttr } : {}) });
         replace(node, el("figure", { class: `kb-embed-frame kb-embed-${e.provider}`, ...(e.height ? { style: `--kb-embed-h: ${e.height}px` } : {}) }, [frame, ...(node.attribs["data-caption"] ? [el("figcaption", {}, [text(node.attribs["data-caption"])])] : [])]));
       } else {
         let host = url;

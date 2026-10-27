@@ -2655,3 +2655,6 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
 /* Séparateur : couleur */
 :is(.article-content, .ProseMirror) hr[data-color] { border-color: var(--kb-color); color: var(--kb-color); }
 :is(.article-content, .ProseMirror) hr[data-bgc] { padding: 0; background-color: transparent; }
+/* Publications de réseaux sociaux intégrées : colonne étroite, centrée */
+:is(.kb-embed-twitter, .kb-embed-instagram, .kb-embed-facebook, .kb-embed-tiktok, .kb-embed-pinterest, .kb-embed-reddit, .kb-embed-imgur, .kb-embed-giphy, .kb-embed-pocketcasts) { max-width: 560px; margin-left: auto; margin-right: auto; }
+:is(.kb-embed-tiktok) { max-width: 420px; }
