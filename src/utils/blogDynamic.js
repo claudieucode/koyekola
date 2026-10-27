@@ -2,6 +2,7 @@
 // et passe par des nœuds texte (jamais concaténé en HTML) : aucune injection possible. Les adresses ont déjà été validées (articles du site) ou sont
 // revérifiées ici (flux RSS : http/https seulement, liens externes en nofollow).
 const { Element, Text } = require("domhandler");
+const { parseDocument } = require("htmlparser2");
 const { NETWORKS } = require("../shared/dynamicBlocks");
 
 const el = (name, attribs = {}, children = []) => { const n = new Element(name, attribs, children); children.forEach((c) => { c.parent = n; }); return n; };
@@ -25,6 +26,18 @@ function latest(attribs, ctx) {
     return el("li", {}, parts);
   });
   return widget("kb-latest", attribs["data-title"] || "Derniers articles", { "data-view": attribs["data-view"] === "grid" ? "grid" : "list" }, [...title(attribs["data-title"]), el("ul", {}, items)]);
+}
+// Formulaire de Marketing (déjà assaini et fabriqué par le serveur : champs, anti-robot, consentement) ; absent s'il n'est plus publié ou s'il appartient à un autre site
+function form(attribs, ctx) {
+  const html = ctx.widgets.form ? ctx.widgets.form(attribs["data-form"]) : null;
+  if (!html) return null;
+  return widget("kb-form", attribs["data-title"] || "Formulaire", {}, [...title(attribs["data-title"]), ...parseDocument(html).children]);
+}
+function breadcrumbs(attribs, ctx) {
+  const trail = ctx.widgets.breadcrumbs ? ctx.widgets.breadcrumbs({ home: attribs["data-home"] === "true" }) : [];
+  if (trail.length < 2) return null;
+  const items = trail.map((t, i) => (i === trail.length - 1 || !t.url ? el("li", { "aria-current": "page" }, [text(t.name)]) : el("li", {}, [a(t.url, t.name)])));
+  return el("nav", { class: "kb-breadcrumbs kb-widget", "aria-label": attribs["data-title"] || "Fil d'Ariane" }, [...title(attribs["data-title"]), el("ol", {}, items)]);
 }
 function comments(attribs, ctx) {
   const rows = ctx.widgets.comments ? ctx.widgets.comments({ count: Number(attribs["data-count"]) || 5 }) : [];
@@ -106,5 +119,5 @@ function toc(attribs, entries, pageHref) {
   return widget("kb-toc", attribs["data-title"] || "Sommaire", {}, [...title(attribs["data-title"] || "Sommaire"), el("ol", {}, rows.map((t) => el("li", { "data-level": String(t.level) }, [a(`${pageHref(t.page || 1)}#${t.id}`, t.text)])))]);
 }
 
-const BUILDERS = { "kb-comments": comments, "kb-latest": latest, "kb-categories": categories, "kb-tags": tags, "kb-archives": archives, "kb-calendar": calendar, "kb-search": search, "kb-social": social, "kb-pagelist": pageList, "kb-rss": rss };
+const BUILDERS = { "kb-form": form, "kb-breadcrumbs": breadcrumbs, "kb-comments": comments, "kb-latest": latest, "kb-categories": categories, "kb-tags": tags, "kb-archives": archives, "kb-calendar": calendar, "kb-search": search, "kb-social": social, "kb-pagelist": pageList, "kb-rss": rss };
 module.exports = { BUILDERS, toc, el, text };

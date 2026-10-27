@@ -103,9 +103,9 @@ describe("Firefox — éditeur et pages publiques (WebDriver BiDi)", { skip: SKI
     await run(`(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setContent("<p></p>"); ed.view.focus(); return true; })()`);
     await waitFor(`document.activeElement === document.querySelector(".ProseMirror")`);
     await keys("Bonjour");
-    assert.equal(await run(`document.querySelector(".ProseMirror").editor.getText()`), "Bonjour");
+    await waitFor(`document.querySelector(".ProseMirror").editor.getText() === "Bonjour"`); // la frappe réelle arrive de façon asynchrone
     await chord(process.platform === "darwin" ? META : CTRL, "z");
-    assert.equal(await run(`document.querySelector(".ProseMirror").editor.getText()`), "", "Ctrl/Cmd+Z annule la frappe");
+    await waitFor(`document.querySelector(".ProseMirror").editor.getText() === ""`); // Ctrl/Cmd+Z annule la frappe
     // zoom arrière par la commande de l'éditeur (le raccourci passe par le même code)
     await run(`(() => { document.querySelector(".ProseMirror").editor.view.focus(); document.querySelector("[data-blog-editor]").classList.add("is-zoom-out"); return true; })()`);
     assert.equal(Number(await run(`getComputedStyle(document.querySelector(".wp-content")).zoom`)), 0.55);
@@ -124,12 +124,32 @@ describe("Firefox — éditeur et pages publiques (WebDriver BiDi)", { skip: SKI
     await waitFor(`!!document.querySelector(".kb-lightbox-trigger")`);
     assert.equal(await run(`document.querySelectorAll(".kb-footnotes li").length`), 1);
     assert.equal(await run(`document.querySelectorAll(".kb-toc li").length`), 1);
-    await run(`(() => { document.querySelector(".kb-lightbox-trigger").click(); return true; })()`);
-    await waitFor(`(() => { const d = document.querySelector(".kb-lightbox"); return d && !d.hidden; })()`);
+    // le script du site est différé : on (re)clique jusqu'à ce que la boîte de dialogue s'ouvre
+    await waitFor(`(() => { const d = document.querySelector(".kb-lightbox"); if (d && !d.hidden) return true; document.querySelector(".kb-lightbox-trigger").click(); return false; })()`);
     assert.match(await run(`document.querySelector(".kb-lightbox figcaption").textContent`), /Légende un/);
     await bidi.send("input.performActions", { context, actions: [{ type: "key", id: "kb", actions: [{ type: "keyDown", value: "" }, { type: "keyUp", value: "" }] }] });
     await waitFor(`document.querySelector(".kb-lightbox").hidden === true`);
     assert.equal(await run(`document.activeElement.className`), "kb-lightbox-trigger", "le focus revient au bouton");
+    assert.deepEqual(jsErrors(), []);
+  });
+
+  test("site public dans Firefox : onglets accessibles (rôles, flèches), accordéon exclusif, formule MathML réellement dessinée", async (t) => {
+    if (skipReason) return t.skip(skipReason);
+    const fd = new FormData();
+    const content = '<div class="kb-math" data-latex="\\frac{a}{b}"></div><div class="kb-tabs"><div class="kb-tab" data-title="Premier"><p>Contenu un</p></div><div class="kb-tab" data-title="Deuxième"><p>Contenu deux</p></div></div><div class="kb-accordion-group" data-autoclose="true"><details class="kb-acc-item"><summary>A</summary><div class="kb-accordion-body"><p>1</p></div></details><details class="kb-acc-item"><summary>B</summary><div class="kb-accordion-body"><p>2</p></div></details></div>';
+    for (const [k, v] of Object.entries({ content_format: "html", title: "Blocs Firefox 2", content, status: "published" })) fd.append(k, v);
+    const saved = JSON.parse((await boss.request("/formateur/blog/nouveau", { method: "POST", multipart: fd, headers: { "x-blog-editor": "1" } })).text);
+    await go(`${srv.base}/blog/${saved.slug}`);
+    await waitFor(`!!document.querySelector(".kb-tablist")`);
+    assert.deepEqual(await run(`({ tabs: document.querySelectorAll('[role="tab"]').length, selected: document.querySelector('[role="tab"][aria-selected="true"]').textContent, visible: [...document.querySelectorAll('[role="tabpanel"]')].filter((p) => !p.hidden).length })`), { tabs: 2, selected: "Premier", visible: 1 });
+    await run(`(() => { document.querySelector('[role="tab"]').focus(); return true; })()`);
+    await bidi.send("input.performActions", { context, actions: [{ type: "key", id: "kb", actions: [{ type: "keyDown", value: "\uE014" }, { type: "keyUp", value: "\uE014" }] }] }); // flèche droite
+    assert.equal(await run(`document.querySelector('[role="tab"][aria-selected="true"]').textContent`), "Deuxième");
+    // accordéon exclusif (ouverture par un vrai clic sur le résumé)
+    await run(`(() => { const s = document.querySelectorAll(".kb-acc-item summary"); s[0].click(); s[1].click(); return true; })()`);
+    assert.deepEqual(await run(`[...document.querySelectorAll(".kb-acc-item")].map((d) => d.open)`), [false, true]);
+    // MathML : Firefox dessine la fraction (largeur et hauteur non nulles)
+    assert.equal(await run(`(() => { const r = document.querySelector(".kb-math math").getBoundingClientRect(); return r.width > 5 && r.height > 5; })()`), true);
     assert.deepEqual(jsErrors(), []);
   });
 });

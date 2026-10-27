@@ -36,8 +36,8 @@ describe("blocs dynamiques — assainissement", () => {
     assert.match(sanitizeBlogHtml('<div class="kb-rss" data-url="https://exemple.org/feed.xml"></div>'), /kb-rss/);
     for (const bad of ["http://exemple.org/f", "javascript:x", "https://user:pw@exemple.org/f", "https://exemple.org:8443/f", ""]) assert.doesNotMatch(sanitizeBlogHtml(`<div class="kb-rss" data-url="${bad}"></div>`), /kb-rss/, bad);
   });
-  test("les onze blocs dynamiques sont décrits (nom, classe, libellé, champs du panneau)", () => {
-    assert.equal(DYNAMIC.length, 11);
+  test("les treize blocs dynamiques sont décrits (nom, classe, libellé, champs du panneau)", () => {
+    assert.equal(DYNAMIC.length, 13);
     for (const d of DYNAMIC) for (const [, , , spec] of Object.values(d.attrs)) assert.ok(spec && spec.label && spec.kind, `${d.name} : champ sans description`);
   });
 });
@@ -197,6 +197,24 @@ describe("blocs dynamiques — isolation entre sites et pages publiées", () => 
     const region = html.slice(html.indexOf('article-content">'), html.indexOf("<p>FIN-ARTICLE</p>"));
     assert.match(region, /Lecteur Beta/); assert.match(region, /Commentaire visible Beta/);
     assert.doesNotMatch(region, /secret Alpha|Lecteur Alpha|en attente|Spammeur/);
+  });
+
+  test("« Formulaire » : un formulaire publié du même site s'affiche avec son anti-robot et son consentement ; celui d'un autre site ou non publié, jamais", async () => {
+    const orgId = one("SELECT id FROM mk_organizations").id;
+    const form = (name, slug, status, siteId) => db.prepare("INSERT INTO mk_forms (organization_id, name, slug, status, fields, consent_text, site_id) VALUES (?, ?, ?, ?, ?, ?, ?)").run(orgId, name, slug, status, '["first_name"]', "J'accepte de recevoir des e-mails", siteId);
+    form("Inscription Beta", "inscription-beta", "published", B); form("Inscription Alpha", "inscription-alpha", "published", A); form("Brouillon Beta", "brouillon-beta", "draft", B); form("Inscription principal", "inscription-principal", "published", null);
+    const embed = (slug) => `<div class="kb-form" data-form="${slug}" data-title="Restons en contact"></div><p>FIN-ARTICLE</p>`;
+    const region = (html) => html.slice(html.indexOf('article-content">'), html.indexOf("<p>FIN-ARTICLE</p>"));
+    const ok = region((await page((await article("Page avec formulaire", embed("inscription-beta"), { qs: `?site=${B}` })).slug)).html);
+    assert.match(ok, /<form class="kb-form-embed" method="post" action="\/f\/inscription-beta"/);
+    assert.match(ok, /name="website"/); assert.match(ok, /name="ft"/); assert.match(ok, /name="consent"/); assert.match(ok, /Prénom/);
+    assert.match(ok, /Restons en contact/);
+    for (const [slug, why] of [["inscription-alpha", "formulaire d'un autre site"], ["brouillon-beta", "formulaire non publié"], ["inscription-principal", "formulaire du site principal"], ["inexistant", "formulaire inconnu"]]) {
+      const html = region((await page((await article(`Essai ${slug}`, embed(slug), { qs: `?site=${B}` })).slug)).html);
+      assert.doesNotMatch(html, /<form/, why);
+    }
+    assert.doesNotMatch(sanitizeBlogHtml('<div class="kb-form" data-form="../evil"></div>'), /kb-form/);
+    assert.doesNotMatch(sanitizeBlogHtml('<div class="kb-form"></div>'), /kb-form/);
   });
 
   test("pages multiples : ?page=N, navigation, sommaire par page, canonique propre à chaque page", async () => {

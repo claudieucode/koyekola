@@ -20,6 +20,15 @@ function siteOfPost(post) {
   return Number.isInteger(site) && site > 0 ? site : 0;
 }
 
+// Formulaires publiés d'un site (liste de l'éditeur) : site = 0 pour le site principal
+function listForms(site = 0) {
+  try {
+    const org = db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get();
+    if (!org) return [];
+    return db.prepare(`SELECT slug, name FROM mk_forms WHERE organization_id = ? AND status = 'published' AND ${site === 0 ? "site_id IS NULL" : "site_id = ?"} ORDER BY name COLLATE NOCASE LIMIT 100`).all(org.id, ...(site === 0 ? [] : [site]));
+  } catch { return []; }
+}
+
 function forPost(post, { excerptOf = (p) => p.excerpt || "" } = {}) {
   const site = siteOfPost(post);
   const postScope = siteContent.scopeForSite("post", "posts.id", site);
@@ -42,6 +51,36 @@ function forPost(post, { excerptOf = (p) => p.excerpt || "" } = {}) {
         JOIN posts p ON c.content_type = 'post' AND p.id = c.content_id LEFT JOIN users u ON u.id = c.user_id
         WHERE c.status = 'approved' AND p.published = 1 AND p.deleted_at IS NULL${sc ? ` AND ${sc.sql}` : ""} ORDER BY c.created_at DESC, c.id DESC LIMIT ?`).all(...(sc ? sc.params : []), Math.min(Math.max(Number(count) || 5, 1), 10));
       return rows.map((r) => ({ author: r.user_id ? r.username || "Membre" : r.author_name || "Anonyme", excerpt: String(r.body || "").replace(/\s+/g, " ").trim().slice(0, 90), title: r.title, url: urlOfPost({ id: r.pid, slug: r.slug, title: r.title, published_at: r.published_at }), date: frDate(r.created_at) }));
+    },
+    // Chemin de l'article : Accueil › Blog › catégorie principale et ses parents › article (le dernier maillon n'est pas un lien)
+    // Formulaire publié de Marketing, du MÊME site que l'article : même rendu que sa page publique (/f/<adresse>), mêmes protections (anti-robot, consentement)
+    form(slug) {
+      try {
+        const org = db.prepare("SELECT id FROM mk_organizations ORDER BY id LIMIT 1").get();
+        if (!org) return null;
+        const forms = require("../marketing/forms");
+        const f = forms.getPublishedForm(db, org.id, String(slug || ""));
+        if (!f || (f.siteId ?? 0) !== site) return null;
+        const ejs = require("ejs");
+        const file = require("path").join(__dirname, "..", "..", "views", "marketing-public", "_signup-fields.ejs");
+        const fields = ejs.render(require("fs").readFileSync(file, "utf8"), { form: f, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: forms.propertyFieldDefs(db, org.id, f), values: {}, prefix: `bf${f.id}`, formToken: require("../marketing/forms/antispam").issue(), asset: require("../utils/assets").asset, autofocus: false }, { filename: file });
+        return `<form class="kb-form-embed" method="post" action="/f/${f.slug}" novalidate${f.fileField && f.fileField.enabled ? ' enctype="multipart/form-data"' : ""}><input type="hidden" name="tz" data-tz>${fields}<button type="submit" class="btn btn-primary">S'inscrire</button></form>`;
+      } catch { return null; } // le blog ne dépend jamais du module marketing pour s'afficher
+    },
+    breadcrumbs({ home = true } = {}) {
+      const trail = [];
+      if (home) trail.push({ name: "Accueil", url: "/" });
+      trail.push({ name: "Blog", url: "/blog" });
+      if (post && Number.isInteger(post.id)) {
+        const taxonomyService = require("./taxonomy");
+        const terms = taxonomyService.termsOf("post", post.id);
+        if (terms.primary) {
+          for (const a of taxonomyService.ancestors(terms.primary.id)) trail.push({ name: a.name, url: taxonomyService.urlOf(a) });
+          trail.push({ name: terms.primary.name, url: terms.primary.url });
+        } else if (post.category) trail.push({ name: post.category, url: `${taxonomy.baseOf("category")}/${taxonomy.categorySlugOfName(post.category)}` });
+      }
+      trail.push({ name: (post && post.title) || "Article", url: "" });
+      return trail;
     },
     categories() {
       const rows = db.prepare(`SELECT category, COUNT(*) n FROM posts WHERE ${live} AND category <> '' GROUP BY category COLLATE NOCASE ORDER BY n DESC, category COLLATE NOCASE LIMIT 60`).all(...args);
@@ -77,4 +116,4 @@ function forPost(post, { excerptOf = (p) => p.excerpt || "" } = {}) {
     feed(url) { return require("./rssFeeds").cached(url); },
   };
 }
-module.exports = { forPost, frDate, MONTHS };
+module.exports = { forPost, listForms, frDate, MONTHS };

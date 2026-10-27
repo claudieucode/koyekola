@@ -5,6 +5,8 @@
 import { Node, Extension, mergeAttributes } from "@tiptap/core";
 import { STYLE_PROPS, COLOR_VARS, styleDataOf, colorStyle } from "../../shared/blockStyles";
 import { DYNAMIC } from "../../shared/dynamicBlocks";
+import { latexToMathML } from "../../shared/latexMath";
+import { icon as drawIcon } from "../../utils/icons";
 
 const WIDTHS = ["25", "33", "50", "66", "75", "100"];
 const ALIGNS = ["left", "center", "right", "wide"];
@@ -570,6 +572,107 @@ export const DynamicBlocks = DYNAMIC.map((d) => marker({
 // Valeurs par défaut à l'insertion d'un bloc dynamique
 export const dynamicDefaults = (name) => { const d = DYNAMIC.find((x) => x.name === name); return d ? Object.fromEntries(Object.entries(d.attrs).map(([k, [, , def]]) => [k, def])) : {}; };
 
+// ---------- Icône : un pictogramme du jeu d'icônes du site (liste fermée, couleur et alignement par les réglages communs) ----------
+const ICON_PX = { s: 20, m: 32, l: 48, xl: 72 };
+export const KbIcon = Node.create({
+  name: "kbIcon",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() { return { icon: { default: "star" }, size: { default: "m" }, label: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-icon", priority: 75, getAttrs: (el) => ({ icon: el.getAttribute("data-icon") || "star", size: el.getAttribute("data-size") || "m", label: el.getAttribute("data-label") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-icon", "data-icon": node.attrs.icon, "data-size": node.attrs.size, ...(node.attrs.label ? { "data-label": node.attrs.label } : {}), ...lockOf(node) }]; },
+  addNodeView() { return atomView((dom, a) => { dom.className = "kb-ed-icon kb-icon"; dom.dataset.size = a.size; dom.innerHTML = drawIcon(a.icon, { size: ICON_PX[a.size] || 32 }) || "?"; }); }, // le dessin vient de NOTRE jeu d'icônes (jamais d'une saisie)
+});
+
+// ---------- Formule mathématique : LaTeX (sous-ensemble courant) converti en MathML par notre convertisseur ----------
+export const KbMath = Node.create({
+  name: "kbMath",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() { return { latex: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-math", priority: 75, getAttrs: (el) => ({ latex: (el.getAttribute("data-latex") || "").slice(0, 600) }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-math", "data-latex": node.attrs.latex, ...lockOf(node) }]; },
+  addNodeView() {
+    return atomView((dom, a) => {
+      dom.className = "kb-ed-math kb-math";
+      const r = latexToMathML(a.latex);
+      if (!r.ok) { dom.append(span("kb-ed-empty", "Formule vide : saisissez-la dans l'onglet « Bloc » (ex. \\frac{a}{b})")); return; }
+      dom.innerHTML = r.mathml; // fabriqué par notre convertisseur : éléments MathML d'une liste fermée, texte échappé
+    });
+  },
+});
+
+// ---------- Liste de lecture audio : une piste par ligne « fichier|titre|artiste » ----------
+export const KbPlaylist = Node.create({
+  name: "kbPlaylist",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() { return { tracks: { default: "" }, title: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-playlist", priority: 75, getAttrs: (el) => ({ tracks: el.getAttribute("data-tracks") || "", title: el.getAttribute("data-title") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-playlist", "data-tracks": node.attrs.tracks, ...(node.attrs.title ? { "data-title": node.attrs.title } : {}), ...lockOf(node) }]; },
+  addNodeView() {
+    return atomView((dom, a) => {
+      dom.className = "kb-ed-marker";
+      const rows = String(a.tracks || "").split("\n").filter(Boolean);
+      dom.append(span("kb-ed-marker-icon", "♫"), span("kb-ed-marker-label", `Liste de lecture${a.title ? ` « ${a.title} »` : ""} · ${rows.length ? `${rows.length} piste${rows.length > 1 ? "s" : ""}` : "aucune piste : ajoutez-en dans l'onglet « Bloc »"}`));
+    });
+  },
+});
+
+// ---------- Accordéon (plusieurs éléments, un seul ouvert à la fois si l'option est choisie) ----------
+export const KbAccItem = Node.create({
+  name: "kbAccItem",
+  content: "kbSummary kbAccordionBody",
+  defining: true,
+  parseHTML() { return [{ tag: "details.kb-acc-item", priority: 85 }]; },
+  renderHTML() { return ["details", { class: "kb-acc-item" }, 0]; },
+  addNodeView() { return () => { const dom = document.createElement("div"); dom.className = "kb-ed-accordion kb-ed-faq-item"; return { dom, contentDOM: dom }; }; },
+});
+export const KbAccordionGroup = Node.create({
+  name: "kbAccordionGroup",
+  group: "block",
+  content: "kbAccItem+",
+  defining: true,
+  addAttributes() { return { autoclose: { default: false, parseHTML: (el) => el.getAttribute("data-autoclose") === "true", renderHTML: () => ({}) } }; },
+  parseHTML() { return [{ tag: "div.kb-accordion-group", priority: 80 }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-accordion-group", ...(node.attrs.autoclose ? { "data-autoclose": "true" } : {}), ...lockOf(node) }, 0]; },
+  addNodeView() { return layoutView("kb-ed-faq", []); },
+});
+
+// ---------- Onglets : chaque onglet a un titre et son contenu ; le site les affiche en onglets (et en sections titrées sans JavaScript) ----------
+export const KbTab = Node.create({
+  name: "kbTab",
+  content: "block+",
+  defining: true,
+  isolating: true,
+  addAttributes() { return { title: { default: "Onglet" } }; },
+  parseHTML() { return [{ tag: "div.kb-tab", priority: 85, getAttrs: (el) => ({ title: (el.getAttribute("data-title") || "Onglet").slice(0, 60) }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-tab", "data-title": node.attrs.title }, 0]; },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement("div"); dom.className = "kb-ed-tab";
+      const label = document.createElement("div"); label.className = "kb-ed-tab-label"; label.contentEditable = "false";
+      const body = document.createElement("div"); body.className = "kb-ed-tab-body";
+      dom.append(label, body);
+      const paint = (n) => { label.textContent = `Onglet : ${n.attrs.title}`; };
+      paint(node);
+      return { dom, contentDOM: body, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } };
+    };
+  },
+});
+export const KbTabs = Node.create({
+  name: "kbTabs",
+  group: "block",
+  content: "kbTab+",
+  defining: true,
+  parseHTML() { return [{ tag: "div.kb-tabs", priority: 80 }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-tabs", ...lockOf(node) }, 0]; },
+  addNodeView() { return layoutView("kb-ed-tabs", []); },
+});
+
 // ---------- Page suivante : découpe l'article en plusieurs pages (?page=N) ----------
 export const KbNextPage = Node.create({
   name: "kbNextPage",
@@ -631,4 +734,4 @@ export const KbFootnote = Node.create({
   },
 });
 
-export const BLOG_NODES = [...DynamicBlocks, KbNextPage, KbHtml, KbFootnote, KbMore, KbFile, KbPreformatted, KbVerse, KbCover, KbMediaTextBody, KbMediaText, KbReusable, KbReusableEdit, KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];
+export const BLOG_NODES = [...DynamicBlocks, KbIcon, KbMath, KbPlaylist, KbAccItem, KbAccordionGroup, KbTab, KbTabs, KbNextPage, KbHtml, KbFootnote, KbMore, KbFile, KbPreformatted, KbVerse, KbCover, KbMediaTextBody, KbMediaText, KbReusable, KbReusableEdit, KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];

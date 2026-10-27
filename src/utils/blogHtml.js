@@ -19,6 +19,9 @@ const { STYLE_PROPS, cleanValue, colorStyleFromData } = require("../shared/block
 const dynamicBlocks = require("../shared/dynamicBlocks");
 const blogDynamic = require("./blogDynamic");
 const customHtml = require("./customHtml");
+const { ICON_NAMES } = require("../shared/contentIcons");
+const { latexToMathML, MAX_LATEX } = require("../shared/latexMath");
+const { icon: renderIcon } = require("./icons");
 const CONTAINER_CLASSES = new Set(require("../shared/blockRegistry").containerClasses());
 
 const MAX_HTML = 300000;
@@ -35,7 +38,7 @@ const AUDIO_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:mp3|m4a|ogg|oga|w
 const MEDIA_URL = /^(https:\/\/[^\s"'<>]{1,500}|\/uploads\/blog\/[A-Za-z0-9_.-]{1,200})$/i;
 const COURSE_SLUG = /^[a-z0-9-]{1,120}$/;
 const REL_TOKENS = new Set(["nofollow", "sponsored", "ugc", "noopener", "noreferrer"]);
-const DIV_CLASSES = ["kb-more", "kb-file", "kb-cover", "kb-mediatext", "kb-mediatext-body", "kb-reusable", "kb-spacer", "kb-pagebreak", "kb-columns", "kb-column", "kb-group", "kb-buttons", "kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", "kb-html", "kb-nextpage", ...dynamicBlocks.DYNAMIC.map((d) => d.cls), ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
+const DIV_CLASSES = ["kb-more", "kb-file", "kb-cover", "kb-mediatext", "kb-mediatext-body", "kb-reusable", "kb-spacer", "kb-pagebreak", "kb-columns", "kb-column", "kb-group", "kb-buttons", "kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", "kb-html", "kb-nextpage", "kb-icon", "kb-math", "kb-playlist", "kb-accordion-group", "kb-tabs", "kb-tab", ...dynamicBlocks.DYNAMIC.map((d) => d.cls), ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
 
 // Mises en page des colonnes : largeurs en %, 2 à 4 colonnes
 const COLUMN_LAYOUT = /^(custom|50-50|33-67|67-33|25-75|75-25|33-33-33|25-50-25|50-25-25|25-25-50|25-25-25-25)$/;
@@ -45,6 +48,17 @@ const classesOf = (attribs) => String(attribs.class || "").split(/\s+/).filter(B
 const keepClasses = (attribs, allowed) => classesOf(attribs).filter((c) => allowed.includes(c)).join(" ");
 
 // ---------- 1. Assainissement (enregistrement) ----------
+// Liste de lecture : une piste par ligne « /uploads/blog/fichier.mp3|Titre|Artiste » (30 au plus) ; seuls les fichiers audio téléversés sont acceptés
+function cleanTracks(raw) {
+  const out = [];
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const [src, title = "", artist = ""] = line.split("|").map((x) => x.replace(/[\u2028\u2029]+/g, " ").trim());
+    if (!AUDIO_SRC.test(src || "")) continue;
+    out.push([src, title.slice(0, 120), artist.slice(0, 120)].join("|"));
+    if (out.length >= 30) break;
+  }
+  return out.join("\n");
+}
 const transformTags = {
   b: "strong",
   i: "em",
@@ -129,12 +143,34 @@ const transformTags = {
     if (dyn) {
       Object.assign(out, dynamicBlocks.cleanAttrs(dyn, attribs));
       if (main === "kb-rss" && !out["data-url"]) return { tagName: "div", attribs: {} }; // un flux sans adresse valide n'a pas de sens
+      if (main === "kb-form" && !out["data-form"]) return { tagName: "div", attribs: {} }; // pas de formulaire choisi
     }
     if (main === "kb-html") {
       // HTML personnalisé : conservé UNIQUEMENT si la signature du compte créateur correspond au code (src/utils/customHtml.js)
       const code = String(attribs["data-code"] || "");
       if (!customHtml.verify(code, attribs["data-sig"])) return { tagName: "div", attribs: {} };
       out["data-code"] = code; out["data-sig"] = attribs["data-sig"];
+    }
+    if (main === "kb-icon") {
+      if (!ICON_NAMES.includes(String(attribs["data-icon"] || ""))) return { tagName: "div", attribs: {} };
+      out["data-icon"] = attribs["data-icon"]; keep("data-size", /^(s|m|l|xl)$/);
+      if (attribs["data-label"]) out["data-label"] = String(attribs["data-label"]).replace(/[\r\n\u2028\u2029]+/g, " ").trim().slice(0, 80);
+    }
+    if (main === "kb-math") {
+      const latex = String(attribs["data-latex"] || "").replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_LATEX);
+      if (!latex) return { tagName: "div", attribs: {} };
+      out["data-latex"] = latex;
+    }
+    if (main === "kb-playlist") {
+      const tracks = cleanTracks(attribs["data-tracks"]);
+      if (!tracks) return { tagName: "div", attribs: {} };
+      out["data-tracks"] = tracks;
+      if (attribs["data-title"]) out["data-title"] = String(attribs["data-title"]).replace(/[\r\n]+/g, " ").trim().slice(0, 120);
+    }
+    if (main === "kb-accordion-group" && attribs["data-autoclose"] === "true") out["data-autoclose"] = "true";
+    if (main === "kb-tab") {
+      const title = String(attribs["data-title"] || "").replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+      out["data-title"] = title || "Onglet";
     }
     if (main === "kb-column") { keep("data-basis", /^(?:[5-9]|[1-8]\d|9[0-5])$/); keep("data-valign", /^(top|center|bottom)$/); }
     if (main === "kb-buttons") keep("data-align", /^(left|center|right)$/);
@@ -161,7 +197,7 @@ const transformTags = {
     Object.assign(out, pick(attribs, ["data-title", "data-caption"]));
     return { tagName: "div", attribs: out };
   },
-  details: (tagName, attribs) => ({ tagName, attribs: { class: keepClasses(attribs, ["kb-accordion", "kb-faq-item"]) || "kb-accordion", ...(attribs["data-open"] === "true" ? { "data-open": "true" } : {}) } }),
+  details: (tagName, attribs) => ({ tagName, attribs: { class: keepClasses(attribs, ["kb-accordion", "kb-faq-item", "kb-acc-item"]) || "kb-accordion", ...(attribs["data-open"] === "true" ? { "data-open": "true" } : {}) } }),
   ol: (tagName, attribs) => {
     const out = {};
     if (classesOf(attribs).includes("kb-steps")) { out.class = "kb-steps"; Object.assign(out, pick(attribs, ["data-title"])); }
@@ -253,7 +289,7 @@ const saveOptions = {
   allowedAttributes: {
     a: ["href", "target", "rel", "class"], img: ["src", "alt", "title", "width", "height", "data-media-id"],
     figure: ["class", "data-align", "data-width", "data-credit", "data-main", "data-ratio", "data-lightbox", "data-fit"],
-    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download", "data-track", "data-track-lang", "data-track-label", "data-natural", "data-lightbox", "data-autoplay", "data-preload", "data-depth", "data-view", "data-date", "data-excerpt", "data-image", "data-category", "data-max", "data-placeholder", "data-button", "data-links", "data-count", "data-code", "data-sig", "data-preview", "data-fx", "data-fy", "data-fixed", "data-shade", "data-pos", "data-crop", "data-justify", "data-gridcols", "data-basis", "data-px"],
+    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download", "data-track", "data-track-lang", "data-track-label", "data-natural", "data-lightbox", "data-autoplay", "data-preload", "data-icon", "data-tracks", "data-latex", "data-autoclose", "data-home", "data-form", "data-depth", "data-view", "data-date", "data-excerpt", "data-image", "data-category", "data-max", "data-placeholder", "data-button", "data-links", "data-count", "data-code", "data-sig", "data-preview", "data-fx", "data-fy", "data-fixed", "data-shade", "data-pos", "data-crop", "data-justify", "data-gridcols", "data-basis", "data-px"],
     details: ["class", "data-open"], ol: ["class", "data-title", "start", "reversed", "data-ltype"], ul: ["data-type", "data-ltype"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
     p: ["style", "data-indent", "data-dropcap", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class", "data-cite"], sup: ["class", "data-note"], span: ["style"], mark: ["style"],
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"], pre: ["class"], table: ["data-caption", "data-footer", "data-fixed"],
@@ -541,6 +577,43 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       replace(node, null); // bloc dynamique sans données (aperçu hors site) : rien n'est affiché plutôt qu'un cadre vide
     } else if (name === "sup" && hasClass(node, "kb-fn")) {
       footnotes.push(node);
+    } else if (name === "div" && hasClass(node, "kb-icon")) {
+      const size = node.attribs["data-size"] || "m";
+      const label = node.attribs["data-label"];
+      replace(node, el("div", { class: "kb-icon", "data-size": size, ...(label ? { role: "img", "aria-label": label } : {}) }, htmlNodes(renderIcon(node.attribs["data-icon"], { size: { s: 20, m: 32, l: 48, xl: 72 }[size] || 32 }))));
+    } else if (name === "div" && hasClass(node, "kb-math")) {
+      // Formule : LaTeX → MathML par notre propre convertisseur (liste fermée d'éléments, texte échappé) ; l'annotation TeX sert aux lecteurs d'écran
+      const r = latexToMathML(node.attribs["data-latex"], { display: true });
+      replace(node, r.ok ? el("div", { class: "kb-math" }, htmlNodes(r.mathml)) : null);
+    } else if (name === "div" && hasClass(node, "kb-playlist")) {
+      const rows = String(node.attribs["data-tracks"] || "").split("\n").filter(Boolean).map((line) => line.split("|"));
+      const heading = node.attribs["data-title"];
+      replace(node, el("figure", { class: "kb-playlist" }, [
+        ...(heading ? [el("figcaption", {}, [text(heading)])] : []),
+        el("ol", {}, rows.map(([src, name2, artist]) => el("li", {}, [
+          el("span", { class: "kb-playlist-title" }, [text(name2 || decodeURIComponent(src.split("/").pop().replace(/^\d+-[0-9a-f]{16}-?/, "")))]),
+          ...(artist ? [text(" "), el("span", { class: "kb-playlist-artist" }, [text(`— ${artist}`)])] : []),
+          el("audio", { src, controls: "", preload: "none" }, [text("Votre navigateur ne lit pas ce fichier audio.")]),
+        ]))),
+      ]));
+    } else if (name === "div" && hasClass(node, "kb-accordion-group")) {
+      // Accordéon : un seul élément ouvert à la fois (attribut « name » des <details>, géré par le navigateur) si l'option est choisie
+      const items = node.children.filter((c) => c.name === "details");
+      const group = node.attribs["data-autoclose"] === "true" ? uniqueId("kb-acc") : "";
+      for (const d of items) { if (group) d.attribs.name = group; }
+      delete node.attribs["data-autoclose"];
+    } else if (name === "div" && hasClass(node, "kb-tabs")) {
+      // Onglets : sans JavaScript, chaque onglet est une section titrée (tout le contenu reste lisible et indexable) ; public/js/main.js en fait de vrais onglets
+      const panels = node.children.filter((c) => hasClass(c, "kb-tab"));
+      if (panels.length < 2) { replace(node, panels.flatMap((p2) => p2.children.slice())); continue; }
+      panels.forEach((panel, i) => {
+        const label = panel.attribs["data-title"] || `Onglet ${i + 1}`;
+        const id = uniqueId(`onglet-${label}`);
+        const section = el("section", { class: "kb-tab-panel", id }, [el("h3", { class: "kb-tab-title" }, [text(label)]), ...panel.children.slice()]);
+        section.children.forEach((c) => { c.parent = section; });
+        DomUtils.replaceElement(panel, section);
+      });
+      node.attribs["data-tabs"] = "true";
     } else if (name === "div" && hasClass(node, "kb-course")) {
       const card = courseCard(node.attribs["data-course"]);
       replace(node, card ? htmlNodes(card) : null);

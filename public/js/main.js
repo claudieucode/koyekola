@@ -258,3 +258,40 @@ document.addEventListener("DOMContentLoaded", () => {
     box.querySelector(".kb-lightbox-close").focus();
   });
 })();
+
+// Onglets d'article (bloc « Onglets ») : sans JavaScript chaque onglet est une section titrée ; ici ils deviennent de vrais onglets (rôles ARIA, flèches, Début, Fin).
+(() => {
+  document.querySelectorAll(".kb-tabs[data-tabs]").forEach((group, g) => {
+    const panels = [...group.querySelectorAll(":scope > .kb-tab-panel")];
+    if (panels.length < 2 || group.dataset.ready) return;
+    const list = document.createElement("div");
+    list.className = "kb-tablist"; list.setAttribute("role", "tablist");
+    const tabs = panels.map((panel, i) => {
+      const title = panel.querySelector(":scope > .kb-tab-title");
+      const tab = document.createElement("button");
+      tab.type = "button"; tab.setAttribute("role", "tab"); tab.id = `kb-tab-${g}-${i}`; tab.setAttribute("aria-controls", panel.id);
+      tab.textContent = title ? title.textContent : `Onglet ${i + 1}`;
+      panel.setAttribute("role", "tabpanel"); panel.setAttribute("aria-labelledby", tab.id); panel.tabIndex = 0;
+      list.append(tab);
+      return tab;
+    });
+    const select = (i, focus) => {
+      tabs.forEach((tab, k) => { const on = k === i; tab.setAttribute("aria-selected", String(on)); tab.tabIndex = on ? 0 : -1; panels[k].hidden = !on; });
+      if (focus) tabs[i].focus();
+    };
+    list.addEventListener("click", (e) => { const i = tabs.indexOf(e.target.closest('[role="tab"]')); if (i >= 0) select(i, false); });
+    list.addEventListener("keydown", (e) => {
+      const at = tabs.indexOf(document.activeElement);
+      if (at < 0) return;
+      const to = { ArrowRight: (at + 1) % tabs.length, ArrowLeft: (at - 1 + tabs.length) % tabs.length, Home: 0, End: tabs.length - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault(); select(to, true);
+    });
+    group.insertBefore(list, group.firstChild);
+    group.dataset.ready = "true";
+    // Un lien d'ancre vers un titre d'un onglet masqué ouvre cet onglet
+    const open = () => { const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1))); const panel = target && target.closest(".kb-tab-panel"); const i = panel ? panels.indexOf(panel) : -1; if (i >= 0 && group.contains(panel)) select(i, false); };
+    select(0, false); open();
+    window.addEventListener("hashchange", open);
+  });
+})();

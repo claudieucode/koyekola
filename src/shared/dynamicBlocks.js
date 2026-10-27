@@ -49,6 +49,7 @@ function cleanSocial(raw) {
   }
   return out.join(" ");
 }
+const formSlug = (v) => (/^[a-z0-9][a-z0-9-]{0,119}$/.test(String(v || "")) ? String(v) : "");
 const feedUrl = (v) => { const s = String(v || "").trim(); if (!/^https:\/\/[^\s"'<>]{4,300}$/.test(s)) return ""; try { const u = new URL(s); return u.username || u.password || (u.port && u.port !== "443") ? "" : u.href; } catch { return ""; } };
 
 // cls : classe du marqueur · name : nœud Tiptap · attrs : { nom d'attribut Tiptap: [attribut HTML, nettoyage, valeur par défaut à l'insertion, champ du panneau de réglages] }
@@ -61,6 +62,10 @@ const DYNAMIC = [
     attrs: { count: ["data-count", int(1, 12), "5", { label: "Nombre d'articles", kind: "number", min: 1, max: 12 }], view: ["data-view", oneOf("list", "grid"), "list", { label: "Présentation", kind: "select", options: [["list", "Liste"], ["grid", "Grille"]] }], date: ["data-date", bool, "true", { label: "Afficher la date", kind: "check" }], excerpt: ["data-excerpt", bool, "", { label: "Afficher l'extrait", kind: "check" }], image: ["data-image", bool, "", { label: "Afficher l'image", kind: "check" }], category: ["data-category", text(60), "", T("Seulement cette catégorie", { placeholder: "Toutes les catégories" })], title: ["data-title", text(80), "", T("Titre du bloc")] } },
   { name: "kbComments", cls: "kb-comments", label: "Derniers commentaires", icon: "list", desc: "Les derniers commentaires approuvés sur les articles du site.", keywords: "discussion avis réactions",
     attrs: { count: ["data-count", int(1, 10), "5", { label: "Nombre de commentaires", kind: "number", min: 1, max: 10 }], title: ["data-title", text(80), "", T("Titre du bloc")] } },
+  { name: "kbBreadcrumbs", cls: "kb-breadcrumbs", label: "Fil d'Ariane", icon: "list", desc: "Le chemin de l'article : Accueil › Blog › catégorie › article.", keywords: "navigation chemin miettes breadcrumb",
+    attrs: { home: ["data-home", bool, "true", { label: "Commencer par « Accueil »", kind: "check" }], title: ["data-title", text(80), "", T("Titre du bloc")] } },
+  { name: "kbForm", cls: "kb-form", label: "Formulaire", icon: "list", desc: "Un formulaire publié dans Marketing (inscription, contact…), avec son anti-robot et son consentement.", keywords: "inscription contact collecte newsletter champ",
+    attrs: { form: ["data-form", formSlug, "", { label: "Formulaire", kind: "forms" }], title: ["data-title", text(80), "", T("Titre du bloc")] } },
   { name: "kbCategories", cls: "kb-categories", label: "Catégories", icon: "list", desc: "Liste des catégories du blog.", keywords: "rubriques thèmes taxonomie",
     attrs: { count: ["data-count", bool, "true", { label: "Afficher le nombre d'articles", kind: "check" }], title: ["data-title", text(80), "", T("Titre du bloc")] } },
   { name: "kbTags", cls: "kb-tags", label: "Nuage d'étiquettes", icon: "list", desc: "Les étiquettes les plus utilisées.", keywords: "tags mots-clés nuage",

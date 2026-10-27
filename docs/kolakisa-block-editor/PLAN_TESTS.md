@@ -34,6 +34,7 @@
 | `tests/editeur-blocs-editeur-gutenberg.test.js` | Chrome | transformations, verrous partiels, lasso, fil d'Ariane, vue en liste repliable, modifier en HTML, zoom, `[[`, insécable, backtick, aperçu au survol, guide, copier/couper/coller, recherche/remplacement, plan, recadrage + rotation |
 | `tests/editeur-blocs-mentions.test.js` | serveur + Chrome | mentions : seules les personnes lisant l'article, aucun e-mail exposé, saisie assistée |
 | `tests/editeur-blocs-pages.test.js` | serveur + Chrome | page « À propos » en blocs : jamais un article, accès créateur seul, versions, retour au texte simple |
+| `tests/editeur-blocs-nouveaux-blocs-2.test.js` | serveur + Chrome + site | LaTeX → MathML (saisies piégées), Icône, Liste de lecture, Accordéon exclusif, Onglets (sections, clavier), Fil d'Ariane ; insertion, réglages, aller-retour, site public |
 | `tests/editeur-blocs-firefox.test.js` | Firefox 153 (BiDi) | chargement sans erreur JS, aller-retour des réglages, frappe/annulation, zoom, lightbox publique |
 | `tests/editeur-blocs-a11y-perf-navigateur.test.js` (étendu) | Chrome | 0 défaut d'accessibilité sur les écrans ajoutés |
 

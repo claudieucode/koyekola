@@ -49,11 +49,18 @@ const BLOCKS = [
   { name: "kbNewsletter", label: "Newsletter", category: "KOLAKISA", tag: "div", cls: "kb-newsletter", top: true, sample: '<div class="kb-newsletter"></div>', since: 1 },
   { name: "kbReusable", label: "Bloc synchronisé", category: "Blocs réutilisables", tag: "div", cls: "kb-reusable", top: true, sample: '<div class="kb-reusable" data-ref="1"></div>', since: 1 },
   // --- Widgets dynamiques (rendus par le serveur à l'affichage, limités au site de l'article) : définis dans src/shared/dynamicBlocks.js ---
-  ...DYNAMIC.map((d) => ({ name: d.name, label: d.label, category: "Widgets", tag: "div", cls: d.cls, top: true, sample: `<div class="${d.cls}"${d.cls === "kb-rss" ? ' data-url="https://exemple.org/flux.xml"' : ""}></div>`, since: 3, dynamic: true })),
+  ...DYNAMIC.map((d) => ({ name: d.name, label: d.label, category: "Widgets", tag: "div", cls: d.cls, top: true, sample: `<div class="${d.cls}"${d.cls === "kb-rss" ? ' data-url="https://exemple.org/flux.xml"' : d.cls === "kb-form" ? ' data-form="inscription"' : ""}></div>`, since: 3, dynamic: true })),
+  { name: "kbIcon", label: "Icône", category: "Média", tag: "div", cls: "kb-icon", top: true, sample: '<div class="kb-icon" data-icon="star"></div>', since: 3 },
+  { name: "kbMath", label: "Formule mathématique", category: "Texte", tag: "div", cls: "kb-math", top: true, sample: '<div class="kb-math" data-latex="x^2"></div>', since: 3 },
+  { name: "kbPlaylist", label: "Liste de lecture audio", category: "Média", tag: "div", cls: "kb-playlist", top: true, sample: '<div class="kb-playlist" data-tracks="/uploads/blog/a.mp3|Titre|Artiste"></div>', since: 3 },
+  { name: "kbAccordionGroup", label: "Accordéon", category: "Texte", tag: "div", cls: "kb-accordion-group", top: true, container: true, sample: '<div class="kb-accordion-group"><details class="kb-acc-item"><summary>Q</summary><div class="kb-accordion-body"><p>R</p></div></details></div>', since: 3 },
+  { name: "kbTabs", label: "Onglets", category: "Mise en page", tag: "div", cls: "kb-tabs", top: true, container: true, sample: '<div class="kb-tabs"><div class="kb-tab" data-title="Un"><p>a</p></div><div class="kb-tab" data-title="Deux"><p>b</p></div></div>', since: 3 },
   { name: "kbNextPage", label: "Page suivante", category: "Mise en page", tag: "div", cls: "kb-nextpage", top: true, sample: '<div class="kb-nextpage"></div>', since: 3 },
   // HTML personnalisé : conservé seulement s'il porte la signature du compte créateur (src/utils/customHtml.js) : pas d'exemple « libre » qui survive à la sanitisation
   { name: "kbHtml", label: "HTML personnalisé", category: "Mise en forme", tag: "div", cls: "kb-html", top: true, signed: true, since: 3 },
   // --- Nœuds internes (jamais insérés seuls) ---
+  { name: "kbAccItem", label: "Élément d'accordéon", sub: true, tag: "details", cls: "kb-acc-item", since: 3 },
+  { name: "kbTab", label: "Onglet", sub: true, tag: "div", cls: "kb-tab", since: 3 },
   { name: "kbFootnote", label: "Note de bas de page", sub: true, inline: true, tag: "sup", cls: "kb-fn", sample: '<p>x<sup class="kb-fn" data-note="Une note">1</sup></p>', since: 3 },
   { name: "kbColumn", label: "Colonne", sub: true, tag: "div", cls: "kb-column", since: 1 },
   { name: "kbSummary", label: "Résumé", sub: true, tag: "summary", since: 1 },

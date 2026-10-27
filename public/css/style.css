@@ -1767,10 +1767,11 @@ a.post-card-category:hover { text-decoration: underline; }
 .article-content th { background: var(--surface-alt); color: var(--primary); font-weight: 700; }
 .article-content td > p, .article-content th > p { margin: 0; }
 /* Accordéons et FAQ */
-.kb-accordion, .kb-faq-item { margin: 0.8em 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
-.kb-accordion > summary, .kb-faq-item > summary { cursor: pointer; padding: 14px 18px; font-weight: 700; color: var(--primary); min-height: 44px; }
-.kb-accordion > summary::marker, .kb-faq-item > summary::marker { color: var(--accent); }
+.kb-accordion, .kb-faq-item, .kb-acc-item { margin: 0.8em 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.kb-accordion > summary, .kb-faq-item > summary, .kb-acc-item > summary { cursor: pointer; padding: 14px 18px; font-weight: 700; color: var(--primary); min-height: 44px; }
+.kb-accordion > summary::marker, .kb-faq-item > summary::marker, .kb-acc-item > summary::marker { color: var(--accent); }
 .kb-accordion-body, .kb-faq-answer { padding: 0 18px 4px; }
+.kb-accordion-group { margin: 1.8em 0; }
 .kb-faq { margin: 2em 0; }
 /* Étapes */
 .article-content ol.kb-steps { list-style: none; counter-reset: kbstep; padding-left: 0; margin: 2em 0; }
@@ -2717,3 +2718,29 @@ form.kb-search input[type="search"] { flex: 1 1 200px; min-width: 0; padding: 10
 .kb-ed-cover[data-shade="fade-up"] { background-image: linear-gradient(to top, rgba(0, 0, 0, var(--ov, 0.4)), rgba(0, 0, 0, 0)), var(--cover-src, none); }
 .kb-ed-cover[data-shade="fade-down"] { background-image: linear-gradient(to bottom, rgba(0, 0, 0, var(--ov, 0.4)), rgba(0, 0, 0, 0)), var(--cover-src, none); }
 .kb-comments ul { list-style: none; padding: 0; } .kb-comment-author { font-weight: 600; } .kb-comment-excerpt { margin: .2em 0 0; color: var(--muted); font-size: .92em; }
+
+/* Icône, formule, liste de lecture, onglets, fil d'Ariane */
+.kb-icon { display: flex; margin: 1.2em 0; color: var(--primary); }
+.kb-icon[data-size="s"] svg { width: 20px; height: 20px; } .kb-icon[data-size="m"] svg { width: 32px; height: 32px; } .kb-icon[data-size="l"] svg { width: 48px; height: 48px; } .kb-icon[data-size="xl"] svg { width: 72px; height: 72px; }
+.kb-math { margin: 1.4em 0; overflow-x: auto; text-align: center; font-size: 1.15em; }
+.kb-math math { display: block math; }
+.kb-playlist { margin: 1.8em 0; padding: 14px 18px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-alt); }
+.kb-playlist figcaption { margin-bottom: 8px; font-weight: 700; color: var(--primary); }
+.kb-playlist ol { margin: 0; padding-left: 1.4em; } .kb-playlist li { margin: .7em 0; } .kb-playlist audio { display: block; width: 100%; margin-top: 4px; }
+.kb-playlist-title { font-weight: 600; } .kb-playlist-artist { color: var(--muted); }
+.kb-tabs { margin: 1.8em 0; }
+.kb-tabs:not([data-ready]) .kb-tab-panel + .kb-tab-panel { margin-top: 1.2em; }
+.kb-tabs .kb-tab-title { margin: 0 0 .5em; font-size: 1.1rem; color: var(--primary); }
+.kb-tabs[data-ready] .kb-tab-title { display: none; }
+.kb-tablist { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 2px solid var(--border); }
+.kb-tablist [role="tab"] { padding: 10px 16px; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px; background: none; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+.kb-tablist [role="tab"][aria-selected="true"] { color: var(--primary); border-bottom-color: var(--accent, var(--primary)); }
+.kb-tablist [role="tab"]:focus-visible { outline: 3px solid var(--accent, #1d4ed8); outline-offset: -3px; }
+.kb-tabs[data-ready] .kb-tab-panel { padding: 16px 4px 0; } .kb-tabs[data-ready] .kb-tab-panel[hidden] { display: none; }
+.kb-breadcrumbs ol { display: flex; flex-wrap: wrap; gap: 4px 0; margin: 0; padding: 0; list-style: none; }
+.kb-breadcrumbs li + li::before { content: "›"; margin: 0 8px; color: var(--muted); }
+.kb-breadcrumbs li[aria-current="page"] { color: var(--muted); font-weight: 600; }
+.kb-ed-tab { margin: .6em 0; border: 1px dashed var(--border); border-radius: 8px; } .kb-ed-tab-label { padding: 4px 10px; background: var(--surface-alt); border-bottom: 1px dashed var(--border); border-radius: 8px 8px 0 0; font-size: 12px; font-weight: 700; color: var(--primary); } .kb-ed-tab-body { padding: 6px 10px; }
+.kb-ed-icon { cursor: default; } .kb-ed-math { padding: 6px; border: 1px dashed var(--border); border-radius: 6px; }
+.wp-tab-row { display: flex; gap: 8px; align-items: end; } .wp-tab-row .wp-control { flex: 1; }
+.wp-snippets { flex-wrap: wrap; gap: 6px; }

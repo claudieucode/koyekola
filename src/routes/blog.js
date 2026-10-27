@@ -771,6 +771,7 @@ function editorData(req, post) {
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
     newsletterReady: Boolean(marketing && marketing.ready && newsletterForm(req)),
     canHtml: mayWriteHtml(req) && customHtml.available(),
+    marketingForms: require("../services/blogWidgets").listForms(editorSite(req, post) || 0),
     editorTheme: editorTheme.describe(db.prepare("SELECT editor_theme, editor_color FROM user_prefs WHERE user_id = ?").get(req.session.user.id)), editorThemes: editorTheme.THEMES,
     seoWorkspace: seoWorkspace.prefsOf(req.session.user.id),
     editorPrefs: reusable.prefsOf(req.session.user.id),

@@ -76,3 +76,10 @@ Transformations étendues, verrous partiels, lasso, fil d'Ariane, vue en liste r
 ### Autres
 - Accessibilité : nouveau test sur les écrans ajoutés (réglages de style de 17 types de blocs, widgets, verrouillage, guide, HTML, notes, fil d'Ariane, aperçu) : 0 défaut.
 - Firefox 153 réel par WebDriver BiDi (`editeur-blocs-firefox`, 4) : mêmes parcours essentiels, 0 erreur JavaScript. Safari non testé.
+
+### Lot 7 — Blocs de Gutenberg 24.2 non couverts, polish d'éditeur
+- Nouveaux blocs : **Math** (convertisseur LaTeX → MathML sans dépendance, testé avec des saisies piégées), **Icône**, **Liste de lecture audio**, **Accordéon** (un seul ouvert à la fois), **Onglets** (sections titrées sans JavaScript, vrais onglets avec), **Fil d'Ariane**, **Formulaire** (intègre un formulaire publié de Marketing, même site). Test : `editeur-blocs-nouveaux-blocs-2` (17) + `editeur-blocs-widgets` (formulaire, commentaires).
+- Éditeur : zone d'écriture redimensionnable (poignée et clavier), aperçu des styles au survol, réinitialisation par groupe, préférence « texte des boutons », « ouvrir la vue en liste au démarrage », « Copier tout le contenu », commandes de palette, recadrage + **rotation**.
+- **Défaut préexistant trouvé et corrigé** : la vue en liste écrivait le mot « null » quand l'analyse n'était pas prête (`append(null)`).
+- Piège : la liste blanche des réglages de l'éditeur (`reusableBlocks.SETTINGS`) supprimait silencieusement toute préférence nouvelle (`welcomeSeen`, `textLabels`, `alwaysListView`) ; ajoutées.
+- Firefox : trois tests instables corrigés en attendant l'état réel (frappe asynchrone, script différé) au lieu de supposer l'ordre ; Edge ne se lance pas via Playwright ici.
