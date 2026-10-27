@@ -111,15 +111,15 @@ describe("éditeur d'articles — accessibilité et performance (navigateur)", {
     await page.mouse.move(1300, 520);
     await page.locator('[data-block-toolbar] button[aria-label="Options"], [data-top-toolbar] button[aria-label="Options"]').first().click();
     await page.getByRole("menuitem", { name: /Options de verrouillage/ }).click();
-    await scan("verrouillage"); await page.keyboard.press("Escape");
+    await scan("verrouillage"); await page.keyboard.press("Escape"); await page.waitForSelector("dialog", { state: "detached" });
     await page.evaluate(() => document.querySelector(".ProseMirror").editor.view.focus());
     await page.mouse.move(1300, 540);
     await page.locator('[data-block-toolbar] button[aria-label="Options"], [data-top-toolbar] button[aria-label="Options"]').first().click();
     await page.getByRole("menuitem", { name: /Modifier en HTML/ }).click();
-    await scan("modifier en HTML"); await page.keyboard.press("Escape");
+    await scan("modifier en HTML"); await page.keyboard.press("Escape"); await page.waitForSelector("dialog", { state: "detached" });
     await page.click("[data-options-toggle]");
     await page.getByRole("menuitem", { name: "Guide de bienvenue" }).click();
-    await scan("guide de bienvenue"); await page.keyboard.press("Escape");
+    await scan("guide de bienvenue"); await page.keyboard.press("Escape"); await page.waitForSelector("dialog", { state: "detached" });
     // aperçu au survol : décoratif, jamais focalisable ni annoncé deux fois
     await page.click("[data-toggle-inserter]");
     await page.locator(".wp-block-type", { hasText: "Citation" }).first().hover();

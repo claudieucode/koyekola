@@ -80,6 +80,7 @@ describe("widgets et blocs spéciaux — éditeur (navigateur)", { skip: SKIP },
     await page.getByRole("menuitem", { name: /Note de bas de page/ }).click();
     await page.getByLabel("Texte de la note").fill("Première note");
     await page.locator("dialog").getByRole("button", { name: "Enregistrer" }).click();
+    await page.waitForSelector("dialog", { state: "detached" }); // la fenêtre se ferme avec une courte sortie animée
     await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; const size = ed.state.doc.content.size; ed.commands.setTextSelection(size - 3); });
     const out = await html(page);
     assert.match(out, /<sup class="kb-fn" data-note="Première note">/);
@@ -89,6 +90,7 @@ describe("widgets et blocs spéciaux — éditeur (navigateur)", { skip: SKIP },
     await page.locator(".ProseMirror .kb-ed-footnote").click();
     await page.getByLabel("Texte de la note").fill("Note corrigée");
     await page.locator("dialog").getByRole("button", { name: "Enregistrer" }).click();
+    await page.waitForSelector("dialog", { state: "detached" }); // la fenêtre se ferme avec une courte sortie animée
     assert.match(await html(page), /data-note="Note corrigée"/);
     // aller-retour : le HTML enregistré redonne la même note
     await load(page, await html(page));

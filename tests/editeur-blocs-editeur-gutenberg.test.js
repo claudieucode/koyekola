@@ -93,6 +93,7 @@ describe("éditeur d'articles — fonctions de Gutenberg (navigateur)", { skip: 
     await page.getByLabel("Empêcher le déplacement").check();
     await page.getByLabel("Empêcher la suppression").check();
     await page.locator("dialog").getByRole("button", { name: "Appliquer" }).click();
+    await page.waitForSelector("dialog", { state: "detached" }); // la fenêtre se ferme avec une courte sortie animée
     let t = await tops(page);
     assert.deepEqual([t[1].attrs.locked, t[1].attrs.lockMove, t[1].attrs.lockRemove], [false, true, true]);
     // le contenu reste modifiable
@@ -127,6 +128,7 @@ describe("éditeur d'articles — fonctions de Gutenberg (navigateur)", { skip: 
     await page.getByLabel("Empêcher la suppression").check();
     await page.getByLabel("Appliquer aussi aux blocs qu'il contient").check();
     await page.locator("dialog").getByRole("button", { name: "Appliquer" }).click();
+    await page.waitForSelector("dialog", { state: "detached" }); // la fenêtre se ferme avec une courte sortie animée
     const inner = await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; const out = []; ed.state.doc.firstChild.descendants((n) => { if (n.type.name === "paragraph") out.push(n.attrs.lockRemove); return true; }); return out; });
     assert.deepEqual(inner, [true, true]);
     await page.context().close();
@@ -194,6 +196,7 @@ describe("éditeur d'articles — fonctions de Gutenberg (navigateur)", { skip: 
     assert.match(await ta.inputValue(), /<p[^>]*>Avant<\/p>/);
     await ta.fill('<h2>Nouveau titre</h2><script>alert(1)</script><p onclick="x()">Texte</p>');
     await page.locator("dialog").getByRole("button", { name: "Appliquer" }).click();
+    await page.waitForSelector("dialog", { state: "detached" }); // la fenêtre se ferme avec une courte sortie animée
     const t = await tops(page);
     assert.deepEqual(t.map((x) => `${x.type}:${x.text}`).slice(0, 2), ["heading:Nouveau titre", "paragraph:Texte"]);
     assert.doesNotMatch(await html(page), /script|onclick/);
