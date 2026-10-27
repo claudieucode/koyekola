@@ -540,6 +540,8 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_checkout_sessions_user ON checkout_sessions(user_id, status);
 `);
+// Tunnels : étape de paiement (mk_funnel_steps.id) d'où vient la session, pour reprendre le parcours après le paiement
+if (!db.prepare("PRAGMA table_info(checkout_sessions)").all().some((c) => c.name === "funnel_step_id")) db.exec("ALTER TABLE checkout_sessions ADD COLUMN funnel_step_id INTEGER");
 
 // Remboursements (palier 20) : la vérité financière reste chez Stripe ; ici seulement la trace de ce que Stripe annonce (webhook signé « charge.refunded »),
 // rattachée à la commande payée par ce paiement. UNIQUE sur l'identifiant du remboursement Stripe : un webhook rejoué n'enregistre rien de plus.

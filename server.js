@@ -173,6 +173,7 @@ app.use(invitationRoutes); // invitation à rejoindre l'équipe (CMS → Utilisa
 app.use(courseRoutes);
 app.use(cartRoutes);
 app.use(orderRoutes);
+app.use(require("./src/routes/tunnelOffers"));
 app.use(learningRoutes);
 app.use(supportRoutes);
 app.use(favoritesRoutes);

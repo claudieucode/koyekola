@@ -9,6 +9,7 @@ const payments = require("../services/payments");
 const notifications = require("../services/notifications");
 const { applyEffectivePrices } = require("../services/pricing");
 const { paidCheckoutOpen } = require("../services/payment");
+const funnels = require("../marketing/funnels");
 
 const router = express.Router();
 
@@ -109,8 +110,13 @@ router.get("/commande/retour/:ref", requireAuth, async (req, res, next) => {
       }
     }
     if (result && (result.status === "paid" || result.status === "already")) {
-      req.session.cart = {};
-      delete req.session.coupon;
+      // Achat fait depuis une étape de tunnel : le parcours continue (offre complémentaire, remerciement…) ; sinon, confirmation de commande
+      if (cs.funnel_step_id) {
+        const marketing = req.app.locals.marketing;
+        const step = marketing && marketing.ready ? funnels.offerStep(db, marketing.organizationId, cs.funnel_step_id) : null;
+        const next = step ? funnels.nextUrlAfterOffer(db, marketing.organizationId, step, { paid: true }) : null;
+        if (next) return res.redirect(next);
+      } else { req.session.cart = {}; delete req.session.coupon; }
       return res.redirect(`/commande/confirmation/${result.orderId}`);
     }
     if (cs.status === "failed" || cs.status === "expired") {

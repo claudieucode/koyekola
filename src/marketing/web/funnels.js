@@ -81,7 +81,12 @@ module.exports = () => {
   // Palier 18 : une étape garde sa place ; sa PAGE CMS se remplace, se détache ou se crée (jamais copiée dans le tunnel)
   stepAction("/remplacer", (req, f, sid) => { funnels.replaceStepPage(req.mk.ctx, f.id, sid, intOrNull(req.body.page_id)); return "Page de l'étape remplacée. L'ancienne page n'est pas modifiée : elle reste dans Pages."; });
   stepAction("/detacher", (req, f, sid) => { funnels.detachStepPage(req.mk.ctx, f.id, sid); return "Page détachée : l'étape reste, sans page. La page n'est pas supprimée."; });
-  stepAction("/reglages", (req, f, sid) => { funnels.updateStepSettings(req.mk.ctx, f.id, sid, { noindex: req.body.noindex === "on", hideFooter: req.body.hideFooter === "on", goal: req.body.goal || "" }); return "Réglages de l'étape enregistrés (propres au tunnel : la page elle-même n'est pas modifiée)."; });
+  stepAction("/reglages", (req, f, sid) => {
+    // Le formulaire de l'offre additionnelle n'envoie que ses deux champs : les autres réglages de l'étape restent tels quels
+    const raw = req.body.bumpCourseId !== undefined ? { bumpCourseId: req.body.bumpCourseId, bumpLabel: req.body.bumpLabel || "" } : { noindex: req.body.noindex === "on", hideFooter: req.body.hideFooter === "on", goal: req.body.goal || "" };
+    funnels.updateStepSettings(req.mk.ctx, f.id, sid, raw);
+    return "Réglages de l'étape enregistrés (propres au tunnel : la page elle-même n'est pas modifiée).";
+  });
   // « Créer avec KOLAKISA CMS » : nouvelle page CMS associée à l'étape, puis l'éditeur visuel EXISTANT
   router.post("/tunnels/:id(\\d+)/etapes/:sid(\\d+)/creer-page", need("funnels.write"), (req, res, next) => {
     const f = load(req, res);

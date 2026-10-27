@@ -54,6 +54,17 @@
                     <% if (canEditPages) { %><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= s.pageId %>/test-ab">Tester en A/B</a><% } %>
                   <% } %>
                   <% if (s.live) { %><a class="btn btn-ghost btn-sm" href="<%= s.path %>" target="_blank" rel="noopener">Voir en ligne</a><% } %>
+                  <% if (edit && s.type === "order") { %>
+                    <details class="mk-flash-details"><summary>Offre additionnelle (order bump)</summary>
+                      <form class="mk-form" action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/reglages" method="post">
+                        <p class="field-hint">Une case à cocher sur le bon de commande : le client ajoute une autre formation au même paiement.</p>
+                        <div class="field-group"><label for="bump-<%= s.id %>">Formation proposée en plus</label>
+                          <select id="bump-<%= s.id %>" name="bumpCourseId"><option value="">Aucune</option><% courses.filter((c) => c.id !== s.courseId).forEach((c) => { %><option value="<%= c.id %>"<%= s.settings.bumpCourseId === c.id ? " selected" : "" %>><%= c.title %></option><% }) %></select></div>
+                        <div class="field-group"><label for="bumpl-<%= s.id %>">Texte de la case</label><input id="bumpl-<%= s.id %>" type="text" name="bumpLabel" maxlength="120" value="<%= s.settings.bumpLabel %>"></div>
+                        <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+                      </form>
+                    </details>
+                  <% } %>
                   <% if (edit && !s.courseTitle) { %>
                     <details class="mk-flash-details"><summary>Page et réglages de l'étape</summary>
                       <% if (s.pageId) { %>
