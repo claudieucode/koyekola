@@ -17,6 +17,7 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_post_notes_post ON post_notes(post_id, id);
+  CREATE INDEX IF NOT EXISTS idx_post_notes_parent ON post_notes(parent_id);
 `);
 
 const BLOCK_ID = /^b[a-z0-9]{8}$/;
