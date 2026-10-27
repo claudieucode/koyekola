@@ -622,11 +622,6 @@
 .kb-ed-button[data-align="center"] { align-items: center; }
 .kb-ed-button[data-align="right"] { align-items: flex-end; }
 /* Poignée de bloc (glisser-déposer, insérer) */
-.kb-ed-handle { position: absolute; left: 10px; display: flex; gap: 2px; z-index: 5; }
-.kb-ed-handle[hidden] { display: none; }
-.kb-ed-handle-btn { width: 24px; height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 1; }
-.kb-ed-handle-btn:hover { background: var(--surface-alt); color: var(--accent-dark); }
-.kb-ed-grip { cursor: grab; }
 .be-stats { margin: 8px 0 0; font-size: 0.85rem; color: var(--muted); }
 
 
@@ -1282,8 +1277,8 @@
 .kb-ed-image.is-broken img { min-height: 80px; width: 100%; background: repeating-linear-gradient(45deg, #fdecec, #fdecec 10px, #fff 10px, #fff 20px); border: 2px dashed var(--danger); border-radius: var(--radius); }
 .kb-ed-broken { display: block; margin-top: 6px; padding: 6px 10px; border-radius: var(--radius); background: #fdecec; color: var(--danger); font-size: 0.82rem; font-weight: 700; }
 /* Bloc verrouillé */
-.ProseMirror > .is-locked { position: relative; outline: 1px dashed rgba(11, 42, 64, 0.35); outline-offset: 4px; border-radius: 2px; }
-.ProseMirror > .is-locked::after { content: "🔒"; position: absolute; top: -10px; right: -10px; font-size: 12px; line-height: 1; padding: 3px; border-radius: 999px; background: #fff; box-shadow: 0 1px 4px rgba(11, 42, 64, 0.2); pointer-events: none; }
+.ProseMirror .is-locked { position: relative; outline: 1px dashed rgba(11, 42, 64, 0.35); outline-offset: 4px; border-radius: 2px; }
+.ProseMirror .is-locked::after { content: "🔒"; position: absolute; top: -10px; right: -10px; font-size: 12px; line-height: 1; padding: 3px; border-radius: 999px; background: #fff; box-shadow: 0 1px 4px rgba(11, 42, 64, 0.2); pointer-events: none; }
 /* Rechercher / remplacer */
 .wp-findbar { position: sticky; top: 8px; z-index: 30; margin: 8px auto 0; width: min(560px, calc(100% - 24px)); display: grid; gap: 6px; padding: 10px; background: var(--ed-surface-2); color: var(--ed-text); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 28px rgba(11, 42, 64, 0.15); }
 .wp-find-row { display: flex; gap: 6px; align-items: center; }
@@ -1781,7 +1776,7 @@
 /* La feuille : une page centrée, bordée de tous côtés, ombre très légère ; la barre du bloc et les poignées disparaissent */
 .is-doc-mode .wp-content { max-width: 816px; margin: 32px auto 64px; padding: 80px 88px 96px; border: 1px solid var(--ed-border); border-radius: var(--bs-r); box-shadow: 0 1px 2px rgba(11, 42, 64, 0.04), 0 8px 24px -16px rgba(11, 42, 64, 0.2); min-height: calc(100vh - 200px); }
 .is-doc-mode .wp-content::before { content: "Document · KOLAKISA"; top: 40px; left: 88px; }
-.is-doc-mode .wp-block-toolbar, .is-doc-mode .wp-top-toolbar, .is-doc-mode .wp-inline-appender, .is-doc-mode .kb-ed-handle { display: none !important; }
+.is-doc-mode .wp-block-toolbar, .is-doc-mode .wp-top-toolbar, .is-doc-mode .wp-inline-appender { display: none !important; }
 .is-doc-mode .wp-editor .be-prose > .has-focus:not(p):not(h1):not(h2):not(h3):not(h4):not(.kb-ed-image):not(.kb-ed-marker) { box-shadow: none; }
 /* Blocs spéciaux : repérables d'un coup d'œil (filet pointillé discret), jamais transformés en texte */
 .is-doc-mode .wp-editor .be-prose > :is(.kb-ed-marker, .kb-ed-gallery, .kb-ed-columns, .kb-ed-group, .kb-ed-buttons, .kb-ed-accordion, .kb-ed-spacer, .kb-ed-pagebreak, [class*="kb-ed-callout"], .kb-ed-reusable) { outline: 1px dashed var(--ed-border-strong); outline-offset: 4px; border-radius: 2px; }

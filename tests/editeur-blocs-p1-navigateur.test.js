@@ -288,6 +288,22 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     await page.context().close();
   });
 
+  test("verrouillage d'un bloc imbriqué : le bloc d'une colonne ou d'un groupe est protégé comme un bloc de premier niveau", async () => {
+    const page = await open();
+    await load(page, '<div class="kb-group" data-bg="light"><p>Libre</p><p>Protégé</p></div><p>Dehors</p>');
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; let at = 0; ed.state.doc.descendants((n, pos) => { if (n.textContent === "Protégé" && n.type.name === "paragraph") at = pos; }); ed.commands.setTextSelection(at + 2); ed.view.focus(); });
+    await page.locator('[data-block-toolbar] button[aria-label="Options"], [data-top-toolbar] button[aria-label="Options"]').first().click();
+    await page.getByRole("menuitem", { name: /Verrouiller/ }).click();
+    const locked = await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; let l = []; ed.state.doc.descendants((n) => { if (n.attrs && n.attrs.locked) l.push(n.textContent); }); return l; });
+    assert.deepEqual(locked, ["Protégé"]);
+    // Tout sélectionner puis effacer : le bloc verrouillé empêche l'opération
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.selectAll(); ed.view.focus(); });
+    await page.keyboard.press("Backspace");
+    const texts = (await tops(page)).map((x) => x.text);
+    assert.match(texts.join("|"), /Protégé/, "le bloc verrouillé est toujours là");
+    await page.context().close();
+  });
+
   test("sans erreur de console pendant ces parcours", () => {
     assert.deepEqual(errors, []);
   });

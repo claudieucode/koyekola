@@ -56,96 +56,15 @@ function moveBlock(state, dispatch, dir) {
 
 export const BlockHandle = Extension.create({
   name: "blockHandle",
-  addOptions() { return { onPlus: () => {}, visual: true }; },
-  addKeyboardShortcuts() {
+    addKeyboardShortcuts() {
     return {
       "Alt-ArrowUp": () => moveBlock(this.editor.state, this.editor.view.dispatch, -1),
       "Alt-ArrowDown": () => moveBlock(this.editor.state, this.editor.view.dispatch, 1),
     };
   },
   addProseMirrorPlugins() {
-    const options = this.options;
-    if (!options.visual) return [blockDropPlugin()]; // interface façon Gutenberg : la poignée vit dans la barre d'outils du bloc
-    let current = null; // position du bloc survolé
-    return [blockDropPlugin(), 
-      new Plugin({
-        key: new PluginKey("blockHandle"),
-        view(view) {
-          const bar = document.createElement("div");
-          bar.className = "kb-ed-handle";
-          bar.hidden = true;
-          const plus = document.createElement("button");
-          plus.type = "button";
-          plus.className = "kb-ed-handle-btn";
-          plus.textContent = "+";
-          plus.title = "Insérer un bloc ici";
-          plus.setAttribute("aria-label", "Insérer un bloc après celui-ci");
-          const grip = document.createElement("button");
-          grip.type = "button";
-          grip.className = "kb-ed-handle-btn kb-ed-grip";
-          grip.textContent = "⠿";
-          grip.title = "Glisser pour déplacer le bloc (au clavier : Alt + flèche haut / bas)";
-          grip.setAttribute("aria-label", "Déplacer le bloc");
-          grip.draggable = true;
-          bar.append(plus, grip);
-          const host = view.dom.parentNode;
-          host.style.position = "relative";
-          host.append(bar);
-
-          const place = (pos) => {
-            const dom = view.nodeDOM(pos);
-            if (!(dom instanceof HTMLElement)) { bar.hidden = true; return; }
-            const hostBox = host.getBoundingClientRect();
-            const box = dom.getBoundingClientRect();
-            bar.style.top = `${box.top - hostBox.top + host.scrollTop}px`;
-            bar.hidden = false;
-          };
-          const onMove = (event) => {
-            if (!view.editable) return;
-            const found = view.posAtCoords({ left: view.dom.getBoundingClientRect().left + 24, top: event.clientY });
-            if (!found) return;
-            const pos = topLevelPos(view.state.doc, found.inside >= 0 ? found.inside : found.pos);
-            if (pos === null) return;
-            current = pos;
-            place(pos);
-          };
-          const selectBlock = () => {
-            if (current === null || !view.state.doc.nodeAt(current)) return false;
-            view.dispatch(view.state.tr.setSelection(NodeSelection.create(view.state.doc, current)));
-            return true;
-          };
-          plus.addEventListener("mousedown", (e) => e.preventDefault());
-          plus.addEventListener("click", () => {
-            if (current === null) return;
-            const node = view.state.doc.nodeAt(current);
-            if (!node) return;
-            const after = current + node.nodeSize;
-            view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(after - 1))));
-            view.focus();
-            options.onPlus(after);
-          });
-          grip.addEventListener("mousedown", () => selectBlock());
-          grip.addEventListener("dragstart", (event) => {
-            if (!selectBlock()) return;
-            const slice = view.state.selection.content();
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", " ");
-            const dom = view.nodeDOM(current);
-            if (dom instanceof HTMLElement) event.dataTransfer.setDragImage(dom, 0, 0);
-            view.dragging = { slice, move: true };
-            blockDrag = current;
-            document.body.classList.add("kb-block-dragging");
-          });
-          grip.addEventListener("dragend", () => { view.dragging = null; blockDrag = null; document.body.classList.remove("kb-block-dragging"); });
-          view.dom.addEventListener("mousemove", onMove);
-          host.addEventListener("mouseleave", (e) => { if (!bar.contains(e.relatedTarget)) bar.hidden = true; });
-          return {
-            update() { if (current !== null && !bar.hidden && view.state.doc.nodeAt(current)) place(current); },
-            destroy() { view.dom.removeEventListener("mousemove", onMove); bar.remove(); },
-          };
-        },
-      }),
-    ];
+    // Interface façon Gutenberg : la poignée de déplacement vit dans la barre d'outils du bloc (pas de poignée flottante)
+    return [blockDropPlugin()];
   },
 });
 

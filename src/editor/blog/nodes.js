@@ -158,7 +158,7 @@ function marker({ name, cls, attrs, icon, label }) {
 export const KbVideo = marker({ name: "kbVideo", cls: "kb-video", attrs: { url: "data-url", caption: "data-caption", poster: "data-poster", autoplay: "data-autoplay", muted: "data-muted", loop: "data-loop", nocontrols: "data-nocontrols" }, icon: "▶", label: (a) => `Vidéo · ${a.url || "adresse à compléter"}${a.caption ? ` · ${a.caption}` : ""}` });
 export const KbAudio = marker({ name: "kbAudio", cls: "kb-audio", attrs: { src: "data-src", title: "data-title", author: "data-author" }, icon: "♪", label: (a) => `Audio · ${a.title || a.src || "fichier à choisir"}${a.author ? ` — ${a.author}` : ""}` });
 export const KbEmbed = marker({ name: "kbEmbed", cls: "kb-embed", attrs: { url: "data-url", caption: "data-caption" }, icon: "⧉", label: (a) => `Intégration · ${a.url || "adresse à compléter"} (YouTube et Vimeo deviennent un lecteur ; le reste, un lien)` });
-export const KbCourse = marker({ name: "kbCourse", cls: "kb-course", attrs: { slug: "data-course" }, icon: "🎓", label: (a) => `Formation recommandée · ${a.title || a.slug || "à choisir"}` });
+export const KbCourse = marker({ name: "kbCourse", cls: "kb-course", attrs: { slug: "data-course" }, icon: "🎓", label: (a) => `Formation recommandée · ${a.slug || "à choisir"}` });
 export const KbNewsletter = marker({ name: "kbNewsletter", cls: "kb-newsletter", attrs: {}, icon: "✉", label: () => "Inscription à la newsletter (formulaire choisi dans Blog → réglages)" });
 
 export const KbMore = marker({ name: "kbMore", cls: "kb-more", attrs: { label: "data-label" }, icon: "⋯", label: (a) => `Lire la suite${a.label ? ` — « ${a.label} »` : ""} · le texte qui précède sert d'extrait si l'extrait est vide` });

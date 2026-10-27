@@ -15,7 +15,8 @@ const LOCK_META = "kbLockChange";
 export const lockKey = new PluginKey("kbBlockLock");
 
 // Blocs verrouillés d'un document : liste de nœuds (dans l'ordre)
-const lockedNodes = (doc) => { const out = []; doc.forEach((n) => { if (n.attrs && n.attrs.locked) out.push(n); }); return out; };
+// Blocs verrouillés à TOUS les niveaux (colonnes, groupes, encadrés…) : un bloc imbriqué est protégé comme un bloc de premier niveau
+const lockedNodes = (doc) => { const out = []; doc.descendants((n) => { if (n.attrs && n.attrs.locked) out.push(n); return true; }); return out; };
 
 export const BlockLock = Extension.create({
   name: "kbBlockLock",
@@ -51,10 +52,10 @@ export const BlockLock = Extension.create({
         return true;
       },
       props: {
-        // Repère visuel : classe sur chaque bloc verrouillé
+        // Repère visuel : classe sur chaque bloc verrouillé, à tous les niveaux
         decorations(state) {
           const decos = [];
-          state.doc.forEach((n, pos) => { if (n.attrs && n.attrs.locked) decos.push(Decoration.node(pos, pos + n.nodeSize, { class: "is-locked", "data-lock-label": "Verrouillé" })); });
+          state.doc.descendants((n, pos) => { if (n.attrs && n.attrs.locked) decos.push(Decoration.node(pos, pos + n.nodeSize, { class: "is-locked", "data-lock-label": "Verrouillé" })); return true; });
           return decos.length ? DecorationSet.create(state.doc, decos) : null;
         },
       },

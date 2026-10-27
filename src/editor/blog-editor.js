@@ -44,7 +44,6 @@ const ICONS = {
   readmore: "M3 11h5v2H3v-2zm6.5 0h5v2h-5v-2zM16 11h5v2h-5v-2zM5 6h14v1.5H5V6zm0 10.5h14V18H5v-1.5z",
   paragraph: "M18.3 4H9.9v-.1l-.9.2c-2.3.4-4 2.4-4 4.8s1.7 4.4 4 4.8l.7.1V20h1.5V5.5h2.9V20h1.5V5.5h2.7V4z",
   heading: "M6 5V18.5911L12 13.8473L18 18.5911V5H6Z",
-  h: "M6.2 5.2v13.4l5.8-4.8 5.8 4.8V5.2z",
   list: "M4 4v1.5h16V4H4zm8 8.5h8V11h-8v1.5zM4 20h16v-1.5H4V20zm4-8c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2z",
   ordered: "M11.1 15.8H20v-1.5h-8.9v1.5zm0-8.6v1.5H20V7.2h-8.9zM6 13c-.6 0-1 .4-1 1s.4 1 1 1 1-.4 1-1-.4-1-1-1zM6 6.6c-.6 0-1 .4-1 1s.4 1 1 1 1-.4 1-1-.4-1-1-1z",
   quote: "M13 6v6h5.2v4c0 .8-.2 1.4-.5 1.7-.6.6-1.6.6-2.5.5h-.3v1.5h.5c1 0 2.3-.1 3.3-1 .6-.6 1-1.6 1-2.8V6H13zm-9 6h5.2v4c0 .8-.2 1.4-.5 1.7-.6.6-1.6.6-2.5.5h-.3v1.5h.5c1 0 2.3-.1 3.3-1 .6-.6 1-1.6 1-2.8V6H4v6z",
@@ -220,7 +219,7 @@ function start() {
       Placeholder.configure({ includeChildren: false, placeholder: ({ node, editor: ed }) => (node.type.name === "heading" ? "Titre" : ed.state.doc.childCount <= 1 ? "Commencez à écrire, ou tapez / pour ajouter un bloc" : "Tapez / pour ajouter un bloc") }),
       ...BLOG_NODES,
       Focus.configure({ mode: "shallowest", className: "has-focus" }),
-      BlockHandle.configure({ visual: false }),
+      BlockHandle,
       BlockLock.configure({ onBlocked: () => lockedNotice() }),
       BlockSupports,
       MultiSelectHighlight,
@@ -639,12 +638,6 @@ function start() {
     if (!r || r.nodes.length < 2) selectBlockById(bId);
     listActive = null; syncListSelection(true);
   }
-  function selectBlockAt(pos) {
-    const node = editor.state.doc.nodeAt(pos);
-    if (!node) return;
-    if (node.isAtom || !node.isTextblock) editor.chain().focus().setNodeSelection(pos).scrollIntoView().run();
-    else editor.chain().focus().setTextSelection(pos + 1).scrollIntoView().run();
-  }
   function toggleHidden(id) {
     const b = findBlock(editor.state.doc, id);
     if (!b) return;
@@ -786,7 +779,6 @@ function start() {
     editor.view.dispatch(tr);
     return true;
   };
-  const topOf = (pos) => { const $p = editor.state.doc.resolve(pos); return $p.depth === 0 ? pos : $p.before(1); };
 
   // ---------- Barre d'outils du bloc (flottante, ou en haut en mode « Barre d'outils supérieure ») ----------
   const blockToolbar = $("[data-block-toolbar]");
@@ -927,7 +919,7 @@ function start() {
       ...(canUngroup(node) ? [{ label: "Dégrouper", run: () => attempt(() => ungroupAt(editor, top), "Bloc dégroupé : son contenu est remis au niveau du dessus.") }] : []),
       ...(copyStyles(node) ? [{ label: "Copier les styles", run: () => { styleClipboard = copyStyles(node); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); } }] : []),
       ...(styleClipboard && !locked ? [{ label: "Coller les styles", shortcut: "Ctrl+Alt+V", run: () => attempt(() => pasteStyles(editor, top, styleClipboard), (n) => `${n} réglage${n > 1 ? "s" : ""} de style appliqué${n > 1 ? "s" : ""}.`) }] : []),
-      ...(LOCKABLE_TYPES.includes(node.type.name) && editor.state.doc.resolve(top).depth === 0 ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
+      ...(LOCKABLE_TYPES.includes(node.type.name) ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
       ...(blockMenuExtra ? blockMenuExtra(top, node) : []),
       ...(locked ? [] : ["-", { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) }]),
     ];
@@ -963,7 +955,7 @@ function start() {
       const id = n.attrs.blockId;
       add("hide", n.attrs.hidden ? "Afficher le bloc" : "Masquer le bloc", "Ctrl+Maj+H", () => toggleHidden(id), Boolean(id) && !locked);
       add("rename", "Renommer le bloc…", "Ctrl+Alt+R", () => renameBlock(first.pos), !locked && LOCKABLE_TYPES.includes(n.type.name));
-      if (LOCKABLE_TYPES.includes(n.type.name) && editor.state.doc.resolve(first.pos).depth === 0) add("lock", locked ? "Déverrouiller le bloc" : "Verrouiller le bloc", "", () => { setLocked(editor, first.pos, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); });
+      if (LOCKABLE_TYPES.includes(n.type.name)) add("lock", locked ? "Déverrouiller le bloc" : "Verrouiller le bloc", "", () => { setLocked(editor, first.pos, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); });
       if (copyStyles(n)) add("copy-styles", "Copier les styles", "", () => { styleClipboard = copyStyles(n); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); });
       if (styleClipboard) add("paste-styles", "Coller les styles", "Ctrl+Alt+V", () => attempt(() => pasteStyles(editor, first.pos, styleClipboard), (k) => `${plural(k, "réglage")} de style appliqué${k > 1 ? "s" : ""}.`), !locked);
       if (transformsFor(editor, first.pos).length || TEXT_TYPES.includes(n.type.name)) add("transform", "Transformer en…", "", () => { if (TEXT_TYPES.includes(n.type.name)) editor.chain().focus().setTextSelection(first.pos + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]"), first.pos); }, !locked);
@@ -2050,7 +2042,7 @@ function start() {
         control("Crédit", bind(input({ value: a.credit || "" }), "credit")),
         control("Titre (infobulle)", bind(input({ value: a.title || "" }), "title")),
         h("p", { class: "wp-label" }, "Largeur"),
-        segmented([["25", "25 %"], ["50", "50 %"], ["75", "75 %"], ["100", "100 %"]], a.width, (v) => set({ width: v })),
+        segmented([["25", "25 %"], ["33", "33 %"], ["50", "50 %"], ["66", "66 %"], ["75", "75 %"], ["100", "100 %"]], a.width, (v) => set({ width: v })),
         h("p", { class: "wp-label" }, "Alignement"),
         segmented([["left", "Gauche"], ["center", "Centre"], ["right", "Droite"], ["wide", "Large"]], a.align, (v) => set({ align: v })),
         h("p", { class: "wp-label" }, "Proportions"),
