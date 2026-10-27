@@ -3162,6 +3162,8 @@ function start() {
     const kind = b.dataset.preview;
     if (kind === "google") return revealPanel("google");
     if (kind === "social") return revealPanel("social");
+    // Ordinateur / tablette / mobile : la zone d'écriture elle-même prend la largeur de l'appareil (comme Gutenberg), sans enregistrer
+    if (["desktop", "tablet", "mobile"].includes(kind)) return setCanvasDevice(kind);
     try {
       const id = await ensurePost();
       if (dirty) await autosave();
@@ -3173,9 +3175,15 @@ function start() {
       const setDevice = (k) => { frame.style.width = `${widths[k]}px`; const scale = Math.min(1, (wrap.clientWidth - 8) / widths[k]); frame.style.transform = `scale(${scale})`; frame.style.height = `${Math.round(760 / scale)}px`; wrap.style.height = "760px"; devices.querySelectorAll("button").forEach((d) => d.setAttribute("aria-pressed", String(d.dataset.k === k))); };
       const devices = h("div", { class: "wp-segmented" }, ...Object.keys(widths).map((k) => h("button", { type: "button", "data-k": k, onclick: () => setDevice(k) }, { desktop: "Ordinateur", tablet: "Tablette", mobile: "Mobile" }[k])));
       modal("Aperçu", h("div", {}, devices, wrap), [], { wide: true });
-      requestAnimationFrame(() => setDevice(kind));
+      requestAnimationFrame(() => setDevice(kind === "frame" ? "desktop" : kind));
     } catch (e) { toast(e.message, "error"); }
   }));
+  function setCanvasDevice(kind) {
+    root.dataset.canvasDevice = kind;
+    $$("[data-preview]").forEach((b) => { if (["desktop", "tablet", "mobile"].includes(b.dataset.preview)) b.setAttribute("aria-checked", String(b.dataset.preview === kind)); });
+    toast(kind === "desktop" ? "Zone d'écriture en largeur ordinateur." : `Zone d'écriture à la largeur ${kind === "tablet" ? "d'une tablette (820 px)" : "d'un mobile (390 px)"} : les colonnes s'empilent comme sur le site.`);
+    toolbarKey = ""; refreshUi();
+  }
   // Éditeur visuel / éditeur de code
   $$("[data-mode]").forEach((b) => b.addEventListener("click", () => {
     const code = b.dataset.mode === "code";
@@ -3484,9 +3492,10 @@ function start() {
         { id: "ed:reusable", group: "Réutilisables", label: "Bibliothèque des blocs réutilisables…", run: () => manageReusable() },
         { id: "ed:save", group: "Article", label: "Enregistrer", run: () => save() },
         { id: "ed:publish", group: "Article", label: $("[data-publish]").textContent.trim(), run: () => $("[data-publish]").click() },
-        { id: "ed:preview-desktop", group: "Aperçu", label: "Aperçu ordinateur", run: () => $('[data-preview="desktop"]').click() },
-        { id: "ed:preview-tablet", group: "Aperçu", label: "Aperçu tablette", run: () => $('[data-preview="tablet"]').click() },
-        { id: "ed:preview-mobile", group: "Aperçu", label: "Aperçu mobile", run: () => $('[data-preview="mobile"]').click() },
+        { id: "ed:preview-desktop", group: "Aperçu", label: "Zone d'écriture : largeur ordinateur", run: () => $('[data-preview="desktop"]').click() },
+        { id: "ed:preview-tablet", group: "Aperçu", label: "Zone d'écriture : largeur tablette", run: () => $('[data-preview="tablet"]').click() },
+        { id: "ed:preview-mobile", group: "Aperçu", label: "Zone d'écriture : largeur mobile", run: () => $('[data-preview="mobile"]').click() },
+        { id: "ed:preview-frame", group: "Aperçu", label: "Aperçu du site dans une fenêtre", run: () => $('[data-preview="frame"]').click() },
         { id: "ed:preview-tab", group: "Aperçu", label: "Prévisualiser dans un nouvel onglet", run: () => $('[data-preview="tab"]').click() },
         { id: "ed:find", group: "Article", label: "Rechercher et remplacer dans l'article", run: () => openFind() },
         { id: "ed:stats", group: "Article", label: "Compteurs de l'article (mots, caractères, titres…)", run: () => showCounters($("[data-stats]")) },

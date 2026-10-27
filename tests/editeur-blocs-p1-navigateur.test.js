@@ -327,6 +327,31 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     await page.context().close();
   });
 
+  test("aperçu par appareil : la zone d'écriture prend la largeur de l'appareil et les colonnes s'empilent", async () => {
+    const page = await open();
+    await load(page, '<div class="kb-columns" data-layout="50-50" data-stack="mobile"><div class="kb-column"><p>A</p></div><div class="kb-column"><p>B</p></div></div>');
+    const width = () => page.evaluate(() => Math.round(document.querySelector(".wp-content").getBoundingClientRect().width));
+    const cols = () => page.evaluate(() => getComputedStyle(document.querySelector(".kb-ed-columns")).gridTemplateColumns.split(" ").length);
+    const desktop = await width();
+    assert.ok(desktop > 600);
+    assert.equal(await cols(), 2);
+    await page.click("[data-preview-toggle]");
+    await page.getByRole("menuitemradio", { name: "Mobile" }).click();
+    await page.waitForTimeout(150);
+    assert.ok(await width() <= 392, `largeur mobile : ${await width()}`);
+    assert.equal(await cols(), 1, "les colonnes s'empilent en largeur mobile");
+    await page.click("[data-preview-toggle]");
+    await page.getByRole("menuitemradio", { name: "Tablette" }).click();
+    await page.waitForTimeout(150);
+    const tablet = await width();
+    assert.ok(tablet > 392 && tablet <= 822, `largeur tablette : ${tablet}`);
+    await page.click("[data-preview-toggle]");
+    await page.getByRole("menuitemradio", { name: "Ordinateur" }).click();
+    await page.waitForTimeout(150);
+    assert.equal(await width(), desktop);
+    await page.context().close();
+  });
+
   test("sans erreur de console pendant ces parcours", () => {
     assert.deepEqual(errors, []);
   });

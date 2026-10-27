@@ -74,10 +74,12 @@
           <div class="wp-dropdown wp-preview-dropdown">
             <button type="button" class="wp-btn-icon" data-preview-toggle aria-haspopup="true" aria-expanded="false" aria-label="Aperçu" title="Aperçu"><%- icon("monitor", { size: 20 }) %></button>
             <div class="wp-menu" data-preview-menu hidden role="menu">
-              <button type="button" role="menuitem" data-preview="desktop">Ordinateur</button>
-              <button type="button" role="menuitem" data-preview="tablet">Tablette</button>
-              <button type="button" role="menuitem" data-preview="mobile">Mobile</button>
+              <p class="wp-menu-label">Largeur de la zone d'écriture</p>
+              <button type="button" role="menuitemradio" aria-checked="true" data-preview="desktop">Ordinateur</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-preview="tablet">Tablette</button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-preview="mobile">Mobile</button>
               <hr>
+              <button type="button" role="menuitem" data-preview="frame">Aperçu du site dans une fenêtre</button>
               <button type="button" role="menuitem" data-preview="tab">Prévisualiser dans un nouvel onglet ↗</button>
               <button type="button" role="menuitem" data-preview="google">Aperçu dans Google</button>
               <button type="button" role="menuitem" data-preview="social">Aperçu sur les réseaux sociaux</button>
@@ -105,7 +107,7 @@
               <hr>
               <p class="wp-menu-label wp-mobile-only">Aperçu</p>
               <button type="button" role="menuitem" class="wp-mobile-only" data-preview="tab">Prévisualiser l'article ↗</button>
-              <button type="button" role="menuitem" class="wp-mobile-only" data-preview="mobile">Aperçu mobile</button>
+              <button type="button" role="menuitem" class="wp-mobile-only" data-preview="frame">Aperçu du site</button>
               <hr class="wp-mobile-only">
               <button type="button" role="menuitem" data-option="settings">⚙ Réglages de l'éditeur…</button>
               <button type="button" role="menuitem" data-option="appearance">Apparence de l'éditeur…</button>
