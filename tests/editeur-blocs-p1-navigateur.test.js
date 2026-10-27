@@ -304,6 +304,29 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     await page.context().close();
   });
 
+  test("modèles : chacun s'insère en copie, et tous survivent à l'enregistrement sans rien perdre", async () => {
+    const page = await open();
+    await page.fill("#post-title", "Article de modèles");
+    await page.click("[data-toggle-inserter]");
+    await page.getByRole("tab", { name: "Modèles" }).click();
+    await page.waitForSelector(".wp-pattern");
+    const ids = await page.locator(".wp-pattern").evaluateAll((els) => els.map((e) => e.dataset.pattern));
+    assert.ok(ids.length >= 12, `${ids.length} modèles proposés`);
+    for (const id of ids) {
+      await page.evaluate(() => document.querySelector(".ProseMirror").editor.commands.focus("end")); // le curseur est à la fin de l'article (hors du bloc précédemment inséré)
+      await page.locator(`.wp-pattern[data-pattern="${id}"]`).click();
+    }
+    const types = (await tops(page)).map((x) => x.type);
+    for (const need of ["kbCta", "kbGroup", "kbColumns", "callout", "kbSteps", "kbFaq", "kbCompare", "table"]) assert.ok(types.includes(need), `${need} absent après insertion : ${types.join(",")}`);
+    const [response] = await Promise.all([page.waitForResponse((r) => /\/formateur\/blog\/(nouveau|\d+\/modifier)/.test(r.url()) && r.request().method() === "POST"), page.click("[data-save]")]);
+    const body = await response.json();
+    assert.equal(response.status(), 200, JSON.stringify(body));
+    assert.deepEqual(body.warnings, [], "aucun élément retiré par le serveur");
+    const saved = srv.db().prepare("SELECT content FROM posts WHERE title = ?").get("Article de modèles").content;
+    for (const marker of ["kb-cta", "kb-group", "kb-columns", "callout", "kb-steps", "kb-faq", "kb-compare", "<table", "kb-pullquote"]) assert.ok(saved.includes(marker), `${marker} perdu à l'enregistrement`);
+    await page.context().close();
+  });
+
   test("sans erreur de console pendant ces parcours", () => {
     assert.deepEqual(errors, []);
   });

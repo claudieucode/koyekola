@@ -28,6 +28,7 @@ import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
 import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS } from "./blog/supports";
+import { PATTERNS, PATTERN_CATEGORIES } from "./blog/patterns";
 import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
@@ -459,9 +460,22 @@ function start() {
       if (!grid.querySelector(".wp-block-type, .wp-reusable-item") && q) grid.prepend(h("p", { class: "wp-help" }, "Aucun résultat."));
     }
     loadReusable().then(() => { if (secondaryMode === "inserter") render(); });
-    const tabs = segmentedTabs([["blocs", "Blocs"], ["medias", "Médias"]], (k) => { grid.hidden = k !== "blocs"; media.hidden = k !== "medias"; if (k === "medias") loadMediaTab(media); });
-    search.addEventListener("input", render);
-    secondaryDynamic.replaceChildren(tabs, h("div", { class: "wp-secondary-body" }, search, grid, media));
+    // Modèles : mises en page prêtes à l'emploi, insérées en copie indépendante
+    const patterns = h("div", { class: "wp-inserter-patterns", hidden: true });
+    function renderPatterns() {
+      const q = norm(search.value || "");
+      patterns.replaceChildren();
+      for (const cat of PATTERN_CATEGORIES) {
+        const items = PATTERNS.filter((x) => x.cat === cat && (!q || norm(`${x.title} ${x.desc} ${cat}`).includes(q)));
+        if (!items.length) continue;
+        patterns.append(h("h2", { class: "wp-inserter-cat" }, cat), h("div", { class: "wp-pattern-list" }, ...items.map((x) => h("button", { type: "button", class: "wp-pattern", "data-pattern": x.id, title: x.desc, onclick: () => { blk(x.nodes()); toast(`Modèle « ${x.title} » inséré : c'est une copie, vous pouvez la modifier librement.`); } }, h("strong", {}, x.title), h("small", {}, x.desc)))));
+      }
+      if (!patterns.childElementCount) patterns.append(h("p", { class: "wp-help" }, "Aucun modèle ne correspond."));
+    }
+    let tabKey = "blocs";
+    const tabs = segmentedTabs([["blocs", "Blocs"], ["modeles", "Modèles"], ["medias", "Médias"]], (k) => { tabKey = k; grid.hidden = k !== "blocs"; patterns.hidden = k !== "modeles"; media.hidden = k !== "medias"; search.hidden = k === "medias"; if (k === "medias") loadMediaTab(media); if (k === "modeles") renderPatterns(); });
+    search.addEventListener("input", () => { if (tabKey === "modeles") renderPatterns(); else render(); });
+    secondaryDynamic.replaceChildren(tabs, h("div", { class: "wp-secondary-body" }, search, grid, patterns, media));
     render();
     search.focus();
   }
