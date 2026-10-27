@@ -147,13 +147,14 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
       ["Détails ouvert", '<details class="kb-accordion" data-open="true"><summary>R</summary><div class="kb-accordion-body"><p>x</p></div></details>', /<details class="kb-accordion"[^>]*data-open="true"/],
       ["Vidéo sous-titrée", '<div class="kb-video" data-url="/uploads/blog/a.mp4" data-track="/uploads/blog/s.vtt" data-track-lang="en" data-track-label="English"></div>', /<div class="kb-video"[^>]*data-track="\/uploads\/blog\/s\.vtt"/],
       ["Galerie avec lien", '<div class="kb-gallery" data-columns="2"><figure class="kb-image"><a href="/catalogue"><img src="/uploads/thumbnails/a.png" alt="x"></a></figure></div>', /<div class="kb-gallery"[^>]*><figure[^>]*><a href="\/catalogue"><img/],
+      ["Masqué sur mobile", '<p data-hide="mobile tablet">Caché</p>', /<p[^>]*data-hide="mobile tablet"[^>]*>Caché/],
       ["Spotify", '<div class="kb-embed" data-url="https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC"></div>', /<div class="kb-embed"[^>]*data-url="https:\/\/open\.spotify\.com\/track\/4uLU6hMCjMI75M1A2tKUQC"/],
     ];
     const page = await open();
     await page.fill("#post-title", "Aller-retour des blocs");
     await load(page, samples.map((x) => x[1]).join(""));
     const types = (await tops(page)).map((x) => x.type);
-    assert.deepEqual(types.slice(0, 15), ["kbPreformatted", "kbVerse", "kbMore", "kbFile", "kbCover", "kbMediaText", "table", "horizontalRule", "kbImage", "paragraph", "orderedList", "kbAccordion", "kbVideo", "kbGallery", "kbEmbed"]);
+    assert.deepEqual(types.slice(0, 16), ["kbPreformatted", "kbVerse", "kbMore", "kbFile", "kbCover", "kbMediaText", "table", "horizontalRule", "kbImage", "paragraph", "orderedList", "kbAccordion", "kbVideo", "kbGallery", "paragraph", "kbEmbed"]);
     await page.click("[data-save]");
     await page.waitForFunction(() => /^Enregistré$/.test(document.querySelector("[data-save-state]").textContent.trim()), null, { timeout: 15000 });
     const saved = srv.db().prepare("SELECT content FROM posts WHERE title = ?").get("Aller-retour des blocs").content;
@@ -161,7 +162,7 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     // Rechargé depuis la base, l'éditeur retrouve les mêmes blocs
     await page.reload();
     await page.waitForFunction(() => document.querySelector(".ProseMirror") && document.querySelector(".ProseMirror").editor);
-    assert.deepEqual((await tops(page)).map((x) => x.type).slice(0, 15), types.slice(0, 15));
+    assert.deepEqual((await tops(page)).map((x) => x.type).slice(0, 16), types.slice(0, 16));
     await page.context().close();
   });
 

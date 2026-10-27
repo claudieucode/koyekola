@@ -2257,8 +2257,15 @@ function start() {
         classNote.textContent = v ? `Classes appliquées : ${v}` : "Aucune classe supplémentaire.";
         set({ xclass: v });
       });
-      inspector.append(h("div", { class: `wp-panel${advancedOpen || a.anchor || a.xclass ? " is-open" : ""}`, "data-panel-advanced": "" }, h("h2", { class: "wp-panel-title" }, h("button", { type: "button", "aria-expanded": String(Boolean(advancedOpen || a.anchor || a.xclass)), "aria-controls": "be-adv-body", onclick: (e) => { const body = $("#be-adv-body"); body.hidden = !body.hidden; advancedOpen = !body.hidden; body.parentElement.classList.toggle("is-open", !body.hidden); e.currentTarget.setAttribute("aria-expanded", String(!body.hidden)); } }, "Réglages avancés", h("span", { class: "wp-chevron", "aria-hidden": "true" }))),
-        h("div", { class: "wp-panel-body", id: "be-adv-body", hidden: !(advancedOpen || a.anchor || a.xclass) }, control("Ancre HTML", anchorIn, null), anchorNote, control("Classes CSS supplémentaires", classIn, null), classNote)));
+      const hidden = new Set(String(a.hide || "").split(/\s+/).filter(Boolean));
+      const deviceBox = h("div", { class: "wp-device-hide" }, h("p", { class: "wp-label" }, "Masquer sur le site selon l'appareil"), ...[["mobile", "Mobile (≤ 640 px)"], ["tablet", "Tablette (641 à 960 px)"], ["desktop", "Ordinateur (> 960 px)"]].map(([d, label]) => checkbox(label, hidden.has(d), (on) => {
+        const next = new Set(String(currentBlock().node.attrs.hide || "").split(/\s+/).filter(Boolean));
+        if (on) next.add(d); else next.delete(d);
+        if (next.size === 3) { toast("Un bloc masqué sur tous les appareils : utilisez « Masquer le bloc » (vue en liste).", "error"); renderInspector(true); return; }
+        set({ hide: ["mobile", "tablet", "desktop"].filter((x) => next.has(x)).join(" ") });
+      })));
+      inspector.append(h("div", { class: `wp-panel${advancedOpen || a.anchor || a.xclass || a.hide ? " is-open" : ""}`, "data-panel-advanced": "" }, h("h2", { class: "wp-panel-title" }, h("button", { type: "button", "aria-expanded": String(Boolean(advancedOpen || a.anchor || a.xclass || a.hide)), "aria-controls": "be-adv-body", onclick: (e) => { const body = $("#be-adv-body"); body.hidden = !body.hidden; advancedOpen = !body.hidden; body.parentElement.classList.toggle("is-open", !body.hidden); e.currentTarget.setAttribute("aria-expanded", String(!body.hidden)); } }, "Réglages avancés", h("span", { class: "wp-chevron", "aria-hidden": "true" }))),
+        h("div", { class: "wp-panel-body", id: "be-adv-body", hidden: !(advancedOpen || a.anchor || a.xclass || a.hide) }, control("Ancre HTML", anchorIn, null), anchorNote, control("Classes CSS supplémentaires", classIn, null), classNote, deviceBox)));
     }
     inspector.append(section("Avancé", h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => duplicateBlock(b.top) }, "Dupliquer"), h("button", { type: "button", class: "wp-btn-danger", onclick: () => deleteBlock(b.top) }, "Supprimer le bloc"))));
   }

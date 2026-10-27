@@ -1884,3 +1884,5 @@
 .ProseMirror :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol)[data-tone="accent"] { color: var(--accent-dark, var(--accent)); }
 .ProseMirror :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol)[data-tone="muted"] { color: var(--muted); }
 .ProseMirror :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol)[data-tone="primary"] { color: var(--primary); }
+.ProseMirror [data-hide]:not([data-hide=""]) { outline: 1px dashed var(--muted); outline-offset: 3px; }
+.ProseMirror [data-hide]:not([data-hide=""])::before { content: "Masqué sur : " attr(data-hide); display: block; margin-bottom: 2px; font-size: 11px; color: var(--muted); }

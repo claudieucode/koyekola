@@ -191,6 +191,11 @@ for (const tag of LOCKABLE) {
     // Ancre HTML et classes supplémentaires (réglages communs des blocs) : valeurs strictes, mêmes règles que l'éditeur (src/editor/blog/supports.js)
     if (r.tagName === tagName && ANCHOR_ID.test(attribs.id || "")) r.attribs = { ...r.attribs, id: attribs.id };
     if (r.tagName === tagName && TONE_TAGS.has(tagName) && /^(accent|muted|primary)$/.test(attribs["data-tone"] || "")) r.attribs = { ...r.attribs, "data-tone": attribs["data-tone"] };
+    // Visibilité par appareil : mobile, tablette, ordinateur (jamais les trois à la fois : un bloc masqué partout se masque avec « Masquer »)
+    if (r.tagName === tagName && attribs["data-hide"]) {
+      const devices = [...new Set(String(attribs["data-hide"]).split(/\s+/).filter((d) => ["mobile", "tablet", "desktop"].includes(d)))];
+      if (devices.length && devices.length < 3) r.attribs = { ...r.attribs, "data-hide": ["mobile", "tablet", "desktop"].filter((d) => devices.includes(d)).join(" ") };
+    }
     if (r.tagName === tagName && attribs["data-name"]) r.attribs = { ...r.attribs, "data-name": String(attribs["data-name"]).replace(/[\r\n\u2028\u2029]+/g, " ").trim().slice(0, 60) };
     if (r.tagName === tagName && attribs["data-variant"]) {
       const first = String(r.attribs.class || "").split(" ")[0];
@@ -227,7 +232,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name", "data-tone"];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name", "data-tone", "data-hide"];
 
 function tidy(html) {
   return html

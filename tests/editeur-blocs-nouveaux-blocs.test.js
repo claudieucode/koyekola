@@ -70,6 +70,13 @@ describe("nouveaux blocs — sanitisation et rendu", () => {
     assert.match(out, /<h2 data-tone="muted">t<\/h2>/);
     assert.match(out, /<ol start="3" reversed="reversed">/);
   });
+  test("visibilité par appareil : mobile, tablette, ordinateur (jamais les trois à la fois, jamais d'autre valeur)", () => {
+    const out = sanitizeBlogHtml('<p data-hide="desktop mobile">a</p><p data-hide="mobile tablet desktop">b</p><p data-hide="evil">c</p><div class="kb-group" data-hide="tablet"><p>d</p></div>');
+    assert.match(out, /<p data-hide="mobile desktop">a<\/p>/);
+    assert.match(out, /<p>b<\/p><p>c<\/p>/);
+    assert.match(out, /<div class="kb-group" data-hide="tablet">/);
+    assert.match(renderBlogHtml('<p data-hide="mobile">x</p>').html, /<p data-hide="mobile">x<\/p>/, "l'attribut reste dans la page : le CSS du site fait le masquage");
+  });
   test("aucun de ces blocs n'est signalé comme « inconnu » par le rapport d'éléments retirés", () => {
     assert.deepEqual(findUnsupported('<pre class="kb-verse">v</pre><div class="kb-more"></div><div class="kb-file" data-url="/uploads/blog/a.pdf"></div><div class="kb-cover" data-src="/uploads/thumbnails/a.png"><p>x</p></div><div class="kb-mediatext"><div class="kb-mediatext-body"></div></div>'), []);
   });

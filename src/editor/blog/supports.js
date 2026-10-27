@@ -70,6 +70,12 @@ export const BlockSupports = Extension.create({
           parseHTML: (el) => (ANCHOR_RE.test(el.getAttribute("id") || "") ? el.getAttribute("id") : null),
           renderHTML: (attrs) => (attrs.anchor ? { id: attrs.anchor } : {}),
         },
+        hide: {
+          default: "",
+          keepOnSplit: false,
+          parseHTML: (el) => String(el.getAttribute("data-hide") || "").split(/\s+/).filter((d) => ["mobile", "tablet", "desktop"].includes(d)).join(" "),
+          renderHTML: (attrs) => (attrs.hide ? { "data-hide": attrs.hide } : {}),
+        },
         blockName: {
           default: null,
           keepOnSplit: false,
