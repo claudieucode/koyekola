@@ -27,7 +27,7 @@ import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatc
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
-import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay } from "./blog/supports";
+import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS } from "./blog/supports";
 import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
@@ -36,6 +36,10 @@ const root = document.querySelector("[data-blog-editor]");
 
 // Icônes (24 × 24) dans le style de la bibliothèque d'icônes de WordPress
 const ICONS = {
+  file: "M19 6.2h-5.9l-.6-1.3c-.3-.6-.9-1-1.6-1H5c-1.1 0-2 .9-2 2v11.6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8.2c0-1.1-.9-2-2-2zm.5 11.6c0 .3-.2.5-.5.5H5c-.3 0-.5-.2-.5-.5V6.2c0-.3.2-.5.5-.5h5.9l.6 1.3c.3.6.9 1 1.6 1H19c.3 0 .5.2.5.5v9.3z",
+  cover: "M4 4h16v16H4V4zm1.5 1.5v13h13v-13h-13zM7 15l3-4 2 2.5 2-3 3 4.5H7z",
+  mediatext: "M3 5h8v14H3V5zm1.5 1.5v11h5v-11h-5zM13 7h8v1.5h-8V7zm0 4h8v1.5h-8V11zm0 4h6v1.5h-6V15z",
+  readmore: "M3 11h5v2H3v-2zm6.5 0h5v2h-5v-2zM16 11h5v2h-5v-2zM5 6h14v1.5H5V6zm0 10.5h14V18H5v-1.5z",
   paragraph: "M18.3 4H9.9v-.1l-.9.2c-2.3.4-4 2.4-4 4.8s1.7 4.4 4 4.8l.7.1V20h1.5V5.5h2.9V20h1.5V5.5h2.7V4z",
   heading: "M6 5V18.5911L12 13.8473L18 18.5911V5H6Z",
   h: "M6.2 5.2v13.4l5.8-4.8 5.8 4.8V5.2z",
@@ -328,6 +332,12 @@ function start() {
     { id: "gallery", title: "Galerie", cat: "Média", icon: "gallery", desc: "Affichez plusieurs images dans une galerie.", run: () => openMediaModal({ multiple: true, onSelectMany: (list) => blk({ type: "kbGallery", attrs: { columns: "3", images: list.map((m) => ({ src: m.path, alt: m.alt || "", caption: m.caption || "" })) } }) }) },
     { id: "video", title: "Vidéo", cat: "Média", icon: "video", desc: "Vidéo YouTube, Vimeo ou fichier téléversé.", run: () => urlPrompt("Vidéo", "Adresse de la vidéo (YouTube, Vimeo)", "https://www.youtube.com/watch?v=…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } }), { kind: "video" }) },
     { id: "audio", title: "Audio", cat: "Média", icon: "audio", desc: "Lecteur audio (MP3).", keywords: "podcast son", run: () => openMediaModal({ kind: "audio", onSelect: (m) => blk({ type: "kbAudio", attrs: { src: m.path, title: m.title || "" } }) }) },
+    { id: "preformatted", title: "Préformaté", cat: "Texte", icon: "code", desc: "Texte dont les espaces et les retours à la ligne sont conservés.", keywords: "pre espaces texte brut", run: () => blk({ type: "kbPreformatted", content: [] }) },
+    { id: "verse", title: "Vers", cat: "Texte", icon: "quote", desc: "Vers de poème ou de chanson, avec leurs retours à la ligne.", keywords: "poème poésie chanson", run: () => blk({ type: "kbVerse", content: [] }) },
+    { id: "more", title: "Lire la suite", cat: "Mise en page", icon: "readmore", desc: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", keywords: "more extrait résumé coupure", run: () => blk({ type: "kbMore" }) },
+    { id: "file", title: "Fichier", cat: "Média", icon: "file", desc: "Un document à télécharger (PDF, Office, ZIP…).", keywords: "pdf télécharger document pièce jointe", run: () => openMediaModal({ kind: "file", onSelect: (m) => blk({ type: "kbFile", attrs: { url: m.path, title: m.title || "", download: "true" } }) }) },
+    { id: "cover", title: "Couverture", cat: "Média", icon: "cover", desc: "Une image de fond avec du texte par-dessus.", keywords: "bannière hero fond image", run: () => openMediaModal({ onSelect: (m, extra) => blk({ type: "kbCover", attrs: { src: m.path, alt: extra.alt || "", overlay: "40", height: "m" }, content: [{ type: "heading", attrs: { level: 2 }, content: [] }, p("")] }) }) },
+    { id: "mediatext", title: "Média et texte", cat: "Média", icon: "mediatext", desc: "Une image à côté d'un texte.", keywords: "image texte côte à côte", run: () => openMediaModal({ onSelect: (m, extra) => blk({ type: "kbMediaText", attrs: { side: "left", width: "50" }, content: [{ type: "kbImage", attrs: { src: m.path, mediaId: m.id, alt: extra.alt || "", caption: "", credit: "", title: m.title || "", width: "100", align: "center" } }, { type: "kbMediaTextBody", content: [p("")] }] }) }) },
     { id: "gcallout-info", title: "Encadré Information", cat: "Mise en forme", icon: "callout", desc: "Mettez une information en évidence.", keywords: "note info", run: () => blk({ type: "callout", attrs: { type: "info" }, content: [p("")] }) },
     { id: "gcallout-conseil", title: "Encadré Conseil", cat: "Mise en forme", icon: "callout", desc: "Un conseil pratique.", keywords: "astuce tip", run: () => blk({ type: "callout", attrs: { type: "conseil" }, content: [p("")] }) },
     { id: "gcallout-attention", title: "Encadré Attention", cat: "Mise en forme", icon: "callout", desc: "Un avertissement.", keywords: "alerte danger", run: () => blk({ type: "callout", attrs: { type: "attention" }, content: [p("")] }) },
@@ -463,8 +473,8 @@ function start() {
       if (!media.length) box.prepend(h("p", { class: "wp-help" }, "Aucune image téléversée pour l'instant."));
     } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); }
   }
-  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)" };
-  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button" };
+  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbPreformatted: "Préformaté", kbVerse: "Vers", kbMore: "Lire la suite", kbFile: "Fichier", kbCover: "Couverture", kbMediaText: "Média et texte", kbMediaTextBody: "Texte", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)" };
+  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button", kbPreformatted: "code", kbVerse: "quote", kbMore: "readmore", kbFile: "file", kbCover: "cover", kbMediaText: "mediatext" };
   const nameOf = (node) => (node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
   // ---------- Structure de l'article : vue en liste, plan, corbeille ----------
   // Une seule source de vérité : le document de l'éditeur. Chaque ligne porte l'identifiant du bloc (blockId) ;
@@ -705,10 +715,10 @@ function start() {
   // ---------- Bloc courant ----------
   // Bloc ciblé par la barre d'outils et la barre latérale : bloc entier sélectionné, sinon le plus petit bloc « réglable »
   // Conteneurs de mise en page : on règle leur contenu bloc par bloc ; eux-mêmes se sélectionnent par « Sélectionner le conteneur »
-  const LAYOUT_TYPES = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons"]);
+  const LAYOUT_TYPES = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons", "kbCover"]);
   // Bloc synchronisé en cours de modification qui contient le curseur (actions dans l'onglet Bloc)
   const editingReusableAt = () => { const $p = editor.state.selection.$from; for (let d = $p.depth; d >= 1; d--) if ($p.node(d).type.name === "kbReusableEdit") return { pos: $p.before(d), node: $p.node(d) }; return null; };
-  const SETTINGS_TYPES = new Set(["kbReusable", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
+  const SETTINGS_TYPES = new Set(["kbMore", "kbFile", "kbCover", "kbMediaText", "horizontalRule", "kbReusable", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
   function currentBlock() {
     const sel = editor.state.selection;
     // « top » : le bloc à déplacer / dupliquer / supprimer — au premier niveau, ou dans une colonne / un groupe
@@ -1589,7 +1599,7 @@ function start() {
     const grid = h("ul", { class: "wp-attachments", role: "listbox", "aria-multiselectable": String(multiple) });
     const details = h("div", { class: "wp-attachment-details" }, h("p", { class: "wp-help" }, "Sélectionnez un fichier pour voir ses détails."));
     const q = input({ type: "search", placeholder: "Rechercher des médias", class: "wp-search" });
-    const upload = h("input", { type: "file", id: `wp-f${++uid}`, accept: kind === "image" ? "image/jpeg,image/png,image/webp,image/gif,image/avif" : kind === "video" ? "video/mp4,video/webm" : "audio/mpeg,audio/mp4,audio/ogg,audio/wav", multiple: multiple || null, class: "wp-upload-input" });
+    const upload = h("input", { type: "file", id: `wp-f${++uid}`, accept: kind === "image" ? "image/jpeg,image/png,image/webp,image/gif,image/avif" : kind === "video" ? "video/mp4,video/webm" : kind === "file" ? FILE_ACCEPT.join(",") : "audio/mpeg,audio/mp4,audio/ogg,audio/wav", multiple: multiple || null, class: "wp-upload-input" });
     let current = null;
     const fields = {};
     const showDetails = (m) => {
@@ -1599,7 +1609,7 @@ function start() {
       Object.values(fields).forEach((el) => el.addEventListener("input", saveMeta));
       details.replaceChildren(
         h("h2", {}, "Détails du fichier"),
-        m.kind === "image" ? h("img", { src: m.path, alt: "" }) : h("p", { class: "wp-help" }, m.kind === "video" ? "Vidéo" : "Audio"),
+        m.kind === "image" ? h("img", { src: m.path, alt: "" }) : h("p", { class: "wp-help" }, m.kind === "video" ? "Vidéo" : m.kind === "file" ? "Fichier" : "Audio"),
         h("p", { class: "wp-help" }, `${m.path.split("/").pop()}${m.width ? ` · ${m.width} × ${m.height} pixels` : ""}`),
         h("button", { type: "button", class: "wp-btn-link is-danger", disabled: m.used ? true : null, title: m.used ? `Utilisé par ${m.used} article(s)` : null, onclick: async () => { if (!confirm("Supprimer définitivement ce fichier ?")) return; try { await api(`/formateur/blog/api/medias/${m.id}/supprimer`, { method: "POST" }); load(); details.replaceChildren(); } catch (e) { toast(e.message, "error"); } } }, "Supprimer définitivement"),
         m.kind === "image" ? control("Texte alternatif", fields.alt, "Décrivez le but de l'image. Laissez vide si l'image est purement décorative.") : null,
@@ -1613,7 +1623,7 @@ function start() {
           const name = m.title || m.path.split("/").pop();
           const li = h("li", { role: "option", tabindex: 0, class: `${chosen.has(m.id) ? "is-selected" : ""}${m.missing ? " is-missing" : ""}`, "aria-selected": String(chosen.has(m.id)), "aria-label": `${m.missing ? "Fichier introuvable : " : ""}${m.alt || name}` },
             m.missing ? h("span", { class: "wp-attachment-missing" }, "Fichier introuvable", h("small", {}, name))
-              : m.kind === "image" ? h("img", { src: m.path, alt: "" }) : h("span", { class: "wp-attachment-file" }, m.kind === "video" ? "▶" : "♪", h("small", {}, name)));
+              : m.kind === "image" ? h("img", { src: m.path, alt: "" }) : h("span", { class: "wp-attachment-file" }, m.kind === "video" ? "▶" : m.kind === "file" ? "📄" : "♪", h("small", {}, name)));
           const toggle = () => {
             // Fichier absent du serveur : jamais inséré (il s'afficherait cassé) ; détails et suppression de la fiche seulement
             if (m.missing) { showDetails(m); details.prepend(h("p", { class: "wp-warning" }, "⚠ Ce fichier n'existe plus sur le serveur. Réimportez l'image (bouton « Téléverser »), puis remplacez-la dans les articles qui l'utilisaient.")); return; }
@@ -1666,7 +1676,7 @@ function start() {
     tabsBar.querySelectorAll("button")[0].setAttribute("aria-selected", "false");
     tabsBar.querySelectorAll("button")[1].setAttribute("aria-selected", "true");
     const selectBtn = h("button", { type: "button", class: "wp-btn-primary", disabled: true }, multiple ? "Créer une galerie" : onSelect ? "Sélectionner" : "Fermer");
-    const m = modal(kind === "image" ? (multiple ? "Créer une galerie" : "Sélectionner ou téléverser un média") : kind === "video" ? "Sélectionner une vidéo" : "Sélectionner un fichier audio", h("div", { class: "wp-media-modal" }, tabsBar, uploadPane, libraryPane, h("div", { class: "wp-modal-actions" }, selectBtn)), [], { wide: true });
+    const m = modal(kind === "image" ? (multiple ? "Créer une galerie" : "Sélectionner ou téléverser un média") : kind === "video" ? "Sélectionner une vidéo" : kind === "file" ? "Sélectionner un fichier à télécharger" : "Sélectionner un fichier audio", h("div", { class: "wp-media-modal" }, tabsBar, uploadPane, libraryPane, h("div", { class: "wp-modal-actions" }, selectBtn)), [], { wide: true });
     const dropZone = m.dlg;
     const dropHint = h("div", { class: "wp-drop-hint", "aria-hidden": "true" }, h("span", {}, "Déposez pour téléverser"));
     dropZone.append(dropHint);
@@ -1685,8 +1695,9 @@ function start() {
     if (!onSelect && !onSelectMany) selectBtn.disabled = false;
     load();
   }
-  const ACCEPT = { image: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"], video: ["video/mp4", "video/webm"], audio: ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/ogg", "audio/wav", "audio/x-wav", "audio/wave"] };
-  const ACCEPT_LABEL = { image: "JPEG, PNG, WebP, GIF ou AVIF", video: "MP4 ou WebM", audio: "MP3, M4A, OGG ou WAV" };
+  const FILE_ACCEPT = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.oasis.opendocument.text", "application/vnd.oasis.opendocument.spreadsheet", "application/vnd.oasis.opendocument.presentation", "text/plain", "text/csv", "application/zip", "application/x-zip-compressed"];
+  const ACCEPT = { file: FILE_ACCEPT, image: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"], video: ["video/mp4", "video/webm"], audio: ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/ogg", "audio/wav", "audio/x-wav", "audio/wave"] };
+  const ACCEPT_LABEL = { file: "PDF, Word, Excel, PowerPoint, OpenDocument, TXT, CSV ou ZIP", image: "JPEG, PNG, WebP, GIF ou AVIF", video: "MP4 ou WebM", audio: "MP3, M4A, OGG ou WAV" };
   const kindOf = (file) => Object.keys(ACCEPT).find((k) => ACCEPT[k].includes(file.type)) || null;
   // Fichiers déposés ou collés directement dans l'article : téléversés puis insérés à cet endroit
   async function insertFiles(fileList, at) {
@@ -1707,6 +1718,7 @@ function start() {
     for (const m of done) {
       if (m.kind === "video") nodes.push({ type: "kbVideo", attrs: { url: m.path, caption: "" } });
       if (m.kind === "audio") nodes.push({ type: "kbAudio", attrs: { src: m.path, title: m.title || "" } });
+      if (m.kind === "file") nodes.push({ type: "kbFile", attrs: { url: m.path, title: m.title || "", download: "true" } });
     }
     placeAfter(Math.min(at, editor.state.doc.content.size), nodes);
     toast(images.length ? `${done.length} fichier(s) inséré(s). Ajoutez le texte alternatif dans l'onglet Bloc.` : `${done.length} fichier(s) inséré(s).`);
@@ -1716,7 +1728,7 @@ function start() {
     // Images déposées ou collées dans l'article, recadrage : elles rejoignent la médiathèque du CMS (un seul système d'envoi)
     if (kind === "image" && window.KWMedia) return window.KWMedia.upload(file).promise;
     const body = new FormData();
-    body.append(kind === "image" ? "article_image" : kind === "video" ? "article_video" : "article_audio", file);
+    body.append(kind === "image" ? "article_image" : kind === "video" ? "article_video" : kind === "file" ? "article_file" : "article_audio", file);
     if (kind === "image") {
       const url = URL.createObjectURL(file);
       const img = await new Promise((resolve) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = () => resolve(null); i.src = url; });
@@ -1858,7 +1870,7 @@ function start() {
 
   // ---------- Onglet Bloc : réglages du bloc sélectionné ----------
   const inspector = $("[data-block-inspector]");
-  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte." };
+  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte.", kbPreformatted: "Texte dont les espaces et les retours à la ligne sont conservés.", kbVerse: "Vers de poème ou de chanson, retours à la ligne respectés.", kbMore: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", kbFile: "Un document à télécharger (PDF, Office, ZIP…).", kbCover: "Une image de fond avec du texte par-dessus.", kbMediaText: "Une image à côté d'un texte." };
   let inspectorKey = "";
   let advancedOpen = false; // « Réglages avancés » reste ouvert d'un bloc à l'autre une fois ouvert
   function renderInspector(force = false) {
@@ -1988,7 +2000,30 @@ function start() {
       inspector.append(section("Colonnes", ...cols.map((c, i) => control(`Colonne ${i + 1}`, (() => { const s = select([["pro", "Pour / avantages"], ["con", "Contre / limites"], ["neutral", "Neutre"]], c.tone); s.addEventListener("change", () => setAttrsAt(c.pos, { tone: s.value })); return s; })()))));
     } else if (t === "kbNewsletter") {
       inspector.append(section("Réglages", h("p", { class: "wp-help" }, DATA.newsletterReady ? "Le formulaire affiché se choisit dans la liste des articles (réglage « newsletter »)." : "Aucun formulaire publié : ce bloc n'apparaîtra pas tant qu'un formulaire d'inscription n'est pas publié dans Marketing.")));
+    } else if (t === "kbMore") {
+      inspector.append(section("Réglages", control("Libellé (facultatif)", bind(input({ value: a.label || "", maxlength: 60, placeholder: "Lire la suite" }), "label"), "Sert d'intitulé interne ; l'extrait de l'article est le texte qui précède ce repère, quand l'extrait est vide.")));
+    } else if (t === "kbFile") {
+      inspector.append(section("Réglages",
+        control("Titre affiché", bind(input({ value: a.title || "", maxlength: 120, placeholder: (a.url || "").split("/").pop() }), "title")),
+        checkbox("Téléchargement direct (au lieu de l'ouvrir dans le navigateur)", a.download === "true", (v) => set({ download: v ? "true" : "" })),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "file", onSelect: (m) => set({ url: m.path }) }) }, "Remplacer le fichier")));
+    } else if (t === "kbCover") {
+      const alt = input({ value: a.alt || "", maxlength: 200, placeholder: "Vide si l'image est décorative" });
+      bind(alt, "alt");
+      inspector.append(section("Réglages",
+        h("img", { class: "wp-inspector-preview", src: a.src, alt: "" }),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ onSelect: (m) => set({ src: m.path }) }) }, "Remplacer l'image"),
+        control("Texte alternatif de l'image", alt),
+        h("p", { class: "wp-label" }, "Opacité du voile sombre"), segmented([["0", "0 %"], ["20", "20 %"], ["40", "40 %"], ["60", "60 %"], ["80", "80 %"]], a.overlay || "40", (v) => set({ overlay: v })),
+        h("p", { class: "wp-label" }, "Hauteur"), segmented([["s", "Basse"], ["m", "Moyenne"], ["l", "Haute"]], a.height || "m", (v) => set({ height: v })),
+        h("p", { class: "wp-help" }, "Le texte est affiché en blanc sur l'image : gardez un voile d'au moins 40 % pour que la lecture reste confortable.")));
+    } else if (t === "kbMediaText") {
+      inspector.append(section("Réglages",
+        h("p", { class: "wp-label" }, "Position de l'image"), segmented([["left", "À gauche"], ["right", "À droite"]], a.side || "left", (v) => set({ side: v })),
+        h("p", { class: "wp-label" }, "Largeur de l'image"), segmented([["33", "Un tiers"], ["50", "Moitié"]], a.width || "50", (v) => set({ width: v })),
+        h("p", { class: "wp-help" }, "Cliquez sur l'image pour régler son texte alternatif, sa légende et son lien. Les deux colonnes sont empilées sur mobile.")));
     } else if (t === "table") {
+      inspector.append(section("Légende", control("Légende du tableau", bind(input({ value: a.caption || "", maxlength: 200, placeholder: "Ex. Tarifs 2026" }), "caption"), "Affichée sous le tableau et lue par les lecteurs d'écran.")));
       inspector.append(section("Réglages", h("div", { class: "wp-button-row" },
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().toggleHeaderRow().run() }, "Ligne d'en-tête"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addRowAfter().run() }, "+ Ligne"),
@@ -2028,6 +2063,8 @@ function start() {
     } else if (t === "bulletList" || t === "orderedList") {
       inspector.append(section("Réglages", segmented([["bulletList", "Liste à puces", "list"], ["orderedList", "Liste numérotée", "ordered"]], t, (v) => (v === "orderedList" ? chain().toggleOrderedList().run() : chain().toggleBulletList().run())), h("p", { class: "wp-help" }, "Tabulation : imbriquer un élément. Maj + Tabulation : le sortir d'un niveau.")));
     }
+    // Styles du bloc (variantes) : liste fermée par type de bloc
+    if (VARIANTS[t] && !isLocked(node)) inspector.append(section("Styles", segmented(VARIANTS[t], a.variant || "", (v) => set({ variant: v }))));
     // Réglages communs (comme Gutenberg) : ancre HTML et classes CSS supplémentaires
     if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) {
       const anchorIn = input({ value: a.anchor || "", maxlength: 64, placeholder: "ex. tarifs" });

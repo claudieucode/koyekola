@@ -12,7 +12,7 @@ function topLevelPos(doc, pos) {
 }
 
 // Zones qui contiennent des blocs (on y déplace et on y dépose des blocs comme au premier niveau)
-export const ZONES = new Set(["kbColumn", "kbGroup"]);
+export const ZONES = new Set(["kbColumn", "kbGroup", "kbCover"]);
 // Début du bloc « de zone » qui contient une position : enfant direct du document, d'une colonne ou d'un groupe
 function zoneBlockPos(doc, pos) {
   const $pos = doc.resolve(Math.max(0, Math.min(pos, doc.content.size)));

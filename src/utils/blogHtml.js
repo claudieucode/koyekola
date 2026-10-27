@@ -22,11 +22,14 @@ const CALLOUT_TYPES = Object.keys(CALLOUTS); // conseil, a-retenir, bon-a-savoir
 const COLOR = [/^#[0-9a-f]{3,8}$/i, /^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d{1,3})\s*)?\)$/i, /^var\(--kb-[a-z]{2,12}\)$/];
 const SAFE_HREF = /^(https?:\/\/[^\s"'<>]+|mailto:[^\s"'<>]+|\/(?!\/)[^\s"'<>]*|#[a-z0-9-]{1,80})$/i;
 const IMG_SRC = /^\/uploads\/(?:thumbnails\/|marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?)[A-Za-z0-9_.-]{1,200}\.(?:png|jpe?g|webp|gif|avif)$/i; // images publiques du site (blog, médiathèque du CMS) uniquement
+const FILE_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:pdf|docx|xlsx|pptx|odt|ods|odp|txt|csv|zip)$/i; // fichiers à télécharger (bloc Fichier) : formats bureautiques sûrs, jamais d'exécutable
+// Variantes de style par bloc (équivalent des « styles de bloc » de Gutenberg) : liste fermée, par balise ou par balise.classe
+const VARIANTS = { hr: ["dots", "wide", "short"], "figure.kb-image": ["rounded", "circle", "shadow"], blockquote: ["bordered"], table: ["striped"], "div.kb-group": ["card"] };
 const AUDIO_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:mp3|m4a|ogg|oga|wav|aac)$/i;
 const MEDIA_URL = /^(https:\/\/[^\s"'<>]{1,500}|\/uploads\/blog\/[A-Za-z0-9_.-]{1,200})$/i;
 const COURSE_SLUG = /^[a-z0-9-]{1,120}$/;
 const REL_TOKENS = new Set(["nofollow", "sponsored", "ugc", "noopener", "noreferrer"]);
-const DIV_CLASSES = ["kb-reusable", "kb-spacer", "kb-pagebreak", "kb-columns", "kb-column", "kb-group", "kb-buttons", "kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
+const DIV_CLASSES = ["kb-more", "kb-file", "kb-cover", "kb-mediatext", "kb-mediatext-body", "kb-reusable", "kb-spacer", "kb-pagebreak", "kb-columns", "kb-column", "kb-group", "kb-buttons", "kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
 
 // Mises en page des colonnes : largeurs en %, 2 à 4 colonnes
 const COLUMN_LAYOUT = /^(50-50|33-67|67-33|25-75|75-25|33-33-33|25-50-25|50-25-25|25-25-50|25-25-25-25)$/;
@@ -109,6 +112,21 @@ const transformTags = {
     if (main === "kb-buttons") keep("data-align", /^(left|center|right)$/);
     if (main === "kb-reusable") { keep("data-ref", /^\d{1,9}$/); if (!out["data-ref"]) return { tagName: "div", attribs: {} }; }
     if (main === "kb-compare-col" && /^(pro|con|neutral)$/.test(attribs["data-tone"] || "")) out["data-tone"] = attribs["data-tone"];
+    if (main === "kb-more" && attribs["data-label"]) out["data-label"] = String(attribs["data-label"]).replace(/[\r\n]+/g, " ").slice(0, 60);
+    if (main === "kb-file") {
+      const url = String(attribs["data-url"] || "").trim();
+      if (!FILE_SRC.test(url)) return { tagName: "div", attribs: {} };
+      out["data-url"] = url;
+      if (attribs["data-download"] === "true") out["data-download"] = "true";
+    }
+    if (main === "kb-cover") {
+      const src = String(attribs["data-src"] || "").trim();
+      if (!IMG_SRC.test(src)) return { tagName: "div", attribs: {} };
+      out["data-src"] = src;
+      keep("data-overlay", /^(0|20|40|60|80)$/); keep("data-height", /^(s|m|l)$/);
+      if (attribs["data-alt"]) out["data-alt"] = String(attribs["data-alt"]).replace(/[\r\n]+/g, " ").slice(0, 200);
+    }
+    if (main === "kb-mediatext") { keep("data-side", /^(left|right)$/); keep("data-width", /^(33|50)$/); }
     Object.assign(out, pick(attribs, ["data-title", "data-caption"]));
     return { tagName: "div", attribs: out };
   },
@@ -141,13 +159,13 @@ const transformTags = {
   },
   td: (tagName, attribs) => ({ tagName, attribs: pick(attribs, ["colspan", "rowspan"]) }),
   th: (tagName, attribs) => ({ tagName, attribs: pick(attribs, ["colspan", "rowspan"]) }),
-  pre: (tagName) => ({ tagName, attribs: {} }),
+  pre: (tagName, attribs) => ({ tagName, attribs: classesOf(attribs).includes("kb-preformatted") ? { class: "kb-preformatted" } : classesOf(attribs).includes("kb-verse") ? { class: "kb-verse" } : {} }),
   code: (tagName, attribs) => ({ tagName, attribs: /^language-[a-z0-9+-]{1,20}$/.test(attribs.class || "") ? { class: attribs.class } : {} }),
 };
 for (const h of ["h1", "h2", "h3", "h4", "h5", "h6"]) transformTags[h] = (tagName, attribs) => ({ tagName, attribs: { ...pick(attribs, ["style"]), ...(/^[1-4]$/.test(String(attribs["data-indent"] || "")) ? { "data-indent": attribs["data-indent"] } : {}) } });
 transformTags.hr = (tagName) => ({ tagName, attribs: {} });
 transformTags.blockquote = (tagName, attribs) => ({ tagName, attribs: classesOf(attribs).includes("kb-pullquote") ? { class: "kb-pullquote" } : {} });
-transformTags.table = (tagName) => ({ tagName, attribs: {} });
+transformTags.table = (tagName, attribs) => ({ tagName, attribs: attribs["data-caption"] ? { "data-caption": String(attribs["data-caption"]).replace(/[\r\n]+/g, " ").slice(0, 200) } : {} });
 // Bloc verrouillé dans l'éditeur (protection contre les modifications accidentelles) : marqueur conservé, valeur stricte
 const BLOCK_ID = /^b[a-z0-9]{8}$/;
 const ANCHOR_ID = /^[a-z][a-z0-9_-]{0,63}$/;
@@ -163,6 +181,11 @@ for (const tag of LOCKABLE) {
     if (r.tagName === tagName && attribs["data-hidden"] === "true") r.attribs = { ...r.attribs, "data-hidden": "true" };
     // Ancre HTML et classes supplémentaires (réglages communs des blocs) : valeurs strictes, mêmes règles que l'éditeur (src/editor/blog/supports.js)
     if (r.tagName === tagName && ANCHOR_ID.test(attribs.id || "")) r.attribs = { ...r.attribs, id: attribs.id };
+    if (r.tagName === tagName && attribs["data-variant"]) {
+      const first = String(r.attribs.class || "").split(" ")[0];
+      const allowed = VARIANTS[tagName] || VARIANTS[`${tagName}.${first}`] || [];
+      if (allowed.includes(attribs["data-variant"])) r.attribs = { ...r.attribs, "data-variant": attribs["data-variant"] };
+    }
     const extra = String(attribs["data-class"] || "").split(/\s+/).filter((c) => XCLASS_TOKEN.test(c)).slice(0, 5);
     if (r.tagName === tagName && extra.length) r.attribs = { ...r.attribs, "data-class": [...new Set(extra)].join(" ") };
     return r;
@@ -175,10 +198,10 @@ const saveOptions = {
   allowedAttributes: {
     a: ["href", "target", "rel", "class"], img: ["src", "alt", "title", "width", "height", "data-media-id"],
     figure: ["class", "data-align", "data-width", "data-credit", "data-main", "data-ratio"],
-    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref"],
+    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download"],
     details: ["class"], ol: ["class", "data-title", "start"], ul: ["data-type"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
     p: ["style", "data-indent", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class"], span: ["style"], mark: ["style"],
-    td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"],
+    td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"], pre: ["class"], table: ["data-caption"],
   },
   allowedClasses: false, // vérifiées une à une dans transformTags (listes blanches)
   // Taille du texte : seulement les 3 tailles proposées par l'éditeur (relatives au texte de l'article) ; police : seulement
@@ -193,7 +216,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class"];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant"];
 
 function tidy(html) {
   return html
@@ -219,7 +242,7 @@ function uniqueAnchors(html) {
 }
 
 function sanitizeBlogHtml(html) {
-  const source = typeof html === "string" ? html.slice(0, MAX_HTML) : "";
+  const source = typeof html === "string" ? html.slice(0, MAX_HTML).replace(/\r\n?/g, "\n") : ""; // les formulaires envoient des fins de ligne CRLF : le contenu enregistré a toujours \n
   if (!source.trim()) return "";
   const out = uniqueAnchors(tidy(sanitizeHtml(source, saveOptions)).trim());
   return /\S/.test(out.replace(/<[^>]*>/g, "")) || /<(img|hr|input|div class="kb-)/.test(out) ? out : "";
@@ -290,7 +313,7 @@ function videoPlayer(url, caption, opts = {}) {
 }
 
 // options : courseCard(slug) → HTML | null ; newsletterHtml → HTML | null ; tocDepth 2|3
-function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null, imageVariants = () => [], reusableHtml = () => null } = {}) {
+function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null, imageVariants = () => [], reusableHtml = () => null, fileSize = () => null } = {}) {
   // Blocs réutilisables synchronisés : contenu lu à l'affichage (une modification s'applique partout) ; jamais imbriqués
   const REF = /<div class="kb-reusable"[^>]*data-ref="(\d+)"[^>]*><\/div>/g;
   const clean = withoutHidden(sanitizeBlogHtml(html)).replace(REF, (m, id) => withoutHidden(sanitizeBlogHtml(reusableHtml(Number(id)) || "")).replace(REF, ""));
@@ -384,6 +407,34 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
     } else if (name === "div" && hasClass(node, "kb-audio")) {
       const title = [node.attribs["data-title"], node.attribs["data-author"]].filter(Boolean).join(" — ");
       replace(node, el("figure", { class: "kb-audio" }, [el("audio", { src: node.attribs["data-src"], controls: "", preload: "none" }, [text("Votre navigateur ne lit pas ce fichier audio.")]), ...(title ? [el("figcaption", {}, [text(title)])] : [])]));
+    } else if (name === "div" && hasClass(node, "kb-file")) {
+      // Bloc Fichier : lien de téléchargement avec type et poids du fichier
+      const url = node.attribs["data-url"];
+      const ext = (url.match(/\.([a-z0-9]+)$/i) || [])[1] || "";
+      const title = node.attribs["data-title"] || decodeURIComponent(url.split("/").pop().replace(/^\d+-[0-9a-f]{16}-?/, "")) || "Fichier";
+      const bytes = Number(fileSize(url)) || 0;
+      const size = bytes ? ` · ${bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1).replace(".", ",")} Mo` : `${Math.max(1, Math.round(bytes / 1024))} Ko`}` : "";
+      const dl = node.attribs["data-download"] === "true" ? { download: "" } : {};
+      replace(node, el("div", { class: "kb-file" }, [
+        el("a", { class: "kb-file-name", href: url, ...dl }, [text(title)]),
+        el("span", { class: "kb-file-meta" }, [text(`${ext.toUpperCase()}${size}`)]),
+        el("a", { class: "btn btn-outline kb-file-btn", href: url, ...dl, "aria-label": `Télécharger ${title}` }, [text("Télécharger")]),
+      ]));
+    } else if (name === "div" && hasClass(node, "kb-cover")) {
+      // Bloc Couverture : image de fond sous un voile, contenu par-dessus (l'image est une vraie balise <img>, jamais un style)
+      const img = el("img", { class: "kb-cover-img", src: node.attribs["data-src"], alt: node.attribs["data-alt"] || "", loading: "lazy", decoding: "async" });
+      const shade = el("div", { class: "kb-cover-shade", "aria-hidden": "true" });
+      const body = el("div", { class: "kb-cover-body" }, node.children.slice());
+      body.children.forEach((c) => { c.parent = body; });
+      node.children = [];
+      DomUtils.appendChild(node, img);
+      DomUtils.appendChild(node, shade);
+      DomUtils.appendChild(node, body);
+      delete node.attribs["data-src"]; delete node.attribs["data-alt"];
+      images.push({ src: img.attribs.src, alt: img.attribs.alt });
+    } else if (name === "table" && node.attribs["data-caption"]) {
+      DomUtils.prepend(node.children[0] || node, el("caption", {}, [text(node.attribs["data-caption"])]));
+      delete node.attribs["data-caption"];
     } else if (name === "div" && hasClass(node, "kb-course")) {
       const card = courseCard(node.attribs["data-course"]);
       replace(node, card ? htmlNodes(card) : null);
@@ -423,6 +474,17 @@ function blogPlainText(html) {
   return DomUtils.textContent(parseDocument(withoutHidden(sanitizeBlogHtml(html)))).replace(/\s+/g, " ").trim();
 }
 
+// Texte qui précède le bloc « Lire la suite » (résumé automatique d'un article sans extrait saisi) ; "" s'il n'y a pas de repère
+function excerptBeforeMore(html, max = 300) {
+  const clean = sanitizeBlogHtml(html);
+  const at = clean.search(/<div class="kb-more"/);
+  if (at <= 0) return "";
+  const text = blogPlainText(clean.slice(0, at).replace(/<\/(p|h[1-6]|li|blockquote|div)>/g, "</$1> "));
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), max - 40))}…`;
+}
+
 // ---------- 3. Ancien article Markdown → HTML de l'éditeur ----------
 function markdownToEditorHtml(markdown) {
   const { html } = renderArticle(markdown, { courseCard: (slug) => `<div class="kb-course" data-course="${slug}"></div>` });
@@ -436,4 +498,4 @@ function markdownToEditorHtml(markdown) {
   return sanitizeBlogHtml(converted);
 }
 
-module.exports = { sanitizeBlogHtml, findUnsupported, renderBlogHtml, blogPlainText, withoutHidden, markdownToEditorHtml, CALLOUT_TYPES, WORDS_PER_MINUTE };
+module.exports = { sanitizeBlogHtml, findUnsupported, excerptBeforeMore, renderBlogHtml, blogPlainText, withoutHidden, markdownToEditorHtml, CALLOUT_TYPES, WORDS_PER_MINUTE };

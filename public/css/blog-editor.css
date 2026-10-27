@@ -1815,3 +1815,28 @@
   .wp-body .wp-site-icon { min-width: 44px; }
   .wp-body [data-edit-mode] { min-height: 44px; min-width: 44px; }
 }
+
+/* Nouveaux blocs : préformaté, vers, couverture, média et texte, légende de tableau, variantes */
+.ProseMirror pre.kb-preformatted, .ProseMirror pre.kb-verse { margin: 1em 0; padding: 14px 18px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); font-family: ui-monospace, Menlo, monospace; font-size: 0.92rem; line-height: 1.6; }
+.ProseMirror pre.kb-verse { font-family: var(--font-display, Georgia, serif); font-size: 1.05rem; font-style: italic; background: none; border: 0; border-left: 3px solid var(--accent); border-radius: 0; }
+.ProseMirror pre.kb-preformatted:empty::before, .ProseMirror pre.kb-verse:empty::before { content: "Saisissez du texte brut…"; color: var(--muted); }
+.kb-ed-cover { position: relative; margin: 1em 0; padding: 28px; min-height: 240px; display: flex; flex-direction: column; justify-content: center; border-radius: 10px; color: #fff; background-color: var(--primary); background-image: linear-gradient(rgba(0, 0, 0, var(--ov, 0.4)), rgba(0, 0, 0, var(--ov, 0.4))), var(--cover-src, none); background-size: cover; background-position: center; text-align: center; outline: 1px dashed var(--border); outline-offset: 2px; }
+.kb-ed-cover[data-height="s"] { min-height: 160px; }
+.kb-ed-cover[data-height="l"] { min-height: 360px; }
+.kb-ed-cover :is(h1, h2, h3, h4, h5, h6, p, li, a) { color: #fff; }
+.kb-ed-mediatext { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center; margin: 1em 0; padding: 6px; border: 1px dashed transparent; border-radius: 8px; }
+.kb-ed-mediatext:hover, .kb-ed-mediatext.ProseMirror-selectednode { border-color: var(--border); }
+.kb-ed-mediatext[data-width="33"] { grid-template-columns: 1fr 2fr; }
+.kb-ed-mediatext[data-side="right"] > .kb-ed-image { order: 2; }
+.kb-ed-mediatext > .kb-ed-image { margin: 0; }
+.kb-ed-table-caption { margin: -0.4em 0 1em; text-align: center; font-size: 0.875rem; color: var(--muted); }
+.ProseMirror hr[data-variant="dots"] { border: 0; height: auto; text-align: center; overflow: visible; }
+.ProseMirror hr[data-variant="dots"]::after { content: "• • •"; letter-spacing: 0.6em; color: var(--muted); }
+.ProseMirror hr[data-variant="short"] { width: 80px; margin-left: auto; margin-right: auto; }
+.kb-ed-image[data-variant="rounded"] img { border-radius: 28px; }
+.kb-ed-image[data-variant="circle"] img { border-radius: 50%; aspect-ratio: 1 / 1; object-fit: cover; }
+.kb-ed-image[data-variant="shadow"] img { box-shadow: 0 10px 30px rgba(11, 42, 64, 0.18); }
+.ProseMirror blockquote[data-variant="bordered"] { border: 1px solid var(--border); border-left-width: 4px; border-radius: var(--radius); background: var(--surface-alt); }
+.ProseMirror table[data-variant="striped"] tbody tr:nth-child(even) { background: var(--surface-alt); }
+.kb-ed-group[data-variant="card"] { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 6px 22px rgba(11, 42, 64, 0.1); }
+@media (max-width: 640px) { .kb-ed-mediatext, .kb-ed-mediatext[data-width="33"] { grid-template-columns: minmax(0, 1fr); } .kb-ed-mediatext[data-side="right"] > .kb-ed-image { order: 0; } }

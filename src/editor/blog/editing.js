@@ -10,7 +10,8 @@ import { DOMSerializer } from "@tiptap/pm/model";
 
 // Blocs de premier niveau qui peuvent être verrouillés
 export const LOCKABLE_TYPES = ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "codeBlock", "table", "horizontalRule", "details",
-  "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbCta", "kbAccordion", "kbFaq", "kbSteps", "kbCompare", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbReusable"];
+  "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbCta", "kbAccordion", "kbFaq", "kbSteps", "kbCompare", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbReusable",
+  "kbPreformatted", "kbVerse", "kbMore", "kbFile", "kbCover", "kbMediaText"];
 const LOCK_META = "kbLockChange";
 export const lockKey = new PluginKey("kbBlockLock");
 

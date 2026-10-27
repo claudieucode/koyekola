@@ -68,6 +68,7 @@ export const KbImage = Node.create({
       dom.className = "kb-ed-image";
       dom.dataset.align = a.align;
       dom.dataset.width = a.width;
+      if (a.variant) dom.dataset.variant = a.variant; else delete dom.dataset.variant;
       const img = document.createElement("img");
       // Fichier absent du serveur : on le dit clairement au lieu d'afficher un cadre vide
       img.addEventListener("error", () => {
@@ -125,6 +126,7 @@ export const KbGallery = Node.create({
 export const lockOf = (node) => ({
   ...(node.attrs.anchor ? { id: node.attrs.anchor } : {}),
   ...(node.attrs.xclass ? { "data-class": node.attrs.xclass } : {}),
+  ...(node.attrs.variant ? { "data-variant": node.attrs.variant } : {}),
   ...(node.attrs.locked ? { "data-locked": "true" } : {}),
   ...(node.attrs.blockId ? { "data-block-id": node.attrs.blockId } : {}),
   ...(node.attrs.hidden ? { "data-hidden": "true" } : {}),
@@ -157,6 +159,87 @@ export const KbAudio = marker({ name: "kbAudio", cls: "kb-audio", attrs: { src: 
 export const KbEmbed = marker({ name: "kbEmbed", cls: "kb-embed", attrs: { url: "data-url", caption: "data-caption" }, icon: "⧉", label: (a) => `Intégration · ${a.url || "adresse à compléter"} (YouTube et Vimeo deviennent un lecteur ; le reste, un lien)` });
 export const KbCourse = marker({ name: "kbCourse", cls: "kb-course", attrs: { slug: "data-course" }, icon: "🎓", label: (a) => `Formation recommandée · ${a.title || a.slug || "à choisir"}` });
 export const KbNewsletter = marker({ name: "kbNewsletter", cls: "kb-newsletter", attrs: {}, icon: "✉", label: () => "Inscription à la newsletter (formulaire choisi dans Blog → réglages)" });
+
+export const KbMore = marker({ name: "kbMore", cls: "kb-more", attrs: { label: "data-label" }, icon: "⋯", label: (a) => `Lire la suite${a.label ? ` — « ${a.label} »` : ""} · le texte qui précède sert d'extrait si l'extrait est vide` });
+export const KbFile = marker({ name: "kbFile", cls: "kb-file", attrs: { url: "data-url", title: "data-title", download: "data-download" }, icon: "📄", label: (a) => `Fichier à télécharger · ${a.title || (a.url || "").split("/").pop() || "fichier à choisir"}${a.download === "true" ? " (téléchargement direct)" : ""}` });
+
+// ---------- Préformaté et vers : texte dont les espaces et les retours à la ligne sont conservés ----------
+function preBlock({ name, cls, placeholder }) {
+  return Node.create({
+    name,
+    group: "block",
+    content: "inline*",
+    marks: "",
+    whitespace: "pre",
+    defining: true,
+    addAttributes() { return {}; },
+    parseHTML() { return [{ tag: `pre.${cls}`, priority: 90, preserveWhitespace: "full" }]; },
+    renderHTML({ node }) { return ["pre", { class: cls, ...lockOf(node) }, 0]; },
+    addKeyboardShortcuts() {
+      return {
+        // Entrée = retour à la ligne dans le bloc ; une ligne vide à la fin (Entrée deux fois de plus) en sort vers un nouveau paragraphe
+        Enter: ({ editor }) => {
+          const { $from, empty } = editor.state.selection;
+          if ($from.parent.type.name !== name || !empty) return false;
+          const text = $from.parent.textContent;
+          if ($from.parentOffset === $from.parent.content.size && text.endsWith("\n\n")) {
+            const end = $from.after();
+            return editor.chain().command(({ tr }) => { tr.delete($from.pos - 2, $from.pos); return true; }).insertContentAt(end - 2, { type: "paragraph" }).focus().run();
+          }
+          return editor.commands.insertContent("\n");
+        },
+        "Mod-Enter": ({ editor }) => {
+          const { $from } = editor.state.selection;
+          if ($from.parent.type.name !== name) return false;
+          return editor.chain().insertContentAt($from.after(), { type: "paragraph" }).focus().run();
+        },
+      };
+    },
+  });
+}
+export const KbPreformatted = preBlock({ name: "kbPreformatted", cls: "kb-preformatted" });
+export const KbVerse = preBlock({ name: "kbVerse", cls: "kb-verse" });
+
+// ---------- Couverture : image de fond sous un voile, contenu modifiable par-dessus ----------
+export const KbCover = Node.create({
+  name: "kbCover",
+  group: "block",
+  content: "block+",
+  defining: true,
+  addAttributes() { return { src: { default: "" }, alt: { default: "" }, overlay: { default: "40" }, height: { default: "m" } }; },
+  parseHTML() {
+    return [{ tag: "div.kb-cover", priority: 85, getAttrs: (el) => ({ src: el.getAttribute("data-src") || "", alt: el.getAttribute("data-alt") || "", overlay: el.getAttribute("data-overlay") || "40", height: el.getAttribute("data-height") || "m" }) }];
+  },
+  renderHTML({ node }) {
+    const a = node.attrs;
+    return ["div", { class: "kb-cover", "data-src": a.src, ...(a.alt ? { "data-alt": a.alt } : {}), "data-overlay": a.overlay || "40", "data-height": a.height || "m", ...lockOf(node) }, 0];
+  },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement("div");
+      const paint = (n) => {
+        dom.className = "kb-ed-cover";
+        dom.dataset.height = n.attrs.height || "m";
+        dom.style.setProperty("--ov", String((Number(n.attrs.overlay) || 0) / 100));
+        dom.style.setProperty("--cover-src", n.attrs.src ? `url("${String(n.attrs.src).replace(/["\\]/g, "")}")` : "none");
+      };
+      paint(node);
+      return { dom, contentDOM: dom, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } };
+    };
+  },
+});
+
+// ---------- Média et texte : une image à côté d'un texte ----------
+export const KbMediaText = Node.create({
+  name: "kbMediaText",
+  group: "block",
+  content: "kbImage kbMediaTextBody",
+  defining: true,
+  addAttributes() { return { side: { default: "left" }, width: { default: "50" } }; },
+  parseHTML() { return [{ tag: "div.kb-mediatext", priority: 85, getAttrs: (el) => ({ side: el.getAttribute("data-side") === "right" ? "right" : "left", width: el.getAttribute("data-width") === "33" ? "33" : "50" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-mediatext", "data-side": node.attrs.side, "data-width": node.attrs.width, ...lockOf(node) }, 0]; },
+  addNodeView() { return layoutView("kb-ed-mediatext", ["side", "width"]); },
+});
 
 // ---------- Bouton ----------
 export const KbButton = Node.create({
@@ -335,7 +418,7 @@ export const KbColumns = Node.create({
   renderHTML({ node }) { return ["div", { class: "kb-columns", ...dataAttrs(node, COLUMN_KEYS), ...lockOf(node) }, 0]; },
   addNodeView() { return layoutView("kb-ed-columns", COLUMN_KEYS); },
 });
-const GROUP_KEYS = ["bg", "pad", "border", "width"];
+const GROUP_KEYS = ["bg", "pad", "border", "width", "variant"];
 export const KbGroup = Node.create({
   name: "kbGroup",
   group: "block",
@@ -426,4 +509,6 @@ export const KbReusableEdit = Node.create({
   },
 });
 
-export const BLOG_NODES = [KbReusable, KbReusableEdit, KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];
+export const KbMediaTextBody = simpleBlock("kbMediaTextBody", "div", "kb-mediatext-body", "block+", { group: null });
+
+export const BLOG_NODES = [KbMore, KbFile, KbPreformatted, KbVerse, KbCover, KbMediaTextBody, KbMediaText, KbReusable, KbReusableEdit, KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];

@@ -12,7 +12,7 @@ import { LOCKABLE_TYPES } from "./editing";
 // Blocs de la structure : ceux du premier niveau (= blocs verrouillables) + les colonnes
 export const BLOCK_TYPES = [...LOCKABLE_TYPES, "kbColumn"];
 // Conteneurs dont les enfants sont aussi des blocs de la structure (hiérarchie de la vue en liste)
-export const TREE_CONTAINERS = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons"]);
+export const TREE_CONTAINERS = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons", "kbCover"]);
 export const ID_ONLY_META = "kbBlockIdsOnly"; // transaction qui ne fait qu'attribuer des identifiants : pas une modification
 const LOCK_META = "kbLockChange"; // laisse passer le filtre des blocs verrouillés (attributs seulement, contenu intact)
 export const blocksKey = new PluginKey("kbBlocks");

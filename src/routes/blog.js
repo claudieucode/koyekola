@@ -18,7 +18,7 @@ const { uploadsRoot } = require("../config/paths");
 const { fileExists } = require("../config/mediaAudit");
 const { themeFor } = require("../utils/blogThemes");
 const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/seo");
-const { sanitizeBlogHtml, markdownToEditorHtml, findUnsupported } = require("../utils/blogHtml");
+const { sanitizeBlogHtml, markdownToEditorHtml, findUnsupported, excerptBeforeMore } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const articles = require("../services/articles");
@@ -593,7 +593,7 @@ function readFields(body, existing = null, site = null) {
   const category = blog.canonicalCategory(body.category, exceptId);
   const fields = {
     title: oneLine(body.title, 150),
-    excerpt: oneLine(body.excerpt, 300),
+    excerpt: oneLine(body.excerpt, 300) || (format === "html" ? oneLine(excerptBeforeMore(raw), 300) : ""), // extrait vide : le texte avant « Lire la suite »
     content: format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(raw), site) : raw,
     content_format: format,
     seo_title: oneLine(body.seo_title, 70),
@@ -1162,7 +1162,7 @@ router.get("/formateur/blog/api/medias", (req, res) => {
   res.json({ media: media.map((m) => ({ ...m, used: blog.imageReferences(m.path).length, missing: !fileExists(uploadsRoot, m.path) })) });
 });
 
-const mediaUpload = upload.fields([{ name: "article_image", maxCount: 1 }, { name: "article_video", maxCount: 1 }, { name: "article_audio", maxCount: 1 }, { name: "image_variant", maxCount: 4 }]);
+const mediaUpload = upload.fields([{ name: "article_image", maxCount: 1 }, { name: "article_video", maxCount: 1 }, { name: "article_audio", maxCount: 1 }, { name: "article_file", maxCount: 1 }, { name: "image_variant", maxCount: 4 }]);
 // Versions réduites d'une image (WebP, préparées par le navigateur) : <nom>-<largeur>w.webp à côté de l'original.
 // Chaque fichier est vérifié (vraiment du WebP, largeur annoncée = largeur réelle, plus petit que l'original) sinon supprimé.
 function keepVariants(req, mainFile, mainWidth) {
@@ -1185,9 +1185,10 @@ router.post("/formateur/blog/api/medias", mediaUpload, (req, res) => {
   const image = fileOf(req, "article_image");
   const video = fileOf(req, "article_video");
   const audio = fileOf(req, "article_audio");
-  const file = image || video || audio;
-  if (!file) return res.status(400).json({ error: "Choisissez un fichier (image, vidéo MP4/WebM ou audio MP3)." });
-  const kind = image ? "image" : video ? "video" : "audio";
+  const doc = fileOf(req, "article_file");
+  const file = image || video || audio || doc;
+  if (!file) return res.status(400).json({ error: "Choisissez un fichier (image, vidéo MP4/WebM, audio MP3 ou document à télécharger)." });
+  const kind = image ? "image" : video ? "video" : audio ? "audio" : "file";
   const path = image ? `/uploads/thumbnails/${file.filename}` : `/uploads/blog/${file.filename}`;
   // Image : quand le fichier est lisible (PNG, JPEG, WebP, GIF), ses dimensions réelles font foi, pas celles déclarées par le navigateur ;
   // un format que le serveur ne sait pas lire (AVIF) garde la valeur déclarée. Le fichier n'est jamais refusé pour cela (aucune régression sur les formats rares).

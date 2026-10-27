@@ -124,7 +124,7 @@ function courseCard(slug) {
 // Rendu public : Markdown (anciens articles) ou texte riche de l'éditeur
 function renderPost(post, { newsletterHtml = null } = {}) {
   const imageSize = (src) => db.prepare("SELECT width, height FROM media WHERE path = ?").get(String(src || ""));
-  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id, post.id ? (require("./siteContent").siteOf(db, "post", post.id) ?? null) : null) });
+  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, fileSize: (src) => (db.prepare("SELECT size FROM media WHERE path = ?").get(String(src || "")) || {}).size, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id, post.id ? (require("./siteContent").siteOf(db, "post", post.id) ?? null) : null) });
   const r = renderArticle(post.content, { courseCard });
   return { ...r, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
 }
@@ -325,7 +325,7 @@ const clearAutosave = (postId) => db.prepare("DELETE FROM post_autosaves WHERE p
 function listMedia({ q = "", kind = "", limit = 60 } = {}) {
   const where = ["1 = 1"];
   const params = [];
-  if (["image", "video", "audio"].includes(kind)) { where.push("kind = ?"); params.push(kind); }
+  if (["image", "video", "audio", "file"].includes(kind)) { where.push("kind = ?"); params.push(kind); }
   else where.push("kind IN ('image', 'video', 'audio')"); // les documents (PDF, Centre de gestion → Ressources) ne s'insèrent pas comme médias
   if (q) { where.push("(alt LIKE ? OR title LIKE ? OR caption LIKE ? OR path LIKE ?)"); const like = `%${String(q).slice(0, 80)}%`; params.push(like, like, like, like); }
   return db.prepare(`SELECT * FROM media WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ?`).all(...params, Math.min(200, limit));

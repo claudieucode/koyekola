@@ -131,6 +131,50 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     await page.context().close();
   });
 
+  test("nouveaux blocs : l'éditeur et le serveur parlent le même HTML (aller-retour sans perte)", async () => {
+    const samples = [
+      ["Préformaté", '<pre class="kb-preformatted">ligne 1\n  ligne 2</pre>', /<pre class="kb-preformatted"[^>]*>ligne 1\n {2}ligne 2<\/pre>/],
+      ["Vers", '<pre class="kb-verse">vers 1\nvers 2</pre>', /<pre class="kb-verse"[^>]*>vers 1\nvers 2<\/pre>/],
+      ["Lire la suite", '<div class="kb-more" data-label="Suite"></div>', /<div class="kb-more"[^>]*data-label="Suite"/],
+      ["Fichier", '<div class="kb-file" data-url="/uploads/blog/1-0123456789abcdef.pdf" data-title="Guide" data-download="true"></div>', /<div class="kb-file"[^>]*data-url="\/uploads\/blog\/1-0123456789abcdef\.pdf"/],
+      ["Couverture", '<div class="kb-cover" data-src="/uploads/thumbnails/a.png" data-overlay="60" data-height="l" data-alt="Fond"><h2>Titre</h2></div>', /<div class="kb-cover"[^>]*data-overlay="60"[^>]*><h2[^>]*>Titre<\/h2><\/div>/],
+      ["Média et texte", '<div class="kb-mediatext" data-side="right" data-width="33"><figure class="kb-image" data-align="center"><img src="/uploads/thumbnails/a.png" alt="x"></figure><div class="kb-mediatext-body"><p>Texte</p></div></div>', /<div class="kb-mediatext"[^>]*data-side="right"[^>]*><figure[^>]*><img[^>]*><\/figure><div class="kb-mediatext-body"><p>Texte<\/p><\/div><\/div>/],
+      ["Tableau légendé", '<table data-caption="Tarifs"><tbody><tr><td><p>1</p></td></tr></tbody></table>', /<table[^>]*data-caption="Tarifs"/],
+      ["Séparateur à points", '<hr data-variant="dots">', /<hr[^>]*data-variant="dots"/],
+      ["Image ronde", '<figure class="kb-image" data-align="center" data-variant="circle"><img src="/uploads/thumbnails/a.png" alt="x"></figure>', /<figure class="kb-image"[^>]*data-variant="circle"/],
+    ];
+    const page = await open();
+    await page.fill("#post-title", "Aller-retour des blocs");
+    await load(page, samples.map((x) => x[1]).join(""));
+    const types = (await tops(page)).map((x) => x.type);
+    assert.deepEqual(types.slice(0, 9), ["kbPreformatted", "kbVerse", "kbMore", "kbFile", "kbCover", "kbMediaText", "table", "horizontalRule", "kbImage"]);
+    await page.click("[data-save]");
+    await page.waitForFunction(() => /^Enregistré$/.test(document.querySelector("[data-save-state]").textContent.trim()), null, { timeout: 15000 });
+    const saved = srv.db().prepare("SELECT content FROM posts WHERE title = ?").get("Aller-retour des blocs").content;
+    for (const [name, , re] of samples) assert.match(saved, re, `${name} : perdu ou déformé à l'enregistrement\n${saved}`);
+    // Rechargé depuis la base, l'éditeur retrouve les mêmes blocs
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector(".ProseMirror") && document.querySelector(".ProseMirror").editor);
+    assert.deepEqual((await tops(page)).map((x) => x.type).slice(0, 9), types.slice(0, 9));
+    await page.context().close();
+  });
+
+  test("Lire la suite, Préformaté : Entrée insère un retour à la ligne dans le bloc ; deux lignes vides en sortent", async () => {
+    const page = await open();
+    await load(page, '<pre class="kb-preformatted">a</pre>');
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(ed.state.doc.firstChild.nodeSize - 1); ed.view.focus(); });
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("b");
+    let t = await tops(page);
+    assert.equal(t[0].type, "kbPreformatted");
+    assert.equal(t[0].text, "a\nb");
+    await page.keyboard.press("Enter"); await page.keyboard.press("Enter"); await page.keyboard.press("Enter");
+    t = await tops(page);
+    assert.equal(t[0].text, "a\nb", "les lignes vides de sortie sont retirées");
+    assert.equal(t[1].type, "paragraph", "le curseur est sorti du bloc");
+    await page.context().close();
+  });
+
   test("sans erreur de console pendant ces parcours", () => {
     assert.deepEqual(errors, []);
   });

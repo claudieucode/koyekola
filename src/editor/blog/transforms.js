@@ -6,7 +6,7 @@ import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { closeHistory } from "@tiptap/pm/history";
 
 // Blocs qui peuvent en contenir d'autres au même niveau : la sélection de plusieurs blocs « frères » se groupe dans l'un d'eux
-const GROUP_PARENTS = new Set(["doc", "kbGroup", "kbColumn", "callout", "kbCta"]);
+const GROUP_PARENTS = new Set(["doc", "kbGroup", "kbColumn", "callout", "kbCta", "kbCover"]);
 export const CALLOUT_TYPES = [["info", "Encadré Information"], ["conseil", "Encadré Conseil"], ["attention", "Encadré Attention"], ["a-retenir", "Encadré À retenir"], ["bon-a-savoir", "Encadré Bon à savoir"], ["note", "Encadré Note"], ["important", "Encadré Important"], ["astuce", "Encadré Astuce"]];
 
 export class TransformError extends Error {}
