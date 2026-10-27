@@ -4,6 +4,7 @@
 // le lecteur réel est fabriqué par le serveur à l'affichage.
 import { Node, Extension, mergeAttributes } from "@tiptap/core";
 import { STYLE_PROPS, COLOR_VARS, styleDataOf, colorStyle } from "../../shared/blockStyles";
+import { DYNAMIC } from "../../shared/dynamicBlocks";
 
 const WIDTHS = ["25", "33", "50", "66", "75", "100"];
 const ALIGNS = ["left", "center", "right", "wide"];
@@ -559,4 +560,75 @@ export const KbReusableEdit = Node.create({
 
 export const KbMediaTextBody = simpleBlock("kbMediaTextBody", "div", "kb-mediatext-body", "block+", { group: null });
 
-export const BLOG_NODES = [KbMore, KbFile, KbPreformatted, KbVerse, KbCover, KbMediaTextBody, KbMediaText, KbReusable, KbReusableEdit, KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];
+// ---------- Blocs dynamiques (widgets) : marqueurs, le contenu réel est fabriqué par le serveur à l'affichage ----------
+export const DynamicBlocks = DYNAMIC.map((d) => marker({
+  name: d.name, cls: d.cls,
+  attrs: Object.fromEntries(Object.entries(d.attrs).map(([key, [attr]]) => [key, attr])),
+  icon: "☰",
+  label: (a) => `${d.label}${d.name === "kbLatest" ? ` · ${a.count || 5} article(s)${a.category ? ` · ${a.category}` : ""}` : d.name === "kbRss" ? ` · ${a.url || "adresse du flux à compléter"}` : d.name === "kbSocial" ? ` · ${(a.links || "").split(/\s+/).filter(Boolean).length} lien(s)` : ""} · affiché sur le site`,
+}));
+// Valeurs par défaut à l'insertion d'un bloc dynamique
+export const dynamicDefaults = (name) => { const d = DYNAMIC.find((x) => x.name === name); return d ? Object.fromEntries(Object.entries(d.attrs).map(([k, [, , def]]) => [k, def])) : {}; };
+
+// ---------- Page suivante : découpe l'article en plusieurs pages (?page=N) ----------
+export const KbNextPage = Node.create({
+  name: "kbNextPage",
+  group: "block",
+  atom: true,
+  draggable: true,
+  parseHTML() { return [{ tag: "div.kb-nextpage", priority: 70 }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-nextpage", ...lockOf(node) }]; },
+  addNodeView() { return atomView((dom) => { dom.className = "kb-ed-nextpage"; dom.append(span("kb-ed-pagebreak-label", "Page suivante : le texte qui suit s'affiche sur une nouvelle page du site")); }); },
+});
+
+// ---------- HTML personnalisé : code libre, réservé au compte créateur (signature vérifiée par le serveur, voir src/utils/customHtml.js) ----------
+const b64e = (value) => { const bytes = new TextEncoder().encode(String(value)); let bin = ""; bytes.forEach((b) => { bin += String.fromCharCode(b); }); return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const b64d = (value) => { try { const bin = atob(String(value).replace(/-/g, "+").replace(/_/g, "/")); return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))); } catch { return ""; } };
+export const KbHtml = Node.create({
+  name: "kbHtml",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes() { return { code: { default: "" }, sig: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-html", priority: 80, getAttrs: (el) => ({ code: b64d(el.getAttribute("data-code") || ""), sig: el.getAttribute("data-sig") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-html", "data-code": b64e(node.attrs.code), ...(node.attrs.sig ? { "data-sig": node.attrs.sig } : {}), ...lockOf(node) }]; },
+  addNodeView() {
+    return atomView((dom, a) => {
+      dom.className = "kb-ed-html";
+      dom.append(span("kb-ed-marker-icon", "</>"), span("kb-ed-marker-label", "HTML personnalisé · le code s'exécute sur le site publié, pas dans l'éditeur"));
+      if (a.code) {
+        const frame = document.createElement("iframe");
+        frame.setAttribute("sandbox", ""); // aucun script, aucun accès à la page de l'éditeur
+        frame.setAttribute("title", "Aperçu du code (sans scripts)");
+        frame.srcdoc = a.code;
+        dom.append(frame);
+      }
+    });
+  },
+});
+
+// ---------- Note de bas de page : nœud en ligne ; le serveur numérote et rassemble les notes en fin d'article ----------
+export const KbFootnote = Node.create({
+  name: "kbFootnote",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  addAttributes() { return { note: { default: "" } }; },
+  parseHTML() { return [{ tag: "sup.kb-fn", priority: 100, getAttrs: (el) => ({ note: (el.getAttribute("data-note") || "").slice(0, 500) }) }]; },
+  renderHTML({ node }) { return ["sup", { class: "kb-fn", "data-note": node.attrs.note }, "*"]; },
+  addNodeView() {
+    return ({ node, getPos }) => {
+      const dom = document.createElement("sup");
+      const paint = (n) => { dom.className = "kb-ed-footnote"; dom.title = n.attrs.note || "Note vide"; dom.setAttribute("aria-label", `Note de bas de page : ${n.attrs.note || "vide"}`); dom.tabIndex = 0; dom.setAttribute("role", "button"); };
+      const edit = () => dom.dispatchEvent(new CustomEvent("kb-footnote-edit", { bubbles: true, detail: { pos: getPos() } }));
+      // « mousedown » et non « click » : la sélection du nœud fait apparaître la barre d'outils du bloc sous le pointeur, le relâchement du bouton tomberait dessus
+      dom.addEventListener("mousedown", (e) => { if (e.button === 0) { e.preventDefault(); edit(); } });
+      dom.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); edit(); } });
+      paint(node);
+      return { dom, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } };
+    };
+  },
+});
+
+export const BLOG_NODES = [...DynamicBlocks, KbNextPage, KbHtml, KbFootnote, KbMore, KbFile, KbPreformatted, KbVerse, KbCover, KbMediaTextBody, KbMediaText, KbReusable, KbReusableEdit, KbSpacer, KbPageBreak, KbColumn, KbColumns, KbGroup, KbButtons, PullquoteAttr, KbImage, KbGallery, KbVideo, KbAudio, KbEmbed, KbCourse, KbNewsletter, KbButton, Callout, KbCta, KbSummary, KbAccordionBody, KbAccordion, KbFaqAnswer, KbFaqItem, KbFaq, KbSteps, KbCompareCol, KbCompare];

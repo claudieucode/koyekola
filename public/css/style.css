@@ -2658,3 +2658,44 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
 /* Publications de réseaux sociaux intégrées : colonne étroite, centrée */
 :is(.kb-embed-twitter, .kb-embed-instagram, .kb-embed-facebook, .kb-embed-tiktok, .kb-embed-pinterest, .kb-embed-reddit, .kb-embed-imgur, .kb-embed-giphy, .kb-embed-pocketcasts) { max-width: 560px; margin-left: auto; margin-right: auto; }
 :is(.kb-embed-tiktok) { max-width: 420px; }
+
+/* Blocs dynamiques (derniers articles, catégories, étiquettes, archives, calendrier, recherche, réseaux sociaux, liste des pages, flux RSS, sommaire) */
+.kb-widget { margin: 1.8em 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-alt); }
+.kb-widget-title { margin: 0 0 10px; font-weight: 700; color: var(--primary); }
+.kb-widget ul, .kb-widget ol { margin: 0; padding-left: 1.2em; }
+.kb-widget li { margin: .35em 0; }
+.kb-widget-count { color: var(--muted); font-size: .9em; }
+.kb-latest[data-view="grid"] ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; padding: 0; list-style: none; }
+.kb-latest ul { list-style: none; padding: 0; }
+.kb-latest li { display: flex; gap: 12px; align-items: flex-start; }
+.kb-latest li img { width: 84px; height: 64px; object-fit: cover; border-radius: 8px; flex: none; }
+.kb-latest[data-view="grid"] li { flex-direction: column; }
+.kb-latest[data-view="grid"] li img { width: 100%; height: 130px; }
+.kb-latest-title { font-weight: 600; }
+.kb-latest-date { color: var(--muted); font-size: .85em; }
+.kb-latest-excerpt { margin: .2em 0 0; color: var(--muted); font-size: .92em; }
+.kb-tags ul { display: flex; flex-wrap: wrap; gap: 6px 12px; list-style: none; padding: 0; align-items: baseline; }
+.kb-tags li[data-weight="1"] { font-size: .85em; } .kb-tags li[data-weight="3"] { font-size: 1.05em; } .kb-tags li[data-weight="4"] { font-size: 1.2em; } .kb-tags li[data-weight="5"] { font-size: 1.4em; font-weight: 600; }
+.kb-calendar table { width: 100%; border-collapse: collapse; text-align: center; font-size: .92em; }
+.kb-calendar caption { padding-bottom: 8px; font-weight: 700; color: var(--primary); text-transform: capitalize; }
+.kb-calendar th, .kb-calendar td { padding: 6px 2px; border: 0; }
+.kb-calendar td a { display: inline-block; min-width: 2em; padding: 2px 4px; border-radius: 6px; background: var(--primary); color: #fff; font-weight: 600; text-decoration: none; }
+form.kb-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+form.kb-search .kb-widget-title { flex: 1 1 100%; }
+form.kb-search input[type="search"] { flex: 1 1 200px; min-width: 0; padding: 10px 12px; border: 1px solid var(--border-strong, var(--border)); border-radius: var(--radius); font: inherit; }
+.kb-social ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; }
+.kb-social-link { display: inline-block; padding: 6px 14px; border: 1px solid var(--border-strong, var(--border)); border-radius: 999px; background: var(--surface); color: var(--primary); font-weight: 600; text-decoration: none; }
+.kb-social[data-size="s"] .kb-social-link { padding: 3px 10px; font-size: .85em; } .kb-social[data-size="l"] .kb-social-link { padding: 10px 20px; font-size: 1.1em; }
+.kb-social-link:hover { background: var(--primary); color: #fff; }
+.kb-toc ol { list-style: none; padding-left: 0; } .kb-toc li[data-level="3"] { padding-left: 1.2em; } .kb-toc li[data-level="4"] { padding-left: 2.4em; }
+.kb-rss time { color: var(--muted); font-size: .85em; }
+.kb-html-block { margin: 1.6em 0; }
+/* Notes de bas de page */
+.article-content .kb-fn-ref { font-size: .75em; line-height: 0; } .article-content .kb-fn-ref a { text-decoration: none; padding: 0 2px; }
+.kb-footnotes { margin: 2.4em 0 0; padding-top: 1em; border-top: 1px solid var(--border); font-size: .92em; color: var(--muted); }
+.kb-footnotes ol { margin: 0; padding-left: 1.4em; } .kb-footnotes li { margin: .3em 0; scroll-margin-top: 90px; }
+.kb-fn-back { text-decoration: none; margin-left: 4px; }
+.article-content .kb-fn-ref { scroll-margin-top: 90px; }
+/* Article en plusieurs pages */
+.article-pages { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin: 2.4em 0 1em; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.article-pages-status { color: var(--muted); font-weight: 600; }

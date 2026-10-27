@@ -29,7 +29,7 @@
             <nav class="article-toc" aria-labelledby="toc-title">
               <p class="article-toc-title" id="toc-title"><%= typeof tocTitle !== "undefined" ? tocTitle : "Sommaire" %></p>
               <ol class="article-toc-list">
-                <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="#<%= item.id %>" data-toc-link="<%= item.id %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
+                <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="<%= item.href || ("#" + item.id) %>" data-toc-link="<%= item.id %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
               </ol>
             </nav>
           <% } %>
@@ -65,12 +65,19 @@
           <details class="article-toc-mobile">
             <summary><%= typeof tocTitle !== "undefined" ? tocTitle : "Sommaire" %> <span class="toc-count">(<%= tocItems.filter((i) => i.level === 2).length %> parties)</span></summary>
             <ol class="article-toc-list">
-              <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="#<%= item.id %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
+              <% tocItems.forEach((item) => { %><li class="<%= item.cls %>"><a href="<%= item.href || ("#" + item.id) %>"><% if (item.number) { %><span class="toc-num" aria-hidden="true"><%= item.number %></span><% } %><span><%= item.text %></span></a></li><% }) %>
             </ol>
           </details>
         <% } %>
 
         <div class="markdown article-content"><%- article.html %></div>
+        <% if (article.pageCount > 1) { %>
+          <nav class="article-pages" aria-label="Pages de l'article">
+            <% if (article.pageNo > 1) { %><a class="btn btn-outline" rel="prev" href="?page=<%= article.pageNo - 1 %>">← Page précédente</a><% } %>
+            <span class="article-pages-status">Page <%= article.pageNo %> sur <%= article.pageCount %></span>
+            <% if (article.pageNo < article.pageCount) { %><a class="btn btn-primary" rel="next" href="?page=<%= article.pageNo + 1 %>">Page suivante →</a><% } %>
+          </nav>
+        <% } %>
         <% } %>
 
         <% if (tags.length) { %>

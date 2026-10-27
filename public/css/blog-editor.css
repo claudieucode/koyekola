@@ -1896,3 +1896,14 @@
 .wp-color-row { display: flex; align-items: center; gap: 8px; }
 .wp-color-row input[type="color"] { width: 40px; height: 30px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; }
 .wp-color-value { font-size: 12px; color: var(--muted); }
+/* Page suivante, HTML personnalisé, notes de bas de page, aperçu de flux */
+.kb-ed-nextpage { margin: 18px 0; border-top: 3px double var(--accent, #1d4ed8); text-align: center; line-height: 0; }
+.kb-ed-nextpage .kb-ed-pagebreak-label { position: relative; top: -1px; }
+.kb-ed-html { margin: 1em 0; padding: 10px 12px; border: 1px dashed var(--warning, #b45309); border-radius: 8px; background: #fffaf0; display: grid; gap: 8px; }
+.kb-ed-html iframe { width: 100%; min-height: 80px; max-height: 260px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+.ProseMirror { counter-reset: kbfn; }
+.ProseMirror .kb-ed-footnote { counter-increment: kbfn; display: inline-block; color: var(--accent, #1d4ed8); cursor: pointer; font-size: .75em; vertical-align: super; line-height: 1; min-width: 1.4em; padding: 0 2px; border-radius: 3px; }
+.ProseMirror .kb-ed-footnote::before { content: "[" counter(kbfn) "]"; }
+.ProseMirror .kb-ed-footnote.ProseMirror-selectednode { outline: 2px solid var(--accent, #1d4ed8); }
+.wp-mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.45; width: 100%; }
+.wp-feed-preview ul { margin: 0; padding-left: 1.2em; font-size: 13px; }

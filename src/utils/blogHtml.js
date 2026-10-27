@@ -16,6 +16,9 @@ const { slugify } = require("./format");
 const { parseVideoUrl, embedProvider } = require("./video");
 const { renderArticle, CALLOUTS } = require("./articleMarkdown");
 const { STYLE_PROPS, cleanValue, colorStyleFromData } = require("../shared/blockStyles");
+const dynamicBlocks = require("../shared/dynamicBlocks");
+const blogDynamic = require("./blogDynamic");
+const customHtml = require("./customHtml");
 const CONTAINER_CLASSES = new Set(require("../shared/blockRegistry").containerClasses());
 
 const MAX_HTML = 300000;
@@ -32,7 +35,7 @@ const AUDIO_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:mp3|m4a|ogg|oga|w
 const MEDIA_URL = /^(https:\/\/[^\s"'<>]{1,500}|\/uploads\/blog\/[A-Za-z0-9_.-]{1,200})$/i;
 const COURSE_SLUG = /^[a-z0-9-]{1,120}$/;
 const REL_TOKENS = new Set(["nofollow", "sponsored", "ugc", "noopener", "noreferrer"]);
-const DIV_CLASSES = ["kb-more", "kb-file", "kb-cover", "kb-mediatext", "kb-mediatext-body", "kb-reusable", "kb-spacer", "kb-pagebreak", "kb-columns", "kb-column", "kb-group", "kb-buttons", "kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
+const DIV_CLASSES = ["kb-more", "kb-file", "kb-cover", "kb-mediatext", "kb-mediatext-body", "kb-reusable", "kb-spacer", "kb-pagebreak", "kb-columns", "kb-column", "kb-group", "kb-buttons", "kb-gallery", "kb-video", "kb-audio", "kb-embed", "kb-course", "kb-newsletter", "kb-cta", "kb-faq", "kb-faq-answer", "kb-accordion-body", "kb-compare", "kb-compare-col", "kb-step-body", "callout", "kb-html", "kb-nextpage", ...dynamicBlocks.DYNAMIC.map((d) => d.cls), ...CALLOUT_TYPES.map((t) => `callout-${t}`)];
 
 // Mises en page des colonnes : largeurs en %, 2 à 4 colonnes
 const COLUMN_LAYOUT = /^(custom|50-50|33-67|67-33|25-75|75-25|33-33-33|25-50-25|50-25-25|25-25-50|25-25-25-25)$/;
@@ -122,6 +125,17 @@ const transformTags = {
     if (main === "kb-spacer") { keep("data-size", /^(s|m|l|xl)$/); keep("data-size-mobile", /^(s|m|l|xl)$/); keep("data-px", /^(?:[8-9]|[1-9]\d|[1-4]\d\d)$/); } // hauteur libre : 8 à 499 px
     if (main === "kb-columns") { keep("data-layout", COLUMN_LAYOUT); keep("data-gap", /^(none|s|m|l)$/); keep("data-stack", /^(mobile|tablet|never)$/); keep("data-valign", /^(top|center|bottom)$/); }
     if (main === "kb-group") { keep("data-bg", /^(none|light|accent|dark|warm)$/); keep("data-pad", /^(none|s|m|l)$/); keep("data-border", /^(true)$/); keep("data-width", /^(normal|wide)$/); keep("data-layout", /^(row|stack|grid)$/); keep("data-justify", /^(left|center|right|between)$/); keep("data-gridcols", /^[2-4]$/); keep("data-valign", /^(top|center|bottom)$/); }
+    const dyn = dynamicBlocks.BY_CLASS.get(main);
+    if (dyn) {
+      Object.assign(out, dynamicBlocks.cleanAttrs(dyn, attribs));
+      if (main === "kb-rss" && !out["data-url"]) return { tagName: "div", attribs: {} }; // un flux sans adresse valide n'a pas de sens
+    }
+    if (main === "kb-html") {
+      // HTML personnalisé : conservé UNIQUEMENT si la signature du compte créateur correspond au code (src/utils/customHtml.js)
+      const code = String(attribs["data-code"] || "");
+      if (!customHtml.verify(code, attribs["data-sig"])) return { tagName: "div", attribs: {} };
+      out["data-code"] = code; out["data-sig"] = attribs["data-sig"];
+    }
     if (main === "kb-column") { keep("data-basis", /^(?:[5-9]|[1-8]\d|9[0-5])$/); keep("data-valign", /^(top|center|bottom)$/); }
     if (main === "kb-buttons") keep("data-align", /^(left|center|right)$/);
     if (main === "kb-reusable") { keep("data-ref", /^\d{1,9}$/); if (!out["data-ref"]) return { tagName: "div", attribs: {} }; }
@@ -184,6 +198,8 @@ const transformTags = {
 };
 for (const h of ["h1", "h2", "h3", "h4", "h5", "h6"]) transformTags[h] = (tagName, attribs) => ({ tagName, attribs: { ...pick(attribs, ["style"]), ...(/^[1-4]$/.test(String(attribs["data-indent"] || "")) ? { "data-indent": attribs["data-indent"] } : {}) } });
 transformTags.hr = (tagName) => ({ tagName, attribs: {} });
+// Note de bas de page : <sup class="kb-fn" data-note="…"> (le texte de la note est dans l'attribut, rendu en liste à la fin de l'article)
+transformTags.sup = (tagName, attribs) => ({ tagName, attribs: classesOf(attribs).includes("kb-fn") && String(attribs["data-note"] || "").trim() ? { class: "kb-fn", "data-note": String(attribs["data-note"]).replace(/[\r\n\u2028\u2029]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 500) } : {} });
 transformTags.blockquote = (tagName, attribs) => ({ tagName, attribs: { ...(classesOf(attribs).includes("kb-pullquote") ? { class: "kb-pullquote" } : {}), ...(attribs["data-cite"] ? { "data-cite": String(attribs["data-cite"]).replace(/[\r\n\u2028\u2029]+/g, " ").trim().slice(0, 200) } : {}) } });
 transformTags.table = (tagName, attribs) => ({ tagName, attribs: { ...(attribs["data-caption"] ? { "data-caption": String(attribs["data-caption"]).replace(/[\r\n]+/g, " ").slice(0, 200) } : {}), ...(attribs["data-footer"] === "true" ? { "data-footer": "true" } : {}), ...(attribs["data-fixed"] === "true" ? { "data-fixed": "true" } : {}) } });
 // Bloc verrouillé dans l'éditeur (protection contre les modifications accidentelles) : marqueur conservé, valeur stricte
@@ -235,9 +251,9 @@ const saveOptions = {
   allowedAttributes: {
     a: ["href", "target", "rel", "class"], img: ["src", "alt", "title", "width", "height", "data-media-id"],
     figure: ["class", "data-align", "data-width", "data-credit", "data-main", "data-ratio", "data-lightbox", "data-fit"],
-    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download", "data-track", "data-track-lang", "data-track-label", "data-natural", "data-lightbox", "data-preload", "data-preview", "data-fx", "data-fy", "data-fixed", "data-shade", "data-pos", "data-crop", "data-justify", "data-gridcols", "data-basis", "data-px"],
+    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download", "data-track", "data-track-lang", "data-track-label", "data-natural", "data-lightbox", "data-preload", "data-depth", "data-view", "data-date", "data-excerpt", "data-image", "data-category", "data-max", "data-placeholder", "data-button", "data-links", "data-count", "data-code", "data-sig", "data-preview", "data-fx", "data-fy", "data-fixed", "data-shade", "data-pos", "data-crop", "data-justify", "data-gridcols", "data-basis", "data-px"],
     details: ["class", "data-open"], ol: ["class", "data-title", "start", "reversed", "data-ltype"], ul: ["data-type", "data-ltype"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
-    p: ["style", "data-indent", "data-dropcap", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class", "data-cite"], span: ["style"], mark: ["style"],
+    p: ["style", "data-indent", "data-dropcap", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class", "data-cite"], sup: ["class", "data-note"], span: ["style"], mark: ["style"],
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"], pre: ["class"], table: ["data-caption", "data-footer", "data-fixed"],
   },
   allowedClasses: false, // vérifiées une à une dans transformTags (listes blanches)
@@ -351,12 +367,15 @@ function videoPlayer(url, caption, opts = {}) {
 }
 
 // options : courseCard(slug) → HTML | null ; newsletterHtml → HTML | null ; tocDepth 2|3
-function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null, imageVariants = () => [], reusableHtml = () => null, fileSize = () => null } = {}) {
+function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, tocDepth = 3, imageSize = () => null, imageVariants = () => [], reusableHtml = () => null, fileSize = () => null, widgets = null, allowCustomHtml = true, pageHref = (n) => `?page=${n}` } = {}) {
   // Blocs réutilisables synchronisés : contenu lu à l'affichage (une modification s'applique partout) ; jamais imbriqués
   const REF = /<div class="kb-reusable"[^>]*data-ref="(\d+)"[^>]*><\/div>/g;
   const clean = withoutHidden(sanitizeBlogHtml(html)).replace(REF, (m, id) => withoutHidden(sanitizeBlogHtml(reusableHtml(Number(id)) || "")).replace(REF, ""));
   const doc = parseDocument(clean);
   const toc = [];
+  const pageBreaks = [];
+  const tocBlocks = [];
+  const footnotes = [];
   const faq = [];
   const howto = [];
   const images = [];
@@ -405,7 +424,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       const t = textOf(node);
       if (!t) continue;
       if (!node.attribs.id) node.attribs.id = uniqueId(t); // une ancre saisie par la personne est conservée telle quelle
-      if ((level === 2 || (level === 3 && tocDepth >= 3) || (level === 4 && tocDepth >= 4)) && !insideAny(node, ["kb-cta", "callout", "kb-faq", "details"])) toc.push({ level, id: node.attribs.id, text: t });
+      if ((level === 2 || (level === 3 && tocDepth >= 3) || (level === 4 && tocDepth >= 4)) && !insideAny(node, ["kb-cta", "callout", "kb-faq", "details"])) toc.push({ level, id: node.attribs.id, text: t, node });
     } else if (name === "img") {
       node.attribs.loading = "lazy";
       node.attribs.decoding = "async";
@@ -504,6 +523,22 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
         if (rows.length > 1) { const last = rows[rows.length - 1]; DomUtils.removeElement(last); DomUtils.appendChild(node, el("tfoot", {}, [last])); }
         delete node.attribs["data-footer"];
       }
+    } else if (name === "div" && hasClass(node, "kb-html")) {
+      // HTML personnalisé : restitué seulement si la signature du compte créateur est valide (src/utils/customHtml.js)
+      const code = node.attribs["data-code"];
+      if (allowCustomHtml && customHtml.verify(code, node.attribs["data-sig"])) replace(node, el("div", { class: "kb-html-block" }, htmlNodes(customHtml.decode(code))));
+      else replace(node, null);
+    } else if (name === "div" && hasClass(node, "kb-nextpage")) {
+      pageBreaks.push(node);
+    } else if (name === "div" && hasClass(node, "kb-toc")) {
+      tocBlocks.push(node);
+    } else if (name === "div" && widgets && blogDynamic.BUILDERS[classesOf(node.attribs).find((c) => blogDynamic.BUILDERS[c])]) {
+      const built = blogDynamic.BUILDERS[classesOf(node.attribs).find((c) => blogDynamic.BUILDERS[c])](node.attribs, { widgets });
+      replace(node, built);
+    } else if (name === "div" && dynamicBlocks.BY_CLASS.has(classesOf(node.attribs)[0])) {
+      replace(node, null); // bloc dynamique sans données (aperçu hors site) : rien n'est affiché plutôt qu'un cadre vide
+    } else if (name === "sup" && hasClass(node, "kb-fn")) {
+      footnotes.push(node);
     } else if (name === "div" && hasClass(node, "kb-course")) {
       const card = courseCard(node.attribs["data-course"]);
       replace(node, card ? htmlNodes(card) : null);
@@ -547,10 +582,43 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       if (steps.length >= 2) howto.push({ name: node.attribs["data-title"] || "", steps });
     }
   }
+  // Découpage en pages (bloc « Page suivante ») : chaque repère ouvre une nouvelle page ; le sommaire sait dans quelle page se trouve chaque titre
+  const topIndex = (node) => { let n = node; while (n && n.parent && n.parent !== doc) n = n.parent; return doc.children.indexOf(n); };
+  const breakAt = pageBreaks.map(topIndex).filter((i) => i >= 0).sort((x, y) => x - y);
+  const pageOf = (node) => 1 + breakAt.filter((i) => i < topIndex(node)).length;
+  for (const t of toc) { t.page = pageOf(t.node); delete t.node; }
+  // Notes de bas de page : numérotées dans l'ordre du texte ; la liste est en fin d'article (en fin de chaque page si l'article est découpé), avec lien de retour
+  const notes = footnotes.map((sup, i) => {
+    const n = i + 1;
+    const refId = uniqueId(`fnref-${n}`); const noteId = uniqueId(`fn-${n}`);
+    const page = pageOf(sup);
+    DomUtils.prepend(sup, el("sup", { class: "kb-fn-ref", id: refId }, [el("a", { href: `#${noteId}`, "aria-label": `Note ${n}` }, [text(String(n))])]));
+    DomUtils.removeElement(sup);
+    return { page, item: () => el("li", { id: noteId, value: String(n) }, [text(sup.attribs["data-note"]), text(" "), el("a", { href: `#${refId}`, class: "kb-fn-back", "aria-label": `Retour au texte (note ${n})` }, [text("↩")])]) };
+  });
+  const notesAside = (list) => el("aside", { class: "kb-footnotes", "aria-label": "Notes de bas de page" }, [el("ol", {}, list.map((x) => x.item()))]);
+  // Sommaire en bloc : liste des titres de l'article (page de chaque titre comprise)
+  for (const node of tocBlocks) replace(node, blogDynamic.toc(node.attribs, toc, (n) => (breakAt.length ? pageHref(n) : "")));
+  let pages = null;
+  if (breakAt.length) {
+    const kids = doc.children.slice();
+    const cuts = [0, ...breakAt, kids.length];
+    pages = [];
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const slice = kids.slice(cuts[i], cuts[i + 1]).filter((k) => !pageBreaks.includes(k));
+      const mine = notes.filter((x) => x.page === i + 1);
+      pages.push(render([...slice, ...(mine.length ? [notesAside(mine)] : [])], { encodeEntities: "utf8" }));
+    }
+    pages = pages.filter((p) => /\S/.test(p.replace(/<[^>]*>/g, "")) || /<(img|figure|iframe|hr)/.test(p));
+    if (pages.length < 2) pages = null;
+  }
+  if (notes.length) DomUtils.appendChild(doc, notesAside(notes));
+  for (const node of pageBreaks) DomUtils.removeElement(node);
   const out = render(doc, { encodeEntities: "utf8" });
-  const plain = DomUtils.textContent(doc);
+  const plainOf = (nodes) => nodes.map((n) => (n.type === "text" ? n.data : n.attribs && (hasClass(n, "kb-html-block") || n.name === "script" || n.name === "style") ? "" : plainOf(n.children || []))).join(" ");
+  const plain = plainOf(doc.children);
   const words = (plain.match(/[\p{L}\p{N}’']+/gu) || []).length;
-  return { html: out, toc, words, minutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)), images, links, faq, howto };
+  return { html: out, pages, toc, words, minutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)), images, links, faq, howto };
 }
 
 // Texte brut d'un contenu (analyse, résumé automatique)

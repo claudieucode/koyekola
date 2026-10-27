@@ -122,11 +122,15 @@ function courseCard(slug) {
 }
 
 // Rendu public : Markdown (anciens articles) ou texte riche de l'éditeur
-function renderPost(post, { newsletterHtml = null } = {}) {
+function renderPost(post, { newsletterHtml = null, allowCustomHtml = true } = {}) {
   const imageSize = (src) => db.prepare("SELECT width, height FROM media WHERE path = ?").get(String(src || ""));
-  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, fileSize: (src) => (db.prepare("SELECT size FROM media WHERE path = ?").get(String(src || "")) || {}).size, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id, post.id ? (require("./siteContent").siteOf(db, "post", post.id) ?? null) : null) });
+  if (post.content_format === "html") {
+    // Blocs dynamiques (derniers articles, catégories, archives…) : données limitées au site de l'article (src/services/blogWidgets.js)
+    const widgets = require("./blogWidgets").forPost(post, { excerptOf });
+    return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, fileSize: (src) => (db.prepare("SELECT size FROM media WHERE path = ?").get(String(src || "")) || {}).size, widgets, allowCustomHtml, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id, post.id ? (require("./siteContent").siteOf(db, "post", post.id) ?? null) : null) });
+  }
   const r = renderArticle(post.content, { courseCard });
-  return { ...r, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
+  return { ...r, pages: null, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
 }
 
 // ---------- Statuts et programmation ----------

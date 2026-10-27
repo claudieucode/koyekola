@@ -144,6 +144,10 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "feed_cache": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
   "lesson_attachments": {
    "siteId": false,
    "classe": "plateforme"

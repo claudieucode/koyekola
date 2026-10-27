@@ -19,6 +19,9 @@ const { fileExists } = require("../config/mediaAudit");
 const { themeFor } = require("../utils/blogThemes");
 const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/seo");
 const { sanitizeBlogHtml, markdownToEditorHtml, findUnsupported, excerptBeforeMore } = require("../utils/blogHtml");
+const customHtml = require("../utils/customHtml");
+// Le bloc « HTML personnalisé » (code libre) n'est signé que pour le compte créateur : toute autre personne le voit refusé à l'enregistrement
+const mayWriteHtml = (req) => Boolean(req.session && req.session.user && req.session.user.role === "formateur" && !req.blogSite);
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const articles = require("../services/articles");
@@ -135,6 +138,9 @@ function renderList(req, res, { filter = null } = {}) {
   if (filter && (filter.type === "category" || filter.type === "tag")) { const f = taxonomy.contentFilter("post", filter.termIds); where.push(f.sql); params.push(...f.args); }
   if (filter && filter.type === "author") { where.push("(author_id = ? OR (author_id IS NULL AND ? = (SELECT MIN(id) FROM users WHERE role = 'formateur')))"); params.push(filter.id, filter.id); }
   let rows = db.prepare(`SELECT * FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC`).all(...params);
+  // Archives par date (blocs Archives / Calendrier) : ?date=AAAA-MM ou AAAA-MM-JJ
+  const dateFilter = /^\d{4}-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?$/.test(String(req.query.date || "")) ? String(req.query.date) : "";
+  if (dateFilter) rows = rows.filter((p) => String(p.published_at || "").startsWith(dateFilter));
   // Recherche : titre, extrait, catégorie, sous-catégorie, étiquettes et texte de l'article ; tous les mots doivent figurer
   const q = String(req.query.q || "").replace(/\s+/g, " ").trim().slice(0, 100);
   if (q) {
@@ -144,7 +150,7 @@ function renderList(req, res, { filter = null } = {}) {
       return terms.every((t) => hay.includes(t));
     });
   }
-  const hub = !filter && !q;
+  const hub = !filter && !q && !dateFilter;
   // Article à la une : celui marqué « à la une » dans l'éditeur, sinon le plus récent (accueil du blog seulement)
   let featured = null;
   if (hub && rows.length) {
@@ -171,7 +177,7 @@ function renderList(req, res, { filter = null } = {}) {
   const listed = featured && page === 1 ? [featured, ...posts] : posts;
   const seo = seoPages.blogList(req, { filter, page, basePath, heading, crumbs, posts: listed });
   // Résultats de recherche : pas d'indexation (contenu en double des listes), liens suivis
-  if (q) seo.robots = "noindex, follow";
+  if (q || dateFilter) seo.robots = "noindex, follow";
   const categories = blog.categories(scope).map((c) => ({ ...c, theme: themeFor(c) }));
   // Sections éditoriales de l'accueil du blog
   let popular = [], discover = null;
@@ -241,7 +247,7 @@ router.get("/blog/feed.xml", (req, res) => {
   const date = (value) => { const d = new Date(String(value || "").replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(value)) ? "" : "Z")); return Number.isNaN(d.getTime()) ? new Date(0).toUTCString() : d.toUTCString(); };
   const items = rows.map((p) => {
     const url = absoluteUrl(req, urls.publicPath("post", p));
-    return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description>${full ? `<content:encoded><![CDATA[${String(blog.renderPost(p).html || "").replace(/\]\]>/g, "]]]]><![CDATA[>")}]]></content:encoded>` : ""}</item>`;
+    return `<item><title>${escapeXml(p.title)}</title><link>${escapeXml(url)}</link><guid isPermaLink="true">${escapeXml(url)}</guid><pubDate>${date(p.published_at)}</pubDate><description>${escapeXml(excerptOf(p))}</description>${full ? `<content:encoded><![CDATA[${String(blog.renderPost(p, { allowCustomHtml: false }).html || "").replace(/\]\]>/g, "]]]]><![CDATA[>")}]]></content:encoded>` : ""}</item>`;
   }).join("");
   const channelLast = rows.length ? date(rows[0].published_at) : new Date(0).toUTCString();
   res.set("Content-Type", "application/rss+xml; charset=utf-8").set("Cache-Control", "public, no-cache");
@@ -287,6 +293,10 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   }
   const newsletter = newsletterForm(req);
   const article = blog.renderPost(post, { newsletterHtml: newsletterBlockHtml(newsletter) });
+  // Article découpé en pages (bloc « Page suivante ») : ?page=N ; un numéro hors limites montre la première page
+  const pageCount = article.pages ? article.pages.length : 1;
+  const askedPage = Number.parseInt(req.query.page, 10);
+  const pageNo = pageCount > 1 && Number.isInteger(askedPage) && askedPage >= 1 && askedPage <= pageCount ? askedPage : 1;
   const minutes = Number.isInteger(post.reading_minutes) && post.reading_minutes > 0 ? post.reading_minutes : article.minutes;
   const tags = blog.parseTags(post.tags);
   const description = post.seo_description || excerptOf(post);
@@ -306,7 +316,8 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   // « Mis à jour le » : seulement si l'article a été modifié un autre jour que celui de sa publication
   const modified = post.published_at && post.updated_at && post.updated_at.slice(0, 10) > post.published_at.slice(0, 10) ? post.updated_at : null;
 
-  const seo = { title, description, canonical };
+  const pagedCanonical = pageCount > 1 && pageNo > 1 && canonical === ownUrl ? `${ownUrl}?page=${pageNo}` : canonical; // chaque page d'un article découpé est sa propre adresse canonique
+  const seo = { title, description, canonical: pagedCanonical };
   if (!post.published || preview) {
     seo.noindex = true;
   } else {
@@ -358,14 +369,15 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   }
   const pageScope = urls.contentScope("post", "posts.id", req.kwSite || null);
   const { previous, next } = post.published ? blog.neighbours(post, pageScope) : { previous: null, next: null };
-  const toc = post.toc_enabled === 0 ? [] : article.toc;
+  // Sommaire : les titres des autres pages pointent vers leur page (?page=N#ancre) ; ceux de la page affichée restent des ancres simples
+  const toc = (post.toc_enabled === 0 ? [] : article.toc).map((t) => (pageCount > 1 ? { ...t, href: t.page === pageNo ? `#${t.id}` : `?page=${t.page}#${t.id}` } : t));
   // Modèle de thème « Article du blog » (Page Builder) : remplace l'en-tête, l'image et le texte ; sans modèle publié, rien ne change
   const postTaxo = taxonomy.termsOf("post", post.id);
   const primaryTerm = postTaxo.primary;
   const nearestCats = primaryTerm ? [primaryTerm.name, ...taxonomy.ancestors(primaryTerm.id).map((a) => a.name).reverse()] : [];
   themeRender.renderRegion(req, res, db, "single_post", { category: nearestCats[0] || post.category || "", categories: nearestCats.slice(1), tags: (postTaxo.tags || []).map((t) => t.name), postId: post.id, scope: { post: themeRender.postScope(post, { contentHtml: article.html, minutes, author: author ? author.username : "" }) } }, (themeTemplate) => {
   res.render("blog/show", {
-    themeTemplate, post, crumbs, author, seo, article: { ...article, toc }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
+    themeTemplate, post, crumbs, author, seo, article: { ...article, toc, html: pageCount > 1 ? article.pages[pageNo - 1] : article.html, pageNo, pageCount }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
     tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,
     categorySlug: post.category ? taxonomy.categorySlugOfName(post.category) : "", postTerms,
     sidebar: { popular: blog.popular(4, post.id, pageScope), recent: blog.recent(4, post.id, pageScope), categories: blog.categories(pageScope), newsletter },
@@ -585,7 +597,7 @@ function applyTaxonomy(postId, body) {
   }
 }
 
-function readFields(body, existing = null, site = null) {
+function readFields(body, existing = null, site = null, allowHtml = false) {
   const minutes = String(body.reading_minutes || "").trim();
   const canonical = oneLine(body.canonical_url, 500);
   const format = body.content_format === "html" ? "html" : "markdown";
@@ -596,7 +608,7 @@ function readFields(body, existing = null, site = null) {
   const fields = {
     title: oneLine(body.title, 150),
     excerpt: oneLine(body.excerpt, 300) || (format === "html" ? oneLine(excerptBeforeMore(raw), 300) : ""), // extrait vide : le texte avant « Lire la suite »
-    content: format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(raw), site) : raw,
+    content: format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(customHtml.signBlocks(raw, { allowed: allowHtml })), site) : raw,
     content_format: format,
     seo_title: oneLine(body.seo_title, 70),
     seo_description: oneLine(body.seo_description, 160),
@@ -754,6 +766,7 @@ function editorData(req, post) {
     statuses: blog.STATUSES, languages: Object.keys(LANGUAGES), currentUserId: req.session.user.id,
     aiConfigured: blogAi.isConfigured(), siteUrl: absoluteUrl(req, "/").replace(/\/$/, ""),
     newsletterReady: Boolean(marketing && marketing.ready && newsletterForm(req)),
+    canHtml: mayWriteHtml(req) && customHtml.available(),
     editorTheme: editorTheme.describe(db.prepare("SELECT editor_theme, editor_color FROM user_prefs WHERE user_id = ?").get(req.session.user.id)), editorThemes: editorTheme.THEMES,
     seoWorkspace: seoWorkspace.prefsOf(req.session.user.id),
     editorPrefs: reusable.prefsOf(req.session.user.id),
@@ -767,7 +780,7 @@ router.post("/formateur/blog/api/seo-check", upload.none(), (req, res) => {
   if (req.blogSite !== undefined && existing && siteContent.siteOf(db, "post", existing.id) !== req.blogSite) return res.status(403).json({ error: "Vous n'avez pas accès à cet article." });
   let f;
   // Données incomplètes (ex. titre vide) : le contrôle porte alors sur les valeurs brutes, pour tout signaler d'un coup
-  try { f = readFields(req.body, existing, existing ? (siteContent.siteOf(db, "post", existing.id) ?? null) : editorSiteSafe(req)); } catch (error) { if (!(error instanceof UserError)) throw error; f = { ...req.body, robots_index: req.body.robots_index === "0" ? 0 : 1 }; }
+  try { f = readFields(req.body, existing, existing ? (siteContent.siteOf(db, "post", existing.id) ?? null) : editorSiteSafe(req), mayWriteHtml(req)); } catch (error) { if (!(error instanceof UserError)) throw error; f = { ...req.body, robots_index: req.body.robots_index === "0" ? 0 : 1 }; }
   const mediaSite = existing ? (siteContent.siteOf(db, "post", existing.id) ?? null) : (req.blogSite ?? null);
   const cover = libraryImage(req.body.cover_media, mediaSite) || (req.body.remove_cover === "1" ? null : existing && existing.cover_path);
   const og = libraryImage(req.body.og_image_media, mediaSite) || (req.body.remove_og_image === "1" ? null : existing && existing.og_image_path);
@@ -926,7 +939,7 @@ router.get("/formateur/blog/:id/modifier", loadPost, (req, res) => {
 // Création (formulaire classique ou éditeur)
 router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   const site = newArticleSite(req);
-  const f = readFields(req.body, null, newArticleSite(req));
+  const f = readFields(req.body, null, newArticleSite(req), mayWriteHtml(req));
   if (req.blogActor) f.author_id = null; // un rédacteur ne signe qu'en son nom
   const st = applyStatus(req.body, null, f);
   guardActorStatus(req, st, null);
@@ -960,7 +973,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   const p = req.post;
   // Conflit d'enregistrement (palier 10, D3) : l'article a été modifié depuis la version que cet écran a chargée → rien n'est écrasé
   if (isStale(req.body, p)) return conflictResponse(req, res, p);
-  const f = readFields(req.body, p, siteContent.siteOf(db, "post", p.id) ?? null);
+  const f = readFields(req.body, p, siteContent.siteOf(db, "post", p.id) ?? null, mayWriteHtml(req));
   if (req.blogActor) f.author_id = null; // un rédacteur ne change pas l'auteur d'un article
   const st = applyStatus(req.body, p, f);
   guardActorStatus(req, st, p);
@@ -1053,7 +1066,7 @@ router.post("/formateur/blog/:id/autosave", loadPost, upload.none(), (req, res) 
   if (isStale(req.body, req.post)) return conflictResponse(req, res, req.post); // un onglet périmé n'écrase pas la sauvegarde automatique d'un onglet à jour
   const data = {};
   for (const [k, v] of Object.entries(req.body)) if (typeof v === "string" && /^[a-z_]{1,40}$/.test(k)) data[k] = v.slice(0, k === "content" ? MAX_HTML : 5000);
-  if (data.content) data.content = reusable.pruneMissing(sanitizeBlogHtml(data.content), siteContent.siteOf(db, "post", req.post.id) ?? null);
+  if (data.content) data.content = reusable.pruneMissing(sanitizeBlogHtml(customHtml.signBlocks(data.content, { allowed: mayWriteHtml(req) })), siteContent.siteOf(db, "post", req.post.id) ?? null);
   let savedAt;
   try { savedAt = blog.setAutosave(req.post.id, req.session.user.id, data); } catch (error) {
     if (!(error instanceof UserError)) throw error;
@@ -1087,6 +1100,20 @@ router.get("/formateur/blog/:id/apercu", loadPost, (req, res) => {
 
 // ---------- Corbeille des blocs (Structure de l'article → Corbeille) ----------
 // ---------- Diagnostic des blocs (compte créateur) : registre, version du schéma, usage réel dans les articles, blocs inconnus ----------
+// Aperçu d'un flux RSS pour le bloc « Flux RSS » (compte créateur seulement : hors de la liste des routes de rédaction). Lit le flux, le met en cache et renvoie ses premiers éléments.
+const feedLimiter = createRateLimiter(30, 10 * 60 * 1000);
+router.get("/formateur/blog/api/flux", async (req, res) => {
+  const rssFeeds = require("../services/rssFeeds");
+  const url = rssFeeds.checkUrl(req.query.url);
+  if (!url) return res.status(400).json({ error: "Adresse de flux refusée : https, nom de domaine public, sans identifiants." });
+  if (feedLimiter.isLimited(`feed:${req.session.user.id}`)) return res.status(429).json({ error: "Trop de lectures de flux en peu de temps. Patientez quelques minutes." });
+  const feed = await rssFeeds.refresh(url.href);
+  if (!feed) {
+    const c = rssFeeds.cached(url.href);
+    return res.json({ title: c.title, items: c.items, error: c.items.length ? "Flux momentanément indisponible : la dernière version enregistrée est affichée." : "Flux illisible ou inaccessible (adresse non autorisée, délai dépassé, type de contenu refusé ou fichier trop volumineux)." });
+  }
+  res.json({ title: feed.title, items: feed.items.slice(0, 10) });
+});
 router.get("/formateur/blog/api/diagnostic", (req, res) => {
   const rows = db.prepare("SELECT id, content FROM posts WHERE content_format = 'html' AND deleted_at IS NULL").all();
   const known = new Set(blockRegistry.BLOCKS.map((b) => b.cls).filter(Boolean));

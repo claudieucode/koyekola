@@ -18,7 +18,8 @@ import Superscript from "@tiptap/extension-superscript";
 import { Placeholder, Focus } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
-import { BLOG_NODES, CALLOUT_LABELS, reusableContent, forgetReusable } from "./blog/nodes";
+import { BLOG_NODES, CALLOUT_LABELS, reusableContent, forgetReusable, dynamicDefaults } from "./blog/nodes";
+import { DYNAMIC } from "../shared/dynamicBlocks";
 import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag, zoneBlockPos, ZONES } from "./blog/dragHandle";
 import { createWorkspace } from "./blog/workspace";
 import { createSeoData, createRenderers } from "./blog/seoPanels";
@@ -383,8 +384,13 @@ function start() {
     // Un bloc par service (comme Gutenberg), dérivé de la table des services du serveur : une adresse d'un autre service est refusée avec un message clair
     ...EMBED_PROVIDERS.map((p) => ({ id: p.id, title: p.label, cat: "Intégrations", icon: "video", desc: `Contenu ${p.label}.`, keywords: p.keywords, run: () => urlPrompt(p.label, `Adresse du contenu ${p.label}`, p.example, (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } }), { check: (v) => { const e = embedProviderFor(v); return Boolean(e && e.provider === p.id); }, error: `Ce n'est pas une adresse ${p.label} reconnue (${p.example}).` }) })),
     { id: "vimeo", title: "Vimeo", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo Vimeo.", run: () => urlPrompt("Vimeo", "Adresse de la vidéo Vimeo", "https://vimeo.com/…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
+    // Widgets dynamiques : le serveur fabrique leur contenu à l'affichage, limité au site de l'article
+    ...DYNAMIC.filter((d) => d.name !== "kbRss").map((d) => ({ id: d.name, title: d.label, cat: "Widgets", icon: "list", desc: d.desc, keywords: d.keywords, run: () => blk({ type: d.name, attrs: dynamicDefaults(d.name) }) })),
+    { id: "kbRss", title: "Flux RSS", cat: "Widgets", icon: "list", desc: DYNAMIC.find((d) => d.name === "kbRss").desc, keywords: DYNAMIC.find((d) => d.name === "kbRss").keywords, run: () => urlPrompt("Flux RSS", "Adresse du flux RSS ou Atom (https)", "https://exemple.org/feed.xml", (url) => { blk({ type: "kbRss", attrs: { ...dynamicDefaults("kbRss"), url } }); api(`/formateur/blog/api/flux?url=${encodeURIComponent(url)}`).catch(() => {}); }) },
+    { id: "nextpage", title: "Page suivante", cat: "Mise en page", icon: "separator", desc: "Découpe l'article en plusieurs pages : le texte qui suit s'affiche sur une nouvelle page du site (?page=2).", keywords: "pagination suite nextpage découper", run: () => blk({ type: "kbNextPage" }) },
+    ...(DATA.canHtml ? [{ id: "html", title: "HTML personnalisé", cat: "Mise en forme", icon: "code", desc: "Code HTML libre (scripts, iframes, styles). Réservé au compte créateur : il s'exécute sur le site publié.", keywords: "code embed script iframe widget", run: () => blk({ type: "kbHtml", attrs: { code: "<p>Votre code HTML ici</p>" } }) }] : []),
   ];
-  const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Mise en page", "Intégrations"];
+  const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Mise en page", "Widgets", "Intégrations"];
   // ---------- Préférences personnelles : favoris, récents, réglages (enregistrées sur le compte) ----------
   let editorPrefs = DATA.editorPrefs || { favorites: [], recents: [], settings: {} };
   const persistPrefs = debounce(() => { api("/formateur/blog/api/preferences", { method: "PUT", json: { favorites: editorPrefs.favorites, recents: editorPrefs.recents, settings: editorPrefs.settings } }).then((r) => { editorPrefs = r.prefs; }).catch(() => toast("Préférences de l'éditeur non enregistrées (connexion ?).", "error")); }, 600);
@@ -503,8 +509,8 @@ function start() {
       if (!media.length) box.prepend(h("p", { class: "wp-help" }, "Aucune image téléversée pour l'instant."));
     } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); }
   }
-  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbPreformatted: "Préformaté", kbVerse: "Vers", kbMore: "Lire la suite", kbFile: "Fichier", kbCover: "Couverture", kbMediaText: "Média et texte", kbMediaTextBody: "Texte", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)" };
-  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button", kbPreformatted: "code", kbVerse: "quote", kbMore: "readmore", kbFile: "file", kbCover: "cover", kbMediaText: "mediatext" };
+  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbPreformatted: "Préformaté", kbVerse: "Vers", kbMore: "Lire la suite", kbFile: "Fichier", kbCover: "Couverture", kbMediaText: "Média et texte", kbMediaTextBody: "Texte", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)", kbNextPage: "Page suivante", kbHtml: "HTML personnalisé", ...Object.fromEntries(DYNAMIC.map((d) => [d.name, d.label])) };
+  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button", kbPreformatted: "code", kbVerse: "quote", kbMore: "readmore", kbFile: "file", kbCover: "cover", kbMediaText: "mediatext", kbNextPage: "separator", kbHtml: "code", ...Object.fromEntries(DYNAMIC.map((d) => [d.name, "list"])) };
   const nameOf = (node) => (node.attrs && node.attrs.blockName ? node.attrs.blockName : node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
   // ---------- Structure de l'article : vue en liste, plan, corbeille ----------
   // Une seule source de vérité : le document de l'éditeur. Chaque ligne porte l'identifiant du bloc (blockId) ;
@@ -779,7 +785,7 @@ function start() {
   const LAYOUT_TYPES = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons", "kbCover"]);
   // Bloc synchronisé en cours de modification qui contient le curseur (actions dans l'onglet Bloc)
   const editingReusableAt = () => { const $p = editor.state.selection.$from; for (let d = $p.depth; d >= 1; d--) if ($p.node(d).type.name === "kbReusableEdit") return { pos: $p.before(d), node: $p.node(d) }; return null; };
-  const SETTINGS_TYPES = new Set(["kbMore", "kbFile", "kbCover", "kbMediaText", "horizontalRule", "kbReusable", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
+  const SETTINGS_TYPES = new Set([...DYNAMIC.map((d) => d.name), "kbNextPage", "kbHtml", "kbMore", "kbFile", "kbCover", "kbMediaText", "horizontalRule", "kbReusable", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
   function currentBlock() {
     const sel = editor.state.selection;
     // « top » : le bloc à déplacer / dupliquer / supprimer — au premier niveau, ou dans une colonne / un groupe
@@ -889,12 +895,31 @@ function start() {
       chain().insertContent(content.length === 1 ? content[0].content || [] : content).run();
     } catch { toast("Accès au presse-papiers refusé par le navigateur : utilisez Ctrl+Maj+V (Cmd+Maj+V sur Mac) pour coller sans mise en forme."); }
   }
+  // Note de bas de page : nœud en ligne ; le serveur numérote les notes et les rassemble en fin d'article (ou de page)
+  function footnoteDialog(initial, done) {
+    const ta = textarea({ rows: 4, maxlength: 500, "aria-label": "Texte de la note" }, initial);
+    const m = modal(initial ? "Modifier la note de bas de page" : "Ajouter une note de bas de page", control("Texte de la note", ta, "500 caractères au plus. Affichée en bas de l'article avec un lien de retour."), [{ label: "Enregistrer", primary: true, run: () => { const v = ta.value.replace(/\s+/g, " ").trim(); if (!v) { toast("Écrivez le texte de la note.", "error"); return true; } done(v); } }]);
+    ta.focus();
+    return m;
+  }
+  function addFootnote() {
+    const { from } = editor.state.selection;
+    footnoteDialog("", (note) => { editor.chain().focus().insertContentAt(from, { type: "kbFootnote", attrs: { note } }).run(); toast("Note ajoutée : elle apparaîtra numérotée en bas de l'article."); });
+  }
+  function editFootnote(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbFootnote") return;
+    footnoteDialog(node.attrs.note, (note) => { editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { note })); });
+  }
+  // Un clic sur une note ouvre son texte (l'événement vient de la vue du nœud, voir KbFootnote dans blog/nodes.js)
+  root.addEventListener("kb-footnote-edit", (e) => editFootnote(e.detail.pos));
   function moreFormats(anchor) {
     const colors = [["#0b2a40", "Bleu nuit"], ["#3858e9", "Bleu"], ["#1e7a34", "Vert"], ["#b45309", "Orange"], ["#cc1818", "Rouge"], ["#6b21a8", "Violet"], ["#757575", "Gris"]];
     const marks = [["#fff3a3", "Jaune"], ["#d1fae5", "Vert"], ["#e0f2fe", "Bleu"], ["#fde2e4", "Rose"]];
     popover(anchor, h("div", {},
       menuList([
         { label: "Code en ligne", icon: "code", run: () => chain().toggleCode().run() },
+        { label: "Note de bas de page…", run: () => addFootnote() },
         { label: "Souligné", run: () => chain().toggleUnderline().run(), shortcut: "Ctrl+U" },
         { label: "Barré", run: () => chain().toggleStrike().run() },
         { label: "Exposant", run: () => chain().toggleSuperscript().run() },
@@ -2039,7 +2064,7 @@ function start() {
 
   // ---------- Onglet Bloc : réglages du bloc sélectionné ----------
   const inspector = $("[data-block-inspector]");
-  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte.", kbPreformatted: "Texte dont les espaces et les retours à la ligne sont conservés.", kbVerse: "Vers de poème ou de chanson, retours à la ligne respectés.", kbMore: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", kbFile: "Un document à télécharger (PDF, Office, ZIP…).", kbCover: "Une image de fond avec du texte par-dessus.", kbMediaText: "Une image à côté d'un texte." };
+  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte.", kbPreformatted: "Texte dont les espaces et les retours à la ligne sont conservés.", kbVerse: "Vers de poème ou de chanson, retours à la ligne respectés.", kbMore: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", kbFile: "Un document à télécharger (PDF, Office, ZIP…).", kbCover: "Une image de fond avec du texte par-dessus.", kbMediaText: "Une image à côté d'un texte.", kbNextPage: "Découpe l'article en plusieurs pages.", kbHtml: "Code HTML libre, réservé au compte créateur.", ...Object.fromEntries(DYNAMIC.map((d) => [d.name, d.desc])) };
   let inspectorKey = "";
   let advancedOpen = false; // « Réglages avancés » reste ouvert d'un bloc à l'autre une fois ouvert
   const openStyleGroups = new Set(); // groupes de « Style du bloc » ouverts (conservés d'un bloc à l'autre)
@@ -2214,6 +2239,24 @@ function start() {
       inspector.append(section("Colonnes", ...cols.map((c, i) => control(`Colonne ${i + 1}`, (() => { const s = select([["pro", "Pour / avantages"], ["con", "Contre / limites"], ["neutral", "Neutre"]], c.tone); s.addEventListener("change", () => setAttrsAt(c.pos, { tone: s.value })); return s; })()))));
     } else if (t === "kbNewsletter") {
       inspector.append(section("Réglages", h("p", { class: "wp-help" }, DATA.newsletterReady ? "Le formulaire affiché se choisit dans la liste des articles (réglage « newsletter »)." : "Aucun formulaire publié : ce bloc n'apparaîtra pas tant qu'un formulaire d'inscription n'est pas publié dans Marketing.")));
+    } else if (DYNAMIC.some((d) => d.name === t)) {
+      const def = DYNAMIC.find((d) => d.name === t);
+      const fields = Object.entries(def.attrs).map(([key, [, , , spec]]) => {
+        const v = a[key] || "";
+        if (spec.kind === "check") return checkbox(spec.label, v === "true", (on) => set({ [key]: on ? "true" : "" }));
+        if (spec.kind === "select") { const sel = select(spec.options, v || def.attrs[key][2]); sel.addEventListener("change", () => set({ [key]: sel.value })); return control(spec.label, sel); }
+        if (spec.kind === "number") { const n = h("input", { type: "number", min: String(spec.min), max: String(spec.max), value: v || def.attrs[key][2], id: `wp-f${++uid}` }); n.addEventListener("change", () => { const x = Math.round(Number(n.value)); if (!(x >= spec.min && x <= spec.max)) { toast(`${spec.label} : de ${spec.min} à ${spec.max}.`, "error"); n.value = v || def.attrs[key][2]; return; } set({ [key]: String(x) }); }); return control(spec.label, n); }
+        if (spec.kind === "textarea") { const ta = textarea({ rows: 5, placeholder: spec.placeholder || "", class: "wp-mono" }, (v || "").split(" ").join("\n")); ta.addEventListener("change", () => set({ [key]: ta.value })); return control(spec.label, ta, spec.help); }
+        const inp = input({ value: v, placeholder: spec.placeholder || "", maxlength: 300 }); inp.addEventListener("change", () => set({ [key]: inp.value.trim() })); return control(spec.label, inp, null);
+      });
+      inspector.append(section("Réglages", ...fields, h("p", { class: "wp-help" }, t === "kbRss" ? "Le flux est lu et mis en cache par le serveur (actualisé toutes les heures) : rien n'est demandé au visiteur." : "Le contenu est fabriqué par le serveur à l'affichage et reste limité au site de cet article.")));
+      if (t === "kbRss" && a.url) inspector.append(section("Aperçu du flux", (() => { const box = h("div", { class: "wp-feed-preview", "aria-live": "polite" }, h("p", { class: "wp-help" }, "Lecture du flux…")); api(`/formateur/blog/api/flux?url=${encodeURIComponent(a.url)}`).then((r) => box.replaceChildren(...(r.items.length ? [h("ul", {}, ...r.items.slice(0, 5).map((i) => h("li", {}, i.title)))] : [h("p", { class: "wp-warning" }, r.error || "Aucun élément lu : vérifiez l'adresse du flux.")]))).catch((e) => box.replaceChildren(h("p", { class: "wp-warning" }, e.message || "Flux illisible."))); return box; })()));
+    } else if (t === "kbHtml") {
+      const ta = textarea({ rows: 14, class: "wp-mono", spellcheck: "false", "aria-label": "Code HTML" }, a.code || "");
+      ta.addEventListener("input", debounce(() => set({ code: ta.value }), 400));
+      inspector.append(section("Code HTML", ta, h("p", { class: "wp-warning" }, "⚠ Ce code est publié tel quel et s'exécute sur le site (scripts, iframes, styles). Il est signé par le serveur à l'enregistrement : seul le compte créateur peut le modifier. Dans l'éditeur, l'aperçu est isolé et sans scripts.")));
+    } else if (t === "kbNextPage") {
+      inspector.append(section("Réglages", h("p", { class: "wp-help" }, "L'article est découpé en pages à chaque repère. Les visiteurs naviguent avec « Page précédente / suivante » et le sommaire pointe vers la bonne page.")));
     } else if (t === "kbMore") {
       inspector.append(section("Réglages", control("Libellé (facultatif)", bind(input({ value: a.label || "", maxlength: 60, placeholder: "Lire la suite" }), "label"), "Sert d'intitulé interne ; l'extrait de l'article est le texte qui précède ce repère, quand l'extrait est vide.")));
     } else if (t === "kbFile") {
