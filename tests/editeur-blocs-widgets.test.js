@@ -228,16 +228,17 @@ describe("blocs dynamiques — isolation entre sites et pages publiées", () => 
   });
 
   test("archives par date : ?date=AAAA-MM filtre la liste du blog ; valeur piégée ignorée", async () => {
-    await article("Article d'octobre", "<p>x</p>");
-    db.prepare("UPDATE posts SET published_at = '2026-10-05 10:00:00' WHERE title = 'Article d''octobre'").run();
+    const oct0 = await article("Article de juillet", "<p>x</p>");
+    db.prepare("DELETE FROM mk_content_sites WHERE content_type = 'post' AND content_id = ?").run(oct0.id); // l'éditeur retient le dernier site choisi : cet article doit rester sur le domaine principal
+    db.prepare("UPDATE posts SET published_at = '2026-07-05 10:00:00' WHERE title = 'Article de juillet'").run();
     db.prepare("UPDATE posts SET published_at = '2026-03-02 10:00:00' WHERE title = 'Public principal'").run();
-    const octRes = await fetch(`${srv.base}/blog?date=2026-10`);
+    const octRes = await fetch(`${srv.base}/blog?date=2026-07`);
     const oct = await octRes.text();
     assert.equal(octRes.status, 200, srv.log().slice(-1500));
-    assert.match(oct, /Article d&#39;octobre|Article d'octobre/); assert.doesNotMatch(oct, /Public principal/);
+    assert.match(oct, /Article de juillet/); assert.doesNotMatch(oct, /Public principal/);
     assert.match(oct, /noindex, follow/);
     const bad = await (await fetch(`${srv.base}/blog?date=2026-13'%20OR%201=1`)).text();
-    assert.match(bad, /Public principal/, "une date invalide est ignorée");
+    assert.match(bad, /Essai inexistant/, "une date invalide est ignorée : la liste complète s'affiche"); assert.doesNotMatch(bad, /Article de juillet/);
   });
 
   test("HTML personnalisé : le compte créateur l'enregistre (signé) et il est publié ; une valeur injectée en base ne l'est pas", async () => {
