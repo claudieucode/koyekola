@@ -213,6 +213,8 @@ for (const tag of LOCKABLE) {
   transformTags[tag] = (tagName, attribs) => {
     const r = base ? base(tagName, attribs) : { tagName, attribs: {} };
     if (attribs["data-locked"] === "true" && r.tagName === tagName) r.attribs = { ...r.attribs, "data-locked": "true" };
+    if (attribs["data-lock-move"] === "true" && r.tagName === tagName) r.attribs = { ...r.attribs, "data-lock-move": "true" };
+    if (attribs["data-lock-remove"] === "true" && r.tagName === tagName) r.attribs = { ...r.attribs, "data-lock-remove": "true" };
     // Identité stable du bloc (vue en liste, corbeille) et bloc masqué : valeurs strictes
     if (r.tagName === tagName && BLOCK_ID.test(attribs["data-block-id"] || "")) r.attribs = { ...r.attribs, "data-block-id": attribs["data-block-id"] };
     if (r.tagName === tagName && attribs["data-hidden"] === "true") r.attribs = { ...r.attribs, "data-hidden": "true" };
@@ -269,7 +271,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name", "data-tone", "data-hide", ...STYLE_PROPS.map((p) => p.attr)];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-lock-move", "data-lock-remove", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name", "data-tone", "data-hide", ...STYLE_PROPS.map((p) => p.attr)];
 
 function tidy(html) {
   return html

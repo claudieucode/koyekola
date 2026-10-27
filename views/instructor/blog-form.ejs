@@ -104,6 +104,7 @@
               <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="toptoolbar">Barre d'outils fixe en haut</button>
               <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="distraction">Mode sans distraction<kbd>Ctrl+Maj+\</kbd></button>
               <button type="button" role="menuitem" data-option="fullscreen">Plein écran<kbd>Ctrl+Maj+Alt+F</kbd></button>
+              <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="zoomout">Zoom arrière<kbd>Ctrl+Maj+0</kbd></button>
               <hr>
               <p class="wp-menu-label wp-mobile-only">Aperçu</p>
               <button type="button" role="menuitem" class="wp-mobile-only" data-preview="tab">Prévisualiser l'article ↗</button>
@@ -112,6 +113,7 @@
               <button type="button" role="menuitem" data-option="settings">⚙ Réglages de l'éditeur…</button>
               <button type="button" role="menuitem" data-option="appearance">Apparence de l'éditeur…</button>
               <button type="button" role="menuitem" data-option="shortcuts">Raccourcis clavier</button>
+              <button type="button" role="menuitem" data-option="welcome">Guide de bienvenue</button>
               <button type="button" role="menuitem" data-option="diagnostic">Diagnostic des blocs…</button>
               <a role="menuitem" href="<%= siteId ? '/marketing/site-web/articles?site=' + siteId : (restrictedSite ? '/marketing/site-web/articles?site=' + restrictedSite : '/formateur/blog') %>">Retour aux articles</a>
               <a role="menuitem" href="/formateur">Mon espace (vue d'ensemble)</a>
@@ -173,6 +175,7 @@
             <label for="post-content" class="sr-only" data-content-label>Contenu (HTML)</label>
             <textarea id="post-content" name="content" rows="24" class="wp-code-editor" placeholder="Saisissez le code HTML de l'article"><%= editorHtml %></textarea>
           </div>
+          <nav class="wp-breadcrumb" data-breadcrumb aria-label="Chemin du bloc sélectionné"></nav>
         </div>
 
         <%# ---------- Espace de travail SEO : zone d'ancrage basse, fenêtres flottantes, panneaux fermés ---------- %>

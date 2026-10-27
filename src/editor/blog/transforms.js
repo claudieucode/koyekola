@@ -1,7 +1,7 @@
 // Grouper / dégrouper, transformer un bloc en un autre, copier / coller les styles (équivalents des commandes de bloc de Gutenberg).
 // Tout passe par de vraies transactions ProseMirror : « Annuler » les défait, un bloc verrouillé est refusé, et une conversion qui ne
 // peut pas conserver le contenu est REFUSÉE avec un message (jamais de perte silencieuse).
-import { Fragment } from "@tiptap/pm/model";
+import { Fragment, DOMParser as PMDOMParser } from "@tiptap/pm/model";
 import { Extension } from "@tiptap/core";
 import { NodeSelection, TextSelection, Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
@@ -16,6 +16,8 @@ export class TransformError extends Error {}
 // Chaque commande de bloc est UNE étape d'historique (comme dans Gutenberg) : « Annuler » la défait seule, sans emporter la frappe qui la précède ou la suit
 const step = (editor, tr) => { editor.view.dispatch(closeHistory(editor.state.tr)); editor.view.dispatch(tr); editor.view.dispatch(closeHistory(editor.state.tr)); };
 const isLocked = (n) => Boolean(n && n.attrs && n.attrs.locked);
+// Verrous partiels : un bloc (ou un bloc qu'il contient) verrouillé contre la suppression / le déplacement
+const anyInside = (n, key) => { let hit = Boolean(n.attrs && n.attrs[key]); if (!hit) n.descendants((c) => { if (c.attrs && c.attrs[key]) hit = true; return !hit; }); return hit; };
 const type = (editor, name) => editor.schema.nodes[name];
 
 // Blocs « frères » touchés par la sélection : { depth, parent, parentPos, start, end, from, to, nodes }
@@ -86,9 +88,32 @@ export function ungroupAt(editor, pos) {
   return content.length;
 }
 
+// ---------- Modifier un bloc en HTML : le code est relu par le schéma de l'éditeur (éléments non pris en charge retirés) ----------
+export function replaceBlockHtml(editor, pos, code) {
+  const node = editor.state.doc.nodeAt(pos);
+  if (!node) throw new TransformError("Bloc introuvable.");
+  if (isLocked(node)) throw new TransformError("Ce bloc est verrouillé : déverrouillez-le d'abord.");
+  const holder = document.createElement("div");
+  holder.innerHTML = String(code || "");
+  const slice = PMDOMParser.fromSchema(editor.schema).parseSlice(holder);
+  if (!slice.content.size) throw new TransformError("Ce HTML ne contient aucun élément pris en charge.");
+  const $pos = editor.state.doc.resolve(pos);
+  if (!$pos.parent.canReplace($pos.index(), $pos.index() + 1, slice.content)) throw new TransformError("Ce HTML ne peut pas remplacer le bloc à cet endroit.");
+  step(editor, editor.state.tr.replaceWith(pos, pos + node.nodeSize, slice.content).scrollIntoView());
+  return slice.content.childCount;
+}
+
 // ---------- Transformer un bloc en un autre ----------
 const TEXTUAL = new Set(["paragraph", "heading", "bulletList", "orderedList", "taskList", "blockquote", "codeBlock"]);
 const jsonOf = (node) => node.toJSON();
+const TEXTLIKE = new Set(["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "codeBlock", "kbPreformatted", "kbVerse"]);
+// Texte d'un bloc, une ligne par entrée : un élément de liste = une ligne, un retour à la ligne = une ligne, un paragraphe de citation = une ligne
+function textLines(node) {
+  const name = node.type.name;
+  if (["bulletList", "orderedList", "taskList"].includes(name)) { const out = []; node.descendants((n) => { if (n.type.name === "paragraph") { out.push(n.textBetween(0, n.content.size, "\n", "\n")); return false; } return true; }); return out; }
+  if (name === "blockquote") { const out = []; node.forEach((b) => out.push(...b.textBetween(0, b.content.size, "\n", "\n").split("\n"))); return out; }
+  return node.textBetween(0, node.content.size, "\n", "\n").split("\n");
+}
 const asBlocks = (editor, node) => {
   // Un bloc de texte devient le contenu d'un conteneur : tel quel (il est déjà un bloc)
   return [node];
@@ -101,6 +126,14 @@ export function transformsFor(editor, pos) {
   if (!node || isLocked(node)) return [];
   const name = node.type.name;
   const out = [];
+  // Remplace le bloc par PLUSIEURS blocs (refusé si l'emplacement ne les accepte pas)
+  const many = (label, build) => out.push({ id: `many-${out.length}`, label, run: () => {
+    const made = build();
+    if (!made.length) throw new TransformError("Il n'y a rien à convertir.");
+    const $pos = editor.state.doc.resolve(pos);
+    if (!$pos.parent.canReplace($pos.index(), $pos.index() + 1, Fragment.from(made))) throw new TransformError("Cette conversion n'est pas possible à cet endroit.");
+    step(editor, editor.state.tr.replaceWith(pos, pos + node.nodeSize, made).scrollIntoView());
+  } });
   const swap = (id, label, build) => out.push({ id, label, run: () => {
     const made = build();
     const $pos = editor.state.doc.resolve(pos);
@@ -148,6 +181,52 @@ export function transformsFor(editor, pos) {
   if (name === "kbEmbed") swap("kbVideo", "Vidéo", () => type(editor, "kbVideo").create({ url: node.attrs.url || "", caption: node.attrs.caption || "" }));
   // Boutons
   if (name === "kbButton") swap("kbButtons", "Groupe de boutons", () => type(editor, "kbButtons").create({ align: node.attrs.align || "center" }, Fragment.from(node)));
+  if (name === "kbButtons") many("Boutons séparés", () => { const btns = []; node.forEach((b) => btns.push(b)); return btns; });
+
+  // Texte : conversions entre paragraphe, titre, liste, citation, préformaté, vers et code (le texte est conservé, ligne par ligne)
+  if (TEXTLIKE.has(name)) {
+    const lines = textLines(node);
+    const makeText = (target) => type(editor, target).create(null, lines.join("\n") ? editor.schema.text(lines.join("\n")) : null);
+    if (name !== "kbPreformatted") swap("kbPreformatted", "Préformaté", () => makeText("kbPreformatted"));
+    if (name !== "kbVerse") swap("kbVerse", "Vers", () => makeText("kbVerse"));
+    const toggled = ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "codeBlock"].includes(name); // déjà proposés par les boutons de type de l'éditeur
+    if (!toggled) swap("codeBlock", "Code", () => makeText("codeBlock"));
+    if (["bulletList", "orderedList", "taskList"].includes(name)) many("Paragraphes séparés (un par élément)", () => lines.filter(Boolean).map((l) => type(editor, "paragraph").create(null, editor.schema.text(l))));
+    if (["kbPreformatted", "kbVerse"].includes(name)) many("Paragraphes (un par ligne)", () => lines.map((l) => type(editor, "paragraph").create(null, l ? editor.schema.text(l) : null)));
+    if (name === "blockquote") many("Paragraphes (sans la citation)", () => { const out = []; node.forEach((b) => out.push(b)); return out; });
+    if (!toggled && lines.join("").length) swap("blockquote", "Citation", () => type(editor, "blockquote").create(null, Fragment.from(lines.map((l) => type(editor, "paragraph").create(null, l ? editor.schema.text(l) : null)))));
+    if (!toggled) {
+      swap("bulletList", "Liste à puces", () => type(editor, "bulletList").create(null, Fragment.from(lines.filter(Boolean).map((l) => type(editor, "listItem").create(null, type(editor, "paragraph").create(null, editor.schema.text(l)))))));
+      swap("orderedList", "Liste numérotée", () => type(editor, "orderedList").create(null, Fragment.from(lines.filter(Boolean).map((l) => type(editor, "listItem").create(null, type(editor, "paragraph").create(null, editor.schema.text(l)))))));
+    }
+  }
+  // Repères : Lire la suite ↔ Page suivante
+  if (name === "kbMore" && type(editor, "kbNextPage")) swap("kbNextPage", "Page suivante", () => type(editor, "kbNextPage").create());
+  if (name === "kbNextPage" && type(editor, "kbMore")) swap("kbMore", "Lire la suite", () => type(editor, "kbMore").create());
+  // Image → Couverture ; Couverture → Image ou Groupe ; Média et texte → Image ou Groupe ; Groupe → Colonnes ; Détails → Groupe
+  if (name === "kbImage" && type(editor, "kbCover")) swap("kbCover", "Couverture", () => type(editor, "kbCover").create({ src: node.attrs.src, alt: node.attrs.alt || "", overlay: "40", height: "m" }, Fragment.from(type(editor, "paragraph").create(null, node.attrs.caption ? editor.schema.text(node.attrs.caption) : null))));
+  if (name === "kbCover") {
+    swap("kbGroup", "Groupe (texte seul)", () => type(editor, "kbGroup").create({ bg: "none", pad: "m" }, node.content));
+    many("Image + texte séparés", () => { const out = [type(editor, "kbImage").create({ src: node.attrs.src, alt: node.attrs.alt || "", align: "center", width: "100" })]; node.forEach((b) => out.push(b)); return out; });
+  }
+  if (name === "kbMediaText") {
+    many("Image et texte séparés", () => { const out = []; node.forEach((part) => { if (part.type.name === "kbMediaTextBody") part.forEach((b) => out.push(b)); else out.push(part); }); return out; });
+    swap("kbGroup", "Groupe", () => { const out = []; node.forEach((part) => { if (part.type.name === "kbMediaTextBody") part.forEach((b) => out.push(b)); else out.push(part); }); return type(editor, "kbGroup").create({ bg: "none", pad: "m" }, Fragment.from(out)); });
+  }
+  if (name === "kbGroup" && type(editor, "kbColumns")) {
+    const kids = innerBlocks(node);
+    if (kids.length >= 2) swap("kbColumns", `Colonnes (${Math.min(kids.length, 4)})`, () => {
+      const n = Math.min(kids.length, 4);
+      const buckets = Array.from({ length: n }, () => []);
+      kids.forEach((k, i) => buckets[Math.min(Math.floor((i * n) / kids.length), n - 1)].push(k));
+      return type(editor, "kbColumns").create({ layout: { 2: "50-50", 3: "33-33-33", 4: "25-25-25-25" }[n] }, Fragment.from(buckets.map((b) => type(editor, "kbColumn").create(null, Fragment.from(b)))));
+    });
+  }
+  if (name === "kbAccordion") swap("kbGroup", "Groupe (titre + contenu)", () => {
+    const body = []; let title = "";
+    node.forEach((part) => { if (part.type.name === "kbSummary") title = part.textContent; else part.forEach((b) => body.push(b)); });
+    return type(editor, "kbGroup").create({ bg: "none", pad: "m" }, Fragment.from([...(title ? [type(editor, "heading").create({ level: 3 }, editor.schema.text(title))] : []), ...body]));
+  });
   return out.filter((t, i, all) => all.findIndex((x) => x.id === t.id) === i);
 }
 function mediaTextFrom(editor, imageNode) {
@@ -214,6 +293,7 @@ export function duplicateRange(editor, range = blockRange(editor.state)) {
 export function deleteRange(editor, range = blockRange(editor.state)) {
   if (!range || !range.nodes.length) throw new TransformError("Sélectionnez un bloc à supprimer.");
   if (range.nodes.some(({ node }) => isLocked(node))) throw new TransformError("Un bloc verrouillé ne peut pas être supprimé : déverrouillez-le d'abord.");
+  if (range.nodes.some(({ node }) => anyInside(node, "lockRemove"))) throw new TransformError("Ce bloc (ou un bloc qu'il contient) est verrouillé contre la suppression : « Options de verrouillage… » pour le lever.");
   const tr = editor.state.tr.delete(range.from, range.to);
   // Un conteneur ne peut pas rester vide : le document garde au moins un paragraphe
   if (range.depth === 0 && !tr.doc.childCount) tr.insert(0, type(editor, "paragraph").create());
@@ -224,8 +304,10 @@ export function deleteRange(editor, range = blockRange(editor.state)) {
 export function moveRange(editor, dir, range = blockRange(editor.state)) {
   if (!range || !range.nodes.length) throw new TransformError("Sélectionnez un bloc à déplacer.");
   if (range.nodes.some(({ node }) => isLocked(node))) throw new TransformError("Un bloc verrouillé ne peut pas être déplacé : déverrouillez-le d'abord.");
+  if (range.nodes.some(({ node }) => node.attrs && node.attrs.lockMove)) throw new TransformError("Ce bloc est verrouillé contre le déplacement : « Options de verrouillage… » pour le lever.");
   const sibling = dir < 0 ? (range.start > 0 ? range.parent.child(range.start - 1) : null) : (range.end + 1 < range.parent.childCount ? range.parent.child(range.end + 1) : null);
   if (!sibling) throw new TransformError(dir < 0 ? "Ce bloc est déjà le premier." : "Ce bloc est déjà le dernier.");
+  if (sibling.attrs && sibling.attrs.lockMove) throw new TransformError("Le bloc voisin est verrouillé contre le déplacement : il ne peut pas être enjambé.");
   const moving = range.nodes.map((x) => x.node);
   const tr = editor.state.tr;
   tr.delete(range.from, range.to);
@@ -242,6 +324,7 @@ export function moveBlockTo(editor, fromPos, targetPos, where) {
   const target = doc.nodeAt(targetPos);
   if (!node || !target) throw new TransformError("Bloc introuvable.");
   if (isLocked(node)) throw new TransformError("Un bloc verrouillé ne peut pas être déplacé : déverrouillez-le d'abord.");
+  if (node.attrs && node.attrs.lockMove) throw new TransformError("Ce bloc est verrouillé contre le déplacement : « Options de verrouillage… » pour le lever.");
   if (targetPos >= fromPos && targetPos < fromPos + node.nodeSize) throw new TransformError("Un bloc ne peut pas être déplacé dans lui-même.");
   let at;
   let parent;

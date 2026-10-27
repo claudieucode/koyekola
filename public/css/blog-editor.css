@@ -1907,3 +1907,41 @@
 .ProseMirror .kb-ed-footnote.ProseMirror-selectednode { outline: 2px solid var(--accent, #1d4ed8); }
 .wp-mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.45; width: 100%; }
 .wp-feed-preview ul { margin: 0; padding-left: 1.2em; font-size: 13px; }
+/* Vue en liste : replier / déplier */
+.wp-lv-toggle { flex: none; width: 20px; height: 24px; padding: 0; border: 0; background: none; color: var(--muted); cursor: pointer; display: inline-grid; place-items: center; }
+.wp-lv-toggle svg { transition: transform .12s; } .wp-lv-item.is-collapsed > .wp-lv-row .wp-lv-toggle svg { transform: rotate(-90deg); }
+.wp-lv-item.is-collapsed > .wp-lv-children { display: none; }
+.wp-lv-toggle:focus-visible { outline: 2px solid var(--accent, #1d4ed8); outline-offset: 1px; }
+.wp-lv-fold { display: flex; gap: 14px; padding: 4px 4px 8px; }
+/* Fil d'Ariane */
+.wp-breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; padding: 6px 14px; border-top: 1px solid var(--border); background: var(--surface); font-size: 12.5px; color: var(--muted); min-height: 32px; }
+.wp-crumb { padding: 2px 4px; border: 0; background: none; color: var(--primary); font: inherit; cursor: pointer; border-radius: 4px; }
+.wp-crumb:hover { text-decoration: underline; } .wp-crumb:focus-visible { outline: 2px solid var(--accent, #1d4ed8); }
+.wp-crumb.is-current { color: var(--text); font-weight: 600; cursor: default; padding: 2px 4px; }
+.wp-crumb-sep { color: var(--muted); }
+/* Zoom arrière */
+.is-zoom-out .wp-content { zoom: .55; transform-origin: top center; }
+.is-zoom-out .wp-block-toolbar { zoom: 1.8; }
+/* Guide de bienvenue */
+.wp-welcome { display: grid; gap: 10px; min-width: min(420px, 80vw); }
+.wp-welcome-title { margin: 0; font-size: 1.25rem; color: var(--primary); } .wp-welcome-text { margin: 0; line-height: 1.55; } .wp-welcome-dots { margin: 0; letter-spacing: 4px; color: var(--primary); text-align: center; }
+.wp-welcome-hint { position: fixed; left: 96px; bottom: 44px; z-index: 50; display: flex; gap: 12px; align-items: center; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: 0 8px 24px rgba(11, 31, 75, .16); font-size: 13px; }
+/* Aperçu d'un bloc au survol dans l'outil d'insertion */
+.wp-block-preview { position: fixed; z-index: 60; width: 300px; max-height: 300px; overflow: hidden; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: 0 10px 28px rgba(11, 31, 75, .18); pointer-events: none; }
+.wp-block-preview[hidden] { display: none; }
+.wp-block-preview-title { margin: 0 0 2px; font-weight: 700; color: var(--primary); } .wp-block-preview-desc { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+.wp-block-preview-body { max-height: 190px; overflow: hidden; font-size: 13px; zoom: .8; border-top: 1px solid var(--border); padding-top: 8px; }
+.wp-block-preview-note { margin: 0; font-style: italic; color: var(--muted); }
+/* Sélection au lasso */
+.wp-lasso { position: fixed; z-index: 55; border: 1.5px dashed var(--accent, #1d4ed8); background: rgba(29, 78, 216, .08); pointer-events: none; }
+/* Mentions dans les notes */
+.wp-mention-wrap { position: relative; }
+.wp-mention-list { position: absolute; left: 0; right: 0; bottom: 100%; z-index: 20; margin: 0 0 4px; padding: 4px; list-style: none; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: 0 8px 22px rgba(11, 31, 75, .16); }
+.wp-mention-list[hidden] { display: none; }
+.wp-mention-list button { display: block; width: 100%; padding: 6px 10px; border: 0; border-radius: 6px; background: none; text-align: left; font: inherit; cursor: pointer; }
+.wp-mention-list button.is-active, .wp-mention-list button:hover { background: var(--accent-light, #e8efff); }
+.wp-mention { padding: 0 3px; border-radius: 4px; background: var(--accent-light, #e8efff); color: var(--primary); font-weight: 600; }
+.wp-mention.is-me { background: #fde68a; color: #3b2f0b; }
+.wp-note-body.is-mentioned { border-left: 3px solid #f59e0b; padding-left: 8px; }
+.be-tab-dot.is-mention { background: #f59e0b; }
+.ProseMirror > .is-lasso { outline: 2px solid var(--accent, #1d4ed8); outline-offset: 3px; border-radius: 4px; }

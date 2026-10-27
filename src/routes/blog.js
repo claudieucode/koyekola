@@ -1140,7 +1140,7 @@ router.get("/formateur/blog/api/diagnostic", (req, res) => {
 // ---------- Notes de travail de l'article (jamais publiées) ----------
 const noteLimiter = createRateLimiter(40, 10 * 60 * 1000);
 const noteJson = (req, res, fn) => { try { res.json(fn()); } catch (e) { if (e instanceof UserError) return res.status(e.message === "Note introuvable." ? 404 : 400).json({ error: e.message }); throw e; } };
-router.get("/formateur/blog/:id(\\d+)/notes", loadPost, (req, res) => res.json({ notes: postNotes.list(req.post.id), me: req.session.user.id, canModerate: !req.blogActor || req.blogActor.all }));
+router.get("/formateur/blog/:id(\\d+)/notes", loadPost, (req, res) => res.json({ notes: postNotes.list(req.post.id), people: postNotes.mentionable(req.post.id), me: req.session.user.id, canModerate: !req.blogActor || req.blogActor.all }));
 router.post("/formateur/blog/:id(\\d+)/notes", express.json({ limit: "16kb" }), loadPost, (req, res) => {
   const who = `note:${req.session.user.id}`;
   if (noteLimiter.isLimited(who)) return res.status(429).json({ error: "Trop de notes en peu de temps. Patientez quelques minutes." });

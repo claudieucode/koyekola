@@ -17,14 +17,14 @@ import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import { Placeholder, Focus } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
+import { DOMParser as PMDOMParser, DOMSerializer as PMDOMSerializer } from "@tiptap/pm/model";
 import { BLOG_NODES, CALLOUT_LABELS, reusableContent, forgetReusable, dynamicDefaults } from "./blog/nodes";
 import { DYNAMIC } from "../shared/dynamicBlocks";
 import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag, zoneBlockPos, ZONES } from "./blog/dragHandle";
 import { createWorkspace } from "./blog/workspace";
 import { createSeoData, createRenderers } from "./blog/seoPanels";
 import { setupWorkspaceUi } from "./blog/workspaceUi";
-import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
+import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, setLockState, lockSummary, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
@@ -38,7 +38,7 @@ const MAPS_EMBED = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~
 export const embedKindFor = (url) => (YT_VIMEO.test(url) ? "kbVideo" : MAPS_EMBED.test(url) || embedProviderFor(url) ? "kbEmbed" : "");
 import { PATTERNS, PATTERN_CATEGORIES } from "./blog/patterns";
 import { NotesBadges, setNoteCounts } from "./blog/notes";
-import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
+import { replaceBlockHtml, blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
 
@@ -173,10 +173,10 @@ function start() {
   };
   // Modification refusée sur un bloc verrouillé (message au plus toutes les 4 s)
   let lockNoticeAt = 0;
-  function lockedNotice() {
+  function lockedNotice(kind = "locked") {
     if (Date.now() - lockNoticeAt < 4000) return;
     lockNoticeAt = Date.now();
-    toast("Bloc verrouillé : clic droit (ou ⋮) → « Déverrouiller » pour le modifier.", "error");
+    toast(kind === "move" ? "Ce bloc est verrouillé contre le déplacement : « Options de verrouillage… » pour le lever." : kind === "remove" ? "Ce bloc est verrouillé contre la suppression : « Options de verrouillage… » pour le lever." : "Bloc verrouillé : clic droit (ou ⋮) → « Déverrouiller » pour le modifier.", "error");
   }
 
   // ---------- Fenêtres (modales WordPress) ----------
@@ -230,7 +230,7 @@ function start() {
       ...BLOG_NODES,
       Focus.configure({ mode: "shallowest", className: "has-focus" }),
       BlockHandle,
-      BlockLock.configure({ onBlocked: () => lockedNotice() }),
+      BlockLock.configure({ onBlocked: (kind) => lockedNotice(kind) }),
       BlockSupports,
       MultiSelectHighlight,
       NotesBadges.configure({ onClick: (id) => openNotes(id) }),
@@ -291,7 +291,9 @@ function start() {
   const GOOGLE_MAP = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~:-]{10,2000}$/;
   // Code d'intégration Google Maps collé tel quel : on n'en garde que l'adresse de la carte
   const mapsUrl = (v) => { const m = String(v || "").match(/src=["']([^"']+)["']/); return (m ? m[1] : String(v || "")).trim().replace(/&amp;/g, "&"); };
+  let capturing = null; // aperçu d'un bloc dans l'outil d'insertion : « blk » enregistre le contenu au lieu de l'insérer
   function blk(content) {
+    if (capturing) { capturing.push(content); return true; }
     const sel = editor.state.selection;
     const { $from } = sel;
     // Zone d'insertion : le document, ou la colonne / le groupe le plus proche du curseur (blocs imbriqués)
@@ -406,8 +408,36 @@ function start() {
     toast(`Bloc synchronisé « ${b.name} » inséré : il suivra chaque modification du bloc.`);
   };
   const usesText = (b) => (b.occurrences ? `Utilisé ${b.occurrences} fois · ${b.uses} article${b.uses > 1 ? "s" : ""}` : "Pas encore utilisé");
+  let previewBox = null;
+  function hideBlockPreview() { if (previewBox) previewBox.hidden = true; }
+  function showBlockPreview(b, anchor) {
+    if (!previewBox) { previewBox = h("div", { class: "wp-block-preview", role: "presentation", "aria-hidden": "true" }); document.body.append(previewBox); }
+    let content = [];
+    capturing = [];
+    try { b.run(); content = capturing; } catch { content = []; } finally { capturing = null; }
+    const body = h("div", { class: "wp-block-preview-body be-prose" });
+    for (const json of content.slice(0, 1)) {
+      try {
+        const node = editor.schema.nodeFromJSON(json);
+        if (node.isAtom) body.append(h("p", { class: "wp-block-preview-note" }, `${LABEL[node.type.name] || b.title} : s'affiche sur le site (réglages dans l'onglet « Bloc »).`));
+        else body.append(PMDOMSerializer.fromSchema(editor.schema).serializeNode(node));
+      } catch { /* aperçu indisponible : titre et description suffisent */ }
+    }
+    if (!body.childNodes.length) body.append(h("p", { class: "wp-block-preview-note" }, "Choisissez le contenu (image, fichier, adresse…) après avoir ajouté le bloc."));
+    previewBox.replaceChildren(h("p", { class: "wp-block-preview-title" }, b.title), h("p", { class: "wp-block-preview-desc" }, b.desc || ""), body);
+    const r = anchor.getBoundingClientRect(); const panel = secondary.getBoundingClientRect();
+    previewBox.style.left = `${Math.round(panel.right + 8)}px`;
+    previewBox.style.top = `${Math.max(8, Math.min(Math.round(r.top), window.innerHeight - 280))}px`;
+    previewBox.hidden = false;
+  }
   const blockButton = (b, after, { star = false, onStar } = {}) => {
     const btn = h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); useBlock(b.id); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
+    // Aperçu au survol / au focus (comme Gutenberg) : le bloc tel qu'il sera inséré, sans rien modifier dans l'article
+    btn.addEventListener("mouseenter", () => showBlockPreview(b, btn));
+    btn.addEventListener("focus", () => showBlockPreview(b, btn));
+    btn.addEventListener("mouseleave", hideBlockPreview);
+    btn.addEventListener("blur", hideBlockPreview);
+    btn.addEventListener("click", hideBlockPreview);
     // Glisser le bloc depuis l'outil d'insertion vers l'article : il est inséré à l'endroit du dépôt
     btn.draggable = true;
     btn.addEventListener("dragstart", (e) => { e.dataTransfer.setData("application/x-kb-insert", b.id); e.dataTransfer.setData("text/plain", b.title); e.dataTransfer.effectAllowed = "copy"; });
@@ -417,6 +447,7 @@ function start() {
   };
   const matches = (b, q) => !q || norm(`${b.title} ${b.cat} ${b.keywords || ""} ${b.desc}`).includes(norm(q));
   function urlPrompt(title, label, placeholder, done, { kind, transform, check, error } = {}) {
+    if (capturing) return;
     const url = input({ type: transform ? "text" : "url", placeholder });
     const body = h("div", {}, control(label, url));
     if (kind === "video") body.append(h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { m.close(); openMediaModal({ kind: "video", onSelect: (media) => done(media.path) }); } }, "Ou téléverser un fichier vidéo…"));
@@ -517,6 +548,7 @@ function start() {
   // la zone d'écriture et la liste se retrouvent par cet identifiant, jamais par un rang dans un tableau.
   let structureTab = "liste";
   let listRows = new Map(); // blockId → ligne de la vue en liste (reconstruite à chaque rendu)
+  const listCollapsed = new Set(); // blocs conteneurs repliés dans la vue en liste (conservés d'un rendu à l'autre)
   let listActive = null;
   let trashItems = null; // éléments de la corbeille (serveur), chargés à la demande
   let pendingTrash = []; // article jamais enregistré : éléments envoyés au premier enregistrement
@@ -580,6 +612,19 @@ function start() {
         const sub = h("ul", { role: "group", class: "wp-lv-children" });
         row.append(sub);
         stack.push({ depth, ul: sub });
+        // Replier / déplier ; Alt + clic : replier tous les autres conteneurs (sauf celui-ci et ses parents), comme Gutenberg
+        if (id) {
+          const folded = listCollapsed.has(id);
+          row.setAttribute("aria-expanded", String(!folded));
+          row.classList.toggle("is-collapsed", folded);
+          const toggle = h("button", { type: "button", class: "wp-lv-toggle", "data-block-toggle": id, "aria-expanded": String(!folded), "aria-label": `${folded ? "Déplier" : "Replier"} ${name}`, title: "Replier / déplier · Alt + clic : replier tous les autres",
+            onclick: (e) => {
+              if (e.altKey) { const keep = new Set([id]); let p = row.parentElement; while (p) { if (p.dataset && p.dataset.blockRow) keep.add(p.dataset.blockRow); p = p.parentElement; } for (const other of listRows.keys()) { if (!keep.has(other) && listRows.get(other).querySelector(":scope > .wp-lv-children")) listCollapsed.add(other); } listCollapsed.delete(id); }
+              else if (folded) listCollapsed.delete(id); else listCollapsed.add(id);
+              renderListView();
+            } }, svg("chevronDown", 16));
+          rowBox.prepend(toggle);
+        }
       }
       return hidden ? false : undefined; // les enfants d'un bloc masqué sont masqués avec lui
     });
@@ -589,7 +634,7 @@ function start() {
     if (!hs.length) outline.append(h("li", { class: "wp-help" }, "Le plan s'affiche à partir des titres (blocs Titre)."));
     const trashCount = visibleTrash().length;
     const tabs = structureTabs([["liste", "Vue en liste"], ["plan", "Plan"], ["corbeille", trashCount ? `Corbeille (${trashCount})` : "Corbeille"]], (k) => {
-      structureTab = k; list.hidden = k !== "liste"; outline.hidden = k !== "plan"; trash.hidden = k !== "corbeille";
+      structureTab = k; list.hidden = k !== "liste"; fold.hidden = k !== "liste"; outline.hidden = k !== "plan"; trash.hidden = k !== "corbeille";
       if (k === "corbeille") renderTrash(trash, true);
       if (k === "liste") syncListSelection(true);
     });
@@ -599,7 +644,8 @@ function start() {
     // Le focus clavier reste sur le même bouton du même bloc après le nouveau rendu
     const fa = document.activeElement;
     const focusKey = fa && secondaryDynamic.contains(fa) ? ["data-block-select", "data-block-hide", "data-block-delete", "data-structure-tab"].map((a) => (fa.hasAttribute(a) ? `[${a}="${fa.getAttribute(a)}"]` : null)).find(Boolean) : null;
-    body.append(stats, list, outline, trash);
+    const fold = h("div", { class: "wp-lv-fold", hidden: structureTab !== "liste" }, h("button", { type: "button", class: "wp-btn-link", onclick: () => { for (const k of listRows.keys()) if (listRows.get(k).querySelector(":scope > .wp-lv-children")) listCollapsed.add(k); renderListView(); } }, "Tout replier"), h("button", { type: "button", class: "wp-btn-link", onclick: () => { listCollapsed.clear(); renderListView(); } }, "Tout déplier"));
+    body.append(stats, fold, list, outline, trash);
     secondaryDynamic.replaceChildren(tabs, body);
     body.scrollTop = scroll;
     if (focusKey) { const again = secondaryDynamic.querySelector(focusKey); if (again && !again.disabled) again.focus({ preventScroll: true }); }
@@ -867,6 +913,33 @@ function start() {
   function attempt(fn, okMessage, { focus = true } = {}) {
     try { const r = fn(); if (focus) editor.view.focus(); if (okMessage) toast(typeof okMessage === "function" ? okMessage(r) : okMessage); return r; } catch (e) { if (e instanceof TransformError) { toast(e.message, "error"); return null; } throw e; }
   }
+  // Verrouillage détaillé (comme Gutenberg) : contenu, déplacement, suppression ; avec ou sans les blocs internes
+  function lockDialog(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || !LOCKABLE_TYPES.includes(node.type.name)) return;
+    const st = { locked: Boolean(node.attrs.locked), lockMove: Boolean(node.attrs.lockMove), lockRemove: Boolean(node.attrs.lockRemove), inner: false };
+    let hasInner = false; node.descendants((c) => { if (c.attrs && "locked" in c.attrs) hasInner = true; return !hasInner; });
+    const body = h("div", {},
+      h("p", { class: "wp-help" }, "Protège ce bloc contre les modifications accidentelles. Les verrous se lèvent ici, à tout moment."),
+      checkbox("Empêcher la modification du contenu (verrou complet)", st.locked, (v) => { st.locked = v; }),
+      checkbox("Empêcher le déplacement", st.lockMove, (v) => { st.lockMove = v; }),
+      checkbox("Empêcher la suppression", st.lockRemove, (v) => { st.lockRemove = v; }),
+      ...(hasInner ? [checkbox("Appliquer aussi aux blocs qu'il contient", false, (v) => { st.inner = v; })] : []));
+    modal("Options de verrouillage", body, [{ label: "Appliquer", primary: true, run: () => { setLockState(editor, pos, st); const any = st.locked || st.lockMove || st.lockRemove; toast(any ? `Verrouillé : ${lockSummary(editor.state.doc.nodeAt(pos)).join(", ")}.` : "Bloc déverrouillé."); } }]);
+  }
+  // Modifier un bloc en HTML (comme Gutenberg) : le code est relu par les règles de l'éditeur ; ce qu'il ne gère pas est retiré, comme à l'enregistrement
+  function editBlockHtml(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || isLocked(node)) return;
+    const ta = textarea({ rows: 16, class: "wp-mono", spellcheck: "false", "aria-label": "HTML du bloc" }, blockHtml(editor, pos));
+    modal(`Modifier « ${nameOf(node)} » en HTML`, h("div", {}, h("p", { class: "wp-help" }, "Seuls les éléments pris en charge par l'éditeur sont conservés (aucun script, aucun style libre). « Annuler » (Ctrl+Z) défait la modification."), control("Code HTML du bloc", ta)),
+      [{ label: "Appliquer", primary: true, run: () => {
+        const code = ta.value.trim();
+        if (!code) { toast("Le HTML est vide : utilisez « Supprimer le bloc ».", "error"); return true; }
+        if (attempt(() => replaceBlockHtml(editor, pos, code), "Bloc modifié (Ctrl+Z pour annuler).") === null) return true;
+      } }], { wide: true });
+    ta.focus();
+  }
   let styleClipboard = null;
   function transformMenu(anchor, pos = null) {
     const textual = pos === null || TEXT_TYPES.includes((editor.state.doc.nodeAt(pos) || {}).type?.name);
@@ -969,7 +1042,8 @@ function start() {
       ...(canUngroup(node) ? [{ label: "Dégrouper", run: () => attempt(() => ungroupAt(editor, top), "Bloc dégroupé : son contenu est remis au niveau du dessus.") }] : []),
       ...(copyStyles(node) ? [{ label: "Copier les styles", run: () => { styleClipboard = copyStyles(node); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); } }] : []),
       ...(styleClipboard && !locked ? [{ label: "Coller les styles", shortcut: "Ctrl+Alt+V", run: () => attempt(() => pasteStyles(editor, top, styleClipboard), (n) => `${n} réglage${n > 1 ? "s" : ""} de style appliqué${n > 1 ? "s" : ""}.`) }] : []),
-      ...(LOCKABLE_TYPES.includes(node.type.name) ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
+      ...(LOCKABLE_TYPES.includes(node.type.name) ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }, { label: "Options de verrouillage…", run: () => lockDialog(top) }] : []),
+      ...(!locked && node.type.name !== "kbReusableEdit" ? [{ label: "Modifier en HTML…", run: () => editBlockHtml(top) }] : []),
       ...(blockMenuExtra ? blockMenuExtra(top, node) : []),
       ...(locked ? [] : ["-", { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) }]),
     ];
@@ -1006,6 +1080,8 @@ function start() {
       add("hide", n.attrs.hidden ? "Afficher le bloc" : "Masquer le bloc", "Ctrl+Maj+H", () => toggleHidden(id), Boolean(id) && !locked);
       add("rename", "Renommer le bloc…", "Ctrl+Alt+R", () => renameBlock(first.pos), !locked && LOCKABLE_TYPES.includes(n.type.name));
       if (LOCKABLE_TYPES.includes(n.type.name)) add("lock", locked ? "Déverrouiller le bloc" : "Verrouiller le bloc", "", () => { setLocked(editor, first.pos, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); });
+      if (LOCKABLE_TYPES.includes(n.type.name)) add("lock-options", "Options de verrouillage…", "", () => lockDialog(first.pos));
+      add("edit-html", "Modifier en HTML…", "Ctrl+Maj+Alt+M", () => editBlockHtml(first.pos), !locked && n.type.name !== "kbReusableEdit");
       if (copyStyles(n)) add("copy-styles", "Copier les styles", "", () => { styleClipboard = copyStyles(n); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); });
       if (styleClipboard) add("paste-styles", "Coller les styles", "Ctrl+Alt+V", () => attempt(() => pasteStyles(editor, first.pos, styleClipboard), (k) => `${plural(k, "réglage")} de style appliqué${k > 1 ? "s" : ""}.`), !locked);
       if (transformsFor(editor, first.pos).length || TEXT_TYPES.includes(n.type.name)) add("transform", "Transformer en…", "", () => { if (TEXT_TYPES.includes(n.type.name)) editor.chain().focus().setTextSelection(first.pos + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]"), first.pos); }, !locked);
@@ -1620,6 +1696,15 @@ function start() {
   editor.setOptions({
     editorProps: {
       ...editor.options.editorProps,
+      // « [[ » : recherche d'un article ou d'une page du site à lier (comme Gutenberg) ; le texte du lien est le titre de la cible
+      handleTextInput: (view, from, to, text) => {
+        if (text !== "[" || from < 1 || view.state.doc.textBetween(from - 1, from) !== "[") return false;
+        const $from = view.state.doc.resolve(from);
+        if (["codeBlock", "kbPreformatted", "kbVerse"].includes($from.parent.type.name)) return false;
+        view.dispatch(view.state.tr.delete(from - 1, from));
+        setTimeout(() => linkPopover(null, { bracket: true }), 0);
+        return true;
+      },
       handleDOMEvents: {
         // Premier clic dans l'article après un réglage de la barre latérale : le curseur va exactement où l'on clique
         // (sans cela, la sélection précédente — une image, un bouton — reprenait la main et le curseur « sautait »)
@@ -1704,6 +1789,9 @@ function start() {
           options.forEach((o) => o.classList.toggle("is-active", o === next));
           return true;
         }
+        // Ctrl+Maj+0 : zoom arrière (vue d'ensemble de la page) ; Ctrl+Maj+Espace : espace insécable
+        if (mod && event.shiftKey && !event.altKey && event.code === "Digit0") { event.preventDefault(); toggleZoomOut(); return true; }
+        if (mod && event.shiftKey && !event.altKey && event.code === "Space") { event.preventDefault(); editor.chain().insertContent("\u00a0").run(); return true; }
         if (mod && !event.shiftKey && event.key.toLowerCase() === "k") {
           event.preventDefault();
           // Avec du texte sélectionné (ou dans un lien) : lien ; sinon : palette de commandes
@@ -1729,19 +1817,19 @@ function start() {
   });
 
   // ---------- Liens (fenêtre surgissante « Rechercher ou saisir l'URL ») ----------
-  function linkPopover(anchor) {
+  function linkPopover(anchor, { bracket = false } = {}) {
     const attrs = editor.getAttributes("link");
     const rel = String(attrs.rel || "").split(/\s+/);
     const url = input({ type: "text", value: attrs.href || "", placeholder: "Rechercher ou saisir l'URL", autocomplete: "off", "aria-label": "Rechercher ou saisir l'URL" });
     const results = h("ul", { class: "wp-link-results", role: "listbox" });
     const opts = { tab: attrs.target === "_blank", nofollow: rel.includes("nofollow"), sponsored: rel.includes("sponsored"), ugc: rel.includes("ugc") };
-    const apply = (href) => {
+    const apply = (href, label) => {
       href = String(href || url.value).trim();
       if (!/^(https?:\/\/\S+|mailto:\S+|\/(?!\/)\S*|#[\w-]+)$/i.test(href)) { if (/^[\w-]+(\.[\w-]+)+/.test(href)) href = `https://${href}`; else { toast("Adresse invalide : https://…, /chemin-interne ou mailto:…", "error"); return; } }
       const relValue = ["nofollow", "sponsored", "ugc"].filter((r) => opts[r]);
       if (opts.tab) relValue.push("noopener", "noreferrer");
       const linkAttrs = { href, target: opts.tab ? "_blank" : null, rel: relValue.length ? relValue.join(" ") : null };
-      if (editor.state.selection.empty && !editor.isActive("link")) ins().insertContent({ type: "text", text: href, marks: [{ type: "link", attrs: linkAttrs }] }).run();
+      if (editor.state.selection.empty && !editor.isActive("link")) ins().insertContent({ type: "text", text: label || href, marks: [{ type: "link", attrs: linkAttrs }] }).run();
       else { const to = editor.state.selection.to; chain().extendMarkRange("link").setLink(linkAttrs).setTextSelection(to).unsetMark("link").run(); } // curseur après le lien, sans le prolonger
       pop.close();
       editor.view.focus();
@@ -1751,7 +1839,7 @@ function start() {
       if (/^(https?:|\/|mailto:)/.test(q)) { results.replaceChildren(h("li", {}, h("button", { type: "button", onclick: () => apply(q) }, h("span", { class: "wp-link-title" }, q), h("span", { class: "wp-link-type" }, "Appuyer sur Entrée pour ajouter ce lien")))); return; }
       try {
         const { results: found } = await api(`/formateur/blog/api/liens?q=${encodeURIComponent(q)}`);
-        results.replaceChildren(...found.map((r) => h("li", {}, h("button", { type: "button", onclick: () => apply(r.url) }, h("span", { class: "wp-link-title" }, r.title), h("span", { class: "wp-link-url" }, r.url), h("span", { class: "wp-link-type" }, r.label)))));
+        results.replaceChildren(...found.map((r) => h("li", {}, h("button", { type: "button", onclick: () => apply(r.url, bracket ? r.title : undefined) }, h("span", { class: "wp-link-title" }, r.title), h("span", { class: "wp-link-url" }, r.url), h("span", { class: "wp-link-type" }, r.label)))));
       } catch (e) { results.replaceChildren(h("li", { class: "wp-error" }, e.message)); }
     }, 200);
     url.addEventListener("input", runSearch);
@@ -1783,6 +1871,7 @@ function start() {
     });
   }
   function openMediaModal({ kind = "image", onSelect = null, onSelectMany = null, multiple = false, legacy = false } = {}) {
+    if (capturing) return;
     if (kind === "image" && !legacy && window.KWMediaPicker) {
       // Bouton « Médiathèque » de la barre d'outils (aucune insertion demandée) : la médiathèque complète du CMS, dans un nouvel onglet
       if (!onSelect && !onSelectMany) { window.open("/marketing/site-web/mediatheque", "_blank", "noopener"); return; }
@@ -2399,22 +2488,55 @@ function start() {
 
   // ---------- Notes de travail (jamais publiées) ----------
   const notesBody = $("[data-notes-body]");
-  let notesState = { notes: [], me: null, canModerate: false, loaded: false, filter: "open", focusBlock: null };
+  let notesState = { notes: [], people: [], me: null, canModerate: false, loaded: false, filter: "open", focusBlock: null };
   const noteDate = (sql) => fmtDate(sql);
   async function loadNotes() {
     if (!postId) { notesState.loaded = true; notesState.notes = []; renderNotes(); return; }
-    try { const r = await api(`/formateur/blog/${postId}/notes`); notesState = { ...notesState, notes: r.notes, me: r.me, canModerate: r.canModerate, loaded: true }; } catch (e) { toast(`Notes : ${e.message}`, "error"); }
+    try { const r = await api(`/formateur/blog/${postId}/notes`); notesState = { ...notesState, notes: r.notes, people: r.people || [], me: r.me, canModerate: r.canModerate, loaded: true }; } catch (e) { toast(`Notes : ${e.message}`, "error"); }
     renderNotes();
   }
   const noteCounts = () => { const out = {}; for (const n of notesState.notes) if (!n.resolved && n.blockId) out[n.blockId] = (out[n.blockId] || 0) + 1; return out; };
   function refreshNoteBadges() {
     try { setNoteCounts(editor, noteCounts()); } catch { /* éditeur en cours de démarrage */ }
     const open = notesState.notes.filter((n) => !n.resolved).length;
+    const mine = notesState.notes.filter((n) => !n.resolved && [n, ...n.replies].some((x) => x.userId !== notesState.me && x.mentions.some((m) => m.id === notesState.me))).length;
     const dot = $("[data-notes-dot]");
-    if (dot) { dot.hidden = !open; dot.title = open ? `${open} note${open > 1 ? "s" : ""} ouverte${open > 1 ? "s" : ""}` : ""; }
+    if (dot) { dot.hidden = !open; dot.classList.toggle("is-mention", mine > 0); dot.title = open ? `${open} note${open > 1 ? "s" : ""} ouverte${open > 1 ? "s" : ""}${mine ? ` · ${mine} vous mentionne${mine > 1 ? "nt" : ""}` : ""}` : ""; }
   }
   async function noteAction(url, json) {
     try { const r = await api(url, { method: "POST", json: json || {} }); notesState.notes = r.notes; renderNotes(); } catch (e) { toast(e.message, "error"); }
+  }
+  // Texte d'une note : les mentions reconnues (@nom) sont mises en évidence ; tout le reste reste du texte brut (jamais du HTML)
+  function noteText(n) {
+    const names = new Set((n.mentions || []).map((m) => m.username.toLowerCase()));
+    const out = []; let last = 0;
+    for (const m of n.body.matchAll(/(^|[\s(,;:])@([\p{L}\p{N}._-]{2,40})/gu)) {
+      if (!names.has(m[2].toLowerCase())) continue;
+      const at = m.index + m[1].length;
+      if (at > last) out.push(n.body.slice(last, at));
+      out.push(h("span", { class: `wp-mention${(n.mentions || []).some((x) => x.id === notesState.me && x.username.toLowerCase() === m[2].toLowerCase()) ? " is-me" : ""}` }, `@${m[2]}`));
+      last = at + 1 + m[2].length;
+    }
+    out.push(n.body.slice(last));
+    return out;
+  }
+  // Complétion des mentions : « @ » dans une zone de note propose les personnes qui peuvent lire cet article
+  function mentionAssist(area) {
+    const list = h("ul", { class: "wp-mention-list", role: "listbox", "aria-label": "Personnes à mentionner", hidden: true });
+    let matches = []; let active = 0;
+    const query = () => { const upto = area.value.slice(0, area.selectionStart); const m = /(^|[\s(,;:])@([\p{L}\p{N}._-]{0,40})$/u.exec(upto); return m ? { text: m[2], at: upto.length - m[2].length - 1 } : null; };
+    const close = () => { list.hidden = true; matches = []; };
+    const choose = (u) => { const q = query(); if (!q) return; area.setRangeText(`@${u.username} `, q.at, area.selectionStart, "end"); close(); area.focus(); };
+    const paint = () => { list.replaceChildren(...matches.map((u, i) => h("li", { role: "option", "aria-selected": String(i === active) }, h("button", { type: "button", class: i === active ? "is-active" : "", tabindex: "-1", onmousedown: (e) => { e.preventDefault(); choose(u); } }, `@${u.username}`)))); list.hidden = !matches.length; };
+    area.addEventListener("input", () => { const q = query(); if (!q) return close(); matches = (notesState.people || []).filter((u) => u.username.toLowerCase().startsWith(q.text.toLowerCase())).slice(0, 6); active = 0; paint(); });
+    area.addEventListener("keydown", (e) => {
+      if (list.hidden || !matches.length) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); active = (active + (e.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length; paint(); }
+      else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); choose(matches[active]); }
+      else if (e.key === "Escape") { e.preventDefault(); close(); }
+    });
+    area.addEventListener("blur", () => setTimeout(close, 150));
+    return list;
   }
   function renderNotes() {
     if (!notesBody) return;
@@ -2427,6 +2549,7 @@ function start() {
     const area = textarea({ rows: 3, maxlength: 2000, placeholder: "Une remarque, une question, une consigne pour la personne qui relira…" }, draft);
     area.setAttribute("data-note-new", "");
     area.setAttribute("aria-label", "Texte de la note");
+    const mentions = mentionAssist(area);
     const link = checkbox(selId ? `Lier au bloc sélectionné (${nameOf(sel.node)})` : "Lier à un bloc (sélectionnez d'abord un bloc)", Boolean(target || selId), () => {});
     const linkBox = link.querySelector("input");
     linkBox.disabled = !selId && !target;
@@ -2452,8 +2575,8 @@ function start() {
       return h("li", { class: `wp-note${n.resolved ? " is-resolved" : ""}`, "data-note": n.id },
         head(n),
         n.blockId ? h("button", { type: "button", class: "wp-note-block", onclick: () => (blockNode ? selectBlockById(n.blockId) : toast("Ce bloc n'est plus dans l'article.", "error")) }, blockNode ? `Bloc : ${nameOf(blockNode)}` : "Bloc supprimé de l'article") : h("small", { class: "wp-help" }, "Note sur tout l'article"),
-        h("p", { class: "wp-note-body" }, n.body),
-        ...n.replies.map((r) => h("div", { class: "wp-note-reply", "data-note-reply": r.id }, head(r), h("p", { class: "wp-note-body" }, r.body), mine(r) ? h("button", { type: "button", class: "wp-btn-link is-danger", "aria-label": "Supprimer cette réponse", onclick: () => { if (confirm("Supprimer cette réponse ?")) noteAction(`/formateur/blog/${postId}/notes/${r.id}/supprimer`); } }, "Supprimer") : null)),
+        h("p", { class: `wp-note-body${(n.mentions || []).some((m) => m.id === notesState.me) ? " is-mentioned" : ""}` }, ...noteText(n)),
+        ...n.replies.map((r) => h("div", { class: "wp-note-reply", "data-note-reply": r.id }, head(r), h("p", { class: "wp-note-body" }, ...noteText(r)), mine(r) ? h("button", { type: "button", class: "wp-btn-link is-danger", "aria-label": "Supprimer cette réponse", onclick: () => { if (confirm("Supprimer cette réponse ?")) noteAction(`/formateur/blog/${postId}/notes/${r.id}/supprimer`); } }, "Supprimer") : null)),
         n.resolved ? null : h("div", { class: "wp-note-replybox" }, reply, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { if (reply.value.trim()) noteAction(`/formateur/blog/${postId}/notes`, { body: reply.value, parentId: n.id }); } }, "Répondre")),
         h("div", { class: "wp-note-actions" },
           h("button", { type: "button", class: "wp-btn-secondary", "data-note-resolve": n.id, onclick: () => noteAction(`/formateur/blog/${postId}/notes/${n.id}/resoudre`, { resolved: !n.resolved }) }, n.resolved ? "Rouvrir" : "Résoudre"),
@@ -2462,7 +2585,7 @@ function start() {
     const shown = notesState.filter === "done" ? done : open;
     notesBody.replaceChildren(
       h("p", { class: "wp-help" }, "Les notes servent à travailler à plusieurs. Elles ne sont jamais publiées."),
-      h("div", { class: "wp-note-form" }, area, link, send),
+      h("div", { class: "wp-note-form" }, h("div", { class: "wp-mention-wrap" }, area, mentions), link, send),
       segmented([["open", `Ouvertes (${open.length})`], ["done", `Résolues (${done.length})`]], notesState.filter, (v) => { notesState.filter = v; renderNotes(); }),
       shown.length ? h("ul", { class: "wp-notes" }, ...shown.map(thread)) : h("p", { class: "wp-help" }, notesState.filter === "done" ? "Aucune note résolue." : "Aucune note ouverte."));
     refreshNoteBadges();
@@ -3231,6 +3354,14 @@ function start() {
     ];
     modal("Raccourcis clavier", h("div", {}, h("p", { class: "wp-help" }, "Sur Mac, remplacez Ctrl par Cmd."), ...groups.flatMap(([title, rows]) => [h("h3", { class: "wp-shortcuts-title" }, title), h("dl", { class: "wp-shortcuts" }, ...rows.flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)]))])), [], { wide: true });
   }
+  // Zoom arrière : la page entière se voit en réduction (réorganiser de gros blocs, comme dans Gutenberg)
+  function toggleZoomOut(force) {
+    const on = typeof force === "boolean" ? force : !root.classList.contains("is-zoom-out");
+    root.classList.toggle("is-zoom-out", on);
+    const item = $('[data-option="zoomout"]');
+    if (item) item.setAttribute("aria-checked", String(on));
+    toast(on ? "Zoom arrière : toute la page est visible (Ctrl+Maj+0 pour revenir)." : "Zoom normal.");
+  }
   // Mode sans distraction (panneaux masqués) et plein écran du navigateur
   function setDistractionFree(on) {
     root.classList.toggle("is-distraction-free", on);
@@ -3448,12 +3579,14 @@ function start() {
     if (opt === "appearance") return openAppearance();
     if (opt === "settings") return openEditorSettings();
     if (opt === "shortcuts") return showShortcuts();
+    if (opt === "welcome") return showWelcome();
     if (opt === "diagnostic") return showDiagnostic();
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
     if (opt === "focus") root.classList.toggle("is-focus-mode", on);
     if (opt === "distraction") setDistractionFree(on);
     if (opt === "fullscreen") { b.setAttribute("aria-checked", "false"); toggleFullscreen(); }
+    if (opt === "zoomout") { b.setAttribute("aria-checked", String(!on)); toggleZoomOut(on); }
     if (opt === "toptoolbar") { topToolbarMode = on; topToolbar.hidden = !on; blockToolbar.hidden = true; root.classList.toggle("has-top-toolbar", on); renderBlockToolbar(); }
     return null;
   }));
@@ -3787,8 +3920,97 @@ function start() {
     onToggle: (doc) => { toolbarKey = ""; if (!doc) topToolbar.hidden = !topToolbarMode; renderBlockToolbar(); },
   });
 
+  // ---------- Sélection au lasso : on glisse depuis la marge de la zone d'écriture, les blocs touchés par le rectangle sont sélectionnés ----------
+  (function lasso() {
+    const canvas = $("[data-canvas]");
+    if (!canvas) return;
+    let start = null; let box = null; let hits = [];
+    const topChildren = () => [...editor.view.dom.children];
+    function update(e) {
+      const x1 = Math.min(start.x, e.clientX), x2 = Math.max(start.x, e.clientX), y1 = Math.min(start.y, e.clientY), y2 = Math.max(start.y, e.clientY);
+      if (!box) { box = h("div", { class: "wp-lasso", "aria-hidden": "true" }); document.body.append(box); }
+      Object.assign(box.style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px` });
+      const doms = topChildren();
+      hits = doms.map((el, i) => ({ el, i, r: el.getBoundingClientRect() })).filter(({ r }) => r.right >= x1 && r.left <= x2 && r.bottom >= y1 && r.top <= y2).map(({ i }) => i);
+      doms.forEach((el, i) => el.classList.toggle("is-lasso", hits.includes(i)));
+    }
+    function finish() {
+      document.removeEventListener("mousemove", move, true); document.removeEventListener("mouseup", finish, true);
+      if (box) { box.remove(); box = null; }
+      topChildren().forEach((el) => el.classList.remove("is-lasso"));
+      if (start && start.moved && hits.length) {
+        const kids = []; editor.state.doc.forEach((n, pos) => kids.push({ n, pos }));
+        const a = kids[Math.min(...hits)], b = kids[Math.max(...hits)];
+        if (a && b) {
+          editor.commands.focus();
+          editor.commands.setTextSelection({ from: a.pos + 1, to: b.pos + b.n.nodeSize - 1 });
+          if (hits.length === 1 && !a.n.isTextblock) editor.commands.setNodeSelection(a.pos);
+          toast(hits.length > 1 ? `${hits.length} blocs sélectionnés.` : "Bloc sélectionné.");
+        }
+      }
+      start = null; hits = [];
+    }
+    function move(e) {
+      if (!start) return;
+      if (!start.moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 8) return;
+      start.moved = true; e.preventDefault(); update(e);
+    }
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button !== 0 || !(e.target === canvas || (e.target.classList && e.target.classList.contains("wp-content")))) return; // seulement depuis un espace vide de la zone d'écriture
+      start = { x: e.clientX, y: e.clientY, moved: false };
+      document.addEventListener("mousemove", move, true); document.addEventListener("mouseup", finish, true);
+    });
+  })();
+
+  // ---------- Fil d'Ariane du bloc sélectionné : Document › Groupe › Colonne › Paragraphe (chaque étape se sélectionne) ----------
+  const crumbsBar = $("[data-breadcrumb]");
+  function renderBreadcrumb() {
+    if (!crumbsBar) return;
+    const sel = editor.state.selection;
+    const $from = sel.$from;
+    const trail = [];
+    for (let d = 1; d <= $from.depth; d++) trail.push({ node: $from.node(d), pos: $from.before(d) });
+    if (sel instanceof NodeSelection) trail.push({ node: sel.node, pos: sel.from });
+    const pickAt = (item) => { editor.view.focus(); if (item.node.isTextblock) editor.commands.setTextSelection(item.pos + 1); else { try { editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, item.pos))); } catch { editor.commands.setTextSelection(item.pos + 1); } } };
+    const parts = [h("button", { type: "button", class: "wp-crumb", onclick: () => { editor.view.focus(); editor.commands.setTextSelection(1); } }, "Document")];
+    trail.forEach((item, i) => {
+      parts.push(h("span", { class: "wp-crumb-sep", "aria-hidden": "true" }, "›"));
+      const label = nameOf(item.node);
+      parts.push(i === trail.length - 1 ? h("span", { class: "wp-crumb is-current", "aria-current": "true" }, label) : h("button", { type: "button", class: "wp-crumb", onclick: () => pickAt(item) }, label));
+    });
+    crumbsBar.replaceChildren(...parts);
+  }
+  editor.on("selectionUpdate", renderBreadcrumb);
+  editor.on("update", () => { cancelAnimationFrame(crumbFrame); crumbFrame = requestAnimationFrame(renderBreadcrumb); });
+  let crumbFrame = 0;
+
+  // ---------- Guide de bienvenue (comme Gutenberg) : 4 écrans, affichable à tout moment depuis le menu « ⋮ » ----------
+  function showWelcome() {
+    const steps = [
+      ["Bienvenue dans l'éditeur", "Écrivez comme dans un document : chaque paragraphe, image ou encadré est un bloc que vous pouvez déplacer, dupliquer, grouper ou verrouiller. L'article est enregistré automatiquement."],
+      ["Ajouter un bloc", "Tapez « / » dans un paragraphe vide, cliquez sur le « + » ou ouvrez l'outil d'insertion à gauche. Les modèles de mise en page et vos blocs réutilisables y sont aussi."],
+      ["Régler un bloc", "Sélectionnez un bloc : l'onglet « Bloc » à droite propose ses réglages (style, couleur, espacement, ancre, visibilité par appareil). Ctrl+K ouvre la palette de commandes, Ctrl+Maj+H la liste des raccourcis."],
+      ["Travailler à plusieurs", "L'onglet « Notes » sert aux échanges internes (jamais publiés). Les versions d'un article se comparent et se restaurent depuis le panneau Article ; deux onglets ouverts ne s'écrasent jamais."],
+    ];
+    let i = 0;
+    const title = h("h2", { class: "wp-welcome-title" }); const text = h("p", { class: "wp-welcome-text" }); const dots = h("p", { class: "wp-welcome-dots", "aria-hidden": "true" });
+    const prev = h("button", { type: "button", class: "wp-btn-secondary" }, "Précédent"); const next = h("button", { type: "button", class: "wp-btn-primary" }, "Suivant");
+    const paint = () => { title.textContent = steps[i][0]; text.textContent = steps[i][1]; dots.textContent = steps.map((_, k) => (k === i ? "●" : "○")).join(" "); prev.hidden = i === 0; next.textContent = i === steps.length - 1 ? "Commencer" : "Suivant"; };
+    const m = modal("Guide de bienvenue", h("div", { class: "wp-welcome", "aria-live": "polite" }, title, text, dots, h("div", { class: "wp-button-row" }, prev, next)), []);
+    prev.addEventListener("click", () => { i = Math.max(0, i - 1); paint(); });
+    next.addEventListener("click", () => { if (i === steps.length - 1) { m.close(); saveEditorSettings({ welcomeSeen: true }); } else { i += 1; paint(); } });
+    paint();
+    next.focus();
+  }
+  // Première visite d'une personne sur un NOUVEL article : une invitation discrète (jamais une fenêtre qui bloque) ; ignorée par les outils d'automatisation
+  if (!DATA.postId && !(editorPrefs.settings || {}).welcomeSeen && !navigator.webdriver) {
+    const hint = h("div", { class: "wp-welcome-hint", role: "status" }, h("span", {}, "Première visite ?"), h("button", { type: "button", class: "wp-btn-link", onclick: () => { hint.remove(); showWelcome(); } }, "Voir le guide de bienvenue"), h("button", { type: "button", class: "wp-btn-link", "aria-label": "Fermer l'invitation", onclick: () => { hint.remove(); saveEditorSettings({ welcomeSeen: true }); } }, "×"));
+    document.body.append(hint);
+  }
+
   // ---------- Premier affichage ----------
   loadReusable();
+  renderBreadcrumb();
   applyEditorSettings();
   refreshCounters();
   refreshPreviews();
