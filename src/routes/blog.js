@@ -20,6 +20,7 @@ const { themeFor } = require("../utils/blogThemes");
 const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/seo");
 const { sanitizeBlogHtml, markdownToEditorHtml, findUnsupported, excerptBeforeMore } = require("../utils/blogHtml");
 const customHtml = require("../utils/customHtml");
+const sitePages = require("../services/sitePages");
 // Le bloc « HTML personnalisé » (code libre) n'est signé que pour le compte créateur : toute autre personne le voit refusé à l'enregistrement
 const mayWriteHtml = (req) => Boolean(req.session && req.session.user && req.session.user.role === "formateur" && !req.blogSite);
 const { escapeHtml } = require("../utils/markdown");
@@ -519,7 +520,8 @@ function requireBlogAccess(req, res, next) {
   const m = /^\/(\d+)\//.exec(req.path);
   const canPublish = can("articles.publish");
   if (m) {
-    const post = db.prepare("SELECT author_id, status FROM posts WHERE id = ?").get(Number(m[1]));
+    const post = db.prepare("SELECT author_id, status, page_key FROM posts WHERE id = ?").get(Number(m[1]));
+    if (post && post.page_key) return deny("Cette page du site se modifie depuis le compte créateur."); // une page du site n'est pas un article : l'équipe de rédaction n'y accède pas
     if (post) {
       if (!all && post.author_id !== user.id) return deny("Cet article appartient à une autre personne.");
       // Restaurer une version modifie l'article : refusé sur un article en ligne à qui ne peut pas publier
@@ -753,6 +755,8 @@ function editorData(req, post) {
   return {
     weekStart: weekStartOf(req),
     post,
+    pageKey: post && post.page_key ? post.page_key : null,
+    pageInfo: post && post.page_key ? { label: (sitePages.PAGES[post.page_key] || {}).label || post.page_key, url: (sitePages.PAGES[post.page_key] || {}).url || "/" } : null,
     rev: post ? blog.revisionFingerprint(post) : null,
     editorHtml: post ? (post.content_format === "html" ? post.content : markdownToEditorHtml(post.content)) : "",
     // Sauvegarde automatique plus récente que la dernière version enregistrée : proposée à la restauration
@@ -968,11 +972,30 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   res.redirect(`/formateur/blog/${post.id}/modifier?enregistre=1`);
 }));
 
+// Page du site (page_key) : le contenu et les réglages de référencement sont enregistrés ET publiés tout de suite (la page publique lit site_pages) ;
+// la ligne support reste hors ligne et « dans la corbeille » (jamais publiée comme article, jamais dans une liste d'articles)
+function savePage(req, res, p) {
+  const f = readFields(req.body, p, null, mayWriteHtml(req));
+  const cols = { title: f.title, excerpt: "", content: f.content, content_format: "html", seo_title: f.seo_title || null, seo_description: f.seo_description || null, focus_keyword: f.focus_keyword, secondary_keywords: f.secondary_keywords, published: 0, status: "draft", published_at: null };
+  const names = Object.keys(cols);
+  const after = transaction(db, () => {
+    db.prepare(`UPDATE posts SET ${names.map((n) => `${n} = ?`).join(", ")}, updated_at = datetime('now') WHERE id = ? AND page_key IS NOT NULL`).run(...names.map((n) => cols[n]), p.id);
+    const row = db.prepare("SELECT * FROM posts WHERE id = ?").get(p.id);
+    sitePages.publish(row);
+    return row;
+  });
+  blog.addRevision(after, req.session.user.id, blog.describeChange(p, after), blog.revisionKind(p, after));
+  blog.clearAutosave(p.id);
+  if (wantsJson(req)) return res.json({ ok: true, id: after.id, slug: after.slug, status: "draft", published: 0, publishedAt: null, updatedAt: after.updated_at, rev: blog.revisionFingerprint(after), warnings: findUnsupported(req.body.content), pageKey: after.page_key, revisions: blog.listRevisions(after.id), revisionTotal: blog.countRevisions(after.id) });
+  res.redirect(`/formateur/blog/${p.id}/modifier?enregistre=1`);
+}
+
 // Enregistrement (formulaire classique ou éditeur)
 router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, res) => {
   const p = req.post;
   // Conflit d'enregistrement (palier 10, D3) : l'article a été modifié depuis la version que cet écran a chargée → rien n'est écrasé
   if (isStale(req.body, p)) return conflictResponse(req, res, p);
+  if (p.page_key) return savePage(req, res, p);
   const f = readFields(req.body, p, siteContent.siteOf(db, "post", p.id) ?? null, mayWriteHtml(req));
   if (req.blogActor) f.author_id = null; // un rédacteur ne change pas l'auteur d'un article
   const st = applyStatus(req.body, p, f);
@@ -1095,6 +1118,7 @@ router.get("/formateur/blog/:id/apercu", loadPost, (req, res) => {
     if (IMG_PATH.test(d.cover_media || "") || cmsMedia(d.cover_media, editorSite(req, req.post))) merged.cover_path = d.cover_media;
   }
   res.set("Cache-Control", "no-store");
+  if (req.post.page_key) return require("./pages").previewPage(req, res, merged); // une page du site s'aperçoit avec sa propre mise en page, pas comme un article
   renderPostPage(req, res, merged, { preview: true });
 });
 
@@ -1217,6 +1241,7 @@ router.post("/formateur/blog/:id(\\d+)/versions/:rid/restaurer", loadPost, (req,
     return { after, revision };
   });
   if (result.same) return fail(409, "Cette version est déjà la version actuelle.");
+  if (req.post.page_key && result.after) sitePages.publish(result.after); // page du site : la version restaurée est aussitôt celle du site
   if (wantsJson(req)) return res.json({ ok: true, revision: result.revision, kept, revisions: blog.listRevisions(req.post.id), revisionTotal: blog.countRevisions(req.post.id), rev: result.after ? blog.revisionFingerprint(result.after) : undefined });
   res.redirect(`/formateur/blog/${req.post.id}/modifier?restaure=1`);
 });

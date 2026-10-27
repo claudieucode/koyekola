@@ -358,7 +358,7 @@
 .wp-swatch { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(11, 42, 64, 0.2); cursor: pointer; }
 .wp-swatch:hover { transform: scale(1.1); }
 .wp-swatch.is-none { background: linear-gradient(-45deg, #fff 45%, var(--danger) 45%, var(--danger) 55%, #fff 55%); }
-.wp-slash { min-width: 260px; padding: 4px; }
+.wp-slash { min-width: 260px; max-height: 340px; overflow-y: auto; padding: 4px; }
 .wp-slash button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 36px; padding: 6px 8px; border: 0; border-radius: 2px; background: none; color: var(--primary); text-align: left; font-size: 13px; cursor: pointer; }
 .wp-slash button.is-active, .wp-slash button:hover { background: var(--accent); color: #fff; }
 .wp-anchor-ghost { position: absolute; width: 1px; height: 1px; }
@@ -1945,3 +1945,8 @@
 .wp-note-body.is-mentioned { border-left: 3px solid #f59e0b; padding-left: 8px; }
 .be-tab-dot.is-mention { background: #f59e0b; }
 .ProseMirror > .is-lasso { outline: 2px solid var(--accent, #1d4ed8); outline-offset: 3px; border-radius: 4px; }
+/* Page du site (ex. « À propos ») : ce n'est pas un article, les réglages propres aux articles sont masqués */
+[data-page-mode] [data-publish], [data-page-mode] [data-view-post], [data-page-mode] .wp-doc-status, [data-page-mode] [data-panel="categories"], [data-page-mode] [data-panel="checklist"] { display: none !important; }
+[data-page-mode] #panel-article > :not([data-page-keep]):not([data-panel="revisions"]) { display: none !important; }
+.wp-page-card { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); }
+.wp-page-card-title { margin: 0 0 4px; font-weight: 700; color: var(--primary); }

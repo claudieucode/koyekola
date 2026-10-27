@@ -21,6 +21,8 @@
     });
   });
   var def = form.querySelector("[data-page-default]");
+  // Boutons qui demandent confirmation avant d'envoyer leur formulaire (ex. « Revenir au texte simple »)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-confirm-text]:not([data-page-default])"), function (b) { b.addEventListener("click", function (e) { if (!window.confirm(b.getAttribute("data-confirm-text"))) e.preventDefault(); }); });
   if (def) def.addEventListener("click", function () { if (window.confirm(def.getAttribute("data-confirm-text"))) { area.value = ""; refresh(); area.focus(); } });
   form.addEventListener("submit", function () { submitting = true; });
   window.addEventListener("beforeunload", function (e) { if (dirty && !submitting) { e.preventDefault(); e.returnValue = ""; } });

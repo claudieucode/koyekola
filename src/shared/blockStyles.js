@@ -11,6 +11,7 @@ const SIZES = [["", "Par défaut"], ["none", "Aucun"], ["xs", "Très petit"], ["
 // group : section du panneau ; scope : "text" (blocs de texte) ou "all" (tous les blocs de premier niveau et imbriqués)
 const STYLE_PROPS = [
   // --- Typographie ---
+  { key: "ff", attr: "data-ff", label: "Police", group: "Typographie", scope: "text", values: [["", "Par défaut"], ["sans", "Figtree (texte)"], ["display", "Bricolage Grotesque (titres)"], ["serif", "Georgia (à empattements)"], ["mono", "Chasse fixe"]] },
   { key: "fz", attr: "data-fz", label: "Taille du texte", group: "Typographie", scope: "text", values: [["", "Par défaut"], ["s", "Petite"], ["l", "Grande"], ["xl", "Très grande"], ["xxl", "Énorme"], ["display", "Affiche"]] },
   { key: "fw", attr: "data-fw", label: "Graisse", group: "Typographie", scope: "text", values: [["", "Par défaut"], ["light", "Fine"], ["medium", "Moyenne"], ["semibold", "Demi-grasse"], ["bold", "Grasse"], ["black", "Très grasse"]] },
   { key: "fst", attr: "data-fst", label: "Style", group: "Typographie", scope: "text", values: [["", "Normal"], ["italic", "Italique"]] },

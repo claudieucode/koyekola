@@ -16,24 +16,32 @@ router.use("/formateur", (req, res, next) => (req.path === "/blog" || req.path.s
 // ---------- À propos ----------
 
 const { DEFAULT_ABOUT, DEFAULT_TITLE, parse: parseAbout, stats: aboutStats } = require("../services/aboutPage");
+const sitePages = require("../services/sitePages");
 
 const ABOUT_MAX = 20000;
 const ABOUT_DESCRIPTION = "KOLAKISA : formations vidéo à suivre à votre rythme, avec quiz, ressources à télécharger et certificat de réussite vérifiable.";
 
 function loadAbout() {
   const row = db.prepare("SELECT * FROM site_pages WHERE slug = 'a-propos'").get();
-  return { content: row && row.content.trim() ? row.content : DEFAULT_ABOUT, custom: Boolean(row && row.content.trim()), description: (row && row.seo_description) || "", raw: row ? row.content : "" };
+  return { content: row && row.content.trim() ? row.content : DEFAULT_ABOUT, custom: Boolean(row && row.content.trim()), description: (row && row.seo_description) || "", raw: row ? row.content : "", html: row && row.content_html && row.content_html.trim() ? row.content_html : "", heading: (row && row.heading) || "" };
+}
+// Mise en page de la page : contenu en blocs (éditeur de blocs) si la page en a, sinon le texte Markdown d'origine (rien ne change tant que l'éditeur de blocs n'a pas été utilisé)
+function aboutLayout(about, { draftHtml = null, draftTitle = null } = {}) {
+  const html = draftHtml !== null ? draftHtml : about.html;
+  if (!html) return { ...parseAbout(about.content), blocks: false };
+  const rendered = require("../services/blog").renderPost({ id: null, content: html, content_format: "html", toc_depth: 3 });
+  return { ...sitePages.layoutOf(rendered.html, draftTitle !== null ? draftTitle : about.heading), blocks: true, full: rendered.html };
 }
 
 router.get("/a-propos", (req, res) => {
   const about = loadAbout();
   const creator = db.prepare("SELECT username, bio FROM users WHERE role = 'formateur' ORDER BY id LIMIT 1").get();
-  const doc = parseAbout(about.content);
+  const doc = aboutLayout(about);
   const model = { ...doc, title: doc.title || DEFAULT_TITLE, stats: aboutStats(db) };
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "À propos" }];
   // Modèle de thème « Page du site » (Page Builder, Apparence → Templates) : remplace le texte de la page ; sans modèle en ligne, rien ne change
   let contentHtml = "";
-  try { contentHtml = require("../utils/markdown").renderMarkdown(about.content); } catch { contentHtml = ""; }
+  try { contentHtml = doc.blocks ? doc.full : require("../utils/markdown").renderMarkdown(about.content); } catch { contentHtml = ""; }
   require("../marketing/web/themeRender").renderRegion(req, res, db, "static_page", { scope: { post: { title: "À propos", url: "/a-propos", excerpt: about.description || "", image: "", date: null, category: "", author: "", minutes: null, contentHtml } } }, (themeTemplate) => {
     res.render("pages/about", {
       about, creator, crumbs, themeTemplate, model,
@@ -42,13 +50,37 @@ router.get("/a-propos", (req, res) => {
   });
 });
 
+// Aperçu d'une page du site depuis l'éditeur de blocs : la page avec sa mise en page, à partir du brouillon (jamais publié)
+router.previewPage = (req, res, merged) => {
+  const about = loadAbout();
+  const creator = db.prepare("SELECT username, bio FROM users WHERE role = 'formateur' ORDER BY id LIMIT 1").get();
+  const doc = aboutLayout(about, { draftHtml: merged.content || "", draftTitle: merged.title });
+  const model = { ...doc, title: doc.title || DEFAULT_TITLE, stats: aboutStats(db) };
+  const crumbs = [{ name: "Accueil", url: "/" }, { name: "À propos" }];
+  res.render("pages/about", { about, creator, crumbs, themeTemplate: null, model, seo: { ...seoPages.staticPage(req, "a-propos", { title: "À propos", description: ABOUT_DESCRIPTION, type: "AboutPage", crumbs }), noindex: true } });
+};
+
+// Éditeur de blocs de la page : ouvre l'éditeur complet sur la ligne « support » de la page (créée au premier passage à partir du texte actuel)
+router.get("/formateur/pages/:slug/blocs", (req, res) => {
+  if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
+  const post = sitePages.ensureSupport(req.params.slug, req.session.user.id);
+  res.redirect(`/formateur/blog/${post.id}/modifier`);
+});
+
 // Seule la page « à propos » est modifiable (la liste est fermée : aucune page ne se crée par l'adresse)
 const EDITABLE_PAGES = { "a-propos": "À propos" };
 
 router.get("/formateur/pages/:slug", (req, res) => {
   if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
   const about = loadAbout();
-  res.render("instructor/page-form", { title: EDITABLE_PAGES[req.params.slug], slug: req.params.slug, content: about.raw, description: about.description, saved: req.query.enregistre === "1", error: req.query.erreur || null, defaultText: DEFAULT_ABOUT, defaultTitle: DEFAULT_TITLE, max: ABOUT_MAX });
+  res.render("instructor/page-form", { blocks: Boolean(about.html), title: EDITABLE_PAGES[req.params.slug], slug: req.params.slug, content: about.raw, description: about.description, saved: req.query.enregistre === "1", error: req.query.erreur || null, defaultText: DEFAULT_ABOUT, defaultTitle: DEFAULT_TITLE, max: ABOUT_MAX });
+});
+
+// Retour au texte simple : le site réaffiche le texte Markdown ; le contenu en blocs reste dans l'éditeur (et son historique), rien n'est supprimé
+router.post("/formateur/pages/:slug/texte-simple", (req, res) => {
+  if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
+  db.prepare("UPDATE site_pages SET content_html = '', updated_at = datetime('now') WHERE slug = ?").run(req.params.slug);
+  res.redirect(`/formateur/pages/${req.params.slug}?enregistre=1`);
 });
 
 router.post("/formateur/pages/:slug", (req, res) => {

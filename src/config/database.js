@@ -299,6 +299,11 @@ db.exec(`
     AND EXISTS (SELECT 1 FROM lesson_attachments a WHERE a.lesson_id = lessons.id AND a.path = lessons.resource_path);
 `);
 
+// Pages du site : contenu en blocs (HTML assaini, éditeur de blocs) en plus du texte Markdown d'origine
+const sitePageColumns = db.prepare("PRAGMA table_info(site_pages)").all().map((c) => c.name);
+if (!sitePageColumns.includes("content_html")) db.exec("ALTER TABLE site_pages ADD COLUMN content_html TEXT NOT NULL DEFAULT ''");
+if (!sitePageColumns.includes("heading")) db.exec("ALTER TABLE site_pages ADD COLUMN heading TEXT NOT NULL DEFAULT ''"); // titre affiché en tête de la page (éditeur de blocs)
+
 // Évolutions du schéma pour les bases déjà existantes (CREATE TABLE IF NOT EXISTS ne modifie pas une table existante)
 const courseColumns = db.prepare("PRAGMA table_info(courses)").all().map((col) => col.name);
 const NEW_COURSE_COLUMNS = {
@@ -357,10 +362,14 @@ const NEW_POST_COLUMNS = {
   deleted_at: "TEXT",
   deleted_from_status: "TEXT",
   deleted_by: "INTEGER",
+  // Page du site éditée avec l'éditeur de blocs (ex. « a-propos ») : ce n'est PAS un article. La ligne reste hors ligne et « dans la corbeille » (deleted_at) pour
+  // être exclue de toutes les listes, recherches, exports et flux d'articles ; elle sert seulement de support à l'éditeur (versions, sauvegarde automatique)
+  page_key: "TEXT",
 };
 for (const [name, definition] of Object.entries(NEW_POST_COLUMNS)) {
   if (!postColumns.includes(name)) db.exec(`ALTER TABLE posts ADD COLUMN ${name} ${definition}`);
 }
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_page_key ON posts(page_key) WHERE page_key IS NOT NULL");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(published, category)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_cms ON posts(deleted_at, status, updated_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_id)");

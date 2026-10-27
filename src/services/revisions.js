@@ -327,7 +327,7 @@ const trashParts = (ctx) => {
   const pg = siteWhere(ctx, "p.site_id"), pgo = orgWhere(ctx, "p.organization_id"), md = siteWhere(ctx, "m.site_id"), mdo = orgWhere(ctx, "m.organization_id"), pt = siteWhere(ctx, "t.site_id");
   return {
     page: { from: `mk_landing_pages p WHERE p.archived_at IS NOT NULL AND p.kind <> 'step'${pg.sql}${pgo.sql}`, params: [...pg.params, ...pgo.params] },
-    post: { from: `posts p WHERE p.deleted_at IS NOT NULL${post ? ` AND ${post.sql}` : ""}`, params: post ? post.params : [] },
+    post: { from: `posts p WHERE p.deleted_at IS NOT NULL AND p.page_key IS NULL${post ? ` AND ${post.sql}` : ""}`, params: post ? post.params : [] },
     media: { from: `mk_media m WHERE m.deleted_at IS NOT NULL${md.sql}${mdo.sql}`, params: [...md.params, ...mdo.params] },
     comment: { from: `blog_comments c WHERE c.status = 'trash'${com ? ` AND ${com.sql}` : ""}`, params: com ? com.params : [] },
     pattern: { from: `appearance_patterns t WHERE t.deleted_at IS NOT NULL${pt.sql}`, params: pt.params },

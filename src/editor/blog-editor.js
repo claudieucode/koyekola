@@ -1081,7 +1081,7 @@ function start() {
       add("rename", "Renommer le bloc…", "Ctrl+Alt+R", () => renameBlock(first.pos), !locked && LOCKABLE_TYPES.includes(n.type.name));
       if (LOCKABLE_TYPES.includes(n.type.name)) add("lock", locked ? "Déverrouiller le bloc" : "Verrouiller le bloc", "", () => { setLocked(editor, first.pos, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); });
       if (LOCKABLE_TYPES.includes(n.type.name)) add("lock-options", "Options de verrouillage…", "", () => lockDialog(first.pos));
-      add("edit-html", "Modifier en HTML…", "Ctrl+Maj+Alt+M", () => editBlockHtml(first.pos), !locked && n.type.name !== "kbReusableEdit");
+      add("edit-html", "Modifier en HTML…", "", () => editBlockHtml(first.pos), !locked && n.type.name !== "kbReusableEdit");
       if (copyStyles(n)) add("copy-styles", "Copier les styles", "", () => { styleClipboard = copyStyles(n); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); });
       if (styleClipboard) add("paste-styles", "Coller les styles", "Ctrl+Alt+V", () => attempt(() => pasteStyles(editor, first.pos, styleClipboard), (k) => `${plural(k, "réglage")} de style appliqué${k > 1 ? "s" : ""}.`), !locked);
       if (transformsFor(editor, first.pos).length || TEXT_TYPES.includes(n.type.name)) add("transform", "Transformer en…", "", () => { if (TEXT_TYPES.includes(n.type.name)) editor.chain().focus().setTextSelection(first.pos + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]"), first.pos); }, !locked);
@@ -1679,7 +1679,7 @@ function start() {
     const m = empty && /^\/([\p{L}\p{N} '-]{0,30})$/u.exec(text);
     if (!m || $from.parentOffset !== text.length) { if (slash) { slash.remove(); slash = null; } return; }
     const range = { from: $from.start(), to: $from.end() };
-    const found = BLOCKS.filter((b) => !((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []).includes(b.id) && matches(b, m[1])).slice(0, 8);
+    const found = BLOCKS.filter((b) => !((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []).includes(b.id) && matches(b, m[1])).slice(0, 40);
     if (!slash) { slash = h("div", { class: "wp-popover wp-slash", role: "listbox", "aria-label": "Blocs" }); document.body.append(slash); }
     slash.replaceChildren(...found.map((b, i) => h("button", { type: "button", role: "option", class: i === 0 ? "is-active" : "", onmousedown: (e) => e.preventDefault(), onclick: () => applySlash(b, range) }, svg(b.icon, 20), h("span", {}, b.title))));
     if (!found.length) slash.append(h("p", { class: "wp-help" }, "Aucun bloc trouvé."));
@@ -1787,6 +1787,7 @@ function start() {
           if (event.key === "Enter") { if (options[i]) options[i].click(); return true; }
           const next = options[(i + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length];
           options.forEach((o) => o.classList.toggle("is-active", o === next));
+          next.scrollIntoView({ block: "nearest" });
           return true;
         }
         // Ctrl+Maj+0 : zoom arrière (vue d'ensemble de la page) ; Ctrl+Maj+Espace : espace insécable
@@ -3347,10 +3348,10 @@ function start() {
   // Fenêtre d'aide : regroupée comme celle de Gutenberg (Global, Sélection, Bloc, Texte). Mac : Cmd à la place de Ctrl.
   function showShortcuts() {
     const groups = [
-      ["Global", [["Ctrl + S", "Enregistrer"], ["Ctrl + Z", "Annuler"], ["Ctrl + Maj + Z  ou  Ctrl + Y", "Rétablir"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer"], ["Ctrl + Maj + Alt + M", "Éditeur visuel / éditeur de code"], ["Ctrl + Alt + M", "Ajouter une note sur le bloc"], ["Ctrl + Maj + Alt + F", "Plein écran"], ["Maj + Alt + O", "Vue en liste"], ["Ctrl + Maj + ,", "Afficher / masquer les réglages"], ["Ctrl + Maj + \\", "Mode sans distraction"], ["Maj + Alt + N / P", "Région suivante / précédente"], ["Alt + F10", "Barre d'outils du bloc"], ["Maj + Alt + H", "Cette aide"], ["Échap", "Fermer un menu"]]],
+      ["Global", [["Ctrl + S", "Enregistrer"], ["Ctrl + Z", "Annuler"], ["Ctrl + Maj + Z  ou  Ctrl + Y", "Rétablir"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer"], ["Ctrl + Maj + Alt + M", "Éditeur visuel / éditeur de code"], ["Ctrl + Alt + M", "Ajouter une note sur le bloc"], ["Ctrl + Maj + Alt + F", "Plein écran"], ["Maj + Alt + O", "Vue en liste"], ["Ctrl + Maj + ,", "Afficher / masquer les réglages"], ["Ctrl + Maj + \\", "Mode sans distraction"], ["Ctrl + Maj + 0", "Zoom arrière (toute la page)"], ["Maj + Alt + N / P", "Région suivante / précédente"], ["Alt + F10", "Barre d'outils du bloc"], ["Maj + Alt + H", "Cette aide"], ["Échap", "Fermer un menu"]]],
       ["Sélection", [["Ctrl + A", "Tout sélectionner (texte, puis tous les blocs)"], ["Maj + ↑ / ↓", "Étendre la sélection à plusieurs blocs"], ["Maj + clic (vue en liste)", "Sélectionner une plage de blocs"]]],
       ["Bloc", [["Ctrl + Maj + D", "Dupliquer"], ["Maj + Alt + Z", "Supprimer"], ["Ctrl + Alt + T / Y", "Insérer un paragraphe avant / après"], ["Ctrl + Maj + Alt + T / Y", "Monter / descendre"], ["Alt + ↑ / ↓", "Déplacer d'un cran"], ["Ctrl + G", "Grouper les blocs sélectionnés"], ["Ctrl + Alt + V", "Coller les styles"], ["Ctrl + Alt + R", "Renommer le bloc"], ["Ctrl + Maj + H", "Masquer / afficher le bloc"], ["/", "Choisir un bloc (début d'un paragraphe vide)"], ["Clic droit", "Menu du bloc (Maj + clic droit : menu du navigateur)"]]],
-      ["Texte", [["Ctrl + B / I / U", "Gras / italique / souligné"], ["Maj + Alt + 1 à 6", "Titre de niveau 1 à 6"], ["Maj + Alt + 0", "Paragraphe"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + V", "Coller sans mise en forme"]]],
+      ["Texte", [["[[", "Rechercher un article ou une page à lier"], ["Ctrl + Maj + Espace", "Espace insécable"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Maj + Alt + 1 à 6", "Titre de niveau 1 à 6"], ["Maj + Alt + 0", "Paragraphe"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + V", "Coller sans mise en forme"]]],
     ];
     modal("Raccourcis clavier", h("div", {}, h("p", { class: "wp-help" }, "Sur Mac, remplacez Ctrl par Cmd."), ...groups.flatMap(([title, rows]) => [h("h3", { class: "wp-shortcuts-title" }, title), h("dl", { class: "wp-shortcuts" }, ...rows.flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)]))])), [], { wide: true });
   }

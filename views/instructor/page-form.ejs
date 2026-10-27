@@ -5,6 +5,17 @@
     <% if (saved) { %><p class="form-success" role="status">Page enregistrée. <a href="/a-propos" target="_blank" rel="noopener">Voir la page<span class="sr-only"> (nouvel onglet)</span></a></p><% } %>
     <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
 
+    <section class="content-card page-blocks-card" aria-labelledby="page-blocks-title">
+      <h2 id="page-blocks-title">Éditeur de blocs</h2>
+      <p class="field-hint">Mise en page libre : colonnes, images, boutons, appels à l'action, listes d'articles, vidéos… avec l'historique des versions, la sauvegarde automatique et l'aperçu.</p>
+      <% if (blocks) { %><p class="form-success" role="status">Cette page est écrite avec l'éditeur de blocs : c'est lui qui s'affiche sur le site. Le texte simple ci-dessous n'est plus utilisé.</p><% } %>
+      <p class="page-actions">
+        <a href="/formateur/pages/<%= slug %>/blocs" class="btn btn-primary"><%= blocks ? "Modifier avec l'éditeur de blocs" : "Passer à l'éditeur de blocs" %></a>
+        <% if (blocks) { %><button type="submit" form="page-simple-form" class="btn btn-outline" data-confirm-text="Réafficher le texte simple sur le site ? Le contenu en blocs est conservé dans l'éditeur, vous pourrez le republier.">Revenir au texte simple</button><% } %>
+      </p>
+      <% if (blocks) { %><form id="page-simple-form" action="/formateur/pages/<%= slug %>/texte-simple" method="post"></form><% } %>
+    </section>
+
     <form action="/formateur/pages/<%= slug %>" method="post" class="content-card" data-page-form>
       <div class="field-group">
         <label for="page-content">Contenu <span class="field-hint">(laissez vide pour afficher le texte par défaut)</span></label>

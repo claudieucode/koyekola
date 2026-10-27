@@ -2699,3 +2699,8 @@ form.kb-search input[type="search"] { flex: 1 1 200px; min-width: 0; padding: 10
 /* Article en plusieurs pages */
 .article-pages { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin: 2.4em 0 1em; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .article-pages-status { color: var(--muted); font-weight: 600; }
+/* Police du bloc : les familles proposées par l'éditeur (déjà chargées par le site ou système) */
+:is(.article-content, .ProseMirror) [data-ff="sans"] { font-family: Figtree, sans-serif; }
+:is(.article-content, .ProseMirror) [data-ff="display"] { font-family: "Bricolage Grotesque", Figtree, sans-serif; }
+:is(.article-content, .ProseMirror) [data-ff="serif"] { font-family: Georgia, serif; }
+:is(.article-content, .ProseMirror) [data-ff="mono"] { font-family: ui-monospace, Menlo, Consolas, monospace; }
