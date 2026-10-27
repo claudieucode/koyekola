@@ -7,11 +7,10 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey, NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { DOMSerializer } from "@tiptap/pm/model";
+import { topNames } from "../../shared/blockRegistry";
 
 // Blocs de premier niveau qui peuvent être verrouillés
-export const LOCKABLE_TYPES = ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "taskList", "codeBlock", "table", "horizontalRule", "details",
-  "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbCta", "kbAccordion", "kbFaq", "kbSteps", "kbCompare", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbReusable",
-  "kbPreformatted", "kbVerse", "kbMore", "kbFile", "kbCover", "kbMediaText"];
+export const LOCKABLE_TYPES = topNames(); // dérivé du registre central (src/shared/blockRegistry.js) : un bloc ajouté au registre est verrouillable, avec identité, sans autre liste à tenir à jour
 const LOCK_META = "kbLockChange";
 export const lockKey = new PluginKey("kbBlockLock");
 

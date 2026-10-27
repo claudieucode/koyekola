@@ -175,6 +175,119 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     await page.context().close();
   });
 
+  test("sélection multiple : Maj+flèches, barre d'actions de groupe, Ctrl+G, dupliquer, monter, supprimer", async () => {
+    const page = await open();
+    await load(page, "<p>Un</p><p>Deux</p><p>Trois</p><p>Quatre</p>");
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(2); ed.view.focus(); });
+    await page.keyboard.press("Shift+ArrowDown");
+    await page.keyboard.press("Shift+ArrowDown");
+    await page.mouse.move(700, 400);
+    await page.waitForFunction(() => /3 blocs sélectionnés/.test(document.querySelector("[data-block-toolbar]").innerText), null, { timeout: 5000 });
+    assert.equal(await page.locator(".ProseMirror .is-multi-selected").count(), 3, "les trois blocs sont repérés");
+    await page.keyboard.press("ControlOrMeta+g");
+    let t = await tops(page);
+    assert.deepEqual(t.map((x) => x.type), ["kbGroup", "paragraph"]);
+    assert.equal(t[0].text, "UnDeuxTrois");
+    await selectNode(page, 0);
+    await page.keyboard.press("ControlOrMeta+Shift+d");
+    t = await tops(page);
+    assert.deepEqual(t.map((x) => x.type), ["kbGroup", "kbGroup", "paragraph"], "Ctrl+Maj+D duplique le groupe");
+    await page.keyboard.press("ControlOrMeta+Shift+Alt+y");
+    await page.keyboard.press("ControlOrMeta+Shift+Alt+y");
+    t = await tops(page);
+    assert.deepEqual(t.map((x) => x.type).slice(0, 3), ["kbGroup", "paragraph", "kbGroup"], "Ctrl+Maj+Alt+Y descend le bloc, deux fois (un paragraphe final est ajouté après un groupe)");
+    await page.keyboard.press("Shift+Alt+z");
+    assert.equal((await tops(page)).filter((x) => x.type === "kbGroup").length, 1, "Maj+Alt+Z supprime le groupe sélectionné");
+    await page.context().close();
+  });
+
+  test("raccourcis de bloc : insérer avant/après, masquer, renommer, niveaux de titre", async () => {
+    const page = await open();
+    await load(page, "<p>Premier</p><p>Second</p>");
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(10); ed.view.focus(); });
+    await page.keyboard.press("ControlOrMeta+Alt+t");
+    let t = await tops(page);
+    assert.deepEqual(t.map((x) => x.text), ["Premier", "", "Second"], "Ctrl+Alt+T insère un paragraphe avant le bloc courant");
+    await page.keyboard.press("ControlOrMeta+Alt+y");
+    t = await tops(page);
+    assert.equal(t.length, 4, "Ctrl+Alt+Y insère un paragraphe après");
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; let pos = 0; ed.state.doc.forEach((n, p) => { if (n.textContent === "Second") pos = p; }); ed.commands.setTextSelection(pos + 2); ed.view.focus(); });
+    await page.keyboard.press("Shift+Alt+2");
+    t = await tops(page);
+    assert.deepEqual([t.find((x) => x.text === "Second").type, t.find((x) => x.text === "Second").attrs.level], ["heading", 2], "Maj+Alt+2 : titre de niveau 2");
+    await page.keyboard.press("Shift+Alt+0");
+    assert.equal((await tops(page)).find((x) => x.text === "Second").type, "paragraph", "Maj+Alt+0 : paragraphe");
+    await page.keyboard.press("ControlOrMeta+Shift+h");
+    assert.equal((await tops(page)).find((x) => x.text === "Second").attrs.hidden, true, "Ctrl+Maj+H masque le bloc");
+    await page.keyboard.press("ControlOrMeta+Shift+h");
+    assert.equal((await tops(page)).find((x) => x.text === "Second").attrs.hidden, false, "…et l'affiche de nouveau");
+    await page.keyboard.press("ControlOrMeta+Alt+r");
+    await page.fill(".wp-modal input", "Ma conclusion");
+    await page.getByRole("button", { name: "Enregistrer" }).last().click();
+    assert.equal((await tops(page)).find((x) => x.text === "Second").attrs.blockName, "Ma conclusion");
+    await page.context().close();
+  });
+
+  test("annuler / rétablir : boutons désactivés tant qu'il n'y a rien à défaire ; palette : commandes de bloc", async () => {
+    const page = await open();
+    await load(page, "<p>Un</p><p>Deux</p>");
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.view.dispatch(ed.state.tr.setMeta("addToHistory", false)); ed.commands.setTextSelection(2); ed.view.focus(); });
+    await page.waitForTimeout(200);
+    const state = () => page.evaluate(() => [document.querySelector("[data-undo]").disabled, document.querySelector("[data-redo]").disabled]);
+    await page.keyboard.type("x");
+    await page.waitForTimeout(150);
+    assert.deepEqual(await state(), [false, true], "après une frappe : annuler possible, rétablir non");
+    await page.keyboard.press("ControlOrMeta+z");
+    await page.waitForTimeout(150);
+    assert.equal((await state())[1], false, "après annulation : rétablir possible");
+    // Palette de commandes : « Grouper »
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection({ from: 2, to: 8 }); ed.view.focus(); });
+    await page.keyboard.press("ControlOrMeta+Shift+k");
+    await page.waitForSelector(".wsp-palette");
+    await page.keyboard.type("Grouper");
+    await page.waitForTimeout(250);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(300);
+    assert.equal((await tops(page))[0].type, "kbGroup", "la palette exécute la commande « Grouper »");
+    await page.context().close();
+  });
+
+  test("vue en liste : Maj+clic sélectionne une plage, glisser-déposer déplace un bloc, mode sans distraction", async () => {
+    const page = await open();
+    await load(page, "<p>Alpha</p><p>Beta</p><p>Gamma</p><p>Delta</p>");
+    await page.click('[data-rail="list"]');
+    await page.waitForSelector(".wp-lv-select");
+    await page.locator(".wp-lv-select").nth(0).click();
+    await page.locator(".wp-lv-select").nth(2).click({ modifiers: ["Shift"] });
+    await page.mouse.move(700, 400);
+    await page.waitForFunction(() => /3 blocs sélectionnés/.test(document.querySelector("[data-block-toolbar]").innerText), null, { timeout: 5000 });
+    // Glisser « Delta » avant « Alpha »
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(2); });
+    const rows = page.locator(".wp-lv-row");
+    await rows.nth(3).dragTo(rows.nth(0), { targetPosition: { x: 40, y: 3 } });
+    await page.waitForTimeout(300);
+    assert.deepEqual((await tops(page)).map((x) => x.text), ["Delta", "Alpha", "Beta", "Gamma"], "le bloc a été déplacé par glisser-déposer");
+    await page.keyboard.press("ControlOrMeta+Shift+Backslash");
+    assert.equal(await page.evaluate(() => document.querySelector("[data-blog-editor]").classList.contains("is-distraction-free")), true);
+    await page.keyboard.press("ControlOrMeta+Shift+Backslash");
+    assert.equal(await page.evaluate(() => document.querySelector("[data-blog-editor]").classList.contains("is-distraction-free")), false);
+    await page.context().close();
+  });
+
+  test("outil d'insertion : un bloc glissé vers l'article est inséré à l'endroit du dépôt", async () => {
+    const page = await open();
+    await load(page, "<p>Haut</p><p>Bas</p>");
+    await page.click("[data-toggle-inserter]");
+    await page.waitForSelector(".wp-block-type");
+    const source = page.locator(".wp-block-type", { hasText: "Séparateur" }).first();
+    const target = page.locator(".ProseMirror > p").nth(0);
+    await source.dragTo(target, { targetPosition: { x: 20, y: 18 } });
+    await page.waitForTimeout(300);
+    const t = await tops(page);
+    assert.deepEqual(t.map((x) => x.type).slice(0, 3), ["paragraph", "horizontalRule", "paragraph"], JSON.stringify(t.map((x) => x.type)));
+    await page.context().close();
+  });
+
   test("sans erreur de console pendant ces parcours", () => {
     assert.deepEqual(errors, []);
   });

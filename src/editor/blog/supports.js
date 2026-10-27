@@ -69,6 +69,12 @@ export const BlockSupports = Extension.create({
           parseHTML: (el) => (ANCHOR_RE.test(el.getAttribute("id") || "") ? el.getAttribute("id") : null),
           renderHTML: (attrs) => (attrs.anchor ? { id: attrs.anchor } : {}),
         },
+        blockName: {
+          default: null,
+          keepOnSplit: false,
+          parseHTML: (el) => (el.getAttribute("data-name") || "").replace(/\s+/g, " ").trim().slice(0, 60) || null,
+          renderHTML: (attrs) => (attrs.blockName ? { "data-name": attrs.blockName } : {}),
+        },
         variant: {
           default: "",
           keepOnSplit: false,

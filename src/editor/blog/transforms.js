@@ -2,7 +2,9 @@
 // Tout passe par de vraies transactions ProseMirror : « Annuler » les défait, un bloc verrouillé est refusé, et une conversion qui ne
 // peut pas conserver le contenu est REFUSÉE avec un message (jamais de perte silencieuse).
 import { Fragment } from "@tiptap/pm/model";
-import { NodeSelection, TextSelection } from "@tiptap/pm/state";
+import { Extension } from "@tiptap/core";
+import { NodeSelection, TextSelection, Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { closeHistory } from "@tiptap/pm/history";
 
 // Blocs qui peuvent en contenir d'autres au même niveau : la sélection de plusieurs blocs « frères » se groupe dans l'un d'eux
@@ -189,3 +191,95 @@ export function pasteStyles(editor, pos, clip) {
   step(editor, editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...applied }));
   return Object.keys(applied).length;
 }
+
+// ---------- Opérations sur une plage de blocs frères (sélection multiple) ----------
+const stripForCopy = (node) => {
+  const json = node.toJSON();
+  const clean = (j) => {
+    if (j.attrs) { if ("locked" in j.attrs) j.attrs.locked = false; if ("anchor" in j.attrs) j.attrs.anchor = null; if ("blockId" in j.attrs) j.attrs.blockId = null; }
+    if (j.content) j.content.forEach(clean);
+  };
+  clean(json);
+  return json;
+};
+export function duplicateRange(editor, range = blockRange(editor.state)) {
+  if (!range || !range.nodes.length) throw new TransformError("Sélectionnez un bloc à dupliquer.");
+  const copies = range.nodes.map(({ node }) => editor.schema.nodeFromJSON(stripForCopy(node)));
+  if (!range.parent.canReplace(range.end + 1, range.end + 1, Fragment.from(copies))) throw new TransformError("Ces blocs ne peuvent pas être dupliqués ici.");
+  step(editor, editor.state.tr.insert(range.to, copies).scrollIntoView());
+  return copies.length;
+}
+export function deleteRange(editor, range = blockRange(editor.state)) {
+  if (!range || !range.nodes.length) throw new TransformError("Sélectionnez un bloc à supprimer.");
+  if (range.nodes.some(({ node }) => isLocked(node))) throw new TransformError("Un bloc verrouillé ne peut pas être supprimé : déverrouillez-le d'abord.");
+  const tr = editor.state.tr.delete(range.from, range.to);
+  // Un conteneur ne peut pas rester vide : le document garde au moins un paragraphe
+  if (range.depth === 0 && !tr.doc.childCount) tr.insert(0, type(editor, "paragraph").create());
+  else if (!range.parent.canReplace(range.start, range.end + 1)) throw new TransformError("Ce bloc ne peut pas être supprimé seul : supprimez le bloc qui le contient.");
+  step(editor, tr.scrollIntoView());
+  return range.nodes.length;
+}
+export function moveRange(editor, dir, range = blockRange(editor.state)) {
+  if (!range || !range.nodes.length) throw new TransformError("Sélectionnez un bloc à déplacer.");
+  if (range.nodes.some(({ node }) => isLocked(node))) throw new TransformError("Un bloc verrouillé ne peut pas être déplacé : déverrouillez-le d'abord.");
+  const sibling = dir < 0 ? (range.start > 0 ? range.parent.child(range.start - 1) : null) : (range.end + 1 < range.parent.childCount ? range.parent.child(range.end + 1) : null);
+  if (!sibling) throw new TransformError(dir < 0 ? "Ce bloc est déjà le premier." : "Ce bloc est déjà le dernier.");
+  const moving = range.nodes.map((x) => x.node);
+  const tr = editor.state.tr;
+  tr.delete(range.from, range.to);
+  const target = dir < 0 ? range.from - sibling.nodeSize : range.from + sibling.nodeSize;
+  tr.insert(target, moving);
+  try { tr.setSelection(moving.length === 1 && !moving[0].isTextblock ? NodeSelection.create(tr.doc, target) : TextSelection.near(tr.doc.resolve(target + 1))); } catch { /* sélection par défaut */ } // un bloc conteneur reste sélectionné en entier : on peut le déplacer plusieurs fois de suite
+  step(editor, tr.scrollIntoView());
+  return moving.length;
+}
+// Déplacer un bloc (par sa position) avant / après / dans un autre bloc (vue en liste : glisser-déposer)
+export function moveBlockTo(editor, fromPos, targetPos, where) {
+  const doc = editor.state.doc;
+  const node = doc.nodeAt(fromPos);
+  const target = doc.nodeAt(targetPos);
+  if (!node || !target) throw new TransformError("Bloc introuvable.");
+  if (isLocked(node)) throw new TransformError("Un bloc verrouillé ne peut pas être déplacé : déverrouillez-le d'abord.");
+  if (targetPos >= fromPos && targetPos < fromPos + node.nodeSize) throw new TransformError("Un bloc ne peut pas être déplacé dans lui-même.");
+  let at;
+  let parent;
+  let index;
+  if (where === "inside") {
+    if (!GROUP_PARENTS.has(target.type.name) || target.type.name === "doc") throw new TransformError("Ce bloc ne peut pas en contenir d'autres.");
+    parent = target; index = target.childCount; at = targetPos + target.nodeSize - 1;
+  } else {
+    const $t = doc.resolve(targetPos);
+    parent = $t.parent; index = $t.index() + (where === "after" ? 1 : 0); at = where === "after" ? targetPos + target.nodeSize : targetPos;
+  }
+  if (!parent.canReplaceWith(index, index, node.type)) throw new TransformError("Ce bloc ne peut pas être placé à cet endroit.");
+  const tr = editor.state.tr;
+  tr.delete(fromPos, fromPos + node.nodeSize);
+  const mapped = tr.mapping.map(at);
+  tr.insert(mapped, node);
+  try { tr.setSelection(!node.isTextblock ? NodeSelection.create(tr.doc, mapped) : TextSelection.near(tr.doc.resolve(mapped + 1))); } catch { /* sélection par défaut */ }
+  step(editor, tr.scrollIntoView());
+}
+export function insertParagraphAt(editor, pos) {
+  const p = type(editor, "paragraph").create();
+  const tr = editor.state.tr.insert(pos, p);
+  tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1)));
+  step(editor, tr.scrollIntoView());
+}
+
+// Repère visuel des blocs de la sélection multiple
+export const MultiSelectHighlight = Extension.create({
+  name: "kbMultiSelect",
+  addProseMirrorPlugins() {
+    return [new Plugin({
+      key: new PluginKey("kbMultiSelect"),
+      props: {
+        decorations(state) {
+          if (state.selection.empty || state.selection instanceof NodeSelection) return null;
+          const r = blockRange(state);
+          if (!r || r.nodes.length < 2) return null;
+          return DecorationSet.create(state.doc, r.nodes.map(({ node, pos }) => Decoration.node(pos, pos + node.nodeSize, { class: "is-multi-selected" })));
+        },
+      },
+    })];
+  },
+});

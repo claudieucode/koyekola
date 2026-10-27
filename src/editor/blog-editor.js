@@ -28,7 +28,7 @@ import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
 import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS } from "./blog/supports";
-import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError } from "./blog/transforms";
+import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
 
@@ -36,6 +36,8 @@ const root = document.querySelector("[data-blog-editor]");
 
 // Icônes (24 × 24) dans le style de la bibliothèque d'icônes de WordPress
 const ICONS = {
+  layers: "M4 4h10v10H4V4zm1.5 1.5v7h7v-7h-7zM10 10h10v10H10V10zm1.5 1.5v7h7v-7h-7z",
+  duplicate: "M8 3h12v12H8V3zm1.5 1.5v9h9v-9h-9zM4 8h2v1.5H5.5v9h9V18H16v2H4V8z",
   file: "M19 6.2h-5.9l-.6-1.3c-.3-.6-.9-1-1.6-1H5c-1.1 0-2 .9-2 2v11.6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8.2c0-1.1-.9-2-2-2zm.5 11.6c0 .3-.2.5-.5.5H5c-.3 0-.5-.2-.5-.5V6.2c0-.3.2-.5.5-.5h5.9l.6 1.3c.3.6.9 1 1.6 1H19c.3 0 .5.2.5.5v9.3z",
   cover: "M4 4h16v16H4V4zm1.5 1.5v13h13v-13h-13zM7 15l3-4 2 2.5 2-3 3 4.5H7z",
   mediatext: "M3 5h8v14H3V5zm1.5 1.5v11h5v-11h-5zM13 7h8v1.5h-8V7zm0 4h8v1.5h-8V11zm0 4h6v1.5h-6V15z",
@@ -221,6 +223,7 @@ function start() {
       BlockHandle.configure({ visual: false }),
       BlockLock.configure({ onBlocked: () => lockedNotice() }),
       BlockSupports,
+      MultiSelectHighlight,
       BlockIdentity.configure({ hiddenLabel: (n) => blockNameOf(n), onShow: (id) => { setHidden(editor, id, false); toast("Bloc de nouveau visible."); } }),
       FindHighlight,
     ],
@@ -388,6 +391,9 @@ function start() {
   const usesText = (b) => (b.occurrences ? `Utilisé ${b.occurrences} fois · ${b.uses} article${b.uses > 1 ? "s" : ""}` : "Pas encore utilisé");
   const blockButton = (b, after, { star = false, onStar } = {}) => {
     const btn = h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); useBlock(b.id); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
+    // Glisser le bloc depuis l'outil d'insertion vers l'article : il est inséré à l'endroit du dépôt
+    btn.draggable = true;
+    btn.addEventListener("dragstart", (e) => { e.dataTransfer.setData("application/x-kb-insert", b.id); e.dataTransfer.setData("text/plain", b.title); e.dataTransfer.effectAllowed = "copy"; });
     if (!star) return btn;
     const fav = editorPrefs.favorites.includes(b.id);
     return h("div", { class: "wp-block-type-wrap" }, btn, h("button", { type: "button", class: `wp-fav${fav ? " is-on" : ""}`, "aria-pressed": String(fav), "aria-label": fav ? `Retirer « ${b.title} » des favoris` : `Ajouter « ${b.title} » aux favoris`, title: fav ? "Retirer des favoris" : "Ajouter aux favoris", onclick: (e) => { e.stopPropagation(); toggleFavorite(b.id); onStar?.(); } }, fav ? "★" : "☆"));
@@ -475,7 +481,7 @@ function start() {
   }
   const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbPreformatted: "Préformaté", kbVerse: "Vers", kbMore: "Lire la suite", kbFile: "Fichier", kbCover: "Couverture", kbMediaText: "Média et texte", kbMediaTextBody: "Texte", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)" };
   const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button", kbPreformatted: "code", kbVerse: "quote", kbMore: "readmore", kbFile: "file", kbCover: "cover", kbMediaText: "mediatext" };
-  const nameOf = (node) => (node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
+  const nameOf = (node) => (node.attrs && node.attrs.blockName ? node.attrs.blockName : node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
   // ---------- Structure de l'article : vue en liste, plan, corbeille ----------
   // Une seule source de vérité : le document de l'éditeur. Chaque ligne porte l'identifiant du bloc (blockId) ;
   // la zone d'écriture et la liste se retrouvent par cet identifiant, jamais par un rang dans un tableau.
@@ -505,7 +511,8 @@ function start() {
       const name = blockLabel(node);
       const preview = blockPreview(node);
       const fixedChild = node.type.name === "kbColumn"; // une colonne se gère par la mise en page du bloc Colonnes
-      const select = h("button", { type: "button", class: "wp-lv-select", "data-block-select": id || "", onclick: () => selectBlockById(id) },
+      const select = h("button", { type: "button", class: "wp-lv-select", "data-block-select": id || "", title: "Maj + clic : sélectionner une plage de blocs · Alt + ↑/↓ : déplacer", onclick: (e) => (e.shiftKey ? selectBlocksRange(listActive || activeBlockId(editor.state), id) : selectBlockById(id)),
+        onkeydown: (e) => { if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && id) { e.preventDefault(); selectBlockById(id); attempt(() => moveRange(editor, e.key === "ArrowUp" ? -1 : 1)); renderListView(); const again = secondaryDynamic.querySelector(`[data-block-select="${id}"]`); if (again) again.focus(); } } },
         svg(ICON_OF[node.type.name] || "paragraph", 18), h("span", { class: "wp-list-name" }, name), preview ? h("span", { class: "wp-list-preview" }, preview) : null);
       const eye = h("button", { type: "button", class: `wp-lv-action${hidden ? " is-on" : ""}`, "data-block-hide": id || "", "aria-pressed": String(hidden), disabled: locked || fixedChild || !id,
         "aria-label": hidden ? `Afficher le bloc ${name}` : `Masquer le bloc ${name}`, title: locked ? "Bloc verrouillé" : hidden ? "Afficher le bloc" : "Masquer le bloc",
@@ -513,8 +520,29 @@ function start() {
       const del = h("button", { type: "button", class: "wp-lv-action is-danger", "data-block-delete": id || "", disabled: locked || fixedChild || !id,
         "aria-label": `Supprimer le bloc ${name}`, title: locked ? "Bloc verrouillé" : fixedChild ? "Changez le nombre de colonnes dans les réglages du bloc Colonnes" : "Supprimer (vers la corbeille)",
         onclick: () => trashBlock(id) }, svg("trash", 18));
-      const row = h("li", { role: "treeitem", "aria-level": String(depth + 1), "aria-selected": "false", class: `wp-lv-item${hidden ? " is-hidden" : ""}`, "data-block-row": id || "" },
-        h("div", { class: "wp-lv-row" }, select, h("span", { class: "wp-lv-actions" }, eye, del)));
+      const rowBox = h("div", { class: "wp-lv-row" }, select, h("span", { class: "wp-lv-actions" }, eye, del));
+      const row = h("li", { role: "treeitem", "aria-level": String(depth + 1), "aria-selected": "false", class: `wp-lv-item${hidden ? " is-hidden" : ""}`, "data-block-row": id || "" }, rowBox);
+      // Glisser-déposer : un bloc se déplace avant, après ou dans un autre bloc (le clavier : Alt + ↑/↓ sur la ligne)
+      if (id && !locked && !fixedChild) {
+        rowBox.draggable = true;
+        rowBox.addEventListener("dragstart", (e) => { e.dataTransfer.setData("application/x-kb-block", id); e.dataTransfer.effectAllowed = "move"; row.classList.add("is-dragging"); });
+        rowBox.addEventListener("dragend", () => { row.classList.remove("is-dragging"); list.querySelectorAll(".is-drop-before, .is-drop-after, .is-drop-inside").forEach((x) => x.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside")); });
+      }
+      if (id) {
+        const zoneOf = (e) => { const r = rowBox.getBoundingClientRect(); const y = (e.clientY - r.top) / Math.max(1, r.height); return ["kbGroup", "kbColumn", "kbCover", "callout", "kbCta"].includes(node.type.name) && y > 0.3 && y < 0.7 ? "inside" : y < 0.5 ? "before" : "after"; };
+        rowBox.addEventListener("dragover", (e) => { if (![...e.dataTransfer.types].includes("application/x-kb-block")) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; const z = zoneOf(e); rowBox.classList.toggle("is-drop-before", z === "before"); rowBox.classList.toggle("is-drop-after", z === "after"); rowBox.classList.toggle("is-drop-inside", z === "inside"); });
+        rowBox.addEventListener("dragleave", () => rowBox.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside"));
+        rowBox.addEventListener("drop", (e) => {
+          const from = e.dataTransfer.getData("application/x-kb-block");
+          if (!from) return;
+          e.preventDefault();
+          rowBox.classList.remove("is-drop-before", "is-drop-after", "is-drop-inside");
+          const a = findBlock(editor.state.doc, from), t = findBlock(editor.state.doc, id);
+          if (!a || !t) return;
+          attempt(() => moveBlockTo(editor, a.pos, t.pos, zoneOf(e)), "Bloc déplacé (Ctrl+Z pour annuler).");
+          renderListView();
+        });
+      }
       stack[stack.length - 1].ul.append(row);
       if (id) listRows.set(id, row);
       count += 1;
@@ -595,6 +623,21 @@ function start() {
       setTimeout(() => dom.classList.remove("is-list-target"), 1600);
     }
     syncListSelection(true);
+  }
+  // Maj + clic dans la vue en liste : tous les blocs de même niveau entre deux blocs
+  function selectBlocksRange(aId, bId) {
+    const doc = editor.state.doc;
+    const A = findBlock(doc, aId), B = findBlock(doc, bId);
+    if (!A || !B) { if (B) selectBlockById(bId); return; }
+    if (A.parent !== B.parent) { toast("Sélectionnez des blocs du même niveau (même colonne, même groupe).", "error"); return; }
+    const [x, y] = A.pos <= B.pos ? [A, B] : [B, A];
+    const from = x.pos, to = y.pos + y.node.nodeSize;
+    const sel = TextSelection.between(doc.resolve(from), doc.resolve(to), 1);
+    editor.view.dispatch(editor.state.tr.setSelection(sel));
+    editor.view.focus();
+    const r = blockRange(editor.state);
+    if (!r || r.nodes.length < 2) selectBlockById(bId);
+    listActive = null; syncListSelection(true);
   }
   function selectBlockAt(pos) {
     const node = editor.state.doc.nodeAt(pos);
@@ -856,6 +899,11 @@ function start() {
   function blockMenuItems(top) {
     const node = editor.state.doc.nodeAt(top);
     if (!node) return [];
+    // Plusieurs blocs sélectionnés : les actions de groupe seulement
+    const multi = blockRange(editor.state);
+    if (multi && multi.nodes.length > 1 && multi.from <= top && top < multi.to) {
+      return blockCommands().filter((c) => c.enabled && ["group", "duplicate", "up", "down", "delete"].includes(c.id)).map((c, i, all) => (c.id === "delete" && i === all.length - 1 && all.length > 1 ? [{ label: c.label, danger: true, shortcut: c.shortcut, run: c.run }] : [{ label: c.label, shortcut: c.shortcut, run: c.run }])).flat();
+    }
     const locked = isLocked(node);
     const copy = async () => {
       blockClipboard = { ...node.toJSON(), attrs: { ...node.attrs, locked: false } };
@@ -891,6 +939,61 @@ function start() {
     if (node.type.name === "kbReusableEdit") return [{ label: "✓ Enregistrer le bloc (tous les articles)", run: () => commitReusable(top) }, { label: "Annuler les modifications du bloc", run: () => commitReusable(top, { cancel: true }) }];
     return [{ label: "Enregistrer comme bloc réutilisable…", run: () => saveAsReusable(top) }];
   };
+  // ---------- Commandes de bloc : UNE définition pour le menu, la barre multi-sélection, les raccourcis et la palette de commandes ----------
+  function blockCommands() {
+    const r = blockRange(editor.state);
+    if (!r || !r.nodes.length) return [];
+    const many = r.nodes.length > 1;
+    const first = r.nodes[0];
+    const locked = r.nodes.some(({ node }) => isLocked(node));
+    const plural = (n, w) => `${n} ${w}${n > 1 ? "s" : ""}`;
+    const out = [];
+    const add = (id, label, shortcut, run, enabled = true) => out.push({ id, label, shortcut, run, enabled });
+    add("duplicate", many ? `Dupliquer ces ${r.nodes.length} blocs` : "Dupliquer le bloc", "Ctrl+Maj+D", () => attempt(() => duplicateRange(editor), (n) => `${plural(n, "bloc")} dupliqué${n > 1 ? "s" : ""}.`));
+    add("delete", many ? `Supprimer ces ${r.nodes.length} blocs` : "Supprimer le bloc", "Maj+Alt+Z", () => attempt(() => deleteRange(editor), (n) => `${plural(n, "bloc")} supprimé${n > 1 ? "s" : ""} (Ctrl+Z pour annuler).`), !locked);
+    add("before", "Insérer un paragraphe avant", "Ctrl+Alt+T", () => attempt(() => insertParagraphAt(editor, r.from)));
+    add("after", "Insérer un paragraphe après", "Ctrl+Alt+Y", () => attempt(() => insertParagraphAt(editor, r.to)));
+    add("up", many ? "Monter ces blocs" : "Déplacer vers le haut", "Ctrl+Maj+Alt+T", () => attempt(() => moveRange(editor, -1)), !locked && r.start > 0);
+    add("down", many ? "Descendre ces blocs" : "Déplacer vers le bas", "Ctrl+Maj+Alt+Y", () => attempt(() => moveRange(editor, 1)), !locked && r.end + 1 < r.parent.childCount);
+    const g = canGroup(editor);
+    add("group", many ? `Grouper ces ${r.nodes.length} blocs` : "Grouper", "Ctrl+G", () => attempt(() => groupSelection(editor), (n) => `${plural(n, "bloc")} groupé${n > 1 ? "s" : ""}.`), g.ok);
+    if (!many && canUngroup(first.node)) add("ungroup", "Dégrouper", "", () => attempt(() => ungroupAt(editor, first.pos), "Bloc dégroupé : son contenu est remis au niveau du dessus."));
+    if (!many) {
+      const n = first.node;
+      const id = n.attrs.blockId;
+      add("hide", n.attrs.hidden ? "Afficher le bloc" : "Masquer le bloc", "Ctrl+Maj+H", () => toggleHidden(id), Boolean(id) && !locked);
+      add("rename", "Renommer le bloc…", "Ctrl+Alt+R", () => renameBlock(first.pos), !locked && LOCKABLE_TYPES.includes(n.type.name));
+      if (LOCKABLE_TYPES.includes(n.type.name) && editor.state.doc.resolve(first.pos).depth === 0) add("lock", locked ? "Déverrouiller le bloc" : "Verrouiller le bloc", "", () => { setLocked(editor, first.pos, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); });
+      if (copyStyles(n)) add("copy-styles", "Copier les styles", "", () => { styleClipboard = copyStyles(n); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); });
+      if (styleClipboard) add("paste-styles", "Coller les styles", "Ctrl+Alt+V", () => attempt(() => pasteStyles(editor, first.pos, styleClipboard), (k) => `${plural(k, "réglage")} de style appliqué${k > 1 ? "s" : ""}.`), !locked);
+      if (transformsFor(editor, first.pos).length || TEXT_TYPES.includes(n.type.name)) add("transform", "Transformer en…", "", () => { if (TEXT_TYPES.includes(n.type.name)) editor.chain().focus().setTextSelection(first.pos + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]"), first.pos); }, !locked);
+    }
+    return out;
+  }
+  const runCommand = (id) => { const c = blockCommands().find((x) => x.id === id); if (!c || !c.enabled) return false; c.run(); return true; };
+  // Raccourcis de bloc (mêmes combinaisons que Gutenberg) : touche physique (event.code), modificateur principal = Ctrl ou Cmd
+  function commandForKeys(e) {
+    const mod = e.ctrlKey || e.metaKey;
+    if (!mod && !(e.shiftKey && e.altKey)) return null;
+    if (mod && e.altKey && !e.shiftKey) return { KeyT: "before", KeyY: "after", KeyV: "paste-styles", KeyR: "rename" }[e.code] || null;
+    if (mod && e.altKey && e.shiftKey) return { KeyT: "up", KeyY: "down" }[e.code] || null;
+    if (mod && !e.altKey && !e.shiftKey && e.code === "KeyG") return "group";
+    if (mod && e.shiftKey && !e.altKey && e.code === "KeyH") return "hide";
+    return null;
+  }
+  // Renommer un bloc : le nom personnalisé s'affiche dans la vue en liste et les menus (jamais dans l'article publié)
+  function renameBlock(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node) return;
+    if (isLocked(node)) { lockedNotice(); return; }
+    const kind = LABEL[node.type.name] || "Bloc";
+    const name = input({ value: node.attrs.blockName || "", maxlength: 60, placeholder: kind });
+    modal("Renommer le bloc", h("div", {}, control("Nom du bloc", name, "Visible dans la vue en liste et dans les menus ; laissez vide pour retrouver le nom d'origine. Il n'est pas publié."), ), [
+      { label: "Annuler" },
+      { label: "Enregistrer", primary: true, run: () => { setAttrsAt(pos, { blockName: name.value.replace(/\s+/g, " ").trim().slice(0, 60) || null }); if (secondaryMode === "list") renderListView(); toast(name.value.trim() ? "Bloc renommé." : "Nom d'origine rétabli."); } },
+    ]);
+    setTimeout(() => name.focus(), 30);
+  }
   let lastMenuAnchor = null;
   function blockOptions(anchor, b) {
     lastMenuAnchor = anchor;
@@ -1271,6 +1374,9 @@ function start() {
     if (blockDragging) return;
     // Mode Document : le ruban remplace la barre du bloc (flottante ou fixe en haut)
     if (docMode && docMode.isActive()) { blockToolbar.hidden = true; topToolbar.hidden = true; return; }
+    // Plusieurs blocs sélectionnés : barre d'actions de groupe (grouper, dupliquer, déplacer, supprimer)
+    const multi = blockRange(editor.state);
+    if (multi && multi.nodes.length > 1 && !editor.state.selection.empty && !(editor.state.selection instanceof NodeSelection) && !root.classList.contains("is-code-mode")) { renderMultiToolbar(multi); return; }
     const b = currentBlock();
     const target = topToolbarMode ? topToolbar : blockToolbar;
     (topToolbarMode ? blockToolbar : topToolbar).hidden = true;
@@ -1329,6 +1435,27 @@ function start() {
     target.append(...groups);
     target.hidden = false;
     positionToolbar(b);
+  }
+  function renderMultiToolbar(range) {
+    const target = topToolbarMode ? topToolbar : blockToolbar;
+    (topToolbarMode ? blockToolbar : topToolbar).hidden = true;
+    if (root.classList.contains("is-typing")) { target.hidden = true; return; }
+    const cmds = blockCommands().filter((c) => ["group", "duplicate", "up", "down", "delete"].includes(c.id));
+    const key = `multi|${range.from}|${range.to}|${cmds.map((c) => `${c.id}${c.enabled ? 1 : 0}`).join("")}`;
+    if (key !== toolbarKey || !target.childElementCount) {
+      toolbarKey = key;
+      const icons = { group: "layers", duplicate: "duplicate", up: "up", down: "down", delete: "trash" };
+      target.replaceChildren(tgroup(h("span", { class: "wp-multi-count", role: "status" }, `${range.nodes.length} blocs sélectionnés`), ...cmds.map((c) => { const bt = tbtn(c.label + (c.shortcut ? ` (${c.shortcut})` : ""), icons[c.id] && ICONS[icons[c.id]] ? icons[c.id] : "more", () => c.run()); if (!c.enabled) bt.disabled = true; return bt; })), tgroup(tbtn("Options", "more", (e) => blockOptions(e.currentTarget, { top: range.nodes[0].pos }))));
+    }
+    target.hidden = false;
+    if (topToolbarMode) return;
+    const dom = editor.view.nodeDOM(range.nodes[0].pos);
+    const el = dom instanceof HTMLElement ? dom : dom && dom.parentElement;
+    if (!el) { blockToolbar.hidden = true; return; }
+    const hostBox = $(".wp-content").getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    blockToolbar.style.top = `${Math.max(0, Math.round(box.top - hostBox.top - blockToolbar.offsetHeight - 10))}px`;
+    blockToolbar.style.left = `${Math.max(0, Math.round(box.left - hostBox.left))}px`;
   }
   // Position : juste au-dessus du bloc, aligné à gauche
   function positionToolbar(b) {
@@ -1528,8 +1655,18 @@ function start() {
           return true;
         }
         if (mod && event.shiftKey && event.key.toLowerCase() === "f") { event.preventDefault(); openFind(); return true; }
-        if (mod && event.shiftKey && event.key.toLowerCase() === "d") { event.preventDefault(); const b = currentBlock(); if (b) duplicateBlock(b.top); return true; }
-        if (event.shiftKey && event.altKey && event.key.toLowerCase() === "z") { event.preventDefault(); const b = currentBlock(); if (b) deleteBlock(b.top); return true; }
+        if (mod && event.shiftKey && !event.altKey && event.code === "KeyD") { event.preventDefault(); runCommand("duplicate"); return true; }
+        if (event.shiftKey && event.altKey && event.code === "KeyZ") { event.preventDefault(); if (!runCommand("delete")) lockedNotice(); return true; }
+        const cmd = commandForKeys(event);
+        if (cmd) { event.preventDefault(); runCommand(cmd); return true; }
+        // Maj+Alt+1 à 6 : niveau de titre ; Maj+Alt+0 : paragraphe (blocs de texte)
+        if (event.shiftKey && event.altKey && !mod && /^Digit[0-6]$/.test(event.code)) {
+          event.preventDefault();
+          const lvl = Number(event.code.slice(5));
+          if (lvl === 0) blocksToParagraphs(); else toHeading(lvl);
+          return true;
+        }
+        if (mod && event.code === "KeyY" && !event.shiftKey && !event.altKey) { event.preventDefault(); editor.chain().focus().redo().run(); return true; }
         return false;
       },
     },
@@ -2816,14 +2953,65 @@ function start() {
     }
     if (mod && e.shiftKey && e.key.toLowerCase() === "f" && !e.target.closest(".wsp-palette")) { e.preventDefault(); openFind(); }
     if (e.key === "Escape") closePopovers();
+    // Raccourcis globaux (mêmes combinaisons que Gutenberg) : éditeur de code, plein écran, vue en liste, réglages, sans distraction, aide, régions
+    if (e.target.closest && e.target.closest(".wsp-palette, .wp-modal") && !(mod && e.shiftKey && e.altKey)) return;
+    if (mod && e.shiftKey && e.altKey && e.code === "KeyM") { e.preventDefault(); $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click(); }
+    else if (mod && e.shiftKey && e.altKey && e.code === "KeyF") { e.preventDefault(); toggleFullscreen(); }
+    else if (e.shiftKey && e.altKey && !mod && e.code === "KeyO" || (e.ctrlKey && e.altKey && !e.shiftKey && e.code === "KeyO")) { e.preventDefault(); setSecondary("list"); }
+    else if (mod && e.shiftKey && !e.altKey && e.code === "Comma") { e.preventDefault(); $(".wp-header [data-toggle-sidebar]").click(); }
+    else if (mod && e.shiftKey && !e.altKey && e.code === "Backslash") { e.preventDefault(); setDistractionFree(!root.classList.contains("is-distraction-free")); }
+    else if ((e.shiftKey && e.altKey && !mod && e.code === "KeyH") || (e.ctrlKey && e.altKey && !e.shiftKey && e.code === "KeyH")) { e.preventDefault(); $('[data-option="shortcuts"]').click(); }
+    else if (e.shiftKey && e.altKey && !mod && (e.code === "KeyN" || e.code === "KeyP")) { e.preventDefault(); focusRegion(e.code === "KeyN" ? 1 : -1); }
+    else if (e.altKey && !mod && !e.shiftKey && e.code === "F10") { e.preventDefault(); const t = (topToolbarMode ? topToolbar : blockToolbar).querySelector("button"); if (t) t.focus(); }
   });
+
+  // Fenêtre d'aide : regroupée comme celle de Gutenberg (Global, Sélection, Bloc, Texte). Mac : Cmd à la place de Ctrl.
+  function showShortcuts() {
+    const groups = [
+      ["Global", [["Ctrl + S", "Enregistrer"], ["Ctrl + Z", "Annuler"], ["Ctrl + Maj + Z  ou  Ctrl + Y", "Rétablir"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer"], ["Ctrl + Maj + Alt + M", "Éditeur visuel / éditeur de code"], ["Ctrl + Maj + Alt + F", "Plein écran"], ["Maj + Alt + O", "Vue en liste"], ["Ctrl + Maj + ,", "Afficher / masquer les réglages"], ["Ctrl + Maj + \\", "Mode sans distraction"], ["Maj + Alt + N / P", "Région suivante / précédente"], ["Alt + F10", "Barre d'outils du bloc"], ["Maj + Alt + H", "Cette aide"], ["Échap", "Fermer un menu"]]],
+      ["Sélection", [["Ctrl + A", "Tout sélectionner (texte, puis tous les blocs)"], ["Maj + ↑ / ↓", "Étendre la sélection à plusieurs blocs"], ["Maj + clic (vue en liste)", "Sélectionner une plage de blocs"]]],
+      ["Bloc", [["Ctrl + Maj + D", "Dupliquer"], ["Maj + Alt + Z", "Supprimer"], ["Ctrl + Alt + T / Y", "Insérer un paragraphe avant / après"], ["Ctrl + Maj + Alt + T / Y", "Monter / descendre"], ["Alt + ↑ / ↓", "Déplacer d'un cran"], ["Ctrl + G", "Grouper les blocs sélectionnés"], ["Ctrl + Alt + V", "Coller les styles"], ["Ctrl + Alt + R", "Renommer le bloc"], ["Ctrl + Maj + H", "Masquer / afficher le bloc"], ["/", "Choisir un bloc (début d'un paragraphe vide)"], ["Clic droit", "Menu du bloc (Maj + clic droit : menu du navigateur)"]]],
+      ["Texte", [["Ctrl + B / I / U", "Gras / italique / souligné"], ["Maj + Alt + 1 à 6", "Titre de niveau 1 à 6"], ["Maj + Alt + 0", "Paragraphe"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + V", "Coller sans mise en forme"]]],
+    ];
+    modal("Raccourcis clavier", h("div", {}, h("p", { class: "wp-help" }, "Sur Mac, remplacez Ctrl par Cmd."), ...groups.flatMap(([title, rows]) => [h("h3", { class: "wp-shortcuts-title" }, title), h("dl", { class: "wp-shortcuts" }, ...rows.flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)]))])), [], { wide: true });
+  }
+  // Mode sans distraction (panneaux masqués) et plein écran du navigateur
+  function setDistractionFree(on) {
+    root.classList.toggle("is-distraction-free", on);
+    const item = $('[data-option="distraction"]');
+    if (item) item.setAttribute("aria-checked", String(on));
+    toast(on ? "Mode sans distraction : les panneaux sont masqués (Ctrl+Maj+\\ pour les rétablir)." : "Panneaux rétablis.");
+  }
+  function toggleFullscreen() {
+    const el = document.documentElement;
+    if (!document.fullscreenEnabled) { toast("Le plein écran n'est pas disponible dans ce navigateur.", "error"); return; }
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else el.requestFullscreen().catch(() => toast("Le navigateur a refusé le plein écran.", "error"));
+  }
+  // Région suivante / précédente de l'éditeur : barre du haut, panneau de gauche, zone d'écriture, panneau de droite
+  function focusRegion(dir) {
+    const regions = [$(".wp-header"), !secondary.hidden ? secondary : null, $(".wp-canvas"), !sidebar.hidden ? sidebar : null].filter(Boolean);
+    let at = regions.findIndex((r) => r.contains(document.activeElement));
+    at = at === -1 ? regions.indexOf($(".wp-canvas")) : at;
+    const next = regions[(at + dir + regions.length) % regions.length];
+    if (next === $(".wp-canvas")) { editor.commands.focus(); return; }
+    const target = next.querySelector("button:not([disabled]), a[href], input:not([type=hidden]), select, textarea, [tabindex='0']");
+    if (target) target.focus();
+  }
   window.addEventListener("beforeunload", (e) => { if (dirty) { localDraft.write(); e.preventDefault(); e.returnValue = ""; } });
   form.addEventListener("input", (e) => { if (e.target !== codeEditor && !e.target.closest(".wp-modal")) changed(); });
   form.addEventListener("change", (e) => { if (e.target.type === "checkbox" || e.target.tagName === "SELECT") changed(); });
   codeEditor.addEventListener("input", () => changed());
   let lastTypingSignal = 0;
   editor.on("update", ({ transaction }) => { if (transaction && transaction.getMeta(ID_ONLY_META)) return; changed(); refreshSlash(); if (seoData && Date.now() - lastTypingSignal > 1000) { lastTypingSignal = Date.now(); seoData.emit("typing", {}); } });
-  const refreshUi = () => { renderBlockToolbar(); refreshAppender(); renderInspector(); };
+  const refreshUi = () => { renderBlockToolbar(); refreshAppender(); renderInspector(); refreshHistoryButtons(); };
+  // Annuler / Rétablir : désactivés quand il n'y a rien à annuler / rétablir (comme Gutenberg)
+  function refreshHistoryButtons() {
+    const u = $("[data-undo]"), r = $("[data-redo]");
+    if (!u || !r) return;
+    const canU = editor.can().undo(), canR = editor.can().redo();
+    if (u.disabled === canU) { u.disabled = !canU; u.setAttribute("aria-disabled", String(!canU)); }
+    if (r.disabled === canR) { r.disabled = !canR; r.setAttribute("aria-disabled", String(!canR)); }
+  }
   editor.on("selectionUpdate", () => { refreshUi(); refreshSlash(); syncListSelection(); });
   let uiFrame = 0;
   editor.on("transaction", () => { cancelAnimationFrame(uiFrame); uiFrame = requestAnimationFrame(refreshUi); });
@@ -2995,10 +3183,12 @@ function start() {
     optionsMenu.close();
     if (opt === "appearance") return openAppearance();
     if (opt === "settings") return openEditorSettings();
-    if (opt === "shortcuts") return modal("Raccourcis clavier", h("dl", { class: "wp-shortcuts" }, ...[["Ctrl + S", "Enregistrer"], ["Ctrl + Z / Ctrl + Maj + Z", "Annuler / Rétablir"], ["/", "Choisir un bloc (au début d'un paragraphe vide)"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer dans l'article"], ["Clic droit sur un bloc", "Menu du bloc (copier, couper, coller, verrouiller…) ; Maj + clic droit : menu du navigateur"], ["Ctrl + Maj + D", "Dupliquer le bloc"], ["Maj + Alt + Z", "Supprimer le bloc"], ["Alt + ↑ / ↓", "Déplacer le bloc"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + P", "Aperçu dans l'appareil par défaut"], ["Échap", "Fermer un menu"]].flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)])));
+    if (opt === "shortcuts") return showShortcuts();
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
     if (opt === "focus") root.classList.toggle("is-focus-mode", on);
+    if (opt === "distraction") setDistractionFree(on);
+    if (opt === "fullscreen") { b.setAttribute("aria-checked", "false"); toggleFullscreen(); }
     if (opt === "toptoolbar") { topToolbarMode = on; topToolbar.hidden = !on; blockToolbar.hidden = true; root.classList.toggle("has-top-toolbar", on); renderBlockToolbar(); }
     return null;
   }));
@@ -3220,6 +3410,50 @@ function start() {
   $("[data-stats]").addEventListener("click", (e) => { e.stopPropagation(); showCounters(e.currentTarget); });
   $("[data-stats]").setAttribute("title", "Voir les compteurs de l'article");
   editor.view.dom.addEventListener("contextmenu", contextMenuAt);
+  // Dépôt d'un bloc glissé depuis l'outil d'insertion : trait repère pendant le survol, insertion avant / après le bloc visé
+  const dropLine = h("div", { class: "wp-drop-line", hidden: true, "aria-hidden": "true" });
+  $(".wp-content").append(dropLine);
+  const insertTarget = (e) => {
+    const found = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+    if (!found) return null;
+    const pos = zoneBlockPos(editor.state.doc, found.inside >= 0 ? found.inside : found.pos);
+    const node = pos === null ? null : editor.state.doc.nodeAt(pos);
+    if (!node) return null;
+    const dom = editor.view.nodeDOM(pos);
+    const box = dom instanceof HTMLElement ? dom.getBoundingClientRect() : null;
+    return { pos, node, box, after: !box || e.clientY > box.top + box.height / 2 };
+  };
+  const dropDone = () => { dropLine.hidden = true; };
+  editor.view.dom.addEventListener("dragover", (e) => {
+    if (![...e.dataTransfer.types].includes("application/x-kb-insert")) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = "copy";
+    const t = insertTarget(e);
+    if (!t || !t.box) { dropDone(); return; }
+    const host = $(".wp-content").getBoundingClientRect();
+    dropLine.hidden = false;
+    dropLine.style.top = `${(t.after ? t.box.bottom : t.box.top) - host.top - 1}px`;
+    dropLine.style.left = `${t.box.left - host.left}px`;
+    dropLine.style.width = `${t.box.width}px`;
+  }, true);
+  editor.view.dom.addEventListener("dragleave", dropDone, true);
+  editor.view.dom.addEventListener("drop", (e) => {
+    const id = e.dataTransfer && e.dataTransfer.getData("application/x-kb-insert");
+    dropDone();
+    if (!id) return;
+    e.preventDefault(); e.stopPropagation();
+    const def = BLOCKS.find((x) => x.id === id);
+    const t = insertTarget(e);
+    if (!def) return;
+    if (t) {
+      const $p = editor.state.doc.resolve(t.pos);
+      const prev = $p.nodeBefore;
+      if (t.after) editor.chain().focus().setNodeSelection(t.pos).run();
+      else if (prev) editor.chain().focus().setNodeSelection(t.pos - prev.nodeSize).run();
+      else { editor.chain().focus().insertContentAt(t.pos, { type: "paragraph" }).setTextSelection(t.pos + 1).run(); }
+    } else editor.commands.focus("end");
+    useBlock(def.id);
+    def.run();
+  }, true);
 
   // ---------- Espace de travail SEO ----------
   seoData = createSeoData({ api, postId: () => postId });
@@ -3253,6 +3487,11 @@ function start() {
         { id: "ed:tab-article", group: "Panneaux", label: "Ouvrir les réglages de l'article (document)", run: () => { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("article"); } },
         { id: "ed:tab-seo", group: "Panneaux", label: "Ouvrir le SEO", run: () => revealSeo() },
         { id: "ed:tab-bloc", group: "Panneaux", label: "Ouvrir les réglages du bloc", run: () => { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("bloc"); } },
+        ...blockCommands().filter((c) => c.enabled).map((c) => ({ id: `block:${c.id}`, group: "Bloc", label: c.shortcut ? `${c.label}` : c.label, run: () => { editor.commands.focus(); c.run(); } })),
+        ...(blockRange(editor.state) ? transformsFor(editor, blockRange(editor.state).nodes[0].pos).map((t) => ({ id: `transform:${t.id}`, group: "Bloc", label: `Transformer en : ${t.label}`, run: () => { editor.commands.focus(); attempt(() => t.run(), `Converti : ${t.label}.`); } })) : []),
+        { id: "ed:distraction", group: "Affichage", label: "Mode sans distraction (masquer les panneaux)", run: () => setDistractionFree(!root.classList.contains("is-distraction-free")) },
+        { id: "ed:fullscreen", group: "Affichage", label: "Plein écran", run: () => toggleFullscreen() },
+        { id: "ed:list", group: "Panneaux", label: "Vue en liste des blocs", run: () => { if (secondaryMode !== "list") setSecondary("list"); } },
         { id: "ed:undo", group: "Édition", label: "Annuler", run: () => editor.chain().focus().undo().run() },
         { id: "ed:redo", group: "Édition", label: "Rétablir", run: () => editor.chain().focus().redo().run() },
         { id: "ed:code", group: "Édition", label: root.classList.contains("is-code-mode") ? "Éditeur visuel" : "Éditeur de code (HTML)", run: () => $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click() },

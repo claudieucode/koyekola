@@ -1840,3 +1840,18 @@
 .ProseMirror table[data-variant="striped"] tbody tr:nth-child(even) { background: var(--surface-alt); }
 .kb-ed-group[data-variant="card"] { background: var(--surface); border: 1px solid var(--border); box-shadow: 0 6px 22px rgba(11, 42, 64, 0.1); }
 @media (max-width: 640px) { .kb-ed-mediatext, .kb-ed-mediatext[data-width="33"] { grid-template-columns: minmax(0, 1fr); } .kb-ed-mediatext[data-side="right"] > .kb-ed-image { order: 0; } }
+
+/* Sélection multiple, mode sans distraction, titres de l'aide des raccourcis */
+.ProseMirror .is-multi-selected { background: color-mix(in srgb, var(--accent) 12%, transparent); outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 2px; border-radius: 4px; }
+.wp-multi-count { padding: 0 10px; font-size: 13px; font-weight: 600; color: var(--primary); white-space: nowrap; }
+.is-distraction-free .wp-rail, .is-distraction-free .wp-sidebar, .is-distraction-free .wp-secondary, .is-distraction-free .wsp-dock { display: none !important; }
+.is-distraction-free .wp-header { opacity: 0.35; transition: opacity 180ms ease; }
+.is-distraction-free .wp-header:hover, .is-distraction-free .wp-header:focus-within { opacity: 1; }
+.wp-shortcuts-title { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.wp-btn-icon:disabled, .wp-btn-icon[aria-disabled="true"] { opacity: 0.4; cursor: default; }
+.wp-menu button kbd { margin-left: auto; padding-left: 14px; }
+.wp-drop-line { position: absolute; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 5; }
+.wp-lv-item.is-dragging { opacity: 0.45; }
+.wp-lv-row.is-drop-before { box-shadow: 0 -3px 0 0 var(--accent); }
+.wp-lv-row.is-drop-after { box-shadow: 0 3px 0 0 var(--accent); }
+.wp-lv-row.is-drop-inside { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }

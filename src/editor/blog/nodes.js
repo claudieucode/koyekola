@@ -127,6 +127,7 @@ export const lockOf = (node) => ({
   ...(node.attrs.anchor ? { id: node.attrs.anchor } : {}),
   ...(node.attrs.xclass ? { "data-class": node.attrs.xclass } : {}),
   ...(node.attrs.variant ? { "data-variant": node.attrs.variant } : {}),
+  ...(node.attrs.blockName ? { "data-name": node.attrs.blockName } : {}),
   ...(node.attrs.locked ? { "data-locked": "true" } : {}),
   ...(node.attrs.blockId ? { "data-block-id": node.attrs.blockId } : {}),
   ...(node.attrs.hidden ? { "data-hidden": "true" } : {}),

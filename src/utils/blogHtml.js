@@ -181,6 +181,7 @@ for (const tag of LOCKABLE) {
     if (r.tagName === tagName && attribs["data-hidden"] === "true") r.attribs = { ...r.attribs, "data-hidden": "true" };
     // Ancre HTML et classes supplémentaires (réglages communs des blocs) : valeurs strictes, mêmes règles que l'éditeur (src/editor/blog/supports.js)
     if (r.tagName === tagName && ANCHOR_ID.test(attribs.id || "")) r.attribs = { ...r.attribs, id: attribs.id };
+    if (r.tagName === tagName && attribs["data-name"]) r.attribs = { ...r.attribs, "data-name": String(attribs["data-name"]).replace(/[\r\n\u2028\u2029]+/g, " ").trim().slice(0, 60) };
     if (r.tagName === tagName && attribs["data-variant"]) {
       const first = String(r.attribs.class || "").split(" ")[0];
       const allowed = VARIANTS[tagName] || VARIANTS[`${tagName}.${first}`] || [];
@@ -216,7 +217,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant"];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name"];
 
 function tidy(html) {
   return html
@@ -227,10 +228,10 @@ function tidy(html) {
 
 // Version publique : les blocs masqués dans l'éditeur ne sont jamais publiés ; les repères internes de l'éditeur sont retirés
 function withoutHidden(html) {
-  if (!/data-hidden="true"|data-block-id=/.test(html)) return html;
+  if (!/data-hidden="true"|data-block-id=|data-name=/.test(html)) return html;
   const doc = parseDocument(html);
   for (const n of DomUtils.findAll((x) => x.attribs && x.attribs["data-hidden"] === "true", doc.children)) DomUtils.removeElement(n);
-  for (const n of DomUtils.findAll((x) => x.attribs && (x.attribs["data-block-id"] || x.attribs["data-hidden"]), doc.children)) { delete n.attribs["data-block-id"]; delete n.attribs["data-hidden"]; }
+  for (const n of DomUtils.findAll((x) => x.attribs && (x.attribs["data-block-id"] || x.attribs["data-hidden"] || x.attribs["data-name"]), doc.children)) { delete n.attribs["data-block-id"]; delete n.attribs["data-hidden"]; delete n.attribs["data-name"]; }
   return render(doc.children, { encodeEntities: "utf8" });
 }
 
