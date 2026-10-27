@@ -150,6 +150,8 @@ transformTags.blockquote = (tagName, attribs) => ({ tagName, attribs: classesOf(
 transformTags.table = (tagName) => ({ tagName, attribs: {} });
 // Bloc verrouillé dans l'éditeur (protection contre les modifications accidentelles) : marqueur conservé, valeur stricte
 const BLOCK_ID = /^b[a-z0-9]{8}$/;
+const ANCHOR_ID = /^[a-z][a-z0-9_-]{0,63}$/;
+const XCLASS_TOKEN = /^kb-x-[a-z0-9-]{1,30}$/;
 const LOCKABLE = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "ul", "ol", "pre", "table", "figure", "div", "details", "hr"];
 for (const tag of LOCKABLE) {
   const base = transformTags[tag];
@@ -159,6 +161,10 @@ for (const tag of LOCKABLE) {
     // Identité stable du bloc (vue en liste, corbeille) et bloc masqué : valeurs strictes
     if (r.tagName === tagName && BLOCK_ID.test(attribs["data-block-id"] || "")) r.attribs = { ...r.attribs, "data-block-id": attribs["data-block-id"] };
     if (r.tagName === tagName && attribs["data-hidden"] === "true") r.attribs = { ...r.attribs, "data-hidden": "true" };
+    // Ancre HTML et classes supplémentaires (réglages communs des blocs) : valeurs strictes, mêmes règles que l'éditeur (src/editor/blog/supports.js)
+    if (r.tagName === tagName && ANCHOR_ID.test(attribs.id || "")) r.attribs = { ...r.attribs, id: attribs.id };
+    const extra = String(attribs["data-class"] || "").split(/\s+/).filter((c) => XCLASS_TOKEN.test(c)).slice(0, 5);
+    if (r.tagName === tagName && extra.length) r.attribs = { ...r.attribs, "data-class": [...new Set(extra)].join(" ") };
     return r;
   };
 }
@@ -187,7 +193,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden"];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class"];
 
 function tidy(html) {
   return html
@@ -205,10 +211,17 @@ function withoutHidden(html) {
   return render(doc.children, { encodeEntities: "utf8" });
 }
 
+// Deux blocs ne peuvent pas porter la même ancre : la première est conservée, les suivantes perdent leur ancre (le bloc reste, rien d'autre n'est modifié)
+function uniqueAnchors(html) {
+  if (!html.includes(' id="')) return html;
+  const seen = new Set();
+  return html.replace(/(<[a-z0-9]+\b[^>]*?) id="([a-z][a-z0-9_-]*)"/g, (m, head, id) => (seen.has(id) ? head : (seen.add(id), m)));
+}
+
 function sanitizeBlogHtml(html) {
   const source = typeof html === "string" ? html.slice(0, MAX_HTML) : "";
   if (!source.trim()) return "";
-  const out = tidy(sanitizeHtml(source, saveOptions)).trim();
+  const out = uniqueAnchors(tidy(sanitizeHtml(source, saveOptions)).trim());
   return /\S/.test(out.replace(/<[^>]*>/g, "")) || /<(img|hr|input|div class="kb-)/.test(out) ? out : "";
 }
 
@@ -288,6 +301,11 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
   const images = [];
   const links = [];
   const usedIds = new Set();
+  // Ancres saisies dans l'éditeur : réservées avant de fabriquer les ancres des titres (aucune collision) ; classes supplémentaires (data-class) déposées en class
+  for (const n of DomUtils.findAll((x) => x.attribs && (x.attribs.id || x.attribs["data-class"]), doc.children)) {
+    if (n.attribs.id) usedIds.add(n.attribs.id);
+    if (n.attribs["data-class"]) { n.attribs.class = [n.attribs.class, n.attribs["data-class"]].filter(Boolean).join(" "); delete n.attribs["data-class"]; }
+  }
   const uniqueId = (t) => {
     const base = slugify(t).slice(0, 60) || "section";
     let id = base;
@@ -298,6 +316,13 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
   const replace = (node, replacement) => {
     if (!replacement) return DomUtils.removeElement(node);
     const nodes = Array.isArray(replacement) ? replacement : [replacement];
+    // Un bloc remplacé par son lecteur (vidéo, formation…) garde son ancre et ses classes supplémentaires
+    const first = nodes.find((n) => n && n.attribs);
+    if (first && node.attribs) {
+      if (node.attribs.id && !first.attribs.id) first.attribs.id = node.attribs.id;
+      const extra = String(node.attribs.class || "").split(/\s+/).filter((c) => /^kb-x-/.test(c));
+      if (extra.length) first.attribs.class = [first.attribs.class, ...extra].filter(Boolean).join(" ");
+    }
     nodes.forEach((n) => DomUtils.prepend(node, n));
     DomUtils.removeElement(node);
   };
@@ -310,7 +335,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       const level = Number(node.name[1]);
       const t = textOf(node);
       if (!t) continue;
-      node.attribs.id = uniqueId(t);
+      if (!node.attribs.id) node.attribs.id = uniqueId(t); // une ancre saisie par la personne est conservée telle quelle
       if ((level === 2 || (level === 3 && tocDepth >= 3) || (level === 4 && tocDepth >= 4)) && !insideAny(node, ["kb-cta", "callout", "kb-faq", "details"])) toc.push({ level, id: node.attribs.id, text: t });
     } else if (name === "img") {
       node.attribs.loading = "lazy";

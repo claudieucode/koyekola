@@ -103,6 +103,34 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     await page.context().close();
   });
 
+  test("ancre HTML et classes supplémentaires : saisies dans le panneau Bloc, enregistrées, publiées", async () => {
+    const page = await open();
+    await page.fill("#post-title", "Article avec ancre");
+    await load(page, "<p>Premier</p><p>Second</p>");
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(2); ed.view.focus(); });
+    await page.click('[data-sidebar-tab="bloc"]');
+    await page.click('[data-panel-advanced] button[aria-controls="be-adv-body"]');
+    await page.mouse.move(1300, 500); // la saisie masque les panneaux tant que la souris ne bouge pas
+    await page.fill("#be-anchor", "Tarifs 2026");
+    await page.press("#be-anchor", "Tab");
+    await page.fill("#be-xclass", "bandeau promo");
+    await page.press("#be-xclass", "Tab");
+    const t = await tops(page);
+    assert.equal(t[0].attrs.anchor, "tarifs-2026");
+    assert.equal(t[0].attrs.xclass, "kb-x-bandeau kb-x-promo");
+    // L'ancre est unique : le second bloc ne peut pas la reprendre
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; let p2 = 0; ed.state.doc.forEach((n, pos) => { if (pos > 0 && !p2) p2 = pos; }); ed.commands.setTextSelection(p2 + 1); ed.view.focus(); });
+    await page.fill("#be-anchor", "tarifs-2026");
+    await page.press("#be-anchor", "Tab");
+    assert.match(await page.locator("#be-anchor-note").innerText(), /déjà utilisée/);
+    assert.equal((await tops(page))[1].attrs.anchor, null);
+    await page.click("[data-save]");
+    await page.waitForFunction(() => /^Enregistré$/.test(document.querySelector("[data-save-state]").textContent.trim()), null, { timeout: 15000 });
+    const row = srv.db().prepare("SELECT content, slug FROM posts WHERE title = ?").get("Article avec ancre");
+    assert.match(row.content, /<p [^>]*id="tarifs-2026"[^>]*data-class="kb-x-bandeau kb-x-promo"|<p [^>]*data-class="kb-x-bandeau kb-x-promo"[^>]*id="tarifs-2026"/);
+    await page.context().close();
+  });
+
   test("sans erreur de console pendant ces parcours", () => {
     assert.deepEqual(errors, []);
   });

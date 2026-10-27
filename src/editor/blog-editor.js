@@ -27,6 +27,7 @@ import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatc
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
+import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay } from "./blog/supports";
 import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
@@ -215,6 +216,7 @@ function start() {
       Focus.configure({ mode: "shallowest", className: "has-focus" }),
       BlockHandle.configure({ visual: false }),
       BlockLock.configure({ onBlocked: () => lockedNotice() }),
+      BlockSupports,
       BlockIdentity.configure({ hiddenLabel: (n) => blockNameOf(n), onShow: (id) => { setHidden(editor, id, false); toast("Bloc de nouveau visible."); } }),
       FindHighlight,
     ],
@@ -1858,6 +1860,7 @@ function start() {
   const inspector = $("[data-block-inspector]");
   const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte." };
   let inspectorKey = "";
+  let advancedOpen = false; // « Réglages avancés » reste ouvert d'un bloc à l'autre une fois ouvert
   function renderInspector(force = false) {
     if ($('[data-sidebar-panel="bloc"]').hidden) return;
     const b = currentBlock();
@@ -2024,6 +2027,34 @@ function start() {
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { const n = editor.state.doc.nodeAt(b.pos); editor.chain().focus().insertContentAt(b.pos + n.nodeSize - 1, { type: "kbButton", attrs: { text: "Nouveau bouton", href: "/catalogue", variant: "outline", align: a.align, newTab: false } }).run(); } }, "+ Ajouter un bouton")));
     } else if (t === "bulletList" || t === "orderedList") {
       inspector.append(section("Réglages", segmented([["bulletList", "Liste à puces", "list"], ["orderedList", "Liste numérotée", "ordered"]], t, (v) => (v === "orderedList" ? chain().toggleOrderedList().run() : chain().toggleBulletList().run())), h("p", { class: "wp-help" }, "Tabulation : imbriquer un élément. Maj + Tabulation : le sortir d'un niveau.")));
+    }
+    // Réglages communs (comme Gutenberg) : ancre HTML et classes CSS supplémentaires
+    if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) {
+      const anchorIn = input({ value: a.anchor || "", maxlength: 64, placeholder: "ex. tarifs" });
+      anchorIn.id = "be-anchor";
+      const anchorNote = h("p", { class: "wp-help", id: "be-anchor-note" }, a.anchor ? `Lien direct : #${a.anchor}` : "Lettres, chiffres, tirets. Permet un lien direct vers ce bloc (#ancre).");
+      anchorIn.addEventListener("change", () => {
+        const v = anchorIn.value.trim() ? normalizeAnchor(anchorIn.value) : "";
+        if (anchorIn.value.trim() && !v) { anchorNote.textContent = "Ancre invalide : commencez par une lettre, puis lettres, chiffres, tirets."; anchorNote.className = "wp-error"; return; }
+        let taken = false;
+        editor.state.doc.descendants((n, pos) => { if (pos !== b.pos && n.attrs && n.attrs.anchor === v && v) taken = true; });
+        if (taken) { anchorNote.textContent = `L'ancre « ${v} » est déjà utilisée par un autre bloc.`; anchorNote.className = "wp-error"; return; }
+        anchorIn.value = v;
+        anchorNote.className = "wp-help";
+        anchorNote.textContent = v ? `Lien direct : #${v}` : "Ancre retirée.";
+        set({ anchor: v || null });
+      });
+      const classIn = input({ value: classesForDisplay(a.xclass), maxlength: 160, placeholder: "ex. bandeau promo" });
+      classIn.id = "be-xclass";
+      const classNote = h("p", { class: "wp-help", id: "be-xclass-note" }, "Séparez par des espaces (5 au maximum). Elles servent de crochets au CSS de votre site et sont préfixées « kb-x- ».");
+      classIn.addEventListener("change", () => {
+        const v = normalizeClasses(classIn.value);
+        classIn.value = classesForDisplay(v);
+        classNote.textContent = v ? `Classes appliquées : ${v}` : "Aucune classe supplémentaire.";
+        set({ xclass: v });
+      });
+      inspector.append(h("div", { class: `wp-panel${advancedOpen || a.anchor || a.xclass ? " is-open" : ""}`, "data-panel-advanced": "" }, h("h2", { class: "wp-panel-title" }, h("button", { type: "button", "aria-expanded": String(Boolean(advancedOpen || a.anchor || a.xclass)), "aria-controls": "be-adv-body", onclick: (e) => { const body = $("#be-adv-body"); body.hidden = !body.hidden; advancedOpen = !body.hidden; body.parentElement.classList.toggle("is-open", !body.hidden); e.currentTarget.setAttribute("aria-expanded", String(!body.hidden)); } }, "Réglages avancés", h("span", { class: "wp-chevron", "aria-hidden": "true" }))),
+        h("div", { class: "wp-panel-body", id: "be-adv-body", hidden: !(advancedOpen || a.anchor || a.xclass) }, control("Ancre HTML", anchorIn, null), anchorNote, control("Classes CSS supplémentaires", classIn, null), classNote)));
     }
     inspector.append(section("Avancé", h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => duplicateBlock(b.top) }, "Dupliquer"), h("button", { type: "button", class: "wp-btn-danger", onclick: () => deleteBlock(b.top) }, "Supprimer le bloc"))));
   }

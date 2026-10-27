@@ -123,6 +123,8 @@ export const KbGallery = Node.create({
 // Bloc verrouillé : marqueur conservé dans le HTML enregistré (attribut global « locked », voir editing.js)
 // Repères communs aux blocs dessinés par leur propre renderHTML : verrou, identité du bloc, bloc masqué
 export const lockOf = (node) => ({
+  ...(node.attrs.anchor ? { id: node.attrs.anchor } : {}),
+  ...(node.attrs.xclass ? { "data-class": node.attrs.xclass } : {}),
   ...(node.attrs.locked ? { "data-locked": "true" } : {}),
   ...(node.attrs.blockId ? { "data-block-id": node.attrs.blockId } : {}),
   ...(node.attrs.hidden ? { "data-hidden": "true" } : {}),
