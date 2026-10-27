@@ -127,6 +127,14 @@ export const BlockSupports = Extension.create({
       types: ["paragraph", "heading", "blockquote", "bulletList", "orderedList"],
       attributes: { tone: { default: "", keepOnSplit: true, parseHTML: (el) => (["accent", "muted", "primary"].includes(el.getAttribute("data-tone")) ? el.getAttribute("data-tone") : ""), renderHTML: (attrs) => (attrs.tone ? { "data-tone": attrs.tone } : {}) } },
     }, {
+      // Style de numérotation (liste numérotée) et de puce (liste à puces)
+      types: ["orderedList", "bulletList"],
+      attributes: { ltype: { default: "", parseHTML: (el) => (["decimal", "lower-alpha", "upper-alpha", "lower-roman", "upper-roman", "lower-greek", "disc", "circle", "square", "none"].includes(el.getAttribute("data-ltype")) ? el.getAttribute("data-ltype") : ""), renderHTML: (attrs) => (attrs.ltype ? { "data-ltype": attrs.ltype } : {}) } },
+    }, {
+      // Citation (auteur, source) : champ séparé du texte de la citation
+      types: ["blockquote"],
+      attributes: { cite: { default: "", parseHTML: (el) => (el.getAttribute("data-cite") || "").replace(/\s+/g, " ").trim().slice(0, 200), renderHTML: (attrs) => (attrs.cite ? { "data-cite": attrs.cite } : {}) } },
+    }, {
       // Liste numérotée décroissante
       types: ["orderedList"],
       attributes: { reversed: { default: false, parseHTML: (el) => el.hasAttribute("reversed"), renderHTML: (attrs) => (attrs.reversed ? { reversed: "reversed" } : {}) } },
@@ -139,6 +147,8 @@ export const BlockSupports = Extension.create({
           parseHTML: (el) => el.getAttribute("data-caption") || "",
           renderHTML: (attrs) => (attrs.caption ? { "data-caption": attrs.caption } : {}),
         },
+        footer: { default: false, parseHTML: (el) => el.getAttribute("data-footer") === "true", renderHTML: (attrs) => (attrs.footer ? { "data-footer": "true" } : {}) },
+        fixed: { default: false, parseHTML: (el) => el.getAttribute("data-fixed") === "true", renderHTML: (attrs) => (attrs.fixed ? { "data-fixed": "true" } : {}) },
       },
     }];
   },

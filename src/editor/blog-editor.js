@@ -2110,7 +2110,10 @@ function start() {
           h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { setCover(a.src, a.alt); toast("Image mise en avant définie."); } }, "Définir comme image mise en avant"))));
       const href = input({ value: a.href || "", placeholder: "https://… ou /cours/…" });
       href.addEventListener("input", debounce(() => { const v = href.value.trim(); if (!v || /^(https?:\/\/\S+|\/(?!\/)\S*|mailto:\S+)$/i.test(v)) set({ href: v }); }, 300));
-      inspector.append(section("Lien", control("Lien de l'image", href, "Vide : pas de lien."), checkbox("Ouvrir dans un nouvel onglet", a.newTab, (v) => set({ newTab: v }))));
+      inspector.append(section("Lien", control("Lien de l'image", href, "Vide : pas de lien."), checkbox("Ouvrir dans un nouvel onglet", a.newTab, (v) => set({ newTab: v })),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { set({ href: a.src }); toast("Lien vers le fichier de l'image défini."); renderInspector(true); } }, "Lier au fichier de l'image"),
+        checkbox("Agrandir au clic (lightbox)", Boolean(a.lightbox) && !a.href, (v) => { if (v && a.href) { toast("Retirez d'abord le lien : une image cliquable ne s'agrandit pas.", "error"); renderInspector(true); return; } set({ lightbox: v }); }),
+        h("p", { class: "wp-label" }, "Ajustement dans le cadre"), segmented([["", "Remplir (rogner)"], ["contain", "Contenir"]], a.fit || "", (v) => set({ fit: v }))));
       const info = h("div", { class: "wp-image-info", "aria-live": "polite" }, h("p", { class: "wp-help" }, "Vérification du fichier…"));
       inspector.append(section("Fichier", info));
       api("/formateur/blog/api/espace-seo/images", { method: "POST", json: { srcs: [a.src] } }).then(({ images }) => {
@@ -2129,6 +2132,8 @@ function start() {
         segmented([["2", "2"], ["3", "3"], ["4", "4"]], a.columns, (v) => set({ columns: v })),
         h("p", { class: "wp-label" }, "Espacement"),
         segmented([["s", "Petit"], ["", "Moyen"], ["l", "Grand"]], a.gap || "", (v) => set({ gap: v })),
+        checkbox("Rogner les images au même format", !a.natural, (v) => set({ natural: !v })),
+        checkbox("Agrandir au clic (lightbox)", Boolean(a.lightbox), (v) => set({ lightbox: v })),
         h("p", { class: "wp-label" }, "Images"),
         h("ul", { class: "wp-gallery-items" }, ...(a.images || []).map((img, i) => {
           const alt = input({ value: img.alt || "", placeholder: "Texte alternatif", "aria-label": `Texte alternatif de l'image ${i + 1}` });
@@ -2154,6 +2159,7 @@ function start() {
           checkbox("Muet", a.muted === "true" || a.autoplay === "true", flag("muted")),
           checkbox("En boucle", a.loop === "true", flag("loop")),
           checkbox("Masquer les commandes de lecture", a.nocontrols === "true", flag("nocontrols")),
+          (() => { const pre = select([["", "Métadonnées (par défaut)"], ["none", "Rien avant la lecture"], ["auto", "Tout charger"]], a.preload || ""); pre.addEventListener("change", () => set({ preload: pre.value })); return control("Préchargement", pre); })(),
           h("p", { class: "wp-label" }, "Sous-titres (fichier .vtt)"),
           h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "file", onSelect: (m) => { if (!/\.vtt$/i.test(m.path)) return toast("Choisissez un fichier de sous-titres WebVTT (.vtt).", "error"); set({ track: m.path, tracklang: a.tracklang || "fr", tracklabel: a.tracklabel || "Français" }); } }) }, a.track ? "Changer le fichier .vtt" : "Ajouter des sous-titres"), a.track ? h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => set({ track: "", tracklang: "", tracklabel: "" }) }, "Retirer") : null),
           ...(a.track ? [(() => { const lang = select([["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["pt", "Portugais"], ["de", "Allemand"], ["it", "Italien"]], a.tracklang || "fr"); lang.addEventListener("change", () => set({ tracklang: lang.value })); return control("Langue", lang); })(), control("Intitulé affiché", bind(input({ value: a.tracklabel || "", maxlength: 40 }), "tracklabel"))] : []),
@@ -2161,6 +2167,9 @@ function start() {
       }
     } else if (t === "kbAudio") {
       inspector.append(section("Réglages", control("Titre", bind(input({ value: a.title || "" }), "title")), control("Auteur", bind(input({ value: a.author || "" }), "author")), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "audio", onSelect: (m) => set({ src: m.path }) }) }, "Remplacer le fichier")));
+      inspector.append(section("Lecture", checkbox("En boucle", a.loop === "true", (v) => set({ loop: v ? "true" : "" })),
+        (() => { const pre = select([["", "Rien avant la lecture (par défaut)"], ["metadata", "Métadonnées"], ["auto", "Tout charger"]], a.preload || ""); pre.addEventListener("change", () => set({ preload: pre.value })); return control("Préchargement", pre); })(),
+        h("p", { class: "wp-help" }, "La lecture automatique n'existe pas pour l'audio : les navigateurs la bloquent et elle gêne les personnes qui utilisent un lecteur d'écran.")));
     } else if (t === "kbButton") {
       const href = input({ value: a.href || "" });
       href.addEventListener("input", debounce(() => { if (/^(https?:\/\/\S+|\/(?!\/)\S*|mailto:\S+)$/i.test(href.value.trim())) set({ href: href.value.trim() }); }, 300));
@@ -2196,6 +2205,7 @@ function start() {
       inspector.append(section("Réglages",
         control("Titre affiché", bind(input({ value: a.title || "", maxlength: 120, placeholder: (a.url || "").split("/").pop() }), "title")),
         checkbox("Téléchargement direct (au lieu de l'ouvrir dans le navigateur)", a.download === "true", (v) => set({ download: v ? "true" : "" })),
+        ...(/\.pdf$/i.test(a.url || "") ? [checkbox("Afficher un aperçu du PDF dans la page", a.preview === "true", (v) => set({ preview: v ? "true" : "" }))] : []),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "file", onSelect: (m) => set({ url: m.path }) }) }, "Remplacer le fichier")));
     } else if (t === "kbCover") {
       const alt = input({ value: a.alt || "", maxlength: 200, placeholder: "Vide si l'image est décorative" });
@@ -2206,14 +2216,24 @@ function start() {
         control("Texte alternatif de l'image", alt),
         h("p", { class: "wp-label" }, "Opacité du voile sombre"), segmented([["0", "0 %"], ["20", "20 %"], ["40", "40 %"], ["60", "60 %"], ["80", "80 %"]], a.overlay || "40", (v) => set({ overlay: v })),
         h("p", { class: "wp-label" }, "Hauteur"), segmented([["s", "Basse"], ["m", "Moyenne"], ["l", "Haute"]], a.height || "m", (v) => set({ height: v })),
+        h("p", { class: "wp-label" }, "Teinte du voile"), segmented([["", "Sombre"], ["navy", "Bleu nuit"], ["light", "Clair"]], a.shade || "", (v) => set({ shade: v })),
+        h("p", { class: "wp-label" }, "Position du texte"),
+        h("div", { class: "wp-pos-grid", role: "group", "aria-label": "Position du texte" }, ...["tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"].map((p) => h("button", { type: "button", class: `wp-pos${(a.pos || "mc") === p ? " is-active" : ""}`, "aria-pressed": String((a.pos || "mc") === p), "aria-label": ({ t: "Haut", m: "Milieu", b: "Bas" })[p[0]] + " " + ({ l: "gauche", c: "centre", r: "droite" })[p[1]], onclick: () => set({ pos: p === "mc" ? "" : p }) }, ""))),
+        control("Point focal horizontal (%)", (() => { const r = h("input", { type: "range", min: "0", max: "100", step: "5", value: a.fx || "50", id: `wp-f${++uid}` }); r.addEventListener("input", debounce(() => set({ fx: r.value === "50" ? "" : r.value }), 150)); return r; })()),
+        control("Point focal vertical (%)", (() => { const r = h("input", { type: "range", min: "0", max: "100", step: "5", value: a.fy || "50", id: `wp-f${++uid}` }); r.addEventListener("input", debounce(() => set({ fy: r.value === "50" ? "" : r.value }), 150)); return r; })()),
+        checkbox("Image fixe à l'arrière-plan (effet parallaxe)", a.fixed === "true", (v) => set({ fixed: v ? "true" : "" })),
         h("p", { class: "wp-help" }, "Le texte est affiché en blanc sur l'image : gardez un voile d'au moins 40 % pour que la lecture reste confortable.")));
     } else if (t === "kbMediaText") {
       inspector.append(section("Réglages",
         h("p", { class: "wp-label" }, "Position de l'image"), segmented([["left", "À gauche"], ["right", "À droite"]], a.side || "left", (v) => set({ side: v })),
-        h("p", { class: "wp-label" }, "Largeur de l'image"), segmented([["33", "Un tiers"], ["50", "Moitié"]], a.width || "50", (v) => set({ width: v })),
+        control("Largeur de l'image", (() => { const w = select([["25", "25 %"], ["33", "33 %"], ["40", "40 %"], ["50", "50 %"], ["60", "60 %"], ["66", "66 %"], ["75", "75 %"]], a.width || "50"); w.addEventListener("change", () => set({ width: w.value })); return w; })()),
+        h("p", { class: "wp-label" }, "Alignement vertical"), segmented([["top", "Haut"], ["", "Centre"], ["bottom", "Bas"]], a.valign || "", (v) => set({ valign: v })),
+        checkbox("Rogner l'image pour remplir la hauteur du texte", a.crop === "true", (v) => set({ crop: v ? "true" : "" })),
+        checkbox("Ne pas empiler sur mobile", a.stack === "never", (v) => set({ stack: v ? "never" : "" })),
         h("p", { class: "wp-help" }, "Cliquez sur l'image pour régler son texte alternatif, sa légende et son lien. Les deux colonnes sont empilées sur mobile.")));
     } else if (t === "table") {
       inspector.append(section("Légende", control("Légende du tableau", bind(input({ value: a.caption || "", maxlength: 200, placeholder: "Ex. Tarifs 2026" }), "caption"), "Affichée sous le tableau et lue par les lecteurs d'écran.")));
+      inspector.append(section("Structure", checkbox("Dernière ligne = pied de tableau (totaux)", Boolean(a.footer), (v) => set({ footer: v })), checkbox("Colonnes de largeur égale (disposition fixe)", Boolean(a.fixed), (v) => set({ fixed: v }))));
       inspector.append(section("Réglages", h("div", { class: "wp-button-row" },
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().toggleHeaderRow().run() }, "Ligne d'en-tête"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addRowAfter().run() }, "+ Ligne"),
@@ -2224,12 +2244,15 @@ function start() {
         h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-primary", onclick: () => editReusable(b.pos) }, "Modifier le bloc…"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => detachReusable(b.pos) }, "Créer une copie indépendante")),
         h("button", { type: "button", class: "wp-btn-link", onclick: manageReusable }, "Ouvrir la bibliothèque")));
     } else if (t === "blockquote") {
-      inspector.append(section("Réglages", checkbox("Citation mise en avant (grande, centrée)", Boolean(a.pullquote), (v) => set({ pullquote: v }))));
+      inspector.append(section("Réglages", checkbox("Citation mise en avant (grande, centrée)", Boolean(a.pullquote), (v) => set({ pullquote: v })),
+        control("Citation (auteur, source)", bind(input({ value: a.cite || "", maxlength: 200, placeholder: "Ex. Victor Hugo, Les Misérables" }), "cite"), "Affichée sous la citation.")));
     } else if (t === "kbSpacer") {
       const SIZES = [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"], ["xl", "Très grand"]];
       const mobile = select([["", "Comme sur ordinateur"], ...SIZES], a.sizeMobile || "");
       mobile.addEventListener("change", () => set({ sizeMobile: mobile.value }));
-      inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Hauteur"), segmented(SIZES, a.size, (v) => set({ size: v })), control("Hauteur sur mobile", mobile)));
+      const px = h("input", { type: "number", min: "8", max: "499", step: "1", value: a.px || "", placeholder: "ex. 75", id: `wp-f${++uid}` });
+      px.addEventListener("change", () => { const n = Math.round(Number(px.value)); if (!px.value) return set({ px: "" }); if (!(n >= 8 && n <= 499)) { toast("Hauteur libre : de 8 à 499 px.", "error"); px.value = a.px || ""; return; } set({ px: String(n) }); });
+      inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Hauteur"), segmented(SIZES, a.size, (v) => set({ size: v })), control("Hauteur libre (px)", px, "Remplace la hauteur ci-dessus quand elle est renseignée."), control("Hauteur sur mobile", mobile)));
     } else if (t === "kbColumns") {
       const layouts = [["50-50", "2 colonnes · 50 / 50"], ["33-67", "2 colonnes · 33 / 67"], ["67-33", "2 colonnes · 67 / 33"], ["25-75", "2 colonnes · 25 / 75"], ["75-25", "2 colonnes · 75 / 25"], ["33-33-33", "3 colonnes · égales"], ["25-50-25", "3 colonnes · 25 / 50 / 25"], ["50-25-25", "3 colonnes · 50 / 25 / 25"], ["25-25-50", "3 colonnes · 25 / 25 / 50"], ["25-25-25-25", "4 colonnes · égales"]];
       const lay = select(layouts, a.layout);
@@ -2240,6 +2263,15 @@ function start() {
         h("p", { class: "wp-label" }, "Espacement"), segmented([["none", "Aucun"], ["s", "Petit"], ["", "Moyen"], ["l", "Grand"]], a.gap || "", (v) => set({ gap: v })),
         h("p", { class: "wp-label" }, "Alignement vertical"), segmented([["", "Haut"], ["center", "Centre"], ["bottom", "Bas"]], a.valign || "", (v) => set({ valign: v })),
         control("Empiler les colonnes", stack)));
+      // Largeurs libres (en %) : chaque colonne peut recevoir sa largeur ; vide = part égale du reste
+      const colsInfo = []; node.forEach((col, offset) => colsInfo.push({ pos: b.pos + 1 + offset, basis: col.attrs.basis || "", valign: col.attrs.valign || "" }));
+      inspector.append(section("Largeur de chaque colonne", ...colsInfo.map((c, i) => {
+        const w = h("input", { type: "number", min: "5", max: "95", step: "1", value: c.basis, placeholder: "auto", id: `wp-f${++uid}` });
+        w.addEventListener("change", () => { const n = Math.round(Number(w.value)); if (w.value && !(n >= 5 && n <= 95)) { toast("Largeur d'une colonne : de 5 à 95 %.", "error"); w.value = c.basis; return; } editor.chain().command(({ tr }) => { tr.setNodeMarkup(c.pos, undefined, { ...editor.state.doc.nodeAt(c.pos).attrs, basis: w.value ? String(n) : "" }); const cur = editor.state.doc.nodeAt(b.pos); tr.setNodeMarkup(b.pos, undefined, { ...cur.attrs, layout: "custom" }); return true; }).run(); renderInspector(true); });
+        const va = select([["", "Comme les autres"], ["top", "Haut"], ["center", "Centre"], ["bottom", "Bas"]], c.valign);
+        va.addEventListener("change", () => setAttrsAt(c.pos, { valign: va.value }));
+        return h("div", { class: "wp-col-width" }, control(`Colonne ${i + 1} · largeur (%)`, w), control(`Colonne ${i + 1} · alignement`, va));
+      }), h("p", { class: "wp-help" }, "Renseigner une largeur passe la disposition en « libre » ; les colonnes sans largeur se partagent le reste.")));
     } else if (t === "kbGroup") {
       const bg = select([["none", "Aucun fond"], ["light", "Gris clair"], ["accent", "Bleu clair"], ["warm", "Crème"], ["dark", "Bleu nuit (texte blanc)"]], a.bg || "none");
       bg.addEventListener("change", () => set({ bg: bg.value }));
@@ -2247,6 +2279,11 @@ function start() {
         h("p", { class: "wp-label" }, "Marges intérieures"), segmented([["none", "Aucune"], ["s", "Petites"], ["m", "Moyennes"], ["l", "Grandes"]], a.pad || "none", (v) => set({ pad: v })),
         h("p", { class: "wp-label" }, "Largeur"), segmented([["", "Normale"], ["wide", "Large (grand écran)"]], a.width || "", (v) => set({ width: v })),
         checkbox("Bordure", a.border === "true", (v) => set({ border: v ? "true" : "" }))));
+      inspector.append(section("Disposition des blocs internes",
+        h("p", { class: "wp-label" }, "Variation"), segmented([["", "Flux"], ["row", "Ligne"], ["stack", "Pile"], ["grid", "Grille"]], a.layout || "", (v) => set({ layout: v })),
+        ...(a.layout === "grid" ? [h("p", { class: "wp-label" }, "Colonnes de la grille"), segmented([["", "Auto"], ["2", "2"], ["3", "3"], ["4", "4"]], a.gridcols || "", (v) => set({ gridcols: v }))] : []),
+        ...(a.layout === "row" || a.layout === "stack" ? [h("p", { class: "wp-label" }, "Justification"), segmented([["", "Début"], ["center", "Centre"], ["right", "Fin"], ["between", "Écartés"]], a.justify || "", (v) => set({ justify: v }))] : []),
+        ...(a.layout === "row" ? [h("p", { class: "wp-label" }, "Alignement vertical"), segmented([["", "Centre"], ["top", "Haut"], ["bottom", "Bas"]], a.valign || "", (v) => set({ valign: v }))] : [])));
     } else if (t === "kbButtons") {
       inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Alignement"), segmented([["left", "Gauche"], ["center", "Centre"], ["right", "Droite"]], a.align, (v) => set({ align: v })),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { const n = editor.state.doc.nodeAt(b.pos); editor.chain().focus().insertContentAt(b.pos + n.nodeSize - 1, { type: "kbButton", attrs: { text: "Nouveau bouton", href: "/catalogue", variant: "outline", align: a.align, newTab: false } }).run(); } }, "+ Ajouter un bouton")));
@@ -2255,6 +2292,7 @@ function start() {
       start.addEventListener("change", () => { const n = Math.max(1, Math.min(9999, Number(start.value) || 1)); start.value = String(n); set({ start: n }); });
       inspector.append(section("Réglages", segmented([["bulletList", "Liste à puces", "list"], ["orderedList", "Liste numérotée", "ordered"]], t, (v) => (v === "orderedList" ? chain().toggleOrderedList().run() : chain().toggleBulletList().run())),
         ...(t === "orderedList" ? [control("Numéro de départ", start), checkbox("Numérotation décroissante", Boolean(a.reversed), (v) => set({ reversed: v }))] : []),
+        (() => { const opts = t === "orderedList" ? [["", "Chiffres (par défaut)"], ["lower-alpha", "a, b, c"], ["upper-alpha", "A, B, C"], ["lower-roman", "i, ii, iii"], ["upper-roman", "I, II, III"], ["lower-greek", "α, β, γ"]] : [["", "Disque (par défaut)"], ["circle", "Cercle"], ["square", "Carré"], ["none", "Sans puce"]]; const ls = select(opts, a.ltype || ""); ls.addEventListener("change", () => set({ ltype: ls.value })); return control(t === "orderedList" ? "Style de numérotation" : "Style de puce", ls); })(),
         h("p", { class: "wp-label" }, "Teinte du texte"), segmented(TONES, a.tone || "", (v) => set({ tone: v })),
         h("p", { class: "wp-help" }, "Tabulation : imbriquer un élément. Maj + Tabulation : le sortir d'un niveau.")));
     }

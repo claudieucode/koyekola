@@ -3,7 +3,7 @@
 // l'action, accordéon, FAQ, étapes, comparaison. Les blocs « à risque » (vidéo, intégration…) ne sont que des marqueurs :
 // le lecteur réel est fabriqué par le serveur à l'affichage.
 import { Node, Extension, mergeAttributes } from "@tiptap/core";
-import { STYLE_PROPS, styleDataOf, colorStyle } from "../../shared/blockStyles";
+import { STYLE_PROPS, COLOR_VARS, styleDataOf, colorStyle } from "../../shared/blockStyles";
 
 const WIDTHS = ["25", "33", "50", "66", "75", "100"];
 const ALIGNS = ["left", "center", "right", "wide"];
@@ -13,8 +13,9 @@ export const CALLOUT_LABELS = { info: "Information", conseil: "Conseil", attenti
 export function applyStyleAttrs(dom, attrs) {
   for (const p of STYLE_PROPS) dom.removeAttribute(p.attr);
   for (const [k, v] of Object.entries(styleDataOf(attrs))) dom.setAttribute(k, v);
-  const css = colorStyle(attrs);
-  if (css) dom.setAttribute("style", css); else if (dom.getAttribute("style") && /--kb-/.test(dom.getAttribute("style"))) dom.removeAttribute("style");
+  for (const cssVar of Object.values(COLOR_VARS)) dom.style.removeProperty(cssVar);
+  for (const part of colorStyle(attrs).split(";").filter(Boolean)) { const [name, value] = part.split(":").map((x) => x.trim()); dom.style.setProperty(name, value); }
+  if (!dom.getAttribute("style")) dom.removeAttribute("style");
 }
 
 // Vue d'un bloc « atome » dans l'éditeur : une carte non modifiable au clavier (on la règle par sa fenêtre)
@@ -37,7 +38,7 @@ export const KbImage = Node.create({
   draggable: true,
   selectable: true,
   addAttributes() {
-    return { src: { default: null }, alt: { default: "" }, title: { default: "" }, caption: { default: "" }, credit: { default: "" }, align: { default: "center" }, width: { default: "100" }, mediaId: { default: null }, href: { default: "" }, newTab: { default: false }, ratio: { default: "" } };
+    return { src: { default: null }, alt: { default: "" }, title: { default: "" }, caption: { default: "" }, credit: { default: "" }, align: { default: "center" }, width: { default: "100" }, mediaId: { default: null }, href: { default: "" }, newTab: { default: false }, ratio: { default: "" }, lightbox: { default: false }, fit: { default: "" } };
   },
   parseHTML() {
     return [
@@ -54,6 +55,7 @@ export const KbImage = Node.create({
             width: WIDTHS.includes(el.getAttribute("data-width")) ? el.getAttribute("data-width") : "100", mediaId: img.getAttribute("data-media-id"),
             href: (el.querySelector("a") || { getAttribute: () => "" }).getAttribute("href") || "", newTab: (el.querySelector("a") || { getAttribute: () => "" }).getAttribute("target") === "_blank",
             ratio: el.getAttribute("data-ratio") || "",
+            lightbox: el.getAttribute("data-lightbox") === "true", fit: el.getAttribute("data-fit") === "contain" ? "contain" : "",
           };
         },
       },
@@ -66,6 +68,8 @@ export const KbImage = Node.create({
     if (a.width && a.width !== "100") fig["data-width"] = a.width;
     if (a.credit) fig["data-credit"] = a.credit;
     if (a.ratio) fig["data-ratio"] = a.ratio;
+    if (a.lightbox) fig["data-lightbox"] = "true";
+    if (a.fit) fig["data-fit"] = a.fit;
     const img = { src: a.src, alt: a.alt || "" };
     if (a.title) img.title = a.title;
     if (a.mediaId) img["data-media-id"] = String(a.mediaId);
@@ -78,6 +82,7 @@ export const KbImage = Node.create({
       dom.dataset.align = a.align;
       dom.dataset.width = a.width;
       if (a.variant) dom.dataset.variant = a.variant; else delete dom.dataset.variant;
+      if (a.fit) dom.dataset.fit = a.fit; else delete dom.dataset.fit;
       const img = document.createElement("img");
       // Fichier absent du serveur : on le dit clairement au lieu d'afficher un cadre vide
       img.addEventListener("error", () => {
@@ -100,7 +105,7 @@ export const KbGallery = Node.create({
   group: "block",
   atom: true,
   draggable: true,
-  addAttributes() { return { images: { default: [] }, columns: { default: "3" }, gap: { default: "" } }; },
+  addAttributes() { return { images: { default: [] }, columns: { default: "3" }, gap: { default: "" }, natural: { default: false }, lightbox: { default: false } }; },
   parseHTML() {
     return [{
       tag: "div.kb-gallery",
@@ -108,6 +113,7 @@ export const KbGallery = Node.create({
       getAttrs: (el) => ({
         columns: ["2", "3", "4"].includes(el.getAttribute("data-columns")) ? el.getAttribute("data-columns") : "3",
         gap: ["s", "m", "l"].includes(el.getAttribute("data-gap")) ? el.getAttribute("data-gap") : "",
+        natural: el.getAttribute("data-natural") === "true", lightbox: el.getAttribute("data-lightbox") === "true",
         images: [...el.querySelectorAll("figure")].map((f) => {
           const img = f.querySelector("img");
           return img ? { src: img.getAttribute("src"), alt: img.getAttribute("alt") || "", caption: (f.querySelector("figcaption") || { textContent: "" }).textContent.trim(), href: (f.querySelector("a") || { getAttribute: () => "" }).getAttribute("href") || "" } : null;
@@ -121,12 +127,13 @@ export const KbGallery = Node.create({
       const picture = i.href ? ["a", { href: i.href }, img] : img; // lien par image
       return i.caption ? ["figure", { class: "kb-image" }, picture, ["figcaption", {}, i.caption]] : ["figure", { class: "kb-image" }, picture];
     });
-    return ["div", { class: "kb-gallery", "data-columns": node.attrs.columns, ...(node.attrs.gap ? { "data-gap": node.attrs.gap } : {}), ...lockOf(node) }, ...figures];
+    return ["div", { class: "kb-gallery", "data-columns": node.attrs.columns, ...(node.attrs.gap ? { "data-gap": node.attrs.gap } : {}), ...(node.attrs.natural ? { "data-natural": "true" } : {}), ...(node.attrs.lightbox ? { "data-lightbox": "true" } : {}), ...lockOf(node) }, ...figures];
   },
   addNodeView() {
     return atomView((dom, a) => {
       dom.className = "kb-ed-gallery";
       if (a.gap) dom.dataset.gap = a.gap;
+      if (a.natural) dom.dataset.natural = "true";
       dom.style.setProperty("--cols", a.columns);
       for (const i of a.images || []) { const img = document.createElement("img"); img.src = i.src; img.alt = i.alt || ""; dom.append(img); }
       if (!(a.images || []).length) dom.append(span("kb-ed-empty", "Galerie vide : sélectionnez-la, puis « Ajouter des images » dans l'onglet Bloc"));
@@ -171,14 +178,14 @@ function marker({ name, cls, attrs, icon, label }) {
     },
   });
 }
-export const KbVideo = marker({ name: "kbVideo", cls: "kb-video", attrs: { url: "data-url", caption: "data-caption", poster: "data-poster", autoplay: "data-autoplay", muted: "data-muted", loop: "data-loop", nocontrols: "data-nocontrols", track: "data-track", tracklang: "data-track-lang", tracklabel: "data-track-label" }, icon: "▶", label: (a) => `Vidéo · ${a.url || "adresse à compléter"}${a.caption ? ` · ${a.caption}` : ""}` });
-export const KbAudio = marker({ name: "kbAudio", cls: "kb-audio", attrs: { src: "data-src", title: "data-title", author: "data-author" }, icon: "♪", label: (a) => `Audio · ${a.title || a.src || "fichier à choisir"}${a.author ? ` — ${a.author}` : ""}` });
+export const KbVideo = marker({ name: "kbVideo", cls: "kb-video", attrs: { url: "data-url", caption: "data-caption", poster: "data-poster", autoplay: "data-autoplay", muted: "data-muted", loop: "data-loop", preload: "data-preload", nocontrols: "data-nocontrols", track: "data-track", tracklang: "data-track-lang", tracklabel: "data-track-label" }, icon: "▶", label: (a) => `Vidéo · ${a.url || "adresse à compléter"}${a.caption ? ` · ${a.caption}` : ""}` });
+export const KbAudio = marker({ name: "kbAudio", cls: "kb-audio", attrs: { src: "data-src", title: "data-title", author: "data-author", loop: "data-loop", preload: "data-preload" }, icon: "♪", label: (a) => `Audio · ${a.title || a.src || "fichier à choisir"}${a.author ? ` — ${a.author}` : ""}` });
 export const KbEmbed = marker({ name: "kbEmbed", cls: "kb-embed", attrs: { url: "data-url", caption: "data-caption" }, icon: "⧉", label: (a) => `Intégration · ${a.url || "adresse à compléter"} (YouTube, Vimeo, Spotify, SoundCloud, Dailymotion, Loom, TED : lecteur ; le reste : lien)` });
 export const KbCourse = marker({ name: "kbCourse", cls: "kb-course", attrs: { slug: "data-course" }, icon: "🎓", label: (a) => `Formation recommandée · ${a.slug || "à choisir"}` });
 export const KbNewsletter = marker({ name: "kbNewsletter", cls: "kb-newsletter", attrs: {}, icon: "✉", label: () => "Inscription à la newsletter (formulaire choisi dans Blog → réglages)" });
 
 export const KbMore = marker({ name: "kbMore", cls: "kb-more", attrs: { label: "data-label" }, icon: "⋯", label: (a) => `Lire la suite${a.label ? ` — « ${a.label} »` : ""} · le texte qui précède sert d'extrait si l'extrait est vide` });
-export const KbFile = marker({ name: "kbFile", cls: "kb-file", attrs: { url: "data-url", title: "data-title", download: "data-download" }, icon: "📄", label: (a) => `Fichier à télécharger · ${a.title || (a.url || "").split("/").pop() || "fichier à choisir"}${a.download === "true" ? " (téléchargement direct)" : ""}` });
+export const KbFile = marker({ name: "kbFile", cls: "kb-file", attrs: { url: "data-url", title: "data-title", download: "data-download", preview: "data-preview" }, icon: "📄", label: (a) => `Fichier à télécharger · ${a.title || (a.url || "").split("/").pop() || "fichier à choisir"}${a.download === "true" ? " (téléchargement direct)" : ""}` });
 
 // ---------- Préformaté et vers : texte dont les espaces et les retours à la ligne sont conservés ----------
 function preBlock({ name, cls, placeholder }) {
@@ -186,7 +193,7 @@ function preBlock({ name, cls, placeholder }) {
     name,
     group: "block",
     content: "inline*",
-    marks: "",
+    marks: "_", // mise en forme en ligne (gras, italique, lien…) permise, comme dans Gutenberg
     whitespace: "pre",
     defining: true,
     addAttributes() { return {}; },
@@ -223,13 +230,13 @@ export const KbCover = Node.create({
   group: "block",
   content: "block+",
   defining: true,
-  addAttributes() { return { src: { default: "" }, alt: { default: "" }, overlay: { default: "40" }, height: { default: "m" } }; },
+  addAttributes() { return { src: { default: "" }, alt: { default: "" }, overlay: { default: "40" }, height: { default: "m" }, fx: { default: "" }, fy: { default: "" }, fixed: { default: "" }, shade: { default: "" }, pos: { default: "" } }; },
   parseHTML() {
-    return [{ tag: "div.kb-cover", priority: 85, getAttrs: (el) => ({ src: el.getAttribute("data-src") || "", alt: el.getAttribute("data-alt") || "", overlay: el.getAttribute("data-overlay") || "40", height: el.getAttribute("data-height") || "m" }) }];
+    return [{ tag: "div.kb-cover", priority: 85, getAttrs: (el) => ({ src: el.getAttribute("data-src") || "", alt: el.getAttribute("data-alt") || "", overlay: el.getAttribute("data-overlay") || "40", height: el.getAttribute("data-height") || "m", fx: el.getAttribute("data-fx") || "", fy: el.getAttribute("data-fy") || "", fixed: el.getAttribute("data-fixed") || "", shade: el.getAttribute("data-shade") || "", pos: el.getAttribute("data-pos") || "" }) }];
   },
   renderHTML({ node }) {
     const a = node.attrs;
-    return ["div", { class: "kb-cover", "data-src": a.src, ...(a.alt ? { "data-alt": a.alt } : {}), "data-overlay": a.overlay || "40", "data-height": a.height || "m", ...lockOf(node) }, 0];
+    return ["div", { class: "kb-cover", "data-src": a.src, ...(a.alt ? { "data-alt": a.alt } : {}), "data-overlay": a.overlay || "40", "data-height": a.height || "m", ...(a.fx ? { "data-fx": a.fx } : {}), ...(a.fy ? { "data-fy": a.fy } : {}), ...(a.fixed ? { "data-fixed": a.fixed } : {}), ...(a.shade ? { "data-shade": a.shade } : {}), ...(a.pos ? { "data-pos": a.pos } : {}), ...lockOf(node) }, 0];
   },
   addNodeView() {
     return ({ node }) => {
@@ -237,6 +244,9 @@ export const KbCover = Node.create({
       const paint = (n) => {
         dom.className = "kb-ed-cover";
         dom.dataset.height = n.attrs.height || "m";
+        for (const k of ["fx", "fy", "shade", "pos"]) { if (n.attrs[k]) dom.dataset[k] = n.attrs[k]; else delete dom.dataset[k]; }
+        dom.style.setProperty("--fx", n.attrs.fx ? `${n.attrs.fx}%` : "50%"); dom.style.setProperty("--fy", n.attrs.fy ? `${n.attrs.fy}%` : "50%");
+        applyStyleAttrs(dom, n.attrs);
         dom.style.setProperty("--ov", String((Number(n.attrs.overlay) || 0) / 100));
         dom.style.setProperty("--cover-src", n.attrs.src ? `url("${String(n.attrs.src).replace(/["\\]/g, "")}")` : "none");
       };
@@ -252,10 +262,10 @@ export const KbMediaText = Node.create({
   group: "block",
   content: "kbImage kbMediaTextBody",
   defining: true,
-  addAttributes() { return { side: { default: "left" }, width: { default: "50" } }; },
-  parseHTML() { return [{ tag: "div.kb-mediatext", priority: 85, getAttrs: (el) => ({ side: el.getAttribute("data-side") === "right" ? "right" : "left", width: el.getAttribute("data-width") === "33" ? "33" : "50" }) }]; },
-  renderHTML({ node }) { return ["div", { class: "kb-mediatext", "data-side": node.attrs.side, "data-width": node.attrs.width, ...lockOf(node) }, 0]; },
-  addNodeView() { return layoutView("kb-ed-mediatext", ["side", "width"]); },
+  addAttributes() { return { side: { default: "left" }, width: { default: "50" }, valign: { default: "" }, crop: { default: "" }, stack: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-mediatext", priority: 85, getAttrs: (el) => ({ side: el.getAttribute("data-side") === "right" ? "right" : "left", width: ["25", "33", "40", "50", "60", "66", "75"].includes(el.getAttribute("data-width")) ? el.getAttribute("data-width") : "50", valign: el.getAttribute("data-valign") || "", crop: el.getAttribute("data-crop") || "", stack: el.getAttribute("data-stack") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-mediatext", "data-side": node.attrs.side, "data-width": node.attrs.width, ...dataAttrs(node, ["valign", "crop", "stack"]), ...lockOf(node) }, 0]; },
+  addNodeView() { return layoutView("kb-ed-mediatext", ["side", "width", "valign", "crop", "stack"]); },
 });
 
 // ---------- Bouton ----------
@@ -393,10 +403,10 @@ export const KbSpacer = Node.create({
   group: "block",
   atom: true,
   draggable: true,
-  addAttributes() { return { size: { default: "m" }, sizeMobile: { default: "" } }; },
-  parseHTML() { return [{ tag: "div.kb-spacer", priority: 70, getAttrs: (el) => ({ size: el.getAttribute("data-size") || "m", sizeMobile: el.getAttribute("data-size-mobile") || "" }) }]; },
-  renderHTML({ node }) { return ["div", { class: "kb-spacer", "data-size": node.attrs.size, ...(node.attrs.sizeMobile ? { "data-size-mobile": node.attrs.sizeMobile } : {}), ...lockOf(node) }]; },
-  addNodeView() { return atomView((dom, a) => { dom.className = "kb-ed-spacer"; dom.dataset.size = a.size; dom.append(span("kb-ed-spacer-label", `Espace ${({ s: "petit", m: "moyen", l: "grand", xl: "très grand" })[a.size] || ""}${a.sizeMobile ? ` · mobile : ${({ s: "petit", m: "moyen", l: "grand", xl: "très grand" })[a.sizeMobile]}` : ""}`)); }); },
+  addAttributes() { return { size: { default: "m" }, sizeMobile: { default: "" }, px: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-spacer", priority: 70, getAttrs: (el) => ({ size: el.getAttribute("data-size") || "m", sizeMobile: el.getAttribute("data-size-mobile") || "", px: el.getAttribute("data-px") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-spacer", "data-size": node.attrs.size, ...(node.attrs.sizeMobile ? { "data-size-mobile": node.attrs.sizeMobile } : {}), ...(node.attrs.px ? { "data-px": node.attrs.px } : {}), ...lockOf(node) }]; },
+  addNodeView() { return atomView((dom, a) => { dom.className = "kb-ed-spacer"; dom.dataset.size = a.size; if (a.px) { dom.dataset.px = a.px; dom.style.setProperty("--kb-px", `${a.px}px`); } else delete dom.dataset.px; dom.append(span("kb-ed-spacer-label", `Espace ${a.px ? `${a.px} px` : ({ s: "petit", m: "moyen", l: "grand", xl: "très grand" })[a.size] || ""}${a.sizeMobile ? ` · mobile : ${({ s: "petit", m: "moyen", l: "grand", xl: "très grand" })[a.sizeMobile]}` : ""}`)); }); },
 });
 export const KbPageBreak = Node.create({
   name: "kbPageBreak",
@@ -410,7 +420,7 @@ export const KbPageBreak = Node.create({
 // Conteneur dont les réglages sont des attributs data-* et le contenu modifiable
 const layoutView = (cls, keys) => ({ node }) => {
   const dom = document.createElement("div");
-  const paint = (n) => { dom.className = cls; for (const k of keys) { const v = n.attrs[k]; if (v) dom.dataset[k] = v; else delete dom.dataset[k]; } };
+  const paint = (n) => { dom.className = cls; for (const k of keys) { const v = n.attrs[k]; if (v) dom.dataset[k] = v; else delete dom.dataset[k]; } applyStyleAttrs(dom, n.attrs); };
   paint(node);
   return { dom, contentDOM: dom, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } };
 };
@@ -421,9 +431,10 @@ export const KbColumn = Node.create({
   content: "block+",
   defining: true,
   isolating: true,
-  parseHTML() { return [{ tag: "div.kb-column", priority: 80 }]; },
-  renderHTML({ node }) { return ["div", { class: "kb-column", ...lockOf(node) }, 0]; },
-  addNodeView() { return () => { const dom = document.createElement("div"); dom.className = "kb-ed-column"; return { dom, contentDOM: dom }; }; },
+  addAttributes() { return { basis: { default: "" }, valign: { default: "" } }; },
+  parseHTML() { return [{ tag: "div.kb-column", priority: 80, getAttrs: (el) => ({ basis: el.getAttribute("data-basis") || "", valign: el.getAttribute("data-valign") || "" }) }]; },
+  renderHTML({ node }) { return ["div", { class: "kb-column", ...dataAttrs(node, ["basis", "valign"]), ...lockOf(node) }, 0]; },
+  addNodeView() { return ({ node }) => { const dom = document.createElement("div"); const paint = (n) => { dom.className = "kb-ed-column"; if (n.attrs.valign) dom.dataset.valign = n.attrs.valign; else delete dom.dataset.valign; }; paint(node); return { dom, contentDOM: dom, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } }; }; },
 });
 const COLUMN_KEYS = ["layout", "gap", "stack", "valign"];
 export const KbColumns = Node.create({
@@ -434,15 +445,34 @@ export const KbColumns = Node.create({
   addAttributes() { return { layout: { default: "50-50" }, gap: { default: "" }, stack: { default: "mobile" }, valign: { default: "" } }; },
   parseHTML() { return [{ tag: "div.kb-columns", priority: 80, getAttrs: (el) => ({ ...readData(el, COLUMN_KEYS), stack: el.getAttribute("data-stack") || "mobile" }) }]; },
   renderHTML({ node }) { return ["div", { class: "kb-columns", ...dataAttrs(node, COLUMN_KEYS), ...lockOf(node) }, 0]; },
-  addNodeView() { return layoutView("kb-ed-columns", COLUMN_KEYS); },
+  addNodeView() {
+    return ({ node }) => {
+      const dom = document.createElement("div");
+      const paint = (n) => {
+        dom.className = "kb-ed-columns";
+        for (const k of COLUMN_KEYS) { const v = n.attrs[k]; if (v) dom.dataset[k] = v; else delete dom.dataset[k]; }
+        applyStyleAttrs(dom, n.attrs);
+        if (n.attrs.layout === "custom") dom.style.setProperty("--kb-cols", columnsTemplate(n)); else dom.style.removeProperty("--kb-cols");
+      };
+      paint(node);
+      return { dom, contentDOM: dom, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } };
+    };
+  },
 });
-const GROUP_KEYS = ["bg", "pad", "border", "width", "variant"];
+// Largeurs libres : « 30fr 70fr » ; les colonnes sans largeur se partagent le reste (même règle que le serveur)
+export function columnsTemplate(node) {
+  const set = []; node.forEach((c) => set.push(Number(c.attrs.basis) || 0));
+  const free = set.filter((v) => !v).length;
+  const rest = Math.max(5, 100 - set.reduce((a, b) => a + b, 0));
+  return set.map((v) => `${v || Math.round((rest / (free || 1)) * 10) / 10}fr`).join(" ");
+}
+const GROUP_KEYS = ["bg", "pad", "border", "width", "variant", "layout", "justify", "gridcols", "valign"];
 export const KbGroup = Node.create({
   name: "kbGroup",
   group: "block",
   content: "block+",
   defining: true,
-  addAttributes() { return { bg: { default: "light" }, pad: { default: "m" }, border: { default: "" }, width: { default: "" } }; },
+  addAttributes() { return { bg: { default: "light" }, pad: { default: "m" }, border: { default: "" }, width: { default: "" }, layout: { default: "" }, justify: { default: "" }, gridcols: { default: "" }, valign: { default: "" } }; },
   parseHTML() { return [{ tag: "div.kb-group", priority: 80, getAttrs: (el) => readData(el, GROUP_KEYS) }]; },
   renderHTML({ node }) { return ["div", { class: "kb-group", ...dataAttrs(node, GROUP_KEYS), ...lockOf(node) }, 0]; },
   addNodeView() { return layoutView("kb-ed-group", GROUP_KEYS); },
