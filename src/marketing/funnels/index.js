@@ -4,8 +4,8 @@
 // Le tunnel ne recopie rien : l'étape pointe vers la page. Une page n'appartient qu'à un seul tunnel actif, pour que
 // « l'étape suivante » soit toujours sans ambiguïté. Les boutons d'une page dont l'adresse est /etape-suivante mènent à
 // l'étape suivante du tunnel ; après une inscription, le visiteur y est conduit aussi.
-// Les étapes de paiement (bon de commande, offre complémentaire, offre supérieure, offre de repli) arrivent avec le
-// paiement (phase 9) : elles ne sont pas proposées avant d'exister.
+// Étapes de paiement (bon de commande, offre complémentaire, offre de repli) : /tunnel/offre/<étape> (src/routes/tunnelOffers.js),
+// paiement Stripe réel, commande créée seulement après confirmation de Stripe.
 const { MarketingError } = require("../errors");
 const { checkCtx, audit, resolveSite, siteSql } = require("../audience/shared");
 const { transaction } = require("../db/tx");
@@ -28,13 +28,17 @@ const STEP_TYPES = {
   download: { label: "Téléchargement", template: "telechargement" },
   thankyou: { label: "Remerciement", template: "merci" },
   course: { label: "Formation (LMS)", course: true },
+  // Étapes de paiement (phase 9) : une offre = une formation publiée du catalogue, payée par le Stripe du site.
+  order: { label: "Bon de commande", course: true, offer: true },
+  upsell: { label: "Offre complémentaire (upsell)", course: true, offer: true },
+  downsell: { label: "Offre de repli (downsell)", course: true, offer: true },
   custom: { label: "Étape personnalisée", template: null, advances: true },
 };
 
 // Réglages de CONTEXTE d'une étape (jamais écrits dans la page CMS : la même page sert aussi hors tunnel) :
 //  noindex : l'étape n'est pas proposée aux moteurs de recherche (par défaut pour remerciement et téléchargement) ; hideFooter : pied de page masqué ;
 //  goal : objectif de conversion, pour vous (texte libre court).
-const DEFAULT_SETTINGS = { noindex: false, hideFooter: false, goal: "" };
+const DEFAULT_SETTINGS = { noindex: false, hideFooter: false, goal: "", bumpCourseId: null, bumpLabel: "" };
 const NOINDEX_BY_DEFAULT = new Set(["thankyou", "download"]);
 function cleanSettings(raw, base = DEFAULT_SETTINGS) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw bad("Réglages d'étape invalides.");
@@ -42,9 +46,11 @@ function cleanSettings(raw, base = DEFAULT_SETTINGS) {
   if (raw.noindex !== undefined) out.noindex = raw.noindex === true || raw.noindex === "on" || raw.noindex === "1" || raw.noindex === 1;
   if (raw.hideFooter !== undefined) out.hideFooter = raw.hideFooter === true || raw.hideFooter === "on" || raw.hideFooter === "1" || raw.hideFooter === 1;
   if (raw.goal !== undefined) out.goal = line(raw.goal, 120);
+  if (raw.bumpCourseId !== undefined) { const n = Number(raw.bumpCourseId); out.bumpCourseId = raw.bumpCourseId === "" || raw.bumpCourseId === null ? null : (Number.isInteger(n) && n > 0 ? n : null); }
+  if (raw.bumpLabel !== undefined) out.bumpLabel = line(raw.bumpLabel, 120);
   return out;
 }
-const parseSettings = (text) => { try { const v = JSON.parse(text || "{}"); return { ...DEFAULT_SETTINGS, ...(v && typeof v === "object" && !Array.isArray(v) ? { noindex: Boolean(v.noindex), hideFooter: Boolean(v.hideFooter), goal: typeof v.goal === "string" ? v.goal.slice(0, 120) : "" } : {}) }; } catch { return { ...DEFAULT_SETTINGS }; } };
+const parseSettings = (text) => { try { const v = JSON.parse(text || "{}"); return { ...DEFAULT_SETTINGS, ...(v && typeof v === "object" && !Array.isArray(v) ? { noindex: Boolean(v.noindex), hideFooter: Boolean(v.hideFooter), goal: typeof v.goal === "string" ? v.goal.slice(0, 120) : "", bumpCourseId: Number.isInteger(v.bumpCourseId) && v.bumpCourseId > 0 ? v.bumpCourseId : null, bumpLabel: typeof v.bumpLabel === "string" ? v.bumpLabel.slice(0, 120) : "" } : {}) }; } catch { return { ...DEFAULT_SETTINGS }; } };
 
 // ---------- Lecture ----------
 
@@ -72,7 +78,7 @@ function describeStep(ctx, s, funnelSite = null) {
   if (type.course) {
     const c = getCourse(ctx, s.course_id);
     if (!c) out.problem = "La formation n'est plus publiée : choisissez-en une autre ou retirez l'étape.";
-    else Object.assign(out, { courseTitle: c.title, path: `/cours/${encodeURIComponent(c.slug)}`, live: true });
+    else Object.assign(out, { courseTitle: c.title, path: type.offer ? `/tunnel/offre/${s.id}` : `/cours/${encodeURIComponent(c.slug)}`, live: true });
   } else if (!s.page_id) out.problem = "Aucune page n'est associée à cette étape (détachée ou supprimée) : sélectionnez une page existante ou créez-en une avec KOLAKISA CMS.";
   else {
     Object.assign(out, { pageName: s.page_name, pageSlug: s.page_slug, pageStatus: s.page_status, pageHasDraft: Boolean(s.page_has_draft), path: `/p/${s.page_slug}` });
@@ -122,7 +128,7 @@ function createFunnel(ctx, { name, description = "", template = null, siteId } =
     const id = Number(ctx.db.prepare("INSERT INTO mk_funnels (organization_id, name, description, template, created_by, site_id) VALUES (?, ?, ?, ?, ?, ?)")
       .run(ctx.organizationId, n, line(description, 300), tpl ? tpl.key : null, ctx.userId ?? null, site).lastInsertRowid);
     if (tpl) for (const st of tpl.steps) {
-      addStep(ctx, id, st.type === "course" ? { type: "course", name: st.name, courseId: listCourses(ctx)[0].id } : { type: st.type, name: st.name, newPage: true, template: st.template });
+      addStep(ctx, id, STEP_TYPES[st.type].course ? { type: st.type, name: st.name, courseId: listCourses(ctx)[0].id } : { type: st.type, name: st.name, newPage: true, template: st.template });
     }
     audit(ctx, "funnel.created", "funnel", id, { template: tpl ? tpl.key : null });
     return getFunnel(ctx, id);
@@ -196,7 +202,7 @@ function assertPageUsable(ctx, funnel, page) {
 function replaceStepPage(ctx, funnelId, stepId, pageId) {
   const f = requireFunnel(ctx, funnelId, { active: true });
   const s = stepOf(f, stepId);
-  if (STEP_TYPES[s.type] && STEP_TYPES[s.type].course) throw bad("Une étape « Formation » n'a pas de page : choisissez une autre formation.");
+  if (STEP_TYPES[s.type] && STEP_TYPES[s.type].course) throw bad("Une étape « Formation » ou de paiement n'a pas de page : choisissez une autre formation.");
   const page = pages.getPage(ctx, Number(pageId));
   if (!page) throw bad("Choisissez une page existante.");
   if (f.steps.some((x) => x.pageId === page.id && x.id !== s.id)) throw bad("Cette page est déjà une autre étape de ce tunnel.");
@@ -222,7 +228,7 @@ function createStepPage(ctx, funnelId, stepId, { template } = {}) {
   const f = requireFunnel(ctx, funnelId, { active: true });
   const s = stepOf(f, stepId);
   const t = STEP_TYPES[s.type] || {};
-  if (t.course) throw bad("Une étape « Formation » n'a pas de page.");
+  if (t.course) throw bad("Une étape « Formation » ou de paiement n'a pas de page.");
   if (s.pageId) throw bad("Cette étape a déjà une page : détachez-la d'abord.");
   return transaction(ctx.db, () => {
     const tplKey = template === undefined ? t.template : template;
@@ -239,6 +245,11 @@ function updateStepSettings(ctx, funnelId, stepId, raw) {
   const f = requireFunnel(ctx, funnelId, { active: true });
   const s = stepOf(f, stepId);
   const next = cleanSettings(raw, s.settings);
+  if (next.bumpCourseId !== null) {
+    if (s.type !== "order") throw bad("Seul un bon de commande peut proposer une offre additionnelle.");
+    if (next.bumpCourseId === s.courseId) throw bad("L'offre additionnelle doit être une autre formation que celle du bon de commande.");
+    if (!getCourse(ctx, next.bumpCourseId)) throw bad("L'offre additionnelle doit être une formation publiée du catalogue.");
+  }
   ctx.db.prepare("UPDATE mk_funnel_steps SET settings = ?, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(next), s.id);
   touch(ctx, f.id);
   audit(ctx, "funnel.step_settings", "funnel", f.id, { step: s.id });
@@ -406,24 +417,41 @@ function stepUrlForPage(db, page, stepId) {
 
 // ---------- Côté public ----------
 
-// Adresse de l'étape suivante d'une page (tunnel actif), si elle est atteignable ; sinon null
-function nextUrlForPage(db, page) {
-  const ctx = { db, organizationId: page.organization_id };
-  const step = db.prepare(`SELECT s.funnel_id, s.position FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id
-    WHERE s.page_id = ? AND f.status = 'active' AND f.organization_id = ? ORDER BY s.id LIMIT 1`).get(page.id, page.organization_id);
-  if (!step) return null;
+// Première étape ATTEIGNABLE après une position (une étape hors ligne est sautée plutôt que de mener à une page d'erreur).
+// `skip` : types d'étape à sauter (ex. l'offre de repli, une fois l'offre complémentaire acceptée).
+function liveStepAfter(db, organizationId, funnelId, position, skip = []) {
+  const ctx = { db, organizationId };
   const rows = db.prepare(`SELECT s.*, p.slug AS page_slug, p.status AS page_status, p.archived_at AS page_archived, p.site_id AS page_site_id, f.site_id AS funnel_site FROM mk_funnel_steps s
-    JOIN mk_funnels f ON f.id = s.funnel_id LEFT JOIN mk_landing_pages p ON p.id = s.page_id WHERE s.funnel_id = ? AND s.position > ? ORDER BY s.position, s.id`).all(step.funnel_id, step.position);
-  // L'étape suivante ATTEIGNABLE (une étape hors ligne est sautée plutôt que de mener à une page d'erreur)
+    JOIN mk_funnels f ON f.id = s.funnel_id LEFT JOIN mk_landing_pages p ON p.id = s.page_id WHERE s.funnel_id = ? AND s.position > ? AND f.organization_id = ? ORDER BY s.position, s.id`).all(funnelId, position, organizationId);
   for (const r of rows) {
+    if (skip.includes(r.type)) continue;
     const d = describeStep(ctx, r, r.funnel_site ?? null);
     if (d.live) return d.path;
   }
   return null;
 }
 
+// Adresse de l'étape suivante d'une page (tunnel actif), si elle est atteignable ; sinon null
+function nextUrlForPage(db, page) {
+  const step = db.prepare(`SELECT s.funnel_id, s.position FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id
+    WHERE s.page_id = ? AND f.status = 'active' AND f.organization_id = ? ORDER BY s.id LIMIT 1`).get(page.id, page.organization_id);
+  return step ? liveStepAfter(db, page.organization_id, step.funnel_id, step.position) : null;
+}
+
+// Étape de paiement d'un tunnel ACTIF (bon de commande, offre complémentaire, offre de repli), ou null
+function offerStep(db, organizationId, stepId) {
+  const row = db.prepare(`SELECT s.*, f.name AS funnel_name FROM mk_funnel_steps s JOIN mk_funnels f ON f.id = s.funnel_id
+    WHERE s.id = ? AND f.status = 'active' AND f.organization_id = ?`).get(stepId, organizationId);
+  if (!row || !(STEP_TYPES[row.type] || {}).offer || !row.course_id) return null;
+  return { ...row, settings: parseSettings(row.settings) };
+}
+// Où aller après une étape de paiement : `paid` (offre complémentaire acceptée → l'offre de repli est sautée) ou refus.
+function nextUrlAfterOffer(db, organizationId, step, { paid = false } = {}) {
+  return liveStepAfter(db, organizationId, step.funnel_id, step.position, paid && step.type === "upsell" ? ["downsell"] : []);
+}
+
 module.exports = {
   STEP_TYPES, NEXT_URL, MAX_STEPS, getFunnel, requireFunnel, listFunnels, createFunnel, updateFunnel, archiveFunnel, restoreFunnel, duplicateFunnel,
-  addStep, renameStep, moveStep, removeStep, publishFunnel, nextUrlForPage, funnelsOfPage, linkedAutomations, stepSections,
+  addStep, renameStep, moveStep, removeStep, publishFunnel, nextUrlForPage, offerStep, nextUrlAfterOffer, funnelsOfPage, linkedAutomations, stepSections,
   replaceStepPage, detachStepPage, createStepPage, updateStepSettings, guardPageRemoval, contextForPage, stepUrlForPage, parseSettings, DEFAULT_SETTINGS,
 };

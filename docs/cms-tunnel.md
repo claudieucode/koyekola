@@ -32,7 +32,7 @@ déclencheurs d'automatisation, éditeur visuel unique (`/marketing/pages/:id/ed
 | Preview | aperçu de la page (bouton « Prévisualiser » de chaque étape, sans compter de visite) ; pas d'aperçu de navigation du tunnel entier |
 | Page Builder | inchangé (moteur) ; seul ajout : l'étape précise dans le sélecteur de lien |
 | Variables `{{funnel.*}}`, produit, prix | **non implémentées** (pas de moteur de variables de page ; aucune donnée produit inventée) |
-| Checkout, upsell, downsell, paiement | **non fournis** : le tunnel n'a pas d'étape de paiement (la boutique actuelle est le panier des formations) ; rien n'est simulé |
+| Checkout, upsell, downsell, paiement | **fournis (jalon paiement)** : étapes `order` / `upsell` / `downsell`, voir « Étapes de paiement » ci-dessous |
 | Événements funnel.entered, step.viewed, … | existants sous les noms `funnel.step_reached` / `funnel.completed` (visiteurs identifiés ayant accepté la mesure) ; `checkout.*`, `purchase.completed` non émis par le tunnel |
 | Automatisations | déclencheurs `funnel.step_reached` / `funnel.completed` (palier 17), sans changement |
 
@@ -40,5 +40,16 @@ déclencheurs d'automatisation, éditeur visuel unique (`/marketing/pages/:id/ed
 - Une page ne peut appartenir qu'à **un seul tunnel actif** (règle voulue : « étape suivante » sans ambiguïté) ; elle peut figurer dans des tunnels archivés. Réutiliser les mêmes pages dans deux tunnels actifs est refusé.
 - Pas de route de tunnel distincte (`/f/...`) : l'adresse publique d'une étape est celle de sa page.
 - Pas d'en-tête à masquer sur ces pages (elles n'ont qu'un pied de page) ; pas de choix de modèle d'apparence par étape.
-- Pas de variables de tunnel dans les pages, pas d'étapes de paiement/offres, pas d'aperçu de navigation du tunnel complet.
+- Pas de variables de tunnel dans les pages, pas d'aperçu de navigation du tunnel complet. Les étapes de paiement existent désormais (voir ci-dessous).
 - Le nom d'un tunnel reste unique par organisation.
+
+## Étapes de paiement (bon de commande, order bump, upsell, downsell)
+
+- Types d'étape `order`, `upsell`, `downsell` : chacun désigne **une formation publiée** (pas de page CMS ; présentez l'offre sur la page de vente qui précède). Adresse : `/tunnel/offre/<étape>` (`src/routes/tunnelOffers.js`, vue `views/tunnel-offer.ejs`).
+- Paiement : Stripe Checkout existant (`services/payments.js`). Montants calculés par le serveur ; la session porte `checkout_sessions.funnel_step_id`. La commande et l'inscription ne sont créées qu'après confirmation de Stripe (webhook signé ou relecture), jamais au simple retour du navigateur. Sans `STRIPE_SECRET_KEY`, l'offre s'affiche mais ne peut pas être payée (rien n'est simulé).
+- Reprise du parcours : `/commande/retour/:ref` envoie vers l'étape suivante atteignable ; une offre complémentaire **payée** saute l'offre de repli, un **refus** y mène. Étape finale absente : confirmation de commande.
+- Code promo : champ facultatif sur la page d'offre, vérifié côté serveur (mêmes codes que la boutique).
+- Order bump : réglage de l'étape « bon de commande » (`bumpCourseId`, `bumpLabel`), case à cocher, ajoutée au même paiement ; jamais la formation principale elle-même.
+- Une étape d'un tunnel archivé, inconnue ou qui n'est pas une offre répond 404. Compte requis (redirection vers la connexion puis retour).
+- Limites : pas de paiement en un clic pour l'upsell (la carte est redemandée), une seule devise (EUR), Stripe uniquement.
+- Tests : `tests/tunnel-paiement.test.js` (faux Stripe local, webhooks signés).
