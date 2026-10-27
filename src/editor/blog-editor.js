@@ -527,7 +527,7 @@ function start() {
       const preview = blockPreview(node);
       const fixedChild = node.type.name === "kbColumn"; // une colonne se gère par la mise en page du bloc Colonnes
       const select = h("button", { type: "button", class: "wp-lv-select", "data-block-select": id || "", title: "Maj + clic : sélectionner une plage de blocs · Alt + ↑/↓ : déplacer", onclick: (e) => (e.shiftKey ? selectBlocksRange(listActive || activeBlockId(editor.state), id) : selectBlockById(id)),
-        onkeydown: (e) => { if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && id) { e.preventDefault(); selectBlockById(id); attempt(() => moveRange(editor, e.key === "ArrowUp" ? -1 : 1)); renderListView(); const again = secondaryDynamic.querySelector(`[data-block-select="${id}"]`); if (again) again.focus(); } } },
+        onkeydown: (e) => { if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && id) { e.preventDefault(); const b = findBlock(editor.state.doc, id); if (!b) return; if (b.node.isTextblock) editor.commands.setTextSelection(b.pos + 1); else editor.commands.setNodeSelection(b.pos); attempt(() => moveRange(editor, e.key === "ArrowUp" ? -1 : 1), null, { focus: false }); renderListView(); const again = secondaryDynamic.querySelector(`[data-block-select="${id}"]`); if (again) again.focus(); } } },
         svg(ICON_OF[node.type.name] || "paragraph", 18), h("span", { class: "wp-list-name" }, name), preview ? h("span", { class: "wp-list-preview" }, preview) : null);
       const eye = h("button", { type: "button", class: `wp-lv-action${hidden ? " is-on" : ""}`, "data-block-hide": id || "", "aria-pressed": String(hidden), disabled: locked || fixedChild || !id,
         "aria-label": hidden ? `Afficher le bloc ${name}` : `Masquer le bloc ${name}`, title: locked ? "Bloc verrouillé" : hidden ? "Afficher le bloc" : "Masquer le bloc",
@@ -849,8 +849,8 @@ function start() {
   function unwrapQuoteOnly() { if (editor.isActive("blockquote") && !editor.isActive("bulletList") && !editor.isActive("orderedList")) chain().toggleBlockquote().run(); }
   function toHeading(level) { unwrapBlocks(); chain().setHeading({ level }).run(); }
   // Exécute une opération de bloc : un refus explicite (bloc verrouillé, place invalide…) devient un message, jamais une perte silencieuse
-  function attempt(fn, okMessage) {
-    try { const r = fn(); editor.view.focus(); if (okMessage) toast(typeof okMessage === "function" ? okMessage(r) : okMessage); return r; } catch (e) { if (e instanceof TransformError) { toast(e.message, "error"); return null; } throw e; }
+  function attempt(fn, okMessage, { focus = true } = {}) {
+    try { const r = fn(); if (focus) editor.view.focus(); if (okMessage) toast(typeof okMessage === "function" ? okMessage(r) : okMessage); return r; } catch (e) { if (e instanceof TransformError) { toast(e.message, "error"); return null; } throw e; }
   }
   let styleClipboard = null;
   function transformMenu(anchor, pos = null) {
