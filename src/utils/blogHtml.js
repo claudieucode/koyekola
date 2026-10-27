@@ -212,6 +212,35 @@ function sanitizeBlogHtml(html) {
   return /\S/.test(out.replace(/<[^>]*>/g, "")) || /<(img|hr|input|div class="kb-)/.test(out) ? out : "";
 }
 
+// D11 : ce que l'enregistrement va RETIRER ou aplatir, dit à la personne au lieu d'être perdu en silence.
+// Ne modifie rien : lecture seule du HTML reçu, avec les mêmes règles que sanitizeBlogHtml. Retourne [{ kind, label, count }].
+const KNOWN_TAGS = new Set([...saveOptions.allowedTags, "html", "head", "body"]);
+function findUnsupported(html) {
+  const source = typeof html === "string" ? html.slice(0, MAX_HTML) : "";
+  if (!source.trim()) return [];
+  const found = new Map();
+  const note = (kind, label) => { const cur = found.get(kind) || { kind, label, count: 0 }; cur.count += 1; found.set(kind, cur); };
+  const walk = (nodes) => {
+    for (const n of nodes) {
+      if (n.type !== "tag" && n.type !== "script" && n.type !== "style") continue;
+      const a = n.attribs || {};
+      if (!KNOWN_TAGS.has(n.name)) note(`tag:${n.name}`, `balise <${n.name}> non prise en charge`);
+      else if (n.name === "img" && !IMG_SRC.test(String(a.src || "").trim())) note("img", "image hors médiathèque du site (adresse externe ou invalide)");
+      else if (n.name === "a" && !SAFE_HREF.test(String(a.href || "").trim())) note("a", "lien dont l'adresse n'est pas autorisée");
+      else if (n.name === "div") {
+        const kb = classesOf(a).filter((c) => c.startsWith("kb-") && !DIV_CLASSES.includes(c));
+        if (kb.length) note(`bloc:${kb[0]}`, `bloc « ${kb[0]} » inconnu (contenu conservé sans sa mise en forme)`);
+        const main = classesOf(a).find((c) => DIV_CLASSES.includes(c));
+        if ((main === "kb-video" || main === "kb-embed") && !MEDIA_URL.test(String(a["data-url"] || "").trim())) note("media", "vidéo ou intégration dont l'adresse n'est pas autorisée");
+        if (main === "kb-audio" && !AUDIO_SRC.test(String(a["data-src"] || "").trim())) note("audio", "fichier audio non autorisé");
+      }
+      if (n.children) walk(n.children);
+    }
+  };
+  walk(parseDocument(source).children);
+  return [...found.values()];
+}
+
 // ---------- 2. Affichage ----------
 const el = (name, attribs = {}, children = []) => {
   const node = new Element(name, attribs, children);
@@ -382,4 +411,4 @@ function markdownToEditorHtml(markdown) {
   return sanitizeBlogHtml(converted);
 }
 
-module.exports = { sanitizeBlogHtml, renderBlogHtml, blogPlainText, withoutHidden, markdownToEditorHtml, CALLOUT_TYPES, WORDS_PER_MINUTE };
+module.exports = { sanitizeBlogHtml, findUnsupported, renderBlogHtml, blogPlainText, withoutHidden, markdownToEditorHtml, CALLOUT_TYPES, WORDS_PER_MINUTE };

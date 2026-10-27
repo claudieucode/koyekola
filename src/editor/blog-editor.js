@@ -2703,6 +2703,7 @@ function start() {
       for (const [key, col] of [["cover", "coverPath"], ["og", "ogImagePath"], ["twitter", "twitterImagePath"]]) if (r[col] !== undefined) imagePicks[key].saved(r[col]);
       if (r.slug) { field("slug").value = r.slug; if (r.publishedAt) $("[data-slug-hint]").textContent = "Article en ligne : si vous changez le lien, l'ancienne adresse redirigera vers la nouvelle."; }
       field("remove_cover").value = ""; field("remove_og_image").value = ""; field("remove_twitter_image").value = "";
+      if (r.warnings && r.warnings.length) toast(`Enregistré, mais ${r.warnings.map((w) => `${w.count} × ${w.label}`).join(" ; ")} — retiré ou aplati à l'enregistrement.`, "error"); // D11 : rien n'est perdu en silence
       if (untouched) setState("Enregistré", "is-saved");
       else { setState("Modifications non enregistrées", "is-dirty"); scheduleAutosave(); } // frappes arrivées pendant l'envoi : elles restent à sauvegarder
       syncStatus();

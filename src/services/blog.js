@@ -131,8 +131,14 @@ function renderPost(post, { newsletterHtml = null } = {}) {
 
 // ---------- Statuts et programmation ----------
 // Un article programmé dont l'heure est passée devient publié (appelé avant chaque lecture publique du blog)
+// D12 : la mise en ligne laisse une trace (révision « Publication »), comme une publication manuelle ; chaque article n'est promu qu'une fois même si deux requêtes arrivent ensemble
 function promoteScheduled() {
-  db.prepare("UPDATE posts SET status = 'published', published = 1 WHERE status = 'scheduled' AND deleted_at IS NULL AND published_at IS NOT NULL AND published_at <= datetime('now')").run();
+  const due = db.prepare("SELECT id FROM posts WHERE status = 'scheduled' AND deleted_at IS NULL AND published_at IS NOT NULL AND published_at <= datetime('now')").all();
+  for (const { id } of due) {
+    const changed = db.prepare("UPDATE posts SET status = 'published', published = 1, updated_at = datetime('now') WHERE id = ? AND status = 'scheduled'").run(id).changes;
+    if (!changed) continue; // une autre requête l'a déjà promu
+    addRevision(db.prepare("SELECT * FROM posts WHERE id = ?").get(id), null, "Mise en ligne programmée", "publish");
+  }
 }
 
 // Adresse d'un article : tirée du titre (ou saisie), rendue unique : « titre », « titre-2 », « titre-3 »… ; les anciennes adresses

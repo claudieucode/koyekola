@@ -18,7 +18,7 @@ const { uploadsRoot } = require("../config/paths");
 const { fileExists } = require("../config/mediaAudit");
 const { themeFor } = require("../utils/blogThemes");
 const { absoluteUrl, breadcrumbLd, isoDate, isoDateTime } = require("../utils/seo");
-const { sanitizeBlogHtml, markdownToEditorHtml } = require("../utils/blogHtml");
+const { sanitizeBlogHtml, markdownToEditorHtml, findUnsupported } = require("../utils/blogHtml");
 const { escapeHtml } = require("../utils/markdown");
 const blog = require("../services/blog");
 const articles = require("../services/articles");
@@ -465,7 +465,7 @@ router.sitemapEntries = () => {
     { path: "/blog" },
     ...taxonomy.publicTerms("category").map((t) => ({ path: taxonomy.urlOf(t) })),
     ...db
-      .prepare("SELECT * FROM posts WHERE published = 1 AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
+      .prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
       .all()
       .map((p) => ({ path: urls.publicPath("post", p), lastmod: isoDate(p.updated_at) })),
   ];
@@ -548,6 +548,8 @@ const oneLine = (value, max) => String(value || "").replace(/[\r\n\u2028\u2029]+
 // Case à cocher précédée d'un champ caché « 0 » : la dernière valeur reçue l'emporte
 const lastOf = (v) => (Array.isArray(v) ? v[v.length - 1] : v);
 const flag = (v, fallback) => { const x = lastOf(v); return x === undefined ? fallback : x === "1" || x === "on" || x === "true" || x === true ? 1 : 0; };
+// Éléments que la sanitisation a retirés de ce qui vient d'être envoyé (D11) : affichés par l'éditeur, jamais perdus en silence
+const warningsOf = (req) => (req.body && req.body.content_format === "html" ? findUnsupported(String(req.body.content || "")) : []);
 const wantsJson = (req) => req.get("x-blog-editor") === "1";
 // Conflit de modification (D3) : l'éditeur envoie la version qu'il a chargée (base_rev = empreinte du contenu et des réglages, base_updated_at = date à la seconde).
 // L'empreinte est précise : deux enregistrements dans la même seconde sont distingués, ce que la date seule ne fait pas.
@@ -947,7 +949,7 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   });
   const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(newId);
   blog.addRevision(post, req.session.user.id, "Création de l'article", "create");
-  if (wantsJson(req)) return res.json({ ok: true, id: post.id, slug: post.slug, status: post.status, published: post.published, publishedAt: post.published_at, editUrl: `/formateur/blog/${post.id}/modifier`, updatedAt: post.updated_at, rev: blog.revisionFingerprint(post), coverPath: post.cover_path, ogImagePath: post.og_image_path, twitterImagePath: post.twitter_image_path, revisions: blog.listRevisions(post.id).slice(0, 20) });
+  if (wantsJson(req)) return res.json({ ok: true, id: post.id, slug: post.slug, status: post.status, published: post.published, publishedAt: post.published_at, editUrl: `/formateur/blog/${post.id}/modifier`, updatedAt: post.updated_at, rev: blog.revisionFingerprint(post), warnings: warningsOf(req), coverPath: post.cover_path, ogImagePath: post.og_image_path, twitterImagePath: post.twitter_image_path, revisions: blog.listRevisions(post.id).slice(0, 20) });
   res.redirect(`/formateur/blog/${post.id}/modifier?enregistre=1`);
 }));
 
@@ -996,7 +998,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   for (const col of ["cover_path", "og_image_path", "twitter_image_path"]) {
     if (p[col] && p[col] !== after[col]) forgetIfUnused(p[col]);
   }
-  if (wantsJson(req)) return res.json({ ok: true, id: after.id, slug: after.slug, status: after.status, published: after.published, publishedAt: after.published_at, updatedAt: after.updated_at, rev: blog.revisionFingerprint(after), coverPath: after.cover_path, ogImagePath: after.og_image_path, twitterImagePath: after.twitter_image_path, revisions: blog.listRevisions(after.id, { limit: 20 }), revisionTotal: blog.countRevisions(after.id) });
+  if (wantsJson(req)) return res.json({ ok: true, id: after.id, slug: after.slug, status: after.status, published: after.published, publishedAt: after.published_at, updatedAt: after.updated_at, rev: blog.revisionFingerprint(after), warnings: warningsOf(req), coverPath: after.cover_path, ogImagePath: after.og_image_path, twitterImagePath: after.twitter_image_path, revisions: blog.listRevisions(after.id, { limit: 20 }), revisionTotal: blog.countRevisions(after.id) });
   res.redirect(`/formateur/blog/${p.id}/modifier?enregistre=1`);
 }));
 
@@ -1027,7 +1029,11 @@ listAction("supprimer-definitivement", (p) => { articles.purge(p.id); return { t
 
 // ---------- Sauvegarde automatique ----------
 // Un nouvel article reçoit un brouillon dès la première sauvegarde automatique (rien n'est perdu en cas de rafraîchissement)
+const draftLimiter = createRateLimiter(60, 10 * 60 * 1000); // 60 brouillons automatiques par tranche de 10 minutes et par personne (un éditeur n'en crée qu'un par article)
 router.post("/formateur/blog/api/brouillon", upload.none(), (req, res) => {
+  const who = `draft:${req.session.user.id}`;
+  if (draftLimiter.isLimited(who)) return res.status(429).json({ error: "Trop de brouillons créés en peu de temps. Patientez quelques minutes." });
+  draftLimiter.hit(who);
   const title = oneLine(req.body.title, 150) || "Article sans titre";
   const site = newArticleSite(req); // même règle que la création : le site est validé côté serveur, jamais cru sur parole
   // Le brouillon naît dans le site de l'éditeur, dans la même transaction que sa création (comme POST /nouveau)
@@ -1183,9 +1189,13 @@ router.post("/formateur/blog/api/medias", mediaUpload, (req, res) => {
   if (!file) return res.status(400).json({ error: "Choisissez un fichier (image, vidéo MP4/WebM ou audio MP3)." });
   const kind = image ? "image" : video ? "video" : "audio";
   const path = image ? `/uploads/thumbnails/${file.filename}` : `/uploads/blog/${file.filename}`;
+  // Image : quand le fichier est lisible (PNG, JPEG, WebP, GIF), ses dimensions réelles font foi, pas celles déclarées par le navigateur ;
+  // un format que le serveur ne sait pas lire (AVIF) garde la valeur déclarée. Le fichier n'est jamais refusé pour cela (aucune régression sur les formats rares).
+  let real = null;
+  if (image) { try { real = seoImages.readDimensions(fs.readFileSync(file.path)); } catch { real = null; } }
   const dim = (v) => (/^\d{1,5}$/.test(String(v || "")) ? Number(v) : null);
-  const media = blog.addMedia({ path, kind, mime: file.mimetype, size: file.size, width: dim(req.body.width), height: dim(req.body.height), alt: oneLine(req.body.alt, 300), title: oneLine(req.body.title, 200), userId: req.session.user.id });
-  const variants = image ? keepVariants(req, file, dim(req.body.width)) : [];
+  const media = blog.addMedia({ path, kind, mime: file.mimetype, size: file.size, width: real ? real.width : dim(req.body.width), height: real ? real.height : dim(req.body.height), alt: oneLine(req.body.alt, 300), title: oneLine(req.body.title, 200), userId: req.session.user.id });
+  const variants = image ? keepVariants(req, file, real ? real.width : dim(req.body.width)) : [];
   if (!image) for (const f of (req.files && req.files.image_variant) || []) fs.unlink(f.path, () => {});
   res.json({ media, path, variants });
 });

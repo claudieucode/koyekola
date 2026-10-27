@@ -120,6 +120,29 @@ describe("éditeur d'articles — intégrité P0", () => {
     });
   });
 
+  test("D12 : un article programmé qui arrive à échéance est mis en ligne UNE fois, avec une révision « Publication »", async () => {
+    const info = db.prepare("INSERT INTO posts (slug, title, content, content_format, status, published, published_at, author_id) VALUES ('programme-echu', 'Programmé échu', '<p>Texte</p>', 'html', 'scheduled', 0, datetime('now', '-1 hour'), ?)").run(one("SELECT id FROM users WHERE role = 'formateur' LIMIT 1").id);
+    const id = Number(info.lastInsertRowid);
+    await Promise.all([boss.get("/blog"), boss.get("/blog"), boss.get("/blog")]);
+    const post = one("SELECT status, published FROM posts WHERE id = ?", id);
+    assert.deepEqual([post.status, post.published], ["published", 1]);
+    const revs = db.prepare("SELECT kind FROM post_revisions WHERE post_id = ? AND kind = 'publish'").all(id);
+    assert.equal(revs.length, 1, "une seule révision de publication, même avec des requêtes simultanées");
+  });
+
+  test("D11 : l'enregistrement signale ce qu'il retire au lieu de le perdre en silence", async () => {
+    const html = '<p>Texte</p><img src="https://exemple.org/x.png" alt="x"><iframe src="https://exemple.org"></iframe><a href="javascript:alert(1)">piège</a><div class="kb-futur">Bloc d\'une version plus récente</div><div class="kb-video" data-url="http://non-https.test/v.mp4"></div>';
+    const r = await boss.request("/formateur/blog/nouveau", { method: "POST", multipart: form({ title: "Avec éléments retirés", content: html, content_format: "html", status: "draft" }), headers: { "x-blog-editor": "1" } });
+    assert.equal(r.status, 200, r.text);
+    const kinds = JSON.parse(r.text).warnings.map((w) => w.kind).sort();
+    assert.deepEqual(kinds, ["a", "bloc:kb-futur", "img", "media", "tag:iframe"]);
+    const saved = one("SELECT content FROM posts WHERE id = ?", JSON.parse(r.text).id).content;
+    assert.doesNotMatch(saved, /iframe|javascript:|exemple\.org/);
+    assert.match(saved, /Bloc d'une version plus récente/, "le texte d'un bloc inconnu est conservé");
+    const clean = await boss.request("/formateur/blog/nouveau", { method: "POST", multipart: form({ title: "Propre", content: "<p>Rien à retirer</p>", content_format: "html", status: "draft" }), headers: { "x-blog-editor": "1" } });
+    assert.deepEqual(JSON.parse(clean.text).warnings, []);
+  });
+
   test("client : la création transmet le site (D4) et une frappe pendant l'envoi n'est jamais déclarée enregistrée (D1)", () => {
     const src = fs.readFileSync(path.join(__dirname, "..", "src", "editor", "blog-editor.js"), "utf8");
     assert.match(src, /function siteQuery\(/);

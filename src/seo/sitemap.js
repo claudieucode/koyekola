@@ -45,7 +45,7 @@ function entries({ hostSite = null } = {}) {
   const siteTag = (home) => (home ? { siteId: home, base: urls.siteInfo(home).base } : {});
   for (const t of taxonomy.publicTerms("category")) { const home = homeOf("term", t.id); add({ path: home ? `${taxonomy.baseOf("category")}/${urls.addressOf("term", t)}` : taxonomy.urlOf(t), type: "Catégorie d'articles", ...siteTag(home) }, metaIndex("blog_category", t.slug)); }
   const blogSites = new Set();
-  for (const p of db.prepare("SELECT * FROM posts WHERE published = 1 ORDER BY published_at DESC").all()) {
+  for (const p of db.prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY published_at DESC").all()) {
     const home = homeOf("post", p.id);
     if (home) blogSites.add(home);
     const e = { path: urls.publicPath("post", p), type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title, ...siteTag(home) };
