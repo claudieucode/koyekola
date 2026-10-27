@@ -11,10 +11,11 @@ Mission commencée le 2026-10-27. Périmètre : éditeur d'articles Tiptap (voir
 | `API_ET_EXTENSIBILITE.md` | Registre, API, extensibilité | rédigé |
 | `PERSISTANCE_ET_COMPATIBILITE.md` | Sérialisation, blocs inconnus, révisions, choix du format | rédigé |
 | `AUDIT_EXISTANT.md` | État réel de Kolakisa avant intervention | **fait** |
-| `MATRICE_PARITE.md` | Parité capacité par capacité | **v1 (initiale)** |
+| `MATRICE_PARITE.md` | Parité capacité par capacité, avec statut final et preuve | **v2 (finale)** |
 | `PLAN_IMPLEMENTATION.md` | Lots P0 → P5, blocages | **fait** |
 | `DECISIONS_TECHNIQUES.md` | Choix et limites | **fait** |
 | `JOURNAL_IMPLEMENTATION.md` | Ce qui a été fait, avec résultats de tests | tenu à jour |
-| `ARCHITECTURE_CIBLE.md`, `PLAN_TESTS.md` | à écrire avec le lot P4 / avant P1 | à faire |
+| `ARCHITECTURE_CIBLE.md` | Registre central, supports, blocs inconnus, sites | **fait** |
+| `PLAN_TESTS.md` | Tests de la mission et limites | **fait** |
 
 Les documents de référence Gutenberg ont été produits par recherche documentaire automatisée ; chacun se termine par ses « points non vérifiés ». Ils ne remplacent pas une vérification dans les `block.json` avant d'implémenter un bloc.

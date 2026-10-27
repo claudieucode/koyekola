@@ -60,6 +60,9 @@ Aucun défaut critique. Pas de faille XSS persistante identifiée (double saniti
 | D12 | Moyen | Programmation : promotion à la requête, sans révision ni recontrôle SEO/droits | services/blog.js:134 |
 | D13 | Faible | MIME client non vérifié, dimensions média fournies par le client, corbeille de blocs non assainie, pas de limite de débit sur brouillon/autosave/corbeille, sitemap sans `deleted_at`/site, `dateModified` non mis à jour | |
 
+### Statut final des défauts (après la mission)
+D1 corrigé (Chrome) · D2 corrigé · D3 corrigé · D4 corrigé (Chrome) · D5 corrigé (Chrome) · D6 corrigé · D7 corrigé (colonne `site_id`, historique) · **D8/D9 réévalués : risque faible, accès du seul compte créateur (DT-15), décision produit n° 4** · D10 corrigé (re-sanitisation ; les droits `revisions.*` de la doc concernent un autre écran, la route de l'éditeur exige déjà `articles.write`/`edit_own` et le droit de publier pour un article en ligne) · D11 corrigé en rapport (pas de bloc brut) · D12 corrigé · D13 corrigé sauf : MIME des vidéos/audios non vérifié sur le contenu, corbeille de blocs non assainie à l'écriture (le contenu est assaini à l'enregistrement de l'article).
+
 ## 5. Base de référence des tests (avant modification)
 
 Commande : 16 fichiers liés à l'éditeur d'articles, `--test-concurrency=1`, `ENCRYPTION_KEY` factice, `node_modules` lié depuis le worktree de déploiement.
