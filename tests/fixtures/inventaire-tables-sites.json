@@ -36,6 +36,10 @@
    "siteId": false,
    "classe": "a-isoler-B5"
   },
+  "blog_reusable_versions": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
   "certificates": {
    "siteId": false,
    "classe": "plateforme"
@@ -573,6 +577,10 @@
    "classe": "plateforme"
   },
   "post_autosaves": {
+   "siteId": false,
+   "classe": "a-isoler-B5"
+  },
+  "post_notes": {
    "siteId": false,
    "classe": "a-isoler-B5"
   },
