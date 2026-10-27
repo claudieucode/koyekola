@@ -31,6 +31,7 @@ const { transaction: siteTransaction } = require("../marketing/db/tx");
 const themeRender = require("../marketing/web/themeRender");
 const blockTrash = require("../services/blockTrash");
 const postNotes = require("../services/postNotes");
+const blockRegistry = require("../shared/blockRegistry");
 const blogAi = require("../services/blogAi");
 const editorTheme = require("../services/editorTheme");
 const seoPages = require("../seo/pages");
@@ -1085,6 +1086,30 @@ router.get("/formateur/blog/:id/apercu", loadPost, (req, res) => {
 });
 
 // ---------- Corbeille des blocs (Structure de l'article → Corbeille) ----------
+// ---------- Diagnostic des blocs (compte créateur) : registre, version du schéma, usage réel dans les articles, blocs inconnus ----------
+router.get("/formateur/blog/api/diagnostic", (req, res) => {
+  const rows = db.prepare("SELECT id, content FROM posts WHERE content_format = 'html' AND deleted_at IS NULL").all();
+  const known = new Set(blockRegistry.BLOCKS.map((b) => b.cls).filter(Boolean));
+  const withClass = blockRegistry.BLOCKS.filter((b) => b.cls);
+  const usage = new Map(withClass.map((b) => [b.name, 0]));
+  const unknown = new Map();
+  for (const post of rows) {
+    const html = post.content || "";
+    for (const b of withClass) if (new RegExp(`class="[^"]*\\b${b.cls}\\b`).test(html)) usage.set(b.name, usage.get(b.name) + 1);
+    for (const m of html.matchAll(/class="([^"]*)"/g)) for (const c of m[1].split(/\s+/)) {
+      if (!/^(kb-|callout-)/.test(c) || known.has(c) || /^kb-x-|^callout-[a-z-]+$/.test(c) || ["kb-button", "kb-pullquote", "kb-steps"].includes(c)) continue;
+      if (!unknown.has(c)) unknown.set(c, new Set());
+      unknown.get(c).add(post.id);
+    }
+  }
+  res.json({
+    schemaVersion: blockRegistry.SCHEMA_VERSION,
+    articles: rows.length,
+    blocks: blockRegistry.BLOCKS.filter((b) => !b.sub).map((b) => ({ name: b.name, label: b.label, since: b.since, articles: usage.has(b.name) ? usage.get(b.name) : null })),
+    unknownClasses: [...unknown].map(([cls, ids]) => ({ cls, count: ids.size, articles: [...ids].slice(0, 20) })),
+  });
+});
+
 // ---------- Notes de travail de l'article (jamais publiées) ----------
 const noteLimiter = createRateLimiter(40, 10 * 60 * 1000);
 const noteJson = (req, res, fn) => { try { res.json(fn()); } catch (e) { if (e instanceof UserError) return res.status(e.message === "Note introuvable." ? 404 : 400).json({ error: e.message }); throw e; } };

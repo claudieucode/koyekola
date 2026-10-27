@@ -3055,6 +3055,17 @@ function start() {
     else if (e.altKey && !mod && !e.shiftKey && e.code === "F10") { e.preventDefault(); const t = (topToolbarMode ? topToolbar : blockToolbar).querySelector("button"); if (t) t.focus(); }
   });
 
+  // Diagnostic des blocs (compte créateur) : version du schéma, blocs connus et leur usage réel, classes de blocs inconnues dans les articles
+  async function showDiagnostic() {
+    try {
+      const d = await api("/formateur/blog/api/diagnostic");
+      const rows = d.blocks.map((b) => h("tr", {}, h("td", {}, b.label), h("td", {}, b.name), h("td", {}, String(b.since)), h("td", {}, b.articles === null ? "—" : String(b.articles))));
+      modal("Diagnostic des blocs", h("div", {},
+        h("p", {}, `Version du schéma des blocs : ${d.schemaVersion} · ${d.articles} article(s) en format éditeur.`),
+        d.unknownClasses.length ? h("div", { class: "wp-warning" }, h("p", {}, "Blocs inconnus trouvés dans des articles (conservés sans mise en forme) :"), h("ul", {}, ...d.unknownClasses.map((u) => h("li", {}, `${u.cls} — ${u.count} article(s)`)))) : h("p", { class: "wp-help" }, "Aucun bloc inconnu dans les articles."),
+        h("table", { class: "wp-diag" }, h("thead", {}, h("tr", {}, ...["Bloc", "Nom technique", "Depuis", "Articles"].map((x) => h("th", {}, x)))), h("tbody", {}, ...rows))), [{ label: "Fermer" }], { wide: true });
+    } catch (e) { toast(`Diagnostic : ${e.message}`, "error"); }
+  }
   // Fenêtre d'aide : regroupée comme celle de Gutenberg (Global, Sélection, Bloc, Texte). Mac : Cmd à la place de Ctrl.
   function showShortcuts() {
     const groups = [
@@ -3282,6 +3293,7 @@ function start() {
     if (opt === "appearance") return openAppearance();
     if (opt === "settings") return openEditorSettings();
     if (opt === "shortcuts") return showShortcuts();
+    if (opt === "diagnostic") return showDiagnostic();
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
     if (opt === "focus") root.classList.toggle("is-focus-mode", on);

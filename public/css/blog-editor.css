@@ -1878,3 +1878,5 @@
 .kb-note-badge { position: absolute; right: -8px; transform: translateX(100%); margin-top: 2px; padding: 1px 7px; border: 0; border-radius: 999px; background: var(--accent-light); color: var(--accent-dark); font-size: 12px; font-weight: 700; cursor: pointer; }
 
 [data-notes-body] { padding: 14px 16px 24px; }
+.wp-diag { width: 100%; border-collapse: collapse; font-size: 13px; }
+.wp-diag th, .wp-diag td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }

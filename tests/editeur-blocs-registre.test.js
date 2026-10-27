@@ -5,6 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { BLOCKS, SCHEMA_VERSION, topNames } = require("../src/shared/blockRegistry");
 const { sanitizeBlogHtml } = require("../src/utils/blogHtml");
+const { TEST_KEY } = require("./marketing-helpers");
+const { startServer, loginInstructor, newStudent } = require("./helpers");
 
 const root = path.join(__dirname, "..");
 const nodesSrc = fs.readFileSync(path.join(root, "src", "editor", "blog", "nodes.js"), "utf8");
@@ -40,3 +42,27 @@ describe("registre central des blocs", () => {
     assert.equal(SCHEMA_VERSION, Math.max(...BLOCKS.map((b) => b.since)));
   });
 });
+
+describe("diagnostic des blocs (serveur)", () => {
+  let srv, boss;
+  const { before, after } = require("node:test");
+  before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); });
+  after(() => srv.stop());
+  test("le compte créateur voit la version du schéma, l'usage réel de chaque bloc et les blocs inconnus ; un élève est refusé", async () => {
+    const fd = new FormData();
+    Object.entries({ title: "Diagnostic", content: '<div class="kb-group" data-bg="light"><p>x</p></div><pre class="kb-verse">v</pre>', content_format: "html", status: "draft" }).forEach(([k, v]) => fd.append(k, v));
+    await boss.request("/formateur/blog/nouveau", { method: "POST", multipart: fd, headers: { "x-blog-editor": "1" } });
+    srv.db().prepare("UPDATE posts SET content = content || '<div class=\"kb-ancien-bloc\"><p>y</p></div>' WHERE title = 'Diagnostic'").run();
+    const r = await boss.get("/formateur/blog/api/diagnostic");
+    assert.equal(r.status, 200, r.text);
+    const d = JSON.parse(r.text);
+    assert.equal(d.schemaVersion, SCHEMA_VERSION);
+    assert.equal(d.blocks.find((b) => b.name === "kbGroup").articles, 1);
+    assert.equal(d.blocks.find((b) => b.name === "kbVerse").articles, 1);
+    assert.equal(d.blocks.find((b) => b.name === "kbCover").articles, 0);
+    assert.deepEqual(d.unknownClasses.map((u) => u.cls), ["kb-ancien-bloc"]);
+    const student = await newStudent(srv);
+    assert.notEqual((await student.get("/formateur/blog/api/diagnostic")).status, 200);
+  });
+});
+
