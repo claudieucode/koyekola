@@ -311,6 +311,103 @@ describe("éditeur d'articles — fonctions de Gutenberg (navigateur)", { skip: 
     await page.context().close();
   });
 
+  test("zone d'écriture redimensionnable : glisser la poignée ou les flèches ; la largeur décide de la disposition (mobile / tablette) ; un appareil prédéfini rétablit la largeur", async () => {
+    const page = await open();
+    await load(page, '<div class="kb-columns" data-layout="50-50" data-stack="mobile"><div class="kb-column"><p>a</p></div><div class="kb-column"><p>b</p></div></div>');
+    const handle = page.getByRole("button", { name: /Redimensionner la zone d'écriture/ });
+    const w0 = await page.evaluate(() => document.querySelector(".wp-content").getBoundingClientRect().width);
+    await handle.focus();
+    for (let i = 0; i < 6; i++) await page.keyboard.press("Shift+ArrowLeft"); // 6 × 100 px
+    const w1 = await page.evaluate(() => document.querySelector(".wp-content").getBoundingClientRect().width);
+    assert.ok(w1 < w0 - 300, `largeur réduite (${w0} → ${w1})`);
+    // glisser jusqu'à une largeur de mobile : les colonnes s'empilent comme sur le site
+    const box = await handle.boundingBox();
+    await page.mouse.move(box.x + 4, box.y + 20); await page.mouse.down();
+    const content = await page.evaluate(() => document.querySelector(".wp-content").getBoundingClientRect());
+    await page.mouse.move(box.x + 4 - (content.width - 380) / 2, box.y + 20, { steps: 6 });
+    await page.mouse.up();
+    const w2 = await page.evaluate(() => Math.round(document.querySelector(".wp-content").getBoundingClientRect().width));
+    assert.ok(w2 <= 400 && w2 >= 320, `largeur de mobile (${w2})`);
+    assert.equal(await page.evaluate(() => document.querySelector("[data-blog-editor]").dataset.canvasDevice), "mobile");
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".kb-ed-columns")).gridTemplateColumns.split(" ").length), 1, "colonnes empilées");
+    // un appareil prédéfini efface la largeur personnalisée
+    await page.locator("[data-preview-toggle]").click();
+    await page.locator('[data-preview="desktop"]').click();
+    assert.equal(await page.evaluate(() => document.querySelector(".wp-content").style.maxWidth), "");
+    await page.context().close();
+  });
+
+  test("réglages : réinitialiser un groupe de style ; aperçu d'un style au survol (sans rien modifier) ; texte des boutons ; copier tout le contenu ; commandes de la palette", async () => {
+    const page = await open();
+    await load(page, '<p data-fw="bold" data-lh="airy" data-mt="l">Réglé</p><figure class="kb-image" data-align="center"><img src="/uploads/thumbnails/a.png" alt="x"></figure>');
+    await selectText(page, 0);
+    await page.click('[data-sidebar-tab="bloc"]');
+    await page.mouse.move(1300, 520);
+    await page.getByRole("button", { name: /Réinitialiser « Typographie »/ }).click();
+    const attrs = (await tops(page))[0].attrs;
+    assert.deepEqual([attrs.fw, attrs.lh, attrs.mt], ["", "", "l"], "seul le groupe Typographie est réinitialisé");
+    // aperçu d'une variante au survol : la page change, le document non
+    await selectNode(page, 1);
+    await page.mouse.move(1300, 540);
+    const rounded = page.getByRole("group").getByRole("button", { name: "Coins arrondis" });
+    await rounded.hover();
+    assert.equal(await page.locator(".kb-ed-image").getAttribute("data-variant"), "rounded", "aperçu appliqué");
+    assert.equal((await tops(page))[1].attrs.variant, "", "le document n'a pas changé");
+    await page.mouse.move(600, 800);
+    assert.equal(await page.locator(".kb-ed-image").getAttribute("data-variant"), null, "aperçu retiré en quittant");
+    await rounded.click();
+    assert.equal((await tops(page))[1].attrs.variant, "rounded");
+    // texte des boutons (préférence d'accessibilité)
+    await page.evaluate(() => { document.querySelector("[data-blog-editor]").dataset.edLabels = "1"; });
+    assert.notEqual(await page.evaluate(() => getComputedStyle(document.querySelector(".wp-header [data-undo]"), "::after").content), "none");
+    // palette : les commandes ajoutées s'exécutent (zoom arrière, copier tout le contenu)
+    await page.evaluate(() => document.querySelector(".ProseMirror").editor.view.focus());
+    await page.keyboard.press("ControlOrMeta+Shift+k");
+    await page.waitForSelector(".wsp-palette");
+    await page.keyboard.type("Zoom arrière");
+    await page.waitForTimeout(250);
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(() => document.querySelector("[data-blog-editor]").classList.contains("is-zoom-out")), true, "la palette active le zoom arrière");
+    await page.evaluate(() => document.querySelector("[data-blog-editor]").classList.remove("is-zoom-out"));
+    await page.evaluate(() => document.querySelector(".ProseMirror").editor.view.focus());
+    await page.keyboard.press("ControlOrMeta+Shift+k");
+    await page.waitForSelector(".wsp-palette");
+    await page.keyboard.type("Copier tout le contenu");
+    await page.waitForTimeout(250);
+    assert.ok(await page.locator(".wsp-palette").getByText("Copier tout le contenu").count(), "la commande est proposée");
+    await page.keyboard.press("Escape");
+    assert.deepEqual(errors, []);
+    await page.context().close();
+  });
+
+  test("menu Outils et préférences : « Copier tout le contenu » ; « Afficher le texte des boutons » et « Ouvrir la vue en liste au démarrage » (enregistrés sur le compte)", async () => {
+    const page = await open();
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: srv.base });
+    await load(page, "<h2>Contenu à copier</h2><p>Texte.</p>");
+    await page.click("[data-options-toggle]");
+    await page.getByRole("menuitem", { name: "Copier tout le contenu" }).click();
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    assert.match(copied, /<h2[^>]*>Contenu à copier<\/h2>/);
+    await page.click("[data-options-toggle]");
+    await page.getByRole("menuitem", { name: /Réglages de l'éditeur/ }).click();
+    await page.getByLabel("Afficher le texte des boutons de la barre d'outils").check();
+    await page.getByLabel("Ouvrir la vue en liste au démarrage").check();
+    await page.waitForFunction(() => document.querySelector("[data-blog-editor]").dataset.edLabels === "1");
+    await page.waitForTimeout(600);
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector(".ProseMirror") && document.querySelector(".ProseMirror").editor);
+    assert.equal(await page.evaluate(() => document.querySelector("[data-blog-editor]").dataset.edLabels), "1", "le réglage est retrouvé au rechargement");
+    await page.waitForSelector(".wp-list-view", { timeout: 8000 });
+    // remise à l'état d'origine (le compte de test est partagé par les tests de ce fichier)
+    await page.click("[data-options-toggle]");
+    await page.getByRole("menuitem", { name: /Réglages de l'éditeur/ }).click();
+    await page.getByLabel("Afficher le texte des boutons de la barre d'outils").uncheck();
+    await page.getByLabel("Ouvrir la vue en liste au démarrage").uncheck();
+    await page.waitForTimeout(500);
+    await page.context().close();
+  });
+
   test("plan du document : liste les titres, un clic place le curseur dans le titre", async () => {
     const page = await open();
     await load(page, "<h2>Introduction</h2><p>x</p><h3>Détail</h3><p>y</p><h2>Conclusion</h2>");

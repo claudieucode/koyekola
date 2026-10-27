@@ -645,7 +645,7 @@ function start() {
     const fa = document.activeElement;
     const focusKey = fa && secondaryDynamic.contains(fa) ? ["data-block-select", "data-block-hide", "data-block-delete", "data-structure-tab"].map((a) => (fa.hasAttribute(a) ? `[${a}="${fa.getAttribute(a)}"]` : null)).find(Boolean) : null;
     const fold = h("div", { class: "wp-lv-fold", hidden: structureTab !== "liste" }, h("button", { type: "button", class: "wp-btn-link", onclick: () => { for (const k of listRows.keys()) if (listRows.get(k).querySelector(":scope > .wp-lv-children")) listCollapsed.add(k); renderListView(); } }, "Tout replier"), h("button", { type: "button", class: "wp-btn-link", onclick: () => { listCollapsed.clear(); renderListView(); } }, "Tout déplier"));
-    body.append(stats, fold, list, outline, trash);
+    body.append(...[stats, fold, list, outline, trash].filter(Boolean)); // (append(null) écrirait « null »)
     secondaryDynamic.replaceChildren(tabs, body);
     body.scrollTop = scroll;
     if (focusKey) { const again = secondaryDynamic.querySelector(focusKey); if (again && !again.disabled) again.focus({ preventScroll: true }); }
@@ -2193,6 +2193,7 @@ function start() {
         sel.addEventListener("change", () => set({ [p.key]: sel.value }));
         return control(p.label, sel, null);
       });
+      if (used) controls.push(h("button", { type: "button", class: "wp-btn-link", "data-style-reset": group, onclick: () => set(Object.fromEntries(props.map((p) => [p.key, ""]))) }, `Réinitialiser « ${group} »`));
       out.push(foldPanel(`st-${group.replace(/\W+/g, "")}`, used ? `${group} (${used})` : group, openStyleGroups.has(group) || used > 0, controls, (open) => { if (open) openStyleGroups.add(group); else openStyleGroups.delete(group); }));
     }
     return out;
@@ -2459,7 +2460,18 @@ function start() {
     if (t === "kbAccordion" && !isLocked(node)) inspector.append(section("Réglages", checkbox("Ouvert par défaut sur le site", Boolean(a.open), (v) => set({ open: v })), h("p", { class: "wp-help" }, "Dans l'éditeur, le bloc reste toujours déplié pour que vous puissiez écrire dedans.")));
     if (t === "blockquote" && !isLocked(node)) inspector.append(section("Teinte", segmented(TONES, a.tone || "", (v) => set({ tone: v }))));
     // Styles du bloc (variantes) : liste fermée par type de bloc
-    if (VARIANTS[t] && !isLocked(node)) inspector.append(section("Styles", segmented(VARIANTS[t], a.variant || "", (v) => set({ variant: v }))));
+    if (VARIANTS[t] && !isLocked(node)) {
+      const seg = segmented(VARIANTS[t], a.variant || "", (v) => set({ variant: v }));
+      // Aperçu : survoler (ou focaliser) un style l'applique à l'écran sans rien modifier ; quitter le rétablit
+      const dom = () => editor.view.nodeDOM(b.pos);
+      seg.querySelectorAll("button").forEach((btn, i) => {
+        const value = VARIANTS[t][i][0];
+        const show = () => { const el = dom(); if (el && el.setAttribute) { if (value) el.setAttribute("data-variant", value); else el.removeAttribute("data-variant"); } };
+        const hide = () => { const el = dom(); if (el && el.setAttribute) { const cur = (editor.state.doc.nodeAt(b.pos) || { attrs: {} }).attrs.variant; if (cur) el.setAttribute("data-variant", cur); else el.removeAttribute("data-variant"); } };
+        btn.addEventListener("mouseenter", show); btn.addEventListener("focus", show); btn.addEventListener("mouseleave", hide); btn.addEventListener("blur", hide);
+      });
+      inspector.append(section("Styles", seg, h("p", { class: "wp-help" }, "Survolez un style pour l'aperçu, cliquez pour l'appliquer.")));
+    }
     if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) for (const panel of styleSettings(t, a, set)) inspector.append(panel);
     // Réglages communs (comme Gutenberg) : ancre HTML et classes CSS supplémentaires
     if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) {
@@ -3367,6 +3379,12 @@ function start() {
     ];
     modal("Raccourcis clavier", h("div", {}, h("p", { class: "wp-help" }, "Sur Mac, remplacez Ctrl par Cmd."), ...groups.flatMap(([title, rows]) => [h("h3", { class: "wp-shortcuts-title" }, title), h("dl", { class: "wp-shortcuts" }, ...rows.flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)]))])), [], { wide: true });
   }
+  // « Copier tout le contenu » (menu Outils de Gutenberg) : le HTML de l'article dans le presse-papiers
+  async function copyAllContent() {
+    const html = editor.getHTML();
+    try { await navigator.clipboard.writeText(html); toast(`Contenu copié (${html.length.toLocaleString("fr-FR")} caractères).`); }
+    catch { codeEditor.value = html; toast("Le navigateur refuse l'accès au presse-papiers : utilisez l'éditeur de code pour copier le contenu.", "error"); }
+  }
   // Zoom arrière : la page entière se voit en réduction (réorganiser de gros blocs, comme dans Gutenberg)
   function toggleZoomOut(force) {
     const on = typeof force === "boolean" ? force : !root.classList.contains("is-zoom-out");
@@ -3572,7 +3590,32 @@ function start() {
       requestAnimationFrame(() => setDevice(kind === "frame" ? "desktop" : kind));
     } catch (e) { toast(e.message, "error"); }
   }));
+  // Zone d'écriture redimensionnable (comme l'édition « responsive » de Gutenberg) : une poignée sur le bord droit, ou les flèches ← → au clavier ; la largeur détermine
+  // la disposition (mobile < 641 px, tablette < 961 px) comme sur le site
+  const canvasContent = $(".wp-content");
+  const canvasHandle = h("button", { type: "button", class: "wp-canvas-handle", "aria-label": "Redimensionner la zone d'écriture (glisser, ou flèches gauche et droite)", title: "Redimensionner la zone d'écriture" });
+  const canvasSize = h("span", { class: "wp-canvas-size", "aria-live": "polite", hidden: true });
+  canvasContent.append(canvasHandle, canvasSize);
+  const resizeCanvas = (w) => {
+    const max = Math.max(320, Math.floor($("[data-canvas]").clientWidth - 24));
+    const width = Math.round(Math.min(max, Math.max(320, w)));
+    canvasContent.style.maxWidth = `${width}px`;
+    root.dataset.canvasDevice = width <= 640 ? "mobile" : width <= 960 ? "tablet" : "desktop";
+    root.dataset.canvasCustom = "1";
+    canvasSize.textContent = `${width} px`; canvasSize.hidden = false;
+    $$("[data-preview]").forEach((b) => { if (["desktop", "tablet", "mobile"].includes(b.dataset.preview)) b.setAttribute("aria-checked", "false"); });
+    return width;
+  };
+  canvasHandle.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); canvasHandle.setPointerCapture(e.pointerId);
+    const startX = e.clientX; const startW = canvasContent.getBoundingClientRect().width;
+    const move = (ev) => resizeCanvas(startW + 2 * (ev.clientX - startX)); // la zone est centrée : un côté bouge de moitié
+    const up = () => { canvasHandle.removeEventListener("pointermove", move); canvasHandle.removeEventListener("pointerup", up); setTimeout(() => { canvasSize.hidden = true; }, 1500); };
+    canvasHandle.addEventListener("pointermove", move); canvasHandle.addEventListener("pointerup", up);
+  });
+  canvasHandle.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); resizeCanvas(canvasContent.getBoundingClientRect().width + (e.key === "ArrowRight" ? 20 : -20) * (e.shiftKey ? 5 : 1)); } });
   function setCanvasDevice(kind) {
+    canvasContent.style.maxWidth = ""; canvasSize.hidden = true; delete root.dataset.canvasCustom;
     root.dataset.canvasDevice = kind;
     $$("[data-preview]").forEach((b) => { if (["desktop", "tablet", "mobile"].includes(b.dataset.preview)) b.setAttribute("aria-checked", String(b.dataset.preview === kind)); });
     toast(kind === "desktop" ? "Zone d'écriture en largeur ordinateur." : `Zone d'écriture à la largeur ${kind === "tablet" ? "d'une tablette (820 px)" : "d'un mobile (390 px)"} : les colonnes s'empilent comme sur le site.`);
@@ -3593,6 +3636,7 @@ function start() {
     if (opt === "settings") return openEditorSettings();
     if (opt === "shortcuts") return showShortcuts();
     if (opt === "welcome") return showWelcome();
+    if (opt === "copyall") return copyAllContent();
     if (opt === "diagnostic") return showDiagnostic();
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
@@ -3611,6 +3655,7 @@ function start() {
     $("[data-stats]").hidden = st.counters === false;
     editor.view.dom.spellcheck = st.spellcheck !== false;
     titleField.spellcheck = st.spellcheck !== false;
+    root.dataset.edLabels = st.textLabels ? "1" : ""; // « Afficher le texte des boutons » (accessibilité) : les icônes de la barre d'outils portent leur libellé
     const ai = $('[data-rail="ai"]');
     if (ai) ai.hidden = st.aiAssistant === false;
     if (st.aiAssistant === false && secondaryMode === "ai") setSecondary("ai");
@@ -3628,6 +3673,8 @@ function start() {
   function openEditorSettings() {
     const st = { ...editorPrefs.settings };
     const sec = (title, ...kids) => h("section", { class: "wp-settings-section" }, h("h2", {}, title), ...kids);
+    // Réglages « désactivés par défaut » : cochés seulement s'ils ont été activés
+    const togOff = (label, key, help) => { const cb = h("input", { type: "checkbox", id: `wp-set-${key}`, checked: st[key] === true }); cb.addEventListener("change", () => saveEditorSettings({ [key]: cb.checked })); return h("div", {}, h("label", { class: "wp-checkbox", for: cb.id }, cb, ` ${label}`), help ? h("p", { class: "wp-help" }, help) : null); };
     const tog = (label, key, help) => { const cb = h("input", { type: "checkbox", id: `wp-set-${key}`, checked: st[key] !== false }); cb.addEventListener("change", () => saveEditorSettings({ [key]: cb.checked })); return h("div", {}, h("label", { class: "wp-checkbox", for: cb.id }, cb, ` ${label}`), help ? h("p", { class: "wp-help" }, help) : null); };
     const pick = (label, key, options) => { const s2 = select(options, st[key]); s2.addEventListener("change", () => saveEditorSettings({ [key]: s2.value })); return control(label, s2); };
     const hidden = new Set(st.hiddenBlocks || []);
@@ -3635,7 +3682,8 @@ function start() {
     const fav = (editorPrefs.favorites || []).map((id) => (BLOCKS.find((b) => b.id === id) || {}).title).filter(Boolean);
     modal("Réglages de l'éditeur", h("div", { class: "wp-settings" },
       sec("Interface", pick("Largeur de la zone d'écriture", "width", [["normal", "Normale"], ["wide", "Large"], ["full", "Toute la largeur"]]), pick("Densité", "density", [["comfortable", "Confortable"], ["compact", "Compacte"]]),
-        tog("Barre d'outils fixe en haut", "topToolbar"), tog("Compteurs de mots dans la barre du haut", "counters")),
+        tog("Barre d'outils fixe en haut", "topToolbar"), tog("Compteurs de mots dans la barre du haut", "counters"),
+        togOff("Afficher le texte des boutons de la barre d'outils", "textLabels", "Remplace les icônes seules par leur libellé (aide à la lecture et à la reconnaissance)."), togOff("Ouvrir la vue en liste au démarrage", "alwaysListView")),
       sec("Écriture", tog("Sauvegarde automatique", "autosave", "Désactivée : seul « Enregistrer » sauvegarde (une copie reste dans ce navigateur)."), pick("Délai avant la sauvegarde automatique", "autosaveDelay", [["2", "2 secondes"], ["5", "5 secondes"], ["10", "10 secondes"], ["30", "30 secondes"]]), tog("Correcteur orthographique du navigateur", "spellcheck")),
       sec("Blocs", h("p", { class: "wp-help" }, "Blocs proposés dans l'inséreur, le menu « / » et la palette. Les favoris se choisissent avec l'étoile dans l'inséreur."), h("p", { class: "wp-help" }, `Favoris : ${fav.length ? fav.join(", ") : "aucun"}.`), blocksList),
       sec("Médias", tog("Créer les versions réduites WebP des images envoyées (affichage rapide sur mobile)", "imageVariants"), h("p", { class: "wp-help" }, "Chargement différé des images : toujours actif sur la page publique.")),
@@ -3905,6 +3953,10 @@ function start() {
         { id: "ed:distraction", group: "Affichage", label: "Mode sans distraction (masquer les panneaux)", run: () => setDistractionFree(!root.classList.contains("is-distraction-free")) },
         { id: "ed:fullscreen", group: "Affichage", label: "Plein écran", run: () => toggleFullscreen() },
         { id: "ed:zoomout", group: "Affichage", label: "Zoom arrière (toute la page)", run: () => toggleZoomOut() },
+        { id: "ed:focus", group: "Affichage", label: "Mode concentration (bloc en cours)", run: () => $('[data-option="focus"]').click() },
+        { id: "ed:toptoolbar", group: "Affichage", label: "Barre d'outils fixe en haut", run: () => $('[data-option="toptoolbar"]').click() },
+        { id: "ed:sidebar", group: "Panneaux", label: "Afficher / masquer les réglages", run: () => $(".wp-header [data-toggle-sidebar]").click() },
+        { id: "ed:copyall", group: "Article", label: "Copier tout le contenu", run: () => copyAllContent() },
         { id: "ed:list", group: "Panneaux", label: "Vue en liste des blocs", run: () => { if (secondaryMode !== "list") setSecondary("list"); } },
         { id: "ed:undo", group: "Édition", label: "Annuler", run: () => editor.chain().focus().undo().run() },
         { id: "ed:redo", group: "Édition", label: "Rétablir", run: () => editor.chain().focus().redo().run() },
@@ -4026,6 +4078,7 @@ function start() {
   // ---------- Premier affichage ----------
   loadReusable();
   renderBreadcrumb();
+  if ((editorPrefs.settings || {}).alwaysListView === true && !window.matchMedia("(max-width: 782px)").matches) setSecondary("list");
   applyEditorSettings();
   refreshCounters();
   refreshPreviews();

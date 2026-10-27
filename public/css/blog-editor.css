@@ -1950,3 +1950,13 @@
 [data-page-mode] #panel-article > :not([data-page-keep]):not([data-panel="revisions"]) { display: none !important; }
 .wp-page-card { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); }
 .wp-page-card-title { margin: 0 0 4px; font-weight: 700; color: var(--primary); }
+/* Texte des boutons (préférence d'accessibilité) */
+[data-ed-labels="1"] .wp-header .wp-btn-icon[aria-label]:not([data-options-toggle]):not([data-wsp-menu-toggle])::after, [data-ed-labels="1"] .wp-tb-btn[aria-label]::after { content: attr(aria-label); margin-left: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+[data-ed-labels="1"] .wp-header .wp-btn-icon:not([data-options-toggle]):not([data-wsp-menu-toggle]), [data-ed-labels="1"] .wp-tb-btn { width: auto; padding-inline: 8px; display: inline-flex; align-items: center; }
+@media (max-width: 1400px) { [data-ed-labels="1"] .wp-header .wp-btn-icon::after { display: none; } [data-ed-labels="1"] .wp-header .wp-btn-icon { width: 36px; padding-inline: 0; } } /* barre trop étroite : les icônes reprennent leur place (le libellé reste dans l'info-bulle) */
+/* Zone d'écriture redimensionnable */
+.wp-content { position: relative; }
+.wp-canvas-handle { position: absolute; right: -18px; top: 50%; width: 9px; height: 64px; margin-top: -32px; padding: 0; border: 0; border-radius: 6px; background: var(--border-strong, #94a3b8); cursor: ew-resize; opacity: .55; }
+.wp-canvas-handle:hover, .wp-canvas-handle:focus-visible { opacity: 1; background: var(--accent, #1d4ed8); outline: none; }
+.wp-canvas-size { position: absolute; right: -78px; top: calc(50% + 40px); padding: 2px 8px; border-radius: 10px; background: var(--primary); color: #fff; font-size: 11px; }
+@media (max-width: 1100px) { .wp-canvas-handle, .wp-canvas-size { display: none; } }

@@ -162,6 +162,8 @@ const SETTINGS = {
   previewDevice: { type: "enum", values: ["desktop", "tablet", "mobile"], default: "desktop" }, imageVariants: { type: "bool", default: true },
   hiddenBlocks: { type: "list", max: 80 },
   editMode: { type: "enum", values: ["blocks", "document"], default: "blocks" }, // mode d'édition : par blocs ou Document
+  textLabels: { type: "bool", default: false }, alwaysListView: { type: "bool", default: false }, // préférences d'accessibilité et d'ouverture (comme Gutenberg)
+  welcomeSeen: { type: "bool", default: false }, // guide de bienvenue déjà vu ou fermé
 };
 function cleanPrefs(input = {}) {
   const out = { favorites: [], recents: [], settings: {} };

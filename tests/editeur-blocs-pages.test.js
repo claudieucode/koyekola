@@ -86,6 +86,8 @@ describe("page « À propos » avec l'éditeur de blocs", () => {
     assert.ok(row, "toujours là");
     assert.deepEqual([row.published, row.status, row.page_key], [0, "draft", "a-propos"]);
     assert.equal(one("SELECT COUNT(*) n FROM posts WHERE title LIKE '%(copie)%'").n, 0);
+    const links = JSON.parse((await boss.get("/formateur/blog/api/liens?q=Qui+sommes")).text);
+    assert.ok(!JSON.stringify(links).includes("page-a-propos") && !JSON.stringify(links).includes("Qui sommes-nous"), "la page n'est pas proposée comme article à lier");
     const bulk = await boss.request("/formateur/blog/actions", { method: "POST", json: { action: "publier", ids: [post.id] } });
     assert.ok(bulk.status < 500);
     assert.equal(one("SELECT published FROM posts WHERE id = ?", post.id).published, 0);

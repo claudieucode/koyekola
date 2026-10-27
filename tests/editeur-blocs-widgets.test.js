@@ -2,7 +2,7 @@
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
-const { startServer, loginInstructor } = require("./helpers");
+const { startServer, loginInstructor, newStudent } = require("./helpers");
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || TEST_KEY;
 const { sanitizeBlogHtml, renderBlogHtml, blogPlainText } = require("../src/utils/blogHtml");
 const customHtml = require("../src/utils/customHtml");
@@ -241,5 +241,7 @@ describe("blocs dynamiques — isolation entre sites et pages publiées", () => 
     assert.equal(bad.status, 400);
     const internal = await boss.get("/formateur/blog/api/flux?url=" + encodeURIComponent("http://exemple.org/feed"));
     assert.equal(internal.status, 400);
+    const student = await newStudent(srv);
+    assert.notEqual((await student.get("/formateur/blog/api/flux?url=" + encodeURIComponent("https://exemple.org/feed.xml"))).status, 200, "un élève ne déclenche aucune requête sortante");
   });
 });
