@@ -2704,3 +2704,16 @@ form.kb-search input[type="search"] { flex: 1 1 200px; min-width: 0; padding: 10
 :is(.article-content, .ProseMirror) [data-ff="display"] { font-family: "Bricolage Grotesque", Figtree, sans-serif; }
 :is(.article-content, .ProseMirror) [data-ff="serif"] { font-family: Georgia, serif; }
 :is(.article-content, .ProseMirror) [data-ff="mono"] { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+/* Filtre des images et vidéos (équivalent du « duotone » de Gutenberg) : trois réglages CSS fixes */
+:is(.article-content, .ProseMirror) [data-duo="bw"] :is(img, video) { filter: grayscale(1); }
+:is(.article-content, .ProseMirror) [data-duo="sepia"] :is(img, video) { filter: sepia(.9); }
+:is(.article-content, .ProseMirror) [data-duo="navy"] { background-color: #0b1f4b; }
+:is(.article-content, .ProseMirror) [data-duo="navy"] :is(img, video) { filter: grayscale(1) contrast(1.08); mix-blend-mode: screen; }
+:is(.article-content, .ProseMirror) [data-duo="warm"] :is(img, video) { filter: sepia(.4) saturate(1.35) hue-rotate(-12deg); }
+/* Couverture : voile en dégradé */
+.kb-cover[data-shade="fade-up"] .kb-cover-shade { background: linear-gradient(to top, #000, transparent); }
+.kb-cover[data-shade="fade-down"] .kb-cover-shade { background: linear-gradient(to bottom, #000, transparent); }
+.kb-ed-cover[data-shade="fade-up"] { background-image: linear-gradient(to top, rgba(0, 0, 0, var(--ov, 0.4)), rgba(0, 0, 0, 0)), var(--cover-src, none); }
+.kb-ed-cover[data-shade="fade-down"] { background-image: linear-gradient(to bottom, rgba(0, 0, 0, var(--ov, 0.4)), rgba(0, 0, 0, 0)), var(--cover-src, none); }
+.kb-comments ul { list-style: none; padding: 0; } .kb-comment-author { font-weight: 600; } .kb-comment-excerpt { margin: .2em 0 0; color: var(--muted); font-size: .92em; }

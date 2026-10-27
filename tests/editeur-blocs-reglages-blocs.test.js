@@ -38,6 +38,14 @@ describe("réglages propres à chaque bloc — serveur", () => {
     assert.match(renderBlogHtml('<div class="kb-audio" data-src="/uploads/blog/a.mp3" data-preload="evil"></div>').html, /preload="none"/);
     assert.match(renderBlogHtml('<div class="kb-video" data-url="/uploads/blog/v.mp4" data-preload="none"></div>').html, /preload="none"/);
   });
+  test("audio : lecture automatique au choix ; couverture : voile en dégradé ; filtre des images : liste fermée", () => {
+    assert.match(renderBlogHtml('<div class="kb-audio" data-src="/uploads/blog/a.mp3" data-autoplay="true"></div>').html, /<audio [^>]*autoplay/);
+    assert.doesNotMatch(renderBlogHtml('<div class="kb-audio" data-src="/uploads/blog/a.mp3" data-autoplay="oui"></div>').html, /autoplay/);
+    assert.match(sanitizeBlogHtml('<div class="kb-cover" data-src="/uploads/thumbnails/a.png" data-shade="fade-up"><p>t</p></div>'), /data-shade="fade-up"/);
+    assert.doesNotMatch(sanitizeBlogHtml('<div class="kb-cover" data-src="/uploads/thumbnails/a.png" data-shade="fade-left"><p>t</p></div>'), /data-shade/);
+    assert.match(sanitizeBlogHtml('<figure class="kb-image" data-duo="navy"><img src="/uploads/thumbnails/a.png" alt=""></figure>'), /data-duo="navy"/);
+    assert.doesNotMatch(sanitizeBlogHtml('<figure class="kb-image" data-duo="url(x)"><img src="/uploads/thumbnails/a.png" alt=""></figure>'), /data-duo/);
+  });
   test("fichier : l'aperçu intégré n'existe que pour un PDF", () => {
     assert.match(renderBlogHtml('<div class="kb-file" data-url="/uploads/blog/a.pdf" data-preview="true"></div>').html, /<iframe class="kb-file-preview" src="\/uploads\/blog\/a\.pdf"/);
     assert.doesNotMatch(renderBlogHtml('<div class="kb-file" data-url="/uploads/blog/a.zip" data-preview="true"></div>').html, /iframe/);

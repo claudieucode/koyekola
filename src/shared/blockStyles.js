@@ -26,6 +26,7 @@ const STYLE_PROPS = [
   { key: "color", attr: "data-color", label: "Couleur du texte", group: "Couleur", scope: "all", color: true },
   { key: "bgc", attr: "data-bgc", label: "Couleur de fond", group: "Couleur", scope: "all", color: true },
   { key: "linkc", attr: "data-linkc", label: "Couleur des liens", group: "Couleur", scope: "all", color: true },
+  { key: "duo", attr: "data-duo", label: "Filtre des images et vidéos", group: "Couleur", scope: "all", values: [["", "Aucun"], ["bw", "Noir et blanc"], ["sepia", "Sépia"], ["navy", "Bleu nuit (duotone)"], ["warm", "Teintes chaudes"]] },
   { key: "gradient", attr: "data-gradient", label: "Dégradé de fond", group: "Couleur", scope: "all", values: [["", "Aucun"], ["navy", "Bleu nuit"], ["ocean", "Océan"], ["dusk", "Crépuscule"], ["sand", "Sable"], ["mist", "Brume"], ["sunrise", "Aurore"]] },
   // --- Dimensions ---
   { key: "minh", attr: "data-minh", label: "Hauteur minimale", group: "Dimensions", scope: "all", values: [["", "Aucune"], ["s", "120 px"], ["m", "240 px"], ["l", "400 px"], ["xl", "600 px"], ["screen", "Hauteur de l'écran"]] },

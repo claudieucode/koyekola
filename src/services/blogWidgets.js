@@ -35,6 +35,14 @@ function forPost(post, { excerptOf = (p) => p.excerpt || "" } = {}) {
       return db.prepare(`SELECT * FROM posts WHERE ${where.join(" AND ")} AND id != ? ORDER BY published_at DESC, id DESC LIMIT ?`).all(...params, post && post.id ? post.id : 0, Math.min(Math.max(Number(count) || 5, 1), 12))
         .map((p) => ({ title: p.title, url: urlOfPost(p), date: frDate(p.published_at), excerpt: excerptOf(p), image: p.cover_path || "", alt: p.cover_alt || "" }));
     },
+    // Derniers commentaires approuvés sur les articles publiés DU MÊME SITE
+    comments({ count = 5 } = {}) {
+      const sc = siteContent.scopeForSite("post", "p.id", site);
+      const rows = db.prepare(`SELECT c.id, c.body, c.created_at, c.author_name, c.user_id, u.username, p.title, p.slug, p.id AS pid, p.published_at FROM blog_comments c
+        JOIN posts p ON c.content_type = 'post' AND p.id = c.content_id LEFT JOIN users u ON u.id = c.user_id
+        WHERE c.status = 'approved' AND p.published = 1 AND p.deleted_at IS NULL${sc ? ` AND ${sc.sql}` : ""} ORDER BY c.created_at DESC, c.id DESC LIMIT ?`).all(...(sc ? sc.params : []), Math.min(Math.max(Number(count) || 5, 1), 10));
+      return rows.map((r) => ({ author: r.user_id ? r.username || "Membre" : r.author_name || "Anonyme", excerpt: String(r.body || "").replace(/\s+/g, " ").trim().slice(0, 90), title: r.title, url: urlOfPost({ id: r.pid, slug: r.slug, title: r.title, published_at: r.published_at }), date: frDate(r.created_at) }));
+    },
     categories() {
       const rows = db.prepare(`SELECT category, COUNT(*) n FROM posts WHERE ${live} AND category <> '' GROUP BY category COLLATE NOCASE ORDER BY n DESC, category COLLATE NOCASE LIMIT 60`).all(...args);
       return rows.map((r) => ({ name: r.category, count: r.n, url: `${taxonomy.baseOf("category")}/${taxonomy.categorySlugOfName(r.category)}` }));

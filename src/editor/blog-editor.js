@@ -1429,7 +1429,18 @@ function start() {
     });
     img.addEventListener("load", () => fitRatio());
     const ratios = segmented([["0", "Libre"], ["1.7778", "16:9"], ["1.3333", "4:3"], ["1.5", "3:2"], ["1", "1:1"], ["0.75", "3:4"]], "0", (v) => { ratio = Number(v); fitRatio(); });
-    modal("Recadrer l'image", h("div", { class: "wp-crop" }, ratios, stage, size, h("p", { class: "wp-help" }, "Une nouvelle image est créée ; l'originale reste dans la médiathèque.")), [
+    // Pivoter de 90° : l'image affichée est redessinée tournée ; le recadrage porte ensuite sur l'image tournée
+    const rotate = (dir) => {
+      if (!img.naturalWidth) return;
+      const c = document.createElement("canvas");
+      c.width = img.naturalHeight; c.height = img.naturalWidth;
+      const g = c.getContext("2d");
+      g.translate(c.width / 2, c.height / 2); g.rotate((dir * Math.PI) / 2); g.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+      r = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
+      img.src = c.toDataURL(/\.png$/i.test(src) ? "image/png" : "image/jpeg", 0.92);
+    };
+    const turns = h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => rotate(-1) }, "↺ Pivoter à gauche"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => rotate(1) }, "↻ Pivoter à droite"));
+    modal("Recadrer et pivoter l'image", h("div", { class: "wp-crop" }, ratios, turns, stage, size, h("p", { class: "wp-help" }, "Une nouvelle image est créée ; l'originale reste dans la médiathèque.")), [
       { label: "Annuler" },
       { label: "Appliquer le recadrage", primary: true, run: async () => {
         if (!img.naturalWidth) { toast("Image non chargée : impossible de la recadrer.", "error"); return true; }
@@ -2298,8 +2309,9 @@ function start() {
     } else if (t === "kbAudio") {
       inspector.append(section("Réglages", control("Titre", bind(input({ value: a.title || "" }), "title")), control("Auteur", bind(input({ value: a.author || "" }), "author")), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "audio", onSelect: (m) => set({ src: m.path }) }) }, "Remplacer le fichier")));
       inspector.append(section("Lecture", checkbox("En boucle", a.loop === "true", (v) => set({ loop: v ? "true" : "" })),
+        checkbox("Lecture automatique", a.autoplay === "true", (v) => set({ autoplay: v ? "true" : "" })),
         (() => { const pre = select([["", "Rien avant la lecture (par défaut)"], ["metadata", "Métadonnées"], ["auto", "Tout charger"]], a.preload || ""); pre.addEventListener("change", () => set({ preload: pre.value })); return control("Préchargement", pre); })(),
-        h("p", { class: "wp-help" }, "La lecture automatique n'existe pas pour l'audio : les navigateurs la bloquent et elle gêne les personnes qui utilisent un lecteur d'écran.")));
+        h("p", { class: "wp-help" }, "La plupart des navigateurs bloquent la lecture automatique d'un son avant tout geste du visiteur, et elle gêne les personnes qui utilisent un lecteur d'écran : à réserver aux cas où elle est vraiment utile.")));
     } else if (t === "kbButton") {
       const href = input({ value: a.href || "" });
       href.addEventListener("input", debounce(() => { if (/^(https?:\/\/\S+|\/(?!\/)\S*|mailto:\S+)$/i.test(href.value.trim())) set({ href: href.value.trim() }); }, 300));
@@ -2364,7 +2376,7 @@ function start() {
         control("Texte alternatif de l'image", alt),
         h("p", { class: "wp-label" }, "Opacité du voile sombre"), segmented([["0", "0 %"], ["20", "20 %"], ["40", "40 %"], ["60", "60 %"], ["80", "80 %"]], a.overlay || "40", (v) => set({ overlay: v })),
         h("p", { class: "wp-label" }, "Hauteur"), segmented([["s", "Basse"], ["m", "Moyenne"], ["l", "Haute"]], a.height || "m", (v) => set({ height: v })),
-        h("p", { class: "wp-label" }, "Teinte du voile"), segmented([["", "Sombre"], ["navy", "Bleu nuit"], ["light", "Clair"]], a.shade || "", (v) => set({ shade: v })),
+        h("p", { class: "wp-label" }, "Teinte du voile"), segmented([["", "Sombre"], ["navy", "Bleu nuit"], ["light", "Clair"], ["fade-up", "Dégradé ↑"], ["fade-down", "Dégradé ↓"]], a.shade || "", (v) => set({ shade: v })),
         h("p", { class: "wp-label" }, "Position du texte"),
         h("div", { class: "wp-pos-grid", role: "group", "aria-label": "Position du texte" }, ...["tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"].map((p) => h("button", { type: "button", class: `wp-pos${(a.pos || "mc") === p ? " is-active" : ""}`, "aria-pressed": String((a.pos || "mc") === p), "aria-label": ({ t: "Haut", m: "Milieu", b: "Bas" })[p[0]] + " " + ({ l: "gauche", c: "centre", r: "droite" })[p[1]], onclick: () => set({ pos: p === "mc" ? "" : p }) }, ""))),
         control("Point focal horizontal (%)", (() => { const r = h("input", { type: "range", min: "0", max: "100", step: "5", value: a.fx || "50", id: `wp-f${++uid}` }); r.addEventListener("input", debounce(() => set({ fx: r.value === "50" ? "" : r.value }), 150)); return r; })()),
@@ -3892,12 +3904,14 @@ function start() {
         { id: "ed:notes", group: "Panneaux", label: "Ajouter une note (sur le bloc sélectionné)", run: () => { const b = currentBlock(); openNotes(b ? b.node.attrs.blockId || null : null); } },
         { id: "ed:distraction", group: "Affichage", label: "Mode sans distraction (masquer les panneaux)", run: () => setDistractionFree(!root.classList.contains("is-distraction-free")) },
         { id: "ed:fullscreen", group: "Affichage", label: "Plein écran", run: () => toggleFullscreen() },
+        { id: "ed:zoomout", group: "Affichage", label: "Zoom arrière (toute la page)", run: () => toggleZoomOut() },
         { id: "ed:list", group: "Panneaux", label: "Vue en liste des blocs", run: () => { if (secondaryMode !== "list") setSecondary("list"); } },
         { id: "ed:undo", group: "Édition", label: "Annuler", run: () => editor.chain().focus().undo().run() },
         { id: "ed:redo", group: "Édition", label: "Rétablir", run: () => editor.chain().focus().redo().run() },
         { id: "ed:code", group: "Édition", label: root.classList.contains("is-code-mode") ? "Éditeur visuel" : "Éditeur de code (HTML)", run: () => $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click() },
         { id: "ed:settings", group: "Réglages", label: "Réglages de l'éditeur…", run: () => openEditorSettings() },
         { id: "ed:shortcuts", group: "Aide", label: "Raccourcis clavier", run: () => $('[data-option="shortcuts"]').click() },
+        { id: "ed:welcome", group: "Aide", label: "Guide de bienvenue", run: () => showWelcome() },
         { id: "act:analyse", label: "Analyser la page en ligne", run: () => { workspace.reveal("seo-site"); $("[data-seo-analyse]")?.click(); }, disabled: !DATA.everPublished && DATA.status !== "published" },
         { id: "act:links", label: "Proposer des liens internes", run: () => { workspace.reveal("links"); $("[data-suggest]")?.click(); } },
         { id: "act:refresh", label: "Actualiser les données SEO (serveur)", run: () => { seoData.invalidate(); toast("Données SEO actualisées."); } },

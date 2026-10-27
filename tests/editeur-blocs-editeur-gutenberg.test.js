@@ -5,6 +5,16 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
+const zlib = require("node:zlib");
+
+// PNG minimal (w × h, noir) pour tester l'outil d'image avec un vrai fichier
+const png = (w, h) => {
+  const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcTable[(c ^ x) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (t, d) => { const len = Buffer.alloc(4); len.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(Buffer.alloc((w * 3 + 1) * h))), chunk("IEND", Buffer.alloc(0))]);
+};
 
 let chromium = null;
 try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
@@ -255,6 +265,49 @@ describe("éditeur d'articles — fonctions de Gutenberg (navigateur)", { skip: 
     await page.getByLabel("Remplacer par").fill("lynx");
     await page.getByRole("button", { name: "Tout remplacer" }).click();
     assert.deepEqual((await tops(page)).map((x) => x.text), ["lynx chien lynx", "chat verrouillé", "un lynx"]);
+    await page.context().close();
+  });
+
+  test("copier, couper, coller des blocs : un groupe copié se colle en entier (aucune perte), couper le retire, coller le remet", async () => {
+    const page = await open();
+    await load(page, '<div class="kb-group" data-bg="light" data-pad="m" id="mon-groupe"><p>Dans le groupe</p></div><p>Fin</p>');
+    await selectNode(page, 0);
+    await page.keyboard.press("ControlOrMeta+c");
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(ed.state.doc.content.size - 1); ed.view.focus(); });
+    await page.keyboard.press("ControlOrMeta+v");
+    let t = await tops(page);
+    assert.equal(t.filter((x) => x.type === "kbGroup").length, 2, "le groupe est collé une seconde fois");
+    assert.match(t.find((x, i) => x.type === "kbGroup" && i > 0).text, /Dans le groupe/);
+    // couper retire le premier groupe, coller le remet
+    await selectNode(page, 0);
+    await page.keyboard.press("ControlOrMeta+x");
+    assert.equal((await tops(page)).filter((x) => x.type === "kbGroup").length, 1);
+    await page.keyboard.press("ControlOrMeta+v");
+    assert.equal((await tops(page)).filter((x) => x.type === "kbGroup").length, 2);
+    assert.deepEqual(errors, []);
+    await page.context().close();
+  });
+
+  test("image : recadrer et pivoter de 90° crée une nouvelle image aux bonnes dimensions (l'originale reste)", async () => {
+    const fd = new FormData(); fd.append("article_image", new Blob([png(60, 30)], { type: "image/png" }), "base.png"); fd.append("width", "60"); fd.append("height", "30");
+    const media = JSON.parse((await boss.request("/formateur/blog/api/medias", { method: "POST", multipart: fd })).text).media;
+    const page = await open();
+    await load(page, `<figure class="kb-image" data-align="center"><img src="${media.path}" alt="Base"></figure>`);
+    await selectNode(page, 0);
+    await page.click('[data-sidebar-tab="bloc"]');
+    await page.mouse.move(1300, 500);
+    await page.getByRole("button", { name: "Recadrer…" }).click();
+    const preview = page.locator(".wp-crop-img");
+    await page.waitForFunction(() => document.querySelector(".wp-crop-img") && document.querySelector(".wp-crop-img").naturalWidth === 60);
+    await page.getByRole("button", { name: /Pivoter à droite/ }).click();
+    await page.waitForFunction(() => document.querySelector(".wp-crop-img").naturalWidth === 30 && document.querySelector(".wp-crop-img").naturalHeight === 60);
+    assert.equal(await preview.evaluate((el) => [el.naturalWidth, el.naturalHeight].join("x")), "30x60", "l'image affichée est tournée");
+    await page.getByRole("button", { name: "Appliquer le recadrage" }).click();
+    await page.waitForFunction((old) => { let src = ""; document.querySelector(".ProseMirror").editor.state.doc.descendants((n) => { if (n.type.name === "kbImage") src = n.attrs.src; return true; }); return src && src !== old; }, media.path, { timeout: 15000 });
+    const now = (await tops(page))[0].attrs.src;
+    const dims = await page.evaluate(async (u) => { const i = new Image(); i.src = u; await i.decode(); return [i.naturalWidth, i.naturalHeight]; }, now);
+    assert.deepEqual(dims, [24, 48], "zone conservée par défaut (80 %) de l'image tournée 30 × 60");
+    assert.ok((await fetch(`${srv.base}${media.path}`)).ok, "l'image d'origine est conservée");
     await page.context().close();
   });
 

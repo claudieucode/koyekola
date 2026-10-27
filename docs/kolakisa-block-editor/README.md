@@ -11,7 +11,7 @@ Mission commencée le 2026-10-27. Périmètre : éditeur d'articles Tiptap (voir
 | `API_ET_EXTENSIBILITE.md` | Registre, API, extensibilité | rédigé |
 | `PERSISTANCE_ET_COMPATIBILITE.md` | Sérialisation, blocs inconnus, révisions, choix du format | rédigé |
 | `AUDIT_EXISTANT.md` | État réel de Kolakisa avant intervention | **fait** |
-| `MATRICE_PARITE.md` | Parité capacité par capacité, avec statut final et preuve | **v2 (finale)** |
+| `MATRICE_PARITE.md` | Parité capacité par capacité, avec statut final et preuve | **v3 (parité complète)** |
 | `PLAN_IMPLEMENTATION.md` | Lots P0 → P5, blocages | **fait** |
 | `DECISIONS_TECHNIQUES.md` | Choix et limites | **fait** |
 | `JOURNAL_IMPLEMENTATION.md` | Ce qui a été fait, avec résultats de tests | tenu à jour |

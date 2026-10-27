@@ -102,7 +102,7 @@ const transformTags = {
     }
     if (main === "kb-video" && /^(none|metadata|auto)$/.test(attribs["data-preload"] || "")) out["data-preload"] = attribs["data-preload"];
     if (main === "kb-audio" && attribs["data-author"]) out["data-author"] = String(attribs["data-author"]).slice(0, 120);
-    if (main === "kb-audio") { if (attribs["data-loop"] === "true") out["data-loop"] = "true"; if (/^(none|metadata|auto)$/.test(attribs["data-preload"] || "")) out["data-preload"] = attribs["data-preload"]; }
+    if (main === "kb-audio") { if (attribs["data-autoplay"] === "true") out["data-autoplay"] = "true"; if (attribs["data-loop"] === "true") out["data-loop"] = "true"; if (/^(none|metadata|auto)$/.test(attribs["data-preload"] || "")) out["data-preload"] = attribs["data-preload"]; }
     if (main === "kb-gallery") { if (attribs["data-natural"] === "true") out["data-natural"] = "true"; if (attribs["data-lightbox"] === "true") out["data-lightbox"] = "true"; }
     if (main === "kb-gallery" && /^(s|m|l)$/.test(attribs["data-gap"] || "")) out["data-gap"] = attribs["data-gap"];
     if (main === "kb-audio") {
@@ -154,7 +154,7 @@ const transformTags = {
       out["data-src"] = src;
       keep("data-overlay", /^(0|20|40|60|80)$/); keep("data-height", /^(s|m|l)$/);
       keep("data-fx", /^(0|[1-9]?[05]|100)$/); keep("data-fy", /^(0|[1-9]?[05]|100)$/); // point focal de l'image (pourcentages par pas de 5)
-      keep("data-fixed", /^true$/); keep("data-shade", /^(dark|navy|light)$/); keep("data-pos", /^(tl|tc|tr|ml|mc|mr|bl|bc|br)$/);
+      keep("data-fixed", /^true$/); keep("data-shade", /^(dark|navy|light|fade-up|fade-down)$/); keep("data-pos", /^(tl|tc|tr|ml|mc|mr|bl|bc|br)$/);
       if (attribs["data-alt"]) out["data-alt"] = String(attribs["data-alt"]).replace(/[\r\n]+/g, " ").slice(0, 200);
     }
     if (main === "kb-mediatext") { keep("data-side", /^(left|right)$/); keep("data-width", /^(25|33|40|50|60|66|75)$/); keep("data-valign", /^(top|center|bottom)$/); keep("data-crop", /^true$/); keep("data-stack", /^(mobile|never)$/); }
@@ -253,7 +253,7 @@ const saveOptions = {
   allowedAttributes: {
     a: ["href", "target", "rel", "class"], img: ["src", "alt", "title", "width", "height", "data-media-id"],
     figure: ["class", "data-align", "data-width", "data-credit", "data-main", "data-ratio", "data-lightbox", "data-fit"],
-    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download", "data-track", "data-track-lang", "data-track-label", "data-natural", "data-lightbox", "data-preload", "data-depth", "data-view", "data-date", "data-excerpt", "data-image", "data-category", "data-max", "data-placeholder", "data-button", "data-links", "data-count", "data-code", "data-sig", "data-preview", "data-fx", "data-fy", "data-fixed", "data-shade", "data-pos", "data-crop", "data-justify", "data-gridcols", "data-basis", "data-px"],
+    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download", "data-track", "data-track-lang", "data-track-label", "data-natural", "data-lightbox", "data-autoplay", "data-preload", "data-depth", "data-view", "data-date", "data-excerpt", "data-image", "data-category", "data-max", "data-placeholder", "data-button", "data-links", "data-count", "data-code", "data-sig", "data-preview", "data-fx", "data-fy", "data-fixed", "data-shade", "data-pos", "data-crop", "data-justify", "data-gridcols", "data-basis", "data-px"],
     details: ["class", "data-open"], ol: ["class", "data-title", "start", "reversed", "data-ltype"], ul: ["data-type", "data-ltype"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
     p: ["style", "data-indent", "data-dropcap", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class", "data-cite"], sup: ["class", "data-note"], span: ["style"], mark: ["style"],
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"], pre: ["class"], table: ["data-caption", "data-footer", "data-fixed"],
@@ -487,7 +487,7 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       }
     } else if (name === "div" && hasClass(node, "kb-audio")) {
       const title = [node.attribs["data-title"], node.attribs["data-author"]].filter(Boolean).join(" — ");
-      replace(node, el("figure", { class: "kb-audio" }, [el("audio", { src: node.attribs["data-src"], controls: "", preload: node.attribs["data-preload"] || "none", ...(node.attribs["data-loop"] === "true" ? { loop: "" } : {}) }, [text("Votre navigateur ne lit pas ce fichier audio.")]), ...(title ? [el("figcaption", {}, [text(title)])] : [])]));
+      replace(node, el("figure", { class: "kb-audio" }, [el("audio", { src: node.attribs["data-src"], controls: "", preload: node.attribs["data-preload"] || "none", ...(node.attribs["data-loop"] === "true" ? { loop: "" } : {}), ...(node.attribs["data-autoplay"] === "true" ? { autoplay: "" } : {}) }, [text("Votre navigateur ne lit pas ce fichier audio.")]), ...(title ? [el("figcaption", {}, [text(title)])] : [])]));
     } else if (name === "div" && hasClass(node, "kb-file")) {
       // Bloc Fichier : lien de téléchargement avec type et poids du fichier
       const url = node.attribs["data-url"];

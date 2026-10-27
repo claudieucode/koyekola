@@ -44,3 +44,35 @@
 - Fichiers `tests/editeur-blocs-*` : **86/86**.
 - Suite « éditeur » élargie (blog, articles, révisions, réutilisables, blocs) : **443/443** avant les derniers ajouts, puis les fichiers modifiés rejoués : verts.
 - La suite complète d'un seul tenant n'a pas pu aller au bout ici (plusieurs heures à cause des tests Chrome d'autres modules qui expirent) : voir le détail dans le rapport final.
+
+
+## 2026-10-27 → 28 — Chantier « parité complète » (lots 1 à 6)
+
+Demande du propriétaire : « intégrer toutes les fonctionnalités de Gutenberg dans mon éditeur ». Méthode inchangée : un test réel par capacité, jamais « fait » sur la seule lecture du code.
+
+### Lot 1 — Réglages de style communs (`blockStyles`)
+- `src/shared/blockStyles.js` : 35 réglages (typographie 11, couleur 5, dimensions 6, espacement 7, bordure et ombre 6), listes fermées ou couleur `#rrggbb` ; l'éditeur et le serveur en dérivent leurs règles ; ~250 règles CSS fixes.
+- Piège corrigé en route : un bloc qui dessine son propre HTML (image, galerie, couverture…) doit recevoir les réglages par `lockOf` / `applyStyleAttrs`, sinon ils s'enregistrent mais ne s'affichent pas dans l'éditeur ; `applyStyleAttrs` effaçait tout `style` (y compris `--kb-px`) : corrigé, ne touche plus que les variables de couleur.
+- Tests : `editeur-blocs-styles-communs` (9), dont « chaque valeur de liste a sa règle CSS » (échoue si un réglage est décoratif).
+
+### Lot 2 — Réglages propres à chaque bloc
+Style de liste, citation séparée, pied de tableau et disposition fixe, lightbox (bouton accessible, boîte de dialogue, flèches, retour du focus), filtre d'image, ajustement, galerie à proportion naturelle, audio (boucle, préchargement, lecture automatique), vidéo (préchargement), aperçu PDF, couverture (point focal, parallaxe, teinte, dégradé, position), média et texte (largeurs, alignement, rognage), groupe Ligne / Pile / Grille, colonnes libres, espaceur libre, boutons (dégradé, ombre), préformaté / vers avec mise en forme en ligne. Test : `editeur-blocs-reglages-blocs` (13).
+
+### Lot 3 — Intégrations
+Table `embedProviders` : 27 services + YouTube, Vimeo, Google Maps ; adresse reconstruite, `sandbox`, collage = lecteur. Test : `editeur-blocs-integrations` (32), dont 12 imitations refusées.
+
+### Lot 4 — Widgets, pages multiples, notes de bas de page, HTML signé, RSS
+11 widgets rendus côté serveur et limités au site (isolation testée sur 3 sites, y compris les commentaires), « Page suivante » (pagination réelle), notes de bas de page, HTML personnalisé signé, flux RSS avec requêtes sortantes verrouillées. Tests : `editeur-blocs-widgets` (24), `editeur-blocs-flux-rss` (4, base isolée), `editeur-blocs-widgets-navigateur` (5). Le test RSS a révélé qu'un test qui charge un service ouvre la base de développement : les tests de service doivent fixer `DATA_DIR` avant tout `require`.
+
+### Lot 5 — Fonctions d'éditeur
+Transformations étendues, verrous partiels, lasso, fil d'Ariane, vue en liste repliable, « Modifier en HTML », zoom arrière, `[[`, espace insécable, aperçu au survol, guide de bienvenue, mentions `@nom`, recadrage + rotation. Test : `editeur-blocs-editeur-gutenberg` (14), `editeur-blocs-mentions` (3).
+- **Régression évitée de justesse** : j'avais ajouté une seconde clé `handleClickOn` dans l'objet des propriétés de l'éditeur ; la seconde écrasait la première (clic dans la marge d'un conteneur). Fusionnée avant tout test vert trompeur.
+- Le focus de Tiptap (`commands.focus`) est différé d'une image : un test qui appuie sur une touche aussitôt après perd la frappe (attendre `document.activeElement`).
+- Cliquer une note de bas de page : la sélection du nœud fait apparaître la barre d'outils du bloc sous le pointeur, le relâchement du bouton tombe dessus ; l'ouverture se fait donc au `mousedown`.
+
+### Lot 6 — Pages du site
+Éditeur de blocs pour « À propos » (DT-20). Test : `editeur-blocs-pages` (10) : page jamais listée, jamais publiée, aucune action d'article ne l'atteint, élève refusé, restauration de version, retour au texte simple, navigateur de bout en bout.
+
+### Autres
+- Accessibilité : nouveau test sur les écrans ajoutés (réglages de style de 17 types de blocs, widgets, verrouillage, guide, HTML, notes, fil d'Ariane, aperçu) : 0 défaut.
+- Firefox 153 réel par WebDriver BiDi (`editeur-blocs-firefox`, 4) : mêmes parcours essentiels, 0 erreur JavaScript. Safari non testé.

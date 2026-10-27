@@ -26,6 +26,11 @@ function latest(attribs, ctx) {
   });
   return widget("kb-latest", attribs["data-title"] || "Derniers articles", { "data-view": attribs["data-view"] === "grid" ? "grid" : "list" }, [...title(attribs["data-title"]), el("ul", {}, items)]);
 }
+function comments(attribs, ctx) {
+  const rows = ctx.widgets.comments ? ctx.widgets.comments({ count: Number(attribs["data-count"]) || 5 }) : [];
+  if (!rows.length) return null;
+  return widget("kb-comments", attribs["data-title"] || "Derniers commentaires", {}, [...title(attribs["data-title"]), el("ul", {}, rows.map((r) => el("li", {}, [el("span", { class: "kb-comment-author" }, [text(r.author)]), text(" sur "), a(r.url, r.title), ...(r.excerpt ? [el("p", { class: "kb-comment-excerpt" }, [text(`« ${r.excerpt}${r.excerpt.length >= 90 ? "…" : ""} »`)])] : [])])))]);
+}
 function categories(attribs, ctx) {
   const rows = ctx.widgets.categories();
   if (!rows.length) return null;
@@ -101,5 +106,5 @@ function toc(attribs, entries, pageHref) {
   return widget("kb-toc", attribs["data-title"] || "Sommaire", {}, [...title(attribs["data-title"] || "Sommaire"), el("ol", {}, rows.map((t) => el("li", { "data-level": String(t.level) }, [a(`${pageHref(t.page || 1)}#${t.id}`, t.text)])))]);
 }
 
-const BUILDERS = { "kb-latest": latest, "kb-categories": categories, "kb-tags": tags, "kb-archives": archives, "kb-calendar": calendar, "kb-search": search, "kb-social": social, "kb-pagelist": pageList, "kb-rss": rss };
+const BUILDERS = { "kb-comments": comments, "kb-latest": latest, "kb-categories": categories, "kb-tags": tags, "kb-archives": archives, "kb-calendar": calendar, "kb-search": search, "kb-social": social, "kb-pagelist": pageList, "kb-rss": rss };
 module.exports = { BUILDERS, toc, el, text };

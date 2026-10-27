@@ -15,6 +15,7 @@ const widgets = {
   archives: () => [{ label: "octobre 2026", count: 2, url: "/blog?date=2026-10" }],
   calendar: () => ({ year: 2026, month: 10, label: "octobre 2026", ym: "2026-10", days: { 5: 1, 12: 2 } }),
   pages: () => [{ title: "Contact", url: "/contact" }],
+  comments: () => [{ author: "Awa", excerpt: "Très utile <b>merci</b>", title: "Mon article", url: "/blog/mon-article", date: "1er octobre 2026" }],
   feed: () => ({ title: "Flux", items: [{ title: "Dehors", url: "https://exemple.org/a", date: "2026-10-01", excerpt: "Extrait" }] }),
 };
 
@@ -35,8 +36,8 @@ describe("blocs dynamiques — assainissement", () => {
     assert.match(sanitizeBlogHtml('<div class="kb-rss" data-url="https://exemple.org/feed.xml"></div>'), /kb-rss/);
     for (const bad of ["http://exemple.org/f", "javascript:x", "https://user:pw@exemple.org/f", "https://exemple.org:8443/f", ""]) assert.doesNotMatch(sanitizeBlogHtml(`<div class="kb-rss" data-url="${bad}"></div>`), /kb-rss/, bad);
   });
-  test("les dix blocs dynamiques sont décrits (nom, classe, libellé, champs du panneau)", () => {
-    assert.equal(DYNAMIC.length, 10);
+  test("les onze blocs dynamiques sont décrits (nom, classe, libellé, champs du panneau)", () => {
+    assert.equal(DYNAMIC.length, 11);
     for (const d of DYNAMIC) for (const [, , , spec] of Object.values(d.attrs)) assert.ok(spec && spec.label && spec.kind, `${d.name} : champ sans description`);
   });
 });
@@ -60,6 +61,11 @@ describe("blocs dynamiques — rendu", () => {
     assert.match(soc, /kb-social-facebook" aria-label="Facebook" target="_blank" rel="noopener noreferrer nofollow me"/); assert.match(soc, /href="mailto:a@b\.co"/); assert.match(soc, /data-size="l"/);
     const form = render('<div class="kb-search" data-placeholder="Chercher" data-button="Go"></div>').html;
     assert.match(form, /<form class="kb-search kb-widget" role="search" action="\/blog" method="get">/); assert.match(form, /name="q"/); assert.match(form, /<label class="sr-only" for="kb-search-\d+">Chercher<\/label>/);
+  });
+  test("derniers commentaires : auteur, extrait en texte, lien vers l'article", () => {
+    const h = render('<div class="kb-comments" data-count="3"></div>').html;
+    assert.match(h, /<span class="kb-comment-author">Awa<\/span> sur <a href="\/blog\/mon-article">Mon article<\/a>/);
+    assert.match(h, /« Très utile &lt;b&gt;merci&lt;\/b&gt; »/);
   });
   test("calendrier : jours avec articles liés, jours vides en texte, semaine commençant le lundi", () => {
     const h = render('<div class="kb-calendar"></div>').html;
@@ -179,6 +185,18 @@ describe("blocs dynamiques — isolation entre sites et pages publiées", () => 
     assert.match(m, /Public principal/); assert.match(m, /Cat Principal/);
     assert.doesNotMatch(m, /Secret Alpha|Article Beta|Autre article Beta|Cat Alpha|Cat Beta/);
     assert.doesNotMatch(m, /Article principal 2<\/a>/, "l'article lui-même n'est pas listé");
+  });
+
+  test("« Derniers commentaires » : seulement les commentaires approuvés des articles du même site", async () => {
+    const mk = async (title, qs = "") => article(title, "<p>x</p>", { qs });
+    const a = await mk("Article com Alpha", `?site=${A}`); const b = await mk("Article com Beta", `?site=${B}`);
+    const add = (postId, name, body, status = "approved") => db.prepare("INSERT INTO blog_comments (post_id, content_type, content_id, author_name, body, status) VALUES (?, 'post', ?, ?, ?, ?)").run(postId, postId, name, body, status);
+    add(a.id, "Lecteur Alpha", "Commentaire secret Alpha"); add(b.id, "Lecteur Beta", "Commentaire visible Beta"); add(b.id, "Spammeur", "Commentaire en attente", "pending");
+    const widget = await article("Page widget commentaires", '<div class="kb-comments" data-count="10"></div><p>FIN-ARTICLE</p>', { qs: `?site=${B}` });
+    const html = (await page(widget.slug)).html;
+    const region = html.slice(html.indexOf('article-content">'), html.indexOf("<p>FIN-ARTICLE</p>"));
+    assert.match(region, /Lecteur Beta/); assert.match(region, /Commentaire visible Beta/);
+    assert.doesNotMatch(region, /secret Alpha|Lecteur Alpha|en attente|Spammeur/);
   });
 
   test("pages multiples : ?page=N, navigation, sommaire par page, canonique propre à chaque page", async () => {

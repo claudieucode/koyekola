@@ -57,8 +57,23 @@ Colonne `site_id` (NULL = bibliothèque partagée de l'organisation, comportemen
 
 Défense en profondeur conservée : sanitisation à l'enregistrement + à l'affichage ; refus plutôt que troncature (DT-5) ; empreinte de version obligatoire pour toute écriture de l'éditeur (D3) ; isolation par site vérifiée côté serveur, jamais crue sur parole.
 
-## 8. Ce qui reste volontairement hors architecture
+## 8. Descriptions partagées (éditeur ↔ serveur) — chantier « parité complète »
 
-- Éditeur de blocs pour les **pages** (modèle commun absent — DT-1).
-- Bloc **HTML personnalisé** : refusé par défaut (sécurité). Prévu seulement derrière une décision produit (réservé aux administrateurs, sanitisé, jamais de script).
-- Blocs dynamiques WordPress (requête, navigation, commentaires, etc.) : non applicables, le rendu est côté serveur EJS.
+Une description unique par famille de blocs, importée par l'éditeur (esbuild) et par le serveur (CommonJS), de sorte que les deux moitiés ne peuvent pas diverger :
+
+| Module | Décrit | Utilisé par |
+|---|---|---|
+| `src/shared/blockRegistry.js` | tous les blocs (nom, balise, classe, exemple, conteneur, version de schéma) | verrouillage, test de registre, diagnostic |
+| `src/shared/blockStyles.js` | 35 réglages de style communs (listes fermées / couleurs) | attributs des nœuds, panneau de réglages, assainissement, rendu, copier/coller les styles |
+| `src/shared/dynamicBlocks.js` | 11 widgets : attributs, validation, champs du panneau, réseaux sociaux reconnus | nœuds, inserteur, panneau, assainissement |
+| `src/shared/embedProviders.js` | 27 services d'intégration (hôtes, identifiants, hauteur, `sandbox`) | rendu, inserteur (un bloc par service), collage d'une adresse |
+
+Côté serveur : `src/utils/blogDynamic.js` fabrique le HTML des widgets ; `src/services/blogWidgets.js` fournit leurs données **limitées au site de l'article** ; `src/services/rssFeeds.js` lit et met en cache les flux (requêtes sortantes verrouillées) ; `src/utils/customHtml.js` signe et vérifie le bloc HTML personnalisé ; `src/services/sitePages.js` gère les pages du site éditées en blocs (DT-20).
+Côté éditeur : `transforms.js` (grouper, transformer, verrous partiels, HTML de bloc), `supports.js` (réglages communs), `nodes.js` (nœuds, dont widgets, HTML, note de bas de page, page suivante).
+
+## 9. Ce qui reste volontairement hors architecture
+
+- Blocs de **gabarit** WordPress (requête, navigation, avatar, connexion…) : le blog est rendu par ses gabarits de thème (Apparence), pas par le contenu d'un article.
+- Services d'intégration qui n'existent que par une requête **oEmbed** (une requête sortante à chaque affichage).
+- Valeurs de style numériques libres, position absolue, classes CSS libres, codes courts : contraires à la garantie « aucun style ni script libre » (sauf le bloc HTML signé, DT-16).
+- API d'extension tierce : pas de système de plugins.
