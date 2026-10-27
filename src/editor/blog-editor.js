@@ -999,12 +999,15 @@ function start() {
           } catch (e) { where.append(h("p", { class: "wp-error" }, e.message)); }
         });
         return h("li", { class: "wp-library-item", "data-library-item": b.id },
-          h("div", { class: "wp-library-head" }, h("div", {}, h("strong", {}, b.name), h("small", {}, `${b.category ? `${b.category} · ` : ""}modifié le ${fmtDate(b.updatedAt)}`)),
+          h("div", { class: "wp-library-head" }, h("div", {}, h("strong", {}, b.name), h("small", {}, `${b.category ? `${b.category} · ` : ""}${libraryOwns(b) ? "" : "partagé (modifiable hors d'un site) · "}modifié le ${fmtDate(b.updatedAt)}`)),
             h("div", { class: "wp-library-actions" },
-              h("button", { type: "button", class: "wp-btn-secondary", "data-library-edit": b.id, onclick: () => editLibraryBlock(b, draw) }, "Modifier"),
-              h("button", { type: "button", class: "wp-btn-tertiary", "data-library-rename": b.id, onclick: () => renameLibraryBlock(b, draw) }, "Renommer"),
+              ...(libraryOwns(b) ? [
+                h("button", { type: "button", class: "wp-btn-secondary", "data-library-edit": b.id, onclick: () => editLibraryBlock(b, draw) }, "Modifier"),
+                h("button", { type: "button", class: "wp-btn-tertiary", "data-library-rename": b.id, onclick: () => renameLibraryBlock(b, draw) }, "Renommer"),
+                h("button", { type: "button", class: "wp-btn-tertiary", "data-library-history": b.id, onclick: () => historyLibraryBlock(b, draw) }, "Historique"),
+              ] : []),
               h("button", { type: "button", class: "wp-btn-tertiary", "data-library-duplicate": b.id, onclick: async () => { try { const r = await api(`/formateur/blog/api/blocs/${b.id}/dupliquer`, { method: "POST" }); await libraryChanged(); toast(`« ${r.block.name} » créé (bloc indépendant).`); draw(); } catch (e) { toast(e.message, "error"); } } }, "Dupliquer"),
-              h("button", { type: "button", class: "wp-btn-link is-danger", "data-library-delete": b.id, onclick: () => deleteLibraryBlock(b, draw) }, "Supprimer"))),
+              ...(libraryOwns(b) ? [h("button", { type: "button", class: "wp-btn-link is-danger", "data-library-delete": b.id, onclick: () => deleteLibraryBlock(b, draw) }, "Supprimer")] : []))),
           preview, where);
       }));
     };
@@ -1016,6 +1019,25 @@ function start() {
       h("p", { class: "wp-help" }, "Un bloc est enregistré une seule fois. Inséré « synchronisé », il se met à jour partout dès que vous le modifiez ici ; inséré en « copie », il devient indépendant."),
       h("div", { class: "wp-library-bar" }, search, create), listEl), [{ label: "Fermer" }], { wide: true });
     setTimeout(() => search.focus(), 30);
+  }
+  // Un bloc se modifie depuis son propre contexte : un bloc de site depuis ce site, un bloc partagé hors de tout site (le serveur le vérifie aussi)
+  function libraryOwns(b) {
+    const v = (document.getElementById("be-form") || { dataset: {} }).dataset.site;
+    return (b.siteId ?? null) === (v ? Number(v) : null);
+  }
+  // Historique d'un bloc : chaque modification (qui se répercute dans tous les articles) laisse une version restaurable
+  async function historyLibraryBlock(b, done) {
+    let versions = [];
+    try { versions = (await api(`/formateur/blog/api/blocs/${b.id}/versions`)).versions; } catch (e) { toast(e.message, "error"); return; }
+    const rows = versions.length
+      ? versions.map((v) => h("li", { class: "wp-library-item", "data-library-version": v.id },
+        h("div", { class: "wp-library-head" }, h("div", {}, h("strong", {}, v.name), h("small", {}, `${v.reason === "delete" ? "avant suppression" : "version précédente"} · ${fmtDate(v.created_at)}`)),
+          h("div", { class: "wp-library-actions" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: async () => {
+            try { await api(`/formateur/blog/api/blocs/${b.id}/versions/${v.id}/restaurer`, { method: "POST", json: {} }); await libraryChanged(); toast("Version restaurée : tous les articles qui utilisent ce bloc la reprennent."); done(); } catch (e) { toast(e.message, "error"); }
+          } }, "Restaurer"))),
+        (() => { const pv = h("div", { class: "wp-library-preview", "aria-hidden": "true" }); pv.innerHTML = v.content; return pv; })()))
+      : [h("li", { class: "wp-library-empty" }, h("p", {}, "Aucune modification enregistrée pour ce bloc."))];
+    modal(`Historique de « ${b.name} »`, h("div", { class: "wp-library-wrap" }, h("p", { class: "wp-help" }, "Restaurer une version la rend active partout où le bloc est synchronisé. La version actuelle est elle-même conservée."), h("ul", { class: "wp-library-list" }, ...rows)), [{ label: "Fermer" }], { wide: true });
   }
   function renameLibraryBlock(b, done) {
     const nm = input({ value: b.name, maxlength: 80 });

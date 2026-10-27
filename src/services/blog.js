@@ -124,7 +124,7 @@ function courseCard(slug) {
 // Rendu public : Markdown (anciens articles) ou texte riche de l'éditeur
 function renderPost(post, { newsletterHtml = null } = {}) {
   const imageSize = (src) => db.prepare("SELECT width, height FROM media WHERE path = ?").get(String(src || ""));
-  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id) });
+  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id, post.id ? (require("./siteContent").siteOf(db, "post", post.id) ?? null) : null) });
   const r = renderArticle(post.content, { courseCard });
   return { ...r, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
 }

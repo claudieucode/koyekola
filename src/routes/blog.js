@@ -581,7 +581,7 @@ function applyTaxonomy(postId, body) {
   }
 }
 
-function readFields(body, existing = null) {
+function readFields(body, existing = null, site = null) {
   const minutes = String(body.reading_minutes || "").trim();
   const canonical = oneLine(body.canonical_url, 500);
   const format = body.content_format === "html" ? "html" : "markdown";
@@ -592,7 +592,7 @@ function readFields(body, existing = null) {
   const fields = {
     title: oneLine(body.title, 150),
     excerpt: oneLine(body.excerpt, 300),
-    content: format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(raw)) : raw,
+    content: format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(raw), site) : raw,
     content_format: format,
     seo_title: oneLine(body.seo_title, 70),
     seo_description: oneLine(body.seo_description, 160),
@@ -717,6 +717,7 @@ function defaultSelection(siteId) {
   const t = id ? taxonomy.get(id) : null;
   return t ? { categories: [{ ...t, isPrimary: true }], tags: [], primary: { ...t, isPrimary: true } } : { categories: [], tags: [], primary: null };
 }
+const editorSiteSafe = (req) => { try { return newArticleSite(req); } catch { return null; } };
 const editorSite = (req, post) => (post ? (siteContent.siteOf(db, "post", post.id) ?? null) : newArticleSite(req));
 
 // Premier jour de la semaine du calendrier de l'éditeur : réglage « La semaine commence le » (Paramètres → Général) du site de l'article, sinon du site principal
@@ -762,7 +763,7 @@ router.post("/formateur/blog/api/seo-check", upload.none(), (req, res) => {
   if (req.blogSite !== undefined && existing && siteContent.siteOf(db, "post", existing.id) !== req.blogSite) return res.status(403).json({ error: "Vous n'avez pas accès à cet article." });
   let f;
   // Données incomplètes (ex. titre vide) : le contrôle porte alors sur les valeurs brutes, pour tout signaler d'un coup
-  try { f = readFields(req.body, existing); } catch (error) { if (!(error instanceof UserError)) throw error; f = { ...req.body, robots_index: req.body.robots_index === "0" ? 0 : 1 }; }
+  try { f = readFields(req.body, existing, existing ? (siteContent.siteOf(db, "post", existing.id) ?? null) : editorSiteSafe(req)); } catch (error) { if (!(error instanceof UserError)) throw error; f = { ...req.body, robots_index: req.body.robots_index === "0" ? 0 : 1 }; }
   const mediaSite = existing ? (siteContent.siteOf(db, "post", existing.id) ?? null) : (req.blogSite ?? null);
   const cover = libraryImage(req.body.cover_media, mediaSite) || (req.body.remove_cover === "1" ? null : existing && existing.cover_path);
   const og = libraryImage(req.body.og_image_media, mediaSite) || (req.body.remove_og_image === "1" ? null : existing && existing.og_image_path);
@@ -840,27 +841,38 @@ router.put("/formateur/blog/api/espace-seo/fun", express.json({ limit: "8kb" }),
 });
 
 // ---------- Blocs réutilisables et préférences de l'éditeur ----------
-const reusableJson = (b) => { const u = reusable.usage(b.id); return { id: b.id, name: b.name, category: b.category, content: b.content, createdAt: b.created_at, updatedAt: b.updated_at, uses: u.posts.length, occurrences: u.occurrences }; };
-const userError = (res, e) => { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; };
-router.get("/formateur/blog/api/blocs", (req, res) => res.json({ blocks: reusable.list({ q: String(req.query.q || "") }).map(reusableJson) }));
-router.get("/formateur/blog/api/blocs/:bid(\\d+)", (req, res) => { const b = reusable.get(Number(req.params.bid)); if (!b) return res.status(404).json({ error: "Bloc introuvable." }); res.json({ block: reusableJson(b) }); });
-router.post("/formateur/blog/api/blocs", express.json({ limit: "600kb" }), (req, res) => {
-  try { res.json({ block: reusableJson(reusable.create(req.body || {}, req.session.user.id)) }); } catch (e) { userError(res, e); }
-});
-router.post("/formateur/blog/api/blocs/:bid(\\d+)", express.json({ limit: "600kb" }), (req, res) => {
-  try { res.json({ block: reusableJson(reusable.update(Number(req.params.bid), req.body || {})) }); } catch (e) { userError(res, e); }
-});
-router.post("/formateur/blog/api/blocs/:bid(\\d+)/supprimer", express.json({ limit: "2kb" }), (req, res) => {
-  try { res.json({ ok: true, ...reusable.remove(Number(req.params.bid), { mode: (req.body || {}).mode || null }) }); } catch (e) { userError(res, e); }
-});
+const reusableJson = (b) => { const u = reusable.usage(b.id); return { id: b.id, name: b.name, category: b.category, content: b.content, siteId: b.site_id ?? null, createdAt: b.created_at, updatedAt: b.updated_at, uses: u.posts.length, occurrences: u.occurrences }; };
+const userError = (res, e) => { if (e instanceof UserError) return res.status(e.message === "Bloc introuvable." || e.message === "Version introuvable." ? 404 : 400).json({ error: e.message }); throw e; };
+// Contexte de site des blocs réutilisables : celui de l'éditeur (« ?site= » validé par le serveur), jamais un champ libre ; sans site : bibliothèque partagée
+const reusableSite = (req) => newArticleSite(req);
+const withReusableSite = (handler) => (req, res) => { try { handler(req, res, reusableSite(req)); } catch (e) { userError(res, e); } };
+router.get("/formateur/blog/api/blocs", withReusableSite((req, res, site) => res.json({ blocks: reusable.list({ q: String(req.query.q || ""), site }).map(reusableJson) })));
+router.get("/formateur/blog/api/blocs/:bid(\\d+)", withReusableSite((req, res, site) => { const b = reusable.getFor(Number(req.params.bid), site); if (!b) return res.status(404).json({ error: "Bloc introuvable." }); res.json({ block: reusableJson(b) }); }));
+router.post("/formateur/blog/api/blocs", express.json({ limit: "600kb" }), withReusableSite((req, res, site) => {
+  res.json({ block: reusableJson(reusable.create(req.body || {}, req.session.user.id, { site })) });
+}));
+router.post("/formateur/blog/api/blocs/:bid(\\d+)", express.json({ limit: "600kb" }), withReusableSite((req, res, site) => {
+  res.json({ block: reusableJson(reusable.update(Number(req.params.bid), req.body || {}, { site, userId: req.session.user.id })) });
+}));
+router.post("/formateur/blog/api/blocs/:bid(\\d+)/supprimer", express.json({ limit: "2kb" }), withReusableSite((req, res, site) => {
+  res.json({ ok: true, ...reusable.remove(Number(req.params.bid), { mode: (req.body || {}).mode || null, site, userId: req.session.user.id }) });
+}));
 // Où le bloc est utilisé (articles et nombre d'occurrences)
-router.get("/formateur/blog/api/blocs/:bid(\\d+)/utilisations", (req, res) => {
-  if (!reusable.get(Number(req.params.bid))) return res.status(404).json({ error: "Bloc introuvable." });
+router.get("/formateur/blog/api/blocs/:bid(\\d+)/utilisations", withReusableSite((req, res, site) => {
+  if (!reusable.getFor(Number(req.params.bid), site)) return res.status(404).json({ error: "Bloc introuvable." });
   res.json(reusable.usage(Number(req.params.bid)));
-});
-router.post("/formateur/blog/api/blocs/:bid(\\d+)/dupliquer", (req, res) => {
-  try { res.json({ block: reusableJson(reusable.duplicate(Number(req.params.bid), req.session.user.id)) }); } catch (e) { userError(res, e); }
-});
+}));
+router.post("/formateur/blog/api/blocs/:bid(\\d+)/dupliquer", withReusableSite((req, res, site) => {
+  res.json({ block: reusableJson(reusable.duplicate(Number(req.params.bid), req.session.user.id, { site })) });
+}));
+// Historique des modifications d'un bloc (D7) : chaque modification ou suppression laisse un instantané restaurable
+router.get("/formateur/blog/api/blocs/:bid(\\d+)/versions", withReusableSite((req, res, site) => {
+  if (!reusable.getFor(Number(req.params.bid), site)) return res.status(404).json({ error: "Bloc introuvable." });
+  res.json({ versions: reusable.versions(Number(req.params.bid), site) });
+}));
+router.post("/formateur/blog/api/blocs/:bid(\\d+)/versions/:vid(\\d+)/restaurer", withReusableSite((req, res, site) => {
+  res.json({ block: reusableJson(reusable.restoreVersion(Number(req.params.bid), Number(req.params.vid), { site, userId: req.session.user.id })) });
+}));
 router.put("/formateur/blog/api/preferences", express.json({ limit: "16kb" }), (req, res) => res.json({ prefs: reusable.savePrefs(req.session.user.id, req.body || {}) }));
 
 // Apparence des barres latérales de l'éditeur (choix personnel, enregistré sur le compte)
@@ -910,7 +922,7 @@ router.get("/formateur/blog/:id/modifier", loadPost, (req, res) => {
 // Création (formulaire classique ou éditeur)
 router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   const site = newArticleSite(req);
-  const f = readFields(req.body);
+  const f = readFields(req.body, null, newArticleSite(req));
   if (req.blogActor) f.author_id = null; // un rédacteur ne signe qu'en son nom
   const st = applyStatus(req.body, null, f);
   guardActorStatus(req, st, null);
@@ -944,7 +956,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   const p = req.post;
   // Conflit d'enregistrement (palier 10, D3) : l'article a été modifié depuis la version que cet écran a chargée → rien n'est écrasé
   if (isStale(req.body, p)) return conflictResponse(req, res, p);
-  const f = readFields(req.body, p);
+  const f = readFields(req.body, p, siteContent.siteOf(db, "post", p.id) ?? null);
   if (req.blogActor) f.author_id = null; // un rédacteur ne change pas l'auteur d'un article
   const st = applyStatus(req.body, p, f);
   guardActorStatus(req, st, p);
@@ -1033,7 +1045,7 @@ router.post("/formateur/blog/:id/autosave", loadPost, upload.none(), (req, res) 
   if (isStale(req.body, req.post)) return conflictResponse(req, res, req.post); // un onglet périmé n'écrase pas la sauvegarde automatique d'un onglet à jour
   const data = {};
   for (const [k, v] of Object.entries(req.body)) if (typeof v === "string" && /^[a-z_]{1,40}$/.test(k)) data[k] = v.slice(0, k === "content" ? MAX_HTML : 5000);
-  if (data.content) data.content = reusable.pruneMissing(sanitizeBlogHtml(data.content));
+  if (data.content) data.content = reusable.pruneMissing(sanitizeBlogHtml(data.content), siteContent.siteOf(db, "post", req.post.id) ?? null);
   let savedAt;
   try { savedAt = blog.setAutosave(req.post.id, req.session.user.id, data); } catch (error) {
     if (!(error instanceof UserError)) throw error;
@@ -1110,7 +1122,7 @@ router.post("/formateur/blog/:id(\\d+)/versions/:rid/restaurer", loadPost, (req,
   const kept = []; // réglages non rendus (image d'origine supprimée…)
   const result = transaction(db, () => {
     const current = db.prepare("SELECT * FROM posts WHERE id = ?").get(before.id);
-    const cols = { title: r.title, excerpt: r.excerpt, content: r.content_format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(r.content)) : r.content, content_format: r.content_format }; // D10 : le HTML d'une ancienne version repasse par la même sanitisation qu'à l'enregistrement
+    const cols = { title: r.title, excerpt: r.excerpt, content: r.content_format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(r.content), siteContent.siteOf(db, "post", req.post.id) ?? null) : r.content, content_format: r.content_format }; // D10 : le HTML d'une ancienne version repasse par la même sanitisation qu'à l'enregistrement
     for (const k of blog.RESTORED_META) {
       if (!Object.hasOwn(r.meta, k)) continue; // révision ancienne : réglage non connu, valeur actuelle gardée
       let v = r.meta[k];
