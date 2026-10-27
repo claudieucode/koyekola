@@ -50,6 +50,26 @@ describe("nouveaux blocs — sanitisation et rendu", () => {
     assert.match(out, /<blockquote><p>q<\/p><\/blockquote>/, "« dots » n'existe pas pour une citation");
     assert.match(out, /<table data-variant="striped">/);
   });
+  test("Spotify, SoundCloud, Dailymotion, Loom, TED : lecteur reconstruit par le serveur ; toute autre adresse reste un simple lien", () => {
+    const ok = [["https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC", "https://open.spotify.com/embed/track/4uLU6hMCjMI75M1A2tKUQC"], ["https://soundcloud.com/forss/flickermood", "https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fforss%2Fflickermood"], ["https://www.dailymotion.com/video/x8abc12", "https://www.dailymotion.com/embed/video/x8abc12"], ["https://www.loom.com/share/0123456789abcdef0123456789abcdef", "https://www.loom.com/embed/0123456789abcdef0123456789abcdef"], ["https://www.ted.com/talks/ken_robinson_says_schools_kill_creativity", "https://embed.ted.com/talks/ken_robinson_says_schools_kill_creativity"]];
+    for (const [url, src] of ok) assert.ok(renderBlogHtml(`<div class="kb-embed" data-url="${url}"></div>`).html.includes(`<iframe src="${src}`), url);
+    for (const bad of ["https://open.spotify.com.evil.org/track/4uLU6hMCjMI75M1A2tKUQC", "https://evil.org/open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC", "https://open.spotify.com/track/court", "https://soundcloud.com.evil.org/a/b", "https://www.loom.com/share/pasunid"]) {
+      const html = renderBlogHtml(`<div class="kb-embed" data-url="${bad}"></div>`).html;
+      assert.doesNotMatch(html, /<iframe/, bad);
+      assert.match(html, /kb-embed-link/, bad);
+    }
+  });
+  test("Vidéo : sous-titres WebVTT téléversés seulement (langue et intitulé contrôlés) ; Détails ouvert ; lettrine, teinte, liste décroissante", () => {
+    const html = renderBlogHtml('<div class="kb-video" data-url="/uploads/blog/a.mp4" data-track="/uploads/blog/s.vtt" data-track-lang="en" data-track-label="English"></div>').html;
+    assert.match(html, /<track kind="subtitles" src="\/uploads\/blog\/s\.vtt" srclang="en" label="English" default>/);
+    assert.doesNotMatch(renderBlogHtml('<div class="kb-video" data-url="/uploads/blog/a.mp4" data-track="https://evil.org/s.vtt"></div>').html, /<track/);
+    assert.match(renderBlogHtml('<details class="kb-accordion" data-open="true"><summary>R</summary><div class="kb-accordion-body"><p>x</p></div></details>').html, /<details class="kb-accordion" open>/);
+    const out = sanitizeBlogHtml('<p data-dropcap="true" data-tone="accent">a</p><p data-tone="evil" data-dropcap="oui">b</p><h2 data-tone="muted">t</h2><ol start="3" reversed><li><p>x</p></li></ol>');
+    assert.match(out, /<p data-dropcap="true" data-tone="accent">a<\/p>/);
+    assert.match(out, /<p>b<\/p>/);
+    assert.match(out, /<h2 data-tone="muted">t<\/h2>/);
+    assert.match(out, /<ol start="3" reversed="reversed">/);
+  });
   test("aucun de ces blocs n'est signalé comme « inconnu » par le rapport d'éléments retirés", () => {
     assert.deepEqual(findUnsupported('<pre class="kb-verse">v</pre><div class="kb-more"></div><div class="kb-file" data-url="/uploads/blog/a.pdf"></div><div class="kb-cover" data-src="/uploads/thumbnails/a.png"><p>x</p></div><div class="kb-mediatext"><div class="kb-mediatext-body"></div></div>'), []);
   });
@@ -71,6 +91,11 @@ describe("bloc Fichier — téléversement", () => {
     assert.ok(list.some((m) => m.id === media.id));
     const images = JSON.parse((await boss.get("/formateur/blog/api/medias?type=image")).text).media;
     assert.ok(!images.some((m) => m.id === media.id), "un document n'apparaît pas parmi les images");
+  });
+  test("un fichier de sous-titres WebVTT est accepté (extension .vtt imposée)", async () => {
+    const r = await send("../../x.php", "text/vtt", Buffer.from("WEBVTT\n\n00:00.000 --> 00:02.000\nBonjour"));
+    assert.equal(r.status, 200, r.text);
+    assert.match(JSON.parse(r.text).media.path, /^\/uploads\/blog\/\d+-[0-9a-f]{16}\.vtt$/);
   });
   test("exécutables, pages web et SVG sont refusés", async () => {
     for (const [name, type] of [["a.exe", "application/x-msdownload"], ["a.html", "text/html"], ["a.svg", "image/svg+xml"], ["a.js", "application/javascript"], ["a.sh", "application/x-sh"]]) {

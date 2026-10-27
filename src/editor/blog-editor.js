@@ -27,7 +27,7 @@ import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatc
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
-import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS } from "./blog/supports";
+import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS, TONES } from "./blog/supports";
 import { PATTERNS, PATTERN_CATEGORIES } from "./blog/patterns";
 import { NotesBadges, setNoteCounts } from "./blog/notes";
 import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
@@ -340,7 +340,7 @@ function start() {
     { id: "preformatted", title: "Préformaté", cat: "Texte", icon: "code", desc: "Texte dont les espaces et les retours à la ligne sont conservés.", keywords: "pre espaces texte brut", run: () => blk({ type: "kbPreformatted", content: [] }) },
     { id: "verse", title: "Vers", cat: "Texte", icon: "quote", desc: "Vers de poème ou de chanson, avec leurs retours à la ligne.", keywords: "poème poésie chanson", run: () => blk({ type: "kbVerse", content: [] }) },
     { id: "more", title: "Lire la suite", cat: "Mise en page", icon: "readmore", desc: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", keywords: "more extrait résumé coupure", run: () => blk({ type: "kbMore" }) },
-    { id: "file", title: "Fichier", cat: "Média", icon: "file", desc: "Un document à télécharger (PDF, Office, ZIP…).", keywords: "pdf télécharger document pièce jointe", run: () => openMediaModal({ kind: "file", onSelect: (m) => blk({ type: "kbFile", attrs: { url: m.path, title: m.title || "", download: "true" } }) }) },
+    { id: "file", title: "Fichier", cat: "Média", icon: "file", desc: "Un document à télécharger (PDF, Office, ZIP…).", keywords: "pdf télécharger document pièce jointe", run: () => openMediaModal({ kind: "file", onSelect: (m) => { if (/\.vtt$/i.test(m.path)) return toast("Un fichier de sous-titres se joint à un bloc Vidéo, pas au bloc Fichier.", "error"); blk({ type: "kbFile", attrs: { url: m.path, title: m.title || "", download: "true" } }); } }) },
     { id: "cover", title: "Couverture", cat: "Média", icon: "cover", desc: "Une image de fond avec du texte par-dessus.", keywords: "bannière hero fond image", run: () => openMediaModal({ onSelect: (m, extra) => blk({ type: "kbCover", attrs: { src: m.path, alt: extra.alt || "", overlay: "40", height: "m" }, content: [{ type: "heading", attrs: { level: 2 }, content: [] }, p("")] }) }) },
     { id: "mediatext", title: "Média et texte", cat: "Média", icon: "mediatext", desc: "Une image à côté d'un texte.", keywords: "image texte côte à côte", run: () => openMediaModal({ onSelect: (m, extra) => blk({ type: "kbMediaText", attrs: { side: "left", width: "50" }, content: [{ type: "kbImage", attrs: { src: m.path, mediaId: m.id, alt: extra.alt || "", caption: "", credit: "", title: m.title || "", width: "100", align: "center" } }, { type: "kbMediaTextBody", content: [p("")] }] }) }) },
     { id: "gcallout-info", title: "Encadré Information", cat: "Mise en forme", icon: "callout", desc: "Mettez une information en évidence.", keywords: "note info", run: () => blk({ type: "callout", attrs: { type: "info" }, content: [p("")] }) },
@@ -373,6 +373,13 @@ function start() {
     { id: "newsletter", title: "Newsletter", cat: "KOLAKISA", brand: true, icon: "newsletter", desc: "Formulaire d'inscription à la newsletter.", keywords: "inscription email", run: () => blk({ type: "kbNewsletter" }) },
     { id: "embed", title: "Contenu embarqué", cat: "Intégrations", icon: "embed", desc: "Intégrez un contenu externe (YouTube et Vimeo deviennent un lecteur, le reste un lien).", keywords: "embed intégration", run: () => urlPrompt("Contenu embarqué", "Adresse du contenu", "https://…", (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } })) },
     { id: "youtube", title: "YouTube", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo YouTube.", run: () => urlPrompt("YouTube", "Adresse de la vidéo YouTube", "https://www.youtube.com/watch?v=…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
+    ...[
+      ["spotify", "Spotify", "Morceau, album, playlist ou épisode Spotify.", "https://open.spotify.com/track/…", /^https:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:track|album|playlist|episode|show|artist)\/[A-Za-z0-9]{10,30}\/?(?:\?.*)?$/, "musique podcast son"],
+      ["soundcloud", "SoundCloud", "Titre ou playlist SoundCloud.", "https://soundcloud.com/artiste/titre", /^https:\/\/(?:www\.)?soundcloud\.com\/[A-Za-z0-9_-]{2,50}\/(?:sets\/)?[A-Za-z0-9_-]{2,100}\/?(?:\?.*)?$/, "musique podcast son"],
+      ["dailymotion", "Dailymotion", "Vidéo Dailymotion.", "https://www.dailymotion.com/video/…", /^https:\/\/(?:www\.dailymotion\.com\/(?:embed\/)?video\/|dai\.ly\/)[a-z0-9]{5,12}\/?(?:\?.*)?$/i, "vidéo"],
+      ["loom", "Loom", "Vidéo Loom (démonstration d'écran).", "https://www.loom.com/share/…", /^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/[a-f0-9]{32}\/?(?:\?.*)?$/i, "vidéo écran démonstration"],
+      ["ted", "TED", "Conférence TED.", "https://www.ted.com/talks/…", /^https:\/\/(?:www\.)?ted\.com\/talks\/[a-z0-9_]{3,120}\/?(?:\?.*)?$/i, "conférence vidéo"],
+    ].map(([id, title, desc, placeholder, re, keywords]) => ({ id, title, cat: "Intégrations", icon: "video", desc, keywords, run: () => urlPrompt(title, `Adresse du contenu ${title}`, placeholder, (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } }), { check: (v) => re.test(v), error: `Ce n'est pas une adresse ${title} reconnue (${placeholder}).` }) })),
     { id: "vimeo", title: "Vimeo", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo Vimeo.", run: () => urlPrompt("Vimeo", "Adresse de la vidéo Vimeo", "https://vimeo.com/…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
   ];
   const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Mise en page", "Intégrations"];
@@ -1840,7 +1847,7 @@ function start() {
     if (!onSelect && !onSelectMany) selectBtn.disabled = false;
     load();
   }
-  const FILE_ACCEPT = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.oasis.opendocument.text", "application/vnd.oasis.opendocument.spreadsheet", "application/vnd.oasis.opendocument.presentation", "text/plain", "text/csv", "application/zip", "application/x-zip-compressed"];
+  const FILE_ACCEPT = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.presentationml.presentation", "application/vnd.oasis.opendocument.text", "application/vnd.oasis.opendocument.spreadsheet", "application/vnd.oasis.opendocument.presentation", "text/plain", "text/csv", "application/zip", "application/x-zip-compressed", "text/vtt"];
   const ACCEPT = { file: FILE_ACCEPT, image: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"], video: ["video/mp4", "video/webm"], audio: ["audio/mpeg", "audio/mp3", "audio/mp4", "audio/x-m4a", "audio/ogg", "audio/wav", "audio/x-wav", "audio/wave"] };
   const ACCEPT_LABEL = { file: "PDF, Word, Excel, PowerPoint, OpenDocument, TXT, CSV ou ZIP", image: "JPEG, PNG, WebP, GIF ou AVIF", video: "MP4 ou WebM", audio: "MP3, M4A, OGG ou WAV" };
   const kindOf = (file) => Object.keys(ACCEPT).find((k) => ACCEPT[k].includes(file.type)) || null;
@@ -2047,7 +2054,9 @@ function start() {
         t === "heading" ? h("p", { class: "wp-label" }, "Niveau de titre") : null,
         t === "heading" ? segmented([1, 2, 3, 4, 5, 6].map((l) => [l, `H${l}`]), a.level, (l) => chain().setHeading({ level: Number(l) }).run()) : null,
         t === "heading" ? h("p", { class: "wp-help" }, "H2 et H3 apparaissent dans le sommaire. Le titre de l'article est déjà le H1 de la page.") : null));
-      inspector.append(section("Couleur", h("p", { class: "wp-help" }, "Sélectionnez du texte, puis utilisez « Plus » (˅) dans la barre d'outils du bloc pour la couleur et le surligneur.")));
+      inspector.append(section("Couleur", h("p", { class: "wp-label" }, "Teinte du texte du bloc"), segmented(TONES, a.tone || "", (v) => set({ tone: v })),
+        t === "paragraph" ? checkbox("Lettrine (grande initiale)", Boolean(a.dropcap), (v) => set({ dropcap: v })) : null,
+        h("p", { class: "wp-help" }, "Pour colorer seulement des mots : sélectionnez-les, puis « Plus » (˅) dans la barre d'outils du bloc (couleur et surligneur).")));
     } else if (t === "kbImage") {
       inspector.append(h("img", { class: "wp-inspector-preview", src: a.src, alt: "" }));
       const alt = textarea({ rows: 3 }, a.alt || "");
@@ -2096,8 +2105,10 @@ function start() {
           alt.addEventListener("input", debounce(() => { const images = [...currentBlock().node.attrs.images]; images[i] = { ...images[i], alt: alt.value }; set({ images }); }, 300));
           const cap = input({ value: img.caption || "", placeholder: "Légende", "aria-label": `Légende de l'image ${i + 1}` });
           cap.addEventListener("input", debounce(() => { const images = [...currentBlock().node.attrs.images]; images[i] = { ...images[i], caption: cap.value }; set({ images }); }, 300));
+          const link = input({ value: img.href || "", placeholder: "Lien (facultatif) : /catalogue ou https://…", "aria-label": `Lien de l'image ${i + 1}` });
+          link.addEventListener("change", () => { const v = link.value.trim(); if (v && !/^(https?:\/\/\S+|\/(?!\/)\S*)$/i.test(v)) { toast("Lien invalide : /page ou https://…", "error"); link.value = img.href || ""; return; } const images = [...currentBlock().node.attrs.images]; images[i] = { ...images[i], href: v }; set({ images }); });
           const move = (d) => { const images = [...currentBlock().node.attrs.images]; const j = i + d; if (j < 0 || j >= images.length) return; [images[i], images[j]] = [images[j], images[i]]; set({ images }); renderInspector(true); };
-          return h("li", {}, h("img", { src: img.src, alt: "" }), h("div", { class: "wp-gallery-fields" }, alt, cap),
+          return h("li", {}, h("img", { src: img.src, alt: "" }), h("div", { class: "wp-gallery-fields" }, alt, cap, link),
             h("div", { class: "wp-gallery-moves" }, h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Avancer l'image", disabled: i === 0 || null, onclick: () => move(-1) }, "↑"), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Reculer l'image", disabled: i === a.images.length - 1 || null, onclick: () => move(1) }, "↓"),
               h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Retirer l'image", onclick: () => { const images = [...currentBlock().node.attrs.images]; images.splice(i, 1); set({ images }); renderInspector(true); } }, "×")));
         })),
@@ -2113,6 +2124,9 @@ function start() {
           checkbox("Muet", a.muted === "true" || a.autoplay === "true", flag("muted")),
           checkbox("En boucle", a.loop === "true", flag("loop")),
           checkbox("Masquer les commandes de lecture", a.nocontrols === "true", flag("nocontrols")),
+          h("p", { class: "wp-label" }, "Sous-titres (fichier .vtt)"),
+          h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "file", onSelect: (m) => { if (!/\.vtt$/i.test(m.path)) return toast("Choisissez un fichier de sous-titres WebVTT (.vtt).", "error"); set({ track: m.path, tracklang: a.tracklang || "fr", tracklabel: a.tracklabel || "Français" }); } }) }, a.track ? "Changer le fichier .vtt" : "Ajouter des sous-titres"), a.track ? h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => set({ track: "", tracklang: "", tracklabel: "" }) }, "Retirer") : null),
+          ...(a.track ? [(() => { const lang = select([["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["pt", "Portugais"], ["de", "Allemand"], ["it", "Italien"]], a.tracklang || "fr"); lang.addEventListener("change", () => set({ tracklang: lang.value })); return control("Langue", lang); })(), control("Intitulé affiché", bind(input({ value: a.tracklabel || "", maxlength: 40 }), "tracklabel"))] : []),
         ] : [h("p", { class: "wp-help" }, "Affiche, lecture automatique, muet et boucle s'appliquent aux fichiers vidéo téléversés. Pour YouTube et Vimeo, c'est le lecteur du service qui est utilisé.")])));
       }
     } else if (t === "kbAudio") {
@@ -2207,8 +2221,15 @@ function start() {
       inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Alignement"), segmented([["left", "Gauche"], ["center", "Centre"], ["right", "Droite"]], a.align, (v) => set({ align: v })),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { const n = editor.state.doc.nodeAt(b.pos); editor.chain().focus().insertContentAt(b.pos + n.nodeSize - 1, { type: "kbButton", attrs: { text: "Nouveau bouton", href: "/catalogue", variant: "outline", align: a.align, newTab: false } }).run(); } }, "+ Ajouter un bouton")));
     } else if (t === "bulletList" || t === "orderedList") {
-      inspector.append(section("Réglages", segmented([["bulletList", "Liste à puces", "list"], ["orderedList", "Liste numérotée", "ordered"]], t, (v) => (v === "orderedList" ? chain().toggleOrderedList().run() : chain().toggleBulletList().run())), h("p", { class: "wp-help" }, "Tabulation : imbriquer un élément. Maj + Tabulation : le sortir d'un niveau.")));
+      const start = h("input", { type: "number", id: "be-ol-start", min: "1", max: "9999", value: String(a.start || 1), "aria-label": "Numéro de départ" });
+      start.addEventListener("change", () => { const n = Math.max(1, Math.min(9999, Number(start.value) || 1)); start.value = String(n); set({ start: n }); });
+      inspector.append(section("Réglages", segmented([["bulletList", "Liste à puces", "list"], ["orderedList", "Liste numérotée", "ordered"]], t, (v) => (v === "orderedList" ? chain().toggleOrderedList().run() : chain().toggleBulletList().run())),
+        ...(t === "orderedList" ? [control("Numéro de départ", start), checkbox("Numérotation décroissante", Boolean(a.reversed), (v) => set({ reversed: v }))] : []),
+        h("p", { class: "wp-label" }, "Teinte du texte"), segmented(TONES, a.tone || "", (v) => set({ tone: v })),
+        h("p", { class: "wp-help" }, "Tabulation : imbriquer un élément. Maj + Tabulation : le sortir d'un niveau.")));
     }
+    if (t === "kbAccordion" && !isLocked(node)) inspector.append(section("Réglages", checkbox("Ouvert par défaut sur le site", Boolean(a.open), (v) => set({ open: v })), h("p", { class: "wp-help" }, "Dans l'éditeur, le bloc reste toujours déplié pour que vous puissiez écrire dedans.")));
+    if (t === "blockquote" && !isLocked(node)) inspector.append(section("Teinte", segmented(TONES, a.tone || "", (v) => set({ tone: v }))));
     // Styles du bloc (variantes) : liste fermée par type de bloc
     if (VARIANTS[t] && !isLocked(node)) inspector.append(section("Styles", segmented(VARIANTS[t], a.variant || "", (v) => set({ variant: v }))));
     // Réglages communs (comme Gutenberg) : ancre HTML et classes CSS supplémentaires

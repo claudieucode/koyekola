@@ -11,6 +11,7 @@ import { LOCKABLE_TYPES } from "./editing";
 export const ANCHOR_RE = /^[a-z][a-z0-9_-]{0,63}$/;
 export const XCLASS_TOKEN = /^kb-x-[a-z0-9-]{1,30}$/;
 export const MAX_XCLASS = 5;
+export const TONES = [["", "Par défaut"], ["accent", "Accent"], ["muted", "Atténué"], ["primary", "Bleu nuit"]];
 // Variantes de style par bloc (équivalent des « styles de bloc » de Gutenberg) : mêmes listes fermées que le serveur (VARIANTS dans blogHtml.js)
 export const VARIANTS = {
   horizontalRule: [["", "Par défaut"], ["dots", "Points"], ["wide", "Large"], ["short", "Court"]],
@@ -88,6 +89,18 @@ export const BlockSupports = Extension.create({
           renderHTML: (attrs) => (attrs.xclass ? { "data-class": attrs.xclass } : {}),
         },
       },
+    }, {
+      // Lettrine (premier paragraphe d'une section)
+      types: ["paragraph"],
+      attributes: { dropcap: { default: false, keepOnSplit: false, parseHTML: (el) => el.getAttribute("data-dropcap") === "true", renderHTML: (attrs) => (attrs.dropcap ? { "data-dropcap": "true" } : {}) } },
+    }, {
+      // Teinte du texte du bloc : jetons du site (liste fermée, la même que le serveur)
+      types: ["paragraph", "heading", "blockquote", "bulletList", "orderedList"],
+      attributes: { tone: { default: "", keepOnSplit: true, parseHTML: (el) => (["accent", "muted", "primary"].includes(el.getAttribute("data-tone")) ? el.getAttribute("data-tone") : ""), renderHTML: (attrs) => (attrs.tone ? { "data-tone": attrs.tone } : {}) } },
+    }, {
+      // Liste numérotée décroissante
+      types: ["orderedList"],
+      attributes: { reversed: { default: false, parseHTML: (el) => el.hasAttribute("reversed"), renderHTML: (attrs) => (attrs.reversed ? { reversed: "reversed" } : {}) } },
     }, {
       // Légende d'un tableau (le serveur en fait un <caption>)
       types: ["table"],

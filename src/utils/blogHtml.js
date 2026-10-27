@@ -13,7 +13,7 @@ const { default: render } = require("dom-serializer");
 const { Element, Text } = require("domhandler");
 const DomUtils = require("domutils");
 const { slugify } = require("./format");
-const { parseVideoUrl } = require("./video");
+const { parseVideoUrl, embedProvider } = require("./video");
 const { renderArticle, CALLOUTS } = require("./articleMarkdown");
 
 const MAX_HTML = 300000;
@@ -25,6 +25,7 @@ const IMG_SRC = /^\/uploads\/(?:thumbnails\/|marketing\/\d{1,9}\/(?:site-\d{1,9}
 const FILE_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:pdf|docx|xlsx|pptx|odt|ods|odp|txt|csv|zip)$/i; // fichiers à télécharger (bloc Fichier) : formats bureautiques sûrs, jamais d'exécutable
 // Variantes de style par bloc (équivalent des « styles de bloc » de Gutenberg) : liste fermée, par balise ou par balise.classe
 const VARIANTS = { hr: ["dots", "wide", "short"], "figure.kb-image": ["rounded", "circle", "shadow"], blockquote: ["bordered"], table: ["striped"], "div.kb-group": ["card"] };
+const TRACK_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.vtt$/i; // sous-titres WebVTT téléversés
 const AUDIO_SRC = /^\/uploads\/blog\/[A-Za-z0-9_.-]{1,200}\.(?:mp3|m4a|ogg|oga|wav|aac)$/i;
 const MEDIA_URL = /^(https:\/\/[^\s"'<>]{1,500}|\/uploads\/blog\/[A-Za-z0-9_.-]{1,200})$/i;
 const COURSE_SLUG = /^[a-z0-9-]{1,120}$/;
@@ -86,6 +87,11 @@ const transformTags = {
     if (main === "kb-video") {
       if (IMG_SRC.test(String(attribs["data-poster"] || ""))) out["data-poster"] = attribs["data-poster"];
       for (const k of ["data-autoplay", "data-muted", "data-loop", "data-nocontrols"]) if (attribs[k] === "true") out[k] = "true";
+      if (TRACK_SRC.test(String(attribs["data-track"] || ""))) {
+        out["data-track"] = attribs["data-track"];
+        out["data-track-lang"] = /^[a-z]{2,3}(?:-[A-Z]{2})?$/.test(String(attribs["data-track-lang"] || "")) ? attribs["data-track-lang"] : "fr";
+        out["data-track-label"] = String(attribs["data-track-label"] || "Sous-titres").replace(/[\r\n]+/g, " ").slice(0, 40);
+      }
     }
     if (main === "kb-audio" && attribs["data-author"]) out["data-author"] = String(attribs["data-author"]).slice(0, 120);
     if (main === "kb-gallery" && /^(s|m|l)$/.test(attribs["data-gap"] || "")) out["data-gap"] = attribs["data-gap"];
@@ -130,11 +136,12 @@ const transformTags = {
     Object.assign(out, pick(attribs, ["data-title", "data-caption"]));
     return { tagName: "div", attribs: out };
   },
-  details: (tagName, attribs) => ({ tagName, attribs: { class: keepClasses(attribs, ["kb-accordion", "kb-faq-item"]) || "kb-accordion" } }),
+  details: (tagName, attribs) => ({ tagName, attribs: { class: keepClasses(attribs, ["kb-accordion", "kb-faq-item"]) || "kb-accordion", ...(attribs["data-open"] === "true" ? { "data-open": "true" } : {}) } }),
   ol: (tagName, attribs) => {
     const out = {};
     if (classesOf(attribs).includes("kb-steps")) { out.class = "kb-steps"; Object.assign(out, pick(attribs, ["data-title"])); }
     if (/^\d{1,4}$/.test(String(attribs.start || ""))) out.start = String(attribs.start);
+    if (attribs.reversed !== undefined) out.reversed = "reversed";
     return { tagName, attribs: out };
   },
   ul: (tagName, attribs) => ({ tagName, attribs: attribs["data-type"] === "taskList" ? { "data-type": "taskList" } : {} }),
@@ -150,6 +157,7 @@ const transformTags = {
   p: (tagName, attribs) => {
     const out = pick(attribs, ["style"]);
     if (/^[1-4]$/.test(String(attribs["data-indent"] || ""))) out["data-indent"] = attribs["data-indent"];
+    if (attribs["data-dropcap"] === "true") out["data-dropcap"] = "true";
     if (classesOf(attribs).includes("kb-button")) {
       out.class = "kb-button";
       if (/^(left|center|right)$/.test(attribs["data-align"] || "")) out["data-align"] = attribs["data-align"];
@@ -168,6 +176,7 @@ transformTags.blockquote = (tagName, attribs) => ({ tagName, attribs: classesOf(
 transformTags.table = (tagName, attribs) => ({ tagName, attribs: attribs["data-caption"] ? { "data-caption": String(attribs["data-caption"]).replace(/[\r\n]+/g, " ").slice(0, 200) } : {} });
 // Bloc verrouillé dans l'éditeur (protection contre les modifications accidentelles) : marqueur conservé, valeur stricte
 const BLOCK_ID = /^b[a-z0-9]{8}$/;
+const TONE_TAGS = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "ul", "ol"]); // teinte du texte (jeton du site) : liste fermée
 const ANCHOR_ID = /^[a-z][a-z0-9_-]{0,63}$/;
 const XCLASS_TOKEN = /^kb-x-[a-z0-9-]{1,30}$/;
 const LOCKABLE = ["p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "ul", "ol", "pre", "table", "figure", "div", "details", "hr"];
@@ -181,6 +190,7 @@ for (const tag of LOCKABLE) {
     if (r.tagName === tagName && attribs["data-hidden"] === "true") r.attribs = { ...r.attribs, "data-hidden": "true" };
     // Ancre HTML et classes supplémentaires (réglages communs des blocs) : valeurs strictes, mêmes règles que l'éditeur (src/editor/blog/supports.js)
     if (r.tagName === tagName && ANCHOR_ID.test(attribs.id || "")) r.attribs = { ...r.attribs, id: attribs.id };
+    if (r.tagName === tagName && TONE_TAGS.has(tagName) && /^(accent|muted|primary)$/.test(attribs["data-tone"] || "")) r.attribs = { ...r.attribs, "data-tone": attribs["data-tone"] };
     if (r.tagName === tagName && attribs["data-name"]) r.attribs = { ...r.attribs, "data-name": String(attribs["data-name"]).replace(/[\r\n\u2028\u2029]+/g, " ").trim().slice(0, 60) };
     if (r.tagName === tagName && attribs["data-variant"]) {
       const first = String(r.attribs.class || "").split(" ")[0];
@@ -199,9 +209,9 @@ const saveOptions = {
   allowedAttributes: {
     a: ["href", "target", "rel", "class"], img: ["src", "alt", "title", "width", "height", "data-media-id"],
     figure: ["class", "data-align", "data-width", "data-credit", "data-main", "data-ratio"],
-    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download"],
-    details: ["class"], ol: ["class", "data-title", "start"], ul: ["data-type"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
-    p: ["style", "data-indent", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class"], span: ["style"], mark: ["style"],
+    div: ["class", "data-url", "data-src", "data-course", "data-callout", "data-columns", "data-tone", "data-title", "data-caption", "data-size", "data-size-mobile", "data-layout", "data-gap", "data-stack", "data-valign", "data-bg", "data-pad", "data-border", "data-width", "data-align", "data-poster", "data-autoplay", "data-muted", "data-loop", "data-nocontrols", "data-author", "data-gap", "data-ref", "data-label", "data-alt", "data-overlay", "data-height", "data-side", "data-download", "data-track", "data-track-lang", "data-track-label"],
+    details: ["class", "data-open"], ol: ["class", "data-title", "start", "reversed"], ul: ["data-type"], li: ["data-type", "data-checked"], input: ["type", "checked", "disabled"],
+    p: ["style", "data-indent", "data-dropcap", "class", "data-align", "data-size", "data-radius", "data-width", "data-bg", "data-fg", "data-border"], h1: ["style", "data-indent"], h2: ["style", "data-indent"], h3: ["style", "data-indent"], h4: ["style", "data-indent"], h5: ["style", "data-indent"], h6: ["style", "data-indent"], blockquote: ["class"], span: ["style"], mark: ["style"],
     td: ["colspan", "rowspan"], th: ["colspan", "rowspan"], code: ["class"], pre: ["class"], table: ["data-caption"],
   },
   allowedClasses: false, // vérifiées une à une dans transformTags (listes blanches)
@@ -217,7 +227,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name"];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name", "data-tone"];
 
 function tidy(html) {
   return html
@@ -308,7 +318,8 @@ function videoPlayer(url, caption, opts = {}) {
     if (opts.loop) attrs.loop = "";
     // Lecture automatique : toujours muette (règle des navigateurs)
     if (opts.autoplay) { attrs.autoplay = ""; attrs.muted = ""; } else if (opts.muted) attrs.muted = "";
-    player = el("video", attrs, [text("Votre navigateur ne lit pas cette vidéo.")]);
+    const track = opts.track && TRACK_SRC.test(opts.track.src) ? [el("track", { kind: "subtitles", src: opts.track.src, srclang: opts.track.lang, label: opts.track.label, default: "" })] : [];
+    player = el("video", attrs, [...track, text("Votre navigateur ne lit pas cette vidéo.")]);
   } else return null;
   return el("figure", { class: "kb-video" }, [player, ...(caption ? [el("figcaption", {}, [text(caption)])] : [])]);
 }
@@ -393,14 +404,19 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       links.push({ href: node.attribs.href, internal: !/^https?:/i.test(node.attribs.href) });
     } else if (name === "div" && hasClass(node, "kb-video")) {
       const b = (k) => node.attribs[k] === "true";
-      replace(node, videoPlayer(node.attribs["data-url"], node.attribs["data-caption"], { poster: node.attribs["data-poster"], autoplay: b("data-autoplay"), muted: b("data-muted"), loop: b("data-loop"), nocontrols: b("data-nocontrols") }));
+      replace(node, videoPlayer(node.attribs["data-url"], node.attribs["data-caption"], { poster: node.attribs["data-poster"], autoplay: b("data-autoplay"), muted: b("data-muted"), loop: b("data-loop"), nocontrols: b("data-nocontrols"), track: node.attribs["data-track"] ? { src: node.attribs["data-track"], lang: node.attribs["data-track-lang"] || "fr", label: node.attribs["data-track-label"] || "Sous-titres" } : null }));
     } else if (name === "div" && hasClass(node, "kb-embed")) {
       const url = node.attribs["data-url"];
       const player = videoPlayer(url, node.attribs["data-caption"]);
       const map = GOOGLE_MAP.test(url || "");
       if (map) replace(node, el("figure", { class: "kb-map" }, [el("div", { class: "kb-map-frame" }, [el("iframe", { src: url, title: node.attribs["data-caption"] || "Carte Google Maps", loading: "lazy", referrerpolicy: "no-referrer-when-downgrade", allowfullscreen: "" })]), ...(node.attribs["data-caption"] ? [el("figcaption", {}, [text(node.attribs["data-caption"])])] : [])]));
       else if (player) replace(node, player);
-      else {
+      else if (embedProvider(url)) {
+        // Autres lecteurs reconnus (Spotify, SoundCloud, Dailymotion, Loom, TED) : adresse reconstruite par le serveur
+        const e = embedProvider(url);
+        const frame = el("iframe", { src: e.src, title: node.attribs["data-caption"] || e.title, loading: "lazy", allow: "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture", allowfullscreen: "", referrerpolicy: "strict-origin-when-cross-origin" });
+        replace(node, el("figure", { class: `kb-embed-frame kb-embed-${e.provider}`, ...(e.height ? { style: `--kb-embed-h: ${e.height}px` } : {}) }, [frame, ...(node.attribs["data-caption"] ? [el("figcaption", {}, [text(node.attribs["data-caption"])])] : [])]));
+      } else {
         let host = url;
         try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* adresse relative */ }
         replace(node, el("p", { class: "kb-embed-link" }, [el("a", { href: url, target: "_blank", rel: "noopener noreferrer nofollow" }, [text(node.attribs["data-caption"] || `Voir le contenu sur ${host}`)])]));
@@ -447,6 +463,8 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       DomUtils.prepend(node.children[0] || node, el("p", { class: "callout-title" }, [text(node.attribs["data-title"] || CALLOUTS[type] || "Information")]));
       if (!node.children.length) DomUtils.appendChild(node, el("p", { class: "callout-title" }, [text(CALLOUTS[type])]));
       delete node.attribs["data-title"];
+    } else if (name === "details" && node.attribs["data-open"] === "true") {
+      node.attribs.open = ""; delete node.attribs["data-open"]; // accordéon ouvert par défaut
     } else if (name === "details" && hasClass(node, "kb-faq-item")) {
       const summary = DomUtils.findOne((n) => n.name === "summary", node.children, false);
       const q = summary ? textOf(summary) : "";

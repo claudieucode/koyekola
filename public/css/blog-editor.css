@@ -1880,3 +1880,7 @@
 [data-notes-body] { padding: 14px 16px 24px; }
 .wp-diag { width: 100%; border-collapse: collapse; font-size: 13px; }
 .wp-diag th, .wp-diag td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.ProseMirror p[data-dropcap="true"]::first-letter { float: left; margin: 0.06em 0.12em 0 0; font-size: 3.6em; line-height: 0.85; font-weight: 700; color: var(--primary); }
+.ProseMirror :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol)[data-tone="accent"] { color: var(--accent-dark, var(--accent)); }
+.ProseMirror :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol)[data-tone="muted"] { color: var(--muted); }
+.ProseMirror :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol)[data-tone="primary"] { color: var(--primary); }

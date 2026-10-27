@@ -101,13 +101,17 @@ export const KbGallery = Node.create({
         gap: ["s", "m", "l"].includes(el.getAttribute("data-gap")) ? el.getAttribute("data-gap") : "",
         images: [...el.querySelectorAll("figure")].map((f) => {
           const img = f.querySelector("img");
-          return img ? { src: img.getAttribute("src"), alt: img.getAttribute("alt") || "", caption: (f.querySelector("figcaption") || { textContent: "" }).textContent.trim() } : null;
+          return img ? { src: img.getAttribute("src"), alt: img.getAttribute("alt") || "", caption: (f.querySelector("figcaption") || { textContent: "" }).textContent.trim(), href: (f.querySelector("a") || { getAttribute: () => "" }).getAttribute("href") || "" } : null;
         }).filter(Boolean),
       }),
     }];
   },
   renderHTML({ node }) {
-    const figures = (node.attrs.images || []).map((i) => (i.caption ? ["figure", { class: "kb-image" }, ["img", { src: i.src, alt: i.alt || "" }], ["figcaption", {}, i.caption]] : ["figure", { class: "kb-image" }, ["img", { src: i.src, alt: i.alt || "" }]]));
+    const figures = (node.attrs.images || []).map((i) => {
+      const img = ["img", { src: i.src, alt: i.alt || "" }];
+      const picture = i.href ? ["a", { href: i.href }, img] : img; // lien par image
+      return i.caption ? ["figure", { class: "kb-image" }, picture, ["figcaption", {}, i.caption]] : ["figure", { class: "kb-image" }, picture];
+    });
     return ["div", { class: "kb-gallery", "data-columns": node.attrs.columns, ...(node.attrs.gap ? { "data-gap": node.attrs.gap } : {}), ...lockOf(node) }, ...figures];
   },
   addNodeView() {
@@ -155,9 +159,9 @@ function marker({ name, cls, attrs, icon, label }) {
     },
   });
 }
-export const KbVideo = marker({ name: "kbVideo", cls: "kb-video", attrs: { url: "data-url", caption: "data-caption", poster: "data-poster", autoplay: "data-autoplay", muted: "data-muted", loop: "data-loop", nocontrols: "data-nocontrols" }, icon: "▶", label: (a) => `Vidéo · ${a.url || "adresse à compléter"}${a.caption ? ` · ${a.caption}` : ""}` });
+export const KbVideo = marker({ name: "kbVideo", cls: "kb-video", attrs: { url: "data-url", caption: "data-caption", poster: "data-poster", autoplay: "data-autoplay", muted: "data-muted", loop: "data-loop", nocontrols: "data-nocontrols", track: "data-track", tracklang: "data-track-lang", tracklabel: "data-track-label" }, icon: "▶", label: (a) => `Vidéo · ${a.url || "adresse à compléter"}${a.caption ? ` · ${a.caption}` : ""}` });
 export const KbAudio = marker({ name: "kbAudio", cls: "kb-audio", attrs: { src: "data-src", title: "data-title", author: "data-author" }, icon: "♪", label: (a) => `Audio · ${a.title || a.src || "fichier à choisir"}${a.author ? ` — ${a.author}` : ""}` });
-export const KbEmbed = marker({ name: "kbEmbed", cls: "kb-embed", attrs: { url: "data-url", caption: "data-caption" }, icon: "⧉", label: (a) => `Intégration · ${a.url || "adresse à compléter"} (YouTube et Vimeo deviennent un lecteur ; le reste, un lien)` });
+export const KbEmbed = marker({ name: "kbEmbed", cls: "kb-embed", attrs: { url: "data-url", caption: "data-caption" }, icon: "⧉", label: (a) => `Intégration · ${a.url || "adresse à compléter"} (YouTube, Vimeo, Spotify, SoundCloud, Dailymotion, Loom, TED : lecteur ; le reste : lien)` });
 export const KbCourse = marker({ name: "kbCourse", cls: "kb-course", attrs: { slug: "data-course" }, icon: "🎓", label: (a) => `Formation recommandée · ${a.slug || "à choisir"}` });
 export const KbNewsletter = marker({ name: "kbNewsletter", cls: "kb-newsletter", attrs: {}, icon: "✉", label: () => "Inscription à la newsletter (formulaire choisi dans Blog → réglages)" });
 
@@ -334,8 +338,9 @@ export const KbAccordion = Node.create({
   group: "block",
   content: "kbSummary kbAccordionBody",
   defining: true,
+  addAttributes() { return { open: { default: false, parseHTML: (el) => el.getAttribute("data-open") === "true", renderHTML: () => ({}) } }; },
   parseHTML() { return [{ tag: "details.kb-accordion", priority: 70 }, { tag: "details", priority: 40 }]; },
-  renderHTML({ node }) { return ["details", { class: "kb-accordion", ...lockOf(node) }, 0]; },
+  renderHTML({ node }) { return ["details", { class: "kb-accordion", ...(node.attrs.open ? { "data-open": "true" } : {}), ...lockOf(node) }, 0]; },
   addNodeView() { return () => { const dom = document.createElement("div"); dom.className = "kb-ed-accordion"; return { dom, contentDOM: dom }; }; },
 });
 export const KbFaqAnswer = simpleBlock("kbFaqAnswer", "div", "kb-faq-answer", "block+", { group: null });
