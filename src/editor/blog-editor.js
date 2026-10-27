@@ -2603,11 +2603,17 @@ function start() {
     if (!withFiles) for (const name of ["thumbnail", "og_image", "twitter_image"]) data.delete(name);
     return data;
   }
+  // D5 : une seule création d'article à la fois. Brouillon automatique, aperçu, corbeille de blocs et « Enregistrer » partagent la même
+  // promesse : un second appel attend la création en cours au lieu d'en lancer une autre (sinon deux articles pour un seul éditeur)
+  let creation = null;
   async function ensurePost() {
     if (postId) return postId;
-    const body = new FormData();
-    body.append("title", field("title").value);
-    adopt(await api("/formateur/blog/api/brouillon", { method: "POST", body }));
+    if (!creation) {
+      const body = new FormData();
+      body.append("title", field("title").value);
+      creation = api(`/formateur/blog/api/brouillon${siteQuery()}`, { method: "POST", body }).then(adopt).finally(() => { creation = null; });
+    }
+    await creation;
     return postId;
   }
   function adopt(r) {
@@ -2651,9 +2657,12 @@ function start() {
     setState("Enregistrement…", "is-saving");
     const revAtSend = changeRev;
     try {
+      if (!postId && creation) { try { await creation; } catch { /* le brouillon automatique a échoué : l'enregistrement crée l'article lui-même */ } }
       const url = postId ? `/formateur/blog/${postId}/modifier` : `/formateur/blog/nouveau${siteQuery()}`;
-      const r = await api(url, { method: "POST", body: formPayload({ withFiles: true }), headers: { "x-blog-editor": "1" } });
-      if (!postId) adopt({ id: r.id });
+      const sending = api(url, { method: "POST", body: formPayload({ withFiles: true }), headers: { "x-blog-editor": "1" } });
+      if (!postId) { creation = sending.then((x) => adopt({ id: x.id })).finally(() => { creation = null; }); creation.catch(() => {}); }
+      const r = await sending;
+      if (creation) await creation;
       const untouched = changeRev === revAtSend; // rien n'a été tapé pendant l'envoi
       if (untouched) { dirty = false; localDraft.clear(); }
       DATA.status = r.status;
