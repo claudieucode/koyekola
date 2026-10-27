@@ -171,13 +171,29 @@ function start() {
     toast("Bloc verrouillé : clic droit (ou ⋮) → « Déverrouiller » pour le modifier.", "error");
   }
 
+  // ---------- Mouvement ----------
+  // Le mouvement accompagne l'action, il ne la retarde jamais : l'action est déjà faite quand la sortie s'anime ; filet de sécurité si animationend n'arrive pas
+  const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function leave(el, then, { ms = 160 } = {}) {
+    if (el.classList.contains("is-closing")) return;
+    if (reducedMotion()) { then(); return; }
+    el.classList.add("is-closing");
+    let over = false;
+    const end = () => { if (over) return; over = true; el.removeEventListener("animationend", end); then(); };
+    el.addEventListener("animationend", end);
+    setTimeout(end, ms + 60);
+  }
+
   // ---------- Fenêtres (modales WordPress) ----------
   function modal(title, body, actions = [], { wide = false } = {}) {
     const dlg = h("dialog", { class: `wp-modal${wide ? " is-wide" : ""}`, "aria-labelledby": "wp-modal-title" });
-    const close = () => { dlg.close(); dlg.remove(); };
+    const opener = document.activeElement;
+    const close = () => leave(dlg, () => { dlg.close(); dlg.remove(); if (opener && opener.isConnected && opener !== document.body && !dlg.contains(document.activeElement) && document.activeElement === document.body) opener.focus({ preventScroll: true }); });
     const foot = actions.length ? h("div", { class: "wp-modal-actions" }, ...actions.map((a) => h("button", { type: "button", class: a.primary ? "wp-btn-primary" : a.danger ? "wp-btn-danger" : "wp-btn-secondary", onclick: async () => { const keep = await a.run?.(close); if (keep !== true) close(); } }, a.label))) : null;
     dlg.append(h("div", { class: "wp-modal-head" }, h("h1", { id: "wp-modal-title" }, title), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer", onclick: close }, "×")), h("div", { class: "wp-modal-body" }, body), ...(foot ? [foot] : []));
-    dlg.addEventListener("cancel", () => dlg.remove());
+    // Échap : sortie animée si le navigateur laisse annuler l'événement ; sinon (pas d'activation utilisateur récente) il ferme de lui-même et on retire la fenêtre
+    dlg.addEventListener("cancel", (e) => { if (e.cancelable) { e.preventDefault(); close(); } });
+    dlg.addEventListener("close", () => dlg.remove());
     document.body.append(dlg);
     dlg.showModal();
     return { dlg, close };
@@ -820,7 +836,7 @@ function start() {
     const pop = h("div", { class: `wp-popover ${className}`, role: "dialog" }, content);
     document.body.append(pop);
     // Calque flottant commun (public/js/floating.js) : sous le bouton, au-dessus s'il manque de place, toujours dans l'écran
-    const done = () => { window.kbFloat?.close(pop); pop.remove(); document.removeEventListener("mousedown", outside); };
+    const done = () => { document.removeEventListener("mousedown", outside); if (pop.classList.contains("is-closing")) return; window.kbFloat?.close(pop); leave(pop, () => pop.remove(), { ms: 120 }); };
     if (window.kbFloat) window.kbFloat.open(anchor, pop, { align: "start", onClose: done });
     else {
       const r = anchor.getBoundingClientRect();
@@ -2934,20 +2950,28 @@ function start() {
     key: () => `be-draft-${postId || "nouveau"}`,
     write() { try { localStorage.setItem(this.key(), JSON.stringify({ at: Date.now(), title: field("title").value, excerpt: field("excerpt").value, content: editor.getHTML() })); } catch { /* stockage indisponible */ } },
     read() { try { return JSON.parse(localStorage.getItem(this.key()) || "null"); } catch { return null; } },
-    clear() { try { localStorage.removeItem(this.key()); localStorage.removeItem("be-draft-nouveau"); } catch { /* rien */ } },
+    // Frappe : le document entier (getHTML + JSON + localStorage, synchrones) n'est plus sérialisé à chaque touche mais une fois la frappe calmée ; flush à la sortie
+    timer: 0,
+    schedule() { clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = 0; if (dirty) this.write(); }, 600); },
+    flush() { if (this.timer) { clearTimeout(this.timer); this.timer = 0; if (dirty) this.write(); } },
+    clear() { clearTimeout(this.timer); this.timer = 0; try { localStorage.removeItem(this.key()); localStorage.removeItem("be-draft-nouveau"); } catch { /* rien */ } },
   };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") localDraft.flush(); });
+  window.addEventListener("pagehide", () => localDraft.flush());
   let changeRev = 0; // compteur de modifications : une frappe faite pendant un enregistrement ne doit pas être déclarée enregistrée
   function changed() {
     dirty = true;
     changeRev += 1;
     setState("Modifications non enregistrées", "is-dirty");
-    localDraft.write();
+    localDraft.schedule();
     scheduleAutosave();
     refreshLater();
   }
+  // L'analyse relit tout le document (getHTML + analyze) : elle attend une vraie pause et passe en temps mort plutôt que sur la frappe suivante
+  const refreshAnalysisIdle = debounce(() => { if (window.requestIdleCallback) window.requestIdleCallback(() => refreshAnalysis(), { timeout: 2500 }); else refreshAnalysis(); }, 900);
   const refreshLater = debounce(() => {
     refreshCounters(); refreshPreviews();
-    if ((editorPrefs.settings || {}).seoAnalysis !== false || !$('[data-sidebar-panel="seo"]').hidden) refreshAnalysis();
+    if ((editorPrefs.settings || {}).seoAnalysis !== false || !$('[data-sidebar-panel="seo"]').hidden) refreshAnalysisIdle();
     if ($('[data-panel="structure"]').classList.contains("is-open")) refreshStructure();
     if ($('[data-panel="checklist"]').classList.contains("is-open")) refreshPublication();
     if (secondaryMode === "media") refreshMedia();

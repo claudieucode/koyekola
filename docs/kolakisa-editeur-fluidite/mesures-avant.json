@@ -1,0 +1,150 @@
+{
+  "chrome": "150.0.7871.125",
+  "blocs": 800,
+  "frappe": {
+    "n": 27,
+    "median": 26.7,
+    "p95": 37.2,
+    "max": 41
+  },
+  "tachesLongues": [
+    227,
+    75
+  ],
+  "erreursConsole": [],
+  "mouvement": {
+    "fenetre": {
+      "ouverteAu": 11,
+      "animation": "none",
+      "animMs": "0s",
+      "transition": "all",
+      "transMs": "0s",
+      "retireeApresDeuxImages": true,
+      "focusRendu": false
+    },
+    "inserteur": {
+      "animation": "none",
+      "animMs": "0s",
+      "transition": "all",
+      "transMs": "0s",
+      "canevasDeplacePx": {
+        "x": 236,
+        "largeur": -122
+      }
+    },
+    "tokens": [
+      [
+        "--kolakisa-motion-fast",
+        null
+      ],
+      [
+        "--kolakisa-motion-normal",
+        null
+      ],
+      [
+        "--kolakisa-motion-panel",
+        null
+      ],
+      [
+        "--kolakisa-ease-standard",
+        null
+      ]
+    ],
+    "erreurs": [],
+    "cls": 0.3377,
+    "sourcesCls": [
+      {
+        "v": 0.0142,
+        "t": 317,
+        "n": [
+          "div.wp-summary",
+          "div.wp-panel",
+          "textarea#post-excerpt",
+          "input#post-cover-alt",
+          "p.wp-post-card-title"
+        ]
+      },
+      {
+        "v": 0.0035,
+        "t": 349,
+        "n": [
+          "div.wp-header-right",
+          "button.wp-document-bar"
+        ]
+      },
+      {
+        "v": 0.16,
+        "t": 970,
+        "n": [
+          "div.wp-canvas"
+        ]
+      },
+      {
+        "v": 0.16,
+        "t": 1826,
+        "n": [
+          "div.wp-canvas",
+          "div.wp-content"
+        ]
+      }
+    ]
+  },
+  "mouvementReduit": {
+    "fenetre": {
+      "ouverteAu": 13,
+      "animation": "none",
+      "animMs": "1e-05s",
+      "transition": "none",
+      "transMs": "0s",
+      "retireeApresDeuxImages": true,
+      "focusRendu": false
+    },
+    "inserteur": {
+      "animation": "none",
+      "animMs": "1e-05s",
+      "transition": "none",
+      "transMs": "0s",
+      "canevasDeplacePx": {
+        "x": 236,
+        "largeur": -122
+      }
+    },
+    "tokens": [
+      [
+        "--kolakisa-motion-fast",
+        null
+      ],
+      [
+        "--kolakisa-motion-normal",
+        null
+      ],
+      [
+        "--kolakisa-motion-panel",
+        null
+      ],
+      [
+        "--kolakisa-ease-standard",
+        null
+      ]
+    ],
+    "erreurs": [],
+    "cls": 0.32,
+    "sourcesCls": [
+      {
+        "v": 0.16,
+        "t": 868,
+        "n": [
+          "div.wp-canvas"
+        ]
+      },
+      {
+        "v": 0.16,
+        "t": 1269,
+        "n": [
+          "div.wp-canvas",
+          "div.wp-content"
+        ]
+      }
+    ]
+  }
+}

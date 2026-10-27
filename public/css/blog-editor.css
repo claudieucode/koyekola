@@ -1,3 +1,25 @@
+/* ---- Mouvement (TITAN XX) : jetons communs. Transform et opacity seulement ; l'action n'attend jamais l'animation ---- */
+:root {
+  --kolakisa-motion-fast: 120ms;      /* micro-interactions : survol, appui, focus */
+  --kolakisa-motion-menu: 160ms;      /* ouverture d'un menu ou d'un sélecteur */
+  --kolakisa-motion-menu-out: 110ms;
+  --kolakisa-motion-dialog: 200ms;    /* ouverture d'une fenêtre */
+  --kolakisa-motion-dialog-out: 150ms;
+  --kolakisa-motion-panel: 220ms;     /* ouverture d'un panneau */
+  --kolakisa-motion-toast: 200ms;
+  --kolakisa-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --kolakisa-ease-enter: cubic-bezier(0, 0, 0.2, 1);
+  --kolakisa-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+@keyframes kolakisa-dialog-in { from { opacity: 0; transform: translateY(4px) scale(0.97); } }
+@keyframes kolakisa-dialog-out { to { opacity: 0; transform: scale(0.98); } }
+@keyframes kolakisa-fade-in { from { opacity: 0; } }
+@keyframes kolakisa-fade-out { to { opacity: 0; } }
+@keyframes kolakisa-pop-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } }
+@keyframes kolakisa-pop-out { to { opacity: 0; transform: scale(0.98); } }
+@keyframes kolakisa-panel-in { from { opacity: 0; transform: translateX(-12px); } }
+@keyframes kolakisa-panel-in-end { from { opacity: 0; transform: translateX(12px); } }
+@keyframes kolakisa-toast-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
 /* ==========================================================================
    Apparences de l'éditeur (⋮ → Apparence) — système de jetons
    Composant → jeton (--ed-*) → thème. Le thème est posé sur <body class="wp-body"> : barre du haut, rail,
@@ -278,7 +300,7 @@
 .wp-notice-success { border-left-color: var(--success); background: var(--success-light); }
 .wp-notice-warning { border-left-color: var(--ed-warning-line); background: var(--warning-bg); }
 .wp-notice-close { border: 0; background: none; font-size: 18px; cursor: pointer; color: var(--primary); margin-left: auto; }
-.wp-snackbar { font-family: var(--font-body); position: fixed; left: 24px; bottom: 40px; z-index: 300; max-width: 600px; padding: 14px 24px; border-radius: 2px; background: var(--ed-toast-bg); color: var(--ed-toast-fg); box-shadow: 0 2px 8px rgba(11, 42, 64, 0.2); font-size: 13px; animation: wp-slide 0.2s ease-out; }
+.wp-snackbar { font-family: var(--font-body); position: fixed; left: 24px; bottom: 40px; z-index: 300; max-width: 600px; padding: 14px 24px; border-radius: 2px; background: var(--ed-toast-bg); color: var(--ed-toast-fg); box-shadow: 0 2px 8px rgba(11, 42, 64, 0.2); font-size: 13px; animation: kolakisa-toast-in var(--kolakisa-motion-toast) var(--kolakisa-ease-enter); }
 .wp-snackbar.is-error { background: var(--danger); }
 @keyframes wp-slide { from { transform: translateY(12px); opacity: 0; } }
 
@@ -287,6 +309,7 @@
 .wp-secondary { flex: none; width: var(--wp-secondary-w); display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--ed-surface); overflow: hidden; }
 .wp-secondary-head { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 8px 0 16px; border-bottom: 1px solid var(--border); font-weight: 500; }
 .wp-secondary-body { flex: 1; overflow-y: auto; padding: 16px; }
+.has-secondary .wp-secondary:not([hidden]) > * { animation: kolakisa-panel-in var(--kolakisa-motion-panel) var(--kolakisa-ease-enter); }
 .wp-canvas { flex: 1; min-width: 0; position: relative; overflow-y: auto; background: var(--ed-bg); }
 .wp-content { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 48px 40vh; }
 .wp-sidebar { flex: none; width: var(--wp-sidebar-w); border-left: 1px solid var(--border); background: var(--ed-surface); overflow-y: auto; overscroll-behavior: contain; }
@@ -342,7 +365,8 @@
 .wp-inline-appender svg { width: 22px; height: 22px; }
 
 /* ---------- Fenêtres surgissantes, menus ---------- */
-.wp-popover { position: absolute; z-index: 60; min-width: 220px; max-width: min(360px, calc(100vw - 16px)); padding: 8px; background: var(--ed-surface-2); border: 1px solid var(--border); border-radius: 2px; box-shadow: 0 2px 6px rgba(11, 42, 64, 0.05), 0 8px 24px rgba(11, 42, 64, 0.12); }
+.wp-popover.is-closing { animation: kolakisa-pop-out var(--kolakisa-motion-menu-out) var(--kolakisa-ease-exit) forwards; pointer-events: none; }
+.wp-popover { animation: kolakisa-pop-in var(--kolakisa-motion-menu) var(--kolakisa-ease-enter); transform-origin: top left; position: absolute; z-index: 60; min-width: 220px; max-width: min(360px, calc(100vw - 16px)); padding: 8px; background: var(--ed-surface-2); border: 1px solid var(--border); border-radius: 2px; box-shadow: 0 2px 6px rgba(11, 42, 64, 0.05), 0 8px 24px rgba(11, 42, 64, 0.12); }
 .wp-popover.is-link { width: min(380px, calc(100vw - 16px)); max-width: none; padding: 12px; }
 .wp-menu-list { display: flex; flex-direction: column; }
 .wp-popover:has(.wp-menu-list) { padding: 4px; }
@@ -466,7 +490,7 @@
 .wp-gallery-items img { width: 48px; height: 36px; object-fit: cover; border-radius: 2px; }
 
 /* ---------- Panneau de publication ---------- */
-.wp-prepublish { position: absolute; inset: 0 0 0 auto; z-index: 40; width: var(--wp-sidebar-w); display: flex; flex-direction: column; background: var(--ed-surface); color: var(--ed-text); border-left: 1px solid var(--border); box-shadow: -4px 0 12px rgba(11, 42, 64, 0.06); overflow-y: auto; animation: wp-in 0.2s ease-out; }
+.wp-prepublish { position: absolute; inset: 0 0 0 auto; z-index: 40; width: var(--wp-sidebar-w); display: flex; flex-direction: column; background: var(--ed-surface); color: var(--ed-text); border-left: 1px solid var(--border); box-shadow: -4px 0 12px rgba(11, 42, 64, 0.06); overflow-y: auto; animation: kolakisa-panel-in-end var(--kolakisa-motion-panel) var(--kolakisa-ease-enter); }
 @keyframes wp-in { from { transform: translateX(16px); } }
 @media (prefers-reduced-motion: reduce) { .wp-prepublish, .wp-snackbar { animation: none; } }
 .wp-prepublish-head { display: flex; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
@@ -491,6 +515,10 @@
 /* ---------- Fenêtres modales ---------- */
 .wp-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border: 0; border-radius: 8px; box-shadow: 0 5px 15px rgba(11, 42, 64, 0.08), 0 15px 27px rgba(11, 42, 64, 0.07), 0 30px 36px rgba(11, 42, 64, 0.04); overflow: hidden; display: flex; flex-direction: column; }
 .wp-modal:not([open]) { display: none; }
+.wp-modal[open] { animation: kolakisa-dialog-in var(--kolakisa-motion-dialog) var(--kolakisa-ease-enter); }
+.wp-modal[open]::backdrop { animation: kolakisa-fade-in var(--kolakisa-motion-dialog) var(--kolakisa-ease-enter); }
+.wp-modal.is-closing { animation: kolakisa-dialog-out var(--kolakisa-motion-dialog-out) var(--kolakisa-ease-exit) forwards; pointer-events: none; }
+.wp-modal.is-closing::backdrop { animation: kolakisa-fade-out var(--kolakisa-motion-dialog-out) var(--kolakisa-ease-exit) forwards; }
 .wp-modal.is-wide { width: min(1200px, calc(100vw - 32px)); height: min(860px, calc(100vh - 48px)); }
 .wp-modal::backdrop { background: rgba(11, 42, 64, 0.35); }
 .wp-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 64px; padding: 0 16px 0 32px; flex: none; }
@@ -1203,7 +1231,7 @@
 .wsp-dragging, .wsp-dragging * { cursor: grabbing !important; user-select: none; }
 .wsp-drop-overlay { position: absolute; inset: 0; z-index: 70; pointer-events: none; }
 .wsp-drop-overlay[hidden] { display: none; }
-.wsp-drop-preview { position: absolute; border: 2px dashed var(--accent); border-radius: 10px; background: rgba(2, 119, 182, 0.08); transition: all 0.08s linear; }
+.wsp-drop-preview { position: absolute; border: 2px dashed var(--accent); border-radius: 10px; background: rgba(2, 119, 182, 0.08); transition: transform 0.08s linear, width 0.08s linear, height 0.08s linear; }
 .wsp-drop-preview[data-kind="line"] { border: 0; border-radius: 3px; background: var(--accent); }
 .wsp-drop-preview[data-kind="tab"] { border-style: solid; background: rgba(2, 119, 182, 0.12); }
 .wsp-drop-label { position: absolute; padding: 4px 10px; border-radius: 999px; background: var(--ed-pressed-bg); color: var(--ed-pressed-fg); font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -1500,7 +1528,7 @@
 .kdp-trigger.is-empty span { color: var(--ed-muted); }
 .kdp-trigger svg { flex: none; color: var(--ed-muted); }
 .wp-help.is-warning { color: var(--ed-warning); }
-.kdp { position: fixed; z-index: 400; width: 292px; padding: 12px; border: 1px solid var(--ed-border); border-radius: 12px; background: var(--ed-surface-2); color: var(--ed-text); box-shadow: var(--ed-shadow); font-family: var(--font-body); font-size: 13px; animation: kdp-in 120ms ease-out; }
+.kdp { position: fixed; z-index: 400; width: 292px; padding: 12px; border: 1px solid var(--ed-border); border-radius: 12px; background: var(--ed-surface-2); color: var(--ed-text); box-shadow: var(--ed-shadow); font-family: var(--font-body); font-size: 13px; animation: kolakisa-pop-in var(--kolakisa-motion-menu) var(--kolakisa-ease-enter); }
 @keyframes kdp-in { from { opacity: 0; transform: translateY(-4px); } }
 .kdp-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
 .kdp-title { margin: 0; font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--ed-text); text-transform: capitalize; }
@@ -1539,7 +1567,7 @@
    pastilles d'état, focus discret mais visible. Uniquement des jetons --ed-* : toutes les apparences de l'éditeur
    (clair, nuit, noir, gris…) restent valables. La feuille d'écriture reste volontairement la plus sobre.
    ========================================================================== */
-.wp-body { --wp-header-h: 60px; --bs-r: 8px; --bs-ease: 0.15s ease; }
+.wp-body { --wp-header-h: 60px; --bs-r: 8px; --bs-ease: var(--kolakisa-motion-fast) var(--kolakisa-ease-standard); }
 
 /* Niveau 1 — contexte : barre supérieure */
 .wp-header { gap: 12px; background: var(--ed-surface); backdrop-filter: none; -webkit-backdrop-filter: none; border-bottom: 1px solid var(--ed-border); box-shadow: none; }
@@ -1579,7 +1607,7 @@
 .wp-header .wp-save-state.is-error { color: var(--ed-danger); background: var(--ed-danger-soft); font-weight: 700; }
 .wp-header .wp-save-state.is-error::before { background: var(--ed-danger); }
 /* Boutons : une action principale (Publier / Mettre à jour), les autres secondaires — mêmes formes que Marketing */
-.wp-btn-primary, .wp-btn-secondary, .wp-btn-tertiary, .wp-btn-danger { border-radius: var(--bs-r); min-height: 36px; padding: 6px 14px; font-weight: 600; transition: background var(--bs-ease), box-shadow var(--bs-ease), color var(--bs-ease); }
+.wp-btn-primary, .wp-btn-secondary, .wp-btn-tertiary, .wp-btn-danger { border-radius: var(--bs-r); min-height: 36px; padding: 6px 14px; font-weight: 600; transition: background var(--bs-ease), box-shadow var(--bs-ease), color var(--bs-ease), transform var(--bs-ease); }
 .wp-btn-primary { background: var(--ed-primary); color: var(--ed-on-primary); box-shadow: none; }
 .wp-btn-primary:hover { background: var(--ed-primary-hover); color: var(--ed-on-primary); }
 .wp-btn-secondary { background: transparent; color: var(--ed-text-2); box-shadow: inset 0 0 0 1px var(--ed-border-strong); }
@@ -1886,3 +1914,17 @@
 .ProseMirror :is(p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol)[data-tone="primary"] { color: var(--primary); }
 .ProseMirror [data-hide]:not([data-hide=""]) { outline: 1px dashed var(--muted); outline-offset: 3px; }
 .ProseMirror [data-hide]:not([data-hide=""])::before { content: "Masqué sur : " attr(data-hide); display: block; margin-bottom: 2px; font-size: 11px; color: var(--muted); }
+
+/* Micro-interactions : retour immédiat à l'appui (transform seulement, la mise en page ne bouge pas), focus et champs en douceur */
+.wp-btn-primary:active:not(:disabled), .wp-btn-secondary:active:not(:disabled), .wp-btn-tertiary:active:not(:disabled), .wp-btn-danger:active:not(:disabled) { transform: scale(0.98); }
+.wp-btn-icon:active:not(:disabled), .doc-btn:active:not(:disabled), .wp-rail-btn:active:not(:disabled) { transform: scale(0.96); }
+.wp-modal :is(input, select, textarea), .wp-popover :is(input, select, textarea), .wp-sidebar :is(input, select, textarea) { transition: border-color var(--kolakisa-motion-fast) var(--kolakisa-ease-standard), box-shadow var(--kolakisa-motion-fast) var(--kolakisa-ease-standard); }
+.wp-menu:not([hidden]) { animation: kolakisa-pop-in var(--kolakisa-motion-menu) var(--kolakisa-ease-enter); transform-origin: top right; }
+
+/* Réduction de mouvement : pas de zoom ni de translation, les états (focus, sélection) restent visibles */
+@media (prefers-reduced-motion: reduce) {
+  :root { --kolakisa-motion-fast: 0ms; --kolakisa-motion-menu: 0ms; --kolakisa-motion-menu-out: 0ms; --kolakisa-motion-dialog: 0ms; --kolakisa-motion-dialog-out: 0ms; --kolakisa-motion-panel: 0ms; --kolakisa-motion-toast: 0ms; }
+  .wp-modal[open], .wp-modal[open]::backdrop, .wp-popover, .kdp, .wp-snackbar, .wp-prepublish, .has-secondary .wp-secondary > * { animation: none; }
+  .wp-modal.is-closing, .wp-popover.is-closing, .wp-menu:not([hidden]) { animation: none; }
+  .wp-btn-primary:active, .wp-btn-secondary:active, .wp-btn-tertiary:active, .wp-btn-danger:active, .wp-btn-icon:active, .doc-btn:active, .wp-rail-btn:active { transform: none; }
+}
