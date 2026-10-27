@@ -27,6 +27,7 @@ import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatc
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
+import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
 
@@ -784,8 +785,16 @@ function start() {
   function blocksToParagraphs() { unwrapBlocks(); chain().setParagraph().run(); }
   function unwrapQuoteOnly() { if (editor.isActive("blockquote") && !editor.isActive("bulletList") && !editor.isActive("orderedList")) chain().toggleBlockquote().run(); }
   function toHeading(level) { unwrapBlocks(); chain().setHeading({ level }).run(); }
-  function transformMenu(anchor) {
+  // Exécute une opération de bloc : un refus explicite (bloc verrouillé, place invalide…) devient un message, jamais une perte silencieuse
+  function attempt(fn, okMessage) {
+    try { const r = fn(); editor.view.focus(); if (okMessage) toast(typeof okMessage === "function" ? okMessage(r) : okMessage); return r; } catch (e) { if (e instanceof TransformError) { toast(e.message, "error"); return null; } throw e; }
+  }
+  let styleClipboard = null;
+  function transformMenu(anchor, pos = null) {
+    const textual = pos === null || TEXT_TYPES.includes((editor.state.doc.nodeAt(pos) || {}).type?.name);
+    const structural = pos === null ? [] : transformsFor(editor, pos).map((t) => ({ label: t.label, run: () => attempt(() => t.run(), `Converti : ${t.label}.`) }));
     const items = [
+      ...(!textual ? [] : [
       { label: "Paragraphe", icon: "paragraph", run: blocksToParagraphs },
       ...[1, 2, 3, 4, 5, 6].map((l) => ({ label: `Titre ${l}${l === 2 ? " (section)" : ""}`, icon: "heading", run: () => toHeading(l) })),
       { label: "Liste", icon: "list", run: () => chain().toggleBulletList().run() },
@@ -793,6 +802,9 @@ function start() {
       { label: "Liste de contrôle", icon: "checklist", run: () => chain().toggleTaskList().run() },
       { label: "Citation", icon: "quote", run: () => chain().toggleBlockquote().run() },
       { label: "Code", icon: "code", run: () => chain().setCodeBlock().run() },
+      ]),
+      ...(textual && structural.length ? ["-"] : []),
+      ...structural,
     ];
     popover(anchor, h("div", {}, h("p", { class: "wp-menu-label" }, "Transformer en"), menuList(items)));
   }
@@ -827,6 +839,7 @@ function start() {
   }
   // Menu d'un bloc (bouton ⋮ de la barre du bloc, ou clic droit) : seulement les actions possibles pour ce bloc
   let blockClipboard = null;
+  const groupCount = () => { const r = blockRange(editor.state); return r ? r.nodes.length : 0; };
   const TEXT_TYPES = ["paragraph", "heading", "bulletList", "orderedList", "taskList", "blockquote", "codeBlock"];
   function blockMenuItems(top) {
     const node = editor.state.doc.nodeAt(top);
@@ -849,7 +862,11 @@ function start() {
       { label: "Insérer un paragraphe après", run: () => { const at = top + node.nodeSize; editor.chain().focus().insertContentAt(at, p("")).setTextSelection(at + 1).run(); } },
       ...(editor.state.doc.resolve(top).nodeBefore ? [{ label: "Déplacer vers le haut", icon: "up", shortcut: "Alt+↑", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, -1); } }] : []),
       ...(editor.state.doc.resolve(top + node.nodeSize).nodeAfter ? [{ label: "Déplacer vers le bas", icon: "down", shortcut: "Alt+↓", run: () => { editor.commands.setNodeSelection(top); moveBlock(editor.state, editor.view.dispatch, 1); } }] : []),
-      ...(!locked && TEXT_TYPES.includes(node.type.name) ? [{ label: "Transformer en…", run: () => { const sel = editor.state.selection; if (sel.to <= top || sel.from >= top + node.nodeSize) editor.chain().focus().setTextSelection(top + 1).run(); else editor.commands.focus(); /* plusieurs blocs sélectionnés : la sélection est gardée */ transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]")); } }] : []),
+      ...(!locked && (TEXT_TYPES.includes(node.type.name) || transformsFor(editor, top).length) ? [{ label: "Transformer en…", run: () => { const sel = editor.state.selection; if (TEXT_TYPES.includes(node.type.name)) { if (sel.to <= top || sel.from >= top + node.nodeSize) editor.chain().focus().setTextSelection(top + 1).run(); else editor.commands.focus(); /* plusieurs blocs sélectionnés : la sélection est gardée */ } transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]"), top); } }] : []),
+      ...(canGroup(editor).ok ? [{ label: groupCount() > 1 ? `Grouper ces ${groupCount()} blocs` : "Grouper", run: () => attempt(() => groupSelection(editor), (n) => `${n} bloc${n > 1 ? "s" : ""} groupé${n > 1 ? "s" : ""}.`) }] : []),
+      ...(canUngroup(node) ? [{ label: "Dégrouper", run: () => attempt(() => ungroupAt(editor, top), "Bloc dégroupé : son contenu est remis au niveau du dessus.") }] : []),
+      ...(copyStyles(node) ? [{ label: "Copier les styles", run: () => { styleClipboard = copyStyles(node); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); } }] : []),
+      ...(styleClipboard && !locked ? [{ label: "Coller les styles", shortcut: "Ctrl+Alt+V", run: () => attempt(() => pasteStyles(editor, top, styleClipboard), (n) => `${n} réglage${n > 1 ? "s" : ""} de style appliqué${n > 1 ? "s" : ""}.`) }] : []),
       ...(LOCKABLE_TYPES.includes(node.type.name) && editor.state.doc.resolve(top).depth === 0 ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
       ...(blockMenuExtra ? blockMenuExtra(top, node) : []),
       ...(locked ? [] : ["-", { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) }]),
@@ -1253,7 +1270,7 @@ function start() {
     target.replaceChildren();
     const type = b.node.type.name;
     const textType = b.text ? b.text.node.type.name : null;
-    const typeBtn = tbtn(`${nameOf(b.node)} : changer de type`, ICON_OF[type] || "paragraph", (e) => (b.text && !b.node.isAtom ? transformMenu(e.currentTarget) : null));
+    const typeBtn = tbtn(`${nameOf(b.node)} : changer de type`, ICON_OF[type] || "paragraph", (e) => (b.text && !b.node.isAtom ? transformMenu(e.currentTarget, b.top) : transformsFor(editor, b.top).length ? transformMenu(e.currentTarget, b.top) : null));
     // Poignée : pas de preventDefault au mousedown (il empêcherait le navigateur de démarrer le glisser)
     const grip = h("button", { type: "button", class: "wp-tb-btn wp-tb-grip", "aria-label": "Glisser pour déplacer le bloc (au clavier : flèches de la barre)", title: "Glisser pour déplacer le bloc" }, svg("drag"));
     grip.draggable = true;
