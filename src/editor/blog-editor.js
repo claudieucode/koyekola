@@ -27,7 +27,8 @@ import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatc
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
-import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS, TONES } from "./blog/supports";
+import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS, TONES, supportsStyle } from "./blog/supports";
+import { STYLE_PROPS, GROUPS as STYLE_GROUPS } from "../shared/blockStyles";
 import { PATTERNS, PATTERN_CATEGORIES } from "./blog/patterns";
 import { NotesBadges, setNoteCounts } from "./blog/notes";
 import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
@@ -2026,6 +2027,35 @@ function start() {
   const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte.", kbPreformatted: "Texte dont les espaces et les retours à la ligne sont conservés.", kbVerse: "Vers de poème ou de chanson, retours à la ligne respectés.", kbMore: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", kbFile: "Un document à télécharger (PDF, Office, ZIP…).", kbCover: "Une image de fond avec du texte par-dessus.", kbMediaText: "Une image à côté d'un texte." };
   let inspectorKey = "";
   let advancedOpen = false; // « Réglages avancés » reste ouvert d'un bloc à l'autre une fois ouvert
+  const openStyleGroups = new Set(); // groupes de « Style du bloc » ouverts (conservés d'un bloc à l'autre)
+  // Panneau repliable (même structure que « Réglages avancés »)
+  function foldPanel(id, title, isOpen, body, onToggle) {
+    const bodyEl = h("div", { class: "wp-panel-body", id: `be-${id}-body`, hidden: !isOpen }, ...body);
+    const panel = h("div", { class: `wp-panel${isOpen ? " is-open" : ""}`, "data-panel-style": id });
+    panel.append(h("h2", { class: "wp-panel-title" }, h("button", { type: "button", "aria-expanded": String(isOpen), "aria-controls": `be-${id}-body`, onclick: (e) => { bodyEl.hidden = !bodyEl.hidden; panel.classList.toggle("is-open", !bodyEl.hidden); e.currentTarget.setAttribute("aria-expanded", String(!bodyEl.hidden)); onToggle(!bodyEl.hidden); } }, title, h("span", { class: "wp-chevron", "aria-hidden": "true" }))), bodyEl);
+    return panel;
+  }
+  // Réglages de style communs (typographie, couleur, dimensions, espacement, bordure et ombre) : même description que le serveur (src/shared/blockStyles.js)
+  function styleSettings(t, a, set) {
+    const out = [];
+    for (const group of STYLE_GROUPS) {
+      const props = STYLE_PROPS.filter((p) => p.group === group && supportsStyle(t, p));
+      if (!props.length) continue;
+      const used = props.filter((p) => a[p.key]).length;
+      const controls = props.map((p) => {
+        if (p.color) {
+          const color = h("input", { type: "color", id: `wp-f${++uid}`, value: a[p.key] || "#0b1f4b", "aria-label": p.label });
+          color.addEventListener("input", debounce(() => set({ [p.key]: color.value.toLowerCase() }), 150));
+          return h("div", { class: "wp-control wp-color-control" }, h("label", { for: color.id, class: "wp-label" }, p.label), h("div", { class: "wp-color-row" }, color, h("span", { class: "wp-color-value" }, a[p.key] || "Par défaut"), a[p.key] ? h("button", { type: "button", class: "wp-btn-secondary wp-btn-small", onclick: () => set({ [p.key]: "" }) }, "Effacer") : null));
+        }
+        const sel = select(p.values, a[p.key] || "");
+        sel.addEventListener("change", () => set({ [p.key]: sel.value }));
+        return control(p.label, sel, null);
+      });
+      out.push(foldPanel(`st-${group.replace(/\W+/g, "")}`, used ? `${group} (${used})` : group, openStyleGroups.has(group) || used > 0, controls, (open) => { if (open) openStyleGroups.add(group); else openStyleGroups.delete(group); }));
+    }
+    return out;
+  }
   function renderInspector(force = false) {
     if ($('[data-sidebar-panel="bloc"]').hidden) return;
     const b = currentBlock();
@@ -2232,6 +2262,7 @@ function start() {
     if (t === "blockquote" && !isLocked(node)) inspector.append(section("Teinte", segmented(TONES, a.tone || "", (v) => set({ tone: v }))));
     // Styles du bloc (variantes) : liste fermée par type de bloc
     if (VARIANTS[t] && !isLocked(node)) inspector.append(section("Styles", segmented(VARIANTS[t], a.variant || "", (v) => set({ variant: v }))));
+    if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) for (const panel of styleSettings(t, a, set)) inspector.append(panel);
     // Réglages communs (comme Gutenberg) : ancre HTML et classes CSS supplémentaires
     if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) {
       const anchorIn = input({ value: a.anchor || "", maxlength: 64, placeholder: "ex. tarifs" });

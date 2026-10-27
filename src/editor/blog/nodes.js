@@ -3,17 +3,26 @@
 // l'action, accordéon, FAQ, étapes, comparaison. Les blocs « à risque » (vidéo, intégration…) ne sont que des marqueurs :
 // le lecteur réel est fabriqué par le serveur à l'affichage.
 import { Node, Extension, mergeAttributes } from "@tiptap/core";
+import { STYLE_PROPS, styleDataOf, colorStyle } from "../../shared/blockStyles";
 
 const WIDTHS = ["25", "33", "50", "66", "75", "100"];
 const ALIGNS = ["left", "center", "right", "wide"];
 export const CALLOUT_LABELS = { info: "Information", conseil: "Conseil", attention: "Attention", "a-retenir": "À retenir", "bon-a-savoir": "Bon à savoir", note: "Note", important: "Important", astuce: "Astuce" };
+
+// Réglages de style (marges, bordure, couleurs…) sur le conteneur d'un bloc dessiné par sa propre vue
+export function applyStyleAttrs(dom, attrs) {
+  for (const p of STYLE_PROPS) dom.removeAttribute(p.attr);
+  for (const [k, v] of Object.entries(styleDataOf(attrs))) dom.setAttribute(k, v);
+  const css = colorStyle(attrs);
+  if (css) dom.setAttribute("style", css); else if (dom.getAttribute("style") && /--kb-/.test(dom.getAttribute("style"))) dom.removeAttribute("style");
+}
 
 // Vue d'un bloc « atome » dans l'éditeur : une carte non modifiable au clavier (on la règle par sa fenêtre)
 function atomView(build) {
   return ({ node }) => {
     const dom = document.createElement("div");
     dom.contentEditable = "false";
-    const paint = (n) => { dom.replaceChildren(); build(dom, n.attrs); };
+    const paint = (n) => { dom.replaceChildren(); build(dom, n.attrs); applyStyleAttrs(dom, n.attrs); };
     paint(node);
     return { dom, update: (n) => { if (n.type !== node.type) return false; paint(n); return true; } };
   };
@@ -128,6 +137,8 @@ export const KbGallery = Node.create({
 // Bloc verrouillé : marqueur conservé dans le HTML enregistré (attribut global « locked », voir editing.js)
 // Repères communs aux blocs dessinés par leur propre renderHTML : verrou, identité du bloc, bloc masqué
 export const lockOf = (node) => ({
+  ...styleDataOf(node.attrs),
+  ...(colorStyle(node.attrs) ? { style: colorStyle(node.attrs) } : {}),
   ...(node.attrs.anchor ? { id: node.attrs.anchor } : {}),
   ...(node.attrs.xclass ? { "data-class": node.attrs.xclass } : {}),
   ...(node.attrs.variant ? { "data-variant": node.attrs.variant } : {}),

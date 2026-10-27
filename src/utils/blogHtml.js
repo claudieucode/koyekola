@@ -15,6 +15,8 @@ const DomUtils = require("domutils");
 const { slugify } = require("./format");
 const { parseVideoUrl, embedProvider } = require("./video");
 const { renderArticle, CALLOUTS } = require("./articleMarkdown");
+const { STYLE_PROPS, cleanValue, colorStyleFromData } = require("../shared/blockStyles");
+const CONTAINER_CLASSES = new Set(require("../shared/blockRegistry").containerClasses());
 
 const MAX_HTML = 300000;
 const WORDS_PER_MINUTE = 230;
@@ -202,6 +204,15 @@ for (const tag of LOCKABLE) {
       const allowed = VARIANTS[tagName] || VARIANTS[`${tagName}.${first}`] || [];
       if (allowed.includes(attribs["data-variant"])) r.attribs = { ...r.attribs, "data-variant": attribs["data-variant"] };
     }
+    // Réglages de style communs (typographie, couleur, espacement, bordure, ombre, dimensions) : listes fermées ou couleur #rrggbb, voir src/shared/blockStyles.js
+    if (r.tagName === tagName) {
+      for (const p of STYLE_PROPS) {
+        if (p.scope === "text" && !TONE_TAGS.has(tagName) && tagName !== "pre") continue;
+        if (p.scope === "container" && !CONTAINER_CLASSES.has(String(r.attribs.class || "").split(" ")[0])) continue;
+        const v = cleanValue(p.key, attribs[p.attr]);
+        if (v) r.attribs = { ...r.attribs, [p.attr]: v };
+      }
+    }
     const extra = String(attribs["data-class"] || "").split(/\s+/).filter((c) => XCLASS_TOKEN.test(c)).slice(0, 5);
     if (r.tagName === tagName && extra.length) r.attribs = { ...r.attribs, "data-class": [...new Set(extra)].join(" ") };
     return r;
@@ -232,7 +243,7 @@ const saveOptions = {
 };
 // allowedClasses: false désactive le filtre de classes de sanitize-html ; nos transformations ne laissent passer que les classes listées
 saveOptions.allowedAttributes["*"] = [];
-for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name", "data-tone", "data-hide"];
+for (const tag of LOCKABLE) saveOptions.allowedAttributes[tag] = [...(saveOptions.allowedAttributes[tag] || []), "data-locked", "data-block-id", "data-hidden", "id", "data-class", "data-variant", "data-name", "data-tone", "data-hide", ...STYLE_PROPS.map((p) => p.attr)];
 
 function tidy(html) {
   return html
@@ -346,6 +357,11 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
     if (n.attribs.id) usedIds.add(n.attribs.id);
     if (n.attribs["data-class"]) { n.attribs.class = [n.attribs.class, n.attribs["data-class"]].filter(Boolean).join(" "); delete n.attribs["data-class"]; }
   }
+  // Couleurs libres des réglages de style (déjà validées #rrggbb par la sanitisation) : déposées en variables CSS, jamais en style libre
+  for (const n of DomUtils.findAll((x) => x.attribs && STYLE_PROPS.some((p) => p.color && x.attribs[p.attr]), doc.children)) {
+    const css = colorStyleFromData(n.attribs);
+    if (css) n.attribs.style = [n.attribs.style, css].filter(Boolean).join("; ");
+  }
   const uniqueId = (t) => {
     const base = slugify(t).slice(0, 60) || "section";
     let id = base;
@@ -362,6 +378,9 @@ function renderBlogHtml(html, { courseCard = () => null, newsletterHtml = null, 
       if (node.attribs.id && !first.attribs.id) first.attribs.id = node.attribs.id;
       const extra = String(node.attribs.class || "").split(/\s+/).filter((c) => /^kb-x-/.test(c));
       if (extra.length) first.attribs.class = [first.attribs.class, ...extra].filter(Boolean).join(" ");
+      // Réglages de style (marges, bordure, couleurs…) : portés par le lecteur qui remplace le bloc
+      for (const p of STYLE_PROPS) if (node.attribs[p.attr] && !first.attribs[p.attr]) first.attribs[p.attr] = node.attribs[p.attr];
+      if (node.attribs.style && !first.attribs.style) first.attribs.style = node.attribs.style;
     }
     nodes.forEach((n) => DomUtils.prepend(node, n));
     DomUtils.removeElement(node);

@@ -7,6 +7,14 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { LOCKABLE_TYPES } from "./editing";
+import { containerNames } from "../../shared/blockRegistry";
+import { STYLE_PROPS, cleanValue, colorStyle } from "../../shared/blockStyles";
+
+// Types de blocs qui reçoivent les réglages « texte » (typographie) et « conteneur » (espace entre blocs internes)
+export const TEXT_STYLE_TYPES = ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "kbPreformatted", "kbVerse", "codeBlock"];
+export const CONTAINER_STYLE_TYPES = containerNames(); // dérivé du registre central
+export const styleScopeTypes = (p) => (p.scope === "text" ? TEXT_STYLE_TYPES : p.scope === "container" ? CONTAINER_STYLE_TYPES : LOCKABLE_TYPES);
+export const supportsStyle = (type, p) => styleScopeTypes(p).includes(type);
 
 export const ANCHOR_RE = /^[a-z][a-z0-9_-]{0,63}$/;
 export const XCLASS_TOKEN = /^kb-x-[a-z0-9-]{1,30}$/;
@@ -95,7 +103,22 @@ export const BlockSupports = Extension.create({
           renderHTML: (attrs) => (attrs.xclass ? { "data-class": attrs.xclass } : {}),
         },
       },
-    }, {
+    }, ...STYLE_PROPS.map((p) => ({
+      // Réglages de style communs (typographie, couleur, espacement, bordure, ombre, dimensions) : src/shared/blockStyles.js
+      types: styleScopeTypes(p),
+      attributes: {
+        [p.key]: {
+          default: "",
+          keepOnSplit: p.scope === "text",
+          parseHTML: (el) => cleanValue(p.key, el.getAttribute(p.attr)),
+          renderHTML: (attrs) => {
+            const v = attrs[p.key] ? cleanValue(p.key, attrs[p.key]) : "";
+            if (!v) return {};
+            return p.color ? { [p.attr]: v, style: colorStyle({ [p.key]: v }) } : { [p.attr]: v };
+          },
+        },
+      },
+    })), {
       // Lettrine (premier paragraphe d'une section)
       types: ["paragraph"],
       attributes: { dropcap: { default: false, keepOnSplit: false, parseHTML: (el) => el.getAttribute("data-dropcap") === "true", renderHTML: (attrs) => (attrs.dropcap ? { "data-dropcap": "true" } : {}) } },

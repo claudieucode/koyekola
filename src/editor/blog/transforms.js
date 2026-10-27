@@ -6,7 +6,8 @@ import { Extension } from "@tiptap/core";
 import { NodeSelection, TextSelection, Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { closeHistory } from "@tiptap/pm/history";
-
+import { STYLE_PROPS } from "../../shared/blockStyles";
+import { supportsStyle } from "./supports";
 // Blocs qui peuvent en contenir d'autres au même niveau : la sélection de plusieurs blocs « frères » se groupe dans l'un d'eux
 const GROUP_PARENTS = new Set(["doc", "kbGroup", "kbColumn", "callout", "kbCta", "kbCover"]);
 export const CALLOUT_TYPES = [["info", "Encadré Information"], ["conseil", "Encadré Conseil"], ["attention", "Encadré Attention"], ["a-retenir", "Encadré À retenir"], ["bon-a-savoir", "Encadré Bon à savoir"], ["note", "Encadré Note"], ["important", "Encadré Important"], ["astuce", "Encadré Astuce"]];
@@ -170,7 +171,8 @@ export const STYLE_KEYS = {
   kbMediaText: ["side", "width"],
 };
 const TEXT_STYLE = ["textAlign"];
-const keysOf = (name) => STYLE_KEYS[name] || (["paragraph", "heading"].includes(name) ? TEXT_STYLE : []);
+// + réglages de style communs (typographie, couleur, espacement, bordure, ombre, dimensions) qui s'appliquent à ce type de bloc
+const keysOf = (name) => [...(STYLE_KEYS[name] || (["paragraph", "heading"].includes(name) ? TEXT_STYLE : [])), ...STYLE_PROPS.filter((p) => supportsStyle(name, p)).map((p) => p.key)];
 export function copyStyles(node) {
   const keys = keysOf(node.type.name);
   if (!keys.length) return null;

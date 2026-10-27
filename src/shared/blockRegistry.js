@@ -20,7 +20,7 @@ const BLOCKS = [
   { name: "kbVerse", label: "Vers", category: "Texte", tag: "pre", cls: "kb-verse", top: true, sample: '<pre class="kb-verse">a\nb</pre>', since: 2 },
   { name: "table", label: "Tableau", category: "Texte", tag: "table", top: true, sample: "<table><tbody><tr><td><p>1</p></td></tr></tbody></table>", since: 1 },
   { name: "horizontalRule", label: "Séparateur", category: "Mise en forme", tag: "hr", top: true, sample: "<hr>", since: 1 },
-  { name: "kbAccordion", label: "Détails", category: "Texte", tag: "details", cls: "kb-accordion", top: true, sample: '<details class="kb-accordion"><summary>R</summary><div class="kb-accordion-body"><p>x</p></div></details>', since: 1 },
+  { name: "kbAccordion", label: "Détails", category: "Texte", tag: "details", cls: "kb-accordion", top: true, container: true, sample: '<details class="kb-accordion"><summary>R</summary><div class="kb-accordion-body"><p>x</p></div></details>', since: 1 },
   // --- Média ---
   { name: "kbImage", label: "Image", category: "Média", tag: "figure", cls: "kb-image", top: true, sample: '<figure class="kb-image"><img src="/uploads/thumbnails/a.png" alt="x"></figure>', since: 1 },
   { name: "kbGallery", label: "Galerie", category: "Média", tag: "div", cls: "kb-gallery", top: true, sample: '<div class="kb-gallery" data-columns="3"><figure class="kb-image"><img src="/uploads/thumbnails/a.png" alt="x"></figure></div>', since: 1 },
@@ -63,4 +63,4 @@ const BLOCKS = [
 const SCHEMA_VERSION = Math.max(...BLOCKS.map((b) => b.since));
 
 const byName = new Map(BLOCKS.map((b) => [b.name, b]));
-module.exports = { BLOCKS, SCHEMA_VERSION, byName, topNames: () => BLOCKS.filter((b) => b.top).map((b) => b.name) };
+module.exports = { BLOCKS, SCHEMA_VERSION, byName, topNames: () => BLOCKS.filter((b) => b.top).map((b) => b.name), containerNames: () => BLOCKS.filter((b) => b.top && b.container).map((b) => b.name), containerClasses: () => BLOCKS.filter((b) => b.top && b.container).map((b) => b.cls) };
