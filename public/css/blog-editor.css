@@ -1812,7 +1812,7 @@
 }
 
 /* Nouveaux blocs : préformaté, vers, couverture, média et texte, légende de tableau, variantes */
-.ProseMirror pre.kb-preformatted, .ProseMirror pre.kb-verse { margin: 1em 0; padding: 14px 18px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); font-family: ui-monospace, Menlo, monospace; font-size: 0.92rem; line-height: 1.6; }
+.ProseMirror pre.kb-preformatted, .ProseMirror pre.kb-verse { color: var(--text); margin: 1em 0; padding: 14px 18px; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); font-family: ui-monospace, Menlo, monospace; font-size: 0.92rem; line-height: 1.6; }
 .ProseMirror pre.kb-verse { font-family: var(--font-display, Georgia, serif); font-size: 1.05rem; font-style: italic; background: none; border: 0; border-left: 3px solid var(--accent); border-radius: 0; }
 .ProseMirror pre.kb-preformatted:empty::before, .ProseMirror pre.kb-verse:empty::before { content: "Saisissez du texte brut…"; color: var(--muted); }
 .kb-ed-cover { position: relative; margin: 1em 0; padding: 28px; min-height: 240px; display: flex; flex-direction: column; justify-content: center; border-radius: 10px; color: #fff; background-color: var(--primary); background-image: linear-gradient(rgba(0, 0, 0, var(--ov, 0.4)), rgba(0, 0, 0, var(--ov, 0.4))), var(--cover-src, none); background-size: cover; background-position: center; text-align: center; outline: 1px dashed var(--border); outline-offset: 2px; }
@@ -1862,3 +1862,19 @@
 .wp[data-canvas-device="mobile"] .kb-ed-columns:not([data-stack="never"]), .wp[data-canvas-device="tablet"] .kb-ed-columns[data-stack="tablet"], .wp[data-canvas-device="mobile"] .kb-ed-mediatext, .wp[data-canvas-device="mobile"] .kb-ed-mediatext[data-width="33"] { grid-template-columns: minmax(0, 1fr); }
 .wp[data-canvas-device="mobile"] .kb-ed-mediatext[data-side="right"] > .kb-ed-image { order: 0; }
 .wp[data-canvas-device="mobile"] .kb-ed-group[data-pad="l"] { padding: 22px; }
+
+/* Notes de travail */
+.wp-note-form { display: grid; gap: 8px; margin: 10px 0 14px; }
+.wp-notes { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
+.wp-note { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); display: grid; gap: 8px; }
+.wp-note.is-resolved { opacity: 0.75; background: var(--surface-alt); }
+.wp-note-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.wp-note-head small { color: var(--muted); }
+.wp-note-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wp-note-block { justify-self: start; padding: 2px 8px; border: 0; border-radius: 999px; background: var(--accent-light); color: var(--accent-dark); font-size: 12px; font-weight: 600; cursor: pointer; }
+.wp-note-reply { padding: 8px 10px; border-left: 3px solid var(--border); display: grid; gap: 4px; }
+.wp-note-replybox { display: grid; gap: 6px; }
+.wp-note-actions { display: flex; gap: 10px; align-items: center; }
+.kb-note-badge { position: absolute; right: -8px; transform: translateX(100%); margin-top: 2px; padding: 1px 7px; border: 0; border-radius: 999px; background: var(--accent-light); color: var(--accent-dark); font-size: 12px; font-weight: 700; cursor: pointer; }
+
+[data-notes-body] { padding: 14px 16px 24px; }

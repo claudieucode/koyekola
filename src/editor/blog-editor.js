@@ -29,6 +29,7 @@ import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
 import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS } from "./blog/supports";
 import { PATTERNS, PATTERN_CATEGORIES } from "./blog/patterns";
+import { NotesBadges, setNoteCounts } from "./blog/notes";
 import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
@@ -224,6 +225,7 @@ function start() {
       BlockLock.configure({ onBlocked: () => lockedNotice() }),
       BlockSupports,
       MultiSelectHighlight,
+      NotesBadges.configure({ onClick: (id) => openNotes(id) }),
       BlockIdentity.configure({ hiddenLabel: (n) => blockNameOf(n), onShow: (id) => { setHidden(editor, id, false); toast("Bloc de nouveau visible."); } }),
       FindHighlight,
     ],
@@ -1909,6 +1911,7 @@ function start() {
     }
     if (key === "bloc") renderInspector(true);
     if (key === "seo") loadSeoSite();
+    if (key === "notes") loadNotes();
     afterVisibility();
   }
   sidebarTabs.forEach((t) => t.addEventListener("click", () => showSidebarTab(t.dataset.sidebarTab)));
@@ -2238,6 +2241,86 @@ function start() {
     }
     inspector.append(section("Avancé", h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => duplicateBlock(b.top) }, "Dupliquer"), h("button", { type: "button", class: "wp-btn-danger", onclick: () => deleteBlock(b.top) }, "Supprimer le bloc"))));
   }
+
+  // ---------- Notes de travail (jamais publiées) ----------
+  const notesBody = $("[data-notes-body]");
+  let notesState = { notes: [], me: null, canModerate: false, loaded: false, filter: "open", focusBlock: null };
+  const noteDate = (sql) => fmtDate(sql);
+  async function loadNotes() {
+    if (!postId) { notesState.loaded = true; notesState.notes = []; renderNotes(); return; }
+    try { const r = await api(`/formateur/blog/${postId}/notes`); notesState = { ...notesState, notes: r.notes, me: r.me, canModerate: r.canModerate, loaded: true }; } catch (e) { toast(`Notes : ${e.message}`, "error"); }
+    renderNotes();
+  }
+  const noteCounts = () => { const out = {}; for (const n of notesState.notes) if (!n.resolved && n.blockId) out[n.blockId] = (out[n.blockId] || 0) + 1; return out; };
+  function refreshNoteBadges() {
+    try { setNoteCounts(editor, noteCounts()); } catch { /* éditeur en cours de démarrage */ }
+    const open = notesState.notes.filter((n) => !n.resolved).length;
+    const dot = $("[data-notes-dot]");
+    if (dot) { dot.hidden = !open; dot.title = open ? `${open} note${open > 1 ? "s" : ""} ouverte${open > 1 ? "s" : ""}` : ""; }
+  }
+  async function noteAction(url, json) {
+    try { const r = await api(url, { method: "POST", json: json || {} }); notesState.notes = r.notes; renderNotes(); } catch (e) { toast(e.message, "error"); }
+  }
+  function renderNotes() {
+    if (!notesBody) return;
+    const kept = notesBody.querySelector("[data-note-new]");
+    const draft = kept ? kept.value : "";
+    const target = notesState.focusBlock;
+    const sel = currentBlock();
+    const selId = sel && sel.node.attrs.blockId;
+    const open = notesState.notes.filter((n) => !n.resolved), done = notesState.notes.filter((n) => n.resolved);
+    const area = textarea({ rows: 3, maxlength: 2000, placeholder: "Une remarque, une question, une consigne pour la personne qui relira…" }, draft);
+    area.setAttribute("data-note-new", "");
+    area.setAttribute("aria-label", "Texte de la note");
+    const link = checkbox(selId ? `Lier au bloc sélectionné (${nameOf(sel.node)})` : "Lier à un bloc (sélectionnez d'abord un bloc)", Boolean(target || selId), () => {});
+    const linkBox = link.querySelector("input");
+    linkBox.disabled = !selId && !target;
+    linkBox.setAttribute("data-note-link", "");
+    const send = h("button", { type: "button", class: "wp-btn-primary", "data-note-send": "", onclick: async () => {
+      const body = area.value.trim();
+      if (!body) { toast("Écrivez votre note avant de l'envoyer.", "error"); area.focus(); return; }
+      send.disabled = true;
+      try {
+        const id = await ensurePost();
+        const blockId = linkBox.checked ? (target || selId) : null;
+        const r = await api(`/formateur/blog/${id}/notes`, { method: "POST", json: { body, blockId } });
+        notesState.notes = r.notes; notesState.focusBlock = null; notesState.filter = "open"; area.value = "";
+        renderNotes(); toast("Note ajoutée. Elle n'est visible que dans l'éditeur.");
+      } catch (e) { toast(e.message, "error"); send.disabled = false; }
+    } }, "Ajouter la note");
+    const thread = (n) => {
+      const blockNode = n.blockId ? (findBlock(editor.state.doc, n.blockId) || {}).node : null;
+      const head = (x) => h("div", { class: "wp-note-head" }, h("strong", {}, x.author), h("small", {}, noteDate(x.createdAt)));
+      const mine = (x) => notesState.me === x.userId || notesState.canModerate;
+      const reply = textarea({ rows: 2, maxlength: 2000, placeholder: "Répondre…" }, "");
+      reply.setAttribute("aria-label", "Répondre à cette note");
+      return h("li", { class: `wp-note${n.resolved ? " is-resolved" : ""}`, "data-note": n.id },
+        head(n),
+        n.blockId ? h("button", { type: "button", class: "wp-note-block", onclick: () => (blockNode ? selectBlockById(n.blockId) : toast("Ce bloc n'est plus dans l'article.", "error")) }, blockNode ? `Bloc : ${nameOf(blockNode)}` : "Bloc supprimé de l'article") : h("small", { class: "wp-help" }, "Note sur tout l'article"),
+        h("p", { class: "wp-note-body" }, n.body),
+        ...n.replies.map((r) => h("div", { class: "wp-note-reply", "data-note-reply": r.id }, head(r), h("p", { class: "wp-note-body" }, r.body), mine(r) ? h("button", { type: "button", class: "wp-btn-link is-danger", "aria-label": "Supprimer cette réponse", onclick: () => { if (confirm("Supprimer cette réponse ?")) noteAction(`/formateur/blog/${postId}/notes/${r.id}/supprimer`); } }, "Supprimer") : null)),
+        n.resolved ? null : h("div", { class: "wp-note-replybox" }, reply, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { if (reply.value.trim()) noteAction(`/formateur/blog/${postId}/notes`, { body: reply.value, parentId: n.id }); } }, "Répondre")),
+        h("div", { class: "wp-note-actions" },
+          h("button", { type: "button", class: "wp-btn-secondary", "data-note-resolve": n.id, onclick: () => noteAction(`/formateur/blog/${postId}/notes/${n.id}/resoudre`, { resolved: !n.resolved }) }, n.resolved ? "Rouvrir" : "Résoudre"),
+          mine(n) ? h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => { if (confirm("Supprimer cette note et ses réponses ?")) noteAction(`/formateur/blog/${postId}/notes/${n.id}/supprimer`); } }, "Supprimer") : null));
+    };
+    const shown = notesState.filter === "done" ? done : open;
+    notesBody.replaceChildren(
+      h("p", { class: "wp-help" }, "Les notes servent à travailler à plusieurs. Elles ne sont jamais publiées."),
+      h("div", { class: "wp-note-form" }, area, link, send),
+      segmented([["open", `Ouvertes (${open.length})`], ["done", `Résolues (${done.length})`]], notesState.filter, (v) => { notesState.filter = v; renderNotes(); }),
+      shown.length ? h("ul", { class: "wp-notes" }, ...shown.map(thread)) : h("p", { class: "wp-help" }, notesState.filter === "done" ? "Aucune note résolue." : "Aucune note ouverte."));
+    refreshNoteBadges();
+  }
+  // Ouvre l'onglet Notes (depuis la pastille d'un bloc, le raccourci Ctrl+Alt+M ou la palette) ; le bloc visé est lié par défaut
+  function openNotes(blockId = null) {
+    if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click();
+    notesState.focusBlock = blockId;
+    showSidebarTab("notes");
+    setTimeout(() => { const a = notesBody.querySelector("[data-note-new]"); if (a) a.focus(); }, 60);
+  }
+  editor.on("selectionUpdate", () => { if (!$('[data-sidebar-panel="notes"]').hidden && !notesBody.contains(document.activeElement)) renderNotes(); });
+  if (DATA.postId) loadNotes().catch(() => {});
 
   // ---------- Article : étiquettes, catégories, sous-catégories ----------
   const tagsValue = $("[data-tags-value]");
@@ -2961,7 +3044,8 @@ function start() {
     if (e.key === "Escape") closePopovers();
     // Raccourcis globaux (mêmes combinaisons que Gutenberg) : éditeur de code, plein écran, vue en liste, réglages, sans distraction, aide, régions
     if (e.target.closest && e.target.closest(".wsp-palette, .wp-modal") && !(mod && e.shiftKey && e.altKey)) return;
-    if (mod && e.shiftKey && e.altKey && e.code === "KeyM") { e.preventDefault(); $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click(); }
+    if (mod && !e.shiftKey && e.altKey && e.code === "KeyM") { e.preventDefault(); const b = currentBlock(); openNotes(b ? b.node.attrs.blockId || null : null); }
+    else if (mod && e.shiftKey && e.altKey && e.code === "KeyM") { e.preventDefault(); $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click(); }
     else if (mod && e.shiftKey && e.altKey && e.code === "KeyF") { e.preventDefault(); toggleFullscreen(); }
     else if (e.shiftKey && e.altKey && !mod && e.code === "KeyO" || (e.ctrlKey && e.altKey && !e.shiftKey && e.code === "KeyO")) { e.preventDefault(); setSecondary("list"); }
     else if (mod && e.shiftKey && !e.altKey && e.code === "Comma") { e.preventDefault(); $(".wp-header [data-toggle-sidebar]").click(); }
@@ -2974,7 +3058,7 @@ function start() {
   // Fenêtre d'aide : regroupée comme celle de Gutenberg (Global, Sélection, Bloc, Texte). Mac : Cmd à la place de Ctrl.
   function showShortcuts() {
     const groups = [
-      ["Global", [["Ctrl + S", "Enregistrer"], ["Ctrl + Z", "Annuler"], ["Ctrl + Maj + Z  ou  Ctrl + Y", "Rétablir"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer"], ["Ctrl + Maj + Alt + M", "Éditeur visuel / éditeur de code"], ["Ctrl + Maj + Alt + F", "Plein écran"], ["Maj + Alt + O", "Vue en liste"], ["Ctrl + Maj + ,", "Afficher / masquer les réglages"], ["Ctrl + Maj + \\", "Mode sans distraction"], ["Maj + Alt + N / P", "Région suivante / précédente"], ["Alt + F10", "Barre d'outils du bloc"], ["Maj + Alt + H", "Cette aide"], ["Échap", "Fermer un menu"]]],
+      ["Global", [["Ctrl + S", "Enregistrer"], ["Ctrl + Z", "Annuler"], ["Ctrl + Maj + Z  ou  Ctrl + Y", "Rétablir"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer"], ["Ctrl + Maj + Alt + M", "Éditeur visuel / éditeur de code"], ["Ctrl + Alt + M", "Ajouter une note sur le bloc"], ["Ctrl + Maj + Alt + F", "Plein écran"], ["Maj + Alt + O", "Vue en liste"], ["Ctrl + Maj + ,", "Afficher / masquer les réglages"], ["Ctrl + Maj + \\", "Mode sans distraction"], ["Maj + Alt + N / P", "Région suivante / précédente"], ["Alt + F10", "Barre d'outils du bloc"], ["Maj + Alt + H", "Cette aide"], ["Échap", "Fermer un menu"]]],
       ["Sélection", [["Ctrl + A", "Tout sélectionner (texte, puis tous les blocs)"], ["Maj + ↑ / ↓", "Étendre la sélection à plusieurs blocs"], ["Maj + clic (vue en liste)", "Sélectionner une plage de blocs"]]],
       ["Bloc", [["Ctrl + Maj + D", "Dupliquer"], ["Maj + Alt + Z", "Supprimer"], ["Ctrl + Alt + T / Y", "Insérer un paragraphe avant / après"], ["Ctrl + Maj + Alt + T / Y", "Monter / descendre"], ["Alt + ↑ / ↓", "Déplacer d'un cran"], ["Ctrl + G", "Grouper les blocs sélectionnés"], ["Ctrl + Alt + V", "Coller les styles"], ["Ctrl + Alt + R", "Renommer le bloc"], ["Ctrl + Maj + H", "Masquer / afficher le bloc"], ["/", "Choisir un bloc (début d'un paragraphe vide)"], ["Clic droit", "Menu du bloc (Maj + clic droit : menu du navigateur)"]]],
       ["Texte", [["Ctrl + B / I / U", "Gras / italique / souligné"], ["Maj + Alt + 1 à 6", "Titre de niveau 1 à 6"], ["Maj + Alt + 0", "Paragraphe"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + V", "Coller sans mise en forme"]]],
@@ -3504,6 +3588,7 @@ function start() {
         { id: "ed:tab-bloc", group: "Panneaux", label: "Ouvrir les réglages du bloc", run: () => { if (sidebar.hidden) $(".wp-header [data-toggle-sidebar]").click(); showSidebarTab("bloc"); } },
         ...blockCommands().filter((c) => c.enabled).map((c) => ({ id: `block:${c.id}`, group: "Bloc", label: c.shortcut ? `${c.label}` : c.label, run: () => { editor.commands.focus(); c.run(); } })),
         ...(blockRange(editor.state) ? transformsFor(editor, blockRange(editor.state).nodes[0].pos).map((t) => ({ id: `transform:${t.id}`, group: "Bloc", label: `Transformer en : ${t.label}`, run: () => { editor.commands.focus(); attempt(() => t.run(), `Converti : ${t.label}.`); } })) : []),
+        { id: "ed:notes", group: "Panneaux", label: "Ajouter une note (sur le bloc sélectionné)", run: () => { const b = currentBlock(); openNotes(b ? b.node.attrs.blockId || null : null); } },
         { id: "ed:distraction", group: "Affichage", label: "Mode sans distraction (masquer les panneaux)", run: () => setDistractionFree(!root.classList.contains("is-distraction-free")) },
         { id: "ed:fullscreen", group: "Affichage", label: "Plein écran", run: () => toggleFullscreen() },
         { id: "ed:list", group: "Panneaux", label: "Vue en liste des blocs", run: () => { if (secondaryMode !== "list") setSecondary("list"); } },

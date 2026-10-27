@@ -352,6 +352,38 @@ describe("éditeur d'articles — commandes de bloc (navigateur)", { skip: SKIP 
     await page.context().close();
   });
 
+  test("notes : ajout lié à un bloc (Ctrl+Alt+M), pastille sur le bloc, réponse, résolution, jamais dans le contenu", async () => {
+    const page = await open();
+    await page.fill("#post-title", "Article avec notes");
+    await load(page, "<p>Premier paragraphe</p><p>Second paragraphe</p>");
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(25); ed.view.focus(); });
+    await page.keyboard.press("ControlOrMeta+Alt+m");
+    await page.waitForSelector("[data-note-new]");
+    assert.equal(await page.locator("[data-note-link]").isChecked(), true, "la note est liée au bloc sélectionné");
+    await page.fill("[data-note-new]", "Peut-on raccourcir ce passage ?");
+    await page.click("[data-note-send]");
+    await page.waitForSelector(".wp-note");
+    assert.match(await page.locator(".wp-note").first().innerText(), /Peut-on raccourcir/);
+    assert.match(await page.locator(".wp-note-block").first().innerText(), /Bloc : Paragraphe/);
+    await page.waitForSelector(".kb-note-badge");
+    assert.match(await page.locator(".kb-note-badge").first().innerText(), /1/);
+    await page.locator(".wp-note-replybox textarea").first().fill("Fait, merci.");
+    await page.locator(".wp-note-replybox button").first().click();
+    await page.waitForSelector(".wp-note-reply");
+    await page.locator("[data-note-resolve]").first().click();
+    await page.waitForFunction(() => !document.querySelector(".kb-note-badge"));
+    assert.equal(await page.locator(".wp-note").count(), 0, "le fil résolu quitte la liste des notes ouvertes");
+    await page.getByRole("button", { name: /Résolues \(1\)/ }).click();
+    assert.equal(await page.locator(".wp-note.is-resolved").count(), 1);
+    // Les notes ne polluent jamais le contenu de l'article
+    await page.click("[data-save]");
+    await page.waitForFunction(() => /^Enregistré$/.test(document.querySelector("[data-save-state]").textContent.trim()), null, { timeout: 15000 });
+    const row = srv.db().prepare("SELECT id, content FROM posts WHERE title = ?").get("Article avec notes");
+    assert.doesNotMatch(row.content, /raccourcir|Fait, merci/);
+    assert.equal(srv.db().prepare("SELECT COUNT(*) n FROM post_notes WHERE post_id = ?").get(row.id).n, 2);
+    await page.context().close();
+  });
+
   test("sans erreur de console pendant ces parcours", () => {
     assert.deepEqual(errors, []);
   });

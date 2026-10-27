@@ -30,6 +30,7 @@ const urls = require("../services/urls");
 const { transaction: siteTransaction } = require("../marketing/db/tx");
 const themeRender = require("../marketing/web/themeRender");
 const blockTrash = require("../services/blockTrash");
+const postNotes = require("../services/postNotes");
 const blogAi = require("../services/blogAi");
 const editorTheme = require("../services/editorTheme");
 const seoPages = require("../seo/pages");
@@ -479,7 +480,7 @@ router.sitemapEntries = () => {
 // un droit à part (« articles.publish ») ; tout le reste de l'espace du blog (liste du créateur, SEO, apparence, IA, bibliothèque) reste réservé au créateur.
 const WRITER_ROUTES = [
   /^\/nouveau$/, /^\/api\/brouillon$/, /^\/api\/(?:liens|suggestions|seo-check|termes)$/,
-  /^\/\d+\/(?:modifier|apercu|autosave|autosave\/abandonner|versions|corbeille)$/, /^\/\d+\/versions\/\d+(?:\/restaurer)?$/, /^\/\d+\/corbeille\/[^/]+$/,
+  /^\/\d+\/(?:modifier|apercu|autosave|autosave\/abandonner|versions|corbeille)$/, /^\/\d+\/versions\/\d+(?:\/restaurer)?$/, /^\/\d+\/corbeille\/[^/]+$/, /^\/\d+\/notes(?:\/\d+(?:\/(?:resoudre|supprimer))?)?$/,
 ];
 function requireBlogAccess(req, res, next) {
   const user = req.session.user;
@@ -1084,6 +1085,19 @@ router.get("/formateur/blog/:id/apercu", loadPost, (req, res) => {
 });
 
 // ---------- Corbeille des blocs (Structure de l'article → Corbeille) ----------
+// ---------- Notes de travail de l'article (jamais publiées) ----------
+const noteLimiter = createRateLimiter(40, 10 * 60 * 1000);
+const noteJson = (req, res, fn) => { try { res.json(fn()); } catch (e) { if (e instanceof UserError) return res.status(e.message === "Note introuvable." ? 404 : 400).json({ error: e.message }); throw e; } };
+router.get("/formateur/blog/:id(\\d+)/notes", loadPost, (req, res) => res.json({ notes: postNotes.list(req.post.id), me: req.session.user.id, canModerate: !req.blogActor || req.blogActor.all }));
+router.post("/formateur/blog/:id(\\d+)/notes", express.json({ limit: "16kb" }), loadPost, (req, res) => {
+  const who = `note:${req.session.user.id}`;
+  if (noteLimiter.isLimited(who)) return res.status(429).json({ error: "Trop de notes en peu de temps. Patientez quelques minutes." });
+  noteLimiter.hit(who);
+  noteJson(req, res, () => { const id = postNotes.add(req.post.id, req.session.user.id, req.body || {}); return { ok: true, id, notes: postNotes.list(req.post.id) }; });
+});
+router.post("/formateur/blog/:id(\\d+)/notes/:nid(\\d+)/resoudre", express.json({ limit: "1kb" }), loadPost, (req, res) => noteJson(req, res, () => { postNotes.resolve(req.post.id, Number(req.params.nid), req.session.user.id, (req.body || {}).resolved !== false); return { ok: true, notes: postNotes.list(req.post.id) }; }));
+router.post("/formateur/blog/:id(\\d+)/notes/:nid(\\d+)/supprimer", loadPost, (req, res) => noteJson(req, res, () => { postNotes.remove(req.post.id, Number(req.params.nid), req.session.user.id, { canModerate: !req.blogActor || req.blogActor.all }); return { ok: true, notes: postNotes.list(req.post.id) }; }));
+
 router.get("/formateur/blog/:id(\\d+)/corbeille", loadPost, (req, res) => res.json({ items: blockTrash.list(req.post.id) }));
 router.post("/formateur/blog/:id(\\d+)/corbeille", express.json({ limit: "512kb" }), loadPost, (req, res) => {
   try { res.json({ item: blockTrash.add(req.post.id, req.body || {}, req.session.user.id) }); } catch (e) { if (e instanceof UserError) return res.status(400).json({ error: e.message }); throw e; }

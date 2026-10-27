@@ -186,6 +186,7 @@
             <button type="button" role="tab" id="tab-article" aria-controls="panel-article" aria-selected="true" data-sidebar-tab="article">Article</button>
             <button type="button" role="tab" id="tab-seo" aria-controls="panel-seo" aria-selected="false" tabindex="-1" data-sidebar-tab="seo">SEO <span class="be-tab-dot" data-seo-dot></span></button>
             <button type="button" role="tab" id="tab-bloc" aria-controls="panel-bloc" aria-selected="false" tabindex="-1" data-sidebar-tab="bloc">Bloc</button>
+            <button type="button" role="tab" id="tab-notes" aria-controls="panel-notes" aria-selected="false" tabindex="-1" data-sidebar-tab="notes">Notes <span class="be-tab-dot" data-notes-dot hidden></span></button>
             <button type="button" class="wp-btn-icon wp-sidebar-close" data-toggle-sidebar aria-label="Fermer les réglages" title="Fermer les réglages">×</button>
           </div>
 
@@ -412,6 +413,11 @@
               <div data-wsp-part="external" aria-live="polite"></div>
             </div></div>
             </div>
+          </div>
+
+          <%# ===== Onglet Notes (commentaires de travail, jamais publiés) ===== %>
+          <div role="tabpanel" id="panel-notes" aria-labelledby="tab-notes" data-sidebar-panel="notes" hidden>
+            <div data-notes-body><p class="wp-help">Chargement des notes…</p></div>
           </div>
 
           <%# ===== Onglet Bloc ===== %>
