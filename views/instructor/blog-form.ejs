@@ -9,7 +9,7 @@
   const languageNames = { fr: "Français", en: "Anglais", es: "Espagnol", pt: "Portugais", de: "Allemand", it: "Italien", ln: "Lingala" };
   const pageData = {
     postId: post ? post.id : null, slug: post ? post.slug : "", status, publishedAt: post ? post.published_at : null, everPublished: Boolean(post && post.published_at),
-    updatedAt: post ? post.updated_at : null, createdAt: post ? post.created_at : null, siteUrl, aiConfigured, newsletterReady,
+    updatedAt: post ? post.updated_at : null, rev: typeof rev !== "undefined" ? rev : null, createdAt: post ? post.created_at : null, siteUrl, aiConfigured, newsletterReady,
     categories: categories.map((c) => c.name), subcategories, tags, courses, revisions, revisionTotal, authors: instructors.map((u) => ({ id: u.id, name: u.username })), statuses,
     autosave: autosave ? { savedAt: autosave.saved_at, data: autosave.data } : null,
     coverPath: post ? post.cover_path : null, ogImagePath: post ? post.og_image_path : null, twitterImagePath: post ? post.twitter_image_path : null,

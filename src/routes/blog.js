@@ -549,6 +549,16 @@ const oneLine = (value, max) => String(value || "").replace(/[\r\n\u2028\u2029]+
 const lastOf = (v) => (Array.isArray(v) ? v[v.length - 1] : v);
 const flag = (v, fallback) => { const x = lastOf(v); return x === undefined ? fallback : x === "1" || x === "on" || x === "true" || x === true ? 1 : 0; };
 const wantsJson = (req) => req.get("x-blog-editor") === "1";
+// Conflit de modification (D3) : l'éditeur envoie la version qu'il a chargée (base_rev = empreinte du contenu et des réglages, base_updated_at = date à la seconde).
+// L'empreinte est précise : deux enregistrements dans la même seconde sont distingués, ce que la date seule ne fait pas.
+const CONFLICT_MESSAGE = "Cet article a été modifié depuis votre dernière sauvegarde (dans un autre onglet ou depuis la liste des articles). Rien n'a été écrasé : votre texte reste dans l'éditeur et dans ce navigateur. Rechargez la page pour voir la version la plus récente, puis reportez vos changements.";
+function isStale(body, post) {
+  const rev = String(body.base_rev || "").trim();
+  if (rev) return rev !== blog.revisionFingerprint(post);
+  const base = String(body.base_updated_at || "").trim();
+  return Boolean(base) && base !== post.updated_at;
+}
+const conflictResponse = (req, res, post) => (wantsJson(req) ? res.status(409).json({ error: CONFLICT_MESSAGE, conflict: true, currentUpdatedAt: post.updated_at, currentRev: blog.revisionFingerprint(post) }) : res.status(409).render("error", { message: CONFLICT_MESSAGE }));
 
 // Classement d'un article : par identifiants (sélecteur de l'éditeur : category_ids, primary_category_id, tag_ids) ou, sans eux,
 // par l'ancienne saisie texte (category / subcategory / tags) ; les relations de la taxonomie sont la source, le texte en est le miroir
@@ -726,6 +736,7 @@ function editorData(req, post) {
   return {
     weekStart: weekStartOf(req),
     post,
+    rev: post ? blog.revisionFingerprint(post) : null,
     editorHtml: post ? (post.content_format === "html" ? post.content : markdownToEditorHtml(post.content)) : "",
     // Sauvegarde automatique plus récente que la dernière version enregistrée : proposée à la restauration
     autosave: autosave && post && autosave.saved_at > post.updated_at ? autosave : null,
@@ -924,19 +935,15 @@ router.post("/formateur/blog/nouveau", files, withCleanup((req, res) => {
   });
   const post = db.prepare("SELECT * FROM posts WHERE id = ?").get(newId);
   blog.addRevision(post, req.session.user.id, "Création de l'article", "create");
-  if (wantsJson(req)) return res.json({ ok: true, id: post.id, slug: post.slug, status: post.status, published: post.published, publishedAt: post.published_at, editUrl: `/formateur/blog/${post.id}/modifier`, updatedAt: post.updated_at, coverPath: post.cover_path, ogImagePath: post.og_image_path, twitterImagePath: post.twitter_image_path, revisions: blog.listRevisions(post.id).slice(0, 20) });
+  if (wantsJson(req)) return res.json({ ok: true, id: post.id, slug: post.slug, status: post.status, published: post.published, publishedAt: post.published_at, editUrl: `/formateur/blog/${post.id}/modifier`, updatedAt: post.updated_at, rev: blog.revisionFingerprint(post), coverPath: post.cover_path, ogImagePath: post.og_image_path, twitterImagePath: post.twitter_image_path, revisions: blog.listRevisions(post.id).slice(0, 20) });
   res.redirect(`/formateur/blog/${post.id}/modifier?enregistre=1`);
 }));
 
 // Enregistrement (formulaire classique ou éditeur)
 router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, res) => {
   const p = req.post;
-  // Conflit d'enregistrement (palier 10) : l'article a été modifié depuis la version que cet écran a chargée → rien n'est écrasé
-  const base = String(req.body.base_updated_at || "").trim();
-  if (base && base !== p.updated_at) {
-    const message = "Cet article a été modifié depuis votre dernière sauvegarde (dans un autre onglet ou depuis la liste des articles). Rien n'a été écrasé : votre texte reste dans l'éditeur et dans ce navigateur. Rechargez la page pour voir la version la plus récente, puis reportez vos changements.";
-    return wantsJson(req) ? res.status(409).json({ error: message, conflict: true, currentUpdatedAt: p.updated_at }) : res.status(409).render("error", { message });
-  }
+  // Conflit d'enregistrement (palier 10, D3) : l'article a été modifié depuis la version que cet écran a chargée → rien n'est écrasé
+  if (isStale(req.body, p)) return conflictResponse(req, res, p);
   const f = readFields(req.body, p);
   if (req.blogActor) f.author_id = null; // un rédacteur ne change pas l'auteur d'un article
   const st = applyStatus(req.body, p, f);
@@ -977,7 +984,7 @@ router.post("/formateur/blog/:id/modifier", loadPost, files, withCleanup((req, r
   for (const col of ["cover_path", "og_image_path", "twitter_image_path"]) {
     if (p[col] && p[col] !== after[col]) forgetIfUnused(p[col]);
   }
-  if (wantsJson(req)) return res.json({ ok: true, id: after.id, slug: after.slug, status: after.status, published: after.published, publishedAt: after.published_at, updatedAt: after.updated_at, coverPath: after.cover_path, ogImagePath: after.og_image_path, twitterImagePath: after.twitter_image_path, revisions: blog.listRevisions(after.id, { limit: 20 }), revisionTotal: blog.countRevisions(after.id) });
+  if (wantsJson(req)) return res.json({ ok: true, id: after.id, slug: after.slug, status: after.status, published: after.published, publishedAt: after.published_at, updatedAt: after.updated_at, rev: blog.revisionFingerprint(after), coverPath: after.cover_path, ogImagePath: after.og_image_path, twitterImagePath: after.twitter_image_path, revisions: blog.listRevisions(after.id, { limit: 20 }), revisionTotal: blog.countRevisions(after.id) });
   res.redirect(`/formateur/blog/${p.id}/modifier?enregistre=1`);
 }));
 
@@ -1019,10 +1026,11 @@ router.post("/formateur/blog/api/brouillon", upload.none(), (req, res) => {
     return db.prepare("SELECT * FROM posts WHERE id = ?").get(id);
   });
   blog.addRevision(post, req.session.user.id, "Création de l'article (sauvegarde automatique)", "create");
-  res.json({ ok: true, id: post.id, slug: post.slug, editUrl: `/formateur/blog/${post.id}/modifier` });
+  res.json({ ok: true, id: post.id, slug: post.slug, updatedAt: post.updated_at, rev: blog.revisionFingerprint(post), editUrl: `/formateur/blog/${post.id}/modifier` });
 });
 
 router.post("/formateur/blog/:id/autosave", loadPost, upload.none(), (req, res) => {
+  if (isStale(req.body, req.post)) return conflictResponse(req, res, req.post); // un onglet périmé n'écrase pas la sauvegarde automatique d'un onglet à jour
   const data = {};
   for (const [k, v] of Object.entries(req.body)) if (typeof v === "string" && /^[a-z_]{1,40}$/.test(k)) data[k] = v.slice(0, k === "content" ? MAX_HTML : 5000);
   if (data.content) data.content = reusable.pruneMissing(sanitizeBlogHtml(data.content));
@@ -1095,13 +1103,14 @@ router.get("/formateur/blog/:id(\\d+)/versions/:rid", loadPost, (req, res) => {
 // Rien n'est supprimé : on peut toujours revenir à l'état d'avant.
 router.post("/formateur/blog/:id(\\d+)/versions/:rid/restaurer", loadPost, (req, res) => {
   const fail = (status, error) => (wantsJson(req) ? res.status(status).json({ error }) : res.status(status).render("error", { message: error }));
+  if (isStale(req.body, req.post)) return conflictResponse(req, res, req.post);
   const r = blog.getRevision(req.post.id, revisionId(req.params.rid));
   if (!r) return fail(404, "Version introuvable.");
   const before = req.post;
   const kept = []; // réglages non rendus (image d'origine supprimée…)
   const result = transaction(db, () => {
     const current = db.prepare("SELECT * FROM posts WHERE id = ?").get(before.id);
-    const cols = { title: r.title, excerpt: r.excerpt, content: r.content_format === "html" ? reusable.pruneMissing(r.content) : r.content, content_format: r.content_format };
+    const cols = { title: r.title, excerpt: r.excerpt, content: r.content_format === "html" ? reusable.pruneMissing(sanitizeBlogHtml(r.content)) : r.content, content_format: r.content_format }; // D10 : le HTML d'une ancienne version repasse par la même sanitisation qu'à l'enregistrement
     for (const k of blog.RESTORED_META) {
       if (!Object.hasOwn(r.meta, k)) continue; // révision ancienne : réglage non connu, valeur actuelle gardée
       let v = r.meta[k];
@@ -1124,7 +1133,7 @@ router.post("/formateur/blog/:id(\\d+)/versions/:rid/restaurer", loadPost, (req,
     return { after, revision };
   });
   if (result.same) return fail(409, "Cette version est déjà la version actuelle.");
-  if (wantsJson(req)) return res.json({ ok: true, revision: result.revision, kept, revisions: blog.listRevisions(req.post.id), revisionTotal: blog.countRevisions(req.post.id) });
+  if (wantsJson(req)) return res.json({ ok: true, revision: result.revision, kept, revisions: blog.listRevisions(req.post.id), revisionTotal: blog.countRevisions(req.post.id), rev: result.after ? blog.revisionFingerprint(result.after) : undefined });
   res.redirect(`/formateur/blog/${req.post.id}/modifier?restaure=1`);
 });
 

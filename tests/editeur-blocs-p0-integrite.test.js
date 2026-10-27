@@ -71,6 +71,55 @@ describe("éditeur d'articles — intégrité P0", () => {
     assert.match(JSON.parse(row.payload).content, /Premier état/, "l'ancienne sauvegarde automatique est conservée et lisible");
   });
 
+  describe("D3 conflits et D10 restauration", () => {
+    const save = (id, fields) => boss.request(`/formateur/blog/${id}/modifier`, { method: "POST", multipart: form(fields), headers: { "x-blog-editor": "1" } });
+    const create = async (title) => JSON.parse((await boss.request("/formateur/blog/nouveau", { method: "POST", multipart: form({ title, content: "<p>Départ</p>", content_format: "html", status: "draft" }), headers: { "x-blog-editor": "1" } })).text);
+
+    test("D3 : deux enregistrements dans la même seconde sont distingués (le second, périmé, est refusé et n'écrase rien)", async () => {
+      const a = await create("Conflit précis");
+      assert.ok(a.rev, "la création renvoie l'empreinte de version");
+      const first = await save(a.id, { title: "Conflit précis", content: "<p>Version onglet 1</p>", content_format: "html", base_rev: a.rev, base_updated_at: a.updatedAt });
+      assert.equal(first.status, 200, first.text);
+      const second = await save(a.id, { title: "Conflit précis", content: "<p>Version onglet 2</p>", content_format: "html", base_rev: a.rev, base_updated_at: a.updatedAt });
+      assert.equal(second.status, 409, "la date seule (à la seconde) ne l'aurait pas vu");
+      assert.equal(JSON.parse(second.text).conflict, true);
+      assert.match(one("SELECT content FROM posts WHERE id = ?", a.id).content, /onglet 1/);
+      const again = await save(a.id, { title: "Conflit précis", content: "<p>Version onglet 2</p>", content_format: "html", base_rev: JSON.parse(first.text).rev });
+      assert.equal(again.status, 200, "avec la version à jour, l'enregistrement passe");
+    });
+
+    test("D3 : une sauvegarde automatique périmée est refusée (elle n'écrase pas celle d'un onglet à jour)", async () => {
+      const a = await create("Autosave périmée");
+      await save(a.id, { title: "Autosave périmée", content: "<p>Neuf</p>", content_format: "html", base_rev: a.rev });
+      const r = await boss.request(`/formateur/blog/${a.id}/autosave`, { method: "POST", multipart: form({ title: "Vieux", content: "<p>Vieux</p>", base_rev: a.rev }), headers: { "x-blog-editor": "1" } });
+      assert.equal(r.status, 409, r.text);
+      assert.equal(one("SELECT COUNT(*) n FROM post_autosaves WHERE post_id = ?", a.id).n, 0);
+    });
+
+    test("D3 : restaurer une version avec une empreinte périmée est refusé", async () => {
+      const a = await create("Restauration périmée");
+      await save(a.id, { title: "Restauration périmée", content: "<p>Deux</p>", content_format: "html", base_rev: a.rev });
+      const rid = one("SELECT id FROM post_revisions WHERE post_id = ? ORDER BY id ASC LIMIT 1", a.id).id;
+      const r = await boss.request(`/formateur/blog/${a.id}/versions/${rid}/restaurer`, { method: "POST", json: { base_rev: a.rev }, headers: { "x-blog-editor": "1" } });
+      assert.equal(r.status, 409, r.text);
+    });
+
+    test("D10 : le HTML d'une ancienne version est re-assaini à la restauration (aucun script ne revient)", async () => {
+      const a = await create("Restauration saine");
+      await save(a.id, { title: "Restauration saine", content: "<p>Propre</p>", content_format: "html", base_rev: a.rev });
+      const meta = one("SELECT meta FROM post_revisions WHERE post_id = ? ORDER BY id DESC LIMIT 1", a.id).meta;
+      const rid = Number(db.prepare("INSERT INTO post_revisions (post_id, user_id, title, excerpt, content, content_format, note, meta, kind, fingerprint) VALUES (?, NULL, ?, '', ?, 'html', 'ancienne', ?, 'save', 'x')")
+        .run(a.id, "Restauration saine", "<p>Ancien</p><script>alert(1)</script><img src=x onerror=alert(2)>", meta).lastInsertRowid);
+      const cur = one("SELECT * FROM posts WHERE id = ?", a.id);
+      const rev = require("../src/services/blog").revisionFingerprint(cur);
+      const r = await boss.request(`/formateur/blog/${a.id}/versions/${rid}/restaurer`, { method: "POST", json: { base_rev: rev }, headers: { "x-blog-editor": "1" } });
+      assert.equal(r.status, 200, r.text);
+      const content = one("SELECT content FROM posts WHERE id = ?", a.id).content;
+      assert.match(content, /Ancien/);
+      assert.doesNotMatch(content, /<script|onerror/i);
+    });
+  });
+
   test("client : la création transmet le site (D4) et une frappe pendant l'envoi n'est jamais déclarée enregistrée (D1)", () => {
     const src = fs.readFileSync(path.join(__dirname, "..", "src", "editor", "blog-editor.js"), "utf8");
     assert.match(src, /function siteQuery\(/);

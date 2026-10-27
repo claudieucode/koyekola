@@ -129,7 +129,7 @@ function start() {
     const res = await fetch(url, opts);
     let data = null;
     try { data = await res.json(); } catch { data = null; }
-    if (!res.ok) throw new Error((data && data.error) || `Erreur ${res.status} : l'opération n'a pas abouti.`);
+    if (!res.ok) { const err = new Error((data && data.error) || `Erreur ${res.status} : l'opération n'a pas abouti.`); err.status = res.status; err.conflict = Boolean(data && data.conflict); throw err; }
     return data || {};
   }
   // Nouvel article ouvert dans un site : le site accompagne la création (le serveur le valide ; il n'est jamais cru sur parole)
@@ -2507,7 +2507,7 @@ function start() {
           const saved = await save({ status: ONLINE.has(DATA.status) ? DATA.status : secondaryStatus() });
           if (!saved) throw new Error("vos modifications n'ont pas pu être enregistrées d'abord");
         }
-        const r = await api(`/formateur/blog/${postId}/versions/${v.id}/restaurer`, { method: "POST", headers: { "x-blog-editor": "1" } });
+        const r = await api(`/formateur/blog/${postId}/versions/${v.id}/restaurer`, { method: "POST", json: { base_rev: DATA.rev || "" }, headers: { "x-blog-editor": "1" } });
         dirty = false;
         localDraft.clear();
         const params = new URLSearchParams({ restaure: "1" });
@@ -2600,6 +2600,7 @@ function start() {
     // Détection de conflit (palier 10) : version de l'article que cet onglet a chargée ou enregistrée en dernier ; si l'article a changé depuis
     // (autre onglet, action de la liste), le serveur refuse d'écraser en silence
     if (postId && DATA.updatedAt) data.set("base_updated_at", DATA.updatedAt);
+    if (postId && DATA.rev) data.set("base_rev", DATA.rev); // empreinte précise (D3) : la date seule ne distingue pas deux enregistrements dans la même seconde
     if (!withFiles) for (const name of ["thumbnail", "og_image", "twitter_image"]) data.delete(name);
     return data;
   }
@@ -2619,6 +2620,8 @@ function start() {
   function adopt(r) {
     const before = localDraft.key();
     postId = r.id;
+    if (r.rev) DATA.rev = r.rev;
+    if (r.updatedAt) DATA.updatedAt = r.updatedAt;
     form.action = `/formateur/blog/${r.id}/modifier`;
     history.replaceState(null, "", `/formateur/blog/${r.id}/modifier`);
     try { localStorage.removeItem(before); } catch { /* rien */ }
@@ -2641,6 +2644,7 @@ function start() {
       await api(`/formateur/blog/${id}/autosave`, { method: "POST", body: formPayload({ withFiles: false }) });
       setState("Sauvegarde automatique", "is-auto");
     } catch (e) {
+      if (e.conflict) { setState("Conflit : article modifié ailleurs", "is-error"); saveState.title = e.message || ""; toast(e.message, "error"); return; } // inutile de réessayer : il faut recharger
       // Jamais masquée : l'erreur est affichée, la copie locale du navigateur est conservée, nouvel essai dans 30 s
       setState("Erreur de sauvegarde automatique (nouvel essai dans 30 s)", "is-error");
       saveState.title = e.message || "";
@@ -2671,6 +2675,7 @@ function start() {
       if (!$('[data-sidebar-panel="seo"]').hidden) loadSeoSite();
       DATA.publishedAt = r.publishedAt ?? DATA.publishedAt;
       DATA.updatedAt = r.updatedAt;
+      if (r.rev) DATA.rev = r.rev;
       DATA.createdAt = DATA.createdAt || r.updatedAt;
       if (r.revisions) { DATA.revisions = r.revisions; DATA.revisionTotal = r.revisionTotal ?? r.revisions.length; }
       for (const [key, col] of [["cover", "coverPath"], ["og", "ogImagePath"], ["twitter", "twitterImagePath"]]) if (r[col] !== undefined) imagePicks[key].saved(r[col]);
