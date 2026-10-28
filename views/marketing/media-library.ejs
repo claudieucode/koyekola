@@ -4,12 +4,13 @@
 %><%- include("partials/top", { title, active }) %>
 <%
   const S = typeof mkSiteId === "number" ? mkSiteId : ""; // site de la médiathèque : conservé dans tous les liens (le serveur le revérifie)
-  const keep = (over = {}, path = spaceBase) => { const p = new URLSearchParams(); const o = { type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, mois: f.month, vue: view === "liste" ? "liste" : "", portee: f.portee, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return path + (t ? "?" + t : ""); };
+  const keep = (over = {}, path = spaceBase) => { const p = new URLSearchParams(); const o = { type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, mois: f.month, vue: view === "grille" ? "" : view, portee: f.portee, ...f.raw, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return path + (t ? "?" + t : ""); };
   const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   const monthName = (m) => MONTHS[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4);
   const typeOptions = [["", "Tous les médias", counts.all], ["image", "Images", counts.image], ["audio", "Audio", counts.audio], ["video", "Vidéo", counts.video], ["documents", "Documents", counts.documents]];
   const dimsOf = (m) => (m.width ? `${m.width} × ${m.height} px` : "—");
-  const filtered = Boolean(f.q || f.period || f.type || f.month);
+  const advanced = Boolean(f.raw.ext || f.raw.tmin || f.raw.tmax || f.raw.lmin || f.raw.lmax || f.raw.doublons || f.raw.volumineux);
+  const filtered = Boolean(f.q || f.period || f.type || f.month || f.raw.dossier || advanced);
   const small = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : n >= 1024 ? Math.round(n / 1024) + " Ko" : n + " o");
   const label = (m) => ({ image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document" }[m.type] || "Fichier");
   const ext = (m) => { const e = String(m.path).split(".").pop().toUpperCase(); return e.length <= 5 ? e : label(m).toUpperCase(); };
@@ -20,9 +21,10 @@
     <%- include("partials/kx-hero-close", { art: "media" }) %>
 
     <form class="mk-cms-toolbar mk-ml-toolbar" method="get" action="<%= spaceBase %>" role="search" aria-label="Filtrer et rechercher les médias" data-ml-filters><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
-      <% if (f.trashed) { %><input type="hidden" name="corbeille" value="1"><% } %><% if (view === "liste") { %><input type="hidden" name="vue" value="liste"><% } %><% if (f.portee) { %><input type="hidden" name="portee" value="<%= f.portee %>"><% } %>
+      <% if (f.trashed) { %><input type="hidden" name="corbeille" value="1"><% } %><% if (view !== "grille") { %><input type="hidden" name="vue" value="<%= view %>"><% } %><% if (f.raw.dossier) { %><input type="hidden" name="dossier" value="<%= f.raw.dossier %>"><% } %><% if (f.portee) { %><input type="hidden" name="portee" value="<%= f.portee %>"><% } %>
       <span class="mk-ml-views" role="group" aria-label="Mode d'affichage">
         <a class="mk-ml-viewbtn" href="<%= keep({ vue: "liste", page: "" }) %>"<%- view === "liste" ? ' aria-current="true"' : "" %> aria-label="Affichage en liste" title="Affichage en liste"><%- icon("list", { size: 18 }) %></a>
+        <a class="mk-ml-viewbtn" href="<%= keep({ vue: "compacte", page: "" }) %>"<%- view === "compacte" ? ' aria-current="true"' : "" %> aria-label="Affichage compact" title="Affichage compact"><%- icon("menu", { size: 18 }) %></a>
         <a class="mk-ml-viewbtn" href="<%= keep({ vue: "", page: "" }) %>"<%- view === "grille" ? ' aria-current="true"' : "" %> aria-label="Affichage en grille" title="Affichage en grille"><%- icon("grid", { size: 18 }) %></a>
       </span>
       <label class="sr-only" for="ml-type">Filtrer par type de média</label>
@@ -33,8 +35,18 @@
       <select id="ml-tri" name="tri" data-ml-autosubmit><% [["recent", "Plus récents"], ["ancien", "Plus anciens"], ["nom", "Nom A → Z"], ["nom_desc", "Nom Z → A"], ["taille", "Plus volumineux"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.sort === k ? " selected" : "" %>><%= name %></option><% }) %></select>
       <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-ml-select-toggle aria-pressed="false">Sélection groupée</button><% } %>
       <label class="mk-search mk-ml-search"><span class="mk-ml-searchlabel">Rechercher des médias</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" aria-label="Rechercher des médias (nom, titre, texte alternatif, légende, description)"></label>
+      <details class="mk-ml-adv"<%- advanced ? " open" : "" %>><summary class="btn btn-outline btn-sm">Filtres avancés<%= advanced ? " •" : "" %></summary>
+        <div class="mk-ml-adv-body">
+          <label>Extension <input type="text" name="ext" value="<%= f.raw.ext %>" maxlength="8" placeholder="png, pdf…" inputmode="text" autocomplete="off"></label>
+          <label>Taille min. (Ko) <input type="number" name="tmin" value="<%= f.raw.tmin %>" min="0" inputmode="numeric"></label>
+          <label>Taille max. (Ko) <input type="number" name="tmax" value="<%= f.raw.tmax %>" min="0" inputmode="numeric"></label>
+          <label>Largeur min. (px) <input type="number" name="lmin" value="<%= f.raw.lmin %>" min="0" inputmode="numeric"></label>
+          <label>Largeur max. (px) <input type="number" name="lmax" value="<%= f.raw.lmax %>" min="0" inputmode="numeric"></label>
+          <label class="mk-ml-adv-check"><input type="checkbox" name="doublons" value="1"<%= f.raw.doublons ? " checked" : "" %>> Doublons (contenu identique)</label>
+          <label class="mk-ml-adv-check"><input type="checkbox" name="volumineux" value="1"<%= f.raw.volumineux ? " checked" : "" %>> Volumineux (≥ 5 Mo)</label>
+        </div></details>
       <button type="submit" class="btn btn-outline btn-sm">Filtrer</button>
-      <% if (filtered || f.sort !== "recent") { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "", periode: "", mois: "", type: "", tri: "", page: "" }) %>">Réinitialiser</a><% } %>
+      <% if (filtered || f.sort !== "recent") { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "", periode: "", mois: "", type: "", tri: "", page: "", dossier: "", ext: "", tmin: "", tmax: "", lmin: "", lmax: "", doublons: "", volumineux: "" }) %>">Réinitialiser</a><% } %>
     </form>
     <p class="mk-sub mk-ml-sub">
       <% if (f.trashed) { %><a href="<%= keep({ corbeille: "", page: "" }) %>">← Retour à la médiathèque</a><% } else { %><a href="<%= keep({ corbeille: "1", type: "", mois: "", page: "" }) %>">Corbeille (<%= counts.trash %>)</a><% } %>
@@ -55,8 +67,29 @@
       </div>
     <% } %>
 
-    <div class="mk-ml-layout">
+    <div class="mk-ml-layout<%= tree.enabled ? " has-tree" : "" %>">
+      <% if (tree.enabled && !f.trashed) {
+           const kids = (pid) => tree.folders.filter((x) => (x.parentId || null) === pid);
+           const renderNodes = (pid, depth) => kids(pid).map((fo) => {
+             const here = f.adv.folder === fo.id, inPath = crumbs.some((c) => c.id === fo.id), sub = kids(fo.id);
+             return '<li role="treeitem" aria-expanded="' + (sub.length ? String(inPath) : "") + '"' + (here ? ' aria-selected="true"' : "") + '><div class="mk-ml-fo' + (here ? " is-here" : "") + '" data-ml-folder="' + fo.id + '" data-name="' + String(fo.name).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])) + '"><a href="' + keep({ dossier: String(fo.id), page: "" }) + '">' + String(fo.name).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])) + ' <span class="mk-sub">' + fo.count + '</span></a></div>' + (sub.length && (inPath || depth < 0) ? '<ul role="group">' + renderNodes(fo.id, depth + 1) + '</ul>' : "") + '</li>';
+           }).join("");
+      %>
+      <nav class="mk-ml-tree" aria-label="Dossiers" data-ml-tree>
+        <ul role="tree">
+          <li role="treeitem"><div class="mk-ml-fo<%= !f.raw.dossier ? " is-here" : "" %>"><a href="<%= keep({ dossier: "", page: "" }) %>">Tous les fichiers</a></div></li>
+          <li role="treeitem"><div class="mk-ml-fo<%= f.raw.dossier === "racine" ? " is-here" : "" %>"><a href="<%= keep({ dossier: "racine", page: "" }) %>">Sans dossier <span class="mk-sub"><%= tree.rootCount %></span></a></div></li>
+          <%- renderNodes(null, 0) %>
+        </ul>
+        <% if (canWrite) { %><form class="mk-ml-newfolder" data-ml-newfolder><label class="sr-only" for="ml-nf">Nom du nouveau dossier</label><input id="ml-nf" type="text" maxlength="80" placeholder="Nouveau dossier" autocomplete="off"><button type="submit" class="btn btn-outline btn-sm">Créer</button></form><% } %>
+        <p class="mk-sub mk-ml-trees-note"><a href="<%= keep({ doublons: "1", dossier: "", page: "" }) %>">Voir les doublons</a> · <a href="<%= keep({ volumineux: "1", dossier: "", page: "" }) %>">Fichiers volumineux</a></p>
+      </nav>
+      <% } %>
       <div class="mk-ml-main" data-ml-main>
+        <% if (crumbs.length || f.raw.dossier === "racine") { %><nav class="mk-ml-crumb" aria-label="Fil d'Ariane">
+          <a href="<%= keep({ dossier: "", page: "" }) %>">Médiathèque</a><% crumbs.forEach((c, i) => { %> <span aria-hidden="true">›</span> <% if (i < crumbs.length - 1) { %><a href="<%= keep({ dossier: String(c.id), page: "" }) %>"><%= c.name %></a><% } else { %><strong aria-current="page"><%= c.name %></strong>
+            <% if (canWrite) { %> <button type="button" class="btn btn-ghost btn-sm" data-ml-folder-rename="<%= c.id %>" data-name="<%= c.name %>">Renommer</button> <button type="button" class="btn btn-ghost btn-sm" data-ml-folder-delete="<%= c.id %>" data-name="<%= c.name %>">Supprimer le dossier</button><% } %><% } %><% }) %>
+          <% if (f.raw.dossier === "racine") { %> <span aria-hidden="true">›</span> <strong aria-current="page">Sans dossier</strong><% } %></nav><% } %>
         <% if (!found.items.length) { %>
           <div class="mk-empty"><%- illu("image", { className: "kx-empty-ill" }) %><h2><%= f.trashed ? "La corbeille est vide" : filtered ? "Aucun fichier trouvé" : "Aucun fichier" %></h2>
             <p><%= f.trashed ? "Les fichiers mis à la corbeille apparaissent ici ; vous pouvez les restaurer." : filtered ? "Aucun fichier ne correspond à ces critères." : "Envoyez votre premier fichier : glissez-le dans la zone ci-dessus." %></p></div>
@@ -68,6 +101,7 @@
             <select id="ml-bulk-action" data-ml-bulk-action disabled><option value="">Actions groupées</option>
               <% if (f.trashed) { %><option value="restaurer">Restaurer</option><% if (canDelete) { %><option value="supprimer">Supprimer définitivement</option><% } %><% } else { %><option value="corbeille">Mettre à la corbeille</option><% } %></select>
             <button type="button" class="btn btn-outline btn-sm" data-ml-bulk-apply disabled>Appliquer</button>
+            <% if (tree.enabled && !f.trashed) { %><label class="sr-only" for="ml-move-to">Déplacer vers</label><select id="ml-move-to" data-ml-move-to disabled><option value="">Déplacer vers…</option><option value="racine">Sans dossier</option><% tree.folders.forEach((fo) => { %><option value="<%= fo.id %>"><%= fo.name %></option><% }) %></select><% } %>
             <span class="mk-sub" data-ml-bulk-count aria-live="polite"></span>
           </div>
           <% } %>
@@ -84,7 +118,7 @@
                 <td class="mk-row-actions mk-cms-actions-col"><button type="button" class="btn btn-ghost btn-sm" data-ml-open>Détails</button></td></tr>
             <% }) %></tbody></table></div>
           <% } else { %>
-          <ul class="mk-ml-grid" data-ml-grid role="list">
+          <ul class="mk-ml-grid<%= view === "compacte" ? " is-compact" : "" %>" data-ml-grid role="list">
             <% found.items.forEach((m) => { %>
               <li class="mk-ml-item" data-ml-item data-id="<%= m.id %>">
                 <% if (canWrite) { %><input type="checkbox" class="mk-ml-check" data-ml-check value="<%= m.id %>" aria-label="Sélectionner « <%= m.name %> »"><% } %>
@@ -108,5 +142,5 @@
       <aside class="mk-panel mk-ml-panel" data-ml-panel hidden aria-label="Détails du fichier" tabindex="-1"></aside>
     </div>
     <script type="application/json" id="mu-config"><%- JSON.stringify(uploadCfg).replace(/</g, "\\u003c") %></script>
-    <script type="application/json" id="ml-config"><%- JSON.stringify({ canUpload, canWrite, canDelete, trashed: f.trashed, type: f.type, hasFilter: Boolean(f.q || f.period || f.month), view, uploadOpen }).replace(/</g, "\\u003c") %></script>
+    <script type="application/json" id="ml-config"><%- JSON.stringify({ canUpload, canWrite, canDelete, trashed: f.trashed, type: f.type, hasFilter: Boolean(f.q || f.period || f.month || f.raw.dossier || advanced), folder: f.adv.folder || null, folderEnabled: tree.enabled, view, uploadOpen }).replace(/</g, "\\u003c") %></script>
 <%- include("partials/bottom") %>

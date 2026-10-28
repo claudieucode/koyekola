@@ -109,6 +109,38 @@
   }
   try { var flash = sessionStorage.getItem("mlFlash"); if (flash) { sessionStorage.removeItem("mlFlash"); var f = JSON.parse(flash); toast(f.text, f.type); } } catch (e) { /* ignoré */ }
 
+  // ---------------------------------------------------------------- Dossiers (explorateur)
+  function reloadWith(msg, type) { try { sessionStorage.setItem("mlFlash", JSON.stringify({ text: msg, type: type || "ok" })); } catch (e) { /* sans stockage : pas de message */ } location.reload(); }
+  var nf = $("[data-ml-newfolder]");
+  if (nf) nf.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = $("input", nf), name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    K.folderCreate(name, cfg.folder).then(function (f) { reloadWith("Dossier « " + f.name + " » créé."); }, function (err) { toast(err.message, "error"); });
+  });
+  document.addEventListener("click", function (e) {
+    var ren = e.target.closest("[data-ml-folder-rename]"), del = e.target.closest("[data-ml-folder-delete]");
+    if (ren) {
+      var name = window.prompt("Nouveau nom du dossier :", ren.getAttribute("data-name") || "");
+      if (name && name.trim()) K.folderRename(Number(ren.getAttribute("data-ml-folder-rename")), name.trim()).then(function () { reloadWith("Dossier renommé."); }, function (err) { toast(err.message, "error"); });
+    }
+    if (del) confirmDialog({ title: "Supprimer le dossier ?", text: "Le dossier « " + del.getAttribute("data-name") + " » sera supprimé. Ses fichiers ne sont PAS supprimés : ils remontent dans le dossier parent.", ok: "Supprimer le dossier" }, function () {
+      K.folderDelete(Number(del.getAttribute("data-ml-folder-delete"))).then(function () { try { sessionStorage.setItem("mlFlash", JSON.stringify({ text: "Dossier supprimé ; ses fichiers sont conservés.", type: "ok" })); } catch (x) { /* ignoré */ } location.href = location.pathname + location.search.replace(/([?&])dossier=\d+&?/, "$1").replace(/[?&]$/, ""); }, function (err) { toast(err.message, "error"); });
+    });
+  });
+  var moveTo = $("[data-ml-move-to]");
+  if (moveTo) {
+    document.addEventListener("change", function (e) { if (e.target.matches("[data-ml-check]")) moveTo.disabled = selected().length === 0; });
+    moveTo.addEventListener("change", function () {
+      var ids = selected(); if (!moveTo.value || !ids.length) return;
+      K.move(ids, moveTo.value === "racine" ? null : Number(moveTo.value)).then(function (r) {
+        var msg = r.done.length + " fichier" + (r.done.length > 1 ? "s" : "") + " déplacé" + (r.done.length > 1 ? "s" : "") + ".";
+        if (r.failed.length) msg += " " + r.failed.length + " refusé" + (r.failed.length > 1 ? "s" : "") + " : " + r.failed.map(function (f) { return "« " + f.name + " » : " + f.message; }).join(" · ");
+        reloadWith(msg, r.failed.length ? "error" : "ok");
+      }, function (err) { toast(err.message, "error"); moveTo.value = ""; });
+    });
+  }
+
   // ---------------------------------------------------------------- Panneau de détails
   var panel = $("[data-ml-panel]");
   var current = null, lastTrigger = null;
@@ -128,7 +160,7 @@
   function openDetail(id, item) {
     panel.hidden = false; panel.textContent = "Chargement…"; panel.focus();
     $$("[data-ml-item].is-open").forEach(function (i) { i.classList.remove("is-open"); }); if (item) item.classList.add("is-open");
-    K.detail(id).then(function (d) { current = { media: d.media, usage: d.usage, item: item }; render(); }, function (err) { panel.textContent = ""; panel.appendChild(h("p", { class: "mk-ml-error", role: "alert", text: err.message })); panel.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Fermer", onclick: closePanel })); });
+    K.detail(id).then(function (d) { current = { media: d.media, usage: d.usage, item: item, folder: d.folder, duplicates: d.duplicates || [], analysis: d.analysis || null }; render(); }, function (err) { panel.textContent = ""; panel.appendChild(h("p", { class: "mk-ml-error", role: "alert", text: err.message })); panel.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Fermer", onclick: closePanel })); });
   }
   function preview(m) {
     if (m.type === "image") return h("img", { class: "mk-ml-prev", src: m.path, alt: m.alt || "" });
@@ -166,6 +198,8 @@
       h("dt", { text: "Taille" }), h("dd", { text: K.fmtSize(m.size) }),
       m.width ? h("dt", { text: "Dimensions" }) : null, m.width ? h("dd", { text: m.width + " × " + m.height + " px" }) : null,
       h("dt", { text: "Ajouté le" }), h("dd", { text: K.fmtDate(m.createdAt) }),
+      h("dt", { text: "Dossier" }), h("dd", { text: current.folder ? current.folder.name : "Sans dossier" }),
+      m.sha256 ? h("dt", { text: "Empreinte SHA-256" }) : null, m.sha256 ? h("dd", { class: "mk-ml-sha", title: m.sha256, text: m.sha256.slice(0, 16) + "…" }) : null,
       h("dt", { text: "Par" }), h("dd", { text: m.author || "—" }),
       trashed ? h("dt", { text: "Corbeille" }) : null, trashed ? h("dd", { text: "depuis le " + K.fmtDate(m.deletedAt) }) : null,
     ]);
@@ -183,9 +217,12 @@
         save.disabled = false;
       }, function (err) { status.textContent = err.message; status.className = "mk-ml-error"; save.disabled = false; });
     } });
+    var CONF = { confirmed: "confirmé", probable: "probable" };
     var usageBox = h("div", { class: "mk-ml-usage" }, [h("h3", { text: "Utilisation" }), usage.length
-      ? h("ul", {}, usage.map(function (u) { return h("li", {}, u.href ? h("a", { href: u.href, text: u.kind + " « " + u.name + " »" }) : document.createTextNode(u.kind + " « " + u.name + " »")); }))
-      : h("p", { class: "field-hint", text: "Ce fichier n'est utilisé par aucune page, aucun e-mail ni aucun site." })]);
+      ? h("ul", {}, usage.map(function (u) { var label = u.kind + " « " + u.name + " »"; return h("li", {}, [u.href ? h("a", { href: u.href, text: label }) : document.createTextNode(label), h("span", { class: "mk-sub", text: " — " + (CONF[u.confidence] || "probable") })]); }))
+      : h("p", { class: "field-hint", text: "Aucune référence connue dans les éléments analysés." }),
+      h("p", { class: "field-hint", text: "« Confirmé » : relation enregistrée. « Probable » : l'adresse du fichier est citée dans le contenu." + (current.analysis ? " Analysés : " + current.analysis.scanned.join(", ") + ". Non analysés : " + current.analysis.notScanned.join(", ") + " — ne supposez pas un fichier inutilisé sans les vérifier." : "") })]);
+    var twinsBox = current.duplicates.length ? h("div", { class: "mk-ml-usage" }, [h("h3", { text: "Doublons" }), h("p", { class: "field-hint", text: "Même contenu (même empreinte) que :" }), h("ul", {}, current.duplicates.map(function (t) { return h("li", { text: t.name }); }))]) : null;
     var actions = h("div", { class: "mk-ml-panel-actions" }, [copyBtn, h("a", { class: "btn btn-outline btn-sm", href: m.path, target: "_blank", rel: "noopener", text: m.type === "document" ? "Télécharger" : "Ouvrir" })]);
     if (cfg.canWrite && !trashed) actions.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", text: "Mettre à la corbeille", onclick: function () {
       var run = function () { K.trash(m.id).then(function () { toast("« " + m.name + " » est à la corbeille.", "ok"); removeFromView(m.id); }, function (err) { status.textContent = err.message; status.className = "mk-ml-error"; }); };
@@ -197,7 +234,7 @@
         K.purge(m.id).then(function () { toast("« " + m.name + " » est supprimé.", "ok"); removeFromView(m.id); }, function (err) { status.textContent = err.message; status.className = "mk-ml-error"; toast(err.message, "error"); });
       });
     } }));
-    [head, pager, preview(m), info, h("div", { class: "field-group" }, [h("label", { for: "ml-f-url", text: "Adresse (URL)" }), urlInput]), actions, fName, fTitle, fAlt, fCap, fDesc, save, status, usageBox].forEach(function (n) { if (n) panel.appendChild(n); });
+    [head, pager, preview(m), info, h("div", { class: "field-group" }, [h("label", { for: "ml-f-url", text: "Adresse (URL)" }), urlInput]), actions, fName, fTitle, fAlt, fCap, fDesc, save, status, usageBox, twinsBox].forEach(function (n) { if (n) panel.appendChild(n); });
   }
   // Le fichier a quitté cette vue (corbeille, restauration, suppression) : on le retire de la liste et du panneau
   function removeFromView(id) {

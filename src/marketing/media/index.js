@@ -105,6 +105,7 @@ const publicUrl = (ctx, p) => `${String(ctx.baseUrl || "").replace(/\/+$/, "")}$
 const shape = (ctx, row) => (row ? {
   id: row.id, kind: row.kind, type: row.type || (row.kind === "image" ? "image" : "document"), name: row.name, title: row.title || "", alt: row.alt, caption: row.caption || "", description: row.description || "",
   mime: row.mime, size: row.size, width: row.width, height: row.height, path: row.path, url: publicUrl(ctx, row.path), createdAt: row.created_at, createdBy: row.created_by ?? null, deletedAt: row.deleted_at || null,
+  folderId: row.folder_id ?? null, sha256: row.sha256 || null, // Explorateur : dossier logique et empreinte du contenu
   reach: row.reach || "shared", siteId: row.site_id ?? null, // R5 : médiathèque commune (shared) ou propre à un site
 } : null);
 
@@ -190,6 +191,7 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, sit
   const max = effectiveLimit(info.type); // limite choisie dans Paramètres → Médias, jamais au-delà du plafond du serveur
   if (buffer.length > max) throw new MarketingError("invalid_field", `Fichier trop lourd (${(buffer.length / 1048576).toFixed(1)} Mo) : ${max / 1048576} Mo au plus pour ${LIMIT_WORDS[info.type]}.`);
   if (info.type === "image" && info.mime !== "image/avif" && (!info.width || !info.height)) throw new MarketingError("invalid_field", "Image illisible : ses dimensions n'ont pas pu être lues.");
+  const sha256 = crypto.createHash("sha256").update(buffer).digest("hex"); // empreinte du contenu : sert à signaler les doublons (jamais à fusionner ni supprimer)
   const publicPath = newPublicPath(ctx, mediaSite, info.ext); // nom entièrement fabriqué ici
   const where = parsePublicPath(ctx, publicPath);
   try {
@@ -202,17 +204,21 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, sit
   let row;
   try {
     row = ctx.db
-      .prepare("INSERT INTO mk_media (organization_id, kind, type, path, name, mime, size, width, height, created_by, reach, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *")
-      .get(ctx.organizationId, info.kind, info.type, publicPath, displayName(originalName), info.mime, buffer.length, info.width || null, info.height || null, ctx.userId ?? null, mediaSite ? "site" : "shared", mediaSite);
+      .prepare("INSERT INTO mk_media (organization_id, kind, type, path, name, mime, size, width, height, created_by, reach, site_id, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *")
+      .get(ctx.organizationId, info.kind, info.type, publicPath, displayName(originalName), info.mime, buffer.length, info.width || null, info.height || null, ctx.userId ?? null, mediaSite ? "site" : "shared", mediaSite, sha256);
   } catch (error) { try { fs.unlinkSync(where.absolute); } catch { /* fichier déjà absent */ } throw error; } // jamais de fichier sans fiche
   audit(ctx, "media.uploaded", "media", row.id, { type: info.type, size: buffer.length, reach: row.reach, site_id: row.site_id });
-  return shape(ctx, row);
+  const saved = shape(ctx, row);
+  // Doublons : un fichier identique existe déjà dans cette médiathèque. Le nouveau est CONSERVÉ (rien n'est écrasé ni fusionné) ; l'appelant peut le signaler.
+  saved.duplicateOf = ctx.db.prepare("SELECT id FROM mk_media WHERE organization_id = ? AND sha256 = ? AND id <> ? AND deleted_at IS NULL AND reach = ? AND site_id IS ? ORDER BY id").all(ctx.organizationId, sha256, row.id, row.reach, row.site_id ?? null).map((r) => r.id);
+  return saved;
 }
 
+const LARGE_BYTES = 5 * 1024 * 1024; // « fichier volumineux » : 5 Mo et plus
 const SORTS = { recent: "id DESC", ancien: "id ASC", nom: "name COLLATE NOCASE ASC, id DESC", nom_desc: "name COLLATE NOCASE DESC, id DESC", taille: "size DESC, id DESC" };
 // type : un des TYPES, ou « documents » (PDF + documents Office). kind (historique, e-mails) : « image » ou « document »
 // (PDF et documents Office : jamais les vidéos ni l'audio). trashed : la corbeille. from : date (AAAA-MM-JJ HH:MM:SS) minimale.
-function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", month = "", limit = 40, offset = 0, reach = "", siteId } = {}) {
+function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", month = "", limit = 40, offset = 0, reach = "", siteId, folder, ext = "", minSize, maxSize, minWidth, maxWidth, duplicates = false, large = false } = {}) {
   checkCtx(ctx);
   const where = ["organization_id = ?", trashed ? "deleted_at IS NOT NULL" : "deleted_at IS NULL"];
   const args = [ctx.organizationId];
@@ -227,6 +233,18 @@ function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = 
   else if (TYPES.includes(type)) { where.push("type = ?"); args.push(type); }
   if (/^\d{4}-\d{2}-\d{2}/.test(String(from))) { where.push("created_at >= ?"); args.push(String(from).slice(0, 19)); }
   if (/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) { where.push("substr(created_at, 1, 7) = ?"); args.push(String(month)); } // mois d'ajout (AAAA-MM), dates enregistrées en UTC
+  // Explorateur : dossier (null = racine ; absent = toute la médiathèque), extension, taille et dimensions, doublons, fichiers volumineux
+  if (folder === null || folder === "racine") where.push("folder_id IS NULL");
+  else if (Number.isInteger(folder)) { where.push("folder_id = ?"); args.push(folder); }
+  const extClean = String(ext || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8);
+  if (extClean) { where.push("lower(path) LIKE ?"); args.push(`%.${extClean}`); }
+  const num = (v) => (Number.isFinite(Number(v)) && v !== "" && v !== null && v !== undefined && Number(v) >= 0 ? Math.floor(Number(v)) : null);
+  if (num(minSize) !== null) { where.push("size >= ?"); args.push(num(minSize)); }
+  if (num(maxSize) !== null) { where.push("size <= ?"); args.push(num(maxSize)); }
+  if (num(minWidth) !== null) { where.push("width >= ?"); args.push(num(minWidth)); }
+  if (num(maxWidth) !== null) { where.push("width <= ?"); args.push(num(maxWidth)); }
+  if (large) { where.push("size >= ?"); args.push(LARGE_BYTES); }
+  if (duplicates) { where.push(`sha256 IN (SELECT sha256 FROM mk_media WHERE organization_id = ? AND sha256 IS NOT NULL AND deleted_at IS NULL AND ${vis.sql} GROUP BY sha256 HAVING COUNT(*) > 1)`); args.push(ctx.organizationId, ...vis.params); }
   const text = String(q || "").trim().slice(0, 100);
   if (text) {
     const like = `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -296,8 +314,11 @@ function mediaUsage(ctx, media) {
   const pageTemplates = safe(() => db.prepare("SELECT id, name, 'modèle de page' AS kind, NULL AS site_id FROM mk_page_templates WHERE organization_id = ? AND content LIKE ? ESCAPE '\\'").all(org, like));
   const sites = safe(() => db.prepare(`SELECT id, name, 'site' AS kind, id AS site_id FROM mk_sites WHERE organization_id = ?${primarySite.excludeSql(db)} AND (tokens LIKE ? ESCAPE '\\' OR settings LIKE ? ESCAPE '\\')`).all(org, like, like));
   // Articles (image mise en avant, images de partage, images dans le texte) : le texte cite l'adresse du fichier
-  const articles = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind, NULL AS site_id FROM posts WHERE featured_media_id = ? OR cover_path = ? OR og_image_path = ? OR twitter_image_path = ? OR content LIKE ? ESCAPE '\\'").all(media.id, media.path, media.path, media.path, like));
-  return [...templates, ...pages, ...components, ...pageTemplates, ...sites, ...articles];
+  // Fiabilité : « confirmé » = relation exacte (colonne ou clé de la base) ; « probable » = l'adresse du fichier est citée dans le texte ou la structure d'un contenu (adresse fabriquée par le serveur, donc très spécifique, mais pas une relation déclarée)
+  const articlesExact = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind, NULL AS site_id FROM posts WHERE featured_media_id = ? OR cover_path = ? OR og_image_path = ? OR twitter_image_path = ?").all(media.id, media.path, media.path, media.path));
+  const articlesText = safe(() => db.prepare("SELECT id, title AS name, 'article' AS kind, NULL AS site_id FROM posts WHERE content LIKE ? ESCAPE '\\'").all(like)).filter((a) => !articlesExact.some((e) => e.id === a.id));
+  const mark = (rows, confidence) => rows.map((r) => ({ ...r, confidence }));
+  return [...mark(templates, "probable"), ...mark(pages, "probable"), ...mark(components, "probable"), ...mark(pageTemplates, "probable"), ...mark(sites, "probable"), ...mark(articlesExact, "confirmed"), ...mark(articlesText, "probable")];
 }
 // ---------- Partage explicite entre sites (R5) ----------
 // Changer la portée d'un média, JAMAIS d'un site à un autre directement :
@@ -398,6 +419,6 @@ function purgeMedia(ctx, id) {
 
 module.exports = {
   visibleSql, referenceSql, forSite, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaMonths, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
-  effectiveLimit, uploadConfig, ACCEPT, EXT_TYPES,
+  effectiveLimit, uploadConfig, ACCEPT, EXT_TYPES, assertWritable, LARGE_BYTES,
   MAX_IMAGE, MAX_DOCUMENT, MAX_AUDIO, MAX_VIDEO, MAX_UPLOAD, PUBLIC_BASE, TYPES, TYPE_LABELS, FORMATS, SORTS,
 };
