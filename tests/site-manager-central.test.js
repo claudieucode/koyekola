@@ -11,7 +11,11 @@ const one = (sql, ...a) => db.prepare(sql).get(...a);
 const idOf = (c) => one("SELECT id FROM users WHERE email = ?", c.email).id;
 const mk = async (name) => Number(String((await boss.post(S, { name })).location).match(/sites\/(\d+)/)[1]);
 const rowOf = (html, key) => (html.split("<tr").slice(1).map((p) => `<tr${p.split("</tr>")[0]}</tr>`).find((r) => r.includes(key)) || "");
-const cell = (row, label) => (new RegExp(`data-label="${label}"[^>]*>([\\s\\S]*?)</td>`).exec(row) || [])[1]?.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+// Carte de site (Mes sites) : chiffres dans <dl class="mk-site-stats"> (<dt> libellé, <dd> valeur) ; modules dans .mk-site-modules
+const cell = (row, label) => {
+  const m = label === "Modules" ? /mk-site-modules">([\s\S]*?)<\/span>\s*<\/span>\s*<\/th>/.exec(row) : new RegExp(`<dt>${label}</dt><dd[^>]*>([\\s\\S]*?)</dd>`).exec(row);
+  return m && m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+};
 const siteMeta = (html) => (/<meta name="mk-space" content="([a-z0-9]+)"/.exec(html) || [])[1] ?? null;
 
 before(async () => {
