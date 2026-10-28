@@ -108,7 +108,7 @@ describe("templates : bibliothèque, aperçu, importation, idempotence, isolatio
       // styles : brouillon seulement
       const d = JSON.parse(draftOf(A).changes); assert.equal(d["tokens.colors.primary"], "#0b2a40");
       const stBoot = JSON.parse(/<script type="application\/json" id="st-data">([\s\S]*?)<\/script>/.exec((await adminA.get(`/marketing/site-web/styles?site=${A}`)).text)[1].replace(/\\u003c/g, "<"));
-      assert.equal(stBoot.values["tokens.colors.primary"], "#0b2a40", "le brouillon de styles est visible dans Styles"); assert.equal(stBoot.values["tokens.fonts.heading"], "arial"); assert.equal(stBoot.live["tokens.colors.primary"], "#8a1c3a", "la version en ligne ne change pas");
+      assert.equal(stBoot.values["tokens.colors.primary"], "#0b2a40", "le brouillon de styles est visible dans Styles"); assert.equal(stBoot.values["tokens.fonts.heading"], "bricolage"); assert.equal(stBoot.live["tokens.colors.primary"], "#8a1c3a", "la version en ligne ne change pas");
       assert.equal(one("SELECT tokens FROM mk_sites WHERE id = ?", A).tokens, tokensBefore, "styles publiés intacts");
       assert.ok(one("SELECT id FROM cms_template_imports WHERE import_key = ?", k)); assert.ok(one("SELECT id FROM mk_audit_logs WHERE action = 'template.imported' ORDER BY id DESC LIMIT 1"));
     });

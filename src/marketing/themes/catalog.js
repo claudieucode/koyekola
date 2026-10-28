@@ -51,7 +51,7 @@ const checksumOf = (manifest) => crypto.createHash("sha256").update(JSON.stringi
 // Thème d'origine (intégré au moteur) : les jetons par défaut du design system
 const ORIGINAL = Object.freeze({
   key: DEFAULT_KEY, name: "Kolakisa — d'origine", version: "1.0.0", author: "Équipe Kolakisa", api: THEME_API,
-  description: "L'apparence d'origine de Kolakisa : bleu marine, fond clair, titres Arial Bold.", tokens: tokensLib.normalizeTokens({}),
+  description: "L'apparence d'origine de Kolakisa : bleu marine, fond clair, titres Bricolage Grotesque.", tokens: tokensLib.normalizeTokens({}),
 });
 
 const RAW = [

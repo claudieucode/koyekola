@@ -5,7 +5,7 @@
    Principes (détail dans docs/KOLAKISA_ADMIN_DESIGN_SYSTEM.md §« Registre marine ») :
    1. Le bleu marine fait la structure (menus, titres, filets) ; le bleu d'action ne sert qu'à ce qui se clique ou se sélectionne.
    2. Sens fixe des teintes : sarcelle = en ligne / actif ; ambre = brouillon / à surveiller ; gris = archivé ; rouge = suppression et erreur.
-   3. Un titre de page fort (Arial Bold), un texte d'aide de 62 caractères au plus, aucune illustration dans les en-têtes
+   3. Un titre de page fort (Bricolage Grotesque), un texte d'aide de 62 caractères au plus, aucune illustration dans les en-têtes
       (elles restent dans les états vides, où elles guident vers l'action).
    4. Pas de capitales espacées : les étiquettes s'écrivent en minuscules grasses, la hiérarchie vient de la taille et du poids.
    5. Les chiffres clés forment un registre d'un seul tenant (une bande à filets), pas quatre cartes identiques.
@@ -26,7 +26,7 @@
   --kb-live-bg: #e3f3f6;
   --kb-draft: #8a5a00; --kb-draft-bg: #fff4d6;
   --kb-r-ctl: 8px; --kb-r-panel: 12px;
-  --kb-display: var(--font-display, Arial, "Helvetica Neue", Helvetica, sans-serif);
+  --kb-display: var(--font-display, "Bricolage Grotesque", system-ui, sans-serif);
 }
 html[data-kola-theme="light"], html:not([data-kola-theme]) { --bg: var(--kb-canvas); --mk-bg: var(--kb-canvas); --border: var(--kb-rule); --mk-border: var(--kb-rule); --muted: var(--kb-ink-3); --mk-text-soft: var(--kb-ink-2); }
 html[data-kola-theme="dark"] {

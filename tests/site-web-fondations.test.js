@@ -132,7 +132,7 @@ describe("design system", () => {
     assert.match(css, /--kw-primary:#123456;/);
     assert.match(css, /--kw-h1-size:50px;/);
     assert.match(css, /--kw-space-xxl:96px;/);
-    assert.match(css, /--kw-font-heading:Arial,/);
+    assert.match(css, /--kw-font-heading:'Bricolage Grotesque'/);
     const evil = tokensToCss({ colors: { primary: "red;}</style><script>" }, border: { color: "#000;x" } });
     assert.doesNotMatch(evil, /<|script|;x/);
   });

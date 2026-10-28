@@ -11,7 +11,6 @@ const SPACE_KEYS = ["xs", "sm", "md", "lg", "xl", "xxl"];
 // Polices proposées : celles du site (servies localement, aucun service tiers) et des polices système
 const fontLib = require("../../utils/fontLibrary");
 const FONTS = {
-  arial: { label: "Arial (par défaut)", stack: "Arial, 'Helvetica Neue', Helvetica, 'Liberation Sans', Arimo, sans-serif" },
   figtree: { label: "Figtree", stack: "Figtree, system-ui, sans-serif" },
   bricolage: { label: "Bricolage Grotesque", stack: "'Bricolage Grotesque', system-ui, sans-serif" },
   system: { label: "Police du système", stack: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" },
@@ -23,7 +22,7 @@ const SHADOWS = { none: "none", sm: "0 1px 3px rgba(11, 42, 64, 0.08)", md: "0 4
 const DEFAULT_TOKENS = Object.freeze({
   colors: { primary: "#0277b6", secondary: "#0b2a40", accent: "#f59e0b", background: "#f3f8fc", surface: "#ffffff", text: "#10222f", muted: "#5b6b78", success: "#1e7e34", warning: "#8a5a00", error: "#c62828" },
   // button / link : par défaut la police du texte, pour que les sites existants ne changent pas d'aspect
-  fonts: { heading: "arial", body: "arial", button: "arial", link: "arial" },
+  fonts: { heading: "bricolage", body: "figtree", button: "figtree", link: "figtree" },
   // Couleurs ajoutées par l'équipe : { key: "c-<identifiant>", label, hex }. Utilisables comme les couleurs du système
   // (référence « token:c-… » dans les styles des widgets).
   customColors: [],
