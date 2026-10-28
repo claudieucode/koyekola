@@ -78,8 +78,9 @@ describe("polices : hébergées sur le site, aucun service externe", () => {
     }
   });
   test("le texte et les titres utilisent les polices du site, avec repli système", () => {
-    assert.match(SITE_CSS, /--font-body:\s*"Figtree",[^;]*system-ui/);
-    assert.match(SITE_CSS, /--font-display:\s*"Bricolage Grotesque",[^;]*system-ui/);
+    assert.match(SITE_CSS, /--font-sans:\s*Arial,[^;]*sans-serif/);
+    assert.match(SITE_CSS, /--font-body:\s*var\(--font-sans\)/);
+    assert.match(SITE_CSS, /--font-display:\s*var\(--font-sans\)/);
   });
 });
 

@@ -71,8 +71,13 @@
   --ring: 0 0 0 4px rgba(2, 119, 182, 0.16);
   --field-border: #7a90a4;   /* contour des champs : ≥ 3:1 sur fond blanc (WCAG 1.4.11) ; --line reste pour les filets et boutons contour */
 
-  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-display: "Bricolage Grotesque", "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Typographie centrale (Titan XXXVI) : Arial partout, Arial Bold pour les titres. Repli : Helvetica (macOS), Liberation Sans / Arimo
+     (Linux, métriques identiques à Arial). Bricolage Grotesque et Figtree restent déclarées plus haut, uniquement pour les sites dont
+     les réglages (ou le panneau Styles) les choisissent expressément. */
+  --font-sans: Arial, "Helvetica Neue", Helvetica, "Liberation Sans", Arimo, sans-serif;
+  --font-body: var(--font-sans);
+  --font-display: var(--font-sans);
+  --font-display-weight: 700;
   --ease: cubic-bezier(0.22, 0.8, 0.3, 1);
   --header-h: 72px;
 }
@@ -2378,7 +2383,7 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
 .about-text a { color: var(--accent-dark); text-underline-offset: 3px; }
 .about-text ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 22px 36px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); max-width: none; }
 .about-text ul li { margin: 0; padding-left: 16px; border-left: 3px solid var(--accent); color: var(--muted); font-size: 1rem; line-height: 1.6; }
-.about-text ul li strong { display: block; margin-bottom: 4px; color: var(--primary); font-family: "Bricolage Grotesque", "Figtree", system-ui, sans-serif; font-size: 1.1rem; letter-spacing: -0.02em; }
+.about-text ul li strong { display: block; margin-bottom: 4px; color: var(--primary); font-family: var(--font-display); font-size: 1.1rem; letter-spacing: -0.02em; }
 .about-text p:last-child { margin-bottom: 0; }
 .about-section--person h2 { font-size: clamp(1.2rem, 2vw, 1.45rem); }
 @media (min-width: 900px) {
@@ -2388,7 +2393,7 @@ input[type=text], input[type=email], input[type=password], input[type=number], i
   .about-section h2 { position: sticky; top: 96px; }
 }
 .about-close { margin-top: clamp(12px, 3vw, 28px); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 32px; padding: clamp(22px, 4vw, 36px) clamp(20px, 4vw, 40px); border-radius: var(--radius-lg); background: var(--surface-alt); border: 1px solid var(--border); }
-.about-close p { margin: 0; font-family: "Bricolage Grotesque", "Figtree", system-ui, sans-serif; font-size: clamp(1.1rem, 2vw, 1.4rem); font-weight: 700; letter-spacing: -0.02em; color: var(--primary); }
+.about-close p { margin: 0; font-family: var(--font-display); font-size: clamp(1.1rem, 2vw, 1.4rem); font-weight: 700; letter-spacing: -0.02em; color: var(--primary); }
 .about-close .about-close-actions { display: flex; flex-wrap: wrap; gap: 12px; font-family: inherit; }
 @media (prefers-reduced-motion: no-preference) {
   html:not([data-kb-motion="off"]):not([data-kb-motion="lite"]) .about-hero > * { animation: about-rise 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
@@ -2701,7 +2706,7 @@ form.kb-search input[type="search"] { flex: 1 1 200px; min-width: 0; padding: 10
 .article-pages { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin: 2.4em 0 1em; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .article-pages-status { color: var(--muted); font-weight: 600; }
 /* Police du bloc : les familles proposées par l'éditeur (déjà chargées par le site ou système) */
-:is(.article-content, .ProseMirror) [data-ff="sans"] { font-family: Figtree, sans-serif; }
+:is(.article-content, .ProseMirror) [data-ff="sans"] { font-family: Figtree, sans-serif; }  /* choix explicite de l'auteur : conservé */
 :is(.article-content, .ProseMirror) [data-ff="display"] { font-family: "Bricolage Grotesque", Figtree, sans-serif; }
 :is(.article-content, .ProseMirror) [data-ff="serif"] { font-family: Georgia, serif; }
 :is(.article-content, .ProseMirror) [data-ff="mono"] { font-family: ui-monospace, Menlo, Consolas, monospace; }
