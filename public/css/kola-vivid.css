@@ -1,0 +1,185 @@
+/* KOLAKISA — Titan XXVIII « Marine & aurore » : couleurs de fonction, dégradés de marque, surfaces teintées, mouvement.
+   Couche finale, chargée après kola-brand.css (administration) et, en version réduite, dans l'en-tête public (formations).
+   Elle ne change ni le balisage ni les comportements ; elle ajoute des JETONS (§1-2), des ÉLÉMENTS (§3-6) et du MOUVEMENT (§7).
+   Règle : une couleur = une fonction (voir docs/KOLAKISA_TITAN_XXVIII_DIRECTION_ARTISTIQUE.md). Le marine reste la structure ;
+   les familles ci-dessous ne remplissent jamais une page entière : un fond teinté, un accent soutenu, un dégradé réservé aux mises en avant.
+
+   Familles (chacune : réf · fond teinté · encre (texte ≥ 4,5:1 sur le fond teinté) · icône · survol)
+     azur       action, navigation, site                    turquoise  construction, SEO, lecture
+     émeraude   croissance, réussite, analyse               violet     pédagogie (formations), design, parcours
+     magenta    campagnes, création, audience               ambre      attention, mise en valeur, réussite d'apprenant
+   Les couleurs d'état (succès vert, avertissement ambre, erreur rouge) gardent leur sens et ne sont jamais prises par un module. */
+
+/* ===== 1. Jetons — clair ===== */
+:root {
+  --v-azur: #0277b6;     --v-azur-bg: #e6f2fa;     --v-azur-ink: #0b5f93;     --v-azur-ui: #1593d6;     --v-azur-hv: #d3e8f6;
+  --v-turq: #0e7490;     --v-turq-bg: #e0f4f6;     --v-turq-ink: #0b5f74;     --v-turq-ui: #14a2b8;     --v-turq-hv: #c9ebef;
+  --v-emer: #0b8a63;     --v-emer-bg: #e2f5ed;     --v-emer-ink: #076a4c;     --v-emer-ui: #12a578;     --v-emer-hv: #cdeedf;
+  --v-viol: #7048c8;     --v-viol-bg: #eee9fa;     --v-viol-ink: #5f35b0;     --v-viol-ui: #8a63e0;     --v-viol-hv: #e0d7f6;
+  --v-magn: #b83280;     --v-magn-bg: #fbe8f2;     --v-magn-ink: #9a2569;     --v-magn-ui: #d0489a;     --v-magn-hv: #f6d4e7;
+  --v-ambr: #c98a00;     --v-ambr-bg: #fff3d3;     --v-ambr-ink: #7a4f00;     --v-ambr-ui: #e0a100;     --v-ambr-hv: #ffe8ac;
+
+  /* Dégradés de marque : six, pas plus. Le texte blanc y garde ≥ 4,5:1 (teintes de départ et d'arrivée assez profondes). */
+  --g-marine:  linear-gradient(135deg, #0b2a40 0%, #123f5f 55%, #0369a1 130%);                              /* marine → azur : structure, bandeaux */
+  --g-lagon:   linear-gradient(135deg, #0277b6 0%, #0369a1 45%, #0e7490 130%);                                         /* azur → turquoise : action principale, construction */
+  --g-aurore:  linear-gradient(135deg, #0369a1 0%, #6d43c4 100%);                                         /* azur → violet : parcours, pédagogie */
+  --g-orchidee: linear-gradient(135deg, #6d43c4 0%, #b0307b 100%);                                        /* violet → magenta : création, tunnels */
+  --g-seve:    linear-gradient(135deg, #076a4c 0%, #0e7490 100%);                                         /* vert → turquoise : croissance, mesures */
+  --g-nuit-or: radial-gradient(120% 90% at 100% 0%, rgba(232, 176, 48, 0.24), transparent 55%), linear-gradient(135deg, #06192a 0%, #0b2a40 60%, #12466a 100%); /* marine + lumière dorée : accueil */
+
+  /* Accent de l'espace de travail (posé par le module) : deux tons pour les illustrations, un fond teinté, une encre */
+  --vx-a: var(--v-azur); --vx-b: var(--v-turq); --vx-bg: var(--v-azur-bg); --vx-ink: var(--v-azur-ink); --vx-grad: var(--g-lagon);
+
+  /* Profondeur : ombres teintées de marine, jamais noires */
+  --v-sh-1: 0 1px 2px rgba(10, 31, 53, 0.06), 0 6px 16px -8px rgba(10, 31, 53, 0.14);
+  --v-sh-2: 0 2px 4px rgba(10, 31, 53, 0.06), 0 16px 32px -14px rgba(10, 31, 53, 0.24);
+
+  /* Mouvement : 120 / 180 / 260 ms et une courbe (docs/KOLAKISA_MOTION.md) ; 520 ms réservés à une barre qui se remplit */
+  --v-ease: cubic-bezier(0.22, 0.8, 0.3, 1);
+  --v-fill: 520ms;
+  --v-on-grad: #fff;   /* texte posé sur un dégradé de marque (contraste vérifié ≥ 4,5:1 sur chaque départ et arrivée) */
+}
+
+/* ===== 2. Jetons — sombre (fonds en transparence, encres éclaircies : jamais de fond clair éclatant) ===== */
+html[data-kola-theme="dark"] {
+  --v-azur: #4aa3dc;  --v-azur-bg: rgba(74, 163, 220, 0.14);  --v-azur-ink: #8cc6ee;  --v-azur-ui: #5cb4ea;  --v-azur-hv: rgba(74, 163, 220, 0.22);
+  --v-turq: #3fc0d4;  --v-turq-bg: rgba(63, 192, 212, 0.14);  --v-turq-ink: #86dbe9;  --v-turq-ui: #4fcbe0;  --v-turq-hv: rgba(63, 192, 212, 0.22);
+  --v-emer: #34c79a;  --v-emer-bg: rgba(52, 199, 154, 0.14);  --v-emer-ink: #7fdcb9;  --v-emer-ui: #44d3a7;  --v-emer-hv: rgba(52, 199, 154, 0.22);
+  --v-viol: #9b7ae8;  --v-viol-bg: rgba(155, 122, 232, 0.16); --v-viol-ink: #c1adf3;  --v-viol-ui: #a98cee;  --v-viol-hv: rgba(155, 122, 232, 0.24);
+  --v-magn: #e66aa8;  --v-magn-bg: rgba(230, 106, 168, 0.15); --v-magn-ink: #f4a2cb;  --v-magn-ui: #ee7db5;  --v-magn-hv: rgba(230, 106, 168, 0.23);
+  --v-ambr: #e8b030;  --v-ambr-bg: rgba(232, 176, 48, 0.15);  --v-ambr-ink: #f1c766;  --v-ambr-ui: #efbb47;  --v-ambr-hv: rgba(232, 176, 48, 0.23);
+  --v-sh-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -8px rgba(0, 0, 0, 0.4);
+  --v-sh-2: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 32px -14px rgba(0, 0, 0, 0.55);
+}
+
+/* ===== 3. Espaces de travail : deux tons par module (le marine de la structure ne change pas) ===== */
+body[data-kb-module="site"]      { --vx-a: var(--v-azur); --vx-b: var(--v-turq); --vx-bg: var(--v-azur-bg); --vx-ink: var(--v-azur-ink); --vx-grad: var(--g-lagon); }
+body[data-kb-module="marketing"] { --vx-a: var(--v-magn); --vx-b: var(--v-viol); --vx-bg: var(--v-magn-bg); --vx-ink: var(--v-magn-ink); --vx-grad: var(--g-orchidee); }
+body[data-kb-module="analytics"] { --vx-a: var(--v-emer); --vx-b: var(--v-turq); --vx-bg: var(--v-emer-bg); --vx-ink: var(--v-emer-ink); --vx-grad: var(--g-seve); }
+body[data-kb-module="design"]    { --vx-a: var(--v-viol); --vx-b: var(--v-azur); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-aurore); }
+body[data-kb-module="funnel"]    { --vx-a: var(--v-viol); --vx-b: var(--v-magn); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-orchidee); }
+body[data-kb-module="seo"]       { --vx-a: var(--v-turq); --vx-b: var(--v-azur); --vx-bg: var(--v-turq-bg); --vx-ink: var(--v-turq-ink); --vx-grad: var(--g-lagon); }
+body[data-kb-module="lms"]       { --vx-a: var(--v-viol); --vx-b: var(--v-turq); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-aurore); }
+
+/* Surfaces : neutre (--surface), teintée, interactive (survol), active (sélection). Définies sur body pour suivre l'accent de l'espace. */
+body { --s-tint: color-mix(in srgb, var(--vx-a) 6%, var(--surface, #fff)); --s-hover: color-mix(in srgb, var(--vx-a) 10%, var(--surface, #fff)); --s-active: color-mix(in srgb, var(--vx-a) 15%, var(--surface, #fff)); --s-edge: color-mix(in srgb, var(--vx-a) 24%, var(--border, #dde6ed)); --g-halo: radial-gradient(closest-side, color-mix(in srgb, var(--vx-a) 20%, transparent), transparent); }
+
+/* Illustrations : le « bleu » des scènes devient un dégradé à deux tons de l'espace (défini dans le sprite de partials/top.ejs) ; le marine et l'étincelle restent communs */
+.kx-art .blue { fill: url(#vx-g) var(--a-blue); } /* sans le sprite (vx-g), la forme garde son bleu uni */
+.kx-art .stk { stroke: var(--vx-a); }
+.kx-art { --a-blue: var(--vx-a); --a-sky: color-mix(in srgb, var(--vx-b) 55%, #fff); --a-ice: var(--vx-bg); }
+html[data-kola-theme="dark"] .kx-art { --a-sky: color-mix(in srgb, var(--vx-b) 70%, #0a1628); }
+
+/* ===== 4. Surfaces et cartes : icône teintée, liseré d'accent, survol ===== */
+.mk-body .mk-kpi { position: relative; padding-top: 16px; background: var(--s-tint); border: 1px solid var(--s-edge); overflow: hidden; transition: background var(--kb-dur-fast, 120ms) var(--v-ease), box-shadow var(--kb-dur-fast, 120ms) var(--v-ease); }
+.mk-body .mk-kpi::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--kpi-c, var(--vx-a)); opacity: 0.85; }
+.mk-body .mk-kpi:hover { background: var(--s-hover); box-shadow: var(--v-sh-1); }
+.mk-body .mk-kpi.is-strong { background: var(--s-active); }
+.mk-body .mk-kpi[data-tone="azur"]    { --kpi-c: var(--v-azur); }
+.mk-body .mk-kpi[data-tone="turq"]    { --kpi-c: var(--v-turq); }
+.mk-body .mk-kpi[data-tone="emer"]    { --kpi-c: var(--v-emer); }
+.mk-body .mk-kpi[data-tone="viol"]    { --kpi-c: var(--v-viol); }
+.mk-body .mk-kpi[data-tone="magn"]    { --kpi-c: var(--v-magn); }
+.mk-body .mk-kpi[data-tone="ambr"]    { --kpi-c: var(--v-ambr); }
+.mk-body .mk-kpi[data-tone="neutre"]  { --kpi-c: var(--line, #c5d0de); }
+/* pastille d'icône (balisage : <span class="v-ico" data-tone="…">) : fond teinté + glyphe soutenu ; 36 px pour une carte, 28 px en compact */
+.v-ico { display: inline-grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--ico-bg, var(--vx-bg)); color: var(--ico-ink, var(--vx-ink)); }
+.v-ico svg { width: 20px; height: 20px; }
+.v-ico.is-sm { width: 28px; height: 28px; border-radius: 8px; } .v-ico.is-sm svg { width: 16px; height: 16px; }
+.v-ico.is-lg { width: 52px; height: 52px; border-radius: 14px; } .v-ico.is-lg svg { width: 28px; height: 28px; }
+.v-ico[data-tone="azur"] { --ico-bg: var(--v-azur-bg); --ico-ink: var(--v-azur-ink); }
+.v-ico[data-tone="turq"] { --ico-bg: var(--v-turq-bg); --ico-ink: var(--v-turq-ink); }
+.v-ico[data-tone="emer"] { --ico-bg: var(--v-emer-bg); --ico-ink: var(--v-emer-ink); }
+.v-ico[data-tone="viol"] { --ico-bg: var(--v-viol-bg); --ico-ink: var(--v-viol-ink); }
+.v-ico[data-tone="magn"] { --ico-bg: var(--v-magn-bg); --ico-ink: var(--v-magn-ink); }
+.v-ico[data-tone="ambr"] { --ico-bg: var(--v-ambr-bg); --ico-ink: var(--v-ambr-ink); }
+.mk-body .mk-kpi-label { display: flex; align-items: center; gap: 8px; }
+.mk-body .mk-kpi .v-ico { margin-bottom: 6px; }
+
+/* illustrations de partials/empty-art.ejs (variables --accent) : elles prennent aussi l'accent de l'espace */
+.mk-body .mk-empty-art, .mk-body .kx-empty-art { --accent: var(--vx-a); --accent-light: var(--vx-bg); --k-accent-solid: var(--vx-a); }
+
+/* ===== 5. Mise en avant : un dégradé par écran, jamais davantage ===== */
+.v-feature { position: relative; overflow: hidden; border-radius: var(--kb-r-panel, 12px); background: var(--vx-grad); color: var(--v-on-grad); box-shadow: var(--v-sh-2); isolation: isolate; }
+.v-feature::after { content: ""; position: absolute; inset: auto -40px -60px auto; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, 0.18), transparent); z-index: -1; pointer-events: none; }
+.v-feature :is(h2, h3, p, .v-eyebrow) { color: inherit; }
+.v-feature p { opacity: 0.92; }
+.v-feature .btn { background: var(--v-on-grad); color: var(--kb-navy-fixed, #0b2a40); border-color: transparent; }
+.v-feature .btn:hover { background: #eaf3fb; }
+.v-feature.v-marine { background: var(--g-nuit-or); }
+
+/* Action principale d'une mise en avant ou d'un état vide : dégradé lagon (les boutons des formulaires restent unis, comme le veut la charte) */
+.mk-body :is(.mk-empty, .mk-empty-split, .kx-hero-actions) .btn-primary {
+  background: var(--g-lagon); border-color: transparent; color: #fff; box-shadow: 0 1px 2px rgba(10, 31, 53, 0.18), 0 8px 18px -8px color-mix(in srgb, var(--v-azur) 60%, transparent);
+  transition: transform var(--kb-dur-fast, 120ms) var(--v-ease), box-shadow var(--kb-dur-fast, 120ms) var(--v-ease), filter var(--kb-dur-fast, 120ms) var(--v-ease);
+}
+.mk-body :is(.mk-empty, .mk-empty-split, .kx-hero-actions) .btn-primary:hover { filter: brightness(1.08); box-shadow: 0 1px 2px rgba(10, 31, 53, 0.2), 0 12px 22px -8px color-mix(in srgb, var(--v-azur) 70%, transparent); }
+.mk-body :is(.mk-empty, .mk-empty-split, .kx-hero-actions) .btn-primary:active { transform: translateY(1px); filter: none; }
+
+/* ===== 6. États vides : halo de l'espace derrière la scène, grande taille, ligne claire ===== */
+.mk-body .mk-empty { position: relative; overflow: hidden; background: linear-gradient(180deg, var(--s-tint), var(--surface, #fff) 70%); border: 1px solid var(--s-edge); border-style: solid; }
+.mk-body .mk-empty::before { content: ""; position: absolute; left: 50%; top: 10px; width: min(420px, 90%); aspect-ratio: 1.6; translate: -50% 0; background: var(--g-halo); pointer-events: none; }
+.mk-body .mk-empty > * { position: relative; }
+.mk-body .mk-empty :is(.kx-empty-ill, .kx-art, svg.kx-art) { max-width: 176px; }
+.mk-body .mk-empty-split { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--s-tint), var(--surface, #fff) 65%); border: 1px solid var(--s-edge); }
+.mk-body .mk-empty-split .mk-empty-art svg { max-width: 220px; height: auto; }
+.mk-body .kx-empty-art .kx-art { max-width: 200px; height: auto; }
+
+/* Accueil d'un site : le bandeau de bienvenue reprend son illustration, sur un dégradé marine et lumière dorée */
+.mk-body .kx-welcome { position: relative; padding: 24px 28px; border: 0; border-radius: var(--kb-r-panel, 12px); background: var(--g-nuit-or); color: #fff; box-shadow: var(--v-sh-2); overflow: hidden; }
+.mk-body .kx-welcome :is(h1, .kx-hero-lead, .kx-eyebrow) { color: #fff; }
+.mk-body .kx-welcome .kx-hero-lead { opacity: 0.9; }
+.mk-body .kx-welcome h1::before { background: var(--v-ambr-ui); }
+.mk-body .kx-welcome .kx-hero-art { display: block; flex: none; width: min(260px, 34%); opacity: 0.96; }
+.mk-body .kx-welcome .kx-hero-art svg { width: 100%; height: auto; }
+.mk-body .kx-welcome .kx-hero-actions .btn-outline { background: rgba(255, 255, 255, 0.1); color: #fff; border-color: rgba(255, 255, 255, 0.35); }
+.mk-body .kx-welcome .kx-hero-actions .btn-outline:hover { background: rgba(255, 255, 255, 0.18); }
+.mk-body .kx-welcome .kx-hero-actions .btn-primary { background: #fff; color: #0b2a40; box-shadow: none; }
+
+/* Barres de progression : la valeur est un dégradé de l'espace ; l'état reste lisible sans la couleur (le libellé chiffré l'accompagne toujours) */
+.mk-body :is(.mk-progress-bar, .mk-setup-bar > span) { background: var(--vx-grad); }
+.mk-body .mk-col-bar { background: linear-gradient(180deg, var(--vx-b), var(--vx-a)); }
+
+/* Graphiques : six séries distinctes, dans cet ordre (déjà --kb-data-*) ; le sixième est ambre pour rester distinct du bleu et du turquoise */
+:root { --kb-data-5: #c98a00; }
+
+/* ===== 7. Mouvement : ponctuel, court, jamais sur la mise en page ===== */
+/* sélecteur commun : mouvement complet seulement (ni « lite » ni « off » de kb-motion.js, ni préférence système de réduction) */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-empty > :is(.kx-art, svg, .kx-empty-art, .mk-empty-art) { animation: v-rise 260ms var(--v-ease) both; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-empty > :is(h2, h3, p, .mk-actions, .kx-empty-copy) { animation: v-rise 260ms var(--v-ease) 60ms both; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-kpi { animation: v-rise 260ms var(--v-ease) both; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-kpi:nth-child(2) { animation-delay: 40ms; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-kpi:nth-child(3) { animation-delay: 80ms; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-kpi:nth-child(4) { animation-delay: 120ms; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-kpi:nth-child(n+5) { animation-delay: 160ms; }
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .mk-col-bar { transform-origin: bottom; animation: v-grow-y var(--v-fill) var(--v-ease) both; }
+  /* flottement unique, sur la scène d'accueil : 3 px, 7 s */
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .mk-body .kx-welcome .kx-hero-art svg { animation: v-float 7s ease-in-out infinite; }
+}
+@keyframes v-rise { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@keyframes v-grow-y { from { transform: scaleY(0.04); } to { transform: scaleY(1); } }
+@keyframes v-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+
+/* ===== 9. Formations (site public et espace élève : pas de data-kb-module) — pédagogie = violet, appuyé d'un fond turquoise ===== */
+body:not([data-kb-module]) { --vx-a: var(--v-viol); --vx-b: var(--v-turq); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-aurore); }
+.course-thumb:not(:has(img)) { background: var(--g-aurore); color: rgba(255, 255, 255, 0.92); }
+.course-thumb:not(:has(img)) svg { width: 44px; height: 44px; }
+.empty-state { position: relative; overflow: hidden; border-style: solid; border-color: var(--s-edge); background: linear-gradient(180deg, var(--s-tint), transparent 85%); }
+.empty-state .kv-empty-ico { background: var(--g-aurore); color: var(--v-on-grad); }
+.empty-state .kv-empty-art { width: min(190px, 70%); height: auto; margin-bottom: 4px; }
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-kb-motion="lite"]):not([data-kb-motion="off"]) .empty-state > * { animation: v-rise 260ms var(--v-ease) both; }
+}
+
+/* ===== 8. Accessibilité et écrans étroits ===== */
+.mk-body .v-feature :focus-visible, .mk-body .kx-welcome :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (max-width: 720px) {
+  .mk-body .kx-welcome { padding: 18px 16px; }
+  .mk-body .kx-welcome .kx-hero-art { display: none; }
+  .mk-body .mk-empty :is(.kx-empty-ill, .kx-art, svg.kx-art) { max-width: 140px; }
+}
+@media (forced-colors: active) {
+  .v-feature, .mk-body .kx-welcome { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
+  .mk-body .mk-kpi::before { background: Highlight; }
+}

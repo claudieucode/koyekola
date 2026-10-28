@@ -9,24 +9,7 @@
    9 Réglages et formulaires · 10 Outils techniques · 11 Mouvement · 12 Écrans étroits
    ===================================================================================================================== */
 
-/* ===== 1. Illustrations (src/utils/illustrations.js) ===== */
-.kx-art {
-  --a-navy: #0f2c4a; --a-card: #ffffff; --a-line: #c5d0de; --a-line2: #9fb0c4; --a-soft: #e6ecf5;
-  --a-ice: #e3f1fb; --a-blue: #0277b6; --a-sky: #7dd3fc; --a-spark: #f4b740; --a-shadow: rgba(15, 44, 74, 0.1); --a-ground: rgba(15, 44, 74, 0.07);
-  display: block; width: 100%; height: auto; overflow: visible; flex: none;
-}
-html[data-kola-theme="dark"] .kx-art {
-  --a-navy: #0a1628; --a-card: #1a2740; --a-line: #34496a; --a-line2: #51698f; --a-soft: #223352;
-  --a-ice: rgba(76, 163, 230, 0.13); --a-blue: #3a9be0; --a-sky: #8fcbf7; --a-spark: #f1c766; --a-shadow: rgba(0, 0, 0, 0.35); --a-ground: rgba(0, 0, 0, 0.3);
-}
-.kx-art .navy { fill: var(--a-navy); } .kx-art .card { fill: var(--a-card); stroke: var(--a-line); stroke-width: 1.2; } .kx-art .sh { fill: var(--a-shadow); }
-.kx-art .ice { fill: var(--a-ice); } .kx-art .blue { fill: var(--a-blue); } .kx-art .sky { fill: var(--a-sky); } .kx-art .spark { fill: var(--a-spark); }
-.kx-art .ln { fill: var(--a-line); } .kx-art .ln2 { fill: var(--a-line2); } .kx-art .soft { fill: var(--a-soft); } .kx-art .wh { fill: #fff; } .kx-art .gnd { fill: var(--a-ground); }
-.kx-art .none { fill: none; }
-.kx-art .stk, .kx-art .stkn, .kx-art .stkl, .kx-art .stkw { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.kx-art .stk { stroke: var(--a-blue); stroke-width: 2.4; } .kx-art .stkn { stroke: var(--a-navy); stroke-width: 7; } .kx-art .stkl { stroke: var(--a-line2); stroke-width: 2; stroke-dasharray: 2 6; } .kx-art .stkw { stroke: #fff; stroke-width: 2.6; }
-html[data-kola-theme="dark"] .kx-art .stkn { stroke: var(--a-sky); }
-html[data-kola-theme="dark"] .kx-art .navy { stroke: rgba(143, 203, 247, 0.22); stroke-width: 1; }
+/* ===== 1. Illustrations : déplacées dans kola-art.css (partagées avec l'espace élève) ===== */
 
 /* ===== 2. Jetons de composition ===== */
 :root {

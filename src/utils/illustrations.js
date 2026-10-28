@@ -166,6 +166,15 @@ const SCENES = {
 
   // Accueil par défaut : cartes et étincelles
   accueil: () => stage(0) + win(70, 46, 150, 108) + rect(84, 70, 122, 30, 6, "ice") + lines(84, 112, [90, 64], 10, 5) + circ(244, 84, 22, "navy") + path("M244 70l4 10 10 1-8 7 3 10-9-6-9 6 3-10-8-7 10-1z", "spark") + card(190, 130, 80, 40, 9) + rect(200, 142, 40, 6, 3, "ln2") + rect(200, 154, 28, 5, 2.5, "ln") + sparkle(52, 66, 6) + plus(290, 150) + circ(56, 150, 3.5, "blue", 'opacity=".45"'),
+  // Titan XXVIII — formations (lecteur, progression, parcours d'étapes), tunnels (entonnoir en trois couches), réussite (anneau validé et étincelles)
+  formations: () => stage(2) + win(52, 40, 156, 120) + rect(66, 62, 128, 58, 6, "ice") + circ(130, 91, 15, "blue") + path("M125 83l14 8-14 8z", "wh") + rect(66, 130, 128, 6, 3, "soft") + rect(66, 130, 82, 6, 3, "blue") + rect(66, 144, 70, 5, 2.5, "ln") +
+    card(204, 76, 74, 92, 10) + [0, 1, 2].map((i) => circ(220, 98 + i * 24, 7, i < 2 ? "blue" : "soft") + rect(234, 95 + i * 24, 34, 6, 3, i < 2 ? "ln2" : "ln")).join("") + path("M216 98l3 3 5-6", "stkw", 'stroke-width="2"') +
+    path("M222 40l30-14 30 14-30 14z", "navy") + path("M236 48v12c0 5 32 5 32 0V48", "navy", 'opacity=".85"') + path("M282 40v18", "stk", 'stroke-width="2.4"') + circ(282, 62, 3.5, "spark") + sparkle(46, 62, 6) + plus(298, 120),
+  tunnels: () => stage(1) + [[110, 40, 5, "sky"], [160, 32, 5, "blue"], [208, 42, 5, "sky"]].map(([x, y, r, c]) => circ(x, y, r, c, 'opacity=".8"')).join("") +
+    path("M76 60h168l-16 30H92z", "ice", 'stroke="var(--a-line)" stroke-width="1.2"') + path("M92 90h136l-16 30H108z", "sky", 'opacity=".75"') + path("M108 120h104l-14 26h-76z", "blue") + rect(142, 146, 36, 26, 6, "navy") + badge(160, 188, 10, "blue") +
+    path("M110 46v10M160 38v18M208 48v8", "stk", 'stroke-width="1.8" stroke-dasharray="2 4"') + sparkle(268, 96, 6) + plus(52, 128),
+  succes: () => stage(3) + circ(160, 104, 56, "card") + circ(160, 104, 46, "none", 'fill="none" stroke="var(--a-blue)" stroke-width="7" stroke-linecap="round" stroke-dasharray="230 60" transform="rotate(-70 160 104)"') + circ(160, 104, 34, "ice") + path("M141 106l14 14 28-30", "stk", 'stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"') +
+    sparkle(86, 56, 7) + sparkle(244, 70, 6) + sparkle(252, 148, 5) + circ(80, 140, 4, "sky") + circ(236, 36, 3.5, "blue", 'opacity=".5"') + plus(98, 168) + plus(262, 112),
 };
 
 const ALIASES = {
@@ -181,7 +190,7 @@ const ALIASES = {
   layout: "pages", layers: "extensions", arrowrightleft: "redirections", users: "utilisateurs", user: "contacts", globe: "dashboard", searchcheck: "seo", search: "recherche", inbox: "commentaires",
   filetext: "articles", image: "media", palette: "themes", settings: "parametres", sliders: "outils", send: "email", mail: "email", listchecks: "formulaires", zap: "automatisations", plug: "connecteurs",
   download: "echanges", upload: "echanges", trash: "corbeille", list: "contacts", tag: "articles", shield: "sauvegardes", activity: "analytics", barchart: "analytics", messagesquare: "commentaires", menu: "navigation", link: "redirections",
-  filter: "automatisations", tunnels: "automatisations", clock: "sauvegardes", checkcircle: "diagnostic", smartphone: "email", home: "accueil", star: "accueil",
+  filter: "automatisations", funnel: "tunnels", funnels: "tunnels", formation: "formations", cours: "formations", lms: "formations", apprentissage: "formations", reussite: "succes", felicitations: "succes", valide: "succes", clock: "sauvegardes", checkcircle: "diagnostic", smartphone: "email", home: "accueil", star: "accueil",
 };
 
 const NAMES = Object.keys(SCENES);

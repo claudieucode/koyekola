@@ -45,7 +45,7 @@
   </div>
 
   <% if (!list.length) { %>
-    <div class="mk-empty fs-empty"><%- illu("filter", { className: "kx-empty-ill" }) %><h2><%= archived ? "Aucun tunnel archivé" : "Aucun tunnel" %></h2>
+    <div class="mk-empty fs-empty"><%- illu("tunnels", { className: "kx-empty-ill" }) %><h2><%= archived ? "Aucun tunnel archivé" : "Aucun tunnel" %></h2>
       <p><%= archived ? "Un tunnel archivé garde ses étapes et ses statistiques ; rien n'est effacé." : "Créez votre premier tunnel, vide ou à partir d'un modèle qui crée les vraies pages de chaque étape. Vos tunnels, leurs étapes et leurs chiffres apparaîtront ici." %></p>
       <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="fs-create" data-mk-modal-open="nouveau"><%- icon("plus", { size: 16 }) %>Créer le premier tunnel</button></div><% } %></div>
   <% } else { %>

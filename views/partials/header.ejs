@@ -15,12 +15,13 @@
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
   <script>/* barre de navigation : à gauche par défaut ; « bottom » mémorisé (bouton de position) = barre en bas sur grand écran (CSS ≥ 1280 px, pointeur précis) */ try { if (localStorage.getItem("kbDock") === "bottom") document.documentElement.setAttribute("data-kb-dock", "bottom"); } catch (e) {}</script>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
-  <% if (!(typeof dash !== "undefined" && dash)) { %><link rel="stylesheet" href="<%= asset('/css/kola-v3.css') %>"><% } /* design system v3 : site public et espace élève (l'espace formateur garde son habillage dashboard) */ %>
+  <% if (!(typeof dash !== "undefined" && dash)) { %><link rel="stylesheet" href="<%= asset('/css/kola-v3.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-art.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-vivid.css') %>"><% } /* design system v3 : site public et espace élève (l'espace formateur garde son habillage dashboard) */ %>
   <% const ap = typeof appearance === "function" ? appearance() : null; %><% if (ap && ap.css) { %><style id="kw-appearance"><%- ap.css %></style><% } %>
   <% if (ap && ap.preview) { %><meta name="robots" content="noindex, nofollow"><% } %>
   <% if (typeof dash !== "undefined" && dash) { %><link rel="stylesheet" href="<%= asset('/css/dashboard.css') %>"><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% if (dash.seo) { %><link rel="stylesheet" href="<%= asset('/css/seo-workspace.css') %>"><% } %><% } %>
 </head>
 <body<%- typeof dash !== "undefined" && dash ? ' class="dash-body"' : "" %>>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="vx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--vx-a)"/><stop offset="1" style="stop-color:var(--vx-b)"/></linearGradient></defs></svg>
   <a class="skip-link" href="#main">Aller au contenu principal</a>
 <% if (typeof dash !== "undefined" && dash) { %><%- include("dash-open") %><% } else { %>
 
