@@ -29,6 +29,7 @@ const articles = require("../services/articles");
 const workspace = require("../services/blogWorkspace");
 const taxonomy = require("../services/taxonomy");
 const siteContent = require("../services/siteContent");
+const dashSite = require("../services/dashSite");
 const primarySite = require("../services/primarySite");
 const urls = require("../services/urls");
 const { transaction: siteTransaction } = require("../marketing/db/tx");
@@ -723,7 +724,7 @@ function loadPost(req, res, next) {
 function newArticleSite(req) {
   if (req.blogSite !== undefined && req.blogSite !== null) return req.blogSite;
   const raw = String(req.query.site ?? "");
-  if (!raw) return null;
+  if (!raw) return null; // contrat historique : sans « ?site= », site principal (la liste des articles propose « Nouvel article » avec le site actif dans l'adresse)
   if (!/^\d{1,12}$/.test(raw)) throw new UserError("Site introuvable.");
   const orgId = marketingOrgId();
   if (!orgId || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ? AND organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(db)}`).get(Number(raw), orgId)) throw new UserError("Site introuvable.");
@@ -916,7 +917,8 @@ router.get("/formateur/blog", (req, res) => {
   }
   // Liste filtrée, triée et paginée DANS la base par le service partagé avec le CMS (le contenu des articles n'est jamais chargé)
   const state = workspace.parse(req.query);
-  const result = articles.list({ state: state.etat, q: state.q, sort: state.tri, page: state.page, perPage: workspace.PER_PAGE });
+  const activeSite = dashSite.siteIdOf(req);
+  const result = articles.list({ state: state.etat, q: state.q, sort: state.tri, page: state.page, perPage: workspace.PER_PAGE, scope: siteContent.scopeForSite("post", "p.id", activeSite === null ? 0 : activeSite) }); // seulement les articles du site sélectionné
   const flash = req.session.blogFlash || null; delete req.session.blogFlash; // message de la dernière action : affiché une seule fois
   res.render("instructor/blog-list", {
     result, state: { ...state, page: result.page }, flash, newsletter, saved: req.query.enregistre === "1", statuses: blog.STATUSES, workspace, sites: workspace.siteLabels(result.rows.map((r) => r.id)),

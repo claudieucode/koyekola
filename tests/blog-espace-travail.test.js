@@ -208,9 +208,12 @@ describe("Blog : espace de travail (serveur réel)", () => {
   test("les articles d'un autre site sont signalés par le nom de leur site", async () => {
     const id = add("Article du site Beta");
     db.prepare("INSERT INTO mk_content_sites (content_type, content_id, organization_id, site_id) VALUES ('post', ?, ?, ?)").run(id, orgId, siteB);
-    const html = (await prof.get("/formateur/blog?q=site+Beta")).text;
+    // Liste PAR SITE : l'article n'apparaît que dans le site sélectionné (jamais dans la liste du site principal)
+    assert.doesNotMatch((await prof.get("/formateur/blog?site=principal&q=site+Beta")).text, /Article du site Beta/, "absent de la liste du site principal");
+    const html = (await prof.get(`/formateur/blog?site=${siteB}&q=site+Beta`)).text;
     assert.match(html, /<span class="bl-site"[^>]*>Site : Site Beta<\/span>/);
-    assert.doesNotMatch((await prof.get("/formateur/blog?q=Contexte")).text, /class="bl-site"/, "un article du site principal n'a pas de mention");
+    // Le site choisi reste actif pendant la navigation (session, revérifié côté serveur) : on revient explicitement au principal
+    assert.doesNotMatch((await prof.get("/formateur/blog?site=principal&q=Contexte")).text, /class="bl-site"/, "un article du site principal n'a pas de mention");
   });
 
   test("contenu saisi : échappé (titre, adresse, recherche réaffichée), rien d'injecté", async () => {

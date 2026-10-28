@@ -48,13 +48,13 @@ function duplicateCourse(courseId) {
     const info = db
       .prepare(
         `INSERT INTO courses (instructor_id, title, slug, subtitle, description, objectives, prerequisites, target_audience, skills, intro_video,
-                              category, level, price_cents, thumbnail_path, rich_text, language, published, archived)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)`
+                              category, level, price_cents, thumbnail_path, rich_text, language, published, archived, site_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`
       )
       .run(
         source.instructor_id, title, slug, source.subtitle, source.description, source.objectives, source.prerequisites,
         source.target_audience, source.skills, source.intro_video, source.category, source.level, source.price_cents,
-        copyFile(source.thumbnail_path), source.rich_text, source.language
+        copyFile(source.thumbnail_path), source.rich_text, source.language, source.site_id ?? null // la copie reste dans le site de l'original
       );
     const newCourseId = Number(info.lastInsertRowid);
 

@@ -3,6 +3,9 @@
 // (niveau plateforme, un seul destinataire : le formateur) : il n'y a ni fil de discussion ni réponse envoyée depuis le site.
 const db = require("../config/database");
 const { parisToday } = require("./gestion/common");
+const siteScope = require("./siteScope");
+// Tout est scopé par site (contact_messages.site_id ; NULL = site principal) : un message d'un autre site est « introuvable », jamais lisible ni modifiable.
+const SW = (siteId) => siteScope.where(siteId === undefined ? null : siteId);
 
 const PAGE_SIZE = 30;
 
@@ -33,15 +36,17 @@ function shortDate(sqlDate, now = new Date()) {
   return { text, iso: d.toISOString() };
 }
 
-function counts() {
-  const r = db.prepare("SELECT COUNT(*) AS total, COALESCE(SUM(read_at IS NULL), 0) AS unread FROM contact_messages").get();
+function counts(siteId = null) {
+  const w = SW(siteId);
+  const r = db.prepare(`SELECT COUNT(*) AS total, COALESCE(SUM(read_at IS NULL), 0) AS unread FROM contact_messages WHERE 1 = 1${w.sql}`).get(...w.params);
   return { total: r.total, unread: r.unread };
 }
 
 // Filtre commun à la liste et au décompte : { where, params }
 // keepId : le message ouvert reste dans la liste « non lus » même s'il vient d'être lu (la liste ne bouge pas sous les yeux du lecteur)
-function filterOf({ q = "", unreadOnly = false, keepId = 0 } = {}) {
-  const where = [], params = [];
+function filterOf({ q = "", unreadOnly = false, keepId = 0, siteId = null } = {}) {
+  const w = SW(siteId);
+  const where = [`1 = 1${w.sql}`], params = [...w.params];
   if (unreadOnly) { where.push("(read_at IS NULL OR id = ?)"); params.push(Number(keepId) || 0); }
   const term = String(q || "").trim().slice(0, 100);
   if (term) {
@@ -52,8 +57,8 @@ function filterOf({ q = "", unreadOnly = false, keepId = 0 } = {}) {
 }
 
 // Une page de messages, du plus récent au plus ancien (l'ordre ne dépend plus de l'état « lu » : marquer un message lu ne le déplace pas)
-function list({ q = "", unreadOnly = false, page = 1, keepId = 0 } = {}) {
-  const f = filterOf({ q, unreadOnly, keepId });
+function list({ q = "", unreadOnly = false, page = 1, keepId = 0, siteId = null } = {}) {
+  const f = filterOf({ q, unreadOnly, keepId, siteId });
   const total = db.prepare(`SELECT COUNT(*) AS n FROM contact_messages ${f.where}`).get(...f.params).n;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const current = Math.min(Math.max(1, Number.parseInt(page, 10) || 1), pages);
@@ -64,26 +69,27 @@ function list({ q = "", unreadOnly = false, page = 1, keepId = 0 } = {}) {
 }
 
 // Page de la liste (avec ce filtre) qui contient le message : l'ouvrir depuis un lien (activité, notification) montre la liste à la bonne page ; 1 si absent de la liste
-function pageOf(id, { q = "", unreadOnly = false } = {}) {
-  const m = get(id);
+function pageOf(id, { q = "", unreadOnly = false, siteId = null } = {}) {
+  const m = get(id, siteId);
   if (!m) return 1;
-  const f = filterOf({ q, unreadOnly, keepId: m.id });
+  const f = filterOf({ q, unreadOnly, keepId: m.id, siteId });
   const inList = db.prepare(`SELECT COUNT(*) AS n FROM contact_messages ${f.where ? `${f.where} AND` : "WHERE"} id = ?`).get(...f.params, m.id).n;
   if (!inList) return 1;
   const before = db.prepare(`SELECT COUNT(*) AS n FROM contact_messages ${f.where ? `${f.where} AND` : "WHERE"} (created_at > ? OR (created_at = ? AND id > ?))`).get(...f.params, m.created_at, m.created_at, m.id).n;
   return Math.floor(before / PAGE_SIZE) + 1;
 }
 
-function get(id) {
+function get(id, siteId = null) {
   const n = Number(id);
   if (!Number.isInteger(n) || n < 1) return null;
-  const m = db.prepare("SELECT id, name, email, subject, message, created_at, read_at FROM contact_messages WHERE id = ?").get(n);
+  const w = SW(siteId);
+  const m = db.prepare(`SELECT id, name, email, subject, message, created_at, read_at FROM contact_messages WHERE id = ?${w.sql}`).get(n, ...w.params);
   return m ? { ...m, initials: initials(m.name) } : null;
 }
 
-const markRead = (id) => db.prepare("UPDATE contact_messages SET read_at = COALESCE(read_at, datetime('now')) WHERE id = ?").run(Number(id)).changes > 0;
-const markUnread = (id) => db.prepare("UPDATE contact_messages SET read_at = NULL WHERE id = ?").run(Number(id)).changes > 0;
-const remove = (id) => db.prepare("DELETE FROM contact_messages WHERE id = ?").run(Number(id)).changes > 0;
+const markRead = (id, siteId = null) => { const w = SW(siteId); return db.prepare(`UPDATE contact_messages SET read_at = COALESCE(read_at, datetime('now')) WHERE id = ?${w.sql}`).run(Number(id), ...w.params).changes > 0; };
+const markUnread = (id, siteId = null) => { const w = SW(siteId); return db.prepare(`UPDATE contact_messages SET read_at = NULL WHERE id = ?${w.sql}`).run(Number(id), ...w.params).changes > 0; };
+const remove = (id, siteId = null) => { const w = SW(siteId); return db.prepare(`DELETE FROM contact_messages WHERE id = ?${w.sql}`).run(Number(id), ...w.params).changes > 0; };
 
 // Lien « Répondre par e-mail » : adresse + objet « Re: … » (sans doublon de « Re: »). Les caractères de contrôle sont retirés.
 function replyHref(m) {

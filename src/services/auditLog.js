@@ -3,6 +3,7 @@
 //  - les valeurs sensibles (mots de passe, jetons, clés…) sont masquées avant l'écriture, les détails trop gros tronqués ;
 //  - en écriture seule : aucune fonction de modification ou de suppression n'existe ici (et la base les refuse).
 const db = require("../config/database");
+const siteScope = require("./siteScope");
 
 const ACTION = /^[a-z][a-z_]*\.[a-z][a-z_]*$/;
 // « pass » seul = mot de passe ; « pass_percentage » (seuil d'un quiz) n'est PAS un secret
@@ -28,12 +29,15 @@ function serialize(details) {
 function record(actor, spec) {
   try {
     const { action, resourceType, resourceId = null, summary, details = {}, result = "ok" } = spec || {};
+    // Site de l'opération : fourni par le code (spec.siteId) ou, pour une requête de « Mon espace », le site actif vérifié (req.dashSite) ; sinon site principal
+    const rawSite = spec && spec.siteId !== undefined ? spec.siteId : actor && actor.dashSite && actor.dashSite.ok ? actor.dashSite.siteId : null;
+    const siteId = Number.isInteger(rawSite) && rawSite > 0 ? rawSite : null;
     if (!ACTION.test(String(action)) || !resourceType || !summary) return null;
     const user = actor && actor.session ? actor.session.user : actor;
     const ip = actor && actor.ip ? String(actor.ip).slice(0, 64) : null;
-    return Number(db.prepare("INSERT INTO audit_log (actor_id, actor_name, action, resource_type, resource_id, summary, details, result, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    return Number(db.prepare("INSERT INTO audit_log (actor_id, actor_name, action, resource_type, resource_id, summary, details, result, ip, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
       .run(user ? user.id ?? null : null, user ? String(user.username || user.name || "").slice(0, 80) : "", action, String(resourceType).slice(0, 40), resourceId == null ? null : String(resourceId).slice(0, 80),
-        String(summary).slice(0, 300), serialize(details), result === "refused" || result === "error" ? result : "ok", ip).lastInsertRowid);
+        String(summary).slice(0, 300), serialize(details), result === "refused" || result === "error" ? result : "ok", ip, siteId).lastInsertRowid);
   } catch (error) {
     console.error("[KOLAKISA] Journal d'activité non écrit :", error.message);
     return null;
@@ -42,8 +46,9 @@ function record(actor, spec) {
 
 const LIKE = (v) => `%${String(v).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 // Filtres : type (préfixe d'action, ex. « course »), q (texte libre), page. → { rows, total }
-function list({ type = "", q = "", result = "", from = "", to = "", limit = 50, offset = 0 } = {}) {
-  const where = [], args = [];
+function list({ type = "", q = "", result = "", from = "", to = "", limit = 50, offset = 0, siteId = null } = {}) {
+  const sw = siteScope.where(siteId); // journal du site sélectionné (NULL = site principal, qui garde tout l'historique antérieur)
+  const where = [`1 = 1${sw.sql}`], args = [...sw.params];
   if (/^[a-z_]{1,30}$/.test(type)) { where.push("action LIKE ? ESCAPE '\\'"); args.push(`${type}.%`); }
   if (RESULTS[result]) { where.push("result = ?"); args.push(result); }
   if (from) { where.push("at >= ?"); args.push(from); }

@@ -903,4 +903,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_support_messages_author ON support_messages(author_id);
 `);
 
+// Administration par site de « Mon espace » : site_id (NULL = site principal) sur les données du LMS — voir src/config/siteColumns.js
+require("./siteColumns").apply(db);
+
 module.exports = db;

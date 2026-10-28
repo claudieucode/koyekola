@@ -35,6 +35,35 @@
         <span class="dash-user-name"><%= currentUser.username %></span>
       </div>
     </header>
+    <% if (dash.site && dash.site.ok && dash.site.scoped) { const ds = dash.site, cur = ds.current; %>
+    <%# Sélecteur de site universel : liens réels (fonctionne sans JavaScript), recherche et protection des modifications non enregistrées dans dash-site.js %>
+    <div class="dash-sitebar" data-dash-site data-site-count="<%= ds.sites.length %>">
+      <span class="dash-sitebar-label" id="dashSiteLabel">Site administré</span>
+      <div class="dash-site-pick">
+        <button type="button" class="dash-site-btn" data-dash-site-toggle aria-haspopup="listbox" aria-expanded="false" aria-controls="dashSiteList" aria-labelledby="dashSiteLabel dashSiteCurrent">
+          <span class="dash-site-mark" aria-hidden="true"><%= cur.name.slice(0, 1).toUpperCase() %></span>
+          <span class="dash-site-text" id="dashSiteCurrent"><strong><%= cur.name %></strong><small><%= cur.domain || (cur.main ? "Site principal" : "Sans domaine") %></small></span>
+          <%- icon('chevronDown', { size: 16 }) %>
+        </button>
+        <div class="dash-site-pop" id="dashSiteList" hidden>
+          <% if (ds.sites.length > 6) { %><label class="dash-site-search"><span class="sr-only">Rechercher un site</span><input type="search" data-dash-site-search placeholder="Rechercher un site…" autocomplete="off"></label><% } %>
+          <ul role="listbox" aria-label="Sites">
+            <% ds.sites.forEach((s) => { const on = s.key === cur.key; %>
+            <li role="option" aria-selected="<%= on %>" data-site-name="<%= (s.name + ' ' + s.domain).toLowerCase() %>"><a href="<%= ds.withSite(ds.home, s.id) %>" class="dash-site-opt<%= on ? ' is-current' : '' %>"<%- on ? ' aria-current="true"' : '' %>>
+              <span class="dash-site-mark" aria-hidden="true"><%= s.name.slice(0, 1).toUpperCase() %></span>
+              <span class="dash-site-text"><strong><%= s.name %></strong><small><%= s.domain || (s.main ? "Site principal" : "Sans domaine") %><%= s.main && s.domain ? " · principal" : "" %></small></span>
+              <% if (on) { %><span class="dash-site-state">Sélectionné</span><% } %>
+            </a></li>
+            <% }) %>
+          </ul>
+          <p class="dash-site-empty" data-dash-site-empty hidden>Aucun site ne correspond.</p>
+          <a class="dash-site-all" href="/marketing/site-web/sites">Gérer mes sites</a>
+        </div>
+      </div>
+      <% if (ds.denied) { %><p class="dash-site-denied" role="alert"><%= ds.denied %> Le site « <%= cur.name %> » est affiché à la place.</p><% } %>
+    </div>
+    <script src="<%= asset('/js/dash-site.js') %>" defer></script>
+    <% } %>
     <main id="main" tabindex="-1" class="dash-content">
       <% if (trail.length > 1) { %><nav class="dash-crumbs" aria-label="Fil d'Ariane"><ol>
         <% trail.forEach((c, i) => { const last = i === trail.length - 1; %><li><% if (c.href && !last) { %><a href="<%= c.href %>"><%= c.label %></a><% } else { %><span<%- last ? ' aria-current="page"' : "" %>><%= c.label %></span><% } %></li><% }) %>

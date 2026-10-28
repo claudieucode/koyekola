@@ -16,6 +16,8 @@ const { sanitizeRich, normalizeList, editorSources } = require("../utils/richTex
 const { cleanLanguage } = require("../utils/format");
 
 const seoStore = require("../seo/store");
+const dashSite = require("../services/dashSite");
+const siteScope = require("../services/siteScope");
 const router = express.Router();
 // Uniquement sous /formateur : sinon toute URL inconnue du site était redirigée vers la connexion
 router.use("/formateur", requireInstructor);
@@ -25,15 +27,17 @@ function loadOwnedCourse(req, res, next) {
   if (!course || course.instructor_id !== req.session.user.id) {
     return res.status(404).render("error", { message: "Formation introuvable." });
   }
+  if (!dashSite.guardObject(req, res, course.site_id, { notFound: "Formation introuvable." })) return;
   req.course = course;
   next();
 }
 
 function loadOwnedSection(req, res, next) {
   const section = db
-    .prepare(`SELECT sections.* FROM sections JOIN courses ON courses.id = sections.course_id WHERE sections.id = ? AND courses.instructor_id = ?`)
+    .prepare(`SELECT sections.*, courses.site_id AS course_site_id FROM sections JOIN courses ON courses.id = sections.course_id WHERE sections.id = ? AND courses.instructor_id = ?`)
     .get(req.params.sectionId, req.session.user.id);
   if (!section) return res.status(404).render("error", { message: "Chapitre introuvable." });
+  if (!dashSite.guardObject(req, res, section.course_site_id, { notFound: "Chapitre introuvable." })) return;
   req.section = section;
   next();
 }
@@ -41,13 +45,14 @@ function loadOwnedSection(req, res, next) {
 function loadOwnedLesson(req, res, next) {
   const lesson = db
     .prepare(
-      `SELECT lessons.*, sections.course_id FROM lessons
+      `SELECT lessons.*, sections.course_id, courses.site_id AS course_site_id FROM lessons
        JOIN sections ON sections.id = lessons.section_id
        JOIN courses ON courses.id = sections.course_id
        WHERE lessons.id = ? AND courses.instructor_id = ?`
     )
     .get(req.params.lessonId, req.session.user.id);
   if (!lesson) return res.status(404).render("error", { message: "Sous-chapitre introuvable." });
+  if (!dashSite.guardObject(req, res, lesson.course_site_id, { notFound: "Sous-chapitre introuvable." })) return;
   req.lesson = lesson;
   next();
 }
@@ -55,7 +60,7 @@ function loadOwnedLesson(req, res, next) {
 function loadOwnedQuiz(req, res, next) {
   const quiz = db
     .prepare(
-      `SELECT quizzes.*, sections.course_id FROM quizzes
+      `SELECT quizzes.*, sections.course_id, courses.site_id AS course_site_id FROM quizzes
        JOIN lessons ON lessons.id = quizzes.lesson_id
        JOIN sections ON sections.id = lessons.section_id
        JOIN courses ON courses.id = sections.course_id
@@ -63,6 +68,7 @@ function loadOwnedQuiz(req, res, next) {
     )
     .get(req.params.quizId, req.session.user.id);
   if (!quiz) return res.status(404).render("error", { message: "Quiz introuvable." });
+  if (!dashSite.guardObject(req, res, quiz.course_site_id, { notFound: "Quiz introuvable." })) return;
   req.quiz = quiz;
   next();
 }
@@ -91,7 +97,7 @@ function deleteThenRemoveFiles(files, remove) {
 
 // ---------- « Mon espace » : vue d'ensemble, formations, chapitres, catégories, apparence ----------
 const dashboard = require("../services/dashboard");
-const coursesOf = (userId) => db
+const coursesOf = (userId, siteId = null) => { const w = siteScope.where(siteId, "courses"); return db
   .prepare(
     `SELECT courses.*,
       (SELECT COUNT(*) FROM enrollments WHERE course_id = courses.id) AS student_count,
@@ -99,16 +105,17 @@ const coursesOf = (userId) => db
       (SELECT COUNT(*) FROM order_items WHERE course_id = courses.id) AS sales_count,
       (SELECT COUNT(*) FROM sections WHERE course_id = courses.id) AS section_count,
       (SELECT COUNT(*) FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE sections.course_id = courses.id) AS lesson_count
-     FROM courses WHERE instructor_id = ? ORDER BY created_at DESC`
+     FROM courses WHERE instructor_id = ?${w.sql} ORDER BY created_at DESC`
   )
-  .all(userId);
+  .all(userId, ...w.params); };
 
 router.get("/formateur", (req, res) => {
   const now = new Date();
-  const courses = coursesOf(req.session.user.id);
-  const ov = dashboard.overview(req.session.user.id, now);
+  const siteId = dashSite.siteIdOf(req);
+  const courses = coursesOf(req.session.user.id, siteId);
+  const ov = dashboard.overview(req.session.user.id, now, { siteId });
   const dash = res.locals.dash || {};
-  const stats = dashboard.stats(req.session.user.id, now);
+  const stats = dashboard.stats(req.session.user.id, now, siteId);
   // « À traiter » : uniquement ce qui attend réellement une action (compteurs réels, jamais de valeur de remplissage)
   const todo = [
     { n: dash.unread || 0, one: "message non lu", many: "messages non lus", href: "/formateur/messages", icon: "mail" },
@@ -122,7 +129,7 @@ router.get("/formateur", (req, res) => {
 
 const STATUS_FILTERS = { toutes: "Toutes", publiees: "Publiées", brouillons: "Brouillons", archivees: "Archivées" };
 router.get("/formateur/formations", (req, res) => {
-  const all = coursesOf(req.session.user.id);
+  const all = coursesOf(req.session.user.id, dashSite.siteIdOf(req));
   const statut = STATUS_FILTERS[req.query.statut] ? req.query.statut : "toutes";
   const q = String(req.query.q || "").trim();
   const match = (c) => ({ toutes: !c.archived, publiees: c.published && !c.archived, brouillons: !c.published && !c.archived, archivees: c.archived })[statut];
@@ -205,15 +212,15 @@ router.post("/formateur/cours/:id(\\d+)/offres/:offerId(\\d+)/supprimer", loadOw
 });
 
 router.get("/formateur/chapitres", (req, res) => {
-  res.render("instructor/chapters", { courses: coursesOf(req.session.user.id) });
+  res.render("instructor/chapters", { courses: coursesOf(req.session.user.id, dashSite.siteIdOf(req)) });
 });
 
 // Catégories : liste, recherche, tri, filtres (côté serveur, une seule requête groupée) ; modification = page dédiée avec les conséquences exactes
 const CAT_SORTS = { nom: "Nom (A → Z)", formations: "Plus de formations", recentes: "Modifiées récemment" };
 const CAT_FILTERS = { toutes: "Toutes", visibles: "Visibles au catalogue", masquees: "Non visibles", verifier: "À vérifier" };
-const catUrl = (extra) => `/formateur/categories?${new URLSearchParams(extra).toString()}`;
+const catUrl = (extra) => `/formateur/categories?${new URLSearchParams(extra).toString()}`; // le site est repris par la session et le champ « site » ; withSite le rend explicite dans les redirections
 router.get("/formateur/categories", (req, res) => {
-  const all = categoriesSvc.list(req.session.user.id);
+  const all = categoriesSvc.list(req.session.user.id, dashSite.siteIdOf(req));
   const q = String(req.query.q || "").trim().slice(0, 60);
   const sort = CAT_SORTS[req.query.tri] ? req.query.tri : "nom";
   const filter = CAT_FILTERS[req.query.filtre] ? req.query.filtre : "toutes";
@@ -228,7 +235,7 @@ router.get("/formateur/categories", (req, res) => {
 });
 router.get("/formateur/categories/modifier", (req, res) => {
   const name = String(req.query.nom || "");
-  const cat = categoriesSvc.impact(req.session.user.id, name);
+  const cat = categoriesSvc.impact(req.session.user.id, name, dashSite.siteIdOf(req));
   if (!cat) return res.redirect(`/formateur/categories?erreur=${encodeURIComponent("Cette catégorie n'existe plus parmi vos formations.")}`);
   res.render("instructor/category-edit", { cat, to: String(req.query.vers || cat.name).slice(0, 80), mergeWith: req.query.fusion ? String(req.query.fusion) : null, error: req.query.erreur || null, max: categoriesSvc.MAX });
 });
@@ -254,7 +261,7 @@ router.post("/formateur/apparence", express.json({ limit: "4kb" }), (req, res) =
 // ---------- Formation : création / édition ----------
 
 router.get("/formateur/cours/nouveau", (req, res) => {
-  res.render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: null, error: null, sources: editorSources(null) });
+  res.render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || "", dashSite.siteIdOf(req)), course: null, error: null, sources: editorSources(null) });
 });
 
 // Champs « liste » (un élément par ligne) et vidéo de présentation, communs à la création et à la modification.
@@ -303,13 +310,14 @@ function courseListFields(body) {
 
 // Catégorie choisie dans le formulaire : une existante, ou « Nouvelle catégorie… » (category_new). Champ absent = la catégorie actuelle est conservée
 const NEW_CATEGORY = "__nouvelle";
-const pickCategory = (userId, body, current) => body.category === undefined && current ? current : categoriesSvc.canonical(userId, body.category === NEW_CATEGORY ? body.category_new : body.category);
+const pickCategory = (userId, body, current, siteId = null) => body.category === undefined && current ? current : categoriesSvc.canonical(userId, body.category === NEW_CATEGORY ? body.category_new : body.category, siteId);
 router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) => {
+  if (!dashSite.bodySiteMatches(req, res)) return;
   const { title, subtitle, category, level, price } = req.body;
   const lists = courseListFields(req.body);
   const texts = courseTextFields(req.body, null);
   if (!title || !title.trim()) {
-    return res.status(400).render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: { ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.body, ...texts }) });
+    return res.status(400).render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || "", dashSite.siteIdOf(req)), course: { ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.body, ...texts }) });
   }
 
   const baseSlug = slugify(title) || "formation";
@@ -325,13 +333,13 @@ router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) =
 
   const info = db
     .prepare(
-      `INSERT INTO courses (instructor_id, title, slug, subtitle, description, objectives, prerequisites, target_audience, skills, rich_text, intro_video, seo_title, seo_description, category, level, price_cents, thumbnail_path, language)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO courses (instructor_id, title, slug, subtitle, description, objectives, prerequisites, target_audience, skills, rich_text, intro_video, seo_title, seo_description, category, level, price_cents, thumbnail_path, language, site_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.session.user.id, title.trim(), slug, subtitle || "", texts.description,
       texts.objectives, texts.prerequisites, texts.target_audience, texts.skills, texts.rich_text, lists.intro_video, lists.seo_title, lists.seo_description,
-      pickCategory(req.session.user.id, req.body, null), level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language)
+      pickCategory(req.session.user.id, req.body, null, dashSite.siteIdOf(req)), level || "debutant", priceCents, thumbnailPath, cleanLanguage(req.body.language), dashSite.siteIdOf(req)
     );
 
   audit.record(req, { action: "course.created", resourceType: "course", resourceId: info.lastInsertRowid, summary: `Formation « ${title.trim()} » créée (prix ${(priceCents / 100).toFixed(2)} €)`, details: { price_cents: priceCents } });
@@ -339,7 +347,7 @@ router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) =
 });
 
 router.get("/formateur/cours/:id/modifier", loadOwnedCourse, (req, res) => {
-  res.render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: req.course, error: null, saved: req.query.enregistre === "1", sources: editorSources(req.course) });
+  res.render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || "", dashSite.siteIdOf(req)), course: req.course, error: null, saved: req.query.enregistre === "1", sources: editorSources(req.course) });
 });
 
 router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thumbnail"), (req, res) => {
@@ -347,7 +355,7 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
   const lists = courseListFields(req.body);
   const texts = courseTextFields(req.body, req.course);
   if (!title || !title.trim()) {
-    return res.status(400).render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || ""), course: { ...req.course, ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.course, ...req.body, ...texts }) });
+    return res.status(400).render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || "", dashSite.siteIdOf(req)), course: { ...req.course, ...req.body, ...texts }, error: "Le titre est obligatoire.", sources: editorSources({ ...req.course, ...req.body, ...texts }) });
   }
 
   // Adresse modifiable : un champ vide ou sans lettre conserve l'adresse actuelle ; une adresse déjà utilisée est refusée
@@ -371,7 +379,7 @@ router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thu
     thumbnailPath = `/uploads/thumbnails/${req.file.filename}`;
   }
 
-  const newCategory = pickCategory(req.course.instructor_id, req.body, req.course.category);
+  const newCategory = pickCategory(req.course.instructor_id, req.body, req.course.category, req.course.site_id === undefined ? null : req.course.site_id);
   db.prepare(
     `UPDATE courses SET title = ?, slug = ?, subtitle = ?, description = ?, objectives = ?, prerequisites = ?, target_audience = ?, skills = ?, rich_text = ?, intro_video = ?,
        seo_title = ?, seo_description = ?, category = ?, level = ?, price_cents = ?, thumbnail_path = ?, language = ?, updated_at = datetime('now')
@@ -692,7 +700,7 @@ router.post("/formateur/lecons/:lessonId/supprimer", loadOwnedLesson, (req, res)
 function loadOwnedAttachment(req, res, next) {
   const attachment = db
     .prepare(
-      `SELECT a.*, sections.course_id FROM lesson_attachments a
+      `SELECT a.*, sections.course_id, courses.site_id AS course_site_id FROM lesson_attachments a
        JOIN lessons ON lessons.id = a.lesson_id
        JOIN sections ON sections.id = lessons.section_id
        JOIN courses ON courses.id = sections.course_id
@@ -700,6 +708,7 @@ function loadOwnedAttachment(req, res, next) {
     )
     .get(req.params.attachmentId, req.session.user.id);
   if (!attachment) return res.status(404).render("error", { message: "Pièce jointe introuvable." });
+  if (!dashSite.guardObject(req, res, attachment.course_site_id, { notFound: "Pièce jointe introuvable." })) return;
   req.attachment = attachment;
   next();
 }
@@ -793,7 +802,7 @@ router.post("/formateur/quiz/:quizId/questions", loadOwnedQuiz, (req, res) => {
 router.post("/formateur/quiz-questions/:questionId/supprimer", (req, res) => {
   const question = db
     .prepare(
-      `SELECT quiz_questions.*, quizzes.lesson_id, sections.course_id FROM quiz_questions
+      `SELECT quiz_questions.*, quizzes.lesson_id, sections.course_id, courses.site_id AS course_site_id FROM quiz_questions
        JOIN quizzes ON quizzes.id = quiz_questions.quiz_id
        JOIN lessons ON lessons.id = quizzes.lesson_id
        JOIN sections ON sections.id = lessons.section_id
@@ -802,6 +811,7 @@ router.post("/formateur/quiz-questions/:questionId/supprimer", (req, res) => {
     )
     .get(req.params.questionId, req.session.user.id);
   if (!question) return res.status(404).render("error", { message: "Question introuvable." });
+  if (!dashSite.guardObject(req, res, question.course_site_id, { notFound: "Question introuvable." })) return;
 
   db.prepare("DELETE FROM quiz_questions WHERE id = ?").run(question.id);
   res.redirect(`/formateur/cours/${question.course_id}/curriculum?lecon=${question.lesson_id}`);

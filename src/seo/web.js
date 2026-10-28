@@ -25,6 +25,16 @@ const router = express.Router();
 const canManage = (user) => Boolean(user && user.role === "formateur");
 router.use("/formateur/seo", requireInstructor, (req, res, next) => (canManage(req.session.user) ? next() : res.status(403).render("error", { message: "Accès réservé à l'administration SEO." })));
 
+// SEO PAR SITE : la suite centrale ci-dessous (réglages communs, règles, audit global, redirections communes) concerne le site principal et la plateforme.
+// Pour un site secondaire sélectionné dans le sélecteur de site, la lecture mène à son espace SEO propre (réglages, métadonnées, indexation, sitemap, robots, 404,
+// redirections du site : src/marketing/web/siteSeo.js, droits vérifiés par site) ; toute ÉCRITURE centrale est refusée (jamais appliquée par erreur au mauvais site).
+router.use("/formateur/seo", (req, res, next) => {
+  const site = req.dashSite && req.dashSite.ok ? req.dashSite.siteId : null;
+  if (site === null || req.path.startsWith("/erreurs-404")) return next(); // la page 404 centrale garde son « ?site= » (choix du site par l'équipe)
+  if (req.method === "GET" || req.method === "HEAD") return res.redirect(`/marketing/site-web/sites/${site}/seo`);
+  return res.status(409).render("error", { message: "Ces réglages SEO sont ceux du site principal. Ouvrez l'espace SEO du site sélectionné pour modifier ses réglages." });
+});
+
 const mediaImages = () => db.prepare("SELECT path, alt, width, height FROM media WHERE kind = 'image' ORDER BY id DESC LIMIT 300").all();
 const FIELD_LABELS = { ...Object.fromEntries(Object.entries(meta.FIELDS).map(([k, f]) => [k, f.label])), ...Object.fromEntries(Object.entries(settings.FIELDS).map(([k, f]) => [k, f.label])) };
 

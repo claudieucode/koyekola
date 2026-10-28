@@ -36,6 +36,9 @@ const router = express.Router();
 router.use("/formateur/gestion", requireInstructor);
 
 const me = (req) => req.session.user.id;
+const dashSite = require("../services/dashSite");
+const siteScope = require("../services/siteScope");
+const sid = (req) => dashSite.siteIdOf(req); // site actif (contexte vérifié côté serveur) ; null = site principal
 function flash(req, type, text) { req.session.gFlash = { type, text }; }
 // Adresse de la page avec des paramètres modifiés (filtres, tri, pagination) : l'état reste dans l'URL
 function urlFor(req) {
@@ -87,6 +90,8 @@ router.use("/formateur/gestion", (req, res, next) => { res.locals.back = backOf(
 // ---------- Vue d'ensemble ----------
 router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req) => {
   const id = me(req);
+  const siteId = sid(req);
+  const SL = siteScope.lit(siteId, "c");
   const one = (sql, ...a) => db.prepare(sql).get(...a);
   // Chaque bloc est calculé séparément : un bloc en échec affiche « Données indisponibles », les autres restent justes
   const problems = [];
@@ -98,34 +103,34 @@ router.get("/formateur/gestion", page("gestion/index", "Centre de gestion", (req
     }
   };
   const p30 = common.period({ periode: "30j" });
-  const SALES = "FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?";
+  const SALES = "FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?" + SL;
   return {
     overview: {
       orders: safe("Ventes", () => one(`SELECT COUNT(DISTINCT o.id) n ${SALES}`, id).n),
       revenue30: safe("Ventes", () => one(`SELECT COALESCE(SUM(oi.price_cents), 0) s ${SALES} AND o.created_at >= ? AND o.created_at < ?`, id, p30.from, p30.to).s),
       coupons: safe("Codes promo", () => sales.listCoupons(id).filter((c) => c.state.key === "on").length),
-      students: safe("Élèves", () => one("SELECT COUNT(DISTINCT e.user_id) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?", id).n),
-      enrollments30: safe("Élèves", () => one("SELECT COUNT(*) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? AND e.created_at >= ? AND e.created_at < ?", id, p30.from, p30.to).n),
+      students: safe("Élèves", () => one("SELECT COUNT(DISTINCT e.user_id) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?" + SL, id).n),
+      enrollments30: safe("Élèves", () => one("SELECT COUNT(*) n FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?" + SL + " AND e.created_at >= ? AND e.created_at < ?", id, p30.from, p30.to).n),
       // Nombre de fichiers seulement : les utilisations (coûteuses) ne sont calculées que dans Ressources
-      resources: safe("Ressources", () => { const all = resources.allResources(id); if (all.problems.length) throw new Error(all.problems.map((x) => `${x.label} : ${x.message}`).join(" · ")); return all.filter((r) => r.exists).length; }),
-      resourcesTodo: safe("Ressources", () => resources.allResources(id).filter((r) => !r.exists).length, 0),
+      resources: safe("Ressources", () => { const all = resources.allResources(id, siteId); if (all.problems.length) throw new Error(all.problems.map((x) => `${x.label} : ${x.message}`).join(" · ")); return all.filter((r) => r.exists).length; }),
+      resourcesTodo: safe("Ressources", () => resources.allResources(id, siteId).filter((r) => !r.exists).length, 0),
       // Tendance : 30 derniers jours comparés aux 30 précédents (sur les mêmes ventes) ; pas de pourcentage si la période précédente est vide
       revenuePrev30: safe("Ventes", () => { const d = new Date(p30.from.replace(" ", "T") + "Z"), from = new Date(d.getTime() - (new Date(p30.to.replace(" ", "T") + "Z") - d)).toISOString().slice(0, 19).replace("T", " "); return one(`SELECT COALESCE(SUM(oi.price_cents), 0) s ${SALES} AND o.created_at >= ? AND o.created_at < ?`, id, from, p30.from).s; }),
-      supportOpen: safe("Support", () => support.openCount(id)),
+      supportOpen: safe("Support", () => support.openCount(id, siteId)),
       backup: safe("Sauvegardes", () => health.backupStatus(backups.list(), { auto: process.env.SAUVEGARDE_AUTO !== "0" })),
-      lastLog: safe("Journal", () => audit.list({ limit: 1 }).rows[0] || false),
-      unread: safe("Notifications", () => activity.unreadCount(id)),
-      alerts: safe("Alertes", () => activity.alerts(id), []),
-      recent: safe("Activité récente", () => activity.feed(id, { page: 1 }).rows.slice(0, 6), []),
+      lastLog: safe("Journal", () => audit.list({ limit: 1, siteId }).rows[0] || false),
+      unread: safe("Notifications", () => activity.unreadCount(id, siteId)),
+      alerts: safe("Alertes", () => activity.alerts(id, siteId), []),
+      recent: safe("Activité récente", () => activity.feed(id, { page: 1 }, siteId).rows.slice(0, 6), []),
     },
     problems,
   };
 }));
 
 // ---------- Ventes ----------
-router.get("/formateur/gestion/ventes", page("gestion/ventes", "Ventes", (req) => ({ tab: "commandes", orders: sales.listOrders(me(req), req.query), courses: sales.myCourses(me(req)) })));
+router.get("/formateur/gestion/ventes", page("gestion/ventes", "Ventes", (req) => ({ tab: "commandes", orders: sales.listOrders(me(req), req.query, sid(req)), courses: sales.myCourses(me(req), sid(req)) })));
 router.get("/formateur/gestion/ventes/commandes", (req, res) => res.redirect(301, `/formateur/gestion/ventes${req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : ""}`));
-router.get("/formateur/gestion/ventes/commandes/:id(\\d+)", (req, res, next) => page("gestion/commande", `Commande #${req.params.id}`, (r) => { const o = sales.getOrder(me(r), Number(r.params.id)); return o ? { ...o, contact: crm.contactOfUser(r.app.locals.marketing, o.order.user_id) } : null; })(req, res, next));
+router.get("/formateur/gestion/ventes/commandes/:id(\\d+)", (req, res, next) => page("gestion/commande", `Commande #${req.params.id}`, (r) => { const o = sales.getOrder(me(r), Number(r.params.id), sid(r)); return o ? { ...o, contact: crm.contactOfUser(r.app.locals.marketing, o.order.user_id) } : null; })(req, res, next));
 // Paiements par carte (Stripe) des formations du formateur : lus dans checkout_sessions, jamais inventés.
 // Sans Stripe, le paiement du site est une démonstration : l'onglet le dit.
 function stripePayments(instructorId) {
@@ -140,7 +145,7 @@ router.get("/formateur/gestion/ventes/transactions", page("gestion/ventes", "Tra
 router.get("/formateur/gestion/ventes/remboursements", page("gestion/ventes", "Remboursements", () => ({ tab: "remboursements", stripe: payments.stripeEnabled() })));
 router.get("/formateur/gestion/ventes/coupons", page("gestion/ventes", "Codes promo", (req) => {
   const editing = req.query.modifier ? sales.getCoupon(me(req), Number(req.query.modifier)) : null;
-  return { tab: "coupons", coupons: sales.listCoupons(me(req)), courses: sales.myCourses(me(req)), editing, form: editing ? formOf(editing) : { active: 1, kind: "percent" }, errors: {} };
+  return { tab: "coupons", coupons: sales.listCoupons(me(req)), courses: sales.myCourses(me(req), sid(req)), editing, form: editing ? formOf(editing) : { active: 1, kind: "percent" }, errors: {} };
 }));
 // Valeurs du formulaire à partir d'un code enregistré (dates affichées en jour de Paris)
 function formOf(c) {
@@ -150,7 +155,7 @@ function formOf(c) {
 function couponForm(req, res, current) {
   const v = sales.validateCoupon(me(req), req.body || {}, current ? current.id : null);
   if (v.errors) {
-    return res.status(400).render("gestion/ventes", { title: "Codes promo", tab: "coupons", url: urlFor(req), flash: { type: "error", text: "Le code promo n'a pas été enregistré : corrigez les champs signalés." }, query: {}, coupons: sales.listCoupons(me(req)), courses: sales.myCourses(me(req)), editing: current, form: { ...req.body, active: req.body.active ? 1 : 0 }, errors: v.errors });
+    return res.status(400).render("gestion/ventes", { title: "Codes promo", tab: "coupons", url: urlFor(req), flash: { type: "error", text: "Le code promo n'a pas été enregistré : corrigez les champs signalés." }, query: {}, coupons: sales.listCoupons(me(req)), courses: sales.myCourses(me(req), sid(req)), editing: current, form: { ...req.body, active: req.body.active ? 1 : 0 }, errors: v.errors });
   }
   if (current) { sales.updateCoupon(me(req), current.id, v.values); flash(req, "ok", `Code ${v.values.code} modifié.`); }
   else { sales.createCoupon(me(req), v.values); flash(req, "ok", `Code ${v.values.code} créé${v.values.active ? " et actif" : " (désactivé)"}.`); }
@@ -173,9 +178,9 @@ router.post("/formateur/gestion/ventes/coupons/:id(\\d+)/:action(activer|desacti
 }));
 
 // ---------- Élèves ----------
-router.get("/formateur/gestion/eleves", page("gestion/eleves", "Élèves", (req) => ({ list: students.listStudents(me(req), req.query), courses: sales.myCourses(me(req)) })));
+router.get("/formateur/gestion/eleves", page("gestion/eleves", "Élèves", (req) => ({ list: students.listStudents(me(req), req.query, sid(req)), courses: sales.myCourses(me(req), sid(req)) })));
 router.get("/formateur/gestion/eleves/:id(\\d+)", page("gestion/eleve", "Élève", (req, res) => {
-  const s = students.getStudent(me(req), Number(req.params.id));
+  const s = students.getStudent(me(req), Number(req.params.id), sid(req));
   // Relation (prospect / étudiant / client) et fiche contact marketing du même compte : lues, jamais recopiées
   return s ? { ...s, title: s.user.username, relation: crm.relationOf(s.user.id), relations: crm.RELATIONS, certificates: certificates.listForStudent(me(req), s.user.id), contact: crm.contactOfUser(req.app.locals.marketing, s.user.id) } : null;
 }));
@@ -200,23 +205,24 @@ router.get("/formateur/gestion/journal", page("gestion/journal", "Journal d'acti
   const du = common.isYmd(req.query.du) ? req.query.du : "", au = common.isYmd(req.query.au) ? req.query.au : "";
   // Dates saisies = jours à Paris ; la base est en UTC (borne haute exclue : lendemain minuit)
   const from = du ? common.sqlUtc(common.parisDayStart(du)) : "", to = au ? common.sqlUtc(common.parisDayStart(common.addDays(au, 1))) : "";
-  const total = audit.list({ type, q, result, from, to, limit: 1 }).total;
+  const siteId = sid(req);
+  const total = audit.list({ type, q, result, from, to, limit: 1, siteId }).total;
   const pg = common.paginate(total, common.page(req.query), 50);
-  return { log: { ...audit.list({ type, q, result, from, to, limit: pg.limit, offset: pg.offset }), ...pg }, types: audit.TYPES, results: audit.RESULTS, filters: { type, q, result, du, au } };
+  return { log: { ...audit.list({ type, q, result, from, to, limit: pg.limit, offset: pg.offset, siteId }), ...pg }, types: audit.TYPES, results: audit.RESULTS, filters: { type, q, result, du, au } };
 }));
 
 // ---------- Support (tickets des élèves) : le formateur ne voit que les tickets qui lui sont adressés ----------
 router.get("/formateur/gestion/support", page("gestion/support", "Support", (req) => {
   const filters = { statut: support.STATUSES[req.query.statut] ? req.query.statut : "", q: String(req.query.q || "").slice(0, 80), urgent: req.query.urgent === "1" };
-  const list = support.listForInstructor(me(req), { status: filters.statut, q: filters.q, urgent: filters.urgent }, { page: common.page(req.query) });
-  return { list, stats: support.stats(me(req)), statuses: support.STATUSES, priorities: support.PRIORITIES, filters };
+  const list = support.listForInstructor(me(req), { status: filters.statut, q: filters.q, urgent: filters.urgent }, { page: common.page(req.query), siteId: sid(req) });
+  return { list, stats: support.stats(me(req), sid(req)), statuses: support.STATUSES, priorities: support.PRIORITIES, filters };
 }));
 router.get("/formateur/gestion/support/:id(\\d+)", page("gestion/support-ticket", "Demande de support", (req) => {
-  const ticket = support.getForInstructor(me(req), Number(req.params.id));
+  const ticket = support.getForInstructor(me(req), Number(req.params.id), sid(req));
   return ticket ? { ticket, title: `Demande #${ticket.id}`, messages: support.messagesOf(ticket.id), statuses: support.STATUSES, priorities: support.PRIORITIES } : null;
 }));
 const ownTicket = (req, res) => {
-  const ticket = support.getForInstructor(me(req), Number(req.params.id));
+  const ticket = support.getForInstructor(me(req), Number(req.params.id), sid(req));
   if (!ticket) res.status(404).render("gestion/erreur", { title: "Introuvable", notFound: true, retry: null, back: "/formateur/gestion/support" });
   return ticket;
 };
@@ -237,7 +243,7 @@ router.post("/formateur/gestion/support/:id(\\d+)/rouvrir", safely("/formateur/g
 }));
 router.post("/formateur/gestion/support/:id(\\d+)/priorite", safely("/formateur/gestion/support", (req, res) => {
   const ticket = ownTicket(req, res); if (!ticket) return;
-  const ok = support.setPriority(me(req), ticket.id, req.body.priority);
+  const ok = support.setPriority(me(req), ticket.id, req.body.priority, sid(req));
   flash(req, ok ? "ok" : "error", ok ? "Priorité modifiée." : "Priorité inconnue.");
   res.redirect(`/formateur/gestion/support/${ticket.id}`);
 }));
@@ -245,11 +251,11 @@ router.post("/formateur/gestion/support/:id(\\d+)/priorite", safely("/formateur/
 // ---------- Analytics ----------
 router.get("/formateur/gestion/analytics", page("gestion/analytics", "Analytics", (req) => {
   const p = common.period(req.query);
-  return { period: p, periods: common.PERIODS, report: analytics.report(me(req), p) };
+  return { period: p, periods: common.PERIODS, report: analytics.report(me(req), p, sid(req)) };
 }));
 
 // ---------- Ressources ----------
-router.get("/formateur/gestion/ressources", page("gestion/ressources", "Ressources", (req) => ({ list: resources.listResources(me(req), req.query), kinds: resources.KIND_LABELS, sources: resources.SOURCE_LABELS })));
+router.get("/formateur/gestion/ressources", page("gestion/ressources", "Ressources", (req) => ({ list: resources.listResources(me(req), req.query, sid(req)), kinds: resources.KIND_LABELS, sources: resources.SOURCE_LABELS })));
 // Envoi réel vers la médiathèque du site : dossier et extension choisis d'après le VRAI type du fichier (jamais son nom)
 const TYPES = { ...Object.fromEntries(Object.entries(IMAGE_TYPES).map(([m, e]) => [m, ["image", "thumbnails", e]])), ...Object.fromEntries(Object.entries(VIDEO_TYPES).map(([m, e]) => [m, ["video", "blog", e]])), ...Object.fromEntries(Object.entries(AUDIO_TYPES).map(([m, e]) => [m, ["audio", "blog", e]])), "application/pdf": ["document", "blog", ".pdf"] };
 const resourceUpload = multer({
@@ -312,7 +318,7 @@ const backTo = (req) => `/formateur/gestion/ressources${req.body && req.body.ret
 // Supprimer une ressource disponible, ou nettoyer la fiche d'un fichier absent : dépendances revérifiées ici (jamais
 // sur la seule foi de la page), confirmation demandée par la page, fichier ET fiche traités ensemble.
 function deleteResource(req, res, key) {
-  const r = resources.findResource(me(req), key);
+  const r = resources.findResource(me(req), key, sid(req));
   if (!r || !r.deletable) { flash(req, "error", "Ressource introuvable ou non supprimable ici."); return res.redirect(backTo(req)); }
   if (!r.canDelete) { flash(req, "error", `Suppression refusée. ${r.deleteBlockedReason}.`); return res.redirect(backTo(req)); }
   const what = r.state === "ok" ? "supprimé" : "retiré de la médiathèque (fiche nettoyée ; le fichier était déjà absent du stockage)";
@@ -365,7 +371,7 @@ router.post("/formateur/gestion/ressources/reparer", (req, res) => {
     const fail = (text) => { if (tmp) fs.rmSync(tmp, { force: true }); flash(req, "error", text); res.redirect("/formateur/gestion/ressources?etat=a-traiter"); };
     try {
       if (err) return fail(err.code === "LIMIT_FILE_SIZE" ? "Fichier trop lourd (300 Mo au plus)." : `Envoi impossible. Détail technique : ${String(err.message || err).slice(0, 200)}`);
-      const r = resources.findResource(me(req), String(req.body.cle || ""));
+      const r = resources.findResource(me(req), String(req.body.cle || ""), sid(req));
       if (!r) return fail("Ressource introuvable.");
       if (!r.canRepair) return fail("Ce fichier n'a pas besoin d'être réparé (il est présent, ou son adresse n'est pas un fichier du site).");
       if (!req.file) return fail("Choisissez le fichier de remplacement.");
@@ -400,16 +406,16 @@ router.post("/formateur/gestion/ressources/reparer", (req, res) => {
 // ---------- Activité et notifications ----------
 router.get("/formateur/gestion/activite", page("gestion/activite", "Activité", (req) => {
   const view = ["notifications", "alertes"].includes(req.query.vue) ? req.query.vue : "activite";
-  return { view, feed: view === "alertes" ? null : activity.feed(me(req), { ...req.query, vue: view }), alerts: activity.alerts(me(req)), types: activity.TYPES, unread: activity.unreadCount(me(req)) };
+  return { view, feed: view === "alertes" ? null : activity.feed(me(req), { ...req.query, vue: view }, sid(req)), alerts: activity.alerts(me(req), sid(req)), types: activity.TYPES, unread: activity.unreadCount(me(req), sid(req)) };
 }));
 // Ouvrir une notification : marquée comme lue, puis redirection vers l'élément réel (adresse calculée par le serveur)
 router.get("/formateur/gestion/activite/ouvrir", safely("/formateur/gestion/activite", (req, res) => {
-  const it = activity.markRead(me(req), String(req.query.cle || ""));
+  const it = activity.markRead(me(req), String(req.query.cle || ""), sid(req));
   if (!it) { flash(req, "error", "Cet élément n'existe plus."); return res.redirect("/formateur/gestion/activite"); }
   res.redirect(it.href || "/formateur/gestion/activite?vue=notifications");
 }));
 router.post("/formateur/gestion/activite/lu", safely("/formateur/gestion/activite?vue=notifications", (req, res) => {
-  if (!activity.markRead(me(req), String(req.body.cle || ""))) flash(req, "error", "Cet élément n'existe plus.");
+  if (!activity.markRead(me(req), String(req.body.cle || ""), sid(req))) flash(req, "error", "Cet élément n'existe plus.");
   res.redirect(`/formateur/gestion/activite?vue=notifications${req.body.etat === "non-lu" ? "&etat=non-lu" : ""}`);
 }));
 router.post("/formateur/gestion/activite/tout-lu", safely("/formateur/gestion/activite?vue=notifications", (req, res) => {

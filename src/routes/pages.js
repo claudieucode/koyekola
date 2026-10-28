@@ -6,6 +6,7 @@ const { createRateLimiter } = require("../middlewares/security");
 const { sendContactNotification, sendContactAcknowledgement } = require("../utils/mailer");
 const { UserError } = require("../utils/errors");
 const seoPages = require("../seo/pages");
+const dashSite = require("../services/dashSite");
 
 const router = express.Router();
 
@@ -21,8 +22,9 @@ const sitePages = require("../services/sitePages");
 const ABOUT_MAX = 20000;
 const ABOUT_DESCRIPTION = "KOLAKISA : formations vidéo à suivre à votre rythme, avec quiz, ressources à télécharger et certificat de réussite vérifiable.";
 
-function loadAbout() {
-  const row = db.prepare("SELECT * FROM site_pages WHERE slug = 'a-propos'").get();
+// Le site principal garde site_pages (texte ou blocs) ; chaque autre site a sa page TEXTE dans site_pages_by_site (clé : site_id + adresse) — l'éditeur de blocs de la page reste celui du site principal
+function loadAbout(siteId = null) {
+  const row = siteId === null ? db.prepare("SELECT * FROM site_pages WHERE slug = 'a-propos'").get() : db.prepare("SELECT * FROM site_pages_by_site WHERE site_id = ? AND slug = 'a-propos'").get(siteId);
   return { content: row && row.content.trim() ? row.content : DEFAULT_ABOUT, custom: Boolean(row && row.content.trim()), description: (row && row.seo_description) || "", raw: row ? row.content : "", html: row && row.content_html && row.content_html.trim() ? row.content_html : "", heading: (row && row.heading) || "" };
 }
 // Mise en page de la page : contenu en blocs (éditeur de blocs) si la page en a, sinon le texte Markdown d'origine (rien ne change tant que l'éditeur de blocs n'a pas été utilisé)
@@ -63,6 +65,7 @@ router.previewPage = (req, res, merged) => {
 // Éditeur de blocs de la page : ouvre l'éditeur complet sur la ligne « support » de la page (créée au premier passage à partir du texte actuel)
 router.get("/formateur/pages/:slug/blocs", (req, res) => {
   if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
+  if (dashSite.siteIdOf(req) !== null) return res.status(409).render("error", { message: "L'éditeur de blocs de la page À propos est disponible pour le site principal ; les autres sites utilisent le texte de la page." });
   const post = sitePages.ensureSupport(req.params.slug, req.session.user.id);
   res.redirect(`/formateur/blog/${post.id}/modifier`);
 });
@@ -72,13 +75,14 @@ const EDITABLE_PAGES = { "a-propos": "À propos" };
 
 router.get("/formateur/pages/:slug", (req, res) => {
   if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
-  const about = loadAbout();
+  const about = loadAbout(dashSite.siteIdOf(req));
   res.render("instructor/page-form", { blocks: Boolean(about.html), title: EDITABLE_PAGES[req.params.slug], slug: req.params.slug, content: about.raw, description: about.description, saved: req.query.enregistre === "1", error: req.query.erreur || null, defaultText: DEFAULT_ABOUT, defaultTitle: DEFAULT_TITLE, max: ABOUT_MAX });
 });
 
 // Retour au texte simple : le site réaffiche le texte Markdown ; le contenu en blocs reste dans l'éditeur (et son historique), rien n'est supprimé
 router.post("/formateur/pages/:slug/texte-simple", (req, res) => {
   if (!EDITABLE_PAGES[req.params.slug]) return res.status(404).render("error", { message: "Page introuvable." });
+  if (dashSite.siteIdOf(req) !== null) return res.status(409).render("error", { message: "Le contenu en blocs de la page À propos est celui du site principal." });
   db.prepare("UPDATE site_pages SET content_html = '', updated_at = datetime('now') WHERE slug = ?").run(req.params.slug);
   res.redirect(`/formateur/pages/${req.params.slug}?enregistre=1`);
 });
@@ -88,10 +92,16 @@ router.post("/formateur/pages/:slug", (req, res) => {
   const content = String(req.body.content || "");
   if (content.length > ABOUT_MAX) return res.redirect(`/formateur/pages/${req.params.slug}?erreur=${encodeURIComponent(`Le texte fait ${content.length} caractères : la limite est de ${ABOUT_MAX}. Rien n'a été enregistré ; raccourcissez-le puis réessayez.`)}`);
   const description = String(req.body.seo_description || "").trim().slice(0, 160);
-  db.prepare(
+  const siteId = dashSite.siteIdOf(req);
+  if (siteId === null) db.prepare(
     `INSERT INTO site_pages (slug, title, content, seo_description, updated_at) VALUES (?, ?, ?, ?, datetime('now'))
      ON CONFLICT(slug) DO UPDATE SET content = excluded.content, seo_description = excluded.seo_description, updated_at = excluded.updated_at`
   ).run(req.params.slug, EDITABLE_PAGES[req.params.slug], content, description || null);
+  else db.prepare(
+    `INSERT INTO site_pages_by_site (site_id, slug, title, content, seo_description, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(site_id, slug) DO UPDATE SET content = excluded.content, seo_description = excluded.seo_description, updated_at = excluded.updated_at`
+  ).run(siteId, req.params.slug, EDITABLE_PAGES[req.params.slug], content, description || null);
+  require("../services/auditLog").record(req, { action: "page.saved", resourceType: "page", resourceId: req.params.slug, summary: `Page « ${EDITABLE_PAGES[req.params.slug]} » enregistrée` });
   res.redirect(`/formateur/pages/${req.params.slug}?enregistre=1`);
 });
 
@@ -104,7 +114,7 @@ router.get("/cookies", (req, res) => {
 });
 
 router.get("/faq", (req, res) => {
-  const list = faqs.listPublic(null);
+  const list = faqs.listPublic(null, null); // pages publiques : domaine principal uniquement (MAIN_SITE_ONLY)
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Questions fréquentes" }];
   res.render("pages/faq", {
     faqs: list, groups: faqs.grouped(list), crumbs,
@@ -115,7 +125,8 @@ router.get("/faq", (req, res) => {
 function loadCourseOr404(req, res, courseId) {
   // Toutes les colonnes : l'en-tête commun des pages d'une formation (_course-head) affiche son statut, sa miniature et son lien public
   const course = db.prepare("SELECT * FROM courses WHERE id = ? AND instructor_id = ?").get(Number(courseId), req.session.user.id);
-  if (!course) res.status(404).render("error", { message: "Formation introuvable." });
+  if (!course) { res.status(404).render("error", { message: "Formation introuvable." }); return course; }
+  if (!dashSite.guardObject(req, res, course.site_id, { notFound: "Formation introuvable." })) return null;
   return course;
 }
 
@@ -123,12 +134,13 @@ function loadCourseOr404(req, res, courseId) {
 const faqFlash = (req) => { const f = req.session.faqFlash || null; delete req.session.faqFlash; return f; };
 const faqBack = (faq) => (faq && faq.course_id ? `/formateur/cours/${faq.course_id}/faq` : "/formateur/faq");
 function renderFaqAdmin(req, res, course, over = {}) {
-  res.status(over.status || 200).render("instructor/faq-admin", { faqs: faqs.listAll(course ? course.id : null), course, categories: faqs.categories(), flash: faqFlash(req), errors: {}, values: {}, ...over });
+  res.status(over.status || 200).render("instructor/faq-admin", { faqs: faqs.listAll(course ? course.id : null, dashSite.siteIdOf(req)), course, categories: faqs.categories(dashSite.siteIdOf(req)), flash: faqFlash(req), errors: {}, values: {}, ...over });
 }
 // Question ciblée : introuvable → 404 ; hors de son périmètre (formation d'un autre formateur) → 404 aussi (aucune information sur son existence)
 function loadFaq(req, res) {
   const faq = faqs.get(Number(req.params.id));
   if (!faq || !faqs.canManage(req.session.user, faq)) { res.status(404).render("error", { message: "Question introuvable." }); return null; }
+  if (!dashSite.guardObject(req, res, faqs.siteOf(faq), { notFound: "Question introuvable." })) return null;
   return faq;
 }
 
@@ -143,7 +155,7 @@ router.get("/formateur/cours/:id/faq", (req, res) => {
 router.post("/formateur/faq/ajouter", (req, res) => {
   let course = null;
   if (String(req.body.course_id || "").trim()) { course = loadCourseOr404(req, res, req.body.course_id); if (!course) return; }
-  const r = faqs.create(course ? course.id : null, req.body);
+  const r = faqs.create(course ? course.id : null, req.body, course ? (course.site_id ?? null) : dashSite.siteIdOf(req));
   if (r.errors) return renderFaqAdmin(req, res, course, { status: 400, errors: r.errors, values: r.values });
   req.session.faqFlash = { type: "ok", text: "Question ajoutée." };
   res.redirect(course ? `/formateur/cours/${course.id}/faq` : "/formateur/faq");
@@ -153,14 +165,14 @@ router.get("/formateur/faq/:id(\\d+)/modifier", (req, res) => {
   const faq = loadFaq(req, res); if (!faq) return;
   const course = faq.course_id ? loadCourseOr404(req, res, faq.course_id) : null;
   if (faq.course_id && !course) return;
-  res.render("instructor/faq-edit", { faq, course, categories: faqs.categories(), errors: {}, values: faq });
+  res.render("instructor/faq-edit", { faq, course, categories: faqs.categories(faqs.siteOf(faq)), errors: {}, values: faq });
 });
 router.post("/formateur/faq/:id(\\d+)/modifier", (req, res) => {
   const faq = loadFaq(req, res); if (!faq) return;
   const course = faq.course_id ? loadCourseOr404(req, res, faq.course_id) : null;
   if (faq.course_id && !course) return;
   const r = faqs.update(faq, req.body);
-  if (r.errors) return res.status(400).render("instructor/faq-edit", { faq, course, categories: faqs.categories(), errors: r.errors, values: r.values });
+  if (r.errors) return res.status(400).render("instructor/faq-edit", { faq, course, categories: faqs.categories(faqs.siteOf(faq)), errors: r.errors, values: r.values });
   req.session.faqFlash = { type: "ok", text: "Question enregistrée." };
   res.redirect(faqBack(faq));
 });
@@ -216,7 +228,7 @@ router.post("/contact", async (req, res, next) => {
       return renderContact(req, res, { status: 400, values, error: "Votre message doit contenir entre 10 et 5 000 caractères." });
     }
 
-    db.prepare("INSERT INTO contact_messages (name, email, subject, message) VALUES (?, ?, ?, ?)").run(values.name, values.email, values.subject, values.message);
+    db.prepare("INSERT INTO contact_messages (name, email, subject, message, site_id) VALUES (?, ?, ?, ?, ?)").run(values.name, values.email, values.subject, values.message, req.kwSite ? req.kwSite.id : null); // site du domaine servi (jamais une valeur du formulaire)
     contactLimiter.hit(req.ip);
 
     // E-mails mis en file (envoyés en arrière-plan, réessayés en cas d'échec) : le formateur est prévenu, la personne
@@ -252,34 +264,35 @@ const inboxUrl = (state, id) => {
 
 router.get("/formateur/messages", (req, res) => {
   const state = inboxState(req.query);
+  const siteId = dashSite.siteIdOf(req);
   let open = null, missing = false;
   if (req.query.id !== undefined) {
-    open = inbox.get(req.query.id);
+    open = inbox.get(req.query.id, siteId);
     if (!open) missing = true;
-    else if (!open.read_at) { inbox.markRead(open.id); open = inbox.get(open.id); }
+    else if (!open.read_at) { inbox.markRead(open.id, siteId); open = inbox.get(open.id, siteId); }
   }
-  const totals = inbox.counts();
+  const totals = inbox.counts(siteId);
   // La pastille de la navigation a été calculée avant cette lecture : on la remet à jour pour cette réponse
   if (res.locals.dash) res.locals.dash.unread = totals.unread;
   if (res.locals.appRail) res.locals.appRail.unread = totals.unread;
   // Lien direct vers un message (sans page demandée) : la liste s'ouvre à la page qui le contient
-  if (open && req.query.page === undefined) state.page = inbox.pageOf(open.id, state);
-  const result = inbox.list({ ...state, keepId: open ? open.id : 0 });
+  if (open && req.query.page === undefined) state.page = inbox.pageOf(open.id, { ...state, siteId });
+  const result = inbox.list({ ...state, keepId: open ? open.id : 0, siteId });
   res.render("instructor/messages", { result, totals, open, missing, state: { ...state, page: result.page }, replyHref: open ? inbox.replyHref(open) : "", inboxUrl, shortDate: inbox.shortDate });
 });
 
 router.post("/formateur/messages/:id/lu", (req, res) => {
-  inbox.markRead(req.params.id);
+  inbox.markRead(req.params.id, dashSite.siteIdOf(req));
   res.redirect(inboxUrl(inboxState(req.body), req.params.id));
 });
 
 router.post("/formateur/messages/:id/non-lu", (req, res) => {
-  inbox.markUnread(req.params.id);
+  inbox.markUnread(req.params.id, dashSite.siteIdOf(req));
   res.redirect(inboxUrl(inboxState(req.body), req.params.id));
 });
 
 router.post("/formateur/messages/:id/supprimer", (req, res) => {
-  inbox.remove(req.params.id);
+  inbox.remove(req.params.id, dashSite.siteIdOf(req));
   res.redirect(inboxUrl(inboxState(req.body)));
 });
 

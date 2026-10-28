@@ -21,8 +21,8 @@
    "classe": "isolee"
   },
   "audit_log": {
-   "siteId": false,
-   "classe": "plateforme"
+   "siteId": true,
+   "classe": "isolee"
   },
   "blog_block_trash": {
    "siteId": false,
@@ -109,8 +109,8 @@
    "classe": "isolee"
   },
   "contact_messages": {
-   "siteId": false,
-   "classe": "plateforme"
+   "siteId": true,
+   "classe": "isolee"
   },
   "coupons": {
    "siteId": false,
@@ -121,8 +121,8 @@
    "classe": "plateforme"
   },
   "courses": {
-   "siteId": false,
-   "classe": "plateforme"
+   "siteId": true,
+   "classe": "isolee"
   },
   "dashboard_prefs": {
    "siteId": false,
@@ -137,8 +137,8 @@
    "classe": "plateforme"
   },
   "faqs": {
-   "siteId": false,
-   "classe": "plateforme"
+   "siteId": true,
+   "classe": "isolee"
   },
   "favorites": {
    "siteId": false,
@@ -179,18 +179,6 @@
   "mk_admin_notes": {
    "siteId": true,
    "classe": "isolee"
-  },
-  "mk_import_sources": {
-    "siteId": true,
-    "classe": "isolee"
-  },
-  "mk_importer_state": {
-    "siteId": false,
-    "classe": "plateforme"
-  },
-  "mk_user_profiles": {
-    "siteId": false,
-    "classe": "plateforme"
   },
   "mk_ai_requests": {
    "siteId": true,
@@ -317,6 +305,14 @@
    "classe": "isolee"
   },
   "mk_import_rejects": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_import_sources": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_importer_state": {
    "siteId": false,
    "classe": "plateforme"
   },
@@ -528,6 +524,10 @@
    "siteId": false,
    "classe": "a-decider"
   },
+  "mk_user_profiles": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
   "mk_web_components": {
    "siteId": true,
    "classe": "isolee"
@@ -712,13 +712,17 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "site_pages_by_site": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "support_messages": {
    "siteId": false,
    "classe": "plateforme"
   },
   "support_tickets": {
-   "siteId": false,
-   "classe": "plateforme"
+   "siteId": true,
+   "classe": "isolee"
   },
   "taxonomy_relations": {
    "siteId": false,

@@ -7,6 +7,9 @@
 // l'utilise encore, et l'action sûre (nettoyer la fiche, remplacer le fichier, ou gérer dans la formation).
 const path = require("path");
 const db = require("../../config/database");
+const siteScope = require("../siteScope");
+// Portée de site : fichiers des formations du site (courses.site_id) ; la médiathèque du blog (table media) est celle du site principal
+const L = (siteId, alias) => siteScope.lit(siteId, alias);
 const blog = require("../blog");
 const { fileState, STATE_LABELS } = require("../../utils/storage");
 const { paginate, page, cleanQ } = require("./common");
@@ -21,7 +24,7 @@ function stat(p) { const f = fileState(p); return { size: f.size, mtime: f.mtime
 // affichées et la provenance en échec est signalée avec sa raison (jamais une liste silencieusement incomplète).
 // Les utilisations d'un fichier de la médiathèque (recherche dans tous les contenus du site, coûteuse) ne sont calculées
 // que pour les fichiers affichés : voir withUsage().
-function allResources(instructorId) {
+function allResources(instructorId, siteId = null) {
   const out = [];
   const problems = [];
   const part = (source, fn) => {
@@ -32,7 +35,7 @@ function allResources(instructorId) {
   };
   // 1. Médiathèque du site
   part("site", () => {
-    for (const m of db.prepare("SELECT * FROM media ORDER BY created_at DESC, id DESC").all()) {
+    for (const m of (siteId === null ? db.prepare("SELECT * FROM media ORDER BY created_at DESC, id DESC").all() : [])) {
       const p = String(m.path || "");
       const st = stat(p);
       out.push({ key: `site:${m.id}`, id: m.id, source: "site", kind: m.kind === "image" || m.kind === "video" || m.kind === "audio" ? m.kind : kindOf(p, m.mime), name: m.title || path.basename(p) || `Fichier ${m.id}`, path: p, mime: m.mime,
@@ -41,19 +44,19 @@ function allResources(instructorId) {
   });
   // 2. Fichiers des formations du formateur
   part("course", () => {
-    const courses = db.prepare("SELECT id, title, thumbnail_path FROM courses WHERE instructor_id = ?").all(instructorId);
+    const courses = db.prepare(`SELECT id, title, thumbnail_path FROM courses WHERE instructor_id = ?${L(siteId)}`).all(instructorId);
     for (const c of courses) {
       if (c.thumbnail_path) { const st = stat(c.thumbnail_path); out.push({ key: `course-thumb:${c.id}`, source: "course", kind: "image", name: `Miniature — ${c.title}`, path: String(c.thumbnail_path), size: st.size, date: st.mtime, exists: st.exists, state: st.state, usedBy: [`Formation « ${c.title} »`], deletable: false, manageHref: `/formateur/cours/${c.id}/modifier` }); }
     }
-    const lessons = db.prepare(`SELECT l.id, l.title, l.video_path, c.id AS course_id, c.title AS course_title FROM lessons l JOIN sections s ON s.id = l.section_id JOIN courses c ON c.id = s.course_id WHERE c.instructor_id = ? AND l.video_path IS NOT NULL AND l.video_path <> ''`).all(instructorId);
+    const lessons = db.prepare(`SELECT l.id, l.title, l.video_path, c.id AS course_id, c.title AS course_title FROM lessons l JOIN sections s ON s.id = l.section_id JOIN courses c ON c.id = s.course_id WHERE c.instructor_id = ?${L(siteId, "c")} AND l.video_path IS NOT NULL AND l.video_path <> ''`).all(instructorId);
     for (const l of lessons) { const st = stat(l.video_path); out.push({ key: `lesson-video:${l.id}`, source: "course", kind: "video", name: `Vidéo — ${l.title}`, path: String(l.video_path), size: st.size, date: st.mtime, exists: st.exists, state: st.state, usedBy: [`Leçon « ${l.title} » (${l.course_title})`], deletable: false, manageHref: `/formateur/cours/${l.course_id}/curriculum` }); }
-    const atts = db.prepare(`SELECT a.id, a.title, a.path, a.created_at, l.title AS lesson_title, c.id AS course_id, c.title AS course_title FROM lesson_attachments a JOIN lessons l ON l.id = a.lesson_id JOIN sections s ON s.id = l.section_id JOIN courses c ON c.id = s.course_id WHERE c.instructor_id = ? AND a.kind = 'file' AND a.path IS NOT NULL`).all(instructorId);
+    const atts = db.prepare(`SELECT a.id, a.title, a.path, a.created_at, l.title AS lesson_title, c.id AS course_id, c.title AS course_title FROM lesson_attachments a JOIN lessons l ON l.id = a.lesson_id JOIN sections s ON s.id = l.section_id JOIN courses c ON c.id = s.course_id WHERE c.instructor_id = ?${L(siteId, "c")} AND a.kind = 'file' AND a.path IS NOT NULL`).all(instructorId);
     for (const a of atts) { const p = String(a.path); const st = stat(p); out.push({ key: `attachment:${a.id}`, source: "course", kind: kindOf(p), name: a.title || path.basename(p), path: p, size: st.size, date: a.created_at, exists: st.exists, state: st.state, usedBy: [`Leçon « ${a.lesson_title} » (${a.course_title})`], deletable: false, manageHref: `/formateur/cours/${a.course_id}/curriculum` }); }
   });
   // 3. Médiathèque marketing (si le module est en place)
   part("marketing", () => {
     let rows;
-    try { rows = db.prepare("SELECT * FROM mk_media ORDER BY created_at DESC").all(); } catch (e) { if (/no such table/i.test(e.message)) return; throw e; }
+    try { rows = db.prepare(`SELECT * FROM mk_media WHERE 1 = 1${L(siteId)} ORDER BY created_at DESC`).all(); } catch (e) { if (/no such table/i.test(e.message)) return; throw e; }
     for (const m of rows) {
       const p = String(m.path || "");
       const st = stat(p);
@@ -118,12 +121,12 @@ const PROBLEM_REASONS = {
 };
 
 // view : « bibliotheque » (fichiers disponibles uniquement) ou « a-traiter » (fiches dont le fichier est absent/invalide)
-function listResources(instructorId, query = {}) {
+function listResources(instructorId, query = {}, siteId = null) {
   const q = cleanQ(query.q).toLowerCase();
   const kind = KIND_LABELS[query.type] ? query.type : "";
   const source = SOURCE_LABELS[query.source] ? query.source : "";
   const view = query.etat === "a-traiter" ? "a-traiter" : "bibliotheque";
-  const all = allResources(instructorId);
+  const all = allResources(instructorId, siteId);
   const available = all.filter((r) => r.exists);
   const problems = all.filter((r) => !r.exists);
   // Compteurs de la médiathèque : fichiers réellement disponibles seulement
@@ -142,8 +145,8 @@ function listResources(instructorId, query = {}) {
 
 // Une ressource précise (clé « site:12 », « marketing:4 », « course-thumb:3 », « lesson-video:8 », « attachment:5 »),
 // limitée à ce que ce formateur peut voir, avec son état et ses dépendances
-function findResource(instructorId, key) {
-  const r = allResources(instructorId).find((x) => x.key === String(key || ""));
+function findResource(instructorId, key, siteId = null) {
+  const r = allResources(instructorId, siteId).find((x) => x.key === String(key || ""));
   return r ? withUsage([r])[0] : null;
 }
 
