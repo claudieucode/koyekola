@@ -1308,3 +1308,46 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .lp-foot-nav { margin: 0 0 14px; } .lp-foot-nav .kw-menu-list { justify-content: center; }
 .lp-foot-nav .kw-submenu { list-style: none; margin: 2px 0 0; padding: 0; font-size: 0.875em; opacity: .85; }
 @media (max-width: 720px) { .lp-autohead { padding: 12px 16px; } .lp-autohead-nav .kw-menu-list { gap: 2px 16px; } .lp-autohead-nav .kw-submenu { position: static; box-shadow: none; border: 0; background: transparent; color: inherit; display: block; padding: 0 0 0 12px; } }
+
+/* Défilement continu (widget « marquee ») : deux listes identiques mises bout à bout, la piste glisse d'une moitié ; immobile si « réduire les animations » */
+.kw-marquee { position: relative; }
+.kw-marquee-view { overflow: hidden; container-type: inline-size; }
+.kw-marquee-track { display: flex; width: max-content; animation: kw-marquee-run 30s linear infinite; }
+.kw-marquee.is-slow .kw-marquee-track { animation-duration: 60s; }
+.kw-marquee.is-fast .kw-marquee-track { animation-duration: 15s; }
+.kw-marquee.is-right .kw-marquee-track { animation-direction: reverse; }
+.kw-marquee-list { display: flex; align-items: center; justify-content: space-around; min-width: 100cqw; margin: 0; padding: 0; list-style: none; flex-shrink: 0; }
+.kw-marquee-item { display: inline-flex; align-items: center; gap: 1.2em; padding: 0 0.9em; white-space: nowrap; }
+.kw-marquee-sep { opacity: 0.55; }
+.kw-marquee.has-hover-pause:hover .kw-marquee-track, .kw-marquee:focus-within .kw-marquee-track, .kw-marquee-pause:checked ~ .kw-marquee-view .kw-marquee-track { animation-play-state: paused; }
+.kw-marquee-pause { position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; }
+.kw-marquee-pause-label { position: absolute; top: 0; right: 0; z-index: 1; display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 0 0 0 8px; font-size: 12px; font-weight: 700; line-height: 1; color: #fff; background: rgba(0, 0, 0, 0.65); cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+.kw-marquee:hover .kw-marquee-pause-label, .kw-marquee-pause:focus-visible + .kw-marquee-pause-label, .kw-marquee-pause:checked + .kw-marquee-pause-label { opacity: 1; }
+.kw-marquee-pause:focus-visible + .kw-marquee-pause-label { outline: 2px solid var(--lp-accent, #0277b6); outline-offset: 2px; }
+.kw-marquee-pause:checked + .kw-marquee-pause-label .kw-marquee-pause-text::after { content: " (en pause)"; }
+@keyframes kw-marquee-run { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .kw-marquee-track { animation: none; width: auto; }
+  .kw-marquee-list[aria-hidden="true"], .kw-marquee-pause-label { display: none; }
+  .kw-marquee-list { flex-wrap: wrap; justify-content: center; min-width: 0; }
+  .kw-marquee-item { white-space: normal; }
+}
+
+/* Avant / Après (widget « beforeafter ») : l'image « Avant » est rognée à droite de la ligne ; le champ « range » natif, transparent, couvre la zone (clavier, souris, doigt) */
+.kw-compare { margin: 0; }
+.kw-compare-stage { position: relative; overflow: hidden; aspect-ratio: var(--kw-cmp-ratio, 16 / 9); background: #e5e7eb; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.kw-compare-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.kw-compare-after { z-index: 0; }
+.kw-compare-before { z-index: 1; clip-path: inset(0 calc(100% - var(--kw-cmp-pos, 50%)) 0 0); }
+.kw-compare-bar { position: absolute; top: 0; bottom: 0; left: var(--kw-cmp-pos, 50%); width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 4px rgba(11, 42, 64, 0.5); pointer-events: none; }
+.kw-compare-knob { position: absolute; top: 50%; left: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 6px rgba(11, 42, 64, 0.45); }
+.kw-compare-knob::before, .kw-compare-knob::after { content: ""; position: absolute; top: 50%; width: 0; height: 0; margin-top: -5px; border: 5px solid transparent; }
+.kw-compare-knob::before { left: 5px; border-right-color: #374151; }
+.kw-compare-knob::after { right: 5px; border-left-color: #374151; }
+.kw-compare-tag { position: absolute; top: 10px; padding: 3px 8px; border-radius: 4px; font-size: 13px; font-weight: 700; line-height: 1.2; color: #fff; background: rgba(0, 0, 0, 0.65); pointer-events: none; }
+.kw-compare-tag-before { left: 10px; }
+.kw-compare-tag-after { right: 10px; }
+.kw-compare-range { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; -webkit-appearance: none; appearance: none; background: transparent; }
+.kw-compare-range:focus-visible ~ .kw-compare-bar { box-shadow: 0 0 0 3px var(--lp-accent, #0277b6), 0 0 4px rgba(11, 42, 64, 0.5); }
+.kw-compare-empty { display: flex; align-items: center; justify-content: center; aspect-ratio: var(--kw-cmp-ratio, 16 / 9); padding: 16px; text-align: center; color: #6b7280; background: #f3f4f6; border: 1px dashed #d1d5db; }
+.kw-compare-empty:empty { display: none; }

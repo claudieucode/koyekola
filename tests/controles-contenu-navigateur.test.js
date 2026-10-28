@@ -4,7 +4,7 @@
 //   * rien d'autre que l'élément concerné ne change ;
 //   * après rechargement de l'éditeur, le contrôle affiche la valeur choisie (persistance) ;
 //   * aucune erreur de script.
-// Jeu représentatif par défaut ; CONTENU_COMPLET=1 parcourt les 79 types instanciables (≈ 50 min sur une machine lente).
+// Jeu représentatif par défaut ; CONTENU_COMPLET=1 parcourt les types instanciables (hors formation / formulaire réels), voir NEEDS_DATA.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
@@ -19,7 +19,18 @@ const SKIP = !chromium || !CHROME ? "Playwright ou Chrome absent : parcours navi
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Contenu de départ valide par type (les éléments à image, vidéo ou formation exigent une valeur de départ)
-const OVER = { image: { src: "https://example.com/a.jpg", alt: "a" }, imagebox: { src: "https://example.com/a.jpg", title: "Titre" }, video: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Une vidéo" } };
+const IMG = (i) => ({ src: `https://example.com/${i}.jpg`, alt: `Image ${i}` });
+const OVER = {
+  image: { src: "https://example.com/a.jpg", alt: "a" }, imagebox: { src: "https://example.com/a.jpg", title: "Titre" }, video: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Une vidéo" },
+  // éléments qui demandent un choix à l'insertion : contenu de départ réaliste (sinon le mode complet ne pouvait pas démarrer)
+  gallery: { images: [IMG(1), IMG(2), IMG(3)] }, carousel: { images: [IMG(1), IMG(2)] }, hotspot: { src: "https://example.com/a.jpg", alt: "Plan", spots: [{ x: 30, y: 40, title: "Point", text: "Détail" }] },
+  audio: { src: "https://example.com/son.mp3", title: "Son" }, embed: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", title: "Contenu intégré" }, map: { address: "Paris, France", title: "Carte" },
+  rating: { value: 4, max: 5, label: "Note" }, mediacarousel: { items: [{ kind: "image", image: "https://example.com/a.jpg", alt: "a", caption: "" }, { kind: "image", image: "https://example.com/b.jpg", alt: "b", caption: "" }] },
+  lottie: { src: "https://example.com/a.json", alt: "Animation" },
+};
+// Dépendent d'une formation ou d'un formulaire réels du site : éprouvés par leurs tests propres (formations, formulaires)
+const NEEDS_DATA = new Set(["course", "addtocart", "courserating", "signupform"]);
+const EXTRA = { menuanchor: { anchor: "ancre-test" } };
 const REPRESENTATIFS = ["heading", "text", "button", "link", "image", "alert", "accordion", "divider", "iconbox", "cta", "slides", "pricing", "countdown", "tabs", "badge", "progress"];
 // Valeurs d'essai à ne pas inventer au hasard : certains champs n'acceptent qu'une forme précise (refus attendu AVEC message)
 const isLinkLabel = (l) => /lien|adresse|url|href|source|image|vid|src|ancre|fichier/i.test(l);
@@ -31,7 +42,7 @@ describe("réglages de contenu des éléments (inspecteur réel, Chrome)", { ski
   const doc = () => JSON.parse(row().draft || row().sections).sections;
   const snap = (nid) => JSON.stringify(find(doc(), nid));
   const others = (nid) => JSON.stringify(doc().map((s) => ({ ...s, children: (s.children || []).filter((c) => c.id !== nid) })));
-  const types = editorSpec().types.filter((t) => process.env.CONTENU_COMPLET ? true : REPRESENTATIFS.includes(t.type));
+  const types = editorSpec().types.filter((t) => process.env.CONTENU_COMPLET ? !NEEDS_DATA.has(t.type) : REPRESENTATIFS.includes(t.type));
 
   const open = async () => {
     await page.goto(`${srv.base}/marketing/pages/${id}/editeur`);
@@ -53,7 +64,7 @@ describe("réglages de contenu des éléments (inspecteur réel, Chrome)", { ski
     srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
     boss = await loginInstructor(srv);
     id = Number((await boss.post("/marketing/pages", { name: "Contenu", template: "", ouvrir: "editeur" })).location.match(/pages\/(\d+)/)[1]);
-    const kids = types.map((t, i) => ({ id: `wid${String(i).padStart(9, "0")}`, type: t.type, props: { ...(t.blank.props || {}), ...(OVER[t.type] || {}) }, ...(t.container ? { children: [] } : {}) }));
+    const kids = types.map((t, i) => ({ id: `wid${String(i).padStart(9, "0")}`, type: t.type, props: { ...(t.blank.props || {}), ...(OVER[t.type] || {}) }, ...(EXTRA[t.type] || {}), ...(t.container ? { children: [] } : {}) }));
     const r = await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", headers: { Origin: srv.base }, json: { revision: row().revision, content: { title: "Contenu", sections: [{ id: "sect00000001", type: "layout", children: kids }] } } });
     assert.equal(r.status, 200, r.text);
     browser = await chromium.launch({ executablePath: CHROME, headless: true });

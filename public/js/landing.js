@@ -539,3 +539,15 @@
     track.addEventListener("scroll", sync, { passive: true }); window.addEventListener("resize", sync); sync();
   });
 })();
+
+// Avant / Après : le champ « range » natif (clavier, souris, doigt) déplace la ligne de séparation
+(function () {
+  "use strict";
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-compare]"), function (box) {
+    var range = box.querySelector(".kw-compare-range");
+    if (!range) return;
+    var apply = function () { box.style.setProperty("--kw-cmp-pos", range.value + "%"); };
+    range.addEventListener("input", apply);
+    apply();
+  });
+})();
