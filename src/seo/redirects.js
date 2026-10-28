@@ -220,7 +220,7 @@ function middleware(req, res, next) {
   // Le site est celui du DOMAINE servi (vérifié par le serveur, req.kwSite) : une redirection propre à un site ne s'applique que sur son domaine ; aucune valeur de la requête n'intervient
   const r = p && lookup(req.kwSite ? req.kwSite.id : null, p);
   if (!r) return next();
-  if (!require("./probe").isProbe(req)) db.prepare("UPDATE seo_redirects SET hits = hits + 1, last_hit_at = datetime('now') WHERE id = ?").run(r.id);
+  if (!require("./probe").isProbe(req)) require("../utils/writeBehind").defer(() => db.prepare("UPDATE seo_redirects SET hits = hits + 1, last_hit_at = datetime('now') WHERE id = ?").run(r.id)); // compteur d'audience : écriture groupée
   const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
   const target = /^https:\/\//i.test(r.target) || r.target.includes("?") ? r.target : `${encodeURI(r.target)}${query}`;
   res.redirect(r.status, target);

@@ -230,6 +230,9 @@ process.on("unhandledRejection", (reason) => {
   console.error("[KOLAKISA] Promesse rejetée non gérée :", reason);
 });
 
+// Compteurs d'audience (lectures, 404, redirections) : écriture groupée (src/utils/writeBehind.js) ; les serveurs de test gardent l'écriture immédiate (sauf KW_WRITE_BEHIND_MS)
+if (process.env.NODE_ENV !== "test") require("./src/utils/writeBehind").enable();
+
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {
   console.log(`KOLAKISA disponible sur http://localhost:${PORT}`);

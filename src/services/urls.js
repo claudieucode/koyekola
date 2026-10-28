@@ -148,7 +148,24 @@ function publicUrl(req, type, row, opts = {}) {
 // Sur le domaine principal ne restent que les contenus historiques (sans rattachement) ET ceux d'un site SANS domaine : tant que la forme d'adresse d'un site sans domaine n'est pas
 // décidée (B1 : non servi / B2 : préfixe), ils restent servis exactement comme avant — aucune adresse publique existante ne disparaît.
 const TYPE_TABLE = { post: "posts", term: "taxonomy_terms" };
+// Lot : pendant `withBatchCache(fn)` (synchrone), les rattachements d'un type de contenu se lisent en UNE requête au lieu d'une par contenu
+// (plan du site : 2 000 articles = 4 000 requêtes). Le cache n'existe que le temps de l'appel : jamais de donnée périmée d'une requête à l'autre.
+let batchCache = null;
+function withBatchCache(fn) {
+  if (batchCache) return fn();
+  batchCache = new Map();
+  try { return fn(); } finally { batchCache = null; }
+}
 function attachedSite(type, id) {
+  if (batchCache) {
+    let byId = batchCache.get(type);
+    if (!byId) {
+      byId = new Map();
+      try { for (const r of db.prepare("SELECT content_id, site_id, address FROM mk_content_sites WHERE content_type = ?").all(type)) byId.set(r.content_id, { site_id: r.site_id, address: r.address }); } catch { /* table absente : aucun rattachement */ }
+      batchCache.set(type, byId);
+    }
+    return byId.get(id) || null;
+  }
   try { const r = db.prepare("SELECT site_id, address FROM mk_content_sites WHERE content_type = ? AND content_id = ?").get(type, id); return r || null; } catch { return null; }
 }
 // Site qui sert ce contenu sur son domaine, ou null (domaine principal)
@@ -351,6 +368,6 @@ module.exports = {
   RESERVED, isReserved, normalizeSlug, checkSlug, uniqueSlug, isTaken,
   siteForHost, isRetiredHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
   pagePath, pageCanonicalPath, baseOfPage, publicPath, publicUrl,
-  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, attachedSite, addressOf, contentScope, resolvePost, resolveTerm,
+  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, attachedSite, withBatchCache, addressOf, contentScope, resolvePost, resolveTerm,
   slugChanged, slugMovedTo, historyOf, purgeHistory,
 };

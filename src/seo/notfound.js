@@ -33,6 +33,11 @@ function record(req) {
   const bot = !ua || BOT.test(ua);
   // R8 lot 6 : l'adresse introuvable est rattachée au SITE du domaine servi (req.kwSite, vérifié par le serveur) ; NULL = hôte principal. Deux sites peuvent avoir la même adresse introuvable.
   const siteId = req.kwSite ? req.kwSite.id : null;
+  // Journal d'audience : écriture groupée (src/utils/writeBehind.js) — un robot qui sonde des adresses inventées ne bloque plus le serveur à chaque requête
+  require("../utils/writeBehind").defer(() => write(path, siteId, bot, ref, ua));
+}
+
+function write(path, siteId, bot, ref, ua) {
   if (siteSchemaReady()) {
     db.prepare(`INSERT INTO seo_404 (path, site_id, hits_human, hits_bot, last_referrer, last_user_agent) VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(COALESCE(site_id, 0), path) DO UPDATE SET hits_human = hits_human + excluded.hits_human, hits_bot = hits_bot + excluded.hits_bot, last_seen = datetime('now'),

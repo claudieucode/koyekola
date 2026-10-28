@@ -903,6 +903,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_support_messages_author ON support_messages(author_id);
 `);
 
+// Fil d'activité et compteur de notifications du Centre de gestion (calculés à chaque page d'administration) : nouveaux comptes élèves et
+// messages de contact des 30 derniers jours, retrouvés par la date au lieu de parcourir toute la table (mesuré avec 30 000 comptes :
+// 14,6 ms → 3,6 ms par appel, voir docs/KOLAKISA_PERFORMANCE_ZERO_LATENCE.md).
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_users_role_created ON users(role, created_at);
+  CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at);
+`);
+
 // Administration par site de « Mon espace » : site_id (NULL = site principal) sur les données du LMS — voir src/config/siteColumns.js
 require("./siteColumns").apply(db);
 

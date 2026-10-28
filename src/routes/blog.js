@@ -4,6 +4,7 @@ const fs = require("fs");
 // (texte riche, statuts et programmation, sauvegarde automatique, versions, médiathèque, liens internes, analyse SEO, IA).
 const express = require("express");
 const db = require("../config/database");
+const postColumns = require("../utils/postColumns");
 const { requireInstructor } = require("../middlewares/auth");
 const { upload } = require("../middlewares/upload");
 const { createRateLimiter } = require("../middlewares/security");
@@ -139,7 +140,7 @@ function renderList(req, res, { filter = null } = {}) {
   // Catégorie ou étiquette : relations de la taxonomie (une catégorie montre aussi les articles de ses sous-catégories)
   if (filter && (filter.type === "category" || filter.type === "tag")) { const f = taxonomy.contentFilter("post", filter.termIds); where.push(f.sql); params.push(...f.args); }
   if (filter && filter.type === "author") { where.push("(author_id = ? OR (author_id IS NULL AND ? = (SELECT MIN(id) FROM users WHERE role = 'formateur')))"); params.push(filter.id, filter.id); }
-  let rows = db.prepare(`SELECT * FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC`).all(...params);
+  let rows = postColumns.lightRows(db.prepare(`SELECT ${postColumns.listColumns()} FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC`).all(...params)); // sans le contenu des articles (src/utils/postColumns.js) ; il se charge à la demande pour ceux qui sont affichés
   // Archives par date (blocs Archives / Calendrier) : ?date=AAAA-MM ou AAAA-MM-JJ
   const dateFilter = /^\d{4}-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?$/.test(String(req.query.date || "")) ? String(req.query.date) : "";
   if (dateFilter) rows = rows.filter((p) => String(p.published_at || "").startsWith(dateFilter));
@@ -230,7 +231,7 @@ router.get("/recherche", (req, res) => {
     const terms = fold(q).split(" ").filter(Boolean);
     const matches = (parts) => { const hay = fold(parts.join(" \n ")); return terms.every((t) => hay.includes(t)); };
     const scope = urls.contentScope("post", "posts.id", req.kwSite || null);
-    articles = db.prepare(`SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC`).all(...(scope ? scope.params : []))
+    articles = postColumns.lightRows(db.prepare(`SELECT ${postColumns.listColumns()} FROM posts WHERE published = 1 AND deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC`).all(...(scope ? scope.params : [])))
       .filter((p) => matches([p.title, p.excerpt, p.category, p.subcategory, p.tags, blog.textOf(p)])).slice(0, 30)
       .map((p) => ({ title: p.title, url: urls.publicPath("post", p), summary: excerptOf(p) }));
     pages = db.prepare("SELECT name, title, slug, description FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL AND kind = 'page' AND site_id IS NULL ORDER BY published_at DESC, id DESC").all()
@@ -475,17 +476,17 @@ router.get("/blog/:slug", (req, res) => {
 });
 
 // Plan du site : le blog, ses catégories et ses articles publiés et indexables
-router.sitemapEntries = () => {
+router.sitemapEntries = () => urls.withBatchCache(() => {
   blog.promoteScheduled();
   return [
     { path: "/blog" },
     ...taxonomy.publicTerms("category").map((t) => ({ path: taxonomy.urlOf(t) })),
     ...db
-      .prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC")
+      .prepare(`SELECT ${postColumns.listColumns()} FROM posts WHERE published = 1 AND deleted_at IS NULL AND robots_index = 1 AND (canonical_url IS NULL OR canonical_url = '') ORDER BY published_at DESC`)
       .all()
       .map((p) => ({ path: urls.publicPath("post", p), lastmod: isoDate(p.updated_at) })),
   ];
-};
+});
 
 // ---------- Éditeur (formateur) ----------
 
