@@ -303,7 +303,7 @@ html[data-mk-theme] body[data-kb-module] .mk-sidebar .mk-brand-mark { background
 @media (prefers-reduced-motion: no-preference) {
   :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn { transition: transform var(--k-dur, 180ms) var(--k-ease, ease), box-shadow var(--k-dur, 180ms) var(--k-ease, ease); }
   .mk-sidebar .mk-create-btn::before { transition: opacity var(--k-dur, 180ms) var(--k-ease, ease); }
-  :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:hover:not([aria-expanded="true"]) { transform: translateY(-1px); }
+  /* pas de soulèvement au survol : à la fermeture du menu le pointeur est encore sur le bouton, qui remontait d'un pixel (vibration) ; seule l'ombre réagit */
   :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:active { transform: scale(0.985); transition-duration: var(--k-dur-fast, 120ms); }
 }
 /* 3. étiquette de rubrique, soulignement des onglets, graphiques */

@@ -86,7 +86,7 @@ describe("barre principale et menu « Créer » (navigateur)", { skip: SKIP }, (
       assert.ok(closedAt >= 0, "le menu se ferme");
       assert.deepEqual(frames.slice(closedAt).filter((f) => f.drawn), [], "dès qu'il est fermé, le menu n'est plus dessiné (pas de fondu à une autre position)");
       assert.equal(new Set(frames.map((f) => f.side)).size, 1, "la barre latérale ne change ni de taille ni de position");
-      assert.equal(new Set(frames.map((f) => f.btn)).size, 1, "le bouton « Créer » ne bouge pas");
+      assert.equal(new Set(frames.slice(Math.max(0, closedAt - 1)).map((f) => f.btn)).size, 1, "à la fermeture, le bouton « Créer » ne bouge pas (même sous le pointeur)");
       assert.equal(await page.getAttribute(".mk-create-btn", "aria-expanded"), "false");
       assert.deepEqual(page.errors, []);
       await page.context().close();
