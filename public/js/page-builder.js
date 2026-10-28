@@ -6365,7 +6365,7 @@
       // Guides de cet écran, et position du pointeur dans la page
       c.fillStyle = "#0891b2";
       if (aids.guides !== false) marks.forEach(function (m) { var p = at(m); if (p < 0 || p > len) return; c.beginPath(); if (horizontal) { c.moveTo(p - 4, 0); c.lineTo(p + 4, 0); c.lineTo(p, 6); } else { c.moveTo(0, p - 4); c.lineTo(0, p + 4); c.lineTo(6, p); } c.fill(); });
-      if (pointer !== null) { var pp = Math.round(at(pointer)) + 0.5; if (pp >= 0 && pp <= len) { c.strokeStyle = "#e11d48"; c.beginPath(); if (horizontal) { c.moveTo(pp, 0); c.lineTo(pp, RULER); } else { c.moveTo(0, pp); c.lineTo(RULER, pp); } c.stroke(); } }
+      if (pointer !== null) { var pp = Math.round(at(pointer)) + 0.5; if (pp >= 0 && pp <= len) { c.strokeStyle = "#dc2626"; c.beginPath(); if (horizontal) { c.moveTo(pp, 0); c.lineTo(pp, RULER); } else { c.moveTo(0, pp); c.lineTo(RULER, pp); } c.stroke(); } }
     };
     paint(rx, Math.max(0, cr.width - RULER), true, fr.left - (cr.left + RULER), sx, g.v, pointerPage ? pointerPage.x : null, "v", band && [band.x1, band.x2]);
     paint(ry, Math.max(0, cr.height - RULER), false, fr.top - (cr.top + RULER), sy, g.h, pointerPage ? pointerPage.y : null, "h", band && [band.y1, band.y2]);
@@ -6390,7 +6390,7 @@
     var any = false;
     if (s.grid && p.mode === "free") {
       var shown = p.step * Math.max(1, Math.ceil(4 / (p.step * zoom))); // jamais plus dense qu'un trait tous les 4 px d'écran
-      ov.style.backgroundImage = "linear-gradient(to right,rgba(236,72,153,.18) 1px,transparent 1px),linear-gradient(to bottom,rgba(236,72,153,.18) 1px,transparent 1px)";
+      ov.style.backgroundImage = "linear-gradient(to right,rgba(2,119,182,.18) 1px,transparent 1px),linear-gradient(to bottom,rgba(2,119,182,.18) 1px,transparent 1px)";
       ov.style.backgroundSize = shown + "px " + shown + "px";
       any = true;
     }

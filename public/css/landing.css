@@ -515,7 +515,7 @@
 .pb-drop-box{ position:absolute;z-index:114;border:2px dashed #0277b6;background:rgba(2,119,182,.08);pointer-events:none;box-sizing:border-box}
 .pb-drop-label{ position:absolute;z-index:115;padding:2px 7px;border-radius:4px;background:#0277b6;color:#fff;font:600 11px/1.6 system-ui,sans-serif;pointer-events:none;white-space:nowrap}
 .pb-grid-overlay{ position:absolute;top:0;left:0;z-index:109;pointer-events:none;overflow:hidden}
-.pb-grid-col{ position:absolute;top:0;bottom:0;background:rgba(255,64,129,.07);border-left:1px solid rgba(255,64,129,.25);border-right:1px solid rgba(255,64,129,.25)}
+.pb-grid-col{ position:absolute;top:0;bottom:0;background:rgba(2,119,182,.07);border-left:1px solid rgba(2,119,182,.25);border-right:1px solid rgba(2,119,182,.25)}
 .pb-margin-line,.pb-container-line{ position:absolute;top:0;bottom:0;width:0;border-left:1px dashed #0d9488}
 .pb-margin-line::after,.pb-container-line::after{ content:attr(data-label);position:absolute;top:2px;right:4px}
 .pb-margin-line::after{ top:18px}
@@ -527,16 +527,16 @@
 .pb-safe-area::before{ content:attr(data-label);position:absolute;top:2px;left:4px;font:600 10px/1.4 system-ui,sans-serif;color:#b45309}
 .pb-smart-layer{ position:absolute;top:0;left:0;width:0;height:0;z-index:116;pointer-events:none}
 .pb-smart{ position:absolute;pointer-events:none}
-.pb-smart-v{ width:0;border-left:1px solid #db2777}
-.pb-smart-h{ height:0;border-top:1px solid #db2777}
+.pb-smart-v{ width:0;border-left:1px solid #d97706}
+.pb-smart-h{ height:0;border-top:1px solid #d97706}
 .pb-smart.is-guide{ border-color:#0891b2}
-.pb-smart.is-dist{ border-color:#e11d48}
+.pb-smart.is-dist{ border-color:#dc2626}
 .pb-smart.is-dist.is-equal{ border-color:#16a34a}
-.pb-smart-tag{ position:absolute;transform:translateX(-50%);padding:0 5px;border-radius:3px;font:600 10px/1.6 system-ui,sans-serif;color:#fff;background:#db2777;white-space:nowrap}
-.pb-smart-tag.is-dist{ background:#e11d48}
+.pb-smart-tag{ position:absolute;transform:translateX(-50%);padding:0 5px;border-radius:3px;font:600 10px/1.6 system-ui,sans-serif;color:#fff;background:#b45309;white-space:nowrap}
+.pb-smart-tag.is-dist{ background:#dc2626}
 .pb-smart-tag.is-equal{ background:#16a34a}
 .pb-smart-tag.is-snap{ transform:none}
-.pb-smart-box{ position:absolute;outline:1px solid #e11d48;background:rgba(225,29,72,.06)}
+.pb-smart-box{ position:absolute;outline:1px solid #dc2626;background:rgba(220,38,38,.06)}
 body.pb-outlines .kw-node,body.pb-outlines .lp-block{outline:1px dashed rgba(2,119,182,.35);outline-offset:-1px}
 body.pb-hand,body.pb-hand *{cursor:grab}
 body.pb-hand.is-panning,body.pb-hand.is-panning *{cursor:grabbing}
@@ -557,7 +557,7 @@ body.pb-hand.is-panning,body.pb-hand.is-panning *{cursor:grabbing}
 .pb-guide.is-temp::before { background: #22d3ee; }
 .pb-guide.is-locked { pointer-events: none; }
 .pb-guide-label { position: absolute; z-index: 115; padding: 1px 6px; border-radius: 4px; background: #0e7490; color: #fff; font: 600 11px/1.6 system-ui, sans-serif; pointer-events: none; white-space: nowrap; }
-.pb-guide.is-removing::before { background: #e11d48; }
+.pb-guide.is-removing::before { background: #dc2626; }
 .pb-col-split{ position:absolute;z-index:114;width:12px;margin-left:-6px;cursor:col-resize;display:flex;justify-content:center}
 .pb-col-split::before{ content:"";width:3px;height:100%;border-radius:2px;background:rgba(2,119,182,.35)}
 .pb-col-split:hover::before{ background:#0277b6}
@@ -625,7 +625,7 @@ body.pb-hand.is-panning,body.pb-hand.is-panning *{cursor:grabbing}
 .kw-code { white-space: pre-wrap; overflow-x: auto; }
 /* Coloration du code (src/marketing/pages/highlight.js) */
 .kw-tok-com { color: #5b7083; font-style: italic; } .kw-tok-str { color: #0a7a4a; } .kw-tok-num { color: #b45309; } .kw-tok-kw { color: #1d4ed8; font-weight: 600; } .kw-tok-fn { color: #0277b6; }
-.kw-tok-tag { color: #b4235b; } .kw-tok-attr { color: #b45309; }
+.kw-tok-tag { color: #0b5f93; } .kw-tok-attr { color: #b45309; }
 .kw-progress-head > span:last-child:not(:first-child) { flex: none; white-space: nowrap; overflow-wrap: normal; }
 .kw-progress-head { align-items: flex-start; }
 /* Animations d'entrée (ajoutées par landing.js seulement : sans script, tout est visible) */

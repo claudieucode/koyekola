@@ -92,7 +92,7 @@ html[data-kola-theme="dark"] .is-cms { --kab-bg: #061425; --kab-bg-2: #0d2540; }
 .kab-item-text small { color: var(--muted, #5a6b80); font-size: 0.74rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kab-item-quiet { justify-content: center; color: var(--accent-dark, #0369a1); font-weight: 650; font-size: 0.84rem; }
 .kab-item-danger { color: var(--danger, #c8202c); }
-.kab-item-danger .kab-item-ico { background: var(--danger-light, #fdeaec); color: var(--danger, #c8202c); }
+.kab-item-danger .kab-item-ico { background: var(--danger-light, #fdecea); color: var(--danger, #c8202c); }
 .kab-check { color: var(--accent, #0277b6); }
 .kab-foot { margin: 6px -6px -6px; padding: 6px; border-top: 1px solid var(--mk-border, #e1e7ef); }
 .kab-pop-notif .kab-foot { margin: 0; }

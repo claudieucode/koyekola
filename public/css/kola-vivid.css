@@ -1,4 +1,4 @@
-/* KOLAKISA — Titan XXVIII « Marine & aurore » : couleurs de fonction, dégradés de marque, surfaces teintées, mouvement.
+/* KOLAKISA — Titan XXVIII « Marine & aurore » (Titan XXXV : famille chromatique rose retirée, remplacée par « marine ») : couleurs de fonction, dégradés de marque, surfaces teintées, mouvement.
    Couche finale, chargée après kola-brand.css (administration) et, en version réduite, dans l'en-tête public (formations).
    Elle ne change ni le balisage ni les comportements ; elle ajoute des JETONS (§1-2), des ÉLÉMENTS (§3-6) et du MOUVEMENT (§7).
    Règle : une couleur = une fonction (voir docs/KOLAKISA_TITAN_XXVIII_DIRECTION_ARTISTIQUE.md). Le marine reste la structure ;
@@ -7,7 +7,7 @@
    Familles (chacune : réf · fond teinté · encre (texte ≥ 4,5:1 sur le fond teinté) · icône · survol)
      azur       action, navigation, site                    turquoise  construction, SEO, lecture
      émeraude   croissance, réussite, analyse               violet     pédagogie (formations), design, parcours
-     magenta    campagnes, création, audience               ambre      attention, mise en valeur, réussite d'apprenant
+     marine     structure, campagnes, volumes               ambre      attention, mise en valeur, réussite d'apprenant
    Les couleurs d'état (succès vert, avertissement ambre, erreur rouge) gardent leur sens et ne sont jamais prises par un module. */
 
 /* ===== 1. Jetons — clair ===== */
@@ -16,14 +16,14 @@
   --v-turq: #0e7490;     --v-turq-bg: #e0f4f6;     --v-turq-ink: #0b5f74;     --v-turq-ui: #14a2b8;     --v-turq-hv: #c9ebef;
   --v-emer: #0b8a63;     --v-emer-bg: #e2f5ed;     --v-emer-ink: #076a4c;     --v-emer-ui: #12a578;     --v-emer-hv: #cdeedf;
   --v-viol: #7048c8;     --v-viol-bg: #eee9fa;     --v-viol-ink: #5f35b0;     --v-viol-ui: #8a63e0;     --v-viol-hv: #e0d7f6;
-  --v-magn: #b83280;     --v-magn-bg: #fbe8f2;     --v-magn-ink: #9a2569;     --v-magn-ui: #d0489a;     --v-magn-hv: #f6d4e7;
+  --v-marine: #0b2239;   --v-marine-bg: #e9eef4;   --v-marine-ink: #0b2239;   --v-marine-ui: #1d4f7a;   --v-marine-hv: #d9e3ed;
   --v-ambr: #c98a00;     --v-ambr-bg: #fff3d3;     --v-ambr-ink: #7a4f00;     --v-ambr-ui: #e0a100;     --v-ambr-hv: #ffe8ac;
 
   /* Dégradés de marque : six, pas plus. Le texte blanc y garde ≥ 4,5:1 (teintes de départ et d'arrivée assez profondes). */
   --g-marine:  linear-gradient(135deg, #0b2a40 0%, #123f5f 55%, #0369a1 130%);                              /* marine → azur : structure, bandeaux */
   --g-lagon:   linear-gradient(135deg, #0277b6 0%, #0369a1 45%, #0e7490 130%);                                         /* azur → turquoise : action principale, construction */
   --g-aurore:  linear-gradient(135deg, #0369a1 0%, #6d43c4 100%);                                         /* azur → violet : parcours, pédagogie */
-  --g-orchidee: linear-gradient(135deg, #6d43c4 0%, #b0307b 100%);                                        /* violet → magenta : création, tunnels */
+  --g-nocturne: linear-gradient(135deg, #5b3aa8 0%, #0b2a40 100%);                                       /* violet → marine : création, tunnels */
   --g-seve:    linear-gradient(135deg, #076a4c 0%, #0e7490 100%);                                         /* vert → turquoise : croissance, mesures */
   --g-nuit-or: radial-gradient(120% 90% at 100% 0%, rgba(232, 176, 48, 0.24), transparent 55%), linear-gradient(135deg, #06192a 0%, #0b2a40 60%, #12466a 100%); /* marine + lumière dorée : accueil */
 
@@ -46,7 +46,7 @@ html[data-kola-theme="dark"] {
   --v-turq: #3fc0d4;  --v-turq-bg: rgba(63, 192, 212, 0.14);  --v-turq-ink: #86dbe9;  --v-turq-ui: #4fcbe0;  --v-turq-hv: rgba(63, 192, 212, 0.22);
   --v-emer: #34c79a;  --v-emer-bg: rgba(52, 199, 154, 0.14);  --v-emer-ink: #7fdcb9;  --v-emer-ui: #44d3a7;  --v-emer-hv: rgba(52, 199, 154, 0.22);
   --v-viol: #9b7ae8;  --v-viol-bg: rgba(155, 122, 232, 0.16); --v-viol-ink: #c1adf3;  --v-viol-ui: #a98cee;  --v-viol-hv: rgba(155, 122, 232, 0.24);
-  --v-magn: #e66aa8;  --v-magn-bg: rgba(230, 106, 168, 0.15); --v-magn-ink: #f4a2cb;  --v-magn-ui: #ee7db5;  --v-magn-hv: rgba(230, 106, 168, 0.23);
+  --v-marine: #8fb4d6; --v-marine-bg: rgba(143, 180, 214, 0.14); --v-marine-ink: #b9d2e8; --v-marine-ui: #a3c3e0; --v-marine-hv: rgba(143, 180, 214, 0.22);
   --v-ambr: #e8b030;  --v-ambr-bg: rgba(232, 176, 48, 0.15);  --v-ambr-ink: #f1c766;  --v-ambr-ui: #efbb47;  --v-ambr-hv: rgba(232, 176, 48, 0.23);
   --v-sh-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -8px rgba(0, 0, 0, 0.4);
   --v-sh-2: 0 2px 4px rgba(0, 0, 0, 0.3), 0 16px 32px -14px rgba(0, 0, 0, 0.55);
@@ -54,10 +54,10 @@ html[data-kola-theme="dark"] {
 
 /* ===== 3. Espaces de travail : deux tons par module (le marine de la structure ne change pas) ===== */
 body[data-kb-module="site"]      { --vx-a: var(--v-azur); --vx-b: var(--v-turq); --vx-bg: var(--v-azur-bg); --vx-ink: var(--v-azur-ink); --vx-grad: var(--g-lagon); }
-body[data-kb-module="marketing"] { --vx-a: var(--v-magn); --vx-b: var(--v-viol); --vx-bg: var(--v-magn-bg); --vx-ink: var(--v-magn-ink); --vx-grad: var(--g-orchidee); }
+body[data-kb-module="marketing"] { --vx-a: var(--v-azur); --vx-b: var(--v-marine-ui); --vx-bg: var(--v-azur-bg); --vx-ink: var(--v-azur-ink); --vx-grad: var(--g-marine); }
 body[data-kb-module="analytics"] { --vx-a: var(--v-emer); --vx-b: var(--v-turq); --vx-bg: var(--v-emer-bg); --vx-ink: var(--v-emer-ink); --vx-grad: var(--g-seve); }
 body[data-kb-module="design"]    { --vx-a: var(--v-viol); --vx-b: var(--v-azur); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-aurore); }
-body[data-kb-module="funnel"]    { --vx-a: var(--v-viol); --vx-b: var(--v-magn); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-orchidee); }
+body[data-kb-module="funnel"]    { --vx-a: var(--v-viol); --vx-b: var(--v-azur); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-aurore); }
 body[data-kb-module="seo"]       { --vx-a: var(--v-turq); --vx-b: var(--v-azur); --vx-bg: var(--v-turq-bg); --vx-ink: var(--v-turq-ink); --vx-grad: var(--g-lagon); }
 body[data-kb-module="lms"]       { --vx-a: var(--v-viol); --vx-b: var(--v-turq); --vx-bg: var(--v-viol-bg); --vx-ink: var(--v-viol-ink); --vx-grad: var(--g-aurore); }
 
@@ -71,15 +71,15 @@ body { --s-tint: color-mix(in srgb, var(--vx-a) 6%, var(--surface, #fff)); --s-h
 html[data-kola-theme="dark"] .kx-art { --a-sky: color-mix(in srgb, var(--vx-b) 70%, #0a1628); }
 
 /* ===== 4. Surfaces et cartes : icône teintée, liseré d'accent, survol ===== */
-.mk-body .mk-kpi { position: relative; padding-top: 16px; background: var(--s-tint); border: 1px solid var(--s-edge); overflow: hidden; transition: background var(--kb-dur-fast, 120ms) var(--v-ease), box-shadow var(--kb-dur-fast, 120ms) var(--v-ease); }
+.mk-body .mk-kpi { position: relative; padding-top: 16px; background: var(--surface, #fff); border: 1px solid var(--border, #dde6ed); overflow: hidden; transition: background var(--kb-dur-fast, 120ms) var(--v-ease), box-shadow var(--kb-dur-fast, 120ms) var(--v-ease); }
 .mk-body .mk-kpi::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--kpi-c, var(--vx-a)); opacity: 0.85; }
-.mk-body .mk-kpi:hover { background: var(--s-hover); box-shadow: var(--v-sh-1); }
-.mk-body .mk-kpi.is-strong { background: var(--s-active); }
+.mk-body .mk-kpi:hover { background: var(--surface, #fff); border-color: var(--s-edge); box-shadow: var(--v-sh-1); }
+.mk-body .mk-kpi.is-strong { background: var(--surface, #fff); border-color: var(--s-edge); }
 .mk-body .mk-kpi[data-tone="azur"]    { --kpi-c: var(--v-azur); }
 .mk-body .mk-kpi[data-tone="turq"]    { --kpi-c: var(--v-turq); }
 .mk-body .mk-kpi[data-tone="emer"]    { --kpi-c: var(--v-emer); }
 .mk-body .mk-kpi[data-tone="viol"]    { --kpi-c: var(--v-viol); }
-.mk-body .mk-kpi[data-tone="magn"]    { --kpi-c: var(--v-magn); }
+.mk-body .mk-kpi[data-tone="marine"]  { --kpi-c: var(--v-marine); }
 .mk-body .mk-kpi[data-tone="ambr"]    { --kpi-c: var(--v-ambr); }
 .mk-body .mk-kpi[data-tone="neutre"]  { --kpi-c: var(--line, #c5d0de); }
 /* pastille d'icône (balisage : <span class="v-ico" data-tone="…">) : fond teinté + glyphe soutenu ; 36 px pour une carte, 28 px en compact */
@@ -91,7 +91,7 @@ html[data-kola-theme="dark"] .kx-art { --a-sky: color-mix(in srgb, var(--vx-b) 7
 .v-ico[data-tone="turq"] { --ico-bg: var(--v-turq-bg); --ico-ink: var(--v-turq-ink); }
 .v-ico[data-tone="emer"] { --ico-bg: var(--v-emer-bg); --ico-ink: var(--v-emer-ink); }
 .v-ico[data-tone="viol"] { --ico-bg: var(--v-viol-bg); --ico-ink: var(--v-viol-ink); }
-.v-ico[data-tone="magn"] { --ico-bg: var(--v-magn-bg); --ico-ink: var(--v-magn-ink); }
+.v-ico[data-tone="marine"] { --ico-bg: var(--v-marine-bg); --ico-ink: var(--v-marine-ink); }
 .v-ico[data-tone="ambr"] { --ico-bg: var(--v-ambr-bg); --ico-ink: var(--v-ambr-ink); }
 .mk-body .mk-kpi-label { display: flex; align-items: center; gap: 8px; }
 .mk-body .mk-kpi .v-ico { margin-bottom: 6px; }

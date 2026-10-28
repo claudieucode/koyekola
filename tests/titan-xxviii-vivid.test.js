@@ -9,7 +9,7 @@ const { illu, resolve, NAMES } = require("../src/utils/illustrations");
 const ROOT = path.join(__dirname, "..");
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 const CSS = read("public/css/kola-vivid.css");
-const FAMILIES = ["azur", "turq", "emer", "viol", "magn", "ambr"];
+const FAMILIES = ["azur", "turq", "emer", "viol", "marine", "ambr"];
 
 const rgb = (hex) => { const h = hex.replace("#", ""); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); };
 const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
@@ -41,8 +41,8 @@ describe("couleurs de fonction : contraste lisible", () => {
 
 describe("dégradés de marque : six, texte blanc lisible sur chaque teinte", () => {
   const names = [...LIGHT.matchAll(/--g-([a-z-]+):/g)].map((m) => m[1]).filter((n) => n !== "halo");
-  test("exactement six dégradés nommés", () => { assert.deepEqual(names.sort(), ["aurore", "lagon", "marine", "nuit-or", "orchidee", "seve"]); });
-  for (const n of ["marine", "lagon", "aurore", "orchidee", "seve", "nuit-or"]) {
+  test("exactement six dégradés nommés", () => { assert.deepEqual(names.sort(), ["aurore", "lagon", "marine", "nocturne", "nuit-or", "seve"]); });
+  for (const n of ["marine", "lagon", "aurore", "nocturne", "seve", "nuit-or"]) {
     test(`${n} : chaque teinte pleine garde ≥ 4,5:1 avec du blanc`, () => {
       const def = token(LIGHT, `g-${n}`).replace(/rgba\([^)]*\)/g, "");
       const hexes = def.match(/#[0-9a-f]{6}/gi);
