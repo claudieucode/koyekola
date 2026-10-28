@@ -32,6 +32,7 @@ function sinceOf(period) {
 // aucun lien ne doit faire quitter le site administré pour le site principal.
 const spaceBase = (ctx) => { const site = siteContent.siteParam(ctx); return site ? `/marketing/site-web/sites/${site}/medias` : "/marketing/site-web/mediatheque"; };
 const libraryUrl = (ctx) => spaceBase(ctx);
+const folders = require("../media/folders");
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
 // Filtres lus dans l'adresse (liste, page et API)
@@ -45,10 +46,16 @@ function filtersOf(query) {
   const q = String(query.q || "").trim().slice(0, 100);
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(query.mois || "")) ? String(query.mois) : ""; // mois d'ajout (AAAA-MM), proposé par la médiathèque elle-même
   const page = Math.max(1, Number(query.page) || 1);
-  return { type, trashed, sort, period, q, page, reach, month, portee };
+  // Explorateur : dossier (racine ou numéro), extension, taille (Ko) et largeur (px) minimales / maximales, doublons, fichiers volumineux
+  const folder = query.dossier === "racine" ? null : intOrNull(query.dossier) || undefined;
+  const ext = String(query.ext || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8);
+  const kb = (v) => { const n = intOrNull(v); return n === null ? undefined : n * 1024; };
+  const px = (v) => { const n = intOrNull(v); return n === null ? undefined : n; };
+  const adv = { folder, ext, minSize: kb(query.tmin), maxSize: kb(query.tmax), minWidth: px(query.lmin), maxWidth: px(query.lmax), duplicates: query.doublons === "1", large: query.volumineux === "1" };
+  return { type, trashed, sort, period, q, page, reach, month, portee, adv, raw: { dossier: query.dossier === "racine" ? "racine" : folder ? String(folder) : "", ext, tmin: query.tmin || "", tmax: query.tmax || "", lmin: query.lmin || "", lmax: query.lmax || "", doublons: query.doublons === "1" ? "1" : "", volumineux: query.volumineux === "1" ? "1" : "" } };
 }
 function search(ctx, f, perPage = PER_PAGE) {
-  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, sort: f.sort, from: sinceOf(f.period), month: f.month, reach: f.reach, limit: perPage, offset: (f.page - 1) * perPage });
+  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, sort: f.sort, from: sinceOf(f.period), month: f.month, reach: f.reach, ...f.adv, limit: perPage, offset: (f.page - 1) * perPage });
   return { ...found, pages: Math.max(1, Math.ceil(found.total / perPage)), page: f.page, perPage };
 }
 
@@ -67,8 +74,12 @@ module.exports = () => {
     return Object.fromEntries(ctx.db.prepare(`SELECT id, username FROM users WHERE id IN (${list.map(() => "?").join(",")})`).all(...list).map((u) => [u.id, u.username]));
   };
   const describe = (ctx, m) => {
-    const usage = media.mediaUsage(ctx, m).map((u) => ({ kind: u.kind, name: u.name, href: media.usageHref(u) }));
-    return { media: { ...m, author: authorsOf(ctx, [m.createdBy])[m.createdBy] || null }, usage };
+    const usage = media.mediaUsage(ctx, m).map((u) => ({ kind: u.kind, name: u.name, href: media.usageHref(u), confidence: u.confidence || "probable" }));
+    // Mêmes fichiers (même empreinte) dans cette médiathèque : information seulement
+    const vis = media.visibleSql(ctx);
+    const twins = m.sha256 ? ctx.db.prepare(`SELECT id, name FROM mk_media WHERE organization_id = ? AND sha256 = ? AND id <> ? AND deleted_at IS NULL AND ${vis.sql} ORDER BY id LIMIT 20`).all(ctx.organizationId, m.sha256, m.id, ...vis.params) : [];
+    const folder = m.folderId ? folders.getFolder(ctx, m.folderId) : null;
+    return { media: { ...m, author: authorsOf(ctx, [m.createdBy])[m.createdBy] || null }, usage, duplicates: twins, folder: folder ? { id: folder.id, name: folder.name } : null, analysis: { scanned: ["modèles d'e-mail", "pages et tunnels", "composants", "modèles de page", "réglages de site", "articles"], notScanned: ["cours (LMS)", "produits et téléchargements", "formulaires", "e-mails déjà envoyés"] } };
   };
 
   // ----- Page -----
@@ -77,8 +88,10 @@ module.exports = () => {
     const f = filtersOf(req.query);
     const found = search(ctx, f);
     const authors = authorsOf(ctx, found.items.map((m) => m.createdBy));
+    const tree = folders.listFolders(ctx);
     res.render("marketing/media-library", {
-      title: "Médiathèque", active, uploadOpen, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view: req.query.vue === "liste" ? "liste" : "grille",
+      tree, crumbs: f.adv.folder ? folders.breadcrumb(ctx, f.adv.folder) : [], dupCount: f.adv.duplicates ? found.total : null, mediaLarge: media.LARGE_BYTES,
+      title: "Médiathèque", active, uploadOpen, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view: ["liste", "compacte"].includes(req.query.vue) ? req.query.vue : "grille",
       canUpload: req.mk.can("media.upload"), canWrite: req.mk.can("media.write"), canDelete: req.mk.can("media.delete"), uploadCfg: { ...media.uploadConfig(), libraryUrl: libraryUrl(ctx) }, formats: media.FORMATS, maxMb: media.uploadConfig().limits,
       mediaJs: true,
     });
@@ -136,6 +149,8 @@ module.exports = () => {
         if (!req.file) throw new MarketingError("invalid_field", "Aucun fichier reçu.");
         const originalName = originalNameOf(req.file);
         let saved = media.saveUpload(ctxOf(req), { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, siteId: media.siteOfUpload(ctxOf(req)) });
+        const toFolder = intOrNull(req.body && req.body.dossier); // dossier de destination choisi dans l'explorateur (vérifié : même médiathèque)
+        if (toFolder) { const r = folders.moveMedia(ctxOf(req), [saved.id], toFolder); if (r.failed.length) throw new MarketingError("invalid_field", r.failed[0].message); saved = media.getMedia(ctxOf(req), saved.id); saved.duplicateOf = saved.duplicateOf || []; }
         if (req.body && (req.body.alt || req.body.title)) saved = media.updateMedia(ctxOf(req), saved.id, { alt: req.body.alt, title: req.body.title });
         res.status(201).json({ media: saved });
       } catch (error) { fail(res, next, error); }
@@ -156,6 +171,42 @@ module.exports = () => {
       try { run(c, id); done.push(id); } catch (error) { if (!(error instanceof MarketingError)) return next(error); failed.push({ id, name: m ? m.name : `#${id}`, message: error.message }); }
     }
     res.json({ done, failed });
+  });
+
+  // ----- Explorateur : dossiers logiques, déplacement, empreintes et doublons (rien n'est supprimé ici) -----
+  router.get(`${base}/dossiers.json`, need("media.read"), (req, res) => {
+    const ctx = ctxOf(req, { overview: true });
+    res.set("Cache-Control", "no-store").json({ ...folders.listFolders(ctx), breadcrumb: folders.breadcrumb(ctx, intOrNull(req.query.dossier)) });
+  });
+  router.post(`${base}/dossiers`, need("media.write"), (req, res, next) => {
+    try { const b = req.body || {}; res.status(201).json({ folder: folders.createFolder(ctxOf(req), { name: b.name, parentId: intOrNull(b.parent_id) }) }); } catch (error) { fail(res, next, error); }
+  });
+  router.post(`${base}/dossiers/:fid(\\d+)`, need("media.write"), (req, res, next) => {
+    try {
+      const b = req.body || {}, id = Number(req.params.fid), ctx = ctxOf(req);
+      let folder = folders.getFolder(ctx, id);
+      if (!folder) throw new MarketingError("not_found", "Dossier introuvable.");
+      if (b.name !== undefined) folder = folders.renameFolder(ctx, id, b.name);
+      if (Object.hasOwn(b, "parent_id")) folder = folders.moveFolder(ctx, id, intOrNull(b.parent_id));
+      res.json({ folder });
+    } catch (error) { fail(res, next, error); }
+  });
+  router.post(`${base}/dossiers/:fid(\\d+)/supprimer`, need("media.write"), (req, res, next) => {
+    try { res.json({ ok: folders.deleteFolder(ctxOf(req), Number(req.params.fid)) }); } catch (error) { fail(res, next, error); }
+  });
+  router.post(`${base}/deplacer`, need("media.write"), (req, res, next) => {
+    try {
+      const ids = [...new Set((Array.isArray(req.body.ids) ? req.body.ids : []).map(intOrNull).filter(Boolean))].slice(0, 200);
+      if (!ids.length) throw new MarketingError("invalid_field", "Sélectionnez au moins un fichier.");
+      res.json(folders.moveMedia(ctxOf(req), ids, intOrNull(req.body.folder_id)));
+    } catch (error) { fail(res, next, error); }
+  });
+  router.get(`${base}/doublons.json`, need("media.read"), (req, res, next) => {
+    try { res.set("Cache-Control", "no-store").json({ groups: folders.duplicateGroups(ctxOf(req, { overview: true })) }); } catch (error) { fail(res, next, error); }
+  });
+  // Calcule les empreintes manquantes des fichiers déjà présents (par lots de 50, en flux) : à répéter jusqu'à « left: 0 »
+  router.post(`${base}/empreintes`, need("media.write"), async (req, res, next) => {
+    try { res.json(await folders.computeMissingHashes(ctxOf(req, { overview: true }), { limit: 50 })); } catch (error) { fail(res, next, error); }
   });
 
   router.post(`${base}/:id(\\d+)`, need("media.write"), (req, res, next) => {

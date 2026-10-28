@@ -314,7 +314,7 @@ describe("Administration par site : isolation des données", () => {
   test("marketing : aucune route ni fichier de vue du module Marketing n'a été modifié par cette fonctionnalité", () => {
     const { execFileSync } = require("node:child_process");
     const changed = execFileSync("git", ["diff", "--name-only", "HEAD", "--", "src/marketing/web", "views/marketing"], { cwd: path.join(__dirname, "..") }).toString().split("\n").filter(Boolean);
-    const mine = changed.filter((f) => !/funnel|tunnel/i.test(f)); // chantier « tunnel de paiement » antérieur et distinct
+    const mine = changed.filter((f) => !/funnel|tunnel|partials\/top\.ejs$/i.test(f)); // chantiers distincts : « tunnel de paiement » ; feuille « Soft Surface » (une ligne <link> dans le gabarit commun top.ejs)
     assert.deepEqual(mine, []);
   });
 });

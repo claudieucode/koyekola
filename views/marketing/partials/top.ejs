@@ -10,7 +10,7 @@
   const cms = typeof marketingShell !== "undefined" && marketingShell ? null : mkh.buildCmsNav({ can: mk.can, active, space });
   const cmsSites = cms ? mkh.cmsSites(mk.ctx) : [];
   // Espace de travail pour la direction chromatique (jetons --kb-mod* de kola-brand.css) : le bleu marine reste le fil conducteur, chaque espace ajoute son accent
-  const kbModule = (() => { const a = String(typeof active !== "undefined" ? active : ""); if (/^apparence/.test(a) || a === "appearance" || a === "components") return "design"; if (/^analytics/.test(a) || a === "revenue" || a === "compare") return "analytics"; if (/^(dashboard|contacts|contactdupes|lists|segments|tags|properties|forms|surveys|scoring|import|campaigns|templates|ab|rss|social|smscampaigns|smsaudience|sms|automations|journeys|funnels|events|api|webhooks|sending|domains|compliance|ai|socialsettings)$/.test(a)) return "marketing"; return cms ? "site" : "marketing"; })();
+  const kbModule = (() => { const a = String(typeof active !== "undefined" ? active : ""); if (/^apparence/.test(a) || a === "appearance" || a === "components") return "design"; if (/^analytics/.test(a) || a === "revenue" || a === "compare") return "analytics"; if (a === "funnels") return "funnel"; if (/^(site-web|sites|sitedash|landing|pagetests|commentaires|corbeille|redirections|utilisateurs|outils)$/.test(a)) return "site"; if (/^seo/.test(a)) return "seo"; if (/^(dashboard|contacts|contactdupes|lists|segments|tags|properties|forms|surveys|scoring|import|campaigns|templates|ab|rss|social|smscampaigns|smsaudience|sms|automations|journeys|funnels|events|api|webhooks|sending|domains|compliance|ai|socialsettings)$/.test(a)) return "marketing"; return cms ? "site" : "marketing"; })();
   // Barre d'administration supérieure du CMS (une seule implémentation : partials/cms-adminbar.ejs ; données filtrées par les droits côté serveur)
   const bar = cms ? mkh.adminBar({ mk, user: currentUser, space: cms.space || null, cms, sites: cmsSites, active, content: { page: typeof page !== "undefined" ? page : null } }) : null;
   const crumbs = nav.breadcrumb || [title];
@@ -57,11 +57,15 @@
   <% if (typeof funnelStudio !== "undefined" && funnelStudio) { %><link rel="stylesheet" href="<%= asset('/css/funnel-studio.css') %>"><% } %>
   <link rel="stylesheet" href="<%= asset('/css/kola-ui.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-pages.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/kola-art.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-compose.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-stable.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-brand.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/kola-vivid.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/kola-soft.css') %>">
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %>" data-kb-module="<%= kbModule %>">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="vx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--vx-a)"/><stop offset="1" style="stop-color:var(--vx-b)"/></linearGradient></defs></svg>
   <a class="skip-link" href="#main">Aller au contenu principal</a>
   <%# CMS : barre d'administration (niveau 1) puis fil d'Ariane (niveau 2), tous deux au niveau global de la coque, AVANT menu et contenu ; hors CMS, le fil d'Ariane reste dans la colonne du contenu %>
   <% if (cms) { %><%- include("cms-adminbar", { bar, cms }) %><% } %>

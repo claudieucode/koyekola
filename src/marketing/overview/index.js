@@ -50,8 +50,8 @@ function growth(ctx, now) {
   const startSec = Math.floor((now - WEEKS * WEEK) / 1000);
   const counts = new Array(WEEKS).fill(0);
   const rows = ctx.db
-    .prepare("SELECT CAST((strftime('%s', created_at) - ?) / 604800 AS INTEGER) AS b, COUNT(*) AS n FROM mk_contacts WHERE organization_id = ? AND strftime('%s', created_at) >= ? GROUP BY b")
-    .all(startSec, ctx.organizationId, startSec);
+    .prepare("SELECT CAST((strftime('%s', created_at) - ?) / 604800 AS INTEGER) AS b, COUNT(*) AS n FROM mk_contacts WHERE organization_id = ? AND created_at >= ? GROUP BY b")
+    .all(startSec, ctx.organizationId, sqlDate(startSec * 1000)); // comparaison directe sur created_at : l'index (organization_id, created_at) sert, au lieu de lire tous les contacts
   for (const r of rows) if (r.b >= 0 && r.b < WEEKS) counts[r.b] += r.n;
   return counts.map((count, i) => ({ label: shortDate(now - (WEEKS - i) * WEEK + 1), count }));
 }

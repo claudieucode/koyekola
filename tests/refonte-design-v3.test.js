@@ -85,7 +85,7 @@ describe("design v3 : pages publiques, élève, authentification, erreurs, compt
 
   describe("catalogue et fiche d'une formation", () => {
     test("recherche sans résultat : état vide avec icône ; fiche : résumé sans doublon du titre, données réelles conservées", async () => {
-      assert.match(await text(anon, "/catalogue?q=zzzzzz-introuvable"), /kv-empty-ico[\s\S]*Aucune formation ne correspond/);
+      assert.match(await text(anon, "/catalogue?q=zzzzzz-introuvable"), /kv-empty-art[\s\S]*Aucune formation ne correspond/);
       const t = await text(anon, `/cours/${course.slug}`);
       const box = t.slice(t.indexOf('class="course-summary"'), t.indexOf('id="apprendre"'));
       assert.match(box, /<span class="eyebrow">Résumé de la formation<\/span>/); assert.match(box, /<h2 id="summaryTitle" class="sr-only">Montage vidéo v3<\/h2>/, "titre conservé comme nom accessible, masqué visuellement");
