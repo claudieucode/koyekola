@@ -282,29 +282,30 @@ html[data-mk-theme] body[data-kb-module="design"] .mk-sidebar    { --accent: #b3
 /* (l'espace « site » garde le bleu clair #5cbdf5 du menu : c'est la couleur de référence du marine) */
 /* la pastille de marque reste bleue dans tous les espaces : c'est la signature, pas l'accent de l'espace */
 html[data-mk-theme] body[data-kb-module] .mk-sidebar .mk-brand-mark { background: #5cbdf5; color: #04121d; }
-/* le bouton « Créer » : action principale, bleu ciel en dégradé doux sur le marine, dans tous les espaces.
-   Texte #04121d sur #3ba3e6 (le point le plus sombre) : contraste ≈ 7:1. Seuls transform et opacity s'animent. */
+/* le bouton « Créer » : action principale mais discrète. Teinte bleu azur sur le marine (pas de dégradé, de reflet ni d'ombre), 36 px comme les entrées de menu.
+   Texte #cfeeff sur fond ≈ #1d3a56 : contraste > 9:1. Seules les couleurs s'animent ; le bouton ne bouge jamais (menu ouvert ou fermé). */
 :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn {
-  --kb-create-from: #9bd8fc; --kb-create-mid: #6cc3f6; --kb-create-to: #3ba3e6;
-  position: relative; isolation: isolate; min-height: 44px; gap: 9px;
-  background: linear-gradient(180deg, var(--kb-create-from) 0%, var(--kb-create-mid) 52%, var(--kb-create-to) 100%);
-  color: #04121d; font-weight: 650; letter-spacing: 0.01em;
-  border: 1px solid rgba(255, 255, 255, 0.34); border-radius: var(--k-r-card, 12px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 1px 2px rgba(2, 10, 20, 0.35), 0 6px 14px -8px rgba(59, 163, 230, 0.55);
-  transition: none;
+  height: 36px; min-height: 36px; padding-block: 0; gap: 8px;
+  background: rgba(92, 189, 245, 0.14); color: #cfeeff; font-weight: 600; letter-spacing: 0;
+  border: 1px solid rgba(92, 189, 245, 0.34); border-radius: 10px; box-shadow: none; transform: none;
 }
-.mk-sidebar .mk-create-btn::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0) 70%); opacity: 0; pointer-events: none; }
-.mk-sidebar .mk-create-btn .icon { stroke-width: 2.1; }
-:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:hover { background: linear-gradient(180deg, var(--kb-create-from) 0%, var(--kb-create-mid) 52%, var(--kb-create-to) 100%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(2, 10, 20, 0.35), 0 10px 18px -8px rgba(59, 163, 230, 0.7); }
-.mk-sidebar .mk-create-btn:is(:hover, :focus-visible, [aria-expanded="true"])::before { opacity: 1; }
-/* menu ouvert : le bouton reste posé (aucun mouvement pendant l'ouverture ni la fermeture) */
-:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn[aria-expanded="true"] { transform: none; }
-:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.mk-sidebar .mk-create-btn::before { display: none; }
+.mk-sidebar .mk-create-btn .icon { stroke-width: 2.1; color: #8fd3fb; }
+:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:is(:hover, [aria-expanded="true"]) { background: rgba(92, 189, 245, 0.22); border-color: rgba(92, 189, 245, 0.5); transform: none; box-shadow: none; }
+:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:focus-visible { outline: 2px solid #5cbdf5; outline-offset: 2px; }
+/* action principale de la barre du haut (« Créer un tunnel », « Nouvelle campagne »…) : même langage, sur fond clair */
+:is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary {
+  display: inline-flex; align-items: center; height: 36px; min-height: 36px; padding: 0 14px; gap: 8px;
+  background: color-mix(in srgb, var(--accent) 11%, var(--mk-surface)); color: var(--accent-dark, var(--accent)); font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); border-radius: 10px; box-shadow: none; transform: none;
+}
+:is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary:hover { background: color-mix(in srgb, var(--accent) 20%, var(--mk-surface)); border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: none; transform: none; }
+:is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: no-preference) {
-  :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn { transition: transform var(--k-dur, 180ms) var(--k-ease, ease), box-shadow var(--k-dur, 180ms) var(--k-ease, ease); }
-  .mk-sidebar .mk-create-btn::before { transition: opacity var(--k-dur, 180ms) var(--k-ease, ease); }
-  /* pas de soulèvement au survol : à la fermeture du menu le pointeur est encore sur le bouton, qui remontait d'un pixel (vibration) ; seule l'ombre réagit */
-  :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:active { transform: scale(0.985); transition-duration: var(--k-dur-fast, 120ms); }
+  :is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary { transition: background-color var(--k-dur-fast, 120ms) var(--k-ease, ease), border-color var(--k-dur-fast, 120ms) var(--k-ease, ease); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn { transition: background-color var(--k-dur-fast, 120ms) var(--k-ease, ease), border-color var(--k-dur-fast, 120ms) var(--k-ease, ease); }
 }
 /* 3. étiquette de rubrique, soulignement des onglets, graphiques */
 .mk-body :is(.kx-eyebrow, .mk-tg-kicker) { color: var(--kb-mod-ink); }

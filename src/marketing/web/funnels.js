@@ -18,7 +18,13 @@ module.exports = () => {
   router.get("/tunnels", need("funnels.read"), (req, res) => {
     const archived = req.query.vue === "archives";
     const { ctx } = req.mk;
-    const list = funnels.listFunnels(ctx, { archived }).map((f) => ({ ...f, report: funnelReport(ctx, funnels.getFunnel(ctx, f.id), { days: 30 }) }));
+    const list = funnels.listFunnels(ctx, { archived }).map((f) => {
+      const full = funnels.getFunnel(ctx, f.id);
+      const steps = full.steps || [];
+      // Publication : une étape « live » est atteignable par un visiteur (page en ligne, formation publiée) ; « problem » dit pourquoi elle ne l'est pas
+      const pub = { total: steps.length, live: steps.filter((s) => s.live).length, problems: steps.filter((s) => s.problem).length, entryPath: steps.length ? steps[0].path : null };
+      return { ...f, report: funnelReport(ctx, full, { days: 30 }), pub };
+    });
     res.render("marketing/funnels", { title: "Tunnels", active: "funnels", archived, list, templates: require("../funnels/templates").catalog(), hasCourse: listCourses(ctx).length > 0 });
   });
   router.post("/tunnels", need("funnels.write"), (req, res, next) => {

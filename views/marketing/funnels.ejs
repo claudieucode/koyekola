@@ -1,140 +1,114 @@
 <%- include("partials/top", { title, active, funnelStudio: true }) %>
 <%#
-  Funnel Studio (phase 1, interface). Données 100 % réelles : tunnels, étapes, entrées, inscriptions et conversion viennent du modèle existant (funnelReport, 30 jours).
-  Rien n'est inventé : une source absente est dite telle quelle (« — », « Bientôt »). Création et archives : comportements existants conservés.
-  Ce qui n'est pas encore branché (types de tunnel, ventes, domaine, actions groupées, zones du studio) est visible mais inactif (aria-disabled), sans lien ni message de succès.
+  Funnel Studio — liste des tunnels de vente. Organisation de systeme.io (menu Sites → Sales funnels) : « Créer » ouvre une fenêtre (nom, domaine/site, type de tunnel),
+  liste de gestion avec menu « ⋯ » par tunnel (réglages, désactivation), recherche et filtre. Données 100 % réelles (modèle et rapports existants) ; rien n'est inventé :
+  une source absente est dite telle quelle. Éléments pas encore branchés : visibles mais inactifs (aria-disabled, « Bientôt »).
 %>
 <%
   const canWrite = mk.can("funnels.write");
   const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`);
-  // Indicateurs : agrégats des tunnels affichés (aucun chiffre saisi à la main)
-  const withData = list.filter((f) => f.report && f.report.entrants !== null && f.report.entrants !== undefined);
-  const visitors = withData.length ? withData.reduce((a, f) => a + f.report.entrants, 0) : null;
-  const leads = list.length ? list.reduce((a, f) => a + (Number(f.report.leads) || 0), 0) : null;
-  const conv = visitors ? Math.round((withData.reduce((a, f) => a + (Number(f.report.leads) || 0), 0) / visitors) * 1000) / 10 : null;
-  const kpis = [
-    { icon: "filter", label: archived ? "Tunnels archivés" : "Tunnels", value: list.length === 0 ? 0 : list.length, hint: archived ? "Conservés avec leurs étapes" : "Actifs sur ce site" },
-    { icon: "globe", label: "Visiteurs", value: visitors, hint: "Entrées · 30 derniers jours" },
-    { icon: "users", label: "Contacts générés", value: leads, hint: "Inscriptions · 30 derniers jours" },
-    { icon: "star", label: "Ventes", value: null, hint: "Pas encore raccordées", soon: true },
-    { icon: "trendingUp", label: "Taux de conversion", value: conv, text: pct(conv), hint: "Inscriptions ÷ entrées" },
-  ];
-  const types = ["Tunnel de vente", "Tunnel de génération de prospects", "Tunnel de vente d'une formation", "Tunnel de webinaire", "Tunnel personnalisé"];
-  const studio = [["layers", "Étapes du tunnel"], ["layout", "Modèles de pages"], ["settings", "Réglages du tunnel"], ["activity", "Performances détaillées"]];
+  const tplByKey = Object.fromEntries(templates.map((t) => [t.key, t]));
+  // Les quatre types de systeme.io (audience, vente, personnalisé, webinaire) branchés sur les vrais modèles de Kolakisa
+  const types = [
+    { label: "Constituer une audience", key: "aimant", icon: "users", steps: "Page d'inscription, puis remerciement" },
+    { label: "Vendre", key: "vente-commande", icon: "star", steps: "Page de vente, bon de commande, remerciement" },
+    { label: "Tunnel personnalisé", key: "", icon: "layers", steps: "Tunnel vide : vous ajoutez les étapes une à une" },
+    { label: "Webinaire", key: "webinaire", icon: "globe", steps: "Inscription au webinaire, puis confirmation" },
+  ].map((t) => ({ ...t, off: Boolean(t.key && (!tplByKey[t.key] || (tplByKey[t.key].requiresCourse && !hasCourse))) }));
+  const otherTemplates = templates.filter((t) => !types.some((x) => x.key === t.key));
+  const pubState = (f) => (archived ? { k: "archived", label: "Archivé" } : !f.pub.total ? { k: "off", label: "Sans étape" } : f.pub.live === f.pub.total ? { k: "live", label: "En ligne" } : f.pub.live === 0 ? { k: "off", label: "Pas encore en ligne" } : { k: "part", label: `En ligne ${f.pub.live}/${f.pub.total}` });
 %>
 <div class="fs">
-  <header class="fs-head">
-    <div class="fs-head-main">
-      <p class="fs-eyebrow">Funnel Studio</p>
+  <header class="fs-bar">
+    <div class="fs-bar-main">
       <h1>Tunnels de vente</h1>
-      <p class="fs-sub">Un tunnel conduit le visiteur d'étape en étape : page d'atterrissage, inscription, remerciement, page de vente, formation… Chaque étape est une vraie page, composée dans le même éditeur visuel que le reste du site.</p>
+      <p class="fs-sub">Un tunnel conduit le visiteur d'étape en étape : inscription, remerciement, page de vente, formation… Chaque étape est une vraie page, composée dans l'éditeur du site.</p>
     </div>
-    <div class="fs-head-actions">
-      <%# « Modèles » ouvre la même boîte que « Créer » : les modèles de départ y sont déjà proposés %>
-      <% if (canWrite && !archived) { %>
-        <button type="button" class="btn btn-outline" data-mk-modal-open="nouveau" data-tip="Les modèles de départ créent les vraies pages de chaque étape."><%- icon("layout", { size: 16 }) %>Modèles</button>
-        <div class="fs-create" data-mk-dropdown>
-          <button type="button" class="btn btn-primary fs-create-main" data-mk-modal-open="nouveau" data-tip="Crée un tunnel vide ou à partir d'un modèle qui génère les vraies pages de chaque étape."><%- icon("plus", { size: 16 }) %>Créer un tunnel</button>
-          <button type="button" class="btn btn-primary fs-create-caret" aria-haspopup="menu" aria-expanded="false" aria-controls="fs-create-menu" aria-label="Types de tunnel"><%- icon("chevronDown", { size: 16 }) %></button>
-          <div class="mk-menu fs-create-menu" id="fs-create-menu" role="menu" hidden>
-            <p class="fs-menu-note">Types de tunnel : bientôt disponibles</p>
-            <% types.forEach((t) => { %><button type="button" role="menuitem" class="fs-menu-item" aria-disabled="true" tabindex="-1"><span><%= t %></span><span class="fs-soon">Bientôt</span></button><% }) %>
-          </div>
-        </div>
-      <% } %>
-    </div>
+    <% if (canWrite && !archived) { %><button type="button" class="fs-create" data-mk-modal-open="nouveau" data-tip="Crée un tunnel vide ou à partir d'un modèle qui génère les vraies pages de chaque étape."><%- icon("plus", { size: 16 }) %>Créer</button><% } %>
   </header>
 
   <%- include("partials/site-filter", { action: "/marketing/tunnels" }) %>
 
-  <ul class="kx-kpis fs-kpis" aria-label="Indicateurs des tunnels">
-    <% kpis.forEach((k) => { const empty = !k.value; %>
-      <li><div class="mk-stat fs-stat"<%- empty ? " data-zero" : "" %>>
-        <span class="kx-kpi-icon" aria-hidden="true"><%- icon(k.icon, { size: 18 }) %></span>
-        <span class="mk-stat-label"><%= k.label %><% if (k.soon) { %> <span class="fs-soon">Bientôt</span><% } %></span>
-        <span class="mk-stat-value"><%= k.text !== undefined ? k.text : (k.value === null || k.value === undefined ? "—" : mkh.fmt(k.value)) %></span>
-        <span class="mk-stat-hint"><%= k.hint %></span>
-      </div></li>
-    <% }) %>
-  </ul>
+  <div class="fs-toolbar">
+    <nav class="mk-tabs fs-tabs" aria-label="Tunnels actifs ou archivés">
+      <a class="mk-tab" href="/marketing/tunnels"<%- archived ? "" : ' aria-current="page"' %>>Tunnels</a>
+      <a class="mk-tab" href="/marketing/tunnels?vue=archives"<%- archived ? ' aria-current="page"' : "" %>>Archivés</a>
+    </nav>
+    <% if (list.length) { %>
+    <div class="fs-tools">
+      <label class="fs-search"><span class="sr-only">Rechercher un tunnel</span><%- icon("search", { size: 16 }) %><input type="search" id="fs-search" placeholder="Rechercher" autocomplete="off" data-fs-search></label>
+      <% if (!archived) { %><label class="fs-select"><span class="sr-only">Filtrer par publication</span><select id="fs-filter" data-fs-filter>
+        <option value="">Tous les tunnels</option><option value="live">En ligne</option><option value="part">Partiellement en ligne</option><option value="off">Pas encore en ligne</option>
+      </select></label><% } %>
+    </div>
+    <% } %>
+  </div>
 
-  <div class="fs-grid">
-    <section class="fs-main" aria-label="Liste des tunnels">
-      <div class="fs-toolbar">
-        <nav class="mk-tabs fs-tabs" aria-label="Tunnels actifs ou archivés">
-          <a class="mk-tab" href="/marketing/tunnels"<%- archived ? "" : ' aria-current="page"' %>>Tunnels</a>
-          <a class="mk-tab" href="/marketing/tunnels?vue=archives"<%- archived ? ' aria-current="page"' : "" %>>Archivés</a>
-        </nav>
-        <% if (list.length) { %>
-        <div class="fs-tools">
-          <label class="fs-search"><span class="sr-only">Rechercher un tunnel</span><%- icon("search", { size: 16 }) %><input type="search" id="fs-search" placeholder="Rechercher" autocomplete="off" data-fs-search></label>
-          <button type="button" class="btn btn-outline btn-sm" aria-disabled="true" tabindex="-1" data-tip="Les filtres par statut et par type arrivent bientôt."><%- icon("filter", { size: 14 }) %>Filtres <span class="fs-soon">Bientôt</span></button>
-        </div>
-        <% } %>
+  <% if (!list.length) { %>
+    <div class="mk-empty fs-empty"><%- illu("filter", { className: "kx-empty-ill" }) %><h2><%= archived ? "Aucun tunnel archivé" : "Aucun tunnel" %></h2>
+      <p><%= archived ? "Un tunnel archivé garde ses étapes et ses statistiques ; rien n'est effacé." : "Créez votre premier tunnel, vide ou à partir d'un modèle qui crée les vraies pages de chaque étape. Vos tunnels, leurs étapes et leurs chiffres apparaîtront ici." %></p>
+      <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="fs-create" data-mk-modal-open="nouveau"><%- icon("plus", { size: 16 }) %>Créer le premier tunnel</button></div><% } %></div>
+  <% } else { %>
+    <p class="sr-only" role="status" aria-live="polite" data-fs-count></p>
+    <div class="fs-table" role="table" aria-label="<%= archived ? "Tunnels archivés" : "Tunnels" %> : chiffres des 30 derniers jours">
+      <div class="fs-row fs-row-head" role="row">
+        <span role="columnheader">Tunnel</span><span role="columnheader" class="fs-num">Étapes</span><span role="columnheader" class="fs-num">Visiteurs</span><span role="columnheader" class="fs-num">Inscriptions</span><span role="columnheader" class="fs-num">Conversion</span><span role="columnheader">État</span><span role="columnheader" class="fs-act"><span class="sr-only">Actions</span></span>
       </div>
-
-      <% if (!list.length) { %>
-        <div class="mk-empty fs-empty"><%- illu("filter", { className: "kx-empty-ill" }) %><h2><%= archived ? "Aucun tunnel archivé" : "Aucun tunnel" %></h2>
-          <p><%= archived ? "Un tunnel archivé garde ses étapes et ses statistiques ; rien n'est effacé." : "Créez votre premier tunnel, vide ou à partir d'un modèle qui crée les vraies pages de chaque étape. Vos tunnels, leurs étapes et leurs chiffres apparaîtront ici." %></p>
-          <% if (canWrite && !archived) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau"><%- icon("plus", { size: 14 }) %>Créer le premier tunnel</button></div><% } %></div>
-      <% } else { %>
-        <p class="fs-live sr-only" role="status" aria-live="polite" data-fs-count></p>
-        <ul class="fs-list" aria-label="<%= archived ? "Tunnels archivés" : "Tunnels" %> : chiffres des 30 derniers jours" data-fs-list>
-          <% list.forEach((f) => { %>
-          <li class="fs-card" data-fs-name="<%= String(f.name + " " + (f.description || "")).toLowerCase() %>">
-            <div class="fs-card-main">
-              <span class="fs-card-icon" aria-hidden="true"><%- icon("filter", { size: 18 }) %></span>
-              <div class="fs-card-title">
-                <a href="/marketing/tunnels/<%= f.id %>"><%= f.name %></a>
-                <% if (f.description) { %><span class="mk-sub"><%= f.description %></span><% } %>
-                <span class="fs-meta"><span class="fs-badge<%= archived ? "" : " is-active" %>"><%= archived ? "Archivé" : "Actif" %></span><span><%= mkh.fmt(f.steps) %> étape<%= f.steps > 1 ? "s" : "" %></span><span>Modifié le <%= mkh.fdatetime(f.updated_at) %></span></span>
+      <div data-fs-list>
+      <% list.forEach((f) => { const ps = pubState(f); %>
+        <div class="fs-row fs-card" role="row" data-fs-name="<%= String(f.name + " " + (f.description || "")).toLowerCase() %>" data-fs-state="<%= ps.k %>">
+          <div role="cell" class="fs-cell-name">
+            <a href="/marketing/tunnels/<%= f.id %>"><%= f.name %></a>
+            <span class="fs-meta"><% if (f.pub.entryPath) { %><code><%= f.pub.entryPath %></code> · <% } %>Modifié le <%= mkh.fdatetime(f.updated_at) %></span>
+          </div>
+          <span role="cell" class="fs-num" data-label="Étapes"><%= mkh.fmt(f.steps) %></span>
+          <span role="cell" class="fs-num" data-label="Visiteurs"><%= f.report.entrants === null ? "—" : mkh.fmt(f.report.entrants) %></span>
+          <span role="cell" class="fs-num" data-label="Inscriptions"><%= mkh.fmt(f.report.leads) %></span>
+          <span role="cell" class="fs-num" data-label="Conversion"><%= pct(f.report.conversion) %></span>
+          <span role="cell" data-label="État"><span class="fs-badge is-<%= ps.k %>"><%= ps.label %></span></span>
+          <div role="cell" class="fs-act">
+            <div class="mk-dropdown" data-mk-dropdown>
+              <button type="button" class="icon-btn btn-sm" aria-haspopup="menu" aria-expanded="false" aria-controls="fs-menu-<%= f.id %>" aria-label="Actions pour le tunnel <%= f.name %>"><%- icon("moreHorizontal", { size: 18 }) %></button>
+              <div class="mk-menu" id="fs-menu-<%= f.id %>" role="menu" hidden>
+                <a role="menuitem" href="/marketing/tunnels/<%= f.id %>">Ouvrir le tunnel</a>
+                <% if (canWrite && !archived) { %><a role="menuitem" href="/marketing/tunnels/<%= f.id %>#fn-settings">Réglages du tunnel</a><% } %>
+                <% if (canWrite && archived) { %><form action="/marketing/tunnels/<%= f.id %>/restaurer" method="post" role="none"><button type="submit" role="menuitem">Restaurer</button></form><% } %>
+                <% if (canWrite && !archived) { %>
+                  <form action="/marketing/tunnels/<%= f.id %>/dupliquer" method="post" role="none"><input type="hidden" name="pages" value="copy"><button type="submit" role="menuitem" aria-label="Dupliquer le tunnel <%= f.name %> (pages copiées en brouillon)">Dupliquer</button></form>
+                  <button type="button" role="menuitem" aria-disabled="true" tabindex="-1" class="fs-menu-item"><span>Partager</span><span class="fs-soon">Bientôt</span></button>
+                  <form action="/marketing/tunnels/<%= f.id %>/archiver" method="post" role="none"><button type="submit" role="menuitem" class="mk-menu-danger" data-mk-confirm="Les pages créées pour ce tunnel passent hors ligne ; une page de votre site utilisée comme étape reste en ligne. Rien n'est effacé." data-mk-confirm-title="Archiver ce tunnel ?" data-mk-confirm-ok="Archiver">Archiver</button></form>
+                <% } %>
               </div>
             </div>
-            <dl class="fs-card-stats">
-              <div><dt>Entrées</dt><dd><%= f.report.entrants === null ? "—" : mkh.fmt(f.report.entrants) %></dd></div>
-              <div><dt>Inscriptions</dt><dd><%= mkh.fmt(f.report.leads) %></dd></div>
-              <div><dt>Conversion</dt><dd><%= pct(f.report.conversion) %></dd></div>
-            </dl>
-            <div class="fs-card-side">
-              <span class="fs-slot" data-tip="Le domaine du tunnel s'affichera ici.">Domaine : —</span>
-              <a class="btn btn-outline btn-sm" href="/marketing/tunnels/<%= f.id %>">Ouvrir</a>
-              <button type="button" class="icon-btn btn-sm" aria-disabled="true" tabindex="-1" aria-label="Autres actions : bientôt disponibles" data-tip="Dupliquer, renommer : bientôt."><%- icon("settings", { size: 16 }) %></button>
-            </div>
-          </li>
-          <% }) %>
-        </ul>
-        <p class="fs-nomatch mk-sub" data-fs-nomatch hidden>Aucun tunnel ne correspond à cette recherche.</p>
-        <p class="field-hint">Entrées = visiteurs de la première étape (comptés une fois par jour, sans cookie) ; inscriptions = formulaires envoyés sur les pages du tunnel.</p>
-      <% } %>
-    </section>
-
-    <aside class="fs-side" aria-label="Studio">
-      <section class="fs-panel">
-        <h2>Activité récente</h2>
-        <p class="fs-panel-empty">Les inscriptions reçues par vos tunnels s'afficheront ici.</p>
-      </section>
-      <section class="fs-panel">
-        <h2>Dans le studio</h2>
-        <ul class="fs-roadmap">
-          <% studio.forEach((z) => { %><li><span class="fs-roadmap-icon" aria-hidden="true"><%- icon(z[0], { size: 16 }) %></span><span><%= z[1] %></span><span class="fs-soon">Bientôt</span></li><% }) %>
-        </ul>
-        <p class="fs-panel-note">Ces zones seront reliées aux étapes, aux modèles et aux réglages de chaque tunnel.</p>
-      </section>
-    </aside>
-  </div>
+          </div>
+        </div>
+      <% }) %>
+      </div>
+    </div>
+    <p class="fs-nomatch mk-sub" data-fs-nomatch hidden>Aucun tunnel ne correspond à cette recherche.</p>
+    <p class="field-hint">Visiteurs = personnes arrivées sur la première étape (comptées une fois par jour, sans cookie) ; inscriptions = formulaires envoyés sur les pages du tunnel. 30 derniers jours.</p>
+  <% } %>
 </div>
+
     <% if (canWrite) { %>
-      <dialog class="mk-dialog mk-modal" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="fn-new-title">
+      <dialog class="mk-dialog mk-modal fs-dialog" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="fn-new-title">
         <form action="/marketing/tunnels" method="post">
           <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="fn-new-title">Nouveau tunnel</h2><p class="mk-dialog-desc">Un modèle crée les vraies pages de chaque étape, en brouillon : rien n'est mis en ligne avant que vous le décidiez.</p></div>
             <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
           <div class="mk-dialog-body">
-            <%- include("partials/site-field", { id: "fn-site" }) %>
             <div class="field-group"><label for="fn-name">Nom du tunnel *</label><input id="fn-name" type="text" name="name" maxlength="100" required placeholder="Guide gratuit Photoshop"></div>
-            <fieldset class="mk-tpl-choice"><legend>Modèle de départ</legend>
-              <label class="mk-tpl"><input type="radio" name="template" value="" checked><span><strong>Tunnel vide</strong><span class="mk-sub">Vous ajoutez les étapes une à une.</span></span></label>
-              <% templates.forEach((t) => { const off = t.requiresCourse && !hasCourse; %><label class="mk-tpl"><input type="radio" name="template" value="<%= t.key %>"<%= off ? " disabled" : "" %>><span><strong><%= t.name %></strong><span class="mk-sub"><%= t.category %> · <%= t.description %> Étapes : <%= t.steps.join(" → ") %>.<%= off ? " Publiez d'abord une formation dans le catalogue." : "" %></span></span></label><% }) %>
+            <%- include("partials/site-field", { id: "fn-site" }) %>
+            <fieldset class="fs-types"><legend>Type de tunnel</legend>
+              <% types.forEach((t) => { %>
+                <label class="fs-type<%= t.off ? " is-off" : "" %>"><input type="radio" name="template" value="<%= t.key %>"<%= t.off ? " disabled" : "" %><%= t.key === "" ? " checked" : "" %>>
+                  <span class="fs-type-icon" aria-hidden="true"><%- icon(t.icon, { size: 18 }) %></span>
+                  <span class="fs-type-text"><strong><%= t.label %></strong><span class="mk-sub"><%= t.steps %></span><% if (t.off) { %><span class="fs-soon">Demande une formation publiée</span><% } %></span></label>
+              <% }) %>
             </fieldset>
+            <% if (otherTemplates.length) { %><details class="fs-more"><summary>Autres modèles de départ</summary>
+              <fieldset class="mk-tpl-choice"><legend class="sr-only">Autres modèles de départ</legend>
+                <% otherTemplates.forEach((t) => { const off = t.requiresCourse && !hasCourse; %><label class="mk-tpl"><input type="radio" name="template" value="<%= t.key %>"<%= off ? " disabled" : "" %>><span><strong><%= t.name %></strong><span class="mk-sub"><%= t.description %><%= off ? " — nécessite une formation publiée." : "" %></span></span></label><% }) %>
+              </fieldset></details><% } %>
           </div>
           <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-mk-modal-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer le tunnel</button></div>
         </form>
