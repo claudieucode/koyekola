@@ -494,6 +494,8 @@ function createSite(ctx, { name, tokens, slug, description, siteType } = {}) {
   const id = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, slug, description, site_type, tokens, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
     .run(ctx.organizationId, clean_, finalSlug, desc, type, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
   audit(ctx, "site.created", "site", id, {});
+  // Adresse de la plateforme : seulement si un domaine de plateforme est configuré (PLATFORM_DOMAIN) ; sinon le site n'en reçoit pas (rien n'est inventé)
+  try { const d = require("../../services/siteDomains"); if (d.platformStatus().available) d.ensurePlatformDomain(ctx, id); } catch { /* le site est créé ; l'adresse peut être activée plus tard depuis « Domaines » */ }
   return getSite(ctx, id);
 }
 function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {}) {
@@ -559,13 +561,9 @@ function saveSiteDesign(ctx, id, { tokens, settings, name, revision } = {}) {
       throw bad(`La couleur « ${first.label} » est utilisée dans ${usage[first.key].pages} page(s) du site : remplacez-la dans ces pages avant de la supprimer.`);
     }
   }
-  // Un domaine n'appartient qu'à un seul site (sinon la même adresse servirait deux sites)
-  const publicUrl = nextSettings.seo && nextSettings.seo.publicUrl;
-  if (publicUrl) {
-    const host = new URL(publicUrl).hostname.toLowerCase();
-    const clash = ctx.db.prepare("SELECT id, name, settings FROM mk_sites WHERE id <> ? AND status = 'active'").all(site.id).find((o) => { try { const u = JSON.parse(o.settings || "{}").seo; return u && u.publicUrl && new URL(u.publicUrl).hostname.toLowerCase() === host; } catch { return false; } });
-    if (clash) throw new MarketingError("duplicate", `Cette adresse publique est déjà celle du site « ${clash.name} » : un domaine ne peut servir qu'un seul site.`);
-  }
+  // L'adresse publique passe par le registre des domaines (TITAN XXXII) : un domaine n'appartient qu'à un seul site, les noms réservés sont refusés, et en production un domaine
+  // saisi reste « à vérifier » (rien n'est servi) tant que la propriété n'est pas prouvée. Les réglages gardent le miroir du domaine principal vérifié.
+  if (nextSettings.seo) nextSettings.seo.publicUrl = require("../../services/siteDomains").syncFromPublicUrl(ctx, site.id, nextSettings.seo.publicUrl || "");
   const info = ctx.db.prepare("UPDATE mk_sites SET name = ?, tokens = ?, settings = ?, settings_revision = settings_revision + 1, updated_at = datetime('now') WHERE id = ? AND settings_revision = ?")
     .run(nextName, JSON.stringify(nextTokens), JSON.stringify(nextSettings), site.id, revision);
   if (info.changes !== 1) throw new MarketingError("conflict", "Les réglages de ce site ont été modifiés ailleurs : rechargez-les avant d'enregistrer.");

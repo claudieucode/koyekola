@@ -35,6 +35,7 @@ module.exports = ({ db }) => {
     // Contact déjà abonné (personne connectée dont l'adresse est un contact abonné) : connu du serveur seulement
     const subscribed = user && db.prepare("SELECT 1 FROM mk_contacts WHERE organization_id = ? AND email = lower(trim(?)) AND status = 'subscribed'").get(req.mkForms.organizationId, user.email);
     const eligible = forms.getActivePopups(db, req.mkForms.organizationId).filter((p) => {
+      if (req.kwSite && (p.siteId ?? null) !== req.kwSite.id) return false; // pop-up d'un autre site (ou du principal) : jamais ici
       const r = p.popupRules || {};
       if (!fieldRules.pageMatches(r, pathname)) return false;
       if (r.hideForStudents && user) return false;
@@ -80,9 +81,13 @@ module.exports = ({ db }) => {
     }
   });
 
+  // TITAN XXXII : sur le domaine d'UN site, le formulaire d'un AUTRE site ne répond pas (écart 4) ; un pop-up ne s'affiche que s'il est de CE site (il apparaît de lui-même sur toutes les pages)
+  // Un formulaire historique du site principal (sans site) reste utilisable depuis une page de site qui l'intègre ; seul le formulaire d'UN AUTRE site est refusé ici.
+  const foreignHere = (req, item) => Boolean(req.kwSite) && item.siteId != null && item.siteId !== req.kwSite.id;
+
   router.get("/f/:slug", (req, res) => {
     const form = forms.getPublishedForm(db, req.mkForms.organizationId, req.params.slug);
-    if (!form) return res.status(404).render("error", { message: "Ce formulaire n'existe pas ou n'est plus publié." });
+    if (!form || foreignHere(req, form)) return res.status(404).render("error", { message: "Ce formulaire n'existe pas ou n'est plus publié." });
     const submitted = req.query.envoye === "1";
     if (!submitted) forms.recordView(db, form.id); // la page de remerciement n'est pas une nouvelle visite du formulaire
     res.render("marketing-public/form", { title: form.name, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: forms.propertyFieldDefs(db, req.mkForms.organizationId, form), error: null, values: {}, submitted, confirmPending: submitted && req.query.confirmer === "1" });
@@ -94,7 +99,7 @@ module.exports = ({ db }) => {
     const isPopup = req.get("x-mk-popup") === "1";
     const fail = (status, message) => (isPopup ? res.status(status).json({ ok: false, error: message }) : res.status(status).render("marketing-public/form", { title: form.name, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: forms.propertyFieldDefs(db, req.mkForms.organizationId, form), error: message, values: req.body, submitted: false }));
     const form = forms.getPublishedForm(db, req.mkForms.organizationId, req.params.slug);
-    if (!form) return isPopup ? res.status(404).json({ ok: false, error: "Formulaire introuvable." }) : res.status(404).render("error", { message: "Ce formulaire n'existe pas ou n'est plus publié." });
+    if (!form || foreignHere(req, form)) return isPopup ? res.status(404).json({ ok: false, error: "Formulaire introuvable." }) : res.status(404).render("error", { message: "Ce formulaire n'existe pas ou n'est plus publié." });
     // Champ piège rempli, ou envoi sans jeton valide / trop rapide pour un humain : robot
     if (String(req.body.website || "").trim() || !antispam.check(req.body.ft)) {
       // champ piège rempli : faux positif silencieux (jamais renseigner un robot sur son échec)

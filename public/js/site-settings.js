@@ -454,7 +454,7 @@
     wrap.appendChild(section("Indexation et adresse", [
       { kind: "toggle", path: "settings.extras.noindex", label: "Demander aux moteurs de ne pas indexer ce site", hint: "Toutes les pages du site sont alors en noindex (et absentes du plan du site)." },
       { kind: "toggle", path: "settings.seo.follow", label: "Autoriser les moteurs à suivre les liens des pages", hint: "Décoché : toutes les pages du site sont publiées en nofollow." },
-      { kind: "text", path: "settings.seo.publicUrl", label: "Adresse publique du site (facultative)", max: 200, hint: "Ex. https://www.monsite.com — sans chemin. Utilisée pour les adresses canoniques, le partage et les données structurées. Vide : l'adresse de KOLAKISA." },
+      { kind: "text", path: "settings.seo.publicUrl", label: "Adresse publique du site (facultative)", max: 200, hint: "Ex. https://www.monsite.com — sans chemin. Le domaine doit être vérifié (enregistrement DNS) avant de servir le site : suivez-le dans la page « Domaines » du site (Mes sites → Domaines, ou le bouton « Domaines du site » des réglages généraux). Utilisée pour les adresses canoniques, le partage et les données structurées. Vide : l'adresse de KOLAKISA." },
     ]));
     if (!state.canSeo) wrap.querySelectorAll("input, select, textarea, button").forEach(function (el) { el.disabled = true; });
     bodyEl.appendChild(wrap);
