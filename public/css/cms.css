@@ -803,6 +803,35 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 .mk-st-ratios li { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 8px; border: 1px solid var(--mk-border, #dbe4ea); border-radius: 8px; }
 .mk-st-ratios li.is-bad { border-color: var(--warning, #d99a00); }
 .mk-st-ratio-sample { display: grid; place-items: center; height: 32px; border-radius: 6px; font-weight: 700; border: 1px solid var(--mk-border, #dbe4ea); }
+/* ---------- Panneau Styles : mise en page des rangées (correctif d'alignement) ----------
+   Cause : kola-compose.css donne à TOUT « .mk-st-field » une grille 2 colonnes (200–300 px + 48 px d'écart) pensée pour de larges formulaires ; dans le panneau de
+   460 px, la colonne des contrôles était écrasée et les pastilles débordaient. Ici : une rangée = libellé (souple) + contrôles (largeur propre), l'aide dessous.
+   Sélecteurs préfixés par .mk-st-panel (spécificité supérieure à kola-compose) pour ne rien changer aux autres écrans. */
+.mk-body .mk-st-panel .mk-st-field { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-auto-flow: row; column-gap: 12px; row-gap: 4px; align-items: center; padding: 10px 0; margin: 0; border-top: 1px solid var(--mk-border, #dbe4ea); }
+.mk-body .mk-st-panel .mk-st-field:first-of-type { border-top: 0; padding-top: 2px; }
+.mk-body .mk-st-panel .mk-st-field > label { grid-column: 1; grid-row: 1; margin: 0; padding: 0; min-width: 0; overflow-wrap: anywhere; }
+.mk-body .mk-st-panel .mk-st-field > :is(.mk-st-colorrow, .mk-st-numrow) { grid-column: 2; grid-row: 1; justify-self: end; min-width: 0; }
+.mk-body .mk-st-panel .mk-st-field > :is(input, select, textarea) { grid-column: 2; grid-row: 1; width: 100%; max-width: 200px; }
+.mk-body .mk-st-panel .mk-st-field > .field-hint { grid-column: 1 / -1; grid-row: auto; max-width: none; margin: 0; }
+.mk-body .mk-st-panel .mk-st-field > .mk-st-err[hidden] { display: none; }
+.mk-body .mk-st-panel .mk-st-field:has(> .mk-cms-check) { grid-template-columns: minmax(0, 1fr); }
+.mk-body .mk-st-panel .mk-st-field:has(> .mk-cms-check) > .field-hint { padding-left: 0; }
+.mk-body .mk-st-panel .mk-st-colorrow { display: flex; align-items: center; gap: 8px; }
+.mk-body .mk-st-panel .mk-st-colorrow > * { flex: none; }
+.mk-body .mk-st-panel .mk-st-colorrow input[type="color"] { width: 40px; height: 36px; padding: 2px; box-sizing: border-box; }
+.mk-body .mk-st-panel .mk-st-colorrow input[type="text"] { width: 92px; max-width: 92px; min-width: 0; box-sizing: border-box; }
+.mk-body .mk-st-panel .mk-st-swatch { width: 24px; height: 24px; box-sizing: border-box; border: 1px solid var(--mk-border-strong, #b8c6d1); }
+.mk-body .mk-st-panel .mk-st-reset { width: 32px; height: 32px; min-height: 32px; padding: 0; box-sizing: border-box; }
+.mk-body .mk-st-panel .mk-st-numrow { display: flex; align-items: center; gap: 8px; }
+.mk-body .mk-st-panel .mk-st-numrow :is(input[type="number"], select) { width: 120px; max-width: 160px; box-sizing: border-box; }
+.mk-body .mk-st-panel .mk-st-group { min-width: 0; }
+.mk-body .mk-st-panel .mk-st-palettes { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+.mk-body .mk-st-panel .mk-st-palette { min-width: 0; box-sizing: border-box; }
+.mk-body .mk-st-panel .mk-st-pal-name { overflow-wrap: anywhere; }
+.mk-body .mk-st-panel .mk-st-ratios li { grid-template-columns: 44px minmax(0, 1fr) auto auto; }
+.mk-body .mk-st-panel .mk-st-ratios li > :nth-child(2) { min-width: 0; overflow-wrap: anywhere; }
+@container (max-width: 330px) { .mk-body .mk-st-panel .mk-st-field { grid-template-columns: minmax(0, 1fr); } .mk-body .mk-st-panel .mk-st-field > :is(.mk-st-colorrow, .mk-st-numrow, input, select) { grid-column: 1; grid-row: 2; justify-self: start; } }
+.mk-st-panel { container-type: inline-size; }
 .mk-st-ratio-lvl { font-size: 12px; color: var(--mk-text-soft, #5b6b78); }
 .mk-st-versions { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
 .mk-st-versions li { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid var(--mk-border, #dbe4ea); border-radius: 8px; padding: 8px 12px; }
