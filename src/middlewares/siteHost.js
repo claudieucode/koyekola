@@ -42,6 +42,8 @@ function attachSite(req, res, next) {
   req.kwUnknownHost = !req.kwSite && !req.kwRetired && hostPolicy(host) === "unknown";
   // Sur le domaine d'un site, toutes les adresses absolues (canonical, plan du site, robots.txt, JSON-LD) sont celles de ce site
   if (req.kwSite && req.kwSite.base) req.seoBase = req.kwSite.base;
+  // Domaine secondaire (alias vérifié, ex. www ou adresse de plateforme) : redirection 301 vers le domaine principal du site, chemin et requête conservés (une seule adresse par page)
+  if (req.kwSite && req.kwSite.host && host !== req.kwSite.host && isRead(req) && req.path !== "/sante") return res.redirect(301, `${req.kwSite.base}${req.originalUrl}`);
   if (req.kwSite || req.kwRetired) neutralErrors(req, res);
   next();
 }

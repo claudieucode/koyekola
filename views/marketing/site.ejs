@@ -3,6 +3,7 @@
     <div class="mk-head"><div class="mk-builder-title"><h1><%= site.name %></h1><% if (site.deleted_at) { %><span class="mk-status mk-status-warn">Supprimé</span><% } else if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
       <% if (canWrite) { %><div class="mk-actions">
         <% if (!mk.ctx.siteScope && mk.can("sites.modules")) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= site.id %>/modules">Modules</a><% } %>
+        <% if (mk.can("sites.domains")) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= site.id %>/domaines">Domaines</a><% } %>
         <% if (site.deleted_at) { %><form action="/marketing/site-web/sites/<%= site.id %>/recuperer" method="post"><button type="submit" class="btn btn-primary btn-sm">Récupérer le site</button></form>
         <% } else if (archived) { %><form action="/marketing/site-web/sites/<%= site.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le site</button></form>
         <% } else { %>

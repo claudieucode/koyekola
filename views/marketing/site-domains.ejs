@@ -1,0 +1,84 @@
+<%- include("partials/top", { title, active }) %>
+<%#
+  Domaines d'un site (TITAN XXXII). Données réelles : registre mk_site_domains. Rien n'est annoncé « en ligne » tant que la propriété, le DNS et le HTTPS ne sont pas contrôlés :
+  chaque état est dit tel quel (« en attente », « DNS non conforme », « HTTPS non actif »).
+%>
+<%
+  const STATUS = { pending: ["À vérifier", "mk-status-warn"], verified: ["Vérifié", ""], disabled: ["Retiré", "mk-status-warn"] };
+  const DNS = { unknown: "Non contrôlé", ok: "Conforme", missing: "Absent", mismatch: "Non conforme" };
+  const TLS = { unknown: "Non contrôlé", ok: "Actif", pending: "En attente", failed: "Non actif" };
+%>
+    <p class="mk-back"><a href="/marketing/site-web/sites/<%= site.id %>/reglages">← Réglages du site</a></p>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Domaines de « <%= site.name %> »</h1>
+        <p class="mk-head-sub">Un site se visite à sa propre adresse : un domaine que vous possédez, ou l'adresse fournie par la plateforme. Un domaine ne sert le site qu'après la preuve de propriété ; le site principal (<code><%= mainHost || "—" %></code>) reste celui de la plateforme.</p></div>
+    </div>
+
+    <section class="mk-panel" aria-labelledby="dom-plat">
+      <h2 id="dom-plat">Adresse de la plateforme</h2>
+      <% if (platform.available) { %>
+        <% const plat = domains.find((d) => d.kind === "platform"); %>
+        <% if (plat) { %><p>Adresse du site : <strong>https://<%= plat.host %></strong> <span class="mk-sub">— <%= plat.note %></span></p>
+        <% } else { %>
+          <p>Le site peut recevoir une adresse de la forme <code>nom-du-site.<%= platform.domain %></code>, résolue par le serveur dès son activation.</p>
+          <form action="/marketing/site-web/sites/<%= site.id %>/domaines/plateforme" method="post"><button type="submit" class="btn btn-primary btn-sm">Activer l'adresse de la plateforme</button></form>
+        <% } %>
+      <% } else { %>
+        <p class="mk-callout mk-callout-warn"><span><%= platform.reason %></span></p>
+      <% } %>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="dom-list">
+      <h2 id="dom-list">Domaines du site</h2>
+      <% if (!domains.length) { %>
+        <p>Aucun domaine pour l'instant : le site est visible sous <code><%= mainHost || "l'adresse de la plateforme" %>/p/…</code> seulement. Ajoutez un domaine ci-dessous.</p>
+      <% } else { %>
+        <div class="mk-table-wrap"><table class="mk-table">
+          <caption class="sr-only">Domaines du site, état de vérification, DNS et HTTPS</caption>
+          <thead><tr><th scope="col">Domaine</th><th scope="col">Type</th><th scope="col">État</th><th scope="col">DNS</th><th scope="col">HTTPS</th><th scope="col">Actions</th></tr></thead>
+          <tbody>
+            <% domains.forEach((d) => { const st = STATUS[d.status] || [d.status, ""]; %>
+              <tr>
+                <th scope="row"><%= d.host %><% if (d.canonical) { %> <span class="mk-status">Principal</span><% } else if (d.status === "verified") { %> <span class="mk-sub">redirige vers le principal</span><% } %></th>
+                <td><%= d.kind === "platform" ? "Plateforme" : "Personnalisé" %></td>
+                <td><span class="mk-status <%= st[1] %>"><%= st[0] %></span></td>
+                <td><%= DNS[d.dns_status] || d.dns_status %></td>
+                <td><%= TLS[d.tls_status] || d.tls_status %></td>
+                <td class="mk-row-actions">
+                  <form action="/marketing/site-web/sites/<%= site.id %>/domaines/<%= d.id %>/verifier" method="post" class="mk-inline-form"><button type="submit" class="btn btn-outline btn-sm"><%= d.status === "pending" ? "Vérifier" : "Contrôler" %></button></form>
+                  <% if (d.status === "verified" && !d.canonical) { %><form action="/marketing/site-web/sites/<%= site.id %>/domaines/<%= d.id %>/principal" method="post" class="mk-inline-form"><button type="submit" class="btn btn-outline btn-sm">Rendre principal</button></form><% } %>
+                  <form action="/marketing/site-web/sites/<%= site.id %>/domaines/<%= d.id %>/retirer" method="post" class="mk-inline-form"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Le domaine « <%= d.host %> » ne servira plus ce site." data-mk-confirm-title="Retirer ce domaine ?" data-mk-confirm-ok="Retirer">Retirer</button></form>
+                </td>
+              </tr>
+              <tr><td colspan="6" class="mk-sub"><%= d.note %><% if (d.last_check_error && d.status !== "verified") { %> — <%= d.last_check_error %><% } %></td></tr>
+              <% if (instructions[d.id]) { const ins = instructions[d.id]; %>
+                <tr><td colspan="6">
+                  <div class="mk-callout"><span>
+                    <strong>Pour prouver que vous possédez <%= d.host %></strong>, créez cet enregistrement chez votre fournisseur de domaine :
+                    <br>Type <code>TXT</code> · nom <code><%= ins.txt.name %></code> · valeur <code><%= ins.txt.value %></code>
+                    <% if (ins.routing.a.length || ins.routing.cname.length) { %><br>Puis faites pointer le domaine vers la plateforme : <% if (ins.routing.cname.length) { %>CNAME <code><%= ins.routing.cname.join(", ") %></code><% } %><% if (ins.routing.a.length) { %> <%= ins.routing.cname.length ? "ou " : "" %>A/AAAA <code><%= ins.routing.a.join(", ") %></code><% } %> <span class="mk-sub">(<%= ins.routing.source %>)</span><% } %>
+                  </span></div>
+                </td></tr>
+              <% } %>
+            <% }) %>
+          </tbody>
+        </table></div>
+      <% } %>
+      <form action="/marketing/site-web/sites/<%= site.id %>/domaines" method="post" class="mk-form mk-flow-add">
+        <h3 class="mk-journey-sub">Ajouter un domaine</h3>
+        <div class="field-group"><label for="dom-new">Nom de domaine</label><input id="dom-new" type="text" name="domaine" maxlength="253" required placeholder="www.monsite.com" autocomplete="off" inputmode="url">
+          <p class="field-hint">Un domaine que vous possédez, sans « https:// » ni chemin. <%= verifRequise ? "Il ne sera actif qu'après la vérification." : "" %></p></div>
+        <button type="submit" class="btn btn-primary btn-sm">Ajouter le domaine</button>
+      </form>
+    </section>
+
+    <section class="mk-panel" aria-labelledby="dom-how">
+      <h2 id="dom-how">Comment ça fonctionne</h2>
+      <ol>
+        <li><strong>Propriété</strong> : un enregistrement TXT <code>_kolakisa-verify.&lt;domaine&gt;</code> prouve que le domaine est à vous. Sans lui, rien n'est servi.</li>
+        <li><strong>DNS</strong> : le domaine doit pointer vers la plateforme (l'état « DNS » le contrôle).</li>
+        <li><strong>HTTPS</strong> : le certificat est délivré par l'hébergeur une fois le domaine rattaché à l'hébergement ; l'état « HTTPS » le contrôle réellement.</li>
+        <li><strong>Principal</strong> : un seul domaine principal ; les autres domaines vérifiés du site y redirigent (301).</li>
+      </ol>
+    </section>
+<%- include("partials/bottom") %>

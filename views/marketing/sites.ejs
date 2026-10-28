@@ -62,6 +62,7 @@
             <td data-label="Actions"><div class="mk-actions">
               <% if (!st.deleted_at) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= st.id %>/tableau-de-bord">Ouvrir<span class="sr-only"> <%= st.name %></span></a><% } %>
               <% if (canModules && !st.deleted_at && st.status === "active") { %><a class="btn btn-ghost btn-sm" href="/marketing/site-web/sites/<%= st.id %>/modules">Modules<span class="sr-only"> de <%= st.name %></span></a><% } %>
+              <% if (mk.can("sites.domains") && !st.deleted_at && st.status === "active") { %><a class="btn btn-ghost btn-sm" href="/marketing/site-web/sites/<%= st.id %>/domaines">Domaines<span class="sr-only"> de <%= st.name %></span></a><% } %>
               <% if (canWrite && !st.deleted_at && st.status === "active") { %>
                 <form action="/marketing/site-web/sites/<%= st.id %>/dupliquer" method="post"><input type="hidden" name="contenu" value="pages"><button type="submit" class="btn btn-ghost btn-sm" title="Copie le design system, les réglages et les pages (en brouillon)">Dupliquer</button></form>
                 <form action="/marketing/site-web/sites/<%= st.id %>/archiver" method="post"><button type="submit" class="btn btn-ghost btn-sm" data-mk-confirm="Les pages en ligne de « <%= st.name %> » passent hors ligne. Rien n'est effacé et vous pourrez le restaurer.">Archiver</button></form>
