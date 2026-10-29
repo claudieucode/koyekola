@@ -684,6 +684,10 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "seo_rank_entries": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "seo_redirects": {
    "siteId": true,
    "classe": "isolee"
