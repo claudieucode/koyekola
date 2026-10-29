@@ -188,7 +188,7 @@ main { display: block; }
   background: var(--surface-alt);
   border: 1.5px solid transparent;
   border-radius: var(--radius-pill);
-  padding: 9px 18px;
+  padding: 0 18px;
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 /* input[type=text] : même priorité que la règle globale des champs, sinon elle remet une bordure */
@@ -197,7 +197,7 @@ main { display: block; }
   background: transparent;
   flex: 1;
   min-width: 0;
-  padding: 0;
+  padding: 9px 0; /* la hauteur du champ (cible tactile) = celle du pill, sans changer le rendu */
   min-height: 0;
   font-size: 0.95rem;
   color: var(--text);
@@ -1814,7 +1814,7 @@ a.post-card-category:hover { text-decoration: underline; }
 .blog-cats a[aria-current="page"] { background: var(--primary); border-color: var(--primary); color: #fff; }
 .blog-cats-count { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
 .blog-cats a[aria-current="page"] .blog-cats-count { color: var(--sky); }
-.blog-search { flex: 0 1 380px; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--card); color: var(--muted); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.blog-search { flex: 0 1 380px; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 14px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--card); color: var(--muted); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
 .blog-search:focus-within { border-color: var(--accent); box-shadow: var(--ring); }
 .blog-search input { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; color: var(--text); padding: 6px 0; }
 .blog-search input:focus-visible { outline: 2px solid transparent; }

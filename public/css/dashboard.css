@@ -108,7 +108,7 @@
 .dash-section { margin-top: var(--s6); }
 .dash-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s3); margin-bottom: var(--s3); }
 .dash-section-head h2 { margin: 0; font-size: 20px; color: var(--dash-text); }
-.dash-section-head a { font-size: 14px; font-weight: 600; color: var(--dash-accent-text); text-decoration: none; }
+.dash-section-head a { display: inline-flex; align-items: center; min-height: 24px; font-size: 14px; font-weight: 600; color: var(--dash-accent-text); text-decoration: none; }
 
 /* ---------- Boutons dans l'espace ---------- */
 .dash .btn { transition: background var(--dash-ease), border-color var(--dash-ease), color var(--dash-ease), box-shadow var(--dash-ease); }
@@ -302,7 +302,7 @@
 /* =====================================================================
    Centre de gestion (Mon espace → Centre de gestion)
    ===================================================================== */
-.g-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: var(--s3); font-size: 14px; font-weight: 600; color: var(--dash-accent-text); text-decoration: none; }
+.g-back { display: inline-flex; align-items: center; min-height: 24px; gap: 6px; margin-bottom: var(--s3); font-size: 14px; font-weight: 600; color: var(--dash-accent-text); text-decoration: none; }
 .g-back:hover { text-decoration: underline; }
 .g-back:focus-visible, .g-module:focus-visible, .g-feed-text a:focus-visible { outline: 2px solid var(--dash-accent); outline-offset: 2px; border-radius: 4px; }
 .g-flash { margin: 0 0 var(--s4); padding: var(--s3) var(--s4); border-radius: var(--dash-radius-sm); border: 1px solid color-mix(in srgb, var(--dash-success) 35%, var(--dash-border)); background: color-mix(in srgb, var(--dash-success) 10%, var(--dash-card)); color: var(--dash-text); font-size: 14px; }

@@ -364,8 +364,8 @@ html[data-sidebar="collapsed"] .mk-cms-back .mk-nav-label, html[data-sidebar="co
 .mk-ar-subsubsub li { display: inline-flex; gap: 4px; }
 .mk-ar-subsubsub a.is-current { font-weight: 700; color: inherit; text-decoration: none; }
 .mk-ar-subsubsub .count { color: var(--muted); font-weight: 400; }
-.mk-ar-search { display: flex; gap: 6px; }
-.mk-ar-search input[type="search"] { min-height: 34px; min-width: 200px; }
+.mk-ar-search { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.mk-ar-search input[type="search"] { min-height: 34px; min-width: min(200px, 100%); flex: 1 1 200px; }
 .mk-ar-found { margin: 0 0 8px; color: var(--muted); font-size: 0.9rem; }
 .mk-ar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 8px; }
 .mk-ar-actions .mk-cms-bulk { margin: 0; }

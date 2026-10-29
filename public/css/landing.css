@@ -674,8 +674,9 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .kw-lightbox-nav { top: 50%; margin-top: -20px; } .kw-lightbox-nav.is-prev { left: 8px; } .kw-lightbox-nav.is-next { right: 8px; }
 .kw-lightbox button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 /* Carrousel : points */
-.kw-carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
-.kw-carousel-dot { width: 10px; height: 10px; padding: 0; border: 0; border-radius: 50%; background: rgba(16, 34, 47, .25); cursor: pointer; }
+.kw-carousel-dots { display: flex; justify-content: center; gap: 0; margin-top: 4px; }
+/* Pastille de 10 px dans une cible de 24 px (WCAG 2.5.8) : le point est dessiné par le fond rogné au contenu, la zone cliquable est le bouton */
+.kw-carousel-dot { width: 24px; height: 24px; padding: 7px; border: 0; border-radius: 50%; background: rgba(16, 34, 47, .25); background-clip: content-box; cursor: pointer; }
 .kw-carousel-dot[aria-current="true"] { background: var(--kw-primary, #0277b6); }
 .kw-carousel-dot:focus-visible { outline: 2px solid var(--kw-primary, #0277b6); outline-offset: 2px; }
 /* Onglets : icône */
