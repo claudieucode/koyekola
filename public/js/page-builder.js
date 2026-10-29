@@ -4989,24 +4989,27 @@
       kf.classList.add("kf-ctx"); kf.setAttribute("data-tip", label || p.label);
       return kf;
     }
-    var sel = h("select", { "aria-label": label || p.label, "data-tip": label || p.label, disabled: lockedAny(items) }, [h("option", { value: "", text: (label || p.label) + "…" })].concat((options || p.options).map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+    var sel = h("select", { "aria-label": label || p.label, "data-tip": label || p.label, disabled: lockedAny(items) }, [h("option", { value: "", text: label || p.label })].concat((options || p.options).map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
     sel.value = own === undefined ? "" : String(own);
-    sel.addEventListener("change", function () { setStyle(idsOf(items), key, key === "columns" && sel.value ? Number(sel.value) : sel.value); });
+    // Valeur vide : le libellé de la commande sert de repère (sans « … »), grisé ; valeur choisie : texte normal
+    var markEmpty = function () { sel.classList.toggle("is-empty", !sel.value); };
+    markEmpty();
+    sel.addEventListener("change", function () { markEmpty(); setStyle(idsOf(items), key, key === "columns" && sel.value ? Number(sel.value) : sel.value); });
     return sel;
   }
   // Case compacte de la barre contextuelle : même NumericControl (flèches ↑↓, unité tapée avec le nombre, bornes du serveur)
-  function ctxLength(label, key, items, width) {
+  function ctxLength(label, key, items, width, short) {
     var it = items[0], own = ownValue(it, key), inh = inheritedValue(it, key), dis = lockedAny(items);
     var isNum = SP[key].kind === "number", cfg = (isNum ? NUMCFG[key] : LENCFG[key]) || {};
     var commonOpts = { label: label, ariaLabel: label, tip: label, inputClass: "pb-ctx-num", cellClass: "pb-ctx-cell", hideSteps: true, disabled: dis, drag: false, allowEmpty: true };
     var wrap;
     if (isNum) {
       var lim = NUM[key] || [-9999, 9999, 1];
-      wrap = numericControl(Object.assign({ inlineUnit: true, min: lim[0], max: lim[1], step: lim[2], value: own === undefined ? "" : own, placeholder: inh !== undefined ? inh : label, base: cfg.base, onCommit: function (raw, u, opts) { setStyle(idsOf(items), key, raw === "" ? "" : Number(raw), opts); } }, commonOpts, { slider: null, staticUnit: null }));
+      wrap = numericControl(Object.assign({ inlineUnit: true, min: lim[0], max: lim[1], step: lim[2], value: own === undefined ? "" : own, placeholder: inh !== undefined ? inh : (short || label), base: cfg.base, onCommit: function (raw, u, opts) { setStyle(idsOf(items), key, raw === "" ? "" : Number(raw), opts); } }, commonOpts, { slider: null, staticUnit: null }));
     } else {
       var units = unitsOf(key), cur = splitLen(own), base = splitLen(inh);
       var disp = function (p) { return !p ? "" : p.unit === "auto" ? "auto" : p.unit === "px" ? p.num : p.num + p.unit; };
-      wrap = numericControl(Object.assign({ inlineUnit: true, units: units, unit: (cur || base || { unit: units[0] }).unit === "auto" ? "px" : (cur || base || { unit: units[0] }).unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, value: disp(cur), placeholder: base ? disp(base) : label,
+      wrap = numericControl(Object.assign({ inlineUnit: true, units: units, unit: (cur || base || { unit: units[0] }).unit === "auto" ? "px" : (cur || base || { unit: units[0] }).unit, step: STEP_REL, min: isSigned(key) ? -9999 : 0, max: 9999, base: 0, value: disp(cur), placeholder: base ? disp(base) : (short || label),
         onCommit: function (raw, u, opts) {
           var v = u === "auto" ? "auto" : raw === "" ? "" : Number(raw) === 0 ? "0" : raw + u;
           if (parseLength(v, key) === null) { toast(label + " : valeur invalide.", true); return false; }
@@ -5018,9 +5021,11 @@
   }
   function ctxColor(label, key, items) {
     var own = ownValue(items[0], key);
-    var inp = h("input", { type: "color", "aria-label": label, "data-tip": label, value: own && /^#/.test(own) ? own.slice(0, 7) : "#000000", disabled: lockedAny(items) });
-    inp.addEventListener("change", function () { setStyle(idsOf(items), key, inp.value); });
-    return h("span", { class: "pb-ctx-color" + (own ? " is-set" : "") }, inp);
+    var inh = inheritedValue(items[0], key), shown = own && /^#/.test(own) ? own : inh && /^#/.test(inh) ? inh : "";
+    var inp = h("input", { type: "color", "aria-label": label, "data-tip": label + (own ? " : " + own : " (hérité)"), value: shown ? shown.slice(0, 7) : "#000000", disabled: lockedAny(items) });
+    var box = h("span", { class: "pb-ctx-color" + (own ? " is-set" : "") + (shown ? "" : " is-unknown") }, inp);
+    inp.addEventListener("change", function () { box.classList.add("is-set"); box.classList.remove("is-unknown"); setStyle(idsOf(items), key, inp.value); });
+    return box;
   }
   function ctxAlign(items, key, values) {
     var own = ownValue(items[0], key);
@@ -5028,10 +5033,74 @@
       return h("button", { type: "button", "aria-pressed": String(own === v[0]), "aria-label": v[1], "data-tip": v[1], disabled: lockedAny(items), onclick: function () { setStyle(idsOf(items), key, own === v[0] ? "" : v[0]); } }, icon(v[2]));
     }));
   }
+  // Groupes logiques de la barre. Priorité : 0 = toujours visible ; plus le nombre est grand, plus le groupe passe tôt dans « Plus » quand la place manque
   var ctxSep = function () { return h("span", { class: "pb-ctx-sep", "aria-hidden": "true" }); };
-  function renderContext() {
+  var ctxGroups = [];
+  function ctxGroup(bar, name, prio, controls) {
+    var g = h("span", { class: "pb-ctx-group", role: "group", "aria-label": name, "data-ctx-prio": String(prio) }, controls);
+    ctxGroups.push(g);
+    bar.appendChild(g);
+    return g;
+  }
+  var ctxFitRaf = 0, ctxFitWidth = -1, ctxObserver = null, ctxMoreOpen = null;
+  function ctxCloseMore() {
+    if (!ctxMoreOpen) return;
+    ctxMoreOpen.btn.setAttribute("aria-expanded", "false"); ctxMoreOpen.pop.hidden = true; ctxMoreOpen = null;
+    document.removeEventListener("pointerdown", ctxOutside, true);
+  }
+  function ctxOutside(e) { if (ctxMoreOpen && !ctxMoreOpen.wrap.contains(e.target)) ctxCloseMore(); }
+  // Bouton « Plus » : reçoit les groupes qui ne tiennent plus (les mêmes nœuds : état et écouteurs conservés)
+  function ctxMore(bar) {
+    var pop = h("div", { class: "pb-ctx-pop", role: "group", "aria-label": "Autres réglages", hidden: true });
+    var btn = h("button", { type: "button", class: "pb-ctx-btn pb-ctx-icon", "aria-label": "Plus de réglages", "aria-haspopup": "true", "aria-expanded": "false", "data-tip": "Plus de réglages" }, "⋯");
+    var wrap = h("span", { class: "pb-ctx-more", hidden: true }, [btn, pop]);
+    btn.addEventListener("click", function () {
+      if (ctxMoreOpen && ctxMoreOpen.wrap === wrap) { ctxCloseMore(); return; }
+      ctxCloseMore();
+      var r = btn.getBoundingClientRect();
+      pop.hidden = false; btn.setAttribute("aria-expanded", "true");
+      pop.style.top = Math.round(r.bottom + 6) + "px";
+      pop.style.left = Math.max(8, Math.min(Math.round(r.right - pop.offsetWidth), window.innerWidth - pop.offsetWidth - 8)) + "px";
+      ctxMoreOpen = { wrap: wrap, btn: btn, pop: pop };
+      document.addEventListener("pointerdown", ctxOutside, true);
+    });
+    wrap.addEventListener("keydown", function (e) { if (e.key === "Escape" && ctxMoreOpen) { ctxCloseMore(); btn.focus(); e.stopPropagation(); } });
+    bar.appendChild(wrap);
+    return wrap;
+  }
+  // Place disponible = largeur réelle de la barre (pas de la fenêtre) : on remet tout en ligne, puis on déplace les groupes les moins
+  // prioritaires dans « Plus » jusqu'à ce que la rangée tienne. Rien n'est supprimé ni tronqué : les commandes déplacées restent actives.
+  function fitContext() {
+    ctxFitRaf = 0;
+    var bar = $("[data-pb-context]"), wrap = bar && bar.querySelector(".pb-ctx-more");
+    if (!bar || !wrap || !ctxGroups.length) return;
+    var pop = wrap.querySelector(".pb-ctx-pop"), wasOpen = !!ctxMoreOpen;
+    ctxCloseMore();
+    ctxGroups.forEach(function (g) { if (g.getAttribute("data-ctx-prio") !== "0") bar.insertBefore(g, wrap); });
+    wrap.hidden = true;
+    ctxFitWidth = bar.clientWidth;
+    if (bar.scrollWidth <= bar.clientWidth + 1) return;
+    wrap.hidden = false;
+    var moved = [];
+    var cand = ctxGroups.map(function (g, i) { return { g: g, i: i, p: Number(g.getAttribute("data-ctx-prio")) }; }).filter(function (c) { return c.p > 0; })
+      .sort(function (a, b) { return b.p - a.p || b.i - a.i; });
+    for (var k = 0; k < cand.length && bar.scrollWidth > bar.clientWidth + 1; k++) { moved.push(cand[k]); pop.appendChild(cand[k].g); }
+    moved.sort(function (a, b) { return a.i - b.i; }).forEach(function (c) { pop.appendChild(c.g); });
+    if (wasOpen) wrap.querySelector("button").click();
+  }
+  function scheduleFitContext() { if (!ctxFitRaf) ctxFitRaf = requestAnimationFrame(fitContext); }
+  function watchContextWidth() {
     var bar = $("[data-pb-context]");
+    if (!bar || ctxObserver || !window.ResizeObserver) return;
+    ctxObserver = new ResizeObserver(function () { if (bar.clientWidth !== ctxFitWidth) scheduleFitContext(); });
+    ctxObserver.observe(bar);
+  }
+  function renderContext() { renderContextBar(); watchContextWidth(); scheduleFitContext(); }
+  function renderContextBar() {
+    var bar = $("[data-pb-context]");
+    ctxCloseMore();
     bar.textContent = "";
+    ctxGroups = [];
     if (editing && editing.rich) { richToolbar(bar); return; }
     var items = selectedItems();
     if (!items.length) { bar.appendChild(h("span", { class: "pb-ctx-hint", text: "Écran : " + bpLabel(device) + (device === "desktop" ? "" : " — vos réglages s'appliquent à cet écran") })); return; }
@@ -5046,42 +5115,33 @@
       return;
     }
     if (same && isNode(it) && inspectorFor(it).groups && inspectorFor(it).groups.typography !== undefined) {
-      bar.appendChild(ctxSelect("Police", "fontFamily", items));
-      bar.appendChild(ctxLength("Taille", "fontSize", items, 60));
-      bar.appendChild(ctxSelect("Graisse", "fontWeight", items));
-      bar.appendChild(ctxColor("Couleur du texte", "color", items));
-      bar.appendChild(ctxSep());
-      bar.appendChild(ctxAlign(items, "textAlign", [["left", "Aligner à gauche", "alignLeft"], ["center", "Centrer", "alignCenter"], ["right", "Aligner à droite", "alignRight"], ["justify", "Justifier", "alignJustify"]]));
-      bar.appendChild(ctxLength("Interligne", "lineHeight", items, 50));
-      bar.appendChild(ctxLength("Espacement des lettres", "letterSpacing", items, 56));
-      bar.appendChild(ctxSelect("Casse", "textTransform", items));
+      ctxGroup(bar, "Typographie", 1, [ctxSelect("Police", "fontFamily", items), ctxLength("Taille", "fontSize", items, 64), ctxSelect("Graisse", "fontWeight", items)]);
+      ctxGroup(bar, "Couleur du texte", 2, [ctxColor("Couleur du texte", "color", items)]);
+      ctxGroup(bar, "Alignement du texte", 4, [ctxAlign(items, "textAlign", [["left", "Aligner à gauche", "alignLeft"], ["center", "Centrer", "alignCenter"], ["right", "Aligner à droite", "alignRight"], ["justify", "Justifier", "alignJustify"]])]);
+      ctxGroup(bar, "Espacement et casse", 5, [ctxLength("Interligne", "lineHeight", items, 84), ctxLength("Espacement des lettres", "letterSpacing", items, 104, "Interlettrage"), ctxSelect("Casse", "textTransform", items)]);
     }
     if (it.type === "button") {
-      bar.appendChild(ctxSep());
-      bar.appendChild(ctxColor("Fond du bouton", "backgroundColor", items));
-      bar.appendChild(ctxLength("Arrondi", "borderRadius", items, 56));
-      bar.appendChild(ctxSelect("Largeur", "width", items, [["auto", "Largeur auto"], ["100%", "Toute la largeur"]]));
-      bar.appendChild(ctxAlign(items, "alignSelf", [["flex-start", "À gauche", "alignLeft"], ["center", "Centré", "alignCenter"], ["flex-end", "À droite", "alignRight"]]));
-      bar.appendChild(h("button", { type: "button", class: "pb-ctx-btn", onclick: function () { inspTab = "style"; styleState = "hover"; renderInspector(); renderContext(); } }, "Survol…"));
+      ctxGroup(bar, "Bouton", 3, [ctxColor("Fond du bouton", "backgroundColor", items), ctxLength("Arrondi", "borderRadius", items, 68), ctxSelect("Largeur", "width", items, [["auto", "Largeur auto"], ["100%", "Toute la largeur"]])]);
+      ctxGroup(bar, "Disposition", 4, [ctxAlign(items, "alignSelf", [["flex-start", "À gauche", "alignLeft"], ["center", "Centré", "alignCenter"], ["flex-end", "À droite", "alignRight"]])]);
+      ctxGroup(bar, "États", 3, [h("button", { type: "button", class: "pb-ctx-btn", onclick: function () { inspTab = "style"; styleState = "hover"; renderInspector(); renderContext(); } }, "Survol…")]);
     }
     if (it.type === "image") {
-      bar.appendChild(h("button", { type: "button", class: "pb-ctx-btn", disabled: lockedAny(items), onclick: function () { openMedia({ title: "Remplacer l'image", onPick: function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); } }); } }, icon("image"), "Remplacer"));
-      bar.appendChild(ctxSelect("Cadrage", "objectFit", items));
-      bar.appendChild(ctxSelect("Proportions", "aspectRatio", items));
-      bar.appendChild(ctxLength("Arrondi", "borderRadius", items, 56));
-      bar.appendChild(ctxSelect("Ombre", "boxShadow", items));
-      bar.appendChild(ctxLength("Largeur", "width", items, 64));
+      ctxGroup(bar, "Image", 1, [
+        h("button", { type: "button", class: "pb-ctx-btn", disabled: lockedAny(items), onclick: function () { openMedia({ title: "Remplacer l'image", onPick: function (m) { change(function () { var x = byId(it.id); x.props.src = m.path; if (m.alt && !x.props.alt) { x.props.alt = m.alt; delete x.props.decorative; } }); } }); } }, icon("image"), "Remplacer"),
+        ctxSelect("Cadrage", "objectFit", items), ctxSelect("Proportions", "aspectRatio", items)]);
+      ctxGroup(bar, "Forme et dimensions", 3, [ctxLength("Arrondi", "borderRadius", items, 68), ctxSelect("Ombre", "boxShadow", items), ctxLength("Largeur", "width", items, 72)]);
     }
     if (!isNode(it) || kidsOf(it)) {
-      bar.appendChild(ctxColor("Couleur de fond", "backgroundColor", items));
-      bar.appendChild(ctxLength("Intérieur haut", "paddingTop", items, 60));
-      bar.appendChild(ctxLength("Intérieur bas", "paddingBottom", items, 60));
-      if (kidsOf(it)) bar.appendChild(ctxLength("Écart entre enfants", "gap", items, 56));
-      if (it.type === "grid") bar.appendChild(ctxSelect("Colonnes", "columns", items, [1, 2, 3, 4, 5, 6].map(function (n) { return [n, n + " colonne" + (n > 1 ? "s" : "")]; })));
-      bar.appendChild(ctxLength("Largeur max.", "maxWidth", items, 70));
-      bar.appendChild(ctxSelect("Arrondi", "borderRadius", items, [["0", "Sans arrondi"], ["8px", "8 px"], ["12px", "12 px"], ["16px", "16 px"], ["24px", "24 px"]]));
+      ctxGroup(bar, "Fond", 2, [ctxColor("Couleur de fond", "backgroundColor", items)]);
+      ctxGroup(bar, "Espacement", 3, [ctxLength("Intérieur haut", "paddingTop", items, 72, "Int. haut"), ctxLength("Intérieur bas", "paddingBottom", items, 72, "Int. bas")].concat(kidsOf(it) ? [ctxLength("Écart entre enfants", "gap", items, 68, "Écart")] : []));
+      var dims = [];
+      if (it.type === "grid") dims.push(ctxSelect("Colonnes", "columns", items, [1, 2, 3, 4, 5, 6].map(function (n) { return [n, n + " colonne" + (n > 1 ? "s" : "")]; })));
+      dims.push(ctxLength("Largeur max.", "maxWidth", items, 92));
+      dims.push(ctxSelect("Arrondi", "borderRadius", items, [["0", "Sans arrondi"], ["8px", "8 px"], ["12px", "12 px"], ["16px", "16 px"], ["24px", "24 px"]]));
+      ctxGroup(bar, "Dimensions et forme", 4, dims);
     }
-    if (INLINE[it.type] && canWrite) bar.appendChild(h("button", { type: "button", class: "pb-ctx-btn", disabled: lockedDeep(it.id), onclick: function () { startEdit(it.id); } }, icon("edit"), "Écrire"));
+    if (ctxGroups.length) ctxMore(bar);
+    if (INLINE[it.type] && canWrite) ctxGroup(bar, "Édition", 0, [h("button", { type: "button", class: "pb-ctx-btn", disabled: lockedDeep(it.id), onclick: function () { startEdit(it.id); } }, icon("edit"), "Écrire")]).classList.add("pb-ctx-end");
   }
 
   // ---------- Édition directe dans le canevas ----------
