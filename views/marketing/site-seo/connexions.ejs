@@ -1,0 +1,20 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p>Chaque site a SA propre connexion Google : sa propriété Search Console ou GA4 et sa clé de compte de service, stockée chiffrée et jamais réaffichée. Sans configuration, l'état reste « Non connecté » : rien n'est affiché qui ne vienne de Google.</p></div>
+    <% [["search_console", "Adresse de la propriété", "property", "sc-domain:exemple.com ou https://www.exemple.com/"], ["analytics", "Identifiant de propriété GA4", "propertyId", "123456789"]].forEach((c) => { const base = c[0]; const stt = st[base]; %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="cx-<%= base %>"><h2 id="cx-<%= base %>"><%= names[base] %> — <%= stt.label %></h2>
+      <% if (stt.detail) { %><p class="field-hint"><%= stt.detail %></p><% } %>
+      <% if (canEdit) { %>
+      <form method="post" action="<%= space.base %>/seo/connexions/<%= base %>" class="mk-form" data-busy-form autocomplete="off">
+        <div class="field-group"><label for="cx-<%= base %>-p"><%= c[1] %></label><input id="cx-<%= base %>-p" name="<%= c[2] %>" value="<%= config[base][c[2]] || "" %>" maxlength="300" placeholder="<%= c[3] %>" required></div>
+        <div class="field-group"><label for="cx-<%= base %>-k">Clé du compte de service (contenu du fichier JSON)</label><textarea id="cx-<%= base %>-k" name="service_account" rows="4" spellcheck="false" autocomplete="off" placeholder="<%= stt.state === "connected" || stt.state === "not_verified" || stt.state === "error" ? "Laisser vide pour conserver la clé enregistrée" : "{ &quot;type&quot;: &quot;service_account&quot;, … }" %>"></textarea>
+          <small>Ajoutez l'adresse e-mail du compte de service comme utilisateur de la propriété (lecture seule) dans Google.</small></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer et vérifier</button></div>
+      </form>
+      <% if (stt.state !== "not_connected" && stt.state !== "config_required") { %>
+      <form method="post" action="<%= space.base %>/seo/connexions/<%= base %>" class="mk-actions"><button type="submit" name="action" value="tester" class="btn btn-outline btn-sm">Tester</button> <button type="submit" name="action" value="deconnecter" class="btn btn-outline btn-sm" data-confirm="Déconnecter ce site de Google ?">Déconnecter</button></form>
+      <% } %>
+      <% } %>
+    </section>
+    <% }) %>
+<%- include("../partials/bottom") %>

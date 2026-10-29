@@ -42,6 +42,7 @@ function normalizeTheme(input) {
   return theme;
 }
 
+const PAGE_SCHEMA_TYPES = ["WebPage", "AboutPage", "ContactPage", "CollectionPage", "ProfilePage", "ItemPage", "CheckoutPage", "SearchResultsPage"];
 // SEO propre à la page (le moteur SEO du site lit ces valeurs : voir phase 3)
 function normalizeSeo(input = {}) {
   const src = input && typeof input === "object" ? input : {};
@@ -59,6 +60,8 @@ function normalizeSeo(input = {}) {
   if (line(src.ogDescription, 200)) seo.ogDescription = line(src.ogDescription, 200);
   if (src.twitterCard === "summary" || src.twitterCard === "summary_large_image") seo.twitterCard = src.twitterCard;
   if (line(src.focusKeyword, 80)) seo.focusKeyword = line(src.focusKeyword, 80);
+  // Type de page des données structurées : sous-types de WebPage sans propriété obligatoire supplémentaire (le type par défaut reste WebPage)
+  if (PAGE_SCHEMA_TYPES.includes(src.schemaType) && src.schemaType !== "WebPage") seo.schemaType = src.schemaType;
   const ogImage = imageUrl(src.ogImage, "Image de partage");
   if (ogImage) seo.ogImage = ogImage;
   return seo;

@@ -29,6 +29,10 @@ const FIELDS = {
   org_postal_code: { group: "organization", label: "Code postal", type: "text", max: 12, default: "" },
   org_city: { group: "organization", label: "Ville", type: "text", max: 80, default: "" },
   org_country: { group: "organization", label: "Pays (code à 2 lettres)", type: "text", max: 2, default: "", help: "Exemple : FR, BE, CA, CH." },
+  org_hours: { group: "organization", label: "Horaires d'ouverture", type: "multiline", max: 600, default: "", help: "SEO local (type « LocalBusiness » uniquement). Une plage par ligne : « Lun-Ven 09:00-18:00 », « Sam 10:00-13:00 ». Un jour sans ligne est fermé." },
+  org_lat: { group: "organization", label: "Latitude", type: "text", max: 14, default: "", help: "Coordonnées GPS de l'établissement (ex. 48.8566) — LocalBusiness uniquement, avec la longitude." },
+  org_lng: { group: "organization", label: "Longitude", type: "text", max: 14, default: "", help: "Ex. 2.3522." },
+  org_locations: { group: "organization", label: "Autres établissements", type: "multiline", max: 3000, default: "", help: "Un lieu par ligne : Nom | Rue | Code postal | Ville | Pays | Téléphone | Horaires (facultatif, plages séparées par « ; »). 10 au plus." },
   social_profiles: { group: "organization", label: "Profils sociaux officiels", type: "urls", max: 10, default: [], help: "Une adresse https par ligne (Facebook, Instagram, LinkedIn, YouTube, X…). Uniquement vos vrais profils." },
 
   catalogue_title: { group: "templates", label: "Catalogue : titre", type: "template", max: 70, vars: ["site_name"], required: true, default: "Toutes les formations" },
@@ -69,7 +73,7 @@ const get = (key) => all()[key];
 // R8 lot 6 — Réglages PROPRES À UN SITE. Règle de résolution, déterministe : valeur enregistrée pour ce site → valeur neutre ou par défaut prévue ci-dessous.
 // JAMAIS le réglage global (celui du site principal) pour l'identité, la marque ou les règles d'un autre site : nom, description, image de partage, organisation, logo, profils sociaux et règles robots.
 // Seuls des formats techniques (séparateur, modèle de titre, langue, type d'organisation) retombent sur le défaut du champ — jamais sur la valeur choisie pour le site principal.
-const SITE_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "default_social_image", "org_type", "org_name", "org_logo", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country", "robots_custom"];
+const SITE_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "default_social_image", "org_type", "org_name", "org_logo", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country", "org_hours", "org_lat", "org_lng", "org_locations", "robots_custom"];
 const NEUTRAL = { default_description: "", default_social_image: "", org_name: "", org_logo: "", org_description: "", social_profiles: [], robots_custom: "" };
 const siteCache = new Map();
 const siteRows = (siteId) => { try { return db.prepare("SELECT key, value FROM seo_site_settings WHERE site_id = ?").all(siteId); } catch (e) { if (/no such table/i.test(e.message)) return []; throw e; } };
@@ -121,6 +125,8 @@ function validate(key, raw, opts = {}) {
   if (f.type === "multiline") {
     const v = String(raw ?? "").replace(/\r\n?/g, "\n").split("\n").map((l) => l.trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
     if (v.length > f.max) return { error: `${f.label} : ${f.max} caractères au plus.` };
+    if (key === "org_hours") { const e = require("./local").parseHours(v).errors; if (e.length) return { error: e[0] }; }
+    if (key === "org_locations") { const e = require("./local").parseLocations(v).errors; if (e.length) return { error: e[0] }; }
     if (key === "robots_custom") { const problems = require("./robots").check(v).filter((x) => x.level === "error"); if (problems.length) return { error: `${f.label} : ${problems.map((x) => x.message).join(" ")}` }; }
     return { value: v };
   }
@@ -132,6 +138,7 @@ function validate(key, raw, opts = {}) {
   }
   if (f.required && !value && !(opts.site && key === "default_description")) return { error: `${f.label} : obligatoire.` };
   if (value.length > f.max) return { error: `${f.label} : ${f.max} caractères au plus.` };
+  if ((key === "org_lat" || key === "org_lng") && value && !/^-?\d{1,3}([.,]\d{1,8})?$/.test(value)) return { error: `${f.label} : nombre décimal attendu (ex. 48.8566).` };
   if (f.type === "template") {
     const unknown = unknownVariables(value, f.vars);
     if (unknown.length) return { error: `${f.label} : variable inconnue ${unknown.map((v) => `{${v}}`).join(", ")} (autorisées : ${f.vars.map((v) => `{${v}}`).join(", ")}).` };

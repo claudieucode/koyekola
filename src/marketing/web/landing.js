@@ -68,7 +68,7 @@ function contentFromBody(b, sections, working) {
   return {
     sections, title: b.title, description: b.description,
     theme: b.theme_accent === undefined ? working.theme : { accent: b.theme_accent, background: b.theme_background, text: b.theme_text },
-    seo: { ...working.seo, canonical: b.seo_canonical, ogImage: b.seo_og_image },
+    seo: { ...working.seo, canonical: b.seo_canonical, ogImage: b.seo_og_image, schemaType: b.seo_schema_type === undefined ? (working.seo || {}).schemaType : b.seo_schema_type },
   };
 }
 

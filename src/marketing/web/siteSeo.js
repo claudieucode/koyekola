@@ -9,10 +9,14 @@ const settings = require("../../seo/settings");
 const redirects = require("../../seo/redirects");
 const notfound = require("../../seo/notfound");
 const tools = require("../../seo/siteTools");
+const transfer = require("../../seo/transfer");
+const linkSuggestions = require("../../seo/linkSuggestions");
+const rankings = require("../../seo/rankings");
+const integrations = require("../../seo/integrations");
 
 const BASE = nav.BASE;
 // Réglages qu'un site peut modifier depuis son espace (les images passent par les réglages d'identité du site ; les clés restantes de SITE_KEYS sont gérées par l'équipe)
-const FORM_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "org_type", "org_name", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country", "robots_custom"];
+const FORM_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "org_type", "org_name", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country", "org_hours", "org_lat", "org_lng", "org_locations", "robots_custom"];
 
 // Le site de la requête : celui de l'adresse, vérifié ; sinon refus (jamais un repli)
 function spaceOf(req, res) {
@@ -42,7 +46,7 @@ module.exports = () => {
   // Chaque rubrique ne modifie QUE ses propres réglages (liste fermée) ; le site vient de l'adresse vérifiée
   const GROUPS = {
     meta: ["site_name", "title_separator", "title_template", "default_description"],
-    schema: ["org_type", "org_name", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country"],
+    schema: ["org_type", "org_name", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country", "org_hours", "org_lat", "org_lng", "org_locations"],
     "open-graph": ["og_locale"],
   };
   const render = (req, res, mode, title, extra = {}) => res.render("marketing/site-seo/" + mode, { active: mode === "overview" ? "seo" : `seo/${mode === "notfound" ? "404" : mode}`, title, mode, space: req.seoSpace, note: note(req.seoSpace),
@@ -282,7 +286,7 @@ module.exports = () => {
   };
   router.post(`${P}/redirections`, (req, res) => {
     if (!guardWrite(req, res, "redirects.create") || !externalOk(req, res, req.body.target)) return;
-    const r = redirects.createForSite(req.seoSpace.siteId, { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note }, req.session.user.id); // le « site » du formulaire n'est jamais lu
+    const r = redirects.createForSite(req.seoSpace.siteId, { source: req.body.source, target: req.body.target, status: req.body.status, matchType: req.body.match_type, note: req.body.note }, req.session.user.id); // le « site » du formulaire n'est jamais lu
     if (!r.ok) flashError(req, r.errors.join(" ")); else flashOk(req, "Redirection créée.");
     res.redirect(back(req, "/redirections"));
   });
@@ -296,7 +300,7 @@ module.exports = () => {
   });
   router.post(`${P}/redirections/:rid(\\d+)`, (req, res) => {
     if (!guardWrite(req, res, "redirects.edit") || !externalOk(req, res, req.body.target)) return;
-    const r = redirects.updateForSite(req.seoSpace.siteId, Number(req.params.rid), { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note, enabled: req.body.enabled === "1" ? "1" : "0" }, req.session.user.id);
+    const r = redirects.updateForSite(req.seoSpace.siteId, Number(req.params.rid), { source: req.body.source, target: req.body.target, status: req.body.status, matchType: req.body.match_type, note: req.body.note, enabled: req.body.enabled === "1" ? "1" : "0" }, req.session.user.id);
     if (!r.ok) flashError(req, r.errors.join(" ")); else flashOk(req, "Redirection enregistrée.");
     res.redirect(back(req, "/redirections"));
   });
@@ -304,6 +308,96 @@ module.exports = () => {
     if (!guardWrite(req, res, "redirects.delete")) return;
     if (redirects.removeForSite(req.seoSpace.siteId, Number(req.params.rid), req.session.user.id)) flashOk(req, "Redirection supprimée."); else flashError(req, "Redirection introuvable.");
     res.redirect(back(req, "/redirections"));
+  });
+  // ---------- Export / import des réglages SEO, import Rank Math / Yoast ----------
+  // Le fichier ne désigne jamais le site : tout s'applique au site de l'adresse vérifiée.
+  const sendJson = (res, name, data) => res.set({ "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" }).send(JSON.stringify(data, null, 2));
+  router.get(`${P}/seo/transfert`, need("seo.view"), (req, res) => render(req, res, "transfert", "Export et import SEO", { report: null, kind: null }));
+  router.get(`${P}/seo/transfert/export.json`, need("seo.view"), (req, res) => sendJson(res, `seo-site-${sid(req)}.json`, transfer.exportScope(sid(req))));
+  router.post(`${P}/seo/transfert/import`, need("seo.edit"), (req, res) => {
+    if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses réglages ne peuvent pas être modifiés."); return res.redirect(back(req, "/seo/transfert")); }
+    const dryRun = req.body.apply !== "1";
+    const report = transfer.importScope(sid(req), String(req.body.json || "").slice(0, 400000), req.session.user.id, { dryRun, allowExternal: req.mk.can("redirects.external") });
+    render(req, res, "transfert", "Export et import SEO", { report, kind: "json" });
+  });
+  router.post(`${P}/seo/transfert/wordpress`, need("seo.edit"), (req, res) => {
+    if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses pages ne peuvent pas être modifiées."); return res.redirect(back(req, "/seo/transfert")); }
+    const dryRun = req.body.apply !== "1";
+    let report;
+    try { report = transfer.importWordPress(sid(req), String(req.body.table || "").slice(0, 400000), req.session.user.id, { dryRun, ctx: req.mk.ctx }); } catch (e) { report = { ok: false, errors: [e.message] }; }
+    render(req, res, "transfert", "Export et import SEO", { report, kind: "wordpress" });
+  });
+
+  // ---------- Suggestions de liens internes ----------
+  router.get(`${P}/seo/liens-internes`, need("seo.view"), (req, res) => {
+    const pageId = /^\d+$/.test(String(req.query.page || "")) ? Number(req.query.page) : null;
+    render(req, res, "liens-internes", "Liens internes", { v: linkSuggestions.forSite(sid(req), { pageId }), pageId });
+  });
+
+  // ---------- Suivi de positionnement ----------
+  router.get(`${P}/seo/positions`, need("seo.view"), (req, res) => render(req, res, "positions", "Suivi de positionnement", { v: rankings.summary(sid(req), { q: String(req.query.q || "") }), sources: rankings.SOURCES, gsc: integrations.status(integrations.scoped("search_console", sid(req))), search: String(req.query.q || "") }));
+  const rankGuard = (req, res) => { if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses mesures ne peuvent pas être modifiées."); res.redirect(back(req, "/seo/positions")); return false; } return true; };
+  router.post(`${P}/seo/positions`, need("seo.edit"), (req, res) => {
+    if (!rankGuard(req, res)) return;
+    const r = rankings.add(sid(req), { keyword: req.body.keyword, url: req.body.url, position: req.body.position, date: req.body.date }, req.session.user.id);
+    if (!r.ok) flashError(req, r.errors.join(" ")); else flashOk(req, "Mesure enregistrée.");
+    res.redirect(back(req, "/seo/positions"));
+  });
+  router.post(`${P}/seo/positions/import`, need("seo.edit"), (req, res) => {
+    if (!rankGuard(req, res)) return;
+    const r = rankings.importGsc(sid(req), String(req.body.csv || "").slice(0, 400000), { date: req.body.date, userId: req.session.user.id });
+    if (!r.ok) flashError(req, r.errors.join(" ")); else if (r.errors.length) flashError(req, `${r.imported} mesure(s) importée(s) ; ${r.errors.length} ligne(s) refusée(s) : ${r.errors.slice(0, 3).join(" ")}`); else flashOk(req, `${r.imported} mesure(s) importée(s).`);
+    res.redirect(back(req, "/seo/positions"));
+  });
+  router.post(`${P}/seo/positions/api`, need("seo.edit"), async (req, res, next) => {
+    if (!rankGuard(req, res)) return;
+    try {
+      const r = await rankings.snapshotFromSearchConsole(sid(req), req.session.user.id);
+      flashOk(req, `${r.imported} requête(s) enregistrée(s) depuis Search Console.`);
+    } catch (e) {
+      if (e instanceof integrations.IntegrationError) flashError(req, e.message); else return next(e);
+    }
+    res.redirect(back(req, "/seo/positions"));
+  });
+  router.post(`${P}/seo/positions/:eid(\\d+)/supprimer`, need("seo.edit"), (req, res) => {
+    if (!rankGuard(req, res)) return;
+    if (rankings.remove(sid(req), Number(req.params.eid), req.session.user.id)) flashOk(req, "Mesure supprimée."); else flashError(req, "Mesure introuvable.");
+    res.redirect(back(req, "/seo/positions"));
+  });
+
+  // ---------- Connexions Search Console et GA4 propres au site ----------
+  // La clé du compte de service est chiffrée sous un nom propre au site et n'est jamais renvoyée au navigateur.
+  const gName = (req, base) => integrations.scoped(base, sid(req));
+  router.get(`${P}/seo/connexions`, need("seo.view"), (req, res) => {
+    const st = {};
+    const config = {};
+    for (const b of ["search_console", "analytics"]) { st[b] = integrations.status(gName(req, b)); config[b] = integrations.row(gName(req, b)).config; }
+    render(req, res, "connexions", "Search Console et Analytics", { st, config, names: integrations.NAMES });
+  });
+  router.post(`${P}/seo/connexions/:base(search_console|analytics)`, need("seo.edit"), async (req, res, next) => {
+    if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses connexions ne peuvent pas être modifiées."); return res.redirect(back(req, "/seo/connexions")); }
+    const base = req.params.base;
+    const name = gName(req, base);
+    const label = integrations.NAMES[base];
+    try {
+      if (req.body.action === "deconnecter") { integrations.disconnect(name, req.session.user.id); flashOk(req, `${label} déconnecté de ce site.`); return res.redirect(back(req, "/seo/connexions")); }
+      if (req.body.action === "tester") {
+        const t = base === "search_console" ? await integrations.testSearchConsole(sid(req)) : await integrations.testAnalytics(sid(req));
+        if (t.ok) flashOk(req, `${label} : connexion vérifiée auprès de Google.`); else flashError(req, `${label} : ${t.error}`);
+        return res.redirect(back(req, "/seo/connexions"));
+      }
+      const config = base === "search_console" ? { property: String(req.body.property || "").trim().slice(0, 300) } : { propertyId: String(req.body.propertyId || "").trim().slice(0, 40) };
+      if (base === "search_console" && !/^(sc-domain:[a-z0-9.-]+|https:\/\/[^\s"'<>]+)$/i.test(config.property)) throw new integrations.IntegrationError("Propriété Search Console : « sc-domain:exemple.com » ou une adresse https:// complète.");
+      if (base === "analytics" && !/^\d{3,20}$/.test(config.propertyId)) throw new integrations.IntegrationError("Identifiant de propriété GA4 : des chiffres uniquement.");
+      const keyText = String(req.body.service_account || "").trim();
+      if (keyText) integrations.parseServiceAccount(keyText);
+      integrations.saveConfig(name, keyText ? { config, secret: keyText } : { config }, req.session.user.id);
+      const t = base === "search_console" ? await integrations.testSearchConsole(sid(req)) : await integrations.testAnalytics(sid(req));
+      if (t.ok) flashOk(req, `${label} connecté à ce site : connexion vérifiée auprès de Google.`); else flashError(req, `Configuration enregistrée, mais la vérification a échoué : ${t.error}`);
+    } catch (e) {
+      if (e instanceof integrations.IntegrationError) flashError(req, e.message); else return next(e);
+    }
+    res.redirect(back(req, "/seo/connexions"));
   });
   return router;
 };
