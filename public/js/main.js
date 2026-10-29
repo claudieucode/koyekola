@@ -206,3 +206,92 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+
+// Agrandissement des images d'article (lightbox) : un bouton « Agrandir » posé par le serveur (bloc Image / Galerie, option « Agrandir au clic »).
+// Boîte de dialogue accessible : focus déplacé dedans puis rendu au bouton, Échap ferme, flèches pour passer d'une image à l'autre d'une galerie.
+(() => {
+  let box = null; let opener = null; let group = []; let index = 0;
+  const full = (img) => {
+    const set = (img.getAttribute("srcset") || "").split(",").map((x) => x.trim().split(/\s+/)).filter((x) => x[0]);
+    const best = set.sort((a, b) => parseInt(b[1], 10) - parseInt(a[1], 10))[0];
+    return (best && best[0]) || img.currentSrc || img.src;
+  };
+  function build() {
+    box = document.createElement("div");
+    box.className = "kb-lightbox"; box.hidden = true; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-label", "Image agrandie");
+    box.innerHTML = '<button type="button" class="kb-lightbox-close" aria-label="Fermer">×</button><button type="button" class="kb-lightbox-nav" data-dir="-1" aria-label="Image précédente">‹</button><figure><img alt=""><figcaption></figcaption></figure><button type="button" class="kb-lightbox-nav" data-dir="1" aria-label="Image suivante">›</button>';
+    document.body.append(box);
+    box.addEventListener("click", (e) => {
+      if (e.target.closest(".kb-lightbox-close") || e.target === box) return close();
+      const nav = e.target.closest(".kb-lightbox-nav");
+      if (nav) show(index + Number(nav.dataset.dir));
+    });
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.preventDefault(); close(); }
+      else if (e.key === "ArrowLeft") show(index - 1);
+      else if (e.key === "ArrowRight") show(index + 1);
+      else if (e.key === "Tab") { const f = [...box.querySelectorAll("button:not([hidden])")]; const first = f[0]; const last = f[f.length - 1]; if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } }
+    });
+  }
+  function show(i) {
+    if (!group.length) return;
+    index = (i + group.length) % group.length;
+    const fig = group[index].closest("figure");
+    const img = group[index].querySelector("img");
+    const view = box.querySelector("img");
+    view.src = full(img); view.alt = img.alt || "";
+    const cap = fig && fig.querySelector("figcaption");
+    box.querySelector("figcaption").textContent = cap ? cap.textContent : "";
+    for (const n of box.querySelectorAll(".kb-lightbox-nav")) n.hidden = group.length < 2;
+  }
+  function close() { box.hidden = true; document.documentElement.style.overflow = ""; if (opener) opener.focus(); }
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest(".kb-lightbox-trigger");
+    if (!trigger) return;
+    e.preventDefault();
+    if (!box) build();
+    opener = trigger;
+    const gallery = trigger.closest(".kb-gallery");
+    group = gallery ? [...gallery.querySelectorAll(".kb-lightbox-trigger")] : [trigger];
+    box.hidden = false; document.documentElement.style.overflow = "hidden";
+    show(group.indexOf(trigger));
+    box.querySelector(".kb-lightbox-close").focus();
+  });
+})();
+
+// Onglets d'article (bloc « Onglets ») : sans JavaScript chaque onglet est une section titrée ; ici ils deviennent de vrais onglets (rôles ARIA, flèches, Début, Fin).
+(() => {
+  document.querySelectorAll(".kb-tabs[data-tabs]").forEach((group, g) => {
+    const panels = [...group.querySelectorAll(":scope > .kb-tab-panel")];
+    if (panels.length < 2 || group.dataset.ready) return;
+    const list = document.createElement("div");
+    list.className = "kb-tablist"; list.setAttribute("role", "tablist");
+    const tabs = panels.map((panel, i) => {
+      const title = panel.querySelector(":scope > .kb-tab-title");
+      const tab = document.createElement("button");
+      tab.type = "button"; tab.setAttribute("role", "tab"); tab.id = `kb-tab-${g}-${i}`; tab.setAttribute("aria-controls", panel.id);
+      tab.textContent = title ? title.textContent : `Onglet ${i + 1}`;
+      panel.setAttribute("role", "tabpanel"); panel.setAttribute("aria-labelledby", tab.id); panel.tabIndex = 0;
+      list.append(tab);
+      return tab;
+    });
+    const select = (i, focus) => {
+      tabs.forEach((tab, k) => { const on = k === i; tab.setAttribute("aria-selected", String(on)); tab.tabIndex = on ? 0 : -1; panels[k].hidden = !on; });
+      if (focus) tabs[i].focus();
+    };
+    list.addEventListener("click", (e) => { const i = tabs.indexOf(e.target.closest('[role="tab"]')); if (i >= 0) select(i, false); });
+    list.addEventListener("keydown", (e) => {
+      const at = tabs.indexOf(document.activeElement);
+      if (at < 0) return;
+      const to = { ArrowRight: (at + 1) % tabs.length, ArrowLeft: (at - 1 + tabs.length) % tabs.length, Home: 0, End: tabs.length - 1 }[e.key];
+      if (to === undefined) return;
+      e.preventDefault(); select(to, true);
+    });
+    group.insertBefore(list, group.firstChild);
+    group.dataset.ready = "true";
+    // Un lien d'ancre vers un titre d'un onglet masqué ouvre cet onglet
+    const open = () => { const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1))); const panel = target && target.closest(".kb-tab-panel"); const i = panel ? panels.indexOf(panel) : -1; if (i >= 0 && group.contains(panel)) select(i, false); };
+    select(0, false); open();
+    window.addEventListener("hashchange", open);
+  });
+})();

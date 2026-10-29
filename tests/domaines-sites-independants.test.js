@@ -1,6 +1,7 @@
 // Domaines indépendants et publication multisite — audit ciblé (aucune modification du code applicatif).
 // Deux sites, deux domaines, un site principal : on vérifie ce qui EXISTE (routage par hôte, 421, isolation) et on documente par des tests
-// les ÉCARTS connus (marqués « ÉCART ») — ils décrivent le comportement actuel, à corriger par un lot ultérieur (voir le rapport).
+// les ÉCARTS connus (marqués « ÉCART »). TITAN XXXII : registre mk_site_domains, vérification de propriété, alias et adresse de plateforme, noms réservés refusés, formulaires isolés — voir tests/domaines-registre.test.js
+// (mode strict, comme la production) ; ici le mode « auto » des tests (adresse acceptée sans vérification) garde les anciens parcours intacts.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("http");
@@ -77,30 +78,30 @@ describe("domaines indépendants : deux sites, deux domaines, un principal", () 
   });
 
   // ---------- Écarts ----------
-  test("ÉCART 1 — aucune vérification de propriété : n'importe quelle adresse https est active dès l'enregistrement (aucun état, aucun contrôle DNS)", async () => {
+  test("MODE TEST — adresse acceptée sans vérification (en production : « à vérifier », rien n'est servi : voir domaines-registre.test.js) ; le domaine vit désormais dans un registre", async () => {
     const r = await setDomain(D, "https://domaine-sans-dns.example"); assert.equal(r.status, 200, "accepté sans vérification");
     const row = JSON.parse(one("SELECT settings FROM mk_sites WHERE id = ?", D).settings);
     assert.deepEqual(Object.keys(row.seo).filter((k) => /dns|verif|status|etat|https|ssl/i.test(k)), [], "aucun champ d'état de domaine");
     assert.equal((await get("domaine-sans-dns.example", "/")).status === 421, false, "servi tout de suite (la plateforme ne contrôle ni le DNS ni la propriété)");
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((t) => t.name).filter((n) => /domain|host/i.test(n));
-    console.log("   tables liées aux domaines :", tables.join(", "));
+    assert.ok(tables.includes("mk_site_domains"), "registre des domaines");
+    assert.equal(one("SELECT status FROM mk_site_domains WHERE host = 'domaine-sans-dns.example'").status, "verified", "mode test : vérifié d'office");
   });
-  test("ÉCART 2 — un seul domaine par site (pas de domaine principal désigné, pas de variantes www, pas de sous-domaine provisoire propre au site)", async () => {
+  test("www non enregistré : refusé (421) ; le domaine d'un site n'est plus une colonne de mk_sites mais une ligne du registre (alias www, domaine principal, adresse de plateforme : domaines-registre.test.js)", async () => {
     assert.equal((await get("www.a.test", "/")).status, 421, "www.<domaine du site> n'est ni redirigé ni servi");
     const cols = db.prepare("PRAGMA table_info(mk_sites)").all().map((c) => c.name);
     assert.deepEqual(cols.filter((c) => /domain|host|subdomain/i.test(c)), [], "aucune colonne de domaine dans mk_sites (le domaine vit dans settings.seo.publicUrl)");
   });
-  test("ÉCART 3 — un site peut déclarer l'hôte de la plateforme ou un hôte local comme « domaine » sans erreur ; il n'est jamais servi (le principal prime) mais l'enregistrement est silencieux", async () => {
+  test("hôte de la plateforme ou hôte local comme « domaine » : refusé avec une erreur explicite ; le site principal n'est jamais détourné", async () => {
     for (const url of ["https://k.test", "https://localhost"]) {
-      const r = await setDomain(D, url); console.log("   sonde domaine réservé", url, "→", r.status);
+      const r = await setDomain(D, url); assert.ok(r.status >= 400, `${url} doit être refusé (statut ${r.status})`);
       assert.equal((await get("k.test", "/")).status, 200, "le site principal n'est pas détourné");
     }
     await setDomain(D, "");
   });
-  test("ÉCART 4 — formulaires et inscriptions : l'hôte n'est pas contrôlé (le formulaire du site B répond sur le domaine du site A)", async () => {
+  test("CORRIGÉ — formulaires : celui du site B ne répond pas sur le domaine du site A (404) mais répond sur celui du site B", async () => {
     const onA = await get("a.test", "/f/form-b"); const onB = await get("b.test", "/f/form-b");
-    console.log("   /f/form-b sur a.test →", onA.status, "; sur b.test →", onB.status);
-    assert.equal(onB.status, 200); assert.equal(onA.status, 200, "ÉCART : servi aussi sur le domaine d'un autre site");
+    assert.equal(onB.status, 200); assert.equal(onA.status, 404, "le formulaire d'un autre site est introuvable sur ce domaine");
   });
   test("SÉPARATION — l'administration n'est pas servie comme vitrine d'un site : sur un domaine de site, /marketing exige la connexion (aucune session partagée entre hôtes)", async () => {
     const r = await get("a.test", "/marketing"); console.log("   /marketing sur a.test →", r.status, r.location || "");

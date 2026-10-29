@@ -25,7 +25,7 @@
   </div>
   <div class="bl-head-actions">
     <a href="/marketing/site-web/articles" class="btn btn-outline" title="Modification rapide, actions groupées, filtres par auteur, catégorie et mois">Gestion avancée</a>
-    <a href="/formateur/blog/nouveau" class="btn btn-primary"><%- icon('plus', { size: 16 }) %> Nouvel article</a>
+    <a href="<%= dash && dash.site && dash.site.ok ? dash.site.withSite("/formateur/blog/nouveau", dash.site.siteId) : "/formateur/blog/nouveau" %>" class="btn btn-primary"><%- icon('plus', { size: 16 }) %> Nouvel article</a>
   </div>
 </header>
 
@@ -70,7 +70,7 @@
         <a class="btn btn-outline btn-sm" href="<%= workspace.url({ tri: state.tri }) %>">Voir tous les articles</a>
       <% } else { %>
         <p><strong>Aucun article pour le moment.</strong> Rédigez le premier : il reste en brouillon tant que vous ne le publiez pas.</p>
-        <a class="btn btn-primary btn-sm" href="/formateur/blog/nouveau"><%- icon('plus', { size: 16 }) %> Rédiger le premier article</a>
+        <a class="btn btn-primary btn-sm" href="<%= dash && dash.site && dash.site.ok ? dash.site.withSite("/formateur/blog/nouveau", dash.site.siteId) : "/formateur/blog/nouveau" %>"><%- icon('plus', { size: 16 }) %> Rédiger le premier article</a>
       <% } %>
     </div>
   <% } else { %>

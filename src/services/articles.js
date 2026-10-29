@@ -34,7 +34,7 @@ const stateSql = {
   programmes: "p.deleted_at IS NULL AND p.status = 'scheduled'",
   // « Brouillons » = tout ce qui n'est ni en ligne ni programmé (brouillon, en relecture, archivé) ; le badge de la ligne précise
   brouillons: "p.deleted_at IS NULL AND p.status NOT IN ('published', 'scheduled')",
-  corbeille: "p.deleted_at IS NOT NULL",
+  corbeille: "p.deleted_at IS NOT NULL AND p.page_key IS NULL",
 };
 const PERIODS = { 7: 7, 30: 30, 90: 90, annee: null };
 const like = (q) => `%${String(q).replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -45,7 +45,7 @@ function counts(scope = null) {
       COALESCE(SUM(deleted_at IS NULL AND status = 'published'), 0) publies,
       COALESCE(SUM(deleted_at IS NULL AND status = 'scheduled'), 0) programmes,
       COALESCE(SUM(deleted_at IS NULL AND status NOT IN ('published', 'scheduled')), 0) brouillons,
-      COALESCE(SUM(deleted_at IS NOT NULL), 0) corbeille FROM posts p${scope ? " WHERE " + scope.sql : ""}`).get(...(scope ? scope.params : []));
+      COALESCE(SUM(deleted_at IS NOT NULL AND page_key IS NULL), 0) corbeille FROM posts p${scope ? " WHERE " + scope.sql : ""}`).get(...(scope ? scope.params : []));
   return { toutes: r.toutes, publies: r.publies, programmes: r.programmes, brouillons: r.brouillons, corbeille: r.corbeille };
 }
 
@@ -103,7 +103,8 @@ const authors = (scope = null) => db.prepare(`SELECT DISTINCT u.id, u.username F
 const categoryTree = (scope = null) => taxonomy.tree("category", scope); // catégories en arbre (profondeur) pour le filtre
 const tagList = (scope = null) => taxonomy.tree("tag", scope); // étiquettes du site (liste à plat) : modification rapide et actions groupées
 
-const get = (id) => (Number.isInteger(id) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(id) : null);
+// Une page du site (page_key) n'est pas un article : aucune action de la liste des articles (publier, corbeille, copie, suppression…) ne la voit
+const get = (id) => { const row = Number.isInteger(id) ? db.prepare("SELECT * FROM posts WHERE id = ?").get(id) : null; return row && !row.page_key ? row : null; };
 
 // Titre → article en brouillon (identifiant réel), prêt à s'ouvrir dans l'éditeur
 function createDraft({ title, userId, siteId = null }) {

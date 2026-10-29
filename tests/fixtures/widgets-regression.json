@@ -33,6 +33,10 @@
   "json": "3a544f9163d84a3f2f80762a57e258461417a501",
   "css": "de8c954cf47b99d7a35c144cc718029bc54d886c"
  },
+ "beforeafter": {
+  "json": "88e9a8d6a2545ce08d4e23dc5426238c07f86cd4",
+  "css": "10890c265353aa85f549a4ee9226984a8f2ab05c"
+ },
  "breadcrumb": {
   "json": "e5787b80761a617b2093dc3c7ace4ff78e9ce780",
   "css": "3e987d183608c097918ba7455829c5af957c7442"
@@ -183,6 +187,10 @@
  },
  "map": {
   "error": "077eff4a78c934e47be5e4a4156c535358bcf57e"
+ },
+ "marquee": {
+  "json": "3b18ff4bc45f6404835945b1d433877daefd1b29",
+  "css": "8439d68d5fcb17b7789802fc9fa7c18e9cd750a8"
  },
  "mediacarousel": {
   "json": "438935f5c107d0f13cd8fe2680d132c16a4d75df",

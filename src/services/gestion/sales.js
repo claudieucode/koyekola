@@ -2,14 +2,17 @@
 // Paiement : le site enregistre les commandes avec un paiement SIMULÉ (aucun prestataire connecté) — aucune transaction
 // bancaire ni remboursement n'existe donc à afficher ; l'interface le dit sans rien inventer.
 const db = require("../../config/database");
+const siteScope = require("../siteScope");
+// Portée de site (courses.site_id ; NULL = site principal) : toute lecture du Centre de gestion est limitée aux formations du site actif
+const L = (siteId, alias) => siteScope.lit(siteId, alias);
 const { paginate, page, likeOf, cleanQ, isYmd, parisDayStart, addDays, sqlUtc } = require("./common");
 
 const ORDER_SORTS = { recent: "o.created_at DESC, o.id DESC", ancien: "o.created_at ASC, o.id ASC", montant: "amount DESC, o.id DESC", "montant-asc": "amount ASC, o.id ASC" };
 
 // Commandes contenant au moins une formation du formateur ; montant = part du formateur (lignes de ses formations)
-function listOrders(instructorId, query = {}) {
+function listOrders(instructorId, query = {}, siteId = null) {
   const q = cleanQ(query.q);
-  const where = ["c.instructor_id = ?"], args = [instructorId];
+  const where = ["c.instructor_id = ?" + L(siteId, "c") + ""], args = [instructorId];
   if (q) {
     const num = /^#?\d+$/.test(q) ? Number(q.replace("#", "")) : null;
     where.push(`(${num ? "o.id = ? OR " : ""}u.username LIKE ? ESCAPE '\\' OR u.email LIKE ? ESCAPE '\\' OR c.title LIKE ? ESCAPE '\\' OR o.coupon_code LIKE ? ESCAPE '\\')`);
@@ -33,11 +36,11 @@ function listOrders(instructorId, query = {}) {
 }
 
 // Détail : uniquement si la commande contient une formation du formateur ; lignes des autres formateurs masquées
-function getOrder(instructorId, id) {
+function getOrder(instructorId, id, siteId = null) {
   const order = db.prepare(`SELECT o.*, u.username, u.email, u.created_at AS user_created_at FROM orders o JOIN users u ON u.id = o.user_id WHERE o.id = ?
-    AND EXISTS (SELECT 1 FROM order_items oi JOIN courses c ON c.id = oi.course_id WHERE oi.order_id = o.id AND c.instructor_id = ?)`).get(id, instructorId);
+    AND EXISTS (SELECT 1 FROM order_items oi JOIN courses c ON c.id = oi.course_id WHERE oi.order_id = o.id AND c.instructor_id = ?${L(siteId, "c")})`).get(id, instructorId);
   if (!order) return null;
-  const items = db.prepare(`SELECT oi.*, c.title, c.slug, c.id AS course_id, c.instructor_id = ? AS mine,
+  const items = db.prepare(`SELECT oi.*, c.title, c.slug, c.id AS course_id, (c.instructor_id = ?${L(siteId, "c")}) AS mine,
       (SELECT created_at FROM enrollments e WHERE e.user_id = ? AND e.course_id = c.id) AS enrolled_at,
       (SELECT COUNT(*) FROM lessons l JOIN sections s ON s.id = l.section_id WHERE s.course_id = c.id) AS lessons,
       (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN sections s ON s.id = l.section_id WHERE s.course_id = c.id AND lp.user_id = ?) AS done
@@ -49,8 +52,8 @@ function getOrder(instructorId, id) {
   return { order, items: mine, otherItems: items.length - mine.length, myAmount: mine.reduce((s, i) => s + i.price_cents, 0), stripePaid: Boolean(paid), refunds, refundedCents: refunds.reduce((n, r) => n + r.amount_cents, 0) };
 }
 
-function myCourses(instructorId) {
-  return db.prepare("SELECT id, title, price_cents FROM courses WHERE instructor_id = ? ORDER BY title COLLATE NOCASE").all(instructorId);
+function myCourses(instructorId, siteId = null) {
+  return db.prepare(`SELECT id, title, price_cents FROM courses WHERE instructor_id = ?${L(siteId)} ORDER BY title COLLATE NOCASE`).all(instructorId);
 }
 
 // ---------- Codes promo ----------

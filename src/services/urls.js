@@ -63,6 +63,10 @@ function isTaken(type, slug, exceptId = null) {
 }
 
 // ---------- Domaines des sites ----------
+// Mode « auto » (tests seulement) : l'ancienne adresse des réglages sert encore, et un domaine saisi est accepté sans vérification de propriété. Actif uniquement sous NODE_ENV=test ou
+// dans un test lancé par « node --test » (NODE_TEST_CONTEXT, jamais défini en production), sauf KOLAKISA_DOMAIN_VERIFY=strict. En production : toujours strict.
+const legacyDomains = () => (process.env.NODE_ENV === "test" || Boolean(process.env.NODE_TEST_CONTEXT)) && process.env.KOLAKISA_DOMAIN_VERIFY !== "strict";
+let legacyBackfillTried = false;
 let sitesCache = null;
 let sitesAt = 0;
 const TTL = 5000; // secondes : un changement d'adresse publique est aussi invalidé tout de suite (invalidateSites)
@@ -72,19 +76,40 @@ function loadSites() {
   const byId = new Map();
   const retired = new Set(); // domaines d'un site archivé ou supprimé (et repris par aucun site actif)
   try {
+    // Domaines VÉRIFIÉS du registre (mk_site_domains) : seule source des hôtes servis. Le canonique vient en premier (ORDER BY).
+    const registry = new Map();
+    let haveTable = true;
+    try {
+      for (const d of db.prepare("SELECT site_id, host FROM mk_site_domains WHERE status = 'verified' ORDER BY is_canonical DESC, id").all()) { if (!registry.has(d.site_id)) registry.set(d.site_id, []); registry.get(d.site_id).push(d.host); }
+    } catch (error) { if (!/no such table/i.test(error.message)) throw error; haveTable = false; }
+    // Filet de sécurité : si la reprise des domaines existants (au démarrage) n'a pas pu aboutir, le registre est vide alors que des sites ont une adresse enregistrée : on la rejoue une fois
+    // (idempotente) plutôt que de laisser tous les sites à domaine propre répondre 421.
+    if (haveTable && registry.size === 0 && !legacyBackfillTried) {
+      legacyBackfillTried = true;
+      try {
+        if (require("./siteDomains").backfillLegacy(db)) {
+          for (const d of db.prepare("SELECT site_id, host FROM mk_site_domains WHERE status = 'verified' ORDER BY is_canonical DESC, id").all()) { if (!registry.has(d.site_id)) registry.set(d.site_id, []); registry.get(d.site_id).push(d.host); }
+        }
+      } catch { /* la reprise sera retentée au prochain démarrage */ }
+    }
+    // NODE_ENV=test « auto » (voir services/siteDomains.js) : l'ancienne adresse des réglages sert encore si le site n'a aucune ligne au registre
+    const legacyOk = !haveTable || legacyDomains();
     for (const s of db.prepare("SELECT id, organization_id, name, status, home_page_id, settings, deleted_at FROM mk_sites").all()) {
       let conf = {};
       try { conf = JSON.parse(s.settings || "{}"); } catch { conf = {}; }
-      let base = "";
-      let host = "";
-      const url = conf.seo && conf.seo.publicUrl;
-      if (url) { try { const u = new URL(url); if (u.protocol === "https:") { base = u.origin; host = u.hostname.toLowerCase(); } } catch { /* adresse invalide : ignorée */ } }
+      let hosts = registry.get(s.id) || [];
+      if (!hosts.length && legacyOk) {
+        const url = conf.seo && conf.seo.publicUrl;
+        if (url) { try { const u = new URL(url); if (u.protocol === "https:") hosts = [u.hostname.toLowerCase()]; } catch { /* adresse invalide : ignorée */ } }
+      }
+      const host = hosts[0] || "";
+      const base = host ? `https://${host}` : "";
       const rd = conf.reading || {};
       const front = rd.showOnFront === "posts" ? "posts" : "page";
-      const info = { id: s.id, name: s.name, active: s.status === "active" && !s.deleted_at, homePageId: front === "posts" ? null : s.home_page_id, front, postsPage: Number.isInteger(rd.postsPage) ? rd.postsPage : null, postsPerPage: Number.isInteger(rd.postsPerPage) && rd.postsPerPage >= 1 && rd.postsPerPage <= 50 ? rd.postsPerPage : 10, feedItems: Number.isInteger(rd.feedItems) && rd.feedItems >= 1 && rd.feedItems <= 50 ? rd.feedItems : 20, feedContent: rd.feedContent === "full" ? "full" : "excerpt", base, host, noindex: Boolean(conf.extras && conf.extras.noindex) };
+      const info = { id: s.id, name: s.name, active: s.status === "active" && !s.deleted_at, homePageId: front === "posts" ? null : s.home_page_id, front, postsPage: Number.isInteger(rd.postsPage) ? rd.postsPage : null, postsPerPage: Number.isInteger(rd.postsPerPage) && rd.postsPerPage >= 1 && rd.postsPerPage <= 50 ? rd.postsPerPage : 10, feedItems: Number.isInteger(rd.feedItems) && rd.feedItems >= 1 && rd.feedItems <= 50 ? rd.feedItems : 20, feedContent: rd.feedContent === "full" ? "full" : "excerpt", base, host, hosts, noindex: Boolean(conf.extras && conf.extras.noindex) };
       byId.set(s.id, info);
-      if (host && info.active && !byHost.has(host)) byHost.set(host, info);
-      else if (host && !info.active) retired.add(host);
+      if (info.active) { for (const h of hosts) if (!byHost.has(h)) byHost.set(h, info); }
+      else for (const h of hosts) retired.add(h);
     }
     for (const h of byHost.keys()) retired.delete(h); // un domaine repris par un site actif n'est plus « retiré »
   } catch (error) { if (!/no such (table|column)/i.test(error.message)) throw error; }
@@ -148,7 +173,24 @@ function publicUrl(req, type, row, opts = {}) {
 // Sur le domaine principal ne restent que les contenus historiques (sans rattachement) ET ceux d'un site SANS domaine : tant que la forme d'adresse d'un site sans domaine n'est pas
 // décidée (B1 : non servi / B2 : préfixe), ils restent servis exactement comme avant — aucune adresse publique existante ne disparaît.
 const TYPE_TABLE = { post: "posts", term: "taxonomy_terms" };
+// Lot : pendant `withBatchCache(fn)` (synchrone), les rattachements d'un type de contenu se lisent en UNE requête au lieu d'une par contenu
+// (plan du site : 2 000 articles = 4 000 requêtes). Le cache n'existe que le temps de l'appel : jamais de donnée périmée d'une requête à l'autre.
+let batchCache = null;
+function withBatchCache(fn) {
+  if (batchCache) return fn();
+  batchCache = new Map();
+  try { return fn(); } finally { batchCache = null; }
+}
 function attachedSite(type, id) {
+  if (batchCache) {
+    let byId = batchCache.get(type);
+    if (!byId) {
+      byId = new Map();
+      try { for (const r of db.prepare("SELECT content_id, site_id, address FROM mk_content_sites WHERE content_type = ?").all(type)) byId.set(r.content_id, { site_id: r.site_id, address: r.address }); } catch { /* table absente : aucun rattachement */ }
+      batchCache.set(type, byId);
+    }
+    return byId.get(id) || null;
+  }
   try { const r = db.prepare("SELECT site_id, address FROM mk_content_sites WHERE content_type = ? AND content_id = ?").get(type, id); return r || null; } catch { return null; }
 }
 // Site qui sert ce contenu sur son domaine, ou null (domaine principal)
@@ -349,8 +391,8 @@ wireTaxonomyEvents();
 
 module.exports = {
   RESERVED, isReserved, normalizeSlug, checkSlug, uniqueSlug, isTaken,
-  siteForHost, isRetiredHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost,
+  siteForHost, isRetiredHost, siteInfo, invalidateSites, cacheInfo, mainHost, normHost, legacyDomains,
   pagePath, pageCanonicalPath, baseOfPage, publicPath, publicUrl,
-  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, attachedSite, addressOf, contentScope, resolvePost, resolveTerm,
+  resolve, cleanPath, movedLocation, movedTarget, publicHomeOf, attachedSite, withBatchCache, addressOf, contentScope, resolvePost, resolveTerm,
   slugChanged, slugMovedTo, historyOf, purgeHistory,
 };

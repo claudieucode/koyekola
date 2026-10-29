@@ -10,11 +10,12 @@
 .app-rail-sep { height: 1px; margin: 6px 12px; background: currentColor; opacity: 0.15; }
 .app-rail-link { position: relative; display: grid; place-items: center; width: 40px; height: 40px; margin: 0 12px; border: 0; border-radius: 10px; background: none; color: inherit; cursor: pointer; opacity: 0.78; text-decoration: none; transition: background 160ms ease, opacity 160ms ease; }
 .app-rail-link:hover { opacity: 1; background: var(--dash-hover, rgba(255, 255, 255, 0.08)); }
-.app-rail-link[aria-current="true"] { opacity: 1; background: var(--dash-active-bg, rgba(255, 255, 255, 0.12)); color: var(--dash-active-text, #fff); }
+/* Rubrique active : même langage que le menu du module (fond teinté de l'accent + liseré + barre), adapté à la forme compacte. Une seule rubrique est active (aria-current). */
+.app-rail-link[aria-current="true"] { opacity: 1; background: color-mix(in srgb, var(--dash-accent, #0b83c6) 30%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dash-accent, #0b83c6) 62%, transparent); color: var(--dash-active-text, #fff); }
+.app-rail-link[aria-current="true"]:hover { background: color-mix(in srgb, var(--dash-accent, #0b83c6) 38%, transparent); }
 .app-rail-link[aria-current="true"]::before { content: ""; position: absolute; left: -12px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 3px 3px 0; background: var(--dash-accent, #0b83c6); }
-/* Centre de gestion : présence un peu plus marquée (fond teinté + liseré intérieur, sans changer la taille ni l'emplacement) */
-.app-rail-link[data-tip="Centre de gestion"]:not([aria-current="true"]) { opacity: 1; background: color-mix(in srgb, var(--dash-accent, #0b83c6) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dash-accent, #0b83c6) 28%, transparent); }
-.app-rail-link[data-tip="Centre de gestion"]:not([aria-current="true"]):hover { background: color-mix(in srgb, var(--dash-accent, #0b83c6) 26%, transparent); }
+/* Centre de gestion : repérable sans ressembler à une rubrique active (pas de fond : seule l'icône prend la couleur d'accent) */
+.app-rail-link[data-tip="Centre de gestion"]:not([aria-current="true"]) { opacity: 1; color: color-mix(in srgb, var(--dash-accent, #0b83c6) 70%, #fff); }
 .app-rail-link:focus-visible, .app-rail-brand:focus-visible { outline: 2px solid var(--dash-accent, #0b83c6); outline-offset: 2px; }
 .app-rail-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--dash-accent, #0b83c6); box-shadow: 0 0 0 2px var(--dash-sidebar, #0b2538); }
 .app-rail-foot { display: grid; gap: 2px; padding-top: 8px; border-top: 1px solid var(--dash-border, rgba(255, 255, 255, 0.08)); }

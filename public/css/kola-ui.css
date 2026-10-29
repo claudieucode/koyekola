@@ -37,12 +37,12 @@
   --muted: #5a6b80;
   /* Fonctionnelles */
   --success: #1a7a35; --success-dark: #14612a; --success-light: #e4f5e9;
-  --danger: #c8202c; --danger-light: #fdeaec;
+  --danger: #c8202c; --danger-light: #fdecea;
   --warning-bg: #fff6dd; --warning-text: #6a4a00;
   --k-info-bg: #eef6fd; --k-info-bd: #cfe4f5; --k-info-fg: #0b4f7a;
   --k-ok-bg: #eef8f1; --k-ok-bd: #cdebd6; --k-ok-fg: #14612a;
   --k-warn-bg: #fff8e6; --k-warn-bd: #f1dfa8; --k-warn-fg: #6a4a00;
-  --k-err-bg: #fff1f2; --k-err-bd: #f6ccd1; --k-err-fg: #9b1620;
+  --k-err-bg: #fef1ef; --k-err-bd: #f6ccd1; --k-err-fg: #9b1620;
   /* Jetons de l'espace d'administration (--mk-*) */
   --mk-bg: var(--bg);
   --mk-surface: #ffffff;

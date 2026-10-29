@@ -247,7 +247,13 @@ describe("manipulation directe sur le canevas (navigateur)", { skip: SKIP }, () 
   });
 
   test("performance : geste de poignée fluide sur une page de 300 éléments (aucune image > 50 ms), survol léger, rien d'enregistré pendant le geste", async () => {
-    const many = Array.from({ length: 296 }, (_, i) => ({ id: `hh${String(i).padStart(10, "0")}`, type: "heading", props: { text: `Titre ${i}`, level: 3 } }));
+    // GESTE_MIXTE=1 : les 296 éléments sont de vrais widgets variés du catalogue (au lieu de titres) pour mesurer leur coût sur le geste
+    const nodesApi = require("../src/marketing/pages/nodes"), { creatable, OVER, EXTRA } = require("./widgets-helpers");
+    const pool = creatable.filter((x) => !nodesApi.NODE_TYPES[x].container);
+    // GESTE_TYPE=<type> : les 296 éléments sont tous de ce type (pour repérer un widget coûteux)
+    const many = process.env.GESTE_MIXTE || process.env.GESTE_TYPE
+      ? Array.from({ length: 296 }, (_, i) => { const t = process.env.GESTE_TYPE || pool[i % pool.length], b = nodesApi.PALETTE[t].blank(); return { id: `hh${String(i).padStart(10, "0")}`, type: t, props: { ...(b.props || {}), ...(OVER[t] || {}) }, ...(t === "menuanchor" ? { anchor: `ancre-${i}` } : EXTRA[t] || {}) }; })
+      : Array.from({ length: 296 }, (_, i) => ({ id: `hh${String(i).padStart(10, "0")}`, type: "heading", props: { text: `Titre ${i}`, level: 3 } }));
     await putDraft({ sections: [{ id: "sect00000001", type: "layout", children: [{ id: "cont00000099", type: "container", children: [kid(1), kid(2), kid(3)], styles: { desktop: { display: "flex", flexDirection: "column", gap: "24px" } } }, { id: "cont00000098", type: "container", children: many }] }] });
     await open(); await select("cont00000099");
     await page.evaluate(() => { window.__fr = []; let last = performance.now(); window.__stop = false; const tick = (t) => { window.__fr.push(t - last); last = t; if (!window.__stop) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });

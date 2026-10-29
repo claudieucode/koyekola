@@ -14,6 +14,27 @@ export const LOCKABLE_TYPES = topNames(); // dérivé du registre central (src/s
 const LOCK_META = "kbLockChange";
 export const lockKey = new PluginKey("kbBlockLock");
 
+// Verrous partiels : identités des blocs dont la suppression / le déplacement est verrouillé
+function partialLocks(doc) {
+  const out = { remove: [], move: [] };
+  doc.descendants((n) => { const a = n.attrs; if (a && a.blockId) { if (a.lockRemove) out.remove.push(a.blockId); if (a.lockMove) out.move.push(a.blockId); } return true; });
+  return out;
+}
+// Pour chaque bloc identifié : son parent (identité ou « doc ») et l'ordre de ses frères identifiés
+function blockMap(doc) {
+  const map = new Map();
+  const visit = (parent, parentId) => {
+    const ids = [];
+    parent.forEach((child) => { if (child.attrs && child.attrs.blockId) ids.push(child.attrs.blockId); });
+    parent.forEach((child) => {
+      const id = child.attrs && child.attrs.blockId;
+      if (id) map.set(id, { parent: parentId, siblings: ids });
+      visit(child, id || parentId);
+    });
+  };
+  visit(doc, "doc");
+  return map;
+}
 // Blocs verrouillés d'un document : liste de nœuds (dans l'ordre)
 // Blocs verrouillés à TOUS les niveaux (colonnes, groupes, encadrés…) : un bloc imbriqué est protégé comme un bloc de premier niveau
 const lockedNodes = (doc) => { const out = []; doc.descendants((n) => { if (n.attrs && n.attrs.locked) out.push(n); return true; }); return out; };
@@ -30,6 +51,17 @@ export const BlockLock = Extension.create({
           parseHTML: (el) => el.getAttribute("data-locked") === "true",
           renderHTML: (attrs) => (attrs.locked ? { "data-locked": "true" } : {}),
         },
+        // Verrous partiels (comme Gutenberg) : « déplacement » et « suppression » se verrouillent séparément du contenu
+        lockMove: {
+          default: false,
+          parseHTML: (el) => el.getAttribute("data-lock-move") === "true",
+          renderHTML: (attrs) => (attrs.lockMove ? { "data-lock-move": "true" } : {}),
+        },
+        lockRemove: {
+          default: false,
+          parseHTML: (el) => el.getAttribute("data-lock-remove") === "true",
+          renderHTML: (attrs) => (attrs.lockRemove ? { "data-lock-remove": "true" } : {}),
+        },
       },
     }];
   },
@@ -41,13 +73,31 @@ export const BlockLock = Extension.create({
       filterTransaction(tr, state) {
         if (!tr.docChanged || tr.getMeta(LOCK_META)) return true;
         const before = lockedNodes(state.doc);
-        if (!before.length) return true;
+        const partial = partialLocks(state.doc);
+        if (!before.length && !partial.remove.length && !partial.move.length) return true;
         const after = lockedNodes(tr.doc);
         const pool = [...after];
         for (const n of before) {
           const i = pool.findIndex((m) => m.eq(n));
-          if (i === -1) { options.onBlocked(); return false; }
+          if (i === -1) { options.onBlocked("locked"); return false; }
           pool.splice(i, 1);
+        }
+        if (partial.remove.length || partial.move.length) {
+          const next = blockMap(tr.doc);
+          // Suppression verrouillée : le bloc (même identité) doit rester dans l'article
+          for (const id of partial.remove) if (!next.has(id)) { options.onBlocked("remove"); return false; }
+          // Déplacement verrouillé : même parent, et l'ordre relatif avec les blocs voisins qui existaient déjà ne change pas
+          const prev = blockMap(state.doc);
+          for (const id of partial.move) {
+            const a = prev.get(id); const b = next.get(id);
+            if (!a || !b) continue; // supprimé : relève du verrou de suppression
+            if (a.parent !== b.parent) { options.onBlocked("move"); return false; }
+            const common = new Set(b.siblings);
+            const was = a.siblings.filter((x) => common.has(x));
+            const nowIds = new Set(a.siblings);
+            const is = b.siblings.filter((x) => nowIds.has(x));
+            if (was.join("|") !== is.join("|")) { options.onBlocked("move"); return false; }
+          }
         }
         return true;
       },
@@ -74,7 +124,28 @@ export function setLocked(editor, pos, locked) {
   editor.view.dispatch(tr);
   return true;
 }
+// Verrouillage détaillé d'un bloc : { locked (contenu), lockMove, lockRemove, inner (appliquer aussi aux blocs internes) }
+export function setLockState(editor, pos, { locked = false, lockMove = false, lockRemove = false, inner = false } = {}) {
+  const node = editor.state.doc.nodeAt(pos);
+  if (!node || !LOCKABLE_TYPES.includes(node.type.name)) return false;
+  const tr = editor.state.tr;
+  tr.setNodeMarkup(pos, undefined, { ...node.attrs, locked, lockMove, lockRemove });
+  if (inner) {
+    node.descendants((child, offset) => {
+      if (LOCKABLE_TYPES.includes(child.type.name) || child.type.name === "kbColumn") {
+        const at = pos + 1 + offset;
+        if (child.attrs && "locked" in child.attrs) tr.setNodeMarkup(tr.mapping.map(at), undefined, { ...child.attrs, locked, lockMove, lockRemove });
+      }
+      return true;
+    });
+  }
+  tr.setMeta(LOCK_META, true);
+  tr.setMeta("addToHistory", false);
+  editor.view.dispatch(tr);
+  return true;
+}
 export const isLocked = (node) => Boolean(node && node.attrs && node.attrs.locked);
+export const lockSummary = (node) => (node && node.attrs ? [node.attrs.locked && "contenu", node.attrs.lockMove && "déplacement", node.attrs.lockRemove && "suppression"].filter(Boolean) : []);
 
 // ---------- Rechercher / remplacer ----------
 export const findKey = new PluginKey("kbFind");

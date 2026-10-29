@@ -4,6 +4,7 @@
 const db = require("../config/database");
 const crypto = require("crypto");
 const { removeUploadedFile } = require("../utils/uploads");
+const postColumns = require("../utils/postColumns");
 const fs = require("fs");
 const path = require("path");
 const { uploadsRoot } = require("../config/paths");
@@ -25,7 +26,27 @@ const MAX_TAGS = 10;
 // Robots (moteurs, aperçus de liens, outils) : leurs visites ne comptent pas comme des lectures
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|curl|wget|python|java\/|headless|monitor|lighthouse/i;
 
-const textOf = (post) => (post.content_format === "html" ? blogPlainText(post.content) : post.content);
+// Texte brut d'un article (passe par l'assainissement HTML complet : 1,4 ms pour un article de 7 Ko). Gardé en mémoire, clé = article + date
+// de modification + taille du contenu en octets : toute modification change la clé. Borné (≈ 40 Mo de texte) ; en dehors du cache, le calcul reste
+// identique à l'ancien. La recherche du blog lit ce texte pour chaque article publié : sans cache, 1,8 s à 2 000 articles.
+const PLAIN_CACHE_MAX_CHARS = 40 * 1024 * 1024;
+const plainCache = new Map(); // clé → texte brut (ordre d'insertion = ordre d'ancienneté)
+let plainCacheChars = 0;
+function cachedPlain(key, compute) {
+  const hit = plainCache.get(key);
+  if (hit !== undefined) return hit;
+  const text = compute();
+  plainCache.set(key, text); plainCacheChars += text.length;
+  while (plainCacheChars > PLAIN_CACHE_MAX_CHARS && plainCache.size > 1) { const [oldKey, oldText] = plainCache.entries().next().value; plainCache.delete(oldKey); plainCacheChars -= oldText.length; }
+  return text;
+}
+const textOf = (post) => {
+  if (post.content_format !== "html") return post.content;
+  if (!post.id || !post.updated_at) return blogPlainText(post.content);
+  const bytes = post.content_bytes != null ? post.content_bytes : Buffer.byteLength(String(post.content || ""));
+  return cachedPlain(`${post.id}:${post.updated_at}:${bytes}`, () => blogPlainText(post.content));
+};
+const clearPlainCache = () => { plainCache.clear(); plainCacheChars = 0; };
 const excerptOf = (post) => post.excerpt || plainText(textOf(post), 160);
 
 // « Vidéo, montage , vidéo » → ["Vidéo", "montage"] (sans doublon, sans vide, 10 au plus, 40 caractères chacune)
@@ -74,8 +95,9 @@ function similar(post, limit = 3, scope = null) {
   const tags = new Set(parseTags(post.tags).map(slugify));
   const category = slugify(post.category || "");
   const scored = db
-    .prepare(`SELECT * FROM posts WHERE published = 1 AND id != ?${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT 200`)
+    .prepare(`SELECT ${postColumns.listColumns()} FROM posts WHERE published = 1 AND id != ?${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT 200`)
     .all(post.id, ...(scope ? scope.params : []))
+    .map(postColumns.withLazyContent)
     .map((p) => {
       let score = 0;
       if (category && slugify(p.category || "") === category) score += 3;
@@ -122,11 +144,15 @@ function courseCard(slug) {
 }
 
 // Rendu public : Markdown (anciens articles) ou texte riche de l'éditeur
-function renderPost(post, { newsletterHtml = null } = {}) {
+function renderPost(post, { newsletterHtml = null, allowCustomHtml = true } = {}) {
   const imageSize = (src) => db.prepare("SELECT width, height FROM media WHERE path = ?").get(String(src || ""));
-  if (post.content_format === "html") return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, fileSize: (src) => (db.prepare("SELECT size FROM media WHERE path = ?").get(String(src || "")) || {}).size, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id, post.id ? (require("./siteContent").siteOf(db, "post", post.id) ?? null) : null) });
+  if (post.content_format === "html") {
+    // Blocs dynamiques (derniers articles, catégories, archives…) : données limitées au site de l'article (src/services/blogWidgets.js)
+    const widgets = require("./blogWidgets").forPost(post, { excerptOf });
+    return renderBlogHtml(post.content, { courseCard, newsletterHtml, tocDepth: [2, 3, 4].includes(post.toc_depth) ? post.toc_depth : 3, imageSize, imageVariants, fileSize: (src) => (db.prepare("SELECT size FROM media WHERE path = ?").get(String(src || "")) || {}).size, widgets, allowCustomHtml, reusableHtml: (id) => require("./reusableBlocks").syncedHtml(id, post.id ? (require("./siteContent").siteOf(db, "post", post.id) ?? null) : null) });
+  }
   const r = renderArticle(post.content, { courseCard });
-  return { ...r, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
+  return { ...r, pages: null, toc: post.toc_depth === 2 ? r.toc.filter((t) => t.level === 2) : r.toc, faq: [], howto: [], links: [] };
 }
 
 // ---------- Statuts et programmation ----------
@@ -395,7 +421,8 @@ function countView(post, req) {
   if (!post.published) return;
   if (req.session.user && req.session.user.role === "formateur") return;
   if (BOT.test(String(req.get("user-agent") || "")) || !req.get("user-agent")) return;
-  db.prepare("UPDATE posts SET views = views + 1 WHERE id = ?").run(post.id);
+  const id = post.id;
+  require("../utils/writeBehind").defer(() => db.prepare("UPDATE posts SET views = views + 1 WHERE id = ?").run(id)); // compteur d'audience : écriture groupée (src/utils/writeBehind.js)
 }
 
 // ---------- Commentaires : moteur générique (src/services/comments.js) ; ces fonctions gardent l'API historique ----------
@@ -422,7 +449,7 @@ function imageVariants(src) {
 module.exports = {
   imageVariants,
   listComments, countComments, getComment, deleteComment, COMMENT_MAX,
-  STATUSES, parseTags, excerptOf, textOf, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
+  STATUSES, parseTags, excerptOf, textOf, clearPlainCache, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
   popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled, uniqueSlug,
   addRevision, describeChange, revisionKind, revisionFingerprint, listRevisions, countRevisions, getRevision, metaOf, revisionImages, releaseImage, REVISION_META, RESTORED_META, REVISION_KINDS, MAX_REVISIONS, getAutosave, setAutosave, clearAutosave,
   listMedia, addMedia, getMedia, mediaByPath, updateMedia, mediaUsage, imageReferences, searchLinks, suggestLinks, PAGES,

@@ -77,6 +77,59 @@ describe("éditeur d'articles — accessibilité et performance (navigateur)", {
     await page.context().close();
   });
 
+  test("accessibilité des écrans ajoutés : réglages de style, widgets, HTML personnalisé, verrouillage, guide, notes de bas de page, fil d'Ariane, aperçu au survol", async () => {
+    const page = await open();
+    const found = [];
+    const scan = async (label) => { for (const p of await page.evaluate(audit)) found.push(`${label} : ${p}`); };
+    await page.evaluate(() => {
+      const ed = document.querySelector(".ProseMirror").editor;
+      ed.commands.setContent([
+        { type: "paragraph", content: [{ type: "text", text: "Texte avec note" }, { type: "kbFootnote", attrs: { note: "Une note" } }] },
+        { type: "kbLatest", attrs: { count: "3", view: "grid", date: "true" } }, { type: "kbSocial", attrs: { links: "facebook=https://facebook.com/x", size: "m" } }, { type: "kbToc", attrs: { depth: "3" } },
+        { type: "kbRss", attrs: { url: "https://exemple.org/feed.xml", count: "5" } }, { type: "kbSearch", attrs: {} }, { type: "kbHtml", attrs: { code: "<p>x</p>" } }, { type: "kbNextPage" },
+        { type: "kbColumns", attrs: { layout: "custom" }, content: [{ type: "kbColumn", attrs: { basis: "30" }, content: [{ type: "paragraph" }] }, { type: "kbColumn", content: [{ type: "paragraph" }] }] },
+        { type: "kbGroup", attrs: { layout: "grid", gridcols: "2" }, content: [{ type: "paragraph" }] }, { type: "kbSpacer", attrs: { size: "m", px: "60" } },
+        { type: "kbCover", attrs: { src: "/uploads/thumbnails/a.png", alt: "x", pos: "bl", fx: "25" }, content: [{ type: "paragraph" }] }, { type: "orderedList", attrs: { ltype: "lower-roman" }, content: [{ type: "listItem", content: [{ type: "paragraph" }] }] },
+        { type: "blockquote", attrs: { cite: "Auteur" }, content: [{ type: "paragraph" }] }, { type: "table", attrs: { footer: true }, content: [{ type: "tableRow", content: [{ type: "tableCell", content: [{ type: "paragraph" }] }] }] },
+        { type: "paragraph", attrs: { fw: "bold", bgc: "#ffeedd", lh: "airy" }, content: [{ type: "text", text: "Réglé" }] },
+      ]);
+    });
+    await page.click('[data-sidebar-tab="bloc"]');
+    const count = await page.evaluate(() => document.querySelector(".ProseMirror").editor.state.doc.childCount);
+    for (let i = 0; i < count; i++) {
+      await page.evaluate((k) => { const ed = document.querySelector(".ProseMirror").editor; let at = -1, n = 0; ed.state.doc.forEach((node, pos) => { if (n++ === k) at = pos; }); try { ed.commands.setNodeSelection(at); } catch { ed.commands.setTextSelection(at + 1); } }, i);
+      await page.waitForTimeout(100);
+      // tous les groupes de réglages de style sont dépliés : chaque champ doit avoir son libellé
+      await page.evaluate(() => document.querySelectorAll('[data-panel-style] > h2 > button[aria-expanded="false"]').forEach((b) => b.click()));
+      await scan(`réglages du bloc ${i}`);
+    }
+    // fil d'Ariane
+    assert.ok(await page.locator("nav[data-breadcrumb][aria-label]").count(), "le fil d'Ariane est une navigation nommée");
+    await scan("fil d'Ariane");
+    // boîtes de dialogue
+    await page.evaluate(() => { const ed = document.querySelector(".ProseMirror").editor; ed.commands.setTextSelection(2); ed.view.focus(); });
+    await page.mouse.move(1300, 520);
+    await page.locator('[data-block-toolbar] button[aria-label="Options"], [data-top-toolbar] button[aria-label="Options"]').first().click();
+    await page.getByRole("menuitem", { name: /Options de verrouillage/ }).click();
+    await scan("verrouillage"); await page.keyboard.press("Escape"); await page.waitForSelector("dialog", { state: "detached" });
+    await page.evaluate(() => document.querySelector(".ProseMirror").editor.view.focus());
+    await page.mouse.move(1300, 540);
+    await page.locator('[data-block-toolbar] button[aria-label="Options"], [data-top-toolbar] button[aria-label="Options"]').first().click();
+    await page.getByRole("menuitem", { name: /Modifier en HTML/ }).click();
+    await scan("modifier en HTML"); await page.keyboard.press("Escape"); await page.waitForSelector("dialog", { state: "detached" });
+    await page.click("[data-options-toggle]");
+    await page.getByRole("menuitem", { name: "Guide de bienvenue" }).click();
+    await scan("guide de bienvenue"); await page.keyboard.press("Escape"); await page.waitForSelector("dialog", { state: "detached" });
+    // aperçu au survol : décoratif, jamais focalisable ni annoncé deux fois
+    await page.click("[data-toggle-inserter]");
+    await page.locator(".wp-block-type", { hasText: "Citation" }).first().hover();
+    assert.equal(await page.locator(".wp-block-preview").getAttribute("aria-hidden"), "true");
+    assert.equal(await page.locator(".wp-block-preview a, .wp-block-preview button, .wp-block-preview input").count(), 0);
+    const unique = [...new Set(found)];
+    assert.deepEqual(unique, [], unique.join("\n"));
+    await page.context().close();
+  });
+
   test("clavier : la vue en liste se parcourt et déplace un bloc (Alt+flèches), le menu du bloc s'ouvre et se ferme au clavier", async () => {
     const page = await open();
     await page.evaluate(() => document.querySelector(".ProseMirror").editor.commands.setContent("<p>Alpha</p><p>Beta</p><p>Gamma</p>"));

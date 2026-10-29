@@ -71,19 +71,19 @@ html[data-kola-theme="dark"] .mk-body .mk-seg [aria-current="page"], html[data-k
 .mk-body .mk-viewtoggle .is-on, .mk-body .mk-viewtoggle [aria-current="true"], .mk-body .mk-viewtoggle [aria-pressed="true"] { background: var(--mk-selected); color: var(--accent); }
 
 /* ===== 3. Contrôles : cases à cocher, boutons fendus, menus d'actions, interrupteur ===== */
-.mk-content input[type=checkbox]:not(.mk-switch-input), .mk-content input[type=radio] {
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch), .mk-content input[type=radio] {
   appearance: none; -webkit-appearance: none; flex: none; width: 18px; height: 18px; margin: 0; padding: 0; vertical-align: middle; background: var(--mk-surface);
   border: 1.5px solid var(--field-border); cursor: pointer; transition: background var(--k-dur-fast), border-color var(--k-dur-fast), box-shadow var(--k-dur-fast);
 }
-.mk-content input[type=checkbox]:not(.mk-switch-input) { border-radius: 5px; }
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch) { border-radius: 5px; }
 .mk-content input[type=radio] { border-radius: 50%; }
-.mk-content input[type=checkbox]:not(.mk-switch-input):hover, .mk-content input[type=radio]:hover { border-color: var(--accent); }
-.mk-content input[type=checkbox]:not(.mk-switch-input):checked, .mk-content input[type=checkbox]:not(.mk-switch-input):indeterminate { background-color: var(--k-accent-solid); border-color: var(--k-accent-solid); }
-.mk-content input[type=checkbox]:not(.mk-switch-input):checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size: 100% 100%; }
-.mk-content input[type=checkbox]:not(.mk-switch-input):indeterminate { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8h8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E"); background-size: 100% 100%; }
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch):hover, .mk-content input[type=radio]:hover { border-color: var(--accent); }
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch):checked, .mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch):indeterminate { background-color: var(--k-accent-solid); border-color: var(--k-accent-solid); }
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch):checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size: 100% 100%; }
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch):indeterminate { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8h8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E"); background-size: 100% 100%; }
 .mk-content input[type=radio]:checked { border-color: var(--k-accent-solid); background-image: radial-gradient(circle, var(--k-accent-solid) 0 4.5px, transparent 5.5px); }
-.mk-content input[type=checkbox]:not(.mk-switch-input):disabled, .mk-content input[type=radio]:disabled { opacity: 0.45; cursor: not-allowed; }
-.mk-content input[type=checkbox]:not(.mk-switch-input):focus-visible, .mk-content input[type=radio]:focus-visible { outline: none; box-shadow: var(--mk-focus); border-color: var(--accent); }
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch):disabled, .mk-content input[type=radio]:disabled { opacity: 0.45; cursor: not-allowed; }
+.mk-content input[type=checkbox]:not(.mk-switch-input):not(.mk-fx-switch):focus-visible, .mk-content input[type=radio]:focus-visible { outline: none; box-shadow: var(--mk-focus); border-color: var(--accent); }
 /* Interrupteur (case à cocher présentée comme une bascule) : <label class="mk-switch"><input class="mk-switch-input" type="checkbox"><span class="mk-switch-ui"></span>…</label> */
 .mk-switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.9rem; }
 .mk-switch-input { position: absolute; opacity: 0; width: 1px; height: 1px; }

@@ -412,7 +412,7 @@
   function erase(p) { var a = S.annot; var n = a.shapes.length; a.shapes = a.shapes.filter(function (s) { return !near(s, p); }); if (a.shapes.length !== n) drawAnnot(); }
   function drawAnnot() {
     var a = S.annot; if (!a) return; var c = a.canvas, g = c.getContext("2d"), b = frameBox(), k = b.k;
-    g.clearRect(0, 0, c.width, c.height); g.lineWidth = 3; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#e11d48"; g.fillStyle = "#e11d48"; g.font = "600 15px system-ui, sans-serif";
+    g.clearRect(0, 0, c.width, c.height); g.lineWidth = 3; g.lineCap = "round"; g.lineJoin = "round"; g.strokeStyle = "#dc2626"; g.fillStyle = "#dc2626"; g.font = "600 15px system-ui, sans-serif";
     a.shapes.concat(a.cur ? [a.cur] : []).forEach(function (s) {
       var P = s.pts.map(function (q) { return { x: q.x * k, y: q.y * k }; });
       g.beginPath();

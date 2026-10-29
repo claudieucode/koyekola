@@ -1,0 +1,138 @@
+/* Funnel Studio (Marketing → Tunnels) : liste de gestion + espace d'un tunnel.
+   Structure : celle de systeme.io (docs/KOLAKISA_FUNNEL_STUDIO_REFERENCE.md) ; finition : design system Kolakisa (--mk-*, --accent*).
+   Mouvement : couleurs et opacité seulement, jamais de dimensions ; coupé par prefers-reduced-motion.
+   Cette feuille est chargée avant kola-compose.css : les règles qui écrasent .kx-* montent en spécificité (.fs …). */
+
+.fs, .fs-ws { --fs-dur: 140ms; --fs-ease: var(--kx-ease, cubic-bezier(0.2, 0, 0, 1)); min-width: 0; }
+.fs { display: grid; gap: 16px; width: 100%; max-width: none; }
+
+/* ---- Barre de titre (liste) ---- */
+.fs-bar { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.fs-bar-main { min-width: 0; flex: 1 1 420px; }
+.fs-bar h1 { margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.fs-sub { margin: 6px 0 0; max-width: 70ch; color: var(--mk-text-soft); font-size: 0.93rem; line-height: 1.55; }
+
+/* Bouton « Créer » : action principale mais discrète (même langage que le bouton de la barre latérale : teinte bleu azur, 36 px, sans ombre) */
+.fs-create { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px 0 12px; border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 11%, var(--mk-surface)); color: var(--accent-dark, var(--accent)); font: inherit; font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: background-color var(--fs-dur) var(--fs-ease), border-color var(--fs-dur) var(--fs-ease); }
+.fs-create:hover { background: color-mix(in srgb, var(--accent) 20%, var(--mk-surface)); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.fs-create:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fs-create .icon { stroke-width: 2.2; }
+
+/* ---- Barre d'outils : onglets + recherche + filtre ---- */
+.fs-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.fs-toolbar .mk-tabs { margin: 0; }
+.fs-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fs-search { position: relative; display: inline-flex; align-items: center; }
+.fs-search svg { position: absolute; left: 11px; color: var(--muted); pointer-events: none; }
+.fs-search input { width: min(280px, 100%); min-height: 36px; padding: 6px 12px 6px 34px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: var(--mk-surface); color: var(--mk-text); font: inherit; font-size: 0.9rem; transition: border-color var(--fs-dur) var(--fs-ease), box-shadow var(--fs-dur) var(--fs-ease); }
+.fs-select select { min-height: 36px; padding: 6px 32px 6px 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background-color: var(--mk-surface); color: var(--mk-text); font: inherit; font-size: 0.9rem; transition: border-color var(--fs-dur) var(--fs-ease), box-shadow var(--fs-dur) var(--fs-ease); }
+.fs-search input:focus, .fs-select select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* ---- Liste de gestion ---- */
+.fs-table { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--mk-r); }
+.fs-row { display: grid; grid-template-columns: minmax(0, 2.6fr) 72px 92px 104px 104px minmax(130px, 1fr) 44px; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--mk-border); transition: background-color var(--fs-dur) var(--fs-ease); }
+[data-fs-list] .fs-row:last-child { border-bottom: 0; }
+.fs-row-head { padding-block: 10px; background: var(--mk-hover); border-radius: var(--mk-r) var(--mk-r) 0 0; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.fs-card:hover { background: color-mix(in srgb, var(--accent) 4%, var(--mk-surface)); }
+.fs-card[hidden] { display: none; }
+.fs-num { text-align: right; font-variant-numeric: tabular-nums; }
+.fs-cell-name { display: grid; gap: 2px; min-width: 0; }
+.fs-cell-name > a { font-weight: 700; color: var(--mk-text); text-decoration: none; overflow-wrap: anywhere; }
+.fs-cell-name > a:hover { color: var(--accent-dark, var(--accent)); text-decoration: underline; }
+.fs-meta { font-size: 0.78rem; color: var(--muted); overflow-wrap: anywhere; }
+.fs-meta code { font-size: 0.95em; background: none; padding: 0; color: var(--mk-text-soft); }
+.fs-act { display: flex; justify-content: flex-end; }
+.fs-nomatch { margin: 4px 2px; }
+.fs-nomatch[hidden] { display: none; }
+.fs-empty { margin: 0; }
+
+/* « Bientôt » : repère sobre, identique partout */
+.fs-soon { display: inline-flex; align-items: center; padding: 1px 7px; border: 1px solid var(--mk-border); border-radius: 999px; font-size: 0.68rem; font-weight: 600; color: var(--muted); background: var(--mk-surface); white-space: nowrap; }
+.mk-menu .fs-menu-item { justify-content: space-between; cursor: default; color: var(--mk-text-soft); }
+.mk-menu .fs-menu-item[aria-disabled="true"]:hover { background: transparent; }
+
+/* État de publication (liste et espace du tunnel) */
+.fs-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; color: var(--mk-text-soft); background: var(--mk-hover); }
+.fs-badge.is-live { color: var(--accent-dark, var(--accent)); background: var(--accent-light); }
+.fs-badge.is-part { color: var(--accent-dark, var(--accent)); background: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, var(--mk-border)); }
+
+/* ---- Fenêtre de création : nom, site, quatre types ---- */
+.fs-dialog { width: min(640px, calc(100vw - 24px)); }
+.fs-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.fs-types legend { padding: 0; margin-bottom: 8px; font-weight: 600; }
+.fs-type { position: relative; display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: var(--mk-surface); cursor: pointer; transition: border-color var(--fs-dur) var(--fs-ease), background-color var(--fs-dur) var(--fs-ease); }
+.fs-type input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.fs-type:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--mk-border)); }
+.fs-type:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--mk-surface)); box-shadow: 0 0 0 1px var(--accent); }
+.fs-type:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fs-type.is-off { opacity: 0.6; cursor: not-allowed; }
+.fs-type.is-off input { cursor: not-allowed; }
+.fs-type-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--accent-dark, var(--accent)); background: var(--accent-light); }
+.fs-type-text { display: grid; gap: 3px; min-width: 0; }
+.fs-type-text strong { font-size: 0.95rem; }
+.fs-more { margin-top: 12px; }
+.fs-more summary { cursor: pointer; font-weight: 600; color: var(--mk-text-soft); }
+
+/* ---- Espace d'un tunnel ---- */
+.fs-crumb { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; font-size: 0.86rem; color: var(--muted); }
+.fs-crumb a { display: inline-flex; align-items: center; gap: 4px; color: var(--mk-text-soft); text-decoration: none; }
+.fs-crumb a:hover { color: var(--accent-dark, var(--accent)); text-decoration: underline; }
+.fs-crumb [aria-current] { color: var(--mk-text); font-weight: 600; overflow-wrap: anywhere; }
+.fs-head h1 { font-size: 1.65rem; }
+.fs-head .mk-inline-form select { max-width: 200px; text-overflow: ellipsis; }
+.mk-builder-title { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+
+.fs-ws { display: grid; gap: 16px; }
+.fs-ws-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--mk-border); }
+.fs-ws-tabs [role="tab"] { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--mk-text-soft); font: inherit; font-size: 0.93rem; font-weight: 600; cursor: pointer; transition: color var(--fs-dur) var(--fs-ease), border-color var(--fs-dur) var(--fs-ease); }
+.fs-ws-tabs [role="tab"]:hover { color: var(--mk-text); }
+.fs-ws-tabs [role="tab"][aria-selected="true"] { color: var(--accent-dark, var(--accent)); border-bottom-color: var(--accent); }
+.fs-ws-tabs [role="tab"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+.fs-count { padding: 0 7px; border-radius: 999px; font-size: 0.72rem; background: var(--mk-hover); color: var(--mk-text-soft); }
+
+/* Un seul panneau visible à la fois (piloté par data-active) ; sans JavaScript, tout reste affiché (voir <noscript> dans la vue) */
+.fs-ws[data-active="steps"] > [data-fs-panel]:not([data-fs-panel="steps"]),
+.fs-ws[data-active="stats"] > [data-fs-panel]:not([data-fs-panel="stats"]),
+.fs-ws[data-active="auto"] > [data-fs-panel]:not([data-fs-panel="auto"]),
+.fs-ws[data-active="settings"] > [data-fs-panel]:not([data-fs-panel="settings"]) { display: none; }
+
+/* Étapes : menu de gauche (parcours + « Ajouter une étape »), étapes à droite */
+.fs-steps-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; align-items: start; }
+.fs-steps-main { min-width: 0; }
+.fs-rail { position: sticky; top: 12px; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--mk-border); border-radius: var(--mk-r); background: var(--mk-surface); }
+.fs-rail-title { margin: 0; padding: 0 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.fs-rail-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+/* marketing.css (l. 2011) souligne et colore les liens des <li> avec une spécificité de (0,4,1) : on la dépasse pour que le menu de gauche reste un menu */
+.mk-content .fs-ws .mk-panel li a.fs-rail-item:not(.btn) { text-decoration: none; color: var(--mk-text); }
+.mk-content .fs-ws .mk-panel li a.fs-rail-item:not(.btn):hover { color: var(--mk-text); }
+.fs-rail-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; color: var(--mk-text); text-decoration: none; transition: background-color var(--fs-dur) var(--fs-ease); }
+.fs-rail-item:hover { background: var(--mk-hover); }
+.fs-rail-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fs-rail-num { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 0.76rem; font-weight: 700; color: var(--accent-dark, var(--accent)); background: var(--accent-light); }
+.fs-rail-text { display: grid; min-width: 0; flex: 1 1 auto; }
+.fs-rail-text strong { font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-rail-text span { font-size: 0.76rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--mk-border); }
+.fs-rail-item.is-live .fs-dot { background: var(--accent); }
+.fs-rail-item.is-problem .fs-dot { background: var(--warning, #d97706); }
+.fs-rail-empty { margin: 0; padding: 0 4px; font-size: 0.85rem; color: var(--muted); }
+.fs-ws .mk-panel a.fs-rail-add { text-decoration: none; color: var(--accent-dark, var(--accent)); }
+.fs-rail-add { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; border: 1px dashed color-mix(in srgb, var(--accent) 50%, var(--mk-border)); border-radius: 10px; color: var(--accent-dark, var(--accent)); font-size: 0.88rem; font-weight: 600; text-decoration: none; transition: background-color var(--fs-dur) var(--fs-ease); }
+.fs-rail-add:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.fs-rail-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- Responsive : la zone de travail reste pleine largeur, rien ne déborde ---- */
+@media (max-width: 1100px) { .fs-steps-layout { grid-template-columns: minmax(0, 1fr); } .fs-rail { position: static; } .fs-rail-list { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } }
+@media (max-width: 900px) {
+  .fs-row-head { display: none; }
+  .fs-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+  .fs-row > .fs-cell-name { grid-column: 1; }
+  .fs-row > .fs-act { grid-column: 2; grid-row: 1; }
+  .fs-row > [data-label] { grid-column: 1 / -1; display: inline-flex; gap: 6px; text-align: left; font-size: 0.86rem; }
+  .fs-row > [data-label]::before { content: attr(data-label) " : "; color: var(--muted); }
+}
+@media (max-width: 640px) { .fs-types { grid-template-columns: minmax(0, 1fr); } .fs-bar h1 { font-size: 1.6rem; } .fs-search, .fs-search input, .fs-select, .fs-select select, .fs-tools { width: 100%; } .fs-ws-tabs { overflow-x: auto; flex-wrap: nowrap; } .fs-ws-tabs [role="tab"] { white-space: nowrap; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-create, .fs-search input, .fs-select select, .fs-row, .fs-type, .fs-ws-tabs [role="tab"], .fs-rail-item, .fs-rail-add { transition: none; }
+}

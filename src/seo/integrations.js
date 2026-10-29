@@ -47,6 +47,17 @@ const SCOPES = { search_console: "https://www.googleapis.com/auth/webmasters.rea
 const NAMES = { pagespeed: "PageSpeed Insights", search_console: "Google Search Console", analytics: "Google Analytics 4" };
 
 class IntegrationError extends Error {}
+
+// Portée par site : la configuration d'un site (propriété Search Console, propriété GA4, clé de compte de service) est stockée sous un nom
+// « base@site<id> », distinct de celui de l'équipe centrale et de celui des autres sites. Le site vient de l'appelant (adresse vérifiée), jamais de la saisie.
+// Le nom fait partie des données authentifiées du chiffrement (seo:<nom>) : une clé copiée d'un site à l'autre ne se déchiffre pas.
+const BASES = ["search_console", "analytics"];
+const baseOf = (name) => String(name).split("@")[0];
+function scoped(name, siteId = null) {
+  if (siteId === null || siteId === undefined) return name;
+  if (!Number.isInteger(siteId) || siteId <= 0 || !BASES.includes(name)) throw new IntegrationError("Intégration d'un site : site ou intégration invalide.");
+  return `${name}@site${siteId}`;
+}
 const encryptionKey = () => process.env.ENCRYPTION_KEY || "";
 
 function row(name) {
@@ -61,7 +72,7 @@ function readSecret(name) {
 // État affiché : jamais « connecté » sans vérification réelle réussie
 function status(name) {
   const r = row(name);
-  const needsSecret = name !== "pagespeed";
+  const needsSecret = baseOf(name) !== "pagespeed";
   if (!needsSecret) {
     if (r.secret && r.status === "error") return { state: "error", label: "Erreur avec la clé", detail: r.last_error, hasKey: true };
     return r.secret ? { state: "connected", label: "Clé d'API enregistrée", detail: r.checked_at ? `Dernière analyse réussie le ${r.checked_at}` : null, hasKey: true } : { state: "available", label: "Disponible sans clé (quota partagé)", detail: null, hasKey: false };
@@ -123,10 +134,11 @@ const tokens = new Map();
 async function accessToken(name) {
   const cached = tokens.get(name);
   if (cached && cached.expires > Date.now() + 60000) return cached.token;
+  if (!SCOPES[baseOf(name)]) throw new IntegrationError("Intégration inconnue.");
   const sa = parseServiceAccount(readSecret(name));
   const now = Math.floor(Date.now() / 1000);
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
-  const unsigned = `${b64({ alg: "RS256", typ: "JWT" })}.${b64({ iss: sa.client_email, scope: SCOPES[name], aud: URLS.token(), iat: now, exp: now + 3600 })}`;
+  const unsigned = `${b64({ alg: "RS256", typ: "JWT" })}.${b64({ iss: sa.client_email, scope: SCOPES[baseOf(name)], aud: URLS.token(), iat: now, exp: now + 3600 })}`;
   let signature;
   try { signature = crypto.createSign("RSA-SHA256").update(unsigned).sign(sa.private_key).toString("base64url"); } catch { throw new IntegrationError("La clé privée du compte de service est invalide."); }
   const r = await http(URLS.token(), { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: `${unsigned}.${signature}` }).toString() });
@@ -145,34 +157,36 @@ function periods(days) {
   const prevStart = new Date(prevEnd.getTime() - (days - 1) * 86400000);
   return { current: { start: ymd(start), end: ymd(end) }, previous: { start: ymd(prevStart), end: ymd(prevEnd) } };
 }
-async function gscQuery(body) {
-  const property = row("search_console").config.property;
+async function gscQuery(body, name = "search_console") {
+  const property = row(name).config.property;
   if (!property) throw new IntegrationError("Propriété Search Console non renseignée.");
-  const token = await accessToken("search_console");
+  const token = await accessToken(name);
   const r = await http(`${URLS.gsc()}/sites/${encodeURIComponent(property)}/searchAnalytics/query`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (r.status === 403) throw new IntegrationError(`Accès refusé par Search Console : ajoutez l'adresse du compte de service comme utilisateur de la propriété « ${property} » (Paramètres → Utilisateurs et autorisations). Détail : ${googleMessage(r)}`);
   if (r.status !== 200) throw new IntegrationError(`Erreur Search Console : ${googleMessage(r)}`);
   return (r.data && r.data.rows) || [];
 }
-async function testSearchConsole() {
+async function testSearchConsole(siteId = null) {
+  const name = scoped("search_console", siteId);
   try {
     const p = periods(7);
-    await gscQuery({ startDate: p.current.start, endDate: p.current.end, rowLimit: 1 });
-    markChecked("search_console", true);
+    await gscQuery({ startDate: p.current.start, endDate: p.current.end, rowLimit: 1 }, name);
+    markChecked(name, true);
     return { ok: true };
-  } catch (e) { markChecked("search_console", false, e.message); return { ok: false, error: e.message }; }
+  } catch (e) { markChecked(name, false, e.message); return { ok: false, error: e.message }; }
 }
 const sum = (rows) => {
   const t = rows.reduce((a, r) => ({ clicks: a.clicks + r.clicks, impressions: a.impressions + r.impressions, pos: a.pos + r.position * r.impressions }), { clicks: 0, impressions: 0, pos: 0 });
   return { clicks: t.clicks, impressions: t.impressions, ctr: t.impressions ? t.clicks / t.impressions : null, position: t.impressions ? t.pos / t.impressions : null };
 };
 // Rapport : totaux et détail sur la période et la précédente + analyses statistiques (aucune extrapolation)
-async function searchConsoleReport(days = 28, { refresh = false } = {}) {
+async function searchConsoleReport(days = 28, { refresh = false, siteId = null } = {}) {
+  const name = scoped("search_console", siteId);
   const key = `report:${days}`;
-  const cached = db.prepare("SELECT data, fetched_at FROM seo_integration_cache WHERE name = 'search_console' AND cache_key = ? AND fetched_at >= datetime('now', '-6 hours')").get(key);
+  const cached = db.prepare("SELECT data, fetched_at FROM seo_integration_cache WHERE name = ? AND cache_key = ? AND fetched_at >= datetime('now', '-6 hours')").get(name, key);
   if (cached && !refresh) return { ...JSON.parse(cached.data), fetchedAt: cached.fetched_at, fromCache: true };
   const p = periods(days);
-  const q = (range, dimension) => gscQuery({ startDate: range.start, endDate: range.end, dimensions: [dimension], rowLimit: 1000 });
+  const q = (range, dimension) => gscQuery({ startDate: range.start, endDate: range.end, dimensions: [dimension], rowLimit: 1000 }, name);
   const [pagesNow, pagesBefore, queriesNow, queriesBefore] = await Promise.all([q(p.current, "page"), q(p.previous, "page"), q(p.current, "query"), q(p.previous, "query")]);
   const byKey = (rows) => new Map(rows.map((r) => [r.keys[0], r]));
   const pb = byKey(pagesBefore);
@@ -193,56 +207,59 @@ async function searchConsoleReport(days = 28, { refresh = false } = {}) {
       nearTop: queriesNow.filter((r) => r.position >= 8 && r.position <= 20 && r.impressions >= 50).sort((a, b) => b.impressions - a.impressions).slice(0, 10).map((r) => ({ query: r.keys[0], impressions: r.impressions, position: r.position })),
     },
   };
-  db.prepare("INSERT INTO seo_integration_cache (name, cache_key, data, fetched_at) VALUES ('search_console', ?, ?, datetime('now')) ON CONFLICT(name, cache_key) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at").run(key, JSON.stringify(report));
+  db.prepare("INSERT INTO seo_integration_cache (name, cache_key, data, fetched_at) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(name, cache_key) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at").run(name, key, JSON.stringify(report));
   return { ...report, fetchedAt: new Date().toISOString().slice(0, 19).replace("T", " "), fromCache: false };
 }
 
 // Une seule page (onglet SEO de l'éditeur) : totaux sur deux périodes et requêtes qui l'ont affichée — filtre « page »
 // de l'API Search Analytics. Cache 6 h par adresse.
-async function pageReport(pageUrl, days = 28, { refresh = false } = {}) {
+async function pageReport(pageUrl, days = 28, { refresh = false, siteId = null } = {}) {
+  const name = scoped("search_console", siteId);
   const key = `page:${days}:${pageUrl}`;
-  const cached = db.prepare("SELECT data, fetched_at FROM seo_integration_cache WHERE name = 'search_console' AND cache_key = ? AND fetched_at >= datetime('now', '-6 hours')").get(key);
+  const cached = db.prepare("SELECT data, fetched_at FROM seo_integration_cache WHERE name = ? AND cache_key = ? AND fetched_at >= datetime('now', '-6 hours')").get(name, key);
   if (cached && !refresh) return { ...JSON.parse(cached.data), fetchedAt: cached.fetched_at, fromCache: true };
   const p = periods(days);
   const filter = [{ filters: [{ dimension: "page", operator: "equals", expression: pageUrl }] }];
-  const q = (range, dimensions, rowLimit) => gscQuery({ startDate: range.start, endDate: range.end, dimensions, dimensionFilterGroups: filter, rowLimit });
+  const q = (range, dimensions, rowLimit) => gscQuery({ startDate: range.start, endDate: range.end, dimensions, dimensionFilterGroups: filter, rowLimit }, name);
   const [now, before, queries] = await Promise.all([q(p.current, [], 1), q(p.previous, [], 1), q(p.current, ["query"], 100)]);
   const report = {
     page: pageUrl, period: p, days,
     totals: { current: sum(now), previous: sum(before) },
     queries: queries.slice().sort((a, b) => b.impressions - a.impressions).slice(0, 50).map((r) => ({ query: r.keys[0], clicks: r.clicks, impressions: r.impressions, ctr: r.ctr, position: r.position })),
   };
-  db.prepare("INSERT INTO seo_integration_cache (name, cache_key, data, fetched_at) VALUES ('search_console', ?, ?, datetime('now')) ON CONFLICT(name, cache_key) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at").run(key, JSON.stringify(report));
+  db.prepare("INSERT INTO seo_integration_cache (name, cache_key, data, fetched_at) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(name, cache_key) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at").run(name, key, JSON.stringify(report));
   return { ...report, fetchedAt: new Date().toISOString().slice(0, 19).replace("T", " "), fromCache: false };
 }
 
 // ---------- Google Analytics 4 ----------
-async function ga4Report(body) {
-  const propertyId = row("analytics").config.propertyId;
+async function ga4Report(body, name = "analytics") {
+  const propertyId = row(name).config.propertyId;
   if (!propertyId) throw new IntegrationError("Identifiant de propriété GA4 non renseigné.");
-  const token = await accessToken("analytics");
+  const token = await accessToken(name);
   const r = await http(`${URLS.ga4()}/properties/${encodeURIComponent(propertyId)}:runReport`, { method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (r.status === 403) throw new IntegrationError(`Accès refusé par Google Analytics : ajoutez l'adresse du compte de service avec le rôle « Lecteur » sur la propriété ${propertyId} (Administration → Gestion des accès). Détail : ${googleMessage(r)}`);
   if (r.status !== 200) throw new IntegrationError(`Erreur Google Analytics : ${googleMessage(r)}`);
   return r.data || {};
 }
-async function testAnalytics() {
+async function testAnalytics(siteId = null) {
+  const name = scoped("analytics", siteId);
   try {
-    await ga4Report({ dateRanges: [{ startDate: "7daysAgo", endDate: "today" }], metrics: [{ name: "activeUsers" }], limit: 1 });
-    markChecked("analytics", true);
+    await ga4Report({ dateRanges: [{ startDate: "7daysAgo", endDate: "today" }], metrics: [{ name: "activeUsers" }], limit: 1 }, name);
+    markChecked(name, true);
     return { ok: true };
-  } catch (e) { markChecked("analytics", false, e.message); return { ok: false, error: e.message }; }
+  } catch (e) { markChecked(name, false, e.message); return { ok: false, error: e.message }; }
 }
-async function analyticsReport(days = 28, { refresh = false } = {}) {
+async function analyticsReport(days = 28, { refresh = false, siteId = null } = {}) {
+  const name = scoped("analytics", siteId);
   const key = `report:${days}`;
-  const cached = db.prepare("SELECT data, fetched_at FROM seo_integration_cache WHERE name = 'analytics' AND cache_key = ? AND fetched_at >= datetime('now', '-6 hours')").get(key);
+  const cached = db.prepare("SELECT data, fetched_at FROM seo_integration_cache WHERE name = ? AND cache_key = ? AND fetched_at >= datetime('now', '-6 hours')").get(name, key);
   if (cached && !refresh) return { ...JSON.parse(cached.data), fetchedAt: cached.fetched_at, fromCache: true };
   const range = [{ startDate: `${days}daysAgo`, endDate: "yesterday" }];
   const METRICS = ["activeUsers", "sessions", "screenPageViews", "keyEvents"];
   const [totals, pages, sources] = await Promise.all([
-    ga4Report({ dateRanges: range, metrics: METRICS.map((name) => ({ name })) }),
-    ga4Report({ dateRanges: range, dimensions: [{ name: "pagePath" }], metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 25 }),
-    ga4Report({ dateRanges: range, dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 10 }),
+    ga4Report({ dateRanges: range, metrics: METRICS.map((m) => ({ name: m })) }, name),
+    ga4Report({ dateRanges: range, dimensions: [{ name: "pagePath" }], metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 25 }, name),
+    ga4Report({ dateRanges: range, dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 10 }, name),
   ]);
   const val = (r, i) => (r && r.metricValues && r.metricValues[i] ? Number(r.metricValues[i].value) : null);
   const t = totals.rows && totals.rows[0];
@@ -252,7 +269,7 @@ async function analyticsReport(days = 28, { refresh = false } = {}) {
     pages: (pages.rows || []).map((r) => ({ path: r.dimensionValues[0].value, views: val(r, 0), users: val(r, 1) })),
     channels: (sources.rows || []).map((r) => ({ channel: r.dimensionValues[0].value, sessions: val(r, 0) })),
   };
-  db.prepare("INSERT INTO seo_integration_cache (name, cache_key, data, fetched_at) VALUES ('analytics', ?, ?, datetime('now')) ON CONFLICT(name, cache_key) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at").run(key, JSON.stringify(report));
+  db.prepare("INSERT INTO seo_integration_cache (name, cache_key, data, fetched_at) VALUES (?, ?, ?, datetime('now')) ON CONFLICT(name, cache_key) DO UPDATE SET data = excluded.data, fetched_at = excluded.fetched_at").run(name, key, JSON.stringify(report));
   return { ...report, fetchedAt: new Date().toISOString().slice(0, 19).replace("T", " "), fromCache: false };
 }
 
@@ -297,6 +314,6 @@ async function runPageSpeed(url, strategy = "mobile") {
 const pageSpeedHistory = (limit = 30, url = null) => (url ? db.prepare("SELECT * FROM seo_pagespeed WHERE url = ? ORDER BY id DESC LIMIT ?").all(url, limit) : db.prepare("SELECT * FROM seo_pagespeed ORDER BY id DESC LIMIT ?").all(limit)).map((r) => ({ ...r, data: r.data ? JSON.parse(r.data) : null }));
 
 module.exports = {
-  NAMES, status, row, saveConfig, disconnect, parseServiceAccount, testSearchConsole, testAnalytics, searchConsoleReport, pageReport, analyticsReport,
+  NAMES, scoped, status, row, saveConfig, disconnect, parseServiceAccount, testSearchConsole, testAnalytics, searchConsoleReport, pageReport, analyticsReport,
   runPageSpeed, parsePageSpeed, pageSpeedHistory, IntegrationError, periods,
 };

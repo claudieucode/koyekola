@@ -15,6 +15,7 @@ const urls = require("../services/urls");
 const LOCALES = { fr: "fr_FR", en: "en_US", es: "es_ES", pt: "pt_PT", de: "de_DE", it: "it_IT", ar: "ar_AR", sw: "sw_KE" };
 const LANGS = { fr: "fr-FR", en: "en", es: "es", pt: "pt", de: "de", it: "it", ar: "ar", sw: "sw" };
 
+const PAGE_TYPES = ["AboutPage", "ContactPage", "CollectionPage", "ProfilePage", "ItemPage", "CheckoutPage", "SearchResultsPage"]; // liste fermée : même liste que marketing/pages/index.js
 const parseSeo = (page) => {
   if (page && page.seo && typeof page.seo === "object") return page.seo;
   try { return JSON.parse((page && page.seo) || "{}") || {}; } catch { return {}; }
@@ -95,7 +96,7 @@ function inputs(req, { page, site = null, preview = false }) {
   const faqs = faqsOf(page);
   const url = s.canonical;
   const faq = faqs.length ? { "@type": "FAQPage", "@id": `${url}#faq`, mainEntity: faqs.map((f) => ({ "@type": "Question", name: plainText(f.q, 300), acceptedAnswer: { "@type": "Answer", text: plainText(f.a, 1000) } })) } : null;
-  s.graph = { page: { type: "WebPage", url, name: seo.title || pageTitle, crumbs: crumbs || undefined, inLanguage: LANGS[(sx && sx.extras && sx.extras.language) || "fr"] || "fr-FR", dateModified: page.updated_at ? `${String(page.updated_at).replace(" ", "T").replace(/Z?$/, "Z")}` : undefined, imagePath: imagePath && imagePath.startsWith("/") ? imagePath : undefined }, main: [faq] };
+  s.graph = { page: { type: PAGE_TYPES.includes(seo.schemaType) ? seo.schemaType : "WebPage", url, name: seo.title || pageTitle, crumbs: crumbs || undefined, inLanguage: LANGS[(sx && sx.extras && sx.extras.language) || "fr"] || "fr-FR", dateModified: page.updated_at ? `${String(page.updated_at).replace(" ", "T").replace(/Z?$/, "Z")}` : undefined, imagePath: imagePath && imagePath.startsWith("/") ? imagePath : undefined }, main: [faq] };
   return { s, ix, siteLabel, own };
 }
 

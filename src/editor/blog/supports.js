@@ -7,6 +7,14 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { LOCKABLE_TYPES } from "./editing";
+import { containerNames } from "../../shared/blockRegistry";
+import { STYLE_PROPS, cleanValue, colorStyle } from "../../shared/blockStyles";
+
+// Types de blocs qui reçoivent les réglages « texte » (typographie) et « conteneur » (espace entre blocs internes)
+export const TEXT_STYLE_TYPES = ["paragraph", "heading", "blockquote", "bulletList", "orderedList", "kbPreformatted", "kbVerse", "codeBlock"];
+export const CONTAINER_STYLE_TYPES = containerNames(); // dérivé du registre central
+export const styleScopeTypes = (p) => (p.scope === "text" ? TEXT_STYLE_TYPES : p.scope === "container" ? CONTAINER_STYLE_TYPES : LOCKABLE_TYPES);
+export const supportsStyle = (type, p) => styleScopeTypes(p).includes(type);
 
 export const ANCHOR_RE = /^[a-z][a-z0-9_-]{0,63}$/;
 export const XCLASS_TOKEN = /^kb-x-[a-z0-9-]{1,30}$/;
@@ -95,7 +103,22 @@ export const BlockSupports = Extension.create({
           renderHTML: (attrs) => (attrs.xclass ? { "data-class": attrs.xclass } : {}),
         },
       },
-    }, {
+    }, ...STYLE_PROPS.map((p) => ({
+      // Réglages de style communs (typographie, couleur, espacement, bordure, ombre, dimensions) : src/shared/blockStyles.js
+      types: styleScopeTypes(p),
+      attributes: {
+        [p.key]: {
+          default: "",
+          keepOnSplit: p.scope === "text",
+          parseHTML: (el) => cleanValue(p.key, el.getAttribute(p.attr)),
+          renderHTML: (attrs) => {
+            const v = attrs[p.key] ? cleanValue(p.key, attrs[p.key]) : "";
+            if (!v) return {};
+            return p.color ? { [p.attr]: v, style: colorStyle({ [p.key]: v }) } : { [p.attr]: v };
+          },
+        },
+      },
+    })), {
       // Lettrine (premier paragraphe d'une section)
       types: ["paragraph"],
       attributes: { dropcap: { default: false, keepOnSplit: false, parseHTML: (el) => el.getAttribute("data-dropcap") === "true", renderHTML: (attrs) => (attrs.dropcap ? { "data-dropcap": "true" } : {}) } },
@@ -103,6 +126,14 @@ export const BlockSupports = Extension.create({
       // Teinte du texte du bloc : jetons du site (liste fermée, la même que le serveur)
       types: ["paragraph", "heading", "blockquote", "bulletList", "orderedList"],
       attributes: { tone: { default: "", keepOnSplit: true, parseHTML: (el) => (["accent", "muted", "primary"].includes(el.getAttribute("data-tone")) ? el.getAttribute("data-tone") : ""), renderHTML: (attrs) => (attrs.tone ? { "data-tone": attrs.tone } : {}) } },
+    }, {
+      // Style de numérotation (liste numérotée) et de puce (liste à puces)
+      types: ["orderedList", "bulletList"],
+      attributes: { ltype: { default: "", parseHTML: (el) => (["decimal", "lower-alpha", "upper-alpha", "lower-roman", "upper-roman", "lower-greek", "disc", "circle", "square", "none"].includes(el.getAttribute("data-ltype")) ? el.getAttribute("data-ltype") : ""), renderHTML: (attrs) => (attrs.ltype ? { "data-ltype": attrs.ltype } : {}) } },
+    }, {
+      // Citation (auteur, source) : champ séparé du texte de la citation
+      types: ["blockquote"],
+      attributes: { cite: { default: "", parseHTML: (el) => (el.getAttribute("data-cite") || "").replace(/\s+/g, " ").trim().slice(0, 200), renderHTML: (attrs) => (attrs.cite ? { "data-cite": attrs.cite } : {}) } },
     }, {
       // Liste numérotée décroissante
       types: ["orderedList"],
@@ -116,6 +147,8 @@ export const BlockSupports = Extension.create({
           parseHTML: (el) => el.getAttribute("data-caption") || "",
           renderHTML: (attrs) => (attrs.caption ? { "data-caption": attrs.caption } : {}),
         },
+        footer: { default: false, parseHTML: (el) => el.getAttribute("data-footer") === "true", renderHTML: (attrs) => (attrs.footer ? { "data-footer": "true" } : {}) },
+        fixed: { default: false, parseHTML: (el) => el.getAttribute("data-fixed") === "true", renderHTML: (attrs) => (attrs.fixed ? { "data-fixed": "true" } : {}) },
       },
     }];
   },

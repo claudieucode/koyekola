@@ -1,13 +1,14 @@
-<%- include("partials/top", { title, active }) %>
+<%- include("partials/top", { title, active, funnelStudio: true }) %>
 <%
   const archived = f.status === "archived"; const edit = canWrite && !archived;
   const pct = (r) => (r === null || r === undefined ? "—" : `${String(r).replace(".", ",")} %`);
   const periodLabel = { 7: "7 derniers jours", 30: "30 derniers jours", 90: "90 derniers jours" };
   const STATUS = { draft: "Brouillon", published: "En ligne", unpublished: "Hors ligne" }; const STATUS_CLASS = { draft: "", published: "mk-status-ok", unpublished: "mk-status-warn" };
   const live = f.steps.filter((s) => s.live).length;
+  const pub = archived ? { k: "archived", label: "Archivé" } : !f.steps.length ? { k: "off", label: "Sans étape" } : live === f.steps.length ? { k: "live", label: "En ligne" } : live === 0 ? { k: "off", label: "Pas encore en ligne" } : { k: "part", label: `En ligne ${live}/${f.steps.length}` };
 %>
-    <p class="mk-back"><a href="/marketing/tunnels">← Tunnels</a></p>
-    <div class="mk-head"><div class="mk-builder-title"><h1><%= f.name %></h1><% if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
+    <nav class="fs-crumb" aria-label="Fil d'Ariane"><a href="/marketing/tunnels"><%- icon("chevronLeft", { size: 14 }) %>Tunnels de vente</a><span aria-hidden="true">/</span><span aria-current="page"><%= f.name %></span></nav>
+    <div class="mk-head fs-head"><div class="mk-builder-title"><h1><%= f.name %></h1><span class="fs-badge is-<%= pub.k %>"><%= pub.label %></span></div>
       <% if (canWrite) { %><div class="mk-actions">
         <% if (archived) { %><form action="/marketing/tunnels/<%= f.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le tunnel</button></form>
         <% } else { %>
@@ -20,8 +21,26 @@
     <% if (f.description) { %><p class="mk-lead"><%= f.description %></p><% } %>
     <p class="mk-lead">Le visiteur avance d'étape en étape : après une inscription, il est conduit à l'étape suivante ; un bouton dont l'adresse est <code><%= NEXT_URL %></code> l'y mène aussi.</p>
 
-    <section class="mk-panel" aria-labelledby="fn-steps">
+    <div class="fs-ws" data-fs-ws data-active="steps">
+    <noscript><style>.fs-ws [data-fs-panel] { display: block !important; } .fs-ws-tabs { display: none; }</style></noscript>
+    <div class="fs-ws-tabs" role="tablist" aria-label="Espace du tunnel">
+      <button type="button" role="tab" id="tab-steps" aria-controls="fn-panel-steps" aria-selected="true" data-fs-tab="steps">Étapes <span class="fs-count"><%= f.steps.length %></span></button>
+      <button type="button" role="tab" id="tab-stats" aria-controls="fn-panel-stats" aria-selected="false" tabindex="-1" data-fs-tab="stats">Statistiques</button>
+      <button type="button" role="tab" id="tab-auto" aria-controls="fn-panel-auto" aria-selected="false" tabindex="-1" data-fs-tab="auto">Automatisations</button>
+      <% if (edit) { %><button type="button" role="tab" id="tab-settings" aria-controls="fn-panel-settings" aria-selected="false" tabindex="-1" data-fs-tab="settings">Paramètres</button><% } %>
+    </div>
+
+    <section class="mk-panel" id="fn-panel-steps" role="tabpanel" aria-labelledby="fn-steps" data-fs-panel="steps">
       <h2 id="fn-steps">Étapes <span class="mk-sub"><%= f.steps.length %> étape<%= f.steps.length > 1 ? "s" : "" %> · <%= live %> en ligne</span></h2>
+      <div class="fs-steps-layout">
+      <aside class="fs-rail" aria-label="Parcours du tunnel">
+        <p class="fs-rail-title">Parcours</p>
+        <% if (f.steps.length) { %><ol class="fs-rail-list">
+          <% f.steps.forEach((s, i) => { %><li><a class="fs-rail-item<%= s.live ? " is-live" : s.problem ? " is-problem" : "" %>" href="#etape-<%= s.id %>"><span class="fs-rail-num"><%= i + 1 %></span><span class="fs-rail-text"><strong><%= s.name %></strong><span><%= s.typeLabel %></span></span><span class="fs-dot" role="img" aria-label="<%= s.live ? "En ligne" : s.problem ? "À corriger" : "Pas encore en ligne" %>"></span></a></li><% }) %>
+        </ol><% } else { %><p class="fs-rail-empty">Aucune étape pour l'instant.</p><% } %>
+        <% if (edit) { %><a class="fs-rail-add" href="#ajouter"><%- icon("plus", { size: 15 }) %>Ajouter une étape</a><% } %>
+      </aside>
+      <div class="fs-steps-main">
       <% if (!f.steps.length) { %>
         <p>Ce tunnel n'a pas encore d'étape. Ajoutez la première ci-dessous : une nouvelle page, une page existante de votre site, ou une formation du catalogue.</p>
       <% } else { %>
@@ -54,6 +73,17 @@
                     <% if (canEditPages) { %><a class="btn btn-ghost btn-sm" href="/marketing/pages/<%= s.pageId %>/test-ab">Tester en A/B</a><% } %>
                   <% } %>
                   <% if (s.live) { %><a class="btn btn-ghost btn-sm" href="<%= s.path %>" target="_blank" rel="noopener">Voir en ligne</a><% } %>
+                  <% if (edit && s.type === "order") { %>
+                    <details class="mk-flash-details"><summary>Offre additionnelle (order bump)</summary>
+                      <form class="mk-form" action="/marketing/tunnels/<%= f.id %>/etapes/<%= s.id %>/reglages" method="post">
+                        <p class="field-hint">Une case à cocher sur le bon de commande : le client ajoute une autre formation au même paiement.</p>
+                        <div class="field-group"><label for="bump-<%= s.id %>">Formation proposée en plus</label>
+                          <select id="bump-<%= s.id %>" name="bumpCourseId"><option value="">Aucune</option><% courses.filter((c) => c.id !== s.courseId).forEach((c) => { %><option value="<%= c.id %>"<%= s.settings.bumpCourseId === c.id ? " selected" : "" %>><%= c.title %></option><% }) %></select></div>
+                        <div class="field-group"><label for="bumpl-<%= s.id %>">Texte de la case</label><input id="bumpl-<%= s.id %>" type="text" name="bumpLabel" maxlength="120" value="<%= s.settings.bumpLabel %>"></div>
+                        <button type="submit" class="btn btn-outline btn-sm">Enregistrer</button>
+                      </form>
+                    </details>
+                  <% } %>
                   <% if (edit && !s.courseTitle) { %>
                     <details class="mk-flash-details"><summary>Page et réglages de l'étape</summary>
                       <% if (s.pageId) { %>
@@ -109,9 +139,11 @@
           <p class="field-hint">Pour qu'un bouton d'une page mène à l'étape suivante, donnez-lui l'adresse <code><%= NEXT_URL %></code> dans l'éditeur. Une étape qui n'est pas en ligne est sautée.</p>
         </form>
       <% } %>
+      </div>
+      </div>
     </section>
 
-    <section class="mk-panel" aria-labelledby="fn-stats">
+    <section class="mk-panel" id="fn-panel-stats" role="tabpanel" aria-labelledby="fn-stats" data-fs-panel="stats">
       <h2 id="fn-stats">Résultats</h2>
       <nav class="mk-tabs" aria-label="Période">
         <% [7, 30, 90].forEach((n) => { %><a class="mk-tab" href="/marketing/tunnels/<%= f.id %>?periode=<%= n %>#fn-stats"<%- days === n ? ' aria-current="page"' : "" %>><%= periodLabel[n] %></a><% }) %>
@@ -148,7 +180,7 @@
       <% } %>
     </section>
 
-    <section class="mk-panel" aria-labelledby="fn-auto">
+    <section class="mk-panel" id="fn-panel-auto" role="tabpanel" aria-labelledby="fn-auto" data-fs-panel="auto">
       <h2 id="fn-auto">Automatisations</h2>
       <p class="field-hint">Un contact connu (inscrit, ou connecté) qui atteint une étape ou termine ce tunnel peut entrer dans un scénario : e-mail de relance, étiquette, liste… Déclencheurs : « Un contact atteint une étape d'un tunnel », « … la dernière étape d'un tunnel », « Un contact visite une page ».</p>
       <% if (automations.length) { %>
@@ -158,7 +190,7 @@
     </section>
 
     <% if (edit) { %>
-      <section class="mk-panel" aria-labelledby="fn-settings">
+      <section class="mk-panel" id="fn-panel-settings" role="tabpanel" aria-labelledby="fn-settings" data-fs-panel="settings">
         <h2 id="fn-settings">Réglages du tunnel</h2>
         <form class="mk-form" action="/marketing/tunnels/<%= f.id %>" method="post">
           <div class="field-group"><label for="fn-edit-name">Nom *</label><input id="fn-edit-name" type="text" name="name" maxlength="100" required value="<%= f.name %>"></div>
@@ -167,4 +199,6 @@
         </form>
       </section>
     <% } %>
+    </div>
+    <script src="<%= asset('/js/funnel-studio.js') %>" defer></script>
 <%- include("partials/bottom") %>

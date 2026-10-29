@@ -1,6 +1,7 @@
 // « Mon espace » (tableau de bord du formateur) : apparence personnelle, navigation, statistiques réelles.
 // L'apparence est enregistrée sur le compte (table dashboard_prefs) ; elle ne concerne que l'espace de gestion.
 const db = require("../config/database");
+const siteScope = require("./siteScope");
 const { parisToday, parisDayStart, sqlUtc, addDays } = require("./gestion/common");
 
 db.exec(`
@@ -135,7 +136,7 @@ const NAV = [
     { key: "support", label: "Support", href: "/formateur/gestion/support", icon: "help", badge: "support" },
   ] },
   { group: "Croissance", items: [
-    { key: "marketing", label: "Marketing", href: "/marketing", icon: "send" },
+    { key: "marketing", label: "Marketing", href: "/marketing", icon: "send", global: true },
     { key: "seo", label: "SEO", href: "/formateur/seo", icon: "search" },
   ] },
   { group: "Gestion", items: [
@@ -148,7 +149,7 @@ const NAV = [
   ] },
   { group: "Personnalisation", items: [
     { key: "appearance", label: "Apparence", href: "/formateur/apparence", icon: "sliders" },
-    { key: "settings", label: "Profil et paramètres", href: "/formateur/profil", icon: "settings" },
+    { key: "settings", label: "Profil et paramètres", href: "/formateur/profil", icon: "settings", global: true },
   ] },
 ];
 // Navigation interne de l'espace SEO (même coquille que « Mon espace », rubriques propres)
@@ -181,7 +182,7 @@ const GESTION_NAV = [
     { key: "g-ressources", label: "Ressources", href: "/formateur/gestion/ressources", icon: "image" },
     { key: "g-support", label: "Support", href: "/formateur/gestion/support", icon: "mail", badge: "support" },
     { key: "g-activite", label: "Activité", href: "/formateur/gestion/activite", icon: "bell", badge: "notifications" },
-    { key: "g-sauvegardes", label: "Sauvegardes", href: "/formateur/gestion/sauvegardes", icon: "shield" },
+    { key: "g-sauvegardes", label: "Sauvegardes", href: "/formateur/gestion/sauvegardes", icon: "shield", global: true },
     { key: "g-journal", label: "Journal", href: "/formateur/gestion/journal", icon: "listChecks" },
   ] },
 ];
@@ -251,13 +252,14 @@ function crumbs(path, title) {
 }
 
 // Statistiques réelles (formations du formateur) et tendance du mois en cours
-function stats(userId, now = new Date()) {
+function stats(userId, now = new Date(), siteId = null) {
+  const sw = siteScope.where(siteId, "c"); // formations de CE site (null = site principal)
   const one = (sql, ...a) => db.prepare(sql).get(...a);
   // Début du mois à l'heure de Paris (comme le Centre de gestion) : une vente à 00:30 le 1er compte dans le nouveau mois
   const monthStart = sqlUtc(parisDayStart(`${parisToday(now).slice(0, 8)}01`));
-  const courses = one("SELECT COUNT(*) n, SUM(published) pub, SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) month FROM courses WHERE instructor_id = ?", monthStart, userId);
-  const students = one("SELECT COUNT(*) n, SUM(CASE WHEN e.created_at >= ? THEN 1 ELSE 0 END) month FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?", monthStart, userId);
-  const revenue = one("SELECT COALESCE(SUM(oi.price_cents), 0) total, COALESCE(SUM(CASE WHEN o.created_at >= ? THEN oi.price_cents ELSE 0 END), 0) month FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?", monthStart, userId);
+  const courses = one("SELECT COUNT(*) n, SUM(published) pub, SUM(CASE WHEN c.created_at >= ? THEN 1 ELSE 0 END) month FROM courses c WHERE c.instructor_id = ?" + sw.sql, monthStart, userId, ...sw.params);
+  const students = one("SELECT COUNT(*) n, SUM(CASE WHEN e.created_at >= ? THEN 1 ELSE 0 END) month FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?" + sw.sql, monthStart, userId, ...sw.params);
+  const revenue = one("SELECT COALESCE(SUM(oi.price_cents), 0) total, COALESCE(SUM(CASE WHEN o.created_at >= ? THEN oi.price_cents ELSE 0 END), 0) month FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?" + sw.sql, monthStart, userId, ...sw.params);
   return {
     courses: courses.n || 0, coursesMonth: courses.month || 0, published: courses.pub || 0, drafts: (courses.n || 0) - (courses.pub || 0),
     students: students.n || 0, studentsMonth: students.month || 0, revenueCents: revenue.total || 0, revenueMonthCents: revenue.month || 0,
@@ -268,20 +270,21 @@ function stats(userId, now = new Date()) {
 // Données RÉELLES uniquement (commandes, messages, formations) : rien n'est simulé, une période sans vente donne une série à zéro (jamais une tendance inventée).
 // Les jours sont ceux de Paris (une vente à 23 h 30 UTC appartient au jour suivant à Paris), comme le Centre de gestion.
 const utcDate = (sqlDate) => new Date(String(sqlDate).replace(" ", "T") + "Z");
-function overview(userId, now = new Date(), { days = 30, activityLimit = 6 } = {}) {
+function overview(userId, now = new Date(), { days = 30, activityLimit = 6, siteId = null } = {}) {
+  const sw = siteScope.where(siteId, "c");
   const today = parisToday(now);
   const first = addDays(today, -(days - 1));
   const since = sqlUtc(parisDayStart(first));
   const series = Array.from({ length: days }, (_, i) => ({ day: addDays(first, i), sales: 0, cents: 0 }));
   const at = new Map(series.map((d, i) => [d.day, i]));
-  const rows = db.prepare("SELECT o.created_at, oi.price_cents FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ? AND o.created_at >= ?").all(userId, since);
+  const rows = db.prepare("SELECT o.created_at, oi.price_cents FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ? AND o.created_at >= ?" + sw.sql).all(userId, since, ...sw.params);
   for (const r of rows) { const i = at.get(parisToday(utcDate(r.created_at))); if (i !== undefined) { series[i].sales += 1; series[i].cents += r.price_cents; } }
   const totals = series.reduce((t, d) => ({ sales: t.sales + d.sales, cents: t.cents + d.cents, peak: Math.max(t.peak, d.cents) }), { sales: 0, cents: 0, peak: 0 });
   // Activité : ventes et messages reçus, du plus récent au plus ancien
   const sales = db.prepare(`SELECT o.id AS order_id, o.created_at, oi.price_cents, u.username AS buyer, c.title AS course_title, c.id AS course_id
     FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id JOIN users u ON u.id = o.user_id
-    WHERE c.instructor_id = ? ORDER BY o.created_at DESC, oi.id DESC LIMIT ?`).all(userId, activityLimit);
-  const messages = db.prepare("SELECT id, name, subject, created_at, read_at FROM contact_messages ORDER BY created_at DESC, id DESC LIMIT ?").all(activityLimit);
+    WHERE c.instructor_id = ?${sw.sql} ORDER BY o.created_at DESC, oi.id DESC LIMIT ?`).all(userId, ...sw.params, activityLimit);
+  const messages = db.prepare(`SELECT id, name, subject, created_at, read_at FROM contact_messages WHERE 1 = 1${siteScope.where(siteId).sql} ORDER BY created_at DESC, id DESC LIMIT ?`).all(...siteScope.where(siteId).params, activityLimit);
   const activity = [
     ...sales.map((r) => ({ kind: "sale", at: r.created_at, who: r.buyer, what: r.course_title, cents: r.price_cents, href: `/formateur/gestion/ventes/commandes/${r.order_id}` })),
     ...messages.map((m) => ({ kind: "message", at: m.created_at, who: m.name, what: m.subject || "Sans objet", unread: !m.read_at, href: `/formateur/messages?id=${m.id}` })),

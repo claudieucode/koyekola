@@ -244,7 +244,7 @@ function propertyFieldDefs(db, organizationId, form) {
 }
 
 function recordView(db, formId) {
-  db.prepare("UPDATE mk_forms SET view_count = view_count + 1 WHERE id = ?").run(formId);
+  require("../../utils/writeBehind").defer(() => db.prepare("UPDATE mk_forms SET view_count = view_count + 1 WHERE id = ?").run(formId)); // compteur d'audience : écriture groupée
 }
 
 // { ok: true } ou { ok: false, reason } — jamais une exception pour une entrée utilisateur invalide (page publique)

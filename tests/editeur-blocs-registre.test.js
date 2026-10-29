@@ -12,16 +12,20 @@ const root = path.join(__dirname, "..");
 const nodesSrc = fs.readFileSync(path.join(root, "src", "editor", "blog", "nodes.js"), "utf8");
 const editingSrc = fs.readFileSync(path.join(root, "src", "editor", "blog", "editing.js"), "utf8");
 const EXTENSIONS = new Set(["kbPullquote"]); // extensions d'attributs (pas des blocs)
+const { DYNAMIC } = require("../src/shared/dynamicBlocks");
 const CORE = new Set(["paragraph", "heading", "bulletList", "orderedList", "taskList", "blockquote", "codeBlock", "table", "horizontalRule"]); // fournis par Tiptap (StarterKit, TaskList, TableKit)
 
 describe("registre central des blocs", () => {
   test("chaque bloc du registre a son nœud dans l'éditeur (ou vient du noyau Tiptap)", () => {
     const declared = new Set([...nodesSrc.matchAll(/(?:name:\s*"|simpleBlock\("|preBlock\(\{\s*name:\s*")(\w+)"/g)].map((m) => m[1]));
+    assert.match(nodesSrc, /DYNAMIC\.map/, "les blocs dynamiques sont fabriqués depuis la table partagée");
+    for (const d of DYNAMIC) declared.add(d.name);
     for (const b of BLOCKS) assert.ok(CORE.has(b.name) || declared.has(b.name), `${b.name} : déclaré au registre mais sans nœud dans nodes.js`);
   });
   test("chaque nœud personnalisé de l'éditeur est déclaré au registre", () => {
     const declared = [...nodesSrc.matchAll(/(?:name:\s*"|simpleBlock\("|preBlock\(\{\s*name:\s*")(\w+)"/g)].map((m) => m[1]).filter((n) => (/^kb[A-Z]|^callout$/.test(n)) && !EXTENSIONS.has(n));
     const known = new Set(BLOCKS.map((b) => b.name));
+    assert.ok(DYNAMIC.every((d) => known.has(d.name)));
     for (const n of declared) assert.ok(known.has(n), `${n} : nœud de l'éditeur absent du registre (sanitisation et verrouillage non garantis)`);
   });
   test("le serveur conserve chaque bloc du registre à l'enregistrement (aucun bloc « perdu au premier enregistrement »)", () => {

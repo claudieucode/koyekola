@@ -299,6 +299,11 @@ db.exec(`
     AND EXISTS (SELECT 1 FROM lesson_attachments a WHERE a.lesson_id = lessons.id AND a.path = lessons.resource_path);
 `);
 
+// Pages du site : contenu en blocs (HTML assaini, éditeur de blocs) en plus du texte Markdown d'origine
+const sitePageColumns = db.prepare("PRAGMA table_info(site_pages)").all().map((c) => c.name);
+if (!sitePageColumns.includes("content_html")) db.exec("ALTER TABLE site_pages ADD COLUMN content_html TEXT NOT NULL DEFAULT ''");
+if (!sitePageColumns.includes("heading")) db.exec("ALTER TABLE site_pages ADD COLUMN heading TEXT NOT NULL DEFAULT ''"); // titre affiché en tête de la page (éditeur de blocs)
+
 // Évolutions du schéma pour les bases déjà existantes (CREATE TABLE IF NOT EXISTS ne modifie pas une table existante)
 const courseColumns = db.prepare("PRAGMA table_info(courses)").all().map((col) => col.name);
 const NEW_COURSE_COLUMNS = {
@@ -357,10 +362,14 @@ const NEW_POST_COLUMNS = {
   deleted_at: "TEXT",
   deleted_from_status: "TEXT",
   deleted_by: "INTEGER",
+  // Page du site éditée avec l'éditeur de blocs (ex. « a-propos ») : ce n'est PAS un article. La ligne reste hors ligne et « dans la corbeille » (deleted_at) pour
+  // être exclue de toutes les listes, recherches, exports et flux d'articles ; elle sert seulement de support à l'éditeur (versions, sauvegarde automatique)
+  page_key: "TEXT",
 };
 for (const [name, definition] of Object.entries(NEW_POST_COLUMNS)) {
   if (!postColumns.includes(name)) db.exec(`ALTER TABLE posts ADD COLUMN ${name} ${definition}`);
 }
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_page_key ON posts(page_key) WHERE page_key IS NOT NULL");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(published, category)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_cms ON posts(deleted_at, status, updated_at)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_posts_author ON posts(author_id)");
@@ -531,6 +540,8 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_checkout_sessions_user ON checkout_sessions(user_id, status);
 `);
+// Tunnels : étape de paiement (mk_funnel_steps.id) d'où vient la session, pour reprendre le parcours après le paiement
+if (!db.prepare("PRAGMA table_info(checkout_sessions)").all().some((c) => c.name === "funnel_step_id")) db.exec("ALTER TABLE checkout_sessions ADD COLUMN funnel_step_id INTEGER");
 
 // Remboursements (palier 20) : la vérité financière reste chez Stripe ; ici seulement la trace de ce que Stripe annonce (webhook signé « charge.refunded »),
 // rattachée à la commande payée par ce paiement. UNIQUE sur l'identifiant du remboursement Stripe : un webhook rejoué n'enregistre rien de plus.
@@ -891,5 +902,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_support_tickets_course ON support_tickets(course_id);
   CREATE INDEX IF NOT EXISTS idx_support_messages_author ON support_messages(author_id);
 `);
+
+// Fil d'activité et compteur de notifications du Centre de gestion (calculés à chaque page d'administration) : nouveaux comptes élèves et
+// messages de contact des 30 derniers jours, retrouvés par la date au lieu de parcourir toute la table (mesuré avec 30 000 comptes :
+// 14,6 ms → 3,6 ms par appel, voir docs/KOLAKISA_PERFORMANCE_ZERO_LATENCE.md).
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_users_role_created ON users(role, created_at);
+  CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at);
+`);
+
+// Administration par site de « Mon espace » : site_id (NULL = site principal) sur les données du LMS — voir src/config/siteColumns.js
+require("./siteColumns").apply(db);
 
 module.exports = db;

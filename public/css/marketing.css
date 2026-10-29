@@ -1981,11 +1981,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 /* Aperçu : le cadre n'apparaît qu'une fois le rendu prêt (voir preview.js#setReady) — pas d'état intermédiaire visible */
 .mk-b-preview[data-ready="false"] .mk-pv-device { visibility: hidden; }
 
-/* Menus et sous-menus : apparition courte (opacité + léger déplacement, sans toucher à la mise en page) ; coupée en mouvement réduit */
+/* Menus : une seule animation d'entrée (kola-pop, kola-ui.css), coupée en mouvement réduit. Pas de sortie animée : le calque flottant (floating.js)
+   rend le menu à sa place d'origine dès la fermeture ; une transition « display » le laissait visible 140 ms à cette position, d'où le saut et le scintillement. */
+@media (prefers-reduced-motion: reduce) { .mk-menu, .mk-body [role="menu"] { animation: none !important; } }
 @media (prefers-reduced-motion: no-preference) {
-  .mk-menu { transition: opacity 0.14s ease, transform 0.14s ease, display 0.14s allow-discrete; transform-origin: top right; }
-  .mk-menu[hidden] { display: none; opacity: 0; transform: translateY(-4px) scale(0.98); }
-  @starting-style { .mk-menu:not([hidden]) { opacity: 0; transform: translateY(-4px) scale(0.98); } }
   .mk-nav-sub { transition: opacity 0.16s ease, display 0.16s allow-discrete; }
   @starting-style { .mk-nav-group.is-open > .mk-nav-sub { opacity: 0; } }
 }

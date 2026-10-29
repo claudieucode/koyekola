@@ -68,7 +68,8 @@ describe("cache des domaines", () => {
   test("un même domaine ne peut pas être attribué à deux sites", async () => {
     const r = await setDomain(B, "https://alpha.test");
     assert.equal(r.status, 422);
-    assert.match(r.text, /déjà celle du site/);
+    assert.match(r.text, /déjà utilisée par un autre site/); // TITAN XXXII : le message ne nomme plus l'autre site (aucune fuite entre sites)
+    assert.doesNotMatch(r.text, /« /, "le nom de l'autre site n'est pas révélé");
     assert.match((await hostGet("beta.test", "/")).text, /CONTENU-BETA-PRIVE/, "B garde son domaine");
   });
   test("changement de domaine : l'ancien domaine ne sert plus rien IMMÉDIATEMENT (pas d'attente du cache)", async () => {

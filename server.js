@@ -174,6 +174,7 @@ app.use(invitationRoutes); // invitation à rejoindre l'équipe (CMS → Utilisa
 app.use(courseRoutes);
 app.use(cartRoutes);
 app.use(orderRoutes);
+app.use(require("./src/routes/tunnelOffers"));
 app.use(learningRoutes);
 app.use(supportRoutes);
 app.use(favoritesRoutes);
@@ -229,6 +230,9 @@ app.use((err, req, res, next) => {
 process.on("unhandledRejection", (reason) => {
   console.error("[KOLAKISA] Promesse rejetée non gérée :", reason);
 });
+
+// Compteurs d'audience (lectures, 404, redirections) : écriture groupée (src/utils/writeBehind.js) ; les serveurs de test gardent l'écriture immédiate (sauf KW_WRITE_BEHIND_MS)
+if (process.env.NODE_ENV !== "test") require("./src/utils/writeBehind").enable();
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, () => {

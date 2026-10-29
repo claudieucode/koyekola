@@ -14,7 +14,7 @@
   <div class="container-wide section-tight learner-space">
     <% if (courses.length === 0 && favorites.length === 0) { %>
       <div class="empty-state">
-        <span class="kv-empty-ico" aria-hidden="true"><%- icon("graduation", { size: 26 }) %></span>
+        <%- illu("formations", { className: "kv-empty-art" }) %>
         <h3>Vous n'avez pas encore de formation</h3>
         <p>Direction le catalogue pour trouver votre prochaine compétence à apprendre.</p>
         <a href="/catalogue" class="btn btn-primary">Voir le catalogue</a>

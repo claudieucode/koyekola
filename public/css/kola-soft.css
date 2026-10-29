@@ -1,0 +1,129 @@
+/* =====================================================================================================================
+   KOLAKISA — « Soft Surface » : hiérarchie de surfaces à la place des contours omniprésents.
+   Chargée EN DERNIER (administration/Marketing, Mon espace, site public et espace élève). Documentation : docs/KOLAKISA_SOFT_SURFACE.md
+
+   Principe : un champ ou un panneau se distingue par un fond légèrement teinté (mélange du texte et de la surface du contexte),
+   un filet très discret (même épaisseur qu'avant : aucun décalage de mise en page) et, au focus, un anneau net + filet d'accent.
+   Les jetons --soft-* se calculent à partir de --soft-base (surface du contexte) et --soft-ink (texte du contexte) : ils suivent
+   donc automatiquement le thème clair/sombre de l'administration et les thèmes de Mon espace, sans nouvelle couleur écrite en dur.
+   Sommaire : 1 Jetons · 2 Champs · 3 Listes et menus ouverts · 4 Cartes et panneaux · 5 Tableaux · 6 Boutons · 7 Dialogues
+   ===================================================================================================================== */
+
+/* ===== 1. Jetons ===== */
+:root { --soft-base: var(--surface, #fff); --soft-ink: var(--text, #10222f); }
+.mk-body { --soft-base: var(--mk-surface); --soft-ink: var(--mk-text); }
+.dash { --soft-base: var(--dash-card); --soft-ink: var(--dash-text); }
+:root, .mk-body, .dash {
+  --soft-field: color-mix(in srgb, var(--soft-ink) 4.5%, var(--soft-base));        /* champ au repos */
+  --soft-field-hover: color-mix(in srgb, var(--soft-ink) 7%, var(--soft-base));    /* survol */
+  --soft-field-focus: var(--soft-base);                                             /* focus : le champ « s'éclaire » */
+  --soft-field-off: color-mix(in srgb, var(--soft-ink) 3%, var(--soft-base));      /* désactivé */
+  --soft-field-err: color-mix(in srgb, var(--danger, #c8202c) 6%, var(--soft-base)); /* erreur : nuance + filet */
+  --soft-edge: color-mix(in srgb, var(--soft-ink) 12%, var(--soft-base));          /* filet de champ */
+  --soft-edge-hover: color-mix(in srgb, var(--soft-ink) 20%, var(--soft-base));
+  --soft-panel: color-mix(in srgb, var(--soft-ink) 2.5%, var(--soft-base));        /* surface secondaire (groupe dans une carte) */
+  --soft-sep: color-mix(in srgb, var(--soft-ink) 8%, var(--soft-base));            /* séparateur fin */
+  --soft-card-edge: color-mix(in srgb, var(--soft-ink) 7%, var(--soft-base));      /* filet de carte */
+  --soft-shadow: 0 1px 2px color-mix(in srgb, var(--soft-ink) 5%, transparent), 0 4px 14px -6px color-mix(in srgb, var(--soft-ink) 9%, transparent);
+  --soft-ring: 0 0 0 3px color-mix(in srgb, var(--accent, #0277b6) 22%, transparent);
+  --soft-ring-err: 0 0 0 3px color-mix(in srgb, var(--danger, #c8202c) 20%, transparent);
+  --soft-r: 10px;
+  --soft-ease: 120ms ease;
+}
+
+/* ===== 2. Champs de formulaire (texte, nombre, date, URL, mot de passe, recherche, zone de texte, liste déroulante) ===== */
+:root body :is(input:is([type=text], [type=email], [type=password], [type=number], [type=date], [type=time], [type=url], [type=tel], [type=search], [type=datetime-local], [type=month], [type=week]), textarea, select):not(.rt-editor *) {
+  background-color: var(--soft-field);
+  border-color: var(--soft-edge);
+  border-radius: var(--soft-r);
+  box-shadow: none;
+  transition: background-color var(--soft-ease), border-color var(--soft-ease), box-shadow var(--soft-ease);
+}
+:root body :is(input:is([type=text], [type=email], [type=password], [type=number], [type=date], [type=time], [type=url], [type=tel], [type=search], [type=datetime-local], [type=month], [type=week]), textarea, select):hover:not(:disabled):not(:focus):not(.rt-editor *) {
+  background-color: var(--soft-field-hover);
+  border-color: var(--soft-edge-hover);
+}
+/* Focus : fond « éclairé », filet d'accent et anneau (clavier comme souris) — l'indicateur reste net, sans changer la taille du champ */
+:root body :is(input:is([type=text], [type=email], [type=password], [type=number], [type=date], [type=time], [type=url], [type=tel], [type=search], [type=datetime-local], [type=month], [type=week]), textarea, select):focus:not(.rt-editor *) {
+  background-color: var(--soft-field-focus);
+  border-color: var(--accent, #0277b6);
+  box-shadow: var(--soft-ring);
+  outline: none;
+}
+:root body :is(input, textarea, select):disabled:not(.rt-editor *) {
+  background-color: var(--soft-field-off);
+  border-color: var(--soft-sep);
+  color: var(--muted, var(--dash-muted));
+  box-shadow: none;
+  cursor: not-allowed;
+}
+/* Erreur : le filet rouge et la nuance de fond restent (jamais une simple variation imperceptible) */
+:root body :is(input, textarea, select)[aria-invalid="true"]:not(.rt-editor *),
+:root body .field-group:has(.field-error) :is(input, textarea, select):not(.rt-editor *) {
+  background-color: var(--soft-field-err);
+  border-color: var(--danger, #c8202c);
+}
+:root body :is(input, textarea, select)[aria-invalid="true"]:focus:not(.rt-editor *) { box-shadow: var(--soft-ring-err); border-color: var(--danger, #c8202c); }
+/* Couleur : même traitement que les champs */
+:root body input[type=color] { background-color: var(--soft-field); border-color: var(--soft-edge); border-radius: var(--soft-r); }
+:root body input[type=color]:hover { border-color: var(--soft-edge-hover); }
+:root body input[type=color]:focus-visible { border-color: var(--accent, #0277b6); box-shadow: var(--soft-ring); outline: none; }
+/* Case de fichier et zone de dépôt : surface, pas de cadre lourd */
+:root body input[type=file]::file-selector-button { background-color: var(--soft-field); border-color: var(--soft-edge); border-radius: var(--soft-r); }
+:root body input[type=file]::file-selector-button:hover { background-color: var(--soft-field-hover); }
+/* Champs imbriqués dans un champ composite (préfixe/suffixe, recherche avec loupe) : le conteneur porte le fond */
+:root body .mk-search input { background-color: var(--soft-field); }
+
+/* ===== 3. Listes déroulantes ouvertes, menus contextuels ===== */
+/* La liste native (<select>) est dessinée par le navigateur ; ses options reprennent la surface du contexte. */
+:root body select option { background-color: var(--soft-base); color: var(--soft-ink); }
+/* Menus flottants : surface distincte de la page, filet quasi invisible + ombre douce (pas de cadres imbriqués) */
+.mk-body .mk-menu, .mk-body .mk-dropdown-menu, .mk-body .mk-popover { background: var(--soft-base); border-color: var(--soft-card-edge); box-shadow: var(--mk-pop); }
+.mk-body .mk-menu a:hover, .mk-body .mk-menu button:hover, .mk-body .mk-menu a:focus-visible, .mk-body .mk-menu button:focus-visible { background: var(--soft-field-hover); }
+.dash .dash-site-pop, .dash .dash-menu, .dash [role="menu"] { border-color: var(--soft-card-edge); }
+
+/* ===== 4. Cartes et panneaux ===== */
+/* Carte : fond de surface + filet très discret + ombre légère. Le fond de page (plus soutenu) fait le contraste principal. */
+.mk-body :is(.mk-panel, .mk-ap-card, .mk-ap-bar, .mk-nav-add, .mk-nav-structure, .mk-nav-slots, .mk-tx-add, .mk-ar-panel, .mk-ml-toolbar, .mk-ml-panel, .mk-cms-card, .mk-stat, .mk-filterbar, .mk-table-wrap) {
+  border-color: var(--soft-card-edge);
+  box-shadow: var(--soft-shadow);
+}
+/* Groupes de champs déjà contenus dans une carte : plus de second cadre, un fond de groupe suffit */
+.mk-body :is(.mk-ap-form fieldset, .mk-us-group, .mk-tl-fieldset, .mk-fieldset) {
+  background: var(--soft-panel);
+  border-color: transparent;
+  box-shadow: none;
+}
+.mk-body :is(.mk-panel, .mk-ap-card, .mk-cms-card) :is(.mk-ap-form fieldset, .mk-us-group, .mk-tl-fieldset, .mk-fieldset) { background: var(--soft-panel); }
+/* Dans un groupe teinté, les champs gardent leur fond (légèrement plus clair que le groupe) */
+.mk-body :is(.mk-us-group, .mk-fieldset, .mk-tl-fieldset, .mk-ap-form fieldset) :is(input, textarea, select):not(:focus):not([aria-invalid="true"]):not(:disabled) { background-color: var(--soft-base); }
+.mk-body a.mk-stat:hover, .mk-body .mk-cms-stat:hover { border-color: var(--soft-edge-hover); box-shadow: var(--soft-shadow); }
+/* États vides : le pointillé reste (zone de dépôt / absence de contenu), en plus discret */
+.mk-body .mk-empty { border-color: var(--soft-edge); }
+/* Mon espace : cartes du tableau de bord */
+.dash :is(.dash-card, .dash-panel, .dash-stat, .g-card, .g-panel) { border-color: var(--soft-card-edge); box-shadow: var(--soft-shadow); }
+/* Public et espace élève : cartes génériques */
+:root body:not(.mk-body) :is(.card, .kv-card):not(.dash *) { border-color: var(--soft-card-edge); }
+
+/* ===== 5. Tableaux ===== */
+.mk-body .mk-table td, .mk-body .mk-table tbody th[scope="row"] { border-top-color: var(--soft-sep); }
+.mk-body .mk-table thead th { border-bottom-color: var(--soft-sep); background: var(--soft-panel); }
+.mk-body .mk-table tbody tr:hover > * { background: var(--soft-field); }
+.mk-body .mk-datatable tr.is-selected > * { background: var(--mk-selected); }
+.dash table :is(th, td) { border-color: var(--soft-sep); }
+.dash table tbody tr:hover > * { background: var(--soft-field); }
+
+/* ===== 6. Boutons secondaires : fond subtil, filet minimal ; principal et destructif inchangés ===== */
+.mk-body :is(.btn-outline, .btn-secondary) { background: var(--soft-field); border-color: var(--soft-edge); box-shadow: none; }
+.mk-body :is(.btn-outline, .btn-secondary):hover { background: var(--soft-field-hover); border-color: var(--soft-edge-hover); }
+.mk-body .btn-danger { background: var(--soft-field); box-shadow: none; }
+.mk-body .btn-danger:hover { background: var(--danger); }
+.mk-body input[type=file]::file-selector-button { box-shadow: none; }
+
+/* ===== 7. Dialogues ===== */
+.mk-body .mk-dialog { border-color: var(--soft-card-edge); }
+.mk-body .mk-dialog-actions { background: var(--soft-panel); }
+
+@media (prefers-reduced-motion: reduce) {
+  :root body :is(input, textarea, select) { transition: none; }
+}

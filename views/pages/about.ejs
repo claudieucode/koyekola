@@ -11,16 +11,16 @@
     <%- include("../partials/breadcrumb", { crumbs }) %>
     <header class="about-hero">
       <h1><%= model.title %></h1>
-      <% if (model.lead) { %><div class="about-lead markdown"><%- model.lead %></div><% } %>
+      <% if (model.lead) { %><div class="about-lead markdown<%= model.blocks ? " article-content" : "" %>"><%- model.lead %></div><% } %>
       <% if (model.stats.courses > 0) { %><p class="about-fact"><a href="/catalogue"><%= model.stats.courses %> formation<%= model.stats.courses > 1 ? "s" : "" %> au catalogue<% if (model.stats.categories > 1) { %>, dans <%= model.stats.categories %> catégories<% } %></a></p><% } %>
     </header>
 
     <div class="about-body">
-      <% if (model.intro) { %><section class="about-section about-section--intro"><div class="about-text markdown"><%- model.intro %></div></section><% } %>
+      <% if (model.intro) { %><section class="about-section about-section--intro"><div class="about-text markdown<%= model.blocks ? " article-content" : "" %>"><%- model.intro %></div></section><% } %>
       <% model.sections.forEach((s) => { %>
         <section class="about-section" aria-labelledby="ap-<%= s.id %>">
           <h2 id="ap-<%= s.id %>"><%= s.title %></h2>
-          <div class="about-text markdown"><%- s.html %></div>
+          <div class="about-text markdown<%= model.blocks ? " article-content" : "" %>"><%- s.html %></div>
         </section>
       <% }) %>
       <% if (creator && creator.bio && creator.bio.trim()) { %>

@@ -111,15 +111,35 @@ function injectLocals(req, res, next) {
     const prefs = dashboard.prefsOf(req.session.user.id);
     const seo = dashboard.isSeoPath(req.path);
     const gestion = dashboard.isGestionPath(req.path);
+    // Site administré : DEMANDE du navigateur (?site=, champ « site », dernier choix de la session) toujours revérifiée côté serveur (dashSite → siteContext)
+    const dashSite = require("../services/dashSite");
+    const asked = req.query.site !== undefined ? req.query.site : req.body && req.body.site !== undefined ? req.body.site : req.session.dashSite;
+    const site = dashSite.forRequest(db, req.session.user.id, asked);
+    req.dashSite = site;
+    // Les redirections vers « Mon espace » gardent le site actif (adresse partageable, aucun retour silencieux au site principal)
+    const redirect = res.redirect.bind(res);
+    res.redirect = (...args) => {
+      const i = typeof args[0] === "number" ? 1 : 0;
+      if (site.ok && typeof args[i] === "string" && /^\/formateur(\/|\?|$)/.test(args[i]) && !/[?&]site=/.test(args[i])) args[i] = dashSite.withSite(args[i], site.siteId);
+      return redirect(...args);
+    };
+    // (la page « Erreurs 404 » du SEO central garde son propre « ?site= » historique : il ne change pas le site mémorisé)
+    if (site.ok && !/^\/formateur\/seo\/erreurs-404/.test(req.path)) req.session.dashSite = site.current && site.current.main ? dashSite.MAIN : String(site.siteId);
+    const navNow = seo ? dashboard.SEO_NAV : gestion ? dashboard.GESTION_NAV : dashboard.NAV;
+    const activeNow = seo ? dashboard.seoActiveKey(req.path) : gestion ? dashboard.gestionActiveKey(req.path) : dashboard.activeKey(req.path);
+    const activeItem = navNow.flatMap((g) => g.items).find((i) => i.key === activeNow);
+    const siteNav = (nav) => nav.map((g) => ({ ...g, items: g.items.map((i) => (i.global ? i : { ...i, href: dashSite.withSite(i.href, site.siteId) })) }));
     res.locals.dash = {
-      seo, gestion, module: seo ? dashboard.MODULES.seo : gestion ? dashboard.MODULES.gestion : null, globalNav: dashboard.NAV, activeKey: dashboard.activeKey(req.path), path: req.path, crumbs: (title) => dashboard.crumbs(req.path, title),
-      active: seo ? dashboard.seoActiveKey(req.path) : gestion ? dashboard.gestionActiveKey(req.path) : dashboard.activeKey(req.path), nav: seo ? dashboard.SEO_NAV : gestion ? dashboard.GESTION_NAV : dashboard.NAV, prefs, style: dashboard.style(prefs),
+      seo, gestion, module: seo ? dashboard.MODULES.seo : gestion ? dashboard.MODULES.gestion : null, globalNav: siteNav(dashboard.NAV), activeKey: dashboard.activeKey(req.path), path: req.path, crumbs: (title) => dashboard.crumbs(req.path, title),
+      active: activeNow, nav: siteNav(navNow), prefs, style: dashboard.style(prefs),
+      // Sélecteur de site universel : seulement sur les écrans propres à un site (pas Marketing ni Profil)
+      site: { ...site, scoped: Boolean(activeItem) && !activeItem.global, home: activeItem ? dashSite.withSite(activeItem.href, null) : "/formateur", withSite: dashSite.withSite },
       tasks: seo ? require("../seo/tasks").openCount() : 0,
-      support: (() => { try { return require("../services/support").openCount(req.session.user.id); } catch { return 0; } })(), // tickets en attente de réponse
-      unread: db.prepare("SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL").get().n,
+      support: (() => { try { return require("../services/support").openCount(req.session.user.id, site.siteId); } catch { return 0; } })(), // tickets en attente de réponse (site actif)
+      unread: (() => { const w = require("../services/siteScope").where(site.siteId); return db.prepare(`SELECT COUNT(*) n FROM contact_messages WHERE read_at IS NULL${w.sql}`).get(...w.params).n; })(), // messages non lus du site actif
       // Notifications non lues du Centre de gestion (données réelles ; badge de la navigation)
       // (un échec ne doit jamais empêcher l'affichage de Mon espace : pas de badge dans ce cas)
-      notifications: (() => { try { return require("../services/gestion/activity").unreadCount(req.session.user.id); } catch (error) { console.error("[KOLAKISA] Badge des notifications :", error.message); return 0; } })(),
+      notifications: (() => { try { return require("../services/gestion/activity").unreadCount(req.session.user.id, site.siteId); } catch (error) { console.error("[KOLAKISA] Badge des notifications :", error.message); return 0; } })(),
     };
   }
   // Espace Marketing (application à part, sous /marketing) : la navigation générale de « Mon espace » reste visible (rail)

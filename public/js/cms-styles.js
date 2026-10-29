@@ -80,7 +80,7 @@
     var id = rid(c.id), wrap = h("div", { class: "field-group mk-st-field", "data-st-ctl": c.id }), input;
     var label = h("label", { for: id, text: c.label });
     if (c.kind === "color") {
-      var txt = h("input", { type: "text", id: id, maxlength: "7", autocomplete: "off", spellcheck: "false", placeholder: c.allowEmpty ? "(valeur d'origine)" : "#000000", value: eff(c.id) && !empty(values[c.id]) ? values[c.id] : (c.allowEmpty ? "" : eff(c.id)) });
+      var txt = h("input", { type: "text", id: id, maxlength: "7", autocomplete: "off", spellcheck: "false", placeholder: c.allowEmpty ? "Origine" : "#000000", value: eff(c.id) && !empty(values[c.id]) ? values[c.id] : (c.allowEmpty ? "" : eff(c.id)) });
       var pick = h("input", { type: "color", "aria-label": c.label + " (sélecteur)", value: isHex(eff(c.id)) ? eff(c.id) : "#000000" });
       var sw = h("span", { class: "mk-st-swatch", style: isHex(eff(c.id)) ? "background:" + eff(c.id) : null, "aria-hidden": "true" });
       txt.disabled = pick.disabled = !CAN;

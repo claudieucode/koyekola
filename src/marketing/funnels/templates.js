@@ -11,6 +11,8 @@ const TEMPLATES = [
     steps: [step("webinar", "Inscription", "webinaire"), step("thankyou", "Confirmation", "merci")] },
   { key: "vente-formation", category: "Formation", name: "Vente d'une formation", description: "Page de vente, puis la vraie page de la formation (achat ou inscription).", requiresCourse: true,
     steps: [step("sales", "Page de vente", "vente"), step("course", "Formation")] },
+  { key: "vente-commande", category: "Formation", name: "Vente avec bon de commande", description: "Page de vente, bon de commande (paiement Stripe), puis remerciement.", requiresCourse: true,
+    steps: [step("sales", "Page de vente", "vente"), step("order", "Bon de commande"), step("thankyou", "Remerciement", "merci")] },
   { key: "lancement", category: "Formation", name: "Lancement (liste d'attente)", description: "Annonce et liste d'attente, puis confirmation.",
     steps: [step("optin", "Liste d'attente", "bientot"), step("thankyou", "Confirmation", "merci")] },
   { key: "leads", category: "Business", name: "Génération de prospects", description: "Présentation de l'offre, formulaire, remerciement.",

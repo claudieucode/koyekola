@@ -77,7 +77,21 @@ module.exports = () => {
       title: "Modèles de thème", active: "sitedash", types: themeTemplates.TYPES, templates: themeTemplates.list(ctx), canWrite: req.mk.can("forms.write"),
       pageChoices: pages.listPages(ctx, {}).filter((p) => p.kind !== "step" && !p.archived_at), audiences: require("../pages/nodes").AUDIENCES,
       categories: (() => { try { return require("../../services/blog").categories().map((c) => c.name); } catch { return []; } })(),
+      // « Pourquoi ce modèle ? » : formulaire en lecture seule (GET) ; le résultat est calculé par la même règle que le site public
+      why: (() => {
+        if (!req.query.why_type) return null;
+        try { return themeTemplates.explain(ctx, String(req.query.why_type), { category: String(req.query.why_category || ""), tag: String(req.query.why_tag || ""), postId: intOrNull(req.query.why_post) }); } catch (e) { return { error: e.message }; }
+      })(),
+      whyQuery: { type: String(req.query.why_type || ""), category: String(req.query.why_category || ""), tag: String(req.query.why_tag || "") },
     });
+  });
+  // Pourquoi tel modèle (ou aucun) pour telle page : le gagnant et la raison de chaque exclusion. Lecture seule.
+  router.get("/site-web/modeles-de-theme/resolution.json", need("forms.read"), (req, res) => {
+    try {
+      const q = req.query;
+      const out = themeTemplates.explain(req.mk.ctx, String(q.type || ""), { category: String(q.category || ""), tag: String(q.tag || ""), postId: intOrNull(q.post) });
+      res.set("Cache-Control", "no-store").json({ ...out, audienceNote: "Le public du visiteur n'est pas simulé ici : un modèle réservé à un public est compté comme s'il convenait." });
+    } catch (error) { res.status(422).json({ error: { code: "invalid", message: error.message } }); }
   });
   router.post("/site-web/modeles-de-theme", need("forms.write"), (req, res, next) => {
     attempt(req, res, next, "/marketing/site-web/modeles-de-theme", () => {
@@ -333,9 +347,9 @@ module.exports = () => {
   const jsonError = (res, next, error) => {
     const { MarketingError } = require("../errors");
     if (!(error instanceof MarketingError)) return next(error);
-    res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" ? 409 : 422).json({ error: { code: error.code, message: error.message, ...(error.details ? { details: error.details } : {}) } });
+    res.status(error.code === "not_found" ? 404 : error.code === "in_use" || error.code === "duplicate" || error.code === "conflict" ? 409 : 422).json({ error: { code: error.code, message: error.message, ...(error.details ? { details: error.details } : {}) } });
   };
-  const describe = (c, ctx) => ({ id: c.id, name: c.name, global: c.global, kind: c.kind, hasDraft: c.hasDraft, version: c.version, blocks: c.blocks, type: c.section && c.section.type, section: c.section, uses: ctx ? pages.componentInstances(ctx, c.id).reduce((n, p) => n + p.count, 0) : undefined });
+  const describe = (c, ctx) => ({ id: c.id, revision: c.revision, name: c.name, global: c.global, kind: c.kind, hasDraft: c.hasDraft, version: c.version, blocks: c.blocks, type: c.section && c.section.type, section: c.section, uses: ctx ? pages.componentInstances(ctx, c.id).reduce((n, p) => n + p.count, 0) : undefined });
   router.get("/site-web/composants.json", need("forms.read"), (req, res) => {
     res.set("Cache-Control", "no-store").json({ components: pages.listComponents(req.mk.ctx, { siteId: intOrNull(req.query.site) }).map(describe) });
   });
@@ -354,7 +368,9 @@ module.exports = () => {
   router.post("/site-web/composants/:id(\\d+)", need("forms.write"), (req, res, next) => {
     try {
       const b = req.body || {};
-      res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: b.name, section: b.section, global: typeof b.global === "boolean" ? b.global : undefined, siteId: b.siteId }), req.mk.ctx) });
+      // Le contenu d'un en-tête / pied de page / variante ne se change plus que par la copie de travail puis « Mettre à jour » : jamais diffusé directement
+      if (b.section !== undefined && pages.componentRole(req.mk.ctx, pages.getComponent(req.mk.ctx, Number(req.params.id))) !== "component") throw new (require("../errors").MarketingError)("invalid", "Le contenu d'un en-tête ou d'un pied de page se modifie dans son éditeur (brouillon), puis « Mettre à jour » le publie.");
+      res.json({ component: describe(pages.updateComponent(req.mk.ctx, Number(req.params.id), { name: b.name, section: b.section, global: typeof b.global === "boolean" ? b.global : undefined, siteId: b.siteId, revision: Number.isInteger(b.revision) ? b.revision : undefined }), req.mk.ctx) });
     } catch (error) { jsonError(res, next, error); }
   });
   // Modèles de pages (enregistrés depuis l'éditeur ; proposés à la création d'une page) : PRIVÉS à leur site. Le site demandé (?site=) n'est qu'un sélecteur : l'accès à ce site est revérifié par le moteur (inScope)
@@ -399,12 +415,12 @@ module.exports = () => {
   // Mise à jour explicite : la copie de travail devient la version diffusée aux instances liées
   router.post("/site-web/composants/:id(\\d+)/mettre-a-jour", need("forms.write"), (req, res, next) => {
     try {
-      const r = pages.publishComponent(req.mk.ctx, Number(req.params.id));
+      const r = pages.publishComponent(req.mk.ctx, Number(req.params.id), { revision: Number.isInteger((req.body || {}).revision) ? req.body.revision : undefined });
       res.json({ component: describe(r.component, req.mk.ctx), changed: r.changed, pages: r.instances.length, instances: r.instances.reduce((n, p) => n + p.count, 0) });
     } catch (error) { jsonError(res, next, error); }
   });
   router.post("/site-web/composants/:id(\\d+)/abandonner", need("forms.write"), (req, res, next) => {
-    try { res.json({ component: describe(pages.discardComponentDraft(req.mk.ctx, Number(req.params.id)), req.mk.ctx) }); } catch (error) { jsonError(res, next, error); }
+    try { res.json({ component: describe(pages.discardComponentDraft(req.mk.ctx, Number(req.params.id), { revision: Number.isInteger((req.body || {}).revision) ? req.body.revision : undefined }), req.mk.ctx) }); } catch (error) { jsonError(res, next, error); }
   });
   // Suppression : sans instance liée, directe ; sinon le corps choisit « instances » (les supprimer aussi) ou « detach » (les conserver, devenues indépendantes)
   router.post("/site-web/composants/:id(\\d+)/supprimer", need("forms.write"), (req, res, next) => {

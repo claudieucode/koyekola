@@ -17,20 +17,29 @@ import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import { Placeholder, Focus } from "@tiptap/extensions";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
-import { DOMParser as PMDOMParser } from "@tiptap/pm/model";
-import { BLOG_NODES, CALLOUT_LABELS, reusableContent, forgetReusable } from "./blog/nodes";
+import { DOMParser as PMDOMParser, DOMSerializer as PMDOMSerializer } from "@tiptap/pm/model";
+import { BLOG_NODES, CALLOUT_LABELS, reusableContent, forgetReusable, dynamicDefaults } from "./blog/nodes";
+import { DYNAMIC } from "../shared/dynamicBlocks";
+import { CONTENT_ICONS } from "../shared/contentIcons";
 import { BlockHandle, moveBlock, startBlockDrag, endBlockDrag, zoneBlockPos, ZONES } from "./blog/dragHandle";
 import { createWorkspace } from "./blog/workspace";
 import { createSeoData, createRenderers } from "./blog/seoPanels";
 import { setupWorkspaceUi } from "./blog/workspaceUi";
-import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
+import { BlockLock, FindHighlight, LOCKABLE_TYPES, setLocked, setLockState, lockSummary, isLocked, findMatches, findKey, blockHtml, contentHtml } from "./blog/editing";
 import { BlockIdentity, walkBlocks, findBlock, activeBlockId, setHidden, placeOf, restorePosition, ID_ONLY_META } from "./blog/blocks";
 import { attachDatePicker, parseLocal, timeZoneLabel } from "./blog/datePicker";
 import { Indent, listItemAt } from "./blog/indent";
-import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS, TONES } from "./blog/supports";
+import { BlockSupports, normalizeAnchor, normalizeClasses, classesForDisplay, VARIANTS, TONES, supportsStyle } from "./blog/supports";
+import { STYLE_PROPS, GROUPS as STYLE_GROUPS } from "../shared/blockStyles";
+import { PROVIDERS as EMBED_PROVIDERS, embedProviderFor } from "../shared/embedProviders";
+
+// Type de bloc à créer pour une adresse collée : YouTube / Vimeo → Vidéo ; carte Google Maps ou autre service reconnu → Contenu embarqué ; sinon rien (l'adresse reste du texte)
+const YT_VIMEO = /^https:\/\/(?:(?:www\.|m\.|music\.)?youtube\.com\/(?:watch\?[^\s]*v=|embed\/|shorts\/|live\/)|youtu\.be\/|(?:www\.)?youtube-nocookie\.com\/embed\/|(?:www\.)?vimeo\.com\/\d+|player\.vimeo\.com\/video\/\d+)/i;
+const MAPS_EMBED = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~:-]{10,2000}$/;
+export const embedKindFor = (url) => (YT_VIMEO.test(url) ? "kbVideo" : MAPS_EMBED.test(url) || embedProviderFor(url) ? "kbEmbed" : "");
 import { PATTERNS, PATTERN_CATEGORIES } from "./blog/patterns";
 import { NotesBadges, setNoteCounts } from "./blog/notes";
-import { blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
+import { replaceBlockHtml, blockRange, canGroup, groupSelection, canUngroup, ungroupAt, transformsFor, copyStyles, pasteStyles, TransformError, duplicateRange, deleteRange, moveRange, moveBlockTo, insertParagraphAt, MultiSelectHighlight } from "./blog/transforms";
 import { analyze, norm } from "../utils/seoAnalyzer";
 import { setupDocumentMode } from "./blog/documentMode";
 
@@ -165,19 +174,35 @@ function start() {
   };
   // Modification refusée sur un bloc verrouillé (message au plus toutes les 4 s)
   let lockNoticeAt = 0;
-  function lockedNotice() {
+  function lockedNotice(kind = "locked") {
     if (Date.now() - lockNoticeAt < 4000) return;
     lockNoticeAt = Date.now();
-    toast("Bloc verrouillé : clic droit (ou ⋮) → « Déverrouiller » pour le modifier.", "error");
+    toast(kind === "move" ? "Ce bloc est verrouillé contre le déplacement : « Options de verrouillage… » pour le lever." : kind === "remove" ? "Ce bloc est verrouillé contre la suppression : « Options de verrouillage… » pour le lever." : "Bloc verrouillé : clic droit (ou ⋮) → « Déverrouiller » pour le modifier.", "error");
+  }
+
+  // ---------- Mouvement ----------
+  // Le mouvement accompagne l'action, il ne la retarde jamais : l'action est déjà faite quand la sortie s'anime ; filet de sécurité si animationend n'arrive pas
+  const reducedMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function leave(el, then, { ms = 160 } = {}) {
+    if (el.classList.contains("is-closing")) return;
+    if (reducedMotion()) { then(); return; }
+    el.classList.add("is-closing");
+    let over = false;
+    const end = () => { if (over) return; over = true; el.removeEventListener("animationend", end); then(); };
+    el.addEventListener("animationend", end);
+    setTimeout(end, ms + 60);
   }
 
   // ---------- Fenêtres (modales WordPress) ----------
   function modal(title, body, actions = [], { wide = false } = {}) {
     const dlg = h("dialog", { class: `wp-modal${wide ? " is-wide" : ""}`, "aria-labelledby": "wp-modal-title" });
-    const close = () => { dlg.close(); dlg.remove(); };
+    const opener = document.activeElement;
+    const close = () => leave(dlg, () => { dlg.close(); dlg.remove(); if (opener && opener.isConnected && opener !== document.body && !dlg.contains(document.activeElement) && document.activeElement === document.body) opener.focus({ preventScroll: true }); });
     const foot = actions.length ? h("div", { class: "wp-modal-actions" }, ...actions.map((a) => h("button", { type: "button", class: a.primary ? "wp-btn-primary" : a.danger ? "wp-btn-danger" : "wp-btn-secondary", onclick: async () => { const keep = await a.run?.(close); if (keep !== true) close(); } }, a.label))) : null;
     dlg.append(h("div", { class: "wp-modal-head" }, h("h1", { id: "wp-modal-title" }, title), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Fermer", onclick: close }, "×")), h("div", { class: "wp-modal-body" }, body), ...(foot ? [foot] : []));
-    dlg.addEventListener("cancel", () => dlg.remove());
+    // Échap : sortie animée si le navigateur laisse annuler l'événement ; sinon (pas d'activation utilisateur récente) il ferme de lui-même et on retire la fenêtre
+    dlg.addEventListener("cancel", (e) => { if (e.cancelable) { e.preventDefault(); close(); } });
+    dlg.addEventListener("close", () => dlg.remove());
     document.body.append(dlg);
     dlg.showModal();
     return { dlg, close };
@@ -222,7 +247,7 @@ function start() {
       ...BLOG_NODES,
       Focus.configure({ mode: "shallowest", className: "has-focus" }),
       BlockHandle,
-      BlockLock.configure({ onBlocked: () => lockedNotice() }),
+      BlockLock.configure({ onBlocked: (kind) => lockedNotice(kind) }),
       BlockSupports,
       MultiSelectHighlight,
       NotesBadges.configure({ onClick: (id) => openNotes(id) }),
@@ -283,7 +308,9 @@ function start() {
   const GOOGLE_MAP = /^https:\/\/www\.google\.com\/maps\/embed\?pb=[A-Za-z0-9!._%~:-]{10,2000}$/;
   // Code d'intégration Google Maps collé tel quel : on n'en garde que l'adresse de la carte
   const mapsUrl = (v) => { const m = String(v || "").match(/src=["']([^"']+)["']/); return (m ? m[1] : String(v || "")).trim().replace(/&amp;/g, "&"); };
+  let capturing = null; // aperçu d'un bloc dans l'outil d'insertion : « blk » enregistre le contenu au lieu de l'insérer
   function blk(content) {
+    if (capturing) { capturing.push(content); return true; }
     const sel = editor.state.selection;
     const { $from } = sel;
     // Zone d'insertion : le document, ou la colonne / le groupe le plus proche du curseur (blocs imbriqués)
@@ -318,6 +345,8 @@ function start() {
     return true;
   }
   const p = (text) => ({ type: "paragraph", content: text ? [{ type: "text", text }] : [] });
+  const accItem = (q) => ({ type: "kbAccItem", content: [{ type: "kbSummary", content: [{ type: "text", text: q }] }, { type: "kbAccordionBody", content: [p("Contenu de l'élément.")] }] });
+  const tabNode = (title) => ({ type: "kbTab", attrs: { title }, content: [p("")] });
   const cell = (type) => ({ type, content: [{ type: "paragraph" }] });
   const tableNode = (rows, cols) => ({ type: "table", content: Array.from({ length: rows }, (_, r) => ({ type: "tableRow", content: Array.from({ length: cols }, () => cell(r === 0 ? "tableHeader" : "tableCell")) })) });
   const faqNode = (items) => ({ type: "kbFaq", content: items.map((i) => ({ type: "kbFaqItem", content: [{ type: "kbSummary", content: [{ type: "text", text: i.question }] }, { type: "kbFaqAnswer", content: String(i.answer).split(/\n{2,}/).map((t) => p(t.trim())) }] })) });
@@ -371,18 +400,23 @@ function start() {
     { id: "steps", title: "Étapes", cat: "KOLAKISA", brand: true, icon: "steps", desc: "Guide pas à pas (données structurées HowTo).", keywords: "howto tutoriel", run: () => blk({ type: "kbSteps", attrs: { title: "" }, content: [1, 2, 3].map((n) => ({ type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: `Étape ${n}`, marks: [{ type: "bold" }] }, { type: "text", text: " : ce qu'il faut faire." }] }] })) }) },
     { id: "course", title: "Formation recommandée", cat: "KOLAKISA", brand: true, icon: "course", desc: "Carte d'une formation du catalogue.", keywords: "cours produit", run: () => { if (!DATA.courses.length) return toast("Aucune formation publiée à recommander.", "error"); return blk({ type: "kbCourse", attrs: { slug: DATA.courses[0].slug } }); } },
     { id: "newsletter", title: "Newsletter", cat: "KOLAKISA", brand: true, icon: "newsletter", desc: "Formulaire d'inscription à la newsletter.", keywords: "inscription email", run: () => blk({ type: "kbNewsletter" }) },
-    { id: "embed", title: "Contenu embarqué", cat: "Intégrations", icon: "embed", desc: "Intégrez un contenu externe (YouTube et Vimeo deviennent un lecteur, le reste un lien).", keywords: "embed intégration", run: () => urlPrompt("Contenu embarqué", "Adresse du contenu", "https://…", (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } })) },
+    { id: "embed", title: "Contenu embarqué", cat: "Intégrations", icon: "embed", desc: `Intégrez un contenu externe : les ${EMBED_PROVIDERS.length + 3} services reconnus deviennent un lecteur, le reste un lien.`, keywords: `embed intégration ${EMBED_PROVIDERS.map((p) => p.label).join(" ")}`, run: () => urlPrompt("Contenu embarqué", "Adresse du contenu", "https://…", (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } })) },
     { id: "youtube", title: "YouTube", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo YouTube.", run: () => urlPrompt("YouTube", "Adresse de la vidéo YouTube", "https://www.youtube.com/watch?v=…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
-    ...[
-      ["spotify", "Spotify", "Morceau, album, playlist ou épisode Spotify.", "https://open.spotify.com/track/…", /^https:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:track|album|playlist|episode|show|artist)\/[A-Za-z0-9]{10,30}\/?(?:\?.*)?$/, "musique podcast son"],
-      ["soundcloud", "SoundCloud", "Titre ou playlist SoundCloud.", "https://soundcloud.com/artiste/titre", /^https:\/\/(?:www\.)?soundcloud\.com\/[A-Za-z0-9_-]{2,50}\/(?:sets\/)?[A-Za-z0-9_-]{2,100}\/?(?:\?.*)?$/, "musique podcast son"],
-      ["dailymotion", "Dailymotion", "Vidéo Dailymotion.", "https://www.dailymotion.com/video/…", /^https:\/\/(?:www\.dailymotion\.com\/(?:embed\/)?video\/|dai\.ly\/)[a-z0-9]{5,12}\/?(?:\?.*)?$/i, "vidéo"],
-      ["loom", "Loom", "Vidéo Loom (démonstration d'écran).", "https://www.loom.com/share/…", /^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/[a-f0-9]{32}\/?(?:\?.*)?$/i, "vidéo écran démonstration"],
-      ["ted", "TED", "Conférence TED.", "https://www.ted.com/talks/…", /^https:\/\/(?:www\.)?ted\.com\/talks\/[a-z0-9_]{3,120}\/?(?:\?.*)?$/i, "conférence vidéo"],
-    ].map(([id, title, desc, placeholder, re, keywords]) => ({ id, title, cat: "Intégrations", icon: "video", desc, keywords, run: () => urlPrompt(title, `Adresse du contenu ${title}`, placeholder, (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } }), { check: (v) => re.test(v), error: `Ce n'est pas une adresse ${title} reconnue (${placeholder}).` }) })),
+    // Un bloc par service (comme Gutenberg), dérivé de la table des services du serveur : une adresse d'un autre service est refusée avec un message clair
+    ...EMBED_PROVIDERS.map((p) => ({ id: p.id, title: p.label, cat: "Intégrations", icon: "video", desc: `Contenu ${p.label}.`, keywords: p.keywords, run: () => urlPrompt(p.label, `Adresse du contenu ${p.label}`, p.example, (url) => blk({ type: "kbEmbed", attrs: { url, caption: "" } }), { check: (v) => { const e = embedProviderFor(v); return Boolean(e && e.provider === p.id); }, error: `Ce n'est pas une adresse ${p.label} reconnue (${p.example}).` }) })),
     { id: "vimeo", title: "Vimeo", cat: "Intégrations", icon: "video", desc: "Intégrez une vidéo Vimeo.", run: () => urlPrompt("Vimeo", "Adresse de la vidéo Vimeo", "https://vimeo.com/…", (url) => blk({ type: "kbVideo", attrs: { url, caption: "" } })) },
+    // Widgets dynamiques : le serveur fabrique leur contenu à l'affichage, limité au site de l'article
+    ...DYNAMIC.filter((d) => d.name !== "kbRss").map((d) => ({ id: d.name, title: d.label, cat: "Widgets", icon: "list", desc: d.desc, keywords: d.keywords, run: () => blk({ type: d.name, attrs: dynamicDefaults(d.name) }) })),
+    { id: "kbRss", title: "Flux RSS", cat: "Widgets", icon: "list", desc: DYNAMIC.find((d) => d.name === "kbRss").desc, keywords: DYNAMIC.find((d) => d.name === "kbRss").keywords, run: () => urlPrompt("Flux RSS", "Adresse du flux RSS ou Atom (https)", "https://exemple.org/feed.xml", (url) => { blk({ type: "kbRss", attrs: { ...dynamicDefaults("kbRss"), url } }); api(`/formateur/blog/api/flux?url=${encodeURIComponent(url)}`).catch(() => {}); }) },
+    { id: "icon", title: "Icône", cat: "Média", icon: "image", desc: "Un pictogramme du jeu d'icônes du site (couleur et taille au choix).", keywords: "pictogramme symbole étoile coeur", run: () => blk({ type: "kbIcon", attrs: { icon: "star", size: "m" } }) },
+    { id: "math", title: "Formule mathématique", cat: "Texte", icon: "code", desc: "Une formule écrite en LaTeX (fractions, racines, sommes, matrices…), affichée en MathML.", keywords: "latex équation maths mathématiques", run: () => blk({ type: "kbMath", attrs: { latex: "E = mc^2" } }) },
+    { id: "playlist", title: "Liste de lecture audio", cat: "Média", icon: "audio", desc: "Plusieurs fichiers audio à la suite, avec titre et artiste.", keywords: "pistes musique podcast playlist", run: () => openMediaModal({ kind: "audio", multiple: true, onSelectMany: (list) => blk({ type: "kbPlaylist", attrs: { tracks: list.map((m) => `${m.path}|${(m.title || "").replace(/[|\n]/g, " ")}|`).join("\n"), title: "" } }), onSelect: (m) => blk({ type: "kbPlaylist", attrs: { tracks: `${m.path}|${(m.title || "").replace(/[|\n]/g, " ")}|`, title: "" } }) }) },
+    { id: "accordion", title: "Accordéon", cat: "Texte", icon: "details", desc: "Plusieurs éléments dépliables ; option : un seul ouvert à la fois.", keywords: "dépliant questions faq plier", run: () => blk({ type: "kbAccordionGroup", content: [accItem("Premier élément"), accItem("Deuxième élément")] }) },
+    { id: "tabs", title: "Onglets", cat: "Mise en page", icon: "columns", desc: "Plusieurs contenus dans des onglets (sections titrées sans JavaScript).", keywords: "tabs panneaux", run: () => blk({ type: "kbTabs", content: [tabNode("Premier onglet"), tabNode("Deuxième onglet")] }) },
+    { id: "nextpage", title: "Page suivante", cat: "Mise en page", icon: "separator", desc: "Découpe l'article en plusieurs pages : le texte qui suit s'affiche sur une nouvelle page du site (?page=2).", keywords: "pagination suite nextpage découper", run: () => blk({ type: "kbNextPage" }) },
+    ...(DATA.canHtml ? [{ id: "html", title: "HTML personnalisé", cat: "Mise en forme", icon: "code", desc: "Code HTML libre (scripts, iframes, styles). Réservé au compte créateur : il s'exécute sur le site publié.", keywords: "code embed script iframe widget", run: () => blk({ type: "kbHtml", attrs: { code: "<p>Votre code HTML ici</p>" } }) }] : []),
   ];
-  const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Mise en page", "Intégrations"];
+  const CATS = ["Texte", "KOLAKISA", "Média", "Mise en forme", "Mise en page", "Widgets", "Intégrations"];
   // ---------- Préférences personnelles : favoris, récents, réglages (enregistrées sur le compte) ----------
   let editorPrefs = DATA.editorPrefs || { favorites: [], recents: [], settings: {} };
   const persistPrefs = debounce(() => { api("/formateur/blog/api/preferences", { method: "PUT", json: { favorites: editorPrefs.favorites, recents: editorPrefs.recents, settings: editorPrefs.settings } }).then((r) => { editorPrefs = r.prefs; }).catch(() => toast("Préférences de l'éditeur non enregistrées (connexion ?).", "error")); }, 600);
@@ -398,8 +432,36 @@ function start() {
     toast(`Bloc synchronisé « ${b.name} » inséré : il suivra chaque modification du bloc.`);
   };
   const usesText = (b) => (b.occurrences ? `Utilisé ${b.occurrences} fois · ${b.uses} article${b.uses > 1 ? "s" : ""}` : "Pas encore utilisé");
+  let previewBox = null;
+  function hideBlockPreview() { if (previewBox) previewBox.hidden = true; }
+  function showBlockPreview(b, anchor) {
+    if (!previewBox) { previewBox = h("div", { class: "wp-block-preview", role: "presentation", "aria-hidden": "true" }); document.body.append(previewBox); }
+    let content = [];
+    capturing = [];
+    try { b.run(); content = capturing; } catch { content = []; } finally { capturing = null; }
+    const body = h("div", { class: "wp-block-preview-body be-prose" });
+    for (const json of content.slice(0, 1)) {
+      try {
+        const node = editor.schema.nodeFromJSON(json);
+        if (node.isAtom) body.append(h("p", { class: "wp-block-preview-note" }, `${LABEL[node.type.name] || b.title} : s'affiche sur le site (réglages dans l'onglet « Bloc »).`));
+        else body.append(PMDOMSerializer.fromSchema(editor.schema).serializeNode(node));
+      } catch { /* aperçu indisponible : titre et description suffisent */ }
+    }
+    if (!body.childNodes.length) body.append(h("p", { class: "wp-block-preview-note" }, "Choisissez le contenu (image, fichier, adresse…) après avoir ajouté le bloc."));
+    previewBox.replaceChildren(h("p", { class: "wp-block-preview-title" }, b.title), h("p", { class: "wp-block-preview-desc" }, b.desc || ""), body);
+    const r = anchor.getBoundingClientRect(); const panel = secondary.getBoundingClientRect();
+    previewBox.style.left = `${Math.round(panel.right + 8)}px`;
+    previewBox.style.top = `${Math.max(8, Math.min(Math.round(r.top), window.innerHeight - 280))}px`;
+    previewBox.hidden = false;
+  }
   const blockButton = (b, after, { star = false, onStar } = {}) => {
     const btn = h("button", { type: "button", class: b.brand ? "wp-block-type is-brand" : "wp-block-type", onclick: () => { after?.(); useBlock(b.id); b.run(); } }, h("span", { class: "wp-block-type-icon" }, svg(b.icon)), h("span", { class: "wp-block-type-title" }, b.title));
+    // Aperçu au survol / au focus (comme Gutenberg) : le bloc tel qu'il sera inséré, sans rien modifier dans l'article
+    btn.addEventListener("mouseenter", () => showBlockPreview(b, btn));
+    btn.addEventListener("focus", () => showBlockPreview(b, btn));
+    btn.addEventListener("mouseleave", hideBlockPreview);
+    btn.addEventListener("blur", hideBlockPreview);
+    btn.addEventListener("click", hideBlockPreview);
     // Glisser le bloc depuis l'outil d'insertion vers l'article : il est inséré à l'endroit du dépôt
     btn.draggable = true;
     btn.addEventListener("dragstart", (e) => { e.dataTransfer.setData("application/x-kb-insert", b.id); e.dataTransfer.setData("text/plain", b.title); e.dataTransfer.effectAllowed = "copy"; });
@@ -409,6 +471,7 @@ function start() {
   };
   const matches = (b, q) => !q || norm(`${b.title} ${b.cat} ${b.keywords || ""} ${b.desc}`).includes(norm(q));
   function urlPrompt(title, label, placeholder, done, { kind, transform, check, error } = {}) {
+    if (capturing) return;
     const url = input({ type: transform ? "text" : "url", placeholder });
     const body = h("div", {}, control(label, url));
     if (kind === "video") body.append(h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { m.close(); openMediaModal({ kind: "video", onSelect: (media) => done(media.path) }); } }, "Ou téléverser un fichier vidéo…"));
@@ -501,14 +564,15 @@ function start() {
       if (!media.length) box.prepend(h("p", { class: "wp-help" }, "Aucune image téléversée pour l'instant."));
     } catch (e) { box.replaceChildren(h("p", { class: "wp-error" }, e.message)); }
   }
-  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbPreformatted: "Préformaté", kbVerse: "Vers", kbMore: "Lire la suite", kbFile: "Fichier", kbCover: "Couverture", kbMediaText: "Média et texte", kbMediaTextBody: "Texte", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)" };
-  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button", kbPreformatted: "code", kbVerse: "quote", kbMore: "readmore", kbFile: "file", kbCover: "cover", kbMediaText: "mediatext" };
+  const LABEL = { paragraph: "Paragraphe", heading: "Titre", bulletList: "Liste", orderedList: "Liste numérotée", listItem: "Élément de liste", taskList: "Liste de contrôle", taskItem: "Élément", blockquote: "Citation", codeBlock: "Code", horizontalRule: "Séparateur", table: "Tableau", tableRow: "Ligne", tableCell: "Cellule", tableHeader: "En-tête", kbImage: "Image", kbGallery: "Galerie", kbVideo: "Vidéo", kbAudio: "Audio", kbEmbed: "Contenu embarqué", kbCourse: "Formation recommandée", kbNewsletter: "Newsletter", kbButton: "Bouton", callout: "Encadré", kbCta: "Appel à l'action", kbAccordion: "Détails", kbSummary: "Résumé", kbAccordionBody: "Contenu", kbFaq: "FAQ", kbFaqItem: "Question", kbFaqAnswer: "Réponse", kbSteps: "Étapes", kbCompare: "Comparaison", kbCompareCol: "Colonne", kbSpacer: "Espaceur", kbPageBreak: "Saut de page", kbColumns: "Colonnes", kbColumn: "Colonne", kbGroup: "Groupe", kbButtons: "Groupe de boutons", kbPreformatted: "Préformaté", kbVerse: "Vers", kbMore: "Lire la suite", kbFile: "Fichier", kbCover: "Couverture", kbMediaText: "Média et texte", kbMediaTextBody: "Texte", kbReusable: "Bloc synchronisé", kbReusableEdit: "Bloc synchronisé (modification)", kbNextPage: "Page suivante", kbHtml: "HTML personnalisé", kbIcon: "Icône", kbMath: "Formule mathématique", kbPlaylist: "Liste de lecture audio", kbAccordionGroup: "Accordéon", kbAccItem: "Élément d'accordéon", kbTabs: "Onglets", kbTab: "Onglet", kbFootnote: "Note de bas de page", ...Object.fromEntries(DYNAMIC.map((d) => [d.name, d.label])) };
+  const ICON_OF = { paragraph: "paragraph", heading: "heading", bulletList: "list", orderedList: "ordered", taskList: "checklist", blockquote: "quote", codeBlock: "code", horizontalRule: "separator", table: "table", kbImage: "image", kbGallery: "gallery", kbVideo: "video", kbAudio: "audio", kbEmbed: "embed", kbCourse: "course", kbNewsletter: "newsletter", kbButton: "button", callout: "callout", kbCta: "cta", kbAccordion: "details", kbFaq: "faq", kbSteps: "steps", kbCompare: "columns", kbSpacer: "separator", kbPageBreak: "separator", kbColumns: "columns", kbColumn: "columns", kbGroup: "callout", kbButtons: "button", kbPreformatted: "code", kbVerse: "quote", kbMore: "readmore", kbFile: "file", kbCover: "cover", kbMediaText: "mediatext", kbNextPage: "separator", kbHtml: "code", kbIcon: "image", kbMath: "code", kbPlaylist: "audio", kbAccordionGroup: "details", kbTabs: "columns", ...Object.fromEntries(DYNAMIC.map((d) => [d.name, "list"])) };
   const nameOf = (node) => (node.attrs && node.attrs.blockName ? node.attrs.blockName : node.type.name === "heading" ? `Titre H${node.attrs.level}` : node.type.name === "callout" ? `Encadré ${CALLOUT_LABELS[node.attrs.type] || ""}` : LABEL[node.type.name] || node.type.name);
   // ---------- Structure de l'article : vue en liste, plan, corbeille ----------
   // Une seule source de vérité : le document de l'éditeur. Chaque ligne porte l'identifiant du bloc (blockId) ;
   // la zone d'écriture et la liste se retrouvent par cet identifiant, jamais par un rang dans un tableau.
   let structureTab = "liste";
   let listRows = new Map(); // blockId → ligne de la vue en liste (reconstruite à chaque rendu)
+  const listCollapsed = new Set(); // blocs conteneurs repliés dans la vue en liste (conservés d'un rendu à l'autre)
   let listActive = null;
   let trashItems = null; // éléments de la corbeille (serveur), chargés à la demande
   let pendingTrash = []; // article jamais enregistré : éléments envoyés au premier enregistrement
@@ -572,6 +636,19 @@ function start() {
         const sub = h("ul", { role: "group", class: "wp-lv-children" });
         row.append(sub);
         stack.push({ depth, ul: sub });
+        // Replier / déplier ; Alt + clic : replier tous les autres conteneurs (sauf celui-ci et ses parents), comme Gutenberg
+        if (id) {
+          const folded = listCollapsed.has(id);
+          row.setAttribute("aria-expanded", String(!folded));
+          row.classList.toggle("is-collapsed", folded);
+          const toggle = h("button", { type: "button", class: "wp-lv-toggle", "data-block-toggle": id, "aria-expanded": String(!folded), "aria-label": `${folded ? "Déplier" : "Replier"} ${name}`, title: "Replier / déplier · Alt + clic : replier tous les autres",
+            onclick: (e) => {
+              if (e.altKey) { const keep = new Set([id]); let p = row.parentElement; while (p) { if (p.dataset && p.dataset.blockRow) keep.add(p.dataset.blockRow); p = p.parentElement; } for (const other of listRows.keys()) { if (!keep.has(other) && listRows.get(other).querySelector(":scope > .wp-lv-children")) listCollapsed.add(other); } listCollapsed.delete(id); }
+              else if (folded) listCollapsed.delete(id); else listCollapsed.add(id);
+              renderListView();
+            } }, svg("chevronDown", 16));
+          rowBox.prepend(toggle);
+        }
       }
       return hidden ? false : undefined; // les enfants d'un bloc masqué sont masqués avec lui
     });
@@ -581,7 +658,7 @@ function start() {
     if (!hs.length) outline.append(h("li", { class: "wp-help" }, "Le plan s'affiche à partir des titres (blocs Titre)."));
     const trashCount = visibleTrash().length;
     const tabs = structureTabs([["liste", "Vue en liste"], ["plan", "Plan"], ["corbeille", trashCount ? `Corbeille (${trashCount})` : "Corbeille"]], (k) => {
-      structureTab = k; list.hidden = k !== "liste"; outline.hidden = k !== "plan"; trash.hidden = k !== "corbeille";
+      structureTab = k; list.hidden = k !== "liste"; fold.hidden = k !== "liste"; outline.hidden = k !== "plan"; trash.hidden = k !== "corbeille";
       if (k === "corbeille") renderTrash(trash, true);
       if (k === "liste") syncListSelection(true);
     });
@@ -591,7 +668,8 @@ function start() {
     // Le focus clavier reste sur le même bouton du même bloc après le nouveau rendu
     const fa = document.activeElement;
     const focusKey = fa && secondaryDynamic.contains(fa) ? ["data-block-select", "data-block-hide", "data-block-delete", "data-structure-tab"].map((a) => (fa.hasAttribute(a) ? `[${a}="${fa.getAttribute(a)}"]` : null)).find(Boolean) : null;
-    body.append(stats, list, outline, trash);
+    const fold = h("div", { class: "wp-lv-fold", hidden: structureTab !== "liste" }, h("button", { type: "button", class: "wp-btn-link", onclick: () => { for (const k of listRows.keys()) if (listRows.get(k).querySelector(":scope > .wp-lv-children")) listCollapsed.add(k); renderListView(); } }, "Tout replier"), h("button", { type: "button", class: "wp-btn-link", onclick: () => { listCollapsed.clear(); renderListView(); } }, "Tout déplier"));
+    body.append(...[stats, fold, list, outline, trash].filter(Boolean)); // (append(null) écrirait « null »)
     secondaryDynamic.replaceChildren(tabs, body);
     body.scrollTop = scroll;
     if (focusKey) { const again = secondaryDynamic.querySelector(focusKey); if (again && !again.disabled) again.focus({ preventScroll: true }); }
@@ -777,7 +855,7 @@ function start() {
   const LAYOUT_TYPES = new Set(["kbColumns", "kbColumn", "kbGroup", "kbButtons", "kbCover"]);
   // Bloc synchronisé en cours de modification qui contient le curseur (actions dans l'onglet Bloc)
   const editingReusableAt = () => { const $p = editor.state.selection.$from; for (let d = $p.depth; d >= 1; d--) if ($p.node(d).type.name === "kbReusableEdit") return { pos: $p.before(d), node: $p.node(d) }; return null; };
-  const SETTINGS_TYPES = new Set(["kbMore", "kbFile", "kbCover", "kbMediaText", "horizontalRule", "kbReusable", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
+  const SETTINGS_TYPES = new Set([...DYNAMIC.map((d) => d.name), "kbNextPage", "kbHtml", "kbIcon", "kbMath", "kbPlaylist", "kbAccordionGroup", "kbTabs", "kbMore", "kbFile", "kbCover", "kbMediaText", "horizontalRule", "kbReusable", "kbSpacer", "kbPageBreak", "kbColumns", "kbGroup", "kbButtons", "kbImage", "kbGallery", "kbVideo", "kbAudio", "kbEmbed", "kbCourse", "kbNewsletter", "kbButton", "callout", "kbSteps", "kbCompare", "table", "kbCta", "kbFaq", "kbAccordion", "bulletList", "orderedList", "taskList", "blockquote"]);
   function currentBlock() {
     const sel = editor.state.selection;
     // « top » : le bloc à déplacer / dupliquer / supprimer — au premier niveau, ou dans une colonne / un groupe
@@ -820,7 +898,7 @@ function start() {
     const pop = h("div", { class: `wp-popover ${className}`, role: "dialog" }, content);
     document.body.append(pop);
     // Calque flottant commun (public/js/floating.js) : sous le bouton, au-dessus s'il manque de place, toujours dans l'écran
-    const done = () => { window.kbFloat?.close(pop); pop.remove(); document.removeEventListener("mousedown", outside); };
+    const done = () => { document.removeEventListener("mousedown", outside); if (pop.classList.contains("is-closing")) return; window.kbFloat?.close(pop); leave(pop, () => pop.remove(), { ms: 120 }); };
     if (window.kbFloat) window.kbFloat.open(anchor, pop, { align: "start", onClose: done });
     else {
       const r = anchor.getBoundingClientRect();
@@ -859,6 +937,33 @@ function start() {
   function attempt(fn, okMessage, { focus = true } = {}) {
     try { const r = fn(); if (focus) editor.view.focus(); if (okMessage) toast(typeof okMessage === "function" ? okMessage(r) : okMessage); return r; } catch (e) { if (e instanceof TransformError) { toast(e.message, "error"); return null; } throw e; }
   }
+  // Verrouillage détaillé (comme Gutenberg) : contenu, déplacement, suppression ; avec ou sans les blocs internes
+  function lockDialog(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || !LOCKABLE_TYPES.includes(node.type.name)) return;
+    const st = { locked: Boolean(node.attrs.locked), lockMove: Boolean(node.attrs.lockMove), lockRemove: Boolean(node.attrs.lockRemove), inner: false };
+    let hasInner = false; node.descendants((c) => { if (c.attrs && "locked" in c.attrs) hasInner = true; return !hasInner; });
+    const body = h("div", {},
+      h("p", { class: "wp-help" }, "Protège ce bloc contre les modifications accidentelles. Les verrous se lèvent ici, à tout moment."),
+      checkbox("Empêcher la modification du contenu (verrou complet)", st.locked, (v) => { st.locked = v; }),
+      checkbox("Empêcher le déplacement", st.lockMove, (v) => { st.lockMove = v; }),
+      checkbox("Empêcher la suppression", st.lockRemove, (v) => { st.lockRemove = v; }),
+      ...(hasInner ? [checkbox("Appliquer aussi aux blocs qu'il contient", false, (v) => { st.inner = v; })] : []));
+    modal("Options de verrouillage", body, [{ label: "Appliquer", primary: true, run: () => { setLockState(editor, pos, st); const any = st.locked || st.lockMove || st.lockRemove; toast(any ? `Verrouillé : ${lockSummary(editor.state.doc.nodeAt(pos)).join(", ")}.` : "Bloc déverrouillé."); } }]);
+  }
+  // Modifier un bloc en HTML (comme Gutenberg) : le code est relu par les règles de l'éditeur ; ce qu'il ne gère pas est retiré, comme à l'enregistrement
+  function editBlockHtml(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || isLocked(node)) return;
+    const ta = textarea({ rows: 16, class: "wp-mono", spellcheck: "false", "aria-label": "HTML du bloc" }, blockHtml(editor, pos));
+    modal(`Modifier « ${nameOf(node)} » en HTML`, h("div", {}, h("p", { class: "wp-help" }, "Seuls les éléments pris en charge par l'éditeur sont conservés (aucun script, aucun style libre). « Annuler » (Ctrl+Z) défait la modification."), control("Code HTML du bloc", ta)),
+      [{ label: "Appliquer", primary: true, run: () => {
+        const code = ta.value.trim();
+        if (!code) { toast("Le HTML est vide : utilisez « Supprimer le bloc ».", "error"); return true; }
+        if (attempt(() => replaceBlockHtml(editor, pos, code), "Bloc modifié (Ctrl+Z pour annuler).") === null) return true;
+      } }], { wide: true });
+    ta.focus();
+  }
   let styleClipboard = null;
   function transformMenu(anchor, pos = null) {
     const textual = pos === null || TEXT_TYPES.includes((editor.state.doc.nodeAt(pos) || {}).type?.name);
@@ -887,12 +992,31 @@ function start() {
       chain().insertContent(content.length === 1 ? content[0].content || [] : content).run();
     } catch { toast("Accès au presse-papiers refusé par le navigateur : utilisez Ctrl+Maj+V (Cmd+Maj+V sur Mac) pour coller sans mise en forme."); }
   }
+  // Note de bas de page : nœud en ligne ; le serveur numérote les notes et les rassemble en fin d'article (ou de page)
+  function footnoteDialog(initial, done) {
+    const ta = textarea({ rows: 4, maxlength: 500, "aria-label": "Texte de la note" }, initial);
+    const m = modal(initial ? "Modifier la note de bas de page" : "Ajouter une note de bas de page", control("Texte de la note", ta, "500 caractères au plus. Affichée en bas de l'article avec un lien de retour."), [{ label: "Enregistrer", primary: true, run: () => { const v = ta.value.replace(/\s+/g, " ").trim(); if (!v) { toast("Écrivez le texte de la note.", "error"); return true; } done(v); } }]);
+    ta.focus();
+    return m;
+  }
+  function addFootnote() {
+    const { from } = editor.state.selection;
+    footnoteDialog("", (note) => { editor.chain().focus().insertContentAt(from, { type: "kbFootnote", attrs: { note } }).run(); toast("Note ajoutée : elle apparaîtra numérotée en bas de l'article."); });
+  }
+  function editFootnote(pos) {
+    const node = editor.state.doc.nodeAt(pos);
+    if (!node || node.type.name !== "kbFootnote") return;
+    footnoteDialog(node.attrs.note, (note) => { editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { note })); });
+  }
+  // Un clic sur une note ouvre son texte (l'événement vient de la vue du nœud, voir KbFootnote dans blog/nodes.js)
+  root.addEventListener("kb-footnote-edit", (e) => editFootnote(e.detail.pos));
   function moreFormats(anchor) {
     const colors = [["#0b2a40", "Bleu nuit"], ["#3858e9", "Bleu"], ["#1e7a34", "Vert"], ["#b45309", "Orange"], ["#cc1818", "Rouge"], ["#6b21a8", "Violet"], ["#757575", "Gris"]];
     const marks = [["#fff3a3", "Jaune"], ["#d1fae5", "Vert"], ["#e0f2fe", "Bleu"], ["#fde2e4", "Rose"]];
     popover(anchor, h("div", {},
       menuList([
         { label: "Code en ligne", icon: "code", run: () => chain().toggleCode().run() },
+        { label: "Note de bas de page…", run: () => addFootnote() },
         { label: "Souligné", run: () => chain().toggleUnderline().run(), shortcut: "Ctrl+U" },
         { label: "Barré", run: () => chain().toggleStrike().run() },
         { label: "Exposant", run: () => chain().toggleSuperscript().run() },
@@ -942,7 +1066,8 @@ function start() {
       ...(canUngroup(node) ? [{ label: "Dégrouper", run: () => attempt(() => ungroupAt(editor, top), "Bloc dégroupé : son contenu est remis au niveau du dessus.") }] : []),
       ...(copyStyles(node) ? [{ label: "Copier les styles", run: () => { styleClipboard = copyStyles(node); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); } }] : []),
       ...(styleClipboard && !locked ? [{ label: "Coller les styles", shortcut: "Ctrl+Alt+V", run: () => attempt(() => pasteStyles(editor, top, styleClipboard), (n) => `${n} réglage${n > 1 ? "s" : ""} de style appliqué${n > 1 ? "s" : ""}.`) }] : []),
-      ...(LOCKABLE_TYPES.includes(node.type.name) ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }] : []),
+      ...(LOCKABLE_TYPES.includes(node.type.name) ? [{ label: locked ? "🔓 Déverrouiller" : "🔒 Verrouiller (empêche toute modification)", run: () => { setLocked(editor, top, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); } }, { label: "Options de verrouillage…", run: () => lockDialog(top) }] : []),
+      ...(!locked && node.type.name !== "kbReusableEdit" ? [{ label: "Modifier en HTML…", run: () => editBlockHtml(top) }] : []),
       ...(blockMenuExtra ? blockMenuExtra(top, node) : []),
       ...(locked ? [] : ["-", { label: "Supprimer", danger: true, shortcut: "Maj+Alt+Z", run: () => deleteBlock(top) }]),
     ];
@@ -979,6 +1104,8 @@ function start() {
       add("hide", n.attrs.hidden ? "Afficher le bloc" : "Masquer le bloc", "Ctrl+Maj+H", () => toggleHidden(id), Boolean(id) && !locked);
       add("rename", "Renommer le bloc…", "Ctrl+Alt+R", () => renameBlock(first.pos), !locked && LOCKABLE_TYPES.includes(n.type.name));
       if (LOCKABLE_TYPES.includes(n.type.name)) add("lock", locked ? "Déverrouiller le bloc" : "Verrouiller le bloc", "", () => { setLocked(editor, first.pos, !locked); toast(locked ? "Bloc déverrouillé." : "Bloc verrouillé : il ne peut plus être modifié ni supprimé par erreur."); });
+      if (LOCKABLE_TYPES.includes(n.type.name)) add("lock-options", "Options de verrouillage…", "", () => lockDialog(first.pos));
+      add("edit-html", "Modifier en HTML…", "", () => editBlockHtml(first.pos), !locked && n.type.name !== "kbReusableEdit");
       if (copyStyles(n)) add("copy-styles", "Copier les styles", "", () => { styleClipboard = copyStyles(n); toast("Styles copiés : « Coller les styles » les applique à un autre bloc."); });
       if (styleClipboard) add("paste-styles", "Coller les styles", "Ctrl+Alt+V", () => attempt(() => pasteStyles(editor, first.pos, styleClipboard), (k) => `${plural(k, "réglage")} de style appliqué${k > 1 ? "s" : ""}.`), !locked);
       if (transformsFor(editor, first.pos).length || TEXT_TYPES.includes(n.type.name)) add("transform", "Transformer en…", "", () => { if (TEXT_TYPES.includes(n.type.name)) editor.chain().focus().setTextSelection(first.pos + 1).run(); transformMenu(lastMenuAnchor || document.querySelector("[data-block-toolbar]"), first.pos); }, !locked);
@@ -1326,7 +1453,18 @@ function start() {
     });
     img.addEventListener("load", () => fitRatio());
     const ratios = segmented([["0", "Libre"], ["1.7778", "16:9"], ["1.3333", "4:3"], ["1.5", "3:2"], ["1", "1:1"], ["0.75", "3:4"]], "0", (v) => { ratio = Number(v); fitRatio(); });
-    modal("Recadrer l'image", h("div", { class: "wp-crop" }, ratios, stage, size, h("p", { class: "wp-help" }, "Une nouvelle image est créée ; l'originale reste dans la médiathèque.")), [
+    // Pivoter de 90° : l'image affichée est redessinée tournée ; le recadrage porte ensuite sur l'image tournée
+    const rotate = (dir) => {
+      if (!img.naturalWidth) return;
+      const c = document.createElement("canvas");
+      c.width = img.naturalHeight; c.height = img.naturalWidth;
+      const g = c.getContext("2d");
+      g.translate(c.width / 2, c.height / 2); g.rotate((dir * Math.PI) / 2); g.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+      r = { x: 0.1, y: 0.1, w: 0.8, h: 0.8 };
+      img.src = c.toDataURL(/\.png$/i.test(src) ? "image/png" : "image/jpeg", 0.92);
+    };
+    const turns = h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => rotate(-1) }, "↺ Pivoter à gauche"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => rotate(1) }, "↻ Pivoter à droite"));
+    modal("Recadrer et pivoter l'image", h("div", { class: "wp-crop" }, ratios, turns, stage, size, h("p", { class: "wp-help" }, "Une nouvelle image est créée ; l'originale reste dans la médiathèque.")), [
       { label: "Annuler" },
       { label: "Appliquer le recadrage", primary: true, run: async () => {
         if (!img.naturalWidth) { toast("Image non chargée : impossible de la recadrer.", "error"); return true; }
@@ -1576,7 +1714,7 @@ function start() {
     const m = empty && /^\/([\p{L}\p{N} '-]{0,30})$/u.exec(text);
     if (!m || $from.parentOffset !== text.length) { if (slash) { slash.remove(); slash = null; } return; }
     const range = { from: $from.start(), to: $from.end() };
-    const found = BLOCKS.filter((b) => !((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []).includes(b.id) && matches(b, m[1])).slice(0, 8);
+    const found = BLOCKS.filter((b) => !((editorPrefs.settings && editorPrefs.settings.hiddenBlocks) || []).includes(b.id) && matches(b, m[1])).slice(0, 40);
     if (!slash) { slash = h("div", { class: "wp-popover wp-slash", role: "listbox", "aria-label": "Blocs" }); document.body.append(slash); }
     slash.replaceChildren(...found.map((b, i) => h("button", { type: "button", role: "option", class: i === 0 ? "is-active" : "", onmousedown: (e) => e.preventDefault(), onclick: () => applySlash(b, range) }, svg(b.icon, 20), h("span", {}, b.title))));
     if (!found.length) slash.append(h("p", { class: "wp-help" }, "Aucun bloc trouvé."));
@@ -1593,6 +1731,15 @@ function start() {
   editor.setOptions({
     editorProps: {
       ...editor.options.editorProps,
+      // « [[ » : recherche d'un article ou d'une page du site à lier (comme Gutenberg) ; le texte du lien est le titre de la cible
+      handleTextInput: (view, from, to, text) => {
+        if (text !== "[" || from < 1 || view.state.doc.textBetween(from - 1, from) !== "[") return false;
+        const $from = view.state.doc.resolve(from);
+        if (["codeBlock", "kbPreformatted", "kbVerse"].includes($from.parent.type.name)) return false;
+        view.dispatch(view.state.tr.delete(from - 1, from));
+        setTimeout(() => linkPopover(null, { bracket: true }), 0);
+        return true;
+      },
       handleDOMEvents: {
         // Premier clic dans l'article après un réglage de la barre latérale : le curseur va exactement où l'on clique
         // (sans cela, la sélection précédente — une image, un bouton — reprenait la main et le curseur « sautait »)
@@ -1627,6 +1774,20 @@ function start() {
       },
       handlePaste: (view, event) => {
         const files = event.clipboardData ? [...event.clipboardData.files] : [];
+        // Adresse collée seule dans un paragraphe vide : si elle est reconnue (vidéo, publication, musique…), elle devient directement un lecteur (comme Gutenberg)
+        if (!files.length && event.clipboardData) {
+          const url = (event.clipboardData.getData("text/plain") || "").trim();
+          const { $from, empty } = view.state.selection;
+          if (empty && /^https:\/\/\S+$/.test(url) && $from.parent.type.name === "paragraph" && $from.parent.content.size === 0 && $from.depth === 1) {
+            const kind = embedKindFor(url);
+            if (kind) {
+              event.preventDefault();
+              editor.chain().insertContentAt({ from: $from.before(), to: $from.after() }, { type: kind, attrs: { url, caption: "" } }).run();
+              toast(kind === "kbVideo" ? "Vidéo intégrée." : "Contenu intégré.");
+              return true;
+            }
+          }
+        }
         if (!files.length) return false;
         event.preventDefault();
         insertFiles(files, blockEndAt(editor.state.selection.from));
@@ -1661,8 +1822,12 @@ function start() {
           if (event.key === "Enter") { if (options[i]) options[i].click(); return true; }
           const next = options[(i + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length];
           options.forEach((o) => o.classList.toggle("is-active", o === next));
+          next.scrollIntoView({ block: "nearest" });
           return true;
         }
+        // Ctrl+Maj+0 : zoom arrière (vue d'ensemble de la page) ; Ctrl+Maj+Espace : espace insécable
+        if (mod && event.shiftKey && !event.altKey && event.code === "Digit0") { event.preventDefault(); toggleZoomOut(); return true; }
+        if (mod && event.shiftKey && !event.altKey && event.code === "Space") { event.preventDefault(); editor.chain().insertContent("\u00a0").run(); return true; }
         if (mod && !event.shiftKey && event.key.toLowerCase() === "k") {
           event.preventDefault();
           // Avec du texte sélectionné (ou dans un lien) : lien ; sinon : palette de commandes
@@ -1688,19 +1853,19 @@ function start() {
   });
 
   // ---------- Liens (fenêtre surgissante « Rechercher ou saisir l'URL ») ----------
-  function linkPopover(anchor) {
+  function linkPopover(anchor, { bracket = false } = {}) {
     const attrs = editor.getAttributes("link");
     const rel = String(attrs.rel || "").split(/\s+/);
     const url = input({ type: "text", value: attrs.href || "", placeholder: "Rechercher ou saisir l'URL", autocomplete: "off", "aria-label": "Rechercher ou saisir l'URL" });
     const results = h("ul", { class: "wp-link-results", role: "listbox" });
     const opts = { tab: attrs.target === "_blank", nofollow: rel.includes("nofollow"), sponsored: rel.includes("sponsored"), ugc: rel.includes("ugc") };
-    const apply = (href) => {
+    const apply = (href, label) => {
       href = String(href || url.value).trim();
       if (!/^(https?:\/\/\S+|mailto:\S+|\/(?!\/)\S*|#[\w-]+)$/i.test(href)) { if (/^[\w-]+(\.[\w-]+)+/.test(href)) href = `https://${href}`; else { toast("Adresse invalide : https://…, /chemin-interne ou mailto:…", "error"); return; } }
       const relValue = ["nofollow", "sponsored", "ugc"].filter((r) => opts[r]);
       if (opts.tab) relValue.push("noopener", "noreferrer");
       const linkAttrs = { href, target: opts.tab ? "_blank" : null, rel: relValue.length ? relValue.join(" ") : null };
-      if (editor.state.selection.empty && !editor.isActive("link")) ins().insertContent({ type: "text", text: href, marks: [{ type: "link", attrs: linkAttrs }] }).run();
+      if (editor.state.selection.empty && !editor.isActive("link")) ins().insertContent({ type: "text", text: label || href, marks: [{ type: "link", attrs: linkAttrs }] }).run();
       else { const to = editor.state.selection.to; chain().extendMarkRange("link").setLink(linkAttrs).setTextSelection(to).unsetMark("link").run(); } // curseur après le lien, sans le prolonger
       pop.close();
       editor.view.focus();
@@ -1710,7 +1875,7 @@ function start() {
       if (/^(https?:|\/|mailto:)/.test(q)) { results.replaceChildren(h("li", {}, h("button", { type: "button", onclick: () => apply(q) }, h("span", { class: "wp-link-title" }, q), h("span", { class: "wp-link-type" }, "Appuyer sur Entrée pour ajouter ce lien")))); return; }
       try {
         const { results: found } = await api(`/formateur/blog/api/liens?q=${encodeURIComponent(q)}`);
-        results.replaceChildren(...found.map((r) => h("li", {}, h("button", { type: "button", onclick: () => apply(r.url) }, h("span", { class: "wp-link-title" }, r.title), h("span", { class: "wp-link-url" }, r.url), h("span", { class: "wp-link-type" }, r.label)))));
+        results.replaceChildren(...found.map((r) => h("li", {}, h("button", { type: "button", onclick: () => apply(r.url, bracket ? r.title : undefined) }, h("span", { class: "wp-link-title" }, r.title), h("span", { class: "wp-link-url" }, r.url), h("span", { class: "wp-link-type" }, r.label)))));
       } catch (e) { results.replaceChildren(h("li", { class: "wp-error" }, e.message)); }
     }, 200);
     url.addEventListener("input", runSearch);
@@ -1742,6 +1907,7 @@ function start() {
     });
   }
   function openMediaModal({ kind = "image", onSelect = null, onSelectMany = null, multiple = false, legacy = false } = {}) {
+    if (capturing) return;
     if (kind === "image" && !legacy && window.KWMediaPicker) {
       // Bouton « Médiathèque » de la barre d'outils (aucune insertion demandée) : la médiathèque complète du CMS, dans un nouvel onglet
       if (!onSelect && !onSelectMany) { window.open("/marketing/site-web/mediatheque", "_blank", "noopener"); return; }
@@ -2023,9 +2189,39 @@ function start() {
 
   // ---------- Onglet Bloc : réglages du bloc sélectionné ----------
   const inspector = $("[data-block-inspector]");
-  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte.", kbPreformatted: "Texte dont les espaces et les retours à la ligne sont conservés.", kbVerse: "Vers de poème ou de chanson, retours à la ligne respectés.", kbMore: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", kbFile: "Un document à télécharger (PDF, Office, ZIP…).", kbCover: "Une image de fond avec du texte par-dessus.", kbMediaText: "Une image à côté d'un texte." };
+  const DESC = { paragraph: "Commencez par le bloc de construction de toute narration.", heading: "Introduit une nouvelle section et organise le contenu.", kbImage: "Insérez une image pour illustrer votre propos.", kbGallery: "Affichez plusieurs images dans une galerie.", kbVideo: "Intégrez une vidéo.", kbAudio: "Intégrez un fichier audio.", kbEmbed: "Intégrez un contenu externe.", kbButton: "Invitez les lecteurs à agir.", callout: "Mettez une information en évidence.", kbCourse: "Recommandez une formation du catalogue.", kbNewsletter: "Formulaire d'inscription à la newsletter.", table: "Données structurées en tableau.", kbSteps: "Guide pas à pas (HowTo).", kbFaq: "Questions fréquentes (FAQPage).", kbCompare: "Comparaison en colonnes.", kbCta: "Encadré d'appel à l'action.", bulletList: "Liste à puces.", orderedList: "Liste numérotée.", taskList: "Liste de contrôle.", blockquote: "Mettez en valeur une citation.", codeBlock: "Code en respectant l'espacement.", kbAccordion: "Masquez et affichez du contenu.", kbSpacer: "Ajoutez de l'espace vertical entre deux blocs.", kbPageBreak: "Commence une nouvelle page à l'impression ou en PDF.", kbColumns: "Disposez des blocs côte à côte ; empilés sur mobile.", kbGroup: "Regroupez des blocs sur un fond commun.", kbButtons: "Plusieurs boutons côte à côte.", kbPreformatted: "Texte dont les espaces et les retours à la ligne sont conservés.", kbVerse: "Vers de poème ou de chanson, retours à la ligne respectés.", kbMore: "Marque la fin de l'extrait : le texte qui précède sert de résumé.", kbFile: "Un document à télécharger (PDF, Office, ZIP…).", kbCover: "Une image de fond avec du texte par-dessus.", kbMediaText: "Une image à côté d'un texte.", kbNextPage: "Découpe l'article en plusieurs pages.", kbHtml: "Code HTML libre, réservé au compte créateur.", kbIcon: "Un pictogramme du jeu d'icônes du site.", kbMath: "Une formule écrite en LaTeX.", kbPlaylist: "Plusieurs fichiers audio à la suite.", kbAccordionGroup: "Plusieurs éléments dépliables.", kbTabs: "Plusieurs contenus dans des onglets.", ...Object.fromEntries(DYNAMIC.map((d) => [d.name, d.desc])) };
   let inspectorKey = "";
   let advancedOpen = false; // « Réglages avancés » reste ouvert d'un bloc à l'autre une fois ouvert
+  const openStyleGroups = new Set(); // groupes de « Style du bloc » ouverts (conservés d'un bloc à l'autre)
+  // Panneau repliable (même structure que « Réglages avancés »)
+  function foldPanel(id, title, isOpen, body, onToggle) {
+    const bodyEl = h("div", { class: "wp-panel-body", id: `be-${id}-body`, hidden: !isOpen }, ...body);
+    const panel = h("div", { class: `wp-panel${isOpen ? " is-open" : ""}`, "data-panel-style": id });
+    panel.append(h("h2", { class: "wp-panel-title" }, h("button", { type: "button", "aria-expanded": String(isOpen), "aria-controls": `be-${id}-body`, onclick: (e) => { bodyEl.hidden = !bodyEl.hidden; panel.classList.toggle("is-open", !bodyEl.hidden); e.currentTarget.setAttribute("aria-expanded", String(!bodyEl.hidden)); onToggle(!bodyEl.hidden); } }, title, h("span", { class: "wp-chevron", "aria-hidden": "true" }))), bodyEl);
+    return panel;
+  }
+  // Réglages de style communs (typographie, couleur, dimensions, espacement, bordure et ombre) : même description que le serveur (src/shared/blockStyles.js)
+  function styleSettings(t, a, set) {
+    const out = [];
+    for (const group of STYLE_GROUPS) {
+      const props = STYLE_PROPS.filter((p) => p.group === group && supportsStyle(t, p));
+      if (!props.length) continue;
+      const used = props.filter((p) => a[p.key]).length;
+      const controls = props.map((p) => {
+        if (p.color) {
+          const color = h("input", { type: "color", id: `wp-f${++uid}`, value: a[p.key] || "#0b1f4b", "aria-label": p.label });
+          color.addEventListener("input", debounce(() => set({ [p.key]: color.value.toLowerCase() }), 150));
+          return h("div", { class: "wp-control wp-color-control" }, h("label", { for: color.id, class: "wp-label" }, p.label), h("div", { class: "wp-color-row" }, color, h("span", { class: "wp-color-value" }, a[p.key] || "Par défaut"), a[p.key] ? h("button", { type: "button", class: "wp-btn-secondary wp-btn-small", onclick: () => set({ [p.key]: "" }) }, "Effacer") : null));
+        }
+        const sel = select(p.values, a[p.key] || "");
+        sel.addEventListener("change", () => set({ [p.key]: sel.value }));
+        return control(p.label, sel, null);
+      });
+      if (used) controls.push(h("button", { type: "button", class: "wp-btn-link", "data-style-reset": group, onclick: () => set(Object.fromEntries(props.map((p) => [p.key, ""]))) }, `Réinitialiser « ${group} »`));
+      out.push(foldPanel(`st-${group.replace(/\W+/g, "")}`, used ? `${group} (${used})` : group, openStyleGroups.has(group) || used > 0, controls, (open) => { if (open) openStyleGroups.add(group); else openStyleGroups.delete(group); }));
+    }
+    return out;
+  }
   function renderInspector(force = false) {
     if ($('[data-sidebar-panel="bloc"]').hidden) return;
     const b = currentBlock();
@@ -2080,7 +2276,10 @@ function start() {
           h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { setCover(a.src, a.alt); toast("Image mise en avant définie."); } }, "Définir comme image mise en avant"))));
       const href = input({ value: a.href || "", placeholder: "https://… ou /cours/…" });
       href.addEventListener("input", debounce(() => { const v = href.value.trim(); if (!v || /^(https?:\/\/\S+|\/(?!\/)\S*|mailto:\S+)$/i.test(v)) set({ href: v }); }, 300));
-      inspector.append(section("Lien", control("Lien de l'image", href, "Vide : pas de lien."), checkbox("Ouvrir dans un nouvel onglet", a.newTab, (v) => set({ newTab: v }))));
+      inspector.append(section("Lien", control("Lien de l'image", href, "Vide : pas de lien."), checkbox("Ouvrir dans un nouvel onglet", a.newTab, (v) => set({ newTab: v })),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { set({ href: a.src }); toast("Lien vers le fichier de l'image défini."); renderInspector(true); } }, "Lier au fichier de l'image"),
+        checkbox("Agrandir au clic (lightbox)", Boolean(a.lightbox) && !a.href, (v) => { if (v && a.href) { toast("Retirez d'abord le lien : une image cliquable ne s'agrandit pas.", "error"); renderInspector(true); return; } set({ lightbox: v }); }),
+        h("p", { class: "wp-label" }, "Ajustement dans le cadre"), segmented([["", "Remplir (rogner)"], ["contain", "Contenir"]], a.fit || "", (v) => set({ fit: v }))));
       const info = h("div", { class: "wp-image-info", "aria-live": "polite" }, h("p", { class: "wp-help" }, "Vérification du fichier…"));
       inspector.append(section("Fichier", info));
       api("/formateur/blog/api/espace-seo/images", { method: "POST", json: { srcs: [a.src] } }).then(({ images }) => {
@@ -2099,6 +2298,8 @@ function start() {
         segmented([["2", "2"], ["3", "3"], ["4", "4"]], a.columns, (v) => set({ columns: v })),
         h("p", { class: "wp-label" }, "Espacement"),
         segmented([["s", "Petit"], ["", "Moyen"], ["l", "Grand"]], a.gap || "", (v) => set({ gap: v })),
+        checkbox("Rogner les images au même format", !a.natural, (v) => set({ natural: !v })),
+        checkbox("Agrandir au clic (lightbox)", Boolean(a.lightbox), (v) => set({ lightbox: v })),
         h("p", { class: "wp-label" }, "Images"),
         h("ul", { class: "wp-gallery-items" }, ...(a.images || []).map((img, i) => {
           const alt = input({ value: img.alt || "", placeholder: "Texte alternatif", "aria-label": `Texte alternatif de l'image ${i + 1}` });
@@ -2114,7 +2315,7 @@ function start() {
         })),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ multiple: true, onSelectMany: (list) => set({ images: [...a.images, ...list.map((m) => ({ src: m.path, alt: m.alt || "", caption: m.caption || "" }))] }) }) }, "Ajouter des images")));
     } else if (t === "kbVideo" || t === "kbEmbed") {
-      inspector.append(section("Réglages", control("Adresse", bind(input({ value: a.url || "", type: "url" }), "url"), t === "kbVideo" ? "YouTube, Vimeo, ou un fichier vidéo téléversé." : "YouTube, Vimeo et les cartes Google Maps deviennent un lecteur ; les autres adresses s'affichent comme un lien (sécurité)."), control("Légende", bind(input({ value: a.caption || "" }), "caption"))));
+      inspector.append(section("Réglages", control("Adresse", bind(input({ value: a.url || "", type: "url" }), "url"), t === "kbVideo" ? "YouTube, Vimeo, ou un fichier vidéo téléversé." : "YouTube, Vimeo, Google Maps et une vingtaine de services (Spotify, X, Instagram, TikTok, Facebook, Reddit, CodePen…) deviennent un lecteur ; les autres adresses s'affichent comme un lien (sécurité)."), control("Légende", bind(input({ value: a.caption || "" }), "caption"))));
       if (t === "kbVideo") {
         const isFile = /^\/uploads\/blog\//.test(a.url || "");
         const flag = (k) => (v) => set({ [k]: v ? "true" : "" });
@@ -2124,6 +2325,7 @@ function start() {
           checkbox("Muet", a.muted === "true" || a.autoplay === "true", flag("muted")),
           checkbox("En boucle", a.loop === "true", flag("loop")),
           checkbox("Masquer les commandes de lecture", a.nocontrols === "true", flag("nocontrols")),
+          (() => { const pre = select([["", "Métadonnées (par défaut)"], ["none", "Rien avant la lecture"], ["auto", "Tout charger"]], a.preload || ""); pre.addEventListener("change", () => set({ preload: pre.value })); return control("Préchargement", pre); })(),
           h("p", { class: "wp-label" }, "Sous-titres (fichier .vtt)"),
           h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "file", onSelect: (m) => { if (!/\.vtt$/i.test(m.path)) return toast("Choisissez un fichier de sous-titres WebVTT (.vtt).", "error"); set({ track: m.path, tracklang: a.tracklang || "fr", tracklabel: a.tracklabel || "Français" }); } }) }, a.track ? "Changer le fichier .vtt" : "Ajouter des sous-titres"), a.track ? h("button", { type: "button", class: "wp-btn-link is-danger", onclick: () => set({ track: "", tracklang: "", tracklabel: "" }) }, "Retirer") : null),
           ...(a.track ? [(() => { const lang = select([["fr", "Français"], ["en", "Anglais"], ["es", "Espagnol"], ["pt", "Portugais"], ["de", "Allemand"], ["it", "Italien"]], a.tracklang || "fr"); lang.addEventListener("change", () => set({ tracklang: lang.value })); return control("Langue", lang); })(), control("Intitulé affiché", bind(input({ value: a.tracklabel || "", maxlength: 40 }), "tracklabel"))] : []),
@@ -2131,6 +2333,10 @@ function start() {
       }
     } else if (t === "kbAudio") {
       inspector.append(section("Réglages", control("Titre", bind(input({ value: a.title || "" }), "title")), control("Auteur", bind(input({ value: a.author || "" }), "author")), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "audio", onSelect: (m) => set({ src: m.path }) }) }, "Remplacer le fichier")));
+      inspector.append(section("Lecture", checkbox("En boucle", a.loop === "true", (v) => set({ loop: v ? "true" : "" })),
+        checkbox("Lecture automatique", a.autoplay === "true", (v) => set({ autoplay: v ? "true" : "" })),
+        (() => { const pre = select([["", "Rien avant la lecture (par défaut)"], ["metadata", "Métadonnées"], ["auto", "Tout charger"]], a.preload || ""); pre.addEventListener("change", () => set({ preload: pre.value })); return control("Préchargement", pre); })(),
+        h("p", { class: "wp-help" }, "La plupart des navigateurs bloquent la lecture automatique d'un son avant tout geste du visiteur, et elle gêne les personnes qui utilisent un lecteur d'écran : à réserver aux cas où elle est vraiment utile.")));
     } else if (t === "kbButton") {
       const href = input({ value: a.href || "" });
       href.addEventListener("input", debounce(() => { if (/^(https?:\/\/\S+|\/(?!\/)\S*|mailto:\S+)$/i.test(href.value.trim())) set({ href: href.value.trim() }); }, 300));
@@ -2160,12 +2366,64 @@ function start() {
       inspector.append(section("Colonnes", ...cols.map((c, i) => control(`Colonne ${i + 1}`, (() => { const s = select([["pro", "Pour / avantages"], ["con", "Contre / limites"], ["neutral", "Neutre"]], c.tone); s.addEventListener("change", () => setAttrsAt(c.pos, { tone: s.value })); return s; })()))));
     } else if (t === "kbNewsletter") {
       inspector.append(section("Réglages", h("p", { class: "wp-help" }, DATA.newsletterReady ? "Le formulaire affiché se choisit dans la liste des articles (réglage « newsletter »)." : "Aucun formulaire publié : ce bloc n'apparaîtra pas tant qu'un formulaire d'inscription n'est pas publié dans Marketing.")));
+    } else if (DYNAMIC.some((d) => d.name === t)) {
+      const def = DYNAMIC.find((d) => d.name === t);
+      const fields = Object.entries(def.attrs).map(([key, [, , , spec]]) => {
+        const v = a[key] || "";
+        if (spec.kind === "check") return checkbox(spec.label, v === "true", (on) => set({ [key]: on ? "true" : "" }));
+        if (spec.kind === "forms") { const list = DATA.forms || []; const sel = select([["", list.length ? "Choisir un formulaire…" : "Aucun formulaire publié pour ce site"], ...list.map((f) => [f.slug, f.name])], v); sel.addEventListener("change", () => set({ [key]: sel.value })); return control(spec.label, sel, "Les formulaires se créent et se publient dans Marketing → Formulaires ; celui-ci garde son anti-robot et sa case de consentement."); }
+        if (spec.kind === "select") { const sel = select(spec.options, v || def.attrs[key][2]); sel.addEventListener("change", () => set({ [key]: sel.value })); return control(spec.label, sel); }
+        if (spec.kind === "number") { const n = h("input", { type: "number", min: String(spec.min), max: String(spec.max), value: v || def.attrs[key][2], id: `wp-f${++uid}` }); n.addEventListener("change", () => { const x = Math.round(Number(n.value)); if (!(x >= spec.min && x <= spec.max)) { toast(`${spec.label} : de ${spec.min} à ${spec.max}.`, "error"); n.value = v || def.attrs[key][2]; return; } set({ [key]: String(x) }); }); return control(spec.label, n); }
+        if (spec.kind === "textarea") { const ta = textarea({ rows: 5, placeholder: spec.placeholder || "", class: "wp-mono" }, (v || "").split(" ").join("\n")); ta.addEventListener("change", () => set({ [key]: ta.value })); return control(spec.label, ta, spec.help); }
+        const inp = input({ value: v, placeholder: spec.placeholder || "", maxlength: 300 }); inp.addEventListener("change", () => set({ [key]: inp.value.trim() })); return control(spec.label, inp, null);
+      });
+      inspector.append(section("Réglages", ...fields, h("p", { class: "wp-help" }, t === "kbRss" ? "Le flux est lu et mis en cache par le serveur (actualisé toutes les heures) : rien n'est demandé au visiteur." : "Le contenu est fabriqué par le serveur à l'affichage et reste limité au site de cet article.")));
+      if (t === "kbRss" && a.url) inspector.append(section("Aperçu du flux", (() => { const box = h("div", { class: "wp-feed-preview", "aria-live": "polite" }, h("p", { class: "wp-help" }, "Lecture du flux…")); api(`/formateur/blog/api/flux?url=${encodeURIComponent(a.url)}`).then((r) => box.replaceChildren(...(r.items.length ? [h("ul", {}, ...r.items.slice(0, 5).map((i) => h("li", {}, i.title)))] : [h("p", { class: "wp-warning" }, r.error || "Aucun élément lu : vérifiez l'adresse du flux.")]))).catch((e) => box.replaceChildren(h("p", { class: "wp-warning" }, e.message || "Flux illisible."))); return box; })()));
+    } else if (t === "kbHtml") {
+      const ta = textarea({ rows: 14, class: "wp-mono", spellcheck: "false", "aria-label": "Code HTML" }, a.code || "");
+      ta.addEventListener("input", debounce(() => set({ code: ta.value }), 400));
+      inspector.append(section("Code HTML", ta, h("p", { class: "wp-warning" }, "⚠ Ce code est publié tel quel et s'exécute sur le site (scripts, iframes, styles). Il est signé par le serveur à l'enregistrement : seul le compte créateur peut le modifier. Dans l'éditeur, l'aperçu est isolé et sans scripts.")));
+    } else if (t === "kbIcon") {
+      const ic = select(CONTENT_ICONS, a.icon); ic.addEventListener("change", () => set({ icon: ic.value }));
+      inspector.append(section("Réglages", control("Icône", ic), h("p", { class: "wp-label" }, "Taille"), segmented([["s", "Petite"], ["m", "Moyenne"], ["l", "Grande"], ["xl", "Très grande"]], a.size || "m", (v) => set({ size: v })),
+        control("Texte alternatif (facultatif)", bind(input({ value: a.label || "", maxlength: 80, placeholder: "Vide : icône décorative" }), "label"), "Si l'icône porte un sens, décrivez-le ; sinon laissez vide (les lecteurs d'écran l'ignorent). La couleur se règle dans « Couleur » plus bas.")));
+    } else if (t === "kbMath") {
+      const ta = textarea({ rows: 5, class: "wp-mono", spellcheck: "false", maxlength: 600, "aria-label": "Formule LaTeX", placeholder: "\\frac{a}{b}, \\sqrt{x}, \\sum_{i=1}^{n} i" }, a.latex || "");
+      ta.addEventListener("input", debounce(() => set({ latex: ta.value }), 300));
+      const snippets = [["Fraction", "\\frac{a}{b}"], ["Racine", "\\sqrt{x}"], ["Puissance", "x^{2}"], ["Indice", "x_{i}"], ["Somme", "\\sum_{i=1}^{n} i"], ["Intégrale", "\\int_{0}^{1} f(x)\\,dx"], ["Limite", "\\lim_{x \\to 0} f(x)"], ["Matrice", "\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}"]];
+      inspector.append(section("Formule (LaTeX)", ta, h("div", { class: "wp-button-row wp-snippets" }, ...snippets.map(([label, code]) => h("button", { type: "button", class: "wp-btn-secondary wp-btn-small", onclick: () => { ta.setRangeText(code, ta.selectionStart, ta.selectionEnd, "end"); ta.dispatchEvent(new Event("input")); ta.focus(); } }, label))),
+        h("p", { class: "wp-help" }, "Sous-ensemble courant de LaTeX : fractions, racines, exposants, indices, sommes, intégrales, limites, lettres grecques, matrices, \\text{…}. Une commande inconnue s'affiche telle quelle. Le site l'affiche en MathML (lu par les lecteurs d'écran).")));
+    } else if (t === "kbPlaylist") {
+      const rows = String(a.tracks || "").split("\n").filter(Boolean).map((l) => l.split("|"));
+      const write = (list) => set({ tracks: list.map((r) => [r[0], (r[1] || "").replace(/[|\n]/g, " "), (r[2] || "").replace(/[|\n]/g, " ")].join("|")).join("\n") });
+      inspector.append(section("Pistes", control("Titre de la liste (facultatif)", bind(input({ value: a.title || "", maxlength: 120 }), "title")),
+        h("ul", { class: "wp-gallery-items" }, ...rows.map((r, i) => {
+          const tt = input({ value: r[1] || "", placeholder: (r[0] || "").split("/").pop(), "aria-label": `Titre de la piste ${i + 1}` }); tt.addEventListener("change", () => { const next = rows.map((x) => [...x]); next[i][1] = tt.value; write(next); });
+          const ar = input({ value: r[2] || "", placeholder: "Artiste", "aria-label": `Artiste de la piste ${i + 1}` }); ar.addEventListener("change", () => { const next = rows.map((x) => [...x]); next[i][2] = ar.value; write(next); });
+          const move = (d) => { const next = rows.map((x) => [...x]); const j = i + d; if (j < 0 || j >= next.length) return; [next[i], next[j]] = [next[j], next[i]]; write(next); renderInspector(true); };
+          return h("li", {}, h("div", { class: "wp-gallery-fields" }, tt, ar), h("div", { class: "wp-gallery-moves" }, h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Avancer la piste", disabled: i === 0 || null, onclick: () => move(-1) }, "↑"), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Reculer la piste", disabled: i === rows.length - 1 || null, onclick: () => move(1) }, "↓"), h("button", { type: "button", class: "wp-btn-icon", "aria-label": "Retirer la piste", onclick: () => { const next = rows.filter((_, k) => k !== i); if (!next.length) { deleteBlock(b.top); return; } write(next); renderInspector(true); } }, "×")));
+        })),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "audio", multiple: true, onSelectMany: (list) => { write([...rows, ...list.map((m) => [m.path, m.title || "", ""])]); renderInspector(true); }, onSelect: (m) => { write([...rows, [m.path, m.title || "", ""]]); renderInspector(true); } }) }, "Ajouter des pistes")));
+    } else if (t === "kbAccordionGroup") {
+      inspector.append(section("Réglages", checkbox("Un seul élément ouvert à la fois", Boolean(a.autoclose), (v) => set({ autoclose: v })),
+        h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { editor.chain().focus().insertContentAt(b.pos + node.nodeSize - 1, accItem("Nouvel élément")).run(); renderInspector(true); } }, "+ Ajouter un élément"),
+        h("p", { class: "wp-help" }, "Dans l'éditeur, tous les éléments restent dépliés pour que vous puissiez écrire dedans.")));
+    } else if (t === "kbTabs") {
+      const tabs = []; node.forEach((tab, offset) => tabs.push({ pos: b.pos + 1 + offset, title: tab.attrs.title }));
+      inspector.append(section("Onglets", ...tabs.map((tb, i) => {
+        const tt = input({ value: tb.title, maxlength: 60, "aria-label": `Titre de l'onglet ${i + 1}` }); tt.addEventListener("change", () => setAttrsAt(tb.pos, { title: tt.value.trim() || `Onglet ${i + 1}` }));
+        return h("div", { class: "wp-tab-row" }, control(`Onglet ${i + 1}`, tt), tabs.length > 1 ? h("button", { type: "button", class: "wp-btn-link is-danger", "aria-label": `Retirer l'onglet ${i + 1}`, onclick: () => { const n = editor.state.doc.nodeAt(tb.pos); editor.view.dispatch(editor.state.tr.delete(tb.pos, tb.pos + n.nodeSize)); renderInspector(true); } }, "Retirer") : null);
+      }), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { editor.chain().focus().insertContentAt(b.pos + node.nodeSize - 1, tabNode(`Onglet ${tabs.length + 1}`)).run(); renderInspector(true); } }, "+ Ajouter un onglet"),
+        h("p", { class: "wp-help" }, "Sur le site, les onglets sont de vrais onglets (clavier : flèches, Début, Fin). Sans JavaScript, chaque onglet s'affiche comme une section titrée.")));
+    } else if (t === "kbNextPage") {
+      inspector.append(section("Réglages", h("p", { class: "wp-help" }, "L'article est découpé en pages à chaque repère. Les visiteurs naviguent avec « Page précédente / suivante » et le sommaire pointe vers la bonne page.")));
     } else if (t === "kbMore") {
       inspector.append(section("Réglages", control("Libellé (facultatif)", bind(input({ value: a.label || "", maxlength: 60, placeholder: "Lire la suite" }), "label"), "Sert d'intitulé interne ; l'extrait de l'article est le texte qui précède ce repère, quand l'extrait est vide.")));
     } else if (t === "kbFile") {
       inspector.append(section("Réglages",
         control("Titre affiché", bind(input({ value: a.title || "", maxlength: 120, placeholder: (a.url || "").split("/").pop() }), "title")),
         checkbox("Téléchargement direct (au lieu de l'ouvrir dans le navigateur)", a.download === "true", (v) => set({ download: v ? "true" : "" })),
+        ...(/\.pdf$/i.test(a.url || "") ? [checkbox("Afficher un aperçu du PDF dans la page", a.preview === "true", (v) => set({ preview: v ? "true" : "" }))] : []),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => openMediaModal({ kind: "file", onSelect: (m) => set({ url: m.path }) }) }, "Remplacer le fichier")));
     } else if (t === "kbCover") {
       const alt = input({ value: a.alt || "", maxlength: 200, placeholder: "Vide si l'image est décorative" });
@@ -2176,14 +2434,24 @@ function start() {
         control("Texte alternatif de l'image", alt),
         h("p", { class: "wp-label" }, "Opacité du voile sombre"), segmented([["0", "0 %"], ["20", "20 %"], ["40", "40 %"], ["60", "60 %"], ["80", "80 %"]], a.overlay || "40", (v) => set({ overlay: v })),
         h("p", { class: "wp-label" }, "Hauteur"), segmented([["s", "Basse"], ["m", "Moyenne"], ["l", "Haute"]], a.height || "m", (v) => set({ height: v })),
+        h("p", { class: "wp-label" }, "Teinte du voile"), segmented([["", "Sombre"], ["navy", "Bleu nuit"], ["light", "Clair"], ["fade-up", "Dégradé ↑"], ["fade-down", "Dégradé ↓"]], a.shade || "", (v) => set({ shade: v })),
+        h("p", { class: "wp-label" }, "Position du texte"),
+        h("div", { class: "wp-pos-grid", role: "group", "aria-label": "Position du texte" }, ...["tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br"].map((p) => h("button", { type: "button", class: `wp-pos${(a.pos || "mc") === p ? " is-active" : ""}`, "aria-pressed": String((a.pos || "mc") === p), "aria-label": ({ t: "Haut", m: "Milieu", b: "Bas" })[p[0]] + " " + ({ l: "gauche", c: "centre", r: "droite" })[p[1]], onclick: () => set({ pos: p === "mc" ? "" : p }) }, ""))),
+        control("Point focal horizontal (%)", (() => { const r = h("input", { type: "range", min: "0", max: "100", step: "5", value: a.fx || "50", id: `wp-f${++uid}` }); r.addEventListener("input", debounce(() => set({ fx: r.value === "50" ? "" : r.value }), 150)); return r; })()),
+        control("Point focal vertical (%)", (() => { const r = h("input", { type: "range", min: "0", max: "100", step: "5", value: a.fy || "50", id: `wp-f${++uid}` }); r.addEventListener("input", debounce(() => set({ fy: r.value === "50" ? "" : r.value }), 150)); return r; })()),
+        checkbox("Image fixe à l'arrière-plan (effet parallaxe)", a.fixed === "true", (v) => set({ fixed: v ? "true" : "" })),
         h("p", { class: "wp-help" }, "Le texte est affiché en blanc sur l'image : gardez un voile d'au moins 40 % pour que la lecture reste confortable.")));
     } else if (t === "kbMediaText") {
       inspector.append(section("Réglages",
         h("p", { class: "wp-label" }, "Position de l'image"), segmented([["left", "À gauche"], ["right", "À droite"]], a.side || "left", (v) => set({ side: v })),
-        h("p", { class: "wp-label" }, "Largeur de l'image"), segmented([["33", "Un tiers"], ["50", "Moitié"]], a.width || "50", (v) => set({ width: v })),
+        control("Largeur de l'image", (() => { const w = select([["25", "25 %"], ["33", "33 %"], ["40", "40 %"], ["50", "50 %"], ["60", "60 %"], ["66", "66 %"], ["75", "75 %"]], a.width || "50"); w.addEventListener("change", () => set({ width: w.value })); return w; })()),
+        h("p", { class: "wp-label" }, "Alignement vertical"), segmented([["top", "Haut"], ["", "Centre"], ["bottom", "Bas"]], a.valign || "", (v) => set({ valign: v })),
+        checkbox("Rogner l'image pour remplir la hauteur du texte", a.crop === "true", (v) => set({ crop: v ? "true" : "" })),
+        checkbox("Ne pas empiler sur mobile", a.stack === "never", (v) => set({ stack: v ? "never" : "" })),
         h("p", { class: "wp-help" }, "Cliquez sur l'image pour régler son texte alternatif, sa légende et son lien. Les deux colonnes sont empilées sur mobile.")));
     } else if (t === "table") {
       inspector.append(section("Légende", control("Légende du tableau", bind(input({ value: a.caption || "", maxlength: 200, placeholder: "Ex. Tarifs 2026" }), "caption"), "Affichée sous le tableau et lue par les lecteurs d'écran.")));
+      inspector.append(section("Structure", checkbox("Dernière ligne = pied de tableau (totaux)", Boolean(a.footer), (v) => set({ footer: v })), checkbox("Colonnes de largeur égale (disposition fixe)", Boolean(a.fixed), (v) => set({ fixed: v }))));
       inspector.append(section("Réglages", h("div", { class: "wp-button-row" },
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().toggleHeaderRow().run() }, "Ligne d'en-tête"),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => chain().addRowAfter().run() }, "+ Ligne"),
@@ -2194,12 +2462,15 @@ function start() {
         h("div", { class: "wp-button-row" }, h("button", { type: "button", class: "wp-btn-primary", onclick: () => editReusable(b.pos) }, "Modifier le bloc…"), h("button", { type: "button", class: "wp-btn-secondary", onclick: () => detachReusable(b.pos) }, "Créer une copie indépendante")),
         h("button", { type: "button", class: "wp-btn-link", onclick: manageReusable }, "Ouvrir la bibliothèque")));
     } else if (t === "blockquote") {
-      inspector.append(section("Réglages", checkbox("Citation mise en avant (grande, centrée)", Boolean(a.pullquote), (v) => set({ pullquote: v }))));
+      inspector.append(section("Réglages", checkbox("Citation mise en avant (grande, centrée)", Boolean(a.pullquote), (v) => set({ pullquote: v })),
+        control("Citation (auteur, source)", bind(input({ value: a.cite || "", maxlength: 200, placeholder: "Ex. Victor Hugo, Les Misérables" }), "cite"), "Affichée sous la citation.")));
     } else if (t === "kbSpacer") {
       const SIZES = [["s", "Petit"], ["m", "Moyen"], ["l", "Grand"], ["xl", "Très grand"]];
       const mobile = select([["", "Comme sur ordinateur"], ...SIZES], a.sizeMobile || "");
       mobile.addEventListener("change", () => set({ sizeMobile: mobile.value }));
-      inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Hauteur"), segmented(SIZES, a.size, (v) => set({ size: v })), control("Hauteur sur mobile", mobile)));
+      const px = h("input", { type: "number", min: "8", max: "499", step: "1", value: a.px || "", placeholder: "ex. 75", id: `wp-f${++uid}` });
+      px.addEventListener("change", () => { const n = Math.round(Number(px.value)); if (!px.value) return set({ px: "" }); if (!(n >= 8 && n <= 499)) { toast("Hauteur libre : de 8 à 499 px.", "error"); px.value = a.px || ""; return; } set({ px: String(n) }); });
+      inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Hauteur"), segmented(SIZES, a.size, (v) => set({ size: v })), control("Hauteur libre (px)", px, "Remplace la hauteur ci-dessus quand elle est renseignée."), control("Hauteur sur mobile", mobile)));
     } else if (t === "kbColumns") {
       const layouts = [["50-50", "2 colonnes · 50 / 50"], ["33-67", "2 colonnes · 33 / 67"], ["67-33", "2 colonnes · 67 / 33"], ["25-75", "2 colonnes · 25 / 75"], ["75-25", "2 colonnes · 75 / 25"], ["33-33-33", "3 colonnes · égales"], ["25-50-25", "3 colonnes · 25 / 50 / 25"], ["50-25-25", "3 colonnes · 50 / 25 / 25"], ["25-25-50", "3 colonnes · 25 / 25 / 50"], ["25-25-25-25", "4 colonnes · égales"]];
       const lay = select(layouts, a.layout);
@@ -2210,6 +2481,15 @@ function start() {
         h("p", { class: "wp-label" }, "Espacement"), segmented([["none", "Aucun"], ["s", "Petit"], ["", "Moyen"], ["l", "Grand"]], a.gap || "", (v) => set({ gap: v })),
         h("p", { class: "wp-label" }, "Alignement vertical"), segmented([["", "Haut"], ["center", "Centre"], ["bottom", "Bas"]], a.valign || "", (v) => set({ valign: v })),
         control("Empiler les colonnes", stack)));
+      // Largeurs libres (en %) : chaque colonne peut recevoir sa largeur ; vide = part égale du reste
+      const colsInfo = []; node.forEach((col, offset) => colsInfo.push({ pos: b.pos + 1 + offset, basis: col.attrs.basis || "", valign: col.attrs.valign || "" }));
+      inspector.append(section("Largeur de chaque colonne", ...colsInfo.map((c, i) => {
+        const w = h("input", { type: "number", min: "5", max: "95", step: "1", value: c.basis, placeholder: "auto", id: `wp-f${++uid}` });
+        w.addEventListener("change", () => { const n = Math.round(Number(w.value)); if (w.value && !(n >= 5 && n <= 95)) { toast("Largeur d'une colonne : de 5 à 95 %.", "error"); w.value = c.basis; return; } editor.chain().command(({ tr }) => { tr.setNodeMarkup(c.pos, undefined, { ...editor.state.doc.nodeAt(c.pos).attrs, basis: w.value ? String(n) : "" }); const cur = editor.state.doc.nodeAt(b.pos); tr.setNodeMarkup(b.pos, undefined, { ...cur.attrs, layout: "custom" }); return true; }).run(); renderInspector(true); });
+        const va = select([["", "Comme les autres"], ["top", "Haut"], ["center", "Centre"], ["bottom", "Bas"]], c.valign);
+        va.addEventListener("change", () => setAttrsAt(c.pos, { valign: va.value }));
+        return h("div", { class: "wp-col-width" }, control(`Colonne ${i + 1} · largeur (%)`, w), control(`Colonne ${i + 1} · alignement`, va));
+      }), h("p", { class: "wp-help" }, "Renseigner une largeur passe la disposition en « libre » ; les colonnes sans largeur se partagent le reste.")));
     } else if (t === "kbGroup") {
       const bg = select([["none", "Aucun fond"], ["light", "Gris clair"], ["accent", "Bleu clair"], ["warm", "Crème"], ["dark", "Bleu nuit (texte blanc)"]], a.bg || "none");
       bg.addEventListener("change", () => set({ bg: bg.value }));
@@ -2217,6 +2497,11 @@ function start() {
         h("p", { class: "wp-label" }, "Marges intérieures"), segmented([["none", "Aucune"], ["s", "Petites"], ["m", "Moyennes"], ["l", "Grandes"]], a.pad || "none", (v) => set({ pad: v })),
         h("p", { class: "wp-label" }, "Largeur"), segmented([["", "Normale"], ["wide", "Large (grand écran)"]], a.width || "", (v) => set({ width: v })),
         checkbox("Bordure", a.border === "true", (v) => set({ border: v ? "true" : "" }))));
+      inspector.append(section("Disposition des blocs internes",
+        h("p", { class: "wp-label" }, "Variation"), segmented([["", "Flux"], ["row", "Ligne"], ["stack", "Pile"], ["grid", "Grille"]], a.layout || "", (v) => set({ layout: v })),
+        ...(a.layout === "grid" ? [h("p", { class: "wp-label" }, "Colonnes de la grille"), segmented([["", "Auto"], ["2", "2"], ["3", "3"], ["4", "4"]], a.gridcols || "", (v) => set({ gridcols: v }))] : []),
+        ...(a.layout === "row" || a.layout === "stack" ? [h("p", { class: "wp-label" }, "Justification"), segmented([["", "Début"], ["center", "Centre"], ["right", "Fin"], ["between", "Écartés"]], a.justify || "", (v) => set({ justify: v }))] : []),
+        ...(a.layout === "row" ? [h("p", { class: "wp-label" }, "Alignement vertical"), segmented([["", "Centre"], ["top", "Haut"], ["bottom", "Bas"]], a.valign || "", (v) => set({ valign: v }))] : [])));
     } else if (t === "kbButtons") {
       inspector.append(section("Réglages", h("p", { class: "wp-label" }, "Alignement"), segmented([["left", "Gauche"], ["center", "Centre"], ["right", "Droite"]], a.align, (v) => set({ align: v })),
         h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { const n = editor.state.doc.nodeAt(b.pos); editor.chain().focus().insertContentAt(b.pos + n.nodeSize - 1, { type: "kbButton", attrs: { text: "Nouveau bouton", href: "/catalogue", variant: "outline", align: a.align, newTab: false } }).run(); } }, "+ Ajouter un bouton")));
@@ -2225,13 +2510,26 @@ function start() {
       start.addEventListener("change", () => { const n = Math.max(1, Math.min(9999, Number(start.value) || 1)); start.value = String(n); set({ start: n }); });
       inspector.append(section("Réglages", segmented([["bulletList", "Liste à puces", "list"], ["orderedList", "Liste numérotée", "ordered"]], t, (v) => (v === "orderedList" ? chain().toggleOrderedList().run() : chain().toggleBulletList().run())),
         ...(t === "orderedList" ? [control("Numéro de départ", start), checkbox("Numérotation décroissante", Boolean(a.reversed), (v) => set({ reversed: v }))] : []),
+        (() => { const opts = t === "orderedList" ? [["", "Chiffres (par défaut)"], ["lower-alpha", "a, b, c"], ["upper-alpha", "A, B, C"], ["lower-roman", "i, ii, iii"], ["upper-roman", "I, II, III"], ["lower-greek", "α, β, γ"]] : [["", "Disque (par défaut)"], ["circle", "Cercle"], ["square", "Carré"], ["none", "Sans puce"]]; const ls = select(opts, a.ltype || ""); ls.addEventListener("change", () => set({ ltype: ls.value })); return control(t === "orderedList" ? "Style de numérotation" : "Style de puce", ls); })(),
         h("p", { class: "wp-label" }, "Teinte du texte"), segmented(TONES, a.tone || "", (v) => set({ tone: v })),
         h("p", { class: "wp-help" }, "Tabulation : imbriquer un élément. Maj + Tabulation : le sortir d'un niveau.")));
     }
     if (t === "kbAccordion" && !isLocked(node)) inspector.append(section("Réglages", checkbox("Ouvert par défaut sur le site", Boolean(a.open), (v) => set({ open: v })), h("p", { class: "wp-help" }, "Dans l'éditeur, le bloc reste toujours déplié pour que vous puissiez écrire dedans.")));
     if (t === "blockquote" && !isLocked(node)) inspector.append(section("Teinte", segmented(TONES, a.tone || "", (v) => set({ tone: v }))));
     // Styles du bloc (variantes) : liste fermée par type de bloc
-    if (VARIANTS[t] && !isLocked(node)) inspector.append(section("Styles", segmented(VARIANTS[t], a.variant || "", (v) => set({ variant: v }))));
+    if (VARIANTS[t] && !isLocked(node)) {
+      const seg = segmented(VARIANTS[t], a.variant || "", (v) => set({ variant: v }));
+      // Aperçu : survoler (ou focaliser) un style l'applique à l'écran sans rien modifier ; quitter le rétablit
+      const dom = () => editor.view.nodeDOM(b.pos);
+      seg.querySelectorAll("button").forEach((btn, i) => {
+        const value = VARIANTS[t][i][0];
+        const show = () => { const el = dom(); if (el && el.setAttribute) { if (value) el.setAttribute("data-variant", value); else el.removeAttribute("data-variant"); } };
+        const hide = () => { const el = dom(); if (el && el.setAttribute) { const cur = (editor.state.doc.nodeAt(b.pos) || { attrs: {} }).attrs.variant; if (cur) el.setAttribute("data-variant", cur); else el.removeAttribute("data-variant"); } };
+        btn.addEventListener("mouseenter", show); btn.addEventListener("focus", show); btn.addEventListener("mouseleave", hide); btn.addEventListener("blur", hide);
+      });
+      inspector.append(section("Styles", seg, h("p", { class: "wp-help" }, "Survolez un style pour l'aperçu, cliquez pour l'appliquer.")));
+    }
+    if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) for (const panel of styleSettings(t, a, set)) inspector.append(panel);
     // Réglages communs (comme Gutenberg) : ancre HTML et classes CSS supplémentaires
     if (LOCKABLE_TYPES.includes(t) && !isLocked(node)) {
       const anchorIn = input({ value: a.anchor || "", maxlength: 64, placeholder: "ex. tarifs" });
@@ -2272,22 +2570,55 @@ function start() {
 
   // ---------- Notes de travail (jamais publiées) ----------
   const notesBody = $("[data-notes-body]");
-  let notesState = { notes: [], me: null, canModerate: false, loaded: false, filter: "open", focusBlock: null };
+  let notesState = { notes: [], people: [], me: null, canModerate: false, loaded: false, filter: "open", focusBlock: null };
   const noteDate = (sql) => fmtDate(sql);
   async function loadNotes() {
     if (!postId) { notesState.loaded = true; notesState.notes = []; renderNotes(); return; }
-    try { const r = await api(`/formateur/blog/${postId}/notes`); notesState = { ...notesState, notes: r.notes, me: r.me, canModerate: r.canModerate, loaded: true }; } catch (e) { toast(`Notes : ${e.message}`, "error"); }
+    try { const r = await api(`/formateur/blog/${postId}/notes`); notesState = { ...notesState, notes: r.notes, people: r.people || [], me: r.me, canModerate: r.canModerate, loaded: true }; } catch (e) { toast(`Notes : ${e.message}`, "error"); }
     renderNotes();
   }
   const noteCounts = () => { const out = {}; for (const n of notesState.notes) if (!n.resolved && n.blockId) out[n.blockId] = (out[n.blockId] || 0) + 1; return out; };
   function refreshNoteBadges() {
     try { setNoteCounts(editor, noteCounts()); } catch { /* éditeur en cours de démarrage */ }
     const open = notesState.notes.filter((n) => !n.resolved).length;
+    const mine = notesState.notes.filter((n) => !n.resolved && [n, ...n.replies].some((x) => x.userId !== notesState.me && x.mentions.some((m) => m.id === notesState.me))).length;
     const dot = $("[data-notes-dot]");
-    if (dot) { dot.hidden = !open; dot.title = open ? `${open} note${open > 1 ? "s" : ""} ouverte${open > 1 ? "s" : ""}` : ""; }
+    if (dot) { dot.hidden = !open; dot.classList.toggle("is-mention", mine > 0); dot.title = open ? `${open} note${open > 1 ? "s" : ""} ouverte${open > 1 ? "s" : ""}${mine ? ` · ${mine} vous mentionne${mine > 1 ? "nt" : ""}` : ""}` : ""; }
   }
   async function noteAction(url, json) {
     try { const r = await api(url, { method: "POST", json: json || {} }); notesState.notes = r.notes; renderNotes(); } catch (e) { toast(e.message, "error"); }
+  }
+  // Texte d'une note : les mentions reconnues (@nom) sont mises en évidence ; tout le reste reste du texte brut (jamais du HTML)
+  function noteText(n) {
+    const names = new Set((n.mentions || []).map((m) => m.username.toLowerCase()));
+    const out = []; let last = 0;
+    for (const m of n.body.matchAll(/(^|[\s(,;:])@([\p{L}\p{N}._-]{2,40})/gu)) {
+      if (!names.has(m[2].toLowerCase())) continue;
+      const at = m.index + m[1].length;
+      if (at > last) out.push(n.body.slice(last, at));
+      out.push(h("span", { class: `wp-mention${(n.mentions || []).some((x) => x.id === notesState.me && x.username.toLowerCase() === m[2].toLowerCase()) ? " is-me" : ""}` }, `@${m[2]}`));
+      last = at + 1 + m[2].length;
+    }
+    out.push(n.body.slice(last));
+    return out;
+  }
+  // Complétion des mentions : « @ » dans une zone de note propose les personnes qui peuvent lire cet article
+  function mentionAssist(area) {
+    const list = h("ul", { class: "wp-mention-list", role: "listbox", "aria-label": "Personnes à mentionner", hidden: true });
+    let matches = []; let active = 0;
+    const query = () => { const upto = area.value.slice(0, area.selectionStart); const m = /(^|[\s(,;:])@([\p{L}\p{N}._-]{0,40})$/u.exec(upto); return m ? { text: m[2], at: upto.length - m[2].length - 1 } : null; };
+    const close = () => { list.hidden = true; matches = []; };
+    const choose = (u) => { const q = query(); if (!q) return; area.setRangeText(`@${u.username} `, q.at, area.selectionStart, "end"); close(); area.focus(); };
+    const paint = () => { list.replaceChildren(...matches.map((u, i) => h("li", { role: "option", "aria-selected": String(i === active) }, h("button", { type: "button", class: i === active ? "is-active" : "", tabindex: "-1", onmousedown: (e) => { e.preventDefault(); choose(u); } }, `@${u.username}`)))); list.hidden = !matches.length; };
+    area.addEventListener("input", () => { const q = query(); if (!q) return close(); matches = (notesState.people || []).filter((u) => u.username.toLowerCase().startsWith(q.text.toLowerCase())).slice(0, 6); active = 0; paint(); });
+    area.addEventListener("keydown", (e) => {
+      if (list.hidden || !matches.length) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); active = (active + (e.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length; paint(); }
+      else if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); choose(matches[active]); }
+      else if (e.key === "Escape") { e.preventDefault(); close(); }
+    });
+    area.addEventListener("blur", () => setTimeout(close, 150));
+    return list;
   }
   function renderNotes() {
     if (!notesBody) return;
@@ -2300,6 +2631,7 @@ function start() {
     const area = textarea({ rows: 3, maxlength: 2000, placeholder: "Une remarque, une question, une consigne pour la personne qui relira…" }, draft);
     area.setAttribute("data-note-new", "");
     area.setAttribute("aria-label", "Texte de la note");
+    const mentions = mentionAssist(area);
     const link = checkbox(selId ? `Lier au bloc sélectionné (${nameOf(sel.node)})` : "Lier à un bloc (sélectionnez d'abord un bloc)", Boolean(target || selId), () => {});
     const linkBox = link.querySelector("input");
     linkBox.disabled = !selId && !target;
@@ -2325,8 +2657,8 @@ function start() {
       return h("li", { class: `wp-note${n.resolved ? " is-resolved" : ""}`, "data-note": n.id },
         head(n),
         n.blockId ? h("button", { type: "button", class: "wp-note-block", onclick: () => (blockNode ? selectBlockById(n.blockId) : toast("Ce bloc n'est plus dans l'article.", "error")) }, blockNode ? `Bloc : ${nameOf(blockNode)}` : "Bloc supprimé de l'article") : h("small", { class: "wp-help" }, "Note sur tout l'article"),
-        h("p", { class: "wp-note-body" }, n.body),
-        ...n.replies.map((r) => h("div", { class: "wp-note-reply", "data-note-reply": r.id }, head(r), h("p", { class: "wp-note-body" }, r.body), mine(r) ? h("button", { type: "button", class: "wp-btn-link is-danger", "aria-label": "Supprimer cette réponse", onclick: () => { if (confirm("Supprimer cette réponse ?")) noteAction(`/formateur/blog/${postId}/notes/${r.id}/supprimer`); } }, "Supprimer") : null)),
+        h("p", { class: `wp-note-body${(n.mentions || []).some((m) => m.id === notesState.me) ? " is-mentioned" : ""}` }, ...noteText(n)),
+        ...n.replies.map((r) => h("div", { class: "wp-note-reply", "data-note-reply": r.id }, head(r), h("p", { class: "wp-note-body" }, ...noteText(r)), mine(r) ? h("button", { type: "button", class: "wp-btn-link is-danger", "aria-label": "Supprimer cette réponse", onclick: () => { if (confirm("Supprimer cette réponse ?")) noteAction(`/formateur/blog/${postId}/notes/${r.id}/supprimer`); } }, "Supprimer") : null)),
         n.resolved ? null : h("div", { class: "wp-note-replybox" }, reply, h("button", { type: "button", class: "wp-btn-secondary", onclick: () => { if (reply.value.trim()) noteAction(`/formateur/blog/${postId}/notes`, { body: reply.value, parentId: n.id }); } }, "Répondre")),
         h("div", { class: "wp-note-actions" },
           h("button", { type: "button", class: "wp-btn-secondary", "data-note-resolve": n.id, onclick: () => noteAction(`/formateur/blog/${postId}/notes/${n.id}/resoudre`, { resolved: !n.resolved }) }, n.resolved ? "Rouvrir" : "Résoudre"),
@@ -2335,7 +2667,7 @@ function start() {
     const shown = notesState.filter === "done" ? done : open;
     notesBody.replaceChildren(
       h("p", { class: "wp-help" }, "Les notes servent à travailler à plusieurs. Elles ne sont jamais publiées."),
-      h("div", { class: "wp-note-form" }, area, link, send),
+      h("div", { class: "wp-note-form" }, h("div", { class: "wp-mention-wrap" }, area, mentions), link, send),
       segmented([["open", `Ouvertes (${open.length})`], ["done", `Résolues (${done.length})`]], notesState.filter, (v) => { notesState.filter = v; renderNotes(); }),
       shown.length ? h("ul", { class: "wp-notes" }, ...shown.map(thread)) : h("p", { class: "wp-help" }, notesState.filter === "done" ? "Aucune note résolue." : "Aucune note ouverte."));
     refreshNoteBadges();
@@ -2934,20 +3266,28 @@ function start() {
     key: () => `be-draft-${postId || "nouveau"}`,
     write() { try { localStorage.setItem(this.key(), JSON.stringify({ at: Date.now(), title: field("title").value, excerpt: field("excerpt").value, content: editor.getHTML() })); } catch { /* stockage indisponible */ } },
     read() { try { return JSON.parse(localStorage.getItem(this.key()) || "null"); } catch { return null; } },
-    clear() { try { localStorage.removeItem(this.key()); localStorage.removeItem("be-draft-nouveau"); } catch { /* rien */ } },
+    // Frappe : le document entier (getHTML + JSON + localStorage, synchrones) n'est plus sérialisé à chaque touche mais une fois la frappe calmée ; flush à la sortie
+    timer: 0,
+    schedule() { clearTimeout(this.timer); this.timer = setTimeout(() => { this.timer = 0; if (dirty) this.write(); }, 600); },
+    flush() { if (this.timer) { clearTimeout(this.timer); this.timer = 0; if (dirty) this.write(); } },
+    clear() { clearTimeout(this.timer); this.timer = 0; try { localStorage.removeItem(this.key()); localStorage.removeItem("be-draft-nouveau"); } catch { /* rien */ } },
   };
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") localDraft.flush(); });
+  window.addEventListener("pagehide", () => localDraft.flush());
   let changeRev = 0; // compteur de modifications : une frappe faite pendant un enregistrement ne doit pas être déclarée enregistrée
   function changed() {
     dirty = true;
     changeRev += 1;
     setState("Modifications non enregistrées", "is-dirty");
-    localDraft.write();
+    localDraft.schedule();
     scheduleAutosave();
     refreshLater();
   }
+  // L'analyse relit tout le document (getHTML + analyze) : elle attend une vraie pause et passe en temps mort plutôt que sur la frappe suivante
+  const refreshAnalysisIdle = debounce(() => { if (window.requestIdleCallback) window.requestIdleCallback(() => refreshAnalysis(), { timeout: 2500 }); else refreshAnalysis(); }, 900);
   const refreshLater = debounce(() => {
     refreshCounters(); refreshPreviews();
-    if ((editorPrefs.settings || {}).seoAnalysis !== false || !$('[data-sidebar-panel="seo"]').hidden) refreshAnalysis();
+    if ((editorPrefs.settings || {}).seoAnalysis !== false || !$('[data-sidebar-panel="seo"]').hidden) refreshAnalysisIdle();
     if ($('[data-panel="structure"]').classList.contains("is-open")) refreshStructure();
     if ($('[data-panel="checklist"]').classList.contains("is-open")) refreshPublication();
     if (secondaryMode === "media") refreshMedia();
@@ -3097,12 +3437,26 @@ function start() {
   // Fenêtre d'aide : regroupée comme celle de Gutenberg (Global, Sélection, Bloc, Texte). Mac : Cmd à la place de Ctrl.
   function showShortcuts() {
     const groups = [
-      ["Global", [["Ctrl + S", "Enregistrer"], ["Ctrl + Z", "Annuler"], ["Ctrl + Maj + Z  ou  Ctrl + Y", "Rétablir"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer"], ["Ctrl + Maj + Alt + M", "Éditeur visuel / éditeur de code"], ["Ctrl + Alt + M", "Ajouter une note sur le bloc"], ["Ctrl + Maj + Alt + F", "Plein écran"], ["Maj + Alt + O", "Vue en liste"], ["Ctrl + Maj + ,", "Afficher / masquer les réglages"], ["Ctrl + Maj + \\", "Mode sans distraction"], ["Maj + Alt + N / P", "Région suivante / précédente"], ["Alt + F10", "Barre d'outils du bloc"], ["Maj + Alt + H", "Cette aide"], ["Échap", "Fermer un menu"]]],
+      ["Global", [["Ctrl + S", "Enregistrer"], ["Ctrl + Z", "Annuler"], ["Ctrl + Maj + Z  ou  Ctrl + Y", "Rétablir"], ["Ctrl + K", "Avec du texte sélectionné : lien ; sinon : palette de commandes"], ["Ctrl + Maj + K", "Palette de commandes"], ["Ctrl + Maj + F", "Rechercher et remplacer"], ["Ctrl + Maj + Alt + M", "Éditeur visuel / éditeur de code"], ["Ctrl + Alt + M", "Ajouter une note sur le bloc"], ["Ctrl + Maj + Alt + F", "Plein écran"], ["Maj + Alt + O", "Vue en liste"], ["Ctrl + Maj + ,", "Afficher / masquer les réglages"], ["Ctrl + Maj + \\", "Mode sans distraction"], ["Ctrl + Maj + 0", "Zoom arrière (toute la page)"], ["Maj + Alt + N / P", "Région suivante / précédente"], ["Alt + F10", "Barre d'outils du bloc"], ["Maj + Alt + H", "Cette aide"], ["Échap", "Fermer un menu"]]],
       ["Sélection", [["Ctrl + A", "Tout sélectionner (texte, puis tous les blocs)"], ["Maj + ↑ / ↓", "Étendre la sélection à plusieurs blocs"], ["Maj + clic (vue en liste)", "Sélectionner une plage de blocs"]]],
       ["Bloc", [["Ctrl + Maj + D", "Dupliquer"], ["Maj + Alt + Z", "Supprimer"], ["Ctrl + Alt + T / Y", "Insérer un paragraphe avant / après"], ["Ctrl + Maj + Alt + T / Y", "Monter / descendre"], ["Alt + ↑ / ↓", "Déplacer d'un cran"], ["Ctrl + G", "Grouper les blocs sélectionnés"], ["Ctrl + Alt + V", "Coller les styles"], ["Ctrl + Alt + R", "Renommer le bloc"], ["Ctrl + Maj + H", "Masquer / afficher le bloc"], ["/", "Choisir un bloc (début d'un paragraphe vide)"], ["Clic droit", "Menu du bloc (Maj + clic droit : menu du navigateur)"]]],
-      ["Texte", [["Ctrl + B / I / U", "Gras / italique / souligné"], ["Maj + Alt + 1 à 6", "Titre de niveau 1 à 6"], ["Maj + Alt + 0", "Paragraphe"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + V", "Coller sans mise en forme"]]],
+      ["Texte", [["[[", "Rechercher un article ou une page à lier"], ["Ctrl + Maj + Espace", "Espace insécable"], ["Ctrl + B / I / U", "Gras / italique / souligné"], ["Maj + Alt + 1 à 6", "Titre de niveau 1 à 6"], ["Maj + Alt + 0", "Paragraphe"], ["Tab / Maj + Tab", "Imbriquer / désimbriquer un élément de liste"], ["Ctrl + Maj + V", "Coller sans mise en forme"]]],
     ];
     modal("Raccourcis clavier", h("div", {}, h("p", { class: "wp-help" }, "Sur Mac, remplacez Ctrl par Cmd."), ...groups.flatMap(([title, rows]) => [h("h3", { class: "wp-shortcuts-title" }, title), h("dl", { class: "wp-shortcuts" }, ...rows.flatMap(([k, d]) => [h("dt", {}, h("kbd", {}, k)), h("dd", {}, d)]))])), [], { wide: true });
+  }
+  // « Copier tout le contenu » (menu Outils de Gutenberg) : le HTML de l'article dans le presse-papiers
+  async function copyAllContent() {
+    const html = editor.getHTML();
+    try { await navigator.clipboard.writeText(html); toast(`Contenu copié (${html.length.toLocaleString("fr-FR")} caractères).`); }
+    catch { codeEditor.value = html; toast("Le navigateur refuse l'accès au presse-papiers : utilisez l'éditeur de code pour copier le contenu.", "error"); }
+  }
+  // Zoom arrière : la page entière se voit en réduction (réorganiser de gros blocs, comme dans Gutenberg)
+  function toggleZoomOut(force) {
+    const on = typeof force === "boolean" ? force : !root.classList.contains("is-zoom-out");
+    root.classList.toggle("is-zoom-out", on);
+    const item = $('[data-option="zoomout"]');
+    if (item) item.setAttribute("aria-checked", String(on));
+    toast(on ? "Zoom arrière : toute la page est visible (Ctrl+Maj+0 pour revenir)." : "Zoom normal.");
   }
   // Mode sans distraction (panneaux masqués) et plein écran du navigateur
   function setDistractionFree(on) {
@@ -3301,7 +3655,32 @@ function start() {
       requestAnimationFrame(() => setDevice(kind === "frame" ? "desktop" : kind));
     } catch (e) { toast(e.message, "error"); }
   }));
+  // Zone d'écriture redimensionnable (comme l'édition « responsive » de Gutenberg) : une poignée sur le bord droit, ou les flèches ← → au clavier ; la largeur détermine
+  // la disposition (mobile < 641 px, tablette < 961 px) comme sur le site
+  const canvasContent = $(".wp-content");
+  const canvasHandle = h("button", { type: "button", class: "wp-canvas-handle", "aria-label": "Redimensionner la zone d'écriture (glisser, ou flèches gauche et droite)", title: "Redimensionner la zone d'écriture" });
+  const canvasSize = h("span", { class: "wp-canvas-size", "aria-live": "polite", hidden: true });
+  canvasContent.append(canvasHandle, canvasSize);
+  const resizeCanvas = (w) => {
+    const max = Math.max(320, Math.floor($("[data-canvas]").clientWidth - 24));
+    const width = Math.round(Math.min(max, Math.max(320, w)));
+    canvasContent.style.maxWidth = `${width}px`;
+    root.dataset.canvasDevice = width <= 640 ? "mobile" : width <= 960 ? "tablet" : "desktop";
+    root.dataset.canvasCustom = "1";
+    canvasSize.textContent = `${width} px`; canvasSize.hidden = false;
+    $$("[data-preview]").forEach((b) => { if (["desktop", "tablet", "mobile"].includes(b.dataset.preview)) b.setAttribute("aria-checked", "false"); });
+    return width;
+  };
+  canvasHandle.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); canvasHandle.setPointerCapture(e.pointerId);
+    const startX = e.clientX; const startW = canvasContent.getBoundingClientRect().width;
+    const move = (ev) => resizeCanvas(startW + 2 * (ev.clientX - startX)); // la zone est centrée : un côté bouge de moitié
+    const up = () => { canvasHandle.removeEventListener("pointermove", move); canvasHandle.removeEventListener("pointerup", up); setTimeout(() => { canvasSize.hidden = true; }, 1500); };
+    canvasHandle.addEventListener("pointermove", move); canvasHandle.addEventListener("pointerup", up);
+  });
+  canvasHandle.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); resizeCanvas(canvasContent.getBoundingClientRect().width + (e.key === "ArrowRight" ? 20 : -20) * (e.shiftKey ? 5 : 1)); } });
   function setCanvasDevice(kind) {
+    canvasContent.style.maxWidth = ""; canvasSize.hidden = true; delete root.dataset.canvasCustom;
     root.dataset.canvasDevice = kind;
     $$("[data-preview]").forEach((b) => { if (["desktop", "tablet", "mobile"].includes(b.dataset.preview)) b.setAttribute("aria-checked", String(b.dataset.preview === kind)); });
     toast(kind === "desktop" ? "Zone d'écriture en largeur ordinateur." : `Zone d'écriture à la largeur ${kind === "tablet" ? "d'une tablette (820 px)" : "d'un mobile (390 px)"} : les colonnes s'empilent comme sur le site.`);
@@ -3321,12 +3700,15 @@ function start() {
     if (opt === "appearance") return openAppearance();
     if (opt === "settings") return openEditorSettings();
     if (opt === "shortcuts") return showShortcuts();
+    if (opt === "welcome") return showWelcome();
+    if (opt === "copyall") return copyAllContent();
     if (opt === "diagnostic") return showDiagnostic();
     const on = b.getAttribute("aria-checked") !== "true";
     b.setAttribute("aria-checked", String(on));
     if (opt === "focus") root.classList.toggle("is-focus-mode", on);
     if (opt === "distraction") setDistractionFree(on);
     if (opt === "fullscreen") { b.setAttribute("aria-checked", "false"); toggleFullscreen(); }
+    if (opt === "zoomout") { b.setAttribute("aria-checked", String(!on)); toggleZoomOut(on); }
     if (opt === "toptoolbar") { topToolbarMode = on; topToolbar.hidden = !on; blockToolbar.hidden = true; root.classList.toggle("has-top-toolbar", on); renderBlockToolbar(); }
     return null;
   }));
@@ -3338,6 +3720,7 @@ function start() {
     $("[data-stats]").hidden = st.counters === false;
     editor.view.dom.spellcheck = st.spellcheck !== false;
     titleField.spellcheck = st.spellcheck !== false;
+    root.dataset.edLabels = st.textLabels ? "1" : ""; // « Afficher le texte des boutons » (accessibilité) : les icônes de la barre d'outils portent leur libellé
     const ai = $('[data-rail="ai"]');
     if (ai) ai.hidden = st.aiAssistant === false;
     if (st.aiAssistant === false && secondaryMode === "ai") setSecondary("ai");
@@ -3355,6 +3738,8 @@ function start() {
   function openEditorSettings() {
     const st = { ...editorPrefs.settings };
     const sec = (title, ...kids) => h("section", { class: "wp-settings-section" }, h("h2", {}, title), ...kids);
+    // Réglages « désactivés par défaut » : cochés seulement s'ils ont été activés
+    const togOff = (label, key, help) => { const cb = h("input", { type: "checkbox", id: `wp-set-${key}`, checked: st[key] === true }); cb.addEventListener("change", () => saveEditorSettings({ [key]: cb.checked })); return h("div", {}, h("label", { class: "wp-checkbox", for: cb.id }, cb, ` ${label}`), help ? h("p", { class: "wp-help" }, help) : null); };
     const tog = (label, key, help) => { const cb = h("input", { type: "checkbox", id: `wp-set-${key}`, checked: st[key] !== false }); cb.addEventListener("change", () => saveEditorSettings({ [key]: cb.checked })); return h("div", {}, h("label", { class: "wp-checkbox", for: cb.id }, cb, ` ${label}`), help ? h("p", { class: "wp-help" }, help) : null); };
     const pick = (label, key, options) => { const s2 = select(options, st[key]); s2.addEventListener("change", () => saveEditorSettings({ [key]: s2.value })); return control(label, s2); };
     const hidden = new Set(st.hiddenBlocks || []);
@@ -3362,7 +3747,8 @@ function start() {
     const fav = (editorPrefs.favorites || []).map((id) => (BLOCKS.find((b) => b.id === id) || {}).title).filter(Boolean);
     modal("Réglages de l'éditeur", h("div", { class: "wp-settings" },
       sec("Interface", pick("Largeur de la zone d'écriture", "width", [["normal", "Normale"], ["wide", "Large"], ["full", "Toute la largeur"]]), pick("Densité", "density", [["comfortable", "Confortable"], ["compact", "Compacte"]]),
-        tog("Barre d'outils fixe en haut", "topToolbar"), tog("Compteurs de mots dans la barre du haut", "counters")),
+        tog("Barre d'outils fixe en haut", "topToolbar"), tog("Compteurs de mots dans la barre du haut", "counters"),
+        togOff("Afficher le texte des boutons de la barre d'outils", "textLabels", "Remplace les icônes seules par leur libellé (aide à la lecture et à la reconnaissance)."), togOff("Ouvrir la vue en liste au démarrage", "alwaysListView")),
       sec("Écriture", tog("Sauvegarde automatique", "autosave", "Désactivée : seul « Enregistrer » sauvegarde (une copie reste dans ce navigateur)."), pick("Délai avant la sauvegarde automatique", "autosaveDelay", [["2", "2 secondes"], ["5", "5 secondes"], ["10", "10 secondes"], ["30", "30 secondes"]]), tog("Correcteur orthographique du navigateur", "spellcheck")),
       sec("Blocs", h("p", { class: "wp-help" }, "Blocs proposés dans l'inséreur, le menu « / » et la palette. Les favoris se choisissent avec l'étoile dans l'inséreur."), h("p", { class: "wp-help" }, `Favoris : ${fav.length ? fav.join(", ") : "aucun"}.`), blocksList),
       sec("Médias", tog("Créer les versions réduites WebP des images envoyées (affichage rapide sur mobile)", "imageVariants"), h("p", { class: "wp-help" }, "Chargement différé des images : toujours actif sur la page publique.")),
@@ -3631,12 +4017,18 @@ function start() {
         { id: "ed:notes", group: "Panneaux", label: "Ajouter une note (sur le bloc sélectionné)", run: () => { const b = currentBlock(); openNotes(b ? b.node.attrs.blockId || null : null); } },
         { id: "ed:distraction", group: "Affichage", label: "Mode sans distraction (masquer les panneaux)", run: () => setDistractionFree(!root.classList.contains("is-distraction-free")) },
         { id: "ed:fullscreen", group: "Affichage", label: "Plein écran", run: () => toggleFullscreen() },
+        { id: "ed:zoomout", group: "Affichage", label: "Zoom arrière (toute la page)", run: () => toggleZoomOut() },
+        { id: "ed:focus", group: "Affichage", label: "Mode concentration (bloc en cours)", run: () => $('[data-option="focus"]').click() },
+        { id: "ed:toptoolbar", group: "Affichage", label: "Barre d'outils fixe en haut", run: () => $('[data-option="toptoolbar"]').click() },
+        { id: "ed:sidebar", group: "Panneaux", label: "Afficher / masquer les réglages", run: () => $(".wp-header [data-toggle-sidebar]").click() },
+        { id: "ed:copyall", group: "Article", label: "Copier tout le contenu", run: () => copyAllContent() },
         { id: "ed:list", group: "Panneaux", label: "Vue en liste des blocs", run: () => { if (secondaryMode !== "list") setSecondary("list"); } },
         { id: "ed:undo", group: "Édition", label: "Annuler", run: () => editor.chain().focus().undo().run() },
         { id: "ed:redo", group: "Édition", label: "Rétablir", run: () => editor.chain().focus().redo().run() },
         { id: "ed:code", group: "Édition", label: root.classList.contains("is-code-mode") ? "Éditeur visuel" : "Éditeur de code (HTML)", run: () => $(root.classList.contains("is-code-mode") ? '[data-mode="visual"]' : '[data-mode="code"]').click() },
         { id: "ed:settings", group: "Réglages", label: "Réglages de l'éditeur…", run: () => openEditorSettings() },
         { id: "ed:shortcuts", group: "Aide", label: "Raccourcis clavier", run: () => $('[data-option="shortcuts"]').click() },
+        { id: "ed:welcome", group: "Aide", label: "Guide de bienvenue", run: () => showWelcome() },
         { id: "act:analyse", label: "Analyser la page en ligne", run: () => { workspace.reveal("seo-site"); $("[data-seo-analyse]")?.click(); }, disabled: !DATA.everPublished && DATA.status !== "published" },
         { id: "act:links", label: "Proposer des liens internes", run: () => { workspace.reveal("links"); $("[data-suggest]")?.click(); } },
         { id: "act:refresh", label: "Actualiser les données SEO (serveur)", run: () => { seoData.invalidate(); toast("Données SEO actualisées."); } },
@@ -3660,8 +4052,98 @@ function start() {
     onToggle: (doc) => { toolbarKey = ""; if (!doc) topToolbar.hidden = !topToolbarMode; renderBlockToolbar(); },
   });
 
+  // ---------- Sélection au lasso : on glisse depuis la marge de la zone d'écriture, les blocs touchés par le rectangle sont sélectionnés ----------
+  (function lasso() {
+    const canvas = $("[data-canvas]");
+    if (!canvas) return;
+    let start = null; let box = null; let hits = [];
+    const topChildren = () => [...editor.view.dom.children];
+    function update(e) {
+      const x1 = Math.min(start.x, e.clientX), x2 = Math.max(start.x, e.clientX), y1 = Math.min(start.y, e.clientY), y2 = Math.max(start.y, e.clientY);
+      if (!box) { box = h("div", { class: "wp-lasso", "aria-hidden": "true" }); document.body.append(box); }
+      Object.assign(box.style, { left: `${x1}px`, top: `${y1}px`, width: `${x2 - x1}px`, height: `${y2 - y1}px` });
+      const doms = topChildren();
+      hits = doms.map((el, i) => ({ el, i, r: el.getBoundingClientRect() })).filter(({ r }) => r.right >= x1 && r.left <= x2 && r.bottom >= y1 && r.top <= y2).map(({ i }) => i);
+      doms.forEach((el, i) => el.classList.toggle("is-lasso", hits.includes(i)));
+    }
+    function finish() {
+      document.removeEventListener("mousemove", move, true); document.removeEventListener("mouseup", finish, true);
+      if (box) { box.remove(); box = null; }
+      topChildren().forEach((el) => el.classList.remove("is-lasso"));
+      if (start && start.moved && hits.length) {
+        const kids = []; editor.state.doc.forEach((n, pos) => kids.push({ n, pos }));
+        const a = kids[Math.min(...hits)], b = kids[Math.max(...hits)];
+        if (a && b) {
+          editor.commands.focus();
+          editor.commands.setTextSelection({ from: a.pos + 1, to: b.pos + b.n.nodeSize - 1 });
+          if (hits.length === 1 && !a.n.isTextblock) editor.commands.setNodeSelection(a.pos);
+          toast(hits.length > 1 ? `${hits.length} blocs sélectionnés.` : "Bloc sélectionné.");
+        }
+      }
+      start = null; hits = [];
+    }
+    function move(e) {
+      if (!start) return;
+      if (!start.moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < 8) return;
+      start.moved = true; e.preventDefault(); update(e);
+    }
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button !== 0 || !(e.target === canvas || (e.target.classList && e.target.classList.contains("wp-content")))) return; // seulement depuis un espace vide de la zone d'écriture
+      start = { x: e.clientX, y: e.clientY, moved: false };
+      document.addEventListener("mousemove", move, true); document.addEventListener("mouseup", finish, true);
+    });
+  })();
+
+  // ---------- Fil d'Ariane du bloc sélectionné : Document › Groupe › Colonne › Paragraphe (chaque étape se sélectionne) ----------
+  const crumbsBar = $("[data-breadcrumb]");
+  function renderBreadcrumb() {
+    if (!crumbsBar) return;
+    const sel = editor.state.selection;
+    const $from = sel.$from;
+    const trail = [];
+    for (let d = 1; d <= $from.depth; d++) trail.push({ node: $from.node(d), pos: $from.before(d) });
+    if (sel instanceof NodeSelection) trail.push({ node: sel.node, pos: sel.from });
+    const pickAt = (item) => { editor.view.focus(); if (item.node.isTextblock) editor.commands.setTextSelection(item.pos + 1); else { try { editor.view.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, item.pos))); } catch { editor.commands.setTextSelection(item.pos + 1); } } };
+    const parts = [h("button", { type: "button", class: "wp-crumb", onclick: () => { editor.view.focus(); editor.commands.setTextSelection(1); } }, "Document")];
+    trail.forEach((item, i) => {
+      parts.push(h("span", { class: "wp-crumb-sep", "aria-hidden": "true" }, "›"));
+      const label = nameOf(item.node);
+      parts.push(i === trail.length - 1 ? h("span", { class: "wp-crumb is-current", "aria-current": "true" }, label) : h("button", { type: "button", class: "wp-crumb", onclick: () => pickAt(item) }, label));
+    });
+    crumbsBar.replaceChildren(...parts);
+  }
+  editor.on("selectionUpdate", renderBreadcrumb);
+  editor.on("update", () => { cancelAnimationFrame(crumbFrame); crumbFrame = requestAnimationFrame(renderBreadcrumb); });
+  let crumbFrame = 0;
+
+  // ---------- Guide de bienvenue (comme Gutenberg) : 4 écrans, affichable à tout moment depuis le menu « ⋮ » ----------
+  function showWelcome() {
+    const steps = [
+      ["Bienvenue dans l'éditeur", "Écrivez comme dans un document : chaque paragraphe, image ou encadré est un bloc que vous pouvez déplacer, dupliquer, grouper ou verrouiller. L'article est enregistré automatiquement."],
+      ["Ajouter un bloc", "Tapez « / » dans un paragraphe vide, cliquez sur le « + » ou ouvrez l'outil d'insertion à gauche. Les modèles de mise en page et vos blocs réutilisables y sont aussi."],
+      ["Régler un bloc", "Sélectionnez un bloc : l'onglet « Bloc » à droite propose ses réglages (style, couleur, espacement, ancre, visibilité par appareil). Ctrl+K ouvre la palette de commandes, Ctrl+Maj+H la liste des raccourcis."],
+      ["Travailler à plusieurs", "L'onglet « Notes » sert aux échanges internes (jamais publiés). Les versions d'un article se comparent et se restaurent depuis le panneau Article ; deux onglets ouverts ne s'écrasent jamais."],
+    ];
+    let i = 0;
+    const title = h("h2", { class: "wp-welcome-title" }); const text = h("p", { class: "wp-welcome-text" }); const dots = h("p", { class: "wp-welcome-dots", "aria-hidden": "true" });
+    const prev = h("button", { type: "button", class: "wp-btn-secondary" }, "Précédent"); const next = h("button", { type: "button", class: "wp-btn-primary" }, "Suivant");
+    const paint = () => { title.textContent = steps[i][0]; text.textContent = steps[i][1]; dots.textContent = steps.map((_, k) => (k === i ? "●" : "○")).join(" "); prev.hidden = i === 0; next.textContent = i === steps.length - 1 ? "Commencer" : "Suivant"; };
+    const m = modal("Guide de bienvenue", h("div", { class: "wp-welcome", "aria-live": "polite" }, title, text, dots, h("div", { class: "wp-button-row" }, prev, next)), []);
+    prev.addEventListener("click", () => { i = Math.max(0, i - 1); paint(); });
+    next.addEventListener("click", () => { if (i === steps.length - 1) { m.close(); saveEditorSettings({ welcomeSeen: true }); } else { i += 1; paint(); } });
+    paint();
+    next.focus();
+  }
+  // Première visite d'une personne sur un NOUVEL article : une invitation discrète (jamais une fenêtre qui bloque) ; ignorée par les outils d'automatisation
+  if (!DATA.postId && !(editorPrefs.settings || {}).welcomeSeen && !navigator.webdriver) {
+    const hint = h("div", { class: "wp-welcome-hint", role: "status" }, h("span", {}, "Première visite ?"), h("button", { type: "button", class: "wp-btn-link", onclick: () => { hint.remove(); showWelcome(); } }, "Voir le guide de bienvenue"), h("button", { type: "button", class: "wp-btn-link", "aria-label": "Fermer l'invitation", onclick: () => { hint.remove(); saveEditorSettings({ welcomeSeen: true }); } }, "×"));
+    document.body.append(hint);
+  }
+
   // ---------- Premier affichage ----------
   loadReusable();
+  renderBreadcrumb();
+  if ((editorPrefs.settings || {}).alwaysListView === true && !window.matchMedia("(max-width: 782px)").matches) setSecondary("list");
   applyEditorSettings();
   refreshCounters();
   refreshPreviews();

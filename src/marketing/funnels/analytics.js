@@ -28,7 +28,7 @@ function funnelReport(ctx, funnel, { days = 30, now = Date.now() } = {}) {
     const reached = new Set(s.path ? measured.all(ctx.organizationId, s.path, since).map((r) => r.visitor_id) : []);
     cohort = cohort === null ? reached : new Set([...reached].filter((v) => cohort.has(v)));
     const out = { id: s.id, name: s.name, typeLabel: s.typeLabel, anonVisitors: a ? a.visitors : null, signups: a ? a.signups || 0 : null, journey: cohort.size };
-    if (s.type === "course" && s.courseId) {
+    if (["course", "order", "upsell", "downsell"].includes(s.type) && s.courseId) {
       const users = [...(before || reached)].map((v) => (userOf.get(v) || {}).lms_user_id).filter(Number.isInteger);
       out.sales = courseConversions(ctx, { courseId: s.courseId, userIds: users, since });
     }

@@ -116,37 +116,45 @@ html[data-kola-theme="dark"] {
 /* ---------- Barres de filtres : une seule bande ---------- */
 .mk-body :is(.mk-filterbar, .mk-cms-toolbar) { background: var(--surface); border: 1px solid var(--kb-rule); border-radius: var(--kb-r-panel); box-shadow: none; }
 
-/* ---------- Mes sites : chaque site est une ligne de registre, plus un tableau de dix colonnes ----------
-   Même balisage (tableau, étiquettes data-label, boutons) : seule la composition change. Aucune donnée n'est retirée. */
-@media (min-width: 900px) {
-  .mk-body .mk-site-manager, .mk-body .mk-site-manager tbody { display: block; width: 100%; }
-  .mk-body .mk-site-manager thead, .mk-body .mk-site-manager caption { display: none; }
-  .mk-body .mk-site-manager tbody tr {
-    display: grid; grid-template-columns: minmax(220px, 1.9fr) repeat(4, minmax(64px, 84px)) minmax(150px, 1.1fr);
-    grid-auto-flow: row; gap: 10px 16px; align-items: start; padding: 18px 22px; border-bottom: 1px solid var(--kb-rule);
-  }
-  .mk-body .mk-site-manager tbody tr:last-child { border-bottom: 0; }
-  .mk-body .mk-site-manager.mk-table tbody tr > :is(td, th) { display: block; min-width: 0; padding: 0; border: 0; background: none; text-align: left; }
-  .mk-body .mk-site-manager th[scope="row"] { grid-column: 1; grid-row: 1; }
-  .mk-body .mk-site-manager th[scope="row"] > a { font-family: var(--kb-display); font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em; color: var(--kb-navy); text-decoration: none; }
-  .mk-body .mk-site-manager th[scope="row"] > a:hover { text-decoration: underline; }
-  .mk-body .mk-site-manager th[scope="row"] .mk-sub { display: block; max-width: 60ch; margin-top: 4px; font-weight: 400; color: var(--kb-ink-2); font-size: 0.86rem; line-height: 1.45; }
-  /* chiffres : étiquette au-dessus, valeur en police d'affichage */
-  .mk-body .mk-site-manager td.mk-num { grid-row: 1; text-align: left; font-family: var(--kb-display); font-weight: 700; font-size: 1.5rem; line-height: 1.1; letter-spacing: -0.02em; color: var(--kb-navy); font-variant-numeric: tabular-nums; }
-  .mk-body .mk-site-manager td.mk-num::before { content: attr(data-label); display: block; margin-bottom: 2px; font-family: var(--font-body); font-weight: 600; font-size: 0.76rem; letter-spacing: 0; color: var(--kb-ink-3); }
-  .mk-body .mk-site-manager td[data-label="Pages"] { grid-column: 2; }
-  .mk-body .mk-site-manager td[data-label="En ligne"] { grid-column: 3; }
-  .mk-body .mk-site-manager td[data-label="Équipe"] { grid-column: 4; }
-  .mk-body .mk-site-manager td[data-label="Contacts"] { grid-column: 5; }
-  .mk-body .mk-site-manager td[data-label="Actions"] { grid-column: 6; grid-row: 1 / span 3; justify-self: end; }
-  .mk-body .mk-site-manager td[data-label="Actions"] .mk-actions { flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
-  /* deuxième ligne : état, domaine, dernière modification ; troisième : modules */
-  .mk-body .mk-site-manager td[data-label="État"] { grid-column: 1; grid-row: 2; }
-  .mk-body .mk-site-manager td[data-label="Domaine"] { grid-column: 2 / span 2; grid-row: 2; color: var(--kb-ink-2); font-size: 0.86rem; overflow-wrap: anywhere; }
-  .mk-body .mk-site-manager td[data-label="Modifié le"] { grid-column: 4 / span 2; grid-row: 2; color: var(--kb-ink-3); font-size: 0.82rem; }
-  .mk-body .mk-site-manager td[data-label="Modules"] { grid-column: 1 / span 5; grid-row: 3; }
-  .mk-body .mk-site-manager td:is([data-label="Domaine"], [data-label="Modifié le"], [data-label="Modules"])::before { content: attr(data-label) " : "; color: var(--kb-ink-3); font-size: 0.8rem; }
-  .mk-body .mk-site-manager.mk-table tbody tr > td[data-label="Modules"] { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+/* ---------- Mes sites : une carte par site, trois zones ----------
+   A (info : nom, badge Principal, description, état, modules) · B (statistiques en grille + domaine et date) · C (Ouvrir + menu ⋮).
+   Balisage : <tr data-site> à trois cellules (th.mk-site-info, td.mk-site-figures, td.mk-site-actions). Portée : uniquement .mk-site-manager. */
+.mk-body .mk-site-list { overflow: visible; }
+.mk-body .mk-site-manager, .mk-body .mk-site-manager tbody { display: block; width: 100%; }
+.mk-body .mk-site-manager thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mk-body .mk-site-manager tbody tr { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr) 112px; gap: 14px 32px; align-items: start; padding: 18px 22px; border-bottom: 1px solid var(--kb-rule); }
+.mk-body .mk-site-manager tbody tr:last-child { border-bottom: 0; }
+.mk-body .mk-site-manager.mk-table tbody tr > :is(td, th), .mk-body .mk-site-manager.mk-table tbody tr:hover > :is(td, th) { display: block; min-width: 0; padding: 0; border: 0; background: none; text-align: left; white-space: normal; }
+/* Zone A */
+.mk-body .mk-site-info { font-weight: 400; }
+.mk-body .mk-site-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.mk-body .mk-site-manager .mk-site-title > a { font-family: var(--kb-display); font-weight: 700; font-size: 1.15rem; line-height: 1.25; letter-spacing: -0.02em; color: var(--kb-navy); text-decoration: none; overflow-wrap: anywhere; }
+.mk-body .mk-site-manager .mk-site-title > a:hover { text-decoration: underline; }
+.mk-body .mk-site-info > .mk-sub { display: block; max-width: 62ch; margin-top: 4px; font-weight: 400; font-size: 0.86rem; line-height: 1.45; color: var(--kb-ink-2); overflow-wrap: anywhere; }
+.mk-body .mk-site-flags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; }
+.mk-body .mk-site-modules { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; min-width: 0; font-size: 0.82rem; }
+.mk-body .mk-site-modules .mk-chips { display: inline-flex; flex-wrap: wrap; gap: 4px 6px; }
+/* Zone B : quatre colonnes égales, libellé au-dessus de la valeur */
+.mk-body .mk-site-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
+.mk-body .mk-site-stats > div { min-width: 0; }
+.mk-body .mk-site-stats dt { margin: 0 0 2px; font-weight: 600; font-size: 0.76rem; line-height: 1.3; color: var(--kb-ink-3); overflow-wrap: anywhere; }
+.mk-body .mk-site-stats dd { margin: 0; font-family: var(--kb-display); font-weight: 700; font-size: 1.5rem; line-height: 1.1; letter-spacing: -0.02em; color: var(--kb-navy); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mk-body .mk-site-meta { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--kb-rule); font-size: 0.82rem; line-height: 1.4; color: var(--kb-ink-2); }
+.mk-body .mk-site-meta > span { min-width: 0; overflow-wrap: anywhere; }
+.mk-body .mk-site-meta-k { color: var(--kb-ink-3); }
+.mk-body .mk-site-meta-k::after { content: " :"; }
+/* Zone C */
+.mk-body .mk-site-actions .mk-actions { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.mk-body .mk-site-actions form { margin: 0; }
+.mk-body .mk-site-more { width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 1099px) {
+  .mk-body .mk-site-manager tbody tr { grid-template-columns: minmax(0, 1fr) 112px; }
+  .mk-body .mk-site-manager .mk-site-figures { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 639px) {
+  .mk-body .mk-site-manager tbody tr { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .mk-body .mk-site-manager .mk-site-figures { grid-row: auto; grid-column: auto; }
+  .mk-body .mk-site-actions .mk-actions { justify-content: flex-start; }
 }
 
 /* ---------- Tableau de bord du site : un seul document à deux colonnes, pas six cartes identiques ----------
@@ -199,27 +207,6 @@ html[data-kola-theme="dark"] .mk-tg-cats a.is-active span { color: #fff; }
 /* Commentaires : le compteur du filtre courant est à côté de la pastille, pas dedans (il était écrit en blanc sur fond blanc : invisible) */
 .mk-body .mk-cm-states a.is-current + .mk-tab-count { color: var(--kb-ink-2); }
 
-/* Mes sites sur tablette (640–899 px) : la ligne de registre se replie sur quatre colonnes, plus de tableau coupé à droite */
-@media (min-width: 640px) and (max-width: 899px) {
-  .mk-body .mk-site-manager, .mk-body .mk-site-manager tbody { display: block; width: 100%; }
-  .mk-body .mk-site-manager thead, .mk-body .mk-site-manager caption { display: none; }
-  .mk-body .mk-site-manager tbody tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; padding: 18px 20px; border-bottom: 1px solid var(--kb-rule); }
-  .mk-body .mk-site-manager tbody tr:last-child { border-bottom: 0; }
-  .mk-body .mk-site-manager.mk-table tbody tr > :is(td, th) { display: block; min-width: 0; padding: 0; border: 0; background: none; text-align: left; }
-  .mk-body .mk-site-manager th[scope="row"] { grid-column: 1 / -1; }
-  .mk-body .mk-site-manager th[scope="row"] > a { font-family: var(--kb-display); font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em; color: var(--kb-navy); text-decoration: none; }
-  .mk-body .mk-site-manager th[scope="row"] .mk-sub { display: block; margin-top: 4px; font-weight: 400; color: var(--kb-ink-2); font-size: 0.86rem; line-height: 1.45; }
-  .mk-body .mk-site-manager td.mk-num { font-family: var(--kb-display); font-weight: 700; font-size: 1.5rem; line-height: 1.1; color: var(--kb-navy); font-variant-numeric: tabular-nums; }
-  .mk-body .mk-site-manager td.mk-num::before { content: attr(data-label); display: block; margin-bottom: 2px; font-family: var(--font-body); font-weight: 600; font-size: 0.76rem; color: var(--kb-ink-3); }
-  .mk-body .mk-site-manager td[data-label="État"] { grid-column: 1 / span 2; grid-row: 2; }
-  .mk-body .mk-site-manager td[data-label="Domaine"] { grid-column: 3 / span 2; grid-row: 2; color: var(--kb-ink-2); font-size: 0.86rem; overflow-wrap: anywhere; }
-  .mk-body .mk-site-manager td[data-label="Modifié le"] { grid-column: 1 / span 2; grid-row: 4; color: var(--kb-ink-3); font-size: 0.82rem; }
-  .mk-body .mk-site-manager td[data-label="Modules"] { grid-column: 3 / span 2; grid-row: 4; display: flex; flex-wrap: wrap; gap: 4px 6px; }
-  .mk-body .mk-site-manager td[data-label="Actions"] { grid-column: 1 / -1; grid-row: 5; }
-  .mk-body .mk-site-manager td[data-label="Pages"] { grid-column: 1; grid-row: 3; } .mk-body .mk-site-manager td[data-label="En ligne"] { grid-column: 2; grid-row: 3; } .mk-body .mk-site-manager td[data-label="Équipe"] { grid-column: 3; grid-row: 3; } .mk-body .mk-site-manager td[data-label="Contacts"] { grid-column: 4; grid-row: 3; }
-  .mk-body .mk-site-manager th[scope="row"] { grid-row: 1; }
-  .mk-body .mk-site-manager td:is([data-label="Domaine"], [data-label="Modifié le"], [data-label="Modules"])::before { content: attr(data-label) " : "; color: var(--kb-ink-3); font-size: 0.8rem; }
-}
 
 html[data-kola-theme="dark"] .mk-nm-pending li { background: var(--surface-alt); border-color: var(--line); }
 /* Aperçu des tailles d'images (Réglages → Médias) : bloc marine fixe dans les deux modes (en sombre, --k-navy-900 devenait clair sous du texte blanc) */
@@ -250,7 +237,7 @@ html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked), ht
    barres des graphiques, étiquette de rubrique, teinte des illustrations. Les boutons d'action restent bleus, le focus reste bleu, les couleurs
    d'état gardent leur sens partout (sarcelle = en ligne, ambre = brouillon, rouge = erreur, vert = succès).
      site       Site Web, médias, utilisateurs, SEO, outils     marine lumière  #1d5f8f
-     marketing  campagnes, audience, SMS, automatisations         baie            #b83280
+     marketing  campagnes, audience, SMS, automatisations         azur            #0277b6
      analytics  statistiques, revenus, comparaisons               émeraude        #0b8a63
      design     Apparence, thèmes, styles, composants             violet          #7048c8
    Trois valeurs par espace : --kb-mod (remplissage, repères, barres) ; --kb-mod-ink (texte : ≥ 4,5:1 sur fond clair, éclairci en sombre) ;
@@ -261,14 +248,14 @@ html[data-kola-theme="dark"] .mk-content .md-orient label:has(input:checked), ht
   /* sémantique : alias des jetons existants, à utiliser dans les nouveaux composants */
   --kb-ok: var(--success); --kb-warn: var(--kb-draft); --kb-err: var(--kb-alert); --kb-info: var(--kb-action);
   /* visualisation de données : six teintes distinctes, dans cet ordre */
-  --kb-data-1: #1d5f8f; --kb-data-2: #b83280; --kb-data-3: #0b8a63; --kb-data-4: #7048c8; --kb-data-5: #c98a00; --kb-data-6: #0e7490;
+  --kb-data-1: #1d5f8f; --kb-data-2: #0b2239; --kb-data-3: #0b8a63; --kb-data-4: #7048c8; --kb-data-5: #c98a00; --kb-data-6: #0e7490;
 }
 body[data-kb-module="site"]      { --kb-mod: #1d5f8f; --kb-mod-ink: #1d5f8f; --kb-mod-ui: #0277b6; }
-body[data-kb-module="marketing"] { --kb-mod: #b83280; --kb-mod-ink: #a02a6f; --kb-mod-ui: #c43d8f; }
+body[data-kb-module="marketing"] { --kb-mod: #0277b6; --kb-mod-ink: #0b5f93; --kb-mod-ui: #1593d6; }
 body[data-kb-module="analytics"] { --kb-mod: #0b8a63; --kb-mod-ink: #087554; --kb-mod-ui: #12a578; }
 body[data-kb-module="design"]    { --kb-mod: #7048c8; --kb-mod-ink: #6439bb; --kb-mod-ui: #8a63e0; }
 html[data-kola-theme="dark"] body[data-kb-module="site"]      { --kb-mod: #4aa3dc; --kb-mod-ink: #7dbbea; }
-html[data-kola-theme="dark"] body[data-kb-module="marketing"] { --kb-mod: #e66aa8; --kb-mod-ink: #f08cc0; }
+html[data-kola-theme="dark"] body[data-kb-module="marketing"] { --kb-mod: #4aa3dc; --kb-mod-ink: #8cc6ee; }
 html[data-kola-theme="dark"] body[data-kb-module="analytics"] { --kb-mod: #34c79a; --kb-mod-ink: #6fdcb4; }
 html[data-kola-theme="dark"] body[data-kb-module="design"]    { --kb-mod: #9b7ae8; --kb-mod-ink: #b7a0f2; }
 
@@ -276,22 +263,46 @@ html[data-kola-theme="dark"] body[data-kb-module="design"]    { --kb-mod: #9b7ae
 .mk-body :is(.mk-head h1, .kx-hero h1) { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; }
 .mk-body :is(.mk-head h1, .kx-hero h1)::before { content: ""; flex: none; width: 4px; height: 0.82em; border-radius: 2px; background: var(--kb-mod); }
 /* 2. menu latéral : l'icône de l'entrée active et son liseré prennent l'accent de l'espace (le menu reste marine) */
-html[data-mk-theme] body[data-kb-module="marketing"] .mk-sidebar { --accent: #ee7ab6; --accent-dark: #f6a6cf; --accent-light: rgba(238, 122, 182, 0.16); }
+html[data-mk-theme] body[data-kb-module="marketing"] .mk-sidebar { --accent: #5cbdf5; --accent-dark: #9ad8fb; --accent-light: rgba(92, 189, 245, 0.16); }
 html[data-mk-theme] body[data-kb-module="analytics"] .mk-sidebar { --accent: #4fd8ad; --accent-dark: #86e7c8; --accent-light: rgba(79, 216, 173, 0.16); }
 html[data-mk-theme] body[data-kb-module="design"] .mk-sidebar    { --accent: #b39af2; --accent-dark: #cdbcf7; --accent-light: rgba(179, 154, 242, 0.16); }
 /* (l'espace « site » garde le bleu clair #5cbdf5 du menu : c'est la couleur de référence du marine) */
-/* le bouton « Créer » et la pastille de marque restent bleus dans tous les espaces : c'est l'action et la signature, pas l'accent de l'espace */
-html[data-mk-theme] body[data-kb-module] .mk-sidebar :is(.mk-create-btn, .mk-brand-mark) { background: #5cbdf5; color: #04121d; }
-html[data-mk-theme] body[data-kb-module] .mk-sidebar .mk-create-btn:hover { background: #93d4fb; }
+/* la pastille de marque reste bleue dans tous les espaces : c'est la signature, pas l'accent de l'espace */
+html[data-mk-theme] body[data-kb-module] .mk-sidebar .mk-brand-mark { background: #5cbdf5; color: #04121d; }
+/* le bouton « Créer » : action principale mais discrète. Teinte bleu azur sur le marine (pas de dégradé, de reflet ni d'ombre), 36 px comme les entrées de menu.
+   Texte #cfeeff sur fond ≈ #1d3a56 : contraste > 9:1. Seules les couleurs s'animent ; le bouton ne bouge jamais (menu ouvert ou fermé). */
+:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn {
+  height: 36px; min-height: 36px; padding-block: 0; gap: 8px;
+  background: rgba(92, 189, 245, 0.14); color: #cfeeff; font-weight: 600; letter-spacing: 0;
+  border: 1px solid rgba(92, 189, 245, 0.34); border-radius: 10px; box-shadow: none; transform: none;
+}
+.mk-sidebar .mk-create-btn::before { display: none; }
+.mk-sidebar .mk-create-btn .icon { stroke-width: 2.1; color: #8fd3fb; }
+:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:is(:hover, [aria-expanded="true"]) { background: rgba(92, 189, 245, 0.22); border-color: rgba(92, 189, 245, 0.5); transform: none; box-shadow: none; }
+:is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn:focus-visible { outline: 2px solid #5cbdf5; outline-offset: 2px; }
+/* action principale de la barre du haut (« Créer un tunnel », « Nouvelle campagne »…) : même langage, sur fond clair */
+:is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary {
+  display: inline-flex; align-items: center; height: 36px; min-height: 36px; padding: 0 14px; gap: 8px;
+  background: color-mix(in srgb, var(--accent) 11%, var(--mk-surface)); color: var(--accent-dark, var(--accent)); font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); border-radius: 10px; box-shadow: none; transform: none;
+}
+:is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary:hover { background: color-mix(in srgb, var(--accent) 20%, var(--mk-surface)); border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: none; transform: none; }
+:is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  :is(html, html[data-mk-theme]) body .mk-topbar-actions .mk-primary { transition: background-color var(--k-dur-fast, 120ms) var(--k-ease, ease), border-color var(--k-dur-fast, 120ms) var(--k-ease, ease); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :is(html, html[data-mk-theme]) body .mk-sidebar .mk-create-btn { transition: background-color var(--k-dur-fast, 120ms) var(--k-ease, ease), border-color var(--k-dur-fast, 120ms) var(--k-ease, ease); }
+}
 /* 3. étiquette de rubrique, soulignement des onglets, graphiques */
 .mk-body :is(.kx-eyebrow, .mk-tg-kicker) { color: var(--kb-mod-ink); }
 .mk-body .mk-tab[aria-current="page"]::after { background: var(--kb-mod); }
 .mk-body .mk-col-bar { background: var(--kb-mod); }
 /* 4. illustrations : les formes principales prennent l'accent de l'espace ; le marine et l'étincelle dorée restent communs */
-body[data-kb-module="marketing"] .kx-art { --a-blue: #b83280; --a-sky: #f0a3cc; --a-ice: #fbe6f1; }
+body[data-kb-module="marketing"] .kx-art { --a-blue: #0277b6; --a-sky: #9fd0ee; --a-ice: #e6f2fa; }
 body[data-kb-module="analytics"] .kx-art { --a-blue: #0b8a63; --a-sky: #8fe0c2; --a-ice: #def5ec; }
 body[data-kb-module="design"] .kx-art    { --a-blue: #7048c8; --a-sky: #c3b0f2; --a-ice: #ece6fa; }
-html[data-kola-theme="dark"] body[data-kb-module="marketing"] .kx-art { --a-blue: #e66aa8; --a-sky: #f4b5d6; --a-ice: rgba(230, 106, 168, 0.14); }
+html[data-kola-theme="dark"] body[data-kb-module="marketing"] .kx-art { --a-blue: #4aa3dc; --a-sky: #a9d3ef; --a-ice: rgba(74, 163, 220, 0.14); }
 html[data-kola-theme="dark"] body[data-kb-module="analytics"] .kx-art { --a-blue: #34c79a; --a-sky: #9ae6cc; --a-ice: rgba(52, 199, 154, 0.14); }
 html[data-kola-theme="dark"] body[data-kb-module="design"] .kx-art    { --a-blue: #9b7ae8; --a-sky: #c9b8f4; --a-ice: rgba(155, 122, 232, 0.14); }
 

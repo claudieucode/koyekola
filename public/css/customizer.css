@@ -5,7 +5,7 @@
   --kwc-navy: #0b2a40; --kwc-navy-2: #12405f; --kwc-accent: #0277b6; --kwc-accent-h: #02639a; --kwc-accent-soft: #e3f1fb;
   --kwc-bg: #f4f6fa; --kwc-surface: #ffffff; --kwc-surface-2: #f8fafc; --kwc-line: #dde5ee; --kwc-line-2: #c5d0de;
   --kwc-text: #0f1f33; --kwc-muted: #52647a; --kwc-ok: #1a7a35; --kwc-warn: #8a5a00; --kwc-err: #b3202a;
-  --kwc-warn-bg: #fff6dd; --kwc-err-bg: #fdeaec; --kwc-info-bg: #eef6fd; --kwc-stage: #dfe5ee;
+  --kwc-warn-bg: #fff6dd; --kwc-err-bg: #fdecea; --kwc-info-bg: #eef6fd; --kwc-stage: #dfe5ee;
   --kwc-shadow: 0 1px 2px rgba(11, 42, 64, .06), 0 8px 28px -10px rgba(11, 42, 64, .22);
   --kwc-r: 10px; --kwc-top: 56px; --kwc-side: 372px;
   color-scheme: light;

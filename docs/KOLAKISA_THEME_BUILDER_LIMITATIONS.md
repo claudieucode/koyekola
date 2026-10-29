@@ -1,0 +1,18 @@
+# Mission 9 — Theme Builder : limites et travaux à prévoir
+
+> **Mise à jour (mission 9.1, commit `4189ed9`)** : l'en-tête, le pied de page et les variantes d'un site ne s'appliquent plus à chaque enregistrement. Ils ont maintenant un brouillon, un aperçu privé et un bouton « Mettre à jour » (voir `KOLAKISA_SITE_HEADER_FOOTER_DRAFT_*.md`). Les passages ci-dessous qui parlent d'application directe décrivent l'état *avant* 9.1.
+
+| # | Statut | Limite | Décision / recommandation |
+|---|---|---|---|
+| L1 | **RÉGLÉE par la mission 9.1** | L'en-tête, le pied de page et les variantes d'un site s'appliquent **à chaque enregistrement** (pas de brouillon, pas de « publier », pas d'aperçu avant diffusion). Protégé désormais contre les écrasements (révision) mais une saisie à moitié finie est visible en ligne. | Passer ces composants au mode « copie de travail + Mettre à jour » déjà utilisé par les composants ordinaires. Demande de modifier le comportement décidé à la mission « En-tête du site » et ses tests : à valider avec vous avant. |
+| L2 | P3 | Incohérence des boutons texte + adresse : diaporama, bandeau, appel à l'action **refusent** (message explicite, brouillon entier non enregistré tant que ce n'est pas corrigé) ; fenêtre, boîte retournable, offre **tolèrent** (bouton absent + message). | Garder le refus (des tests l'exigent) mais l'éditeur pourrait signaler la diapositive fautive sans bloquer le reste. |
+| L3 | PARTIELLE | Onglets et accordéons : contenu **texte** (`items[].text` / `.a`), pas de widgets imbriqués. | Nécessite un conteneur « onglet » (enfants par onglet) dans le modèle de données, l'éditeur de structure et le rendu : chantier à part. |
+| L4 | ABSENTE | Pas de modèle de « page individuelle » commun (seule `/a-propos` est couverte par `static_page`). | Il faut d'abord un élément « contenu de la page » ; les pages du Page Builder portent chacune leur mise en page. |
+| L5 | PARTIELLE | L'en-tête / pied de page du **site public** (blog) se règle par champs (Apparence), pas avec les widgets du catalogue. Déjà noté « préparé, non implémenté » dans `docs/cms-appearance.md`. | Éditeur visuel d'en-tête du site public. |
+| L6 | ABSENTE | Un composant n'a pas d'historique ni de restauration (compteur `version` seulement). Les pages-modèles, elles, ont les 100 versions. | Table d'historique de composants (sur le modèle de `appearance_revisions`). |
+| L7 | NON TESTÉE | Fiche formation (`single_course`), archives vides, pagination des archives, requête de recherche sans résultat, rendu public de chaque archive (catégorie, étiquette, auteur) une à une. | Compléter par des tests familles par famille. |
+| L8 | NON TESTÉE | Isolation entre organisations, assainissement hostile d'un composant, classes globales et polices dans un modèle. | Voir rapport de sécurité. |
+| L9 | Environnement | Seul Chrome 150 / macOS. Ni Safari, ni Firefox, ni tactile, ni contrastes mesurés, ni lecteur d'écran réel. Navigation clavier non testée par cette mission. | Mission 10. |
+| L10 | Environnement | **Suite complète (~4 840 tests) non relancée** depuis la mission 2 ; seule la régression ciblée a été exécutée (voir rapport de tests). Deux tests (`elementor-parite-3-navigateur`) exigent `sharp`, absent localement. | Lancement de nuit, concurrence 1, sans autre session. |
+| L11 | Info | Le constat « G2 » du palier 8 (autres boutons sans message) était inexact pour diaporama / bandeau / appel à l'action. | Corrigé dans l'AUDIT. |
+| L12 | Info | Fusion et déploiement : la branche `theme-builder` contient aussi le palier 8 (`19f0bcf`, non poussé). | Décision de pousser / fusionner à vous. |

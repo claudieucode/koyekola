@@ -9,6 +9,7 @@
 //   link            → src = simple lien à ouvrir (page web quelconque, non intégrée)
 
 const { isBunnyId } = require("./bunny");
+const { embedProviderFor } = require("../shared/embedProviders");
 
 const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtube-nocookie.com", "www.youtube-nocookie.com"]);
 const VIMEO_HOSTS = new Set(["vimeo.com", "www.vimeo.com", "player.vimeo.com"]);
@@ -67,34 +68,7 @@ function parseVideoUrl(raw) {
 }
 
 // Autres lecteurs intégrables (bloc « Contenu embarqué ») : même règle de sécurité que ci-dessus, l'adresse d'intégration est RECONSTRUITE
-// à partir d'identifiants validés, jamais copiée. Renvoie { provider, src, height?, ratio? } ou null.
-const SPOTIFY_PATH = /^\/(?:intl-[a-z]{2}(?:-[a-z]{2})?\/)?(track|album|playlist|episode|show|artist)\/([A-Za-z0-9]{10,30})\/?$/;
-function embedProvider(raw) {
-  let url;
-  try { url = new URL(String(raw || "").trim()); } catch { return null; }
-  if (url.protocol !== "https:") return null;
-  const host = url.hostname.toLowerCase().replace(/^www\./, "");
-  if (host === "open.spotify.com") {
-    const m = url.pathname.match(SPOTIFY_PATH);
-    return m ? { provider: "spotify", src: `https://open.spotify.com/embed/${m[1]}/${m[2]}`, height: ["track", "episode"].includes(m[1]) ? 152 : 352, title: "Lecteur Spotify" } : null;
-  }
-  if (host === "soundcloud.com") {
-    const m = url.pathname.match(/^\/([A-Za-z0-9_-]{2,50})\/((?:sets\/)?[A-Za-z0-9_-]{2,100})\/?$/);
-    return m ? { provider: "soundcloud", src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(`https://soundcloud.com/${m[1]}/${m[2]}`)}&visual=false&show_comments=false`, height: 166, title: "Lecteur SoundCloud" } : null;
-  }
-  if (host === "dailymotion.com" || host === "dai.ly") {
-    const id = host === "dai.ly" ? (url.pathname.match(/^\/([a-z0-9]{5,12})\/?$/i) || [])[1] : (url.pathname.match(/^\/(?:embed\/)?video\/([a-z0-9]{5,12})\/?$/i) || [])[1];
-    return id ? { provider: "dailymotion", src: `https://www.dailymotion.com/embed/video/${id}`, ratio: "16-9", title: "Vidéo Dailymotion" } : null;
-  }
-  if (host === "loom.com") {
-    const m = url.pathname.match(/^\/(?:share|embed)\/([a-f0-9]{32})\/?$/i);
-    return m ? { provider: "loom", src: `https://www.loom.com/embed/${m[1].toLowerCase()}`, ratio: "16-9", title: "Vidéo Loom" } : null;
-  }
-  if (host === "ted.com") {
-    const m = url.pathname.match(/^\/talks\/([a-z0-9_]{3,120})\/?$/i);
-    return m ? { provider: "ted", src: `https://embed.ted.com/talks/${m[1]}`, ratio: "16-9", title: "Conférence TED" } : null;
-  }
-  return null;
-}
+// à partir d'identifiants validés, jamais copiée. Table des services : src/shared/embedProviders.js. Renvoie { provider, src, height?, ratio?, title, sandboxAttr? } ou null.
+const embedProvider = (raw) => embedProviderFor(raw);
 
 module.exports = { parseVideoUrl, embedProvider };

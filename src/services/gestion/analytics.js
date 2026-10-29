@@ -1,6 +1,9 @@
 // Centre de gestion — Analytics : indicateurs calculés sur les données réelles de la période choisie (formations du
 // formateur). Aucun chiffre estimé : ce qui n'est pas mesuré par le site (visites, conversion) est déclaré indisponible.
 const db = require("../../config/database");
+const siteScope = require("../siteScope");
+// Portée de site (courses.site_id ; NULL = site principal) : toute lecture du Centre de gestion est limitée aux formations du site actif
+const L = (siteId, alias) => siteScope.lit(siteId, alias);
 const { addDays, parisDayStart, sqlUtc } = require("./common");
 
 // Agrégat par jour, semaine ou mois selon la longueur de la période (≤ 31 j : jour ; ≤ 180 j : semaine ; sinon mois)
@@ -25,15 +28,15 @@ function label(ymd, unit) {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
-function report(instructorId, p) {
+function report(instructorId, p, siteId = null) {
   const one = (sql, ...a) => db.prepare(sql).get(...a);
-  const SALES = "FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ? AND o.created_at >= ? AND o.created_at < ?";
+  const SALES = "FROM order_items oi JOIN orders o ON o.id = oi.order_id JOIN courses c ON c.id = oi.course_id WHERE c.instructor_id = ?" + L(siteId, "c") + " AND o.created_at >= ? AND o.created_at < ?";
   const sales = one(`SELECT COALESCE(SUM(oi.price_cents), 0) revenue, COUNT(DISTINCT o.id) orders, COUNT(DISTINCT CASE WHEN o.total_cents > 0 THEN o.id END) paid_orders, COUNT(*) items, COALESCE(SUM(CASE WHEN o.coupon_id IS NOT NULL THEN 1 ELSE 0 END), 0) promo_items ${SALES}`, instructorId, p.from, p.to);
   const discount = one(`SELECT COALESCE(SUM(o.discount_cents), 0) d, COUNT(*) n FROM orders o JOIN coupons cp ON cp.id = o.coupon_id WHERE cp.instructor_id = ? AND o.created_at >= ? AND o.created_at < ?`, instructorId, p.from, p.to);
-  const enrollments = one("SELECT COUNT(*) n, COUNT(DISTINCT e.user_id) students FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? AND e.created_at >= ? AND e.created_at < ?", instructorId, p.from, p.to);
-  const newStudents = one(`SELECT COUNT(*) n FROM (SELECT e.user_id, MIN(e.created_at) first FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? GROUP BY e.user_id) WHERE first >= ? AND first < ?`, instructorId, p.from, p.to).n;
-  const lessons = one("SELECT COUNT(*) n FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN sections s ON s.id = l.section_id JOIN courses c ON c.id = s.course_id WHERE c.instructor_id = ? AND lp.completed_at >= ? AND lp.completed_at < ?", instructorId, p.from, p.to).n;
-  const reviews = one("SELECT COUNT(*) n, AVG(r.rating) avg FROM reviews r JOIN courses c ON c.id = r.course_id WHERE c.instructor_id = ? AND r.created_at >= ? AND r.created_at < ?", instructorId, p.from, p.to);
+  const enrollments = one("SELECT COUNT(*) n, COUNT(DISTINCT e.user_id) students FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?" + L(siteId, "c") + " AND e.created_at >= ? AND e.created_at < ?", instructorId, p.from, p.to);
+  const newStudents = one(`SELECT COUNT(*) n FROM (SELECT e.user_id, MIN(e.created_at) first FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?${L(siteId, "c")} GROUP BY e.user_id) WHERE first >= ? AND first < ?`, instructorId, p.from, p.to).n;
+  const lessons = one("SELECT COUNT(*) n FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN sections s ON s.id = l.section_id JOIN courses c ON c.id = s.course_id WHERE c.instructor_id = ?" + L(siteId, "c") + " AND lp.completed_at >= ? AND lp.completed_at < ?", instructorId, p.from, p.to).n;
+  const reviews = one("SELECT COUNT(*) n, AVG(r.rating) avg FROM reviews r JOIN courses c ON c.id = r.course_id WHERE c.instructor_id = ?" + L(siteId, "c") + " AND r.created_at >= ? AND r.created_at < ?", instructorId, p.from, p.to);
 
   // Séries (une requête par série, regroupée côté base)
   const { unit, buckets } = bucketsOf(p);
@@ -42,7 +45,7 @@ function report(instructorId, p) {
     return buckets.map((b) => stmt.get(instructorId, b.from, b.to).v || 0);
   };
   const revenueSeries = series(`SELECT COALESCE(SUM(oi.price_cents), 0) v ${SALES}`);
-  const enrollSeries = series("SELECT COUNT(*) v FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ? AND e.created_at >= ? AND e.created_at < ?");
+  const enrollSeries = series("SELECT COUNT(*) v FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE c.instructor_id = ?" + L(siteId, "c") + " AND e.created_at >= ? AND e.created_at < ?");
 
   // Performances par formation (période) : ventes, inscriptions, progression moyenne (tous inscrits, état actuel)
   const courses = db.prepare(`SELECT c.id, c.title, c.published, c.price_cents,
@@ -52,7 +55,7 @@ function report(instructorId, p) {
       (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS students,
       (SELECT COUNT(*) FROM lessons l JOIN sections s ON s.id = l.section_id WHERE s.course_id = c.id) AS lessons,
       (SELECT COUNT(*) FROM lesson_progress lp JOIN lessons l ON l.id = lp.lesson_id JOIN sections s ON s.id = l.section_id JOIN enrollments e ON e.user_id = lp.user_id AND e.course_id = c.id WHERE s.course_id = c.id) AS done
-    FROM courses c WHERE c.instructor_id = ? AND c.archived = 0 ORDER BY revenue DESC, enrollments DESC, c.title COLLATE NOCASE`).all(p.from, p.to, p.from, p.to, p.from, p.to, instructorId)
+    FROM courses c WHERE c.instructor_id = ?${L(siteId, "c")} AND c.archived = 0 ORDER BY revenue DESC, enrollments DESC, c.title COLLATE NOCASE`).all(p.from, p.to, p.from, p.to, p.from, p.to, instructorId)
     .map((c) => ({ ...c, avgProgress: c.students && c.lessons ? Math.round((c.done / (c.students * c.lessons)) * 100) : null }));
 
   // Ventes par offre (période) : nom conservé sur la ligne de commande même si l'offre est supprimée ensuite.

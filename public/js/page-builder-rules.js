@@ -212,6 +212,8 @@
   if (quickBtn) quickBtn.addEventListener("click", function (e) { e.stopPropagation(); togglePop(); });
   document.addEventListener("click", function (e) { if (!pop.hidden && !pop.contains(e.target) && e.target !== quickBtn && !(quickBtn && quickBtn.contains(e.target))) closePop(); });
   pop.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closePop(); if (quickBtn) quickBtn.focus(); } });
+  // Un clic dans le canevas (un cadre) n'atteint pas le document de l'éditeur : seul le blur de la fenêtre le signale — comme pour le menu principal
+  window.addEventListener("blur", function () { if (!pop.hidden) closePop(); });
 
   // ---------- Ouverture et déplacement de la fenêtre ----------
   function open(where) {

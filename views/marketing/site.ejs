@@ -3,6 +3,7 @@
     <div class="mk-head"><div class="mk-builder-title"><h1><%= site.name %></h1><% if (site.deleted_at) { %><span class="mk-status mk-status-warn">Supprimé</span><% } else if (archived) { %><span class="mk-status mk-status-warn">Archivé</span><% } %></div>
       <% if (canWrite) { %><div class="mk-actions">
         <% if (!mk.ctx.siteScope && mk.can("sites.modules")) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= site.id %>/modules">Modules</a><% } %>
+        <% if (mk.can("sites.domains")) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/sites/<%= site.id %>/domaines">Domaines</a><% } %>
         <% if (site.deleted_at) { %><form action="/marketing/site-web/sites/<%= site.id %>/recuperer" method="post"><button type="submit" class="btn btn-primary btn-sm">Récupérer le site</button></form>
         <% } else if (archived) { %><form action="/marketing/site-web/sites/<%= site.id %>/restaurer" method="post"><button type="submit" class="btn btn-primary btn-sm">Restaurer le site</button></form>
         <% } else { %>
@@ -53,11 +54,11 @@
       <% } else { %>
         <dl class="mk-facts" data-header-facts>
           <div><dt>En-tête</dt><dd data-header-name><%= H.header.name %></dd></div>
-          <div><dt>Statut</dt><dd data-header-status><%= H.status === "published" ? "Publié" : "Aucun" %></dd></div>
+          <div><dt>Statut</dt><dd data-header-status><%= H.status === "published" ? (H.header.hasDraft ? "Publié · brouillon non publié" : "Publié") : "Aucun" %></dd></div>
           <div><dt>Type</dt><dd data-header-type><%= H.type === "global" ? "Global" : "" %></dd></div>
           <div><dt>Utilisé par</dt><dd data-header-count><%= H.using.length %> page<%= H.using.length > 1 ? "s" : "" %> sur <%= H.total %></dd></div>
         </dl>
-        <p class="field-hint">Un en-tête est un composant synchronisé : le modifier le met à jour sur toutes les pages qui l'utilisent, tout de suite.</p>
+        <p class="field-hint">Un en-tête est un composant synchronisé. Vos modifications sont enregistrées en brouillon : les visiteurs ne voient la nouvelle version qu'après « Mettre à jour » dans l'éditeur (un aperçu privé est disponible avant).</p>
         <p><% if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/site-web/composants/<%= H.header.id %>/editeur" data-header-edit>Modifier l'en-tête</a><% } %></p>
 
         <% const choiceCell = (p, current) => { %>
@@ -99,7 +100,7 @@
       <% if (!components.length) { %><p class="field-hint">Aucun composant pour l'instant : créez par exemple une section avec un menu, puis enregistrez-la comme composant.</p><% } else { %>
       <form action="/marketing/site-web/sites/<%= site.id %>/parties" method="post" class="mk-form-row">
         <div class="field-group"><label for="site-header">En-tête du site</label><select id="site-header" name="header"<%= canWrite ? "" : " disabled" %>><option value="">Aucun</option><% components.forEach((c) => { %><option value="<%= c.id %>"<%= site.header_component_id === c.id ? " selected" : "" %>><%= c.name %><%= c.global ? " (global)" : "" %></option><% }) %></select></div>
-        <div class="field-group"><label for="site-footer">Pied de page du site</label><select id="site-footer" name="footer"<%= canWrite ? "" : " disabled" %>><option value="">Aucun</option><% components.forEach((c) => { %><option value="<%= c.id %>"<%= site.footer_component_id === c.id ? " selected" : "" %>><%= c.name %><%= c.global ? " (global)" : "" %></option><% }) %></select></div>
+        <div class="field-group"><label for="site-footer">Pied de page du site</label><select id="site-footer" name="footer"<%= canWrite ? "" : " disabled" %>><option value="">Aucun</option><% components.forEach((c) => { %><option value="<%= c.id %>"<%= site.footer_component_id === c.id ? " selected" : "" %>><%= c.name %><%= c.global ? " (global)" : "" %></option><% }) %></select><% if (site.footer_component_id && canWrite) { %> <a class="btn btn-ghost btn-sm" href="/marketing/site-web/composants/<%= site.footer_component_id %>/editeur" data-footer-edit>Modifier le pied de page<%= H.footer && H.footer.hasDraft ? " (brouillon non publié)" : "" %></a><% } %></div>
         <% if (canWrite) { %><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button><% } %>
       </form><% } %>
     </section>

@@ -3,6 +3,9 @@
 // dans l'adresse ne donne jamais accès au ticket d'un autre.
 const db = require("../config/database");
 const notifications = require("./notifications");
+const siteScope = require("./siteScope");
+// Un ticket appartient à un site (support_tickets.site_id ; NULL = site principal) : celui de sa formation, sinon celui du domaine où il a été ouvert.
+const SW = (siteId, alias = "t") => siteScope.where(siteId === undefined ? null : siteId, alias);
 
 const MAX_OPEN_PER_HOUR = 5; // création de tickets : au plus 5 par heure et par élève (anti-abus)
 const PRIORITIES = { low: "Basse", normal: "Normale", high: "Haute" };
@@ -28,7 +31,7 @@ function defaultInstructor(courseId) {
 }
 
 // → { id } ou { errors } (erreurs par champ, en français)
-function createTicket(user, input = {}) {
+function createTicket(user, input = {}, siteId = null) {
   const errors = {};
   const subject = cleanText(input.subject).replace(/\s+/g, " ");
   const message = cleanText(input.message);
@@ -45,13 +48,14 @@ function createTicket(user, input = {}) {
   if (Object.keys(errors).length) return { errors, values: { subject, message, course_id: input.course_id || "" } };
 
   const instructorId = defaultInstructor(courseId);
+  const ticketSite = courseId ? ((db.prepare("SELECT site_id FROM courses WHERE id = ?").get(courseId) || {}).site_id ?? null) : (siteId ?? null);
   db.exec("BEGIN IMMEDIATE");
   try {
     // Double clic ou renvoi du formulaire : la même demande envoyée dans les 2 dernières minutes n'est pas créée deux fois
     const twin = db.prepare(`SELECT t.id FROM support_tickets t JOIN support_messages m ON m.ticket_id = t.id AND m.id = (SELECT MIN(id) FROM support_messages WHERE ticket_id = t.id)
       WHERE t.user_id = ? AND t.subject = ? AND m.body = ? AND t.created_at >= datetime('now', '-2 minutes') ORDER BY t.id DESC LIMIT 1`).get(user.id, subject, message);
     if (twin) { db.exec("COMMIT"); return { id: twin.id, duplicate: true }; }
-    const id = Number(db.prepare("INSERT INTO support_tickets (user_id, instructor_id, course_id, subject) VALUES (?, ?, ?, ?)").run(user.id, instructorId, courseId, subject).lastInsertRowid);
+    const id = Number(db.prepare("INSERT INTO support_tickets (user_id, instructor_id, course_id, subject, site_id) VALUES (?, ?, ?, ?, ?)").run(user.id, instructorId, courseId, subject, ticketSite).lastInsertRowid);
     db.prepare("INSERT INTO support_messages (ticket_id, author_id, is_staff, body) VALUES (?, ?, 0, ?)").run(id, user.id, message);
     db.exec("COMMIT");
     notifyStaffOfNew(id, user, subject, message, instructorId);
@@ -67,12 +71,13 @@ const TICKET = `SELECT t.*, u.username AS student_name, u.email AS student_email
   FROM support_tickets t JOIN users u ON u.id = t.user_id LEFT JOIN courses c ON c.id = t.course_id`;
 
 const getForUser = (userId, id) => db.prepare(`${TICKET} WHERE t.id = ? AND t.user_id = ?`).get(id, userId) || null;
-const getForInstructor = (instructorId, id) => db.prepare(`${TICKET} WHERE t.id = ? AND t.instructor_id = ?`).get(id, instructorId) || null;
+const getForInstructor = (instructorId, id, siteId = null) => { const w = SW(siteId); return db.prepare(`${TICKET} WHERE t.id = ? AND t.instructor_id = ?${w.sql}`).get(id, instructorId, ...w.params) || null; };
 const messagesOf = (ticketId) => db.prepare("SELECT m.*, u.username AS author_name FROM support_messages m LEFT JOIN users u ON u.id = m.author_id WHERE m.ticket_id = ? ORDER BY m.id").all(ticketId);
 
 // Filtres du formateur : statut, recherche (sujet, nom, e-mail), « haute priorité à traiter » ; pagination par page de 25
-function instructorWhere(instructorId, { status = "", q = "", urgent = false } = {}) {
-  const where = ["t.instructor_id = ?"], args = [instructorId];
+function instructorWhere(instructorId, { status = "", q = "", urgent = false } = {}, siteId = null) {
+  const sw = SW(siteId);
+  const where = [`t.instructor_id = ?${sw.sql}`], args = [instructorId, ...sw.params];
   if (STATUSES[status]) { where.push("t.status = ?"); args.push(status); }
   if (urgent) where.push("t.priority = 'high' AND t.status <> 'closed'");
   const text = String(q || "").trim().slice(0, 80);
@@ -80,8 +85,8 @@ function instructorWhere(instructorId, { status = "", q = "", urgent = false } =
   return { sql: where.join(" AND "), args };
 }
 // À traiter d'abord : en attente (priorité haute en tête, puis la plus ancienne attente), puis répondus (activité récente), puis résolus
-function listForInstructor(instructorId, filters = {}, { page = 1 } = {}) {
-  const w = instructorWhere(instructorId, filters);
+function listForInstructor(instructorId, filters = {}, { page = 1, siteId = null } = {}) {
+  const w = instructorWhere(instructorId, filters, siteId);
   const total = db.prepare(`SELECT COUNT(*) n FROM support_tickets t JOIN users u ON u.id = t.user_id WHERE ${w.sql}`).get(...w.args).n;
   const pages = Math.max(1, Math.ceil(total / PER_PAGE)), current = Math.min(Math.max(1, Number(page) || 1), pages);
   const rows = db.prepare(`${TICKET} WHERE ${w.sql} ORDER BY CASE t.status WHEN 'open' THEN 0 WHEN 'answered' THEN 1 ELSE 2 END,
@@ -91,12 +96,13 @@ function listForInstructor(instructorId, filters = {}, { page = 1 } = {}) {
   return { rows, total, pages, page: current };
 }
 // Indicateurs : uniquement des comptages réels des tickets adressés à ce formateur (« total » = tous, « open » = en attente de réponse)
-function stats(instructorId) {
+function stats(instructorId, siteId = null) {
+  const sw = SW(siteId, "support_tickets");
   const r = db.prepare(`SELECT COUNT(*) total, COALESCE(SUM(status = 'open'), 0) open, COALESCE(SUM(status = 'answered'), 0) answered, COALESCE(SUM(status = 'closed'), 0) closed,
-    COALESCE(SUM(status = 'open' AND priority = 'high'), 0) urgent, MIN(CASE WHEN status = 'open' THEN updated_at END) oldest_open FROM support_tickets WHERE instructor_id = ?`).get(instructorId);
+    COALESCE(SUM(status = 'open' AND priority = 'high'), 0) urgent, MIN(CASE WHEN status = 'open' THEN updated_at END) oldest_open FROM support_tickets WHERE instructor_id = ?${sw.sql}`).get(instructorId, ...sw.params);
   return { total: r.total, open: r.open, answered: r.answered, closed: r.closed, urgent: r.urgent, oldestOpen: r.oldest_open || null };
 }
-const openCount = (instructorId) => db.prepare("SELECT COUNT(*) n FROM support_tickets WHERE instructor_id = ? AND status = 'open'").get(instructorId).n;
+const openCount = (instructorId, siteId = null) => { const w = SW(siteId, "support_tickets"); return db.prepare(`SELECT COUNT(*) n FROM support_tickets WHERE instructor_id = ? AND status = 'open'${w.sql}`).get(instructorId, ...w.params).n; };
 function listForUser(userId, { status = "" } = {}) {
   const f = STUDENT_STATUSES[status] ? " AND t.status = ?" : "";
   return db.prepare(`${TICKET} WHERE t.user_id = ?${f} ORDER BY CASE t.status WHEN 'answered' THEN 0 WHEN 'open' THEN 1 ELSE 2 END, t.updated_at DESC, t.id DESC LIMIT 100`).all(...(f ? [userId, status] : [userId]));
@@ -151,9 +157,10 @@ function addMessage(ticket, author, body, { staff, resolve = false }) {
 
 function close(ticketId) { return db.prepare("UPDATE support_tickets SET status = 'closed', closed_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status <> 'closed'").run(ticketId).changes === 1; }
 function reopen(ticketId) { return db.prepare("UPDATE support_tickets SET status = 'open', closed_at = NULL, updated_at = datetime('now') WHERE id = ? AND status = 'closed'").run(ticketId).changes === 1; }
-function setPriority(instructorId, id, priority) {
+function setPriority(instructorId, id, priority, siteId = null) {
   if (!PRIORITIES[priority]) return false;
-  return db.prepare("UPDATE support_tickets SET priority = ? WHERE id = ? AND instructor_id = ?").run(priority, id, instructorId).changes === 1;
+  const w = SW(siteId, "support_tickets");
+  return db.prepare(`UPDATE support_tickets SET priority = ? WHERE id = ? AND instructor_id = ?${w.sql}`).run(priority, id, instructorId, ...w.params).changes === 1;
 }
 
 module.exports = { ageLabel, PRIORITIES, STATUSES, STUDENT_STATUSES, PER_PAGE, stats, countsForUser, createTicket, listForUser, getForUser, getForInstructor, messagesOf, listForInstructor, openCount, addMessage, close, reopen, setPriority };

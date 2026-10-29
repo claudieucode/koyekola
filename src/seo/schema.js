@@ -3,6 +3,7 @@
 // Une seule Organisation et un seul WebSite par page, jamais contradictoires. Aucune propriété n'est inventée : un champ
 // sans donnée réelle (logo, profils sociaux, image…) n'apparaît simplement pas.
 const settings = require("./settings");
+const local = require("./local");
 const images = require("./images");
 const { siteBase, absoluteUrl } = require("../utils/seo");
 
@@ -37,6 +38,21 @@ function organization(req, siteId) {
   if (logo) node.logo = logo;
   if (s.org_description) node.description = s.org_description;
   if (s.social_profiles && s.social_profiles.length) node.sameAs = s.social_profiles;
+  // SEO local : uniquement des informations saisies par le site (aucune valeur déduite) ; une adresse n'est publiée que complète (rue + ville)
+  if (/^\+?[0-9 ().-]{6,30}$/.test(s.org_phone || "")) node.telephone = s.org_phone;
+  if (/^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(s.org_email || "")) node.email = s.org_email;
+  if (s.org_street && s.org_city) {
+    node.address = { "@type": "PostalAddress", streetAddress: s.org_street, addressLocality: s.org_city };
+    if (s.org_postal_code) node.address.postalCode = s.org_postal_code;
+    if (/^[A-Za-z]{2}$/.test(s.org_country || "")) node.address.addressCountry = s.org_country.toUpperCase();
+  }
+  // Horaires et coordonnées : propriétés d'un lieu, donc publiées seulement pour une organisation de type LocalBusiness
+  if (s.org_type === "LocalBusiness") {
+    const hours = local.parseHours(s.org_hours).specs;
+    if (hours.length) node.openingHoursSpecification = hours;
+    const geo = local.parseGeo(s.org_lat, s.org_lng).geo;
+    if (geo) node.geo = geo;
+  }
   return node;
 }
 
@@ -62,6 +78,8 @@ function breadcrumb(req, url, crumbs) {
 function build(req, { page, main = [], siteId }) {
   const { website: websiteId } = ids(req);
   const nodes = [organization(req, siteId), website(req, { siteId })];
+  const st = settingsOf(req, siteId);
+  if (st.org_locations) nodes.push(...local.locationNodes(st.org_locations, { base: ids(req).base, orgId: ids(req).org }));
   const webpage = { "@type": page.type || "WebPage", "@id": `${page.url}#webpage`, url: page.url, name: page.name, isPartOf: { "@id": websiteId }, inLanguage: page.inLanguage || "fr-FR" };
   if (page.description) webpage.description = page.description;
   if (page.datePublished) webpage.datePublished = page.datePublished;
@@ -79,7 +97,7 @@ function build(req, { page, main = [], siteId }) {
 const REQUIRED = {
   Organization: ["name", "url"], EducationalOrganization: ["name", "url"], WebSite: ["name", "url"], WebPage: ["url", "name"], CollectionPage: ["url", "name"],
   AboutPage: ["url", "name"], ContactPage: ["url", "name"], ProfilePage: ["url", "name"], BreadcrumbList: ["itemListElement"], Course: ["name", "description", "provider"],
-  BlogPosting: ["headline", "datePublished", "author"], Article: ["headline", "datePublished", "author"], FAQPage: ["mainEntity"], HowTo: ["name", "step"], ImageObject: ["url"], Person: ["name"],
+  BlogPosting: ["headline", "datePublished", "author"], Article: ["headline", "datePublished", "author"], FAQPage: ["mainEntity"], LocalBusiness: ["name", "address"], HowTo: ["name", "step"], ImageObject: ["url"], Person: ["name"],
 };
 function validate(blocks) {
   const problems = [];

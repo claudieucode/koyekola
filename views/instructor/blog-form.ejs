@@ -5,11 +5,12 @@
   const checked = (key, fallback) => ((post ? post[key] : fallback) ? "checked" : "");
   const authorId = post && post.author_id ? post.author_id : currentUserId;
   const status = post ? post.status : "draft";
+  const pageMode = typeof pageInfo !== "undefined" && pageInfo ? pageInfo : null; // page du site (ex. « À propos ») éditée avec l'éditeur de blocs : pas un article
   const toUtcInput = (d) => (d ? d.replace(" ", "T").slice(0, 16) : "");
   const languageNames = { fr: "Français", en: "Anglais", es: "Espagnol", pt: "Portugais", de: "Allemand", it: "Italien", ln: "Lingala" };
   const pageData = {
     postId: post ? post.id : null, slug: post ? post.slug : "", status, publishedAt: post ? post.published_at : null, everPublished: Boolean(post && post.published_at),
-    updatedAt: post ? post.updated_at : null, rev: typeof rev !== "undefined" ? rev : null, createdAt: post ? post.created_at : null, siteUrl, aiConfigured, newsletterReady,
+    updatedAt: post ? post.updated_at : null, rev: typeof rev !== "undefined" ? rev : null, createdAt: post ? post.created_at : null, siteUrl, aiConfigured, newsletterReady, pageKey: pageMode ? pageKey : null, canHtml: typeof canHtml !== "undefined" ? canHtml : false, forms: typeof marketingForms !== "undefined" ? marketingForms : [],
     categories: categories.map((c) => c.name), subcategories, tags, courses, revisions, revisionTotal, authors: instructors.map((u) => ({ id: u.id, name: u.username })), statuses,
     autosave: autosave ? { savedAt: autosave.saved_at, data: autosave.data } : null,
     coverPath: post ? post.cover_path : null, ogImagePath: post ? post.og_image_path : null, twitterImagePath: post ? post.twitter_image_path : null,
@@ -25,7 +26,7 @@
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title><%= post ? `Modifier l'article « ${post.title} »` : "Nouvel article" %> · KOLAKISA</title>
+  <title><%= pageMode ? `Modifier la page « ${pageMode.label} »` : (post ? `Modifier l'article « ${post.title} »` : "Nouvel article") %> · KOLAKISA</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <%- include("../partials/font-preload") %>
   <script src="<%= asset('/js/kb-motion.js') %>" defer></script>
@@ -37,9 +38,9 @@
   <link rel="stylesheet" href="<%= asset('/css/kola-brand-editors.css') %>">
 </head>
 <body class="wp-body"<%- editorTheme.key !== "clair" ? ` data-ed-theme="${editorTheme.key}" data-ed-contrast="${editorTheme.contrast}" style="--ed-base: ${editorTheme.color}"` : "" %>>
-  <div class="be wp" data-blog-editor>
+  <div class="be wp" data-blog-editor<%- pageMode ? ' data-page-mode="' + pageKey + '"' : "" %>>
     <%# Titre de la page pour les lecteurs d'écran (le titre visible est le champ « Titre de l'article ») %>
-    <h1 class="sr-only"><%= post ? "Modifier l'article" : "Nouvel article" %></h1>
+    <h1 class="sr-only"><%= pageMode ? `Modifier la page « ${pageMode.label} »` : (post ? "Modifier l'article" : "Nouvel article") %></h1>
     <form id="be-form"<%- siteId ? ' data-site="' + siteId + '"' : "" %> action="<%= post ? '/formateur/blog/' + post.id + '/modifier' : '/formateur/blog/nouveau' + (siteId ? '?site=' + siteId : '') %>" method="post" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="content_format" value="html">
       <input type="hidden" name="status" value="<%= status %>" data-field="status">
@@ -70,7 +71,7 @@
         </div>
         <div class="wp-header-right">
           <span class="wp-save-state" role="status" aria-live="polite" data-save-state><%= saved || post ? "Enregistré" : "" %></span>
-          <button type="submit" class="wp-btn-tertiary" data-save>Enregistrer<span class="wp-btn-long"> le brouillon</span></button>
+          <button type="submit" class="wp-btn-tertiary" data-save>Enregistrer<span class="wp-btn-long"><%= pageMode ? " la page" : " le brouillon" %></span></button>
           <div class="wp-dropdown wp-preview-dropdown">
             <button type="button" class="wp-btn-icon" data-preview-toggle aria-haspopup="true" aria-expanded="false" aria-label="Aperçu" title="Aperçu"><%- icon("monitor", { size: 20 }) %></button>
             <div class="wp-menu" data-preview-menu hidden role="menu">
@@ -104,6 +105,7 @@
               <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="toptoolbar">Barre d'outils fixe en haut</button>
               <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="distraction">Mode sans distraction<kbd>Ctrl+Maj+\</kbd></button>
               <button type="button" role="menuitem" data-option="fullscreen">Plein écran<kbd>Ctrl+Maj+Alt+F</kbd></button>
+              <button type="button" role="menuitemcheckbox" aria-checked="false" data-option="zoomout">Zoom arrière<kbd>Ctrl+Maj+0</kbd></button>
               <hr>
               <p class="wp-menu-label wp-mobile-only">Aperçu</p>
               <button type="button" role="menuitem" class="wp-mobile-only" data-preview="tab">Prévisualiser l'article ↗</button>
@@ -111,7 +113,9 @@
               <hr class="wp-mobile-only">
               <button type="button" role="menuitem" data-option="settings">⚙ Réglages de l'éditeur…</button>
               <button type="button" role="menuitem" data-option="appearance">Apparence de l'éditeur…</button>
+              <button type="button" role="menuitem" data-option="copyall">Copier tout le contenu</button>
               <button type="button" role="menuitem" data-option="shortcuts">Raccourcis clavier</button>
+              <button type="button" role="menuitem" data-option="welcome">Guide de bienvenue</button>
               <button type="button" role="menuitem" data-option="diagnostic">Diagnostic des blocs…</button>
               <a role="menuitem" href="<%= siteId ? '/marketing/site-web/articles?site=' + siteId : (restrictedSite ? '/marketing/site-web/articles?site=' + restrictedSite : '/formateur/blog') %>">Retour aux articles</a>
               <a role="menuitem" href="/formateur">Mon espace (vue d'ensemble)</a>
@@ -167,12 +171,13 @@
           <div class="wp-top-toolbar" data-top-toolbar hidden></div>
           <div class="wp-content">
             <label for="post-title" class="sr-only">Titre de l'article</label>
-            <textarea id="post-title" name="title" class="wp-title" rows="1" maxlength="150" required placeholder="Ajouter un titre"><%= v('title') %></textarea>
+            <textarea id="post-title" name="title" class="wp-title" rows="1" maxlength="150" required placeholder="<%= pageMode ? "Titre de la page" : "Ajouter un titre" %>"><%= v('title') %></textarea>
             <div class="wp-block-toolbar" data-block-toolbar hidden role="toolbar" aria-label="Outils du bloc"></div>
             <div id="be-editor" class="wp-editor"></div>
             <label for="post-content" class="sr-only" data-content-label>Contenu (HTML)</label>
             <textarea id="post-content" name="content" rows="24" class="wp-code-editor" placeholder="Saisissez le code HTML de l'article"><%= editorHtml %></textarea>
           </div>
+          <nav class="wp-breadcrumb" data-breadcrumb aria-label="Chemin du bloc sélectionné"></nav>
         </div>
 
         <%# ---------- Espace de travail SEO : zone d'ancrage basse, fenêtres flottantes, panneaux fermés ---------- %>
@@ -193,6 +198,13 @@
 
           <%# ===== Onglet Article ===== %>
           <div role="tabpanel" id="panel-article" aria-labelledby="tab-article" data-sidebar-panel="article">
+            <% if (pageMode) { %>
+            <div class="wp-page-card" data-page-keep>
+              <p class="wp-page-card-title">Page du site : « <%= pageMode.label %> »</p>
+              <p class="wp-help">Cette page n'est pas un article. Ce que vous enregistrez est visible sur le site tout de suite. Les versions précédentes se retrouvent dans « Révisions ».</p>
+              <p><a class="wp-btn-secondary" href="<%= pageMode.url %>" target="_blank" rel="noopener">Voir la page sur le site ↗</a> <a class="wp-btn-link" href="/formateur/pages/<%= pageKey %>">Retour aux réglages de la page</a></p>
+            </div>
+            <% } %>
             <div class="wp-post-card">
               <div class="wp-image-pick" data-image-pick="cover"></div>
               <label for="post-cover" class="sr-only">Téléverser l'image mise en avant</label>

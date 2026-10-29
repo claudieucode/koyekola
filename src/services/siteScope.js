@@ -38,4 +38,11 @@ function sameScope(column) {
   return `COALESCE(${column}, 0) = COALESCE(?, 0)`;
 }
 
-module.exports = { assert, where, count, isPrimary, scopeKey, sameScope };
+// Même condition que where(), mais avec l'identifiant INSCRIT dans le SQL (entier validé par assert) : sert aux requêtes qui assemblent
+// beaucoup de fragments où l'ordre des paramètres serait fragile. NULL (principal) ⇒ COALESCE(col, 0) = 0, un identifiant ⇒ = id.
+function lit(siteId, alias = "") {
+  const id = assert(siteId === undefined ? null : siteId);
+  return ` AND COALESCE(${alias ? `${String(alias).replace(/[^A-Za-z0-9_]/g, "")}.` : ""}site_id, 0) = ${id === null ? 0 : id}`;
+}
+
+module.exports = { lit, assert, where, count, isPrimary, scopeKey, sameScope };

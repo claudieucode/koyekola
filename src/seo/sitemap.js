@@ -58,14 +58,16 @@ function entries({ hostSite = null } = {}) {
   const siteTag = (home) => (home ? { siteId: home, base: urls.siteInfo(home).base } : {});
   for (const t of taxonomy.publicTerms("category")) { const home = homeOf("term", t.id); add({ path: home ? `${taxonomy.baseOf("category")}/${urls.addressOf("term", t)}` : taxonomy.urlOf(t), type: "Catégorie d'articles", ...siteTag(home) }, metaIndex("blog_category", t.slug)); }
   const blogSites = new Set();
-  for (const p of db.prepare("SELECT * FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY published_at DESC").all()) {
-    const home = homeOf("post", p.id);
-    if (home) blogSites.add(home);
-    const e = { path: urls.publicPath("post", p), type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title, ...siteTag(home) };
-    if (!p.robots_index) excluded.push({ ...e, reason: "Réglé en noindex" });
-    else if (p.canonical_url) excluded.push({ ...e, reason: `Canonical vers ${p.canonical_url}` });
-    else included.push(e);
-  }
+  urls.withBatchCache(() => {
+    for (const p of db.prepare(`SELECT ${require("../utils/postColumns").listColumns()} FROM posts WHERE published = 1 AND deleted_at IS NULL ORDER BY published_at DESC`).all()) { // sans le contenu : le plan du site n'en lit pas
+      const home = homeOf("post", p.id);
+      if (home) blogSites.add(home);
+      const e = { path: urls.publicPath("post", p), type: "Article", lastmod: isoDate(p.updated_at), images: [p.cover_path].filter(Boolean), title: p.title, ...siteTag(home) };
+      if (!p.robots_index) excluded.push({ ...e, reason: "Réglé en noindex" });
+      else if (p.canonical_url) excluded.push({ ...e, reason: `Canonical vers ${p.canonical_url}` });
+      else included.push(e);
+    }
+  });
   for (const id of blogSites) add({ path: "/blog", type: "Page", ...siteTag(id) }, null); // l'accueil du blog de chaque domaine qui a des articles
   // Pages Site Web / pages d'atterrissage (/p/…) : en ligne, non archivées ; indexées seulement si la page le permet
   // (case « Autoriser les moteurs de recherche ») et sans canonical vers une autre adresse ni noindex dans son SEO

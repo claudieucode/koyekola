@@ -153,6 +153,7 @@
     <div class="mk-sg-section-head"><h2 id="sg-t-life">Gestion du site</h2><p>Copier, archiver ou supprimer ce site. Rien n'est effacé sans confirmation.</p></div>
     <div class="mk-sg-life">
       <% if (!mk.ctx.siteScope && mk.can("sites.modules")) { %><a class="mk-wd-btn" href="/marketing/site-web/sites/<%= site.id %>/modules">Modules du site</a><% } %>
+      <% if (mk.can("sites.domains")) { %><a class="mk-wd-btn" href="/marketing/site-web/sites/<%= site.id %>/domaines">Domaines du site</a><% } %>
       <% if (site.deleted_at) { %><form action="/marketing/site-web/sites/<%= site.id %>/recuperer" method="post"><button type="submit" class="mk-wd-btn mk-wd-btn--primary">Récupérer le site</button></form>
       <% } else if (archived) { %><form action="/marketing/site-web/sites/<%= site.id %>/restaurer" method="post"><button type="submit" class="mk-wd-btn mk-wd-btn--primary">Restaurer le site</button></form>
       <% } else { %>

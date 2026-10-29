@@ -8,6 +8,7 @@
         <div class="field-group"><label for="seo-<%= f.key %>"><%= f.label %> <span class="mk-status <%= f.own ? 'mk-status-ok' : 'mk-status-off' %>"><%= f.own ? "personnalisé" : "valeur par défaut" %></span></label>
           <% if (f.type === "choice") { %><select id="seo-<%= f.key %>" name="<%= f.key %>" <%= canEdit ? "" : "disabled" %>><option value="">Valeur par défaut</option><% f.choices.forEach((c) => { %><option value="<%= c %>" <%= f.own && f.value === c ? "selected" : "" %>><%= c %></option><% }) %></select>
           <% } else if (f.type === "urls") { %><textarea id="seo-<%= f.key %>" name="<%= f.key %>" rows="3" placeholder="https://…" <%= canEdit ? "" : "readonly" %>><%= Array.isArray(f.value) ? f.value.join("\n") : "" %></textarea>
+          <% } else if (f.type === "multiline") { %><textarea id="seo-<%= f.key %>" name="<%= f.key %>" rows="4" maxlength="<%= f.max %>" <%= canEdit ? "" : "readonly" %>><%= f.own ? f.value : "" %></textarea>
           <% } else { %><input id="seo-<%= f.key %>" type="text" name="<%= f.key %>" maxlength="<%= f.max || 200 %>" value="<%= f.own ? f.value : '' %>" placeholder="<%= f.effective %>" <%= canEdit ? "" : "readonly" %>><% } %>
           <% if (f.help) { %><small><%= f.help %></small><% } %></div>
         <% }) %>

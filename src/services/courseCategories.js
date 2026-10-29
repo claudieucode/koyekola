@@ -8,6 +8,10 @@
 const db = require("../config/database");
 const { slugify } = require("../utils/format");
 const audit = require("./auditLog");
+const siteScope = require("./siteScope");
+const dashSite = require("./dashSite");
+// Portée de site : les catégories d'un site sont celles de SES formations (courses.site_id ; NULL = site principal)
+const W = (siteId, alias = "") => siteScope.where(siteId === undefined ? null : siteId, alias);
 
 const MAX = 60;
 const DEFAULTS = ["Développement", "Design", "Business", "Marketing", "Musique", "Photographie", "Bien-être", "Langues", "Autre"];
@@ -18,13 +22,14 @@ const cleanName = (v) => String(v == null ? "" : v).normalize("NFC").replace(/\s
 const nearKey = (name) => slugify(name).replace(/-/g, "").replace(/s$/, "");
 
 // Catégories du formateur, avec les compteurs réels (tous calculés en une requête, sans charger les formations)
-function list(userId) {
+function list(userId, siteId = null) {
+  const w = W(siteId);
   const rows = db.prepare(`SELECT category AS name, COUNT(*) AS total,
       SUM(CASE WHEN published = 1 AND archived = 0 THEN 1 ELSE 0 END) AS visible,
       SUM(CASE WHEN published = 0 AND archived = 0 THEN 1 ELSE 0 END) AS drafts,
       SUM(CASE WHEN archived = 1 THEN 1 ELSE 0 END) AS archived,
       MAX(updated_at) AS updated_at
-    FROM courses WHERE instructor_id = ? GROUP BY category ORDER BY category COLLATE NOCASE`).all(userId);
+    FROM courses WHERE instructor_id = ?${w.sql} GROUP BY category ORDER BY category COLLATE NOCASE`).all(userId, ...w.params);
   const bySlug = new Map(), byNear = new Map();
   for (const r of rows) {
     r.slug = slugify(r.name);
@@ -40,37 +45,42 @@ function list(userId) {
   return rows;
 }
 
-const find = (userId, name) => list(userId).find((c) => c.name === name) || null;
+const find = (userId, name, siteId = null) => list(userId, siteId).find((c) => c.name === name) || null;
 
 // Vue d'une catégorie pour la page de modification : conséquences exactes avant de valider
-function impact(userId, name) {
-  const cat = find(userId, name);
+function impact(userId, name, siteId = null) {
+  const cat = find(userId, name, siteId);
+  const w = W(siteId);
   if (!cat) return null;
-  const others = db.prepare("SELECT COUNT(DISTINCT instructor_id) AS n FROM courses WHERE instructor_id != ? AND category = ?").get(userId, name).n;
-  const courses = db.prepare("SELECT id, title, published, archived FROM courses WHERE instructor_id = ? AND category = ? ORDER BY title COLLATE NOCASE LIMIT 8").all(userId, name);
+  const others = db.prepare(`SELECT COUNT(DISTINCT instructor_id) AS n FROM courses WHERE instructor_id != ? AND category = ?${w.sql}`).get(userId, name, ...w.params).n;
+  const courses = db.prepare(`SELECT id, title, published, archived FROM courses WHERE instructor_id = ? AND category = ?${w.sql} ORDER BY title COLLATE NOCASE LIMIT 8`).all(userId, name, ...w.params);
   return { ...cat, otherInstructors: others, courses };
 }
 
 // Nom à enregistrer pour une formation : l'orthographe d'une catégorie déjà existante du formateur (même nom à la casse ou aux accents près
 // ou même adresse publique) plutôt qu'un doublon ; « Autre » si rien n'est saisi.
-function canonical(userId, input) {
+function canonical(userId, input, siteId = null) {
   const name = cleanName(input).slice(0, MAX);
   if (!name) return "Autre";
   const slug = slugify(name);
-  const own = db.prepare("SELECT DISTINCT category FROM courses WHERE instructor_id = ?").all(userId).map((r) => r.category);
+  const w = W(siteId);
+  const own = db.prepare(`SELECT DISTINCT category FROM courses WHERE instructor_id = ?${w.sql}`).all(userId, ...w.params).map((r) => r.category);
   return own.find((c) => c === name) || own.find((c) => c.toLowerCase() === name.toLowerCase()) || (slug && own.find((c) => slugify(c) === slug)) || DEFAULTS.find((c) => slugify(c) === slug) || name;
 }
 
 // Choix proposés dans le formulaire d'une formation : les catégories habituelles, celles du formateur, et celle de la formation (jamais perdue)
-function choices(userId, current) {
-  const own = db.prepare("SELECT DISTINCT category FROM courses WHERE instructor_id = ? ORDER BY category COLLATE NOCASE").all(userId).map((r) => r.category);
+function choices(userId, current, siteId = null) {
+  const w = W(siteId);
+  const own = db.prepare(`SELECT DISTINCT category FROM courses WHERE instructor_id = ?${w.sql} ORDER BY category COLLATE NOCASE`).all(userId, ...w.params).map((r) => r.category);
   const seen = new Set();
   return [...DEFAULTS, ...own, current].map((c) => cleanName(c)).filter((c) => c && !seen.has(c) && seen.add(c));
 }
 
 function rename(req, from, to, { merge = false } = {}) {
   const userId = req.session.user.id;
-  const source = find(userId, String(from || ""));
+  const siteId = dashSite.siteIdOf(req);
+  const w = W(siteId);
+  const source = find(userId, String(from || ""), siteId);
   if (!source) return { ok: false, error: "Cette catégorie n'existe plus parmi vos formations." };
   const name = cleanName(to);
   if (!name) return { ok: false, error: "Saisissez un nom de catégorie." };
@@ -78,7 +88,7 @@ function rename(req, from, to, { merge = false } = {}) {
   if (!slugify(name)) return { ok: false, error: "Le nom doit contenir au moins une lettre ou un chiffre." };
   if (name === source.name) return { ok: false, error: "Le nouveau nom est identique à l'actuel." };
   // Une autre catégorie du formateur porte déjà ce nom (ou la même adresse publique) : c'est une fusion, à confirmer
-  const target = list(userId).find((c) => c.name !== source.name && (c.name.toLowerCase() === name.toLowerCase() || c.slug === slugify(name)));
+  const target = list(userId, siteId).find((c) => c.name !== source.name && (c.name.toLowerCase() === name.toLowerCase() || c.slug === slugify(name)));
   if (target && !merge) return { ok: false, needsMerge: true, target: target.name, error: `« ${target.name} » existe déjà : confirmez la fusion pour y regrouper ${source.total} formation${source.total > 1 ? "s" : ""}.` };
   const finalName = target ? target.name : name;
   const oldSlug = slugify(source.name), newSlug = slugify(finalName);
@@ -86,19 +96,19 @@ function rename(req, from, to, { merge = false } = {}) {
   let moved = 0;
   db.exec("BEGIN IMMEDIATE");
   try {
-    moved = db.prepare("UPDATE courses SET category = ? WHERE instructor_id = ? AND category = ?").run(finalName, userId, source.name).changes;
+    moved = db.prepare(`UPDATE courses SET category = ? WHERE instructor_id = ? AND category = ?${w.sql}`).run(finalName, userId, source.name, ...w.params).changes;
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); throw e; }
 
   // Ancienne adresse publique → nouvelle (301), sauf si quelqu'un d'autre utilise encore l'ancien nom ou s'il s'agit d'un simple changement de casse
   let redirected = false;
   if (oldSlug && newSlug && oldSlug !== newSlug) {
-    const stillUsed = db.prepare("SELECT DISTINCT category FROM courses").all().some((r) => slugify(r.category) === oldSlug);
+    const stillUsed = db.prepare(`SELECT DISTINCT category FROM courses WHERE 1 = 1${w.sql}`).all(...w.params).some((r) => slugify(r.category) === oldSlug);
     const redirects = require("../seo/redirects");
     // revenir à un ancien nom : la redirection automatique inverse est devenue fausse
     const back = db.prepare("SELECT id FROM seo_redirects WHERE source_path = ? AND note = ? AND site_id IS NULL").get(`/categorie/${newSlug}`, NOTE);
     if (back) redirects.remove(back.id, userId);
-    if (!stillUsed) redirected = redirects.create({ source: `/categorie/${oldSlug}`, target: `/categorie/${newSlug}`, status: 301, note: NOTE }, userId, { source: "categories" }).ok;
+    if (!stillUsed && siteId === null) redirected = redirects.create({ source: `/categorie/${oldSlug}`, target: `/categorie/${newSlug}`, status: 301, note: NOTE }, userId, { source: "categories" }).ok;
   }
   audit.record(req, { action: "category.renamed", resourceType: "category", resourceId: null, summary: `Catégorie « ${source.name} » ${target ? "fusionnée dans" : "renommée en"} « ${finalName} » (${moved} formation${moved > 1 ? "s" : ""})`, details: { de: source.name, vers: finalName, formations: moved, fusion: Boolean(target), redirection: redirected } });
   return { ok: true, moved, merged: Boolean(target), name: finalName, from: source.name, redirected };

@@ -17,7 +17,7 @@ const listView = (req, over = {}) => {
 router.get("/support", requireAuth, (req, res) => { res.render("support", listView(req)); });
 
 router.post("/support", requireAuth, (req, res) => {
-  const r = support.createTicket(req.session.user, req.body || {});
+  const r = support.createTicket(req.session.user, req.body || {}, req.kwSite ? req.kwSite.id : null);
   if (r.errors) return res.status(400).render("support", listView(req, { form: r.values, errors: r.errors, tickets: support.listForUser(req.session.user.id), filter: "" }));
   req.session.supportOk = { id: r.id, text: r.duplicate ? "Cette demande venait déjà d'être envoyée : la voici." : `Demande #${r.id} envoyée. Vous serez prévenu(e) de la réponse dans vos notifications.` };
   res.redirect(`/support/${r.id}`);

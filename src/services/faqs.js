@@ -2,16 +2,22 @@
 // Chaque lecture publique ne renvoie QUE les questions publiées ; toute écriture vérifie le périmètre (une formation n'est modifiable que par son formateur).
 const db = require("../config/database");
 const { UserError } = require("../utils/errors");
+const siteScope = require("./siteScope");
 
 const LIMITS = { question: 300, answer: 5000, category: 60 };
 const clean = (v) => String(v ?? "").replace(/\r\n/g, "\n").trim();
 
-const scope = (courseId) => (courseId ? { sql: "course_id = ?", args: [courseId] } : { sql: "course_id IS NULL", args: [] });
+// Portée : une formation (qui porte déjà son site) ou les questions générales DU SITE (faqs.site_id ; NULL = site principal)
+const scope = (courseId, siteId = null) => {
+  if (courseId) return { sql: "course_id = ?", args: [courseId] };
+  const w = siteScope.where(siteId);
+  return { sql: `course_id IS NULL${w.sql}`, args: w.params };
+};
 // Publiques : triées par position (puis identifiant) ; la catégorie ne sert qu'au classement de l'affichage des questions générales
-const listPublic = (courseId) => { const w = scope(courseId); return db.prepare(`SELECT * FROM faqs WHERE ${w.sql} AND published = 1 ORDER BY position, id`).all(...w.args); };
-const listAll = (courseId) => { const w = scope(courseId); return db.prepare(`SELECT * FROM faqs WHERE ${w.sql} ORDER BY position, id`).all(...w.args); };
+const listPublic = (courseId, siteId = null) => { const w = scope(courseId, siteId); return db.prepare(`SELECT * FROM faqs WHERE ${w.sql} AND published = 1 ORDER BY position, id`).all(...w.args); };
+const listAll = (courseId, siteId = null) => { const w = scope(courseId, siteId); return db.prepare(`SELECT * FROM faqs WHERE ${w.sql} ORDER BY position, id`).all(...w.args); };
 const get = (id) => (Number.isInteger(id) ? db.prepare("SELECT * FROM faqs WHERE id = ?").get(id) || null : null);
-const categories = () => db.prepare("SELECT category c, COUNT(*) n FROM faqs WHERE course_id IS NULL AND category <> '' GROUP BY category ORDER BY MIN(position), c").all().map((r) => ({ name: r.c, count: r.n }));
+const categories = (siteId = null) => { const w = siteScope.where(siteId); return db.prepare(`SELECT category c, COUNT(*) n FROM faqs WHERE course_id IS NULL AND category <> ''${w.sql} GROUP BY category ORDER BY MIN(position), c`).all(...w.params).map((r) => ({ name: r.c, count: r.n })); };
 
 // → { values } valides ou { errors } par champ
 function validate(input, { withCategory }) {
@@ -23,12 +29,12 @@ function validate(input, { withCategory }) {
   return Object.keys(errors).length ? { errors, values: v } : { values: v };
 }
 
-function create(courseId, input) {
+function create(courseId, input, siteId = null) {
   const r = validate(input, { withCategory: !courseId });
   if (r.errors) return r;
-  const w = scope(courseId);
+  const w = scope(courseId, siteId);
   const next = db.prepare(`SELECT COALESCE(MAX(position), -1) + 1 AS n FROM faqs WHERE ${w.sql}`).get(...w.args).n;
-  const id = Number(db.prepare("INSERT INTO faqs (course_id, question, answer, position, category, published) VALUES (?, ?, ?, ?, ?, ?)").run(courseId || null, r.values.question, r.values.answer, next, r.values.category, r.values.published).lastInsertRowid);
+  const id = Number(db.prepare("INSERT INTO faqs (course_id, question, answer, position, category, published, site_id) VALUES (?, ?, ?, ?, ?, ?, ?)").run(courseId || null, r.values.question, r.values.answer, next, r.values.category, r.values.published, siteId === undefined ? null : siteId).lastInsertRowid);
   return { id };
 }
 function update(faq, input) {
@@ -41,7 +47,7 @@ const setPublished = (faq, on) => db.prepare("UPDATE faqs SET published = ? WHER
 const remove = (faq) => db.prepare("DELETE FROM faqs WHERE id = ?").run(faq.id).changes === 1;
 // Échange la position avec la voisine (même périmètre) ; les positions sont d'abord renumérotées 0..n pour qu'aucune égalité ne rende l'ordre ambigu
 function move(faq, dir) {
-  const rows = listAll(faq.course_id || null);
+  const rows = listAll(faq.course_id || null, faq.site_id ?? null);
   const i = rows.findIndex((r) => r.id === faq.id), j = dir === "up" ? i - 1 : i + 1;
   if (i < 0 || j < 0 || j >= rows.length) return false;
   [rows[i], rows[j]] = [rows[j], rows[i]];
@@ -49,7 +55,9 @@ function move(faq, dir) {
   try { const up = db.prepare("UPDATE faqs SET position = ? WHERE id = ?"); rows.forEach((r, k) => up.run(k, r.id)); db.exec("COMMIT"); } catch (e) { try { db.exec("ROLLBACK"); } catch { /* annulée */ } throw e; }
   return true;
 }
-// Le formateur propriétaire de la formation, ou n'importe quel formateur pour les questions générales (une seule plateforme)
+// Le formateur propriétaire de la formation ; pour les questions générales : tout formateur (le site est contrôlé à part par dashSite.guardObject)
+// siteOf : site d'une question (celui de sa formation, sinon son propre site_id)
+const siteOf = (faq) => { if (faq.course_id) { const c = db.prepare("SELECT site_id FROM courses WHERE id = ?").get(faq.course_id); return c ? c.site_id ?? null : null; } return faq.site_id ?? null; };
 function canManage(user, faq) {
   if (!faq) return false;
   if (!faq.course_id) return true;
@@ -63,4 +71,4 @@ function grouped(faqs) {
   return groups;
 }
 
-module.exports = { LIMITS, listPublic, listAll, get, categories, create, update, setPublished, remove, move, canManage, grouped, UserError };
+module.exports = { siteOf, LIMITS, listPublic, listAll, get, categories, create, update, setPublished, remove, move, canManage, grouped, UserError };

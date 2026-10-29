@@ -115,7 +115,7 @@
 </div>
 
 <nav class="ov-quick" aria-label="Raccourcis">
-  <a href="/formateur/blog/nouveau"><%- icon('fileText', { size: 16 }) %> Écrire un article</a>
+  <a href="<%= dash && dash.site && dash.site.ok ? dash.site.withSite("/formateur/blog/nouveau", dash.site.siteId) : "/formateur/blog/nouveau" %>"><%- icon('fileText', { size: 16 }) %> Écrire un article</a>
   <a href="/marketing"><%- icon('send', { size: 16 }) %> Envoyer une campagne</a>
   <a href="/formateur/seo"><%- icon('search', { size: 16 }) %> Vérifier le référencement</a>
   <a href="/formateur/apparence"><%- icon('sliders', { size: 16 }) %> Personnaliser l'apparence</a>
