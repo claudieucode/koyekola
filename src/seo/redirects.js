@@ -1,4 +1,5 @@
-// Gestionnaire de redirections : 301 (définitive) ou 302 (temporaire), exécutées par le serveur avant toute page.
+// Gestionnaire de redirections : 301/308 (définitives), 302/307 (temporaires), ou 410 (page supprimée volontairement, sans destination), exécutées par le serveur avant toute page.
+// 307 et 308 conservent la méthode HTTP d'origine ; 410 dit aux moteurs que la page ne reviendra pas (plus net qu'un 404).
 // Contrôles à l'enregistrement : adresse source interne et publique, cible valide, pas de boucle. Détection des chaînes
 // A → B → C (y compris avec les changements d'adresse automatiques des formations et articles) et correction en A → C.
 // Import / export CSV. Compteur d'utilisations réel.
@@ -28,7 +29,8 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_seo_redirects_site ON seo_redirects(site
 
 // Espaces techniques ou privés : jamais redirigeables (sécurité, connexion, administration, fichiers)
 const PROTECTED = ["/__introuvable__", "/formateur", "/marketing", "/connexion", "/inscription", "/deconnexion", "/api", "/uploads", "/css", "/js", "/img", "/fonts", "/webhooks", "/t/", "/u/", "/preferences", "/sante", "/robots.txt", "/sitemap"];
-const STATUSES = [301, 302];
+const STATUSES = [301, 302, 307, 308, 410];
+const GONE = 410;
 
 // « /Ancienne-Page/?x=1#y » → « /Ancienne-Page » (chemin seul, sans barre finale, décodé)
 function normalizePath(input) {
@@ -65,9 +67,9 @@ const cacheInfo = () => ({ entries: cache ? cache.size : 0, loaded: cache !== nu
 function graph(siteId = null) {
   const edges = new Map();
   // Redirections manuelles qui s'appliquent à ce périmètre : les communes, puis celles du site (qui passent avant, comme sur le domaine du site)
-  for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND site_id IS NULL").all()) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
+  for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND status != 410 AND site_id IS NULL").all()) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
   if (Number.isInteger(siteId)) {
-    for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND site_id = ?").all(siteId)) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
+    for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND status != 410 AND site_id = ?").all(siteId)) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
     return edges; // les historiques automatiques (formations, articles, pages) sont ceux du site principal
   }
   for (const r of db.prepare("SELECT h.old_slug, c.slug FROM course_slug_history h JOIN courses c ON c.id = h.course_id").all()) if (!edges.has(`/cours/${r.old_slug}`)) edges.set(`/cours/${r.old_slug}`, { target: `/cours/${r.slug}`, kind: "course" });
@@ -108,9 +110,9 @@ function validate({ source, target, status, siteId }, { exceptId = null } = {}) 
   if (!src) errors.push("Adresse source invalide : un chemin du site, par exemple /ancienne-page.");
   else if (src === "/") errors.push("La page d'accueil ne peut pas être redirigée.");
   else if (isProtected(src)) errors.push(`« ${src} » est un espace technique ou privé du site : il ne peut pas être redirigé.`);
-  if (!dst) errors.push("Destination invalide : un chemin du site (/nouvelle-page) ou une adresse complète en https://.");
-  if (!STATUSES.includes(st)) errors.push("Type de redirection invalide (301 ou 302).");
-  if (src && dst && src === dst) errors.push("La source et la destination sont identiques.");
+  if (st !== GONE && !dst) errors.push("Destination invalide : un chemin du site (/nouvelle-page) ou une adresse complète en https://.");
+  if (!STATUSES.includes(st)) errors.push("Type de redirection invalide (301, 302, 307, 308 ou 410).");
+  if (st !== GONE && src && dst && src === dst) errors.push("La source et la destination sont identiques.");
   let site = null;
   if (siteId !== undefined && siteId !== null && siteId !== "") {
     site = Number(siteId);
@@ -121,13 +123,13 @@ function validate({ source, target, status, siteId }, { exceptId = null } = {}) 
     const other = db.prepare(`SELECT id FROM seo_redirects WHERE source_path = ? AND ${sameScope("site_id")}`).get(src, site);
     if (other && other.id !== exceptId) errors.push(`Une redirection existe déjà pour « ${src} »${site ? " sur ce site" : ""}.`);
   }
-  if (src && dst && !errors.length) {
+  if (st !== GONE && src && dst && !errors.length) {
     const edges = graph(site);
     if (exceptId) for (const [k, v] of edges) if (v.id === exceptId) edges.delete(k);
     const f = follow(src, edges, { source: src, target: dst });
     if (f.loop) errors.push(`Boucle de redirection : ${f.path.join(" → ")}. Elle rendrait ces pages inaccessibles.`);
   }
-  return { errors, value: { source_path: src, target: dst, status: st, site_id: site } };
+  return { errors, value: { source_path: src, target: st === GONE ? "" : dst, status: st, site_id: site } };
 }
 
 function list({ q = "" } = {}) {
@@ -221,6 +223,7 @@ function middleware(req, res, next) {
   const r = p && lookup(req.kwSite ? req.kwSite.id : null, p);
   if (!r) return next();
   if (!require("./probe").isProbe(req)) require("../utils/writeBehind").defer(() => db.prepare("UPDATE seo_redirects SET hits = hits + 1, last_hit_at = datetime('now') WHERE id = ?").run(r.id)); // compteur d'audience : écriture groupée
+  if (r.status === GONE) { res.status(GONE).set({ "Cache-Control": "public, max-age=3600", "X-Robots-Tag": "noindex" }).type("text/plain; charset=utf-8").send("Cette page a été supprimée définitivement."); return; }
   const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
   const target = /^https:\/\//i.test(r.target) || r.target.includes("?") ? r.target : `${encodeURI(r.target)}${query}`;
   res.redirect(r.status, target);

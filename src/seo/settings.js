@@ -19,10 +19,16 @@ const FIELDS = {
   home_title: { group: "home", label: "Titre de l'accueil", type: "template", max: 120, vars: ["site_name"], required: true, default: "{site_name} — Formations en ligne, à apprendre à votre rythme", help: "Titre complet (le modèle des pages ne s'y ajoute pas)." },
   home_description: { group: "home", label: "Description de l'accueil", type: "template", max: 160, vars: ["site_name"], required: true, default: "Formations vidéo en ligne : suivez les cours où que vous soyez, à votre rythme, avec des quiz, des ressources à télécharger et un certificat de réussite." },
 
-  org_type: { group: "organization", label: "Type d'organisation", type: "choice", choices: ["Organization", "EducationalOrganization"], default: "Organization", help: "EducationalOrganization (organisme de formation) est plus précis pour une plateforme de cours." },
+  org_type: { group: "organization", label: "Type d'organisation", type: "choice", choices: ["Organization", "EducationalOrganization", "LocalBusiness"], default: "Organization", help: "EducationalOrganization (organisme de formation) est plus précis pour une plateforme de cours." },
   org_name: { group: "organization", label: "Nom de l'organisation", type: "text", max: 80, default: "", help: "Vide : le nom du site." },
   org_logo: { group: "organization", label: "Logo", type: "image", default: "", help: "Image carrée ou rectangulaire, au moins 112 × 112 pixels." },
   org_description: { group: "organization", label: "Présentation courte", type: "text", max: 300, default: "" },
+  org_phone: { group: "organization", label: "Téléphone public", type: "text", max: 30, default: "", help: "SEO local : publié dans les données structurées seulement s'il est renseigné ici (jamais déduit)." },
+  org_email: { group: "organization", label: "E-mail public", type: "text", max: 120, default: "", help: "Adresse de contact publique de l'organisation." },
+  org_street: { group: "organization", label: "Adresse (rue)", type: "text", max: 120, default: "" },
+  org_postal_code: { group: "organization", label: "Code postal", type: "text", max: 12, default: "" },
+  org_city: { group: "organization", label: "Ville", type: "text", max: 80, default: "" },
+  org_country: { group: "organization", label: "Pays (code à 2 lettres)", type: "text", max: 2, default: "", help: "Exemple : FR, BE, CA, CH." },
   social_profiles: { group: "organization", label: "Profils sociaux officiels", type: "urls", max: 10, default: [], help: "Une adresse https par ligne (Facebook, Instagram, LinkedIn, YouTube, X…). Uniquement vos vrais profils." },
 
   catalogue_title: { group: "templates", label: "Catalogue : titre", type: "template", max: 70, vars: ["site_name"], required: true, default: "Toutes les formations" },
@@ -63,7 +69,7 @@ const get = (key) => all()[key];
 // R8 lot 6 — Réglages PROPRES À UN SITE. Règle de résolution, déterministe : valeur enregistrée pour ce site → valeur neutre ou par défaut prévue ci-dessous.
 // JAMAIS le réglage global (celui du site principal) pour l'identité, la marque ou les règles d'un autre site : nom, description, image de partage, organisation, logo, profils sociaux et règles robots.
 // Seuls des formats techniques (séparateur, modèle de titre, langue, type d'organisation) retombent sur le défaut du champ — jamais sur la valeur choisie pour le site principal.
-const SITE_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "default_social_image", "org_type", "org_name", "org_logo", "org_description", "social_profiles", "robots_custom"];
+const SITE_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "default_social_image", "org_type", "org_name", "org_logo", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country", "robots_custom"];
 const NEUTRAL = { default_description: "", default_social_image: "", org_name: "", org_logo: "", org_description: "", social_profiles: [], robots_custom: "" };
 const siteCache = new Map();
 const siteRows = (siteId) => { try { return db.prepare("SELECT key, value FROM seo_site_settings WHERE site_id = ?").all(siteId); } catch (e) { if (/no such table/i.test(e.message)) return []; throw e; } };

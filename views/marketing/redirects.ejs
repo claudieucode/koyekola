@@ -23,7 +23,7 @@
     <form class="mk-cms-toolbar mk-cms-filters" method="get" action="/marketing/site-web/redirections" role="search" aria-label="Rechercher parmi les redirections">
       <label class="mk-search"><span class="sr-only">Rechercher (adresse, destination, note)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une adresse"></label>
       <label class="sr-only" for="ur-f-type">Type</label>
-      <select id="ur-f-type" name="type"><option value="">Tous les types</option><option value="301"<%= f.type === "301" ? " selected" : "" %>>301 — définitive</option><option value="302"<%= f.type === "302" ? " selected" : "" %>>302 — temporaire</option></select>
+      <select id="ur-f-type" name="type"><option value="">Tous les types</option><option value="301"<%= f.type === "301" ? " selected" : "" %>>301 — définitive</option><option value="302"<%= f.type === "302" ? " selected" : "" %>>302 — temporaire</option><option value="307"<%= f.type === "307" ? " selected" : "" %>>307 — temporaire (même méthode)</option><option value="308"<%= f.type === "308" ? " selected" : "" %>>308 — définitive (même méthode)</option><option value="410"<%= f.type === "410" ? " selected" : "" %>>410 — supprimée</option></select>
       <label class="sr-only" for="ur-f-etat">État</label>
       <select id="ur-f-etat" name="etat"><option value="">Tous les états</option><option value="active"<%= f.etat === "active" ? " selected" : "" %>>Actives</option><option value="inactive"<%= f.etat === "inactive" ? " selected" : "" %>>Désactivées</option></select>
       <% if (sites.length) { %><label class="sr-only" for="ur-f-site">Site</label>
@@ -45,7 +45,7 @@
           <tr>
             <th scope="row" data-label="Ancienne adresse"><code><%= r.source_path %></code></th>
             <td data-label="Nouvelle adresse"><code><%= r.target %></code><% if (data.external) { %> <span class="mk-sub">site extérieur</span><% } %></td>
-            <td data-label="Type"><%= r.status %><span class="mk-sub"><%= r.status === 301 ? "définitive" : "temporaire" %></span></td>
+            <td data-label="Type"><%= r.status %><span class="mk-sub"><%= r.status === 410 ? "supprimée" : [301, 308].includes(r.status) ? "définitive" : "temporaire" %></span></td>
             <td data-label="Site"><%= r.site_name || "Tous" %></td>
             <td data-label="État"><span class="mk-status <%= r.enabled ? "mk-status-ok" : "mk-status-off" %>"><%= r.enabled ? "Active" : "Désactivée" %></span></td>
             <td class="mk-num" data-label="Visites"><%= r.hits %><% if (r.last_hit_at) { %><span class="mk-sub">dernière : <%= fdate(r.last_hit_at) %></span><% } %></td>
@@ -78,9 +78,9 @@
           <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="ur-form-title">Ajouter une redirection</h2></div><button type="button" class="mk-dialog-close" data-ur-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
           <div class="mk-dialog-body">
             <div class="field-group"><label for="ur-source">Ancienne adresse *</label><input id="ur-source" type="text" name="source" maxlength="300" required autocomplete="off" placeholder="/ancienne-page"><span class="field-hint">Un chemin de ce site. Les espaces techniques (administration, connexion, fichiers) ne peuvent pas être redirigés.</span></div>
-            <div class="field-group"><label for="ur-target">Nouvelle adresse *</label><input id="ur-target" type="text" name="target" maxlength="500" required autocomplete="off" placeholder="/nouvelle-page"><span class="field-hint">Un chemin de ce site<%= can.external ? " ou une adresse complète en https://" : " (une adresse extérieure est réservée aux administrateurs)" %>.</span></div>
+            <div class="field-group"><label for="ur-target">Nouvelle adresse *</label><input id="ur-target" type="text" name="target" maxlength="500" autocomplete="off" placeholder="/nouvelle-page"><span class="field-hint">Un chemin de ce site<%= can.external ? " ou une adresse complète en https://" : " (une adresse extérieure est réservée aux administrateurs)" %>.</span></div>
             <div class="field-group"><label for="ur-status">Type</label>
-              <select id="ur-status" name="status"><option value="301">301 — définitive (conseillé : transmet le référencement)</option><option value="302">302 — temporaire (la page reviendra)</option></select></div>
+              <select id="ur-status" name="status"><option value="301">301 — définitive (conseillé : transmet le référencement)</option><option value="302">302 — temporaire (la page reviendra)</option><option value="307">307 — temporaire, conserve la méthode (POST reste POST)</option><option value="308">308 — définitive, conserve la méthode</option><option value="410">410 — page supprimée définitivement (aucune destination)</option></select></div>
             <% if (sites.length) { %><div class="field-group"><label for="ur-site">Site</label>
               <select id="ur-site" name="site_id"><option value="">Tous les sites</option><% sites.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select>
               <span class="field-hint">Une redirection propre à un site s'applique seulement sur son domaine.</span></div><% } %>

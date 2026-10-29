@@ -12,7 +12,7 @@ const tools = require("../../seo/siteTools");
 
 const BASE = nav.BASE;
 // Réglages qu'un site peut modifier depuis son espace (les images passent par les réglages d'identité du site ; les clés restantes de SITE_KEYS sont gérées par l'équipe)
-const FORM_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "org_type", "org_name", "org_description", "social_profiles", "robots_custom"];
+const FORM_KEYS = ["site_name", "title_separator", "title_template", "default_description", "og_locale", "org_type", "org_name", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country", "robots_custom"];
 
 // Le site de la requête : celui de l'adresse, vérifié ; sinon refus (jamais un repli)
 function spaceOf(req, res) {
@@ -42,7 +42,7 @@ module.exports = () => {
   // Chaque rubrique ne modifie QUE ses propres réglages (liste fermée) ; le site vient de l'adresse vérifiée
   const GROUPS = {
     meta: ["site_name", "title_separator", "title_template", "default_description"],
-    schema: ["org_type", "org_name", "org_description", "social_profiles"],
+    schema: ["org_type", "org_name", "org_description", "social_profiles", "org_phone", "org_email", "org_street", "org_postal_code", "org_city", "org_country"],
     "open-graph": ["og_locale"],
   };
   const render = (req, res, mode, title, extra = {}) => res.render("marketing/site-seo/" + mode, { active: mode === "overview" ? "seo" : `seo/${mode === "notfound" ? "404" : mode}`, title, mode, space: req.seoSpace, note: note(req.seoSpace),
