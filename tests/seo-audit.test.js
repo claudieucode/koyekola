@@ -16,7 +16,7 @@ describe("SEO CORE : audit du site", () => {
     external = http.createServer((req, res) => { res.writeHead(req.url === "/disparue" ? 404 : 200, { "content-type": "text/html" }); res.end("ok"); });
     await new Promise((r) => external.listen(0, "127.0.0.1", r));
     const ext = `http://127.0.0.1:${external.address().port}`;
-    srv = await startServer();
+    srv = await startServer({ KOLA_TEST_ALLOW_LOOPBACK: "1" });
     prof = await loginInstructor(srv);
     await createCourse(prof, srv, { title: "Excel avancé", price: 49 });
     const post = (slug, title, content, extra = "") => run(`INSERT INTO posts (slug, title, excerpt, content, content_format, published, published_at, status, category, focus_keyword${extra ? `, ${extra.split("=")[0]}` : ""}) VALUES (?, ?, 'Un extrait suffisamment long pour servir de description à cet article de test.', ?, 'html', 1, datetime('now'), 'published', 'Bureautique', ?${extra ? `, ${extra.split("=")[1]}` : ""})`, slug, title, content, slug.startsWith("jumeau") ? "excel avancé" : "");

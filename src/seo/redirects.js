@@ -362,11 +362,11 @@ function importCsv(text, userId) {
   });
   return report;
 }
-const csvCell = (v) => (/[",;\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+const csvCell = (v) => { let t = String(v ?? ""); if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`; /* injection de formule : un tableur n'exécute jamais une cellule exportée */ return /[",;\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
 function exportCsv() {
   ensureSchema();
   const rows = db.prepare("SELECT source_path, target, status, note, enabled, hits, last_hit_at, match_type FROM seo_redirects ORDER BY source_path").all();
   return ["source,destination,type,note,active,utilisations,derniere_utilisation,correspondance", ...rows.map((r) => [r.source_path, r.target, r.status, r.note, r.enabled ? "oui" : "non", r.hits, r.last_hit_at || "", r.match_type].map(csvCell).join(","))].join("\n") + "\n";
 }
 
-module.exports = { ensureSchema, MATCH_TYPES, MATCH_LABELS, matchOf, checkRegex, matchRule, cacheInfo, lookup, getForSite, queryForSite, createForSite, updateForSite, removeForSite, importCsvForSite, exportCsvForSite, query, SORTS, isExternal, STATUSES, list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };
+module.exports = { csvCell, ensureSchema, MATCH_TYPES, MATCH_LABELS, matchOf, checkRegex, matchRule, cacheInfo, lookup, getForSite, queryForSite, createForSite, updateForSite, removeForSite, importCsvForSite, exportCsvForSite, query, SORTS, isExternal, STATUSES, list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };

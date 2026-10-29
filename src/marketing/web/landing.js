@@ -252,7 +252,7 @@ module.exports = () => {
     res.render("marketing/page-analysis", { title: `Analyse — ${page.name}`, active: "landing", page, days, funnel: require("../pages/analytics").pageFunnel(ctx, { slug: page.slug, sections: pages.resolveSections(ctx, page.published.sections) }, { days }), report: landing.pageReport(ctx, page.id, { days }) });
   });
   // Comparer une version avec l'état actuel de la page (brouillon s'il existe, sinon la version en ligne)
-  router.get("/pages/:id(\\d+)/versions/:n(\\d+)/comparer", need("forms.read"), (req, res, next) => {
+  router.get("/pages/:id(\\d+)/versions/:n(\\d+)/comparer", need("forms.read"), need("revisions.view"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     let v;
@@ -311,7 +311,7 @@ module.exports = () => {
     try { content = require("../../services/revisions").adapter("page").content(req.mk.ctx, page.id, `r:${req.params.rid}`); } catch (error) { return res.status(404).render("error", { message: error.message }); }
     renderPreview(req, res, page, content, "État d'historique du brouillon — consultation seulement.");
   });
-  router.get("/pages/:id(\\d+)/versions/:n(\\d+)/apercu", need("forms.read"), (req, res, next) => {
+  router.get("/pages/:id(\\d+)/versions/:n(\\d+)/apercu", need("forms.read"), need("revisions.view"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     let v;
@@ -548,7 +548,7 @@ module.exports = () => {
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.discardDraft(req.mk.ctx, page.id); return "Brouillon abandonné : l'éditeur affiche de nouveau la version en ligne."; });
   });
-  router.post("/pages/:id(\\d+)/versions/:n(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
+  router.post("/pages/:id(\\d+)/versions/:n(\\d+)/restaurer", need("forms.write"), need("revisions.restore"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => {

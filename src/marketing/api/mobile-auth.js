@@ -28,7 +28,7 @@ function createMobileAuthRouter({ db }) {
 
       // Vérifier les identifiants dans la table users
       const user = db
-        .prepare("SELECT id, username, email, role, password_hash FROM users WHERE email = ?")
+        .prepare("SELECT id, username, email, role, password_hash, status FROM users WHERE email = ?")
         .get(email.trim().toLowerCase());
 
       if (!user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -37,6 +37,11 @@ function createMobileAuthRouter({ db }) {
       }
 
       clearLoginFailures(req);
+
+      // Compte suspendu ou désactivé : même refus que la connexion web (aucune clé n'est délivrée)
+      if (user.status && user.status !== "active") {
+        return res.status(403).json({ error: { code: "forbidden", message: "Ce compte est suspendu." } });
+      }
 
       // Seuls les formateurs (administrateurs) peuvent accéder au module marketing
       if (user.role !== "formateur") {

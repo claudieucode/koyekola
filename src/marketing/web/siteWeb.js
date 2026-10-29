@@ -203,7 +203,7 @@ module.exports = () => {
     } catch (error) { settingsError(res, next, error); }
   });
   // En-tête et pied de page du site : un composant affiché autour des sections de chaque page du site
-  router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), (req, res, next) => {
+  router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), need("appearance.parts"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/pied-de-page#parties`, () => {
@@ -248,6 +248,8 @@ module.exports = () => {
     });
   });
   router.post("/site-web/sites/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
+    // Créer un site relève de l'équipe de l'organisation (comme la suppression) : la copie n'appartiendrait à aucun accès limité à un site
+    if (req.mk.siteOnly) return res.status(403).render("error", { message: "Seule l'équipe de l'organisation peut dupliquer un site." });
     const site = load(req, res);
     if (!site) return;
     let copy = null;
@@ -257,12 +259,12 @@ module.exports = () => {
       return withPages ? `Copie créée : « ${copy.name} » (réglages et pages ; les pages sont en brouillon, hors ligne). Médias, tunnels et articles ne sont pas copiés.` : `Copie créée : « ${copy.name} » (réglages seulement, sans pages).`;
     });
   });
-  router.post("/site-web/sites/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
+  router.post("/site-web/sites/:id(\\d+)/archiver", need("forms.write"), need("pages.publish"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, "/marketing/site-web/sites", () => { pages.archiveSite(req.mk.ctx, site.id); return `Site « ${site.name} » archivé : ses pages sont hors ligne (rien n'est effacé).`; });
   });
-  router.post("/site-web/sites/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
+  router.post("/site-web/sites/:id(\\d+)/restaurer", need("forms.write"), need("pages.publish"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
@@ -278,6 +280,7 @@ module.exports = () => {
     });
   });
   router.post("/site-web/sites/:id(\\d+)/recuperer", need("forms.write"), (req, res, next) => {
+    if (req.mk.siteOnly) return res.status(403).render("error", { message: "Seule l'équipe de l'organisation peut récupérer un site supprimé." });
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, "/marketing/site-web/sites?vue=archives", () => { pages.undeleteSite(req.mk.ctx, site.id); return `Site « ${site.name} » sorti de la corbeille (il reste archivé : restaurez-le pour le remettre en service).`; });

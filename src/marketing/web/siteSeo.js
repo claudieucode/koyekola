@@ -293,7 +293,7 @@ module.exports = () => {
   router.post(`${P}/redirections/import`, (req, res) => {
     if (!guardWrite(req, res, "redirects.create")) return;
     const text = String(req.body.csv || "").slice(0, 400000);
-    if (!req.mk.can("redirects.external") && /(^|[,;])\s*"?https:\/\//im.test(text.split(/\r?\n/).map((l) => l.split(/[,;]/)[1] || "").join("\n"))) { flashError(req, "Le fichier contient des destinations extérieures : la permission « redirects.external » est nécessaire."); return res.redirect(back(req, "/redirections")); }
+    if (!req.mk.can("redirects.external") && /https?:\/\//i.test(text)) { flashError(req, "Le fichier contient des destinations extérieures : la permission « redirects.external » est nécessaire."); return res.redirect(back(req, "/redirections")); }
     const report = redirects.importCsvForSite(req.seoSpace.siteId, text, req.session.user.id);
     if (report.errors.length) flashError(req, `${report.created} créée(s) ; ${report.errors.length} ligne(s) refusée(s) : ${report.errors.slice(0, 5).join(" ")}`); else flashOk(req, `${report.created} redirection(s) créée(s).`);
     res.redirect(back(req, "/redirections"));
