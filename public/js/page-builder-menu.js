@@ -223,7 +223,10 @@
   }
 
   // ---------- Ouverture, déplacement de la fenêtre, synchronisation ----------
-  function open() { if (!dlg.open) dlg.show(); render(); var f = body.querySelector("input,select,button"); if (f) f.focus(); }
+  var opener = null;
+  // Fenêtre non modale (show) : Échap ne la ferme pas nativement ; on la ferme et on rend le focus à l'élément qui l'a ouverte
+  dlg.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); dlg.close(); if (opener && opener.isConnected) opener.focus(); opener = null; } });
+  function open() { if (!dlg.open) { opener = document.activeElement; dlg.show(); } render(); var f = body.querySelector("input,select,button"); if (f) f.focus(); }
   nav.open = open;
   nav.subscribe(function () { if (dlg.open && !mine) render(); });
   var head = dlg.querySelector("[data-pb-navmgr-head]");

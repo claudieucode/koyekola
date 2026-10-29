@@ -401,6 +401,8 @@
       h("p", { class: "pb-q-note", text: "Ces contrôles automatiques signalent les problèmes détectables ; ils ne garantissent ni la conformité WCAG complète, ni un classement dans les moteurs de recherche." })]));
     document.body.appendChild(el.dlg);
     el.dlg.addEventListener("close", function () { S.open = false; el.btn.setAttribute("aria-expanded", "false"); });
+    // Fenêtre non modale (show) : le navigateur n'y gère pas Échap ; on ferme et on rend le focus au bouton qui l'a ouverte
+    el.dlg.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); el.dlg.close(); el.btn.focus(); } });
   }
   function open() { S.open = true; el.dlg.show(); el.btn.setAttribute("aria-expanded", "true"); if (S.status === "idle") runLocal(); else paint(counts()); }
 

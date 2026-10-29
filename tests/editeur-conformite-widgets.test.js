@@ -13,7 +13,8 @@ const idOf = (i) => `wg${String(i).padStart(10, "0")}`;
 const build = (types) => {
   let n = 0;
   const make = (t) => { const b = nodes.PALETTE[t].blank(); const id = idOf(++n); const node = { id, type: t, ...(b.props ? { props: JSON.parse(JSON.stringify(b.props)) } : {}), ...(b.v ? { v: b.v } : {}) }; if (b.children) node.children = JSON.parse(JSON.stringify(b.children)).map(function fix(c) { return { ...c, id: idOf(++n), children: c.children && c.children.map(fix) }; }); return node; };
-  const list = types.map(make);
+  // « menu » lit désormais un menu du CMS (source « location ») et n'affiche rien tant qu'aucun menu n'est affecté : le contrat s'éprouve avec une liste manuelle (même choix que tests/widgets-helpers.js)
+  const list = types.map(make).map((x) => (x.type === "menu" ? { ...x, props: { ...(x.props || {}), source: "manual", items: [{ label: "Programme", url: "/catalogue" }, { label: "Blog", url: "/blog" }] } } : x));
   return { sections: [{ id: "sect00000001", type: "layout", children: [{ id: "cont00000001", type: "container", children: list }] }], ids: list.map((x) => [x.id, x.type]) };
 };
 

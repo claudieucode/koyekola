@@ -8028,8 +8028,10 @@
   }
   // Une liste d'actions dans le menu flottant (menu contextuel, menu principal, publication, historique) :
   // entrée = [libellé, action, désactivée, raccourci, classe] ou "-" (séparateur)
+  var menuOpener = null; // élément qui avait le focus à l'ouverture : Échap le lui rend (le menu flottant est partagé par plusieurs boutons)
   function showMenuEntries(entries, x, y, opts) {
     opts = opts || {};
+    if (menu.hidden) menuOpener = document.activeElement;
     menu.textContent = "";
     menu.classList.toggle("is-wide", Boolean(opts.wide));
     entries.forEach(function (e) {
@@ -8050,7 +8052,7 @@
     var i = list.indexOf(document.activeElement);
     if (e.key === "ArrowDown") { e.preventDefault(); (list[i + 1] || list[0]).focus(); }
     else if (e.key === "ArrowUp") { e.preventDefault(); (list[i - 1] || list[list.length - 1]).focus(); }
-    else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); closeMenu(); }
+    else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); closeMenu(); if (e.key === "Escape") refocusMenuOpener(); }
   });
   // Un geste hors de l'inspecteur (poignée, glisser, barre contextuelle, menu…) agit toujours sur le widget lui-même : la partie choisie est lâchée avant
   var inInspectorFlow = ".pb-right, [data-pb-inspector], .pb-cpop, .pb-amenu, .pb-dyn-pop, .kf-panel, .pb-menu, .pb-tip, .pb-toast";
@@ -8058,7 +8060,9 @@
   document.addEventListener("mousedown", releasePart, true);
   var menuWasOpenAtPress = false;
   document.addEventListener("mousedown", function (e) { menuWasOpenAtPress = !menu.hidden && Boolean(e.target.closest && e.target.closest("[data-pb-mainmenu]")); if (!menu.hidden && !menu.contains(e.target)) closeMenu(); }, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) closeMenu(); }); // Échap ferme aussi quand le focus n'est plus dans le menu
+  // Échap ferme le menu et rend le focus à l'élément qui l'a ouvert (sinon il tombait sur <body> : l'utilisateur au clavier perdait sa place)
+  function refocusMenuOpener() { var o = menuOpener; menuOpener = null; if (o && o !== document.body && o.isConnected && o.focus) o.focus(); }
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !menu.hidden) { closeMenu(); refocusMenuOpener(); } }); // Échap ferme aussi quand le focus n'est plus dans le menu
   window.addEventListener("blur", closeMenu); // clic dans l'iframe ou hors de la fenêtre
 
   // ---------- Palette de commandes (Ctrl/⌘ + K) ----------
