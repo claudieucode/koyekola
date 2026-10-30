@@ -1,0 +1,17 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Mon compte</h1>
+<% if (info) { %><p class="sh-ok" role="status"><%= info %></p><% } %>
+<p>Connecté : <strong><%= shop.customer.email %></strong></p>
+<form class="sh-form" method="post" action="<%= shop.base %>/compte/profil">
+  <label>Nom<input name="name" value="<%= shop.customer.name || "" %>" maxlength="120"></label>
+  <label>Téléphone<input name="phone" value="<%= shop.customer.phone || "" %>" maxlength="30"></label>
+  <button class="sh-btn" type="submit">Enregistrer</button>
+</form>
+<h2>Mes commandes</h2>
+<% if (!customerOrders.length) { %><p class="sh-empty">Vous n'avez pas encore passé de commande.</p><% } else { %>
+<table class="sh-table"><thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Statut</th><th scope="col">Total</th></tr></thead><tbody>
+<% customerOrders.forEach((o) => { %><tr><th scope="row"><a href="<%= shop.base %>/commande/confirmation/<%= encodeURIComponent(o.number) %>?k=<%= o.key %>"><%= o.number %></a></th><td><%= String(o.created_at).slice(0, 10) %></td><td><%= statusLabels[o.status] %></td><td><%= money(o.total_cents) %></td></tr><% }) %>
+</tbody></table>
+<% } %>
+<form method="post" action="<%= shop.base %>/compte/deconnexion"><button class="sh-btn" type="submit">Se déconnecter</button></form>
+<%- include("_bottom") %>

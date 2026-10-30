@@ -1,0 +1,17 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Commandes" }) %>
+<section class="mk-panel">
+  <form method="get" class="mk-form mk-inline-form" role="search">
+    <div class="field-group"><label for="o-q">Numéro ou e-mail</label><input id="o-q" name="q" value="<%= query.q || "" %>" maxlength="80"></div>
+    <div class="field-group"><label for="o-st">Statut</label><select id="o-st" name="statut"><option value="">Tous</option><% Object.entries(statusLabels).forEach(([k, l]) => { %><option value="<%= k %>"<%= query.statut === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+    <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
+  </form>
+  <% if (!list.items.length) { %><p class="mk-empty">Aucune commande.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Commandes</caption><thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Client</th><th scope="col">Statut</th><th scope="col">Paiement</th><th scope="col">Total</th></tr></thead><tbody>
+  <% const PS = { unpaid: "Non payée", pending: "En cours", paid: "Payée", failed: "Échec", refunded: "Remboursée" }; %>
+  <% list.items.forEach((o) => { %><tr><th scope="row"><a href="<%= base %>/commandes/<%= o.id %>"><%= o.number %></a></th><td><%= String(o.created_at).slice(0, 16) %></td><td><%= o.email %></td><td><span class="mk-status"><%= statusLabels[o.status] %></span></td><td><%= PS[o.payment_status] %></td><td><%= money(o.total_cents) %></td></tr><% }) %>
+  </tbody></table></div>
+  <% if (list.pages > 1) { %><p class="mk-sub"><%= list.total %> commandes — pages : <% for (let i = 1; i <= list.pages; i++) { %><a href="?page=<%= i %>"><%= i %></a> <% } %></p><% } %>
+  <% } %>
+</section>
+<%- include("../partials/bottom") %>

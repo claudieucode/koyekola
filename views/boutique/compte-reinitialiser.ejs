@@ -1,0 +1,9 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Nouveau mot de passe</h1>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<form class="sh-form" method="post" action="<%= shop.base %>/compte/reinitialiser">
+  <input type="hidden" name="t" value="<%= token %>">
+  <label>Nouveau mot de passe (10 caractères minimum)<input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
+  <button class="sh-btn sh-btn-primary" type="submit">Enregistrer</button>
+</form>
+<%- include("_bottom") %>

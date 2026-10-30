@@ -30,7 +30,7 @@ test("mise à niveau d'une base déjà migrée jusqu'à 113 : 114 puis les suiva
   const org = db.prepare("SELECT id FROM mk_organizations").get().id;
   db.prepare("INSERT INTO mk_web_components (organization_id, name, section) VALUES (?, 'Existant', '{}')").run(org);
   const r2 = migrate(db, { dir: DIR, dbPath: path.join(tmp, "t.db"), backupDir: path.join(tmp, "sauv"), log: quiet });
-  assert.deepEqual(r2.applied, ["114", "115", "116", "117", "118", "119", "120"]); // 120 = interface Assistant IA (Programme 21.8) ; 119 = cours par site (LMS universel) ; 118 = contenus IA (Programme 21.6) ; 115 = index des clés étrangères des médias (Palier 18) ; 116 = journal et quotas du Kolakisa AI Core (Programme 21.2) ; 117 = plans de site préparés par l'IA (Programme 21.3)
+  assert.deepEqual(r2.applied, ["114", "115", "116", "117", "118", "119", "120", "121"]); // 121 = boutique (Programme 20.5) ; 120 = interface Assistant IA (Programme 21.8) ; 119 = cours par site (LMS universel) ; 118 = contenus IA (Programme 21.6) ; 115 = index des clés étrangères des médias (Palier 18) ; 116 = journal et quotas du Kolakisa AI Core (Programme 21.2) ; 117 = plans de site préparés par l'IA (Programme 21.3)
   const row = db.prepare("SELECT name, revision FROM mk_web_components").get();
   assert.deepEqual({ ...row }, { name: "Existant", revision: 0 });
   assert.deepEqual(migrate(db, { dir: DIR, dbPath: path.join(tmp, "t.db"), backupDir: path.join(tmp, "sauv"), log: quiet }).applied, [], "idempotent");

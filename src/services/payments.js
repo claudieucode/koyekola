@@ -164,5 +164,5 @@ function recordRefunds(db, charge) {
 
 module.exports = {
   recordRefunds, CURRENCY, MIN_AMOUNT_CENTS, stripeEnabled, createStripeSession, retrieveStripeSession,
-  verifyWebhookSignature, fulfillCheckout, markCheckoutEnded, encodeForm,
+  verifyWebhookSignature, fulfillCheckout, markCheckoutEnded, encodeForm, stripeRequest,
 };

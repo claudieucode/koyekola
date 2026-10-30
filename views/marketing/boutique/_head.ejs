@@ -1,0 +1,12 @@
+<%# En-tête commun des écrans de la boutique : onglets + alertes d'état réelles (module, ouverture, paiement). %>
+<div class="mk-head"><div class="mk-head-main"><h1><%= heading %></h1>
+  <p class="mk-head-sub">Boutique de « <%= space.name %> » — produits, commandes et clients propres à ce site.</p></div></div>
+<nav class="mk-tabs" aria-label="Boutique">
+  <a href="<%= base %>"<%= active === "boutique" ? ' aria-current="page"' : "" %>>Produits</a>
+  <a href="<%= base %>/categories">Catégories</a>
+  <a href="<%= base %>/commandes"<%= active === "boutique/commandes" ? ' aria-current="page"' : "" %>>Commandes</a>
+  <a href="<%= base %>/clients"<%= active === "boutique/clients" ? ' aria-current="page"' : "" %>>Clients</a>
+  <a href="<%= base %>/reglages"<%= active === "boutique/reglages" ? ' aria-current="page"' : "" %>>Réglages</a>
+</nav>
+<% if (!moduleOn) { %><p class="mk-callout mk-callout-warn"><span>Le module « Commerce » n'est pas activé pour ce site : la boutique publique reste fermée. L'équipe de l'organisation l'active dans les réglages du site.</span></p><% } %>
+<% if (!shopSettings.enabled) { %><p class="mk-callout"><span>La boutique n'est pas ouverte au public. Ouvrez-la dans <a href="<%= base %>/reglages">Réglages</a> une fois les produits, la livraison et le paiement prêts.</span></p><% } %>

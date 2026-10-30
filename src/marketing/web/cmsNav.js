@@ -71,6 +71,14 @@ const SECTIONS = [
     ],
   },
   {
+    key: "boutique", label: "Boutique", icon: "cart", items: [
+      leaf("boutique", "Produits", `${BASE}/boutique`, { permission: "shop.read", primary: { label: "Nouveau produit", href: `${BASE}/boutique/produits/nouveau`, permission: "shop.write" } }),
+      leaf("boutique/commandes", "Commandes", `${BASE}/boutique/commandes`, { permission: "shop.read" }),
+      leaf("boutique/clients", "Clients", `${BASE}/boutique/clients`, { permission: "shop.read" }),
+      leaf("boutique/reglages", "Réglages de la boutique", `${BASE}/boutique/reglages`, { permission: "shop.read" }),
+    ],
+  },
+  {
     key: "seo", label: "SEO", icon: "searchCheck", items: [
       leaf("seo", "Vue générale", `${BASE}/seo`, { permission: "seo.view" }),
       leaf("seo/analyse", "Analyse SEO", `${BASE}/seo/analyse`, { permission: "seo.view" }),
@@ -219,6 +227,8 @@ const SITE_MODULES = {
   navigation: { label: "Menus", kind: "delegate", to: "/site-web/navigation", reg: "apparence/menus", permission: "navigation.read", legacy: `${BASE}/navigation` },
   // SEO du site : les neuf rubriques (vue générale, analyse, meta, indexation, sitemap, schema, Open Graph, robots, 404) sont ouvertes ; chacune lit et écrit uniquement les données du site de l'adresse (voir siteSeo.js et seo/siteTools.js)
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
+  // Programme 20.5 : boutique du site (écrans de l'espace du site ; données de CE site seulement, voir shopAdmin.js)
+  boutique: { label: "Boutique", kind: "own", permission: "shop.read" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
   listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
   segments: { label: "Segments", kind: "delegate", to: "/segments", reg: "segments", permission: "segments.read", legacy: "/marketing/segments" },
@@ -299,6 +309,10 @@ const ABILITY = {
   "apparence/pied-de-page": { mode: "open", module: "reglages", sub: "pied-de-page", hash: "parties" },
   redirections: { mode: "open", module: "redirections" },
   seo: { mode: "open", module: "seo" },
+  boutique: { mode: "open", module: "boutique" },
+  "boutique/commandes": { mode: "open", module: "boutique", sub: "commandes" },
+  "boutique/clients": { mode: "open", module: "boutique", sub: "clients" },
+  "boutique/reglages": { mode: "open", module: "boutique", sub: "reglages" },
   "seo/analyse": { mode: "open", module: "seo", sub: "analyse" },
   "seo/meta": { mode: "open", module: "seo", sub: "meta" },
   "seo/indexation": { mode: "open", module: "seo", sub: "indexation" },

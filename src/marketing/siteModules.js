@@ -25,7 +25,7 @@ const ROUTES = Object.freeze({
   social: /^\/reseaux(?:\/|$)/,
   scoring: /^\/score(?:\/|$)/,
   ai: /^\/ia(?:\/|$)/,
-  commerce: /^\/revenus(?:\/|$)/,
+  commerce: /^\/revenus(?:\/|$)/, // la boutique (Programme 20.5) : ses écrans d'administration suivent les permissions shop.* ; le module commande l'OUVERTURE PUBLIQUE de la boutique du site
 });
 function moduleOfPath(path) {
   for (const [key, re] of Object.entries(ROUTES)) if (re.test(path)) return key;

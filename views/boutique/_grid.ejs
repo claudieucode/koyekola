@@ -1,0 +1,15 @@
+<%# Grille de produits (catalogue, produits associés). Locals : items, shop, money. %>
+<% if (!items.length) { %><p class="sh-empty">Aucun produit ne correspond à votre recherche.</p><% } else { %>
+<ul class="sh-grid">
+  <% items.forEach((p) => { %>
+  <li class="sh-card">
+    <a class="sh-card-link" href="<%= shop.base %>/produit/<%= encodeURIComponent(p.slug) %>">
+      <% if (p.image_url) { %><img class="sh-card-img" src="<%= p.image_url %>" alt="" loading="lazy" width="400" height="400"><% } else { %><span class="sh-card-img sh-noimg" aria-hidden="true"></span><% } %>
+      <span class="sh-card-name"><%= p.name %></span>
+    </a>
+    <p class="sh-price"><% if (p.onSale) { %><s class="sh-old"><%= money(p.regularFromCents) %></s> <% } %><%= p.isVariable ? "À partir de " : "" %><strong><%= money(p.priceFromCents) %></strong></p>
+    <% if (!p.inStock) { %><p class="sh-stock sh-out">Rupture de stock</p><% } else if (p.onSale) { %><p class="sh-stock">Promotion</p><% } %>
+  </li>
+  <% }) %>
+</ul>
+<% } %>

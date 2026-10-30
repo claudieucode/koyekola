@@ -1,0 +1,7 @@
+<%# Recherche de produits (widgets/shop.js) : formulaire GET vers le catalogue ; le serveur filtre. %>
+<% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-ss-msg">Boutique fermée : recherche masquée au public.</p></section><% } %><% } else { %>
+<form class="<%= cls %> kw-ss" method="get" action="/boutique/recherche" role="search"<%- attrs %>>
+  <label class="kw-ss-lbl"><span class="kw-sr-only">Rechercher un produit</span><input class="kw-ss-input" type="search" name="q" maxlength="80" placeholder="<%= p.placeholder %>"></label>
+  <button class="kw-pb-btn" type="submit"><%= p.button %></button>
+</form>
+<% } %>

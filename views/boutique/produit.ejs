@@ -1,0 +1,25 @@
+<%- include("_top", { metaDescription: product.seo_description || product.short_description || "" }) %>
+<% if (themeTemplate) { %><%- themeTemplate %><% } %>
+<article class="sh-product">
+  <% if (!themeTemplate) { %>
+  <div class="sh-gallery">
+    <% if (product.image_url) { %><img src="<%= product.image_url %>" alt="<%= product.name %>" width="640" height="640"><% } else { %><span class="sh-noimg sh-big" aria-hidden="true"></span><% } %>
+    <% if (product.gallery.length) { %><ul class="sh-thumbs"><% product.gallery.forEach((g) => { %><li><img src="<%= g %>" alt="" loading="lazy" width="96" height="96"></li><% }) %></ul><% } %>
+  </div>
+  <div class="sh-info">
+    <h1 class="sh-title"><%= product.name %></h1>
+    <p class="sh-price sh-price-lg"><% if (product.onSale) { %><s class="sh-old"><%= money(product.regularFromCents) %></s> <% } %><%= product.isVariable ? "À partir de " : "" %><strong><%= money(product.priceFromCents) %></strong></p>
+    <% if (product.short_description) { %><p class="sh-lead"><%= product.short_description %></p><% } %>
+    <%- include("_buy", { product }) %>
+    <% if (product.sku) { %><p class="sh-meta">Réf. <%= product.sku %></p><% } %>
+    <% if (product.categories.length) { %><p class="sh-meta">Catégories : <% product.categories.forEach((c, i) => { %><a href="<%= shop.base %>/categorie/<%= encodeURIComponent(c.slug) %>"><%= c.name %></a><%= i < product.categories.length - 1 ? ", " : "" %><% }) %></p><% } %>
+    <% if (product.tags.length) { %><p class="sh-meta">Étiquettes : <%= product.tags.join(", ") %></p><% } %>
+    <% if (product.requires_shipping) { %><p class="sh-meta">Livraison : les frais sont calculés à la commande selon votre pays.</p><% } else { %><p class="sh-meta">Produit numérique : aucune livraison.</p><% } %>
+  </div>
+  <% } else { %>
+  <%- include("_buy", { product }) %>
+  <% } %>
+</article>
+<% if (!themeTemplate && product.description) { %><section class="sh-desc"><h2>Description</h2><div class="sh-prose"><%= product.description %></div></section><% } %>
+<% if (related.length) { %><section><h2>Produits associés</h2><%- include("_grid", { items: related }) %></section><% } %>
+<%- include("_bottom") %>

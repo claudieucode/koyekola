@@ -10,7 +10,7 @@ const labels = (arr) => arr.map((s) => s.label);
 
 describe("registre : ordre des rubriques et absence de doublon", () => {
   test("ordre cible : Médias, Commentaires, Apparence, Extensions, Utilisateurs, …, Tests A/B, Outils, Paramètres (Navigation n'est plus une entrée : Apparence → Menus)", () => {
-    assert.deepEqual(labels(cmsNav.SECTIONS), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
+    assert.deepEqual(labels(cmsNav.SECTIONS), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
   });
   test("clés de rubrique et clés d'entrée uniques ; aucune adresse en double", () => {
     const sk = cmsNav.SECTIONS.map((s) => s.key); assert.equal(new Set(sk).size, sk.length);

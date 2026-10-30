@@ -15,7 +15,7 @@ const legacySiteOfRequest = (db) => (req) => {
     m = /^\/site-web\/sites\/(\d+)(?:\/|$)/.exec(p);
     if (m) return { siteId: Number(m[1]) };
     // Espace du site principal (palier 3, B1) : le site principal est « siteId null » — réservé à l'équipe de l'organisation (jamais à un accès limité à un site)
-    if (/^\/site-web\/principal(?:\/|$)/.test(p)) return { siteId: null };
+    if (/^\/site-web\/(?:principal|boutique)(?:\/|$)/.test(p)) return { siteId: null };
     m = /^\/site-web\/historique\/page\/(\d+)(?:\/|$)/.exec(p);
     if (m) { const r = db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(Number(m[1])); return r ? { siteId: r.site_id } : { siteId: null, missing: true }; }
     m = /^\/site-web\/composants\/(\d+)/.exec(p);
