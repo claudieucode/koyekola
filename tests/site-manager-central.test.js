@@ -39,7 +39,7 @@ before(async () => {
   await boss.post(`${S}/${C}/archiver`, {});
   await boss.post(`${S}/${A}/modules/sms`, { etat: "activer" });
   await boss.post(`${S}/${A}/modules/social`, { etat: "activer" });
-  await boss.post(`${S}/${A}/modules/lms`, { etat: "activer" });   // module pas encore ouvert aux sites : jamais affiché ni compté
+  await boss.post(`${S}/${A}/modules/lms`, { etat: "activer" });   // module « Formations » : ouvert aux sites depuis le LMS multi-sites (affiché et compté)
   await boss.post(`${S}/${B}/modules/ai`, { etat: "activer" }); await boss.post(`${S}/${B}/modules/ai`, { etat: "desactiver" });   // activé puis désactivé : n'apparaît plus
 });
 after(() => { db.close(); return srv.stop(); });
@@ -62,13 +62,13 @@ describe("le site principal est une ligne comme les autres", () => {
     const a = rowOf(html, "Alpha Manager"), b = rowOf(html, "Bravo Manager");
     assert.deepEqual([cell(a, "Pages"), cell(a, "En ligne"), cell(a, "Équipe"), cell(a, "Contacts")], ["2", "1", "1", "2"]);
     assert.deepEqual([cell(b, "Pages"), cell(b, "En ligne"), cell(b, "Équipe"), cell(b, "Contacts")], ["1", "1", "0", "1"]);
-    assert.doesNotMatch(cell(a, "Modules"), /Formations/, "module non ouvert aux sites : non affiché"); assert.match(cell(a, "Modules"), /SMS/); assert.match(cell(a, "Modules"), /Réseaux sociaux/); assert.match(cell(b, "Modules"), /Aucun/);
+    assert.match(cell(a, "Modules"), /Formations/, "module Formations ouvert aux sites : affiché"); assert.match(cell(a, "Modules"), /SMS/); assert.match(cell(a, "Modules"), /Réseaux sociaux/); assert.match(cell(b, "Modules"), /Aucun/);
     assert.doesNotMatch(html, /Charlie Archivé/, "un site archivé n'apparaît pas dans la vue « Actifs »");
   });
   test("bande de chiffres : sites actifs (principal compris), archivés, pages en ligne de tous les sites actifs, modules activés", async () => {
     const html = (await boss.get(S)).text;
     const stat = (label) => (new RegExp(`mk-stat-label">${label}</span><span class="mk-stat-value">([^<]*)<`).exec(html) || [])[1];
-    assert.equal(stat("Sites actifs"), String(3 + base0.activeSites)); assert.equal(stat("Sites archivés"), String(1 + base0.archivedSites)); assert.equal(stat("Pages en ligne"), String(3 + base0.publishedMain + base0.publishedOfSites)); assert.equal(stat("Modules activés"), String(2 + base0.modules));
+    assert.equal(stat("Sites actifs"), String(3 + base0.activeSites)); assert.equal(stat("Sites archivés"), String(1 + base0.archivedSites)); assert.equal(stat("Pages en ligne"), String(3 + base0.publishedMain + base0.publishedOfSites)); assert.equal(stat("Modules activés"), String(3 + base0.modules));
   });
   test("recherche et filtres : « principal » retrouve le site principal ; il n'apparaît ni dans Archivés ni dans Supprimés ; un autre mot l'exclut", async () => {
     assert.match((await boss.get(`${S}?q=principal`)).text, /data-site="principal"/);
