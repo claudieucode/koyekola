@@ -1,0 +1,2083 @@
+[
+ {
+  "id": "informatique",
+  "label": "Boutique informatique",
+  "brief": "Boutique de matériel informatique PixelPort, accessoires fictifs avec stock.",
+  "shop": true,
+  "gen": {
+   "id": "informatique",
+   "shop": true,
+   "timings": {
+    "analyse": 14.387351,
+    "structure": 682.633738,
+    "pages": 770.513044,
+    "products": 228.10061,
+    "publish": 1352.293636
+   },
+   "notes": [],
+   "siteId": 1,
+   "analysis": {
+    "readiness": "insufficient",
+    "facts": [
+     "sector",
+     "language"
+    ],
+    "missing": [
+     "shopName",
+     "country",
+     "currency",
+     "audience"
+    ],
+    "sector": "informatique",
+    "warnings": []
+   },
+   "plan": {
+    "pages": [
+     "page:Accueil",
+     "native:Boutique",
+     "native:Pages de catégories",
+     "native:Fiche produit",
+     "native:Panier et commande",
+     "page:À propos",
+     "page:Contact",
+     "page:Questions fréquentes",
+     "page:Livraison",
+     "page:Retours et remboursements",
+     "page:Conditions générales de vente",
+     "page:Politique de confidentialité"
+    ],
+    "categories": [
+     "Ordinateurs",
+     "Ordinateurs portables",
+     "Ordinateurs de bureau",
+     "Écrans",
+     "Claviers et souris",
+     "Stockage",
+     "Réseaux",
+     "Téléphones et tablettes",
+     "Accessoires"
+    ]
+   },
+   "structure": {
+    "created": 9,
+    "reused": 0,
+    "categories": {
+     "cat-1": 1,
+     "cat-2": 2,
+     "cat-3": 3,
+     "cat-4": 4,
+     "cat-5": 5,
+     "cat-6": 6,
+     "cat-7": 7,
+     "cat-8": 8,
+     "cat-9": 9
+    }
+   },
+   "pagesApplied": {
+    "created": 8,
+    "keys": [
+     "accueil",
+     "a-propos",
+     "contact",
+     "faq",
+     "livraison",
+     "retours",
+     "cgv",
+     "confidentialite"
+    ]
+   },
+   "productDrafts": [
+    {
+     "name": "Clavier mécanique K1",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Clavier mécanique K1.\n\nCaractéristiques :\n- Disposition AZERTY\n- Connexion USB-C"
+    },
+    {
+     "name": "Souris sans fil M2",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Souris sans fil M2.\n\nCaractéristiques :\n- Capteur optique\n- Autonomie 6 mois"
+    },
+    {
+     "name": "Écran 27 pouces QHD",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Écran 27 pouces QHD.\n\nCaractéristiques :\n- Dalle IPS\n- Port HDMI et DisplayPort"
+    },
+    {
+     "name": "Hub USB-C 7 ports",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Hub USB-C 7 ports.\n\nCaractéristiques :\n- HDMI, USB-A, lecteur SD\n- Alimentation 100 W"
+    },
+    {
+     "name": "Casque USB Studio",
+     "source": "template",
+     "missing": [
+      "image",
+      "category"
+     ],
+     "issues": 0,
+     "desc": "Casque USB Studio.\n\nCaractéristiques :\n- Microphone intégré\n- Câble 2 m"
+    },
+    {
+     "name": "Webcam Full HD",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Webcam Full HD.\n\nCaractéristiques :\n- Autofocus\n- Fixation écran"
+    }
+   ],
+   "productsApplied": [
+    "Clavier mécanique K1:created",
+    "Souris sans fil M2:created",
+    "Écran 27 pouces QHD:created",
+    "Hub USB-C 7 ports:created",
+    "Casque USB Studio:created",
+    "Webcam Full HD:created"
+   ],
+   "publish": {
+    "products": [
+     "Clavier mécanique K1",
+     "Souris sans fil M2",
+     "Écran 27 pouces QHD",
+     "Hub USB-C 7 ports",
+     "Casque USB Studio",
+     "Webcam Full HD"
+    ],
+    "pages": [
+     "accueil",
+     "a-propos",
+     "faq",
+     "livraison",
+     "retours",
+     "cgv",
+     "confidentialite"
+    ],
+    "refused": [
+     {
+      "name": "page contact",
+      "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page."
+     }
+    ],
+    "opened": true,
+    "ready": true,
+    "blockers": []
+   },
+   "pages": [
+    {
+     "id": 1,
+     "name": "Accueil",
+     "slug": "accueil",
+     "status": "published"
+    },
+    {
+     "id": 7,
+     "name": "Conditions générales de vente",
+     "slug": "conditions-generales-de-vente",
+     "status": "published"
+    },
+    {
+     "id": 3,
+     "name": "Contact",
+     "slug": "contact",
+     "status": "draft"
+    },
+    {
+     "id": 5,
+     "name": "Livraison",
+     "slug": "livraison",
+     "status": "published"
+    },
+    {
+     "id": 8,
+     "name": "Politique de confidentialité",
+     "slug": "politique-de-confidentialite",
+     "status": "published"
+    },
+    {
+     "id": 4,
+     "name": "Questions fréquentes",
+     "slug": "questions-frequentes",
+     "status": "published"
+    },
+    {
+     "id": 6,
+     "name": "Retours et remboursements",
+     "slug": "retours-et-remboursements",
+     "status": "published"
+    },
+    {
+     "id": 2,
+     "name": "À propos",
+     "slug": "a-propos",
+     "status": "published"
+    }
+   ],
+   "homeId": 1,
+   "host": "informatique.lab.test"
+  },
+  "audit": {
+   "host": "http://informatique.lab.test:31651",
+   "pages": [
+    {
+     "vp": "desktop",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 7,
+     "status": 200,
+     "loadMs": 144,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 133,
+      "load": 134,
+      "fcp": 176,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 6,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Accueil · PixelPort",
+      "metaDescription": "Présenter la boutique, les catégories et les produits mis en avant",
+      "canonical": "https://informatique.lab.test/",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 5,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 10,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Accueil",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "div.lp-block",
+       "div.lp-block"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "[Service 1][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "wordCount": 30
+     },
+     "capture": "captures/informatique-desktop.jpg"
+    },
+    {
+     "vp": "desktop",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 137,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 118,
+      "load": 118,
+      "fcp": 116,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Conditions générales de vente · PixelPort",
+      "metaDescription": "Conditions de vente. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garantie de conformité.",
+      "canonical": "https://informatique.lab.test/conditions-generales-de-vente",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Conditions générales de vente",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Conditions générales de vente"
+      ],
+      "wordCount": 4
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 109,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 98,
+      "load": 99,
+      "fcp": 96,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Livraison · PixelPort",
+      "metaDescription": "Zones, modes et délais de livraison (à renseigner : aucun tarif n'est inventé)",
+      "canonical": "https://informatique.lab.test/livraison",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Livraison",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [],
+      "wordCount": 1
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 105,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 100,
+      "load": 100,
+      "fcp": 124,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Politique de confidentialité · PixelPort",
+      "metaDescription": "Données personnelles collectées et leur usage. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garanti",
+      "canonical": "https://informatique.lab.test/politique-de-confidentialite",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Politique de confidentialité",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Politique de confidentialité"
+      ],
+      "wordCount": 3
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 113,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 100,
+      "load": 100,
+      "fcp": 124,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Questions fréquentes · PixelPort",
+      "metaDescription": "Répondre aux questions courantes (commande, paiement, livraison)",
+      "canonical": "https://informatique.lab.test/questions-frequentes",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 2,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 6,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Questions fréquentes",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "div.lp-block",
+       "div.lp-block"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Questions fréquentes",
+       "Questions fréquentes",
+       "[Votre réponse]"
+      ],
+      "wordCount": 10
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 104,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 95,
+      "load": 95,
+      "fcp": 100,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Retours et remboursements · PixelPort",
+      "metaDescription": "Conditions de retour et de remboursement. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garantie de",
+      "canonical": "https://informatique.lab.test/retours-et-remboursements",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Retours et remboursements",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Retours et remboursements"
+      ],
+      "wordCount": 3
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://informatique.lab.test:31651/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 37,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 25,
+      "load": 26,
+      "fcp": 76,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     },
+     "static": {
+      "title": "Page introuvable · PixelPort",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "noindex, nofollow",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 0,
+       "footer": 0
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 2,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [],
+      "skipLink": false,
+      "h1Text": "Page introuvable",
+      "headerLinks": 0,
+      "footerLinks": 0,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.",
+       "p."
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Page introuvable",
+       "Cette page n'existe pas ou n'est plus en ligne."
+      ],
+      "wordCount": 11
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 164,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 84,
+      "load": 120,
+      "fcp": 148,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Boutique · PixelPort",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 1,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 7,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 29,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/boutique",
+       "/boutique/compte",
+       "/boutique/panier",
+       "/boutique/produit/webcam-full-hd",
+       "/boutique/produit/casque-usb-studio",
+       "/boutique/produit/hub-usb-c-7-ports",
+       "/boutique/produit/ecran-27-pouces-qhd",
+       "/boutique/produit/souris-sans-fil-m2",
+       "/boutique/produit/clavier-mecanique-k1"
+      ],
+      "skipLink": true,
+      "h1Text": "Boutique",
+      "headerLinks": 4,
+      "footerLinks": 3,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.sh-title",
+       "div.sh-layout"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Webcam Full HD 85,90 €",
+       "Casque USB Studio 74,90 €",
+       "Hub USB-C 7 ports 63,90 €",
+       "Écran 27 pouces QHD 52,90 €",
+       "Souris sans fil M2 41,90 €",
+       "Clavier mécanique K1 30,90 €"
+      ],
+      "wordCount": 63
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 115,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 91,
+      "load": 91,
+      "fcp": 132,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     },
+     "static": {
+      "title": "Panier · PixelPort",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 1,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 10,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/boutique",
+       "/boutique/compte",
+       "/boutique/panier"
+      ],
+      "skipLink": true,
+      "h1Text": "Panier",
+      "headerLinks": 4,
+      "footerLinks": 3,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.sh-title",
+       "p.sh-empty",
+       "p."
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Votre panier est vide.",
+       "Continuer mes achats"
+      ],
+      "wordCount": 8
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 181,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 175,
+      "load": 175,
+      "fcp": 184,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 139,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 125,
+      "load": 125,
+      "fcp": 128,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 128,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 121,
+      "load": 121,
+      "fcp": 132,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 286,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 263,
+      "load": 263,
+      "fcp": 260,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 219,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 138,
+      "load": 138,
+      "fcp": 240,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 87,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 83,
+      "load": 83,
+      "fcp": 124,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://informatique.lab.test:31651/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 78,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 33,
+      "load": 33,
+      "fcp": 84,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 0,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 149,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 39,
+      "load": 138,
+      "fcp": 160,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 142,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 61,
+      "load": 118,
+      "fcp": 152,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 443,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 432,
+      "load": 432,
+      "fcp": 560,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 95,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 90,
+      "load": 90,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 133,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 127,
+      "load": 127,
+      "fcp": 128,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 213,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 204,
+      "load": 205,
+      "fcp": 132,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 141,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 131,
+      "load": 131,
+      "fcp": 140,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 100,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 90,
+      "load": 91,
+      "fcp": 156,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://informatique.lab.test:31651/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 65,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 31,
+      "load": 32,
+      "fcp": 88,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 187,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 131,
+      "load": 150,
+      "fcp": 184,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 55,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 39,
+      "load": 47,
+      "fcp": 84,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 287,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 193,
+      "load": 195,
+      "fcp": 216,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "capture": "captures/informatique-mobile.jpg"
+    },
+    {
+     "vp": "mobile",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 119,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 111,
+      "load": 111,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 113,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 84,
+      "load": 85,
+      "fcp": 112,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 89,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 83,
+      "load": 83,
+      "fcp": 88,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 247,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 220,
+      "load": 220,
+      "fcp": 252,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 103,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:55x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 92,
+      "load": 92,
+      "fcp": 100,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://informatique.lab.test:31651/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 40,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 28,
+      "load": 28,
+      "fcp": 84,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 184,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 130,
+      "load": 142,
+      "fcp": 168,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 127,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:83x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:56x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 108,
+      "load": 108,
+      "fcp": 140,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    }
+   ],
+   "site": {
+    "/sitemap.xml": 200,
+    "/robots.txt": 200
+   },
+   "errors": [],
+   "unpublished": [
+    "Contact"
+   ],
+   "links": {
+    "total": 11,
+    "broken": []
+   },
+   "journeys": [
+    {
+     "width": 1280,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 354
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 97
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 906
+      },
+      "panier": {
+       "ok": true,
+       "ms": 76
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 104
+      },
+      "commande": {
+       "ok": true,
+       "ms": 347
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://informatique.lab.test:31651/boutique/commande/confirmation/CMD-00001?k=…"
+    },
+    {
+     "width": 820,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 253
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 169
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 170
+      },
+      "panier": {
+       "ok": true,
+       "ms": 188
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 129
+      },
+      "commande": {
+       "ok": true,
+       "ms": 471
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://informatique.lab.test:31651/boutique/commande/confirmation/CMD-00002?k=…"
+    },
+    {
+     "width": 375,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 226
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 151
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 206
+      },
+      "panier": {
+       "ok": true,
+       "ms": 105
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 94
+      },
+      "commande": {
+       "ok": true,
+       "ms": 299
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://informatique.lab.test:31651/boutique/commande/confirmation/CMD-00003?k=…"
+    }
+   ]
+  }
+ }
+]
