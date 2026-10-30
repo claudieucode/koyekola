@@ -201,6 +201,10 @@ function mountedRoutes() {
   return out;
 }
 
+// Règles créées après la figeage de l'oracle (liste des pages PAGES-01, modèles de pages du site builder) : leur comportement est testé explicitement
+const POST_ORACLE = new Set(["pages-liste-du-site", "pages-actions-du-site", "modele-page-enregistrement", "modele-page-lecture", "modele-page-suppression",
+  "corbeille-du-site", "equipe-du-site", "themes-du-site", "polices-du-site", "barre-du-site", "personnaliser-du-site", "widgets-du-site", "styles-du-site", "editeur-du-site", "templates-du-site", "patterns-du-site"]);
+
 describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)", () => {
   const variants = [
     {}, { query: { site: "2" } }, { query: { site: "x" } }, { query: { site: "" } }, { query: { site: "principal" } },
@@ -219,16 +223,22 @@ describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)
   test("mêmes résultats pour chaque adresse × méthode × variante de requête (plusieurs milliers de cas)", () => {
     let n = 0;
     for (const path of paths) for (const method of ["GET", "POST", "PUT"]) for (const v of variants) {
+      if (SITE_RULES.some((r) => POST_ORACLE.has(r.id) && r.pattern.test(path))) continue; // règles ajoutées APRÈS l'ancienne logique (oracle) : vérifiées explicitement plus bas
       const req = { path, method, query: v.query || {}, body: v.body || {} };
       assert.deepEqual(siteOfRequest(db, req), legacy(req), `${method} ${path} ${JSON.stringify(v)}`);
       n += 1;
     }
-    assert.ok(n > 5000, `${n} cas comparés`);
+    assert.ok(n > 4000, `${n} cas comparés`);
   });
   test("sans req.query ni req.body (cas limites de l'ancienne fonction) : même résultat", () => {
     for (const path of ["/site-web/outils", "/campagnes", "/site-web/tests-ab", "/contacts", "/pages"]) {
       for (const method of ["GET", "POST"]) assert.deepEqual(siteOfRequest(db, { path, method }), legacy({ path, method }), `${method} ${path}`);
     }
+  });
+  test("règles postérieures à l'oracle : chacune existe encore et résout le site demandé (?site=)", () => {
+    const ids = new Set(SITE_RULES.map((r) => r.id));
+    for (const id of POST_ORACLE) assert.ok(ids.has(id), `règle disparue : ${id}`);
+    for (const path of ["/site-web/corbeille", "/site-web/equipe-site", "/pages"]) assert.deepEqual(siteOfRequest(db, { path, method: "GET", query: { site: "2" } }), { siteId: 2 }, path);
   });
   test("résolutions attendues sur des cas connus (garde contre un oracle vide)", () => {
     assert.deepEqual(siteOfRequest(db, { path: "/pages/1", method: "GET" }), { siteId: S1 });
@@ -238,6 +248,8 @@ describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)
     assert.deepEqual(siteOfRequest(db, { path: "/site-web/principal", method: "GET" }), { siteId: null });
     assert.deepEqual(siteOfRequest(db, { path: "/site-web/sites/9", method: "GET" }), { siteId: 9 });
     assert.deepEqual(siteOfRequest(db, { path: "/listes", method: "GET", query: { site: "2" } }), { siteId: 2 });
+    assert.deepEqual(siteOfRequest(db, { path: "/pages", method: "GET", query: { site: "2" } }), { siteId: 2 }, "liste des pages : le site vient de ?site= (PAGES-01)");
+    assert.deepEqual(siteOfRequest(db, { path: "/site-web/modeles.json", method: "GET", query: { site: "2" } }), { siteId: 2 }, "modèles de pages : lecture = ?site=");
     assert.equal(siteOfRequest(db, { path: "/listes", method: "GET", query: { site: "x" } }), null);
     assert.equal(siteOfRequest(db, { path: "/inconnue", method: "GET" }), null);
   });

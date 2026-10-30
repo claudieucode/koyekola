@@ -185,7 +185,7 @@ describe("gestionnaire de redirections (CMS)", () => {
     assert.equal(t.status, 302, "302 : le type choisi est respecté");
     assert.equal(one("SELECT hits FROM seo_redirects WHERE source_path = '/ancienne-offre'").hits, 1, "compteur réel");
   });
-  test("refus : boucle, auto-redirection, chaîne via historique, espace technique, adresse invalide, type inconnu", async () => {
+  test("refus : boucle, auto-redirection, chaîne via historique, espace technique, adresse invalide, type inconnu (307 est valide depuis le SEO lot 2 : on teste 999)", async () => {
     const count = () => one("SELECT COUNT(*) n FROM seo_redirects").n;
     const n0 = count();
     const tries = [
@@ -198,7 +198,7 @@ describe("gestionnaire de redirections (CMS)", () => {
       { source: "/x y", target: "/blog" },
       { source: "/ok-source", target: "javascript:alert(1)" },
       { source: "/ok-source", target: "//evil.example/x" },
-      { source: "/ok-source", target: "/blog", status: "307" },
+      { source: "/ok-source", target: "/blog", status: "999" },
     ];
     for (const t of tries) {
       await boss.post(R, { status: "301", ...t });

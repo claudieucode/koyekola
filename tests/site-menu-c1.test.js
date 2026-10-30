@@ -96,10 +96,10 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     assert.ok((await memA.get(`${SP}/${B}/tableau-de-bord`)).status >= 403, "éditeur de A refusé sur B");
     assert.ok([403, 404].includes((await outsider.get(`${SP}/${A}/tableau-de-bord`)).status), "sans accès refusé");
   });
-  test("site principal : son menu garde les 68 entrées du registre et ses adresses historiques (régression)", async () => {
+  test("site principal : son menu garde les 72 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
-    assert.equal(entries.length, 79 + 10); /* « Composants » masqué du menu affiché */ // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(entries.length, 79 + 4 + 10); // + 4 écrans SEO du lot 2 ; /* « Composants » masqué du menu affiché */ // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
     for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(entries.some((e) => e.href === reg.href), reg.href);
     assert.ok(entries.some((e) => e.href === `${PR}/tableau-de-bord`));
