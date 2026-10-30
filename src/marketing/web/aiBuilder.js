@@ -31,7 +31,7 @@ module.exports = () => {
   router.get(B, need("forms.read"), html((req, res) => {
     const ctx = req.mk.ctx;
     const sites = pagesLib.listSites(ctx, { view: "actifs" }).map((s) => ({ id: s.id, name: s.name }));
-    res.set("Cache-Control", "no-store").render("marketing/ai-builder-home", { title: "Créer un site avec l'IA", active: "sites", marketingShell: true, projects: ws.listProjects(ctx), sites, canWrite: req.mk.can("forms.write"), canCreateSite: !req.mk.siteOnly, siteLimited: Boolean(req.mk.siteOnly) });
+    res.set("Cache-Control", "no-store").render("marketing/ai-builder-home", { title: "Créer un site avec l'IA", active: "sites", marketingShell: true, projects: ws.listProjects(ctx), shops: require("../ai/shop/project").list(ctx), sites, canWrite: req.mk.can("forms.write"), canCreateSite: !req.mk.siteOnly, siteLimited: Boolean(req.mk.siteOnly) });
   }));
   router.get(`${B}/projets.json`, need("forms.read"), (req, res, next) => send(res, next, () => ({ projects: ws.listProjects(req.mk.ctx) })));
   router.post(`${B}/projets`, need("forms.write"), (req, res, next) => send(res, next, async () => {
