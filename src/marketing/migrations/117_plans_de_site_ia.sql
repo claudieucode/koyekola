@@ -3,7 +3,7 @@
 --                        `revision` protège contre les modifications concurrentes (mise à jour conditionnelle) ; `status` : draft | pending | validated | modified | to_fix.
 --   mk_ai_plan_events  : historique des modifications importantes (action + résumé court, SANS texte du brief).
 -- Le texte du brief est conservé pour pouvoir affiner l'analyse avec les réponses de la personne ; aucune purge automatique n'existe encore (voir docs/KOLAKISA_PROGRAMME21_3_REMAINING_ISSUES.md).
--- Retour arrière (hors production, après sauvegarde) : DROP TABLE mk_ai_plan_events ; DROP TABLE mk_ai_plans ; DELETE FROM schema_migrations WHERE version = 116 AND scope = 'marketing'.
+-- Retour arrière (hors production, après sauvegarde) : DROP TABLE mk_ai_plan_events ; DROP TABLE mk_ai_plans ; DELETE FROM schema_migrations WHERE version = 117 AND scope = 'marketing'.
 CREATE TABLE mk_ai_plans (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   organization_id INTEGER NOT NULL REFERENCES mk_organizations(id),
