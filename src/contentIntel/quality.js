@@ -102,13 +102,14 @@ function evaluate(doc, opts = {}) {
   }
   // 8 complétude : espaces réservés restants, volume attendu
   const placeholders = (doc.text.match(/\[[^\]\n]{1,80}\]/g) || []).filter((p) => /compl|todo|à remplir|to fill|placeholder/i.test(p));
-  const lorem = /lorem ipsum|texte à venir|coming soon|à rédiger/i.test(doc.text);
+  // « Remplacez par le témoignage réel… » est le texte d'exemple posé par le générateur de pages (constat Q2 du palier 22.1 : publié sur 21 pages de 53)
+  const lorem = /lorem ipsum|texte à venir|coming soon|à rédiger|remplacez par|à remplacer par|replace (this )?with/i.test(doc.text);
   if (!hasText && !doc.types.length) set("completeness", null, "Contenu vide.");
   else {
     let s = 100 - placeholders.length * 12 - (lorem ? 40 : 0); if (kindInfo && wc < kindInfo.minWords) s -= Math.min(30, ((kindInfo.minWords - wc) / kindInfo.minWords) * 40);
     set("completeness", s, kindInfo ? `Longueur de repère pour ce genre : environ ${kindInfo.minWords} mots (indicatif).` : null);
     if (placeholders.length) issues.push(issue("completeness", "placeholders_left", "blocking", `${placeholders.length} information(s) à compléter encore présente(s) dans le texte.`, "Renseigner chaque information manquante avant publication.", null, { matches: placeholders.slice(0, 10) }));
-    if (lorem) issues.push(issue("completeness", "filler_text", "blocking", "Texte provisoire détecté (« lorem ipsum », « à rédiger », « coming soon »).", "Remplacer par le contenu réel."));
+    if (lorem) issues.push(issue("completeness", "filler_text", "blocking", "Texte provisoire détecté (« lorem ipsum », « Remplacez par… », « à rédiger », « coming soon »).", "Remplacer par le contenu réel."));
     if (kindInfo && wc < kindInfo.minWords * 0.5 && doc.origin === "text") issues.push(issue("completeness", "thin_content", "optional", `${wc} mots pour ${kindInfo.minWords} de repère.`, "Développer seulement si le sujet le demande : la longueur n'est pas un but."));
   }
   // 9 qualité des informations : affirmations et chiffres non étayés par les faits fournis (à VÉRIFIER, jamais déclarés faux)

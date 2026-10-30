@@ -11,6 +11,9 @@
 8. **Constructeur 21.8** : n'appelle pas automatiquement `review` après génération (voir `KOLAKISA_AI_WEBSITE_BUILDER_CONTENT_INTEGRATION.md`).
 9. **Termes « à privilégier »** de la voix : non contrôlés (seuls les termes « à éviter » le sont).
 
+## Échecs préexistants constatés (hors périmètre)
+8 tests navigateur échouent sur `origin/main` indépendamment de 22.6 (menu d'un site : `seo-site-outils-navigateur`, `site-espace-navigateur`, `site-menu-c1-navigateur`). Ils décrivent un menu qui a changé depuis leur écriture. À traiter par la session propriétaire du menu.
+
 ## Limites de méthode
 - Intention de recherche : règles lexicales fr/en/es, **estimation**, pas une mesure. Lisibilité : formules validées pour le français et l'anglais seulement.
 - Originalité : comparaison avec les autres pages du **même site** uniquement.

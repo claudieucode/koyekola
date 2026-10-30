@@ -4,7 +4,7 @@ Tout est exécuté sans réseau et sans coût : IA **simulée** (fonction `call`
 
 | Fichier | Niveau | Tests |
 |---|---|---|
-| `tests/programme22-6-content-intelligence.test.js` | services, base réelle en mémoire | 39 |
+| `tests/programme22-6-content-intelligence.test.js` | services, base réelle en mémoire | 40 |
 | `tests/programme22-6-content-intelligence-http.test.js` | serveur réel, membres de rôles différents, deux sites | 10 |
 | `tests/programme22-6-content-intelligence-navigateur.test.js` | Chrome réel (Playwright) | 6 |
 
@@ -38,8 +38,9 @@ Tout est exécuté sans réseau et sans coût : IA **simulée** (fonction `call`
 | 25 | Compatibilité SEO existant | régression : 55 fichiers (`seo-*`, `cms-seo*`, `portee-des-routes`, `programme21-*`, `site-*`, `palier12-*`) |
 
 ## Résultats
-- 39/39 services · 10/10 HTTP · 6/6 Chrome.
+- 40/40 services · 10/10 HTTP · 6/6 Chrome.
 - **Régression : 618/618** sur 55 fichiers (SEO, CMS-SEO, portée des routes, inventaire des tables, menus, paliers 21.x dont régénération et contenu, site-espace).
+- **Arbre fusionné avec `main` (ed151d8b, palier 22.3 inclus)** : 630 tests sur 50 fichiers, 622 réussis, **8 échecs, tous dans trois suites navigateur existantes** (`seo-site-outils-navigateur`, `site-espace-navigateur`, `site-menu-c1-navigateur` : nombre d'onglets et d'entrées du menu d'un site). **Les mêmes 8 échouent sur une copie propre de `origin/main`, sans le code 22.6** : ils préexistent et ne sont pas causés par ce palier (ils étaient jusqu'ici ignorés faute de Playwright). Non corrigés (hors périmètre).
 - **Mutations volontaires** (code cassé puis restauré) : désactiver le refus d'une métrique sur une estimation de l'IA et retirer le filtre `site_id` des mots-clés et des propositions de liens font échouer 3 tests (33, 39, 41).
 
 ## Défauts trouvés par les tests et corrigés
@@ -49,7 +50,8 @@ Tout est exécuté sans réseau et sans coût : IA **simulée** (fonction `call`
 4. **Contenu vide noté** : il reçoit maintenant « pas de note » et un problème bloquant.
 5. **Intention « comment choisir… » classée commerciale** : un indice qui ouvre la requête pèse double.
 6. **Tableau des pages débordant de 320 px** : conteneur à défilement horizontal, focusable, avec libellé.
-7. `optimize` levait une exception synchrone au lieu d'un rejet de promesse.
+7. **Constats 22.1 (Q2, Q3)** : le texte d'exemple « Remplacez par… » n'était pas détecté ; ajouté et testé (test 44).
+8. `optimize` levait une exception synchrone au lieu d'un rejet de promesse.
 
 ## Non exécuté
 Lint, typecheck, build (inexistants pour ce code ; `node --check` seulement). Suite complète `npm test` non lancée. Aucun fournisseur d'IA réel.

@@ -322,4 +322,10 @@ describe("39-44 — sources de données, mots-clés, isolation", () => {
     assert.equal(CI.evaluatePage(A, siteA, p.id).kind, null); CI.setPageKind(A, siteA, p.id, "landing"); assert.equal(CI.evaluatePage(A, siteA, p.id).kind, "landing"); assert.equal(code(() => CI.setPageKind(A, siteA, p.id, "xx")), "invalid");
     CI.setPageKind(A, siteA, p.id, null); assert.equal(CI.evaluatePage(A, siteA, p.id).kind, null);
   });
+  test("44. constats du palier 22.1 : le texte d'exemple du générateur de pages et l'absence de meta description sont bien détectés (bloquant / corrigeable)", () => {
+    const sample = { type: "testimonials", id: "testi01", title: "Ils en parlent", items: [{ text: "Remplacez par le témoignage réel d'un client, avec son accord.", author: "Prénom N.", role: "" }] };
+    const r = CI.quality.evaluate(CI.text.fromSections({ seo: {}, sections: [S("hero", { id: "hero01", title: "Cabinet Dupont", subtitle: "Conseil aux entreprises de la région." }), sample] }), { kind: "home" });
+    assert.ok(r.issues.some((i) => i.id === "filler_text" && i.blocking), "texte d'exemple publiable = bloquant");
+    const d = r.issues.find((i) => i.id === "seo_desc_missing"); assert.ok(d, "meta description absente détectée"); assert.equal(d.correction.field, "seo.description");
+  });
 });

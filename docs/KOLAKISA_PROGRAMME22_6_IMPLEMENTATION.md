@@ -20,7 +20,14 @@ Branche `feat/programme-22-6-content-seo`, issue de `origin/main` (3abf0fd1). Au
 | Décision sur chaque lien proposé, application au brouillon | absente | Créée |
 | Registre de sources avec provenance | absent (21.6 : `volume` toujours `null`) | Créé |
 
-Problèmes de contenu constatés (22.1) : le dépôt ne contient pas de rapport 22.1 ; aucun constat n'a donc été repris. Les problèmes traités sont ceux que les analyseurs détectent sur de vrais contenus (voir `KOLAKISA_PROGRAMME22_6_TESTS.md`).
+Problèmes de contenu constatés par le palier 22.1 (`KOLAKISA_PROGRAMME22_1_QUALITY_AUDIT.md`, arrivé sur `main` pendant ce palier, lu avant la fusion) et traitement :
+| Constat 22.1 | Traitement par 22.6 |
+|---|---|
+| Q2 — 44/53 pages publiées contiennent des `[espaces réservés]`, 21/53 le texte d'exemple « Remplacez par le témoignage réel… » | **Détectés** et classés **bloquants** (`placeholders_left`, `filler_text`) ; testé avec la phrase exacte du générateur (test 44) |
+| Q3 — aucune meta description sur 53/53 pages | **Détectée** (`seo_desc_missing`) avec **correction proposée** dérivée du texte de la page (jamais appliquée) |
+| Q1 — 15 accueils de même structure | Non traité par 22.6 (relève du Page Generator) ; le genre de page et l'intention donnent une structure attendue différente (`kinds.plan`) |
+| Q9 — valeur inventée conservée par le Brief Analyzer | Hors périmètre (21.3) |
+| Q4 images absentes, Q5 boutiques, Q6 formulaires, Q7-Q8, Q10-Q12 | Hors périmètre contenu/SEO |
 
 ## 2. Livré (`src/contentIntel/`)
 | Composant demandé | Fichier |
