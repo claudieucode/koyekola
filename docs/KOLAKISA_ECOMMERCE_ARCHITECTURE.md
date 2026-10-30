@@ -20,7 +20,7 @@ Conclusion : **aucun moteur transactionnel générique n'existait**. Il a été 
 2. **Le site vient du serveur**, jamais du navigateur : côté public, `req.kwSite` (hôte vérifié par le registre des domaines) ; côté administration, l'adresse `/site-web/sites/<id>/boutique…` ou `/site-web/principal/boutique…` revérifiée (`res.locals.siteSpace` + `req.mk.site`).
 3. **Le navigateur n'envoie que des identifiants et des quantités.** Prix, remises, stock, taxes, livraison et total sont recalculés dans `shop/cart.js` à chaque affichage et à la création de la commande.
 4. **Aucun moteur parallèle** : mêmes éditeur, rendu, publication, thèmes et modèles que le reste du CMS.
-5. **Migration additive** (`116_boutique.sql`) : aucune table existante modifiée.
+5. **Migration additive** (`121_boutique.sql`) : aucune table existante modifiée.
 
 ## 3. Modules
 ```
@@ -39,7 +39,7 @@ src/marketing/web/shopPublic.js   boutique publique /boutique…
 src/marketing/pages/widgets/shop.js   5 éléments de page branchés sur ce moteur
 ```
 
-## 4. Données (`116_boutique.sql`)
+## 4. Données (`121_boutique.sql`)
 `mk_shop_settings`, `_categories`, `_products`, `_product_categories`, `_variants`, `_stock_movements`, `_carts`, `_cart_items`, `_customers`, `_customer_tokens`, `_shipping_zones`, `_shipping_methods`, `_tax_rules`, `_coupons`, `_coupon_redemptions`, `_orders`, `_order_items`, `_order_events`, `_payments`, `_webhook_events`, `_notifications`.
 Toutes les tables « racines » portent `organization_id` et `site_id` ; les unicités (slug, SKU, code coupon, e-mail client, numéro de commande, clé d'idempotence) passent par `COALESCE(site_id, 0)` : **deux boutiques peuvent avoir le même slug, le même SKU ou le même code**. Les tables enfants (lignes, événements) sont atteintes uniquement par leur parent déjà filtré par boutique.
 

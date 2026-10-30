@@ -23,7 +23,7 @@ Base : `origin/main` (`bd794900`). Branche : `feat/programme-20-5-ecommerce`. Le
 | Responsive | ordinateur 1280, tablette 820, mobile 375 : aucun débordement, contrôles ≥ 34 px, panier en cartes sur mobile | navigateur |
 
 ## Fichiers (voir le rapport final pour la liste complète)
-Migration `116_boutique.sql` · `src/marketing/shop/*` (9 fichiers) · `src/marketing/web/shopAdmin.js`, `shopPublic.js` · `src/marketing/pages/widgets/shop.js` · vues `views/boutique/*`, `views/marketing/boutique/*`, `views/marketing-public/widgets/shop*.ejs` · `public/css/boutique.css`, extrait ajouté à `landing.css`, `public/js/boutique.js` · modifications ciblées de `organizations.js`, `cmsAccess.js`, `cmsNav.js`, `siteModules.js`, `themeTemplates.js`, `themeRender.js`, `dynamic.js`, `routes/stripeWebhook.js`, `services/payments.js` (+1 export).
+Migration `121_boutique.sql` · `src/marketing/shop/*` (9 fichiers) · `src/marketing/web/shopAdmin.js`, `shopPublic.js` · `src/marketing/pages/widgets/shop.js` · vues `views/boutique/*`, `views/marketing/boutique/*`, `views/marketing-public/widgets/shop*.ejs` · `public/css/boutique.css`, extrait ajouté à `landing.css`, `public/js/boutique.js` · modifications ciblées de `organizations.js`, `cmsAccess.js`, `cmsNav.js`, `siteModules.js`, `themeTemplates.js`, `themeRender.js`, `dynamic.js`, `routes/stripeWebhook.js`, `services/payments.js` (+1 export).
 
 ## Ce qui n'est PAS livré
 Voir `KOLAKISA_PROGRAMME20_5_REMAINING_ISSUES.md` (produits téléchargeables et groupés, remboursement émis depuis Kolakisa, autres passerelles, avis, upsells/cross-sells, import de produits, factures, etc.).

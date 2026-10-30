@@ -13,7 +13,7 @@ Aucune transaction réelle, aucun appel au vrai Stripe, aucun e-mail réel : bas
 Le test navigateur a **trouvé deux défauts réels**, corrigés : défilement horizontal du panier mobile (texte réservé aux lecteurs d'écran positionné hors du conteneur) et liens « Retirer » trop petits ; puis le tableau du panier est devenu une liste de cartes sous 600 px.
 
 ## Non-régression (fichiers hors navigateur)
-- Passage large : **199 fichiers, 2 791 tests, 2 773 réussis, 18 échoués**, 0 annulé, 0 ignoré.
+- Passage large (avant fusion avec les 28 derniers commits de `main`) : **199 fichiers, 2 791 tests, 2 773 réussis, 18 échoués**, 0 annulé, 0 ignoré.
 - Les 18 échecs ont été analysés : **16 étaient des attentes codées en dur qui devaient évoluer** (registres de menu : nouvelle section « Boutique » ; liste des familles de modèles ; dernier numéro de migration ; table des écrans `KOLAKISA_REFONTE_CONTENU.md` ; oracle de portée des routes). Ces fichiers ont été mis à jour **en connaissance de cause** puis relancés avec succès : `site-menu-p1a(-unitaire)`, `site-menu-c1(-unitaire)`, `cms-01-navigation`, `cms-interface`, `editeur-modeles-theme`, `palier12-migration-composants-revision`, `site-espace`, `registre-pages`, `portee-des-routes`.
 - `admin-multisite` « aucun fichier du module Marketing modifié » : garde-fou sur les modifications **non commitées** ; il passe une fois les changements commités.
 - `cms-outils` « gros import (120 pages) » : coupure réseau (`ECONNRESET`) sous forte charge de la machine ; **réussi au nouveau passage**, sans lien avec le code modifié.
@@ -22,3 +22,6 @@ Le test navigateur a **trouvé deux défauts réels**, corrigés : défilement h
 
 ## Non exécuté
 Les ≈ 176 tests navigateur du reste du dépôt, les ≈ 600 fichiers hors du périmètre CMS/commerce/sites, tout test sur la production, tout test contre le vrai Stripe ou un vrai SMTP.
+
+## Après fusion de `main` (migrations 116 à 120 prises par d'autres chantiers → boutique renumérotée **121**)
+Second passage large : 2 969 tests, 2 956 réussis, 13 échoués, dont 11 venant de ma modification de `themeTemplates.pick` (colonne `site_id` absente du schéma réduit d'un test) — **corrigée** — et 2 liés au chargement de la machine ; relance séquentielle des fichiers concernés + tests de la boutique : **183 tests, 183 réussis, 0 échec** (`site-manager-central`, `assistant-creation-site`, `site-menu-c1(-unitaire)`, `site-menu-p1a(-unitaire)`, `theme-builder-regles`, `programme20-5-*`, `admin-multisite`). `site-menu-p1a` (70), `site-espace`, `palier12-migration`, `registre-pages`, `portee-des-routes`, `theme-builder-serveur` repassés au vert après renumérotation. **Limite honnête** : après cette dernière fusion, le passage large complet (≈ 3 000 tests) n'a pas été relancé en entier : seuls les fichiers listés ci-dessus l'ont été.
