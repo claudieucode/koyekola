@@ -107,7 +107,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
   test("RÉPONSE PERDUE : le serveur a importé mais le navigateur n'a pas reçu la réponse ; « Réessayer » ne crée AUCUNE page de plus (même jeton)", async () => {
     const page = await open(); await edit(page);
     const before = pagesA(), importsBefore = imports();
-    await card(page, "Site d'entreprise").getByRole("button", { name: /Utiliser ce modèle : Site d'entreprise/ }).click(); await page.locator("[data-tp-dlg-import]").waitFor();
+    await find(page, "Site d'entreprise"); await card(page, "Site d'entreprise").getByRole("button", { name: /Utiliser ce modèle : Site d'entreprise/ }).click(); await page.locator("[data-tp-dlg-import]").waitFor();
     await page.route("**/templates/importer*", async (route) => { await route.fetch(); await route.abort("connectionreset"); });
     await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-err]:not([hidden])").waitFor();
     assert.match(await page.locator("[data-tp-imp-err]").innerText(), /Connexion impossible/); assert.equal(await page.locator("[data-tp-imp-ok]").innerText(), "Réessayer");
@@ -144,7 +144,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
     assert.equal(await m.evaluate(() => getComputedStyle(document.querySelector("[data-tp-grid]")).gridTemplateColumns.split(" ").length), 1);
     const viewer = await newStudent(srv); db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, (SELECT id FROM users WHERE email = ?), 'viewer')").run(A, viewer.email);
     const v = await open(1280, viewer); await edit(v);
-    assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Utiliser ce modèle/ }).isDisabled(), true); assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Aperçu de/ }).isEnabled(), true);
+    await find(v, "Site d'entreprise"); assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Utiliser ce modèle/ }).isDisabled(), true); assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Aperçu de/ }).isEnabled(), true);
     const r = await v.goto(`${srv.base}${TP}?site=${B}`); assert.notEqual(r.status(), 200);
     assert.deepEqual(errors, [], "aucune erreur JavaScript sur tout le parcours");
   });

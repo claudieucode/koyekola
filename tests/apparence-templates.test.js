@@ -50,7 +50,7 @@ describe("templates : bibliothèque, aperçu, importation, idempotence, isolatio
       assert.equal(b.siteId, A); assert.equal(b.principal, false);
       const packs = (await cat(boss, A, "source=pack")).items, pages = (await cat(boss, A, "source=page")).items, mine = (await cat(boss, A, "source=mine")).items;
       assert.equal(packs.length, PACKS.length); assert.ok(pages.length >= 20, `gabarits : ${pages.length}`); assert.deepEqual(mine.map((m) => m.name), ["Modèle de A"], "« Mes modèles » : A seulement");
-      assert.deepEqual(b.initial.items.map((i) => i.source), packs.map((i) => i.source), "la page embarque la première page de résultats (packs)");
+      assert.equal(b.initial.total, packs.length); assert.deepEqual(b.initial.items.map((i) => i.ref), packs.slice(0, 12).map((i) => i.ref), "la page embarque la première page de résultats (12 packs au plus, même tri)");
       for (const p of packs) { assert.ok(p.pageCount >= 4 && p.elements >= p.pageCount * 2, `${p.key} : ${p.pageCount} pages, ${p.elements} éléments`); assert.ok(p.pages.every((x) => x.sections >= 1 && x.elements >= 1), p.key); assert.ok(p.style.colors.primary && p.style.paletteLabel, p.key); assert.ok(p.menuItems >= 3, p.key); }
       assert.equal(b.can.import, true); assert.equal(b.can.menu, true); assert.equal(b.can.styles, true);
       assert.ok(!JSON.stringify(b).includes("secret du modèle de B")); assert.ok(!JSON.stringify(await cat(boss, A)).includes("modèle de B"), "aucun modèle de B dans le catalogue de A");

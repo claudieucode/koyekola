@@ -39,7 +39,7 @@ const GABARIT_TYPES = {
   "agence-accueil": ["accueil", "agence"], "agence-services": ["services", "service-creatif"], "agence-methode": ["services"], "portfolio-accueil": ["accueil", "portfolio", "galerie"],
   "resto-accueil": ["accueil", "page-locale"], "resto-carte": ["offre"], "resto-reservation": ["reservation"], "immo-accueil": ["accueil", "page-locale"], "immo-biens": ["offre"], "immo-estimation": ["devis", "rdv"],
   "blog-accueil": ["blog", "accueil"], "boutique-accueil": ["catalogue-formations", "accueil"], "asso-accueil": ["association", "accueil", "communaute"], "asso-missions": ["association", "equipe"], "asso-adhesion": ["adhesion", "inscription"], "asso-soutenir": ["association"],
-  "boutique-produits-accueil": ["accueil", "offre"], "boutique-catalogue": ["offre"], "boutique-livraison": ["guide-achat", "questions-produits"],
+  "boutique-produits-accueil": ["accueil", "offre"], "boutique-catalogue": ["offre"], "boutique-livraison": ["centre-aide"],
 };
 
 function typeList() {

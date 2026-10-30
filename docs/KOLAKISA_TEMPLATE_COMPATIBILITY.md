@@ -32,6 +32,7 @@ Le statut apparaît **avant** l'import : badge « À vérifier » / « Incompati
 | Composant synchronisé (`componentId`) | Doit exister et être utilisable dans le site | Bloquant sinon |
 | Formations (`course`, `courselist`) | Au moins une formation publiée | Avertissement + confirmation sinon |
 | Blog (`posts`, `querylist`, `postcontent`…) | Information « fonctionnalités utilisées : blog » | — |
+| Boutique (`shopgrid`, `shopbuy`, `shopcart`, `shopsearch`, `shopfilters`) | Module « Commerce » activé pour le **site de destination** ; boutique ouverte (lecture seule de `mk_shop_settings`) | Avertissement + confirmation sinon ; « fonctionnalités utilisées : boutique » |
 | Médias de la médiathèque (`/uploads/…`) | Modèle venant d'un autre site | Avertissement (les fichiers ne sont **pas copiés**) |
 | Ressources externes (`https://…` en image, média, embed) | Hôtes listés | Avertissement + confirmation |
 | Droits | `lockedWidgetChanges` + droits des options | Refus avec message |
@@ -40,4 +41,4 @@ Le statut apparaît **avant** l'import : badge « À vérifier » / « Incompati
 Un modèle importé est converti en objets natifs avec **de nouveaux identifiants de section** et revalidé ; aucune page existante n'est modifiée, sauf l'ajout de sections au brouillon d'une page choisie (révision vérifiée, refus si le brouillon a changé entre-temps). Les modèles enregistrés avant 20.4 (sans métadonnées) sont lus avec des valeurs par défaut (version 1, format 1, langue `fr`, sans secteur).
 
 ## 6. Limites connues
-Les modèles de thème supposent le moteur de blog (articles, archives) ; les affectations sont **par organisation** (limite D2 du Programme 20.3). Aucun modèle e-commerce (produit physique, panier de produits) : le moteur de vente est celui des formations. Aucune détection de compatibilité entre **versions de widget** (les widgets du registre n'ont pas de version propre exposée) : la compatibilité est vérifiée par la grammaire actuelle, pas par comparaison de versions.
+Les modèles de thème supposent le moteur de blog (articles, archives) ; les affectations sont **par organisation** (limite D2 du Programme 20.3). Les modèles de boutique exigent le moteur de boutique de `main` (Programme 20.5) activé par site ; ils n'incluent pas les pages du moteur (panier, commande, compte). Aucune détection de compatibilité entre **versions de widget** (les widgets du registre n'ont pas de version propre exposée) : la compatibilité est vérifiée par la grammaire actuelle, pas par comparaison de versions.
