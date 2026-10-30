@@ -65,6 +65,7 @@
     <form method="post" action="<%= W %>/identite" data-sw-autosave>
       <input type="hidden" name="revision" value="<%= st.revision %>">
       <fieldset<%= dis %>>
+        <p class="sw-muted">Pour une direction artistique complète (palette vérifiée, polices, espacements, composants, mobile) à partir d'une description : <a href="/marketing/site-web/sites/<%= siteId %>/direction-artistique">Direction artistique</a> (brouillon du personnalisateur, rien n'est publié).</p>
         <legend>Orientation graphique</legend>
         <div class="sw-cards sw-cards-sm">
           <% catalog.STYLES.forEach((s) => { const pal = palettes.find((p) => p.key === s.palette); %>

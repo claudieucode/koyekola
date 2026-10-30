@@ -72,7 +72,7 @@ function buildPage(ctx, page, env) {
   let n = 0;
   page.sections.forEach((s) => {
     const m = mapper.mapSection(s, page, env);
-    m.sections.forEach((sec, k) => { const withStyle = { ...sec, id: sid(page.key, s.key, k), style: Object.fromEntries(Object.entries(mapper.styleFor(sec.type, n)).filter(([, v]) => v)) }; raw.push(withStyle); n += 1; });
+    m.sections.forEach((sec, k) => { const withStyle = { ...sec, id: sid(page.key, s.key, k), style: mapper.styleFor(sec.type, n, env.layout) }; raw.push(withStyle); n += 1; });
     maps.push({ key: m.key, need: m.need, status: m.status, components: m.components, justification: m.justification, limitations: m.limitations, missing: m.missing, example: Boolean(m.example), alternative: Boolean(m.alternative), count: m.sections.length });
   });
   const v = validateLenient(ctx, raw);
@@ -111,7 +111,7 @@ async function aiCopy(ctx, plan, siteId, call) {
 }
 
 // ── génération (proposition) ───────────────────────────────────────────────────────────────────────────────────────────────────
-async function generate(ctx, siteId, planInput, { useAi = false, only = null, call = null } = {}) {
+async function generate(ctx, siteId, planInput, { useAi = false, only = null, call = null, layout = null } = {}) {
   siteOf(ctx, siteId);
   const plan = planLib.validate(planInput);
   if (Array.isArray(only) && only.length) plan.pages = plan.pages.filter((p) => only.includes(p.key));
@@ -133,7 +133,7 @@ async function generate(ctx, siteId, planInput, { useAi = false, only = null, ca
     if (type && !type.available) {
       return { key: p.key, name: p.name, type: p.type, status: "unavailable", reason: `Page non générée : « ${type.label} » dépend d'une fonctionnalité absente de Kolakisa (${type.needs}).`, sections: [], maps: [], warnings: [], existing: null };
     }
-    const b = buildPage(ctx, p, { courseOk: true });
+    const b = buildPage(ctx, p, { courseOk: true, layout });
     const existing = existingFor(ctx, siteId, p, p.name);
     const ws = [...b.validation.dropped];
     for (const m of b.maps) { if (m.example) ws.push(`Section « ${m.key} » : textes d'exemple entre crochets à remplacer.`); for (const x of m.missing) ws.push(`Fonctionnalité manquante : ${x}`); }
