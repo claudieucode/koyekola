@@ -54,6 +54,8 @@ describe("programme 20.4 — bibliothèque de modèles (navigateur)", { skip: SK
     assert.match(await page.locator(".mk-pt-thumb iframe").first().evaluate((f) => f.contentDocument.body.getAttribute("style")), /--kw-primary:#8a1c3a/);
     const unnamed = await page.evaluate(() => [...document.querySelectorAll("[data-tp-root] select, [data-tp-root] input:not([type=hidden]), [data-tp-root] button")].filter((el) => !el.closest("dialog") && !el.hidden && !(el.getAttribute("aria-label") || el.textContent.trim() || (el.labels && el.labels.length))).map((el) => el.outerHTML.slice(0, 90)));
     assert.deepEqual(unnamed, [], "chaque contrôle a un nom accessible");
+    const levels = await page.evaluate(() => [...document.querySelectorAll("main h1, main h2, main h3, [data-tp-root] h1, [data-tp-root] h2, [data-tp-root] h3")].filter((h) => !h.closest("dialog") && !h.closest("[hidden]")).map((h) => Number(h.tagName[1])));
+    assert.ok(levels.length >= 13, `titres : ${levels}`); assert.deepEqual(levels.filter((l, i) => i > 0 && l > levels[i - 1] + 1), [], `aucun saut de niveau de titre : ${levels}`);
     assert.ok((await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1);
     assert.equal(await page.locator("[data-tp-count]").innerText(), "12 modèles");
   });
@@ -153,6 +155,7 @@ describe("programme 20.4 — bibliothèque de modèles (navigateur)", { skip: SK
     await page.keyboard.press("ArrowLeft"); await idle(page); assert.equal(await page.locator('[data-tp-source="pack"]').getAttribute("aria-selected"), "true");
     const tabbable = await card(page, "Restaurant").locator("button").evaluateAll((els) => els.map((e) => [e.getAttribute("aria-label"), e.tabIndex])); assert.ok(tabbable.length === 3 && tabbable.every(([l, t]) => l && t === 0), JSON.stringify(tabbable));
     await card(page, "Restaurant").getByRole("button", { name: /Utiliser ce modèle/ }).click(); await page.locator("[data-tp-dlg-import]").waitFor(); await page.keyboard.press("Escape"); await page.locator("[data-tp-dlg-import]").waitFor({ state: "hidden" });
+    for (const w of [820, 1024, 1920]) { const t = await open(w); await edit(t); assert.ok((await t.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1, `${w} px : aucun défilement horizontal`); assert.ok((await t.evaluate(() => getComputedStyle(document.querySelector("[data-tp-grid]")).gridTemplateColumns.split(" ").length)) >= 2, `${w} px : plusieurs colonnes`); await t.context().close(); }
     const m = await open(390); await edit(m);
     assert.ok((await m.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1); assert.equal(await m.evaluate(() => getComputedStyle(document.querySelector("[data-tp-grid]")).gridTemplateColumns.split(" ").length), 1);
     await card(m, "Restaurant").getByRole("button", { name: /Détails de/ }).click(); await m.locator("[data-tp-dlg-detail]").waitFor(); assert.ok((await m.evaluate(() => document.querySelector("[data-tp-dlg-detail]").getBoundingClientRect().width)) <= 390); await m.keyboard.press("Escape");

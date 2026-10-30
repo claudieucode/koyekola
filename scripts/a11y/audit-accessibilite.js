@@ -1,7 +1,7 @@
 // Palier 15 : audit d'accessibilité mesuré dans Chrome réel (vrai serveur, base de test). Aucun outil tiers (axe-core / Lighthouse non installés) :
 // ce sont des contrôles AUTOMATIQUES partiels, écrits ici, qui ne valent pas conformité WCAG. Calculs : contraste WCAG 2.x (alpha composité sur les fonds parents),
 // parcours Tab réel (visibilité du focus, focus masqué par un élément superposé), noms accessibles, titres, repères, champs étiquetés, images, mouvement réduit.
-// Usage : node scripts/a11y/audit-accessibilite.js [--json f] [--captures dossier]
+// Usage : node scripts/a11y/audit-accessibilite.js [--json f] [--captures dossier] [--only /adresse1,/adresse2]  (--only : ne mesure que ces adresses, en tant qu'écrans d'administration)
 "use strict";
 const fs = require("node:fs");
 const { TEST_KEY } = require("../../tests/marketing-helpers");
@@ -115,7 +115,7 @@ async function parcoursTab(page, max) {
   for (const theme of ["light", "dark"]) {
     ctxs[theme] = await mk(theme);
     const page = await ctxs[theme].newPage();
-    const list = [...PUBLIC.map((u) => ["public", u]), ...ADMIN.map((u) => ["admin", u]), ["éditeur", `/marketing/pages/${pageId}/editeur`]];
+    const only = arg("only", ""), list = only ? only.split(",").map((u) => ["admin", u]) : [...PUBLIC.map((u) => ["public", u]), ...ADMIN.map((u) => ["admin", u]), ["éditeur", `/marketing/pages/${pageId}/editeur`]];
     for (const [cat, url] of list) {
       try {
         await page.goto(srv.base + url, { waitUntil: "load" }); await page.waitForTimeout(cat === "éditeur" ? 1500 : 350);
