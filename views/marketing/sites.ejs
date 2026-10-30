@@ -56,13 +56,14 @@
           // Actions du menu ⋮ : mêmes droits et mêmes routes qu'avant (le serveur les revérifie à chaque requête)
           const hasModules = canModules && actif, hasDomains = mk.can("sites.domains") && actif;
           const hasCopy = canWrite && actif, hasRestore = canWrite && !st.deleted_at && !actif, hasDelete = hasRestore && canDelete;
-          const hasMenu = hasModules || hasDomains || hasCopy || hasRestore;
+          const hasSettings = actif && mk.can("forms.read");
+          const hasMenu = hasSettings || hasModules || hasDomains || hasCopy || hasRestore;
         %>
           <tr data-site="<%= st.id %>">
             <th scope="row" class="mk-site-info">
               <span class="mk-site-title"><a href="/marketing/site-web/sites/<%= st.id %>"><%= st.name %></a></span>
               <span class="mk-sub"><code><%= st.slug %></code><%= st.site_type ? " · " + (siteTypes[st.site_type] || st.site_type) : "" %><%= st.description ? " · " + st.description : "" %></span>
-              <span class="mk-site-flags"><span class="mk-status <%= etat[1] %>"><%= etat[0] %></span><span class="mk-site-modules"><span class="mk-sub">Modules :</span> <% if (!st.modules.length) { %><span class="mk-sub">Aucun</span><% } else { %><span class="mk-chips"><% st.modules.forEach((m) => { %><span class="mk-status"><%= m.label %></span> <% }) %></span><% } %></span></span>
+              <span class="mk-site-flags"><span class="mk-status <%= etat[1] %>"><%= etat[0] %></span><% if (actif) { %><span class="mk-status" title="<%= st.published > 0 ? "Au moins une page de ce site est en ligne" : "Aucune page en ligne : le site est en cours de préparation" %>"><%= st.published > 0 ? "Publié" : "En préparation" %></span><% } %><span class="mk-site-modules"><span class="mk-sub">Modules :</span> <% if (!st.modules.length) { %><span class="mk-sub">Aucun</span><% } else { %><span class="mk-chips"><% st.modules.forEach((m) => { %><span class="mk-status"><%= m.label %></span> <% }) %></span><% } %></span></span>
             </th>
             <td class="mk-site-figures">
               <dl class="mk-site-stats">
@@ -80,6 +81,7 @@
               <div class="mk-dropdown" data-mk-dropdown>
                 <button type="button" class="icon-btn btn-sm mk-site-more" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-site-<%= st.id %>" aria-label="Autres actions pour le site <%= st.name %>"><%- icon("moreVertical", { size: 18 }) %></button>
                 <div class="mk-menu" id="menu-site-<%= st.id %>" role="menu" hidden>
+                  <% if (hasSettings) { %><a role="menuitem" href="/marketing/site-web/sites/<%= st.id %>/reglages">Réglages<span class="sr-only"> de <%= st.name %></span></a><% } %>
                   <% if (hasModules) { %><a role="menuitem" href="/marketing/site-web/sites/<%= st.id %>/modules">Modules<span class="sr-only"> de <%= st.name %></span></a><% } %>
                   <% if (hasDomains) { %><a role="menuitem" href="/marketing/site-web/sites/<%= st.id %>/domaines">Domaines<span class="sr-only"> de <%= st.name %></span></a><% } %>
                   <% if (hasCopy) { %>
@@ -107,7 +109,7 @@
 
     <% if (canWrite) { %>
       <dialog class="mk-dialog mk-modal" id="nouveau" data-mk-modal data-mk-modal-hash="nouveau" aria-labelledby="site-new-title">
-        <form action="/marketing/site-web/sites" method="post">
+        <form action="/marketing/site-web/sites" method="post" data-mk-once>
           <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="site-new-title">Créer un site</h2><p class="mk-dialog-desc">Le site démarre avec le design system par défaut de KOLAKISA, que vous pourrez modifier.</p></div>
             <button type="button" class="mk-dialog-close" data-mk-modal-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
           <div class="mk-dialog-body">
