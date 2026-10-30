@@ -120,6 +120,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./scoring")());
   admin.use(require("./surveys")());
   admin.use(require("./ai")());
+  admin.use(require("./aiPlanner")()); // Programme 21.3 : Brief Analyzer et Site Planner (API JSON, /ia/site/…)
   admin.use(require("./domains")());
   admin.use(require("./social")());
   admin.use(require("./automations")({ db }));
