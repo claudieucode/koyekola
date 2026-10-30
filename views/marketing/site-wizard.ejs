@@ -110,6 +110,7 @@
     <% } %>
     <% if (ps.gaps.length) { %><div class="sw-note sw-warn">Pas encore disponible pour ce type de site : <%= ps.gaps.join(', ') %>.</div><% } %>
     <% if (st.mode === 'shop') { %><div class="sw-note">Pages de panier, de commande et de compte client : <strong>non disponibles</strong>. Seules les pages de présentation et de catalogue de formations sont proposées.</div><% } %>
+    <p class="sw-muted">Pour remplir les pages avec une structure complète de composants natifs : <a href="/marketing/site-web/sites/<%= siteId %>/generateur">Générateur de pages</a> (brouillons, rien n'est publié).</p>
     <h3>Pages du site</h3>
     <form method="post" action="<%= W %>/pages/action" id="sw-nav-form"><input type="hidden" name="action" value="nav"></form>
     <table class="mk-table sw-pages">
