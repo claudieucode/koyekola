@@ -40,7 +40,7 @@ function read(ctx) {
 const write = (ctx, list) => ctx.settings.set(ctx.organizationId, KEY, JSON.stringify(list));
 
 function pageRow(ctx, id) {
-  return ctx.db.prepare("SELECT id, name, slug, status, kind, archived_at, site_id FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) || null;
+  return ctx.db.prepare("SELECT id, name, slug, status, kind, archived_at FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) || null;
 }
 // Affectations avec le nom et l'état de leur page
 function list(ctx) {
@@ -157,7 +157,7 @@ function pick(ctx, type, { category = "", categories = [], tag = "", tags = [], 
   for (const { t } of scored) {
     const p = pageRow(ctx, t.pageId);
     // siteId fourni (boutique) : le modèle doit appartenir à CE site ; omis (blog historique) : comportement inchangé
-    if (p && p.status === "published" && !p.archived_at && (siteId === undefined || (p.site_id ?? null) === siteId)) return p;
+    if (p && p.status === "published" && !p.archived_at && (siteId === undefined || ((ctx.db.prepare("SELECT site_id FROM mk_landing_pages WHERE id = ?").get(p.id) || {}).site_id ?? null) === siteId)) return p;
   }
   return null;
 }
