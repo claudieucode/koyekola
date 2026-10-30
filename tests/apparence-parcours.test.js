@@ -31,7 +31,8 @@ describe("parcours Templates → Éditeur → Patterns → Styles → publicatio
   after(() => { db.close(); return srv.stop(); });
 
   test("1. Templates : importer un pack de site (pages natives, menu, brouillon de styles) — rien n'est publié", async () => {
-    const lib = bootOf((await adminA.get(`${R}/templates?site=${A}`)).text, "tp-data");
+    // Programme 20.4 : la liste des modèles est servie par catalogue.json (recherche et pagination côté serveur)
+    const lib = json(await adminA.get(`${R}/templates/catalogue.json?site=${A}&source=pack`));
     const pack = lib.items.find((i) => i.ref === "pack:service-professionnel"); assert.ok(pack);
     const r = json(await adminA.postJson(`${R}/templates/importer?site=${A}`, { site: String(A), ref: pack.ref, importKey: key(), menu: true, styles: true }));
     assert.equal(r.ok, true, JSON.stringify(r)); imported = r.result;

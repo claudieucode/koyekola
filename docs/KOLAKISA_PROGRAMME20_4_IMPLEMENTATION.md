@@ -57,6 +57,7 @@ Onglets (Sites complets, Pages, Sections, Composants, Thème, Mes modèles, Impo
 | `site-web-modeles.test.js` | Attend 39 gabarits (les 23 historiques inchangés et dans le même ordre) | Ajout volontaire de 16 gabarits |
 | `apparence-templates.test.js` | La liste vient de `catalogue.json` au lieu du JSON embarqué ; la page embarque la 1re page de résultats | La liste est désormais servie par le serveur (pagination) ; mêmes assertions |
 | `apparence-templates-navigateur.test.js` | 12 cartes par page au lieu de 5 ; recherche / filtres attendus après la réponse du serveur ; bouton « Utiliser ce modèle : X » au lieu de « Importer X » ; modèles retrouvés par la recherche | Pagination, recherche côté serveur, libellé demandé par le cahier des charges |
+| `apparence-parcours.test.js` | Le pack est cherché dans `catalogue.json` au lieu du JSON embarqué de la page | Même raison ; trouvé par la suite complète (6 tests en échec avant la correction, 6/6 après) |
 | `inventaire-tables-sites.json` | `cms_template_sectors` classée « plateforme » | Test d'inventaire des tables |
 
 Aucune assertion n'a été supprimée ni assouplie pour faire disparaître un échec.
