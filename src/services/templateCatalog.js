@@ -126,6 +126,15 @@ function structureOf(ctx, siteId, ref, pageKey = null) {
   return { label: part.name, themeType: part.themeType, pages: [{ key: "part", name: part.name, sections: fresh(partsLib.buildPart(id)) }] };
 }
 
+// Élément de remplacement possible pour un type inconnu : un type du registre dont le nom contient (ou est contenu dans) celui du modèle, sinon à très faible distance d'édition. Rien n'est remplacé automatiquement.
+function closestWidget(type) {
+  const t = String(type).toLowerCase(), keys = Object.keys(nodes.NODE_TYPES);
+  const lev = (a, b) => { const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]); for (let j = 1; j <= b.length; j += 1) d[0][j] = j; for (let i = 1; i <= a.length; i += 1) for (let j = 1; j <= b.length; j += 1) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[a.length][b.length]; };
+  const part = keys.filter((k) => k.length >= 4 && (t.includes(k) || k.includes(t))).sort((a, b) => a.length - b.length)[0];
+  const found = part || keys.map((k) => [k, lev(t, k)]).filter(([, d]) => d <= 2).sort((a, b) => a[1] - b[1])[0]?.[0];
+  return found ? { type: found, label: nodes.NODE_TYPES[found].label } : null;
+}
+
 // ---------- Analyse de compatibilité (aucune écriture) ----------
 // blockers : l'importation est refusée ; warnings : l'importation exige une confirmation explicite ; notes : information (rien à confirmer).
 const URL_KEYS = /^(src|image|logo|poster|background|embed|iframe|video|audio|thumbnail)/i;
@@ -147,7 +156,10 @@ function analyze(ctx, siteId, sections, { can = () => true, originSiteId = siteI
     const type = String(n.type || "");
     if (type) {
       const lb = label(type);
-      if (!lb) blockers.push({ code: "unknown_widget", widget: type, message: `Élément « ${type} » inconnu de cette version de Kolakisa (widget retiré ou jamais installé) : le modèle ne peut pas être importé tel quel.` });
+      if (!lb) {
+        const near = closestWidget(type);
+        blockers.push({ code: "unknown_widget", widget: type, ...(near ? { replacement: near.type } : {}), message: `Élément « ${type} » inconnu de cette version de Kolakisa (widget retiré ou jamais installé) : le modèle ne peut pas être importé tel quel.${near ? ` Élément proche disponible : « ${near.label} » — remplacez-le dans l'éditeur du site d'origine, puis réenregistrez le modèle.` : " Remplacez-le dans l'éditeur du site d'origine, ou installez l'extension qui le fournit."}` });
+      }
       else { const w = widgets.get(type) || { type, label: lb, count: 0, requires: (nodes.WIDGETS[type] && nodes.WIDGETS[type][2]) || null }; w.count += 1; widgets.set(type, w); }
       if (["course", "courselist"].includes(type)) needsCourses = true;
       if (["posts", "postcontent", "querylist", "postmeta", "archiveinfo", "authorbox", "postnav", "postcomments", "catfilter"].includes(type) || (n.props && n.props.loop && n.props.loop.source === "posts")) needsBlog = true;

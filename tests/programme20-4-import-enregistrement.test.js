@@ -166,6 +166,13 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
       assert.ok((await cat(boss, A, "compat=blocked")).items.some((i) => i.ref === `mine:${id}`), "filtre « incompatible »");
       assert.equal((await cat(boss, A, "compat=blocked")).items.filter((i) => i.origin === "official").length, 0);
     });
+    test("élément inconnu proche d'un élément existant : le blocage propose l'élément de remplacement (rien n'est remplacé automatiquement)", async () => {
+      const id = tplRow(A, "Modèle avec galleryy", { sections: [{ type: "layout", children: [{ type: "container", children: [{ type: "galleryy", props: {} }] }] }] });
+      const d = json(await boss.get(`${TP}/detail.json?site=${A}&ref=mine:${id}`)).item;
+      assert.equal(d.blockers[0].code, "unknown_widget"); assert.equal(d.blockers[0].replacement, "gallery"); assert.match(d.blockers[0].message, /Élément proche disponible : « Galerie »/);
+      assert.match(JSON.stringify(d.blockers[0]), /réenregistrez le modèle/);
+      assert.equal(one("SELECT COUNT(*) n FROM mk_page_templates WHERE id = ?", id).n, 1, "le modèle d'origine est intact");
+    });
     test("contenu que la grammaire actuelle refuse (format ancien) : bloquant, cause nommée", async () => {
       const id = tplRow(A, "Modèle format ancien", { sections: [{ type: "ancien-carrousel", items: [] }] });
       const d = json(await boss.get(`${TP}/detail.json?site=${A}&ref=mine:${id}`)).item; assert.equal(d.compat.status, "blocked"); assert.match(d.blockers[0].message, /inconnu|incompatible/i);
