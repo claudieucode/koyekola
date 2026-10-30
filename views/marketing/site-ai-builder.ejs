@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= title %> · <%= site.name %> · KOLAKISA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <%- include("../partials/font-preload") %>
+  <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/kola-ui.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/ai-builder.css') %>">
+  <script src="<%= asset('/js/kb-motion.js') %>" defer></script>
+</head>
+<body class="aib-body">
+  <a class="skip-link" href="#aib-main">Aller à la zone de travail</a>
+  <div class="aib" id="aib" data-ready="0">
+    <header class="aib-top" id="aib-top" role="banner">
+      <a class="aib-logo" href="<%= siteBase %>" aria-label="Retour au site <%= site.name %>"><span class="aib-mark" aria-hidden="true">K</span><span class="aib-logo-t">Créateur IA</span></a>
+      <div class="aib-name"><span class="aib-site"><%= site.name %></span><span id="aib-project-name" class="aib-project"></span></div>
+      <div class="aib-save" id="aib-save" role="status" aria-live="polite"></div>
+      <div class="aib-progress" id="aib-progress" aria-live="polite"></div>
+      <div class="aib-actions">
+        <button type="button" class="aib-btn aib-icon" data-act="undo" id="aib-undo" disabled title="Annuler la dernière modification">Annuler</button>
+        <button type="button" class="aib-btn aib-icon" data-act="redo" id="aib-redo" disabled title="Rétablir">Rétablir</button>
+        <button type="button" class="aib-btn" data-act="go" data-step="preview">Prévisualiser</button>
+        <button type="button" class="aib-btn" data-act="save" id="aib-save-btn">Enregistrer</button>
+        <button type="button" class="aib-btn aib-primary" data-act="go" data-step="publish" id="aib-publish-btn" hidden>Publier</button>
+        <button type="button" class="aib-btn aib-icon" data-act="assist" id="aib-assist-btn" aria-pressed="false">Assistant</button>
+        <button type="button" class="aib-btn aib-icon" data-act="menu" aria-haspopup="menu" aria-expanded="false" id="aib-menu-btn">Projet ▾</button>
+        <div class="aib-menu" id="aib-menu" role="menu" hidden>
+          <button type="button" role="menuitem" data-act="rename">Renommer le projet</button>
+          <button type="button" role="menuitem" data-act="projects">Mes projets IA</button>
+          <a role="menuitem" href="<%= siteBase %>/assistant">Assistant de création du site</a>
+          <button type="button" role="menuitem" data-act="archive">Archiver ce projet</button>
+        </div>
+      </div>
+    </header>
+    <nav class="aib-side" id="aib-side" aria-label="Étapes du projet"></nav>
+    <main class="aib-main" id="aib-main" tabindex="-1"><div class="aib-loading">Chargement…</div></main>
+    <aside class="aib-assist" id="aib-assist" aria-label="Assistant IA"></aside>
+    <div class="aib-toasts" id="aib-toasts" role="alert" aria-live="assertive"></div>
+  </div>
+  <noscript><p class="aib-noscript">Le créateur de site IA a besoin de JavaScript.</p></noscript>
+  <script type="application/json" id="aib-boot"><%- JSON.stringify({ base, siteBase, siteId: site.id, siteName: site.name, projectId, perms }).replace(/</g, "\\u003c") %></script>
+  <script src="<%= asset('/js/ai-builder.js') %>" defer></script>
+</body>
+</html>
