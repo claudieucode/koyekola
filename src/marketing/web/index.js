@@ -77,6 +77,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
   admin.use(require("./siteModules")()); // R7 lot 6.0 : activation des modules par site (équipe seulement)
   admin.use(require("./pageGenerator")()); // Programme 21.4 : générateur de pages natives à partir d'un plan (brouillons uniquement)
+  admin.use(require("./contentGenerator")()); // Programme 21.6 : générateur de contenus (textes des sections natives, SEO, révisions, brouillon)
   admin.use(require("./siteWizard")()); // Programme 20.6 : assistant de création guidée d'un site (orchestre les services existants)
   admin.use(require("./siteDomains")()); // TITAN XXXII : domaines des sites (registre, vérification de propriété, DNS, HTTPS)
   admin.use(require("./contactRequests")()); // R7 lot 5 : demandes de rattachement de contacts entre sites — avant contactCore et admin.js (« /contacts/:id »)
