@@ -1,0 +1,27 @@
+/* Mises en page avancées (programme 22.3) : bleu marine de l'interface, panneaux stables, transitions discrètes. Les aperçus filaires sont dessinés à partir de la structure réelle des variantes. */
+.ly-form { display: grid; gap: 10px 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); } .ly-wide { grid-column: 1 / -1; }
+.ly-grid2 { display: grid; gap: 10px 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 8px; }
+.ly details > summary { cursor: pointer; font-weight: 600; color: #0b2a40; padding: 6px 0; }
+.ly-status { min-height: 22px; margin: 8px 0; font-size: 14px; } .ly-status[data-k="error"] { color: #b3261e; font-weight: 600; } .ly-status[data-k="ok"] { color: #1e7e34; }
+.ly-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0 10px; }
+.ly-seg { display: inline-flex; border: 1px solid #dbe4ec; border-radius: 8px; overflow: hidden; } .ly-seg button { border: 0; background: #fff; padding: 7px 12px; font: inherit; cursor: pointer; color: #5b6b78; }
+.ly-seg button[aria-pressed="true"] { background: #0b2a40; color: #fff; }
+.ly-chips { display: flex; flex-wrap: wrap; gap: 6px; } .ly-chips button { border: 1px solid #dbe4ec; background: #fff; border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 13px; cursor: pointer; color: #0b2a40; }
+.ly-chips button[aria-pressed="true"] { background: #0b2a40; color: #fff; border-color: #0b2a40; }
+.ly-gallery { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.ly-card { border: 1px solid #dbe4ec; border-radius: 10px; background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 8px; transition: border-color .15s; } .ly-card:hover { border-color: #0b2a40; } .ly-card[data-current="1"] { border-color: #0277b6; box-shadow: 0 0 0 1px #0277b6; }
+.ly-card h3 { margin: 0; font-size: 15px; color: #0b2a40; } .ly-meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ly-chip { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid #dbe4ec; background: #f3f7fa; color: #5b6b78; }
+.ly-chip[data-k="ok"] { color: #1e7e34; background: #eef8f0; border-color: #b9dcc0; } .ly-chip[data-k="warn"] { color: #8a5a00; background: #fdf6e3; border-color: #ecd9ac; } .ly-chip[data-k="info"] { color: #0b2a40; background: #e6f2fa; border-color: #bcd9ec; }
+.ly-wire { border: 1px dashed #b9c8d4; border-radius: 6px; padding: 6px; background: #f8fbfd; min-height: 90px; overflow: hidden; }
+.ly-wire .w { box-sizing: border-box; min-width: 0; border-radius: 3px; } .ly-wire .w-box { display: flex; flex-direction: column; gap: 3px; } .ly-wire .w-grid { display: grid; gap: 3px; } .ly-wire .w-row { display: flex; flex-direction: row; gap: 3px; flex-wrap: wrap; }
+.ly-wire .w-dark { background: #0b2a40; padding: 3px; } .ly-wire .w-primary { background: #0277b6; padding: 3px; } .ly-wire .w-surface { background: #eef3f7; padding: 3px; }
+.ly-wire .w-heading { height: 7px; background: #0b2a40; width: 60%; margin: 2px 0; } .ly-wire .w-heading.lv1 { height: 11px; width: 80%; } .ly-wire .w-text { height: 14px; background: repeating-linear-gradient(#c9d6e0 0 3px, transparent 3px 6px); }
+.ly-wire .w-image { background: #9db8cc; min-height: 34px; } .ly-wire .w-gallery { background: #9db8cc; min-height: 34px; } .ly-wire .w-button { height: 9px; width: 34%; border-radius: 99px; background: #0277b6; } .ly-wire .w-leaf { background: #d5e1ea; height: 10px; }
+.ly-wire .w-dark .w-heading, .ly-wire .w-primary .w-heading { background: #fff; } .ly-wire .w-dark .w-text, .ly-wire .w-primary .w-text { background: repeating-linear-gradient(#cfe0ee 0 3px, transparent 3px 6px); }
+.ly-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: auto; }
+.ly-compare { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 14px 0; } .ly-box { border: 1px solid #dbe4ec; border-radius: 10px; padding: 12px 14px; margin: 10px 0; background: #fff; } .ly-box h3 { margin: 0 0 6px; font-size: 15px; color: #0b2a40; }
+.ly button:focus-visible, .ly select:focus-visible, .ly input:focus-visible, .ly textarea:focus-visible, .ly summary:focus-visible { outline: 2px solid #0277b6; outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) { .ly-card { transition: none; } }
+@media (max-width: 720px) { .ly-gallery { grid-template-columns: 1fr; } }
+.ly [hidden] { display: none !important; }
