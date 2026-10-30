@@ -269,10 +269,7 @@ describe("console Mailchimp (navigateur)", { skip: SKIP }, () => {
   test("rapports : liste, détail par rubrique, comparaison, exports CSV", async () => {
     const a = fake.addCampaign({ settings: { title: "Rapport A", subject_line: "A" }, recipients: { list_id: remote.id } }), b = fake.addCampaign({ settings: { title: "Rapport B", subject_line: "B" }, recipients: { list_id: remote.id } });
     const rep = (c, open) => ({ id: c.id, campaign_title: c.settings.title, subject_line: c.settings.subject_line, send_time: c.send_time, emails_sent: 100, opens: { open_rate: open, unique_opens: open * 100, opens_total: 150 }, clicks: { click_rate: 0.1, unique_clicks: 10 }, bounces: { hard_bounces: 1, soft_bounces: 2 }, unsubscribed: 1, abuse_reports: 0, ecommerce: { total_revenue: 42 } });
-    // les rapports sont listés par /reports ; le faux serveur sert /reports/{id} : on prépare aussi la liste
     fake.setReport(a.id, rep(a, 0.3)); fake.setReport(b.id, rep(b, 0.6));
-    const origList = fake.state.reports;
-    await page.route("**/marketing/mailchimp/api/rapports?*", async (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, data: { reports: [rep(a, 0.3), rep(b, 0.6)], total_items: 2 } }) }));
     await tab("rapports");
     await panel().getByRole("button", { name: "Ouvrir le rapport de Rapport A" }).waitFor();
     const [dl] = await Promise.all([page.waitForEvent("download"), panel().getByRole("button", { name: "Exporter en CSV" }).first().click()]);
@@ -289,11 +286,9 @@ describe("console Mailchimp (navigateur)", { skip: SKIP }, () => {
       await panel().getByRole("button", { name, exact: true }).click();
       await page.waitForFunction(() => !document.querySelector("[data-mc-panel] .mk-mc-loading"));
     }
-    void origList;
   });
 
   test("webhooks : installation en un clic, événement reçu affiché en direct, détail de la charge, rejeu", async () => {
-    await page.unroute("**/marketing/mailchimp/api/rapports?*");
     await tab("webhooks");
     await panel().getByRole("button", { name: "Installer le webhook Kolakisa" }).click();
     await waitFlash(/Webhook installé/);

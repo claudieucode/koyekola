@@ -13,7 +13,7 @@ const transactional = require("../mailchimp/transactional");
 const { OPS } = require("../mailchimp/catalog");
 const operations = require("../mailchimp/operations");
 
-const HTTP = { invalid_request: 400, invalid_field: 400, key_format: 400, too_large: 413, confirm_required: 409, not_connected: 409, already_linked: 409, not_found: 404, unknown_operation: 404, rate_limited: 429,
+const HTTP = { already_running: 409, config: 500, invalid_request: 400, invalid_field: 400, key_format: 400, too_large: 413, confirm_required: 409, not_connected: 409, already_linked: 409, not_found: 404, unknown_operation: 404, rate_limited: 429,
   auth_invalid: 422, forbidden: 422, member_exists: 422, compliance_state: 422, quota: 422, recipient_blocked: 422, webhook_url: 422, encryption_missing: 500, timeout: 504, network: 502, server_error: 502, unknown: 502 };
 
 function fail(res, error) {
@@ -109,3 +109,4 @@ module.exports = ({ db }) => {
   router.get(`${P}/catalogue`, api(() => OPS.map(({ id, group, method, route, summary, priority, confirm }) => ({ id, group, method, route, summary, priority, confirm })) ));
   return router;
 };
+module.exports.HTTP = HTTP;

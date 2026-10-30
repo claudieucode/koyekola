@@ -425,6 +425,19 @@ describe("intégration Mailchimp (routes)", () => {
   });
 });
 
+describe("correspondance des codes d'erreur", () => {
+  test("tout code d'erreur produit par le module Mailchimp a un statut HTTP explicite (aucun repli silencieux sur 400)", () => {
+    const fs = require("node:fs"), path = require("node:path");
+    const dir = path.join(__dirname, "..", "src", "marketing", "mailchimp");
+    const text = fs.readdirSync(dir).map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n");
+    const codes = new Set([...text.matchAll(/new (?:MailchimpError|MarketingError)\("([a-z_]+)"/g)].map((m) => m[1]));
+    const { HTTP } = require("../src/marketing/web/mailchimp");
+    const missing = [...codes].filter((c) => !Object.hasOwn(HTTP, c));
+    assert.ok(codes.size >= 20, `${codes.size} codes trouvés`);
+    assert.deepEqual(missing, []);
+  });
+});
+
 describe("synchronisation automatique (minuteur)", () => {
   let fake, srv, boss;
   const json = async (client, method, url, body) => { const r = await client.request(url, { method, json: body, headers: { "X-Requested-With": "fetch" } }); return { ...r, data: JSON.parse(r.text) }; };

@@ -8,7 +8,7 @@ const crypto = require("node:crypto");
 const md5 = (s) => crypto.createHash("md5").update(String(s).trim().toLowerCase()).digest("hex");
 
 async function createFakeMailchimp({ key = "0123456789abcdef0123456789abcdef-us21", mandrillKey = "md-test-key-1234567890" } = {}) {
-  const state = { lists: new Map(), members: new Map(), campaigns: new Map(), webhooks: new Map(), reports: new Map(), templates: new Map(), seq: 1 };
+  const state = { lists: new Map(), members: new Map(), campaigns: new Map(), webhooks: new Map(), reports: new Map(), templates: new Map(), coll: {}, seq: 1 };
   const requests = [];
   const faults = [];
   let inflight = 0, maxInflight = 0, delayMs = 0;
@@ -135,9 +135,25 @@ async function createFakeMailchimp({ key = "0123456789abcdef0123456789abcdef-us2
       if (p === "/campaigns" && req.method === "POST") { const c = { id: newId(), type: body.type, status: "save", recipients: body.recipients || {}, settings: body.settings || {}, emails_sent: 0 }; state.campaigns.set(c.id, c); return json(res, 200, c); }
       if ((x = /^\/campaigns\/([a-z0-9]+)$/.exec(p))) { const c = state.campaigns.get(x[1]); if (!c) return notFound(res); if (req.method === "GET") return json(res, 200, c); if (req.method === "PATCH") { Object.assign(c, body); return json(res, 200, c); } if (req.method === "DELETE") { state.campaigns.delete(x[1]); return json(res, 204); } }
       if ((x = /^\/campaigns\/([a-z0-9]+)\/actions\/send$/.exec(p))) { const c = state.campaigns.get(x[1]); if (!c) return notFound(res); c.status = "sent"; c.send_time = new Date().toISOString(); return json(res, 204); }
+      if (p === "/reports" && req.method === "GET") { if (q.get("sort_field")) return problem(res, 400, "Invalid Resource", "The resource submitted could not be validated.", [{ field: "sort_field", message: "Unknown parameter" }]); return json(res, 200, page([...state.reports.values()], "reports", q)); }
       if ((x = /^\/reports\/([a-z0-9]+)$/.exec(p))) { const r = state.reports.get(x[1]); return r ? json(res, 200, r) : notFound(res); }
       if (p === "/templates" && req.method === "POST") { const t = { id: state.seq++, type: "user", active: true, ...body }; state.templates.set(t.id, t); return json(res, 200, t); }
       if (p === "/templates" && req.method === "GET") return json(res, 200, page([...state.templates.values()], "templates", q));
+      if ((x = /^\/lists\/([0-9a-f]{10})\/segments\/(\d+)\/members$/.exec(p))) {
+        const seg = (state.coll[`/lists/${x[1]}/segments`] || []).find((g) => String(g.id) === x[2]);
+        if (!seg) return notFound(res);
+        const all = [...(state.members.get(x[1]) || new Map()).values()];
+        let items;
+        if (seg.static_segment) items = all.filter((m) => seg.static_segment.includes(m.email_address));
+        else { const c = ((seg.options || {}).conditions || [])[0]; items = c ? all.filter((m) => (m.merge_fields || {})[c.field] === c.value) : all; }
+        return json(res, 200, page(items, "members", q));
+      }
+      if ((x = /^\/lists\/([0-9a-f]{10})\/segments$/.exec(p))) {
+        if (!state.lists.has(x[1])) return notFound(res);
+        const segs = (state.coll[p] = state.coll[p] || []);
+        if (req.method === "POST") { const seg = { id: 1000 + segs.length, type: body.static_segment ? "static" : "saved", member_count: 0, ...body }; segs.push(seg); return json(res, 200, seg); }
+        return json(res, 200, { segments: q.get("type") ? segs.filter((g) => g.type === q.get("type")) : segs, total_items: segs.length });
+      }
       if ((x = /^\/campaigns\/([a-z0-9]+)\/send-checklist$/.exec(p))) {
         const c = state.campaigns.get(x[1]); if (!c) return notFound(res);
         return c.notReady ? json(res, 200, { is_ready: false, items: [{ type: "error", id: 1, heading: "Contenu", details: "Le contenu est vide." }] }) : json(res, 200, { is_ready: true, items: [{ type: "success", id: 1, heading: "Liste", details: "" }] });
@@ -161,6 +177,25 @@ async function createFakeMailchimp({ key = "0123456789abcdef0123456789abcdef-us2
         if (req.method === "POST") { const f = { merge_id: l.merge_fields.length, tag: body.tag || String(body.name).toUpperCase().slice(0, 10), ...body }; l.merge_fields.push(f); return json(res, 200, f); }
         return json(res, 200, { merge_fields: l.merge_fields, total_items: l.merge_fields.length });
       }
+      // Collections génériques (automatisations, boutiques et leurs produits / commandes / clients, pages de destination, domaines, applications) : liste, création, lecture, modification, suppression
+      const COLL = { automations: "automations", stores: "stores", products: "products", orders: "orders", customers: "customers", "landing-pages": "landing_pages", "verified-domains": "domains", "authorized-apps": "apps", variants: "variants" };
+      const cm = /^((?:\/ecommerce\/stores(?:\/[^/]+\/(?:products(?:\/[^/]+\/variants)?|orders|customers))?)|\/automations|\/landing-pages|\/verified-domains|\/authorized-apps)(?:\/([^/]+))?$/.exec(p);
+      if (cm) {
+        const base = cm[1], id = cm[2], key = COLL[base.split("/").pop()];
+        const list = (state.coll[base] = state.coll[base] || []);
+        if (!id) {
+          if (req.method === "GET") return json(res, 200, page(list, key, q));
+          if (req.method === "POST") { const item = { id: body.id || newId(), ...body }; if (base === "/verified-domains") { item.domain = String(body.verification_email || "").split("@")[1]; item.verified = false; } list.push(item); return json(res, 200, item); }
+        } else {
+          const at = list.findIndex((i) => String(i.id) === id || i.domain === id);
+          if (at < 0) return notFound(res);
+          if (req.method === "GET") return json(res, 200, list[at]);
+          if (req.method === "PATCH" || req.method === "PUT") { Object.assign(list[at], body); return json(res, 200, list[at]); }
+          if (req.method === "DELETE") { list.splice(at, 1); return json(res, 204); }
+        }
+      }
+      if ((x = /^\/automations\/([^/]+)\/emails$/.exec(p))) return json(res, 200, { emails: [{ id: "em1", settings: { title: "Bienvenue", subject_line: "Bienvenue chez nous" }, status: "paused", delay: { amount: 0, type: "now", direction: "after", action: "signup" }, emails_sent: 12, report_summary: { open_rate: 0.5, click_rate: 0.1 } }], total_items: 1 });
+      if ((x = /^\/verified-domains\/([^/]+)\/actions\/verify$/.exec(p))) { const d = (state.coll["/verified-domains"] || []).find((i) => i.domain === x[1]); if (!d) return notFound(res); if (body.code !== "123456") return problem(res, 400, "Invalid Resource", "Code invalide", [{ field: "code", message: "Wrong code" }]); d.verified = true; return json(res, 200, d); }
       if (p === "/verified-domains") return json(res, 200, { domains: [{ domain: "exemple.fr", verified: true }], total_items: 1 });
       if (p === "/automations") return json(res, 200, { automations: [], total_items: 0 });
       const actionOrDelete = req.method === "DELETE" || /\/actions\//.test(p); // repli : l'opération existe dans le catalogue mais n'est pas simulée finement

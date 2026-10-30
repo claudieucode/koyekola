@@ -140,6 +140,8 @@ function deleteContact(ctx, id, { suppress = false } = {}) {
     // Événements rattachés à l'adresse seule (ex. commentaires d'un invité) : l'adresse et les données associées sont retirées aussi
     for (const address of [contact.email, ...ctx.db.prepare("SELECT email FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id).map((r) => r.email)]) {
       ctx.db.prepare("UPDATE mk_events SET email = NULL, metadata = '{}' WHERE organization_id = ? AND email = ?").run(ctx.organizationId, address);
+      // Webhooks reçus de Mailchimp (charge complète conservée 90 jours) : l'événement reste dans le journal, sans identité
+      ctx.db.prepare("UPDATE mk_mc_events SET email = '', payload = '{}' WHERE organization_id = ? AND email = ?").run(ctx.organizationId, address);
     }
     if (suppress) {
       const emails = [contact.email, ...ctx.db.prepare("SELECT email FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id).map((r) => r.email)];

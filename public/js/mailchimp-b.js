@@ -176,12 +176,19 @@
         var seg = select([["", "Toute l'audience"]], d.segmentId, { name: "segmentId" });
         body.appendChild(field("Audience", aud)); body.appendChild(field("Segment ou tag (facultatif)", seg));
         var info = h("p", { class: "mk-mc-sub", "aria-live": "polite" }); body.appendChild(info);
+        var countOf = function (opt) { var m = opt && opt.textContent.match(/\((\d[\d\s\u202f\u00a0]*)\)$/); return m ? Number(m[1].replace(/\D/g, "")) : 0; };
+        var updateInfo = function () {
+          var a = audiences.filter(function (z) { return z.id === aud.value; })[0];
+          info.textContent = "Destinataires estimés : " + fmtNum(seg.value ? countOf(seg.options[seg.selectedIndex]) : (a && a.stats && a.stats.member_count)) + " (abonnés uniquement).";
+        };
         var loadSeg = async function () {
           clear(seg); seg.appendChild(h("option", { value: "", text: "Toute l'audience" }));
-          try { var s = (await api("GET", "/audiences/" + aud.value + "/segments?count=100")).segments || []; s.forEach(function (x) { var o = h("option", { value: x.id, text: (x.type === "static" ? "Tag : " : "Segment : ") + x.name + " (" + fmtNum(x.member_count) + ")" }); if (String(x.id) === String(d.segmentId)) o.selected = true; seg.appendChild(o); }); } catch (e) { info.textContent = "Segments indisponibles : " + e.message; }
-          var a = audiences.filter(function (z) { return z.id === aud.value; })[0]; info.textContent = "Destinataires estimés : " + fmtNum(seg.value ? (function () { var o = seg.options[seg.selectedIndex].text.match(/\((\d[\d\s  ]*)\)$/); return o ? Number(o[1].replace(/\D/g, "")) : 0; })() : (a && a.stats && a.stats.member_count)) + " (abonnés uniquement).";
+          try { var found = (await api("GET", "/audiences/" + aud.value + "/segments?count=100")).segments || []; found.forEach(function (x) { var o = h("option", { value: x.id, text: (x.type === "static" ? "Tag : " : "Segment : ") + x.name + " (" + fmtNum(x.member_count) + ")" }); if (String(x.id) === String(d.segmentId)) o.selected = true; seg.appendChild(o); }); } catch (e) { info.textContent = "Segments indisponibles : " + e.message; return; }
+          updateInfo();
         };
-        aud.addEventListener("change", function () { d.segmentId = ""; loadSeg(); }); seg.addEventListener("change", loadSeg); loadSeg();
+        aud.addEventListener("change", function () { d.listId = aud.value; d.segmentId = ""; loadSeg(); });
+        seg.addEventListener("change", function () { d.segmentId = seg.value; updateInfo(); });
+        loadSeg();
       }
       if (d.step === 3) {
         defaults();
@@ -373,8 +380,8 @@
     show("resume");
   }
   M.registerTab({ id: "rapports", label: "Rapports", needsConnection: true, render: async function (el) {
-    var d = await api("GET", "/rapports?count=50&sort_field=send_time&sort_dir=DESC");
-    var rows = d.reports || [];
+    var d = await api("GET", "/rapports?count=50");
+    var rows = (d.reports || []).slice().sort(function (a, b) { return String(b.send_time || "").localeCompare(String(a.send_time || "")); });
     function list() {
       clear(el);
       var tools = h("div", { class: "mk-mc-actions" });

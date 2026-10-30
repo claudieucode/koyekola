@@ -212,7 +212,7 @@
   M.simpleList = simpleList; M.del = del;
   async function audienceDetail(el, a, back) {
     M.clear(el);
-    el.appendChild(h("div", { class: "mk-mc-actions" }, button("← Retour aux audiences", back)));
+    el.appendChild(h("div", { class: "mk-mc-actions" }, button("← Retour aux audiences", back), button("Voir les contacts de cette audience", function () { M.state.contactsList = a.id; M.selectTab("contacts", true); })));
     el.appendChild(h("h3", { text: a.name }));
     var st = a.stats || {};
     var tiles = h("div", { class: "mk-mc-tiles" });
@@ -310,10 +310,17 @@
   M.registerTab({ id: "contacts", label: "Contacts", needsConnection: true, render: async function (el) {
     var audiences = await M.loadAudiences();
     if (!audiences.length) { el.appendChild(M.empty("Aucune audience : créez-en une dans l'onglet « Audiences ».")); return; }
-    var view = { list: audiences[0].id, status: "subscribed", offset: 0, count: 25, tag: "", selected: {} };
+    var preset = M.state.contactsList && audiences.some(function (a) { return a.id === M.state.contactsList; }) ? M.state.contactsList : audiences[0].id;
+    M.state.contactsList = null;
+    var view = { list: preset, status: "subscribed", offset: 0, count: 25, segment: "", selected: {} };
     var audSel = select(audiences.map(function (a) { return [a.id, a.name]; }), view.list), stSel = select(STATUS_OPTS, view.status);
+    var segSel = select([["", "Toute l'audience"]], "");
     var search = h("input", { type: "search", placeholder: "Adresse e-mail exacte", "aria-label": "Rechercher un contact par adresse e-mail" });
-    var bar = h("div", { class: "mk-mc-bar2" }, field("Audience", audSel), field("Statut", stSel), field("Rechercher", search));
+    var bar = h("div", { class: "mk-mc-bar2" }, field("Audience", audSel), field("Segment ou tag", segSel), field("Statut", stSel), field("Rechercher", search));
+    async function loadSegments() {
+      M.clear(segSel); segSel.appendChild(h("option", { value: "", text: "Toute l'audience" })); view.segment = "";
+      try { ((await api("GET", "/audiences/" + view.list + "/segments?count=100")).segments || []).forEach(function (g) { segSel.appendChild(h("option", { value: g.id, text: (g.type === "static" ? "Tag : " : "Segment : ") + g.name })); }); } catch (e) { /* filtre indisponible : l'audience entière reste listée */ }
+    }
     var bulk = h("div", { class: "mk-mc-bulk", hidden: true, role: "region", "aria-label": "Actions groupées" });
     var out = h("div", { "aria-live": "polite" });
     el.appendChild(bar);
@@ -335,6 +342,15 @@
       };
       var path = function (e) { return "/audiences/" + view.list + "/membres/" + enc(e); };
       bulk.appendChild(button("Désabonner", function () { run("Désabonner " + n + " contact(s) ?", "Ils ne recevront plus vos e-mails. La synchronisation répercutera ce choix chez Kolakisa.", "Désabonner", function (e) { return api("PATCH", path(e), { status: "unsubscribed" }); }); }));
+      bulk.appendChild(button("Abonner", function (ev) {
+        M.formDialog({ title: "Abonner " + n + " contact(s)", intro: "Un contact désabonné ou supprimé ne peut pas être réabonné par l'API : il sera signalé en échec.", fields: [{ name: "ok", label: "Je certifie que ces personnes ont donné leur consentement à recevoir mes e-mails", type: "checkbox" }], submitLabel: "Abonner", returnFocus: ev.currentTarget,
+          onSubmit: async function (v) {
+            if (!v.ok) throw new Error("Cochez la case de consentement pour abonner ces personnes.");
+            var emails = selectedEmails(), okCount = 0, errs = [];
+            for (var i = 0; i < emails.length; i++) { try { await api("PATCH", path(emails[i]), { status: "subscribed" }); okCount++; } catch (e) { errs.push(emails[i] + " : " + e.message); } }
+            flash(okCount + " contact(s) abonné(s)." + (errs.length ? " " + errs.length + " échec(s) : " + errs.slice(0, 3).join(" ; ") : ""), errs.length ? "error" : "ok"); view.selected = {}; load();
+          } });
+      }));
       bulk.appendChild(button("Archiver", function () { run("Archiver " + n + " contact(s) ?", "Ils quittent l'audience (réversible par réabonnement volontaire).", "Archiver", function (e) { return api("DELETE", path(e) + "?confirm=1"); }, true); }, { danger: true }));
       var tag = h("input", { type: "text", maxlength: 60, "aria-label": "Nom du tag", placeholder: "Nom du tag" });
       bulk.appendChild(tag);
@@ -344,7 +360,9 @@
     async function load() {
       M.clear(out); out.appendChild(h("p", { class: "mk-mc-loading", text: "Chargement…" }));
       try {
-        var d = await api("GET", "/audiences/" + view.list + "/membres" + q({ status: view.status, count: view.count, offset: view.offset, sort_field: "last_changed", sort_dir: "DESC" }));
+        var d = view.segment
+          ? await api("GET", "/audiences/" + view.list + "/segments/" + enc(view.segment) + "/membres" + q({ count: view.count, offset: view.offset, include_unsubscribed: view.status === "unsubscribed" ? "true" : "", include_cleaned: view.status === "cleaned" ? "true" : "" }))
+          : await api("GET", "/audiences/" + view.list + "/membres" + q({ status: view.status, count: view.count, offset: view.offset, sort_field: "last_changed", sort_dir: "DESC" }));
         rowsNow = d.members || [];
         M.clear(out);
         if (!rowsNow.length) { out.appendChild(M.empty("Aucun contact pour ce filtre.")); renderBulk(); return; }
@@ -358,7 +376,8 @@
         renderBulk();
       } catch (e) { M.clear(out); out.appendChild(h("p", { class: "mk-mc-note is-bad", role: "alert", text: e.message })); }
     }
-    audSel.addEventListener("change", function () { view.list = audSel.value; view.offset = 0; view.selected = {}; load(); });
+    audSel.addEventListener("change", function () { view.list = audSel.value; view.offset = 0; view.selected = {}; loadSegments().then(load); });
+    segSel.addEventListener("change", function () { view.segment = segSel.value; view.offset = 0; view.selected = {}; load(); });
     stSel.addEventListener("change", function () { view.status = stSel.value; view.offset = 0; view.selected = {}; load(); });
     search.addEventListener("keydown", async function (ev) {
       if (ev.key !== "Enter") return;
@@ -372,7 +391,7 @@
         { name: "consent", label: "Cette personne a donné son consentement à recevoir mes e-mails", type: "checkbox", hint: "Sans cette case, Mailchimp lui envoie un e-mail de confirmation." }], submitLabel: "Ajouter", returnFocus: opener,
         onSubmit: async function (v) { await api("POST", "/audiences/" + view.list + "/membres", { email_address: v.email, status: v.consent ? "subscribed" : "pending", merge_fields: { FNAME: v.fname, LNAME: v.lname }, tags: v.tags ? v.tags.split(",").map(function (t) { return t.trim(); }).filter(Boolean) : [] }); flash("Contact ajouté.", "ok"); load(); } });
     }
-    load();
+    loadSegments().then(function () { audSel.value = view.list; load(); });
   } });
 
   function contactCard(listId, email, opener, reload) {

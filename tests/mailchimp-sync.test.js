@@ -397,6 +397,19 @@ describe("synchronisation Mailchimp", () => {
       assert.equal(inbound.list(ctxB).length, 0);
     });
 
+    test("droit à l'effacement : effacer le contact retire l'adresse et la charge des événements Mailchimp reçus, et sa correspondance", async () => {
+      const lea = consentedContact(ctx, "lea@exemple.fr");
+      await inbound.receive(ctx, hook("profile", { email: "lea@exemple.fr", merges: { FNAME: "Léa" } }, { fired_at: "e1" }));
+      await inbound.receive(ctx, hook("subscribe", { email: "autre@exemple.fr" }, { fired_at: "e2" }));
+      m.db.prepare("INSERT INTO mk_mc_members (organization_id, audience_remote_id, contact_id, subscriber_hash, mc_status) VALUES (1, ?, ?, 'h', 'subscribed')").run(remote.id, lea.id);
+      assert.ok(one("SELECT 1 AS x FROM mk_mc_events WHERE email = 'lea@exemple.fr'"));
+      assert.equal(contacts.deleteContact(ctx, lea.id), true);
+      assert.equal(one("SELECT COUNT(*) AS n FROM mk_mc_events WHERE email = 'lea@exemple.fr'").n, 0);
+      assert.doesNotMatch(JSON.stringify(all("SELECT payload FROM mk_mc_events")), /lea@exemple\.fr/);
+      assert.equal(one("SELECT COUNT(*) AS n FROM mk_mc_members WHERE contact_id = ?", lea.id).n, 0);
+      assert.ok(one("SELECT 1 AS x FROM mk_mc_events WHERE email = 'autre@exemple.fr'"), "les autres personnes ne sont pas touchées");
+    });
+
     test("journal : liste filtrable, charge complète, lecture incrémentale (after)", async () => {
       await inbound.receive(ctx, hook("subscribe", { email: "a@exemple.fr" }, { fired_at: "t1" }));
       await inbound.receive(ctx, hook("cleaned", { email: "b@exemple.fr", reason: "hard" }, { fired_at: "t2" }));
