@@ -308,9 +308,11 @@ function state(ctx, id, { can = () => true } = {}) {
 }
 
 // ───────── Publication groupée (système natif) ─────────
-function publishAll(ctx, id, { can = () => true } = {}) {
+function publishAll(ctx, id, { can = () => true, confirm = false } = {}) {
   if (!can("pages.publish")) throw err("forbidden", "Vous n'avez pas la permission de publier des pages.");
-  const s = state(ctx, id, { can });
+  const s = state(ctx, id, { can }); // accès au projet vérifié d'abord (autre site : « introuvable »)
+  // Publication = action explicite : la confirmation est exigée par le SERVICE (pas seulement par la boîte de dialogue du navigateur)
+  if (confirm !== true) throw err("confirm_required", "La publication doit être confirmée explicitement.");
   if (s.blockers.length) throw err("preflight_failed", `Publication impossible : ${s.blockers.join(" ")}`);
   const todo = s.pages.filter((p) => p.pageId && p.pageStatus !== "published");
   if (!todo.length) throw err("nothing_to_publish", "Aucune page à publier.");

@@ -1,6 +1,6 @@
 /* Assistant IA — création de site (Programme 21.8). Bleu marine, minimaliste, structure STABLE : la grille ne change pas d'une étape à l'autre,
    les marqueurs de sélection sont fins (pas de gros cadre), les animations discrètes et désactivées si l'utilisateur le demande. */
-.aib, .aibh { --n: #0b2a40; --n-deep: #06192a; --n-soft: #e7eef4; --act: #0277b6; --ok: #0e7490; --ok-bg: #e3f3f6; --warn: #8a5a00; --warn-bg: #fff4d6; --bad: #c4161f; --bad-bg: #fdecee; --rule: #dde6ed; --ink: #0f1f33; --ink2: #44596b; --canvas: #f4f8fb; --r: 8px; }
+.aib, .aibh { --n: #0b2a40; --n-deep: #06192a; --n-soft: #e7eef4; --act: #0277b6; --ok: #0e7490; --ok-bg: #e3f3f6; --warn: #8a5a00; --warn-bg: #fff4d6; --bad: #c4161f; --bad-bg: #fdeeea; --rule: #dde6ed; --ink: #0f1f33; --ink2: #44596b; --canvas: #f4f8fb; --r: 8px; }
 .aib { margin: 0; background: var(--canvas); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; height: 100vh; display: grid; grid-template-rows: 56px auto minmax(0, 1fr); overflow: hidden; }
 .aib *, .aibh * { box-sizing: border-box; }
 .aib [hidden], .aibh [hidden] { display: none !important; }
