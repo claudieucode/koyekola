@@ -36,10 +36,11 @@ describe("performance des moteurs (mesures réelles, machine d'essai chargée)",
     const m = freshMarketing(), A = m.ctx(1), sid = pages.createSite(A, { name: "Perf médias" }).id, media = require("../src/marketing/media");
     let s = t0(); for (let i = 0; i < 300; i += 1) media.saveUpload({ ...A, siteFilter: sid }, { buffer: png.placeholder(24, 16, `m${i}`), originalName: `img-${i}.png`, declaredType: "image/png", allow: ["image"], siteId: sid });
     perf("enregistrement de 300 images (type réel, empreinte, fichier)", ms(s));
-    for (let i = 0; i < 300; i += 3) m.db.prepare("INSERT OR IGNORE INTO mk_aimedia_meta (media_id, organization_id, site_id, source, tags) VALUES (?, 1, ?, ?, ?)").run(i + 1, sid, i % 2 ? "ai" : "user", JSON.stringify(["façade", `t${i}`]));
     require("../src/aiMedia/store").ensureSchema(m.db);
+    for (let i = 0; i < 300; i += 3) m.db.prepare("INSERT OR IGNORE INTO mk_aimedia_meta (media_id, organization_id, site_id, source, tags) VALUES (?, 1, ?, ?, ?)").run(i + 1, sid, i % 2 ? "ai" : "user", JSON.stringify(["façade", `t${i}`]));
     s = t0(); const all = am.library(A, sid, {}); const tList = ms(s); s = t0(); const ai = am.library(A, sid, { ai: true, q: "façade" }); const tFilter = ms(s);
-    perf("liste (200 max)", tList); perf("filtre IA + recherche", tFilter); assert.ok(all.length >= 100 && tList < 5000 && tFilter < 5000);
+    perf("liste (page de 60)", tList); perf("filtre IA + recherche", tFilter); assert.equal(all.length, 60, "page par défaut bornée"); assert.ok(tList < 5000 && tFilter < 5000);
+    s = t0(); const big = am.library(A, sid, { limit: 200 }); perf(`liste de ${big.length} images`, ms(s)); assert.ok(big.length >= 100);
     s = t0(); const unused = am.library(A, sid, { unused: true, limit: 60 }); perf("images inutilisées (60 premières)", ms(s)); assert.ok(Array.isArray(unused));
   });
   test("besoins visuels sur 12 pages, projet avec un historique de 500 tâches/opérations : lecture de l'état", async () => {
