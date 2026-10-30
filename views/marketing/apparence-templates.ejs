@@ -1,22 +1,38 @@
 <%#
-  KOLAKISA CMS → Apparence → Templates : bibliothèque de modèles d'un site (packs de site, gabarits de pages, « Mes modèles »). Les données (modèles, historique, droits) sont dans le bloc JSON
-  ci-dessous ; public/js/cms-templates.js construit l'écran. L'importation crée de vraies pages, un menu et un brouillon de styles, par le serveur, sans rien remplacer.
+  KOLAKISA CMS → Apparence → Templates : bibliothèque professionnelle de modèles d'un site (programme 20.4) — sites complets, pages, sections, composants, modèles du Theme Builder, « Mes modèles ».
+  Les données de départ (première page de résultats, historique, droits) sont dans le bloc JSON ci-dessous ; public/js/cms-templates.js construit l'écran et interroge catalogue.json
+  (recherche, filtres, tri, pagination côté serveur). L'importation crée de vrais objets du site (pages en brouillon, sections, composants…) par le serveur, sans rien remplacer.
 %><%- include("partials/top", { title, active }) %>
 <div class="mk-pt mk-tp" data-tp-root>
   <header class="mk-pt-head">
-    <div class="mk-head-main"><h1>Templates</h1><p class="mk-head-sub">Des modèles de pages et de sites complets pour <strong><%= T.name %></strong>. Un import crée de vraies pages modifiables dans le Page Builder ; il ne remplace ni ne supprime rien de ce qui existe, et rien n'est publié.</p></div>
+    <div class="mk-head-main"><h1>Templates</h1><p class="mk-head-sub">La bibliothèque de modèles de Kolakisa pour <strong><%= T.name %></strong> : sites complets, pages, sections, composants et modèles du Theme Builder. Un import crée de vrais objets modifiables dans le Page Builder ; il ne remplace ni ne supprime rien de ce qui existe, et rien n'est publié.</p></div>
   </header>
   <div class="mk-wd-banner" data-tp-banner hidden role="alert"><span data-tp-banner-text></span></div>
   <p class="mk-wd-loading" data-tp-loading>Chargement de la bibliothèque…</p>
   <div data-tp-main hidden>
     <div class="mk-pt-tools">
       <div class="mk-pt-filters" role="tablist" aria-label="Type de modèle" data-tp-sources></div>
-      <label class="sr-only" for="tp-search">Rechercher un modèle</label><input id="tp-search" type="search" placeholder="Rechercher un modèle…" autocomplete="off" data-tp-search>
-      <label class="sr-only" for="tp-cat">Catégorie</label><select id="tp-cat" data-tp-cat></select>
+      <label class="sr-only" for="tp-search">Rechercher un modèle</label><input id="tp-search" type="search" placeholder="Rechercher (nom, secteur, mot-clé…)" autocomplete="off" maxlength="120" data-tp-search>
+    </div>
+    <div class="mk-tl-filters" data-tp-filters role="group" aria-label="Filtres">
+      <label class="mk-tl-field"><span>Secteur d'activité</span><select data-tp-family></select></label>
+      <label class="mk-tl-field"><span>Spécialité</span><select data-tp-sector></select></label>
+      <label class="mk-tl-field"><span>Catégorie</span><select id="tp-cat" data-tp-cat></select></label>
+      <label class="mk-tl-field"><span>Type de site</span><select data-tp-site-type></select></label>
+      <label class="mk-tl-field"><span>Compatibilité</span><select data-tp-compat><option value="">Toutes</option><option value="ok">Compatible</option><option value="warn">À vérifier</option><option value="blocked">Incompatible</option></select></label>
+      <label class="mk-tl-field"><span>Trier par</span><select data-tp-sort></select></label>
+      <button type="button" class="mk-wd-btn" data-tp-reset hidden>Réinitialiser les filtres</button>
+    </div>
+    <div class="mk-tl-own" data-tp-own hidden>
+      <button type="button" class="mk-wd-btn mk-wd-btn--primary" data-tp-save-open>Enregistrer un modèle…</button>
+      <label class="mk-wd-btn mk-tl-file">Importer un fichier de modèle…<input type="file" accept="application/json,.json" data-tp-file class="sr-only"></label>
+      <button type="button" class="mk-wd-btn" data-tp-sectors-open hidden>Secteurs personnalisés…</button>
     </div>
     <p class="field-hint" data-tp-count role="status" aria-live="polite"></p>
-    <ul class="mk-pt-grid" data-tp-grid aria-label="Modèles"></ul>
+    <div class="mk-wd-banner" data-tp-error hidden role="alert"><span data-tp-error-text></span> <button type="button" class="mk-wd-btn" data-tp-retry>Réessayer</button></div>
+    <ul class="mk-pt-grid" data-tp-grid aria-label="Modèles" aria-busy="false"></ul>
     <p class="mk-pt-empty" data-tp-empty hidden></p>
+    <p class="mk-tl-more" data-tp-more-wrap hidden><button type="button" class="mk-wd-btn" data-tp-more>Afficher plus de modèles</button></p>
     <section class="mk-tp-history" data-tp-history hidden aria-labelledby="tp-hist-title"><h2 id="tp-hist-title">Imports récents</h2><ul data-tp-history-list></ul></section>
   </div>
   <p class="sr-only" role="status" aria-live="assertive" data-tp-live></p>
@@ -24,30 +40,105 @@
   <dialog class="mk-dialog mk-modal mk-pt-dialog mk-pt-dialog--wide" data-tp-dlg-preview aria-labelledby="tp-prev-title">
     <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-prev-title" data-tp-prev-title>Aperçu</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
     <div class="mk-dialog-body">
+      <p class="field-hint">Aperçu avec les styles de ce site. Ce n'est pas une page publiée : rien n'est créé tant que vous n'importez pas le modèle.</p>
       <div class="mk-tp-prevtools"><div class="mk-st-tabs mk-st-tabs--small" role="tablist" aria-label="Pages du modèle" data-tp-prev-tabs></div>
         <div class="mk-st-devices" role="group" aria-label="Appareil" data-tp-devices><button type="button" aria-pressed="true" data-tp-device="desktop">Ordinateur</button><button type="button" aria-pressed="false" data-tp-device="tablet">Tablette</button><button type="button" aria-pressed="false" data-tp-device="mobile">Mobile</button></div></div>
       <div class="mk-pt-prevwrap" data-tp-prevwrap><iframe title="Aperçu du modèle" data-tp-prev-frame referrerpolicy="same-origin"></iframe></div>
     </div>
-    <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Fermer</button><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-tp-prev-import hidden>Importer ce modèle…</button></div>
+    <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Fermer</button><button type="button" class="mk-wd-btn" data-tp-prev-detail>Voir les détails</button><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-tp-prev-import hidden>Utiliser ce modèle…</button></div>
   </dialog>
+
+  <dialog class="mk-dialog mk-modal mk-pt-dialog mk-pt-dialog--wide" data-tp-dlg-detail aria-labelledby="tp-det-title">
+    <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-det-title" data-tp-det-title>Détails</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
+    <div class="mk-dialog-body mk-tl-detail" data-tp-det-body></div>
+    <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Fermer</button><span data-tp-det-own></span><button type="button" class="mk-wd-btn mk-wd-btn--primary" data-tp-det-import hidden>Utiliser ce modèle…</button></div>
+  </dialog>
+
   <dialog class="mk-dialog mk-modal mk-pt-dialog" data-tp-dlg-import aria-labelledby="tp-imp-title">
     <form method="dialog" data-tp-form-import>
       <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-imp-title" data-tp-imp-title>Importer</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
       <div class="mk-dialog-body mk-pt-form">
         <p class="field-hint" data-tp-imp-what></p>
         <p class="mk-wd-banner" data-tp-imp-warn hidden role="status"></p>
-        <div data-tp-imp-single class="field-group" hidden><label for="tp-imp-name">Nom de la page</label><input id="tp-imp-name" type="text" maxlength="110" autocomplete="off" data-tp-imp-name></div>
+        <div data-tp-imp-single class="field-group" hidden><label for="tp-imp-name" data-tp-imp-name-label>Nom de la page</label><input id="tp-imp-name" type="text" maxlength="110" autocomplete="off" data-tp-imp-name></div>
+        <div data-tp-imp-target class="field-group" hidden>
+          <label for="tp-imp-page">Page où insérer</label><select id="tp-imp-page" data-tp-imp-page></select>
+          <label for="tp-imp-pos">Position</label><select id="tp-imp-pos" data-tp-imp-pos><option value="end">À la fin de la page</option><option value="start">Au début de la page</option></select>
+        </div>
         <div data-tp-imp-list></div>
         <fieldset class="mk-pt-radio" data-tp-imp-options hidden><legend>Options du pack</legend>
-          <label class="mk-cms-check"><input type="checkbox" data-tp-imp-menu> Créer un menu qui relie ces pages (non affecté à l'en-tête : vous choisissez ensuite)</label>
+          <label class="mk-cms-check"><input type="checkbox" data-tp-imp-menu> Créer un menu qui relie ces pages (affecté à l'en-tête seulement si celui-ci n'a pas encore de menu)</label>
           <label class="mk-cms-check"><input type="checkbox" data-tp-imp-styles> Préparer le style du pack dans le BROUILLON de Styles (rien n'est publié)</label>
         </fieldset>
-        <p class="field-hint">Les pages sont créées en brouillon, avec de nouveaux noms si ceux-ci existent déjà : aucune page existante n'est remplacée. Les modèles ne contiennent aucune image : vous les choisissez dans la médiathèque.</p>
+        <fieldset class="mk-pt-radio" data-tp-imp-theme hidden><legend>Modèle du Theme Builder</legend>
+          <label class="mk-cms-check"><input type="checkbox" data-tp-imp-assign> Affecter aussi cette page comme modèle de thème (s'applique à toute l'organisation dès qu'elle est publiée)</label>
+        </fieldset>
+        <div class="mk-tl-plan" data-tp-imp-plan hidden aria-live="polite"><h3>Opérations prévues</h3><ul data-tp-imp-ops></ul><div data-tp-imp-issues></div>
+          <label class="mk-cms-check" data-tp-imp-confirm-wrap hidden><input type="checkbox" data-tp-imp-confirm> J'ai lu ces avertissements et je confirme l'importation</label></div>
+        <p class="field-hint" data-tp-imp-note>Les contenus de départ sont des exemples à remplacer (textes entre crochets) : aucune coordonnée, aucun chiffre ni témoignage réel n'est fourni. Les modèles ne contiennent aucune image : vous les choisissez dans la médiathèque.</p>
         <p class="mk-st-err" role="alert" data-tp-imp-err hidden></p>
         <div class="mk-tp-result" data-tp-imp-result hidden role="status"></div>
       </div>
       <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Fermer</button><button type="submit" class="mk-wd-btn mk-wd-btn--primary" data-tp-imp-ok>Importer</button></div>
     </form>
+  </dialog>
+
+  <dialog class="mk-dialog mk-modal mk-pt-dialog" data-tp-dlg-save aria-labelledby="tp-save-title">
+    <form method="dialog" data-tp-form-save>
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-save-title">Enregistrer un modèle</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
+      <div class="mk-dialog-body mk-pt-form">
+        <p class="field-hint">Le modèle est réservé à ce site. Il apparaît dans « Mes modèles » et peut être exporté ; un administrateur peut le partager avec les autres sites de l'organisation.</p>
+        <fieldset class="mk-pt-radio"><legend>Que voulez-vous enregistrer ?</legend>
+          <label class="mk-cms-check"><input type="radio" name="tp-save-kind" value="page" checked> Une page entière</label>
+          <label class="mk-cms-check"><input type="radio" name="tp-save-kind" value="section"> Une ou plusieurs sections (composition)</label>
+          <label class="mk-cms-check"><input type="radio" name="tp-save-kind" value="component"> Une section comme composant réutilisable</label>
+        </fieldset>
+        <div class="field-group"><label for="tp-save-page">Page source</label><select id="tp-save-page" data-tp-save-page></select></div>
+        <fieldset class="mk-pt-radio" data-tp-save-sections hidden><legend>Sections</legend><div data-tp-save-sections-list></div></fieldset>
+        <div class="field-group"><label for="tp-save-name">Nom du modèle</label><input id="tp-save-name" type="text" maxlength="60" autocomplete="off" data-tp-save-name required></div>
+        <div class="field-group"><label for="tp-save-desc">Description (facultatif)</label><input id="tp-save-desc" type="text" maxlength="200" autocomplete="off" data-tp-save-desc></div>
+        <div class="field-group" data-tp-save-meta><label for="tp-save-cat">Catégorie (facultatif)</label><input id="tp-save-cat" type="text" maxlength="60" autocomplete="off" data-tp-save-cat>
+          <label for="tp-save-sector">Secteur (facultatif)</label><select id="tp-save-sector" data-tp-save-sector></select>
+          <label for="tp-save-kw">Mots-clés, séparés par des virgules (facultatif)</label><input id="tp-save-kw" type="text" maxlength="200" autocomplete="off" data-tp-save-kw></div>
+        <p class="mk-st-err" role="alert" data-tp-save-err hidden></p>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Annuler</button><button type="submit" class="mk-wd-btn mk-wd-btn--primary" data-tp-save-ok>Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="mk-dialog mk-modal mk-pt-dialog" data-tp-dlg-edit aria-labelledby="tp-edit-title">
+    <form method="dialog" data-tp-form-edit>
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-edit-title">Modifier le modèle</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
+      <div class="mk-dialog-body mk-pt-form">
+        <div class="field-group"><label for="tp-edit-name">Nom</label><input id="tp-edit-name" type="text" maxlength="80" autocomplete="off" data-tp-edit-name required></div>
+        <div class="field-group"><label for="tp-edit-desc">Description</label><input id="tp-edit-desc" type="text" maxlength="200" autocomplete="off" data-tp-edit-desc></div>
+        <div class="field-group"><label for="tp-edit-cat">Catégorie</label><input id="tp-edit-cat" type="text" maxlength="60" autocomplete="off" data-tp-edit-cat></div>
+        <div class="field-group"><label for="tp-edit-kw">Mots-clés (séparés par des virgules)</label><input id="tp-edit-kw" type="text" maxlength="200" autocomplete="off" data-tp-edit-kw></div>
+        <fieldset class="mk-pt-radio" data-tp-edit-vis><legend>Visibilité</legend>
+          <label class="mk-cms-check"><input type="radio" name="tp-edit-vis" value="site" checked> Réservé à ce site</label>
+          <label class="mk-cms-check"><input type="radio" name="tp-edit-vis" value="organization"> Partagé avec tous les sites de l'organisation (administrateur)</label>
+        </fieldset>
+        <p class="mk-st-err" role="alert" data-tp-edit-err hidden></p>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Annuler</button><button type="submit" class="mk-wd-btn mk-wd-btn--primary" data-tp-edit-ok>Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="mk-dialog mk-modal mk-pt-dialog" data-tp-dlg-sectors aria-labelledby="tp-sec-title">
+    <div>
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="tp-sec-title">Secteurs personnalisés</h2></div><button type="button" class="mk-dialog-close" data-tp-close aria-label="Fermer">×</button></header>
+      <div class="mk-dialog-body mk-pt-form">
+        <p class="field-hint">Les secteurs officiels de Kolakisa sont en lecture seule. Vous pouvez ajouter les vôtres ; ils ne sont visibles que dans votre organisation.</p>
+        <ul class="mk-tl-sectors" data-tp-sec-list></ul>
+        <form data-tp-form-sector class="mk-tl-sector-form">
+          <label for="tp-sec-label">Nouveau secteur</label><input id="tp-sec-label" type="text" maxlength="60" autocomplete="off" data-tp-sec-label required>
+          <label for="tp-sec-family">Famille</label><select id="tp-sec-family" data-tp-sec-family></select>
+          <button type="submit" class="mk-wd-btn mk-wd-btn--primary">Ajouter</button>
+        </form>
+        <p class="mk-st-err" role="alert" data-tp-sec-err hidden></p>
+      </div>
+      <div class="mk-dialog-actions"><button type="button" class="mk-wd-btn" data-tp-close>Fermer</button></div>
+    </div>
   </dialog>
   <script type="application/json" id="tp-data"><%- bootJson %></script>
 </div>

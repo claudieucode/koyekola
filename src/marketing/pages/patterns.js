@@ -49,6 +49,29 @@ const PATTERNS = [
   { key: "cols-4", category: "Mise en page", label: "4 colonnes", build: () => [section([cols(4, (i) => [H(`[Titre ${i + 1}]`, "3"), T("<p>[Texte.]</p>")])])] },
   { key: "courses", category: "Formations", label: "Formations à la une", requires: "courses", build: (ctx) => [section([H("[Nos formations]", "2", { textAlign: "center" }),
     grid(3, listCourses(ctx).slice(0, 3).map((c) => ({ type: "course", props: { courseId: c.id, cta: "Découvrir" } })))])] },
+  // ---- Programme 20.4 : compositions par secteur. Mêmes éléments natifs que ci-dessus ; aucun faux chiffre, nom, prix, adresse ni témoignage : tout texte entre crochets est à remplacer. ----
+  { key: "logos", category: "Preuve", label: "Logos de partenaires (4)", build: () => [section([H("[Ils nous font confiance]", "2", { textAlign: "center" }),
+    grid(4, [1, 2, 3, 4].map((n) => ({ type: "stack", children: [{ type: "container", name: "Emplacement du logo", children: [] }, T(`<p>[Nom du partenaire ${n}]</p>`, { textAlign: "center" })] })))])] },
+  { key: "contact-info", category: "Contact", label: "Coordonnées (adresse, téléphone, e-mail)", build: () => [section([H("[Nous trouver]", "2"),
+    cols(2, (i) => (i === 0
+      ? [{ type: "iconlist", props: { items: [{ text: "[Adresse complète]", icon: "mapPin" }, { text: "[Téléphone]", icon: "smartphone" }, { text: "[Adresse e-mail]", icon: "mail" }] } }]
+      : [card([H("[Comment venir ?]", "3"), T("<p>[Transports, parking, repères utiles, accessibilité.]</p>")])]))])] },
+  { key: "hours", category: "Contact", label: "Horaires d'ouverture", build: () => [section([H("[Horaires d'ouverture]", "2", { textAlign: "center" }),
+    { type: "table", props: { header: true, rows: [["Jour", "Horaires"], ["[Lundi – Vendredi]", "[Horaires réels]"], ["[Samedi]", "[Horaires réels]"], ["[Dimanche]", "[Horaires réels ou fermé]"]] } }], { maxWidth: "720px" })] },
+  { key: "menu-carte", category: "Restauration", label: "Carte du restaurant (3 rubriques)", build: () => [section([H("[Notre carte]", "2", { textAlign: "center" }),
+    cols(3, (i) => [H(["[Entrées]", "[Plats]", "[Desserts]"][i], "3"), { type: "pricelist", props: { items: [1, 2, 3].map((n) => ({ title: "[Nom du plat " + n + "]", price: "[Prix]", text: "[Description courte, allergènes si nécessaire.]" })) } }])])] },
+  { key: "listings", category: "Immobilier", label: "Biens à la une (3 cartes)", build: () => [section([H("[Nos biens à la une]", "2", { textAlign: "center" }),
+    grid(3, [1, 2, 3].map((n) => card([{ type: "container", name: "Emplacement de la photo du bien", children: [] }, { type: "badge", props: { text: "[Vente ou location]", tone: "primary" } }, H(`[Titre du bien ${n}]`, "3"), T("<p>[Surface · pièces · ville]</p>"), H("[Prix réel]", "3"), B("Voir le bien", "/contact", "outline")])))])] },
+  { key: "project-grid", category: "Portfolio", label: "Galerie de projets (6 vignettes)", build: () => [section([H("[Nos réalisations]", "2", { textAlign: "center" }),
+    grid(3, [1, 2, 3, 4, 5, 6].map((n) => ({ type: "stack", children: [{ type: "container", name: "Emplacement du visuel", children: [] }, H(`[Titre du projet ${n}]`, "3"), T("<p>[Type de projet · année]</p>")] })))])] },
+  { key: "values", category: "Contenu", label: "Valeurs et missions (4)", build: () => [section([H("[Nos valeurs]", "2", { textAlign: "center" }),
+    grid(4, [["heart", "[Valeur 1]"], ["users", "[Valeur 2]"], ["shield", "[Valeur 3]"], ["globe", "[Valeur 4]"]].map((x) => card([I(x[0]), H(x[1], "3"), T("<p>[Ce que cette valeur change concrètement pour les personnes concernées.]</p>")])))])] },
+  { key: "process-4", category: "Contenu", label: "Méthode en 4 étapes", build: () => [section([H("[Notre méthode]", "2", { textAlign: "center" }),
+    grid(4, [1, 2, 3, 4].map((n) => card([H(`${n}`, "2", { fontSize: "36px" }), H(`[Étape ${n}]`, "3"), T("<p>[Ce qui se passe, et ce que vous obtenez à la fin de l'étape.]</p>")])))])] },
+  { key: "services-prices", category: "Vente", label: "Prestations avec prix", build: () => [section([H("[Nos prestations]", "2"), { type: "pricelist", props: { items: [1, 2, 3, 4].map((n) => ({ title: `[Prestation ${n}]`, price: "[Prix réel]", text: "[Ce qui est inclus.]" })) } }], { maxWidth: "820px" })] },
+  { key: "quote-large", category: "Preuve", label: "Grande citation", build: () => [section([{ type: "quote", props: { text: "[Témoignage réel, reproduit avec l'accord de la personne.]", author: "[Prénom N., fonction]" } }], { maxWidth: "820px", alignItems: "center" })] },
+  { key: "blog-latest", category: "Blog", label: "Derniers articles du blog", build: () => [section([H("[Nos derniers articles]", "2", { textAlign: "center" }), { type: "posts", props: { count: 3, layout: "grid" } }])] },
+  { key: "catalogue-live", category: "Formations", label: "Catalogue en direct (6 formations)", build: () => [section([H("[Notre catalogue]", "2", { textAlign: "center" }), { type: "courselist", props: { count: 6, sort: "recent" } }])] },
 ];
 
 function catalog(ctx) {
@@ -56,4 +79,4 @@ function catalog(ctx) {
   return PATTERNS.filter((p) => p.requires !== "courses" || hasCourses).map((p) => ({ key: p.key, category: p.category, label: p.label, sections: p.build(ctx) }));
 }
 
-module.exports = { PATTERNS, catalog };
+module.exports = { PATTERNS, catalog, helpers: { H, T, B, I, card, section, cols, grid } };

@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor, newStudent } = require("./helpers");
+const { PACKS } = require("../src/marketing/pages/sitePacks");
 
 let chromium = null;
 try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
@@ -25,6 +26,8 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
     return page;
   };
   const edit = async (page, site = A) => { await page.goto(`${srv.base}${TP}?site=${site}`); await page.locator("[data-tp-main]:not([hidden])").waitFor(); };
+  // La liste est paginée côté serveur (12 par page) : pour atteindre un modèle précis, on le cherche (la recherche interroge le serveur)
+  const find = async (page, text) => { await page.fill("[data-tp-search]", text); await page.waitForFunction(() => document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false"); await page.waitForTimeout(450); await page.waitForFunction(() => document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false"); };
   const card = (page, name) => page.locator(".mk-pt-card", { has: page.getByRole("heading", { name, exact: true }) });
   const pagesA = () => one("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id = ?", A).n;
   const imports = () => one("SELECT COUNT(*) n FROM cms_template_imports WHERE site_id = ?", A).n;
@@ -42,13 +45,15 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
 
   test("la bibliothèque s'ouvre : packs avec vignettes réelles (styles du site), recherche, catégories, onglets ; « Mes modèles » ne montre que ceux de ce site ; imports vides au départ", async () => {
     const page = await open(); await edit(page);
-    assert.equal(await page.locator(".mk-pt-card").count(), 5);
+    assert.equal(await page.locator(".mk-pt-card").count(), Math.min(12, PACKS.length)); // 12 par page (pagination côté serveur)
     await page.waitForFunction(() => { const f = document.querySelector(".mk-pt-thumb iframe"); try { return f.contentDocument && f.contentDocument.body && /lp-main/.test(f.contentDocument.body.innerHTML); } catch { return false; } });
     assert.match(await page.locator(".mk-pt-thumb iframe").first().evaluate((f) => f.contentDocument.body.getAttribute("style")), /--kw-primary:#8a1c3a/, "vignette rendue avec les styles du site");
     assert.match(await card(page, "Formation en ligne").innerText(), /6 pages/);
-    await page.fill("[data-tp-search]", "webinaire"); assert.equal(await page.locator(".mk-pt-card").count(), 1); await page.fill("[data-tp-search]", "");
-    await page.selectOption("[data-tp-cat]", "Produit"); assert.equal(await page.locator(".mk-pt-card").count(), 1); await page.selectOption("[data-tp-cat]", "");
-    await page.click('[data-tp-source="page"]'); assert.ok((await page.locator(".mk-pt-card").count()) >= 20);
+    // La recherche et les filtres interrogent le serveur (catalogue.json) : on attend le résultat au lieu de compter tout de suite
+    const cards = (n) => page.waitForFunction((k) => document.querySelectorAll(".mk-pt-card").length === k && document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false", n);
+    await page.fill("[data-tp-search]", "webinaire"); await cards(1); await page.fill("[data-tp-search]", ""); await cards(Math.min(12, PACKS.length));
+    await page.selectOption("[data-tp-cat]", "Produit"); await cards(1); await page.selectOption("[data-tp-cat]", "");  await cards(Math.min(12, PACKS.length));
+    await page.click('[data-tp-source="page"]'); await cards(12); await page.click("[data-tp-more]"); await page.waitForFunction(() => document.querySelectorAll(".mk-pt-card").length >= 24); assert.ok((await page.locator(".mk-pt-card").count()) >= 20);
     await page.click('[data-tp-source="mine"]'); assert.deepEqual(await page.locator(".mk-pt-card h3").allTextContents(), ["Modèle de A"]);
     await page.click('[data-tp-source="hist"]'); assert.match(await page.locator("[data-tp-empty]").innerText(), /Aucun import/);
   });
@@ -68,7 +73,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
 
   test("importer un pack avec menu et brouillon de styles : fenêtre explicite, résultat réel (pages, menu, styles) avec liens ; DOUBLE CLIC : un seul import ; rien n'est publié", async () => {
     const page = await open(); await edit(page);
-    await card(page, "Formation en ligne").getByRole("button", { name: /Importer Formation en ligne/ }).click();
+    await card(page, "Formation en ligne").getByRole("button", { name: /Utiliser ce modèle : Formation en ligne/ }).click();
     const dlg = page.locator("[data-tp-dlg-import]"); await dlg.waitFor();
     assert.equal(await page.locator("[data-tp-imp-list] li").count(), 6); assert.equal(await page.locator("[data-tp-imp-warn]").isHidden(), true);
     await page.locator("[data-tp-imp-menu]").check(); await page.locator("[data-tp-imp-styles]").check();
@@ -89,7 +94,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
   test("réimporter le même pack : avertissement clair « de NOUVELLES pages », pages numérotées, anciennes pages intactes", async () => {
     const page = await open(); await edit(page);
     const firstIds = db.prepare("SELECT id FROM mk_landing_pages WHERE site_id = ?").all(A).map((r) => r.id), snap = JSON.stringify(db.prepare("SELECT * FROM mk_landing_pages WHERE site_id = ?").all(A));
-    await card(page, "Formation en ligne").getByRole("button", { name: /Importer Formation en ligne/ }).click();
+    await card(page, "Formation en ligne").getByRole("button", { name: /Utiliser ce modèle : Formation en ligne/ }).click();
     assert.match(await page.locator("[data-tp-imp-warn]").innerText(), /déjà été importé.*NOUVELLES pages/);
     await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-result]:not([hidden])").waitFor();
     const names = await page.locator("[data-tp-imp-result] a[href$='/editeur']").allTextContents(); assert.ok(names.every((n) => /\(\d+\)/.test(n)), names.join(" | "));
@@ -100,7 +105,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
   test("RÉPONSE PERDUE : le serveur a importé mais le navigateur n'a pas reçu la réponse ; « Réessayer » ne crée AUCUNE page de plus (même jeton)", async () => {
     const page = await open(); await edit(page);
     const before = pagesA(), importsBefore = imports();
-    await card(page, "Site d'entreprise").getByRole("button", { name: /Importer Site d'entreprise/ }).click(); await page.locator("[data-tp-dlg-import]").waitFor();
+    await card(page, "Site d'entreprise").getByRole("button", { name: /Utiliser ce modèle : Site d'entreprise/ }).click(); await page.locator("[data-tp-dlg-import]").waitFor();
     await page.route("**/templates/importer*", async (route) => { await route.fetch(); await route.abort("connectionreset"); });
     await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-err]:not([hidden])").waitFor();
     assert.match(await page.locator("[data-tp-imp-err]").innerText(), /Connexion impossible/); assert.equal(await page.locator("[data-tp-imp-ok]").innerText(), "Réessayer");
@@ -112,14 +117,14 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
   });
 
   test("gabarit de page : nom modifiable ; « Mes modèles » ; erreur serveur affichée dans la fenêtre sans rien créer", async () => {
-    const page = await open(); await edit(page); await page.click('[data-tp-source="page"]');
-    await card(page, "Contact").getByRole("button", { name: /Importer Contact/ }).click();
+    const page = await open(); await edit(page); await page.click('[data-tp-source="page"]'); await find(page, "Contact");
+    await card(page, "Contact").getByRole("button", { name: /Utiliser ce modèle : Contact/ }).click();
     assert.equal(await page.locator("[data-tp-imp-options]").isHidden(), true); assert.equal(await page.locator("[data-tp-imp-single]").isVisible(), true);
     await page.fill("[data-tp-imp-name]", "Nous écrire"); await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-result]:not([hidden])").waitFor();
     assert.equal(one("SELECT name FROM mk_landing_pages WHERE site_id = ? AND name = 'Nous écrire'", A).name, "Nous écrire"); await page.keyboard.press("Escape");
-    await page.click('[data-tp-source="mine"]'); await card(page, "Modèle de A").getByRole("button", { name: /Importer Modèle de A/ }).click(); await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-result]:not([hidden])").waitFor();
+    await page.fill("[data-tp-search]", ""); await page.click('[data-tp-source="mine"]'); await find(page, ""); await card(page, "Modèle de A").getByRole("button", { name: /Utiliser ce modèle : Modèle de A/ }).click(); await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-result]:not([hidden])").waitFor();
     assert.match(one("SELECT sections FROM mk_landing_pages WHERE site_id = ? AND name = 'Modèle de A'", A).sections, /Contenu du modèle de A/); await page.keyboard.press("Escape");
-    await page.click('[data-tp-source="page"]'); await card(page, "FAQ").or(card(page, "Questions fréquentes")).first().getByRole("button", { name: /Importer/ }).click();
+    await page.click('[data-tp-source="page"]'); await find(page, "Questions fréquentes"); await card(page, "FAQ").or(card(page, "Questions fréquentes")).first().getByRole("button", { name: /Utiliser ce modèle/ }).click();
     const before = pagesA();
     await page.route("**/templates/importer*", (r) => r.fulfill({ status: 500, contentType: "application/json", body: "{}" }));
     await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-err]:not([hidden])").waitFor();
@@ -137,7 +142,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
     assert.equal(await m.evaluate(() => getComputedStyle(document.querySelector("[data-tp-grid]")).gridTemplateColumns.split(" ").length), 1);
     const viewer = await newStudent(srv); db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, (SELECT id FROM users WHERE email = ?), 'viewer')").run(A, viewer.email);
     const v = await open(1280, viewer); await edit(v);
-    assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Importer/ }).isDisabled(), true); assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Aperçu de/ }).isEnabled(), true);
+    assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Utiliser ce modèle/ }).isDisabled(), true); assert.equal(await card(v, "Site d'entreprise").getByRole("button", { name: /Aperçu de/ }).isEnabled(), true);
     const r = await v.goto(`${srv.base}${TP}?site=${B}`); assert.notEqual(r.status(), 200);
     assert.deepEqual(errors, [], "aucune erreur JavaScript sur tout le parcours");
   });

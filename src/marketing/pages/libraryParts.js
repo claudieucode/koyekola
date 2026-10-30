@@ -1,0 +1,26 @@
+// Bibliothèque de modèles : modèles du THEME BUILDER officiels (programme 20.4). Un modèle de thème est une PAGE du Page Builder qui devient le modèle d'une famille de pages du site
+// (pages/themeTemplates.js : article, liste du blog, archives, recherche, page introuvable, fiche de formation). L'importation crée la page en brouillon ; l'affectation à la famille
+// de pages (donc l'effet sur le site public) n'a lieu que si la personne la demande, avec le droit « appearance.templates », et jamais en remplaçant un modèle existant.
+const { helpers: { H, T, B, section, grid } } = require("./patterns");
+
+const post = (type, props = {}) => ({ type, props });
+const list = (mode, count = 12) => post("querylist", { title: "", source: "posts", mode, count });
+
+const PARTS = [
+  { key: "article", themeType: "single_post", category: "Articles", name: "Article du blog", description: "Titre, informations de l'article, contenu, catégories, auteur, article précédent ou suivant et commentaires.",
+    build: () => [section([H("{{post.title}}", "1"), post("postmeta"), post("postcontent"), post("postterms"), post("authorbox"), post("postnav"), post("postcomments")], { maxWidth: "820px" })] },
+  { key: "liste-blog", themeType: "blog_archive", category: "Archives", name: "Liste du blog", description: "En-tête d'archive et grille des articles paginée, qui suit la catégorie courante.",
+    build: () => [section([post("archiveinfo"), list("archive", 12)])] },
+  { key: "archive-categorie", themeType: "category_archive", category: "Archives", name: "Archive de catégorie", description: "Titre de la catégorie, description et liste de ses articles.",
+    build: () => [section([post("archiveinfo"), list("archive", 12)])] },
+  { key: "archive-auteur", themeType: "author_archive", category: "Archives", name: "Page d'un auteur", description: "Boîte auteur et liste de ses articles.",
+    build: () => [section([post("archiveinfo"), post("authorbox"), list("archive", 12)])] },
+  { key: "resultats-recherche", themeType: "search_results", category: "Recherche", name: "Résultats de recherche", description: "Champ de recherche, rappel de la requête et résultats du blog.",
+    build: () => [section([H("Résultats pour « {{query.q}} »", "1"), post("search", { target: "blog" }), post("archiveinfo"), list("archive", 12)])] },
+  { key: "page-introuvable", themeType: "not_found", category: "Erreurs", name: "Page introuvable (404)", description: "Message clair, recherche dans le blog et retour à l'accueil.",
+    build: () => [section([H("Cette page est introuvable", "1", { textAlign: "center" }), T("<p>Elle a peut-être été déplacée ou supprimée.</p>", { textAlign: "center" }), post("search", { target: "blog" }), B("Retour à l'accueil", "/")], { alignItems: "center", paddingTop: "96px", paddingBottom: "96px" })] },
+];
+void grid;
+const catalog = () => PARTS.map(({ key, themeType, category, name, description }) => ({ key, themeType, category, name, description }));
+const buildPart = (key) => { const c = PARTS.find((x) => x.key === key); return c ? JSON.parse(JSON.stringify(c.build())) : null; };
+module.exports = { PARTS, catalog, buildPart };

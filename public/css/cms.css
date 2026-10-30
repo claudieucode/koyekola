@@ -925,6 +925,35 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 .mk-tp-history h2 { font-size: 16px; margin: 0 0 8px; }
 .mk-tp-history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .mk-tp-history li { border: 1px solid var(--mk-border, #dbe4ea); border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+/* ---------- Apparence → Templates (programme 20.4) : filtres, détail, plan d'import, secteurs (.mk-tl-*) ---------- */
+.mk-tl-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; align-items: end; margin: 6px 0 10px; }
+.mk-tl-field { display: grid; gap: 4px; font-size: 13px; color: var(--mk-text-soft, #52606d); min-width: 0; }
+.mk-tl-field select { width: 100%; min-width: 0; box-sizing: border-box; min-height: 36px; }
+.mk-tl-own { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.mk-tl-file { cursor: pointer; display: inline-flex; align-items: center; }
+.mk-tl-file:focus-within { outline: 2px solid var(--primary, #0b2a40); outline-offset: 2px; }
+.mk-tl-more { text-align: center; margin: 16px 0 4px; }
+.mk-tl-sectors-line { margin: 0; font-size: 13px; color: var(--mk-text-soft, #52606d); }
+.mk-tl-compat { margin: 0; font-size: 13px; font-weight: 600; padding-left: 8px; border-left: 3px solid var(--mk-border, #dbe4ea); }
+.mk-tl-compat.is-warn { border-left-color: #b45309; color: #7a3a06; }
+.mk-tl-compat.is-blocked { border-left-color: #b42318; color: #8c1d14; }
+.mk-tl-compat.is-ok { border-left-color: #1e7e34; }
+.mk-tl-issues { margin: 6px 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+.mk-tl-issues.is-warn { border-left: 3px solid #b45309; padding-left: 22px; }
+.mk-tl-issues.is-blocked { border-left: 3px solid #b42318; padding-left: 22px; }
+.mk-tl-detail { display: grid; gap: 14px; }
+.mk-tl-block h3 { margin: 0 0 6px; font-size: 15px; }
+.mk-tl-block h4 { margin: 8px 0 4px; font-size: 14px; }
+.mk-tl-block ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
+.mk-tl-cols { columns: 2; column-gap: 24px; }
+.mk-tl-plan { border: 1px solid var(--mk-border, #dbe4ea); border-radius: 8px; padding: 10px 14px; display: grid; gap: 6px; }
+.mk-tl-plan h3 { margin: 0; font-size: 14px; }
+.mk-tl-plan ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 14px; }
+.mk-tl-conflict { color: #7a3a06; }
+.mk-tl-sectors { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mk-tl-sectors li { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 14px; }
+.mk-tl-sector-form { display: grid; gap: 6px; }
+@media (max-width: 640px) { .mk-tl-cols { columns: 1; } .mk-tl-filters { grid-template-columns: minmax(0, 1fr); } }
 
 /* ---------- Apparence → Éditeur du site : espace de travail (.mk-se-*) — le canevas est le vrai Page Builder dans un cadre ---------- */
 .mk-se { min-width: 0; }

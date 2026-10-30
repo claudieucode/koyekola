@@ -1033,7 +1033,8 @@ function headerOverview(ctx, siteId) {
 }
 
 // ---------- Modèles de pages enregistrés par l'équipe ----------
-const userTemplate = (row) => (row ? { id: row.id, name: row.name, category: row.category, description: row.description, content: json(row.content, { sections: [] }), updatedAt: row.updated_at, siteId: row.site_id, shared: Boolean(row.shared) } : null);
+const userTemplate = (row) => (row ? { id: row.id, name: row.name, category: row.category, description: row.description, content: json(row.content, { sections: [] }), updatedAt: row.updated_at, siteId: row.site_id, shared: Boolean(row.shared), createdBy: row.created_by ?? null, updatedBy: row.updated_by ?? null,
+  version: row.version || 1, formatVersion: row.format_version || 1, keywords: String(row.keywords || "").split(",").map((k) => k.trim()).filter(Boolean), sectors: json(row.sectors, []).filter((k) => typeof k === "string"), language: row.language || "fr", siteType: row.site_type || "" } : null);
 // Modèles enregistrés : PRIVÉS au site qui les a créés (site_id ; NULL = site principal). Seuls les modèles hérités d'avant l'isolation (shared = 1) restent communs.
 // siteId = site de la création de page en cours (null = site principal) : on ne voit jamais le modèle d'un autre site.
 function listPageTemplates(ctx, { siteId = null } = {}) {
@@ -1047,8 +1048,9 @@ function getPageTemplate(ctx, id, { siteId = null } = {}) {
   const row = ctx.db.prepare("SELECT * FROM mk_page_templates WHERE id = ? AND organization_id = ? AND (shared = 1 OR site_id IS ?)").get(id, ctx.organizationId, siteId);
   return row && (row.shared || inScope(ctx, row.site_id)) ? userTemplate(row) : null;
 }
-// Enregistrer un contenu de page comme modèle du site (validé comme toute page ; un modèle du même nom DU MÊME SITE est remplacé)
-function savePageTemplate(ctx, { name, category, description, content, siteId = null } = {}) {
+// Enregistrer un contenu de page comme modèle du site (validé comme toute page). Un modèle du même nom DU MÊME SITE est remplacé (Page Builder : comportement historique, version + 1) ;
+// la bibliothèque (programme 20.4) passe onConflict: "refuse" pour ne jamais remplacer en silence. meta : métadonnées déjà normalisées par services/templateStore (secteurs, mots-clés, langue, type de site).
+function savePageTemplate(ctx, { name, category, description, content, siteId = null, meta = null, onConflict = "replace", userId = null } = {}) {
   checkCtx(ctx);
   assertSiteScope(ctx, siteId);
   const n = line(name, 80);
@@ -1058,15 +1060,20 @@ function savePageTemplate(ctx, { name, category, description, content, siteId = 
   const resolved = { ...clean, sections: resolveSections(ctx, clean.sections).map((sec) => { const { fromComponent: _f, ...rest } = sec; return rest; }) };
   if (!resolved.sections.length) throw bad("Le modèle est vide.");
   const cat = line(category, 60) || "Mes modèles", desc = line(description, 200);
+  const m = meta || {}, mSectors = JSON.stringify(m.sectors || []), mKeywords = (m.keywords || []).join(", "), mLang = m.language || "fr", mType = m.siteType || "";
   const same = ctx.db.prepare("SELECT id FROM mk_page_templates WHERE organization_id = ? AND site_id IS ? AND shared = 0 AND name = ?").get(ctx.organizationId, siteId, n);
   let id;
-  if (same) { ctx.db.prepare("UPDATE mk_page_templates SET category = ?, description = ?, content = ?, updated_at = datetime('now') WHERE id = ?").run(cat, desc, JSON.stringify(resolved), same.id); id = same.id; }
-  else {
-    try { id = Number(ctx.db.prepare("INSERT INTO mk_page_templates (organization_id, site_id, shared, name, category, description, content, created_by) VALUES (?, ?, 0, ?, ?, ?, ?, ?)").run(ctx.organizationId, siteId, n, cat, desc, JSON.stringify(resolved), ctx.userId ?? null).lastInsertRowid); }
+  if (same) {
+    if (onConflict === "refuse") throw new MarketingError("duplicate", "Un modèle de ce site porte déjà ce nom : choisissez un autre nom, ou demandez explicitement à le remplacer.");
+    ctx.db.prepare("UPDATE mk_page_templates SET category = ?, description = ?, content = ?, version = version + 1, updated_by = ?, updated_at = datetime('now')" + (meta ? ", sectors = ?, keywords = ?, language = ?, site_type = ?" : "") + " WHERE id = ?")
+      .run(...[cat, desc, JSON.stringify(resolved), userId ?? ctx.userId ?? null, ...(meta ? [mSectors, mKeywords, mLang, mType] : []), same.id]);
+    id = same.id;
+  } else {
+    try { id = Number(ctx.db.prepare("INSERT INTO mk_page_templates (organization_id, site_id, shared, name, category, description, content, created_by, updated_by, sectors, keywords, language, site_type) VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").run(ctx.organizationId, siteId, n, cat, desc, JSON.stringify(resolved), userId ?? ctx.userId ?? null, userId ?? ctx.userId ?? null, mSectors, mKeywords, mLang, mType).lastInsertRowid); }
     catch (e) { if (/UNIQUE/i.test(e.message)) throw new MarketingError("duplicate", "Un modèle porte déjà ce nom : choisissez un autre nom (un modèle d'un autre site n'est jamais remplacé)."); throw e; }
   }
   const row = ctx.db.prepare("SELECT * FROM mk_page_templates WHERE id = ?").get(id);
-  audit(ctx, "page_template.saved", "page_template", row.id, { name: n, siteId });
+  audit(ctx, "page_template.saved", "page_template", row.id, { name: n, siteId, version: row.version });
   return userTemplate(row);
 }
 function deletePageTemplate(ctx, id) {

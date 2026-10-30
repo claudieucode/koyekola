@@ -7,11 +7,12 @@ const pages = require("../src/marketing/pages");
 const { TEMPLATES, catalog } = require("../src/marketing/pages/templates");
 const { startServer, loginInstructor, createCourse } = require("./helpers");
 
-test("23 catégories ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
+test("39 gabarits (les 23 historiques + 16 par secteur) ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
   const { A } = freshMarketing();
   // 23 gabarits depuis fe11a8d (FAQ, tarifs, témoignages, 404 ajoutés par l'autre session) : attente mise à jour, code applicatif inchangé
-  assert.equal(TEMPLATES.length, 23);
-  assert.deepEqual(catalog().map((t) => t.category), ["Génération de prospects", "Vente", "Webinaire", "Formation", "Produit", "Service", "Newsletter", "Téléchargement", "Lancement", "Bientôt disponible", "Inscription", "Consultation", "Remerciement", "Événement", "À propos", "Contact", "Portfolio", "Logiciel (SaaS)", "Aide", "Tarifs", "Preuve sociale", "Erreur", "Entreprise"]);
+  // Programme 20.4 : 16 gabarits par secteur ajoutés À LA SUITE (agence, portfolio, restaurant, immobilier, blog, boutique, association) ; les 23 premiers et leur ordre sont inchangés
+  assert.equal(TEMPLATES.length, 39);
+  assert.deepEqual(catalog().slice(0, 23).map((t) => t.category), ["Génération de prospects", "Vente", "Webinaire", "Formation", "Produit", "Service", "Newsletter", "Téléchargement", "Lancement", "Bientôt disponible", "Inscription", "Consultation", "Remerciement", "Événement", "À propos", "Contact", "Portfolio", "Logiciel (SaaS)", "Aide", "Tarifs", "Preuve sociale", "Erreur", "Entreprise"]);
   for (const t of TEMPLATES) {
     const p = pages.createPage(A, { name: `Page ${t.key}`, template: t.key });
     const ids = p.working.sections.map((s) => s.id);
