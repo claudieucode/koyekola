@@ -134,6 +134,7 @@
 .dash-chip:hover { border-color: var(--dash-accent); }
 .dash-chip[aria-current="page"] { background: var(--dash-accent); border-color: var(--dash-accent); color: var(--dash-accent-on); }
 .dash-chip .dash-chip-count { opacity: 0.7; font-weight: 500; }
+.dash-chip[aria-current="page"] .dash-chip-count { opacity: 1; } /* texte clair sur fond d'accent : l'opacité 0,7 tombait à 3,2:1 */
 .dash-search { flex: 1 1 220px; max-width: 320px; margin-left: auto; }
 .dash-search input { width: 100%; padding: 8px 12px; border: 1px solid var(--dash-border); border-radius: 999px; background: var(--dash-card); color: var(--dash-text); font: inherit; font-size: 14px; }
 .dash-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--s4); }

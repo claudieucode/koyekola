@@ -101,7 +101,7 @@ describe("design v3 : pages publiques, élève, authentification, erreurs, compt
   describe("pages d'information et d'état", () => {
     test("FAQ vide : état vide structuré (plus de texte nu éclaté dans un conteneur flex) ; lien de contact conservé", async () => {
       const t = await text(anon, "/faq");
-      assert.match(t, /<div class="empty-state">[\s\S]*kv-empty-ico[\s\S]*<h3>Aucune question pour le moment<\/h3>[\s\S]*<p>N(?:'|&#39;)hésitez pas à <a href="\/contact">nous écrire<\/a>\.<\/p>/);
+      assert.match(t, /<div class="empty-state">[\s\S]*kv-empty-ico[\s\S]*<h2>Aucune question pour le moment<\/h2>[\s\S]*<p>N(?:'|&#39;)hésitez pas à <a href="\/contact">nous écrire<\/a>\.<\/p>/);
       assert.match(t, /class="page-cta">Vous ne trouvez pas votre réponse/);
       assert.match(rule("p.empty-state"), /display:\s*block/); assert.match(rule(".page-cta"), /display:\s*block/);
     });

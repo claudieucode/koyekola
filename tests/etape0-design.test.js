@@ -39,10 +39,16 @@ describe("contrastes des couleurs (WCAG AA : 4,5:1 pour le texte courant)", () =
       assert.ok(ratio >= 4.5, `contraste ${ratio.toFixed(2)}:1 (minimum 4,5:1)`);
     });
   }
+  // Dégradés de l'éditeur d'articles ([data-gradient="…"]) : chacun porte SA couleur de texte (clair sur foncé, foncé sur clair) ; c'est ce couple qui est contrôlé
+  const ARTICLE = [...CSS.matchAll(/\[data-gradient="[a-z]+"\]:not\(\.kb-button\) \{ background-image: linear-gradient\(135deg, (#[0-9a-fA-F]{6}), (#[0-9a-fA-F]{6})\); color: (#[0-9a-fA-F]{6}|#fff)/g)];
   test("bandeaux dégradés : texte blanc lisible sur CHAQUE couleur du dégradé", () => {
-    const gradients = [...CSS.matchAll(/linear-gradient\(135deg,([^)]+)\)/g)].map((m) => m[1]);
+    // les dégradés d'article sont contrôlés avec leur propre texte ; tous les AUTRES (texte blanc) gardent le contrôle d'origine, sans exception par couleur
+    const SANS_ARTICLE = CSS.replace(/\[data-gradient="[a-z]+"\]:not\(\.kb-button\) \{ background-image: linear-gradient\([^)]*\)/g, "").replace(/\.kb-button\[data-gradient="[a-z]+"\] \{ --kb-grad: linear-gradient\([^)]*\)/g, "");
+    const gradients = [...SANS_ARTICLE.matchAll(/linear-gradient\(135deg,([^)]+)\)/g)].map((m) => m[1]);
     const stops = gradients.flatMap((g) => g.match(/#[0-9a-fA-F]{6}/g) || []);
     assert.ok(stops.length >= 3, "dégradés introuvables");
+    for (const [, a, b, text] of ARTICLE) for (const stop of [a, b]) { const t = text === "#fff" ? "#ffffff" : text; assert.ok(contrast(t, stop) >= 4.5, `article ${stop} avec ${t} : ${contrast(t, stop).toFixed(2)}:1`); }
+    assert.ok(ARTICLE.length >= 6, "dégradés d'article introuvables");
     for (const stop of stops) {
       if (stop.toLowerCase() === "#ffffff" || stop.toLowerCase() === "#f6fbff") continue; // dégradés clairs (texte foncé)
       assert.ok(contrast("#ffffff", stop) >= 4.5, `${stop} : ${contrast("#ffffff", stop).toFixed(2)}:1`);

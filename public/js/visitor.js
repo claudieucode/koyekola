@@ -118,11 +118,27 @@
   function banner() { return document.getElementById("kw-consent"); }
   // Affichage du bandeau. Aucun bouton n'est mis en avant (ni focus automatique sur « Accepter ») ; rouvert à la demande,
   // c'est le bandeau entier qui reçoit le focus, pour les personnes au clavier ou au lecteur d'écran
-  function showBanner(fromLink) { var b = banner(); if (!b) return; b.hidden = false; if (fromLink) b.focus({ preventScroll: true }); }
+  // Le bandeau est fixé en bas de l'écran : sans marge de défilement, le navigateur laisse l'élément focalisé au clavier DERRIÈRE lui (WCAG 2.4.11).
+  // On réserve sa hauteur tant qu'il est affiché ; elle suit les changements de taille de fenêtre.
+  function reserveBanner() {
+    var b = banner(), root = document.documentElement, on = Boolean(b && !b.hidden), h = on ? (b.offsetHeight + 32) + "px" : "";
+    // marge de défilement (éléments au milieu de la page) ET espace en bas du document (pied de page : sans lui, le dernier lien ne peut pas remonter au-dessus du bandeau)
+    if (on) document.body.style.paddingBottom = h; else document.body.style.removeProperty("padding-bottom");
+  }
+  window.addEventListener("resize", reserveBanner);
+  // Focus au clavier sur un élément que le bandeau recouvre (déjà « à l'écran », donc le navigateur ne défile pas) : on le remonte au-dessus du bandeau.
+  // Pas de scroll-padding : il décale scrollIntoView({ block: "center" }) utilisé par les animations au défilement (régression constatée par un test).
+  document.addEventListener("focusin", function (e) {
+    var b = banner(), t = e.target; if (!b || b.hidden || !t || !t.getBoundingClientRect || b.contains(t)) return;
+    var r = t.getBoundingClientRect(), br = b.getBoundingClientRect();
+    if (r.bottom <= br.top || r.top >= br.bottom || r.right <= br.left || r.left >= br.right) return;
+    var delta = Math.min(r.bottom - br.top + 16, r.top - 8); if (delta > 0) window.scrollBy({ top: delta, behavior: "instant" }); // « instant » : le défilement doux du site ne doit pas retarder le repli
+  });
+  function showBanner(fromLink) { var b = banner(); if (!b) return; b.hidden = false; reserveBanner(); if (fromLink) b.focus({ preventScroll: true }); }
   function choose(accept) {
     setCookie("kw_consent", accept ? "1" : "0", CHOICE_DAYS);
     var b = banner();
-    if (b) b.hidden = true;
+    if (b) { b.hidden = true; reserveBanner(); }
     if (accept) startTracking();
     else {
       queue = [];

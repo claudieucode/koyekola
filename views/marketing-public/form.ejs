@@ -11,7 +11,7 @@
         <% } %>
       <% } else { %>
         <h1><%= form.name %></h1>
-        <% if (error) { %><p class="form-error"><%= error %></p><% } %>
+        <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
         <form method="post" action="/f/<%= form.slug %>" novalidate<%- form.fileField && form.fileField.enabled ? ' enctype="multipart/form-data"' : "" %>><input type="hidden" name="tz" data-tz>
           <%- include("_signup-fields", { form, fieldCatalog, propertyDefs: typeof propertyDefs !== "undefined" ? propertyDefs : [], values, prefix: "f" }) %>
           <button type="submit" class="btn btn-primary btn-block btn-lg">S'inscrire</button>

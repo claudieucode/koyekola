@@ -20,7 +20,7 @@
         <nav class="footer-menu" aria-label="Liens du pied de page">
         <% cols.forEach((col, ci) => { %>
           <div class="footer-col">
-            <% if (col.head) { %><h4><% if (col.head.href) { %><a href="<%= col.head.href %>"<%- col.head.newTab ? ' target="_blank"' : "" %><%- col.head.rel ? ` rel="${col.head.rel}"` : "" %>><%= col.head.label %></a><% } else { %><%= col.head.label %><% } %></h4><% } else { %><h4>Liens</h4><% } %>
+            <% if (col.head) { %><h2><% if (col.head.href) { %><a href="<%= col.head.href %>"<%- col.head.newTab ? ' target="_blank"' : "" %><%- col.head.rel ? ` rel="${col.head.rel}"` : "" %>><%= col.head.label %></a><% } else { %><%= col.head.label %><% } %></h2><% } else { %><h2>Liens</h2><% } %>
             <% col.links.forEach((l) => { %>
               <% if (l.href) { %><a href="<%= l.href %>"<%- l.newTab ? ' target="_blank"' : "" %><%- l.rel ? ` rel="${l.rel}"` : "" %>><%= l.label %></a><% } else { %><span class="footer-group"><%= l.label %></span><% } %>
               <% l.children.forEach((c) => { if (c.href) { %><a class="footer-sublink" href="<%= c.href %>"<%- c.newTab ? ' target="_blank"' : "" %><%- c.rel ? ` rel="${c.rel}"` : "" %>><%= c.label %></a><% } }) %>
@@ -30,16 +30,16 @@
         </nav>
       <% } else { %>
       <div class="footer-col">
-        <h4>Découvrir</h4>
+        <h2>Découvrir</h2>
         <a href="/catalogue">Toutes les formations</a>
         <a href="/inscription">Créer un compte</a>
       </div>
       <div class="footer-col">
-        <h4>Catégories</h4>
+        <h2>Catégories</h2>
         <% navCategories.slice(0, 6).forEach((cat) => { %><a href="/categorie/<%= slugify(cat) %>"><%= cat %></a><% }) %>
       </div>
       <div class="footer-col">
-        <h4>Informations</h4>
+        <h2>Informations</h2>
         <a href="/a-propos">À propos</a>
         <a href="/blog">Blog</a>
         <a href="/faq">Questions fréquentes</a>
