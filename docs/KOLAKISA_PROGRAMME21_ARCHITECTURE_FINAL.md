@@ -1,27 +1,32 @@
 # Programme 21 — architecture finale (état réel)
 
-## Moteurs et responsabilités (aucun doublon de responsabilité constaté)
-| Moteur | Code | Rôle | Sortie consommée par |
-|---|---|---|---|
-| Brief Analyzer, Site Planner | `src/marketing/ai/builder/{brief,planner,plans,registry,locale,contracts}.js` | brief → analyse → plan validé (`mk_ai_plans`) | studio, pont de pages |
-| Pont plan → pages | `ai/builder/bridge.js` (`toPageGenPlan`) | traduit les sections du plan en genres du Page Generator | Page Generator |
-| Page Generator, Component Mapper | `src/pageGen/` | plan v1 → sections NATIVES validées (`normalizeSections`), brouillons | moteur de pages |
-| Design Generator | `src/designGen/` | brief → 3 directions vérifiées → réglages du PERSONNALISATEUR (brouillon) | personnalisateur, Page Generator (`appliedLayout`) |
-| Content Generator | `src/contentGen/` | textes dans les CHAMPS natifs, SEO, localisation, anti-invention | pages (brouillon) |
-| Media Generator, Asset Manager | `src/aiMedia/` | besoins visuels, tâches asynchrones, provenance, affectation | médiathèque native, pages |
-| Interface | `ai/builder/{workspace,assistant}.js`, `web/aiBuilder.js`, `views/marketing/ai-builder*.ejs`, `public/js/ai-builder.js` | 8 étapes, état calculé, annuler/rétablir, assistant à règles | utilisateur |
-| AI Core | `src/ai/` | fournisseurs, registre, routage, quotas, journal | médias (quotas/journal/config) ; contenus en option (`viaCore`) |
-| Socle IA historique | `services/aiCore.js`, `marketing/ai` (`ai.call`) | appel Anthropic, plafond quotidien, module « ia » par site | brief, plan, contenus, design (option) |
+## Moteurs et responsabilités
+| Moteur | Code | Rôle |
+|---|---|---|
+| Brief Analyzer, Site Planner | `src/marketing/ai/builder/{brief,planner,plans,registry,locale,contracts}.js` | brief → analyse → plan validé (`mk_ai_plans`) |
+| Pont plan → pages | `ai/builder/bridge.js` | sections du plan → genres du Page Generator |
+| Page Generator, Component Mapper | `src/pageGen/` | plan v1 → sections NATIVES validées, brouillons |
+| Design Generator | `src/designGen/` | 3 directions vérifiées → brouillon du PERSONNALISATEUR |
+| Content Generator | `src/contentGen/` | textes dans les champs natifs, SEO, localisation, anti-invention |
+| Media Generator, Asset Manager | `src/aiMedia/` | besoins visuels, tâches, provenance, affectation |
+| Interface (studio) | `ai/builder/{workspace,assistant}.js`, `web/aiBuilder.js` | 8 étapes, état calculé, annuler/rétablir du plan |
+| Régénération et historique (21.9) | `src/regen/`, `web/regeneration.js` | demande → contexte → impact → portée → régénération sélective, snapshots, comparaison, restauration, conflits, protections |
+| Moteur de boutique natif (20.5) | `src/marketing/shop/`, `web/{shopAdmin,shopPublic}.js`, migration 121 | catalogue, panier, commandes, paiement (Stripe + manuel), clients |
+| Constructeur de boutique par IA (21.10) | `src/marketing/ai/shop/`, `web/aiShop.js`, migration 122 | brief commercial → plan → structure → produits (brouillons) → config → validation → publication |
+| AI Core | `src/ai/` | fournisseurs, registre, routage, quotas, journal |
+| Socle IA historique | `services/aiCore.js`, `marketing/ai` (`ai.call`) | appel Anthropic, plafond quotidien, module « ia » par site |
 
 ## Flux réels
-`brief` → `analyzeBrief` → questions → `createPlan` → `validate` → `validatedPlan` (seule porte) → `bridge` → `pageGen.generate/apply` (brouillons) → `designGen.generate/apply` (brouillon du personnalisateur) → `contentGen.generatePage/accept/apply` → `aiMedia.plan/start/assign` → aperçu natif → `pages.publish`. Chaque étape lit l'état de la précédente en base ; aucune ne dépend de l'ordre d'appel (reprise possible à tout moment).
+Vitrine : `brief → analyzeBrief → questions → createPlan → validate → validatedPlan → bridge → pageGen → designGen → contentGen → aiMedia → aperçu natif → pages.publish`.
+Boutique : `brief commercial → ai/shop analyzer → planner → structure → catégories natives → produits en BROUILLON (prix saisis, jamais inventés) → config (paiement, livraison, taxes saisis) → validation (aucun achat d'essai) → publication guidée (produits complets, pages, ouverture de la boutique sur demande)`.
+Régénération : `regen.analyzer → context → impact → plan de portée → snapshot → moteur du palier concerné (contenus/médias/design) → conflits → historique`.
 
-## Structures de données : natives d'abord
-Pages = `mk_landing_pages.sections` (aucun format parallèle) ; styles = jetons du site via le personnalisateur ; médias = `mk_media` + chemin natif ; menus = `services/navigation`. Les tables propres au programme 21 sont des **états de travail** (plans, runs, ensembles de contenus, tâches, métadonnées de provenance), toutes rattachées au site.
+## Structures natives d'abord
+Pages = `mk_landing_pages.sections` ; styles = jetons du site (personnalisateur) ; médias = `mk_media` ; catalogue = tables du moteur Boutique ; menus = `services/navigation`. Les tables propres au programme 21 sont des états de travail rattachés au site.
 
-## Écarts d'architecture (à connaître)
-1. **Deux socles IA coexistent** : `services/aiCore` + `ai.call` (en service) et `src/ai` (AI Core, non branché pour le texte). Le Content Generator sait utiliser l'un ou l'autre (`gateway`), le reste utilise `ai.call`. Pas de duplication de responsabilité mais une migration à terminer.
-2. **Trois chemins vers « OpenAI »** : connecteur (clés), adaptateur texte de l'AI Core, adaptateur image de `aiMedia` (qui réutilise la couche réseau et les clés du connecteur). Responsabilités distinctes.
-3. **Deux réalisations de l'interface 21.8** ont existé ; seule celle du studio est déployée (la mienne reste en archive).
-4. **Aucun appel de fournisseur depuis le navigateur** (recherche dans `public/` et `views/` : aucun hôte de fournisseur). Aucune dépendance circulaire problématique observée (chargement paresseux des modules qui touchent la base).
-5. **AI Orchestrator** : pas de module nommé ainsi ; l'orchestration est dans `workspace.js` (studio).
+## Écarts d'architecture
+1. **Deux socles IA** (`ai.call` en service, `src/ai` non branché pour le texte) ; pas de modèle d'image dans le registre de l'AI Core.
+2. **Deux planificateurs** : le Site Planner général (registre sans boutique) et le planificateur de boutique (21.10) ; deux assistants à règles (studio, boutique) et un troisième pour la régénération.
+3. **Piles d'annulation séparées** (plan du studio, régénération 21.9, brouillons de boutique 21.10, versions de champs de contenu, annulation des générations de pages/design) ; aucune pile unifiée.
+4. **Aucun appel de fournisseur depuis le navigateur** ; chargement paresseux des modules qui ouvrent la base ; pas de dépendance circulaire problématique observée.
+5. **Interface 21.8 réalisée deux fois** (une seule déployée).

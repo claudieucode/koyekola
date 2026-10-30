@@ -15,3 +15,6 @@ Constats :
 - Formats régionaux (date, heure, nombre, devise) : `Intl` selon le pays dans l'assistant de création ; **non propagés** au rendu public ni à la devise des ventes.
 - Unités de mesure, configuration fiscale, livraison : **non implémentées** (aucune fonction de ce type dans le CMS).
 - Géographie des paiements : Stripe pour les formations uniquement ; pas de moyen de paiement local (mobile money, etc.).
+
+## Boutique (21.10 et moteur 20.5)
+19 pays reconnus (dont RDC, France, Canada, États-Unis) ; **devise détectée si écrite, sinon HYPOTHÈSE signalée** ; montants en plus petite unité (devises sans décimale gérées pour le CSV) ; zones de livraison et règles de taxe **saisies** (aucune règle locale fournie, aucune règle américaine codée en dur). **Seul l'euro est testé** ; pas de conversion ni de multi-devises ; pas de formats/unités propres au pays ; pas de traduction de la boutique ; disponibilité des paiements par pays **non vérifiée** (dépend du compte Stripe) ; une règle de taxe par commande (pas d'OSS).

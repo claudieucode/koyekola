@@ -1,31 +1,33 @@
 # Programme 21 — audit final (21.11)
 
-Audit fait sur `origin/main` au commit `904709af` puis corrigé dans la branche `feat/programme-21-11-validation`. Chaque ligne s'appuie sur du code lu ou un test exécuté ; aucune ligne ne repose sur un document seul.
+Audit fait sur `origin/main` (commit `a39abd87`, après fusion des paliers 20.5, 21.9 et 21.10 survenue PENDANT ce palier) puis corrigé dans la branche `feat/programme-21-11-validation`. Chaque ligne s'appuie sur du code lu ou un test exécuté ; aucune ligne ne repose sur un document seul.
 
-## Constat principal
-**Les paliers 21.9 (régénération intelligente et historique) et 21.10 (intégration e-commerce) n'existent pas dans le dépôt** : aucun module, aucune route, aucune migration, aucun document, aucune branche distante correspondante. Le programme 21 n'est donc **pas complet**. De plus Kolakisa **n'a pas de catalogue de produits natif** (voir `KOLAKISA_PROGRAMME21_INTEGRATION_MATRIX.md`) : une boutique de matériel informatique ne peut pas être construite, avec ou sans IA.
+> Chronologie à connaître : l'audit a d'abord été fait sur un `main` qui ne contenait NI 21.9, NI 21.10, NI le moteur de boutique 20.5 ; quinze commits les ont apportés en cours de route. L'audit a été **refait** sur le code fusionné ; les conclusions ci-dessous sont celles du code fusionné.
 
 ## État des paliers
 | Palier | Statut réel | Preuve principale |
 |---|---|---|
-| 21.1 audit et architecture | OPÉRATIONNEL (documentaire) ; « AI Orchestrator » = PARTIELLEMENT (pas de module unique, orchestration répartie) | `docs/KOLAKISA_PROGRAMME21_1_*.md` |
-| 21.2 AI Core | PARTIELLEMENT OPÉRATIONNEL : testé avec fournisseurs simulés, aucune connexion réelle, branché seulement pour les médias | `tests/ai-core*.test.js` (56 tests) |
-| 21.3 Brief Analyzer + Site Planner | OPÉRATIONNEL (clé d'IA requise, qualité réelle non évaluée) | 30 tests |
+| 21.1 audit et architecture | OPÉRATIONNEL (documentaire) ; « AI Orchestrator » = PARTIELLEMENT (pas de module unique) | `docs/KOLAKISA_PROGRAMME21_1_*.md` |
+| 21.2 AI Core | PARTIELLEMENT : testé avec fournisseurs simulés, aucune connexion réelle, branché surtout pour les médias | `ai-core*.test.js` (56) |
+| 21.3 Brief Analyzer + Site Planner | OPÉRATIONNEL (clé d'IA requise) ; registre non aligné sur la boutique (voir I1) | 30 tests |
 | 21.4 Page Generator + Component Mapper | OPÉRATIONNEL | 26 tests + scénario vitrine |
-| 21.5 Design Generator | OPÉRATIONNEL | 25 tests + 9 ambiances × 12 teintes vérifiées |
+| 21.5 Design Generator | OPÉRATIONNEL | 25 tests |
 | 21.6 Content Generator | OPÉRATIONNEL (clé d'IA requise) | 30 tests |
-| 21.7 Media Generator + Asset Manager | PARTIELLEMENT : fournisseur d'images réel non vérifié, démonstration seulement | 21 tests |
-| 21.8 interface | OPÉRATIONNEL (studio `/marketing/ia/studio`, autre session) ; ma réalisation alternative non déployée | 28 tests + navigateur non exécuté |
-| 21.9 régénération et historique | **NON IMPLÉMENTÉ** (éléments épars : annuler/rétablir du plan, annulation des pages et du design, versions de champs, versions natives de pages) | aucun code |
-| 21.10 e-commerce | **NON IMPLÉMENTÉ** et **BLOQUÉ PAR UNE DÉPENDANCE** (pas de catalogue produits, livraison, taxes) | registre 21.3, schéma de base |
+| 21.7 Media Generator + Asset Manager | PARTIELLEMENT : fournisseur d'images réel non vérifié | 21 tests |
+| 21.8 interface (studio) | OPÉRATIONNEL ; navigateur réel non exécuté | 28 tests |
+| 21.9 régénération et historique | PARTIELLEMENT OPÉRATIONNEL : analyse, contexte, impact, snapshots, comparaison, restauration, conflits, protections ; **ne couvre pas le catalogue**, pas de pile unifiée, pas de lien depuis le studio | 34 tests |
+| 21.10 constructeur de boutique | PARTIELLEMENT OPÉRATIONNEL : brief → plan → catalogue natif → config → validation → publication ; **paiements simulés seulement**, pas de fiche produit générée, pas d'images de produits générées | 46 tests (+ moteur 20.5 : 83) |
 
-## Défauts trouvés et corrigés dans ce palier
-| Id | Gravité | Défaut | Correction | Preuve |
-|---|---|---|---|---|
-| F1 | P1 | Le studio IA et l'API des plans lisaient briefs, plans et états avec le seul droit `forms.read` : un rôle quasi sans droit (« Rien » = `forms.read` seul) voyait les projets IA. La matrice R7 des routes de moteur échouait. | `templates.read` exigé en plus sur toutes les lectures (studio, API plans) | `r7-coherence-moteurs` 6/6 |
-| F2 | P2 | La publication groupée du studio n'exigeait la confirmation que dans la boîte de dialogue du navigateur : un appel direct publiait toutes les pages prêtes. | Confirmation exigée par le **service** (`confirm_required`, 422), ordre : droit → accès au projet → confirmation → blocages ; le client l'envoie | tests studio 28/28 + vitrine |
-| F3 | P3 | La feuille de style du studio contenait une teinte rose (`#fdecee`) interdite par l'audit « anti-rose » de la charte. | teinte remplacée | `anti-rose` 3/3 |
-| F4 | — | Tests périmés par l'ouverture du module « Formations » aux sites (LMS multi-sites) et libellé du catalogue de l'assistant 20.6. | tests et libellé mis à jour (palier précédent, commit `dd0d37d8`) | 50/50 |
+## Défauts d'intégration trouvés
+| Id | Gravité | Défaut | Traitement |
+|---|---|---|---|
+| F1 | P1 | Le studio IA, l'API des plans, la régénération (21.9) et le constructeur de boutique (21.10) lisaient projets, plans, versions et états avec le seul droit `forms.read` : un rôle quasi sans droit voyait ces écrans (la matrice R7 des routes de moteur échouait, deux fois). | **Corrigé** : `templates.read` exigé en plus sur toutes les lectures de ces quatre routeurs ; matrice R7 6/6 |
+| F2 | P2 | Publication groupée du studio : confirmation exigée seulement par la boîte de dialogue du navigateur. | **Corrigé** : confirmation exigée par le service (422 `confirm_required`), après le contrôle d'accès |
+| F3 | P3 | Feuille de style du studio : teinte rose résiduelle (audit « anti-rose »). | **Corrigé** |
+| F4 | — | Tests et libellé périmés par l'ouverture du module « Formations » aux sites. | **Corrigé** (commit `dd0d37d8`) |
+| I1 | P1 | **Registre du Site Planner non aligné** : il déclare « boutique » et « catalogue de produits » indisponibles (et les types de pages `boutique`/`panier`… exigent « Boutique en ligne ») alors que le moteur Boutique natif existe et que 21.10 construit des boutiques. Le planificateur général ne planifiera donc pas de boutique. | **Atténué** : texte du registre corrigé (renvoie au constructeur de boutique) ; statut volontairement conservé « indisponible » pour le planificateur général (ses pages ne savent pas bâtir une boutique), ce qui est vrai ; l'unification reste à faire |
+| I2 | P2 | 21.9 et 21.10 ne sont pas reliés à l'interface 21.8 (pas de lien depuis le studio vers la régénération/les versions) ; deux piles d'annulation et plusieurs journaux d'historique coexistent. | Documenté |
+| I3 | P2 | Les protections de 21.9 ne sont consultées que par 21.9 et le Content Generator, pas par le Page Generator, le Design Generator ni les médias appelés directement. | Documenté |
+| I4 | P2 | 21.9 ne couvre pas produits, catégories ni configuration commerciale (historique minimal propre à 21.10). | Documenté |
 
-## Défauts constatés NON corrigés
-Voir `KOLAKISA_PROGRAMME21_REMAINING_ISSUES.md`.
+Aucune fuite entre sites, aucune faille d'écriture, aucun défaut P0 n'a été trouvé.

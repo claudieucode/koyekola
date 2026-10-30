@@ -24,12 +24,19 @@ Statuts : OPÉRATIONNEL · PARTIELLEMENT OPÉRATIONNEL · NON OPÉRATIONNEL · N
 | 21.8 | Studio 8 étapes, état calculé | `web/aiBuilder.js` | OPÉRATIONNEL | module IA | `programme21-8-ai-builder-http` 28 | navigateur réel non exécuté | T |
 | 21.8 | Assistant (5 intentions + conseils) | `ai/builder/assistant.js` | PARTIELLEMENT | — | idem | règles locales | T |
 | 21.8 | Publication native avec confirmation | `workspace.publishAll` | OPÉRATIONNEL (corrigé 21.11) | `pages.publish` | studio + vitrine | — | T |
-| 21.9 | Context Resolver, Impact/Dependency Analyzer | — | **NON IMPLÉMENTÉ** | — | — | — | — |
-| 21.9 | Snapshots, comparaison, restauration globale | — | **NON IMPLÉMENTÉ** | — | — | restaurer une page : versions natives des pages | — |
-| 21.9 | Régénération sélective | `contentGen` (`only` + `scope`) | PARTIELLEMENT | — | vitrine (une section) | par section, pas par intention globale | T |
-| 21.9 | Annuler/rétablir | plan (studio), pages, design, contenus (par champ) | PARTIELLEMENT | — | tests studio | pas de pile globale | T |
-| 21.10 | Store/Product Structure Planner | — | **NON IMPLÉMENTÉ** | catalogue produits | — | — | — |
-| 21.10 | Catalogue produits, variantes, livraison, taxes | — | **BLOQUÉ PAR UNE DÉPENDANCE** | n'existe pas dans le CMS | `programme21-international-migrations` (registre) | aucune table produit/expédition/taxe | T |
-| 21.10 | Panier / paiement | `node:cart` | PARTIELLEMENT | Stripe | — | **formations seulement** | L |
-| 21.11 | Sécurité et isolation multisite des moteurs | — | OPÉRATIONNEL | — | `programme21-securite-multisite` 4 | — | T |
+| 21.9 | Context Resolver, Dependency/Impact Analyzer | `src/regen/{context,engine}.js` | OPÉRATIONNEL (règles) | pages, contenus, médias, design | `programme21-9-regeneration` 28, `-http` 6 | langage naturel à règles ; dépendance « couleur de design » estimée | T |
+| 21.9 | Snapshots, comparaison, restauration, conflits | `regen/{snapshots,compare,restore}.js` | OPÉRATIONNEL | tables à la demande | idem | **catalogue non couvert** ; chemins de médias seulement | T |
+| 21.9 | Régénération sélective + protections | `regen/{engine,protect}.js` | PARTIELLEMENT | Content Generator, médias, design | idem + vitrine (une section) | protections non consultées par pagegen/designgen/médias appelés directement | T |
+| 21.9 | Annuler/rétablir | `regen` + plan (studio) + moteurs | PARTIELLEMENT | — | idem | **pas de pile unifiée** ; aucun lien depuis le studio | T |
+| 20.5 | Moteur de boutique natif (catalogue, variantes, stock, panier, commandes, clients) | `src/marketing/shop`, migration 121 | OPÉRATIONNEL | module Commerce | `programme20-5-boutique-moteur` 42, `-serveur` 29, `-builder` 12 | Stripe jamais vérifié contre le vrai service ; seul l'euro testé | T |
+| 20.5 | Paiement | `shop/payments.js` | PARTIELLEMENT | clés serveur | `-serveur` (faux Stripe, webhook signé, montant falsifié refusé, remboursement) | carte désactivée sans clés ; manuel possible | T |
+| 21.10 | Analyse du modèle commercial, plan, structure | `ai/shop/{analyzer,planner,structure}.js` | OPÉRATIONNEL (règles) | moteur Boutique | `programme21-10-ecommerce-builder` 30, `-http` 16 | gros/dropshipping non pris en charge | T |
+| 21.10 | Produits en brouillon, variantes, CSV, anti-invention | `ai/shop/{products,csv}.js` | OPÉRATIONNEL | catalogue natif | idem | pas de fiche produit générée ; variantes à stock 0 sans SKU | T |
+| 21.10 | Images de produits générées | — | NON IMPLÉMENTÉ | 21.7 ne couvre pas les produits | — | association d'images existantes seulement | — |
+| 21.10 | Configuration paiement/livraison/taxes | `ai/shop/config.js` | OPÉRATIONNEL | droit « paiements » | idem | valeurs saisies ; aucune règle locale fournie | T |
+| 21.10 | Validation et publication guidée | `ai/shop/{validation,project}.js` | OPÉRATIONNEL | — | idem | « prête » d'après la configuration : **aucune commande d'essai** | T |
+| 21.10 | Prévisualisation du catalogue / panier / checkout | boutique publique | PARTIELLEMENT | — | `-serveur` (panier, commande, Stripe simulé) | pas d'aperçu intégré, navigateur non exécuté | T |
+| 21.10 | Planificateur général ↔ boutique | `ai/builder/registry.js` | **NON ALIGNÉ** (I1) | — | `programme21-3` | le Site Planner déclare la boutique indisponible | L,T |
+| 21.11 | Sécurité et isolation multisite des moteurs 21.3-21.8 | — | OPÉRATIONNEL | — | `programme21-securite-multisite` 4 | — | T |
+| 21.11 | Sécurité et isolation 21.9 et 21.10 | — | OPÉRATIONNEL | — | `programme21-securite-regen-boutique` 3 + `r7-coherence-moteurs` 6 | — | T |
 | 21.11 | Scénario vitrine de bout en bout | — | OPÉRATIONNEL (simulé) | — | `programme21-integration-vitrine` 8 | pas de navigateur | T |
