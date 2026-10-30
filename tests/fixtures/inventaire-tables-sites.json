@@ -188,6 +188,14 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_ai_plan_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_ai_plans": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_ai_requests": {
    "siteId": true,
    "classe": "a-decider"
