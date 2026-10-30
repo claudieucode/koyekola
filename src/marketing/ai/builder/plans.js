@@ -214,6 +214,23 @@ function edit(ctx, id, op, { revision } = {}) {
   return view(load(ctx, id));
 }
 
+// Restauration d'un état précédent (annuler / rétablir de l'interface). N'est PAS une opération du catalogue OPS : elle n'est donc pas joignable par l'API de modification,
+// et l'état restauré vient d'une copie du plan enregistrée par le serveur (jamais d'une requête). Protégée par la révision comme toute modification.
+function restoreState(ctx, id, { planJson, status, revision, summary = "État précédent restauré." } = {}) {
+  checkCtx(ctx); gate(ctx);
+  const row = load(ctx, id);
+  if (revision === undefined || Number(revision) !== row.revision) throw err("conflict", "Ce plan a changé depuis son affichage : rechargez-le.");
+  if (typeof planJson !== "string" || !["draft", "pending", "modified", "validated", "to_fix"].includes(status)) throw err("invalid_field", "État à restaurer invalide.");
+  const now = nowOf(ctx);
+  transaction(ctx.db, () => {
+    const r = ctx.db.prepare("UPDATE mk_ai_plans SET plan_json = ?, status = ?, revision = revision + 1, updated_at = ?, validated_at = CASE WHEN ? = 'validated' THEN ? ELSE NULL END WHERE id = ? AND organization_id = ? AND revision = ?")
+      .run(planJson, status, now, status, now, row.id, ctx.organizationId, row.revision);
+    if (!r.changes) throw err("conflict", "Ce plan a été modifié par quelqu'un d'autre : rechargez-le.");
+    event(ctx, row.id, "restored", summary, row.revision + 1);
+  });
+  return view(load(ctx, id));
+}
+
 // ---------- Validation ----------
 function validate(ctx, id, { revision } = {}) {
   checkCtx(ctx); gate(ctx);
@@ -252,4 +269,4 @@ function list(ctx, { limit = 30 } = {}) {
 function get(ctx, id) { return view(load(ctx, id)); }
 function history(ctx, id) { const row = load(ctx, id); return ctx.db.prepare("SELECT id, action, summary, revision, user_id, created_at FROM mk_ai_plan_events WHERE plan_id = ? AND organization_id = ? ORDER BY id").all(row.id, ctx.organizationId); }
 
-module.exports = { analyzeBrief, answerQuestions, createPlan, edit, validate, validatedPlan, list, get, history, OPS: Object.keys(OPS) };
+module.exports = { analyzeBrief, answerQuestions, createPlan, edit, restoreState, validate, validatedPlan, list, get, history, OPS: Object.keys(OPS) };

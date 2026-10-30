@@ -80,6 +80,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./designGenerator")()); // Programme 21.5 : direction artistique générée (brouillon du personnalisateur)
   admin.use(require("./pageGenerator")()); // Programme 21.4 : générateur de pages natives à partir d'un plan (brouillons uniquement)
   admin.use(require("./contentGenerator")()); // Programme 21.6 : générateur de contenus (textes des sections natives, SEO, révisions, brouillon)
+  admin.use(require("./aiBuilder")()); // Programme 21.8 : interface « Assistant IA » de création de site (orchestre 21.3 à 21.6, aucune logique de moteur)
   admin.use(require("./siteWizard")()); // Programme 20.6 : assistant de création guidée d'un site (orchestre les services existants)
   admin.use(require("./siteDomains")()); // TITAN XXXII : domaines des sites (registre, vérification de propriété, DNS, HTTPS)
   admin.use(require("./contactRequests")()); // R7 lot 5 : demandes de rattachement de contacts entre sites — avant contactCore et admin.js (« /contacts/:id »)

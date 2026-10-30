@@ -122,6 +122,7 @@ const SITE_RULES = Object.freeze([
   { id: "ia-assistant", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/, kind: "param", terminal: true },
   // Plans de site préparés par l'IA (Programme 21.3) : le site d'un plan est enregistré avec lui et relu en base ; un accès limité ne voit que les plans de SON site (filtre du service)
   { id: "ia-plans-de-site", pattern: /^\/ia\/site(?:\/|$)/, kind: "param", terminal: true },
+  { id: "ia-studio", pattern: /^\/ia\/studio(?:\/|$)/, kind: "param", terminal: true },
   // Réseaux sociaux par site (R7 lot 6.3) : une publication par son identifiant relève de son site (NULL = organisation, fermée à un accès limité) ; liste et création : site choisi ; comptes, jetons et autorisations : organisation
   { id: "reseau-publication-par-identifiant", pattern: /^\/reseaux\/(\d{1,12})\/(?:annuler|relancer|supprimer)$/, kind: "resource", table: "socialPost", idGroup: 1 },
   { id: "reseaux-du-site", pattern: /^\/reseaux$/, kind: "param", terminal: true },
@@ -167,6 +168,7 @@ const FAMILIES = Object.freeze([
   { id: "contacts", scope: "site", pattern: /^\/contacts(?:\/|$)/ },
   { id: "ia-assistant", scope: "site", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/ },
   { id: "ia-plans-de-site", scope: "site", pattern: /^\/ia\/site(?:\/|$)/ },
+  { id: "ia-studio", scope: "site", pattern: /^\/ia\/studio(?:\/|$)/ },
   { id: "sms-campagnes", scope: "site", pattern: /^\/sms(?:\/campagnes(?:\/|$)|\/abonnes$|$)/ },
   { id: "reseaux-publications", scope: "site", pattern: /^\/reseaux(?:\/\d+\/(?:annuler|relancer|supprimer))?$/ },
   { id: "score-apercu", scope: "site", pattern: /^\/score$/ },
