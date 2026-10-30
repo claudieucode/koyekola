@@ -6,7 +6,7 @@
 | Élément | État vérifié |
 |---|---|
 | Moteur e-commerce « natif » | **N'était pas sur `main`** : seul le commerce des formations (`routes/cart.js`, `orders`) y existait. Le moteur (`src/marketing/shop`, migration 121 : catégories, produits simples/variables/numériques, variantes, stock + journal, panier, clients, zones et méthodes de livraison, règles de taxe sans taux par défaut, coupons, commandes, Stripe en test + paiement manuel) est sur la branche 20.5 : **fusionné ici** (prérequis). |
-| Programme 21.9 (régénération, historique) | **Absent** : la branche existe mais n'a aucun commit. Les exigences « historique compatible 21.9 » sont donc couvertes par un historique propre au projet (voir §4). |
+| Programme 21.9 (régénération, historique) | **Arrivé sur `main` pendant ce palier** (commit 0bcecedf, `src/regen`) : régénération sélective et historique des **pages, du design, des textes et des médias**. Il **ne couvre pas le catalogue de boutique** (produits, catégories, configuration commerciale) : aucune de ses pièces ne les connaît. Le constructeur garde donc son propre historique (voir §4). Fusionné sans conflit ; aucun code de 21.9 n'est modifié. |
 | 21.3 à 21.8 | Sur `main` : planificateur, générateurs de pages / design / contenus / médias, interface « Assistant IA » (réutilisée : charte, structure, mécanismes). L'AI Core 21.2 n'est branché sur aucun module (inchangé). |
 | Limites déclarées du moteur (20.5) | Pas d'import CSV natif, pas de modification en masse, pas d'avis, pas de produits téléchargeables, pas de schema.org produit, pas de gros ni de dropshipping, pas de génération d'images de produits (21.7 : bandeaux et sections « Image » seulement). **Le constructeur ne simule aucune de ces fonctions.** |
 
@@ -29,8 +29,8 @@ Le constructeur **ne contient aucune logique commerciale**. Il prépare des BROU
 | Interface (12 étapes) + assistant contextuel | `web/aiShop.js`, `ai-shop.ejs`, `public/js/ai-shop.js`, `ai/shop/assistant.js` (à règles) | ✔ |
 | Migration | `122_ia_boutique.sql` (3 tables additives) | ✔ |
 
-## 4. Historique (en l'absence de 21.9)
-`mk_ai_shop_events` (qui, quoi, révision) et `mk_ai_shop_states` (annuler/rétablir sur 30 niveaux) couvrent **les brouillons du projet seulement**. Pas de comparaison de versions ; **pas de restauration d'un produit déjà créé** (le catalogue se gère dans l'administration de la boutique, qui garde son propre journal de stock). À brancher sur 21.9 quand il existera.
+## 4. Historique (21.9 ne couvre pas le catalogue)
+`mk_ai_shop_events` (qui, quoi, révision) et `mk_ai_shop_states` (annuler/rétablir sur 30 niveaux) couvrent **les brouillons du projet seulement**. Pas de comparaison de versions ; **pas de restauration d'un produit déjà créé** (le catalogue se gère dans l'administration de la boutique, qui garde son propre journal de stock). Les **pages éditoriales** créées par le constructeur sont des pages natives : elles bénéficient de l'historique de pages existant et de 21.9. Brancher le catalogue (produits, catégories) sur 21.9 reste à faire.
 
 ## 5. Incidents de procédure
 Un test d'interface ne détectait pas qu'une étape plantait au rendu (l'ancien titre restait affiché) : corrigé en exigeant que le titre corresponde à l'étape et qu'aucune erreur de script ne soit levée. Le bouton « Nouveau produit » passait l'événement de clic comme produit : corrigé.

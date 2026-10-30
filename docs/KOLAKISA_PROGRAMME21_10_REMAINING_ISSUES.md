@@ -7,7 +7,7 @@ Le parcours (brief → modèle → plan → catalogue → produits → design �
 | # | Point | Effet |
 |---|---|---|
 | D1 | **Le moteur e-commerce (20.5) n'était pas sur `main`** : il a été fusionné dans ce palier (migration 121, modification du webhook Stripe et du service de paiement partagés avec les formations) | Déployer 21.10 déploie ce moteur. Les tests de paiement des formations (Stripe, commerce par site, tunnel) passent sur la fusion ; **aucune transaction réelle n'a été faite**. |
-| D2 | **21.9 absent** (branche vide) | Pas de régénération intelligente ni de comparaison de versions ; historique minimal propre au projet |
+| D2 | **21.9 présent mais sans le catalogue** : il traite pages, design, textes et médias, pas les produits, catégories ni la configuration commerciale | Pas de comparaison de versions ni de restauration pour le catalogue ; historique minimal propre au projet ; les modifications de **prix, de stock et de configuration** n'ont volontairement aucune restauration automatique |
 | D3 | **Stripe jamais vérifié contre le vrai service** (20.5) ; clés et webhook à définir par le propriétaire | La carte reste désactivée tant que le serveur n'est pas configuré ; seul le paiement manuel fonctionne |
 | D4 | AI Core 21.2 non branché ; aucun fournisseur d'IA réel vérifié | La rédaction par IA (facultative) passe par l'ancien `ai.call` ; l'analyse du brief et l'assistant sont **à règles** |
 
@@ -21,7 +21,7 @@ Le parcours (brief → modèle → plan → catalogue → produits → design �
 | L5 | Internationalisation | 19 pays reconnus, devise saisie ; **seul l'euro est testé**, pas de multi-devises ni de conversion, pas de formats/unités locaux, pas de traduction de la boutique |
 | L6 | Vérification du checkout | **Statique** (d'après la configuration) : aucune commande d'essai |
 | L7 | Aperçu des fiches produits | Lien vers l'administration de la boutique ; les pages éditoriales ont l'aperçu natif ; **pas d'aperçu mobile/tablette intégré aux fiches** |
-| L8 | Historique 21.9 : produits, catégories, design, contenus, médias | Journal et annulation des **brouillons du projet seulement** ; pas de restauration d'un produit déjà créé |
+| L8 | Compatibilité 21.9 pour produits et catégories | Journal et annulation des **brouillons du projet seulement** ; pas de restauration d'un produit déjà créé ; la compatibilité de 21.9 avec le design et les pages créés par le constructeur n'a **pas été testée** |
 | L9 | Stock | Quantité saisie à la création seulement ; **pas d'ajustement ni d'alerte** depuis le constructeur (gérés par le moteur) |
 | L10 | Variantes | Combinaisons créées à stock 0, sans SKU ni prix propre ; **à compléter dans l'administration** ; pas d'édition des variantes dans le constructeur |
 | L11 | Gros catalogues | Brouillons limités à 500 ; **pas de file de traitement asynchrone** (une requête = un produit ; l'IA se lance produit par produit) ; catalogue affiché limité à 100 lignes, sans pagination |
@@ -35,4 +35,4 @@ Le parcours (brief → modèle → plan → catalogue → produits → design �
 3. L'ouverture de la boutique expose publiquement les produits publiés : à faire après relecture des pages légales par un professionnel.
 
 ## Pour la suite
-Brancher 21.9 (historique, comparaison, restauration) ; générer des modèles de fiche produit via le Theme Builder ; coupons et promotions ; file de traitement pour les gros catalogues ; essai réel borné de Stripe (clés de test) et d'un fournisseur d'IA ; test navigateur mobile des fiches produits.
+Brancher le catalogue sur 21.9 (historique, comparaison, restauration, avec règles propres aux prix et stocks) ; générer des modèles de fiche produit via le Theme Builder ; coupons et promotions ; file de traitement pour les gros catalogues ; essai réel borné de Stripe (clés de test) et d'un fournisseur d'IA ; test navigateur mobile des fiches produits.

@@ -33,7 +33,7 @@ Désactiver le garde-fou anti-invention → le test de l'IA hostile échoue. Sup
 | 20 | Prévisualisation | navigateur (pages éditoriales) ; **fiches produits : lien vers l'administration seulement** |
 | 21 | Checkout | **statique** (configuration) ; aucune commande d'essai |
 | 22 | Validation avant publication, publication guidée | service, HTTP, navigateur |
-| 23-24 | Historique et restauration | annuler/rétablir des **brouillons** (service, HTTP, navigateur) ; pas de restauration du catalogue |
+| 23-24 | Historique et restauration | annuler/rétablir des **brouillons** (service, HTTP, navigateur) ; pas de restauration du catalogue ; **compatibilité avec le 21.9 (arrivé en cours de palier) non testée** |
 | 25-26 | Isolation multisite, permissions | service, HTTP (lecteur, éditeur limité, administrateur d'un autre site, modules ia/commerce, `?site=` hostile) |
 | 27 | Gestion des erreurs | 409, 422, 429/503 expliqués ; perte de connexion en navigateur |
 | 28 | Idempotence | catégories, produits, 2e application sans doublon |
