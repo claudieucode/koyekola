@@ -1,0 +1,6224 @@
+{
+ "homonym": {
+  "pagesCreated": 0,
+  "message": "existe déjà : choisissez « nouvelle page », « nouvelle version », « remplacer (après confirmation) » ou « ignorer ». Rien n&#39;a été modifié."
+ },
+ "generatedAt": "2026-10-30T22:37:36.986Z",
+ "node": "v24.20.0",
+ "brief": {
+  "cases": [
+   {
+    "id": "precis",
+    "kind": "précis",
+    "chars": 133,
+    "accepted": true,
+    "country": "CD",
+    "language": "fr",
+    "contradictions": []
+   },
+   {
+    "id": "court",
+    "kind": "court",
+    "chars": 28,
+    "accepted": true,
+    "country": "",
+    "language": "fr",
+    "contradictions": []
+   },
+   {
+    "id": "vague",
+    "kind": "vague",
+    "chars": 45,
+    "accepted": true,
+    "country": "",
+    "language": "fr",
+    "contradictions": []
+   },
+   {
+    "id": "incomplet",
+    "kind": "incomplet",
+    "chars": 30,
+    "accepted": true,
+    "country": "",
+    "language": "fr",
+    "contradictions": []
+   },
+   {
+    "id": "complexe",
+    "kind": "complexe",
+    "chars": 158,
+    "accepted": true,
+    "country": "CD",
+    "language": "fr",
+    "contradictions": []
+   },
+   {
+    "id": "contradictoire",
+    "kind": "contradictoire",
+    "chars": 95,
+    "accepted": true,
+    "country": "",
+    "language": "fr",
+    "contradictions": [
+     "minimal_vs_rich"
+    ]
+   }
+  ],
+  "guards": {
+   "invented": 4,
+   "downgraded": 4,
+   "retainedWithValue": 4,
+   "retainedConfidence": [
+    0.8,
+    0.8,
+    0.8,
+    0.8
+   ],
+   "unknownTypeRejected": true,
+   "unknownFeatureDropped": true,
+   "confidenceCapped": true
+  },
+  "readinessOfInventedBrief": "ready"
+ },
+ "content": {
+  "bad": [
+   {
+    "kind": "statistique",
+    "text": "Plus de 95 % de nos clients recommandent nos services.",
+    "detected": true
+   },
+   {
+    "kind": "années",
+    "text": "Forte de 25 ans d'expérience, notre équipe vous accompagne.",
+    "detected": true
+   },
+   {
+    "kind": "clients",
+    "text": "Nous avons réalisé 1 200 chantiers avec succès.",
+    "detected": true
+   },
+   {
+    "kind": "certification",
+    "text": "Entreprise certifiée ISO 9001 pour la qualité de ses travaux.",
+    "detected": true
+   },
+   {
+    "kind": "classement",
+    "text": "Le numéro 1 de la rénovation à Kinshasa.",
+    "detected": true
+   },
+   {
+    "kind": "promesse médicale",
+    "text": "Notre méthode garantit la guérison de votre dos en trois séances.",
+    "detected": true
+   },
+   {
+    "kind": "téléphone inventé",
+    "text": "Appelez-nous au +243 812 345 678 dès maintenant.",
+    "detected": true
+   },
+   {
+    "kind": "e-mail inventé",
+    "text": "Écrivez à contact@batiplus-rdc.com pour un devis.",
+    "detected": true
+   },
+   {
+    "kind": "témoignage inventé",
+    "text": "« Un travail impeccable ! » — Jean K., client satisfait depuis 2019.",
+    "detected": true
+   },
+   {
+    "kind": "prix inventé",
+    "text": "Devis dès 450 € pour une rénovation complète.",
+    "detected": true
+   },
+   {
+    "kind": "garantie",
+    "text": "Résultats garantis à 100 % ou remboursé.",
+    "detected": true
+   },
+   {
+    "kind": "année inventée",
+    "text": "Fondée en 1998, notre entreprise est un leader du secteur.",
+    "detected": true
+   }
+  ],
+  "good": [
+   {
+    "text": "Nous construisons et rénovons des bâtiments à Kinshasa.",
+    "falsePositive": false
+   },
+   {
+    "text": "Décrivez votre projet, nous revenons vers vous avec un devis.",
+    "falsePositive": false
+   },
+   {
+    "text": "Une équipe à l'écoute pour chaque étape de votre chantier.",
+    "falsePositive": false
+   },
+   {
+    "text": "Découvrez nos services et nos réalisations.",
+    "falsePositive": false
+   },
+   {
+    "text": "Demander un devis",
+    "falsePositive": false
+   },
+   {
+    "text": "Questions fréquentes sur nos chantiers.",
+    "falsePositive": false
+   }
+  ],
+  "detectionRate": 1,
+  "falsePositiveRate": 0,
+  "undetected": [],
+  "repetitionCodes": [
+   "repeated_sentence"
+  ]
+ },
+ "sections": [
+  {
+   "kind": "hero",
+   "status": "ok",
+   "components": [
+    "hero"
+   ],
+   "example": false,
+   "missing": [],
+   "limitations": 1,
+   "alternative": false
+  },
+  {
+   "kind": "intro",
+   "status": "ok",
+   "components": [
+    "text"
+   ],
+   "example": true,
+   "missing": [],
+   "limitations": 0,
+   "alternative": false
+  },
+  {
+   "kind": "services",
+   "status": "ok",
+   "components": [
+    "features"
+   ],
+   "example": true,
+   "missing": [],
+   "limitations": 1,
+   "alternative": false
+  },
+  {
+   "kind": "benefits",
+   "status": "ok",
+   "components": [
+    "features"
+   ],
+   "example": true,
+   "missing": [],
+   "limitations": 1,
+   "alternative": false
+  },
+  {
+   "kind": "steps",
+   "status": "ok",
+   "components": [
+    "list"
+   ],
+   "example": true,
+   "missing": [],
+   "limitations": 0,
+   "alternative": false
+  },
+  {
+   "kind": "gallery",
+   "status": "skipped",
+   "components": [],
+   "example": false,
+   "missing": [
+    "Galerie / grille d'images (seul le composant « Image » existe, une image par section)"
+   ],
+   "limitations": 1,
+   "alternative": false
+  },
+  {
+   "kind": "testimonials",
+   "status": "ok",
+   "components": [
+    "testimonials"
+   ],
+   "example": true,
+   "missing": [],
+   "limitations": 0,
+   "alternative": false
+  },
+  {
+   "kind": "faq",
+   "status": "ok",
+   "components": [
+    "faq"
+   ],
+   "example": true,
+   "missing": [],
+   "limitations": 0,
+   "alternative": false
+  },
+  {
+   "kind": "contact",
+   "status": "ok",
+   "components": [
+    "text",
+    "form"
+   ],
+   "example": true,
+   "missing": [],
+   "limitations": 1,
+   "alternative": false
+  },
+  {
+   "kind": "cta",
+   "status": "skipped",
+   "components": [],
+   "example": false,
+   "missing": [],
+   "limitations": 0,
+   "alternative": false
+  },
+  {
+   "kind": "pricing",
+   "status": "partial",
+   "components": [
+    "features"
+   ],
+   "example": true,
+   "missing": [
+    "Tableau de tarifs (rendu avec des cartes)"
+   ],
+   "limitations": 2,
+   "alternative": true
+  },
+  {
+   "kind": "listing",
+   "status": "partial",
+   "components": [
+    "text"
+   ],
+   "example": true,
+   "missing": [
+    "Liste dynamique d'articles"
+   ],
+   "limitations": 1,
+   "alternative": true
+  },
+  {
+   "kind": "video",
+   "status": "skipped",
+   "components": [],
+   "example": false,
+   "missing": [],
+   "limitations": 0,
+   "alternative": false
+  },
+  {
+   "kind": "text",
+   "status": "skipped",
+   "components": [],
+   "example": false,
+   "missing": [],
+   "limitations": 0,
+   "alternative": false
+  }
+ ],
+ "media": {
+  "providers": [
+   {
+    "id": "demo",
+    "kind": "demo",
+    "integration": "Local, testé. Produit des visuels d'attente, pas des images d'IA.",
+    "priceStatus": "verified"
+   },
+   {
+    "id": "openai",
+    "kind": "real",
+    "integration": "Adaptateur écrit d'après la documentation publique ; testé contre un faux serveur seulement ; jamais appelé en réel. NON VÉRIFIÉ.",
+    "priceStatus": "unverified"
+   }
+  ],
+  "notIntegrated": [
+   "gemini-imagen",
+   "stability",
+   "bfl-flux"
+  ],
+  "ratios": {
+   "1:1": {
+    "width": 1024,
+    "height": 1024
+   },
+   "3:2": {
+    "width": 1536,
+    "height": 1024
+   },
+   "2:3": {
+    "width": 1024,
+    "height": 1536
+   }
+  },
+  "altSample": "Chantier de construction à Kinshasa (image générée)",
+  "altHeroSample": "Illustration d'ambiance (image générée)"
+ },
+ "scenarios": [
+  {
+   "id": "entreprise",
+   "label": "Site d'entreprise",
+   "siteId": 1,
+   "wizard": "entreprise",
+   "unpublished": [
+    {
+     "name": "Contact",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil",
+     "slug": "accueil",
+     "status": 200,
+     "ms": 18,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6753,
+     "words": 136,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site d&#39;entreprise (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Services",
+     "slug": "services",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "features",
+      "faq"
+     ],
+     "bytes": 6623,
+     "words": 121,
+     "h1": 1,
+     "h1Text": "Services",
+     "title": "Services · Site d&#39;entreprise (labo 22.1)",
+     "placeholders": 8,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos",
+     "slug": "a-propos",
+     "status": 200,
+     "ms": 12,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6329,
+     "words": 122,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site d&#39;entreprise (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Blog",
+     "slug": "blog",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "text"
+     ],
+     "bytes": 5734,
+     "words": 90,
+     "h1": 1,
+     "h1Text": "Blog",
+     "title": "Blog · Site d&#39;entreprise (labo 22.1)",
+     "placeholders": 1,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact",
+     "slug": "contact",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "services",
+    "apropos",
+    "blog",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#1d457c",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Institutionnel",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "institutionnel",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#25426a",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 30,
+    "generateMs": 25,
+    "applyMs": 33,
+    "publishMs": 50,
+    "totalMs": 590
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : FR (attendu FR)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Services, À propos, Blog, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "12 sections, 23 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 4/4"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.7,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "469 mots rendus, dont 23 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 4/4",
+       "meta description : 0/4 · canonical : 4/4 · JSON-LD : 4/4",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 12 ms (machine partagée, charge variable) · accueil 6.6 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 49.7,
+    "measured": 64.5,
+    "pct": 77.1,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "immobilier",
+   "label": "Site immobilier",
+   "siteId": 2,
+   "wizard": "immobilier",
+   "unpublished": [
+    {
+     "name": "Nos biens",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    },
+    {
+     "name": "Contact (2)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (2)",
+     "slug": "accueil-2",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6688,
+     "words": 133,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site immobilier (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Nos biens",
+     "slug": "nos-biens",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    },
+    {
+     "name": "À propos (2)",
+     "slug": "a-propos-2",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6264,
+     "words": 119,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site immobilier (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (2)",
+     "slug": "contact-2",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "immobilier",
+    "apropos",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Luxe",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 222,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "forte",
+      "lang": "fr",
+      "why": [
+       "Ambiance « luxe » d'après le brief.",
+       "Teinte 222° d'après le secteur."
+      ]
+     },
+     "primary": "#152242",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Éditorial",
+     "fontPair": "editorial",
+     "direction": {
+      "mood": "editorial",
+      "hue": 222,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "net",
+      "fontPair": "editorial",
+      "imagery": "forte",
+      "lang": "fr",
+      "why": [
+       "Ambiance « luxe » d'après le brief.",
+       "Teinte 222° d'après le secteur."
+      ]
+     },
+     "primary": "#283552",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Corporate sobre",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "corporate",
+      "hue": 222,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "forte",
+      "lang": "fr",
+      "why": [
+       "Ambiance « luxe » d'après le brief.",
+       "Teinte 222° d'après le secteur."
+      ]
+     },
+     "primary": "#1d3a7c",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 16,
+    "generateMs": 12,
+    "applyMs": 24,
+    "publishMs": 28,
+    "totalMs": 270
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : CA (attendu CA)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Nos biens, À propos, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "7 sections, 14 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 2/2"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.5,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "252 mots rendus, dont 14 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 2/2",
+       "meta description : 0/2 · canonical : 2/2 · JSON-LD : 2/2",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 11 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 49.5,
+    "measured": 64.5,
+    "pct": 76.7,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "construction",
+   "label": "Site de construction",
+   "siteId": 3,
+   "wizard": "services",
+   "unpublished": [
+    {
+     "name": "Prendre rendez-vous",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    },
+    {
+     "name": "Contact (3)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (3)",
+     "slug": "accueil-3",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6694,
+     "words": 129,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site de construction (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Services (2)",
+     "slug": "services-2",
+     "status": 200,
+     "ms": 16,
+     "sections": [
+      "hero",
+      "features",
+      "faq"
+     ],
+     "bytes": 6566,
+     "words": 114,
+     "h1": 1,
+     "h1Text": "Services",
+     "title": "Services · Site de construction (labo 22.1)",
+     "placeholders": 8,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Témoignages",
+     "slug": "temoignages",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "testimonials"
+     ],
+     "bytes": 5928,
+     "words": 86,
+     "h1": 1,
+     "h1Text": "Témoignages",
+     "title": "Témoignages · Site de construction (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (3)",
+     "slug": "a-propos-3",
+     "status": 200,
+     "ms": 12,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6270,
+     "words": 115,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site de construction (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Prendre rendez-vous",
+     "slug": "prendre-rendez-vous",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    },
+    {
+     "name": "Contact (3)",
+     "slug": "contact-3",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "services",
+    "temoignages",
+    "apropos",
+    "contact",
+    "contact"
+   ],
+   "essentialMissing": [
+    "realisations"
+   ],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 22,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 22° d'après la couleur citée."
+      ]
+     },
+     "primary": "#7c401d",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Institutionnel",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "institutionnel",
+      "hue": 22,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 22° d'après la couleur citée."
+      ]
+     },
+     "primary": "#6a3e25",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 22,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 22° d'après la couleur citée."
+      ]
+     },
+     "primary": "#422515",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 13,
+    "generateMs": 18,
+    "applyMs": 28,
+    "publishMs": 42,
+    "totalMs": 488
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : CD (attendu CD)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 8.5,
+      "notes": [
+       "pages : Accueil, Services, Témoignages, À propos, Prendre rendez-vous, Contact",
+       "essentielles couvertes : 3/4 (manquent : realisations)",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "12 sections, 22 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 4/4"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.7,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "444 mots rendus, dont 22 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 4/4",
+       "meta description : 0/4 · canonical : 4/4 · JSON-LD : 4/4",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 12 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 48.2,
+    "measured": 64.5,
+    "pct": 74.7,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "tech",
+   "label": "Site technologique",
+   "siteId": 4,
+   "wizard": "agence",
+   "unpublished": [
+    {
+     "name": "Contact (4)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (4)",
+     "slug": "accueil-4",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6724,
+     "words": 134,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site technologique (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Services (3)",
+     "slug": "services-3",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "features",
+      "faq"
+     ],
+     "bytes": 6596,
+     "words": 119,
+     "h1": 1,
+     "h1Text": "Services",
+     "title": "Services · Site technologique (labo 22.1)",
+     "placeholders": 8,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Réalisations",
+     "slug": "realisations",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero"
+     ],
+     "bytes": 5517,
+     "words": 75,
+     "h1": 1,
+     "h1Text": "Réalisations",
+     "title": "Réalisations · Site technologique (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Témoignages (2)",
+     "slug": "temoignages-2",
+     "status": 200,
+     "ms": 13,
+     "sections": [
+      "hero",
+      "testimonials"
+     ],
+     "bytes": 5966,
+     "words": 91,
+     "h1": 1,
+     "h1Text": "Témoignages",
+     "title": "Témoignages · Site technologique (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (4)",
+     "slug": "a-propos-4",
+     "status": 200,
+     "ms": 17,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6300,
+     "words": 120,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site technologique (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (4)",
+     "slug": "contact-4",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "services",
+    "realisations",
+    "temoignages",
+    "apropos",
+    "contact"
+   ],
+   "essentialMissing": [
+    "tarifs"
+   ],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Technologique",
+     "fontPair": "moderne",
+     "direction": {
+      "mood": "tech",
+      "hue": 215,
+      "neutral": false,
+      "density": "compacte",
+      "roundness": "doux",
+      "fontPair": "moderne",
+      "imagery": "moderee",
+      "lang": "en",
+      "why": [
+       "Ambiance « tech » d'après le brief.",
+       "Teinte bleue (215°) par défaut."
+      ]
+     },
+     "primary": "#1450a3",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 215,
+      "neutral": false,
+      "density": "compacte",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "en",
+      "why": [
+       "Ambiance « tech » d'après le brief.",
+       "Teinte bleue (215°) par défaut."
+      ]
+     },
+     "primary": "#1d457c",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "en",
+      "why": [
+       "Ambiance « tech » d'après le brief.",
+       "Teinte bleue (215°) par défaut."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 17,
+    "generateMs": 12,
+    "applyMs": 25,
+    "publishMs": 37,
+    "totalMs": 505
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : US (attendu US)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 8.5,
+      "notes": [
+       "pages : Accueil, Services, Réalisations, Témoignages, À propos, Contact",
+       "essentielles couvertes : 3/4 (manquent : tarifs)",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "13 sections, 22 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 5/5"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.9,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "539 mots rendus, dont 22 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 5/5",
+       "meta description : 0/5 · canonical : 5/5 · JSON-LD : 5/5",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 11 ms (machine partagée, charge variable) · accueil 6.6 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 48.4,
+    "measured": 64.5,
+    "pct": 75,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "photographie",
+   "label": "Site de photographie",
+   "siteId": 5,
+   "wizard": "portfolio",
+   "unpublished": [
+    {
+     "name": "Contact (5)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (5)",
+     "slug": "accueil-5",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6692,
+     "words": 131,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site de photographie (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Réalisations (2)",
+     "slug": "realisations-2",
+     "status": 200,
+     "ms": 15,
+     "sections": [
+      "hero"
+     ],
+     "bytes": 5493,
+     "words": 72,
+     "h1": 1,
+     "h1Text": "Réalisations",
+     "title": "Réalisations · Site de photographie (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (5)",
+     "slug": "a-propos-5",
+     "status": 200,
+     "ms": 14,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6268,
+     "words": 117,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site de photographie (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Témoignages (3)",
+     "slug": "temoignages-3",
+     "status": 200,
+     "ms": 15,
+     "sections": [
+      "hero",
+      "testimonials"
+     ],
+     "bytes": 5934,
+     "words": 88,
+     "h1": 1,
+     "h1Text": "Témoignages",
+     "title": "Témoignages · Site de photographie (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (5)",
+     "slug": "contact-5",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "realisations",
+    "apropos",
+    "temoignages",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Minimaliste",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "minimaliste",
+      "hue": 215,
+      "neutral": true,
+      "density": "equilibree",
+      "roundness": "net",
+      "fontPair": "neutre",
+      "imagery": "forte",
+      "lang": "fr",
+      "why": [
+       "Ambiance « minimaliste » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#2a2d31",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 215,
+      "neutral": true,
+      "density": "equilibree",
+      "roundness": "net",
+      "fontPair": "neutre",
+      "imagery": "forte",
+      "lang": "fr",
+      "why": [
+       "Ambiance « minimaliste » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#464c53",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": true,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "forte",
+      "lang": "fr",
+      "why": [
+       "Ambiance « minimaliste » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#282b2f",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 37,
+    "generateMs": 20,
+    "applyMs": 98,
+    "publishMs": 111,
+    "totalMs": 660
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : FR (attendu FR)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Réalisations, À propos, Témoignages, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "10 sections, 14 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 4/4"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 3.1,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "408 mots rendus, dont 14 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 4/4",
+       "meta description : 0/4 · canonical : 4/4 · JSON-LD : 4/4",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 15 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 50.1,
+    "measured": 64.5,
+    "pct": 77.7,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "portfolio",
+   "label": "Portfolio créatif",
+   "siteId": 6,
+   "wizard": "portfolio",
+   "unpublished": [
+    {
+     "name": "Contact (6)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (6)",
+     "slug": "accueil-6",
+     "status": 200,
+     "ms": 29,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6673,
+     "words": 125,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Portfolio créatif (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Réalisations (3)",
+     "slug": "realisations-3",
+     "status": 200,
+     "ms": 15,
+     "sections": [
+      "hero"
+     ],
+     "bytes": 5474,
+     "words": 66,
+     "h1": 1,
+     "h1Text": "Réalisations",
+     "title": "Réalisations · Portfolio créatif (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (6)",
+     "slug": "a-propos-6",
+     "status": 200,
+     "ms": 12,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6249,
+     "words": 111,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Portfolio créatif (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Témoignages (4)",
+     "slug": "temoignages-4",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "testimonials"
+     ],
+     "bytes": 5915,
+     "words": 82,
+     "h1": 1,
+     "h1Text": "Témoignages",
+     "title": "Témoignages · Portfolio créatif (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (6)",
+     "slug": "contact-6",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "realisations",
+    "apropos",
+    "temoignages",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Créatif",
+     "fontPair": "moderne",
+     "direction": {
+      "mood": "creatif",
+      "hue": 262,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "arrondi",
+      "fontPair": "moderne",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « creatif » d'après le brief.",
+       "Teinte 262° d'après le secteur."
+      ]
+     },
+     "primary": "#4f1fa3",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Technologique",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "tech",
+      "hue": 262,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "arrondi",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « creatif » d'après le brief.",
+       "Teinte 262° d'après le secteur."
+      ]
+     },
+     "primary": "#4914a3",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 262,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « creatif » d'après le brief.",
+       "Teinte 262° d'après le secteur."
+      ]
+     },
+     "primary": "#251542",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 18,
+    "generateMs": 21,
+    "applyMs": 63,
+    "publishMs": 63,
+    "totalMs": 739
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 2,
+      "notes": [
+       "pays détecté par règles : — (attendu FR)",
+       "langue du brief : unknown",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Réalisations, À propos, Témoignages, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "10 sections, 14 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 4/4"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 3,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "384 mots rendus, dont 14 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 4/4",
+       "meta description : 0/4 · canonical : 4/4 · JSON-LD : 4/4",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 15 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 48,
+    "measured": 64.5,
+    "pct": 74.4,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "institutionnel",
+   "label": "Site institutionnel",
+   "siteId": 7,
+   "wizard": "organisation",
+   "unpublished": [
+    {
+     "name": "Contact (7)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (7)",
+     "slug": "accueil-7",
+     "status": 200,
+     "ms": 15,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6680,
+     "words": 124,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site institutionnel (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (7)",
+     "slug": "a-propos-7",
+     "status": 200,
+     "ms": 19,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6256,
+     "words": 110,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site institutionnel (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Blog (2)",
+     "slug": "blog-2",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "text"
+     ],
+     "bytes": 5661,
+     "words": 78,
+     "h1": 1,
+     "h1Text": "Blog",
+     "title": "Blog · Site institutionnel (labo 22.1)",
+     "placeholders": 1,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (7)",
+     "slug": "contact-7",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "apropos",
+    "blog",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Institutionnel",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "institutionnel",
+      "hue": 145,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « institutionnel » d'après le brief.",
+       "Teinte 145° d'après la couleur citée."
+      ]
+     },
+     "primary": "#256a42",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 145,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « institutionnel » d'après le brief.",
+       "Teinte 145° d'après la couleur citée."
+      ]
+     },
+     "primary": "#1d7c45",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 145,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « institutionnel » d'après le brief.",
+       "Teinte 145° d'après la couleur citée."
+      ]
+     },
+     "primary": "#154228",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 17,
+    "generateMs": 13,
+    "applyMs": 25,
+    "publishMs": 32,
+    "totalMs": 458
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : CD (attendu CD)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, À propos, Blog, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "9 sections, 15 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 3/3"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.7,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "312 mots rendus, dont 15 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 3/3",
+       "meta description : 0/3 · canonical : 3/3 · JSON-LD : 3/3",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 15 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 49.7,
+    "measured": 64.5,
+    "pct": 77.1,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "restaurant",
+   "label": "Restaurant",
+   "siteId": 8,
+   "wizard": "restaurant",
+   "unpublished": [
+    {
+     "name": "Contact (8)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (8)",
+     "slug": "accueil-8",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6620,
+     "words": 125,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Restaurant (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Carte",
+     "slug": "carte",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "features",
+      "faq"
+     ],
+     "bytes": 6452,
+     "words": 110,
+     "h1": 1,
+     "h1Text": "Carte",
+     "title": "Carte · Restaurant (labo 22.1)",
+     "placeholders": 8,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (8)",
+     "slug": "a-propos-8",
+     "status": 200,
+     "ms": 34,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6196,
+     "words": 111,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Restaurant (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (8)",
+     "slug": "contact-8",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "services",
+    "apropos",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Créatif",
+     "fontPair": "moderne",
+     "direction": {
+      "mood": "creatif",
+      "hue": 22,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "arrondi",
+      "fontPair": "moderne",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « creatif » d'après le type de site (restaurant).",
+       "Teinte 22° d'après le secteur."
+      ]
+     },
+     "primary": "#a34f1f",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Technologique",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "tech",
+      "hue": 22,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "arrondi",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « creatif » d'après le type de site (restaurant).",
+       "Teinte 22° d'après le secteur."
+      ]
+     },
+     "primary": "#a34914",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 22,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « creatif » d'après le type de site (restaurant).",
+       "Teinte 22° d'après le secteur."
+      ]
+     },
+     "primary": "#422515",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 14,
+    "generateMs": 14,
+    "applyMs": 22,
+    "publishMs": 45,
+    "totalMs": 685
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 3,
+      "notes": [
+       "pays détecté par règles : BE (attendu BE)",
+       "langue du brief : unknown",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Carte, À propos, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "10 sections, 22 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 3/3"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.3,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "346 mots rendus, dont 22 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 3/3",
+       "meta description : 0/3 · canonical : 3/3 · JSON-LD : 3/3",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 11 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 48.3,
+    "measured": 64.5,
+    "pct": 74.9,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "blog",
+   "label": "Blog professionnel",
+   "siteId": 9,
+   "wizard": "blog",
+   "unpublished": [
+    {
+     "name": "Contact (9)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (9)",
+     "slug": "accueil-9",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6699,
+     "words": 129,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Blog professionnel (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Blog (3)",
+     "slug": "blog-3",
+     "status": 200,
+     "ms": 8,
+     "sections": [
+      "hero",
+      "text"
+     ],
+     "bytes": 5680,
+     "words": 83,
+     "h1": 1,
+     "h1Text": "Blog",
+     "title": "Blog · Blog professionnel (labo 22.1)",
+     "placeholders": 1,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (9)",
+     "slug": "a-propos-9",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6275,
+     "words": 115,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Blog professionnel (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (9)",
+     "slug": "contact-9",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "blog",
+    "apropos",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Éditorial",
+     "fontPair": "editorial",
+     "direction": {
+      "mood": "editorial",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "net",
+      "fontPair": "editorial",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « editorial » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#283a52",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Luxe",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "net",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « editorial » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « editorial » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 258,
+    "generateMs": 10,
+    "applyMs": 29,
+    "publishMs": 29,
+    "totalMs": 904
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 3,
+      "notes": [
+       "pays détecté par règles : — (attendu FR)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Blog, À propos, Contact",
+       "essentielles couvertes : 4/4",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "9 sections, 15 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 3/3"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.8,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "327 mots rendus, dont 15 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 3/3",
+       "meta description : 0/3 · canonical : 3/3 · JSON-LD : 3/3",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 11 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 48.8,
+    "measured": 64.5,
+    "pct": 75.7,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "boutique",
+   "label": "Boutique e-commerce",
+   "siteId": 10,
+   "wizard": "boutique",
+   "unpublished": [
+    {
+     "name": "Contact (10)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (10)",
+     "slug": "accueil-10",
+     "status": 200,
+     "ms": 23,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6716,
+     "words": 131,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Boutique e-commerce (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Catalogue",
+     "slug": "catalogue",
+     "status": 200,
+     "ms": 12,
+     "sections": [
+      "hero",
+      "text",
+      "faq"
+     ],
+     "bytes": 6275,
+     "words": 94,
+     "h1": 1,
+     "h1Text": "Catalogue",
+     "title": "Catalogue · Boutique e-commerce (labo 22.1)",
+     "placeholders": 3,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Questions fréquentes",
+     "slug": "questions-frequentes",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "faq"
+     ],
+     "bytes": 6147,
+     "words": 82,
+     "h1": 1,
+     "h1Text": "Questions fréquentes",
+     "title": "Questions fréquentes · Boutique e-commerce (labo 22.1)",
+     "placeholders": 2,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (10)",
+     "slug": "contact-10",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "formation",
+    "faq",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [
+    "formation"
+   ],
+   "wrongModule": [
+    "formation"
+   ],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — E-commerce",
+     "fontPair": "moderne",
+     "direction": {
+      "mood": "ecommerce",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "moderne",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « ecommerce » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#204b88",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Minimaliste",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "minimaliste",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « ecommerce » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#272d34",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « ecommerce » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 13,
+    "generateMs": 11,
+    "applyMs": 41,
+    "publishMs": 46,
+    "totalMs": 406
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : FR (attendu FR)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 7,
+      "notes": [
+       "pages : Accueil, Catalogue, Questions fréquentes, Contact",
+       "essentielles couvertes : 3/3",
+       "pages peu pertinentes : formation",
+       "type de page « formation » appliqué à un projet qui ne vend pas de formations"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "9 sections, 12 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 3/3"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 3,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "307 mots rendus, dont 12 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 3/3",
+       "meta description : 0/3 · canonical : 3/3 · JSON-LD : 3/3",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 12 ms (machine partagée, charge variable) · accueil 6.6 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 47,
+    "measured": 64.5,
+    "pct": 72.9,
+    "status": "À AMÉLIORER",
+    "capped": true,
+    "critical": [
+     "parcours d'achat non démontré : le parcours guidé crée un « catalogue » de FORMATIONS, sans fiche produit, panier ni commande de produits",
+     "le planificateur déclare la boutique « unavailable »"
+    ]
+   }
+  },
+  {
+   "id": "mode",
+   "label": "Boutique de mode",
+   "siteId": 11,
+   "wizard": "boutique",
+   "unpublished": [
+    {
+     "name": "Contact (11)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (11)",
+     "slug": "accueil-11",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6656,
+     "words": 127,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Boutique de mode (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Catalogue (2)",
+     "slug": "catalogue-2",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "text",
+      "faq"
+     ],
+     "bytes": 6225,
+     "words": 90,
+     "h1": 1,
+     "h1Text": "Catalogue",
+     "title": "Catalogue · Boutique de mode (labo 22.1)",
+     "placeholders": 3,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Questions fréquentes (2)",
+     "slug": "questions-frequentes-2",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "faq"
+     ],
+     "bytes": 6097,
+     "words": 78,
+     "h1": 1,
+     "h1Text": "Questions fréquentes",
+     "title": "Questions fréquentes · Boutique de mode (labo 22.1)",
+     "placeholders": 2,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (11)",
+     "slug": "contact-11",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "formation",
+    "faq",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [
+    "formation"
+   ],
+   "wrongModule": [
+    "formation"
+   ],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Luxe",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « luxe » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Éditorial",
+     "fontPair": "editorial",
+     "direction": {
+      "mood": "editorial",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "net",
+      "fontPair": "editorial",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « luxe » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#283a52",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Corporate sobre",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "corporate",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « luxe » d'après le brief.",
+       "Teinte 215° d'après le secteur."
+      ]
+     },
+     "primary": "#1d457c",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 15,
+    "generateMs": 28,
+    "applyMs": 30,
+    "publishMs": 25,
+    "totalMs": 286
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : CA (attendu CA)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 7,
+      "notes": [
+       "pages : Accueil, Catalogue, Questions fréquentes, Contact",
+       "essentielles couvertes : 3/3",
+       "pages peu pertinentes : formation",
+       "type de page « formation » appliqué à un projet qui ne vend pas de formations"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "9 sections, 12 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 3/3"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.9,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "295 mots rendus, dont 12 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 3/3",
+       "meta description : 0/3 · canonical : 3/3 · JSON-LD : 3/3",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 10 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 46.9,
+    "measured": 64.5,
+    "pct": 72.7,
+    "status": "À AMÉLIORER",
+    "capped": true,
+    "critical": [
+     "parcours d'achat non démontré : le parcours guidé crée un « catalogue » de FORMATIONS, sans fiche produit, panier ni commande de produits",
+     "le planificateur déclare la boutique « unavailable »"
+    ]
+   }
+  },
+  {
+   "id": "informatique",
+   "label": "Boutique informatique",
+   "siteId": 12,
+   "wizard": "boutique",
+   "unpublished": [
+    {
+     "name": "Contact (12)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (12)",
+     "slug": "accueil-12",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6688,
+     "words": 123,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Boutique informatique (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Catalogue (3)",
+     "slug": "catalogue-3",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "text",
+      "faq"
+     ],
+     "bytes": 6257,
+     "words": 86,
+     "h1": 1,
+     "h1Text": "Catalogue",
+     "title": "Catalogue · Boutique informatique (labo 22.1)",
+     "placeholders": 3,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Questions fréquentes (3)",
+     "slug": "questions-frequentes-3",
+     "status": 200,
+     "ms": 10,
+     "sections": [
+      "hero",
+      "faq"
+     ],
+     "bytes": 6129,
+     "words": 74,
+     "h1": 1,
+     "h1Text": "Questions fréquentes",
+     "title": "Questions fréquentes · Boutique informatique (labo 22.1)",
+     "placeholders": 2,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (12)",
+     "slug": "contact-12",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "formation",
+    "faq",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [
+    "formation"
+   ],
+   "wrongModule": [
+    "formation"
+   ],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Technologique",
+     "fontPair": "moderne",
+     "direction": {
+      "mood": "tech",
+      "hue": 215,
+      "neutral": false,
+      "density": "compacte",
+      "roundness": "doux",
+      "fontPair": "moderne",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « tech » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#1450a3",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 215,
+      "neutral": false,
+      "density": "compacte",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « tech » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#1d457c",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « tech » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 11,
+    "generateMs": 16,
+    "applyMs": 44,
+    "publishMs": 25,
+    "totalMs": 335
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : CD (attendu CD)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 7,
+      "notes": [
+       "pages : Accueil, Catalogue, Questions fréquentes, Contact",
+       "essentielles couvertes : 3/3",
+       "pages peu pertinentes : formation",
+       "type de page « formation » appliqué à un projet qui ne vend pas de formations"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "9 sections, 12 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 3/3"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.9,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "283 mots rendus, dont 12 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 3/3",
+       "meta description : 0/3 · canonical : 3/3 · JSON-LD : 3/3",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 10 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 46.9,
+    "measured": 64.5,
+    "pct": 72.7,
+    "status": "À AMÉLIORER",
+    "capped": true,
+    "critical": [
+     "parcours d'achat non démontré : le parcours guidé crée un « catalogue » de FORMATIONS, sans fiche produit, panier ni commande de produits",
+     "le planificateur déclare la boutique « unavailable »"
+    ]
+   }
+  },
+  {
+   "id": "services",
+   "label": "Site de services",
+   "siteId": 13,
+   "wizard": "services",
+   "unpublished": [
+    {
+     "name": "Prendre rendez-vous (2)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    },
+    {
+     "name": "Contact (13)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (13)",
+     "slug": "accueil-13",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6658,
+     "words": 126,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site de services (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Services (4)",
+     "slug": "services-4",
+     "status": 200,
+     "ms": 11,
+     "sections": [
+      "hero",
+      "features",
+      "faq"
+     ],
+     "bytes": 6526,
+     "words": 111,
+     "h1": 1,
+     "h1Text": "Services",
+     "title": "Services · Site de services (labo 22.1)",
+     "placeholders": 8,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Témoignages (5)",
+     "slug": "temoignages-5",
+     "status": 200,
+     "ms": 8,
+     "sections": [
+      "hero",
+      "testimonials"
+     ],
+     "bytes": 5896,
+     "words": 83,
+     "h1": 1,
+     "h1Text": "Témoignages",
+     "title": "Témoignages · Site de services (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (10)",
+     "slug": "a-propos-10",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6234,
+     "words": 112,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site de services (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Prendre rendez-vous (2)",
+     "slug": "prendre-rendez-vous-2",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    },
+    {
+     "name": "Contact (13)",
+     "slug": "contact-13",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "services",
+    "temoignages",
+    "apropos",
+    "contact",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 145,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 145° d'après la couleur citée."
+      ]
+     },
+     "primary": "#1d7c45",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Institutionnel",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "institutionnel",
+      "hue": 145,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 145° d'après la couleur citée."
+      ]
+     },
+     "primary": "#256a42",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 145,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le brief.",
+       "Teinte 145° d'après la couleur citée."
+      ]
+     },
+     "primary": "#154228",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 15,
+    "generateMs": 32,
+    "applyMs": 26,
+    "publishMs": 38,
+    "totalMs": 468
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : SN (attendu SN)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Services, Témoignages, À propos, Prendre rendez-vous, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "12 sections, 22 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 4/4"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.6,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "432 mots rendus, dont 22 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 4/4",
+       "meta description : 0/4 · canonical : 4/4 · JSON-LD : 4/4",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 9 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 49.6,
+    "measured": 64.5,
+    "pct": 76.9,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "education",
+   "label": "Site éducatif",
+   "siteId": 14,
+   "wizard": "education",
+   "unpublished": [
+    {
+     "name": "Contact (14)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (14)",
+     "slug": "accueil-14",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6622,
+     "words": 123,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site éducatif (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Formations",
+     "slug": "formations",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "text",
+      "faq"
+     ],
+     "bytes": 6191,
+     "words": 86,
+     "h1": 1,
+     "h1Text": "Formations",
+     "title": "Formations · Site éducatif (labo 22.1)",
+     "placeholders": 3,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Enseignants",
+     "slug": "enseignants",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "features"
+     ],
+     "bytes": 5975,
+     "words": 100,
+     "h1": 1,
+     "h1Text": "Enseignants",
+     "title": "Enseignants · Site éducatif (labo 22.1)",
+     "placeholders": 6,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Blog (4)",
+     "slug": "blog-4",
+     "status": 200,
+     "ms": 8,
+     "sections": [
+      "hero",
+      "text"
+     ],
+     "bytes": 5599,
+     "words": 77,
+     "h1": 1,
+     "h1Text": "Blog",
+     "title": "Blog · Site éducatif (labo 22.1)",
+     "placeholders": 1,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Contact (14)",
+     "slug": "contact-14",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "formation",
+    "equipe",
+    "blog",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Éducatif",
+     "fontPair": "moderne",
+     "direction": {
+      "mood": "educatif",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "arrondi",
+      "fontPair": "moderne",
+      "imagery": "moderee",
+      "lang": "en",
+      "why": [
+       "Ambiance « educatif » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#214e8c",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "arrondi",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "en",
+      "why": [
+       "Ambiance « educatif » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#1d457c",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "en",
+      "why": [
+       "Ambiance « educatif » d'après le brief.",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 10,
+    "generateMs": 16,
+    "applyMs": 26,
+    "publishMs": 31,
+    "totalMs": 334
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 4,
+      "notes": [
+       "pays détecté par règles : US (attendu US)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Formations, Enseignants, Blog, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "11 sections, 17 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 4/4"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.8,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "386 mots rendus, dont 17 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 4/4",
+       "meta description : 0/4 · canonical : 4/4 · JSON-LD : 4/4",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 9 ms (machine partagée, charge variable) · accueil 6.5 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 49.8,
+    "measured": 64.5,
+    "pct": 77.2,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  },
+  {
+   "id": "sante",
+   "label": "Site de santé (contenu contrôlé)",
+   "siteId": 15,
+   "wizard": "services",
+   "unpublished": [
+    {
+     "name": "Prendre rendez-vous (3)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    },
+    {
+     "name": "Contact (15)",
+     "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page.",
+     "needsForm": true
+    }
+   ],
+   "pages": [
+    {
+     "name": "Accueil (15)",
+     "slug": "accueil-15",
+     "status": 200,
+     "ms": 8,
+     "sections": [
+      "hero",
+      "text",
+      "features",
+      "testimonials"
+     ],
+     "bytes": 6790,
+     "words": 128,
+     "h1": 1,
+     "h1Text": "Accueil",
+     "title": "Accueil · Site de santé (contenu contrôlé) (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Services (5)",
+     "slug": "services-5",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "features",
+      "faq"
+     ],
+     "bytes": 6658,
+     "words": 113,
+     "h1": 1,
+     "h1Text": "Services",
+     "title": "Services · Site de santé (contenu contrôlé) (labo 22.1)",
+     "placeholders": 8,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Témoignages (6)",
+     "slug": "temoignages-6",
+     "status": 200,
+     "ms": 8,
+     "sections": [
+      "hero",
+      "testimonials"
+     ],
+     "bytes": 6028,
+     "words": 85,
+     "h1": 1,
+     "h1Text": "Témoignages",
+     "title": "Témoignages · Site de santé (contenu contrôlé) (labo 22.1)",
+     "placeholders": 0,
+     "replaceMarkers": 2,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "À propos (11)",
+     "slug": "a-propos-11",
+     "status": 200,
+     "ms": 9,
+     "sections": [
+      "hero",
+      "text",
+      "features"
+     ],
+     "bytes": 6366,
+     "words": 114,
+     "h1": 1,
+     "h1Text": "À propos",
+     "title": "À propos · Site de santé (contenu contrôlé) (labo 22.1)",
+     "placeholders": 7,
+     "replaceMarkers": 0,
+     "description": false,
+     "images": 0
+    },
+    {
+     "name": "Prendre rendez-vous (3)",
+     "slug": "prendre-rendez-vous-3",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    },
+    {
+     "name": "Contact (15)",
+     "slug": "contact-15",
+     "status": 0,
+     "ms": 0,
+     "sections": [
+      "hero",
+      "text",
+      "form"
+     ],
+     "bytes": null,
+     "words": null,
+     "h1": null,
+     "h1Text": null,
+     "title": null,
+     "placeholders": null,
+     "replaceMarkers": null,
+     "description": null,
+     "images": null
+    }
+   ],
+   "types": [
+    "accueil",
+    "services",
+    "temoignages",
+    "apropos",
+    "contact",
+    "contact"
+   ],
+   "essentialMissing": [],
+   "unrelated": [],
+   "wrongModule": [],
+   "design": [
+    {
+     "key": "a",
+     "name": "A — Corporate",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "corporate",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le type de site (entreprise).",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#1d457c",
+     "contrastOk": true
+    },
+    {
+     "key": "b",
+     "name": "B — Institutionnel",
+     "fontPair": "neutre",
+     "direction": {
+      "mood": "institutionnel",
+      "hue": 215,
+      "neutral": false,
+      "density": "equilibree",
+      "roundness": "doux",
+      "fontPair": "neutre",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le type de site (entreprise).",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#25426a",
+     "contrastOk": true
+    },
+    {
+     "key": "c",
+     "name": "C — Contraste premium",
+     "fontPair": "classique",
+     "direction": {
+      "mood": "luxe",
+      "hue": 215,
+      "neutral": false,
+      "density": "aeree",
+      "roundness": "net",
+      "fontPair": "classique",
+      "imagery": "moderee",
+      "lang": "fr",
+      "why": [
+       "Ambiance « corporate » d'après le type de site (entreprise).",
+       "Teinte 215° d'après la couleur citée."
+      ]
+     },
+     "primary": "#152842",
+     "contrastOk": true
+    }
+   ],
+   "homeSignature": "hero>text>features>testimonials",
+   "linkChecks": [
+    {
+     "href": "/",
+     "status": 200
+    },
+    {
+     "href": "/cookies",
+     "status": 200
+    }
+   ],
+   "mediaQueries": 36,
+   "timings": {
+    "designMs": 11,
+    "generateMs": 9,
+    "applyMs": 28,
+    "publishMs": 38,
+    "totalMs": 299
+   },
+   "claims": [],
+   "score": {
+    "rows": [
+     {
+      "key": "brief",
+      "label": "Compréhension du brief",
+      "max": 10,
+      "measured": 4,
+      "got": 3,
+      "notes": [
+       "pays détecté par règles : — (attendu FR)",
+       "langue du brief : fr",
+       "compréhension réelle (secteur, public, fonctionnalités) : NON MESURÉE — dépend du modèle d'IA"
+      ]
+     },
+     {
+      "key": "architecture",
+      "label": "Architecture du site",
+      "max": 10,
+      "measured": 10,
+      "got": 10,
+      "notes": [
+       "pages : Accueil, Services, Témoignages, À propos, Prendre rendez-vous, Contact",
+       "essentielles couvertes : 3/3",
+       "aucune page hors sujet"
+      ]
+     },
+     {
+      "key": "visuel",
+      "label": "Qualité visuelle",
+      "max": 20,
+      "measured": 12,
+      "got": 9.5,
+      "notes": [
+       "contrastes des 3 directions vérifiés : 100 %",
+       "variété des sections de l'accueil : 1 (hero > text > features > testimonials)",
+       "alternance des fonds : 0.33",
+       "jugement esthétique (originalité, harmonie, personnalité) : NON MESURÉ — aucun navigateur ni évaluation humaine dans ce palier"
+      ]
+     },
+     {
+      "key": "sections",
+      "label": "Qualité des sections",
+      "max": 10,
+      "measured": 10,
+      "got": 6,
+      "notes": [
+       "12 sections, 22 textes d'exemple entre crochets (100 %)",
+       "pages de plus de 40 mots : 4/4"
+      ]
+     },
+     {
+      "key": "contenus",
+      "label": "Qualité des contenus",
+      "max": 10,
+      "measured": 4,
+      "got": 2.7,
+      "notes": [
+       "aucune statistique, certification ou promesse inventée",
+       "440 mots rendus, dont 22 blocs d'exemple",
+       "qualité rédactionnelle réelle : NON MESURÉE — le contenu rédigé par IA n'est pas généré dans le laboratoire"
+      ]
+     },
+     {
+      "key": "medias",
+      "label": "Qualité des médias",
+      "max": 10,
+      "measured": 5,
+      "got": 0,
+      "notes": [
+       "AUCUNE image dans le site généré (le Media Generator est une étape séparée)",
+       "pertinence, cadrage, cohérence stylistique : NON MESURÉS"
+      ]
+     },
+     {
+      "key": "responsive",
+      "label": "Responsive design",
+      "max": 10,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "balise viewport : oui · règles @media dans le CSS : 36 · images fluides : oui",
+       "rendu réel mobile/tablette (débordements, texte coupé) : NON MESURÉ — Chrome absent"
+      ]
+     },
+     {
+      "key": "ux",
+      "label": "Expérience utilisateur",
+      "max": 10,
+      "measured": 4.5,
+      "got": 3.5,
+      "notes": [
+       "menu de navigation dans la page : non (non noté) · liens internes testés : 2, cassés : 0",
+       "appel à l'action sur l'accueil : oui · formulaire sur la page de contact : page de contact NON PUBLIABLE sans formulaire associé"
+      ]
+     },
+     {
+      "key": "seoa11y",
+      "label": "SEO et accessibilité",
+      "max": 5,
+      "measured": 5,
+      "got": 4,
+      "notes": [
+       "pages avec exactement un h1 : 4/4",
+       "meta description : 0/4 · canonical : 4/4 · JSON-LD : 4/4",
+       "conformité WCAG : NON ÉVALUÉE (audit statique partiel, pas de lecteur d'écran ni de clavier)"
+      ]
+     },
+     {
+      "key": "perf",
+      "label": "Performance technique",
+      "max": 5,
+      "measured": 5,
+      "got": 5,
+      "notes": [
+       "temps de réponse médian 9 ms (machine partagée, charge variable) · accueil 6.6 Ko · 4 balises script · CSS 123.5 Ko",
+       "Lighthouse / Core Web Vitals : NON EXÉCUTÉS (Chrome absent)"
+      ]
+     }
+    ],
+    "got": 48.7,
+    "measured": 64.5,
+    "pct": 75.5,
+    "status": "SATISFAISANT",
+    "capped": false,
+    "critical": []
+   }
+  }
+ ],
+ "diversity": {
+  "distinctHomeSignatures": 1,
+  "total": 15,
+  "identicalHomePairs": 105,
+  "identicalPageSetPairs": 7,
+  "meanJaccard": 1,
+  "distinctPrimaryColors": 13,
+  "primaries": [
+   "#1d457c",
+   "#152242",
+   "#7c401d",
+   "#1450a3",
+   "#2a2d31",
+   "#4f1fa3",
+   "#256a42",
+   "#a34f1f",
+   "#283a52",
+   "#204b88",
+   "#152842",
+   "#1450a3",
+   "#1d7c45",
+   "#214e8c",
+   "#1d457c"
+  ],
+  "distinctDirectionTriples": 13,
+  "architectureGroups": [
+   {
+    "types": "accueil>services>apropos>blog>contact",
+    "scenarios": [
+     "entreprise"
+    ]
+   },
+   {
+    "types": "accueil>immobilier>apropos>contact",
+    "scenarios": [
+     "immobilier"
+    ]
+   },
+   {
+    "types": "accueil>services>temoignages>apropos>contact>contact",
+    "scenarios": [
+     "construction",
+     "services",
+     "sante"
+    ]
+   },
+   {
+    "types": "accueil>services>realisations>temoignages>apropos>contact",
+    "scenarios": [
+     "tech"
+    ]
+   },
+   {
+    "types": "accueil>realisations>apropos>temoignages>contact",
+    "scenarios": [
+     "photographie",
+     "portfolio"
+    ]
+   },
+   {
+    "types": "accueil>apropos>blog>contact",
+    "scenarios": [
+     "institutionnel"
+    ]
+   },
+   {
+    "types": "accueil>services>apropos>contact",
+    "scenarios": [
+     "restaurant"
+    ]
+   },
+   {
+    "types": "accueil>blog>apropos>contact",
+    "scenarios": [
+     "blog"
+    ]
+   },
+   {
+    "types": "accueil>formation>faq>contact",
+    "scenarios": [
+     "boutique",
+     "mode",
+     "informatique"
+    ]
+   },
+   {
+    "types": "accueil>formation>equipe>blog>contact",
+    "scenarios": [
+     "education"
+    ]
+   }
+  ],
+  "pairs": [
+   {
+    "a": "entreprise",
+    "b": "immobilier",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "construction",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "tech",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "photographie",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "portfolio",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "institutionnel",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "restaurant",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "entreprise",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "construction",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "tech",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "photographie",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "portfolio",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "institutionnel",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "restaurant",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "immobilier",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "tech",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "photographie",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "portfolio",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "institutionnel",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "restaurant",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": true
+   },
+   {
+    "a": "construction",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "construction",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": true
+   },
+   {
+    "a": "tech",
+    "b": "photographie",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "portfolio",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "institutionnel",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "restaurant",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "tech",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "portfolio",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": true
+   },
+   {
+    "a": "photographie",
+    "b": "institutionnel",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "restaurant",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "photographie",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "institutionnel",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "restaurant",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "portfolio",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "restaurant",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "institutionnel",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "restaurant",
+    "b": "blog",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "restaurant",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "restaurant",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "restaurant",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "restaurant",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "restaurant",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "restaurant",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "blog",
+    "b": "boutique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "blog",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "blog",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "blog",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "blog",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "blog",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "boutique",
+    "b": "mode",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": true
+   },
+   {
+    "a": "boutique",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": true
+   },
+   {
+    "a": "boutique",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "boutique",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "boutique",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "mode",
+    "b": "informatique",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": true
+   },
+   {
+    "a": "mode",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "mode",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "mode",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "informatique",
+    "b": "services",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "informatique",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "informatique",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "services",
+    "b": "education",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   },
+   {
+    "a": "services",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": true
+   },
+   {
+    "a": "education",
+    "b": "sante",
+    "identicalHome": true,
+    "jaccard": 1,
+    "identicalPages": false
+   }
+  ]
+ }
+}
