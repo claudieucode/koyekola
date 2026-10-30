@@ -62,3 +62,5 @@ Commandes utiles :
 - `GET /sante` : page de contrôle (`{"statut":"ok"}`).
 
 Variables d’environnement : voir `.env.example`.
+
+Documentation d'exploitation (palier 19) : [installation et configuration](docs/KOLAKISA_INSTALLATION_AND_CONFIGURATION.md) · [déploiement et retour arrière](docs/KOLAKISA_DEPLOYMENT_RUNBOOK.md) · [sauvegarde et restauration](docs/KOLAKISA_BACKUP_AND_RESTORE.md) · [exploitation et diagnostic](docs/KOLAKISA_OPERATIONS_AND_TROUBLESHOOTING.md) · [préparation à la production](docs/KOLAKISA_PRODUCTION_READINESS_CHECKLIST.md).

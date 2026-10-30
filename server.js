@@ -70,6 +70,7 @@ app.use(canonicalHost);
 // Palier 12 : site d'après l'hôte (domaines enregistrés seulement), casse / barre finale des adresses de contenu, environnement non public jamais indexé
 const siteHost = require("./src/middlewares/siteHost");
 app.use(siteHost.attachSite);
+app.use(require("./src/services/lmsSites").attach(require("./src/config/database"))); // contexte de site du LMS (req.lmsSite) : déduit du domaine, jamais de la requête
 app.use(require("./src/marketing/pages").schedulerMiddleware); // pages programmées : mises en ligne à la première visite après l'heure prévue (palier 23)
 app.use(siteHost.indexingGuard);
 app.use(siteHost.normalizePaths);

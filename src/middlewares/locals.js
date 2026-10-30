@@ -87,9 +87,10 @@ function injectLocals(req, res, next) {
   // Élément « courant » : son adresse (sans paramètres ni ancre) est celle de la page affichée
   res.locals.navIsCurrent = (href) => Boolean(href) && href.startsWith("/") && href.split(/[?#]/)[0].replace(/\/+$/, "") === String(req.path).replace(/\/+$/, "") && !(href === "/" && req.path !== "/");
   // Catégories des formations publiées, pour le menu « Catégories » de l'en-tête
+  const navScope = require("../services/lmsSites").scopeSql(req.lmsSite, "courses"); // seules les catégories du site de la requête (jamais celles d'un autre site)
   res.locals.navCategories = db
-    .prepare("SELECT DISTINCT category FROM courses WHERE published = 1 ORDER BY category")
-    .all()
+    .prepare(`SELECT DISTINCT category FROM courses WHERE published = 1 AND ${navScope.sql} ORDER BY category`)
+    .all(...navScope.params)
     .map((row) => row.category);
   // Le panier n'existe que pour les utilisateurs connectés : un simple visiteur (ou un robot)
   // ne doit pas créer de session enregistrée en base à chaque page vue.

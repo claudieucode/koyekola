@@ -15,7 +15,7 @@ const MODULES = Object.freeze({
   social: { label: "Réseaux sociaux", phase: "R7-6.3", ready: true },
   scoring: { label: "Score des contacts", phase: "R7-6.4", ready: true },
   commerce: { label: "Commerce", phase: "R7-6.5", ready: true },
-  lms: { label: "Formations", phase: "R7-6.6", ready: false },
+  lms: { label: "Formations", phase: "Titan XXIII", ready: true },
 });
 const KEYS = Object.keys(MODULES);
 

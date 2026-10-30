@@ -1,0 +1,64 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<div class="sw">
+  <p class="mk-back"><a href="/marketing/site-web/sites/<%= siteId %>/assistant">← Assistant de création</a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Générateur de pages</h1><p class="mk-head-sub">Un plan devient de vraies pages Kolakisa (mêmes composants que l'éditeur), enregistrées en <strong>brouillon</strong>. Rien n'est publié, aucune page existante n'est écrasée sans votre choix.</p></div></div>
+
+<% if (mode === "index") { %>
+  <section class="mk-panel">
+    <h2>Plan des pages</h2>
+    <p class="sw-muted">Plan prérempli d'après le type de votre site (format « Site Plan » v1). Modifiez-le si besoin : les textes laissés vides deviennent des textes d'exemple entre crochets.</p>
+    <form method="post" action="<%= W %>/generer">
+      <label class="sw-field">Plan (JSON) <textarea name="plan" rows="16" spellcheck="false" style="font-family:monospace"><%= planJson %></textarea></label>
+      <label><input type="checkbox" name="ia" value="oui"> Rédiger les textes manquants avec l'IA <span class="sw-muted">(module IA du site et clé configurée ; plafond quotidien appliqué ; l'IA ne fournit que du texte)</span></label>
+      <% if (canWrite) { %><div class="sw-actions"><button class="btn btn-primary" type="submit">Générer la proposition</button></div><% } %>
+    </form>
+  </section>
+  <section class="mk-panel">
+    <h2>Composants disponibles dans Kolakisa</h2>
+    <table class="mk-table"><caption class="sw-sr">Registre des composants</caption><thead><tr><th scope="col">Composant</th><th scope="col">Catégorie</th><th scope="col">Utilisé par le générateur</th></tr></thead><tbody>
+      <% registry.types.filter((t) => !t.builderOnly).forEach((t) => { %><tr><td><code><%= t.type %></code> — <%= t.label %></td><td><%= t.category %></td><td><%= t.mapped ? "Oui" : "Non" %></td></tr><% }) %>
+    </tbody></table>
+    <p class="sw-muted"><strong>Absents du CMS</strong> (jamais présentés comme disponibles) : <%= Object.values(registry.absent).join(" · ") %></p>
+  </section>
+  <% if (runs.length) { %><section class="mk-panel"><h2>Générations précédentes</h2><ul class="sw-list"><% runs.forEach((r) => { %><li><span>Génération n° <%= r.id %> · <%= r.status %> · <%= r.created_at %></span><a class="btn btn-outline btn-sm" href="<%= W %>/<%= r.id %>">Ouvrir</a></li><% }) %></ul></section><% } %>
+
+<% } else { %>
+  <section class="mk-panel">
+    <h2>Génération n° <%= run.id %> — <%= run.status === "proposed" ? "proposition (rien d'enregistré)" : run.status === "applied" ? "appliquée en brouillon" : "annulée" %></h2>
+    <% if (run.usedAi) { %><p class="sw-note">Textes manquants rédigés par l'IA : relisez-les, ils ne sont pas vérifiés.</p><% } %>
+    <% run.result.warnings.forEach((w) => { %><p class="sw-muted"><%= w %></p><% }) %>
+    <form method="post" action="<%= W %>/<%= run.id %>/appliquer">
+    <% run.result.pages.forEach((p) => { const a = run.applied[p.key]; %>
+      <div class="sw-block">
+        <h3><%= p.name %> <span class="mk-status <%= p.status === "ready" ? "" : "mk-status-warn" %>"><%= p.status === "ready" ? "Prête" : p.status === "invalid" ? "Invalide" : "Non générée" %></span></h3>
+        <% if (p.reason) { %><p class="sw-warn"><%= p.reason %></p><% } %>
+        <% (p.errors || []).forEach((e) => { %><p class="sw-warn"><%= e %></p><% }) %>
+        <% if (p.maps.length) { %>
+        <table class="mk-table"><caption class="sw-sr">Structure de <%= p.name %></caption><thead><tr><th scope="col">Besoin</th><th scope="col">Composant</th><th scope="col">État</th><th scope="col">Justification et limites</th></tr></thead><tbody>
+          <% p.maps.forEach((m) => { %><tr><td><%= m.need %></td><td><%= m.components.join(" + ") || "—" %></td><td><%= m.status === "ok" ? "OK" : m.status === "partial" ? "Alternative" : "Ignorée" %></td>
+            <td><%= m.justification %><% m.limitations.forEach((l) => { %><br><small class="sw-muted"><%= l %></small><% }) %><% m.missing.forEach((x) => { %><br><small class="sw-warn">Manquant : <%= x %></small><% }) %></td></tr><% }) %>
+        </tbody></table>
+        <% } %>
+        <% p.warnings.forEach((w) => { %><p class="sw-muted"><%= w %></p><% }) %>
+        <div class="sw-actions">
+          <% if (p.sections.length) { %><a class="btn btn-outline btn-sm" href="<%= W %>/<%= run.id %>/apercu?page=<%= p.key %>" target="_blank" rel="noopener">Prévisualiser</a><% } %>
+          <% if (a) { %><a class="btn btn-primary btn-sm" href="/marketing/pages/<%= a.pageId %>/editeur" target="_blank" rel="noopener">Ouvrir dans l'éditeur</a> <span class="sw-muted">« <%= a.name %> » — <%= a.strategy === "create" ? "nouvelle page" : a.strategy === "version" ? "nouvelle version du brouillon" : "remplacée" %></span><% } %>
+          <% if (run.status === "proposed" && p.status === "ready" && canWrite) { %>
+            <% if (p.existing) { %>
+              <label>Une page « <%= p.existing.name %> » existe déjà — <select name="strategie_<%= p.key %>"><option value="">Choisir…</option><option value="create">Créer une nouvelle page</option><% if (p.existing.sameSite) { %><option value="version">Nouvelle version (brouillon)</option><option value="replace">Remplacer (confirmation ci-dessous)</option><% } %><option value="skip">Ignorer</option></select></label>
+            <% } else { %><label><select name="strategie_<%= p.key %>"><option value="create">Créer la page (brouillon)</option><option value="skip">Rejeter cette page</option></select></label><% } %>
+          <% } %>
+        </div>
+      </div>
+    <% }) %>
+    <% if (run.status === "proposed" && canWrite) { %>
+      <label class="sw-confirm"><input type="checkbox" name="confirmer_remplacement" value="oui"> Je confirme le remplacement des pages pour lesquelles j'ai choisi « Remplacer ».</label>
+      <div class="sw-actions"><button class="btn btn-primary" type="submit">Enregistrer les pages en brouillon</button><a class="btn btn-outline" href="<%= W %>">Modifier le plan / régénérer</a></div>
+    <% } %>
+    </form>
+    <% if (run.status === "applied" && canWrite) { %><form method="post" action="<%= W %>/<%= run.id %>/annuler" class="sw-actions"><button class="btn btn-outline" type="submit">Annuler cette génération</button></form><% } %>
+  </section>
+<% } %>
+</div>
+<%- include("partials/bottom") %>

@@ -1,0 +1,6 @@
+## 100 éléments (n=12) : total 36.9 ms = attente avant l'envoi 3.9 + requête 23 (dont attente du serveur 21.5) + application dans le canevas 10.5 · réponse 2410 octets
+   champs texte : ["TexteOu double-cli=zz11mvu1g4","Lien (facultatif)T="]
+   valeur unique → canevas : 48 ms · rafale de 8 frappes : 8 requête(s) de rendu
+## 400 éléments (n=12) : total 95.1 ms = attente avant l'envoi 6.3 + requête 66.3 (dont attente du serveur 64.9) + application dans le canevas 23 · réponse 5303 octets
+   champs texte : ["TexteOu double-cli=zz11mvu1gn","Lien (facultatif)T="]
+   valeur unique → canevas : 44.6 ms · rafale de 8 frappes : 2 requête(s) de rendu

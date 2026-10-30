@@ -161,6 +161,10 @@ registerQuerySource("courses", {
   label: "Formations", scopeKey: "course", orderby: ["date", "title", "price", "random", "id"], filters: ["include", "exclude", "categories", "author", "search", "excludeCurrent"],
   run(ctx, q, env) {
     const where = ["c.published = 1", "COALESCE(c.archived, 0) = 0"], args = [];
+    // Titan XXIII : une page d'un site ne liste que les formations de CE site (page du site principal : celles du principal) ; personne limitée à un site : sa portée
+    const pg = env.scope.page || null;
+    const lmsSite = Number.isInteger(ctx.siteScope) ? ctx.siteScope : pg ? (pg.site_id || null) : undefined;
+    if (lmsSite !== undefined) { const sc = require("../../services/lmsSites").scopeSql(lmsSite, "c"); where.push(sc.sql); args.push(...sc.params); }
     const cur = env.scope.course || null;
     if (q.include) { where.push(`c.id IN (${q.include.map(() => "?").join(",")})`); args.push(...q.include); }
     const exclude = [...(q.exclude || []), ...(q.excludeCurrent && cur && Number.isInteger(cur.id) ? [cur.id] : [])];

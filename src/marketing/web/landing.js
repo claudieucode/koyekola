@@ -233,7 +233,7 @@ module.exports = () => {
     const { ctx } = req.mk;
     res.render("marketing/landing", {
       title: page.name, active: "landing", page, content: page.working, STATUSES: landing.STATUSES, STATUS_CLASS, SECTION_LABELS: Object.fromEntries(Object.entries(pages.TYPES).map(([k, t]) => [k, t.label])),
-      forms: forms.listForms(ctx), courses: listCourses(ctx), images: media.listMedia(media.forSite(ctx, page.site_id), { kind: "image", limit: 100 }).items, // médiathèque DU site de la page
+      forms: forms.listForms(ctx), courses: listCourses({ ...ctx, lmsSite: page.site_id || null }), images: media.listMedia(media.forSite(ctx, page.site_id), { kind: "image", limit: 100 }).items, // médiathèque DU site de la page
       pagesHome: pagesHome(page.site_id), sites: pages.listSites(ctx), versions: pages.listVersions(ctx, page.id), inFunnels: require("../funnels").funnelsOfPage(ctx, page.id),
       variantOf: ctx.db.prepare("SELECT t.id, t.page_id, p.name FROM mk_page_tests t JOIN mk_landing_pages p ON p.id = t.page_id WHERE t.variant_page_id = ? AND t.organization_id = ?").get(page.id, ctx.organizationId) || null,
       openTest: ctx.db.prepare("SELECT id, name, status FROM mk_page_tests WHERE page_id = ? AND organization_id = ? AND status IN ('draft', 'running', 'stopped')").get(page.id, ctx.organizationId) || null,
@@ -384,7 +384,7 @@ module.exports = () => {
       // Formulaires proposés au widget « Formulaire » (état réel : un brouillon ne s'affiche pas sur la page)
       forms: require("../forms").listForms(ctx).map((f) => ({ id: f.id, name: f.name, status: f.status })),
       blocks: require("../pages/patterns").catalog(ctx).concat(require("../../services/appearance").patternBlocks(page.site_id ?? null)),
-      courses: listCourses(ctx).map((c) => ({ id: c.id, title: c.title })),
+      courses: listCourses({ ...ctx, lmsSite: page.site_id || null }).map((c) => ({ id: c.id, title: c.title })),
       components: pages.listComponents(ctx, { siteId: page.site_id }).map((c) => ({ id: c.id, name: c.name, global: c.global, kind: c.kind, hasDraft: c.hasDraft, version: c.version, blocks: c.blocks, type: c.section && c.section.type, uses: pages.componentInstances(ctx, c.id).reduce((n, p) => n + p.count, 0) })),
       // Modèles de pages de l'équipe (onglet Blocs : insérables dans la page en cours)
       // Écran d'accueil / création guidée : registre des types et gabarits intégrés, pages récemment modifiées (données réelles)

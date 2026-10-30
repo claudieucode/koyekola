@@ -233,6 +233,21 @@
   // tête, une copie du message d'erreur (sinon caché derrière le fond sombre) et les valeurs déjà saisies.
   // Les saisies sont gardées le temps d'un aller-retour dans sessionStorage (jamais mot de passe ni fichier),
   // effacées dès la page suivante.
+  // <form data-mk-once> : une seule soumission à la fois (double clic, Entrée répétée). Le bouton est rendu inactif ; il est rétabli si la page revient de l'historique.
+  $$("form[data-mk-once]").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      if (form.getAttribute("data-mk-sent") === "1") { e.preventDefault(); return; }
+      form.setAttribute("data-mk-sent", "1"); form.setAttribute("aria-busy", "true");
+      $$("button[type=submit]", form).forEach(function (b) { b.setAttribute("aria-disabled", "true"); b.classList.add("is-busy"); });
+    });
+  });
+  window.addEventListener("pageshow", function (ev) {
+    if (!ev.persisted) return;
+    $$("form[data-mk-once]").forEach(function (form) {
+      form.removeAttribute("data-mk-sent"); form.removeAttribute("aria-busy");
+      $$("button[type=submit]", form).forEach(function (b) { b.removeAttribute("aria-disabled"); b.classList.remove("is-busy"); });
+    });
+  });
   var DRAFT = "mkModalDraft:";
   function draftable(el) { return el.name && !el.disabled && ["password", "hidden", "file", "submit", "button"].indexOf(el.type) === -1; }
   allModals.forEach(function (dlg) {

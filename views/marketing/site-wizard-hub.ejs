@@ -1,0 +1,74 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<div class="sw">
+  <div class="mk-head">
+    <div class="mk-head-main"><h1>Créer un site</h1><p class="mk-head-sub">Un parcours en étapes. Votre site reste <strong>en brouillon</strong> : rien n'est publié sans votre confirmation, aucun DNS n'est modifié.</p></div>
+  </div>
+
+  <% if (inProgress.length) { %>
+  <section class="mk-panel sw-resume" aria-labelledby="sw-resume-t">
+    <h2 id="sw-resume-t">Reprendre une création</h2>
+    <ul class="sw-list">
+      <% inProgress.forEach((c) => { %>
+        <li><div><strong><%= c.name %></strong> <span class="sw-muted">· <%= modeLabels[c.mode] || c.mode %> · <%= c.percent %> % · modifié <%= c.updatedAt %></span></div>
+          <a class="btn btn-primary btn-sm" href="/marketing/site-web/sites/<%= c.siteId %>/assistant">Continuer</a></li>
+      <% }) %>
+    </ul>
+  </section>
+  <% } %>
+
+  <% if (!canCreate) { %>
+    <section class="mk-panel"><p>La création d'un nouveau site est réservée à l'équipe de l'organisation. Vous pouvez reprendre la création de votre site ci-dessus.</p></section>
+  <% } else { %>
+  <form class="sw-form" method="post" action="<%= BASE %>/demarrer" data-sw-hub>
+    <fieldset class="mk-panel">
+      <legend><span class="sw-num">1</span> Comment voulez-vous commencer ?</legend>
+      <div class="sw-cards" role="radiogroup">
+        <label class="sw-card"><input type="radio" name="mode" value="blank" checked><span class="sw-card-body"><strong>Site vierge</strong><span>Une page d'accueil, puis vous construisez librement avec l'éditeur.</span></span></label>
+        <label class="sw-card"><input type="radio" name="mode" value="template"><span class="sw-card-body"><strong>Modèle professionnel</strong><span>Des pages, un menu et un style de départ issus de la bibliothèque de modèles.</span></span></label>
+        <label class="sw-card"><input type="radio" name="mode" value="shop"><span class="sw-card-body"><strong>Boutique en ligne</strong><span>Vente de formations par carte (module Commerce). Le panier de produits n'est pas encore disponible.</span></span></label>
+      </div>
+      <div class="sw-note" data-sw-shop hidden>
+        <strong>Ce qui existe aujourd'hui :</strong> pages de présentation et de catalogue de formations, paiement par carte (Stripe) une fois le module Commerce activé et votre compte de paiement configuré par l'équipe.<br>
+        <strong>Ce qui n'existe pas encore :</strong> panier multi-produits, produits physiques, livraison, calcul de taxes. Aucune conformité fiscale n'est garantie : faites valider vos règles par un professionnel.
+      </div>
+    </fieldset>
+
+    <fieldset class="mk-panel" data-sw-category>
+      <legend><span class="sw-num">2</span> Quel type de site ?</legend>
+      <div class="sw-cards sw-cards-sm">
+        <% catalog.CATEGORIES.filter((c) => !c.shop).forEach((c, i) => { %>
+          <label class="sw-card" data-cat="<%= c.key %>" data-pack="<%= c.pack || '' %>"><input type="radio" name="category" value="<%= c.key %>"<%= c.key === 'vitrine' ? ' checked' : '' %>>
+            <span class="sw-card-body"><svg class="sw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="<%= catalog.ICONS[c.icon] %>"/></svg><strong><%= c.name %></strong><span><%= c.description %></span>
+            <small class="sw-muted">Pages : <%= c.pages.map((p) => p.name).join(' · ') %></small>
+            <% if (c.gaps) { %><small class="sw-warn">Pas encore disponible : <%= c.gaps.join(', ') %></small><% } %></span></label>
+        <% }) %>
+      </div>
+    </fieldset>
+
+    <fieldset class="mk-panel" data-sw-templates hidden>
+      <legend><span class="sw-num">3</span> Quel modèle ?</legend>
+      <div class="sw-tools"><label>Rechercher <input type="search" data-sw-search placeholder="ex. formation, événement"></label>
+        <label>Secteur <select data-sw-sector><option value="">Tous</option><% [...new Set(packs.map((p) => p.category))].forEach((c) => { %><option><%= c %></option><% }) %></select></label></div>
+      <div class="sw-cards">
+        <% packs.forEach((p) => { %>
+          <label class="sw-card" data-pack-card="<%= p.key %>" data-sector="<%= p.category %>" data-text="<%= (p.name + ' ' + p.description + ' ' + p.category).toLowerCase() %>"><input type="radio" name="pack" value="<%= p.key %>">
+            <span class="sw-card-body"><strong><%= p.name %></strong><span><%= p.description %></span>
+              <small class="sw-muted"><%= p.category %> · <%= (p.pages || []).length %> pages<%= p.pages && p.pages.length ? ' : ' + p.pages.map((x) => x.name).join(', ') : '' %></small>
+              <a href="/marketing/site-web/templates/apercu?ref=pack:<%= p.key %>" target="_blank" rel="noopener">Prévisualiser le modèle</a></span></label>
+        <% }) %>
+        <% if (!packs.length) { %><p class="sw-muted">Aucun modèle disponible.</p><% } %>
+      </div>
+      <p class="sw-muted">Les modèles ne contiennent ni image sous licence, ni faux témoignage : les textes entre crochets sont à remplacer par vos informations.</p>
+    </fieldset>
+
+    <fieldset class="mk-panel">
+      <legend><span class="sw-num">4</span> Nom du site</legend>
+      <label class="sw-field">Nom du site <input name="name" required maxlength="100" autocomplete="off" placeholder="ex. Cabinet Dupont"></label>
+      <button class="btn btn-primary" type="submit">Créer le brouillon et continuer</button>
+    </fieldset>
+  </form>
+  <% } %>
+</div>
+<script src="/js/site-wizard.js" defer></script>
+<%- include("partials/bottom") %>

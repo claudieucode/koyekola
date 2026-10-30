@@ -1,0 +1,25 @@
+# Banc d'interactions (2026-10-29T21:12:19.081Z) — Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz ×4, Chrome 150.0.7871.125, charge 6 8.26 7.79
+
+## 100 éléments
+survol: pire image 50 ms · p95 16.8 · images > 33 ms : 1 · tâches longues 1 (65 ms) · événement pire 0 ms · par action : 0.6 mises en page (0.3 ms), 1.2 recalculs de style (0.1 ms), script 0.5 ms
+selectionCanevas: pire image 33.4 ms · p95 16.8 · images > 33 ms : 1 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 4.8 mises en page (4.2 ms), 12.5 recalculs de style (5.3 ms), script 5.1 ms
+deselection: pire image 16.8 ms · p95 16.8 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 20.8 mises en page (7.6 ms), 46 recalculs de style (13.6 ms), script 9.2 ms
+panneauStructure: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 32 ms · par action : 4.8 mises en page (2.3 ms), 17 recalculs de style (6 ms), script 2.6 ms
+insertion: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 11.8 mises en page (3.7 ms), 25.2 recalculs de style (3.3 ms), script 6.6 ms
+zoom: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 32 ms · par action : 3.3 mises en page (0.4 ms), 5.3 recalculs de style (0.4 ms), script 2.9 ms
+deplacementVue: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 24 ms · par action : 1 mises en page (0.1 ms), 5.1 recalculs de style (0.5 ms), script 0.6 ms
+defilement: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 1 mises en page (0.1 ms), 2.7 recalculs de style (0.2 ms), script 0.5 ms
+redimensionnement: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 5.9 mises en page (1.1 ms), 6.9 recalculs de style (0.4 ms), script 0.8 ms
+curseur: pire image 83.4 ms · p95 16.8 · images > 33 ms : 2 · tâches longues 2 (148 ms) · événement pire 0 ms · par action : 1.3 mises en page (2 ms), 3.5 recalculs de style (2 ms), script 2 ms
+
+## 400 éléments
+survol: pire image 50.1 ms · p95 16.7 · images > 33 ms : 1 · tâches longues 1 (64 ms) · événement pire 0 ms · par action : 0.6 mises en page (0.3 ms), 1.2 recalculs de style (0.1 ms), script 0.9 ms
+selectionCanevas: pire image 216.7 ms · p95 33.4 · images > 33 ms : 3 · tâches longues 2 (233 ms) · événement pire 0 ms · par action : 5.2 mises en page (4.8 ms), 12.6 recalculs de style (15.7 ms), script 10.7 ms
+deselection: pire image 16.8 ms · p95 16.8 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 12.8 mises en page (4.5 ms), 36.3 recalculs de style (9.2 ms), script 9.9 ms
+panneauStructure: pire image 100 ms · p95 16.8 · images > 33 ms : 1 · tâches longues 0 (0 ms) · événement pire 40 ms · par action : 6.8 mises en page (3.3 ms), 29 recalculs de style (9.3 ms), script 5.5 ms
+insertion: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 1 mises en page (0.1 ms), 3.8 recalculs de style (0.3 ms), script 1.8 ms
+zoom: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 176 ms · par action : 2.2 mises en page (0.8 ms), 12.4 recalculs de style (1.1 ms), script 3.5 ms
+deplacementVue: pire image 16.8 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 24 ms · par action : 0.1 mises en page (0 ms), 2.2 recalculs de style (1 ms), script 0.4 ms
+defilement: pire image 16.8 ms · p95 16.8 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 0 mises en page (0 ms), 1.7 recalculs de style (0.1 ms), script 0.2 ms
+redimensionnement: pire image 16.7 ms · p95 16.7 · images > 33 ms : 0 · tâches longues 0 (0 ms) · événement pire 0 ms · par action : 5.8 mises en page (1.2 ms), 6.6 recalculs de style (0.4 ms), script 2 ms
+curseur: pire image 266.7 ms · p95 33.4 · images > 33 ms : 2 · tâches longues 2 (321 ms) · événement pire 0 ms · par action : 1.3 mises en page (8.1 ms), 3.6 recalculs de style (2.2 ms), script 2.5 ms

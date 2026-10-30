@@ -101,6 +101,9 @@ function siteRouting(req, res, next) {
 // les formulaires et le suivi, la connexion et les comptes (communs à la plateforme), les pages techniques.
 // R7 lot 6.6 : « commande » (paiement, retour du fournisseur, confirmation) rejoint la liste — le parcours d'achat reste entièrement sur l'hôte principal (voir docs/r7-contacts-par-site-2026-10-16/15-rapport-R7-lot-6-6-commerce.md)
 const MAIN_SITE_ONLY = /^\/(blog|cours|catalogue|categorie|a-propos|faq|feed|recherche|panier|commande|favoris|formations?)(\/|$)/i;
+// Domaine d'un site dont le module « lms » est activé (req.lmsSite > 0, voir services/lmsSites) : catalogue, fiches, panier et commande de CE site sont servis ;
+// les routes filtrent par site (aucune formation du site principal ni d'un autre site). Blog, à-propos, FAQ, recherche… restent réservés au site principal.
+const LMS_SITE_OK = /^\/(cours|catalogue|categorie|panier|commande|favoris|formations?)(\/|$)/i;
 const ALWAYS_OK = /^\/(sante|uploads|css|js|img|fonts|favicon\.(ico|svg)|avatar|effacement)(\/|$|\.)/i;
 const refusedLogged = new Set();
 // Blog propre à un site (R6 lot 4) : le domaine d'un site sert SON blog (articles rattachés à ce site, adresses logiques du site) dès que ce site a au moins un article en ligne ;
@@ -125,6 +128,7 @@ function siteIsolation(req, res, next) {
   }
   if (ALWAYS_OK.test(req.path)) return next();
   if (req.kwSite && BLOG_PATH.test(req.path) && siteHasBlog(req.kwSite.id)) return next();
+  if (req.kwSite && req.lmsSite > 0 && LMS_SITE_OK.test(req.path)) return next();
   if (req.kwRetired || (req.kwSite && MAIN_SITE_ONLY.test(req.path))) {
     if (!isRead(req)) return res.status(404).type("text/plain").send("Introuvable");
     req.url = MISSING;

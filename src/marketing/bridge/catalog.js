@@ -3,11 +3,19 @@
 const { checkCtx } = require("../audience/shared");
 const { effectivePriceSql, nowParams } = require("../../services/pricingSql"); // partie pure : aucun accès à la base à l'import
 
+// Portée de site (Titan XXIII) : une personne limitée à un site (ctx.siteScope, imposé par le serveur) ne voit que les formations de CE site ; l'équipe (sans portée) garde la vue d'ensemble historique.
+// ctx.lmsSite (facultatif, ex. site de la page affichée) : null = formations du site principal, identifiant = celles de ce site ; absent = pas de filtre.
+function scopeOf(ctx, alias = "courses") {
+  const siteId = Number.isInteger(ctx.siteScope) ? ctx.siteScope : ctx.lmsSite !== undefined ? ctx.lmsSite : undefined;
+  return siteId === undefined ? { sql: "1", params: [] } : require("../../services/lmsSites").scopeSql(siteId, alias);
+}
+
 // Formations publiées proposées dans l'éditeur (identifiant et titre seulement)
 function listCourses(ctx) {
   checkCtx(ctx);
   try {
-    return ctx.db.prepare("SELECT id, title FROM courses WHERE published = 1 ORDER BY title COLLATE NOCASE LIMIT 300").all().map((c) => ({ id: c.id, title: c.title }));
+    const sc = scopeOf(ctx);
+    return ctx.db.prepare(`SELECT id, title FROM courses WHERE published = 1 AND ${sc.sql} ORDER BY title COLLATE NOCASE LIMIT 300`).all(...sc.params).map((c) => ({ id: c.id, title: c.title }));
   } catch {
     return [];
   }
@@ -19,11 +27,12 @@ function getCourse(ctx, id) {
   if (!Number.isInteger(id) || id < 1) return null;
   // price_cents = prix à payer MAINTENANT (offre en cours comprise : un e-mail ou une page ne doit jamais afficher un prix
   // différent de celui du site) ; standard_price_cents = prix habituel. Sans table d'offres (base ancienne), prix standard.
+  const sc = scopeOf(ctx);
   try {
-    return ctx.db.prepare(`SELECT id, title, slug, subtitle, ${effectivePriceSql("courses")} AS price_cents, price_cents AS standard_price_cents, thumbnail_path FROM courses WHERE id = ? AND published = 1`).get(...nowParams(), id) ?? null;
+    return ctx.db.prepare(`SELECT id, title, slug, subtitle, ${effectivePriceSql("courses")} AS price_cents, price_cents AS standard_price_cents, thumbnail_path FROM courses WHERE id = ? AND published = 1 AND ${sc.sql}`).get(...nowParams(), id, ...sc.params) ?? null;
   } catch {
     try {
-      return ctx.db.prepare("SELECT id, title, slug, subtitle, price_cents, price_cents AS standard_price_cents, thumbnail_path FROM courses WHERE id = ? AND published = 1").get(id) ?? null;
+      return ctx.db.prepare(`SELECT id, title, slug, subtitle, price_cents, price_cents AS standard_price_cents, thumbnail_path FROM courses WHERE id = ? AND published = 1 AND ${sc.sql}`).get(id, ...sc.params) ?? null;
     } catch {
       return null;
     }
@@ -34,9 +43,10 @@ function getCourse(ctx, id) {
 function listCourseCards(ctx, { limit = 3, category = "", sort = "recent" } = {}) {
   checkCtx(ctx);
   const order = { recent: "created_at DESC, id DESC", title: "title COLLATE NOCASE", price: "price_cents ASC, title COLLATE NOCASE" }[sort] || "created_at DESC, id DESC";
+  const sc = scopeOf(ctx);
   try {
-    return ctx.db.prepare(`SELECT id, title, slug, subtitle, price_cents, thumbnail_path FROM courses WHERE published = 1${category ? " AND category = ? COLLATE NOCASE" : ""} ORDER BY ${order} LIMIT ?`)
-      .all(...(category ? [category] : []), Math.min(Math.max(limit, 1), 12));
+    return ctx.db.prepare(`SELECT id, title, slug, subtitle, price_cents, thumbnail_path FROM courses WHERE published = 1 AND ${sc.sql}${category ? " AND category = ? COLLATE NOCASE" : ""} ORDER BY ${order} LIMIT ?`)
+      .all(...sc.params, ...(category ? [category] : []), Math.min(Math.max(limit, 1), 12));
   } catch {
     return [];
   }
@@ -54,7 +64,7 @@ function courseRating(ctx, id) {
 function countPublished(ctx, what) {
   checkCtx(ctx);
   try {
-    if (what === "courses") return ctx.db.prepare("SELECT COUNT(*) n FROM courses WHERE published = 1").get().n;
+    if (what === "courses") { const sc = scopeOf(ctx); return ctx.db.prepare(`SELECT COUNT(*) n FROM courses WHERE published = 1 AND ${sc.sql}`).get(...sc.params).n; }
     if (what === "posts") return ctx.db.prepare("SELECT COUNT(*) n FROM posts WHERE published_at IS NOT NULL AND published_at <= datetime('now') AND (published = 1 OR status = 'scheduled')").get().n;
   } catch { /* table absente */ }
   return 0;
@@ -95,7 +105,8 @@ function getCourseBySlug(ctx, slug) {
   checkCtx(ctx);
   if (typeof slug !== "string" || !/^[a-z0-9-]{1,120}$/.test(slug)) return null;
   try {
-    return ctx.db.prepare("SELECT id, title, slug FROM courses WHERE slug = ? AND published = 1").get(slug) ?? null;
+    const sc = scopeOf(ctx);
+    return ctx.db.prepare(`SELECT id, title, slug FROM courses WHERE slug = ? AND published = 1 AND ${sc.sql}`).get(slug, ...sc.params) ?? null;
   } catch {
     return null;
   }
@@ -164,8 +175,9 @@ function queryPosts(ctx, { limit = 6, offset = 0, category = "", search = "", so
 }
 function queryCourses(ctx, { limit = 6, offset = 0, category = "", search = "", sort = "recent" } = {}) {
   checkCtx(ctx);
-  const where = ["published = 1"];
-  const args = [];
+  const sc = scopeOf(ctx);
+  const where = ["published = 1", sc.sql];
+  const args = [...sc.params];
   if (category) { where.push("category = ? COLLATE NOCASE"); args.push(category); }
   if (search) { where.push("(title LIKE ? ESCAPE '\\' OR subtitle LIKE ? ESCAPE '\\')"); args.push(`%${likeEsc(search)}%`, `%${likeEsc(search)}%`); }
   const order = { recent: "created_at DESC, id DESC", title: "title COLLATE NOCASE", price: "price_cents ASC, title COLLATE NOCASE" }[sort] || "created_at DESC, id DESC";
