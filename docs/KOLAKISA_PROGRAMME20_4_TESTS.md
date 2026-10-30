@@ -28,6 +28,9 @@ Chaque test de comportement est écrit pour échouer si la fonction manque ; les
 | Lot de régression ciblé 3 (migrations, isolation, composants, éditeur de modèles, pages, 20.2 / 20.3 / IA) | 54 | 796 | 794 | 2 → corrigés (tests « le dossier des migrations s'arrête à N », mis à jour pour la migration 123) | 0 / 0 |
 | Rejeu de 13 fichiers navigateur en échec dans la suite partielle | 14 | 88 | 69 | 19 dont **18 identiques sur `main` pristine (a39abd87)** : 18 / 88 contre 18 / 88 ; 1 intermittent (`editeur-blocs-p1-navigateur`) qui **passe seul 17 / 17** | 0 / 0 |
 
+| Lot ciblé 6 (droits, révisions, registre de menu, portée des routes, éditeur, pages) | 32 | 538 | 534 | 3 : `entrees-fermees-preuves` et `r7-coherence-moteurs` (**identiques sur `main` pristine**) ; `site-menu-p1a` « aucune migration n'a été ajoutée » (plafond de migration relevé à 123, 70 / 70 ensuite) | 0 / 1 |
+| **Après la dernière fusion de `main`** (20.4 ×4, bibliothèque existante, assistant, migrations, sécurité multisite du Programme 21, catalogue guidé, modèles) | 15 | **226** | **226** | **0** | 0 / 0 |
+
 Résultat de la suite complète : voir §4.
 
 ## 4. Suite complète
@@ -38,8 +41,8 @@ Elle n'a pas pu être menée d'une traite : sur cette machine partagée (4 cœur
 ## 5. Fragilités de l'environnement (dites telles quelles)
 Les tests navigateur de la bibliothèque dépendent d'une réponse serveur (liste paginée) : ils attendent `aria-busy="false"` ; sans cela, deux tests ont échoué sous charge (une course entre un clic d'onglet et la lecture de la liste, corrigée dans le test). Les tests existants du dépôt qui échouent par délai de 30 s sous charge sont ceux de la liste « identiques sur `main` ». Firefox a une fois refusé d'ouvrir son interface BiDi sous charge (le test s'ignore alors avec un message explicite, jamais en succès silencieux) ; il passe 3 / 3 sur un second essai.
 
-## 6. Reste de la suite (fichiers après `editeur-droite-navigateur`)
-*(complété à la fin du document, au moment du rapport final — voir §7)*
+## 6. Reste de la suite (473 fichiers après `editeur-droite-navigateur`)
+**Non exécuté en entier.** Une seconde tentative (493 fichiers) a été arrêtée au bout de quelques minutes : les premiers fichiers (éditeur navigateur) y demandent plusieurs minutes chacun sur cette machine. À la place, **les fichiers qui touchent ce que 20.4 modifie** ont été rejoués par lots (lot 3 : 54 fichiers ; lot 6 : 32 ; lot final : 36 ; après fusion : 15) : bibliothèque et gabarits, composants, Theme Builder, patterns, assistant de création de site, permissions, registre de routes, migrations, isolation des sites, reconstruction R6, éditeur de modèles, création de pages, boutique, IA. Un fichier non rejoué peut donc encore contenir une dépendance que je n'ai pas vue : les deux régressions trouvées par la suite partielle (`pageTypes`, `apparence-parcours`) l'avaient échappé aux premiers lots ciblés.
 
 ## 7. Mesures
 | Mesure | Valeur | Conditions |
@@ -52,4 +55,4 @@ Les tests navigateur de la bibliothèque dépendent d'une réponse serveur (list
 | Sonde d'accessibilité automatique (Chrome, clair + sombre, parcours Tab réel) sur l'écran | 0 constat après correction de 3 (saut de titre h1 → h3, contraste en thème sombre) | `scripts/a11y/audit-accessibilite.js --only /marketing/site-web/templates` — contrôles partiels, pas de conformité WCAG |
 
 ## 8. Statuts
-Exécutés : voir §3 et §6. Bloqués : Safari (non activable), Edge (ne démarre pas sous Playwright sur cette machine). Non exécutés : lecteur d'écran, axe-core / Lighthouse (non installés), tests de charge sur serveur réel.
+Exécutés : voir §3 (lot final 524 / 524, après fusion 226 / 226) et §6 (suite complète NON terminée). Bloqués : Safari (non activable), Edge (ne démarre pas sous Playwright sur cette machine). Non exécutés : lecteur d'écran, axe-core / Lighthouse (non installés), tests de charge sur serveur réel.
