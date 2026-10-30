@@ -35,6 +35,8 @@ const PERMISSIONS = Object.freeze({
   "revisions.view": "editor", "revisions.restore": "editor", "revisions.delete": "admin",
   // Référencement (palier 11) : voir l'analyse et l'aperçu SEO = éditeur ; modifier les réglages SEO (page, site) = éditeur (retirable à un rôle personnalisé)
   "seo.view": "editor", "seo.edit": "editor",
+  // Programme 20.5 — boutique : voir (catalogue, stocks) < gérer produits/réglages < traiter les commandes < confirmer un paiement / rembourser (jamais sans ce droit)
+  "shop.read": "editor", "shop.write": "editor", "shop.orders": "editor", "shop.payments": "admin",
   // Adresses et redirections (palier 12) : voir, créer et modifier une redirection vers une adresse du site = éditeur ; supprimer et rediriger vers un site extérieur = administrateur
   // Outils (palier 13) : voir les outils et lancer l'analyse de santé = éditeur ; exporter, importer, mettre à jour l'existant, maintenance, outils de contenu et cache = administrateur
   "tools.view": "editor", "tools.health": "editor", "tools.export": "admin", "tools.import": "admin", "tools.overwrite": "admin", "tools.maintenance": "admin", "tools.content": "admin", "tools.cache": "admin",

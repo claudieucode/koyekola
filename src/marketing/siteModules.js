@@ -25,7 +25,7 @@ const ROUTES = Object.freeze({
   social: /^\/reseaux(?:\/|$)/,
   scoring: /^\/score(?:\/|$)/,
   ai: /^\/ia(?:\/|$)/,
-  commerce: /^\/revenus(?:\/|$)/,
+  commerce: /^\/(?:revenus(?:\/|$)|site-web\/sites\/\d+\/boutique(?:\/|$))/,
 });
 function moduleOfPath(path) {
   for (const [key, re] of Object.entries(ROUTES)) if (re.test(path)) return key;

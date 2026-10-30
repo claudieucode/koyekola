@@ -1,0 +1,20 @@
+<%# Formulaire d'ajout au panier. Le serveur revérifie produit, variante, quantité et stock : rien de ce formulaire n'est une preuve de prix. %>
+<% if (typeof error !== "undefined" && error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (!product.inStock) { %><p class="sh-stock sh-out" role="status">Rupture de stock</p>
+<% } else { %>
+<form class="sh-buy sh-form" method="post" action="<%= shop.base %>/panier/ajouter" data-sh-add>
+  <input type="hidden" name="product_id" value="<%= product.id %>">
+  <input type="hidden" name="retour" value="<%= shop.base %>/produit/<%= product.slug %>">
+  <% if (product.isVariable) { %>
+  <label>Variante
+    <select name="variant_id" required>
+      <option value="">Choisir…</option>
+      <% product.variants.forEach((v) => { const out = v.manage_stock && v.stock_qty <= 0; %><option value="<%= v.id %>"<%= out ? " disabled" : "" %>><%= Object.values(v.options).join(" / ") %><%= out ? " — rupture" : "" %></option><% }) %>
+    </select>
+  </label>
+  <% } %>
+  <label>Quantité<input type="number" name="quantity" value="1" min="1" max="99" inputmode="numeric" required></label>
+  <button class="sh-btn sh-btn-primary" type="submit">Ajouter au panier</button>
+  <p class="sh-msg" data-sh-msg role="status" aria-live="polite"></p>
+</form>
+<% } %>

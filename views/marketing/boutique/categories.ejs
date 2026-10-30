@@ -1,0 +1,14 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Catégories" }) %>
+<section class="mk-panel">
+  <% if (!categories.length) { %><p class="mk-empty">Aucune catégorie.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Catégories</caption><thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">Produits en ligne</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  <% categories.forEach((c) => { %><tr><th scope="row"><%= c.parent_id ? "↳ " : "" %><%= c.name %></th><td><code><%= c.slug %></code></td><td><%= c.product_count %></td>
+    <td><% if (canWrite) { %><form method="post" action="<%= base %>/categories/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Les produits restent, sans cette catégorie." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/categories"><h2>Nouvelle catégorie</h2>
+    <div class="field-group"><label for="c-n">Nom</label><input id="c-n" name="name" required maxlength="120"></div>
+    <div class="field-group"><label for="c-p">Catégorie parente</label><select id="c-p" name="parent_id"><option value="">Aucune</option><% categories.forEach((c) => { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
+    <button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
+</section>
+<%- include("../partials/bottom") %>

@@ -32,6 +32,8 @@ const GROUPS = [
     ["articles.publish", "Publier", "publish"], ["articles.delete", "Supprimer définitivement", "delete"]] },
   { key: "revisions", label: "Historique et corbeille", perms: [["revisions.view", "Voir l'historique des modifications", "view"], ["revisions.restore", "Restaurer une ancienne version", "edit"], ["revisions.delete", "Supprimer des versions de l'historique", "delete"]] },
   { key: "seo", label: "Référencement (SEO)", perms: [["seo.view", "Voir l'analyse et l'aperçu SEO", "view"], ["seo.edit", "Modifier les réglages SEO (pages, site)", "edit"]] },
+  { key: "shop", label: "Boutique en ligne", perms: [["shop.read", "Boutique : voir produits, stocks, commandes et clients", "view"], ["shop.write", "Boutique : produits, catégories, réglages, livraison, taxes, coupons", "edit"],
+    ["shop.orders", "Boutique : traiter les commandes (préparation, expédition, annulation)", "edit"], ["shop.payments", "Boutique : confirmer un paiement manuel, enregistrer un remboursement", "publish"]] },
   { key: "tools", label: "Outils (import, export, santé, maintenance)", perms: [["tools.view", "Voir les outils et les informations système", "view"], ["tools.health", "Lancer l'analyse de santé et les contrôles d'intégrité", "view"],
     ["tools.export", "Exporter le contenu", "view"], ["tools.import", "Importer du contenu (nouveaux éléments)", "create"], ["tools.overwrite", "Mettre à jour par import des éléments existants", "edit"],
     ["tools.content", "Outils de contenu (rechercher / remplacer, régénérations, nettoyages)", "edit"], ["tools.cache", "Inspecter et vider les caches", "edit"], ["tools.maintenance", "Activer le mode maintenance d'un site", "publish"]] },

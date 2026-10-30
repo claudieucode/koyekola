@@ -1,0 +1,38 @@
+<%- include("_top") %>
+<% const qs = (over) => { const p = { ...query, ...over }; const out = Object.entries(p).filter(([, v]) => v !== "" && v != null).map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v)).join("&"); return out ? "?" + out : ""; }; %>
+<% if (themeTemplate) { %>
+  <%- themeTemplate %>
+<% } else { %>
+<h1 class="sh-title"><%= title %></h1>
+<% if (category && category.description) { %><p class="sh-lead"><%= category.description %></p><% } %>
+<div class="sh-layout">
+  <aside class="sh-filters" aria-label="Filtres">
+    <form method="get" action="<%= shop.base %>" class="sh-form">
+      <label>Recherche<input type="search" name="q" value="<%= q.q %>" maxlength="80"></label>
+      <label>Catégorie
+        <select name="categorie"><option value="">Toutes</option><% categories.forEach((c) => { %><option value="<%= c.slug %>"<%= q.category === c.slug ? " selected" : "" %>><%= c.name %></option><% }) %></select>
+      </label>
+      <div class="sh-row">
+        <label>Prix min<input type="number" name="min" min="0" step="1" value="<%= query.min || "" %>"></label>
+        <label>Prix max<input type="number" name="max" min="0" step="1" value="<%= query.max || "" %>"></label>
+      </div>
+      <label class="sh-check"><input type="checkbox" name="stock" value="1"<%= q.inStock ? " checked" : "" %>> En stock seulement</label>
+      <label class="sh-check"><input type="checkbox" name="promo" value="1"<%= q.onSale ? " checked" : "" %>> En promotion</label>
+      <label>Trier par
+        <select name="tri"><% [["newest","Nouveautés"],["featured","Mis en avant"],["price_asc","Prix croissant"],["price_desc","Prix décroissant"],["name","Nom"]].forEach(([v,l]) => { %><option value="<%= v %>"<%= result.sort === v ? " selected" : "" %>><%= l %></option><% }) %></select>
+      </label>
+      <button class="sh-btn" type="submit">Filtrer</button>
+    </form>
+  </aside>
+  <section aria-label="Produits">
+    <p class="sh-count" role="status"><%= result.total %> produit<%= result.total > 1 ? "s" : "" %></p>
+    <%- include("_grid", { items: result.items }) %>
+    <% if (result.pages > 1) { %>
+    <nav class="sh-pager" aria-label="Pagination">
+      <% for (let i = 1; i <= result.pages; i++) { %><% if (i === result.page) { %><span aria-current="page"><%= i %></span><% } else { %><a href="<%= qs({ page: i }) %>"><%= i %></a><% } %><% } %>
+    </nav>
+    <% } %>
+  </section>
+</div>
+<% } %>
+<%- include("_bottom") %>

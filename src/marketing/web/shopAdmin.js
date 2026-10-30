@@ -1,0 +1,205 @@
+// Administration de la boutique d'UN site (Programme 20.5) : produits, variantes, stocks, catégories, commandes, clients, livraison, taxes, coupons, paiements.
+// Le site vient UNIQUEMENT de l'adresse vérifiée par le serveur (res.locals.siteSpace / req.mk.site) : aucun « site » reçu du navigateur n'est lu.
+// Droits réels : shop.read (voir), shop.write (produits, réglages), shop.orders (traiter les commandes), shop.payments (confirmer un paiement manuel, rembourser, moyens de paiement).
+const express = require("express");
+const { need, flashError, flashOk } = require("./kit");
+const { MarketingError } = require("../errors");
+const { recordAudit } = require("../audit");
+const catalog = require("../shop/catalog");
+const store = require("../shop/store");
+const orders = require("../shop/orders");
+const customers = require("../shop/customers");
+const payments = require("../shop/payments");
+const notify = require("../shop/notify");
+const view = require("../shop/view");
+const siteModules = require("../siteModules");
+
+const PAGE = 25;
+module.exports = () => {
+  const router = express.Router({ mergeParams: true });
+  const PREFIXES = ["/site-web/sites/:id(\\d+)", "/site-web/principal"];
+
+  // Portée commerciale de la requête : site de l'adresse (vérifié) ou principal (équipe seulement) — sinon refus, jamais de repli
+  function scopeOf(req, res) {
+    const space = res.locals.siteSpace;
+    const ok = space && (space.principal ? req.mk.siteId === null : Number.isInteger(space.siteId) && req.mk.site && req.mk.site.id === space.siteId);
+    if (!ok) {
+      const reason = req.mk.siteContext && !req.mk.siteContext.ok ? req.mk.siteContext.reason : "not_found";
+      res.status(reason === "forbidden" ? 403 : 404).render("error", { message: reason === "forbidden" ? "Vous n'avez pas accès à ce site." : "Site introuvable." });
+      return null;
+    }
+    req.shopSpace = space;
+    return { db: req.mk.ctx.db, organizationId: req.mk.ctx.organizationId, siteId: space.principal ? null : space.siteId };
+  }
+  const writable = (space) => space.status !== "archived" && !space.deleted;
+  const audit = (req, s, action, resourceType, resourceId, metadata = {}) => {
+    try { recordAudit(s.db, { organizationId: s.organizationId, userId: req.mk.ctx.userId ?? null, action, resourceType, resourceId: String(resourceId ?? ""), metadata, siteId: s.siteId ?? undefined }); } catch { /* la trace ne bloque jamais */ }
+  };
+  const actor = (req) => `user:${req.mk.ctx.userId}`;
+
+  // Enregistre une route sous les deux préfixes (site et principal). `perm` : permission exigée ; `write` : refusé sur un site archivé.
+  function route(method, tail, perm, handler, { write = false } = {}) {
+    for (const P of PREFIXES) {
+      router[method](`${P}/boutique${tail}`, need(perm), (req, res, next) => {
+        const s = scopeOf(req, res);
+        if (!s) return undefined;
+        if (write && !writable(req.shopSpace)) { flashError(req, "Ce site est archivé : sa boutique est en lecture seule."); return res.redirect(req.shopSpace.base + "/boutique"); }
+        try { return handler(req, res, s, next); } catch (error) {
+          if (error instanceof MarketingError) { flashError(req, error.message); return res.redirect(req.get("referer") && /^https?:\/\/[^/]+\/marketing\//.test(req.get("referer")) ? req.get("referer") : `${req.shopSpace.base}/boutique`); }
+          return next(error);
+        }
+      });
+    }
+  }
+  const render = (req, res, tpl, title, active, extra = {}) => {
+    const s = { db: req.mk.ctx.db, organizationId: req.mk.ctx.organizationId, siteId: req.shopSpace.principal ? null : req.shopSpace.siteId };
+    const settings = store.getSettings(s);
+    const moduleOn = siteModules.isEnabled(s.db, s.organizationId, s.siteId, "commerce");
+    res.render(`marketing/boutique/${tpl}`, { title, active, space: req.shopSpace, base: `${req.shopSpace.base}/boutique`, shopSettings: settings, moduleOn, canWrite: req.mk.can("shop.write") && writable(req.shopSpace), canOrders: req.mk.can("shop.orders") && writable(req.shopSpace),
+      canPay: req.mk.can("shop.payments") && writable(req.shopSpace), money: (c) => view.money(c, settings.currency), query: req.query, ...extra });
+  };
+  const int = (v) => (v === undefined || v === "" ? undefined : Number(v));
+  const euros = (v) => { if (v === undefined || v === null || String(v).trim() === "") return undefined; const n = Number(String(v).replace(",", ".")); return Number.isFinite(n) ? Math.round(n * 100) : NaN; };
+  const productInput = (b) => ({
+    name: b.name, type: b.type, status: b.status, sku: b.sku, short_description: b.short_description, description: b.description,
+    price_cents: euros(b.price), sale_price_cents: b.sale_price === "" ? null : euros(b.sale_price), sale_starts_at: b.sale_starts_at, sale_ends_at: b.sale_ends_at,
+    manage_stock: b.manage_stock ? 1 : 0, stock_qty: int(b.stock_qty), weight_grams: b.weight_grams === "" ? null : int(b.weight_grams), length_mm: b.length_mm === "" ? null : int(b.length_mm), width_mm: b.width_mm === "" ? null : int(b.width_mm), height_mm: b.height_mm === "" ? null : int(b.height_mm),
+    requires_shipping: b.requires_shipping ? 1 : 0, image_url: b.image_url, gallery: b.gallery, tags: b.tags, is_featured: b.is_featured ? 1 : 0, seo_title: b.seo_title, seo_description: b.seo_description,
+    category_ids: [].concat(b.category_ids || []).map(Number),
+    attributes: String(b.attributes || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [name, ...rest] = l.split(":"); return { name: name.trim(), values: rest.join(":").split(",").map((x) => x.trim()).filter(Boolean) }; }),
+  });
+  const orderCtx = (req, s) => ({ s, order: orders.getOrder(s, req.params.oid) });
+
+  // ── Produits ──
+  route("get", "", "shop.read", (req, res, s) => {
+    const list = catalog.adminList(s, { q: req.query.q, status: req.query.statut, page: req.query.page, perPage: PAGE });
+    render(req, res, "produits", "Boutique — produits", "boutique", { list });
+  });
+  route("get", "/produits/nouveau", "shop.write", (req, res, s) => render(req, res, "produit", "Nouveau produit", "boutique", { product: null, categories: catalog.listCategories(s), variants: [], values: {} }), { write: true });
+  route("post", "/produits", "shop.write", (req, res, s) => {
+    try {
+      const id = catalog.createProduct(s, productInput(req.body), req.mk.ctx.userId);
+      audit(req, s, "shop_product.created", "shop_product", id, { name: req.body.name });
+      flashOk(req, "Produit créé.");
+      res.redirect(`${req.shopSpace.base}/boutique/produits/${id}`);
+    } catch (error) {
+      if (!(error instanceof MarketingError)) throw error;
+      res.status(422); flashError(req, error.message);
+      render(req, res, "produit", "Nouveau produit", "boutique", { product: null, categories: catalog.listCategories(s), variants: [], values: req.body });
+    }
+  }, { write: true });
+  route("get", "/produits/:pid(\\d+)", "shop.read", (req, res, s) => {
+    const product = catalog.productById(s, req.params.pid);
+    if (!product) return res.status(404).render("error", { message: "Produit introuvable." });
+    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {} });
+  });
+  route("post", "/produits/:pid(\\d+)", "shop.write", (req, res, s) => {
+    catalog.updateProduct(s, Number(req.params.pid), productInput(req.body));
+    audit(req, s, "shop_product.updated", "shop_product", req.params.pid);
+    flashOk(req, "Produit enregistré.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/supprimer", "shop.write", (req, res, s) => {
+    catalog.deleteProduct(s, Number(req.params.pid));
+    audit(req, s, "shop_product.deleted", "shop_product", req.params.pid);
+    flashOk(req, "Produit supprimé du catalogue (les commandes passées sont conservées).");
+    res.redirect(`${req.shopSpace.base}/boutique`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/variantes", "shop.write", (req, res, s) => {
+    const b = req.body;
+    const options = {};
+    for (const [k, v] of Object.entries(b)) if (k.startsWith("opt_")) options[k.slice(4)] = v;
+    catalog.saveVariant(s, Number(req.params.pid), { options, sku: b.sku, price_cents: b.price === "" ? null : euros(b.price), sale_price_cents: b.sale_price === "" ? null : euros(b.sale_price), stock_qty: int(b.stock_qty), weight_grams: b.weight_grams === "" ? null : int(b.weight_grams), manage_stock: 1 }, b.variant_id ? Number(b.variant_id) : null);
+    audit(req, s, "shop_variant.saved", "shop_product", req.params.pid);
+    flashOk(req, "Variante enregistrée.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/variantes/:vid(\\d+)/supprimer", "shop.write", (req, res, s) => {
+    catalog.deleteVariant(s, Number(req.params.pid), Number(req.params.vid));
+    audit(req, s, "shop_variant.deleted", "shop_product", req.params.pid);
+    flashOk(req, "Variante supprimée.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/stock", "shop.write", (req, res, s) => {
+    catalog.adjustStock(s, Number(req.params.pid), req.body.variant_id ? Number(req.body.variant_id) : null, req.body.delta, req.mk.ctx.userId);
+    audit(req, s, "shop_stock.adjusted", "shop_product", req.params.pid, { delta: req.body.delta });
+    flashOk(req, "Stock ajusté.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+
+  // ── Catégories ──
+  route("get", "/categories", "shop.read", (req, res, s) => render(req, res, "categories", "Boutique — catégories", "boutique", { categories: catalog.listCategories(s) }));
+  route("post", "/categories", "shop.write", (req, res, s) => { catalog.saveCategory(s, req.body); flashOk(req, "Catégorie enregistrée."); res.redirect(`${req.shopSpace.base}/boutique/categories`); }, { write: true });
+  route("post", "/categories/:cid(\\d+)/supprimer", "shop.write", (req, res, s) => { catalog.deleteCategory(s, Number(req.params.cid)); flashOk(req, "Catégorie supprimée."); res.redirect(`${req.shopSpace.base}/boutique/categories`); }, { write: true });
+
+  // ── Commandes ──
+  route("get", "/commandes", "shop.read", (req, res, s) => {
+    const list = orders.listOrders(s, { status: req.query.statut, q: req.query.q, page: req.query.page, perPage: PAGE });
+    render(req, res, "commandes", "Boutique — commandes", "boutique/commandes", { list, statusLabels: orders.STATUS_LABELS });
+  });
+  route("get", "/commandes/:oid(\\d+)", "shop.read", (req, res, s) => {
+    const { order } = orderCtx(req, s);
+    if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
+    const detail = orders.orderDetail(s, order);
+    const next = orders.TRANSITIONS[order.status].filter((t) => t !== "paid" || order.payment_method === "manual");
+    render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, statusLabels: orders.STATUS_LABELS, next });
+  });
+  route("post", "/commandes/:oid(\\d+)/statut", "shop.orders", (req, res, s) => {
+    const { order } = orderCtx(req, s);
+    if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
+    const to = String(req.body.statut || "");
+    if ((to === "paid" || to === "refunded") && !req.mk.can("shop.payments")) throw new MarketingError("forbidden", "Vous n'avez pas le droit de confirmer un paiement ou d'enregistrer un remboursement.");
+    const updated = orders.changeStatus(s, order.id, to, { actor: actor(req), note: req.body.note, canMarkPaid: req.mk.can("shop.payments"), tracking: req.body.tracking });
+    audit(req, s, "shop_order.status_changed", "shop_order", order.id, { from: order.status, to });
+    const event = { paid: "order_paid", shipped: "order_shipped", cancelled: "order_cancelled", refunded: "order_refunded", processing: "order_updated", completed: "order_updated" }[to];
+    if (event) notify.notify(s, updated, event);
+    flashOk(req, `Commande ${order.number} : ${orders.STATUS_LABELS[to].toLowerCase()}.`);
+    res.redirect(`${req.shopSpace.base}/boutique/commandes/${order.id}`);
+  }, { write: true });
+
+  // ── Clients ──
+  route("get", "/clients", "shop.read", (req, res, s) => render(req, res, "clients", "Boutique — clients", "boutique/clients", { list: customers.listCustomers(s, { q: req.query.q, page: req.query.page, perPage: PAGE }) }));
+  route("post", "/clients/:cid(\\d+)/statut", "shop.write", (req, res, s) => {
+    customers.setStatus(s, Number(req.params.cid), req.body.statut);
+    audit(req, s, "shop_customer.status_changed", "shop_customer", req.params.cid, { statut: req.body.statut });
+    flashOk(req, "Statut du client modifié.");
+    res.redirect(`${req.shopSpace.base}/boutique/clients`);
+  }, { write: true });
+
+  // ── Réglages : boutique, paiement, livraison, taxes, coupons ──
+  route("get", "/reglages", "shop.read", (req, res, s) => render(req, res, "reglages", "Boutique — réglages", "boutique/reglages", { zones: store.listZones(s), taxRules: store.listTaxRules(s), coupons: store.listCoupons(s), providers: payments.status(store.getSettings(s)), products: catalog.adminList(s, { perPage: 100 }).items }));
+  route("post", "/reglages", "shop.write", (req, res, s) => {
+    const b = req.body;
+    const input = { currency: b.currency, prices_include_tax: b.prices_include_tax ? 1 : 0, tax_enabled: b.tax_enabled ? 1 : 0, default_country: b.default_country, guest_checkout: b.guest_checkout ? 1 : 0, low_stock_threshold: b.low_stock_threshold, notify_email: b.notify_email, order_prefix: b.order_prefix };
+    // Ouvrir la boutique et choisir les moyens de paiement : droit « shop.payments » (réglages sensibles)
+    if (req.mk.can("shop.payments")) { input.enabled = b.enabled ? 1 : 0; input.payment_methods = [].concat(b.payment_methods || []).flatMap((x) => String(x).split(",")); input.manual_instructions = b.manual_instructions; }
+    store.saveSettings(s, input);
+    audit(req, s, "shop_settings.updated", "shop_settings", s.siteId ?? "principal", { enabled: input.enabled, payment_methods: input.payment_methods });
+    flashOk(req, "Réglages enregistrés.");
+    res.redirect(`${req.shopSpace.base}/boutique/reglages`);
+  }, { write: true });
+  route("post", "/livraison/zones", "shop.write", (req, res, s) => { store.saveZone(s, { name: req.body.name, countries: req.body.countries }); flashOk(req, "Zone ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`); }, { write: true });
+  route("post", "/livraison/zones/:zid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteZone(s, Number(req.params.zid)); flashOk(req, "Zone supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`); }, { write: true });
+  route("post", "/livraison/zones/:zid(\\d+)/methodes", "shop.write", (req, res, s) => {
+    const b = req.body;
+    store.saveMethod(s, Number(req.params.zid), { name: b.name, kind: b.kind, cost_cents: euros(b.cost), min_subtotal_cents: euros(b.min_subtotal), min_weight_grams: int(b.min_weight_grams), max_weight_grams: int(b.max_weight_grams) });
+    flashOk(req, "Méthode ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`);
+  }, { write: true });
+  route("post", "/livraison/methodes/:mid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteMethod(s, Number(req.params.mid)); flashOk(req, "Méthode supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`); }, { write: true });
+  route("post", "/taxes", "shop.write", (req, res, s) => {
+    const b = req.body;
+    store.saveTaxRule(s, { name: b.name, country: b.country, region: b.region, rate_bp: Math.round(Number(String(b.rate).replace(",", ".")) * 100), applies_to_shipping: b.applies_to_shipping ? 1 : 0, priority: b.priority });
+    audit(req, s, "shop_tax.created", "shop_settings", s.siteId ?? "principal", { country: b.country });
+    flashOk(req, "Règle de taxe ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#taxes`);
+  }, { write: true });
+  route("post", "/taxes/:tid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteTaxRule(s, Number(req.params.tid)); flashOk(req, "Règle supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#taxes`); }, { write: true });
+  route("post", "/coupons", "shop.write", (req, res, s) => {
+    const b = req.body;
+    store.saveCoupon(s, { code: b.code, kind: b.kind, value: b.kind === "fixed" ? euros(b.value) : Number(b.value), min_subtotal_cents: euros(b.min_subtotal), starts_at: b.starts_at, ends_at: b.ends_at, max_uses: int(b.max_uses), per_customer_limit: int(b.per_customer_limit), product_ids: [].concat(b.product_ids || []).map(Number) });
+    audit(req, s, "shop_coupon.created", "shop_coupon", b.code);
+    flashOk(req, "Coupon créé."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`);
+  }, { write: true });
+  route("post", "/coupons/:kid(\\d+)/etat", "shop.write", (req, res, s) => { store.setCouponActive(s, Number(req.params.kid), Boolean(req.body.actif)); flashOk(req, "Coupon mis à jour."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`); }, { write: true });
+
+  return router;
+};

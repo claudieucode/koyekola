@@ -17,6 +17,9 @@ const TYPES = {
   search_results: { label: "Résultats de recherche", hint: "Remplace la liste quand une recherche est faite dans le blog (/blog?q=…). La recherche saisie se lit avec {{query.q}}. Le moteur de recherche global du site viendra plus tard : ce modèle reçoit déjà la requête et les résultats du blog." },
   static_page: { label: "Page du site (À propos)", hint: "Remplace le texte de la page « À propos ». Utilisez l'élément « Contenu de l'article » : il affiche le texte de la page ; {{post.title}} donne son titre." },
   not_found: { label: "Page introuvable (404)", hint: "S'affiche quand une adresse n'existe pas." },
+  // Programme 20.5 — boutique : mêmes conditions, même priorité, même moteur de rendu que les autres familles. Seul un modèle dont la page appartient à la MÊME boutique s'applique.
+  product: { label: "Fiche produit", hint: "Remplace l'en-tête de la fiche d'un produit de la boutique. Utilisez les étiquettes {{product.title}}, {{product.price}}, {{product.image}}… et les éléments « Ajouter au panier », « Prix du produit ». Limitez-le à une catégorie de produits si besoin." },
+  product_archive: { label: "Catalogue / catégorie de produits", hint: "Remplace la liste des produits de la boutique (catalogue, catégorie, recherche, promotions). Utilisez l'élément « Grille de produits » : il suit la catégorie, la recherche et les filtres de la page ({{query.categorie}}, {{query.q}})." },
 };
 // Extension : un module peut déclarer une nouvelle famille de pages (le rendu reste à brancher dans la route concernée,
 // avec renderRegion de web/themeRender.js ; sans cela le modèle n'a aucun effet et l'écran l'indique).
@@ -37,7 +40,7 @@ function read(ctx) {
 const write = (ctx, list) => ctx.settings.set(ctx.organizationId, KEY, JSON.stringify(list));
 
 function pageRow(ctx, id) {
-  return ctx.db.prepare("SELECT id, name, slug, status, kind, archived_at FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) || null;
+  return ctx.db.prepare("SELECT id, name, slug, status, kind, archived_at, site_id FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(id, ctx.organizationId) || null;
 }
 // Affectations avec le nom et l'état de leur page
 function list(ctx) {
@@ -45,7 +48,7 @@ function list(ctx) {
 }
 // Conditions possibles selon la famille : catégorie (articles, listes, archives de catégorie), étiquette (articles, archives d'étiquette),
 // article précis (articles seulement). Une condition vide = « tous ».
-const CONDITIONS = { single_post: ["category", "tag", "postId"], blog_archive: ["category"], category_archive: ["category"], tag_archive: ["tag"], search_results: [], static_page: [], not_found: [] };
+const CONDITIONS = { product: ["category"], product_archive: ["category"], single_post: ["category", "tag", "postId"], blog_archive: ["category"], category_archive: ["category"], tag_archive: ["tag"], search_results: [], static_page: [], not_found: [] };
 function add(ctx, { type, pageId, category = "", tag = "", postId = null, audience = null }) {
   if (!Object.hasOwn(TYPES, type)) throw new MarketingError("invalid", "Type de modèle inconnu.");
   const page = Number.isInteger(pageId) ? pageRow(ctx, pageId) : null;
@@ -79,7 +82,7 @@ function remove(ctx, id) {
 // du modèle est EN LIGNE. Renvoie la page (ligne de base) ou null.
 //   category : nom de la catégorie courante (archive) ; categories : [nom de la catégorie de l'article, puis ses parentes] ;
 //   tags : noms des étiquettes de l'article ; tag : étiquette courante (archive) ; postId : article affiché.
-function pick(ctx, type, { category = "", categories = [], tag = "", tags = [], postId = null, visitor } = {}) {
+function pick(ctx, type, { category = "", categories = [], tag = "", tags = [], postId = null, visitor, siteId } = {}) {
   const lc = (v) => String(v || "").toLowerCase();
   const cats = [category, ...categories].filter(Boolean).map(lc);
   const tgs = [tag, ...tags].filter(Boolean).map(lc);
@@ -97,7 +100,8 @@ function pick(ctx, type, { category = "", categories = [], tag = "", tags = [], 
   scored.sort((a, b) => b.score - a.score || a.order - b.order);
   for (const { t } of scored) {
     const p = pageRow(ctx, t.pageId);
-    if (p && p.status === "published" && !p.archived_at) return p;
+    // siteId fourni (boutique) : le modèle doit appartenir à CE site ; omis (blog historique) : comportement inchangé
+    if (p && p.status === "published" && !p.archived_at && (siteId === undefined || (p.site_id ?? null) === siteId)) return p;
   }
   return null;
 }

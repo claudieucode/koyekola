@@ -23,6 +23,20 @@ router.post("/webhook", (req, res) => {
   }
   const session = event.data && event.data.object;
   try {
+    // Programme 20.5 : une session de BOUTIQUE (référence « shop:<commande> ») ou le remboursement d'un paiement de boutique est traité par le moteur de boutique (même signature vérifiée ci-dessus)
+    const shopRef = session && typeof session.client_reference_id === "string" && session.client_reference_id.startsWith("shop:");
+    const shopRefund = event.type === "charge.refunded" && session && typeof session.payment_intent === "string" && db.prepare("SELECT 1 FROM mk_shop_payments WHERE provider = 'stripe' AND provider_intent = ?").get(session.payment_intent);
+    if (shopRef || shopRefund) {
+      const shop = require("../marketing/shop/payments").handleStripeEvent(db, event);
+      if (shop.handled && shop.result && shop.scope && shop.orderId) {
+        const orders = require("../marketing/shop/orders"); const notify = require("../marketing/shop/notify");
+        const order = orders.getOrder(shop.scope, shop.orderId);
+        if (order && shop.result.status === "paid") notify.notify(shop.scope, order, "order_paid");
+        else if (order && event.type === "checkout.session.async_payment_failed") notify.notify(shop.scope, order, "payment_failed");
+        else if (order && shop.result.status === "refunded") notify.notify(shop.scope, order, "order_refunded");
+      }
+      return res.json({ received: true });
+    }
     switch (event.type) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded": {

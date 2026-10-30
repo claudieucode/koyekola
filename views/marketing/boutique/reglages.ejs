@@ -1,0 +1,68 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Réglages de la boutique" }) %>
+<% const st = shopSettings; const dis = canWrite ? "" : " disabled"; %>
+<form class="mk-form mk-panel" method="post" action="<%= base %>/reglages"><h2>Boutique et paiement</h2>
+  <div class="field-group"><label><input type="checkbox" name="enabled" value="1"<%= st.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> Boutique ouverte au public</label><% if (!canPay) { %><p class="field-hint">Réservé aux personnes autorisées à gérer les paiements.</p><% } %></div>
+  <div class="field-group"><label for="r-cur">Devise (code)</label><input id="r-cur" name="currency" value="<%= st.currency %>" maxlength="3"<%= dis %>></div>
+  <div class="field-group"><label for="r-cty">Pays par défaut (code ISO)</label><input id="r-cty" name="default_country" value="<%= st.default_country || "" %>" maxlength="2"<%= dis %>></div>
+  <div class="field-group"><label for="r-pre">Préfixe des numéros de commande</label><input id="r-pre" name="order_prefix" value="<%= st.order_prefix %>" maxlength="8"<%= dis %>></div>
+  <div class="field-group"><label for="r-mail">Adresse notifiée à chaque nouvelle commande</label><input id="r-mail" name="notify_email" type="email" value="<%= st.notify_email || "" %>"<%= dis %>></div>
+  <div class="field-group"><label for="r-low">Seuil de stock bas</label><input id="r-low" name="low_stock_threshold" type="number" min="0" value="<%= st.low_stock_threshold %>"<%= dis %>></div>
+  <div class="field-group"><label><input type="checkbox" name="guest_checkout" value="1"<%= st.guest_checkout ? " checked" : "" %><%= dis %>> Autoriser la commande sans compte</label></div>
+  <div class="field-group"><label><input type="checkbox" name="tax_enabled" value="1"<%= st.tax_enabled ? " checked" : "" %><%= dis %>> Appliquer les taxes configurées ci-dessous</label></div>
+  <div class="field-group"><label><input type="checkbox" name="prices_include_tax" value="1"<%= st.prices_include_tax ? " checked" : "" %><%= dis %>> Les prix saisis incluent les taxes</label></div>
+  <fieldset><legend>Moyens de paiement</legend>
+    <% providers.forEach((p) => { %><div class="field-group"><label><input type="checkbox" name="payment_methods" value="<%= p.key %>"<%= p.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> <%= p.label %></label>
+      <% if (!p.configured) { %><p class="field-hint">Configuration externe requise : clés du fournisseur (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) à définir sur le serveur. Tant qu'elles manquent, ce moyen n'est pas proposé aux clients.</p><% } %></div><% }) %>
+    <div class="field-group"><label for="r-man">Instructions du paiement manuel (virement, à la livraison…)</label><textarea id="r-man" name="manual_instructions" rows="3" maxlength="2000"<%= canPay ? "" : " disabled" %>><%= st.manual_instructions || "" %></textarea></div>
+  </fieldset>
+  <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
+</form>
+
+<section class="mk-panel" id="livraison"><h2>Livraison</h2>
+  <p class="field-hint">Une zone liste des pays (codes ISO, ex. « FR, BE ») ; une zone sans pays vaut « tous les pays ». Sans zone correspondante, la livraison est refusée pour ce pays.</p>
+  <% zones.forEach((z) => { %><div class="mk-callout"><span><strong><%= z.name %></strong> — <%= z.countries.length ? z.countries.join(", ") : "tous les pays" %>
+    <ul><% z.methods.forEach((m) => { %><li><%= m.name %> — <%= { flat: "forfait", free_over: "gratuite dès", weight: "selon le poids" }[m.kind] %> <%= m.kind === "free_over" ? money(m.min_subtotal_cents) : money(m.cost_cents) %><% if (m.min_weight_grams != null || m.max_weight_grams != null) { %> (<%= m.min_weight_grams ?? 0 %>–<%= m.max_weight_grams ?? "∞" %> g)<% } %>
+      <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/methodes/<%= m.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul>
+    <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones/<%= z.id %>/methodes">
+      <div class="field-group"><label for="m-n<%= z.id %>">Nom</label><input id="m-n<%= z.id %>" name="name" required></div>
+      <div class="field-group"><label for="m-k<%= z.id %>">Type</label><select id="m-k<%= z.id %>" name="kind"><option value="flat">Forfait</option><option value="free_over">Gratuite dès un montant</option><option value="weight">Selon le poids</option></select></div>
+      <div class="field-group"><label for="m-c<%= z.id %>">Coût</label><input id="m-c<%= z.id %>" name="cost" inputmode="decimal"></div>
+      <div class="field-group"><label for="m-m<%= z.id %>">Montant minimal</label><input id="m-m<%= z.id %>" name="min_subtotal" inputmode="decimal"></div>
+      <div class="field-group"><label for="m-w1<%= z.id %>">Poids min (g)</label><input id="m-w1<%= z.id %>" name="min_weight_grams" type="number" min="0"></div>
+      <div class="field-group"><label for="m-w2<%= z.id %>">Poids max (g)</label><input id="m-w2<%= z.id %>" name="max_weight_grams" type="number" min="0"></div>
+      <button class="btn btn-outline btn-sm" type="submit">Ajouter la méthode</button></form>
+    <form method="post" action="<%= base %>/livraison/zones/<%= z.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer la zone et ses méthodes ?" data-mk-confirm-ok="Supprimer">Supprimer la zone</button></form><% } %></span></div><% }) %>
+  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones"><div class="field-group"><label for="z-n">Nouvelle zone</label><input id="z-n" name="name" required placeholder="France"></div><div class="field-group"><label for="z-c">Pays (codes)</label><input id="z-c" name="countries" placeholder="FR, BE"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
+</section>
+
+<section class="mk-panel" id="taxes"><h2>Taxes</h2>
+  <p class="mk-callout mk-callout-warn"><span>Aucun taux n'est prérempli : saisissez les taux applicables à votre situation fiscale. Kolakisa applique ces règles mais ne garantit pas la conformité fiscale ; faites-les valider par un professionnel.</span></p>
+  <% if (taxRules.length) { %><ul class="mk-list"><% taxRules.forEach((t) => { %><li><%= t.name %> — <%= t.country %><%= t.region ? " / " + t.region : "" %> : <%= (t.rate_bp / 100).toFixed(2) %> %<%= t.applies_to_shipping ? " (livraison comprise)" : "" %>
+    <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/taxes/<%= t.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune règle de taxe.</p><% } %>
+  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/taxes">
+    <div class="field-group"><label for="t-n">Nom</label><input id="t-n" name="name" required></div>
+    <div class="field-group"><label for="t-c">Pays (code ou *)</label><input id="t-c" name="country" required maxlength="2"></div>
+    <div class="field-group"><label for="t-r">Région (facultatif)</label><input id="t-r" name="region"></div>
+    <div class="field-group"><label for="t-t">Taux (%)</label><input id="t-t" name="rate" inputmode="decimal" required></div>
+    <div class="field-group"><label><input type="checkbox" name="applies_to_shipping" value="1"> S'applique à la livraison</label></div>
+    <button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
+</section>
+
+<section class="mk-panel" id="coupons"><h2>Coupons</h2>
+  <% if (coupons.length) { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Coupons</caption><thead><tr><th scope="col">Code</th><th scope="col">Réduction</th><th scope="col">Utilisations</th><th scope="col">Validité</th><th scope="col">État</th></tr></thead><tbody>
+  <% coupons.forEach((c) => { %><tr><th scope="row"><%= c.code %></th><td><%= c.kind === "percent" ? c.value + " %" : money(c.value) %></td><td><%= c.used_count %><%= c.max_uses != null ? " / " + c.max_uses : "" %></td><td><%= c.starts_at ? String(c.starts_at).slice(0, 10) : "…" %> → <%= c.ends_at ? String(c.ends_at).slice(0, 10) : "…" %></td>
+    <td><%= c.active ? "Actif" : "Inactif" %> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/coupons/<%= c.id %>/etat"><% if (!c.active) { %><input type="hidden" name="actif" value="1"><% } %><button class="btn btn-ghost btn-sm" type="submit"><%= c.active ? "Désactiver" : "Activer" %></button></form><% } %></td></tr><% }) %></tbody></table></div><% } else { %><p class="mk-empty">Aucun coupon.</p><% } %>
+  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/coupons"><h3>Nouveau coupon</h3>
+    <div class="field-group"><label for="k-c">Code</label><input id="k-c" name="code" required maxlength="40"></div>
+    <div class="field-group"><label for="k-k">Type</label><select id="k-k" name="kind"><option value="percent">Pourcentage</option><option value="fixed">Montant fixe</option></select></div>
+    <div class="field-group"><label for="k-v">Valeur (% ou montant)</label><input id="k-v" name="value" inputmode="decimal" required></div>
+    <div class="field-group"><label for="k-m">Panier minimum</label><input id="k-m" name="min_subtotal" inputmode="decimal"></div>
+    <div class="field-group"><label for="k-s">Début</label><input id="k-s" name="starts_at" placeholder="AAAA-MM-JJ"></div>
+    <div class="field-group"><label for="k-e">Fin</label><input id="k-e" name="ends_at" placeholder="AAAA-MM-JJ"></div>
+    <div class="field-group"><label for="k-u">Utilisations maximales</label><input id="k-u" name="max_uses" type="number" min="1"></div>
+    <div class="field-group"><label for="k-pc">Limite par client</label><input id="k-pc" name="per_customer_limit" type="number" min="1"></div>
+    <div class="field-group"><label for="k-p">Limiter à certains produits</label><select id="k-p" name="product_ids" multiple size="4"><% products.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %></select></div>
+    <button class="btn btn-primary btn-sm" type="submit">Créer</button></form><% } %>
+</section>
+<%- include("../partials/bottom") %>

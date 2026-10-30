@@ -85,6 +85,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./rss")());
   admin.use(require("./landing")());
   admin.use(require("./siteWeb")());
+  admin.use(require("./shopAdmin")()); // Programme 20.5 : boutique d'un site (produits, commandes, clients, réglages) — avant l'espace du site
   admin.use(require("./siteSeo")()); // R8 lot 6C : SEO d'un site (réglages, redirections, 404) — avant l'espace du site (ses routes /sites/:id/redirections sont plus précises)
   admin.use(require("./siteSpace")()); // Espace d'administration d'UN site (palier 3, B1) : après siteWeb (ses routes /sites/:id/… sont plus précises)
   admin.use(require("./funnels")());
@@ -137,6 +138,7 @@ function createMarketingRouters({ db }) {
   publicRoutes.use(require("./visitorsPublic")({ db }));
   publicRoutes.use(require("./formsPublic")({ db }));
   publicRoutes.use(require("./landingPublic")({ db }));
+  publicRoutes.use(require("./shopPublic")({ db })); // Programme 20.5 : boutique publique (/boutique) du site de l'hôte
   publicRoutes.use(require("./surveysPublic")({ db }));
   publicRoutes.use(require("./smsPublic")({ db }));
   publicRoutes.use(require("./socialPublic")({ db }));
