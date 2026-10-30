@@ -161,7 +161,7 @@ describe("Interface Assistant IA (serveur réel)", () => {
 
   describe("pages, design, contenus, médias, aperçu, publication", () => {
     test("publier est impossible avant validation du plan (aucune page, aucune publication)", async () => {
-      const r = await post(boss, U(`/${project}/publier`), {}); assert.ok([409, 422].includes(r.status), r.text.slice(0, 200));
+      const r = await post(boss, U(`/${project}/publier`), { confirm: true }); assert.ok([409, 422].includes(r.status), r.text.slice(0, 200));
       const g = await post(boss, U(`/${project}/pages/generer`), {}); assert.equal(g.status, 409, "génération impossible avant validation du plan");
     });
     test("valider le plan, puis générer et appliquer les pages (brouillons natifs)", async () => {
@@ -222,12 +222,14 @@ describe("Interface Assistant IA (serveur réel)", () => {
       const s = await state(); const keys = s.checklist.map((c) => c.key);
       for (const k of ["site", "plan", "pages", "preflight", "contenus", "images", "liens", "seo", "design", "mobile", "domaine"]) assert.ok(keys.includes(k), k);
       assert.equal(s.checklist.find((c) => c.key === "mobile").level, "info", "le mobile n'est pas déclaré vérifié automatiquement");
-      const r = await post(boss, U(`/${project}/publier`), {});
+      const noConfirm = await post(boss, U(`/${project}/publier`), {}); assert.equal(noConfirm.status, 422, "21.11 : sans confirmation explicite côté serveur, rien n'est publié");
+      assert.equal(JSON.parse(noConfirm.text).code, "confirm_required");
+      const r = await post(boss, U(`/${project}/publier`), { confirm: true });
       if (s.canPublish) {
         assert.equal(r.status, 200, r.text.slice(0, 300)); const out = json(r);
         assert.equal(out.published + out.failed, s.pages.filter((p) => p.pageId).length);
         const dbPublished = one("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id = ? AND status = 'published'", siteOfProject).n; assert.equal(dbPublished, out.published);
-        assert.equal((await post(boss, U(`/${project}/publier`), {})).status, out.failed ? 200 : 409, "rien à republier");
+        assert.equal((await post(boss, U(`/${project}/publier`), { confirm: true })).status, out.failed ? 200 : 409, "rien à republier");
       } else {
         assert.equal(r.status, 422, r.text.slice(0, 200)); assert.equal(one("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id = ? AND status = 'published'", siteOfProject).n, 0, "aucune page publiée quand c'est bloqué");
         assert.ok(s.blockers.length);

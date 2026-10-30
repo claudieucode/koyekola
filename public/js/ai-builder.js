@@ -411,7 +411,7 @@
   async function publish() {
     const todo = S.pages.filter((p) => p.pageId && p.pageStatus !== "published");
     if (!await confirmDlg("Publier le site ?", `${todo.length} page(s) seront mises en ligne : ${todo.map((p) => p.name).join(", ")}. Vous pourrez les remettre hors ligne depuis la liste des pages.`, "Publier")) return;
-    const j = await act(() => api("POST", "/publier", {}));
+    const j = await act(() => api("POST", "/publier", { confirm: true }));
     if (j) dlg.replaceChildren(h("div", { class: "aib-form" }, h("h2", { text: j.failed ? "Publication partielle" : "Publication terminée" }), h("ul", {}, j.results.map((r) => h("li", { text: `${r.name} : ${r.ok ? "publiée" : `échec — ${r.error}`}` }))), h("div", { class: "aib-form-actions" }, btn("Fermer", () => dlg.close(), { primary: true })))), dlg.onclose = null, dlg.showModal();
   }
 
