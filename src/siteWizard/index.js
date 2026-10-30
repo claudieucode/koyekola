@@ -139,7 +139,7 @@ function startInner(ctx, { mode, category, name, pack, can = () => true, userId 
     pagesLib().setHomePage(ctx, site.id, home.id);
     mark(w, "pages", "pending");
   } else if (mode === "template") {
-    const out = libTemplates().importTemplate(ctx, site.id, { ref: `pack:${packKey}`, importKey: `wiz-${site.id}-${packKey}`.slice(0, 60), menu: can("navigation.write"), styles: false, can, userId: userId ?? ctx.userId ?? null });
+    const out = libTemplates().importTemplate(ctx, site.id, { ref: `pack:${packKey}`, importKey: `wiz-${site.id}-${packKey}`.slice(0, 60), menu: can("navigation.write"), styles: false, confirm: true, can, userId: userId ?? ctx.userId ?? null }); // site tout neuf, étapes guidées : les avertissements de compatibilité (ex. aucune formation publiée encore) sont connus et non bloquants
     if (out.pages[0]) pagesLib().setHomePage(ctx, site.id, out.pages[0].id);
     w.data = { ...w.data, imported: { label: out.label, pages: out.pages.length, menu: Boolean(out.menu) } };
   }

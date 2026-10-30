@@ -274,7 +274,9 @@
       if (r.component) links.appendChild(h("li", null, h("a", { href: "/marketing/site-web/composants/" + r.component.id + "/editeur" + S.query, text: r.component.name + " — ouvrir l'éditeur du composant" })));
       res.appendChild(links);
       var more = h("p", null); if (r.menu) more.appendChild(h("a", { href: S.links.menus, text: "Voir les menus" })); if (r.styles) { if (r.menu) more.appendChild(document.createTextNode(" · ")); more.appendChild(h("a", { href: S.links.styles, text: "Voir le brouillon de styles" })); }
-      if (r.kind === "part") more.appendChild(h("a", { href: S.links.themeTemplates, text: "Modèles de thème" })); res.appendChild(more);
+      if (r.kind === "part") more.appendChild(h("a", { href: S.links.themeTemplates, text: "Modèles de thème" }));
+      if (r.kind === "site" && !r.styles) { if (r.menu) more.appendChild(document.createTextNode(" · ")); more.appendChild(h("a", { href: S.links.styles, text: "Personnaliser l'identité graphique (couleurs, polices)" })); }
+      res.appendChild(more);
       var hist = S.history[0]; if (hist && !r.replay && S.can.import) res.appendChild(undoButton(hist.id));
       say("Modèle importé."); res.setAttribute("tabindex", "-1"); res.focus(); load(false);
     }, function (x) { busy = false; ok.textContent = "Réessayer"; err.textContent = x.message + (x.status >= 500 ? " Rien n'a été créé : vous pouvez réessayer." : ""); err.hidden = false; if (x.data && x.data.details && x.data.details.code === "confirm_required") { setOk(); } else ok.disabled = false; });

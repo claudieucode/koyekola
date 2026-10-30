@@ -142,12 +142,13 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
       const base = read().length;
       const r = await ok(imp(boss, A, { ref: "part:page-introuvable" })); assert.equal(r.result.theme, null); assert.equal(read().length, base, "aucune affectation sans demande");
       const plan = await ok(post(boss, A, "plan", { ref: "part:page-introuvable", assign: true })); assert.ok(plan.plan.operations.some((o) => o.op === "assign_theme" && o.scope === "organisation"));
-      const a = await ok(imp(boss, A, { ref: "part:page-introuvable", assign: true })); assert.equal(a.result.theme.type, "not_found"); assert.equal(read().length, base + 1);
+      const needConfirm = await refused(imp(boss, A, { ref: "part:page-introuvable", assign: true }), 409, /confirmation/); assert.ok(needConfirm.details.analysis.warnings.some((w) => w.code === "theme_scope"), "l'affectation touche toute l'organisation : confirmation exigée"); assert.equal(read().length, base);
+      const a = await ok(imp(boss, A, { ref: "part:page-introuvable", assign: true, confirm: true })); assert.equal(a.result.theme.type, "not_found"); assert.equal(read().length, base + 1);
       assert.equal(one("SELECT status FROM mk_landing_pages WHERE id = ?", a.result.pages[0].id).status, "draft", "affecté mais pas publié : le site garde son affichage tant que la page n'est pas publiée");
       const before = counts();
-      await refused(imp(boss, A, { ref: "part:page-introuvable", assign: true }), 422, /existe déjà/);
+      await refused(imp(boss, A, { ref: "part:page-introuvable", assign: true, confirm: true }), 422, /existe déjà/);
       assert.equal(counts().pages, before.pages, "le conflit n'a créé aucune page"); assert.equal(read().length, base + 1);
-      await refused(imp(boss, A, { ref: "page:contact", assign: true }), 422, /Theme Builder/);
+      await refused(imp(boss, A, { ref: "page:contact", assign: true, confirm: true }), 422, /Theme Builder/);
       await refused(imp(boss, A, { ref: "part:article", menu: true }), 422, /packs de site/);
     });
   });
@@ -247,7 +248,7 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
       const s2 = await ok(imp(boss, A, { ref: "section:benefits", pageId: pid })); db.prepare("UPDATE mk_landing_pages SET revision = revision + 1 WHERE id = ?").run(pid);
       await refused(undo(boss, A, s2.history[0].id), 409, /modifiée depuis/);
       const c = await ok(imp(boss, A, { ref: "component:bandeau-annonce" })); await ok(undo(boss, A, c.history[0].id)); assert.equal(one("SELECT COUNT(*) n FROM mk_web_components WHERE id = ?", c.result.component.id).n, 0);
-      const t = await ok(imp(boss, A, { ref: "part:resultats-recherche", assign: true })); await refused(undo(boss, A, t.history[0].id), 409, /affecté/);
+      const t = await ok(imp(boss, A, { ref: "part:resultats-recherche", assign: true, confirm: true })); await refused(undo(boss, A, t.history[0].id), 409, /affecté/);
     });
     test("droits et isolation : un lecteur ne peut pas annuler ; l'import d'un autre site est introuvable ; site archivé : refusé", async () => {
       const r = await ok(imp(boss, A, { ref: "page:merci" }));

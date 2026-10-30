@@ -25,6 +25,13 @@ class ImportRefused extends UserError { constructor(message, details = {}, statu
 
 const parseRef = catalog.parseRef;
 
+// ---------- Packs de site (utilisés aussi par l'assistant de création de site) ----------
+// Même forme que l'ancienne liste : { ref, key, name, description, category, pages: [{ key, name, sections, elements }], pageCount, elements, menuItems, style, … }, dans l'ordre du catalogue officiel
+function packs(ctx) {
+  const order = new Map(PACKS.map((p, i) => [p.key, i]));
+  return catalog.query(ctx, null, { source: "pack", perPage: 48 }).items.sort((a, b) => order.get(a.key) - order.get(b.key));
+}
+
 // ---------- Aperçu : sections d'UNE page du modèle ----------
 function sectionsOf(ctx, siteId, ref, pageKey = null) {
   const { kind, id } = parseRef(ref);
@@ -114,6 +121,8 @@ function plan(ctx, siteId, { ref, name = "", menu = false, styles = false, assig
   }
   const impact = [...(menu ? ["menu"] : []), ...(styles ? ["styles"] : []), ...(assign ? ["theme"] : [])];
   const { structure: _s, ...a } = analysis;
+  // Opération à fort impact : une affectation de modèle de thème vaut pour TOUTE l'organisation (limite D2 du Theme Builder) → confirmation explicite
+  if (assign) a.warnings = [...a.warnings, { code: "theme_scope", message: "Affecter ce modèle de thème s'applique à toute l'organisation (pas seulement à ce site) dès que la page est publiée." }];
   return { ref, kind, resource, label: st.label, operations, conflicts, impact, analysis: a, needsConfirm: a.warnings.length > 0, canImport: a.blockers.length === 0 };
 }
 
@@ -211,4 +220,4 @@ function undoImport(ctx, siteId, { id, can = () => true, userId = null }) {
   });
 }
 
-module.exports = { KEY_RE, ImportRefused, history, lastImport, sectionsOf, plan, importTemplate, undoImport, parseRef };
+module.exports = { KEY_RE, ImportRefused, packs, history, lastImport, sectionsOf, plan, importTemplate, undoImport, parseRef };
