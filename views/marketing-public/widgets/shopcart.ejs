@@ -1,0 +1,9 @@
+<%# Panier, commande et compte de la boutique (widgets/shop.js). Le nombre d'articles est lu auprès du serveur (/boutique/panier.json). %>
+<% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-sc-msg">Boutique fermée : liens masqués au public.</p></section><% } %><% } else { %>
+<nav class="<%= cls %> kw-sc"<%- attrs %> aria-label="Boutique">
+  <a class="kw-sc-cart" href="/boutique/panier"><%= p.cartLabel %><% if (p.showCount) { %> <span class="kw-sc-badge" data-sh-cart-count>0</span><% } %></a>
+  <% if (p.checkoutLabel) { %><a class="kw-sc-checkout kw-pb-btn" href="/boutique/commande"><%= p.checkoutLabel %></a><% } %>
+  <% if (p.accountLabel) { %><a class="kw-sc-account" href="/boutique/compte"><%= p.accountLabel %></a><% } %>
+  <% if (!isBuilder) { %><script src="/js/boutique.js" defer></script><% } %>
+</nav>
+<% } %>

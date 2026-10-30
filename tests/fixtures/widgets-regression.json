@@ -278,6 +278,26 @@
   "json": "815d35c7b3c2370da7bff70a3b625c6677c40162",
   "css": "48b72932269d0b9ca5388c2ed3682f0890761998"
  },
+ "shopbuy": {
+  "json": "f6ec89f6648afb83b092528c7dfd59bb54aef3bf",
+  "css": "b1284c1aa45ede131148c427917f9857b62daa8c"
+ },
+ "shopcart": {
+  "json": "400a61b4067ed43b0729b7fafd5e4ce47a734b2f",
+  "css": "8edf5a18caa9e4a50a875b9c0ef1577bad119770"
+ },
+ "shopfilters": {
+  "json": "7d3fb33cd31f3fffd204bf55d557320e14f4217c",
+  "css": "88c6df918a8b4cc82a7db486753c9ddf864d3987"
+ },
+ "shopgrid": {
+  "json": "c39415d0da7758d459947380d4d92dabea069584",
+  "css": "d0edab9d83c1f781e3d254031e7225d670ee6d70"
+ },
+ "shopsearch": {
+  "json": "3f65f8306ef7caf04accbcbd1c593968f10ca27d",
+  "css": "30f341371ce84c9284048280abe2224708adf697"
+ },
  "signupform": {
   "error": "4f02e54d88c9df2609571467694e3b84aaf9530b"
  },

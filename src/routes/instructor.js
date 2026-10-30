@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const db = require("../config/database");
 const { requireInstructor } = require("../middlewares/auth");
+const lmsSites = require("../services/lmsSites");
 const { upload } = require("../middlewares/upload");
 const { slugify } = require("../utils/format");
 const { parseVideoUrl } = require("../utils/video");
@@ -346,8 +347,25 @@ router.post("/formateur/cours/nouveau", upload.single("thumbnail"), (req, res) =
   res.redirect(`/formateur/cours/${info.lastInsertRowid}/curriculum`);
 });
 
+// Site de la formation (Titan XXIII) : la rattacher à un site dont le module « Formations » est activé. Réservé au compte créateur (équipe), le site vient du serveur (liste des sites de l'organisation), jamais d'un identifiant libre.
+router.post("/formateur/cours/:id/site", loadOwnedCourse, (req, res) => {
+  const marketing = req.app.locals.marketing;
+  const siteId = Number(req.body.site_id);
+  try {
+    if (!marketing || !marketing.ready) throw new Error("Le gestionnaire de sites n'est pas disponible.");
+    lmsSites.assignCourse({ db, organizationId: marketing.organizationId, userId: null }, req.course.id, siteId);
+    return res.redirect(`/formateur/cours/${req.course.id}/modifier?enregistre=site`);
+  } catch (error) {
+    return res.status(error.code ? 400 : 500).render("error", { message: error.code ? error.message : "Rattachement impossible pour le moment." });
+  }
+});
+
 router.get("/formateur/cours/:id/modifier", loadOwnedCourse, (req, res) => {
-  res.render("instructor/course-form", { categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || "", dashSite.siteIdOf(req)), course: req.course, error: null, saved: req.query.enregistre === "1", sources: editorSources(req.course) });
+  const marketing = req.app.locals.marketing;
+  const owner = lmsSites.siteOfCourse(db, req.course.id);
+  const choices = marketing && marketing.ready ? lmsSites.siteChoices(db, marketing.organizationId) : [];
+  const siteInfo = { currentId: owner, currentName: owner ? (choices.find((c) => c.id === owner) || db.prepare("SELECT name FROM mk_sites WHERE id = ?").get(owner) || {}).name || "Site" : null, choices: owner === null ? choices : [] };
+  res.render("instructor/course-form", { siteInfo, categoryChoices: categoriesSvc.choices(req.session.user.id, (req.course && req.course.category) || "", dashSite.siteIdOf(req)), course: req.course, error: null, saved: req.query.enregistre === "1", sources: editorSources(req.course) });
 });
 
 router.post("/formateur/cours/:id/modifier", loadOwnedCourse, upload.single("thumbnail"), (req, res) => {

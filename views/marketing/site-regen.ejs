@@ -1,0 +1,36 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<link rel="stylesheet" href="<%= asset('/css/regen.css') %>">
+<div class="sw rg" id="rg" data-base="<%= base %>" data-write="<%= perms.write ? 1 : 0 %>" data-restore="<%= perms.restore ? 1 : 0 %>">
+  <p class="mk-back"><a href="<%= siteBase %>">← <%= siteName %></a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Modifier avec l'IA et historique</h1><p class="mk-head-sub">Décrivez un changement : Kolakisa choisit le plus petit périmètre, vous montre l'impact et l'aperçu, puis modifie uniquement cela, dans le brouillon. Chaque modification est conservée et peut être comparée, annulée ou restaurée. Rien n'est publié.</p></div></div>
+  <nav class="rg-tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="rg-t-edit" aria-selected="true" aria-controls="rg-p-edit" data-tab="edit">Modifier</button>
+    <button type="button" role="tab" id="rg-t-hist" aria-selected="false" aria-controls="rg-p-hist" data-tab="hist" tabindex="-1">Historique et versions</button>
+    <button type="button" role="tab" id="rg-t-prot" aria-selected="false" aria-controls="rg-p-prot" data-tab="prot" tabindex="-1">Protection</button>
+  </nav>
+  <div class="rg-status" id="rg-status" role="status" aria-live="polite"></div>
+  <section id="rg-p-edit" role="tabpanel" aria-labelledby="rg-t-edit" class="mk-panel">
+    <form id="rg-form" class="rg-form">
+      <label class="sw-field">Page (facultatif si votre demande la nomme)<select id="rg-page" name="page"><option value="">—</option></select></label>
+      <label class="sw-field">Section (facultatif)<select id="rg-section" name="section"><option value="">—</option></select></label>
+      <label class="sw-field">Champ texte (facultatif)<select id="rg-field" name="field"><option value="">—</option></select></label>
+      <label class="sw-field rg-wide">Votre demande<textarea id="rg-text" name="text" rows="3" maxlength="600" placeholder="Ex. Raccourcis ce texte · Change uniquement le fond de cette section en sombre · Ajoute une section FAQ après les services" <%= perms.write ? "" : "disabled" %>></textarea></label>
+      <div class="sw-actions"><button class="btn btn-primary" type="submit" <%= perms.write ? "" : "disabled" %>>Préparer la modification</button> <button class="btn" type="button" id="rg-undo" <%= perms.restore ? "" : "disabled" %>>Annuler la dernière opération</button> <button class="btn" type="button" id="rg-redo" <%= perms.restore ? "" : "disabled" %>>Rétablir</button></div>
+    </form>
+    <div id="rg-proposal" aria-live="polite"></div>
+  </section>
+  <section id="rg-p-hist" role="tabpanel" aria-labelledby="rg-t-hist" class="mk-panel" hidden>
+    <div class="rg-row"><label>Acteur <select id="rg-f-actor"><option value="">Tous</option><option value="ai">IA</option><option value="human">Personne</option></select></label><label>Statut <select id="rg-f-status"><option value="">Tous</option><option value="applied">Appliquée</option><option value="proposed">Proposée</option><option value="undone">Annulée</option><option value="rejected">Refusée</option></select></label><button class="btn btn-sm" type="button" id="rg-snap">Enregistrer une version du site maintenant</button><span id="rg-usage" class="sw-muted"></span></div>
+    <h2>Opérations</h2><div id="rg-ops"></div><div class="rg-row"><button class="btn btn-sm" type="button" id="rg-more" hidden>Voir plus</button></div>
+    <h2>Versions enregistrées</h2><div id="rg-snaps"></div>
+    <div id="rg-compare" aria-live="polite"></div>
+  </section>
+  <section id="rg-p-prot" role="tabpanel" aria-labelledby="rg-t-prot" class="mk-panel" hidden>
+    <p class="sw-muted">Un élément <strong>verrouillé</strong> n'est jamais modifié par l'IA ni par une restauration. Un élément <strong>validé</strong> exige une confirmation explicite. Un texte modifié à la main après une écriture de l'IA est protégé automatiquement. La protection est appliquée par le serveur.</p>
+    <label class="sw-field">Page<select id="rg-prot-page"><option value="">—</option></select></label>
+    <div id="rg-prot"></div>
+  </section>
+</div>
+<script src="<%= asset('/js/regen.js') %>" defer></script>
+<%- include("partials/bottom") %>

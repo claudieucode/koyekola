@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title><%= title %> · Boutique IA · KOLAKISA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/ai-builder.css') %>">
+</head>
+<body class="aib" data-base="<%= base %>" data-id="<%= id %>" data-site="<%= project.siteId %>" data-write="<%= canWrite ? 1 : 0 %>" data-shop="<%= canShop ? 1 : 0 %>" data-payments="<%= canPayments ? 1 : 0 %>" data-design="<%= canDesign ? 1 : 0 %>" data-publish="<%= canPublish ? 1 : 0 %>">
+  <a class="aib-skip" href="#aib-main">Aller au contenu</a>
+  <header class="aib-top" role="banner">
+    <a class="aib-logo" href="/marketing/ia/studio" aria-label="Kolakisa — retour aux projets IA"><span class="aib-mark" aria-hidden="true">K</span><span class="aib-logo-t">Kolakisa</span></a>
+    <div class="aib-project"><span class="aib-project-k">Boutique</span> <strong id="aib-name"><%= project.name %></strong></div>
+    <div class="aib-grow"></div>
+    <div class="aib-save" id="aib-save" role="status" aria-live="polite"><span class="aib-dot" aria-hidden="true"></span><span id="aib-save-t">Enregistré</span></div>
+    <div class="aib-progress" id="aib-progress" title="Étapes terminées / étapes totales"><span class="aib-progress-bar"><span id="aib-progress-fill"></span></span><span id="aib-progress-t"></span></div>
+    <div class="aib-actions">
+      <button type="button" class="aib-btn" id="aib-undo" disabled aria-label="Annuler la dernière modification des brouillons">Annuler</button>
+      <button type="button" class="aib-btn" id="aib-redo" disabled aria-label="Rétablir la modification annulée">Rétablir</button>
+      <button type="button" class="aib-btn aib-assist-btn" id="aib-assist-btn" aria-controls="aib-assist">Assistant</button>
+      <button type="button" class="aib-btn" id="aib-save-btn">Enregistrer</button>
+      <details class="aib-menu"><summary class="aib-btn" aria-label="Paramètres du projet">Paramètres</summary>
+        <div class="aib-menu-pop">
+          <a href="/marketing/site-web/sites/<%= project.siteId %>/boutique">Administration de la boutique</a>
+          <a href="/marketing/site-web/sites/<%= project.siteId %>">Ouvrir le site « <%= project.siteName %> »</a>
+          <a href="/marketing/ia/studio">Tous mes projets IA</a>
+          <button type="button" id="aib-toggle-assist">Replier / afficher l'assistant</button>
+        </div></details>
+    </div>
+  </header>
+  <div class="aib-banner" id="aib-banner" role="alert" hidden></div>
+  <div class="aib-body" id="aib-body">
+    <nav class="aib-steps" aria-label="Étapes de création de la boutique"><ol id="aib-steps"></ol></nav>
+    <main class="aib-main" id="aib-main" tabindex="-1"></main>
+    <aside class="aib-assist" id="aib-assist" aria-label="Assistant boutique">
+      <div class="aib-assist-head"><strong>Assistant</strong><span class="aib-ctx" id="aib-ctx"></span></div>
+      <div class="aib-chat" id="aib-chat" role="log" aria-live="polite"></div>
+      <form class="aib-chat-form" id="aib-chat-form" autocomplete="off">
+        <label class="aib-sr" for="aib-chat-in">Votre demande</label>
+        <textarea id="aib-chat-in" rows="2" maxlength="400" placeholder="Ex. : Ajoute une catégorie Imprimantes"></textarea>
+        <button type="submit" class="aib-btn aib-btn-primary">Envoyer</button>
+      </form>
+      <p class="aib-hint">Assistant à règles (sans IA). Il propose, vous acceptez ou refusez ; il ne supprime rien et n'invente ni prix, ni stock, ni taxe.</p>
+    </aside>
+  </div>
+  <dialog id="aib-dialog" class="aib-dialog"></dialog>
+  <script id="aib-initial" type="application/json"><%- initialJson %></script>
+  <script src="<%= asset('/js/ai-shop.js') %>" defer></script>
+</body>
+</html>

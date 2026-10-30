@@ -42,6 +42,7 @@ describe("assistant de création de site", () => {
   const flash = async (client, url) => (await client.get(url)).text;
   // Les noms de pages sont uniques dans l'organisation : « Accueil (2) » vaut « Accueil »
   const base = (rows) => rows.map((p) => p.name.replace(/ \(\d+\)$/, "")).sort();
+  const m_count = (id) => row("SELECT COUNT(*) n FROM mk_site_modules WHERE site_id = ? AND module = 'lms' AND enabled = 1", id).n;
   const idOf = (c) => row("SELECT id FROM users WHERE email = ?", c.email).id;
 
   before(async () => {
@@ -107,9 +108,12 @@ describe("assistant de création de site", () => {
     assert.equal(r.status, 302);
     assert.deepEqual(base(all("SELECT name FROM mk_landing_pages WHERE site_id = ?", id)), ["Accueil", "Blog", "Contact", "Enseignants", "Formations"]);
     const f = await flash(boss, W(id, "?etape=fonctions"));
-    assert.match(f, /Formations en ligne/); assert.match(f, /Pas encore ouvert aux sites/);
+    assert.match(f, /Formations en ligne/);
+    // Le module « Formations » est ouvert aux sites (LMS multi-sites) : activable par l'équipe, jamais activé seul ; s'il ne l'était pas, l'activation serait refusée
+    const open = require("../src/marketing/siteModules").MODULES.lms.ready;
+    assert.equal(m_count(id), 0, "jamais activé tout seul");
     await boss.post(W(id, "/fonctions/lms"), { etat: "activer" });
-    assert.equal(row("SELECT COUNT(*) n FROM mk_site_modules WHERE site_id = ? AND module = 'lms'", id).n, 0, "un module non ouvert aux sites ne s'active pas");
+    assert.equal(m_count(id), open ? 1 : 0, open ? "module ouvert aux sites : activation explicite possible" : "un module non ouvert aux sites ne s'active pas");
     assert.match(await flash(boss, W(id, "?etape=fonctions")), /Réservation[\s\S]*Non disponible/);
   });
 

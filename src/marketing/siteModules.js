@@ -15,7 +15,7 @@ const MODULES = Object.freeze({
   social: { label: "Réseaux sociaux", phase: "R7-6.3", ready: true },
   scoring: { label: "Score des contacts", phase: "R7-6.4", ready: true },
   commerce: { label: "Commerce", phase: "R7-6.5", ready: true },
-  lms: { label: "Formations", phase: "R7-6.6", ready: false },
+  lms: { label: "Formations", phase: "Titan XXIII", ready: true },
 });
 const KEYS = Object.keys(MODULES);
 
@@ -25,7 +25,7 @@ const ROUTES = Object.freeze({
   social: /^\/reseaux(?:\/|$)/,
   scoring: /^\/score(?:\/|$)/,
   ai: /^\/ia(?:\/|$)/,
-  commerce: /^\/revenus(?:\/|$)/,
+  commerce: /^\/revenus(?:\/|$)/, // la boutique (Programme 20.5) : ses écrans d'administration suivent les permissions shop.* ; le module commande l'OUVERTURE PUBLIQUE de la boutique du site
 });
 function moduleOfPath(path) {
   for (const [key, re] of Object.entries(ROUTES)) if (re.test(path)) return key;

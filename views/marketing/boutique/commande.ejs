@@ -1,0 +1,31 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Commande " + order.number }) %>
+<% const PS = { unpaid: "Non payée", pending: "Paiement en cours", paid: "Payée", failed: "Paiement échoué", refunded: "Remboursée" }; %>
+<section class="mk-panel"><h2>Résumé</h2>
+  <p>Statut : <strong><%= statusLabels[order.status] %></strong> · Paiement : <strong><%= PS[order.payment_status] %></strong> (<%= order.payment_method %>) · Client : <%= order.email %> · <%= String(order.created_at).slice(0, 16) %></p>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Articles</caption><thead><tr><th scope="col">Article</th><th scope="col">SKU</th><th scope="col">Qté</th><th scope="col">Prix unitaire</th><th scope="col">Total</th></tr></thead><tbody>
+  <% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %><%= i.variant_label ? " (" + i.variant_label + ")" : "" %></th><td><%= i.sku || "—" %></td><td><%= i.quantity %></td><td><%= money(i.unit_price_cents) %></td><td><%= money(i.line_subtotal_cents - i.discount_cents) %></td></tr><% }) %>
+  </tbody></table></div>
+  <p>Sous-total <%= money(order.subtotal_cents) %><% if (order.discount_cents) { %> · Réduction − <%= money(order.discount_cents) %> (<%= order.coupon_code %>)<% } %> · Livraison <%= money(order.shipping_cents) %><%= order.shipping_method_name ? " (" + order.shipping_method_name + ")" : "" %> · Taxes <%= money(order.tax_cents) %> <%= order.prices_include_tax ? "(incluses)" : "(en sus)" %> · <strong>Total <%= money(order.total_cents) %></strong></p>
+  <% if (order.shippingAddress && order.shippingAddress.line1) { const a = order.shippingAddress; %><p>Livraison : <%= a.name %>, <%= a.line1 %> <%= a.line2 %>, <%= a.postal_code %> <%= a.city %>, <%= a.country %></p><% } %>
+  <% if (order.tracking_number) { %><p>Suivi : <%= order.tracking_number %></p><% } %>
+</section>
+<% if (canOrders && next.length) { %>
+<section class="mk-panel"><h2>Changer le statut</h2>
+  <% next.forEach((t) => { const sensitive = t === "paid" || t === "refunded"; %>
+    <% if (!sensitive || canPay) { %>
+    <form class="mk-form mk-inline-form" method="post" action="<%= base %>/commandes/<%= order.id %>/statut">
+      <input type="hidden" name="statut" value="<%= t %>">
+      <% if (t === "shipped") { %><div class="field-group"><label for="t-<%= t %>">Numéro de suivi</label><input id="t-<%= t %>" name="tracking" maxlength="80"></div><% } %>
+      <div class="field-group"><label for="n-<%= t %>">Note (facultatif)</label><input id="n-<%= t %>" name="note" maxlength="300"></div>
+      <button class="btn <%= t === "cancelled" || t === "refunded" ? "btn-outline" : "btn-primary" %> btn-sm" type="submit"<% if (t === "paid") { %> data-mk-confirm="Confirmez-vous avoir reçu le paiement de <%= money(order.total_cents) %> ?" data-mk-confirm-title="Confirmer le paiement" data-mk-confirm-ok="Confirmer"<% } else if (t === "refunded") { %> data-mk-confirm="Cela enregistre le remboursement ; il doit être effectué chez le fournisseur de paiement." data-mk-confirm-ok="Enregistrer"<% } %>><%= { paid: "Confirmer le paiement reçu", processing: "Mettre en préparation", shipped: "Marquer comme expédiée", completed: "Marquer comme terminée", cancelled: "Annuler la commande", refunded: "Enregistrer un remboursement" }[t] %></button>
+    </form>
+    <% } %>
+  <% }) %>
+</section>
+<% } %>
+<section class="mk-panel"><h2>Historique</h2>
+  <ul class="mk-list"><% order.events.forEach((e) => { %><li><span class="mk-sub"><%= String(e.created_at).slice(0, 16) %></span> — <%= e.to_status ? statusLabels[e.to_status] : e.kind %> <span class="mk-sub">(<%= e.actor %>)</span><%= e.note ? " — " + e.note : "" %></li><% }) %></ul>
+  <% if (order.payments.length) { %><h3>Paiements</h3><ul class="mk-list"><% order.payments.forEach((p) => { %><li><%= p.provider %> · <%= money(p.amount_cents) %> · <%= p.status %><%= p.failure_reason ? " — " + p.failure_reason : "" %></li><% }) %></ul><% } %>
+</section>
+<%- include("../partials/bottom") %>

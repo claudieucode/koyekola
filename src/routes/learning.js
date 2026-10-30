@@ -12,10 +12,16 @@ const { buildCertificatePdf } = require("../services/certificatePdf");
 const { createRateLimiter } = require("../middlewares/security");
 const { siteBase } = require("../utils/seo");
 
+const lmsSites = require("../services/lmsSites");
+// Portée de site de la requête (domaine résolu côté serveur, voir services/lmsSites) : une formation d'un autre site est introuvable
+const scopeOf = (req, alias = "courses") => lmsSites.scopeSql(req.lmsSite, alias);
+const outOfSite = (req, courseId) => !lmsSites.belongsTo(db, courseId, req.lmsSite);
+
 const router = express.Router();
 
 router.get("/mes-cours", requireAuth, (req, res) => {
   const userId = req.session.user.id;
+  const sc = scopeOf(req);
   const courses = db
     .prepare(
       `SELECT courses.*, users.username AS instructor_name, enrollments.created_at AS enrolled_at,
@@ -27,10 +33,10 @@ router.get("/mes-cours", requireAuth, (req, res) => {
        FROM enrollments
        JOIN courses ON courses.id = enrollments.course_id
        JOIN users ON users.id = courses.instructor_id
-       WHERE enrollments.user_id = ?
+       WHERE enrollments.user_id = ? AND ${sc.sql}
        ORDER BY enrollments.created_at DESC`
     )
-    .all(userId, userId);
+    .all(userId, userId, ...sc.params);
 
   // Dernière leçon consultée de chaque formation (pour le bouton « Reprendre »)
   const lastStmt = db.prepare(
@@ -61,10 +67,10 @@ router.get("/mes-cours", requireAuth, (req, res) => {
     .prepare(
       `SELECT courses.id, courses.slug, courses.title, courses.price_cents, users.username AS instructor_name
        FROM favorites JOIN courses ON courses.id = favorites.course_id JOIN users ON users.id = courses.instructor_id
-       WHERE favorites.user_id = ? AND courses.published = 1
+       WHERE favorites.user_id = ? AND courses.published = 1 AND ${sc.sql}
        ORDER BY favorites.created_at DESC, favorites.rowid DESC`
     )
-    .all(userId));
+    .all(userId, ...sc.params));
 
   const notes = db
     .prepare(
@@ -73,10 +79,10 @@ router.get("/mes-cours", requireAuth, (req, res) => {
        JOIN lessons ON lessons.id = lesson_notes.lesson_id
        JOIN sections ON sections.id = lessons.section_id
        JOIN courses ON courses.id = sections.course_id
-       WHERE lesson_notes.user_id = ?
+       WHERE lesson_notes.user_id = ? AND ${sc.sql}
        ORDER BY lesson_notes.updated_at DESC LIMIT 20`
     )
-    .all(userId);
+    .all(userId, ...sc.params);
 
   res.render("my-courses", { courses, inProgress, finished, resumeCourse, library, counts, favorites, notes });
 });
@@ -146,6 +152,7 @@ function redirectRenamed(req, res) {
 
 router.get("/apprendre/:slug", (req, res) => {
   const course = db.prepare("SELECT * FROM courses WHERE slug = ?").get(req.params.slug);
+  if (course && outOfSite(req, course.id)) return res.status(404).render("error", { message: "Formation introuvable." });
   if (!course && redirectRenamed(req, res)) return;
   if (!course || lessonAccess(req.session.user, course, null).hidden) {
     return res.status(404).render("error", { message: "Formation introuvable." });
@@ -176,6 +183,7 @@ router.get("/apprendre/:slug", (req, res) => {
 // formation. L'accès aux autres sous-chapitres reste vérifié plus bas.
 router.get("/apprendre/:slug/:lessonId", (req, res) => {
   const course = db.prepare("SELECT * FROM courses WHERE slug = ?").get(req.params.slug);
+  if (course && outOfSite(req, course.id)) return res.status(404).render("error", { message: "Formation introuvable." });
   if (!course && redirectRenamed(req, res)) return;
   if (!course) return res.status(404).render("error", { message: "Formation introuvable." });
 
@@ -263,7 +271,7 @@ function loadTrackedLesson(req, res, next) {
   const lesson = Number.isInteger(lessonId)
     ? db.prepare("SELECT lessons.id, sections.course_id FROM lessons JOIN sections ON sections.id = lessons.section_id WHERE lessons.id = ?").get(lessonId)
     : null;
-  if (!lesson) return res.status(404).json({ erreur: "Leçon introuvable." });
+  if (!lesson || outOfSite(req, lesson.course_id)) return res.status(404).json({ erreur: "Leçon introuvable." });
   if (!isEnrolled(req.session.user, lesson.course_id)) return res.status(403).json({ erreur: "Réservé aux élèves inscrits." });
   req.trackedLesson = lesson;
   next();
@@ -328,7 +336,7 @@ router.post("/apprendre/lecon/:lessonId/terminer", requireAuth, (req, res) => {
        WHERE lessons.id = ?`
     )
     .get(req.params.lessonId);
-  if (!lesson) return res.redirect("/mes-cours");
+  if (!lesson || outOfSite(req, lesson.course_id)) return res.redirect("/mes-cours");
 
   const enrolled = db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(req.session.user.id, lesson.course_id);
   if (enrolled) {
@@ -353,7 +361,7 @@ router.post("/apprendre/quiz/:quizId/soumettre", requireAuth, (req, res) => {
        WHERE quizzes.id = ?`
     )
     .get(req.params.quizId);
-  if (!quiz) return res.redirect("/mes-cours");
+  if (!quiz || outOfSite(req, quiz.course_id)) return res.redirect("/mes-cours");
 
   const enrolled = db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(req.session.user.id, quiz.course_id);
   if (!enrolled) return res.redirect(`/apprendre/${quiz.course_slug}/${quiz.lesson_id}`);
@@ -398,7 +406,7 @@ function certificateFor(req, res) {
   const course = db
     .prepare("SELECT courses.*, users.username AS instructor_name FROM courses JOIN users ON users.id = courses.instructor_id WHERE slug = ?")
     .get(req.params.slug);
-  if (!course) { res.status(404).render("error", { message: "Formation introuvable." }); return null; }
+  if (!course || outOfSite(req, course.id)) { res.status(404).render("error", { message: "Formation introuvable." }); return null; }
 
   const enrolled = db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(req.session.user.id, course.id);
   if (!enrolled) { res.status(403).render("error", { message: "Vous devez posséder cette formation pour obtenir un certificat." }); return null; }

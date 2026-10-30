@@ -1,0 +1,104 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<% const money = (m) => (m === null || m === undefined ? "inconnu" : (m / 1e6).toFixed(4) + " $"); const done = tasks.filter((t) => t.status === "succeeded"); const active_ = tasks.some((t) => ["queued", "running"].includes(t.status)); %>
+<div class="sw" data-ai-media data-poll="<%= W %>/taches.json" data-active="<%= active_ ? 1 : 0 %>">
+  <p class="mk-back"><a href="/marketing/site-web/sites/<%= siteId %>/assistant">← Assistant de création</a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Médias IA</h1><p class="mk-head-sub">Planifiez les images dont vos pages ont besoin, générez-les ou choisissez-les dans la médiathèque, puis placez-les dans les <strong>brouillons</strong> de vos pages. Une image déjà en place n'est <strong>jamais</strong> remplacée sans votre action explicite. Les images générées par IA sont toujours identifiées comme telles.</p></div></div>
+
+  <section class="mk-panel">
+    <h2>Fournisseurs</h2>
+    <table class="mk-table"><caption class="sw-sr">Fournisseurs d'images</caption><thead><tr><th scope="col">Fournisseur</th><th scope="col">Intégration</th><th scope="col">État pour ce site</th></tr></thead><tbody>
+      <% providers.forEach((p) => { %><tr><td><%= p.label %></td><td><%= p.integration %></td><td><span class="mk-status <%= p.usable ? "" : "mk-status-warn" %>"><%= p.usable ? "Utilisable" : "Indisponible" %></span> <%= p.why %></td></tr><% }) %>
+    </tbody></table>
+    <p class="sw-muted">Aucun fournisseur d'images réel n'a été appelé en conditions réelles : l'adaptateur OpenAI est écrit et testé contre un faux serveur, <strong>non vérifié</strong>. Le fournisseur « Démonstration » produit des visuels d'attente, pas des images d'IA.</p>
+    <% if (isTeam) { %><form method="post" action="<%= W %>/depense" class="sw-actions"><label><input type="checkbox" name="autoriser" value="oui" <%= spend ? "checked" : "" %>> J'autorise la dépense auprès des fournisseurs payants pour cette organisation (clé et activation dans l'AI Core toujours requises)</label><button class="btn btn-outline btn-sm" type="submit">Enregistrer</button></form><% } %>
+  </section>
+
+  <section class="mk-panel">
+    <h2>Besoins visuels</h2>
+    <% if (canWrite) { %><form method="post" action="<%= W %>/planifier" class="sw-actions"><button class="btn btn-outline btn-sm" type="submit">Analyser les pages et planifier les images</button></form><% } %>
+    <% if (!needs.length) { %><p class="sw-muted">Aucun besoin planifié. Lancez l'analyse : elle lit la structure réelle de vos pages (images de bandeau, illustrations).</p><% } %>
+    <% needs.forEach((n) => { %>
+      <div class="sw-block">
+        <h3><%= n.description %> <small class="sw-muted">— <%= n.pageName || "site" %></small> <span class="mk-status <%= n.status === "assigned" ? "" : "mk-status-warn" %>"><%= { needed: "À pourvoir", queued: "En cours", generated: "Générée", assigned: "En place", skipped: "Pourvue autrement", no_slot: "Sans emplacement" }[n.status] || n.status %></span></h3>
+        <p class="sw-muted">Emplacement : <%= n.widget || "—" %> · format <%= n.ratio %> (<%= n.width %>×<%= n.height %>) · priorité <%= n.priority %></p>
+        <% if (n.reason) { %><p class="sw-warn"><%= n.reason %></p><% } %>
+        <% if (n.status !== "no_slot" && canWrite) { %>
+        <form method="post" action="<%= W %>/generer">
+          <input type="hidden" name="besoins" value="<%= n.key %>">
+          <label class="sw-field">Consigne <textarea name="consigne" rows="3" maxlength="1500"><%= n.prompt %></textarea></label>
+          <div class="sw-grid">
+            <label class="sw-field">Fournisseur <select name="fournisseur"><% providers.filter((p) => p.models.length).forEach((p) => { %><option value="<%= p.id %>" <%= p.usable ? "" : "disabled" %>><%= p.label %><%= p.usable ? "" : " (indisponible)" %></option><% }) %></select></label>
+            <label class="sw-field">Format <select name="ratio"><% Object.keys(RATIOS).forEach((r) => { %><option value="<%= r %>" <%= r === n.ratio ? "selected" : "" %>><%= r %></option><% }) %></select></label>
+            <label class="sw-field">Variantes <select name="variantes"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+          </div>
+          <div class="sw-actions"><button class="btn btn-primary btn-sm" type="submit">Générer</button>
+            <% if (["generated", "assigned"].includes(n.status)) { %><label><input type="checkbox" name="regenerer" value="oui"> Régénérer (nouvelle variante)</label><% } %></div>
+        </form>
+        <% } %>
+      </div>
+    <% }) %>
+    <% if (canWrite && needs.some((n) => n.status === "generated")) { %><form method="post" action="<%= W %>/auto-affecter" class="sw-actions"><button class="btn btn-outline" type="submit">Placer les images générées dans les emplacements vides</button><span class="sw-muted">Remplit uniquement ce qui est vide.</span></form><% } %>
+  </section>
+
+  <section class="mk-panel">
+    <h2>Générations <span class="sw-muted" data-ai-status role="status" aria-live="polite"><%= active_ ? "en cours…" : "" %></span></h2>
+    <% if (!tasks.length) { %><p class="sw-muted">Aucune génération.</p><% } %>
+    <% tasks.forEach((t) => { const need = needs.find((n) => n.key === t.needKey); %>
+      <div class="sw-block">
+        <strong><%= need ? need.description : t.needKey %></strong> — <%= t.provider %> / <%= t.model %> · <%= t.variants %> variante(s) ·
+        <span class="mk-status <%= t.status === "succeeded" ? "" : "mk-status-warn" %>"><%= { queued: "en attente", running: "en cours", succeeded: "terminée", failed: "échouée", canceled: "annulée" }[t.status] %></span>
+        <small class="sw-muted">coût estimé : <%= money(t.estCostMicro) %> · coût réel : inconnu</small>
+        <% if (t.error) { %><p class="sw-warn"><%= t.error %></p><% } %>
+        <% if (canWrite && ["queued", "running"].includes(t.status)) { %><form method="post" action="<%= W %>/taches/<%= t.id %>/annuler" class="mk-inline"><button class="btn btn-outline btn-sm" type="submit">Annuler</button></form><% } %>
+        <% if (canWrite && t.status === "failed") { %><form method="post" action="<%= W %>/taches/<%= t.id %>/relancer" class="mk-inline"><button class="btn btn-outline btn-sm" type="submit">Relancer</button></form><% } %>
+        <% if (t.status === "succeeded") { %><div class="sw-cards sw-cards-sm"><% t.mediaIds.forEach((mid) => { const m = library.find((x) => x.id === mid); if (m) { %>
+          <div class="sw-card"><span class="sw-card-body"><img src="<%= m.path %>" alt="<%= m.alt %>" style="max-width:100%;border-radius:8px"><small class="sw-muted"><%= m.sourceLabel %></small>
+            <% if (canWrite && need && need.pageId) { %><form method="post" action="<%= W %>/affecter"><input type="hidden" name="besoin" value="<%= t.needKey %>"><input type="hidden" name="media" value="<%= m.id %>">
+              <label class="sw-sr" for="alt<%= m.id %>">Texte alternatif</label><input id="alt<%= m.id %>" name="alt" maxlength="200" placeholder="Texte alternatif (modifiable)">
+              <% if (need.status === "assigned") { %><label><input type="checkbox" name="remplacer" value="oui"> Remplacer l'image en place</label><label><input type="checkbox" name="confirmer_manuel" value="oui"> Même si elle a été choisie à la main</label><% } %>
+              <button class="btn btn-primary btn-sm" type="submit">Utiliser cette image</button></form><% } %></span></div>
+        <% } }) %></div><% } %>
+      </div>
+    <% }) %>
+  </section>
+
+  <section class="mk-panel">
+    <h2>Médiathèque du site</h2>
+    <form method="get" action="<%= W %>" class="sw-tools">
+      <label>Recherche <input type="search" name="q" value="<%= q.q %>" placeholder="nom, tag, description"></label>
+      <label>Source <select name="source"><option value="">Toutes</option><% Object.entries(SOURCES).forEach(([k, v]) => { %><option value="<%= k %>" <%= q.source === k ? "selected" : "" %>><%= v %></option><% }) %></select></label>
+      <label><input type="checkbox" name="ia" value="1" <%= q.ai ? "checked" : "" %>> Générées par IA</label>
+      <label><input type="checkbox" name="inutilises" value="1" <%= q.unused ? "checked" : "" %>> Inutilisées</label>
+      <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
+    </form>
+    <% if (!library.length) { %><p class="sw-muted">Aucune image.</p><% } %>
+    <div class="sw-cards sw-cards-sm">
+      <% library.slice(0, 24).forEach((m) => { %>
+        <div class="sw-card"><span class="sw-card-body"><img src="<%= m.path %>" alt="<%= m.alt %>" loading="lazy" style="max-width:100%;border-radius:8px"><strong><%= m.name %></strong>
+          <small class="sw-muted"><%= m.sourceLabel %><%= m.aiGenerated ? " · générée par IA" : "" %> · <%= m.width %>×<%= m.height %><%= m.license ? " · " + m.license : "" %></small>
+          <a href="<%= W %>/medias/<%= m.id %>.json" target="_blank" rel="noopener">Détails (provenance, usage, variantes)</a>
+          <% if (canWrite) { %><details><summary>Métadonnées</summary><form method="post" action="<%= W %>/medias/<%= m.id %>/metadonnees">
+            <label class="sw-field">Texte alternatif <input name="alt" value="<%= m.alt %>" maxlength="200"></label>
+            <label class="sw-field">Description <input name="description" value="<%= m.description %>" maxlength="500"></label>
+            <label class="sw-field">Tags <input name="tags" value="<%= m.tags.join(", ") %>"></label>
+            <label class="sw-field">Catégorie <input name="categorie" value="<%= m.category %>" maxlength="40"></label>
+            <label class="sw-field">Licence <input name="licence" value="<%= m.license %>" maxlength="100"></label>
+            <label class="sw-field">Source de la licence <input name="note_licence" maxlength="300"></label>
+            <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button></form></details><% } %></span></div>
+      <% }) %>
+    </div>
+    <p class="sw-muted">Pour importer votre propre image : <a href="/marketing/site-web/medias" target="_blank" rel="noopener">médiathèque</a> (le type réel du fichier est vérifié), puis renseignez sa provenance ici.</p>
+  </section>
+
+  <section class="mk-panel">
+    <h2>Historique et consommation</h2>
+    <table class="mk-table"><caption class="sw-sr">Historique des opérations</caption><thead><tr><th scope="col">Date</th><th scope="col">Opération</th><th scope="col">Fournisseur</th><th scope="col">État</th><th scope="col">Coût estimé</th></tr></thead><tbody>
+      <% history.forEach((h) => { %><tr><td><%= h.at %></td><td><%= h.op %><%= h.needKey ? " · " + h.needKey : "" %></td><td><%= h.provider %> <%= h.model %></td><td><%= h.status %><%= h.error ? " — " + h.error : "" %></td><td><%= money(h.estCostMicro) %></td></tr><% }) %>
+    </tbody></table>
+    <% consumption.byProvider.forEach((c) => { %><p class="sw-muted"><%= c.k %> : <%= c.tasks %> tâche(s), <%= c.images || 0 %> image(s), coût estimé <%= money(c.est) %> (coût réel inconnu).</p><% }) %>
+    <% history.filter((h) => h.op === "replace" && h.previousMediaId).slice(0, 3).forEach((h) => { %><% if (canWrite) { %><form method="post" action="<%= W %>/restaurer" class="sw-actions"><input type="hidden" name="besoin" value="<%= h.needKey %>"><label><input type="checkbox" name="confirmer" value="oui" required> Confirmer</label><button class="btn btn-outline btn-sm" type="submit">Restaurer l'image précédente de « <%= h.needKey %> »</button></form><% } %><% }) %>
+  </section>
+</div>
+<script src="/js/site-ai-media.js" defer></script>
+<%- include("partials/bottom") %>

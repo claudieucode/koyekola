@@ -1,0 +1,11 @@
+<%# Filtres de produits (widgets/shop.js) : formulaire GET vers le catalogue ; chaque filtre est appliqué par le serveur. %>
+<% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-sf-msg">Boutique fermée : filtres masqués au public.</p></section><% } %><% } else { const q = (d && d.query) || {}; %>
+<form class="<%= cls %> kw-sf" method="get" action="/boutique"<%- attrs %>>
+  <% if (p.showCategory && d.categories.length) { %><label class="kw-sf-f"><span class="kw-sf-lbl">Catégorie</span><select name="categorie"><option value="">Toutes</option><% d.categories.forEach((c) => { %><option value="<%= c.slug %>"<%= q.categorie === c.slug ? " selected" : "" %>><%= c.name %></option><% }) %></select></label><% } %>
+  <% if (p.showPrice) { %><label class="kw-sf-f"><span class="kw-sf-lbl">Prix min</span><input type="number" name="min" min="0" value="<%= q.min || "" %>"></label><label class="kw-sf-f"><span class="kw-sf-lbl">Prix max</span><input type="number" name="max" min="0" value="<%= q.max || "" %>"></label><% } %>
+  <% if (p.showStock) { %><label class="kw-sf-c"><input type="checkbox" name="stock" value="1"<%= q.stock === "1" ? " checked" : "" %>> En stock</label><% } %>
+  <% if (p.showSale) { %><label class="kw-sf-c"><input type="checkbox" name="promo" value="1"<%= q.promo === "1" ? " checked" : "" %>> En promotion</label><% } %>
+  <% if (p.showSort) { %><label class="kw-sf-f"><span class="kw-sf-lbl">Trier par</span><select name="tri"><% [["newest","Nouveautés"],["featured","Mis en avant"],["price_asc","Prix croissant"],["price_desc","Prix décroissant"],["name","Nom"]].forEach(([v,l]) => { %><option value="<%= v %>"<%= q.tri === v ? " selected" : "" %>><%= l %></option><% }) %></select></label><% } %>
+  <button class="kw-pb-btn" type="submit"><%= p.button %></button>
+</form>
+<% } %>

@@ -35,7 +35,7 @@ function postScope(post, { contentHtml = "", minutes = null, author = "" } = {})
 
 // done(html | null)
 // type : une famille ou une liste ordonnée (la première qui a un modèle en ligne gagne : ex. archive de catégorie, puis liste du blog)
-function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, scope = {}, query = {} } = {}, done) {
+function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, scope = {}, query = {}, siteId } = {}, done) {
   let finished = false;
   const end = (html) => { if (!finished) { finished = true; done(html); } };
   try {
@@ -44,7 +44,7 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     const ctx = ctxOf(db, marketing);
     const visitor = visitorContext(db, marketing.organizationId, req);
     let row = null;
-    for (const t of [].concat(type)) { row = themeTemplates.pick(ctx, t, { category, categories, tag, tags, postId, visitor }); if (row) break; }
+    for (const t of [].concat(type)) { row = themeTemplates.pick(ctx, t, { category, categories, tag, tags, postId, visitor, siteId }); if (row) break; }
     if (!row) return end(null);
     const page = landing.getPublishedPage(db, row.slug);
     if (!page) return end(null);

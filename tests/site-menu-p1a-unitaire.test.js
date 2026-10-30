@@ -12,7 +12,7 @@ describe("projection du registre (menu d'un site)", () => {
   test("les groupes du registre (sauf ceux, entièrement centraux, d'« Extensions ») sont tous présents, une fois, dans l'ordre du registre ; « Marketing du site » vient avant Outils", () => {
     const groups = nav.siteSections(site).map((s) => s.key);
     const registry = nav.SECTIONS.filter((s) => !s.centralOnly && s.key !== "extensions").map((s) => s.key); // « Mes sites » est le gestionnaire central ; « Extensions » est une fonction centrale (menu du principal seulement)
-    assert.equal(nav.SECTIONS.length, 14); assert.equal(registry.length, 12);
+    assert.equal(nav.SECTIONS.length, 15); assert.equal(registry.length, 13);
     assert.deepEqual(groups.filter((g) => g !== "marketing"), registry);
     assert.equal(new Set(groups).size, groups.length);
     assert.equal(groups.indexOf("marketing"), groups.indexOf("outils") - 1);
@@ -71,9 +71,9 @@ describe("espace du site principal", () => {
     // Le tableau de bord du principal est celui de SON espace ; « Mes sites » n'est pas une entrée d'espace
     for (const it of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(hrefs.has(it.href), it.href);
     assert.ok(hrefs.has(`${principal.base}/tableau-de-bord`)); assert.ok(!hrefs.has(`${nav.BASE}/sites`));
-    assert.equal(nav.ALL.length, 84); // 80 + 4 écrans SEO du lot 2 ; // CHIMERA : recomptage (80) ; FICHIERS-THEMES : + « Éditeur de fichiers »;  // ADMIN-NOTES : + « Admin Notes » // // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
-    assert.equal(r.sections.length, 14);
-    assert.equal(flat(r.sections).length, 78 + 4 + 11); // + 4 écrans SEO du lot 2 ; // CHIMERA : + « Éditeur de fichiers » et « Profil » ; EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(nav.ALL.length, 88); // + 4 écrans Boutique (Programme 20.5) ; 80 + 4 écrans SEO du lot 2 ; // CHIMERA : recomptage (80) ; FICHIERS-THEMES : + « Éditeur de fichiers »;  // ADMIN-NOTES : + « Admin Notes » // // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
+    assert.equal(r.sections.length, 15);
+    assert.equal(flat(r.sections).length, 78 + 4 + 4 + 11); // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; // CHIMERA : + « Éditeur de fichiers » et « Profil » ; EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
     const g = nav.buildCmsNav({ can: all, active: "sites" });

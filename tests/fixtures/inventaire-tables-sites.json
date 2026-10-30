@@ -184,6 +184,14 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_ai_builder_messages": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_ai_builder_states": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
   "mk_ai_core_quotas": {
    "siteId": false,
    "classe": "plateforme"
@@ -192,9 +200,29 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_ai_plan_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_ai_plans": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_ai_requests": {
    "siteId": true,
    "classe": "a-decider"
+  },
+  "mk_ai_shop_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_ai_shop_states": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_ai_shops": {
+   "siteId": true,
+   "classe": "isolee"
   },
   "mk_api_keys": {
    "siteId": false,
@@ -280,11 +308,27 @@
    "siteId": true,
    "classe": "a-isoler-B4"
   },
+  "mk_content_sets": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_content_sites": {
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_content_versions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_content_voice": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_conversions": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_course_sites": {
    "siteId": true,
    "classe": "isolee"
   },
@@ -465,6 +509,90 @@
    "classe": "plateforme"
   },
   "mk_settings": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_cart_items": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_carts": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_categories": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_coupon_redemptions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_coupons": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_customer_tokens": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_customers": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_notifications": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_order_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_order_items": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_orders": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_payments": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_product_categories": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_products": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_settings": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_shipping_methods": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_shipping_zones": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_stock_movements": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_tax_rules": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_variants": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_webhook_events": {
    "siteId": false,
    "classe": "plateforme"
   },

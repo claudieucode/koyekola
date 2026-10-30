@@ -33,9 +33,22 @@ function entries({ hostSite = null } = {}) {
     included.push(e);
   };
   for (const [key, path] of [["home", "/"], ["catalogue", "/catalogue"], ["a-propos", "/a-propos"], ["faq", "/faq"], ["contact", "/contact"]]) add({ path, type: "Page" }, metaIndex("page", key));
-  for (const r of db.prepare("SELECT DISTINCT category FROM courses WHERE published = 1 AND archived = 0 ORDER BY category").all()) add({ path: `/categorie/${slugify(r.category)}`, type: "Catégorie de formations" }, metaIndex("course_category", slugify(r.category)));
-  for (const c of db.prepare("SELECT id, slug, updated_at, created_at, thumbnail_path, title FROM courses WHERE published = 1 AND archived = 0 ORDER BY created_at DESC").all()) {
-    add({ path: `/cours/${c.slug}`, type: "Formation", lastmod: isoDate(c.updated_at || c.created_at), images: [c.thumbnail_path].filter(Boolean), title: c.title }, metaIndex("course", c.id));
+  // Formations (Titan XXIII) : celles du site principal dans son plan ; celles d'un site (module « lms » actif) dans le plan de SON domaine, sous son adresse
+  const lmsOnSite = require("../services/lmsSites").hasTable(db);
+  const publicCourses = db.prepare(`SELECT c.id, c.slug, c.updated_at, c.created_at, c.thumbnail_path, c.title, c.category, ${lmsOnSite ? "cs.site_id" : "NULL"} AS site_id FROM courses c
+    ${lmsOnSite ? "LEFT JOIN mk_course_sites cs ON cs.course_id = c.id LEFT JOIN mk_site_modules m ON m.site_id = cs.site_id AND m.module = 'lms' AND m.enabled = 1" : ""}
+    WHERE c.published = 1 AND c.archived = 0${lmsOnSite ? " AND (cs.site_id IS NULL OR m.site_id IS NOT NULL)" : ""} ORDER BY c.created_at DESC`).all();
+  const courseTag = (siteId) => (siteId ? { siteId, base: urls.siteInfo(siteId).base } : {});
+  const seenCat = new Set(), seenCatalogue = new Set();
+  for (const c of publicCourses.slice().sort((a, b) => String(a.category).localeCompare(String(b.category)))) {
+    const key = `${c.site_id || 0}|${c.category}`;
+    if (seenCat.has(key)) continue;
+    seenCat.add(key);
+    add({ path: `/categorie/${slugify(c.category)}`, type: "Catégorie de formations", ...courseTag(c.site_id) }, c.site_id ? null : metaIndex("course_category", slugify(c.category)));
+  }
+  for (const c of publicCourses) {
+    if (c.site_id && !seenCatalogue.has(c.site_id)) { seenCatalogue.add(c.site_id); add({ path: "/catalogue", type: "Page", ...courseTag(c.site_id) }, null); }
+    add({ path: `/cours/${c.slug}`, type: "Formation", lastmod: isoDate(c.updated_at || c.created_at), images: [c.thumbnail_path].filter(Boolean), title: c.title, ...courseTag(c.site_id) }, c.site_id ? null : metaIndex("course", c.id));
   }
   blog.promoteScheduled();
   add({ path: "/blog", type: "Page" }, metaIndex("page", "blog"));

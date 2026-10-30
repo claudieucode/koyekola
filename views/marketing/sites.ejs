@@ -5,7 +5,7 @@
   const href = (v) => "/marketing/site-web/sites?vue=" + v + (q ? "&q=" + encodeURIComponent(q) : "");
 %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Mes sites</h1><p class="mk-head-sub">Le point d'entrée de tous vos sites. Chaque site a son propre espace d'administration : ses pages, son design system, ses contenus, ses contacts et son équipe restent séparés de ceux des autres sites. Ouvrez un site pour travailler dans son espace ; le site principal s'ouvre de la même façon.</p></div><% if (canWrite) { %><a class="btn btn-outline btn-sm" href="/marketing/site-web/assistant">Assistant de création</a> <button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button><% } %></div>
+      <div class="mk-head-main"><h1>Mes sites</h1><p class="mk-head-sub">Le point d'entrée de tous vos sites. Chaque site a son propre espace d'administration : ses pages, son design system, ses contenus, ses contacts et son équipe restent séparés de ceux des autres sites. Ouvrez un site pour travailler dans son espace ; le site principal s'ouvre de la même façon.</p></div><% if (canWrite) { %><a class="btn btn-primary btn-sm" href="/marketing/ia/studio">Assistant IA</a> <a class="btn btn-outline btn-sm" href="/marketing/site-web/assistant">Assistant de création</a> <button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau">Créer un site</button><% } %></div>
 
     <div class="mk-stats mk-stats-4" aria-label="Vue d'ensemble des sites">
       <div class="mk-stat"><span class="mk-stat-label">Sites actifs</span><span class="mk-stat-value"><%= mkh.fmt(totals.actifs + (main ? 1 : 0)) %></span><span class="mk-stat-hint">site principal compris</span></div>

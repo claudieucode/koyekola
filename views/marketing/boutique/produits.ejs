@@ -1,0 +1,29 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Produits" }) %>
+<section class="mk-panel">
+  <form method="get" class="mk-form mk-inline-form" role="search">
+    <div class="field-group"><label for="p-q">Rechercher</label><input id="p-q" name="q" value="<%= query.q || "" %>" maxlength="80" placeholder="Nom ou SKU"></div>
+    <div class="field-group"><label for="p-st">Statut</label><select id="p-st" name="statut"><option value="">Tous</option><% [["published","En ligne"],["draft","Brouillon"],["archived","Archivé"]].forEach(([v,l]) => { %><option value="<%= v %>"<%= query.statut === v ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+    <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
+    <% if (canWrite) { %><a class="btn btn-primary btn-sm" href="<%= base %>/produits/nouveau">Nouveau produit</a><% } %>
+  </form>
+  <% if (!list.items.length) { %><p class="mk-empty">Aucun produit pour l'instant.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table">
+    <caption class="sr-only">Produits de la boutique</caption>
+    <thead><tr><th scope="col">Produit</th><th scope="col">Type</th><th scope="col">Prix</th><th scope="col">Stock</th><th scope="col">Statut</th></tr></thead>
+    <tbody>
+    <% const ST = { published: "En ligne", draft: "Brouillon", archived: "Archivé" }; const TY = { simple: "Simple", variable: "Variable", digital: "Numérique" }; %>
+    <% list.items.forEach((p) => { const low = p.manage_stock && p.type !== "variable" && p.stock_qty <= shopSettings.low_stock_threshold; %>
+      <tr>
+        <th scope="row"><a href="<%= base %>/produits/<%= p.id %>"><%= p.name %></a><% if (p.sku) { %> <span class="mk-sub">· <%= p.sku %></span><% } %></th>
+        <td><%= TY[p.type] || p.type %></td>
+        <td><%= p.onSale ? money(p.priceFromCents) + " (promo)" : money(p.priceFromCents) %><%= p.isVariable ? " et +" : "" %></td>
+        <td><% if (p.type === "variable") { %><%= p.variants.reduce((a, v) => a + (v.manage_stock ? v.stock_qty : 0), 0) %> (<%= p.variants.length %> variantes)<% } else if (p.manage_stock) { %><span class="<%= low ? "mk-status mk-status-warn" : "" %>"><%= p.stock_qty %><%= low ? " — stock bas" : "" %></span><% } else { %>Illimité<% } %></td>
+        <td><span class="mk-status"><%= ST[p.status] %></span></td>
+      </tr>
+    <% }) %>
+    </tbody></table></div>
+  <% if (list.pages > 1) { %><p class="mk-sub">Page <%= list.page %> sur <%= list.pages %> — <% if (list.page > 1) { %><a href="?page=<%= list.page - 1 %>">précédente</a> <% } %><% if (list.page < list.pages) { %><a href="?page=<%= list.page + 1 %>">suivante</a><% } %></p><% } %>
+  <% } %>
+</section>
+<%- include("../partials/bottom") %>

@@ -124,6 +124,22 @@
         </div>
       </div>
     </form>
+    <% if (isEdit && typeof siteInfo !== "undefined") { %>
+      <section class="card" style="margin-top:var(--space-4,1rem)" aria-labelledby="course-site-title">
+        <h2 id="course-site-title" style="font-size:1rem">Site de la formation</h2>
+        <% if (siteInfo.currentId) { %>
+          <p>Cette formation est publiée sur le site <strong><%= siteInfo.currentName %></strong>. Elle n'apparaît plus sur le site principal.</p>
+        <% } else if (siteInfo.choices.length) { %>
+          <p>Aujourd'hui sur le <strong>site principal</strong>. Vous pouvez la publier sur l'un de vos sites (module « Formations » activé).</p>
+          <form action="/formateur/cours/<%= course.id %>/site" method="post" class="form-layout" style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+            <label>Site <select name="site_id" required><% siteInfo.choices.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></label>
+            <button class="btn btn-outline" type="submit">Rattacher à ce site</button>
+          </form>
+        <% } else { %>
+          <p>Cette formation est sur le <strong>site principal</strong>. Activez le module « Formations » sur un site (Marketing → Site Web → Mes sites) pour pouvoir l'y publier.</p>
+        <% } %>
+      </section>
+    <% } %>
   </div>
 
 <%- include("../partials/footer") %>

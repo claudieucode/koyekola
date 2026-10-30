@@ -76,8 +76,13 @@ function createMarketingRouters({ db }) {
   });
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
   admin.use(require("./siteModules")()); // R7 lot 6.0 : activation des modules par site (équipe seulement)
+  admin.use(require("./aiMedia")()); // Programme 21.7 : médias IA et gestionnaire de ressources (génération asynchrone, provenance, affectation aux pages)
   admin.use(require("./designGenerator")()); // Programme 21.5 : direction artistique générée (brouillon du personnalisateur)
   admin.use(require("./pageGenerator")()); // Programme 21.4 : générateur de pages natives à partir d'un plan (brouillons uniquement)
+  admin.use(require("./contentGenerator")()); // Programme 21.6 : générateur de contenus (textes des sections natives, SEO, révisions, brouillon)
+  admin.use(require("./regeneration")()); // Programme 21.9 : régénération intelligente et historique (brouillons seulement)
+  admin.use(require("./aiBuilder")()); // Programme 21.8 : interface « Assistant IA » de création de site (orchestre 21.3 à 21.6, aucune logique de moteur)
+  admin.use(require("./aiShop")()); // Programme 21.10 : constructeur de boutique par IA (orchestre le moteur e-commerce 20.5, aucune logique commerciale)
   admin.use(require("./siteWizard")()); // Programme 20.6 : assistant de création guidée d'un site (orchestre les services existants)
   admin.use(require("./siteDomains")()); // TITAN XXXII : domaines des sites (registre, vérification de propriété, DNS, HTTPS)
   admin.use(require("./contactRequests")()); // R7 lot 5 : demandes de rattachement de contacts entre sites — avant contactCore et admin.js (« /contacts/:id »)
@@ -88,6 +93,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./rss")());
   admin.use(require("./landing")());
   admin.use(require("./siteWeb")());
+  admin.use(require("./shopAdmin")()); // Programme 20.5 : boutique d'un site (produits, commandes, clients, réglages) — avant l'espace du site
   admin.use(require("./siteSeo")()); // R8 lot 6C : SEO d'un site (réglages, redirections, 404) — avant l'espace du site (ses routes /sites/:id/redirections sont plus précises)
   admin.use(require("./siteSpace")()); // Espace d'administration d'UN site (palier 3, B1) : après siteWeb (ses routes /sites/:id/… sont plus précises)
   admin.use(require("./funnels")());
@@ -120,6 +126,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./scoring")());
   admin.use(require("./surveys")());
   admin.use(require("./ai")());
+  admin.use(require("./aiPlanner")()); // Programme 21.3 : Brief Analyzer et Site Planner (API JSON, /ia/site/…)
   admin.use(require("./domains")());
   admin.use(require("./social")());
   admin.use(require("./automations")({ db }));
@@ -140,6 +147,7 @@ function createMarketingRouters({ db }) {
   publicRoutes.use(require("./visitorsPublic")({ db }));
   publicRoutes.use(require("./formsPublic")({ db }));
   publicRoutes.use(require("./landingPublic")({ db }));
+  publicRoutes.use(require("./shopPublic")({ db })); // Programme 20.5 : boutique publique (/boutique) du site de l'hôte
   publicRoutes.use(require("./surveysPublic")({ db }));
   publicRoutes.use(require("./smsPublic")({ db }));
   publicRoutes.use(require("./socialPublic")({ db }));

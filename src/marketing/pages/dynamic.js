@@ -67,17 +67,26 @@ registerDynamicSource("archive.count", { label: "Nombre de résultats", resolve:
 registerDynamicSource("archive.search", { label: "Recherche de l'archive", resolve: R("search") });
 registerDynamicSource("archive.url", { label: "Adresse de l'archive", kind: "url", resolve: R("url") });
 // Formation (« produit » : même source, deux noms) : scope.course = { title, subtitle, priceCents, url, image, category, instructor, description }
+// « product » lit d'abord scope.product (produit de la boutique, Programme 20.5), sinon scope.course (compatibilité : l'ancien alias de formation)
 for (const group of ["course", "product"]) {
-  const C = (k) => (s) => (s.course && s.course[k] != null && s.course[k] !== "" ? s.course[k] : null);
+  const src = (s) => (group === "product" && s.product ? s.product : s.course);
+  const C = (k) => (s) => { const o = src(s); return o && o[k] != null && o[k] !== "" ? o[k] : null; };
   registerDynamicSource(`${group}.title`, { label: "Titre de la formation", resolve: C("title") });
   registerDynamicSource(`${group}.subtitle`, { label: "Sous-titre de la formation", resolve: C("subtitle") });
   registerDynamicSource(`${group}.description`, { label: "Description de la formation", resolve: C("description") });
-  registerDynamicSource(`${group}.price`, { label: "Prix de la formation", resolve: (s) => (s.course ? money(s.course.priceCents) : null) });
+  registerDynamicSource(`${group}.price`, { label: "Prix de la formation", resolve: (s) => { const o = src(s); return o ? (o.priceLabel || money(o.priceCents)) : null; } });
   registerDynamicSource(`${group}.url`, { label: "Adresse de la formation", kind: "url", resolve: C("url") });
   registerDynamicSource(`${group}.image`, { label: "Image de la formation", kind: "image", resolve: C("image") });
   registerDynamicSource(`${group}.category`, { label: "Catégorie de la formation", resolve: C("category") });
   registerDynamicSource(`${group}.instructor`, { label: "Formateur", resolve: C("instructor") });
 }
+// Produit de la boutique : scope.product = { shortDescription, regularCents, sku, availability, cartUrl, ... }
+const PR = (k) => (s) => (s.product && s.product[k] != null && s.product[k] !== "" ? s.product[k] : null);
+registerDynamicSource("product.short_description", { label: "Description courte du produit", resolve: PR("shortDescription") });
+registerDynamicSource("product.regular_price", { label: "Prix normal (avant promotion)", resolve: (s) => (s.product && s.product.regularLabel ? s.product.regularLabel : null) });
+registerDynamicSource("product.sku", { label: "Référence (SKU)", resolve: PR("sku") });
+registerDynamicSource("product.availability", { label: "Disponibilité du produit", resolve: PR("availability") });
+registerDynamicSource("product.cart_url", { label: "Adresse du panier", kind: "url", resolve: PR("cartUrl") });
 // Visiteur, page, site, date
 registerDynamicSource("user.first_name", { label: "Prénom du visiteur", resolve: (s) => (s.visitor && s.visitor.firstName) || null });
 registerDynamicSource("user.logged_in", { label: "Visiteur connecté (oui / non)", resolve: (s) => (s.visitor && s.visitor.loggedIn ? "oui" : "non") });

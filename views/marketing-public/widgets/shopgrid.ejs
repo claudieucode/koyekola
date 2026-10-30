@@ -1,0 +1,20 @@
+<%# Grille de produits de la boutique (widgets/shop.js). Variables : p, cls, attrs, isBuilder, d = { items, closed }. %>
+<% const items = (d && d.items) || []; if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pg-empty">Boutique fermée (<%= d.closed === "module" ? "module Commerce non activé pour ce site" : "ouvrez-la dans Boutique → Réglages" %>) : cet élément reste vide au public.</p></section><% } %><% } else { %>
+<section class="<%= cls %> kw-pg"<%- attrs %> style="--kw-pg-cols: <%= p.columns %>">
+  <% if (p.title) { %><h3 class="kw-pg-title"><%= p.title %></h3><% } %>
+  <% if (!items.length) { %><p class="kw-pg-empty"><%= p.empty %></p><% } else { %>
+  <ul class="kw-pg-grid">
+    <% items.forEach((x) => { %>
+    <li class="kw-pg-card">
+      <a class="kw-pg-link" href="<%= d.base %>/produit/<%= encodeURIComponent(x.slug) %>">
+        <% if (p.showImage) { %><% if (x.image_url) { %><img class="kw-pg-img" src="<%= x.image_url %>" alt="" loading="lazy" decoding="async" width="400" height="400"><% } else { %><span class="kw-pg-img kw-pg-noimg" aria-hidden="true"></span><% } %><% } %>
+        <span class="kw-pg-name"><%= x.name %></span>
+      </a>
+      <% if (p.showPrice) { %><p class="kw-pg-price"><% if (x.onSale) { %><s class="kw-pg-old"><%= x.regularLabel %></s> <% } %><%= x.isVariable ? "À partir de " : "" %><strong><%= x.priceLabel %></strong></p><% } %>
+      <% if (!x.inStock) { %><p class="kw-pg-out">Rupture de stock</p><% } %>
+    </li>
+    <% }) %>
+  </ul>
+  <% } %>
+</section>
+<% } %>

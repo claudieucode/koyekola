@@ -157,6 +157,7 @@
 
   <% } else if (step === 'contenus') { %>
     <h2 id="sw-h">Contenus</h2>
+    <p class="sw-muted">Pour illustrer vos pages (images de bandeau, illustrations) : <a href="/marketing/site-web/sites/<%= siteId %>/medias-ia">Médias IA</a> (planification, génération, choix dans la médiathèque ; rien n'est publié).</p>
     <p class="sw-muted">Les textes entre crochets, par exemple « [chiffre réel] », sont des <strong>contenus d'exemple</strong> à remplacer : ils ne représentent pas votre entreprise. Les images se choisissent dans la médiathèque depuis l'éditeur.</p>
     <% contents.forEach((c) => { %>
       <details class="sw-block"<%= c.placeholders ? ' open' : '' %>><summary><strong><%= c.name %></strong> <% if (c.placeholders) { %><span class="mk-status mk-status-warn"><%= c.placeholders %> texte(s) d'exemple</span><% } else { %><span class="mk-status">Sans texte d'exemple</span><% } %></summary>

@@ -16,7 +16,14 @@ const { applyEffectivePrices } = require("../services/pricing");
 const { effectivePriceSql, nowParams } = require("../services/pricingSql");
 const { dayOf } = require("../services/offers");
 
+const lmsSites = require("../services/lmsSites");
+
 const SITE_NAME = "KOLAKISA";
+
+// Portée de site de la requête (domaine résolu côté serveur) : fragment SQL + paramètres à ajouter à tout WHERE sur `courses`
+const scopeOf = (req, alias = "courses") => lmsSites.scopeSql(req.lmsSite, alias);
+// Formation d'un autre site (ou d'un domaine sans module actif) : traitée comme inexistante, sans redirection d'ancienne adresse
+const outOfSite = (req, course) => !lmsSites.belongsTo(db, course.id, req.lmsSite);
 
 // 150 minutes -> "PT2H30M" (durée au format des données structurées)
 function isoDuration(minutes) {
@@ -49,20 +56,21 @@ const COURSE_SELECT = `
 `;
 
 router.get("/", (req, res) => {
-  const featured = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 ORDER BY student_count DESC, courses.created_at DESC LIMIT 6`).all());
-  const recent = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 ORDER BY courses.created_at DESC LIMIT 8`).all());
-  const categories = db.prepare("SELECT category, COUNT(*) AS count FROM courses WHERE published = 1 GROUP BY category ORDER BY count DESC").all();
+  const sc = scopeOf(req);
+  const featured = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 AND ${sc.sql} ORDER BY student_count DESC, courses.created_at DESC LIMIT 6`).all(...sc.params));
+  const recent = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 AND ${sc.sql} ORDER BY courses.created_at DESC LIMIT 8`).all(...sc.params));
+  const categories = db.prepare(`SELECT category, COUNT(*) AS count FROM courses WHERE published = 1 AND ${sc.sql} GROUP BY category ORDER BY count DESC`).all(...sc.params);
   const stats = {
-    courseCount: db.prepare("SELECT COUNT(*) c FROM courses WHERE published = 1").get().c,
-    studentCount: db.prepare("SELECT COUNT(*) c FROM enrollments").get().c,
+    courseCount: db.prepare(`SELECT COUNT(*) c FROM courses WHERE published = 1 AND ${sc.sql}`).get(...sc.params).c,
+    studentCount: db.prepare(`SELECT COUNT(*) c FROM enrollments e JOIN courses ON courses.id = e.course_id WHERE ${sc.sql}`).get(...sc.params).c,
     lessonCount: db
       .prepare(
         `SELECT COUNT(*) c FROM lessons
          JOIN sections ON sections.id = lessons.section_id
          JOIN courses ON courses.id = sections.course_id
-         WHERE courses.published = 1`
+         WHERE courses.published = 1 AND ${sc.sql}`
       )
-      .get().c,
+      .get(...sc.params).c,
   };
   const creator = db.prepare("SELECT username, bio FROM users WHERE role = 'formateur' ORDER BY id LIMIT 1").get() || null;
   res.render("index", {
@@ -77,11 +85,13 @@ router.get("/catalogue", (req, res) => {
 
   // /catalogue?category=X (sans autre filtre) est l'ancienne adresse d'une page catégorie : redirection définitive
   if (category && Object.keys(req.query).length === 1) {
-    const exists = db.prepare("SELECT 1 FROM courses WHERE published = 1 AND archived = 0 AND category = ?").get(category);
+    const sx = scopeOf(req);
+    const exists = db.prepare(`SELECT 1 FROM courses WHERE published = 1 AND archived = 0 AND category = ? AND ${sx.sql}`).get(category, ...sx.params);
     if (exists) return res.redirect(301, `/categorie/${slugify(category)}`);
   }
-  const conditions = ["courses.published = 1"];
-  const params = [];
+  const scope = scopeOf(req);
+  const conditions = ["courses.published = 1", scope.sql];
+  const params = [...scope.params];
 
   if (q) {
     conditions.push("(courses.title LIKE ? OR courses.subtitle LIKE ?)");
@@ -109,7 +119,7 @@ router.get("/catalogue", (req, res) => {
     .prepare(`${COURSE_SELECT} WHERE ${conditions.join(" AND ")} ORDER BY ${orderBy}`)
     .all(...params, ...(priceSort ? nowParams() : [])));
 
-  const categories = db.prepare("SELECT DISTINCT category FROM courses WHERE published = 1 ORDER BY category").all();
+  const categories = db.prepare(`SELECT DISTINCT category FROM courses WHERE published = 1 AND ${scope.sql} ORDER BY category`).all(...scope.params);
 
   const seo = seoPages.catalogue(req);
   // Variantes filtrées ou triées : même titre que le catalogue et adresse canonique /catalogue → non indexées (liens suivis)
@@ -122,11 +132,12 @@ router.get("/catalogue", (req, res) => {
 
 // Une page par catégorie (contenu indexable, adresse propre)
 router.get("/categorie/:slug", (req, res) => {
-  const categories = db.prepare("SELECT DISTINCT category FROM courses WHERE published = 1 AND archived = 0").all().map((r) => r.category);
+  const sc = scopeOf(req);
+  const categories = db.prepare(`SELECT DISTINCT category FROM courses WHERE published = 1 AND archived = 0 AND ${sc.sql}`).all(...sc.params).map((r) => r.category);
   const category = categories.find((c) => slugify(c) === req.params.slug);
   if (!category) return res.status(404).render("error", { message: "Catégorie introuvable." });
 
-  const courses = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 AND courses.category = ? ORDER BY courses.created_at DESC`).all(category));
+  const courses = applyEffectivePrices(db.prepare(`${COURSE_SELECT} WHERE courses.published = 1 AND courses.category = ? AND ${sc.sql} ORDER BY courses.created_at DESC`).all(category, ...sc.params));
   const crumbs = [{ name: "Accueil", url: "/" }, { name: "Catalogue", url: "/catalogue" }, { name: category }];
   res.render("category", {
     category, courses, crumbs,
@@ -137,6 +148,7 @@ router.get("/categorie/:slug", (req, res) => {
 router.get("/cours/:slug", (req, res) => {
   const currentUserId = req.session.user ? req.session.user.id : null;
   const course = db.prepare(`${COURSE_SELECT} WHERE courses.slug = ?`).get(req.params.slug);
+  if (course && outOfSite(req, course)) return res.status(404).render("error", { message: "Formation introuvable." });
 
   if (!course) {
     // Formation renommée : l'ancienne adresse redirige définitivement vers la nouvelle
@@ -271,6 +283,7 @@ function loadProgram(courseId) {
 router.get("/cours/:slug/plan", (req, res, next) => {
   try {
     const course = db.prepare("SELECT id, slug, title, published, archived, instructor_id FROM courses WHERE slug = ?").get(req.params.slug);
+    if (course && outOfSite(req, course)) return res.status(404).render("error", { message: "Formation introuvable." });
     if (!course) {
       const renamed = currentSlugFor(req.params.slug);
       if (renamed) return res.redirect(301, `/cours/${renamed}/plan`);
@@ -294,6 +307,7 @@ router.get("/cours/:slug/plan", (req, res, next) => {
 router.get("/cours/:slug/programme.pdf", (req, res, next) => {
   try {
     const course = db.prepare("SELECT * FROM courses WHERE slug = ?").get(req.params.slug);
+    if (course && outOfSite(req, course)) return res.status(404).render("error", { message: "Formation introuvable." });
     if (!course) {
       const renamed = currentSlugFor(req.params.slug);
       if (renamed) return res.redirect(301, `/cours/${renamed}/programme.pdf`);
@@ -321,7 +335,7 @@ router.get("/cours/:slug/programme.pdf", (req, res, next) => {
 
 router.post("/cours/:slug/avis", requireAuth, (req, res) => {
   const course = db.prepare("SELECT * FROM courses WHERE slug = ?").get(req.params.slug);
-  if (!course) return res.status(404).render("error", { message: "Formation introuvable." });
+  if (!course || outOfSite(req, course)) return res.status(404).render("error", { message: "Formation introuvable." });
 
   const enrolled = db.prepare("SELECT 1 FROM enrollments WHERE user_id = ? AND course_id = ?").get(req.session.user.id, course.id);
   if (!enrolled) return res.status(403).render("error", { message: "Il faut avoir suivi la formation pour laisser un avis." });

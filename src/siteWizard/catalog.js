@@ -64,7 +64,7 @@ const FEATURES = Object.freeze({
   social: { label: "Réseaux sociaux", kind: "module", module: "social", use: "Publication sur vos comptes.", needs: "L'autorisation de vos comptes (OAuth).", permission: "sites.modules" },
   scoring: { label: "Score des contacts", kind: "module", module: "scoring", use: "Mesurer l'intérêt des contacts.", permission: "sites.modules" },
   commerce: { label: "Commerce (vente de formations)", kind: "module", module: "commerce", use: "Revenus, commandes et paiement par carte des formations.", needs: "Un compte de paiement (Stripe) configuré par l'équipe.", permission: "sites.modules" },
-  lms: { label: "Formations en ligne", kind: "module", module: "lms", use: "Cours, leçons, apprenants.", deps: ["Module non encore ouvert aux sites (R7-6.6)"], permission: "sites.modules" },
+  lms: { label: "Formations en ligne", kind: "module", module: "lms", use: "Cours, leçons, apprenants (catalogue, fiches, panier de formations).", needs: "Un compte de paiement (Stripe) configuré par l'équipe pour vendre.", permission: "sites.modules" },
   reservation: { label: "Réservation", kind: "absent", use: "Prise de réservation en ligne." },
   gallery: { label: "Galerie dédiée", kind: "absent", use: "Module de galerie : utilisez la médiathèque et les widgets d'image." },
   reviews: { label: "Avis clients", kind: "absent", use: "Collecte d'avis : utilisez la page « Témoignages » (contenu saisi à la main)." },

@@ -1,0 +1,29 @@
+<%#
+  Gabarit commun de la boutique publique (Programme 20.5). Reprend le style du site (jetons, thème, CSS du site) comme la page publique d'un site ; sans site, la marque de la plateforme.
+  Locals : shop { base, name, cartCount, customer }, site, tokensToCss, title, money.
+%><%_ const sx = site ? site.settings : null; const siteStyle = site ? tokensToCss(site.tokens) : ""; _%>
+<!doctype html>
+<html lang="<%= sx && sx.extras ? sx.extras.language : "fr" %>">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> · <%= shop.name %></title>
+  <% if (typeof metaDescription !== "undefined" && metaDescription) { %><meta name="description" content="<%= metaDescription %>"><% } %>
+  <% if (typeof noindex !== "undefined" && noindex) { %><meta name="robots" content="noindex, follow"><% } %>
+  <% if (sx && sx.identity && sx.identity.faviconUrl) { %><link rel="icon" href="<%= sx.identity.faviconUrl %>"><% } else { %><link rel="icon" href="/favicon.svg" type="image/svg+xml"><% } %>
+  <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
+  <link rel="stylesheet" href="<%= asset("/css/boutique.css") %>">
+  <% if (site && site.assets && site.assets.theme) { %><style><%- site.assets.theme %></style><% } %>
+  <% if (site && site.assets && site.assets.custom) { %><style><%- site.assets.custom %></style><% } %>
+</head>
+<body class="sh-body<%= site ? " lp-site" : "" %>"<% if (siteStyle) { %> style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text);"<% } %>>
+  <a class="sh-skip" href="#main">Aller au contenu</a>
+  <header class="sh-head">
+    <a class="sh-brand" href="<%= site ? "/" : shop.base %>"><% if (sx && sx.identity && sx.identity.logoUrl) { %><img src="<%= sx.identity.logoUrl %>" alt="<%= shop.name %>"><% } else { %><%= shop.name %><% } %></a>
+    <nav class="sh-nav" aria-label="Boutique">
+      <a href="<%= shop.base %>">Boutique</a>
+      <a href="<%= shop.base %>/compte"><%= shop.customer ? "Mon compte" : "Se connecter" %></a>
+      <a class="sh-cart" href="<%= shop.base %>/panier">Panier <span class="sh-badge" data-sh-cart-count><%= shop.cartCount %></span></a>
+    </nav>
+  </header>
+  <main class="sh-main" id="main">

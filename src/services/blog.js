@@ -434,7 +434,11 @@ const getComment = (id) => comments.get(id);
 const deleteComment = (id) => comments.purge(id);
 
 // Versions réduites (WebP) réellement présentes sur le disque pour une image du site : [{ src, w }]
-const variantCache = new Map();
+const variantCache = new Map(), VARIANT_CACHE_MAX = 2000; // borné : une entrée par image distincte rencontrée, jamais retirée auparavant
+function rememberVariants(src, at, list) {
+  if (variantCache.size >= VARIANT_CACHE_MAX) variantCache.delete(variantCache.keys().next().value); // la plus ancienne d'abord (ordre d'insertion)
+  variantCache.set(src, { at, list });
+}
 function imageVariants(src) {
   const m = /^\/uploads\/thumbnails\/([A-Za-z0-9_-]{1,190})\.(?:png|jpe?g|webp|avif)$/i.exec(String(src || ""));
   if (!m) return [];
@@ -442,12 +446,12 @@ function imageVariants(src) {
   const hit = variantCache.get(src);
   if (hit && now - hit.at < 60000) return hit.list;
   const list = [480, 960, 1600].filter((w) => fs.existsSync(path.join(uploadsRoot, "thumbnails", `${m[1]}-${w}w.webp`))).map((w) => ({ src: `/uploads/thumbnails/${m[1]}-${w}w.webp`, w }));
-  variantCache.set(src, { at: now, list });
+  rememberVariants(src, now, list);
   return list;
 }
 
 module.exports = {
-  imageVariants,
+  imageVariants, rememberVariants, variantCacheSize: () => variantCache.size, VARIANT_CACHE_MAX,
   listComments, countComments, getComment, deleteComment, COMMENT_MAX,
   STATUSES, parseTags, excerptOf, textOf, clearPlainCache, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
   popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled, uniqueSlug,

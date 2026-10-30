@@ -1,0 +1,62 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="<%= asset('/css/ai-builder.css') %>">
+<div class="aibh">
+  <div class="mk-head"><div class="mk-head-main"><h1>Créer un site avec l'IA</h1>
+    <p class="mk-head-sub">Décrivez votre projet avec vos propres mots : l'IA propose un plan, vous gardez la main à chaque étape. Rien n'est publié sans votre accord, et votre travail est enregistré à chaque action.</p></div></div>
+
+  <% const groups = [["in_progress", "Projets en cours"], ["waiting", "En attente (brief analysé, plan à créer)"], ["validated", "Plan validé"], ["published", "Projets publiés"]]; %>
+  <% if (projects.length) { const last = projects[0]; %>
+    <section class="mk-panel aibh-resume" aria-labelledby="aibh-resume-t"><h2 id="aibh-resume-t">Reprendre mon travail</h2>
+      <p><strong><%= last.name %></strong> · <%= last.progress.done %>/<%= last.progress.total %> étapes terminées · modifié <%= new Date(last.updatedAt).toLocaleString("fr-FR") %></p>
+      <a class="btn btn-primary btn-sm" href="/marketing/ia/studio/<%= last.id %><%= last.siteId ? "?site=" + last.siteId : "" %>">Reprendre mon travail</a></section>
+  <% } %>
+
+  <% if (canWrite) { %>
+  <section class="mk-panel" aria-labelledby="aibh-new-t"><h2 id="aibh-new-t">Nouveau projet</h2>
+    <form id="aibh-form" class="mk-form" novalidate>
+      <label for="aibh-brief">Décrivez votre site</label>
+      <textarea id="aibh-brief" name="brief" rows="6" maxlength="12000" required placeholder="Ex. : Je souhaite créer un site professionnel pour une entreprise spécialisée dans la construction et la rénovation de bâtiments à Kinshasa. Le site doit présenter les services, les réalisations, l'entreprise et permettre aux visiteurs de demander un devis."></textarea>
+      <p class="field-hint">Quelques phrases suffisent : activité, public visé, ce que les visiteurs doivent pouvoir faire. L'IA vous posera ensuite des questions.</p>
+      <fieldset class="aibh-site"><legend>Site concerné</legend>
+        <% if (canCreateSite) { %><label><input type="radio" name="site" value="new" checked> Nouveau site (créé en brouillon)</label>
+        <label for="aibh-name" class="aib-sr">Nom du nouveau site</label><input id="aibh-name" name="newSiteName" maxlength="80" placeholder="Nom du projet (ex. BâtiPlus)">
+        <% } %>
+        <% if (sites.length) { %><label><input type="radio" name="site" value="existing" <%= canCreateSite ? "" : "checked" %>> Un site existant</label>
+        <label for="aibh-site" class="aib-sr">Site existant</label><select id="aibh-site" name="siteId"><% sites.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select><% } %>
+      </fieldset>
+      <p class="aibh-status" id="aibh-status" role="status" aria-live="polite"></p>
+      <div class="mk-actions"><button type="submit" class="btn btn-primary" id="aibh-go" data-mk-once>Analyser mon projet</button></div>
+    </form>
+  </section>
+  <% } else { %><section class="mk-panel"><p>Vous pouvez consulter les projets, mais pas en créer (droit d'écriture requis).</p></section><% } %>
+
+  <% if (canWrite) { %>
+  <section class="mk-panel" aria-labelledby="aibh-shop-t"><h2 id="aibh-shop-t">Nouvelle boutique en ligne</h2>
+    <p class="field-hint">Décrivez votre activité commerciale : l'IA propose l'architecture, les catégories et prépare des brouillons de produits. Les prix, stocks, taxes et frais de livraison sont toujours saisis par vous ; rien n'est publié sans votre accord.</p>
+    <form id="aibh-shop-form" class="mk-form" novalidate>
+      <label for="aibh-shop-brief">Décrivez votre boutique</label>
+      <textarea id="aibh-shop-brief" name="brief" rows="5" maxlength="6000" required placeholder="Ex. : Boutique en ligne d'ordinateurs portables, écrans et claviers à Kinshasa, pour les particuliers et les professionnels, livraison en RDC, prix en dollars."></textarea>
+      <fieldset class="aibh-site"><legend>Site concerné</legend>
+        <% if (canCreateSite) { %><label><input type="radio" name="shopsite" value="new" checked> Nouveau site (créé en brouillon)</label>
+        <label for="aibh-shop-name" class="aib-sr">Nom de la nouvelle boutique</label><input id="aibh-shop-name" name="newSiteName" maxlength="80" placeholder="Nom de la boutique (ex. TechKin)"><% } %>
+        <% if (sites.length) { %><label><input type="radio" name="shopsite" value="existing" <%= canCreateSite ? "" : "checked" %>> Un site existant</label>
+        <label for="aibh-shop-site" class="aib-sr">Site existant</label><select id="aibh-shop-site" name="siteId"><% sites.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select><% } %>
+      </fieldset>
+      <p class="aibh-status" id="aibh-shop-status" role="status" aria-live="polite"></p>
+      <div class="mk-actions"><button type="submit" class="btn btn-primary" id="aibh-shop-go" data-mk-once>Analyser ma boutique</button></div>
+    </form>
+  </section>
+  <% } %>
+  <% if (shops.length) { %><section class="mk-panel" aria-labelledby="aibh-shops"><h2 id="aibh-shops">Mes boutiques IA</h2>
+    <ul class="aibh-list"><% shops.forEach((x) => { %><li><div><strong><%= x.name %></strong><div class="aibh-meta"><%= x.sector %> · modifié <%= new Date(x.updatedAt).toLocaleString("fr-FR") %></div></div><a class="btn btn-ghost btn-sm" href="/marketing/ia/studio/boutique/<%= x.id %>?site=<%= x.siteId %>">Ouvrir</a></li><% }) %></ul></section><% } %>
+
+  <% groups.forEach(([key, label]) => { const list = projects.filter((p) => p.group === key); if (!list.length) return; %>
+    <section class="mk-panel" aria-labelledby="aibh-<%= key %>"><h2 id="aibh-<%= key %>"><%= label %></h2>
+      <ul class="aibh-list"><% list.forEach((p) => { %>
+        <li><div><strong><%= p.name %></strong><div class="aibh-meta"><%= p.progress.done %>/<%= p.progress.total %> étapes terminées · <%= p.generated %>/<%= p.pages %> page(s) générée(s) · modifié <%= new Date(p.updatedAt).toLocaleString("fr-FR") %></div></div>
+        <a class="btn btn-ghost btn-sm" href="/marketing/ia/studio/<%= p.id %><%= p.siteId ? "?site=" + p.siteId : "" %>">Ouvrir</a></li><% }) %></ul></section>
+  <% }) %>
+  <% if (!projects.length && !shops.length) { %><div class="mk-empty"><h2>Aucun projet pour le moment</h2><p>Décrivez votre site ci-dessus pour commencer.</p></div><% } %>
+</div>
+<script src="<%= asset('/js/ai-builder-home.js') %>" defer></script>
+<%- include("partials/bottom") %>

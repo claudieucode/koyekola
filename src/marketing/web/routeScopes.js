@@ -84,6 +84,7 @@ const SITE_RULES = Object.freeze([
   { id: "page-par-identifiant", pattern: /^\/pages\/(\d+)(?:\/|$)/, kind: "resource", table: "page", idGroup: 1 },
   { id: "site-dans-le-chemin", pattern: /^\/site-web\/sites\/(\d+)(?:\/|$)/, kind: "path", idGroup: 1 },
   { id: "site-principal", pattern: /^\/site-web\/principal(?:\/|$)/, kind: "main" },
+  { id: "boutique-principal", pattern: /^\/site-web\/boutique(?:\/|$)/, kind: "main" }, // Programme 20.5 : adresse historique de la boutique du principal (équipe seulement)
   { id: "historique-de-page", pattern: /^\/site-web\/historique\/page\/(\d+)(?:\/|$)/, kind: "resource", table: "page", idGroup: 1 },
   { id: "composant-par-identifiant", pattern: /^\/site-web\/composants\/(\d+)/, kind: "resource", table: "composant", idGroup: 1 },
   { id: "page-creation-json", pattern: /^\/pages\/(?:creer|importer)\.json$/, methods: ["POST"], kind: "bodySiteIdJson" },
@@ -120,6 +121,9 @@ const SITE_RULES = Object.freeze([
   { id: "sms-du-site", pattern: /^\/sms(?:\/(?:campagnes|abonnes))?$/, kind: "param", terminal: true },
   // Assistant IA (R7 lot 6.2) : les appels d'aide à la rédaction (e-mails, SMS) relèvent du site choisi (?site= ou champ « site » du corps JSON) ; les réglages de l'assistant (voix de marque, plafond) restent à l'organisation
   { id: "ia-assistant", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/, kind: "param", terminal: true },
+  // Plans de site préparés par l'IA (Programme 21.3) : le site d'un plan est enregistré avec lui et relu en base ; un accès limité ne voit que les plans de SON site (filtre du service)
+  { id: "ia-plans-de-site", pattern: /^\/ia\/site(?:\/|$)/, kind: "param", terminal: true },
+  { id: "ia-studio", pattern: /^\/ia\/studio(?:\/|$)/, kind: "param", terminal: true },
   // Réseaux sociaux par site (R7 lot 6.3) : une publication par son identifiant relève de son site (NULL = organisation, fermée à un accès limité) ; liste et création : site choisi ; comptes, jetons et autorisations : organisation
   { id: "reseau-publication-par-identifiant", pattern: /^\/reseaux\/(\d{1,12})\/(?:annuler|relancer|supprimer)$/, kind: "resource", table: "socialPost", idGroup: 1 },
   { id: "reseaux-du-site", pattern: /^\/reseaux$/, kind: "param", terminal: true },
@@ -164,6 +168,8 @@ const FAMILIES = Object.freeze([
   { id: "evenements", scope: "site", pattern: /^\/evenements(?:\/|$)/ },
   { id: "contacts", scope: "site", pattern: /^\/contacts(?:\/|$)/ },
   { id: "ia-assistant", scope: "site", pattern: /^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/ },
+  { id: "ia-plans-de-site", scope: "site", pattern: /^\/ia\/site(?:\/|$)/ },
+  { id: "ia-studio", scope: "site", pattern: /^\/ia\/studio(?:\/|$)/ },
   { id: "sms-campagnes", scope: "site", pattern: /^\/sms(?:\/campagnes(?:\/|$)|\/abonnes$|$)/ },
   { id: "reseaux-publications", scope: "site", pattern: /^\/reseaux(?:\/\d+\/(?:annuler|relancer|supprimer))?$/ },
   { id: "score-apercu", scope: "site", pattern: /^\/score$/ },
@@ -180,7 +186,7 @@ const FAMILIES = Object.freeze([
   { id: "templates-par-site", scope: "site", pattern: /^\/site-web\/templates(?:\/|$)/ },
   { id: "editeur-du-site-par-site", scope: "site", pattern: /^\/site-web\/editeur-du-site(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
-  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|corbeille|outils|parametres|equipe-site|tests-ab)(?:\/|$)/ },
+  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|boutique|composants|composants\.json|historique|corbeille|outils|parametres|equipe-site|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —
   { id: "tableau-de-bord", scope: "organization", pattern: /^\/$/ },
   { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
