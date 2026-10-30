@@ -1,0 +1,244 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<% const idx = catalog.STEP_KEYS.indexOf(step); const prev = idx > 0 ? catalog.STEP_KEYS[idx - 1] : null; const cur = st.steps[idx]; const optional = cur && cur.optional;
+   const to = (k) => W + '?etape=' + k; const lbl = { done: 'Terminée', skipped: 'Ignorée', issue: 'À corriger', todo: 'À faire' };
+   const dis = can.write ? '' : ' disabled'; %>
+<div class="sw" data-sw-wizard data-draft-url="<%= W %>/brouillon" data-step="<%= step %>" data-revision="<%= st.revision %>">
+  <p class="mk-back"><a href="<%= BASE %>">← Mes créations</a></p>
+  <div class="mk-head">
+    <div class="mk-head-main"><h1><%= st.site.name %></h1><p class="mk-head-sub"><%= st.category ? st.category.name : '' %> · brouillon · <strong><%= st.percent %> %</strong> terminé</p></div>
+    <div class="sw-save" role="status" aria-live="polite" data-sw-status>Enregistré</div>
+  </div>
+  <div class="sw-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= st.percent %>" aria-label="Progression"><span style="width:<%= st.percent %>%"></span></div>
+  <% if (st.readOnly) { %><div class="sw-note sw-warn">Ce site est archivé : la création est en lecture seule.</div><% } %>
+
+  <nav class="sw-steps" aria-label="Étapes de création">
+    <ol>
+      <% st.steps.forEach((s, i) => { %>
+        <li class="sw-s sw-s-<%= s.status %><%= s.key === step ? ' is-current' : '' %>"><a href="<%= to(s.key) %>"<%- s.key === step ? ' aria-current="step"' : '' %>><span class="sw-n"><%= s.status === 'done' ? '✓' : s.status === 'issue' ? '!' : (i + 1) %></span><span class="sw-l"><%= s.label %></span><span class="sw-sr"> — <%= lbl[s.status] %><%= s.optional ? ', facultative' : '' %></span></a></li>
+      <% }) %>
+    </ol>
+  </nav>
+
+  <section class="mk-panel sw-main" aria-labelledby="sw-h">
+  <% if (step === 'mode' || step === 'type') { %>
+    <h2 id="sw-h"><%= step === 'mode' ? 'Mode de création' : 'Type de site' %></h2>
+    <p>Mode : <strong><%= st.mode === 'blank' ? 'Site vierge' : st.mode === 'template' ? 'Modèle professionnel' : 'Boutique en ligne' %></strong>. Type : <strong><%= st.category ? st.category.name : '—' %></strong>.</p>
+    <% if (st.data.imported) { %><p>Modèle importé : « <%= st.data.imported.label %> » (<%= st.data.imported.pages %> pages<%= st.data.imported.menu ? ', menu créé' : '' %>).</p><% } %>
+    <p class="sw-muted">Ces choix sont faits à la création. Pour un autre mode, créez un nouveau site : le brouillon actuel n'est jamais supprimé.</p>
+    <% if (st.mode === 'shop') { %><div class="sw-note"><strong>Boutique :</strong> le panier de produits, la livraison et le calcul de taxes n'existent pas encore. Disponible : vente de formations par carte (module Commerce, à activer à l'étape Fonctionnalités, compte Stripe à configurer par l'équipe).</div><% } %>
+
+  <% } else if (step === 'infos') { %>
+    <h2 id="sw-h">Informations générales</h2>
+    <form method="post" action="<%= W %>/infos" data-sw-autosave>
+      <input type="hidden" name="revision" value="<%= st.revision %>">
+      <fieldset<%= dis %>>
+        <label class="sw-field">Nom du site <input name="name" required maxlength="100" value="<%= values.name %>"></label>
+        <label class="sw-field">Entreprise ou organisation <input name="company" maxlength="100" value="<%= values.company || '' %>"></label>
+        <label class="sw-field">Description de l'activité <textarea name="description" rows="3" maxlength="500"><%= values.description || '' %></textarea></label>
+        <label class="sw-field">Secteur d'activité <input name="sector" maxlength="100" value="<%= values.sector || '' %>"></label>
+        <div class="sw-grid">
+          <label class="sw-field">Pays <select name="country" data-sw-country required><option value="">Choisir…</option><% Object.entries(countries).forEach(([k, c]) => { %><option value="<%= k %>" data-lang="<%= c.lang %>" data-tz="<%= c.tz %>" data-cur="<%= c.currency %>"<%= values.country === k ? ' selected' : '' %>><%= c.name %></option><% }) %></select></label>
+          <label class="sw-field">Langue principale <select name="lang" data-sw-lang><% Object.entries(langs).forEach(([k, n]) => { %><option value="<%= k %>"<%= (values.lang || 'fr') === k ? ' selected' : '' %>><%= n %></option><% }) %></select></label>
+          <label class="sw-field">Fuseau horaire <input name="timezone" list="sw-zones" value="<%= values.timezone || '' %>" data-sw-tz placeholder="ex. Europe/Paris"><datalist id="sw-zones"><% zones.forEach((z) => { %><option value="<%= z %>"><% }) %></datalist></label>
+          <label class="sw-field">Devise <select name="currency" data-sw-cur><% currencies.forEach((c) => { %><option<%= (values.currency || '') === c ? ' selected' : '' %>><%= c %></option><% }) %></select></label>
+        </div>
+        <p class="sw-muted" data-sw-fmt>Formats (<%= fmt.locale %>) : <%= fmt.date %> · <%= fmt.time %> · <%= fmt.number %> · <%= fmt.money %></p>
+        <p class="sw-muted">Le pays propose une langue, un fuseau et une devise ; vous pouvez les changer. Aucune règle fiscale n'est appliquée ici.</p>
+        <details><summary>Coordonnées de contact (facultatif)</summary>
+          <div class="sw-grid">
+            <label class="sw-field">E-mail de contact <input type="email" name="email" maxlength="254" value="<%= values.email || '' %>"></label>
+            <label class="sw-field">Téléphone <input name="phone" maxlength="30" value="<%= values.phone || '' %>"></label>
+            <label class="sw-field">Adresse <input name="street" maxlength="200" value="<%= values.street || '' %>"></label>
+            <label class="sw-field">Code postal <input name="postalCode" maxlength="20" value="<%= values.postalCode || '' %>"></label>
+            <label class="sw-field">Ville <input name="city" maxlength="100" value="<%= values.city || '' %>"></label>
+          </div>
+          <p class="sw-muted">Ces informations alimentent le SEO local du site (« SEO → Schéma ») et ne sont visibles que par les personnes ayant accès à ce site.<%= st.data.seoApplied === false ? ' Dernier envoi au SEO : refusé, vérifiez les valeurs.' : '' %></p>
+        </details>
+      </fieldset>
+      <% if (can.write) { %><div class="sw-actions"><button class="btn btn-primary" type="submit">Enregistrer et continuer</button></div><% } %>
+    </form>
+
+  <% } else if (step === 'identite') { %>
+    <h2 id="sw-h">Identité visuelle</h2>
+    <p class="sw-muted">Ces choix s'écrivent dans les <strong>styles du site</strong> (le même système que l'éditeur et « Apparence → Styles »).</p>
+    <form method="post" action="<%= W %>/identite" data-sw-autosave>
+      <input type="hidden" name="revision" value="<%= st.revision %>">
+      <fieldset<%= dis %>>
+        <legend>Orientation graphique</legend>
+        <div class="sw-cards sw-cards-sm">
+          <% catalog.STYLES.forEach((s) => { const pal = palettes.find((p) => p.key === s.palette); %>
+            <label class="sw-card"><input type="radio" name="style" value="<%= s.key %>"<%= (values.style || (st.data.identity || {}).style) === s.key ? ' checked' : '' %>><span class="sw-card-body"><strong><%= s.label %></strong>
+              <span class="sw-swatches" aria-hidden="true"><% ['primary', 'secondary', 'accent', 'background'].forEach((k) => { %><i style="background:<%= pal.colors[k] %>"></i><% }) %></span>
+              <small class="sw-muted"><%= tk.FONTS[s.heading].label %> / <%= tk.FONTS[s.body].label %></small></span></label>
+          <% }) %>
+        </div>
+        <legend>Couleurs</legend>
+        <div class="sw-grid">
+          <% [['primary', 'Principale (boutons et liens)'], ['secondary', 'Secondaire'], ['accent', 'Accent'], ['background', 'Arrière-plan'], ['text', 'Texte']].forEach(([k, n]) => { %>
+            <label class="sw-field"><%= n %> <input type="color" name="color_<%= k %>" value="<%= values['color_' + k] || site.tokens.colors[k] %>" data-sw-color="<%= k %>"></label>
+          <% }) %>
+        </div>
+        <legend>Typographie</legend>
+        <div class="sw-grid">
+          <% [['heading', 'Titres'], ['body', 'Texte courant']].forEach(([k, n]) => { %>
+            <label class="sw-field"><%= n %> <select name="font_<%= k %>" data-sw-font="<%= k %>"><% Object.entries(tk.FONTS).forEach(([fk, f]) => { %><option value="<%= fk %>" data-stack="<%= f.stack %>"<%= (values['font_' + k] || site.tokens.fonts[k]) === fk ? ' selected' : '' %>><%= f.label %></option><% }) %></select></label>
+          <% }) %>
+        </div>
+        <div class="sw-preview" data-sw-preview aria-label="Aperçu de la hiérarchie typographique">
+          <h3 data-sw-pv-h>Titre de votre site</h3><p data-sw-pv-b>Un paragraphe d'exemple pour juger la lisibilité du texte courant. <a href="#" data-sw-pv-a>Un lien</a></p><span class="sw-btn" data-sw-pv-btn>Un bouton</span>
+        </div>
+        <legend>Logo</legend>
+        <p class="sw-muted">Importez votre logo dans la médiathèque du site, puis indiquez son chemin. Sans logo, le nom du site est utilisé (logo temporaire).<%= (st.data.identity || {}).logo ? ' Un logo est déjà défini.' : '' %></p>
+        <div class="sw-grid">
+          <label class="sw-field">Importer un logo (image) <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-sw-logo-file></label>
+          <label class="sw-field">Chemin du logo <input name="logoUrl" value="" placeholder="/uploads/…" data-sw-logo-url></label>
+        </div>
+        <p class="sw-muted" data-sw-logo-msg role="status"></p>
+      </fieldset>
+      <% if (can.write) { %><div class="sw-actions"><button class="btn btn-primary" type="submit">Enregistrer et continuer</button></div><% } %>
+    </form>
+
+  <% } else if (step === 'pages') { %>
+    <h2 id="sw-h">Structure et pages</h2>
+    <% if (ps.proposals.length && can.write) { %>
+    <form method="post" action="<%= W %>/pages/proposees" class="sw-block">
+      <h3>Pages proposées pour « <%= st.category ? st.category.name : '' %> »</h3>
+      <ul class="sw-checks"><% ps.proposals.forEach((p) => { %><li><label><input type="checkbox" name="keys" value="<%= p.key %>" checked> <%= p.name %><% if (p.note) { %> <small class="sw-muted">— <%= p.note %></small><% } %></label></li><% }) %></ul>
+      <button class="btn btn-outline btn-sm" type="submit">Créer les pages cochées</button>
+    </form>
+    <% } %>
+    <% if (ps.gaps.length) { %><div class="sw-note sw-warn">Pas encore disponible pour ce type de site : <%= ps.gaps.join(', ') %>.</div><% } %>
+    <% if (st.mode === 'shop') { %><div class="sw-note">Pages de panier, de commande et de compte client : <strong>non disponibles</strong>. Seules les pages de présentation et de catalogue de formations sont proposées.</div><% } %>
+    <p class="sw-muted">Pour remplir les pages avec une structure complète de composants natifs : <a href="/marketing/site-web/sites/<%= siteId %>/generateur">Générateur de pages</a> (brouillons, rien n'est publié).</p>
+    <h3>Pages du site</h3>
+    <form method="post" action="<%= W %>/pages/action" id="sw-nav-form"><input type="hidden" name="action" value="nav"></form>
+    <table class="mk-table sw-pages">
+      <caption class="sw-sr">Pages du site</caption>
+      <thead><tr><th scope="col">Page</th><th scope="col">État</th><th scope="col">Navigation</th><th scope="col">Actions</th></tr></thead>
+      <tbody data-sw-pages>
+      <% ps.pages.forEach((p, i) => { %>
+        <tr data-id="<%= p.id %>">
+          <td><form method="post" action="<%= W %>/pages/action" class="mk-inline"><input type="hidden" name="action" value="rename"><input type="hidden" name="pageId" value="<%= p.id %>">
+            <input name="name" value="<%= p.name %>" maxlength="100" aria-label="Nom de la page <%= p.name %>"<%= dis %>> <% if (can.write) { %><button class="btn btn-outline btn-sm" type="submit">Renommer</button><% } %></form>
+            <% if (p.home) { %><span class="mk-status">Accueil</span><% } %></td>
+          <td><%= p.status === 'published' ? 'Publiée' : 'Brouillon' %></td>
+          <td><label><input type="checkbox" name="nav" value="<%= p.id %>" form="sw-nav-form"<%= p.inNav ? ' checked' : '' %><%= dis %>> Afficher</label></td>
+          <td class="sw-row-actions">
+            <% if (can.write) { %>
+            <button type="button" class="btn btn-outline btn-sm" data-sw-up aria-label="Monter <%= p.name %>"<%= i === 0 ? ' disabled' : '' %>>↑</button>
+            <button type="button" class="btn btn-outline btn-sm" data-sw-down aria-label="Descendre <%= p.name %>"<%= i === ps.pages.length - 1 ? ' disabled' : '' %>>↓</button>
+            <% if (!p.home) { %><form method="post" action="<%= W %>/pages/action" class="mk-inline"><input type="hidden" name="action" value="home"><input type="hidden" name="pageId" value="<%= p.id %>"><button class="btn btn-outline btn-sm" type="submit">Accueil</button></form>
+            <form method="post" action="<%= W %>/pages/action" class="mk-inline"><input type="hidden" name="action" value="remove"><input type="hidden" name="pageId" value="<%= p.id %>"><button class="btn btn-outline btn-sm" type="submit">Retirer</button></form><% } %>
+            <% } %>
+            <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= p.id %>/editeur" target="_blank" rel="noopener">Éditeur</a>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+    <% if (!ps.pages.length) { %><p class="sw-muted">Aucune page pour l'instant.</p><% } %>
+    <% if (can.write) { %>
+    <form method="post" action="<%= W %>/pages/action" class="sw-block"><input type="hidden" name="action" value="add">
+      <h3>Ajouter une page</h3>
+      <div class="sw-grid"><label class="sw-field">Nom <input name="name" required maxlength="100"></label>
+        <label class="sw-field">Gabarit <select name="template"><option value="">Page vierge</option><% templates.forEach((t) => { %><option value="<%= t.key %>"><%= t.name %></option><% }) %></select></label></div>
+      <button class="btn btn-outline btn-sm" type="submit">Ajouter</button>
+    </form>
+    <form method="post" action="<%= W %>/pages/action" id="sw-order-form"><input type="hidden" name="action" value="order"><input type="hidden" name="ids" value="" data-sw-order></form>
+    <div class="sw-actions">
+      <button class="btn btn-outline" type="submit" form="sw-order-form" data-sw-save-order>Enregistrer l'ordre</button>
+      <button class="btn btn-outline" type="submit" form="sw-nav-form">Enregistrer les pages de navigation</button>
+      <% if (can.menu) { %><form method="post" action="<%= W %>/pages/menu" class="mk-inline"><button class="btn btn-outline" type="submit">Créer le menu du site</button></form><% } else { %><span class="sw-muted">Création du menu : droit « navigation.write » requis.</span><% } %>
+      <form method="post" action="<%= W %>/pages/terminer" class="mk-inline"><input type="hidden" name="revision" value="<%= st.revision %>"><button class="btn btn-primary" type="submit">Valider la structure et continuer</button></form>
+    </div>
+    <% } %>
+
+  <% } else if (step === 'contenus') { %>
+    <h2 id="sw-h">Contenus</h2>
+    <p class="sw-muted">Les textes entre crochets, par exemple « [chiffre réel] », sont des <strong>contenus d'exemple</strong> à remplacer : ils ne représentent pas votre entreprise. Les images se choisissent dans la médiathèque depuis l'éditeur.</p>
+    <% contents.forEach((c) => { %>
+      <details class="sw-block"<%= c.placeholders ? ' open' : '' %>><summary><strong><%= c.name %></strong> <% if (c.placeholders) { %><span class="mk-status mk-status-warn"><%= c.placeholders %> texte(s) d'exemple</span><% } else { %><span class="mk-status">Sans texte d'exemple</span><% } %></summary>
+        <form method="post" action="<%= W %>/contenus/<%= c.id %>">
+          <fieldset<%= dis %>>
+            <label class="sw-field">Titre de la page <input name="title" maxlength="120" value="<%= c.title %>"></label>
+            <label class="sw-field">Description (moteurs de recherche) <textarea name="description" rows="2" maxlength="300"><%= c.description %></textarea></label>
+            <% if (c.hero) { %>
+              <label class="sw-field">Titre d'accroche <input name="heroTitle" maxlength="160" value="<%= c.hero.title %>"></label>
+              <label class="sw-field">Texte de présentation <textarea name="heroSubtitle" rows="2" maxlength="300"><%= c.hero.subtitle %></textarea></label>
+              <div class="sw-grid"><label class="sw-field">Texte du bouton <input name="buttonLabel" maxlength="60" value="<%= c.hero.buttonLabel %>"></label>
+                <label class="sw-field">Lien du bouton <input name="buttonUrl" maxlength="300" value="<%= c.hero.buttonUrl %>"></label></div>
+            <% } else { %><p class="sw-muted">Cette page n'a pas de section d'accroche : modifiez-la dans l'éditeur.</p><% } %>
+          </fieldset>
+          <div class="sw-actions"><% if (can.write) { %><button class="btn btn-outline btn-sm" type="submit">Enregistrer</button><% } %> <a class="btn btn-outline btn-sm" href="/marketing/pages/<%= c.id %>/editeur" target="_blank" rel="noopener">Ouvrir dans l'éditeur</a></div>
+        </form>
+      </details>
+    <% }) %>
+    <% if (!contents.length) { %><p class="sw-muted">Aucune page : retournez à l'étape Pages.</p><% } %>
+
+  <% } else if (step === 'fonctions') { %>
+    <h2 id="sw-h">Fonctionnalités</h2>
+    <p class="sw-muted">Seules les fonctionnalités qui existent sont activables. Une intégration externe n'est <strong>jamais</strong> connectée automatiquement : l'activation d'un module ne donne aucun accès à vos comptes.</p>
+    <% if (!can.modules) { %><div class="sw-note">L'activation des modules est réservée à l'équipe de l'organisation (droit « sites.modules »).</div><% } %>
+    <table class="mk-table">
+      <caption class="sw-sr">Fonctionnalités</caption>
+      <thead><tr><th scope="col">Fonctionnalité</th><th scope="col">Utilité</th><th scope="col">État</th><th scope="col">Prérequis</th><th scope="col">Action</th></tr></thead>
+      <tbody>
+      <% features.forEach((f) => { %>
+        <tr><td><strong><%= f.label %></strong><% if (f.recommended) { %> <span class="mk-status">Conseillé</span><% } %></td><td><%= f.use %></td>
+          <td><span class="mk-status <%= f.status === 'Activé' || f.status === 'Inclus' ? '' : 'mk-status-warn' %>"><%= f.status %></span></td>
+          <td><%= [].concat(f.deps || [], f.needs ? [f.needs] : []).join(' · ') || '—' %></td>
+          <td><% if (f.kind === 'module' && f.available && can.modules && can.write) { %>
+            <form method="post" action="<%= W %>/fonctions/<%= f.key %>" class="mk-inline"><input type="hidden" name="etat" value="<%= f.enabled ? 'desactiver' : 'activer' %>"><button class="btn <%= f.enabled ? 'btn-outline' : 'btn-primary' %> btn-sm" type="submit"><%= f.enabled ? 'Désactiver' : 'Activer' %></button></form>
+            <% } else if (f.kind === 'inclus') { %>Disponible<% } else { %>—<% } %></td></tr>
+      <% }) %>
+      </tbody>
+    </table>
+    <% if (can.write) { %><form method="post" action="<%= W %>/fonctions/terminer" class="sw-actions"><button class="btn btn-primary" type="submit">Valider et continuer</button></form><% } %>
+
+  <% } else if (step === 'apercu') { %>
+    <h2 id="sw-h">Aperçu responsive</h2>
+    <p class="sw-muted">Le rendu est celui de l'aperçu des pages (même moteur que le site), avec vos contenus et vos styles réels.</p>
+    <div class="sw-tools">
+      <% Object.keys(devices).forEach((d) => { %><a class="btn <%= d === device ? 'btn-primary' : 'btn-outline' %> btn-sm" href="<%= to('apercu') %>&appareil=<%= d %><%= pageId ? '&page=' + pageId : '' %>"<%- d === device ? ' aria-current="true"' : '' %>><%= d.charAt(0).toUpperCase() + d.slice(1) %> (<%= devices[d] %> px)</a><% }) %>
+      <form method="get" action="<%= W %>" class="mk-inline"><input type="hidden" name="etape" value="apercu"><input type="hidden" name="appareil" value="<%= device %>">
+        <label class="sw-sr" for="sw-page">Page à prévisualiser</label><select id="sw-page" name="page" onchange="this.form.submit()"><% ps.pages.forEach((p) => { %><option value="<%= p.id %>"<%= (pageId || ps.homeId) === p.id ? ' selected' : '' %>><%= p.name %></option><% }) %></select></form>
+    </div>
+    <% const shown = pageId || ps.homeId || (ps.pages[0] && ps.pages[0].id); %>
+    <% if (shown) { %><div class="sw-device"><iframe title="Aperçu <%= device %>" src="/marketing/pages/<%= shown %>/apercu" style="width:<%= devices[device] %>px" loading="lazy"></iframe></div><% } else { %><p class="sw-muted">Aucune page à prévisualiser.</p><% } %>
+    <h3>Alertes (non bloquantes)</h3>
+    <% if (!alerts.length) { %><p>Aucune alerte.</p><% } else { %><ul class="sw-alerts"><% alerts.forEach((a) => { %><li class="sw-a-<%= a.level %>"><strong><%= a.page %></strong> — <%= a.message %> <a href="/marketing/pages/<%= a.pageId %>/editeur" target="_blank" rel="noopener">Corriger</a></li><% }) %></ul><% } %>
+
+  <% } else if (step === 'publication') { %>
+    <h2 id="sw-h">Domaine et publication</h2>
+    <p>Vous pouvez <strong>terminer en brouillon</strong> : rien ne se publie sans votre confirmation, et aucun DNS n'est modifié par l'assistant.</p>
+    <h3>À vérifier avant publication</h3>
+    <ul class="sw-checklist"><% pub.items.forEach((i) => { %><li class="<%= i.ok ? 'ok' : 'todo' %>"><span aria-hidden="true"><%= i.ok ? '✓' : '○' %></span> <strong><%= i.label %></strong> — <%= i.detail %><span class="sw-sr"> (<%= i.ok ? 'vérifié' : 'à vérifier' %>)</span></li><% }) %></ul>
+    <h3>Domaine</h3>
+    <% if (pub.domains.length) { %><ul><% pub.domains.forEach((d) => { %><li><%= d.host %> — <%= d.kind === 'platform' ? 'adresse de la plateforme' : 'domaine personnalisé' %> · propriété : <%= d.status %> · DNS : <%= d.dns_status %> · HTTPS : <%= d.tls_status %></li><% }) %></ul>
+    <% } else { %><p class="sw-muted">Aucun domaine pour l'instant<%= pub.platform.available ? " ; l'adresse de la plateforme peut être activée." : ". Aucun domaine de plateforme n'est configuré sur ce serveur." %></p><% } %>
+    <% if (can.domains) { %><p><a href="/marketing/site-web/sites/<%= siteId %>/domaines">Gérer les domaines et voir les instructions DNS</a> — l'état « opérationnel » n'est affiché qu'après vérification technique réelle.</p><% } else { %><p class="sw-muted">La gestion des domaines demande le droit « sites.domains ».</p><% } %>
+    <h3>Publier</h3>
+    <% if (can.publish && can.write) { %>
+    <form method="post" action="<%= W %>/publier">
+      <fieldset><legend>Pages à publier</legend>
+        <ul class="sw-checks"><% pub.pages.forEach((p) => { %><li><label><input type="checkbox" name="pages" value="<%= p.id %>"> <%= p.name %> <small class="sw-muted">(<%= p.status === 'published' ? 'déjà publiée' : 'brouillon' %>)</small></label></li><% }) %></ul>
+      </fieldset>
+      <label class="sw-confirm"><input type="checkbox" name="confirmer" value="oui" required> Je confirme vouloir rendre ces pages publiques.</label>
+      <button class="btn btn-primary" type="submit">Publier les pages cochées</button>
+    </form>
+    <% } else { %><p class="sw-muted">La publication demande le droit « pages.publish ». Vous pouvez terminer ici en brouillon.</p><% } %>
+  <% } %>
+  </section>
+
+  <div class="sw-foot">
+    <% if (prev) { %><a class="btn btn-outline" href="<%= to(prev) %>">← Retour</a><% } %>
+    <a class="btn btn-outline" href="<%= BASE %>">Enregistrer et quitter</a>
+    <% if (idx < catalog.STEP_KEYS.length - 1) { %>
+      <% if (optional && can.write) { %><form method="post" action="<%= W %>/ignorer" class="mk-inline"><input type="hidden" name="etape" value="<%= step %>"><button class="btn btn-outline" type="submit">Ignorer cette étape</button></form><% } %>
+      <a class="btn btn-primary" href="<%= to(catalog.STEP_KEYS[idx + 1]) %>">Continuer →</a>
+    <% } %>
+  </div>
+</div>
+<script src="/js/site-wizard.js" defer></script>
+<%- include("partials/bottom") %>
