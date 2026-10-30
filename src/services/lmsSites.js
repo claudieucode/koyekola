@@ -1,4 +1,4 @@
-// Titan XXIII — LMS multi-sites : UN moteur de formations, des données rattachées à un site (table mk_course_sites, migration 115).
+// Titan XXIII — LMS multi-sites : UN moteur de formations, des données rattachées à un site (table mk_course_sites, migration 119).
 // Convention (comme les articles, voir mk_content_sites) : formation SANS ligne = site principal ; site_id n'est JAMAIS lu depuis la requête du navigateur,
 // seulement déduit côté serveur (domaine résolu, droits de la personne). Sections, leçons, inscriptions, progression, quiz, avis, certificats héritent du site par leur formation.
 const { MarketingError } = require("../marketing/errors");

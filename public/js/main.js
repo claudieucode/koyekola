@@ -34,6 +34,23 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Menu « Catégories » : s'ouvre au survol et au focus (CSS). WCAG 1.4.13 : il doit pouvoir être refermé sans bouger le pointeur ni le focus (Échap),
+  // et son état est annoncé (aria-expanded). Dans le tiroir mobile la liste est toujours dépliée : rien à fermer.
+  document.querySelectorAll(".nav-dropdown").forEach((dd) => {
+    const toggle = dd.querySelector(".nav-dropdown-toggle");
+    if (!toggle) return;
+    const wide = () => window.matchMedia("(min-width: 921px)").matches;
+    const sync = () => toggle.setAttribute("aria-expanded", String(!wide() || (!dd.classList.contains("is-dismissed") && (dd.matches(":hover") || dd.matches(":focus-within")))));
+    document.addEventListener("keydown", (e) => { // document : Échap fonctionne aussi quand le menu est ouvert au survol seul (le focus est ailleurs)
+      if (e.key !== "Escape" || !wide() || dd.classList.contains("is-dismissed") || !(dd.matches(":hover") || dd.matches(":focus-within"))) return;
+      dd.classList.add("is-dismissed"); if (dd.contains(document.activeElement)) toggle.focus(); sync();
+    });
+    const reset = () => { dd.classList.remove("is-dismissed"); setTimeout(sync, 0); };
+    dd.addEventListener("mouseleave", reset); dd.addEventListener("focusout", (e) => { if (!dd.contains(e.relatedTarget)) reset(); });
+    dd.addEventListener("mouseenter", () => setTimeout(sync, 0)); dd.addEventListener("focusin", () => setTimeout(sync, 0));
+    sync();
+  });
+
   // Accordéon du programme (page formation + lecteur de leçon)
   document.querySelectorAll(".accordion-toggle").forEach((btn) => {
     btn.addEventListener("click", () => {

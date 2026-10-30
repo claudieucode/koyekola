@@ -500,11 +500,15 @@ function createSite(ctx, { name, tokens, slug, description, siteType } = {}) {
   const finalSlug = slug !== undefined && String(slug).trim() !== "" ? cleanSiteSlug(ctx, slug) : freeSiteSlug(ctx, landing.slugify(clean_).replace(/^page$/, "site"));
   const desc = line(description ?? "", 500);
   const type = cleanSiteType(siteType ?? "");
-  const id = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, slug, description, site_type, tokens, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .run(ctx.organizationId, clean_, finalSlug, desc, type, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
-  audit(ctx, "site.created", "site", id, {});
-  // Adresse de la plateforme : seulement si un domaine de plateforme est configuré (PLATFORM_DOMAIN) ; sinon le site n'en reçoit pas (rien n'est inventé)
-  try { const d = require("../../services/siteDomains"); if (d.platformStatus().available) d.ensurePlatformDomain(ctx, id); } catch { /* le site est créé ; l'adresse peut être activée plus tard depuis « Domaines » */ }
+  // Une seule opération : le site, son journal et son adresse de plateforme sont enregistrés ensemble ou pas du tout (jamais de site à moitié créé)
+  const id = transaction(ctx.db, () => {
+    const newId = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, slug, description, site_type, tokens, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, clean_, finalSlug, desc, type, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
+    audit(ctx, "site.created", "site", newId, {});
+    // Adresse de la plateforme : seulement si un domaine de plateforme est configuré (PLATFORM_DOMAIN) ; sinon le site n'en reçoit pas (rien n'est inventé)
+    try { const d = require("../../services/siteDomains"); if (d.platformStatus().available) d.ensurePlatformDomain(ctx, newId); } catch { /* le site est créé ; l'adresse peut être activée plus tard depuis « Domaines » */ }
+    return newId;
+  });
   return getSite(ctx, id);
 }
 function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {}) {
@@ -756,6 +760,8 @@ function createComponent(ctx, { name, section, siteId = null, kind = "standard" 
   if (!COMPONENT_KINDS.includes(kind)) throw bad("Nature de composant inconnue (standard ou global).");
   const n = line(name, 80);
   if (!n) throw bad("Le nom du composant est obligatoire.");
+  // Accès limité à un site : le composant naît dans CE site (jamais global ni dans un autre site) ; le site validé par la route n'est pas celui que ce service reçoit
+  if (Number.isInteger(ctx.siteScope)) { if (siteId === null || siteId === undefined) siteId = ctx.siteScope; assertSiteScope(ctx, siteId); }
   if (siteId !== null) requireSite(ctx, siteId, { active: true });
   if (ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(ctx.organizationId, n)) throw new MarketingError("duplicate", "Un composant porte déjà ce nom.");
   checkWidgetRights(ctx, [], [componentSection(ctx, section)]);
@@ -776,6 +782,8 @@ function updateComponent(ctx, id, { name, section, global, siteId, revision } = 
   const s = section === undefined ? c.section : componentSection(ctx, section);
   checkWidgetRights(ctx, [c.section], [s]);
   let site = c.site_id;
+  // Accès limité à un site : ne rend pas un composant global et ne le déplace pas vers un autre site
+  if (Number.isInteger(ctx.siteScope) && (global === true || (global === false && Number(siteId) !== ctx.siteScope))) throw new MarketingError("forbidden", "Ce site n'est pas accessible avec vos droits.");
   if (global === true) site = null;
   else if (global === false) {
     const sid = Number(siteId);

@@ -15,7 +15,7 @@
     <% if (courses.length === 0 && favorites.length === 0) { %>
       <div class="empty-state">
         <%- illu("formations", { className: "kv-empty-art" }) %>
-        <h3>Vous n'avez pas encore de formation</h3>
+        <h2>Vous n'avez pas encore de formation</h2>
         <p>Direction le catalogue pour trouver votre prochaine compétence à apprendre.</p>
         <a href="/catalogue" class="btn btn-primary">Voir le catalogue</a>
       </div>
@@ -58,7 +58,7 @@
         </div>
         <div class="empty-state mc-noresult" hidden data-mc-none>
           <span class="kv-empty-ico" aria-hidden="true"><%- icon("search", { size: 26 }) %></span>
-          <h3>Aucune formation ne correspond</h3>
+          <h2>Aucune formation ne correspond</h2>
           <p>Essayez un autre mot ou retirez le filtre.</p>
           <button type="button" class="btn btn-outline" data-mc-reset>Réinitialiser les filtres</button>
         </div>

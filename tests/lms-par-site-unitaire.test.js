@@ -1,4 +1,4 @@
-// Titan XXIII — rattachement des formations aux sites (migration 115, services/lmsSites). Base jetable avec les vraies migrations.
+// Titan XXIII — rattachement des formations aux sites (migration 119, services/lmsSites). Base jetable avec les vraies migrations.
 const { test, describe, before } = require("node:test");
 const assert = require("node:assert/strict");
 const { freshMarketing, addLmsSchema } = require("./marketing-helpers");
@@ -20,7 +20,7 @@ before(() => {
 const team = (extra = {}) => ({ ...env.A, ...extra });
 const listIds = (siteId) => { const s = lms.scopeSql(siteId); return env.db.prepare(`SELECT id FROM courses WHERE ${s.sql} ORDER BY id`).all(...s.params).map((r) => r.id); };
 
-describe("migration 115", () => {
+describe("migration 119", () => {
   test("table vide à la création : toutes les formations existantes restent au site principal", () => {
     assert.equal(env.db.prepare("SELECT COUNT(*) n FROM mk_course_sites").get().n, 0);
     assert.deepEqual(listIds(null), [ids.main, ids.ca, ids.cb]);

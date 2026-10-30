@@ -92,13 +92,15 @@ register({ id: "kolakisa", title: "Kolakisa", order: 10, collect: async (ctx) =>
   let lang = null, tz = null;
   try { const v = settings.readAll({ siteId: ctx.siteId }, { db, organizationId: ctx.organizationId, can: () => true, orgLevel: true }); lang = v.language.value; tz = v.timezone.value; } catch { /* réglages illisibles : non disponible */ }
   const site = ctx.siteId ? require("../urls").siteInfo(ctx.siteId) : null;
+  // Le nom vient de la base (pas du cache des adresses : un site créé il y a un instant n'y figure pas encore)
+  const siteName = ctx.siteId ? ((db.prepare("SELECT name FROM mk_sites WHERE id = ?").get(ctx.siteId) || {}).name || (site && site.name) || "Site") : "";
   const env = process.env.NODE_ENV === "production" ? "Production" : process.env.NODE_ENV === "test" ? "Test" : "Développement";
   const pub = siteUrlOf(ctx);
   const sites = count("SELECT COUNT(*) n FROM mk_sites WHERE status = 'active'");
   return [
     row("Version de Kolakisa", pkg.version), row("Environnement", env), row("Langue du site", lang), row("Fuseau horaire", tz),
     row("Adresse publique", pub || "Non définie"), row("Adresse de l'administration", pub ? `${pub}/marketing` : null),
-    row("Site", ctx.siteId ? `${site ? site.name : "Site"} (identifiant ${ctx.siteId})` : "Site principal"),
+    row("Site", ctx.siteId ? `${siteName} (identifiant ${ctx.siteId})` : "Site principal"),
     row("Domaine propre", ctx.siteId ? (site && site.host ? site.host : "Aucun (pages sous /p/ du site principal)") : "Non applicable (site principal)"),
     ...(ctx.showCentral ? [row("Sites actifs sur l'installation", sites, { central: true })] : []),
     row("Mises à jour", "Par déploiement du code : aucun mécanisme de mise à jour automatique depuis le CMS"),

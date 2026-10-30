@@ -9,7 +9,7 @@
     <% if (isEdit) { %><%- include("_course-head", { course, tab: "edit" }) %><h2 class="sr-only">Modifier la formation</h2>
     <% } else { %><div class="dash-head"><div><h1>Nouvelle formation</h1><p>Renseignez l'essentiel ; vous ajouterez les chapitres ensuite.</p></div></div><% } %>
 
-    <% if (error) { %><p class="form-error"><%= error %></p><% } %>
+    <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
     <% if (typeof saved !== "undefined" && saved) { %><p class="form-success">Modifications enregistrées.</p><% } %>
 
     <form action="<%= isEdit ? `/formateur/cours/${course.id}/modifier` : "/formateur/cours/nouveau" %>" method="post" enctype="multipart/form-data" class="form-layout">

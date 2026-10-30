@@ -34,7 +34,7 @@ const REWRITE = {
   ...Object.fromEntries(Object.entries(TONES).map(([k, t]) => [`ton_${k}`, `Réécris ce texte sur un ton ${t}, sans changer les informations.`])),
 };
 const AREAS = { objet: "Objet", preheader: "Préheader", contenu: "Contenu", appel: "Appel à l'action", lisibilite: "Lisibilité", personnalisation: "Personnalisation", delivrabilite: "Délivrabilité" };
-const ACTIONS = { subjects: "Objets et préheaders", rewrite: "Réécriture", draft: "Brouillon d'e-mail", optimize: "Conseils d'optimisation", sms: "Texte de SMS" };
+const ACTIONS = { subjects: "Objets et préheaders", rewrite: "Réécriture", draft: "Brouillon d'e-mail", optimize: "Conseils d'optimisation", sms: "Texte de SMS", brief: "Analyse de brief (site)", plan: "Plan de site" };
 
 const bad = (message) => new MarketingError("invalid_field", message);
 const nowOf = (ctx) => (typeof ctx.now === "function" ? ctx.now() : Date.now());

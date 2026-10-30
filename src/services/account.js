@@ -61,8 +61,20 @@ function deleteAccount(userId, marketing, log = console) {
   const contact = marketingContactOf(marketing, user);
   // Mot de passe inutilisable : le hachage d'un secret aléatoire jamais conservé
   const unusable = bcrypt.hashSync(crypto.randomBytes(32).toString("hex"), 10);
+  // Dernier Super administrateur actif de l'organisation : le compte ne peut pas disparaître sans successeur
+  try {
+    const owned = db.prepare("SELECT m.organization_id FROM mk_org_members m WHERE m.user_id = ? AND m.role = 'owner'").all(userId);
+    for (const o of owned) {
+      const others = db.prepare("SELECT COUNT(*) n FROM mk_org_members m JOIN users u ON u.id = m.user_id WHERE m.organization_id = ? AND m.role = 'owner' AND u.status = 'active' AND u.id <> ?").get(o.organization_id, userId).n;
+      if (!others) throw new Error("Vous êtes le dernier Super administrateur : nommez-en un autre avant de supprimer ce compte.");
+    }
+  } catch (error) { if (!/no such table/.test(error.message)) throw error; }
   db.exec("BEGIN IMMEDIATE");
   try {
+    // Accès marketing et clés d'API de la personne : retirés avec le compte (sinon une fiche anonymisée resterait « active » dans l'équipe)
+    for (const sql of ["DELETE FROM mk_org_members WHERE user_id = ?", "DELETE FROM mk_site_members WHERE user_id = ?", "UPDATE mk_api_keys SET revoked_at = datetime('now') WHERE created_by = ? AND revoked_at IS NULL"]) {
+      try { db.prepare(sql).run(userId); } catch (error) { if (!/no such table/.test(error.message)) throw error; }
+    }
     for (const table of ["lesson_notes", "reviews", "blog_comments", "favorites", "user_prefs", "password_resets", "lesson_state"]) {
       try { db.prepare(`DELETE FROM ${table} WHERE user_id = ?`).run(userId); } catch (error) { if (!/no such table/.test(error.message)) throw error; }
     }

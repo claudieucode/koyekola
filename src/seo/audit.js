@@ -65,18 +65,32 @@ const externalUrl = (href) => (/^https?:\/\//i.test(String(href || "")) ? String
 const isPrivate = (p) => PRIVATE.some((x) => p === x.replace(/\/$/, "") || p.startsWith(x.endsWith("/") ? x : `${x}/`)) || /^\/(uploads|css|js|img|fonts)\//.test(p) || /\.(xml|txt|pdf|png|jpe?g|webp|gif|svg|ico|mp4|mp3)$/i.test(p);
 
 // Vérification réelle d'un lien externe : HEAD puis GET, délai 8 s ; « injoignable » n'est jamais compté comme cassé
-async function checkExternal(url) {
-  const attempt = async (method) => {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      const r = await fetch(url, { method, redirect: "follow", signal: ctrl.signal, headers: { "User-Agent": "Mozilla/5.0 (compatible; KOLAKISA-LinkChecker/1)" } });
-      return { status: r.status };
-    } catch (e) { return { error: e.name === "AbortError" ? "délai dépassé" : "connexion impossible" }; } finally { clearTimeout(timer); }
-  };
-  let r = await attempt("HEAD");
-  if (r.error || r.status === 405 || r.status === 403 || r.status === 501) r = await attempt("GET");
-  return r;
+// SSRF : le serveur ne contacte JAMAIS une adresse interne (loopback, réseau privé, métadonnées cloud) même si un lien de page y mène ou si une redirection y renvoie.
+// Mêmes garde-fous que l'import de flux (rss/feed.js) : adresse vérifiée à la connexion (safeLookup, anti-rebond DNS) et à chaque redirection (suivies à la main, 4 au plus).
+function checkExternal(url) {
+  const { safeLookup, checkUrl } = require("../marketing/rss/feed");
+  const attempt = (raw, method, hops = 0) => new Promise((resolve) => {
+    let u;
+    try { u = checkUrl(raw); } catch { return resolve({ error: "adresse refusée" }); }
+    const lib = u.protocol === "https:" ? require("https") : require("http");
+    const req = lib.request(u, { method, lookup: safeLookup, timeout: 8000, headers: { "User-Agent": "Mozilla/5.0 (compatible; KOLAKISA-LinkChecker/1)" } }, (res) => {
+      res.resume();
+      const next = res.headers.location;
+      if (res.statusCode >= 300 && res.statusCode < 400 && next) {
+        if (hops >= 4) return resolve({ error: "trop de redirections" });
+        return resolve(attempt(new URL(next, u).href, method, hops + 1));
+      }
+      resolve({ status: res.statusCode });
+    });
+    req.on("timeout", () => { req.destroy(); resolve({ error: "délai dépassé" }); });
+    req.on("error", () => resolve({ error: "connexion impossible" }));
+    req.end();
+  });
+  return (async () => {
+    let r = await attempt(url, "HEAD");
+    if (r.error || r.status === 405 || r.status === 403 || r.status === 501) r = await attempt(url, "GET");
+    return r;
+  })();
 }
 
 // Périmètre d'UN site (écran SEO du site) : ses pages en ligne seulement. Le site vient de l'appelant (adresse vérifiée par le serveur), jamais d'une saisie.
