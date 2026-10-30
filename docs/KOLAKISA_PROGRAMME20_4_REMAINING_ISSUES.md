@@ -5,7 +5,7 @@ Chaque ligne dit ce qui manque, pourquoi, et ce que l'écran affiche à la place
 ## A. Dépendances d'autres programmes
 | # | Point | Effet |
 |---|---|---|
-| D1 | **20.1** : aucun document dans le dépôt ; **20.2** (Site Builder) : branche `origin/feat/programme-20-2-site-builder` non fusionnée, 10 tests hérités en échec sur `main` | Pas de « créer un site À PARTIR d'un modèle » en une étape dans « Mes sites » : on crée le site (écran existant, ou assistant de `main`), puis on y importe un pack. Les packs s'importent dans un site existant |
+| D1 | **Créer un site À PARTIR d'un modèle** : l'assistant de création de `main` (20.2/20.6) utilise déjà les packs ; l'écran de la bibliothèque importe, lui, dans un site **existant** (créer le site, puis « Utiliser ce modèle ») | Deux chemins vers le même import ; pas de bouton « Nouveau site depuis ce modèle » dans la bibliothèque elle-même |
 | D2 | Affectations de modèles de thème **par organisation** (limite D2 de 20.3) | L'option « affecter » d'un modèle de thème s'applique à toute l'organisation ; l'écran le dit avant l'import. Corriger demande une migration des affectations (hors périmètre) |
 
 ## B. Fonctions du cahier des charges non réalisées ou partielles
@@ -38,4 +38,4 @@ Chaque ligne dit ce qui manque, pourquoi, et ce que l'écran affiche à la place
 | Isolation multi-organisations | Testée au niveau du service et par requêtes (secteurs d'une autre organisation invisibles) ; pas de parcours HTTP complet avec deux organisations |
 
 ## D. Pour passer au Programme 20.5
-Les modèles et leur API sont stables. Prérequis : décider D1 (fusion de 20.2 ou abandon) et D2 (affectations de thème par site), puis choisir parmi R1, R3, R6, R8 selon la priorité produit. Les ajouts présents sur `main` pendant ce travail (assistant de création de site, générateur de pages par IA) n'ont pas été modifiés par 20.4 ; leurs tests `assistant-creation-site` et `page-generator` ont été rejoués dans les lots (voir TESTS). Le Programme 20.5 n'a pas été commencé.
+Les modèles et leur API sont stables. Prérequis : décider D2 (affectations de thème par site), puis choisir parmi R1, R3, R6, R8 selon la priorité produit. Les ajouts présents sur `main` pendant ce travail (assistant de création de site, générateur de pages par IA) n'ont pas été modifiés par 20.4 ; leurs tests `assistant-creation-site` et `page-generator` ont été rejoués dans les lots (voir TESTS). Le Programme 20.5 n'a pas été commencé.

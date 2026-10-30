@@ -35,6 +35,10 @@ const GABARIT_TYPES = {
   lancement: ["lancement-produit", "promotion"], bientot: ["bientot", "temporaire"], inscription: ["inscription"], consultation: ["rdv", "consultation", "reservation"],
   merci: ["remerciement", "confirmation", "confirmation-inscription", "confirmation-formation"], evenement: ["evenement", "inscription-evenement", "programme"], apropos: ["apropos", "equipe"],
   contact: ["contact", "contact-commercial", "devis"], portfolio: ["portfolio", "projet", "agence", "design", "photographie"], saas: ["application", "landing"], faq: ["faq", "centre-aide", "questions-produits"], tarifs: ["tarifs", "comparaison"], temoignages: ["temoignages", "references"], p404: ["p404"], entreprise: ["entreprise", "accueil", "services"],
+  // Programme 20.4 : gabarits par secteur (types réellement couverts ; aucun type qui exige une fonction absente, comme la boutique de produits)
+  "agence-accueil": ["accueil", "agence"], "agence-services": ["services", "service-creatif"], "agence-methode": ["services"], "portfolio-accueil": ["accueil", "portfolio", "galerie"],
+  "resto-accueil": ["accueil", "page-locale"], "resto-carte": ["offre"], "resto-reservation": ["reservation"], "immo-accueil": ["accueil", "page-locale"], "immo-biens": ["offre"], "immo-estimation": ["devis", "rdv"],
+  "blog-accueil": ["blog", "accueil"], "boutique-accueil": ["catalogue-formations", "accueil"], "asso-accueil": ["association", "accueil", "communaute"], "asso-missions": ["association", "equipe"], "asso-adhesion": ["adhesion", "inscription"], "asso-soutenir": ["association"],
 };
 
 function typeList() {

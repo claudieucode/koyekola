@@ -4,12 +4,14 @@
 
 ## 1. Audit préalable (état réel, vérifié)
 
-### 1.1 Programmes 20.1, 20.2, 20.3
-| Programme | État réel constaté | Conséquence |
+### 1.1 Programmes 20.1, 20.2, 20.3 (état réel au moment du travail, puis après la dernière fusion de `main`)
+| Programme | État réel constaté | Conséquence pour 20.4 |
 |---|---|---|
-| 20.1 | **Aucun document « Programme 20.1 »** dans le dépôt (le Programme 20.2 le constatait déjà). Les socles équivalents existent : `KOLAKISA_CORE_*`, `KOLAKISA_COMPONENTS_*`, `KOLAKISA_ADMIN_MULTISITE.md`. | Rien à fusionner ; les systèmes réels ont été audités directement dans le code. |
-| 20.2 (Site Builder) | Branche `origin/feat/programme-20-2-site-builder` (`1dc4a813`), **non fusionnée dans `main`**, avec 10 tests hérités en échec (registre de menu des sites, voir ses `REMAINING_ISSUES`). | 20.4 s'appuie sur `main`, comme 20.3 : création d'un site = écran « Mes sites » existant ; la bibliothèque importe dans un site existant. |
-| 20.3 (Theme Builder) | **Sur `main`** (`06f6a2b4`) : modèles de thème avec exclusions, modification, conflits signalés ; statut « validé avec réserves » (affectations par organisation, pas par site : D2). | Les modèles de thème de la bibliothèque s'appuient dessus (`themeTemplates.add`) ; la limite D2 est reprise et signalée à l'écran. Ses tests (`theme-builder-regles`, `theme-builder-routes-20-3`) sont rejoués dans la suite de 20.4. |
+| 20.1 (audit et conception) | Documents `KOLAKISA_PROGRAMME20_1_*` et `KOLAKISA_PROGRAMME20_ROADMAP.md` fusionnés dans `main` pendant ce travail (au départ : absents de la branche de base). Statut « validé avec réserves ». La feuille de route définit 20.4 : catalogue unifié **calculé** (lecture), format `kolakisa-template@1`, import sûr avec `requires`, enregistrement de ses modèles, kits de site, tests hostiles | Suivie : catalogue calculé (écarts G10), enveloppe `kolakisa-template@1` (G11), analyse de compatibilité + droits dédiés (G12), 7 packs et contenu par secteur (G13). Non couverts : duplication de site (G19), mesure sur kits réels (partielle, voir TESTS) |
+| 20.2 (Site Builder) | Fusionné dans `main` pendant ce travail (`5f2996f0`) ; **assistant de création de site** (`src/siteWizard`, écran « Créer un site ») déjà sur `main` : il crée un site depuis un pack de la bibliothèque | 20.4 s'y raccorde : `templateLibrary.packs()` (conservée) alimente l'assistant avec les 12 packs ; son appel d'import passe `confirm: true` (site tout neuf, avertissements connus) |
+| 20.3 (Theme Builder) | Sur `main` : modèles de thème avec exclusions, modification, conflits ; « validé avec réserves » (affectations par organisation : D2) | Les modèles de thème de la bibliothèque appellent `themeTemplates.add` ; l'affectation demande une **confirmation** qui rappelle la portée « organisation » |
+
+Sur le moment de la première lecture du dépôt, 20.2 n'était pas fusionné et 20.1 n'avait pas de documents sur la branche de base ; la décision a été de bâtir sur `main` (comme 20.3), puis de fusionner `main` de nouveau avant livraison. Les tests de 20.2 et 20.3 (`programme20-2-site-builder`, `theme-builder-regles`, `theme-builder-routes-20-3`) sont rejoués dans la suite de 20.4.
 
 ### 1.2 Ce qui existait déjà (réutilisé, rien reconstruit)
 | Besoin | Existant | Décision |
@@ -31,7 +33,7 @@ Partielles : catalogue limité à 5 packs et 23 pages (aucun secteur), recherche
 ## 2. Ce qui a été développé
 
 ### 2.1 Catalogue officiel (contenu réel, sans image ni faux contenu)
-**99 modèles officiels** : 12 sites complets (56 pages au total), 39 gabarits de page, 34 sections, 8 composants, 6 modèles du Theme Builder. Ajouts de 20.4 : 7 packs (agence digitale, portfolio créatif, restaurant, immobilier, blog et magazine, boutique de formations, association), 16 gabarits par secteur, 11 sections par secteur, 8 composants (2 en-têtes, 2 pieds de page, bandeaux, cartes, bloc de chiffre), 6 modèles du Theme Builder (article, liste du blog, archive de catégorie, page d'auteur, résultats de recherche, 404). Tous utilisent les éléments natifs du Page Builder ; tous les textes sont des consignes entre crochets (« [Prix réel] »).
+**99 modèles officiels** : 12 sites complets (56 pages au total), 39 gabarits de page, 34 sections, 8 composants, 6 modèles du Theme Builder. Ajouts de 20.4 : 7 packs (agence digitale, portfolio créatif, restaurant, immobilier, blog et magazine, boutique de formations, association), 16 gabarits par secteur, 12 compositions de section par secteur, 8 composants (2 en-têtes, 2 pieds de page, bandeaux, cartes, bloc de chiffre), 6 modèles du Theme Builder (article, liste du blog, archive de catégorie, page d'auteur, résultats de recherche, 404). Tous utilisent les éléments natifs du Page Builder ; tous les textes sont des consignes entre crochets (« [Prix réel] »).
 
 ### 2.2 Taxonomie administrable
 Table `cms_template_sectors` (migration `117`) : 8 familles, 48 secteurs officiels (en lecture seule), secteurs personnalisés par organisation (droit `templates.categories`). Les modèles référencent des **clés**, jamais des libellés.
@@ -58,6 +60,8 @@ Onglets (Sites complets, Pages, Sections, Composants, Thème, Mes modèles, Impo
 | `inventaire-tables-sites.json` | `cms_template_sectors` classée « plateforme » | Test d'inventaire des tables |
 
 Aucune assertion n'a été supprimée ni assouplie pour faire disparaître un échec.
+
+**Fichier d'une autre fonctionnalité modifié (une ligne)** : `src/siteWizard/index.js` (assistant de création de site, arrivé sur `main` pendant ce travail) appelle `templateLibrary.importTemplate` ; l'import exige désormais une confirmation quand l'analyse émet un avertissement (ex. « aucune formation publiée » pour le pack Boutique de formations). L'appel de l'assistant passe `confirm: true` : le site est tout neuf et l'assistant est lui-même un parcours guidé. `templateLibrary.packs()` est conservée (même forme qu'avant) pour l'assistant. `tests/assistant-creation-site.test.js` passe.
 
 ## 4. Bugs trouvés par les tests pendant le développement
 Référence inconnue ou modèle d'un autre site → erreur 500 au lieu de 422 (corrigé) ; focus clavier perdu quand la barre d'onglets est reconstruite (corrigé) ; doublon de nom d'un modèle renvoyait 422 au lieu de 409 (corrigé) ; identifiant de composition renvoyé `undefined` (corrigé).
