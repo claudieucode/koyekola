@@ -188,6 +188,14 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_ai_plan_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_ai_plans": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_ai_requests": {
    "siteId": true,
    "classe": "a-decider"
@@ -276,7 +284,19 @@
    "siteId": true,
    "classe": "a-isoler-B4"
   },
+  "mk_content_sets": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_content_sites": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_content_versions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_content_voice": {
    "siteId": true,
    "classe": "isolee"
   },

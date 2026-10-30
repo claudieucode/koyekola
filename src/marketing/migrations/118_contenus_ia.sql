@@ -5,7 +5,7 @@
 --                         `source_set_id` relie une version linguistique à sa version d'origine.
 --   mk_content_versions : historique des valeurs de chaque champ (génération, variantes proposées, choix, modification manuelle, application).
 -- Les textes sont conservés pour l'historique et l'annulation ; le contexte (faits fournis par la personne) l'est pour régénérer sans les redemander. Ils suivent l'effacement du site (ON DELETE CASCADE).
--- Retour arrière (hors production, après sauvegarde) : DROP TABLE mk_content_versions ; DROP TABLE mk_content_sets ; DROP TABLE mk_content_voice ; DELETE FROM schema_migrations WHERE scope = 'marketing' AND version = '117'.
+-- Retour arrière (hors production, après sauvegarde) : DROP TABLE mk_content_versions ; DROP TABLE mk_content_sets ; DROP TABLE mk_content_voice ; DELETE FROM schema_migrations WHERE scope = 'marketing' AND version = '118'.
 CREATE TABLE mk_content_voice (
   site_id INTEGER PRIMARY KEY REFERENCES mk_sites(id) ON DELETE CASCADE,
   organization_id INTEGER NOT NULL REFERENCES mk_organizations(id),

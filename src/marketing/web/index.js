@@ -76,6 +76,7 @@ function createMarketingRouters({ db }) {
   });
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
   admin.use(require("./siteModules")()); // R7 lot 6.0 : activation des modules par site (équipe seulement)
+  admin.use(require("./designGenerator")()); // Programme 21.5 : direction artistique générée (brouillon du personnalisateur)
   admin.use(require("./pageGenerator")()); // Programme 21.4 : générateur de pages natives à partir d'un plan (brouillons uniquement)
   admin.use(require("./contentGenerator")()); // Programme 21.6 : générateur de contenus (textes des sections natives, SEO, révisions, brouillon)
   admin.use(require("./siteWizard")()); // Programme 20.6 : assistant de création guidée d'un site (orchestre les services existants)
@@ -120,6 +121,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./scoring")());
   admin.use(require("./surveys")());
   admin.use(require("./ai")());
+  admin.use(require("./aiPlanner")()); // Programme 21.3 : Brief Analyzer et Site Planner (API JSON, /ia/site/…)
   admin.use(require("./domains")());
   admin.use(require("./social")());
   admin.use(require("./automations")({ db }));

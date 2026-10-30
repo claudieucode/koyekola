@@ -25,7 +25,7 @@ module.exports = () => {
       let plan;
       try { plan = JSON.parse(String(req.body.plan || "")); } catch { throw new MarketingError("invalid_field", "Le plan n'est pas un JSON valide."); }
       const only = [].concat(req.body.pages || []).flatMap((x) => String(x).split(",")).filter(Boolean);
-      const run = await gen.generate(ctx, id, plan, { useAi: req.body.ia === "oui", only: only.length ? only : null });
+      const run = await gen.generate(ctx, id, plan, { useAi: req.body.ia === "oui", only: only.length ? only : null, layout: require("../../designGen").appliedLayout(ctx, id) });
       flash(req, "ok", "Proposition prête : rien n'est encore enregistré. Examinez-la, puis appliquez-la en brouillon.");
       res.redirect(`${W(id)}/${run.id}`);
     } catch (e) {

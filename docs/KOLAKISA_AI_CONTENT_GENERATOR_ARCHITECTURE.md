@@ -19,7 +19,7 @@ page native (sections du brouillon)               ─┼─► champs admissible
 8. **Contrôles** : `validate` (certain / probable, 4 gravités), `seo` (métadonnées, structure H1/H2, bourrage, cannibalisation, alt), questions pour les faits manquants.
 9. **Enregistrement** : ensemble `proposed` + versions initiales, en une transaction.
 
-## Données (migration 117)
+## Données (migration 118)
 `mk_content_sets` (un ensemble par page et par langue ; `fields` JSON avec valeur, source `ai|user`, verrou, valeur de base, dernière valeur appliquée), `mk_content_versions` (historique, variantes proposées), `mk_content_voice`. `revision` protège les écritures concurrentes (409).
 
 ## Statuts

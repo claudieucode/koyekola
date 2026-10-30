@@ -11,10 +11,11 @@
 8. **SEO** : pas de recherche de mots-clés, pas de données de volume/concurrence, pas de données structurées ni de maillage automatique ; hiérarchie H1/H2 déduite de la convention du rendu (non vérifiée visuellement).
 9. **Correction orthographique/grammaticale** : absente (contrôles mécaniques seulement).
 
-## Prérequis non remplis
+## Prérequis
 - **21.2 AI Core** : présent mais **non branché en production** (aucun appelant, permission `ai.use` inexistante). Le défaut utilise donc `ai.call` (plafond d'organisation, module « ia » du site). Le branchement Core (`gateway.viaCore`) est testé mais inactif en production.
-- **21.3 Brief Analyzer / Site Planner** : non fusionné dans `main` (branche à part). L'adaptateur `facts.fromBriefAnalysis` lit sa forme v1 mais n'est testé que sur un exemple ; **conflit de numéro de migration (116) à résoudre** : la migration du 21.3 doit passer à 118 ou plus avant fusion.
-- **21.5 AI Design Generator** : inexistant ; ce palier ne touche à aucun style.
+- **21.3** : fusionné dans `main` pendant ce palier ; l'adaptateur de faits est testé sur un vrai `brief.normalize`. **Le Site Planner n'alimente pas encore la génération de contenus** (pas de lien plan → pages → contenus automatisé : chaque étape est appelée séparément).
+- **21.5 AI Design Generator** : fusionné dans `main` ; non utilisé par ce palier (aucune lecture de ses jetons).
+- Migration : ce palier porte le numéro **118** (117 = plans de site 21.3). Un autre palier fusionné entre-temps imposerait une nouvelle renumérotation.
 
 ## Risques et points d'attention
 - Les textes générés d'un site (faits fournis compris : e-mail, téléphone) sont conservés dans `mk_content_sets` pour l'historique, sans durée de conservation ni purge ; non branché sur « Effacer les données ».
@@ -28,4 +29,4 @@
 Voir le rapport final : **non déployé**.
 
 ## Conditions pour le programme 21.7 (médias et ressources)
-Fusionner 21.3 (après renumérotation de sa migration) ; décider du branchement du Core en production ; un essai réel borné sur ce palier ; une interface (21.8) ou au minimum un écran de revue des ensembles ; décider de la durée de conservation des textes et faits.
+Décider du branchement du Core en production ; un essai réel borné sur ce palier ; une interface (21.8) ou au minimum un écran de revue des ensembles ; décider de la durée de conservation des textes et faits.

@@ -239,6 +239,15 @@ describe("H/L — informations inconnues, qualité", () => {
     const c = facts.buildContext({ analysis: { project: { name: { value: "Orion", status: "explicit" }, sector: { value: "transport", status: "inferred" }, audience: { value: "PME", status: "assumed" }, city: { value: "Lubumbashi", status: "explicit" } }, goals: [{ key: "devis", label: "Recevoir des demandes de devis", status: "explicit" }] } });
     assert.deepEqual(Object.keys(c.facts).sort(), ["city", "company_name", "goals", "sector"]); assert.equal(c.facts.company_name.source, "brief");
   });
+  test("brief analysé RÉEL du 21.3 (brief.normalize) → faits : explicites et déduits retenus, hypothèses écartées", () => {
+    const brief = require("../src/marketing/ai/builder/brief");
+    const fact = (value = "", status = "unknown", evidence = "") => ({ value, status, evidence, confidence: 0.9 });
+    const raw = { briefLanguage: "fr", name: fact("Orion Transport", "explicit", "Orion Transport"), siteType: fact("entreprise", "explicit", "entreprise"), sector: fact("transport", "explicit", "transport"), country: fact(), city: fact("Lubumbashi", "explicit", "Lubumbashi"), siteLanguage: fact("fr", "assumed"), audience: fact("PME", "assumed"), tone: fact(), formality: fact(), style: fact(), typography: fact(), colors: [], secondaryTypes: [], goals: [{ key: "devis", status: "explicit", confidence: 0.9, evidence: "devis" }], features: [], pagesRequested: [], contradictions: [], missing: [], questions: [] };
+    const analysis = brief.normalize(raw, "Orion Transport : entreprise de transport à Lubumbashi, demandes de devis", {});
+    const c = facts.buildContext({ analysis });
+    assert.deepEqual(Object.keys(c.facts).sort(), ["city", "company_name", "goals", "sector"]);
+    assert.equal(c.facts.company_name.value, "Orion Transport"); assert.ok(!c.facts.audience, "l'audience « assumed » n'est pas un fait");
+  });
   test("L. répétitions, incohérences, langue, ponctuation : classées par gravité, certain / probable distingués, aucune note", () => {
     const ctx = facts.buildContext({});
     const v = V.normalize({});

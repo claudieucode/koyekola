@@ -3,15 +3,16 @@
 Branche `feat/programme-21-6-content-generator`, issue de `origin/main` `01247a32`.
 
 ## 1. Audit initial (état réel, vérifié dans le code)
-| Programme | Constat sur `origin/main` |
+Le dépôt a **évolué pendant ce palier** : d'autres sessions ont fusionné des paliers dans `main`. Constat à la fin (après fusion de `origin/main` `5641e61d` dans la branche) :
+| Programme | Constat |
 |---|---|
-| 21.1 (audit) | Documents présents **seulement** sur la branche `docs/programme-21-1-ai-website-builder` (non fusionnée). |
-| 21.2 AI Core | **Présent** (`src/ai/*`, migration 116, tests `ai-core*.test.js`). **Non branché en production** (`getAiCore()` n'est appelé nulle part ; la permission `ai.use` n'existe pas dans les rôles). |
-| 21.3 Brief Analyzer / Site Planner | **Absent de `main`** : il existe sur `feat/programme-21-3-brief-planner` (non fusionnée). Sa migration porte aussi le numéro **116** : conflit à résoudre avant toute fusion. |
-| 21.4 Page Generator / Component Mapper | **Présent** (`src/pageGen/*`, route `generateur`). Il a défini son propre contrat de Site Plan v1 (le Planner n'existait pas). Il écrit des textes d'exemple entre crochets (`[Service]`) et un texte IA minimal (`aiCopy`). |
-| 21.5 AI Design Generator | **Absent** (aucune branche, aucun document). Le design se lit donc dans les jetons et styles existants ; ce palier ne produit ni style ni jeton. |
+| 21.1 (audit) | Fusionné dans `main` (documents). |
+| 21.2 AI Core | **Présent** (`src/ai/*`, migration 116, tests `ai-core*.test.js`), **non branché en production** (`getAiCore()` jamais appelé ; permission `ai.use` inexistante). |
+| 21.3 Brief Analyzer / Site Planner | **Présent sur `main`** (`src/marketing/ai/builder/*`, migration 117 renumérotée). Utilisé ici via `facts.fromBriefAnalysis` (testé sur un vrai `brief.normalize`). Le plan de site v1 du 21.3 n'est pas relié au Page Generator. |
+| 21.4 Page Generator | **Présent** (`src/pageGen/*`). Il a son propre contrat de plan v1 ; il écrit des textes d'exemple `[…]` que ce palier remplace. |
+| 21.5 AI Design Generator | **Présent sur `main`** (commit `e4524ca7`) mais **non utilisé** par ce palier : aucun style, jeton ou couleur n'est produit ni lu ; seule la voix éditoriale est prise en compte. |
 
-Conséquences de conception : le générateur de contenus s'appuie sur ce qui **existe sur `main`** (pages natives produites par le Page Generator ou par la personne) et reste compatible avec le BriefAnalysis v1 (21.3) par un adaptateur de faits, sans dépendre de sa fusion.
+Au début du palier, seuls 21.2 et 21.4 étaient sur `main` ; la conception s'appuie donc sur les pages natives et reste indépendante des fusions ultérieures.
 
 ## 2. Livré
 | Élément | Fichier |
@@ -25,8 +26,8 @@ Conséquences de conception : le générateur de contenus s'appuie sur ce qui **
 | Passerelle IA (legacy `ai.call` ou AI Core) | `src/contentGen/gateway.js` |
 | Moteur (génération, révision, traduction, application) | `src/contentGen/engine.js` |
 | API JSON `/marketing/site-web/sites/:id/contenus/…` | `src/marketing/web/contentGenerator.js` |
-| Migration 117 (`mk_content_voice`, `mk_content_sets`, `mk_content_versions`) | `src/marketing/migrations/117_contenus_ia.sql` |
-| Tests | `tests/programme21-6-content-generator.test.js` (26), `…-http.test.js` (3) |
+| Migration 118 (`mk_content_voice`, `mk_content_sets`, `mk_content_versions`) | `src/marketing/migrations/118_contenus_ia.sql` |
+| Tests | `tests/programme21-6-content-generator.test.js` (27), `…-http.test.js` (3) |
 
 Fichiers existants modifiés : `web/index.js` (montage), et trois tests dont le plafond de numéro de migration était périmé (`site-menu-p1a`, `site-espace`).
 

@@ -500,11 +500,15 @@ function createSite(ctx, { name, tokens, slug, description, siteType } = {}) {
   const finalSlug = slug !== undefined && String(slug).trim() !== "" ? cleanSiteSlug(ctx, slug) : freeSiteSlug(ctx, landing.slugify(clean_).replace(/^page$/, "site"));
   const desc = line(description ?? "", 500);
   const type = cleanSiteType(siteType ?? "");
-  const id = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, slug, description, site_type, tokens, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .run(ctx.organizationId, clean_, finalSlug, desc, type, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
-  audit(ctx, "site.created", "site", id, {});
-  // Adresse de la plateforme : seulement si un domaine de plateforme est configuré (PLATFORM_DOMAIN) ; sinon le site n'en reçoit pas (rien n'est inventé)
-  try { const d = require("../../services/siteDomains"); if (d.platformStatus().available) d.ensurePlatformDomain(ctx, id); } catch { /* le site est créé ; l'adresse peut être activée plus tard depuis « Domaines » */ }
+  // Une seule opération : le site, son journal et son adresse de plateforme sont enregistrés ensemble ou pas du tout (jamais de site à moitié créé)
+  const id = transaction(ctx.db, () => {
+    const newId = Number(ctx.db.prepare("INSERT INTO mk_sites (organization_id, name, slug, description, site_type, tokens, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(ctx.organizationId, clean_, finalSlug, desc, type, JSON.stringify(normalizeTokens(tokens || DEFAULT_TOKENS, { strict: Boolean(tokens) })), ctx.userId ?? null).lastInsertRowid);
+    audit(ctx, "site.created", "site", newId, {});
+    // Adresse de la plateforme : seulement si un domaine de plateforme est configuré (PLATFORM_DOMAIN) ; sinon le site n'en reçoit pas (rien n'est inventé)
+    try { const d = require("../../services/siteDomains"); if (d.platformStatus().available) d.ensurePlatformDomain(ctx, newId); } catch { /* le site est créé ; l'adresse peut être activée plus tard depuis « Domaines » */ }
+    return newId;
+  });
   return getSite(ctx, id);
 }
 function updateSite(ctx, id, { name, tokens, slug, description, siteType } = {}) {
