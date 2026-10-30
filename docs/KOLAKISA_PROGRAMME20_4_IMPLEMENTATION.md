@@ -36,7 +36,7 @@ Partielles : catalogue limité à 5 packs et 23 pages (aucun secteur), recherche
 **99 modèles officiels** : 12 sites complets (56 pages au total), 39 gabarits de page, 34 sections, 8 composants, 6 modèles du Theme Builder. Ajouts de 20.4 : 7 packs (agence digitale, portfolio créatif, restaurant, immobilier, blog et magazine, boutique de formations, association), 16 gabarits par secteur, 12 compositions de section par secteur, 8 composants (2 en-têtes, 2 pieds de page, bandeaux, cartes, bloc de chiffre), 6 modèles du Theme Builder (article, liste du blog, archive de catégorie, page d'auteur, résultats de recherche, 404). Tous utilisent les éléments natifs du Page Builder ; tous les textes sont des consignes entre crochets (« [Prix réel] »).
 
 ### 2.2 Taxonomie administrable
-Table `cms_template_sectors` (migration `117`) : 8 familles, 48 secteurs officiels (en lecture seule), secteurs personnalisés par organisation (droit `templates.categories`). Les modèles référencent des **clés**, jamais des libellés.
+Table `cms_template_sectors` (migration `123`) : 8 familles, 48 secteurs officiels (en lecture seule), secteurs personnalisés par organisation (droit `templates.categories`). Les modèles référencent des **clés**, jamais des libellés.
 
 ### 2.3 Services et routes
 | Fichier | Rôle |

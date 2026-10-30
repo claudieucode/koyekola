@@ -27,6 +27,8 @@ const COMPONENTS = [
     build: () => bar([card([H("[chiffre réel]", "2", { fontSize: "40px", textAlign: "center" }), T("<p>[ce qu'il mesure, et sa source]</p>", { textAlign: "center" })])]) },
   { key: "bandeau-appel", role: "component", category: "Blocs de contenu", name: "Bandeau d'appel à l'action", description: "Titre, phrase d'appui et bouton sur fond de couleur principale.",
     build: () => bar([H("[Prêt à commencer ?]", "2", { color: "token:on-primary", textAlign: "center" }), T("<p>[Le bénéfice principal en une phrase.]</p>", { color: "token:on-primary", textAlign: "center" }), B("[Je commence]", "/contact", "outline")], { backgroundColor: "token:primary", alignItems: "center", paddingTop: "48px", paddingBottom: "48px" }) },
+  { key: "barre-boutique", role: "component", category: "Boutique", name: "Barre de boutique (recherche et panier)", description: "Recherche de produits et lien vers le panier, branchés sur la boutique du site (module « Commerce » requis).",
+    build: () => bar([{ type: "group", children: [{ type: "shopsearch", props: {} }, { type: "shopcart", props: {} }], styles: { desktop: row } }]) },
 ];
 void grid;
 const catalog = () => COMPONENTS.map(({ key, role, category, name, description }) => ({ key, role, category, name, description }));

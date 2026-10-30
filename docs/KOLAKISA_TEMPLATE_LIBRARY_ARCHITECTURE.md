@@ -25,14 +25,14 @@ Non réalisé : modèle « personnel » d'un utilisateur, visible de lui seul à
 ## 3. Stockage
 | Donnée | Table | Détail |
 |---|---|---|
-| Modèles de page du site | `mk_page_templates` (existante) | + colonnes de la migration 117 : `version`, `format_version`, `keywords`, `sectors` (JSON de clés), `language`, `site_type`, `updated_by` ; `shared` = visibilité ; `created_by` = auteur ; `site_id` = site d'origine ; `updated_at` = date |
+| Modèles de page du site | `mk_page_templates` (existante) | + colonnes de la migration 123 : `version`, `format_version`, `keywords`, `sectors` (JSON de clés), `language`, `site_type`, `updated_by` ; `shared` = visibilité ; `created_by` = auteur ; `site_id` = site d'origine ; `updated_at` = date |
 | Compositions du site | `appearance_patterns` (existante, corbeille) | inchangée |
 | Composants | `mk_web_components` (existante) | inchangée |
 | Secteurs | `cms_template_sectors` (nouvelle) | `organization_id` NULL = officiel ; unicité `(COALESCE(organization_id,0), slug)` |
 | Journal des imports | `cms_template_imports` (existante) | + `undone_at`, `undone_by` |
 | Affectations de thème | `mk_settings` `theme.templates` (existante, 20.3) | inchangée |
 
-Migration `117_bibliotheque_modeles.sql` : **additive** (colonnes avec valeur par défaut, une table, 48 lignes de départ). Annulation : `DROP TABLE cms_template_sectors` ; les colonnes ajoutées sont ignorées par l'ancien code.
+Migration `123_bibliotheque_modeles.sql` : **additive** (colonnes avec valeur par défaut, une table, 48 lignes de départ). Annulation : `DROP TABLE cms_template_sectors` ; les colonnes ajoutées sont ignorées par l'ancien code.
 
 ## 4. Taxonomie (administrable, non codée en dur)
 8 familles et 48 secteurs officiels dans `cms_template_sectors` (Entreprises et services, Création et communication, Commerce, Éducation et formation, Santé et bien-être, Médias et contenus, Restauration et hôtellerie, Organisations et communautés — exactement la liste du cahier des charges). Une organisation ajoute ses secteurs (famille existante ou nouvelle), les désactive ou les retire s'ils ne classent aucun modèle. Les secteurs d'une organisation ne sont jamais visibles d'une autre. Le catalogue officiel référence des **clés** (`pages/libraryMeta.js`) ; un test vérifie que chaque clé existe dans la table. La 2e dimension, `category`, reste un libellé fonctionnel libre (« Vente », « Contact »…), et `siteType` réutilise `SITE_TYPES` du moteur.

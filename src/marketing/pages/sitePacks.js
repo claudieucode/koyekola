@@ -52,5 +52,9 @@ const PACKS = Object.freeze([
     palette: "foret", fonts: { heading: "bricolage", body: "figtree" },
     pages: [{ key: "accueil", name: "Accueil", template: "asso-accueil" }, { key: "actions", name: "Actions", template: "asso-missions" }, { key: "adhesion", name: "Adhésion", template: "asso-adhesion" }, { key: "soutenir", name: "Nous soutenir", template: "asso-soutenir" }, { key: "contact", name: "Contact", template: "contact" }],
     menu: ["accueil", "actions", "adhesion", "soutenir", "contact"] },
+  { key: "boutique-en-ligne", category: "Boutique", name: "Boutique en ligne", description: "Accueil, catalogue, livraison et retours, questions et contact, branchés sur la boutique du site (module « Commerce » à activer, boutique à ouvrir).",
+    palette: "ocean", fonts: { heading: "bricolage", body: "figtree" },
+    pages: [{ key: "accueil", name: "Accueil", template: "boutique-produits-accueil" }, { key: "catalogue", name: "Catalogue", template: "boutique-catalogue" }, { key: "livraison", name: "Livraison et retours", template: "boutique-livraison" }, { key: "faq", name: "Questions fréquentes", template: "faq" }, { key: "contact", name: "Contact", template: "contact" }],
+    menu: ["accueil", "catalogue", "livraison", "faq", "contact"] },
 ]);
 module.exports = { PACKS };

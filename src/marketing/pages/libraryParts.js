@@ -19,6 +19,10 @@ const PARTS = [
     build: () => [section([H("Résultats pour « {{query.q}} »", "1"), post("search", { target: "blog" }), post("archiveinfo"), list("archive", 12)])] },
   { key: "page-introuvable", themeType: "not_found", category: "Erreurs", name: "Page introuvable (404)", description: "Message clair, recherche dans le blog et retour à l'accueil.",
     build: () => [section([H("Cette page est introuvable", "1", { textAlign: "center" }), T("<p>Elle a peut-être été déplacée ou supprimée.</p>", { textAlign: "center" }), post("search", { target: "blog" }), B("Retour à l'accueil", "/")], { alignItems: "center", paddingTop: "96px", paddingBottom: "96px" })] },
+  { key: "fiche-produit", themeType: "product", category: "Boutique", name: "Fiche produit", description: "Titre, prix, disponibilité et bouton d'achat du produit affiché (étiquettes {{product.…}}), branchés sur la boutique du site.",
+    build: () => [section([H("{{product.title}}", "1"), T("<p>{{product.price}} · {{product.availability}}</p>"), post("shopbuy"), T("<p>[Description, matières, entretien : à compléter dans la fiche du produit.]</p>")], { maxWidth: "820px" })] },
+  { key: "catalogue-produits", themeType: "product_archive", category: "Boutique", name: "Catalogue de produits", description: "Recherche, filtres et grille qui suit la catégorie et la recherche de l'adresse.",
+    build: () => [section([H("Notre catalogue", "1"), post("shopsearch"), post("shopfilters"), post("shopgrid", { source: "archive", count: 12, columns: "3", orderby: "newest" })])] },
 ];
 void grid;
 const catalog = () => PARTS.map(({ key, themeType, category, name, description }) => ({ key, themeType, category, name, description }));

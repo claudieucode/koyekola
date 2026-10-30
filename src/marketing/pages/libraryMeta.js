@@ -7,6 +7,7 @@ const SEC = { // regroupements de secteurs réutilisés
   resto: ["restaurant", "cafe"], editorial: ["blog", "magazine", "actualites", "portail-editorial"], commerce: ["boutique-en-ligne", "produits-numeriques", "catalogue-produits"],
   asso: ["association", "ong", "fondation", "communaute", "organisation-professionnelle"], pro: ["services-professionnels", "conseil"], horaires: ["restaurant", "cafe", "cabinet", "clinique", "bien-etre", "fitness", "hotel"],
 };
+const SHOP = ["boutique-en-ligne", "catalogue-produits", "mode", "beaute", "electronique", "maison-decoration"]; // gabarits GÉNÉRIQUES de vente de produits : ils conviennent à ces secteurs, sans texte propre à l'un d'eux
 const m = (sectors, siteType, keywords, since = OLD) => ({ sectors, siteType, keywords, since });
 
 const META = {
@@ -56,6 +57,11 @@ const META = {
   "section:project-grid": m(SEC.creatif.concat(["agence-digitale"]), "vitrine", ["projets", "galerie", "réalisations"], NEW), "section:values": m(SEC.asso, "vitrine", ["valeurs", "missions"], NEW),
   "section:process-4": m([], "", ["méthode", "étapes", "processus"], NEW), "section:services-prices": m(SEC.pro.concat(SEC.agence), "vitrine", ["prestations", "prix", "liste de prix"], NEW),
   "section:quote-large": m([], "", ["citation", "témoignage"], NEW), "section:blog-latest": m(SEC.editorial, "blog", ["articles", "blog", "derniers"], NEW), "section:catalogue-live": m(SEC.commerce.concat(SEC.formation), "boutique", ["catalogue", "formations", "boutique"], NEW),
+  "pack:boutique-en-ligne": m(SHOP, "boutique", ["boutique", "e-commerce", "produits", "panier", "catalogue", "vente en ligne"], NEW),
+  "page:boutique-produits-accueil": m(SHOP, "boutique", ["boutique", "produits à la une", "promotions"], NEW), "page:boutique-catalogue": m(SHOP, "boutique", ["catalogue", "recherche", "filtres", "produits"], NEW), "page:boutique-livraison": m(SHOP, "boutique", ["livraison", "retours", "paiement"], NEW),
+  "section:shop-featured": m(SHOP, "boutique", ["produits à la une", "grille", "boutique"], NEW), "section:shop-sale": m(SHOP, "boutique", ["promotions", "soldes", "boutique"], NEW), "section:shop-search": m(SHOP, "boutique", ["recherche", "filtres", "boutique"], NEW), "section:shop-archive": m(SHOP, "boutique", ["catalogue", "catégorie", "boutique"], NEW),
+  "component:barre-boutique": m(SHOP, "boutique", ["recherche", "panier", "boutique"], NEW),
+  "part:fiche-produit": m(SHOP, "boutique", ["fiche produit", "prix", "achat", "boutique"], NEW), "part:catalogue-produits": m(SHOP, "boutique", ["catalogue", "catégorie de produits", "boutique"], NEW),
   // Composants
   "component:header-simple": m([], "", ["en-tête", "logo", "menu"], NEW), "component:header-cta": m([], "", ["en-tête", "bouton", "menu"], NEW), "component:footer-simple": m([], "", ["pied de page", "copyright"], NEW),
   "component:footer-colonnes": m([], "", ["pied de page", "colonnes", "contact"], NEW), "component:bandeau-annonce": m([], "", ["annonce", "bandeau"], NEW), "component:carte-service": m([], "", ["carte", "service"], NEW),

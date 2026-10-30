@@ -132,7 +132,7 @@ const URL_KEYS = /^(src|image|logo|poster|background|embed|iframe|video|audio|th
 function analyze(ctx, siteId, sections, { can = () => true, originSiteId = siteId, themeType = null } = {}) {
   const widgets = new Map(), blockers = [], warnings = [], notes = [];
   const forms = new Set(), components = new Set(), external = new Set(), uploads = new Set();
-  let needsCourses = false, needsBlog = false, needsForm = false;
+  let needsCourses = false, needsBlog = false, needsForm = false, needsShop = false;
   const label = (type) => (nodes.NODE_TYPES[type] && nodes.NODE_TYPES[type].label) || (sectionsLib.TYPES[type] && sectionsLib.TYPES[type].label) || null;
   const scan = (value, key, ownerType) => {
     if (typeof value === "string") {
@@ -175,9 +175,19 @@ function analyze(ctx, siteId, sections, { can = () => true, originSiteId = siteI
   if (uploads.size && (originSiteId ?? null) !== (siteId ?? null)) warnings.push({ code: "foreign_media", message: `Le modèle cite ${uploads.size} fichier(s) de la médiathèque d'un autre site : ils seront affichés tels quels tant que vous ne les remplacez pas (ils ne sont pas copiés).` });
   if (external.size) warnings.push({ code: "external_resources", message: `Le modèle charge des ressources externes depuis : ${[...external].sort().join(", ")}. Vérifiez qu'elles sont autorisées et conformes à votre politique de confidentialité.` });
   if (needsCourses && listCourses(ctx).length === 0) warnings.push({ code: "no_courses", message: "Le modèle affiche des formations, mais aucune formation n'est publiée : la zone restera vide jusqu'à la première publication." });
+  // Éléments de boutique (Programme 20.5) : ils lisent la boutique du SITE DE DESTINATION ; sans module « Commerce » ou boutique ouverte, ils n'affichent rien au public
+  const shopTypes = [...widgets.keys()].filter((t) => /^shop/.test(t));
+  if (shopTypes.length) {
+    needsShop = true;
+    try {
+      const siteId2 = siteId ?? null;
+      if (!require("../marketing/siteModules").isEnabled(ctx.db, ctx.organizationId, siteId2, "commerce")) warnings.push({ code: "shop_module", message: "Le module « Commerce » n'est pas activé pour ce site (Modules du site) : les éléments de boutique n'afficheront rien au public tant qu'il ne l'est pas." });
+      else if (!(ctx.db.prepare("SELECT enabled FROM mk_shop_settings WHERE organization_id = ? AND site_id IS ?").get(ctx.organizationId, siteId2) || { enabled: 0 }).enabled) warnings.push({ code: "shop_closed", message: "La boutique de ce site est fermée (Boutique → Réglages) : les éléments de boutique n'afficheront rien au public tant qu'elle n'est pas ouverte." });
+    } catch { /* tables de boutique absentes : aucun avertissement inventé */ } // lecture seule : jamais getSettings(), qui crée la ligne de réglages
+  }
   if (needsForm) notes.push({ code: "form_to_choose", message: "Le modèle contient un formulaire d'inscription : choisissez-en un avant de publier la page." });
   if (themeType) notes.push({ code: "theme_type", message: `Modèle du Theme Builder (${themeType}) : la page est créée en brouillon ; l'affecter au site est une action distincte.` });
-  const requires = [...(needsCourses ? ["formations"] : []), ...(needsBlog ? ["blog"] : []), ...(needsForm || forms.size ? ["formulaire"] : [])];
+  const requires = [...(needsCourses ? ["formations"] : []), ...(needsBlog ? ["blog"] : []), ...(needsShop ? ["boutique"] : []), ...(needsForm || forms.size ? ["formulaire"] : [])];
   const status = blockers.length ? "blocked" : warnings.length ? "warn" : "ok";
   return { status, blockers, warnings, notes, widgets: [...widgets.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "fr")), requires, deps: { forms: [...forms], components: [...components], uploads: [...uploads], external: [...external].sort() } };
 }

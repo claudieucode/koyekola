@@ -6,6 +6,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor, newStudent } = require("./helpers");
+const { PACKS } = require("../src/marketing/pages/sitePacks");
+const { TEMPLATES } = require("../src/marketing/pages/templates");
+const { COMPONENTS } = require("../src/marketing/pages/libraryComponents");
 
 let chromium = null;
 try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
@@ -57,7 +60,7 @@ describe("programme 20.4 — bibliothèque de modèles (navigateur)", { skip: SK
     const levels = await page.evaluate(() => [...document.querySelectorAll("main h1, main h2, main h3, [data-tp-root] h1, [data-tp-root] h2, [data-tp-root] h3")].filter((h) => !h.closest("dialog") && !h.closest("[hidden]")).map((h) => Number(h.tagName[1])));
     assert.ok(levels.length >= 13, `titres : ${levels}`); assert.deepEqual(levels.filter((l, i) => i > 0 && l > levels[i - 1] + 1), [], `aucun saut de niveau de titre : ${levels}`);
     assert.ok((await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1);
-    assert.equal(await page.locator("[data-tp-count]").innerText(), "12 modèles");
+    assert.equal(await page.locator("[data-tp-count]").innerText(), `${PACKS.length} modèles — 12 affichés`);
   });
 
   test("recherche côté serveur (nom, secteur, mot-clé, sans accent), aucun résultat avec « Réinitialiser », filtres cumulés, tri, réinitialisation", async () => {
@@ -72,15 +75,15 @@ describe("programme 20.4 — bibliothèque de modèles (navigateur)", { skip: SK
     await page.selectOption("[data-tp-sort]", "alpha"); await settle(page); const list = await names(page); assert.deepEqual(list, [...list].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" })));
     await search(page, "carte"); assert.deepEqual(await names(page), ["Restaurant — carte"]);
     await page.click("[data-tp-reset]"); await settle(page); assert.equal(await page.locator("[data-tp-family]").inputValue(), ""); assert.equal(await page.locator("[data-tp-sector]").isDisabled(), true);
-    await tab(page, "component"); await page.selectOption("[data-tp-compat]", "ok"); await settle(page); assert.equal(await cards(page).count(), 8);
+    await tab(page, "component"); await page.selectOption("[data-tp-compat]", "ok"); await settle(page); assert.equal(await cards(page).count(), COMPONENTS.length - 1, "le composant qui lit la boutique est « à vérifier » tant que le module Commerce est absent");
   });
 
-  test("« Afficher plus » : 12, 24, 36 puis 39 modèles de pages, bouton masqué à la fin, compteur exact ; la page d'accueil de la bibliothèque ne charge pas toutes les vignettes", async () => {
+  test("« Afficher plus » : 12, 24, 36 puis tous les modèles de pages, bouton masqué à la fin, compteur exact ; la page d'accueil de la bibliothèque ne charge pas toutes les vignettes", async () => {
     const page = await open(); await edit(page); await tab(page, "page");
-    assert.equal(await cards(page).count(), 12); assert.equal(await page.locator("[data-tp-more]").isVisible(), true); assert.match(await page.locator("[data-tp-count]").innerText(), /39 modèles — 12 affichés/);
+    assert.equal(await cards(page).count(), 12); assert.equal(await page.locator("[data-tp-more]").isVisible(), true); assert.match(await page.locator("[data-tp-count]").innerText(), new RegExp(`${TEMPLATES.length} modèles — 12 affichés`));
     const loaded = await page.evaluate(() => [...document.querySelectorAll(".mk-pt-thumb iframe")].filter((f) => f.getAttribute("src")).length); assert.ok(loaded < 12, `vignettes chargées à la demande : ${loaded}`);
-    for (const n of [24, 36, 39]) { await page.click("[data-tp-more]"); await page.waitForFunction((k) => document.querySelectorAll(".mk-pt-card").length === k, n); await idle(page); }
-    assert.equal(await page.locator("[data-tp-more-wrap]").isHidden(), true); assert.equal(new Set(await names(page)).size, 39, "aucun doublon entre les pages");
+    for (const n of [24, 36, TEMPLATES.length]) { await page.click("[data-tp-more]"); await page.waitForFunction((k) => document.querySelectorAll(".mk-pt-card").length === k, n); await idle(page); }
+    assert.equal(await page.locator("[data-tp-more-wrap]").isHidden(), true); assert.equal(new Set(await names(page)).size, TEMPLATES.length, "aucun doublon entre les pages");
   });
 
   test("détail : éléments, structure, compatibilité, licence ; Échap ferme et rend le focus au bouton ; aperçu par page et par appareil puis « Voir les détails »", async () => {

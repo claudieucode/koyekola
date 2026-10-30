@@ -72,6 +72,11 @@ const PATTERNS = [
   { key: "quote-large", category: "Preuve", label: "Grande citation", build: () => [section([{ type: "quote", props: { text: "[Témoignage réel, reproduit avec l'accord de la personne.]", author: "[Prénom N., fonction]" } }], { maxWidth: "820px", alignItems: "center" })] },
   { key: "blog-latest", category: "Blog", label: "Derniers articles du blog", build: () => [section([H("[Nos derniers articles]", "2", { textAlign: "center" }), { type: "posts", props: { count: 3, layout: "grid" } }])] },
   { key: "catalogue-live", category: "Formations", label: "Catalogue en direct (6 formations)", build: () => [section([H("[Notre catalogue]", "2", { textAlign: "center" }), { type: "courselist", props: { count: 6, sort: "recent" } }])] },
+  // ---- Programme 20.4 x boutique (Programme 20.5) : elements branches sur le VRAI moteur de boutique du site ; ils n'affichent rien au public tant que le module "Commerce" n'est pas active et la boutique ouverte ----
+  { key: "shop-featured", category: "Boutique", label: "Produits à la une (grille)", build: () => [section([H("[Nos produits à la une]", "2", { textAlign: "center" }), { type: "shopgrid", props: { source: "featured", count: 6, columns: "3", orderby: "featured" } }])] },
+  { key: "shop-sale", category: "Boutique", label: "Produits en promotion (grille)", build: () => [section([H("[Promotions en cours]", "2", { textAlign: "center" }), { type: "shopgrid", props: { source: "sale", count: 4, columns: "4", orderby: "newest" } }])] },
+  { key: "shop-search", category: "Boutique", label: "Recherche et filtres de produits", build: () => [section([{ type: "shopsearch", props: {} }, { type: "shopfilters", props: {} }], { maxWidth: "820px" })] },
+  { key: "shop-archive", category: "Boutique", label: "Catalogue (suit la catégorie et la recherche)", build: () => [section([{ type: "shopgrid", props: { source: "archive", count: 12, columns: "3", orderby: "newest" } }])] },
 ];
 
 function catalog(ctx) {

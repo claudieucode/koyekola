@@ -58,8 +58,10 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
         if (r.status === 409) { assert.equal(json(r).details.code, "confirm_required", t.key); r = await imp(boss, C, { ref: `page:${t.key}`, confirm: true }); }
         assert.equal(r.status, 200, `${t.key} : ${r.text.slice(0, 200)}`);
       }
-      for (const c of components.COMPONENTS) { const r = await ok(imp(boss, C, { ref: `component:${c.key}` })); assert.ok(r.result.component.id, c.key); }
-      for (const p of parts.PARTS) { const r = await ok(imp(boss, C, { ref: `part:${p.key}` })); assert.equal(r.result.pages.length, 1, p.key); assert.ok(sectionsOf(r.result.pages[0].id).length >= 1); }
+      // Un modèle qui lit la boutique ou les formations avertit (module absent, rien de publié) : la confirmation est exigée, puis l'import réussit
+      const withConfirm = async (body) => { let r = await imp(boss, C, body); if (r.status === 409) { assert.equal(json(r).details.code, "confirm_required", body.ref); r = await imp(boss, C, { ...body, confirm: true }); } return ok(Promise.resolve(r)); };
+      for (const c of components.COMPONENTS) { const r = await withConfirm({ ref: `component:${c.key}` }); assert.ok(r.result.component.id, c.key); }
+      for (const p of parts.PARTS) { const r = await withConfirm({ ref: `part:${p.key}` }); assert.equal(r.result.pages.length, 1, p.key); assert.ok(sectionsOf(r.result.pages[0].id).length >= 1); }
       // Une page contient 30 sections au plus (limite du moteur) : on remplit plusieurs pages cibles
       const targets = [await newPage(boss, C, "Cible des sections 1")]; let total = 0;
       for (const p of patterns.PATTERNS.filter((x) => !x.requires)) {
@@ -185,6 +187,21 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
       const before = counts(); const r = await refused(imp(boss, A, { ref: `mine:${ext}` }), 409, /confirmation/); assert.equal(r.details.code, "confirm_required"); assert.deepEqual(counts(), before);
       await ok(imp(boss, A, { ref: `mine:${ext}`, confirm: true }));
       assert.equal(counts().pages, before.pages + 1);
+    });
+    test("éléments de BOUTIQUE (moteur du Programme 20.5) : module « Commerce » absent puis boutique fermée → avertissements nommés et confirmation ; module activé et boutique ouverte → compatible ; aucune écriture à la lecture", async () => {
+      const shopRows = () => one("SELECT COUNT(*) n FROM mk_shop_settings").n;
+      const d1 = json(await boss.get(`${TP}/detail.json?site=${B}&ref=pack:boutique-en-ligne`)).item;
+      assert.equal(d1.compat.status, "warn"); assert.ok(d1.warnings.some((w) => w.code === "shop_module")); assert.ok(d1.requires.includes("boutique")); assert.ok(d1.widgets.some((w) => w.type === "shopgrid"));
+      const before = counts(); await refused(imp(boss, B, { ref: "pack:boutique-en-ligne" }), 409, /confirmation/); assert.deepEqual(counts(), before);
+      db.prepare("INSERT INTO mk_site_modules (site_id, organization_id, module, enabled) VALUES (?, ?, 'commerce', 1)").run(B, orgId);
+      const rows = shopRows();
+      const d2 = json(await boss.get(`${TP}/detail.json?site=${B}&ref=section:shop-featured`)).item; assert.equal(d2.compat.status, "warn"); assert.ok(d2.warnings.some((w) => w.code === "shop_closed"), "module activé mais boutique fermée");
+      await cat(boss, B, "compat=ok"); await cat(boss, B, "source=pack"); assert.equal(shopRows(), rows, "consulter la bibliothèque ne crée aucune ligne de réglages de boutique");
+      db.prepare("INSERT INTO mk_shop_settings (organization_id, site_id, enabled) VALUES (?, ?, 1)").run(orgId, B);
+      const d3 = json(await boss.get(`${TP}/detail.json?site=${B}&ref=pack:boutique-en-ligne`)).item; assert.equal(d3.compat.status, "ok"); assert.deepEqual(d3.warnings, []);
+      const pk = await ok(imp(boss, B, { ref: "pack:boutique-en-ligne" })); assert.equal(pk.result.pages.length, 5);
+      assert.match(JSON.stringify(draftOf(pk.result.pages[0].id)), /shopgrid/, "les éléments de boutique sont dans la page importée");
+      const part = await ok(imp(boss, B, { ref: "part:fiche-produit", assign: true, confirm: true })); assert.equal(part.result.theme.type, "product");
     });
     test("pas de formation publiée : la boutique est « à vérifier » (confirmation) ; avec une formation publiée, elle est compatible", async () => {
       const before = counts(); await refused(imp(boss, A, { ref: "page:boutique-accueil" }), 409);

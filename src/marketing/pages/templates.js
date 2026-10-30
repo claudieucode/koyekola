@@ -103,6 +103,12 @@ const TEMPLATES = [
     build: (ctx) => [hero("Adhérer", "[Montant et durée de la cotisation : à renseigner.]"), list("Pourquoi adhérer", ["[Avantage 1]", "[Avantage 2]", "[Avantage 3]"]), form("Demande d'adhésion", "Vos coordonnées et votre motivation."), ...block("faq", ctx)] },
   { key: "asso-soutenir", category: "Association", name: "Association — nous soutenir", description: "Les façons de soutenir l'association ; aucun paiement n'est intégré à ce modèle.",
     build: () => [hero("Nous soutenir", "[Vos besoins réels.]"), features("Comment nous aider", [["Donner du temps", "[Missions de bénévolat.]"], ["Faire un don", "[Indiquez le moyen de don que vous gérez : le modèle n'en fournit pas.]"], ["Devenir partenaire", "[Entreprises et institutions.]"]]), cta("Parlons-en", "[Contact dédié.]", "Nous contacter", "/contact")] },
+  { key: "boutique-produits-accueil", category: "Boutique", name: "Boutique en ligne — accueil", description: "Promesse, produits à la une et en promotion de la vraie boutique du site, garanties à renseigner, questions.",
+    build: (ctx) => [hero("[Nom de la boutique]", "[Ce que vous vendez, et ce qui vous distingue.]", "Voir le catalogue", "/boutique"), ...block("shop-featured", ctx), features("Pourquoi acheter chez nous", [["Livraison", "[Délais et zones réels.]"], ["Retours", "[Conditions réelles.]"], ["Paiement", "[Moyens de paiement acceptés.]"]]), ...block("shop-sale", ctx), ...block("faq", ctx)] },
+  { key: "boutique-catalogue", category: "Boutique", name: "Boutique en ligne — catalogue", description: "Recherche, filtres et grille des produits de la boutique (suit la catégorie et la recherche de l'adresse).",
+    build: (ctx) => [hero("Notre catalogue", "[Une phrase sur l'assortiment.]"), ...block("shop-search", ctx), ...block("shop-archive", ctx)] },
+  { key: "boutique-livraison", category: "Boutique", name: "Boutique en ligne — livraison et retours", description: "Livraison, retours, paiement et questions : à compléter avec vos conditions réelles.",
+    build: (ctx) => [hero("Livraison, retours et paiement", "[Vos engagements, en une phrase.]"), features("Ce qu'il faut savoir", [["Livraison", "[Zones, délais, frais réels.]"], ["Retours et remboursements", "[Délai légal et conditions.]"], ["Paiement sécurisé", "[Moyens acceptés.]"]]), ...block("faq", ctx), cta("Une question avant d'acheter ?", "[Délai de réponse réel.]", "Nous contacter", "/contact")] },
 ];
 
 // Sections d'un gabarit (sections absentes faute de données retirées) ; null si la clé est inconnue
