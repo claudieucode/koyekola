@@ -46,7 +46,29 @@ function list(ctx) {
 // Conditions possibles selon la famille : catégorie (articles, listes, archives de catégorie), étiquette (articles, archives d'étiquette),
 // article précis (articles seulement). Une condition vide = « tous ».
 const CONDITIONS = { single_post: ["category", "tag", "postId"], blog_archive: ["category"], category_archive: ["category"], tag_archive: ["tag"], search_results: [], static_page: [], not_found: [] };
-function add(ctx, { type, pageId, category = "", tag = "", postId = null, audience = null }) {
+// Exclusions : mêmes familles de critères que les conditions, mais elles RETIRENT le modèle (ex. « tout le blog sauf la catégorie Actualités »).
+// Une exclusion l'emporte toujours sur une condition d'inclusion. Listes de noms (catégorie, étiquette) ou d'identifiants d'articles.
+const MAX_EXCLUDE = 20;
+function cleanExclude(ctx, type, raw) {
+  const allowed = CONDITIONS[type] || [];
+  const out = {};
+  const terms = (v) => [...new Set((Array.isArray(v) ? v : String(v ?? "").split(",")).map((x) => line(x, 80)).filter(Boolean))].slice(0, MAX_EXCLUDE);
+  if (allowed.includes("category")) { const c = terms(raw && raw.category); if (c.length) out.category = c; }
+  if (allowed.includes("tag")) { const t = terms(raw && raw.tag); if (t.length) out.tag = t; }
+  if (allowed.includes("postId")) {
+    const ids = [...new Set((Array.isArray(raw && raw.postId) ? raw.postId : String((raw && raw.postId) ?? "").split(",")).map((x) => String(x).trim()).filter(Boolean).map(Number))].slice(0, MAX_EXCLUDE);
+    for (const id of ids) if (!Number.isInteger(id) || id < 1 || !ctx.db.prepare("SELECT 1 FROM posts WHERE id = ? AND deleted_at IS NULL").get(id)) throw new MarketingError("invalid", "Exclusion : article introuvable.");
+    if (ids.length) out.postId = ids;
+  }
+  return out;
+}
+// Les modèles du même type qui obtiendraient le MÊME score que celui-ci : en cas d'égalité, le plus ancien l'emporte (voir pick).
+// Renvoie leurs noms, pour que l'interface informe au lieu de laisser l'arbitrage invisible.
+function specificity(t) { return (t.postId ? 8 : 0) + (t.category ? 4 : 0) + (t.tag ? 2 : 0) + (t.audience ? 1 : 0); }
+function sameRankAs(ctx, entry, current) {
+  return current.filter((o) => o.id !== entry.id && o.type === entry.type && specificity(o) === specificity(entry)).map((o) => { const p = pageRow(ctx, o.pageId); return { id: o.id, pageName: p ? p.name : "(page supprimée)" }; });
+}
+function add(ctx, { type, pageId, category = "", tag = "", postId = null, audience = null, exclude = null }) {
   if (!Object.hasOwn(TYPES, type)) throw new MarketingError("invalid", "Type de modèle inconnu.");
   const page = Number.isInteger(pageId) ? pageRow(ctx, pageId) : null;
   if (!page || page.archived_at) throw new MarketingError("invalid", "Choisissez une page du site (non archivée) comme modèle.");
@@ -63,11 +85,33 @@ function add(ctx, { type, pageId, category = "", tag = "", postId = null, audien
     pid = Number(postId);
     if (!Number.isInteger(pid) || !ctx.db.prepare("SELECT 1 FROM posts WHERE id = ? AND deleted_at IS NULL").get(pid)) throw new MarketingError("invalid", "Article introuvable.");
   }
-  const same = (t) => t.type === type && (t.category || "").toLowerCase() === cat.toLowerCase() && (t.tag || "").toLowerCase() === tg.toLowerCase() && (t.postId || null) === pid && JSON.stringify(t.audience || null) === JSON.stringify(aud);
+  const ex = cleanExclude(ctx, type, exclude);
+  const same = (t) => JSON.stringify(t.exclude || null) === JSON.stringify(Object.keys(ex).length ? ex : null) && t.type === type && (t.category || "").toLowerCase() === cat.toLowerCase() && (t.tag || "").toLowerCase() === tg.toLowerCase() && (t.postId || null) === pid && JSON.stringify(t.audience || null) === JSON.stringify(aud);
   if (current.some(same)) throw new MarketingError("invalid", "Un modèle existe déjà pour ce type et ces conditions : retirez-le d'abord ou changez les conditions.");
-  const entry = { id: newId(), type, pageId, category: cat, ...(tg ? { tag: tg } : {}), ...(pid ? { postId: pid } : {}), ...(aud ? { audience: aud } : {}) };
+  const now = new Date().toISOString();
+  const entry = { id: newId(), type, pageId, category: cat, ...(tg ? { tag: tg } : {}), ...(pid ? { postId: pid } : {}), ...(aud ? { audience: aud } : {}), ...(Object.keys(ex).length ? { exclude: ex } : {}), createdAt: now, updatedAt: now };
   write(ctx, [...current, entry]);
-  return entry;
+  return { ...entry, conflicts: sameRankAs(ctx, entry, current) };
+}
+// Modifier les conditions (ou la page) d'un modèle existant. Mêmes contrôles que add ; le modèle garde son rang d'ancienneté (donc son arbitrage).
+function update(ctx, id, changes = {}) {
+  const current = read(ctx);
+  const at = current.findIndex((t) => t.id === id);
+  if (at < 0) throw new MarketingError("not_found", "Modèle introuvable.");
+  const old = current[at];
+  const rest = current.filter((t) => t.id !== id);
+  const probe = { ctx: { ...ctx, settings: { get: () => JSON.stringify(rest), set: () => {} } } };
+  // Validation par le chemin d'ajout, sur une liste sans l'ancien modèle (pas de faux doublon avec lui-même)
+  const entry = add(probe.ctx, {
+    type: old.type, pageId: changes.pageId === undefined ? old.pageId : changes.pageId, category: changes.category === undefined ? old.category : changes.category,
+    tag: changes.tag === undefined ? old.tag : changes.tag, postId: changes.postId === undefined ? old.postId : changes.postId,
+    audience: changes.audience === undefined ? old.audience : changes.audience, exclude: changes.exclude === undefined ? old.exclude : changes.exclude,
+  });
+  const next = { ...entry, id: old.id, createdAt: old.createdAt || entry.createdAt, updatedAt: new Date().toISOString() };
+  delete next.conflicts;
+  const list = current.slice(); list[at] = next;
+  write(ctx, list);
+  return { ...next, conflicts: sameRankAs(ctx, next, list) };
 }
 function remove(ctx, id) {
   const current = read(ctx);
@@ -79,6 +123,17 @@ function remove(ctx, id) {
 // du modèle est EN LIGNE. Renvoie la page (ligne de base) ou null.
 //   category : nom de la catégorie courante (archive) ; categories : [nom de la catégorie de l'article, puis ses parentes] ;
 //   tags : noms des étiquettes de l'article ; tag : étiquette courante (archive) ; postId : article affiché.
+// Une exclusion écarte le modèle quoi qu'il en soit : catégorie ou étiquette courante (ou de l'article) dans la liste, ou article exclu.
+function excludedBy(t, { cats, tgs, postId }) {
+  const ex = t.exclude;
+  if (!ex) return null;
+  if (ex.postId && postId != null && ex.postId.includes(Number(postId))) return "L'article affiché est exclu par ce modèle.";
+  const hitCat = (ex.category || []).find((c) => cats.includes(String(c).toLowerCase()));
+  if (hitCat) return `La catégorie « ${hitCat} » est exclue par ce modèle.`;
+  const hitTag = (ex.tag || []).find((c) => tgs.includes(String(c).toLowerCase()));
+  if (hitTag) return `L'étiquette « ${hitTag} » est exclue par ce modèle.`;
+  return null;
+}
 function pick(ctx, type, { category = "", categories = [], tag = "", tags = [], postId = null, visitor } = {}) {
   const lc = (v) => String(v || "").toLowerCase();
   const cats = [category, ...categories].filter(Boolean).map(lc);
@@ -86,6 +141,7 @@ function pick(ctx, type, { category = "", categories = [], tag = "", tags = [], 
   const scored = [];
   read(ctx).forEach((t, order) => {
     if (t.type !== type) return;
+    if (excludedBy(t, { cats, tgs, postId })) return;
     if (visitor !== undefined && !nodes.audienceMatches(t.audience, visitor)) return;
     let score = 0;
     if (t.postId) { if (Number(postId) !== t.postId) return; score += 8; }
@@ -121,9 +177,11 @@ function explain(ctx, type, { category = "", categories = [], tag = "", tags = [
   read(ctx).forEach((t, order) => {
     if (t.type !== type) return;
     const p = pageRow(ctx, t.pageId);
-    const base = { id: t.id, pageId: t.pageId, pageName: p ? p.name : "(page supprimée)", conditions: { category: t.category || "", tag: t.tag || "", postId: t.postId || null, audience: t.audience ? nodes.audienceLabel(t.audience) : "" } };
+    const base = { id: t.id, pageId: t.pageId, pageName: p ? p.name : "(page supprimée)", conditions: { category: t.category || "", tag: t.tag || "", postId: t.postId || null, exclude: t.exclude || null, audience: t.audience ? nodes.audienceLabel(t.audience) : "" } };
     let score = 0, reason = "";
-    if (t.postId && Number(postId) !== t.postId) reason = "L'article demandé n'est pas celui du modèle.";
+    const excl = excludedBy(t, { cats, tgs, postId });
+    if (excl) reason = excl;
+    else if (t.postId && Number(postId) !== t.postId) reason = "L'article demandé n'est pas celui du modèle.";
     else if (t.postId) score += 8;
     if (!reason && t.category) { const at = cats.indexOf(lc(t.category)); if (at < 0) reason = `La catégorie « ${t.category} » ne correspond pas à la page demandée.`; else score += 4 + (at === 0 ? 0.5 : 0); }
     if (!reason && t.tag) { if (!tgs.includes(lc(t.tag))) reason = `L'étiquette « ${t.tag} » ne correspond pas à la page demandée.`; else score += 2; }
@@ -145,4 +203,4 @@ function explain(ctx, type, { category = "", categories = [], tag = "", tags = [
 // Type d'affectation d'une page (pour montrer des données d'exemple pendant qu'on la dessine)
 const typesOfPage = (ctx, pageId) => read(ctx).filter((t) => t.pageId === pageId).map((t) => t.type);
 
-module.exports = { guardPageRemoval, explain, registerTemplateType, TYPES, CONDITIONS, KEY, MAX_TEMPLATES, list, add, remove, pick, typesOfPage, read };
+module.exports = { update, specificity, guardPageRemoval, explain, registerTemplateType, TYPES, CONDITIONS, KEY, MAX_TEMPLATES, list, add, remove, pick, typesOfPage, read };

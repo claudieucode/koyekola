@@ -93,11 +93,24 @@ module.exports = () => {
       res.set("Cache-Control", "no-store").json({ ...out, audienceNote: "Le public du visiteur n'est pas simulé ici : un modèle réservé à un public est compté comme s'il convenait." });
     } catch (error) { res.status(422).json({ error: { code: "invalid", message: error.message } }); }
   });
+  // Conditions saisies : les noms de catégorie / étiquette restent des textes comparés sans interprétation (comportement historique, voir
+  // KOLAKISA_THEME_BUILDER_DISPLAY_RULES.md) ; les exclusions sont des listes séparées par des virgules, les articles exclus doivent exister.
+  const themeConditions = (body) => {
+    const split = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
+    const who = String(body.audience || "");
+    return { category: body.category, audience: who ? { who, value: body.audience_value } : null, exclude: { category: split(body.exclude_category), tag: split(body.exclude_tag), postId: split(body.exclude_post) } };
+  };
+  const conflictNote = (e) => (e.conflicts && e.conflicts.length ? ` Attention : même précision que ${e.conflicts.map((c) => `« ${c.pageName} »`).join(", ")} ; en cas d'égalité, le modèle affecté en premier est utilisé.` : "");
   router.post("/site-web/modeles-de-theme", need("forms.write"), (req, res, next) => {
     attempt(req, res, next, "/marketing/site-web/modeles-de-theme", () => {
-      const who = String(req.body.audience || "");
-      themeTemplates.add(req.mk.ctx, { type: req.body.type, pageId: intOrNull(req.body.page_id), category: req.body.category, audience: who ? { who, value: req.body.audience_value } : null });
-      return "Modèle enregistré. Il s'applique dès que sa page est en ligne ; sans modèle, le site garde son affichage d'origine.";
+      const e = themeTemplates.add(req.mk.ctx, { type: req.body.type, pageId: intOrNull(req.body.page_id), ...themeConditions(req.body) });
+      return `Modèle enregistré. Il s'applique dès que sa page est en ligne ; sans modèle, le site garde son affichage d'origine.${conflictNote(e)}`;
+    });
+  });
+  router.post("/site-web/modeles-de-theme/:tid([a-f0-9]{8})/modifier", need("forms.write"), (req, res, next) => {
+    attempt(req, res, next, "/marketing/site-web/modeles-de-theme", () => {
+      const e = themeTemplates.update(req.mk.ctx, req.params.tid, { pageId: intOrNull(req.body.page_id) ?? undefined, ...themeConditions(req.body) });
+      return `Conditions du modèle mises à jour.${conflictNote(e)}`;
     });
   });
   router.post("/site-web/modeles-de-theme/:tid([a-f0-9]{8})/supprimer", need("forms.write"), (req, res, next) => {
