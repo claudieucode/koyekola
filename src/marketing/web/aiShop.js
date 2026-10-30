@@ -26,17 +26,17 @@ module.exports = () => {
   const st = (req) => ({ state: project.state(req.mk.ctx, pid(req), { can: can(req) }) });
   const html = (fn) => (req, res, next) => { try { fn(req, res, next); } catch (e) { if (e instanceof MarketingError) return res.status(e.code === "not_found" ? 404 : e.code === "forbidden" || e.code === "module_disabled" ? 403 : 422).render("error", { message: e.message }); next(e); } };
 
-  router.get(`${B}/projets.json`, need("forms.read"), (req, res, next) => send(res, next, () => ({ projects: project.list(req.mk.ctx) })));
+  router.get(`${B}/projets.json`, need("forms.read"), need("templates.read"), (req, res, next) => send(res, next, () => ({ projects: project.list(req.mk.ctx) })));
   router.post(`${B}/projets`, need("forms.write"), (req, res, next) => send(res, next, () => {
     const b = body(req); const v = project.createWithSite(req.mk.ctx, { brief: b.brief, siteId: b.siteId ? Number(b.siteId) : undefined, newSiteName: b.newSiteName });
     return { id: v.id, url: `/marketing${B}/${v.id}?site=${v.siteId}` };
   }));
-  router.get(`${B}/:id(\\d+)`, need("forms.read"), html((req, res) => {
+  router.get(`${B}/:id(\\d+)`, need("forms.read"), need("templates.read"), html((req, res) => {
     const s = project.state(req.mk.ctx, pid(req), { can: can(req) });
     const json = JSON.stringify(s).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
     res.set("Cache-Control", "no-store").render("marketing/ai-shop", { title: s.project.name, project: s.project, id: pid(req), canWrite: req.mk.can("forms.write"), canShop: req.mk.can("shop.write"), canPayments: req.mk.can("shop.payments"), canDesign: req.mk.can("appearance.styles"), canPublish: req.mk.can("pages.publish"), initialJson: json, base: `/marketing${B}/${pid(req)}`, steps: project.STEPS });
   }));
-  router.get(`${B}/:id(\\d+)/etat.json`, need("forms.read"), (req, res, next) => send(res, next, () => st(req)));
+  router.get(`${B}/:id(\\d+)/etat.json`, need("forms.read"), need("templates.read"), (req, res, next) => send(res, next, () => st(req)));
   router.post(`${B}/:id(\\d+)/modifier`, need("forms.write"), (req, res, next) => send(res, next, () => { project.edit(req.mk.ctx, pid(req), body(req).operation, { revision: body(req).revision }); return st(req); }));
   router.post(`${B}/:id(\\d+)/annuler`, need("forms.write"), (req, res, next) => send(res, next, () => { project.undo(req.mk.ctx, pid(req), { revision: body(req).revision }); return st(req); }));
   router.post(`${B}/:id(\\d+)/retablir`, need("forms.write"), (req, res, next) => send(res, next, () => { project.redo(req.mk.ctx, pid(req), { revision: body(req).revision }); return st(req); }));
@@ -54,12 +54,12 @@ module.exports = () => {
   router.post(`${B}/:id(\\d+)/appliquer/configuration`, need("shop.payments"), (req, res, next) => send(res, next, () => ({ result: project.applyConfig(req.mk.ctx, pid(req), body(req).items || null), ...st(req) })));
 
   // Médias : médiathèque du site uniquement
-  router.get(`${B}/:id(\\d+)/media/bibliotheque`, need("forms.read"), (req, res, next) => send(res, next, () => { const v = project.load(req.mk.ctx, pid(req)); return { items: require("../../aiMedia").library(req.mk.ctx, v.site_id, { q: String(req.query.q || "").slice(0, 80), limit: 40 }) }; }));
+  router.get(`${B}/:id(\\d+)/media/bibliotheque`, need("forms.read"), need("templates.read"), (req, res, next) => send(res, next, () => { const v = project.load(req.mk.ctx, pid(req)); return { items: require("../../aiMedia").library(req.mk.ctx, v.site_id, { q: String(req.query.q || "").slice(0, 80), limit: 40 }) }; }));
   router.post(`${B}/:id(\\d+)/media/produit`, need("shop.write"), (req, res, next) => send(res, next, () => ({ result: project.assignImage(req.mk.ctx, pid(req), Number(body(req).productId), Number(body(req).mediaId), { alt: body(req).alt }), ...st(req) })));
 
   // Design
   router.post(`${B}/:id(\\d+)/design/generer`, need("appearance.styles"), (req, res, next) => send(res, next, async () => ({ ...(await project.generateDesign(req.mk.ctx, pid(req), body(req).brief || {}, { useAi: body(req).useAi === true })), ...st(req) })));
-  router.get(`${B}/:id(\\d+)/design/:rid(\\d+)/comparer`, need("appearance.read"), (req, res, next) => send(res, next, () => ({ comparison: project.designCompare(req.mk.ctx, pid(req), req.params.rid, String(req.query.variante || ""), { can: can(req) }) })));
+  router.get(`${B}/:id(\\d+)/design/:rid(\\d+)/comparer`, need("appearance.read"), need("templates.read"), (req, res, next) => send(res, next, () => ({ comparison: project.designCompare(req.mk.ctx, pid(req), req.params.rid, String(req.query.variante || ""), { can: can(req) }) })));
   router.post(`${B}/:id(\\d+)/design/:rid(\\d+)/appliquer`, need("appearance.styles"), (req, res, next) => send(res, next, () => ({ result: project.designApply(req.mk.ctx, pid(req), req.params.rid, String(body(req).variante || ""), { overwrite: false, can: can(req), userId: req.session.user.id }), ...st(req) })));
   router.post(`${B}/:id(\\d+)/design/:rid(\\d+)/annuler`, need("appearance.styles"), (req, res, next) => send(res, next, () => ({ result: project.designUndo(req.mk.ctx, pid(req), req.params.rid, { can: can(req), userId: req.session.user.id }), ...st(req) })));
 
