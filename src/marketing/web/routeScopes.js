@@ -84,6 +84,7 @@ const SITE_RULES = Object.freeze([
   { id: "page-par-identifiant", pattern: /^\/pages\/(\d+)(?:\/|$)/, kind: "resource", table: "page", idGroup: 1 },
   { id: "site-dans-le-chemin", pattern: /^\/site-web\/sites\/(\d+)(?:\/|$)/, kind: "path", idGroup: 1 },
   { id: "site-principal", pattern: /^\/site-web\/principal(?:\/|$)/, kind: "main" },
+  { id: "boutique-principal", pattern: /^\/site-web\/boutique(?:\/|$)/, kind: "main" }, // Programme 20.5 : adresse historique de la boutique du principal (équipe seulement)
   { id: "historique-de-page", pattern: /^\/site-web\/historique\/page\/(\d+)(?:\/|$)/, kind: "resource", table: "page", idGroup: 1 },
   { id: "composant-par-identifiant", pattern: /^\/site-web\/composants\/(\d+)/, kind: "resource", table: "composant", idGroup: 1 },
   { id: "page-creation-json", pattern: /^\/pages\/(?:creer|importer)\.json$/, methods: ["POST"], kind: "bodySiteIdJson" },
@@ -180,7 +181,7 @@ const FAMILIES = Object.freeze([
   { id: "templates-par-site", scope: "site", pattern: /^\/site-web\/templates(?:\/|$)/ },
   { id: "editeur-du-site-par-site", scope: "site", pattern: /^\/site-web\/editeur-du-site(?:\/|$)/ },
   { id: "contenus-par-site", scope: "site", pattern: /^\/site-web\/(?:articles|commentaires|mediatheque|medias|medias\.json)(?:\/|$)/ },
-  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|composants|composants\.json|historique|corbeille|outils|parametres|equipe-site|tests-ab)(?:\/|$)/ },
+  { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|boutique|composants|composants\.json|historique|corbeille|outils|parametres|equipe-site|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —
   { id: "tableau-de-bord", scope: "organization", pattern: /^\/$/ },
   { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },

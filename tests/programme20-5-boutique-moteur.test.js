@@ -418,4 +418,15 @@ describe("boutique", () => {
     assert.equal(catalog.catalogQuery(sMain, { q: "Produit principal" }).total, 1);
     assert.equal(catalog.getProduct(A, id), null);
   });
+
+  test("un moyen de paiement activé mais non configuré n'est jamais proposé (clés absentes)", () => {
+    const saved = { k: process.env.STRIPE_SECRET_KEY, w: process.env.STRIPE_WEBHOOK_SECRET };
+    delete process.env.STRIPE_SECRET_KEY; delete process.env.STRIPE_WEBHOOK_SECRET;
+    try {
+      assert.deepEqual(payments.available({ payment_methods: ["stripe", "manual"] }), ["manual"]);
+      assert.equal(payments.status({ payment_methods: ["stripe"] }).find((p) => p.key === "stripe").configured, false);
+      process.env.STRIPE_SECRET_KEY = "sk_test_x"; process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
+      assert.deepEqual(payments.available({ payment_methods: ["stripe", "manual"] }), ["stripe", "manual"]);
+    } finally { if (saved.k === undefined) delete process.env.STRIPE_SECRET_KEY; else process.env.STRIPE_SECRET_KEY = saved.k; if (saved.w === undefined) delete process.env.STRIPE_WEBHOOK_SECRET; else process.env.STRIPE_WEBHOOK_SECRET = saved.w; }
+  });
 });

@@ -8,15 +8,15 @@
   <% priced.issues.forEach((i) => { %><p class="sh-error" role="alert"><%= i.message %>
     <form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= i.itemId %>/supprimer"><input type="hidden" name="version" value="<%= priced.version %>"><button class="sh-link" type="submit">Retirer du panier</button></form></p><% }) %>
   <div class="sh-table-wrap">
-  <table class="sh-table">
+  <table class="sh-table sh-cart">
     <caption class="sh-sr">Articles du panier</caption>
     <thead><tr><th scope="col">Article</th><th scope="col">Prix unitaire</th><th scope="col">Quantité</th><th scope="col">Sous-total</th><th scope="col"><span class="sh-sr">Retirer</span></th></tr></thead>
     <tbody>
     <% priced.lines.forEach((l) => { %>
       <tr>
         <th scope="row"><a href="<%= shop.base %>/produit/<%= encodeURIComponent(l.slug) %>"><%= l.name %></a><% if (l.variantLabel) { %><br><small><%= l.variantLabel %></small><% } %></th>
-        <td><% if (l.onSale) { %><s class="sh-old"><%= money(l.regularCents) %></s> <% } %><%= money(l.unitCents) %></td>
-        <td>
+        <td data-label="Prix unitaire"><% if (l.onSale) { %><s class="sh-old"><%= money(l.regularCents) %></s> <% } %><%= money(l.unitCents) %></td>
+        <td data-label="Quantité">
           <form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= l.itemId %>">
             <input type="hidden" name="version" value="<%= priced.version %>">
             <label class="sh-sr" for="q<%= l.itemId %>">Quantité de <%= l.name %></label>
@@ -24,8 +24,8 @@
             <button class="sh-btn" type="submit">Mettre à jour</button>
           </form>
         </td>
-        <td><%= money(l.unitCents * l.quantity) %></td>
-        <td><form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= l.itemId %>/supprimer"><input type="hidden" name="version" value="<%= priced.version %>"><button class="sh-link" type="submit" aria-label="Retirer <%= l.name %>">Retirer</button></form></td>
+        <td data-label="Sous-total"><%= money(l.unitCents * l.quantity) %></td>
+        <td data-label="Retirer"><form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= l.itemId %>/supprimer"><input type="hidden" name="version" value="<%= priced.version %>"><button class="sh-link" type="submit" aria-label="Retirer <%= l.name %>">Retirer</button></form></td>
       </tr>
     <% }) %>
     </tbody>

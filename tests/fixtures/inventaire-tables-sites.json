@@ -751,6 +751,90 @@
   "users": {
    "siteId": false,
    "classe": "plateforme"
+  },
+  "mk_shop_cart_items": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_carts": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_categories": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_coupon_redemptions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_coupons": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_customer_tokens": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_customers": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_notifications": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_order_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_order_items": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_orders": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_payments": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_product_categories": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_shop_products": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_settings": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_shipping_methods": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_shipping_zones": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_stock_movements": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_tax_rules": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_variants": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_shop_webhook_events": {
+   "siteId": false,
+   "classe": "plateforme"
   }
  },
  "_lisez_moi": "Inventaire des tables (palier 3, B1). Classes : isolee = colonne de site ; plateforme = pas de contenu propre à un site (comptes, formations, journaux, réglages globaux) ; a-isoler-Bn = contenu qui sera isolé à la phase Bn. Une table nouvelle doit être classée ici (test tests/site-espace-unitaire.test.js). a-decider = contenu ou donnée liée à un site que le plan du palier 3 ne couvre pas encore (sondages, SMS, flux RSS, réseaux sociaux, étiquettes de contacts, rapports, désinscriptions) : décision à prendre avant d'y toucher."

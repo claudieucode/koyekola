@@ -160,6 +160,8 @@ module.exports = ({ db }) => {
       let customerId = req.shopCustomer ? req.shopCustomer.id : null;
       if (!customerId && !settings.guest_checkout) throw new MarketingError("auth", "Connectez-vous ou créez un compte pour commander.");
       const email = req.shopCustomer ? req.shopCustomer.email : b.email;
+      // Un moyen de paiement activé mais non configuré (clés absentes) n'est jamais accepté : aucune commande ne doit réserver du stock sans pouvoir être payée
+      if (!payments.available(settings).includes(String(b.payment_method || ""))) throw new MarketingError("invalid_field", "Ce moyen de paiement n'est pas disponible pour le moment.");
       const { order, duplicate } = orders.createFromCart(s, k, { email, billing, shipping, shippingMethodId: b.shipping_method, paymentMethod: b.payment_method, idempotencyKey: b.idempotency_key, expectedTotalCents: b.expected_total, customerId });
       if (!customerId) { customerId = customers.ensureGuest(s, order.email, shipping.name); db.prepare("UPDATE mk_shop_orders SET customer_id = ? WHERE id = ? AND customer_id IS NULL").run(customerId, order.id); }
       const key = view.orderToken(order);

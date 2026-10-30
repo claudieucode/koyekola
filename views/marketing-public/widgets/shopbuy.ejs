@@ -1,0 +1,22 @@
+<%# Ajouter au panier (widgets/shop.js). Le formulaire envoie des identifiants : le serveur recalcule prix, stock et quantité. %>
+<% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Boutique fermée (<%= d.closed === "module" ? "module Commerce non activé" : "à ouvrir dans Boutique → Réglages" %>).</p></section><% } %>
+<% } else if (!d || !d.product) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Aucun produit : choisissez un produit ou placez cet élément dans un modèle « Fiche produit ».</p></section><% } %>
+<% } else { const pr = d.product; %>
+<section class="<%= cls %> kw-pb"<%- attrs %>>
+  <% if (p.showPrice) { %><p class="kw-pb-price"><% if (pr.onSale) { %><s class="kw-pg-old"><%= pr.regularLabel %></s> <% } %><%= pr.isVariable ? "À partir de " : "" %><strong><%= pr.priceLabel %></strong></p><% } %>
+  <% if (!pr.inStock) { %><p class="kw-pb-out" role="status"><%= p.outLabel %></p>
+  <% } else { %>
+  <form class="kw-pb-wrap" method="post" action="/boutique/panier/ajouter" data-sh-add>
+    <input type="hidden" name="product_id" value="<%= pr.id %>">
+    <input type="hidden" name="retour" value="<%= d.back %>">
+    <% if (pr.isVariable) { %><label class="kw-pb-var"><span class="kw-pb-lbl">Variante</span>
+      <select name="variant_id" required><option value="">Choisir…</option><% pr.variants.forEach((v) => { const out = v.manage_stock && v.stock_qty <= 0; %><option value="<%= v.id %>"<%= out ? " disabled" : "" %>><%= Object.values(v.options).join(" / ") %><%= out ? " — rupture" : "" %></option><% }) %></select></label><% } %>
+    <% if (p.showQuantity) { %><label class="kw-pb-q"><span class="kw-pb-lbl">Quantité</span><input class="kw-pb-qty" type="number" name="quantity" value="1" min="1" max="99" inputmode="numeric"></label><% } else { %><input type="hidden" name="quantity" value="1"><% } %>
+    <button class="kw-pb-btn" type="submit"><%= p.label %></button>
+    <p class="kw-pb-msg" data-sh-msg role="status" aria-live="polite"></p>
+  </form>
+  <% } %>
+  <% if (p.showStock && pr.inStock) { %><p class="kw-pb-stock">En stock</p><% } %>
+  <% if (!isBuilder) { %><script src="/js/boutique.js" defer></script><% } %>
+</section>
+<% } %>

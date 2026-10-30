@@ -72,10 +72,10 @@ const SECTIONS = [
   },
   {
     key: "boutique", label: "Boutique", icon: "cart", items: [
-      leaf("boutique", "Produits", `${BASE}/principal/boutique`, { permission: "shop.read", primary: { label: "Nouveau produit", href: `${BASE}/principal/boutique/produits/nouveau`, permission: "shop.write" } }),
-      leaf("boutique/commandes", "Commandes", `${BASE}/principal/boutique/commandes`, { permission: "shop.read" }),
-      leaf("boutique/clients", "Clients", `${BASE}/principal/boutique/clients`, { permission: "shop.read" }),
-      leaf("boutique/reglages", "Réglages de la boutique", `${BASE}/principal/boutique/reglages`, { permission: "shop.read" }),
+      leaf("boutique", "Produits", `${BASE}/boutique`, { permission: "shop.read", primary: { label: "Nouveau produit", href: `${BASE}/boutique/produits/nouveau`, permission: "shop.write" } }),
+      leaf("boutique/commandes", "Commandes", `${BASE}/boutique/commandes`, { permission: "shop.read" }),
+      leaf("boutique/clients", "Clients", `${BASE}/boutique/clients`, { permission: "shop.read" }),
+      leaf("boutique/reglages", "Réglages de la boutique", `${BASE}/boutique/reglages`, { permission: "shop.read" }),
     ],
   },
   {

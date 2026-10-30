@@ -1352,3 +1352,36 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-compare-range:focus-visible ~ .kw-compare-bar { box-shadow: 0 0 0 3px var(--lp-accent, #0277b6), 0 0 4px rgba(11, 42, 64, 0.5); }
 .kw-compare-empty { display: flex; align-items: center; justify-content: center; aspect-ratio: var(--kw-cmp-ratio, 16 / 9); padding: 16px; text-align: center; color: #6b7280; background: #f3f4f6; border: 1px dashed #d1d5db; }
 .kw-compare-empty:empty { display: none; }
+
+/* Programme 20.5 — éléments « Boutique » du Page Builder (grille, achat, panier, recherche, filtres) */
+/* Éléments de page (Page Builder) : grille de produits, bouton d'achat */
+.kw-pg-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--kw-pg-cols, 3), minmax(0, 1fr)); gap: 20px; }
+.kw-pg-title { margin: 0 0 12px; }
+.kw-pg-card { border: 1px solid color-mix(in srgb, currentColor 16%, transparent); border-radius: 12px; padding: 12px; }
+.kw-pg-link { display: block; color: inherit; text-decoration: none; }
+.kw-pg-img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; }
+.kw-pg-name { display: block; margin-top: 8px; font-weight: 600; }
+.kw-pg-price { margin: 4px 0 0; }
+.kw-pg-old { opacity: .6; }
+.kw-pg-out { margin: 4px 0 0; font-size: .85rem; }
+.kw-pg-empty { opacity: .75; }
+.kw-pb-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kw-pb-qty { width: 5em; min-height: 40px; }
+.kw-pb-btn { min-height: 40px; padding: 8px 16px; border-radius: 8px; border: 1px solid transparent; background: var(--kw-primary, #0277b6); color: var(--kw-on-primary, Canvas); font: inherit; font-weight: 600; cursor: pointer; }
+.kw-pb-msg { flex-basis: 100%; margin: 0; font-size: .9rem; }
+.kw-pb-out { margin: 0; }
+.kw-pg-noimg { background: color-mix(in srgb, currentColor 8%, transparent); }
+.kw-pb-price, .kw-pb-stock, .kw-sc-msg, .kw-ss-msg, .kw-sf-msg { margin: 0 0 8px; }
+.kw-pb-var, .kw-pb-q, .kw-sf-f { display: flex; flex-direction: column; gap: 4px; font-size: .9rem; }
+.kw-pb-lbl, .kw-sf-lbl { font-weight: 600; }
+.kw-sc { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.kw-sc-badge { display: inline-block; min-width: 1.5em; padding: 0 6px; border-radius: 999px; background: var(--kw-primary, #0277b6); color: var(--kw-on-primary, Canvas); text-align: center; font-size: .8rem; }
+.kw-ss { display: flex; gap: 8px; align-items: center; }
+.kw-ss-lbl { flex: 1; }
+.kw-ss-input { width: 100%; min-height: 40px; padding: 8px 10px; border-radius: 8px; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); background: transparent; color: inherit; font: inherit; }
+.kw-sf { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.kw-sf-f select, .kw-sf-f input { min-height: 40px; padding: 6px 8px; border-radius: 8px; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); background: transparent; color: inherit; font: inherit; }
+.kw-sf-c { display: flex; gap: 6px; align-items: center; }
+.kw-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 900px) { .kw-pg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .kw-pg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .kw-ss { flex-wrap: wrap; } }

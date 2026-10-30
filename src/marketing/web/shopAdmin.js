@@ -17,11 +17,11 @@ const siteModules = require("../siteModules");
 const PAGE = 25;
 module.exports = () => {
   const router = express.Router({ mergeParams: true });
-  const PREFIXES = ["/site-web/sites/:id(\\d+)", "/site-web/principal"];
+  const PREFIXES = ["/site-web/sites/:id(\\d+)", "/site-web/principal", "/site-web"]; // site, espace du principal, adresse historique du principal (menu CMS)
 
   // Portée commerciale de la requête : site de l'adresse (vérifié) ou principal (équipe seulement) — sinon refus, jamais de repli
   function scopeOf(req, res) {
-    const space = res.locals.siteSpace;
+    const space = res.locals.siteSpace || (req.path.startsWith("/site-web/boutique") ? res.locals.principalFrame : null);
     const ok = space && (space.principal ? req.mk.siteId === null : Number.isInteger(space.siteId) && req.mk.site && req.mk.site.id === space.siteId);
     if (!ok) {
       const reason = req.mk.siteContext && !req.mk.siteContext.ok ? req.mk.siteContext.reason : "not_found";
