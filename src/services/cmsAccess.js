@@ -264,7 +264,9 @@ function setStatus(organizationId, actor, targetId, status) {
   if (!["active", "suspended", "disabled"].includes(status)) throw new UserError("Statut inconnu.");
   assertCanManage(actor.id, actor.perms, organizationId, targetId, { self: "votre propre statut" });
   const t = db.prepare("SELECT id, status FROM users WHERE id = ?").get(targetId);
-  if (!t) throw new UserError("Compte introuvable.");
+  // Seuls les comptes de l'équipe ou d'un site de CETTE organisation se gèrent ici : un compte sans appartenance (élève, client) est « introuvable »
+  const inOrg = t && (membershipOf(targetId, organizationId) || db.prepare("SELECT 1 FROM mk_site_members sm JOIN mk_sites s ON s.id = sm.site_id WHERE sm.user_id = ? AND s.organization_id = ?").get(targetId, organizationId));
+  if (!t || !inOrg) throw new UserError("Compte introuvable.");
   if (status !== "active") { const m = membershipOf(targetId, organizationId); if (m && m.role === "owner") assertNotLastOwner(organizationId, targetId, "Nommez d'abord un autre Super administrateur."); }
   db.prepare("UPDATE users SET status = ? WHERE id = ?").run(status, targetId);
   audit(organizationId, actor.id, "user.status_changed", "user", targetId, { from: t.status, to: status });
@@ -277,6 +279,7 @@ function removeFromTeam(organizationId, actor, targetId) {
   transaction(db, () => {
     db.prepare("DELETE FROM mk_org_members WHERE organization_id = ? AND user_id = ?").run(organizationId, targetId);
     db.prepare("DELETE FROM mk_site_members WHERE user_id = ?").run(targetId);
+    db.prepare("UPDATE mk_api_keys SET revoked_at = datetime('now') WHERE organization_id = ? AND created_by = ? AND revoked_at IS NULL").run(organizationId, targetId); // les clés d'API créées par cette personne s'arrêtent avec son accès
   });
   audit(organizationId, actor.id, "user.removed", "user", targetId, { role: m ? m.role : null });
 }

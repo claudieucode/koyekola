@@ -93,11 +93,24 @@ module.exports = () => {
       res.set("Cache-Control", "no-store").json({ ...out, audienceNote: "Le public du visiteur n'est pas simulé ici : un modèle réservé à un public est compté comme s'il convenait." });
     } catch (error) { res.status(422).json({ error: { code: "invalid", message: error.message } }); }
   });
+  // Conditions saisies : les noms de catégorie / étiquette restent des textes comparés sans interprétation (comportement historique, voir
+  // KOLAKISA_THEME_BUILDER_DISPLAY_RULES.md) ; les exclusions sont des listes séparées par des virgules, les articles exclus doivent exister.
+  const themeConditions = (body) => {
+    const split = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean);
+    const who = String(body.audience || "");
+    return { category: body.category, audience: who ? { who, value: body.audience_value } : null, exclude: { category: split(body.exclude_category), tag: split(body.exclude_tag), postId: split(body.exclude_post) } };
+  };
+  const conflictNote = (e) => (e.conflicts && e.conflicts.length ? ` Attention : même précision que ${e.conflicts.map((c) => `« ${c.pageName} »`).join(", ")} ; en cas d'égalité, le modèle affecté en premier est utilisé.` : "");
   router.post("/site-web/modeles-de-theme", need("forms.write"), (req, res, next) => {
     attempt(req, res, next, "/marketing/site-web/modeles-de-theme", () => {
-      const who = String(req.body.audience || "");
-      themeTemplates.add(req.mk.ctx, { type: req.body.type, pageId: intOrNull(req.body.page_id), category: req.body.category, audience: who ? { who, value: req.body.audience_value } : null });
-      return "Modèle enregistré. Il s'applique dès que sa page est en ligne ; sans modèle, le site garde son affichage d'origine.";
+      const e = themeTemplates.add(req.mk.ctx, { type: req.body.type, pageId: intOrNull(req.body.page_id), ...themeConditions(req.body) });
+      return `Modèle enregistré. Il s'applique dès que sa page est en ligne ; sans modèle, le site garde son affichage d'origine.${conflictNote(e)}`;
+    });
+  });
+  router.post("/site-web/modeles-de-theme/:tid([a-f0-9]{8})/modifier", need("forms.write"), (req, res, next) => {
+    attempt(req, res, next, "/marketing/site-web/modeles-de-theme", () => {
+      const e = themeTemplates.update(req.mk.ctx, req.params.tid, { pageId: intOrNull(req.body.page_id) ?? undefined, ...themeConditions(req.body) });
+      return `Conditions du modèle mises à jour.${conflictNote(e)}`;
     });
   });
   router.post("/site-web/modeles-de-theme/:tid([a-f0-9]{8})/supprimer", need("forms.write"), (req, res, next) => {
@@ -203,7 +216,7 @@ module.exports = () => {
     } catch (error) { settingsError(res, next, error); }
   });
   // En-tête et pied de page du site : un composant affiché autour des sections de chaque page du site
-  router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), (req, res, next) => {
+  router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), need("appearance.parts"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/pied-de-page#parties`, () => {
@@ -248,6 +261,8 @@ module.exports = () => {
     });
   });
   router.post("/site-web/sites/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
+    // Créer un site relève de l'équipe de l'organisation (comme la suppression) : la copie n'appartiendrait à aucun accès limité à un site
+    if (req.mk.siteOnly) return res.status(403).render("error", { message: "Seule l'équipe de l'organisation peut dupliquer un site." });
     const site = load(req, res);
     if (!site) return;
     let copy = null;
@@ -257,12 +272,12 @@ module.exports = () => {
       return withPages ? `Copie créée : « ${copy.name} » (réglages et pages ; les pages sont en brouillon, hors ligne). Médias, tunnels et articles ne sont pas copiés.` : `Copie créée : « ${copy.name} » (réglages seulement, sans pages).`;
     });
   });
-  router.post("/site-web/sites/:id(\\d+)/archiver", need("forms.write"), (req, res, next) => {
+  router.post("/site-web/sites/:id(\\d+)/archiver", need("forms.write"), need("pages.publish"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, "/marketing/site-web/sites", () => { pages.archiveSite(req.mk.ctx, site.id); return `Site « ${site.name} » archivé : ses pages sont hors ligne (rien n'est effacé).`; });
   });
-  router.post("/site-web/sites/:id(\\d+)/restaurer", need("forms.write"), (req, res, next) => {
+  router.post("/site-web/sites/:id(\\d+)/restaurer", need("forms.write"), need("pages.publish"), (req, res, next) => {
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages`, () => { pages.restoreSite(req.mk.ctx, site.id); return "Site restauré. Ses pages restent hors ligne : publiez celles qui sont prêtes."; });
@@ -278,6 +293,7 @@ module.exports = () => {
     });
   });
   router.post("/site-web/sites/:id(\\d+)/recuperer", need("forms.write"), (req, res, next) => {
+    if (req.mk.siteOnly) return res.status(403).render("error", { message: "Seule l'équipe de l'organisation peut récupérer un site supprimé." });
     const site = load(req, res);
     if (!site) return;
     attempt(req, res, next, "/marketing/site-web/sites?vue=archives", () => { pages.undeleteSite(req.mk.ctx, site.id); return `Site « ${site.name} » sorti de la corbeille (il reste archivé : restaurez-le pour le remettre en service).`; });

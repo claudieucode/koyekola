@@ -1,0 +1,36 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+<% const rep = typeof report === "undefined" ? null : report; %>
+    <% if (rep && rep.errors && rep.errors.length) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p><%= rep.errors.join(" ") %></p></div><% } %>
+    <% if (rep && kind === "json" && rep.ok) { %><section class="mk-panel" role="status"><h2><%= rep.dryRun ? "Aperçu (rien n'est enregistré)" : "Import terminé" %></h2>
+      <p>Réglages : <%= rep.settings.applied.length %> <%= rep.dryRun ? "à appliquer" : "appliqué(s)" %><%= rep.settings.ignored.length ? ` ; ${rep.settings.ignored.length} ignoré(s) car non modifiables pour un site (${rep.settings.ignored.join(", ")})` : "" %>.</p>
+      <p>Redirections : <%= rep.redirects.created %> <%= rep.dryRun ? "à créer" : "créée(s)" %> ; <%= rep.redirects.skipped.length %> déjà présente(s) ; <%= rep.redirects.errors.length %> refusée(s).</p>
+      <% if (rep.redirects.errors.length) { %><ul><% rep.redirects.errors.slice(0, 10).forEach((e) => { %><li><%= e %></li><% }) %></ul><% } %></section><% } %>
+    <% if (rep && kind === "wordpress" && rep.ok) { %><section class="mk-panel" role="status"><h2><%= rep.dryRun ? "Aperçu (rien n'est enregistré)" : "Import terminé : brouillons créés" %></h2>
+      <p><%= rep.updated.length %> page(s) <%= rep.dryRun ? "à mettre à jour" : "mise(s) à jour en brouillon (à relire puis publier)" %> ; <%= rep.skipped.length %> ignorée(s).</p>
+      <% if (rep.updated.length) { %><ul><% rep.updated.slice(0, 30).forEach((u) => { %><li><code><%= u.path %></code> — <%= u.fields.join(", ") %></li><% }) %></ul><% } %>
+      <% if (rep.skipped.length) { %><details class="mk-seo-details"><summary>Lignes ignorées (<%= rep.skipped.length %>)</summary><ul><% rep.skipped.slice(0, 50).forEach((u) => { %><li><%= u %></li><% }) %></ul></details><% } %>
+      <% if (rep.warnings.length) { %><details class="mk-seo-details" open><summary>Avertissements (<%= rep.warnings.length %>)</summary><ul><% rep.warnings.slice(0, 50).forEach((u) => { %><li><%= u %></li><% }) %></ul></details><% } %></section><% } %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="tr-export"><h2 id="tr-export">Exporter les réglages SEO de ce site</h2>
+      <p>Fichier JSON : réglages SEO propres à ce site (identité, organisation, SEO local, modèles de titres, robots) et ses redirections. Aucune clé ni donnée de connexion n'y figure.</p>
+      <div class="mk-actions"><a class="btn btn-outline btn-sm" href="<%= space.base %>/seo/transfert/export.json">Télécharger l'export (.json)</a></div>
+    </section>
+    <% if (canEdit) { %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="tr-import"><h2 id="tr-import">Importer un export KOLAKISA</h2>
+      <p>L'import s'applique toujours à CE site, quel que soit le site d'origine du fichier. Faites d'abord un aperçu.</p>
+      <form method="post" action="<%= space.base %>/seo/transfert/import" class="mk-form" data-busy-form>
+        <div class="field-group"><label for="tr-json">Contenu du fichier .json</label><textarea id="tr-json" name="json" rows="6" spellcheck="false" maxlength="400000"></textarea></div>
+        <div class="field-group"><label><input type="checkbox" name="apply" value="1"> Enregistrer réellement (sinon : aperçu seulement)</label></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Vérifier / importer</button></div>
+      </form>
+    </section>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="tr-wp"><h2 id="tr-wp">Importer depuis Rank Math ou Yoast</h2>
+      <p>Collez un tableau (CSV ou JSON) avec une colonne <code>url</code> et, selon l'extension, les colonnes <code>rank_math_title</code>, <code>rank_math_description</code>, <code>rank_math_focus_keyword</code>, <code>rank_math_canonical_url</code> ou <code>_yoast_wpseo_title</code>, <code>_yoast_wpseo_metadesc</code>, <code>_yoast_wpseo_focuskw</code>, <code>_yoast_wpseo_canonical</code> (ou le format long <code>url, meta_key, meta_value</code>). Les pages sont retrouvées par leur adresse ; les valeurs sont écrites dans le <strong>brouillon</strong> de la page, jamais publiées automatiquement.</p>
+      <form method="post" action="<%= space.base %>/seo/transfert/wordpress" class="mk-form" data-busy-form>
+        <div class="field-group"><label for="tr-table">Tableau</label><textarea id="tr-table" name="table" rows="6" spellcheck="false" maxlength="400000"></textarea></div>
+        <div class="field-group"><label><input type="checkbox" name="apply" value="1"> Enregistrer réellement dans les brouillons (sinon : aperçu seulement)</label></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Vérifier / importer</button></div>
+      </form>
+    </section>
+    <% } %>
+<%- include("../partials/bottom") %>

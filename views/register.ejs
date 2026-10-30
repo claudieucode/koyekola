@@ -10,7 +10,7 @@
       <% if (typeof closed !== "undefined" && closed) { %>
       <p class="form-error" role="status">Les inscriptions sont fermées pour le moment. Si vous avez déjà un compte ou une invitation, connectez-vous.</p>
       <% } else { %>
-      <% if (error) { %><p class="form-error"><%= error %></p><% } %>
+      <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
 
       <form action="/inscription" method="post"><input type="hidden" name="tz" data-tz>
         <% if (typeof redirect !== "undefined" && redirect) { %><input type="hidden" name="redirect" value="<%= redirect %>"><% } %>

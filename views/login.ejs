@@ -7,7 +7,7 @@
     <div class="auth-card">
       <h1>Content de vous revoir</h1>
       <p class="subtitle">Connectez-vous pour accéder à vos formations.</p>
-      <% if (error) { %><p class="form-error"><%= error %></p><% } %>
+      <% if (error) { %><p class="form-error" role="alert"><%= error %></p><% } %>
       <% if (typeof notice !== "undefined" && notice) { %><p class="form-success" role="status"><%= notice %></p><% } %>
       <form action="/connexion" method="post"><input type="hidden" name="tz" data-tz>
         <input type="hidden" name="redirect" value="<%= redirect %>">

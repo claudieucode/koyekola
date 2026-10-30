@@ -42,25 +42,75 @@ a.pb-icon-btn { display: inline-flex; align-items: center; justify-content: cent
 .pb-save.is-dirty { color: var(--warning-text); }
 
 /* Zone contextuelle : réglages rapides de la sélection */
-.pb-context { order: 3; flex: 1 1 100%; display: flex; align-items: center; gap: 6px; min-height: 38px; padding: 4px 0 0; border-top: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin; }
-.pb-context select, .pb-context input[type="text"] { min-height: 32px; height: 32px; padding: 2px 8px; font-size: 13px; border-radius: var(--pb-radius-md); }
-.pb-context select { max-width: 160px; }
+/* Barre contextuelle (réglages rapides de la sélection) — TITAN XXXVIII.
+   Jetons de la barre : hauteur des contrôles, rayon, espacement, icônes, transitions, anneau de focus. Un seul endroit à modifier.
+   Focus : anneau fin (bordure accent + 1 px) sur les champs ; contour 2 px décalé sur les boutons. Jamais de double contour. */
+.pb-context {
+  --ctx-h: 32px; --ctx-r: var(--pb-radius-md); --ctx-gap: 6px; --ctx-icon: 16px; --ctx-t: 120ms ease;
+  --ctx-line: var(--editor-border, var(--border)); --ctx-line-strong: var(--editor-border-strong, var(--line, var(--border)));
+  --ctx-ring: var(--editor-accent, var(--accent)); --ctx-active-bg: var(--editor-active, var(--accent-light)); --ctx-active-fg: var(--editor-accent-text, var(--accent-dark));
+  order: 3; flex: 1 1 100%; display: flex; align-items: center; gap: var(--ctx-gap); min-height: 38px; padding: 4px 0 0; border-top: 1px solid var(--border); overflow-x: auto; scrollbar-width: thin;
+}
+.pb-ctx-group { flex: none; display: inline-flex; align-items: center; gap: var(--ctx-gap); }
+.pb-ctx-group + .pb-ctx-group, .pb-ctx-more + .pb-ctx-group { padding-left: 8px; margin-left: 2px; border-left: 1px solid var(--ctx-line); }
+.pb-ctx-end { margin-left: auto; }
+.pb-context select, .pb-context input[type="text"] { min-height: var(--ctx-h); height: var(--ctx-h); padding: 0 8px; font-size: 13px; border-radius: var(--ctx-r); }
+.pb-context select {
+  appearance: none; -webkit-appearance: none; box-sizing: border-box; width: auto; min-width: 104px; max-width: 176px; padding: 0 26px 0 10px; font-weight: 500;
+  border: 1px solid var(--ctx-line); background: var(--editor-input, var(--card)) var(--editor-select-arrow) no-repeat right 8px center / 12px; color: var(--editor-text, var(--text));
+  text-overflow: ellipsis; transition: border-color var(--ctx-t), background-color var(--ctx-t);
+}
+.pb-context select.is-empty { color: var(--editor-muted, var(--muted)); }
+.pb-context select option { color: var(--editor-text, var(--text)); background: var(--editor-card, var(--card)); }
+.pb-context select:hover:not(:disabled):not(:focus) { border-color: var(--ctx-line-strong); background-color: var(--editor-hover, var(--card)); }
+.pb-context select:focus, .pb-context select:focus-visible { outline: none; border-color: var(--ctx-ring); box-shadow: 0 0 0 1px var(--ctx-ring); }
+.pb-context select:disabled { opacity: var(--editor-disabled-opacity, 0.5); }
 .pb-ctx-name { flex: none; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding-right: 4px; }
 .pb-ctx-state { flex: none; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--warning-bg); color: var(--warning-text); }
 .pb-ctx-hint { font-size: 13px; color: var(--muted); }
 .pb-ctx-sep { flex: none; width: 1px; height: 22px; background: var(--border); margin: 0 2px; }
 .pb-ctx-num { flex: none; }
-.pb-ctx-btn { flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--pb-radius-md); background: var(--card, #fff); color: var(--primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.pb-ctx-btn:hover:not(:disabled) { border-color: var(--accent); background: #f3f9fd; }
+.pb-ctx-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box; min-height: var(--ctx-h); padding: 0 10px; border: 1px solid var(--ctx-line); border-radius: var(--ctx-r); background: var(--editor-input, var(--card, #fff)); color: var(--primary); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color var(--ctx-t), background-color var(--ctx-t), color var(--ctx-t); }
+.pb-ctx-btn:hover:not(:disabled) { border-color: var(--ctx-line-strong); background: var(--editor-hover, #f3f9fd); }
+.pb-ctx-btn:focus-visible { outline: 2px solid var(--ctx-ring); outline-offset: 1px; box-shadow: none; }
 .pb-ctx-btn:disabled { opacity: 0.45; cursor: default; }
-.pb-ctx-icon { min-width: 32px; padding: 0 6px; justify-content: center; }
+.pb-ctx-btn svg, .pb-context .pb-seg-icons svg { width: var(--ctx-icon); height: var(--ctx-icon); flex: none; }
+.pb-ctx-icon { min-width: var(--ctx-h); padding: 0 6px; justify-content: center; }
 .pb-ctx-icon.is-bold { font-weight: 800; }
 .pb-ctx-icon.is-italic { font-style: italic; }
 .pb-ctx-icon.is-underline { text-decoration: underline; }
 .pb-ctx-icon.is-strike { text-decoration: line-through; }
-.pb-ctx-color { flex: none; display: inline-flex; padding: 2px; border-radius: var(--pb-radius-md); border: 1px solid var(--border); }
-.pb-ctx-color.is-set { border-color: var(--accent); }
-.pb-context input[type="color"], .pb-ctx-color input { width: 30px; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
+/* Alignement : boutons carrés identiques ; actif = fond bleu léger + texte marine (pas d'aplat saturé) */
+.pb-context .pb-seg-icons { box-sizing: border-box; height: var(--ctx-h); gap: 2px; padding: 2px; align-items: center; margin: 0; border: 1px solid var(--ctx-line); border-radius: var(--ctx-r); background: var(--editor-input, var(--card)); }
+.pb-context .pb-seg-icons button { width: 28px; height: 26px; min-height: 0; padding: 0; justify-content: center; border-radius: calc(var(--ctx-r) - 2px); color: var(--editor-muted, var(--muted)); transition: background-color var(--ctx-t), color var(--ctx-t); }
+.pb-context .pb-seg-icons button:hover:not(:disabled):not([aria-pressed="true"]) { background: var(--editor-hover); color: var(--editor-text); }
+.pb-context .pb-seg-icons button[aria-pressed="true"] { background: var(--ctx-active-bg); color: var(--ctx-active-fg); box-shadow: none; }
+.pb-context .pb-seg-icons button:focus-visible { outline: 2px solid var(--ctx-ring); outline-offset: -2px; }
+/* Couleur : pastille de la couleur réellement appliquée ; liseré accent = valeur personnalisée, estompée = valeur héritée */
+.pb-ctx-color { flex: none; box-sizing: border-box; display: inline-flex; width: var(--ctx-h); height: var(--ctx-h); padding: 3px; border-radius: var(--ctx-r); border: 1px solid var(--ctx-line); background: var(--editor-input, var(--card)); transition: border-color var(--ctx-t); }
+.pb-ctx-color:hover { border-color: var(--ctx-line-strong); }
+.pb-ctx-color.is-set { border-color: var(--ctx-ring); }
+.pb-ctx-color.is-unknown { background: linear-gradient(135deg, transparent 45%, var(--ctx-line-strong) 45% 55%, transparent 55%), var(--editor-input, var(--card)); }
+.pb-ctx-color.is-unknown input { opacity: 0; }
+.pb-ctx-color:focus-within { border-color: var(--ctx-ring); box-shadow: 0 0 0 1px var(--ctx-ring); }
+.pb-context input[type="color"], .pb-ctx-color input { width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; outline: none; }
+.pb-ctx-color input::-webkit-color-swatch-wrapper { padding: 0; }
+.pb-ctx-color input::-webkit-color-swatch { border: 1px solid color-mix(in srgb, var(--editor-text, #000) 18%, transparent); border-radius: calc(var(--ctx-r) - 3px); }
+.pb-ctx-color input::-moz-color-swatch { border: 1px solid color-mix(in srgb, var(--editor-text, #000) 18%, transparent); border-radius: calc(var(--ctx-r) - 3px); }
+/* Champs numériques (.pb-boxcell > input.pb-ctx-num) : même hauteur que les listes. Cause du « gros cadre bleu » : style.css empilait sur ce champ
+   le contour global :focus-visible (3 px, décalé de 3 px) ET le halo input:focus (--ring, 4 px). Ici : un seul anneau fin, porté par le champ. */
+.pb-context input.pb-ctx-num { box-sizing: border-box; width: 100%; height: var(--ctx-h); min-height: var(--ctx-h); padding: 0 8px; border: 1px solid var(--ctx-line); border-radius: var(--ctx-r); background: var(--editor-input, var(--card)); color: var(--editor-text, var(--text)); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; transition: border-color var(--ctx-t), background-color var(--ctx-t); }
+.pb-context input.pb-ctx-num::placeholder { color: var(--editor-muted, var(--muted)); font-weight: 500; }
+.pb-context input.pb-ctx-num:hover:not(:disabled):not(:focus) { border-color: var(--ctx-line-strong); background-color: var(--editor-hover, var(--card)); }
+.pb-context input.pb-ctx-num:focus, .pb-context input.pb-ctx-num:focus-visible { outline: none; border-color: var(--ctx-ring); box-shadow: 0 0 0 1px var(--ctx-ring); }
+.pb-context input.pb-ctx-num:disabled { opacity: var(--editor-disabled-opacity, 0.5); }
+/* « Plus » : les groupes qui ne tiennent plus dans la largeur réelle de la barre */
+.pb-ctx-more { flex: none; display: inline-flex; }
+.pb-ctx-more[hidden], .pb-ctx-pop[hidden] { display: none; }
+.pb-ctx-pop { position: fixed; z-index: 60; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; width: max-content; max-width: min(440px, calc(100vw - 16px)); padding: 12px; background: var(--editor-card, #fff); border: 1px solid var(--ctx-line); border-radius: 10px; box-shadow: var(--editor-shadow, 0 8px 24px rgba(11, 42, 64, 0.16)); }
+.pb-ctx-pop .pb-ctx-group { flex-wrap: wrap; padding: 0; margin: 0; border: 0; }
+.pb-ctx-pop .pb-ctx-group::before { content: attr(aria-label); flex: 0 0 100%; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--editor-muted, var(--muted)); }
+@media (prefers-reduced-motion: reduce) { .pb-context * { transition: none !important; } }
 
 /* ---------- Corps : outils | éléments | canevas | calques + inspecteur ---------- */
 .pb-main { --pb-tools-w: 48px; --pb-left-w: 260px; --pb-right-w: 340px; display: grid; grid-template-columns: var(--pb-tools-w) var(--pb-left-w) 6px minmax(0, 1fr) 6px var(--pb-right-w); min-height: 0; }

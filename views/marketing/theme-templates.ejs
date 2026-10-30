@@ -6,15 +6,25 @@
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table mk-datatable">
         <caption class="sr-only">Modèles de thème</caption>
-        <thead><tr><th scope="col">Famille de pages</th><th scope="col">Page modèle</th><th scope="col">Catégorie</th><th scope="col">Public</th><th scope="col">État</th><% if (canWrite) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
+        <thead><tr><th scope="col">Famille de pages</th><th scope="col">Page modèle</th><th scope="col">Catégorie</th><th scope="col">Public</th><th scope="col">Exclusions</th><th scope="col">Modifié</th><th scope="col">État</th><% if (canWrite) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
         <tbody><% templates.forEach((t) => { %>
           <tr>
             <th scope="row" data-label="Famille"><%= t.typeLabel %></th>
             <td data-label="Page"><% if (t.pageStatus === "missing") { %><%= t.pageName %><% } else { %><a href="/marketing/pages/<%= t.pageId %>/editeur"><%= t.pageName %></a><% } %></td>
             <td data-label="Catégorie"><%= t.category || "Toutes" %></td>
             <td data-label="Public"><%= t.audienceLabel || "Tout le monde" %></td>
+            <td data-label="Exclusions"><%= t.exclude ? [].concat((t.exclude.category || []).map((c) => "catégorie " + c), (t.exclude.tag || []).map((c) => "étiquette " + c), (t.exclude.postId || []).map((c) => "article " + c)).join(", ") : "Aucune" %></td>
+            <td data-label="Modifié"><%= t.updatedAt ? new Date(t.updatedAt).toLocaleDateString("fr-FR") : "—" %></td>
             <td data-label="État"><%= t.pageStatus === "published" ? "Actif (page en ligne)" : t.pageStatus === "missing" ? "Page supprimée" : "Inactif : publiez la page" %></td>
-            <% if (canWrite) { %><td data-label="Actions"><form action="/marketing/site-web/modeles-de-theme/<%= t.id %>/supprimer" method="post"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer ce modèle">Retirer</button></form></td><% } %>
+            <% if (canWrite) { %><td data-label="Actions"><details><summary class="btn btn-ghost btn-sm">Modifier</summary>
+              <form action="/marketing/site-web/modeles-de-theme/<%= t.id %>/modifier" method="post" class="mk-form">
+                <input type="hidden" name="page_id" value="<%= t.pageId %>">
+                <label for="tt-ed-cat-<%= t.id %>">Catégorie</label><input id="tt-ed-cat-<%= t.id %>" name="category" maxlength="80" value="<%= t.category || "" %>">
+                <label for="tt-ed-xc-<%= t.id %>">Catégories exclues (séparées par des virgules)</label><input id="tt-ed-xc-<%= t.id %>" name="exclude_category" maxlength="400" value="<%= ((t.exclude || {}).category || []).join(", ") %>">
+                <label for="tt-ed-xt-<%= t.id %>">Étiquettes exclues</label><input id="tt-ed-xt-<%= t.id %>" name="exclude_tag" maxlength="400" value="<%= ((t.exclude || {}).tag || []).join(", ") %>">
+                <button type="submit" class="btn btn-primary btn-sm">Enregistrer les conditions</button>
+              </form></details>
+              <form action="/marketing/site-web/modeles-de-theme/<%= t.id %>/supprimer" method="post"><button type="submit" class="btn btn-ghost btn-sm" aria-label="Retirer ce modèle">Retirer</button></form></td><% } %>
           </tr>
         <% }) %></tbody>
       </table></div>
@@ -49,6 +59,10 @@
           <label for="tt-cat">Catégorie (facultative, articles seulement)</label>
           <input id="tt-cat" name="category" maxlength="80" list="tt-cats" placeholder="Toutes les catégories">
           <datalist id="tt-cats"><% categories.forEach((c) => { %><option value="<%= c %>"><% }) %></datalist>
+          <label for="tt-xcat">Catégories exclues (facultatif, séparées par des virgules)</label>
+          <input id="tt-xcat" name="exclude_category" maxlength="400" placeholder="Le modèle ne s'applique pas à ces catégories">
+          <label for="tt-xtag">Étiquettes exclues (facultatif)</label>
+          <input id="tt-xtag" name="exclude_tag" maxlength="400">
           <label for="tt-aud">Public</label>
           <select id="tt-aud" name="audience"><option value="">Tout le monde</option><% Object.entries(audiences).filter(([k]) => k !== "tag" && k !== "not_tag" && k !== "score_min").forEach(([k, label]) => { %><option value="<%= k %>"><%= label %></option><% }) %></select>
           <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Ajouter le modèle</button></div>

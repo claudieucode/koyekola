@@ -53,7 +53,7 @@
 /* ===== 4. États vides : une composition centrée, jamais décalée dans une grille ===== */
 .empty-state { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 520px; margin: clamp(24px, 6vw, 64px) auto; padding: 40px 28px; text-align: center; border: 1px dashed var(--kv-line); border-radius: var(--kv-r-lg); background: var(--surface); color: var(--kv-ink-soft); }
 .empty-state .kv-empty-ico { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 10px; border-radius: 14px; background: var(--accent-light); color: var(--accent-dark); }
-.empty-state h3 { margin: 0; color: var(--primary); font-size: 1.25rem; letter-spacing: -0.02em; }
+.empty-state :is(h2, h3) { margin: 0; color: var(--primary); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
 .empty-state p { margin: 0 0 14px; max-width: 42ch; }
 .empty-state .btn { margin-top: 4px; }
 .cart-layout--empty { display: block; }
@@ -73,6 +73,19 @@
 .auth-card h1 { font-size: 1.7rem; }
 .auth-card .field-hint { display: inline-block; margin-top: 6px; }
 .auth-card .form-footer { margin: 20px 0 0; text-align: center; color: var(--kv-ink-soft); }
+
+/* ===== 5 bis. Page publique d'un formulaire d'inscription (/f/…) : carte centrée, largeur lisible =====
+   La page n'a pas de volet de valeur (.kv-auth-main) : sans ce bloc, .auth-page{display:block} la laissait collée à gauche. */
+.kv-form-page { display: flex; justify-content: center; align-items: flex-start; box-sizing: border-box; min-height: calc(100vh - var(--header-h) - 120px); padding: clamp(24px, 5vw, 64px) clamp(16px, 4vw, 32px); background: var(--bg); }
+.kv-form-card { width: 100%; max-width: 640px; margin-inline: auto; box-sizing: border-box; padding: clamp(24px, 5vw, 48px); border-color: var(--kv-line); box-shadow: 0 1px 2px color-mix(in srgb, var(--primary) 5%, transparent), 0 12px 32px -16px color-mix(in srgb, var(--primary) 16%, transparent); }
+.kv-form-card h1 { margin: 0 0 clamp(18px, 3vw, 28px); font-size: clamp(1.6rem, 3.2vw, 2.1rem); line-height: 1.15; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.kv-form-card .field-group { margin-bottom: 20px; }
+.kv-form-card .field-group > label { display: block; margin-bottom: 8px; font-size: 0.92rem; font-weight: 600; color: var(--primary); }
+.kv-form-card :is(input:not([type=checkbox]):not([type=radio]):not([type=file]), select, textarea) { width: 100%; box-sizing: border-box; min-height: 48px; padding: 12px 16px; font-size: 1rem; }
+.kv-form-card .optin-row { width: 100%; box-sizing: border-box; margin: 4px 0 24px; padding: 14px 16px; border-radius: var(--kv-r-lg); background: var(--accent-light); font-size: 0.92rem; color: var(--primary); }
+.kv-form-card .btn-block { min-height: 52px; font-size: 1.05rem; }
+.kv-form-card .form-error { margin: 0 0 20px; }
+@media (max-width: 520px) { .kv-form-page { padding-top: 16px; } .kv-form-card { max-width: none; } }
 
 /* ===== 6. Pages d'erreur ===== */
 .error-page { max-width: 560px; margin: 0 auto; padding-block: clamp(56px, 10vw, 112px); text-align: left; }

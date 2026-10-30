@@ -67,7 +67,7 @@ const legacySiteOfRequest = (db) => (req) => {
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
     }
     // Assistant IA (R7 lot 6.2)
-    if (/^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/.test(p)) {
+    if (/^\/ia\/(?:etat|objets|reecrire|brouillon|optimiser|sms)$/.test(p) || /^\/ia\/site(?:\/|$)/.test(p)) { // + plans de site préparés par l'IA (Programme 21.3)
       const raw = (req.query && req.query.site) ?? (req.body && req.body.site);
       return /^\d{1,12}$/.test(String(raw ?? "")) ? { siteId: Number(raw) } : null;
     }
@@ -201,6 +201,10 @@ function mountedRoutes() {
   return out;
 }
 
+// Règles créées après la figeage de l'oracle (liste des pages PAGES-01, modèles de pages du site builder) : leur comportement est testé explicitement
+const POST_ORACLE = new Set(["pages-liste-du-site", "pages-actions-du-site", "modele-page-enregistrement", "modele-page-lecture", "modele-page-suppression",
+  "corbeille-du-site", "equipe-du-site", "themes-du-site", "polices-du-site", "barre-du-site", "personnaliser-du-site", "widgets-du-site", "styles-du-site", "editeur-du-site", "templates-du-site", "patterns-du-site"]);
+
 describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)", () => {
   const variants = [
     {}, { query: { site: "2" } }, { query: { site: "x" } }, { query: { site: "" } }, { query: { site: "principal" } },
@@ -212,23 +216,29 @@ describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)
     "/campagnes", "/campagnes/nouvelle", "/campagnes/1", "/campagnes/2/pause", "/campagnes/99999", "/listes", "/listes/1", "/segments/3", "/modeles/1", "/modeles/bibliotheque", "/modeles/bibliotheque/k/apercu", "/modeles/apercu",
     "/automatisations", "/automatisations/parcours", "/automatisations/parcours/abc", "/automatisations/historique", "/automatisations/1", "/tunnels/1/etapes/2", "/tunnels/nouveau",
     "/tests-ab/1", "/tests-ab/99999", "/site-web/tests-ab", "/analytics/global", "/analytics/global/export", "/analytics/global/x", "/analytics", "/evenements/1", "/evenements/99999", "/evenements/1/x", "/evenements",
-    "/contacts", "/contacts/actions", "/contacts/12", "/contacts/12/etiquettes", "/contacts/12/etiquettes/retirer", "/contacts/12/cycle-de-vie", "/contacts/12/etat", "/contacts/12/effacer", "/contacts/fusion", "/ia", "/ia/etat", "/ia/sms", "/ia/objets", "/ia/reecrire", "/ia/brouillon", "/ia/optimiser", "/sms", "/sms/abonnes", "/sms/campagnes", "/sms/campagnes/1", "/sms/campagnes/1/lancer", "/sms/campagnes/99999/annuler", "/sms/reglages", "/sms/test", "/sms/blocages", "/revenus", "/revenus/fenetre", "/score", "/score/regles", "/score/regles/1", "/score/niveaux", "/score/recalculer", "/reseaux", "/reseaux/1/annuler", "/reseaux/2/relancer", "/reseaux/99999/supprimer", "/reseaux/reglages", "/reseaux/reglages/sites", "/contacts/demandes", "/contacts/demandes/traiter", "/contacts/demandes/3/accepter", "/contacts/12/evenements.json", "/formulaires", "/formulaires/1", "/formulaires/1/publier", "/formulaires/99999/supprimer", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
+    "/contacts", "/contacts/actions", "/contacts/12", "/contacts/12/etiquettes", "/contacts/12/etiquettes/retirer", "/contacts/12/cycle-de-vie", "/contacts/12/etat", "/contacts/12/effacer", "/contacts/fusion", "/ia", "/ia/etat", "/ia/sms", "/ia/objets", "/ia/reecrire", "/ia/brouillon", "/ia/optimiser", "/ia/site/plans", "/ia/site/plans/3", "/ia/site/analyser", "/sms", "/sms/abonnes", "/sms/campagnes", "/sms/campagnes/1", "/sms/campagnes/1/lancer", "/sms/campagnes/99999/annuler", "/sms/reglages", "/sms/test", "/sms/blocages", "/revenus", "/revenus/fenetre", "/score", "/score/regles", "/score/regles/1", "/score/niveaux", "/score/recalculer", "/reseaux", "/reseaux/1/annuler", "/reseaux/2/relancer", "/reseaux/99999/supprimer", "/reseaux/reglages", "/reseaux/reglages/sites", "/contacts/demandes", "/contacts/demandes/traiter", "/contacts/demandes/3/accepter", "/contacts/12/evenements.json", "/formulaires", "/formulaires/1", "/formulaires/1/publier", "/formulaires/99999/supprimer", "/contacts/12/x", "/contacts/doublons", "/webhooks", "/site-web/utilisateurs"];
   const paths = new Set(handmade);
   before(() => { for (const r of mountedRoutes()) for (const id of [1, 2, 99999]) for (const p of concrete(r.path, id)) paths.add(p); });
 
   test("mêmes résultats pour chaque adresse × méthode × variante de requête (plusieurs milliers de cas)", () => {
     let n = 0;
     for (const path of paths) for (const method of ["GET", "POST", "PUT"]) for (const v of variants) {
+      if (SITE_RULES.some((r) => POST_ORACLE.has(r.id) && r.pattern.test(path))) continue; // règles ajoutées APRÈS l'ancienne logique (oracle) : vérifiées explicitement plus bas
       const req = { path, method, query: v.query || {}, body: v.body || {} };
       assert.deepEqual(siteOfRequest(db, req), legacy(req), `${method} ${path} ${JSON.stringify(v)}`);
       n += 1;
     }
-    assert.ok(n > 5000, `${n} cas comparés`);
+    assert.ok(n > 4000, `${n} cas comparés`);
   });
   test("sans req.query ni req.body (cas limites de l'ancienne fonction) : même résultat", () => {
     for (const path of ["/site-web/outils", "/campagnes", "/site-web/tests-ab", "/contacts", "/pages"]) {
       for (const method of ["GET", "POST"]) assert.deepEqual(siteOfRequest(db, { path, method }), legacy({ path, method }), `${method} ${path}`);
     }
+  });
+  test("règles postérieures à l'oracle : chacune existe encore et résout le site demandé (?site=)", () => {
+    const ids = new Set(SITE_RULES.map((r) => r.id));
+    for (const id of POST_ORACLE) assert.ok(ids.has(id), `règle disparue : ${id}`);
+    for (const path of ["/site-web/corbeille", "/site-web/equipe-site", "/pages"]) assert.deepEqual(siteOfRequest(db, { path, method: "GET", query: { site: "2" } }), { siteId: 2 }, path);
   });
   test("résolutions attendues sur des cas connus (garde contre un oracle vide)", () => {
     assert.deepEqual(siteOfRequest(db, { path: "/pages/1", method: "GET" }), { siteId: S1 });
@@ -238,6 +248,8 @@ describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)
     assert.deepEqual(siteOfRequest(db, { path: "/site-web/principal", method: "GET" }), { siteId: null });
     assert.deepEqual(siteOfRequest(db, { path: "/site-web/sites/9", method: "GET" }), { siteId: 9 });
     assert.deepEqual(siteOfRequest(db, { path: "/listes", method: "GET", query: { site: "2" } }), { siteId: 2 });
+    assert.deepEqual(siteOfRequest(db, { path: "/pages", method: "GET", query: { site: "2" } }), { siteId: 2 }, "liste des pages : le site vient de ?site= (PAGES-01)");
+    assert.deepEqual(siteOfRequest(db, { path: "/site-web/modeles.json", method: "GET", query: { site: "2" } }), { siteId: 2 }, "modèles de pages : lecture = ?site=");
     assert.equal(siteOfRequest(db, { path: "/listes", method: "GET", query: { site: "x" } }), null);
     assert.equal(siteOfRequest(db, { path: "/inconnue", method: "GET" }), null);
   });

@@ -18,10 +18,10 @@ test("aucun numéro de migration en double, et l'ancien nom en collision n'exist
   assert.ok(fs.existsSync(path.join(DIR, "114_composants_revision.sql")));
 });
 
-test("mise à niveau d'une base déjà migrée jusqu'à 113 : 114 s'applique seule, les composants existants sont conservés avec la révision 0", () => {
+test("mise à niveau d'une base déjà migrée jusqu'à 113 : 114 puis les suivantes (115…) s'appliquent seules, les composants existants sont conservés avec la révision 0", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "p12-mig-"));
   const before = path.join(tmp, "avant"); fs.mkdirSync(before);
-  for (const f of fs.readdirSync(DIR)) if (!/^114_/.test(f)) fs.copyFileSync(path.join(DIR, f), path.join(before, f));
+  for (const f of fs.readdirSync(DIR)) if (parseInt(f, 10) < 114) fs.copyFileSync(path.join(DIR, f), path.join(before, f));
   const db = new DatabaseSync(path.join(tmp, "t.db"));
   db.exec("PRAGMA foreign_keys = ON");
   const r1 = migrate(db, { dir: before, dbPath: path.join(tmp, "t.db"), backupDir: path.join(tmp, "sauv"), log: quiet });
@@ -30,7 +30,7 @@ test("mise à niveau d'une base déjà migrée jusqu'à 113 : 114 s'applique seu
   const org = db.prepare("SELECT id FROM mk_organizations").get().id;
   db.prepare("INSERT INTO mk_web_components (organization_id, name, section) VALUES (?, 'Existant', '{}')").run(org);
   const r2 = migrate(db, { dir: DIR, dbPath: path.join(tmp, "t.db"), backupDir: path.join(tmp, "sauv"), log: quiet });
-  assert.deepEqual(r2.applied, ["114"]);
+  assert.deepEqual(r2.applied, ["114", "115", "116", "117"]); // 115 = index des clés étrangères des médias (Palier 18) ; 116 = journal et quotas du Kolakisa AI Core (Programme 21.2) ; 117 = plans de site préparés par l'IA (Programme 21.3)
   const row = db.prepare("SELECT name, revision FROM mk_web_components").get();
   assert.deepEqual({ ...row }, { name: "Existant", revision: 0 });
   assert.deepEqual(migrate(db, { dir: DIR, dbPath: path.join(tmp, "t.db"), backupDir: path.join(tmp, "sauv"), log: quiet }).applied, [], "idempotent");

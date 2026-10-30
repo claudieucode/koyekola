@@ -371,7 +371,9 @@ module.exports = ({ db }) => {
       for (const line of lines) {
         const check = audience.validateEmail(line);
         if (!check.ok) { invalid.push(line.slice(0, 60)); continue; }
-        const c = audience.findByEmail(req.mk.ctx, check.email);
+        const found = audience.findByEmail(req.mk.ctx, check.email);
+        // Accès limité à un site : un contact hors de ce site est traité comme inexistant (même message : aucun indice qu'une adresse existe ailleurs dans l'organisation)
+        const c = found && siteAccess.canRead(req.mk.ctx, found) ? found : null;
         if (c) ids.push(c.id); else unknown.push(check.email);
       }
       const r = ids.length ? audience.addToList(req.mk.ctx, list.id, ids) : { added: 0, alreadyMembers: 0 };
