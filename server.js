@@ -81,6 +81,7 @@ app.use("/stripe", express.raw({ type: "*/*", limit: "256kb" }), require("./src/
 app.use(express.urlencoded({ extended: true }));
 // Éditeur visuel des pages : une page complète (30 sections) peut dépasser la limite par défaut de 100 ko
 app.use("/marketing/pages", express.json({ limit: "1mb" }));
+app.use("/marketing/mailchimp/api", express.json({ limit: "2mb" })); // import de contacts (5 000 lignes) et contenu HTML de campagne
 app.use(express.json());
 // API publique /api/v1 : authentification par clé (jamais par cookie), donc montée avant la session et le contrôle d'origine
 app.use("/api/v1", marketingWeb.api);

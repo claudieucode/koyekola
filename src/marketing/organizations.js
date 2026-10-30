@@ -53,6 +53,8 @@ const PERMISSIONS = Object.freeze({
   "settings.read": "admin", "settings.write": "admin", "settings.sensitive": "admin", // réglages sensibles (domaine, indexation, page d'accueil, adresses) : retirables à un rôle personnalisé
  
   "api_keys.manage": "admin", "webhooks.manage": "admin", "domains.manage": "admin",
+  // Intégration Mailchimp (API Marketing v3) : connexion, synchronisation, campagnes, webhooks = administrateur de l'organisation (la clé d'API donne accès à toute l'audience)
+  "mailchimp.manage": "admin",
   "audit.read": "admin", "queue.manage": "admin",
   "members.manage": "owner", "organization.delete": "owner",
 });

@@ -1,0 +1,17 @@
+<%#
+  Marketing → Mailchimp. Le serveur pose l'état réel (JSON #mc-data) ; public/js/mailchimp.js construit les onglets et les formulaires (textContent seulement : aucune donnée de Mailchimp n'est injectée comme HTML).
+  Aucune clé d'API n'est jamais renvoyée au navigateur.
+%><%- include("partials/top", { title, active }) %>
+<div class="mk-mc" data-mc-root>
+  <header class="mk-mc-head">
+    <h1>Mailchimp</h1>
+    <p class="mk-mc-lead">Connectez votre compte Mailchimp : audiences, contacts, campagnes, modèles, rapports, automatisations, webhooks et e-commerce depuis Kolakisa. Kolakisa reste maître des consentements et des désinscriptions.</p>
+  </header>
+  <noscript><p class="mk-mc-note">Cet écran a besoin de JavaScript.</p></noscript>
+  <p class="mk-mc-flash" data-mc-flash role="status" aria-live="polite" hidden></p>
+  <div class="mk-mc-bar" data-mc-bar></div>
+  <div class="mk-mc-tabs" role="tablist" aria-label="Rubriques Mailchimp" data-mc-tabs></div>
+  <section class="mk-mc-panel" data-mc-panel tabindex="-1" aria-live="polite"></section>
+</div>
+<script type="application/json" id="mc-data"><%- bootJson %></script>
+<%- include("partials/bottom") %>

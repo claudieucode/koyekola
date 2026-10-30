@@ -412,6 +412,30 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_mc_audiences": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_mc_campaigns": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_mc_events": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_mc_members": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_mc_requests": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_mc_state": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
   "mk_media": {
    "siteId": false,
    "classe": "a-isoler-B2"

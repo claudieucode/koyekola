@@ -32,6 +32,38 @@ module.exports = ({ db }) => {
     }
   });
 
+  // ---------- Mailchimp : événements d'audience (subscribe, unsubscribe, profile, cleaned, upemail, campaign) ----------
+  // Mailchimp ne signe pas ses webhooks : l'adresse porte un jeton secret par organisation (comparé à temps constant). Un jeton faux = 404 sans explication.
+  // GET/HEAD : Mailchimp teste l'adresse à la création du webhook ; POST : l'événement (formulaire encodé). Une fois le jeton validé, la réponse est 200 même si l'événement est
+  // ignoré ou en échec (il est enregistré et rejouable) : Mailchimp désactive un webhook qui répond en erreur.
+  function mailchimpContext(req, res) {
+    if (limiter.isLimited(req.ip)) { res.status(429).end(); return null; }
+    limiter.hit(req.ip);
+    const orgId = /^\d{1,9}$/.test(req.params.org) ? Number(req.params.org) : 0;
+    const marketing = req.app.locals.marketing;
+    if (!orgId || !marketing || !marketing.ready) { res.status(404).end(); return null; }
+    const ctx = { db, organizationId: orgId, userId: null, bus: marketing.bus, settings: marketing.settings, env: process.env };
+    let ok = false;
+    try { ok = require("../mailchimp/connection").tokenMatches(ctx, req.params.token); } catch { ok = false; }
+    if (!ok) { res.status(404).end(); return null; }
+    return ctx;
+  }
+  router.get("/mailchimp/:org/:token", (req, res) => { if (mailchimpContext(req, res)) res.status(200).type("text/plain").send("ok"); });
+  router.head("/mailchimp/:org/:token", (req, res) => { if (mailchimpContext(req, res)) res.status(200).end(); });
+  router.post("/mailchimp/:org/:token", async (req, res) => {
+    const ctx = mailchimpContext(req, res);
+    if (!ctx) return;
+    try {
+      const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+      const out = await require("../mailchimp/inbound").receive(ctx, raw);
+      res.status(200).json({ ok: true, ...(out.duplicate ? { duplicate: true } : {}) });
+    } catch (error) {
+      if (error && error.code === "too_large") return res.status(413).end();
+      console.error("[KOLAKISA] Webhook Mailchimp :", error && error.message);
+      res.status(200).json({ ok: true });
+    }
+  });
+
   // ---------- Twilio (SMS) : rappels de statut et SMS entrants, signés avec le jeton du compte ----------
   // L'adresse signée est celle déclarée chez Twilio : SITE_URL + chemin (le proxy de l'hébergeur ne la change pas).
   function twilioRequest(req, res) {

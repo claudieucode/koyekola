@@ -189,7 +189,7 @@ const FAMILIES = Object.freeze([
   { id: "espace-du-site", scope: "site", pattern: /^\/site-web\/(?:sites|principal|boutique|composants|composants\.json|historique|corbeille|outils|parametres|equipe-site|tests-ab)(?:\/|$)/ },
   // — Écrans de l'organisation (aucun site visé) —
   { id: "tableau-de-bord", scope: "organization", pattern: /^\/$/ },
-  { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
+  { id: "moteurs-transverses", scope: "organization", pattern: /^\/(?:sms|sondages|webhooks|mailchimp|rss|reseaux|ia|importer|score|domaines|medias|envoi|conformite|etiquettes|api|revenus|proprietes|apparence|composants)(?:\/|$)/ },
   { id: "site-web-organisation", scope: "organization", pattern: /^\/site-web(?:\/(?:utilisateurs|profil|apparence|navigation|redirections|extensions|modeles-de-theme|modeles|modeles\.json|liens-casses|recherche|permaliens|gabarits|mes-sites|seo|assistant)(?:\/|$)|$)/ },
 ]);
 
