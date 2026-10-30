@@ -1,0 +1,78 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<div class="sw">
+  <p class="mk-back"><a href="/marketing/site-web/sites/<%= siteId %>/assistant">← Assistant de création</a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Direction artistique</h1><p class="mk-head-sub">Décrivez le style voulu : le générateur propose des palettes, des polices, des espacements et des styles de composants <strong>vérifiés (contrastes, lisibilité)</strong>. Il écrit dans le <strong>brouillon du personnalisateur</strong> : rien n'est publié, vos réglages personnels sont conservés.</p></div></div>
+
+<% if (mode === "index") { %>
+  <section class="mk-panel">
+    <h2>Votre brief</h2>
+    <form method="post" action="<%= W %>/generer">
+      <label class="sw-field">Style souhaité <textarea name="brief" rows="5" maxlength="2000" placeholder="Ex. site immobilier élégant, premium, bleu marine profond, espaces généreux, typographie moderne, grandes photographies"><%= brief.text %></textarea></label>
+      <div class="sw-grid">
+        <label class="sw-field">Type de site <input name="category" maxlength="40" value="<%= brief.category %>" placeholder="ex. immobilier, boutique, portfolio"></label>
+        <label class="sw-field">Secteur <input name="sector" maxlength="100" value="<%= brief.sector %>"></label>
+        <input type="hidden" name="country" value="<%= brief.country %>"><input type="hidden" name="lang" value="<%= brief.lang %>">
+      </div>
+      <label><input type="checkbox" name="ia" value="oui"> Affiner la direction avec l'IA <span class="sw-muted">(choix parmi des listes seulement ; module IA du site et clé configurée ; plafond quotidien appliqué)</span></label>
+      <% if (canWrite) { %><div class="sw-actions"><button class="btn btn-primary" type="submit">Proposer des directions</button></div><% } else { %><p class="sw-muted">Le droit « appearance.styles » est nécessaire pour générer.</p><% } %>
+    </form>
+  </section>
+  <% if (runs.length) { %><section class="mk-panel"><h2>Propositions précédentes</h2><ul class="sw-list"><% runs.forEach((r) => { %><li><span>Proposition n° <%= r.id %> · <%= r.status === "applied" ? "appliquée (variante " + r.chosen.toUpperCase() + ")" : r.status === "undone" ? "annulée" : "non appliquée" %> · <%= r.created_at %></span><a class="btn btn-outline btn-sm" href="<%= W %>/<%= r.id %>">Ouvrir</a></li><% }) %></ul></section><% } %>
+
+<% } else { %>
+  <section class="mk-panel">
+    <h2>Proposition n° <%= run.id %> — <%= run.status === "applied" ? "appliquée dans le brouillon (variante " + run.chosen.toUpperCase() + ")" : run.status === "undone" ? "annulée" : "à choisir" %></h2>
+    <% run.brief.direction.why.forEach((w) => { %><p class="sw-muted"><%= w %></p><% }) %>
+    <% (run.brief.notes || []).forEach((w) => { %><p class="sw-muted"><%= w %></p><% }) %>
+    <div class="sw-cards">
+    <% run.proposals.forEach((p) => { const d = p.design, pal = d.palette, t = d.typography; const hs = FONTS[t.fonts.heading].stack, bs = FONTS[t.fonts.body].stack; %>
+      <div class="sw-block" style="padding:0;overflow:hidden">
+        <div style="background:<%= pal.background %>;color:<%= pal.text %>;padding:18px;font-family:<%= bs %>;font-size:<%= Math.min(t.sizes.body, 16) %>px;line-height:<%= t.lineHeights.body %>">
+          <div style="font-family:<%= hs %>;font-weight:<%= t.weights.h1 %>;color:<%= pal.secondary %>;font-size:<%= Math.min(t.sizes.h2, 30) %>px;line-height:1.15">Titre de votre site</div>
+          <p style="margin:8px 0">Un paragraphe d'exemple pour juger la lisibilité. <span style="color:<%= pal.link %>;text-decoration:underline">Un lien</span></p>
+          <span style="display:inline-block;background:<%= pal.primary %>;color:<%= pal.buttonText %>;padding:8px 16px;border-radius:<%= d.radius.button %>px;font-weight:700">Bouton</span>
+          <span style="display:inline-block;background:<%= pal.accent %>;color:<%= pal.accentText %>;padding:8px 16px;border-radius:<%= d.radius.button %>px;margin-left:6px">Accent</span>
+          <div style="background:<%= pal.surface %>;border:1px solid <%= pal.border %>;border-radius:<%= d.radius.card %>px;padding:10px;margin-top:10px">Carte · <span style="color:<%= pal.muted %>">texte secondaire</span></div>
+        </div>
+        <div style="padding:12px 14px">
+          <h3 style="margin:0 0 4px"><%= p.name %></h3><p class="sw-muted" style="margin:0 0 6px"><%= p.description %></p>
+          <div class="sw-swatches" aria-label="Palette"><% ['primary','secondary','accent','background','surface','text'].forEach((k) => { %><i title="<%= k %> <%= pal[k] %>" style="background:<%= pal[k] %>"></i><% }) %></div>
+          <p class="sw-muted" style="margin:6px 0 0">Polices : <%= FONTS[t.fonts.heading].label %> / <%= FONTS[t.fonts.body].label %> · titre <%= t.sizes.h1 %> px (mobile <%= d.responsive.mobile.h1 %> px) · texte <%= t.sizes.body %> px</p>
+          <p class="sw-muted" style="margin:4px 0 0">Contrastes : <%= p.report.contrasts.filter((c) => c.ok).length %>/<%= p.report.contrasts.length %> conformes (AA)<%= p.report.ok ? "" : " — NON APPLICABLE" %></p>
+          <% p.limits.forEach((l) => { %><p class="sw-muted" style="margin:2px 0 0">Non disponible dans Kolakisa : <%= l %></p><% }) %>
+          <div class="sw-actions"><a class="btn <%= key === p.key ? 'btn-primary' : 'btn-outline' %> btn-sm" href="<%= W %>/<%= run.id %>?variante=<%= p.key %>">Comparer avec mon site</a></div>
+        </div>
+      </div>
+    <% }) %>
+    </div>
+  </section>
+
+  <% if (cmp) { const prop = run.proposals.find((p) => p.key === key); %>
+  <section class="mk-panel">
+    <h2>Avant / après — variante <%= key.toUpperCase() %></h2>
+    <p><strong><%= cmp.summary.replace %></strong> réglage(s) à modifier · <strong><%= cmp.summary.same %></strong> déjà identiques · <strong><%= cmp.summary.protected %></strong> protégé(s) (vos personnalisations).</p>
+    <form method="post" action="<%= W %>/<%= run.id %>/appliquer">
+      <input type="hidden" name="variante" value="<%= key %>">
+      <table class="mk-table"><caption class="sw-sr">Comparaison des réglages</caption>
+        <thead><tr><th scope="col">Réglage</th><th scope="col">Actuel</th><th scope="col">Proposé</th><th scope="col">État</th></tr></thead>
+        <tbody>
+        <% cmp.rows.filter((r) => r.status !== "same").forEach((r) => { %>
+          <tr><td><code><%= r.path %></code></td><td><%= r.current === null ? "—" : r.current %></td><td><%= r.proposed %></td>
+            <td><% if (r.status === "protected") { %><label><input type="checkbox" name="remplacer" value="<%= r.path %>"> Remplacer (réglage à vous)</label><% } else { %>Sera appliqué<% } %></td></tr>
+        <% }) %>
+        </tbody>
+      </table>
+      <% if (cmp.summary.protected) { %><label class="sw-confirm"><input type="checkbox" name="remplacer_tout" value="oui"> Remplacer aussi TOUS mes réglages protégés</label><% } %>
+      <% if (canWrite && run.status !== "undone") { %><div class="sw-actions"><button class="btn btn-primary" type="submit">Ajouter au brouillon du personnalisateur</button><a class="btn btn-outline" href="<%= custom %>" target="_blank" rel="noopener">Ouvrir le personnalisateur</a></div><% } %>
+    </form>
+    <% if (run.status === "applied" && canWrite) { %><form method="post" action="<%= W %>/<%= run.id %>/annuler" class="sw-actions"><button class="btn btn-outline" type="submit">Annuler cette application</button></form><% } %>
+    <details><summary>Rapport de validation</summary>
+      <table class="mk-table"><thead><tr><th scope="col">Paire</th><th scope="col">Contraste</th><th scope="col">Minimum</th></tr></thead><tbody><% prop.report.contrasts.forEach((c) => { %><tr><td><%= c.pair %></td><td><%= c.ratio %></td><td><%= c.min %> <%= c.ok ? "✓" : "✗" %></td></tr><% }) %></tbody></table>
+      <% prop.report.warnings.forEach((w) => { %><p class="sw-muted"><%= w %></p><% }) %>
+    </details>
+  </section>
+  <% } %>
+<% } %>
+</div>
+<%- include("partials/bottom") %>

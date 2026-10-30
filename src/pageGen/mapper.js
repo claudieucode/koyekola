@@ -109,13 +109,18 @@ function mapSection(sec, page, env = {}) {
   return { ...base, ...r, status, missing: r.missing || [], limitations: r.limitations || [], properties: r.sections.map((x) => Object.keys(x)), compat: { responsive: ["empilement automatique sur mobile par le rendu", "masquage par écran possible (hideOn) depuis l'éditeur"] } };
 }
 
-// Style de section (attributs natifs seulement) : rythme alterné fond clair / surface pour la lisibilité ; jamais de propriété hors STYLE
-function styleFor(type, index) {
+// Style de section (attributs natifs seulement). `layout` (facultatif) : plan de composition du AI Design Generator (designGen) — { hero, cards, text, cta } ; toute valeur hors énumération native est écartée.
+function styleFor(type, index, layout = null) {
   const S = registry.STYLE;
   const pick = (k, v) => (S[k].includes(v) ? v : undefined);
-  if (type === "hero") return { padding: pick("padding", "xl"), align: pick("align", "center"), width: pick("width", "wide") };
-  if (type === "cta") return { padding: pick("padding", "lg"), background: pick("background", "primary"), align: pick("align", "center") };
-  if (["features", "testimonials", "faq", "list"].includes(type)) return { padding: pick("padding", "lg"), background: pick("background", index % 2 ? "surface" : "default"), width: pick("width", "normal") };
-  return { padding: pick("padding", "md"), width: pick("width", "narrow") };
+  const from = (def, over, alt = false) => {
+    const g = { ...def, ...(over || {}) };
+    if (alt && over && over.background === undefined && g.background !== undefined) g.background = index % 2 ? "surface" : "default";
+    return Object.fromEntries(["padding", "background", "align", "width"].map((k) => [k, pick(k, g[k])]).filter(([, v]) => v));
+  };
+  if (type === "hero") return from({ padding: "xl", align: "center", width: "wide" }, layout && layout.hero);
+  if (type === "cta") return from({ padding: "lg", background: "primary", align: "center" }, layout && layout.cta);
+  if (["features", "testimonials", "faq", "list"].includes(type)) return from({ padding: "lg", background: index % 2 ? "surface" : "default", width: "normal" }, layout && layout.cards);
+  return from({ padding: "md", width: "narrow" }, layout && layout.text);
 }
 module.exports = { mapSection, styleFor, RULES };
