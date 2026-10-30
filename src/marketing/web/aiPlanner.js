@@ -17,8 +17,8 @@ module.exports = () => {
   });
   const body = (req) => (req.body && typeof req.body === "object" ? req.body : {});
 
-  router.get("/ia/site/plans", need("forms.read"), (req, res, next) => send(res, next, () => ({ plans: plans.list(req.mk.ctx) })));
-  router.get("/ia/site/plans/:id(\\d+)", need("forms.read"), (req, res, next) => send(res, next, () => ({ plan: plans.get(req.mk.ctx, req.params.id), history: plans.history(req.mk.ctx, req.params.id) })));
+  router.get("/ia/site/plans", need("forms.read"), need("templates.read"), (req, res, next) => send(res, next, () => ({ plans: plans.list(req.mk.ctx) })));
+  router.get("/ia/site/plans/:id(\\d+)", need("forms.read"), need("templates.read"), (req, res, next) => send(res, next, () => ({ plan: plans.get(req.mk.ctx, req.params.id), history: plans.history(req.mk.ctx, req.params.id) })));
   router.post("/ia/site/analyser", need("forms.write"), (req, res, next) => send(res, next, async () => ({ plan: await plans.analyzeBrief(req.mk.ctx, { brief: body(req).brief, siteId: body(req).siteId }) })));
   router.post("/ia/site/plans/:id(\\d+)/reponses", need("forms.write"), (req, res, next) => send(res, next, async () => ({ plan: await plans.answerQuestions(req.mk.ctx, req.params.id, { answers: body(req).answers, revision: body(req).revision }) })));
   router.post("/ia/site/plans/:id(\\d+)/planifier", need("forms.write"), (req, res, next) => send(res, next, async () => ({ plan: await plans.createPlan(req.mk.ctx, req.params.id, { proceedWithAssumptions: body(req).proceedWithAssumptions === true }) })));
