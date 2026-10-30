@@ -180,6 +180,14 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_ai_core_quotas": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_ai_core_usage": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_ai_requests": {
    "siteId": true,
    "classe": "a-decider"
