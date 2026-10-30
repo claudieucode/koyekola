@@ -144,16 +144,19 @@ function exportTemplate(ctx, siteId, ref) {
     const st = catalog.structureOf(ctx, siteId, ref);
     doc = { kind: kind === "pattern" ? "section" : "component", name: st.label, description: "", category: "", language: "fr", siteType: "", sectors: [], keywords: [], version: 1, content: { sections: st.pages[0].sections } };
   } else throw new UserError("Seuls vos propres modèles peuvent être exportés.");
-  return { format: FORMAT, formatVersion: catalog.FORMAT_VERSION, exportedAt: new Date().toISOString(), requires: { widgets: widgetTypesOf(doc.content.sections) }, ...doc };
+  return { format: `${FORMAT}@${catalog.FORMAT_VERSION}`, formatVersion: catalog.FORMAT_VERSION, exportedAt: new Date().toISOString(), requires: { widgets: widgetTypesOf(doc.content.sections) }, ...doc };
 }
 // Migrations de format : chaque entrée transforme la version N en N + 1 (aucune n'est nécessaire tant que le format est à 1 ; l'ancien « kolakisa-page@1 » est reconnu et converti)
 const MIGRATIONS = Object.freeze({});
 function upgradeDocument(doc) {
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new UserError("Fichier de modèle invalide : un objet JSON est attendu.");
   if (LEGACY_FORMATS.includes(doc.format)) return { format: FORMAT, formatVersion: 1, kind: "page", name: doc.name, description: "", category: "", language: "fr", siteType: "", sectors: [], keywords: [], version: 1, content: doc.content };
-  if (doc.format !== FORMAT) throw new UserError("Ce fichier n'est pas un modèle Kolakisa (format inconnu).");
-  let v = Number(doc.formatVersion);
+  // « kolakisa-template@N » (forme canonique, comme « kolakisa-page@1 ») ou « kolakisa-template » + formatVersion
+  const tagged = /^kolakisa-template@(\d{1,3})$/.exec(String(doc.format));
+  if (doc.format !== FORMAT && !tagged) throw new UserError("Ce fichier n'est pas un modèle Kolakisa (format inconnu).");
+  let v = tagged ? Number(tagged[1]) : Number(doc.formatVersion);
   if (!Number.isInteger(v) || v < 1) throw new UserError("Version de format absente ou invalide.");
+  if (tagged && doc.formatVersion !== undefined && Number(doc.formatVersion) !== v) throw new UserError("Version de format incohérente dans le fichier.");
   if (v > catalog.FORMAT_VERSION) throw new UserError(`Ce modèle a été créé avec une version plus récente du format (${v}) que celle de ce site (${catalog.FORMAT_VERSION}) : mettez Kolakisa à jour avant de l'importer.`);
   let out = doc;
   while (v < catalog.FORMAT_VERSION) { const step = MIGRATIONS[v]; if (!step) throw new UserError(`Aucune migration disponible depuis la version ${v} du format.`); out = step(out); v += 1; }

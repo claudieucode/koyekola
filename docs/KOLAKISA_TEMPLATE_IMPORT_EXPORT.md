@@ -59,13 +59,13 @@ Options d'`/importer` : `ref`, `importKey` (8 à 64 caractères, obligatoire), `
 `/annuler` retire ce que l'import a créé **à condition que rien n'ait changé** (tout ou rien) : pages en brouillon et non modifiées → corbeille (restaurables) ; sections insérées → retirées si la page est à la même révision ; composant → supprimé s'il n'est utilisé nulle part ; menu → supprimé. Refus (409, rien de changé, cause nommée) si une page a été modifiée / publiée, si le modèle de thème est affecté, ou si l'import est déjà annulé. **Le brouillon de styles n'est pas annulé** (à abandonner dans Styles) — signalé dans la réponse. Un import annulé ne compte plus dans les usages ni dans « déjà importé ».
 
 ## 6. Fichiers de modèle
-Format `kolakisa-template`, `formatVersion` 1 :
+Format `kolakisa-template@1` (forme canonique, comme `kolakisa-page@1` ; la forme `kolakisa-template` + `formatVersion` est aussi lue), `formatVersion` 1 :
 ```json
-{ "format": "kolakisa-template", "formatVersion": 1, "exportedAt": "…", "requires": { "widgets": ["heading", "text"] },
+{ "format": "kolakisa-template@1", "formatVersion": 1, "exportedAt": "…", "requires": { "widgets": ["heading", "text"] },
   "kind": "page|section|component", "name": "…", "description": "…", "category": "…", "language": "fr", "siteType": "vitrine",
   "sectors": ["restaurant"], "keywords": ["…"], "version": 2, "content": { "sections": [ … ], "theme": {}, "title": "", "description": "", "seo": {} } }
 ```
-Export : ses propres modèles (page, composition, composant), en téléchargement (`Content-Disposition`, `X-Content-Type-Options: nosniff`). Import : corps JSON de 600 Ko au plus (413 au-delà) ; format reconnu (`kolakisa-template` ou l'ancien `kolakisa-page@1`, converti) ; version de format supérieure à celle du site refusée avec explication ; 30 sections au plus ; **contenu entièrement revalidé** par la grammaire fermée (scripts, gestionnaires d'événements, HTML libre retirés ou refusés) ; analyse de compatibilité ; secteurs inconnus ignorés ; le résultat est un **modèle** de « Mes modèles » (jamais une page). Non pris en charge : fichiers de sites complets, de modèles de thème (voir REMAINING_ISSUES).
+Export : ses propres modèles (page, composition, composant), en téléchargement (`Content-Disposition`, `X-Content-Type-Options: nosniff`). Import : corps JSON de 600 Ko au plus (413 au-delà) ; format reconnu (`kolakisa-template@N`, `kolakisa-template` + `formatVersion`, ou l'ancien `kolakisa-page@1`, converti ; version du nom et `formatVersion` doivent concorder) ; version de format supérieure à celle du site refusée avec explication ; 30 sections au plus ; **contenu entièrement revalidé** par la grammaire fermée (scripts, gestionnaires d'événements, HTML libre retirés ou refusés) ; analyse de compatibilité ; secteurs inconnus ignorés ; le résultat est un **modèle** de « Mes modèles » (jamais une page). Non pris en charge : fichiers de sites complets, de modèles de thème (voir REMAINING_ISSUES).
 
 ## 7. Réponses d'erreur
 `{ ok: false, error, details? }` ; 403 sans droit, 404 modèle ou site introuvable, 409 confirmation requise / conflit / annulation refusée, 413 fichier trop gros, 422 refus de validation, 500 erreur technique (rien d'écrit).

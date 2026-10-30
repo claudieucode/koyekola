@@ -321,21 +321,24 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
   });
 
   describe("fichiers de modèle : export, import, versions de format", () => {
-    const doc = (extra = {}) => ({ format: "kolakisa-template", formatVersion: 1, kind: "page", name: "Modèle fichier", description: "D", category: "Mes pages", language: "fr", siteType: "", sectors: ["restaurant"], keywords: ["a"], content: { sections: [{ type: "text", markdown: "Contenu du fichier" }] }, ...extra });
+    const doc = (extra = {}) => ({ format: "kolakisa-template@1", formatVersion: 1, kind: "page", name: "Modèle fichier", description: "D", category: "Mes pages", language: "fr", siteType: "", sectors: ["restaurant"], keywords: ["a"], content: { sections: [{ type: "text", markdown: "Contenu du fichier" }] }, ...extra });
     test("export puis import dans un autre site : même contenu, nom numéroté si besoin, secteurs conservés, version de format et éléments requis déclarés", async () => {
       const pid = await newPage(boss, A, "Source export"); const ref = (await ok(post(editorA, A, "enregistrer", { kind: "page", pageId: pid, name: "Modèle exporté", sectors: ["restaurant"], keywords: "x, y" }))).result.ref;
       const r = await editorA.get(`${TP}/export.json?site=${A}&ref=${ref}`); assert.equal(r.status, 200); assert.match(r.headers.get("content-disposition"), /attachment; filename="modele-exporte\.kolakisa-template\.json"/); assert.equal(r.headers.get("x-content-type-options"), "nosniff");
-      const file = json(r); assert.equal(file.format, "kolakisa-template"); assert.equal(file.formatVersion, 1); assert.equal(file.kind, "page"); assert.deepEqual(file.sectors, ["restaurant"]); assert.ok(file.requires.widgets.length >= 1);
+      const file = json(r); assert.equal(file.format, "kolakisa-template@1"); assert.equal(file.formatVersion, 1); assert.equal(file.kind, "page"); assert.deepEqual(file.sectors, ["restaurant"]); assert.ok(file.requires.widgets.length >= 1);
       const back = await ok(post(adminB, B, "importer-fichier", file)); assert.equal(back.result.renamed, true); assert.match(back.result.name, /Modèle exporté \(2\)/); assert.equal(one("SELECT site_id FROM mk_page_templates WHERE id = ?", Number(back.result.ref.slice(5))).site_id, B);
       assert.ok((await cat(adminB, B, "source=mine&sector=restaurant")).items.some((i) => i.ref === back.result.ref));
+      const old = await ok(post(editorA, A, "importer-fichier", doc({ format: "kolakisa-template", name: "Forme sans arobase" }))); assert.match(old.result.ref, /^mine:/, "la forme « kolakisa-template » + formatVersion reste acceptée");
       const sec = await ok(post(editorA, A, "importer-fichier", doc({ kind: "section", name: "Section fichier" }))); assert.match(sec.result.ref, /^pattern:/);
       const comp = await ok(post(editorA, A, "importer-fichier", doc({ kind: "component", name: "Composant fichier" }))); assert.match(comp.result.ref, /^comp:/);
     });
     test("fichiers invalides : format inconnu, version plus récente, JSON non objet, type non pris en charge, trop de sections, élément inconnu, contenu dangereux — refusés avec la cause, rien d'écrit", async () => {
       const before = counts(), tpl = one("SELECT COUNT(*) n FROM mk_page_templates").n;
       await refused(post(editorA, A, "importer-fichier", { format: "autre", formatVersion: 1 }), 422, /pas un modèle Kolakisa/);
-      await refused(post(editorA, A, "importer-fichier", doc({ formatVersion: 99 })), 422, /version plus récente/);
-      await refused(post(editorA, A, "importer-fichier", doc({ formatVersion: 0 })), 422, /Version de format/);
+      await refused(post(editorA, A, "importer-fichier", doc({ format: "kolakisa-template@99", formatVersion: 99 })), 422, /version plus récente/);
+      await refused(post(editorA, A, "importer-fichier", doc({ format: "kolakisa-template", formatVersion: 99 })), 422, /version plus récente/);
+      await refused(post(editorA, A, "importer-fichier", doc({ format: "kolakisa-template@1", formatVersion: 2 })), 422, /incohérente/);
+      await refused(post(editorA, A, "importer-fichier", doc({ format: "kolakisa-template", formatVersion: 0 })), 422, /Version de format/);
       await refused(editorA.request(`${TP}/importer-fichier${q(A)}`, { method: "POST", json: ["x"] }), 422, /objet JSON/);
       await refused(post(editorA, A, "importer-fichier", doc({ kind: "site" })), 422, /non pris en charge/);
       await refused(post(editorA, A, "importer-fichier", doc({ content: { sections: [] } })), 422, /aucune section/);
