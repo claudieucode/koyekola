@@ -55,3 +55,7 @@ Les 12 documents `KOLAKISA_PROGRAMME21_*.md` de `docs/`.
 
 ## I. Prochaines priorités
 P1 : aligner le planificateur sur la boutique native (I1) ; corriger les 5 échecs hérités de 20.5. P2 : brancher 21.9 et 21.10 sur le studio ; valider un fournisseur d'IA et Stripe en réel avec une clé de test. P3 : exécuter les suites navigateur sur une machine équipée de Chrome.
+
+## Résultat du déploiement
+- Poussé sur `main` sans force : a39abd87 → a1e45460.
+- Vérifié en production le 2026-10-30 : `/sante` 200, `/connexion` 200, `/marketing/ia/studio` 302 (protégé), et `/js/ai-builder.js` déployé contient `confirm: true` (preuve que la correction F2 est en ligne).
