@@ -206,28 +206,35 @@ function save(ctx, row, fields, extra = {}) {
 }
 const rescan = (row, fields) => { const c = factsLib.buildContext({ facts: Object.entries(json(row.context, {}).facts || {}).map(([key, value]) => ({ key, value, source: "user" })), language: row.language }); const v = voiceLib.normalize(json(row.voice, {})); return issueScan(fields, null, c, v, row.language); };
 
+// Cœur de la révision, SANS ensemble enregistré : réécrit une valeur de champ (variantes nettoyées, garde anti-invention, contrôles qualité). Utilisé par `revise` (champ d'un ensemble) et par la
+// régénération sélective (21.9, texte actuellement dans la page). Aucune écriture.
+async function reviseValue(ctx, siteId, { value, label = "Texte", max = 400, line = true, path = ["text"], key = "field", op, instruction = "", count = 1, call = null, facts = {}, country = "", keywords = {}, language = "fr", voice = null, focusKeyword = "" } = {}) {
+  if (!Object.hasOwn(OPS, op)) throw bad(`Opération inconnue. Disponibles : ${Object.keys(OPS).join(", ")}.`);
+  const n = op === "variants" ? Math.min(Math.max(Number(count) || 3, 2), 3) : Math.min(Math.max(Number(count) || 1, 1), 3);
+  const context = factsLib.buildContext({ facts: Object.entries(facts || {}).map(([k, v]) => ({ key: k, value: v, source: "user" })), language, country, keywords });
+  const v = voiceLib.normalize(voice || {});
+  const loc = localize.profile(language, context.country);
+  const schema = { type: "object", additionalProperties: false, required: ["variants"], properties: { variants: { type: "array", items: { type: "string" } } } };
+  const prompt = `${OPS[op]}${instruction ? `\nConsigne de la personne : ${String(instruction).slice(0, 300)}` : ""}${op === "seo" && focusKeyword ? `\nMot-clé principal : ${focusKeyword}` : ""}\nProduis ${n} variante(s). Maximum ${max} caractères chacune.\n<donnees>\n${JSON.stringify({ role: label, texte: value })}\n</donnees>`;
+  const raw = await (call || gateway.legacy())(ctx, "revise", { prompt, schema, system: systemPrompt(v, loc, "Informations fournies : aucune autre que le texte. N'ajoute aucun fait."), siteId, effort: "low" });
+  const variants = (Array.isArray(raw && raw.variants) ? raw.variants : []).filter((x) => typeof x === "string" && x.trim()).slice(0, n).map((t) => {
+    const g = factsLib.guard(fieldsLib.clean(t, { max: max * 2, line: true }), context), text = fieldsLib.clean(g.text, { max, line });
+    const issues = [...validate.redactions(g.replaced, key), ...validate.checkField({ key, label, max, path }, text, { context, voice: v, language })];
+    return { text, issues, blocking: validate.blocking(issues).length > 0 };
+  });
+  if (!variants.length) throw bad("L'IA n'a proposé aucune variante utilisable.", "format");
+  return { variants, aiCalls: 1 };
+}
 async function revise(ctx, siteId, setId, { fieldKey, op, instruction = "", count = 1, call = null } = {}) {
   const row = loadSet(ctx, siteId, setId);
   if (!Object.hasOwn(OPS, op)) throw bad(`Opération inconnue. Disponibles : ${Object.keys(OPS).join(", ")}.`);
   const { f } = fieldOf(row, fieldKey);
   if (f.locked) throw bad("Ce champ est verrouillé : déverrouillez-le pour le réviser.", "locked");
-  const n = op === "variants" ? Math.min(Math.max(Number(count) || 3, 2), 3) : Math.min(Math.max(Number(count) || 1, 1), 3);
   const ctxData = json(row.context, {});
-  const context = factsLib.buildContext({ facts: Object.entries(ctxData.facts || {}).map(([key, value]) => ({ key, value, source: "user" })), language: row.language, country: ctxData.country, keywords: ctxData.keywords });
-  const voice = voiceLib.normalize(json(row.voice, {}));
-  const loc = localize.profile(row.language, context.country);
   const seoRow = json(row.seo, {});
-  const schema = { type: "object", additionalProperties: false, required: ["variants"], properties: { variants: { type: "array", items: { type: "string" } } } };
-  const prompt = `${OPS[op]}${instruction ? `\nConsigne de la personne : ${String(instruction).slice(0, 300)}` : ""}${op === "seo" && seoRow.focusKeyword ? `\nMot-clé principal : ${seoRow.focusKeyword}` : ""}\nProduis ${n} variante(s). Maximum ${f.max} caractères chacune.\n<donnees>\n${JSON.stringify({ role: f.label, texte: f.value })}\n</donnees>`;
-  const raw = await (call || gateway.legacy())(ctx, "revise", { prompt, schema, system: systemPrompt(voice, loc, "Informations fournies : aucune autre que le texte. N'ajoute aucun fait."), siteId, effort: "low" });
+  const res = await reviseValue(ctx, siteId, { value: f.value, label: f.label, max: f.max, line: f.type !== "text", path: f.path, key: fieldKey, op, instruction, count, call, facts: ctxData.facts || {}, country: ctxData.country, keywords: ctxData.keywords, language: row.language, voice: json(row.voice, {}), focusKeyword: seoRow.focusKeyword });
   const batch = crypto.randomUUID();
-  const variants = (Array.isArray(raw && raw.variants) ? raw.variants : []).filter((v) => typeof v === "string" && v.trim()).slice(0, n).map((t) => {
-    const g = factsLib.guard(fieldsLib.clean(t, { max: f.max * 2, line: true }), context), text = fieldsLib.clean(g.text, { max: f.max, line: f.type !== "text" });
-    const issues = [...validate.redactions(g.replaced, fieldKey), ...validate.checkField({ key: fieldKey, label: f.label, max: f.max, path: f.path }, text, { context, voice, language: row.language })];
-    const vid = Number(version(ctx, row.id, fieldKey, text, "ai", `variant:${op}`, batch).lastInsertRowid);
-    return { id: vid, text, issues, blocking: validate.blocking(issues).length > 0 };
-  });
-  if (!variants.length) throw bad("L'IA n'a proposé aucune variante utilisable.", "format");
+  const variants = res.variants.map((x) => ({ ...x, id: Number(version(ctx, row.id, fieldKey, x.text, "ai", `variant:${op}`, batch).lastInsertRowid) }));
   return { fieldKey, op, before: f.value, manual: f.source === "user", variants };
 }
 // Choix explicite d'une variante proposée (jamais un texte libre venu du client)
@@ -349,11 +356,14 @@ function apply(ctx, siteId, setId, { pageId = null, overwriteManual = [], onlyKe
   const sections = JSON.parse(JSON.stringify((page.working && page.working.sections) || []));
   const report = { applied: [], skipped: [] };
   const blockedKeys = new Set(validate.blocking(issues).map((i) => i.field));
+  // Protection posée par la personne (Régénération intelligente, 21.9) : une page ou une section VERROUILLÉE n'est jamais écrite par ce moteur, quel que soit l'appelant
+  const lockedByUser = (sectionId) => { try { return require("../regen/protect").isLocked(ctx, siteId, [["page", page.id], ["section", sectionId]]); } catch { return false; } };
   const bySection = new Map();
   for (const [key, f] of Object.entries(fields)) {
     if (onlyKeys && !onlyKeys.includes(key)) continue;
     if (!f.value) { report.skipped.push({ key, why: "Champ vide." }); continue; }
     if (blockedKeys.has(key)) { report.skipped.push({ key, why: "Problème critique non résolu sur ce champ." }); continue; }
+    if (lockedByUser(f.section)) { report.skipped.push({ key, why: "Page ou section verrouillée par la personne : conservée." }); continue; }
     let idx = sections.findIndex((s) => s.id === f.section);
     if (idx < 0 && Number.isInteger(f.index) && sections[f.index] && sections[f.index].type === f.type) idx = f.index;
     if (idx < 0) { report.skipped.push({ key, why: "Section introuvable dans la page cible." }); continue; }
@@ -423,4 +433,4 @@ function unapply(ctx, siteId, setId) {
 function getSet(ctx, siteId, setId) { return view(loadSet(ctx, siteId, setId)); }
 function listSets(ctx, siteId, { pageId = null } = {}) { siteOf(ctx, siteId); return ctx.db.prepare("SELECT id, page_id, language, source_set_id, status, revision, updated_at FROM mk_content_sets WHERE site_id = ? AND organization_id = ? AND (? IS NULL OR page_id = ?) ORDER BY id DESC LIMIT 100").all(siteId, ctx.organizationId, pageId, pageId); }
 
-module.exports = { OPS, getVoice, setVoice, pageFields, generatePage, generateSite, revise, choose, editField, lockField, undoField, history, accept, discard, localizeSet, apply, unapply, getSet, listSets, systemPrompt, PAGE_SCHEMA };
+module.exports = { OPS, reviseValue, getVoice, setVoice, pageFields, generatePage, generateSite, revise, choose, editField, lockField, undoField, history, accept, discard, localizeSet, apply, unapply, getSet, listSets, systemPrompt, PAGE_SCHEMA };
