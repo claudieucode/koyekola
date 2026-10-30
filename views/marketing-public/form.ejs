@@ -1,6 +1,6 @@
 <%- include("../partials/header", { title, seo: { noindex: true, rawTitle: title + " · KOLAKISA" } }) %>
-  <div class="auth-page">
-    <div class="auth-card">
+  <div class="auth-page kv-form-page">
+    <div class="auth-card kv-form-card">
       <% if (submitted) { %>
         <% if (typeof confirmPending !== "undefined" && confirmPending) { %>
           <h1>Vérifiez votre boîte e-mail</h1>

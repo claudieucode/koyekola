@@ -360,6 +360,10 @@
    "siteId": false,
    "classe": "a-isoler-B2"
   },
+  "mk_media_folders": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_message_events": {
    "siteId": false,
    "classe": "plateforme"
@@ -451,6 +455,10 @@
   "mk_settings": {
    "siteId": false,
    "classe": "plateforme"
+  },
+  "mk_site_domains": {
+   "siteId": true,
+   "classe": "isolee"
   },
   "mk_site_members": {
    "siteId": true,
@@ -675,6 +683,10 @@
   "seo_pagespeed": {
    "siteId": false,
    "classe": "plateforme"
+  },
+  "seo_rank_entries": {
+   "siteId": true,
+   "classe": "isolee"
   },
   "seo_redirects": {
    "siteId": true,

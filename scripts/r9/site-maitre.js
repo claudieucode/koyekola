@@ -56,6 +56,7 @@ function appliquer(db) {
   const before = { counts: tableCounts(db), sites: JSON.stringify(secondaries(db)), structure: structure(db) };
   db.exec("BEGIN IMMEDIATE");
   try {
+    before.counts = tableCounts(db); // comptés SOUS le verrou : une écriture concurrente de l'application (journal 404…) ne fausse plus la comparaison
     db.exec(UP);
     db.prepare("INSERT INTO schema_migrations (scope, version, name, checksum) VALUES (?, ?, ?, ?)").run(SCOPE, VERSION, NAME, CHECKSUM);
     // contrôles DANS la transaction : toute anomalie annule tout
@@ -103,6 +104,7 @@ function retour(db) {
   const before = { counts: tableCounts(db), sites: JSON.stringify(secondaries(db)) };
   db.exec("BEGIN IMMEDIATE");
   try {
+    before.counts = tableCounts(db); // idem : comptage sous le verrou
     db.exec(DOWN);
     db.prepare("DELETE FROM schema_migrations WHERE scope = ? AND version = ?").run(SCOPE, VERSION);
     // l'identifiant consommé est rendu seulement si la ligne du principal était la dernière créée (sinon la séquence reste, sans conséquence)

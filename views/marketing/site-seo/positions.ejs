@@ -1,0 +1,36 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p>Aucune position n'est inventée. Les mesures viennent de ce que vous saisissez, d'un export « Requêtes » de Search Console, ou de l'API Search Console de ce site si elle est connectée (<a href="<%= space.base %>/seo/connexions">Connexions</a>). La position de Search Console est une <strong>moyenne</strong> sur la période, pas un rang exact. Un écart négatif est une amélioration.</p></div>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-main"><h2 id="ps-main">Mots-clés suivis (<%= v.total %>)</h2>
+      <form method="get" class="mk-form"><div class="field-group"><label for="ps-q">Rechercher</label><input id="ps-q" type="search" name="q" value="<%= search %>" maxlength="100"></div></form>
+      <% if (!v.keywords.length) { %><div class="mk-empty"><%- icon("trendingUp", { size: 32 }) %><p>Aucune mesure pour le moment.</p></div><% } else { %>
+      <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Positions par mot-clé</caption><thead><tr><th scope="col">Mot-clé</th><th scope="col">Position</th><th scope="col">Écart</th><th scope="col">Mesurée le</th><th scope="col">Source</th><th scope="col">Historique</th></tr></thead>
+        <tbody><% v.keywords.forEach((k) => { %><tr><td data-label="Mot-clé"><%= k.keyword %><% if (k.latest.page_url) { %><span class="mk-sub"><code><%= k.latest.page_url %></code></span><% } %></td>
+          <td data-label="Position"><%= k.latest.position %></td>
+          <td data-label="Écart"><%= k.delta === null ? "—" : (k.delta > 0 ? "+" : "") + k.delta %><% if (k.delta !== null && k.delta !== 0) { %> <span class="mk-sub"><%= k.delta < 0 ? "amélioration" : "recul" %></span><% } %></td>
+          <td data-label="Mesurée le"><%= k.latest.measured_on %></td><td data-label="Source"><%= sources[k.latest.source] || k.latest.source %></td>
+          <td data-label="Historique"><%= k.history.map((h) => h.position).join(" → ") %>
+            <% if (canEdit) { %><form method="post" action="<%= space.base %>/seo/positions/<%= k.latest.id %>/supprimer" data-confirm="Supprimer la dernière mesure de ce mot-clé ?"><button type="submit" class="btn btn-outline btn-sm">Supprimer la dernière</button></form><% } %></td></tr><% }) %></tbody></table></div>
+      <% } %>
+    </section>
+    <% if (canEdit) { %>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-add"><h2 id="ps-add">Ajouter une mesure</h2>
+      <form method="post" action="<%= space.base %>/seo/positions" class="mk-form" data-busy-form>
+        <div class="field-group"><label for="ps-kw">Mot-clé</label><input id="ps-kw" name="keyword" maxlength="120" required></div>
+        <div class="field-group"><label for="ps-pos">Position (1 à 1000)</label><input id="ps-pos" name="position" inputmode="decimal" required></div>
+        <div class="field-group"><label for="ps-url">Page (facultatif)</label><input id="ps-url" name="url" maxlength="500" placeholder="/ma-page"></div>
+        <div class="field-group"><label for="ps-date">Date de la mesure (vide = aujourd'hui)</label><input id="ps-date" type="date" name="date"></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div>
+      </form>
+    </section>
+    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-imp"><h2 id="ps-imp">Importer un export Search Console</h2>
+      <form method="post" action="<%= space.base %>/seo/positions/import" class="mk-form" data-busy-form>
+        <div class="field-group"><label for="ps-csv">Contenu du fichier « Requêtes.csv »</label><textarea id="ps-csv" name="csv" rows="5" spellcheck="false" maxlength="400000"></textarea></div>
+        <div class="field-group"><label for="ps-idate">Date de fin de la période exportée (vide = aujourd'hui)</label><input id="ps-idate" type="date" name="date"></div>
+        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Importer</button></div>
+      </form>
+      <% if (gsc.state === "connected") { %><form method="post" action="<%= space.base %>/seo/positions/api" data-busy-form><div class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Relever les requêtes depuis l'API Search Console (28 derniers jours)</button></div></form>
+      <% } else { %><p class="field-hint">API Search Console : <%= gsc.label %>.</p><% } %>
+    </section>
+    <% } %>
+<%- include("../partials/bottom") %>

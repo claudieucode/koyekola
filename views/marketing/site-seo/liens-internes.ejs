@@ -1,0 +1,12 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head") %>
+    <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p>Suggestions calculées localement : une page est proposée quand son mot-clé principal (ou son titre) apparaît déjà dans le texte d'une autre page du site qui ne pointe pas encore vers elle. C'est un repère éditorial, pas une promesse de classement.</p></div>
+    <% if (!v.pages.length) { %><div class="mk-empty"><%- icon("link", { size: 32 }) %><p>Ce site n'a pas encore de page publiée.</p></div><% } else if (!v.withSuggestions) { %><div class="mk-empty"><%- icon("link", { size: 32 }) %><p>Aucune suggestion : les mentions du sujet d'une page sont déjà reliées, ou n'existent pas encore. Renseignez un mot-clé principal sur vos pages pour de meilleures suggestions.</p></div><% } %>
+    <% v.pages.filter((p) => p.suggestions.length).forEach((p) => { %>
+    <section class="mk-panel mk-seo-appear"><h2><%= p.name %> <small><code><%= p.path %></code></small></h2>
+      <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Liens à ajouter depuis <%= p.name %></caption><thead><tr><th scope="col">Lier vers</th><th scope="col">Texte à lier</th><th scope="col">Mentions</th><th scope="col">Contexte</th></tr></thead>
+        <tbody><% p.suggestions.forEach((s) => { %><tr><td data-label="Lier vers"><%= s.name %><span class="mk-sub"><code><%= s.path %></code></span></td><td data-label="Texte à lier">« <%= s.anchor %> »</td><td data-label="Mentions"><%= s.count %></td><td data-label="Contexte">…<%= s.context %>…</td></tr><% }) %></tbody></table></div>
+    </section>
+    <% }) %>
+    <% if (v.truncated) { %><p class="field-hint">Seules les 500 premières pages sont analysées.</p><% } %>
+<%- include("../partials/bottom") %>

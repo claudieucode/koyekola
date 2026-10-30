@@ -3,6 +3,7 @@ const { createRepository } = require("../db/repository");
 const { transaction } = require("../db/tx");
 const { checkCtx, cleanText, audit, emit, resolveSite, siteSql, MarketingError } = require("./shared");
 const { sendableSql } = require("../compliance/sendable");
+const siteAccess = require("../contactcore/siteAccess");
 
 const MAX_BATCH = 5000;
 
@@ -80,7 +81,7 @@ function addToList(ctx, listId, contactIds) {
     let alreadyMembers = 0;
     for (const id of contactIds) {
       const contact = Number.isInteger(id) ? check.get(id, ctx.organizationId) : null;
-      if (!contact) throw new MarketingError("not_found", `Contact introuvable (${String(id).slice(0, 20)}).`);
+      if (!contact || !siteAccess.canRead(ctx, contact)) throw new MarketingError("not_found", `Contact introuvable (${String(id).slice(0, 20)}).`); // accès limité à un site : seulement les contacts de CE site (défense en profondeur : le service ne dépend pas de la route)
       if (insert.run(ctx.organizationId, listId, id).changes) {
         added++;
         emit(ctx, "list.member_added", { contact, idempotencyKey: `list.member_added:${listId}:${id}`, metadata: { listId } });

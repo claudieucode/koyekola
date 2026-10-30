@@ -77,8 +77,17 @@ function revokeApiKey(ctx, id) {
 // N'écrit `last_used_at` que si la dernière écriture date de plus d'une minute (une clé très active n'écrit pas à chaque requête).
 function authenticate(db, rawKey) {
   if (typeof rawKey !== "string" || !rawKey.startsWith(PREFIX) || rawKey.length > 200) return null;
-  const row = db.prepare("SELECT id, organization_id, scope, reach, site_id, last_used_at FROM mk_api_keys WHERE key_hash = ? AND revoked_at IS NULL").get(hashOf(rawKey));
+  let row;
+  try {
+    row = db.prepare("SELECT k.id, k.organization_id, k.scope, k.reach, k.site_id, k.last_used_at, k.created_by, u.status AS creator_status, u.deleted_at AS creator_deleted FROM mk_api_keys k LEFT JOIN users u ON u.id = k.created_by WHERE k.key_hash = ? AND k.revoked_at IS NULL").get(hashOf(rawKey));
+  } catch (error) {
+    // Base sans table des comptes (tests unitaires du module marketing seul) : pas de lien avec un compte à vérifier ; en production la table existe toujours
+    if (!/no such table: users|no such column: .*(status|deleted_at)/.test(error.message)) throw error;
+    row = db.prepare("SELECT id, organization_id, scope, reach, site_id, last_used_at, created_by FROM mk_api_keys WHERE key_hash = ? AND revoked_at IS NULL").get(hashOf(rawKey));
+  }
   if (!row) return null;
+  // Clé liée à une personne : refusée tant que son compte est suspendu, désactivé ou supprimé (la réactivation la rétablit ; le retrait de l'équipe et la suppression la révoquent)
+  if (row.created_by && (row.creator_deleted || (row.creator_status && row.creator_status !== "active"))) return null;
   // Clé limitée à un site : refusée si son site n'existe plus ou n'est plus actif (même effet que la révocation, sans rien modifier). Une portée inconnue est refusée par prudence.
   if (row.reach === "site") {
     const site = Number.isInteger(row.site_id) ? db.prepare(`SELECT status, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(db)}`).get(row.site_id, row.organization_id) : null;

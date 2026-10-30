@@ -8,8 +8,8 @@ const { need } = require("./kit");
 module.exports = ({ BASE, shell }) => {
   const router = express.Router();
   const PAGE = `${BASE}/logs`;
-  // Un accès limité à un site ne lit le journal qu'avec « audit.read » du site (jamais par simple « tools.view »)
-  const guard = (req, res, next) => (req.mk.siteOnly && !req.mk.can("audit.read") ? res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." }) : next());
+  // Le journal d'activité (rôles, connexions, adresses des personnes invitées, tous les sites) exige « audit.read » (administrateur), pour l'équipe comme pour un accès limité à un site : jamais le simple « tools.view »
+  const guard = (req, res, next) => (!req.mk.can("audit.read") ? res.status(403).render("error", { message: "Vous n'avez pas la permission d'ouvrir cet écran." }) : next());
   const head = (req) => ({ title: "Journal d'activité", ...shell(req, null, "logs"), noSite: true });
 
   router.get("/site-web/outils/logs", need("tools.view"), guard, (req, res) => {

@@ -183,13 +183,13 @@ function renderRedirects(req, res, { errors = [], form = {}, status = 200, repor
 }
 router.get("/formateur/seo/redirections", (req, res) => renderRedirects(req, res, { form: { source: String(req.query.source || ""), target: "", status: 301 } }));
 router.post("/formateur/seo/redirections", (req, res) => {
-  const r = redirects.create({ source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note }, req.session.user.id);
+  const r = redirects.create({ source: req.body.source, target: req.body.target, status: req.body.status, matchType: req.body.match_type, note: req.body.note }, req.session.user.id);
   if (!r.ok) return renderRedirects(req, res, { errors: r.errors, form: req.body, status: 400 });
   notfound.remove(redirects.normalizePath(req.body.source)); // l'adresse introuvable est désormais redirigée
   res.redirect("/formateur/seo/redirections?ok=cree");
 });
 router.post("/formateur/seo/redirections/:id(\\d+)", (req, res) => {
-  const r = redirects.update(Number(req.params.id), { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note, enabled: req.body.enabled === "1" ? "1" : "0" }, req.session.user.id);
+  const r = redirects.update(Number(req.params.id), { source: req.body.source, target: req.body.target, status: req.body.status, matchType: req.body.match_type, note: req.body.note, enabled: req.body.enabled === "1" ? "1" : "0" }, req.session.user.id);
   if (!r.ok) return renderRedirects(req, res, { errors: r.errors, form: req.body, status: 400 });
   res.redirect("/formateur/seo/redirections?ok=modifiee");
 });

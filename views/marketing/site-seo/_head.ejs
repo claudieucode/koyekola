@@ -2,7 +2,7 @@
   En-tête commun des neuf rubriques SEO d'un site : titre, onglets (rubrique active), note d'état du site.
   Aucun formulaire n'envoie d'identifiant de site : le serveur le déduit de l'adresse vérifiée (space).
 %><%
-  const TABS = [["", "Vue générale", "seo"], ["/analyse", "Analyse SEO", "analyse"], ["/meta", "Meta", "meta"], ["/indexation", "Indexation", "indexation"], ["/sitemap", "Sitemap", "sitemap"], ["/schema", "Schema", "schema"], ["/open-graph", "Open Graph", "open-graph"], ["/robots", "Robots", "robots"], ["/404", "Erreurs 404", "notfound"]];
+  const TABS = [["", "Vue générale", "seo"], ["/analyse", "Analyse SEO", "analyse"], ["/meta", "Meta", "meta"], ["/indexation", "Indexation", "indexation"], ["/sitemap", "Sitemap", "sitemap"], ["/schema", "Schema", "schema"], ["/open-graph", "Open Graph", "open-graph"], ["/robots", "Robots", "robots"], ["/404", "Erreurs 404", "notfound"], ["/liens-internes", "Liens internes", "liens-internes"], ["/positions", "Positions", "positions"], ["/connexions", "Google", "connexions"], ["/transfert", "Export / import", "transfert"]];
   const here = mode === "overview" ? "seo" : mode;
   const fmt = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—");
 %>
