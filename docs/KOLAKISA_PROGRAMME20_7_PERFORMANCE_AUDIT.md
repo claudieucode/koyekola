@@ -1,0 +1,3 @@
+# Programme 20.7 — audit de performance
+
+**Non mesuré dans cette passe.** Aucun chiffre de temps de chargement, d'ouverture de l'éditeur, de mémoire ou de requêtes n'est annoncé. Existants : `scripts/audit-performance.js`, `docs/KOLAKISA_CANVAS_INTERACTION_PERFORMANCE.md`, `docs/perf-page-builder.md`, `docs/performance-mesures-chrome/` (mesures antérieures, non rejouées). Seule observation : sur une machine chargée par quatre tranches de tests et d'autres sessions, des parcours Chrome dépassaient 30 s à 450 s — ce qui montre une sensibilité à la charge, pas une régression mesurée. Reste à faire : exécuter `audit-performance.js` à froid et comparer aux mesures de référence.

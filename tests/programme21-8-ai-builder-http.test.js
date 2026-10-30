@@ -55,6 +55,8 @@ describe("Interface Assistant IA (serveur réel)", () => {
     test("l'accueil des projets s'affiche pour l'équipe ; un visiteur non connecté n'y accède pas", async () => {
       const r = await boss.get(U()); assert.equal(r.status, 200); assert.match(r.text, /Créer un site avec l'IA/); assert.match(r.text, /Décrivez votre site/);
       const anon = await new Client(srv.base).get(U()); assert.notEqual(anon.status, 200);
+      const sites = await boss.get("/marketing/site-web/sites"); assert.equal(sites.status, 200);
+      assert.match(sites.text, /href="\/marketing\/ia\/studio"[^>]*>Assistant IA/, "le bouton « Assistant IA » est visible sur Mes sites");
     });
     test("un brief trop court est refusé ; un brief valide crée le projet ET un site en brouillon ; rien n'est publié", async () => {
       const short = await post(boss, U("/projets"), { brief: "Un site.", newSiteName: "Projet Bâti" }); assert.ok([400, 422].includes(short.status), short.text.slice(0, 200));
