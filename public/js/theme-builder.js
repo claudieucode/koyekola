@@ -5,11 +5,16 @@
   document.body.append(root); // plein écran : rattaché au body pour échapper à tout ancêtre qui crée un bloc conteneur (transform, contain) du gabarit
   const base = root.dataset.base, canWrite = root.dataset.write === "1", canRemove = root.dataset.remove === "1";
   const $ = (id) => document.getElementById(id), el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt !== undefined) e.textContent = txt; return e; };
-  const status = (m, k) => { const s = $("tb-status"); s.textContent = m || ""; s.dataset.k = k || ""; };
+  let statusT = 0;
+  const status = (m, k) => { const s = $("tb-status"); s.textContent = m || ""; s.dataset.k = k || ""; s.dataset.show = m ? "1" : "0"; clearTimeout(statusT); if (m && k !== "err") statusT = setTimeout(() => { s.dataset.show = "0"; }, 6000); };
   const api = async (path, opt = {}) => { const r = await fetch(`${base}/api${path}`, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...opt }); const j = await r.json().catch(() => ({ ok: false, error: "Réponse illisible." })); if (!j.ok) { const e = new Error(j.error || "Erreur."); e.code = j.code; e.conflicts = j.conflicts; throw e; } return j; };
   const post = (p, b) => api(p, { method: "POST", body: JSON.stringify(b || {}) });
   const ST = { published: "Publié", draft: "Brouillon", archived: "Archivé" };
-  let data = null, opts = null, cur = "", editing = null;
+  let data = null, opts = null, cur = "", editing = null, view = "grid", navDepth = 0, loadSeq = 0, ctl = null, shown = 0;
+  const PAGE = 48, cache = new Map(), thumbs = new Map();
+  const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* navigation privée : préférence non conservée */ } } };
+  const VKEY = "kola.themeBuilder.view";
+  const reduced = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   // Icônes de navigation et structures types : balisage STATIQUE du code (aucune donnée du site), analysé par DOMParser comme les aperçus serveur.
   const IC = (d) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">${d}</svg>`;
   const ICONS = {
@@ -50,7 +55,7 @@
   const ordered = () => { const o = (t) => (t.key === "sidebar" ? 1 : t.key === "custom" ? 2 : 0); return [...data.types].sort((a, b) => o(a) - o(b)); };
   function drawTypes() {
     const ul = $("tb-types"); ul.textContent = "";
-    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.setAttribute("aria-current", String(cur === "")); b0.append(icon("all"), el("span", "", "Toutes les parties"), el("span", "tb-count", String(data.total))); b0.addEventListener("click", () => { cur = ""; load(); }); all.append(b0); ul.append(all);
+    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.setAttribute("aria-current", String(cur === "")); b0.append(icon("all"), el("span", "", "Toutes les parties"), el("span", "tb-count", String(data.total))); b0.addEventListener("click", () => go("")); all.append(b0); ul.append(all);
     let g = "";
     for (const t of ordered()) {
       if (!g) { g = "x"; ul.append(el("li", "tb-grp", "Parties du site")); }
@@ -58,7 +63,7 @@
       const dot = el("span", "tb-dot"); dot.dataset.live = t.live ? "1" : "0"; dot.setAttribute("aria-hidden", "true");
       b.append(icon(t.key), el("span", "", t.label), el("span", "tb-count", String(t.count)), dot);
       if (t.live) b.setAttribute("aria-label", `${t.label} : ${t.count} modèle(s), ${t.live} publié(s)`);
-      b.addEventListener("click", () => { cur = t.key; load(); }); li.append(b); ul.append(li);
+      b.addEventListener("click", () => go(t.key)); li.append(b); ul.append(li);
     }
     const sel = $("tb-new-type"); if (!sel.options.length) for (const t of data.types) { const o = el("option", "", t.available ? t.label : `${t.label} (indisponible)`); o.value = t.key; o.disabled = !t.available; sel.append(o); }
     const w = $("tb-why-type"); if (!w.options.length) for (const t of data.types) { const o = el("option", "", t.label); o.value = t.key; w.append(o); }
@@ -72,6 +77,7 @@
     const close = () => { ul.hidden = true; btn.setAttribute("aria-expanded", "false"); };
     btn.addEventListener("click", () => { const open = ul.hidden; document.querySelectorAll(".tb-menu-list").forEach((u) => { u.hidden = true; }); ul.hidden = !open; btn.setAttribute("aria-expanded", String(open)); if (open) ul.querySelector("button").focus(); });
     wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") { close(); btn.focus(); } });
+    item("Aperçu", () => preview(t));
     if (canWrite && t.status !== "archived") {
       item("Renommer", () => rename(t)); item("Dupliquer", () => act(t, "dupliquer", "Modèle dupliqué (brouillon)."));
       if (t.status === "published") item("Dépublier", () => act(t, "depublier", "Modèle dépublié."));
@@ -93,48 +99,154 @@
   function card(t) {
     const c = el("article", "tb-card"); c.dataset.status = t.status; c.dataset.id = t.id;
     const ch = el("div", "tb-ch"); ch.append(el("h3", "", t.name), infoBtn(t.name, () => details(t))); c.append(ch);
-    const th = el("a", "tb-thumb"); th.href = t.editUrl; th.setAttribute("aria-label", `Ouvrir « ${t.name} » dans l'éditeur`); th.append(svgOf(t.thumb)); c.append(th);
+    const th = el("a", "tb-thumb"); th.href = t.editUrl; th.setAttribute("aria-label", `Ouvrir « ${t.name} » dans l'éditeur`); lazyThumb(th, t, c); c.append(th);
     const b = el("div", "tb-body"); b.append(el("p", "tb-type", t.typeLabel));
     const bd = el("div", "tb-badges"); const s = el("span", "tb-badge", ST[t.status]); s.dataset.k = t.status; bd.append(s); if (t.hasConflict) { const x = el("span", "tb-badge", "Conflit"); x.dataset.k = "conflict"; bd.append(x); } if (t.documentMissing) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; bd.append(x); } b.append(bd);
     const m = el("p", "tb-meta"); const l1 = el("span"); l1.append(el("b", "", "S'affiche : "), document.createTextNode(t.describe.include)); m.append(l1);
     if (t.describe.exclude) { const l2 = el("span"); l2.append(el("b", "", "Sauf : "), document.createTextNode(t.describe.exclude)); m.append(l2); }
     const l3 = el("span"); l3.append(el("b", "", "Modifié : "), document.createTextNode(dates(t.updatedAt))); m.append(l3); b.append(m);
     const a = el("div", "tb-actions"); const ed = el("a", "btn btn-sm btn-primary", "Modifier"); ed.href = t.editUrl; a.append(ed);
+    const pv = el("button", "btn btn-sm btn-outline", "Aperçu"); pv.type = "button"; pv.setAttribute("aria-label", `Aperçu de « ${t.name} »`); pv.addEventListener("click", () => preview(t)); a.append(pv);
     if (canWrite && t.status !== "archived") { const cd = el("button", "btn btn-sm btn-outline", "Conditions"); cd.type = "button"; cd.addEventListener("click", () => conditions(t)); a.append(cd);
       const pb = el("button", "btn btn-sm btn-outline", t.status === "published" ? "Republier" : "Publier"); pb.type = "button"; pb.addEventListener("click", () => publish(t)); a.append(pb); }
     a.append(menu(t)); b.append(a); c.append(b); return c;
   }
+  // Miniature filaire chargée à la demande (visible à l'écran, 4 requêtes au plus en parallèle) : une liste de 60 modèles n'ouvre plus 60 documents d'un coup.
+  const queue = []; let running = 0;
+  const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); queue.push(e.target); } pump(); }, { rootMargin: "240px" }) : null;
+  function pump() { while (running < 4 && queue.length) { const n = queue.shift(); if (!n.isConnected) continue; running += 1; fetchThumb(n).finally(() => { running -= 1; pump(); }); } }
+  async function fetchThumb(n) {
+    const t = n._t, k = `${t.id}:${t.updatedAt}:${t.revision}`;
+    try { let r = thumbs.get(k); if (!r) { r = await api(`/modeles/${t.id}/miniature`); thumbs.set(k, r); if (thumbs.size > 300) thumbs.delete(thumbs.keys().next().value); } paintThumb(n, r); }
+    catch { n.dataset.state = "err"; }
+  }
+  function paintThumb(n, r) {
+    n.textContent = ""; n.append(svgOf(r.thumb)); n.dataset.state = "ok";
+    if (r.documentMissing && n._card && !n._card.querySelector('[data-miss]')) { const bd = n._card.querySelector(".tb-badges"); if (bd) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; x.dataset.miss = "1"; bd.append(x); } }
+  }
+  function lazyThumb(n, t, c) {
+    n._t = t; n._card = c; n.dataset.state = "wait"; n.append(el("span", "tb-shim"));
+    if (t.thumb) { paintThumb(n, { thumb: t.thumb, documentMissing: t.documentMissing }); return; }
+    const hit = thumbs.get(`${t.id}:${t.updatedAt}:${t.revision}`); if (hit) { paintThumb(n, hit); return; }
+    pending.push(n);
+  }
+  // Observation après insertion dans la page : un élément encore détaché ne signale pas son entrée dans l'écran.
+  const pending = [];
+  function watchThumbs() { const l = pending.splice(0); for (const n of l) { if (io) io.observe(n); else { queue.push(n); } } if (!io) pump(); }
+  const SORT = { recent: (a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")), name: (a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }), status: (a, b) => ["published", "draft", "archived"].indexOf(a.status) - ["published", "draft", "archived"].indexOf(b.status) || a.name.localeCompare(b.name, "fr") };
+  // Ligne du mode liste : mêmes données et mêmes actions que la carte, présentées en tableau (colonnes nommées pour les lecteurs d'écran).
+  function rowOf(t) {
+    const tr = el("tr", "tb-card tb-row"); tr.dataset.status = t.status; tr.dataset.id = t.id;
+    const cell = (label, ...kids) => { const td = el("td"); td.dataset.label = label; td.append(...kids); tr.append(td); return td; };
+    const th = el("a", "tb-thumb tb-thumb-s"); th.href = t.editUrl; th.setAttribute("aria-label", `Ouvrir « ${t.name} » dans l'éditeur`); lazyThumb(th, t, tr);
+    const nm = el("td", "tb-c-name"); nm.dataset.label = "Modèle"; const lk = el("a", "tb-name", t.name); lk.href = t.editUrl; nm.append(th, lk); tr.append(nm);
+    cell("Type", document.createTextNode(t.typeLabel));
+    const bd = el("div", "tb-badges"); const s = el("span", "tb-badge", ST[t.status]); s.dataset.k = t.status; bd.append(s); if (t.hasConflict) { const x = el("span", "tb-badge", "Conflit"); x.dataset.k = "conflict"; bd.append(x); } if (t.documentMissing) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; bd.append(x); }
+    cell("État", bd);
+    cell("S'affiche", document.createTextNode(t.describe.include + (t.describe.exclude ? ` (sauf ${t.describe.exclude})` : "")));
+    cell("Modifié", document.createTextNode(dates(t.updatedAt)));
+    const a = el("div", "tb-actions"); const ed = el("a", "btn btn-sm btn-primary", "Modifier"); ed.href = t.editUrl; a.append(ed);
+    const pv = el("button", "btn btn-sm btn-outline", "Aperçu"); pv.type = "button"; pv.setAttribute("aria-label", `Aperçu de « ${t.name} »`); pv.addEventListener("click", () => preview(t)); a.append(pv);
+    if (canWrite && t.status !== "archived") { const pb = el("button", "btn btn-sm btn-outline", t.status === "published" ? "Republier" : "Publier"); pb.type = "button"; pb.addEventListener("click", () => publish(t)); a.append(pb); }
+    a.append(menu(t)); cell("Actions", a).classList.add("tb-c-act"); return tr;
+  }
+  function ghostRow(t) {
+    const tr = el("tr", "tb-tcard tb-row"); tr.dataset.type = t.key; const td = el("td"); td.colSpan = 6; td.className = "tb-c-ghost";
+    td.append(el("strong", "", t.label), el("span", "", " — aucun modèle"));
+    if (canWrite) { const bt = el("button", "btn btn-sm btn-outline", "Créer un modèle"); bt.type = "button"; bt.setAttribute("aria-label", `Créer un modèle : ${t.label}`); bt.addEventListener("click", () => { $("tb-new-name").value = ""; $("tb-new-type").value = t.key; openDlg("tb-dlg-new"); }); td.append(bt); }
+    tr.append(td); return tr;
+  }
+  function emptyState(filtered, compact) {
+    const d = el("div", compact ? "tb-empty tb-empty-s" : "tb-empty"); d.append(svgOf(IC('<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 9.5h17M8 13.5h8"/>')));
+    d.firstChild.setAttribute("class", "tb-empty-ico"); d.firstChild.setAttribute("aria-hidden", "true");
+    d.append(el("h2", "", filtered ? "Aucun résultat" : "Aucun modèle pour l'instant"), el("p", "sw-muted", filtered ? "Aucun modèle ne correspond à ces filtres." : "Aucun modèle pour ce site. Créez-en un avec « Ajouter un modèle », ou reprenez l'existant avec « Récupérer l'existant »."));
+    if (filtered) { const b = el("button", "btn btn-outline", "Effacer les filtres"); b.type = "button"; b.addEventListener("click", () => { $("tb-q").value = ""; $("tb-st").value = ""; syncUrl(true); load(); }); d.append(b); }
+    return d;
+  }
   function drawCards() {
-    const box = $("tb-cards"); box.textContent = ""; box.style.animation = "none"; void box.offsetWidth; box.style.animation = "";
+    const box = $("tb-cards"), list = view === "list";
     const ty = cur ? data.types.find((t) => t.key === cur) || {} : null, filtered = Boolean($("tb-q").value.trim() || $("tb-st").value);
     $("tb-title").textContent = cur ? ty.label : "Personnalisez chaque partie de votre site"; $("tb-lead").textContent = LEAD[cur] || "";
-    if (!data.templates.length) { const p = el("p", "sw-muted", data.total || data.archived ? "Aucun modèle ne correspond à ces filtres." : "Aucun modèle pour ce site. Créez-en un avec « Ajouter un modèle », ou reprenez l'existant avec « Récupérer l'existant »."); box.append(p); }
-    for (const t of data.templates) box.append(card(t));
-    if (!filtered) for (const t of ordered()) if (t.available && !t.count && (!cur || cur === t.key)) box.append(ghost(t));
+    document.title = `${cur ? ty.label + " · " : ""}Theme Builder`;
+    box.dataset.view = view; box.textContent = ""; io && queue.splice(0);
+    const sorted = [...data.templates].sort(SORT[$("tb-sort").value] || SORT.recent), ghosts = filtered ? [] : ordered().filter((t) => t.available && !t.count && (!cur || cur === t.key));
+    if (!sorted.length) box.append(emptyState(Boolean(filtered || data.total || data.archived), ghosts.length > 0));
+    let host = box;
+    if (list) { const tb = el("table", "tb-table"); tb.setAttribute("aria-label", "Modèles"); const hd = el("thead"), hr = el("tr"); for (const h of ["Modèle", "Type", "État", "S'affiche", "Modifié", "Actions"]) { const th = el("th", "", h); th.scope = "col"; hr.append(th); } hd.append(hr); tb.append(hd); host = el("tbody"); tb.append(host); if (sorted.length || ghosts.length) box.append(tb); }
+    const frag = document.createDocumentFragment(); let n = 0;
+    for (const t of sorted) { if (n >= shown) break; frag.append(list ? rowOf(t) : card(t)); n += 1; }
+    if (n >= shown && sorted.length > shown) { /* suite : bouton ci-dessous */ } else for (const t of ghosts) frag.append(list ? ghostRow(t) : ghost(t));
+    host.append(frag); watchThumbs();
+    if (sorted.length > shown) { const more = el("button", "btn btn-outline tb-more", `Afficher la suite (${sorted.length - shown} autres)`); more.type = "button"; more.addEventListener("click", () => { shown += PAGE; drawCards(); }); box.append(more); }
     const cf = $("tb-conflicts"); cf.hidden = !data.conflicts.length; cf.textContent = "";
     if (data.conflicts.length) { cf.append(el("strong", "", `${data.conflicts.length} conflit(s) entre modèles publiés`)); for (const c of data.conflicts) { const p = el("p"); p.append(el("b", "", c.severity === "blocking" ? "Bloquant : " : "Attention : "), document.createTextNode(`${c.message} ${c.suggestion}`)); cf.append(p); } }
+    $("tb-back").hidden = !cur; $("tb-back-l").textContent = navDepth > 0 ? "Retour" : "Toutes les parties";
   }
+  const querystring = () => { const q = new URLSearchParams(); if (cur) q.set("type", cur); if ($("tb-q").value.trim()) q.set("q", $("tb-q").value.trim()); const st = $("tb-st").value; if (st) q.set("statut", st); return q; };
+  // Adresse = état (catégorie, recherche, filtre) : le bouton Précédent du navigateur et les liens copiés retrouvent la même vue.
+  function syncUrl(replace) {
+    const q = querystring(), qs = q.toString(), url = location.pathname + (qs ? `?${qs}` : "");
+    if (url === location.pathname + location.search) return;
+    if (replace) history.replaceState({ tb: navDepth }, "", url); else { navDepth += 1; history.pushState({ tb: navDepth }, "", url); }
+  }
+  function readUrl() { const q = new URLSearchParams(location.search); const t = q.get("type") || ""; cur = t; $("tb-q").value = q.get("q") || ""; $("tb-st").value = ["published", "draft", "archived"].includes(q.get("statut")) ? q.get("statut") : ""; }
+  // Modifications non enregistrées : la fenêtre de conditions (ou de création/renommage) ouverte et modifiée demande confirmation avant de quitter la vue.
+  const dirty = () => [...document.querySelectorAll("#tb dialog[open]")].some((d) => d.dataset.dirty === "1");
+  const guard = () => !dirty() || confirm("Des modifications ne sont pas enregistrées. Quitter sans les enregistrer ?");
+  function go(type) {
+    if (type === cur) return;
+    if (!guard()) return;
+    cur = type; shown = PAGE; syncUrl(false); load();
+  }
+  window.addEventListener("popstate", (e) => {
+    if (!guard()) { history.pushState({ tb: navDepth }, "", location.href); return; }
+    navDepth = e.state && Number.isInteger(e.state.tb) ? e.state.tb : 0; readUrl(); shown = PAGE; load();
+  });
+  window.addEventListener("beforeunload", (e) => { if (dirty()) { e.preventDefault(); e.returnValue = ""; } });
+  $("tb-back").addEventListener("click", () => { if (!guard()) return; if (navDepth > 0) { history.back(); } else { cur = ""; shown = PAGE; syncUrl(false); load(); } });
   async function load() {
-    try { const q = new URLSearchParams(); if (cur) q.set("type", cur); if ($("tb-q").value.trim()) q.set("q", $("tb-q").value.trim()); const st = $("tb-st").value; if (st) q.set("statut", st); data = await api(`/modeles?${q}`); drawTypes(); drawCards(); }
-    catch (e) { status(e.message, "err"); }
+    const q = querystring(), key = q.toString(); q.set("leger", "1");
+    if (ctl) ctl.abort(); ctl = new AbortController(); const my = ++loadSeq;
+    const box = $("tb-cards"); box.setAttribute("aria-busy", "true");
+    const hit = cache.get(key);
+    if (hit) { data = hit; shown = Math.max(shown, PAGE); drawTypes(); drawCards(); } else if (!data) skeleton();
+    try {
+      const d = await api(`/modeles?${q}`, { signal: ctl.signal }); if (my !== loadSeq) return;
+      data = d; cache.set(key, d); if (cache.size > 30) cache.delete(cache.keys().next().value);
+      if (!shown) shown = PAGE; drawTypes(); drawCards(); box.setAttribute("aria-busy", "false");
+    } catch (e) {
+      if (e.name === "AbortError") return; box.setAttribute("aria-busy", "false");
+      status(e.message || "Chargement impossible.", "err");
+      if (!data) { box.textContent = ""; const d = el("div", "tb-empty"); d.append(el("h2", "", "Impossible de charger les modèles"), el("p", "sw-muted", e.message || "Vérifiez votre connexion."), (() => { const b = el("button", "btn btn-primary", "Réessayer"); b.type = "button"; b.addEventListener("click", () => load()); return b; })()); box.append(d); }
+    }
   }
-  async function act(t, path, ok) { try { await post(`/modeles/${t.id}/${path}`); status(ok, "ok"); await load(); } catch (e) { status(e.message, "err"); } }
-  async function rename(t) { const n = prompt("Nouveau nom du modèle", t.name); if (n === null) return; try { await post(`/modeles/${t.id}/renommer`, { name: n }); status("Modèle renommé.", "ok"); await load(); } catch (e) { status(e.message, "err"); } }
-  async function remove(t) { if (!confirm(`Supprimer définitivement « ${t.name} » ? Le document (page ou composant) reste dans vos pages.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await load(); } catch (e) { status(e.message, "err"); } }
+  function skeleton() { const box = $("tb-cards"); box.textContent = ""; box.dataset.view = "grid"; for (let i = 0; i < 6; i += 1) { const c = el("div", "tb-sk"); c.setAttribute("aria-hidden", "true"); box.append(c); } }
+  const refresh = () => { cache.clear(); return load(); };
+  async function act(t, path, ok) { try { await post(`/modeles/${t.id}/${path}`); status(ok, "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
+  function rename(t) { renaming = t; $("tb-ren-name").value = t.name; openDlg("tb-dlg-ren"); $("tb-ren-name").select(); }
+  let renaming = null;
+  $("tb-form-ren").addEventListener("submit", async (e) => {
+    e.preventDefault(); const t = renaming; if (!t) return;
+    try { await post(`/modeles/${t.id}/renommer`, { name: $("tb-ren-name").value }); closeDlg($("tb-dlg-ren")); status("Modèle renommé.", "ok"); await refresh(); } catch (err) { status(err.message, "err"); closeDlg($("tb-dlg-ren")); }
+  });
+  async function remove(t) { if (!confirm(`Supprimer définitivement « ${t.name} » ? Le document (page ou composant) reste dans vos pages.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
   async function publish(t) {
-    try { const r = await post(`/modeles/${t.id}/publier`, { revision: t.revision }); status(r.conflicts && r.conflicts.length ? `Publié, avec ${r.conflicts.length} avertissement(s) : voir les conflits.` : "Modèle publié.", "ok"); await load(); }
-    catch (e) { status(e.message, "err"); if (e.conflicts) await load(); }
+    try { const r = await post(`/modeles/${t.id}/publier`, { revision: t.revision }); status(r.conflicts && r.conflicts.length ? `Publié, avec ${r.conflicts.length} avertissement(s) : voir les conflits.` : "Modèle publié.", "ok"); await refresh(); }
+    catch (e) { status(e.message, "err"); if (e.conflicts) await refresh(); }
   }
   const dlg = (id) => $(id);
-  function openDlg(id) { const d = dlg(id); if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }
-  function closeDlg(d) { if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
-  document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => closeDlg(b.closest("dialog"))));
+  function openDlg(id) { const d = dlg(id); d.dataset.dirty = "0"; if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }
+  function closeDlg(d) { d.dataset.dirty = "0"; if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+  // Fermer une fenêtre modifiée (Annuler, Échap) demande confirmation ; les fenêtres de lecture se ferment sans question.
+  const tryClose = (d) => { if (d.dataset.dirty === "1" && !confirm("Des modifications ne sont pas enregistrées. Fermer sans les enregistrer ?")) return false; closeDlg(d); return true; };
+  document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => tryClose(b.closest("dialog"))));
+  for (const id of ["tb-dlg-new", "tb-dlg-cond", "tb-dlg-ren"]) { const d = $(id); d.addEventListener("input", () => { d.dataset.dirty = "1"; }); d.addEventListener("change", () => { d.dataset.dirty = "1"; }); d.addEventListener("cancel", (e) => { e.preventDefault(); tryClose(d); }); }
 
   // ---- éditeur de conditions
   const LIST = { ids: "Identifiants (virgules)", category: "Catégories (virgules)", childCategory: "Sous-catégories de (virgules)", tag: "Étiquettes (virgules)", author: "Auteurs (identifiants)", names: "Noms (virgules)" };
   function row(kindsAllowed, c) {
     const r = el("div", "tb-row"); const kw = el("label", "sw-field", "Condition"); const ks = el("select"); for (const k of opts.kinds.filter((k) => kindsAllowed.includes(k.key))) { const o = el("option", "", k.label); o.value = k.key; ks.append(o); } kw.append(ks); r.append(kw);
-    const params = el("div", "tb-row-params"); params.style.display = "contents"; r.append(params); const rm = el("button", "btn btn-sm btn-outline", "Retirer"); rm.type = "button"; rm.addEventListener("click", () => r.remove()); r.append(rm);
+    const params = el("div", "tb-row-params"); params.style.display = "contents"; r.append(params); const rm = el("button", "btn btn-sm btn-outline", "Retirer"); rm.type = "button"; rm.addEventListener("click", () => { r.remove(); $("tb-dlg-cond").dataset.dirty = "1"; }); r.append(rm);
     const fields = () => {
       params.textContent = ""; const def = opts.kinds.find((k) => k.key === ks.value);
       for (const k of def.criteria) {
@@ -164,11 +276,11 @@
     const fill = (id, list) => { const box = $(id); box.textContent = ""; for (const c of list) box.append(row(allowedKinds(t.type), c)); };
     fill("tb-inc", t.conditions.include || []); fill("tb-exc", t.conditions.exclude || []); $("tb-cond-msg").hidden = true; $("tb-dlg-cond-h").textContent = `Conditions — ${t.name}`; openDlg("tb-dlg-cond");
   }
-  $("tb-add-inc").addEventListener("click", () => $("tb-inc").append(row(allowedKinds(editing.type))));
-  $("tb-add-exc").addEventListener("click", () => $("tb-exc").append(row(allowedKinds(editing.type))));
+  $("tb-add-inc").addEventListener("click", () => { $("tb-inc").append(row(allowedKinds(editing.type))); $("tb-dlg-cond").dataset.dirty = "1"; });
+  $("tb-add-exc").addEventListener("click", () => { $("tb-exc").append(row(allowedKinds(editing.type))); $("tb-dlg-cond").dataset.dirty = "1"; });
   $("tb-form-cond").addEventListener("submit", async (e) => {
     e.preventDefault(); const rd = (id) => [...$(id).querySelectorAll("[data-row]")].map((r) => r.read());
-    try { const r = await post(`/modeles/${editing.id}/conditions`, { conditions: { include: rd("tb-inc"), exclude: rd("tb-exc") }, revision: editing.revision }); closeDlg($("tb-dlg-cond")); status(r.conflicts && r.conflicts.length ? "Conditions enregistrées — attention aux conflits signalés." : "Conditions enregistrées.", "ok"); await load(); }
+    try { const r = await post(`/modeles/${editing.id}/conditions`, { conditions: { include: rd("tb-inc"), exclude: rd("tb-exc") }, revision: editing.revision }); closeDlg($("tb-dlg-cond")); status(r.conflicts && r.conflicts.length ? "Conditions enregistrées — attention aux conflits signalés." : "Conditions enregistrées.", "ok"); await refresh(); }
     catch (err) { const m = $("tb-cond-msg"); m.hidden = false; m.textContent = err.message; }
   });
 
@@ -181,18 +293,18 @@
   });
   $("tb-import")?.addEventListener("change", async (e) => {
     const f = e.target.files[0]; if (!f) return; e.target.value = "";
-    try { if (f.size > 2000000) throw new Error("Fichier trop volumineux."); const payload = JSON.parse(await f.text()); await post("/importer", { payload }); status("Modèle importé en brouillon.", "ok"); await load(); }
+    try { if (f.size > 2000000) throw new Error("Fichier trop volumineux."); const payload = JSON.parse(await f.text()); await post("/importer", { payload }); status("Modèle importé en brouillon.", "ok"); await refresh(); }
     catch (err) { status(err instanceof SyntaxError ? "Ce fichier n'est pas un JSON valide." : err.message, "err"); }
   });
   $("tb-legacy")?.addEventListener("click", async () => {
-    try { const r = await post("/importer-ancien"); status(`${r.imported.length} élément(s) repris${r.skipped.length ? `, ${r.skipped.length} ignoré(s) (${r.skipped.filter((s) => s.reason !== "déjà importé").map((s) => `${s.label} : ${s.reason}`).join(" ; ") || "déjà importés"})` : ""}.`, "ok"); await load(); }
+    try { const r = await post("/importer-ancien"); status(`${r.imported.length} élément(s) repris${r.skipped.length ? `, ${r.skipped.length} ignoré(s) (${r.skipped.filter((s) => s.reason !== "déjà importé").map((s) => `${s.label} : ${s.reason}`).join(" ; ") || "déjà importés"})` : ""}.`, "ok"); await refresh(); }
     catch (err) { status(err.message, "err"); }
   });
 
   // ---- versions, utilisation, simulation
   function info(title, build) { $("tb-dlg-info-h").textContent = title; const box = $("tb-info"); box.textContent = ""; build(box); openDlg("tb-dlg-info"); }
   async function versions(t) {
-    try { const r = await api(`/modeles/${t.id}/versions`); info(`Versions — ${t.name}`, (box) => { if (!r.versions.length) box.append(el("p", "sw-muted", "Aucune version publiée pour l'instant.")); const ul = el("ul"); for (const v of r.versions) { const li = el("li"); li.append(document.createTextNode(`Version ${v.number} · ${dates(v.createdAt)} · ${v.describe.include}${v.describe.exclude ? ` (sauf ${v.describe.exclude})` : ""} `)); if (canWrite) { const b = el("button", "btn btn-sm btn-outline", "Restaurer en brouillon"); b.type = "button"; b.addEventListener("click", async () => { try { const rr = await post(`/modeles/${t.id}/versions/${v.number}/restaurer`); closeDlg($("tb-dlg-info")); status(`Version ${v.number} : contenu restauré en brouillon de travail (rien n'est changé en ligne avant la publication).${rr.conditionsRestored ? "" : " Les conditions en ligne n'ont pas été modifiées."}`, "ok"); await load(); } catch (e) { status(e.message, "err"); } }); li.append(b); } ul.append(li); } box.append(ul); }); }
+    try { const r = await api(`/modeles/${t.id}/versions`); info(`Versions — ${t.name}`, (box) => { if (!r.versions.length) box.append(el("p", "sw-muted", "Aucune version publiée pour l'instant.")); const ul = el("ul"); for (const v of r.versions) { const li = el("li"); li.append(document.createTextNode(`Version ${v.number} · ${dates(v.createdAt)} · ${v.describe.include}${v.describe.exclude ? ` (sauf ${v.describe.exclude})` : ""} `)); if (canWrite) { const b = el("button", "btn btn-sm btn-outline", "Restaurer en brouillon"); b.type = "button"; b.addEventListener("click", async () => { try { const rr = await post(`/modeles/${t.id}/versions/${v.number}/restaurer`); closeDlg($("tb-dlg-info")); status(`Version ${v.number} : contenu restauré en brouillon de travail (rien n'est changé en ligne avant la publication).${rr.conditionsRestored ? "" : " Les conditions en ligne n'ont pas été modifiées."}`, "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }); li.append(b); } ul.append(li); } box.append(ul); }); }
     catch (e) { status(e.message, "err"); }
   }
   async function where(t) {
@@ -205,8 +317,58 @@
     try { const r = await api(`/resolution?${q}`); const out = $("tb-why-out"); out.textContent = ""; out.append(el("p", "", r.winner ? `Modèle appliqué : « ${r.winner.name} ».` : "Aucun modèle publié ne s'applique : l'affichage d'origine du site est utilisé.")); const ul = el("ul", "tb-explain"); for (const x of r.explain) { const li = el("li", "", `${x.name} — ${x.reason}`); li.dataset.s = x.state; ul.append(li); } out.append(ul); }
     catch (err) { $("tb-why-out").textContent = err.message; }
   });
+  // ---- aperçu réel : le modèle enregistré, rendu par le même moteur que l'éditeur, à la largeur de l'appareil choisi
+  const DEV = { desktop: 1280, tablet: 820, mobile: 390 };
+  let pv = null, dev = "desktop", pvRo = null;
+  function fitPreview() {
+    const st = $("tb-prev-stage"), wrap = $("tb-prev-wrap"), fr = $("tb-prev-frame"), w = DEV[dev], avail = st.clientWidth - 32, k = Math.min(1, avail / w);
+    wrap.style.width = `${w * k}px`; fr.style.width = `${w}px`; fr.style.height = `${Math.max(240, (st.clientHeight - 32) / k)}px`; fr.style.transform = `scale(${k})`; wrap.style.height = `${Math.max(240, st.clientHeight - 32)}px`;
+  }
+  function setDevice(d) { dev = d; for (const b of document.querySelectorAll(".tb-devices button")) b.setAttribute("aria-pressed", String(b.dataset.dev === d)); $("tb-prev-wrap").dataset.dev = d; fitPreview(); }
+  function loadPreview() {
+    if (!pv) return; const fr = $("tb-prev-frame"), ld = $("tb-prev-load"); ld.hidden = false; ld.textContent = "Chargement de l'aperçu…"; ld.dataset.k = "";
+    const pg = pv.previewNeedsPage ? $("tb-prev-page").value : ""; const url = pv.previewUrl + (pg ? `?page=${encodeURIComponent(pg)}` : "");
+    $("tb-prev-open").href = url; fr.onload = () => { ld.hidden = true; }; fr.onerror = () => { ld.textContent = "L'aperçu n'a pas pu être chargé."; ld.dataset.k = "err"; }; fr.src = url;
+  }
+  async function preview(t) {
+    pv = t; $("tb-prev-h").textContent = `Aperçu — ${t.name}`; $("tb-prev-sub").textContent = `${t.typeLabel} · ${ST[t.status]}`; $("tb-prev-edit").href = t.editUrl; $("tb-prev-edit").hidden = false;
+    const w = $("tb-prev-pagew"); w.hidden = !t.previewNeedsPage;
+    if (t.previewNeedsPage) { if (!opts) { try { opts = await api("/options"); } catch (e) { status(e.message, "err"); return; } } const s = $("tb-prev-page"); s.textContent = ""; const o0 = el("option", "", "Page choisie automatiquement"); o0.value = ""; s.append(o0); for (const p of opts.pages) { const o = el("option", "", p.name); o.value = p.id; s.append(o); } }
+    openDlg("tb-prev"); setDevice(dev); loadPreview();
+    if (!pvRo && "ResizeObserver" in window) { pvRo = new ResizeObserver(() => { if ($("tb-prev").open) fitPreview(); }); pvRo.observe($("tb-prev-stage")); }
+  }
+  const closePreview = () => { const d = $("tb-prev"); closeDlg(d); $("tb-prev-frame").removeAttribute("src"); pv = null; };
+  $("tb-prev-back").addEventListener("click", closePreview);
+  $("tb-prev").addEventListener("cancel", (e) => { e.preventDefault(); closePreview(); });
+  $("tb-prev-page").addEventListener("change", loadPreview);
+  for (const b of document.querySelectorAll(".tb-devices button")) b.addEventListener("click", () => setDevice(b.dataset.dev));
+
+  // ---- mode d'affichage (grille / liste), conservé entre les navigations et les sessions
+  function setView(v, persist = true) {
+    if (v !== "grid" && v !== "list") v = "grid"; if (v === view && data) return; view = v;
+    for (const b of document.querySelectorAll(".tb-views button")) b.setAttribute("aria-pressed", String(b.dataset.view === v));
+    if (persist) store.set(VKEY, v);
+    if (!data) return;
+    const swap = () => drawCards();
+    if (document.startViewTransition && !reduced()) document.startViewTransition(swap); else swap();
+  }
+  for (const b of document.querySelectorAll(".tb-views button")) b.addEventListener("click", () => setView(b.dataset.view));
+
   $("tb-tools").addEventListener("submit", (e) => e.preventDefault());
-  $("tb-q").addEventListener("input", () => { clearTimeout(load.t); load.t = setTimeout(load, 250); }); $("tb-st").addEventListener("change", load);
+  $("tb-q").addEventListener("input", () => { clearTimeout(load.t); load.t = setTimeout(() => { shown = PAGE; syncUrl(true); load(); }, 250); });
+  $("tb-st").addEventListener("change", () => { shown = PAGE; syncUrl(true); load(); });
+  $("tb-sort").addEventListener("change", () => { store.set("kola.themeBuilder.sort", $("tb-sort").value); if (data) drawCards(); });
   document.addEventListener("click", (e) => { if (!e.target.closest(".tb-menu")) document.querySelectorAll(".tb-menu-list").forEach((u) => { u.hidden = true; }); });
+  // Raccourcis (hors saisie et hors fenêtre ouverte) : / recherche · n nouveau modèle · v grille/liste · Échap vide la recherche.
+  document.addEventListener("keydown", (e) => {
+    const t = e.target, typing = t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+    if (e.key === "Escape" && t === $("tb-q") && $("tb-q").value) { $("tb-q").value = ""; shown = PAGE; syncUrl(true); load(); return; }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey || document.querySelector("#tb dialog[open]")) return;
+    if (e.key === "/") { e.preventDefault(); $("tb-q").focus(); }
+    else if (e.key === "n" && canWrite) { e.preventDefault(); $("tb-new").click(); }
+    else if (e.key === "v") { e.preventDefault(); setView(view === "grid" ? "list" : "grid"); }
+  });
+  // Départ : adresse → état ; préférences d'affichage et de tri retrouvées.
+  { const sv = store.get(VKEY), so = store.get("kola.themeBuilder.sort"); if (so && SORT[so]) $("tb-sort").value = so; readUrl(); history.replaceState({ tb: 0 }, "", location.href); shown = PAGE; if (sv === "list") { view = "list"; for (const b of document.querySelectorAll(".tb-views button")) b.setAttribute("aria-pressed", String(b.dataset.view === "list")); } }
   load();
 })();

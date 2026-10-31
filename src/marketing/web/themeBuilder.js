@@ -19,17 +19,20 @@ module.exports = () => {
     next(e);
   });
   const editUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/editeur` : `/marketing/site-web/composants/${t.sourceId}/editeur`);
-  const card = (ctx, t, conflictIds) => {
-    let doc = null;
-    try { doc = t.sourceKind === "page" ? P().getPage(ctx, t.sourceId).working : (P().getComponent(ctx, t.sourceId) || {}).section; } catch { doc = null; }
-    const th = thumbnail(doc);
-    return { ...t, describe: TB.conditions.describe(t.conditions), thumb: th.svg, elements: th.elements, editUrl: editUrl(t), hasConflict: conflictIds.has(t.id), active: t.status === "published", documentMissing: !doc };
+  // Aperçu réel : mêmes routes que l'éditeur (page enregistrée ou composant dans une page d'exemple) ; les miniatures filaires sont lues À LA DEMANDE (`/miniature`) pour ne pas ouvrir tous les documents à chaque liste.
+  const previewUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/apercu` : `/marketing/site-web/composants/${t.sourceId}/apercu`);
+  const docOf = (ctx, t) => { try { return t.sourceKind === "page" ? P().getPage(ctx, t.sourceId).working : (P().getComponent(ctx, t.sourceId) || {}).section; } catch { return null; } };
+  const card = (ctx, t, conflictIds, light = false) => {
+    const base = { ...t, describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
+    if (light) return base;
+    const doc = docOf(ctx, t), th = thumbnail(doc);
+    return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc };
   };
-  const listAll = (ctx, id, f = {}) => {
+  const listAll = (ctx, id, f = {}, light = false) => {
     const all = TB.store.list(ctx, id, { archived: true });
     const conflicts = TB.resolve.conflicts(all);
     const ids = new Set(conflicts.flatMap((c) => [c.a, c.b]));
-    const shown = TB.store.list(ctx, id, f).map((t) => card(ctx, t, ids));
+    const shown = TB.store.list(ctx, id, f).map((t) => card(ctx, t, ids, light));
     const counts = {}; for (const t of all) if (t.status !== "archived") counts[t.type] = (counts[t.type] || 0) + 1;
     const types = Object.entries(TB.types.TYPES).map(([key, d]) => {
       const off = d.module && !siteModules.isEnabled(ctx.db, ctx.organizationId, id, d.module);
@@ -43,7 +46,7 @@ module.exports = () => {
       res.set("Cache-Control", "no-store").render("marketing/theme-builder", { title: "Constructeur de thème", active: "sites", marketingShell: true, siteId: site.id, siteName: site.name, base: `/marketing/site-web/sites/${site.id}/constructeur-de-theme`, siteBase: `/marketing/site-web/sites/${site.id}`, perms: { write: req.mk.can("forms.write"), remove: req.mk.can("pages.delete") } });
     } catch (e) { if (e instanceof MarketingError) return res.status(e.code === "not_found" ? 404 : 422).render("error", { message: e.message }); next(e); }
   });
-  router.get(`${A}/modeles`, need("forms.read"), run((ctx, id, req) => listAll(ctx, id, { type: String(req.query.type || ""), status: String(req.query.statut || ""), q: String(req.query.q || ""), archived: req.query.archives === "1" })));
+  router.get(`${A}/modeles`, need("forms.read"), run((ctx, id, req) => listAll(ctx, id, { type: String(req.query.type || ""), status: String(req.query.statut || ""), q: String(req.query.q || ""), archived: req.query.archives === "1" }, req.query.leger === "1")));
   router.get(`${A}/options`, need("forms.read"), run((ctx, id) => {
     TB.store.site(ctx, id);
     const lists = { categories: [], tags: [] };
@@ -53,6 +56,10 @@ module.exports = () => {
   router.post(`${A}/modeles`, need("forms.write"), run((ctx, id, req) => { const b = body(req); const t = TB.store.create(ctx, id, { type: String(b.type || ""), name: b.name, conditions: b.conditions || {} }); return { template: card(ctx, t, new Set()) }; }));
   const T = `${A}/modeles/:tid(\\d+)`, tid = (req) => Number(req.params.tid);
   const one = (ctx, id, t) => ({ template: card(ctx, t, new Set(TB.resolve.conflicts(TB.store.list(ctx, id)).flatMap((c) => [c.a, c.b]))) });
+  router.get(`${T}/miniature`, need("forms.read"), run((ctx, id, req) => {
+    const t = TB.store.get(ctx, id, tid(req)); const doc = docOf(ctx, t), th = thumbnail(doc);
+    return { thumb: th.svg, elements: th.elements, documentMissing: !doc };
+  }));
   router.post(`${T}/renommer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.rename(ctx, id, tid(req), body(req).name))));
   router.post(`${T}/conditions`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.setConditions(ctx, id, tid(req), body(req).conditions || {}, { revision: body(req).revision ?? null }); return { ...one(ctx, id, r.template), conflicts: r.conflicts }; }));
   router.post(`${T}/publier`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.publish(ctx, id, tid(req), { revision: body(req).revision ?? null }); return { ...one(ctx, id, r.template), version: r.version, conflicts: r.conflicts }; }));

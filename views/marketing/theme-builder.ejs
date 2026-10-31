@@ -3,14 +3,14 @@
 <link rel="stylesheet" href="<%= asset('/css/theme-builder.css') %>">
 <div class="sw tb" id="tb" data-base="<%= base %>" data-write="<%= perms.write ? 1 : 0 %>" data-remove="<%= perms.remove ? 1 : 0 %>">
   <header class="tb-bar">
-    <span class="tb-logo" aria-hidden="true">K</span><span class="tb-brand">THEME BUILDER</span><span class="tb-site"><%= siteName %></span>
+    <span class="tb-logo" aria-hidden="true">K</span><span class="tb-brand">Theme Builder</span><span class="tb-site"><%= siteName %></span>
     <a class="tb-close" href="<%= siteBase %>/tableau-de-bord" aria-label="Fermer le Theme Builder et revenir à « <%= siteName %> »"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></a>
   </header>
   <div class="tb-layout">
     <nav class="tb-side" aria-label="Types de modèles"><ul id="tb-types"></ul></nav>
     <main class="tb-main" id="tb-main">
       <div class="tb-head">
-        <div class="tb-head-text"><h1 id="tb-title">Personnalisez chaque partie de votre site</h1><p class="tb-lead" id="tb-lead"></p></div>
+        <div class="tb-head-text"><button type="button" class="tb-back" id="tb-back" hidden><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="tb-back-l">Retour</span></button><h1 id="tb-title">Personnalisez chaque partie de votre site</h1><p class="tb-lead" id="tb-lead"></p></div>
         <div class="tb-top-actions">
           <% if (perms.write) { %><button class="btn btn-primary" type="button" id="tb-new">Ajouter un modèle</button>
           <label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
@@ -18,13 +18,18 @@
         </div>
       </div>
       <form class="tb-tools" id="tb-tools" role="search" aria-label="Filtrer les modèles">
-        <label class="sw-field">Recherche<input type="search" id="tb-q" maxlength="80" placeholder="Nom ou type"></label>
+        <label class="sw-field">Recherche<input type="search" id="tb-q" maxlength="80" placeholder="Nom ou type  ( / )" autocomplete="off"></label>
         <label class="sw-field">État<select id="tb-st"><option value="">Tous (hors archives)</option><option value="published">Publiés</option><option value="draft">Brouillons</option><option value="archived">Archivés</option></select></label>
+        <label class="sw-field">Trier par<select id="tb-sort"><option value="recent">Modifiés récemment</option><option value="name">Nom (A → Z)</option><option value="status">État</option></select></label>
         <button class="btn btn-outline" type="button" id="tb-why">Pourquoi ce modèle ?</button>
+        <div class="tb-views" role="group" aria-label="Mode d'affichage">
+          <button type="button" id="tb-v-grid" data-view="grid" aria-pressed="true" aria-label="Affichage en grille" title="Grille ( v )"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/></svg></button>
+          <button type="button" id="tb-v-list" data-view="list" aria-pressed="false" aria-label="Affichage en liste" title="Liste ( v )"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg></button>
+        </div>
       </form>
       <div class="tb-status" id="tb-status" role="status" aria-live="polite"></div>
       <section id="tb-conflicts" class="tb-conflicts" aria-label="Conflits" hidden></section>
-      <div class="tb-cards" id="tb-cards" aria-live="polite"></div>
+      <div class="tb-cards" id="tb-cards" data-view="grid" aria-live="polite" aria-busy="false"></div>
     </main>
   </div>
 
@@ -35,6 +40,28 @@
     <p class="sw-muted">Le modèle est créé en brouillon ; vous le modifiez ensuite dans l'éditeur de pages puis le publiez.</p>
     <div class="tb-dlg-actions"><button class="btn btn-outline" value="cancel" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Créer et ouvrir l'éditeur</button></div>
   </form></dialog>
+
+  <dialog id="tb-dlg-ren" aria-labelledby="tb-dlg-ren-h"><form method="dialog" id="tb-form-ren">
+    <h2 id="tb-dlg-ren-h">Renommer le modèle</h2>
+    <label class="sw-field">Nom<input id="tb-ren-name" required maxlength="100"></label>
+    <div class="tb-dlg-actions"><button class="btn btn-outline" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Renommer</button></div>
+  </form></dialog>
+
+  <dialog id="tb-prev" class="tb-prev" aria-labelledby="tb-prev-h">
+    <header class="tb-prev-bar">
+      <button type="button" class="tb-back" id="tb-prev-back"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Retour aux modèles</span></button>
+      <div class="tb-prev-title"><h2 id="tb-prev-h">Aperçu</h2><p id="tb-prev-sub" class="tb-prev-sub"></p></div>
+      <div class="tb-devices" role="group" aria-label="Appareil">
+        <button type="button" data-dev="desktop" aria-pressed="true">Ordinateur</button><button type="button" data-dev="tablet" aria-pressed="false">Tablette</button><button type="button" data-dev="mobile" aria-pressed="false">Mobile</button>
+      </div>
+      <label class="sw-field tb-prev-page" id="tb-prev-pagew" hidden>Page d'exemple<select id="tb-prev-page"></select></label>
+      <a class="btn btn-outline btn-sm" id="tb-prev-open" target="_blank" rel="noopener">Ouvrir dans un onglet</a>
+      <a class="btn btn-primary btn-sm" id="tb-prev-edit">Modifier</a>
+    </header>
+    <div class="tb-prev-stage" id="tb-prev-stage"><div class="tb-prev-wrap" id="tb-prev-wrap"><iframe id="tb-prev-frame" title="Aperçu du modèle" referrerpolicy="same-origin"></iframe></div>
+      <div class="tb-prev-load" id="tb-prev-load" role="status">Chargement de l'aperçu…</div></div>
+    <p class="tb-prev-note">Rendu du modèle tel qu'il est enregistré. Les contenus dynamiques (article, produit, archive) affichent le contenu d'exemple du modèle.</p>
+  </dialog>
 
   <dialog id="tb-dlg-cond" aria-labelledby="tb-dlg-cond-h"><form method="dialog" id="tb-form-cond">
     <h2 id="tb-dlg-cond-h">Conditions d'affichage</h2>
