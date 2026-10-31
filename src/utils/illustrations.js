@@ -44,6 +44,8 @@ const gear = (x, y, r, cls = "navy") => {
   return teeth + circ(x, y, r * 0.86, cls) + circ(x, y, r * 0.38, "card");
 };
 
+const circle5 = (x, y) => [0, 1, 2, 3, 4].map((i) => circ(x + i * 11, y, 2.4, "ln2")).join("");
+
 const SCENES = {
   // Tableau de bord : pilotage du site (carte de mesures, jauge, flèche de progression)
   dashboard: () => stage(0) + win(56, 40, 170, 118) + [0, 1, 2, 3, 4].map((i) => rect(72 + i * 20, 138 - [26, 38, 30, 52, 70][i], 12, [26, 38, 30, 52, 70][i], 3, i === 4 ? "blue" : "sky", i === 4 ? "" : 'opacity=".55"')).join("") +
@@ -175,6 +177,59 @@ const SCENES = {
     path("M110 46v10M160 38v18M208 48v8", "stk", 'stroke-width="1.8" stroke-dasharray="2 4"') + sparkle(268, 96, 6) + plus(52, 128),
   succes: () => stage(3) + circ(160, 104, 56, "card") + circ(160, 104, 46, "none", 'fill="none" stroke="var(--a-blue)" stroke-width="7" stroke-linecap="round" stroke-dasharray="230 60" transform="rotate(-70 160 104)"') + circ(160, 104, 34, "ice") + path("M141 106l14 14 28-30", "stk", 'stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"') +
     sparkle(86, 56, 7) + sparkle(244, 70, 6) + sparkle(252, 148, 5) + circ(80, 140, 4, "sky") + circ(236, 36, 3.5, "blue", 'opacity=".5"') + plus(98, 168) + plus(262, 112),
+
+  // Palier visuel 2 — scènes de création de site (éditeur, IA, modèles, boutique, publication, assistant, état vide, plateforme, connexion)
+  // Éditeur : colonne de blocs, page en cours d'édition avec un bloc sélectionné (poignées), curseur
+  editeur: () => stage(1) + win(48, 36, 224, 140) + rect(58, 58, 44, 108, 6, "soft") + [0, 1, 2, 3].map((i) => rect(64, 66 + i * 24, 32, 18, 5, i === 1 ? "blue" : "card")).join("") +
+    rect(112, 58, 150, 108, 6, "ice") + rect(120, 66, 134, 36, 5, "navy", 'opacity=".92"') + rect(128, 76, 56, 7, 3.5, "wh", 'opacity=".9"') + rect(128, 88, 84, 5, 2.5, "sky") + rect(222, 80, 24, 14, 7, "spark") +
+    rect(120, 110, 40, 48, 5, "card") + rect(166, 110, 40, 48, 5, "card") + rect(212, 110, 42, 48, 5, "card") + rect(116, 62, 142, 44, 7, "none", 'fill="none" stroke="var(--a-blue)" stroke-width="1.6" stroke-dasharray="4 3"') + [[116, 62], [258, 62], [116, 106], [258, 106]].map(([x, y]) => rect(x - 3, y - 3, 6, 6, 1.5, "blue")).join("") +
+    path("M236 128l-2 26 8-7 5 12 6-3-5-12 10-1z", "navy") + sparkle(40, 62, 6) + plus(296, 70) + circ(290, 156, 3.5, "blue", 'opacity=".45"'),
+
+  // IA : une demande en texte devient une page (étapes reliées, étincelles)
+  ia: () => stage(0) + card(40, 48, 100, 70, 10) + rect(50, 58, 54, 6, 3, "ln2") + lines(50, 72, [76, 62, 70], 10, 5) + rect(50, 104, 30, 8, 4, "blue") +
+    path("M146 83h22", "stk", 'stroke-width="2.6" stroke-dasharray="1 6"') + circ(158, 83, 14, "navy") + path("M158 75l2.8 6.4 6.4 2.8-6.4 2.8L158 93l-2.8-6.4-6.4-2.8 6.4-2.8z", "spark") +
+    win(176, 40, 104, 118) + rect(186, 62, 84, 26, 5, "ice") + rect(192, 69, 38, 6, 3, "navy") + rect(192, 79, 54, 4, 2, "sky") + rect(186, 96, 38, 30, 5, "soft") + rect(230, 96, 40, 13, 5, "soft") + rect(230, 113, 40, 13, 5, "soft") + rect(186, 134, 52, 12, 6, "blue") +
+    [0, 1, 2].map((i) => circ(70 + i * 24, 156, 8, i < 2 ? "blue" : "soft")).join("") + path("M66 156l3 3 5-6", "stkw", 'stroke-width="2"') + path("M90 156l3 3 5-6", "stkw", 'stroke-width="2"') + sparkle(300, 60, 6) + plus(38, 28) + circ(292, 168, 3.5, "blue", 'opacity=".45"'),
+
+  // Bibliothèque de modèles : grille de pages miniatures, une est choisie
+  bibliotheque: () => stage(2) + [[44, 40], [118, 40], [192, 40], [44, 108], [118, 108], [192, 108]].map(([x, y], i) => {
+      const body = [rect(x + 6, y + 14, 56, 22, 3, "ice") + lines(x + 8, y + 42, [50, 34], 7, 4), rect(x + 6, y + 14, 26, 38, 3, "ice") + rect(x + 36, y + 14, 26, 16, 3, "soft") + rect(x + 36, y + 34, 26, 18, 3, "soft"), rect(x + 6, y + 14, 56, 14, 3, "navy", 'opacity=".9"') + [0, 1, 2].map((k) => rect(x + 6 + k * 20, y + 34, 16, 24, 3, "soft")).join(""), rect(x + 6, y + 14, 56, 44, 3, "soft") + circ(x + 34, y + 36, 11, "sky") + rect(x + 22, y + 47, 24, 4, 2, "blue"), lines(x + 8, y + 16, [48, 40, 52, 30], 9, 4) + rect(x + 8, y + 54, 30, 8, 4, "blue"), rect(x + 6, y + 14, 56, 24, 3, "sky", 'opacity=".55"') + rect(x + 6, y + 42, 26, 16, 3, "ice") + rect(x + 36, y + 42, 26, 16, 3, "ice")][i];
+      return card(x, y, 68, 68, 8) + body;
+    }).join("") + rect(114, 36, 76, 76, 11, "none", 'fill="none" stroke="var(--a-blue)" stroke-width="2.4"') + badge(186, 40, 10) + sparkle(30, 34, 6) + plus(304, 100) + circ(300, 178, 3.5, "blue", 'opacity=".45"'),
+
+  // Boutique : vitrine à auvent, produits, panier
+  boutique: () => stage(3) + card(54, 78, 150, 96, 8) + path("M48 78l10-30h132l10 30z", "navy") + [0, 1, 2, 3, 4].map((i) => rect(52 + i * 30, 70, 30, 12, 6, i % 2 ? "sky" : "card")).join("") +
+    [0, 1, 2].map((i) => rect(66 + i * 44, 98, 36, 36, 6, "ice") + circ(84 + i * 44, 112, 8, i === 1 ? "spark" : "blue") + rect(70 + i * 44, 140, 28, 5, 2.5, "ln") + rect(70 + i * 44, 150, 16, 5, 2.5, "ln2")).join("") +
+    card(218, 92, 60, 74, 10) + path("M232 108h6l5 22h20l4-14h-27", "stk", 'stroke-width="2.4"') + circ(246, 140, 3.2, "navy") + circ(260, 140, 3.2, "navy") + rect(230, 148, 36, 8, 4, "blue") + circ(272, 90, 11, "spark") + rect(268, 87, 8, 6, 3, "wh") +
+    sparkle(40, 60, 6) + plus(296, 60) + circ(38, 160, 3.5, "blue", 'opacity=".45"'),
+
+  // Publication : page reliée à un globe, coche de mise en ligne
+  publication: () => stage(0) + win(40, 56, 116, 98) + rect(50, 78, 96, 28, 5, "ice") + rect(56, 86, 40, 6, 3, "navy") + rect(56, 96, 60, 4, 2, "sky") + lines(50, 114, [76, 56], 9, 5) + rect(50, 134, 38, 12, 6, "blue") +
+    path("M158 105h30", "stk", 'stroke-width="2.6" stroke-dasharray="1 6"') + circ(236, 104, 44, "card") + circ(236, 104, 44, "none", 'fill="none" stroke="var(--a-blue)" stroke-width="2.4"') + path("M192 104h88M236 60v88", "stkl", 'stroke-width="1.6"') + path("M204 78c20 8 52 8 64 0M204 130c20-8 52-8 64 0", "stkl", 'stroke-width="1.6"') + path("M236 60c-24 24-24 64 0 88c24-24 24-64 0-88z", "stkl", 'stroke-width="1.6"') +
+    badge(270, 70, 13) + rect(188, 36, 58, 18, 9, "navy") + rect(196, 43, 30, 4, 2, "sky") + sparkle(34, 40, 6) + plus(300, 160) + circ(176, 176, 3.5, "blue", 'opacity=".45"'),
+
+  // Assistant : trois étapes, la première validée, la seconde en cours
+  assistant: () => stage(3) + path("M92 108h30m62 0h30", "stk", 'stroke-width="2.4" stroke-dasharray="2 6"') +
+    card(40, 66, 74, 84, 10) + circ(77, 94, 14, "blue") + check(77, 94.5, 6).replace('class="stkw"', 'class="stkw"') + rect(54, 120, 46, 6, 3, "ln2") + rect(60, 132, 34, 5, 2.5, "ln") +
+    g(card(118, 54, 84, 108, 11), "") + rect(118, 54, 84, 108, 11, "none", 'fill="none" stroke="var(--a-blue)" stroke-width="2.2"') + circ(160, 90, 16, "navy") + path("M154 90h12m-6-6v12", "stkw", 'stroke-width="2.4"') + rect(132, 118, 56, 7, 3.5, "navy") + rect(138, 132, 44, 5, 2.5, "ln") + rect(142, 142, 36, 10, 5, "blue") +
+    card(206, 66, 74, 84, 10) + circ(243, 94, 14, "soft") + rect(220, 120, 46, 6, 3, "ln") + rect(226, 132, 34, 5, 2.5, "ln") + sparkle(46, 46, 6) + plus(294, 46) + circ(292, 168, 3.5, "blue", 'opacity=".45"') + rect(132, 36, 56, 12, 6, "ice"),
+
+  // Aucun site : fenêtre vide en pointillés et grand « + » à remplir
+  nouveausite: () => stage(2) + rect(62, 46, 196, 124, 12, "none", 'fill="var(--a-card)" fill-opacity=".55" stroke="var(--a-line2)" stroke-width="2" stroke-dasharray="7 6"') + path("M62 68V58a12 12 0 0 1 12-12h172a12 12 0 0 1 12 12v10z", "ice") + circ(76, 57, 2.4, "sky") + circ(85, 57, 2.4, "sky", 'opacity=".7"') + circ(94, 57, 2.4, "sky", 'opacity=".45"') +
+    circ(160, 112, 30, "blue") + path("M160 96v32M144 112h32", "stkw", 'stroke-width="5"') + rect(116, 152, 88, 6, 3, "ln") + rect(134, 162, 52, 5, 2.5, "ln2") + sparkle(46, 70, 6) + sparkle(280, 140, 7) + plus(290, 62) + circ(46, 150, 3.5, "blue", 'opacity=".45"'),
+
+  // Plateforme (hero) : l'éditeur au centre, une boutique, une formation et des mesures qui l'entourent
+  plateforme: () => stage(0) + win(88, 30, 150, 116) + rect(98, 52, 130, 34, 5, "navy", 'opacity=".92"') + rect(106, 62, 54, 7, 3.5, "wh", 'opacity=".9"') + rect(106, 74, 80, 5, 2.5, "sky") + rect(196, 60, 24, 14, 7, "spark") + rect(98, 94, 40, 42, 5, "ice") + rect(144, 94, 40, 42, 5, "soft") + rect(190, 94, 38, 42, 5, "ice") +
+    g(card(0, 0, 70, 78, 10) + rect(8, 8, 54, 36, 6, "ice") + circ(35, 26, 9, "blue") + rect(8, 52, 40, 5, 2.5, "ln2") + rect(8, 62, 26, 5, 2.5, "ln") + circ(58, 62, 7, "spark"), "translate(14 98) rotate(-5)") +
+    g(card(0, 0, 76, 70, 10) + rect(8, 8, 60, 34, 6, "navy") + circ(38, 25, 9, "card") + path("M35 20l9 5-9 5z", "blue") + rect(8, 48, 60, 5, 2.5, "soft") + rect(8, 48, 38, 5, 2.5, "blue"), "translate(236 96) rotate(5)") +
+    card(236, 28, 70, 46, 10) + path("M246 62c8-14 14-4 22-14s14-4 28-12", "stk", 'stroke-width="2.4"') + circ(292, 38, 3.2, "spark") +
+    card(20, 30, 62, 40, 9) + circ(36, 50, 9, "sky") + path("M31 50l4 4 7-8", "stk", 'stroke="var(--a-navy)" stroke-width="2.4"') + rect(50, 44, 24, 5, 2.5, "ln2") + rect(50, 54, 16, 5, 2.5, "ln") +
+    path("M60 94c8-10 14-12 24-12M240 92c-8-8-12-12-22-12", "stkl", 'stroke-dasharray="2 5"') + sparkle(172, 14, 7) + plus(308, 150) + plus(12, 150) + circ(160, 184, 3.5, "blue", 'opacity=".45"'),
+
+  // Connexion : carte de compte, cadenas et clé
+  connexion: () => stage(1) + card(84, 40, 152, 118, 12) + circ(160, 78, 18, "ice") + avatar(160, 80, 16, "blue") + rect(112, 106, 96, 14, 7, "soft") + rect(120, 111, 44, 4, 2, "ln2") + rect(112, 126, 96, 14, 7, "soft") + circle5(130, 133) +
+    g(rect(0, 12, 40, 32, 7, "navy") + path("M8 12V8a12 12 0 0 1 24 0v4", "none", 'fill="none" stroke="var(--a-navy)" stroke-width="5"') + circ(20, 27, 4, "spark") + rect(18, 29, 4, 8, 2, "spark"), "translate(220 118)") +
+    g(circ(0, 0, 9, "spark") + circ(0, 0, 3.4, "card") + rect(8, -2.5, 30, 5, 2.5, "spark") + rect(28, 2, 5, 8, 1.5, "spark"), "translate(58 132) rotate(-18)") + sparkle(50, 60, 6) + plus(286, 62) + circ(290, 176, 3.5, "blue", 'opacity=".45"'),
 };
 
 const ALIASES = {
@@ -190,7 +245,7 @@ const ALIASES = {
   layout: "pages", layers: "extensions", arrowrightleft: "redirections", users: "utilisateurs", user: "contacts", globe: "dashboard", searchcheck: "seo", search: "recherche", inbox: "commentaires",
   filetext: "articles", image: "media", palette: "themes", settings: "parametres", sliders: "outils", send: "email", mail: "email", listchecks: "formulaires", zap: "automatisations", plug: "connecteurs",
   download: "echanges", upload: "echanges", trash: "corbeille", list: "contacts", tag: "articles", shield: "sauvegardes", activity: "analytics", barchart: "analytics", messagesquare: "commentaires", menu: "navigation", link: "redirections",
-  filter: "automatisations", funnel: "tunnels", funnels: "tunnels", formation: "formations", cours: "formations", lms: "formations", apprentissage: "formations", reussite: "succes", felicitations: "succes", valide: "succes", clock: "sauvegardes", checkcircle: "diagnostic", smartphone: "email", home: "accueil", star: "accueil",
+  filter: "automatisations", funnel: "tunnels", funnels: "tunnels", formation: "formations", cours: "formations", lms: "formations", apprentissage: "formations", reussite: "succes", felicitations: "succes", valide: "succes", clock: "sauvegardes", editeur: "editeur", "editeur-de-site": "editeur", "page-builder": "editeur", ia: "ia", ai: "ia", intelligence: "ia", sparkles: "ia", wand: "ia", bibliotheque: "bibliotheque", "modeles-de-site": "bibliotheque", gabarits: "bibliotheque", boutique: "boutique", shop: "boutique", commerce: "boutique", produits: "boutique", panier: "boutique", shoppingcart: "boutique", publication: "publication", publier: "publication", "en-ligne": "publication", assistant: "assistant", "creer-site": "assistant", wizard: "assistant", etapes: "assistant", nouveausite: "nouveausite", "nouveau-site": "nouveausite", "aucun-site": "nouveausite", plateforme: "plateforme", kolakisa: "plateforme", connexion: "connexion", login: "connexion", compte: "connexion", securite: "connexion", lock: "connexion", checkcircle: "diagnostic", smartphone: "email", home: "accueil", star: "accueil",
 };
 
 const NAMES = Object.keys(SCENES);
