@@ -32,7 +32,8 @@ function promptFor(context, role, n = 0) {
   const scene = role === "hero" ? subj.hero : subj.extra[n % subj.extra.length];
   const style = MOOD_STYLE[context.mood] || MOOD_STYLE.corporate;
   const palette = `palette dominante ${hueName(Number.isFinite(context.hue) ? context.hue : 215)} et tons neutres harmonieux`;
-  const composition = role === "hero" ? "Composition large avec de l'espace libre sur un côté pour accueillir du texte." : "Composition équilibrée, sujet clair et net.";
+  // 22.7 : côté du sujet et du texte explicites (le sujet à droite, le texte à gauche pour un bandeau ; côtés alternés pour les illustrations suivantes)
+  const composition = role === "hero" ? "Sujet placé à droite, grand espace libre à gauche pour accueillir du texte ; arrière-plan peu chargé." : `Composition équilibrée, sujet clair et net, placé ${n % 2 ? "à gauche" : "à droite"}.`;
   return `Photographie ${role === "hero" ? "d'ambiance" : "d'illustration"} : ${scene}. ${style} ; ${palette}. ${composition} ${NEGATIVE}`;
 }
 const keyOf = (pageId, sectionId, slot) => `${pageId}:${sectionId}:${slot}`;

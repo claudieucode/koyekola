@@ -106,6 +106,8 @@ function head(req, { page, site = null, preview = false }) {
   const h = finalize(req, urls.pageCanonicalPath(page), s, null);
   // Pas de données structurées sur une page que les moteurs ne doivent pas indexer
   if (ix.blockAll || (parseSeo(page).noindex)) h.jsonLd = [];
+  // hreflang : seulement pour une page indexable d'un site, reliée à au moins une autre page publiée (lecture seule, par site)
+  h.alternates = site && !ix.blockAll && !parseSeo(page).noindex ? require("../contentIntel/i18n").alternatesForPage(db, { siteId: site.id, pageId: page.id, abs: (p) => absoluteUrl(req, p) }) : [];
   return h;
 }
 
