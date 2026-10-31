@@ -7,8 +7,8 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | État | Lignes |
 |---|---|
 | Complet | 286 |
-| Partiel | 144 |
-| Absent | 81 |
+| Partiel | 147 |
+| Absent | 78 |
 | Autre module | 18 |
 | Non applicable | 9 |
 | Exclu/Non fait | 6 |
@@ -26,7 +26,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | LY | 2 | 1 | 21 | 0 | 1 | 6 |
 | NV | 4 | 0 | 5 | 0 | 0 | 10 |
 | PU | 9 | 0 | 15 | 0 | 0 | 15 |
-| SS | 16 | 2 | 27 | 0 | 3 | 18 |
+| SS | 13 | 2 | 27 | 0 | 3 | 21 |
 | ST | 3 | 0 | 45 | 0 | 0 | 12 |
 | TB | 2 | 1 | 3 | 0 | 1 | 18 |
 | UI | 8 | 0 | 30 | 0 | 1 | 15 |
@@ -413,9 +413,9 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | EL-SS041 | Site Settings / Kit | Custom Fonts : font-display / chargement des polices Google (Disable Google Fonts) | déduit (titre dans le menu officiel ; article non lu) | Polices auto-hébergées (pas d'appel à Google) | Complet | Conforme RGPD par construction | — | — | fontLibrary.js:65 |
 | EL-SS042 | Site Settings / Kit | Custom Icons : jeux d'icônes personnalisés (Fontello, IcoMoon, Fontastic ; zip) | documenté (article lu, Pro selon étiquettes de l'article) | Aucun : bibliothèque d'icônes interne uniquement | Absent | Pas de jeu d'icônes importable ni d'icônes SVG propres | Importer un jeu SVG (symboles assainis) par site, préfixe unique, proposé dans le sélecteur d'icônes | P3 | grep customIcon : aucune occurrence |
 | EL-SS043 | Site Settings / Kit | Enable SVG Support (téléverser du SVG) | déduit (titre dans le menu officiel ; article non lu) | Média : aucun SVG téléversable ? (non vérifié) | Absent | Non vérifié dans la médiathèque | Vérifier src/marketing/media ; autoriser SVG assaini si absent | P4 | non vérifié |
-| EL-SS044 | Site Settings / Kit | Custom Code : <head> | documenté (article lu, Pro selon étiquettes de l'article) | Aucun champ d'injection de code | Absent | Pas de suivi (GTM, pixel) ni script libre ; clé de la parité Pro | Ajouter un module « Code personnalisé » par site : emplacement, priorité 1-10, conditions ; validation et droit admin ; CSP à prévoir | P1 | grep head/custom code : aucune occurrence dans src/marketing |
-| EL-SS045 | Site Settings / Kit | Custom Code : début de <body> | documenté (article lu, Pro selon étiquettes de l'article) | Aucun | Absent | — | Idem ligne précédente | P1 | — |
-| EL-SS046 | Site Settings / Kit | Custom Code : fin de <body> | documenté (article lu, Pro selon étiquettes de l'article) | Aucun | Absent | — | Idem ligne précédente | P1 | — |
+| EL-SS044 | Site Settings / Kit | Custom Code : <head> | documenté (article lu, Pro selon étiquettes de l'article) | Aucun champ d'injection de code | Partiel | Implémenté (lot 1) sur les pages publiées du site : zone signée par le serveur, réservée à « pages.code », jamais dans l'éditeur ni l'aperçu. Reste : pages du CMS (articles, thèmes) et boutique, priorité 1-10 et conditions d'affichage. | Ajouter un module « Code personnalisé » par site : emplacement, priorité 1-10, conditions ; validation et droit admin ; CSP à prévoir | P1 | grep head/custom code : aucune occurrence dans src/marketing \| tests/site-web-reglages-theme.test.js (22.8) |
+| EL-SS045 | Site Settings / Kit | Custom Code : début de <body> | documenté (article lu, Pro selon étiquettes de l'article) | Aucun | Partiel | Implémenté (lot 1) sur les pages publiées du site : zone signée par le serveur, réservée à « pages.code », jamais dans l'éditeur ni l'aperçu. Reste : pages du CMS (articles, thèmes) et boutique, priorité 1-10 et conditions d'affichage. | Idem ligne précédente | P1 | — \| tests/site-web-reglages-theme.test.js (22.8) |
+| EL-SS046 | Site Settings / Kit | Custom Code : fin de <body> | documenté (article lu, Pro selon étiquettes de l'article) | Aucun | Partiel | Implémenté (lot 1) sur les pages publiées du site : zone signée par le serveur, réservée à « pages.code », jamais dans l'éditeur ni l'aperçu. Reste : pages du CMS (articles, thèmes) et boutique, priorité 1-10 et conditions d'affichage. | Idem ligne précédente | P1 | — \| tests/site-web-reglages-theme.test.js (22.8) |
 | EL-SS047 | Site Settings / Kit | Custom Code : priorité 1-10 et conditions d'affichage | documenté (article lu, Pro selon étiquettes de l'article) | Aucun | Absent | — | Idem ; réutiliser le moteur de conditions de nodes.js | P2 | — |
 | EL-SS048 | Site Settings / Kit | Intégrations Google Analytics / Tag Manager / Facebook Pixel | déduit (titre dans le menu officiel ; article non lu) | Module Analytics interne ; pas de balise tierce | Autre module | Mesure propre (analytics) ; pas d'injection GTM/Pixel | Couvert si Custom Code est ajouté | P2 | src/marketing/analytics |
 | EL-SS049 | Site Settings / Kit | Maintenance Mode / Coming Soon : mode maintenance (503) | documenté (article lu) | Outils > Maintenance, par site (cms_maintenance, message, 503) | Partiel | Pas de mode « Coming Soon » distinct, pas de gabarit de page choisi, pas de rôles autorisés | Ajouter mode (maintenance\|bientôt), page gabarit du site, rôles autorisés | P2 | src/services/tools/maintenance.js:1-26 ; web/tools.js:455-462 |
