@@ -28,4 +28,4 @@
 - Les chiffres de **trafic, position et clics** ne sont affichés nulle part (aucune source connectée à ce niveau).
 
 ## Suites possibles
-formulaires de saisie sur l'écran ; menu contextuel dans l'éditeur ; appel automatique de `review` par le constructeur ; connecteur de mots-clés quand un fournisseur est choisi et autorisé.
+menu contextuel dans l'éditeur ; appel automatique de `review` par le constructeur ; connecteur de mots-clés quand un fournisseur est choisi et autorisé.

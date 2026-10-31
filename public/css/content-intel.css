@@ -10,3 +10,4 @@
 .ci-fix{margin-top:.3rem}.ci-crit{padding-left:1.1rem}
 .ci table{width:100%;overflow-wrap:anywhere}.ci{min-width:0}
 .ci-scroll{overflow-x:auto;max-width:100%}.ci-scroll:focus-visible{outline:2px solid var(--mk-accent,#1d4f7c);outline-offset:2px}
+.ci-form{margin:1rem 0;max-width:34rem}.ci-form .sw-field{margin:.5rem 0}.ci-form input,.ci-form select,.ci-form textarea{width:100%}
