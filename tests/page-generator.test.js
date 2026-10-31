@@ -67,6 +67,20 @@ describe("Page Generator (service)", () => {
   const site = (name = "Site Un") => pages.createSite(A, { name }).id;
   const draftOf = (id) => pages.requirePage(A, id);
 
+  test("22.10 (Q3). méta description : but du plan ou phrase réelle du contenu ; jamais un texte d'exemple entre crochets", async () => {
+    const sid = site();
+    const plan = raw([
+      { name: "Avec but", type: "services", goal: "Présenter nos services de transport et d'entreposage aux industriels de la région lyonnaise", sections: [S("intro", { text: "Texte" })] },
+      { name: "Phrase réelle", type: "apropos", sections: [S("intro", { text: "Nous transportons et stockons les marchandises des industriels de la région depuis plus de dix ans." })] },
+      { name: "Exemple seul", type: "faq", sections: [S("intro", { text: "[Décrivez ici votre activité en deux phrases claires pour vos visiteurs]" })] },
+    ]);
+    const run = await gen.generate(A, sid, plan);
+    const out = gen.apply(A, sid, run.id, {});
+    const seoOf = (key) => draftOf(out[key].pageId).working.seo || {};
+    assert.match(seoOf("avec-but").description, /transport et d'entreposage/);
+    assert.match(seoOf("phrase-reelle").description, /^Nous transportons/);
+    assert.equal(seoOf("exemple-seul").description, undefined, "un texte d'exemple n'est jamais publié comme méta description");
+  });
   test("A. page d'accueil : sections natives ordonnées, identifiants déterministes, brouillon, rien de publié", async () => {
     const sid = site();
     const plan = raw([{ name: "Accueil immo", type: "accueil", goal: "Présenter l'agence", sections: [S("hero", { title: "Votre agence", text: "Près de chez vous", cta: { label: "Nous contacter", url: "/contact" } }), S("intro", { text: "Nous aidons depuis 2010." }), S("listing"), S("benefits", { items: [{ title: "Proximité", text: "Un interlocuteur" }, { title: "Rapidité" }] }), S("testimonials"), S("contact")] }]);

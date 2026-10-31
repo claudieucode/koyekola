@@ -1,4 +1,4 @@
-// Programme 22.1 — laboratoire de qualité : 15 scénarios de RÉFÉRENCE. Les briefs ne changent pas d'un palier à l'autre (comparabilité) ; toutes les données sont fictives.
+// Programme 22.1 — laboratoire de qualité : 21 scénarios (15 de RÉFÉRENCE 22.1 + 6 du 22.10). Les briefs ne changent pas d'un palier à l'autre (comparabilité) ; toutes les données sont fictives.
 // `wizard` = catégorie du parcours guidé (catalogue 20.6) ; `design` = brief transmis au générateur de direction artistique ; `expect` = ce qu'un bon site pour ce brief doit contenir.
 // `essential` = types de pages sans lesquels le site ne remplit pas son objectif ; `allowed` = types acceptables en plus (tout le reste est signalé comme page peu pertinente).
 const BASE_ALLOWED = ["accueil", "contact", "apropos", "faq", "temoignages", "blog"];
@@ -50,6 +50,25 @@ const SCENARIOS = [
   S("sante", "Site de santé (contenu contrôlé)", "services", "Cabinet de kinésithérapie à Lille : présenter l'équipe, les spécialités, les horaires et la prise de rendez-vous. Aucune promesse de guérison ni de résultat médical.",
     { text: "apaisant, propre, bleu clair, très lisible", category: "entreprise", sector: "santé", country: "FR", lang: "fr" },
     { siteType: "services", sector: "santé", country: "FR", lang: "fr", audience: "patients" }, ["accueil", "services", "contact"], ["services", "equipe", "tarifs"], { sensitive: true }),
+  // Programme 22.10 — 6 scénarios ajoutés pour couvrir les 20 catégories de la certification (les 15 premiers restent inchangés : comparabilité avec le 22.1)
+  S("agence", "Agence digitale", "agence", "Agence digitale à Bruxelles (Belgique) : présenter nos services de création de sites et de marketing, nos réalisations, l'équipe, et recevoir des demandes de devis de PME.",
+    { text: "agence créative, audacieuse mais lisible, violet et noir", category: "agence", sector: "marketing digital", country: "BE", lang: "fr" },
+    { siteType: "agence", sector: "marketing digital", country: "BE", lang: "fr", audience: "PME" }, ["accueil", "services", "realisations", "contact"], ["services", "realisations", "equipe", "temoignages"]),
+  S("juridique", "Cabinet juridique", "services", "Cabinet d'avocats en droit des affaires à Genève (Suisse) : domaines d'intervention, équipe, honoraires indicatifs, prise de rendez-vous. Aucune promesse de résultat judiciaire.",
+    { text: "sobre, institutionnel, bleu nuit et or discret", category: "entreprise", sector: "droit", country: "CH", lang: "fr" },
+    { siteType: "services", sector: "droit", country: "CH", lang: "fr", audience: "entreprises" }, ["accueil", "services", "contact"], ["services", "equipe", "tarifs"], { sensitive: true }),
+  S("numerique", "Produits numériques", "boutique", "Vente de modèles Notion et de guides PDF téléchargeables pour indépendants : catalogue, fiche produit, paiement sécurisé, téléchargement immédiat après achat.",
+    { text: "moderne, lumineux, minimaliste, vert menthe", category: "boutique", sector: "produits numériques", country: "FR", lang: "fr" },
+    { siteType: "boutique", sector: "produits numériques", country: "FR", lang: "fr", audience: "indépendants" }, ["accueil", "boutique", "panier", "commande", "contact"], ["boutique", "catalogue", "panier", "commande", "fiche-produit", "faq"], { shop: true }),
+  S("voyage", "Site de voyage", "hotel", "Maison d'hôtes sur la côte à Zanzibar (Tanzanie) : présenter les chambres, la situation, les activités, et permettre de demander une réservation. Site en anglais.",
+    { text: "chaleureux, évasion, turquoise et sable", category: "hotel", sector: "hébergement touristique", country: "TZ", lang: "en" },
+    { siteType: "hotel", sector: "hébergement touristique", country: "TZ", lang: "en", audience: "voyageurs" }, ["accueil", "chambres", "contact"], ["chambres", "galerie", "realisations"]),
+  S("evenement", "Site événementiel", "evenement", "Conférence annuelle sur l'agriculture durable à Nairobi (Kenya) : programme, intervenants, inscription, informations pratiques. Site en anglais.",
+    { text: "dynamique, vert et orange, très lisible", category: "evenement", sector: "événementiel", country: "KE", lang: "en" },
+    { siteType: "evenement", sector: "événementiel", country: "KE", lang: "en", audience: "professionnels agricoles" }, ["accueil", "inscription", "contact"], ["inscription", "programme", "equipe", "faq"]),
+  S("consultant", "Site de consultant", "personnel", "Consultant indépendant en stratégie RH à Casablanca (Maroc) : mon parcours, mes missions, des articles, et un moyen de me contacter pour une mission.",
+    { text: "personnel, élégant, bordeaux et crème", category: "personnel", sector: "ressources humaines", country: "MA", lang: "fr" },
+    { siteType: "personnel", sector: "ressources humaines", country: "MA", lang: "fr", audience: "directions RH" }, ["accueil", "realisations", "contact"], ["realisations", "services", "blog", "apropos"]),
 ];
 
 // Briefs de test du Brief Analyzer (précis, courts, vagues, incomplets, complexes, contradictoires)

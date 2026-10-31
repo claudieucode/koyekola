@@ -11,9 +11,9 @@ const lab = require("./quality-lab/lab");
 const RESULTS = path.join(__dirname, "..", "docs", "quality-lab", "results.json");
 
 describe("scénarios de référence", () => {
-  test("15 scénarios, identifiants uniques, briefs non vides, aucune donnée réelle (pas d'e-mail ni de téléphone)", () => {
-    assert.equal(SCENARIOS.length, 15);
-    assert.equal(new Set(SCENARIOS.map((s) => s.id)).size, 15);
+  test("21 scénarios, identifiants uniques, briefs non vides, aucune donnée réelle (pas d'e-mail ni de téléphone)", () => {
+    assert.equal(SCENARIOS.length, 21);
+    assert.equal(new Set(SCENARIOS.map((s) => s.id)).size, 21);
     for (const s of SCENARIOS) {
       assert.ok(s.brief.length > 60 && s.design.text && s.expect.country && s.essential.length >= 3, s.id);
       assert.ok(!/@|\+?\d[\d .]{8,}/.test(s.brief), `${s.id} : donnée personnelle`);
@@ -86,9 +86,9 @@ describe("gardes du Brief Analyzer, du Content Generator, du Component Mapper (f
 
 describe("résultat de référence enregistré (docs/quality-lab/results.json)", () => {
   const exists = fs.existsSync(RESULTS);
-  test("15 scénarios notés, notes cohérentes avec la grille, statuts recalculables, plafonds appliqués", { skip: !exists && "résultat de référence absent" }, () => {
+  test("21 scénarios notés, notes cohérentes avec la grille, statuts recalculables, plafonds appliqués", { skip: !exists && "résultat de référence absent" }, () => {
     const r = JSON.parse(fs.readFileSync(RESULTS, "utf8"));
-    assert.equal(r.scenarios.length, 15);
+    assert.equal(r.scenarios.length, 21);
     for (const s of r.scenarios) {
       const sc = s.score; assert.equal(sc.rows.length, 10);
       assert.ok(sc.rows.every((x) => x.got <= x.measured + 1e-9 && x.measured <= x.max), s.id);
@@ -106,9 +106,9 @@ describe("résultat de référence enregistré (docs/quality-lab/results.json)",
 
 // Relance complète (serveur réel) : opt-in, car elle prend plusieurs minutes
 describe("laboratoire complet (QUALITY_LAB=1)", { skip: !process.env.QUALITY_LAB && "opt-in : QUALITY_LAB=1" }, () => {
-  test("les 15 scénarios s'exécutent de bout en bout (génération, publication, lecture publique)", { timeout: 900000 }, async () => {
+  test("les 21 scénarios s'exécutent de bout en bout (génération, publication, lecture publique)", { timeout: 900000 }, async () => {
     const r = await lab.runLab();
-    assert.equal(r.scenarios.length, 15);
+    assert.equal(r.scenarios.length, 21);
     assert.ok(r.scenarios.every((s) => s.pages.length >= 3 && s.pages.some((p) => p.status === 200)));
   });
 });
