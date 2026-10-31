@@ -57,11 +57,12 @@
           var options = (f.options || []).map(function (o) { return '<option value="' + escAttr(o) + '">' + esc(o) + "</option>"; }).join("");
           return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<select name="' + name + '"' + req + '><option value="">—</option>' + options + "</select></label></div>";
         }
+        var ph = s.placeholder ? ' placeholder="' + escAttr(s.placeholder) + '"' : "";
         if (s.display === "textarea") {
-          return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<textarea name="' + name + '" maxlength="500" rows="3"' + req + "></textarea></label></div>";
+          return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<textarea name="' + name + '" maxlength="500" rows="3"' + ph + req + "></textarea></label></div>";
         }
         var type = f.type === "number" ? "number" : f.type === "date" ? "date" : "text";
-        return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<input type="' + type + '" name="' + name + '"' + (type === "text" ? ' maxlength="500"' : type === "number" ? ' step="any"' : "") + req + "></label></div>";
+        return '<div class="field-group"' + cond + "><label>" + esc(f.label) + star + '<input type="' + type + '" name="' + name + '"' + (type === "text" ? ' maxlength="500"' : type === "number" ? ' step="any"' : "") + ph + req + "></label></div>";
       })
       .join("");
   }
