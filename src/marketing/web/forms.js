@@ -12,7 +12,7 @@ function fieldSettingsFromBody(fs) {
   const out = {};
   for (const [key, v] of Object.entries(fs && typeof fs === "object" ? fs : {})) {
     if (!v || typeof v !== "object") continue;
-    out[key] = { required: v.required === "1", display: v.display || undefined, showIf: v.field ? { field: v.field, op: v.op, value: v.value } : undefined };
+    out[key] = { required: v.required === "1", display: v.display || undefined, placeholder: v.placeholder || undefined, showIf: v.field ? { field: v.field, op: v.op, value: v.value } : undefined };
   }
   return out;
 }

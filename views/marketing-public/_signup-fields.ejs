@@ -6,6 +6,7 @@
    const settings = form.fieldSettings || {};
    const req_ = (name) => Boolean(settings[name] && settings[name].required);
    const showIf = (name) => (settings[name] && settings[name].showIf ? JSON.stringify(settings[name].showIf) : null);
+   const ph = (name) => (settings[name] && settings[name].placeholder ? ` placeholder="${String(settings[name].placeholder).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")}"` : "");
    const star = (name) => (req_(name) ? ' <span class="req-mark" aria-hidden="true">*</span>' : "");
    const AUTO = { first_name: "given-name", last_name: "family-name", phone: "tel", company: "organization", country: "country-name" }; %>
           <div class="hp-field" aria-hidden="true"><label for="<%= p %>-website">Ne pas remplir</label><input id="<%= p %>-website" type="text" name="website" tabindex="-1" autocomplete="off"></div>
@@ -13,8 +14,8 @@
           <div class="field-group"><label for="<%= p %>-email">Adresse e-mail <span class="req-mark" aria-hidden="true">*</span></label><input id="<%= p %>-email" type="email" name="email" autocomplete="email" value="<%= values.email || '' %>"<%- typeof autofocus === "undefined" || autofocus ? " required autofocus" : " required" %>></div>
           <% form.fields.forEach((key) => { const id = `${p}-${key}`; const textarea = settings[key] && settings[key].display === "textarea"; %>
             <div class="field-group"<% if (showIf(key)) { %> data-show-if="<%= showIf(key) %>"<% } %>><label for="<%= id %>"><%= fieldCatalog[key] %><%- star(key) %></label>
-              <% if (textarea) { %><textarea id="<%= id %>" name="<%= key %>" maxlength="200" rows="3"<%= req_(key) ? " required" : "" %>><%= values[key] || '' %></textarea>
-              <% } else { %><input id="<%= id %>" type="<%= key === "phone" ? "tel" : "text" %>" name="<%= key %>" maxlength="200" autocomplete="<%= AUTO[key] || "on" %>" value="<%= values[key] || '' %>"<%= req_(key) ? " required" : "" %>><% } %></div>
+              <% if (textarea) { %><textarea id="<%= id %>" name="<%= key %>" maxlength="200" rows="3"<%- ph(key) %><%= req_(key) ? " required" : "" %>><%= values[key] || '' %></textarea>
+              <% } else { %><input id="<%= id %>" type="<%= key === "phone" ? "tel" : "text" %>" name="<%= key %>" maxlength="200" autocomplete="<%= AUTO[key] || "on" %>" value="<%= values[key] || '' %>"<%- ph(key) %><%= req_(key) ? " required" : "" %>><% } %></div>
           <% }) %>
           <% (typeof propertyDefs !== "undefined" ? propertyDefs : []).forEach((d) => { const id = p + "-prop-" + d.key; const v = values[d.name] || ""; const cond = showIf(d.name); const display = settings[d.name] && settings[d.name].display; %>
             <% if (d.type === "boolean") { %>
@@ -29,9 +30,9 @@
                 <% d.options.forEach((o) => { %><option value="<%= o %>"<%- v === o ? " selected" : "" %>><%= o %></option><% }) %>
               </select></div>
             <% } else if (d.type === "text" && display === "textarea") { %>
-              <div class="field-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><label for="<%= id %>"><%= d.label %><%- star(d.name) %></label><textarea id="<%= id %>" name="<%= d.name %>" maxlength="500" rows="4"<%= req_(d.name) ? " required" : "" %>><%= v %></textarea></div>
+              <div class="field-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><label for="<%= id %>"><%= d.label %><%- star(d.name) %></label><textarea id="<%= id %>" name="<%= d.name %>" maxlength="500" rows="4"<%- ph(d.name) %><%= req_(d.name) ? " required" : "" %>><%= v %></textarea></div>
             <% } else { %>
-              <div class="field-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><label for="<%= id %>"><%= d.label %><%- star(d.name) %></label><input id="<%= id %>" type="<%= d.type === "number" ? "number" : d.type === "date" ? "date" : "text" %>" name="<%= d.name %>" value="<%= v %>"<%- d.type === "text" ? ' maxlength="500"' : d.type === "number" ? ' step="any"' : "" %><%= req_(d.name) ? " required" : "" %>></div>
+              <div class="field-group"<% if (cond) { %> data-show-if="<%= cond %>"<% } %>><label for="<%= id %>"><%= d.label %><%- star(d.name) %></label><input id="<%= id %>" type="<%= d.type === "number" ? "number" : d.type === "date" ? "date" : "text" %>" name="<%= d.name %>" value="<%= v %>"<%- ph(d.name) %><%- d.type === "text" ? ' maxlength="500"' : d.type === "number" ? ' step="any"' : "" %><%= req_(d.name) ? " required" : "" %>></div>
             <% } %>
           <% }) %>
           <% if (form.fileField && form.fileField.enabled) { const acc = { images: "image/jpeg,image/png,image/webp", pdf: "application/pdf", both: "image/jpeg,image/png,image/webp,application/pdf" }[form.fileField.accept] || "image/jpeg,image/png,image/webp,application/pdf"; %>

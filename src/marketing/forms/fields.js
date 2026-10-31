@@ -31,6 +31,11 @@ function normalizeFieldSettings(input, form, propertyDefs) {
     if (s.required === true || s.required === "1" || s.required === "on") r.required = true;
     if (s.display === "radio" && f.type === "select") r.display = "radio";
     if (s.display === "textarea" && (f.kind === "standard" || f.type === "text")) r.display = "textarea";
+    // Texte indicatif (placeholder) : champs de saisie libre seulement (ni case, ni liste, ni date), sans caractères de contrôle
+    if (f.kind === "standard" || f.type === "text" || f.type === "number") {
+      const ph = String(s.placeholder ?? "").replace(/[\x00-\x1f\x7f]/g, " ").trim().slice(0, 80);
+      if (ph) r.placeholder = ph;
+    }
     const c = s.showIf;
     if (c && typeof c === "object" && c.field) {
       const target = list.findIndex((x) => x.key === c.field);

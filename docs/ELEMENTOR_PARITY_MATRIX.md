@@ -7,8 +7,8 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | État | Lignes |
 |---|---|
 | Complet | 287 |
-| Partiel | 147 |
-| Absent | 77 |
+| Partiel | 148 |
+| Absent | 76 |
 | Autre module | 18 |
 | Non applicable | 9 |
 | Exclu/Non fait | 6 |
@@ -22,7 +22,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 |---|---|---|---|---|---|---|
 | DY | 11 | 0 | 20 | 0 | 1 | 15 |
 | F | 0 | 0 | 31 | 2 | 0 | 0 |
-| FM | 17 | 8 | 18 | 0 | 0 | 19 |
+| FM | 16 | 8 | 18 | 0 | 0 | 20 |
 | LY | 2 | 1 | 21 | 0 | 1 | 6 |
 | NV | 4 | 0 | 5 | 0 | 0 | 10 |
 | PU | 9 | 0 | 15 | 0 | 0 | 15 |
@@ -271,7 +271,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | EL-FM019 | Formulaires | Honeypot | documenté | Champ piège « website » + jeton signé ≥2 s + limite 5 envois/h/IP; FP:17,104; antispam.js | Complet | Équivalent fonctionnel, réponse « réussie » silencieuse pour les robots | — | P4 | FP:17; FP:104; src/marketing/forms/antispam.js:1-26 |
 | EL-FM020 | Formulaires | Étape (Step) / formulaire multi-étapes | documenté | Aucun | Absent | Formulaire sur une seule page; pas d'indicateur d'étapes (texte/icône/nombre/barre) | Mode multi-étapes + indicateur | P3 | FP: aucune notion d'étape; popup.js |
 | EL-FM021 | Formulaires | Option champ : Libellé (Label) afficher/masquer | documenté | Libellés issus du catalogue/propriété; pas de masquage | Partiel | Libellé non modifiable pour les champs standards (FIELD_CATALOG fixe) | Libellés personnalisables | P3 | FI:23 |
-| EL-FM022 | Formulaires | Option champ : Placeholder | documenté | Aucun | Absent | Pas de texte indicatif | Ajouter placeholder | P3 | popup.js:64 |
+| EL-FM022 | Formulaires | Option champ : Placeholder | documenté | Réglage placeholder par champ (fields.js), rendu échappé dans _signup-fields.ejs (page /f, section du site, widget); pas encore dans le pop-up public/js/popup.js | Partiel | Absent du rendu pop-up | Reprendre le placeholder dans popup.js | P3 | tests/programme22-8-formulaire-placeholder.test.js |
 | EL-FM023 | Formulaires | Option champ : Obligatoire (Required) + marque | documenté | required par champ, recalculé serveur; FL:30-31, FL:76; étoile popup.js | Complet | Marque d'obligation toujours affichée (non masquable) | — | P4 | FL:76-84; tests/pages-formulaires-sms-par-site.test.js |
 | EL-FM024 | Formulaires | Option champ : Largeur de colonne | documenté | Aucun réglage de largeur par champ | Absent | Champs toujours empilés | Largeur par champ (100/50/33/25) + colonnes | P2 | popup.js:45-64; form.ejs |
 | EL-FM025 | Formulaires | Option champ : Valeur par défaut / ID / Shortcode | documenté | Aucun | Absent | Pas de valeur par défaut ni d'ID de champ | Ajouter ID et valeur par défaut | P4 | — |
