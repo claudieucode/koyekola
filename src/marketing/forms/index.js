@@ -81,6 +81,14 @@ function validateTags(input) {
 
 // Redirection après inscription : une adresse web complète (http/https, sans identifiants) ou un chemin du site
 // (« /… », jamais « // » ni « /\ » qui mèneraient ailleurs). Tout autre protocole (javascript:, data:…) est refusé.
+// E-mail de notification de l'équipe : une seule adresse valide (jamais de liste ni d'en-tête injecté), vide = désactivé
+function validateNotifyEmail(input) {
+  const text = String(input ?? "").trim();
+  if (!text) return "";
+  if (text.length > 120 || !/^[^\s@,;<>"'\\]+@[^\s@,;<>"'\\]+\.[^\s@,;<>"'\\]{2,}$/.test(text)) throw new MarketingError("invalid_field", "Adresse e-mail de notification invalide (une seule adresse).");
+  return text.toLowerCase();
+}
+
 function validateRedirect(input) {
   const text = String(input ?? "").trim();
   if (!text) return null;
@@ -112,7 +120,7 @@ function rowToForm(row) {
     doubleOptin: Boolean(row.double_optin), smsConsentText: row.sms_consent_text || "",
     popupEnabled: Boolean(row.popup_enabled), popupTrigger: row.popup_trigger, popupTriggerValue: row.popup_trigger_value, popupFrequencyDays: row.popup_frequency_days,
     fieldSettings: parseJson(row.field_settings, {}), fileField: parseJson(row.file_field, {}), popupRules: parseJson(row.popup_rules, {}),
-    siteId: row.site_id ?? null, createdAt: row.created_at, updatedAt: row.updated_at,
+    notifyEmail: row.notify_email || "", siteId: row.site_id ?? null, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
 
@@ -161,13 +169,14 @@ function validateSmsConsentText(value) {
   return text;
 }
 
-function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin, smsConsentText, fieldSettings, fileField, popupRules }) {
+function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, popupEnabled, popupTrigger, popupTriggerValue, popupFrequencyDays, propertyFields, tags, redirectUrl, doubleOptin, smsConsentText, fieldSettings, fileField, popupRules, notifyEmail }) {
   checkCtx(ctx);
   const current = rowToForm(requireFormRow(ctx, id)); // existe et appartient à l'organisation
   // Réglages absents de l'appel (ancien appelant) : on garde la valeur actuelle plutôt que de l'effacer
   const cleanPropertyFields = propertyFields === undefined ? current.propertyFields : validatePropertyFields(ctx, propertyFields);
   const cleanTags = tags === undefined ? current.tags : validateTags(tags);
   const cleanRedirect = redirectUrl === undefined ? current.redirectUrl : validateRedirect(redirectUrl);
+  const cleanNotify = notifyEmail === undefined ? current.notifyEmail : validateNotifyEmail(notifyEmail);
   const cleanSms = smsConsentText === undefined ? current.smsConsentText : validateSmsConsentText(smsConsentText);
   const cleanName = cleanText(name, { max: 80, field: "name" });
   if (!cleanName) throw new MarketingError("invalid_field", "Le nom est obligatoire.");
@@ -189,11 +198,11 @@ function updateForm(ctx, id, { name, fields, consentText, listId, thankYouText, 
     .prepare(
       `UPDATE mk_forms SET name = ?, fields = ?, consent_text = ?, list_id = ?, thank_you_text = ?,
          popup_enabled = ?, popup_trigger = ?, popup_trigger_value = ?, popup_frequency_days = ?,
-         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, sms_consent_text = ?, field_settings = ?, file_field = ?, popup_rules = ?, updated_at = datetime('now') WHERE id = ?`
+         property_fields = ?, tags = ?, redirect_url = ?, double_optin = ?, sms_consent_text = ?, field_settings = ?, file_field = ?, popup_rules = ?, notify_email = ?, updated_at = datetime('now') WHERE id = ?`
     )
     .run(cleanName, JSON.stringify(cleanFields), cleanConsent, list, cleanThanks, popupEnabled ? 1 : 0, trigger, triggerValue, frequencyDays,
       JSON.stringify(cleanPropertyFields), JSON.stringify(cleanTags), cleanRedirect, (doubleOptin === undefined ? current.doubleOptin : doubleOptin) ? 1 : 0, cleanSms,
-      JSON.stringify(cleanSettings), JSON.stringify(cleanFile), JSON.stringify(cleanRules), id);
+      JSON.stringify(cleanSettings), JSON.stringify(cleanFile), JSON.stringify(cleanRules), cleanNotify, id);
   audit(ctx, "form.updated", "form", id, { name: cleanName, popupEnabled: Boolean(popupEnabled) });
   return getForm(ctx, id);
 }
