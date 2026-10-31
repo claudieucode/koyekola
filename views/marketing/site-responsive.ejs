@@ -1,0 +1,33 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<link rel="stylesheet" href="<%= asset('/css/responsive-studio.css') %>">
+<div class="sw rs" id="rs" data-base="<%= base %>" data-write="<%= perms.write ? 1 : 0 %>" data-restore="<%= perms.restore ? 1 : 0 %>">
+  <p class="mk-back"><a href="<%= siteBase %>">← <%= siteName %></a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Responsive et mobile</h1><p class="mk-head-sub">Diagnostic de vos pages sur ordinateur, tablette et téléphone. Les corrections proposées ne touchent jamais l'ordinateur ni vos réglages manuels par écran ; rien n'est publié, et chaque application s'annule.</p></div></div>
+  <div class="rs-status" id="rs-status" role="status" aria-live="polite"></div>
+  <section aria-labelledby="rs-h-profiles">
+    <h2 id="rs-h-profiles">Écrans de référence de ce site</h2>
+    <p class="sw-muted">Les seuils tablette / mobile / grand écran se règlent dans les réglages du site ; ces largeurs servent de repères et sont rattachées à l'écran natif qui s'applique réellement.</p>
+    <ul class="rs-profiles" id="rs-profiles"></ul>
+    <p class="rs-warn" id="rs-bp-issues" hidden></p>
+  </section>
+  <section aria-labelledby="rs-h-diag">
+    <h2 id="rs-h-diag">Diagnostic</h2>
+    <form id="rs-form" class="rs-form">
+      <label class="sw-field">Page<select id="rs-page"><option value="">Toutes les pages (lecture seule)</option></select></label>
+      <button class="btn btn-primary" type="submit">Analyser</button>
+    </form>
+    <p id="rs-summary" class="rs-summary" aria-live="polite"></p>
+    <div id="rs-issues" class="rs-issues"></div>
+  </section>
+  <section id="rs-proposal" aria-live="polite" aria-labelledby="rs-h-prop" hidden>
+    <h2 id="rs-h-prop">Correction proposée</h2>
+    <ul id="rs-changes" class="rs-changes"></ul>
+    <p id="rs-reasons" class="rs-warn" hidden></p>
+    <label class="rs-confirm" id="rs-confirm-wrap" hidden><input type="checkbox" id="rs-confirm"> J'ai lu l'aperçu et je confirme cette modification.</label>
+    <div class="sw-actions"><button class="btn btn-primary" type="button" id="rs-apply">Appliquer au brouillon</button><button class="btn" type="button" id="rs-reject">Refuser</button></div>
+  </section>
+  <div class="sw-actions"><button class="btn" type="button" id="rs-undo" hidden>Annuler la dernière correction</button></div>
+</div>
+<script src="<%= asset('/js/responsive-studio.js') %>" defer></script>
+<%- include("partials/bottom") %>

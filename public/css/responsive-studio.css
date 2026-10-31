@@ -1,0 +1,18 @@
+/* Responsive Studio (programme 22.8) : variables de l'interface (--sw-*), aucune couleur en dur. Cibles tactiles ≥ 44 px, pas de défilement horizontal à 320 px. */
+.rs h2 { margin: 22px 0 8px; font-size: 1.1rem; }
+.rs-status { min-height: 22px; margin: 8px 0; }
+.rs-status[data-k="err"] { color: var(--sw-warn); font-weight: 600; } .rs-status[data-k="ok"] { color: var(--sw-ok); font-weight: 600; }
+.rs-profiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 8px 0; list-style: none; }
+.rs-profiles li { border: 1px solid var(--sw-line); border-radius: 8px; padding: 6px 10px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.rs-tag { font-size: .8rem; color: var(--sw-blue); }
+.rs-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; } .rs-form .sw-field { flex: 1 1 220px; min-width: 0; }
+.rs .btn { min-height: 44px; }
+.rs-summary { margin: 10px 0; }
+.rs-issues { display: grid; gap: 10px; }
+.rs-issue { border: 1px solid var(--sw-line); border-left-width: 5px; border-radius: 8px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.rs-issue[data-sev="blocking"] { border-left-color: var(--sw-warn); } .rs-issue[data-sev="warning"] { border-left-color: var(--sw-blue); } .rs-issue[data-sev="suggestion"] { border-left-color: var(--sw-line); }
+.rs-issue p { margin: 0; } .rs-issue code { font-size: .8rem; color: var(--sw-navy); }
+.rs-sev, .rs-dev { font-size: .8rem; font-weight: 600; margin-right: 8px; }
+.rs-changes { padding-left: 18px; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.rs-warn { color: var(--sw-warn); } .rs-confirm { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.rs-confirm input { width: 22px; height: 22px; }
