@@ -44,7 +44,9 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     const ctx = ctxOf(db, marketing);
     const visitor = visitorContext(db, marketing.organizationId, req);
     let row = null;
-    for (const t of [].concat(type)) { row = themeTemplates.pick(ctx, t, { category, categories, tag, tags, postId, visitor, siteId }); if (row) break; }
+    // Theme Builder (23.1) d'abord (modèles produit d'un site) ; sans modèle applicable, l'ancien système décide exactement comme avant
+    row = require("../../themeBuilder/render").pickRegion(ctx, siteId, type, { category, categories, tag, tags, postId });
+    if (!row) for (const t of [].concat(type)) { row = themeTemplates.pick(ctx, t, { category, categories, tag, tags, postId, visitor, siteId }); if (row) break; }
     if (!row) return end(null);
     const page = landing.getPublishedPage(db, row.slug);
     if (!page) return end(null);

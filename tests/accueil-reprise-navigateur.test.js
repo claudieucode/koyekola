@@ -136,7 +136,7 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     const id = await create("Accueil D");
     await start().waitFor({ state: "visible" });
     await home().click();
-    assert.equal(await start().locator("[data-pb-start-card]").count(), 2, "un seul écran, pas de doublon");
+    assert.equal(await page.locator("[data-pb-start]").count(), 1, "un seul écran, pas de doublon"); assert.equal(await start().locator("[data-pb-cat-next]").count(), 1, "le catalogue guidé reste affiché"); assert.equal(await start().locator("[data-pb-start-card]").count(), 0);
     assert.equal(await start().locator("[data-pb-home-resume]").count(), 0, "rien à reprendre sur une page vierge");
     assert.equal((draft(id).sections || []).length, 0);
   });
@@ -260,7 +260,7 @@ describe("accueil persistant et reprise du travail (navigateur)", { skip: SKIP }
     assert.equal(row(newId).name, "Ma page nommée", "le nom saisi (espaces retirés) est celui du document");
     await page.waitForFunction(() => document.querySelector("[data-pb-frame]"), null, { timeout: 15000 });
     await start().waitFor({ state: "visible" });
-    assert.equal(await page.locator('[data-pb-start-card="classic"]').count(), 1, "la nouvelle page propose l'écran de démarrage");
+    assert.equal(await page.locator("[data-pb-cat-next]").count(), 1, "la nouvelle page ouvre directement le catalogue guidé");
     await open(id); // l'ancien document est récupérable
     assert.equal(await nodes() > 0, true);
     assert.equal(await page.locator('[data-pb-layers] .pb-node[data-id="cont00000001"]').count(), 1);

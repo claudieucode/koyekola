@@ -1,0 +1,68 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<link rel="stylesheet" href="<%= asset('/css/theme-builder.css') %>">
+<div class="sw tb" id="tb" data-base="<%= base %>" data-write="<%= perms.write ? 1 : 0 %>" data-remove="<%= perms.remove ? 1 : 0 %>">
+  <p class="mk-back"><a href="<%= siteBase %>/tableau-de-bord">← <%= siteName %></a></p>
+  <header class="tb-top">
+    <div><h1>Constructeur de thème</h1><p class="mk-head-sub">Concevez les parties de « <%= siteName %> » — en-tête, pied de page, pages, articles, archives, 404, boutique — et choisissez où chacune s'affiche. Chaque modèle s'édite dans l'éditeur de pages habituel ; rien n'est publié sans votre action.</p></div>
+    <div class="tb-top-actions">
+      <% if (perms.write) { %><label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
+      <button class="btn btn-outline" type="button" id="tb-legacy" title="Reprendre l'en-tête, le pied de page et les modèles de thème déjà configurés pour ce site">Récupérer l'existant</button>
+      <button class="btn btn-primary" type="button" id="tb-new">Ajouter un modèle</button><% } %>
+    </div>
+  </header>
+  <div class="tb-status" id="tb-status" role="status" aria-live="polite"></div>
+  <div class="tb-layout">
+    <nav class="tb-side" aria-label="Types de modèles"><ul id="tb-types"></ul></nav>
+    <main class="tb-main">
+      <form class="tb-tools" id="tb-tools" role="search" aria-label="Filtrer les modèles">
+        <label class="sw-field">Recherche<input type="search" id="tb-q" maxlength="80" placeholder="Nom ou type"></label>
+        <label class="sw-field">État<select id="tb-st"><option value="">Tous (hors archives)</option><option value="published">Publiés</option><option value="draft">Brouillons</option><option value="archived">Archivés</option></select></label>
+        <button class="btn btn-outline" type="button" id="tb-why">Pourquoi ce modèle ?</button>
+      </form>
+      <section id="tb-conflicts" class="tb-conflicts" aria-label="Conflits" hidden></section>
+      <h2 id="tb-title">Toutes les parties</h2>
+      <div class="tb-cards" id="tb-cards" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <dialog id="tb-dlg-new" aria-labelledby="tb-dlg-new-h"><form method="dialog" id="tb-form-new">
+    <h2 id="tb-dlg-new-h">Nouveau modèle</h2>
+    <label class="sw-field">Type<select id="tb-new-type" required></select></label>
+    <label class="sw-field">Nom<input id="tb-new-name" required maxlength="100"></label>
+    <p class="sw-muted">Le modèle est créé en brouillon ; vous le modifiez ensuite dans l'éditeur de pages puis le publiez.</p>
+    <div class="tb-dlg-actions"><button class="btn btn-outline" value="cancel" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Créer et ouvrir l'éditeur</button></div>
+  </form></dialog>
+
+  <dialog id="tb-dlg-cond" aria-labelledby="tb-dlg-cond-h"><form method="dialog" id="tb-form-cond">
+    <h2 id="tb-dlg-cond-h">Conditions d'affichage</h2>
+    <p class="sw-muted">Le modèle s'affiche si <strong>une</strong> inclusion correspond et qu'<strong>aucune</strong> exclusion ne correspond. Sans condition : tout le site. Les critères d'une même ligne se combinent (ET).</p>
+    <h3>Afficher sur</h3><div id="tb-inc" class="tb-rows"></div><button class="btn btn-sm" type="button" id="tb-add-inc">+ Ajouter une inclusion</button>
+    <h3>Sauf sur</h3><div id="tb-exc" class="tb-rows"></div><button class="btn btn-sm" type="button" id="tb-add-exc">+ Ajouter une exclusion</button>
+    <p class="tb-warn" id="tb-cond-msg" role="alert" hidden></p>
+    <div class="tb-dlg-actions"><button class="btn btn-outline" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+  </form></dialog>
+
+  <dialog id="tb-dlg-info" aria-labelledby="tb-dlg-info-h"><div>
+    <h2 id="tb-dlg-info-h">Détails</h2><div id="tb-info"></div>
+    <div class="tb-dlg-actions"><button class="btn btn-primary" type="button" data-close>Fermer</button></div>
+  </div></dialog>
+
+  <dialog id="tb-dlg-why" aria-labelledby="tb-dlg-why-h"><form method="dialog" id="tb-form-why">
+    <h2 id="tb-dlg-why-h">Pourquoi ce modèle ?</h2>
+    <p class="sw-muted">Simulez une page de votre site : le moteur dit quel modèle gagne et pourquoi les autres sont écartés. Rien n'est modifié.</p>
+    <div class="tb-grid2">
+      <label class="sw-field">Type<select id="tb-why-type"></select></label>
+      <label class="sw-field">Page vue<select id="tb-why-view"><option value="front">Accueil</option><option value="page">Page</option><option value="post">Article</option><option value="archive">Archive</option><option value="search">Recherche</option><option value="not_found">404</option><option value="product">Produit</option><option value="product_archive">Archive produits</option></select></label>
+      <label class="sw-field">Identifiant du contenu<input id="tb-why-id" inputmode="numeric"></label>
+      <label class="sw-field">Catégories (virgules)<input id="tb-why-cat"></label>
+      <label class="sw-field">Étiquettes (virgules)<input id="tb-why-tag"></label>
+      <label class="sw-field">Archive<select id="tb-why-arch"><option value="">—</option><option value="blog">Blog</option><option value="category">Catégorie</option><option value="tag">Étiquette</option><option value="author">Auteur</option><option value="search">Recherche</option><option value="shop">Boutique</option></select></label>
+      <label class="sw-field">Nom de l'archive<input id="tb-why-name"></label>
+    </div>
+    <div id="tb-why-out" aria-live="polite"></div>
+    <div class="tb-dlg-actions"><button class="btn btn-outline" type="button" data-close>Fermer</button><button class="btn btn-primary" type="submit">Simuler</button></div>
+  </form></dialog>
+</div>
+<script src="<%= asset('/js/theme-builder.js') %>" defer></script>
+<%- include("partials/bottom") %>

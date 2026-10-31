@@ -1,4 +1,4 @@
-// Canvas vide : choix « Création classique » / « Création guidée » (Chrome réel, vrai serveur).
+// Canvas vide : création GUIDÉE obligatoire, plus de choix « classique » (Chrome réel, vrai serveur).
 // Vérifie : affichage seulement pour un vrai état vide, mode classique = sélecteur de structures habituel, mode guidé = format réellement écrit
 // (theme.layout) puis appliqué au rendu, verrou protégé côté serveur, pas de réaffichage après vidage volontaire, pas de remontage du canevas.
 const { test, describe, before, after } = require("node:test");
@@ -53,52 +53,47 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
   after(async () => { if (browser) await browser.close(); if (srv) await srv.stop(); });
 
   let blankId;
-  test("une nouvelle page vide affiche les deux modes, sans recouvrir la barre d'outils ni l'inspecteur", async () => {
+  test("une nouvelle page vide ouvre directement le catalogue de gabarits : aucun choix de mode, aucune carte classique", async () => {
     blankId = await create("Page vide A");
     assert.equal((draft(blankId).sections || []).length, 0, "la page de départ est réellement vide");
     await start().waitFor({ state: "visible" });
-    assert.equal(await page.locator('[data-pb-start-card="classic"]').count(), 1);
-    assert.equal(await page.locator('[data-pb-start-card="guided"]').count(), 1);
+    await page.locator("[data-pb-cat-next]").waitFor();
+    assert.equal(await page.locator("[data-pb-start-card]").count(), 0, "plus de carte de choix");
+    assert.equal(await page.locator('[data-pb-start-go="classic"]').count(), 0);
     const text = await start().innerText();
-    assert.match(text, /Création classique/); assert.match(text, /Création guidée/);
-    assert.match(text, /Commencer/); assert.match(text, /Choisir un gabarit/);
+    assert.doesNotMatch(text, /Création classique/); assert.doesNotMatch(text, /Comment voulez-vous commencer/); assert.match(text, /gabarit/i);
     const r = await start().boundingBox(), canvas = await page.locator("[data-pb-canvas]").boundingBox(), top = await page.locator(".pb-top").boundingBox();
     assert.ok(r.x >= canvas.x - 1 && r.x + r.width <= canvas.x + canvas.width + 1, "limité à la zone du canevas");
     assert.ok(r.y >= top.y + top.height - 1, "sous la barre d'outils");
   });
 
-  test("Annuler (configuration) : ferme sans rien écrire ; Retour revient au choix", async () => {
-    await page.locator('[data-pb-start-go="guided"]').click();
+  test("pas d'issue sans format : ni Annuler ni Retour vers un choix, Échap ne ferme pas ; le format n'est écrit qu'à la validation", async () => {
     await page.locator("[data-pb-cat-next]").click();
     await page.locator("[data-pb-start-format]").first().waitFor();
+    assert.equal(await page.locator("[data-pb-start-cancel]").count(), 0, "pas d'Annuler");
     await page.locator("[data-pb-start-back]").click();
     await page.locator("[data-pb-cat-next]").waitFor(); // Retour de la configuration : le catalogue
-    await page.locator("[data-pb-start-back]").click();
-    await page.locator('[data-pb-start-card="classic"]').waitFor();
-    await page.locator('[data-pb-start-go="guided"]').click();
-    await page.locator("[data-pb-cat-next]").click();
-    await page.locator("[data-pb-start-cancel]").click();
-    await until(async () => start().isHidden(), { what: "panneau fermé" });
+    assert.equal(await page.locator("[data-pb-start-back]").count(), 0, "le catalogue est la première étape");
+    assert.equal(await page.locator("[data-pb-start-cancel]").count(), 0);
+    await page.keyboard.press("Escape");
+    assert.equal(await start().isVisible(), true, "Échap ne contourne pas la création guidée");
     await wait(1200);
-    assert.equal(layout(blankId), undefined, "aucun format écrit");
-    assert.equal((draft(blankId).sections || []).length, 0);
+    assert.equal(layout(blankId), undefined, "rien n'est écrit tant que rien n'est validé");
   });
 
-  test("mode classique : « Commencer » ouvre le sélecteur de structures habituel, aucun format imposé", async () => {
-    await open(blankId);
-    await start().waitFor({ state: "visible" });
-    await page.locator('[data-pb-start-go="classic"]').click();
+  test("« Continuer avec une page vide » initialise le format recommandé (largeur et marges), jamais de conception sans format", async () => {
+    await page.locator("[data-pb-cat-next]").click();
+    await page.locator("[data-pb-start-continue]").click();
     await until(async () => start().isHidden(), { what: "panneau fermé" });
     await page.getByText("Quelle mise en page utiliser", { exact: false }).first().waitFor({ timeout: 8000 });
-    await wait(1200);
-    assert.equal(layout(blankId), undefined, "conception libre : pas de theme.layout");
+    await until(async () => Boolean(layout(blankId)), { what: "format enregistré" });
+    const l = layout(blankId); assert.equal(l.format, "standard"); assert.ok(l.maxWidth > 0 && l.gutter >= 0);
   });
 
   test("mode guidé : format choisi, écrit (verrouillé par défaut), appliqué au rendu, conservé après rechargement", async () => {
     const id = await create("Page vide B");
     await start().waitFor({ state: "visible" });
     await page.evaluate(() => { window.__frameBefore = document.querySelector("[data-pb-frame]"); });
-    await page.locator('[data-pb-start-go="guided"]').click();
     await page.locator("[data-pb-cat-next]").click();
     assert.equal(await page.locator('[data-pb-start-format="compact"]').count(), 1);
     assert.equal(await page.locator('[data-pb-start-lock]').getAttribute("aria-checked"), "true", "verrouillé par défaut, explicite");
@@ -123,7 +118,6 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
   test("mode guidé « Personnalisé » : valeurs invalides refusées à l'écran, valeurs valides enregistrées, déverrouillé", async () => {
     const id = await create("Page vide C");
     await start().waitFor({ state: "visible" });
-    await page.locator('[data-pb-start-go="guided"]').click();
     await page.locator("[data-pb-cat-next]").click();
     await page.locator('[data-pb-start-format="custom"]').click();
     await page.locator("[data-pb-start-maxWidth]").fill("100");
@@ -159,7 +153,6 @@ describe("canvas vide : choix du mode de création (navigateur)", { skip: SKIP }
     await wait(400);
     const over = await page.evaluate(() => { const s = document.querySelector("[data-pb-start]"); return { sw: s.scrollWidth, cw: s.clientWidth }; });
     assert.ok(over.sw <= over.cw + 1, `pas de défilement horizontal : ${over.sw} > ${over.cw}`);
-    await page.locator('[data-pb-start-go="guided"]').click();
     await page.locator("[data-pb-cat-next]").click();
     await page.locator("[data-pb-start-continue]").scrollIntoViewIfNeeded();
     const b = await page.locator("[data-pb-start-continue]").boundingBox();

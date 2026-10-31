@@ -59,12 +59,13 @@ describe("cycle de vie d'un modèle", () => {
     store.archive(A, s1.id, d.id); assert.throws(() => store.publish(A, s1.id, d.id), /archivé/); assert.throws(() => store.setConditions(A, s1.id, d.id, {}), /archivé/);
     const h = store.create(A, s1.id, { type: "header", name: "H dup" }); const hd = store.duplicate(A, s1.id, h.id); assert.notEqual(hd.sourceId, h.sourceId); assert.equal(pages.getComponent(A, hd.sourceId).site_id, s1.id);
   });
-  test("versions : restaurer remet les conditions et le contenu en BROUILLON, sans publier", () => {
+  test("versions : restaurer ne met JAMAIS un modèle publié hors ligne ; contenu en brouillon de travail ; conditions restaurées seulement hors ligne", () => {
     const t = store.create(A, s1.id, { type: "single_page", name: "Page", conditions: { include: [{ kind: "page" }] } });
     pages.saveDraft(A, t.sourceId, content([layout([heading("h00000000002", "V1")])]), { revision: pages.requirePage(A, t.sourceId).revision }); store.publish(A, s1.id, t.id);
     store.setConditions(A, s1.id, t.id, { include: [{ kind: "front_page" }] });
     pages.saveDraft(A, t.sourceId, content([layout([heading("h00000000002", "V2")])]), { revision: pages.requirePage(A, t.sourceId).revision });
-    const r = store.restoreVersion(A, s1.id, t.id, 1); assert.equal(r.status, "draft"); assert.deepEqual(r.conditions.include, [{ kind: "page" }]);
+    const r = store.restoreVersion(A, s1.id, t.id, 1); assert.equal(r.status, "published", "jamais mis hors ligne"); assert.equal(r.conditionsRestored, false); assert.deepEqual(r.conditions.include, [{ kind: "front_page" }], "conditions en ligne inchangées");
+    store.unpublish(A, s1.id, t.id); const r2 = store.restoreVersion(A, s1.id, t.id, 1); assert.equal(r2.conditionsRestored, true); assert.deepEqual(r2.conditions.include, [{ kind: "page" }]);
     assert.equal(pages.requirePage(A, t.sourceId).working.sections[0].children[0].props.text, "V1");
   });
   test("isolation : un modèle du site 1 est introuvable depuis le site 2 ; document d'un autre site refusé ; autre organisation introuvable", () => {

@@ -152,16 +152,18 @@ function versions(ctx, siteId, id) {
   const t = get(ctx, siteId, id);
   return ctx.db.prepare("SELECT number, name, conditions, created_at FROM mk_tb_versions WHERE template_id = ? ORDER BY number DESC").all(t.id).map((v) => ({ number: v.number, name: v.name, conditions: json(v.conditions, {}), createdAt: v.created_at }));
 }
-// Restauration d'une version : les CONDITIONS et le NOM reviennent ; le contenu du document est remis en brouillon de travail (publication explicite ensuite)
+// Restauration d'une version : JAMAIS de mise hors ligne. Le contenu du document revient en copie de travail (brouillon) — la page publique ne change qu'à la prochaine publication ;
+// le nom revient ; les CONDITIONS ne reviennent que si le modèle n'est pas publié (elles prendraient effet immédiatement sur le site en ligne).
 function restoreVersion(ctx, siteId, id, number) {
   const t = get(ctx, siteId, id); const v = ctx.db.prepare("SELECT * FROM mk_tb_versions WHERE template_id = ? AND number = ?").get(t.id, Number(number));
   if (!v) throw bad("Version introuvable.", "not_found");
   const snap = json(v.snapshot, {}); const cond = Cond.normalize(json(v.conditions, {}), t.type);
+  const conditionsRestored = t.status !== "published";
   return transaction(ctx.db, () => {
     if (snap.kind === "component" && snap.section) P().saveComponentDraft(ctx, t.sourceId, snap.section);
     else if (snap.kind === "page" && snap.content) P().saveDraft(ctx, t.sourceId, snap.content, { revision: P().requirePage(ctx, t.sourceId).revision });
-    ctx.db.prepare("UPDATE mk_tb_templates SET conditions = ?, name = ?, status = CASE WHEN status = 'archived' THEN 'archived' ELSE 'draft' END WHERE id = ? AND site_id = ?").run(JSON.stringify(cond), uniqueName(ctx, siteId, v.name, t.id), t.id, siteId); touch(ctx, siteId, t.id);
-    return get(ctx, siteId, id);
+    ctx.db.prepare("UPDATE mk_tb_templates SET conditions = CASE WHEN ? THEN ? ELSE conditions END, name = ? WHERE id = ? AND site_id = ?").run(conditionsRestored ? 1 : 0, JSON.stringify(cond), uniqueName(ctx, siteId, v.name, t.id), t.id, siteId); touch(ctx, siteId, t.id);
+    return { ...get(ctx, siteId, id), conditionsRestored };
   });
 }
 module.exports = { docName, list, get, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };
