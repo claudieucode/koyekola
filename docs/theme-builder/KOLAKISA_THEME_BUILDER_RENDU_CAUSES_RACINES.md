@@ -35,3 +35,20 @@ Conséquence directe de ce que décrit la demande : un en-tête créé et publi�
 3. **En-tête et pied de page des pages du site** : un modèle publié applicable remplace l'en-tête / le pied codés dans `header.ejs` / `footer.ejs` pour les requêtes d'un domaine de site ; sans modèle, rendu historique inchangé.
 4. **Repli visible** : un modèle gagnant dont le document est absent est journalisé (jamais silencieux) et le repli historique est conservé.
 5. **Aucun nouveau cache** : réutilisation du marqueur existant ; invalidation ciblée par site.
+
+## 8. Ce qui a été corrigé (fichiers et fonctions)
+| Cause | Correction |
+|---|---|
+| n° 1 — 4 types sur 11 | `themeBuilder/render.js` : `FAMILY` couvre produit, archives produits, **article, archives (blog, catégorie, étiquette, auteur), recherche, 404, page statique** ; `regionContext` construit le contexte réel (catégories, ancêtres, étiquettes, auteur, archive) ; `pickRegion` résout toutes les familles |
+| n° 2 — site non transmis | `themeRender.renderRegion` prend le site de `req.kwSite` (`siteIdOf`) ; `blog.js` transmet l'auteur ; `server.js` : la 404 d'un domaine de site passe par `renderRegion("not_found")` |
+| n° 3 — contexte figé | `resolveParts` / `defaultContext` : contexte par vue ; `renderRegion` mémorise le contexte de la page (`res.locals.themeCtx`) pour l'en-tête et le pied |
+| Hors Page Builder | `middlewares/themeLayout.js` (domaines de site seulement) résout et rend l'en-tête / le pied avec le **même rendu que le Page Builder** (`landing.viewModel`, `marketing-public/_sections`) ; `header.ejs`, `footer.ejs`, `site-public-error.ejs` les affichent à la place de l'habillage d'origine |
+| n° 4 — repli silencieux | `pages.withSiteParts` et `themeRender.renderParts` journalisent (une fois par composant) un modèle dont le composant n'a pas de version publiée |
+| Chemin du routeur monté | Le contexte par défaut utilise `req.originalUrl` : sous `/boutique`, `req.path` valait « / » et la boutique était prise pour l'accueil (trouvé par `theme-builder-couverture-rendu`, test 8) |
+
+## 9. Ce qui reste volontairement hors périmètre
+* **Page individuelle d'un site du Page Builder** : le modèle `single_page` n'a pas d'élément « contenu de la page » pour envelopper une page du Page Builder (limite L4 du Theme Builder) ; il s'applique à la page statique « À propos ». Les pages du Page Builder gardent leur propre mise en page, avec l'en-tête et le pied du Theme Builder.
+* **Barre latérale et modèle personnalisé** : aucune zone du site public ne les affiche (types réservés).
+* **Site principal** : pas de Theme Builder (décision R9-4 : son contenu reste `site_id` NULL), il garde son habillage d'apparence.
+* **Largeur de l'en-tête** : la partie globale respecte la colonne de contenu du site (réglage de largeur du site), comme dans le Page Builder ; ce n'est pas une bande pleine largeur automatique.
+* **`/recherche`** n'est pas servi sur un domaine de site (isolation) : la recherche d'un site passe par `/blog?q=`, couverte.
