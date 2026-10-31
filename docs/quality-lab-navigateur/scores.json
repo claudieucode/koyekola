@@ -1,0 +1,1035 @@
+[
+ {
+  "id": "entreprise",
+  "label": "Site d'entreprise",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 7,
+     "why": "4/5 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir)."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 8,
+     "why": "Lisibilité mesurée 6/6 (contraste 31/31 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 2/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✘ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 5.1,
+     "why": "13 texte(s) d'exemple entre crochets sur 2/4 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 4 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7.6,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 8 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/4 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 136 ms, transfert max 116 Ko, requêtes max 7. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 51.2,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 64,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 4 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 2 page(s)",
+    "page(s) de conversion non publiable(s) : Contact"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "immobilier",
+  "label": "Site immobilier",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 3,
+     "why": "3/5 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 10,
+     "why": "Lisibilité mesurée 6/6 (contraste 18/18 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 4/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (2) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 7.6,
+     "why": "6 texte(s) d'exemple entre crochets sur 1/3 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 3 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 8.2,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 6 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 1.5,
+     "why": "2 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/3 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 103 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 50.3,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 63,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 3 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 1 page(s)",
+    "page(s) de conversion non publiable(s) : Contact (2), Estimer mon bien"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "construction",
+  "label": "Site de construction",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "4/5 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 10,
+     "why": "Lisibilité mesurée 6/6 (contraste 31/31 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 4/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (3) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 5.1,
+     "why": "13 texte(s) d'exemple entre crochets sur 2/4 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 4 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7.6,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 8 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/4 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 153 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 52.2,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 65,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 4 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 2 page(s)",
+    "page(s) de conversion non publiable(s) : Demander un devis"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "tech",
+  "label": "Site technologique",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "3/4 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 10,
+     "why": "Lisibilité mesurée 6/6 (contraste 36/36 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 4/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (4) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 2.5,
+     "why": "20 texte(s) d'exemple entre crochets sur 3/3 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 3 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 8.2,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 6 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/3 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 161 ms, transfert max 117 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 50.2,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 63,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 3 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 3 page(s)",
+    "page(s) de conversion non publiable(s) : Contact (4)"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "photo",
+  "label": "Site de photographie",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "3/4 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 12,
+     "why": "Lisibilité mesurée 6/6 (contraste 16/16 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 6/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (5) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✔ accueil sans texte d'exemple (0 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 7.6,
+     "why": "6 texte(s) d'exemple entre crochets sur 1/3 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 3 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 8.2,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 6 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/3 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 117 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 57.3,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 72,
+   "status": "À AMÉLIORER (plafonné : défaillance critique)",
+   "critical": [
+    "aucune navigation : 3 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 1 page(s)",
+    "page(s) de conversion non publiable(s) : Réserver"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "portfolio",
+  "label": "Portfolio créatif",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "3/4 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 12,
+     "why": "Lisibilité mesurée 6/6 (contraste 8/8 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 6/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (6) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✔ accueil sans texte d'exemple (0 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 10,
+     "why": "0 texte(s) d'exemple entre crochets sur 0/3 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 3 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 8.8,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 4 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 1.1,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 8 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 4.2,
+     "why": "1/3 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 87 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 57.1,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 71,
+   "status": "À AMÉLIORER (plafonné : défaillance critique)",
+   "critical": [
+    "aucune navigation : 3 pages publiées sans lien entre elles",
+    "page(s) de conversion non publiable(s) : Contact (5)"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "institution",
+  "label": "Site institutionnel",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "4/5 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 10,
+     "why": "Lisibilité mesurée 6/6 (contraste 32/32 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 4/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (7) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 3.4,
+     "why": "14 texte(s) d'exemple entre crochets sur 3/4 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 4 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7.6,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 8 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/4 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 117 ms, transfert max 119 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 50.5,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 63,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 4 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 3 page(s)",
+    "page(s) de conversion non publiable(s) : Contact (6)"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "restaurant",
+  "label": "Restaurant",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "4/5 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 12,
+     "why": "Lisibilité mesurée 6/6 (contraste 19/19 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 6/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (8) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✔ accueil sans texte d'exemple (0 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 7.6,
+     "why": "6 texte(s) d'exemple entre crochets sur 1/4 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 4 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7.6,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 8 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/4 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 156 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 56.7,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 71,
+   "status": "À AMÉLIORER (plafonné : défaillance critique)",
+   "critical": [
+    "aucune navigation : 4 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 1 page(s)",
+    "page(s) de conversion non publiable(s) : Réserver (2)"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "blog",
+  "label": "Blog professionnel",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "3/4 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 12,
+     "why": "Lisibilité mesurée 6/6 (contraste 11/11 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 6/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (9) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✔ accueil sans texte d'exemple (0 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 10,
+     "why": "0 texte(s) d'exemple entre crochets sur 0/3 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 3 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 8.2,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 6 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/3 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 132 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 59.7,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 75,
+   "status": "À AMÉLIORER (plafonné : défaillance critique)",
+   "critical": [
+    "aucune navigation : 3 pages publiées sans lien entre elles",
+    "page(s) de conversion non publiable(s) : Lettre d'information"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "boutique",
+  "label": "Boutique e-commerce",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 8,
+     "why": "9 pages, 8 publiées."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 6,
+     "why": "Lisibilité mesurée 6/6 (contraste 72/72 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 0/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✘ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✘ image sur l'accueil (0 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 6,
+     "why": "7 texte(s) d'exemple entre crochets sur 2/10 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 6,
+     "why": "0 image(s) visibles sur 10 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 30 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 4,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 11, 8 erreur(s) console/réseau. Parcours d'achat simulé : [\"ok\",\"ok\",\"ok\"]"
+    },
+    "seo": {
+     "max": 5,
+     "got": 4.3,
+     "why": "3/10 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 132 ms, transfert max 113 Ko, requêtes max 7. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 46.3,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 58,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 8 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 2 page(s)",
+    "page(s) de conversion non publiable(s) : Contact"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "mode",
+  "label": "Boutique de mode",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 8,
+     "why": "8 pages, 7 publiées."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 6,
+     "why": "Lisibilité mesurée 6/6 (contraste 69/69 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 0/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✘ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✘ image sur l'accueil (0 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 6,
+     "why": "7 texte(s) d'exemple entre crochets sur 2/9 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 6,
+     "why": "0 image(s) visibles sur 9 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 28 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 4,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 11, 8 erreur(s) console/réseau. Parcours d'achat simulé : [\"ok\",\"ok\",\"ok\"]"
+    },
+    "seo": {
+     "max": 5,
+     "got": 4.2,
+     "why": "3/9 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 101 ms, transfert max 113 Ko, requêtes max 7. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 46.2,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 58,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 7 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 2 page(s)",
+    "page(s) de conversion non publiable(s) : Contact"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "informatique",
+  "label": "Boutique informatique",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 8,
+     "why": "8 pages, 7 publiées."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 6,
+     "why": "Lisibilité mesurée 6/6 (contraste 69/69 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 0/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✘ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✘ image sur l'accueil (0 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 6,
+     "why": "7 texte(s) d'exemple entre crochets sur 2/9 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 6,
+     "why": "0 image(s) visibles sur 9 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 28 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 4,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 11, 8 erreur(s) console/réseau. Parcours d'achat simulé : [\"ok\",\"ok\",\"ok\"]"
+    },
+    "seo": {
+     "max": 5,
+     "got": 4.2,
+     "why": "3/9 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 113 ms, transfert max 113 Ko, requêtes max 7. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 46.2,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 58,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 7 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 2 page(s)",
+    "page(s) de conversion non publiable(s) : Contact"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "services",
+  "label": "Site de services",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "3/4 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 10,
+     "why": "Lisibilité mesurée 6/6 (contraste 28/28 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 4/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (10) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 5.1,
+     "why": "13 texte(s) d'exemple entre crochets sur 2/3 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 3 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 8.2,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 6 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/3 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 160 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 52.8,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 66,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 3 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 2 page(s)",
+    "page(s) de conversion non publiable(s) : Devis"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "education",
+  "label": "Site éducatif",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "4/5 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 10,
+     "why": "Lisibilité mesurée 6/6 (contraste 33/33 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 4/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (11) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 3.4,
+     "why": "14 texte(s) d'exemple entre crochets sur 3/4 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 4 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7.6,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 8 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/4 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 127 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 50.5,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 63,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 4 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 3 page(s)",
+    "page(s) de conversion non publiable(s) : Inscription"
+   ],
+   "note": null
+  }
+ },
+ {
+  "id": "sante",
+  "label": "Site de santé (contenu contrôlé)",
+  "score": {
+   "criteria": {
+    "brief": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : l'analyse vient d'un fournisseur simulé (plan de référence). Les garde-fous déterministes sont testés à part (tests/programme22-1b-lab-navigateur.test.js)."
+    },
+    "architecture": {
+     "max": 10,
+     "got": 6,
+     "why": "4/5 pages publiables sans intervention (page(s) bloquée(s) : formulaire à choisir) ; conflit de noms avec un autre site."
+    },
+    "visuel": {
+     "max": 20,
+     "got": 10,
+     "why": "Lisibilité mesurée 6/6 (contraste 22/22 éléments mesurés conformes AA ; 0 image(s) cassée(s)). Structure visible 4/14 : ✘ navigation entre les pages (0 lien(s) dans l'en-tête/menu) ; ✔ titre du bandeau différent du nom de la page (H1 = « Accueil », page = « Accueil (12) ») ; ✘ bouton d'action sur l'accueil (0 bouton(s)) ; ✘ rythme : au moins 3 types de blocs distincts (1 type(s) de blocs) ; ✔ image sur l'accueil (1 image(s)) ; ✘ accueil sans texte d'exemple (6 texte(s) entre crochets) ; ✘ pied de page utile (≥ 3 liens) (2 lien(s))."
+    },
+    "sections": {
+     "max": 10,
+     "got": 6,
+     "why": "7 texte(s) d'exemple entre crochets sur 2/4 page(s) publiée(s) (étape « contenus » non exécutée : pas de modèle)."
+    },
+    "contenus": {
+     "max": 10,
+     "got": null,
+     "why": "Non évalué : la rédaction exige le fournisseur d'IA réel. Les textes livrés sont des textes d'exemple (voir sections)."
+    },
+    "medias": {
+     "max": 10,
+     "got": 10,
+     "why": "1 image(s) visibles sur 4 page(s) ; 0 sans attribut alt ; 0 cassée(s). Pertinence : visuels d'attente génériques (fournisseur « demo »), non notée."
+    },
+    "responsive": {
+     "max": 10,
+     "got": 7.6,
+     "why": "Débordements : desktop 0, laptop 0, tablette 0, mobile 0 page(s) ; 8 contrôle(s) < 32 px sur mobile."
+    },
+    "ux": {
+     "max": 10,
+     "got": 3.5,
+     "why": "1 page(s) non publiée(s), 0 lien(s) interne(s) cassé(s) sur 2, 0 erreur(s) console/réseau."
+    },
+    "seo": {
+     "max": 5,
+     "got": 5,
+     "why": "0/4 page(s) sans titre, description, H1 unique ou langue ; 0 problème(s) d'étiquette/alt ; sitemap 200."
+    },
+    "perf": {
+     "max": 5,
+     "got": 5,
+     "why": "Mesuré localement (réseau non limité, machine chargée) : médiane de chargement 138 ms, transfert max 118 Ko, requêtes max 8. Chiffres comparables entre exécutions, pas des temps de production."
+    }
+   },
+   "pointsObtained": 53.1,
+   "evaluatedPoints": 80,
+   "coverage": "80/100",
+   "total": 66,
+   "status": "À AMÉLIORER",
+   "critical": [
+    "aucune navigation : 4 pages publiées sans lien entre elles",
+    "textes d'exemple publiés sur 2 page(s)",
+    "page(s) de conversion non publiable(s) : Rendez-vous"
+   ],
+   "note": null
+  }
+ }
+]

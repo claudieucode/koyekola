@@ -1,0 +1,42 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<link rel="stylesheet" href="<%= asset('/css/layouts.css') %>">
+<div class="sw ly" id="ly" data-base="<%= base %>" data-write="<%= perms.write ? 1 : 0 %>" data-restore="<%= perms.restore ? 1 : 0 %>">
+  <p class="mk-back"><a href="<%= siteBase %>">← <%= siteName %></a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Mises en page avancées</h1><p class="mk-head-sub">Choisissez une composition pour une section : chaque variante est une vraie structure du Page Builder (grille, colonnes, éléments natifs), modifiable ensuite dans l'éditeur. Rien n'est publié : tout est écrit dans le brouillon de la page.</p></div></div>
+  <div class="ly-status" id="ly-status" role="status" aria-live="polite"></div>
+  <form id="ly-form" class="ly-form" autocomplete="off">
+    <label class="sw-field">Page<select id="ly-page" required><option value="">—</option></select></label>
+    <label class="sw-field">Section<select id="ly-section"><option value="">Nouvelle section</option></select></label>
+    <label class="sw-field">Rôle de la section<select id="ly-role"></select></label>
+    <label class="sw-field">Type de page (oriente les familles)<select id="ly-ptype"><option value="">Autre</option><option value="accueil">Accueil</option><option value="services">Services</option><option value="apropos">À propos</option><option value="portfolio">Portfolio</option><option value="galerie">Galerie</option><option value="tarifs">Tarifs</option><option value="contact">Contact</option><option value="blog">Blog</option><option value="boutique">Boutique</option><option value="fiche-produit">Fiche produit</option><option value="equipe">Équipe</option><option value="faq">FAQ</option></select></label>
+    <details class="ly-wide" id="ly-content" open><summary>Contenu de la section</summary>
+      <div class="ly-grid2">
+        <label class="sw-field">Titre<input id="ly-title" maxlength="200"></label>
+        <label class="sw-field">Sur-titre (facultatif)<input id="ly-eyebrow" maxlength="60"></label>
+        <label class="sw-field ly-wide">Texte<textarea id="ly-text" rows="3" maxlength="6000"></textarea></label>
+        <label class="sw-field ly-wide">Éléments (une ligne par élément : titre | texte | prix)<textarea id="ly-items" rows="4" placeholder="Conception | Des plans clairs | 120 €"></textarea></label>
+        <label class="sw-field">Image principale (adresse https ou médiathèque)<input id="ly-img" maxlength="2000"></label>
+        <label class="sw-field">Texte de remplacement de l'image<input id="ly-alt" maxlength="200"></label>
+        <label class="sw-field">Bouton : libellé<input id="ly-cta" maxlength="60"></label>
+        <label class="sw-field">Bouton : adresse<input id="ly-cta-url" maxlength="2000" placeholder="/contact"></label>
+      </div>
+      <p class="sw-muted">Le contenu n'est jamais tronqué ni complété : une variante qui exige un contenu absent (image, chiffres, tarifs…) est écartée avec la raison.</p>
+    </details>
+    <div class="sw-actions ly-wide"><button class="btn btn-primary" type="submit">Afficher les variantes</button></div>
+  </form>
+  <section id="ly-results" hidden>
+    <div class="ly-bar">
+      <div role="group" aria-label="Écran de l'aperçu" class="ly-seg" id="ly-bp"><button type="button" data-bp="desktop" aria-pressed="true">Ordinateur</button><button type="button" data-bp="tablet" aria-pressed="false">Tablette</button><button type="button" data-bp="mobile" aria-pressed="false">Mobile</button></div>
+      <div role="group" aria-label="Filtrer par famille" class="ly-chips" id="ly-fam"></div>
+      <button class="btn btn-sm" type="button" id="ly-cmp" disabled>Comparer (0)</button>
+    </div>
+    <div id="ly-gallery" class="ly-gallery"></div>
+    <div id="ly-compare" aria-live="polite"></div>
+    <div id="ly-rejected" class="sw-muted"></div>
+  </section>
+  <section id="ly-proposal" aria-live="polite"></section>
+  <div class="sw-actions"><button class="btn" type="button" id="ly-undo" hidden>Annuler la dernière composition</button></div>
+</div>
+<script src="<%= asset('/js/layouts.js') %>" defer></script>
+<%- include("partials/bottom") %>

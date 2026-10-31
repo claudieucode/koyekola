@@ -1,0 +1,30 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<link rel="stylesheet" href="<%= asset('/css/content-intel.css') %>">
+<div class="sw ci" id="ci" data-base="<%= base %>" data-edit="<%= perms.edit ? 1 : 0 %>" data-ai="<%= perms.ai ? 1 : 0 %>">
+  <p class="mk-back"><a href="<%= siteBase %>">← <%= siteName %></a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Contenu et qualité SEO</h1><p class="mk-head-sub">Analyse de vos pages, maillage, langues et mots-clés. Les scores sont des repères éditoriaux calculés sur votre contenu : ce ne sont ni des prévisions de classement ni des notes de Google. Rien n'est publié depuis cet écran.</p></div></div>
+  <nav class="ci-tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" id="ci-t-over" aria-selected="true" aria-controls="ci-p-over" data-tab="over">Vue d'ensemble</button>
+    <button type="button" role="tab" id="ci-t-page" aria-selected="false" aria-controls="ci-p-page" data-tab="page" tabindex="-1">Analyse d'une page</button>
+    <button type="button" role="tab" id="ci-t-link" aria-selected="false" aria-controls="ci-p-link" data-tab="link" tabindex="-1">Maillage interne</button>
+    <button type="button" role="tab" id="ci-t-lang" aria-selected="false" aria-controls="ci-p-lang" data-tab="lang" tabindex="-1">Langues</button>
+    <button type="button" role="tab" id="ci-t-kw" aria-selected="false" aria-controls="ci-p-kw" data-tab="kw" tabindex="-1">Mots-clés et sources</button>
+    <button type="button" role="tab" id="ci-t-set" aria-selected="false" aria-controls="ci-p-set" data-tab="set" tabindex="-1">Réglages</button>
+  </nav>
+  <div class="ci-status" id="ci-status" role="status" aria-live="polite"></div>
+  <section id="ci-p-over" role="tabpanel" aria-labelledby="ci-t-over" class="mk-panel"><div id="ci-over">Chargement…</div></section>
+  <section id="ci-p-page" role="tabpanel" aria-labelledby="ci-t-page" class="mk-panel" hidden>
+    <label class="sw-field">Page<select id="ci-page"></select></label>
+    <div id="ci-eval" aria-live="polite"></div>
+  </section>
+  <section id="ci-p-link" role="tabpanel" aria-labelledby="ci-t-link" class="mk-panel" hidden>
+    <div class="sw-actions"><button class="btn btn-primary" type="button" id="ci-link-run">Chercher des liens à proposer</button></div>
+    <div id="ci-links"></div>
+  </section>
+  <section id="ci-p-lang" role="tabpanel" aria-labelledby="ci-t-lang" class="mk-panel" hidden><div id="ci-langs"></div></section>
+  <section id="ci-p-kw" role="tabpanel" aria-labelledby="ci-t-kw" class="mk-panel" hidden><div id="ci-kws"></div></section>
+  <section id="ci-p-set" role="tabpanel" aria-labelledby="ci-t-set" class="mk-panel" hidden><div id="ci-sets"></div></section>
+</div>
+<script src="<%= asset('/js/content-intel.js') %>" defer></script>
+<%- include("partials/bottom") %>

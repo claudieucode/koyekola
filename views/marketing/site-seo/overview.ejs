@@ -6,6 +6,8 @@
     <% if (s.siteNoindex) { %><div class="mk-cms-soon mk-seo-alert" role="alert"><%- icon("alertTriangle", { size: 18 }) %><p><strong>Tout le site est en noindex.</strong> Aucune page de ce site ne sera proposée par les moteurs de recherche. <a href="<%= space.base %>/seo/indexation">Voir l'indexation</a></p></div><% } %>
     <% if (s.truncated) { %><div class="mk-cms-soon" role="note"><p>Ce site compte plus de 500 pages en ligne : les chiffres ci-dessous portent sur les 500 premières.</p></div><% } %>
 
+    <p class="mk-seo-content-link"><a href="<%= space.base %>/contenu-seo">Contenu et qualité : score éditorial par page, maillage, langues et mots-clés →</a></p>
+
     <div class="mk-stats mk-stats-4 mk-seo-appear">
       <a class="mk-stat" href="<%= space.base %>/seo/meta"><span class="mk-stat-label">Pages en ligne</span><span class="mk-stat-value"><%= s.pages.analysed %></span><span class="mk-stat-hint">lues dans la base, telles que publiées</span></a>
       <a class="mk-stat" href="<%= space.base %>/seo/indexation"><span class="mk-stat-label">Indexables</span><span class="mk-stat-value"><%= s.pages.indexable %></span><span class="mk-stat-hint"><%= s.pages.excluded %> exclue(s)</span></a>

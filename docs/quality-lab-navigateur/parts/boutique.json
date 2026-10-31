@@ -1,0 +1,2272 @@
+[
+ {
+  "id": "boutique",
+  "label": "Boutique e-commerce",
+  "brief": "Boutique en ligne Maison Cèdre, objets de décoration fictifs, avec livraison en France.",
+  "shop": true,
+  "gen": {
+   "id": "boutique",
+   "shop": true,
+   "timings": {
+    "analyse": 10.040488,
+    "structure": 13.807771,
+    "pages": 84.86781,
+    "products": 29.57708,
+    "publish": 569.221155
+   },
+   "notes": [],
+   "siteId": 1,
+   "analysis": {
+    "readiness": "partial",
+    "facts": [
+     "sector",
+     "country",
+     "language"
+    ],
+    "missing": [
+     "shopName",
+     "currency",
+     "audience"
+    ],
+    "sector": "maison",
+    "warnings": []
+   },
+   "plan": {
+    "pages": [
+     "page:Accueil",
+     "native:Boutique",
+     "native:Pages de catégories",
+     "native:Fiche produit",
+     "native:Panier et commande",
+     "page:À propos",
+     "page:Contact",
+     "page:Questions fréquentes",
+     "page:Livraison",
+     "page:Retours et remboursements",
+     "page:Conditions générales de vente",
+     "page:Politique de confidentialité",
+     "page:Mentions légales"
+    ],
+    "categories": [
+     "Salon",
+     "Canapés et fauteuils",
+     "Tables basses",
+     "Chambre",
+     "Cuisine et salle à manger",
+     "Décoration",
+     "Luminaires",
+     "Textiles de maison",
+     "Rangement"
+    ]
+   },
+   "structure": {
+    "created": 9,
+    "reused": 0,
+    "categories": {
+     "cat-1": 1,
+     "cat-2": 2,
+     "cat-3": 3,
+     "cat-4": 4,
+     "cat-5": 5,
+     "cat-6": 6,
+     "cat-7": 7,
+     "cat-8": 8,
+     "cat-9": 9
+    }
+   },
+   "pagesApplied": {
+    "created": 9,
+    "keys": [
+     "accueil",
+     "a-propos",
+     "contact",
+     "faq",
+     "livraison",
+     "retours",
+     "cgv",
+     "confidentialite",
+     "mentions-legales"
+    ]
+   },
+   "productDrafts": [
+    {
+     "name": "Vase en grès Aube",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Vase en grès Aube.\n\nCaractéristiques :\n- Grès émaillé fait main\n- Hauteur 24 cm"
+    },
+    {
+     "name": "Bougie Cèdre",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Bougie Cèdre.\n\nCaractéristiques :\n- Cire végétale\n- Durée environ 40 heures"
+    },
+    {
+     "name": "Plaid en lin",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Plaid en lin.\n\nCaractéristiques :\n- Lin lavé\n- 130 x 170 cm"
+    },
+    {
+     "name": "Miroir rond Soleil",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Miroir rond Soleil.\n\nCaractéristiques :\n- Cadre en bois\n- Diamètre 60 cm"
+    },
+    {
+     "name": "Coussin Sable",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Coussin Sable.\n\nCaractéristiques :\n- Housse déhoussable\n- 45 x 45 cm"
+    },
+    {
+     "name": "Plateau en chêne",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Plateau en chêne.\n\nCaractéristiques :\n- Chêne massif huilé\n- 40 x 28 cm"
+    }
+   ],
+   "productsApplied": [
+    "Vase en grès Aube:created",
+    "Bougie Cèdre:created",
+    "Plaid en lin:created",
+    "Miroir rond Soleil:created",
+    "Coussin Sable:created",
+    "Plateau en chêne:created"
+   ],
+   "publish": {
+    "products": [
+     "Vase en grès Aube",
+     "Bougie Cèdre",
+     "Plaid en lin",
+     "Miroir rond Soleil",
+     "Coussin Sable",
+     "Plateau en chêne"
+    ],
+    "pages": [
+     "accueil",
+     "a-propos",
+     "faq",
+     "livraison",
+     "retours",
+     "cgv",
+     "confidentialite",
+     "mentions-legales"
+    ],
+    "refused": [
+     {
+      "name": "page contact",
+      "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page."
+     }
+    ],
+    "opened": true,
+    "ready": true,
+    "blockers": []
+   },
+   "pages": [
+    {
+     "id": 1,
+     "name": "Accueil",
+     "slug": "accueil",
+     "status": "published"
+    },
+    {
+     "id": 7,
+     "name": "Conditions générales de vente",
+     "slug": "conditions-generales-de-vente",
+     "status": "published"
+    },
+    {
+     "id": 3,
+     "name": "Contact",
+     "slug": "contact",
+     "status": "draft"
+    },
+    {
+     "id": 5,
+     "name": "Livraison",
+     "slug": "livraison",
+     "status": "published"
+    },
+    {
+     "id": 9,
+     "name": "Mentions légales",
+     "slug": "mentions-legales",
+     "status": "published"
+    },
+    {
+     "id": 8,
+     "name": "Politique de confidentialité",
+     "slug": "politique-de-confidentialite",
+     "status": "published"
+    },
+    {
+     "id": 4,
+     "name": "Questions fréquentes",
+     "slug": "questions-frequentes",
+     "status": "published"
+    },
+    {
+     "id": 6,
+     "name": "Retours et remboursements",
+     "slug": "retours-et-remboursements",
+     "status": "published"
+    },
+    {
+     "id": 2,
+     "name": "À propos",
+     "slug": "a-propos",
+     "status": "published"
+    }
+   ],
+   "homeId": 1,
+   "host": "boutique.lab.test"
+  },
+  "audit": {
+   "host": "http://boutique.lab.test:35328",
+   "pages": [
+    {
+     "vp": "desktop",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 325,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 289,
+      "load": 290,
+      "fcp": 312,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Accueil · Maison Cèdre",
+      "metaDescription": "Présenter la boutique, les catégories et les produits mis en avant",
+      "canonical": "https://boutique.lab.test/",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 5,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 10,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Accueil",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "div.lp-block",
+       "div.lp-block"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "[Service 1][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "wordCount": 30
+     },
+     "capture": "captures/boutique-desktop.jpg"
+    },
+    {
+     "vp": "desktop",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 115,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 95,
+      "load": 95,
+      "fcp": 116,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Conditions générales de vente · Maison Cèdre",
+      "metaDescription": "Conditions de vente. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garantie de conformité.",
+      "canonical": "https://boutique.lab.test/conditions-generales-de-vente",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Conditions générales de vente",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Conditions générales de vente"
+      ],
+      "wordCount": 4
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 132,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 124,
+      "load": 124,
+      "fcp": 136,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Livraison · Maison Cèdre",
+      "metaDescription": "Zones, modes et délais de livraison (à renseigner : aucun tarif n'est inventé)",
+      "canonical": "https://boutique.lab.test/livraison",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Livraison",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [],
+      "wordCount": 1
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Mentions légales",
+     "path": "/mentions-legales",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 158,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 143,
+      "load": 143,
+      "fcp": 148,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Mentions légales · Maison Cèdre",
+      "metaDescription": "Identité de l'éditeur et de l'hébergeur. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garantie de c",
+      "canonical": "https://boutique.lab.test/mentions-legales",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Mentions légales",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Mentions légales"
+      ],
+      "wordCount": 2
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 93,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 82,
+      "load": 82,
+      "fcp": 112,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Politique de confidentialité · Maison Cèdre",
+      "metaDescription": "Données personnelles collectées et leur usage. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garanti",
+      "canonical": "https://boutique.lab.test/politique-de-confidentialite",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Politique de confidentialité",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Politique de confidentialité"
+      ],
+      "wordCount": 3
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 136,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 119,
+      "load": 119,
+      "fcp": 152,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Questions fréquentes · Maison Cèdre",
+      "metaDescription": "Répondre aux questions courantes (commande, paiement, livraison)",
+      "canonical": "https://boutique.lab.test/questions-frequentes",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 2,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 6,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Questions fréquentes",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "div.lp-block",
+       "div.lp-block"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Questions fréquentes",
+       "Questions fréquentes",
+       "[Votre réponse]"
+      ],
+      "wordCount": 10
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 103,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 95,
+      "load": 95,
+      "fcp": 108,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Retours et remboursements · Maison Cèdre",
+      "metaDescription": "Conditions de retour et de remboursement. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garantie de",
+      "canonical": "https://boutique.lab.test/retours-et-remboursements",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Retours et remboursements",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Retours et remboursements"
+      ],
+      "wordCount": 3
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://boutique.lab.test:35328/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 28,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 22,
+      "load": 23,
+      "fcp": 68,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     },
+     "static": {
+      "title": "Page introuvable · Maison Cèdre",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "noindex, nofollow",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 0,
+       "footer": 0
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 2,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [],
+      "skipLink": false,
+      "h1Text": "Page introuvable",
+      "headerLinks": 0,
+      "footerLinks": 0,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.",
+       "p."
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Page introuvable",
+       "Cette page n'existe pas ou n'est plus en ligne."
+      ],
+      "wordCount": 11
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 168,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 49,
+      "load": 154,
+      "fcp": 184,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Boutique · Maison Cèdre",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 1,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 7,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 29,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/boutique",
+       "/boutique/compte",
+       "/boutique/panier",
+       "/boutique/produit/plateau-en-chene",
+       "/boutique/produit/coussin-sable",
+       "/boutique/produit/miroir-rond-soleil",
+       "/boutique/produit/plaid-en-lin",
+       "/boutique/produit/bougie-cedre",
+       "/boutique/produit/vase-en-gres-aube"
+      ],
+      "skipLink": true,
+      "h1Text": "Boutique",
+      "headerLinks": 4,
+      "footerLinks": 3,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.sh-title",
+       "div.sh-layout"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Plateau en chêne 85,90 €",
+       "Coussin Sable 74,90 €",
+       "Miroir rond Soleil 63,90 €",
+       "Plaid en lin 52,90 €",
+       "Bougie Cèdre 41,90 €",
+       "Vase en grès Aube 30,90 €"
+      ],
+      "wordCount": 61
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 121,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 105,
+      "load": 105,
+      "fcp": 144,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     },
+     "static": {
+      "title": "Panier · Maison Cèdre",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 1,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 10,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/boutique",
+       "/boutique/compte",
+       "/boutique/panier"
+      ],
+      "skipLink": true,
+      "h1Text": "Panier",
+      "headerLinks": 4,
+      "footerLinks": 3,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.sh-title",
+       "p.sh-empty",
+       "p."
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Votre panier est vide.",
+       "Continuer mes achats"
+      ],
+      "wordCount": 8
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 183,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 152,
+      "load": 152,
+      "fcp": 168,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 125,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 118,
+      "load": 118,
+      "fcp": 128,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 136,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 123,
+      "load": 123,
+      "fcp": 140,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Mentions légales",
+     "path": "/mentions-legales",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 94,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 87,
+      "load": 87,
+      "fcp": 116,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 93,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 85,
+      "load": 85,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 137,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 129,
+      "load": 130,
+      "fcp": 136,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 96,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 89,
+      "load": 89,
+      "fcp": 112,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://boutique.lab.test:35328/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 53,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 46,
+      "load": 46,
+      "fcp": 80,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 136,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 106,
+      "load": 117,
+      "fcp": 152,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 119,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 92,
+      "load": 92,
+      "fcp": 132,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 290,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 268,
+      "load": 268,
+      "fcp": 280,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 92,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 82,
+      "load": 83,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 93,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 84,
+      "load": 84,
+      "fcp": 148,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Mentions légales",
+     "path": "/mentions-legales",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 133,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 127,
+      "load": 127,
+      "fcp": 124,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 94,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 84,
+      "load": 84,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 149,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 140,
+      "load": 141,
+      "fcp": 152,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 98,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 93,
+      "load": 94,
+      "fcp": 124,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://boutique.lab.test:35328/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 66,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 47,
+      "load": 48,
+      "fcp": 96,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 112,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 74,
+      "load": 104,
+      "fcp": 144,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 106,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 37,
+      "load": 94,
+      "fcp": 140,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 184,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 176,
+      "load": 176,
+      "fcp": 172,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "capture": "captures/boutique-mobile.jpg"
+    },
+    {
+     "vp": "mobile",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 95,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 85,
+      "load": 85,
+      "fcp": 92,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 101,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 86,
+      "load": 86,
+      "fcp": 92,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Mentions légales",
+     "path": "/mentions-legales",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 90,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 85,
+      "load": 85,
+      "fcp": 100,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 91,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 84,
+      "load": 84,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 129,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 119,
+      "load": 120,
+      "fcp": 136,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 86,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:86x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 80,
+      "load": 80,
+      "fcp": 108,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://boutique.lab.test:35328/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 40,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 27,
+      "load": 27,
+      "fcp": 76,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 132,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 113,
+      "load": 126,
+      "fcp": 156,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 158,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:126x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:89x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 145,
+      "load": 145,
+      "fcp": 172,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    }
+   ],
+   "site": {
+    "/sitemap.xml": 200,
+    "/robots.txt": 200
+   },
+   "errors": [],
+   "unpublished": [
+    "Contact"
+   ],
+   "links": {
+    "total": 11,
+    "broken": []
+   },
+   "journeys": [
+    {
+     "width": 1280,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 306
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 230
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 238
+      },
+      "panier": {
+       "ok": true,
+       "ms": 107
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 85
+      },
+      "commande": {
+       "ok": true,
+       "ms": 601
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://boutique.lab.test:35328/boutique/commande/confirmation/CMD-00001?k=…"
+    },
+    {
+     "width": 820,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 237
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 175
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 57
+      },
+      "panier": {
+       "ok": true,
+       "ms": 99
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 85
+      },
+      "commande": {
+       "ok": true,
+       "ms": 199
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://boutique.lab.test:35328/boutique/commande/confirmation/CMD-00002?k=…"
+    },
+    {
+     "width": 375,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 233
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 173
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 828
+      },
+      "panier": {
+       "ok": true,
+       "ms": 78
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 76
+      },
+      "commande": {
+       "ok": true,
+       "ms": 434
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://boutique.lab.test:35328/boutique/commande/confirmation/CMD-00003?k=…"
+    }
+   ]
+  }
+ }
+]

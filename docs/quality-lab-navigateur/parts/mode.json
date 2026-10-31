@@ -1,0 +1,2088 @@
+[
+ {
+  "id": "mode",
+  "label": "Boutique de mode",
+  "brief": "Boutique de mode Fil & Aiguille, vêtements fictifs avec tailles et couleurs.",
+  "shop": true,
+  "gen": {
+   "id": "mode",
+   "shop": true,
+   "timings": {
+    "analyse": 13.819623,
+    "structure": 56.887547,
+    "pages": 124.289832,
+    "products": 52.136275,
+    "publish": 152.662469
+   },
+   "notes": [],
+   "siteId": 1,
+   "analysis": {
+    "readiness": "insufficient",
+    "facts": [
+     "sector",
+     "language"
+    ],
+    "missing": [
+     "shopName",
+     "country",
+     "currency",
+     "audience"
+    ],
+    "sector": "mode",
+    "warnings": []
+   },
+   "plan": {
+    "pages": [
+     "page:Accueil",
+     "native:Boutique",
+     "native:Pages de catégories",
+     "native:Fiche produit",
+     "native:Panier et commande",
+     "page:À propos",
+     "page:Contact",
+     "page:Questions fréquentes",
+     "page:Livraison",
+     "page:Retours et remboursements",
+     "page:Conditions générales de vente",
+     "page:Politique de confidentialité"
+    ],
+    "categories": [
+     "Femme",
+     "Robes",
+     "Hauts",
+     "Pantalons et jupes",
+     "Homme",
+     "Chemises",
+     "Pantalons",
+     "Vestes",
+     "Enfant",
+     "Chaussures",
+     "Accessoires"
+    ]
+   },
+   "structure": {
+    "created": 11,
+    "reused": 0,
+    "categories": {
+     "cat-1": 1,
+     "cat-2": 2,
+     "cat-3": 3,
+     "cat-4": 4,
+     "cat-5": 5,
+     "cat-6": 6,
+     "cat-7": 7,
+     "cat-8": 8,
+     "cat-9": 9,
+     "cat-10": 10,
+     "cat-11": 11
+    }
+   },
+   "pagesApplied": {
+    "created": 8,
+    "keys": [
+     "accueil",
+     "a-propos",
+     "contact",
+     "faq",
+     "livraison",
+     "retours",
+     "cgv",
+     "confidentialite"
+    ]
+   },
+   "productDrafts": [
+    {
+     "name": "Chemise Lin Marine",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Chemise Lin Marine.\n\nCaractéristiques :\n- Lin 100 %\n- Coupe droite"
+    },
+    {
+     "name": "Pantalon Droit Sable",
+     "source": "template",
+     "missing": [
+      "image",
+      "category"
+     ],
+     "issues": 0,
+     "desc": "Pantalon Droit Sable.\n\nCaractéristiques :\n- Coton épais\n- Taille haute"
+    },
+    {
+     "name": "Robe Portefeuille",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Robe Portefeuille.\n\nCaractéristiques :\n- Viscose\n- Longueur midi"
+    },
+    {
+     "name": "Veste Courte Olive",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Veste Courte Olive.\n\nCaractéristiques :\n- Coton\n- Deux poches"
+    },
+    {
+     "name": "Pull Maille Écru",
+     "source": "template",
+     "missing": [
+      "image"
+     ],
+     "issues": 0,
+     "desc": "Pull Maille Écru.\n\nCaractéristiques :\n- Laine mérinos\n- Col rond"
+    },
+    {
+     "name": "Jupe Plissée Noire",
+     "source": "template",
+     "missing": [
+      "image",
+      "category"
+     ],
+     "issues": 0,
+     "desc": "Jupe Plissée Noire.\n\nCaractéristiques :\n- Polyester recyclé\n- Longueur genou"
+    }
+   ],
+   "productsApplied": [
+    "Chemise Lin Marine:created",
+    "Pantalon Droit Sable:created",
+    "Robe Portefeuille:created",
+    "Veste Courte Olive:created",
+    "Pull Maille Écru:created",
+    "Jupe Plissée Noire:created"
+   ],
+   "publish": {
+    "products": [
+     "Chemise Lin Marine",
+     "Pantalon Droit Sable",
+     "Robe Portefeuille",
+     "Veste Courte Olive",
+     "Pull Maille Écru",
+     "Jupe Plissée Noire"
+    ],
+    "pages": [
+     "accueil",
+     "a-propos",
+     "faq",
+     "livraison",
+     "retours",
+     "cgv",
+     "confidentialite"
+    ],
+    "refused": [
+     {
+      "name": "page contact",
+      "reason": "La section d'inscription a besoin d'un formulaire : choisissez-en un dans les réglages de la page."
+     }
+    ],
+    "opened": true,
+    "ready": true,
+    "blockers": []
+   },
+   "pages": [
+    {
+     "id": 1,
+     "name": "Accueil",
+     "slug": "accueil",
+     "status": "published"
+    },
+    {
+     "id": 7,
+     "name": "Conditions générales de vente",
+     "slug": "conditions-generales-de-vente",
+     "status": "published"
+    },
+    {
+     "id": 3,
+     "name": "Contact",
+     "slug": "contact",
+     "status": "draft"
+    },
+    {
+     "id": 5,
+     "name": "Livraison",
+     "slug": "livraison",
+     "status": "published"
+    },
+    {
+     "id": 8,
+     "name": "Politique de confidentialité",
+     "slug": "politique-de-confidentialite",
+     "status": "published"
+    },
+    {
+     "id": 4,
+     "name": "Questions fréquentes",
+     "slug": "questions-frequentes",
+     "status": "published"
+    },
+    {
+     "id": 6,
+     "name": "Retours et remboursements",
+     "slug": "retours-et-remboursements",
+     "status": "published"
+    },
+    {
+     "id": 2,
+     "name": "À propos",
+     "slug": "a-propos",
+     "status": "published"
+    }
+   ],
+   "homeId": 1,
+   "host": "mode.lab.test"
+  },
+  "audit": {
+   "host": "http://mode.lab.test:25370",
+   "pages": [
+    {
+     "vp": "desktop",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 196,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 178,
+      "load": 179,
+      "fcp": 180,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 6,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Accueil · Fil & Aiguille",
+      "metaDescription": "Présenter la boutique, les catégories et les produits mis en avant",
+      "canonical": "https://mode.lab.test/",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 5,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 10,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Accueil",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "div.lp-block",
+       "div.lp-block"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "[Service 1][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3][Une phrase qui décrit ce que la personne obtient]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "wordCount": 30
+     },
+     "capture": "captures/mode-desktop.jpg"
+    },
+    {
+     "vp": "desktop",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 101,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 92,
+      "load": 92,
+      "fcp": 116,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Conditions générales de vente · Fil & Aiguille",
+      "metaDescription": "Conditions de vente. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garantie de conformité.",
+      "canonical": "https://mode.lab.test/conditions-generales-de-vente",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Conditions générales de vente",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Conditions générales de vente"
+      ],
+      "wordCount": 4
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 89,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 83,
+      "load": 83,
+      "fcp": 112,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Livraison · Fil & Aiguille",
+      "metaDescription": "Zones, modes et délais de livraison (à renseigner : aucun tarif n'est inventé)",
+      "canonical": "https://mode.lab.test/livraison",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Livraison",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [],
+      "wordCount": 1
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 98,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 90,
+      "load": 91,
+      "fcp": 92,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Politique de confidentialité · Fil & Aiguille",
+      "metaDescription": "Données personnelles collectées et leur usage. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garanti",
+      "canonical": "https://mode.lab.test/politique-de-confidentialite",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Politique de confidentialité",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Politique de confidentialité"
+      ],
+      "wordCount": 3
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 120,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 107,
+      "load": 107,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Questions fréquentes · Fil & Aiguille",
+      "metaDescription": "Répondre aux questions courantes (commande, paiement, livraison)",
+      "canonical": "https://mode.lab.test/questions-frequentes",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 2,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 6,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Questions fréquentes",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "div.lp-block",
+       "div.lp-block"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Questions fréquentes",
+       "Questions fréquentes",
+       "[Votre réponse]"
+      ],
+      "wordCount": 10
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 93,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 84,
+      "load": 84,
+      "fcp": 92,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Retours et remboursements · Fil & Aiguille",
+      "metaDescription": "Conditions de retour et de remboursement. Modèle à compléter et à faire vérifier par un professionnel : il ne constitue ni un avis juridique ni une garantie de",
+      "canonical": "https://mode.lab.test/retours-et-remboursements",
+      "lang": "fr",
+      "robots": "index, follow",
+      "og": [
+       "og:title",
+       "og:description"
+      ],
+      "jsonLd": 1,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 3,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/cookies"
+      ],
+      "skipLink": false,
+      "h1Text": "Retours et remboursements",
+      "headerLinks": 0,
+      "footerLinks": 2,
+      "buttonLike": 0,
+      "mainKinds": [
+       "header.lp-hero"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Retours et remboursements"
+      ],
+      "wordCount": 3
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://mode.lab.test:25370/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 40,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 23,
+      "load": 23,
+      "fcp": 76,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     },
+     "static": {
+      "title": "Page introuvable · Fil & Aiguille",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "noindex, nofollow",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 0,
+       "header": 0,
+       "footer": 0
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 2,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [],
+      "skipLink": false,
+      "h1Text": "Page introuvable",
+      "headerLinks": 0,
+      "footerLinks": 0,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.",
+       "p."
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Page introuvable",
+       "Cette page n'existe pas ou n'est plus en ligne."
+      ],
+      "wordCount": 11
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 152,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 43,
+      "load": 146,
+      "fcp": 180,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "static": {
+      "title": "Boutique · Fil & Aiguille",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 1,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 7,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 29,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/boutique",
+       "/boutique/compte",
+       "/boutique/panier",
+       "/boutique/produit/jupe-plissee-noire",
+       "/boutique/produit/pull-maille-ecru",
+       "/boutique/produit/veste-courte-olive",
+       "/boutique/produit/robe-portefeuille",
+       "/boutique/produit/pantalon-droit-sable",
+       "/boutique/produit/chemise-lin-marine"
+      ],
+      "skipLink": true,
+      "h1Text": "Boutique",
+      "headerLinks": 4,
+      "footerLinks": 3,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.sh-title",
+       "div.sh-layout"
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Jupe Plissée Noire 85,90 €",
+       "Pull Maille Écru 74,90 €",
+       "Veste Courte Olive 63,90 €",
+       "Robe Portefeuille 52,90 €",
+       "Pantalon Droit Sable 41,90 €",
+       "Chemise Lin Marine 30,90 €"
+      ],
+      "wordCount": 54
+     }
+    },
+    {
+     "vp": "desktop",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 109,
+     "metrics": {
+      "w": 1440,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 38,
+      "load": 100,
+      "fcp": 128,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     },
+     "static": {
+      "title": "Panier · Fil & Aiguille",
+      "metaDescription": "",
+      "canonical": "",
+      "lang": "fr",
+      "robots": "",
+      "og": [],
+      "jsonLd": 0,
+      "h1": 1,
+      "headingSkips": 0,
+      "headingCount": 1,
+      "imgs": 0,
+      "imgsNoAlt": 0,
+      "imgsEmptyAlt": 0,
+      "landmarks": {
+       "main": 1,
+       "nav": 1,
+       "header": 1,
+       "footer": 1
+      },
+      "fields": 0,
+      "unlabeled": 0,
+      "emptyButtons": 0,
+      "contrast": {
+       "checked": 10,
+       "fail": [],
+       "unknown": 0
+      },
+      "links": [
+       "/",
+       "/boutique",
+       "/boutique/compte",
+       "/boutique/panier"
+      ],
+      "skipLink": true,
+      "h1Text": "Panier",
+      "headerLinks": 4,
+      "footerLinks": 3,
+      "buttonLike": 0,
+      "mainKinds": [
+       "h1.sh-title",
+       "p.sh-empty",
+       "p."
+      ],
+      "imgsInMain": 0,
+      "textBlocks": [
+       "Votre panier est vide.",
+       "Continuer mes achats"
+      ],
+      "wordCount": 8
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 260,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 245,
+      "load": 245,
+      "fcp": 244,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 123,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 117,
+      "load": 117,
+      "fcp": 116,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 123,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 115,
+      "load": 115,
+      "fcp": 120,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 132,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 126,
+      "load": 126,
+      "fcp": 136,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 191,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 114,
+      "load": 117,
+      "fcp": 240,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 130,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 116,
+      "load": 117,
+      "fcp": 124,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://mode.lab.test:25370/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 43,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 29,
+      "load": 29,
+      "fcp": 76,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 160,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 47,
+      "load": 148,
+      "fcp": 176,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "laptop",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 59,
+     "metrics": {
+      "w": 1024,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 45,
+      "load": 52,
+      "fcp": 88,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 167,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 152,
+      "load": 152,
+      "fcp": 164,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 91,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 86,
+      "load": 87,
+      "fcp": 128,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 95,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 91,
+      "load": 91,
+      "fcp": 116,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 128,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 120,
+      "load": 120,
+      "fcp": 112,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 190,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 122,
+      "load": 122,
+      "fcp": 188,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 100,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 85,
+      "load": 86,
+      "fcp": 120,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://mode.lab.test:25370/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 66,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 47,
+      "load": 47,
+      "fcp": 84,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 143,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 100,
+      "load": 129,
+      "fcp": 160,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "tablette",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 104,
+     "metrics": {
+      "w": 768,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 86,
+      "load": 86,
+      "fcp": 120,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Accueil",
+     "path": "/",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 190,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Service 1]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 2]",
+       "[Une phrase qui décrit ce que la personne obtient]",
+       "[Service 3]",
+       "[Une phrase qui décrit ce que la personne obtient]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 164,
+      "load": 164,
+      "fcp": 176,
+      "transferKB": 113,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     },
+     "capture": "captures/mode-mobile.jpg"
+    },
+    {
+     "vp": "mobile",
+     "name": "Conditions générales de vente",
+     "path": "/conditions-generales-de-vente",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 88,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 83,
+      "load": 83,
+      "fcp": 92,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Livraison",
+     "path": "/livraison",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 219,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 188,
+      "load": 188,
+      "fcp": 200,
+      "transferKB": 2,
+      "decodedKB": 259,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Politique de confidentialité",
+     "path": "/politique-de-confidentialite",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 106,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 88,
+      "load": 89,
+      "fcp": 104,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Questions fréquentes",
+     "path": "/questions-frequentes",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 101,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [
+       "[Votre question la plus fréquente]"
+      ],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 97,
+      "load": 97,
+      "fcp": 136,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Retours et remboursements",
+     "path": "/retours-et-remboursements",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 82,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a:76x17",
+       "a:51x17"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 74,
+      "load": 75,
+      "fcp": 112,
+      "transferKB": 3,
+      "decodedKB": 260,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "À propos",
+     "path": "/a-propos",
+     "console": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+     ],
+     "failed": [
+      "404 http://mode.lab.test:25370/a-propos"
+     ],
+     "requests": 1,
+     "status": 404,
+     "loadMs": 40,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 23,
+      "load": 24,
+      "fcp": 76,
+      "transferKB": 1,
+      "decodedKB": 1,
+      "resources": 1,
+      "heapMB": 1.4
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Boutique (catalogue)",
+     "path": "/boutique",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 153,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "input:13x13",
+       "input:13x13",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 134,
+      "load": 148,
+      "fcp": 184,
+      "transferKB": 47,
+      "decodedKB": 201,
+      "resources": 7,
+      "heapMB": 1.5
+     }
+    },
+    {
+     "vp": "mobile",
+     "name": "Boutique (panier)",
+     "path": "/boutique/panier",
+     "console": [],
+     "failed": [],
+     "requests": 8,
+     "status": 200,
+     "loadMs": 209,
+     "metrics": {
+      "w": 375,
+      "hscroll": false,
+      "wide": [],
+      "small": [
+       "a.sh-brand:113x31",
+       "a:69x26",
+       "a:102x26",
+       "a.sh-cart:71x26",
+       "a:78x18",
+       "a:40x18",
+       "a:82x18"
+      ],
+      "clipped": [],
+      "tinyText": [],
+      "brokenImages": [],
+      "placeholders": [],
+      "lorem": 0
+     },
+     "perf": {
+      "dcl": 104,
+      "load": 104,
+      "fcp": 288,
+      "transferKB": 2,
+      "decodedKB": 197,
+      "resources": 7,
+      "heapMB": 1.4
+     }
+    }
+   ],
+   "site": {
+    "/sitemap.xml": 200,
+    "/robots.txt": 200
+   },
+   "errors": [],
+   "unpublished": [
+    "Contact"
+   ],
+   "links": {
+    "total": 11,
+    "broken": []
+   },
+   "journeys": [
+    {
+     "width": 1280,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 237
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 131
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 854
+      },
+      "panier": {
+       "ok": true,
+       "ms": 140
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 81
+      },
+      "commande": {
+       "ok": true,
+       "ms": 1131
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://mode.lab.test:25370/boutique/commande/confirmation/CMD-00001?k=…"
+    },
+    {
+     "width": 820,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 212
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 201
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 111
+      },
+      "panier": {
+       "ok": true,
+       "ms": 93
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 85
+      },
+      "commande": {
+       "ok": true,
+       "ms": 237
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://mode.lab.test:25370/boutique/commande/confirmation/CMD-00002?k=…"
+    },
+    {
+     "width": 375,
+     "steps": {
+      "catalogue": {
+       "ok": true,
+       "ms": 218
+      },
+      "fiche": {
+       "ok": true,
+       "ms": 178
+      },
+      "ajout": {
+       "ok": true,
+       "ms": 119
+      },
+      "panier": {
+       "ok": true,
+       "ms": 99
+      },
+      "caisse": {
+       "ok": true,
+       "ms": 73
+      },
+      "commande": {
+       "ok": true,
+       "ms": 303
+      }
+     },
+     "errors": [],
+     "finalUrl": "http://mode.lab.test:25370/boutique/commande/confirmation/CMD-00003?k=…"
+    }
+   ]
+  }
+ }
+]
