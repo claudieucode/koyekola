@@ -304,6 +304,139 @@ const PARTS = {
     link: part("Lien", ".kw-menu-link", LINK, ["hover", "focus"]),
   },
 
+  // Widgets « élément » dont la racine contient des sous-éléments propres (étape 2 : couverture des 42 types restants, voir KOLAKISA_WIDGET_COVERAGE.md)
+  list: { item: part("Élément de la liste", "li", { ...TEXT, background: true, border: true }) },
+  quote: {
+    text: part("Texte de la citation", "p", TEXT),
+    author: part("Auteur", "footer", TEXT),
+  },
+  code: { numbers: part("Numéros de ligne", ".kw-code-nums", TEXT) },
+  audio: {
+    caption: part("Légende", "figcaption", TEXT),
+    player: part("Lecteur", "audio", { size: ["width", "maxWidth"], border: true, effects: ["opacity", "boxShadow"], spacing: spacingAll }),
+  },
+  video: {
+    frame: part("Cadre du lecteur", ".lp-video-frame", { border: true, effects: ["opacity", "boxShadow", "filter"], size: ["width", "maxWidth"] }),
+    file: part("Vidéo (fichier)", "video", { border: true, effects: ["opacity", "boxShadow", "filter"], media: true, size: ["width", "maxWidth"] }),
+  },
+  table: {
+    caption: part("Légende", "caption", TEXT),
+    head: part("Cellules d'en-tête", "th", TEXT_BG),
+    cell: part("Cellules", "td", TEXT_BG),
+    row: part("Lignes du corps", "tbody tr", { background: true, border: true }, ["hover"]),
+    footer: part("Cellules du pied", "tfoot td", TEXT_BG),
+  },
+  search: {
+    field: part("Champ", "input", { ...TEXT_BG, size: ["width", "height"], effects: ["boxShadow", "opacity", "transitionDuration"] }, ["hover", "focus"]),
+    button: part("Bouton", ".kw-button", { ...TEXT_BG, size: ["width", "height"] }, ["hover", "focus"]),
+  },
+  breadcrumb: {
+    list: part("Liste", ".kw-crumbs", { ...LAYOUT, typography: true }),
+    link: part("Liens", ".kw-crumbs a", LINK, ["hover", "focus"]),
+    current: part("Page courante", ".kw-crumbs [aria-current=\"page\"]", TEXT),
+  },
+  catfilter: {
+    list: part("Liste", "ul", LAYOUT),
+    link: part("Catégories", "a", LINK, ["hover", "focus"]),
+    active: part("Catégorie active", "a[aria-current=\"true\"]", LINK, ["hover", "focus"]),
+    count: part("Compteur", ".kw-catfilter-n", TEXT),
+  },
+  course: {
+    image: part("Image", "img", IMAGE),
+    body: part("Contenu", ".lp-course-body", { ...LAYOUT, background: true }),
+    title: part("Titre", "h3", TEXT),
+    subtitle: part("Sous-titre", ".lp-course-body p:not(.lp-price)", TEXT),
+    price: part("Prix", ".lp-price", TEXT),
+    button: part("Bouton", ".lp-btn", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+  },
+  addtocart: {
+    price: part("Prix", ".kw-buy-price", TEXT),
+    button: part("Bouton", ".kw-button", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+  },
+  courserating: {
+    stars: part("Étoiles", ".kw-stars", { typography: ["fontSize", "letterSpacing"], color: ["color"], spacing: spacingAll }),
+    score: part("Note", "strong", TEXT),
+    count: part("Nombre d'avis", ".kw-courserating-count", TEXT),
+  },
+  animatedheading: { word: part("Mot animé", ".kw-rotate", TEXT_BG) },
+  sitemap: {
+    group: part("Groupe", ".kw-sitemap-group", BOX),
+    title: part("Titre du groupe", ".kw-sitemap-title", TEXT),
+    list: part("Liste de liens", ".kw-sitemap-list", LAYOUT),
+    link: part("Lien", ".kw-sitemap-link", LINK, ["hover", "focus"]),
+  },
+  facebookembed: { frame: part("Cadre", ".kw-fbe-frame", { border: true, effects: ["opacity", "boxShadow"], size: ["width", "maxWidth", "height"] }) },
+  facebookbutton: { frame: part("Bouton", ".kw-fbbtn-frame", { border: true, effects: ["opacity", "boxShadow"], size: ["width", "maxWidth"] }) },
+  lottie: { stage: part("Animation", ".kw-lottie-stage", { size: ["width", "maxWidth", "height"], border: true, effects: ["opacity", "boxShadow"] }) },
+  map: { frame: part("Carte", ".kw-map-frame", { border: true, effects: ["opacity", "boxShadow", "filter"], size: ["width", "maxWidth", "height", "minHeight"] }) },
+  embed: { frame: part("Contenu intégré", ".kw-embed-frame", { border: true, effects: ["opacity", "boxShadow"], size: ["width", "maxWidth"] }) },
+  button: { icon: part("Icône", ".kw-btn-icon", ICON) },
+  image: {
+    picture: part("Image", "img", IMAGE, ["hover"]),
+    caption: part("Légende", "figcaption", TEXT),
+  },
+  smartlink: { button: part("Bouton", ".kw-button", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]) },
+  sitetitle: { link: part("Lien", ".kw-sitetitle-link", LINK, ["hover", "focus"]) },
+  // Widgets arrivés sur main après la branche des parties : boutique par site et comparateur / défilement
+  beforeafter: {
+    stage: part("Zone de comparaison", ".kw-compare-stage", { border: true, effects: ["opacity", "boxShadow"], size: ["width", "maxWidth", "height"] }),
+    before: part("Image « avant »", ".kw-compare-before", IMAGE),
+    after: part("Image « après »", ".kw-compare-after", IMAGE),
+    tag: part("Étiquettes", ".kw-compare-tag", TEXT_BG),
+    bar: part("Barre de séparation", ".kw-compare-bar", { background: true, size: ["width"], effects: ["opacity", "boxShadow"] }),
+    knob: part("Poignée", ".kw-compare-knob", DOT),
+  },
+  marquee: {
+    item: part("Élément", ".kw-marquee-item", TEXT_BG),
+    sep: part("Séparateur", ".kw-marquee-sep", TEXT),
+    pause: part("Bouton pause", ".kw-marquee-pause", LINK, ["hover", "focus"]),
+  },
+  shopgrid: {
+    card: part("Carte produit", ".kw-pg-card", BOX, ["hover"]),
+    image: part("Image", ".kw-pg-img", IMAGE, ["hover"]),
+    name: part("Nom", ".kw-pg-name", TEXT, ["hover"]),
+    price: part("Prix", ".kw-pg-price", TEXT),
+    old: part("Ancien prix", ".kw-pg-old", TEXT),
+    out: part("Mention « épuisé »", ".kw-pg-out", TEXT_BG),
+  },
+  shopbuy: {
+    price: part("Prix", ".kw-pb-price", TEXT),
+    old: part("Ancien prix", ".kw-pg-old", TEXT),
+    label: part("Libellés", ".kw-pb-lbl", TEXT),
+    variant: part("Choix de variante", ".kw-pb-var", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    qty: part("Quantité", ".kw-pb-qty", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    button: part("Bouton", ".kw-pb-btn", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    stock: part("Stock", ".kw-pb-stock", TEXT),
+    message: part("Message", ".kw-pb-msg", TEXT),
+  },
+  shopcart: {
+    cart: part("Panier", ".kw-sc-cart", LINK, ["hover", "focus"]),
+    badge: part("Pastille", ".kw-sc-badge", { ...TEXT, background: true, border: true }),
+    account: part("Compte", ".kw-sc-account", LINK, ["hover", "focus"]),
+    checkout: part("Bouton de commande", ".kw-sc-checkout", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    message: part("Message", ".kw-sc-msg", TEXT),
+  },
+  shopsearch: {
+    label: part("Libellé", ".kw-ss-lbl", TEXT),
+    input: part("Champ", ".kw-ss-input", { ...TEXT_BG, size: ["width", "height"] }, ["hover", "focus"]),
+    button: part("Bouton", ".kw-pb-btn", { ...TEXT_BG, size: ["width", "height"] }, ["hover", "focus"]),
+    message: part("Message", ".kw-ss-msg", TEXT),
+  },
+  shopfilters: {
+    label: part("Libellés", ".kw-sf-lbl", TEXT),
+    field: part("Champs", ".kw-sf-f", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    choice: part("Choix", ".kw-sf-c", TEXT),
+    button: part("Bouton", ".kw-pb-btn", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    message: part("Message", ".kw-sf-msg", TEXT),
+  },
+  postcontent: {
+    h2: part("Intertitres (H2)", "h2", TEXT),
+    h3: part("Intertitres (H3)", "h3", TEXT),
+    paragraph: part("Paragraphes", "p", TEXT),
+    link: part("Liens", "a", LINK, ["hover", "focus"]),
+    image: part("Images", "img", IMAGE),
+    quote: part("Citations", "blockquote", TEXT_BG),
+  },
 };
 
 // Une propriété est-elle permise pour cette partie ? groupOf : clé → groupe (STYLE_PROPS et propriétés composées)
@@ -343,4 +476,15 @@ function scan(sections, groupOf) {
   return out;
 }
 
-module.exports = { PARTS, allows, spec, scan };
+// Widgets volontairement SANS parties : leur racine EST l'unique élément visible (ou leurs enfants sont de vrais nœuds stylables), donc le style de la racine
+// couvre tout. Chaque entrée est justifiée ; un nouveau widget doit déclarer des parties OU figurer ici (test de couverture : widgets-parts-couverture.test.js).
+const ROOT_ONLY = {
+  container: "conteneur : ses enfants sont de vrais nœuds", columns: "conteneur : enfants = nœuds", column: "conteneur : enfants = nœuds", grid: "conteneur : enfants = nœuds",
+  stack: "conteneur : enfants = nœuds", group: "conteneur : enfants = nœuds",
+  spacer: "élément vide : la racine est l'espace", divider: "la racine est le trait (couleur, épaisseur, style par la racine)",
+  heading: "la racine est le titre", text: "la racine est le paragraphe (ses balises internes héritent de la typographie)", badge: "la racine est l'étiquette",
+  link: "la racine est le lien", html: "contenu libre signé : pas de structure connue", dyntext: "la racine est le texte dynamique", copyright: "la racine est le paragraphe",
+  icon: "la racine est l'icône", menuanchor: "ancre invisible : aucun rendu public", textpath: "texte sur un tracé SVG : propriétés CSS de boîte sans effet sur les sous-éléments SVG",
+};
+
+module.exports = { PARTS, ROOT_ONLY, allows, spec, scan };

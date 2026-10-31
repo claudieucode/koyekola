@@ -5095,7 +5095,35 @@
     ctxObserver = new ResizeObserver(function () { if (bar.clientWidth !== ctxFitWidth) scheduleFitContext(); });
     ctxObserver.observe(bar);
   }
-  function renderContext() { renderContextBar(); watchContextWidth(); scheduleFitContext(); }
+  // La barre est reconstruite à chaque changement de sélection ou de valeur. Deux garde-fous : (1) l'ajustement « Plus » se fait dans la MÊME image
+  // (avant la peinture) : plus d'image intermédiaire où la rangée déborde puis saute ; (2) le champ qui avait le focus le retrouve (même commande,
+  // même curseur) : taper une taille puis Entrée ne renvoie plus le focus à la page.
+  function ctxFocusKey(bar) {
+    var a = document.activeElement;
+    if (!a || a === bar || !bar.contains(a)) return null;
+    var host = a.closest("[aria-label],[data-tip]");
+    var label = host ? (host.getAttribute("aria-label") || host.getAttribute("data-tip")) : null;
+    if (!label) return null;
+    var field = a.matches("input,select,textarea,button");
+    return { label: label, tag: a.tagName, start: field && typeof a.selectionStart === "number" ? a.selectionStart : null, end: field && typeof a.selectionEnd === "number" ? a.selectionEnd : null };
+  }
+  function ctxRestoreFocus(bar, k) {
+    if (!k) return;
+    var nodes = bar.querySelectorAll("[aria-label],[data-tip]"), target = null;
+    for (var i = 0; i < nodes.length && !target; i++) {
+      if ((nodes[i].getAttribute("aria-label") || nodes[i].getAttribute("data-tip")) !== k.label) continue;
+      target = nodes[i].tagName === k.tag ? nodes[i] : nodes[i].querySelector(k.tag.toLowerCase());
+    }
+    if (!target || target.disabled) return;
+    try { target.focus({ preventScroll: true }); if (k.start !== null && target.setSelectionRange) target.setSelectionRange(k.start, k.end); } catch (e) { /* champ sans sélection */ }
+  }
+  function renderContext() {
+    var bar = $("[data-pb-context]"), key = bar ? ctxFocusKey(bar) : null;
+    renderContextBar(); watchContextWidth();
+    if (ctxFitRaf) { cancelAnimationFrame(ctxFitRaf); ctxFitRaf = 0; }
+    fitContext();
+    if (bar) ctxRestoreFocus(bar, key);
+  }
   function renderContextBar() {
     var bar = $("[data-pb-context]");
     ctxCloseMore();
