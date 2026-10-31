@@ -72,6 +72,7 @@ window.KOLA_TIPS = {
     "/site-web/templates": "Choisissez et gérez les modèles de page de ce site : listes, fiches, pages d'accueil.",
     "/site-web/patterns": "Bibliothèque de blocs réutilisables de ce site : créez-les une fois, insérez-les partout.",
     "/site-web/styles": "Réglez palette, typographie, formes et boutons du site ; ils s'appliquent partout à la fois.",
+    "/site-web/apparence/theme-builder": "Concevez en-tête, pied de page, pages, articles, archives, recherche, 404 et boutique de ce site : 100 modèles par type, conditions d'affichage, publication.",
     "/site-web/widgets": "Gérez les zones de widgets du site (pied de page, barre latérale…) et les blocs qui s'y affichent.",
     "/site-web/polices": "La bibliothèque de polices de ce site : installez des Google Fonts ou importez vos fichiers.",
     "/site-web/apparence/en-tete": "Le logo, le menu et le bandeau du haut de vos pages.",

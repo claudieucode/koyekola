@@ -104,6 +104,10 @@ function postWhere(ctx, q, env) {
   const where = ["p.published_at IS NOT NULL", "p.published_at <= ?", "(p.published = 1 OR p.status = 'scheduled')", "p.deleted_at IS NULL"];
   const args = [now];
   const cur = env.scope.post || null;
+  // Un site n'affiche QUE ses articles (mk_content_sites) ; le site principal, que ceux qui n'appartiennent à aucun site : jamais les articles d'un autre site
+  const pg = env.scope && env.scope.page ? env.scope.page : null;
+  if (pg && Number.isInteger(pg.site_id) && pg.site_id > 0) { where.push("p.id IN (SELECT content_id FROM mk_content_sites WHERE content_type = 'post' AND site_id = ?)"); args.push(pg.site_id); }
+  else if (pg) where.push("p.id NOT IN (SELECT content_id FROM mk_content_sites WHERE content_type = 'post')");
   if (q.include) { where.push(`p.id IN (${q.include.map(() => "?").join(",")})`); args.push(...q.include); }
   const exclude = [...(q.exclude || []), ...(q.excludeCurrent && cur && Number.isInteger(cur.id) ? [cur.id] : [])];
   if (exclude.length) { where.push(`p.id NOT IN (${exclude.map(() => "?").join(",")})`); args.push(...exclude); }

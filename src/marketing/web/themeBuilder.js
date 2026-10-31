@@ -7,6 +7,8 @@ const { instances } = require("../../themeBuilder/instances");
 const { need } = require("./kit");
 const { MarketingError } = require("../errors");
 const siteModules = require("../siteModules");
+const Catalog = require("../../themeBuilder/catalog");
+const { useTemplate } = require("../../themeBuilder/catalog/use");
 
 const STATUS = { not_found: 404, forbidden: 403, module_disabled: 403, conflict: 409, invalid_field: 422, duplicate: 409 };
 const P = () => require("../pages");
@@ -87,6 +89,43 @@ module.exports = () => {
     const c = { siteId: id, view, id: num(q.id), authorId: num(q.auteur), parents: list(q.parents).map(Number).filter(Number.isInteger), categories: list(q.categories), categoryAncestors: list(q.parentes), tags: list(q.etiquettes), archive: archKind ? { kind: archKind, name: String(q.nom || "").slice(0, 80), ancestors: list(q.ancetres) } : undefined };
     const r = TB.resolve.resolve(TB.store.list(ctx, id, { archived: true }), c, { type });
     return { context: c, winner: r.winner ? { id: r.winner.id, name: r.winner.name } : null, explain: r.explain };
+  }));
+  // ── Bibliothèque de modèles (100 par type) : liste paginée (métadonnées seulement), miniature et aperçu À LA DEMANDE, « Utiliser » = copie indépendante dans CE site ──
+  const LIB = `${A}/bibliotheque`, keyOf = ":type/:key([a-z0-9.-]{3,80})";
+  const libType = (ctx, id, type) => {
+    if (!Catalog.types().includes(type)) throw Object.assign(new Error("Ce type de modèle n'a pas de bibliothèque."), { code: "not_found" });
+    const off = TB.types.TYPES[type].module && !siteModules.isEnabled(ctx.db, ctx.organizationId, id, TB.types.TYPES[type].module);
+    return { off, reason: off ? `Module ${siteModules.MODULES[TB.types.TYPES[type].module].label} désactivé pour ce site.` : "" };
+  };
+  router.get(LIB, need("forms.read"), run((ctx, id, req) => {
+    TB.store.site(ctx, id);
+    const type = String(req.query.type || "");
+    if (!type) return { types: Catalog.stats().map((t) => { const o = libType(ctx, id, t.type); return { ...t, available: !o.off, reason: o.reason }; }) };
+    const o = libType(ctx, id, type), q = req.query;
+    return { type, available: !o.off, reason: o.reason, ...Catalog.list(type, { q: String(q.q || "").slice(0, 80), tag: String(q.etiquette || "").slice(0, 40), skin: String(q.identite || "").slice(0, 20), layout: String(q.mise || "").slice(0, 40), page: q.page, limit: q.limite }) };
+  }));
+  router.get(`${LIB}/${keyOf}/miniature`, need("forms.read"), run((ctx, id, req) => {
+    TB.store.site(ctx, id); libType(ctx, id, req.params.type);
+    const doc = Catalog.thumbDoc(req.params.type, req.params.key);
+    if (!doc) throw Object.assign(new Error("Modèle introuvable."), { code: "not_found" });
+    const th = thumbnail(doc.sections ? doc : doc);
+    return { thumb: th.svg, elements: th.elements };
+  }));
+  router.get(`${LIB}/${keyOf}/apercu`, need("forms.read"), (req, res, next) => {
+    try {
+      TB.store.site(req.mk.ctx, sid(req)); libType(req.mk.ctx, sid(req), req.params.type);
+      const doc = Catalog.build(req.params.type, req.params.key, {});
+      if (!doc) return res.status(404).type("text").send("Modèle introuvable.");
+      require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc }, (html) => {
+        if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
+        res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).type("html").send(html);
+      });
+    } catch (e) { if (e instanceof MarketingError || (e && STATUS[e.code])) return res.status(STATUS[e.code] || 400).type("text").send(e.message); next(e); }
+  });
+  router.post(`${LIB}/utiliser`, need("forms.write"), run((ctx, id, req) => {
+    const b = body(req); libType(ctx, id, String(b.type || ""));
+    const t = useTemplate(ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });
+    return { template: card(ctx, t, new Set()) };
   }));
   return router;
 };

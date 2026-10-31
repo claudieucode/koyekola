@@ -12,7 +12,8 @@
       <div class="tb-head">
         <div class="tb-head-text"><button type="button" class="tb-back" id="tb-back" hidden><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="tb-back-l">Retour</span></button><h1 id="tb-title">Personnalisez chaque partie de votre site</h1><p class="tb-lead" id="tb-lead"></p></div>
         <div class="tb-top-actions">
-          <% if (perms.write) { %><button class="btn btn-primary" type="button" id="tb-new">Ajouter un modèle</button>
+          <button class="btn btn-primary" type="button" id="tb-lib-open">Bibliothèque de modèles</button>
+          <% if (perms.write) { %><button class="btn btn-outline" type="button" id="tb-new">Ajouter un modèle</button>
           <label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
           <button class="btn btn-outline" type="button" id="tb-legacy" title="Reprendre l'en-tête, le pied de page et les modèles de thème déjà configurés pour ce site">Récupérer l'existant</button><% } %>
         </div>
@@ -40,6 +41,26 @@
     <p class="sw-muted">Le modèle est créé en brouillon ; vous le modifiez ensuite dans l'éditeur de pages puis le publiez.</p>
     <div class="tb-dlg-actions"><button class="btn btn-outline" value="cancel" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Créer et ouvrir l'éditeur</button></div>
   </form></dialog>
+
+  <dialog id="tb-lib" class="tb-prev tb-lib" aria-labelledby="tb-lib-h">
+    <header class="tb-prev-bar">
+      <button type="button" class="tb-back" id="tb-lib-back"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Retour</span></button>
+      <div class="tb-prev-title"><h2 id="tb-lib-h">Bibliothèque de modèles</h2><p class="tb-prev-sub" id="tb-lib-sub">100 modèles par type, prêts à personnaliser. « Utiliser » crée votre propre copie en brouillon.</p></div>
+    </header>
+    <form class="tb-tools tb-lib-tools" id="tb-lib-tools" role="search" aria-label="Filtrer la bibliothèque">
+      <label class="sw-field">Type<select id="tb-lib-type"></select></label>
+      <label class="sw-field">Recherche<input type="search" id="tb-lib-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
+      <label class="sw-field">Identité<select id="tb-lib-skin"><option value="">Toutes</option></select></label>
+      <label class="sw-field">Mise en page<select id="tb-lib-layout"><option value="">Toutes</option></select></label>
+      <div class="tb-views" role="group" aria-label="Mode d'affichage">
+        <button type="button" data-lview="grid" aria-pressed="true" aria-label="Grille" title="Grille"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/></svg></button>
+        <button type="button" data-lview="list" aria-pressed="false" aria-label="Liste" title="Liste"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg></button>
+      </div>
+    </form>
+    <div class="tb-status" id="tb-lib-status" role="status" aria-live="polite"></div>
+    <div class="tb-lib-body"><div class="tb-cards" id="tb-lib-cards" data-view="grid" aria-live="polite"></div></div>
+    <nav class="tb-lib-pager" aria-label="Pagination de la bibliothèque"><button class="btn btn-outline btn-sm" type="button" id="tb-lib-prev">Précédent</button><span id="tb-lib-page" aria-live="polite"></span><button class="btn btn-outline btn-sm" type="button" id="tb-lib-next">Suivant</button></nav>
+  </dialog>
 
   <dialog id="tb-dlg-ren" aria-labelledby="tb-dlg-ren-h"><form method="dialog" id="tb-form-ren">
     <h2 id="tb-dlg-ren-h">Renommer le modèle</h2>

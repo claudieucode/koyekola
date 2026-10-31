@@ -39,12 +39,23 @@ function wrapHtml(res, vm, siteOk, body, cls) {
   const main = require("../../services/appearance").publishedTokens();
   const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}), { siteId: main ? null : siteOk ? siteOk.id : undefined });
   // Partie globale (en-tête, pied) : même colonne de contenu que les pages du site (réglage de largeur du site, comme dans le Page Builder) ; la feuille de la plateforme ne doit pas changer l'aspect des liens non stylés
-  const band = cls.includes("kw-theme-part") ? ".kw-theme-part { color: var(--kw-text, #10222f); } :where(.kw-theme-part) a:not([class]) { color: revert; text-decoration: revert; }" : "";
-  const css = [faces, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, band, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
+  const band = cls.includes("kw-theme-part") ? ".kw-theme-part { color: var(--kw-text, #10222f); } :where(.kw-theme-part) a:not([class]) { color: revert; text-decoration: revert; } .kw-theme-part.kw-theme-sticky { position: sticky; top: 0; z-index: 60; } .kw-theme-part.kw-theme-overlay { position: absolute; top: 0; left: 0; right: 0; z-index: 60; }" : "";
+  // Gabarits de contenu : titre et description d'archive à une échelle de page (le titre de niveau 1 du thème est pensé pour un bandeau d'accueil)
+  const bleed = cls.includes("kw-theme-bleed") ? ".kw-theme-bleed > .lp-main { max-width: none; padding-left: 0; padding-right: 0; }" : "";
+  const tpl = cls.includes("kw-theme-template") ? ".kw-theme-template .kw-ai-title { font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.5rem); line-height: 1.15; } .kw-theme-template .kw-ai-desc { font-size: 1.05rem; line-height: 1.55; }" : "";
+  const css = [faces, bleed, tpl, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, band, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
   const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
   return `<div class="${cls}${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`;
 }
 const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, page.site_id) : null; return site && site.status === "active" ? site : null; };
+// Comportement d'une partie globale, lu dans sa première bande : « collant » (position: sticky) ou « superposé » (position: absolute) ; la bande est dans le <div> de la partie, qui ne peut coller que si c'est lui qui porte la position
+function partMode(section) {
+  const first = section && Array.isArray(section.children) ? section.children[0] : null;
+  const pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
+  return pos === "sticky" ? " kw-theme-sticky" : pos === "absolute" ? " kw-theme-overlay" : "";
+}
+// Un modèle fait de bandes pleine largeur (conteneurs « pleine largeur ») doit pouvoir toucher les bords : sa zone n'est alors plus limitée à la colonne de texte du site. Sans bande pleine largeur, rien ne change.
+const bleedOf = (sections) => ((sections || []).some((s) => s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true))) ? " kw-theme-bleed" : "");
 // Rend le modèle de vue `vm` avec les éléments du Page Builder (callback : html | null). Un callback passé à res.render ne passe jamais par themeLayout (rendu de fragment).
 function renderVm(res, vm, siteOk, cls, done) {
   res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false }, (err, body) => {
@@ -78,7 +89,7 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     if (!page) return end(null);
     const sections = pages.resolveSections(ctx, page.sections).filter((s) => !s.hidden && audienceMatches(s.audience, visitor));
     const vm = landing.viewModel(ctx, { ...page, visitor: { ...visitor, query: { ...visitor.query, ...query } }, scope, sections });
-    renderVm(res, vm, siteOf(ctx, page), "kw-theme-template", end);
+    renderVm(res, vm, siteOf(ctx, page), `kw-theme-template${bleedOf(sections)}`, end);
   } catch (error) { end(null); }
 }
 
@@ -100,7 +111,7 @@ function renderParts(req, res) {
         const section = pages.partSection(ctx, win[which].sourceId, which);
         if (!section) { console.warn(`[KOLAKISA] Theme Builder : ${which === "header" ? "en-tête" : "pied de page"} « ${win[which].name} » sans version publiée ; habillage d'origine conservé.`); return ok(); }
         const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: site.id, organization_id: marketing.organizationId, visitor, theme: {}, scope: {}, sections: [section] });
-        renderVm(res, vm, siteOf(ctx, { site_id: site.id }), `kw-theme-part kw-theme-${which}`, (html) => { if (html) out[which] = html; ok(); });
+        renderVm(res, vm, siteOf(ctx, { site_id: site.id }), `kw-theme-part kw-theme-${which}${which === "header" ? partMode(section) : ""}${bleedOf([section])}`, (html) => { if (html) out[which] = html; ok(); });
       }));
       Promise.all(jobs).then(() => resolve(out), () => resolve({}));
     } catch { resolve({}); }
@@ -108,9 +119,9 @@ function renderParts(req, res) {
 }
 
 // Pendant qu'on dessine un modèle d'article : données du dernier article publié (aperçu réaliste)
-function previewScope(db, ctx, page) {
+function previewScope(db, ctx, page, typesOverride = null) {
   try {
-    const types = themeTemplates.typesOfPage(ctx, page.id);
+    const types = typesOverride || themeTemplates.typesOfPage(ctx, page.id);
     if (types.includes("single_course")) {
       const c = db.prepare("SELECT * FROM courses WHERE published = 1 ORDER BY created_at DESC, id DESC LIMIT 1").get();
       if (!c) return {};
@@ -131,4 +142,38 @@ function previewScope(db, ctx, page) {
   } catch { return {}; }
 }
 
-module.exports = { renderRegion, renderParts, postScope, previewScope };
+// ── Aperçu d'un modèle du CATALOGUE (aucune écriture) : mêmes éléments, mêmes jetons et même CSS que le site public ; données d'EXEMPLE clairement annoncées ─────────────────────────────
+const EXAMPLE = {
+  post: { title: "Titre de l'article (exemple)", url: "/blog", excerpt: "Le résumé de l'article s'affichera ici.", image: "", date: Date.now(), category: "Catégorie", author: "Auteur", minutes: 4, id: null, slug: "exemple", tags: ["exemple"], contentHtml: "<p>Le texte de votre contenu s'affichera ici : paragraphes, intertitres, images et listes.</p><h2>Un intertitre</h2><p>Chaque modèle met en page ce texte réel dès que le contenu existe.</p>" },
+  product: { id: null, title: "Nom du produit (exemple)", subtitle: "", shortDescription: "Description courte du produit.", description: "Description détaillée du produit : elle vient de la fiche produit de la boutique.", priceCents: 4900, priceLabel: "49,00 €", regularLabel: "59,00 €", url: "/boutique", image: "", category: "Catégorie", sku: "REF-EXEMPLE", availability: "En stock", cartUrl: "/boutique/panier" },
+};
+function catalogScope(db, ctx, type) {
+  if (type === "single_post") { const real = previewScope(db, ctx, { id: 0 }, ["single_post"]); return real.post ? real : { post: EXAMPLE.post }; }
+  if (type === "single_page") return { post: { ...EXAMPLE.post, title: "Titre de la page (exemple)" } };
+  if (type === "archive") return { archive: { type: "blog", name: "", id: null, termIds: [], title: "Titre de l'archive (exemple)", description: "Description de l'archive : elle viendra de la catégorie, de l'étiquette ou de l'auteur affiché.", count: 12, url: "/blog", search: "" }, post: EXAMPLE.post };
+  if (type === "search_results") return { archive: { type: "search", name: "", id: null, termIds: [], title: "Résultats de recherche (exemple)", description: "", count: 12, url: "/blog", search: "exemple" } };
+  if (type === "single_product") return { product: EXAMPLE.product };
+  if (type === "product_archive") return { archive: { type: "shop", title: "Boutique (exemple)", description: "", count: 12, url: "/boutique", search: "" } };
+  return {};
+}
+const FILLER = '<div style="max-width:1100px;margin:0 auto;padding:40px 24px;font:14px/1.6 system-ui,sans-serif;color:#64748b"><div style="height:160px;border-radius:12px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);margin-bottom:20px"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:80%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:65%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:72%"></div><p style="margin-top:18px;font-size:12px">Contenu de la page (aperçu)</p></div>';
+// done(html | null). doc : résultat de catalog.build()
+function previewDoc(req, res, { siteId, type, doc }, done) {
+  try {
+    const marketing = req.app.locals.marketing, db = require("../../config/database");
+    if (!marketing || !marketing.ready) return done(null);
+    const ctx = ctxOf(db, marketing);
+    const section = doc.kind === "component" ? doc.section : null;
+    const content = pages.normalizeContent(ctx, { site_id: siteId }, { sections: doc.kind === "component" ? [doc.section] : doc.sections });
+    const visitor = visitorContext(db, marketing.organizationId, req);
+    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections });
+    const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
+    renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
+      if (!html) return done(null);
+      const body = type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html;
+      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title><style>html,body{margin:0}</style></head><body>${body}</body></html>`);
+    });
+  } catch { done(null); }
+}
+
+module.exports = { renderRegion, renderParts, postScope, previewScope, previewDoc };

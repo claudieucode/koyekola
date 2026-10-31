@@ -43,6 +43,7 @@ const SECTIONS = [
   },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
+      leaf("apparence/theme-builder", "Theme Builder", `${BASE}/apparence/theme-builder`, { permission: "forms.read", siteOnly: true }), // propre à un site créé : le centre de contrôle du design (en-tête, pied, pages, articles, archives, 404, boutique)
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
       leaf("apparence/fichiers", "Éditeur de fichiers", `${BASE}/themes/fichiers`, { permission: "appearance.read" }), // fichiers JSON virtuels d'un thème installé (services/themeFiles.js)
       leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
@@ -305,6 +306,7 @@ const ABILITY = {
   sitedash: { mode: "open", module: "tableau-de-bord", label: "Tableau de bord" },
   landing: { mode: "open", module: "pages" },
   apparence: { mode: "open", module: "editeur-du-site" },
+  "apparence/theme-builder": { mode: "themebuilder" },
   "apparence/en-tete": { mode: "open", module: "reglages", sub: "en-tete", hash: "entete" },
   "apparence/pied-de-page": { mode: "open", module: "reglages", sub: "pied-de-page", hash: "parties" },
   redirections: { mode: "open", module: "redirections" },
@@ -419,9 +421,11 @@ function marketingGroup(space) {
 function projectItem(item, group, space) {
   const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
   // Dans son espace, le principal a le même « Tableau de bord » que tout autre site, à l'adresse de SON espace
+  if (item.siteOnly && space.principal) return null; // le site principal n'a pas de Theme Builder
   if (space.principal) return item.key === "sitedash" ? { ...item, ...base, label: "Tableau de bord", href: `${space.base}/tableau-de-bord` } : { ...item, ...base };
   const a = ABILITY[item.key];
   if (a && a.mode === "central") return null;
+  if (a && a.mode === "themebuilder") return { ...base, href: `${space.base}/constructeur-de-theme`, status: "live", external: true };
   if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
   if (a && a.mode === "customizer") return { ...base, href: `${BASE}/personnaliser?site=${space.siteId}`, status: "live", external: true };
   if (a && a.mode === "open") {

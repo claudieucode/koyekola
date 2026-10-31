@@ -343,6 +343,73 @@
   $("tb-prev-page").addEventListener("change", loadPreview);
   for (const b of document.querySelectorAll(".tb-devices button")) b.addEventListener("click", () => setDevice(b.dataset.dev));
 
+  // ---- bibliothèque de modèles (100 par type) : liste paginée côté serveur (métadonnées seulement), miniature et aperçu chargés à la demande, « Utiliser » = copie indépendante en brouillon
+  const L = { type: "", q: "", skin: "", layout: "", page: 1, lview: "grid", info: null, busy: false };
+  const libThumbs = new Map();
+  const libStatus = (m, k) => { const s = $("tb-lib-status"); s.textContent = m || ""; s.dataset.k = k || ""; s.dataset.show = m ? "1" : "0"; };
+  const libQuery = () => { const p = new URLSearchParams({ type: L.type, page: String(L.page), limite: "24" }); if (L.q) p.set("q", L.q); if (L.skin) p.set("identite", L.skin); if (L.layout) p.set("mise", L.layout); return p.toString(); };
+  async function libLoad() {
+    const seq = (L.seq = (L.seq || 0) + 1); $("tb-lib-cards").setAttribute("aria-busy", "true");
+    try {
+      if (!L.type) { const r = await api("/bibliotheque"); const sel = $("tb-lib-type"); sel.textContent = ""; for (const t of r.types) { const o = el("option", "", `${t.label} (${t.count})${t.available ? "" : " — indisponible"}`); o.value = t.type; o.disabled = !t.available; sel.append(o); } L.type = (r.types.find((t) => t.available) || r.types[0]).type; sel.value = L.type; }
+      const r = await api(`/bibliotheque?${libQuery()}`); if (seq !== L.seq) return; L.info = r;
+      const fill = (id, list, all) => { const s = $(id), v = s.value; if (s.options.length <= 1 || s.dataset.type !== L.type) { s.textContent = ""; const o = el("option", "", all); o.value = ""; s.append(o); for (const x of list) { const op = el("option", "", x.label); op.value = x.key; s.append(op); } s.dataset.type = L.type; s.value = v && [...s.options].some((o) => o.value === v) ? v : ""; } };
+      fill("tb-lib-skin", r.skins, "Toutes"); fill("tb-lib-layout", r.layouts, "Toutes");
+      libDraw(r);
+    } catch (e) { libStatus(e.message, "err"); } finally { $("tb-lib-cards").setAttribute("aria-busy", "false"); }
+  }
+  function libDraw(r) {
+    const box = $("tb-lib-cards"); box.textContent = ""; box.dataset.view = L.lview;
+    $("tb-lib-sub").textContent = `${r.total} modèle(s) · page ${r.page} sur ${r.pages}`;
+    $("tb-lib-page").textContent = `Page ${r.page} / ${r.pages}`; $("tb-lib-prev").disabled = r.page <= 1; $("tb-lib-next").disabled = r.page >= r.pages;
+    if (!r.available) libStatus(r.reason || "Ce type n'est pas disponible pour ce site.", "err"); else libStatus("");
+    if (!r.items.length) { box.append(el("p", "sw-muted", "Aucun modèle ne correspond à cette recherche.")); return; }
+    for (const m of r.items) box.append(libCard(m, r.available));
+  }
+  function libCard(m, available) {
+    const c = el("article", "tb-card tb-libcard"); c.dataset.key = m.key;
+    const ch = el("div", "tb-ch"); ch.append(el("h3", "", m.name)); c.append(ch);
+    const th = el("div", "tb-thumb"); th.setAttribute("aria-hidden", "true"); th.dataset.skin = m.skinKey; c.append(th);
+    const body = el("div", "tb-body"); body.append(el("p", "tb-type", m.layoutLabel + " · " + m.skinLabel), el("p", "sw-muted tb-card-d", m.desc)); const tags = el("p", "tb-tags"); for (const t of m.tags.slice(0, 4)) tags.append(el("span", "tb-tag", t)); body.append(tags);
+    const act = el("div", "tb-actions");
+    const pv = el("button", "btn btn-sm btn-outline", "Prévisualiser"); pv.type = "button"; pv.setAttribute("aria-label", `Prévisualiser « ${m.name} »`); pv.addEventListener("click", () => libPreview(m));
+    act.append(pv);
+    if (canWrite) { const us = el("button", "btn btn-sm btn-primary", "Utiliser ce modèle"); us.type = "button"; us.disabled = !available; us.setAttribute("aria-label", `Utiliser « ${m.name} »`); us.addEventListener("click", () => libUse(m, us, act)); act.append(us); }
+    body.append(act); c.append(body); libLazyThumb(th, m); return c;
+  }
+  const libIo = "IntersectionObserver" in window ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { libIo.unobserve(e.target); e.target.__go(); } }, { rootMargin: "200px" }) : null;
+  function libLazyThumb(th, m) {
+    const key = `${L.type}:${m.key}`;
+    th.__go = async () => { try { let svg = libThumbs.get(key); if (!svg) { const r = await api(`/bibliotheque/${L.type}/${m.key}/miniature`); svg = r.thumb; libThumbs.set(key, svg); } th.textContent = ""; th.append(svgOf(svg)); } catch { /* miniature facultative */ } };
+    if (libIo) libIo.observe(th); else th.__go();
+  }
+  async function libUse(m, btn, act) {
+    if (L.busy) return; L.busy = true; btn.disabled = true; btn.textContent = "Création…";
+    try {
+      const r = await post("/bibliotheque/utiliser", { type: L.type, key: m.key });
+      libStatus(`« ${m.name} » ajouté à votre site en brouillon.`, "ok");
+      btn.textContent = "Ajouté ✓"; const ed = el("a", "btn btn-sm btn-outline", "Modifier"); ed.href = r.template.editUrl; ed.setAttribute("aria-label", `Modifier « ${m.name} »`); act.append(ed);
+      await refresh();
+    } catch (e) { libStatus(e.message, "err"); btn.disabled = false; btn.textContent = "Utiliser ce modèle"; } finally { L.busy = false; }
+  }
+  function libPreview(m) {
+    // même fenêtre d'aperçu que les modèles du site : le document du catalogue est rendu par le moteur public (aucune écriture)
+    preview({ name: m.name, typeLabel: (data.types.find((t) => t.key === L.type) || {}).label || "", status: "draft", previewUrl: `${base}/api/bibliotheque/${L.type}/${m.key}/apercu`, editUrl: "#", previewNeedsPage: false, catalog: true });
+    $("tb-prev-sub").textContent = "Modèle de la bibliothèque · données d'exemple"; $("tb-prev-edit").hidden = true;
+  }
+  const libOpen = () => { openDlg("tb-lib"); if (!L.info) libLoad(); };
+  $("tb-lib-open").addEventListener("click", libOpen);
+  $("tb-lib-back").addEventListener("click", () => closeDlg($("tb-lib")));
+  $("tb-lib").addEventListener("cancel", (e) => { if ($("tb-prev").open) return; e.preventDefault(); closeDlg($("tb-lib")); });
+  $("tb-lib-tools").addEventListener("submit", (e) => e.preventDefault());
+  $("tb-lib-type").addEventListener("change", () => { L.type = $("tb-lib-type").value; L.page = 1; L.skin = ""; L.layout = ""; $("tb-lib-skin").value = ""; $("tb-lib-layout").value = ""; libLoad(); });
+  $("tb-lib-q").addEventListener("input", () => { clearTimeout(libLoad.t); libLoad.t = setTimeout(() => { L.q = $("tb-lib-q").value; L.page = 1; libLoad(); }, 250); });
+  $("tb-lib-skin").addEventListener("change", () => { L.skin = $("tb-lib-skin").value; L.page = 1; libLoad(); });
+  $("tb-lib-layout").addEventListener("change", () => { L.layout = $("tb-lib-layout").value; L.page = 1; libLoad(); });
+  $("tb-lib-prev").addEventListener("click", () => { if (L.page > 1) { L.page -= 1; libLoad(); } });
+  $("tb-lib-next").addEventListener("click", () => { L.page += 1; libLoad(); });
+  for (const b of document.querySelectorAll("[data-lview]")) b.addEventListener("click", () => { L.lview = b.dataset.lview; for (const x of document.querySelectorAll("[data-lview]")) x.setAttribute("aria-pressed", String(x === b)); $("tb-lib-cards").dataset.view = L.lview; });
+
   // ---- mode d'affichage (grille / liste), conservé entre les navigations et les sessions
   function setView(v, persist = true) {
     if (v !== "grid" && v !== "list") v = "grid"; if (v === view && data) return; view = v;

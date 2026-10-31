@@ -144,3 +144,21 @@ dialog.tb-prev { max-width: none; width: 100vw; height: 100vh; max-height: none;
   .tb *, .tb *::before, .tb *::after, dialog[open] { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
   .tb-card, .tb-tcard { opacity: 1; } .tb-status { transform: translate(-50%, 0); }
 }
+
+/* ---------- bibliothèque de modèles ---------- */
+dialog.tb-lib { display: none; flex-direction: column; } dialog.tb-lib[open] { display: flex; }
+.tb-lib-tools { flex: none; display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; padding: 10px 16px; background: var(--tb-surface); border-bottom: 1px solid var(--tb-line); }
+.tb-lib-tools .sw-field { flex: 1 1 180px; min-width: 150px; }
+.tb-lib-body { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
+.tb-libcard .tb-thumb { aspect-ratio: 200 / 124; background: var(--tb-soft); border-radius: var(--tb-rc); display: grid; place-items: center; overflow: hidden; }
+.tb-libcard .tb-thumb svg { width: 100%; height: 100%; }
+.tb-libcard .tb-card-d { margin: 2px 0 6px; font-size: .84rem; }
+.tb-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px; } .tb-tag { font-size: .72rem; padding: 1px 8px; border-radius: 999px; background: var(--tb-soft); color: var(--tb-ink2); }
+.tb-lib-pager { flex: none; display: flex; justify-content: center; align-items: center; gap: 14px; padding: 10px; border-top: 1px solid var(--tb-line); background: var(--tb-surface); }
+/* la miniature filaire prend la teinte de l'identité visuelle du modèle (repère rapide parmi 100) */
+.tb-libcard .tb-thumb[data-skin="clair"] { background: #fff; } .tb-libcard .tb-thumb[data-skin="clair"] svg { --tb-wire: #cbd5e1; }
+.tb-libcard .tb-thumb[data-skin="marque"] { background: #0a74b5; } .tb-libcard .tb-thumb[data-skin="marque"] svg { --tb-wire: #ffffff66; }
+.tb-libcard .tb-thumb[data-skin="nuit"] { background: #0b1220; } .tb-libcard .tb-thumb[data-skin="nuit"] svg { --tb-wire: #334155; }
+.tb-libcard .tb-thumb[data-skin="editorial"] { background: #fbfaf6; border: 2px solid #1f2937; border-radius: 0; } .tb-libcard .tb-thumb[data-skin="editorial"] svg { --tb-wire: #1f2937aa; }
+.tb-libcard .tb-thumb[data-skin="doux"] { background: #eef4f8; border-radius: 22px; } .tb-libcard .tb-thumb[data-skin="doux"] svg { --tb-wire: #b7c8d6; }
+.tb-libcard .tb-thumb svg [class^="tb-w-"] { fill: var(--tb-wire, currentColor); stroke: none; }
