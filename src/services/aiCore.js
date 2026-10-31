@@ -3,6 +3,8 @@
 // assistants sont simplement indisponibles (aucune fausse réponse). Aucune donnée secrète n'est jamais renvoyée.
 const Anthropic = require("@anthropic-ai/sdk");
 
+const schemaBudget = require("./schemaBudget");
+
 const AnthropicClient = Anthropic.default || Anthropic;
 const MODEL = "claude-opus-5-5";
 
@@ -27,6 +29,8 @@ function translateError(error) {
   if (error instanceof AnthropicClient.APIConnectionError) return new AiError("network", "Impossible de joindre le service d'IA : réessayez dans un instant.");
   if (error instanceof AnthropicClient.BadRequestError) {
     if (/credit balance|billing|purchase credits/i.test(msg)) return new AiError("credit", "Crédit Anthropic insuffisant : ajoutez du crédit sur console.anthropic.com → Billing (Plans & Billing), puis réessayez. La clé, elle, fonctionne.");
+    // Grammaire du schéma de sortie trop volumineuse : défaut de Kolakisa (pas de la clé, ni du texte saisi) — message dédié
+    if (/compiled grammar is too large|schema.{0,40}too (large|complex)/i.test(msg)) return new AiError("schema_too_complex", "L'analyse n'a pas pu démarrer : le format de réponse demandé à l'IA est trop complexe pour Anthropic. Ce n'est pas lié à votre texte ni à votre clé. Rien n'a été modifié ; signalez ce message à l'équipe technique.");
     return new AiError("api", `Anthropic a refusé la demande (400)${msg ? ` : « ${msg} »` : ""}. Rien n'a été modifié.`);
   }
   if (error instanceof AnthropicClient.APIError) return new AiError("api", `Le service d'IA a renvoyé une erreur (${error.status || "?"})${msg ? ` : « ${msg} »` : ""}. Réessayez plus tard.`);
@@ -48,7 +52,16 @@ function clientOf(apiKey) {
 }
 
 // Une demande, une réponse JSON conforme au schéma. Renvoie { data, model, usage }.
-async function runJson({ system, prompt, schema, effort = "medium", maxTokens = 16000, tooLong = "La réponse de l'IA a été coupée : raccourcissez le texte fourni.", apiKey = null }) {
+async function runJson({ system, prompt, schema, effort = "medium", maxTokens = 16000, tooLong = "La réponse de l'IA a été coupée : raccourcissez le texte fourni.", apiKey = null, label = "json" }) {
+  // Aucun outil n'est transmis : seule la sortie structurée (schéma) est compilée par Anthropic. On mesure le schéma AVANT l'appel
+  const metrics = schemaBudget.measure(schema);
+  const over = schemaBudget.exceeded(metrics);
+  if (over.length) {
+    console.warn(`[ia] schéma « ${label} » refusé avant l'appel (trop complexe : ${over.join(", ")})`);
+    const e = new AiError("schema_too_complex", "L'analyse n'a pas pu démarrer : le format de réponse demandé à l'IA est trop complexe. Rien n'a été envoyé ni modifié ; signalez ce message à l'équipe technique.");
+    e.schema = metrics;
+    throw e;
+  }
   const client = clientOf(apiKey);
   const params = {
     model: MODEL,
@@ -69,7 +82,10 @@ async function runJson({ system, prompt, schema, effort = "medium", maxTokens = 
       response = await client.messages.create(params);
     }
   } catch (error) {
-    throw translateError(error);
+    const out = translateError(error);
+    // Trace technique (aucun secret, aucun texte saisi) : de quoi retrouver le schéma en cause
+    if (out instanceof AiError && out.code === "schema_too_complex") { out.schema = metrics; console.error(`[ia] Anthropic a refusé la grammaire du schéma « ${label} » : ${JSON.stringify(metrics)} ; outils transmis : 0`); }
+    throw out;
   }
   if (response.stop_reason === "refusal") throw new AiError("refusal", "L'IA a refusé de traiter ce texte. Reformulez la demande ou rédigez ce passage vous-même.");
   if (response.stop_reason === "max_tokens") throw new AiError("too_long", tooLong);
