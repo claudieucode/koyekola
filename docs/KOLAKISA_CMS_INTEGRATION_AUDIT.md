@@ -12,4 +12,4 @@
 | Thèmes / Design Tokens | direction artistique 21.5 appliquée au site (labo : 19 couleurs primaires distinctes sur 21) | ✅ |
 | Articles | Blog Studio existant ; **non branché** sur l'évaluation 22.6 | ⛔ partiel |
 
-**Défaut de contenu natif constaté :** la publication native **ne bloque pas** les textes d'exemple (59/74 pages publiées en contiennent). Le moteur 22.6 les détecte mais n'est pas appelé à la publication.
+**Défaut de contenu natif constaté :** la publication native **ne bloque pas** les textes d'exemple (59/74 pages publiées en contiennent). Le moteur 22.6 les détecte et le constructeur 21.8 les liste après génération, mais la publication ne les bloque pas.

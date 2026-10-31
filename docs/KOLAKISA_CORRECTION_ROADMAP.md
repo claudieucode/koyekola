@@ -12,7 +12,7 @@
 | Réf. | Constat | Cause racine | Action recommandée |
 |---|---|---|---|
 | Q1 | 21/21 accueils identiques | recette fixe `RECIPES.accueil`; `layoutGen` (22.3) non branché | brancher `layoutGen.composePage` sur la génération d'accueil, par secteur |
-| Q2 | 59/74 pages publiées avec exemples | la publication ne consulte pas les détecteurs | bloquer/avertir à la publication via `contentIntel.review` |
+| Q2 | 59/74 pages publiées avec exemples | la publication ne consulte pas les détecteurs (le constructeur les liste désormais avant publication) | avertir/bloquer à la publication via `contentIntel.review` |
 | Q4 | 0 image | médias = étape séparée sans fournisseur ; **22.7 existe mais n'est pas appelé par le Page Generator (I-2)** | brancher `imageIntel`/`aiMedia.plan` après « Appliquer » + fournisseur configuré |
 | Q5/I1 | boutique = catalogue de formations ; planificateur « indisponible » | table `TYPE_OF` antérieure à 20.5 | aligner catalogue et registre sur la boutique native |
 | Q6 | 26 pages non publiables d'origine | formulaire jamais associé | proposer l'association du formulaire dans le parcours |

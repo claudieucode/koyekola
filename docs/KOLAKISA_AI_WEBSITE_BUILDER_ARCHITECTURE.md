@@ -81,7 +81,7 @@ Stockage : tables du CMS (pages, sections, SEO, médiathèque, personnalisateur)
 | Studio → AI Core | ⛔ seul le Media l'utilise |
 | Studio → Régénération 21.9 / Boutique 21.10 | ⛔ non branchés (écrans séparés) |
 | Page Generator → layoutGen (22.3) | ⛔ non branché |
-| Studio → contentIntel (22.6) | ⛔ non branché ; l'écran `contenu-seo` est autonome |
+| Studio → contentIntel (22.6) | ✅ `applyPages` appelle `review` (indicatif, ne modifie rien) ; ⛔ la publication ne l'appelle pas |
 | Page Generator → imageIntel (22.7) | ⛔ non branché (I-2 de 22.7) |
 | Rendu public → perfEngine (22.9) | ✅ priorité LCP et dimensions d'images appliquées au rendu |
 | Éditeur/rendu → responsive (22.8) | ✅ `fontSize` fluide, correctifs de menu ; pas de lien avec la génération |
