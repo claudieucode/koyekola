@@ -7198,9 +7198,10 @@
     if (window.ResizeObserver && $("[data-pb-frame]")) { var ro = new ResizeObserver(function () { if (!eff.isConnected) { ro.disconnect(); return; } paintEff(); }); ro.observe($("[data-pb-frame]")); }
     box.appendChild(checkField("Verrouiller le format", l.locked, function (v) { setLayout(fmt({ locked: v })); }, { disabled: !canWrite, hint: locked ? "Protégé : " + LF.protected.map(function (p) { return LF.labels[p]; }).join(", ").toLowerCase() + " des éléments de premier niveau, le format lui-même. Textes, images, couleurs, widgets et sections restent libres." : "Verrouillé, le format protège la largeur et les marges des éléments de premier niveau, y compris pour l'IA." }));
   }
-  // ---------- Écran de démarrage d'une page vide : « Création classique » ou « Création guidée » ----------
-  // Aucun moteur de plus : « classique » ouvre le sélecteur de structures habituel, « guidée » écrit theme.layout par setLayout (même voie que l'onglet Page,
-  // verrou contrôlé par le serveur). Affiché seulement pour un vrai état vide : écriture permise, aucune section, aucun format, canevas rendu, aucune
+  // ---------- Écran de démarrage d'une page vide : création GUIDÉE uniquement ----------
+  // Le choix « classique / guidée » n'existe plus : une page vide ouvre directement le catalogue de gabarits. Aucun moteur de plus : le parcours écrit theme.layout
+  // par setLayout (même voie que l'onglet Page, verrou contrôlé par le serveur), donc largeur et marges sont toujours initialisées. Les pages existantes,
+  // créées sans format, s'ouvrent comme avant (l'écran n'apparaît que pour un vrai état vide) ; l'accueil rouvert garde « Ajouter une structure ». Affiché seulement pour un vrai état vide : écriture permise, aucune section, aucun format, canevas rendu, aucune
   // modification dans la session. Dès qu'une section ou une modification existe, il ne revient plus (vider une page existante ne le déclenche pas).
   var startEl = $("[data-pb-start]"), startStep = "choice", startDraft = null, startDone = IS_COMPONENT || !canWrite || content.sections.length > 0 || Boolean(layoutOf());
   var PC = boot.pageCatalog || null, catState = { q: "", group: "all", scope: "gabarits", sort: "default" }, recentFilter = "all";
@@ -7245,10 +7246,12 @@
     startEl.hidden = false;
     paintStart();
   }
+  function beginGuided() { startStep = PC ? "catalog" : "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true, gabarit: "" }; }
   function paintStart(focusFirst) {
     startEl.textContent = "";
     var box = h("div", { class: "pb-start-box" });
     startEl.appendChild(box);
+    if (startStep === "choice" && !homeOpen) beginGuided(); // création guidée obligatoire : pas de choix de mode
     if (startStep === "choice") paintStartChoice(box); else if (startStep === "catalog" && PC) paintCatalog(box); else paintStartConfig(box);
     if (focusFirst !== false) { var f = box.querySelector("button:not([disabled]), input:not([disabled])"); if (f) f.focus({ preventScroll: true }); }
   }
@@ -7261,32 +7264,12 @@
     blank: '<rect class="il-w" x="14" y="10" width="212" height="100" rx="8"/><path class="il-bar" d="M14 18a8 8 0 0 1 8-8h196a8 8 0 0 1 8 8v8H14z"/><circle class="il-t" cx="26" cy="18" r="2"/><circle class="il-t" cx="34" cy="18" r="2"/><circle class="il-t" cx="42" cy="18" r="2"/><rect class="il-d" x="30" y="36" width="180" height="64" rx="5"/><circle class="il-a" cx="120" cy="68" r="14"/><path class="il-plus" d="M120 60v16M112 68h16"/><path class="il-spark" d="M168 48l1.8 4.2 4.2 1.8-4.2 1.8L168 60l-1.8-4.2-4.2-1.8 4.2-1.8zM70 82l1.2 2.8 2.8 1.2-2.8 1.2L70 90l-1.2-2.8-2.8-1.2 2.8-1.2z"/>',
     guided: '<rect class="il-w" x="22" y="24" width="64" height="82" rx="6"/><rect class="il-s" x="30" y="32" width="48" height="22" rx="3"/><rect class="il-bar" x="30" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="30" y="72" width="32" height="4" rx="2"/><rect class="il-w" x="154" y="24" width="64" height="82" rx="6"/><rect class="il-bar" x="162" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="188" y="32" width="22" height="22" rx="3"/><rect class="il-bar" x="162" y="62" width="48" height="4" rx="2"/><rect class="il-bar" x="162" y="72" width="36" height="4" rx="2"/><rect class="il-w il-front" x="82" y="12" width="76" height="98" rx="7"/><rect class="il-s" x="91" y="21" width="58" height="26" rx="4"/><rect class="il-a" x="98" y="29" width="30" height="5" rx="2.5"/><rect class="il-t" x="98" y="37" width="40" height="3" rx="1.5"/><rect class="il-bar" x="91" y="55" width="26" height="18" rx="3"/><rect class="il-bar" x="123" y="55" width="26" height="18" rx="3"/><rect class="il-t" x="91" y="81" width="58" height="4" rx="2"/><rect class="il-a" x="91" y="92" width="26" height="9" rx="4.5"/>'
   };
-  IL_SVG.classic = IL_SVG.structure;
   function illus(kind) {
     var el = h("div", { class: "pb-illus is-" + kind, "aria-hidden": "true" });
     el.innerHTML = '<svg viewBox="0 0 240 120" focusable="false" preserveAspectRatio="xMidYMid meet">' + (IL_SVG[kind] || "") + '</svg>';
     return el;
   }
-  function startCard(iconName, title, text, hint, label, onclick, id) {
-    return h("div", { class: "pb-start-card", "data-pb-start-card": id },
-      illus(id === "guided" ? "guided" : "classic"),
-      h("span", { class: "pb-start-icon", "aria-hidden": "true" }, icon(iconName)),
-      h("h2", { class: "pb-start-title", text: title }),
-      h("p", { class: "pb-start-text", text: text }),
-      h("p", { class: "pb-start-hint", text: hint }),
-      h("button", { type: "button", class: "btn btn-primary pb-start-btn", "data-pb-start-go": id, onclick: onclick }, label));
-  }
-  function paintStartChoice(box) {
-    if (homeOpen) { paintHomeChoice(box); return; }
-    box.appendChild(h("h1", { class: "pb-start-head", text: "Comment voulez-vous commencer ?" }));
-    box.appendChild(h("div", { class: "pb-start-cards" },
-      startCard("layers", "Création classique", "Construisez librement votre page avec les conteneurs, Flexbox et les widgets Kolakisa.", "Aucune contrainte : vous réglez tout vous-même.", "Commencer",
-        function () { startFinish(); openStructurePicker({ parent: null, index: 0 }); }, "classic"),
-      startCard("layout", "Création guidée", "Choisissez un gabarit de conception web et définissez les règles de mise en page de votre page.", "Largeur du contenu et marges fixées au départ, protégeables par un verrou.", "Choisir un gabarit",
-        function () { startStep = PC ? "catalog" : "config"; var p = LF.formats.standard || {}; startDraft = { format: "standard", maxWidth: p.maxWidth || 1200, gutter: p.gutter || 24, locked: true, gabarit: "" }; paintStart(); }, "guided")));
-    paintRecents(box);
-    box.appendChild(h("p", { class: "pb-start-foot", text: "Dans les deux cas vous utilisez les mêmes conteneurs, la même grille Flexbox et les mêmes widgets. Vous pourrez changer de mode plus tard dans l'onglet « Page »." }));
-  }
+  function paintStartChoice(box) { paintHomeChoice(box); } // seul l'accueil rouvert propose encore un choix (reprendre, structure, gabarit, nouvelle page)
   // Accueil rouvert : reprendre (action principale, pleine largeur) puis trois autres façons de commencer, étiquetées par ce qu'elles touchent :
   // « Sur cette page » (ajouter une structure, gabarit) ou « Nouveau document » (page vierge). Les identifiants data-pb-* des actions sont inchangés.
   function homeCard(iconName, tag, title, text, label, onclick, id) {
@@ -7543,15 +7526,17 @@
     function paintActions() {
       action.textContent = "";
       var chosen = d.gabarit ? (gabs.filter(function (g) { return g.key === d.gabarit; })[0] || null) : null;
-      action.appendChild(h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = "choice"; paintStart(); } }, "Retour"));
-      action.appendChild(h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"));
+      if (homeOpen) {
+        action.appendChild(h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = "choice"; paintStart(); } }, "Retour"));
+        action.appendChild(h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"));
+      }
       action.appendChild(h("button", { type: "button", class: "btn btn-primary", "data-pb-cat-next": "", onclick: function () { startStep = "config"; paintStart(); } }, chosen ? "Continuer avec « " + chosen.name + " »" : "Continuer avec une page vide"));
     }
     var qTimer = null;
     q.addEventListener("input", function () { st.q = q.value; clearTimeout(qTimer); qTimer = setTimeout(repaintCat, 120); });
     sort.addEventListener("change", function () { st.sort = sort.value; repaintCat(); });
     repaintCat();
-    box.addEventListener("keydown", function (e) { if (e.key === "Escape" && e.target !== q) { e.stopPropagation(); startStep = "choice"; paintStart(); } });
+    box.addEventListener("keydown", function (e) { if (e.key === "Escape" && e.target !== q && homeOpen) { e.stopPropagation(); startStep = "choice"; paintStart(); } });
     paintRecents(box);
   }
   // Insère un gabarit intégré à la fin (accueil) ou en tête (page vide), en une étape annulable ; la copie est neuve, aucune page n'est dupliquée
@@ -7658,8 +7643,8 @@
     box.appendChild(lock);
     box.appendChild(err);
     box.appendChild(h("div", { class: "pb-start-actions" },
-      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = PC ? "catalog" : "choice"; paintStart(); } }, "Retour"),
-      h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler"),
+      PC || homeOpen ? h("button", { type: "button", class: "btn btn-outline", "data-pb-start-back": "", onclick: function () { startStep = PC ? "catalog" : "choice"; paintStart(); } }, "Retour") : null,
+      homeOpen ? h("button", { type: "button", class: "btn btn-outline", "data-pb-start-cancel": "", onclick: startFinish }, "Annuler") : null,
       h("button", { type: "button", class: "btn btn-outline", "data-pb-start-newpage": "", title: "Crée une page distincte avec ce gabarit et ce format ; la page actuelle n'est pas modifiée", onclick: function () {
         var wOk2 = d.maxWidth === 0 || (Number.isInteger(d.maxWidth) && d.maxWidth >= 320 && d.maxWidth <= 2400), gOk2 = Number.isInteger(d.gutter) && d.gutter >= 0 && d.gutter <= 96;
         if (d.format === "custom" && !(wOk2 && gOk2)) { err.textContent = !wOk2 ? "Largeur maximale : 0 (aucune limite) ou entre 320 et 2 400 px." : "Marge latérale : entre 0 et 96 px."; err.hidden = false; return; }

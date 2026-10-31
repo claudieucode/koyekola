@@ -333,7 +333,7 @@ function createPageInner(ctx, { name, siteId = null, kind = "page", template = n
   }
   // Page de site : un bandeau et un texte (la section d'inscription des pages d'atterrissage demanderait un formulaire
   // avant toute publication)
-  // Page vierge demandée explicitement (éditeur) : aucune section, l'éditeur propose alors création classique ou guidée. Sans `blank`, le contenu de départ historique est inchangé.
+  // Page vierge demandée explicitement (éditeur) : aucune section, l'éditeur ouvre alors directement la création guidée (catalogue de gabarits, format recommandé). Sans `blank`, le contenu de départ historique est inchangé.
   if (blank) ctx.db.prepare("UPDATE mk_landing_pages SET sections = '[]' WHERE id = ?").run(page.id);
   else if (kind === "page" || kind === "step") {
     const start = [{ ...page.sections[0], id: newSectionId() }, { type: "text", markdown: "Présentez ici le contenu de la page.", id: newSectionId() }];
