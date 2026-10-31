@@ -113,10 +113,23 @@ describe("Theme Builder : couverture du rendu public (serveur réel, domaines r�
     assert.ok((await get("a.test", "/blog/article-a")).text.includes("HDR-GLOBAL"), "archivage → retour au modèle suivant, sans cache périmé");
     assert.ok(d.id);
   });
-  test("7. republication : le contenu modifié d'un en-tête apparaît immédiatement sur les pages du blog", async () => {
+  test("7. republication : le contenu modifié d'un en-tête apparaît immédiatement sur les pages du blog ; le brouillon du composant reste invisible", async () => {
     const t = await model(A, "header", "HDR-V1", { include: [{ kind: "front_page" }, { kind: "archive" }] });
     assert.ok((await get("a.test", "/blog")).text.includes("HDR-V1"));
-    const cur = one("SELECT * FROM mk_web_components WHERE id = ?", t.sourceId);
-    assert.ok(cur, "composant du modèle");
+    const draft = JSON.stringify({ type: "layout", children: [{ id: "tbnouveau01", type: "heading", props: { text: "HDR-V2", level: "2" } }] });
+    db.prepare("UPDATE mk_web_components SET draft = ? WHERE id = ?").run(draft, t.sourceId);
+    const before = await get("a.test", "/blog"); assert.ok(before.text.includes("HDR-V1") && !before.text.includes("HDR-V2"), "le brouillon n'est jamais diffusé");
+    assert.equal((await post(U(A, `/api/modeles/${t.id}/publier`))).status, 200); // republication
+    const after = await get("a.test", "/blog"); assert.ok(after.text.includes("HDR-V2") && !after.text.includes("HDR-V1"), "la nouvelle version est servie aussitôt, sans cache périmé");
+    // archivage → retour au modèle suivant ; restauration non publiée : jamais appliquée
+    await archiveModel(A, t); const arch = await get("a.test", "/blog"); assert.ok(!arch.text.includes("HDR-V2") && arch.text.includes("HDR-GLOBAL"));
+  });
+  test("8. boutique du domaine (module Commerce) : l'en-tête et le pied du site s'y affichent aussi ; modèle produit propre au site", async () => {
+    assert.equal((await boss.post(`/marketing/site-web/sites/${A}/modules/commerce`, { etat: "activer" })).status, 302);
+    const r = await get("a.test", "/boutique"); // boutique non ouverte : page 404 du site, habillée comme les autres pages
+    assert.ok([200, 404].includes(r.status), `/boutique → ${r.status}`);
+    assert.ok(r.text.includes("HDR-GLOBAL"), "en-tête global (et non l'en-tête de l'accueil, malgré le chemin relatif « / » du routeur de la boutique)");
+    assert.ok(!r.text.includes("HDR-V1"), "l'en-tête de l'accueil ne s'applique pas à la boutique"); assert.ok(r.text.includes("FTR-GLOBAL"));
+    const b = await get("b.test", "/boutique"); assert.doesNotMatch(b.text, /HDR-GLOBAL|FTR-GLOBAL/, "jamais le modèle de A sur B");
   });
 });

@@ -38,7 +38,9 @@ function wrapHtml(res, vm, siteOk, body, cls) {
   // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
   const main = require("../../services/appearance").publishedTokens();
   const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}), { siteId: main ? null : siteOk ? siteOk.id : undefined });
-  const css = [faces, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
+  // Partie globale (en-tête, pied) : même colonne de contenu que les pages du site (réglage de largeur du site, comme dans le Page Builder) ; la feuille de la plateforme ne doit pas changer l'aspect des liens non stylés
+  const band = cls.includes("kw-theme-part") ? ".kw-theme-part { color: var(--kw-text, #10222f); } :where(.kw-theme-part) a:not([class]) { color: revert; text-decoration: revert; }" : "";
+  const css = [faces, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, band, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
   const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
   return `<div class="${cls}${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`;
 }
@@ -91,7 +93,7 @@ function renderParts(req, res) {
       const ctx = ctxOf(db, marketing);
       const TB = require("../../themeBuilder/render");
       if (!TB.hasParts(ctx, site.id)) return resolve({});
-      const win = TB.resolveParts(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, req.path));
+      const win = TB.resolveParts(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]));
       const visitor = visitorContext(db, marketing.organizationId, req);
       const out = {};
       const jobs = ["header", "footer"].filter((w) => win[w]).map((which) => new Promise((ok) => {
