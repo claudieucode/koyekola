@@ -3,6 +3,7 @@
 <div class="sw">
   <div class="mk-head">
     <div class="mk-head-main"><h1>Créer un site</h1><p class="mk-head-sub">Un parcours en étapes. Votre site reste <strong>en brouillon</strong> : rien n'est publié sans votre confirmation, aucun DNS n'est modifié.</p></div>
+    <div class="kx-feature-art" aria-hidden="true"><%- illu("assistant") %></div>
   </div>
 
   <p class="sw-ai-entry"><a class="btn btn-ghost btn-sm" href="/marketing/ia/studio">Créer avec l'IA : décrire mon projet et laisser l'assistant proposer un plan</a></p>
@@ -26,9 +27,9 @@
     <fieldset class="mk-panel">
       <legend><span class="sw-num">1</span> Comment voulez-vous commencer ?</legend>
       <div class="sw-cards" role="radiogroup">
-        <label class="sw-card"><input type="radio" name="mode" value="blank" checked><span class="sw-card-body"><strong>Site vierge</strong><span>Une page d'accueil, puis vous construisez librement avec l'éditeur.</span></span></label>
-        <label class="sw-card"><input type="radio" name="mode" value="template"><span class="sw-card-body"><strong>Modèle professionnel</strong><span>Des pages, un menu et un style de départ issus de la bibliothèque de modèles.</span></span></label>
-        <label class="sw-card"><input type="radio" name="mode" value="shop"><span class="sw-card-body"><strong>Boutique en ligne</strong><span>Vente de formations par carte (module Commerce). Le panier de produits n'est pas encore disponible.</span></span></label>
+        <label class="sw-card"><input type="radio" name="mode" value="blank" checked><span class="sw-card-body"><span class="kx-card-ill" aria-hidden="true"><%- illu("nouveausite") %></span><strong>Site vierge</strong><span>Une page d'accueil, puis vous construisez librement avec l'éditeur.</span></span></label>
+        <label class="sw-card"><input type="radio" name="mode" value="template"><span class="sw-card-body"><span class="kx-card-ill" aria-hidden="true"><%- illu("bibliotheque") %></span><strong>Modèle professionnel</strong><span>Des pages, un menu et un style de départ issus de la bibliothèque de modèles.</span></span></label>
+        <label class="sw-card"><input type="radio" name="mode" value="shop"><span class="sw-card-body"><span class="kx-card-ill" aria-hidden="true"><%- illu("boutique") %></span><strong>Boutique en ligne</strong><span>Vente de formations par carte (module Commerce). Le panier de produits n'est pas encore disponible.</span></span></label>
       </div>
       <div class="sw-note" data-sw-shop hidden>
         <strong>Ce qui existe aujourd'hui :</strong> pages de présentation et de catalogue de formations, paiement par carte (Stripe) une fois le module Commerce activé et votre compte de paiement configuré par l'équipe.<br>
