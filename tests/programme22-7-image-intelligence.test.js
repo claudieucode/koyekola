@@ -263,6 +263,12 @@ describe("22.7 · web : routes, droits et isolation entre sites", () => {
     const r = await boss.get(G(A, "/recommandations.json?besoin=nope")); assert.equal(r.status, 404);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM mk_aimedia_tasks").get().n, 0);
   });
+  test("l'écran Médias IA affiche le panneau « Qualité des images » et son script est servi sans HTML injecté", async () => {
+    const pg = await boss.get(G(A, ""));
+    assert.equal(pg.status, 200); assert.match(pg.text, /Qualité des images/); assert.match(pg.text, /data-iq-run/); assert.match(pg.text, /site-ai-quality\.js/);
+    const js = await boss.get("/js/site-ai-quality.js");
+    assert.equal(js.status, 200); assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(js.text));
+  });
   test("un administrateur du site B ne lit ni le diagnostic ni l'analyse du site A", async () => {
     for (const rest of ["/diagnostic.json", "/sources.json", "/medias/1/analyse.json", "/recommandations.json?besoin=x"]) assert.ok([403, 404].includes((await adminB.get(G(A, rest))).status), rest);
   });
