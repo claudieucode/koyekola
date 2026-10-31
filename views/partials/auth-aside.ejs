@@ -1,5 +1,6 @@
 <%# Volet de valeur des pages d'accès (connexion, inscription, mot de passe) : même contenu partout, aucune donnée ni promesse inventée. %>
 <aside class="kv-auth-aside" aria-label="À propos de KOLAKISA">
+  <div class="kv-auth-art" aria-hidden="true"><%- illu("formations") %></div>
   <h2><%= typeof asideTitle !== "undefined" && asideTitle ? asideTitle : "Apprenez à votre rythme, où que vous soyez." %></h2>
   <ul>
     <li><span class="kv-ico" aria-hidden="true"><%- icon("play", { size: 18 }) %></span><div><strong>Des formations en vidéo</strong><span class="kv-sub">Suivez chaque leçon quand vous voulez, sur tous vos appareils.</span></div></li>

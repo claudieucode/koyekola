@@ -18,3 +18,41 @@ html[data-kola-theme="dark"] .kx-art {
 .kx-art .stk { stroke: var(--a-blue); stroke-width: 2.4; } .kx-art .stkn { stroke: var(--a-navy); stroke-width: 7; } .kx-art .stkl { stroke: var(--a-line2); stroke-width: 2; stroke-dasharray: 2 6; } .kx-art .stkw { stroke: #fff; stroke-width: 2.6; }
 html[data-kola-theme="dark"] .kx-art .stkn { stroke: var(--a-sky); }
 html[data-kola-theme="dark"] .kx-art .navy { stroke: rgba(143, 203, 247, 0.22); stroke-width: 1; }
+
+/* ===== 2. Compositions visuelles des écrans de création (enrichissement visuel, palier 3) =====
+   Opt-in : l'administration masque par défaut les illustrations d'en-tête (kola-brand.css, « Registre marine »). Ces classes ne s'appliquent qu'aux écrans
+   qui les demandent ; l'éditeur, les tableaux de données et les formulaires denses n'en reçoivent jamais. Aucune animation : rien à désactiver pour prefers-reduced-motion. */
+.mk-body .kx-feature-art { display: none; margin: -6px 0; }
+@media (min-width: 1040px) {
+  .mk-body .kx-feature-art { display: block; flex: none; width: clamp(180px, 19vw, 250px); margin-left: auto; filter: drop-shadow(0 12px 18px rgba(15, 44, 74, 0.10)); }
+}
+.mk-body .kx-feature-art .kx-art { max-width: none; width: 100%; height: auto; }
+/* Dans le bloc de bienvenue du tableau de bord d'un site : visuel discret, jamais au-dessus du contenu */
+.mk-body .kx-hero.kx-welcome { display: flex; align-items: center; gap: 24px; }
+.mk-body .kx-hero.kx-welcome .kx-hero-body { flex: 1 1 auto; min-width: 0; }
+.mk-body .kx-hero.kx-welcome .kx-hero-art { display: none; }
+@media (min-width: 1040px) { .mk-body .kx-hero.kx-welcome .kx-hero-art { display: block; flex: none; width: clamp(150px, 15vw, 200px); } }
+/* Étapes du processus : liste numérotée lisible, sans icône décorative */
+.kx-steps { display: flex; flex-wrap: wrap; gap: 8px 6px; margin: 0 0 18px; padding: 0; list-style: none; counter-reset: kxs; }
+.kx-steps li { counter-increment: kxs; display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; background: var(--accent-light, #e0f2fe); color: var(--primary, #0b2a40); font-size: 0.85rem; font-weight: 600; }
+.kx-steps li::before { content: counter(kxs); display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent, #0277b6); color: #fff; font-size: 0.75rem; font-weight: 700; }
+html[data-kola-theme="dark"] .kx-steps li { background: rgba(76, 163, 230, 0.16); color: #dbeafe; }
+/* Pastille illustrée en tête d'une carte de choix (assistant de création) */
+.kx-card-ill { display: block; width: 84px; margin: 0 0 8px; }
+.kx-card-ill .kx-art { width: 100%; height: auto; }
+/* Illustration d'un volet sombre (pages de connexion et d'inscription) */
+.kv-auth-art { width: min(260px, 70%); margin: 0 0 4px; }
+.kv-auth-art .kx-art { width: 100%; height: auto; }
+/* État vide d'une page publique */
+.kv-empty-ill { display: block; width: min(220px, 70%); margin: 0 auto 12px; }
+.kv-empty-ill .kx-art { width: 100%; height: auto; }
+/* Miniature d'un site (partials/site-thumb.ejs) : schéma aux couleurs réelles du site, à gauche des informations */
+.mk-body .kx-site-card { display: flex; align-items: flex-start; gap: 16px; }
+.mk-body .kx-site-thumb { flex: none; width: 112px; line-height: 0; border-radius: 8px; box-shadow: 0 6px 14px rgba(15, 44, 74, 0.10); }
+.mk-body .kx-site-thumb-svg { display: block; width: 100%; height: auto; border-radius: 8px; }
+.mk-body .kx-site-body { display: block; min-width: 0; flex: 1 1 auto; }
+@media (max-width: 560px) { .mk-body .kx-site-thumb { width: 84px; } }
+/* Volet sombre : l'illustration repose sur une tuile claire (le marine des scènes s'y lit) et reste dans la couleur d'action de la charte */
+.kv-auth-aside .kv-auth-art { padding: 14px 16px 6px; border-radius: 20px; background: #eaf3fa; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22); }
+.kv-auth-aside .kv-auth-art .kx-art { --a-blue: #0277b6; --a-sky: #7dd3fc; --a-ice: #e3f1fb; }
+.kv-auth-aside .kv-auth-art .kx-art .blue { fill: var(--a-blue); }

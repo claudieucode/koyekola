@@ -223,3 +223,8 @@ html[data-kola-theme="dark"] .kwc-toast-error { background: #7a1f29; color: #fff
 .kwc-sched, .kwc-sharelink { width: 100%; min-height: 44px; margin-top: 6px; padding: 8px 10px; border: 1px solid var(--kwc-line-2); border-radius: 8px; background: var(--kwc-surface); color: inherit; font: inherit; }
 .kwc-sched-l { display: block; margin-top: 12px; font-weight: 600; }
 @media (pointer: coarse) { .kwc-chip { width: 36px; height: 36px; } }
+
+.kwc-scope-note { margin: 8px 16px 0; font-size: 12px; line-height: 1.45; color: var(--kwc-muted, #5b6b7a); }
+.kwc-scope-line { margin-top: 4px; font-size: 12px; opacity: .92; }
+.kwc-scope-link { display: inline-block; margin-top: 6px; color: #fff; font-weight: 700; text-decoration: underline; }
+.kwc-selbar { pointer-events: auto; }

@@ -182,7 +182,7 @@ module.exports = () => {
     catalog: {
       colorKeys: tokens.COLOR_KEYS, colorLabels: tokens.COLOR_LABELS, maxCustomColors: tokens.MAX_CUSTOM_COLORS,
       fontRoles: tokens.FONT_ROLES, fontLabels: tokens.FONT_LABELS, fonts: Object.fromEntries(Object.entries(tokens.FONTS).map(([k, f]) => [k, { label: f.label, stack: f.stack }])),
-      typeKeys: tokens.TYPE_KEYS, typeLabels: tokens.TYPE_LABELS, shadows: Object.keys(tokens.SHADOWS), languages: siteSettings.LANGUAGES, maxCss: siteSettings.MAX_CSS,
+      typeKeys: tokens.TYPE_KEYS, typeLabels: tokens.TYPE_LABELS, shadows: Object.keys(tokens.SHADOWS), languages: siteSettings.LANGUAGES, maxCss: siteSettings.MAX_CSS, maxCode: siteSettings.MAX_CODE,
     },
   });
   router.get("/site-web/sites/:id(\\d+)/reglages.json", need("forms.read"), (req, res, next) => {
@@ -199,6 +199,24 @@ module.exports = () => {
       if (body.settings && body.settings.customCss !== undefined && String(body.settings.customCss).trim() !== String(current.settings.customCss).trim() && !req.mk.can("pages.code")) {
         const { MarketingError } = require("../errors");
         throw new MarketingError("forbidden", "Le CSS personnalisé du site est réservé aux comptes autorisés à écrire du code (permission « pages.code »).");
+      }
+      // Code personnalisé du site (head / body) : du code libre, donc « pages.code » ; il est SIGNÉ ici (jamais par le navigateur) et restitué seulement si la signature est valide
+      // Un envoi sans ce champ (ancien écran) ne l'efface pas : les réglages sont remplacés en bloc, le code signé est donc reporté
+      if (body.settings && body.settings.customCode === undefined) body.settings.customCode = current.settings.customCode;
+      if (body.settings && body.settings.customCode !== undefined) {
+        const sx = require("../pages/siteSettings");
+        const cur = current.settings.customCode;
+        const next = sx.normalizeSettings({ customCode: body.settings.customCode }, { strict: true }).customCode;
+        const same = ["head", "bodyStart", "bodyEnd"].every((k) => next[k] === cur[k]);
+        if (!same && !req.mk.can("pages.code")) {
+          const { MarketingError } = require("../errors");
+          throw new MarketingError("forbidden", "Le code personnalisé du site est réservé aux comptes autorisés à écrire du code (permission « pages.code »).");
+        }
+        if ((next.head || next.bodyStart || next.bodyEnd) && !require("../../utils/customHtml").available()) {
+          const { MarketingError } = require("../errors");
+          throw new MarketingError("invalid", "Le code personnalisé ne peut pas être enregistré : la clé de signature du serveur n'est pas configurée.");
+        }
+        body.settings.customCode = { ...next, sig: same ? cur.sig : sx.signCustomCode(next) };
       }
       // Référencement du site : réglage SEO réservé à la permission « seo.edit » (la description du site et noindex en font partie)
       if (body.settings && !req.mk.can("seo.edit")) {

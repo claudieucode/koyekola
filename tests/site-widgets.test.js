@@ -25,7 +25,7 @@ describe("catégorie Site (sans serveur)", () => {
   test("réglages des widgets : valeurs hors liste ramenées à la valeur par défaut", () => {
     const def = nodes.CUSTOM_WIDGETS.querylist;
     assert.ok(def.data, "chargement des données");
-    assert.equal(def.schema.find((f) => f.key === "source").options.length, 6);
+    assert.equal(def.schema.find((f) => f.key === "source").options.length, 7);
   });
 });
 

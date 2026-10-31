@@ -34,9 +34,11 @@
         <tbody>
 <% if (main) { %>          <tr data-site="principal">
             <th scope="row" class="mk-site-info">
+              <span class="kx-site-card"><span class="kx-site-thumb"><%- include("partials/site-thumb", { colors: main.tokens && main.tokens.colors, kind: "vitrine", label: "Schéma de mise en page aux couleurs du site " + main.name }) %></span><span class="kx-site-body">
               <span class="mk-site-title"><a href="<%= main.openHref %>"><%= main.name %></a><span class="mk-status mk-status-ok">Principal</span></span>
               <span class="mk-sub"><%= main.description %></span>
               <span class="mk-site-flags"><span class="mk-status mk-status-ok">Actif</span><span class="mk-site-modules"><span class="mk-sub">Modules :</span> <span class="mk-sub">Tous (site principal)</span></span></span>
+              </span></span>
             </th>
             <td class="mk-site-figures">
               <dl class="mk-site-stats">
@@ -61,9 +63,11 @@
         %>
           <tr data-site="<%= st.id %>">
             <th scope="row" class="mk-site-info">
+              <span class="kx-site-card"><span class="kx-site-thumb"><%- include("partials/site-thumb", { colors: st.tokens && st.tokens.colors, kind: st.site_type, label: "Schéma de mise en page aux couleurs du site " + st.name }) %></span><span class="kx-site-body">
               <span class="mk-site-title"><a href="/marketing/site-web/sites/<%= st.id %>"><%= st.name %></a></span>
               <span class="mk-sub"><code><%= st.slug %></code><%= st.site_type ? " · " + (siteTypes[st.site_type] || st.site_type) : "" %><%= st.description ? " · " + st.description : "" %></span>
               <span class="mk-site-flags"><span class="mk-status <%= etat[1] %>"><%= etat[0] %></span><% if (actif) { %><span class="mk-status" title="<%= st.published > 0 ? "Au moins une page de ce site est en ligne" : "Aucune page en ligne : le site est en cours de préparation" %>"><%= st.published > 0 ? "Publié" : "En préparation" %></span><% } %><span class="mk-site-modules"><span class="mk-sub">Modules :</span> <% if (!st.modules.length) { %><span class="mk-sub">Aucun</span><% } else { %><span class="mk-chips"><% st.modules.forEach((m) => { %><span class="mk-status"><%= m.label %></span> <% }) %></span><% } %></span></span>
+              </span></span>
             </th>
             <td class="mk-site-figures">
               <dl class="mk-site-stats">

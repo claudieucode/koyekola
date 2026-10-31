@@ -2,7 +2,10 @@
 <link rel="stylesheet" href="<%= asset('/css/ai-builder.css') %>">
 <div class="aibh">
   <div class="mk-head"><div class="mk-head-main"><h1>Créer un site avec l'IA</h1>
-    <p class="mk-head-sub">Décrivez votre projet avec vos propres mots : l'IA propose un plan, vous gardez la main à chaque étape. Rien n'est publié sans votre accord, et votre travail est enregistré à chaque action.</p></div></div>
+    <p class="mk-head-sub">Décrivez votre projet avec vos propres mots : l'IA propose un plan, vous gardez la main à chaque étape. Rien n'est publié sans votre accord, et votre travail est enregistré à chaque action.</p></div>
+    <div class="kx-feature-art" aria-hidden="true"><%- illu("ia") %></div></div>
+  <%# Les huit étapes de l'espace de travail (workspace.STEPS) : on voit tout le chemin dès l'arrivée %>
+  <ol class="kx-steps" aria-label="Les étapes d'un projet"><li>Brief du projet</li><li>Plan du site</li><li>Pages</li><li>Design</li><li>Contenus</li><li>Images et médias</li><li>Prévisualisation</li><li>Publication</li></ol>
 
   <% const groups = [["in_progress", "Projets en cours"], ["waiting", "En attente (brief analysé, plan à créer)"], ["validated", "Plan validé"], ["published", "Projets publiés"]]; %>
   <% if (projects.length) { const last = projects[0]; %>
@@ -56,7 +59,7 @@
         <li><div><strong><%= p.name %></strong><div class="aibh-meta"><%= p.progress.done %>/<%= p.progress.total %> étapes terminées · <%= p.generated %>/<%= p.pages %> page(s) générée(s) · modifié <%= new Date(p.updatedAt).toLocaleString("fr-FR") %></div></div>
         <a class="btn btn-ghost btn-sm" href="/marketing/ia/studio/<%= p.id %><%= p.siteId ? "?site=" + p.siteId : "" %>">Ouvrir</a></li><% }) %></ul></section>
   <% }) %>
-  <% if (!projects.length && !shops.length) { %><div class="mk-empty"><h2>Aucun projet pour le moment</h2><p>Décrivez votre site ci-dessus pour commencer.</p></div><% } %>
+  <% if (!projects.length && !shops.length) { %><div class="mk-empty"><%- illu("nouveausite", { className: "kx-empty-ill" }) %><h2>Aucun projet pour le moment</h2><p>Décrivez votre site ci-dessus pour commencer.</p></div><% } %>
 </div>
 <script src="<%= asset('/js/ai-builder-home.js') %>" defer></script>
 <%- include("partials/bottom") %>
