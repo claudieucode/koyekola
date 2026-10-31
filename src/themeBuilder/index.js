@@ -1,2 +1,2 @@
-// Theme Builder (programme 23.1) : noyau pur (types, conditions, évaluation, résolution). Le stockage et les routes sont dans store.js et web/themeBuilder*.js.
-module.exports = { types: require("./types"), conditions: require("./conditions"), match: require("./match"), resolve: require("./resolve") };
+// Theme Builder (programme 23.1) : noyau pur (types, conditions, évaluation, résolution) + stockage par site, import des anciens réglages, import/export.
+module.exports = { types: require("./types"), conditions: require("./conditions"), match: require("./match"), resolve: require("./resolve"), store: require("./store"), legacy: require("./legacy"), portable: require("./portable") };

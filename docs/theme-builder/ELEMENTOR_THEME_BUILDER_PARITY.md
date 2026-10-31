@@ -23,14 +23,14 @@ Statuts : ABSENT · PARTIEL (existant, insuffisant) · PRÉVU (lot) · FAIT (tes
 | 17 | WooCommerce : Shop, Product Category/Tags, Products, In Category/Tag, by Author | PARTIEL | lot 1 | idem | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
 | 18 | Landing Pages, Floating buttons, Media (cibles Singular) | NON PRIS EN CHARGE (pas de ces types de contenu) | — | — | — | NON PRIS EN CHARGE |
 | 19 | Avertissement de conflit | PARTIEL | lot 1 + 3 | `resolve.js` | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
-| 20 | Instances (où le modèle est utilisé) | ABSENT | lot 2/3 | `store.js` | — | PRÉVU |
+| 20 | Instances (où le modèle est utilisé) | ABSENT | lot 2/3 | `store.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
 | 21 | Edit / Edit Conditions | PARTIEL | lot 3 | — | — | PRÉVU |
-| 22 | Rename / Trash / Export | PARTIEL | lot 2 | `store.js`, `portable.js` | — | PRÉVU |
-| 23 | Import `.json` | ABSENT | lot 2 | `portable.js` | — | PRÉVU |
+| 22 | Rename / Trash / Export | PARTIEL | lot 2 | `store.js`, `portable.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
+| 23 | Import `.json` | ABSENT | lot 2 | `portable.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
 | 24 | Import `.zip` | NON PRIS EN CHARGE (JSON seulement, pas d'exécutable) | — | — | — | NON PRIS EN CHARGE |
 | 25 | Miniatures auto / image mise en avant | ABSENT | lot 4 | `thumb.js` | — | PRÉVU |
 | 26 | Raccourci clavier Ctrl+Maj+E | ABSENT | lot 3 (si sans conflit avec l'administration) | — | — | PRÉVU |
 | 27 | Accès depuis l'éditeur (logo › Theme Builder) | NON PRIS EN CHARGE (modifierait l'éditeur — interdit) | lien depuis l'administration uniquement | — | — | NON PRIS EN CHARGE |
 | 28 | Conditions personnalisées (API) | ABSENT | lot 1 : registre de conditions extensible côté serveur | `conditions.js` | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
 | 29 | Sticky / transparent header | à vérifier dans le Page Builder (propriétés de position) | documenté, pas de développement dans l'éditeur | — | — | PRÉVU |
-| 30 | Duplication, archivage, restauration, versions | ABSENT | lot 2 | `store.js` | — | PRÉVU |
+| 30 | Duplication, archivage, restauration, versions | ABSENT | lot 2 | `store.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
