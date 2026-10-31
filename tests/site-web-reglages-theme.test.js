@@ -252,6 +252,43 @@ describe("réglages du site : effet sur la page publiée (vrai serveur)", () => 
     assert.doesNotMatch(await publicHtml(), /<script>alert/);
   });
 
+  test("code personnalisé (22.8) : signé par le serveur, restitué dans head / début / fin de body ; invalide, falsifié ou non signé = rien", async () => {
+    const mark = (z) => `<script>window.__kw_${z}=1</script>`;
+    await apply((b) => { b.settings.customCode = { head: mark("head"), bodyStart: mark("start"), bodyEnd: mark("end"), sig: "forgee" }; });
+    const saved = (await load()).settings.customCode;
+    assert.ok(saved.sig && saved.sig !== "forgee", "la signature envoyée par le navigateur est ignorée : le serveur signe lui-même");
+    let html = await publicHtml();
+    assert.ok(html.indexOf(mark("head")) > 0 && html.indexOf(mark("head")) < html.indexOf("</head>"));
+    assert.ok(html.indexOf(mark("start")) > html.indexOf("<body") && html.indexOf(mark("start")) < html.indexOf('id="main"'));
+    assert.ok(html.indexOf(mark("end")) > html.indexOf("</main>") && html.indexOf(mark("end")) < html.indexOf("</body>"));
+    // jamais dans l'aperçu du canevas
+    const canvas = await boss.request(`/marketing/pages/${pageId}/rendu`, { method: "POST", json: { content: { sections: [layout([{ id: "hed000000001", type: "heading", props: { text: "T", level: "2" } }])] } } });
+    assert.doesNotMatch(canvas.text, /__kw_head/);
+    // un ancien écran qui renvoie les réglages sans ce champ ne l'efface pas
+    const cur = await load(); const noCode = JSON.parse(JSON.stringify(cur.settings)); delete noCode.customCode;
+    assert.equal((await put({ tokens: cur.tokens, settings: noCode, revision: cur.revision })).status, 200);
+    assert.match(await publicHtml(), /__kw_head/);
+    // trop long : refusé sans rien écraser
+    const cur2 = await load();
+    const long = await put({ tokens: cur2.tokens, settings: { ...cur2.settings, customCode: { ...cur2.settings.customCode, head: "x".repeat(20001) } }, revision: cur2.revision });
+    assert.equal(long.status, 422); assert.match(JSON.parse(long.text).error.message, /20000/);
+    // falsifié en base (code changé, signature conservée) : plus restitué
+    const row = db.prepare("SELECT settings FROM mk_sites WHERE id = ?").get(siteId);
+    const raw = JSON.parse(row.settings); raw.customCode.head = '<script>window.__kw_pirate=1</script>';
+    db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify(raw), siteId);
+    html = await publicHtml();
+    assert.doesNotMatch(html, /__kw_pirate|__kw_head|__kw_start|__kw_end/, "signature invalide : aucune des trois zones n'est restituée");
+    await apply((b) => { b.settings.customCode = { head: "", bodyStart: "", bodyEnd: "", sig: "" }; });
+  });
+
+  test("code personnalisé (22.8) : un rédacteur sans « pages.code » ne peut pas le modifier (403), ni le faire signer", async () => {
+    const cur = await load();
+    const denied = await put({ tokens: cur.tokens, settings: { ...cur.settings, customCode: { head: "<script>1</script>", bodyStart: "", bodyEnd: "", sig: "" } }, revision: cur.revision }, editor);
+    assert.equal(denied.status, 403);
+    assert.match(JSON.parse(denied.text).error.message, /pages\.code/);
+    assert.equal((await load()).settings.customCode.head, "");
+  });
+
   test("droits : un rédacteur règle le thème mais ne peut pas modifier le CSS du site (code) ; un élève n'a aucun accès", async () => {
     const cur = await load();
     const settings = JSON.parse(JSON.stringify(cur.settings));

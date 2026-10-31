@@ -427,6 +427,15 @@
     function upd() { count.textContent = area.value.length.toLocaleString("fr-FR") + " / " + C.maxCss.toLocaleString("fr-FR") + " caractères"; }
     area.addEventListener("input", upd); upd();
     bodyEl.appendChild(h("section", { class: "ss-group" }, [ta, count]));
+    // Code personnalisé (head / body) : signé par le serveur, exécuté sur les pages publiées du site (jamais dans l'éditeur ni l'aperçu)
+    var maxCode = C.maxCode || 20000;
+    bodyEl.appendChild(h("p", { class: "ss-hint", text: "Code personnalisé (suivi, balises, scripts) inséré dans les pages publiées. Il s'exécute tel quel, y compris avant le consentement aux cookies : n'y mettez que du code de confiance. Il est signé par le serveur ; modifié hors de cet écran, il n'est plus restitué. " + maxCode.toLocaleString("fr-FR") + " caractères par zone." }));
+    [["head", "Code dans <head>"], ["bodyStart", "Code au début de <body>"], ["bodyEnd", "Code à la fin de <body>"]].forEach(function (z) {
+      var f = textField({ kind: "textarea", path: "settings.customCode." + z[0], label: z[1], max: maxCode, rows: 6, code: true });
+      var a = f.querySelector("textarea");
+      a.disabled = !state.canWrite || !state.canCode;
+      bodyEl.appendChild(h("section", { class: "ss-group" }, [f]));
+    });
   }
   function renderExtras() {
     var langs = Object.keys(state.catalog.languages).map(function (k) { return [k, state.catalog.languages[k]]; });

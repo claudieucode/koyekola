@@ -85,6 +85,7 @@
     openPanel = null; side.textContent = "";
     var head = h("div", { class: "kwc-root-head" }, [h("span", { class: "kwc-kicker", text: "Vous personnalisez" }), h("strong", { text: boot.siteName })]);
     side.appendChild(head);
+    side.appendChild(h("p", { class: "kwc-scope-note", text: "Les réglages d'ici s'appliquent à tout le site. Pour modifier un seul élément, utilisez « Sélectionner un élément » puis « Modifier seulement cet élément »." }));
     var list = h("ul", { class: "kwc-list", role: "list" });
     boot.panels.forEach(function (p) {
       var btn = h("button", { type: "button", class: "kwc-row", "data-panel": p.id, onclick: function () { renderPanel(p.id); } }, [
@@ -403,7 +404,7 @@
     if (busy || !boot.can.publish || hasErrors() || pendingCount() === 0) return;
     var list = h("ul", { class: "kwc-publist" }); Object.keys(work()).slice(0, 12).forEach(function (id) { list.appendChild(h("li", { text: labelOf(id) })); });
     var more = Object.keys(work()).length - 12;
-    modal("Publier les modifications ?", [h("p", { text: pendingCount() + " réglage" + (pendingCount() > 1 ? "s" : "") + " seront appliqués au site public « " + boot.siteName + " » :" }), list, more > 0 ? h("p", { text: "… et " + more + " autre(s)." }) : null], [
+    modal("Publier les modifications ?", [h("p", { text: pendingCount() + " réglage" + (pendingCount() > 1 ? "s" : "") + " seront appliqués à toutes les pages du site public « " + boot.siteName + " » (modification globale, aucun autre site n'est touché) :" }), list, more > 0 ? h("p", { text: "… et " + more + " autre(s)." }) : null], [
       { label: "Annuler" },
       { label: "Publier maintenant", primary: true, run: doPublish },
     ]);
@@ -511,9 +512,31 @@
     return p ? T("Fond de la page", "couleurs", "tokens.colors.background") : T("Fond de la page", "arriere-plan", "settings.background.color");
   }
   function pathOf(el) { var out = [], n = el; while (n && n.nodeType === 1 && out.length < 4 && n.tagName.toLowerCase() !== "html") { out.unshift(n.tagName.toLowerCase()); n = n.parentElement; } return out.join(" › "); }
+  // Portée d'une sélection : le réglage ouvert est GLOBAL (tous les éléments de même nature du site) ; seul l'éditeur de pages modifie un élément unique, identifié par sa classe kw-n-<id>.
+  var SCOPE_SEL = { "Bouton": ["boutons", "button,.kw-button,.lp-btn,a[class*='btn']"], "Champ de formulaire": ["champs de formulaire", "input,select,textarea"], "Champ": ["champs de formulaire", "input,select,textarea"], "Image": ["images", "img"], "Lien": ["liens", "a"], "Lien de navigation": ["liens de navigation", "nav a,header a,footer a"], "En-tête": ["en-têtes", "header"], "Pied de page": ["pieds de page", "footer"], "Légende": ["légendes", "figcaption"], "Texte": ["textes courants", "p,li,blockquote"], "Fond de la page": ["pages", "body"] };
+  function scopeOf(label) {
+    var m = /^Titre ([1-6])$/.exec(label);
+    if (m) return { noun: "titres de niveau " + m[1], sel: "h" + m[1] };
+    var x = SCOPE_SEL[label]; return x ? { noun: x[0], sel: x[1] } : { noun: "éléments de même nature", sel: null };
+  }
+  function elementIdentity(el) {
+    var n = el;
+    while (n && n.nodeType === 1) {
+      var m = /(?:^|\s)kw-n-([a-z0-9]{6,20})(?:\s|$)/.exec(typeof n.className === "string" ? n.className : "");
+      if (m) return m[1];
+      n = n.parentElement;
+    }
+    return null;
+  }
   function selectElement(el) {
-    var t = pickTarget(el);
-    var bar = $("#kwc-selbar"); bar.hidden = false; bar.textContent = "Sélection : " + pathOf(el) + " — " + t.label;
+    var t = pickTarget(el), sc = scopeOf(t.label), doc = frameDoc(), count = 0;
+    if (sc.sel && doc) { try { count = doc.querySelectorAll(sc.sel).length; } catch (e) { count = 0; } }
+    var nid = elementIdentity(el), pm = /\/marketing\/pages\/(\d+)\//.exec(currentPage());
+    var bar = $("#kwc-selbar"); bar.hidden = false; bar.textContent = "";
+    bar.appendChild(h("div", { text: "Sélection : " + pathOf(el) + " — " + t.label }));
+    bar.appendChild(h("div", { class: "kwc-scope-line", text: "Portée : modification GLOBALE — tous les " + sc.noun + " du site « " + boot.siteName + " »" + (sc.sel ? " (" + count + " sur cette page)" : "") + "." }));
+    if (nid && pm && !boot.principal) bar.appendChild(h("a", { class: "kwc-scope-link", href: "/marketing/pages/" + pm[1] + "/editeur#element=" + nid, target: "_blank", rel: "noopener", text: "Modifier seulement cet élément (éditeur de pages) ↗" }));
+    else bar.appendChild(h("div", { class: "kwc-scope-line", text: "Cet élément n'a pas d'identité propre dans la page : seul le réglage global est disponible ici." }));
     collapse(false); renderPanel(t.panel);
     if (t.ctl) { var row = $('[data-ctl="' + t.ctl + '"]'); if (row) { row.scrollIntoView({ block: "center" }); row.classList.add("is-flash"); setTimeout(function () { row.classList.remove("is-flash"); }, 1400); var f = row.querySelector('input:not([tabindex="-1"]),select,textarea,button:not(.kwc-reset)'); if (f) setTimeout(function () { f.focus({ preventScroll: true }); }, 80); } }
   }

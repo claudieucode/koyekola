@@ -4230,9 +4230,9 @@
     box.appendChild(checkField("Répéter pour chaque article ou formation (boucle)", Boolean(loop), function (v) { change(function () { var x = byId(it.id); if (v) x.props.loop = { source: "posts", count: 6, sort: "recent" }; else delete x.props.loop; }, { label: v ? "Boucle activée" : "Boucle désactivée" }); }, { disabled: dis }));
     if (loop) {
       var setLoop = function (k, v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); if (v === "" || v === false) delete x.props.loop[k]; else x.props.loop[k] = v; if (k === "source") { x.props.loop.sort = "recent"; } }, { key: it.id + ":loop:" + k, light: typeof v === "string" && k !== "source" && k !== "sort" }); };
-      box.appendChild(selectField("Contenu à répéter", loop.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"], ["pages", "Pages du site"], ["authors", "Auteurs"], ["categories", "Catégories d'articles"], ["tags", "Étiquettes d'articles"]], function (v) { setLoop("source", v); }, { disabled: dis }));
+      box.appendChild(selectField("Contenu à répéter", loop.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"], ["products", "Produits de la boutique"], ["pages", "Pages du site"], ["authors", "Auteurs"], ["categories", "Catégories d'articles"], ["tags", "Étiquettes d'articles"]], function (v) { setLoop("source", v); }, { disabled: dis }));
       box.appendChild(selectField("Nombre par page", String(loop.count), ["1", "2", "3", "4", "6", "8", "9", "12", "16", "24", "32", "48"].map(function (n) { return [n, n]; }), function (v) { setLoop("count", Number(v)); }, { disabled: dis }));
-      box.appendChild(selectField("Ordre", loop.sort || "recent", loop.source === "courses" ? [["recent", "Les plus récentes"], ["title", "Par titre"], ["price", "Par prix croissant"]] : [["recent", "Les plus récents"], ["old", "Les plus anciens"], ["title", "Par titre"]], function (v) { setLoop("sort", v); }, { disabled: dis }));
+      box.appendChild(selectField("Ordre", loop.sort || "recent", loop.source === "courses" || loop.source === "products" ? [["recent", "Les plus récentes"], ["title", "Par titre"], ["price", "Par prix croissant"]] : [["recent", "Les plus récents"], ["old", "Les plus anciens"], ["title", "Par titre"]], function (v) { setLoop("sort", v); }, { disabled: dis }));
       box.appendChild(textField("Catégorie (facultative, nom exact)", loop.category || "", function (v) { setLoop("category", v); }, { max: 80, disabled: dis, onChange: true }));
       if (loop.source === "posts") {
         box.appendChild(textField("Étiquettes (séparées par des virgules, facultatif)", (loop.tags || []).join(", "), function (v) { change(function () { var x = byId(it.id); x.props.loop = Object.assign({}, x.props.loop); var t = v.split(",").map(function (a) { return a.trim(); }).filter(Boolean); if (t.length) x.props.loop.tags = t; else delete x.props.loop.tags; }, { key: it.id + ":loop:tags", light: true }); }, { max: 200, disabled: dis, onChange: true }));
@@ -8612,6 +8612,11 @@
       return true;
     },
   });
+  // Lien direct vers un élément (#element=<id>), utilisé par le Personnaliser (« Modifier seulement cet élément ») : sélectionne l'élément s'il existe dans cette page, sinon ne fait rien.
+  (function () {
+    var m = /(?:^|[#&])element=([a-z0-9]{6,20})(?:&|$)/.exec(location.hash || "");
+    if (m && byId(m[1])) select(m[1]);
+  })();
   // Pont vers IA Kolakisa (page-builder-ai.js) : l'IA propose, l'éditeur applique en UNE étape d'historique
   if (window.pbAi) window.pbAi.attach({
     base: BASE, api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; },

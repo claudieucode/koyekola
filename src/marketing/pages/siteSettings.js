@@ -4,6 +4,7 @@
 const { bad } = require("./sections");
 const { COLOR_REF } = require("./tokens");
 const { colorCss } = require("./themeCss");
+const customHtml = require("../../utils/customHtml");
 
 const DEFAULT_BREAKPOINTS = Object.freeze({ tablet: 1023, mobile: 767, wide: 1920 });
 const LANGUAGES = { fr: "Français", en: "English", es: "Español", pt: "Português", de: "Deutsch", it: "Italiano", ar: "العربية", sw: "Kiswahili" };
@@ -13,6 +14,7 @@ const BG_POSITIONS = ["center", "top", "bottom", "left", "right"];
 const BG_SIZES = ["cover", "contain", "auto"];
 const BG_REPEATS = ["no-repeat", "repeat", "repeat-x", "repeat-y"];
 const MAX_CSS = 20000;
+const MAX_CODE = 20000;
 
 const DEFAULT_SETTINGS = Object.freeze({
   identity: { description: "", logoUrl: "", logoMobileUrl: "", faviconUrl: "" },
@@ -25,6 +27,8 @@ const DEFAULT_SETTINGS = Object.freeze({
   // Mode sombre du site : "off" = jamais ; "auto" = suit la préférence de la personne (système). Couleurs vides = couleur du site inchangée.
   dark: { mode: "off", background: "", surface: "", text: "", muted: "", primary: "" },
   customCss: "",
+  // Code personnalisé (head, début et fin de body) : écrit par un compte « pages.code » et SIGNÉ côté serveur ; restitué seulement si la signature est valide
+  customCode: { head: "", bodyStart: "", bodyEnd: "", sig: "" },
   classes: [],
   extras: { language: "fr", smoothScroll: false, noindex: false },
   // Référencement du site (palier 11) : valeurs par défaut des pages du site. La description du site est identity.description,
@@ -158,6 +162,9 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   if (rawCss.trim()) {
     try { normalizeSiteCss(rawCss); customCss = rawCss.trim(); } catch (e) { if (strict) throw bad(e.message); customCss = ""; }
   }
+  const cc = src.customCode && typeof src.customCode === "object" ? src.customCode : {};
+  const codeOf = (v, label) => { const x = v === undefined || v === null ? "" : String(v).replace(/\r\n?/g, "\n"); if (x.length > MAX_CODE) { if (strict) throw bad(`${label} : ${MAX_CODE} caractères au maximum.`); return ""; } return x.trim(); };
+  const customCode = { head: codeOf(cc.head, "Code du <head>"), bodyStart: codeOf(cc.bodyStart, "Code de début de <body>"), bodyEnd: codeOf(cc.bodyEnd, "Code de fin de <body>"), sig: /^[A-Za-z0-9_-]{0,64}$/.test(String(cc.sig || "")) ? String(cc.sig || "") : "" };
   // Classes globales : styles nommés réutilisables (voir nodes.classCss)
   const sectionsLib = require("./sections");
   let classes;
@@ -190,7 +197,7 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   // Commentaires du site : bloc complet (voir services/comments) ou null = le site hérite du site principal
   let commentsBlock = null;
   if (src.comments && typeof src.comments === "object") { try { commentsBlock = require("../../services/comments").normalizeSettings(src.comments); } catch { commentsBlock = null; } }
-  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, classes, extras, seo, general, reading, comments: commentsBlock };
+  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, customCode, classes, extras, seo, general, reading, comments: commentsBlock };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus
@@ -282,6 +289,15 @@ function lightboxAttrs(settings) {
   return ` data-kw-lb="${l.enabled ? "on" : "off"}" data-kw-lb-arrows="${l.arrows ? 1 : 0}" data-kw-lb-overlay-close="${l.closeOnOverlay ? 1 : 0}" data-kw-lb-captions="${l.captions ? 1 : 0}" data-kw-lb-anim="${l.animation}"`;
 }
 
+// Code personnalisé du site : la signature (HMAC, clé ENCRYPTION_KEY, voir utils/customHtml) couvre les trois zones ; sans clé ou signature valide, rien n'est restitué
+const codePayload = (c) => customHtml.encode(JSON.stringify([c.head || "", c.bodyStart || "", c.bodyEnd || ""]));
+function signCustomCode(c) { return customHtml.sign(codePayload(c)); }
+function verifiedCustomCode(c) {
+  const none = { head: "", bodyStart: "", bodyEnd: "" };
+  if (!c || !(c.head || c.bodyStart || c.bodyEnd)) return none;
+  return customHtml.verify(codePayload(c), c.sig) ? { head: c.head, bodyStart: c.bodyStart, bodyEnd: c.bodyEnd } : none;
+}
+
 // Tout ce que le gabarit public affiche pour un site, calculé une fois (valeurs déjà validées)
 function siteAssets(tokens, settings, themeCss) {
   let custom = "";
@@ -289,10 +305,11 @@ function siteAssets(tokens, settings, themeCss) {
   return {
     theme: [themeCss(tokens), layoutCss(settings), require("./nodes").classCss(settings.classes, breakpointsOf(settings))].filter(Boolean).join("\n").replace(/</g, ""),
     custom: custom.replace(/</g, ""),
+    code: verifiedCustomCode(settings.customCode),
     transition: transitionCss(settings),
     lightboxVars: lightboxVars(settings),
     lightboxAttrs: lightboxAttrs(settings),
   };
 }
 
-module.exports = { DEFAULT_SETTINGS, DEFAULT_BREAKPOINTS, LANGUAGES, LB_ANIMATIONS, TRANSITION_TYPES, BG_POSITIONS, BG_SIZES, BG_REPEATS, MAX_CSS, normalizeSettings, normalizeSiteCss, breakpointsOf, layoutCss, transitionCss, siteAssets };
+module.exports = { signCustomCode, verifiedCustomCode, MAX_CODE, DEFAULT_SETTINGS, DEFAULT_BREAKPOINTS, LANGUAGES, LB_ANIMATIONS, TRANSITION_TYPES, BG_POSITIONS, BG_SIZES, BG_REPEATS, MAX_CSS, normalizeSettings, normalizeSiteCss, breakpointsOf, layoutCss, transitionCss, siteAssets };
