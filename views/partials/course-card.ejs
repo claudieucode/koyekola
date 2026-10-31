@@ -3,7 +3,8 @@
     <% if (course.thumbnail_path) { %>
       <img src="<%= course.thumbnail_path %>" alt="" loading="lazy" decoding="async" width="640" height="360">
     <% } else { %>
-      <%- icon('book', { size: 36 }) %>
+      <%# Sans vignette : scène d'illustration de la charte (même rendu pour toutes les formations, jamais une fausse image) %>
+      <span class="course-thumb-art" aria-hidden="true"><%- illu("formations") %></span>
     <% } %>
     <div class="course-badges">
       <% if (!course.price_cents) { %><span class="badge badge-success">Gratuit</span><% } %>

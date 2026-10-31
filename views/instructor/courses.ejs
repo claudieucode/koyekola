@@ -14,7 +14,7 @@
 <% if (!courses.length) { %>
   <div class="dash-empty">
     <% if (q) { %><p>Aucune formation ne correspond à « <%= q %> ».</p>
-    <% } else if (statut === "toutes") { %><h2>Vous n'avez pas encore de formation</h2><p>Créez votre première formation pour commencer à enseigner sur KOLAKISA.</p><a href="/formateur/cours/nouveau" class="btn btn-primary">Créer ma première formation</a>
+    <% } else if (statut === "toutes") { %><div class="kv-empty-ill" aria-hidden="true"><%- illu("formations") %></div><h2>Vous n'avez pas encore de formation</h2><p>Créez votre première formation pour commencer à enseigner sur KOLAKISA.</p><a href="/formateur/cours/nouveau" class="btn btn-primary">Créer ma première formation</a>
     <% } else { %><p>Aucune formation dans « <%= filters[statut] %> ».</p><% } %>
   </div>
 <% } else { %>

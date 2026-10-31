@@ -225,7 +225,7 @@ module.exports = () => {
   });
   // Données d'affichage d'un contenu (formations relues dans le catalogue, composants synchronisés résolus)
   // Aperçu, canevas, versions : vus comme par un visiteur inconnu (personnalisation non appliquée, tout est montré)
-  const shown = (ctx, page, content, draftId = null) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId }) });
+  const shown = (ctx, page, content, draftId = null, themeBuilder = false) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId, themeBuilder }) });
 
   router.get("/pages/:id(\\d+)", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -261,16 +261,16 @@ module.exports = () => {
     res.render("marketing/page-compare", { title: `Comparer la version ${v.number} — ${page.name}`, active: "landing", page, version: v, diff, canWrite: req.mk.can("forms.write") });
   });
   // Aperçu du BROUILLON (ou de la version en ligne s'il n'y a pas de brouillon) : clics et inscriptions non enregistrés
-  const renderPreview = (req, res, page, content, label, draftId = null) => {
+  const renderPreview = (req, res, page, content, label, draftId = null, themeBuilder = false) => {
     const ctx = req.mk.ctx;
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     res.set("Cache-Control", "no-store");
-    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
+    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId, themeBuilder), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
   };
   router.get("/pages/:id(\\d+)/apercu", need("forms.read"), (req, res) => {
     const page = load(req, res);
     if (!page) return;
-    renderPreview(req, res, page, page.working, page.hasDraft ? "Aperçu du brouillon — pas encore en ligne." : null);
+    renderPreview(req, res, page, page.working, page.hasDraft ? "Aperçu du brouillon — pas encore en ligne." : null, null, true);
   });
   // SEO de la page (palier 11) : aperçu dans les résultats de recherche et analyse. Même moteur que la page publique
   // (seo/webPages.js) ; les champs envoyés par l'éditeur (non enregistrés) remplacent ceux du brouillon pour l'aperçu.

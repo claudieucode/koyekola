@@ -146,6 +146,14 @@ function imageSource(src, size) {
   return { src: sourceFor(src, size), srcset: "", sizes: "" };
 }
 
+// Attributs width/height à écrire dans <img> pour réserver l'espace avant le chargement (aucun décalage de mise en page). Seulement pour une image de la médiathèque dont les
+// dimensions sont lisibles ET dont la taille choisie ne recadre pas (original ou adaptative) : un recadrage change le rapport, l'attribut serait faux. Sinon : chaîne vide.
+function dimensionAttrs(src, size) {
+  if (size && size !== "full" && size !== "auto") return "";
+  const d = dimensions(src);
+  return d && d.width > 0 && d.height > 0 ? ` width="${d.width}" height="${d.height}"` : "";
+}
+
 // Retire les versions d'une image supprimée définitivement (toutes les tailles fabriquées, historiques comprises).
 function purge(src) {
   const m = SRC_RE.exec(String(src || ""));
@@ -211,4 +219,4 @@ function middleware(req, res, next) {
 }
 
 const siteOf = (src) => siteOfSrc(SRC_RE.exec(String(src || "")));
-module.exports = { siteOf, selfTest, SIZES, KEYS, SIZE_CHOICES, available, isLocal, variantUrl, sourceFor, offered, adaptive, dimensions, imageSource, purge, middleware, SRC_RE, locate, MAX_PIXELS };
+module.exports = { siteOf, selfTest, SIZES, KEYS, SIZE_CHOICES, available, isLocal, variantUrl, sourceFor, offered, adaptive, dimensions, dimensionAttrs, imageSource, purge, middleware, SRC_RE, locate, MAX_PIXELS };

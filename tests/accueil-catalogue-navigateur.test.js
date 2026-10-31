@@ -91,7 +91,6 @@ describe("création guidée : catalogue, gabarits et pages récentes (navigateur
 
   test("le catalogue liste les gabarits réels, distingue les types répertoriés et filtre par recherche, catégorie et portée", async () => {
     await blank("Catalogue A");
-    await page.locator('[data-pb-start-go="guided"]').click();
     await cards().first().waitFor();
     assert.equal(await cards().count(), TEMPLATES.length + 1, "page vide + un carte par gabarit réel");
     assert.equal(await page.locator('[data-pb-cat-card="blank"]').getAttribute("aria-checked"), "true", "page vide préchoisie");
@@ -121,7 +120,6 @@ describe("création guidée : catalogue, gabarits et pages récentes (navigateur
 
   test("gabarit choisi puis format : sections réelles insérées, format appliqué, une seule étape annulable", async () => {
     const id = await blank("Catalogue B");
-    await page.locator('[data-pb-start-go="guided"]').click();
     await page.locator('[data-pb-cat-card="contact"]').click();
     assert.equal(await page.locator('[data-pb-cat-card="contact"]').getAttribute("aria-checked"), "true");
     await page.locator("[data-pb-cat-next]").click();
@@ -266,7 +264,6 @@ describe("création guidée : catalogue, gabarits et pages récentes (navigateur
 
   test("responsive et apparence sombre : pas de débordement du catalogue ni des pages récentes", async () => {
     await blank("Catalogue R");
-    await page.locator('[data-pb-start-go="guided"]').click();
     await cards().first().waitFor();
     for (const w of [1600, 1100, 760, 420]) {
       await page.setViewportSize({ width: w, height: 900 }); await wait(250);

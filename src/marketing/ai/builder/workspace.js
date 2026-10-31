@@ -162,7 +162,14 @@ const runView = (run) => ({ id: run.id, status: run.status, usedAi: run.usedAi, 
 function applyPages(ctx, id, runId, decisions = {}, { confirmReplace = false } = {}) {
   const v = plans.get(ctx, id); const siteId = requireSite(ctx, v);
   const out = pageGen().apply(ctx, siteId, Number(runId), decisions, { confirmReplace });
-  return { applied: out };
+  return { applied: out, editorial: editorialReview(ctx, siteId) };
+}
+// Contrôle éditorial (programme 22.6) après la génération : éléments à compléter, rien n'est modifié. Un échec du contrôle ne doit jamais empêcher l'application des pages.
+function editorialReview(ctx, siteId) {
+  try {
+    const r = require("../../../contentIntel").review(ctx, siteId);
+    return { toComplete: r.toComplete.slice(0, 30).map((x) => ({ pageId: x.pageId, page: x.page, what: x.what })), total: r.toComplete.length, analyzed: r.dashboard.overview.analyzed, optimized: r.dashboard.overview.optimized, toImprove: r.dashboard.overview.toImprove };
+  } catch { return null; }
 }
 function undoPages(ctx, id, runId) { const v = plans.get(ctx, id); const siteId = requireSite(ctx, v); return { report: pageGen().undo(ctx, siteId, Number(runId)) }; }
 

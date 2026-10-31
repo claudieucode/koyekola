@@ -51,7 +51,6 @@ describe("canvas vide guidé : compatibilité (navigateur)", { skip: SKIP }, () 
     await page.locator("#lp-name").fill("Guidée compat");
     await Promise.all([page.waitForURL(/\/editeur/), page.locator('#nouvelle button[type="submit"]').click()]);
     id = Number(page.url().match(/pages\/(\d+)/)[1]);
-    await page.locator('[data-pb-start-go="guided"]').click();
     await page.locator("[data-pb-cat-next]").click();
     await page.locator('[data-pb-start-format="compact"]').click();
     await page.locator("[data-pb-start-continue]").click();

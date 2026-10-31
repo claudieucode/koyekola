@@ -63,7 +63,7 @@
       <a href="/catalogue?sort=popular" class="see-all">Voir tout <%- icon('arrowRight', { size: 14 }) %></a>
     </div>
     <% if (featured.length === 0) { %>
-      <p class="empty-state">Aucune formation publiée pour l'instant.</p>
+      <div class="empty-state"><div class="kv-empty-ill" aria-hidden="true"><%- illu("formations") %></div><p>Aucune formation publiée pour l'instant.</p></div>
     <% } else { %>
       <div class="grid-courses">
         <% featured.forEach(course => { %><%- include("partials/course-card", { course }) %><% }) %>

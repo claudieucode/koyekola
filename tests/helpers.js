@@ -178,15 +178,16 @@ async function buy(student, course) {
   return student.post("/commande", {});
 }
 
-// Page vide ouverte dans l'éditeur : l'écran « Création classique / guidée » recouvre le canevas. Les tests qui partent d'un canevas vide pour
-// manipuler le « + » le referment sans rien écrire (Choisir un gabarit → Annuler) ; sans effet si l'écran n'est pas affiché.
+// Page vide ouverte dans l'éditeur : l'écran de création GUIDÉE (catalogue de gabarits) recouvre le canevas. Les tests qui partent d'un canevas vide pour
+// manipuler le « + » parcourent le parcours (page vide → Continuer, format standard) et referment le sélecteur de structures qui s'ouvre ensuite ;
+// sans effet si l'écran n'est pas affiché. La page porte alors le format recommandé (largeur et marges initialisées).
 async function dismissStart(page) {
   const start = page.locator("[data-pb-start]");
   if (!(await start.isVisible().catch(() => false))) return;
-  await page.locator('[data-pb-start-go="guided"]').click();
   await page.locator("[data-pb-cat-next]").click();
-  await page.locator("[data-pb-start-cancel]").click();
+  await page.locator("[data-pb-start-continue]").click();
   await start.waitFor({ state: "hidden" });
+  await page.keyboard.press("Escape");
 }
 
 // Le port est tiré au hasard : si un autre programme de la machine l'occupe déjà (EADDRINUSE), on recommence avec un autre port

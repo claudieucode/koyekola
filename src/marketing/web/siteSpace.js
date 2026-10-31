@@ -61,6 +61,7 @@ const SCREENS = {
     if (canCreate) quick.push({ label: "Ajouter une page", href: `${space.base}/pages#nouvelle`, icon: "plus", primary: true });
     if (space.principal && req.mk.can("articles.write")) quick.push({ label: "Écrire un article", href: `${BASE}/articles/ajouter`, icon: "edit" });
     if (space.principal && req.mk.can("media.upload")) quick.push({ label: "Ajouter un média", href: `${BASE}/mediatheque/ajouter`, icon: "image" });
+    if (!space.principal && req.mk.can("forms.read")) quick.push({ label: "Constructeur de thème", href: `${space.base}/constructeur-de-theme`, icon: "layers" });
     quick.push({ label: "Aperçu du site", href: `${space.base}/apercu`, icon: "externalLink", external: true });
     const shortcuts = { pages: `${space.base}/pages`, list: space.principal ? [
       { label: "Apparence", text: "Thèmes, styles, en-tête et pied de page", href: `${BASE}/apparence`, icon: "palette" },

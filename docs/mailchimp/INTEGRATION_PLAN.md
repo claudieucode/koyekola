@@ -28,7 +28,7 @@ Pourquoi **pas** le cadre `services/connectors` : il est organisé autour de *ca
 ## 2. Fichiers créés / modifiés
 Voir `CHANGELOG.md` (liste exhaustive). Principes : un fichier par responsabilité, aucune dépendance npm ajoutée (`fetch`, `crypto`, `node:sqlite` natifs), tout en français.
 
-## 3. Schéma de base de données (migration `124_mailchimp.sql`, additive)
+## 3. Schéma de base de données (migration `125_mailchimp.sql`, additive)
 
 | Table | Contenu | Clé |
 |---|---|---|

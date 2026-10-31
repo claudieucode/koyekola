@@ -34,6 +34,7 @@ const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u0008\u00
 const line = (v, max) => clean(v, max).replace(/\s+/g, " ");
 
 // ---------- Valeurs de style (validées une à une) ----------
+const FLUID = require("../../responsive/fluid");
 const LEN = /^(-?\d{1,4}(?:\.\d{1,3})?)(px|%|rem|em|vh|vw)$/;
 const INTRINSIC = new Set(["fit-content", "min-content", "max-content"]); // dimensions intrinsèques : liste fermée, jamais de CSS libre
 const lengthOf = ({ auto = false, negative = false, intrinsic = false } = {}) => (v) => {
@@ -169,7 +170,8 @@ const STYLE_PROPS = {
   paddingLeft: { css: "padding-left", check: withLenToken("space", len), out: lenTokenOut, group: "spacing" },
   // Police : un des cinq réglages historiques du site OU une famille de la bibliothèque (Font Manager, identifiant « font.inter »)
   fontFamily: { css: "font-family", check: (v) => (Object.hasOwn(FONT_STACKS, v) || fontLib.isId(v) ? v : null), out: (v) => FONT_STACKS[v] || fontLib.stackOf(v), group: "typography" },
-  fontSize: { css: "font-size", check: withLenToken("type", len), out: lenTokenOut, group: "typography" },
+  // « fluid:min-max » (22.8) : taille fluide bornée, rendue en clamp() calculé à partir de deux nombres seulement (jamais d'expression saisie)
+  fontSize: { css: "font-size", check: (v) => (FLUID.isFluid(v) ? FLUID.check(v) : withLenToken("type", len)(v)), out: (v) => (FLUID.isFluid(v) ? FLUID.css(v) : lenTokenOut(v)), group: "typography" },
   fontWeight: { css: "font-weight", check: oneOf("300", "400", "500", "600", "700", "800", "900"), group: "typography" },
   fontStyle: { css: "font-style", check: oneOf("normal", "italic"), group: "typography" },
   lineHeight: { css: "line-height", check: numberIn(0.8, 3), group: "typography" },
@@ -388,13 +390,13 @@ const boxTag = (p) => { const tag = oneOf(...BOX_TAGS)(p.tag); return tag && tag
 // Voir aussi INTERACTIVE_INSIDE_LINK : un lien ne peut pas en contenir un autre.
 // Boucle d'une grille : source, nombre, catégorie, tri, pagination, filtrage par l'adresse (?q=, ?categorie=). Valeurs bornées.
 const LEGACY_SORTS = { recent: ["date", "desc"], old: ["date", "asc"], title: ["title", "asc"], price: ["price", "asc"] };
-const EMPTY_LOOP = { posts: "Aucun article ne correspond.", courses: "Aucune formation ne correspond." };
+const EMPTY_LOOP = { posts: "Aucun article ne correspond.", courses: "Aucune formation ne correspond.", products: "Aucun produit ne correspond." };
 const loopProps = (p) => {
   const l = p.loop;
   if (!l || typeof l !== "object") return {};
   const query = require("./query");
   const source = oneOf(...query.SOURCES.keys())(l.source) || "posts";
-  const sorts = source === "courses" ? ["recent", "title", "price"] : ["recent", "old", "title"];
+  const sorts = source === "courses" || source === "products" ? ["recent", "title", "price"] : ["recent", "old", "title"];
   const sort = oneOf(...sorts)(l.sort) || "recent";
   // Réglages avancés (tri, filtres, pagination) : validés par le moteur de requêtes commun, jamais recopiés tels quels
   const [orderby, order] = LEGACY_SORTS[sort];
@@ -1010,6 +1012,7 @@ const WIDGET_SHORTCUTS = [
   { key: "productshort", label: "Description du produit", group: "commerce", icon: "alignLeft", keywords: "produit description courte resume formation short description", type: "text", preset: {"html": "<p>{{product.subtitle}}</p><p>{{product.description}}</p>"} },
   { key: "productmeta", label: "Informations du produit", group: "commerce", icon: "info", keywords: "produit meta categorie formateur informations product meta", type: "text", preset: {"html": "<p>Catégorie : {{product.category}} · Formateur : {{product.instructor}}</p>"} },
   { key: "productrelated", label: "Produits apparentés", group: "commerce", icon: "list", keywords: "produits apparentes lies similaires formations related upsells", type: "querylist", preset: {"title": "Vous aimerez aussi", "source": "courses", "mode": "recent", "count": 3, "layout": "cards", "showDate": false, "excludeCurrent": true} },
+  { key: "shoprelated", label: "Produits apparentés (boutique)", group: "commerce", icon: "list", keywords: "produits apparentes lies similaires boutique meme categorie related upsells", type: "querylist", preset: {"title": "Vous aimerez aussi", "source": "products", "mode": "related", "count": 3, "layout": "cards", "showDate": false, "excludeCurrent": true} },
   { key: "courselist2", label: "Formations (liste dynamique)", group: "site", sub: "Listes dynamiques", icon: "list", keywords: "formations cours catalogue liste dynamique recents", type: "querylist", preset: {"title": "Nos formations", "source": "courses", "mode": "recent", "count": 6, "layout": "cards", "showDate": false} },
 ];
 

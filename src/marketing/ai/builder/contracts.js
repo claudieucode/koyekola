@@ -33,20 +33,40 @@ const en = (values) => ({ type: "string", enum: [...values] });
 const arr = (items) => ({ type: "array", items });
 const obj = (properties) => ({ type: "object", properties, required: Object.keys(properties), additionalProperties: false });
 
-const fact = () => obj({ value: str, status: en(FACT_STATUS), confidence: num, evidence: str });
+// Schéma d'analyse demandé au modèle — forme COMPACTE. Anthropic compile le schéma en grammaire : l'ancienne forme
+// (un objet « fait » recopié 14 fois, 17 énumérations dont les listes de clés) dépassait sa limite (400 « compiled grammar
+// is too large »). Ici, UN seul objet « fait » (champ nommé par `field`) et UN seul objet « signal » (objectif, fonctionnalité,
+// type secondaire) ; les listes de clés autorisées sont dans la consigne et revérifiées par le serveur (brief.normalize).
+const FACT_FIELDS = Object.freeze(["name", "siteType", "sector", "country", "city", "siteLanguage", "audience", "tone", "formality", "style", "typography", "color"]);
+const SIGNAL_KINDS = Object.freeze(["goal", "feature", "secondaryType"]);
 const analysisSchema = () => obj({
   briefLanguage: str,
-  name: fact(), siteType: fact(), sector: fact(), country: fact(), city: fact(), siteLanguage: fact(), audience: fact(),
-  tone: fact(), formality: fact(), style: fact(), typography: fact(),
-  colors: arr(fact()),
-  secondaryTypes: arr(en(Object.keys(SITE_TYPES))),
-  goals: arr(obj({ key: en(Object.keys(GOALS)), status: en(FACT_STATUS), confidence: num, evidence: str })),
-  features: arr(obj({ key: en(registry.featureKeys()), status: en(FACT_STATUS), confidence: num, evidence: str, reason: str })),
+  facts: arr(obj({ field: en(FACT_FIELDS), value: str, status: en(FACT_STATUS), confidence: num, evidence: str })),
+  signals: arr(obj({ kind: en(SIGNAL_KINDS), key: str, status: en(FACT_STATUS), confidence: num, evidence: str, reason: str })),
   pagesRequested: arr(obj({ name: str, evidence: str })),
   contradictions: arr(obj({ description: str, evidence: str })),
   missing: arr(obj({ topic: str, why: str, blocking: bool })),
   questions: arr(obj({ topic: str, question: str, why: str, blocking: bool, choices: arr(str) })),
 });
+
+// Reconstruit la forme historique (un champ par fait) lue par brief.normalize. Une réponse déjà à l'ancienne forme
+// (sans `facts`) passe telle quelle. Les clés inconnues sont ignorées ici et filtrées ensuite par le serveur.
+function expandAnalysis(raw) {
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.facts)) return raw;
+  const out = { briefLanguage: raw.briefLanguage, colors: [], goals: [], features: [], secondaryTypes: [], pagesRequested: raw.pagesRequested, contradictions: raw.contradictions, missing: raw.missing, questions: raw.questions };
+  for (const f of raw.facts) {
+    if (!f || !FACT_FIELDS.includes(f.field)) continue;
+    const fact = { value: f.value, status: f.status, confidence: f.confidence, evidence: f.evidence };
+    if (f.field === "color") out.colors.push(fact);
+    else if (!out[f.field]) out[f.field] = fact; // la première occurrence d'un champ l'emporte
+  }
+  for (const s of Array.isArray(raw.signals) ? raw.signals : []) {
+    if (!s || !SIGNAL_KINDS.includes(s.kind)) continue;
+    if (s.kind === "secondaryType") out.secondaryTypes.push(s.key);
+    else (s.kind === "goal" ? out.goals : out.features).push({ key: s.key, status: s.status, confidence: s.confidence, evidence: s.evidence, reason: s.reason });
+  }
+  return out;
+}
 
 const planSchema = () => obj({
   site: obj({ name: str, description: str }),
@@ -55,13 +75,13 @@ const planSchema = () => obj({
     menu: en(MENUS), position: num, parent: str, relatedTo: arr(str),
     sections: arr(obj({
       key: str, type: str, purpose: str, description: str, expectedContent: str, widgets: arr(str), importance: en(IMPORTANCE),
-      requiredData: arr(str), dependsOn: arr(en(registry.featureKeys())), origin: en(["user", "ai"]),
+      requiredData: arr(str), dependsOn: arr(str), origin: en(["user", "ai"]),
     })),
   })),
   navigation: obj({ main: arr(str), secondary: arr(str), footer: arr(str) }),
-  features: arr(obj({ key: en(registry.featureKeys()), level: en(LEVELS), origin: en(["user", "ai"]), reason: str })),
+  features: arr(obj({ key: str, level: en(LEVELS), origin: en(["user", "ai"]), reason: str })),
   conversions: arr(obj({ action: en(CONVERSIONS), pageKey: str, label: str })),
   recommendations: arr(obj({ text: str, feature: str, why: str })),
 });
 
-module.exports = { VERSION, CONTRACTS, SITE_TYPES, GOALS, CONVERSIONS, FACT_STATUS, LEVELS, PRIORITIES, MENUS, IMPORTANCE, PLAN_STATUS, LIMITS, analysisSchema, planSchema };
+module.exports = { FACT_FIELDS, SIGNAL_KINDS, VERSION, CONTRACTS, SITE_TYPES, GOALS, CONVERSIONS, FACT_STATUS, LEVELS, PRIORITIES, MENUS, IMPORTANCE, PLAN_STATUS, LIMITS, analysisSchema, expandAnalysis, planSchema };

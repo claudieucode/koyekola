@@ -97,6 +97,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+app.use(require("./src/perfEngine/minify").middleware); // programme 22.9 : CSS/JS des pages publiques minifiés à la volée (repli sur l'original)
 // Photos du site (diaporama de l'accueil) : 30 jours
 // Bibliothèque typographique (Font Manager) : fichiers WOFF2 versionnés avec l'application, cache long
 // Polices publiques (bibliothèque libre + polices du site) : lisibles depuis un cadre d'aperçu isolé (sandbox sans allow-same-origin = origine opaque, donc « autre origine » pour les polices)

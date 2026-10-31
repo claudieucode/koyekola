@@ -10,7 +10,7 @@
 - **Balises alternates** (`alternates`) : réciproques, **seulement entre pages publiées**, auto-référencées, `x-default` uniquement s'il est choisi explicitement ; aucune balise s'il y a moins de deux pages publiées.
 
 ## Ce qui n'est PAS fait
-- **Les balises hreflang ne sont pas encore émises dans le `<head>` public** : `alternates()` les calcule et les valide, mais `seo/resolver.js` n'a pas été modifié (risque de régression sur toutes les pages publiques). À brancher dans un palier dédié.
+- **hreflang est émis dans le `<head>` des pages du CMS** (`i18n.alternatesForPage`, branché dans `seo/webPages.head`, partial `seo-head-tags.ejs`) : lecture seule, par site, réciproque avec auto-référence ; jamais pour une page non publiée, archivée ou en noindex, ni quand il reste moins de deux pages publiées. Limites : pas de `x-default` (non stocké), pas d'émission pour les articles de blog ni pour la page d'accueil du site principal (hors CMS Pages).
 - Pas d'URL localisée générée automatiquement ni de métadonnées localisées automatiques : chaque page liée a ses propres `seo.*`.
 - Pas de traduction automatique ajoutée (la traduction de 21.6 existe côté Content Generator).
 - Tests de rédaction locale : seul le français est contrôlé finement.
