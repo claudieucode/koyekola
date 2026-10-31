@@ -1,7 +1,7 @@
 # Programme 22.6 — points restants (état honnête)
 
 ## Demandé et NON fait
-1. **hreflang absent du `<head>` public.** Relations, validation et calcul des balises existent (`i18n.alternates`), mais `seo/resolver.js` n'émet rien : modification volontairement reportée (risque sur toutes les pages publiques).
+1. ~~hreflang absent du `<head>`~~ **Corrigé** (`tests/programme22-6-hreflang-head.test.js`). Reste : `x-default`, articles de blog.
 2. **Couverture sémantique** (sous-thèmes, entités, questions manquantes) : non implémentée. Elle demande une IA configurée ou une source de données ; ni l'une ni l'autre n'est vérifiée.
 3. **Aucun connecteur de recherche de mots-clés** (volumes, difficulté) : volontairement, car aucune source réelle n'est configurée. SEMrush/Ahrefs : ni intégrés ni simulés.
 4. **Traitement asynchrone** : évaluations synchrones et mises en cache (quelques ms par page, 200 pages au plus par tableau de bord). Pas de file de travail ; un site de plusieurs milliers de pages demanderait d'en ajouter une.
@@ -28,4 +28,4 @@
 - Les chiffres de **trafic, position et clics** ne sont affichés nulle part (aucune source connectée à ce niveau).
 
 ## Suites possibles
-Émettre hreflang dans le `<head>` ; formulaires de saisie sur l'écran ; menu contextuel dans l'éditeur ; appel automatique de `review` par le constructeur ; connecteur de mots-clés quand un fournisseur est choisi et autorisé.
+formulaires de saisie sur l'écran ; menu contextuel dans l'éditeur ; appel automatique de `review` par le constructeur ; connecteur de mots-clés quand un fournisseur est choisi et autorisé.
