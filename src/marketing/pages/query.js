@@ -179,6 +179,47 @@ registerQuerySource("courses", {
   },
 });
 
+// ---------- Source : produits de la boutique (22.8, lot 2) ----------
+// Même catalogue que la boutique publique (hydrate/productScope : une seule source de vérité). Une page d'un site ne liste que les produits de CE site, et seulement si le
+// module Commerce est activé ET la boutique ouverte (sinon aucun résultat, sans erreur). Lecture seule : aucune ligne de réglages n'est créée au passage.
+registerQuerySource("products", {
+  label: "Produits", scopeKey: "product", orderby: ["date", "title", "price", "random", "id"], filters: ["include", "exclude", "categories", "search", "excludeCurrent", "related"],
+  run(ctx, q, env) {
+    const pg = env.scope.page || null;
+    const siteId = pg && Number.isInteger(pg.site_id) && pg.site_id > 0 ? pg.site_id : null;
+    if (!require("../siteModules").isEnabled(ctx.db, ctx.organizationId, siteId, "commerce")) return { items: [], total: 0 };
+    const cfg = ctx.db.prepare(`SELECT enabled, currency FROM mk_shop_settings WHERE organization_id = ? AND ${siteId == null ? "site_id IS NULL" : "site_id = ?"}`).get(ctx.organizationId, ...(siteId == null ? [] : [siteId]));
+    if (!cfg || !cfg.enabled) return { items: [], total: 0 };
+    const catalog = require("../shop/catalog"), view = require("../shop/view");
+    const st = { db: ctx.db, organizationId: ctx.organizationId, siteId };
+    const where = ["p.organization_id = ?", siteId == null ? "p.site_id IS NULL" : "p.site_id = ?", "p.deleted_at IS NULL", "p.status = 'published'"];
+    const args = [ctx.organizationId, ...(siteId == null ? [] : [siteId])];
+    const cur = env.scope.product || null;
+    if (q.include) { where.push(`p.id IN (${q.include.map(() => "?").join(",")})`); args.push(...q.include); }
+    const exclude = [...(q.exclude || []), ...(q.excludeCurrent && cur && Number.isInteger(cur.id) ? [cur.id] : [])];
+    if (exclude.length) { where.push(`p.id NOT IN (${exclude.map(() => "?").join(",")})`); args.push(...exclude); }
+    if (q.categories) {
+      const catIds = [];
+      for (const name of q.categories) {
+        const c = catalog.categoryBySlug(st, name) || catalog.listCategories(st).find((x) => String(x.name).toLowerCase() === String(name).toLowerCase());
+        if (c) catIds.push(...catalog.descendantIds(st, c.id));
+      }
+      where.push(catIds.length ? `EXISTS (SELECT 1 FROM mk_shop_product_categories pc WHERE pc.product_id = p.id AND pc.category_id IN (${catIds.map(() => "?").join(",")}))` : "0");
+      args.push(...catIds);
+    }
+    // « Liés » : produits qui partagent une catégorie avec le produit courant (jamais le produit lui-même)
+    if (q.related && cur && Number.isInteger(cur.id)) {
+      where.push("p.id <> ?", "EXISTS (SELECT 1 FROM mk_shop_product_categories pc JOIN mk_shop_product_categories me ON me.category_id = pc.category_id AND me.product_id = ? WHERE pc.product_id = p.id)");
+      args.push(cur.id, cur.id);
+    } else if (q.related) where.push("0");
+    if (q.search) { const like = `%${likeEsc(q.search)}%`; where.push("(p.name LIKE ? ESCAPE '\\' OR p.short_description LIKE ? ESCAPE '\\')"); args.push(like, like); }
+    const order = { date: "p.created_at", title: "p.name COLLATE NOCASE", price: "p.price_cents", random: "RANDOM()", id: "p.id" }[q.orderby];
+    const total = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_shop_products p WHERE ${where.join(" AND ")}`).get(...args).n;
+    const rows = ctx.db.prepare(`SELECT p.* FROM mk_shop_products p WHERE ${where.join(" AND ")} ORDER BY ${order} ${q.order === "asc" ? "ASC" : "DESC"}, p.id DESC LIMIT ? OFFSET ?`).all(...args, q.count, q.offset);
+    return { total, items: catalog.hydrate(st, rows).map((p) => view.productScope(p, { base: "/boutique", currency: cfg.currency || "eur" })) };
+  },
+});
+
 // ---------- Source : pages du site ----------
 registerQuerySource("pages", {
   label: "Pages du site", scopeKey: "page_item", orderby: ["date", "modified", "title", "id"], filters: ["include", "exclude", "search", "excludeCurrent"],

@@ -4,7 +4,7 @@ const query = require("../query");
 
 const MODES = [["recent", "Les plus récents"], ["popular", "Les plus lus"], ["commented", "Les plus commentés"], ["related", "Articles liés (même catégorie ou étiquette)"],
   ["samecategory", "Même catégorie que l'article affiché"], ["sameauthor", "Même auteur que l'article affiché"], ["archive", "Suit l'archive affichée (catégorie, étiquette, auteur)"], ["random", "Au hasard"]];
-const SOURCES = [["posts", "Articles"], ["courses", "Formations"], ["pages", "Pages du site"], ["authors", "Auteurs"], ["categories", "Catégories"], ["tags", "Étiquettes"]];
+const SOURCES = [["posts", "Articles"], ["courses", "Formations"], ["products", "Produits de la boutique"], ["pages", "Pages du site"], ["authors", "Auteurs"], ["categories", "Catégories"], ["tags", "Étiquettes"]];
 
 // Requête d'une liste : le mode choisit tri et filtres, uniquement parmi ceux que la source sait faire
 function listQuery(p, scope) {
@@ -18,6 +18,11 @@ function listQuery(p, scope) {
     else if (p.mode === "samecategory") { q.related = "category"; q.excludeCurrent = true; }
     else if (p.mode === "sameauthor") { q.author = "current"; q.excludeCurrent = true; }
     else if (p.mode === "archive") q.archive = true;
+  } else if (p.source === "products") {
+    // Produits : « apparentés » = même catégorie que le produit affiché ; « au hasard » ; sinon les plus récents
+    if (p.mode === "random") q.orderby = "random";
+    else if (p.mode === "related" || p.mode === "samecategory") { q.related = "category"; q.excludeCurrent = true; }
+    if (p.excludeCurrent) q.excludeCurrent = true;
   } else if (p.source === "courses" || p.source === "pages") {
     if (p.mode === "random" && p.source === "courses") q.orderby = "random";
     if (p.excludeCurrent) q.excludeCurrent = true;
