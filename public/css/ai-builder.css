@@ -72,3 +72,4 @@
   .aib-frame { height: 60vh; }
 }
 @media (prefers-reduced-motion: reduce) { .aib *, .aibh * { transition: none !important; animation: none !important; } }
+.aib-note { border: 1px solid var(--mk-line, #d6dbe3); border-left: 4px solid var(--mk-warn, #8a6d00); border-radius: 6px; padding: 10px 14px; margin: 12px 0; } .aib-note ul { margin: 6px 0 0; padding-left: 1.2em; } .aib-muted { margin: 4px 0; opacity: .8; }

@@ -100,6 +100,19 @@ describe("Contenu et qualité SEO (navigateur)", { skip: SKIP }, () => {
     await page.waitForFunction(() => /Aucun mot-clé enregistré/.test(document.getElementById("ci-kws").textContent));
     assert.deepEqual(errors, []);
   });
+  test("page : genre enregistré ; assistant IA sans fournisseur configuré = message clair, texte de la page inchangé", async () => {
+    await page.click("#ci-t-page"); await page.selectOption("#ci-page", String(src)); await page.waitForSelector("#ci-eval form");
+    await page.getByLabel(/Genre \(guide/).selectOption("service"); await page.getByRole("button", { name: "Enregistrer le genre" }).click();
+    await page.waitForFunction(() => /Genre enregistré/.test(document.getElementById("ci-status").textContent));
+    assert.match(one("SELECT value FROM mk_ci_settings WHERE site_id = ? AND key = 'page_kinds'", site).value, new RegExp(`"${src}":"service"`));
+    const before = one("SELECT sections, draft FROM mk_landing_pages WHERE id = ?", src);
+    await page.waitForSelector("#ci-eval >> text=Améliorer cette page avec l'IA");
+    await page.getByLabel("Action", { exact: true }).selectOption("improve"); await page.getByRole("button", { name: "Préparer une proposition" }).click();
+    await page.waitForFunction(() => document.getElementById("ci-opt-out").textContent.length > 20 && !/Préparation/.test(document.getElementById("ci-opt-out").textContent));
+    const msg = await page.locator("#ci-opt-out").innerText(); assert.equal(/Accepter la proposition/.test(msg), false, msg);
+    assert.deepEqual(one("SELECT sections, draft FROM mk_landing_pages WHERE id = ?", src), before, "rien n'est modifié sans acceptation");
+    assert.deepEqual(errors, []);
+  });
   test("responsive : 320 px sans défilement horizontal de la page, cibles tactiles des onglets ≥ 44 px", async () => {
     await page.setViewportSize({ width: 320, height: 800 }); await page.click("#ci-t-set"); await page.waitForSelector("#ci-sets form"); await page.click("#ci-t-over"); await page.waitForSelector(".ci-stat");
     const over = await page.evaluate(() => { const w = document.documentElement.clientWidth; return [...document.querySelectorAll("body *")].filter((e) => e.getBoundingClientRect().right > w + 1 && e.getBoundingClientRect().width > 0).slice(0, 6).map((e) => `${e.tagName}.${String(e.className).slice(0, 30)}#${e.id} right=${Math.round(e.getBoundingClientRect().right)}`); });
