@@ -2,26 +2,28 @@
 <link rel="stylesheet" href="/css/site-wizard.css">
 <link rel="stylesheet" href="<%= asset('/css/theme-builder.css') %>">
 <div class="sw tb" id="tb" data-base="<%= base %>" data-write="<%= perms.write ? 1 : 0 %>" data-remove="<%= perms.remove ? 1 : 0 %>">
-  <p class="mk-back"><a href="<%= siteBase %>/tableau-de-bord">← <%= siteName %></a></p>
-  <header class="tb-top">
-    <div><h1>Constructeur de thème</h1><p class="mk-head-sub">Concevez les parties de « <%= siteName %> » — en-tête, pied de page, pages, articles, archives, 404, boutique — et choisissez où chacune s'affiche. Chaque modèle s'édite dans l'éditeur de pages habituel ; rien n'est publié sans votre action.</p></div>
-    <div class="tb-top-actions">
-      <% if (perms.write) { %><label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
-      <button class="btn btn-outline" type="button" id="tb-legacy" title="Reprendre l'en-tête, le pied de page et les modèles de thème déjà configurés pour ce site">Récupérer l'existant</button>
-      <button class="btn btn-primary" type="button" id="tb-new">Ajouter un modèle</button><% } %>
-    </div>
+  <header class="tb-bar">
+    <span class="tb-logo" aria-hidden="true">K</span><span class="tb-brand">THEME BUILDER</span><span class="tb-site"><%= siteName %></span>
+    <a class="tb-close" href="<%= siteBase %>/tableau-de-bord" aria-label="Fermer le Theme Builder et revenir à « <%= siteName %> »"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></a>
   </header>
-  <div class="tb-status" id="tb-status" role="status" aria-live="polite"></div>
   <div class="tb-layout">
     <nav class="tb-side" aria-label="Types de modèles"><ul id="tb-types"></ul></nav>
-    <main class="tb-main">
+    <main class="tb-main" id="tb-main">
+      <div class="tb-head">
+        <div class="tb-head-text"><h1 id="tb-title">Personnalisez chaque partie de votre site</h1><p class="tb-lead" id="tb-lead"></p></div>
+        <div class="tb-top-actions">
+          <% if (perms.write) { %><button class="btn btn-primary" type="button" id="tb-new">Ajouter un modèle</button>
+          <label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
+          <button class="btn btn-outline" type="button" id="tb-legacy" title="Reprendre l'en-tête, le pied de page et les modèles de thème déjà configurés pour ce site">Récupérer l'existant</button><% } %>
+        </div>
+      </div>
       <form class="tb-tools" id="tb-tools" role="search" aria-label="Filtrer les modèles">
         <label class="sw-field">Recherche<input type="search" id="tb-q" maxlength="80" placeholder="Nom ou type"></label>
         <label class="sw-field">État<select id="tb-st"><option value="">Tous (hors archives)</option><option value="published">Publiés</option><option value="draft">Brouillons</option><option value="archived">Archivés</option></select></label>
         <button class="btn btn-outline" type="button" id="tb-why">Pourquoi ce modèle ?</button>
       </form>
+      <div class="tb-status" id="tb-status" role="status" aria-live="polite"></div>
       <section id="tb-conflicts" class="tb-conflicts" aria-label="Conflits" hidden></section>
-      <h2 id="tb-title">Toutes les parties</h2>
       <div class="tb-cards" id="tb-cards" aria-live="polite"></div>
     </main>
   </div>
