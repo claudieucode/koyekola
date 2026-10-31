@@ -940,8 +940,14 @@ function siteParts(ctx, siteId, { draftId = null } = {}) {
   return { header: partOf(ctx, site.header_component_id, "header", draftId), footer: partOf(ctx, site.footer_component_id, "footer", draftId) };
 }
 // Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
-function withSiteParts(ctx, page, sections, { draftId = null } = {}) {
+function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false } = {}) {
   const p = siteParts(ctx, page && page.site_id, { draftId });
+  // Theme Builder (23.1) : seulement la page publiée et son aperçu (jamais le canevas de l'éditeur) ; sans modèle applicable, comportement historique inchangé
+  if (themeBuilder && page && page.site_id) {
+    const tb = require("../../themeBuilder/render").partsFor(ctx, page);
+    if (tb.header !== undefined) p.header = partOf(ctx, tb.header, "header", draftId) || p.header;
+    if (tb.footer !== undefined) p.footer = partOf(ctx, tb.footer, "footer", draftId) || p.footer;
+  }
   // Aperçu du personnalisateur : en-tête / pied choisis dans le travail en cours de la personne (cette requête seulement)
   const over = page && page.site_id ? require("../../services/previewParts").of(page.site_id) : null;
   if (over) {

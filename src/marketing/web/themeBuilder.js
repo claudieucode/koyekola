@@ -62,7 +62,7 @@ module.exports = () => {
   router.post(`${T}/dupliquer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.duplicate(ctx, id, tid(req)))));
   router.post(`${T}/supprimer`, need("forms.write"), need("pages.delete"), run((ctx, id, req) => TB.store.remove(ctx, id, tid(req))));
   router.get(`${T}/versions`, need("forms.read"), run((ctx, id, req) => ({ versions: TB.store.versions(ctx, id, tid(req)).map((v) => ({ ...v, describe: TB.conditions.describe(v.conditions) })) })));
-  router.post(`${T}/versions/:n(\\d+)/restaurer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.restoreVersion(ctx, id, tid(req), Number(req.params.n)))));
+  router.post(`${T}/versions/:n(\\d+)/restaurer`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.restoreVersion(ctx, id, tid(req), Number(req.params.n)); return { ...one(ctx, id, r), conditionsRestored: r.conditionsRestored }; }));
   router.get(`${T}/instances`, need("forms.read"), run((ctx, id, req) => instances(ctx, id, tid(req))));
   router.get(`${T}/export.json`, need("forms.read"), (req, res, next) => {
     try { const d = TB.portable.exportTemplate(req.mk.ctx, sid(req), tid(req)); res.set({ "Cache-Control": "no-store", "Content-Disposition": `attachment; filename="modele-${tid(req)}.json"` }).type("application/json").send(JSON.stringify(d, null, 2)); }
