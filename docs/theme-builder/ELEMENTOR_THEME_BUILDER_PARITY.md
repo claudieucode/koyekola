@@ -17,12 +17,12 @@ Statuts : ABSENT · PARTIEL (existant, insuffisant) · PRÉVU (lot) · FAIT (tes
 | 11 | Sidebar | ABSENT | lot 6 (type + zone si le moteur de rendu le permet) | — | — | PRÉVU |
 | 12 | Single Product / Product Archive | PARTIEL (20.5) | lot 5 | — | — | PRÉVU |
 | 13 | Panier / paiement / compte (Woo Pro) | ABSENT | lot 6 selon moteur boutique ; jamais de faux paiement | — | — | PRÉVU |
-| 14 | Conditions Inclure/Exclure | PARTIEL (exclusions limitées) | lot 1 | `conditions.js`, `match.js` | — | PRÉVU |
-| 15 | Entire Site, Front Page, All Singular, Posts, Pages, Direct child / Any child, By Author, 404 | PARTIEL | lot 1 | idem | — | PRÉVU |
-| 16 | Archives : Author, Date, Search, Posts Archive, Categories (+ enfants), Tags | PARTIEL | lot 1 (Date : critère accepté, sans effet tant que pas d'archive de date) | idem | — | PRÉVU |
-| 17 | WooCommerce : Shop, Product Category/Tags, Products, In Category/Tag, by Author | PARTIEL | lot 1 | idem | — | PRÉVU |
+| 14 | Conditions Inclure/Exclure | PARTIEL (exclusions limitées) | lot 1 | `conditions.js`, `match.js` | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
+| 15 | Entire Site, Front Page, All Singular, Posts, Pages, Direct child / Any child, By Author, 404 | PARTIEL | lot 1 | idem | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
+| 16 | Archives : Author, Date, Search, Posts Archive, Categories (+ enfants), Tags | PARTIEL | lot 1 (Date : critère accepté, sans effet tant que pas d'archive de date) | idem | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
+| 17 | WooCommerce : Shop, Product Category/Tags, Products, In Category/Tag, by Author | PARTIEL | lot 1 | idem | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
 | 18 | Landing Pages, Floating buttons, Media (cibles Singular) | NON PRIS EN CHARGE (pas de ces types de contenu) | — | — | — | NON PRIS EN CHARGE |
-| 19 | Avertissement de conflit | PARTIEL | lot 1 + 3 | `resolve.js` | — | PRÉVU |
+| 19 | Avertissement de conflit | PARTIEL | lot 1 + 3 | `resolve.js` | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
 | 20 | Instances (où le modèle est utilisé) | ABSENT | lot 2/3 | `store.js` | — | PRÉVU |
 | 21 | Edit / Edit Conditions | PARTIEL | lot 3 | — | — | PRÉVU |
 | 22 | Rename / Trash / Export | PARTIEL | lot 2 | `store.js`, `portable.js` | — | PRÉVU |
@@ -31,6 +31,6 @@ Statuts : ABSENT · PARTIEL (existant, insuffisant) · PRÉVU (lot) · FAIT (tes
 | 25 | Miniatures auto / image mise en avant | ABSENT | lot 4 | `thumb.js` | — | PRÉVU |
 | 26 | Raccourci clavier Ctrl+Maj+E | ABSENT | lot 3 (si sans conflit avec l'administration) | — | — | PRÉVU |
 | 27 | Accès depuis l'éditeur (logo › Theme Builder) | NON PRIS EN CHARGE (modifierait l'éditeur — interdit) | lien depuis l'administration uniquement | — | — | NON PRIS EN CHARGE |
-| 28 | Conditions personnalisées (API) | ABSENT | lot 1 : registre de conditions extensible côté serveur | `conditions.js` | — | PRÉVU |
+| 28 | Conditions personnalisées (API) | ABSENT | lot 1 : registre de conditions extensible côté serveur | `conditions.js` | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
 | 29 | Sticky / transparent header | à vérifier dans le Page Builder (propriétés de position) | documenté, pas de développement dans l'éditeur | — | — | PRÉVU |
 | 30 | Duplication, archivage, restauration, versions | ABSENT | lot 2 | `store.js` | — | PRÉVU |
