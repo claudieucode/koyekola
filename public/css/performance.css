@@ -1,0 +1,13 @@
+.pf-card{background:#fff;border:1px solid #d9e0ec;border-radius:10px;padding:16px 18px;margin:0 0 16px}
+.pf-card h2{margin:0 0 8px;font-size:1.1rem;color:#0b1f44}.pf-card h3{margin:18px 0 8px;font-size:1rem;color:#0b1f44}
+.pf [hidden]{display:none!important}
+.pf-status{min-height:1.4em;margin:0 0 10px;color:#0b1f44}.pf-status.is-error{color:#a11}
+.pf-scroll{overflow-x:auto}.pf-table{width:100%;border-collapse:collapse;font-size:.9rem}
+.pf-table th,.pf-table td{text-align:left;padding:7px 9px;border-bottom:1px solid #e6ebf3;vertical-align:top}.pf-table th{color:#44536b;font-weight:600}
+.pf-sr{position:absolute;left:-9999px}
+.pf-badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.78rem;border:1px solid #c5cfe0;color:#33445f;background:#f3f6fb}
+.pf-badge.is-mesure{background:#e8f4ea;border-color:#a9d3b0}.pf-badge.is-estimation{background:#fff6dd;border-color:#e6cf88}.pf-badge.is-indisponible{background:#eceff4;color:#5b6678}
+.pf-findings{padding-left:20px;margin:0}.pf-findings li{margin:0 0 12px}.pf-sev{font-weight:700}.pf-sev.s-élevée,.pf-sev.s-critique{color:#a11}.pf-sev.s-moyenne{color:#8a5a00}
+.pf-meta{display:block;color:#44536b;font-size:.85rem}
+.pf-cmp{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}.pf-check{display:flex;gap:8px;align-items:flex-start}
+.pf-log{margin:8px 0 0;padding-left:18px;color:#44536b;font-size:.85rem}

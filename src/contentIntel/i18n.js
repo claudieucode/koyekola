@@ -68,4 +68,19 @@ function alternates(group, pageId, { siteOrigin = "", xDefault = null } = {}) {
   if (x) tags.push({ hreflang: "x-default", href: `${siteOrigin}${x.path}` });
   return tags;
 }
-module.exports = { link, unlink, groups, validate, alternates, tag, LANG, REGION };
+// Lecture seule pour le rendu public (aucune création de table pendant un GET) : balises alternates RÉCIPROQUES d'une page publiée, ou [] s'il n'y a rien à déclarer.
+// Un membre non publié, archivé ou en noindex n'est jamais annoncé ; la page elle-même doit en faire partie. `abs` convertit un chemin en adresse absolue.
+function alternatesForPage(db, { siteId, pageId, abs }) {
+  if (!siteId || !pageId) return [];
+  try {
+    if (!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'mk_ci_translations'").get()) return [];
+    const mine = db.prepare("SELECT group_key, organization_id FROM mk_ci_translations WHERE site_id = ? AND page_id = ?").get(siteId, pageId);
+    if (!mine) return [];
+    const rows = db.prepare(`SELECT t.page_id, t.lang, t.region, p.slug, p.site_id, p.seo FROM mk_ci_translations t JOIN mk_landing_pages p ON p.id = t.page_id AND p.site_id = t.site_id
+      WHERE t.site_id = ? AND t.organization_id = ? AND t.group_key = ? AND p.status = 'published' AND p.archived_at IS NULL ORDER BY t.lang, t.region`).all(siteId, mine.organization_id, mine.group_key);
+    const live = rows.filter((r) => { try { return !(JSON.parse(r.seo || "{}") || {}).noindex; } catch { return true; } });
+    if (live.length < 2 || !live.some((r) => r.page_id === pageId)) return [];
+    return live.map((r) => ({ hreflang: tag(r.lang, r.region), href: abs(urls.pageCanonicalPath(r)) }));
+  } catch { return []; }
+}
+module.exports = { link, unlink, groups, validate, alternates, alternatesForPage, tag, LANG, REGION };

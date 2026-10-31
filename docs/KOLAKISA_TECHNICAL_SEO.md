@@ -21,5 +21,5 @@ Les données structurées doivent correspondre au contenu réellement présent :
 
 ## Limites
 - Le contrôle est local ; il ne valide pas auprès de Google (outil externe) et ne prouve pas qu'une page est indexée.
-- `hreflang` n'est pas émis dans le `<head>` (voir `KOLAKISA_MULTILINGUAL_CONTENT_SEO.md`).
+- `hreflang` est émis pour les pages du CMS reliées entre elles (voir `KOLAKISA_MULTILINGUAL_CONTENT_SEO.md`).
 - Les types `Organization`/`LocalBusiness`/`WebSite`/`BreadcrumbList` restent gérés par l'existant.
