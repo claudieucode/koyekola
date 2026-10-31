@@ -1,6 +1,8 @@
 <% if (typeof dash !== "undefined" && dash) { %><%- include("dash-close") %><% } else { %>
   </main>
 
+  <%# Theme Builder : le pied de page publié applicable remplace le pied d'origine (domaine d'un site) ; sans modèle, rien ne change %>
+  <% if (typeof themeFooter === "string" && themeFooter) { %><%- themeFooter %><% } else { %>
   <footer class="site-footer">
     <% const footerGridClass = (typeof navMenu === "function" && navMenu("footer") && navMenu("footer").items.length > 0) ? "container-wide footer-grid footer-grid--menu" : "container-wide footer-grid"; %>
     <div class="<%= footerGridClass %>">
@@ -55,6 +57,7 @@
       <% if (!apF || apF.cookies) { %><a href="/cookies" data-kw-consent-open>Cookies</a><% } %>
     </div>
   </footer>
+  <% } %>
 
   <div class="mobile-nav-overlay" id="mobileNavOverlay" hidden></div>
   <%- include("consent-banner") %>

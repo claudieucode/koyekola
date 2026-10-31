@@ -70,6 +70,7 @@ app.use(canonicalHost);
 // Palier 12 : site d'après l'hôte (domaines enregistrés seulement), casse / barre finale des adresses de contenu, environnement non public jamais indexé
 const siteHost = require("./src/middlewares/siteHost");
 app.use(siteHost.attachSite);
+app.use(require("./src/middlewares/themeLayout")); // en-tête / pied de page / modèles du Theme Builder sur les pages d'un domaine de site
 app.use(require("./src/services/lmsSites").attach(require("./src/config/database"))); // contexte de site du LMS (req.lmsSite) : déduit du domaine, jamais de la requête
 app.use(require("./src/marketing/pages").schedulerMiddleware); // pages programmées : mises en ligne à la première visite après l'heure prévue (palier 23)
 app.use(siteHost.indexingGuard);
@@ -192,7 +193,9 @@ app.use("/marketing", marketingWeb.admin);
 app.use(marketingWeb.publicRoutes);
 
 app.use((req, res) => {
-  if (req.kwSite || req.kwRetired) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." }); // rendu neutre (siteHost.attachSite)
+  if (req.kwRetired) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." }); // rendu neutre (siteHost.attachSite)
+  // Domaine d'un site : modèle « Page 404 » du Theme Builder de CE site s'il y en a un en ligne ; sinon page neutre d'origine (siteHost.neutralErrors)
+  if (req.kwSite) return require("./src/marketing/web/themeRender").renderRegion(req, res, require("./src/config/database"), "not_found", {}, (themeTemplate) => res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne.", themeTemplate }));
   // Modèle de thème « Page introuvable (404) » du Page Builder, s'il y en a un en ligne ; sinon page d'erreur d'origine
   require("./src/marketing/web/themeRender").renderRegion(req, res, require("./src/config/database"), "not_found", {}, (themeTemplate) => {
     res.status(404).render("error", { message: "Page introuvable.", themeTemplate });

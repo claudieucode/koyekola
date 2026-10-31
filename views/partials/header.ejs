@@ -28,6 +28,8 @@
 
   <% const apH = ap ? ap.header : { logo: { mode: "text", text: "KOLAKISA" }, search: true, cart: true, account: true, announcement: { enabled: false }, cta: { enabled: false }, mobile: { showCta: true } }; %>
   <% if (ap && ap.preview) { %><div class="kw-preview-bar" role="status">Aperçu du brouillon de l'apparence : visible seulement par l'équipe, pas encore publié.</div><% } %>
+  <%# Theme Builder : l'en-tête publié applicable à cette page (domaine d'un site) remplace l'en-tête d'origine ; sans modèle, rien ne change %>
+  <% if (typeof themeHeader === "string" && themeHeader) { %><%- themeHeader %><% } else { %>
   <% if (apH.announcement.enabled) { %><div class="site-announcement" role="region" aria-label="Annonce"><% if (apH.announcement.url) { %><a href="<%= apH.announcement.url %>"<%- /^https?:/.test(apH.announcement.url) ? ' rel="noopener noreferrer" target="_blank"' : "" %>><%= apH.announcement.text %></a><% } else { %><span><%= apH.announcement.text %></span><% } %></div><% } %>
   <header class="site-header">
     <div class="header-inner container-wide">
@@ -118,6 +120,7 @@
       </div>
     </div>
   </header>
+  <% } %>
 
   <main id="main" tabindex="-1">
 <% } %>

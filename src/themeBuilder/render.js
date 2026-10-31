@@ -1,8 +1,9 @@
-// Branchement du Theme Builder au RENDU PUBLIC (programme 23.1, lot 5). Trois entrées :
-//  · partsFor  — en-tête / pied de page d'une page de site (utilisé par pages.withSiteParts, uniquement pour la page publiée et l'aperçu ; jamais par le canevas de l'éditeur) ;
-//  · pickRegion — modèle de page (produit, archive produits…) pour themeRender.renderRegion d'un site ;
-// Règle de repli : s'il n'y a AUCUN modèle publié qui s'applique, le comportement historique (colonnes du site, anciens modèles) reste exactement le même. Une erreur ne casse jamais la page.
-const Types = require("./types");
+// Branchement du Theme Builder au RENDU PUBLIC (programme 23.1) : UN service de résolution pour TOUS les types de modèles.
+//  · regionContext / defaultContext — construisent le contexte de résolution (site, vue, contenu affiché) à partir de ce que la route connaît ;
+//  · resolveParts / partsFor — en-tête et pied de page : le modèle publié applicable à ce contexte (pages du Page Builder ET pages du site : blog, recherche, 404…) ;
+//  · pickRegion — modèle de PAGE applicable (article, archives, recherche, 404, page statique, produit, archives produits) pour themeRender.renderRegion.
+// Règle de repli : s'il n'y a AUCUN modèle publié qui s'applique, le comportement historique reste exactement le même. Une erreur ne casse jamais la page.
+// Voir docs/theme-builder/KOLAKISA_THEME_BUILDER_RENDU_CAUSES_RACINES.md.
 const Res = require("./resolve");
 const store = require("./store");
 
@@ -17,36 +18,71 @@ function published(ctx, siteId) {
   return list;
 }
 const homeOf = (ctx, siteId) => { try { const s = require("../marketing/pages").getSite(ctx, siteId); return s && s.home_page_id; } catch { return null; } };
+
+// Famille de l'ancien système (nom utilisé par les routes : themeRender.renderRegion) → type de modèle du Theme Builder + vue de résolution (+ sorte d'archive)
+const FAMILY = {
+  product: { type: "single_product", view: "product" },
+  product_archive: { type: "product_archive", view: "product_archive" },
+  single_post: { type: "single_post", view: "post" },
+  blog_archive: { type: "archive", view: "archive", kind: "blog" },
+  category_archive: { type: "archive", view: "archive", kind: "category" },
+  tag_archive: { type: "archive", view: "archive", kind: "tag" },
+  author_archive: { type: "archive", view: "archive", kind: "author" },
+  search_results: { type: "search_results", view: "search", kind: "search" },
+  not_found: { type: "not_found", view: "not_found" },
+  static_page: { type: "single_page", view: "page" },
+};
+const list = (v) => [].concat(v || []).filter(Boolean).map(String);
+
+// Contexte de résolution d'une page de CONTENU (voir match.js pour la forme). `o` : ce que la route sait du contenu affiché.
+function regionContext(siteId, family, o = {}) {
+  const m = FAMILY[family];
+  if (!m) return null;
+  const cats = list([o.category, ...list(o.categories)]);
+  const c = { siteId, view: m.view, id: o.postId ?? null, authorId: o.authorId ?? null, parents: list(o.parents).map(Number).filter(Number.isInteger), categories: cats, categoryAncestors: list(o.categories), tags: list(o.tags) };
+  if (m.view === "product_archive") c.archive = { kind: o.category ? "category" : "shop", name: o.category || "", ancestors: list(o.categories) };
+  else if (m.view === "archive" || m.view === "search") c.archive = { kind: m.kind, name: m.kind === "category" ? (o.category || "") : m.kind === "tag" ? (o.tag || "") : "", ancestors: m.kind === "category" ? list(o.categories) : [], authorId: m.kind === "author" ? (o.authorId ?? null) : null };
+  return c;
+}
+// Contexte par défaut d'une page du site qui ne déclare rien (catalogue, formation, compte…) : accueil si « / », sinon page
+const defaultContext = (siteId, path = "/") => ({ siteId, view: path === "/" ? "front" : "page", id: null, authorId: null, parents: [], categories: [], categoryAncestors: [], tags: [] });
+
+// Modèles de parties globales (en-tête, pied de page) applicables à un contexte : { header, footer } (modèle complet ou null)
+function resolveParts(ctx, siteId, c) {
+  const out = { header: null, footer: null };
+  const pool = published(ctx, siteId);
+  if (!pool.length) return out;
+  for (const type of ["header", "footer"]) { const w = Res.resolve(pool, c, { type }).winner; if (w && w.sourceKind === "component") out[type] = w; }
+  return out;
+}
+// Y a-t-il au moins un en-tête ou un pied publié sur ce site ? (court-circuit : le rendu historique ne paie qu'une lecture en cache)
+const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => t.type === "header" || t.type === "footer");
+
 // page : ligne de page ({ id, site_id }) → { header: id de composant | undefined, footer: … } ; undefined = aucun modèle ne s'applique (repli historique)
 function partsFor(ctx, page) {
   const out = { header: undefined, footer: undefined };
   try {
     if (!page || !page.site_id) return out;
-    const list = published(ctx, page.site_id);
-    if (!list.length) return out;
     const view = homeOf(ctx, page.site_id) === page.id ? "front" : "page";
-    const c = { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [] };
-    for (const type of ["header", "footer"]) {
-      const w = Res.resolve(list, c, { type }).winner;
-      if (w && w.sourceKind === "component") out[type] = w.sourceId;
-    }
+    const w = resolveParts(ctx, page.site_id, { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [] });
+    if (w.header) out.header = w.header.sourceId;
+    if (w.footer) out.footer = w.footer.sourceId;
   } catch { /* jamais bloquant : repli historique */ }
   return out;
 }
-// themeRender.renderRegion : famille historique → type de modèle + contexte. Renvoie une ligne de page publiée { slug… } ou null.
-const FAMILY = { product: { type: "single_product", view: "product" }, product_archive: { type: "product_archive", view: "product_archive" } };
-function pickRegion(ctx, siteId, families, { category = "", categories = [], tag = "", tags = [], postId = null } = {}) {
+
+// themeRender.renderRegion : modèle de PAGE applicable (toutes familles). Renvoie une ligne de page publiée { slug… } ou null.
+function pickRegion(ctx, siteId, families, o = {}) {
   try {
     if (!siteId) return null;
-    const list = published(ctx, siteId);
-    if (!list.length) return null;
+    const pool = published(ctx, siteId);
+    if (!pool.length) return null;
     for (const fam of [].concat(families)) {
       const m = FAMILY[fam]; if (!m) continue;
-      const c = { siteId, view: m.view, id: postId, authorId: null, categories: [category, ...categories].filter(Boolean), categoryAncestors: [], tags: tags || [], archive: m.view === "product_archive" ? { kind: category ? "category" : "shop", name: category, ancestors: categories || [] } : undefined };
-      const w = Res.resolve(list, c, { type: m.type }).winner;
+      const w = Res.resolve(pool, regionContext(siteId, fam, o), { type: m.type }).winner;
       if (w && w.sourceKind === "page") { const row = ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ? AND site_id = ? AND status = 'published' AND archived_at IS NULL").get(w.sourceId, ctx.organizationId, siteId); if (row) return row; }
     }
   } catch { /* repli historique */ }
   return null;
 }
-module.exports = { partsFor, pickRegion, published, FAMILY };
+module.exports = { partsFor, pickRegion, published, FAMILY, regionContext, defaultContext, resolveParts, hasParts };

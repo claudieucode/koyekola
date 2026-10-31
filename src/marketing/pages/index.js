@@ -939,14 +939,28 @@ function siteParts(ctx, siteId, { draftId = null } = {}) {
   if (!site || site.status !== "active") return none;
   return { header: partOf(ctx, site.header_component_id, "header", draftId), footer: partOf(ctx, site.footer_component_id, "footer", draftId) };
 }
+// Modèle publié du Theme Builder dont le composant n'a plus de version publiée (supprimé, jamais publié) : on garde l'ancienne partie, mais on le dit (une fois par composant)
+const warnedParts = new Set();
+function missingPart(which, componentId) {
+  const k = `${which}:${componentId}`;
+  if (warnedParts.has(k)) return;
+  if (warnedParts.size > 500) warnedParts.clear();
+  warnedParts.add(k);
+  console.warn(`[KOLAKISA] Theme Builder : le composant ${componentId} (${which === "header" ? "en-tête" : "pied de page"}) du modèle publié n'a pas de version publiée ; l'ancien ${which === "header" ? "en-tête" : "pied de page"} reste affiché.`);
+}
+// Partie globale d'un site (section rendable) pour un composant donné : version diffusée, jamais le brouillon ; null si elle n'existe plus (interface du rendu hors Page Builder)
+const partSection = (ctx, componentId, which) => partOf(ctx, componentId, which, null);
 // Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
 function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false } = {}) {
   const p = siteParts(ctx, page && page.site_id, { draftId });
   // Theme Builder (23.1) : seulement la page publiée et son aperçu (jamais le canevas de l'éditeur) ; sans modèle applicable, comportement historique inchangé
   if (themeBuilder && page && page.site_id) {
     const tb = require("../../themeBuilder/render").partsFor(ctx, page);
-    if (tb.header !== undefined) p.header = partOf(ctx, tb.header, "header", draftId) || p.header;
-    if (tb.footer !== undefined) p.footer = partOf(ctx, tb.footer, "footer", draftId) || p.footer;
+    for (const which of ["header", "footer"]) {
+      if (tb[which] === undefined) continue;
+      const part = partOf(ctx, tb[which], which, draftId);
+      if (part) p[which] = part; else missingPart(which, tb[which]); // le repli sur l'ancienne partie n'est jamais silencieux
+    }
   }
   // Aperçu du personnalisateur : en-tête / pied choisis dans le travail en cours de la personne (cette requête seulement)
   const over = page && page.site_id ? require("../../services/previewParts").of(page.site_id) : null;
@@ -1132,6 +1146,6 @@ module.exports = {
   createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
-  siteParts, withSiteParts, componentRole, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
+  siteParts, withSiteParts, partSection, componentRole, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

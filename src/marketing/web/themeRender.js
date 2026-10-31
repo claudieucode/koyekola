@@ -33,9 +33,29 @@ function postScope(post, { contentHtml = "", minutes = null, author = "" } = {})
     seoTitle: String(post.seo_title || "").slice(0, 160), seoDescription: String(post.seo_description || "").replace(/\s+/g, " ").trim().slice(0, 320) };
 }
 
+// Habillage d'un modèle rendu hors Page Builder : jetons du site, feuille des pages, CSS généré (jetons → thème → éléments → personnalisé) ; même code pour les modèles de page ET les parties globales
+function wrapHtml(res, vm, siteOk, body, cls) {
+  // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
+  const main = require("../../services/appearance").publishedTokens();
+  const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}), { siteId: main ? null : siteOk ? siteOk.id : undefined });
+  const css = [faces, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
+  const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
+  return `<div class="${cls}${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`;
+}
+const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, page.site_id) : null; return site && site.status === "active" ? site : null; };
+// Rend le modèle de vue `vm` avec les éléments du Page Builder (callback : html | null). Un callback passé à res.render ne passe jamais par themeLayout (rendu de fragment).
+function renderVm(res, vm, siteOk, cls, done) {
+  res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false }, (err, body) => {
+    if (err) return done(null);
+    try { done(wrapHtml(res, vm, siteOk, body, cls)); } catch { done(null); }
+  });
+}
+// Site dont on cherche les modèles : celui du domaine de la requête (req.kwSite) sauf indication contraire de la route ; le site principal n'a pas de Theme Builder (null)
+const siteIdOf = (req, siteId) => (siteId !== undefined ? siteId : req.kwSite && Number.isInteger(req.kwSite.id) ? req.kwSite.id : null);
+
 // done(html | null)
 // type : une famille ou une liste ordonnée (la première qui a un modèle en ligne gagne : ex. archive de catégorie, puis liste du blog)
-function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, scope = {}, query = {}, siteId } = {}, done) {
+function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, authorId = null, scope = {}, query = {}, siteId } = {}, done) {
   let finished = false;
   const end = (html) => { if (!finished) { finished = true; done(html); } };
   try {
@@ -43,27 +63,46 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     if (!marketing || !marketing.ready) return end(null);
     const ctx = ctxOf(db, marketing);
     const visitor = visitorContext(db, marketing.organizationId, req);
-    let row = null;
-    // Theme Builder (23.1) d'abord (modèles produit d'un site) ; sans modèle applicable, l'ancien système décide exactement comme avant
-    row = require("../../themeBuilder/render").pickRegion(ctx, siteId, type, { category, categories, tag, tags, postId });
+    const opts = { category, categories, tag, tags, postId, authorId };
+    // Theme Builder (23.1) : modèles du site de la requête, toutes familles. Le contexte de la page est mémorisé pour l'en-tête et le pied de page (themeLayout)
+    const tbSite = siteIdOf(req, siteId);
+    const TB = require("../../themeBuilder/render");
+    if (tbSite) { const first = [].concat(type)[0]; res.locals.themeCtx = TB.regionContext(tbSite, first, opts) || res.locals.themeCtx; }
+    let row = TB.pickRegion(ctx, tbSite, type, opts);
+    // Sans modèle applicable, l'ancien système décide exactement comme avant
     if (!row) for (const t of [].concat(type)) { row = themeTemplates.pick(ctx, t, { category, categories, tag, tags, postId, visitor, siteId }); if (row) break; }
     if (!row) return end(null);
     const page = landing.getPublishedPage(db, row.slug);
     if (!page) return end(null);
     const sections = pages.resolveSections(ctx, page.sections).filter((s) => !s.hidden && audienceMatches(s.audience, visitor));
     const vm = landing.viewModel(ctx, { ...page, visitor: { ...visitor, query: { ...visitor.query, ...query } }, scope, sections });
-    const site = page.site_id ? pages.getSite(ctx, page.site_id) : null;
-    const siteOk = site && site.status === "active" ? site : null;
-    res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false }, (err, body) => {
-      if (err) return end(null);
-      // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
-      const main = require("../../services/appearance").publishedTokens();
-      const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}), { siteId: main ? null : siteOk ? siteOk.id : undefined });
-      const css = [faces, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
-      const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
-      end(`<div class="kw-theme-template${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`);
-    });
+    renderVm(res, vm, siteOf(ctx, page), "kw-theme-template", end);
   } catch (error) { end(null); }
+}
+
+// En-tête et pied de page d'un site pour la requête : { header, footer } en HTML (null = rien ne s'applique, l'habillage d'origine reste). Utilisé par themeLayout ; jamais bloquant.
+function renderParts(req, res) {
+  return new Promise((resolve) => {
+    try {
+      const site = req.kwSite;
+      const marketing = req.app.locals.marketing;
+      if (!site || !Number.isInteger(site.id) || !marketing || !marketing.ready) return resolve({});
+      const db = require("../../config/database");
+      const ctx = ctxOf(db, marketing);
+      const TB = require("../../themeBuilder/render");
+      if (!TB.hasParts(ctx, site.id)) return resolve({});
+      const win = TB.resolveParts(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, req.path));
+      const visitor = visitorContext(db, marketing.organizationId, req);
+      const out = {};
+      const jobs = ["header", "footer"].filter((w) => win[w]).map((which) => new Promise((ok) => {
+        const section = pages.partSection(ctx, win[which].sourceId, which);
+        if (!section) { console.warn(`[KOLAKISA] Theme Builder : ${which === "header" ? "en-tête" : "pied de page"} « ${win[which].name} » sans version publiée ; habillage d'origine conservé.`); return ok(); }
+        const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: site.id, organization_id: marketing.organizationId, visitor, theme: {}, scope: {}, sections: [section] });
+        renderVm(res, vm, siteOf(ctx, { site_id: site.id }), `kw-theme-part kw-theme-${which}`, (html) => { if (html) out[which] = html; ok(); });
+      }));
+      Promise.all(jobs).then(() => resolve(out), () => resolve({}));
+    } catch { resolve({}); }
+  });
 }
 
 // Pendant qu'on dessine un modèle d'article : données du dernier article publié (aperçu réaliste)
@@ -90,4 +129,4 @@ function previewScope(db, ctx, page) {
   } catch { return {}; }
 }
 
-module.exports = { renderRegion, postScope, previewScope };
+module.exports = { renderRegion, renderParts, postScope, previewScope };

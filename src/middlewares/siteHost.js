@@ -58,7 +58,7 @@ function neutralErrors(req, res) {
     let built = true;
     if (site) { try { const home = urls.resolve("/", { hostSite: site }); built = Boolean(home && home.type === "page" && home.state === "live"); } catch { built = false; } }
     res.set("X-Robots-Tag", "noindex, nofollow");
-    return render("site-public-error", { siteName: site ? site.name : "Ce site", built, message: (locals && locals.message) || "Cette page n'existe pas ou n'est plus en ligne." }, cb);
+    return render("site-public-error", { siteName: site ? site.name : "Ce site", built, message: (locals && locals.message) || "Cette page n'existe pas ou n'est plus en ligne.", themeTemplate: (locals && typeof locals.themeTemplate === "string") ? locals.themeTemplate : "" }, cb);
   };
 }
 
