@@ -16,6 +16,8 @@
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
   <% if (siteX && siteX.assets.custom) { %><style id="kw-site-custom"><%- siteX.assets.custom %></style><% } %>
   <% if (siteX && siteX.assets.transition && !(typeof builder !== "undefined" && builder)) { %><style><%- siteX.assets.transition %></style><% } %>
+<% const kwCode = siteX && siteX.assets.code && !preview && !(typeof builder !== "undefined" && builder) ? siteX.assets.code : null; %>
+  <% if (kwCode && kwCode.head) { %><%- kwCode.head %><% } %>
   <%# CSS personnalisé de la page : vérifié (aucune ressource externe), confiné au contenu de la page %>
   <% if (page.customCss) { %><style><%- page.customCss %></style><% } %>
 </head>
@@ -24,6 +26,7 @@
   <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <%# En-tête AUTOMATIQUE : le menu affecté à « En-tête du site » s'affiche même sans composant d'en-tête (jamais en double si la page montre déjà ce menu) %>
   <% if (page.autoNav && page.autoNav.header) { %><header class="lp-autohead"><a class="lp-autohead-brand" href="/"><% if (sx && sx.identity.logoUrl) { %><img src="<%= sx.identity.logoUrl %>" alt="<%= siteX.name %>"><% } else { %><%= siteX ? siteX.name : "KOLAKISA" %><% } %></a><%- include("_autonav", { nav: page.autoNav.header, cls: "lp-autohead-nav" }) %></header><% } %>
+  <% if (kwCode && kwCode.bodyStart) { %><%- kwCode.bodyStart %><% } %>
   <main class="lp-main" id="main">
     <% if (thanks && !page.sections.some((x) => x.type === "form")) { %><section class="lp-section"><p class="lp-thanks" role="status"><%= thanks %></p></section><% } %>
     <%- include("_sections", { page, form, preview, thanks, error, values, fieldCatalog, propertyDefs, builder: typeof builder !== "undefined" && builder }) %>
@@ -34,5 +37,6 @@
   <script src="<%= asset("/js/visitor.js") %>" defer></script><% } %>
   <script src="<%= asset("/js/landing.js") %>" defer></script>
   <script src="<%= asset("/js/kw-effects.js") %>" defer></script>
+  <% if (kwCode && kwCode.bodyEnd) { %><%- kwCode.bodyEnd %><% } %>
 </body>
 </html>
