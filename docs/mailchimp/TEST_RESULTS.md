@@ -23,7 +23,7 @@ Régression : **2 159 / 2 159** sur 150 fichiers — tous les tests `marketing-*
 
 ## 3. Écarts et fragilités, dits tels quels
 - **Un échec intermittent** a été observé une fois dans `mailchimp-navigateur.test.js` pendant une passe chargée (21 tests, 20 réussis) ; il ne s'est pas reproduit aux deux passes suivantes (21 / 21). Cause non identifiée : probablement un délai de 12 s sous charge.
-- **Un échec préexistant sans lien** : `tests/effacer-donnees.test.js` (« e-mail non parti ») échoue **à l'identique** sur `main` (a1e45460… `3abf0fd1`) sans mes changements ; je ne l'ai pas modifié.
+- **Un échec préexistant sans lien** : `tests/effacer-donnees.test.js` (« e-mail non parti ») échoue **à l'identique** sur `main` (`3abf0fd1`) sans mes changements ; je ne l'ai pas modifié.
 - **Suite complète du dépôt non exécutée** (696 fichiers, plusieurs heures sur cette machine partagée) : j'ai rejoué les 150 fichiers qui touchent ce que l'intégration modifie ou côtoie. Un fichier non rejoué peut encore contenir une dépendance non vue.
 - **Safari et Edge non testés.** Chrome et Firefox seulement. Aucun lecteur d'écran, axe-core ni Lighthouse : contrôles d'accessibilité partiels (noms accessibles, ordre des titres, clavier, focus rendu, contraste hérité du thème).
 - **Aucun test de charge** sur un vrai volume (50 000 membres) : la lecture par tranches et la reprise ont été testées avec un plafond réduit (3 membres), pas avec la volumétrie réelle.
