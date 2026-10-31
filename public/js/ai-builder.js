@@ -12,7 +12,7 @@
   const STEP_KEYS = S.steps.map((s) => s.key);
   let step = STEP_KEYS.includes(LS("step")) ? LS("step") : S.progress.current;
   let curPage = LS("page") || "";
-  let previewPage = "", device = "desktop", lastSkipped = [], lastRetry = null, failedNetwork = null, busy = 0;
+  let previewPage = "", device = "desktop", lastSkipped = [], lastEditorial = null, lastRetry = null, failedNetwork = null, busy = 0;
   const STATUS = { not_started: "Non commencé", in_progress: "En cours", to_review: "À vérifier", done: "Terminé", error: "Erreur" };
   const GEN = { none: "Non générée", proposed: "Proposition prête", draft: "Brouillon", published: "Publiée", missing: "Introuvable", unavailable: "Indisponible", invalid: "Invalide" };
 
@@ -226,7 +226,11 @@
     table.append(tb); wrap.append(table);
     if (run && run.status === "proposed" && CAN.write) {
       const conf = h("input", { type: "checkbox", id: "aib-confirm-replace" });
-      wrap.append(h("div", { class: "aib-cta" }, h("label", {}, conf, " Je confirme le remplacement des pages pour lesquelles j'ai choisi « Remplacer »"), btn("Appliquer en brouillon", () => act(async () => { const j = await api("POST", `/pages/${run.id}/appliquer`, { decisions, confirmReplace: conf.checked }); lastSkipped = []; return j; }), { primary: true })));
+      wrap.append(h("div", { class: "aib-cta" }, h("label", {}, conf, " Je confirme le remplacement des pages pour lesquelles j'ai choisi « Remplacer »"), btn("Appliquer en brouillon", () => act(async () => { const j = await api("POST", `/pages/${run.id}/appliquer`, { decisions, confirmReplace: conf.checked }); lastSkipped = []; lastEditorial = j.editorial || null; return j; }), { primary: true })));
+    }
+    if (run && run.status === "applied" && lastEditorial && lastEditorial.total) {
+      const ul = h("ul", {}); lastEditorial.toComplete.forEach((x) => ul.append(h("li", {}, h("strong", {}, x.page + " : "), x.what)));
+      wrap.append(h("div", { class: "aib-note", role: "status" }, h("strong", {}, `À compléter avant de publier (${lastEditorial.total}) — contrôle éditorial`), h("p", { class: "aib-muted" }, "Ces informations manquent ou sont des espaces réservés. Rien n'a été inventé ni modifié."), ul));
     }
     if (run && run.status === "applied" && CAN.write) wrap.append(h("div", { class: "aib-cta" }, btn("Annuler cette génération", async () => { if (await confirmDlg("Annuler la génération ?", "Les pages créées par cette génération et restées intactes sont retirées ; celles que vous avez modifiées depuis sont conservées et listées.", "Annuler la génération")) act(() => api("POST", `/pages/${run.id}/annuler`, {})); }, { danger: true })));
     return wrap;

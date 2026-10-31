@@ -20,3 +20,7 @@
 ## Ce qui n'est PAS branché
 - Le constructeur 21.8 n'appelle pas automatiquement la revue après sa génération, et son écran n'affiche pas les « éléments à compléter » : l'API existe, l'appel automatique reste à faire.
 - Le plan de pages du constructeur ne reçoit pas encore le genre de page 22.6.
+
+
+## Mise à jour : contrôle éditorial après génération
+`workspace.applyPages` appelle `contentIntel.review` après l'application des pages en brouillon et renvoie `editorial` (`toComplete` limité à 30 lignes, `total`, `analyzed`, `optimized`, `toImprove`). L'étape « Pages » du constructeur affiche ces éléments sous « À compléter avant de publier ». Lecture seule : aucun texte n'est modifié ni inventé ; une erreur du contrôle renvoie `null` sans bloquer l'application. Test : `tests/programme21-8-ai-builder-http.test.js`.

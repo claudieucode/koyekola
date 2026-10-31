@@ -15,6 +15,8 @@
     return fetch(BASE + path, { method: method, credentials: "same-origin", headers: Object.assign({ Accept: "application/json" }, body !== undefined ? { "Content-Type": "application/json" } : {}), body: body !== undefined ? JSON.stringify(body) : undefined })
       .then(function (r) { return r.json().catch(function () { return { ok: false, error: "Réponse inattendue du serveur." }; }).then(function (j) { j.status = r.status; return j; }); }, function () { return { ok: false, error: "Le serveur ne répond pas." }; });
   }
+  var RBASE = root.getAttribute("data-base").replace(/\/contenu-seo$/, "/regeneration") + "/api";
+  function apiR(method, path, body) { var keep = BASE; BASE = RBASE; var p = api(method, path, body); BASE = keep; return p; }
   function tab(name) { TABS.forEach(function (t) { var on = t === name; $("#ci-t-" + t).setAttribute("aria-selected", String(on)); $("#ci-t-" + t).tabIndex = on ? 0 : -1; $("#ci-p-" + t).hidden = !on; }); load(name); }
   root.querySelector(".ci-tabs").addEventListener("click", function (e) { var b = e.target.closest("[data-tab]"); if (b) tab(b.getAttribute("data-tab")); });
   root.querySelector(".ci-tabs").addEventListener("keydown", function (e) { var i = TABS.indexOf(document.activeElement && document.activeElement.getAttribute("data-tab")); if (i < 0 || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return; var n = TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length]; tab(n); $("#ci-t-" + n).focus(); });
@@ -65,9 +67,47 @@
       var ul = h("ul", { class: "ci-crit" }); q.criteria.forEach(function (c) { ul.appendChild(h("li", {}, [h("strong", { text: c.label + " : " }), c.score == null ? "non évaluable" : c.score + "/100", c.note ? h("small", { text: " — " + c.note }) : null])); }); box.appendChild(ul);
       box.appendChild(h("h2", { text: "Problèmes détectés (" + q.issues.length + ")" }));
       q.issues.forEach(function (i) { box.appendChild(h("div", { class: "ci-issue", "data-sev": i.severity }, [h("strong", { text: SEV[i.severity] + " · " }), i.explanation, h("br"), h("em", { text: "Recommandation : " + i.recommendation }), i.correction ? h("div", { class: "ci-fix" }, ["Correction proposée : ", h("code", { text: i.correction.value || i.correction.note || i.correction.type }), i.correction.value && i.correction.note ? h("small", { text: " — " + i.correction.note }) : null]) : null])); });
-      if (AI) { box.appendChild(h("h2", { text: "Améliorer avec l'IA (avant/après)" })); box.appendChild(h("p", { class: "sw-muted", text: "Chaque action prépare une proposition dans l'écran « Modifier avec l'IA et historique », où vous l'acceptez, la refusez ou l'annulez." })); }
+      if (EDIT) kindForm(box, Number(id), e.kind);
+      if (AI) optimizeForm(box, Number(id));
       box.appendChild(h("button", { type: "button", class: "btn btn-sm", text: "Ré-analyser", onclick: function () { evalPage(true); } }));
     });
+  }
+  // ---------- genre de page et assistant d'optimisation ----------
+  function kindForm(box, pageId, current) {
+    api("GET", "/reglages").then(function (j) {
+      if (!j.ok) return;
+      var opts = [["", "À préciser"]].concat(j.kinds.map(function (k) { return [k.key, k.label]; }));
+      box.appendChild(form("Genre de cette page", [field("Genre (guide la rédaction et l'évaluation)", select("kind", opts, current || ""))], "Enregistrer le genre", function (f) {
+        api("POST", "/pages/" + pageId + "/genre", { kind: f.elements.kind.value }).then(function (r) { result(r, "Genre enregistré.", function () { evalPage(true); }); });
+      }));
+    });
+  }
+  function optimizeForm(box, pageId) {
+    api("GET", "/actions").then(function (j) {
+      if (!j.ok) return;
+      var out = h("div", { id: "ci-opt-out", "aria-live": "polite" });
+      box.appendChild(form("Améliorer cette page avec l'IA", [
+        h("p", { class: "sw-muted", text: "Rien n'est modifié sans votre accord : l'IA prépare une proposition avant/après que vous acceptez ou refusez, et que vous pouvez annuler ensuite (historique dans « Modifier avec l'IA et historique »). Chaque proposition peut consommer des crédits d'IA si un fournisseur est configuré." }),
+        field("Action", select("action", j.actions.map(function (a) { return [a.key, a.label]; }))), field("Précision (facultatif)", input("extra", "ex. public : artisans")),
+      ], "Préparer une proposition", function (f) {
+        empty(out).textContent = "Préparation…";
+        api("POST", "/optimiser", { action: f.elements.action.value, extra: f.elements.extra.value.trim(), pageId: pageId }).then(function (r) { showProposal(out, r); });
+      }));
+      box.appendChild(out);
+    });
+  }
+  function showProposal(out, r) {
+    empty(out);
+    if (!r.ok) { out.textContent = r.error || "Erreur."; return; }
+    if (r.status !== "proposed") { out.textContent = r.message || "Aucune modification proposée."; return; }
+    out.appendChild(h("h2", { text: "Proposition (avant / après)" }));
+    var ch = (r.preview && r.preview.changes) || [];
+    if (!ch.length) out.appendChild(h("p", { text: "La proposition ne change aucun texte." }));
+    ch.slice(0, 12).forEach(function (c) { out.appendChild(h("div", { class: "ci-issue" }, [h("strong", { text: "Avant : " }), String(c.before == null ? "" : c.before).slice(0, 600), h("br"), h("strong", { text: "Après : " }), String(c.after == null ? "" : c.after).slice(0, 600)])); });
+    var need = Boolean(r.plan && r.plan.requiresConfirmation);
+    if (need) out.appendChild(h("p", { class: "ci-issue", "data-sev": "important", text: "Cette proposition dépasse le périmètre demandé : " + ((r.plan && r.plan.why) || "voir l'historique") + " Vous devez la confirmer expressément." }));
+    out.appendChild(h("button", { type: "button", class: "btn btn-primary", text: need ? "Je confirme et j'accepte" : "Accepter la proposition", onclick: function () { apiR("POST", "/operations/" + r.opId + "/appliquer", { confirm: need }).then(function (x) { result(x, "Proposition appliquée. Vous pouvez l'annuler dans « Modifier avec l'IA et historique ».", function () { empty(out); evalPage(true); }); }); } }));
+    out.appendChild(h("button", { type: "button", class: "btn", text: "Refuser", onclick: function () { apiR("POST", "/operations/" + r.opId + "/refuser", {}).then(function (x) { result(x, "Proposition refusée, le texte d'origine est conservé.", function () { empty(out); }); }); } }));
   }
   // ---------- maillage ----------
   function links() {

@@ -177,6 +177,7 @@ describe("Interface Assistant IA (serveur réel)", () => {
       const rows = db.prepare("SELECT id, status, site_id FROM mk_landing_pages WHERE site_id = ?").all(siteOfProject);
       assert.ok(rows.length >= 2); assert.ok(rows.every((r) => r.status !== "published"), "aucune page publiée par la génération");
       const st = json(ap).state; assert.ok(st.pages.filter((p) => p.pageId).length >= 2);
+      const ed = json(ap).editorial; assert.ok(ed && ed.analyzed >= 2, "contrôle éditorial 22.6 joint au résultat"); assert.ok(Array.isArray(ed.toComplete) && ed.total >= ed.toComplete.length);
       assert.equal(st.steps.find((x) => x.key === "pages").status, st.pages.every((p) => p.pageId) ? "done" : "to_review");
     });
     test("médias : emplacements vides listés ; le fournisseur réel non configuré est refusé ; la génération « démonstration » suit tout le cycle (estimation, tâche, acceptation, image en place)", async () => {

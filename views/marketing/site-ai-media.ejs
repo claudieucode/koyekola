@@ -91,6 +91,13 @@
     <p class="sw-muted">Pour importer votre propre image : <a href="/marketing/site-web/medias" target="_blank" rel="noopener">médiathèque</a> (le type réel du fichier est vérifié), puis renseignez sa provenance ici.</p>
   </section>
 
+  <section class="mk-panel" data-iq data-url="<%= W %>/diagnostic.json">
+    <h2>Qualité des images</h2>
+    <p class="sw-muted">Analyse les images de la médiathèque (luminosité, netteté, taille, doublons, images inutilisées, licences, textes alternatifs). Lecture seule : rien n'est modifié ni supprimé. Le sujet des images n'est pas reconnu.</p>
+    <p><button type="button" class="mk-btn" data-iq-run>Lancer le diagnostic</button> <span class="sw-muted" data-iq-status role="status" aria-live="polite"></span></p>
+    <div data-iq-out></div>
+  </section>
+
   <section class="mk-panel">
     <h2>Historique et consommation</h2>
     <table class="mk-table"><caption class="sw-sr">Historique des opérations</caption><thead><tr><th scope="col">Date</th><th scope="col">Opération</th><th scope="col">Fournisseur</th><th scope="col">État</th><th scope="col">Coût estimé</th></tr></thead><tbody>
@@ -101,4 +108,5 @@
   </section>
 </div>
 <script src="/js/site-ai-media.js" defer></script>
+<script src="/js/site-ai-quality.js" defer></script>
 <%- include("partials/bottom") %>
