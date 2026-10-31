@@ -3,6 +3,7 @@
 // qui ne redirige QUE vers un lien enregistré dans la page (jamais une adresse fournie par le visiteur).
 const express = require("express");
 const landing = require("../landing");
+const perfEngine = require("../../perfEngine");
 const pages = require("../pages");
 const { tokensToCss } = require("../pages/tokens");
 const forms = require("../forms");
@@ -57,6 +58,11 @@ module.exports = ({ db }) => {
       funnelContext, page: { ...shownPage(req, page), funnelNoindex: Boolean(funnelContext && funnelContext.noindex) }, site: siteOf(req, page), tokensToCss, form: form && form.status === "published" ? form : null, fieldCatalog: forms.FIELD_CATALOG,
       propertyDefs: form ? forms.propertyFieldDefs(db, page.organization_id, form) : [], renderMarkdown, preview: false,
       error: widget ? null : error, values: widget ? {} : values, thanks: widget ? null : thanks, widgetForm: widget ? { id: widget, error, values, thanks } : null,
+    }, (err, html) => {
+      if (err) return req.next(err);
+      // Programme 22.9 : l'image principale visible d'emblée n'est pas différée (réglage par site, activé par défaut) ; jamais d'échec de page pour une optimisation
+      try { if (perfEngine.lcpEnabled(db, page.site_id)) html = perfEngine.prioritizeLcp(html).html; } catch { /* page servie telle quelle */ }
+      res.send(html);
     });
   };
   // Widget « Formulaire » de la page (dans une section libre) : son formulaire, ou null

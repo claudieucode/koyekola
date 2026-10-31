@@ -201,7 +201,11 @@
     var list = nav.querySelector(".kw-menu-list");
     var b = document.createElement("button"); b.type = "button"; b.className = "kw-menu-burger"; b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-controls", list.id);
     b.innerHTML = '<span aria-hidden="true"></span><span class="kw-menu-burger-label">Menu</span>';
-    b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); nav.classList.toggle("is-open", !open); });
+    var setOpen = function (on) { b.setAttribute("aria-expanded", on ? "true" : "false"); nav.classList.toggle("is-open", on); };
+    b.addEventListener("click", function () { setOpen(b.getAttribute("aria-expanded") !== "true"); });
+    // 22.8 — clavier et lecteurs d'écran : Échap referme le menu et rend le focus au bouton ; Tab hors du menu le referme (jamais de menu resté ouvert hors de vue)
+    nav.addEventListener("keydown", function (e) { if (e.key === "Escape" && nav.classList.contains("is-open")) { setOpen(false); b.focus(); } });
+    nav.addEventListener("focusout", function (e) { if (nav.classList.contains("is-open") && e.relatedTarget && !nav.contains(e.relatedTarget)) setOpen(false); });
     nav.insertBefore(b, list);
     nav.classList.add("is-enhanced");
   });

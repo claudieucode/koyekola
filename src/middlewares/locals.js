@@ -5,7 +5,7 @@ const db = require("../config/database");
 const { parseVideoUrl } = require("../utils/video");
 const { asset } = require("../utils/assets");
 const { renderMarkdown } = require("../utils/markdown");
-const { imageSource } = require("../marketing/media/variants");
+const { imageSource, dimensionAttrs } = require("../marketing/media/variants");
 const { signedBunnyUrl } = require("../utils/bunny");
 const { absoluteUrl, plainText, jsonLdTags } = require("../utils/seo");
 const { slugify } = require("../utils/format");
@@ -55,6 +55,7 @@ function injectLocals(req, res, next) {
   res.locals.renderMarkdown = renderMarkdown;
   res.locals.nodeLinkCount = (node) => { try { return require("../marketing/landing").linksOf({ sections: [{ type: "layout", children: [node] }] }).length; } catch { return 0; } }; // liens cliquables d'un élément (recalage du compteur si son rendu échoue)
   res.locals.imageSource = imageSource; // résolution choisie d'un widget image (src, srcset, sizes)
+  res.locals.imageDims = dimensionAttrs; // width/height réservés (programme 22.9)
   res.locals.asset = asset;
   res.locals.httpStatus = () => res.statusCode; // code de la réponse en cours (pages d'erreur : titre et message adaptés)
   // Apparence du site (CMS → Apparence) : styles, en-tête, pied de page. Version publiée ; en aperçu (?kwpreview=1, équipe seulement) le brouillon.

@@ -4,7 +4,8 @@
   <% if (h.noindex) { %><meta name="robots" content="noindex, nofollow">
   <% } else { %><% if (h.robots) { %><meta name="robots" content="<%= h.robots %>">
   <% } %><link rel="canonical" href="<%= h.canonical %>">
-  <meta property="og:site_name" content="<%= h.siteName %>">
+  <% (h.alternates || []).forEach((a) => { %><link rel="alternate" hreflang="<%= a.hreflang %>" href="<%= a.href %>">
+  <% }) %>  <meta property="og:site_name" content="<%= h.siteName %>">
   <meta property="og:locale" content="<%= h.locale %>">
   <meta property="og:type" content="<%= h.ogType %>">
   <meta property="og:title" content="<%= h.ogTitle %>">

@@ -105,7 +105,7 @@ async function call(ctx, action, { channel = "email", prompt, schema, effort = "
   if (orgLast24h(ctx, now) >= settings.dailyLimit) throw new AiError("quota", `Plafond atteint : ${settings.dailyLimit} demandes à l'IA sur les dernières 24 heures (réglable dans Paramètres → Assistant IA).`);
   const log = (ok, code = "", out = 0) => ctx.db.prepare("INSERT INTO mk_ai_requests (organization_id, user_id, action, ok, error_code, input_chars, output_tokens, created_at, site_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(ctx.organizationId, ctx.userId ?? null, action, ok ? 1 : 0, code, prompt.length, out, now, site);
   try {
-    const r = await runJson({ system: system || systemFor(ctx, channel), prompt, schema, effort, apiKey });
+    const r = await runJson({ system: system || systemFor(ctx, channel), prompt, schema, effort, apiKey, label: action });
     log(true, "", (r.usage && r.usage.output_tokens) || 0);
     return r.data;
   } catch (error) {

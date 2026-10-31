@@ -1,0 +1,31 @@
+<%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/site-wizard.css">
+<link rel="stylesheet" href="<%= asset('/css/performance.css') %>">
+<div class="sw pf" id="pf" data-base="<%= base %>" data-write="<%= perms.write ? 1 : 0 %>">
+  <p class="mk-back"><a href="<%= siteBase %>">← <%= siteName %></a></p>
+  <div class="mk-head"><div class="mk-head-main"><h1>Performance des pages</h1><p class="mk-head-sub">Analyse du HTML réellement servi aux visiteurs. Chaque valeur indique son origine : mesure, estimation ou donnée indisponible.</p></div></div>
+  <div class="pf-status" id="pf-status" role="status" aria-live="polite"></div>
+  <section class="pf-card" aria-labelledby="pf-h-opt">
+    <h2 id="pf-h-opt">Optimisation appliquée</h2>
+    <label class="pf-check"><input type="checkbox" id="pf-lcp" <%= perms.write ? "" : "disabled" %>> Priorité de l'image principale (retire le chargement différé de la première grande image et la rend prioritaire)</label>
+    <p class="sw-muted">Réversible à tout moment ; chaque changement est journalisé.</p>
+    <ul class="pf-log" id="pf-log" aria-label="Journal des changements"></ul>
+  </section>
+  <section class="pf-card" aria-labelledby="pf-h-pages">
+    <h2 id="pf-h-pages">Pages du site</h2>
+    <p class="sw-muted" id="pf-totals"></p>
+    <div class="pf-scroll"><table class="pf-table"><thead><tr><th scope="col">Page</th><th scope="col">Statut</th><th scope="col">Dernière analyse</th><th scope="col">Constats</th><th scope="col">HTML (gzip)</th><th scope="col">JS</th><th scope="col">CSS</th><th scope="col">Éléments DOM</th><th scope="col"><span class="pf-sr">Action</span></th></tr></thead><tbody id="pf-rows"></tbody></table></div>
+  </section>
+  <section class="pf-card" id="pf-detail" hidden aria-labelledby="pf-h-detail">
+    <h2 id="pf-h-detail">Détail</h2>
+    <p class="sw-muted" id="pf-conditions"></p>
+    <div class="pf-scroll"><table class="pf-table"><thead><tr><th scope="col">Métrique</th><th scope="col">Valeur</th><th scope="col">Origine</th><th scope="col">Environnement</th></tr></thead><tbody id="pf-metrics"></tbody></table></div>
+    <h3>Constats et corrections proposées</h3>
+    <ol class="pf-findings" id="pf-findings"></ol>
+    <h3>Historique et comparaison</h3>
+    <div class="pf-cmp"><label class="sw-field">Avant<select id="pf-before"></select></label><label class="sw-field">Après<select id="pf-after"></select></label><button class="btn" type="button" id="pf-compare">Comparer</button></div>
+    <div id="pf-compare-out" aria-live="polite"></div>
+  </section>
+</div>
+<script src="<%= asset('/js/performance.js') %>" defer></script>
+<%- include("partials/bottom") %>
