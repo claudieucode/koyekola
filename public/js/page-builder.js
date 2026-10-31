@@ -8612,6 +8612,11 @@
       return true;
     },
   });
+  // Lien direct vers un élément (#element=<id>), utilisé par le Personnaliser (« Modifier seulement cet élément ») : sélectionne l'élément s'il existe dans cette page, sinon ne fait rien.
+  (function () {
+    var m = /(?:^|[#&])element=([a-z0-9]{6,20})(?:&|$)/.exec(location.hash || "");
+    if (m && byId(m[1])) select(m[1]);
+  })();
   // Pont vers IA Kolakisa (page-builder-ai.js) : l'IA propose, l'éditeur applique en UNE étape d'historique
   if (window.pbAi) window.pbAi.attach({
     base: BASE, api: api, store: store, icon: icon, toast: toast, canWrite: function () { return canWrite; },
