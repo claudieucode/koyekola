@@ -2,7 +2,7 @@
 
 _Vue de `ELEMENTOR_PARITY_MATRIX.md` générée par `scripts/build-elementor-matrix.py` (familles F, SS, UI, FM, NV). Ne pas modifier à la main._
 
-**234 lignes** : Complet 111, Partiel 66, Absent 41, Autre module 10, Non applicable 4, Exclu/Non fait 2.
+**234 lignes** : Complet 112, Partiel 65, Absent 41, Autre module 10, Non applicable 4, Exclu/Non fait 2.
 
 | ID | Référence Elementor | Source | Disponibilité | Kolakisa | État | Écart | Solution prévue | Prio |
 |---|---|---|---|---|---|---|---|---|
@@ -60,7 +60,7 @@ _Vue de `ELEMENTOR_PARITY_MATRIX.md` générée par `scripts/build-elementor-mat
 | EL-FM019 | Honeypot | https://elementor.com/help/form-widget/ | documenté | Champ piège « website » + jeton signé ≥2 s + limite 5 envois/h/IP; FP:17,104; antispam.js | Complet | Équivalent fonctionnel, réponse « réussie » silencieuse pour les robots | — | P4 |
 | EL-FM020 | Étape (Step) / formulaire multi-étapes | https://elementor.com/help/form-widget/ | documenté | Aucun | Absent | Formulaire sur une seule page; pas d'indicateur d'étapes (texte/icône/nombre/barre) | Mode multi-étapes + indicateur | P3 |
 | EL-FM021 | Option champ : Libellé (Label) afficher/masquer | https://elementor.com/help/form-widget/ | documenté | Libellés issus du catalogue/propriété; pas de masquage | Partiel | Libellé non modifiable pour les champs standards (FIELD_CATALOG fixe) | Libellés personnalisables | P3 |
-| EL-FM022 | Option champ : Placeholder | https://elementor.com/help/form-widget/ | documenté | Réglage placeholder par champ (fields.js), rendu échappé dans _signup-fields.ejs (page /f, section du site, widget); pas encore dans le pop-up public/js/popup.js | Partiel | Absent du rendu pop-up | Reprendre le placeholder dans popup.js | P3 |
+| EL-FM022 | Option champ : Placeholder | https://elementor.com/help/form-widget/ | documenté | Réglage placeholder par champ (fields.js), rendu échappé: pages /f, sections du site, widget et pop-up (popup.js) | Complet | — | — | P3 |
 | EL-FM023 | Option champ : Obligatoire (Required) + marque | https://elementor.com/help/form-widget/ | documenté | required par champ, recalculé serveur; FL:30-31, FL:76; étoile popup.js | Complet | Marque d'obligation toujours affichée (non masquable) | — | P4 |
 | EL-FM024 | Option champ : Largeur de colonne | https://elementor.com/help/form-widget/ | documenté | Aucun réglage de largeur par champ | Absent | Champs toujours empilés | Largeur par champ (100/50/33/25) + colonnes | P2 |
 | EL-FM025 | Option champ : Valeur par défaut / ID / Shortcode | https://elementor.com/help/form-widget/ | documenté | Aucun | Absent | Pas de valeur par défaut ni d'ID de champ | Ajouter ID et valeur par défaut | P4 |
