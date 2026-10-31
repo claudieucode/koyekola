@@ -12,6 +12,7 @@
 .tb-side button[disabled] { opacity: .55; cursor: not-allowed; }
 .tb-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--sw-line); flex: none; } .tb-dot[data-live="1"] { background: var(--sw-ok); border-color: var(--sw-ok); }
 .tb-count { margin-left: auto; font-size: .8rem; color: var(--sw-navy); }
+#tb input:not([type=checkbox]):not([type=file]), #tb select, #tb .sw-field select { min-height: 44px; box-sizing: border-box; }
 .tb-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; } .tb-tools .sw-field { flex: 1 1 180px; min-width: 0; }
 .tb-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 14px; }
 .tb-card { border: 1px solid var(--sw-line); border-radius: 12px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0; background: inherit; }
