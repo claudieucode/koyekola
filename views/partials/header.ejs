@@ -18,7 +18,7 @@
   <% if (!(typeof dash !== "undefined" && dash)) { %><link rel="stylesheet" href="<%= asset('/css/kola-v3.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-art.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-vivid.css') %>"><% } /* design system v3 : site public et espace élève (l'espace formateur garde son habillage dashboard) */ %>
   <% const ap = typeof appearance === "function" ? appearance() : null; %><% if (ap && ap.css) { %><style id="kw-appearance"><%- ap.css %></style><% } %>
   <% if (ap && ap.preview) { %><meta name="robots" content="noindex, nofollow"><% } %>
-  <% if (typeof dash !== "undefined" && dash) { %><link rel="stylesheet" href="<%= asset('/css/dashboard.css') %>"><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% if (dash.seo) { %><link rel="stylesheet" href="<%= asset('/css/seo-workspace.css') %>"><% } %><% } %>
+  <% if (typeof dash !== "undefined" && dash) { %><link rel="stylesheet" href="<%= asset('/css/dashboard.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-art.css') %>"><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% if (dash.seo) { %><link rel="stylesheet" href="<%= asset('/css/seo-workspace.css') %>"><% } %><% } %>
   <link rel="stylesheet" href="<%= asset('/css/kola-soft.css') %>"><%# Soft Surface : surfaces douces à la place des contours (jetons --soft-*), chargée en dernier %>
 </head>
 <body<%- typeof dash !== "undefined" && dash ? ' class="dash-body"' : "" %>>

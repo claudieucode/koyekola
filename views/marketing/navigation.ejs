@@ -8,7 +8,7 @@
       <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Créer un menu</button></div><% } %></div>
 
     <% if (!total) { %>
-      <div class="mk-empty"><%- icon("menu", { size: 32 }) %><h2>Aucun menu.</h2>
+      <div class="mk-empty"><%- illu("navigation", { className: "kx-empty-ill" }) %><h2>Aucun menu.</h2>
         <p>Créez un menu vide, ou reprenez les liens actuels de l'en-tête et du pied de page du site pour partir d'une base réelle.</p>
         <% if (canWrite) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-mk-modal-open="nouveau-menu">Créer un menu</button>
           <% if (navSite === null) { %><form action="<%= BASE %>/importer" method="post" class="mk-inline"><button type="submit" class="btn btn-outline btn-sm">Créer à partir du site actuel</button></form><% } %></div><% } %></div>

@@ -56,3 +56,6 @@ html[data-kola-theme="dark"] .kx-steps li { background: rgba(76, 163, 230, 0.16)
 .kv-auth-aside .kv-auth-art { padding: 14px 16px 6px; border-radius: 20px; background: #eaf3fa; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22); }
 .kv-auth-aside .kv-auth-art .kx-art { --a-blue: #0277b6; --a-sky: #7dd3fc; --a-ice: #e3f1fb; }
 .kv-auth-aside .kv-auth-art .kx-art .blue { fill: var(--a-blue); }
+/* Carte de formation sans vignette : la scène remplit la zone d'image (le conteneur garde son format) */
+.course-thumb .course-thumb-art { position: absolute; inset: 0; display: grid; place-items: center; background: var(--surface-alt, #eaf3fa); }
+.course-thumb .course-thumb-art .kx-art { width: min(78%, 260px); height: auto; }

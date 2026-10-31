@@ -1,7 +1,7 @@
 <%- include("../partials/header", { title: "Chapitres" }) %>
 <div class="dash-head"><div><h1>Chapitres</h1><p>Organisez le programme de chaque formation : chapitres, sous-chapitres, quiz et ressources.</p></div></div>
 <% if (!courses.length) { %>
-  <div class="dash-empty"><h3>Aucune formation</h3><p>Créez une formation pour lui ajouter des chapitres.</p><a href="/formateur/cours/nouveau" class="btn btn-primary">Nouvelle formation</a></div>
+  <div class="dash-empty"><div class="kv-empty-ill" aria-hidden="true"><%- illu("formations") %></div><h3>Aucune formation</h3><p>Créez une formation pour lui ajouter des chapitres.</p><a href="/formateur/cours/nouveau" class="btn btn-primary">Nouvelle formation</a></div>
 <% } else { %>
   <div class="dpanel"><div class="dtable-wrap"><table class="dtable">
     <thead><tr><th scope="col">Formation</th><th scope="col">Chapitres</th><th scope="col">Sous-chapitres</th><th scope="col">Statut</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>

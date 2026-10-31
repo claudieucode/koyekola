@@ -2,7 +2,7 @@
 <%- include("_head", { heading: "Clients" }) %>
 <section class="mk-panel">
   <form method="get" class="mk-form mk-inline-form" role="search"><div class="field-group"><label for="cl-q">Rechercher</label><input id="cl-q" name="q" value="<%= query.q || "" %>" maxlength="80"></div><button class="btn btn-outline btn-sm" type="submit">Rechercher</button></form>
-  <% if (!list.items.length) { %><p class="mk-empty">Aucun client.</p><% } else { %>
+  <% if (!list.items.length) { %><div class="mk-empty"><%- illu("boutique", { className: "kx-empty-ill" }) %><p>Aucun client.</p></div><% } else { %>
   <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Clients</caption><thead><tr><th scope="col">Client</th><th scope="col">Compte</th><th scope="col">Commandes</th><th scope="col">Dépensé</th><th scope="col">Statut</th></tr></thead><tbody>
   <% list.items.forEach((c) => { %><tr><th scope="row"><%= c.name || c.email %><br><span class="mk-sub"><%= c.email %></span></th><td><%= c.has_account ? "Oui" : "Invité" %></td><td><%= c.orders %></td><td><%= money(c.spent_cents) %></td>
     <td><%= c.status === "active" ? "Actif" : "Désactivé" %><% if (canWrite) { %> <form class="mk-inline-form" method="post" action="<%= base %>/clients/<%= c.id %>/statut"><input type="hidden" name="statut" value="<%= c.status === "active" ? "disabled" : "active" %>"><button class="btn btn-ghost btn-sm" type="submit"><%= c.status === "active" ? "Désactiver" : "Réactiver" %></button></form><% } %></td></tr><% }) %>

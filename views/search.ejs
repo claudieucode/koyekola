@@ -11,7 +11,7 @@
     <% if (!q) { %>
       <p class="kv-error-msg">Saisissez un mot pour chercher dans les articles et les pages du site.</p>
     <% } else if (!articles.length && !pages.length) { %>
-      <div class="empty-state"><span class="kv-empty-ico" aria-hidden="true"><%- icon("search", { size: 26 }) %></span><h3>Aucun résultat</h3><p>Aucun résultat pour « <%= q %> ».</p><a href="/catalogue" class="btn btn-outline">Voir le catalogue</a></div>
+      <div class="empty-state"><div class="kv-empty-ill" aria-hidden="true"><%- illu("recherche") %></div><h3>Aucun résultat</h3><p>Aucun résultat pour « <%= q %> ».</p><a href="/catalogue" class="btn btn-outline">Voir le catalogue</a></div>
     <% } else { %>
       <% if (articles.length) { %>
         <h2>Articles (<%= articles.length %>)</h2>

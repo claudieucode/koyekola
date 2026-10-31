@@ -1,6 +1,7 @@
 /* Assistant de création de site — bleu marine Kolakisa, sobre, sans animation lourde */
 .sw { --sw-navy: #0b2a40; --sw-blue: #0277b6; --sw-line: #d6e2ec; --sw-soft: #f3f8fc; --sw-ok: #1e7e34; --sw-warn: #8a5a00; max-width: 1040px; margin: 0 auto; }
 .sw fieldset { border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
+html[data-kola-theme="dark"] .sw legend { color: #e6edf6; }
 .sw legend { font-weight: 700; color: var(--sw-navy); margin: 14px 0 8px; padding: 0; display: flex; gap: 10px; align-items: center; }
 .sw .mk-panel { margin-bottom: 16px; }
 .sw-num { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--sw-navy); color: #fff; font-size: 13px; }
@@ -9,7 +10,7 @@
 .sw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .sw-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .sw-cards-sm { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
-.sw-card { position: relative; display: block; border: 1px solid var(--sw-line); border-radius: 12px; background: #fff; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.sw-card { position: relative; display: block; border: 1px solid var(--sw-line); border-radius: 12px; background: #fff; color: #10222f; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
 .sw-card:hover { border-color: var(--sw-blue); }
 .sw-card input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
 .sw-card:has(input:checked) { border-color: var(--sw-navy); box-shadow: 0 0 0 2px var(--sw-navy); }
@@ -44,3 +45,5 @@
 .sw :focus-visible { outline: 3px solid var(--sw-blue); outline-offset: 2px; }
 @media (max-width: 640px) { .sw-steps .sw-l { display: none; } .sw-steps .is-current .sw-l { display: inline; } .sw-row-actions { white-space: normal; } }
 @media (prefers-reduced-motion: reduce) { .sw * { transition: none !important; } }
+/* Mode sombre : les cartes de choix restent blanches (fond fixe) ; leur texte reste donc foncé */
+html[data-kola-theme="dark"] .sw .sw-card-body > strong, html[data-kola-theme="dark"] .sw .sw-card-body > span:not(.kx-card-ill) { color: #10222f; }

@@ -6,7 +6,7 @@
       <div class="kv-pagehead" style="padding-inline:0;"><div><h1>Mon panier</h1><% if (items.length) { %><p><%= items.length %> formation<%= items.length > 1 ? "s" : "" %> prête<%= items.length > 1 ? "s" : "" %> à être commandée<%= items.length > 1 ? "s" : "" %>.</p><% } %></div></div>
       <% if (items.length === 0) { %>
         <div class="empty-state">
-          <span class="kv-empty-ico" aria-hidden="true"><%- icon("cart", { size: 26 }) %></span>
+          <div class="kv-empty-ill" aria-hidden="true"><%- illu("boutique") %></div>
           <h3>Votre panier est vide</h3>
           <p>Parcourez le catalogue pour trouver votre prochaine formation.</p>
           <a href="/catalogue" class="btn btn-primary">Voir le catalogue</a>
