@@ -4,8 +4,8 @@ Statuts : ABSENT · PARTIEL (existant, insuffisant) · PRÉVU (lot) · FAIT (tes
 
 | # | Référence Elementor | État initial Kolakisa | Implémentation prévue | Fichiers | Tests | Statut |
 |---|---|---|---|---|---|---|
-| 1 | Tableau de bord « toutes les parties » avec miniatures | absent | lot 3 | `views/marketing/theme-builder*.ejs` | — | PRÉVU |
-| 2 | Barre latérale par type + point vert/gris | absent | lot 3 | idem | — | PRÉVU |
+| 1 | Tableau de bord « toutes les parties » avec miniatures | absent | lot 3 | `views/marketing/theme-builder*.ejs` | theme-builder-routes.test.js | FAIT (10 tests, lot 3) |
+| 2 | Barre latérale par type + point vert/gris | absent | lot 3 | idem | theme-builder-routes.test.js | FAIT (10 tests, lot 3) |
 | 3 | Header | PARTIEL (1 par site, sans conditions) | lot 2 (modèle + conditions), lot 5 (rendu) | `src/themeBuilder/*` | — | PRÉVU |
 | 4 | Footer | PARTIEL | idem | idem | — | PRÉVU |
 | 5 | Single page | ABSENT (seulement « À propos ») | lot 5 | `render` | — | PRÉVU |
@@ -24,13 +24,17 @@ Statuts : ABSENT · PARTIEL (existant, insuffisant) · PRÉVU (lot) · FAIT (tes
 | 18 | Landing Pages, Floating buttons, Media (cibles Singular) | NON PRIS EN CHARGE (pas de ces types de contenu) | — | — | — | NON PRIS EN CHARGE |
 | 19 | Avertissement de conflit | PARTIEL | lot 1 + 3 | `resolve.js` | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
 | 20 | Instances (où le modèle est utilisé) | ABSENT | lot 2/3 | `store.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
-| 21 | Edit / Edit Conditions | PARTIEL | lot 3 | — | — | PRÉVU |
+| 21 | Edit / Edit Conditions | PARTIEL | lot 3 | — | theme-builder-routes.test.js | FAIT (10 tests, lot 3) |
 | 22 | Rename / Trash / Export | PARTIEL | lot 2 | `store.js`, `portable.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
 | 23 | Import `.json` | ABSENT | lot 2 | `portable.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
 | 24 | Import `.zip` | NON PRIS EN CHARGE (JSON seulement, pas d'exécutable) | — | — | — | NON PRIS EN CHARGE |
 | 25 | Miniatures auto / image mise en avant | ABSENT | lot 4 | `thumb.js` | — | PRÉVU |
-| 26 | Raccourci clavier Ctrl+Maj+E | ABSENT | lot 3 (si sans conflit avec l'administration) | — | — | PRÉVU |
+| 26 | Raccourci clavier Ctrl+Maj+E | ABSENT | lot 3 (si sans conflit avec l'administration) | — | theme-builder-routes.test.js | FAIT (10 tests, lot 3) — raccourci clavier non fait |
 | 27 | Accès depuis l'éditeur (logo › Theme Builder) | NON PRIS EN CHARGE (modifierait l'éditeur — interdit) | lien depuis l'administration uniquement | — | — | NON PRIS EN CHARGE |
 | 28 | Conditions personnalisées (API) | ABSENT | lot 1 : registre de conditions extensible côté serveur | `conditions.js` | theme-builder-noyau.test.js | NOYAU FAIT (14 tests purs, lot 1) ; branchement au rendu : lot 5 |
 | 29 | Sticky / transparent header | à vérifier dans le Page Builder (propriétés de position) | documenté, pas de développement dans l'éditeur | — | — | PRÉVU |
 | 30 | Duplication, archivage, restauration, versions | ABSENT | lot 2 | `store.js` | theme-builder-stockage.test.js | SERVICE FAIT (13 tests, lot 2) ; écran : lot 3 |
+
+
+## Écart de navigation (lot 3)
+L'entrée « Constructeur de thème » n'est PAS dans le registre du menu Apparence : cinq suites figent ce registre (le site principal doit exposer chaque entrée à son adresse historique) et le Theme Builder 23.1 est propre aux sites créés dans le gestionnaire. Accès actuel : raccourci du tableau de bord du site (`/site-web/sites/:id/tableau-de-bord`) et adresse directe `/site-web/sites/:id/constructeur-de-theme`. Décision produit à prendre pour une entrée de menu (tests du registre à étendre).
