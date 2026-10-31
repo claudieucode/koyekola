@@ -111,8 +111,8 @@ async function aiCopy(ctx, plan, siteId, call) {
 }
 
 // ── génération (proposition) ───────────────────────────────────────────────────────────────────────────────────────────────────
-// Méta description d'une page créée : le but du plan s'il existe, sinon la première phrase RÉELLE du contenu. Jamais un texte d'exemple (crochets, « Remplacez par… ») : sans phrase réelle, la description reste vide plutôt qu'inventée (constat Q3 du 22.1).
-function seoDescriptionFor(p, sections) {
+// Méta description d'une page créée (jamais la même que celle d'une autre page du lot : une description dupliquée est un défaut SEO) : le but du plan s'il existe, sinon la première phrase RÉELLE du contenu. Jamais un texte d'exemple (crochets, « Remplacez par… ») : sans phrase réelle, la description reste vide plutôt qu'inventée (constat Q3 du 22.1).
+function seoDescriptionFor(p, sections, used = new Set()) {
   const fit = (t) => {
     const text = String(t || "").replace(/\s+/g, " ").trim();
     if (text.length < 40 || /[\[\]]|remplacez par|lorem ipsum/i.test(text)) return "";
@@ -120,8 +120,9 @@ function seoDescriptionFor(p, sections) {
     const cut = text.slice(0, 157), at = cut.lastIndexOf(" ");
     return `${cut.slice(0, at > 80 ? at : 157)}…`;
   };
-  if (p.goal && fit(p.goal)) return fit(p.goal);
-  for (const sec of sections) for (const field of [sec.markdown, sec.subtitle, sec.text]) for (const line of String(field || "").split(/\n+/)) { if (/^\s*#/.test(line)) continue; const d = fit(line.replace(/[*_`>]/g, "")); if (d) return d; }
+  const free = (d) => d && !used.has(d.toLowerCase());
+  if (p.goal && free(fit(p.goal))) return fit(p.goal);
+  for (const sec of sections) for (const field of [sec.markdown, sec.subtitle, sec.text]) for (const line of String(field || "").split(/\n+/)) { if (/^\s*#/.test(line)) continue; const d = fit(line.replace(/[*_`>]/g, "")); if (free(d)) return d; }
   return "";
 }
 
@@ -187,6 +188,7 @@ function apply(ctx, siteId, runId, decisions = {}, { confirmReplace = false } = 
   const run = getRun(ctx, siteId, runId);
   if (run.status !== "proposed") throw bad("Cette génération a déjà été appliquée ou annulée : lancez-en une nouvelle.");
   const out = {};
+  const usedDescriptions = new Set();
   transaction(ctx.db, () => {
     for (const p of run.result.pages) {
       const choice = decisions[p.key];
@@ -205,7 +207,7 @@ function apply(ctx, siteId, runId, decisions = {}, { confirmReplace = false } = 
         const name = live ? freeName(ctx, p.name) : p.name;
         const page = pagesLib().createPage(ctx, { name, siteId, kind: "page", blank: true });
         const fresh = pagesLib().requirePage(ctx, page.id);
-        const metaDescription = seoDescriptionFor(p, checked.sections);
+        const metaDescription = seoDescriptionFor(p, checked.sections, usedDescriptions); if (metaDescription) usedDescriptions.add(metaDescription.toLowerCase());
         const saved = pagesLib().saveDraft(ctx, page.id, { ...fresh.working, sections: checked.sections, title: p.name, description: p.goal ? p.goal.slice(0, 160) : fresh.working.description, ...(metaDescription ? { seo: { ...(fresh.working.seo || {}), description: metaDescription } } : {}) }, { revision: fresh.revision });
         out[p.key] = { pageId: page.id, strategy: "create", name, revision: saved.revision };
       } else {

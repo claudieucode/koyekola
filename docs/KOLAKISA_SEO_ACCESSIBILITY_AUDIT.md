@@ -6,10 +6,10 @@
 | Contrôle | Résultat |
 |---|---|
 | Un seul H1 | voir `docs/quality-lab/results.json` (champ `h1` par page) |
-| Méta description | **0/74** sans contenu réel fourni (⛔ Q3). Correctif P1 apporté (voir roadmap) : description tirée du but du plan ou d'une phrase réelle, jamais d'un texte d'exemple ; reste vide si le contenu n'est qu'un exemple |
+| Méta description | **21/74** après correctif P1 (une par site, page d'accueil) : description tirée du but du plan ou d'une phrase réelle du brief, jamais d'un texte d'exemple, jamais dupliquée dans un lot ; **53 pages restent sans description** |
 | Images | **0/74** avec image (⛔ Q4) → ALT non évaluable |
 | Textes d'exemple publiés | 59/74 avec crochets, 29/74 « Remplacez par… » (⛔ Q2) |
-| hreflang | calculé et validé (22.6), **non émis** dans le `<head>` (⛔ partiel) |
+| hreflang | calculé, validé et **émis dans le `<head>`** pour les pages reliées (22.6, test `hreflang-head`) ; `x-default` et blog non faits |
 | Canonical, sitemap, robots, données structurées | moteur `src/seo` (41 règles, tests) 🟡 non rejoué page par page |
 
 ## Accessibilité

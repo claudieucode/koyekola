@@ -81,6 +81,15 @@ describe("Page Generator (service)", () => {
     assert.match(seoOf("phrase-reelle").description, /^Nous transportons/);
     assert.equal(seoOf("exemple-seul").description, undefined, "un texte d'exemple n'est jamais publié comme méta description");
   });
+  test("22.10 (Q3). la même phrase n'est jamais la méta description de deux pages d'un lot (description dupliquée)", async () => {
+    const sid = site();
+    const same = "Nous transportons et stockons les marchandises des industriels de la région depuis plus de dix ans.";
+    const plan = raw([{ name: "Page un", type: "apropos", sections: [S("intro", { text: same })] }, { name: "Page deux", type: "faq", sections: [S("intro", { text: same })] }]);
+    const run = await gen.generate(A, sid, plan);
+    const out = gen.apply(A, sid, run.id, {});
+    const d = Object.values(out).map((o) => (draftOf(o.pageId).working.seo || {}).description).filter(Boolean);
+    assert.equal(d.length, 1, "une seule des deux pages reçoit la phrase");
+  });
   test("A. page d'accueil : sections natives ordonnées, identifiants déterministes, brouillon, rien de publié", async () => {
     const sid = site();
     const plan = raw([{ name: "Accueil immo", type: "accueil", goal: "Présenter l'agence", sections: [S("hero", { title: "Votre agence", text: "Près de chez vous", cta: { label: "Nous contacter", url: "/contact" } }), S("intro", { text: "Nous aidons depuis 2010." }), S("listing"), S("benefits", { items: [{ title: "Proximité", text: "Un interlocuteur" }, { title: "Rapidité" }] }), S("testimonials"), S("contact")] }]);
