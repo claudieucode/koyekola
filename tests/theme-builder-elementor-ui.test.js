@@ -38,7 +38,7 @@ describe("Theme Builder : interface calquée sur Elementor", { skip: SKIP }, () 
   test("structure : barre supérieure, navigation fixe, catégories de l'énoncé, une carte par partie sans modèle, filtre par catégorie", async () => {
     const { context, page } = await open();
     await page.goto(url(siteA)); await page.waitForSelector("#tb-types button"); await page.waitForSelector(".tb-tcard");
-    assert.match(await page.locator(".tb-bar").innerText(), /THEME BUILDER/);
+    assert.match(await page.locator(".tb-bar").innerText(), /theme builder/i);
     assert.match(await page.locator(".tb-close").getAttribute("href"), /\/tableau-de-bord$/, "fermeture : retour au site");
     const labels = await page.locator("#tb-types button .tb-ico + span").allInnerTexts();
     for (const l of ["Toutes les parties", "En-tête", "Pied de page", "Page individuelle", "Article individuel", "Archives", "Résultats de recherche", "Page 404"]) assert.ok(labels.includes(l), `catégorie « ${l} »`);

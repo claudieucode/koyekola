@@ -6,8 +6,8 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 
 | État | Lignes |
 |---|---|
-| Complet | 287 |
-| Partiel | 148 |
+| Complet | 288 |
+| Partiel | 147 |
 | Absent | 76 |
 | Autre module | 18 |
 | Non applicable | 9 |
@@ -22,7 +22,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 |---|---|---|---|---|---|---|
 | DY | 11 | 0 | 20 | 0 | 1 | 15 |
 | F | 0 | 0 | 31 | 2 | 0 | 0 |
-| FM | 16 | 8 | 18 | 0 | 0 | 20 |
+| FM | 16 | 8 | 19 | 0 | 0 | 19 |
 | LY | 2 | 1 | 21 | 0 | 1 | 6 |
 | NV | 4 | 0 | 5 | 0 | 0 | 10 |
 | PU | 9 | 0 | 15 | 0 | 0 | 15 |
@@ -271,7 +271,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | EL-FM019 | Formulaires | Honeypot | documenté | Champ piège « website » + jeton signé ≥2 s + limite 5 envois/h/IP; FP:17,104; antispam.js | Complet | Équivalent fonctionnel, réponse « réussie » silencieuse pour les robots | — | P4 | FP:17; FP:104; src/marketing/forms/antispam.js:1-26 |
 | EL-FM020 | Formulaires | Étape (Step) / formulaire multi-étapes | documenté | Aucun | Absent | Formulaire sur une seule page; pas d'indicateur d'étapes (texte/icône/nombre/barre) | Mode multi-étapes + indicateur | P3 | FP: aucune notion d'étape; popup.js |
 | EL-FM021 | Formulaires | Option champ : Libellé (Label) afficher/masquer | documenté | Libellés issus du catalogue/propriété; pas de masquage | Partiel | Libellé non modifiable pour les champs standards (FIELD_CATALOG fixe) | Libellés personnalisables | P3 | FI:23 |
-| EL-FM022 | Formulaires | Option champ : Placeholder | documenté | Réglage placeholder par champ (fields.js), rendu échappé dans _signup-fields.ejs (page /f, section du site, widget); pas encore dans le pop-up public/js/popup.js | Partiel | Absent du rendu pop-up | Reprendre le placeholder dans popup.js | P3 | tests/programme22-8-formulaire-placeholder.test.js |
+| EL-FM022 | Formulaires | Option champ : Placeholder | documenté | Réglage placeholder par champ (fields.js), rendu échappé: pages /f, sections du site, widget et pop-up (popup.js) | Complet | — | — | P3 | tests/programme22-8-formulaire-placeholder.test.js |
 | EL-FM023 | Formulaires | Option champ : Obligatoire (Required) + marque | documenté | required par champ, recalculé serveur; FL:30-31, FL:76; étoile popup.js | Complet | Marque d'obligation toujours affichée (non masquable) | — | P4 | FL:76-84; tests/pages-formulaires-sms-par-site.test.js |
 | EL-FM024 | Formulaires | Option champ : Largeur de colonne | documenté | Aucun réglage de largeur par champ | Absent | Champs toujours empilés | Largeur par champ (100/50/33/25) + colonnes | P2 | popup.js:45-64; form.ejs |
 | EL-FM025 | Formulaires | Option champ : Valeur par défaut / ID / Shortcode | documenté | Aucun | Absent | Pas de valeur par défaut ni d'ID de champ | Ajouter ID et valeur par défaut | P4 | — |
@@ -281,7 +281,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | EL-FM029 | Formulaires | Validation : champ obligatoire côté serveur | documenté | applySettings recalcule le caractère visible/obligatoire | Complet | — | — | P4 | FL:76-84 |
 | EL-FM030 | Formulaires | Validation : format e-mail / adresse | documenté | Normalisation e-mail par Contact Core | Complet | — | — | P4 | FI:312 |
 | EL-FM031 | Formulaires | Validation : fichier (type/taille) | documenté | Type réel + 5 Mo | Complet | — | — | P4 | FL:98-104 |
-| EL-FM032 | Formulaires | Action : Envoyer un e-mail (Email) | documenté | Pas d'e-mail de notification envoyé à l'administrateur à la soumission; événement form.submitted déclenche scénarios d'automatisation | Partiel | Pas de To/Subject/Message/From/Reply-To/Cc/Bcc/Meta Data/HTML-texte; l'e-mail passe par automatisation | Action « Notifier » configurable dans le formulaire | P2 | FI:357 emitSubmitted; src/marketing/automations/catalog.js:37 |
+| EL-FM032 | Formulaires | Action : Envoyer un e-mail (Email) | documenté | Réglage « Prévenir l'équipe par e-mail » par formulaire (mk_forms.notify_email, migration 126), e-mail récapitulatif via la file d'envoi, non bloquant, robots exclus | Partiel | Une seule adresse, texte fixe (sujet/corps non personnalisables, pas de champs [field]) | Objet et message personnalisables | P2 | tests/programme22-8-formulaire-notification.test.js |
 | EL-FM033 | Formulaires | Action : Envoyer un e-mail 2 (confirmation au visiteur) | documenté | Double confirmation (lien envoyé au visiteur) si activée; FI:329-341 | Partiel | E-mail de confirmation d'abonnement seulement, pas d'e-mail 2 libre | E-mail de réponse automatique configurable | P3 | FI:329-341; FP:131 |
 | EL-FM034 | Formulaires | Action : Redirection (Redirect) | documenté | redirectUrl validée (https:// ou chemin); FI:84, FP:135 | Complet | Sans redirection dynamique par champ | — | P4 | FI:84-98; FP:134-135 |
 | EL-FM035 | Formulaires | Action : Webhook | documenté | Module webhooks sortants existe (events lms.*, etc.) mais pas d'action webhook sur form.submitted dans le catalogue | Partiel | form.submitted disponible en automatisation; à vérifier si l'action webhook sortante est branchée (déduit) | Ajouter form.submitted au catalogue webhooks | P2 | src/marketing/webhooks/catalog.js:7-12; automations/catalog.js:37 |

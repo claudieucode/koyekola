@@ -3,7 +3,7 @@
 const express = require("express");
 const forms = require("../forms");
 const { createRateLimiter } = require("../../middlewares/security");
-const { sendSubscriptionConfirmation } = require("../../utils/mailer");
+const { sendSubscriptionConfirmation, sendFormNotification } = require("../../utils/mailer");
 const antispam = require("../forms/antispam");
 const fieldRules = require("../forms/fields");
 const formUpload = require("./formUpload");
@@ -124,6 +124,14 @@ module.exports = ({ db }) => {
       if (result.contact && !result.withheld && consentedVisitor(req)) visitorsLib.recordFormSubmit(db, req.mkForms.organizationId, { visitorId: consentedVisitor(req), contactId: result.contact.id, path: page, formName: form.name });
       // Palier 19 : le parcours déjà suivi par ce visiteur rejoint son contact (événements datés de leur vrai moment)
       if (result.contact && !result.withheld && consentedVisitor(req)) { try { require("../funnels/events").replayVisitor({ db, organizationId: req.mkForms.organizationId, bus: req.mkForms.bus, userId: null, audit: false }, consentedVisitor(req), result.contact.id); } catch (error) { console.error("[KOLAKISA] Parcours du visiteur :", error.message); } }
+      // Notification de l'équipe (facultative) : jamais bloquante, ne révèle rien au visiteur
+      if (form.notifyEmail && !result.withheld) {
+        try {
+          const shown = {};
+          for (const k of Object.keys(req.body)) if (/^(prop_|first_name$|last_name$|phone$|company$|country$)/.test(k)) shown[k] = req.body[k];
+          sendFormNotification(db, { to: form.notifyEmail, formName: form.name, email: result.email || (result.contact && result.contact.email) || req.body.email, values: shown, page });
+        } catch { /* la notification ne doit jamais faire échouer l'envoi */ }
+      }
       if (result.pending) {
         // Double confirmation : l'adresse publique du site (SITE_URL) sert au lien ; sinon celle de la requête
         const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");

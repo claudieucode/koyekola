@@ -143,6 +143,15 @@ function sendSubscriptionConfirmation(db, { to, formName, url }) {
   });
 }
 
+// Notification à l'équipe : un formulaire vient d'être envoyé. Contient des données personnelles : e-mail « sensible » (texte effacé après envoi).
+function sendFormNotification(db, { to, formName, email, values = {}, page = "" }) {
+  const lines = Object.entries(values).filter(([, v]) => String(v ?? "").trim()).slice(0, 20).map(([k, v]) => `- ${oneLine(k)} : ${oneLine(v).slice(0, 300)}`);
+  return queueMail(db, {
+    kind: "form_notification", to, subject: `Nouvel envoi : ${oneLine(formName).slice(0, 80)}`, sensitive: true, replyTo: email,
+    text: ["Bonjour,", "", `Le formulaire « ${oneLine(formName)} » vient d'être envoyé.`, "", `Adresse e-mail : ${oneLine(email)}`, ...lines, ...(page ? ["", `Page : ${oneLine(page).slice(0, 200)}`] : []), "", "Retrouvez le contact dans Marketing → Contacts."].join("\n"),
+  });
+}
+
 // Invitation à rejoindre l'équipe du site (CMS → Utilisateurs). Le lien est à usage unique : l'e-mail est « sensible » (texte effacé après envoi).
 function sendInvitationEmail(db, { to, inviter, roleName, siteName, url, days, name = "", message = "" }) {
   return queueMail(db, {
@@ -177,5 +186,5 @@ module.exports = {
   sendSupportReplyEmail, sendSupportStaffEmail,
   sendAccountCreatedEmail,
   sendInvitationEmail, TIMEOUTS, buildTransport, fromAddress, siteUrl,
-  sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendEmailChange, sendPasswordResetEmail, sendSubscriptionConfirmation,
+  sendPurchaseWelcomeEmail, sendContactNotification, sendContactAcknowledgement, sendSignupWelcomeEmail, sendEmailVerification, sendEmailChange, sendPasswordResetEmail, sendSubscriptionConfirmation, sendFormNotification,
 };

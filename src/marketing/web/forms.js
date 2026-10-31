@@ -60,6 +60,7 @@ module.exports = ({ db }) => {
         popupEnabled: req.body.popupEnabled === "1", popupTrigger: req.body.popupTrigger, popupTriggerValue: Number(req.body.popupTriggerValue), popupFrequencyDays: Number(req.body.popupFrequencyDays),
         propertyFields, tags: req.body.tags ?? "", redirectUrl: req.body.redirectUrl ?? "",
         doubleOptin: req.body.doubleOptinShown ? req.body.doubleOptin === "1" : undefined, // case absente du formulaire envoyé = inchangé
+        notifyEmail: req.body.notifyShown ? req.body.notifyEmail : undefined,
         smsConsentText: req.body.smsConsentText, // absent (ancien envoi) = inchangé
         // Options par champ (« fs[<champ>][…] ») et fichier joint (« file[…] ») : absents (ancien envoi) = inchangés
         fieldSettings: req.body.fsShown ? fieldSettingsFromBody(req.body.fs) : undefined,

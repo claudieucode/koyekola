@@ -127,6 +127,12 @@
             <p class="field-hint" id="ff-redirect-hint">Remplace la page de remerciement pour le formulaire en page. Le pop-up, lui, affiche toujours le message de remerciement : il ne fait jamais quitter la page en cours de lecture.</p>
           </div>
           <div class="field-group">
+            <input type="hidden" name="notifyShown" value="1">
+            <label for="ff-notify">Prévenir l'équipe par e-mail (facultatif)</label>
+            <input id="ff-notify" type="email" name="notifyEmail" maxlength="120" value="<%= item.notifyEmail || '' %>" placeholder="equipe@exemple.com" aria-describedby="ff-notify-hint">
+            <p class="field-hint" id="ff-notify-hint">Une seule adresse. Un e-mail récapitulatif est envoyé à chaque envoi du formulaire (sauf les envois suspects de robots).</p>
+          </div>
+          <div class="field-group">
             <input type="hidden" name="doubleOptinShown" value="1">
             <label class="checkbox-row"><input type="checkbox" name="doubleOptin" value="1" <%= item.doubleOptin ? "checked" : "" %>> Double confirmation par e-mail (recommandé)</label>
             <p class="field-hint">La personne reçoit un e-mail « Confirmez votre inscription » et n'est abonnée qu'après avoir cliqué : vos listes ne contiennent que des adresses réelles et volontaires (recommandé par la CNIL). Nécessite que les e-mails du site soient configurés (SMTP).</p>

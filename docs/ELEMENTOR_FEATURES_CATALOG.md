@@ -2,7 +2,7 @@
 
 _Vue de `ELEMENTOR_PARITY_MATRIX.md` générée par `scripts/build-elementor-matrix.py` (familles F, SS, UI, FM, NV). Ne pas modifier à la main._
 
-**234 lignes** : Complet 111, Partiel 66, Absent 41, Autre module 10, Non applicable 4, Exclu/Non fait 2.
+**234 lignes** : Complet 112, Partiel 65, Absent 41, Autre module 10, Non applicable 4, Exclu/Non fait 2.
 
 | ID | Référence Elementor | Source | Disponibilité | Kolakisa | État | Écart | Solution prévue | Prio |
 |---|---|---|---|---|---|---|---|---|
@@ -60,7 +60,7 @@ _Vue de `ELEMENTOR_PARITY_MATRIX.md` générée par `scripts/build-elementor-mat
 | EL-FM019 | Honeypot | https://elementor.com/help/form-widget/ | documenté | Champ piège « website » + jeton signé ≥2 s + limite 5 envois/h/IP; FP:17,104; antispam.js | Complet | Équivalent fonctionnel, réponse « réussie » silencieuse pour les robots | — | P4 |
 | EL-FM020 | Étape (Step) / formulaire multi-étapes | https://elementor.com/help/form-widget/ | documenté | Aucun | Absent | Formulaire sur une seule page; pas d'indicateur d'étapes (texte/icône/nombre/barre) | Mode multi-étapes + indicateur | P3 |
 | EL-FM021 | Option champ : Libellé (Label) afficher/masquer | https://elementor.com/help/form-widget/ | documenté | Libellés issus du catalogue/propriété; pas de masquage | Partiel | Libellé non modifiable pour les champs standards (FIELD_CATALOG fixe) | Libellés personnalisables | P3 |
-| EL-FM022 | Option champ : Placeholder | https://elementor.com/help/form-widget/ | documenté | Réglage placeholder par champ (fields.js), rendu échappé dans _signup-fields.ejs (page /f, section du site, widget); pas encore dans le pop-up public/js/popup.js | Partiel | Absent du rendu pop-up | Reprendre le placeholder dans popup.js | P3 |
+| EL-FM022 | Option champ : Placeholder | https://elementor.com/help/form-widget/ | documenté | Réglage placeholder par champ (fields.js), rendu échappé: pages /f, sections du site, widget et pop-up (popup.js) | Complet | — | — | P3 |
 | EL-FM023 | Option champ : Obligatoire (Required) + marque | https://elementor.com/help/form-widget/ | documenté | required par champ, recalculé serveur; FL:30-31, FL:76; étoile popup.js | Complet | Marque d'obligation toujours affichée (non masquable) | — | P4 |
 | EL-FM024 | Option champ : Largeur de colonne | https://elementor.com/help/form-widget/ | documenté | Aucun réglage de largeur par champ | Absent | Champs toujours empilés | Largeur par champ (100/50/33/25) + colonnes | P2 |
 | EL-FM025 | Option champ : Valeur par défaut / ID / Shortcode | https://elementor.com/help/form-widget/ | documenté | Aucun | Absent | Pas de valeur par défaut ni d'ID de champ | Ajouter ID et valeur par défaut | P4 |
@@ -70,7 +70,7 @@ _Vue de `ELEMENTOR_PARITY_MATRIX.md` générée par `scripts/build-elementor-mat
 | EL-FM029 | Validation : champ obligatoire côté serveur | https://elementor.com/help/form-widget/ | documenté | applySettings recalcule le caractère visible/obligatoire | Complet | — | — | P4 |
 | EL-FM030 | Validation : format e-mail / adresse | https://elementor.com/help/form-widget/ | documenté | Normalisation e-mail par Contact Core | Complet | — | — | P4 |
 | EL-FM031 | Validation : fichier (type/taille) | https://elementor.com/help/form-widget/ | documenté | Type réel + 5 Mo | Complet | — | — | P4 |
-| EL-FM032 | Action : Envoyer un e-mail (Email) | https://elementor.com/help/form-widget/ | documenté | Pas d'e-mail de notification envoyé à l'administrateur à la soumission; événement form.submitted déclenche scénarios d'automatisation | Partiel | Pas de To/Subject/Message/From/Reply-To/Cc/Bcc/Meta Data/HTML-texte; l'e-mail passe par automatisation | Action « Notifier » configurable dans le formulaire | P2 |
+| EL-FM032 | Action : Envoyer un e-mail (Email) | https://elementor.com/help/form-widget/ | documenté | Réglage « Prévenir l'équipe par e-mail » par formulaire (mk_forms.notify_email, migration 126), e-mail récapitulatif via la file d'envoi, non bloquant, robots exclus | Partiel | Une seule adresse, texte fixe (sujet/corps non personnalisables, pas de champs [field]) | Objet et message personnalisables | P2 |
 | EL-FM033 | Action : Envoyer un e-mail 2 (confirmation au visiteur) | https://elementor.com/help/form-widget/ | documenté | Double confirmation (lien envoyé au visiteur) si activée; FI:329-341 | Partiel | E-mail de confirmation d'abonnement seulement, pas d'e-mail 2 libre | E-mail de réponse automatique configurable | P3 |
 | EL-FM034 | Action : Redirection (Redirect) | https://elementor.com/help/form-widget/ | documenté | redirectUrl validée (https:// ou chemin); FI:84, FP:135 | Complet | Sans redirection dynamique par champ | — | P4 |
 | EL-FM035 | Action : Webhook | https://elementor.com/help/elementor-editor/forms/integrating-forms-with-3rd-party-software (résultat de recherche, page non lue) | documenté | Module webhooks sortants existe (events lms.*, etc.) mais pas d'action webhook sur form.submitted dans le catalogue | Partiel | form.submitted disponible en automatisation; à vérifier si l'action webhook sortante est branchée (déduit) | Ajouter form.submitted au catalogue webhooks | P2 |
