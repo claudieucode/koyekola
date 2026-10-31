@@ -102,6 +102,7 @@ async function createFakeMailchimp({ key = "0123456789abcdef0123456789abcdef-us2
           let items = [...map.values()];
           if (q.get("status")) items = items.filter((i) => i.status === q.get("status"));
           if (q.get("since_last_changed")) items = items.filter((i) => Date.parse(i.last_changed) > Date.parse(q.get("since_last_changed")));
+          if (q.get("sort_field") === "last_changed") items = [...items].sort((a, b) => (Date.parse(a.last_changed) - Date.parse(b.last_changed)) * (q.get("sort_dir") === "DESC" ? -1 : 1));
           return json(res, 200, page(items, "members", q));
         }
         if (req.method === "POST") {
@@ -153,6 +154,10 @@ async function createFakeMailchimp({ key = "0123456789abcdef0123456789abcdef-us2
         const segs = (state.coll[p] = state.coll[p] || []);
         if (req.method === "POST") { const seg = { id: 1000 + segs.length, type: body.static_segment ? "static" : "saved", member_count: 0, ...body }; segs.push(seg); return json(res, 200, seg); }
         return json(res, 200, { segments: q.get("type") ? segs.filter((g) => g.type === q.get("type")) : segs, total_items: segs.length });
+      }
+      if ((x = /^\/lists\/([0-9a-f]{10})\/members\/([0-9a-f]{32})\/actions\/delete-permanent$/.exec(p))) {
+        const map = state.members.get(x[1]); if (!map || !map.has(x[2])) return notFound(res);
+        map.delete(x[2]); recount(x[1]); return json(res, 204);
       }
       if ((x = /^\/campaigns\/([a-z0-9]+)\/send-checklist$/.exec(p))) {
         const c = state.campaigns.get(x[1]); if (!c) return notFound(res);

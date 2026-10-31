@@ -16,7 +16,9 @@ async function tick({ db, settings, bus, organizationId, env = process.env, log 
     const ctx = { db, settings, bus, organizationId, userId: null, env };
     const st = connection.status(ctx);
     if (!st.connected || !st.syncEnabled) return { skipped: true };
-    return await syncAll(ctx);
+    const retried = await require("./inbound").retryPending(ctx).catch(() => ({ retried: 0, applied: 0 })); // événements restés en suspens
+    const out = await syncAll(ctx);
+    return { ...out, retried };
   } catch (error) {
     log.warn?.("[KOLAKISA] Synchronisation Mailchimp :", error.message);
     return { error: error.message };

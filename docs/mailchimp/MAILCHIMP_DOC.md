@@ -13,14 +13,14 @@
 | Sujet | Règle |
 |---|---|
 | Authentification Mailchimp | HTTP Basic (identifiant quelconque, clé d'API en mot de passe). L'hôte dépend du centre de données porté par la clé : `https://<dc>.api.mailchimp.com/3.0` (dc extrait de `…-us21`). |
-| Limite de débit | Mailchimp limite à **10 connexions simultanées** par compte (et coupe une requête après 120 s) — pas « 10 requêtes par seconde ». Kolakisa plafonne à **8** requêtes simultanées (10 au maximum quoi qu'on configure) et met les autres en attente. |
+| Limite de débit | Mailchimp limite à **10 connexions simultanées** par compte (et coupe une requête après 120 s) — pas « 10 requêtes par seconde ». Kolakisa plafonne à **8** requêtes simultanées (10 au maximum quoi qu'on configure), **partagées par organisation** (écran, synchronisation et webhooks utilisent le même plafond), et met les autres en attente. |
 | Nouvelles tentatives | `429` : toujours réessayé (3 fois maximum, en respectant `Retry-After`, sinon 0,5 s · 1 s · 2 s avec gigue). `5xx` et pannes réseau : réessayés pour GET, PUT, PATCH, DELETE **jamais pour POST** (risque de doublon : un envoi ou une création). |
 | Pagination | `count` (1 à 1000) et `offset`. Les lectures complètes (synchronisation, export) parcourent toutes les pages. |
 | Enveloppe de réponse | `{ "ok": true, "data": … }` ou `{ "ok": false, "error": { "code", "message" (français), "detail"? } }`. |
 | Droits | Permission `mailchimp.manage` (administrateur de l'organisation) ; jamais ouvert à un accès limité à un site. Toute requête qui modifie exige l'en-tête `X-Requested-With: fetch`. |
 | Actions irréversibles | Envoi, planification, suppressions, suppression définitive, publication : refusées (`409 confirm_required`) sans `confirm: true` (corps) ou `?confirm=1` (requête). |
 | Identifiants | Chaque identifiant de chemin est validé (audience : 10 caractères hexadécimaux ; membre : adresse e-mail ou empreinte MD5 de 32 caractères ; autres : lettres, chiffres, `_`, `-`, `.`). Un paramètre de requête non prévu est refusé. |
-| Consentement | Kolakisa reste maître des consentements : voir `INTEGRATION_PLAN.md` §4 (le plus restrictif gagne). |
+| Consentement | Kolakisa reste maître des consentements : voir `INTEGRATION_PLAN.md` §4 (le plus restrictif gagne). Les opérations qui abonnent (`members.add`, `members.upsert`, `members.update`, `audiences.batchSubscribe`) sont **refusées** (`422 consent_blocked`) pour une adresse désinscrite, rebondie, plaignante ou supprimée chez Kolakisa. |
 
 ### Erreurs
 
@@ -88,7 +88,7 @@ Chaque ligne renvoie aux opérations qui la réalisent. « COMPOSITE » = opéra
 |---|---|---|
 | Créer / modifier / supprimer un template HTML | `templates.create`, `templates.update`, `templates.delete` | Disponible |
 | Lister (personnalisés + Mailchimp) | `templates.list`, `templates.get` | Disponible |
-| Récupérer le HTML | `templates.defaultContent` | Disponible |
+| Récupérer le HTML | `templates.defaultContent`, COMPOSITE:HTML d'un modèle | L'API Mailchimp ne renvoie PAS le HTML complet d'un modèle (seulement ses sections modifiables). Kolakisa conserve le HTML des modèles qu'il crée ou modifie ; pour un modèle créé ailleurs, le HTML n'est pas récupérable. |
 | Rendre un template avec des variables | COMPOSITE:aperçu de modèle | L'API Marketing n'a pas de point d'accès de rendu : Mailchimp rend les balises *|…|* à l'envoi. Kolakisa propose un aperçu LOCAL avec des valeurs d'exemple. |
 
 ### AUTOMATIONS
@@ -178,7 +178,7 @@ Chaque ligne renvoie aux opérations qui la réalisent. « COMPOSITE » = opéra
 
 ## Opérations de l'API Marketing v3
 
-157 opérations. Route interne = préfixe `/marketing/mailchimp/api` + route indiquée. Les paramètres de requête listés sont les seuls acceptés.
+156 opérations. Route interne = préfixe `/marketing/mailchimp/api` + route indiquée. Les paramètres de requête listés sont les seuls acceptés.
 
 ### Audiences
 
@@ -1513,12 +1513,12 @@ Réponse : le JSON de Mailchimp (voir la documentation officielle de la ressourc
 
 Réponse : le JSON de Mailchimp (en général vide, code 204 → `data: null`), enveloppé `{ "ok": true, "data": … }`.
 
-#### `templates.defaultContent` — HTML / sections par défaut d'un modèle
+#### `templates.defaultContent` — Sections modifiables d'un modèle et leur contenu par défaut
 
-- **Priorité d'intégration** : CRITIQUE
+- **Priorité d'intégration** : IMPORTANT
 - **Endpoint Mailchimp** : `GET /3.0/templates/{templateId}/default-content`
-- **Route Kolakisa** : `GET /marketing/mailchimp/api/modeles/:templateId/contenu`
-- **Cas d'usage dans Kolakisa** : Récupérer le HTML pour l'éditeur.
+- **Route Kolakisa** : `GET /marketing/mailchimp/api/modeles/:templateId/sections`
+- **Cas d'usage dans Kolakisa** : Lire les zones `mc:edit` d'un modèle (l'API ne renvoie PAS le HTML complet d'un modèle : Kolakisa conserve lui-même le HTML des modèles qu'il crée, voir /modeles/:id/html).
 - **Paramètres de requête (facultatifs)** : `fields`, `exclude_fields`
 - **Champs obligatoires du corps** : aucun
 - **Confirmation** : non requise
@@ -2777,32 +2777,6 @@ Réponse : le JSON de Mailchimp (voir la documentation officielle de la ressourc
 
 Réponse : le JSON de Mailchimp (voir la documentation officielle de la ressource), enveloppé `{ "ok": true, "data": … }`.
 
-#### `batches.create` — Soumettre un lot d'opérations
-
-- **Priorité d'intégration** : OPTIONNEL
-- **Endpoint Mailchimp** : `POST /3.0/batches`
-- **Route Kolakisa** : `POST /marketing/mailchimp/api/lots`
-- **Cas d'usage dans Kolakisa** : Opérations groupées (operations[] : method, path, body).
-- **Paramètres de requête (facultatifs)** : aucun
-- **Champs obligatoires du corps** : `operations`
-- **Confirmation** : obligatoire (`confirm: true` dans le corps) — sinon `409 confirm_required`
-
-Exemple de corps (champs obligatoires) :
-```json
-{
-  "operations": [
-    {
-      "method": "GET",
-      "path": "/lists",
-      "operation_id": "op1"
-    }
-  ],
-  "confirm": true
-}
-```
-
-Réponse : le JSON de Mailchimp (voir la documentation officielle de la ressource), enveloppé `{ "ok": true, "data": … }`.
-
 ## Opérations composées (propres à Kolakisa)
 
 Elles s'appuient sur les opérations ci-dessus et ajoutent des garanties (consentement, validation, lots, calcul local).
@@ -3056,6 +3030,21 @@ Exemple de réponse :
 }
 ```
 
+#### HTML d'un modèle
+
+- **Priorité** : IMPORTANT
+- **Route** : `GET /marketing/mailchimp/api/modeles/:templateId/html`
+- **Description** : HTML conservé par Kolakisa pour les modèles créés ou modifiés depuis l'écran (`available: false` sinon : l'API Mailchimp ne le fournit pas).
+
+Exemple de réponse :
+```json
+{
+  "html": "<p>Bonjour *|FNAME|*</p>",
+  "available": true,
+  "updatedAt": "2026-10-30 10:00:00"
+}
+```
+
 #### journal des appels
 
 - **Priorité** : IMPORTANT
@@ -3077,15 +3066,15 @@ Mailchimp **ne signe pas** ses webhooks Marketing (il n'existe pas de signature 
 4. la limite de corps est de 64 Ko (`413` au-delà) et le débit est limité par adresse IP ;
 5. le webhook est créé avec les sources **user** et **admin** seulement : les écritures de Kolakisa par l'API ne reviennent pas en boucle.
 
-Mailchimp teste l'adresse par un `GET` à la création : elle répond `200 ok` si le jeton est exact. Une fois le jeton validé, la réponse est toujours `200` (Mailchimp désactive un webhook qui répond en erreur) ; un événement en échec est conservé et peut être **rejoué** depuis l'écran.
+Mailchimp teste l'adresse par un `GET` à la création : elle répond `200 ok` si le jeton est exact. Une fois le jeton validé, la réponse est toujours `200` (Mailchimp désactive un webhook qui répond en erreur) ; un événement en échec est conservé, **retraité automatiquement** (doublon reçu, ou passe de rattrapage de la synchronisation, 3 essais) et peut être **rejoué** depuis l'écran. Seuls les jetons **refusés** comptent dans le limiteur (600 par minute et par adresse IP) : une vague d'événements légitimes n'est jamais bloquée.
 
 | Événement | Effet dans Kolakisa |
 |---|---|
-| `subscribe` | contact créé ou retrouvé, consentement enregistré avec preuve (source `mailchimp`, audience d'origine), ajouté à la liste liée — **sauf** s'il est désinscrit, rebondi, plaignant ou supprimé chez Kolakisa : il reste désinscrit et son désabonnement est renvoyé à Mailchimp |
+| `subscribe` | **seulement si l'audience est liée à une liste Kolakisa** : contact créé ou retrouvé, consentement enregistré avec preuve (source `mailchimp`, audience d'origine), ajouté à la liste liée, sans déclencher les séries de bienvenue de Kolakisa — **sauf** s'il est désinscrit (de Kolakisa ou de cette liste), rebondi, plaignant, supprimé ou effacé chez Kolakisa : il reste désinscrit et son désabonnement est renvoyé à Mailchimp |
 | `unsubscribe` | désinscription du contact (créé « désinscrit » s'il était inconnu : il ne sera jamais joignable) |
-| `profile` | prénom et nom mis à jour (Mailchimp fait autorité) |
+| `profile` | audience liée seulement : prénom et nom mis à jour s'ils figurent dans l'événement (Mailchimp fait autorité) |
 | `cleaned` | adresse placée en liste de suppression (rebond dur ; plainte si `reason = abuse`) |
-| `upemail` | la nouvelle adresse est abonnée (preuve de consentement), l'ancienne est désinscrite |
+| `upemail` | audience liée seulement : la nouvelle adresse est abonnée (preuve de consentement) et l'ancienne désinscrite ; si l'ancienne était désinscrite chez Kolakisa, la nouvelle hérite de la désinscription |
 | `campaign` | statut de la campagne mis à jour, rapport relu à la prochaine synchronisation |
 
 Exemple (corps reçu, décodé) :

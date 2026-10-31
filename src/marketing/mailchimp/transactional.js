@@ -7,7 +7,7 @@ const { transactionalKey, logger } = require("./connection");
 const { audit } = require("../audience/shared");
 
 const BASE = "https://mandrillapp.com/api/1.0";
-const NAME = /^[a-z0-9-]{1,40}$/;
+const NAME = /^[A-Za-z0-9_-]{1,60}$/;
 
 // Mandrill répond HTTP 500 + { status: "error", name, message } pour presque toutes les erreurs : on classe par le NOM de l'erreur.
 function classify(status, json) {
@@ -67,7 +67,7 @@ const bad = (message) => new MarketingError("invalid_request", message);
 function clientFor(ctx, options = {}) {
   const key = transactionalKey(ctx);
   if (!key) throw new MarketingError("not_connected", "Mailchimp Transactional n'est pas connecté : enregistrez votre clé Mandrill dans Marketing → Mailchimp → Transactionnel.");
-  const transport = createTransport({ onLog: logger(ctx), ...(ctx.mailchimp || {}), ...options });
+  const transport = createTransport({ onLog: logger(ctx), limiterKey: `md:${ctx.organizationId}`, ...(ctx.mailchimp || {}), ...options });
   return { key, transport };
 }
 
@@ -88,7 +88,7 @@ function checkRecipients(ctx, message) {
 }
 
 async function run(ctx, opId, body = {}) {
-  const op = OPS[opId];
+  const op = Object.hasOwn(OPS, opId) ? OPS[opId] : null;
   if (!op) throw new MarketingError("unknown_operation", "Opération inconnue.");
   const source = body && typeof body === "object" && !Array.isArray(body) ? body : {};
   const { confirm, ...rest } = source;
@@ -104,8 +104,8 @@ async function run(ctx, opId, body = {}) {
     if (opId.startsWith("messages.send")) checkRecipients(ctx, payload.message);
   }
   if (payload.email !== undefined && !validateEmail(payload.email).ok) throw bad("Adresse e-mail invalide.");
-  if (payload.name !== undefined && !NAME.test(String(payload.name))) throw bad("Nom de modèle invalide (minuscules, chiffres et « - », 40 caractères au plus).");
-  if (payload.template_name !== undefined && !NAME.test(String(payload.template_name))) throw bad("Nom de modèle invalide (minuscules, chiffres et « - », 40 caractères au plus).");
+  if (payload.name !== undefined && !NAME.test(String(payload.name))) throw bad("Nom de modèle invalide (lettres, chiffres, « - » et « _ », 60 caractères au plus).");
+  if (payload.template_name !== undefined && !NAME.test(String(payload.template_name))) throw bad("Nom de modèle invalide (lettres, chiffres, « - » et « _ », 60 caractères au plus).");
   const { key, transport } = ctx.mdClient || clientFor(ctx);
   try {
     const res = await transport.send({

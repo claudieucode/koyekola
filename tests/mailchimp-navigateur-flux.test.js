@@ -97,7 +97,7 @@ describe("console Mailchimp — parcours complémentaires (navigateur)", { skip:
     await waitFlash(/Brouillon enregistré/);
     const post = sent("POST", /\/campaigns$/).pop();
     assert.equal(post.body.type, "variate");
-    assert.deepEqual(post.body.variate_settings, { winner_criteria: "clicks", wait_time: 24, test_size: 30, subject_lines: ["Mon objet", "Objet B"] });
+    assert.deepEqual(post.body.variate_settings, { winner_criteria: "clicks", wait_time: 1440, test_size: 30, subject_lines: ["Mon objet", "Objet B"] });
   });
 
   test("segment : un segment choisi à l'étape 2 est transmis comme segment enregistré", async () => {
@@ -182,6 +182,7 @@ describe("console Mailchimp — parcours complémentaires (navigateur)", { skip:
       if (consent) await dialog().getByLabel(/a donné son consentement/).check();
       await dialog().locator("button[type=submit]").click();
       await waitFlash(/Contact ajouté/);
+      for (let i = 0; i < 50 && !fake.state.members.get(remote.id).get(fake.md5(email)); i++) await new Promise((r) => setTimeout(r, 100)); // le message de la fiche précédente reste affiché : on attend l'arrivée réelle
       const got = fake.state.members.get(remote.id).get(fake.md5(email));
       assert.ok(got, `${email} absent de l'audience ; requêtes : ${JSON.stringify(fake.requests.filter((r) => r.method === "POST").map((r) => r.path))}`);
       assert.equal(got.status, expected);

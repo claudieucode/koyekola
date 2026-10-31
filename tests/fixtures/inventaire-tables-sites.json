@@ -420,6 +420,10 @@
    "siteId": false,
    "classe": "plateforme"
   },
+  "mk_mc_erased": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
   "mk_mc_events": {
    "siteId": false,
    "classe": "plateforme"
@@ -433,6 +437,10 @@
    "classe": "plateforme"
   },
   "mk_mc_state": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
+  "mk_mc_template_html": {
    "siteId": false,
    "classe": "plateforme"
   },

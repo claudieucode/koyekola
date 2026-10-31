@@ -35,7 +35,7 @@ function secretKey(ctx) { return need(ctx).get(ctx.organizationId, K.apiKey); }
 function clientFor(ctx, options = {}) {
   const apiKey = secretKey(ctx);
   if (!apiKey) throw new MarketingError("not_connected", "Mailchimp n'est pas connecté : enregistrez votre clé d'API dans Marketing → Mailchimp → Connexion.");
-  return createClient({ apiKey, env: ctx.env || process.env, onLog: logger(ctx), ...(ctx.mailchimp || {}), ...options });
+  return createClient({ apiKey, env: ctx.env || process.env, onLog: logger(ctx), limiterKey: `mc:${ctx.organizationId}`, ...(ctx.mailchimp || {}), ...options });
 }
 
 function status(ctx) {
@@ -58,7 +58,7 @@ async function connect(ctx, apiKey) {
   try { require("../security/crypto").parseKey(process.env.ENCRYPTION_KEY); } catch { throw new MarketingError("encryption_missing", "ENCRYPTION_KEY est absente ou invalide sur le serveur : la clé ne peut pas être enregistrée de façon chiffrée."); }
   let account;
   try {
-    const client = createClient({ apiKey: key, env: ctx.env || process.env, onLog: logger(ctx), ...(ctx.mailchimp || {}) });
+    const client = createClient({ apiKey: key, env: ctx.env || process.env, onLog: logger(ctx), limiterKey: `mc:${ctx.organizationId}`, ...(ctx.mailchimp || {}) });
     await client.ping();
     account = await client.get("/", { fields: "account_id,account_name,email,first_name,last_name,role,pro_enabled,total_subscribers,industry_stats,contact" });
   } catch (error) { throw toMarketing(error); }

@@ -273,7 +273,7 @@
       button(s.running ? "En cours…" : "Synchroniser maintenant", function () { startSync(false); }, { disabled: s.running })));
   }
   async function refreshStatus() {
-    try { var d = await api("GET", "/etat"); state.status = d.status; state.sync = d.sync; } catch (e) { return; }
+    try { var d = await api("GET", "/etat"); state.status = d.status; state.sync = d.sync; } catch (e) { if (state.sync && state.sync.running) schedulePoll(); return; } // erreur réseau passagère : on réessaie tant qu'une synchronisation est en cours
     renderBar();
     if (state.sync && state.sync.running) schedulePoll(); else if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
   }

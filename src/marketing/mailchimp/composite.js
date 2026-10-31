@@ -10,11 +10,11 @@ const BATCH = 500;
 const FIELD_TAG = /^[A-Z][A-Z0-9_]{0,9}$/;
 const bad = (message) => new MarketingError("invalid_request", message);
 
-// Adresses à NE PAS pousser : déjà désinscrites, rebondies, plaignantes ou supprimées dans Kolakisa (le plus restrictif gagne)
+// Adresses à NE PAS pousser : déjà désinscrites, rebondies, plaignantes ou supprimées dans Kolakisa (le plus restrictif gagne) ; les autres adresses d'un contact fusionné comptent aussi
 function blockedLocally(ctx, email) {
-  const c = ctx.db.prepare("SELECT status FROM mk_contacts WHERE organization_id = ? AND email = ?").get(ctx.organizationId, email);
+  const c = require("../audience/contacts").findByEmail(ctx, email);
   if (c && ["unsubscribed", "bounced", "complained", "suppressed"].includes(c.status)) return true;
-  return Boolean(ctx.db.prepare("SELECT 1 FROM mk_suppressions WHERE organization_id = ? AND email = ?").get(ctx.organizationId, email));
+  return Boolean(ctx.db.prepare("SELECT 1 FROM mk_suppressions WHERE organization_id = ? AND email IN (?, ?)").get(ctx.organizationId, String(email).toLowerCase(), c ? c.email : String(email).toLowerCase()));
 }
 
 // rows : [{ email, FNAME?, LNAME?, <TAG>?, tags?: "a,b" }] (le navigateur a déjà appliqué la correspondance des colonnes). Sans attestation de consentement, les contacts sont importés « pending » :
@@ -23,6 +23,7 @@ async function importMembers(ctx, listId, { rows, attestConsent = false, updateE
   if (!Array.isArray(rows) || !rows.length) throw bad("Aucune ligne à importer.");
   if (rows.length > MAX_IMPORT) throw bad(`${MAX_IMPORT} lignes au plus par import : découpez le fichier.`);
   const status = attestConsent === true ? "subscribed" : "pending";
+  const common = Array.isArray(commonTags) ? commonTags : [];
   const report = { received: rows.length, sent: 0, created: 0, updated: 0, invalid: [], blocked: 0, duplicates: 0, errors: [], status };
   const seen = new Set(), members = [];
   rows.forEach((row, index) => {
@@ -34,11 +35,18 @@ async function importMembers(ctx, listId, { rows, attestConsent = false, updateE
     const merge = {};
     for (const [k, v] of Object.entries(row)) if (FIELD_TAG.test(k) && typeof v === "string" && v.trim()) merge[k] = v.trim().slice(0, 255);
     const rowTags = String(row.tags || "").split(",").map((t) => t.trim()).filter(Boolean);
-    members.push({ email_address: check.email, status_if_new: status, status, merge_fields: merge, tags: [...new Set([...commonTags.map(String), ...rowTags])].slice(0, 20) });
+    members.push({ email_address: check.email, status_if_new: status, status, merge_fields: merge, tags: [...new Set([...common.map(String), ...rowTags])].slice(0, 20) });
   });
   for (let i = 0; i < members.length; i += BATCH) {
     const chunk = members.slice(i, i + BATCH).map(({ status_if_new, ...m }) => (updateExisting ? { ...m, status: undefined, status_if_new } : m));
-    const res = await run(ctx, "audiences.batchSubscribe", { params: { listId }, body: { members: chunk.map((m) => JSON.parse(JSON.stringify(m))), update_existing: Boolean(updateExisting), sync_tags: false } });
+    let res;
+    try { res = await run(ctx, "audiences.batchSubscribe", { params: { listId }, body: { members: chunk.map((m) => JSON.parse(JSON.stringify(m))), update_existing: Boolean(updateExisting), sync_tags: false } }); }
+    catch (error) {
+      if (!report.sent) throw error; // rien n'est parti : l'erreur est simplement remontée
+      report.aborted = `Import interrompu après ${report.sent} ligne(s) : ${error.message}`; // les lots déjà acceptés par Mailchimp restent comptés
+      report.errors.push({ email: "(lot suivant)", message: error.message });
+      break;
+    }
     report.sent += chunk.length;
     report.created += Number(res && res.total_created) || 0;
     report.updated += Number(res && res.total_updated) || 0;
@@ -136,4 +144,4 @@ async function dashboard(ctx, { live = true } = {}) {
     recentCampaigns: campaigns.slice(0, 8), growth, alerts };
 }
 
-module.exports = { importMembers, exportMembers, memberExists, bounces, compare, renderTemplate, dashboard, cell };
+module.exports = { blockedLocally, importMembers, exportMembers, memberExists, bounces, compare, renderTemplate, dashboard, cell };

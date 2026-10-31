@@ -60,3 +60,11 @@ Rien à ajouter : `fetch` natif, `crypto` natif, `mk_jobs` pour la file. Variabl
 
 ## 8. Ce qui n'a pas été fait
 Phase 1 et suivantes non commencées. Aucun appel réseau vers Mailchimp. Aucune lecture de la documentation officielle à ce stade (les points §5 sont à vérifier).
+
+## 9. Décisions retenues pour la suite (autonomie accordée par l'utilisateur)
+Les trois décisions du § 7 ont été tranchées selon les recommandations de l'audit :
+1. **Connecteur de synchronisation** (pas une console qui remplace le moteur interne).
+2. **Le plus restrictif gagne** pour le consentement, les désinscriptions, rebonds, plaintes et suppressions ; Mailchimp fait autorité pour le reste.
+3. **Tous les lots** ont été réalisés dans l'ordre proposé (connexion, audiences et membres, webhooks, synchronisation → campagnes et modèles → rapports → automatisations → pages, formulaires, boutiques → compte → Transactionnel).
+
+L'architecture réalisée, ses écarts avec le cahier des charges et les raisons sont dans `INTEGRATION_PLAN.md` ; les preuves dans `TEST_RESULTS.md`.

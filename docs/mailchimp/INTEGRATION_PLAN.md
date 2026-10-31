@@ -12,7 +12,7 @@ Ce document décrit l'architecture **construite** (pas un projet) et les écarts
         ▼
 routes  src/marketing/web/mailchimp.js ── enveloppe { ok, data | error } ── codes HTTP
         │
-        ├─ operations.js  ← catalog.js (157 opérations : validation, confirmation, journal d'audit)
+        ├─ operations.js  ← catalog.js (156 opérations : validation, confirmation, journal d'audit)
         ├─ composite.js   (import/export CSV, existence, rebonds, comparaison, aperçu, tableau de bord)
         ├─ sync.js        (synchronisation Mailchimp ↔ Kolakisa)       ← scheduler.js (toutes les heures)
         ├─ inbound.js     (webhooks reçus : journal, application idempotente, rejeu)
@@ -38,6 +38,10 @@ Voir `CHANGELOG.md` (liste exhaustive). Principes : un fichier par responsabilit
 | `mk_mc_events` | **webhooks reçus** : type, adresse, charge complète (16 Ko), état (`received`/`applied`/`ignored`/`failed`), détail, rejeux ; clé de déduplication unique | id ; unique (organisation, déduplication) |
 | `mk_mc_requests` | **journal des appels sortants** : méthode, chemin masqué, statut, durée, tentatives, code d'erreur (30 jours) | id |
 | `mk_mc_state` | dernière synchronisation : date, état, résumé, erreur, verrou `running_since` | organisation |
+| `mk_mc_template_html` | HTML des modèles créés ou modifiés depuis Kolakisa (l'API Mailchimp ne renvoie **pas** le HTML d'un modèle) | (organisation, modèle) |
+| `mk_mc_erased` | **empreintes** (SHA-256 et MD5) des personnes effacées chez Kolakisa : à supprimer définitivement chez Mailchimp et à ne jamais réimporter ; la ligne disparaît une fois Mailchimp nettoyé | (organisation, empreinte) |
+
+Migration : **huit** tables, toutes additives.
 
 **Clés d'API et configuration** : dans `mk_settings` (réglages existants), chiffrées : `mailchimp.api_key`, `mailchimp.webhook_token`, `mailchimp.transactional_key` (secrets) ; `mailchimp.account` (informations non secrètes du compte), `mailchimp.sync_enabled`.
 
@@ -51,15 +55,17 @@ Seules les audiences **liées** à une liste Kolakisa échangent des contacts. L
 |---|---|
 | Mailchimp → Kolakisa | `subscribed` → contact créé/mis à jour, **consentement enregistré avec preuve** (source `mailchimp`, audience d'origine, date), ajouté à la liste liée · `unsubscribed` → désinscription · `cleaned` → liste de suppression « rebond » · `pending` → contact sans consentement · `archived`/`transactional` → ignorés · prénom/nom et tags repris |
 | Kolakisa → Mailchimp | contact **abonné avec consentement** de la liste liée, inconnu de Mailchimp → abonné (jamais sans consentement) · contact désinscrit/rebondi/plaignant/supprimé que Mailchimp croit abonné → **désabonné** chez Mailchimp |
-| Conflit | **Le plus restrictif gagne** pour tout ce qui touche au consentement. Une personne désinscrite, rebondie, plaignante ou supprimée chez Kolakisa n'est **jamais réabonnée** (même si Mailchimp la dit abonnée) ; son désabonnement est renvoyé à Mailchimp. Pour le reste (nom, tags, statuts de campagne, chiffres), **Mailchimp fait autorité** |
+| Conflit | **Le plus restrictif gagne** pour tout ce qui touche au consentement. Une personne désinscrite (de Kolakisa **ou de la liste liée**), rebondie, plaignante, supprimée ou effacée chez Kolakisa n'est **jamais réabonnée** (même si Mailchimp la dit abonnée) ; son désabonnement est renvoyé à Mailchimp. Les opérations génériques d'abonnement (`members.add/upsert/update`, lot) sont refusées pour ces adresses. Pour le reste (nom, tags, statuts de campagne, chiffres), **Mailchimp fait autorité** |
+| Effacement | Une personne effacée chez Kolakisa (droit à l'effacement) est **supprimée définitivement** chez Mailchimp à la synchronisation suivante (`delete-permanent`), jamais réimportée entre-temps ; les événements de webhook qui la citent (y compris comme ancienne adresse) sont anonymisés |
+| Événements | Les contacts nés d'une synchronisation n'émettent **pas** les événements « abonné » / « ajouté à la liste » : aucune série de bienvenue Kolakisa ne part vers des personnes déjà abonnées chez Mailchimp |
 | Campagnes | statut, objet, envoi lus ; rapports relus pour les campagnes envoyées dans les 7 derniers jours (et celles jamais lues) |
-| Incrémental | `since_last_changed` (curseur avancé seulement si **tout** a été lu, recouvrement d'une minute) ; « synchronisation complète » relit tout |
-| Garde-fous | verrou en base (pas deux synchronisations à la fois, périmé après 30 min) ; 2 000 envois vers Mailchimp au plus par audience et par passage ; 50 000 membres lus au plus ; erreurs d'une audience isolées des autres ; état `ok` / `partial` / `error` avec message |
+| Incrémental | `since_last_changed`, membres lus du plus ancien au plus récent ; le curseur n'avance qu'**après** l'envoi complet des désabonnements ; au-delà de 50 000 membres, chaque passe reprend là où la précédente s'est arrêtée ; recouvrement d'une minute ; « synchronisation complète » relit tout |
+| Garde-fous | les lots de contacts rendent la main à l'event loop (le reste du site ne gèle pas) ; un envoi refusé par Mailchimp est mémorisé (pas de nouvel essai à chaque passe) ; verrou en base (pas deux synchronisations à la fois, périmé après 30 min) ; 2 000 envois vers Mailchimp au plus par audience et par passage ; 50 000 membres lus au plus ; erreurs d'une audience isolées des autres ; état `ok` / `partial` / `error` avec message |
 
 Déclencheurs : minuteur horaire (`MAILCHIMP_SYNC_INTERVAL_MS`), bouton « Synchroniser maintenant », webhooks entrants (temps réel).
 
 ## 5. Erreurs, nouvelles tentatives et débit
-- **Débit** : Mailchimp limite à **10 connexions simultanées** (pas 10 requêtes par seconde). Un sémaphore plafonne à 8 (10 maximum quoi qu'on configure) ; les autres requêtes attendent.
+- **Débit** : Mailchimp limite à **10 connexions simultanées** (pas 10 requêtes par seconde). Un sémaphore plafonne à 8 (10 maximum quoi qu'on configure), **partagé par organisation** : l'écran, la synchronisation et les webhooks se partagent le même plafond ; les autres requêtes attendent.
 - **Tentatives** : `429` toujours réessayé (3 fois, `Retry-After` respecté, sinon 0,5 · 1 · 2 s + gigue) ; `5xx` et réseau réessayés **sauf pour un POST** (risque de doublon). Délai de 30 s par requête (60 s pour un contenu HTML).
 - **Erreurs** : table de correspondance 400/401/403/404/429/5xx → code stable + message français actionnable (`errors.js`) ; champ fautif cité pour un 400 ; code HTTP interne cohérent.
 - **Journal** : chaque appel est inscrit (sans clé, sans corps, empreinte de membre masquée) ; consultable dans l'onglet « Journal ».

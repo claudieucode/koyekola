@@ -6,7 +6,9 @@
 --   mk_mc_events    : webhooks reçus (charge complète, état du traitement, rejeux) ; dedupe_key rend le traitement idempotent
 --   mk_mc_requests  : journal des appels sortants (sans secret, sans corps, adresse du membre masquée)
 --   mk_mc_state     : état de la dernière synchronisation
--- Retour arrière : DROP TABLE de ces six tables (les réglages « mailchimp.% » de mk_settings sont à supprimer à part).
+--   mk_mc_template_html : HTML des modèles créés par Kolakisa (l'API Mailchimp ne renvoie pas le HTML d'un modèle)
+--   mk_mc_erased    : adresses effacées chez Kolakisa (empreinte SHA-256), à supprimer aussi chez Mailchimp et à ne jamais réimporter ; la ligne disparaît une fois Mailchimp nettoyé
+-- Retour arrière : DROP TABLE de ces huit tables (les réglages « mailchimp.% » de mk_settings sont à supprimer à part).
 CREATE TABLE IF NOT EXISTS mk_mc_audiences (
   organization_id INTEGER NOT NULL REFERENCES mk_organizations(id),
   remote_id TEXT NOT NULL,
@@ -85,4 +87,18 @@ CREATE TABLE IF NOT EXISTS mk_mc_state (
   last_sync_summary TEXT NOT NULL DEFAULT '{}',
   last_error TEXT NOT NULL DEFAULT '',
   running_since TEXT
+);
+CREATE TABLE IF NOT EXISTS mk_mc_template_html (
+  organization_id INTEGER NOT NULL REFERENCES mk_organizations(id),
+  template_id TEXT NOT NULL,
+  html TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (organization_id, template_id)
+);
+CREATE TABLE IF NOT EXISTS mk_mc_erased (
+  organization_id INTEGER NOT NULL REFERENCES mk_organizations(id),
+  email_hash TEXT NOT NULL,
+  mc_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (organization_id, email_hash)
 );

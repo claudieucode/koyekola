@@ -222,7 +222,7 @@ app.use((err, req, res, next) => {
     status = err.status; // erreurs de requête détectées par Express (URL mal formée, corps illisible…)
     message = STATUS_MESSAGES[status] || STATUS_MESSAGES[400];
   } else {
-    console.error(`[KOLAKISA] Erreur sur ${req.method} ${req.originalUrl} :`, err);
+    console.error(`[KOLAKISA] Erreur sur ${req.method} ${String(req.originalUrl).replace(/(\/webhooks\/mailchimp\/\d+\/)[0-9a-f]+/i, "$1••••")} :`, err); // le jeton d'un webhook n'est jamais journalisé
   }
   res.status(status).render("error", { message });
 });

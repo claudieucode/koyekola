@@ -104,7 +104,7 @@ add(G4, "templates.get", "GET", "/templates/{templateId}", "/modeles/:templateId
 add(G4, "templates.create", "POST", "/templates", "/modeles", "Créer un modèle HTML personnalisé", "Publier un modèle de la bibliothèque Kolakisa dans Mailchimp (HTML inline, 1 Mo maximum).", C, { required: ["name", "html"], example: { request: { name: "Newsletter simple", html: "<html><body><h1>*|MC:SUBJECT|*</h1><div mc:edit=\"corps\">Contenu</div></body></html>" }, response: { id: 10045, name: "Newsletter simple", type: "user", active: true } } });
 add(G4, "templates.update", "PATCH", "/templates/{templateId}", "/modeles/:templateId", "Modifier un modèle", "Changer le nom ou le HTML.", C, {});
 add(G4, "templates.delete", "DELETE", "/templates/{templateId}", "/modeles/:templateId", "Supprimer un modèle", "Retirer un modèle personnalisé.", C, { confirm: true });
-add(G4, "templates.defaultContent", "GET", "/templates/{templateId}/default-content", "/modeles/:templateId/contenu", "HTML / sections par défaut d'un modèle", "Récupérer le HTML pour l'éditeur.", C, { query: FIELDS });
+add(G4, "templates.defaultContent", "GET", "/templates/{templateId}/default-content", "/modeles/:templateId/sections", "Sections modifiables d'un modèle et leur contenu par défaut", "Lire les zones `mc:edit` d'un modèle (l'API ne renvoie PAS le HTML complet d'un modèle : Kolakisa conserve lui-même le HTML des modèles qu'il crée, voir /modeles/:id/html).", I, { query: FIELDS });
 
 // ---------- AUTOMATISATIONS ----------
 const G5 = "Automatisations";
@@ -207,7 +207,6 @@ add(G10, "account.domainDelete", "DELETE", "/verified-domains/{domain}", "/compt
 const G11 = "Lots (batches)";
 add(G11, "batches.list", "GET", "/batches", "/lots", "Lister les lots d'opérations", "Suivre les opérations groupées.", O, { query: PAGE });
 add(G11, "batches.get", "GET", "/batches/{batchId}", "/lots/:batchId", "État d'un lot", "Progression et URL des résultats.", O, { query: FIELDS });
-add(G11, "batches.create", "POST", "/batches", "/lots", "Soumettre un lot d'opérations", "Opérations groupées (operations[] : method, path, body).", O, { required: ["operations"], confirm: true });
 
 const BY_ID = new Map(OPS.map((o) => [o.id, o]));
 const TOKENS = (s) => [...s.matchAll(/[{:]([A-Za-z]+)\}?/g)].map((m) => m[1]);

@@ -220,6 +220,31 @@ describe("intégration Mailchimp (routes)", () => {
       assert.match(prev.data.data.html, /&lt;i&gt;/);
       assert.equal((await json(boss, "POST", `${API}/rapports/comparer`, { ids: ["a"] })).status, 400);
     });
+    test("HTML d'un modèle : conservé pour ceux créés depuis Kolakisa, « indisponible » pour les autres (l'API Mailchimp ne le renvoie pas)", async () => {
+      const created = await json(boss, "POST", `${API}/modeles`, { name: "Mon modèle", html: "<p>Bonjour *|FNAME|*</p>" });
+      assert.equal(created.status, 200);
+      const id = created.data.data.id;
+      const got = await json(boss, "GET", `${API}/modeles/${id}/html`);
+      assert.deepEqual({ html: got.data.data.html, available: got.data.data.available }, { html: "<p>Bonjour *|FNAME|*</p>", available: true });
+      await json(boss, "PATCH", `${API}/modeles/${id}`, { html: "<p>Version 2</p>" });
+      assert.equal((await json(boss, "GET", `${API}/modeles/${id}/html`)).data.data.html, "<p>Version 2</p>");
+      const foreign = await json(boss, "GET", `${API}/modeles/99999/html`);
+      assert.deepEqual({ html: foreign.data.data.html, available: foreign.data.data.available }, { html: null, available: false });
+      assert.equal((await json(boss, "GET", `${API}/modeles/abc/html`)).status, 400);
+      await json(boss, "DELETE", `${API}/modeles/${id}?confirm=1`);
+      assert.equal((await json(boss, "GET", `${API}/modeles/${id}/html`)).data.data.available, false);
+      const editor = await member("editor");
+      assert.equal((await json(editor, "GET", `${API}/modeles/${id}/html`)).status, 403);
+    });
+    test("abonner une adresse désinscrite chez Kolakisa par une opération générique : 422 « consent_blocked », rien n'atteint Mailchimp", async () => {
+      run("INSERT INTO mk_suppressions (organization_id, email, reason) VALUES (1, 'refus@exemple.fr', 'bounced')");
+      fake.reset();
+      const r = await json(boss, "POST", `${API}/audiences/${remote.id}/membres`, { email_address: "refus@exemple.fr", status: "subscribed" });
+      assert.equal(r.status, 422); assert.equal(r.data.error.code, "consent_blocked");
+      const b = await json(boss, "POST", `${API}/audiences/${remote.id}/lot`, { members: [{ email_address: "refus@exemple.fr", status: "subscribed" }] });
+      assert.equal(b.status, 422);
+      assert.equal(fake.requests.length, 0);
+    });
     test("liaison d'une audience à une liste Kolakisa, puis tableau de bord et miroirs", async () => {
       await json(boss, "POST", `${API}/sync`, {});
       await until(async () => (await json(boss, "GET", `${API}/etat`)).data.data.sync.status === "ok");
@@ -252,8 +277,8 @@ describe("intégration Mailchimp (routes)", () => {
     test("une synchronisation déjà en cours est refusée (409)", async () => {
       run("UPDATE mk_mc_state SET running_since = datetime('now')");
       const r = await json(boss, "POST", `${API}/sync`, {});
-      assert.equal(r.status, 400); assert.equal(r.data.error.code, "already_running");
-      run("UPDATE mk_mc_state SET running_since = NULL");
+      run("UPDATE mk_mc_state SET running_since = NULL"); // remis à zéro AVANT les assertions : un échec ne doit pas bloquer les tests suivants
+      assert.equal(r.status, 409); assert.equal(r.data.error.code, "already_running");
     });
     test("activation / désactivation de la synchronisation automatique", async () => {
       assert.equal((await json(boss, "POST", `${API}/synchronisation/activer`, { enabled: false })).data.data.syncEnabled, false);
@@ -330,6 +355,12 @@ describe("intégration Mailchimp (routes)", () => {
       assert.equal((await json(boss, "POST", `${API}/evenements/999999/rejouer`, {})).status, 404);
       const editor = await member("editor");
       assert.equal((await json(editor, "POST", `${API}/evenements/${ignored.id}/rejouer`, {})).status, 403);
+    });
+    test("une vague d'événements légitimes (jeton valide) n'est jamais bloquée par le limiteur", async () => {
+      const anon = new Client(srv.base);
+      const statuses = new Set();
+      for (let i = 0; i < 650; i++) statuses.add((await anon.get(url)).status);
+      assert.deepEqual([...statuses], [200]);
     });
     test("installer le webhook chez Mailchimp : une fois, jeton dans l'adresse, rotation du jeton invalide l'ancienne adresse", async () => {
       const inst = await json(boss, "POST", `${API}/audiences/${remote.id}/webhooks/installer`, {});
@@ -421,6 +452,12 @@ describe("intégration Mailchimp (routes)", () => {
       assert.equal((await new Client(srv.base).get(db.length ? "/webhooks/mailchimp/1/anything" : "")).status, 404);
       assert.equal(db("SELECT COUNT(*) AS n FROM mk_contacts WHERE source = 'mailchimp'")[0].n, contacts);
       assert.equal((await json(boss, "GET", `${API}/audiences`)).status, 409);
+    });
+    test("des essais de jeton répétés (ici l'ancien jeton, devenu faux) finissent par être limités : 404 d'abord, puis 429", async () => {
+      const anon = new Client(srv.base);
+      const codes = new Set();
+      for (let i = 0; i < 620; i++) codes.add((await anon.get("/webhooks/mailchimp/1/" + "a".repeat(48))).status);
+      assert.deepEqual([...codes].sort(), [404, 429]);
     });
   });
 });

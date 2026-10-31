@@ -29,7 +29,7 @@ function pathFor(op, params = {}) {
     if (raw === undefined || raw === null || raw === "") throw bad(`Paramètre « ${name} » obligatoire.`);
     if (name === "hash") return subscriberHash(raw);
     const rule = RULES[name] || SAFE_ID;
-    if (!rule.test(String(raw))) throw bad(`Paramètre « ${name} » invalide.`);
+    if (!rule.test(String(raw)) || /^\.+$/.test(String(raw))) throw bad(`Paramètre « ${name} » invalide.`);
     return encodeURIComponent(String(raw));
   });
 }
@@ -73,6 +73,24 @@ function cleanBody(op, body) {
 }
 const confirmed = (body, query) => (body && body.confirm === true) || ["1", "true", "oui"].includes(String(query && query.confirm));
 
+// « Le plus restrictif gagne » aussi pour les opérations génériques : on n'abonne jamais chez Mailchimp une adresse que Kolakisa tient pour désinscrite, rebondie, plaignante ou supprimée.
+const SUBSCRIBING = new Set(["members.add", "members.upsert", "members.update", "audiences.batchSubscribe"]);
+function refuseBlockedSubscriptions(ctx, op, params, body) {
+  if (!SUBSCRIBING.has(op.id) || !body) return;
+  const { blockedLocally } = require("./composite");
+  const wants = (m) => ["subscribed", "pending"].includes(m && m.status) || ["subscribed", "pending"].includes(m && m.status_if_new);
+  const blocked = [];
+  const check = (email, m) => { if (email && wants(m) && blockedLocally(ctx, String(email).toLowerCase())) blocked.push(email); };
+  if (op.id === "audiences.batchSubscribe") for (const m of Array.isArray(body.members) ? body.members : []) check(m && m.email_address, m);
+  else {
+    let email = body.email_address;
+    if (!email && params.hash && !/^[0-9a-f]{32}$/i.test(String(params.hash))) email = params.hash;
+    if (!email && /^[0-9a-f]{32}$/i.test(String(params.hash || ""))) { const row = ctx.db.prepare("SELECT email FROM mk_mc_members m JOIN mk_contacts c ON c.id = m.contact_id WHERE m.organization_id = ? AND m.subscriber_hash = ?").get(ctx.organizationId, String(params.hash).toLowerCase()); email = row && row.email; }
+    check(email, body);
+  }
+  if (blocked.length) throw new MarketingError("consent_blocked", `Abonnement refusé : ${blocked.length === 1 ? "cette adresse est" : `${blocked.length} adresses sont`} désinscrite(s), en rebond, en plainte ou supprimée(s) chez Kolakisa (« le plus restrictif gagne »). Seule la personne elle-même peut se réabonner (formulaire).`);
+}
+
 // Exécute une opération. ctx : contexte marketing de l'organisation. Renvoie le JSON de Mailchimp (sans _links) ; lève MarketingError (code et message français).
 async function run(ctx, opId, { params = {}, query = {}, body } = {}) {
   const op = BY_ID.get(opId);
@@ -81,11 +99,12 @@ async function run(ctx, opId, { params = {}, query = {}, body } = {}) {
   const q = cleanQuery(op, query);
   if (op.confirm && !confirmed(body, query)) throw new MarketingError("confirm_required", `Confirmation requise : « ${op.summary} » est une action à effet immédiat ou irréversible. Confirmez explicitement pour continuer.`);
   const payload = cleanBody(op, body);
+  refuseBlockedSubscriptions(ctx, op, params, payload);
   const client = ctx.mcClient || clientFor(ctx);
   try {
-    const data = await client.request(op.method, path, { query: q, body: payload, timeout: op.id === "campaigns.contentSet" || op.id === "templates.create" ? 60000 : undefined });
+    const data = await client.request(op.method, path, { query: q, body: payload, timeout: op.id === "audiences.batchSubscribe" ? 120000 : (op.id === "campaigns.contentSet" || op.id === "templates.create" || op.id === "templates.update") ? 60000 : undefined });
     if (op.method !== "GET") audit(ctx, "mailchimp.operation", "mailchimp", null, { op: op.id });
-    afterHooks(ctx, op, params, data);
+    afterHooks(ctx, op, params, data, payload);
     return data;
   } catch (error) {
     if (error instanceof MailchimpError) throw new MarketingError(error.code, error.message, error.detail || undefined);
@@ -94,9 +113,14 @@ async function run(ctx, opId, { params = {}, query = {}, body } = {}) {
 }
 
 // Garde les miroirs locaux cohérents sans appel réseau supplémentaire
-function afterHooks(ctx, op, params, data) {
+function afterHooks(ctx, op, params, data, payload) {
   try {
     if (op.id === "audiences.delete") ctx.db.prepare("DELETE FROM mk_mc_audiences WHERE organization_id = ? AND remote_id = ?").run(ctx.organizationId, params.listId);
+    if ((op.id === "templates.create" || op.id === "templates.update") && payload && typeof payload.html === "string") {
+      const id = op.id === "templates.create" ? data && data.id : params.templateId;
+      if (id !== undefined && id !== null) ctx.db.prepare(`INSERT INTO mk_mc_template_html (organization_id, template_id, html) VALUES (?, ?, ?) ON CONFLICT (organization_id, template_id) DO UPDATE SET html = excluded.html, updated_at = datetime('now')`).run(ctx.organizationId, String(id), payload.html);
+    }
+    if (op.id === "templates.delete") ctx.db.prepare("DELETE FROM mk_mc_template_html WHERE organization_id = ? AND template_id = ?").run(ctx.organizationId, String(params.templateId));
     if (op.id === "campaigns.delete") ctx.db.prepare("DELETE FROM mk_mc_campaigns WHERE organization_id = ? AND remote_id = ?").run(ctx.organizationId, params.campaignId);
     if (["campaigns.send", "campaigns.schedule", "campaigns.unschedule", "campaigns.pause", "campaigns.resume", "campaigns.cancelSend"].includes(op.id)) {
       ctx.db.prepare("UPDATE mk_mc_campaigns SET synced_at = NULL WHERE organization_id = ? AND remote_id = ?").run(ctx.organizationId, params.campaignId);

@@ -13,7 +13,7 @@ const transactional = require("../mailchimp/transactional");
 const { OPS } = require("../mailchimp/catalog");
 const operations = require("../mailchimp/operations");
 
-const HTTP = { already_running: 409, config: 500, invalid_request: 400, invalid_field: 400, key_format: 400, too_large: 413, confirm_required: 409, not_connected: 409, already_linked: 409, not_found: 404, unknown_operation: 404, rate_limited: 429,
+const HTTP = { consent_blocked: 422, already_running: 409, config: 500, invalid_request: 400, invalid_field: 400, key_format: 400, too_large: 413, confirm_required: 409, not_connected: 409, already_linked: 409, not_found: 404, unknown_operation: 404, rate_limited: 429,
   auth_invalid: 422, forbidden: 422, member_exists: 422, compliance_state: 422, quota: 422, recipient_blocked: 422, webhook_url: 422, encryption_missing: 500, timeout: 504, network: 502, server_error: 502, unknown: 502 };
 
 function fail(res, error) {
@@ -51,7 +51,8 @@ module.exports = ({ db }) => {
   router.post(`${P}/connexion`, api(async (req, ctx) => ({ account: await connection.connect(ctx, req.body && req.body.apiKey), status: connection.status(ctx) })));
   router.delete(`${P}/connexion`, api((req, ctx) => { connection.disconnect(ctx); return { status: connection.status(ctx) }; }));
   router.post(`${P}/synchronisation/activer`, api((req, ctx) => { connection.setSyncEnabled(ctx, req.body && req.body.enabled !== false); return connection.status(ctx); }));
-  router.post(`${P}/jeton-webhook/regenerer`, api((req, ctx) => { connection.rotateWebhookToken(ctx); return { webhookUrlAvailable: Boolean(connection.webhookUrl(ctx)) }; }));
+  // Régénérer le jeton invalide l'ancienne adresse : les webhooks déjà installés chez Mailchimp sont mis à jour dans la foulée
+  router.post(`${P}/jeton-webhook/regenerer`, api(async (req, ctx) => { connection.rotateWebhookToken(ctx); const moved = await inbound.refreshWebhooks(ctx).catch(() => ({ updated: 0, failed: 0 })); return { webhookUrlAvailable: Boolean(connection.webhookUrl(ctx)), ...moved }; }));
   router.get(`${P}/journal-appels`, api((req, ctx) => connection.recentRequests(ctx, int(req.query.limit, 100))));
 
   // ----- Synchronisation (lancée en arrière-plan : la réponse est immédiate, l'état se lit par /etat) -----
@@ -74,11 +75,17 @@ module.exports = ({ db }) => {
     try {
       if (!/^[0-9a-f]{10}$/i.test(req.params.listId)) throw new MarketingError("invalid_request", "Identifiant d'audience invalide.");
       const out = await composite.exportMembers(ctxOf(req), req.params.listId, String(req.query.status || ""));
-      res.set({ "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="contacts-mailchimp-${req.params.listId}.csv"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).send(out.csv);
+      res.set({ "X-Kolakisa-Truncated": out.truncated ? "1" : "0", "Access-Control-Expose-Headers": "X-Kolakisa-Truncated", "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="contacts-mailchimp-${req.params.listId}.csv"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).send(out.csv);
     } catch (error) { fail(res, error); }
   });
   router.get(`${P}/audiences/:listId/membres/:hash/existe`, api((req, ctx) => composite.memberExists(ctx, req.params.listId, req.params.hash)));
   router.post(`${P}/audiences/:listId/webhooks/installer`, api((req, ctx) => inbound.install(ctx, req.params.listId)));
+  // HTML d'un modèle : l'API Mailchimp ne le renvoie pas ; seuls les modèles créés ou modifiés depuis Kolakisa ont leur HTML conservé (null sinon)
+  router.get(`${P}/modeles/:templateId/html`, api((req, ctx) => {
+    if (!/^\d{1,12}$/.test(req.params.templateId)) throw new MarketingError("invalid_request", "Identifiant de modèle invalide.");
+    const row = ctx.db.prepare("SELECT html, updated_at FROM mk_mc_template_html WHERE organization_id = ? AND template_id = ?").get(ctx.organizationId, req.params.templateId);
+    return { html: row ? row.html : null, available: Boolean(row), updatedAt: row ? row.updated_at : null };
+  }));
   router.post(`${P}/modeles/apercu`, api((req) => composite.renderTemplate(req.body && req.body.html, req.body && req.body.variables)));
   router.get(`${P}/rapports/:campaignId/rebonds`, api((req, ctx) => composite.bounces(ctx, req.params.campaignId)));
   router.post(`${P}/rapports/comparer`, api((req, ctx) => composite.compare(ctx, req.body && req.body.ids)));

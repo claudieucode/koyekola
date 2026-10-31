@@ -297,7 +297,13 @@
               } catch (e) { fail(e); }
             }),
             button("Importer", function (ev) { openCsvImport(a, ev.currentTarget); }),
-            button("Exporter", function (ev) { M.formDialog({ title: "Exporter les contacts de « " + a.name + " »", fields: [{ name: "status", label: "Statut", type: "select", options: [["", "Tous"], ["subscribed", "Abonnés"], ["unsubscribed", "Désabonnés"], ["cleaned", "Adresses invalides"], ["pending", "En attente"]], value: "" }], submitLabel: "Télécharger le CSV", returnFocus: ev.currentTarget, onSubmit: async function (v) { window.location.href = M.BOOT.api + "/audiences/" + a.id + "/export.csv" + q({ status: v.status }); } }); }),
+            button("Exporter", function (ev) { M.formDialog({ title: "Exporter les contacts de « " + a.name + " »", fields: [{ name: "status", label: "Statut", type: "select", options: [["", "Tous"], ["subscribed", "Abonnés"], ["unsubscribed", "Désabonnés"], ["cleaned", "Adresses invalides"], ["pending", "En attente"]], value: "" }], submitLabel: "Télécharger le CSV", returnFocus: ev.currentTarget, onSubmit: async function (v) {
+              var res = await fetch(M.BOOT.api + "/audiences/" + a.id + "/export.csv" + q({ status: v.status }), { credentials: "same-origin" });
+              if (!res.ok) { var j = null; try { j = await res.json(); } catch (e) { j = null; } throw new Error((j && j.error && j.error.message) || "Export impossible (code " + res.status + ")."); }
+              var blob = await res.blob(), url = URL.createObjectURL(blob), link = h("a", { href: url, download: "contacts-mailchimp-" + a.id + ".csv" });
+              document.body.appendChild(link); link.click(); link.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+              flash(res.headers.get("X-Kolakisa-Truncated") === "1" ? "Export téléchargé, mais LIMITÉ aux 50 000 premiers contacts : filtrez par statut pour obtenir le reste." : "Export téléchargé.", res.headers.get("X-Kolakisa-Truncated") === "1" ? "error" : "ok");
+            } }); }),
             button("Modifier", function (ev) { M.formDialog({ title: "Modifier l'audience", fields: audienceFields(a), returnFocus: ev.currentTarget, onSubmit: async function (v) { await api("PATCH", "/audiences/" + a.id, audienceBody(v, false)); flash("Audience modifiée.", "ok"); M.state.audiences = null; M.renderTab(); } }); }),
             del("Supprimer l'audience « " + a.name + " » ?", "Tous ses contacts disparaissent chez Mailchimp. Cette action est irréversible.", "/audiences/" + a.id, function () { M.state.audiences = null; M.renderTab(); }, a.name));
         } }], audiences));
@@ -357,12 +363,15 @@
       bulk.appendChild(button("Ajouter le tag", function () { if (!tag.value.trim()) { flash("Saisissez le nom du tag.", "error"); return; } run("Ajouter le tag « " + tag.value.trim() + " » ?", n + " contact(s) recevront ce tag.", "Ajouter", function (e) { return api("POST", path(e) + "/tags", { tags: [{ name: tag.value.trim(), status: "active" }] }); }); }));
       bulk.appendChild(button("Retirer le tag", function () { if (!tag.value.trim()) { flash("Saisissez le nom du tag.", "error"); return; } run("Retirer le tag « " + tag.value.trim() + " » ?", n + " contact(s) perdront ce tag.", "Retirer", function (e) { return api("POST", path(e) + "/tags", { tags: [{ name: tag.value.trim(), status: "inactive" }] }); }); }));
     }
+    var seq = 0;
     async function load() {
+      var mine = ++seq;
       M.clear(out); out.appendChild(h("p", { class: "mk-mc-loading", text: "Chargement…" }));
       try {
         var d = view.segment
           ? await api("GET", "/audiences/" + view.list + "/segments/" + enc(view.segment) + "/membres" + q({ count: view.count, offset: view.offset, include_unsubscribed: view.status === "unsubscribed" ? "true" : "", include_cleaned: view.status === "cleaned" ? "true" : "" }))
           : await api("GET", "/audiences/" + view.list + "/membres" + q({ status: view.status, count: view.count, offset: view.offset, sort_field: "last_changed", sort_dir: "DESC" }));
+        if (mine !== seq) return; // une réponse plus récente est déjà arrivée ou attendue
         rowsNow = d.members || [];
         M.clear(out);
         if (!rowsNow.length) { out.appendChild(M.empty("Aucun contact pour ce filtre.")); renderBulk(); return; }
@@ -412,7 +421,7 @@
         body.appendChild(dl);
         var fname = h("input", { type: "text", value: (m.merge_fields && m.merge_fields.FNAME) || "", maxlength: 100 }), lname = h("input", { type: "text", value: (m.merge_fields && m.merge_fields.LNAME) || "", maxlength: 100 });
         var canChange = ["subscribed", "unsubscribed", "pending"].indexOf(m.status) >= 0;
-        var stSel = select([["subscribed", "Abonné"], ["unsubscribed", "Désabonné"]], m.status === "unsubscribed" ? "unsubscribed" : "subscribed"); stSel.disabled = !canChange;
+        var stSel = select(m.status === "pending" ? [["pending", "En attente de confirmation"], ["subscribed", "Abonné"], ["unsubscribed", "Désabonné"]] : [["subscribed", "Abonné"], ["unsubscribed", "Désabonné"]], m.status === "pending" || m.status === "unsubscribed" ? m.status : "subscribed"); stSel.disabled = !canChange;
         var consent = h("input", { type: "checkbox", id: "mc-ct-c" });
         body.appendChild(h("h3", { text: "Modifier" }));
         body.appendChild(h("div", { class: "mk-mc-bar2" }, field("Prénom", fname), field("Nom", lname), field("Statut", stSel)));

@@ -31,13 +31,22 @@ function baseUrlFor(apiKey, env = process.env) {
 // Chemin pour le journal : sans paramètres de requête, empreinte de membre masquée
 const logPath = (path) => String(path).split("?")[0].replace(/\/members\/[0-9a-f]{32}/gi, "/members/:hash").replace(/\/queue\/[0-9a-f]{32}/gi, "/queue/:hash").slice(0, 200);
 
-function createTransport({ fetchImpl = globalThis.fetch, maxConcurrent = 8, maxRetries = 3, timeoutMs = 30000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), random = Math.random, onLog = () => {}, maxBackoffMs = 30000 } = {}) {
+// Les limiteurs sont PARTAGÉS par clé (une par organisation) : l'écran, la synchronisation et les webhooks d'une même organisation se partagent les 10 connexions que Mailchimp autorise,
+// au lieu d'avoir chacun son propre compteur.
+const LIMITERS = new Map();
+function limiterFor(key, limit) {
+  const make = () => ({ active: 0, waiting: [], limit });
+  if (!key) return make();
+  if (!LIMITERS.has(key)) LIMITERS.set(key, make());
+  return LIMITERS.get(key);
+}
+
+function createTransport({ fetchImpl = globalThis.fetch, maxConcurrent = 8, maxRetries = 3, timeoutMs = 30000, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), random = Math.random, onLog = () => {}, maxBackoffMs = 30000, limiterKey = null } = {}) {
   if (typeof fetchImpl !== "function") throw new Error("fetch indisponible (Node 18 ou plus requis).");
   const limit = Math.min(Math.max(Number(maxConcurrent) || 1, 1), 10);
-  let active = 0;
-  const waiting = [];
-  const release = () => { active--; const next = waiting.shift(); if (next) next(); };
-  const acquire = () => (active < limit ? (active++, Promise.resolve()) : new Promise((resolve) => waiting.push(() => { active++; resolve(); })));
+  const lim = limiterFor(limiterKey, limit);
+  const release = () => { lim.active--; const next = lim.waiting.shift(); if (next) next(); };
+  const acquire = () => (lim.active < lim.limit ? (lim.active++, Promise.resolve()) : new Promise((resolve) => lim.waiting.push(() => { lim.active++; resolve(); })));
   const metrics = { requests: 0, retries: 0, maxActive: 0 };
 
   async function once({ method, url, headers, body, timeout }) {
@@ -59,7 +68,7 @@ function createTransport({ fetchImpl = globalThis.fetch, maxConcurrent = 8, maxR
     const started = Date.now();
     let attempt = 0, lastError = null;
     await acquire();
-    metrics.maxActive = Math.max(metrics.maxActive, active);
+    metrics.maxActive = Math.max(metrics.maxActive, lim.active);
     try {
       for (;;) {
         attempt++; metrics.requests++;
@@ -110,7 +119,7 @@ function createClient({ apiKey, env = process.env, ...options } = {}) {
     return text ? `?${text}` : "";
   }
   async function request(method, path, { query, body, timeout } = {}) {
-    if (typeof path !== "string" || !path.startsWith("/") || path.includes("..") || /[\s\\]/.test(path)) throw new MailchimpError("invalid_request", "Chemin d'API invalide.");
+    if (typeof path !== "string" || !path.startsWith("/") || path.includes("..") || /\/\.(?:\/|\?|$)/.test(path) || /[\s\\]/.test(path)) throw new MailchimpError("invalid_request", "Chemin d'API invalide.");
     const res = await transport.send({
       method, path, url: `${base}${path}${qs(query)}`, timeout,
       headers: { Authorization: auth, Accept: "application/json", "User-Agent": "Kolakisa-Mailchimp/1.0", ...(body !== undefined ? { "Content-Type": "application/json" } : {}) },

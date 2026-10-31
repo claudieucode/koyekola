@@ -141,7 +141,14 @@ function deleteContact(ctx, id, { suppress = false } = {}) {
     for (const address of [contact.email, ...ctx.db.prepare("SELECT email FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id).map((r) => r.email)]) {
       ctx.db.prepare("UPDATE mk_events SET email = NULL, metadata = '{}' WHERE organization_id = ? AND email = ?").run(ctx.organizationId, address);
       // Webhooks reçus de Mailchimp (charge complète conservée 90 jours) : l'événement reste dans le journal, sans identité
-      ctx.db.prepare("UPDATE mk_mc_events SET email = '', payload = '{}' WHERE organization_id = ? AND email = ?").run(ctx.organizationId, address);
+      const like = `%"${address.replace(/[\\%_]/g, (c) => `\\${c}`)}"%`;
+      ctx.db.prepare("UPDATE mk_mc_events SET email = '', payload = '{}' WHERE organization_id = ? AND (email = ? OR payload LIKE ? ESCAPE '\\')").run(ctx.organizationId, address, like);
+      // Mailchimp connecté : la personne effacée sera supprimée définitivement chez Mailchimp et jamais réimportée (empreintes seulement, retirées une fois Mailchimp nettoyé)
+      if (ctx.db.prepare("SELECT 1 FROM mk_settings WHERE organization_id = ? AND key = 'mailchimp.api_key'").get(ctx.organizationId)) {
+        const crypto = require("node:crypto");
+        ctx.db.prepare("INSERT OR IGNORE INTO mk_mc_erased (organization_id, email_hash, mc_hash) VALUES (?, ?, ?)")
+          .run(ctx.organizationId, crypto.createHash("sha256").update(address.toLowerCase()).digest("hex"), crypto.createHash("md5").update(address.toLowerCase()).digest("hex"));
+      }
     }
     if (suppress) {
       const emails = [contact.email, ...ctx.db.prepare("SELECT email FROM mk_contact_aliases WHERE organization_id = ? AND contact_id = ?").all(ctx.organizationId, id).map((r) => r.email)];

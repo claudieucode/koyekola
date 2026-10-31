@@ -59,3 +59,12 @@ Le détail de chaque opération (endpoint, paramètres, exemples) est dans `MAIL
 ## 7. Avant de passer en production
 1. Faire tourner `TEST_RESULTS.md` § « Recette avec un vrai compte » (connexion, synchronisation d'une audience de test, campagne de test à une adresse interne, webhook) : **cette recette n'a pas pu être faite** faute de clé réelle.
 2. Vérifier que `SITE_URL` est en HTTPS et que `ENCRYPTION_KEY` est sauvegardée (perdue, les clés enregistrées sont illisibles).
+
+## 8. Limites connues
+- **Non validé contre le vrai Mailchimp** (aucune clé n'était disponible pour les tests) : suivre la recette de `TEST_RESULTS.md` § 5 avant la production.
+- Une connexion par **organisation** (pas par site) ; les sites se rattachent via leurs listes.
+- La synchronisation tourne dans le processus du serveur avec un verrou en base : un seul processus à la fois ; si le serveur redémarre en cours de route, le verrou expire après 30 minutes.
+- Le HTML d'un modèle n'est consultable que s'il a été créé ou modifié depuis Kolakisa (l'API Mailchimp ne le renvoie pas).
+- Export CSV limité à 50 000 contacts (un message l'indique) ; import de 5 000 lignes au plus par fichier.
+- Pas de gestion des utilisateurs du compte, ni de répartition par appareil, ni de création complète de parcours Customer Journeys (non exposés par l'API Marketing).
+- Safari et Edge non testés ; accessibilité vérifiée partiellement (voir `TEST_RESULTS.md`).

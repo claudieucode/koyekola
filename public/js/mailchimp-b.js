@@ -124,14 +124,14 @@
     dlg.addEventListener("close", function () { dlg.remove(); if (opener && document.contains(opener)) opener.focus(); if (d.campaignId) reload(); });
     document.body.appendChild(dlg); dlg.showModal();
     var NAMES = ["Type", "Destinataires", "Paramètres", "Contenu", "Envoi"];
-    var editor = null;
+    var editor = null, segReady = true, segPromise = Promise.resolve();
     var audience = function () { return audiences.filter(function (a) { return a.id === d.listId; })[0]; };
     function defaults() { var cd = (audience() && audience().campaign_defaults) || {}; if (!d.fromName) d.fromName = cd.from_name || ""; if (!d.replyTo) d.replyTo = cd.from_email || ""; if (!d.subject && cd.subject) d.subject = cd.subject; }
     function showErr(m) { err.textContent = m; err.hidden = !m; if (m) err.scrollIntoView({ block: "nearest" }); }
     function collect() {
       var g = function (n) { var el = body.querySelector("[name='" + n + "']"); return el ? (el.type === "checkbox" ? el.checked : el.value) : undefined; };
       if (d.step === 1) { d.type = (body.querySelector("input[name='type']:checked") || {}).value || d.type; if (d.type === "rss") { d.feedUrl = g("feedUrl").trim(); d.frequency = g("frequency"); } if (d.type === "variate") { d.subjectB = g("subjectB").trim(); d.testSize = Number(g("testSize")); d.waitHours = Number(g("waitHours")); d.criteria = g("criteria"); } }
-      if (d.step === 2) { d.listId = g("listId"); d.segmentId = g("segmentId") || ""; }
+      if (d.step === 2) { d.listId = g("listId"); if (segReady) d.segmentId = g("segmentId") || ""; }
       if (d.step === 3) { d.title = g("title").trim(); d.subject = g("subject").trim(); d.preview = g("preview").trim(); d.fromName = g("fromName").trim(); d.replyTo = g("replyTo").trim(); }
       if (d.step === 4) { if (d.type === "plaintext") d.plain = g("plain"); else if (editor) d.html = editor.value(); }
       if (d.step === 5) { d.mode = (body.querySelector("input[name='mode']:checked") || {}).value || "draft"; d.when = g("when") || d.when; }
@@ -148,7 +148,7 @@
       var settings = { title: d.title, subject_line: d.subject, preview_text: d.preview, from_name: d.fromName, reply_to: d.replyTo };
       var body2 = { type: d.type, recipients: recipients, settings: settings };
       if (d.type === "rss") body2.rss_opts = { feed_url: d.feedUrl, frequency: d.frequency, schedule: { hour: 9 }, constrain_rss_img: false };
-      if (d.type === "variate") body2.variate_settings = { winner_criteria: d.criteria, wait_time: d.waitHours, test_size: d.testSize, subject_lines: [d.subject, d.subjectB] };
+      if (d.type === "variate") body2.variate_settings = { winner_criteria: d.criteria, wait_time: d.waitHours * 60, test_size: d.testSize, subject_lines: [d.subject, d.subjectB] };
       if (d.campaignId) { await api("PATCH", "/campagnes/" + d.campaignId, { recipients: recipients, settings: settings }); }
       else { var c = await api("POST", "/campagnes", body2); d.campaignId = c.id; }
       await api("PUT", "/campagnes/" + d.campaignId + "/contenu", d.type === "plaintext" ? { plain_text: d.plain } : { html: d.html });
@@ -181,10 +181,12 @@
           var a = audiences.filter(function (z) { return z.id === aud.value; })[0];
           info.textContent = "Destinataires estimés : " + fmtNum(seg.value ? countOf(seg.options[seg.selectedIndex]) : (a && a.stats && a.stats.member_count)) + " (abonnés uniquement).";
         };
-        var loadSeg = async function () {
+        var loadSeg = function () { segPromise = loadSegments(); return segPromise; };
+        var loadSegments = async function () {
+          segReady = false;
           clear(seg); seg.appendChild(h("option", { value: "", text: "Toute l'audience" }));
           try { var found = (await api("GET", "/audiences/" + aud.value + "/segments?count=100")).segments || []; found.forEach(function (x) { var o = h("option", { value: x.id, text: (x.type === "static" ? "Tag : " : "Segment : ") + x.name + " (" + fmtNum(x.member_count) + ")" }); if (String(x.id) === String(d.segmentId)) o.selected = true; seg.appendChild(o); }); } catch (e) { info.textContent = "Segments indisponibles : " + e.message; return; }
-          updateInfo();
+          segReady = true; updateInfo();
         };
         aud.addEventListener("change", function () { d.listId = aud.value; d.segmentId = ""; loadSeg(); });
         seg.addEventListener("change", function () { d.segmentId = seg.value; updateInfo(); });
@@ -205,7 +207,7 @@
           var tplSel = select([["", "— Partir d'un modèle —"]], "", { "aria-label": "Charger un modèle" });
           body.appendChild(h("div", { class: "mk-mc-actions" }, field("Modèle", tplSel), button("Charger ce modèle", async function () {
             if (!tplSel.value) { flash("Choisissez un modèle.", "error"); return; }
-            try { var c = await api("GET", "/modeles/" + tplSel.value + "/contenu"); editor.set(c.html || ""); flash("Modèle chargé.", "ok"); } catch (e) { fail(e); }
+            try { var c = await api("GET", "/modeles/" + tplSel.value + "/html"); if (!c.available) { flash("Le HTML de ce modèle n'est pas disponible : l'API Mailchimp ne le fournit que pour les modèles créés depuis Kolakisa.", "error"); return; } editor.set(c.html || ""); flash("Modèle chargé.", "ok"); } catch (e) { fail(e); }
           })));
           api("GET", "/modeles?count=100&type=user").then(function (t) { (t.templates || []).forEach(function (x) { tplSel.appendChild(h("option", { value: x.id, text: x.name })); }); }).catch(function () {});
           editor = htmlEditor(d.html, {}); body.appendChild(editor.root);
@@ -229,7 +231,7 @@
       }
       if (d.step > 1) nav.appendChild(button("Précédent", function () { collect(); d.step--; render(); }));
       nav.appendChild(button("Annuler", function () { dlg.close(); }));
-      if (d.step < 5) nav.appendChild(button("Suivant", function () { collect(); var m = validate(); if (m) { showErr(m); return; } d.step++; render(); }, { primary: true }));
+      if (d.step < 5) nav.appendChild(button("Suivant", async function () { if (d.step === 2) await segPromise; collect(); var m = validate(); if (m) { showErr(m); return; } d.step++; render(); }, { primary: true }));
       else nav.appendChild(button("Terminer", async function (ev) {
         collect();
         if (!body.querySelector("input[name='confirm']").checked) { showErr("Cochez la case de confirmation."); return; }
@@ -305,7 +307,7 @@
         try { if (tpl) await api("PATCH", "/modeles/" + tpl.id, { name: name.value.trim(), html: ed.value() }); else await api("POST", "/modeles", { name: name.value.trim(), html: ed.value() }); flash("Modèle enregistré.", "ok"); dlg.close(); reload(); } catch (e) { err.textContent = e.message; err.hidden = false; }
       }, { primary: true }), button("Fermer", function () { dlg.close(); })));
     }
-    if (tpl) api("GET", "/modeles/" + tpl.id + "/contenu").then(function (c) { mount(c.html || ""); }).catch(function (e) { err.textContent = e.message; err.hidden = false; }); else mount(STARTER);
+    if (tpl) api("GET", "/modeles/" + tpl.id + "/html").then(function (c) { if (!c.available) { body.appendChild(h("p", { class: "mk-mc-note is-warn", role: "status", text: "Le HTML actuel de ce modèle n'est pas accessible par l'API Mailchimp (modèle créé hors de Kolakisa) : collez le nouveau HTML pour le remplacer." })); mount(""); } else mount(c.html); }).catch(function (e) { err.textContent = e.message; err.hidden = false; }); else mount(STARTER);
   }
   M.registerTab({ id: "modeles", label: "Modèles", needsConnection: true, render: async function (el) {
     var tySel = select([["user", "Mes modèles"], ["base", "Modèles de base Mailchimp"], ["gallery", "Galerie Mailchimp"]], "user");
@@ -326,9 +328,9 @@
           t.thumbnail && /^https:\/\//.test(t.thumbnail) ? h("img", { src: t.thumbnail, alt: "", loading: "lazy", referrerpolicy: "no-referrer" }) : h("div", { class: "mk-mc-thumb", "aria-hidden": "true", text: "HTML" }),
           h("h3", { text: t.name }), h("p", { class: "mk-mc-sub", text: (own ? "Modèle personnalisé" : t.type === "base" ? "Modèle de base" : "Galerie") + " · " + M.fmtDate(t.date_created) }),
           h("div", { class: "mk-mc-inline" },
-            button("Aperçu", async function (ev) { var opener = ev.currentTarget; try { var c = await api("GET", "/modeles/" + t.id + "/contenu"); var dlg = h("dialog", { class: "mk-mc-dialog is-wide", "aria-label": "Aperçu du modèle " + t.name }); var e2 = htmlEditor(c.html || "", {}); e2.root.querySelector("textarea").readOnly = true; dlg.appendChild(h("h2", { text: "Aperçu : " + t.name })); dlg.appendChild(e2.root); dlg.appendChild(h("div", { class: "mk-mc-actions" }, button("Fermer", function () { dlg.close(); }))); dlg.addEventListener("close", function () { dlg.remove(); if (document.contains(opener)) opener.focus(); }); document.body.appendChild(dlg); dlg.showModal(); } catch (e) { fail(e); } }),
+            button("Aperçu", async function (ev) { var opener = ev.currentTarget; try { var c = await api("GET", "/modeles/" + t.id + "/html"); if (!c.available) { flash("Aperçu impossible : l'API Mailchimp ne fournit pas le HTML des modèles créés hors de Kolakisa.", "error"); return; } var dlg = h("dialog", { class: "mk-mc-dialog is-wide", "aria-label": "Aperçu du modèle " + t.name }); var e2 = htmlEditor(c.html || "", {}); e2.root.querySelector("textarea").readOnly = true; dlg.appendChild(h("h2", { text: "Aperçu : " + t.name })); dlg.appendChild(e2.root); dlg.appendChild(h("div", { class: "mk-mc-actions" }, button("Fermer", function () { dlg.close(); }))); dlg.addEventListener("close", function () { dlg.remove(); if (document.contains(opener)) opener.focus(); }); document.body.appendChild(dlg); dlg.showModal(); } catch (e) { fail(e); } }),
             own ? button("Modifier", function (ev) { templateEditor(t, ev.currentTarget, load); }) : null,
-            button("Dupliquer", async function () { try { var c = await api("GET", "/modeles/" + t.id + "/contenu"); if (!c.html) throw new Error("Ce modèle n'a pas de HTML récupérable (modèle glisser-déposer)."); await api("POST", "/modeles", { name: t.name + " (copie)", html: c.html }); flash("Modèle dupliqué dans « Mes modèles ».", "ok"); if (tySel.value === "user") load(); } catch (e) { fail(e); } }),
+            button("Dupliquer", async function () { try { var c = await api("GET", "/modeles/" + t.id + "/html"); if (!c.available || !c.html) throw new Error("Duplication impossible : le HTML de ce modèle n'est pas accessible par l'API Mailchimp (modèle créé hors de Kolakisa)."); await api("POST", "/modeles", { name: t.name + " (copie)", html: c.html }); flash("Modèle dupliqué dans « Mes modèles ».", "ok"); if (tySel.value === "user") load(); } catch (e) { fail(e); } }),
             own ? button("Supprimer", async function () { if (!(await M.confirmDialog({ title: "Supprimer ce modèle ?", text: "« " + t.name + " » sera supprimé chez Mailchimp. Les campagnes déjà créées ne sont pas modifiées.", label: "Supprimer", danger: true }))) return; try { await api("DELETE", "/modeles/" + t.id + "?confirm=1"); flash("Modèle supprimé.", "ok"); load(); } catch (e) { fail(e); } }, { danger: true }) : null)));
       });
     }
