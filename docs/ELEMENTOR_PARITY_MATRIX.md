@@ -6,9 +6,9 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 
 | État | Lignes |
 |---|---|
-| Complet | 288 |
-| Partiel | 147 |
-| Absent | 76 |
+| Complet | 295 |
+| Partiel | 146 |
+| Absent | 70 |
 | Autre module | 18 |
 | Non applicable | 9 |
 | Exclu/Non fait | 6 |
@@ -25,7 +25,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | FM | 16 | 8 | 19 | 0 | 0 | 19 |
 | LY | 2 | 1 | 21 | 0 | 1 | 6 |
 | NV | 4 | 0 | 5 | 0 | 0 | 10 |
-| PU | 9 | 0 | 15 | 0 | 0 | 15 |
+| PU | 3 | 0 | 22 | 0 | 0 | 14 |
 | SS | 13 | 2 | 27 | 0 | 3 | 21 |
 | ST | 3 | 0 | 45 | 0 | 0 | 12 |
 | TB | 2 | 1 | 3 | 0 | 1 | 18 |
@@ -314,12 +314,12 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | EL-FM062 | Formulaires | Limitation de débit / protection anti-spam | documenté | 5/heure/IP | Complet | — | — | P4 | FP:17; FP:108 |
 | EL-PU001 | Popups | Déclencheur : Au chargement de la page (On Page Load, délai) | documenté | modal auto=load + delai (1–600 s); ND:1580-1584 | Complet | — | — | P4 | ND:1582-1586; LJ:259 |
 | EL-PU002 | Popups | Déclencheur : Au défilement (On Scroll, %) | documenté | modal auto=scroll, scrollAt 5–95 %; popup formulaires: scroll 1–100 | Complet | Pas de défilement vers le haut (scroll up) | Ajouter sens de défilement | P3 | ND:1583; LJ:260-263; popup.js:161-175 |
-| EL-PU003 | Popups | Déclencheur : Défilement jusqu'à un élément (On Scroll To Element) | documenté | Aucun | Absent | Pas de sélecteur d'élément cible | Déclencheur par ancre/élément (IntersectionObserver) | P2 | ND:1580 (MODAL_TRIGGERS: load/scroll/exit/idle/clicks) |
+| EL-PU003 | Popups | Déclencheur : Défilement jusqu'à un élément (On Scroll To Element) | documenté | Déclencheur « élément visible » (modal.auto=element, ancre) — lot 5 (nodes.js modalAuto, landing.js) | Complet |  |  | P2 | tests/popups-modale-lot5.test.js |
 | EL-PU004 | Popups | Déclencheur : Au clic (On Click) | documenté | Bouton d'ouverture du widget modal; interaction « open » sur n'importe quel élément (runAction) | Complet | Pas de sélecteur CSS arbitraire ni lien d'ancre #popup | Lien d'action « Ouvrir popup » universel | P3 | LJ:213-218; LJ:295 |
 | EL-PU005 | Popups | Déclencheur : Après un nombre de clics (Click count) | documenté | auto=clicks, 1–50 | Complet | — | — | P4 | ND:1583; LJ:244-247 |
 | EL-PU006 | Popups | Déclencheur : Après inactivité (After Inactivity) | documenté | auto=idle, délai 1–600 s (défaut 20) | Complet | — | — | P4 | LJ:255-258; ND:1583 |
 | EL-PU007 | Popups | Déclencheur : Intention de sortie (Exit Intent) | documenté | auto=exit via mouseout sur le haut de la page | Partiel | Pas d'alternative mobile; souris uniquement | Repli mobile (retour arrière, défilement vers le haut) | P3 | LJ:253-254; popup.js:178-186 |
-| EL-PU008 | Popups | Déclencheur : Défilement vers le haut (On Scroll Up) | déduit (demandé dans le périmètre, absent des listes lues) | Aucun | Absent | — | Ajouter | P4 | — |
+| EL-PU008 | Popups | Déclencheur : Défilement vers le haut (On Scroll Up) | déduit (demandé dans le périmètre, absent des listes lues) | Déclencheur « remontée de page » (modal.auto=scrollup) — lot 5 | Complet |  |  | P4 | tests/popups-modale-lot5.test.js |
 | EL-PU009 | Popups | Pop-up de formulaire (module Formulaires): déclencheurs delay/scroll/exit | observé | POPUP_TRIGGERS delay/scroll/exit; FI:27-29 | Partiel | Pas de inactivité/clics/élément | Aligner sur modal | P3 | FI:27-29; popup.js:161-188 |
 | EL-PU010 | Popups | Règle avancée : Afficher après X pages vues | documenté | minViews 2–20 (modal) / minPages (formulaire); compteur sessionStorage | Complet | Mémoire d'onglet seulement | — | P4 | ND:1590; LJ:236-238; FL:126 |
 | EL-PU011 | Popups | Règle avancée : Afficher après X sessions | documenté | Aucun compteur de sessions inter-visites (visiteur new/returning pour les pop-ups de formulaire seulement) | Partiel | new/returning exige le suivi accepté; pas de compteur N sessions | Compteur de sessions localStorage | P3 | FL:121-128 visitors |
@@ -329,7 +329,7 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | EL-PU015 | Popups | Règle avancée : Masquer aux utilisateurs connectés | documenté | hideForStudents; AUDIENCES student/not_student sur les éléments | Complet | Rôle = élève/formateur seulement | — | P4 | FL:129; ND:1303-1306 |
 | EL-PU016 | Popups | Règle avancée : navigateur | déduit | Aucun | Absent | — | Faible priorité | P4 | — |
 | EL-PU017 | Popups | Règle avancée : rôle / audience | observé | AUDIENCES: abonnés, clients, élèves, étiquette, score, panier, paramètre d'URL | Complet | Dépasse Elementor sur l'audience marketing | — | P4 | ND:1303-1311 |
-| EL-PU018 | Popups | Règle avancée : période (dates de début/fin) | déduit (Display Conditions Elementor non lu) | Aucun | Absent | — | Planification début/fin | P3 | — |
+| EL-PU018 | Popups | Règle avancée : période (dates de début/fin) | déduit (Display Conditions Elementor non lu) | Période d'affichage (modal.startDate/endDate, date du visiteur) — lot 5, widget Modal seulement | Partiel | Pas de période pour les pop-ups du module Formulaires | Planification début/fin | P3 | tests/popups-modale-lot5.test.js |
 | EL-PU019 | Popups | Règle avancée : URL / pages concernées (Conditions) | documenté | pages include/exclude + jokers (formulaire); modal rattaché à la page où il est placé | Partiel | Pas de conditions « tout le site » pour le modal (un modal = une page, sauf modèles de site) | Pop-ups de site avec conditions | P2 | FL:111-117; FL:119 pageMatches |
 | EL-PU020 | Popups | Règle avancée : Abonné déjà inscrit | observé | hideIfSubscribed | Complet | Propre à Kolakisa | — | P4 | FL:130 |
 | EL-PU021 | Popups | Modèle de pop-up réutilisable (Popup Builder, templates) | documenté | Pas de gabarit de pop-up global; le modal est un widget dans la page | Absent | Pas d'éditeur dédié ni modèle partagé entre pages | Type de modèle « popup » dans la bibliothèque | P2 | ND:680; ND:1185 |
@@ -337,19 +337,19 @@ _Générée par `scripts/build-elementor-matrix.py` depuis `KOLAKISA_ELEMENTOR_F
 | EL-PU023 | Popups | Mise en page : position (Horizontal / Vertical) | documenté | position center/left/right/corner/bar | Partiel | 6 positions fixes, pas de décalage libre | Position libre | P3 | ND:687; landing.css:1297-1298 |
 | EL-PU024 | Popups | Slide-in / Bottom Bar | documenté | corner (non bloquant) et bar | Complet | — | — | P4 | landing.css:1297-1299; LJ:216-218 |
 | EL-PU025 | Popups | Panneau latéral (off-canvas) gauche/droite | documenté | position left/right | Complet | — | — | P4 | ND:687; EL-W010 |
-| EL-PU026 | Popups | Superposition (Overlay) : couleur/flou | documenté | ::backdrop natif, aucun réglage | Absent | Pas de couleur/opacité/flou configurables | Contrôles overlay | P3 | landing.css (backdrop); ND:680-690 |
-| EL-PU027 | Popups | Animation d'entrée | documenté | Aucune animation propre au modal (animation d'entrée générique des éléments) | Absent | Pas d'animation d'entrée/sortie ni durée spécifiques | Animation d'entrée/sortie + durée | P2 | ND:680-690 |
-| EL-PU028 | Popups | Animation de sortie | documenté | Aucune | Absent | Idem | Idem | P2 | — |
+| EL-PU026 | Popups | Superposition (Overlay) : couleur/flou | documenté | Superposition : modal.overlayColor (couleur ou jeton) + overlayBlur — lot 5 | Complet |  |  | P3 | tests/popups-modale-lot5.test.js |
+| EL-PU027 | Popups | Animation d'entrée | documenté | Animation d'entrée : modal.animIn fade/zoom/slide-up/slide-down — lot 5 (respecte « mouvement réduit ») | Complet |  |  | P2 | tests/popups-modale-lot5.test.js |
+| EL-PU028 | Popups | Animation de sortie | documenté | Animation de sortie : modal.animOut — lot 5 | Complet |  |  | P2 | tests/popups-modale-lot5.test.js |
 | EL-PU029 | Popups | Fermeture : bouton × | documenté | Bouton de fermeture; popup formulaire idem | Partiel | Pas de délai d'apparition du bouton ni de masquage | Option bouton | P4 | LJ:220; popup.js |
 | EL-PU030 | Popups | Fermeture : touche Échap (Prevent Closing on ESC) | documenté | Échap ferme (natif); verrou lock l'empêche | Complet | Verrou combiné avec clic extérieur | Séparer les deux options | P4 | LJ:221-223; popup.js:125 |
 | EL-PU031 | Popups | Fermeture : clic sur l'overlay (Prevent Closing on Overlay) | documenté | Clic extérieur ferme sauf lock | Complet | Même verrou que Échap | Séparer | P4 | LJ:222 |
 | EL-PU032 | Popups | Fermeture automatique (Automatically Close After) | documenté | autoClose 1–600 s | Complet | Elementor en ms; équivalent | — | P4 | ND:1588; LJ:234-235 |
-| EL-PU033 | Popups | Désactiver le défilement de la page (Disable Page Scrolling) | documenté | showModal natif bloque l'interaction; défilement non réglable | Partiel | Pas d'option | Option | P4 | LJ:218 |
+| EL-PU033 | Popups | Désactiver le défilement de la page (Disable Page Scrolling) | documenté | modal.noScroll bloque le défilement de la page pendant l'ouverture — lot 5 | Complet |  |  | P4 | tests/popups-modale-lot5.test.js |
 | EL-PU034 | Popups | Fréquence d'affichage | documenté | always/session/once | Partiel | Pas de « tous les N jours » pour le modal (existe pour les formulaires) | Délai en jours | P3 | ND:1587; FI:29 |
 | EL-PU035 | Popups | Action de lien : Ouvrir un popup | documenté | Interaction « open » (runAction) sur dialog | Partiel | Par interaction d'élément, pas un lien d'URL | Action de lien | P3 | LJ:295 |
 | EL-PU036 | Popups | Action de lien : Fermer un popup | documenté | Bouton × seulement | Partiel | Pas d'action « fermer » configurable sur un bouton | Action | P3 | LJ:220 |
 | EL-PU037 | Popups | Action de lien : Basculer (Toggle) un popup | déduit | Interaction toggle sur éléments mais pas sur dialog | Absent | — | Action toggle | P4 | LJ:287-294 |
-| EL-PU038 | Popups | Action « Ne plus afficher » (Don't Show Again) | documenté | freq=once équivalent côté auto; pas de bouton | Partiel | Pas de bouton « ne plus afficher » | Action à la fermeture | P3 | LJ:228-232 |
+| EL-PU038 | Popups | Action « Ne plus afficher » (Don't Show Again) | documenté | Bouton « Ne plus afficher » (modal.dismissBtn, mémorisé en stockage local) — lot 5 | Complet |  |  | P3 | tests/popups-modale-lot5.test.js |
 | EL-PU039 | Popups | Un seul popup à la fois | observé | document.querySelector('dialog[open]') bloque | Complet | Propre à Kolakisa | — | P4 | LJ:236 |
 | EL-NV001 | Navigation | Menu : éléments de menu / ajouter un élément | documenté | menu: jusqu'à 12 liens + 10 sous-liens; source manual/location/name; ND:590-610 | Complet | Menu géré aussi par Apparence → Menus (cmsmenu) | — | P4 | ND:590-610; tests/editeur-menu-navigateur.test.js |
 | EL-NV002 | Navigation | Menu : disposition d'éléments (Item Layout horizontal/vertical/dropdown) | documenté | vertical booléen | Partiel | Pas de mode « dropdown » ni de largeur de contenu | Mode d'affichage | P3 | ND:607; landing.css:611-612 |

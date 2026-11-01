@@ -215,9 +215,30 @@
     if (!dlg || typeof dlg.showModal !== "function" || document.body.hasAttribute("data-kw-builder")) return;
     // Coin et barre du bas : fenêtres NON bloquantes (le reste de la page reste utilisable) ; les autres sont des fenêtres modales
     var soft = dlg.classList.contains("kw-popup-corner") || dlg.classList.contains("kw-popup-bar");
-    var show = function () { if (soft) dlg.show(); else dlg.showModal(); };
+    var animIn = dlg.getAttribute("data-kw-anim-in"), animOut = dlg.getAttribute("data-kw-anim-out"), noScroll = dlg.hasAttribute("data-kw-noscroll");
+    var calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; // mouvement réduit : pas d'animation
+    var show = function () {
+      if (soft) dlg.show(); else dlg.showModal();
+      if (animIn && !calm) { dlg.setAttribute("data-kw-anim", animIn); dlg.addEventListener("animationend", function done() { dlg.removeEventListener("animationend", done); dlg.removeAttribute("data-kw-anim"); }); }
+      if (noScroll) document.documentElement.classList.add("kw-noscroll");
+    };
+    // Fermeture : animation de sortie (si demandée), puis fermeture réelle ; le défilement de la page est rendu
+    var closing = false;
+    var shut = function () { if (dlg.open) HTMLDialogElement.prototype.close.call(dlg); if (noScroll) document.documentElement.classList.remove("kw-noscroll"); };
+    dlg.close = function () {
+      if (!dlg.open || closing) return;
+      if (animOut && !calm) {
+        closing = true; dlg.setAttribute("data-kw-anim-out-run", animOut);
+        var fin = function () { dlg.removeEventListener("animationend", fin); dlg.removeAttribute("data-kw-anim-out-run"); closing = false; shut(); };
+        dlg.addEventListener("animationend", fin); setTimeout(function () { if (closing) fin(); }, 600);
+      } else shut();
+    };
+    dlg.addEventListener("close", function () { if (noScroll) document.documentElement.classList.remove("kw-noscroll"); });
     b.addEventListener("click", show);
     dlg.querySelector("[data-kw-modal-close]").addEventListener("click", function () { dlg.close(); b.focus(); });
+    // « Ne plus afficher » : mémorisé pour ce visiteur (stockage local), la fenêtre ne s'ouvre plus d'elle-même
+    var offKey = "kw-pop-off-" + dlg.id, off = dlg.querySelector("[data-kw-modal-dismiss]");
+    if (off) off.addEventListener("click", function () { try { window.localStorage.setItem(offKey, "1"); } catch (e) { /* stockage refusé : la fenêtre pourra revenir */ } dlg.close(); });
     var lock = dlg.hasAttribute("data-kw-lock");
     dlg.addEventListener("click", function (e) { if (e.target === dlg && !lock) dlg.close(); });
     if (lock) dlg.addEventListener("cancel", function (e) { e.preventDefault(); }); // Échap ne ferme pas : seul le bouton « × » ferme
@@ -229,6 +250,10 @@
       var mark = function () { try { if (freq === "once") window.localStorage.setItem(key, "1"); else if (freq === "session") window.sessionStorage.setItem(key, "1"); } catch (e) { /* stockage refusé : la fenêtre pourra revenir */ } };
       var open = function () {
         if (done || seen() || dlg.open || document.querySelector("dialog[open]")) return; // jamais deux fenêtres en même temps
+        try { if (window.localStorage.getItem(offKey)) return; } catch (e) { /* stockage refusé */ }
+        var today = new Date(), iso = today.getFullYear() + "-" + ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2); // jour du visiteur
+        var from = dlg.getAttribute("data-kw-auto-from"), until = dlg.getAttribute("data-kw-auto-until");
+        if ((from && iso < from) || (until && iso > until)) return; // hors de la période d'affichage
         if (views < minViews || (source && source !== origin)) return; // règles d'affichage non remplies
         done = true; mark(); show();
         var secs = Number(dlg.getAttribute("data-kw-auto-close")) || 0;
@@ -244,6 +269,14 @@
       if (mode === "clicks") {
         var need = Number(dlg.getAttribute("data-kw-auto-clicks")) || 3, count = 0;
         document.addEventListener("click", function onClk(e) { if (e.target.closest && e.target.closest("dialog")) return; if (++count >= need) { document.removeEventListener("click", onClk); open(); } });
+      }
+      if (mode === "scrollup") {
+        var lastY = window.scrollY, upFrom = lastY;
+        var onUp = function () { var y = window.scrollY; if (y > lastY) upFrom = y; else if (upFrom - y > 80) { window.removeEventListener("scroll", onUp); open(); } lastY = y; };
+        window.addEventListener("scroll", onUp, { passive: true });
+      } else if (mode === "element") {
+        var tid = dlg.getAttribute("data-kw-auto-target"), tgt = tid && (document.getElementById(tid) || document.querySelector('[name="' + tid + '"]'));
+        if (tgt && "IntersectionObserver" in window) { var io = new IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting; })) { io.disconnect(); open(); } }); io.observe(tgt); }
       }
       if (mode === "load") setTimeout(open, delay);
       else if (mode === "scroll") {

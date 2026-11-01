@@ -777,7 +777,7 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 /* Fenêtre (modale) */
 .kw-modal { width: min(92vw, 560px); max-height: 88vh; padding: 0; border: 0; border-radius: 14px; background: var(--kw-surface, #fff); color: inherit; box-shadow: 0 24px 60px rgba(15, 23, 42, .25); overflow: auto; }
 .kw-modal-sm { width: min(92vw, 400px); } .kw-modal-lg { width: min(94vw, 820px); }
-.kw-modal::backdrop { background: rgba(10, 20, 30, .55); }
+.kw-modal::backdrop { background: var(--kw-ov, rgba(10, 20, 30, .55)); backdrop-filter: blur(var(--kw-ov-blur, 0px)); }
 .kw-modal[open] { animation: kw-in-zoom .18s ease; }
 .kw-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 0; }
 .kw-modal-title { margin: 0; font-size: 21px; overflow-wrap: anywhere; }
@@ -1410,3 +1410,20 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 /* Barre latérale (widget sidebar) : les blocs de la zone gardent leurs propres styles (widgets.css) ; le message vide n'est qu'un repère dans l'éditeur */
 .kw-sidebar { display: block; } .kw-sidebar-empty { margin: 0; padding: 12px; border: 1px dashed rgba(15, 23, 42, .3); border-radius: 8px; font-size: .9rem; opacity: .75; }
 .lp-public .kw-sidebar-empty, body:not(.lp-builder) .kw-sidebar-empty { display: none; }
+
+/* Fenêtres : animations d'entrée / de sortie choisies par l'auteur, défilement de la page bloqué pendant l'ouverture */
+@keyframes kw-modal-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kw-modal-up { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+@keyframes kw-modal-down { from { opacity: 0; transform: translateY(-32px); } to { opacity: 1; transform: none; } }
+@keyframes kw-modal-zoom-out { from { opacity: 1; } to { opacity: 0; transform: scale(.92); } }
+@keyframes kw-modal-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes kw-modal-up-out { from { opacity: 1; } to { opacity: 0; transform: translateY(32px); } }
+@keyframes kw-modal-down-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-32px); } }
+.kw-modal[data-kw-anim="fade"] { animation: kw-modal-fade .25s ease; } .kw-modal[data-kw-anim="zoom"] { animation: kw-in-zoom .25s ease; }
+.kw-modal[data-kw-anim="slide-up"] { animation: kw-modal-up .28s ease; } .kw-modal[data-kw-anim="slide-down"] { animation: kw-modal-down .28s ease; }
+.kw-modal[data-kw-anim-out-run="fade"] { animation: kw-modal-fade-out .2s ease forwards; } .kw-modal[data-kw-anim-out-run="zoom"] { animation: kw-modal-zoom-out .2s ease forwards; }
+.kw-modal[data-kw-anim-out-run="slide-up"] { animation: kw-modal-up-out .2s ease forwards; } .kw-modal[data-kw-anim-out-run="slide-down"] { animation: kw-modal-down-out .2s ease forwards; }
+html.kw-noscroll { overflow: hidden; }
+.kw-modal-dismiss { border: 0; background: none; padding: 6px 0; font: inherit; font-size: .9em; color: inherit; opacity: .7; text-decoration: underline; cursor: pointer; }
+.kw-modal-dismiss:hover, .kw-modal-dismiss:focus-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .kw-modal[data-kw-anim], .kw-modal[data-kw-anim-out-run] { animation: none; } }

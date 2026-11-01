@@ -686,7 +686,7 @@ const NODE_TYPES = {
       // centre : fenêtre ; gauche / droite : panneau qui glisse depuis le bord (« off-canvas »)
       position: oneOf("center", "left", "right", "corner", "bar")(p.position) || "center",
       // Ouverture automatique (comme les déclencheurs d'une popup Elementor) : au chargement après un délai, au défilement, à la sortie de la page ou après inactivité ; fréquence limitée
-      ...modalAuto(p) };
+      ...modalAuto(p), ...modalLook(p) };
   } },
   html: { label: "HTML (sécurisé)", category: "advanced", props: (p, at) => {
     const html = sanitizeHtmlBlock(p.html);
@@ -1263,7 +1263,7 @@ function editorSpec() {
     codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, presetCategories: require("./stylePresets").CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, keywords: elementorNames.withAliases(s.key, s.keywords), pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, css: p.css, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
-    shapeDividers: Object.entries(SHAPE_DIVIDERS), modalTriggers: Object.entries(MODAL_TRIGGERS), modalSources: Object.entries(MODAL_SOURCES), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
+    shapeDividers: Object.entries(SHAPE_DIVIDERS), modalTriggers: Object.entries(MODAL_TRIGGERS), modalAnims: Object.entries(MODAL_ANIMS), modalSources: Object.entries(MODAL_SOURCES), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
     limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
@@ -1579,7 +1579,9 @@ function capsOf(type) {
 }
 // Formes de découpe (masque) : tracés CSS « clip-path », sans fichier à charger
 // Ouverture automatique d'une fenêtre : déclencheur, délai (s), seuil de défilement (%), fréquence, fermeture automatique (s), fermeture verrouillée
-const MODAL_TRIGGERS = { load: "Au chargement de la page", scroll: "Après un défilement", exit: "Quand le visiteur s'apprête à quitter la page", idle: "Après un temps d'inactivité", clicks: "Après un nombre de clics sur la page" };
+const MODAL_TRIGGERS = { load: "Au chargement de la page", scroll: "Après un défilement", exit: "Quand le visiteur s'apprête à quitter la page", idle: "Après un temps d'inactivité", clicks: "Après un nombre de clics sur la page", scrollup: "Quand le visiteur remonte dans la page", element: "Quand un élément de la page (ancre) devient visible" };
+// Animations d'entrée / de sortie de la fenêtre (Elementor : Entrance / Exit Animation) ; absentes = comportement historique
+const MODAL_ANIMS = { none: "Aucune", fade: "Fondu", zoom: "Zoom", "slide-up": "Glisse depuis le bas", "slide-down": "Glisse depuis le haut" };
 const MODAL_SOURCES = { direct: "Visiteur arrivé directement (sans site d'origine)", search: "Visiteur venu d'un moteur de recherche", social: "Visiteur venu d'un réseau social", other: "Visiteur venu d'un autre site" };
 function modalAuto(p) {
   const auto = oneOf(...Object.keys(MODAL_TRIGGERS))(p.auto);
@@ -1588,6 +1590,11 @@ function modalAuto(p) {
   if (auto === "load" || auto === "idle") out.delay = numberIn(1, 600, { integer: true })(p.delay) || (auto === "idle" ? 20 : 5);
   if (auto === "clicks") out.clicks = numberIn(1, 50, { integer: true })(p.clicks) || 3;
   if (auto === "scroll") out.scrollAt = numberIn(5, 95, { integer: true })(p.scrollAt) || 50;
+  if (auto === "element") {
+    const target = String(p.target || "").replace(/^#/, "");
+    if (!/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(target)) throw new Error("fenêtre : le déclencheur « élément visible » demande le nom d'une ancre (lettres, chiffres, tirets ; ex. tarifs).");
+    out.target = target;
+  }
   out.freq = oneOf("always", "session", "once")(p.freq) || "session";
   const close = numberIn(1, 600, { integer: true })(p.autoClose);
   if (close) out.autoClose = close;
@@ -1597,6 +1604,25 @@ function modalAuto(p) {
   if (views) out.minViews = views;
   const source = oneOf(...Object.keys(MODAL_SOURCES))(p.source);
   if (source) out.source = source;
+  // Période d'affichage (dates incluses) et bouton « Ne plus afficher »
+  const day = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "")); if (!m) return null; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? String(v) : null; };
+  const from = day(p.startDate), until = day(p.endDate);
+  if (from) out.startDate = from;
+  if (until) out.endDate = until;
+  if (from && until && from > until) throw new Error("fenêtre : la date de fin doit suivre la date de début.");
+  if (p.dismissBtn === true) out.dismissBtn = true;
+  return out;
+}
+// Apparence de la fenêtre, valable pour toutes les fenêtres (ouverture au clic comprise) : animations, superposition (couleur, flou), défilement de la page
+function modalLook(p) {
+  const out = {};
+  const inA = oneOf(...Object.keys(MODAL_ANIMS))(p.animIn), outA = oneOf(...Object.keys(MODAL_ANIMS))(p.animOut);
+  if (inA && inA !== "none") out.animIn = inA;
+  if (outA && outA !== "none") out.animOut = outA;
+  if (p.overlayColor !== undefined && p.overlayColor !== "") { const c = color(String(p.overlayColor)); if (!c) throw new Error("fenêtre : couleur de superposition invalide."); out.overlayColor = c; }
+  const blur = numberIn(0, 20, { integer: true })(p.overlayBlur);
+  if (blur) out.overlayBlur = blur;
+  if (p.noScroll === true) out.noScroll = true;
   return out;
 }
 const MASK_SHAPES = {
