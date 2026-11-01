@@ -73,7 +73,7 @@ function entries({ hostSite = null } = {}) {
   // (case « Autoriser les moteurs de recherche ») et sans canonical vers une autre adresse ni noindex dans son SEO
   let webPages = [];
   try {
-    webPages = db.prepare("SELECT p.id, p.slug, p.name, p.title, p.indexable, p.seo, (SELECT 1 FROM mk_funnel_steps st JOIN mk_funnels f ON f.id = st.funnel_id WHERE st.page_id = p.id AND f.status = 'active' AND json_extract(st.settings, '$.noindex') = 1 LIMIT 1) AS funnel_noindex, p.updated_at, p.site_id, s.settings AS site_settings FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id AND s.status = 'active' WHERE p.status = 'published' AND p.archived_at IS NULL ORDER BY p.published_at DESC").all();
+    webPages = db.prepare("SELECT p.id, p.slug, p.name, p.title, p.indexable, p.seo, (SELECT 1 FROM mk_funnel_steps st JOIN mk_funnels f ON f.id = st.funnel_id WHERE st.page_id = p.id AND f.status = 'active' AND json_extract(st.settings, '$.noindex') = 1 LIMIT 1) AS funnel_noindex, p.updated_at, p.site_id, s.settings AS site_settings FROM mk_landing_pages p LEFT JOIN mk_sites s ON s.id = p.site_id AND s.status = 'active' WHERE p.status = 'published' AND p.archived_at IS NULL AND p.id NOT IN (SELECT source_id FROM mk_tb_templates WHERE source_kind = 'page') ORDER BY p.published_at DESC").all();
   } catch (error) {
     if (!/no such (table|column)/.test(error.message)) throw error; // module marketing pas encore migré : aucune page web
   }

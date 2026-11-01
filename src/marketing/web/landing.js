@@ -396,7 +396,15 @@ module.exports = () => {
     const nodesLib = require("../pages/nodes");
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     const funnel = component ? null : require("../funnels").funnelsOfPage(ctx, page.id).find((f) => f.status === "active") || null;
+    // Contexte Theme Builder : si ce document est le contenu d'un modèle, l'éditeur le sait (identité, type, état, retour) — jamais déduit du nom du document
+    let tb = null;
+    try {
+      const t = require("../../themeBuilder").store.byDocument(ctx, component ? "component" : "page", component ? component.id : page.id);
+      if (t && t.siteId === (page.site_id ?? null)) tb = { id: t.id, siteId: t.siteId, type: t.type, typeLabel: t.typeLabel, name: t.name, status: t.status, revision: t.revision, backUrl: `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme` };
+    } catch { tb = null; }
+    if (tb) page = { ...page, back: tb.backUrl };
     const boot = {
+      themeTemplate: tb,
       page: { identity: identity || (component && component.identity) || null, breakpoints: require("../pages/siteSettings").breakpointsOf(site && site.settings), id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null,
         customColors: site ? site.tokens.customColors.map((c) => ({ key: c.key, label: c.label })) : [], siteClasses: site && site.settings ? site.settings.classes || [] : [], siteSettingsUrl: site ? `/marketing/site-web/sites/${site.id}/reglages.json` : null, formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
         abTest: component ? null : (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null,
@@ -555,10 +563,20 @@ module.exports = () => {
       res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString(), ...(warnings && warnings.length ? { warnings } : {}) });
     } catch (error) { jsonError(res, next, error); }
   });
+  // Page qui est le contenu d'un modèle du Theme Builder : la publication est CELLE du modèle (conflits de conditions, version, état) — jamais une page publique autonome
+  const tbPublish = (req, page) => {
+    const t = require("../../themeBuilder").store.byDocument(req.mk.ctx, "page", page.id);
+    if (!t) return null;
+    if (!req.mk.can("forms.write")) throw new MarketingError("forbidden", "Publier un modèle du Constructeur de thème demande le droit de modifier les modèles.");
+    const r = require("../../themeBuilder").store.publish(req.mk.ctx, t.siteId, t.id);
+    return { version: r.version, template: r.template };
+  };
   router.post("/pages/:id(\\d+)/publier.json", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     try {
+      const viaTb = tbPublish(req, page);
+      if (viaTb) return res.json({ version: viaTb.version, revision: pages.getPage(req.mk.ctx, page.id).revision, url: `/marketing/site-web/sites/${viaTb.template.siteId}/constructeur-de-theme`, themeTemplate: { id: viaTb.template.id, status: viaTb.template.status } });
       const { version } = pages.publish(req.mk.ctx, page.id);
       const p = pages.getPage(req.mk.ctx, page.id);
       res.json({ version, revision: p.revision, url: `/p/${p.slug}` });
@@ -569,6 +587,8 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => {
+      const viaTb = tbPublish(req, page);
+      if (viaTb) return `Modèle « ${viaTb.template.name} » publié (version ${viaTb.version}) : il s'applique selon ses conditions d'affichage.`;
       const { version } = pages.publish(req.mk.ctx, page.id);
       return `Page en ligne (version ${version}) : /p/${page.slug}${page.indexable ? "" : " (non indexée par les moteurs de recherche)"}.`;
     });
@@ -604,15 +624,23 @@ module.exports = () => {
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.cancelSchedule(req.mk.ctx, page.id); return "Programmation annulée : la page reste hors ligne."; });
   });
+  // Dépublier la page d'un modèle = dépublier le MODÈLE (sinon le modèle resterait « publié » sans contenu en ligne et le site retomberait en silence sur un autre rendu)
+  const tbUnpublish = (req, page) => {
+    const TB = require("../../themeBuilder"), t = TB.store.byDocument(req.mk.ctx, "page", page.id);
+    if (!t) return false;
+    if (!req.mk.can("forms.write")) throw new MarketingError("forbidden", "Dépublier un modèle du Constructeur de thème demande le droit de modifier les modèles.");
+    if (t.status === "published") TB.store.unpublish(req.mk.ctx, t.siteId, t.id);
+    return true;
+  };
   router.post("/pages/:id(\\d+)/depublier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => { pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
+    attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => { if (tbUnpublish(req, page)) return "Modèle dépublié : il repasse en brouillon et ne s'applique plus."; pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
   });
   router.post("/pages/:id(\\d+)/depublier.json", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    try { pages.unpublish(req.mk.ctx, page.id); res.json({ ok: true, revision: pages.getPage(req.mk.ctx, page.id).revision }); } catch (error) { jsonError(res, next, error); }
+    try { if (!tbUnpublish(req, page)) pages.unpublish(req.mk.ctx, page.id); res.json({ ok: true, revision: pages.getPage(req.mk.ctx, page.id).revision }); } catch (error) { jsonError(res, next, error); }
   });
   router.post("/pages/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
