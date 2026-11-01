@@ -162,3 +162,4 @@ dialog.tb-lib { display: none; flex-direction: column; } dialog.tb-lib[open] { d
 .tb-libcard .tb-thumb[data-skin="editorial"] { background: #fbfaf6; border: 2px solid #1f2937; border-radius: 0; } .tb-libcard .tb-thumb[data-skin="editorial"] svg { --tb-wire: #1f2937aa; }
 .tb-libcard .tb-thumb[data-skin="doux"] { background: #eef4f8; border-radius: 22px; } .tb-libcard .tb-thumb[data-skin="doux"] svg { --tb-wire: #b7c8d6; }
 .tb-libcard .tb-thumb svg [class^="tb-w-"] { fill: var(--tb-wire, currentColor); stroke: none; }
+#tb .tb-hint { margin: 0 0 8px; padding: 6px 8px; border-radius: 6px; font-size: 12px; line-height: 1.4; background: var(--sw-warn-bg, var(--sw-surface-2, transparent)); color: var(--sw-text, inherit); border: 1px solid var(--sw-border, currentColor); }

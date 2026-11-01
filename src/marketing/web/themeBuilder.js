@@ -32,10 +32,13 @@ module.exports = () => {
     return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc };
   };
   const listAll = (ctx, id, f = {}, light = false) => {
+    TB.legacy.adoptSiteParts(ctx, id);
     const all = TB.store.list(ctx, id, { archived: true });
     const conflicts = TB.resolve.conflicts(all);
     const ids = new Set(conflicts.flatMap((c) => [c.a, c.b]));
-    const shown = TB.store.list(ctx, id, f).map((t) => card(ctx, t, ids, light));
+    const live = all.filter((t) => t.status === "published");
+    const sameConds = (a, b) => JSON.stringify(a.conditions) === JSON.stringify(b.conditions);
+    const shown = TB.store.list(ctx, id, f).map((t) => { const c = card(ctx, t, ids, light); if (t.status === "draft") { const r = live.filter((o) => o.type === t.type && sameConds(o, t)); if (r.length) c.willReplace = r.map((o) => o.name); } return c; });
     const counts = {}; for (const t of all) if (t.status !== "archived") counts[t.type] = (counts[t.type] || 0) + 1;
     const types = Object.entries(TB.types.TYPES).map(([key, d]) => {
       const off = d.module && !siteModules.isEnabled(ctx.db, ctx.organizationId, id, d.module);
@@ -65,7 +68,7 @@ module.exports = () => {
   }));
   router.post(`${T}/renommer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.rename(ctx, id, tid(req), body(req).name))));
   router.post(`${T}/conditions`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.setConditions(ctx, id, tid(req), body(req).conditions || {}, { revision: body(req).revision ?? null }); return { ...one(ctx, id, r.template), conflicts: r.conflicts }; }));
-  router.post(`${T}/publier`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.publish(ctx, id, tid(req), { revision: body(req).revision ?? null }); return { ...one(ctx, id, r.template), version: r.version, conflicts: r.conflicts }; }));
+  router.post(`${T}/publier`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.publish(ctx, id, tid(req), { revision: body(req).revision ?? null, replace: body(req).replace === true }); return { ...one(ctx, id, r.template), version: r.version, conflicts: r.conflicts, replaced: r.replaced }; }));
   router.post(`${T}/depublier`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.unpublish(ctx, id, tid(req)))));
   router.post(`${T}/archiver`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.archive(ctx, id, tid(req)))));
   router.post(`${T}/restaurer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.restore(ctx, id, tid(req)))));

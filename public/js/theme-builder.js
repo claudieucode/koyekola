@@ -102,6 +102,7 @@
     const th = el("a", "tb-thumb"); th.href = t.editUrl; th.setAttribute("aria-label", `Ouvrir « ${t.name} » dans l'éditeur`); lazyThumb(th, t, c); c.append(th);
     const b = el("div", "tb-body"); b.append(el("p", "tb-type", t.typeLabel));
     const bd = el("div", "tb-badges"); const s = el("span", "tb-badge", ST[t.status]); s.dataset.k = t.status; bd.append(s); if (t.hasConflict) { const x = el("span", "tb-badge", "Conflit"); x.dataset.k = "conflict"; bd.append(x); } if (t.documentMissing) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; bd.append(x); } b.append(bd);
+    if (t.status === "draft" && t.willReplace && t.willReplace.length) b.append(el("p", "tb-hint", `Non affiché : le site montre « ${t.willReplace.join(" », « ")} ». Publiez pour le remplacer.`));
     const m = el("p", "tb-meta"); const l1 = el("span"); l1.append(el("b", "", "S'affiche : "), document.createTextNode(t.describe.include)); m.append(l1);
     if (t.describe.exclude) { const l2 = el("span"); l2.append(el("b", "", "Sauf : "), document.createTextNode(t.describe.exclude)); m.append(l2); }
     const l3 = el("span"); l3.append(el("b", "", "Modifié : "), document.createTextNode(dates(t.updatedAt))); m.append(l3); b.append(m);
@@ -231,8 +232,13 @@
   });
   async function remove(t) { if (!confirm(`Supprimer définitivement « ${t.name} » ? Le document (page ou composant) reste dans vos pages.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
   async function publish(t) {
-    try { const r = await post(`/modeles/${t.id}/publier`, { revision: t.revision }); status(r.conflicts && r.conflicts.length ? `Publié, avec ${r.conflicts.length} avertissement(s) : voir les conflits.` : "Modèle publié.", "ok"); await refresh(); }
-    catch (e) { status(e.message, "err"); if (e.conflicts) await refresh(); }
+    const go = async (replace) => { const r = await post(`/modeles/${t.id}/publier`, { revision: t.revision, replace }); status(r.replaced && r.replaced.length ? `Publié : remplace « ${r.replaced.map((o) => o.name).join(" », « ")} » (repassé en brouillon).` : r.conflicts && r.conflicts.length ? `Publié, avec ${r.conflicts.length} avertissement(s) : voir les conflits.` : "Modèle publié.", "ok"); await refresh(); };
+    try { await go(false); }
+    catch (e) {
+      const dup = (e.conflicts || []).some((c) => c.severity === "blocking");
+      if (dup && t.willReplace && t.willReplace.length && confirm(`Ce site affiche déjà « ${t.willReplace.join(" », « ")} » aux mêmes conditions.\n\nPublier « ${t.name} » à sa place ? L'ancien modèle repasse en brouillon (rien n'est supprimé).`)) { try { await go(true); } catch (e2) { status(e2.message, "err"); } return; }
+      status(e.message, "err"); if (e.conflicts) await refresh();
+    }
   }
   const dlg = (id) => $(id);
   function openDlg(id) { const d = dlg(id); d.dataset.dirty = "0"; if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }

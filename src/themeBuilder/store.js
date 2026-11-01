@@ -108,14 +108,24 @@ function snapshotOf(ctx, t) {
   if (t.sourceKind === "component") { const c = P().getComponent(ctx, t.sourceId); return { kind: "component", name: c ? c.name : "", section: c ? c.section : null }; }
   const p = P().getPage(ctx, t.sourceId); return { kind: "page", name: p ? p.name : "", content: p ? p.working : null };
 }
-function publish(ctx, siteId, id, { revision = null } = {}) {
+// replace : le modèle remplace ceux qu'il doublonne exactement (mêmes conditions) : ils repassent en brouillon, rien n'est supprimé ni modifié dans leur document
+function publish(ctx, siteId, id, { revision = null, replace = false } = {}) {
   const t = get(ctx, siteId, id);
   if (t.status === "archived") throw bad("Ce modèle est archivé : restaurez-le avant de le publier.");
   if (revision !== null && Number(revision) !== t.revision) throw bad("Ce modèle a été modifié ailleurs : rechargez avant de publier.", "conflict");
-  const conflicts = conflictsFor(ctx, siteId, t, t.conditions);
+  let conflicts = conflictsFor(ctx, siteId, t, t.conditions);
+  const replaced = [];
+  if (replace) {
+    for (const c of conflicts.filter((x) => x.severity === "blocking")) {
+      const o = get(ctx, siteId, c.a === t.id ? c.b : c.a);
+      if (o.status === "published" && o.type === t.type) replaced.push(o);
+    }
+    if (replaced.length) conflicts = conflicts.filter((c) => c.severity !== "blocking");
+  }
   const blocking = conflicts.find((c) => c.severity === "blocking");
   if (blocking) throw Object.assign(bad(blocking.message, "conflict"), { conflicts });
   return transaction(ctx.db, () => {
+    for (const o of replaced) { ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft' WHERE id = ? AND site_id = ?").run(o.id, siteId); touch(ctx, siteId, o.id); }
     // le document est publié par le service existant (contrôles de publication de l'éditeur inchangés) ; une erreur annule tout
     try {
       if (t.sourceKind === "page") P().publish(ctx, t.sourceId);
@@ -125,7 +135,7 @@ function publish(ctx, siteId, id, { revision = null } = {}) {
     ctx.db.prepare("INSERT INTO mk_tb_versions (template_id, number, name, conditions, snapshot, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, n, t.name, JSON.stringify(t.conditions), JSON.stringify(snapshotOf(ctx, t)), ctx.userId ?? null);
     ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
     ctx.db.prepare("UPDATE mk_tb_templates SET status = 'published', published_at = datetime('now') WHERE id = ? AND site_id = ?").run(t.id, siteId); touch(ctx, siteId, t.id);
-    return { template: get(ctx, siteId, id), version: n, conflicts };
+    return { template: get(ctx, siteId, id), version: n, conflicts, replaced: replaced.map((o) => ({ id: o.id, name: o.name })) };
   });
 }
 function unpublish(ctx, siteId, id) {
