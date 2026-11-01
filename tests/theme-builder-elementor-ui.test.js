@@ -44,10 +44,10 @@ describe("Theme Builder : interface calquée sur Elementor", { skip: SKIP }, () 
     for (const l of ["Toutes les parties", "En-tête", "Pied de page", "Page individuelle", "Article individuel", "Archives", "Résultats de recherche", "Page 404"]) assert.ok(labels.includes(l), `catégorie « ${l} »`);
     assert.equal(await page.locator("#tb-types li.tb-grp").textContent(), "Parties du site");
     assert.equal(await page.locator("#tb-types button[aria-current=true]").innerText().then((t) => t.split("\n")[0]), "Toutes les parties", "entrée active identifiable");
-    // proportions : barre 56 px, navigation 240 px de large, grille d'au moins 4 colonnes à 1440 px
+    // proportions : barre 48 px, navigation 240 px de large, grille d'au moins 4 colonnes à 1440 px
     const g = await page.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); const cards = [...document.querySelectorAll(".tb-tcard")].map((c) => c.getBoundingClientRect().top); return { bar: r(".tb-bar").height, side: r(".tb-side").width, firstRow: cards.filter((t) => Math.abs(t - cards[0]) < 12).length }; });
     await shot(page, "elementor-01-toutes");
-    assert.equal(Math.round(g.bar), 56); assert.equal(Math.round(g.side), 240); assert.ok(g.firstRow >= 4, `colonnes : ${g.firstRow}`);
+    assert.equal(Math.round(g.bar), 48); assert.equal(Math.round(g.side), 240); assert.ok(g.firstRow >= 4, `colonnes : ${g.firstRow}`);
     // une carte par type disponible, désignée comme exemple (pas un faux aperçu), et le filtre ne garde qu'une catégorie
     const enabled = await page.locator("#tb-types button:not([disabled]) .tb-ico + span").count() - 1;
     assert.equal(await page.locator(".tb-tcard").count(), enabled);
