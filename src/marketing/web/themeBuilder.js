@@ -49,7 +49,9 @@ module.exports = () => {
   router.get(B, need("forms.read"), (req, res, next) => {
     try {
       const site = TB.store.site(req.mk.ctx, sid(req));
-      res.set("Cache-Control", "no-store").render("marketing/theme-builder", { title: "Constructeur de thème", active: "sites", marketingShell: true, siteId: site.id, siteName: site.name, base: `/marketing/site-web/sites/${site.id}/constructeur-de-theme`, siteBase: `/marketing/site-web/sites/${site.id}`, perms: { write: req.mk.can("forms.write"), remove: req.mk.can("pages.delete") } });
+      // Retour : l'écran d'origine si la page d'appel l'a indiqué (chemin interne uniquement, jamais une adresse externe), sinon le tableau de bord du site
+      const ret = String(req.query.retour || ""), safe = /^\/(?!\/)[A-Za-z0-9\-._~\/?=&%]{1,300}$/.test(ret) && !ret.includes("..") ? ret : "";
+      res.set("Cache-Control", "no-store").render("marketing/theme-builder", { title: "Constructeur de thème", active: "sites", marketingShell: true, backUrl: safe || `/marketing/site-web/sites/${site.id}/tableau-de-bord`, backIsCustom: !!safe, siteId: site.id, siteName: site.name, base: `/marketing/site-web/sites/${site.id}/constructeur-de-theme`, siteBase: `/marketing/site-web/sites/${site.id}`, perms: { write: req.mk.can("forms.write"), remove: req.mk.can("pages.delete") } });
     } catch (e) { if (e instanceof MarketingError) return res.status(e.code === "not_found" ? 404 : 422).render("error", { message: e.message }); next(e); }
   });
   router.get(`${A}/modeles`, need("forms.read"), run((ctx, id, req) => listAll(ctx, id, { type: String(req.query.type || ""), status: String(req.query.statut || ""), q: String(req.query.q || ""), archived: req.query.archives === "1" }, req.query.leger === "1")));
@@ -66,6 +68,20 @@ module.exports = () => {
     const t = TB.store.get(ctx, id, tid(req)); const doc = docOf(ctx, t), th = thumbnail(doc);
     return { thumb: th.svg, elements: th.elements, documentMissing: !doc };
   }));
+  // Miniature RÉELLE d'un modèle du site : son document enregistré (copie de travail), rendu par le moteur public ; le site propriétaire est vérifié par TB.store.get
+  router.get(`${T}/vignette`, need("forms.read"), (req, res, next) => {
+    try {
+      const ctx = req.mk.ctx, site = sid(req), t = TB.store.get(ctx, site, tid(req));
+      let doc = null;
+      if (t.sourceKind === "component") { const c = P().getComponent(ctx, t.sourceId); const sec = c && (c.draft || c.section); if (sec) doc = { kind: "component", section: sec }; }
+      else { const pg = P().getPage(ctx, t.sourceId); if (pg && pg.working && pg.working.sections) doc = { kind: "page", sections: pg.working.sections }; }
+      if (!doc) return res.status(404).type("text").send("Le document de ce modèle est introuvable.");
+      require("./themeRender").previewDoc(req, res, { siteId: site, type: t.type, doc, thumb: true }, (html) => {
+        if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
+        res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).type("html").send(html);
+      });
+    } catch (e) { if (e instanceof MarketingError || (e && STATUS[e.code])) return res.status(STATUS[e.code] || 400).type("text").send(e.message); next(e); }
+  });
   router.post(`${T}/renommer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.rename(ctx, id, tid(req), body(req).name))));
   router.post(`${T}/conditions`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.setConditions(ctx, id, tid(req), body(req).conditions || {}, { revision: body(req).revision ?? null }); return { ...one(ctx, id, r.template), conflicts: r.conflicts }; }));
   router.post(`${T}/publier`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.publish(ctx, id, tid(req), { revision: body(req).revision ?? null, replace: body(req).replace === true }); return { ...one(ctx, id, r.template), version: r.version, conflicts: r.conflicts, replaced: r.replaced }; }));
@@ -115,17 +131,20 @@ module.exports = () => {
     const th = thumbnail(doc.sections ? doc : doc);
     return { thumb: th.svg, elements: th.elements };
   }));
-  router.get(`${LIB}/${keyOf}/apercu`, need("forms.read"), (req, res, next) => {
+  // Aperçu complet (« apercu ») et miniature de carte (« vignette ») : même document du catalogue, même moteur de rendu public ; la miniature est mise en cache 2 min côté navigateur (elle ne dépend que du modèle et du site)
+  const libPreview = (thumb) => (req, res, next) => {
     try {
       TB.store.site(req.mk.ctx, sid(req)); libType(req.mk.ctx, sid(req), req.params.type);
       const doc = Catalog.build(req.params.type, req.params.key, {});
       if (!doc) return res.status(404).type("text").send("Modèle introuvable.");
-      require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc }, (html) => {
+      require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb }, (html) => {
         if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
-        res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }).type("html").send(html);
+        res.set({ "Cache-Control": thumb ? "private, max-age=120" : "no-store", "X-Content-Type-Options": "nosniff" }).type("html").send(html);
       });
     } catch (e) { if (e instanceof MarketingError || (e && STATUS[e.code])) return res.status(STATUS[e.code] || 400).type("text").send(e.message); next(e); }
-  });
+  };
+  router.get(`${LIB}/${keyOf}/apercu`, need("forms.read"), libPreview(false));
+  router.get(`${LIB}/${keyOf}/vignette`, need("forms.read"), libPreview(true));
   router.post(`${LIB}/utiliser`, need("forms.write"), run((ctx, id, req) => {
     const b = body(req); libType(ctx, id, String(b.type || ""));
     const t = useTemplate(ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });

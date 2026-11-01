@@ -163,3 +163,33 @@ dialog.tb-lib { display: none; flex-direction: column; } dialog.tb-lib[open] { d
 .tb-libcard .tb-thumb[data-skin="doux"] { background: #eef4f8; border-radius: 22px; } .tb-libcard .tb-thumb[data-skin="doux"] svg { --tb-wire: #b7c8d6; }
 .tb-libcard .tb-thumb svg [class^="tb-w-"] { fill: var(--tb-wire, currentColor); stroke: none; }
 #tb .tb-hint { margin: 0 0 8px; padding: 6px 8px; border-radius: 6px; font-size: 12px; line-height: 1.4; background: var(--sw-warn-bg, var(--sw-surface-2, transparent)); color: var(--sw-text, inherit); border: 1px solid var(--sw-border, currentColor); }
+
+/* ---------- v2 : interface compacte, Retour, miniatures réelles ---------- */
+.tb-close { width: auto; padding: 0 14px 0 10px; gap: 6px; display: inline-flex; align-items: center; font-weight: 600; font-size: .9rem; border: 1px solid color-mix(in srgb, #eaf1f8 22%, transparent); }
+.tb-close svg { transition: transform .15s var(--tb-ease); } .tb-close:hover svg { transform: translateX(-2px); }
+.tb-thumb[data-kind="header"] { aspect-ratio: 1200 / 240; } .tb-thumb[data-kind="footer"] { aspect-ratio: 1200 / 360; }
+.tb-thumb[data-real="1"] { background: var(--tb-surface); }
+.tb-frame { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; background: transparent; }
+@media (min-width: 1025px) and (pointer: fine) {
+  .tb .btn { min-height: 34px; padding-top: 4px; padding-bottom: 4px; font-size: .86rem; }
+  #tb input:not([type=checkbox]):not([type=file]), #tb select, #tb .sw-field select { min-height: 36px; font-size: .88rem; padding-top: 4px; padding-bottom: 4px; }
+  .tb-views button { width: 36px; height: 36px; } .tb-info { width: 32px; height: 32px; } .tb-menu-list button { min-height: 36px; }
+  .tb-side button { min-height: 38px; font-size: .88rem; }
+  .tb-main { padding: 20px 28px 48px; } .tb-head { padding-bottom: 14px; gap: 10px; } .tb h1 { font-size: clamp(1.35rem, 1.1rem + .7vw, 1.7rem); } .tb-lead { margin-top: 6px; font-size: .9rem; line-height: 1.5; max-width: 60ch; }
+  .tb-tools { margin-top: 12px; gap: 8px; } .tb-tools .sw-field { flex: 0 1 190px; font-size: .78rem; }
+  .tb-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 12px; margin-top: 14px; }
+  .tb-ch { min-height: 38px; padding: 0 4px 0 12px; } .tb-ch h3 { font-size: .88rem; }
+  .tb-thumb { margin: 0 10px; aspect-ratio: 1200 / 720; } .tb-body { padding: 8px 12px 12px; gap: 6px; } .tb-type { font-size: .74rem; } .tb-meta { font-size: .78rem; } .tb-badge { font-size: .7rem; padding: 1px 8px; }
+  .tb-actions { gap: 5px; } .tb-actions .btn-sm { padding: 3px 10px; min-height: 32px; }
+  article.tb-tcard .tb-thumb { aspect-ratio: 1200 / 420; max-height: 110px; } article.tb-tcard .tb-body { padding-top: 6px; }
+  .tb-lib-tools { padding: 8px 16px; gap: 8px 12px; } .tb-lib-tools .sw-field { flex: 1 1 150px; min-width: 130px; font-size: .78rem; }
+  .tb-lib-body { padding: 12px 16px; } #tb-lib-cards { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; margin-top: 0; }
+}
+.tb-hint { margin: 0; }
+.tb-libcard .tb-card-d { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; font-size: .8rem; line-height: 1.35; }
+.tb-libcard .tb-tags { margin: 0; display: flex; flex-wrap: nowrap; gap: 4px; overflow: hidden; } .tb-libcard .tb-tag { font-size: .68rem; padding: 1px 7px; border-radius: 999px; background: var(--tb-soft); color: var(--tb-ink2); white-space: nowrap; }
+.tb-libcard .tb-actions { flex-wrap: nowrap; } .tb-libcard .tb-actions .btn { flex: 1 1 0; justify-content: center; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+.tb-libcard .tb-actions .btn-primary { flex: 1.4 1 0; }
+.tb-lib-bar-count { margin-left: auto; }
+.tb-libcard .tb-thumb[data-real="1"] { background: var(--tb-surface); border: 1px solid var(--tb-line); border-radius: var(--tb-rc); }
+.tb-libcard .tb-thumb[data-kind="header"] { aspect-ratio: 1200 / 240; } .tb-libcard .tb-thumb[data-kind="footer"] { aspect-ratio: 1200 / 360; }

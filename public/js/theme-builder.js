@@ -116,19 +116,39 @@
   const queue = []; let running = 0;
   const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); queue.push(e.target); } pump(); }, { rootMargin: "240px" }) : null;
   function pump() { while (running < 4 && queue.length) { const n = queue.shift(); if (!n.isConnected) continue; running += 1; fetchThumb(n).finally(() => { running -= 1; pump(); }); } }
+  // Miniature RÉELLE : le HTML rendu par le moteur public pour CE modèle (fetch → iframe isolée « sandbox » sans script), réduit à la largeur de la carte. 3 rendus au plus en parallèle, HTML mis en cache pour la session ; en cas d'échec l'appelant garde la miniature filaire.
+  const FRAME = { header: [960, 192], footer: [960, 288], def: [1000, 600] }, frames = new Map(), fq = []; let fRun = 0;
+  const fitRo = "ResizeObserver" in window ? new ResizeObserver((es) => { for (const e of es) { const f = e.target.querySelector("iframe.tb-frame"); if (f) f.style.transform = `scale(${e.target.clientWidth / Number(f.getAttribute("width"))})`; } }) : null;
+  function frameThumb(n, url, kind, key) {
+    return new Promise((ok, no) => { fq.push({ n, url, kind, key, ok, no }); framePump(); });
+  }
+  function framePump() {
+    while (fRun < 3 && fq.length) {
+      const j = fq.shift(); fRun += 1;
+      (async () => {
+        let html = frames.get(j.key);
+        if (html === undefined) { const r = await fetch(j.url, { credentials: "same-origin" }); if (!r.ok) throw new Error("rendu indisponible"); html = await r.text(); frames.set(j.key, html); if (frames.size > 120) frames.delete(frames.keys().next().value); }
+        if (!j.n.isConnected) return;
+        const [w, h] = FRAME[j.kind] || FRAME.def, f = document.createElement("iframe");
+        f.className = "tb-frame"; f.setAttribute("sandbox", ""); f.setAttribute("tabindex", "-1"); f.setAttribute("aria-hidden", "true"); f.setAttribute("width", String(w)); f.setAttribute("height", String(h)); f.srcdoc = html;
+        j.n.textContent = ""; j.n.append(f); j.n.dataset.state = "ok"; j.n.dataset.real = "1"; f.style.transform = `scale(${(j.n.clientWidth || 240) / w})`; if (fitRo) fitRo.observe(j.n);
+      })().then(j.ok, j.no).finally(() => { fRun -= 1; framePump(); });
+    }
+  }
   async function fetchThumb(n) {
     const t = n._t, k = `${t.id}:${t.updatedAt}:${t.revision}`;
+    try { await frameThumb(n, `${base}/api/modeles/${t.id}/vignette`, t.type, `t:${k}`); return; } catch { /* repli : miniature filaire */ }
     try { let r = thumbs.get(k); if (!r) { r = await api(`/modeles/${t.id}/miniature`); thumbs.set(k, r); if (thumbs.size > 300) thumbs.delete(thumbs.keys().next().value); } paintThumb(n, r); }
     catch { n.dataset.state = "err"; }
   }
   function paintThumb(n, r) {
+    if (n.dataset.real === "1") return;
     n.textContent = ""; n.append(svgOf(r.thumb)); n.dataset.state = "ok";
     if (r.documentMissing && n._card && !n._card.querySelector('[data-miss]')) { const bd = n._card.querySelector(".tb-badges"); if (bd) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; x.dataset.miss = "1"; bd.append(x); } }
   }
   function lazyThumb(n, t, c) {
-    n._t = t; n._card = c; n.dataset.state = "wait"; n.append(el("span", "tb-shim"));
-    if (t.thumb) { paintThumb(n, { thumb: t.thumb, documentMissing: t.documentMissing }); return; }
-    const hit = thumbs.get(`${t.id}:${t.updatedAt}:${t.revision}`); if (hit) { paintThumb(n, hit); return; }
+    n._t = t; n._card = c; n.dataset.state = "wait"; n.dataset.kind = t.type; n.append(el("span", "tb-shim"));
+    if (t.thumb) paintThumb(n, { thumb: t.thumb, documentMissing: t.documentMissing }); // filaire immédiat, remplacé par le rendu réel dès qu'il est prêt
     pending.push(n);
   }
   // Observation après insertion dans la page : un élément encore détaché ne signale pas son entrée dans l'écran.
@@ -366,7 +386,7 @@
   }
   function libDraw(r) {
     const box = $("tb-lib-cards"); box.textContent = ""; box.dataset.view = L.lview;
-    $("tb-lib-sub").textContent = `${r.total} modèle(s) · page ${r.page} sur ${r.pages}`;
+    $("tb-lib-sub").textContent = `${r.total} modèle${r.total > 1 ? "s" : ""} · page ${r.page} sur ${r.pages}`;
     $("tb-lib-page").textContent = `Page ${r.page} / ${r.pages}`; $("tb-lib-prev").disabled = r.page <= 1; $("tb-lib-next").disabled = r.page >= r.pages;
     if (!r.available) libStatus(r.reason || "Ce type n'est pas disponible pour ce site.", "err"); else libStatus("");
     if (!r.items.length) { box.append(el("p", "sw-muted", "Aucun modèle ne correspond à cette recherche.")); return; }
@@ -386,7 +406,8 @@
   const libIo = "IntersectionObserver" in window ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { libIo.unobserve(e.target); e.target.__go(); } }, { rootMargin: "200px" }) : null;
   function libLazyThumb(th, m) {
     const key = `${L.type}:${m.key}`;
-    th.__go = async () => { try { let svg = libThumbs.get(key); if (!svg) { const r = await api(`/bibliotheque/${L.type}/${m.key}/miniature`); svg = r.thumb; libThumbs.set(key, svg); } th.textContent = ""; th.append(svgOf(svg)); } catch { /* miniature facultative */ } };
+    th.dataset.kind = L.type;
+    th.__go = async () => { try { await frameThumb(th, `${base}/api/bibliotheque/${L.type}/${m.key}/vignette`, L.type, `l:${base}:${key}`); return; } catch { /* repli : miniature filaire */ } try { let svg = libThumbs.get(key); if (!svg) { const r = await api(`/bibliotheque/${L.type}/${m.key}/miniature`); svg = r.thumb; libThumbs.set(key, svg); } th.textContent = ""; th.append(svgOf(svg)); } catch { /* miniature facultative */ } };
     if (libIo) libIo.observe(th); else th.__go();
   }
   async function libUse(m, btn, act) {
@@ -403,6 +424,8 @@
     preview({ name: m.name, typeLabel: (data.types.find((t) => t.key === L.type) || {}).label || "", status: "draft", previewUrl: `${base}/api/bibliotheque/${L.type}/${m.key}/apercu`, editUrl: "#", previewNeedsPage: false, catalog: true });
     $("tb-prev-sub").textContent = "Modèle de la bibliothèque · données d'exemple"; $("tb-prev-edit").hidden = true;
   }
+  // Retour : confirmation seulement si une fenêtre contient une saisie non enregistrée ; sinon navigation directe vers l'écran d'origine (adresse fournie par le serveur, jamais l'historique)
+  $("tb-exit")?.addEventListener("click", (e) => { const dirty = [...document.querySelectorAll("dialog[open]")].some((d) => d.dataset.dirty === "1"); if (dirty && !confirm("Des modifications ne sont pas enregistrées. Quitter le Theme Builder ?")) e.preventDefault(); });
   const libOpen = () => { openDlg("tb-lib"); if (!L.info) libLoad(); };
   $("tb-lib-open").addEventListener("click", libOpen);
   $("tb-lib-back").addEventListener("click", () => closeDlg($("tb-lib")));
