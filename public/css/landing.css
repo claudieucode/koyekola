@@ -1389,3 +1389,9 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 900px) { .kw-pg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 520px) { .kw-pg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .kw-ss { flex-wrap: wrap; } }
+
+/* Parties globales dans le canvas : bouton « Modifier » explicite (le reste de la partie reste non sélectionnable) */
+.lp-builder [data-site-part]{opacity:1}
+.lp-builder [data-site-part] > :not(.lp-part-edit){opacity:.75}
+.lp-builder .lp-part-edit{position:absolute;top:2px;right:2px;z-index:6;pointer-events:auto;padding:2px 10px;border:0;border-radius:4px;background:#0b2a4a;color:#fff;font:600 12px/1.6 system-ui,sans-serif;cursor:pointer}
+.lp-builder .lp-part-edit:hover,.lp-builder .lp-part-edit:focus-visible{background:#0277b6;outline:2px solid #fff;outline-offset:1px}

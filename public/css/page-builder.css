@@ -2256,3 +2256,11 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 
 /* Éditeur affiché DANS « Apparence → Éditeur du site » (?cadre=1) : le cadre fournit lui-même la navigation, les boutons « Retour » de l'éditeur seraient trompeurs */
 .pb-embedded .pb-back, .pb-embedded .pb-back-sites { display: none; }
+
+/* Identité du modèle global édité (en-tête, pied de page…) : site, type, modèle, statut, retour */
+.pb-body:has(.pb-identity) { grid-template-rows: auto auto minmax(0, 1fr); }
+.pb-identity { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 6px 14px; background: #0b2a4a; color: #fff; font-size: 13px; }
+.pb-identity strong { font-weight: 700; }
+.pb-identity-tag { padding: 1px 8px; border-radius: 4px; background: #0277b6; font-weight: 700; }
+.pb-identity-warn { opacity: .85; }
+.pb-identity-back { margin-left: auto; color: #fff; font-weight: 600; text-decoration: underline; }

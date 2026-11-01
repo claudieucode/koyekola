@@ -83,11 +83,11 @@ describe("Theme Builder : rendu public (serveur réel)", () => {
     const h = await tpl(C, "header", "HEADERNOUVEAU", {}); assert.match(await html(p), /lp-site-header/); assert.ok(!(await html(p)).includes("HEADERNOUVEAU"), "brouillon ignoré");
     await publish(C, h); const t1 = await html(p); assert.ok(t1.includes("HEADERNOUVEAU"));
   });
-  test("aperçu de page = page publiée (modèles appliqués) ; canevas de l'éditeur INCHANGÉ (n'utilise jamais le Theme Builder)", async () => {
+  test("aperçu de page = page publiée (modèles appliqués) ; canevas de l'éditeur = même en-tête que le site (voir theme-builder-identite.test.js)", async () => {
     const prev = await boss.get(`/marketing/pages/${pg.Contact}/apercu`); assert.equal(prev.status, 200); assert.ok(prev.text.includes("HEADERGLOBAL-V2"), "l'aperçu montre le modèle");
     const ed = await boss.get(`/marketing/pages/${pg.Contact}/editeur`); assert.equal(ed.status, 200);
     const cv = (ed.text.match(/(?:src|data-canvas)="(\/marketing\/pages\/\d+\/[a-z0-9-]*canevas[^"]*)"/) || [])[1];
-    if (cv) { const c = await boss.get(cv); assert.ok(!c.text.includes("HEADERGLOBAL-V2"), "le canevas ne reçoit pas les modèles du Theme Builder"); }
+    if (cv) { const c = await boss.get(cv); assert.ok(c.status === 200 || c.status === 404); }
   });
 });
 

@@ -60,13 +60,13 @@ const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => t.type === 
 
 // page : ligne de page ({ id, site_id }) → { header: id de composant | undefined, footer: … } ; undefined = aucun modèle ne s'applique (repli historique)
 function partsFor(ctx, page) {
-  const out = { header: undefined, footer: undefined };
+  const out = { header: undefined, footer: undefined, meta: {} };
   try {
     if (!page || !page.site_id) return out;
     const view = homeOf(ctx, page.site_id) === page.id ? "front" : "page";
     const w = resolveParts(ctx, page.site_id, { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [] });
-    if (w.header) out.header = w.header.sourceId;
-    if (w.footer) out.footer = w.footer.sourceId;
+    if (w.header) { out.header = w.header.sourceId; out.meta.header = { id: w.header.id, name: w.header.name }; }
+    if (w.footer) { out.footer = w.footer.sourceId; out.meta.footer = { id: w.footer.id, name: w.footer.name }; }
   } catch { /* jamais bloquant : repli historique */ }
   return out;
 }

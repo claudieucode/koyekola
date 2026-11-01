@@ -1760,6 +1760,14 @@
     ask("Renommer le composant", [["name", "text", "Nouveau nom"]], function (v) { if (v.name && v.name !== c.name) updateComponentMeta(c, { name: v.name }, "Composant renommé : « " + v.name + " »."); });
     var input = $("[data-pb-ask-fields] input[name='name']"); if (input) { input.value = c.name; input.select(); }
   }
+  // Ouvre la partie globale cliquée : modèle Theme Builder (si connu) et retour à CETTE page ; la page est enregistrée d'abord (aucune modification perdue)
+  function openSitePart(btn) {
+    var cid = Number(btn.getAttribute("data-part-edit")), tid = btn.getAttribute("data-part-template");
+    if (!cid) return;
+    var url = "/marketing/site-web/composants/" + cid + "/editeur?" + (tid ? "modele=" + encodeURIComponent(tid) + "&" : "") + (PAGE.id ? "retour=" + encodeURIComponent("/marketing/pages/" + PAGE.id + "/editeur") : "");
+    var go = function () { window.location.assign(url); };
+    if (dirty || saving) saveNow().then(go); else go();
+  }
   function openComponentEditor(c) {
     var go = function () { window.open("/marketing/site-web/composants/" + c.id + "/editeur", "_blank", "noopener"); };
     if (dirty || saving) saveNow().then(go); else go();
@@ -5489,6 +5497,9 @@
       if (e.target.closest(".pb-handle")) return;
       var plus = e.target.closest && e.target.closest("[data-kw-add]");
       if (plus) { canvasAdd(plus); return; }
+      // Partie globale du site (en-tête, pied de page) : action explicite, ouvre le composant EXACT de cette partie (identifiants lus sur l'élément cliqué)
+      var partBtn = e.target.closest && e.target.closest("[data-part-edit]");
+      if (partBtn) { openSitePart(partBtn); return; }
       select(idOfEl(targetOf(e)), e.shiftKey || e.metaKey || e.ctrlKey, { scroll: false });
     });
     doc.addEventListener("dblclick", function (e) {

@@ -25,6 +25,12 @@ const shape = (r) => r && ({ id: r.id, siteId: r.site_id, type: r.type, typeLabe
 const row = (ctx, siteId, id) => ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE id = ? AND site_id = ? AND organization_id = ?").get(Number(id), siteId, ctx.organizationId);
 function get(ctx, siteId, id) { site(ctx, siteId); const r = row(ctx, siteId, id); if (!r) throw bad("Modèle introuvable.", "not_found"); return shape(r); }
 
+// Modèles (non archivés) d'un site qui ouvrent CE document : identité exacte quand on édite un composant (jamais déduite du nom)
+function bySource(ctx, siteId, kind, sourceId) {
+  site(ctx, siteId);
+  return ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE site_id = ? AND organization_id = ? AND source_kind = ? AND source_id = ? AND status <> 'archived' ORDER BY id").all(siteId, ctx.organizationId, kind, Number(sourceId)).map(shape);
+}
+
 // Marqueur de cache de résolution d'un site : change à toute écriture (chaque écriture incrémente `revision`, donc la somme change même dans la même seconde)
 const stampOf = (ctx, siteId) => { const r = ctx.db.prepare("SELECT COUNT(*) n, COALESCE(SUM(revision), 0) u, COALESCE(MAX(id), 0) m FROM mk_tb_templates WHERE site_id = ? AND organization_id = ?").get(siteId, ctx.organizationId); return `${r.n}:${r.u}:${r.m}`; };
 const touch = (ctx, siteId, id) => ctx.db.prepare("UPDATE mk_tb_templates SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ? AND site_id = ?").run(id, siteId);
@@ -166,4 +172,4 @@ function restoreVersion(ctx, siteId, id, number) {
     return { ...get(ctx, siteId, id), conditionsRestored };
   });
 }
-module.exports = { docName, list, get, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };
+module.exports = { docName, list, get, bySource, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };

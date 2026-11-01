@@ -959,7 +959,8 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
     for (const which of ["header", "footer"]) {
       if (tb[which] === undefined) continue;
       const part = partOf(ctx, tb[which], which, draftId);
-      if (part) p[which] = part; else missingPart(which, tb[which]); // le repli sur l'ancienne partie n'est jamais silencieux
+      if (part) p[which] = { ...part, templateId: tb.meta && tb.meta[which] ? tb.meta[which].id : null, templateName: tb.meta && tb.meta[which] ? tb.meta[which].name : null };
+      else missingPart(which, tb[which]); // le repli sur l'ancienne partie n'est jamais silencieux
     }
   }
   // Aperçu du personnalisateur : en-tête / pied choisis dans le travail en cours de la personne (cette requête seulement)
