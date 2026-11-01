@@ -55,13 +55,13 @@
   const ordered = () => { const o = (t) => (t.key === "sidebar" ? 1 : t.key === "custom" ? 2 : 0); return [...data.types].sort((a, b) => o(a) - o(b)); };
   function drawTypes() {
     const ul = $("tb-types"); ul.textContent = "";
-    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.setAttribute("aria-current", String(cur === "")); b0.append(icon("all"), el("span", "", "Toutes les parties"), el("span", "tb-count", String(data.total))); b0.addEventListener("click", () => go("")); all.append(b0); ul.append(all);
+    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.setAttribute("aria-current", String(cur === "")); const dot0 = el("span", "tb-dot"); dot0.dataset.live = "0"; dot0.setAttribute("aria-hidden", "true"); b0.append(icon("all"), el("span", "tb-lbl", "Toutes les parties"), el("span", "tb-count", String(data.total)), dot0); b0.addEventListener("click", () => go("")); all.append(b0); ul.append(all);
     let g = "";
     for (const t of ordered()) {
       if (!g) { g = "x"; ul.append(el("li", "tb-grp", "Parties du site")); }
       const li = el("li"), b = el("button"); b.type = "button"; b.setAttribute("aria-current", String(cur === t.key)); if (!t.available) { b.disabled = true; b.title = t.reason; }
       const dot = el("span", "tb-dot"); dot.dataset.live = t.live ? "1" : "0"; dot.setAttribute("aria-hidden", "true");
-      b.append(icon(t.key), el("span", "", t.label), el("span", "tb-count", String(t.count)), dot);
+      b.title = t.label; b.append(icon(t.key), el("span", "tb-lbl", t.label), el("span", "tb-count", String(t.count)), dot);
       if (t.live) b.setAttribute("aria-label", `${t.label} : ${t.count} modèle(s), ${t.live} publié(s)`);
       b.addEventListener("click", () => go(t.key)); li.append(b); ul.append(li);
     }
@@ -92,25 +92,29 @@
   // Carte « structure type » : un type sans modèle. Pointillés + libellé explicite : ce n'est PAS l'aperçu d'un modèle existant.
   function ghost(t) {
     const c = el("article", "tb-tcard"); c.dataset.type = t.key; const ch = el("div", "tb-ch"); ch.append(el("h3", "", t.label), infoBtn(t.label, () => info(t.label, (box) => box.append(el("p", "", LEAD[t.key] || ""), el("p", "sw-muted", "Aucun modèle n'existe pour cette partie : la structure ci-dessous est un exemple, pas un aperçu de votre site.")))));
-    const th = el("div", "tb-thumb"); th.append(svgOf(wireSvg(t.key))); const b = el("div", "tb-body"); b.append(el("p", "tb-type", "Aucun modèle"));
+    const th = el("div", "tb-thumb"); th.append(svgOf(wireSvg(t.key))); const b = el("div", "tb-body tb-body-g"); b.append(el("p", "tb-type", "Aucun modèle"));
     if (canWrite) { const a = el("div", "tb-actions"); const bt = el("button", "btn btn-sm btn-outline", "Créer un modèle"); bt.type = "button"; bt.setAttribute("aria-label", `Créer un modèle : ${t.label}`); bt.addEventListener("click", () => { $("tb-new-name").value = ""; $("tb-new-type").value = t.key; openDlg("tb-dlg-new"); }); a.append(bt); b.append(a); }
     c.append(ch, th, b); return c;
   }
   function card(t) {
     const c = el("article", "tb-card"); c.dataset.status = t.status; c.dataset.id = t.id;
-    const ch = el("div", "tb-ch"); ch.append(el("h3", "", t.name), infoBtn(t.name, () => details(t))); c.append(ch);
+    const ch = el("div", "tb-ch"); ch.append(el("h3", "", t.name), infoBtn(t.name, () => details(t)), menu(t)); ch.firstChild.title = t.name; c.append(ch);
     const th = el("a", "tb-thumb"); th.href = t.editUrl; th.setAttribute("aria-label", `Ouvrir « ${t.name} » dans l'éditeur`); lazyThumb(th, t, c); c.append(th);
-    const b = el("div", "tb-body"); b.append(el("p", "tb-type", t.typeLabel));
-    const bd = el("div", "tb-badges"); const s = el("span", "tb-badge", ST[t.status]); s.dataset.k = t.status; bd.append(s); if (t.hasConflict) { const x = el("span", "tb-badge", "Conflit"); x.dataset.k = "conflict"; bd.append(x); } if (t.documentMissing) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; bd.append(x); } b.append(bd);
+    const b = el("div", "tb-body"), sub = el("div", "tb-sub"); sub.append(el("p", "tb-type", t.typeLabel));
+    const bd = el("div", "tb-badges"); const s = el("span", "tb-badge", ST[t.status]); s.dataset.k = t.status; bd.append(s); if (t.hasConflict) { const x = el("span", "tb-badge", "Conflit"); x.dataset.k = "conflict"; bd.append(x); } if (t.documentMissing) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; bd.append(x); } sub.append(bd); b.append(sub);
     if (t.status === "draft" && t.willReplace && t.willReplace.length) b.append(el("p", "tb-hint", `Non affiché : le site montre « ${t.willReplace.join(" », « ")} ». Publiez pour le remplacer.`));
-    const m = el("p", "tb-meta"); const l1 = el("span"); l1.append(el("b", "", "S'affiche : "), document.createTextNode(t.describe.include)); m.append(l1);
+    const m = el("div", "tb-meta"); const l1 = el("span", "tb-cond"), tx = el("span", "tb-cond-t"); tx.append(el("b", "", "S'affiche : "), document.createTextNode(t.describe.include)); l1.append(tx);
+    // « Conditions » est rangé avec la ligne qu'il modifie (« S'affiche »), en action discrète.
+    if (canWrite && t.status !== "archived") { const cd = el("button", "btn btn-sm btn-quiet", "Conditions"); cd.type = "button"; cd.addEventListener("click", () => conditions(t)); l1.append(cd); }
+    m.append(l1);
     if (t.describe.exclude) { const l2 = el("span"); l2.append(el("b", "", "Sauf : "), document.createTextNode(t.describe.exclude)); m.append(l2); }
     const l3 = el("span"); l3.append(el("b", "", "Modifié : "), document.createTextNode(dates(t.updatedAt))); m.append(l3); b.append(m);
+    // Actions : « Modifier » (principale), « Aperçu » (secondaire), « Publier » à droite ; le menu ⋯ est dans l'en-tête de la carte.
     const a = el("div", "tb-actions"); const ed = el("a", "btn btn-sm btn-primary", "Modifier"); ed.href = t.editUrl; a.append(ed);
     const pv = el("button", "btn btn-sm btn-outline", "Aperçu"); pv.type = "button"; pv.setAttribute("aria-label", `Aperçu de « ${t.name} »`); pv.addEventListener("click", () => preview(t)); a.append(pv);
-    if (canWrite && t.status !== "archived") { const cd = el("button", "btn btn-sm btn-outline", "Conditions"); cd.type = "button"; cd.addEventListener("click", () => conditions(t)); a.append(cd);
+    if (canWrite && t.status !== "archived") { a.append(el("span", "tb-spacer"));
       const pb = el("button", "btn btn-sm btn-outline", t.status === "published" ? "Republier" : "Publier"); pb.type = "button"; pb.addEventListener("click", () => publish(t)); a.append(pb); }
-    a.append(menu(t)); b.append(a); c.append(b); return c;
+    b.append(a); c.append(b); return c;
   }
   // Miniature filaire chargée à la demande (visible à l'écran, 4 requêtes au plus en parallèle) : une liste de 60 modèles n'ouvre plus 60 documents d'un coup.
   const queue = []; let running = 0;
