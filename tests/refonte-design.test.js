@@ -7,7 +7,7 @@ const { startServer, Client } = require("./helpers");
 
 const ROOT = path.join(__dirname, "..");
 // Feuilles de style du site ET de l'espace marketing : les mêmes règles de conception s'appliquent aux deux
-const CSS = ["style.css", "marketing.css", "blog-editor.css", "dashboard.css", "seo-workspace.css", "app-rail.css", "landing.css", "page-builder.css", "page-builder-menu.css", "site-settings.css", "cms.css", "kola-ui.css", "cms-polices.css", "kola-pages.css", "kola-compose.css", "taxonomy-picker.css", "font-manager.css", "customizer.css", "kola-v3.css", "adminbar.css", "kola-art.css", "kola-vivid.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
+const CSS = ["style.css", "marketing.css", "blog-editor.css", "dashboard.css", "seo-workspace.css", "app-rail.css", "landing.css", "page-builder.css", "page-builder-menu.css", "site-settings.css", "cms.css", "kola-ui.css", "cms-polices.css", "kola-pages.css", "kola-compose.css", "taxonomy-picker.css", "font-manager.css", "customizer.css", "kola-v3.css", "adminbar.css", "kola-art.css", "kola-vivid.css", "agent-ia.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
 
 describe("palette : les codes couleurs d'origine sont conservés", () => {
   const expected = { primary: "#0b2a40", "primary-dark": "#06192a", accent: "#0277b6", "accent-dark": "#0369a1", "accent-light": "#e0f2fe", sky: "#7dd3fc", bg: "#f3f8fc", text: "#10222f", muted: "#5d7182", star: "#9a5809" };
