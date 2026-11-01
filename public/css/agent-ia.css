@@ -1,0 +1,19 @@
+/* Assistant IA des visiteurs : bouton de lancement (le widget ElevenLabs prend ensuite le relais, mêmes couleurs marine).
+   Jetons --kb-* de la charte (docs/KOLAKISA_DESIGN_CHARTE.md) ; les valeurs de repli sont celles de la charte. */
+.kb-agent { position: fixed; right: 16px; bottom: calc(16px + var(--kb-agent-lift, 0px)); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.kb-agent-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--kb-navy-mid, #164a6e); border-radius: var(--kb-r-ctl, 8px);
+  background: var(--kb-navy, #0b2a40); color: var(--kb-canvas, #f4f8fb);
+  font: 600 15px/1 var(--kb-display, system-ui, sans-serif); cursor: pointer;
+}
+.kb-agent-btn:hover { background: var(--kb-navy-mid, #164a6e); }
+.kb-agent-btn:focus-visible { outline: 2px solid var(--kb-action, #0277b6); outline-offset: 2px; }
+.kb-agent-btn[aria-busy="true"] { opacity: 0.7; cursor: progress; }
+.kb-agent-note {
+  margin: 0; max-width: 260px; padding: 8px 12px; border: 1px solid var(--kb-rule, #dde6ed); border-radius: var(--kb-r-ctl, 8px);
+  background: var(--kb-canvas, #f4f8fb); color: var(--kb-ink, #0f1f33); font-size: 14px; line-height: 1.4;
+}
+.kb-agent.is-live .kb-agent-btn { display: none; }
+@media (max-width: 480px) { .kb-agent { right: 12px; bottom: calc(12px + var(--kb-agent-lift, 0px)); } .kb-agent-btn { padding: 0 14px; } }
+@media print { .kb-agent { display: none; } }

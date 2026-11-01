@@ -30,8 +30,11 @@ function requirePage(ctx, id) {
   if (!p) throw new MarketingError("not_found", "Page introuvable.");
   return p;
 }
-function getPublishedPage(db, slug) {
-  return parse(SLUG.test(String(slug || "")) ? db.prepare("SELECT * FROM mk_landing_pages WHERE slug = ? AND status = 'published' AND archived_at IS NULL").get(slug) : null);
+// `standalone` : page servie TOUTE SEULE aux visiteurs (/p/<adresse>, domaines). Le contenu d'un modèle du Theme Builder n'en est jamais une : il ne s'affiche que
+// dans les pages auxquelles ses conditions s'appliquent (le rendu du thème le lit sans cette option).
+function getPublishedPage(db, slug, { standalone = false } = {}) {
+  const sql = `SELECT * FROM mk_landing_pages WHERE slug = ? AND status = 'published' AND archived_at IS NULL${standalone ? " AND id NOT IN (SELECT source_id FROM mk_tb_templates WHERE source_kind = 'page')" : ""}`;
+  return parse(SLUG.test(String(slug || "")) ? db.prepare(sql).get(slug) : null);
 }
 function listPages(ctx) {
   checkCtx(ctx);

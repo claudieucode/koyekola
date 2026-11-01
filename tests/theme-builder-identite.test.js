@@ -68,4 +68,23 @@ describe("Theme Builder : identité du modèle ouvert", () => {
     assert.match(r.text, /Site Bravo/);
     assert.match(r.text, /HEADERBRAVO/);
   });
+
+  test("modèle de page (page unique) : le bandeau affiche modèle, site, statut ; une page ordinaire n'a aucun bandeau", async () => {
+    const t = await tpl(A, "single_page", "PAGETYPEALPHA", { include: [{ kind: "page" }] });
+    const r = await boss.get(`/marketing/pages/${t.sourceId}/editeur?modele=${t.id}&retour=tb`);
+    assert.equal(r.status, 200);
+    assert.match(r.text, /data-pb-identity/);
+    assert.match(r.text, /PAGETYPEALPHA/);
+    assert.match(r.text, /Site Alpha/);
+    assert.doesNotMatch(r.text, /modèle global/, "un modèle de page n'est pas une partie globale");
+    const plain = await boss.get(`/marketing/pages/${pageA}/editeur`);
+    assert.equal(plain.status, 200);
+    assert.doesNotMatch(plain.text, /data-pb-identity/);
+  });
+
+  test("modèle de page : un identifiant de modèle étranger à cette page est refusé", async () => {
+    const t = await tpl(A, "single_page", "PAGETYPE2", { include: [{ kind: "page" }] });
+    assert.equal((await boss.get(`/marketing/pages/${pageA}/editeur?modele=${t.id}`)).status, 404);
+    assert.equal((await boss.get(`/marketing/pages/${pageA}/editeur?modele=${hdrB.id}`)).status, 404);
+  });
 });

@@ -1,0 +1,11 @@
+<%# Assistant IA des visiteurs (ElevenLabs Agents). Pages publiques du site principal seulement (agentIaId est vide sur les espaces privés et sur les sites créés).
+    Respect de la vie privée : aucun script ni requête vers un tiers avant le clic du visiteur sur « Poser une question » (public/js/agent-ia.js). %>
+<% if (typeof agentIaId === "string" && agentIaId && typeof agentIaScript === "object" && agentIaScript) { %>
+  <div class="kb-agent" data-kb-agent data-agent-id="<%= agentIaId %>" data-src="<%= agentIaScript.src %>" data-integrity="<%= agentIaScript.integrity %>">
+    <button type="button" class="kb-agent-btn" data-kb-agent-open aria-label="Ouvrir l'assistant : poser une question à l'écrit ou à l'oral">
+      <%- icon("messageSquare", { size: 20 }) %><span>Poser une question</span>
+    </button>
+    <p class="kb-agent-note" data-kb-agent-note role="status" hidden></p>
+  </div>
+  <script src="<%= asset('/js/agent-ia.js') %>" defer></script>
+<% } %>

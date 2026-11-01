@@ -66,7 +66,7 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
 
   test("miniatures différées : seules les cartes visibles demandent leur miniature, le défilement charge les autres", async () => {
     const { context, page } = await open(); const asked = new Set();
-    page.on("request", (r) => { const m = r.url().match(/modeles\/(\d+)\/miniature/); if (m) asked.add(m[1]); });
+    page.on("request", (r) => { const m = r.url().match(/modeles\/(\d+)\/(?:miniature|vignette)/); if (m) asked.add(m[1]); });
     await page.goto(url(siteA)); await page.waitForSelector(".tb-card"); await page.waitForFunction(() => document.querySelectorAll('.tb-thumb[data-state="ok"]').length >= 3);
     await page.waitForTimeout(400);
     const first = asked.size; assert.ok(first > 0 && first < N, `demandées au premier affichage : ${first} sur ${N}`);

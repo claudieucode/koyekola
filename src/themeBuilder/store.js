@@ -35,6 +35,13 @@ function bySource(ctx, siteId, kind, sourceId) {
 const stampOf = (ctx, siteId) => { const r = ctx.db.prepare("SELECT COUNT(*) n, COALESCE(SUM(revision), 0) u, COALESCE(MAX(id), 0) m FROM mk_tb_templates WHERE site_id = ? AND organization_id = ?").get(siteId, ctx.organizationId); return `${r.n}:${r.u}:${r.m}`; };
 const touch = (ctx, siteId, id) => ctx.db.prepare("UPDATE mk_tb_templates SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ? AND site_id = ?").run(id, siteId);
 
+// Modèle du Theme Builder qui porte ce document (page ou composant), ou null. Source de vérité unique « document → modèle » : l'éditeur, les aperçus et les
+// routes de publication s'en servent au lieu de deviner depuis un nom ou une position. Filtré par organisation ; le site du modèle est celui de la ligne.
+function byDocument(ctx, kind, docId) {
+  const k = kind === "component" ? "component" : "page";
+  const r = ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE organization_id = ? AND source_kind = ? AND source_id = ? ORDER BY (status = 'archived'), id LIMIT 1").get(ctx.organizationId, k, Number(docId));
+  return r ? shape(r) : null;
+}
 function list(ctx, siteId, { type = "", status = "", q = "", archived = false } = {}) {
   site(ctx, siteId);
   const where = ["organization_id = ?", "site_id = ?"], args = [ctx.organizationId, siteId];
@@ -182,4 +189,4 @@ function restoreVersion(ctx, siteId, id, number) {
     return { ...get(ctx, siteId, id), conditionsRestored };
   });
 }
-module.exports = { docName, list, get, bySource, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };
+module.exports = { byDocument, docName, list, get, bySource, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };

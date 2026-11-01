@@ -6,7 +6,7 @@ function securityHeaders(req, res, next) {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
     "Referrer-Policy": "strict-origin-when-cross-origin",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Permissions-Policy": "camera=(), microphone=(self), geolocation=()", // micro : seulement cette page (assistant vocal, lancé par un clic du visiteur)
     // Politique de sécurité du contenu, limitée aux directives qui ne peuvent rien casser sur le site :
     // aucun plugin (<object>/<embed>), pas de <base> injectée qui détournerait les liens et scripts relatifs, pas
     // d'affichage dans le cadre d'un autre site. (script-src et form-action ne sont pas restreints : scripts intégrés

@@ -50,6 +50,8 @@ function injectLocals(req, res, next) {
   res.locals.webPageSeo = (page, site, preview) => require("../seo/webPages").head(req, { page, site, preview: Boolean(preview) });
   // Réglages de référencement de la page (les routes publiques les précisent en passant `seo` à la vue)
   res.locals.seo = NOINDEX_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + "/")) ? { noindex: true } : {};
+  res.locals.agentIaId = require("../config/agentIa").idFor(req); // assistant IA des visiteurs (identifiant public) ou null : jamais sur un site créé ni sur les pages privées
+  res.locals.agentIaScript = require("../config/agentIa").WIDGET_SCRIPT;
   res.locals.signedBunnyUrl = signedBunnyUrl;
   res.locals.parseVideoUrl = parseVideoUrl;
   res.locals.renderMarkdown = renderMarkdown;

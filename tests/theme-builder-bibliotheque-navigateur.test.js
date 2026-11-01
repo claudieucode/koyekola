@@ -39,7 +39,7 @@ describe("Bibliothèque de modèles dans un navigateur réel", { skip: SKIP }, (
     await page.waitForSelector("#tb-lib-cards .tb-libcard");
     assert.equal(await page.locator("#tb-lib-cards .tb-libcard").count(), 24);
     assert.match(await page.locator("#tb-lib-page").innerText(), /Page 1 \/ 5/);
-    await page.waitForFunction(() => document.querySelectorAll("#tb-lib-cards .tb-thumb svg").length > 0); // miniatures chargées à la demande
+    await page.waitForFunction(() => document.querySelectorAll("#tb-lib-cards .tb-thumb iframe.tb-frame, #tb-lib-cards .tb-thumb svg").length > 0); // miniatures chargées à la demande (rendu réel, repli filaire)
     await shot(page, "bibliotheque-en-tetes");
     await page.click("#tb-lib-next"); await page.waitForFunction(() => /Page 2 \/ 5/.test(document.getElementById("tb-lib-page").textContent));
     await page.selectOption("#tb-lib-type", "footer"); await page.waitForFunction(() => /Page 1 \/ 5/.test(document.getElementById("tb-lib-page").textContent));
