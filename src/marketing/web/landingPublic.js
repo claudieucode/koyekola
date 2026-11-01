@@ -84,7 +84,7 @@ module.exports = ({ db }) => {
   };
 
   router.get("/p/:slug", (req, res) => {
-    const published = landing.getPublishedPage(db, req.params.slug);
+    const published = landing.getPublishedPage(db, req.params.slug, { standalone: true });
     if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const { page, test, visitor, consent } = forVisitor(req, published);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
@@ -106,7 +106,7 @@ module.exports = ({ db }) => {
   });
 
   router.get("/p/:slug/clic/:n(\\d{1,3})", (req, res) => {
-    const published = landing.getPublishedPage(db, req.params.slug);
+    const published = landing.getPublishedPage(db, req.params.slug, { standalone: true });
     if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const { page, test, visitor } = forVisitor(req, published);
     const link = landing.linksOf(shownPage(req, page))[Number(req.params.n)];
@@ -135,7 +135,7 @@ module.exports = ({ db }) => {
   });
 
   router.post("/p/:slug/inscription", formUpload, (req, res, next) => {
-    const published = landing.getPublishedPage(db, req.params.slug);
+    const published = landing.getPublishedPage(db, req.params.slug, { standalone: true });
     if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const { page, test, visitor } = forVisitor(req, published);
     // Widget « Formulaire » (w = son identifiant) ou section d'inscription de la page : même circuit, même protections

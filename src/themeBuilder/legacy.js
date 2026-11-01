@@ -25,7 +25,7 @@ function mapLegacy(t) {
     default: return null;
   }
 }
-function importLegacy(ctx, siteId) {
+function importLegacy(ctx, siteId, { partsOnly = false } = {}) {
   store.site(ctx, siteId);
   const out = { imported: [], skipped: [] };
   const have = new Set(store.list(ctx, siteId, { archived: true }).map((t) => t.legacyRef).filter(Boolean));
@@ -39,6 +39,7 @@ function importLegacy(ctx, siteId) {
     const c = P().getComponent(ctx, cid); if (!c) { out.skipped.push({ ref: `site-part:${key}`, label: Types.TYPES[type].label, reason: "composant introuvable" }); continue; }
     add(`site-part:${key}`, c.name, () => store.create(ctx, siteId, { type, name: c.name, conditions: {}, sourceKind: "component", sourceId: c.id, legacyRef: `site-part:${key}`, status: "published" }));
   }
+  if (partsOnly) return out;
   for (const t of TT().list(ctx)) {
     const pg = ctx.db.prepare("SELECT id, site_id, status FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(t.pageId, ctx.organizationId);
     if (!pg || pg.site_id !== siteId) continue; // seuls les modèles dont la page est dans CE site
@@ -49,4 +50,7 @@ function importLegacy(ctx, siteId) {
   }
   return out;
 }
-module.exports = { importLegacy, mapLegacy };
+// Le pied de page et l'en-tête QUE LE SITE AFFICHE AUJOURD'HUI (réglages du site) doivent figurer dans le Theme Builder : sans cela, le tableau de bord ne montre que des modèles
+// jamais publiés alors que le site en affiche un autre. Reprise idempotente (legacy_ref), jamais bloquante, aucune donnée existante modifiée.
+function adoptSiteParts(ctx, siteId) { try { return importLegacy(ctx, siteId, { partsOnly: true }).imported; } catch { return []; } }
+module.exports = { importLegacy, mapLegacy, adoptSiteParts };

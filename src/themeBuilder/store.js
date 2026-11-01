@@ -25,10 +25,23 @@ const shape = (r) => r && ({ id: r.id, siteId: r.site_id, type: r.type, typeLabe
 const row = (ctx, siteId, id) => ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE id = ? AND site_id = ? AND organization_id = ?").get(Number(id), siteId, ctx.organizationId);
 function get(ctx, siteId, id) { site(ctx, siteId); const r = row(ctx, siteId, id); if (!r) throw bad("Modèle introuvable.", "not_found"); return shape(r); }
 
+// Modèles (non archivés) d'un site qui ouvrent CE document : identité exacte quand on édite un composant (jamais déduite du nom)
+function bySource(ctx, siteId, kind, sourceId) {
+  site(ctx, siteId);
+  return ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE site_id = ? AND organization_id = ? AND source_kind = ? AND source_id = ? AND status <> 'archived' ORDER BY id").all(siteId, ctx.organizationId, kind, Number(sourceId)).map(shape);
+}
+
 // Marqueur de cache de résolution d'un site : change à toute écriture (chaque écriture incrémente `revision`, donc la somme change même dans la même seconde)
 const stampOf = (ctx, siteId) => { const r = ctx.db.prepare("SELECT COUNT(*) n, COALESCE(SUM(revision), 0) u, COALESCE(MAX(id), 0) m FROM mk_tb_templates WHERE site_id = ? AND organization_id = ?").get(siteId, ctx.organizationId); return `${r.n}:${r.u}:${r.m}`; };
 const touch = (ctx, siteId, id) => ctx.db.prepare("UPDATE mk_tb_templates SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ? AND site_id = ?").run(id, siteId);
 
+// Modèle du Theme Builder qui porte ce document (page ou composant), ou null. Source de vérité unique « document → modèle » : l'éditeur, les aperçus et les
+// routes de publication s'en servent au lieu de deviner depuis un nom ou une position. Filtré par organisation ; le site du modèle est celui de la ligne.
+function byDocument(ctx, kind, docId) {
+  const k = kind === "component" ? "component" : "page";
+  const r = ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE organization_id = ? AND source_kind = ? AND source_id = ? ORDER BY (status = 'archived'), id LIMIT 1").get(ctx.organizationId, k, Number(docId));
+  return r ? shape(r) : null;
+}
 function list(ctx, siteId, { type = "", status = "", q = "", archived = false } = {}) {
   site(ctx, siteId);
   const where = ["organization_id = ?", "site_id = ?"], args = [ctx.organizationId, siteId];
@@ -102,14 +115,24 @@ function snapshotOf(ctx, t) {
   if (t.sourceKind === "component") { const c = P().getComponent(ctx, t.sourceId); return { kind: "component", name: c ? c.name : "", section: c ? c.section : null }; }
   const p = P().getPage(ctx, t.sourceId); return { kind: "page", name: p ? p.name : "", content: p ? p.working : null };
 }
-function publish(ctx, siteId, id, { revision = null } = {}) {
+// replace : le modèle remplace ceux qu'il doublonne exactement (mêmes conditions) : ils repassent en brouillon, rien n'est supprimé ni modifié dans leur document
+function publish(ctx, siteId, id, { revision = null, replace = false } = {}) {
   const t = get(ctx, siteId, id);
   if (t.status === "archived") throw bad("Ce modèle est archivé : restaurez-le avant de le publier.");
   if (revision !== null && Number(revision) !== t.revision) throw bad("Ce modèle a été modifié ailleurs : rechargez avant de publier.", "conflict");
-  const conflicts = conflictsFor(ctx, siteId, t, t.conditions);
+  let conflicts = conflictsFor(ctx, siteId, t, t.conditions);
+  const replaced = [];
+  if (replace) {
+    for (const c of conflicts.filter((x) => x.severity === "blocking")) {
+      const o = get(ctx, siteId, c.a === t.id ? c.b : c.a);
+      if (o.status === "published" && o.type === t.type) replaced.push(o);
+    }
+    if (replaced.length) conflicts = conflicts.filter((c) => c.severity !== "blocking");
+  }
   const blocking = conflicts.find((c) => c.severity === "blocking");
   if (blocking) throw Object.assign(bad(blocking.message, "conflict"), { conflicts });
   return transaction(ctx.db, () => {
+    for (const o of replaced) { ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft' WHERE id = ? AND site_id = ?").run(o.id, siteId); touch(ctx, siteId, o.id); }
     // le document est publié par le service existant (contrôles de publication de l'éditeur inchangés) ; une erreur annule tout
     try {
       if (t.sourceKind === "page") P().publish(ctx, t.sourceId);
@@ -119,7 +142,7 @@ function publish(ctx, siteId, id, { revision = null } = {}) {
     ctx.db.prepare("INSERT INTO mk_tb_versions (template_id, number, name, conditions, snapshot, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, n, t.name, JSON.stringify(t.conditions), JSON.stringify(snapshotOf(ctx, t)), ctx.userId ?? null);
     ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
     ctx.db.prepare("UPDATE mk_tb_templates SET status = 'published', published_at = datetime('now') WHERE id = ? AND site_id = ?").run(t.id, siteId); touch(ctx, siteId, t.id);
-    return { template: get(ctx, siteId, id), version: n, conflicts };
+    return { template: get(ctx, siteId, id), version: n, conflicts, replaced: replaced.map((o) => ({ id: o.id, name: o.name })) };
   });
 }
 function unpublish(ctx, siteId, id) {
@@ -166,4 +189,4 @@ function restoreVersion(ctx, siteId, id, number) {
     return { ...get(ctx, siteId, id), conditionsRestored };
   });
 }
-module.exports = { docName, list, get, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };
+module.exports = { byDocument, docName, list, get, bySource, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };

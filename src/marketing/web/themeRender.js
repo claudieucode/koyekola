@@ -158,7 +158,8 @@ function catalogScope(db, ctx, type) {
 }
 const FILLER = '<div style="max-width:1100px;margin:0 auto;padding:40px 24px;font:14px/1.6 system-ui,sans-serif;color:#64748b"><div style="height:160px;border-radius:12px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);margin-bottom:20px"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:80%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:65%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:72%"></div><p style="margin-top:18px;font-size:12px">Contenu de la page (aperçu)</p></div>';
 // done(html | null). doc : résultat de catalog.build()
-function previewDoc(req, res, { siteId, type, doc }, done) {
+// thumb : miniature de carte (sans bloc de remplissage, sans défilement) ; mêmes éléments et même CSS que l'aperçu complet
+function previewDoc(req, res, { siteId, type, doc, thumb = false }, done) {
   try {
     const marketing = req.app.locals.marketing, db = require("../../config/database");
     if (!marketing || !marketing.ready) return done(null);
@@ -170,8 +171,8 @@ function previewDoc(req, res, { siteId, type, doc }, done) {
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
-      const body = type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html;
-      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title><style>html,body{margin:0}</style></head><body>${body}</body></html>`);
+      const body = thumb ? html : type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html;
+      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title><style>html,body{margin:0}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body>${body}</body></html>`);
     });
   } catch { done(null); }
 }

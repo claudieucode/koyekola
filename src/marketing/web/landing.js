@@ -365,15 +365,47 @@ module.exports = () => {
     if (!(error instanceof MarketingError)) return next(error);
     res.status(error.code === "conflict" ? 409 : error.code === "not_found" ? 404 : error.code === "forbidden" ? 403 : 422).json({ error: { code: error.code, message: error.message } });
   };
+  // Identité explicite du modèle ouvert (Theme Builder) : site, type, statut. Un modèle demandé qui n'ouvre pas ce document est REFUSÉ (jamais un autre ouvert en silence).
+  // Renvoie { identity } (null hors site ou sans modèle) ou { refused: true }.
+  const tbIdentity = (req, { kind, id, siteId, roleLabel }) => {
+    const ctx = req.mk.ctx;
+    try {
+      const TB = require("../../themeBuilder");
+      if (!siteId) return { identity: null };
+      const wanted = /^\d+$/.test(String(req.query.modele || "")) ? Number(req.query.modele) : null;
+      let t = null;
+      if (wanted !== null) {
+        try { t = TB.store.get(ctx, siteId, wanted); } catch { t = null; }
+        if (!t || t.sourceKind !== kind || t.sourceId !== id) return { refused: true };
+      } else {
+        const all = TB.store.bySource(ctx, siteId, kind, id);
+        t = all.length === 1 ? all[0] : null;
+      }
+      if (!t && kind === "page") return { identity: null }; // une page ordinaire n'est pas un modèle : aucun bandeau
+      const site = pages.getSite(ctx, siteId);
+      const tb = `/marketing/site-web/sites/${siteId}/constructeur-de-theme`;
+      const back = String(req.query.retour || "");
+      const backUrl = back === "tb" ? tb : /^\/marketing\/pages\/\d+\/editeur$/.test(back) ? back : null;
+      return { identity: { siteId, siteName: site ? site.name : "", roleLabel, global: kind === "component", template: t ? { id: t.id, name: t.name, type: t.type, typeLabel: t.typeLabel, status: t.status } : null, backUrl, backLabel: backUrl === tb ? "Retour au Theme Builder" : backUrl ? "Retour à la page" : null, tbUrl: tb } };
+    } catch { return { identity: null }; }
+  };
   // Éditeur ouvert sur une page (component = null) ou sur la SOURCE d'un composant du site : en-tête, pied de page…
-  const openEditor = (req, res, page, { component = null } = {}) => {
+  const openEditor = (req, res, page, { component = null, identity = null } = {}) => {
     const { ctx } = req.mk;
     const site = page.site_id ? pages.getSite(ctx, page.site_id) : null;
     const nodesLib = require("../pages/nodes");
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     const funnel = component ? null : require("../funnels").funnelsOfPage(ctx, page.id).find((f) => f.status === "active") || null;
+    // Contexte Theme Builder : si ce document est le contenu d'un modèle, l'éditeur le sait (identité, type, état, retour) — jamais déduit du nom du document
+    let tb = null;
+    try {
+      const t = require("../../themeBuilder").store.byDocument(ctx, component ? "component" : "page", component ? component.id : page.id);
+      if (t && t.siteId === (page.site_id ?? null)) tb = { id: t.id, siteId: t.siteId, type: t.type, typeLabel: t.typeLabel, name: t.name, status: t.status, revision: t.revision, backUrl: `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme` };
+    } catch { tb = null; }
+    if (tb) page = { ...page, back: tb.backUrl };
     const boot = {
-      page: { breakpoints: require("../pages/siteSettings").breakpointsOf(site && site.settings), id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null,
+      themeTemplate: tb,
+      page: { identity: identity || (component && component.identity) || null, breakpoints: require("../pages/siteSettings").breakpointsOf(site && site.settings), id: page.id, name: page.name, slug: page.slug, status: page.status, hasDraft: page.hasDraft, revision: page.revision, siteId: page.site_id, siteName: site ? site.name : null,
         customColors: site ? site.tokens.customColors.map((c) => ({ key: c.key, label: c.label })) : [], siteClasses: site && site.settings ? site.settings.classes || [] : [], siteSettingsUrl: site ? `/marketing/site-web/sites/${site.id}/reglages.json` : null, formId: page.form_id, formName: form ? form.name : null, formPublished: Boolean(form && form.status === "published"), indexable: Boolean(page.indexable), funnel: funnel ? { id: funnel.id, name: funnel.name, position: funnel.position } : null,
         abTest: component ? null : (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null,
         // Édition d'un composant : adresses de l'éditeur propres au composant (rendu, enregistrement) et retour à la fiche du site
@@ -428,7 +460,9 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     if (page.archived_at) return res.redirect(`/marketing/pages/${page.id}`);
-    openEditor(req, res, page);
+    const idr = tbIdentity(req, { kind: "page", id: page.id, siteId: page.site_id, roleLabel: "Modèle de page" });
+    if (idr.refused) return res.status(404).render("error", { message: "Ce modèle du Theme Builder n'ouvre pas cette page (ou n'existe pas dans ce site). Retournez au Theme Builder et rouvrez-le." });
+    openEditor(req, res, page, { identity: idr.identity });
   });
 
   // ---------- Édition de la source d'un composant (en-tête / pied de page du site) dans le même éditeur ----------
@@ -448,8 +482,12 @@ module.exports = () => {
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const c = loadComponent(req, res);
     if (!c) return;
-    const page = componentPage(req.mk.ctx, c);
-    openEditor(req, res, page, { component: { id: c.id, name: c.name, role: page.role, kind: c.kind, hasDraft: c.hasDraft, version: c.version } });
+    const ctx = req.mk.ctx;
+    const page = componentPage(ctx, c);
+    const idr = tbIdentity(req, { kind: "component", id: c.id, siteId: c.site_id, roleLabel: { header: "En-tête", footer: "Pied de page", variant: "Variante d'en-tête" }[page.role] || "Composant" });
+    if (idr.refused) return res.status(404).render("error", { message: "Ce modèle du Theme Builder n'ouvre pas ce composant (ou n'existe pas dans ce site). Retournez au Theme Builder et rouvrez-le." });
+    const identity = idr.identity;
+    openEditor(req, res, page, { component: { id: c.id, name: c.name, role: page.role, kind: c.kind, hasDraft: c.hasDraft, version: c.version, identity } });
   });
   router.post("/site-web/composants/:id(\\d+)/rendu", need("forms.read"), (req, res, next) => {
     const c = loadComponent(req, res);
@@ -511,7 +549,7 @@ module.exports = () => {
       const content = pages.normalizeContent(ctx, page, (req.body && req.body.content) || {});
       const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
       res.set("Cache-Control", "no-store");
-      res.render("marketing-public/landing", { page: shown(ctx, page, content), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
+      res.render("marketing-public/landing", { page: shown(ctx, page, content, null, true), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
     } catch (error) { jsonError(res, next, error); }
   });
   // Sauvegarde automatique du brouillon (JSON) : jamais d'écrasement silencieux (révision), réponse = nouvelle révision
@@ -525,10 +563,20 @@ module.exports = () => {
       res.set("Cache-Control", "no-store").json({ revision, savedAt: new Date().toISOString(), ...(warnings && warnings.length ? { warnings } : {}) });
     } catch (error) { jsonError(res, next, error); }
   });
+  // Page qui est le contenu d'un modèle du Theme Builder : la publication est CELLE du modèle (conflits de conditions, version, état) — jamais une page publique autonome
+  const tbPublish = (req, page) => {
+    const t = require("../../themeBuilder").store.byDocument(req.mk.ctx, "page", page.id);
+    if (!t) return null;
+    if (!req.mk.can("forms.write")) throw new MarketingError("forbidden", "Publier un modèle du Constructeur de thème demande le droit de modifier les modèles.");
+    const r = require("../../themeBuilder").store.publish(req.mk.ctx, t.siteId, t.id);
+    return { version: r.version, template: r.template };
+  };
   router.post("/pages/:id(\\d+)/publier.json", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
     try {
+      const viaTb = tbPublish(req, page);
+      if (viaTb) return res.json({ version: viaTb.version, revision: pages.getPage(req.mk.ctx, page.id).revision, url: `/marketing/site-web/sites/${viaTb.template.siteId}/constructeur-de-theme`, themeTemplate: { id: viaTb.template.id, status: viaTb.template.status } });
       const { version } = pages.publish(req.mk.ctx, page.id);
       const p = pages.getPage(req.mk.ctx, page.id);
       res.json({ version, revision: p.revision, url: `/p/${p.slug}` });
@@ -539,6 +587,8 @@ module.exports = () => {
     const page = load(req, res);
     if (!page) return;
     attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => {
+      const viaTb = tbPublish(req, page);
+      if (viaTb) return `Modèle « ${viaTb.template.name} » publié (version ${viaTb.version}) : il s'applique selon ses conditions d'affichage.`;
       const { version } = pages.publish(req.mk.ctx, page.id);
       return `Page en ligne (version ${version}) : /p/${page.slug}${page.indexable ? "" : " (non indexée par les moteurs de recherche)"}.`;
     });
@@ -574,15 +624,23 @@ module.exports = () => {
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.cancelSchedule(req.mk.ctx, page.id); return "Programmation annulée : la page reste hors ligne."; });
   });
+  // Dépublier la page d'un modèle = dépublier le MODÈLE (sinon le modèle resterait « publié » sans contenu en ligne et le site retomberait en silence sur un autre rendu)
+  const tbUnpublish = (req, page) => {
+    const TB = require("../../themeBuilder"), t = TB.store.byDocument(req.mk.ctx, "page", page.id);
+    if (!t) return false;
+    if (!req.mk.can("forms.write")) throw new MarketingError("forbidden", "Dépublier un modèle du Constructeur de thème demande le droit de modifier les modèles.");
+    if (t.status === "published") TB.store.unpublish(req.mk.ctx, t.siteId, t.id);
+    return true;
+  };
   router.post("/pages/:id(\\d+)/depublier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => { pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
+    attempt(req, res, next, listBack(req, page.site_id, `/marketing/pages/${page.id}`), () => { if (tbUnpublish(req, page)) return "Modèle dépublié : il repasse en brouillon et ne s'applique plus."; pages.unpublish(req.mk.ctx, page.id); return "Page hors ligne : son adresse affiche « page indisponible »."; });
   });
   router.post("/pages/:id(\\d+)/depublier.json", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;
-    try { pages.unpublish(req.mk.ctx, page.id); res.json({ ok: true, revision: pages.getPage(req.mk.ctx, page.id).revision }); } catch (error) { jsonError(res, next, error); }
+    try { if (!tbUnpublish(req, page)) pages.unpublish(req.mk.ctx, page.id); res.json({ ok: true, revision: pages.getPage(req.mk.ctx, page.id).revision }); } catch (error) { jsonError(res, next, error); }
   });
   router.post("/pages/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
     const page = load(req, res);
