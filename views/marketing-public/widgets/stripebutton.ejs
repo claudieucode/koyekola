@@ -1,0 +1,5 @@
+<%# Bouton de paiement (src/marketing/pages/widgets/paymentbuttons.js). Variables : p, d (d.href vérifié contre la liste blanche, d.brand, d.brandName), cls, attrs, icon(). %>
+<div class="<%= cls %> is-brand-<%= d.brand %> is-size-<%= ["sm", "md", "lg"].includes(p.size) ? p.size : "md" %> is-align-<%= ["left", "center", "right"].includes(p.align) ? p.align : "left" %><%= p.fullWidth ? " is-full" : "" %>"<%- attrs %>>
+  <a class="kw-pay-btn kw-button" href="<%= d.href %>"<%- p.newTab ? ' target="_blank" rel="noopener noreferrer"' : ' rel="noopener noreferrer"' %> aria-label="<%= p.label %> (<%= d.brandName %>)"><% if (p.showIcon) { %><span class="kw-pay-icon" aria-hidden="true"><%- icon("lock", { size: 18 }) %></span><% } %><span class="kw-pay-label"><%= p.label %></span></a>
+  <% if (p.note) { %><p class="kw-pay-note"><%= p.note %></p><% } %>
+</div>

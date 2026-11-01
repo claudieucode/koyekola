@@ -1,0 +1,558 @@
+{
+ "consulted": "2026-11-01",
+ "source": "https://elementor.com/help/elementor-pro-vs-free/ (navigation du centre d'aide, section Widgets)",
+ "widgets": [
+  {
+   "name": "Accordion",
+   "helpSlug": "accordion-widget",
+   "kolakisa": "accordion",
+   "note": ""
+  },
+  {
+   "name": "Accordion (nested elements)",
+   "helpSlug": "accordion-widget-with-nested-elements",
+   "kolakisa": "container",
+   "note": "conteneur, mode accordéon"
+  },
+  {
+   "name": "Alert",
+   "helpSlug": "alert-widget",
+   "kolakisa": "alert",
+   "note": ""
+  },
+  {
+   "name": "Animated Headline",
+   "helpSlug": "animated-headline-widget",
+   "kolakisa": "animatedheading",
+   "note": ""
+  },
+  {
+   "name": "Archive Posts",
+   "helpSlug": "archive-posts-widget",
+   "kolakisa": "archiveposts",
+   "note": "raccourci → liste dynamique"
+  },
+  {
+   "name": "Atomic Form",
+   "helpSlug": "atomic-form-element",
+   "kolakisa": "signupform",
+   "note": ""
+  },
+  {
+   "name": "Author Box",
+   "helpSlug": "author-box-widget",
+   "kolakisa": "authorbox",
+   "note": ""
+  },
+  {
+   "name": "Basic Gallery",
+   "helpSlug": "basic-gallery-widget",
+   "kolakisa": "gallery",
+   "note": ""
+  },
+  {
+   "name": "Basic Media Carousel",
+   "helpSlug": "basic-media-carousel-widget",
+   "kolakisa": "mediacarousel",
+   "note": ""
+  },
+  {
+   "name": "Blockquote",
+   "helpSlug": "blockquote-widget",
+   "kolakisa": "quote",
+   "note": ""
+  },
+  {
+   "name": "Breadcrumbs",
+   "helpSlug": "breadcrumbs-widget",
+   "kolakisa": "breadcrumb",
+   "note": ""
+  },
+  {
+   "name": "Button",
+   "helpSlug": "button-widget",
+   "kolakisa": "button",
+   "note": ""
+  },
+  {
+   "name": "Call to Action",
+   "helpSlug": "call-to-action-widget",
+   "kolakisa": "cta",
+   "note": ""
+  },
+  {
+   "name": "Carousel (nested elements)",
+   "helpSlug": "carousel-widget",
+   "kolakisa": "container",
+   "note": "conteneur, mode carrousel"
+  },
+  {
+   "name": "Code Highlight",
+   "helpSlug": "code-highlight-widget",
+   "kolakisa": "code",
+   "note": ""
+  },
+  {
+   "name": "Countdown",
+   "helpSlug": "countdown-widget",
+   "kolakisa": "countdown",
+   "note": ""
+  },
+  {
+   "name": "Counter",
+   "helpSlug": "counter-widget",
+   "kolakisa": "counter",
+   "note": ""
+  },
+  {
+   "name": "Custom Add To Cart",
+   "helpSlug": "custom-add-to-cart-widget",
+   "kolakisa": "shopbuy",
+   "note": ""
+  },
+  {
+   "name": "Divider",
+   "helpSlug": "divider-widget",
+   "kolakisa": "divider",
+   "note": ""
+  },
+  {
+   "name": "Facebook Comments",
+   "helpSlug": "facebook-comments-widget",
+   "kolakisa": null,
+   "note": ""
+  },
+  {
+   "name": "Facebook Embed",
+   "helpSlug": "facebook-embed-widget",
+   "kolakisa": "facebookembed",
+   "note": ""
+  },
+  {
+   "name": "Facebook Like Button",
+   "helpSlug": "facebook-like-button-widget",
+   "kolakisa": "facebookbutton",
+   "note": ""
+  },
+  {
+   "name": "Facebook Page Feed",
+   "helpSlug": "facebook-page-feed",
+   "kolakisa": "facebookpage",
+   "note": "raccourci → contenu intégré"
+  },
+  {
+   "name": "Featured Image",
+   "helpSlug": "featured-image-widget",
+   "kolakisa": "postimage",
+   "note": "raccourci → image"
+  },
+  {
+   "name": "Flip Box",
+   "helpSlug": "flip-box-widget",
+   "kolakisa": "flipbox",
+   "note": ""
+  },
+  {
+   "name": "Floating Button",
+   "helpSlug": "floating-button",
+   "kolakisa": "floatingbutton",
+   "note": ""
+  },
+  {
+   "name": "Form",
+   "helpSlug": "form-widget",
+   "kolakisa": "signupform",
+   "note": ""
+  },
+  {
+   "name": "Gallery",
+   "helpSlug": "gallery-widget",
+   "kolakisa": "gallery",
+   "note": ""
+  },
+  {
+   "name": "Google Maps",
+   "helpSlug": "google-maps-widget",
+   "kolakisa": "map",
+   "note": ""
+  },
+  {
+   "name": "Heading",
+   "helpSlug": "heading-widget",
+   "kolakisa": "heading",
+   "note": ""
+  },
+  {
+   "name": "Hotspot",
+   "helpSlug": "hotspot-widget",
+   "kolakisa": "hotspot",
+   "note": ""
+  },
+  {
+   "name": "HTML",
+   "helpSlug": "html-widget",
+   "kolakisa": "html",
+   "note": ""
+  },
+  {
+   "name": "Icon Box",
+   "helpSlug": "icon-box-widget",
+   "kolakisa": "iconbox",
+   "note": ""
+  },
+  {
+   "name": "Icon List",
+   "helpSlug": "icon-list-widget",
+   "kolakisa": "iconlist",
+   "note": ""
+  },
+  {
+   "name": "Icon",
+   "helpSlug": "icon-widget",
+   "kolakisa": "icon",
+   "note": ""
+  },
+  {
+   "name": "Image Box",
+   "helpSlug": "image-box-widget",
+   "kolakisa": "imagebox",
+   "note": ""
+  },
+  {
+   "name": "Image Carousel",
+   "helpSlug": "image-carousel-widget",
+   "kolakisa": "carousel",
+   "note": ""
+  },
+  {
+   "name": "Image",
+   "helpSlug": "image-widget",
+   "kolakisa": "image",
+   "note": ""
+  },
+  {
+   "name": "Inner Section (legacy)",
+   "helpSlug": "inner-section-widget",
+   "kolakisa": "group",
+   "note": ""
+  },
+  {
+   "name": "Login",
+   "helpSlug": "login-widget",
+   "kolakisa": "account",
+   "note": ""
+  },
+  {
+   "name": "Loop Carousel",
+   "helpSlug": "loop-carousel",
+   "kolakisa": "querylist",
+   "note": ""
+  },
+  {
+   "name": "Loop Grid",
+   "helpSlug": "loop-grid",
+   "kolakisa": "querylist",
+   "note": ""
+  },
+  {
+   "name": "Lottie",
+   "helpSlug": "lottie-widget",
+   "kolakisa": "lottie",
+   "note": ""
+  },
+  {
+   "name": "Media Carousel",
+   "helpSlug": "media-carousel-widget",
+   "kolakisa": "mediacarousel",
+   "note": ""
+  },
+  {
+   "name": "Menu Anchor",
+   "helpSlug": "menu-anchor-widget",
+   "kolakisa": "menuanchor",
+   "note": ""
+  },
+  {
+   "name": "Menu Cart",
+   "helpSlug": "menu-cart-widget",
+   "kolakisa": "minicart",
+   "note": ""
+  },
+  {
+   "name": "Menu",
+   "helpSlug": "menu-widget",
+   "kolakisa": "menu",
+   "note": ""
+  },
+  {
+   "name": "Off-Canvas",
+   "helpSlug": "off-canvas-widget",
+   "kolakisa": "modal",
+   "note": ""
+  },
+  {
+   "name": "Page Title",
+   "helpSlug": "page-title-widget",
+   "kolakisa": "pagetitle",
+   "note": "raccourci → texte dynamique"
+  },
+  {
+   "name": "PayPal Button",
+   "helpSlug": "paypal-button-widget",
+   "kolakisa": "paypalbutton",
+   "note": "PayPal.me, don ou bouton hébergé ; aucune clé API ni script externe"
+  },
+  {
+   "name": "Portfolio",
+   "helpSlug": "portfolio-widget",
+   "kolakisa": "gallery",
+   "note": "galerie à filtres"
+  },
+  {
+   "name": "Post Comments",
+   "helpSlug": "post-comments-widget",
+   "kolakisa": "postcomments",
+   "note": ""
+  },
+  {
+   "name": "Post Content",
+   "helpSlug": "post-content-widget",
+   "kolakisa": "postcontent",
+   "note": ""
+  },
+  {
+   "name": "Post Excerpt",
+   "helpSlug": "post-excerpt-widget",
+   "kolakisa": "postexcerpt",
+   "note": ""
+  },
+  {
+   "name": "Post Info",
+   "helpSlug": "post-info-widget",
+   "kolakisa": "postmeta",
+   "note": ""
+  },
+  {
+   "name": "Post Navigation",
+   "helpSlug": "post-navigation-widget",
+   "kolakisa": "postnav",
+   "note": ""
+  },
+  {
+   "name": "Post Title",
+   "helpSlug": "post-title-widget",
+   "kolakisa": "posttitle",
+   "note": ""
+  },
+  {
+   "name": "Posts",
+   "helpSlug": "posts-widget",
+   "kolakisa": "posts",
+   "note": ""
+  },
+  {
+   "name": "Price List",
+   "helpSlug": "price-list-widget",
+   "kolakisa": "pricelist",
+   "note": ""
+  },
+  {
+   "name": "Price Table",
+   "helpSlug": "price-table-widget",
+   "kolakisa": "pricing",
+   "note": ""
+  },
+  {
+   "name": "Progress Bar",
+   "helpSlug": "progress-bar-widget",
+   "kolakisa": "progress",
+   "note": ""
+  },
+  {
+   "name": "Progress Tracker",
+   "helpSlug": "progress-tracker-widget",
+   "kolakisa": "readingprogress",
+   "note": ""
+  },
+  {
+   "name": "Rating",
+   "helpSlug": "rating-widget",
+   "kolakisa": "rating",
+   "note": ""
+  },
+  {
+   "name": "Read More",
+   "helpSlug": "read-more-widget",
+   "kolakisa": "readmore",
+   "note": ""
+  },
+  {
+   "name": "Reviews",
+   "helpSlug": "reviews-widget",
+   "kolakisa": "testimonialcarousel",
+   "note": ""
+  },
+  {
+   "name": "Search Form",
+   "helpSlug": "search-form-widget",
+   "kolakisa": "search",
+   "note": ""
+  },
+  {
+   "name": "Search",
+   "helpSlug": "search-widget",
+   "kolakisa": "search",
+   "note": ""
+  },
+  {
+   "name": "Share Buttons",
+   "helpSlug": "share-buttons-widget",
+   "kolakisa": "sharebuttons",
+   "note": ""
+  },
+  {
+   "name": "Shortcode",
+   "helpSlug": "shortcode-widget",
+   "kolakisa": null,
+   "note": ""
+  },
+  {
+   "name": "Sidebar",
+   "helpSlug": "sidebar-widget",
+   "kolakisa": "sidebar",
+   "note": "affiche la zone « Colonne latérale » d'Apparence → Widgets"
+  },
+  {
+   "name": "Single Post",
+   "helpSlug": "single-post-widget",
+   "kolakisa": "postcontent",
+   "note": ""
+  },
+  {
+   "name": "Site Logo",
+   "helpSlug": "site-logo-widget",
+   "kolakisa": "sitelogo",
+   "note": ""
+  },
+  {
+   "name": "Site Title",
+   "helpSlug": "site-title-widget",
+   "kolakisa": "sitetitle",
+   "note": ""
+  },
+  {
+   "name": "Sitemap",
+   "helpSlug": "sitemap-widget",
+   "kolakisa": "sitemap",
+   "note": ""
+  },
+  {
+   "name": "Slides",
+   "helpSlug": "slides-widget",
+   "kolakisa": "slides",
+   "note": ""
+  },
+  {
+   "name": "Social Icons",
+   "helpSlug": "social-icons-widget",
+   "kolakisa": "social",
+   "note": ""
+  },
+  {
+   "name": "SoundCloud",
+   "helpSlug": "soundcloud-widget",
+   "kolakisa": "soundcloud",
+   "note": "raccourci → contenu intégré"
+  },
+  {
+   "name": "Spacer",
+   "helpSlug": "spacer-widget",
+   "kolakisa": "spacer",
+   "note": ""
+  },
+  {
+   "name": "Stripe Button",
+   "helpSlug": "stripe-button",
+   "kolakisa": "stripebutton",
+   "note": "lien de paiement Stripe hébergé ; aucune clé API ni script externe"
+  },
+  {
+   "name": "Table of Contents",
+   "helpSlug": "table-of-contents-widget",
+   "kolakisa": "toc",
+   "note": ""
+  },
+  {
+   "name": "Tabs",
+   "helpSlug": "tabs-widget",
+   "kolakisa": "tabs",
+   "note": ""
+  },
+  {
+   "name": "Tabs (nested elements)",
+   "helpSlug": "tabs-widget-with-nested-elements",
+   "kolakisa": "container",
+   "note": "conteneur, mode onglets"
+  },
+  {
+   "name": "Taxonomy Filter",
+   "helpSlug": "taxonomy-filter-widget",
+   "kolakisa": "catfilter",
+   "note": ""
+  },
+  {
+   "name": "Template",
+   "helpSlug": "template-widget",
+   "kolakisa": null,
+   "note": ""
+  },
+  {
+   "name": "Testimonial Carousel",
+   "helpSlug": "testimonial-carousel-widget",
+   "kolakisa": "testimonialcarousel",
+   "note": ""
+  },
+  {
+   "name": "Testimonial",
+   "helpSlug": "testimonial-widget",
+   "kolakisa": "testimonial",
+   "note": ""
+  },
+  {
+   "name": "Text Editor",
+   "helpSlug": "text-editor-widget",
+   "kolakisa": "text",
+   "note": ""
+  },
+  {
+   "name": "Text Path",
+   "helpSlug": "text-path-widget",
+   "kolakisa": "textpath",
+   "note": ""
+  },
+  {
+   "name": "Toggle",
+   "helpSlug": "toggle-widget",
+   "kolakisa": "toggle",
+   "note": ""
+  },
+  {
+   "name": "Video",
+   "helpSlug": "video-widget",
+   "kolakisa": "video",
+   "note": ""
+  },
+  {
+   "name": "Video Playlist",
+   "helpSlug": "video-playlist-widget",
+   "kolakisa": "videoplaylist",
+   "note": ""
+  },
+  {
+   "name": "WordPress Menu",
+   "helpSlug": "wordpress-menu-widget",
+   "kolakisa": "cmsmenu",
+   "note": ""
+  }
+ ]
+}

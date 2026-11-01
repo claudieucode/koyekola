@@ -1,0 +1,4 @@
+<%# Barre latérale (src/marketing/pages/widgets/sidebar.js). Variables : p, d (d.html : blocs de la zone « sidebar », déjà nettoyés et échappés par le catalogue des widgets), cls, attrs. %>
+<div class="<%= cls %>" role="complementary" aria-label="<%= p.label %>"<%- attrs %>>
+  <% if (d.html) { %><%- d.html %><% } else { %><p class="kw-sidebar-empty">Aucun bloc actif dans la colonne latérale : ajoutez-en dans Apparence → Widgets.</p><% } %>
+</div>

@@ -1395,3 +1395,18 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .lp-builder [data-site-part] > :not(.lp-part-edit){opacity:.75}
 .lp-builder .lp-part-edit{position:absolute;top:2px;right:2px;z-index:6;pointer-events:auto;padding:2px 10px;border:0;border-radius:4px;background:#0b2a4a;color:#fff;font:600 12px/1.6 system-ui,sans-serif;cursor:pointer}
 .lp-builder .lp-part-edit:hover,.lp-builder .lp-part-edit:focus-visible{background:#0277b6;outline:2px solid #fff;outline-offset:1px}
+
+/* Boutons de paiement Stripe / PayPal (widgets stripebutton, paypalbutton) : un bouton + une mention ; couleur de marque par défaut, modifiable dans le panneau de style */
+.kw-stripebutton, .kw-paypalbutton { display: flex; flex-direction: column; gap: 8px; }
+.kw-stripebutton.is-align-left, .kw-paypalbutton.is-align-left { align-items: flex-start; text-align: left; }
+.kw-stripebutton.is-align-center, .kw-paypalbutton.is-align-center { align-items: center; text-align: center; }
+.kw-stripebutton.is-align-right, .kw-paypalbutton.is-align-right { align-items: flex-end; text-align: right; }
+.kw-stripebutton.is-full .kw-pay-btn, .kw-paypalbutton.is-full .kw-pay-btn { width: 100%; justify-content: center; }
+.kw-pay-btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; font-weight: 600; text-decoration: none; color: #fff; background: #635bff; }
+.is-brand-paypal .kw-pay-btn { background: #ffc439; color: #111827; }
+.is-size-sm .kw-pay-btn { padding: 8px 14px; font-size: .9rem; } .is-size-md .kw-pay-btn { padding: 12px 22px; } .is-size-lg .kw-pay-btn { padding: 16px 30px; font-size: 1.15rem; }
+.kw-pay-icon { display: inline-flex; } .kw-pay-note { margin: 0; font-size: .85rem; opacity: .75; }
+
+/* Barre latérale (widget sidebar) : les blocs de la zone gardent leurs propres styles (widgets.css) ; le message vide n'est qu'un repère dans l'éditeur */
+.kw-sidebar { display: block; } .kw-sidebar-empty { margin: 0; padding: 12px; border: 1px dashed rgba(15, 23, 42, .3); border-radius: 8px; font-size: .9rem; opacity: .75; }
+.lp-public .kw-sidebar-empty, body:not(.lp-builder) .kw-sidebar-empty { display: none; }

@@ -211,6 +211,10 @@
   "json": "2cb5c6d47b8698fa86bfa6162a6a75f9718cdc6d",
   "css": "491a5c0d2c6e83f7652e3d8e26a08435b68083d2"
  },
+ "paypalbutton": {
+  "json": "c3f2add70bede1f89197e79bd21a4f3ce7e600a8",
+  "css": "6dcb026089ddc5ef48b131486f782d12b09a195a"
+ },
  "postcomments": {
   "json": "2e9c58878b0cf3434c84ce5209b4c690d23659aa",
   "css": "3d7ae378fe3181037de1cce50118433da67c31cc"
@@ -298,6 +302,10 @@
   "json": "3f65f8306ef7caf04accbcbd1c593968f10ca27d",
   "css": "30f341371ce84c9284048280abe2224708adf697"
  },
+ "sidebar": {
+  "json": "a0f1d85821776bcb32befe5e0660920c7e97e5d0",
+  "css": "cb8e05c8104afe78ccd1be4b27eb20591f3f5c9f"
+ },
  "signupform": {
   "error": "4f02e54d88c9df2609571467694e3b84aaf9530b"
  },
@@ -332,6 +340,10 @@
  "stack": {
   "json": "9d08d4ff17752b01ce6d2886e3c9dd3ac1eb7a34",
   "css": "d07364a4c84fc827fef12ad88bf9cd3e4c629072"
+ },
+ "stripebutton": {
+  "json": "5ff6c6fde069066e7468798f9dee10ff7d1809fe",
+  "css": "70b61f7cba02f0dae7e4f642d2ac83d38fc3b1e8"
  },
  "table": {
   "json": "afd7c2f23655b41ff9ea29859af6d77bba894ee8",
