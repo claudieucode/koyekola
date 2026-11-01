@@ -70,13 +70,13 @@
       <span class="pb-publish-group"><button type="button" class="btn btn-primary btn-sm" data-pb-publish<%= pbPubHidden ? " hidden" : "" %>><%= pbPubLabel %></button><button type="button" class="btn btn-primary btn-sm pb-publish-more" data-pb-publish-menu aria-haspopup="menu" aria-label="Plus d'options de publication" data-tip="Publication : dépublier, voir la page en ligne…"><%- icon("chevronDown", { size: 15 }) %></button></span>
     </div>
   </header>
-  <% if (pbCm && pbCm.identity) { const idt = pbCm.identity; %>
+  <% if (pbPg.identity) { const idt = pbPg.identity; %>
   <%# Identité explicite de ce qui est édité : site, type, modèle, statut (jamais déduits du nom) %>
   <div class="pb-identity" role="status" data-pb-identity>
-    <span class="pb-identity-tag"><%= idt.roleLabel %> · modèle global</span>
+    <span class="pb-identity-tag"><%= idt.roleLabel %><%= idt.global ? " · modèle global" : "" %></span>
     <span>Site : <strong><%= idt.siteName %></strong></span>
     <% if (idt.template) { %><span>Modèle : <strong><%= idt.template.name %></strong> (<%= idt.template.typeLabel %>, <%= idt.template.status === "published" ? "publié" : idt.template.status === "draft" ? "brouillon" : idt.template.status %>)</span><% } else { %><span>Pas de modèle Theme Builder associé</span><% } %>
-    <span class="pb-identity-warn">Modifier ici change toutes les pages qui l'affichent.</span>
+    <% if (idt.global) { %><span class="pb-identity-warn">Modifier ici change toutes les pages qui l'affichent.</span><% } %>
     <% if (idt.backUrl) { %><a class="pb-identity-back" href="<%= idt.backUrl %>"><%= idt.backLabel %></a><% } %>
   </div>
   <% } %>

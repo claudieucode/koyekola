@@ -21,7 +21,7 @@ module.exports = () => {
     next(e);
   });
   // Le composant s'ouvre AVEC l'identifiant du modèle : l'éditeur affiche et vérifie exactement ce modèle (jamais un autre qui partagerait la même source)
-  const editUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/editeur` : `/marketing/site-web/composants/${t.sourceId}/editeur?modele=${t.id}&retour=tb`);
+  const editUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/editeur?modele=${t.id}&retour=tb` : `/marketing/site-web/composants/${t.sourceId}/editeur?modele=${t.id}&retour=tb`);
   // Aperçu réel : mêmes routes que l'éditeur (page enregistrée ou composant dans une page d'exemple) ; les miniatures filaires sont lues À LA DEMANDE (`/miniature`) pour ne pas ouvrir tous les documents à chaque liste.
   const previewUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/apercu` : `/marketing/site-web/composants/${t.sourceId}/apercu`);
   const docOf = (ctx, t) => { try { return t.sourceKind === "page" ? P().getPage(ctx, t.sourceId).working : (P().getComponent(ctx, t.sourceId) || {}).section; } catch { return null; } };

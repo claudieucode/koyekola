@@ -33,7 +33,7 @@ describe("Theme Builder (serveur réel)", () => {
     const r = await post(boss, U(A, "/api/modeles"), { type: "header", name: "En-tête principal" }); assert.equal(r.status, 200, r.text.slice(0, 200)); const t = json(r).template;
     assert.equal(t.status, "draft"); assert.equal(t.typeLabel, "En-tête"); assert.match(t.thumb, /^<svg /); assert.ok(!/<script|onload|javascript:/i.test(t.thumb));
     assert.equal(t.editUrl, `/marketing/site-web/composants/${t.sourceId}/editeur?modele=${t.id}&retour=tb`); assert.equal(one("SELECT site_id FROM mk_web_components WHERE id = ?", t.sourceId).site_id, A);
-    const p = await mkT(A, "single_page", "Page type", { include: [{ kind: "page" }] }); assert.equal(p.editUrl, `/marketing/pages/${p.sourceId}/editeur`);
+    const p = await mkT(A, "single_page", "Page type", { include: [{ kind: "page" }] }); assert.equal(p.editUrl, `/marketing/pages/${p.sourceId}/editeur?modele=${p.id}&retour=tb`);
     assert.equal((await post(boss, U(A, "/api/modeles"), { type: "inconnu", name: "x" })).status, 422);
     assert.equal((await post(boss, U(A, "/api/modeles"), { type: "single_post", name: "Mauvais", conditions: { include: [{ kind: "archive" }] } })).status, 422);
   });
