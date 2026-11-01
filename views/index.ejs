@@ -57,15 +57,33 @@
     </div>
   </div>
 
+  <section class="container-wide st-features" aria-label="Ce que vous trouverez sur la plateforme">
+    <article class="st-feature">
+      <span class="st-feature-icon" aria-hidden="true"><%- icon('video', { size: 22 }) %></span>
+      <h2>Cours vidéo</h2>
+      <p>Suivez chaque formation en vidéo, à votre rythme, sur tous vos appareils.</p>
+    </article>
+    <article class="st-feature">
+      <span class="st-feature-icon" aria-hidden="true"><%- icon('quiz', { size: 22 }) %></span>
+      <h2>Quiz d'évaluation</h2>
+      <p>Validez vos acquis avec des quiz proposés au fil des chapitres.</p>
+    </article>
+    <article class="st-feature">
+      <span class="st-feature-icon" aria-hidden="true"><%- icon('graduation', { size: 22 }) %></span>
+      <h2>Certificat de réussite</h2>
+      <p>Obtenez un certificat à la fin de votre parcours pour valoriser vos compétences.</p>
+    </article>
+  </section>
+
   <section class="container-wide section">
     <div class="section-header">
-      <h2>Formations populaires</h2>
+      <div class="st-heading"><span class="st-eyebrow">Catalogue</span><h2>Formations populaires</h2></div>
       <a href="/catalogue?sort=popular" class="see-all">Voir tout <%- icon('arrowRight', { size: 14 }) %></a>
     </div>
     <% if (featured.length === 0) { %>
       <div class="empty-state"><div class="kv-empty-ill" aria-hidden="true"><%- illu("formations") %></div><p>Aucune formation publiée pour l'instant.</p></div>
     <% } else { %>
-      <div class="grid-courses">
+      <div class="grid-courses st-grid-3">
         <% featured.forEach(course => { %><%- include("partials/course-card", { course }) %><% }) %>
       </div>
     <% } %>
@@ -73,11 +91,25 @@
 
   <section class="container-wide section section-tight">
     <div class="section-header">
-      <h2>Nouveautés</h2>
+      <div class="st-heading"><span class="st-eyebrow">À découvrir</span><h2>Nouveautés</h2></div>
       <a href="/catalogue?sort=recent" class="see-all">Voir tout <%- icon('arrowRight', { size: 14 }) %></a>
     </div>
-    <div class="grid-courses">
+    <div class="grid-courses st-grid-3">
       <% recent.forEach(course => { %><%- include("partials/course-card", { course }) %><% }) %>
+    </div>
+  </section>
+
+  <section class="st-steps">
+    <div class="container-wide">
+      <div class="st-steps-head">
+        <span class="st-eyebrow">Comment ça marche</span>
+        <h2>Un parcours simple pour apprendre à votre rythme</h2>
+      </div>
+      <ol class="st-steps-list">
+        <li><span class="st-step-num" aria-hidden="true">1</span><h3>Choisissez votre formation</h3><p>Parcourez le catalogue et sélectionnez le cours qui correspond à vos objectifs.</p></li>
+        <li><span class="st-step-num" aria-hidden="true">2</span><h3>Apprenez à votre rythme</h3><p>Suivez les vidéos, répondez aux quiz et reprenez où vous vous êtes arrêté.</p></li>
+        <li><span class="st-step-num" aria-hidden="true">3</span><h3>Obtenez votre certificat</h3><p>Terminez la formation pour recevoir votre certificat de réussite.</p></li>
+      </ol>
     </div>
   </section>
 
@@ -93,5 +125,13 @@
       </div>
     </section>
   <% } %>
+
+  <section class="st-cta">
+    <div class="container-wide st-cta-inner">
+      <h2>Prêt à vous lancer ?</h2>
+      <p>Accédez dès aujourd'hui aux formations et avancez à votre rythme.</p>
+      <% if (currentUser) { %><a class="btn btn-lg st-cta-btn" href="/catalogue">Découvrir le catalogue</a><% } else { %><a class="btn btn-lg st-cta-btn" href="/inscription">Créer un compte gratuit</a><% } %>
+    </div>
+  </section>
 
 <%- include("partials/footer") %>
