@@ -21,7 +21,6 @@
   <% if (typeof dash !== "undefined" && dash) { %><link rel="stylesheet" href="<%= asset('/css/dashboard.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-art.css') %>"><link rel="stylesheet" href="<%= asset('/css/app-rail.css') %>"><% if (dash.seo) { %><link rel="stylesheet" href="<%= asset('/css/seo-workspace.css') %>"><% } %><% } %>
   <% if (!(typeof dash !== "undefined" && dash) && typeof agentIaId === "string" && agentIaId) { %><link rel="stylesheet" href="<%= asset('/css/agent-ia.css') %>"><% } %>
   <link rel="stylesheet" href="<%= asset('/css/kola-soft.css') %>"><%# Soft Surface : surfaces douces à la place des contours (jetons --soft-*), chargée en dernier %>
-  <% if (!(typeof dash !== "undefined" && dash)) { %><link rel="stylesheet" href="<%= asset('/css/kola-stitch.css') %>"><% } %><%# Refonte Stitch : habillage du site public (accueil, catalogue, formation, connexion), chargée après tout le reste %>
 </head>
 <body<%- typeof dash !== "undefined" && dash ? ' class="dash-body"' : "" %>>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="vx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--vx-a)"/><stop offset="1" style="stop-color:var(--vx-b)"/></linearGradient></defs></svg>
@@ -86,8 +85,8 @@
             <a href="/mon-compte" class="btn btn-ghost btn-block">Mon compte</a>
             <form action="/deconnexion" method="post"><button type="submit" class="btn btn-outline btn-block">Déconnexion</button></form>
           <% } else { %>
-            <a href="/connexion" class="btn btn-outline btn-block">Se connecter</a>
-            <a href="/inscription" class="btn btn-primary btn-block">S'inscrire</a>
+            <a href="/connexion" class="btn btn-outline btn-block">Connexion</a>
+            <a href="/inscription" class="btn btn-primary btn-block">Commencer</a>
           <% } %>
         </div><% } %>
       </nav>
@@ -115,8 +114,8 @@
               <button type="submit" class="btn btn-ghost btn-sm">Déconnexion</button>
             </form>
           <% } else { %>
-            <a href="/connexion" class="btn btn-ghost btn-sm">Se connecter</a>
-            <a href="/inscription" class="btn btn-primary btn-sm">S'inscrire</a>
+            <a href="/connexion" class="btn btn-ghost btn-sm">Connexion</a>
+            <a href="/inscription" class="btn btn-primary btn-sm">Commencer</a>
           <% } %>
         </div><% } %>
       </div>
