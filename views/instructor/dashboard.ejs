@@ -83,7 +83,7 @@
  </div>
  <div class="ov-rail">
   <section class="ov-card ov-todo" aria-labelledby="ov-todo">
-    <h2 id="ov-todo">À traiter</h2>
+    <div class="ov-todo-head"><h2 id="ov-todo">À traiter</h2><% if (todo.length) { %><span class="ov-todo-total" aria-label="<%= todo.reduce((a, t) => a + t.n, 0) %> éléments au total"><%= todo.reduce((a, t) => a + t.n, 0) %></span><% } %></div>
     <% if (!todo.length) { %>
       <p class="ov-empty">Rien à traiter pour le moment.</p>
     <% } else { %>
