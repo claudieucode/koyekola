@@ -61,7 +61,7 @@ describe("design v3 : pages publiques, élève, authentification, erreurs, compt
   describe("espace élève", () => {
     test("panier vide : composition centrée (une colonne), icône, appel à l'action ; panier garni : récapitulatif conservé", async () => {
       const empty = await text(student, "/panier");
-      assert.match(empty, /cart-layout cart-layout--empty/); assert.match(empty, /class="kv-empty-ico"[^>]*aria-hidden="true"/); assert.match(empty, /Votre panier est vide/); assert.doesNotMatch(empty, /summary-card/);
+      assert.match(empty, /cart-layout cart-layout--empty/); assert.match(empty, /class="kv-empty-(?:ico|ill)"[^>]*aria-hidden="true"/); assert.match(empty, /Votre panier est vide/); assert.doesNotMatch(empty, /summary-card/);
       await student.post(`/panier/ajouter/${course.id}`, {});
       const full = await text(student, "/panier");
       assert.doesNotMatch(full, /cart-layout--empty/); assert.match(full, /summary-card/); assert.match(full, /Passer la commande/); assert.match(full, /Montage vidéo v3/);

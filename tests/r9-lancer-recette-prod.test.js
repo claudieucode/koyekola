@@ -9,7 +9,9 @@ const assert = require("node:assert/strict");
 const { DatabaseSync } = require("node:sqlite");
 
 const L = path.join(__dirname, "..", "scripts", "r9", "lancer-recette-prod.sh");
-describe("lanceur SSH v2 (faux serveur local)", () => {
+// Le lanceur lit l'outil de recette dans la branche locale « r8-recette-outil » (jamais poussée) : sans elle (CI, nouveau clone), il n'y a rien à tester — ignoré avec la raison, pas échoué.
+const BRANCHE_OUTIL = spawnSync("git", ["-C", path.join(__dirname, ".."), "rev-parse", "--verify", "--quiet", "r8-recette-outil"], { encoding: "utf8" }).status === 0;
+describe("lanceur SSH v2 (faux serveur local)", { skip: BRANCHE_OUTIL ? false : "branche locale r8-recette-outil absente (outil de recette non versionné sur main)" }, () => {
   let dir, home, srvHome, bin, live, writer;
   const listing = (d) => fs.readdirSync(d).sort().join(",");
   const run = (args, env = {}) => spawnSync("bash", [L, ...args], { encoding: "utf8", env: { PATH: `${bin}:${path.dirname(process.execPath)}:/usr/bin:/bin`, HOME: home, FAKE_SERVER_HOME: srvHome, TMPDIR: dir, ...env } });
