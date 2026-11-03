@@ -192,7 +192,7 @@ describe("migration 081 sur des données existantes, double confirmation et cons
       db.exec("INSERT INTO mk_consents (organization_id, contact_id, source, text_shown, action, form_id) VALUES (1, 1, 'form', 'Texte de preuve', 'granted', 1)");
       const before = { f: rows(db, "SELECT * FROM mk_forms"), c: rows(db, "SELECT * FROM mk_consents") };
       assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied.filter((v) => v === "081"), ["081"]);
-      const strip = (r) => r.map(({ site_id, ...rest }) => rest);
+      const strip = (r) => r.map(({ site_id, notify_email, ...rest }) => rest); // notify_email : colonne ajoutée plus tard par la migration 126 (défaut vide), sans effet sur les données existantes
       assert.deepEqual({ f: strip(rows(db, "SELECT * FROM mk_forms")), c: strip(rows(db, "SELECT * FROM mk_consents")) }, { f: strip(before.f), c: strip(before.c) });
       assert.deepEqual([rows(db, "SELECT site_id FROM mk_forms")[0].site_id, rows(db, "SELECT site_id FROM mk_consents")[0].site_id], [null, null]);
       assert.deepEqual(migrate(db, { dir: MIGRATIONS, dbPath: ":memory:", log: quiet }).applied, [], "rejouée : rien à appliquer");

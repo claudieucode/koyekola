@@ -53,7 +53,7 @@ html[data-kola-theme="dark"] .kx-steps li { background: rgba(76, 163, 230, 0.16)
 .mk-body .kx-site-body { display: block; min-width: 0; flex: 1 1 auto; }
 @media (max-width: 560px) { .mk-body .kx-site-thumb { width: 84px; } }
 /* Volet sombre : l'illustration repose sur une tuile claire (le marine des scènes s'y lit) et reste dans la couleur d'action de la charte */
-.kv-auth-aside .kv-auth-art { padding: 14px 16px 6px; border-radius: 20px; background: #eaf3fa; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22); }
+.kv-auth-aside .kv-auth-art { padding: 14px 16px 6px; border-radius: 20px; background: #eaf3fa; box-shadow: 0 10px 28px rgba(11, 42, 64, 0.22); }
 .kv-auth-aside .kv-auth-art .kx-art { --a-blue: #0277b6; --a-sky: #7dd3fc; --a-ice: #e3f1fb; }
 .kv-auth-aside .kv-auth-art .kx-art .blue { fill: var(--a-blue); }
 /* Carte de formation sans vignette : la scène remplit la zone d'image (le conteneur garde son format) */

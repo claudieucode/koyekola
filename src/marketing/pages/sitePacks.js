@@ -2,7 +2,7 @@
 // d'un menu qui les relie et d'un style de départ (une palette lisible AA + deux polices du moteur). Un pack ne contient aucun HTML figé, aucune capture d'écran, aucun faux chiffre ni faux témoignage :
 // les textes de départ disent quoi écrire (« [chiffre réel] »), comme tous les gabarits. Il ne contient AUCUNE image : les images se choisissent dans la médiathèque du site (aucune image sous licence tierce n'est embarquée).
 // Importer un pack ne touche à aucun contenu existant : il ajoute des pages (nouveaux noms, jamais remplacés), un menu (nouveau nom) et un BROUILLON de styles (jamais publié).
-const PACKS = Object.freeze([
+const BASE_PACKS = ([
   { key: "formation-en-ligne", category: "Formation", name: "Formation en ligne", description: "Vendez une formation : page de vente, programme, tarifs, questions fréquentes, présentation de l'équipe et contact.",
     palette: "marine", fonts: { heading: "bricolage", body: "figtree" },
     pages: [{ key: "accueil", name: "Accueil", template: "vente" }, { key: "programme", name: "Programme", template: "formation" }, { key: "tarifs", name: "Tarifs", template: "tarifs" }, { key: "faq", name: "Questions fréquentes", template: "faq" }, { key: "a-propos", name: "À propos", template: "apropos" }, { key: "contact", name: "Contact", template: "contact" }],
@@ -57,4 +57,6 @@ const PACKS = Object.freeze([
     pages: [{ key: "accueil", name: "Accueil", template: "boutique-produits-accueil" }, { key: "catalogue", name: "Catalogue", template: "boutique-catalogue" }, { key: "livraison", name: "Livraison et retours", template: "boutique-livraison" }, { key: "faq", name: "Questions fréquentes", template: "faq" }, { key: "contact", name: "Contact", template: "contact" }],
     menu: ["accueil", "catalogue", "livraison", "faq", "contact"] },
 ]);
+// Programme 100 : packs de site supplémentaires (src/marketing/pages/lib100/packs.js), composés de gabarits de page existants.
+const PACKS = Object.freeze([...BASE_PACKS, ...require("./lib100/packs").entries()]);
 module.exports = { PACKS };

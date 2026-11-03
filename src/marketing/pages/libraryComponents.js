@@ -30,6 +30,9 @@ const COMPONENTS = [
   { key: "barre-boutique", role: "component", category: "Boutique", name: "Barre de boutique (recherche et panier)", description: "Recherche de produits et lien vers le panier, branchés sur la boutique du site (module « Commerce » requis).",
     build: () => bar([{ type: "group", children: [{ type: "shopsearch", props: {} }, { type: "shopcart", props: {} }], styles: { desktop: row } }]) },
 ];
+// Programme 100 : composants supplémentaires (src/marketing/pages/lib100/components.js).
+COMPONENTS.push(...require("./lib100/components").entries({ H, T, B, I, card, cols, grid, row, bar, nav }));
+for (const c of COMPONENTS) c.build = require("./lib100/fixes").wrap(c.build);
 void grid;
 const catalog = () => COMPONENTS.map(({ key, role, category, name, description }) => ({ key, role, category, name, description }));
 const buildComponent = (key) => { const c = COMPONENTS.find((x) => x.key === key); return c ? JSON.parse(JSON.stringify(c.build())) : null; };

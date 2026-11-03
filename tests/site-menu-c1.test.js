@@ -47,7 +47,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const main = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     assert.ok(site.length >= 13 && main.length >= 13); // 13 groupes depuis que « Navigation » est devenu Apparence → Menus
     const strip = (labels) => labels.filter((l) => !["Modules", "Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
-    assert.deepEqual(flatLabels(site), strip(flatLabels(main)));
+    assert.deepEqual(flatLabels(site).filter((l) => l !== "Theme Builder"), strip(flatLabels(main))); // Theme Builder : entrée propre à un site créé (siteOnly), absente du principal
   });
   test("les groupes Utilisateurs, Outils et Paramètres s'affichent sous LEUR titre, avec leurs sous-entrées (plus d'« Équipe du site », de « Réglages du site » en titre)", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
@@ -72,6 +72,8 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
       if (/\/articles\/ajouter(?:[?#]|$)/.test(h)) { assert.equal(r.status, 302, h); assert.match(r.location, /^\/formateur\/blog\/nouveau/); continue; } // ARTICLES-02 : ouvre l'éditeur
       // PERSONNALISER : écran plein cadre (aperçu du site), hors cadre du site ; il ouvre le site du menu et lui seul
       if (/\/personnaliser\?site=\d+$/.test(h)) { assert.equal(r.status, 200, h); assert.equal(h, `/marketing/site-web/personnaliser?site=${A}`); assert.match(r.text, /"siteName":"Site Alpha"/, h); continue; }
+      // THEME BUILDER : centre de contrôle plein écran (sa propre coque), ouvert pour CE site seulement
+      if (/\/sites\/\d+\/constructeur-de-theme$/.test(h)) { assert.equal(r.status, 200, h); assert.ok(h.includes(`/sites/${A}/`), h); continue; }
       assert.equal(r.status, 200, h);
       assert.match(r.text, /mk-site-banner-name">Site Alpha</, `${h} : bandeau du site`);
       assert.ok(navHtml(r.text).includes("Marketing du site"), `${h} : menu du site (${r.status} ${h})`);
@@ -101,7 +103,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const entries = m.flatMap((g) => g.entrees);
     assert.equal(entries.length, 79 + 4 + 4 + 10); // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; /* « Composants » masqué du menu affiché */ // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
-    for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(entries.some((e) => e.href === reg.href), reg.href);
+    for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash" && !i.siteOnly)) assert.ok(entries.some((e) => e.href === reg.href), reg.href);
     assert.ok(entries.some((e) => e.href === `${PR}/tableau-de-bord`));
   });
 });

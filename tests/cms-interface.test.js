@@ -22,11 +22,12 @@ describe("registre et menu", () => {
   test("le registre couvre la structure cible (14 rubriques : « Navigation » est devenu Apparence → Menus) sans adresse en double", () => {
     assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
-    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Thèmes", "Éditeur de fichiers", "Personnaliser", "Éditeur du site", "Templates", "Patterns", "Styles", "Polices", "En-tête", "Pied de page", "Widgets", "Menus"]);
+    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Theme Builder", "Thèmes", "Éditeur de fichiers", "Personnaliser", "Éditeur du site", "Templates", "Patterns", "Styles", "Polices", "En-tête", "Pied de page", "Widgets", "Menus"]);
   });
 
   test("chaque écran du registre répond 200 dans la coque CMS, avec son menu ouvert sur la bonne entrée", async () => {
     for (const item of cmsNav.ALL) {
+      if (item.siteOnly) continue; // Theme Builder : propre à un site créé, absent du site principal (testé dans theme-builder-routes)
       // « Mes sites » (liste globale) est une destination du menu Marketing : elle n'a plus de coque CMS (voir « Sites et Tests A/B »)
       if (item.key === "sites") { assert.equal((await boss.get(item.href)).status, 200, item.href); continue; }
       const res = await boss.get(item.href);

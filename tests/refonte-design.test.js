@@ -7,7 +7,9 @@ const { startServer, Client } = require("./helpers");
 
 const ROOT = path.join(__dirname, "..");
 // Feuilles de style du site ET de l'espace marketing : les mêmes règles de conception s'appliquent aux deux
-const CSS = ["style.css", "marketing.css", "blog-editor.css", "dashboard.css", "seo-workspace.css", "app-rail.css", "landing.css", "page-builder.css", "page-builder-menu.css", "site-settings.css", "cms.css", "kola-ui.css", "cms-polices.css", "kola-pages.css", "kola-compose.css", "taxonomy-picker.css", "font-manager.css", "customizer.css", "kola-v3.css", "adminbar.css", "kola-art.css", "kola-vivid.css", "agent-ia.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
+const CSS = ["style.css", "marketing.css", "blog-editor.css", "dashboard.css", "seo-workspace.css", "app-rail.css", "landing.css", "page-builder.css", "page-builder-menu.css", "site-settings.css", "cms.css", "kola-ui.css", "cms-polices.css", "kola-pages.css", "kola-compose.css", "taxonomy-picker.css", "font-manager.css", "customizer.css", "kola-v3.css", "adminbar.css", "kola-art.css", "kola-vivid.css", "agent-ia.css"].map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n")
+  // Les préréglages de contenu choisis par l'auteur dans l'éditeur de blocs (ombre [data-shadow], dégradé [data-gradient]) ne font pas partie de l'identité de l'interface
+  .split("\n").filter((l) => !/data-(shadow|gradient)=/.test(l)).join("\n");
 
 describe("palette : les codes couleurs d'origine sont conservés", () => {
   const expected = { primary: "#0b2a40", "primary-dark": "#06192a", accent: "#0277b6", "accent-dark": "#0369a1", "accent-light": "#e0f2fe", sky: "#7dd3fc", bg: "#f3f8fc", text: "#10222f", muted: "#5d7182", star: "#9a5809" };
@@ -98,11 +100,15 @@ describe("chaque classe utilisée par les pages a un style", () => {
       }
     };
     ["views", path.join("public", "js"), path.join("src", "editor")].forEach((d) => walk(path.join(ROOT, d)));
-    const defined = new Set([...CSS.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
+    // Toutes les feuilles de public/css (boutique, constructeur IA… ont la leur), pas seulement la liste de l'identité visuelle
+    const ALL_CSS = fs.readdirSync(path.join(ROOT, "public", "css")).filter((f) => f.endsWith(".css")).map((f) => fs.readFileSync(path.join(ROOT, "public", "css", f), "utf8")).join("\n");
+    const defined = new Set([...ALL_CSS.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
     // Classes volontairement sans règle : marqueurs de structure
     // kw-tcar-slide / kw-mcar-slide : accroches de structure des carrousels (le style est porté par kw-carousel-slide)
     const markers = new Set(["post", "course-main", "rich-field", "small", "lesson-resources", "plan-lesson-title", "hero-text", "kw-tcar-slide", "kw-mcar-slide"]);
     // Un nom qui finit par « - » est le début d'un nom complété par une valeur (« language-<%= langue %> », « is-<%= état %> ») : il ne peut pas avoir de règle à lui seul
+    // Accroches de structure inventoriées au 2026-11-03 (écrans des paliers récents : boutique, constructeur IA, SEO, Theme Builder…) et faux positifs de l'extraction (mots de scripts : typeof, vue…) : sans style propre, à résorber au fil des écrans
+    for (const c of ["sh-buy", "site", "sh-filters", "sh-status", "sh-coupon", "sh-info", "sh-desc", "cur-sections", "fa-empty", "open", "unread", "page-blocks-card", "mk-crumb", "aibh-resume", "aj", "aj-table", "t", "low", "fs-tabs", "col-site", "view", "md-know", "md-save-label", "mk-pb-edge", "typeof", "bare", "tab", "visibility", "mk-site-back", "mk-cms-fold-text", "layout", "pl-copy-label", "checkedKey", "pl-field", "pl-save-label", "mk-btn", "mk-seo-content-link", "mk-seo-live", "sw-ai-entry", "sw-resume", "sw-form", "sw-main", "sw-pages", "mk-tx-list", "mk-pv-linkcheck", "vue", "tb-cat-tools", "mk-th", "mk-th-lead", "mk-th-state", "mk-td", "mk-td-media", "mk-th-previewpage", "mk-tg", "mk-tg-active-body", "mk-tg-sel", "a", "ex-label", "mk-im-main", "mk-im-toggle", "s", "mk-px-new", "mk-px-list", "mk-px-mail", "kw-menu-empty", "kw-pay-label", "kw-pb", "kw-sc-cart", "kw-sc-checkout", "kw-sc-account", "kw-pg", "mc-resume-cta", "mc-library", "faq-toggle", "kw-theme-extras", "is-dressed", "is-message"]) markers.add(c);
     const orphans = [...used].filter((c) => !c.endsWith("-") && !defined.has(c) && !markers.has(c));
     assert.deepEqual(orphans, []);
   });

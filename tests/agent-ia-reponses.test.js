@@ -27,7 +27,8 @@ function ask(question, timeoutMs = 45000) {
 
 let SKIP = false;
 describe("Assistant IA : réponses de l'agent réel", () => {
-  before(async () => { try { await ask("Bonjour", 20000); } catch (e) { SKIP = `ElevenLabs injoignable (${e.message}) : réponses non vérifiées`; } });
+  // Réponses d'un modèle externe, non déterministes : elles ne conditionnent pas la CI (déploiement) ; à lancer à la demande avec RUN_EXTERNAL_TESTS=1
+  before(async () => { if (process.env.CI && !process.env.RUN_EXTERNAL_TESTS) { SKIP = "CI : agent externe non déterministe (RUN_EXTERNAL_TESTS=1 pour le vérifier)"; return; } try { await ask("Bonjour", 20000); } catch (e) { SKIP = `ElevenLabs injoignable (${e.message}) : réponses non vérifiées`; } });
 
   const KNOWN = [
     ["Combien coûte la formation Figma ?", /24,99/],

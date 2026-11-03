@@ -57,7 +57,7 @@ const PATTERNS = [
       ? [{ type: "iconlist", props: { items: [{ text: "[Adresse complète]", icon: "mapPin" }, { text: "[Téléphone]", icon: "smartphone" }, { text: "[Adresse e-mail]", icon: "mail" }] } }]
       : [card([H("[Comment venir ?]", "3"), T("<p>[Transports, parking, repères utiles, accessibilité.]</p>")])]))])] },
   { key: "hours", category: "Contact", label: "Horaires d'ouverture", build: () => [section([H("[Horaires d'ouverture]", "2", { textAlign: "center" }),
-    { type: "table", props: { header: true, rows: [["Jour", "Horaires"], ["[Lundi – Vendredi]", "[Horaires réels]"], ["[Samedi]", "[Horaires réels]"], ["[Dimanche]", "[Horaires réels ou fermé]"]] } }], { maxWidth: "720px" })] },
+    ...["[Lundi – Vendredi]", "[Samedi]", "[Dimanche]"].flatMap((d, i) => [{ type: "group", children: [T(`<p>${d}</p>`, { fontWeight: "600" }), T(`<p>${i === 2 ? "[Horaires réels ou fermé]" : "[Horaires réels]"}</p>`)], styles: { desktop: { display: "flex", flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" } } }, { type: "divider", props: {} }])], { maxWidth: "720px" })] },
   { key: "menu-carte", category: "Restauration", label: "Carte du restaurant (3 rubriques)", build: () => [section([H("[Notre carte]", "2", { textAlign: "center" }),
     cols(3, (i) => [H(["[Entrées]", "[Plats]", "[Desserts]"][i], "3"), { type: "pricelist", props: { items: [1, 2, 3].map((n) => ({ title: "[Nom du plat " + n + "]", price: "[Prix]", text: "[Description courte, allergènes si nécessaire.]" })) } }])])] },
   { key: "listings", category: "Immobilier", label: "Biens à la une (3 cartes)", build: () => [section([H("[Nos biens à la une]", "2", { textAlign: "center" }),
@@ -84,4 +84,7 @@ function catalog(ctx) {
   return PATTERNS.filter((p) => p.requires !== "courses" || hasCourses).map((p) => ({ key: p.key, category: p.category, label: p.label, sections: p.build(ctx) }));
 }
 
+// Programme 100 : sections supplémentaires (src/marketing/pages/lib100/sections.js), mêmes éléments natifs et mêmes règles que ci-dessus.
+PATTERNS.push(...require("./lib100/sections").entries({ H, T, B, I, card, section, cols, grid, listCourses }));
+for (const p of PATTERNS) p.build = require("./lib100/fixes").wrap(p.build);
 module.exports = { PATTERNS, catalog, helpers: { H, T, B, I, card, section, cols, grid } };

@@ -50,10 +50,10 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
     assert.equal(await page.locator(".mk-pt-card").count(), Math.min(12, PACKS.length)); // 12 par page (pagination côté serveur)
     await page.waitForFunction(() => { const f = document.querySelector(".mk-pt-thumb iframe"); try { return f.contentDocument && f.contentDocument.body && /lp-main/.test(f.contentDocument.body.innerHTML); } catch { return false; } });
     assert.match(await page.locator(".mk-pt-thumb iframe").first().evaluate((f) => f.contentDocument.body.getAttribute("style")), /--kw-primary:#8a1c3a/, "vignette rendue avec les styles du site");
-    assert.match(await card(page, "Formation en ligne").innerText(), /6 pages/);
+    await find(page, "Formation en ligne"); assert.match(await card(page, "Formation en ligne").innerText(), /6 pages/);
     // La recherche et les filtres interrogent le serveur (catalogue.json) : on attend le résultat au lieu de compter tout de suite
     const cards = (n) => page.waitForFunction((k) => document.querySelectorAll(".mk-pt-card").length === k && document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false", n);
-    await page.fill("[data-tp-search]", "webinaire"); await cards(1); await page.fill("[data-tp-search]", ""); await cards(Math.min(12, PACKS.length));
+    await page.fill("[data-tp-search]", "Cycle de webinaires"); await cards(1); await page.fill("[data-tp-search]", ""); await cards(Math.min(12, PACKS.length));
     await page.selectOption("[data-tp-cat]", "Produit"); await cards(1); await page.selectOption("[data-tp-cat]", "");  await cards(Math.min(12, PACKS.length));
     await tab(page, "page"); await cards(12); await page.click("[data-tp-more]"); await page.waitForFunction(() => document.querySelectorAll(".mk-pt-card").length >= 24); assert.ok((await page.locator(".mk-pt-card").count()) >= 20);
     await tab(page, "mine"); assert.deepEqual(await page.locator(".mk-pt-card h3").allTextContents(), ["Modèle de A"]);
@@ -62,7 +62,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
 
   test("aperçu d'un pack : une page à la fois (onglets), contenu réel du modèle, appareils ; Échap ferme ; rien n'est créé", async () => {
     const before = pagesA(), page = await open(); await edit(page);
-    await card(page, "Formation en ligne").getByRole("button", { name: /Aperçu de/ }).click();
+    await find(page, "Formation en ligne"); await card(page, "Formation en ligne").getByRole("button", { name: /Aperçu de/ }).click();
     const dlg = page.locator("[data-tp-dlg-preview]"); await dlg.waitFor();
     assert.equal(await page.locator("[data-tp-prev-tabs] button").count(), 6);
     await page.waitForFunction(() => { const f = document.querySelector("[data-tp-prev-frame]"); try { return f.contentDocument.body.innerText.length > 50; } catch { return false; } });
@@ -75,7 +75,7 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
 
   test("importer un pack avec menu et brouillon de styles : fenêtre explicite, résultat réel (pages, menu, styles) avec liens ; DOUBLE CLIC : un seul import ; rien n'est publié", async () => {
     const page = await open(); await edit(page);
-    await card(page, "Formation en ligne").getByRole("button", { name: /Utiliser ce modèle : Formation en ligne/ }).click();
+    await find(page, "Formation en ligne"); await card(page, "Formation en ligne").getByRole("button", { name: /Utiliser ce modèle : Formation en ligne/ }).click();
     const dlg = page.locator("[data-tp-dlg-import]"); await dlg.waitFor();
     assert.equal(await page.locator("[data-tp-imp-list] li").count(), 6); assert.equal(await page.locator("[data-tp-imp-warn]").isHidden(), true);
     await page.locator("[data-tp-imp-menu]").check(); await page.locator("[data-tp-imp-styles]").check();
@@ -89,14 +89,14 @@ describe("templates (navigateur)", { skip: SKIP }, () => {
     assert.equal(JSON.parse(one("SELECT changes FROM cms_customizer_drafts WHERE site_id = ?", A).changes)["tokens.colors.primary"], "#0b2a40");
     assert.equal(one("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id = ? AND published_at IS NOT NULL", A).n, 0, "rien n'est publié");
     await page.keyboard.press("Escape"); await dlg.waitFor({ state: "hidden" });
-    assert.match(await card(page, "Formation en ligne").innerText(), /Déjà importé le/);
+    await find(page, "Formation en ligne"); assert.match(await card(page, "Formation en ligne").innerText(), /Déjà importé le/);
     await tab(page, "hist"); assert.match(await page.locator("[data-tp-history-list]").innerText(), /Formation en ligne — 6 pages \+ menu \+ brouillon de styles/);
   });
 
   test("réimporter le même pack : avertissement clair « de NOUVELLES pages », pages numérotées, anciennes pages intactes", async () => {
     const page = await open(); await edit(page);
     const firstIds = db.prepare("SELECT id FROM mk_landing_pages WHERE site_id = ?").all(A).map((r) => r.id), snap = JSON.stringify(db.prepare("SELECT * FROM mk_landing_pages WHERE site_id = ?").all(A));
-    await card(page, "Formation en ligne").getByRole("button", { name: /Utiliser ce modèle : Formation en ligne/ }).click();
+    await find(page, "Formation en ligne"); await card(page, "Formation en ligne").getByRole("button", { name: /Utiliser ce modèle : Formation en ligne/ }).click();
     assert.match(await page.locator("[data-tp-imp-warn]").innerText(), /déjà été importé.*NOUVELLES pages/);
     await page.locator("[data-tp-imp-ok]").click(); await page.locator("[data-tp-imp-result]:not([hidden])").waitFor();
     const names = await page.locator("[data-tp-imp-result] a[href$='/editeur']").allTextContents(); assert.ok(names.every((n) => /\(\d+\)/.test(n)), names.join(" | "));

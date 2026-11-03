@@ -67,7 +67,7 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
   test("miniatures différées : seules les cartes visibles demandent leur miniature, le défilement charge les autres", async () => {
     const { context, page } = await open(); const asked = new Set();
     page.on("request", (r) => { const m = r.url().match(/modeles\/(\d+)\/(?:miniature|vignette)/); if (m) asked.add(m[1]); });
-    await page.goto(url(siteA)); await page.waitForSelector(".tb-card"); await page.waitForFunction(() => document.querySelectorAll('.tb-thumb[data-state="ok"]').length >= 3);
+    await page.goto(url(siteA)); await page.waitForSelector("#tb-cards .tb-card"); await page.waitForFunction(() => document.querySelectorAll('.tb-thumb[data-state="ok"]').length >= 3);
     await page.waitForTimeout(400);
     const first = asked.size; assert.ok(first > 0 && first < N, `demandées au premier affichage : ${first} sur ${N}`);
     for (let y = 0; y < 12; y += 1) { await page.evaluate((k) => { const m = document.querySelector(".tb-main"); m.scrollTop = k * 500; }, y); await page.waitForTimeout(120); }
@@ -79,8 +79,8 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
 
   test("grille et liste : bascule instantanée, mêmes données et actions, choix conservé à la navigation et après rechargement ; raccourci v", async () => {
     const { context, page } = await open();
-    await page.goto(url(siteA)); await page.waitForSelector(".tb-card");
-    assert.equal(await page.locator("#tb-cards").getAttribute("data-view"), "grid"); assert.equal(await page.locator("article.tb-card").count(), N);
+    await page.goto(url(siteA)); await page.waitForSelector("#tb-cards .tb-card");
+    assert.equal(await page.locator("#tb-cards").getAttribute("data-view"), "grid"); assert.equal(await page.locator("#tb-cards article.tb-card").count(), N);
     await page.click("#tb-v-list"); await page.waitForSelector("table.tb-table");
     assert.equal(await page.locator("#tb-v-list").getAttribute("aria-pressed"), "true"); assert.equal(await page.locator("tr.tb-card").count(), N);
     const heads = await page.locator("table.tb-table th").allInnerTexts(); assert.deepEqual(heads.map((h) => h.toLowerCase()), ["modèle", "type", "état", "s'affiche", "modifié", "actions"]);
@@ -89,7 +89,7 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
     await page.click('#tb-types button:has-text("En-tête")'); await page.waitForFunction(() => document.getElementById("tb-title").textContent === "En-tête");
     assert.equal(await page.locator("#tb-cards").getAttribute("data-view"), "list", "le mode survit à la navigation");
     await page.reload(); await page.waitForSelector("tr.tb-card"); assert.equal(await page.locator("#tb-v-list").getAttribute("aria-pressed"), "true", "le mode survit au rechargement");
-    await page.keyboard.press("v"); await page.waitForSelector("article.tb-card"); assert.equal(await page.locator("#tb-v-grid").getAttribute("aria-pressed"), "true");
+    await page.keyboard.press("v"); await page.waitForSelector("#tb-cards article.tb-card"); assert.equal(await page.locator("#tb-v-grid").getAttribute("aria-pressed"), "true");
     // la même page en liste sur téléphone : fiches empilées, pas de défilement horizontal
     await page.setViewportSize({ width: 390, height: 800 }); await page.click("#tb-v-list"); await page.waitForSelector("tr.tb-card");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), true);
@@ -98,11 +98,11 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
 
   test("retour : bouton réel (catégorie → toutes les parties), historique du navigateur, adresse partageable, garde contre la perte de saisie", async () => {
     const { context, page } = await open();
-    await page.goto(url(siteA)); await page.waitForSelector(".tb-card");
+    await page.goto(url(siteA)); await page.waitForSelector("#tb-cards .tb-card");
     assert.equal(await page.locator("#tb-back").isHidden(), true, "pas de retour à la racine");
     await page.click('#tb-types button:has-text("En-tête")'); await page.waitForFunction(() => document.getElementById("tb-title").textContent === "En-tête");
     assert.match(page.url(), /\?type=header/); assert.equal(await page.locator("#tb-back").isVisible(), true);
-    await page.fill("#tb-q", "Modèle 04"); await page.waitForFunction(() => document.querySelectorAll(".tb-card").length === 1); assert.match(page.url(), /q=Mod/);
+    await page.fill("#tb-q", "Modèle 04"); await page.waitForFunction(() => document.querySelectorAll("#tb-cards .tb-card").length === 1); assert.match(page.url(), /q=Mod/);
     await page.click("#tb-back");
     await page.waitForFunction(() => document.getElementById("tb-title").textContent.startsWith("Personnalisez"));
     assert.doesNotMatch(page.url(), /type=/, "retour à la vue précédente");
@@ -111,7 +111,7 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
     await page.goto(url(siteA, "?type=single_page")); await page.waitForFunction(() => document.getElementById("tb-title").textContent === "Page individuelle"); // adresse copiée = même vue
     // garde : conditions modifiées puis tentative de navigation par Précédent → confirmation, refus = on reste
     const asked = []; page.on("dialog", (d) => { asked.push(d.message()); d.dismiss(); });
-    await page.locator(".tb-card").first().getByText("Conditions").click(); await page.waitForSelector("#tb-dlg-cond[open]");
+    await page.locator("#tb-cards .tb-card").first().getByText("Conditions").click(); await page.waitForSelector("#tb-dlg-cond[open]");
     await page.click("#tb-add-inc"); await page.keyboard.press("Escape");
     await page.waitForTimeout(200); assert.equal(await page.locator("#tb-dlg-cond").evaluate((d) => d.open), true, "Échap refusé : la fenêtre modifiée reste ouverte");
     assert.ok(asked.some((m) => /pas enregistrées/.test(m)), "confirmation demandée");
@@ -123,8 +123,8 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
   test("aperçu réel : le modèle enregistré s'affiche dans une vue dédiée, 3 largeurs d'appareil, retour à la liste ; page d'exemple pour un composant", async () => {
     const { context, page } = await open();
     await boss.request("/marketing/pages", { method: "POST", form: { name: "Accueil Alpha", site_id: siteA, kind: "page" } });
-    await page.goto(url(siteA, "?type=header")); await page.waitForSelector(".tb-card");
-    await page.locator(".tb-card").first().getByRole("button", { name: /Aperçu de/ }).click(); await page.waitForSelector("#tb-prev[open]");
+    await page.goto(url(siteA, "?type=header")); await page.waitForSelector("#tb-cards .tb-card");
+    await page.locator("#tb-cards .tb-card").first().getByRole("button", { name: /Aperçu de/ }).click(); await page.waitForSelector("#tb-prev[open]");
     assert.match(await page.locator("#tb-prev-h").innerText(), /Aperçu — Modèle/);
     await page.waitForFunction(() => document.getElementById("tb-prev-load").hidden, null, { timeout: 30000 });
     const src = await page.locator("#tb-prev-frame").getAttribute("src"); assert.match(src, /\/marketing\/site-web\/composants\/\d+\/apercu/);
@@ -136,8 +136,8 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
     await page.keyboard.press("Escape"); await page.waitForFunction(() => !document.getElementById("tb-prev").open);
     assert.equal(await page.locator("#tb-prev-frame").getAttribute("src"), null, "l'aperçu libère la page chargée");
     // modèle de type page : aperçu direct de la page enregistrée
-    await page.goto(url(siteA, "?type=single_page")); await page.waitForSelector(".tb-card");
-    await page.locator(".tb-card").first().getByRole("button", { name: /Aperçu de/ }).click(); await page.waitForSelector("#tb-prev[open]");
+    await page.goto(url(siteA, "?type=single_page")); await page.waitForSelector("#tb-cards .tb-card");
+    await page.locator("#tb-cards .tb-card").first().getByRole("button", { name: /Aperçu de/ }).click(); await page.waitForSelector("#tb-prev[open]");
     assert.match(await page.locator("#tb-prev-frame").getAttribute("src"), /\/marketing\/pages\/\d+\/apercu/); assert.equal(await page.locator("#tb-prev-pagew").isHidden(), true);
     await page.click("#tb-prev-back"); await page.waitForFunction(() => !document.getElementById("tb-prev").open);
     assert.deepEqual(errors, []); await context.close();
@@ -145,12 +145,12 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
 
   test("raccourcis et mouvement réduit : / cherche, n crée, Échap efface ; aucune animation avec prefers-reduced-motion", async () => {
     const { context, page } = await open({ reducedMotion: "reduce" });
-    await page.goto(url(siteA)); await page.waitForSelector(".tb-card");
+    await page.goto(url(siteA)); await page.waitForSelector("#tb-cards .tb-card");
     await page.keyboard.press("/"); assert.equal(await page.evaluate(() => document.activeElement.id), "tb-q");
     await page.keyboard.type("zzz"); await page.waitForSelector("#tb-cards .tb-empty"); assert.match(await page.locator("#tb-cards").innerText(), /Aucun modèle ne correspond/);
-    await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelectorAll(".tb-card").length > 0);
+    await page.keyboard.press("Escape"); await page.waitForFunction(() => document.querySelectorAll("#tb-cards .tb-card").length > 0);
     await page.locator("body").click({ position: { x: 5, y: 300 } }); await page.keyboard.press("n"); await page.waitForSelector("#tb-dlg-new[open]"); await page.keyboard.press("Escape");
-    const an = await page.evaluate(() => { const c = document.querySelector(".tb-card"); const s = getComputedStyle(c); return { anim: s.animationName, dur: s.animationDuration, opacity: s.opacity, tr: getComputedStyle(document.querySelector(".tb-side button")).transitionDuration }; });
+    const an = await page.evaluate(() => { const c = document.querySelector("#tb-cards .tb-card"); const s = getComputedStyle(c); return { anim: s.animationName, dur: s.animationDuration, opacity: s.opacity, tr: getComputedStyle(document.querySelector(".tb-side button")).transitionDuration }; });
     assert.equal(an.anim, "none"); assert.equal(an.opacity, "1"); assert.match(an.tr, /^0s/);
     assert.deepEqual(errors, []); await context.close();
   });

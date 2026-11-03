@@ -118,7 +118,7 @@ describe("site (vrai serveur)", () => {
     db.prepare("UPDATE mk_landing_pages SET status = 'published', sections = ? WHERE id = ?").run(JSON.stringify(sections.filter((s) => s.type !== "form")), pid);
     const slug = db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(pid).slug;
     const html = (await new Client(srv.base).get(`/p/${slug}`, { headers: { "User-Agent": UA } })).text;
-    assert.match(html, new RegExp(`data-sid="${sections[0].id}" data-stype="hero"`));
+    assert.match(html, new RegExp(`data-sid="${sections[0].id}" data-stype="${sections[0].type}"`)); // première section du modèle, quel qu'il soit
     assert.match(html, /id="kw-consent"/);
     const id = db.prepare("SELECT id FROM mk_forms WHERE name = 'Lettre'").get().id;
     await boss.post(`/marketing/formulaires/${id}`, { name: "Lettre", consentText: "Oui, je veux la lettre KOLAKISA.", popupEnabled: "1", tags: "", redirectUrl: "", rulesShown: "1", "rules[visitors]": "returning" });

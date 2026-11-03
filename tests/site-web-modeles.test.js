@@ -7,11 +7,12 @@ const pages = require("../src/marketing/pages");
 const { TEMPLATES, catalog } = require("../src/marketing/pages/templates");
 const { startServer, loginInstructor, createCourse } = require("./helpers");
 
-test("42 gabarits (les 23 historiques + 19 par secteur et pour la boutique) ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
+test("la bibliothèque de gabarits (les 42 d'origine toujours présents, 100 au total) ; chaque gabarit donne une page valide, à identifiants de section uniques, sans faux chiffres", () => {
   const { A } = freshMarketing();
   // 23 gabarits depuis fe11a8d (FAQ, tarifs, témoignages, 404 ajoutés par l'autre session) : attente mise à jour, code applicatif inchangé
   // Programme 20.4 : 19 gabarits par secteur ajoutés À LA SUITE (agence, portfolio, restaurant, immobilier, blog, boutique de formations, association, boutique en ligne) ; les 23 premiers et leur ordre sont inchangés
-  assert.equal(TEMPLATES.length, 42);
+  const ORIGINAUX = 42; // 23 historiques + 19 par secteur : leurs clés et leur ordre sont conservés
+  assert.ok(TEMPLATES.length >= ORIGINAUX); assert.equal(TEMPLATES.length, catalog().length);
   assert.deepEqual(catalog().slice(0, 23).map((t) => t.category), ["Génération de prospects", "Vente", "Webinaire", "Formation", "Produit", "Service", "Newsletter", "Téléchargement", "Lancement", "Bientôt disponible", "Inscription", "Consultation", "Remerciement", "Événement", "À propos", "Contact", "Portfolio", "Logiciel (SaaS)", "Aide", "Tarifs", "Preuve sociale", "Erreur", "Entreprise"]);
   for (const t of TEMPLATES) {
     const p = pages.createPage(A, { name: `Page ${t.key}`, template: t.key });

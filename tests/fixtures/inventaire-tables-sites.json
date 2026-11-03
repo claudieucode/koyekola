@@ -692,6 +692,14 @@
    "siteId": false,
    "classe": "a-decider"
   },
+  "mk_tb_templates": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_tb_versions": {
+   "siteId": false,
+   "classe": "plateforme"
+  },
   "mk_template_versions": {
    "siteId": false,
    "classe": "plateforme"

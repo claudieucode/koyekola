@@ -83,9 +83,12 @@ const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => ["header", 
 
 // page : ligne de page ({ id, site_id }) → { header: id de composant | undefined, footer: … } ; undefined = aucun modèle ne s'applique (repli historique)
 function partsFor(ctx, page) {
-  const out = { header: undefined, footer: undefined, meta: {} };
+  const out = { header: undefined, footer: undefined, meta: {}, managed: { header: false, footer: false } };
   try {
     if (!page || !page.site_id) return out;
+    // Dès qu'un modèle PUBLIÉ de ce type existe sur le site, le Theme Builder est l'unique source de vérité de la partie : aucun ancien réglage ne la remplace en silence
+    const pool = published(ctx, page.site_id);
+    out.managed.header = pool.some((t) => t.type === "header"); out.managed.footer = pool.some((t) => t.type === "footer");
     const view = homeOf(ctx, page.site_id) === page.id ? "front" : "page";
     const w = resolveParts(ctx, page.site_id, { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [] });
     if (w.header) { out.header = w.header.sourceId; out.meta.header = { id: w.header.id, name: w.header.name }; }
