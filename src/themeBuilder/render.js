@@ -55,8 +55,31 @@ function resolveParts(ctx, siteId, c) {
   for (const type of ["header", "footer"]) { const w = Res.resolve(pool, c, { type }).winner; if (w && w.sourceKind === "component") out[type] = w; }
   return out;
 }
+// Barre latérale (un seul modèle : le plus précis) et modèles personnalisés (TOUS ceux dont les conditions correspondent, du plus précis au moins précis), applicables à un contexte.
+// Les deux s'affichent sous le contenu de la page, avant le pied de page (themeLayout → footer.ejs). Renvoie { sidebar: modèle|null, custom: [modèles] }.
+function resolveExtras(ctx, siteId, c) {
+  const out = { sidebar: null, custom: [] };
+  const pool = published(ctx, siteId);
+  if (!pool.length) return out;
+  const side = Res.resolve(pool, c, { type: "sidebar" }).winner;
+  if (side && side.sourceKind === "component") out.sidebar = side;
+  const r = Res.resolve(pool, c, { type: "custom" });
+  const byId = new Map(pool.map((t) => [t.id, t]));
+  out.custom = r.candidates.map((x) => byId.get(x.id)).filter((t) => t && t.sourceKind === "page");
+  return out;
+}
+// Pages du Page Builder (accueil, pages libres) : mêmes extras, vue « accueil » ou « page » comme pour l'en-tête et le pied
+function extrasFor(ctx, page) {
+  try {
+    if (!page || !page.site_id) return { sidebar: null, custom: [] };
+    const view = homeOf(ctx, page.site_id) === page.id ? "front" : "page";
+    return resolveExtras(ctx, page.site_id, { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [] });
+  } catch { return { sidebar: null, custom: [] }; }
+}
+// Ligne de page publiée portée par un modèle de type page (ou null) : même contrôle de site et d'organisation que pickRegion
+const pageRowOf = (ctx, siteId, t) => ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ? AND site_id = ? AND status = 'published' AND archived_at IS NULL").get(t.sourceId, ctx.organizationId, siteId) || null;
 // Y a-t-il au moins un en-tête ou un pied publié sur ce site ? (court-circuit : le rendu historique ne paie qu'une lecture en cache)
-const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => t.type === "header" || t.type === "footer");
+const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => ["header", "footer", "sidebar", "custom"].includes(t.type));
 
 // page : ligne de page ({ id, site_id }) → { header: id de composant | undefined, footer: … } ; undefined = aucun modèle ne s'applique (repli historique)
 function partsFor(ctx, page) {
@@ -85,4 +108,4 @@ function pickRegion(ctx, siteId, families, o = {}) {
   } catch { /* repli historique */ }
   return null;
 }
-module.exports = { partsFor, pickRegion, published, FAMILY, regionContext, defaultContext, resolveParts, hasParts };
+module.exports = { partsFor, pickRegion, published, FAMILY, regionContext, defaultContext, resolveParts, resolveExtras, extrasFor, pageRowOf, hasParts };

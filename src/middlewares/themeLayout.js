@@ -9,7 +9,7 @@ function themeLayout(req, res, next) {
   const render = res.render.bind(res);
   let pending = null;
   const prepare = () => {
-    if (!pending) pending = themeRender.renderParts(req, res).then((p) => { res.locals.themeHeader = p.header || ""; res.locals.themeFooter = p.footer || ""; }).catch(() => {});
+    if (!pending) pending = themeRender.renderParts(req, res).then((p) => { res.locals.themeHeader = p.header || ""; res.locals.themeFooter = p.footer || ""; res.locals.themeExtras = p.extras || ""; }).catch(() => {});
     return pending;
   };
   res.render = (view, locals, cb) => {

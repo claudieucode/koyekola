@@ -23,3 +23,15 @@ Menu Elementor › Theme Builder ; logo de l'éditeur › Theme Builder ; raccou
 
 ## Non documenté par les sources lues
 Règles exactes de priorité entre conditions concurrentes ; résultat quand une page correspond à la fois à une inclusion et à une exclusion ; suppression de conditions ; mécanisme de cache. Voir `ELEMENTOR_DISPLAY_CONDITIONS.md` : le comportement retenu pour Kolakisa y est défini explicitement comme **choix de conception**, pas comme fait Elementor.
+
+## Vérification du 02/11/2026 (relecture des sources officielles)
+Pages relues : elementor.com/help/the-elementor-theme-builder/ (page datée « Last Update : September 15, 2026 »), elementor.com/help/conditions/, developers.elementor.com/docs/theme-conditions/. **Aucun numéro de version d'Elementor n'est donné dans les articles d'aide** ; seule mention : les conditions existent depuis **Elementor Pro 2.0** (documentation développeur), et servent au Theme Builder, aux Popups et au Custom Code.
+
+Points confirmés ou précisés :
+* Accès : menu Elementor › Theme Builder, logo de l'éditeur › Theme Builder, raccourci Cmd/Ctrl + Maj + E.
+* Conditions : à la publication, la fenêtre de conditions s'ouvre (« Add condition », par défaut = Entire Site, puis Include / Exclude) ; modifiables ensuite via la flèche à côté de « Publish » › « Display Conditions ».
+* Un modèle peut avoir plusieurs conditions (exemple de l'aide : catégories Shirts et Pants) ; en cas de conflit avec un autre modèle, **Elementor affiche un avertissement** sans préciser lequel l'emporte.
+* La duplication d'une partie n'est pas décrite dans l'article.
+* Sans condition = brouillon (point gris) ; avec conditions = en ligne (point vert).
+* Prérequis d'import : téléversements non filtrés ; l'API REST doit être active.
+* Les mêmes réserves « non documenté » restent valables (priorité, OU/ET exact, mélange inclure/exclure, pages sans correspondance, plafond de conditions).

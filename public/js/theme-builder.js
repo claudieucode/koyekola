@@ -47,7 +47,7 @@
     single_page: "Modèle des pages individuelles : titre, image mise en avant et contenu.", single_post: "Modèle des articles individuels : titre, auteur, image et texte.",
     archive: "Modèle des listes de contenus : blog, catégories, étiquettes, auteurs.", search_results: "Modèle de la page de résultats de recherche.",
     single_product: "Modèle de la fiche produit : visuel, titre, prix et bouton d'achat.", product_archive: "Modèle des listes de produits : boutique et catégories.", not_found: "Modèle affiché quand une page est introuvable.",
-    sidebar: "Barre latérale réutilisable, affichée selon vos conditions.", custom: "Modèles libres, affichés là où vos conditions le décident.",
+    sidebar: "Barre latérale réutilisable : affichée sous le contenu de la page, avant le pied de page, selon vos conditions.", custom: "Modèles libres : tous ceux dont les conditions correspondent s'affichent sous le contenu de la page, avant le pied de page.",
   };
   const dates = (s) => (s ? String(s).slice(0, 16).replace("T", " ") : "—");
 
