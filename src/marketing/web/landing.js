@@ -225,7 +225,7 @@ module.exports = () => {
   });
   // Données d'affichage d'un contenu (formations relues dans le catalogue, composants synchronisés résolus)
   // Aperçu, canevas, versions : vus comme par un visiteur inconnu (personnalisation non appliquée, tout est montré)
-  const shown = (ctx, page, content, draftId = null, themeBuilder = false, pick = {}) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page, null, pick), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId, themeBuilder }) });
+  const shown = (ctx, page, content, draftId = null, themeBuilder = false, pick = {}, force = null) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page, null, pick), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId, themeBuilder, force }) });
 
   router.get("/pages/:id(\\d+)", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -261,11 +261,11 @@ module.exports = () => {
     res.render("marketing/page-compare", { title: `Comparer la version ${v.number} — ${page.name}`, active: "landing", page, version: v, diff, canWrite: req.mk.can("forms.write") });
   });
   // Aperçu du BROUILLON (ou de la version en ligne s'il n'y a pas de brouillon) : clics et inscriptions non enregistrés
-  const renderPreview = (req, res, page, content, label, draftId = null, themeBuilder = false) => {
+  const renderPreview = (req, res, page, content, label, draftId = null, themeBuilder = false, force = null) => {
     const ctx = req.mk.ctx;
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     res.set("Cache-Control", "no-store");
-    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId, themeBuilder, { postId: /^\d{1,9}$/.test(String(req.query.contenu || "")) ? Number(req.query.contenu) : null }), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
+    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId, themeBuilder, { postId: /^\d{1,9}$/.test(String(req.query.contenu || "")) ? Number(req.query.contenu) : null }, force), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
   };
   router.get("/pages/:id(\\d+)/apercu", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -496,8 +496,11 @@ module.exports = () => {
     try {
       const page = componentPage(ctx, c);
       const content = pages.normalizeContent(ctx, page, (req.body && req.body.content) || {});
+      // Canevas de l'éditeur d'un en-tête / pied de page du Theme Builder : même largeur que sur le site publié (bandes pleine largeur)
+      let tbPart = false; try { const t = c.site_id ? require("../../themeBuilder").store.byDocument(ctx, "component", c.id) : null; tbPart = Boolean(t && ["header", "footer", "sidebar"].includes(t.type)); } catch { tbPart = false; }
+      const sections = pages.resolveSections(ctx, content.sections).map((x) => (tbPart && pages.partBleeds(x) ? { ...x, bleed: true } : x));
       res.set("Cache-Control", "no-store");
-      res.render("marketing-public/landing", { page: landing.viewModel(ctx, { ...page, ...content, sections: pages.resolveSections(ctx, content.sections) }), site: c.site_id ? pages.getSite(ctx, c.site_id) : null, tokensToCss, form: null, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
+      res.render("marketing-public/landing", { page: landing.viewModel(ctx, { ...page, ...content, sections }), site: c.site_id ? pages.getSite(ctx, c.site_id) : null, tokensToCss, form: null, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
     } catch (error) { jsonError(res, next, error); }
   });
   // Aperçu PRIVÉ du brouillon d'un composant (en-tête, pied de page, variante) dans une vraie page du site : même rendu que le site public, mais avec la copie de travail.
@@ -522,7 +525,13 @@ module.exports = () => {
       const stale = Number.isInteger(asked) && req.query.rev !== undefined && asked !== c.revision;
       const label = (c.hasDraft ? `Aperçu du brouillon (révision ${c.revision}) de « ${c.name} » — pas encore visible par les visiteurs.` : `« ${c.name} » n'a pas de brouillon : aperçu de la version en ligne.`)
         + (stale ? ` Attention : cet aperçu montre la révision ${c.revision}, plus récente que celle demandée (${asked}).` : "");
-      renderPreview(req, res, page, page.working, label, c.id);
+      // Identité du composant dans le Theme Builder : un en-tête / pied de page est prévisualisé tel quel (copie de travail), au même emplacement que sur le site publié
+      let force = null, themed = false, tbNote = "";
+      try {
+        const t = c.site_id ? require("../../themeBuilder").store.byDocument(ctx, "component", c.id) : null;
+        if (t && (t.type === "header" || t.type === "footer") && t.siteId === c.site_id) { force = { [t.type]: c.id }; themed = true; tbNote = ` Modèle « ${t.name} » (${t.typeLabel}, ${t.status === "published" ? "publié" : "brouillon"}) affiché dans la page « ${page.name} », conditions d'affichage ignorées pour l'aperçu.`; }
+      } catch { force = null; }
+      renderPreview(req, res, page, page.working, label + tbNote, c.id, themed, force);
     } catch (error) { jsonError(res, next, error); }
   });
   router.put("/site-web/composants/:id(\\d+)/brouillon", need("forms.write"), (req, res, next) => {

@@ -926,11 +926,14 @@ function deleteComponent(ctx, id, { mode = null, skipDraftOfPage = null } = {}) 
 // ---------- Parties globales d'un site (en-tête, pied de page) ----------
 // Un composant réutilisable choisi dans les réglages du site, affiché autour des sections de chacune de ses pages
 // draftId : composant dont on montre le BROUILLON à la place de la version diffusée (aperçu privé d'un en-tête / pied de page) ; sans lui, seule la version diffusée est lue
+// Une partie globale faite de bandes (conteneurs « pleine largeur » / « bande ») occupe toute la largeur de l'écran, comme dans le rendu hors Page Builder (themeRender.bleedOf) :
+// une seule règle de largeur pour la vignette, l'aperçu, l'éditeur et le site publié
+const partBleeds = (s) => Boolean(s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true)));
 function partOf(ctx, cid, which, draftId = null) {
   if (!cid) return null;
   const c = getComponent(ctx, Number(cid));
   const section = c && draftId !== null && Number(draftId) === c.id && c.draft ? c.draft : c && c.section;
-  return c && section && section.type !== "component" ? { ...section, id: section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which } : null;
+  return c && section && section.type !== "component" ? { ...section, id: section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which, bleed: partBleeds(section) } : null;
 }
 function siteParts(ctx, siteId, { draftId = null } = {}) {
   const none = { header: null, footer: null };
@@ -951,12 +954,14 @@ function missingPart(which, componentId) {
 // Partie globale d'un site (section rendable) pour un composant donné : version diffusée, jamais le brouillon ; null si elle n'existe plus (interface du rendu hors Page Builder)
 const partSection = (ctx, componentId, which) => partOf(ctx, componentId, which, null);
 // Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
-function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false } = {}) {
+function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false, force = null } = {}) {
   const p = siteParts(ctx, page && page.site_id, { draftId });
   // Theme Builder (23.1) : seulement la page publiée et son aperçu (jamais le canevas de l'éditeur) ; sans modèle applicable, comportement historique inchangé
   if (themeBuilder && page && page.site_id) {
     const tb = require("../../themeBuilder/render").partsFor(ctx, page);
     for (const which of ["header", "footer"]) {
+      // Le Theme Builder gère cette partie mais aucun de ses modèles ne s'applique à cette page : pas de partie (jamais l'ancien réglage du site)
+      if (tb[which] === undefined && tb.managed && tb.managed[which]) { p[which] = null; continue; }
       if (tb[which] === undefined) continue;
       const part = partOf(ctx, tb[which], which, draftId);
       if (part) p[which] = { ...part, templateId: tb.meta && tb.meta[which] ? tb.meta[which].id : null, templateName: tb.meta && tb.meta[which] ? tb.meta[which].name : null };
@@ -969,8 +974,11 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
     if (Object.hasOwn(over, "header")) p.header = partOf(ctx, over.header, "header");
     if (Object.hasOwn(over, "footer")) p.footer = partOf(ctx, over.footer, "footer");
   }
+  // Aperçu d'un modèle précis (composant d'en-tête / de pied de page) : EXACTEMENT ce composant, sa copie de travail, à la place de la partie résolue
+  const forced = force && page && page.site_id ? force : null;
+  if (forced) for (const which of ["header", "footer"]) if (forced[which]) p[which] = partOf(ctx, forced[which], which, forced[which]);
   let header = p.header;
-  if (page && page.site_id && header) {
+  if (page && page.site_id && header && !(forced && forced.header)) {
     if (page.header_mode === "none") header = null;
     else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header", draftId) || p.header;
   }
@@ -1163,6 +1171,6 @@ module.exports = {
   createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
-  siteParts, withSiteParts, partSection, componentRole, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
+  siteParts, withSiteParts, partSection, partBleeds, componentRole, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

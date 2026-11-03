@@ -54,6 +54,6 @@ function build(type, key, env = {}) {
   CACHE.set(ck, out);
   return out;
 }
-const thumbDoc = (type, key) => { const b = build(type, key); return b ? (b.section || b.sections[0]) : null; };
+const thumbDoc = (type, key, env = {}) => { const b = build(type, key, env); return b ? (b.section || b.sections[0]) : null; };
 const stats = () => types().map((t) => ({ type: t, label: Types.TYPES[t].label, count: entries(t).length, layouts: def(t).layouts.length }));
 module.exports = { types, list, find, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };

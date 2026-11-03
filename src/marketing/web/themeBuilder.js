@@ -8,7 +8,7 @@ const { need } = require("./kit");
 const { MarketingError } = require("../errors");
 const siteModules = require("../siteModules");
 const Catalog = require("../../themeBuilder/catalog");
-const { useTemplate } = require("../../themeBuilder/catalog/use");
+const { useTemplate, siteFormId } = require("../../themeBuilder/catalog/use");
 
 const STATUS = { not_found: 404, forbidden: 403, module_disabled: 403, conflict: 409, invalid_field: 422, duplicate: 409 };
 const P = () => require("../pages");
@@ -24,7 +24,7 @@ module.exports = () => {
   const editUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/editeur?modele=${t.id}&retour=tb` : `/marketing/site-web/composants/${t.sourceId}/editeur?modele=${t.id}&retour=tb`);
   // Aperçu réel : mêmes routes que l'éditeur (page enregistrée ou composant dans une page d'exemple) ; les miniatures filaires sont lues À LA DEMANDE (`/miniature`) pour ne pas ouvrir tous les documents à chaque liste.
   const previewUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/apercu` : `/marketing/site-web/composants/${t.sourceId}/apercu`);
-  const docOf = (ctx, t) => { try { return t.sourceKind === "page" ? P().getPage(ctx, t.sourceId).working : (P().getComponent(ctx, t.sourceId) || {}).section; } catch { return null; } };
+  const docOf = (ctx, t) => { try { return t.sourceKind === "page" ? P().getPage(ctx, t.sourceId).working : (() => { const c = P().getComponent(ctx, t.sourceId); return c ? (c.draft || c.section) : null; })(); } catch { return null; } };
   const card = (ctx, t, conflictIds, light = false) => {
     const base = { ...t, describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
     if (light) return base;
@@ -134,7 +134,7 @@ module.exports = () => {
   }));
   router.get(`${LIB}/${keyOf}/miniature`, need("forms.read"), run((ctx, id, req) => {
     TB.store.site(ctx, id); libType(ctx, id, req.params.type);
-    const doc = Catalog.thumbDoc(req.params.type, req.params.key);
+    const doc = Catalog.thumbDoc(req.params.type, req.params.key, { formId: siteFormId(ctx, id) });
     if (!doc) throw Object.assign(new Error("Modèle introuvable."), { code: "not_found" });
     const th = thumbnail(doc.sections ? doc : doc);
     return { thumb: th.svg, elements: th.elements };
@@ -143,7 +143,7 @@ module.exports = () => {
   const libPreview = (thumb) => (req, res, next) => {
     try {
       TB.store.site(req.mk.ctx, sid(req)); libType(req.mk.ctx, sid(req), req.params.type);
-      const doc = Catalog.build(req.params.type, req.params.key, {});
+      const doc = Catalog.build(req.params.type, req.params.key, { formId: siteFormId(req.mk.ctx, sid(req)) });
       if (!doc) return res.status(404).type("text").send("Modèle introuvable.");
       require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb }, (html) => {
         if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");

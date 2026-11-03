@@ -98,6 +98,8 @@
 .lp-w-narrow { max-width: 560px; margin-inline: auto; }
 .lp-w-wide { margin-inline: calc(50% - min(540px, 50vw - 16px)); }
 /* --kw-fmt-pad : retrait du contenu d'un bloc pleine largeur, posé par le format du canevas (conception guidée) ; sinon la colonne de 760 px */
+/* En-tête / pied de page fait de bandes pleine largeur : il sort de la colonne de contenu, comme dans la vignette et l'aperçu du Theme Builder (même règle partout) */
+.lp-block.lp-part-bleed { margin-inline: calc(50% - 50vw); }
 .lp-block.lp-w-full { margin-inline: calc(50% - 50vw); border-radius: 0; padding-inline: var(--kw-fmt-pad, max(16px, calc(50vw - 380px))); }
 /* Masquer selon l'écran : règles émises avec le CSS de la page (pageCss), selon les points de rupture du site */
 .lp-intro { margin: 0 0 16px; opacity: 0.85; }
