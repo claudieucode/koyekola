@@ -951,7 +951,8 @@ function missingPart(which, componentId) {
 // Partie globale d'un site (section rendable) pour un composant donné : version diffusée, jamais le brouillon ; null si elle n'existe plus (interface du rendu hors Page Builder)
 const partSection = (ctx, componentId, which) => partOf(ctx, componentId, which, null);
 // Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
-function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false } = {}) {
+// force : { which: "header" | "footer", id } — aperçu d'UN composant précis : c'est CE composant (sa copie de travail) qui occupe la place, jamais l'en-tête / le pied actuel du site
+function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false, force = null } = {}) {
   const p = siteParts(ctx, page && page.site_id, { draftId });
   // Theme Builder (23.1) : seulement la page publiée et son aperçu (jamais le canevas de l'éditeur) ; sans modèle applicable, comportement historique inchangé
   if (themeBuilder && page && page.site_id) {
@@ -968,6 +969,11 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
   if (over) {
     if (Object.hasOwn(over, "header")) p.header = partOf(ctx, over.header, "header");
     if (Object.hasOwn(over, "footer")) p.footer = partOf(ctx, over.footer, "footer");
+  }
+  if (force && (force.which === "header" || force.which === "footer")) {
+    const f = partOf(ctx, force.id, force.which, force.id);
+    if (f) p[force.which] = f;
+    if (force.which === "header" && f) return [f, ...sections, p.footer].filter(Boolean);
   }
   let header = p.header;
   if (page && page.site_id && header) {

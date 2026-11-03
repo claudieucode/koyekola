@@ -25,8 +25,10 @@ module.exports = () => {
   // Aperçu réel : mêmes routes que l'éditeur (page enregistrée ou composant dans une page d'exemple) ; les miniatures filaires sont lues À LA DEMANDE (`/miniature`) pour ne pas ouvrir tous les documents à chaque liste.
   const previewUrl = (t) => (t.sourceKind === "page" ? `/marketing/pages/${t.sourceId}/apercu` : `/marketing/site-web/composants/${t.sourceId}/apercu`);
   const docOf = (ctx, t) => { try { return t.sourceKind === "page" ? P().getPage(ctx, t.sourceId).working : (P().getComponent(ctx, t.sourceId) || {}).section; } catch { return null; } };
+  // Révision du DOCUMENT affiché (brouillon enregistré du composant / de la page) : change à chaque enregistrement, contrairement à celle du modèle ; sert de clé de cache aux vignettes
+  const docRev = (ctx, t) => { try { const d = t.sourceKind === "page" ? P().getPage(ctx, t.sourceId) : P().getComponent(ctx, t.sourceId); return d ? `${d.revision}:${d.updated_at || d.updatedAt || ""}` : "0"; } catch { return "0"; } };
   const card = (ctx, t, conflictIds, light = false) => {
-    const base = { ...t, describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
+    const base = { ...t, docRev: docRev(ctx, t), describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
     if (light) return base;
     const doc = docOf(ctx, t), th = thumbnail(doc);
     return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc };

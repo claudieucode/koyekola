@@ -225,7 +225,7 @@ module.exports = () => {
   });
   // Données d'affichage d'un contenu (formations relues dans le catalogue, composants synchronisés résolus)
   // Aperçu, canevas, versions : vus comme par un visiteur inconnu (personnalisation non appliquée, tout est montré)
-  const shown = (ctx, page, content, draftId = null, themeBuilder = false) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId, themeBuilder }) });
+  const shown = (ctx, page, content, draftId = null, themeBuilder = false, force = null) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId, themeBuilder, force }) });
 
   router.get("/pages/:id(\\d+)", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -261,11 +261,11 @@ module.exports = () => {
     res.render("marketing/page-compare", { title: `Comparer la version ${v.number} — ${page.name}`, active: "landing", page, version: v, diff, canWrite: req.mk.can("forms.write") });
   });
   // Aperçu du BROUILLON (ou de la version en ligne s'il n'y a pas de brouillon) : clics et inscriptions non enregistrés
-  const renderPreview = (req, res, page, content, label, draftId = null, themeBuilder = false) => {
+  const renderPreview = (req, res, page, content, label, draftId = null, themeBuilder = false, force = null) => {
     const ctx = req.mk.ctx;
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     res.set("Cache-Control", "no-store");
-    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId, themeBuilder), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
+    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId, themeBuilder, force), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
   };
   router.get("/pages/:id(\\d+)/apercu", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -522,7 +522,10 @@ module.exports = () => {
       const stale = Number.isInteger(asked) && req.query.rev !== undefined && asked !== c.revision;
       const label = (c.hasDraft ? `Aperçu du brouillon (révision ${c.revision}) de « ${c.name} » — pas encore visible par les visiteurs.` : `« ${c.name} » n'a pas de brouillon : aperçu de la version en ligne.`)
         + (stale ? ` Attention : cet aperçu montre la révision ${c.revision}, plus récente que celle demandée (${asked}).` : "");
-      renderPreview(req, res, page, page.working, label, c.id);
+      // Source de vérité unique : le type du MODÈLE du Theme Builder (sinon le rôle historique) dit quelle place le composant occupe dans l'aperçu
+      const tpl = c.site_id ? require("../../themeBuilder/store").byDocument(ctx, "component", c.id) : null;
+      const which = tpl && (tpl.type === "header" || tpl.type === "footer") ? tpl.type : role === "header" || role === "footer" ? role : null;
+      renderPreview(req, res, page, page.working, label, c.id, false, which ? { which, id: c.id } : null);
     } catch (error) { jsonError(res, next, error); }
   });
   router.put("/site-web/composants/:id(\\d+)/brouillon", need("forms.write"), (req, res, next) => {

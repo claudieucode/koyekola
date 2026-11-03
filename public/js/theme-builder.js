@@ -140,7 +140,7 @@
     }
   }
   async function fetchThumb(n) {
-    const t = n._t, k = `${t.id}:${t.updatedAt}:${t.revision}`;
+    const t = n._t, k = `${t.id}:${t.updatedAt}:${t.revision}:${t.docRev || ""}`;
     try { await frameThumb(n, `${base}/api/modeles/${t.id}/vignette`, t.type, `t:${k}`); return; } catch { /* repli : miniature filaire */ }
     try { let r = thumbs.get(k); if (!r) { r = await api(`/modeles/${t.id}/miniature`); thumbs.set(k, r); if (thumbs.size > 300) thumbs.delete(thumbs.keys().next().value); } paintThumb(n, r); }
     catch { n.dataset.state = "err"; }
