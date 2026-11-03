@@ -974,7 +974,23 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
     if (page.header_mode === "none") header = null;
     else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header", draftId) || p.header;
   }
-  return [header, ...sections, p.footer].filter(Boolean);
+  return [header, ...sections, ...(themeBuilder && page && page.site_id ? themeExtraSections(ctx, page) : []), p.footer].filter(Boolean);
+}
+// Theme Builder : barre latérale et modèles personnalisés applicables à une page du Page Builder, placés sous son contenu et avant le pied de page. Jamais bloquant.
+function themeExtraSections(ctx, page) {
+  const out = [];
+  try {
+    const TB = require("../../themeBuilder/render"), e = TB.extrasFor(ctx, page);
+    if (e.sidebar) { const part = partOf(ctx, e.sidebar.sourceId, "sidebar", null); if (part) out.push(part); else missingPart("sidebar", e.sidebar.sourceId); }
+    for (const t of e.custom) {
+      const row = TB.pageRowOf(ctx, page.site_id, t);
+      if (!row || row.id === page.id) continue; // le modèle ne s'affiche pas dans lui-même
+      const pub = require("../landing").getPublishedPage(ctx.db, row.slug);
+      if (!pub) continue;
+      for (const s of resolveSections(ctx, pub.sections)) out.push({ ...s, id: `tb${t.id}${s.id}`.slice(0, 20) });
+    }
+  } catch { /* repli : la page s'affiche sans extras */ }
+  return out;
 }
 // Rôle d'un composant : en-tête ou pied de page d'un site, variante d'en-tête, ou composant ordinaire. Les trois premiers ont une copie de travail et une mise à jour explicite.
 function componentRole(ctx, c) {

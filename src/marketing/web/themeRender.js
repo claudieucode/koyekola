@@ -107,12 +107,29 @@ function renderParts(req, res) {
       const win = TB.resolveParts(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]));
       const visitor = visitorContext(db, marketing.organizationId, req);
       const out = {};
-      const jobs = ["header", "footer"].filter((w) => win[w]).map((which) => new Promise((ok) => {
+      const extras = TB.resolveExtras(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]));
+      // Barre latérale puis modèles personnalisés, rendus dans l'ordre (le plus précis d'abord) ; un échec n'empêche jamais la page
+      const extraJobs = [];
+      if (extras.sidebar) extraJobs.push(new Promise((ok) => {
+        const section = pages.partSection(ctx, extras.sidebar.sourceId, "sidebar");
+        if (!section) { console.warn(`[KOLAKISA] Theme Builder : barre latérale « ${extras.sidebar.name} » sans version publiée ; ignorée.`); return ok(null); }
+        const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: site.id, organization_id: marketing.organizationId, visitor, theme: {}, scope: {}, sections: [section] });
+        renderVm(res, vm, siteOf(ctx, { site_id: site.id }), `kw-theme-part kw-theme-sidebar${bleedOf([section])}`, (html) => ok(html || null));
+      }));
+      for (const t of extras.custom) extraJobs.push(new Promise((ok) => {
+        const row = TB.pageRowOf(ctx, site.id, t), page = row && landing.getPublishedPage(db, row.slug);
+        if (!page) return ok(null);
+        const sections = pages.resolveSections(ctx, page.sections).filter((s) => !s.hidden && audienceMatches(s.audience, visitor));
+        const vm = landing.viewModel(ctx, { ...page, visitor, scope: {}, sections });
+        renderVm(res, vm, siteOf(ctx, page), `kw-theme-template kw-theme-custom${bleedOf(sections)}`, (html) => ok(html || null));
+      }));
+      const extraDone = Promise.all(extraJobs).then((parts) => { const html = parts.filter(Boolean).join("\n"); if (html) out.extras = html; });
+      const jobs = [extraDone, ...["header", "footer"].filter((w) => win[w]).map((which) => new Promise((ok) => {
         const section = pages.partSection(ctx, win[which].sourceId, which);
         if (!section) { console.warn(`[KOLAKISA] Theme Builder : ${which === "header" ? "en-tête" : "pied de page"} « ${win[which].name} » sans version publiée ; habillage d'origine conservé.`); return ok(); }
         const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: site.id, organization_id: marketing.organizationId, visitor, theme: {}, scope: {}, sections: [section] });
         renderVm(res, vm, siteOf(ctx, { site_id: site.id }), `kw-theme-part kw-theme-${which}${which === "header" ? partMode(section) : ""}${bleedOf([section])}`, (html) => { if (html) out[which] = html; ok(); });
-      }));
+      }))];
       Promise.all(jobs).then(() => resolve(out), () => resolve({}));
     } catch { resolve({}); }
   });

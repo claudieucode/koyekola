@@ -1,6 +1,9 @@
 <% if (typeof dash !== "undefined" && dash) { %><%- include("dash-close") %><% } else { %>
   </main>
 
+  <%# Theme Builder : barre latérale et modèles personnalisés publiés applicables à la page, sous le contenu et avant le pied de page (domaine d'un site) ; sans modèle, rien ne s'affiche %>
+  <% if (typeof themeExtras === "string" && themeExtras) { %><aside class="kw-theme-extras" aria-label="Contenus complémentaires"><%- themeExtras %></aside><% } %>
+
   <%# Theme Builder : le pied de page publié applicable remplace le pied d'origine (domaine d'un site) ; sans modèle, rien ne change %>
   <% if (typeof themeFooter === "string" && themeFooter) { %><%- themeFooter %><% } else { %>
   <footer class="site-footer">
