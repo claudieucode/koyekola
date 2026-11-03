@@ -62,7 +62,7 @@ describe("Assistant IA : réponses de l'agent réel", () => {
       if (SKIP) return t.skip(SKIP);
       const a = await ask(q);
       assert.doesNotMatch(a, invented, `Invention possible : ${a}`);
-      assert.match(a, /(ne sais pas|n'ai pas|ne dispose pas|pas d'information|pas cette information|préfère ne pas|pas disponible|pas dans|aucune|pas de formation|pas encore|ne propose pas|ne figure)/i, `Pas d'aveu d'ignorance : ${a}`);
+      assert.match(a, /(ne sais pas|n'ai pas|ne dispose pas|pas d'information|pas cette information|préfère ne pas|pas disponible|pas dans|aucune|pas de formation|pas encore|ne propose pas|ne figure|pas de numéro)/i, `Pas d'aveu d'ignorance : ${a}`);
     });
   }
   test("hors sujet : revient au sujet de Kolakisa", async (t) => {

@@ -129,9 +129,9 @@ describe("Effacer les données : demandes, confirmation, effacement réel", () =
       assert.equal((await anon.post(`/effacement/confirmer/${fresh}`, {})).status, 200); assert.equal(req(r0.id).status, "confirmed");
     });
     test("e-mail non parti : la demande devient « Échouée » (e-mail non envoyé) avec l'état réel de la file ; relance possible ; transitions interdites refusées sans effet", async () => {
-      const e3 = mail(); await create(boss, e3); const r = lastReq();
+      const e3 = mail(); const made = await create(boss, e3); assert.equal(made.status, 302, `création refusée : ${flash(made.text)}`); const r = lastReq(); assert.equal(r.status, "pending", "demande créée en attente avant l'échec simulé");
       db.prepare("UPDATE mail_outbox SET status = 'failed', last_error = 'serveur SMTP injoignable (ECONNECTION)' WHERE lower(to_email) = ?").run(e3);
-      const list = (await boss.get(`${PAGE}?etat=failed`)).text; assert.match(list, /E-mail non envoyé/); assert.match(list, /E-mail NON envoyé/);
+      const list = (await boss.get(`${PAGE}?etat=failed`)).text; assert.match(list, /E-mail non envoyé/, `liste des demandes échouées sans l'étiquette attendue (état de la file : ${JSON.stringify(outboxTo(e3).map((x) => [x.status, x.last_error]))}, demande : ${JSON.stringify(req(r.id).status)})`); assert.match(list, /E-mail NON envoyé/);
       const f = req(r.id); assert.equal(f.status, "failed"); assert.equal(f.failure_code, "mail_failed"); assert.match(f.failure_note, /n'est pas parti/); assert.ok(!f.failure_note.includes(e3));
       assert.match((await boss.get(`${PAGE}/${r.id}`)).text, /NON envoyé/);
       // transitions interdites : terminer / exécuter une demande non confirmée, sans effet
