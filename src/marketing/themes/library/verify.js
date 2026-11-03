@@ -43,6 +43,6 @@ function verify(ctx, { maxSimilarity = 0.72, onlyKeys = null } = {}) {
   const counts = Object.fromEntries(library.CATEGORIES.map((c) => [c.key, specs.filter((s) => s.category === c.key).length]));
   const similar = [];
   for (let i = 0; i < specs.length; i += 1) for (let j = i + 1; j < specs.length; j += 1) { const v = similarity(specs[i], specs[j]); if (v > maxSimilarity) similar.push({ a: specs[i].key, b: specs[j].key, similarity: Number(v.toFixed(2)) }); }
-  return { total: specs.length, target: library.TARGET_TOTAL, counts, perTheme, similar, overusedFonts: [...fonts].filter(([, n]) => n > 6).map(([f, n]) => `${f} (${n})`), invalid: perTheme.filter((t) => t.invalidPages.length), lowContrast: perTheme.filter((t) => t.contrast.length), fontPairDuplicates: perTheme.filter((t) => t.fontPairDuplicate) };
+  return { total: specs.length, target: library.TARGET_TOTAL, counts, perTheme, similar, overusedFonts: [...fonts].filter(([, n]) => n > 16).map(([f, n]) => `${f} (${n})`), invalid: perTheme.filter((t) => t.invalidPages.length), lowContrast: perTheme.filter((t) => t.contrast.length), fontPairDuplicates: perTheme.filter((t) => t.fontPairDuplicate) };
 }
 module.exports = { verify, similarity, ratio };

@@ -1,449 +1,526 @@
-// Entreprises et services professionnels, suite (11 thèmes). Textes de DÉMONSTRATION : entreprises, personnes et coordonnées fictives.
-const pageActus = (title, sub, postsTitle, layout, count) => ({ key: "actualites", name: "Actualités", blocks: [
-  ["misc:pagehead", { title, sub }],
-  ["misc:posts", { title: postsTitle, count, layout }],
-  ["misc:search", { title: "Rechercher dans les publications" }],
-] });
-const pageContact = (title, sub, formTitle, formIntro, cta, address, mapTitle) => ({ key: "contact", name: "Contact", blocks: [
-  ["misc:pagehead", { title, sub }],
-  ["contact:cards", { title: formTitle, formTitle: "Écrivez-nous", formIntro, cta }],
-  ["contact:map", { title: mapTitle, mapAddress: address }],
-] });
+// Entreprise, lot B (13 thèmes, services B2B). Textes de DÉMONSTRATION : marques, personnes et coordonnées fictives.
+const P = (title, sub) => ["misc:pagehead", { title, sub }];
+const Q = (q, n, r) => ({ q, n, r });
+const F = "font.";
+const CT = (title, formTitle, formIntro) => ["contact:info", { title, formTitle, formIntro }];
 
 module.exports = [
-  // 1. Notaire : serif didone, bordeaux et or sur crème, symétrie classique
+  // 1 ------------------------------------------------------------ nettoyage industriel
   {
-    key: "etude-valmont", name: "Étude Valmont", category: "entreprise", tags: ["classique", "luxe"], siteType: "Étude notariale",
-    description: "Étude notariale solennelle : titres didone bordeaux, fond crème, en-tête centré et carte de visite sobre pour rassurer sur la durée.",
-    brand: "Étude Valmont & Associés",
-    tokens: { colors: { primary: "#7a1f2b", secondary: "#2b1a1d", accent: "#b08a4a", background: "#f7f1e8", surface: "#fffaf2", text: "#2a1c1e", muted: "#5f4f4f" }, fonts: { heading: "font.rozha-one", body: "font.lora", button: "font.lora", link: "font.lora" }, radius: { sm: 0, md: 2, lg: 2, button: 0, field: 0, card: 0 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#d9c9b0" }, type: { h1: { size: 52, weight: 400, lineHeight: 1.1, letterSpacing: 0 } } },
-    dna: { scale: "m", pad: "airy", align: "center", shape: "sharp" }, art: { seed: "valmont", motifs: ["arches", "plates", "ribbons"] },
-    head: ["head:center", {}], foot: ["foot:center", {}],
-    menu: [["Accueil", "/"], ["Actes et conseils", "/actes"], ["Étude", "/etude"], ["Actualités", "/actualites"], ["Contact", "/contact"]], cta: ["Prendre rendez-vous", "/contact"],
-    contact: { address: "8 place du Marché-aux-Fleurs, 37000 Tours", phone: "02 47 00 12 34", email: "accueil@etude-valmont.example", hours: "Du lundi au vendredi, 9 h – 12 h 30 et 14 h – 18 h", tagline: "Un acte juste, une famille sereine." },
+    key: "netoyard-pro", name: "Netoyard", category: "entreprise", tags: ["moderne", "minimaliste"], siteType: "Nettoyage industriel et remise en état de sites", isNew: true,
+    description: "Nettoyage industriel : turquoise frais sur fond clair, bandeau avec image plein cadre, grille d'icônes et tableau comparatif de prestations.",
+    brand: "Netoyard Industrie",
+    tokens: { colors: { primary: "#0d9488", secondary: "#0b3f46", accent: "#f59e0b", background: "#f1faf9", surface: "#ffffff", text: "#102a2e", muted: "#4a6266" }, fonts: { heading: F + "lexend", body: F + "literata", button: F + "lexend", link: F + "literata" }, radius: { sm: 6, md: 10, lg: 16, button: 10, field: 8, card: 14 }, shadow: { card: "sm", button: "none" } },
+    dna: { scale: "l", pad: "normal", align: "left", shape: "soft" }, art: { seed: "netoyard", motifs: ["waves", "bokeh", "plates"] },
+    head: ["head:topbar", { info: "Intervention sous 48 h en Hauts-de-France", note: "Devis gratuit" }],
+    foot: ["foot:columns", { about: "Nettoyage d'ateliers, d'entrepôts et de lignes de production, de jour comme de nuit.", cols: [["Prestations", "Ateliers", "Sols et cuves", "Fin de chantier"], ["Contact", "Demander un devis", "Mentions légales"]] }],
+    menu: [["Accueil", "/"], ["Prestations", "/prestations"], ["Méthodes", "/methodes"], ["Références", "/references"], ["Contact", "/contact"]], cta: ["Demander un devis", "/contact"],
+    contact: { address: "14 rue des Fonderies, 59000 Lille", phone: "03 20 00 41 18", email: "devis@netoyard.example", hours: "Lundi – vendredi, 6 h – 19 h", tagline: "Des sites propres, sans arrêter la production." },
     pages: [
       { key: "accueil", name: "Accueil", blocks: [
-        ["hero:framed", { eyebrow: "Notaires depuis 1962", title: "Sécuriser vos projets de vie, avec tact.", sub: "Achat immobilier, succession, contrat de mariage, donation : l'étude vous guide pas à pas, de la première question à la signature.", cta: ["Prendre rendez-vous", "/contact"], cta2: ["Nos actes", "/actes"] }],
-        ["feat:icons", { eyebrow: "Nos domaines", title: "Les moments qui comptent", items: [{ icon: "home", t: "Immobilier", x: "Compromis, vente, acquisition et prêts : un acte authentique garanti." }, { icon: "users", t: "Famille", x: "Mariage, pacs, divorce amiable, protection d'un proche." }, { icon: "fileText", t: "Succession", x: "Déclaration, partage et conseils de transmission." }] }],
-        ["misc:quote", { text: "Un bon acte est celui que l'on n'a jamais besoin de rouvrir.", by: "Maître Odile Valmont, notaire associée (personnage fictif)" }],
-        ["feat:steps", { eyebrow: "Parcours d'un dossier", title: "De la première rencontre à la signature", items: [{ d: "Semaine 1", t: "Premier rendez-vous", x: "Écoute de votre situation et liste des pièces à réunir." }, { d: "Semaine 2", t: "Rédaction", x: "Projet d'acte envoyé pour relecture, avec explications." }, { d: "Semaine 4", t: "Signature", x: "Lecture commentée de l'acte et remise des copies." }] }],
-        ["proof:quotes", { title: "Familles accompagnées", items: [{ q: "Chaque clause m'a été expliquée sans jargon.", n: "Marie-Anne F.", r: "Succession, cliente fictive" }, { q: "Nous avons signé notre achat en toute confiance.", n: "Julien et Camille P.", r: "Achat immobilier, clients fictifs" }, { q: "Un accueil attentif dans une période difficile.", n: "Gérard T.", r: "Donation, client fictif" }] }],
-        ["cta:card", { title: "Une première question ?", sub: "Le premier échange téléphonique est gratuit et sans engagement.", cta: ["Nous appeler", "/contact"] }],
-      ] },
-      { key: "actes", name: "Actes et conseils", blocks: [
-        ["misc:pagehead", { title: "Actes et conseils", sub: "Les actes que nous établissons, avec leurs délais habituels." }],
-        ["feat:pricelist", { title: "Quelques repères de coûts (exemples)", intro: "Les frais d'acte dépendent du dossier ; ces montants sont donnés à titre d'illustration.", items: [{ t: "Consultation d'orientation", x: "Trente minutes, sur rendez-vous.", price: "Offerte" }, { t: "Contrat de mariage", x: "Rédaction et conseil patrimonial.", price: "dès 480 €" }, { t: "Donation entre époux", x: "Acte et enregistrement.", price: "dès 390 €" }, { t: "Testament authentique", x: "Rédaction, lecture et conservation.", price: "dès 160 €" }] }],
-        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Combien de temps pour une vente immobilière ?", x: "Comptez deux à trois mois entre la signature du compromis et l'acte définitif." }, { t: "Quels documents apporter à un premier rendez-vous ?", x: "Pièce d'identité, livret de famille et tout document relatif au bien ou à la succession." }, { t: "Puis-je être représenté à la signature ?", x: "Oui, par procuration authentique établie à l'étude." }] }],
-        ["cta:split", { title: "Besoin d'un devis détaillé ?", sub: "Envoyez-nous votre situation, nous vous répondons sous 48 heures.", cta: ["Demander un devis", "/contact"] }],
-      ] },
-      { key: "etude", name: "L'étude", blocks: [
-        ["misc:pagehead", { title: "L'étude" }],
-        ["misc:text", { eyebrow: "Une maison de famille", title: "Trois générations de notaires", paras: ["Fondée en 1962 au cœur de la ville, l'étude a toujours cultivé la même discrétion et la même disponibilité.", "Aujourd'hui, une équipe de neuf personnes se partage les dossiers par spécialité, pour que chaque client trouve un interlocuteur compétent et identifié."] }],
-        ["proof:team", { title: "L'équipe", items: [{ n: "Odile Valmont", r: "Notaire associée" }, { n: "Étienne Garnier", r: "Notaire associé, immobilier" }, { n: "Nadia Benhamou", r: "Clerc, successions" }, { n: "Louis Mercier", r: "Clerc, droit de la famille" }] }],
-        ["feat:list2", { title: "Nos engagements", items: [{ t: "Confidentialité absolue" }, { t: "Réponse sous 48 heures" }, { t: "Honoraires annoncés par écrit" }, { t: "Explication de chaque clause" }] }],
-      ] },
-      pageActus("Actualités de l'étude", "Les évolutions du droit, expliquées simplement.", "Derniers articles", "list", 6),
-      pageContact("Contact et accès", "Sur rendez-vous, du lundi au vendredi.", "Nous trouver", "Décrivez brièvement votre situation : un clerc vous rappellera.", ["Envoyer ma demande", "/contact"], "8 place du Marché-aux-Fleurs, 37000 Tours", "Accès à l'étude"),
-    ],
-  },
-
-  // 2. Avocats : sombre, or, serif fin italiana, header split
-  {
-    key: "barreau-noir", name: "Barreau Noir", category: "entreprise", tags: ["sombre", "luxe"], siteType: "Cabinet d'avocats",
-    description: "Cabinet d'avocats d'affaires en thème sombre : bleu nuit, filets dorés, titres fins en capitales et grand bandeau photographique.",
-    brand: "Delcourt Avocats",
-    tokens: { colors: { primary: "#c9a557", secondary: "#0a1220", accent: "#e2c98a", background: "#101a2b", surface: "#17243a", text: "#eef1f6", muted: "#aab6c9" }, fonts: { heading: "font.italiana", body: "font.inter", button: "font.inter", link: "font.inter" }, radius: { sm: 0, md: 0, lg: 0, button: 0, field: 0, card: 0 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#2b3b57" }, type: { h1: { size: 60, weight: 400, lineHeight: 1.05, letterSpacing: 0.02, transform: "uppercase" }, h2: { size: 36, weight: 400, lineHeight: 1.15, letterSpacing: 0.04, transform: "uppercase" } } },
-    dna: { scale: "l", pad: "airy", align: "left", shape: "sharp" }, art: { seed: "barreau", motifs: ["skyline", "halftone", "rays"] },
-    head: ["head:split", {}], foot: ["foot:big", { title: "Delcourt Avocats" }],
-    menu: [["Accueil", "/"], ["Domaines", "/domaines"], ["Le cabinet", "/cabinet"], ["Publications", "/actualites"], ["Contact", "/contact"]], cta: ["Consultation", "/contact"],
-    contact: { address: "27 quai des Chartrons, 33000 Bordeaux", phone: "05 56 00 45 67", email: "cabinet@delcourt-avocats.example", hours: "Du lundi au vendredi, 8 h 30 – 19 h", tagline: "Défendre, conseiller, anticiper." },
-    pages: [
-      { key: "accueil", name: "Accueil", blocks: [
-        ["hero:cover", { eyebrow: "Droit des affaires et contentieux", title: "Votre litige mérite une stratégie, pas un pari.", sub: "Six avocats, trois barreaux, une même méthode : comprendre l'enjeu économique avant de plaider.", cta: ["Demander une consultation", "/contact"], cta2: ["Nos domaines", "/domaines"], overlay: "#0a1220b3" }],
-        ["feat:strips", { eyebrow: "Domaines d'intervention", title: "Là où nous pesons dans la balance", items: [{ t: "Contentieux commercial", x: "Rupture de contrat, concurrence déloyale, recouvrement : plaidoiries et médiations." }, { t: "Droit des sociétés", x: "Pactes d'associés, levées de fonds, cessions." }, { t: "Droit social", x: "Licenciements, négociations collectives, prud'hommes." }] }],
-        ["proof:statsbar", { items: [["320", "dossiers traités"], ["18", "ans de barreau"], ["7", "langues de travail"]] }],
-        ["feat:alt", { eyebrow: "Méthode", title: "Une défense construite en amont", items: [{ t: "Audit du dossier", x: "Nous chiffrons les risques avant tout engagement, avec une note de synthèse écrite." }, { t: "Stratégie amiable d'abord", x: "Négociation et médiation quand elles servent vos intérêts, contentieux quand il le faut." }] }],
-        ["misc:quote", { text: "Le droit est une langue : il faut la parler mieux que la partie adverse.", by: "Maître Anaïs Delcourt, associée (personnage fictif)" }],
-        ["cta:split", { title: "Un différend en cours ?", sub: "Premier rendez-vous confidentiel sous 72 heures.", cta: ["Nous contacter", "/contact"] }],
-      ] },
-      { key: "domaines", name: "Domaines", blocks: [
-        ["misc:pagehead", { title: "Domaines d'intervention", sub: "Conseil, contentieux et accompagnement dans la durée." }],
-        ["feat:tabs", { title: "Nos spécialités", items: [{ t: "Contentieux", x: "Représentation devant les tribunaux de commerce, les cours d'appel et en arbitrage." }, { t: "Sociétés", x: "Rédaction de pactes, restructurations, opérations de croissance externe." }, { t: "Social", x: "Audits RH, contentieux individuel et collectif, plans de départ." }, { t: "Propriété intellectuelle", x: "Marques, contrats de licence, protection des créations." }] }],
-        ["feat:compare", { title: "Choisir son mode d'honoraires", rows: [["", "Forfait", "Au temps passé", "Résultat"], ["Budget connu à l'avance", "oui", "non", "en partie"], ["Adapté aux dossiers longs", "non", "oui", "oui"], ["Convention écrite", "oui", "oui", "oui"]] }],
-        ["feat:accordion", { title: "Questions avant de nous consulter", items: [{ t: "Le premier rendez-vous est-il payant ?", x: "Il est facturé au forfait de 120 € dans l'exemple présenté ici, déduit des honoraires si vous nous confiez le dossier." }, { t: "Intervenez-vous hors de Bordeaux ?", x: "Oui, devant l'ensemble des juridictions françaises, avec nos correspondants." }] }],
-      ] },
-      { key: "cabinet", name: "Le cabinet", blocks: [
-        ["misc:pagehead", { title: "Le cabinet" }],
-        ["misc:story", { eyebrow: "Notre approche", title: "Peu de dossiers, beaucoup d'attention", paras: ["Le cabinet limite volontairement le nombre de dossiers par avocat afin de rester disponible lors des audiences comme des négociations.", "Chaque client dispose d'un avocat référent et d'un point d'étape mensuel."] }],
-        ["proof:team", { title: "Les avocats", items: [{ n: "Anaïs Delcourt", r: "Associée, contentieux" }, { n: "Rafael Montès", r: "Associé, sociétés" }, { n: "Élise Wagner", r: "Counsel, droit social" }] }],
-        ["proof:logos", { title: "Institutions et réseaux (fictifs)", items: ["Barreau du Sud-Ouest", "Chambre arbitrale Atlantique", "Réseau Lexis-Nova", "Forum du droit de l'entreprise"] }],
-      ] },
-      pageActus("Publications", "Veille juridique et décryptages du cabinet.", "Dernières notes", "grid", 6),
-      pageContact("Prendre contact", "Toutes les demandes sont traitées en confidentialité.", "Nos coordonnées", "Expliquez en quelques lignes l'objet du litige, sans joindre de pièces.", ["Envoyer", "/contact"], "27 quai des Chartrons, 33000 Bordeaux", "Le cabinet"),
-    ],
-  },
-
-  // 3. Assurances : chaleureux, turquoise et orange, bandeau d'infos, arrondis
-  {
-    key: "abri-solide", name: "Abri Solide", category: "entreprise", tags: ["chaleureux", "moderne"], siteType: "Agence d'assurances",
-    description: "Agence d'assurances de proximité : turquoise rassurant, touches orange, formes douces, bandeau de contact et comparatif de formules.",
-    brand: "Abri Solide Assurances",
-    tokens: { colors: { primary: "#0f7c80", secondary: "#0b3b4a", accent: "#f28c28", background: "#f2f9f8", surface: "#ffffff", text: "#17313a", muted: "#4d6670" }, fonts: { heading: "font.public-sans", body: "font.nunito", button: "font.public-sans", link: "font.nunito" }, radius: { sm: 8, md: 14, lg: 20, button: 999, field: 12, card: 18 }, shadow: { card: "md", button: "sm" }, type: { h1: { size: 50, weight: 800, lineHeight: 1.08, letterSpacing: -0.02 } } },
-    dna: { scale: "m", pad: "normal", align: "left", shape: "pill" }, art: { seed: "abri", motifs: ["blobs", "waves", "objects"] },
-    head: ["head:topbar", { info: "Un conseiller vous répond au 04 00 12 98 76", note: "Du lundi au samedi" }], foot: ["foot:newsletter", { title: "Les bons réflexes assurance", sub: "Un conseil par mois, jamais de démarchage.", button: "Je m'abonne" }],
-    menu: [["Accueil", "/"], ["Nos assurances", "/assurances"], ["Sinistre", "/sinistre"], ["Agences", "/agences"], ["Contact", "/contact"]], cta: ["Devis gratuit", "/contact"],
-    contact: { address: "5 avenue de la République, 69003 Lyon", phone: "04 00 12 98 76", email: "bonjour@abri-solide.example", hours: "Lundi au vendredi 9 h – 18 h, samedi 9 h – 12 h", tagline: "Des garanties claires, un conseiller qui décroche." },
-    pages: [
-      { key: "accueil", name: "Accueil", blocks: [
-        ["hero:split-left", { eyebrow: "Assurance de proximité", title: "Protégez ce qui compte, sans lire 40 pages.", sub: "Auto, habitation, santé, responsabilité des professionnels : un devis en 5 minutes, un conseiller à votre écoute.", cta: ["Obtenir mon devis", "/contact"], cta2: ["Déclarer un sinistre", "/sinistre"] }],
-        ["feat:grid-icons", { title: "Quatre protections essentielles", items: [{ icon: "home", t: "Habitation", x: "Dégâts des eaux, vol, incendie." }, { icon: "globe", t: "Auto et moto", x: "Tous risques ou au tiers." }, { icon: "heart", t: "Santé", x: "Mutuelle individuelle et famille." }, { icon: "shield", t: "Professionnels", x: "Responsabilité civile et locaux." }] }],
-        ["price:tiers", { title: "Assurance habitation : trois formules (exemples)", items: [{ t: "Essentiel", price: "9 €", period: "/ mois", x: "L'indispensable pour un locataire.", f: ["Responsabilité civile", "Incendie, dégâts des eaux", "Assistance 24 h/24"], cta: ["Choisir", "/contact"] }, { t: "Confort", price: "17 €", period: "/ mois", x: "Le plus choisi.", f: ["Tout l'Essentiel", "Vol et vandalisme", "Objets de valeur jusqu'à 3 000 €"], cta: ["Choisir", "/contact"], hl: true }, { t: "Sérénité", price: "29 €", period: "/ mois", x: "Pour les propriétaires.", f: ["Tout le Confort", "Protection juridique", "Panne d'équipements"], cta: ["Choisir", "/contact"] }] }],
-        ["proof:stats", { title: "Notre engagement en chiffres (exemples)", items: [["48 h", "pour l'envoi d'un expert"], ["12 000", "foyers couverts"], ["9/10", "clients recommandent l'agence"]] }],
-        ["proof:quotes", { title: "Après un sinistre", items: [{ q: "Remboursé en neuf jours, avec un appel de suivi.", n: "Sophie M.", r: "Dégât des eaux, cliente fictive" }, { q: "Mon conseiller m'a trouvé 200 € d'économie.", n: "Karim A.", r: "Assurance auto, client fictif" }, { q: "Un interlocuteur unique, c'est rare.", n: "Béatrice L.", r: "Professionnelle, cliente fictive" }] }],
-        ["cta:band", { title: "Comparez vos garanties avec un conseiller.", sub: "Gratuit, sans engagement, en agence ou par téléphone.", cta: ["Prendre rendez-vous", "/contact"] }],
-      ] },
-      { key: "assurances", name: "Nos assurances", blocks: [
-        ["misc:pagehead", { title: "Nos assurances", sub: "Pour les particuliers, les indépendants et les petites entreprises." }],
-        ["feat:cards", { title: "Particuliers", items: [{ icon: "home", t: "Multirisque habitation", x: "Appartement ou maison, propriétaire ou locataire." }, { icon: "globe", t: "Assurance auto", x: "Formules adaptées au jeune conducteur comme au bonus maximal." }, { icon: "heart", t: "Mutuelle santé", x: "Remboursements dentaire, optique et hospitalisation." }] }],
-        ["feat:strips", { title: "Professionnels", items: [{ t: "Responsabilité civile professionnelle", x: "Dommages causés à vos clients ou à des tiers." }, { t: "Multirisque locaux", x: "Stocks, matériel, perte d'exploitation." }, { t: "Prévoyance du dirigeant", x: "Maintien de revenu en cas d'arrêt de travail." }] }],
-        ["feat:compare", { title: "Auto : quelle formule ?", rows: [["", "Tiers", "Tiers étendu", "Tous risques"], ["Responsabilité civile", "oui", "oui", "oui"], ["Vol et incendie", "non", "oui", "oui"], ["Dommages au véhicule", "non", "non", "oui"]] }],
-      ] },
-      { key: "sinistre", name: "Sinistre", blocks: [
-        ["misc:pagehead", { title: "Déclarer un sinistre", sub: "Les bons gestes dans l'ordre." }],
-        ["feat:steps", { title: "En quatre étapes", items: [{ d: "Jour J", t: "Sécurisez les lieux", x: "Coupez l'eau ou l'électricité, photographiez les dégâts." }, { d: "Sous 5 jours", t: "Prévenez-nous", x: "Appel, formulaire en ligne ou passage en agence." }, { d: "Sous 10 jours", t: "Expertise", x: "Un expert fixe un rendez-vous si nécessaire." }, { d: "Sous 3 semaines", t: "Indemnisation", x: "Virement après accord sur le chiffrage." }] }],
-        ["feat:accordion", { title: "Questions courantes", items: [{ t: "Que couvre la franchise ?", x: "Une part restant à votre charge, indiquée dans votre contrat." }, { t: "Puis-je choisir mon réparateur ?", x: "Oui, nous proposons aussi un réseau d'artisans agréés." }] }],
-        ["cta:split", { title: "Urgence 24 h/24", sub: "Appelez le numéro d'assistance figuré sur votre carte.", cta: ["Nous contacter", "/contact"] }],
-      ] },
-      { key: "agences", name: "Agences", blocks: [
-        ["misc:pagehead", { title: "Nos agences" }],
-        ["feat:alt", { title: "Trois lieux d'accueil", items: [{ t: "Lyon Part-Dieu", x: "Accueil sans rendez-vous du lundi au samedi matin." }, { t: "Villeurbanne", x: "Conseillers dédiés aux professionnels et commerçants." }, { t: "Vénissieux", x: "Permanence famille et santé les mardis et jeudis." }] }],
-        ["misc:hours", { title: "Horaires d'ouverture (exemple)", rows: [["Lundi – vendredi", "9 h – 18 h"], ["Samedi", "9 h – 12 h"], ["Dimanche", "Fermé"]] }],
-        pageActusBlock(),
-      ] },
-      pageContact("Parlons de votre protection", "Un conseiller vous rappelle dans la journée.", "Coordonnées", "Indiquez le type d'assurance recherché et votre disponibilité.", ["Être rappelé", "/contact"], "5 avenue de la République, 69003 Lyon", "Agence principale"),
-    ],
-  },
-
-  // 4. RH / recrutement : vif, violet et lime, poster, header flottant
-  {
-    key: "talent-vif", name: "Talent Vif", category: "entreprise", tags: ["audacieux", "ludique"], siteType: "Cabinet de recrutement",
-    description: "Cabinet de recrutement affirmé : violet électrique, touche citron, titres marqueur et affiche d'accueil en capitales, barre d'en-tête flottante.",
-    brand: "Talent Vif Recrutement",
-    tokens: { colors: { primary: "#6c3df0", secondary: "#1c1240", accent: "#c6f432", background: "#fbfaff", surface: "#ffffff", text: "#1d1a33", muted: "#55507a" }, fonts: { heading: "font.permanent-marker", body: "font.dm-sans", button: "font.dm-sans", link: "font.dm-sans" }, radius: { sm: 10, md: 16, lg: 24, button: 14, field: 12, card: 20 }, shadow: { card: "lg", button: "md" }, type: { h1: { size: 58, weight: 400, lineHeight: 1.05, letterSpacing: 0 } } },
-    dna: { scale: "xl", pad: "normal", align: "left", shape: "soft" }, art: { seed: "talent", motifs: ["blobs", "bokeh", "mesh"] },
-    head: ["head:float", {}], foot: ["foot:columns", { about: "Recrutement de cadres et de profils rares en région, pour des PME qui veulent grandir.", cols: [["Entreprises", "Missions", "Honoraires", "Candidats"], ["Cabinet", "Équipe", "Actualités", "Contact"]] }],
-    menu: [["Accueil", "/"], ["Entreprises", "/entreprises"], ["Candidats", "/candidats"], ["L'équipe", "/equipe"], ["Contact", "/contact"]], cta: ["Déposer une offre", "/contact"],
-    contact: { address: "14 rue des Capucins, 44000 Nantes", phone: "02 40 00 77 21", email: "hello@talent-vif.example", hours: "Du lundi au vendredi, 9 h – 18 h 30", tagline: "Les bons profils au bon moment." },
-    pages: [
-      { key: "accueil", name: "Accueil", blocks: [
-        ["hero:poster", { eyebrow: "Recrutement en PME", title: "Recrutez ceux qui feront la différence.", sub: "Chasse, présélection et intégration de cadres et de profils techniques : un shortlist en trois semaines.", cta: ["Déposer une offre", "/contact"], cta2: ["Voir les postes", "/candidats"] }],
-        ["proof:logos", { title: "Entreprises accompagnées (fictives)", items: ["Brasserie Océane", "Kelvin Tech", "Maison Arnaud", "Studio Croisette", "Nantaise Logistique"] }],
-        ["feat:numbered", { eyebrow: "Notre méthode", title: "Trois étapes, zéro CV en vrac", items: [{ t: "Cadrer", x: "Nous définissons avec vous le poste, la culture et le budget." }, { t: "Chasser", x: "Réseau, annonces ciblées et approche directe de profils en poste." }, { t: "Intégrer", x: "Suivi pendant la période d'essai, avec bilans à 1 et 3 mois." }] }],
-        ["feat:checks", { title: "Ce que vous obtenez", cta: ["Voir les honoraires", "/entreprises"], items: [{ t: "Shortlist de 3 à 5 profils qualifiés" }, { t: "Évaluation des compétences et des motivations" }, { t: "Garantie de remplacement de 6 mois" }, { t: "Reporting hebdomadaire" }] }],
-        ["proof:big", { items: [{ q: "Notre candidat est arrivé avec une équipe prête à l'écouter. Un recrutement qui a changé notre trimestre.", n: "Directrice d'exploitation", r: "cliente fictive" }] }],
-        ["cta:split", { title: "Un poste à pourvoir ?", sub: "Décrivez-le en dix minutes, nous revenons avec un plan de recherche.", cta: ["Parler à un consultant", "/contact"] }],
-      ] },
-      { key: "entreprises", name: "Entreprises", blocks: [
-        ["misc:pagehead", { title: "Pour les entreprises", sub: "Des formules claires, sans surprise." }],
-        ["price:tiers", { title: "Nos formules (exemples d'honoraires)", items: [{ t: "Sélection", price: "12 %", period: "du salaire annuel", x: "Annonce et présélection.", f: ["Rédaction de l'offre", "Diffusion ciblée", "Shortlist de 3 profils"], cta: ["Démarrer", "/contact"] }, { t: "Chasse", price: "18 %", period: "du salaire annuel", x: "Profils en poste.", f: ["Cartographie du marché", "Approche directe", "Garantie de 6 mois"], cta: ["Démarrer", "/contact"], hl: true }, { t: "Direction", price: "Sur devis", x: "Postes de comité de direction.", f: ["Assessment complet", "Confidentialité renforcée", "Accompagnement 12 mois"], cta: ["Nous écrire", "/contact"] }] }],
-        ["feat:rows", { title: "Les métiers que nous recrutons", items: [{ t: "Direction et gestion", x: "DAF, directeurs d'exploitation, responsables RH." }, { t: "Commercial", x: "Responsables de comptes, business developers." }, { t: "Technique et industrie", x: "Ingénieurs méthodes, responsables de production." }, { t: "Numérique", x: "Développeurs, chefs de projet, data analysts." }] }],
-        ["cta:band", { title: "Besoin d'un devis personnalisé ?", cta: ["Nous contacter", "/contact"] }],
-      ] },
-      { key: "candidats", name: "Candidats", blocks: [
-        ["misc:pagehead", { title: "Pour les candidats", sub: "Quelques postes ouverts (offres de démonstration)." }],
-        ["gal:cards", { title: "Postes en cours", items: [{ tag: "CDI", t: "Responsable logistique", x: "Entrepôt de 8 000 m², équipe de 25 personnes, Nantes." }, { tag: "CDI", t: "Business developer", x: "Solutions logicielles pour PME, déplacements en Pays de la Loire." }, { tag: "CDD", t: "Contrôleur de gestion", x: "Remplacement de 9 mois, industrie agroalimentaire." }] }],
-        ["feat:steps", { title: "Notre accompagnement", items: [{ t: "Entretien", x: "Un point d'une heure pour comprendre vos attentes." }, { t: "Mise en relation", x: "Vous ne postulez qu'aux offres qui vous correspondent." }, { t: "Préparation", x: "Simulation d'entretien et retours après chaque rencontre." }] }],
-        ["cta:card", { title: "Envoyez-nous votre CV", sub: "Il ne sera jamais transmis sans votre accord.", cta: ["Déposer mon CV", "/contact"] }],
-      ] },
-      { key: "equipe", name: "L'équipe", blocks: [
-        ["misc:pagehead", { title: "L'équipe" }],
-        ["proof:team", { title: "Cinq consultants en région", items: [{ n: "Lou Perrin", r: "Fondatrice" }, { n: "Matthieu Roche", r: "Industrie et logistique" }, { n: "Yasmine Hadj", r: "Commerce et marketing" }, { n: "Théo Brunet", r: "Numérique" }] }],
-        ["proof:stats", { items: [["380", "recrutements réalisés"], ["21 jours", "délai moyen de shortlist"], ["91 %", "de postes confirmés après 12 mois"]] }],
-        ["feat:list2", { title: "Notre charte", items: [{ t: "Aucun profil transmis sans accord" }, { t: "Honoraires uniquement au succès" }, { t: "Transparence sur les rémunérations" }, { t: "Retour à chaque candidat" }] }],
-      ] },
-      pageContact("Contact", "Dites-nous qui vous cherchez.", "Écrivons-nous", "Poste, localisation et fourchette de rémunération suffisent pour débuter.", ["Envoyer", "/contact"], "14 rue des Capucins, 44000 Nantes", "Dans le centre de Nantes"),
-    ],
-  },
-
-  // 5. Traduction : papier chaud, slab, en-tête journal, éditorial
-  {
-    key: "lexique-et-lettres", name: "Lexique & Lettres", category: "entreprise", tags: ["editorial", "chaleureux"], siteType: "Agence de traduction",
-    description: "Agence de traduction aux allures d'édition : papier chaud, terracotta et bleu-vert, slab serif, bandeau de journal et grand titre éditorial.",
-    brand: "Lexique & Lettres",
-    tokens: { colors: { primary: "#8a4b2a", secondary: "#3a2a20", accent: "#2f6f73", background: "#faf6ef", surface: "#ffffff", text: "#2b231d", muted: "#675a4f" }, fonts: { heading: "font.roboto-slab", body: "font.work-sans", button: "font.work-sans", link: "font.work-sans" }, radius: { sm: 3, md: 6, lg: 8, button: 4, field: 4, card: 6 }, shadow: { card: "sm", button: "none" }, border: { width: 1, color: "#e1d6c4" }, type: { h1: { size: 54, weight: 700, lineHeight: 1.06, letterSpacing: -0.02 } } },
-    dna: { scale: "l", pad: "normal", align: "left", shape: "soft" }, art: { seed: "lexique", motifs: ["ribbons", "tiles", "arches"] },
-    head: ["head:masthead", { dateline: "Traduction, relecture, localisation : 24 langues" }], foot: ["foot:simple", {}],
-    menu: [["Accueil", "/"], ["Langues et services", "/services"], ["Tarifs", "/tarifs"], ["Notre atelier", "/atelier"], ["Contact", "/contact"]], cta: ["Demander un devis", "/contact"],
-    contact: { address: "3 rue des Imprimeurs, 67000 Strasbourg", phone: "03 88 00 31 42", email: "devis@lexique-lettres.example", hours: "Du lundi au vendredi, 9 h – 17 h 30", tagline: "Le mot juste, dans la langue qu'il faut." },
-    pages: [
-      { key: "accueil", name: "Accueil", blocks: [
-        ["hero:editorial", { eyebrow: "Agence de traduction", kicker: "24 langues, 140 traducteurs", title: "Des textes qui se lisent comme s'ils étaient nés dans la langue d'arrivée.", sub: "Contrats, notices, sites web, supports de formation : nous traduisons, relisons et adaptons vos documents avec des traducteurs natifs et spécialisés.", cta: ["Demander un devis", "/contact"], cta2: ["Voir les tarifs", "/tarifs"] }],
-        ["feat:strips", { eyebrow: "Services", title: "Quatre manières de traduire", items: [{ t: "Traduction spécialisée", x: "Juridique, technique, médical, marketing, par des traducteurs du domaine." }, { t: "Relecture bilingue", x: "Vérification d'une traduction existante, avec corrections commentées." }, { t: "Localisation web", x: "Adaptation de sites, applications et fiches produit." }, { t: "Traduction assermentée", x: "Documents officiels certifiés conformes." }] }],
-        ["proof:statsbar", { items: [["24", "langues couvertes"], ["48 h", "pour les textes courts"], ["15 000", "pages traduites par mois"]] }],
-        ["feat:steps", { title: "Du devis à la livraison", items: [{ d: "1", t: "Devis", x: "Réponse dans l'heure en jours ouvrés." }, { d: "2", t: "Traduction", x: "Glossaire validé avec vous avant de commencer." }, { d: "3", t: "Relecture", x: "Second linguiste indépendant." }, { d: "4", t: "Livraison", x: "Fichiers à la mise en page d'origine." }] }],
-        ["proof:quotes", { title: "Retours d'expérience", items: [{ q: "Nos notices sont enfin cohérentes dans six langues.", n: "Direction qualité", r: "Industrie, client fictif" }, { q: "Un glossaire partagé qui nous fait gagner des semaines.", n: "Chef de projet", r: "Édition, cliente fictive" }, { q: "Livraison la veille de notre salon, impeccable.", n: "Responsable export", r: "PME, client fictif" }] }],
-        ["cta:band", { title: "Vous avez un texte à traduire ?", sub: "Envoyez le fichier, nous chiffrons gratuitement.", cta: ["Demander un devis", "/contact"] }],
-      ] },
-      { key: "services", name: "Langues et services", blocks: [
-        ["misc:pagehead", { title: "Langues et services", sub: "Des équipes natives, spécialisées par domaine." }],
-        ["feat:tabs", { title: "Nos domaines", items: [{ t: "Juridique", x: "Contrats, statuts, procédures : terminologie validée par des juristes." }, { t: "Technique", x: "Notices, fiches de sécurité, manuels de maintenance." }, { t: "Marketing", x: "Transcréation de slogans, catalogues, campagnes." }, { t: "Médical", x: "Protocoles, notices patients, communications scientifiques." }] }],
-        ["feat:grid-icons", { title: "Langues les plus demandées", items: [{ icon: "globe", t: "Anglais", x: "Britannique et américain." }, { icon: "globe", t: "Allemand", x: "Allemagne, Autriche, Suisse." }, { icon: "globe", t: "Espagnol", x: "Europe et Amérique latine." }, { icon: "globe", t: "Italien", x: "Contrats et mode." }] }],
-        ["cta:split", { title: "Une langue rare ?", sub: "Nous constituons une équipe sur mesure.", cta: ["Nous consulter", "/contact"] }],
-      ] },
-      { key: "tarifs", name: "Tarifs", blocks: [
-        ["misc:pagehead", { title: "Tarifs indicatifs", sub: "Prix au mot, hors taxes, pour des textes courants (exemples)." }],
-        ["feat:pricelist", { title: "Grille de démonstration", items: [{ t: "Anglais vers français", x: "Texte général.", price: "0,10 € / mot" }, { t: "Allemand vers français", x: "Texte technique.", price: "0,14 € / mot" }, { t: "Relecture bilingue", x: "Correction commentée.", price: "0,05 € / mot" }, { t: "Document assermenté", x: "Acte d'état civil, la page.", price: "45 €" }] }],
-        ["feat:accordion", { title: "Comment est calculé un devis ?", items: [{ t: "Que comprend le prix au mot ?", x: "La traduction, la relecture par un second linguiste et la mise en page." }, { t: "Y a-t-il un minimum de facturation ?", x: "Dans cet exemple, 40 € par commande." }] }],
-      ] },
-      { key: "atelier", name: "Notre atelier", blocks: [
-        ["misc:pagehead", { title: "Notre atelier" }],
-        ["misc:story", { eyebrow: "Depuis 2004", title: "Une petite maison, un grand carnet d'adresses", paras: ["Née d'un trio de traducteurs strasbourgeois, l'agence réunit aujourd'hui cent quarante professionnels partout en Europe.", "Chaque traducteur est évalué tous les ans sur des textes réels."], image: "portrait-2" }],
-        ["proof:team", { title: "Chefs de projet", items: [{ n: "Ingrid Lang", r: "Direction" }, { n: "Pablo Serrano", r: "Projets ibériques" }, { n: "Mina Kovač", r: "Langues d'Europe centrale" }] }],
-        pageActusBlock(),
-      ] },
-      pageContact("Demander un devis", "Joignez votre fichier et précisez la langue d'arrivée.", "Nos coordonnées", "Texte, langues, date de livraison souhaitée : nous répondons sous une heure ouvrée.", ["Envoyer ma demande", "/contact"], "3 rue des Imprimeurs, 67000 Strasbourg", "Dans la Petite France"),
-    ],
-  },
-
-  // 6. Ingénierie : bleu bureau d'études, orange, side header, sans fond bleu
-  {
-    key: "trace-et-calcul", name: "Trace & Calcul", category: "entreprise", tags: ["technique", "geometrique"], siteType: "Bureau d'études",
-    description: "Bureau d'études techniques : bleu plan, orange de repérage, fonds clairs bleutés, coins nets, en-tête à slogan et bandeau sur fond sombre.",
-    brand: "Trace & Calcul Ingénierie",
-    tokens: { colors: { primary: "#0b5cad", secondary: "#0a2540", accent: "#ff7a1a", background: "#eef3f8", surface: "#ffffff", text: "#0e1c2c", muted: "#4b5d70" }, fonts: { heading: "font.chivo", body: "font.ibm-plex-sans", button: "font.chivo", link: "font.ibm-plex-sans" }, radius: { sm: 2, md: 4, lg: 6, button: 2, field: 2, card: 4 }, shadow: { card: "sm", button: "none" }, border: { width: 1, color: "#cbd6e2" }, type: { h1: { size: 50, weight: 900, lineHeight: 1.04, letterSpacing: -0.02 } } },
-    dna: { scale: "m", pad: "normal", align: "left", shape: "sharp" }, art: { seed: "trace", motifs: ["topo", "tiles", "mesh"] },
-    head: ["head:side", {}], foot: ["foot:columns", { about: "Bureau d'études en structure, fluides et infrastructures pour le bâtiment et l'industrie.", cols: [["Compétences", "Structure", "Fluides", "Infrastructures"], ["Bureau", "Références", "Carrières", "Contact"]] }],
-    menu: [["Accueil", "/"], ["Compétences", "/competences"], ["Références", "/references"], ["Le bureau", "/bureau"], ["Contact", "/contact"]], cta: ["Soumettre un projet", "/contact"],
-    contact: { address: "Parc d'activités Les Hauts-de-Garonne, 31200 Toulouse", phone: "05 61 00 28 90", email: "projets@trace-calcul.example", hours: "Du lundi au vendredi, 8 h 30 – 18 h", tagline: "Calculer juste pour construire sûr." },
-    pages: [
-      { key: "accueil", name: "Accueil", blocks: [
-        ["hero:bleed", { eyebrow: "Ingénierie du bâtiment et de l'industrie", title: "Des plans qui tiennent debout, des budgets qui tiennent.", sub: "Structure, fluides, VRD : trente ingénieurs au service des maîtres d'ouvrage, architectes et entreprises générales.", cta: ["Soumettre un projet", "/contact"], cta2: ["Nos compétences", "/competences"] }],
-        ["proof:statsbar", { items: [["30", "ingénieurs"], ["420", "projets livrés"], ["12 M€", "de travaux étudiés par mois"]] }],
-        ["feat:cards", { eyebrow: "Compétences", title: "Trois pôles, une même chaîne de calcul", items: [{ t: "Structure", x: "Béton, charpente métallique et bois : notes de calcul, plans d'exécution, suivi de chantier." }, { t: "Fluides", x: "Chauffage, ventilation, plomberie, électricité." }, { t: "Infrastructures", x: "Voiries et réseaux divers, assainissement." }] }],
-        ["feat:compare", { title: "Missions : quelle intervention ?", rows: [["", "Études", "Études + suivi", "Maîtrise d'œuvre"], ["Notes de calcul", "oui", "oui", "oui"], ["Plans d'exécution", "oui", "oui", "oui"], ["Visites de chantier", "non", "oui", "oui"], ["Coordination des corps d'état", "non", "non", "oui"]] }],
-        ["proof:quotes", { title: "Partenaires", items: [{ q: "Des notes de calcul claires, livrées à la date prévue.", n: "Agence d'architecture", r: "client fictif" }, { q: "Ils ont optimisé notre structure de 12 %.", n: "Promoteur régional", r: "client fictif" }] }],
-        ["cta:band", { title: "Un projet à chiffrer ?", sub: "Envoyez vos plans, nous répondons sous cinq jours.", cta: ["Soumettre un projet", "/contact"] }],
-      ] },
-      { key: "competences", name: "Compétences", blocks: [
-        ["misc:pagehead", { title: "Compétences", sub: "Du pré-dimensionnement à l'assistance au chantier." }],
-        ["feat:alt", { title: "Nos pôles", items: [{ t: "Structure", x: "Dimensionnement aux Eurocodes, modélisation 3D, diagnostics de bâtiments existants." }, { t: "Fluides et énergie", x: "Études thermiques, ventilation double flux, solaire thermique." }, { t: "Infrastructures", x: "Voiries, réseaux, bassins de rétention." }] }],
-        ["feat:rows", { title: "Phases de mission", items: [{ t: "Esquisse et faisabilité", x: "Comparaison de solutions et estimation du coût." }, { t: "Avant-projet", x: "Dimensionnement et plans de principe." }, { t: "Projet et exécution", x: "Notes de calcul, plans, quantitatifs." }, { t: "Chantier", x: "Visa des plans d'entreprise et visites." }] }],
-        ["cta:split", { title: "Besoin d'un avis technique ?", sub: "Un ingénieur vous rappelle sous 24 heures.", cta: ["Nous contacter", "/contact"] }],
-      ] },
-      { key: "references", name: "Références", blocks: [
-        ["misc:pagehead", { title: "Références", sub: "Une sélection de réalisations (projets fictifs)." }],
-        ["gal:featured", { title: "Réalisations récentes", items: [{ t: "Halle logistique de 12 000 m²", x: "Charpente métallique, portée de 40 m." }, { t: "Résidence de 64 logements", x: "Structure béton, étude thermique RE2020." }, { t: "Passerelle piétonne", x: "Tablier en bois lamellé-collé." }, { t: "Station d'épuration", x: "Génie civil et réseaux." }] }],
-        ["proof:logos", { title: "Maîtres d'ouvrage (fictifs)", items: ["Garonne Habitat", "Mécanique Sud", "Ville de Valmeuse", "Port Atlantique", "Archi-Nord"] }],
-        ["proof:stats", { items: [["0", "sinistre structurel sur nos ouvrages (exemple)"], ["98 %", "de livrables remis à la date contractuelle"]] }],
-      ] },
-      { key: "bureau", name: "Le bureau", blocks: [
-        ["misc:pagehead", { title: "Le bureau" }],
-        ["misc:text", { eyebrow: "Créé en 2003", title: "Un bureau indépendant d'ingénieurs", paras: ["Trace & Calcul n'appartient à aucun groupe de construction : nos recommandations ne dépendent donc d'aucun fournisseur.", "Nous formons chaque année quatre jeunes ingénieurs en alternance."] }],
-        ["proof:team", { title: "Direction technique", items: [{ n: "Alix Fontaine", r: "Directrice, structure" }, { n: "Bastien Orsini", r: "Directeur, fluides" }, { n: "Wei Zhang", r: "Responsable BIM" }] }],
-        ["feat:steps", { title: "Recrutement", items: [{ t: "Candidature", x: "CV et projets dans la rubrique contact." }, { t: "Entretien technique", x: "Étude de cas avec deux ingénieurs." }, { t: "Intégration", x: "Parrainage pendant six mois." }] }],
-      ] },
-      pageContact("Contact", "Joignez plans et programme si vous les avez.", "Notre bureau", "Nature du projet, localisation, calendrier visé.", ["Envoyer le dossier", "/contact"], "Parc d'activités Les Hauts-de-Garonne, 31200 Toulouse", "Plan d'accès"),
-    ],
-  },
-
-  // 7. Nettoyage industriel : jaune sécurité / noir, Bebas, capitales
-  {
-    key: "brillance-pro", name: "Brillance Pro", category: "entreprise", tags: ["audacieux", "technique"], siteType: "Nettoyage industriel",
-    description: "Nettoyage industriel et tertiaire en jaune sécurité et noir : titres condensés en capitales, bandeau pleine largeur et tarification par formule.",
-    brand: "Brillance Pro Nettoyage",
-    tokens: { colors: { primary: "#1a1a1a", secondary: "#0d0d0d", accent: "#ffc61a", background: "#fffdf5", surface: "#ffffff", text: "#171717", muted: "#555555" }, fonts: { heading: "font.bebas-neue", body: "font.barlow", button: "font.bebas-neue", link: "font.barlow" }, radius: { sm: 0, md: 0, lg: 0, button: 0, field: 0, card: 0 }, shadow: { card: "none", button: "none" }, border: { width: 2, color: "#141414" }, type: { h1: { size: 76, weight: 400, lineHeight: 0.98, letterSpacing: 0.01, transform: "uppercase" }, h2: { size: 48, weight: 400, lineHeight: 1, letterSpacing: 0.02, transform: "uppercase" } }, buttons: { paddingY: 14, paddingX: 32 } },
-    dna: { scale: "xl", pad: "tight", align: "left", shape: "sharp" }, art: { seed: "brillance", motifs: ["rays", "halftone", "objects"] },
-    head: ["head:bar", {}], foot: ["foot:line", {}],
-    menu: [["Accueil", "/"], ["Prestations", "/prestations"], ["Sites traités", "/sites"], ["Qualité", "/qualite"], ["Devis", "/contact"]], cta: ["Devis en 48 h", "/contact"],
-    contact: { address: "ZI du Moulin Neuf, 59650 Villeneuve-d'Ascq", phone: "03 20 00 66 18", email: "devis@brillance-pro.example", hours: "Standard : 6 h – 20 h, du lundi au samedi", tagline: "Des sites propres, des équipes qui reviennent." },
-    pages: [
-      { key: "accueil", name: "Accueil", blocks: [
-        ["hero:stacked", { eyebrow: "Nettoyage industriel et tertiaire", title: "Des locaux propres, des équipes qui tournent.", sub: "Ateliers, entrepôts, bureaux, sites agroalimentaires : intervention de jour, de nuit ou en continu, produits conformes aux normes.", cta: ["Devis en 48 h", "/contact"], cta2: ["Nos prestations", "/prestations"], stats: [["180", "sites traités"], ["24 h/24", "astreinte"], ["12", "régions couvertes"]] }],
-        ["misc:marquee", { items: ["Intervention de nuit", "Produits certifiés", "Équipes formées HACCP", "Devis gratuit en 48 h"] }],
-        ["feat:rows", { title: "Ce que nous nettoyons", items: [{ t: "Ateliers et lignes de production", x: "Dégraissage, nettoyage haute pression, gestion des déchets." }, { t: "Entrepôts et plateformes", x: "Autolaveuses, balayage industriel, vitrerie en hauteur." }, { t: "Bureaux et sites tertiaires", x: "Entretien quotidien, remise en état après travaux." }, { t: "Sites alimentaires", x: "Protocoles HACCP, traçabilité des interventions." }] }],
-        ["feat:strips", { title: "Notre promesse", items: [{ t: "Un chef d'équipe par site", x: "Un interlocuteur unique, joignable sans standard." }, { t: "Un cahier de contrôle", x: "Chaque intervention est tracée et signée." }, { t: "Des produits maîtrisés", x: "Fiches de données de sécurité transmises avant le début." }] }],
-        ["proof:quotes", { title: "Sur le terrain", items: [{ q: "Zéro écart sur notre dernier audit d'hygiène.", n: "Responsable qualité", r: "agroalimentaire, client fictif" }, { q: "Les équipes sont ponctuelles, même à 4 h du matin.", n: "Directeur de site", r: "logistique, client fictif" }] }],
-        ["cta:band", { title: "Votre site est-il prêt pour le prochain audit ?", cta: ["Demander une visite", "/contact"] }],
+        ["hero:cover", { eyebrow: "Nettoyage industriel", title: "Vos ateliers propres, vos lignes qui tournent.", sub: "Équipes formées aux environnements agroalimentaires, chimiques et mécaniques, avec protocoles écrits et traçabilité.", cta: ["Demander un devis", "/contact"], cta2: ["Nos prestations", "/prestations"], image: "hero", alt: "Équipe de nettoyage dans un atelier" }],
+        ["feat:grid-icons", { eyebrow: "Savoir-faire", title: "Quatre métiers, une même exigence", items: [{ t: "Ateliers de production", x: "Dégraissage et désinfection entre deux équipes.", icon: "settings" }, { t: "Sols et cuves", x: "Autolaveuses industrielles, nettoyage haute pression.", icon: "layers" }, { t: "Entrepôts", x: "Poussières, racks et quais de chargement.", icon: "home" }, { t: "Fin de chantier", x: "Remise en état avant livraison ou réouverture.", icon: "checkCircle" }] }],
+        ["proof:stats", { title: "En chiffres (exemples)", items: [["240", "sites entretenus"], ["24 h/24", "créneaux de nuit"], ["48 h", "délai moyen d'intervention"]] }],
+        ["feat:compare", { eyebrow: "Formules", title: "Choisir la fréquence qui convient", rows: [["", "Ponctuel", "Récurrent"], ["Plan de nettoyage écrit", "oui", "oui"], ["Rapport photo", "sur demande", "oui"], ["Équipe dédiée", "non", "oui"], ["Tarif au m²", "standard", "dégressif"]], bg: "token:surface" }],
+        ["proof:big", { items: [Q("Entre deux équipes de nuit, le site était prêt : sols secs, cuves rincées, contrôle qualité signé.", "Claire D.", "Responsable qualité, cliente fictive")] }],
+        ["cta:split", { title: "Un arrêt technique à planifier ?", sub: "Envoyez surface et contraintes, nous chiffrons sous 48 h.", cta: ["Demander un devis", "/contact"] }]
       ] },
       { key: "prestations", name: "Prestations", blocks: [
-        ["misc:pagehead", { title: "Prestations", sub: "Contrats récurrents et interventions ponctuelles." }],
-        ["feat:cards", { title: "Interventions", items: [{ icon: "sparkles", t: "Entretien récurrent", x: "Passages quotidiens, hebdomadaires ou mensuels." }, { icon: "settings", t: "Nettoyage industriel", x: "Machines, convoyeurs, sols techniques." }, { icon: "sun", t: "Vitrerie", x: "Façades, verrières, nacelle." }, { icon: "alertTriangle", t: "Remise en état", x: "Après travaux, sinistre ou déménagement." }] }],
-        ["price:tiers", { title: "Contrats types (exemples)", items: [{ t: "Bureaux", price: "dès 1,20 €", period: "/ m² / mois", x: "Entretien 3 fois par semaine.", f: ["Sanitaires", "Sols et vitres intérieures", "Gestion des consommables"], cta: ["Devis", "/contact"] }, { t: "Industrie", price: "Sur devis", x: "Selon cadence et risques.", f: ["Étude préalable", "Équipe dédiée", "Traçabilité"], cta: ["Devis", "/contact"], hl: true }] }],
-        ["cta:split", { title: "Besoin d'une intervention urgente ?", sub: "Astreinte nuit et week-end.", cta: ["Nous appeler", "/contact"] }],
+        P("Nos prestations", "Du nettoyage courant à la remise en état"),
+        ["feat:cards", { title: "Ce que nous prenons en charge", items: [{ t: "Nettoyage de production", x: "Protocole validé avec votre service qualité.", icon: "settings" }, { t: "Haute pression", x: "Cuves, convoyeurs, façades et toitures techniques.", icon: "zap" }, { t: "Désinfection", x: "Produits adaptés aux zones alimentaires.", icon: "shield" }, { t: "Bureaux et sanitaires", x: "Entretien quotidien des parties communes.", icon: "home" }, { t: "Déchets de nettoyage", x: "Tri et évacuation conformes.", icon: "layers" }, { t: "Fin de chantier", x: "Nettoyage grossier puis de finition.", icon: "sparkles" }] }],
+        ["feat:pricelist", { title: "Tarifs indicatifs (exemples)", items: [{ t: "Nettoyage de sol industriel", x: "au m², selon état", price: "dès 1,80 €" }, { t: "Haute pression, demi-journée", x: "équipe de 2", price: "720 €" }, { t: "Entretien mensuel de bureaux", x: "par 100 m²", price: "dès 390 €" }], bg: "token:surface" }],
+        ["cta:band", { title: "Besoin d'une visite de site ?", cta: ["Prendre rendez-vous", "/contact"] }]
       ] },
-      { key: "sites", name: "Sites traités", blocks: [
-        ["misc:pagehead", { title: "Sites traités", sub: "Quelques exemples de chantiers (fictifs)." }],
-        ["gal:masonry", { title: "En images", items: [{ t: "Entrepôt de 20 000 m²" }, { t: "Atelier de mécanique" }, { t: "Laboratoire" }, { t: "Siège tertiaire" }, { t: "Chaîne agroalimentaire" }] }],
-        ["proof:stats", { items: [["1,8 M m²", "nettoyés chaque mois"], ["96 %", "de contrats reconduits"], ["35 min", "de délai d'astreinte moyen"]] }],
+      { key: "methodes", name: "Méthodes", blocks: [
+        P("Nos méthodes", "Un protocole écrit, une preuve de passage"),
+        ["feat:steps", { title: "Une intervention en quatre temps", items: [{ d: "J-7", t: "Visite", x: "Relevé des surfaces, accès, risques et horaires." }, { d: "J-2", t: "Plan", x: "Protocole, produits et fiches de sécurité transmis." }, { d: "Jour J", t: "Intervention", x: "Équipe encadrée par un chef de site." }, { d: "J+1", t: "Compte rendu", x: "Rapport photo et points d'amélioration." }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Intervenez-vous la nuit ?", x: "Oui, sur créneaux de nuit et de week-end." }, { t: "Fournissez-vous les produits ?", x: "Oui, avec fiches de données de sécurité." }, { t: "Vos agents sont-ils formés ?", x: "Habilitations et formation aux zones sensibles incluses." }] }],
+        ["cta:card", { title: "Parlons de votre site", cta: ["Nous écrire", "/contact"] }]
       ] },
-      { key: "qualite", name: "Qualité", blocks: [
-        ["misc:pagehead", { title: "Qualité et sécurité" }],
-        ["feat:numbered", { title: "Trois piliers", items: [{ t: "Formation", x: "40 heures de formation initiale pour chaque agent." }, { t: "Contrôle", x: "Visite qualité mensuelle chez chaque client." }, { t: "Environnement", x: "Produits écolabellisés dès que possible." }] }],
-        ["feat:list2", { title: "Certifications (exemples)", items: [{ t: "Management de la qualité" }, { t: "Management environnemental" }, { t: "Santé et sécurité au travail" }, { t: "Formation HACCP" }] }],
-        pageActusBlock(),
+      { key: "references", name: "Références", blocks: [
+        P("Références", "Des sites exigeants, des clients fidèles"),
+        ["gal:cards", { items: [{ t: "Laiterie régionale", tag: "Agroalimentaire", x: "Nettoyage quotidien de 4 000 m² de production." }, { t: "Fonderie d'aluminium", tag: "Métallurgie", x: "Arrêt annuel : 3 jours, 12 agents." }, { t: "Plateforme logistique", tag: "Entrepôt", x: "Sols et quais entretenus de nuit." }] }],
+        ["proof:quotes", { title: "Retours clients", items: [Q("Des équipes ponctuelles et discrètes.", "Marc B.", "Directeur de site, client fictif"), Q("Rapports clairs, aucun incident.", "Inès R.", "Responsable HSE, cliente fictive"), Q("Un devis détaillé au mètre carré.", "Paul T.", "Acheteur, client fictif")] }],
+        ["cta:band", { title: "Rejoignez-les", cta: ["Demander un devis", "/contact"] }]
       ] },
-      pageContact("Devis en 48 heures", "Surface, activité, fréquence souhaitée.", "Parlons de votre site", "Nous vous proposons une visite gratuite avant tout devis.", ["Demander ma visite", "/contact"], "ZI du Moulin Neuf, 59650 Villeneuve-d'Ascq", "Siège et agence"),
-    ],
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Devis gratuit sous 48 h"), CT("Parlons de vos surfaces", "Demande de devis", "Indiquez le type de site et la surface approximative.", "Envoyer"), ["misc:hours", { title: "Horaires du bureau", rows: [["Lundi – vendredi", "6 h – 19 h"], ["Astreinte", "7 j/7"]] }]] }
+    ]
   },
-
-  // 8. Sécurité : sombre, rouge, prompt
+  // 2 ------------------------------------------------------------ logistique et transport (sombre)
   {
-    key: "bouclier-nord", name: "Bouclier Nord", category: "entreprise", tags: ["sombre", "technique"], siteType: "Société de sécurité",
-    description: "Sécurité privée et télésurveillance : thème noir charbon, rouge d'alerte, bandeau en dégradé, en-tête sombre à filet et chiffres de réactivité.",
-    brand: "Bouclier Nord Sécurité",
-    tokens: { colors: { primary: "#e5392d", secondary: "#060809", accent: "#f2a900", background: "#0c0f12", surface: "#151a1f", text: "#eceff1", muted: "#a0aab2" }, fonts: { heading: "font.prompt", body: "font.archivo", button: "font.prompt", link: "font.archivo" }, radius: { sm: 4, md: 6, lg: 8, button: 4, field: 4, card: 6 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#2a323a" }, type: { h1: { size: 56, weight: 700, lineHeight: 1.05, letterSpacing: -0.01 } } },
-    dna: { scale: "l", pad: "normal", align: "left", shape: "sharp" }, art: { seed: "bouclier", motifs: ["mesh", "rays", "halftone"] },
-    head: ["head:dark", {}], foot: ["foot:columns", { about: "Gardiennage, télésurveillance et sûreté événementielle pour sites industriels, commerces et collectivités.", cols: [["Services", "Gardiennage", "Télésurveillance", "Événementiel"], ["Société", "Agréments", "Actualités", "Contact"]] }],
-    menu: [["Accueil", "/"], ["Services", "/services"], ["Centre de contrôle", "/centre"], ["Agréments", "/agrements"], ["Contact", "/contact"]], cta: ["Audit gratuit", "/contact"],
-    contact: { address: "2 rue de l'Écluse, 59140 Dunkerque", phone: "03 28 00 91 11", email: "operations@bouclier-nord.example", hours: "Centre de contrôle : 24 h/24, 7 j/7 ; bureaux : 8 h – 18 h", tagline: "Veiller quand vous ne le pouvez pas." },
+    key: "routalis-fret", name: "Routalis", category: "entreprise", tags: ["sombre", "audacieux"], siteType: "Transporteur et logisticien de marchandises", featured: true,
+    description: "Transport et logistique : fond anthracite, orange signalétique, titres condensés en capitales, affiche d'accueil et bande de chiffres du réseau.",
+    brand: "Routalis Fret",
+    tokens: { colors: { primary: "#ff7a1a", secondary: "#1d2530", accent: "#ffd166", background: "#10151c", surface: "#18202a", text: "#f1f4f8", muted: "#aab4c2" }, fonts: { heading: F + "barlow-condensed", body: F + "work-sans", button: F + "barlow-condensed", link: F + "work-sans" }, radius: { sm: 2, md: 4, lg: 6, button: 2, field: 4, card: 4 }, shadow: { card: "none", button: "none" }, type: { h1: { size: 64, weight: 700, lineHeight: 1, letterSpacing: 0, transform: "uppercase" }, h2: { size: 40, weight: 700, lineHeight: 1.05, transform: "uppercase" } } },
+    dna: { scale: "xl", pad: "tight", align: "left", shape: "sharp" }, art: { seed: "routalis", motifs: ["rays", "skyline", "topo"] },
+    head: ["head:dark", {}],
+    foot: ["foot:big", { title: "Routalis" }],
+    menu: [["Accueil", "/"], ["Services", "/services"], ["Réseau", "/reseau"], ["Suivi et devis", "/devis"], ["Contact", "/contact"]], cta: ["Cotation fret", "/devis"],
+    contact: { address: "ZAC des Trois Ponts, 69800 Saint-Priest", phone: "04 72 00 60 45", email: "exploitation@routalis.example", hours: "Exploitation 24 h/24, 5 j/7", tagline: "Votre marchandise, à l'heure, partout en Europe." },
     pages: [
       { key: "accueil", name: "Accueil", blocks: [
-        ["hero:gradient", { eyebrow: "Sûreté 24 h/24", title: "Un site protégé ne dort jamais.", sub: "Agents de sécurité, vidéosurveillance et levée de doute à distance : une protection coordonnée depuis notre centre de contrôle.", cta: ["Demander un audit gratuit", "/contact"], cta2: ["Nos services", "/services"], stats: [["< 12 min", "intervention sur site"], ["24 h/24", "veille active"], ["240", "sites sous contrat"]] }],
-        ["feat:icons", { title: "Une protection à trois niveaux", items: [{ icon: "eye", t: "Surveillance vidéo", x: "Caméras analysées en direct par nos opérateurs." }, { icon: "users", t: "Agents de sécurité", x: "Rondes, accueil, contrôle d'accès, événements." }, { icon: "bell", t: "Alarmes et levée de doute", x: "Appels, vérification visuelle et intervention." }] }],
-        ["feat:alt", { eyebrow: "Cas d'usage", title: "Adapté à votre activité", items: [{ t: "Sites industriels", x: "Clôtures, périmètres, accès poids lourds, rondes de nuit." }, { t: "Commerces et centres commerciaux", x: "Prévention de la démarque et gestion des flux." }] }],
-        ["proof:stats", { items: [["-63 %", "d'incidents sur nos sites pilotes (exemple)"], ["150", "agents formés"], ["7 min", "de levée de doute moyenne"]] }],
-        ["feat:steps", { title: "Mise en place", items: [{ d: "J+2", t: "Audit sur site", x: "Relevé des accès, angles morts, risques." }, { d: "J+7", t: "Plan de sûreté", x: "Moyens humains et techniques chiffrés." }, { d: "J+15", t: "Déploiement", x: "Installation et formation des équipes." }] }],
-        ["cta:card", { title: "Un incident récent ?", sub: "Nous répondons en moins d'une heure, jour et nuit.", cta: ["Nous contacter", "/contact"] }],
+        ["hero:poster", { eyebrow: "Transport et logistique", title: "Chargé le soir, livré au matin.", sub: "Lots complets, messagerie palettisée et stockage en entrepôt sous douane, avec suivi chaque jour ouvré.", cta: ["Cotation fret", "/devis"], cta2: ["Nos services", "/services"] }],
+        ["proof:statsbar", { items: [["120", "véhicules (exemple)"], ["38", "pays desservis"], ["98 %", "livraisons à l'heure (exemple)"]] }],
+        ["feat:bento", { eyebrow: "Services", title: "Une chaîne complète", items: [{ t: "Lot complet", x: "Un camion dédié à votre chargement, départ sous 24 h.", icon: "briefcase" }, { t: "Messagerie palettisée", x: "Départs quotidiens depuis six hubs.", icon: "layers" }, { t: "Stockage", x: "Entrepôts sécurisés et gestion de stock.", icon: "home" }] }],
+        ["feat:strips", { title: "Ce qui fait la différence", items: [{ t: "Un interlocuteur unique", x: "Un exploitant suit votre compte de bout en bout." }, { t: "Preuves de livraison numériques", x: "Signature et photos sous 2 heures." }, { t: "Plan B systématique", x: "Un véhicule de secours sur chaque axe." }] }],
+        ["proof:logos", { title: "Chargeurs partenaires (fictifs)", items: ["Brasseries Vallon", "Meubles Orsay", "Textile Nordaline", "Pharmalpes", "AgriCoop"] }],
+        ["cta:image", { title: "Un transport urgent ?", sub: "Réponse chiffrée en moins de deux heures ouvrées.", cta: ["Cotation fret", "/devis"] }]
       ] },
       { key: "services", name: "Services", blocks: [
-        ["misc:pagehead", { title: "Services", sub: "Humain et technologique, en contrat ou à la mission." }],
-        ["feat:tabs", { title: "Nos prestations", items: [{ t: "Gardiennage", x: "Agents postés ou en rondes, uniformes ou civils." }, { t: "Télésurveillance", x: "Raccordement des alarmes et des caméras à notre centre." }, { t: "Événementiel", x: "Concerts, salons, festivals : plan de circulation et contrôle d'accès." }, { t: "Protection rapprochée", x: "Accompagnement de dirigeants, sur demande et avec agrément." }] }],
-        ["feat:pricelist", { title: "Tarifs indicatifs (exemples)", items: [{ t: "Agent de sécurité", x: "Taux horaire, jour.", price: "dès 29 €/h" }, { t: "Télésurveillance", x: "Abonnement mensuel.", price: "dès 49 €" }, { t: "Ronde de nuit", x: "Par passage.", price: "dès 35 €" }] }],
-        ["cta:band", { title: "Besoin d'un devis détaillé ?", cta: ["Nous écrire", "/contact"] }],
-      ] },
-      { key: "centre", name: "Centre de contrôle", blocks: [
-        ["misc:pagehead", { title: "Centre de contrôle" }],
-        ["misc:text", { eyebrow: "Dunkerque, 24 h/24", title: "Quinze opérateurs en veille permanente", paras: ["Notre centre analyse les alertes, vérifie visuellement et déclenche l'intervention adaptée : agent, patrouille ou force publique.", "Chaque appel est enregistré et tracé pour vos audits d'assurance."] }],
-        ["feat:grid-icons", { title: "Ce qui est surveillé", items: [{ icon: "eye", t: "Caméras", x: "Analyse en direct." }, { icon: "bell", t: "Alarmes", x: "Intrusion, incendie." }, { icon: "lock", t: "Accès", x: "Badges et portails." }, { icon: "activity", t: "Capteurs", x: "Température, mouvement." }] }],
-        ["proof:quotes", { title: "Clients", items: [{ q: "Une intervention en dix minutes un dimanche de Noël.", n: "Gérant de site", r: "client fictif" }, { q: "Des rapports d'incident clairs pour notre assureur.", n: "Responsable sûreté", r: "cliente fictive" }] }],
-      ] },
-      { key: "agrements", name: "Agréments", blocks: [
-        ["misc:pagehead", { title: "Agréments et formations" }],
-        ["feat:list2", { title: "Cadre réglementaire (exemples)", items: [{ t: "Autorisation d'exercer délivrée par l'autorité de tutelle" }, { t: "Cartes professionnelles à jour pour chaque agent" }, { t: "Formation continue annuelle" }, { t: "Assurance responsabilité civile" }] }],
-        ["proof:team", { title: "Encadrement", items: [{ n: "Colonel (r) Marc Dewulf", r: "Directeur des opérations" }, { n: "Fatou Diallo", r: "Responsable du centre" }, { n: "Jonas Peeters", r: "Chef des patrouilles" }] }],
-        pageActusBlock(),
-      ] },
-      pageContact("Contact", "Pour une urgence, utilisez la ligne dédiée à vos contrats.", "Parlons de vos risques", "Décrivez le site, ses horaires et vos préoccupations principales.", ["Envoyer", "/contact"], "2 rue de l'Écluse, 59140 Dunkerque", "Siège opérationnel"),
-    ],
-  },
-
-  // 9. Logistique B2B : orange et bleu marine, portail
-  {
-    key: "cap-fret", name: "Cap Fret", category: "entreprise", tags: ["moderne", "geometrique"], siteType: "Logistique B2B",
-    description: "Transport et logistique B2B : orange franc sur marine, fond gris clair, bandeau centré avec chiffres, étapes de la chaîne et tableau de comparaison.",
-    brand: "Cap Fret Logistique",
-    tokens: { colors: { primary: "#c2410c", secondary: "#12324a", accent: "#1c7ed6", background: "#f6f7f9", surface: "#ffffff", text: "#15222e", muted: "#51606e" }, fonts: { heading: "font.chivo", body: "font.rubik", button: "font.rubik", link: "font.rubik" }, radius: { sm: 4, md: 8, lg: 12, button: 8, field: 8, card: 10 }, shadow: { card: "sm", button: "sm" }, type: { h1: { size: 54, weight: 800, lineHeight: 1.06, letterSpacing: -0.02 } } },
-    dna: { scale: "l", pad: "normal", align: "center", shape: "soft" }, art: { seed: "capfret", motifs: ["waves", "skyline", "tiles"] },
-    head: ["head:minimal", {}], foot: ["foot:simple", {}],
-    menu: [["Accueil", "/"], ["Solutions", "/solutions"], ["Réseau", "/reseau"], ["Suivi et tarifs", "/tarifs"], ["Contact", "/contact"]], cta: ["Demander un tarif", "/contact"],
-    contact: { address: "Plateforme Euro-Fret, 62100 Calais", phone: "03 21 00 54 36", email: "exploitation@cap-fret.example", hours: "Exploitation : 5 h – 22 h, du lundi au samedi", tagline: "Du quai au quai, sans rupture." },
-    pages: [
-      { key: "accueil", name: "Accueil", blocks: [
-        ["hero:center", { eyebrow: "Transport et logistique B2B", title: "Vos marchandises à l'heure, de quai à quai.", sub: "Lots complets, messagerie palettisée, stockage et préparation de commandes pour industriels et distributeurs.", cta: ["Demander un tarif", "/contact"], cta2: ["Nos solutions", "/solutions"], stats: [["98,4 %", "livraisons à l'heure"], ["60", "véhicules"], ["40 000", "palettes stockées"]] }],
-        ["feat:steps", { title: "Une chaîne maîtrisée", items: [{ d: "1", t: "Enlèvement", x: "Prise en charge sur rendez-vous, dans la fenêtre convenue." }, { d: "2", t: "Groupage", x: "Regroupement sur nos plateformes de Calais et Lille." }, { d: "3", t: "Transport", x: "Tracteurs géolocalisés et chauffeurs salariés." }, { d: "4", t: "Livraison", x: "Preuve numérique de livraison sous une heure." }] }],
-        ["feat:cards", { title: "Solutions", items: [{ icon: "layers", t: "Messagerie palettisée", x: "Livraison en 24 à 48 h dans les Hauts-de-France et au-delà." }, { icon: "network", t: "Lots complets", x: "Transport dédié, bâché, frigorifique ou plateau." }, { icon: "settings", t: "Logistique contractuelle", x: "Stockage, préparation, expédition." }] }],
-        ["proof:logos", { title: "Partenaires industriels (fictifs)", items: ["Boréal Emballages", "Fonderies Dumont", "Marée du Nord", "Grand Large Distribution"] }],
-        ["proof:big", { items: [{ q: "Nos taux de service ont gagné quatre points en un trimestre.", n: "Directeur supply chain", r: "client fictif" }] }],
-        ["cta:band", { title: "Un flux à fiabiliser ?", sub: "Nous étudions votre cahier des charges sous cinq jours.", cta: ["Demander un tarif", "/contact"] }],
-      ] },
-      { key: "solutions", name: "Solutions", blocks: [
-        ["misc:pagehead", { title: "Solutions de transport", sub: "Pour les flux réguliers comme les expéditions exceptionnelles." }],
-        ["feat:compare", { title: "Messagerie ou lot complet ?", rows: [["", "Messagerie", "Lot complet", "Dédié"], ["Dès 1 palette", "oui", "non", "non"], ["Délai", "24–48 h", "24 h", "Sur mesure"], ["Température dirigée", "non", "oui", "oui"]] }],
-        ["feat:alt", { title: "Entreposage et préparation", items: [{ t: "Stockage", x: "30 000 m² sous température ambiante ou dirigée." }, { t: "Préparation de commandes", x: "Picking, colisage, étiquetage, expédition du jour même." }] }],
-        ["cta:split", { title: "Un cahier des charges ?", sub: "Envoyez-le, nous chiffrons sans engagement.", cta: ["Nous écrire", "/contact"] }],
+        P("Services", "Du camion complet à la palette"),
+        ["feat:tabs", { title: "Choisir son mode de transport", items: [{ t: "Lot complet", x: "Semi-remorque bâchée, frigorifique ou plateau, chargement sous 24 h." }, { t: "Lot partiel", x: "Quelques palettes en groupage sur axe régulier." }, { t: "Messagerie", x: "Colis lourds et palettes, livraison en J+1 ou J+2." }, { t: "Stockage", x: "Préparation de commandes et cross-docking." }] }],
+        ["feat:rows", { title: "Équipements", items: [{ t: "Bâché et fourgon", x: "33 palettes, hayon disponible." }, { t: "Frigorifique", x: "Température enregistrée de bout en bout." }, { t: "Plateau et porte-engins", x: "Charges hors gabarit sur étude." }] }],
+        ["cta:band", { title: "Besoin d'un véhicule spécifique ?", cta: ["Cotation fret", "/devis"] }]
       ] },
       { key: "reseau", name: "Réseau", blocks: [
-        ["misc:pagehead", { title: "Notre réseau" }],
-        ["gal:cards", { title: "Plateformes", items: [{ tag: "Calais", t: "Euro-Fret", x: "Hub principal, 18 000 m², quais d'embarquement ferry." }, { tag: "Lille", t: "Lille-Lesquin", x: "Distribution régionale et cross-docking." }, { tag: "Rouen", t: "Seine Sud", x: "Relais Normandie et Île-de-France." }] }],
-        ["proof:stats", { items: [["12", "plateformes partenaires"], ["300", "livraisons par jour"], ["14 pays", "desservis en Europe"]] }],
+        P("Notre réseau", "Six hubs, des axes réguliers"),
+        ["feat:numbered", { title: "Le réseau en trois chiffres", items: [{ t: "6 hubs", x: "Lyon, Lille, Marseille, Bordeaux, Strasbourg, Nantes." }, { t: "38 pays", x: "Départs hebdomadaires vers l'Europe." }, { t: "24 h", x: "Délai de départ sur lot complet." }] }],
+        ["misc:text", { eyebrow: "Engagements", title: "Une exploitation qui répond", paras: ["Chaque hub dispose d'une équipe d'exploitation joignable en continu. En cas d'aléa, vous êtes prévenu avant votre client.", "Nos chauffeurs sont formés à la sûreté et à l'écoconduite."] }],
+        ["proof:quotes", { items: [Q("Un camion de remplacement en deux heures lors d'une panne.", "Luc P.", "Responsable logistique, client fictif"), Q("Des preuves de livraison fiables.", "Awa K.", "Supply chain, cliente fictive"), Q("Des tarifs lisibles.", "Ben S.", "Acheteur, client fictif")] }]
       ] },
-      { key: "tarifs", name: "Suivi et tarifs", blocks: [
-        ["misc:pagehead", { title: "Suivi et tarifs", sub: "Grilles d'exemple pour une livraison à Paris." }],
-        ["feat:pricelist", { title: "Messagerie palettisée (exemples)", items: [{ t: "1 palette", x: "Jusqu'à 400 kg.", price: "92 €" }, { t: "2 palettes", x: "Jusqu'à 800 kg.", price: "158 €" }, { t: "Lot complet 33 palettes", x: "Camion complet.", price: "dès 620 €" }] }],
-        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Puis-je suivre mes expéditions ?", x: "Oui, par un portail client avec alertes de retard." }, { t: "Quelle est votre politique de litiges ?", x: "Constat à la livraison, dossier ouvert sous 24 heures." }] }],
-        pageActusBlock(),
+      { key: "devis", name: "Suivi et devis", blocks: [
+        P("Cotation fret", "Décrivez votre envoi"),
+        ["feat:checks", { title: "Pour une cotation rapide, indiquez", items: [{ t: "Départ et arrivée" }, { t: "Nombre de palettes et poids" }, { t: "Dates de chargement souhaitées" }, { t: "Contraintes (température, ADR, hayon)" }], cta: ["Écrire à l'exploitation", "/contact"] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Quel délai de réponse ?", x: "Moins de deux heures ouvrées." }, { t: "Le suivi est-il en ligne ?", x: "Le suivi se fait par e-mail à chaque étape (démonstration)." }] }]
       ] },
-      pageContact("Contact exploitation", "Pour une demande de tarif, précisez origine, destination et volumes.", "Joindre l'exploitation", "Nature des marchandises, tonnage, fréquence.", ["Envoyer", "/contact"], "Plateforme Euro-Fret, 62100 Calais", "Plateforme principale"),
-    ],
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Exploitation 24 h/24"), ["contact:cards", {}], ["cta:card", { title: "Cotation fret", cta: ["Demander", "/devis"] }]] }
+    ]
   },
-
-  // 10. Expert-comptable : prune et ocre, serif lisible, header center… sobre
+  // 3 ------------------------------------------------------------ intérim
   {
-    key: "bilan-clair", name: "Bilan Clair", category: "entreprise", tags: ["minimaliste", "moderne"], siteType: "Cabinet d'expertise comptable",
-    description: "Cabinet d'expertise comptable lisible : prune profonde, ocre, titres sans empattement sobres, accueil très aéré en texte seul puis chiffres.",
-    brand: "Bilan Clair Expertise",
-    tokens: { colors: { primary: "#5b2a4e", secondary: "#2a1226", accent: "#c7861c", background: "#f8f4f6", surface: "#ffffff", text: "#241420", muted: "#625560" }, fonts: { heading: "font.public-sans", body: "font.source-serif-4", button: "font.public-sans", link: "font.source-serif-4" }, radius: { sm: 4, md: 8, lg: 12, button: 6, field: 6, card: 8 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#e4d6df" }, type: { h1: { size: 62, weight: 700, lineHeight: 1.03, letterSpacing: -0.03 } } },
-    dna: { scale: "xl", pad: "airy", align: "left", shape: "soft" }, art: { seed: "bilan", motifs: ["plates", "arches", "blobs"] },
-    head: ["head:bar", {}], foot: ["foot:center", {}],
-    menu: [["Accueil", "/"], ["Missions", "/missions"], ["Tarifs", "/tarifs"], ["Le cabinet", "/cabinet"], ["Contact", "/contact"]], cta: ["Premier rendez-vous", "/contact"],
-    contact: { address: "19 boulevard Carnot, 21000 Dijon", phone: "03 80 00 82 15", email: "cabinet@bilan-clair.example", hours: "Du lundi au vendredi, 8 h 30 – 12 h et 14 h – 18 h", tagline: "Des comptes clairs pour décider vite." },
+    key: "intermedia-rh", name: "Intermède", category: "entreprise", tags: ["moderne", "chaleureux"], siteType: "Agence d'intérim et de recrutement temporaire", isNew: true,
+    description: "Agence d'intérim : rouge corail énergique, centrage des messages, bandeau en dégradé, recherche d'offres et parcours candidat / entreprise.",
+    brand: "Intermède Emploi",
+    tokens: { colors: { primary: "#dc2626", secondary: "#7f1d1d", accent: "#fbbf24", background: "#fff8f6", surface: "#ffffff", text: "#2a1411", muted: "#6b4a45" }, fonts: { heading: F + "league-spartan", body: F + "lora", button: F + "league-spartan", link: F + "lora" }, radius: { sm: 8, md: 14, lg: 22, button: 999, field: 12, card: 20 }, shadow: { card: "md", button: "sm" } },
+    dna: { scale: "l", pad: "normal", align: "center", shape: "pill" }, art: { seed: "intermede", motifs: ["blobs", "bokeh", "ribbons"] },
+    head: ["head:float", {}],
+    foot: ["foot:newsletter", { title: "Recevoir les offres de la semaine", sub: "Un e-mail, les missions qui correspondent à votre profil.", button: "S'abonner" }],
+    menu: [["Accueil", "/"], ["Candidats", "/candidats"], ["Entreprises", "/entreprises"], ["Offres", "/offres"], ["Contact", "/contact"]], cta: ["Déposer un CV", "/candidats"],
+    contact: { address: "5 place du Marché, 44000 Nantes", phone: "02 40 00 77 21", email: "agence@intermede.example", hours: "Lundi – vendredi, 8 h – 18 h", tagline: "La bonne personne, la bonne semaine." },
     pages: [
       { key: "accueil", name: "Accueil", blocks: [
-        ["hero:minimal", { eyebrow: "Expertise comptable", title: "Vos chiffres, enfin lisibles.", sub: "Comptabilité, paie, bilan et conseil de gestion pour TPE, commerçants et professions libérales.", cta: ["Premier rendez-vous", "/contact"], cta2: ["Voir les tarifs", "/tarifs"] }],
-        ["proof:stats", { items: [["650", "entreprises suivies"], ["48 h", "pour répondre à une question"], ["100 %", "dématérialisé, si vous le souhaitez"]] }],
-        ["feat:numbered", { eyebrow: "Mission", title: "Trois engagements concrets", items: [{ t: "Un tableau de bord mensuel", x: "Trésorerie, marge et impayés en une page." }, { t: "Un expert nommé", x: "Vous connaissez son nom et son numéro direct." }, { t: "Un prix fixé d'avance", x: "Pas de supplément caché en fin d'exercice." }] }],
-        ["feat:list2", { title: "Nous nous occupons de", items: [{ t: "Tenue comptable et déclarations de TVA" }, { t: "Bulletins de paie" }, { t: "Bilan et liasse fiscale" }, { t: "Création et statut juridique" }, { t: "Aides et crédits d'impôt" }, { t: "Prévisionnel pour la banque" }] }],
-        ["proof:quotes", { title: "Entrepreneurs", items: [{ q: "Je sais enfin combien je peux me payer.", n: "Léa R.", r: "Graphiste indépendante, cliente fictive" }, { q: "Le bilan est livré avant le rendez-vous bancaire.", n: "Anthony V.", r: "Boulanger, client fictif" }] }],
-        ["cta:card", { title: "On regarde vos comptes ensemble ?", sub: "Premier rendez-vous d'une heure offert.", cta: ["Prendre rendez-vous", "/contact"] }],
+        ["hero:gradient", { eyebrow: "Intérim et recrutement", title: "Du renfort dès lundi, des carrières à plus long terme.", sub: "Nous plaçons des opérateurs, techniciens et administratifs en mission courte, longue ou en vue d'embauche.", cta: ["Je cherche du personnel", "/entreprises"], cta2: ["Je cherche une mission", "/candidats"], stats: [["48 h", "pour un premier profil"], ["1 200", "missions par an (exemple)"], ["35 %", "embauchés ensuite (exemple)"]] }],
+        ["feat:icons", { title: "Pour qui travaillons-nous ?", items: [{ t: "Industrie", x: "Opérateurs, conducteurs de ligne, soudeurs.", icon: "settings" }, { t: "Logistique", x: "Caristes, préparateurs, chauffeurs.", icon: "layers" }, { t: "Tertiaire", x: "Assistants, comptables, hôtes d'accueil.", icon: "briefcase" }, { t: "BTP", x: "Maçons, électriciens, chefs d'équipe.", icon: "home" }] }],
+        ["misc:marquee", { items: ["Paie chaque semaine", "Formation sécurité incluse", "Un conseiller dédié", "Mission dès 1 jour"] }],
+        ["feat:steps", { title: "Comment ça marche", items: [{ d: "1", t: "Brief", x: "Nous précisons le poste et la durée." }, { d: "2", t: "Sélection", x: "Entretien et vérification des habilitations." }, { d: "3", t: "Mission", x: "Contrat signé avant la prise de poste." }, { d: "4", t: "Suivi", x: "Point à mi-mission avec le client et l'intérimaire." }], bg: "token:surface" }],
+        ["proof:quotes", { items: [Q("Trois cariste en 24 heures pour une pointe d'activité.", "Gilles H.", "Directeur d'usine, client fictif"), Q("Ma mission a débouché sur un CDI.", "Nadia O.", "Opératrice, cliente fictive"), Q("Un interlocuteur qui connaît mon site.", "Thomas Q.", "Responsable RH, client fictif")] }],
+        ["cta:card", { title: "Un besoin urgent ?", sub: "Appelez l'agence avant 10 h pour un premier profil l'après-midi.", cta: ["Contacter l'agence", "/contact"] }]
       ] },
-      { key: "missions", name: "Missions", blocks: [
-        ["misc:pagehead", { title: "Missions", sub: "De la création à la transmission de l'entreprise." }],
-        ["feat:accordion", { title: "Ce que couvre chaque mission", items: [{ t: "Comptabilité et fiscalité", x: "Saisie ou contrôle de vos écritures, déclarations de TVA et d'impôts." }, { t: "Paie et social", x: "Bulletins, déclarations sociales, contrats de travail." }, { t: "Conseil de gestion", x: "Tableaux de bord, budget, plan de trésorerie." }, { t: "Juridique", x: "Statuts, assemblées, modifications de capital." }] }],
-        ["feat:steps", { title: "Créer son entreprise avec nous", items: [{ d: "Semaine 1", t: "Choix du statut", x: "Micro, société ou association selon votre projet." }, { d: "Semaine 2", t: "Dossier", x: "Statuts et immatriculation." }, { d: "Semaine 3", t: "Lancement", x: "Ouverture comptable et outils de facturation." }] }],
-        ["cta:band", { title: "Une question de fiscalité ?", cta: ["Nous l'envoyer", "/contact"] }],
+      { key: "candidats", name: "Candidats", blocks: [
+        P("Candidats", "Trouvez une mission qui vous convient"),
+        ["feat:list2", { title: "Ce que vous obtenez avec nous", items: [{ t: "Paie hebdomadaire" }, { t: "Indemnité de fin de mission et congés" }, { t: "Formations CACES et habilitations" }, { t: "Un conseiller joignable" }, { t: "Mutuelle accessible dès la première mission" }, { t: "Accompagnement vers le CDI" }] }],
+        ["feat:accordion", { title: "Questions de candidats", items: [{ t: "Faut-il de l'expérience ?", x: "Pas toujours. Certains postes sont ouverts aux débutants." }, { t: "Puis-je refuser une mission ?", x: "Oui, sans pénalité." }] }],
+        ["cta:band", { title: "Prêt à démarrer ?", cta: ["Nous contacter", "/contact"] }]
+      ] },
+      { key: "entreprises", name: "Entreprises", blocks: [
+        P("Entreprises", "Des renforts fiables, sans lourdeur administrative"),
+        ["feat:compare", { title: "Intérim ou recrutement direct", rows: [["", "Intérim", "Recrutement"], ["Délai", "24 à 48 h", "4 à 8 semaines"], ["Engagement", "à la mission", "CDI ou CDD"], ["Gestion de la paie", "par nous", "par vous"], ["Période d'essai", "mission test", "classique"]] }],
+        ["feat:alt", { title: "Nos formules", items: [{ t: "Renfort ponctuel", x: "Pic d'activité, absence, congés." }, { t: "Mission en vue d'embauche", x: "Essai sur plusieurs mois avant intégration." }] }],
+        ["proof:stats", { items: [["48 h", "premier profil"], ["92 %", "missions reconduites (exemple)"], ["4,6/5", "note moyenne (exemple)"]] }]
+      ] },
+      { key: "offres", name: "Offres", blocks: [
+        P("Offres de mission", "Exemples de postes à pourvoir"),
+        ["gal:listings", { items: [{ t: "Cariste CACES 3", tag: "Logistique", price: "13,80 €/h", x: "Nantes, équipe du matin, 3 mois." }, { t: "Opérateur de conditionnement", tag: "Industrie", price: "12,40 €/h", x: "Saint-Herblain, 2x8." }, { t: "Assistante administrative", tag: "Tertiaire", price: "1 900 €/mois", x: "Rezé, remplacement longue durée." }, { t: "Électricien tertiaire", tag: "BTP", price: "16 €/h", x: "Chantier à Orvault." }] }],
+        ["misc:search", {}]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Passez nous voir"), CT("Parlons de votre besoin", "Écrivez-nous", "Candidats comme entreprises, nous répondons le jour même.", "Envoyer"), ["misc:hours", { title: "Ouverture de l'agence", rows: [["Lundi – vendredi", "8 h – 18 h"], ["Samedi", "fermé"]] }]] }
+    ]
+  },
+  // 4 ------------------------------------------------------------ formation professionnelle d'entreprise
+  {
+    key: "instrumenta-form", name: "Instrumenta", category: "entreprise", tags: ["editorial", "classique"], siteType: "Organisme de formation professionnelle pour entreprises",
+    description: "Formation inter et intra-entreprise : violet profond, sérif de lecture, accueil avec image à gauche, onglets de domaines et programme détaillé.",
+    brand: "Instrumenta Formation",
+    tokens: { colors: { primary: "#6d28d9", secondary: "#2e1065", accent: "#f59e0b", background: "#faf8ff", surface: "#ffffff", text: "#1c1433", muted: "#5b5275" }, fonts: { heading: F + "literata", body: F + "public-sans", button: F + "public-sans", link: F + "public-sans" }, radius: { sm: 4, md: 8, lg: 12, button: 6, field: 6, card: 8 }, shadow: { card: "sm", button: "none" } },
+    dna: { scale: "m", pad: "normal", align: "left", shape: "soft" }, art: { seed: "instrumenta", motifs: ["tiles", "topo", "halftone"] },
+    head: ["head:side", {}],
+    foot: ["foot:simple", {}],
+    menu: [["Accueil", "/"], ["Catalogue", "/catalogue"], ["Programme type", "/programme"], ["Financement", "/financement"], ["Contact", "/contact"]], cta: ["Recevoir le catalogue", "/contact"],
+    contact: { address: "27 avenue Jean-Jaurès, 31000 Toulouse", phone: "05 61 00 28 90", email: "formation@instrumenta.example", hours: "Lundi – vendredi, 9 h – 17 h 30", tagline: "Des compétences utiles dès le lendemain." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:split-left", { eyebrow: "Formation d'entreprise", title: "Former vos équipes à ce qu'elles feront lundi.", sub: "Management, sécurité, outils numériques et langues, en inter ou sur site, avec des formateurs praticiens.", cta: ["Voir le catalogue", "/catalogue"], cta2: ["Programme type", "/programme"], image: "portrait-1" }],
+        ["feat:tabs", { title: "Quatre domaines", items: [{ t: "Management", x: "Manager une équipe, conduire un entretien, gérer un conflit." }, { t: "Sécurité", x: "SST, habilitation électrique, travail en hauteur." }, { t: "Numérique", x: "Tableur avancé, outils collaboratifs, cybersécurité." }, { t: "Langues", x: "Anglais professionnel, en visio ou sur site." }] }],
+        ["proof:statsbar", { items: [["320", "sessions par an (exemple)"], ["96 %", "stagiaires satisfaits (exemple)"], ["8", "formateurs permanents"]] }],
+        ["gal:coursecards", { title: "Formations les plus demandées", items: [{ t: "Premiers pas de manager", tag: "Débutant", price: "1 150 €", x: "3 jours, inter-entreprises.", cta: ["Détails", "/catalogue"] }, { t: "Sauveteur secouriste du travail", tag: "Tous niveaux", price: "260 €", x: "2 jours, certificat.", cta: ["Détails", "/catalogue"] }, { t: "Tableur : analyser ses données", tag: "Intermédiaire", price: "690 €", x: "2 jours, cas pratiques.", cta: ["Détails", "/catalogue"] }] }],
+        ["proof:big", { items: [Q("Le formateur est parti de nos dossiers réels. Nous avons appliqué dès la semaine suivante.", "Laure F.", "Directrice des ressources humaines, cliente fictive")] }],
+        ["cta:image", { title: "Une formation sur mesure ?", sub: "Nous construisons un programme à partir de votre besoin.", cta: ["Nous contacter", "/contact"] }]
+      ] },
+      { key: "catalogue", name: "Catalogue", blocks: [
+        P("Catalogue", "Exemples de formations proposées"),
+        ["gal:coursecards", { items: [{ t: "Habilitation électrique B0/H0", tag: "Réglementaire", price: "380 €", x: "1 jour.", cta: ["Nous contacter", "/contact"] }, { t: "Communiquer en anglais en réunion", tag: "Intermédiaire", price: "980 €", x: "5 demi-journées.", cta: ["Nous contacter", "/contact"] }, { t: "Prévention du risque cyber", tag: "Tous niveaux", price: "420 €", x: "1 jour.", cta: ["Nous contacter", "/contact"] }, { t: "Conduire un entretien annuel", tag: "Management", price: "720 €", x: "2 jours.", cta: ["Nous contacter", "/contact"] }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Formez-vous sur site ?", x: "Oui, à partir de quatre stagiaires." }, { t: "Délivrez-vous une attestation ?", x: "Oui, avec évaluation des acquis." }] }],
+        ["cta:band", { title: "Une question sur le catalogue ?", cta: ["Écrire", "/contact"] }]
+      ] },
+      { key: "programme", name: "Programme type", blocks: [
+        P("Programme type", "Exemple : Premiers pas de manager (3 jours)"),
+        ["misc:schedule", { title: "Jour 1", items: [{ d: "9 h", t: "Accueil et attentes", x: "Tour de table et objectifs." }, { d: "10 h", t: "Rôle du manager", x: "Posture, responsabilités, limites." }, { d: "14 h", t: "Fixer des objectifs", x: "Méthode SMART sur cas réels." }, { d: "16 h 30", t: "Bilan", x: "Plan d'action personnel." }] }],
+        ["feat:list2", { title: "Objectifs pédagogiques", items: [{ t: "Déléguer efficacement" }, { t: "Animer une réunion" }, { t: "Donner un retour constructif" }, { t: "Prévenir les tensions" }] }],
+        ["cta:card", { title: "Recevoir le programme complet", cta: ["Demander le PDF", "/contact"] }]
+      ] },
+      { key: "financement", name: "Financement", blocks: [
+        P("Financement", "Des pistes pour prendre en charge vos formations"),
+        ["feat:rows", { title: "Les solutions les plus fréquentes", items: [{ t: "Plan de développement des compétences", x: "Budget formation de l'entreprise." }, { t: "Opérateur de compétences", x: "Prise en charge partielle selon la taille de l'entreprise." }, { t: "Compte personnel de formation", x: "À l'initiative du salarié, sous conditions." }] }],
+        ["misc:text", { title: "Notre rôle", paras: ["Nous vous fournissons les documents nécessaires à votre dossier : programme, convention, attestations.", "Les modalités de prise en charge évoluent : vérifiez-les auprès de votre interlocuteur habituel."] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Recevez notre catalogue"), ["contact:map", { title: "Venir nous voir", mapAddress: "27 avenue Jean-Jaurès, 31000 Toulouse" }], ["cta:band", { title: "Plan de formation 2027 ?", cta: ["Prendre rendez-vous", "/contact"] }]] }
+    ]
+  },
+  // 5 ------------------------------------------------------------ ingénierie
+  {
+    key: "ingenium-bet", name: "Ingenium", category: "entreprise", tags: ["technique", "geometrique"], siteType: "Bureau d'études en ingénierie industrielle",
+    description: "Bureau d'études : bleu cobalt net, police technique angulaire, bandeau éditorial, lignes numérotées de compétences et projets en mosaïque.",
+    brand: "Ingenium BET",
+    tokens: { colors: { primary: "#1d4ed8", secondary: "#0f2a66", accent: "#06b6d4", background: "#f5f7fb", surface: "#ffffff", text: "#0f172a", muted: "#475569" }, fonts: { heading: F + "saira", body: F + "ibm-plex-sans", button: F + "saira", link: F + "ibm-plex-sans" }, radius: { sm: 0, md: 2, lg: 4, button: 2, field: 2, card: 2 }, shadow: { card: "none", button: "none" } },
+    dna: { scale: "l", pad: "normal", align: "left", shape: "sharp" }, art: { seed: "ingenium", motifs: ["plates", "mesh", "tiles"] },
+    head: ["head:split", {}],
+    foot: ["foot:columns", { about: "Conception, calculs et suivi d'exécution pour l'industrie et l'énergie.", cols: [["Expertises", "Mécanique", "Automatismes", "Process"], ["Cabinet", "Projets", "Recrutement", "Contact"]] }],
+    menu: [["Accueil", "/"], ["Expertises", "/expertises"], ["Projets", "/projets"], ["Méthode", "/methode"], ["Contact", "/contact"]], cta: ["Déposer un cahier des charges", "/contact"],
+    contact: { address: "3 allée Gustave-Eiffel, 38000 Grenoble", phone: "04 76 00 52 63", email: "etudes@ingenium.example", hours: "Lundi – vendredi, 8 h 30 – 18 h", tagline: "Du cahier des charges au dossier d'exécution." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:editorial", { kicker: "Bureau d'études", title: "Concevoir juste, calculer large, livrer propre.", sub: "Ingénierie mécanique, électrique et process pour industriels exigeants.", cta: ["Déposer un cahier des charges", "/contact"], image: "hero" }],
+        ["feat:rows", { eyebrow: "Expertises", title: "Trois disciplines, une équipe", items: [{ t: "Mécanique et structures", x: "Conception, calculs par éléments finis, plans de fabrication." }, { t: "Automatismes et électricité", x: "Schémas, programmation d'automates, mise en service." }, { t: "Process et fluides", x: "Dimensionnement, schémas de tuyauterie, sécurité." }] }],
+        ["proof:stats", { items: [["45", "ingénieurs (exemple)"], ["600", "projets livrés (exemple)"], ["15 ans", "d'expérience moyenne"]] }],
+        ["gal:masonry", { items: [{ t: "Ligne d'emballage", x: "Cadence portée à 120 colis/min." }, { t: "Skid de pompage", x: "Pré-assemblé, testé en usine." }, { t: "Portique de manutention", x: "Charge 12 t, dossier de calcul." }, { t: "Four de traitement", x: "Régulation thermique redondante." }] }],
+        ["proof:logos", { title: "Donneurs d'ordre (fictifs)", items: ["Aeronav", "Cryotech", "Hydrelec", "Fonderies Maillard", "Sidéral"] }],
+        ["cta:split", { title: "Un projet à chiffrer ?", sub: "Envoyez votre cahier des charges, réponse sous cinq jours.", cta: ["Nous écrire", "/contact"] }]
+      ] },
+      { key: "expertises", name: "Expertises", blocks: [
+        P("Expertises", "Ce que nous maîtrisons"),
+        ["feat:bento", { title: "Nos domaines", items: [{ t: "Calculs de structure", x: "Éléments finis, fatigue, flambement.", icon: "layers" }, { t: "Automatisme", x: "Automates, supervision, sécurité machine.", icon: "settings" }, { t: "Documentation", x: "Notices et dossiers de conformité.", icon: "fileText" }] }],
+        ["feat:list2", { title: "Outils et normes", items: [{ t: "Conception 3D paramétrique" }, { t: "Marquage CE et directive machines" }, { t: "Analyse de risques" }, { t: "Simulation de procédés" }, { t: "Plans de fabrication" }, { t: "Assistance à la mise en service" }] }],
+        ["cta:band", { title: "Une question technique ?", cta: ["Parler à un ingénieur", "/contact"] }]
+      ] },
+      { key: "projets", name: "Projets", blocks: [
+        P("Projets", "Quelques réalisations (fictives)"),
+        ["gal:cards", { items: [{ t: "Ligne de palettisation", tag: "Mécanique", x: "Conception complète, 8 mois." }, { t: "Station de traitement d'eau", tag: "Process", x: "Dimensionnement et plans." }, { t: "Banc d'essai moteurs", tag: "Automatisme", x: "Acquisition de 64 voies." }, { t: "Charpente métallique", tag: "Structure", x: "Note de calcul et plans." }] }],
+        ["proof:quotes", { items: [Q("Un dossier d'exécution sans reprise.", "Hugo C.", "Directeur technique, client fictif"), Q("Des délais tenus.", "Sarah J.", "Chef de projet, cliente fictive"), Q("Des ingénieurs disponibles.", "Karim L.", "Responsable travaux, client fictif")] }]
+      ] },
+      { key: "methode", name: "Méthode", blocks: [
+        P("Méthode", "Un cycle en V maîtrisé"),
+        ["feat:steps", { title: "Du besoin à la mise en service", items: [{ d: "Phase 1", t: "Analyse du besoin", x: "Cahier des charges fonctionnel." }, { d: "Phase 2", t: "Conception", x: "Avant-projet et revue de conception." }, { d: "Phase 3", t: "Détail", x: "Plans, nomenclatures, notes de calcul." }, { d: "Phase 4", t: "Mise en service", x: "Essais, réglages, formation." }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Travaillez-vous en régie ?", x: "Oui, au forfait ou en régie." }, { t: "Gérez-vous la confidentialité ?", x: "Accord de confidentialité signé avant échanges." }] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Déposez votre cahier des charges"), CT("Parlons de votre projet", "Votre demande", "Décrivez le contexte, les contraintes et le délai.", "Envoyer"), ["misc:hours", { title: "Disponibilité", rows: [["Lundi – vendredi", "8 h 30 – 18 h"]] }]] }
+    ]
+  },
+  // 6 ------------------------------------------------------------ télécoms et réseaux (sombre)
+  {
+    key: "fibrenord-net", name: "Fibrenord", category: "entreprise", tags: ["sombre", "technique"], siteType: "Opérateur télécoms et réseaux pour entreprises", isNew: true,
+    description: "Opérateur B2B : fond bleu nuit, cyan lumineux, bandeau en dégradé, comparatif de débits, tarifs en trois formules et FAQ de raccordement.",
+    brand: "Fibrenord Entreprises",
+    tokens: { colors: { primary: "#22d3ee", secondary: "#0b2a3f", accent: "#a3e635", background: "#07131f", surface: "#0e1f30", text: "#e8f4fb", muted: "#9bb4c6" }, fonts: { heading: F + "sora", body: F + "chivo", button: F + "sora", link: F + "chivo" }, radius: { sm: 6, md: 10, lg: 16, button: 10, field: 8, card: 14 }, shadow: { card: "none", button: "sm" } },
+    dna: { scale: "l", pad: "normal", align: "left", shape: "soft" }, art: { seed: "fibrenord", motifs: ["mesh", "rays", "bokeh"] },
+    head: ["head:minimal", {}],
+    foot: ["foot:line", {}],
+    menu: [["Accueil", "/"], ["Offres", "/offres"], ["Couverture", "/couverture"], ["Assistance", "/assistance"], ["Contact", "/contact"]], cta: ["Tester mon éligibilité", "/couverture"],
+    contact: { address: "9 rue de l'Innovation, 59650 Villeneuve-d'Ascq", phone: "03 20 00 90 12", email: "commercial@fibrenord.example", hours: "Support 24 h/24, 7 j/7", tagline: "Un réseau qui ne se remarque pas." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:search", { eyebrow: "Fibre dédiée et réseaux d'entreprise", title: "Votre site relié, votre réseau garanti.", sub: "Fibre optique dédiée, interconnexion de sites et téléphonie, avec garantie de rétablissement.", placeholder: "Saisissez l'adresse de votre site", cta: ["Tester mon éligibilité", "/couverture"], image: "hero" }],
+        ["feat:icons", { title: "Ce qui est inclus", items: [{ t: "Débit symétrique", x: "De 100 Mbit/s à 10 Gbit/s.", icon: "zap" }, { t: "Garantie de rétablissement", x: "4 heures, 24 h/24.", icon: "shield" }, { t: "Supervision", x: "Alertes avant incident.", icon: "activity" }, { t: "Interconnexion", x: "Sites reliés en réseau privé.", icon: "network" }] }],
+        ["price:tiers", { title: "Formules fibre (tarifs d'exemple)", items: [{ t: "Essentiel", price: "89 €", period: "/mois HT", f: ["200 Mbit/s", "Rétablissement 8 h", "1 adresse IP fixe"], cta: ["Choisir", "/contact"] }, { t: "Pro", price: "189 €", period: "/mois HT", f: ["1 Gbit/s", "Rétablissement 4 h", "Supervision", "Lien de secours 4G"], cta: ["Choisir", "/contact"], hl: true }, { t: "Multisite", price: "Sur devis", f: ["Jusqu'à 10 Gbit/s", "Réseau privé", "Rétablissement 4 h"], cta: ["Nous écrire", "/contact"] }] }],
+        ["proof:statsbar", { items: [["99,95 %", "disponibilité (exemple)"], ["4 h", "rétablissement garanti"], ["1 800", "sites raccordés (exemple)"]] }],
+        ["proof:quotes", { items: [Q("Nos trois agences sont enfin sur le même réseau.", "Odile M.", "Directrice informatique, cliente fictive"), Q("Une panne, rétablie avant l'ouverture.", "Yann G.", "Gérant, client fictif")] }],
+        ["cta:band", { title: "Votre adresse est-elle raccordable ?", cta: ["Tester maintenant", "/couverture"] }]
+      ] },
+      { key: "offres", name: "Offres", blocks: [
+        P("Offres", "Connectivité et services"),
+        ["feat:compare", { title: "Comparer les débits", rows: [["", "Essentiel", "Pro", "Multisite"], ["Débit", "200 Mbit/s", "1 Gbit/s", "jusqu'à 10 Gbit/s"], ["Rétablissement", "8 h", "4 h", "4 h"], ["Supervision", "non", "oui", "oui"], ["Lien de secours", "non", "4G", "double fibre"]] }],
+        ["feat:cards", { title: "Services associés", items: [{ t: "Téléphonie IP", x: "Standard et postes mobiles.", icon: "smartphone" }, { t: "Wi-Fi d'entreprise", x: "Bornes et gestion centralisée.", icon: "network" }, { t: "Pare-feu géré", x: "Filtrage et mises à jour.", icon: "lock" }] }],
+        ["cta:split", { title: "Besoin d'un chiffrage multisite ?", cta: ["Nous écrire", "/contact"] }]
+      ] },
+      { key: "couverture", name: "Couverture", blocks: [
+        P("Couverture", "Raccordement de votre site"),
+        ["feat:steps", { title: "De l'éligibilité à l'activation", items: [{ d: "J0", t: "Test d'adresse", x: "Réponse sous un jour ouvré." }, { d: "J+5", t: "Étude", x: "Visite technique si nécessaire." }, { d: "J+30", t: "Raccordement", x: "Intervention et tests de débit." }, { d: "J+31", t: "Recette", x: "Procès-verbal signé." }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Quel délai en zone urbaine ?", x: "Entre 3 et 6 semaines." }, { t: "Puis-je conserver mon numéro ?", x: "Oui, la portabilité est incluse." }] }],
+        ["cta:band", { title: "Demandez une étude", cta: ["Étudier mon site", "/contact"] }]
+      ] },
+      { key: "assistance", name: "Assistance", blocks: [
+        P("Assistance", "Support 24 h/24"),
+        ["feat:strips", { title: "Comment nous joindre", items: [{ t: "Téléphone", x: "Ligne dédiée, réponse sous 5 minutes." }, { t: "E-mail", x: "Ticket suivi par un technicien." }, { t: "Supervision proactive", x: "Nous vous appelons avant vous." }] }],
+        ["misc:faq", { items: [{ t: "Que faire en cas de coupure ?", x: "Contactez la ligne dédiée, un technicien prend le dossier." }, { t: "Les pénalités existent-elles ?", x: "Oui, selon contrat de niveau de service." }] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Parlons de votre réseau"), ["contact:cards", {}], ["cta:card", { title: "Un incident en cours ?", sub: "Appelez directement le support.", cta: ["Voir l'assistance", "/assistance"] }]] }
+    ]
+  },
+  // 7 ------------------------------------------------------------ maintenance technique
+  {
+    key: "tenacia-maint", name: "Tenacia", category: "entreprise", tags: ["technique", "naturel"], siteType: "Maintenance technique multi-sites (CVC, électricité, GTB)",
+    description: "Maintenance technique : vert franc, slab sérif robuste, bandeau texte puis grande image, contrats en trois niveaux et chronologie d'intervention.",
+    brand: "Tenacia Maintenance",
+    tokens: { colors: { primary: "#15803d", secondary: "#14352a", accent: "#eab308", background: "#f4f8f4", surface: "#ffffff", text: "#13251b", muted: "#475a4e" }, fonts: { heading: F + "zilla-slab", body: F + "barlow", button: F + "barlow", link: F + "barlow" }, radius: { sm: 2, md: 4, lg: 8, button: 4, field: 4, card: 6 }, shadow: { card: "sm", button: "none" } },
+    dna: { scale: "l", pad: "normal", align: "left", shape: "sharp" }, art: { seed: "tenacia", motifs: ["plates", "botanical", "arches"] },
+    head: ["head:bar", {}],
+    foot: ["foot:center", {}],
+    menu: [["Accueil", "/"], ["Contrats", "/contrats"], ["Interventions", "/interventions"], ["Secteurs", "/secteurs"], ["Contact", "/contact"]], cta: ["Dépannage urgent", "/contact"],
+    contact: { address: "62 route de Vannes, 35000 Rennes", phone: "02 99 00 38 70", email: "atelier@tenacia.example", hours: "Astreinte 24 h/24, bureau 8 h – 17 h 30", tagline: "Vos installations tiennent, nous veillons." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:stacked", { eyebrow: "Maintenance technique", title: "Des installations qui ne tombent pas en panne un vendredi soir.", sub: "Chauffage, ventilation, électricité et gestion technique du bâtiment : préventif, curatif et astreinte.", cta: ["Dépannage urgent", "/contact"], cta2: ["Nos contrats", "/contrats"], image: "hero", stats: [["2 h", "délai d'intervention urgent (exemple)"], ["180", "sites sous contrat"], ["24 h/24", "astreinte"]] }],
+        ["feat:alt", { eyebrow: "Métiers", title: "Trois équipes spécialisées", items: [{ t: "Génie climatique", x: "Chaufferies, climatisation, ventilation, traitement d'eau.", link: ["Interventions", "/interventions"] }, { t: "Électricité", x: "Tableaux, éclairage de sécurité, vérifications périodiques.", link: ["Contrats", "/contrats"] }, { t: "GTB et supervision", x: "Capteurs, régulation et alertes à distance.", link: ["Secteurs", "/secteurs"] }] }],
+        ["feat:numbered", { title: "Notre promesse", items: [{ t: "2 h", x: "pour une intervention urgente." }, { t: "100 %", x: "des interventions tracées." }, { t: "1", x: "technicien référent par site." }], bg: "token:surface" }],
+        ["proof:quotes", { items: [Q("La chaufferie est suivie à distance, l'alerte arrive avant la panne.", "Daniel R.", "Responsable patrimoine, client fictif"), Q("Un rapport clair après chaque passage.", "Mélanie V.", "Gestionnaire, cliente fictive"), Q("Astreinte réactive un dimanche de janvier.", "Antoine L.", "Directeur de site, client fictif")] }],
+        ["cta:band", { title: "Faire auditer vos installations ?", sub: "Visite et rapport offerts pour tout site de plus de 1 000 m².", cta: ["Prendre rendez-vous", "/contact"] }]
+      ] },
+      { key: "contrats", name: "Contrats", blocks: [
+        P("Contrats de maintenance", "Trois niveaux d'engagement"),
+        ["price:tiers", { title: "Formules (tarifs d'exemple)", items: [{ t: "Réglementaire", price: "à partir de 90 €", period: "/mois", f: ["Visites obligatoires", "Registre de sécurité", "Rapport annuel"], cta: ["Demander", "/contact"] }, { t: "Préventif", price: "à partir de 240 €", period: "/mois", f: ["Visites trimestrielles", "Pièces d'usure incluses", "Astreinte"], cta: ["Demander", "/contact"], hl: true }, { t: "Tout compris", price: "Sur devis", f: ["Garantie totale", "Supervision à distance", "Plan pluriannuel"], cta: ["Nous écrire", "/contact"] }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Reprenez-vous un contrat existant ?", x: "Oui, après audit des installations." }, { t: "Y a-t-il un engagement ?", x: "Trois ans, résiliable chaque année avec préavis." }] }],
+        ["cta:card", { title: "Comparer avec votre contrat actuel", cta: ["Envoyer le contrat", "/contact"] }]
+      ] },
+      { key: "interventions", name: "Interventions", blocks: [
+        P("Interventions", "Comment se déroule un dépannage"),
+        ["feat:steps", { title: "Une urgence, quatre étapes", items: [{ d: "0 min", t: "Appel", x: "Un technicien prend la demande." }, { d: "30 min", t: "Diagnostic", x: "Premier avis à distance." }, { d: "2 h", t: "Sur place", x: "Intervention et sécurisation." }, { d: "J+1", t: "Compte rendu", x: "Cause, réparation, préconisations." }] }],
+        ["feat:list2", { title: "Équipements couverts", items: [{ t: "Chaudières et pompes à chaleur" }, { t: "Centrales de traitement d'air" }, { t: "Groupes froids" }, { t: "Tableaux électriques" }, { t: "Éclairage de sécurité" }, { t: "Portes automatiques" }] }]
+      ] },
+      { key: "secteurs", name: "Secteurs", blocks: [
+        P("Secteurs", "Des sites très différents, une même rigueur"),
+        ["gal:grid", { items: [{ t: "Bureaux", x: "Confort et économies d'énergie." }, { t: "Santé", x: "Continuité de service." }, { t: "Industrie", x: "Utilités et process." }, { t: "Commerce", x: "Froid et éclairage." }] }],
+        ["proof:stats", { items: [["180", "sites"], ["22", "techniciens"], ["4", "agences"]] }],
+        ["cta:band", { title: "Votre secteur n'est pas listé ?", cta: ["Nous le dire", "/contact"] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Dépannage ou devis"), ["contact:cards", {}], ["cta:band", { title: "Panne en cours ?", sub: "Appelez l'astreinte au numéro indiqué.", cta: ["Voir les contrats", "/contrats"] }]] }
+    ]
+  },
+  // 8 ------------------------------------------------------------ conciergerie d'entreprise
+  {
+    key: "attentio-conc", name: "Attentio", category: "entreprise", tags: ["luxe", "chaleureux"], siteType: "Conciergerie d'entreprise et services aux salariés",
+    description: "Conciergerie d'entreprise : prune profond et crème, titres de caractère en capitales, en-tête centré, carte blanche d'accueil et liste de services à prix.",
+    brand: "Attentio Conciergerie",
+    tokens: { colors: { primary: "#86198f", secondary: "#3b0a40", accent: "#c8a24a", background: "#fbf6f1", surface: "#ffffff", text: "#2a1630", muted: "#6a5470" }, fonts: { heading: F + "marcellus", body: F + "jost", button: F + "jost", link: F + "jost" }, radius: { sm: 2, md: 6, lg: 10, button: 2, field: 4, card: 6 }, shadow: { card: "sm", button: "none" }, type: { h1: { size: 52, weight: 400, lineHeight: 1.1, letterSpacing: 0.02, transform: "uppercase" }, h2: { size: 34, weight: 400, lineHeight: 1.15, letterSpacing: 0.02, transform: "uppercase" } } },
+    dna: { scale: "m", pad: "airy", align: "center", shape: "sharp" }, art: { seed: "attentio", motifs: ["arches", "botanical", "ribbons"] },
+    head: ["head:center", {}],
+    foot: ["foot:columns", { about: "Des services du quotidien, proposés sur place aux salariés de votre entreprise.", cols: [["Services", "Pressing", "Courses", "Mobilité"], ["Entreprise", "Offres", "Contact"]] }],
+    menu: [["Accueil", "/"], ["Services", "/services"], ["Offres", "/offres"], ["Questions", "/questions"], ["Contact", "/contact"]], cta: ["Planifier une présentation", "/contact"],
+    contact: { address: "18 rue de la Paix, 75002 Paris", phone: "01 40 00 61 52", email: "bonjour@attentio.example", hours: "Lundi – vendredi, 8 h – 19 h", tagline: "Du temps rendu à vos équipes." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:framed", { eyebrow: "Conciergerie d'entreprise", title: "Le quotidien de vos salariés, pris en main.", sub: "Pressing, réparation, courses, colis, démarches : un conciergerie sur site ou à distance qui réduit la charge mentale.", cta: ["Planifier une présentation", "/contact"], image: "hero" }],
+        ["misc:marquee", { items: ["Pressing sous 48 h", "Colis réceptionnés", "Paniers de saison", "Cordonnerie", "Réservations"] }],
+        ["feat:cards", { title: "Les services les plus utilisés", items: [{ t: "Pressing et retouches", x: "Dépôt le matin, retour sous 48 h.", icon: "sparkles" }, { t: "Colis et courses", x: "Réception, préparation et remise.", icon: "briefcase" }, { t: "Démarches", x: "Rendez-vous, réservations, billetterie.", icon: "calendarClock" }, { t: "Mobilité", x: "Vélos, covoiturage, lavage.", icon: "globe" }] }],
+        ["proof:big", { items: [Q("Nos équipes retrouvent leurs pauses. Le taux d'absentéisme de l'étage a baissé.", "Valérie S.", "Directrice des ressources humaines, cliente fictive")] }],
+        ["feat:rows", { eyebrow: "Mise en place", title: "En ligne en trois semaines", items: [{ t: "Cadrage", x: "Enquête auprès des salariés sur leurs besoins." }, { t: "Installation", x: "Comptoir ou application interne." }, { t: "Pilotage", x: "Bilan trimestriel d'usage." }], bg: "token:surface" }],
+        ["cta:split", { title: "Offrir un service de plus à vos équipes", cta: ["Planifier une présentation", "/contact"] }]
+      ] },
+      { key: "services", name: "Services", blocks: [
+        P("Services", "Ce que nous proposons"),
+        ["misc:story", { eyebrow: "À propos", title: "Une équipe à votre écoute", paras: ["Notre équipe vous accompagne de l'analyse jusqu'au suivi de terrain."], image: "portrait-1" }],
+        ["feat:pricelist", { title: "Tarifs salariés (exemples)", items: [{ t: "Chemise nettoyée", price: "3,50 €" }, { t: "Retouche d'ourlet", price: "9 €" }, { t: "Panier de fruits et légumes", price: "18 €" }, { t: "Cordonnerie express", price: "dès 12 €" }, { t: "Réservation de restaurant", price: "offerte" }] }],
+        ["feat:strips", { title: "Pour l'entreprise", items: [{ t: "Comptoir sur site", x: "Un concierge présent aux heures clés." }, { t: "Application interne", x: "Commandes et suivi (démonstration)." }, { t: "Tableau de bord", x: "Usage mensuel par service." }] }],
+        ["cta:band", { title: "Un service sur mesure ?", cta: ["Nous le demander", "/contact"] }]
+      ] },
+      { key: "offres", name: "Offres", blocks: [
+        P("Offres pour l'entreprise", "Un budget maîtrisé"),
+        ["price:tiers", { items: [{ t: "Comptoir partagé", price: "dès 900 €", period: "/mois", f: ["2 demi-journées par semaine", "Services de base", "Bilan trimestriel"], cta: ["Demander", "/contact"] }, { t: "Conciergerie dédiée", price: "dès 2 400 €", period: "/mois", f: ["Concierge à temps plein", "Services étendus", "Tableau de bord"], cta: ["Demander", "/contact"], hl: true }, { t: "Application seule", price: "dès 300 €", period: "/mois", f: ["Catalogue de partenaires", "Suivi des commandes"], cta: ["Demander", "/contact"] }] }],
+        ["proof:stats", { items: [["35", "entreprises accompagnées (exemple)"], ["78 %", "salariés utilisateurs (exemple)"]] }]
+      ] },
+      { key: "questions", name: "Questions", blocks: [
+        P("Questions fréquentes", "Tout savoir avant de démarrer"),
+        ["misc:faq", { items: [{ t: "Qui paie les services ?", x: "Le salarié règle ses services, l'entreprise finance le comptoir." }, { t: "Y a-t-il un engagement ?", x: "Douze mois, renouvelables." }, { t: "Les partenaires sont-ils sélectionnés ?", x: "Oui, selon une charte qualité." }] }],
+        ["cta:card", { title: "Une autre question ?", cta: ["Nous écrire", "/contact"] }],
+        ["feat:checks", { title: "Ce qui est inclus", items: [{ t: "Mise en place" }, { t: "Référent dédié" }, { t: "Bilan d'usage" }], cta: ["Nous contacter", "/contact"] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Planifions une présentation"), CT("Rencontrons-nous", "Votre demande", "Taille de l'entreprise et services souhaités."), ["misc:hours", { title: "Horaires", rows: [["Lundi – vendredi", "8 h – 19 h"]] }]] }
+    ]
+  },
+  // 9 ------------------------------------------------------------ gestion de flotte
+  {
+    key: "flotilla-gest", name: "Flotilla", category: "entreprise", tags: ["moderne", "audacieux"], siteType: "Gestion de flotte automobile d'entreprise (location longue durée, suivi)",
+    description: "Gestion de flotte : or ambré sur fond crème, bandeau de journal, bandeau secondaire plein, comparatif de modes de financement et chiffres clés.",
+    brand: "Flotilla Gestion",
+    tokens: { colors: { primary: "#a16207", secondary: "#1f2937", accent: "#0f766e", background: "#fffbeb", surface: "#ffffff", text: "#1c1917", muted: "#57534e" }, fonts: { heading: F + "titillium-web", body: F + "rubik", button: F + "titillium-web", link: F + "rubik" }, radius: { sm: 4, md: 8, lg: 12, button: 8, field: 8, card: 12 }, shadow: { card: "sm", button: "sm" } },
+    dna: { scale: "l", pad: "normal", align: "left", shape: "soft" }, art: { seed: "flotilla", motifs: ["objects", "rays", "tiles"] },
+    head: ["head:masthead", { dateline: "Gestion de flotte · Lyon" }],
+    foot: ["foot:simple", {}],
+    menu: [["Accueil", "/"], ["Solutions", "/solutions"], ["Financement", "/financement"], ["Suivi", "/suivi"], ["Contact", "/contact"]], cta: ["Audit de flotte", "/contact"],
+    contact: { address: "40 cours Gambetta, 69003 Lyon", phone: "04 78 00 14 36", email: "flotte@flotilla.example", hours: "Lundi – vendredi, 8 h – 18 h", tagline: "Moins de coûts, plus de véhicules disponibles." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:bleed", { eyebrow: "Gestion de flotte", title: "Chaque véhicule au bon endroit, au bon coût.", sub: "Location longue durée, entretien, sinistres, carburant et suivi des conducteurs, réunis dans un seul contrat.", cta: ["Audit de flotte", "/contact"], cta2: ["Solutions", "/solutions"], image: "hero" }],
+        ["proof:stats", { title: "Résultats observés (exemples)", items: [["-14 %", "coût par kilomètre"], ["-30 %", "temps administratif"], ["5 000", "véhicules gérés"]] }],
+        ["feat:strips", { eyebrow: "Services", title: "Tout ce qui entoure le véhicule", items: [{ t: "Entretien planifié", x: "Rendez-vous pris chez des garages partenaires." }, { t: "Gestion des sinistres", x: "Constat, expertise et véhicule de remplacement." }, { t: "Cartes carburant et péages", x: "Suivi et refacturation par service." }, { t: "Amendes", x: "Désignation du conducteur automatisée." }] }],
+        ["feat:compare", { title: "Acheter, louer ou gérer", rows: [["", "Achat", "Location longue durée", "Avec Flotilla"], ["Trésorerie", "forte", "faible", "faible"], ["Entretien", "vous", "inclus", "inclus et piloté"], ["Reporting", "à bâtir", "partiel", "tableau mensuel"]], bg: "token:surface" }],
+        ["proof:quotes", { items: [Q("Nous avons réduit notre flotte de douze véhicules sans perdre de service.", "Pierre N.", "Directeur administratif, client fictif"), Q("Les amendes ne sont plus un sujet.", "Léa C.", "Responsable moyens généraux, cliente fictive")] }],
+        ["cta:band", { title: "Que coûte vraiment votre flotte ?", sub: "Audit gratuit sur un échantillon de dix véhicules.", cta: ["Audit de flotte", "/contact"] }]
+      ] },
+      { key: "solutions", name: "Solutions", blocks: [
+        P("Solutions", "Une offre pour chaque taille de flotte"),
+        ["feat:bento", { title: "Nos offres", items: [{ t: "Petites flottes", x: "De 5 à 30 véhicules, contrat simple.", icon: "briefcase" }, { t: "Flottes moyennes", x: "Reporting par service.", icon: "barChart" }, { t: "Grandes flottes", x: "Gestion déléguée complète.", icon: "layers" }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Quels véhicules ?", x: "Citadines, utilitaires, hybrides et électriques." }, { t: "Gérez-vous la recharge ?", x: "Nous conseillons et installons des bornes via des partenaires." }] }],
+        ["cta:split", { title: "Simuler une transition électrique", cta: ["Nous contacter", "/contact"] }]
+      ] },
+      { key: "financement", name: "Financement", blocks: [
+        P("Financement", "Louer, racheter, mutualiser"),
+        ["feat:pricelist", { title: "Loyers indicatifs (exemples)", items: [{ t: "Citadine, 48 mois", x: "entretien inclus", price: "dès 310 €/mois" }, { t: "Utilitaire 3 m³, 48 mois", x: "entretien inclus", price: "dès 420 €/mois" }, { t: "Berline hybride, 48 mois", x: "entretien inclus", price: "dès 590 €/mois" }] }],
+        ["misc:text", { title: "Comment sont fixés les loyers", paras: ["Ils dépendent de la durée, du kilométrage annuel et de la valeur de revente estimée.", "Nous comparons plusieurs bailleurs pour chaque dossier."] }]
+      ] },
+      { key: "suivi", name: "Suivi", blocks: [
+        P("Suivi", "Un tableau de bord par mois"),
+        ["feat:steps", { title: "Du kilomètre au rapport", items: [{ d: "Chaque jour", t: "Collecte", x: "Kilométrage et alertes entretien." }, { d: "Chaque mois", t: "Rapport", x: "Coûts par véhicule et par service." }, { d: "Chaque trimestre", t: "Revue", x: "Optimisation du parc avec vous." }] }],
+        ["proof:statsbar", { items: [["12", "indicateurs suivis"], ["1", "interlocuteur"], ["30 j", "entre deux revues"]] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Audit de flotte gratuit"), ["contact:map", { title: "Nos bureaux", mapAddress: "40 cours Gambetta, 69003 Lyon" }], ["cta:card", { title: "Prêt à reprendre la main ?", cta: ["Voir les solutions", "/solutions"] }]] }
+    ]
+  },
+  // 10 ------------------------------------------------------------ coworking
+  {
+    key: "ruche-cowork", name: "La Ruche Active", category: "entreprise", tags: ["ludique", "moderne"], siteType: "Espace de coworking et bureaux flexibles",
+    description: "Coworking : bleu ciel vif, titres sportifs, collage de photos d'espaces, grille de formules à la journée ou au mois et programme d'événements.",
+    brand: "La Ruche Active",
+    tokens: { colors: { primary: "#0284c7", secondary: "#082f49", accent: "#fb923c", background: "#f0f9ff", surface: "#ffffff", text: "#0c1e2b", muted: "#43607a" }, fonts: { heading: F + "kanit", body: F + "outfit", button: F + "kanit", link: F + "outfit" }, radius: { sm: 8, md: 14, lg: 24, button: 999, field: 14, card: 24 }, shadow: { card: "md", button: "sm" } },
+    dna: { scale: "xl", pad: "airy", align: "left", shape: "pill" }, art: { seed: "ruche", motifs: ["blobs", "tiles", "ribbons"] },
+    head: ["head:float", {}],
+    foot: ["foot:big", { title: "La Ruche" }],
+    menu: [["Accueil", "/"], ["Espaces", "/espaces"], ["Tarifs", "/tarifs"], ["Événements", "/evenements"], ["Contact", "/contact"]], cta: ["Réserver une visite", "/contact"],
+    contact: { address: "11 quai de la Fosse, 44000 Nantes", phone: "02 40 00 15 89", email: "salut@ruche.example", hours: "Lundi – vendredi, 8 h – 20 h, accès 24 h/24 pour les membres", tagline: "Un bureau qui ressemble à votre équipe." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:collage", { eyebrow: "Coworking à Nantes", title: "Un poste, une équipe ou tout un étage.", sub: "Bureaux privatifs, postes en espace partagé et salles de réunion, sans bail de longue durée.", cta: ["Réserver une visite", "/contact"], cta2: ["Voir les tarifs", "/tarifs"] }],
+        ["proof:statsbar", { items: [["180", "postes (exemple)"], ["14", "salles de réunion"], ["7 j/7", "accès membres"]] }],
+        ["feat:icons", { title: "Inclus dans chaque formule", items: [{ t: "Fibre dédiée", x: "Débit symétrique garanti.", icon: "zap" }, { t: "Café et boissons", x: "À volonté.", icon: "heart" }, { t: "Salles de réunion", x: "Heures offertes chaque mois.", icon: "users" }, { t: "Domiciliation", x: "Adresse et réception du courrier.", icon: "mail" }] }],
+        ["gal:wall", { items: [{ t: "Open space" }, { t: "Cabines téléphone" }, { t: "Terrasse" }, { t: "Cuisine partagée" }] }],
+        ["proof:quotes", { items: [Q("Nous sommes passés de deux à neuf postes sans rien signer de plus.", "Camille B.", "Cofondatrice, cliente fictive"), Q("Les rencontres du jeudi nous ont apporté deux clients.", "Samir Z.", "Développeur indépendant, client fictif")] }],
+        ["cta:image", { title: "Venez essayer une journée", sub: "Première journée offerte pour les équipes de trois personnes.", cta: ["Réserver une visite", "/contact"] }]
+      ] },
+      { key: "espaces", name: "Espaces", blocks: [
+        P("Espaces", "Choisissez votre manière de travailler"),
+        ["feat:alt", { title: "Nos espaces", items: [{ t: "Open space", x: "Postes libres ou fixes, ambiance studieuse.", link: ["Tarifs", "/tarifs"] }, { t: "Bureaux privatifs", x: "De 2 à 12 personnes, clé en main.", link: ["Tarifs", "/tarifs"] }, { t: "Salles de réunion", x: "Écran, visio, paperboard, de 4 à 20 places.", link: ["Contact", "/contact"] }] }],
+        ["feat:list2", { title: "Services", items: [{ t: "Impression et scan" }, { t: "Casiers" }, { t: "Douche et local vélos" }, { t: "Accueil des visiteurs" }, { t: "Boîte aux lettres" }, { t: "Sécurité 24 h/24" }] }],
+        ["cta:band", { title: "Visite sur rendez-vous", cta: ["Réserver", "/contact"] }]
       ] },
       { key: "tarifs", name: "Tarifs", blocks: [
-        ["misc:pagehead", { title: "Tarifs", sub: "Forfaits mensuels hors taxes (exemples)." }],
-        ["price:tiers", { title: "Trois formules", items: [{ t: "Indépendant", price: "69 €", period: "/ mois", x: "Micro-entrepreneur.", f: ["Déclarations sociales et fiscales", "Facturation en ligne", "Une question par semaine"], cta: ["Choisir", "/contact"] }, { t: "TPE", price: "149 €", period: "/ mois", x: "Société jusqu'à 3 salariés.", f: ["Comptabilité complète", "Paie jusqu'à 3 bulletins", "Bilan annuel"], cta: ["Choisir", "/contact"], hl: true }, { t: "PME", price: "Sur devis", x: "À partir de 4 salariés.", f: ["Contrôle de gestion", "Paie illimitée", "Commissaire aux comptes partenaire"], cta: ["Parler à un expert", "/contact"] }] }],
-        ["feat:accordion", { title: "Questions sur les honoraires", items: [{ t: "Les honoraires sont-ils révisés ?", x: "Une fois par an, avec préavis de trois mois." }, { t: "Y a-t-il des frais de reprise ?", x: "Non, la reprise de dossier est incluse dans cette démonstration." }] }],
+        P("Tarifs", "À la journée ou au mois, sans engagement"),
+        ["price:tiers", { items: [{ t: "Nomade", price: "18 €", period: "/jour", f: ["Poste libre", "Café inclus"], cta: ["Réserver", "/contact"] }, { t: "Résident", price: "190 €", period: "/mois", f: ["Poste fixe", "8 h de salle", "Domiciliation"], cta: ["Réserver", "/contact"], hl: true }, { t: "Équipe", price: "Sur devis", f: ["Bureau privatif", "Salle dédiée", "Aménagement"], cta: ["Nous écrire", "/contact"] }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Quel préavis ?", x: "Un mois, aucune pénalité." }, { t: "Peut-on recevoir des clients ?", x: "Oui, accueil et salle inclus." }] }]
       ] },
-      { key: "cabinet", name: "Le cabinet", blocks: [
-        ["misc:pagehead", { title: "Le cabinet" }],
-        ["misc:story", { eyebrow: "Depuis 2009", title: "Un cabinet à taille humaine", paras: ["Bilan Clair accompagne des dirigeants qui préfèrent comprendre leurs chiffres plutôt que les subir.", "Nos experts-comptables sont inscrits à l'Ordre et suivent quarante heures de formation chaque année."], image: "portrait-3" }],
-        ["proof:team", { title: "Équipe", items: [{ n: "Valérie Gaillard", r: "Expert-comptable associée" }, { n: "Simon Lacroix", r: "Responsable paie" }, { n: "Amina Touré", r: "Conseil en gestion" }] }],
-        pageActusBlock(),
+      { key: "evenements", name: "Événements", blocks: [
+        P("Événements", "La vie de la communauté"),
+        ["misc:schedule", { title: "Cette semaine (exemple)", items: [{ d: "Mardi 12 h", t: "Déjeuner partagé", x: "Chacun apporte un plat." }, { d: "Mercredi 18 h", t: "Atelier : facturation", x: "Avec un expert-comptable." }, { d: "Jeudi 18 h 30", t: "Afterwork", x: "Rencontre entre membres." }] }],
+        ["gal:cards", { items: [{ t: "Démos produits", tag: "Mensuel", x: "Trois start-ups présentent." }, { t: "Matinée recrutement", tag: "Trimestriel", x: "Profils et offres." }] }],
+        ["cta:card", { title: "Proposer un événement", cta: ["Nous écrire", "/contact"] }]
       ] },
-      pageContact("Prendre rendez-vous", "En cabinet, par visioconférence ou à votre domicile professionnel.", "Nos coordonnées", "Votre activité, votre régime actuel et vos questions.", ["Demander un rendez-vous", "/contact"], "19 boulevard Carnot, 21000 Dijon", "Le cabinet"),
-    ],
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Réservez une visite"), CT("Passez nous voir", "Votre visite", "Nombre de personnes et date souhaitée."), ["misc:hours", { title: "Horaires", rows: [["Accueil", "8 h – 20 h"], ["Membres", "24 h/24"]] }]] }
+    ]
   },
-
-  // 11. Conseil RSE : vert végétal, slab arrondi, collage
+  // 11 ------------------------------------------------------------ imprimerie professionnelle
   {
-    key: "racines-durables", name: "Racines Durables", category: "entreprise", tags: ["naturel", "chaleureux"], siteType: "Conseil RSE et transition écologique",
-    description: "Conseil en transition écologique pour entreprises : vert végétal et jaune soleil, slab doux, collage d'images, feuille de route par étapes.",
-    brand: "Racines Durables Conseil",
-    tokens: { colors: { primary: "#2e7d32", secondary: "#1b3a22", accent: "#f4b400", background: "#f1f7ee", surface: "#ffffff", text: "#1c2b1f", muted: "#506555" }, fonts: { heading: "font.roboto-slab", body: "font.karla", button: "font.karla", link: "font.karla" }, radius: { sm: 8, md: 16, lg: 28, button: 999, field: 14, card: 24 }, shadow: { card: "sm", button: "none" }, type: { h1: { size: 48, weight: 700, lineHeight: 1.12, letterSpacing: -0.01 } } },
-    dna: { scale: "m", pad: "airy", align: "center", shape: "pill" }, art: { seed: "racines", motifs: ["botanical", "dunes", "blobs"] },
-    head: ["head:float", {}], foot: ["foot:newsletter", { title: "La lettre des racines", sub: "Une idée concrète, chaque mois, pour réduire votre empreinte.", button: "Recevoir la lettre" }],
-    menu: [["Accueil", "/"], ["Accompagnements", "/accompagnements"], ["Démarche", "/demarche"], ["Ressources", "/actualites"], ["Contact", "/contact"]], cta: ["Faire le point", "/contact"],
-    contact: { address: "6 chemin des Vergers, 49100 Angers", phone: "02 41 00 23 58", email: "bonjour@racines-durables.example", hours: "Du lundi au vendredi, 9 h – 17 h 30", tagline: "Réduire l'impact, garder la performance." },
+    key: "typografik-imp", name: "Typografik", category: "entreprise", tags: ["editorial", "audacieux"], siteType: "Imprimerie professionnelle (offset, grand format, packaging)",
+    description: "Imprimerie : rose d'encre sur papier crème, sérif d'édition, bandeau minimal en très grand corps, nuancier de supports et tarifs au tirage.",
+    brand: "Typografik Imprimeurs",
+    tokens: { colors: { primary: "#be185d", secondary: "#1c1917", accent: "#0369a1", background: "#fbf7f0", surface: "#ffffff", text: "#1c1917", muted: "#57534e" }, fonts: { heading: F + "spectral", body: F + "archivo", button: F + "archivo", link: F + "archivo" }, radius: { sm: 0, md: 0, lg: 2, button: 0, field: 0, card: 0 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#d9cfc0" } },
+    dna: { scale: "xl", pad: "airy", align: "left", shape: "sharp" }, art: { seed: "typografik", motifs: ["halftone", "plates", "objects"] },
+    head: ["head:topbar", { info: "Livraison en 48 h partout en France", note: "BAT sous 4 h" }],
+    foot: ["foot:line", {}],
+    menu: [["Accueil", "/"], ["Produits", "/produits"], ["Supports", "/supports"], ["Tarifs", "/tarifs"], ["Contact", "/contact"]], cta: ["Demander un devis", "/contact"],
+    contact: { address: "7 rue Gutenberg, 67000 Strasbourg", phone: "03 88 00 24 47", email: "devis@typografik.example", hours: "Lundi – vendredi, 7 h 30 – 18 h", tagline: "Imprimé avec soin, livré à l'heure." },
     pages: [
       { key: "accueil", name: "Accueil", blocks: [
-        ["hero:collage", { eyebrow: "Conseil RSE et bilan carbone", title: "Faire de la transition un atout de votre entreprise.", sub: "Bilan carbone, plan d'action, labels et reporting extra-financier pour PME et collectivités.", cta: ["Faire le point", "/contact"], cta2: ["Notre démarche", "/demarche"] }],
-        ["feat:grid-icons", { title: "Quatre chantiers prioritaires", items: [{ icon: "sun", t: "Énergie", x: "Audit, sobriété, énergies renouvelables." }, { icon: "globe", t: "Bilan carbone", x: "Mesure des émissions des scopes 1, 2 et 3." }, { icon: "layers", t: "Économie circulaire", x: "Déchets, réemploi, achats responsables." }, { icon: "users", t: "Équipes", x: "Mobilisation, formation, qualité de vie." }] }],
-        ["feat:alt", { eyebrow: "Résultats", title: "Des gains mesurables", items: [{ t: "Une imprimerie réduit sa facture d'énergie", x: "Cas fictif : -18 % en 14 mois, grâce au pilotage et au remplacement de deux équipements." }, { t: "Une coopérative mesure ses émissions", x: "Cas fictif : plan sur trois ans validé en comité de direction." }] }],
-        ["proof:statsbar", { items: [["140", "bilans carbone réalisés"], ["-22 %", "d'émissions moyennes après 3 ans (exemple)"], ["35", "labels obtenus"]] }],
-        ["proof:quotes", { title: "Retours", items: [{ q: "Un plan d'action chiffré, enfin compréhensible par nos équipes.", n: "Dirigeante", r: "PME de l'agroalimentaire, cliente fictive" }, { q: "L'audit a payé son coût dès la première année.", n: "Directeur technique", r: "industrie, client fictif" }, { q: "Un tutoiement honnête sur nos fausses pistes.", n: "Gérante", r: "commerce, cliente fictive" }] }],
-        ["cta:card", { title: "Par où commencer ?", sub: "Un diagnostic de deux heures pour hiérarchiser vos priorités.", cta: ["Réserver le diagnostic", "/contact"] }],
+        ["hero:minimal", { eyebrow: "Imprimerie professionnelle", title: "Ce qui s'imprime bien se remarque.", sub: "Catalogues, packagings, signalétique et papeterie pour entreprises : offset, numérique et grand format.", cta: ["Demander un devis", "/contact"], cta2: ["Voir les produits", "/produits"] }],
+        ["gal:strip", { title: "Nos réalisations", items: [{ t: "Catalogue" }, { t: "Étui" }, { t: "Affiche" }, { t: "Brochure" }, { t: "Carte" }] }],
+        ["feat:rows", { eyebrow: "Savoir-faire", title: "De la maquette à la palette", items: [{ t: "Vérification des fichiers", x: "Contrôle gratuit et bon à tirer sous 4 heures." }, { t: "Impression", x: "Offset, numérique, grand format, vernis sélectifs." }, { t: "Façonnage", x: "Pliage, reliure, découpe, dorure à chaud." }, { t: "Livraison", x: "Palettisation et livraison sur rendez-vous." }] }],
+        ["proof:stats", { items: [["48 h", "délai standard"], ["12", "presses (exemple)"], ["100 %", "papiers certifiés"]] }],
+        ["feat:alt", { title: "Un engagement écologique", items: [{ t: "Encres végétales", x: "Pour la quasi-totalité des travaux.", link: ["Supports", "/supports"] }, { t: "Papiers certifiés", x: "Gestion durable des forêts.", link: ["Tarifs", "/tarifs"] }] }],
+        ["proof:big", { items: [Q("Les couleurs de notre catalogue étaient justes dès le premier tirage.", "Élodie M.", "Directrice marketing, cliente fictive")] }],
+        ["cta:band", { title: "Un devis en quelques heures", cta: ["Demander un devis", "/contact"] }]
       ] },
-      { key: "accompagnements", name: "Accompagnements", blocks: [
-        ["misc:pagehead", { title: "Accompagnements", sub: "Du diagnostic au reporting, à votre rythme." }],
-        ["feat:strips", { title: "Nos missions", items: [{ t: "Bilan carbone", x: "Collecte, calcul et restitution avec plan de réduction." }, { t: "Audit énergétique", x: "Visite, mesures, scénarios chiffrés." }, { t: "Stratégie RSE", x: "Matrice d'enjeux, objectifs et gouvernance." }, { t: "Reporting extra-financier", x: "Indicateurs, rapport annuel, préparation aux audits." }] }],
-        ["price:tiers", { title: "Formules (exemples)", items: [{ t: "Diagnostic", price: "1 200 €", x: "Deux heures d'échange et une note.", f: ["Entretien", "Priorités", "Estimation du budget"], cta: ["Réserver", "/contact"] }, { t: "Bilan carbone", price: "4 800 €", x: "Pour 10 à 50 salariés.", f: ["Collecte des données", "Calcul des scopes", "Plan d'action"], cta: ["Réserver", "/contact"], hl: true }, { t: "Programme annuel", price: "Sur devis", x: "Suivi et mobilisation.", f: ["Comité trimestriel", "Ateliers", "Reporting"], cta: ["Nous écrire", "/contact"] }] }],
-        ["cta:split", { title: "Une obligation de reporting ?", sub: "Nous vous aidons à comprendre ce qui vous concerne.", cta: ["Nous contacter", "/contact"] }],
+      { key: "produits", name: "Produits", blocks: [
+        P("Produits", "Tout ce que nous imprimons"),
+        ["gal:cards", { items: [{ t: "Catalogues et brochures", tag: "Offset", x: "De 8 à 200 pages." }, { t: "Packaging", tag: "Carton", x: "Étuis, coffrets et PLV." }, { t: "Signalétique", tag: "Grand format", x: "Bâches, kakémonos, adhésifs." }, { t: "Papeterie", tag: "Numérique", x: "Cartes, en-têtes, enveloppes." }] }],
+        ["feat:list2", { title: "Finitions", items: [{ t: "Vernis sélectif" }, { t: "Dorure à chaud" }, { t: "Pelliculage mat ou brillant" }, { t: "Découpe à la forme" }, { t: "Reliure dos carré collé" }, { t: "Perforation" }] }],
+        ["cta:split", { title: "Un produit sur mesure ?", cta: ["Nous écrire", "/contact"] }]
       ] },
-      { key: "demarche", name: "Démarche", blocks: [
-        ["misc:pagehead", { title: "Notre démarche" }],
-        ["feat:steps", { title: "Une feuille de route en cinq temps", items: [{ d: "1", t: "Écouter", x: "Entretiens avec la direction et les équipes." }, { d: "2", t: "Mesurer", x: "Données d'énergie, d'achats et de déplacements." }, { d: "3", t: "Prioriser", x: "Impact, coût, faisabilité." }, { d: "4", t: "Agir", x: "Chantiers pilotes et suivi mensuel." }, { d: "5", t: "Rendre compte", x: "Indicateurs et communication." }] }],
-        ["misc:text", { eyebrow: "Notre conviction", title: "Réduire d'abord, compenser ensuite", paras: ["Nous ne vendons pas de crédits carbone : notre travail consiste à diminuer vos émissions réelles.", "Chaque recommandation est accompagnée de son coût, de son gain et de son retour sur investissement estimé."] }],
-        ["feat:list2", { title: "Nos principes", items: [{ t: "Transparence des méthodes de calcul" }, { t: "Aucune promesse invérifiable" }, { t: "Transfert de compétences à vos équipes" }, { t: "Indépendance vis-à-vis des fournisseurs" }] }],
+      { key: "supports", name: "Supports", blocks: [
+        P("Supports", "Papiers et matériaux"),
+        ["feat:tabs", { title: "Choisir son support", items: [{ t: "Couché", x: "Mat ou brillant, de 90 à 350 g." }, { t: "Non couché", x: "Toucher naturel pour la papeterie." }, { t: "Recyclé", x: "Aspect sobre, certifié." }, { t: "Carton", x: "Pour l'emballage et les coffrets." }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Quel format de fichier ?", x: "PDF haute définition avec fonds perdus de 3 mm." }, { t: "Fournissez-vous des échantillons ?", x: "Oui, sur demande, sous 48 h." }] }]
       ] },
-      pageActus("Ressources et actualités", "Guides, retours d'expérience et veille réglementaire.", "Derniers articles", "grid", 6),
-      pageContact("Contact", "Un premier échange pour cerner vos enjeux.", "Venez nous voir", "Taille de l'entreprise, secteur et premier sujet à traiter.", ["Envoyer", "/contact"], "6 chemin des Vergers, 49100 Angers", "Le bureau"),
-    ],
+      { key: "tarifs", name: "Tarifs", blocks: [
+        P("Tarifs", "Prix indicatifs au tirage (exemples)"),
+        ["feat:pricelist", { title: "Quelques repères", items: [{ t: "1 000 flyers A5 recto verso", x: "135 g couché mat", price: "89 €" }, { t: "500 brochures A4, 16 pages", x: "agrafées", price: "690 €" }, { t: "Bâche 3 × 1 m", x: "œillets inclus", price: "64 €" }, { t: "500 cartes de visite", x: "350 g, pelliculées", price: "49 €" }] }],
+        ["cta:band", { title: "Votre prix exact en quatre heures", cta: ["Demander un devis", "/contact"] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Atelier ouvert aux visites"), ["contact:map", { title: "Notre atelier", mapAddress: "7 rue Gutenberg, 67000 Strasbourg" }], ["misc:hours", { title: "Horaires", rows: [["Lundi – vendredi", "7 h 30 – 18 h"]] }]] }
+    ]
+  },
+  // 12 ------------------------------------------------------------ sécurité privée (sombre)
+  {
+    key: "vigilance-sec", name: "Vigilance Nord", category: "entreprise", tags: ["sombre", "technique"], siteType: "Société de sécurité privée (gardiennage, télésurveillance)",
+    description: "Sécurité privée : fond encre bleutée, bleu glacé, titres condensés en capitales, bandeau centré, services en bandes et astreinte joignable.",
+    brand: "Vigilance Nord",
+    tokens: { colors: { primary: "#60a5fa", secondary: "#13203a", accent: "#fbbf24", background: "#0b1220", surface: "#131d31", text: "#eef3fb", muted: "#a7b4c9" }, fonts: { heading: F + "oswald", body: F + "cabin", button: F + "oswald", link: F + "cabin" }, radius: { sm: 2, md: 4, lg: 6, button: 4, field: 4, card: 4 }, shadow: { card: "none", button: "none" }, type: { h1: { size: 60, weight: 600, lineHeight: 1.02, letterSpacing: 0.01, transform: "uppercase" }, h2: { size: 38, weight: 600, lineHeight: 1.08, transform: "uppercase" } } },
+    dna: { scale: "l", pad: "normal", align: "center", shape: "sharp" }, art: { seed: "vigilance", motifs: ["topo", "mesh", "skyline"] },
+    head: ["head:dark", {}],
+    foot: ["foot:columns", { about: "Gardiennage, télésurveillance et sécurité incendie pour sites professionnels.", cols: [["Prestations", "Gardiennage", "Télésurveillance", "Incendie"], ["Société", "Agréments", "Recrutement", "Contact"]] }],
+    menu: [["Accueil", "/"], ["Prestations", "/prestations"], ["Agréments", "/agrements"], ["Recrutement", "/recrutement"], ["Contact", "/contact"]], cta: ["Audit de sûreté", "/contact"],
+    contact: { address: "21 boulevard de la Liberté, 59800 Lille", phone: "03 20 00 33 99", email: "operations@vigilance.example", hours: "Centre opérationnel 24 h/24, 365 j/an", tagline: "Vigilants quand vous ne l'êtes plus." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:center", { eyebrow: "Sécurité privée", title: "Vos sites surveillés, de jour comme de nuit.", sub: "Agents de sécurité, télésurveillance et prévention incendie, encadrés par un centre opérationnel permanent.", cta: ["Audit de sûreté", "/contact"], cta2: ["Prestations", "/prestations"], stats: [["24 h/24", "centre opérationnel"], ["15 min", "levée de doute (exemple)"], ["320", "agents formés (exemple)"]] }],
+        ["feat:strips", { eyebrow: "Prestations", title: "Une réponse à chaque risque", items: [{ t: "Gardiennage", x: "Agents en poste fixe ou en rondes." }, { t: "Télésurveillance", x: "Levée de doute vidéo et intervention." }, { t: "Sécurité incendie", x: "Agents SSIAP pour établissements recevant du public." }, { t: "Événements", x: "Filtrage et gestion des flux." }] }],
+        ["feat:steps", { title: "Un incident, une chaîne maîtrisée", items: [{ d: "T0", t: "Alerte", x: "Détection par capteur ou vidéo." }, { d: "T+2 min", t: "Levée de doute", x: "Opérateur et caméras." }, { d: "T+15 min", t: "Intervention", x: "Patrouille ou forces de l'ordre." }, { d: "T+24 h", t: "Rapport", x: "Main courante et suites." }], bg: "token:surface" }],
+        ["proof:logos", { title: "Sites protégés (fictifs)", items: ["Centre Les Arcades", "Logipôle", "Clinique du Parc", "Usine Valmeca", "Tour Meridia"] }],
+        ["proof:quotes", { items: [Q("Une cinquantaine d'alarmes par mois, aucune intrusion non gérée.", "Rémi A.", "Responsable sûreté, client fictif"), Q("Des agents ponctuels et bien présentés.", "Sylvie D.", "Directrice de site, cliente fictive")] }],
+        ["cta:band", { title: "Un doute sur la sûreté de votre site ?", sub: "Audit initial sur place, sans frais.", cta: ["Audit de sûreté", "/contact"] }]
+      ] },
+      { key: "prestations", name: "Prestations", blocks: [
+        P("Prestations", "Gardiennage, télésurveillance, incendie"),
+        ["feat:cards", { title: "Notre offre", items: [{ t: "Agents de sécurité", x: "Cartes professionnelles à jour, tenue réglementaire.", icon: "shield" }, { t: "Vidéosurveillance", x: "Caméras connectées et enregistrement.", icon: "eye" }, { t: "Contrôle d'accès", x: "Badges et registre des visiteurs.", icon: "lock" }, { t: "Rondes", x: "Passages aléatoires avec pointeau.", icon: "mapPin" }, { t: "Incendie", x: "Agents SSIAP et exercices.", icon: "alertTriangle" }, { t: "Astreinte", x: "Intervention sur alarme.", icon: "bell" }] }],
+        ["feat:compare", { title: "Gardiennage ou télésurveillance", rows: [["", "Gardiennage", "Télésurveillance"], ["Présence humaine", "sur place", "à distance"], ["Coût", "plus élevé", "modéré"], ["Réactivité", "immédiate", "15 min"]], bg: "token:surface" }],
+        ["cta:split", { title: "Quelle solution pour votre site ?", cta: ["Parler à un expert", "/contact"] }]
+      ] },
+      { key: "agrements", name: "Agréments", blocks: [
+        P("Agréments", "Des garanties vérifiables"),
+        ["feat:list2", { title: "Nos engagements", items: [{ t: "Autorisation d'exercer à jour" }, { t: "Agents titulaires de cartes professionnelles" }, { t: "Assurance responsabilité civile" }, { t: "Formation continue obligatoire" }, { t: "Charte déontologique" }, { t: "Contrôle interne mensuel" }] }],
+        ["misc:text", { title: "Transparence", paras: ["Les numéros d'autorisation et attestations sont communiqués sur simple demande avant signature.", "Ce site est une démonstration : les agréments cités sont fictifs."] }],
+        ["proof:statsbar", { items: [["320", "agents"], ["24 h/24", "centre opérationnel"], ["12 ans", "d'expérience moyenne"]] }]
+      ] },
+      { key: "recrutement", name: "Recrutement", blocks: [
+        P("Recrutement", "Rejoindre nos équipes"),
+        ["gal:listings", { items: [{ t: "Agent de sécurité", tag: "CDI", price: "1 900 €/mois", x: "Lille, nuits et week-ends." }, { t: "Opérateur de télésurveillance", tag: "CDI", price: "2 100 €/mois", x: "Centre opérationnel." }, { t: "Agent SSIAP 1", tag: "CDD", price: "2 000 €/mois", x: "Roubaix, établissement recevant du public." }] }],
+        ["feat:checks", { title: "Ce que nous offrons", items: [{ t: "Formation prise en charge" }, { t: "Primes de nuit" }, { t: "Évolution vers chef de poste" }], cta: ["Candidater", "/contact"] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Audit de sûreté gratuit"), ["contact:cards", {}], ["cta:card", { title: "Alarme en cours ?", sub: "Appelez le centre opérationnel.", cta: ["Voir les prestations", "/prestations"] }]] }
+    ]
+  },
+  // 13 ------------------------------------------------------------ déchets et recyclage B2B
+  {
+    key: "recyclora-eco", name: "Recyclora", category: "entreprise", tags: ["naturel", "chaleureux"], siteType: "Collecte et valorisation de déchets pour entreprises",
+    description: "Gestion de déchets B2B : vert olive terreux, slab de caractère, bandeau texte et image, circuit de valorisation en étapes et prix de reprise.",
+    brand: "Recyclora Filières",
+    tokens: { colors: { primary: "#4d7c0f", secondary: "#26330f", accent: "#d97706", background: "#f7f8ee", surface: "#ffffff", text: "#1d2610", muted: "#4f5a3c" }, fonts: { heading: F + "bitter", body: F + "manrope", button: F + "manrope", link: F + "manrope" }, radius: { sm: 6, md: 12, lg: 20, button: 12, field: 10, card: 18 }, shadow: { card: "sm", button: "none" } },
+    dna: { scale: "m", pad: "normal", align: "left", shape: "soft" }, art: { seed: "recyclora", motifs: ["botanical", "dunes", "objects"] },
+    head: ["head:split", {}],
+    foot: ["foot:center", {}],
+    menu: [["Accueil", "/"], ["Filières", "/filieres"], ["Collecte", "/collecte"], ["Reprise", "/reprise"], ["Contact", "/contact"]], cta: ["Programmer une collecte", "/collecte"],
+    contact: { address: "Zone de la Plaine, 51100 Reims", phone: "03 26 00 57 10", email: "collecte@recyclora.example", hours: "Lundi – samedi, 6 h – 18 h", tagline: "Ce que vous jetez devient une ressource." },
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:split", { eyebrow: "Déchets d'entreprise", title: "Trier, collecter, valoriser : un seul prestataire.", sub: "Cartons, palettes, métaux, déchets dangereux et bio-déchets, avec bordereaux et justificatifs réglementaires.", cta: ["Programmer une collecte", "/collecte"], cta2: ["Nos filières", "/filieres"], image: "hero" }],
+        ["feat:grid-icons", { title: "Ce que nous collectons", items: [{ t: "Papier et carton", x: "Bennes et presses à balles.", icon: "layers" }, { t: "Métaux", x: "Reprise rachetée au cours du jour.", icon: "settings" }, { t: "Bio-déchets", x: "Collecte pour restaurants et cantines.", icon: "sun" }, { t: "Déchets dangereux", x: "Huiles, solvants, batteries.", icon: "alertTriangle" }] }],
+        ["proof:stats", { title: "Impact (exemples)", items: [["82 %", "valorisés"], ["14 000 t", "traitées par an"], ["650", "clients"]] }],
+        ["feat:steps", { title: "Le trajet de vos déchets", items: [{ d: "1", t: "Tri", x: "Conseils et contenants adaptés." }, { d: "2", t: "Collecte", x: "Tournée régulière ou sur appel." }, { d: "3", t: "Valorisation", x: "Recyclage, compostage ou énergie." }, { d: "4", t: "Justificatifs", x: "Bordereaux et rapport annuel." }], bg: "token:surface" }],
+        ["proof:big", { items: [Q("Nous avons divisé par deux le volume d'ordures ménagères et gagné en conformité.", "Béatrice L.", "Responsable environnement, cliente fictive")] }],
+        ["cta:image", { title: "Faites le point sur vos déchets", sub: "Diagnostic gratuit pour les entreprises de plus de vingt salariés.", cta: ["Programmer une collecte", "/collecte"] }]
+      ] },
+      { key: "filieres", name: "Filières", blocks: [
+        P("Filières", "Chaque déchet a sa destination"),
+        ["feat:tabs", { title: "Nos filières de valorisation", items: [{ t: "Papier et carton", x: "Transformés en nouvelles fibres." }, { t: "Bois", x: "Palettes réparées ou broyées en panneaux." }, { t: "Métaux", x: "Triés et refondus." }, { t: "Bio-déchets", x: "Méthanisation ou compostage." }] }],
+        ["feat:bento", { title: "Obligations réglementaires", items: [{ t: "Tri à la source", x: "Cinq flux séparés obligatoires.", icon: "list" }, { t: "Registre", x: "Suivi des déchets dangereux.", icon: "fileText" }, { t: "Traçabilité", x: "Bordereaux numériques.", icon: "checkCircle" }] }],
+        ["cta:band", { title: "Une filière spécifique ?", cta: ["Nous écrire", "/contact"] }]
+      ] },
+      { key: "collecte", name: "Collecte", blocks: [
+        P("Programmer une collecte", "Fréquence, contenants, tarifs"),
+        ["price:tiers", { title: "Formules (tarifs d'exemple)", items: [{ t: "Petit producteur", price: "75 €", period: "/mois", f: ["Un passage par semaine", "Deux bacs"], cta: ["Choisir", "/contact"] }, { t: "Entreprise", price: "290 €", period: "/mois", f: ["Plusieurs flux", "Bennes", "Rapport annuel"], cta: ["Choisir", "/contact"], hl: true }, { t: "Site industriel", price: "Sur devis", f: ["Presse à balles", "Déchets dangereux", "Suivi dédié"], cta: ["Nous écrire", "/contact"] }] }],
+        ["feat:accordion", { title: "Questions fréquentes", items: [{ t: "Fournissez-vous les bacs ?", x: "Oui, prêtés pendant le contrat." }, { t: "Collectez-vous le samedi ?", x: "Oui, sur certaines tournées." }] }]
+      ] },
+      { key: "reprise", name: "Reprise", blocks: [
+        P("Reprise des matières", "Prix de rachat indicatifs (exemples)"),
+        ["feat:pricelist", { title: "Reprise au cours du jour", items: [{ t: "Carton propre", x: "la tonne", price: "80 €" }, { t: "Cuivre", x: "le kilo", price: "6 €" }, { t: "Aluminium", x: "le kilo", price: "1,10 €" }, { t: "Palettes en bon état", x: "l'unité", price: "2 €" }] }],
+        ["misc:text", { title: "Comment ça marche", paras: ["Les prix varient avec les marchés. Une pesée contradictoire est réalisée à chaque enlèvement.", "Le paiement est effectué chaque mois par virement."] }]
+      ] },
+      { key: "contact", name: "Contact", blocks: [P("Contact", "Collecte et diagnostic"), CT("Parlons de vos déchets", "Votre demande", "Types de déchets, volumes et fréquence souhaitée."), ["misc:hours", { title: "Horaires", rows: [["Lundi – vendredi", "6 h – 18 h"], ["Samedi", "6 h – 12 h"]] }]] }
+    ]
   },
 ];
-
-function pageActusBlock() {
-  return ["misc:posts", { title: "Dernières actualités", count: 3, layout: "list" }];
-}

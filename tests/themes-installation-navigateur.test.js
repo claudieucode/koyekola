@@ -79,7 +79,7 @@ describe("installation et aperçu des thèmes (navigateur)", { skip: SKIP }, () 
       const before = rows(A);
       const btn = firstCard(page); const label = (await btn.innerText()).trim();
       await btn.click();
-      await page.waitForSelector(".mk-th-notice[role=alert]:not([hidden])", { timeout: 8000 });
+      await page.waitForSelector(".mk-th-notice[role=alert]:not([hidden])", { timeout: 8000 }).catch((e) => { throw new Error(`${name} : ${e.message}`); });
       assert.match(await page.locator(".mk-th-notice[role=alert]").innerText(), expected, name);
       assert.equal((await btn.innerText()).trim(), label, `${name} : libellé d'origine rétabli`);
       assert.ok(await btn.isEnabled(), `${name} : bouton de nouveau actif`);
@@ -110,7 +110,7 @@ describe("installation et aperçu des thèmes (navigateur)", { skip: SKIP }, () 
 
   test("fiche d'un thème : rendu réel en direct dans un cadre isolé et mis à l'échelle ; le cadre ne peut pas toucher l'administration", async () => {
     const { context, page } = await open();
-    await page.goto(`${srv.base}${TH}/meridien/details?site=${A}`, { waitUntil: "load" });
+    await page.goto(`${srv.base}${TH}/affiche-vive/details?site=${A}`, { waitUntil: "load" });
     await page.waitForSelector(".mk-td-live.is-live", { timeout: 20000 });
     const g = await page.evaluate(() => { const l = document.querySelector("[data-td-live]"), f = l.querySelector("iframe"); const r = f.getBoundingClientRect(), lr = l.getBoundingClientRect(); return { sandbox: f.getAttribute("sandbox"), scale: parseFloat(getComputedStyle(f).transform.split("(")[1]), fw: f.offsetWidth, lw: Math.round(lr.width), shownW: Math.round(r.width) }; });
     assert.equal(g.sandbox, "allow-scripts", "cadre isolé : pas de allow-same-origin"); assert.equal(g.fw, 1280, "rendu à 1280 px réels"); assert.ok(Math.abs(g.shownW - g.lw) <= 2, `échelle : ${g.shownW} px affichés pour ${g.lw} px de cadre`);
@@ -122,7 +122,7 @@ describe("installation et aperçu des thèmes (navigateur)", { skip: SKIP }, () 
 
   test("aperçu complet : la largeur de l'appareil est la largeur réelle du rendu (tablette 820, téléphone 390)", async () => {
     const { context, page } = await open();
-    await page.goto(`${srv.base}${TH}/meridien/apercu?site=${A}`, { waitUntil: "load" });
+    await page.goto(`${srv.base}${TH}/affiche-vive/apercu?site=${A}`, { waitUntil: "load" });
     for (const w of [820, 390]) {
       await page.click(`[data-tp-width="${w}px"]`); await page.waitForTimeout(500);
       const frame = page.frames().find((f) => /\/demo\//.test(f.url()));

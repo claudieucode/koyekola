@@ -1,0 +1,393 @@
+// Mode et beauté, lot B (9 thèmes). Textes de DÉMONSTRATION : marques, personnes et coordonnées fictives.
+const BOUTIQUE = ["Boutique en ligne : le module e-commerce n'est pas installé, le catalogue est une démonstration"];
+const R = (n) => ({ sm: n, md: n, lg: n, button: n, field: n, card: n });
+module.exports = [
+  // 1. Cosmétiques naturels
+  {
+    key: "verdelune", name: "Verdelune", category: "mode", tags: ["naturel", "chaleureux"], siteType: "Marque de cosmétiques naturels", featured: true,
+    description: "Marque de cosmétiques naturels en vert sauge et crème : serif élégant, grands visuels botaniques, bandeau image à gauche et fiches produits sobres.",
+    modules: BOUTIQUE, brand: "Verdelune",
+    tokens: { colors: { primary: "#3f6b4a", secondary: "#e4ead8", accent: "#c9803a", background: "#f6f3ea", surface: "#fffdf8", text: "#1f2a21", muted: "#55604f" }, fonts: { heading: "font.cormorant-garamond", body: "font.karla", button: "font.karla", link: "font.karla" }, radius: { sm: 6, md: 12, lg: 20, button: 999, field: 10, card: 18 }, shadow: { card: "sm", button: "none" }, type: { h1: { size: 62, weight: 600, lineHeight: 1.04, letterSpacing: -0.01 } } },
+    dna: { scale: "l", pad: "airy", align: "left", shape: "soft" }, art: { seed: "verdelune", motifs: ["botanical", "blobs", "bokeh"] },
+    head: ["head:bar", {}], foot: ["foot:columns", { about: "Soins visage, corps et cheveux formulés avec des plantes cultivées en France.", cols: [["Boutique", "Soins visage", "Soins corps", "Coffrets"], ["La marque", "Nos engagements", "Ingrédients", "Contact"]] }],
+    menu: [["Accueil", "/"], ["Les soins", "/soins"], ["Ingrédients", "/ingredients"], ["Engagements", "/engagements"], ["Contact", "/contact"]], cta: ["Découvrir les soins", "/soins"],
+    contact: { address: "14 chemin des Herbiers, 26400 Crest", phone: "04 75 55 01 38", email: "bonjour@verdelune.example", hours: "Lundi – vendredi, 9 h – 17 h", tagline: "Cosmétiques naturels, faits en petits lots." },
+    social: ["instagram", "facebook"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:split-left", { eyebrow: "Cosmétiques naturels", title: "Des soins qui sentent le jardin.", sub: "Baumes, huiles et crèmes fabriqués en petits lots, avec des plantes récoltées à la main dans la Drôme.", cta: ["Voir les soins", "/soins"], cta2: ["Nos engagements", "/engagements"] }],
+        ["gal:products", { eyebrow: "Best-sellers", title: "Les indispensables de la saison", items: [{ t: "Baume Calendula", x: "Peaux sensibles", price: "18 €" }, { t: "Huile Verveine", x: "Visage et corps", price: "26 €" }, { t: "Crème Camomille", x: "Jour, 50 ml", price: "29 €" }, { t: "Savon Avoine", x: "Pain de 100 g", price: "9 €" }] }],
+        ["feat:bento", { title: "Ce que nous refusons", intro: "Une liste d'ingrédients courte, lisible, sans compromis.", items: [{ t: "Zéro silicone", x: "Nos textures viennent de beurres et de cires végétales.", icon: "sparkles" }, { t: "Peu d'emballage", x: "Flacons en verre, étuis en carton recyclé.", icon: "globe" }, { t: "Pas de testeurs jetables", x: "Des échantillons sur demande.", icon: "heart" }] }],
+        ["proof:quotes", { items: [{ q: "Ma peau réactive supporte enfin un soin quotidien.", n: "Anaïs L.", r: "cliente fictive" }, { q: "Odeur douce, texture riche, rien de collant.", n: "Mathilde R.", r: "cliente fictive" }, { q: "Le coffret découverte m'a fait choisir en confiance.", n: "Hugo B.", r: "client fictif" }] }],
+        ["cta:card", { title: "Un échantillon pour commencer ?", sub: "Écrivez-nous votre type de peau, nous choisissons avec vous.", cta: ["Demander conseil", "/contact"] }],
+      ] },
+      { key: "soins", name: "Les soins", blocks: [
+        ["misc:pagehead", { title: "Les soins", sub: "Catalogue de démonstration." }],
+        ["gal:products", { title: "Visage", items: [{ t: "Sérum Rosée", x: "Hydratation", price: "34 €" }, { t: "Crème Camomille", x: "Jour", price: "29 €" }, { t: "Masque Argile verte", x: "Purifiant", price: "22 €" }, { t: "Eau florale Bleuet", x: "Lotion", price: "15 €" }] }],
+        ["misc:product", { eyebrow: "Produit phare", title: "Baume Calendula", price: "18 €", text: "Un baume nourrissant aux fleurs de calendula macérées, pour mains, coudes et peaux irritées.", points: ["Pot en verre de 30 ml", "9 ingrédients, tous d'origine naturelle", "Fabriqué à Crest en petits lots"], cta: "Commander par message", url: "/contact", note: "Démonstration : la commande se fait par le formulaire de contact." }],
+        ["feat:list2", { title: "Pour chaque besoin", items: [{ t: "Peau sèche", x: "Beurres et huiles riches." }, { t: "Peau mixte", x: "Textures fluides, argile." }, { t: "Peau sensible", x: "Formules minimales." }, { t: "Cheveux", x: "Shampoings solides et huile." }] }],
+      ] },
+      { key: "ingredients", name: "Ingrédients", blocks: [
+        ["misc:pagehead", { title: "Ingrédients" }],
+        ["feat:rows", { title: "Nos plantes, une à une", items: [{ t: "Calendula", x: "Cultivé en bordure de Drôme, apaisant." }, { t: "Verveine", x: "Distillée à la ferme voisine." }, { t: "Avoine", x: "Lait d'avoine pour les peaux fragiles." }, { t: "Cire d'abeille", x: "Locale, filtrée à froid." }] }],
+        ["misc:text", { eyebrow: "Transparence", title: "La liste complète est sur chaque étui", paras: ["Nous détaillons l'origine, la part de naturel et la fonction de chaque ingrédient.", "Les durées de conservation sont indiquées après ouverture."] }],
+        ["cta:band", { title: "Une allergie connue ?", sub: "Nous vérifions la composition avec vous.", cta: ["Nous écrire", "/contact"] }],
+      ] },
+      { key: "engagements", name: "Engagements", blocks: [
+        ["misc:pagehead", { title: "Nos engagements" }],
+        ["misc:story", { eyebrow: "L'atelier", title: "Une petite équipe à la ferme", paras: ["Verdelune est née dans une cuisine, autour d'un alambic d'occasion. Aujourd'hui, six personnes fabriquent, mettent en pots et expédient.", "Nous publions chaque année le bilan de nos achats et de nos emballages."], image: "portrait-1" }],
+        ["proof:stats", { title: "En chiffres (exemples)", items: [["6", "personnes à l'atelier"], ["38", "références"], ["100 %", "flacons en verre"]] }],
+        ["misc:posts", { title: "Le carnet du jardin", count: 3, layout: "list" }],
+      ] },
+      { key: "contact", name: "Contact", blocks: [
+        ["misc:pagehead", { title: "Nous contacter" }],
+        ["contact:info", { title: "Une question sur un soin ?", formTitle: "Écrivez-nous", formIntro: "Nous répondons sous deux jours ouvrés.", cta: ["Envoyer", "/contact"] }],
+        ["misc:faq", { title: "Questions fréquentes", items: [{ t: "Les produits sont-ils vegan ?", x: "Seuls les baumes contiennent de la cire d'abeille, c'est indiqué." }, { t: "Livrez-vous à l'étranger ?", x: "Oui, en Europe, sur demande." }] }],
+      ] },
+    ],
+  },
+  // 2. Salon de coiffure
+  {
+    key: "coupe-marine", name: "Coupe Marine", category: "mode", tags: ["moderne", "chaleureux"], siteType: "Salon de coiffure",
+    description: "Salon de coiffure contemporain en bleu-vert profond et corail : serif à fort contraste, barre flottante, tarifs lisibles et prise de rendez-vous mise en avant.",
+    brand: "Coupe Marine",
+    tokens: { colors: { primary: "#0f766e", secondary: "#0b3b3a", accent: "#f08a5d", background: "#f4faf9", surface: "#ffffff", text: "#11292a", muted: "#4a6566" }, fonts: { heading: "font.bodoni-moda", body: "font.outfit", button: "font.outfit", link: "font.outfit" }, radius: { sm: 8, md: 14, lg: 24, button: 999, field: 12, card: 20 }, shadow: { card: "md", button: "sm" }, type: { h1: { size: 58, weight: 600, lineHeight: 1.06, letterSpacing: -0.015 } } },
+    dna: { scale: "l", pad: "normal", align: "center", shape: "pill" }, art: { seed: "marine", motifs: ["waves", "ribbons", "rays"] },
+    head: ["head:float", {}], foot: ["foot:newsletter", { title: "Les nouveautés du salon", sub: "Une lettre par saison : tendances, offres et dates de stage.", button: "Je m'abonne" }],
+    menu: [["Accueil", "/"], ["Prestations", "/prestations"], ["Tarifs", "/tarifs"], ["L'équipe", "/equipe"], ["Rendez-vous", "/contact"]], cta: ["Prendre rendez-vous", "/contact"],
+    contact: { address: "5 quai des Salines, 17000 La Rochelle", phone: "05 46 00 28 74", email: "salon@coupemarine.example", hours: "Mardi – samedi, 9 h – 19 h", tagline: "Coupe, couleur et soins, à la rochelaise." },
+    social: ["instagram", "facebook"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:framed", { eyebrow: "Salon de coiffure", title: "La coupe qui vous ressemble.", sub: "Diagnostic, coupe sur mesure et couleurs sans ammoniaque, dans un salon lumineux face au port.", cta: ["Prendre rendez-vous", "/contact"], cta2: ["Voir les tarifs", "/tarifs"] }],
+        ["feat:icons", { title: "Au fauteuil", items: [{ t: "Coupe et coiffage", x: "Femme, homme, enfant, avec conseils d'entretien.", icon: "sparkles" }, { t: "Couleur et balayage", x: "Teintes végétales et techniques en douceur.", icon: "palette" }, { t: "Soins profonds", x: "Rituels réparateurs, massage du cuir chevelu.", icon: "heart" }, { t: "Mariage", x: "Essai et coiffure le jour J.", icon: "star" }] }],
+        ["proof:statsbar", { items: [["12 ans", "au même quai"], ["4", "coiffeuses"], ["1 h 30", "pour une couleur (exemple)"]] }],
+        ["gal:wall", { items: [{ t: "Carré plongeant" }, { t: "Balayage miel" }, { t: "Boucles naturelles" }, { t: "Blond froid" }] }],
+        ["proof:big", { items: [{ q: "On sort avec une coupe qui se coiffe seule, c'est rare.", n: "Léa M.", r: "cliente fictive" }] }],
+        ["cta:split", { title: "Une place cette semaine ?", sub: "Réservez en ligne ou par téléphone, nous confirmons sous la journée.", cta: ["Réserver", "/contact"] }],
+      ] },
+      { key: "prestations", name: "Prestations", blocks: [
+        ["misc:pagehead", { title: "Nos prestations" }],
+        ["feat:tabs", { title: "Choisissez votre univers", items: [{ t: "Coupe", x: "Shampoing, coupe, coiffage : 45 minutes." }, { t: "Couleur", x: "Diagnostic offert, produits végétaux ou classiques." }, { t: "Soins", x: "Masque profond et massage, 30 minutes." }, { t: "Cérémonie", x: "Chignons et coiffures sur essai." }] }],
+        ["gal:masonry", { items: [{ t: "Dégradé doux" }, { t: "Frange rideau" }, { t: "Chignon bas" }, { t: "Blond sable" }, { t: "Brun glacé" }] }],
+        ["cta:band", { title: "Pas sûre de votre choix ?", sub: "Un échange de dix minutes est offert avant chaque couleur.", cta: ["Parler au salon", "/contact"] }],
+      ] },
+      { key: "tarifs", name: "Tarifs", blocks: [
+        ["misc:pagehead", { title: "Tarifs", sub: "Prix indicatifs de démonstration." }],
+        ["feat:pricelist", { title: "Coupes", items: [{ t: "Coupe femme", x: "Shampoing, coupe, coiffage", price: "52 €" }, { t: "Coupe homme", x: "Shampoing, coupe", price: "32 €" }, { t: "Coupe enfant", x: "Moins de 12 ans", price: "22 €" }] }],
+        ["feat:pricelist", { title: "Couleurs et soins", items: [{ t: "Couleur racines", x: "Avec coiffage", price: "58 €" }, { t: "Balayage", x: "Selon longueur", price: "95 €" }, { t: "Soin profond", x: "Masque et massage", price: "25 €" }] }],
+        ["misc:faq", { items: [{ t: "Comment annuler ?", x: "Jusqu'à 24 h avant, sans frais." }, { t: "Acceptez-vous les cartes cadeaux ?", x: "Oui, valables un an." }] }],
+      ] },
+      { key: "equipe", name: "L'équipe", blocks: [
+        ["misc:pagehead", { title: "L'équipe" }],
+        ["proof:team", { items: [{ n: "Clémence Roy", r: "Fondatrice, coloriste" }, { n: "Karim Aubin", r: "Coiffeur, coupes homme" }, { n: "Inès Bouvet", r: "Coiffeuse mariage" }, { n: "Théo Garnier", r: "Apprenti" }] }],
+        ["misc:text", { eyebrow: "Notre façon de faire", title: "Écouter avant de couper", paras: ["Chaque rendez-vous commence par un diagnostic : texture, habitudes, temps que vous consacrez à votre coiffure.", "Nous formons deux apprentis par an."] }],
+      ] },
+      { key: "contact", name: "Rendez-vous", blocks: [
+        ["misc:pagehead", { title: "Prendre rendez-vous" }],
+        ["contact:map", { title: "Au salon", mapAddress: "5 quai des Salines, 17000 La Rochelle" }],
+        ["misc:hours", { title: "Horaires", rows: [["Mardi – vendredi", "9 h – 19 h"], ["Samedi", "9 h – 17 h"], ["Dimanche et lundi", "Fermé"]] }],
+      ] },
+    ],
+  },
+  // 3. Barbier (sombre)
+  {
+    key: "barbe-et-cuivre", name: "Barbe & Cuivre", category: "mode", tags: ["sombre", "audacieux"], siteType: "Barbier traditionnel",
+    description: "Barbier en noir charbon et ambre : titres condensés en capitales, bandeau affiche, tarifs en liste, pas de fioritures et un bouton de réservation toujours visible.",
+    brand: "Barbe & Cuivre",
+    tokens: { colors: { primary: "#e0a526", secondary: "#8a2a1a", accent: "#e0a526", background: "#14110f", surface: "#1e1a17", text: "#f3ece3", muted: "#b8aca0" }, fonts: { heading: "font.bebas-neue", body: "font.red-hat-text", button: "font.red-hat-text", link: "font.red-hat-text" }, radius: R(2), shadow: { card: "none", button: "none" }, type: { h1: { size: 84, weight: 400, lineHeight: 0.96, letterSpacing: 0.01, transform: "uppercase" }, h2: { size: 48, weight: 400, lineHeight: 1.02, letterSpacing: 0.02, transform: "uppercase" } } },
+    dna: { scale: "xl", pad: "tight", align: "left", shape: "sharp" }, art: { seed: "cuivre", motifs: ["halftone", "plates", "tiles"] },
+    head: ["head:dark", {}], foot: ["foot:center", {}],
+    menu: [["Accueil", "/"], ["Tarifs", "/tarifs"], ["Le shop", "/produits"], ["Le salon", "/salon"], ["Réserver", "/contact"]], cta: ["Réserver", "/contact"],
+    contact: { address: "27 rue des Tanneurs, 69007 Lyon", phone: "04 72 00 91 64", email: "resa@barbecuivre.example", hours: "Mardi – samedi, 10 h – 20 h", tagline: "Coupe, barbe, rasoir droit." },
+    social: ["instagram"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:poster", { eyebrow: "Barbier depuis 2014", title: "Coupe nette. Barbe droite.", sub: "Rasoir, ciseaux et serviette chaude, sans musique trop forte.", cta: ["Réserver une place", "/contact"], cta2: ["Voir les tarifs", "/tarifs"] }],
+        ["misc:marquee", { items: ["Sans rendez-vous le mardi", "Rasage à l'ancienne", "Soin barbe offert dès 3 visites", "Boissons chaudes"] }],
+        ["feat:numbered", { title: "Trois gestes de la maison", items: [{ t: "La coupe", x: "Dégradé à la tondeuse, finitions aux ciseaux." }, { t: "La barbe", x: "Taille, contour et huile." }, { t: "Le rasage", x: "Serviette chaude et rasoir droit." }] }],
+        ["gal:cards", { title: "Au fauteuil", items: [{ t: "Fondu bas", tag: "Coupe", x: "Net sur les côtés." }, { t: "Barbe sculptée", tag: "Barbe", x: "Contours précis." }, { t: "Rasage complet", tag: "Rasoir", x: "Peau lisse et apaisée." }] }],
+        ["proof:quotes", { items: [{ q: "Le meilleur rasage de la ville, point.", n: "Yann P.", r: "client fictif" }, { q: "Ponctuels, efficaces, ambiance simple.", n: "Samir D.", r: "client fictif" }, { q: "Mon fils y va aussi, tout le monde est bien reçu.", n: "Marc T.", r: "client fictif" }] }],
+        ["cta:band", { title: "Votre fauteuil vous attend", sub: "Réservation en ligne ou passage direct le mardi.", cta: ["Réserver", "/contact"] }],
+      ] },
+      { key: "tarifs", name: "Tarifs", blocks: [
+        ["misc:pagehead", { title: "Tarifs", sub: "Prix d'exemple, de démonstration." }],
+        ["feat:pricelist", { title: "Au fauteuil", items: [{ t: "Coupe", x: "Shampoing inclus", price: "28 €" }, { t: "Barbe", x: "Taille et contour", price: "18 €" }, { t: "Coupe + barbe", x: "Formule complète", price: "42 €" }, { t: "Rasage à l'ancienne", x: "Serviette chaude", price: "30 €" }] }],
+        ["price:tiers", { items: [{ t: "Carte 5 visites", price: "120 €", x: "Une coupe offerte", f: ["5 coupes", "Valable un an", "Cessible à un proche"], cta: "Demander la carte", url: "/contact" }, { t: "Abonné", price: "49 €", period: "/mois", x: "Une coupe par mois", f: ["Coupe illimitée sur 30 jours", "Priorité de créneau", "-10 % au shop"], cta: "S'abonner", url: "/contact", hl: true }] }],
+        ["misc:faq", { items: [{ t: "Faut-il réserver ?", x: "Conseillé, mais le mardi est sans rendez-vous." }, { t: "Travaillez-vous les cheveux frisés ?", x: "Oui, toute l'équipe est formée." }] }],
+      ] },
+      { key: "produits", name: "Le shop", blocks: [
+        ["misc:pagehead", { title: "Le shop" }],
+        ["gal:products", { items: [{ t: "Huile à barbe", x: "30 ml", price: "16 €" }, { t: "Cire coiffante", x: "Tenue forte", price: "14 €" }, { t: "Baume après-rasage", x: "75 ml", price: "18 €" }, { t: "Peigne en bois", x: "Poirier", price: "12 €" }] }],
+        ["misc:text", { eyebrow: "Retrait au salon", title: "Pas de commande en ligne", paras: ["Les produits se retirent au salon. Écrivez-nous pour en réserver."] }],
+      ] },
+      { key: "salon", name: "Le salon", blocks: [
+        ["misc:pagehead", { title: "Le salon" }],
+        ["misc:story", { eyebrow: "Depuis 2014", title: "Un ancien atelier de maroquinier", paras: ["Parquet d'origine, fauteuils restaurés, miroirs récupérés. Quatre barbiers y travaillent côte à côte.", "Nous soutenons un club de boxe du quartier."], image: "portrait-2" }],
+        ["proof:team", { items: [{ n: "Rémi Castel", r: "Fondateur" }, { n: "Bilal Haddad", r: "Barbier" }, { n: "Paul Verny", r: "Barbier" }] }],
+      ] },
+      { key: "contact", name: "Réserver", blocks: [
+        ["misc:pagehead", { title: "Réserver" }],
+        ["contact:cards", { title: "Nous trouver" }],
+        ["misc:hours", { title: "Ouvert", rows: [["Mardi", "10 h – 20 h, sans rendez-vous"], ["Mercredi – vendredi", "10 h – 20 h"], ["Samedi", "9 h – 18 h"], ["Dimanche et lundi", "Fermé"]] }],
+      ] },
+    ],
+  },
+  // 4. Onglerie / nail art
+  {
+    key: "vernis-prisme", name: "Vernis Prisme", category: "mode", tags: ["ludique", "audacieux"], siteType: "Onglerie et nail art",
+    description: "Onglerie créative en violet orchidée et ambre : titres larges et arrondis, grille de créations, programme de séances et ambiance pop.",
+    brand: "Vernis Prisme",
+    tokens: { colors: { primary: "#a8329b", secondary: "#f4d9f1", accent: "#ffb347", background: "#fdf6fc", surface: "#ffffff", text: "#2a1530", muted: "#6a5370" }, fonts: { heading: "font.unbounded", body: "font.quicksand", button: "font.quicksand", link: "font.quicksand" }, radius: { sm: 12, md: 20, lg: 32, button: 999, field: 16, card: 28 }, shadow: { card: "md", button: "md" }, type: { h1: { size: 50, weight: 700, lineHeight: 1.1, letterSpacing: -0.02 }, h2: { size: 32, weight: 700 } } },
+    dna: { scale: "m", pad: "normal", align: "center", shape: "pill" }, art: { seed: "prisme", motifs: ["blobs", "bokeh", "rays"] },
+    head: ["head:minimal", {}], foot: ["foot:simple", {}],
+    menu: [["Accueil", "/"], ["Créations", "/creations"], ["Prestations", "/prestations"], ["Ateliers", "/ateliers"], ["Contact", "/contact"]], cta: ["Réserver", "/contact"],
+    contact: { address: "3 passage des Arts, 31000 Toulouse", phone: "05 61 00 14 52", email: "ongles@vernisprisme.example", hours: "Mercredi – samedi, 10 h – 19 h", tagline: "Des ongles qui racontent quelque chose." },
+    social: ["instagram", "facebook"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:collage", { eyebrow: "Nail art et manucure", title: "Vos ongles, notre terrain de jeu.", sub: "Gel, semi-permanent et nail art dessiné à la main, dans une onglerie colorée au cœur de Toulouse.", cta: ["Réserver une séance", "/contact"], cta2: ["Voir les créations", "/creations"] }],
+        ["gal:carousel", { title: "Créations du moment", items: [{ t: "Aura pastel" }, { t: "French inversée" }, { t: "Chrome miroir" }, { t: "Fleurs pressées" }, { t: "Pixels" }] }],
+        ["feat:grid-icons", { title: "Notre façon de travailler", items: [{ t: "Hygiène stricte", x: "Outils stérilisés, limes à usage unique.", icon: "shield" }, { t: "Pose en douceur", x: "Sans abîmer l'ongle naturel.", icon: "heart" }, { t: "Dessin à main levée", x: "Chaque motif est unique.", icon: "palette" }, { t: "Vernis sans toxiques", x: "Gammes sans TPO.", icon: "check" }] }],
+        ["proof:stats", { items: [["8 ans", "de nail art"], ["2 h", "pour une pose complète (exemple)"], ["60", "coloris en stock"]] }],
+        ["cta:image", { title: "Un anniversaire entre amies ?", sub: "Réservez l'espace pour 4 personnes avec boissons.", cta: ["Nous demander", "/contact"] }],
+      ] },
+      { key: "creations", name: "Créations", blocks: [
+        ["misc:pagehead", { title: "Créations" }],
+        ["gal:grid", { items: [{ t: "Aura pastel", x: "Dégradé" }, { t: "Chrome", x: "Miroir" }, { t: "Mosaïque", x: "Éclats" }, { t: "Tortue", x: "Écaille" }, { t: "Constellation", x: "Étoiles dorées" }, { t: "Pixel", x: "Rétro" }] }],
+        ["feat:alt", { title: "Les styles de la maison", items: [{ t: "Minimal chic", x: "Tons nus, lignes fines, parfait au bureau." }, { t: "Graphique", x: "Formes franches, couleurs vives." }] }],
+        ["cta:band", { title: "Un modèle en tête ?", sub: "Envoyez votre inspiration, nous la dessinons.", cta: ["Envoyer", "/contact"] }],
+      ] },
+      { key: "prestations", name: "Prestations", blocks: [
+        ["misc:pagehead", { title: "Prestations et prix", sub: "Prix de démonstration." }],
+        ["feat:pricelist", { items: [{ t: "Manucure express", x: "Limage, cuticules, vernis", price: "25 €" }, { t: "Semi-permanent", x: "Pose mains", price: "38 €" }, { t: "Pose gel", x: "Capsules ou chablons", price: "55 €" }, { t: "Nail art", x: "Par ongle, à partir de", price: "3 €" }, { t: "Dépose", x: "Avec soin", price: "12 €" }] }],
+        ["feat:accordion", { title: "Avant de venir", items: [{ t: "Combien de temps tient la pose ?", x: "Trois semaines en moyenne." }, { t: "Puis-je venir avec un enfant ?", x: "Oui, dès 8 ans, pour une manucure simple." }, { t: "Y a-t-il une retouche offerte ?", x: "Oui, sous 7 jours." }] }],
+      ] },
+      { key: "ateliers", name: "Ateliers", blocks: [
+        ["misc:pagehead", { title: "Ateliers nail art" }],
+        ["misc:schedule", { title: "Un samedi type", items: [{ d: "10 h", t: "Accueil", x: "Choix des couleurs et des inspirations." }, { d: "10 h 30", t: "Bases", x: "Préparation de l'ongle, base et couleur." }, { d: "11 h 30", t: "Dessin", x: "Pinceaux fins et décorations." }, { d: "12 h 30", t: "Photo", x: "Vos mains en vedette." }] }],
+        ["price:tiers", { items: [{ t: "Atelier duo", price: "70 €", x: "Pour deux personnes", f: ["2 h 30", "Kit à emporter", "Boisson"], cta: "Réserver", url: "/contact" }, { t: "Atelier groupe", price: "180 €", x: "Jusqu'à 5 personnes", f: ["2 h 30", "Kits individuels", "Goûter"], cta: "Réserver", url: "/contact", hl: true }] }],
+      ] },
+      { key: "contact", name: "Contact", blocks: [
+        ["misc:pagehead", { title: "Contact" }],
+        ["contact:info", { title: "Une séance, un atelier ?", formTitle: "Écrivez-nous", formIntro: "Précisez la date souhaitée et l'inspiration.", cta: ["Envoyer", "/contact"] }],
+        ["misc:hours", { title: "Horaires", rows: [["Mercredi – vendredi", "10 h – 19 h"], ["Samedi", "9 h – 18 h"], ["Dimanche – mardi", "Fermé"]] }],
+      ] },
+    ],
+  },
+  // 5. Parfumerie de niche (sombre)
+  {
+    key: "nuit-ambrine", name: "Nuit Ambrine", category: "mode", tags: ["sombre", "luxe"], siteType: "Parfumerie de niche",
+    description: "Maison de parfums de niche en violet nuit et or pâle : capitales gravées, bandeau plein cadre, fiches olfactives et discrétion de salon privé.",
+    modules: BOUTIQUE, brand: "Nuit Ambrine",
+    tokens: { colors: { primary: "#b79cf0", secondary: "#2a2340", accent: "#e3c58a", background: "#15121c", surface: "#1f1b29", text: "#efeaf5", muted: "#b5acc4" }, fonts: { heading: "font.marcellus", body: "font.raleway", button: "font.raleway", link: "font.raleway" }, radius: R(0), shadow: { card: "none", button: "none" }, type: { h1: { size: 56, weight: 400, lineHeight: 1.1, letterSpacing: 0.06, transform: "uppercase" }, h2: { size: 32, weight: 400, letterSpacing: 0.05, transform: "uppercase" } } },
+    dna: { scale: "l", pad: "airy", align: "center", shape: "sharp" }, art: { seed: "ambrine", motifs: ["bokeh", "arches", "mesh"] },
+    head: ["head:split", {}], foot: ["foot:big", { title: "Nuit Ambrine" }],
+    menu: [["Accueil", "/"], ["Les parfums", "/parfums"], ["Notes", "/notes"], ["Journal", "/journal"], ["Contact", "/contact"]], cta: ["Rendez-vous olfactif", "/contact"],
+    contact: { address: "9 rue du Parfumeur-Voyageur, 06130 Grasse", phone: "04 93 00 77 21", email: "salon@nuitambrine.example", hours: "Sur rendez-vous, du mardi au samedi", tagline: "Eaux de parfum de niche, flacons numérotés." },
+    social: ["instagram"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:cover", { eyebrow: "Parfumerie de niche", title: "Des sillages écrits la nuit.", sub: "Six eaux de parfum, composées à Grasse en séries de trois cents flacons numérotés.", cta: ["Découvrir les parfums", "/parfums"], overlay: 0.55 }],
+        ["gal:featured", { title: "La collection", items: [{ t: "Ambre Nocturne", x: "Ambre, vanille, fève tonka." }, { t: "Cuir de Lune", x: "Cuir, iris, bois de cèdre." }, { t: "Figuier d'Encre", x: "Figue verte, vétiver." }, { t: "Rose Sombre", x: "Rose, patchouli, encens." }] }],
+        ["feat:strips", { title: "Notre art", items: [{ t: "Matières premières", x: "Absolues de jasmin et de rose, récoltées localement." }, { t: "Macération", x: "Quatre semaines de repos avant la mise en flacon." }, { t: "Séries limitées", x: "Chaque flacon porte son numéro." }] }],
+        ["proof:big", { items: [{ q: "Un parfum qui reste dans le souvenir des autres.", n: "Client fictif", r: "rendez-vous olfactif" }] }],
+        ["cta:card", { title: "Un rendez-vous olfactif", sub: "Une heure pour découvrir six sillages avec la parfumeuse.", cta: ["Réserver", "/contact"] }],
+      ] },
+      { key: "parfums", name: "Les parfums", blocks: [
+        ["misc:pagehead", { title: "Les parfums", sub: "Catalogue de démonstration." }],
+        ["gal:products", { items: [{ t: "Ambre Nocturne", x: "50 ml", price: "148 €" }, { t: "Cuir de Lune", x: "50 ml", price: "148 €" }, { t: "Figuier d'Encre", x: "50 ml", price: "138 €" }, { t: "Rose Sombre", x: "50 ml", price: "148 €" }] }],
+        ["misc:product", { eyebrow: "Fiche olfactive", title: "Ambre Nocturne", price: "148 €", text: "Une ambre enveloppante, adoucie par la vanille et une pointe de poivre rose.", points: ["Tête : poivre rose, bergamote", "Cœur : ambre, benjoin", "Fond : vanille, fève tonka"], cta: "Demander un échantillon", url: "/contact", note: "Démonstration : pas d'achat en ligne." }],
+        ["feat:compare", { title: "Comparer deux sillages", rows: [["", "Ambre Nocturne", "Figuier d'Encre"], ["Famille", "Ambrée", "Boisée verte"], ["Moment", "Soir", "Journée"], ["Tenue", "Longue", "Moyenne"]] }],
+      ] },
+      { key: "notes", name: "Notes", blocks: [
+        ["misc:pagehead", { title: "Les notes" }],
+        ["feat:steps", { title: "Une pyramide olfactive", items: [{ t: "Notes de tête", d: "0 – 15 min", x: "Agrumes et épices, premières impressions." }, { t: "Notes de cœur", d: "15 min – 3 h", x: "Fleurs et fruits, identité du parfum." }, { t: "Notes de fond", d: "3 h et plus", x: "Bois, ambres, musc : le sillage." }] }],
+        ["misc:text", { eyebrow: "Pour choisir", title: "Testez sur la peau, pas sur le papier", paras: ["Un parfum évolue selon la chaleur de chacun. Nous proposons des échantillons de 2 ml à porter une journée entière."] }],
+        ["cta:band", { title: "Recevoir un échantillon", cta: ["Nous écrire", "/contact"] }],
+      ] },
+      { key: "journal", name: "Journal", blocks: [
+        ["misc:pagehead", { title: "Journal" }],
+        ["misc:posts", { title: "Carnet de la parfumeuse", count: 4, layout: "grid" }],
+        ["misc:quote", { text: "Un parfum est une phrase que l'on porte sans la dire.", by: "La parfumeuse, Nuit Ambrine" }],
+      ] },
+      { key: "contact", name: "Contact", blocks: [
+        ["misc:pagehead", { title: "Contact" }],
+        ["contact:info", { title: "Au salon de Grasse", formTitle: "Demande de rendez-vous", formIntro: "Indiquez deux dates possibles.", cta: ["Envoyer", "/contact"] }],
+        ["misc:hours", { title: "Le salon", rows: [["Mardi – vendredi", "11 h – 18 h, sur rendez-vous"], ["Samedi", "10 h – 17 h"], ["Dimanche et lundi", "Fermé"]] }],
+      ] },
+    ],
+  },
+  // 6. Maquilleuse professionnelle
+  {
+    key: "fard-pivoine", name: "Fard Pivoine", category: "mode", tags: ["audacieux", "editorial"], siteType: "Maquilleuse professionnelle",
+    description: "Portfolio de maquilleuse en rose framboise et or : titres expressifs, grande galerie en mosaïque, forfaits mariage et shooting clairs.",
+    brand: "Fard Pivoine",
+    tokens: { colors: { primary: "#c2255c", secondary: "#2b1319", accent: "#e8b04a", background: "#fff7f8", surface: "#ffffff", text: "#2b1319", muted: "#6e5058" }, fonts: { heading: "font.yeseva-one", body: "font.lexend", button: "font.lexend", link: "font.lexend" }, radius: { sm: 4, md: 8, lg: 14, button: 6, field: 6, card: 10 }, shadow: { card: "sm", button: "none" }, type: { h1: { size: 64, weight: 400, lineHeight: 1.05, letterSpacing: -0.01 } } },
+    dna: { scale: "xl", pad: "normal", align: "left", shape: "soft" }, art: { seed: "pivoine", motifs: ["ribbons", "halftone", "blobs"] },
+    head: ["head:topbar", { info: "Déplacements dans toute l'Île-de-France", note: "Agenda mariages 2027 ouvert" }], foot: ["foot:line", {}],
+    menu: [["Accueil", "/"], ["Portfolio", "/portfolio"], ["Forfaits", "/forfaits"], ["À propos", "/apropos"], ["Réserver", "/contact"]], cta: ["Demander un devis", "/contact"],
+    contact: { address: "Studio sur rendez-vous, 75011 Paris", phone: "06 55 00 12 89", email: "makeup@fardpivoine.example", hours: "Sur rendez-vous, 7 jours sur 7", tagline: "Maquillage mariage, shooting et événement." },
+    social: ["instagram", "linkedin"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:stacked", { eyebrow: "Maquilleuse professionnelle", title: "Un teint qui tient toute la fête.", sub: "Maquillage de mariée, de shooting et d'événement, à votre domicile ou en studio.", cta: ["Demander un devis", "/contact"], cta2: ["Voir le portfolio", "/portfolio"], stats: [["9 ans", "d'expérience"], ["120", "mariées maquillées"], ["30 min", "d'essai offert"]] }],
+        ["feat:rows", { title: "Mes prestations", items: [{ t: "Mariée", x: "Essai, jour J et retouches." }, { t: "Shooting et mode", x: "Équipe créative, mode et publicité." }, { t: "Événement", x: "Soirée, gala, remise de diplôme." }, { t: "Cours particuliers", x: "Apprendre à se maquiller soi-même." }] }],
+        ["gal:masonry", { items: [{ t: "Mariée naturelle" }, { t: "Smoky nuit" }, { t: "Teint glowy" }, { t: "Lèvre rouge" }, { t: "Éditorial" }] }],
+        ["proof:quotes", { items: [{ q: "Tenue parfaite de 8 h à 2 h du matin, malgré les larmes.", n: "Camille D.", r: "mariée fictive" }, { q: "Précise, discrète, ponctuelle.", n: "Studio fictif", r: "client fictif" }, { q: "Enfin quelqu'un qui écoute ma peau.", n: "Nadia F.", r: "cliente fictive" }] }],
+        ["cta:split", { title: "Votre date est-elle libre ?", sub: "Indiquez la date et le lieu, je réponds sous 48 h.", cta: ["Vérifier", "/contact"] }],
+      ] },
+      { key: "portfolio", name: "Portfolio", blocks: [
+        ["misc:pagehead", { title: "Portfolio" }],
+        ["gal:grid", { items: [{ t: "Mariée boho", tag: "Mariage" }, { t: "Campagne beauté", tag: "Shooting" }, { t: "Gala", tag: "Événement" }, { t: "Backstage", tag: "Défilé" }, { t: "Bal", tag: "Soirée" }, { t: "Portrait", tag: "Éditorial" }] }],
+        ["feat:alt", { title: "Deux univers", items: [{ t: "Naturel lumineux", x: "Peau respirante, couleurs douces." }, { t: "Glamour", x: "Regard intense, bouche affirmée." }] }],
+      ] },
+      { key: "forfaits", name: "Forfaits", blocks: [
+        ["misc:pagehead", { title: "Forfaits", sub: "Tarifs d'exemple de démonstration." }],
+        ["price:tiers", { items: [{ t: "Essai", price: "80 €", x: "1 h en studio", f: ["Échange sur vos envies", "Photos de référence", "Déduit du forfait mariée"], cta: "Réserver", url: "/contact" }, { t: "Mariée", price: "260 €", x: "Jour J", f: ["Maquillage de 1 h 30", "Retouches du soir", "Déplacement inclus à Paris"], cta: "Demander un devis", url: "/contact", hl: true }, { t: "Cortège", price: "70 €", x: "Par personne", f: ["Mère, témoins, demoiselles", "45 minutes", "Produits longue tenue"], cta: "Demander un devis", url: "/contact" }] }],
+        ["misc:faq", { items: [{ t: "Utilisez-vous des produits adaptés aux peaux sensibles ?", x: "Oui, je travaille aussi avec des marques sans parfum." }, { t: "Vous déplacez-vous en province ?", x: "Oui, avec des frais de transport." }] }],
+      ] },
+      { key: "apropos", name: "À propos", blocks: [
+        ["misc:pagehead", { title: "À propos" }],
+        ["misc:story", { eyebrow: "Mon parcours", title: "Dix ans de coulisses", paras: ["Formée en école de maquillage professionnel, j'ai travaillé sur des défilés, des tournages et des mariages.", "Mon principe : que l'on se reconnaisse, en plus belle."], image: "portrait-1" }],
+        ["feat:checks", { title: "Ma trousse", cta: ["Parler de mon projet", "/contact"], items: [{ t: "Produits longue tenue" }, { t: "Pinceaux désinfectés" }, { t: "Teintes pour toutes les peaux" }, { t: "Kit de retouche" }] }],
+      ] },
+      { key: "contact", name: "Réserver", blocks: [
+        ["misc:pagehead", { title: "Demander un devis" }],
+        ["contact:info", { title: "Parlons de votre date", formTitle: "Votre demande", formIntro: "Date, lieu, nombre de personnes.", cta: ["Envoyer", "/contact"] }],
+        ["misc:hours", { title: "Disponibilités", rows: [["Mariages", "Samedis et vendredis"], ["Shootings", "En semaine"], ["Cours", "Mercredi après-midi"]] }],
+      ] },
+    ],
+  },
+  // 7. Skincare
+  {
+    key: "peau-claire", name: "Peau Claire", category: "mode", tags: ["minimaliste", "moderne"], siteType: "Marque de soins de la peau (skincare)",
+    description: "Skincare clinique et doux en bleu glacier : serif lisible, fiches ingrédients, comparatif de routines et pages très épurées.",
+    modules: BOUTIQUE, brand: "Peau Claire",
+    tokens: { colors: { primary: "#2b6cb0", secondary: "#dbe9f6", accent: "#7cc6b6", background: "#f4f8fc", surface: "#ffffff", text: "#14283d", muted: "#4d6379" }, fonts: { heading: "font.ibarra-real-nova", body: "font.plus-jakarta-sans", button: "font.plus-jakarta-sans", link: "font.plus-jakarta-sans" }, radius: { sm: 4, md: 8, lg: 12, button: 8, field: 8, card: 12 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#cfe0ef" }, type: { h1: { size: 52, weight: 500, lineHeight: 1.1, letterSpacing: -0.01 } } },
+    dna: { scale: "m", pad: "airy", align: "left", shape: "soft" }, art: { seed: "claire", motifs: ["tiles", "mesh", "waves"] },
+    head: ["head:side", {}], foot: ["foot:columns", { about: "Des soins simples, testés sous contrôle dermatologique, pour une routine en trois gestes.", cols: [["Soins", "Nettoyants", "Sérums", "Hydratants"], ["Aide", "Routine", "Ingrédients", "Contact"]] }],
+    menu: [["Accueil", "/"], ["Soins", "/soins"], ["Routines", "/routines"], ["Ingrédients", "/ingredients"], ["Conseil", "/contact"]], cta: ["Trouver ma routine", "/routines"],
+    contact: { address: "22 rue de l'Observatoire, 59000 Lille", phone: "03 20 00 63 47", email: "conseil@peauclaire.example", hours: "Lundi – vendredi, 9 h – 18 h", tagline: "Trois gestes, des résultats visibles." },
+    social: ["instagram"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:minimal", { eyebrow: "Skincare", title: "Moins d'étapes. Une peau plus calme.", sub: "Nettoyer, traiter, protéger : trois soins formulés avec des actifs dosés et expliqués.", cta: ["Trouver ma routine", "/routines"], cta2: ["Voir les soins", "/soins"] }],
+        ["feat:numbered", { title: "Votre routine en trois gestes", items: [{ t: "Nettoyer", x: "Un gel doux, sans savon agressif." }, { t: "Traiter", x: "Un sérum ciblé : taches, grain, rougeurs." }, { t: "Protéger", x: "Crème hydratante et filtre solaire." }] }],
+        ["gal:products", { items: [{ t: "Gel Nettoyant", x: "pH 5,5", price: "16 €" }, { t: "Sérum Niacinamide 5 %", x: "30 ml", price: "24 €" }, { t: "Crème Barrière", x: "50 ml", price: "28 €" }, { t: "Fluide SPF 50", x: "40 ml", price: "22 €" }] }],
+        ["proof:stats", { title: "Ce que dit notre étude (exemple)", items: [["91 %", "peau plus confortable en 4 semaines"], ["0", "parfum ajouté"], ["12", "ingrédients maximum"]] }],
+        ["feat:accordion", { title: "Vos questions", items: [{ t: "Puis-je l'utiliser enceinte ?", x: "Demandez conseil à votre médecin, nous listons les actifs." }, { t: "Y a-t-il des tests sur animaux ?", x: "Non, jamais." }] }],
+      ] },
+      { key: "soins", name: "Soins", blocks: [
+        ["misc:pagehead", { title: "Les soins", sub: "Catalogue de démonstration." }],
+        ["gal:products", { items: [{ t: "Gel Nettoyant", price: "16 €" }, { t: "Sérum Niacinamide", price: "24 €" }, { t: "Sérum Acide hyaluronique", price: "26 €" }, { t: "Crème Barrière", price: "28 €" }] }],
+        ["misc:product", { title: "Sérum Niacinamide 5 %", price: "24 €", text: "Un sérum léger qui resserre le grain de peau et atténue les rougeurs.", points: ["Convient aux peaux mixtes", "Texture eau, non grasse", "Flacon airless de 30 ml"], cta: "Demander un échantillon", url: "/contact" }],
+        ["feat:compare", { title: "Quel sérum ?", rows: [["", "Niacinamide", "Acide hyaluronique"], ["Pour", "Grain, rougeurs", "Peau déshydratée"], ["Texture", "Fluide", "Gel"], ["Moment", "Matin et soir", "Soir"]] }],
+      ] },
+      { key: "routines", name: "Routines", blocks: [
+        ["misc:pagehead", { title: "Trouver ma routine" }],
+        ["feat:tabs", { items: [{ t: "Peau sèche", x: "Gel doux, sérum hyaluronique, crème barrière." }, { t: "Peau mixte", x: "Gel, niacinamide, fluide léger." }, { t: "Peau sensible", x: "Eau micellaire, crème apaisante." }, { t: "Peau mature", x: "Sérum rétinol doux le soir, SPF le jour." }] }],
+        ["cta:card", { title: "Vous hésitez ?", sub: "Une conseillère répond par message sous 24 h.", cta: ["Demander conseil", "/contact"] }],
+      ] },
+      { key: "ingredients", name: "Ingrédients", blocks: [
+        ["misc:pagehead", { title: "Ingrédients" }],
+        ["feat:list2", { title: "Nos actifs", items: [{ t: "Niacinamide", x: "Matifie et unifie." }, { t: "Acide hyaluronique", x: "Retient l'eau." }, { t: "Panthénol", x: "Apaise." }, { t: "Céramides", x: "Renforcent la barrière." }] }],
+        ["misc:text", { eyebrow: "Transparence", title: "Des pourcentages affichés", paras: ["Nous indiquons la concentration de chaque actif principal, sans jargon marketing."] }],
+        ["misc:posts", { title: "Le blog peau", count: 3, layout: "list" }],
+      ] },
+      { key: "contact", name: "Conseil", blocks: [
+        ["misc:pagehead", { title: "Conseil" }],
+        ["contact:cards", { title: "Parler à une conseillère" }],
+        ["misc:faq", { items: [{ t: "Délai de réponse ?", x: "24 heures ouvrées." }, { t: "Puis-je envoyer une photo ?", x: "Oui, nous ne la conservons pas." }] }],
+      ] },
+    ],
+  },
+  // 8. Bijouterie de créateur
+  {
+    key: "fil-d-orfevre", name: "Fil d'Orfèvre", category: "mode", tags: ["luxe", "classique"], siteType: "Bijouterie de créateur",
+    description: "Atelier de joaillerie créateur en bleu encre et or : serif haut de gamme, grand bandeau éditorial, pièces uniques et page sur-mesure.",
+    modules: BOUTIQUE, brand: "Fil d'Orfèvre",
+    tokens: { colors: { primary: "#2f3f9a", secondary: "#1b1f33", accent: "#b8923f", background: "#f8f6f1", surface: "#ffffff", text: "#1b1f33", muted: "#565a70" }, fonts: { heading: "font.prata", body: "font.work-sans", button: "font.work-sans", link: "font.work-sans" }, radius: R(0), shadow: { card: "none", button: "none" }, type: { h1: { size: 60, weight: 400, lineHeight: 1.08, letterSpacing: 0 } } },
+    dna: { scale: "l", pad: "airy", align: "center", shape: "sharp" }, art: { seed: "orfevre", motifs: ["objects", "plates", "rays"] },
+    head: ["head:masthead", { dateline: "Atelier de joaillerie, Nantes" }], foot: ["foot:center", {}],
+    menu: [["Accueil", "/"], ["Collections", "/collections"], ["Sur-mesure", "/sur-mesure"], ["L'atelier", "/atelier"], ["Contact", "/contact"]], cta: ["Rendez-vous atelier", "/contact"],
+    contact: { address: "6 rue des Orfèvres, 44000 Nantes", phone: "02 40 00 59 13", email: "atelier@fildorfevre.example", hours: "Mardi – samedi, 10 h – 18 h 30", tagline: "Bijoux uniques, or recyclé, fabriqués à la main." },
+    social: ["instagram", "facebook"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:editorial", { kicker: "Joaillerie de créateur", title: "L'or qui se transmet.", sub: "Bagues, boucles et pendentifs en or recyclé, façonnés un par un dans notre atelier nantais.", cta: ["Voir les collections", "/collections"], cta2: ["Créer sur-mesure", "/sur-mesure"] }],
+        ["gal:strip", { title: "Pièces du moment", items: [{ t: "Bague Écume" }, { t: "Créoles Marée" }, { t: "Pendentif Phare" }, { t: "Alliance Sillage" }, { t: "Bracelet Haubans" }] }],
+        ["feat:alt", { eyebrow: "Savoir-faire", title: "Du fil d'or au bijou", items: [{ t: "Fonte et forge", x: "Or recyclé à 100 %, coulé puis martelé.", link: ["Voir l'atelier", "/atelier"] }, { t: "Sertissage", x: "Pierres sélectionnées une à une, serties à la main." }, { t: "Gravure", x: "Un mot, une date, une empreinte à l'intérieur." }] }],
+        ["proof:logos", { title: "Matières et partenaires (fictifs)", items: ["Or recyclé certifié", "Diamants traçables", "Perles d'eau douce", "Emballage sans plastique"] }],
+        ["proof:quotes", { items: [{ q: "Notre alliance est exactement ce que nous imaginions.", n: "Élise & Romain", r: "clients fictifs" }, { q: "Un bijou lourd de sens, léger au doigt.", n: "Sabine V.", r: "cliente fictive" }] }],
+        ["cta:image", { title: "Imaginons votre bijou", sub: "Un premier rendez-vous gratuit à l'atelier.", cta: ["Prendre rendez-vous", "/contact"] }],
+      ] },
+      { key: "collections", name: "Collections", blocks: [
+        ["misc:pagehead", { title: "Collections", sub: "Catalogue de démonstration." }],
+        ["gal:products", { items: [{ t: "Bague Écume", x: "Or jaune 18 ct", price: "490 €" }, { t: "Créoles Marée", x: "Or recyclé", price: "320 €" }, { t: "Pendentif Phare", x: "Or et perle", price: "280 €" }, { t: "Bracelet Haubans", x: "Chaîne tressée", price: "350 €" }] }],
+        ["misc:product", { eyebrow: "Pièce signature", title: "Bague Écume", price: "490 €", text: "Un anneau à la surface martelée comme l'écume d'une vague, disponible en trois largeurs.", points: ["Or jaune 18 carats recyclé", "Gravure offerte", "Fabrication en trois semaines"], cta: "Commander par message", url: "/contact", note: "Démonstration : pas de paiement en ligne." }],
+        ["feat:rows", { title: "Les collections", items: [{ t: "Marée", x: "Reliefs inspirés de l'océan." }, { t: "Phare", x: "Lignes fines, pendentifs." }, { t: "Alliances", x: "Anneaux uniques pour couples." }] }],
+      ] },
+      { key: "sur-mesure", name: "Sur-mesure", blocks: [
+        ["misc:pagehead", { title: "Création sur-mesure" }],
+        ["feat:steps", { title: "Quatre étapes", items: [{ t: "Rencontre", d: "Semaine 1", x: "Vos envies, votre budget, vos pierres." }, { t: "Croquis", d: "Semaine 2", x: "Dessin et devis détaillé." }, { t: "Fabrication", d: "Semaines 3 à 5", x: "Un modèle en cire puis la fonte." }, { t: "Remise", d: "Semaine 6", x: "Écrin et certificat." }] }],
+        ["price:tiers", { items: [{ t: "Transformer", price: "dès 180 €", x: "Un bijou de famille", f: ["Fonte de l'or fourni", "Nouvelle forme", "Certificat"], cta: "Demander un devis", url: "/contact" }, { t: "Créer", price: "dès 650 €", x: "Pièce unique", f: ["Croquis", "Pierres au choix", "Gravure"], cta: "Demander un devis", url: "/contact", hl: true }] }],
+        ["misc:faq", { items: [{ t: "Puis-je fournir mon or ?", x: "Oui, après pesée et analyse." }, { t: "Les bijoux sont-ils garantis ?", x: "Deux ans, entretien offert la première année." }] }],
+      ] },
+      { key: "atelier", name: "L'atelier", blocks: [
+        ["misc:pagehead", { title: "L'atelier" }],
+        ["misc:story", { eyebrow: "Notre histoire", title: "Deux orfèvres, un établi", paras: ["L'atelier est né en 2016 de la rencontre entre une joaillière et un sertisseur.", "Nous travaillons exclusivement de l'or recyclé et des pierres traçables."], image: "portrait-2" }],
+        ["proof:team", { items: [{ n: "Marion Leclair", r: "Joaillière" }, { n: "Antoine Dufour", r: "Sertisseur" }, { n: "Rose Thibault", r: "Conseillère" }] }],
+      ] },
+      { key: "contact", name: "Contact", blocks: [
+        ["misc:pagehead", { title: "Contact" }],
+        ["contact:map", { title: "À l'atelier", mapAddress: "6 rue des Orfèvres, 44000 Nantes" }],
+        ["misc:hours", { title: "Horaires", rows: [["Mardi – vendredi", "10 h – 18 h 30"], ["Samedi", "10 h – 17 h"], ["Dimanche et lundi", "Fermé"]] }],
+      ] },
+    ],
+  },
+  // 9. Institut de beauté bio
+  {
+    key: "sauge-et-sel", name: "Sauge & Sel", category: "mode", tags: ["naturel", "classique"], siteType: "Institut de beauté bio",
+    description: "Institut de beauté bio en vert olive et terre cuite : serif de lecture, en-tête centré, soins en liste de prix, rituels et carte cadeau.",
+    brand: "Sauge & Sel",
+    tokens: { colors: { primary: "#55651c", secondary: "#e6e8cf", accent: "#b5651d", background: "#f7f5ec", surface: "#fffef9", text: "#25291a", muted: "#5a6046" }, fonts: { heading: "font.literata", body: "font.urbanist", button: "font.urbanist", link: "font.urbanist" }, radius: { sm: 4, md: 8, lg: 14, button: 4, field: 6, card: 8 }, shadow: { card: "sm", button: "none" }, type: { h1: { size: 54, weight: 600, lineHeight: 1.1, letterSpacing: -0.01 } } },
+    dna: { scale: "m", pad: "normal", align: "left", shape: "soft" }, art: { seed: "sauge", motifs: ["botanical", "topo", "dunes"] },
+    head: ["head:center", {}], foot: ["foot:columns", { about: "Institut de beauté labellisé bio : soins du visage et du corps, épilation et rituels de détente.", cols: [["Soins", "Visage", "Corps", "Rituels"], ["Infos", "Tarifs", "Carte cadeau", "Contact"]] }],
+    menu: [["Accueil", "/"], ["Soins", "/soins"], ["Rituels", "/rituels"], ["Tarifs", "/tarifs"], ["Rendez-vous", "/contact"]], cta: ["Prendre rendez-vous", "/contact"],
+    contact: { address: "18 place du Marché, 21200 Beaune", phone: "03 80 00 46 20", email: "institut@saugeetsel.example", hours: "Mardi – samedi, 9 h 30 – 18 h 30", tagline: "Soins bio, gestes lents." },
+    social: ["facebook", "instagram"],
+    pages: [
+      { key: "accueil", name: "Accueil", blocks: [
+        ["hero:bleed", { eyebrow: "Institut de beauté bio", title: "Prendre soin, simplement.", sub: "Soins du visage et du corps avec des produits bio, dans une cabine calme et chauffée à la bonne température.", cta: ["Prendre rendez-vous", "/contact"], cta2: ["Voir les soins", "/soins"] }],
+        ["feat:strips", { title: "Trois façons de se retrouver", items: [{ t: "Soin visage", x: "Nettoyage, gommage et masque adaptés à votre peau." }, { t: "Soin corps", x: "Massage aux huiles chaudes, 50 minutes." }, { t: "Rituel duo", x: "Un moment à deux, tisane comprise." }] }],
+        ["proof:statsbar", { items: [["100 %", "gammes bio"], ["50 min", "de soin (exemple)"], ["2", "cabines"]] }],
+        ["gal:cards", { title: "À l'institut", items: [{ t: "Cabine visage", tag: "Soin", x: "Lumière douce et plantes." }, { t: "Espace tisane", tag: "Détente", x: "Un temps pour souffler." }, { t: "Rayon boutique", tag: "Boutique", x: "Les produits utilisés en cabine." }] }],
+        ["proof:big", { items: [{ q: "Je pars toujours plus légère qu'en arrivant.", n: "Bénédicte A.", r: "cliente fictive" }] }],
+        ["cta:band", { title: "Offrez un moment", sub: "La carte cadeau est valable un an.", cta: ["Offrir une carte", "/contact"] }],
+      ] },
+      { key: "soins", name: "Soins", blocks: [
+        ["misc:pagehead", { title: "Les soins" }],
+        ["feat:alt", { title: "Visage et corps", items: [{ t: "Soin éclat", x: "Gommage aux grains de riz, masque à l'argile rose, massage du visage.", link: ["Voir les tarifs", "/tarifs"] }, { t: "Massage relaxant", x: "Huiles tièdes, lenteur et pression douce." }] }],
+        ["feat:grid-icons", { title: "Autour du soin", items: [{ t: "Épilation", x: "À la cire de miel.", icon: "sparkles" }, { t: "Beauté des mains", x: "Soin et vernis bio.", icon: "heart" }, { t: "Teinture de cils", x: "Sans ammoniaque.", icon: "eye" }] }],
+        ["cta:card", { title: "Un soin pour une occasion ?", sub: "Nous composons un forfait pour un anniversaire ou un EVJF.", cta: ["Nous demander", "/contact"] }],
+      ] },
+      { key: "rituels", name: "Rituels", blocks: [
+        ["misc:pagehead", { title: "Rituels" }],
+        ["misc:schedule", { title: "Le rituel Sauge (2 h)", items: [{ d: "0 h", t: "Accueil", x: "Tisane et choix des huiles." }, { d: "0 h 20", t: "Gommage", x: "Au sel de Guérande et à la sauge." }, { d: "0 h 50", t: "Massage", x: "Dos, jambes, nuque." }, { d: "1 h 30", t: "Masque visage", x: "Pause et repos." }] }],
+        ["misc:text", { eyebrow: "Nos produits", title: "Bio, labellisés, expliqués", paras: ["Nous utilisons trois gammes françaises certifiées. La liste des ingrédients est disponible en cabine."] }],
+      ] },
+      { key: "tarifs", name: "Tarifs", blocks: [
+        ["misc:pagehead", { title: "Tarifs", sub: "Prix de démonstration." }],
+        ["feat:pricelist", { title: "Visage", items: [{ t: "Soin éclat", x: "1 h", price: "68 €" }, { t: "Soin purifiant", x: "50 min", price: "58 €" }] }],
+        ["feat:pricelist", { title: "Corps et rituels", items: [{ t: "Massage relaxant", x: "50 min", price: "72 €" }, { t: "Rituel Sauge", x: "2 h", price: "129 €" }, { t: "Épilation sourcils", x: "", price: "12 €" }] }],
+        ["misc:faq", { items: [{ t: "Puis-je annuler ?", x: "Jusqu'à 24 h à l'avance." }, { t: "Les soins conviennent-ils aux femmes enceintes ?", x: "Oui, sur certains soins : précisez-le à la réservation." }] }],
+      ] },
+      { key: "contact", name: "Rendez-vous", blocks: [
+        ["misc:pagehead", { title: "Rendez-vous" }],
+        ["contact:info", { title: "Réserver un soin", formTitle: "Votre demande", formIntro: "Indiquez le soin et deux créneaux.", cta: ["Envoyer", "/contact"] }],
+        ["misc:hours", { title: "Horaires", rows: [["Mardi – vendredi", "9 h 30 – 18 h 30"], ["Samedi", "9 h 30 – 17 h"], ["Dimanche et lundi", "Fermé"]] }],
+      ] },
+    ],
+  },
+];

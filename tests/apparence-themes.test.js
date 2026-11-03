@@ -49,7 +49,7 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
       const r = await boss.get(`${TH}/ajouter?site=${A}`);
       assert.equal(r.status, 200);
       assert.match(r.text, /name="package"/); assert.match(r.text, /bibliothèque de thèmes/);
-      for (const [q, name] of [["ocean", "Océan"], ["ardoise", "Ardoise"], ["savane", "Savane"], ["foret", "Forêt"], ["editorial", "Éditorial"]]) {
+      for (const [q, name] of [["aubelio", "Aubélio"], ["clignotis", "Clignotis"], ["nidouillet", "Nidouillet"], ["bitbambin", "Bitbambin"], ["pagelune", "Pagelune"]]) {
         const html = (await boss.get(`${TH}?site=${A}&q=${q}`)).text;
         assert.ok(cards(html).includes(name), `${name} est dans la galerie`);
         assert.match(html, new RegExp(`name="key" value="${q}"`), `${name} est installable`);
@@ -60,19 +60,19 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
 
   describe("installation", () => {
     test("installer un thème du catalogue : visible dans la liste du site, actions « inactif », et PAS sur les autres sites", async () => {
-      const r = await install(boss, A, "ocean");
+      const r = await install(boss, A, "aubelio");
       assert.equal(r.status, 302); assert.equal(r.location, `${TH}?site=${A}`);
       const html = (await boss.get(r.location)).text;
-      assert.match(flashOf(html), /Océan.*installé/);
-      assert.deepEqual(await installedOf(boss, A), ["Kolakisa — d&#39;origine", "Océan"]);
+      assert.match(flashOf(html), /Aubélio.*installé/);
+      assert.deepEqual(await installedOf(boss, A), ["Kolakisa — d&#39;origine", "Aubélio"]);
       const list = (await boss.get(`${TH}?site=${A}&etat=installed`)).text;
-      assert.match(list, new RegExp(`action="${TH}/ocean/activer"`)); assert.match(list, />Prévisualiser</); assert.match(list, /\/ocean\/details/);
+      assert.match(list, new RegExp(`action="${TH}/aubelio/activer"`)); assert.match(list, />Prévisualiser</); assert.match(list, /\/aubelio\/details/);
       assert.deepEqual(await installedOf(boss, B), ["Kolakisa — d&#39;origine"], "le site B n'a pas reçu le thème");
       assert.deepEqual(await installedOf(boss, null), ["Kolakisa — d&#39;origine"], "le site principal non plus");
-      assert.match((await boss.get(`${TH}?site=${A}&q=ocean`)).text, /mk-tg-flag">Installé/);
+      assert.match((await boss.get(`${TH}?site=${A}&q=aubelio`)).text, /mk-tg-flag">Installé/);
     });
     test("déjà installé, thème inconnu : refusés avec un message", async () => {
-      const dup = await install(boss, A, "ocean");
+      const dup = await install(boss, A, "aubelio");
       assert.match(flashOf((await boss.get(dup.location)).text), /déjà installé/);
       const unk = await install(boss, A, "n-existe-pas");
       assert.match(flashOf((await boss.get(unk.location)).text), /n'existe pas dans le catalogue/);
@@ -93,7 +93,7 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
         ["pas du json", "{oups", /pas du JSON valide/], ["vide", "   ", /Collez le contenu/], ["tableau", "[]", /objet JSON/],
         ["champ inconnu (code)", pkg({ script: "alert(1)" }), /n'est pas reconnu/], ["clé invalide", pkg({ key: "Mauvaise Clé!" }), /« key »/], ["clé réservée", pkg({ key: "kolakisa" }), /réservé/],
         ["sans nom", pkg({ name: "" }), /« name » est obligatoire/], ["version", pkg({ version: "v1" }), /1\.0\.0/], ["couleur invalide", pkg({ tokens: { colors: { primary: "rouge" } } }), /invalide/i],
-        ["sans jetons", pkg({ tokens: undefined }), /« tokens »/], ["usurpe le catalogue", pkg({ key: "ocean" }), /catalogue Kolakisa, avec un contenu différent/], ["trop gros", pkg({ description: "x".repeat(70000) }), /volumineux/],
+        ["sans jetons", pkg({ tokens: undefined }), /« tokens »/], ["usurpe le catalogue", pkg({ key: "aubelio" }), /catalogue Kolakisa, avec un contenu différent/], ["trop gros", pkg({ description: "x".repeat(70000) }), /volumineux/],
         ["format trop récent", pkg({ key: "futur", api: 2 }), /plus récent/],
       ];
       for (const [label, body, re] of bad) {
@@ -110,16 +110,16 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
     test("lecteur : voit la liste, sans bouton ; installer, activer, supprimer refusés (403) et rien ne change", async () => {
       const list = (await viewerA.get(`${SP}/${A}/themes`)).text;
       assert.doesNotMatch(list, /\/activer"|\/supprimer"|\/installer"|\/ajouter\?site|data-confirm/);
-      for (const [path, body] of [[`${TH}/installer`, { key: "foret", site: String(A) }], [`${TH}/ocean/activer`, { site: String(A) }], [`${TH}/mon-theme/supprimer`, { site: String(A) }], [`${TH}/revenir`, { site: String(A) }]]) {
+      for (const [path, body] of [[`${TH}/installer`, { key: "bitbambin", site: String(A) }], [`${TH}/aubelio/activer`, { site: String(A) }], [`${TH}/mon-theme/supprimer`, { site: String(A) }], [`${TH}/revenir`, { site: String(A) }]]) {
         assert.equal((await viewerA.post(path, body)).status, 403, path);
       }
-      assert.equal(activeOf(A), "kolakisa"); assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'foret'").n, 0);
+      assert.equal(activeOf(A), "kolakisa"); assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'bitbambin'").n, 0);
     });
     test("éditeur : peut installer mais ni activer ni supprimer (réservé aux administrateurs)", async () => {
-      assert.equal((await install(editorA, A, "foret")).status, 302);
-      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'foret' AND site_id = ?", A).n, 1);
-      assert.equal((await editorA.post(`${TH}/foret/activer`, { site: String(A) })).status, 403);
-      assert.equal((await editorA.post(`${TH}/foret/supprimer`, { site: String(A) })).status, 403);
+      assert.equal((await install(editorA, A, "bitbambin")).status, 302);
+      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'bitbambin' AND site_id = ?", A).n, 1);
+      assert.equal((await editorA.post(`${TH}/bitbambin/activer`, { site: String(A) })).status, 403);
+      assert.equal((await editorA.post(`${TH}/bitbambin/supprimer`, { site: String(A) })).status, 403);
       assert.equal(activeOf(A), "kolakisa");
     });
     test("accès limité au site A : aucune opération possible sur B, ni sur le principal, même forgée", async () => {
@@ -127,9 +127,9 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
       assert.equal((await adminA.get(`${TH}?site=${B}`)).status, 403);
       const bare = await adminA.get(`${TH}`); assert.ok(bare.status === 403 || (bare.status === 302 && bare.location === "/marketing/site-web/mes-sites"), "sans site : le principal est réservé à l'équipe (refus ou renvoi vers Mes sites)");
       assert.equal((await adminA.get(`${TH}/ajouter?site=${B}`)).status, 403);
-      for (const body of [{ key: "ocean", site: String(B) }, { key: "ocean" }, { key: "ocean", site: "0" }, { key: "ocean", site: "abc" }]) assert.equal((await adminA.post(`${TH}/installer`, body)).status, 403, JSON.stringify(body));
-      assert.equal((await adminA.post(`${TH}/ocean/activer`, { site: String(B) })).status, 403);
-      assert.equal((await adminA.post(`${TH}/foret/supprimer`, { site: String(B) })).status, 403);
+      for (const body of [{ key: "aubelio", site: String(B) }, { key: "aubelio" }, { key: "aubelio", site: "0" }, { key: "aubelio", site: "abc" }]) assert.equal((await adminA.post(`${TH}/installer`, body)).status, 403, JSON.stringify(body));
+      assert.equal((await adminA.post(`${TH}/aubelio/activer`, { site: String(B) })).status, 403);
+      assert.equal((await adminA.post(`${TH}/bitbambin/supprimer`, { site: String(B) })).status, 403);
       assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE site_id = ?", B).n, 0);
       assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE site_id IS NULL").n, 0);
     });
@@ -141,40 +141,40 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
 
   describe("activation, rendu réel, retour, isolation", () => {
     test("activer sur A : thème actif de A uniquement, jetons du site mis à jour, rendu de la page de A, persistance", async () => {
-      const r = await adminA.post(`${TH}/ocean/activer`, { site: String(A) });
+      const r = await adminA.post(`${TH}/aubelio/activer`, { site: String(A) });
       assert.equal(r.status, 302); assert.equal(r.location, `${TH}?site=${A}`);
       const html = (await adminA.get(r.location)).text;
-      assert.match(flashOf(html), /Océan.*activé/);
-      assert.match(html, activeRe("Océan")); assert.match(html, /\/revenir"/);
-      assert.equal(activeOf(A), "ocean"); assert.equal(tokensOf(A).colors.primary, "#0b6e99"); assert.equal(tokensOf(A).colors.background, "#eff9fd");
+      assert.match(flashOf(html), /Aubélio.*activé/);
+      assert.match(html, activeRe("Aubélio")); assert.match(html, /\/revenir"/);
+      assert.equal(activeOf(A), "aubelio"); assert.equal(tokensOf(A).colors.primary, "#9d174d"); assert.equal(tokensOf(A).colors.background, "#fbf6f0");
       // Rendu : la page de A utilise les jetons du thème
       const prev = (await boss.get(`/marketing/pages/${pageA}/apercu`)).text;
-      assert.ok(prev.toLowerCase().includes("--kw-primary:#0b6e99"), "la page du site A est rendue avec le thème actif");
+      assert.ok(prev.toLowerCase().includes("--kw-primary:#9d174d"), "la page du site A est rendue avec le thème actif");
       // Persistance après rechargement (nouvelle session)
-      assert.match((await boss.get(`${SP}/${A}/themes`)).text, activeRe("Océan"));
+      assert.match((await boss.get(`${SP}/${A}/themes`)).text, activeRe("Aubélio"));
       const log = one("SELECT * FROM mk_audit_logs WHERE action = 'theme.activated'");
       assert.ok(log && log.site_id === A, "activation journalisée avec son site");
     });
     test("isolation : B, C et le principal gardent leur thème, leurs jetons, leur liste et leur rendu", async () => {
       assert.equal(activeOf(B), "kolakisa"); assert.equal(activeOf(C), "kolakisa"); assert.equal(activeOf(null), "kolakisa");
       assert.deepEqual(tokensOf(B), {}); assert.deepEqual(tokensOf(C), {});
-      assert.ok(!(await boss.get(`/marketing/pages/${pageB}/apercu`)).text.toLowerCase().includes("--kw-primary:#0b6e99"), "la page de B n'a pas le thème de A");
+      assert.ok(!(await boss.get(`/marketing/pages/${pageB}/apercu`)).text.toLowerCase().includes("--kw-primary:#9d174d"), "la page de B n'a pas le thème de A");
       assert.match((await boss.get(`${SP}/${B}/themes`)).text, activeRe("Kolakisa"));
       // Activer un autre thème sur B ne change rien pour A
-      assert.equal((await boss.post(`${TH}/installer`, { key: "savane", site: String(B) })).status, 302);
-      assert.equal((await boss.post(`${TH}/savane/activer`, { site: String(B) })).status, 302);
-      assert.equal(activeOf(B), "savane"); assert.equal(tokensOf(B).colors.primary, "#b45309");
-      assert.equal(activeOf(A), "ocean"); assert.equal(tokensOf(A).colors.primary, "#0b6e99");
+      assert.equal((await boss.post(`${TH}/installer`, { key: "nidouillet", site: String(B) })).status, 302);
+      assert.equal((await boss.post(`${TH}/nidouillet/activer`, { site: String(B) })).status, 302);
+      assert.equal(activeOf(B), "nidouillet"); assert.equal(tokensOf(B).colors.primary, "#3f7d20");
+      assert.equal(activeOf(A), "aubelio"); assert.equal(tokensOf(A).colors.primary, "#9d174d");
       // Un thème installé sur A n'est pas activable depuis B (déjà installé là-bas = faux)
-      const r = await boss.post(`${TH}/foret/activer`, { site: String(B) });
+      const r = await boss.post(`${TH}/bitbambin/activer`, { site: String(B) });
       assert.match(flashOf((await boss.get(r.location)).text), /n'est pas installé sur ce site/);
-      assert.equal(activeOf(B), "savane");
+      assert.equal(activeOf(B), "nidouillet");
     });
     test("le thème actif ne peut être activé deux fois ; thème non installé et clé invalide refusés", async () => {
-      const again = await adminA.post(`${TH}/ocean/activer`, { site: String(A) });
+      const again = await adminA.post(`${TH}/aubelio/activer`, { site: String(A) });
       assert.match(flashOf((await adminA.get(again.location)).text), /déjà actif/);
       assert.equal((await boss.post(`${TH}/Pas%20Valide/activer`, { site: String(A) })).status, 302);
-      assert.equal(activeOf(A), "ocean");
+      assert.equal(activeOf(A), "aubelio");
     });
     test("thème incompatible : affiché comme tel, sans bouton d'activation, activation refusée côté serveur", async () => {
       const m = { key: "futur", name: "Thème du futur", version: "9.0.0", author: "X", description: "", api: 2, tokens: { colors: { primary: "#111111" } } };
@@ -183,93 +183,93 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
       assert.match(html, /Incompatible/); assert.doesNotMatch(html, /futur\/activer/);
       const r = await boss.post(`${TH}/futur/activer`, { site: String(A) });
       assert.match(flashOf((await boss.get(r.location)).text), /incompatible/);
-      assert.equal(activeOf(A), "ocean"); assert.equal(tokensOf(A).colors.primary, "#0b6e99");
+      assert.equal(activeOf(A), "aubelio"); assert.equal(tokensOf(A).colors.primary, "#9d174d");
       assert.equal((await boss.post(`${TH}/futur/supprimer`, { site: String(A) })).status, 302);
     });
     test("revenir au thème précédent : jetons d'origine rétablis, thème d'origine actif, bouton disparu", async () => {
       const r = await adminA.post(`${TH}/revenir`, { site: String(A) });
       const html = (await adminA.get(r.location)).text;
       assert.match(flashOf(html), /Retour au thème « Kolakisa/);
-      assert.equal(activeOf(A), "kolakisa"); assert.notEqual(tokensOf(A).colors && tokensOf(A).colors.primary, "#0b6e99");
+      assert.equal(activeOf(A), "kolakisa"); assert.notEqual(tokensOf(A).colors && tokensOf(A).colors.primary, "#9d174d");
       assert.doesNotMatch(html, /\/revenir"/, "plus de bouton de retour");
-      assert.ok(!(await boss.get(`/marketing/pages/${pageA}/apercu`)).text.toLowerCase().includes("--kw-primary:#0b6e99"));
+      assert.ok(!(await boss.get(`/marketing/pages/${pageA}/apercu`)).text.toLowerCase().includes("--kw-primary:#9d174d"));
       const none = await adminA.post(`${TH}/revenir`, { site: String(A) });
       assert.match(flashOf((await adminA.get(none.location)).text), /Aucun thème précédent/);
     });
     test("les couleurs personnalisées du site survivent au changement de thème", async () => {
       const t = tokensOf(C); t.customColors = [{ key: "c-marque", label: "Marque", hex: "#123456" }];
       db.prepare("UPDATE mk_sites SET tokens = ? WHERE id = ?").run(JSON.stringify(t), C);
-      await boss.post(`${TH}/installer`, { key: "foret", site: String(C) }); await boss.post(`${TH}/foret/activer`, { site: String(C) });
-      assert.equal(activeOf(C), "foret"); assert.equal(tokensOf(C).customColors[0].key, "c-marque");
+      await boss.post(`${TH}/installer`, { key: "bitbambin", site: String(C) }); await boss.post(`${TH}/bitbambin/activer`, { site: String(C) });
+      assert.equal(activeOf(C), "bitbambin"); assert.equal(tokensOf(C).customColors[0].key, "c-marque");
     });
     test("site principal : activation = publication de l'apparence du principal, rendu public ; A, B, C inchangés ; brouillon en cours = refus", async () => {
       const appr = () => JSON.parse(one("SELECT published FROM appearance_configs WHERE site_id IS NULL").published);
-      await boss.post(`${TH}/installer`, { key: "ardoise" });
-      const r = await boss.post(`${TH}/ardoise/activer`, {});
+      await boss.post(`${TH}/installer`, { key: "clignotis" });
+      const r = await boss.post(`${TH}/clignotis/activer`, {});
       assert.equal(r.status, 302); assert.equal(r.location, TH);
-      assert.match((await boss.get(r.location)).text, activeRe("Ardoise"));
-      assert.equal(appr().tokens.colors.primary, "#38bdf8"); assert.equal(activeOf(null), "ardoise");
+      assert.match((await boss.get(r.location)).text, activeRe("Clignotis"));
+      assert.equal(appr().tokens.colors.primary, "#1d4ed8"); assert.equal(activeOf(null), "clignotis");
       const home = (await boss.get("/")).text.toLowerCase();
-      assert.ok(home.includes("#38bdf8"), "la page publique du site principal utilise le thème");
-      assert.equal(activeOf(A), "kolakisa"); assert.equal(activeOf(B), "savane"); assert.equal(tokensOf(B).colors.primary, "#b45309");
+      assert.ok(home.includes("#1d4ed8"), "la page publique du site principal utilise le thème");
+      assert.equal(activeOf(A), "kolakisa"); assert.equal(activeOf(B), "nidouillet"); assert.equal(tokensOf(B).colors.primary, "#3f7d20");
       // Brouillon d'apparence en cours : refus clair, rien d'écrasé
       db.prepare("UPDATE appearance_configs SET draft = ? WHERE site_id IS NULL").run(JSON.stringify({ ...appr(), header: { ...appr().header, search: false } }));
-      await boss.post(`${TH}/installer`, { key: "editorial" });
-      const d = await boss.post(`${TH}/editorial/activer`, {});
+      await boss.post(`${TH}/installer`, { key: "pagelune" });
+      const d = await boss.post(`${TH}/pagelune/activer`, {});
       assert.match(flashOf((await boss.get(d.location)).text), /brouillon d'apparence/);
-      assert.equal(activeOf(null), "ardoise");
+      assert.equal(activeOf(null), "clignotis");
       db.prepare("UPDATE appearance_configs SET draft = NULL WHERE site_id IS NULL").run();
       assert.equal((await boss.post(`${TH}/revenir`, {})).status, 302); assert.equal(activeOf(null), "kolakisa");
-      assert.ok(!(await boss.get("/")).text.toLowerCase().includes("#38bdf8"));
+      assert.ok(!(await boss.get("/")).text.toLowerCase().includes("#1d4ed8"));
     });
   });
 
   describe("aperçu réel", () => {
     test("la page d'aperçu garde le site, propose retour et activation, et encadre le site de démonstration isolé ; l'aperçu avec le contenu du site reste disponible", async () => {
-      const r = await boss.get(`${TH}/foret/apercu?site=${A}`);
+      const r = await boss.get(`${TH}/bitbambin/apercu?site=${A}`);
       assert.equal(r.status, 200);
-      assert.match(r.text, new RegExp(`src="${TH}/foret/demo/accueil\\?site=${A}"`));
+      assert.match(r.text, new RegExp(`src="${TH}/bitbambin/demo/accueil\\?site=${A}"`));
       assert.ok(r.text.includes(`href="${TH}?site=${A}"`)); assert.match(r.text, /← Thèmes/);
-      assert.match(r.text, /Utiliser ce thème/, "Forêt est installé (inactif) sur A : activation proposée");
-      assert.match((await boss.get(`${TH}/editorial/apercu?site=${A}`)).text, />Installer</, "thème du catalogue non installé sur A : installation proposée");
-      const inst = (await boss.get(`${TH}/ocean/apercu?site=${B}&mode=site`)).text;
-      assert.match(inst, new RegExp(`src="/marketing/pages/${pageB}/apercu\\?kwtheme=ocean"`));
-      const real = (await boss.get(`${TH}/foret/apercu?site=${A}&mode=site`)).text;
-      assert.match(real, new RegExp(`src="/marketing/pages/${pageA}/apercu\\?kwtheme=foret"`)); assert.match(real, /Retour à la liste des thèmes/); assert.match(real, /Activer ce thème/);
+      assert.match(r.text, /Utiliser ce thème/, "Bitbambin est installé (inactif) sur A : activation proposée");
+      assert.match((await boss.get(`${TH}/pagelune/apercu?site=${A}`)).text, />Installer</, "thème du catalogue non installé sur A : installation proposée");
+      const inst = (await boss.get(`${TH}/aubelio/apercu?site=${B}&mode=site`)).text;
+      assert.match(inst, new RegExp(`src="/marketing/pages/${pageB}/apercu\\?kwtheme=aubelio"`));
+      const real = (await boss.get(`${TH}/bitbambin/apercu?site=${A}&mode=site`)).text;
+      assert.match(real, new RegExp(`src="/marketing/pages/${pageA}/apercu\\?kwtheme=bitbambin"`)); assert.match(real, /Retour à la liste des thèmes/); assert.match(real, /Activer ce thème/);
     });
     test("la page est rendue avec les jetons du thème, sans rien enregistrer ; hors équipe autorisée, aucun effet", async () => {
-      const withTheme = (await boss.get(`/marketing/pages/${pageA}/apercu?kwtheme=editorial`)).text.toLowerCase();
-      assert.ok(withTheme.includes("--kw-primary:#9f1239"), "aperçu avec le thème Éditorial");
-      assert.equal(activeOf(A), "kolakisa"); assert.notEqual(tokensOf(A).colors && tokensOf(A).colors.primary, "#9f1239");
+      const withTheme = (await boss.get(`/marketing/pages/${pageA}/apercu?kwtheme=pagelune`)).text.toLowerCase();
+      assert.ok(withTheme.includes("--kw-primary:#0f766e"), "aperçu avec le thème Pagelune");
+      assert.equal(activeOf(A), "kolakisa"); assert.notEqual(tokensOf(A).colors && tokensOf(A).colors.primary, "#0f766e");
       const without = (await boss.get(`/marketing/pages/${pageA}/apercu`)).text.toLowerCase();
-      assert.ok(!without.includes("--kw-primary:#9f1239"));
-      assert.ok(!(await adminA.get(`/marketing/pages/${pageB}/apercu?kwtheme=editorial`)).text.toLowerCase().includes("#9f1239"), "un accès limité à A ne voit pas B");
-      const pub = await fetch(`${srv.base}/?kwtheme=editorial`, { redirect: "manual" });
-      assert.ok(!(await pub.text()).toLowerCase().includes("#9f1239"), "un visiteur ne déclenche jamais l'aperçu");
+      assert.ok(!without.includes("--kw-primary:#0f766e"));
+      assert.ok(!(await adminA.get(`/marketing/pages/${pageB}/apercu?kwtheme=pagelune`)).text.toLowerCase().includes("#0f766e"), "un accès limité à A ne voit pas B");
+      const pub = await fetch(`${srv.base}/?kwtheme=pagelune`, { redirect: "manual" });
+      assert.ok(!(await pub.text()).toLowerCase().includes("#0f766e"), "un visiteur ne déclenche jamais l'aperçu");
       assert.match((await boss.get(`/marketing/pages/${pageA}/apercu?kwtheme=${encodeURIComponent("x';--")}`)).text, /Contenu|lp-/, "clé invalide ignorée");
     });
     test("site sans page : explication claire, aperçu généré affiché ; thème inconnu : 404", async () => {
-      const r = await boss.get(`${TH}/ardoise/apercu?site=${C}&mode=site`);
+      const r = await boss.get(`${TH}/clignotis/apercu?site=${C}&mode=site`);
       assert.match(r.text, /n'a pas encore de page à afficher/); assert.match(r.text, /mk-th-shot/);
       assert.equal((await boss.get(`${TH}/nexiste-pas/apercu?site=${A}`)).status, 404);
     });
     test("fiche de détails : version, auteur, compatibilité, état et actions ; 404 si non installé sur CE site", async () => {
-      const r = await boss.get(`${TH}/foret/details?site=${C}`);
-      for (const f of ["Forêt", "Version", "1.0.0", "Équipe Kolakisa", "Compatible avec ce Kolakisa", "Actif sur ce site", "ne peut pas être supprimé"]) assert.ok(r.text.includes(f), f);
+      const r = await boss.get(`${TH}/bitbambin/details?site=${C}`);
+      for (const f of ["Bitbambin", "Version", "1.0.0", "Équipe Kolakisa", "Compatible avec ce Kolakisa", "Actif sur ce site", "ne peut pas être supprimé"]) assert.ok(r.text.includes(f), f);
       assert.doesNotMatch(r.text, /\/supprimer"/, "le thème actif n'a pas de bouton de suppression");
-      const onB = await boss.get(`${TH}/foret/details?site=${B}`);
-      assert.equal(onB.status, 200, "la fiche d'un thème du catalogue est visible depuis tout site"); assert.match(onB.text, /Disponible/); assert.match(onB.text, /name="key" value="foret"/, "installable sur B");
+      const onB = await boss.get(`${TH}/bitbambin/details?site=${B}`);
+      assert.equal(onB.status, 200, "la fiche d'un thème du catalogue est visible depuis tout site"); assert.match(onB.text, /Disponible/); assert.match(onB.text, /name="key" value="bitbambin"/, "installable sur B");
       assert.equal((await boss.get(`${TH}/kolakisa/details?site=${B}`)).status, 200);
     });
   });
 
   describe("suppression", () => {
     test("le thème actif et le thème d'origine ne se suppriment pas", async () => {
-      const a = await boss.post(`${TH}/foret/supprimer`, { site: String(C) });
+      const a = await boss.post(`${TH}/bitbambin/supprimer`, { site: String(C) });
       assert.match(flashOf((await boss.get(a.location)).text), /Le thème actif ne peut pas être supprimé/);
       const o = await boss.post(`${TH}/kolakisa/supprimer`, { site: String(C) });
       assert.match(flashOf((await boss.get(o.location)).text), /thème d'origine/);
-      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'foret' AND site_id = ?", C).n, 1);
+      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'bitbambin' AND site_id = ?", C).n, 1);
     });
     test("un thème inactif se supprime : sa ligne seulement ; pages, jetons et thèmes des autres sites intacts", async () => {
       const before = { pages: one("SELECT COUNT(*) n FROM mk_landing_pages").n, tokensB: tokensOf(B), themes: one("SELECT COUNT(*) n FROM cms_themes").n };
@@ -293,9 +293,9 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
       db.prepare("UPDATE mk_sites SET status = 'archived' WHERE id = ?").run(C);
       const html = (await boss.get(`${SP}/${C}/themes`)).text;
       assert.match(html, /archivé ou supprimé/); assert.doesNotMatch(html, /\/activer"|\/installer"|\/ajouter\?site|data-confirm/);
-      const r = await boss.post(`${TH}/installer`, { key: "ocean", site: String(C) });
+      const r = await boss.post(`${TH}/installer`, { key: "aubelio", site: String(C) });
       assert.match(flashOf((await boss.get(r.location)).text), /archivé/);
-      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'ocean' AND site_id = ?", C).n, 0);
+      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'aubelio' AND site_id = ?", C).n, 0);
       db.prepare("UPDATE mk_sites SET status = 'active' WHERE id = ?").run(C);
     });
     test("site inconnu : 404, jamais le site principal", async () => {
@@ -303,7 +303,7 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
       assert.equal((await boss.get(`${SP}/99999/themes`)).status, 404);
     });
     test("tous les liens et formulaires de la liste, de l'ajout, de la fiche et de l'aperçu gardent le site, jamais le principal", async () => {
-      for (const url of [`${SP}/${A}/themes`, `${TH}/ajouter?site=${A}`, `${TH}/ocean/details?site=${A}`, `${TH}/ocean/apercu?site=${A}`]) {
+      for (const url of [`${SP}/${A}/themes`, `${TH}/ajouter?site=${A}`, `${TH}/aubelio/details?site=${A}`, `${TH}/aubelio/apercu?site=${A}`]) {
         const html = (await boss.get(url)).text;
         const hrefs = [...html.matchAll(/href="(\/marketing\/site-web\/themes[^"]*)"/g)].map((m) => m[1].replace(/&amp;/g, "&"));
         assert.ok(hrefs.length > 0, url);

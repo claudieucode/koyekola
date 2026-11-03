@@ -1,4 +1,4 @@
-// Bibliothèque de thèmes : le CATALOGUE lui-même (sans serveur) — exactement 160 thèmes réels et distincts, bien répartis, chacun un site complet valide pour le moteur du
+// Bibliothèque de thèmes : le CATALOGUE lui-même (sans serveur) — exactement 360 thèmes réels et distincts, bien répartis, chacun un site complet valide pour le moteur du
 // Page Builder, lisible (contrastes), diversifié, avec ses visuels et ses trois aperçus réels. Données de démonstration : tout est fictif.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -30,28 +30,27 @@ before(() => {
 });
 after(() => { try { db.close(); } catch { /* déjà fermée */ } fs.rmSync(TMP, { recursive: true, force: true }); });
 
-describe("catalogue : 160 thèmes réels", () => {
-  test("exactement 160 thèmes, répartis comme demandé, aucune fiche écartée", () => {
+describe("catalogue : 360 thèmes réels", () => {
+  test("exactement 360 thèmes, répartis comme demandé, aucune fiche écartée", () => {
     assert.deepEqual(library.problems(), [], "toutes les fiches sont valides");
-    assert.equal(library.TARGET_TOTAL, 160);
-    assert.equal(library.load().specs.length, 160);
+    assert.equal(library.TARGET_TOTAL, 360);
+    assert.equal(library.load().specs.length, 360);
     for (const c of library.CATEGORIES) assert.equal(report.counts[c.key], c.count, `${c.label} : ${report.counts[c.key]} / ${c.count}`);
-    assert.equal(Object.values(report.counts).reduce((a, b) => a + b, 0), 160);
+    assert.equal(Object.values(report.counts).reduce((a, b) => a + b, 0), 360);
   });
-  test("160 identifiants uniques, présents dans le catalogue installable ; les cinq thèmes historiques sont conservés avec leurs couleurs", () => {
+  test("360 identifiants uniques, présents dans le catalogue installable ; les anciens thèmes ne sont plus proposés", () => {
     const keys = library.load().specs.map((s) => s.key);
-    assert.equal(new Set(keys).size, 160);
+    assert.equal(new Set(keys).size, 360);
     const cat = new Set(catalog.catalog().map((m) => m.key));
     for (const k of keys) assert.ok(cat.has(k), `${k} installable`);
-    assert.equal(catalog.catalog().length, 160, "le catalogue ne contient que les 160 thèmes de la bibliothèque");
-    const legacy = { ocean: "#0b6e99", ardoise: "#38bdf8", savane: "#b45309", foret: "#166534", editorial: "#9f1239" };
-    for (const [k, primary] of Object.entries(legacy)) assert.equal(catalog.fromCatalog(k).tokens.colors.primary, primary, `${k} garde sa couleur principale`);
+    assert.equal(catalog.catalog().length, 360, "le catalogue ne contient que les 360 thèmes de la bibliothèque");
+    for (const k of ["ocean", "ardoise", "savane", "foret", "editorial"]) assert.equal(catalog.fromCatalog(k), null, `${k} (ancien thème) n'est plus au catalogue ; les sites qui l'ont installé le gardent via leur instantané`);
   });
   test("noms, descriptions et marques uniques ; types de sites renseignés ; styles valides", () => {
     const specs = library.load().specs;
-    assert.equal(new Set(specs.map((s) => s.name.toLowerCase())).size, 160, "noms uniques");
-    assert.equal(new Set(specs.map((s) => s.description)).size, 160, "descriptions uniques");
-    assert.equal(new Set(specs.map((s) => s.brand)).size, 160, "marques fictives uniques");
+    assert.equal(new Set(specs.map((s) => s.name.toLowerCase())).size, 360, "noms uniques");
+    assert.equal(new Set(specs.map((s) => s.description)).size, 360, "descriptions uniques");
+    assert.equal(new Set(specs.map((s) => s.brand)).size, 360, "marques fictives uniques");
     for (const s of specs) { assert.ok(s.siteType.length >= 4, s.key); assert.ok(s.tags.every((t) => library.STYLES.has(t)), s.key); assert.ok(s.description.length >= 40, `${s.key} : description trop courte`); }
   });
 });
@@ -66,7 +65,7 @@ describe("chaque thème est un site complet", () => {
       assert.ok(s.pages[0].blocks.length >= 5, `${s.key} : accueil trop pauvre`);
       for (const p of s.pages) { pages += 1; const sec = library.pageSections(s.key, p.key); assert.ok(sec.length >= (p.key === "introuvable" ? 3 : 4), `${s.key}/${p.key} : ${sec.length} sections`); assert.ok(p.key === "introuvable" || p.blocks.length >= 3, `${s.key}/${p.key} : au moins 3 blocs`); }
     }
-    assert.ok(pages >= 960, `${pages} pages de démonstration`);
+    assert.ok(pages >= 1800, `${pages} pages de démonstration`);
   });
   test("aucun « Lorem ipsum », aucune coordonnée réelle ; e-mails en .example ; textes des accueils tous différents", () => {
     const heroes = new Set();
@@ -95,8 +94,9 @@ describe("qualité visuelle et diversité", () => {
     assert.deepEqual(report.similar, [], "paires trop similaires");
     assert.deepEqual(report.fontPairDuplicates.map((t) => t.key), []);
     const specs = library.load().specs;
-    assert.equal(new Set(specs.map((s) => s.tokens.colors.primary.toLowerCase())).size, 160, "160 couleurs principales différentes");
-    assert.equal(new Set(specs.map((s) => library.signature(s).home)).size >= 150, true, "suites de blocs d'accueil quasi toutes distinctes");
+    const c = (s) => ["primary", "secondary", "accent", "background"].map((k) => String(s.tokens.colors[k]).toLowerCase()).join("|");
+    assert.equal(new Set(specs.map(c)).size, 360, "360 palettes complètes différentes");
+    assert.equal(new Set(specs.map((s) => library.signature(s).home)).size >= 340, true, "suites de blocs d'accueil quasi toutes distinctes");
     const fonts = new Set(specs.map((s) => s.tokens.fonts.heading));
     assert.ok(fonts.size >= 60, `${fonts.size} polices de titre différentes`);
     assert.ok(specs.filter((s) => art.lum(s.tokens.colors.background) < 0.35).length >= 15, "au moins quinze thèmes sombres");
@@ -117,11 +117,11 @@ describe("qualité visuelle et diversité", () => {
       for (const slot of slots) { const r = library.artFor(s.key, slot); assert.ok(r && /^<svg /.test(r.svg) && /<\/svg>$/.test(r.svg), `${s.key}/${slot}`); assert.ok(!/<script|onload|onerror|javascript:|href="http/i.test(r.svg), `${s.key}/${slot} : contenu actif`); }
       hashes.add(crypto.createHash("sha1").update(library.artFor(s.key, "hero").svg).digest("hex"));
     }
-    assert.equal(hashes.size, 160, "160 visuels d'accueil tous différents");
+    assert.equal(hashes.size, 360, "360 visuels d'accueil tous différents");
   });
 });
 
-describe("aperçus réels des 160 thèmes", () => {
+describe("aperçus réels des 360 thèmes", () => {
   test("trois aperçus par thème (accueil, page intérieure, mobile), vrais fichiers WebP, tous différents, aucun gabarit commun", () => {
     const home = new Set(); let bytes = 0;
     for (const s of library.load().specs) {
@@ -134,14 +134,14 @@ describe("aperçus réels des 160 thèmes", () => {
         if (view === "home") home.add(crypto.createHash("sha1").update(buf).digest("hex"));
       }
     }
-    assert.equal(home.size, 160, "160 aperçus d'accueil tous différents");
+    assert.equal(home.size, 360, "360 aperçus d'accueil tous différents");
     assert.ok(bytes < 40 * 1024 * 1024, `poids total des aperçus : ${(bytes / 1048576).toFixed(1)} Mo`);
   });
 });
 
 describe("accessibilité de base des blocs", () => {
   test("toute image porte un texte de remplacement ; aucun bouton sans libellé ; titres de page uniques par page", () => {
-    for (const s of library.load().specs.slice(0, 160)) for (const p of s.pages) {
+    for (const s of library.load().specs.slice(0, 360)) for (const p of s.pages) {
       const json = JSON.stringify(library.pageSections(s.key, p.key));
       assert.ok(!/"type":"image","props":\{[^}]*"alt":""/.test(json), `${s.key}/${p.key} : image sans alternative`);
       const h1 = (json.match(/"type":"heading","props":\{"text":"[^"]*","level":"1"/g) || []).length;
