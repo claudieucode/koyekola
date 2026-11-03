@@ -89,7 +89,7 @@ module.exports = () => {
       links: {
         back: t.principal ? "/marketing" : `/marketing/site-web/sites/${t.siteId}/tableau-de-bord`,
         menus: t.principal ? "/marketing/site-web/navigation" : `/marketing/site-web/navigation?site=${t.siteId}`,
-        themes: `/marketing/site-web/themes${q}`, pageBuilder: t.principal ? null : `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme?type=header`,
+        themes: `/marketing/site-web/themes${q}`, pageBuilder: t.principal ? null : `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme?type=header`, themeBuilder: t.principal ? "/marketing/site-web/principal/constructeur-de-theme" : `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme`,
       },
     };
     res.set("Cache-Control", "no-store");

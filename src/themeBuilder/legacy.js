@@ -33,7 +33,7 @@ function importLegacy(ctx, siteId, { partsOnly = false } = {}) {
     if (have.has(ref)) { out.skipped.push({ ref, label, reason: "déjà importé" }); return; }
     try { const t = fn(); have.add(ref); out.imported.push({ ref, label, id: t.id, type: t.type }); } catch (e) { out.skipped.push({ ref, label, reason: e instanceof MarketingError ? e.message : "erreur" }); }
   };
-  const s = P().getSite(ctx, siteId);
+  const s = siteId === null ? {} : P().getSite(ctx, siteId); // site principal : ses en-tête et pied sont des réglages d'apparence, pas des composants
   for (const [key, type, col] of [["header", "header", "header_component_id"], ["footer", "footer", "footer_component_id"]]) {
     const cid = s[col]; if (!cid) continue;
     const c = P().getComponent(ctx, cid); if (!c) { out.skipped.push({ ref: `site-part:${key}`, label: Types.TYPES[type].label, reason: "composant introuvable" }); continue; }

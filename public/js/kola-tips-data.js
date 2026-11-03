@@ -80,8 +80,6 @@ window.KOLA_TIPS = {
     "/site-web/apparence/theme-builder": "Concevez en-tête, pied de page, pages, articles, archives, recherche, 404 et boutique de ce site : 100 modèles par type, conditions d'affichage, publication.",
     "/site-web/widgets": "Gérez les zones de widgets du site (pied de page, barre latérale…) et les blocs qui s'y affichent.",
     "/site-web/polices": "La bibliothèque de polices de ce site : installez des Google Fonts ou importez vos fichiers.",
-    "/site-web/apparence/en-tete": "Le logo, le menu et le bandeau du haut de vos pages.",
-    "/site-web/apparence/pied-de-page": "Le contenu affiché en bas de chaque page : liens, mentions, réseaux.",
     "/site-web/apparence/menus": "Construisez les menus de navigation et choisissez où ils s'affichent.",
     "/site-web/extensions": "Activez ou désactivez les modules de Kolakisa pour ce site.",
     "/site-web/utilisateurs": "Les personnes qui ont accès à ce site et leur rôle.",

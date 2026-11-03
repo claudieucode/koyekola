@@ -486,9 +486,9 @@ function siteCounts(ctx) {
   return { actifs: r.actifs, archives: r.archives, supprimes: r.supprimes, tous: r.actifs + r.archives };
 }
 function sitePages(ctx, siteId, { archived = false } = {}) {
-  requireSite(ctx, siteId);
+  if (siteId !== null) requireSite(ctx, siteId); // null = site principal (pages à site_id NULL)
   return ctx.db.prepare(`SELECT id, name, slug, title, status, kind, published_at, updated_at, draft IS NOT NULL AS has_draft, archived_at, header_mode, header_component_id FROM mk_landing_pages
-    WHERE organization_id = ? AND site_id = ? AND archived_at IS ${archived ? "NOT " : ""}NULL ORDER BY name COLLATE NOCASE`).all(ctx.organizationId, siteId);
+    WHERE organization_id = ? AND site_id IS ? AND archived_at IS ${archived ? "NOT " : ""}NULL ORDER BY name COLLATE NOCASE`).all(ctx.organizationId, siteId);
 }
 
 function createSite(ctx, { name, tokens, slug, description, siteType } = {}) {
@@ -957,7 +957,7 @@ const partSection = (ctx, componentId, which) => partOf(ctx, componentId, which,
 function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false, force = null } = {}) {
   const p = siteParts(ctx, page && page.site_id, { draftId });
   // Theme Builder (23.1) : seulement la page publiée et son aperçu (jamais le canevas de l'éditeur) ; sans modèle applicable, comportement historique inchangé
-  if (themeBuilder && page && page.site_id) {
+  if (themeBuilder && page && page.site_id !== undefined) {
     const tb = require("../../themeBuilder/render").partsFor(ctx, page);
     for (const which of ["header", "footer"]) {
       // Le Theme Builder gère cette partie mais aucun de ses modèles ne s'applique à cette page : pas de partie (jamais l'ancien réglage du site)
@@ -982,7 +982,7 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
     if (page.header_mode === "none") header = null;
     else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header", draftId) || p.header;
   }
-  return [header, ...sections, ...(themeBuilder && page && page.site_id ? themeExtraSections(ctx, page) : []), p.footer].filter(Boolean);
+  return [header, ...sections, ...(themeBuilder && page && page.site_id !== undefined ? themeExtraSections(ctx, page) : []), p.footer].filter(Boolean);
 }
 // Theme Builder : barre latérale et modèles personnalisés applicables à une page du Page Builder, placés sous son contenu et avant le pied de page. Jamais bloquant.
 function themeExtraSections(ctx, page) {

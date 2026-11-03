@@ -17,7 +17,7 @@ function published(ctx, siteId) {
   cache.set(key, { stamp, list });
   return list;
 }
-const homeOf = (ctx, siteId) => { try { const s = require("../marketing/pages").getSite(ctx, siteId); return s && s.home_page_id; } catch { return null; } };
+const homeOf = (ctx, siteId) => { try { if (siteId === null) return null;  const s = require("../marketing/pages").getSite(ctx, siteId); return s && s.home_page_id; } catch { return null; } };
 
 // Famille de l'ancien système (nom utilisé par les routes : themeRender.renderRegion) → type de modèle du Theme Builder + vue de résolution (+ sorte d'archive)
 const FAMILY = {
@@ -71,13 +71,13 @@ function resolveExtras(ctx, siteId, c) {
 // Pages du Page Builder (accueil, pages libres) : mêmes extras, vue « accueil » ou « page » comme pour l'en-tête et le pied
 function extrasFor(ctx, page) {
   try {
-    if (!page || !page.site_id) return { sidebar: null, custom: [] };
+    if (!page || page.site_id === undefined) return { sidebar: null, custom: [] };
     const view = homeOf(ctx, page.site_id) === page.id ? "front" : "page";
     return resolveExtras(ctx, page.site_id, { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [] });
   } catch { return { sidebar: null, custom: [] }; }
 }
 // Ligne de page publiée portée par un modèle de type page (ou null) : même contrôle de site et d'organisation que pickRegion
-const pageRowOf = (ctx, siteId, t) => ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ? AND site_id = ? AND status = 'published' AND archived_at IS NULL").get(t.sourceId, ctx.organizationId, siteId) || null;
+const pageRowOf = (ctx, siteId, t) => ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ? AND site_id IS ? AND status = 'published' AND archived_at IS NULL").get(t.sourceId, ctx.organizationId, siteId) || null;
 // Y a-t-il au moins un en-tête ou un pied publié sur ce site ? (court-circuit : le rendu historique ne paie qu'une lecture en cache)
 const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => ["header", "footer", "sidebar", "custom"].includes(t.type));
 
@@ -85,7 +85,7 @@ const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => ["header", 
 function partsFor(ctx, page) {
   const out = { header: undefined, footer: undefined, meta: {}, managed: { header: false, footer: false } };
   try {
-    if (!page || !page.site_id) return out;
+    if (!page || page.site_id === undefined) return out;
     // Dès qu'un modèle PUBLIÉ de ce type existe sur le site, le Theme Builder est l'unique source de vérité de la partie : aucun ancien réglage ne la remplace en silence
     const pool = published(ctx, page.site_id);
     out.managed.header = pool.some((t) => t.type === "header"); out.managed.footer = pool.some((t) => t.type === "footer");
@@ -100,13 +100,13 @@ function partsFor(ctx, page) {
 // themeRender.renderRegion : modèle de PAGE applicable (toutes familles). Renvoie une ligne de page publiée { slug… } ou null.
 function pickRegion(ctx, siteId, families, o = {}) {
   try {
-    if (!siteId) return null;
+    if (siteId === undefined) return null;
     const pool = published(ctx, siteId);
     if (!pool.length) return null;
     for (const fam of [].concat(families)) {
       const m = FAMILY[fam]; if (!m) continue;
       const w = Res.resolve(pool, regionContext(siteId, fam, o), { type: m.type }).winner;
-      if (w && w.sourceKind === "page") { const row = ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ? AND site_id = ? AND status = 'published' AND archived_at IS NULL").get(w.sourceId, ctx.organizationId, siteId); if (row) return row; }
+      if (w && w.sourceKind === "page") { const row = ctx.db.prepare("SELECT * FROM mk_landing_pages WHERE id = ? AND organization_id = ? AND site_id IS ? AND status = 'published' AND archived_at IS NULL").get(w.sourceId, ctx.organizationId, siteId); if (row) return row; }
     }
   } catch { /* repli historique */ }
   return null;

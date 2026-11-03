@@ -63,7 +63,7 @@ function renderVm(res, vm, siteOk, cls, done) {
     try { done(wrapHtml(res, vm, siteOk, body, cls)); } catch { done(null); }
   });
 }
-// Site dont on cherche les modèles : celui du domaine de la requête (req.kwSite) sauf indication contraire de la route ; le site principal n'a pas de Theme Builder (null)
+// Site dont on cherche les modèles : celui du domaine de la requête (req.kwSite) sauf indication contraire de la route ; null = site principal (modèles à site_id NULL)
 const siteIdOf = (req, siteId) => (siteId !== undefined ? siteId : req.kwSite && Number.isInteger(req.kwSite.id) ? req.kwSite.id : null);
 
 // done(html | null)
@@ -80,7 +80,7 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     // Theme Builder (23.1) : modèles du site de la requête, toutes familles. Le contexte de la page est mémorisé pour l'en-tête et le pied de page (themeLayout)
     const tbSite = siteIdOf(req, siteId);
     const TB = require("../../themeBuilder/render");
-    if (tbSite) { const first = [].concat(type)[0]; res.locals.themeCtx = TB.regionContext(tbSite, first, opts) || res.locals.themeCtx; }
+    { const first = [].concat(type)[0]; res.locals.themeCtx = TB.regionContext(tbSite, first, opts) || res.locals.themeCtx; }
     let row = TB.pickRegion(ctx, tbSite, type, opts);
     // Sans modèle applicable, l'ancien système décide exactement comme avant
     if (!row) for (const t of [].concat(type)) { row = themeTemplates.pick(ctx, t, { category, categories, tag, tags, postId, visitor, siteId }); if (row) break; }
@@ -97,9 +97,11 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
 function renderParts(req, res) {
   return new Promise((resolve) => {
     try {
-      const site = req.kwSite;
+      // Domaine d'un site : son numéro ; sinon site principal (null)
+      if (req.kwSite && !Number.isInteger(req.kwSite.id)) return resolve({});
+      const site = { id: req.kwSite ? req.kwSite.id : null };
       const marketing = req.app.locals.marketing;
-      if (!site || !Number.isInteger(site.id) || !marketing || !marketing.ready) return resolve({});
+      if (!marketing || !marketing.ready) return resolve({});
       const db = require("../../config/database");
       const ctx = ctxOf(db, marketing);
       const TB = require("../../themeBuilder/render");

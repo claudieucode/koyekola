@@ -5,6 +5,25 @@
   document.body.append(root); // plein écran : rattaché au body pour échapper à tout ancêtre qui crée un bloc conteneur (transform, contain) du gabarit
   const base = root.dataset.base, canWrite = root.dataset.write === "1", canRemove = root.dataset.remove === "1";
   const $ = (id) => document.getElementById(id), el = (t, c, txt) => { const e = document.createElement(t); if (c) e.className = c; if (txt !== undefined) e.textContent = txt; return e; };
+  // Thème clair / sombre / automatique : MÊME système que le reste de l'interface (attributs data-kola-pref / data-kola-theme sur <html>, mémorisé sous « kolaTheme ») ; aucun système parallèle
+  (() => {
+    const html = document.documentElement, group = root.querySelector("#tb-theme"); if (!group) return;
+    const pref = () => { const p = html.getAttribute("data-kola-pref"); return p === "light" || p === "dark" ? p : "auto"; };
+    const paint = () => group.querySelectorAll("[data-tb-theme]").forEach((b) => { const on = b.dataset.tbTheme === pref(); b.setAttribute("aria-checked", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+    const apply = (p, remember) => {
+      const dark = p === "dark" || (p !== "light" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+      html.setAttribute("data-kola-pref", p); html.setAttribute("data-kola-theme", dark ? "dark" : "light");
+      if (remember) { try { localStorage.setItem("kolaTheme", p); } catch { /* navigation privée : préférence non conservée */ } }
+      paint();
+    };
+    group.addEventListener("click", (e) => { const b = e.target.closest("[data-tb-theme]"); if (b) apply(b.dataset.tbTheme, true); });
+    group.addEventListener("keydown", (e) => {
+      const order = ["light", "dark", "auto"], i = order.indexOf(pref()), d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+      if (!d) return; e.preventDefault(); apply(order[(i + d + order.length) % order.length], true); const b = group.querySelector(`[data-tb-theme="${pref()}"]`); if (b) b.focus();
+    });
+    if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (pref() === "auto") apply("auto", false); });
+    paint();
+  })();
   let statusT = 0;
   const status = (m, k) => { const s = $("tb-status"); s.textContent = m || ""; s.dataset.k = k || ""; s.dataset.show = m ? "1" : "0"; clearTimeout(statusT); if (m && k !== "err") statusT = setTimeout(() => { s.dataset.show = "0"; }, 6000); };
   const api = async (path, opt = {}) => { const r = await fetch(`${base}/api${path}`, { credentials: "same-origin", headers: { "Content-Type": "application/json" }, ...opt }); const j = await r.json().catch(() => ({ ok: false, error: "Réponse illisible." })); if (!j.ok) { const e = new Error(j.error || "Erreur."); e.code = j.code; e.conflicts = j.conflicts; throw e; } return j; };

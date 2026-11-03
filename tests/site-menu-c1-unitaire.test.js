@@ -6,7 +6,7 @@ const nav = require("../src/marketing/web/cmsNav");
 const site = { siteId: 5, principal: false, base: "/marketing/site-web/sites/5", name: "Site Cinq", listHref: "/marketing/site-web/sites" };
 const principal = { siteId: null, principal: true, base: "/marketing/site-web/principal", name: "Site principal", listHref: "/marketing/site-web/sites" };
 const all = () => true;
-const CENTRAL = ["apparence/en-tete", "apparence/pied-de-page", "extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // décision D2 : administration centrale, hors du menu d'un site ; En-tête et Pied de page : gérés uniquement par le Theme Builder dans un site
+const CENTRAL = ["extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // décision D2 : administration centrale, hors du menu d'un site ; l'en-tête et le pied de page n'ont plus d'entrée de menu : le Theme Builder les gère seul
 const EXTENSIONS = ["espace/composants"]; // décision D3 : composants propres à chaque site (groupe Pages)
 const registryKeys = nav.SECTIONS.flatMap((s) => s.items.map((i) => i.key));
 // Rubrique dont toutes les entrées sont centrales (« Extensions ») : absente du menu d'un site, présente dans celui du principal
@@ -43,11 +43,11 @@ describe("C1 — une seule définition, deux présentations", () => {
     const items = pg.flatMap((g) => g.items);
     for (const reg of nav.ALL.filter((i) => i.key !== "sites" && !i.siteOnly)) { const got = items.find((i) => i.key === reg.key); assert.ok(got, reg.key); assert.equal(got.permission, reg.permission);
       // seule différence : dans son espace, le principal a le même « Tableau de bord » que les autres sites ; « Mes sites » n'est pas une entrée d'espace
-      if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
+      if (reg.key === "sitedash") { assert.equal(got.label, "Tableau de bord"); assert.equal(got.href, `${principal.base}/tableau-de-bord`); } else if (reg.key === "apparence/theme-builder") { assert.equal(got.label, reg.label); assert.equal(got.href, `${principal.base}/constructeur-de-theme`, "le Theme Builder du principal s'ouvre dans son propre espace"); } else { assert.equal(got.label, reg.label); assert.equal(got.href, reg.href); } }
     assert.ok(!items.some((i) => i.key === "sites"), "pas de « Mes sites » dans le menu du principal")
-    assert.equal(nav.ALL.length, 89); // + « Theme Builder » (propre aux sites créés, absent du principal)
+    assert.equal(nav.ALL.length, 87); // « En-tête » et « Pied de page » n'ont plus d'entrée : le Theme Builder (site principal compris) est leur seul gestionnaire
     // anciennement 88 : // + 4 écrans Boutique (Programme 20.5) ; 80 + 4 écrans SEO du lot 2 ; // FICHIERS-THEMES : + « Éditeur de fichiers »;  // ADMIN-NOTES : + « Admin Notes » // // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
-    assert.equal(items.length, 79 + 4 + 4 + 1 + 10); // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(items.length, 79 + 4 + 4 + 10); // « En-tête » et « Pied de page » retirés, « Theme Builder » ajouté pour le principal : 79 + 4 + 4 + 1 + 10 - 1 ; + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; // EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; 66 entrées de registre (sans « Mes sites ») ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("les quatre fonctions centrales (Extensions, Sauvegardes, Informations système, Journal) n'apparaissent pas dans un site, et seulement elles ont disparu", () => {
     const keys = nav.projectSections(site).flatMap((g) => g.items).map((i) => i.key);

@@ -68,12 +68,16 @@ const SCREENS = {
         table: { caption: "Patterns", columns: [{ label: "Pattern" }, { label: "Catégorie" }, { label: "Sections", num: true }], rows: list.map((p) => ({ cells: [p.label, p.category, String(p.sections.length)] })), empty: empty("layers", "Aucun pattern", "") } };
     }
     if (sub === "styles") return { title: "Styles", lead: "Le design system de chaque site : couleurs, polices, tailles, espacements, boutons. Ouvrez un site pour le modifier.", table: siteTable("Styles par site", "/design-system", "Modifier les styles") };
-    if (sub === "en-tete") return { title: "En-tête", lead: "L'en-tête de chaque site, géré dans le Theme Builder (conditions d'affichage par page).", table: siteTable("En-têtes par site", "/constructeur-de-theme?type=header", "Ouvrir dans le Theme Builder") };
-    if (sub === "pied-de-page") return { title: "Pied de page", lead: "Le pied de page de chaque site.", table: siteTable("Pieds de page par site", "/constructeur-de-theme?type=footer", "Ouvrir dans le Theme Builder") };
+    if (sub === "theme-builder") {
+      // UNIQUE gestionnaire des en-têtes, pieds de page et modèles : le site principal d'abord, puis chaque site créé
+      const main = { cells: [{ text: "Site principal", href: `${BASE}/principal` }, "—", { status: { label: "Actif", cls: "mk-status-ok" } }], actions: [{ label: "Ouvrir le Theme Builder", href: `${BASE}/principal/constructeur-de-theme` }] };
+      return { title: "Theme Builder", lead: "Le seul endroit où l'on crée, règle, affecte et publie l'en-tête, le pied de page et les modèles de chaque site : conditions d'affichage, versions, aperçu et publication.",
+        table: { ...siteTable("Sites", "/constructeur-de-theme", "Ouvrir le Theme Builder"), rows: [main, ...siteRows("/constructeur-de-theme", "Ouvrir le Theme Builder")] } };
+    }
     return { title: "Éditeur du site", art: "themes", lead: "Chaque page de vos sites s'édite dans l'éditeur visuel KOLAKISA (Page Builder). Les réglages communs d'un site se trouvent dans sa fiche.",
       cards: [{ icon: "layout", title: "Éditer une page", text: "Choisissez une page : elle s'ouvre dans l'éditeur visuel.", href: "/marketing/pages", label: "Ouvrir les pages" },
         { icon: "palette", title: "Styles du site", text: "Couleurs, polices, tailles et boutons.", href: `${BASE}/apparence/styles`, label: "Ouvrir les styles" },
-        { icon: "layers", title: "En-tête et pied de page", text: "Composants affichés en haut et en bas de chaque page du site.", href: `${BASE}/apparence/en-tete`, label: "Ouvrir l'en-tête" }],
+        { icon: "layers", title: "En-tête et pied de page", text: "Se composent, s'affectent et se publient dans le Theme Builder.", href: `${BASE}/apparence/theme-builder`, label: "Ouvrir le Theme Builder" }],
       table: siteTable("Sites", "", "Ouvrir le site") };
   },
 
