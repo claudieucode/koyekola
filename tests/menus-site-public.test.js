@@ -5,6 +5,7 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, Client, loginInstructor, newStudent } = require("./helpers");
+const { legacyPost } = require("./legacy-parts-helper");
 
 describe("menus : administration → site public", () => {
   let srv, boss, db, anon, A, B, adminB;
@@ -33,7 +34,7 @@ describe("menus : administration → site public", () => {
   const mkHeader = async (site, name, menuProps) => {
     const section = { type: "layout", children: [{ type: "container", props: { full: true }, children: [{ type: "sitelogo", props: { height: 40 } }, { type: "menu", props: menuProps }] }] };
     const c = await boss.request(`${R}/composants`, { method: "POST", json: { name, section, siteId: site }, headers: origin() }); assert.equal(c.status, 201, c.text.slice(0, 160));
-    const id = JSON.parse(c.text).component.id; assert.equal((await boss.post(`${R}/sites/${site}/parties`, { header: String(id), footer: "" })).status, 302); return id;
+    const id = JSON.parse(c.text).component.id; assert.equal(legacyPost(srv, `${R}/sites/${site}/parties`, { header: String(id), footer: "" }).status, 302); return id;
   };
   const DEMO = { label: "Menu de la page", items: [{ label: "Programme", url: "/catalogue" }, { label: "Blog", url: "/blog" }] };
   const html = async (id, client = anon) => (await client.get(`/p/${slug(id)}`)).text;

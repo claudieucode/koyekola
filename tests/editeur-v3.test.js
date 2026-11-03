@@ -8,6 +8,7 @@ const { TEST_KEY, freshMarketing } = require("./marketing-helpers");
 const pages = require("../src/marketing/pages");
 const nodes = require("../src/marketing/pages/nodes");
 const { startServer, Client, loginInstructor, newStudent, createCourse } = require("./helpers");
+const { legacyPost } = require("./legacy-parts-helper");
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) Chrome/120";
 const layout = (children, id = "sect00000001") => ({ id, type: "layout", children: [{ id: `cont${id.slice(4)}`, type: "container", children }] });
@@ -150,7 +151,7 @@ describe("vrai serveur", () => {
     assert.equal(comp.status, 201, comp.text);
     const compId = JSON.parse(comp.text).component.id;
     const foot = JSON.parse((await boss.postJson("/marketing/site-web/composants", { name: "Pied V3", siteId, section: layout([{ id: "textftr00001", type: "text", props: { html: "<p>Pied du site V3</p>" } }], "sectftr00001") })).text).component.id;
-    const r = await boss.post(`/marketing/site-web/sites/${siteId}/parties`, { header: String(compId), footer: String(foot) });
+    const r = legacyPost(srv, `/marketing/site-web/sites/${siteId}/parties`, { header: String(compId), footer: String(foot) });
     assert.equal(r.status, 302);
     assert.deepEqual([db.prepare("SELECT header_component_id h, footer_component_id f FROM mk_sites WHERE id = ?").get(siteId).h, db.prepare("SELECT footer_component_id f FROM mk_sites WHERE id = ?").get(siteId).f], [compId, foot]);
     const id = await newPage("Page du site V3", { site_id: String(siteId) });
@@ -165,8 +166,8 @@ describe("vrai serveur", () => {
     assert.doesNotMatch(canvas, /data-node-id="menuhdr00001"/, "les éléments de l'en-tête ne sont pas sélectionnables dans cette page");
     // Composant d'un autre site refusé
     const other = Number((await boss.post("/marketing/site-web/sites", { name: "Autre site V3" })).location.match(/(\d+)$/)[1]);
-    const r2 = await boss.post(`/marketing/site-web/sites/${other}/parties`, { header: String(compId) });
-    assert.match(decodeURIComponent(r2.location || "") + (await boss.get(r2.location || "/")).text, /autre site/);
+    legacyPost(srv, `/marketing/site-web/sites/${other}/parties`, { header: String(compId) });
+    assert.equal(db.prepare("SELECT header_component_id h FROM mk_sites WHERE id = ?").get(other).h, null, "un composant réservé à un site ne devient pas l'en-tête d'un autre site");
   });
 
   test("modèles de l'équipe, export / import, mise hors ligne", async () => {
