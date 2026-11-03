@@ -477,7 +477,7 @@ module.exports = () => {
   const componentPage = (ctx, c) => {
     const role = pages.componentRole(ctx, c);
     return { id: `c${c.id}`, name: c.name, slug: "", title: c.name, description: "", status: "published", kind: "page", hasDraft: false, revision: c.revision, site_id: c.site_id, form_id: null, indexable: 0, archived_at: null, header_mode: "inherit",
-      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/reglages/en-tete#entete` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
+      back: c.site_id ? `/marketing/site-web/sites/${c.site_id}/constructeur-de-theme?type=${role === "footer" ? "footer" : "header"}` : "/marketing/site-web/sites", working: { sections: [c.draft || c.section], title: c.name, description: "", theme: pages.normalizeTheme({}), seo: {} }, role };
   };
   router.get("/site-web/composants/:id(\\d+)/editeur", need("forms.read"), (req, res) => {
     const c = loadComponent(req, res);

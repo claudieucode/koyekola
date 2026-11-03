@@ -256,6 +256,8 @@ app.listen(PORT, () => {
   setInterval(purgeVisits, 24 * 60 * 60 * 1000).unref();
   // Exports de données personnelles : expiration des liens et des archives, nettoyage des fichiers temporaires, conservation des demandes (au démarrage, puis toutes les 15 minutes)
   if (marketing.ready) require("./src/services/privacy/exportRequests").startTimer(db);
+  // Theme Builder = seul gestionnaire d'en-têtes et de pieds de page : reprise idempotente (et réversible) de ceux des anciens réglages de chaque site
+  if (marketing.ready) { try { const r = require("./src/themeBuilder/legacy").adoptAllSites(db, { db, organizationId: marketing.organizationId, userId: null, bus: marketing.bus, settings: marketing.settings }); if (r.imported) console.log(`[KOLAKISA] Theme Builder : ${r.imported} en-tête(s)/pied(s) de page repris pour ${r.sites} site(s).`); } catch (error) { console.error("[KOLAKISA] Reprise Theme Builder :", error.message); } }
   // Fichiers envoyés retrouvés dans le dossier du projet ou d'anciennes versions : recopiés dans le dossier conservé
   // Médias : recopie des fichiers restés dans d'anciens builds, puis diagnostic (emplacement, fichiers introuvables)
   require("./src/config/recoverUploads").recoverUploads()

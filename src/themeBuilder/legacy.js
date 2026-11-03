@@ -53,4 +53,14 @@ function importLegacy(ctx, siteId, { partsOnly = false } = {}) {
 // Le pied de page et l'en-tête QUE LE SITE AFFICHE AUJOURD'HUI (réglages du site) doivent figurer dans le Theme Builder : sans cela, le tableau de bord ne montre que des modèles
 // jamais publiés alors que le site en affiche un autre. Reprise idempotente (legacy_ref), jamais bloquante, aucune donnée existante modifiée.
 function adoptSiteParts(ctx, siteId) { try { return importLegacy(ctx, siteId, { partsOnly: true }).imported; } catch { return []; } }
-module.exports = { importLegacy, mapLegacy, adoptSiteParts };
+// Migration de démarrage (suppression des écrans En-tête / Pied de page autonomes) : TOUS les sites qui ont un en-tête ou un pied de page défini par les anciens réglages
+// les retrouvent dans le Theme Builder, sans attendre qu'on l'ouvre. Idempotente (legacy_ref), lecture seule des anciennes colonnes (retour arrière possible), jamais bloquante.
+function adoptAllSites(db, ctx) {
+  const out = { sites: 0, imported: 0 };
+  try {
+    const rows = db.prepare("SELECT id FROM mk_sites WHERE organization_id = ? AND deleted_at IS NULL AND (header_component_id IS NOT NULL OR footer_component_id IS NOT NULL)").all(ctx.organizationId);
+    for (const r of rows) { const n = adoptSiteParts({ ...ctx, siteScope: undefined }, r.id).length; if (n) { out.sites += 1; out.imported += n; } }
+  } catch (e) { console.error("[KOLAKISA] Reprise des en-têtes et pieds de page dans le Theme Builder :", e.message); }
+  return out;
+}
+module.exports = { importLegacy, mapLegacy, adoptSiteParts, adoptAllSites };

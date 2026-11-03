@@ -67,7 +67,7 @@ function build(req, t) {
     retention: defs.analytics_retention_days ? { value: values.analytics_retention_days.value, def: values.analytics_retention_days.default, min: defs.analytics_retention_days.min, max: defs.analytics_retention_days.max, editable: editable("analytics_retention_days") } : null,
     guide: guideService.guide({ db, organizationId: org, siteId: t.siteId, can: req.mk.can }),
     api: `/marketing/site-web/parametres/api/confidentialite${q}`,
-    links: { pages: t.siteId ? `/marketing/site-web/sites/${t.siteId}/pages` : "/marketing/pages", footer: t.siteId ? `/marketing/site-web/sites/${t.siteId}/reglages/pied-de-page` : "/marketing/site-web/apparence/pied-de-page", menus: `/marketing/site-web/apparence/menus${q}` },
+    links: { pages: t.siteId ? `/marketing/site-web/sites/${t.siteId}/pages` : "/marketing/pages", footer: t.siteId ? `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme?type=footer` : "/marketing/site-web/apparence/pied-de-page", menus: `/marketing/site-web/apparence/menus${q}` },
   };
 }
 
