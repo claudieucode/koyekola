@@ -99,6 +99,14 @@ module.exports = () => {
   });
   router.post(`${A}/importer`, need("forms.write"), run((ctx, id, req) => { const t = TB.portable.importTemplate(ctx, id, body(req).payload); return { template: card(ctx, t, new Set()) }; }));
   router.post(`${A}/importer-ancien`, need("forms.write"), run((ctx, id) => TB.legacy.importLegacy(ctx, id)));
+  // Contenus réels proposés pour prévisualiser un modèle (« Aperçu avec ») : articles publiés (le plus récent d'abord). L'aperçu s'ouvre avec ?contenu=<id> sur les routes d'aperçu existantes.
+  router.get(`${A}/contenus-apercu`, need("forms.read"), run((ctx, id, req) => {
+    TB.store.site(ctx, id);
+    const type = TB.types.has(req.query.type) ? req.query.type : null;
+    if (type !== "single_post") return { items: [], note: "Aperçu avec un contenu choisi : disponible pour les modèles d'article." };
+    const items = ctx.db.prepare("SELECT id, title, published_at FROM posts WHERE published = 1 ORDER BY published_at DESC, id DESC LIMIT 50").all().map((p) => ({ id: p.id, title: p.title, publishedAt: p.published_at }));
+    return { items, param: "contenu" };
+  }));
   // « Pourquoi ce modèle ? » : simulation d'un cas (aucune écriture)
   router.get(`${A}/resolution`, need("forms.read"), run((ctx, id, req) => {
     TB.store.site(ctx, id);

@@ -225,7 +225,7 @@ module.exports = () => {
   });
   // Données d'affichage d'un contenu (formations relues dans le catalogue, composants synchronisés résolus)
   // Aperçu, canevas, versions : vus comme par un visiteur inconnu (personnalisation non appliquée, tout est montré)
-  const shown = (ctx, page, content, draftId = null, themeBuilder = false) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId, themeBuilder }) });
+  const shown = (ctx, page, content, draftId = null, themeBuilder = false, pick = {}) => landing.viewModel(ctx, { ...page, ...content, scope: require("./themeRender").previewScope(ctx.db, ctx, page, null, pick), sections: pages.withSiteParts(ctx, page, pages.resolveSections(ctx, content.sections), { draftId, themeBuilder }) });
 
   router.get("/pages/:id(\\d+)", need("forms.read"), (req, res) => {
     const page = load(req, res);
@@ -265,7 +265,7 @@ module.exports = () => {
     const ctx = req.mk.ctx;
     const form = page.form_id ? forms.getForm(ctx, page.form_id) : null;
     res.set("Cache-Control", "no-store");
-    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId, themeBuilder), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
+    res.render("marketing-public/landing", { page: shown(ctx, page, content, draftId, themeBuilder, { postId: /^\d{1,9}$/.test(String(req.query.contenu || "")) ? Number(req.query.contenu) : null }), site: page.site_id ? pages.getSite(ctx, page.site_id) : null, tokensToCss, form, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: form ? forms.propertyFieldDefs(ctx.db, ctx.organizationId, form) : [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: label });
   };
   router.get("/pages/:id(\\d+)/apercu", need("forms.read"), (req, res) => {
     const page = load(req, res);

@@ -119,9 +119,15 @@ function renderParts(req, res) {
 }
 
 // Pendant qu'on dessine un modèle d'article : données du dernier article publié (aperçu réaliste)
-function previewScope(db, ctx, page, typesOverride = null) {
+function previewScope(db, ctx, page, typesOverride = null, pick = {}) {
   try {
-    const types = typesOverride || themeTemplates.typesOfPage(ctx, page.id);
+    // Types du document : ancien système ET modèles du Theme Builder (un modèle d'article du Theme Builder reçoit lui aussi un vrai article)
+    let types = typesOverride || themeTemplates.typesOfPage(ctx, page.id);
+    if (!typesOverride) {
+      const tb = require("../../themeBuilder").store.byDocument(ctx, "page", page.id);
+      const asLegacy = { single_post: "single_post", archive: "blog_archive", search_results: "search_results" }[tb && tb.type];
+      if (asLegacy && !types.includes(asLegacy)) types = [...types, asLegacy];
+    }
     if (types.includes("single_course")) {
       const c = db.prepare("SELECT * FROM courses WHERE published = 1 ORDER BY created_at DESC, id DESC LIMIT 1").get();
       if (!c) return {};
@@ -132,7 +138,9 @@ function previewScope(db, ctx, page, typesOverride = null) {
       return { archive: { type: "blog", name: "", id: null, termIds: [], title: "Titre de l'archive (exemple)", description: "Description de l'archive : elle viendra de la catégorie, de l'étiquette ou de l'auteur affiché.", count: total, url: "/blog", search: "" } };
     }
     if (!types.includes("single_post")) return {};
-    const post = db.prepare("SELECT * FROM posts WHERE published = 1 ORDER BY published_at DESC, id DESC LIMIT 1").get();
+    // « Aperçu avec le contenu » (équivalent de Preview Dynamic Content As) : un article PUBLIÉ choisi ; sinon le plus récent
+    const chosen = Number.isInteger(pick && pick.postId) && pick.postId > 0 ? db.prepare("SELECT * FROM posts WHERE id = ? AND published = 1").get(pick.postId) : null;
+    const post = chosen || db.prepare("SELECT * FROM posts WHERE published = 1 ORDER BY published_at DESC, id DESC LIMIT 1").get();
     if (!post) return {};
     const blog = require("../../services/blog");
     let html = "";
