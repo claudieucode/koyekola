@@ -88,7 +88,7 @@ describe("Firefox — bibliothèque de modèles (WebDriver BiDi)", { skip: SKIP 
     if (skipReason) return t.skip(skipReason);
     await go(`${srv.base}${TP}?site=${A}`); await waitFor(`!document.querySelector("[data-tp-main]").hidden`); await idle();
     await run(`(() => { const i = document.querySelector("[data-tp-search]"); i.value = "restaurant"; i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
-    await waitFor(`document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false" && [...document.querySelectorAll(".mk-pt-card h3")].some((h) => h.textContent === "Restaurant") && document.querySelectorAll(".mk-pt-card").length === 1`);
+    await waitFor(`document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false" && [...document.querySelectorAll(".mk-pt-card h3")].some((h) => h.textContent === "Restaurant") && document.querySelectorAll(".mk-pt-card").length >= 1`); // la bibliothèque compte plusieurs modèles « restaurant » : on vérifie que la recherche filtre et garde le modèle de base
     await run(`(() => { const i = document.querySelector("[data-tp-search]"); i.value = ""; i.dispatchEvent(new Event("input", { bubbles: true })); document.querySelector('[data-tp-source="page"]').click(); return true; })()`);
     await new Promise((r) => setTimeout(r, 600)); // la saisie vidée déclenche une recherche différée (250 ms) : on la laisse aboutir avant de poursuivre
     await waitFor(`document.querySelector('[data-tp-source="page"]').getAttribute("aria-selected") === "true" && document.querySelectorAll(".mk-pt-card").length === 12 && document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false"`);
@@ -99,6 +99,9 @@ describe("Firefox — bibliothèque de modèles (WebDriver BiDi)", { skip: SKIP 
   test("détail, aperçu et fenêtre d'importation (opérations prévues) dans Firefox ; Échap ferme la fenêtre", async (t) => {
     if (skipReason) return t.skip(skipReason);
     await go(`${srv.base}${TP}?site=${A}`); await waitFor(`!document.querySelector("[data-tp-main]").hidden`); await idle();
+    // tri « récents d'abord » : le modèle de base n'est plus sur la première page, on le retrouve par la recherche
+    await run(`(() => { const i = document.querySelector("[data-tp-search]"); i.value = "restaurant"; i.dispatchEvent(new Event("input", { bubbles: true })); return true; })()`);
+    await waitFor(`document.querySelector("[data-tp-grid]").getAttribute("aria-busy") === "false" && !!document.querySelector('.mk-pt-card button[aria-label="Détails de Restaurant"]')`);
     await run(`document.querySelector('.mk-pt-card button[aria-label="Détails de Restaurant"]').click()`);
     await waitFor(`document.querySelector("[data-tp-dlg-detail]").open && /Compatible/.test(document.querySelector("[data-tp-det-body]").innerText)`);
     await run(`document.querySelector("[data-tp-dlg-detail]").close()`);

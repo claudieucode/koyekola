@@ -29,7 +29,10 @@ const parseRef = catalog.parseRef;
 // Même forme que l'ancienne liste : { ref, key, name, description, category, pages: [{ key, name, sections, elements }], pageCount, elements, menuItems, style, … }, dans l'ordre du catalogue officiel
 function packs(ctx) {
   const order = new Map(PACKS.map((p, i) => [p.key, i]));
-  return catalog.query(ctx, null, { source: "pack", perPage: 48 }).items.sort((a, b) => order.get(a.key) - order.get(b.key));
+  // perPage est plafonné à 48 par le catalogue : on parcourt toutes les pages (la bibliothèque compte 100 packs)
+  const items = [];
+  for (let page = 1; ; page += 1) { const d = catalog.query(ctx, null, { source: "pack", perPage: 48, page }); items.push(...d.items); if (page >= d.pages || !d.items.length) break; }
+  return items.sort((a, b) => order.get(a.key) - order.get(b.key));
 }
 
 // ---------- Aperçu : sections d'UNE page du modèle ----------

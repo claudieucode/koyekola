@@ -70,6 +70,10 @@ const META = {
   "part:article": m(SEC.editorial, "blog", ["article", "billet", "commentaires"], NEW), "part:liste-blog": m(SEC.editorial, "blog", ["liste", "archive", "blog"], NEW), "part:archive-categorie": m(SEC.editorial, "blog", ["catégorie", "archive"], NEW),
   "part:archive-auteur": m(SEC.editorial, "blog", ["auteur", "archive"], NEW), "part:resultats-recherche": m(SEC.editorial, "blog", ["recherche", "résultats"], NEW), "part:page-introuvable": m([], "", ["404", "erreur", "introuvable"], NEW),
 };
+// Programme 100 : classement des modèles ajoutés (chaque fichier lib100/*.js exporte `meta` : { clé: { sectors, siteType, keywords, since } }).
+for (const [prefix, file] of [["pack", "packs"], ["page", "pages"], ["section", "sections"], ["component", "components"], ["part", "parts"]]) {
+  for (const [key, v] of Object.entries(require(`./lib100/${file}`).meta)) META[`${prefix}:${key}`] = m(v.sectors || [], v.siteType || "", v.keywords || [], v.since || "2026-11-03");
+}
 const SITE_TYPES = ["", "vitrine", "blog", "boutique", "formation", "autre"];
 const metaOf = (ref) => META[ref] || null;
 module.exports = { META, SEC, metaOf, SITE_TYPES };

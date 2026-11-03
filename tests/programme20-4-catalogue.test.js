@@ -117,20 +117,25 @@ describe("programme 20.4 — catalogue de la bibliothèque de modèles", () => {
       const st = await cat(boss, A, "siteType=blog&perPage=48"); assert.ok(st.total >= 4 && st.items.every((i) => i.siteType === "blog"));
       const cumul = await cat(boss, A, "source=page&family=restauration-hotellerie&perPage=48"); assert.ok(cumul.total >= 3 && cumul.total < fam.total && cumul.items.every((i) => i.kind === "page" && i.sectors.some((s) => s.family === "Restauration et hôtellerie")));
       const triple = await cat(boss, A, `source=page&family=restauration-hotellerie&category=${encodeURIComponent("Restauration")}&q=carte`); assert.deepEqual(triple.items.map((i) => i.ref), ["page:resto-carte"]);
-      const ok = await cat(boss, A, "compat=ok&perPage=48"), warn = await cat(boss, A, "compat=warn&perPage=48");
+      const ok = { items: await everything(boss, A, "compat=ok") }, warn = { items: await everything(boss, A, "compat=warn") };
       assert.ok(ok.items.every((i) => i.compat.status === "ok") && warn.items.every((i) => i.compat.status === "warn"));
       assert.ok(warn.items.some((i) => i.ref === "page:boutique-accueil"), "sans formation publiée, la boutique est « à vérifier »");
       assert.equal((await cat(boss, A, "family=n-existe-pas")).total, 0);
-      assert.equal((await cat(boss, A, "sector=restaurant&family=commerce")).total, 0, "spécialité hors famille : aucun résultat");
+      { // des modèles peuvent légitimement être classés dans plusieurs secteurs (ex. ferme : catalogue + restaurant) : le croisement ne garde que ceux qui sont À LA FOIS dans la spécialité ET dans la famille
+        const solo = await everything(boss, A, "sector=restaurant"), famOnly = await everything(boss, A, "family=commerce"), cross = await everything(boss, A, "sector=restaurant&family=commerce");
+        const inter = solo.map((i) => i.ref).filter((r) => famOnly.some((f) => f.ref === r)).sort();
+        assert.deepEqual(cross.map((i) => i.ref).sort(), inter, "spécialité hors famille : seul le croisement exact des deux filtres reste");
+        assert.ok(cross.length < solo.length && cross.length < famOnly.length, "le croisement restreint chacun des deux filtres");
+      }
     });
     test("un secteur générique n'apparaît pas dans un filtre de secteur (pas de faux classement) ; les facettes comptent les mêmes éléments que la liste", async () => {
       const d = await cat(boss, A, "sector=restaurant&perPage=48"); assert.ok(!d.items.some((i) => i.ref === "page:contact" || i.ref === "page:faq"));
       const f = (await cat(boss, A, "source=pack")).facets.families.find((x) => x.slug === "restauration-hotellerie"); const real = await cat(boss, A, "source=pack&family=restauration-hotellerie"); assert.equal(f.count, real.total);
     });
     test("tri : alphabétique, plus récents ; « plus utilisés » seulement quand des imports réels existent, sans compteur inventé", async () => {
-      const alpha = await cat(boss, A, "source=page&sort=alpha&perPage=48"); const names = alpha.items.map((i) => i.name);
+      const alpha = { items: await everything(boss, A, "source=page&sort=alpha") }; const names = alpha.items.map((i) => i.name);
       assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" })));
-      const recent = await cat(boss, A, "source=page&sort=recent&perPage=48"); const dates = recent.items.map((i) => i.updatedAt); assert.deepEqual(dates, [...dates].sort().reverse()); assert.equal(recent.items[0].updatedAt, "2026-10-30");
+      const recent = { items: await everything(boss, A, "source=page&sort=recent") }; const dates = recent.items.map((i) => i.updatedAt); assert.deepEqual(dates, [...dates].sort().reverse()); assert.equal(recent.items[0].updatedAt, "2026-11-03", "le plus récent : la bibliothèque à 100 modèles");
       const none = await cat(boss, A, "source=page"); assert.ok(!none.sorts.includes("used"), "pas d'option « plus utilisés » sans donnée"); assert.ok(none.items.every((i) => i.usage === 0));
       for (let n = 0; n < 2; n += 1) assert.equal(json(await boss.postJson(`${TP}/importer?site=${A}`, { ref: "page:contact", importKey: key() })).ok, true);
       assert.equal(json(await boss.postJson(`${TP}/importer?site=${A}`, { ref: "page:faq", importKey: key() })).ok, true);

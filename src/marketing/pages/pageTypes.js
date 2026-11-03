@@ -41,6 +41,7 @@ const GABARIT_TYPES = {
   "blog-accueil": ["blog", "accueil"], "boutique-accueil": ["catalogue-formations", "accueil"], "asso-accueil": ["association", "accueil", "communaute"], "asso-missions": ["association", "equipe"], "asso-adhesion": ["adhesion", "inscription"], "asso-soutenir": ["association"],
   "boutique-produits-accueil": ["accueil", "offre"], "boutique-catalogue": ["offre"], "boutique-livraison": ["centre-aide"],
 };
+Object.assign(GABARIT_TYPES, require("./lib100/gabarit-types")); // programme 100 : gabarits ajoutés
 
 function typeList() {
   const covered = new Map();

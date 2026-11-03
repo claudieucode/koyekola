@@ -25,7 +25,8 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
   const imp = (c, site, body) => post(c, site, "importer", { importKey: key(), ...body });
   const ok = async (p) => { const r = await p; assert.equal(r.status, 200, r.text.slice(0, 300)); return json(r); };
   const refused = async (p, status = 422, re = null) => { const r = await p; assert.equal(r.status, status, r.text.slice(0, 300)); if (re) assert.match(json(r).error, re); return json(r); };
-  const cat = async (c, site, params = "") => json(await c.get(`${TP}/catalogue.json?${site ? `site=${site}&` : ""}perPage=48&${params}`));
+  // perPage est plafonné à 48 par le serveur : on parcourt toutes les pages pour obtenir la liste complète du catalogue
+  const cat = async (c, site, params = "") => { const out = []; let d; for (let page = 1; ; page += 1) { d = json(await c.get(`${TP}/catalogue.json?${site ? `site=${site}&` : ""}perPage=48&page=${page}&${params}`)); if (!d || !d.items) return d; out.push(...d.items); if (page >= d.pages) return { ...d, items: out }; } };
   const pagesOf = (site) => all("SELECT * FROM mk_landing_pages WHERE COALESCE(site_id, 0) = COALESCE(?, 0) ORDER BY id", site || null);
   const compsOf = (site) => all("SELECT * FROM mk_web_components WHERE site_id IS ? ORDER BY id", site);
   const sectionsOf = (id) => JSON.parse(one("SELECT sections FROM mk_landing_pages WHERE id = ?", id).sections);
@@ -306,7 +307,7 @@ describe("programme 20.4 — importation, compatibilité, annulation, enregistre
       await refused(post(editorA, A, "enregistrer", { kind: "section", pageId: pa, indexes: [], name: "Vide" }), 422, /au moins une section/);
       const comp = await ok(post(editorA, A, "enregistrer", { kind: "component", pageId: pa, indexes: [0], name: "Mon composant" })); assert.match(comp.result.ref, /^comp:/);
       const items = (await cat(editorA, A, "source=mine")).items; assert.ok(items.some((i) => i.ref === sec.result.ref && i.kind === "section") && items.some((i) => i.ref === comp.result.ref && i.kind === "component"));
-      const target = await newPage(boss, A, "Réutilisation"); await ok(imp(editorA, A, { ref: sec.result.ref, pageId: target })); assert.equal(draftOf(target).length, 3 + 2 - 0, "deux sections ajoutées");
+      const target = await newPage(boss, A, "Réutilisation"); const avant = draftOf(target).length; await ok(imp(editorA, A, { ref: sec.result.ref, pageId: target })); assert.equal(draftOf(target).length, avant + 2, "deux sections ajoutées");
       await ok(imp(editorA, A, { ref: comp.result.ref, name: "Copie du composant" }));
     });
     test("modifier : nom, description, catégorie, mots-clés ; nom en doublon refusé ; seul son site d'origine modifie ; les modèles OFFICIELS sont en lecture seule (modification, suppression, export)", async () => {
