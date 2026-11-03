@@ -12,8 +12,9 @@
       <div class="tb-head">
         <div class="tb-head-text"><button type="button" class="tb-back" id="tb-back" hidden><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="tb-back-l">Retour</span></button><h1 id="tb-title">Personnalisez chaque partie de votre site</h1><p class="tb-lead" id="tb-lead"></p></div>
         <div class="tb-top-actions">
-          <button class="btn btn-primary" type="button" id="tb-lib-open">Bibliothèque de modèles</button>
-          <% if (perms.write) { %><button class="btn btn-outline" type="button" id="tb-new">Ajouter un modèle</button>
+          <% if (perms.write) { %><button class="btn btn-primary" type="button" id="tb-new">Ajouter un modèle</button>
+          <% } %><button class="btn btn-outline" type="button" id="tb-lib-open">Bibliothèque de modèles</button>
+          <% if (perms.write) { %>
           <label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
           <button class="btn btn-outline" type="button" id="tb-legacy" title="Reprendre l'en-tête, le pied de page et les modèles de thème déjà configurés pour ce site">Récupérer l'existant</button><% } %>
         </div>
@@ -30,7 +31,23 @@
       </form>
       <div class="tb-status" id="tb-status" role="status" aria-live="polite"></div>
       <section id="tb-conflicts" class="tb-conflicts" aria-label="Conflits" hidden></section>
+      <h2 class="tb-mine-h" id="tb-mine-h" hidden>Mes modèles</h2>
       <div class="tb-cards" id="tb-cards" data-view="grid" aria-live="polite" aria-busy="false"></div>
+      <section class="tb-cat" id="tb-cat" aria-labelledby="tb-cat-h" hidden>
+        <div class="tb-cat-head"><h2 id="tb-cat-h">Modèles prédéfinis</h2><span class="tb-cat-count" id="tb-cat-count"></span></div>
+        <p class="tb-cat-none sw-muted" id="tb-cat-none" hidden></p>
+        <div id="tb-cat-body" hidden>
+          <p class="sw-muted tb-cat-lead">Parcourez, prévisualisez puis ajoutez un modèle à votre site. « Utiliser ce modèle » crée votre copie en brouillon : rien n'est publié et vos modèles existants restent intacts.</p>
+          <form class="tb-tools tb-cat-tools" id="tb-cat-tools" role="search" aria-label="Filtrer les modèles prédéfinis">
+            <label class="sw-field">Recherche<input type="search" id="tb-cat-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
+            <label class="sw-field">Identité<select id="tb-cat-skin"><option value="">Toutes les identités</option></select></label>
+            <label class="sw-field">Mise en page<select id="tb-cat-layout"><option value="">Toutes les mises en page</option></select></label>
+          </form>
+          <p class="tb-cat-status" id="tb-cat-status" role="status" hidden></p>
+          <div class="tb-cards tb-cat-cards" id="tb-cat-cards" aria-busy="false"></div>
+          <div class="tb-lib-pager tb-cat-pager" id="tb-cat-pager" hidden><button class="btn btn-sm btn-outline" type="button" id="tb-cat-prev">Précédent</button><span id="tb-cat-page"></span><button class="btn btn-sm btn-outline" type="button" id="tb-cat-next">Suivant</button></div>
+        </div>
+      </section>
     </main>
   </div>
 

@@ -42,7 +42,7 @@ module.exports = () => {
     const counts = {}; for (const t of all) if (t.status !== "archived") counts[t.type] = (counts[t.type] || 0) + 1;
     const types = Object.entries(TB.types.TYPES).map(([key, d]) => {
       const off = d.module && !siteModules.isEnabled(ctx.db, ctx.organizationId, id, d.module);
-      return { key, label: d.label, group: d.group, count: counts[key] || 0, live: all.filter((t) => t.type === key && t.status === "published").length, available: !off, reason: off ? `Module ${siteModules.MODULES[d.module].label} désactivé pour ce site.` : "" };
+      return { key, label: d.label, group: d.group, count: counts[key] || 0, catalog: Catalog.types().includes(key) ? Catalog.PER_TYPE() : 0, live: all.filter((t) => t.type === key && t.status === "published").length, available: !off, reason: off ? `Module ${siteModules.MODULES[d.module].label} désactivé pour ce site.` : "" };
     });
     return { templates: shown, conflicts, types, groups: TB.types.GROUPS, total: all.filter((t) => t.status !== "archived").length, archived: all.filter((t) => t.status === "archived").length };
   };
