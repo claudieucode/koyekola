@@ -22,7 +22,7 @@ donc supprimer les écrans aurait supprimé toute édition de l'en-tête et du p
 | Mêmes adresses (POST) | enregistrement du brouillon | supprimées (404) |
 | Personnalisateur | panneaux « En-tête » et « Pied de page » | une seule ligne « Theme Builder » (les réglages stockés restent en base) |
 | Éditeur du site (`siteEditor`), Réglages généraux, Confidentialité | liens vers les anciens écrans | liens vers le Theme Builder |
-| Base de données | `mk_tb_templates.site_id NOT NULL` | nullable : `NULL` = site principal (migration `127_theme_builder_site_principal.sql`, modèles et versions recopiés tels quels) |
+| Base de données | `mk_tb_templates.site_id NOT NULL` | nullable : `NULL` = site principal (migration `128_theme_builder_site_principal.sql`, modèles et versions recopiés tels quels) |
 | Rendu public du site principal | habillage d'apparence uniquement | en-tête, pied, barre latérale et modèles personnalisés du Theme Builder s'ils sont publiés ; sinon habillage d'origine |
 
 ## Ce que le Theme Builder pilote désormais

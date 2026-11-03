@@ -56,6 +56,8 @@ describe("migrations du programme 21 : additives, ordonnées, sans perte de donn
     assert.ok(p21.length >= 5, "116 à 120 au moins");
     for (const f of p21) {
       const sql = fs.readFileSync(path.join(MIGRATIONS, f), "utf8").split("\n").filter((l) => !/^\s*--/.test(l)).join("\n");
+      // Seule exception documentée : 128 reconstruit mk_tb_templates/mk_tb_versions (SQLite ne sait pas retirer un NOT NULL) ; chaque ligne est recopiée AVANT le DROP
+      if (parseInt(f, 10) === 128) { assert.match(sql, /INSERT INTO mk_tb_templates_r[\s\S]*SELECT[\s\S]*FROM mk_tb_templates;[\s\S]*INSERT INTO mk_tb_versions_r[\s\S]*FROM mk_tb_versions;[\s\S]*DROP TABLE mk_tb_versions;[\s\S]*DROP TABLE mk_tb_templates;/i, "128 : recopie avant suppression"); continue; }
       assert.doesNotMatch(sql, /\bDROP\s+(TABLE|COLUMN|INDEX)\b|\bDELETE\s+FROM\b|\bTRUNCATE\b|\bALTER\s+TABLE\s+\w+\s+DROP\b/i, `${f} : opération destructive`);
       assert.match(sql, /CREATE TABLE|ALTER TABLE|CREATE INDEX/i, f);
     }
