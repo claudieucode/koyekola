@@ -4,6 +4,7 @@ const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, Client, loginInstructor, newStudent } = require("./helpers");
+const { legacyPost } = require("./legacy-parts-helper");
 
 const UA = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/120 Safari/537.36" };
 const idFrom = (l) => Number(l.match(/(?:pages|sites)\/(\d+)|(\d+)(?:#.*)?$/).slice(1).find(Boolean));
@@ -35,10 +36,10 @@ describe("brouillon, aperçu et publication des parties de site (vrai serveur)",
       assert.equal((await json(boss, "POST", `/marketing/pages/${id}/publier.json`, {})).status, 200);
       pageIds[key] = id;
     }
-    await boss.post(`/marketing/site-web/sites/${siteId}/entete/creer`, {});
+    legacyPost(srv, `/marketing/site-web/sites/${siteId}/entete/creer`, {});
     const headerId = db.prepare("SELECT header_component_id FROM mk_sites WHERE id = ?").get(siteId).header_component_id;
     const footer = J(await json(boss, "POST", "/marketing/site-web/composants", { name: "Pied brouillon", section: section("PIED-V1", "foot00000001"), siteId: String(siteId) })).component;
-    await boss.post(`/marketing/site-web/sites/${siteId}/parties`, { header: String(headerId), footer: String(footer.id) });
+    legacyPost(srv, `/marketing/site-web/sites/${siteId}/parties`, { header: String(headerId), footer: String(footer.id) });
     // en-tête de départ publié : on le remplace par un texte repérable, par le chemin normal (brouillon puis mise à jour)
     assert.equal((await putDraft(headerId, "ENTETE-V1")).status, 200);
     assert.equal((await update(headerId)).status, 200);
@@ -121,10 +122,10 @@ describe("brouillon, aperçu et publication des parties de site (vrai serveur)",
 
   test("exceptions par page : l'aperçu de l'en-tête n'apparaît pas sur une page « sans en-tête » ; la variante a son propre brouillon", async () => {
     const cid = parts.header;
-    await boss.post(`/marketing/site-web/sites/${siteId}/entete/pages/${pageIds.contact}`, { choice: "none" });
-    await boss.post(`/marketing/site-web/sites/${siteId}/entete/variante`, { name: "Variante brouillon" });
+    legacyPost(srv, `/marketing/site-web/sites/${siteId}/entete/pages/${pageIds.contact}`, { choice: "none" });
+    legacyPost(srv, `/marketing/site-web/sites/${siteId}/entete/variante`, { name: "Variante brouillon" });
     const variant = db.prepare("SELECT id FROM mk_web_components WHERE variant_of = ? ORDER BY id DESC").get(cid).id;
-    await boss.post(`/marketing/site-web/sites/${siteId}/entete/pages/${pageIds.contact}`, { choice: `variant:${variant}` });
+    legacyPost(srv, `/marketing/site-web/sites/${siteId}/entete/pages/${pageIds.contact}`, { choice: `variant:${variant}` });
     J(await putDraft(variant, "VARIANTE-V2"));
     assert.doesNotMatch(await live(pageIds.contact), /VARIANTE-V2/, "brouillon de variante invisible en public");
     const pv = await preview(variant);
@@ -134,7 +135,7 @@ describe("brouillon, aperçu et publication des parties de site (vrai serveur)",
     assert.match(await live(pageIds.contact), /VARIANTE-V2/);
     assert.match(await live(pageIds.accueil), /ENTETE-C/, "l'en-tête du site n'a pas bougé");
     // retour à l'héritage
-    await boss.post(`/marketing/site-web/sites/${siteId}/entete/pages/${pageIds.contact}`, { choice: "inherit" });
+    legacyPost(srv, `/marketing/site-web/sites/${siteId}/entete/pages/${pageIds.contact}`, { choice: "inherit" });
   });
 
   test("permissions : aperçu et lecture pour l'équipe seulement ; un lecteur ne peut ni enregistrer ni publier ; un inconnu n'a aucun accès", async () => {
