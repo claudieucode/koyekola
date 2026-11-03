@@ -4,6 +4,7 @@
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
+const { legacyPost } = require("./legacy-parts-helper");
 const { startServer, Client, loginInstructor, newStudent } = require("./helpers");
 
 const UA = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/120 Safari/537.36" };
@@ -104,7 +105,7 @@ describe("Theme Builder (vrai serveur)", () => {
     let siteA, headerA, pageA;
     before(async () => {
       siteA = idFrom((await boss.post("/marketing/site-web/sites", { name: "Site source" })).location);
-      await boss.post(`/marketing/site-web/sites/${siteA}/entete/creer`, {});
+      legacyPost(srv, `/marketing/site-web/sites/${siteA}/entete/creer`, {});
       headerA = db.prepare("SELECT header_component_id FROM mk_sites WHERE id = ?").get(siteA).header_component_id;
       pageA = await newPage("Accueil source", siteA);
       assert.equal((await publish(pageA)).status, 200);
@@ -112,7 +113,7 @@ describe("Theme Builder (vrai serveur)", () => {
 
     test("pied de page : affiché une seule fois sur chaque page du site, jamais sur une page d'un autre site, retiré quand on le retire ; l'exception « aucun en-tête » ne touche pas le pied", async () => {
       const footer = J(await json(boss, "POST", "/marketing/site-web/composants", { name: "Pied commun", section: layout("PIED-TEST", "foot00000001"), siteId: String(siteA) })).component;
-      assert.equal((await boss.post(`/marketing/site-web/sites/${siteA}/parties`, { header: String(headerA), footer: String(footer.id) })).status, 302);
+      assert.equal((legacyPost(srv, `/marketing/site-web/sites/${siteA}/parties`, { header: String(headerA), footer: String(footer.id) })).status, 302);
       const count = (h, re) => (h.match(re) || []).length;
       const a = await html(`/p/${slugOf(pageA)}`);
       assert.equal(count(a, /lp-site-footer/g) >= 1, true, "le pied de page est affiché");
@@ -120,24 +121,24 @@ describe("Theme Builder (vrai serveur)", () => {
       assert.equal(count(a, /lp-site-header/g) >= 1, true);
       const noHeader = await newPage("Sans en-tête pied", siteA);
       await publish(noHeader);
-      await boss.post(`/marketing/site-web/sites/${siteA}/entete/pages/${noHeader}`, { choice: "none" });
+      legacyPost(srv, `/marketing/site-web/sites/${siteA}/entete/pages/${noHeader}`, { choice: "none" });
       const b = await html(`/p/${slugOf(noHeader)}`);
       assert.equal(count(b, /lp-site-header/g), 0, "exception : pas d'en-tête");
       assert.equal(count(b, /PIED-TEST/g), 1, "le pied de page reste");
       const other = await newPage("Page d'un autre site", idFrom((await boss.post("/marketing/site-web/sites", { name: "Site sans parties" })).location));
       await publish(other);
       assert.doesNotMatch(await html(`/p/${slugOf(other)}`), /PIED-TEST/, "un pied de page ne sort pas de son site");
-      const cross = await boss.post(`/marketing/site-web/sites/${idFrom((await boss.post("/marketing/site-web/sites", { name: "Troisième" })).location)}/parties`, { header: "", footer: String(footer.id) });
+      const cross = await legacyPost(srv, `/marketing/site-web/sites/${idFrom((await boss.post("/marketing/site-web/sites", { name: "Troisième" })).location)}/parties`, { header: "", footer: String(footer.id) });
       assert.equal(cross.status, 302);
       assert.equal(db.prepare("SELECT COUNT(*) n FROM mk_sites WHERE footer_component_id = ?").get(footer.id).n, 1, "un composant réservé à un site ne peut pas devenir le pied d'un autre site");
-      await boss.post(`/marketing/site-web/sites/${siteA}/parties`, { header: String(headerA), footer: "" });
+      legacyPost(srv, `/marketing/site-web/sites/${siteA}/parties`, { header: String(headerA), footer: "" });
       assert.doesNotMatch(await html(`/p/${slugOf(pageA)}`), /PIED-TEST/, "pied retiré");
     });
 
     test("un site dupliqué garde son en-tête (copie propre au nouveau site) et les pages sans en-tête restent sans en-tête", async () => {
       const second = await newPage("Sans en-tête", siteA);
       await publish(second);
-      await boss.post(`/marketing/site-web/sites/${siteA}/entete/pages/${second}`, { choice: "none" });
+      legacyPost(srv, `/marketing/site-web/sites/${siteA}/entete/pages/${second}`, { choice: "none" });
       const r = await boss.post(`/marketing/site-web/sites/${siteA}/dupliquer`, {});
       const copy = idFrom(r.location);
       const row = db.prepare("SELECT header_component_id FROM mk_sites WHERE id = ?").get(copy);
@@ -158,10 +159,10 @@ describe("Theme Builder (vrai serveur)", () => {
       const siteB = idFrom((await boss.post("/marketing/site-web/sites", { name: "Site destination" })).location);
       const p = await newPage("Page à variante", siteA);
       await publish(p);
-      const v = await boss.post(`/marketing/site-web/sites/${siteA}/entete/variante`, { name: "Variante A" });
+      const v = legacyPost(srv, `/marketing/site-web/sites/${siteA}/entete/variante`, { name: "Variante A" });
       const variant = db.prepare("SELECT id FROM mk_web_components WHERE variant_of = ? ORDER BY id DESC").get(headerA);
       assert.ok(variant, "variante créée " + v.status);
-      assert.equal((await boss.post(`/marketing/site-web/sites/${siteA}/entete/pages/${p}`, { choice: `variant:${variant.id}` })).status, 302);
+      assert.equal((legacyPost(srv, `/marketing/site-web/sites/${siteA}/entete/pages/${p}`, { choice: `variant:${variant.id}` })).status, 302);
       assert.equal(db.prepare("SELECT header_mode FROM mk_landing_pages WHERE id = ?").get(p).header_mode, "variant");
       const mv = await boss.post(`/marketing/pages/${p}`, { name: "Page à variante", slug: slugOf(p), site_id: String(siteB) });
       const after = db.prepare("SELECT site_id, header_mode, header_component_id FROM mk_landing_pages WHERE id = ?").get(p);

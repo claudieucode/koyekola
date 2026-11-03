@@ -135,17 +135,21 @@ module.exports = () => {
     const readOnly = site.status !== "active" || Boolean(site.deleted_at);
     require("./generalSettings").render(req, res, { siteId: site.id, name: site.name, principal: false, readOnly, site }, "espace/reglages");
   });
-  // Les trois écrans qui vivaient sur l'ancienne fiche « Réglages » : leurs formulaires et leurs données n'ont pas changé, seul leur emplacement (Apparence) a changé
+  // En-tête et pied de page : gérés UNIQUEMENT par le Theme Builder. Les anciennes adresses redirigent vers sa section correspondante.
   const partsPage = (view, active, title) => (req, res) => {
     const site = load(req, res);
     if (!site) return;
     res.render(view, {
-      title, active, site, canWrite: req.mk.can("forms.write"), T: tokens, cssVars: tokens.tokensToCss(site.tokens), headerOverview: pages.headerOverview(req.mk.ctx, site.id),
-      components: pages.listComponents(req.mk.ctx, { siteId: site.id }),
+      title, active, site, canWrite: req.mk.can("forms.write"), T: tokens, cssVars: tokens.tokensToCss(site.tokens),
     });
   };
-  router.get("/site-web/sites/:id(\\d+)/reglages/en-tete", need("forms.read"), partsPage("marketing/site-header", "apparence/en-tete", "En-tête"));
-  router.get("/site-web/sites/:id(\\d+)/reglages/pied-de-page", need("forms.read"), partsPage("marketing/site-footer", "apparence/pied-de-page", "Pied de page"));
+  const toThemeBuilder = (type) => (req, res) => {
+    const site = load(req, res);
+    if (!site) return;
+    res.redirect(301, `/marketing/site-web/sites/${site.id}/constructeur-de-theme?type=${type}`);
+  };
+  router.get("/site-web/sites/:id(\\d+)/reglages/en-tete", need("forms.read"), toThemeBuilder("header"));
+  router.get("/site-web/sites/:id(\\d+)/reglages/pied-de-page", need("forms.read"), toThemeBuilder("footer"));
   router.get("/site-web/sites/:id(\\d+)/reglages/design-system", need("forms.read"), partsPage("marketing/site-design", "apparence/styles", "Design system avancé"));
   router.post("/site-web/sites/:id(\\d+)", need("forms.write"), (req, res, next) => {
     const site = load(req, res);
@@ -232,51 +236,6 @@ module.exports = () => {
       const site = pages.saveSiteDesign(req.mk.ctx, current.id, { tokens: body.tokens, settings: body.settings, name: body.name, revision: body.revision });
       res.set("Cache-Control", "no-store").json(settingsPayload(req, site));
     } catch (error) { settingsError(res, next, error); }
-  });
-  // En-tête et pied de page du site : un composant affiché autour des sections de chaque page du site
-  router.post("/site-web/sites/:id(\\d+)/parties", need("forms.write"), need("appearance.parts"), (req, res, next) => {
-    const site = load(req, res);
-    if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/pied-de-page#parties`, () => {
-      pages.setSiteParts(req.mk.ctx, site.id, { header: intOrNull(req.body.header), footer: intOrNull(req.body.footer) });
-      return "En-tête et pied de page enregistrés : ils s'affichent sur toutes les pages du site.";
-    });
-  });
-  // ---------- En-tête du site : création, variantes, exceptions par page ----------
-  // En-tête de départ : une ligne avec le logo et le nom du site (éléments qui lisent l'identité du site) ; modifiable ensuite
-  const STARTER_HEADER = () => ({ type: "layout", children: [{ type: "container", props: { full: true }, styles: { desktop: { display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: "16px", paddingTop: "16px", paddingBottom: "16px", paddingLeft: "24px", paddingRight: "24px" }, mobile: { flexDirection: "column", gap: "8px" } }, children: [{ type: "sitelogo", props: { height: 40 } }, { type: "sitetitle", props: { tag: "p", link: true } }] }] });
-  router.post("/site-web/sites/:id(\\d+)/entete/creer", need("forms.write"), (req, res, next) => {
-    const site = load(req, res);
-    if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/en-tete#entete`, () => {
-      if (site.header_component_id) throw new (require("../errors").MarketingError)("invalid", "Ce site a déjà un en-tête.");
-      let name = "En-tête principal", n = 1;
-      while (req.mk.ctx.db.prepare("SELECT 1 FROM mk_web_components WHERE organization_id = ? AND name = ? COLLATE NOCASE").get(req.mk.ctx.organizationId, name)) { n += 1; name = `En-tête principal ${n}`; }
-      const c = pages.createComponent(req.mk.ctx, { name, section: STARTER_HEADER(), siteId: site.id });
-      pages.setSiteParts(req.mk.ctx, site.id, { header: c.id, footer: site.footer_component_id });
-      return `En-tête « ${c.name} » créé : il s'affiche sur toutes les pages du site. Utilisez « Modifier l'en-tête » pour le composer.`;
-    });
-  });
-  router.post("/site-web/sites/:id(\\d+)/entete/variante", need("forms.write"), (req, res, next) => {
-    const site = load(req, res);
-    if (!site) return;
-    let variant = null;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/en-tete#entete`, () => {
-      variant = pages.createHeaderVariant(req.mk.ctx, site.id, { name: req.body.name });
-      return `Variante « ${variant.name} » créée (copie de l'en-tête du site). Modifiez-la, puis choisissez les pages qui l'utilisent.`;
-    });
-  });
-  router.post("/site-web/sites/:id(\\d+)/entete/pages/:pageId(\\d+)", need("forms.write"), (req, res, next) => {
-    const site = load(req, res);
-    if (!site) return;
-    attempt(req, res, next, `/marketing/site-web/sites/${site.id}/reglages/en-tete#entete`, () => {
-      const page = pages.requirePage(req.mk.ctx, Number(req.params.pageId));
-      if (page.site_id !== site.id) throw new (require("../errors").MarketingError)("invalid", "Cette page n'appartient pas à ce site.");
-      const choice = String(req.body.choice || "inherit");
-      const mode = choice === "none" ? "none" : choice.startsWith("variant:") ? "variant" : "inherit";
-      pages.setPageHeader(req.mk.ctx, page.id, { mode, componentId: mode === "variant" ? Number(choice.slice(8)) : null });
-      return mode === "none" ? `« ${page.name} » n'affiche plus d'en-tête.` : mode === "variant" ? `« ${page.name} » utilise maintenant une variante de l'en-tête.` : `« ${page.name} » utilise de nouveau l'en-tête du site.`;
-    });
   });
   router.post("/site-web/sites/:id(\\d+)/dupliquer", need("forms.write"), (req, res, next) => {
     // Créer un site relève de l'équipe de l'organisation (comme la suppression) : la copie n'appartiendrait à aucun accès limité à un site

@@ -166,21 +166,25 @@ describe("Paramètres → Général", () => {
     assert.equal(one("SELECT COUNT(*) n FROM mk_landing_pages WHERE site_id = ? AND published_at LIKE '%T%'", B).n, 0);
   });
 
-  test("écrans déplacés : en-tête, pied de page et design system gardent leurs formulaires et leurs données ; les anciens liens à ancre mènent à leur nouvel écran", async () => {
-    for (const [path, needle] of [["en-tete", 'id="entete"'], ["pied-de-page", 'id="parties"'], ["design-system", 'id="design"']]) {
-      const r = await boss.get(`${R}/sites/${A}/reglages/${path}`); assert.equal(r.status, 200, path); assert.ok(r.text.includes(needle), path);
-    }
-    assert.ok((await boss.get(`${R}/sites/${A}/reglages/design-system`)).text.includes(`/sites/${A}/design`), "le formulaire du design system poste toujours sur la même route");
+  test("en-tête et pied de page : plus d'écrans autonomes, tout mène au Theme Builder ; le design system garde son formulaire", async () => {
+    const r = await boss.get(`${R}/sites/${A}/reglages/design-system`); assert.equal(r.status, 200); assert.ok(r.text.includes('id="design"'));
+    assert.ok(r.text.includes(`/sites/${A}/design`), "le formulaire du design system poste toujours sur la même route");
     const d = await boss.post(`${R}/sites/${A}/design`, { reset: "1" }); assert.equal(d.status, 302); assert.match(d.location, /\/reglages\/design-system$/);
-    const p = await boss.post(`${R}/sites/${A}/parties`, { header: "", footer: "" }); assert.equal(p.status, 302); assert.match(p.location, /\/reglages\/pied-de-page#parties$/);
+    // anciennes adresses : redirection vers la section du Theme Builder (jamais d'écran vide) ; anciennes actions : supprimées
+    for (const [old, type] of [["en-tete", "header"], ["pied-de-page", "footer"]]) {
+      const x = await boss.get(`${R}/sites/${A}/reglages/${old}`); assert.equal(x.status, 301, old); assert.equal(x.location, `${R}/sites/${A}/constructeur-de-theme?type=${type}`);
+    }
+    for (const path of ["parties", "entete/creer", "entete/variante"]) assert.equal((await boss.post(`${R}/sites/${A}/${path}`, {})).status, 404, path);
     const old = await boss.get(`${R}/sites/${A}/reglages`); assert.ok(!old.text.includes('id="entete"') && !old.text.includes('id="design"'), "plus de doublon dans Général");
-    assert.match(old.text, /reglages\/en-tete/, "Général renvoie vers l'en-tête"); assert.match(old.text, /reglages\/pied-de-page/); assert.match(old.text, /reglages\/design-system/);
+    assert.match(old.text, /constructeur-de-theme\?type=header/, "Général renvoie vers le Theme Builder"); assert.match(old.text, /constructeur-de-theme\?type=footer/); assert.match(old.text, /reglages\/design-system/);
+    assert.doesNotMatch(old.text, /reglages\/en-tete|reglages\/pied-de-page/);
     const nav = require("../src/marketing/web/cmsNav");
     const space = { siteId: A, principal: false, base: `${R}/sites/${A}`, name: "Alpha", listHref: `${R}/sites` };
     const items = nav.projectSections(space).flatMap((s) => s.items);
-    assert.equal(items.find((i) => i.key === "apparence/en-tete").href, `${R}/sites/${A}/reglages/en-tete#entete`);
-    assert.equal(items.find((i) => i.key === "apparence/pied-de-page").href, `${R}/sites/${A}/reglages/pied-de-page#parties`);
-    assert.equal((await boss.get(`${R}/sites/${B}/reglages/en-tete`)).status, 200); assert.equal((await adminA.get(`${R}/sites/${B}/reglages/en-tete`)).status === 200, false, "l'en-tête de B n'est pas ouvert à l'admin de A");
+    assert.equal(items.find((i) => i.key === "apparence/en-tete"), undefined, "absent du menu d'un site");
+    assert.equal(items.find((i) => i.key === "apparence/pied-de-page"), undefined, "absent du menu d'un site");
+    assert.ok(items.find((i) => i.key === "apparence/theme-builder"), "le Theme Builder reste dans le menu");
+    assert.equal((await adminA.get(`${R}/sites/${B}/reglages/en-tete`)).status === 301, false, "la redirection ne s'ouvre pas à l'admin de A pour le site B");
   });
 
   test("principal : l'équipe règle le site principal (nom, fuseau, e-mail administratif) ; l'effet est celui du moteur (une seule source) ; l'e-mail est validé", async () => {

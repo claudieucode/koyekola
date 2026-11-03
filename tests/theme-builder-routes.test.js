@@ -3,6 +3,7 @@
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
+const { legacyPost } = require("./legacy-parts-helper");
 const { startServer, loginInstructor, newStudent } = require("./helpers");
 
 describe("Theme Builder (serveur réel)", () => {
@@ -89,7 +90,7 @@ describe("Theme Builder (serveur réel)", () => {
   });
   test("import des anciens réglages : en-tête déjà choisi pour le site repris sans toucher l'ancien système ; second passage sans doublon", async () => {
     const C = Number((await boss.post("/marketing/site-web/sites", { name: "Site Ancien" })).location.match(/sites\/(\d+)/)[1]);
-    await boss.post("/marketing/pages", { name: "Page Ancien", site_id: C, kind: "page" }); await boss.post(`/marketing/site-web/sites/${C}/entete/creer`, {});
+    await boss.post("/marketing/pages", { name: "Page Ancien", site_id: C, kind: "page" }); legacyPost(srv, `/marketing/site-web/sites/${C}/entete/creer`, {});
     const before = one("SELECT header_component_id h FROM mk_sites WHERE id = ?", C).h;
     const r1 = json(await post(boss, U(C, "/api/importer-ancien"))); assert.equal(r1.imported.length, 1); assert.equal(r1.imported[0].type, "header");
     assert.equal(one("SELECT header_component_id h FROM mk_sites WHERE id = ?", C).h, before);

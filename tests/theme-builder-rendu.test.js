@@ -3,6 +3,7 @@
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY, freshMarketing } = require("./marketing-helpers");
+const { legacyPost } = require("./legacy-parts-helper");
 const { startServer, Client, loginInstructor } = require("./helpers");
 const pages = require("../src/marketing/pages");
 
@@ -78,7 +79,7 @@ describe("Theme Builder : rendu public (serveur réel)", () => {
   });
   test("repli historique : un site avec en-tête choisi à l'ancienne et aucun modèle publié rend comme avant ; le modèle publié prime ensuite", async () => {
     const C = Number((await boss.post("/marketing/site-web/sites", { name: "Site Ancien" })).location.match(/sites\/(\d+)/)[1]);
-    const p = await make(C, "Page Ancien"); await boss.post(`/marketing/site-web/sites/${C}/entete/creer`, {});
+    const p = await make(C, "Page Ancien"); legacyPost(srv, `/marketing/site-web/sites/${C}/entete/creer`, {});
     const t0 = await html(p); assert.match(t0, /lp-site-part lp-site-header/, "en-tête historique");
     const h = await tpl(C, "header", "HEADERNOUVEAU", {}); assert.match(await html(p), /lp-site-header/); assert.ok(!(await html(p)).includes("HEADERNOUVEAU"), "brouillon ignoré");
     await publish(C, h); const t1 = await html(p); assert.ok(t1.includes("HEADERNOUVEAU"));

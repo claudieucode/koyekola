@@ -307,8 +307,8 @@ const ABILITY = {
   landing: { mode: "open", module: "pages" },
   apparence: { mode: "open", module: "editeur-du-site" },
   "apparence/theme-builder": { mode: "themebuilder" },
-  "apparence/en-tete": { mode: "open", module: "reglages", sub: "en-tete", hash: "entete" },
-  "apparence/pied-de-page": { mode: "open", module: "reglages", sub: "pied-de-page", hash: "parties" },
+  "apparence/en-tete": { mode: "central" }, // l'en-tête et le pied de page d'un site se gèrent UNIQUEMENT dans le Theme Builder
+  "apparence/pied-de-page": { mode: "central" },
   redirections: { mode: "open", module: "redirections" },
   seo: { mode: "open", module: "seo" },
   boutique: { mode: "open", module: "boutique" },

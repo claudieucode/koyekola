@@ -20,11 +20,11 @@ describe("entrées fermées du menu d'un site : preuves", () => {
   });
   after(() => { db.close(); return srv.stop(); });
 
-  test("décompte exact : 2 entrées fermées sur 84 du registre, par groupe", () => {
+  test("décompte exact : 2 entrées fermées sur 82 du registre, par groupe", () => {
     const list = closed(); const by = {}; for (const i of list) by[i.group] = (by[i.group] || 0) + 1;
     assert.equal(list.length, 2);
     assert.deepEqual(by, { Redirections: 2 });
-    assert.equal(nav.projectSections(space()).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key)).length, 84); // 75 + 4 écrans SEO du lot 2 (liens internes, positions, Google, export/import) + Theme Builder + 4 écrans de la boutique
+    assert.equal(nav.projectSections(space()).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key)).length, 82); // 75 + 4 écrans SEO du lot 2 + écrans ajoutés depuis ; En-tête et Pied de page ne sont plus dans le menu d'un site (Theme Builder)
   });
   test("chaque entrée fermée : grisée « Bientôt » sans lien dans le menu rendu (équipe et administrateur du site), avec la permission du registre ; aucune adresse directe ne prétend fonctionner", async () => {
     const inventory = [];

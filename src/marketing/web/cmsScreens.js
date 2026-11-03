@@ -53,7 +53,7 @@ const SCREENS = {
   // ----- Apparence -----
   apparence(req, ctx, sub) {
     const sites = pages.listSites(ctx);
-    const siteRows = (anchor, linkLabel) => sites.map((s) => ({ cells: [{ text: s.name, href: `${BASE}/sites/${s.id}` }, String(s.page_count ?? s.pages ?? "—"), s.status === "active" ? { status: { label: "Actif", cls: "mk-status-ok" } } : { status: { label: "Archivé", cls: "mk-status-off" } }], actions: [{ label: linkLabel, href: `${BASE}/sites/${s.id}/reglages${anchor}` }] }));
+    const siteRows = (anchor, linkLabel) => sites.map((s) => ({ cells: [{ text: s.name, href: `${BASE}/sites/${s.id}` }, String(s.page_count ?? s.pages ?? "—"), s.status === "active" ? { status: { label: "Actif", cls: "mk-status-ok" } } : { status: { label: "Archivé", cls: "mk-status-off" } }], actions: [{ label: linkLabel, href: `${BASE}/sites/${s.id}${anchor.startsWith("/constructeur") ? "" : "/reglages"}${anchor}` }] }));
     const siteTable = (caption, anchor, linkLabel) => ({ caption, columns: [{ label: "Site" }, { label: "Pages", num: true }, { label: "Statut" }], rows: siteRows(anchor, linkLabel), empty: empty("globe", "Aucun site", "Créez un site pour régler son design, son en-tête et son pied de page.", { label: "Créer un site", href: `${BASE}/sites#nouveau` }) });
     if (sub === "templates") {
       const user = pages.listPageTemplates(ctx);
@@ -68,8 +68,8 @@ const SCREENS = {
         table: { caption: "Patterns", columns: [{ label: "Pattern" }, { label: "Catégorie" }, { label: "Sections", num: true }], rows: list.map((p) => ({ cells: [p.label, p.category, String(p.sections.length)] })), empty: empty("layers", "Aucun pattern", "") } };
     }
     if (sub === "styles") return { title: "Styles", lead: "Le design system de chaque site : couleurs, polices, tailles, espacements, boutons. Ouvrez un site pour le modifier.", table: siteTable("Styles par site", "/design-system", "Modifier les styles") };
-    if (sub === "en-tete") return { title: "En-tête", lead: "L'en-tête de chaque site, avec ses variantes par page.", table: siteTable("En-têtes par site", "/en-tete#entete", "Modifier l'en-tête") };
-    if (sub === "pied-de-page") return { title: "Pied de page", lead: "Le pied de page de chaque site.", table: siteTable("Pieds de page par site", "/pied-de-page#parties", "Modifier le pied de page") };
+    if (sub === "en-tete") return { title: "En-tête", lead: "L'en-tête de chaque site, géré dans le Theme Builder (conditions d'affichage par page).", table: siteTable("En-têtes par site", "/constructeur-de-theme?type=header", "Ouvrir dans le Theme Builder") };
+    if (sub === "pied-de-page") return { title: "Pied de page", lead: "Le pied de page de chaque site.", table: siteTable("Pieds de page par site", "/constructeur-de-theme?type=footer", "Ouvrir dans le Theme Builder") };
     return { title: "Éditeur du site", art: "themes", lead: "Chaque page de vos sites s'édite dans l'éditeur visuel KOLAKISA (Page Builder). Les réglages communs d'un site se trouvent dans sa fiche.",
       cards: [{ icon: "layout", title: "Éditer une page", text: "Choisissez une page : elle s'ouvre dans l'éditeur visuel.", href: "/marketing/pages", label: "Ouvrir les pages" },
         { icon: "palette", title: "Styles du site", text: "Couleurs, polices, tailles et boutons.", href: `${BASE}/apparence/styles`, label: "Ouvrir les styles" },
