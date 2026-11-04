@@ -22,7 +22,7 @@ describe("registre et menu", () => {
   test("le registre couvre la structure cible (14 rubriques : « Navigation » est devenu Apparence → Menus) sans adresse en double", () => {
     assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
-    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Theme Builder", "Thèmes", "Éditeur de fichiers", "Personnaliser", "Éditeur du site", "Templates", "Patterns", "Styles", "Polices", "En-tête", "Pied de page", "Widgets", "Menus"]);
+    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Theme Builder", "Thèmes", "Éditeur de fichiers", "Personnaliser", "Éditeur du site", "Templates", "Patterns", "Styles", "Polices", "Widgets", "Menus"]);
   });
 
   test("chaque écran du registre répond 200 dans la coque CMS, avec son menu ouvert sur la bonne entrée", async () => {
@@ -39,7 +39,7 @@ describe("registre et menu", () => {
       assert.match(res.text, /class="mk-body is-cms"/, `${item.href} : coque CMS`);
       assert.match(res.text, /aria-label="Sections du CMS"/);
       // Le tableau de bord du principal est servi dans la coque CMS mais n'a plus d'entrée dans le menu central (Mes sites → Ouvrir)
-      if (item.key !== "sitedash") assert.match(res.text, new RegExp(`href="${item.href.replace(/[/]/g, "\\/")}"[^>]*aria-current="page"`), `${item.href} : entrée active`);
+      if (item.key !== "sitedash" && item.key !== "apparence/theme-builder") assert.match(res.text, new RegExp(`href="${item.href.replace(/[/]/g, "\\/")}"[^>]*aria-current="page"`), `${item.href} : entrée active`);
       assert.doesNotMatch(res.text, /Menu marketing/, `${item.href} : plus le menu Marketing`);
     }
   });

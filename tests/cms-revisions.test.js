@@ -266,10 +266,11 @@ describe("apparence : brouillon, publication, restauration, conflit", () => {
     const r = await boss.get(`${H}/appearance/0/comparer?a=p:${ids[0]}&b=p:${ids[ids.length - 1]}`);
     assert.equal(r.status, 200); assert.match(r.text, /Styles/); assert.match(r.text, /colors › primary/);
   });
-  test("en-tête et pied de page sont versionnés avec l'apparence (même historique)", async () => {
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "TÊTE V2", search: "1", cart: "1", account: "1", mobile_cta: "1", base: String(draftRev()) });
-    const last = q("SELECT data FROM cms_revisions WHERE content_type = 'appearance' ORDER BY id DESC")[0];
-    assert.match(last.data, /TÊTE V2/);
+  test("les anciens écrans En-tête / Pied de page n'enregistrent plus rien dans l'historique de l'apparence (Theme Builder = seul gestionnaire)", async () => {
+    const avant = one("SELECT COUNT(*) n FROM cms_revisions WHERE content_type = 'appearance'").n;
+    const r = await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "TÊTE V2", base: String(draftRev()) });
+    assert.equal(r.status, 404);
+    assert.equal(one("SELECT COUNT(*) n FROM cms_revisions WHERE content_type = 'appearance'").n, avant);
   });
 });
 

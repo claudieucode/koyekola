@@ -43,7 +43,7 @@ const SECTIONS = [
   },
   {
     key: "apparence", label: "Apparence", icon: "palette", items: [
-      leaf("apparence/theme-builder", "Theme Builder", `${BASE}/apparence/theme-builder`, { permission: "forms.read", siteOnly: true }), // propre à un site créé : le centre de contrôle du design (en-tête, pied, pages, articles, archives, 404, boutique)
+      leaf("apparence/theme-builder", "Theme Builder", `${BASE}/apparence/theme-builder`, { permission: "forms.read" }), // le centre de contrôle du design — site principal ET sites créés : UNIQUE endroit où l'on gère en-tête et pied de page (+ pages, articles, archives, 404, boutique)
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
       leaf("apparence/fichiers", "Éditeur de fichiers", `${BASE}/themes/fichiers`, { permission: "appearance.read" }), // fichiers JSON virtuels d'un thème installé (services/themeFiles.js)
       leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
@@ -52,8 +52,6 @@ const SECTIONS = [
       leaf("apparence/patterns", "Patterns", `${BASE}/patterns`, { permission: "appearance.read" }),
       leaf("apparence/styles", "Styles", `${BASE}/styles`, { permission: "appearance.read" }),
       leaf("apparence/polices", "Polices", `${BASE}/polices`, { permission: "appearance.read" }),
-      leaf("apparence/en-tete", "En-tête", `${BASE}/apparence/en-tete`, { permission: "appearance.read" }),
-      leaf("apparence/pied-de-page", "Pied de page", `${BASE}/apparence/pied-de-page`, { permission: "appearance.read" }),
       leaf("apparence/widgets", "Widgets", `${BASE}/widgets`, { permission: "appearance.read" }),
       leaf("apparence/menus", "Menus", `${BASE}/apparence/menus`, { permission: "navigation.read" }),
     ],
@@ -307,8 +305,6 @@ const ABILITY = {
   landing: { mode: "open", module: "pages" },
   apparence: { mode: "open", module: "editeur-du-site" },
   "apparence/theme-builder": { mode: "themebuilder" },
-  "apparence/en-tete": { mode: "central" }, // l'en-tête et le pied de page d'un site se gèrent UNIQUEMENT dans le Theme Builder
-  "apparence/pied-de-page": { mode: "central" },
   redirections: { mode: "open", module: "redirections" },
   seo: { mode: "open", module: "seo" },
   boutique: { mode: "open", module: "boutique" },
@@ -421,7 +417,7 @@ function marketingGroup(space) {
 function projectItem(item, group, space) {
   const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
   // Dans son espace, le principal a le même « Tableau de bord » que tout autre site, à l'adresse de SON espace
-  if (item.siteOnly && space.principal) return null; // le site principal n'a pas de Theme Builder
+  if (space.principal && item.key === "apparence/theme-builder") return { ...base, href: `${space.base}/constructeur-de-theme`, status: "live", external: true };
   if (space.principal) return item.key === "sitedash" ? { ...item, ...base, label: "Tableau de bord", href: `${space.base}/tableau-de-bord` } : { ...item, ...base };
   const a = ABILITY[item.key];
   if (a && a.mode === "central") return null;

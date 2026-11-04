@@ -87,7 +87,8 @@
     side.appendChild(head);
     side.appendChild(h("p", { class: "kwc-scope-note", text: "Les réglages d'ici s'appliquent à tout le site. Pour modifier un seul élément, utilisez « Sélectionner un élément » puis « Modifier seulement cet élément »." }));
     var list = h("ul", { class: "kwc-list", role: "list" });
-    boot.panels.forEach(function (p) {
+    // L'en-tête et le pied de page ne se règlent plus ici : le Theme Builder est leur UNIQUE gestionnaire (une ligne d'accès remplace les deux anciens panneaux)
+    boot.panels.filter(function (p) { return p.id !== "en-tete" && p.id !== "pied"; }).forEach(function (p) {
       var btn = h("button", { type: "button", class: "kwc-row", "data-panel": p.id, onclick: function () { renderPanel(p.id); } }, [
         h("span", { class: "kwc-row-ico" }, [icon(p.icon)]),
         h("span", { class: "kwc-row-txt" }, [h("strong", { text: p.label }), h("small", { text: p.hint })]),
@@ -96,6 +97,11 @@
       ]);
       list.appendChild(h("li", null, [btn]));
     });
+    if (boot.links && boot.links.themeBuilder) list.appendChild(h("li", null, [h("a", { class: "kwc-row", "data-theme-builder": "1", href: boot.links.themeBuilder }, [
+      h("span", { class: "kwc-row-ico" }, [icon("header")]),
+      h("span", { class: "kwc-row-txt" }, [h("strong", { text: "Theme Builder" }), h("small", { text: "En-tête, pied de page et modèles : création, affectation et publication." })]),
+      icon("chev", "kwc-row-chev"),
+    ])]));
     side.appendChild(list);
     if (boot.unsupported && boot.unsupported.length) {
       var d = h("details", { class: "kwc-unsupported" }, [h("summary", { text: "Non disponible pour ce site (" + boot.unsupported.length + ")" })]);

@@ -42,8 +42,8 @@ before(async () => {
 after(() => srv.stop());
 
 describe("éditeur du site : écrans", () => {
-  test("Apparence et ses 6 écrans s'ouvrent (état honnête : apparence d'origine, aucun template, aucun pattern)", async () => {
-    for (const [sub, re] of [["", /Apparence d(?:'|&#39;)origine/], ["/styles", /Couleurs/], ["/en-tete", /Logo/], ["/pied-de-page", /Marque/], ["/templates", /Utiliser le template par défaut/], ["/patterns", /Aucun pattern\./]]) {
+  test("Apparence et ses 4 écrans s'ouvrent (état honnête : apparence d'origine, aucun template, aucun pattern)", async () => {
+    for (const [sub, re] of [["", /Apparence d(?:'|&#39;)origine/], ["/styles", /Couleurs/], ["/templates", /Utiliser le template par défaut/], ["/patterns", /Aucun pattern\./]]) {
       const r = await boss.get(AP + sub);
       assert.equal(r.status, 200, sub); assert.match(r.text, re, sub);
     }
@@ -132,71 +132,27 @@ describe("styles globaux : brouillon → publication → site", () => {
   });
 });
 
-describe("en-tête et pied de page", () => {
-  test("en-tête : annonce, bouton d'action, recherche et panier masqués — enregistrés puis rendus", async () => {
-    const r = await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "MA MARQUE", ann_enabled: "1", ann_text: "Soldes de rentrée", ann_url: "/catalogue", cta_enabled: "1", cta_label: "Essayer", cta_url: "/inscription", cta_style: "outline", mobile_cta: "1", account: "1" });
-    assert.equal(r.status, 302);
-    assert.doesNotMatch(await get("/"), /MA MARQUE/, "brouillon : pas encore public");
-    const preview = (await boss.get("/?kwpreview=1")).text;
-    assert.match(preview, /MA MARQUE/); assert.match(preview, /Soldes de rentrée/);
-    await publish();
-    const html = await get("/");
-    assert.match(html, /<a href="\/" class="logo"[^>]*>MA MARQUE<\/a>/); assert.match(html, /class="site-announcement"[\s\S]*href="\/catalogue">Soldes de rentrée/);
-    assert.match(html, /class="btn btn-outline btn-sm header-cta" href="\/inscription">Essayer/); assert.match(html, /header-cta-mobile/);
-    assert.doesNotMatch(html, /class="header-search"/); assert.doesNotMatch(html, /href="\/panier"/);
-    assert.match((await boss.get(`${AP}/en-tete`)).text, /value="MA MARQUE"/, "persistance au rechargement");
+describe("en-tête et pied de page : le Theme Builder est leur UNIQUE gestionnaire", () => {
+  const TBP = "/marketing/site-web/principal/constructeur-de-theme";
+  test("les anciennes adresses redirigent vers le Theme Builder du site principal ; aucune écriture possible par l'ancien gestionnaire", async () => {
+    for (const [path, type] of [["en-tete", "header"], ["pied-de-page", "footer"]]) {
+      const r = await boss.request(`${AP}/${path}`, { method: "GET", redirect: "manual" });
+      assert.equal(r.status, 301, path); assert.equal(String(r.headers.location || r.headers.get?.("location")), `${TBP}?type=${type}`);
+      assert.equal((await boss.post(`${AP}/${path}`, { logo_mode: "text", logo_text: "X", brand_mode: "text", brand_text: "X" })).status, 404, `POST ${path}`);
+    }
+    assert.equal(one("SELECT COUNT(*) n FROM appearance_configs WHERE draft LIKE '%\"header\"%' AND draft LIKE '%\"X\"%'").n, 0);
   });
-  test("en-tête : bouton ou annonce activés sans contenu, URL dangereuse : refusés", async () => {
-    const before = one("SELECT draft FROM appearance_configs");
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "X", cta_enabled: "1", cta_label: "", cta_url: "", search: "1", cart: "1", account: "1" });
-    assert.match(flashOf((await boss.get(`${AP}/en-tete`)).text), /besoin d(?:'|&#39;)un texte/);
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "X", cta_enabled: "1", cta_label: "Go", cta_url: "javascript:alert(1)", search: "1", cart: "1", account: "1" });
-    assert.match(flashOf((await boss.get(`${AP}/en-tete`)).text), /autorisées/);
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "X", ann_enabled: "1", ann_text: "", search: "1", cart: "1", account: "1" });
-    assert.deepEqual(one("SELECT draft FROM appearance_configs"), before, "le brouillon n'a pas changé");
-    assert.doesNotMatch(await get("/"), /javascript:alert/);
-  });
-  test("texte HTML dans l'en-tête : échappé (jamais interprété)", async () => {
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "<script>alert(1)</script>", ann_enabled: "1", ann_text: "<img src=x onerror=alert(2)>", search: "1", cart: "1", account: "1", mobile_cta: "1" });
-    await publish();
-    const html = await get("/");
-    assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/); assert.doesNotMatch(html, /<img src=x onerror/);
-    assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "KOLAKISA", search: "1", cart: "1", account: "1", mobile_cta: "1" });
-    await publish();
-  });
-  test("logo image : uniquement une image de la médiathèque ; image supprimée → retour au texte, sans erreur", async () => {
-    const mid = Number(db.prepare("INSERT INTO mk_media (organization_id, kind, type, path, name, mime, size, width, height) VALUES (?, 'image', 'image', '/uploads/marketing/1/logo-test.png', 'logo-test.png', 'image/png', 100, 120, 40)").run(orgId).lastInsertRowid);
-    await boss.post(`${AP}/en-tete`, { logo_mode: "image", logo_media: "999999", logo_alt: "x", search: "1", cart: "1", account: "1" });
-    assert.match(flashOf((await boss.get(`${AP}/en-tete`)).text), /Choisissez une image/);
-    await boss.post(`${AP}/en-tete`, { logo_mode: "image", logo_media: String(mid), logo_alt: "Mon logo", search: "1", cart: "1", account: "1", mobile_cta: "1" });
-    await publish();
-    assert.match(await get("/"), /class="logo logo-img"[^>]*><img src="\/uploads\/marketing\/1\/logo-test\.png" alt="Mon logo" width="120" height="40">/);
-    db.prepare("UPDATE mk_media SET deleted_at = datetime('now') WHERE id = ?").run(mid);
-    const html = await get("/");
-    assert.match(html, /<a href="\/" class="logo"[^>]*>KOLAKISA<\/a>/, "média à la corbeille : texte");
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "KOLAKISA", search: "1", cart: "1", account: "1", mobile_cta: "1" });
-    await publish();
-  });
-  test("pied de page : phrase, mention avec {année}, lien Cookies — enregistrés, publiés, rendus", async () => {
-    await boss.post(`${AP}/pied-de-page`, { brand_mode: "text", brand_text: "MA MARQUE", tagline: "Apprendre autrement.", copyright: "© {année} Ma Marque", cookies: "" });
-    assert.doesNotMatch(await get("/"), /Apprendre autrement/);
-    await publish();
-    const html = await get("/");
-    assert.match(html, /Apprendre autrement\./); assert.match(html, new RegExp(`© ${new Date().getFullYear()} Ma Marque`)); assert.doesNotMatch(html, /data-kw-consent-open>Cookies/);
-    assert.match((await boss.get(`${AP}/pied-de-page`)).text, /value="Apprendre autrement\."/);
-  });
-  test("navigation : le menu de l'en-tête et du pied de page vient du moteur de navigation, modifiable sans toucher à l'apparence", async () => {
+  test("sans modèle publié dans le Theme Builder, le site garde son en-tête et son pied d'origine ; le menu vient du moteur de navigation", async () => {
+    let html = await get("/");
+    assert.match(html, /class="site-header"/); assert.match(html, /class="site-footer"/);
     await boss.post("/marketing/site-web/navigation/menus", { name: "Menu apparence" });
     const m = one("SELECT id FROM nav_menus WHERE name = 'Menu apparence'");
     await boss.post(`/marketing/site-web/navigation/menus/${m.id}/elements`, { type: "custom", label: "Offres", url: "/offres" });
     await boss.post("/marketing/site-web/navigation/emplacements", { header: String(m.id), footer: String(m.id) });
-    let html = await get("/");
-    assert.match(html, /href="\/offres"[^>]*>Offres/); assert.match(html, /MA MARQUE/, "l'apparence publiée reste");
-    await boss.post(`/marketing/site-web/navigation/menus/${m.id}/elements`, { type: "custom", label: "Nouveauté", url: "/nouveau" });
     html = await get("/");
-    assert.match(html, /href="\/nouveau"/);
-    assert.match((await boss.get(`${AP}/en-tete`)).text, /un menu est affecté/);
+    assert.match(html, /href="\/offres"[^>]*>Offres/);
+    await boss.post(`/marketing/site-web/navigation/menus/${m.id}/elements`, { type: "custom", label: "Nouveauté", url: "/nouveau" });
+    assert.match(await get("/"), /href="\/nouveau"/);
     await boss.post("/marketing/site-web/navigation/emplacements", { header: "", footer: "" });
   });
 });
@@ -301,9 +257,7 @@ describe("templates", () => {
   test("en-tête commun : modifier l'en-tête change tous les templates (même en-tête partout)", async () => {
     const t = await newPage("Tpl commun", [layout([{ id: "head00000019", type: "heading", props: { text: "COMMUN", level: 1 } }, { id: "post00000019", type: "postcontent", props: {} }])]);
     await assign({ type: "single_post", page_id: String(t) });
-    await boss.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "ENTETE-COMMUN", search: "1", cart: "1", account: "1", mobile_cta: "1" });
-    await publish();
-    for (const path of ["/blog/article-a", "/blog/article-b", "/blog", "/cette-page-n-existe-pas", "/a-propos"]) assert.match(await get(path), /ENTETE-COMMUN/, path);
+    for (const path of ["/blog/article-a", "/blog/article-b", "/blog", "/cette-page-n-existe-pas", "/a-propos"]) { const h = await get(path); assert.match(h, /class="site-header"/, path); assert.match(h, /class="site-footer"/, path); }
     await clear();
   });
   test("template vers une page inexistante, de tunnel ou en double : refusé", async () => {
@@ -365,7 +319,7 @@ describe("patterns", () => {
 describe("publication, historique, droits, isolation", () => {
   test("historique : chaque publication est conservée ; une ancienne version revient dans le brouillon puis se publie", async () => {
     const hist = q("SELECT id FROM appearance_revisions ORDER BY id");
-    assert.ok(hist.length >= 5);
+    assert.ok(hist.length >= 3); // publications de styles des tests précédents (l'en-tête et le pied ne se publient plus ici)
     await boss.post(`${AP}/versions/${hist[0].id}/restaurer`, {});
     assert.ok(one("SELECT draft FROM appearance_configs").draft);
     assert.match(styleOf((await boss.get("/?kwpreview=1")).text), /--accent:#aa2200/);
@@ -387,7 +341,6 @@ describe("publication, historique, droits, isolation", () => {
     assert.equal(v.status, 200); assert.match(v.text, /disabled/);
     await viewer.post(`${AP}/styles`, { "colors.primary": "#00aa00" });
     assert.equal(one("SELECT COUNT(*) n FROM appearance_configs WHERE draft LIKE '%00aa00%'").n, 0);
-    assert.equal((await viewer.post(`${AP}/en-tete`, { logo_mode: "text", logo_text: "V" })).status, 403);
     assert.equal((await viewer.post(`${AP}/publier`, {})).status, 403);
     await editor.post(`${AP}/styles`, { "colors.primary": "#00aa00" });
     assert.equal(one("SELECT COUNT(*) n FROM appearance_configs WHERE draft LIKE '%00aa00%'").n, 1);
@@ -416,11 +369,11 @@ describe("publication, historique, droits, isolation", () => {
     assert.equal(styleOf(await get("/")), "");
   });
   test("pas de cache obsolète : la version publiée change aussitôt sur le site (première requête après publication)", async () => {
-    await boss.post(`${AP}/pied-de-page`, { brand_mode: "text", brand_text: "V1", tagline: "Version un", copyright: "c", cookies: "1" }); await publish();
-    assert.match(await get("/"), /Version un/);
-    await boss.post(`${AP}/pied-de-page`, { brand_mode: "text", brand_text: "V2", tagline: "Version deux", copyright: "c", cookies: "1" }); await publish();
-    const html = await get("/");
-    assert.match(html, /Version deux/); assert.doesNotMatch(html, /Version un/);
+    await saveStyles({ "colors.primary": "#112233" }); await publish();
+    assert.match(styleOf(await get("/")), /#112233/);
+    await saveStyles({ "colors.primary": "#445566" }); await publish();
+    const css = styleOf(await get("/"));
+    assert.match(css, /#445566/); assert.doesNotMatch(css, /#112233/);
     await boss.post(`${AP}/retirer`, {});
   });
   test("performance : 100 lectures du site public avec apparence publiée, moins de 5 s au total", async () => {

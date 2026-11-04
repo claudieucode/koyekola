@@ -16,7 +16,7 @@ const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparen
   "boutique", "boutique/commandes", "boutique/clients", "boutique/reglages", // Programme 20.5 : boutique du site (écrans de l'espace, données de CE site)
   "seo", "seo/404", "seo/analyse", "seo/meta", "seo/indexation", "seo/sitemap", "seo/schema", "seo/open-graph", "seo/robots", "seo/liens-internes", "seo/positions", "seo/connexions", "seo/transfert", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
-const CENTRAL = ["sites", "apparence/en-tete", "apparence/pied-de-page", "extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
+const CENTRAL = ["sites", "extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
 const MOTIFS = {
   
   // SEO : les neuf rubriques sont ouvertes (isolation démontrée, seo-par-site-espace et seo-site-outils)

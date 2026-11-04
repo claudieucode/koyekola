@@ -13,7 +13,13 @@ const line = (v, max) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, "").r
 const json = (s, d) => { try { const v = JSON.parse(s); return v && typeof v === "object" ? v : d; } catch { return d; } };
 const MAX_PER_SITE = 200;
 
+// siteId : numéro d'un site créé, ou null = SITE PRINCIPAL (ses contenus portent site_id NULL). Le site vient toujours de l'appelant et est revérifié.
+const MAIN = Object.freeze({ id: null, principal: true, name: "Site principal", status: "active", deleted_at: null });
 function site(ctx, siteId) {
+  if (siteId === null) {
+    if (ctx.siteScope !== undefined && ctx.siteScope !== null) throw bad("Site introuvable.", "not_found"); // un accès limité à un site ne voit jamais le site principal
+    return MAIN;
+  }
   if (!Number.isInteger(siteId) || siteId < 1) throw bad("Site introuvable.", "not_found");
   if (ctx.siteScope !== undefined && ctx.siteScope !== null && ctx.siteScope !== siteId) throw bad("Site introuvable.", "not_found");
   const s = P().getSite(ctx, siteId);
@@ -22,18 +28,18 @@ function site(ctx, siteId) {
 }
 const shape = (r) => r && ({ id: r.id, siteId: r.site_id, type: r.type, typeLabel: (Types.TYPES[r.type] || { label: r.type }).label, group: (Types.TYPES[r.type] || {}).group || "custom", name: r.name, status: r.status,
   sourceKind: r.source_kind, sourceId: r.source_id, conditions: json(r.conditions, { include: [], exclude: [] }), revision: r.revision, legacyRef: r.legacy_ref, createdAt: r.created_at, updatedAt: r.updated_at, publishedAt: r.published_at, archivedAt: r.archived_at });
-const row = (ctx, siteId, id) => ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE id = ? AND site_id = ? AND organization_id = ?").get(Number(id), siteId, ctx.organizationId);
+const row = (ctx, siteId, id) => ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE id = ? AND site_id IS ? AND organization_id = ?").get(Number(id), siteId, ctx.organizationId);
 function get(ctx, siteId, id) { site(ctx, siteId); const r = row(ctx, siteId, id); if (!r) throw bad("Modèle introuvable.", "not_found"); return shape(r); }
 
 // Modèles (non archivés) d'un site qui ouvrent CE document : identité exacte quand on édite un composant (jamais déduite du nom)
 function bySource(ctx, siteId, kind, sourceId) {
   site(ctx, siteId);
-  return ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE site_id = ? AND organization_id = ? AND source_kind = ? AND source_id = ? AND status <> 'archived' ORDER BY id").all(siteId, ctx.organizationId, kind, Number(sourceId)).map(shape);
+  return ctx.db.prepare("SELECT * FROM mk_tb_templates WHERE site_id IS ? AND organization_id = ? AND source_kind = ? AND source_id = ? AND status <> 'archived' ORDER BY id").all(siteId, ctx.organizationId, kind, Number(sourceId)).map(shape);
 }
 
 // Marqueur de cache de résolution d'un site : change à toute écriture (chaque écriture incrémente `revision`, donc la somme change même dans la même seconde)
-const stampOf = (ctx, siteId) => { const r = ctx.db.prepare("SELECT COUNT(*) n, COALESCE(SUM(revision), 0) u, COALESCE(MAX(id), 0) m FROM mk_tb_templates WHERE site_id = ? AND organization_id = ?").get(siteId, ctx.organizationId); return `${r.n}:${r.u}:${r.m}`; };
-const touch = (ctx, siteId, id) => ctx.db.prepare("UPDATE mk_tb_templates SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ? AND site_id = ?").run(id, siteId);
+const stampOf = (ctx, siteId) => { const r = ctx.db.prepare("SELECT COUNT(*) n, COALESCE(SUM(revision), 0) u, COALESCE(MAX(id), 0) m FROM mk_tb_templates WHERE site_id IS ? AND organization_id = ?").get(siteId, ctx.organizationId); return `${r.n}:${r.u}:${r.m}`; };
+const touch = (ctx, siteId, id) => ctx.db.prepare("UPDATE mk_tb_templates SET updated_at = datetime('now'), revision = revision + 1 WHERE id = ? AND site_id IS ?").run(id, siteId);
 
 // Modèle du Theme Builder qui porte ce document (page ou composant), ou null. Source de vérité unique « document → modèle » : l'éditeur, les aperçus et les
 // routes de publication s'en servent au lieu de deviner depuis un nom ou une position. Filtré par organisation ; le site du modèle est celui de la ligne.
@@ -44,7 +50,7 @@ function byDocument(ctx, kind, docId) {
 }
 function list(ctx, siteId, { type = "", status = "", q = "", archived = false } = {}) {
   site(ctx, siteId);
-  const where = ["organization_id = ?", "site_id = ?"], args = [ctx.organizationId, siteId];
+  const where = ["organization_id = ?", "site_id IS ?"], args = [ctx.organizationId, siteId];
   if (type && Types.has(type)) { where.push("type = ?"); args.push(type); }
   if (["draft", "published", "archived"].includes(status)) { where.push("status = ?"); args.push(status); } else if (!archived) where.push("status != 'archived'");
   const rows = ctx.db.prepare(`SELECT * FROM mk_tb_templates WHERE ${where.join(" AND ")} ORDER BY updated_at DESC, id DESC`).all(...args).map(shape);
@@ -58,7 +64,7 @@ function assertType(ctx, siteId, type) {
 }
 const uniqueName = (ctx, siteId, name, exceptId = 0) => {
   const base = line(name, 100) || "Modèle"; let n = base, i = 2;
-  while (ctx.db.prepare("SELECT 1 FROM mk_tb_templates WHERE site_id = ? AND organization_id = ? AND status != 'archived' AND name = ? COLLATE NOCASE AND id != ?").get(siteId, ctx.organizationId, n, exceptId)) n = `${base} (${i++})`;
+  while (ctx.db.prepare("SELECT 1 FROM mk_tb_templates WHERE site_id IS ? AND organization_id = ? AND status != 'archived' AND name = ? COLLATE NOCASE AND id != ?").get(siteId, ctx.organizationId, n, exceptId)) n = `${base} (${i++})`;
   return n;
 };
 // Document de départ selon le type : les parties globales sont des COMPOSANTS (réutilisables), les autres des PAGES du site
@@ -73,7 +79,7 @@ function docName(ctx, siteId, kind, name) {
 function create(ctx, siteId, { type, name, conditions = {}, sourceKind = null, sourceId = null, legacyRef = null, status = "draft" } = {}) {
   site(ctx, siteId); assertType(ctx, siteId, type);
   const n = line(name, 100); if (!n) throw bad("Le nom du modèle est obligatoire.");
-  if (ctx.db.prepare("SELECT COUNT(*) c FROM mk_tb_templates WHERE site_id = ? AND organization_id = ?").get(siteId, ctx.organizationId).c >= MAX_PER_SITE) throw bad(`${MAX_PER_SITE} modèles au plus par site.`);
+  if (ctx.db.prepare("SELECT COUNT(*) c FROM mk_tb_templates WHERE site_id IS ? AND organization_id = ?").get(siteId, ctx.organizationId).c >= MAX_PER_SITE) throw bad(`${MAX_PER_SITE} modèles au plus par site.`);
   let cond; try { cond = Cond.normalize(conditions, type); } catch (e) { throw bad(e.message); }
   return transaction(ctx.db, () => {
     let kind = sourceKind, sid = sourceId;
@@ -93,7 +99,7 @@ function create(ctx, siteId, { type, name, conditions = {}, sourceKind = null, s
 }
 function rename(ctx, siteId, id, name) {
   const t = get(ctx, siteId, id); const n = line(name, 100); if (!n) throw bad("Le nom du modèle est obligatoire.");
-  ctx.db.prepare("UPDATE mk_tb_templates SET name = ? WHERE id = ? AND site_id = ?").run(uniqueName(ctx, siteId, n, t.id), t.id, siteId); touch(ctx, siteId, t.id);
+  ctx.db.prepare("UPDATE mk_tb_templates SET name = ? WHERE id = ? AND site_id IS ?").run(uniqueName(ctx, siteId, n, t.id), t.id, siteId); touch(ctx, siteId, t.id);
   return get(ctx, siteId, id);
 }
 // Conflits que provoquerait ce jeu de conditions pour ce modèle (sans rien écrire)
@@ -108,7 +114,7 @@ function setConditions(ctx, siteId, id, conditions, { revision = null } = {}) {
   let cond; try { cond = Cond.normalize(conditions, t.type); } catch (e) { throw bad(e.message); }
   const conflicts = t.status === "published" ? conflictsFor(ctx, siteId, t, cond) : [];
   if (conflicts.some((c) => c.severity === "blocking")) throw Object.assign(bad(conflicts.find((c) => c.severity === "blocking").message, "conflict"), { conflicts });
-  ctx.db.prepare("UPDATE mk_tb_templates SET conditions = ? WHERE id = ? AND site_id = ?").run(JSON.stringify(cond), t.id, siteId); touch(ctx, siteId, t.id);
+  ctx.db.prepare("UPDATE mk_tb_templates SET conditions = ? WHERE id = ? AND site_id IS ?").run(JSON.stringify(cond), t.id, siteId); touch(ctx, siteId, t.id);
   return { template: get(ctx, siteId, id), conflicts };
 }
 function snapshotOf(ctx, t) {
@@ -132,7 +138,7 @@ function publish(ctx, siteId, id, { revision = null, replace = false } = {}) {
   const blocking = conflicts.find((c) => c.severity === "blocking");
   if (blocking) throw Object.assign(bad(blocking.message, "conflict"), { conflicts });
   return transaction(ctx.db, () => {
-    for (const o of replaced) { ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft' WHERE id = ? AND site_id = ?").run(o.id, siteId); touch(ctx, siteId, o.id); }
+    for (const o of replaced) { ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft' WHERE id = ? AND site_id IS ?").run(o.id, siteId); touch(ctx, siteId, o.id); }
     // le document est publié par le service existant (contrôles de publication de l'éditeur inchangés) ; une erreur annule tout
     try {
       if (t.sourceKind === "page") P().publish(ctx, t.sourceId);
@@ -141,26 +147,26 @@ function publish(ctx, siteId, id, { revision = null, replace = false } = {}) {
     const n = (ctx.db.prepare("SELECT COALESCE(MAX(number), 0) m FROM mk_tb_versions WHERE template_id = ?").get(t.id).m) + 1;
     ctx.db.prepare("INSERT INTO mk_tb_versions (template_id, number, name, conditions, snapshot, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, n, t.name, JSON.stringify(t.conditions), JSON.stringify(snapshotOf(ctx, t)), ctx.userId ?? null);
     ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
-    ctx.db.prepare("UPDATE mk_tb_templates SET status = 'published', published_at = datetime('now') WHERE id = ? AND site_id = ?").run(t.id, siteId); touch(ctx, siteId, t.id);
+    ctx.db.prepare("UPDATE mk_tb_templates SET status = 'published', published_at = datetime('now') WHERE id = ? AND site_id IS ?").run(t.id, siteId); touch(ctx, siteId, t.id);
     return { template: get(ctx, siteId, id), version: n, conflicts, replaced: replaced.map((o) => ({ id: o.id, name: o.name })) };
   });
 }
 function unpublish(ctx, siteId, id) {
   const t = get(ctx, siteId, id); if (t.status !== "published") throw bad("Ce modèle n'est pas publié.", "conflict");
-  ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft' WHERE id = ? AND site_id = ?").run(t.id, siteId); touch(ctx, siteId, t.id); return get(ctx, siteId, id);
+  ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft' WHERE id = ? AND site_id IS ?").run(t.id, siteId); touch(ctx, siteId, t.id); return get(ctx, siteId, id);
 }
 function archive(ctx, siteId, id) {
   const t = get(ctx, siteId, id); if (t.status === "archived") throw bad("Ce modèle est déjà archivé.", "conflict");
-  ctx.db.prepare("UPDATE mk_tb_templates SET status = 'archived', archived_at = datetime('now') WHERE id = ? AND site_id = ?").run(t.id, siteId); touch(ctx, siteId, t.id); return get(ctx, siteId, id);
+  ctx.db.prepare("UPDATE mk_tb_templates SET status = 'archived', archived_at = datetime('now') WHERE id = ? AND site_id IS ?").run(t.id, siteId); touch(ctx, siteId, t.id); return get(ctx, siteId, id);
 }
 function restore(ctx, siteId, id) {
   const t = get(ctx, siteId, id); if (t.status !== "archived") throw bad("Ce modèle n'est pas archivé.", "conflict");
-  ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft', archived_at = NULL, name = ? WHERE id = ? AND site_id = ?").run(uniqueName(ctx, siteId, t.name, t.id), t.id, siteId); touch(ctx, siteId, t.id); return get(ctx, siteId, id);
+  ctx.db.prepare("UPDATE mk_tb_templates SET status = 'draft', archived_at = NULL, name = ? WHERE id = ? AND site_id IS ?").run(uniqueName(ctx, siteId, t.name, t.id), t.id, siteId); touch(ctx, siteId, t.id); return get(ctx, siteId, id);
 }
 // Suppression : seulement un modèle ARCHIVÉ. Le document (page ou composant) n'est jamais effacé : il reste dans Pages / Composants.
 function remove(ctx, siteId, id) {
   const t = get(ctx, siteId, id); if (t.status !== "archived") throw bad("Archivez le modèle avant de le supprimer.", "conflict");
-  ctx.db.prepare("DELETE FROM mk_tb_templates WHERE id = ? AND site_id = ?").run(t.id, siteId); return { removed: t.id, documentKept: { kind: t.sourceKind, id: t.sourceId } };
+  ctx.db.prepare("DELETE FROM mk_tb_templates WHERE id = ? AND site_id IS ?").run(t.id, siteId); return { removed: t.id, documentKept: { kind: t.sourceKind, id: t.sourceId } };
 }
 function duplicate(ctx, siteId, id) {
   const t = get(ctx, siteId, id);
@@ -185,7 +191,7 @@ function restoreVersion(ctx, siteId, id, number) {
   return transaction(ctx.db, () => {
     if (snap.kind === "component" && snap.section) P().saveComponentDraft(ctx, t.sourceId, snap.section);
     else if (snap.kind === "page" && snap.content) P().saveDraft(ctx, t.sourceId, snap.content, { revision: P().requirePage(ctx, t.sourceId).revision });
-    ctx.db.prepare("UPDATE mk_tb_templates SET conditions = CASE WHEN ? THEN ? ELSE conditions END, name = ? WHERE id = ? AND site_id = ?").run(conditionsRestored ? 1 : 0, JSON.stringify(cond), uniqueName(ctx, siteId, v.name, t.id), t.id, siteId); touch(ctx, siteId, t.id);
+    ctx.db.prepare("UPDATE mk_tb_templates SET conditions = CASE WHEN ? THEN ? ELSE conditions END, name = ? WHERE id = ? AND site_id IS ?").run(conditionsRestored ? 1 : 0, JSON.stringify(cond), uniqueName(ctx, siteId, v.name, t.id), t.id, siteId); touch(ctx, siteId, t.id);
     return { ...get(ctx, siteId, id), conditionsRestored };
   });
 }

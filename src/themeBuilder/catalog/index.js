@@ -14,6 +14,8 @@ function def(type) {
 }
 const types = () => FILES.filter((t) => Types.has(t));
 const PER_TYPE = () => (SKINS.length * 20);
+// Catalogue « plat » (ex. En-tête) : chaque modèle est UNE composition propre (famille + identité fixée par le modèle), pas un croisement mise en page × identité.
+// d.flat = true, d.families = [{ key, label }], chaque mise en page porte { key, family, skin } ; le filtre « mise en page » de l'interface liste alors les familles.
 
 const META = new Map();
 function entries(type) {
@@ -23,7 +25,10 @@ function entries(type) {
   // Catalogue à entrées propres (ex. Page 404) : chaque entrée porte sa composition ET son identité visuelle
   if (typeof d.entries === "function") { const own = d.entries().map((e) => ({ type, skinLabel: (SKINS.find((s) => s.key === e.skinKey) || {}).label || e.skinKey, ...e })); META.set(type, own); return own; }
   const out = [];
-  for (const l of d.layouts) for (const s of SKINS) out.push({ key: `${l.key}.${s.key}`, type, layoutKey: l.key, skinKey: s.key, name: `${l.label} · ${s.label}`, layoutLabel: l.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] });
+  if (d.flat) {
+    const fam = new Map(d.families.map((f) => [f.key, f]));
+    for (const l of d.layouts) { const s = SKINS.find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
+  } else for (const l of d.layouts) for (const s of SKINS) out.push({ key: `${l.key}.${s.key}`, type, layoutKey: l.key, layoutId: l.key, skinKey: s.key, name: `${l.label} · ${s.label}`, layoutLabel: l.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] });
   META.set(type, out);
   return out;
 }
@@ -58,5 +63,5 @@ function build(type, key, env = {}) {
   return out;
 }
 const thumbDoc = (type, key, env = {}) => { const b = build(type, key, env); return b ? (b.section || b.sections[0]) : null; };
-const stats = () => types().map((t) => ({ type: t, label: Types.TYPES[t].label, count: entries(t).length, layouts: def(t).layouts.length }));
+const stats = () => types().map((t) => ({ type: t, label: Types.TYPES[t].label, count: entries(t).length, layouts: def(t).layouts.length, ...(def(t).flat ? { flat: true } : {}) }));
 module.exports = { types, list, find, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };

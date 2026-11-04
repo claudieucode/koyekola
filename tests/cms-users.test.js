@@ -136,7 +136,8 @@ describe("les permissions contrôlent réellement le serveur (appels directs, sa
     // apparence.styles : brouillon oui, publication non
     assert.equal((await ap.post("/marketing/site-web/apparence/styles", { "colors.primary": "#223344" })).status, 302);
     assert.equal((await ap.post("/marketing/site-web/apparence/publier", {})).status, 403);
-    assert.equal((await ap.post("/marketing/site-web/apparence/en-tete", { logo_mode: "text", logo_text: "X" })).status, 403);
+    // l'ancien gestionnaire d'en-tête n'existe plus (le Theme Builder est l'unique gestionnaire) : aucune écriture possible par cette adresse
+    assert.equal((await ap.post("/marketing/site-web/apparence/en-tete", { logo_mode: "text", logo_text: "X" })).status, 404);
     // commentaires.moderate : approuve ; supprimer définitivement refusé
     const cid = Number(db.prepare("INSERT INTO blog_comments (post_id, content_type, content_id, author_name, body, status) VALUES (?, 'post', ?, 'A', 'c', 'pending')").run(post("art-cm", "Pour commentaire", bossId), 0).lastInsertRowid);
     assert.equal((await cm.post(`/marketing/site-web/commentaires/${cid}/approuver`, { retour: "/marketing/site-web/commentaires" })).status, 302);

@@ -1,12 +1,12 @@
 <%#
-  KOLAKISA CMS → Apparence (palier 8). Une seule expérience pour : Éditeur du site (aperçu + publication), Styles, En-tête, Pied de page,
+  KOLAKISA CMS → Apparence (palier 8). Une seule expérience pour : Éditeur du site (aperçu + publication), Styles,
   Templates, Patterns. Chaque réglage est enregistré dans un BROUILLON réel ; « Publier » le met sur le site. Le Page Builder reste le
   moteur visuel (modèles = pages du Page Builder, patterns = sections du Page Builder).
 %><%- include("partials/top", { title, active }) %>
 <%
   const fdt = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") + " à " + String(v).slice(11, 16) + " UTC" : "");
-  const T = st.draft.tokens, H = st.draft.header, F = st.draft.footer;
-  const tabs = [["", "Éditeur du site"], ["styles", "Styles"], ["en-tete", "En-tête"], ["pied-de-page", "Pied de page"], ["templates", "Templates"], ["patterns", "Patterns"]];
+  const T = st.draft.tokens;
+  const tabs = [["", "Éditeur du site"], ["styles", "Styles"], ["templates", "Templates"], ["patterns", "Patterns"]];
   const colorLabels = tokens.COLOR_LABELS;
   const col = (key, label) => `<div class="mk-ap-color"><label for="c-${key}">${label}</label><input id="c-${key}" type="color" name="colors.${key}" value="${T.colors[key]}"></div>`;
   const num = (id, name, label, value, attrs = "") => `<div class="field-group mk-ap-num"><label for="${id}">${label}</label><input id="${id}" type="number" name="${name}" value="${value === null || value === undefined ? "" : value}" ${attrs}></div>`;
@@ -118,60 +118,6 @@
         <div class="mk-ap-grid"><% ["xs", "sm", "md", "lg", "xl", "xxl"].forEach((k) => { %><%- num("sp-" + k, "space." + k, k.toUpperCase() + " (px)", T.space[k], 'min="0" max="240"') %><% }) %></div>
       </fieldset>
       <% if (canStyles) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer dans le brouillon</button></div><% } else { %><p class="field-hint">Lecture seule.</p><% } %>
-    </form>
-
-<% } else if (section === "en-tete") { %>
-    <p class="mk-lead">L'en-tête du site public. Les liens du menu viennent de <a href="/marketing/site-web/navigation">Navigation</a> : ici on choisit ce que l'en-tête affiche autour.</p>
-    <div class="mk-ap-card"><strong>Menu de l'en-tête :</strong>
-      <%= menus.header ? "un menu est affecté à l'emplacement « En-tête »" : "aucun menu affecté : les liens d'origine (Catégories, Catalogue, Blog) s'affichent" %> · <a href="/marketing/site-web/navigation">Gérer les menus et emplacements</a>
-      <% if (menus.mobile) { %> · un menu mobile distinct est affecté au tiroir<% } %></div>
-    <form method="post" action="<%= BASE %>/en-tete" class="mk-form mk-ap-form" data-ap-form><input type="hidden" name="base" value="<%= st.draftRev %>">
-      <fieldset<%= canParts ? "" : " disabled" %>>
-        <legend>Logo</legend>
-        <div class="field-group"><label for="h-lmode">Type de logo</label><select id="h-lmode" name="logo_mode" data-ap-logo-mode><option value="text"<%= H.logo.mode === "text" ? " selected" : "" %>>Texte</option><option value="image"<%= H.logo.mode === "image" ? " selected" : "" %>>Image de la médiathèque</option></select></div>
-        <div class="field-group"><label for="h-ltext">Texte du logo</label><input id="h-ltext" type="text" name="logo_text" maxlength="40" value="<%= H.logo.text %>"></div>
-        <div class="field-group" data-ap-media-field><label for="h-lalt">Texte alternatif de l'image</label><input id="h-lalt" type="text" name="logo_alt" maxlength="120" value="<%= H.logo.alt %>">
-          <input type="hidden" name="logo_media" value="<%= H.logo.mediaId || "" %>" data-ap-media-id><button type="button" class="btn btn-outline btn-sm" data-ap-media-pick>Choisir dans la médiathèque</button> <span class="mk-sub" data-ap-media-name><%= H.logo.mediaId ? "Image n° " + H.logo.mediaId : "Aucune image choisie" %></span></div>
-      </fieldset>
-      <fieldset<%= canParts ? "" : " disabled" %>>
-        <legend>Éléments de l'en-tête</legend>
-        <label class="mk-cms-check"><input type="checkbox" name="search" value="1"<%= H.search ? " checked" : "" %>> Recherche de formations</label>
-        <label class="mk-cms-check"><input type="checkbox" name="cart" value="1"<%= H.cart ? " checked" : "" %>> Panier</label>
-        <label class="mk-cms-check"><input type="checkbox" name="account" value="1"<%= H.account ? " checked" : "" %>> Compte (connexion, inscription, notifications)</label>
-      </fieldset>
-      <fieldset<%= canParts ? "" : " disabled" %>>
-        <legend>Bouton d'action</legend>
-        <label class="mk-cms-check"><input type="checkbox" name="cta_enabled" value="1"<%= H.cta.enabled ? " checked" : "" %>> Afficher un bouton dans l'en-tête</label>
-        <div class="mk-ap-grid"><div class="field-group"><label for="h-clabel">Texte</label><input id="h-clabel" type="text" name="cta_label" maxlength="30" value="<%= H.cta.label %>"></div><div class="field-group"><label for="h-curl">Adresse</label><input id="h-curl" type="text" name="cta_url" maxlength="500" value="<%= H.cta.url %>" placeholder="/catalogue"></div>
-          <%- sel("h-cstyle", "cta_style", "Style", [["primary", "Principal"], ["secondary", "Secondaire"], ["outline", "Contour"]], H.cta.style) %></div>
-        <label class="mk-cms-check"><input type="checkbox" name="mobile_cta" value="1"<%= H.mobile.showCta ? " checked" : "" %>> Aussi dans le menu mobile (tiroir)</label>
-      </fieldset>
-      <fieldset<%= canParts ? "" : " disabled" %>>
-        <legend>Barre d'annonce</legend>
-        <label class="mk-cms-check"><input type="checkbox" name="ann_enabled" value="1"<%= H.announcement.enabled ? " checked" : "" %>> Afficher une annonce au-dessus de l'en-tête</label>
-        <div class="mk-ap-grid"><div class="field-group"><label for="h-atext">Texte</label><input id="h-atext" type="text" name="ann_text" maxlength="160" value="<%= H.announcement.text %>"></div><div class="field-group"><label for="h-aurl">Adresse (facultative)</label><input id="h-aurl" type="text" name="ann_url" maxlength="500" value="<%= H.announcement.url %>"></div></div>
-      </fieldset>
-      <% if (canParts) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer dans le brouillon</button></div><% } else { %><p class="field-hint">Lecture seule.</p><% } %>
-    </form>
-
-<% } else if (section === "pied-de-page") { %>
-    <p class="mk-lead">Le pied de page du site public. Ses colonnes de liens viennent de <a href="/marketing/site-web/navigation">Navigation</a> (emplacement « Pied de page »).</p>
-    <div class="mk-ap-card"><strong>Menu du pied de page :</strong> <%= menus.footer ? "un menu est affecté : il remplace les colonnes d'origine" : "aucun menu affecté : les colonnes d'origine s'affichent" %> · <a href="/marketing/site-web/navigation">Gérer les menus et emplacements</a></div>
-    <form method="post" action="<%= BASE %>/pied-de-page" class="mk-form mk-ap-form" data-ap-form><input type="hidden" name="base" value="<%= st.draftRev %>">
-      <fieldset<%= canParts ? "" : " disabled" %>>
-        <legend>Marque</legend>
-        <div class="field-group"><label for="f-bmode">Logo du pied de page</label><select id="f-bmode" name="brand_mode" data-ap-logo-mode><option value="text"<%= F.brand.mode === "text" ? " selected" : "" %>>Texte</option><option value="header"<%= F.brand.mode === "header" ? " selected" : "" %>>Le même que l'en-tête</option><option value="image"<%= F.brand.mode === "image" ? " selected" : "" %>>Image de la médiathèque</option></select></div>
-        <div class="field-group"><label for="f-btext">Texte de la marque</label><input id="f-btext" type="text" name="brand_text" maxlength="40" value="<%= F.brand.text %>"></div>
-        <div class="field-group" data-ap-media-field><label for="f-balt">Texte alternatif de l'image</label><input id="f-balt" type="text" name="brand_alt" maxlength="120" value="<%= F.brand.alt %>">
-          <input type="hidden" name="brand_media" value="<%= F.brand.mediaId || "" %>" data-ap-media-id><button type="button" class="btn btn-outline btn-sm" data-ap-media-pick>Choisir dans la médiathèque</button> <span class="mk-sub" data-ap-media-name><%= F.brand.mediaId ? "Image n° " + F.brand.mediaId : "Aucune image choisie" %></span></div>
-      </fieldset>
-      <fieldset<%= canParts ? "" : " disabled" %>>
-        <legend>Textes</legend>
-        <div class="field-group"><label for="f-tag">Phrase de présentation</label><input id="f-tag" type="text" name="tagline" maxlength="200" value="<%= F.tagline %>"></div>
-        <div class="field-group"><label for="f-copy">Mention de bas de page</label><input id="f-copy" type="text" name="copyright" maxlength="200" value="<%= F.copyright %>"><span class="field-hint">« {année} » est remplacé par l'année en cours.</span></div>
-        <label class="mk-cms-check"><input type="checkbox" name="cookies" value="1"<%= F.cookies ? " checked" : "" %>> Lien « Cookies » (réglage du consentement)</label>
-      </fieldset>
-      <% if (canParts) { %><div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer dans le brouillon</button></div><% } else { %><p class="field-hint">Lecture seule.</p><% } %>
     </form>
 
 <% } else if (section === "templates") { %>

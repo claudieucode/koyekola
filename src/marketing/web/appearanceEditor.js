@@ -1,4 +1,4 @@
-// KOLAKISA CMS → Apparence → Éditeur du site (palier 8) : styles globaux, en-tête, pied de page, modèles (templates), patterns,
+// KOLAKISA CMS → Apparence → Éditeur du site (palier 8) : styles globaux, modèles (templates), patterns,
 // aperçu (bureau / tablette / mobile avec le vrai rendu du site) et publication. Le Page Builder reste le moteur visuel : les
 // modèles et les patterns sont des pages / sections du Page Builder ; ici on les affecte, on les range et on les publie.
 // Droits : appearance.read (voir) · appearance.styles / .parts / .templates / .patterns (éditeur) · appearance.publish (administrateur).
@@ -18,8 +18,6 @@ const BASE = "/marketing/site-web/apparence";
 const SECTIONS = {
   "": { title: "Éditeur du site", key: "apparence" },
   styles: { title: "Styles", key: "apparence/styles" },
-  "en-tete": { title: "En-tête", key: "apparence/en-tete" },
-  "pied-de-page": { title: "Pied de page", key: "apparence/pied-de-page" },
   templates: { title: "Templates", key: "apparence/templates" },
   patterns: { title: "Patterns", key: "apparence/patterns" },
 };
@@ -127,24 +125,9 @@ module.exports = () => {
       return "Styles enregistrés dans le brouillon. Prévisualisez, puis publiez pour les voir sur le site.";
     });
   });
-  const partRoute = (path, section) => router.post(`/site-web/apparence/${path}`, need("appearance.parts"), (req, res, next) => {
-    guard(req, res, next, `${BASE}/${path}`, () => {
-      const b = req.body || {};
-      const data = section === "header" ? {
-        logo: { mode: b.logo_mode, text: b.logo_text, mediaId: b.logo_media || null, alt: b.logo_alt },
-        search: b.search === "1", cart: b.cart === "1", account: b.account === "1",
-        announcement: { enabled: b.ann_enabled === "1", text: b.ann_text, url: b.ann_url },
-        cta: { enabled: b.cta_enabled === "1", label: b.cta_label, url: b.cta_url, style: b.cta_style },
-        mobile: { showCta: b.mobile_cta === "1" },
-      } : {
-        brand: { mode: b.brand_mode, text: b.brand_text, mediaId: b.brand_media || null, alt: b.brand_alt },
-        tagline: b.tagline, copyright: b.copyright, cookies: b.cookies === "1",
-      };
-      appearance.saveDraft(null, section, data, req.session.user.id, { baseRev: b.base });
-      return `${section === "header" ? "En-tête" : "Pied de page"} enregistré dans le brouillon.`;
-    });
-  });
-  partRoute("en-tete", "header"); partRoute("pied-de-page", "footer");
+  // L'en-tête et le pied de page du site principal se gèrent UNIQUEMENT dans le Theme Builder : les anciennes adresses y redirigent (aucun gestionnaire autonome).
+  router.get("/site-web/apparence/en-tete", need("forms.read"), (req, res) => res.redirect(301, "/marketing/site-web/principal/constructeur-de-theme?type=header"));
+  router.get("/site-web/apparence/pied-de-page", need("forms.read"), (req, res) => res.redirect(301, "/marketing/site-web/principal/constructeur-de-theme?type=footer"));
 
   // ----- Publication, annulation, historique -----
   router.post("/site-web/apparence/publier", need("appearance.publish"), (req, res, next) => {

@@ -14,8 +14,11 @@ const STATUS = { not_found: 404, forbidden: 403, module_disabled: 403, conflict:
 const P = () => require("../pages");
 module.exports = () => {
   const router = express.Router();
-  const B = "/site-web/sites/:id(\\d+)/constructeur-de-theme", A = `${B}/api`;
-  const sid = (req) => Number(req.params.id), body = (req) => (req.body && typeof req.body === "object" ? req.body : {});
+  // Deux entrées, UN SEUL jeu de routes : un site créé (/sites/:id/…) et le SITE PRINCIPAL (/principal/…, modèles à site_id NULL)
+  for (const [B, principal] of [["/site-web/sites/:id(\\d+)/constructeur-de-theme", false], ["/site-web/principal/constructeur-de-theme", true]]) {
+  const A = `${B}/api`;
+  const sid = (req) => (principal ? null : Number(req.params.id)), body = (req) => (req.body && typeof req.body === "object" ? req.body : {});
+  const spaceBase = (site) => (principal ? "/marketing/site-web/principal" : `/marketing/site-web/sites/${site.id}`);
   const run = (fn) => (req, res, next) => Promise.resolve().then(() => fn(req.mk.ctx, sid(req), req, res)).then((d) => { if (d !== undefined) res.set("Cache-Control", "no-store").json({ ok: true, ...d }); }).catch((e) => {
     if (e instanceof MarketingError || (e && e.code && STATUS[e.code])) return res.status(STATUS[e.code] || 400).set("Cache-Control", "no-store").json({ ok: false, error: e.message, code: e.code, conflicts: e.conflicts });
     next(e);
@@ -53,7 +56,7 @@ module.exports = () => {
       const site = TB.store.site(req.mk.ctx, sid(req));
       // Retour : l'écran d'origine si la page d'appel l'a indiqué (chemin interne uniquement, jamais une adresse externe), sinon le tableau de bord du site
       const ret = String(req.query.retour || ""), safe = /^\/(?!\/)[A-Za-z0-9\-._~\/?=&%]{1,300}$/.test(ret) && !ret.includes("..") ? ret : "";
-      res.set("Cache-Control", "no-store").render("marketing/theme-builder", { title: "Constructeur de thème", active: "sites", marketingShell: true, backUrl: safe || `/marketing/site-web/sites/${site.id}/tableau-de-bord`, backIsCustom: !!safe, siteId: site.id, siteName: site.name, base: `/marketing/site-web/sites/${site.id}/constructeur-de-theme`, siteBase: `/marketing/site-web/sites/${site.id}`, perms: { write: req.mk.can("forms.write"), remove: req.mk.can("pages.delete") } });
+      res.set("Cache-Control", "no-store").render("marketing/theme-builder", { title: "Constructeur de thème", active: "sites", marketingShell: true, backUrl: safe || `${spaceBase(site)}/tableau-de-bord`, backIsCustom: !!safe, siteId: site.id, principal, siteName: site.name, base: `${spaceBase(site)}/constructeur-de-theme`, siteBase: spaceBase(site), perms: { write: req.mk.can("forms.write"), remove: req.mk.can("pages.delete") } });
     } catch (e) { if (e instanceof MarketingError) return res.status(e.code === "not_found" ? 404 : 422).render("error", { message: e.message }); next(e); }
   });
   router.get(`${A}/modeles`, need("forms.read"), run((ctx, id, req) => listAll(ctx, id, { type: String(req.query.type || ""), status: String(req.query.statut || ""), q: String(req.query.q || ""), archived: req.query.archives === "1" }, req.query.leger === "1")));
@@ -147,7 +150,7 @@ module.exports = () => {
       TB.store.site(req.mk.ctx, sid(req)); libType(req.mk.ctx, sid(req), req.params.type);
       const doc = Catalog.build(req.params.type, req.params.key, { formId: siteFormId(req.mk.ctx, sid(req)) });
       if (!doc) return res.status(404).type("text").send("Modèle introuvable.");
-      require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb }, (html) => {
+      require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb, sampleMenu: true }, (html) => {
         if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
         res.set({ "Cache-Control": thumb ? "private, max-age=120" : "no-store", "X-Content-Type-Options": "nosniff" }).type("html").send(html);
       });
@@ -160,5 +163,6 @@ module.exports = () => {
     const t = useTemplate(ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });
     return { template: card(ctx, t, new Set()) };
   }));
+  }
   return router;
 };

@@ -69,12 +69,12 @@ describe("espace du site principal", () => {
     const r = nav.buildSiteNav({ can: all, active: "espace/pages", space: principal });
     const hrefs = new Set(flat(r.sections).map((i) => i.href));
     // Le tableau de bord du principal est celui de SON espace ; « Mes sites » n'est pas une entrée d'espace
-    // « Theme Builder » est propre à un site créé (siteOnly) : le site principal ne l'a pas
-    for (const it of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash" && !i.siteOnly)) assert.ok(hrefs.has(it.href), it.href);
+    // « Theme Builder » : le site principal l'a aussi, à l'adresse de SON espace (unique gestionnaire de l'en-tête et du pied de page)
+    for (const it of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash")) assert.ok(hrefs.has(it.key === "apparence/theme-builder" ? `${principal.base}/constructeur-de-theme` : it.href), it.href);
     assert.ok(hrefs.has(`${principal.base}/tableau-de-bord`)); assert.ok(!hrefs.has(`${nav.BASE}/sites`));
-    assert.equal(nav.ALL.length, 89); // + « Theme Builder » (Programme 23.1, propre à un site créé) ; + 4 écrans Boutique (Programme 20.5) ; 80 + 4 écrans SEO du lot 2 ; // CHIMERA : recomptage (80) ; FICHIERS-THEMES : + « Éditeur de fichiers »;  // ADMIN-NOTES : + « Admin Notes » // // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
+    assert.equal(nav.ALL.length, 87); // − « En-tête » et « Pied de page » (gérés par le Theme Builder) ; + « Theme Builder » (Programme 23.1, propre à un site créé) ; + 4 écrans Boutique (Programme 20.5) ; 80 + 4 écrans SEO du lot 2 ; // CHIMERA : recomptage (80) ; FICHIERS-THEMES : + « Éditeur de fichiers »;  // ADMIN-NOTES : + « Admin Notes » // // WIDGETS : + « Widgets » ; PERSONNALISER : + « Personnaliser » (écran plein cadre) // POLICES : + « Polices » ; THEMES : + « Thèmes » ; MEDIA-01 : + « Ajouter un fichier média »
     assert.equal(r.sections.length, 15);
-    assert.equal(flat(r.sections).length, 78 + 4 + 4 + 11); // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; // CHIMERA : + « Éditeur de fichiers » et « Profil » ; EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(flat(r.sections).length, 78 + 4 + 4 + 11 - 1); // − 2 (En-tête, Pied de page) + 1 (Theme Builder, aussi pour le principal) ; + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; // CHIMERA : + « Éditeur de fichiers » et « Profil » ; EFFACER-DONNEES : + « Effacer les données » ; THEMES : + « Thèmes » ; R8 lot 6D : + « Importer des contacts » dans Marketing
   });
   test("le menu global du principal (hors espace) est inchangé et ne contient aucune clé d'espace", () => {
     const g = nav.buildCmsNav({ can: all, active: "sites" });
