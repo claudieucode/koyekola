@@ -42,7 +42,7 @@ function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, l
   const pages = Math.max(1, Math.ceil(rows.length / lim)), p = Math.min(pages, Math.max(1, Number(page) || 1));
   const d = def(type);
   return { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
-    layouts: d.layouts.map((l) => ({ key: l.key, label: l.label })), skins: SKINS.map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
+    layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: SKINS.map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
 }
 const find = (type, key) => entries(type).find((e) => e.key === key) || null;
 
@@ -54,7 +54,7 @@ function build(type, key, env = {}) {
   const ck = `${type}:${key}:${env.formId || 0}`;
   if (CACHE.has(ck)) return CACHE.get(ck);
   const d = def(type), S = skinOf(meta.skinKey);
-  const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutKey).build;
+  const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
   const children = withIds(buildFn(kit(S), env));
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
