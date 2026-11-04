@@ -97,6 +97,24 @@ function partsFor(ctx, page) {
   return out;
 }
 
+// Page individuelle (single_page) pour une PAGE du Page Builder : le modèle publié qui s'applique à cette page (accueil = vue « front », sinon « page »), ou null.
+// Retour : { template, row } (row = page du modèle, publiée). Une page qui sert elle-même de modèle, une étape de tunnel ou un modèle sans page publiée : null (rendu historique).
+function singleFor(ctx, page) {
+  try {
+    if (!page || !page.site_id || page.kind !== "page") return null;
+    const pool = published(ctx, page.site_id);
+    if (!pool.some((t) => t.type === "single_page")) return null;
+    if (store.byDocument(ctx, "page", page.id)) return null;
+    const parents = []; let cur = page.parent_id;
+    for (let i = 0; cur && i < 12; i++) { parents.push(Number(cur)); const r = ctx.db.prepare("SELECT parent_id FROM mk_landing_pages WHERE id = ? AND organization_id = ?").get(cur, ctx.organizationId); cur = r && r.parent_id; }
+    const view = homeOf(ctx, page.site_id) === page.id ? "front" : "page";
+    const w = Res.resolve(pool, { siteId: page.site_id, view, id: page.id, parents, authorId: null, categories: [], categoryAncestors: [], tags: [] }, { type: "single_page" }).winner;
+    if (!w || w.sourceKind !== "page") return null;
+    const row = pageRowOf(ctx, page.site_id, w);
+    return row && row.id !== page.id ? { template: w, row } : null;
+  } catch { return null; }
+}
+
 // themeRender.renderRegion : modèle de PAGE applicable (toutes familles). Renvoie une ligne de page publiée { slug… } ou null.
 function pickRegion(ctx, siteId, families, o = {}) {
   try {
@@ -111,4 +129,4 @@ function pickRegion(ctx, siteId, families, o = {}) {
   } catch { /* repli historique */ }
   return null;
 }
-module.exports = { partsFor, pickRegion, published, FAMILY, regionContext, defaultContext, resolveParts, resolveExtras, extrasFor, pageRowOf, hasParts };
+module.exports = { singleFor, partsFor, pickRegion, published, FAMILY, regionContext, defaultContext, resolveParts, resolveExtras, extrasFor, pageRowOf, hasParts };
