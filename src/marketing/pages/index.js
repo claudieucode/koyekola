@@ -982,8 +982,36 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
     if (page.header_mode === "none") header = null;
     else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header", draftId) || p.header;
   }
-  return [header, ...sections, ...(themeBuilder && page && page.site_id !== undefined ? themeExtraSections(ctx, page) : []), p.footer].filter(Boolean);
+  const body = themeBuilder && page && page.site_id && !forced ? themeSingleSections(ctx, page, sections) : sections;
+  return [header, ...body, ...(themeBuilder && page && page.site_id !== undefined ? themeExtraSections(ctx, page) : []), p.footer].filter(Boolean);
 }
+// Theme Builder · Page individuelle : le modèle publié qui s'applique à une page du Page Builder l'enveloppe. Le contenu PROPRE de la page prend la place de l'élément « Contenu de l'article »
+// (postcontent) du modèle ; {{post.title}} / {{post.excerpt}} deviennent le titre et la description de la page ; l'image mise en avant (absente d'une page) retire l'élément image.
+// Pages à sections historiques (non « layout »), modèle sans « contenu » ou erreur : la page s'affiche telle quelle (repli historique, jamais bloquant).
+function themeSingleSections(ctx, page, sections) {
+  try {
+    const found = require("../../themeBuilder/render").singleFor(ctx, page);
+    if (!found || !sections.length || !sections.every((x) => x.type === "layout")) return sections;
+    const pub = require("../landing").getPublishedPage(ctx.db, found.row.slug);
+    if (!pub) return sections;
+    const tpl = JSON.parse(JSON.stringify(resolveSections(ctx, pub.sections)));
+    const title = String(page.title || page.name || ""), desc = String(page.description || "");
+    const bind = (v) => (typeof v === "string" ? v.split("{{post.title}}").join(title).split("{{post.excerpt}}").join(desc) : v);
+    let placed = 0;
+    const own = () => sections.map((x) => ({ ...JSON.parse(JSON.stringify(x)), type: "container" }));
+    const walkNodes = (list) => list.flatMap((n) => {
+      if (n.type === "image" && n.props && n.props.src === "{{post.image}}") return [];
+      if (n.type === "postcontent") { placed++; return [{ id: `pc${placed}${String(n.id || "").slice(0, 10)}`, type: "container", children: own(), styles: { desktop: { display: "flex", flexDirection: "column", gap: "24px", width: "100%" } } }]; }
+      const out = { ...n };
+      if (out.props) out.props = Object.fromEntries(Object.entries(out.props).map(([k, v]) => [k, bind(v)]));
+      if (out.children) out.children = walkNodes(out.children);
+      return [out];
+    });
+    const result = tpl.map((s) => (s.type === "layout" ? { ...s, children: walkNodes(s.children || []) } : s));
+    return placed === 1 ? result.map((s) => ({ ...s, id: `tp${found.template.id}${String(s.id || "")}`.slice(0, 20) })) : sections;
+  } catch { return sections; }
+}
+
 // Theme Builder : barre latérale et modèles personnalisés applicables à une page du Page Builder, placés sous son contenu et avant le pied de page. Jamais bloquant.
 function themeExtraSections(ctx, page) {
   const out = [];

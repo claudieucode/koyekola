@@ -118,7 +118,7 @@ describe("Pied de page : cohérence éditeur / aperçu / vignette / site public"
   describe("rendu dans un vrai navigateur : même composition partout, desktop / tablette / mobile", { skip: !chromium || !CHROME ? "Playwright ou Chrome absent" : false }, () => {
     let browser, tpl;
     before(async () => {
-      const key = json(await boss.get(U(S2, "/api/bibliotheque?type=footer&mise=quatre-colonnes&limite=1"))).items[0].key;
+      const key = json(await boss.get(U(S2, "/api/bibliotheque?type=footer&mise=colonnes&limite=1"))).items[0].key;
       tpl = json(await post(U(S2, "/api/bibliotheque/utiliser"), { type: "footer", key, name: "Pied navigateur" })).template;
       const c = await post(U(S2, `/api/modeles/${tpl.id}/conditions`), { conditions: { include: [{ kind: "page", ids: [p2] }] }, revision: tpl.revision }); assert.equal(c.status, 200, c.text.slice(0, 200));
       await publish(S2, tpl);
@@ -150,13 +150,14 @@ describe("Pied de page : cohérence éditeur / aperçu / vignette / site public"
         const edit = await signature(pg, ".lp-block-layout");
         await ctxB.close();
         assert.ok(noScroll, `${name} : aucun défilement horizontal sur le site public`);
-        assert.ok(edit, "pied trouvé dans le canevas de l'éditeur"); assert.equal(edit.width, live.width, `${name} : canevas de l'éditeur = public (largeur)`); assert.equal(edit.text.replace(/Aucun logo : .*?en attendant\)\./g, "").replace(/Menu du CMS : aucun menu publié à l'emplacement « \w+ » pour ce site\. Créez-le et affectez-le dans Apparence → Menus\./g, "").replace(/\s+/g, " ").trim(), live.text, `${name} : éditeur = public (texte, hors aides visibles seulement dans l'éditeur)`); const tally = (csv) => csv.split(",").reduce((m, w) => m.set(w, (m.get(w) || 0) + 1), new Map());
+        // la ligne légale de la plateforme (« Site · Cookies ») est ajoutée par le site public APRÈS le pied du Theme Builder (_foot-legal.ejs) : l'éditeur ne la rend pas
+        assert.ok(edit, "pied trouvé dans le canevas de l'éditeur"); assert.equal(edit.width, live.width, `${name} : canevas de l'éditeur = public (largeur)`); assert.equal(edit.text.replace(/Aucun logo : .*?en attendant\)\./g, "").replace(/Menu du CMS : aucun menu publié à l'emplacement « \w+ » pour ce site\. Créez-le et affectez-le dans Apparence → Menus\./g, "").replace(/\s+/g, " ").trim(), live.text.replace(/ Site Deux · Cookies( · Confidentialité)?$/, ""), `${name} : éditeur = public (texte, hors aides visibles seulement dans l'éditeur)`); const tally = (csv) => csv.split(",").reduce((m, w) => m.set(w, (m.get(w) || 0) + 1), new Map());
         const e = tally(edit.inner), l = tally(live.inner);
         for (const [w, n] of l) assert.ok((e.get(w) || 0) >= n, `${name} : éditeur : chaque conteneur flex du public (${w} px ×${n}) existe dans le canevas (les encadrés d'aide de l'éditeur s'y ajoutent)`);
         assert.ok(live && prev && thumb, "pied trouvé dans les trois rendus");
         if (process.env.TB_DIAG) console.log("DIAG", name, JSON.stringify({ live: [live.width, live.inner], prev: [prev.width, prev.inner], thumb: [thumb.width, thumb.inner] }));
         assert.equal(prev.width, live.width, `${name} : aperçu = public (largeur)`); assert.equal(thumb.width, live.width, `${name} : vignette = public (largeur)`);
-        assert.equal(prev.text, live.text, `${name} : aperçu = public (texte)`); assert.equal(thumb.text, live.text, `${name} : vignette = public (texte)`);
+        assert.equal(prev.text, live.text, `${name} : aperçu = public (texte)`); assert.equal(thumb.text, live.text.replace(/ Site Deux · Cookies( · Confidentialité)?$/, ""), `${name} : vignette = public (texte)`);
         assert.equal(prev.rows, live.rows, `${name} : aperçu = public (colonnes par rangée)`); assert.equal(thumb.rows, live.rows, `${name} : vignette = public (colonnes par rangée)`);
       });
     }

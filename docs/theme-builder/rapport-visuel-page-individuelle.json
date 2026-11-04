@@ -1,0 +1,9 @@
+{
+ "modeles": 100,
+ "largeurs": [
+  "desktop 1280px",
+  "tablette 820px",
+  "mobile 390px"
+ ],
+ "defectueux": []
+}
