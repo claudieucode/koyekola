@@ -7,29 +7,29 @@ const tokensLib = require("../../pages/tokens");
 const compose = require("./compose");
 const art = require("./art");
 
-// Répartition imposée par la mission (total 160)
+// Répartition imposée par la mission (total 360)
 const CATEGORIES = Object.freeze([
-  { key: "entreprise", label: "Entreprises et services professionnels", count: 12 },
-  { key: "agence", label: "Agences créatives, marketing et communication", count: 10 },
-  { key: "portfolio", label: "Portfolios, photographie et arts", count: 10 },
-  { key: "boutique", label: "Boutiques e-commerce et marques", count: 14 },
-  { key: "restaurant", label: "Restaurants, cafés et gastronomie", count: 8 },
-  { key: "tourisme", label: "Hôtels, tourisme et voyages", count: 8 },
-  { key: "immobilier", label: "Immobilier et architecture", count: 8 },
-  { key: "education", label: "Éducation, formation et e-learning", count: 10 },
-  { key: "sante", label: "Santé, bien-être et cabinets professionnels", count: 8 },
-  { key: "tech", label: "Technologie, SaaS et startups", count: 10 },
-  { key: "finance", label: "Finance, comptabilité et conseil", count: 6 },
-  { key: "mode", label: "Mode, beauté et cosmétiques", count: 8 },
-  { key: "association", label: "Associations, ONG et organisations communautaires", count: 6 },
-  { key: "magazine", label: "Blogs, magazines et publications", count: 8 },
-  { key: "evenement", label: "Événementiel, mariage et divertissement", count: 6 },
-  { key: "industrie", label: "Industrie, construction et artisanat", count: 6 },
-  { key: "auto", label: "Automobile et mobilité", count: 4 },
-  { key: "agriculture", label: "Agriculture et alimentation", count: 4 },
-  { key: "sport", label: "Sport, fitness et coaching", count: 4 },
-  { key: "createur", label: "Sites personnels et créateurs de contenu", count: 4 },
-  { key: "local", label: "Services locaux et petites entreprises", count: 6 },
+  { key: "entreprise", label: "Entreprises et services professionnels", count: 26 },
+  { key: "agence", label: "Agences créatives, marketing et communication", count: 22 },
+  { key: "portfolio", label: "Portfolios, photographie et arts", count: 23 },
+  { key: "boutique", label: "Boutiques e-commerce et marques", count: 30 },
+  { key: "restaurant", label: "Restaurants, cafés et gastronomie", count: 18 },
+  { key: "tourisme", label: "Hôtels, tourisme et voyages", count: 18 },
+  { key: "immobilier", label: "Immobilier et architecture", count: 18 },
+  { key: "education", label: "Éducation, formation et e-learning", count: 23 },
+  { key: "sante", label: "Santé, bien-être et cabinets professionnels", count: 18 },
+  { key: "tech", label: "Technologie, SaaS et startups", count: 22 },
+  { key: "finance", label: "Finance, comptabilité et conseil", count: 14 },
+  { key: "mode", label: "Mode, beauté et cosmétiques", count: 18 },
+  { key: "association", label: "Associations, ONG et organisations communautaires", count: 14 },
+  { key: "magazine", label: "Blogs, magazines et publications", count: 18 },
+  { key: "evenement", label: "Événementiel, mariage et divertissement", count: 14 },
+  { key: "industrie", label: "Industrie, construction et artisanat", count: 14 },
+  { key: "auto", label: "Automobile et mobilité", count: 9 },
+  { key: "agriculture", label: "Agriculture et alimentation", count: 9 },
+  { key: "sport", label: "Sport, fitness et coaching", count: 9 },
+  { key: "createur", label: "Sites personnels et créateurs de contenu", count: 9 },
+  { key: "local", label: "Services locaux et petites entreprises", count: 14 },
 ]);
 const CATEGORY_KEYS = new Set(CATEGORIES.map((c) => c.key));
 const TARGET_TOTAL = CATEGORIES.reduce((n, c) => n + c.count, 0);
@@ -42,7 +42,7 @@ const AUTHOR = "Équipe Kolakisa";
 let cache = null;
 // Un fichier ou une fiche invalide n'empêche JAMAIS le reste de la bibliothèque de se charger : il est écarté et listé dans problems() (les tests exigent que la liste soit vide)
 function specsOnDisk(problems) {
-  const dir = path.join(__dirname, "specs");
+  const dir = process.env.KOLAKISA_THEME_SPECS_DIR ? path.resolve(process.env.KOLAKISA_THEME_SPECS_DIR) : path.join(__dirname, "specs"); // KOLAKISA_THEME_SPECS_DIR : dossier de fiches alternatif (travail de refonte, tests)
   const list = [];
   for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".js")).sort()) {
     let arr;

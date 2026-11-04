@@ -74,14 +74,14 @@ describe("Thèmes : galerie refaite", () => {
   });
 
   test("rendu de démonstration : mis en cache privé, identique d'un appel à l'autre, liens du site visé, jamais mélangés entre sites", async () => {
-    const a1 = await boss.get(`${TH}/atelier-brume/demo/accueil?site=${A}`), a2 = await boss.get(`${TH}/atelier-brume/demo/accueil?site=${A}`);
-    const b = await boss.get(`${TH}/atelier-brume/demo/accueil?site=${B}`), p = await boss.get(`${TH}/atelier-brume/demo/accueil`);
+    const a1 = await boss.get(`${TH}/affiche-vive/demo/accueil?site=${A}`), a2 = await boss.get(`${TH}/affiche-vive/demo/accueil?site=${A}`);
+    const b = await boss.get(`${TH}/affiche-vive/demo/accueil?site=${B}`), p = await boss.get(`${TH}/affiche-vive/demo/accueil`);
     for (const r of [a1, a2, b, p]) { assert.equal(r.status, 200); assert.match(String(r.headers.get("cache-control")), /private, max-age=\d+/); assert.doesNotMatch(String(r.headers.get("cache-control")), /public/); assert.match(String(r.headers.get("x-robots-tag")), /noindex/); }
     assert.equal(a1.text, a2.text);
-    assert.match(a1.text, new RegExp(`demo/etudes-de-cas\\?site=${A}`)); assert.match(b.text, new RegExp(`demo/etudes-de-cas\\?site=${B}`));
+    assert.match(a1.text, new RegExp(`demo/campagnes\\?site=${A}`)); assert.match(b.text, new RegExp(`demo/campagnes\\?site=${B}`));
     assert.doesNotMatch(b.text, new RegExp(`\\?site=${A}\\b`)); assert.doesNotMatch(p.text, /\?site=\d/);
-    assert.equal((await new Client(srv.base).get(`${TH}/atelier-brume/demo/accueil?site=${A}`)).status, 302, "anonyme : redirigé, même si la page est en mémoire");
-    assert.equal((await boss.get(`${TH}/atelier-brume/demo/page-inconnue?site=${A}`)).status, 404);
+    assert.equal((await new Client(srv.base).get(`${TH}/affiche-vive/demo/accueil?site=${A}`)).status, 302, "anonyme : redirigé, même si la page est en mémoire");
+    assert.equal((await boss.get(`${TH}/affiche-vive/demo/page-inconnue?site=${A}`)).status, 404);
   });
 
   test("lecteur : l'aperçu rapide est proposé mais sans action d'écriture dans les cartes ; fragment sans cadre de page", async () => {

@@ -37,7 +37,7 @@ describe("Thèmes : bibliothèque, aperçu complet, installation et activation p
     assert.match(html, /Rechercher un thème/); assert.match(html, /Tous les styles/); assert.match(html, /Pertinence/);
     const cards = cardsOf(html);
     assert.ok(cards.length >= 1 && cards.length <= 28, `une page de résultats raisonnable (${cards.length})`);
-    for (const k of cards) assert.ok(library.has(k) || ["kolakisa", "ocean", "ardoise", "savane", "foret", "editorial"].includes(k), `thème réel : ${k}`);
+    for (const k of cards) assert.ok(library.has(k) || k === "kolakisa", `thème réel : ${k}`);
     assert.match(html, /\/img\/theme-previews\/[a-z0-9-]+-(?:home|card)\.webp/);
     assert.match(html, /loading="lazy"/);
     for (const c of library.CATEGORIES.slice(0, 3)) assert.match(html, new RegExp(c.label.replace(/[()]/g, "\\$&").replace(/ et /, " et ")));

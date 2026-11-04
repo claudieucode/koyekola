@@ -1,6 +1,6 @@
 # Bibliothèque de thèmes Kolakisa (Apparence → Thèmes)
 
-Cette bibliothèque propose **160 thèmes complets** (21 catégories). Le catalogue est partagé ; l'état (installé, actif), les réglages et les pages créées sont **propres à chaque site**.
+Cette bibliothèque propose **360 thèmes complets** (21 catégories). Le catalogue est partagé ; l'état (installé, actif), les réglages et les pages créées sont **propres à chaque site**.
 
 ## Ce qu'est un thème
 Un thème est un paquet de **données** (aucun code n'est exécuté) :
@@ -12,7 +12,7 @@ Un thème est un paquet de **données** (aucun code n'est exécuté) :
 ## Où est le code
 | Élément | Fichier |
 |---|---|
-| Fiches des 160 thèmes | `src/marketing/themes/library/specs/*.js` (guide d'écriture : `specs/README.md`) |
+| Fiches des 360 thèmes | `src/marketing/themes/library/specs/*.js` (guide d'écriture : `specs/README.md`) |
 | Moteur de composition (85 variantes de mise en page) | `src/marketing/themes/library/compose.js` |
 | Visuels SVG originaux (16 motifs, palette du thème) | `src/marketing/themes/library/art.js`, servis par `/themes-art/<thème>/<emplacement>.svg` |
 | Registre, catégories, contrôles de fiche | `src/marketing/themes/library/index.js` (`problems()` doit être vide) |
@@ -39,9 +39,9 @@ Le moteur et le catalogue sont partagés (aucune copie du moteur par site). Chaq
 Tous les visuels des thèmes sont des **illustrations vectorielles originales générées par Kolakisa** : pas de photographie, pas d'image tierce, aucune attribution. Conditions relues le 23/10/2026 : Pexels interdit de « redistribuer ou vendre les photos sur d'autres plateformes » et de vendre des copies non modifiées (la page ne traite pas de l'inclusion dans une bibliothèque de thèmes distribuée) ; Unsplash interdit de compiler ses images « pour reproduire un service similaire ou concurrent ». Aucun droit de redistribution dans un produit n'étant établi, aucune photo tierce n'est livrée : les photos réelles se choisissent dans la médiathèque du site (remplacement en un clic dans l'éditeur). Polices : bibliothèque de polices libres de Kolakisa (licences dans son manifeste), hébergées localement. Le détail par thème est dans `KOLAKISA_THEMES_REGISTRE.md`.
 
 ## Contrôles et tests
-- `node scripts/themes-check.js --strict` : 160 thèmes, répartition exacte, chaque page validée par le moteur du Page Builder, contrastes WCAG AA, diversité (mises en page, polices, teintes), aucune fiche écartée.
+- `node scripts/themes-check.js --strict` : 360 thèmes, répartition exacte, chaque page validée par le moteur du Page Builder, contrastes WCAG AA, diversité (mises en page, polices, teintes), aucune fiche écartée.
 - `scripts/themes-responsive.js` : chaque thème, 3 pages × 3 largeurs (1440, 820, 390 px) en vrai Chrome : pas de défilement horizontal, pas d'erreur de page, pas d'image cassée, un seul titre de niveau 1, police de titre chargée.
-- Tests : `themes-bibliotheque.test.js` (catalogue, 160 fiches, aperçus WebP réels et tous différents, visuels), `themes-bibliotheque-http.test.js` (galerie, filtres, aperçu, installation, activation, pages de démonstration, droits, isolation), `themes-bibliotheque-navigateur.test.js` (Chrome réel), `apparence-themes.test.js` (parcours historique adapté).
+- Tests : `themes-bibliotheque.test.js` (catalogue, 360 fiches, aperçus WebP réels et tous différents, visuels), `themes-bibliotheque-http.test.js` (galerie, filtres, aperçu, installation, activation, pages de démonstration, droits, isolation), `themes-bibliotheque-navigateur.test.js` (Chrome réel), `apparence-themes.test.js` (parcours historique adapté).
 
 ## Limites connues (dites honnêtement)
 - Les visuels sont des illustrations, pas des photographies.
