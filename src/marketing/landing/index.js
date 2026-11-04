@@ -268,7 +268,7 @@ function dynamicProps(ctx, n, visitor, page) {
 // Vue d'une formation pour les étiquettes dynamiques (scope.course) et les boucles
 const courseScope = (c) => ({ id: c.id, instructor: c.instructor_name || c.instructor || "", title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
 // Éléments d'une boucle (grille « répéter pour chaque ») : une page de résultats, filtrée par l'adresse si demandé
-function loopQuery(ctx, loop, id, visitor, scope) {
+function loopQuery(ctx, loop, id, visitor, scope, page) {
   const q = (visitor && visitor.query) || {};
   const pageNo = loop.paginate ? Math.max(1, Math.min(parseInt(q[`lp-${id}`], 10) || 1, 500)) : 1;
   const query = { ...loop, pagination: loop.paginate ? loop.pagination || "numbers" : "none" };
@@ -277,6 +277,13 @@ function loopQuery(ctx, loop, id, visitor, scope) {
     if (typeof q.categorie === "string" && q.categorie.trim()) query.categories = [q.categorie.trim().slice(0, 80)];
   }
   const r = require("../pages/query").runQuery(loop.source === "courses" ? ctx : { ...ctx, baseUrl: "" }, query, { pageNo, scope });
+  // Aperçu / vignette de la BIBLIOTHÈQUE de modèles uniquement (page.demoPosts posé par themeRender.previewDoc) : sans article publié, des articles d'EXEMPLE (annoncés comme tels) montrent la mise en page réelle ;
+  // dès que le site a des articles, ce sont les siens. Jamais sur le site publié.
+  if (page && page.demoPosts === true && loop.source === "posts" && !r.total) {
+    const n = Math.min(loop.count || 6, 12), cats = ["Actualités", "Guides", "Conseils"];
+    const items = Array.from({ length: n }, (_, i) => ({ id: null, authorId: null, title: `Titre de l'article d'exemple ${i + 1 + (query.offset || 0)}`, url: "/blog", slug: "exemple", excerpt: "Le résumé de l'article s'affichera ici : il vient de l'extrait de chaque article publié du site.", image: "", imageAlt: "", date: Date.now() - (i + 1) * 3 * 86400000, modified: null, category: cats[i % cats.length], categoryUrl: "", tags: [], author: "Auteur", authorView: null, minutes: 4, views: 0, commentsCount: 0, commentsOpen: false }));
+    return { items, total: n * 3, pageNo: 1, pages: loop.paginate && !loop.slider ? 3 : 1 };
+  }
   return { items: r.items, total: r.total, pageNo: r.pageNo, pages: r.pages };
 }
 function nodeView(ctx, nodes, visitor, page, scope) {
@@ -287,7 +294,7 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (n.type === "postcontent") return { ...n, props: { ...n.props, html: scope.post && scope.post.contentHtml ? scope.post.contentHtml : "" } };
     // Boucle : la grille répète ses enfants (le modèle) pour chaque résultat ; chaque copie reçoit son propre contexte
     if (n.type === "grid" && n.props && n.props.loop && n.children) {
-      const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor, scope);
+      const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor, scope, page);
       const children = [];
       // Cartes insérées (conteneurs « loopInsert ») : hors du modèle, intercalées après le N-ième résultat (une fois ou tous les N)
       const cards = loop.insertAt ? n.children.filter((c) => c.props && c.props.loopInsert) : [];

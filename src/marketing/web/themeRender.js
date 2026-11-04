@@ -194,7 +194,7 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     const section = doc.kind === "component" ? doc.section : null;
     const content = pages.normalizeContent(ctx, { site_id: siteId }, { sections: doc.kind === "component" ? [doc.section] : doc.sections });
     const visitor = visitorContext(db, marketing.organizationId, req);
-    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true } : {}) });
+    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "archive" ? { demoPosts: true } : {}) } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
