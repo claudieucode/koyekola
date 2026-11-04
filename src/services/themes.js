@@ -230,11 +230,11 @@ function previewTokens(siteId, key, baseTokens) {
 // ---------- Bibliothèque : galerie filtrable, détails, site de démonstration ----------
 const fold = (v) => String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 // Les thèmes historiques (catalogue d'avant la bibliothèque) restent affichés tant que leur fiche complète n'existe pas : catégorie déduite, aperçu en pastilles de couleur
-const LEGACY = { ocean: "education", ardoise: "tech", savane: "restaurant", foret: "agriculture", editorial: "magazine" };
+const LEGACY = {};
 function metaOf(manifest) {
   const m = library.meta(manifest.key);
   if (m) return m;
-  const cat = library.CATEGORIES.find((c) => c.key === LEGACY[manifest.key]) || library.CATEGORIES[0];
+  const cat = library.CATEGORIES.find((c) => c.key === LEGACY[manifest.key]) || library.CATEGORIES[library.CATEGORIES.length - 1];
   const c = manifest.tokens.colors;
   return { key: manifest.key, name: manifest.name, category: cat.key, categoryLabel: cat.label, tags: ["moderne"], siteType: cat.label, description: manifest.description, featured: false, isNew: false, order: 900, modules: [], pages: [], palette: [c.primary, c.secondary, c.accent, c.background], fonts: { heading: manifest.tokens.fonts.heading, body: manifest.tokens.fonts.body }, dark: false, previews: null, legacy: true };
 }
@@ -352,4 +352,25 @@ function saveManifest(ctx, siteId, key, next, { revisions } = {}) {
   return get(siteId, row.theme_key);
 }
 
-module.exports = { installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens, manifestOf, saveManifest, audit, gallery, libraryItem, installDemo };
+// ---------- Options de personnalisation d'un thème autonome (paquet) : couleurs, choix et plages déclarés par le thème lui-même ----------
+const packs = require("../marketing/themes/packs");
+// Valeurs en vigueur pour le thème actif (valeurs par défaut du thème pour celles jamais modifiées) ; null si ce thème n'a pas d'options
+function packOptionValues(ctx, siteId, key) {
+  const p = packs.get(String(key));
+  if (!p || !(p.spec.options || []).length) return null;
+  const cur = currentTokens(ctx, siteId).pack;
+  return packs.resolveOptions(p.spec, cur && cur.key === p.spec.key ? cur.options : {});
+}
+// Enregistre les options du thème ACTIF de ce site (jamais d'un autre site) ; valeurs invalides = valeur par défaut du thème ; reset = retour aux valeurs d'origine du thème
+function setPackOptions(ctx, siteId, key, input, { reset = false } = {}) {
+  writableSite(ctx, siteId);
+  const p = packs.get(String(key));
+  if (!p || !(p.spec.options || []).length) throw new UserError("Ce thème n'a pas d'options de personnalisation.");
+  if (activeKey(siteId) !== p.spec.key) throw new UserError(`Le thème « ${p.spec.name} » n'est pas le thème actif de ce site : activez-le d'abord.`);
+  const options = reset ? {} : packs.resolveOptions(p.spec, input || {});
+  const before = currentTokens(ctx, siteId);
+  applyTokens(ctx, siteId, { ...before, pack: { key: p.spec.key, options } }, `Options du thème « ${p.spec.name} »`);
+  return { name: p.spec.name, options };
+}
+
+module.exports = { packOptionValues, setPackOptions, installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens, manifestOf, saveManifest, audit, gallery, libraryItem, installDemo };

@@ -43,6 +43,20 @@
           <button class="btn btn-outline btn-sm" type="submit" data-confirm="Ajouter les pages de démonstration de « <%= theme.name %> » à « <%= T.name %> » ? Elles sont créées en brouillon, sans toucher à vos pages." data-busy="Ajout…">Ajouter les pages de démonstration</button>
         </form>
       <% } %>
+      <% if (theme.state === "active" && theme.options && theme.options.length && packValues && canActivate && !readOnly) { %>
+        <form method="post" action="<%= BASE %>/<%= theme.key %>/options" data-th-form class="mk-td-options"><%- siteField %>
+          <h3 class="mk-td-h">Options de « <%= theme.name %> »</h3>
+          <p class="mk-th-note">Réglages propres à ce thème : ils ne modifient que son apparence, jamais vos contenus.</p>
+          <% theme.options.forEach((o) => { %>
+            <div class="mk-td-opt"><label for="opt_<%= o.key %>"><%= o.label %></label>
+              <% if (o.type === "color") { %><input type="color" id="opt_<%= o.key %>" name="opt_<%= o.key %>" value="<%= packValues[o.key] %>">
+              <% } else if (o.type === "choice") { %><select id="opt_<%= o.key %>" name="opt_<%= o.key %>"><% o.choices.forEach((c) => { %><option value="<%= c[0] %>"<%= packValues[o.key] === c[0] ? " selected" : "" %>><%= c[1] %></option><% }) %></select>
+              <% } else { %><input type="range" id="opt_<%= o.key %>" name="opt_<%= o.key %>" min="<%= o.min %>" max="<%= o.max %>" step="<%= o.step || 1 %>" value="<%= packValues[o.key] %>"><% } %>
+            </div>
+          <% }) %>
+          <div class="mk-th-actions"><button class="btn btn-primary" type="submit" data-busy="Enregistrement…">Enregistrer les options</button><button class="btn btn-outline" type="submit" name="reset" value="1" data-busy="Rétablissement…">Rétablir les valeurs d'origine</button></div>
+        </form>
+      <% } %>
       <dl class="mk-th-dl">
         <dt>Pages de démonstration</dt><dd><ul class="mk-td-pages"><% theme.pages.forEach((p) => { %><li><a href="<%= to("/" + theme.key + "/apercu", { page: p.key }) %>"><%= p.name %></a></li><% }) %></ul></dd>
         <dt>Couleurs</dt><dd class="mk-th-sw"><% ["primary", "secondary", "accent", "background", "surface", "text"].forEach((k) => { %><span title="<%= k %> : <%= theme.tokens.colors[k] %>" style="background:<%= theme.tokens.colors[k] %>"></span><% }) %></dd>
@@ -50,7 +64,7 @@
         <dt>Version</dt><dd><%= theme.version %> · <%= theme.author %></dd>
         <dt>Compatibilité</dt><dd><%= theme.compatible ? "Compatible avec ce Kolakisa. Chaque site garde son propre thème actif et ses réglages." : "Incompatible : format plus récent que celui de ce Kolakisa." %></dd>
         <% if (theme.modules && theme.modules.length) { %><dt>Modules requis</dt><dd><%= theme.modules.join(" · ") %></dd><% } %>
-        <dt>Crédits et licences</dt><dd>Visuels : illustrations originales générées par Kolakisa pour ce thème (aucune photographie ni image tierce, aucune attribution requise). Polices : bibliothèque de polices libres de Kolakisa (licence OFL), hébergées localement.</dd>
+        <dt>Crédits et licences</dt><dd>Visuels : illustrations vectorielles originales dessinées pour ce thème (aucune photographie ni image tierce, aucune attribution requise). Polices : bibliothèque de polices libres de Kolakisa (licence OFL), hébergées localement.</dd>
       </dl>
       <p class="mk-th-note">Changer de thème ne supprime jamais vos pages, articles, médias, comptes ou réglages : seule l'apparence (couleurs, polices, boutons, formes) est remplacée, et « Revenir au thème précédent » la rétablit.</p>
     </div>

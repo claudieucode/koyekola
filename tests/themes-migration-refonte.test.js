@@ -44,10 +44,10 @@ describe("sites ayant un ancien thème", () => {
     assert.equal(tokensOf(siteId).colors.primary, "#0b6e99");
     assert.equal(themes.installed(other).some((t) => t.key === "ocean"), false, "aucun effet sur un autre site");
   });
-  test("la galerie de 360 thèmes et la liste des disponibles fonctionnent pour ce site", () => {
+  test("la galerie de thèmes et la liste des disponibles fonctionnent pour ce site", () => {
     const g = themes.gallery(siteId, { perPage: 24 });
-    assert.ok(g && g.total >= 360 - 1, `galerie : ${g && g.total}`);
-    assert.equal(themes.available(siteId).length, 360);
+    assert.ok(g && g.total >= 6, `galerie : ${g && g.total}`);
+    assert.equal(themes.available(siteId).length, 6);
   });
   test("on peut installer et activer un nouveau thème, puis revenir à l'ancien sans rien perdre", () => {
     const key = catalog.catalog()[0].key;

@@ -1,0 +1,5 @@
+/* Base structurelle commune (aucun style visuel) : libère les sections du thème de la colonne centrale du moteur. Chargée AVANT le CSS du thème, qui peut tout surcharger. */
+.lp-main{max-width:none;margin:0;padding:0}
+.lp-main>.lp-block-layout{max-width:none;margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+.lp-main>.lp-block-layout:not(:has(.pk-bleed)){max-width:var(--pk-max,1280px);margin-left:auto;margin-right:auto;padding-left:var(--pk-gutter,24px);padding-right:var(--pk-gutter,24px);box-sizing:border-box}
+.pk-bleed{display:block;width:100%;box-sizing:border-box}

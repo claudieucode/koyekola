@@ -307,6 +307,7 @@ function siteAssets(tokens, settings, themeCss) {
     custom: custom.replace(/</g, ""),
     code: verifiedCustomCode(settings.customCode),
     transition: transitionCss(settings),
+    pack: require("../themes/packs").headHtml(tokens && tokens.pack),
     lightboxVars: lightboxVars(settings),
     lightboxAttrs: lightboxAttrs(settings),
   };

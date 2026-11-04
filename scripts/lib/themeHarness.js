@@ -23,6 +23,7 @@ async function startHarness() {
   app.use("/fonts/library", express.static(path.join(ROOT, "public", "fonts", "library"), { maxAge: "30d", immutable: true, index: false }));
   app.use(express.static(path.join(ROOT, "public")));
   app.use(require(path.join(ROOT, "src", "marketing", "web", "themeArtPublic"))());
+  app.use(require(path.join(ROOT, "src", "marketing", "web", "themePackPublic"))());
   const ctx = { db, organizationId: 1, userId: 1, can: () => true };
   app.use("/marketing", (req, res, next) => { req.mk = { ctx, can: () => true, perms: new Set(), siteOnly: false, siteId: null, site: null, role: "owner" }; next(); }, require(path.join(ROOT, "src", "marketing", "web", "themeDemo"))());
   app.use((err, req, res, next) => { console.error(err); res.status(500).send(String(err && err.stack || err)); }); // eslint-disable-line no-unused-vars
