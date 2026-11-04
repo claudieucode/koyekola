@@ -1,4 +1,4 @@
-// Catalogue de modèles du Theme Builder : 100 modèles par type (20 mises en page × 5 identités visuelles). Le catalogue est du CODE : aucune ligne en base tant qu'un modèle n'est pas utilisé.
+// Catalogue de modèles du Theme Builder : 100 modèles par type (contenus × compositions, ou mises en page × identités selon le type). Le catalogue est du CODE : aucune ligne en base tant qu'un modèle n'est pas utilisé.
 // · list()  — métadonnées seulement (jamais le document), filtrées et paginées : la liste reste instantanée quel que soit le nombre de modèles ;
 // · build() — le document d'UN modèle, construit à la demande (et gardé en mémoire dans un cache borné) ;
 // · use()   — « Utiliser ce modèle » : crée la copie INDÉPENDANTE du site (composant ou page), puis le modèle du Theme Builder (brouillon). Modifier la copie ne change jamais le catalogue.
