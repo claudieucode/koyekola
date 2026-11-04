@@ -47,7 +47,7 @@ describe("sites ayant un ancien thème", () => {
   test("la galerie de thèmes et la liste des disponibles fonctionnent pour ce site", () => {
     const g = themes.gallery(siteId, { perPage: 24 });
     assert.ok(g && g.total >= 6, `galerie : ${g && g.total}`);
-    assert.equal(themes.available(siteId).length, 6);
+    assert.ok(themes.available(siteId).length >= 6);
   });
   test("on peut installer et activer un nouveau thème, puis revenir à l'ancien sans rien perdre", () => {
     const key = catalog.catalog()[0].key;

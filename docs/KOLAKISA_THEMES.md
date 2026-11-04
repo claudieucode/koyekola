@@ -20,6 +20,10 @@ Fichiers servis sur `/theme-packs/<clé>/style.css|motion.js` (ETag, cache 7 jou
 | volume | architecture | plans et masses, rail vertical |
 | orbite | tech / SaaS | produit sombre, bento, spotlight |
 | noir | mode luxe | lookbook éditorial noir |
+| cursus | éducation | cahier d'écolier Seyès, intercalaires, surligneur |
+| pierre | immobilier | carnet d'architecte, fenêtre en arche, biens filtrables |
+| atelier | agence créative | collage brutaliste, autocollants, projets filtrables |
+| seve | santé | soins rassurants, formes organiques |
 
 ## Contrôle de diversité
 `packs/audit.js` : `auditPack` (balises supprimées par le filtre, liens morts, un seul h1, alt, limite 20 000 car.) et `auditDiversity` (aucune valeur d'empreinte partagée entre thèmes). Vérification : `node -e 'console.log(require("./src/marketing/themes/library").problems())'` doit afficher `[]`.
