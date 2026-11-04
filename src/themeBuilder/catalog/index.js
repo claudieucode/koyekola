@@ -22,6 +22,8 @@ function entries(type) {
   const d = def(type);
   if (!d) return [];
   if (META.has(type)) return META.get(type);
+  // Catalogue à entrées propres (ex. Page 404) : chaque entrée porte sa composition ET son identité visuelle
+  if (typeof d.entries === "function") { const own = d.entries().map((e) => ({ type, skinLabel: (SKINS.find((s) => s.key === e.skinKey) || {}).label || e.skinKey, ...e })); META.set(type, own); return own; }
   const out = [];
   if (d.flat) {
     const fam = new Map(d.families.map((f) => [f.key, f]));
@@ -39,8 +41,8 @@ function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, l
   const rows = all.filter((e) => (!skin || e.skinKey === skin) && (!lay || e.layoutKey === lay) && (!t || e.tags.some((x) => fold(x) === t)) && (!needle || fold(`${e.name} ${e.desc} ${e.tags.join(" ")}`).includes(needle)));
   const pages = Math.max(1, Math.ceil(rows.length / lim)), p = Math.min(pages, Math.max(1, Number(page) || 1));
   const d = def(type);
-  return { items: rows.slice((p - 1) * lim, p * lim), total: rows.length, page: p, pages, limit: lim,
-    layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: SKINS.map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
+  return { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
+    layouts: d.layouts.map((l) => ({ key: l.key, label: l.label })), skins: SKINS.map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
 }
 const find = (type, key) => entries(type).find((e) => e.key === key) || null;
 
@@ -51,8 +53,9 @@ function build(type, key, env = {}) {
   if (!meta) return null;
   const ck = `${type}:${key}:${env.formId || 0}`;
   if (CACHE.has(ck)) return CACHE.get(ck);
-  const d = def(type), l = d.layouts.find((x) => x.key === meta.layoutId), S = skinOf(meta.skinKey);
-  const children = withIds(l.build(kit(S), env));
+  const d = def(type), S = skinOf(meta.skinKey);
+  const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutKey).build;
+  const children = withIds(buildFn(kit(S), env));
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
   if (CACHE.size > 300) CACHE.clear();
