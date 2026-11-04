@@ -1,6 +1,8 @@
 # Catalogue de modèles du Theme Builder
 
 Le catalogue fournit **100 modèles par type** (20 mises en page × 5 identités visuelles) pour : En-tête, Pied de page, Page individuelle, Article individuel, Archives, Résultats de recherche, Page 404, Produit individuel, Archives produits (= 900 modèles).
+> **Exception : En-tête.** Depuis la refonte de novembre 2026, le catalogue d'en-têtes n'est plus un croisement 20 × 5 mais **100 compositions distinctes** (10 familles × 10, identité fixée par modèle, 20 par identité) : voir [`kolakisa-header-library.md`](kolakisa-header-library.md) et [`kolakisa-header-library-modeles.md`](kolakisa-header-library-modeles.md). Les autres types gardent le croisement ci-dessous.
+
 Les types « Barre latérale » et « Modèle personnalisé » n'ont **pas** de catalogue : aucune zone du site public ne les affiche (voir RENDU_CAUSES_RACINES §9) — leur proposer 100 modèles serait une fonctionnalité fictive.
 
 ## Principe

@@ -357,14 +357,19 @@ function menuFor(page, visitor, { source = "location", location = "header", menu
   } catch { return null; }
 }
 // Widget « Menu » (nœud menu) : source « emplacement » / « menu précis », ou ancienne liste de démonstration non modifiée (traitée comme « en-tête »). Une liste manuelle explicite n'est jamais touchée.
+const SAMPLE_MENU = [{ label: "Accueil", url: "/" }, { label: "Services", url: "#", children: [{ label: "Conseil", url: "/contact" }, { label: "Accompagnement", url: "/contact" }] }, { label: "Blog", url: "/blog" }, { label: "Contact", url: "/contact" }];
 function resolveMenuNode(n, page, visitor) {
   const p = n.props || {};
   const demo = pageNodes.isDemoMenu(p);
   const source = demo ? "location" : p.source;
   if (!source || source === "manual") return null;
   const found = menuFor(page, visitor, { source, location: demo ? "header" : p.location, menuName: p.menuName });
-  const items = cmsLinks(found && found.items);
-  return { ...n, props: { ...p, items, cms: { source, location: demo ? "header" : p.location || "", name: found ? found.name : "", found: items.length > 0, demo } } };
+  let items = cmsLinks(found && found.items);
+  // Aperçu / vignette de la BIBLIOTHÈQUE de modèles uniquement (page.demoMenu posé par themeRender.previewDoc) : sans menu affecté, un menu d'exemple montre la mise en page réelle, sous-menu compris.
+  // Jamais sur un site (rendu public, aperçu d'une copie, éditeur) : sans menu affecté on n'affiche toujours rien.
+  const sample = !items.length && page && page.demoMenu === true;
+  if (sample) items = SAMPLE_MENU;
+  return { ...n, props: { ...p, items, cms: { source, location: demo ? "header" : p.location || "", name: found ? found.name : "", found: items.length > 0, demo, ...(sample ? { sample: true } : {}) } } };
 }
 // En-tête / pied de page AUTOMATIQUES : une page de site sans en-tête (ou sans pied de page) composé affiche tout de même le menu AFFECTÉ à l'emplacement (c'est le rôle d'une affectation). Rien n'est ajouté si la page
 // montre déjà ce menu (widget Menu ou Menu du CMS pour cet emplacement : jamais deux fois), si l'en-tête a été retiré pour cette page, ou pour une page d'atterrissage / une étape de tunnel.

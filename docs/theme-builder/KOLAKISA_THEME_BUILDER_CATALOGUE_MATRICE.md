@@ -4,7 +4,7 @@ Générée depuis le code (`src/themeBuilder/catalog`) ; chaque cellule est un m
 
 | Type | Mises en page | Identités | Modèles |
 |---|---:|---:|---:|
-| En-tête (`header`) | 20 | 5 | 100 |
+| En-tête (`header`) | 100 compositions (10 familles × 10) | 5 (une par modèle, 20 chacune) | 100 |
 | Pied de page (`footer`) | 20 | 5 | 100 |
 | Page individuelle (`single_page`) | 20 | 5 | 100 |
 | Article individuel (`single_post`) | 20 | 5 | 100 |
@@ -17,30 +17,7 @@ Générée depuis le code (`src/themeBuilder/catalog`) ; chaque cellule est un m
 
 ## En-tête
 
-| Mise en page | Description | Étiquettes |
-|---|---|---|
-| Classique (`classique`) | Logo à gauche, navigation et bouton d'action à droite. | classique, navigation, bouton |
-| Logo centré (`centre`) | Navigation à gauche, logo au centre, actions à droite. | centré, élégant, bouton |
-| Logo au-dessus (`empile`) | Logo centré, navigation centrée dessous. | centré, empilé, éditorial |
-| Minimal (`minimal`) | Logo et navigation seulement, sans bouton. | minimaliste, sobre |
-| Barre d'annonce (`annonce`) | Bandeau d'annonce au-dessus d'un en-tête classique. | annonce, promotion, bouton |
-| Recherche en vedette (`recherche`) | Logo, grand champ de recherche, compte. | recherche, blog, boutique |
-| Boutique (`boutique`) | Logo, navigation, compte et panier. | boutique, panier, compte |
-| Barre utilitaire (`utilitaire`) | Fine barre (réseaux, compte) au-dessus de l'en-tête. | professionnel, réseaux, compte |
-| Verre dépoli (collant) (`verre`) | Reste collé en haut de page, fond translucide flouté. | collant, sticky, moderne |
-| Transparent sur visuel (`transparent`) | Posé sur le visuel d'ouverture de la page, sans fond. | transparent, superposé, héros |
-| Deux rangées (`deux-rangees`) | Rangée logo/recherche/compte, rangée de navigation en dessous. | complet, recherche, navigation |
-| Pilule flottante (`pilule`) | Navigation dans une pilule détachée du bord. | flottant, arrondi, moderne |
-| Mini-panier (`mini-panier`) | Logo, navigation et mini-panier à pastille de compteur. | boutique, panier, compact |
-| Titre de journal (`masthead`) | Date du jour, grand titre centré, navigation sous filet. | éditorial, blog, date |
-| Plateforme de formation (`formation`) | Logo, catalogue, compte de l'élève. | formation, catalogue, compte |
-| Blog (`blog`) | Logo, rubriques, recherche et bouton d'abonnement. | blog, recherche, abonnement |
-| Site professionnel (`pro`) | Logo, navigation sobre, bouton de prise de contact. | professionnel, contact, rendez-vous |
-| Carte ombrée (`carte`) | En-tête encadré dans une carte à ombre portée. | carte, encadré, relief |
-| Connexion et inscription (`double-action`) | Lien de connexion et bouton d'inscription. | compte, double action |
-| Liseré d'accent (`liseré`) | Épais liseré de couleur sous l'en-tête. | accent, identité |
-
-Identités : Clair épuré · Couleur de marque · Nuit · Éditorial · Doux et arrondi — clés `<mise-en-page>.<identité>` (ex. `classique.clair`).
+Catalogue **plat** de 100 compositions distinctes (refonte de novembre 2026) : liste complète dans [`kolakisa-header-library-modeles.md`](kolakisa-header-library-modeles.md), architecture dans [`kolakisa-header-library.md`](kolakisa-header-library.md). Clés `<clé-du-modèle>.<identité>` (ex. `classique-logo-menu-bouton.clair`).
 
 ## Pied de page
 

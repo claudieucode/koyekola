@@ -810,6 +810,12 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .lp-builder [data-site-part]::before { content: attr(data-site-part) " · se modifie dans le site"; position: absolute; top: 2px; left: 2px; z-index: 5; padding: 1px 7px; border-radius: 4px; background: #0f766e; color: #fff; font: 600 11px/1.6 system-ui, sans-serif; }
 .lp-site-part { min-width: 0; }
 .lp-site-header, .lp-site-footer { min-width: 0; }
+/* En-tête du site collé en haut de page ou superposé au visuel d'ouverture (portés par l'enveloppe du bloc, voir _sections.ejs) */
+.lp-block.lp-site-header.kw-theme-sticky { position: sticky; top: 0; z-index: 60; }
+.lp-block.lp-site-header.kw-theme-overlay { position: absolute; top: 0; left: 0; right: 0; margin-inline: 0; z-index: 60; }
+/* Un en-tête (ou un pied) de site touche le bord de la page : pas de marge de colonne au-dessus (en-tête) ni en dessous (pied) */
+.lp-main:has(> .lp-block.lp-site-header:first-child) { padding-top: 0; }
+.lp-main:has(> .lp-block.lp-site-footer:last-child) { padding-bottom: 0; }
 /* ===== Mission V3 ===== */
 /* Animations : courbe choisie, nouvelles entrées, interaction « rejouer » */
 [data-kw-anim].is-in, .kw-ix-replay[data-kw-anim] { animation-timing-function: var(--kw-anim-ease, cubic-bezier(.2, .7, .2, 1)); }

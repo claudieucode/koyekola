@@ -186,7 +186,7 @@ function catalogScope(db, ctx, type) {
 const FILLER = '<div style="max-width:1100px;margin:0 auto;padding:40px 24px;font:14px/1.6 system-ui,sans-serif;color:#64748b"><div style="height:160px;border-radius:12px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);margin-bottom:20px"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:80%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:65%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:72%"></div><p style="margin-top:18px;font-size:12px">Contenu de la page (aperçu)</p></div>';
 // done(html | null). doc : résultat de catalog.build()
 // thumb : miniature de carte (sans bloc de remplissage, sans défilement) ; mêmes éléments et même CSS que l'aperçu complet
-function previewDoc(req, res, { siteId, type, doc, thumb = false }, done) {
+function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false }, done) {
   try {
     const marketing = req.app.locals.marketing, db = require("../../config/database");
     if (!marketing || !marketing.ready) return done(null);
@@ -194,11 +194,14 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false }, done) {
     const section = doc.kind === "component" ? doc.section : null;
     const content = pages.normalizeContent(ctx, { site_id: siteId }, { sections: doc.kind === "component" ? [doc.section] : doc.sections });
     const visitor = visitorContext(db, marketing.organizationId, req);
-    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections });
+    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
-      const body = thumb ? html : type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html;
+      // En-tête SUPERPOSÉ (transparent, texte clair) : il est posé sur le visuel d'ouverture de la page ; sans visuel dessous, le texte blanc disparaît sur le fond blanc de l'aperçu
+      const overlay = type === "header" && section && partMode(section) === " kw-theme-overlay";
+      const hero = (h) => `<div aria-hidden="true" style="height:${h}px;background:linear-gradient(135deg,#1e293b,#475569 60%,#64748b)"></div>`;
+      const body = overlay ? html + hero(thumb ? 150 : 360) + (thumb ? "" : FILLER) : thumb ? html : type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html;
       done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title><style>html,body{margin:0}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body>${body}</body></html>`);
     });
   } catch { done(null); }
