@@ -88,6 +88,8 @@
   <% } else if (s.type === "form" && isBuilder) { %>
     <section class="lp-section lp-signup lp-placeholder"><h2><%= s.heading %></h2><p>Formulaire d'inscription : choisissez-le dans les réglages de la page.</p></section>
   <% } %>
+  <%# Pied de page du Theme Builder : les widgets de pied (Apparence → Widgets) et la ligne légale sont des éléments INTERNES de ce pied, jamais un second pied de page %>
+  <% if (s.sitePart === "footer" && !isBuilder) { %><%- include("_foot-extra", { page, footLegal: typeof footLegal === "string" ? footLegal : "" }) %><% } %>
 </div>
 <% }) %>
 <%# Éditeur seulement : après le dernier élément de la page, un bouton pour continuer à ajouter des containers (même fenêtre « Quelle mise en page utiliser ? », insertion en fin de page) %>

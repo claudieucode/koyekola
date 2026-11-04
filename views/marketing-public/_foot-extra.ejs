@@ -1,0 +1,4 @@
+<%# Contenu AJOUTÉ à l'intérieur du pied de page du Theme Builder : sections 1 et 2 de pied de page du site (Apparence → Widgets) puis ligne légale (cookies, confidentialité). Aucun <footer> ici. %>
+<% const fzId = page && Number.isInteger(page.site_id) && page.site_id > 0 ? page.site_id : null; const fz1 = typeof widgetZoneFor === "function" ? widgetZoneFor(fzId, "footer-1") : "", fz2 = typeof widgetZoneFor === "function" ? widgetZoneFor(fzId, "footer-2") : ""; %>
+<% if (fz1 || fz2) { %><div class="lp-foot-widgets"><%- fz1 %><%- fz2 %></div><% } %>
+<% if (footLegal) { %><div class="lp-foot lp-foot-legal"><%- footLegal %></div><% } %>
