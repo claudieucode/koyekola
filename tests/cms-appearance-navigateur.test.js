@@ -56,33 +56,17 @@ describe("apparence (navigateur)", { skip: SKIP }, () => {
     assert.match(await visitor.locator(".btn-primary").first().evaluate((b) => getComputedStyle(b).backgroundColor), /rgb\(204, 0, 51\)/, "persistance");
   });
 
-  test("en-tête : bouton et annonce saisis dans l'interface, publiés ; mobile (375) et tablette (820) sans débordement, bouton dans le tiroir", async () => {
+  test("en-tête : l'ancienne adresse mène au Theme Builder (seul gestionnaire) ; le site public reste sans débordement en mobile (375) et tablette (820)", async () => {
     const admin = await open(1400, true);
     await admin.goto(`${srv.base}${AP}/en-tete`);
-    await admin.check("input[name=cta_enabled]");
-    await admin.fill("#h-clabel", "Essayer gratuitement");
-    await admin.fill("#h-curl", "/inscription");
-    await admin.check("input[name=ann_enabled]");
-    await admin.fill("#h-atext", "Nouvelle formation disponible");
-    await admin.click("form.mk-ap-form button[type=submit]");
-    await admin.waitForSelector("text=En-tête enregistré");
-    await admin.goto(`${srv.base}${AP}`);
-    await admin.click("text=Publier sur le site");
-    await admin.waitForSelector("text=Apparence publiée");
-    const desktop = await open(1280);
-    await desktop.goto(srv.base);
-    assert.equal(await desktop.locator(".header-cta").isVisible(), true);
-    assert.match(await desktop.locator(".site-announcement").innerText(), /Nouvelle formation disponible/);
+    await admin.waitForURL(/\/principal\/constructeur-de-theme/);
+    assert.equal(await admin.locator("#tb-theme [data-tb-theme]").count(), 3, "Theme Builder ouvert");
     for (const width of [820, 375]) {
       const page = await open(width);
       await page.goto(srv.base);
       assert.ok((await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1, `${width}px : pas de défilement horizontal`);
-      await page.click("#openMenuBtn");
-      assert.equal(await page.locator(".header-cta-mobile").isVisible(), true, `${width}px : bouton dans le tiroir`);
-      assert.equal(await page.locator(".header-cta").isVisible(), false);
     }
   });
-
   test("templates : l'écran adapte les conditions à la famille choisie ; template 404 appliqué sur une vraie 404", async () => {
     const page = Number((await boss.post("/marketing/pages", { name: "Modèle 404 nav" })).location.match(/(\d+)$/)[1]);
     const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(page).revision;

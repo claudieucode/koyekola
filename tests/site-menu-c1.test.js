@@ -47,7 +47,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const main = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     assert.ok(site.length >= 13 && main.length >= 13); // 13 groupes depuis que « Navigation » est devenu Apparence → Menus
     const strip = (labels) => labels.filter((l) => !["Modules", "Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
-    assert.deepEqual(flatLabels(site).filter((l) => l !== "Theme Builder"), strip(flatLabels(main))); // Theme Builder : entrée propre à un site créé (siteOnly), absente du principal
+    assert.deepEqual(flatLabels(site), strip(flatLabels(main))); // Theme Builder : présent dans le menu du principal comme dans celui d'un site créé
   });
   test("les groupes Utilisateurs, Outils et Paramètres s'affichent sous LEUR titre, avec leurs sous-entrées (plus d'« Équipe du site », de « Réglages du site » en titre)", async () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
@@ -101,9 +101,10 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("site principal : son menu garde les 72 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
-    assert.equal(entries.length, 79 + 4 + 4 + 10); // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; /* « Composants » masqué du menu affiché */ // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
+    assert.equal(entries.length, 79 + 4 + 4 + 10 - 1); // − 2 (En-tête et Pied de page retirés, gérés par le Theme Builder) + 1 (Theme Builder, désormais aussi pour le principal)
+    // // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; /* « Composants » masqué du menu affiché */ // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
-    for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash" && !i.siteOnly)) assert.ok(entries.some((e) => e.href === reg.href), reg.href);
+    for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash" && !i.siteOnly)) assert.ok(entries.some((e) => e.href === (reg.key === "apparence/theme-builder" ? `${PR}/constructeur-de-theme` : reg.href)), reg.href);
     assert.ok(entries.some((e) => e.href === `${PR}/tableau-de-bord`));
   });
 });
