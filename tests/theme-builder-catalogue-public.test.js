@@ -71,7 +71,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     assert.equal(one("SELECT COUNT(*) n FROM mk_tb_templates").n, 0, "rien n'a été créé");
   });
   test("en-tête et pied de page de la bibliothèque : ils habillent le blog, un article et la 404 du site A, pas le site B", async () => {
-    await adopt(A, "header", "classique-logo-menu-bouton.clair"); await adopt(A, "footer", "une-ligne.clair");
+    await adopt(A, "header", "classique-logo-menu-bouton.clair"); await adopt(A, "footer", "ligne-copyright-menu.clair");
     for (const p of ["/", "/blog", "/blog/article-a", "/introuvable-xyz"]) {
       const r = await hostReq(srv, "a.test", p); assert.ok([200, 404].includes(r.status), `${p} → ${r.status}`);
       // pages du Page Builder (accueil) : les parties sont dans la page même ; pages de la plateforme : dans leur zone « partie globale »
@@ -90,7 +90,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     const other = await hostReq(srv, "b.test", "/blog/article-b"); assert.doesNotMatch(other.text, /kw-theme-template/, "le site B garde son rendu");
   });
   test("copie indépendante : modifier ou archiver la copie du site ne change pas la bibliothèque ; export puis import", async () => {
-    const t = JSON.parse((await post(U(A, "/api/bibliotheque/utiliser"), { type: "footer", key: "trois-colonnes.nuit" })).text); assert.ok(t.ok, JSON.stringify(t).slice(0, 200));
+    const t = JSON.parse((await post(U(A, "/api/bibliotheque/utiliser"), { type: "footer", key: "trois-colonnes-marque.marque" })).text); assert.ok(t.ok, JSON.stringify(t).slice(0, 200));
     const tpl = t.template, ex = await boss.get(U(A, `/api/modeles/${tpl.id}/export.json`)); assert.equal(ex.status, 200);
     const imp = JSON.parse((await post(U(B, "/api/importer"), { payload: JSON.parse(ex.text) })).text); assert.ok(imp.ok, JSON.stringify(imp).slice(0, 200)); assert.equal(imp.template.type, "footer");
     assert.equal((await post(U(A, `/api/modeles/${tpl.id}/archiver`))).status, 200);
