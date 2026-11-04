@@ -118,7 +118,7 @@ Les en-têtes **déjà utilisés par des sites ne sont ni supprimés ni modifié
 | `tests/theme-builder-en-tete-collant-public.test.js` | page publiée : classes `kw-theme-sticky` / `kw-theme-overlay` sur l'enveloppe, pas d'effet dans l'éditeur |
 | Contrôle visuel par lots (navigateur) | 100 modèles × 3 largeurs : capture, débordement horizontal, chevauchements, éléments hors écran ; en pages publiées : collage réel au défilement, superposition, sous-menu au survol, menu mobile |
 
-Le contrôle visuel utilise Playwright (non installé par défaut ; les tests navigateur se désactivent sans lui).
+Le contrôle visuel est `scripts/audit-entetes.js` (Playwright, non installé par défaut : `npm i --no-save playwright-core` ; les tests navigateur se désactivent sans lui). Résultats, défauts trouvés et corrigés : [`kolakisa-header-library-verification.md`](kolakisa-header-library-verification.md). Liste des 100 modèles : [`kolakisa-header-library-modeles.md`](kolakisa-header-library-modeles.md).
 
 ## 9. Limites connues
 
