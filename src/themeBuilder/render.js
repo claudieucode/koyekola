@@ -40,7 +40,7 @@ function regionContext(siteId, family, o = {}) {
   if (!m) return null;
   const cats = list([o.category, ...list(o.categories)]);
   const c = { siteId, view: m.view, id: o.postId ?? null, authorId: o.authorId ?? null, parents: list(o.parents).map(Number).filter(Number.isInteger), categories: cats, categoryAncestors: list(o.categories), tags: list(o.tags) };
-  if (m.view === "product_archive") c.archive = { kind: o.category ? "category" : "shop", name: o.category || "", ancestors: list(o.categories) };
+  if (m.view === "product_archive") c.archive = { kind: o.category ? "category" : o.tag ? "tag" : "shop", name: o.category || o.tag || "", ancestors: list(o.categories) };
   else if (m.view === "archive" || m.view === "search") c.archive = { kind: m.kind, name: m.kind === "category" ? (o.category || "") : m.kind === "tag" ? (o.tag || "") : "", ancestors: m.kind === "category" ? list(o.categories) : [], authorId: m.kind === "author" ? (o.authorId ?? null) : null };
   return c;
 }

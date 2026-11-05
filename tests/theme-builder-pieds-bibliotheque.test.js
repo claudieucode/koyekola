@@ -1,4 +1,4 @@
-// Bibliothèque de PIEDS DE PAGE du Theme Builder : exactement 100 compositions distinctes (10 familles × 10, 20 par identité), toutes valides, responsive, sans élément factice,
+// Bibliothèque de PIEDS DE PAGE du Theme Builder : exactement 100 compositions distinctes (10 familles × 10, identités propres), toutes valides, responsive, sans élément factice,
 // utilisables (copie indépendante) et rendues par le vrai moteur (aperçu = vignette = site publié, un seul pied par page). Voir docs/theme-builder/kolakisa-footer-library.md.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -27,7 +27,7 @@ const OLD_LAYOUTS = ["une-ligne", "copyright-seul", "trois-colonnes", "quatre-co
 const OLD_KEYS = OLD_LAYOUTS.flatMap((l) => SKINS.map((s) => `${l}.${s.key}`));
 
 describe("Pieds de page : le catalogue", () => {
-  test("exactement 100 modèles : 10 familles de 10, 20 par identité, clés et noms uniques", () => {
+  test("exactement 100 modèles : 10 familles de 10, identités propres, clés et noms uniques", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100, "clés uniques");
     assert.equal(new Set(all.map((e) => e.name)).size, 100, "noms uniques");
@@ -35,7 +35,7 @@ describe("Pieds de page : le catalogue", () => {
     for (const e of all) { byFamily[e.layoutKey] = (byFamily[e.layoutKey] || 0) + 1; bySkin[e.skinKey] = (bySkin[e.skinKey] || 0) + 1; }
     assert.deepEqual(Object.keys(byFamily).sort(), Footer.families.map((f) => f.key).sort());
     for (const [f, n] of Object.entries(byFamily)) assert.equal(n, 10, `famille ${f}`);
-    for (const [s, n] of Object.entries(bySkin)) assert.equal(n, 20, `identité ${s}`);
+    for (const [s, n] of Object.entries(bySkin)) assert.ok(n >= 1 && n <= 8, `identité ${s} : ${n}`);
   });
   test("clés sûres pour une adresse (ASCII minuscule, chiffres, tiret) : aucune clé ne casse la route de la bibliothèque", () => {
     for (const e of all) assert.match(e.key, /^[a-z0-9]+(-[a-z0-9]+)*\.[a-z]+$/, e.key);
@@ -94,11 +94,11 @@ describe("Pieds de page : le catalogue", () => {
   });
   test("liste : recherche sans accents, filtre par famille et par identité, pagination ; la liste ne contient jamais les documents", () => {
     const p = Catalog.list("footer", { limit: 24 });
-    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, 10); assert.equal(p.skins.length, 5);
+    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, 10); assert.equal(p.skins.length, 34);
     assert.ok(!("section" in p.items[0]) && !("build" in p.items[0]));
     assert.equal(Catalog.list("footer", { layout: "newsletter" }).total, 10);
-    assert.equal(Catalog.list("footer", { skin: "nuit" }).total, 20);
-    assert.equal(Catalog.list("footer", { layout: "colonnes", skin: "doux" }).total, 2);
+    assert.equal(Catalog.list("footer", { skin: "nuit" }).total, 0, "plus d'identité du site"); assert.ok(Catalog.list("footer", { skin: "graphite" }).total >= 1);
+    const sk = Catalog.entries("footer").find((e) => e.layoutKey === "colonnes").skinKey; assert.equal(Catalog.list("footer", { layout: "colonnes", skin: sk }).total, Catalog.entries("footer").filter((e) => e.layoutKey === "colonnes" && e.skinKey === sk).length);
     assert.ok(Catalog.list("footer", { q: "NEWSLETTER" }).total >= 10);
     assert.ok(Catalog.list("footer", { q: "carte" }).total >= 4);
     assert.equal(Catalog.list("footer", { q: "zzzz-inconnu" }).total, 0);

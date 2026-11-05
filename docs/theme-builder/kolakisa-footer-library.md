@@ -5,8 +5,7 @@ Liste des modèles : `kolakisa-footer-library-modeles.md`. Référence Elementor
 
 ## 1. Périmètre
 
-La catégorie **Pied de page** du Theme Builder propose **100 compositions distinctes** (10 familles × 10). Chaque modèle fixe sa propre identité visuelle ; l'identité est un jeu de couleurs, de typographie, de bordures et d'arrondis tiré du site (jetons `token:…`) :
-20 modèles par identité (clair épuré, couleur de marque, nuit, éditorial, doux et arrondi). Ce n'est **pas** un croisement mise en page × couleur : deux modèles de même identité ont toujours des structures différentes, et le test refuse toute paire de même structure.
+La catégorie **Pied de page** du Theme Builder propose **100 compositions distinctes** (10 familles × 10). Chaque modèle possède sa **propre identité** : palette en couleurs FIXES (jamais la charte du site ni le bleu de l'administration) et polices de la bibliothèque locale (Apparence → Polices). Il y a 33 identités, partagées avec les en-têtes (`catalog/identities.js`) : 11 identités de métier (restaurant, école, agence, cabinet, portfolio, SaaS, média, mode, association, immobilier, bien-être) affectées à des modèles précis (table `SECTOR` de `footer.js`) et 22 palettes réparties par ambiance (claire, couleur, sombre, éditoriale, douce). La clé historique de chaque modèle (suffixe `.clair`, `.nuit`…) est conservée : aucun lien existant ne casse, et les pieds déjà copiés dans des sites ne changent pas. Ce n'est **pas** un croisement mise en page × couleur : deux modèles de même identité ont toujours des structures différentes, et le test refuse toute paire de même structure.
 
 | Famille | Contenu |
 |---|---|
@@ -25,7 +24,7 @@ La catégorie **Pied de page** du Theme Builder propose **100 compositions disti
 
 ```
 catalog/footer.js   100 modèles, grammaire de rangées, éléments, familles
-catalog/kit.js      identités (SKINS) + fabrique de nœuds natifs du Page Builder (k.row, k.col, k.band, k.inner, k.W…)
+catalog/kit.js      fabrique de nœuds natifs du Page Builder (k.row, k.col, k.band, k.inner, k.W…)
 catalog/index.js    catalogue « plat » : entries / list / find / build (cache borné) / thumbDoc
 catalog/use.js      « Utiliser ce modèle » : copie indépendante (composant + modèle brouillon)
 web/themeBuilder.js routes …/api/bibliotheque/(liste | footer/:key/(apercu|vignette|miniature) | utiliser)
@@ -122,7 +121,7 @@ NODE_PATH=<…/node_modules> TEST_START_TIMEOUT_MS=900000 node scripts/audit-pie
 
 1. Choisir la famille dans `footer.js` (`fam("<famille>", [...])`) et ajouter `["identifiant-unique", "Nom unique", ["étiquettes"], "Description", [rangées]]`.
    L'identifiant ne doit **jamais** reprendre un identifiant de l'ancien catalogue (`OLD_LAYOUTS` dans le test).
-2. L'identité vient de la position dans la famille (`SKIN_ORDER[(i + f) % 5]`) : garder **10 modèles par famille** pour conserver 20 par identité.
+2. L'identité vient de la table `SECTOR` (métier) ou, à défaut, de l'ambiance de l'ancien thème (`SKIN_ORDER`), puis d'une palette de `identities.js`. Le test `theme-builder-pieds-identites` refuse jeton du site, police absente et contraste < 4,5.
 3. Composer les rangées avec `C/L/T/Z` et les codes ci-dessus. Besoin d'un nouvel élément : l'ajouter dans `item()` **avec un widget natif existant** (nodes.js) — jamais de HTML libre.
 4. `node --test tests/theme-builder-pieds-bibliotheque.test.js` puis `scripts/audit-pieds.js <dossier> <clé>` ; relire la capture aux trois largeurs.
 5. Mettre à jour la liste (`kolakisa-footer-library-modeles.md`, générée) et le décompte des tests.
