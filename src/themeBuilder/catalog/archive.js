@@ -78,7 +78,7 @@ const TREATMENTS = [
     build: (k, a) => [k.section([k.row([sideCol(k, [info(k, { fontSize: "30px" }), ...a.head(k), k.search("blog", { width: "100%" }), k.card([ql(k, { title: "Rubriques", source: "categories", mode: "popular", count: 12 })])]), mainCol(k, narrow(a.content(k, 2)))], { alignItems: "flex-start", gap: k.S.gap, flexWrap: "wrap" })], W())] },
   { key: "bandeau", label: "Bandeau d'en-tête", skinShift: 3, tag: "bandeau",
     build: (k, a) => [
-      k.band([k.inner([k.col([info(k, { fontSize: "40px" }), ...a.head(k)], { gap: "14px", flexBasis: "0px", flexGrow: 1, minWidth: "260px" }), ...(a.key === "recherche" ? [] : [k.search("blog", { maxWidth: "360px", width: "100%" })])], { alignItems: "flex-end" })], { paddingTop: "48px", paddingBottom: "48px", backgroundColor: k.S.alt }),
+      k.band([k.inner([k.col([info(k, { fontSize: "40px" }), ...a.head(k)], { gap: "14px", flexBasis: "0px", flexGrow: 1, minWidth: "260px" }), ...(a.key === "recherche" ? [] : [k.search("blog", { maxWidth: "360px", width: "100%" })])], { alignItems: "flex-end", maxWidth: "1100px" })], { paddingTop: "48px", paddingBottom: "48px", backgroundColor: k.S.alt }),
       k.section(a.content(k, 3), W())] },
   { key: "centre", label: "Éditorial centré", skinShift: 4, tag: "centré",
     build: (k, a) => [k.section([k.col([info(k, { fontSize: "46px", textAlign: "center" }), ...a.head(k), k.divider({ width: "100%" })], { alignItems: "center", textAlign: "center", gap: "14px", width: "100%" }), ...a.content(k, 3)], W({ maxWidth: "1000px" }))] },
