@@ -2,6 +2,7 @@
 // Bibliothèque et aperçu (styles du site), importation d'un pack (pages natives, menu, brouillon de styles — rien de publié), importation d'un gabarit et de « Mes modèles »,
 // idempotence (même jeton = même résultat), aucun écrasement, atomicité (échec = rien d'écrit), permissions côté serveur, isolation A / B / principal.
 const { test, describe, before, after } = require("node:test");
+const IDY = (k) => require("../src/services/packBrand").idOf(k);
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { TEST_KEY } = require("./marketing-helpers");
@@ -82,7 +83,7 @@ describe("templates : bibliothèque, aperçu, importation, idempotence, isolatio
       const before = pagesOf(A).length + pagesOf(B).length;
       for (const [ref, page, text] of [["pack:formation-en-ligne", "programme", /Nom de la formation|Comment se déroule/], ["page:contact", "", /Contactez-nous/], [`mine:${mineA}`, "", /Contenu du modèle de A/]]) {
         const r = await boss.get(`${TP}/apercu?ref=${encodeURIComponent(ref)}${page ? `&page=${page}` : ""}&site=${A}`);
-        assert.equal(r.status, 200, ref); assert.match(r.text, text, ref); assert.match(r.text, /--kw-primary:#8a1c3a/, `${ref} : styles du site`);
+        assert.equal(r.status, 200, ref); assert.match(r.text, text, ref); assert.match(r.text, ref.startsWith("pack:") ? new RegExp(`--kw-primary:${IDY("formation-en-ligne").colors.primary}`) : /--kw-primary:#8a1c3a/, `${ref} : ${ref.startsWith("pack:") ? "identité du pack" : "styles du site"}`);
       }
       assert.equal(pagesOf(A).length + pagesOf(B).length, before, "aucune page créée");
       for (const ref of ["pack:inconnu", "page:inconnu", `mine:${mineB}`, "mine:99999", "bidon", "pack:../x"]) assert.equal((await boss.get(`${TP}/apercu?ref=${encodeURIComponent(ref)}&site=${A}`)).status, 404, ref);
@@ -111,9 +112,9 @@ describe("templates : bibliothèque, aperçu, importation, idempotence, isolatio
       assert.deepEqual(items.map((i) => i.object_id), pack.menu.map((mk) => first.pages.find((p) => p.key === mk).id)); assert.ok(items.every((i) => i.type === "page"));
       assert.deepEqual(all("SELECT location FROM nav_locations WHERE menu_id = ?", menu.id).map((r) => r.location), ["header"], "menu affecté EXPLICITEMENT à l'en-tête du site (emplacement libre) : affectation persistante, jamais en remplaçant un menu déjà affecté");
       // styles : brouillon seulement
-      const d = JSON.parse(draftOf(A).changes); assert.equal(d["tokens.colors.primary"], "#0b2a40");
+      const d = JSON.parse(draftOf(A).changes); assert.equal(d["tokens.colors.primary"], IDY("formation-en-ligne").colors.primary, "identité propre du pack");
       const stBoot = JSON.parse(/<script type="application\/json" id="st-data">([\s\S]*?)<\/script>/.exec((await adminA.get(`/marketing/site-web/styles?site=${A}`)).text)[1].replace(/\\u003c/g, "<"));
-      assert.equal(stBoot.values["tokens.colors.primary"], "#0b2a40", "le brouillon de styles est visible dans Styles"); assert.equal(stBoot.values["tokens.fonts.heading"], "bricolage"); assert.equal(stBoot.live["tokens.colors.primary"], "#8a1c3a", "la version en ligne ne change pas");
+      assert.equal(stBoot.values["tokens.colors.primary"], IDY("formation-en-ligne").colors.primary, "le brouillon de styles est visible dans Styles"); assert.equal(stBoot.values["tokens.fonts.heading"], IDY("formation-en-ligne").fonts.heading); assert.equal(stBoot.live["tokens.colors.primary"], "#8a1c3a", "la version en ligne ne change pas");
       assert.equal(one("SELECT tokens FROM mk_sites WHERE id = ?", A).tokens, tokensBefore, "styles publiés intacts");
       assert.ok(one("SELECT id FROM cms_template_imports WHERE import_key = ?", k)); assert.ok(one("SELECT id FROM mk_audit_logs WHERE action = 'template.imported' ORDER BY id DESC LIMIT 1"));
     });

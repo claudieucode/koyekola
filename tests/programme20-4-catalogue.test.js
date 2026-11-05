@@ -2,6 +2,7 @@
 // Contrat du catalogue officiel (chaque modèle est classé, valide, sans image ni faux contenu, dans une taxonomie administrable), recherche, filtres cumulables, tri, pagination,
 // états vides et paramètres invalides, détail (éléments utilisés, structure, compatibilité, licence), aperçu réel (jamais une page publiée), secteurs administrables et isolation.
 const { test, describe, before, after } = require("node:test");
+const IDY = (k) => require("../src/services/packBrand").idOf(k);
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { TEST_KEY } = require("./marketing-helpers");
@@ -175,7 +176,7 @@ describe("programme 20.4 — catalogue de la bibliothèque de modèles", () => {
       const before = one("SELECT COUNT(*) n FROM mk_landing_pages").n;
       for (const [ref, page] of [["pack:restaurant", "carte"], ["page:resto-accueil", ""], ["section:menu-carte", ""], ["component:header-cta", ""], ["part:article", ""]]) {
         const r = await boss.get(`${TP}/apercu?site=${A}&ref=${ref}${page ? `&page=${page}` : ""}`); assert.equal(r.status, 200, ref);
-        assert.match(r.text, /--kw-primary:#8a1c3a/, `${ref} : styles du site`); assert.match(r.text, /Modèle «/, `${ref} : libellé d'aperçu`); assert.match(r.headers.get("cache-control") || "", /no-store/);
+        assert.match(r.text, ref.startsWith("pack:") ? new RegExp(`--kw-primary:${IDY("restaurant").colors.primary}`) : /--kw-primary:#8a1c3a/, `${ref} : ${ref.startsWith("pack:") ? "identité du pack" : "styles du site"}`); assert.match(r.text, /Modèle «/, `${ref} : libellé d'aperçu`); assert.match(r.headers.get("cache-control") || "", /no-store/);
       }
       assert.equal(one("SELECT COUNT(*) n FROM mk_landing_pages").n, before, "aucune page créée par un aperçu");
       const carte = (await boss.get(`${TP}/apercu?site=${A}&ref=pack:restaurant&page=carte`)).text, home = (await boss.get(`${TP}/apercu?site=${A}&ref=pack:restaurant&page=accueil`)).text;

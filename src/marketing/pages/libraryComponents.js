@@ -24,7 +24,7 @@ const COMPONENTS = [
   { key: "carte-service", role: "component", category: "Cartes", name: "Carte de service", description: "Icône, titre, texte et lien : une carte réutilisable.",
     build: () => bar([card([I("star"), H("[Nom du service]", "3"), T("<p>[Ce que la personne obtient.]</p>"), B("En savoir plus", "/contact", "outline")])]) },
   { key: "bloc-chiffre", role: "component", category: "Blocs de statistiques", name: "Bloc de chiffre clé", description: "Un chiffre et ce qu'il mesure. N'affichez que des chiffres réels et sourcés.",
-    build: () => bar([card([H("[chiffre réel]", "2", { fontSize: "40px", textAlign: "center" }), T("<p>[ce qu'il mesure, et sa source]</p>", { textAlign: "center" })])]) },
+    build: () => bar([card([H("[chiffre réel]", "2", { fontSize: "30px", textAlign: "center" }), T("<p>[ce qu'il mesure, et sa source]</p>", { textAlign: "center" })])]) },
   { key: "bandeau-appel", role: "component", category: "Blocs de contenu", name: "Bandeau d'appel à l'action", description: "Titre, phrase d'appui et bouton sur fond de couleur principale.",
     build: () => bar([H("[Prêt à commencer ?]", "2", { color: "token:on-primary", textAlign: "center" }), T("<p>[Le bénéfice principal en une phrase.]</p>", { color: "token:on-primary", textAlign: "center" }), B("[Je commence]", "/contact", "outline")], { backgroundColor: "token:primary", alignItems: "center", paddingTop: "48px", paddingBottom: "48px" }) },
   { key: "barre-boutique", role: "component", category: "Boutique", name: "Barre de boutique (recherche et panier)", description: "Recherche de produits et lien vers le panier, branchés sur la boutique du site (module « Commerce » requis).",

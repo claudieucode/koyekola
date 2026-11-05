@@ -69,8 +69,8 @@ module.exports = () => {
   router.get("/site-web/templates/apercu", need("appearance.read"), (req, res, next) => {
     const t = target(req, res); if (!t) return;
     try {
-      const { label, sections } = lib.sectionsOf(req.mk.ctx, t.siteId, req.query.ref, req.query.page ? String(req.query.page) : null);
-      renderSections(req, res, { siteId: t.siteId, sections, label: `Modèle « ${label} » — `, title: label });
+      const { label, sections, tokens } = lib.sectionsOf(req.mk.ctx, t.siteId, req.query.ref, req.query.page ? String(req.query.page) : null);
+      renderSections(req, res, { siteId: t.siteId, sections, label: `Modèle « ${label} » — `, title: label, tokens });
     } catch (error) { if (error instanceof UserError) return res.status(404).render("error", { message: error.message }); next(error); }
   });
 

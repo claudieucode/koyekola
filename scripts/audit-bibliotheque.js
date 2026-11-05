@@ -63,7 +63,7 @@ const TYPES = {
 
 // Secteurs officiels (migration 123) : un slug inconnu fait échouer les tests du catalogue.
 const SECTORS = new Set([...fs.readFileSync(path.join(__dirname, "../src/marketing/migrations/123_bibliotheque_modeles.sql"), "utf8").matchAll(/\(NULL, '([a-z0-9-]+)',/g)].map((m) => m[1]));
-const report = {}; let failures = 0;
+const report = {}; let failures = 0; const identities = [];
 for (const [type, def] of Object.entries(TYPES)) {
   if (only && only !== type) continue;
   const items = def.items(), issues = [], sigs = new Map();
@@ -87,6 +87,16 @@ for (const [type, def] of Object.entries(TYPES)) {
       for (const pg of p.pages) if (!templates.TEMPLATES.some((t) => t.key === pg.template)) bad(it, `page inconnue ${pg.template}`);
       for (const m of p.menu) if (!p.pages.some((pg) => pg.key === m)) bad(it, `menu : ${m} absent`);
       if (!require("../src/services/stylePalettes").PALETTES.some((x) => x.key === p.palette)) bad(it, `palette inconnue ${p.palette}`);
+      // Identité visuelle propre au pack : couleurs lisibles (AA), polices de la bibliothèque, illustrations originales
+      const idy = require("../src/services/packBrand").idOf(p.key), PI = require("../src/services/packIdentity");
+      if (!idy) bad(it, "aucune identité visuelle");
+      else {
+        const c = idy.colors;
+        for (const [n, v] of [["texte/fond", PI.contrast(c.text, c.background)], ["texte/surface", PI.contrast(c.text, c.surface)], ["discret/fond", PI.contrast(c.muted, c.background)], ["discret/surface", PI.contrast(c.muted, c.surface)], ["bouton/principale", PI.contrast(c.primary, PI.onColor(c.primary))], ["accent/fond", PI.contrast(c.accent, c.background)], ["principale/fond", PI.contrast(c.primary, c.background)]]) if (v < 4.5) bad(it, `contraste insuffisant (${n} : ${v.toFixed(2)})`);
+        for (const f of [idy.fonts.heading, idy.fonts.body]) if (!require("../src/utils/fontLibrary").byId(f)) bad(it, `police inconnue ${f}`);
+        for (const slot of ["hero", "card-3", "portrait-2"]) { const tk = require("../src/marketing/pages/tokens").normalizeTokens({ colors: c }, { strict: false }); const r = require("../src/services/packArt").render(slot, tk, idy.art); if (!r || !/^<svg/.test(r.svg)) bad(it, `illustration ${slot} impossible`); }
+        identities.push(idy);
+      }
       sigs.set(it.ref, new Map(p.pages.map((pg) => [pg.template, 1]))); continue;
     }
     let built;
@@ -107,6 +117,15 @@ for (const [type, def] of Object.entries(TYPES)) {
     if (sim >= limit) dup.push({ a: refs[i], b: refs[j], similarity: Number(sim.toFixed(2)) });
   }
   for (const d of dup) issues.push({ ref: d.b, problem: `quasi-doublon de ${d.a} (similarité ${d.similarity})` });
+  if (type === "pack" && identities.length) {
+    // identités réellement différentes : couleurs principales distinctes, directions de même famille éloignées, assez de couples de polices
+    const dist = (a, b) => Math.hypot(...[1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)));
+    if (new Set(identities.map((x) => x.colors.primary)).size !== identities.length) issues.push({ ref: "pack:*", problem: "deux packs ont la même couleur principale" });
+    for (let i = 0; i < identities.length; i += 1) for (let j = i + 1; j < identities.length; j += 1) if (identities[i].direction === identities[j].direction && dist(identities[i].colors.primary, identities[j].colors.primary) < 40) issues.push({ ref: `pack:${identities[j].key}`, problem: `couleur principale trop proche de celle de ${identities[i].key} (même direction « ${identities[i].directionLabel} »)` });
+    const pairs = new Set(identities.map((x) => `${x.fonts.heading}/${x.fonts.body}`)).size;
+    if (pairs < 40) issues.push({ ref: "pack:*", problem: `seulement ${pairs} couples de polices différents (40 au moins attendus)` });
+    if (new Set(identities.map((x) => x.direction)).size < 20) issues.push({ ref: "pack:*", problem: "moins de 20 directions artistiques différentes" });
+  }
   report[type] = { label: def.label, count: items.length, target: TARGET, issues };
   failures += issues.length;
 }

@@ -8,6 +8,8 @@
 const db = require("../config/database");
 const { sameScope } = require("./siteScope");
 const palettes = require("./stylePalettes");
+const packBrand = require("./packBrand");
+const packIdentity = require("./packIdentity");
 const { PACKS } = require("../marketing/pages/sitePacks");
 const catalog = require("./templateCatalog");
 const { UserError } = require("../utils/errors");
@@ -38,7 +40,7 @@ function packs(ctx) {
 // ---------- Aperçu : sections d'UNE page du modèle ----------
 function sectionsOf(ctx, siteId, ref, pageKey = null) {
   const { kind, id } = parseRef(ref);
-  if (kind === "pack") { const first = PACKS.find((x) => x.key === id); const st = catalog.structureOf(ctx, siteId, ref, pageKey || (first && first.pages[0].key)); return { label: st.label, sections: st.pages[0].sections }; }
+  if (kind === "pack") { const first = PACKS.find((x) => x.key === id); const key = pageKey || (first && first.pages[0].key); const st = catalog.structureOf(ctx, siteId, ref, key); return { label: st.label, sections: first ? packBrand.sectionsOfPage(st.pages[0].sections, first, key, false) : st.pages[0].sections, tokens: first && packBrand.idOf(first.key) ? packIdentity.previewTokens(packBrand.idOf(first.key)) : null }; }
   const st = catalog.structureOf(ctx, siteId, ref);
   return { label: st.label, sections: st.pages[0].sections };
 }
@@ -102,7 +104,7 @@ function plan(ctx, siteId, { ref, name = "", menu = false, styles = false, assig
     for (const p of st.pages) operations.push({ op: "create_page", name: pageOp(p.name), sections: p.sections.length });
     const pack = PACKS.find((x) => x.key === id);
     if (menu) { const mn = freeMenuName(siteId, `${pack.name} — menu`); operations.push({ op: "create_menu", name: mn }); if (!navigation().assignments({ siteId }).header) operations.push({ op: "assign_menu", name: mn, location: "header" }); }
-    if (styles) operations.push({ op: "draft_styles", palette: palettes.PALETTES.find((x) => x.key === pack.palette).label, fonts: pack.fonts });
+    if (styles) { const idy = packBrand.idOf(pack.key); operations.push({ op: "draft_styles", palette: idy ? `« ${idy.directionLabel} » (couleurs, polices, formes, ombres)` : palettes.PALETTES.find((x) => x.key === pack.palette).label, fonts: idy ? idy.fonts : pack.fonts }); }
   } else if (resource === "page" || resource === "part") {
     const requested = String(name || "").trim() || st.label;
     operations.push({ op: "create_page", name: pageOp(requested), sections: st.pages[0].sections.length });
@@ -152,7 +154,7 @@ function importTemplate(ctx, siteId, { ref, importKey, name = "", menu = false, 
     };
     if (kind === "pack") {
       const pack = PACKS.find((x) => x.key === id);
-      for (const p of pack.pages) { const pg = makePage(p.name, { template: p.template }); created.push({ key: p.key, id: pg.id, name: pg.name, revision: pg.revision }); }
+      for (const p of pack.pages) { const base = pagesLib().gabaritSections(ctx, p.template); const pg = makePage(p.name, base ? { sections: packBrand.sectionsOfPage(base, pack, p.key, false) } : { template: p.template }); created.push({ key: p.key, id: pg.id, name: pg.name, revision: pg.revision }); }
       result.label = pack.name;
       if (menu) {
         const nav = navigation(), m = nav.create({ name: freeMenuName(siteId, `${pack.name} — menu`), siteId, userId });
@@ -164,7 +166,8 @@ function importTemplate(ctx, siteId, { ref, importKey, name = "", menu = false, 
       }
       if (styles) {
         const c = customizer(), draft = c.state(ctx, siteId, { can: () => true }).changes;
-        const changes = { ...draft, ...palettes.changesFor(pack.palette, siteId), "tokens.fonts.heading": pack.fonts.heading, "tokens.fonts.body": pack.fonts.body };
+        const idy = packBrand.idOf(pack.key);
+        const changes = idy ? { ...draft, ...packIdentity.styleChanges(idy) } : { ...draft, ...palettes.changesFor(pack.palette, siteId), "tokens.fonts.heading": pack.fonts.heading, "tokens.fonts.body": pack.fonts.body };
         c.saveDraft(ctx, siteId, changes, userId, { can });
         result.styles = true;
       }
