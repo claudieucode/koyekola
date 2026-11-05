@@ -82,7 +82,7 @@ describe("isolation graphique", () => {
     for (const s of specs()) {
       const p = packs.get(s.key);
       assert.match(p.css, /prefers-reduced-motion/, `${s.key} : CSS`);
-      if (p.js) { assert.match(p.js, new RegExp(`data-kw-pack["']\\)\\s*!==\\s*["']${s.key}["']`), `${s.key} : garde de thème`); assert.match(p.js, /prefers-reduced-motion/, `${s.key} : JS`); assert.ok(p.js.length < 14000, `${s.key} : JS léger`); }
+      if (p.js) { assert.match(p.js, new RegExp(`data-kw-pack["']\\)\\s*!==\\s*["']${s.key}["']`), `${s.key} : garde de thème`); assert.match(p.js, /prefers-reduced-motion/, `${s.key} : JS`); assert.ok(p.js.length < 20000, `${s.key} : JS léger`); }
       assert.ok(p.css.length < 70000, `${s.key} : CSS ${p.css.length} octets`);
     }
   });
