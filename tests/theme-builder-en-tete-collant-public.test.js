@@ -55,7 +55,7 @@ describe("En-tête collant / superposé : pages publiées", () => {
     assert.equal((html.match(/lp-site-header/g) || []).length >= 1, true);
   });
   test("retour à un en-tête ordinaire : les classes disparaissent (rien ne reste d'un modèle remplacé)", async () => {
-    await adopt("classique-sobre.doux"); assert.doesNotMatch(header(await live()), /kw-theme-(sticky|overlay)/);
+    await adopt("classique-logo-menu-bouton.clair"); assert.doesNotMatch(header(await live()), /kw-theme-(sticky|overlay)/);
   });
   test("feuille de style : règles collant / superposé et suppression de la marge de colonne au-dessus de l'en-tête", () => {
     const css = fs.readFileSync(path.join(__dirname, "..", "public", "css", "landing.css"), "utf8");

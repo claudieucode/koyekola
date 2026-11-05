@@ -11,6 +11,7 @@ const Catalog = require(path.join(REPO, "src/themeBuilder/catalog"));
 const { TEST_KEY } = require(path.join(REPO, "tests/marketing-helpers"));
 
 const OUT = process.argv[2] || path.join(require("os").tmpdir(), "audit-pieds");
+const TYPE = process.env.AUDIT_TYPE || "footer"; // « header » pour contrôler les en-têtes
 const ONLY = process.argv[3] ? process.argv[3].split(",") : null;
 const VPS = [["desktop", 1280, 800], ["tablette", 820, 900], ["mobile", 390, 800]];
 
@@ -21,7 +22,7 @@ const VPS = [["desktop", 1280, 800], ["tablette", 820, 900], ["mobile", 390, 800
   const site = Number((await boss.post("/marketing/site-web/sites", { name: "Audit pieds" })).location.match(/sites\/(\d+)/)[1]);
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
   const report = [];
-  const entries = Catalog.entries("footer").filter((e) => !ONLY || ONLY.includes(e.layoutId) || ONLY.includes(e.layoutKey) || ONLY.includes(e.key));
+  const entries = Catalog.entries(TYPE).filter((e) => !ONLY || ONLY.includes(e.layoutId) || ONLY.includes(e.layoutKey) || ONLY.includes(e.key));
   for (const [vname, w, h] of VPS) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     await ctx.addCookies([...boss.cookies].map(([n, v]) => ({ name: n, value: v, url: srv.base })));
@@ -29,10 +30,11 @@ const VPS = [["desktop", 1280, 800], ["tablette", 820, 900], ["mobile", 390, 800
     const errors = [];
     pg.on("pageerror", (e) => errors.push(e.message));
     for (const e of entries) {
-      const url = `${srv.base}/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/footer/${e.key}/apercu`;
+      const url = `${srv.base}/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/${TYPE}/${e.key}/apercu`;
       const r = { key: e.key, name: e.name, family: e.layoutKey, vp: vname };
       try {
         await pg.goto(url, { waitUntil: "load" });
+        await pg.waitForTimeout(600); await pg.evaluate(() => document.fonts.ready).catch(() => {}); // les polices de la bibliothèque se chargent à l'usage : on attend leur arrivée avant de mesurer et de capturer
         const m = await pg.evaluate(() => {
           const root = document.querySelector(".kw-theme-part");
           if (!root) return { missing: true };
@@ -51,7 +53,8 @@ const VPS = [["desktop", 1280, 800], ["tablette", 820, 900], ["mobile", 390, 800
           const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
           const bgOf = (el) => { for (let e = el; e && e !== document.documentElement; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c && c.a > 0.85) return c; } return { r: 255, g: 255, b: 255, a: 1 }; };
           const low = [];
-          for (const el of root.querySelectorAll("a,button,p,span,h1,h2,h3,label,li")) {
+          const overlay = root.classList.contains("kw-theme-overlay"); // en-tête superposé : son texte clair se pose sur le visuel d'ouverture, pas sur le fond blanc de la page
+          for (const el of overlay ? [] : root.querySelectorAll("a,button,p,span,h1,h2,h3,label,li")) {
             if (!vis(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
             const fg = parse(getComputedStyle(el).color), bg = bgOf(el); if (!fg) continue;
             const L1 = lum(fg), L2 = lum(bg), ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
@@ -60,7 +63,8 @@ const VPS = [["desktop", 1280, 800], ["tablette", 820, 900], ["mobile", 390, 800
           const rb = root.getBoundingClientRect();
           // la zone de contenu (1180 px max) est centrée : ses bords gauche et droit doivent être symétriques
           const inner = root.querySelector("[class*='kw-container'] [class*='kw-container']") || null;
-          return { low: low.slice(0, 4), scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, height: Math.round(rb.height), top: Math.round(rb.top), items: rects.length, overlaps: overlaps.slice(0, 4), outside: out.slice(0, 4), hasInner: !!inner,
+          const fontOf = (q) => { const el = root.querySelector(q); return el ? getComputedStyle(el).fontFamily.split(",")[0].replace(/"/g, "") : ""; };
+          return { fonts: { menu: fontOf(".kw-menu-link"), bouton: fontOf(".kw-btn"), logo: fontOf(".kw-sitelogo-text, .kw-sitetitle") }, low: low.slice(0, 4), scrollW: document.documentElement.scrollWidth, clientW: document.documentElement.clientWidth, height: Math.round(rb.height), top: Math.round(rb.top), items: rects.length, overlaps: overlaps.slice(0, 4), outside: out.slice(0, 4), hasInner: !!inner,
             logo: !!root.querySelector("img, [class*='logo']"), menu: !!root.querySelector("nav, [class*='menu']") };
         });
         Object.assign(r, m);

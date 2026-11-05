@@ -52,7 +52,8 @@ const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, p
 function partMode(section) {
   const first = section && Array.isArray(section.children) ? section.children[0] : null;
   const pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
-  return pos === "sticky" ? " kw-theme-sticky" : pos === "absolute" ? " kw-theme-overlay" : "";
+  const fx = first && first.props && ["shrink", "solid", "both"].includes(first.props.headerFx) ? first.props.headerFx : "";
+  return (pos === "sticky" ? " kw-theme-sticky" : pos === "absolute" ? " kw-theme-overlay" : "") + (fx && pos ? ` kw-theme-fx-${fx}` : "");
 }
 // Un modèle fait de bandes pleine largeur (conteneurs « pleine largeur ») doit pouvoir toucher les bords : sa zone n'est alors plus limitée à la colonne de texte du site. Sans bande pleine largeur, rien ne change.
 const bleedOf = (sections) => ((sections || []).some((s) => s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true))) ? " kw-theme-bleed" : "");
@@ -199,7 +200,7 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
       // En-tête SUPERPOSÉ (transparent, texte clair) : il est posé sur le visuel d'ouverture de la page ; sans visuel dessous, le texte blanc disparaît sur le fond blanc de l'aperçu
-      const overlay = type === "header" && section && partMode(section) === " kw-theme-overlay";
+      const overlay = type === "header" && section && partMode(section).startsWith(" kw-theme-overlay");
       const hero = (h) => `<div aria-hidden="true" style="height:${h}px;background:linear-gradient(135deg,#1e293b,#475569 60%,#64748b)"></div>`;
       const body = overlay ? html + hero(thumb ? 150 : 360) + (thumb ? "" : FILLER) : thumb ? html : type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html;
       done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title><style>html,body{margin:0}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body>${body}</body></html>`);
