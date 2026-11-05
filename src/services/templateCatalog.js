@@ -227,7 +227,7 @@ function enrich(ctx, siteId, e, { can, sectors, usage }) {
   const pal = pack ? palettes.PALETTES.find((x) => x.key === pack.palette) : null;
   return { ...e, sectors: sec.map((s) => ({ slug: s.slug, label: s.label, family: s.familyLabel })), pages, pageCount: pages.length, elements: pages.reduce((n, x) => n + x.elements, 0), usage: usage.get(e.ref) || 0,
     compat: { status: analysis.status, blockers: analysis.blockers.length, warnings: analysis.warnings.length, requires: analysis.requires },
-    ...(pack ? { menuItems: pack.menu.length, style: { palette: pack.palette, paletteLabel: pal.label, colors: pal.colors, fonts: pack.fonts } } : {}) };
+    ...(pack ? { menuItems: pack.menu.length, style: (() => { const idy = require("./packBrand").idOf(pack.key); return idy ? { palette: idy.direction, paletteLabel: idy.directionLabel, colors: idy.colors, fonts: idy.fonts } : { palette: pack.palette, paletteLabel: pal.label, colors: pal.colors, fonts: pack.fonts }; })() } : {}) };
 }
 
 // ---------- Requête : recherche, filtres, tri, pagination ----------

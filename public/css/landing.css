@@ -91,6 +91,7 @@
 .lp-bg-dark { background: var(--kw-secondary, #0b2a40); color: #fff; }
 .lp-bg-primary .lp-btn, .lp-bg-dark .lp-btn { background: #fff; color: var(--kw-secondary, #0b2a40); }
 .lp-bg-primary a:not(.lp-btn), .lp-bg-dark a:not(.lp-btn) { color: inherit; }
+.lp-block.lp-bg-primary :is(h1,h2,h3,h4,h5,h6), .lp-block.lp-bg-dark :is(h1,h2,h3,h4,h5,h6), .lp-block.lp-bg-accent :is(h1,h2,h3,h4,h5,h6) { color: inherit; }
 .lp-al-left { text-align: left; }
 .lp-al-center { text-align: center; }
 .lp-al-right { text-align: right; }
@@ -377,7 +378,7 @@
 .kw-buy { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; }
 .kw-courserating { margin: 0; }
 .kw-courserating .kw-stars { margin: 0; }
-.kw-courserating-count, .kw-courserating-none { color: rgba(16, 34, 47, .65); font-size: .95em; }
+.kw-courserating-count, .kw-courserating-none { color: inherit; opacity: .78; font-size: .95em; }
 .kw-buy-price { font-weight: 700; font-size: 1.15em; color: var(--lp-text, inherit); }
 .lp-builder .kw-buy .kw-button[disabled] { pointer-events: none; opacity: 1; cursor: default; }
 .kw-btn-outline { background: transparent; color: var(--lp-accent, #0277b6); border-color: currentColor; }
@@ -482,7 +483,8 @@
    côté serveur). Mêmes structures, seules les valeurs changent. */
 .lp-site { font-family: var(--kw-font-body); font-size: var(--kw-body-size); font-weight: var(--kw-body-weight); line-height: var(--kw-body-lh); }
 .lp-site h1, .lp-site h2, .lp-site h3 { font-family: var(--kw-font-heading); }
-.lp-site .lp-hero h1 { font-size: clamp(28px, 6vw, var(--kw-h1-size)); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); color: var(--kw-secondary); }
+.lp-site .lp-hero h1 { font-size: clamp(24px, 5.5vw, var(--kw-h1-size)); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); color: var(--kw-text, var(--kw-secondary)); }
+.lp-site .lp-block.lp-bg-primary .lp-hero h1, .lp-site .lp-block.lp-bg-dark .lp-hero h1, .lp-site .lp-block.lp-bg-accent .lp-hero h1 { color: inherit; }
 .lp-site .lp-section h2 { font-size: var(--kw-h2-size); font-weight: var(--kw-h2-weight); line-height: var(--kw-h2-lh); }
 .lp-site .lp-section { margin: var(--kw-space-lg) 0; }
 .lp-site a { font-family: var(--kw-font-link); }
@@ -592,7 +594,7 @@ body.pb-hand.is-panning,body.pb-hand.is-panning *{cursor:grabbing}
 @media (prefers-reduced-motion: reduce) { .lp-faq-item[open] > .lp-faq-answer { animation: none; } }
 /* Badge */
 .kw-badge { display: inline-flex; align-self: flex-start; align-items: center; max-width: 100%; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
-.kw-badge-primary { background: color-mix(in srgb, var(--kw-primary, #0277b6) 14%, #fff); color: var(--kw-primary, #0277b6); }
+.kw-badge-primary { background: color-mix(in srgb, var(--kw-primary, #0277b6) 14%, #fff); color: color-mix(in srgb, var(--kw-primary, #0277b6) 30%, #10222f); }
 .kw-badge-neutral { background: rgba(16, 34, 47, 0.08); color: inherit; }
 .kw-badge-success { background: #e3f4e8; color: #1e7e34; }
 .kw-badge-warning { background: #fdf3dc; color: #8a5a00; }
@@ -743,14 +745,14 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .kw-alert[data-kw-dismiss] { padding-right: 44px; }
 /* Compteur */
 .kw-counter { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.kw-counter-num { font-size: 44px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.kw-counter-label { color: rgba(16, 34, 47, .75); }
+.kw-counter-num { font-size: clamp(26px, 2.4vw, 44px); font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.kw-counter-label { color: inherit; opacity: .78; }
 /* Témoignage */
 .kw-testimonial { margin: 0; padding: 22px; border-radius: 14px; background: var(--kw-surface, #fff); box-shadow: 0 6px 18px rgba(15, 23, 42, .08); min-width: 0; }
 .kw-testimonial-text { margin: 0 0 14px; font-size: 17px; } .kw-testimonial-text > :first-child { margin-top: 0; } .kw-testimonial-text > :last-child { margin-bottom: 0; }
 .kw-testimonial-who { display: flex; align-items: center; gap: 12px; }
 .kw-testimonial-who strong { display: block; }
-.kw-testimonial-role { display: block; font-size: 14px; color: rgba(16, 34, 47, .7); }
+.kw-testimonial-role { display: block; font-size: 14px; color: inherit; opacity: .78; }
 .kw-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; flex: none; }
 .kw-stars { margin: 0 0 10px; color: #b7791f; letter-spacing: 2px; } .kw-stars-off { color: rgba(16, 34, 47, .2); }
 /* Offre tarifaire */
@@ -759,7 +761,7 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .kw-pricing-badge { align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: var(--kw-primary, #0277b6); color: #fff; font-size: 13px; font-weight: 700; }
 .kw-pricing-title { margin: 0; font-size: 20px; }
 .kw-pricing-price { margin: 0; } .kw-pricing-price strong { font-size: 36px; line-height: 1.1; } .kw-pricing-price span { color: rgba(16, 34, 47, .7); }
-.kw-pricing-desc { margin: 0; color: rgba(16, 34, 47, .8); }
+.kw-pricing-desc { margin: 0; color: inherit; opacity: .78; }
 .kw-pricing-features { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 8px; }
 .kw-pricing-features li { position: relative; padding-left: 26px; }
 .kw-pricing-features li::before { content: ""; position: absolute; left: 2px; top: 5px; width: 12px; height: 7px; border-left: 2px solid var(--kw-primary, #0277b6); border-bottom: 2px solid var(--kw-primary, #0277b6); transform: rotate(-45deg); }
@@ -796,7 +798,7 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .kw-menu-burger-label { line-height: 1; }
 /* Typographie globale du site (design system) appliquée aux éléments des sections libres. Même poids que la classe
    propre à l'élément (.kw-n-…), écrite après : le réglage d'un élément reste prioritaire. */
-.lp-site :where(h1.kw-heading) { font-family: var(--kw-font-heading); font-size: clamp(28px, 6vw, var(--kw-h1-size)); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); }
+.lp-site :where(h1.kw-heading) { font-family: var(--kw-font-heading); font-size: clamp(24px, 5.5vw, var(--kw-h1-size)); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); }
 .lp-site :where(h2.kw-heading) { font-family: var(--kw-font-heading); font-size: var(--kw-h2-size); font-weight: var(--kw-h2-weight); line-height: var(--kw-h2-lh); }
 .lp-site :where(h3.kw-heading) { font-family: var(--kw-font-heading); font-size: var(--kw-h3-size); font-weight: var(--kw-h3-weight); line-height: var(--kw-h3-lh); }
 .lp-site :where(h4.kw-heading) { font-family: var(--kw-font-heading); font-size: var(--kw-h4-size); font-weight: var(--kw-h4-weight); line-height: var(--kw-h4-lh); }
@@ -878,9 +880,9 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-post-card, .kw-course-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid rgba(16, 34, 47, .12); border-radius: 12px; background: var(--kw-surface, #fff); }
 .kw-post-card img, .kw-course-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
 .kw-post-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; min-width: 0; flex: 1; }
-.kw-post-date { font-size: 13px; color: rgba(16, 34, 47, .65); }
+.kw-post-date { font-size: 13px; color: inherit; opacity: .78; }
 .kw-post-title { margin: 0; font-size: 18px; line-height: 1.3; overflow-wrap: anywhere; } .kw-post-title a { color: inherit; }
-.kw-post-excerpt { margin: 0; color: rgba(16, 34, 47, .8); font-size: 15px; }
+.kw-post-excerpt { margin: 0; color: inherit; opacity: .78; font-size: 15px; }
 .kw-course-price { margin: auto 0 6px; font-weight: 800; }
 .kw-dyn-empty { margin: 0; padding: 14px; border-radius: 10px; background: rgba(16, 34, 47, .05); }
 @media (max-width: 560px) { .kw-posts-list .kw-post-card { flex-direction: column; } .kw-posts-list .kw-post-card img { width: 100%; } }
@@ -1480,3 +1482,6 @@ html.kw-noscroll { overflow: hidden; }
 .kw-modal-dismiss { border: 0; background: none; padding: 6px 0; font: inherit; font-size: .9em; color: inherit; opacity: .7; text-decoration: underline; cursor: pointer; }
 .kw-modal-dismiss:hover, .kw-modal-dismiss:focus-visible { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .kw-modal[data-kw-anim], .kw-modal[data-kw-anim-out-run] { animation: none; } }
+
+/* Petits écrans : le titre principal ne coupe jamais un mot long */
+@media (max-width: 480px) { .lp-site h1.kw-heading, .lp-site .lp-hero h1 { font-size: min(var(--kw-h1-size, 44px), 8.5vw); } }

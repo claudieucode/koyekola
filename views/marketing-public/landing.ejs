@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <%# Balises SEO : calculées par le SEO CORE (src/seo/webPages.js) — une seule source pour l'aperçu, le canevas et la page publique %>
-  <% const h = webPageSeo(page, siteX, preview || (typeof builder !== "undefined" && builder)); const siteStyle = siteX ? tokensToCss(siteX.tokens) : ""; %>
+  <% const h = webPageSeo(page, siteX, preview || (typeof builder !== "undefined" && builder)); const siteStyle = typeof previewStyle !== "undefined" && previewStyle ? previewStyle : siteX ? tokensToCss(siteX.tokens) : ""; %>
   <%- include("../partials/seo-head-tags", { h }) %>
   <% if (sx && sx.identity.faviconUrl) { %><link rel="icon" href="<%= sx.identity.faviconUrl %>"<% if (/\.svg(\?|$)/i.test(sx.identity.faviconUrl)) { %> type="image/svg+xml"<% } %>><% } else { %><link rel="icon" href="/favicon.svg" type="image/svg+xml"><% } %>
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
@@ -13,7 +13,7 @@
   <% if (siteX && siteX.assets.theme) { %><style id="kw-site-theme"><%- siteX.assets.theme %></style><% } %>
   <%# Thème autonome (paquet) : sa propre feuille de styles, confinée à body[data-kw-pack], chargée après la base neutre et avant le CSS personnalisé du site %>
   <% if (siteX && siteX.assets.pack && siteX.assets.pack.link) { %><%- siteX.assets.pack.link %><% } %>
-  <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle, siteX.id); if (ff) { %><style id="kw-site-faces"><%- ff %></style><% } } %>
+  <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle, siteX ? siteX.id : null); if (ff) { %><style id="kw-site-faces"><%- ff %></style><% } } %>
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
   <% if (siteX && siteX.assets.custom) { %><style id="kw-site-custom"><%- siteX.assets.custom %></style><% } %>

@@ -2,6 +2,7 @@
 // Patterns (insertion dans une page) → Styles (publication d'une palette) → publication des pages → site public → rechargement. Chaque étape s'appuie sur les données de la précédente
 // (aucun format parallèle) ; le site B reste intact du début à la fin.
 const { test, describe, before, after } = require("node:test");
+const IDY = (k) => require("../src/services/packBrand").idOf(k);
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { TEST_KEY } = require("./marketing-helpers");
@@ -62,11 +63,11 @@ describe("parcours Templates → Éditeur → Patterns → Styles → publicatio
 
   test("4. Styles : le brouillon préparé par le pack est visible dans Styles ; le publier change le site (moteur et rendu)", async () => {
     const st = bootOf((await adminA.get(`${R}/styles?site=${A}`)).text, "st-data");
-    assert.equal(st.values["tokens.colors.primary"], "#334155", "palette « Ardoise » du pack dans le brouillon"); assert.equal(st.live["tokens.colors.primary"], "#0277b6", "version en ligne inchangée jusque-là");
+    assert.equal(st.values["tokens.colors.primary"], IDY("service-professionnel").colors.primary, "identité du pack dans le brouillon"); assert.equal(st.live["tokens.colors.primary"], "#0277b6", "version en ligne inchangée jusque-là");
     const pub = json(await adminA.postJson(`${R}/personnaliser/publier?site=${A}`, { site: String(A), rev: st.draft.rev }));
     assert.equal(pub.ok, true, JSON.stringify(pub));
-    assert.equal(JSON.parse(one("SELECT tokens FROM mk_sites WHERE id = ?", A).tokens).colors.primary, "#334155");
-    const st2 = bootOf((await adminA.get(`${R}/styles?site=${A}`)).text, "st-data"); assert.equal(st2.live["tokens.colors.primary"], "#334155"); assert.equal(st2.draft.count, 0);
+    assert.equal(JSON.parse(one("SELECT tokens FROM mk_sites WHERE id = ?", A).tokens).colors.primary, IDY("service-professionnel").colors.primary);
+    const st2 = bootOf((await adminA.get(`${R}/styles?site=${A}`)).text, "st-data"); assert.equal(st2.live["tokens.colors.primary"], IDY("service-professionnel").colors.primary); assert.equal(st2.draft.count, 0);
   });
 
   test("5. Publication : les pages prêtes passent en ligne (contrôles habituels), les autres disent pourquoi ; le site public utilise le contenu ET les styles", async () => {
@@ -81,7 +82,7 @@ describe("parcours Templates → Éditeur → Patterns → Styles → publicatio
     const published = all("SELECT id, name, slug FROM mk_landing_pages WHERE site_id = ? AND published_at IS NOT NULL", A);
     assert.ok(published.length >= 1, "au moins une page est publiée");
     const pub = await anon.get(`/p/${published[0].slug}`);
-    assert.equal(pub.status, 200); assert.match(pub.text, /--kw-primary:#334155/, "le site public utilise la palette publiée");
+    assert.equal(pub.status, 200); assert.match(pub.text, new RegExp(`--kw-primary:${IDY("service-professionnel").colors.primary}`), "le site public utilise la palette publiée");
     assert.ok(imported.pages.length - published.length === blocked.length, "chaque page non publiée est expliquée");
   });
 

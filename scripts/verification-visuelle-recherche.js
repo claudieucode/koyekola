@@ -38,13 +38,15 @@ async function pool(items, n, fn) { const q = items.slice(); const res = []; awa
         jobs.push({ key, file: host, name, w, h });
       }
     }
-    const results = await pool(jobs.filter((j) => !j.error), 6, async (j) => {
+    let done = 0;
+    const results = await pool(jobs.filter((j) => !j.error), 4, async (j) => {
       const base = ["--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-sandbox", `--window-size=${Math.max(j.w, 500)},${j.h}`, "--virtual-time-budget=1500"];
       const dom = await run([...base, "--dump-dom", `file://${j.file}`]);
       const m = dom.match(/<title>RESULT:(\{.*?\})<\/title>/);
       let r = { key: j.key, size: j.name, error: "mesure indisponible" };
       if (m) { const v = JSON.parse(m[1]); r = { key: j.key, size: j.name, width: j.w, scrollWidth: v.sw, overflowX: v.sw > v.iw + 1, outside: v.out, firstOutside: v.first, height: v.sh }; }
       if (CAP === "toutes" || (CAP === "echantillon" && keys.indexOf(j.key) % 7 === 0)) await run([...base, `--screenshot=${path.join(OUT, "captures", `${j.key}.${j.name}.png`)}`, `file://${j.file}`]);
+      if (++done % 25 === 0) console.error(`mesures ${done}/${jobs.length}`);
       return r;
     });
     const bad = results.filter((r) => r.error || r.overflowX || r.outside > 0);

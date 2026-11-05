@@ -3,6 +3,7 @@
 const express = require("express");
 const crypto = require("node:crypto");
 const library = require("../themes/library");
+const packArtFor = (key, slot) => { try { const idy = require("../../services/packBrand").idOf(key); if (!idy) return null; const tokens = require("../pages/tokens").normalizeTokens({ colors: idy.colors }, { strict: false }); return require("../../services/packArt").render(slot, tokens, idy.art); } catch { return null; } };
 
 const KEY = /^[a-z][a-z0-9-]{1,39}$/;
 module.exports = () => {
@@ -12,7 +13,7 @@ module.exports = () => {
     const id = `${req.params.key}/${req.params.slot}`;
     let out = memo.get(id);
     if (!out) {
-      const r = KEY.test(req.params.key) ? library.artFor(req.params.key, req.params.slot) : null;
+      const r = KEY.test(req.params.key) ? (library.artFor(req.params.key, req.params.slot) || packArtFor(req.params.key, req.params.slot)) : null;
       if (!r) return res.status(404).type("text/plain").send("Introuvable");
       out = { svg: r.svg, etag: `"${crypto.createHash("sha1").update(r.svg).digest("hex").slice(0, 20)}"` };
       if (memo.size > 3000) memo.clear();

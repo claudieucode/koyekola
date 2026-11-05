@@ -21,7 +21,7 @@ const INSPECT = () => {
     }
     // texte invisible ou illisible : contraste texte / fond effectif inférieur à 2,2 (seuil volontairement bas : seuls les vrais défauts)
     if (e.children.length === 0 && (e.textContent || "").trim().length > 1 && parseFloat(cs.fontSize) >= 12 && r.width > 20 && !e.closest(".kw-marquee")) {
-      const lum = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; const [R, G, B, A = 1] = m.map(Number); if (A === 0) return null; const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return { l: 0.2126 * f(R) + 0.7152 * f(G) + 0.0722 * f(B), a: A }; };
+      const lum = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; let [R, G, B, A = 1] = m.map(Number); if (/^color\(srgb/.test(c)) { R *= 255; G *= 255; B *= 255; if (m.length > 4) A = Number(m[m.length - 1]); } if (A === 0) return null; const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return { l: 0.2126 * f(R) + 0.7152 * f(G) + 0.0722 * f(B), a: A }; };
       let bg = null, imageBg = false; for (let p = e; p; p = p.parentElement) { if (getComputedStyle(p).backgroundImage !== "none") imageBg = true; const b = lum(getComputedStyle(p).backgroundColor); if (b && b.a > 0.9) { bg = b; break; } }
       const fg = lum(cs.color); bg = bg || { l: 1 };
       if (fg && fg.a > 0.5 && !imageBg) { const hi = Math.max(fg.l, bg.l), lo = Math.min(fg.l, bg.l), ratio = (hi + 0.05) / (lo + 0.05); if (ratio < 2.2 && cs.opacity !== "0") { const k = `contrast:${label(e)}`; if (!seen.has(k)) { seen.add(k); out.push(`texte illisible (contraste ${ratio.toFixed(1)}) : « ${(e.textContent || "").trim().slice(0, 30)} »`); } } }
