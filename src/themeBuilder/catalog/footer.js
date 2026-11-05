@@ -7,6 +7,7 @@
 // Responsive : aucune position absolue ; les colonnes ont une largeur minimale et passent à la ligne ; les lignes se replient en pile sous 640 px.
 // Voir docs/theme-builder/kolakisa-footer-library.md pour la grammaire des rangées et l'ajout d'un modèle.
 const { kit, sty } = require("./kit");
+const { IDENT, IDENT2, MOODS } = require("./identities");
 
 const FAMILIES = [
   { key: "minimal", label: "Minimal et compact" },
@@ -26,7 +27,7 @@ const SKIN_ORDER = ["clair", "marque", "nuit", "editorial", "doux"];
 const tone = (S, bg) => {
   if (bg === "alt") return S.alt.startsWith("#") && S.alt.length === 9 ? tone(S, "ink") : { ...S, bg: S.alt, alt: S.bg };
   if (bg === "accent") return { ...S, bg: S.accent, fg: S.onAccent, mute: S.onAccent, alt: "#ffffff22", accent: S.onAccent, onAccent: S.accent, line: "#ffffff55" };
-  if (bg === "ink") return { ...S, bg: "token:text", fg: "token:background", mute: "token:background", alt: "token:text", accent: "token:background", onAccent: "token:text", line: "token:muted" };
+  if (bg === "ink") return S.ink ? { ...S, bg: S.ink, fg: S.onInk, mute: S.onInk, alt: S.ink, accent: S.onInk, onAccent: S.ink, line: "#ffffff55" } : { ...S, bg: "token:text", fg: "token:background", mute: "token:background", alt: "token:text", accent: "token:background", onAccent: "token:text", line: "token:muted" };
   return S;
 };
 const PAD = { xs: "10px", sm: "16px", md: "", lg: "44px", xl: "64px" };
@@ -36,6 +37,9 @@ const ABOUT = "Décrivez en une ou deux phrases votre activité et ce que vos vi
 // ── Un élément : « nom:arg|libellé|adresse » ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // center : l'élément est centré (rangées Z et colonnes centrées)
 function item(k, code, env, center) {
+  return ownFont(k.S, code, rawItem(k, code, env, center));
+}
+function rawItem(k, code, env, center) {
   const [head, a1, a2, a3] = code.split("|");
   const [name, x] = head.split(":");
   const S = k.S, mid = center ? { textAlign: "center" } : {};
@@ -69,8 +73,8 @@ function item(k, code, env, center) {
       if (env && env.formId) return k.W("signupform", { formId: env.formId, heading, intro, button: "S'abonner" }, { width: "100%", maxWidth: "460px", ...(center ? { marginLeft: "auto", marginRight: "auto" } : {}) });
       return k.col([k.H(heading, "3", { fontSize: "20px", ...mid }), k.T(`<p>${intro}</p>`, { color: S.mute, fontSize: "14px", ...mid }), k.B("Nous contacter", "/contact")], { alignItems: center ? "center" : "flex-start", maxWidth: "460px" });
     }
-    case "cta": return k.B(a1 || "Nous contacter", a2 || "/contact");
-    case "cta2": return k.B(a1 || "Nous contacter", a2 || "/contact", "outline", S.bg === "token:primary" ? { color: S.fg, borderColor: S.fg } : {});
+    case "cta": return k.B(a1 || "Nous contacter", a2 || "/contact", undefined, center ? { alignSelf: "center" } : {});
+    case "cta2": return k.B(a1 || "Nous contacter", a2 || "/contact", "outline", { ...(S.bg === "token:primary" ? { color: S.fg, borderColor: S.fg } : {}), ...(center ? { alignSelf: "center" } : {}) });
     case "contact": {
       const n = k.W("iconlist", { items: [{ text: "Votre adresse e-mail", icon: "mail" }, { text: "Votre numéro de téléphone", icon: "smartphone" }, { text: "Votre adresse postale", icon: "mapPin" }], iconColor: S.accent, ...(x === "inline" ? { inline: true } : {}) }, { color: S.fg, fontSize: "14px" });
       return n;
@@ -90,6 +94,18 @@ function item(k, code, env, center) {
     case "div": return k.divider({ width: "100%" });
     default: throw new Error(`Pied de page : élément inconnu « ${name} ».`);
   }
+}
+
+// Identité PROPRE : la police s'applique à tous les éléments de texte ; le site impose la sienne aux liens et boutons, d'où les « parties » (parts.js) pour le menu, le compte, le logo et la recherche.
+function ownFont(S, code, node) {
+  const name = code.split("|")[0].split(":")[0];
+  if (!(S.font && S.font.startsWith("font."))) return node;
+  const set = (d) => ({ styles: { desktop: d } });
+  const out = { ...node, styles: { ...(node.styles || {}), desktop: { ...((node.styles || {}).desktop || {}), fontFamily: name === "logo" || name === "title" ? S.head : S.font } } };
+  if (["menu", "hmenu", "menuh", "hmenuh", "account"].includes(name)) out.parts = { link: set({ fontFamily: S.font }) };
+  if (name === "search") out.parts = { field: set({ fontFamily: S.font, backgroundColor: S.alt, color: S.fg, borderColor: S.line }), button: set({ fontFamily: S.font, backgroundColor: S.accent, color: S.onAccent, borderRadius: S.btnRadius }) };
+  if (name === "logo") out.parts = { text: set({ fontFamily: S.head, fontWeight: S.weight, fontSize: "24px", color: S.fg }) };
+  return out;
 }
 
 // ── Une rangée → une bande ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -145,9 +161,19 @@ const fam = (family, models) => {
     LAYOUTS.push({ key, family, skin, label, tags, desc, build: (k, env) => [wrap(k.S, rows, env)] });
   });
 };
+// Liens et boutons imbriqués (liste légale, liens du pied…) : la police de l'identité s'applique aussi à eux (le site impose la sienne aux liens)
+function fontAll(S, n) {
+  if (!(S.font && S.font.startsWith("font."))) return;
+  for (const c of n.children || []) {
+    if ((c.type === "link" || c.type === "button") && !(c.styles && c.styles.desktop && c.styles.desktop.fontFamily)) c.styles = { ...(c.styles || {}), desktop: { ...((c.styles || {}).desktop || {}), fontFamily: S.font } };
+    fontAll(S, c);
+  }
+}
 // Toutes les rangées sont dans UN conteneur pleine largeur sans espace entre rangées : le pied entier se comporte comme un seul bloc
 function wrap(S, rows, env) {
-  return { type: "container", props: { full: true }, children: rows.map((r, i) => band(S, r, i === 0, env)), ...sty({ display: "flex", flexDirection: "column", gap: "0px", width: "100%" }) };
+  const root = { type: "container", props: { full: true }, children: rows.map((r, i) => band(S, r, i === 0, env)), ...sty({ display: "flex", flexDirection: "column", gap: "0px", width: "100%" }) };
+  fontAll(S, root);
+  return root;
 }
 fam("minimal", [
   ["ligne-copyright-menu", "Une ligne", ["minimaliste", "sobre", "copyright"], "Copyright à gauche, navigation du pied de page à droite, sur une seule ligne.", [L(["copy"], ["menuh"], { pad: "sm" })]],
@@ -279,4 +305,19 @@ fam("centre", [
   ["centre-contact", "Coordonnées centrées avec navigation", ["centré", "contact", "navigation"], "Logo, coordonnées en ligne, navigation et copyright, centrés.", [Z(["logo:40", "contact:inline", "menuh", "copy:c"], { pad: "lg" })]],
 ]);
 
-module.exports = { type: "footer", kind: "component", flat: true, families: FAMILIES, layouts: LAYOUTS };
+// Identités : chaque modèle reçoit une palette et des polices FIXES (jamais la charte du site). Les modèles sectoriels reçoivent l'identité de leur métier ; les autres, une palette de l'ambiance de leur ancien thème
+// (le suffixe de clé d'origine est conservé dans keySkin : aucun lien existant ne casse).
+const SECTOR = {
+  "horaires-et-carte": "resto", "contact-rendez-vous": "cabinet", "portfolio-titre-et-reseaux": "portfolio", "marque-en-geant": "agence", "boutique-formations": "ecole",
+  "saas-produit-ressources": "saas", "journal-titre-et-filets": "media", "boutique-quatre-colonnes": "mode", "carte-a-droite": "immo", "reseaux-bandeau-couleur": "asso", "centre-presentation": "sante",
+};
+const seen = {};
+for (const l of LAYOUTS) {
+  l.keySkin = l.skin;
+  const id = SECTOR[l.key] && IDENT.find((x) => x.key === SECTOR[l.key]);
+  if (id) { l.skin = id.key; continue; }
+  const mood = MOODS[l.skin], pool = IDENT2.filter((x) => x.mood === mood);
+  const n = seen[mood] = (seen[mood] || 0) + 1;
+  l.skin = pool[(n - 1) % pool.length].key;
+}
+module.exports = { type: "footer", kind: "component", flat: true, ownSkins: true, families: FAMILIES, layouts: LAYOUTS, skins: [...IDENT2.map(({ mood: _m, ...x }) => x), ...IDENT] };

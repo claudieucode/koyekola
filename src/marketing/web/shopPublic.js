@@ -72,23 +72,27 @@ module.exports = ({ db }) => {
   const archiveScope = (title, count, extra = {}) => ({ archive: { type: "shop", title, description: "", count, url: BASE, search: "", ...extra } });
 
   // ── Catalogue ──
-  const listing = (req, res, { categorySlug = null } = {}) => {
+  const listing = (req, res, { categorySlug = null, tagName = null } = {}) => {
     const { s } = req.shop;
     const q = {
-      q: String(req.query.q || "").slice(0, 80), category: categorySlug || String(req.query.categorie || ""), minPrice: req.query.min ? Math.round(Number(req.query.min) * 100) : undefined,
+      q: String(req.query.q || "").slice(0, 80), category: categorySlug || String(req.query.categorie || ""), tag: tagName || String(req.query.etiquette || "").slice(0, 40), minPrice: req.query.min ? Math.round(Number(req.query.min) * 100) : undefined,
       maxPrice: req.query.max ? Math.round(Number(req.query.max) * 100) : undefined, sort: String(req.query.tri || ""), inStock: req.query.stock === "1", onSale: req.query.promo === "1",
       featured: req.query.vedette === "1", page: req.query.page, perPage: 12,
     };
     if ((q.minPrice != null && !(q.minPrice >= 0)) || (q.maxPrice != null && !(q.maxPrice >= 0))) { q.minPrice = undefined; q.maxPrice = undefined; }
     const result = catalog.catalogQuery(s, q);
     const category = q.category ? catalog.categoryBySlug(s, q.category) : null;
-    const title = category ? category.name : q.q ? `Résultats pour « ${q.q} »` : "Boutique";
+    const title = category ? category.name : q.tag ? `Étiquette : ${q.tag}` : q.q ? `Résultats pour « ${q.q} »` : "Boutique";
     const categories = catalog.listCategories(s);
     const done = (themeTemplate) => render(req, res, "catalogue", { title, result, category, categories, q, query: req.query, themeTemplate: themeTemplate || null });
-    region(req, res, "product_archive", { category: category ? category.name : "", query: { categorie: category ? category.slug : "", q: q.q }, scope: archiveScope(title, result.total, { name: category ? category.name : "" }) }, done);
+    // Le modèle de thème reçoit TOUS les critères de l'adresse (recherche, étiquette, prix, stock, promotion, tri, page) : sa grille, ses filtres et son compteur lisent le même contexte que cette page.
+    const ctxQuery = { categorie: category ? category.slug : "", q: q.q, etiquette: q.tag };
+    for (const k of ["min", "max", "stock", "promo", "vedette", "tri", "page"]) if (typeof req.query[k] === "string") ctxQuery[k] = req.query[k].slice(0, 40);
+    region(req, res, "product_archive", { category: category ? category.name : "", tag: q.tag, tags: q.tag ? [q.tag] : [], query: ctxQuery, scope: archiveScope(title, result.total, { name: category ? category.name : q.tag || "" }) }, done);
   };
   router.get(BASE, (req, res) => listing(req, res));
   router.get(`${BASE}/recherche`, (req, res) => listing(req, res));
+  router.get(`${BASE}/etiquette/:tag`, (req, res) => listing(req, res, { tagName: String(req.params.tag || "").slice(0, 40) }));
   router.get(`${BASE}/categorie/:slug`, (req, res) => {
     if (!catalog.categoryBySlug(req.shop.s, req.params.slug)) return res.status(404).render("error", { message: "Cette catégorie n'existe pas." });
     listing(req, res, { categorySlug: req.params.slug });

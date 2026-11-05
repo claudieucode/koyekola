@@ -206,6 +206,8 @@ function siteInfo(ctx, page) {
 }
 function dynamicProps(ctx, n, visitor, page, scope) {
   const p = n.props;
+  // Champ de recherche : pré-rempli avec le terme de l'adresse (?q=), comme le fait Elementor sur sa page de résultats
+  if (n.type === "search") { const q = visitor && visitor.query && typeof visitor.query.q === "string" ? visitor.query.q.replace(/\s+/g, " ").trim().slice(0, 80) : ""; return q ? { ...p, value: q } : null; }
   if (n.type === "posts") {
     const { listPosts } = require("../bridge/catalog");
     return { ...p, items: listPosts({ ...ctx, baseUrl: "" }, { limit: p.count, category: p.category }).map((x) => ({ title: x.title, url: x.url, excerpt: x.excerpt || "", image: x.image || "", date: x.date })) };
