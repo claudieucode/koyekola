@@ -2264,3 +2264,6 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-identity-tag { padding: 1px 8px; border-radius: 4px; background: #0277b6; font-weight: 700; }
 .pb-identity-warn { opacity: .85; }
 .pb-identity-back { margin-left: auto; color: #fff; font-weight: 600; text-decoration: underline; }
+
+/* Motion Studio : aperçu de l'animation (lecture, pause, position) */
+.pb-ms-preview input[type="range"] { width: 100%; accent-color: var(--primary); }

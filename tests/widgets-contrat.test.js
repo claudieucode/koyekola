@@ -54,7 +54,7 @@ describe("contrat des widgets", () => {
   });
 
   test("chaque widget personnalisé a son gabarit de rendu", () => {
-    const missing = Object.keys(n.CUSTOM_WIDGETS).filter((t) => !fs.existsSync(path.join(__dirname, "..", "views", "marketing-public", "widgets", `${t}.ejs`)));
+    const missing = Object.keys(n.CUSTOM_WIDGETS).filter((t) => !fs.existsSync(path.join(__dirname, "..", "views", "marketing-public", "widgets", `${n.CUSTOM_WIDGETS[t].template || t}.ejs`)));
     assert.deepEqual(missing, [], `gabarit manquant : ${missing.join(", ")}`);
   });
 

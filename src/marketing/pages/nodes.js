@@ -1261,14 +1261,14 @@ function editorSpec() {
     return STYLE_UI[k] && STYLE_UI[k][1] ? "enum" : "length";
   };
   return {
-    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(partsLib.PARTS[type] ? { parts: partsLib.spec(type) } : {}), ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: elementorNames.withAliases(type, WIDGETS[type][1]), description: (CUSTOM_WIDGETS[type] && CUSTOM_WIDGETS[type].description) || WIDGET_DESCRIPTIONS[type] || "", requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text", ...(CUSTOM_WIDGETS[type].status ? { status: CUSTOM_WIDGETS[type].status } : {}), ...(CUSTOM_WIDGETS[type].dependencies ? { dependencies: CUSTOM_WIDGETS[type].dependencies } : {}) } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
+    types: Object.entries(NODE_TYPES).map(([type, d]) => ({ type, label: d.label, category: d.category, group: WIDGETS[type][0], ...(partsLib.PARTS[type] ? { parts: partsLib.spec(type) } : {}), ...(SITE_SUB[type] ? { sub: SITE_SUB[type] } : {}), keywords: elementorNames.withAliases(type, WIDGETS[type][1]), description: (CUSTOM_WIDGETS[type] && CUSTOM_WIDGETS[type].description) || WIDGET_DESCRIPTIONS[type] || "", requires: widgetRequires(type), capabilities: capsOf(type), version: d.version || 1, ...(d.custom ? { schema: CUSTOM_WIDGETS[type].schema.map((f) => ({ ...f })), style: CUSTOM_WIDGETS[type].style || "text", ...(CUSTOM_WIDGETS[type].status ? { status: CUSTOM_WIDGETS[type].status } : {}), ...(CUSTOM_WIDGETS[type].dependencies ? { dependencies: CUSTOM_WIDGETS[type].dependencies } : {}), ...(CUSTOM_WIDGETS[type].motion ? { motion: STUDIO.widgetSpec(CUSTOM_WIDGETS[type].motion) } : {}) } : {}), container: Boolean(d.container), icon: PALETTE[type].icon, asks: PALETTE[type].asks || null, blank: PALETTE[type].blank() })),
     codeLanguages: Object.entries(require("./highlight").LABELS), categories: CATEGORIES, presetCategories: require("./stylePresets").CATEGORIES, widgetGroups: WIDGET_GROUPS, siteSubs: SITE_SUBS, scrollFx: Object.entries(SCROLL_FX).map(([key, r]) => ({ key, ...r })), scrollRange: Object.entries(SCROLL_RANGE).map(([key, r]) => ({ key, ...r })), scrollDirs: Object.entries(SCROLL_DIRS), mouseRange: Object.entries(MOUSE_RANGE).map(([key, r]) => ({ key, ...r })), mouseModes: Object.entries(MOUSE_MODES), maskShapes: Object.entries(MASK_SHAPES).map(([k, v]) => [k, v[0]]), shortcuts: WIDGET_SHORTCUTS.map((s) => ({ ...s, keywords: elementorNames.withAliases(s.key, s.keywords), pattern: s.provider ? EMBED_PROVIDERS.find((x) => x.key === s.provider).re.source : null })), widgetPermissions: WIDGET_PERMISSIONS, boxTags: BOX_TAGS,
     styleProps: Object.entries(STYLE_PROPS).map(([key, p]) => ({ key, css: p.css, group: p.group, label: STYLE_UI[key][0], kind: kind(key), options: STYLE_UI[key][1] ? Object.entries(STYLE_UI[key][1]).map(([v, l]) => [v, l]) : null })),
     ixTriggers: Object.entries(IX_TRIGGERS), ixActions: Object.entries(IX_ACTIONS), easings: Object.keys(EASINGS), embedProviders: EMBED_PROVIDERS.map((p) => p.label),
     shapeDividers: Object.entries(SHAPE_DIVIDERS), modalTriggers: Object.entries(MODAL_TRIGGERS), modalAnims: Object.entries(MODAL_ANIMS), modalSources: Object.entries(MODAL_SOURCES), socialNetworks: Object.entries(SOCIAL_NETWORKS), shareNetworks: Object.entries(SHARE_NETWORKS), audiences: Object.entries(AUDIENCES), entrances: Object.entries(ENTRANCES), animations: MOTION.catalog(), animationCategories: MOTION.CATEGORY_ORDER, motionCss: MOTION.allKeyframesCss(), motionTriggers: Object.entries(MOTION.TRIGGERS), motionEasings: Object.keys(EASINGS), hovers: Object.entries(HOVERS), groups: GROUP_LABELS, breakpoints: BREAKPOINTS.map(({ key, label }) => ({ key, label })), states: STATES.map(({ key, label }) => ({ key, label })),
     structureKinds: require("./structures").KINDS, structures: require("./structures").STRUCTURES,
     colorTokens: COLOR_TOKENS, lengthTokens: Object.fromEntries(Object.entries(lenTokens()).map(([f, m]) => [f, Object.entries(m).map(([k, v]) => ({ key: k, value: v }))])), spacingScale: [0, 4, 8, 12, 16, 24, 32, 48, 64, 80, 96], icons: iconNames(),
-    limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(),
+    limits: { nodes: MAX_NODES, depth: MAX_DEPTH }, dynamic: dynamic.catalog(), motionStudio: STUDIO.editorSpec(),
   };
 }
 
@@ -1564,6 +1564,7 @@ const scheduleMatches = (s, now = Date.now()) => {
 // ---------- Animations : entrée (à l'apparition à l'écran) et effet au survol ----------
 // Registre central des animations : src/marketing/pages/motion.js (une animation = une ligne ; le panneau, la validation, le CSS publié et l'aperçu le lisent)
 const MOTION = require("./motion");
+const STUDIO = require("./motionStudio");
 const { ANIMATIONS, EASINGS } = MOTION;
 const ENTRANCES = Object.fromEntries(Object.values(ANIMATIONS).map((a) => [a.id, a.label]));
 // Capacités « avancées » d'un élément : elles décident des sections proposées dans l'inspecteur (effets de défilement, de
@@ -1745,6 +1746,8 @@ function normalizeMotion(raw, type) {
   // Mouvement réduit : l'animation s'adapte (ou disparaît) quand le visiteur le demande ; « toujours animer » doit être choisi explicitement
   if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse || out.scrollFx || out.mouseFx)) out.alwaysMotion = true;
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
+  // Motion Studio : réglages versionnés (motionStudio.js) ; préréglages et paramètres validés par la fiche `motion` du widget
+  if (raw.studio) { const st = STUDIO.normalize(raw.studio, CUSTOM_WIDGETS[type] ? CUSTOM_WIDGETS[type].motion : null); if (st) out.studio = st; }
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -1932,7 +1935,8 @@ function entranceRules(n, rules, used) {
 // Attributs de mouvement d'un élément (page publiée, aperçu et canevas) : UNE seule source pour l'entrée, le défilement et la souris
 function motionAttrs(n) {
   const m = n && n.motion;
-  if (!m) return "";
+  const studioAttrs = STUDIO.attrs(n, CUSTOM_WIDGETS[n && n.type] ? CUSTOM_WIDGETS[n.type].motion : null); // composant Motion Studio : module + réglages effectifs
+  if (!m) return studioAttrs;
   const esc = (v) => String(v).replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c]);
   let a = "";
   if (m.entrance && Object.hasOwn(ANIMATIONS, m.entrance)) {
@@ -1948,7 +1952,7 @@ function motionAttrs(n) {
   if (m.mouseFx) a += ` data-kw-mfx="${esc(JSON.stringify(m.mouseFx))}"`;
   if (m.off && (m.scroll || m.mouse || m.scrollFx || m.mouseFx)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
   if (m.alwaysMotion) a += " data-kw-motion-always";
-  return a;
+  return a + studioAttrs.replace(" data-kw-motion-always", m.alwaysMotion ? "" : " data-kw-motion-always");
 }
 
 // CSS d'une page : une règle par élément stylé (et par section stylée), par écran et par état. Valeurs déjà validées.
@@ -2144,5 +2148,5 @@ function isDemoMenu(props) {
 module.exports = {
   isDemoMenu, dynamic, registerCondition, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
   NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
-  capsOf, MOTION, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
+  capsOf, MOTION, STUDIO, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

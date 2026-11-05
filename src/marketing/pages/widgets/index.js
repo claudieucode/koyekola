@@ -13,6 +13,7 @@ const SCALAR_KINDS = KINDS.filter((k) => k !== "items");
 const STATUSES = ["operational", "partial", "dependency"];
 const TYPE = /^[a-z][a-z0-9]{2,30}$/;
 const KEY = /^[a-z][a-zA-Z0-9]{0,30}$/;
+const TEMPLATE = /^[a-z][a-z0-9-]{2,40}$/; // gabarit views/marketing-public/widgets/<template>.ejs (les composants Motion Studio : motion-<nom>)
 
 // Vérifie une description de widget ; lève une erreur claire (au démarrage, jamais en pleine page) sinon
 function check(def, where = "widget") {
@@ -24,7 +25,8 @@ function check(def, where = "widget") {
   if (def.data !== undefined && typeof def.data !== "function") bad("« data » : fonction (ctx, réglages, env) → données pour le gabarit.");
   if (def.complete !== undefined && typeof def.complete !== "function") bad("« complete » : fonction (réglages) → message si le widget est incomplet pour la PUBLICATION (le brouillon, lui, reste enregistrable), sinon rien.");
   if (def.validate !== undefined && typeof def.validate !== "function") bad("« validate » : fonction (réglages validés, lieu) qui lève une erreur claire si l'ensemble est incohérent (ex. adresse d'un service refusée).");
-  if (def.template !== undefined && !TYPE.test(String(def.template))) bad("« template » : nom de gabarit invalide.");
+  if (def.template !== undefined && !TEMPLATE.test(String(def.template))) bad("« template » : nom de gabarit invalide (minuscules, chiffres et tirets).");
+  if (def.motion !== undefined) require("../motionStudio").checkSpec(def.motion, where); // composant Motion Studio : module d'exécution, préréglages, réglages
   if (def.style !== undefined && !["text", "box"].includes(def.style)) bad("« style » : text ou box.");
   if (!Array.isArray(def.schema) || !def.schema.length) bad("« schema » : au moins un champ.");
   if (def.description !== undefined && (typeof def.description !== "string" || !def.description.trim() || def.description.length > 160)) bad("« description » : phrase courte (160 caractères au plus), affichée en infobulle dans la bibliothèque.");

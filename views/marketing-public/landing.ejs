@@ -9,6 +9,7 @@
   <%- include("../partials/seo-head-tags", { h }) %>
   <% if (sx && sx.identity.faviconUrl) { %><link rel="icon" href="<%= sx.identity.faviconUrl %>"<% if (/\.svg(\?|$)/i.test(sx.identity.faviconUrl)) { %> type="image/svg+xml"<% } %>><% } else { %><link rel="icon" href="/favicon.svg" type="image/svg+xml"><% } %>
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
+  <% if (page.motionStudio && page.motionStudio.css) { %><link rel="stylesheet" href="<%= asset("/css/motion-studio.css") %>"><% } %>
   <%# Styles du thème et de la mise en page du site : avant les styles des éléments, qui restent prioritaires %>
   <% if (siteX && siteX.assets.theme) { %><style id="kw-site-theme"><%- siteX.assets.theme %></style><% } %>
   <%# Thème autonome (paquet) : sa propre feuille de styles, confinée à body[data-kw-pack], chargée après la base neutre et avant le CSS personnalisé du site %>
@@ -42,6 +43,9 @@
   <script src="<%= asset("/js/landing.js") %>" defer></script>
   <% if (siteX && siteX.assets.pack && siteX.assets.pack.script) { %><%- siteX.assets.pack.script %><% } %>
   <script src="<%= asset("/js/kw-effects.js") %>" defer></script>
+  <%# Motion Studio : runtime partagé + adresses (avec empreinte) des modules de CETTE page, chargés à la demande par le runtime %>
+  <% if (page.motionStudio) { %><script type="application/json" id="kw-ms-modules"><%- JSON.stringify(Object.fromEntries(page.motionStudio.modules.map((m) => [m, asset("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c") %></script>
+  <script src="<%= asset("/js/kw-motion-studio.js") %>" defer></script><% } %>
   <% if (kwCode && kwCode.bodyEnd) { %><%- kwCode.bodyEnd %><% } %>
 </body>
 </html>

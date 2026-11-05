@@ -1,0 +1,26 @@
+/* Motion Studio — feuille de styles PARTAGÉE des composants animés (page publiée, aperçu, canevas).
+   Chargée seulement quand la page contient un composant Motion Studio (views/marketing-public/landing.ejs).
+   Règles : aucune couleur en dur (le texte hérite de la page) ; aucune propriété de mise en page animée ; contenu visible sans JavaScript.
+   Chaque composant ajoute son bloc ci-dessous, préfixe kw-ms-<composant>. Contrat : docs/motion-studio/MOTION_STUDIO_COMPONENT_CONTRACT.md */
+
+/* ---- Commun ---- */
+.kw-ms { max-width: 100%; overflow-wrap: anywhere; }
+/* Texte pour les lecteurs d'écran seulement (découpage, jamais display:none ni visibility:hidden : il resterait inaccessible) */
+.kw-ms-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .kw-ms:not([data-kw-motion-always]) * { animation: none !important; transition: none !important; }
+}
+
+/* ---- Texte animé (motion-split-text) ---- */
+.kw-ms-st { position: relative; margin: 0; }
+.kw-ms-st-src { display: inline; }
+.kw-ms-st-vis { display: block; }
+.kw-ms-st-vis.kw-ms-3d { perspective: 600px; }
+.kw-ms-w { display: inline-block; max-width: 100%; }
+.kw-ms-m { display: inline-block; vertical-align: top; }
+.kw-ms-u { display: inline-block; will-change: transform, opacity; transform-origin: 50% 100%; }
+.kw-ms-masked .kw-ms-m { overflow: hidden; padding-bottom: .12em; margin-bottom: -.12em; }
+.kw-ms-line { display: block; white-space: nowrap; }
+.kw-ms-line .kw-ms-u { display: block; }
+.kw-ms-st-probe { display: block; visibility: hidden; }
+.kw-ms-pw { display: inline; }

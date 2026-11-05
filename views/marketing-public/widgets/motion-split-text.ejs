@@ -1,0 +1,3 @@
+<%# Texte animé (widgets/motion-split-text.js). Variables : p, cls, attrs (contient data-kw-ms-module et data-kw-ms), isBuilder. Sans JavaScript : le texte complet est affiché tel quel. Le découpage est fait par public/js/motion-studio/split-text.js. %>
+<% const tag = ["h1", "h2", "h3", "h4", "p", "div"].includes(p.tag) ? p.tag : "h2"; const rows = String(p.text || "").split(/\n+/); %>
+<<%= tag %> class="<%= cls %> kw-ms kw-ms-st" data-kw-ms-split="<%= ["chars", "words", "lines"].includes(p.split) ? p.split : "words" %>"<%- attrs %>><span class="kw-ms-st-src"><% rows.forEach((t, i) => { %><%= t %><% if (i < rows.length - 1) { %><br><% } %><% }) %></span></<%= tag %>>
