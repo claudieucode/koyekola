@@ -7,7 +7,7 @@ Cette refonte part de la bibliothèque livrée le 3 novembre (`kolakisa-header-a
 | Point du cahier des charges | État avant | Preuve |
 |---|---|---|
 | Bibliothèque variée | 100 compositions distinctes (10 familles), mais 5 identités seulement ; 12 modèles quasi jumeaux d'un autre de leur famille (mêmes éléments, même famille) | `catalog/header.js` ; mesure de proximité sur les éléments |
-| Identité indépendante de l'administration et de la charte | **Partielle** : 4 identités sur 5 reprennent les jetons du site (`token:primary`…) ; une seule (Nuit) a des couleurs fixes ; polices limitées à « titres / texte / serif » alors que la bibliothèque locale en compte **1 775** | `kit.js` (`SKINS`), `fontLibrary.js`, `manifest.json` |
+| Identité indépendante de l'administration et de la charte | **Partielle (état avant ; traitée ensuite pour les 100 modèles)** : 4 identités sur 5 reprennent les jetons du site (`token:primary`…) ; une seule (Nuit) a des couleurs fixes ; polices limitées à « titres / texte / serif » alors que la bibliothèque locale en compte **1 775** | `kit.js` (`SKINS`), `fontLibrary.js`, `manifest.json` |
 | Modèles par secteur (restaurant, école, agence, cabinet, portfolio, média, boutique, SaaS, hôtel…) | **Absents** : familles par structure, jamais par métier | liste des familles |
 | Logo, menu, sous-menus, boutons, recherche, compte, panier, réseaux, barre supérieure, hamburger | présents | `item()`, `landing.js` (burger, Échap, focus) |
 | Coordonnées | **absentes** (la liste d'icônes existe dans la grammaire, non utilisée) | — |
@@ -35,7 +35,7 @@ Mesuré dans Chrome : le menu du modèle SaaS restait en Figtree alors que la po
 ## 4. Architecture retenue
 
 1. **Identités** : une liste `IDENT` par catalogue plat (couleurs fixes + polices de la bibliothèque) ; le kit les consomme comme les `SKINS`.
-2. **Secteurs** : 12 modèles répartis dans leurs familles, **à la place** des 12 plus redondants → le total reste 100.
+2. **Secteurs** : 12 modèles répartis dans leurs familles, **à la place** des 12 plus redondants → le total reste 100. **Les 88 autres** reçoivent 22 palettes fixes par ambiance (`IDENT2`), clés conservées.
 3. **Comportements** : propriété de conteneur `headerFx` (grammaire fermée, validée), lue par le rendu ; CSS et un écouteur passif dans `landing.js`.
 4. **Éléments** : code `contact` (liste d'icônes, textes d'exemple) ; ni langue ni favoris tant que le site n'a pas la fonction derrière.
 
@@ -44,4 +44,4 @@ Mesuré dans Chrome : le menu du modèle SaaS restait en Figtree alors que la po
 * Sélecteur de langue et favoris (voir §1).
 * Pointeurs de menu configurables et sous-menus à plusieurs niveaux (grammaire `menu`).
 * Réduction **d'une seule rangée** d'un en-tête à plusieurs rangées : l'effet porte sur toutes les rangées du conteneur.
-* Refonte visuelle des 88 autres modèles : ils gardent les cinq identités du site ; seuls 12 modèles ont une identité propre. Étendre est possible modèle par modèle (`IDENT` + `M(...)`).
+* Palettes **sur mesure par modèle** pour les 88 modèles non sectoriels : ils partagent 22 palettes (de 3 à 5 modèles chacune, jamais deux modèles de même famille et de même ambiance consécutifs dans l'affectation d'origine) ; seuls les 12 sectoriels ont une identité à eux seuls.

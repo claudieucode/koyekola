@@ -1,4 +1,4 @@
-# Bibliothèque d'en-têtes du Theme Builder (100 modèles, dont 12 sectoriels)
+# Bibliothèque d'en-têtes du Theme Builder (100 modèles, 34 identités propres)
 
 Documentation technique de la catégorie **En-tête**. Références : [`elementor-header-reference.md`](elementor-header-reference.md) (ce qu'Elementor fait, confirmé / non vérifiable)
 et [`kolakisa-header-audit.md`](kolakisa-header-audit.md) (état avant refonte).
@@ -7,7 +7,7 @@ et [`kolakisa-header-audit.md`](kolakisa-header-audit.md) (état avant refonte).
 
 * Un en-tête du Theme Builder est un **composant réutilisable** du site (`mk_web_components`) rattaché à un modèle (`mk_tb_templates`, type `header`) qui porte ses **conditions d'affichage** et son cycle brouillon / publié.
 * La bibliothèque est un **catalogue en code** : `src/themeBuilder/catalog/header.js`. Aucune ligne en base tant qu'un modèle n'est pas utilisé. « Utiliser ce modèle » crée une **copie indépendante** (`catalog/use.js`).
-* **100 modèles exactement** : 10 familles × 10 compositions. Chaque modèle fixe sa propre identité visuelle : **20 par identité** (Clair épuré, Couleur de marque, Nuit, Éditorial, Doux et arrondi).
+* **100 modèles exactement** : 10 familles × 10 compositions. Chaque modèle fixe sa propre identité visuelle (palette et polices **fixes**, 34 identités : voir §3 bis).
   Ce n'est plus un croisement mise en page × couleur (l'ancien 20 × 5) : deux modèles ne partagent jamais la même composition (test `theme-builder-entetes-bibliotheque`).
 
 ## 2. Les 10 familles
@@ -70,11 +70,18 @@ Règles de composition (`band()` dans `header.js`) :
 * Une rangée dont **tout** le contenu est masqué sur mobile est elle-même masquée (`hideOn`).
 * Toutes les rangées sont dans **un seul conteneur** pleine largeur (`wrap()`), sans espace entre rangées. C'est ce conteneur qui porte le comportement.
 
-## 3 bis. Identités propres : les 12 modèles sectoriels (refonte du 4 novembre 2026)
+## 3 bis. Identités propres : 34 identités, aucune couleur de la charte du site (4 novembre 2026)
 
-Les 88 premiers modèles utilisent les cinq identités du site (jetons de la charte : `token:primary`…). Douze modèles les remplacent des plus redondants et portent **leur propre identité**, déclarée dans `IDENT` (`catalog/header.js`, exportée en `skins`) :
-couleurs en valeurs fixes (jamais la charte du site ni celle de l'administration), polices de la **bibliothèque locale**, arrondis, graisses, casse et densité propres. Le catalogue « plat » les ajoute au filtre « identité » (5 + 12 = 17).
-La police est posée sur tous les éléments de texte ; pour le menu, le compte et le logo elle passe par les **parties** du widget (`parts.link`, `parts.text`), car le site impose sa police aux liens.
+**Les 100 modèles** portent désormais leur propre identité, déclarée dans `catalog/header.js` (`IDENT2` pour les 22 identités par ambiance, `IDENT` pour les 12 sectorielles ; exportées en `skins`, `ownSkins: true`) :
+couleurs en **valeurs fixes** (jamais un jeton `token:…` : le test le vérifie sur les 100 documents), polices de la **bibliothèque locale** (au moins 18 polices de titres et 14 polices de texte différentes), arrondis, graisses, casse et densité propres.
+Les cinq anciennes identités (clair, marque, nuit, éditorial, doux) ne sont plus utilisées par les en-têtes.
+
+* **22 palettes par ambiance** : claire (Lumière, Terre cuite, Sauge, Corail, Gris indigo), couleur (Cobalt, Émeraude, Prune, Brique), sombre (Minuit violet, Graphite et lime, Forêt de nuit, Bordeaux de nuit), éditoriale (Journal, Revue verte, Gazette, Atlas, Manuscrit), douce (Rose poudré, Menthe, Ciel, Lavande).
+* **Affectation** : un modèle reçoit, à tour de rôle dans l'ordre du catalogue, l'une des palettes de l'ambiance de son ancienne identité (une ambiance sombre reste sombre, une colorée reste colorée). Son **suffixe de clé d'origine est conservé** (`keySkin`) : `classique-logo-menu-bouton.clair` existe toujours, avec la palette « Lumière ».
+* **Filtre « identité »** : 34 entrées (22 + 12).
+* La police est posée sur tous les éléments de texte ; pour le menu, le compte, le logo et la **recherche** elle passe par les **parties** du widget (`parts.link`, `parts.text`, `parts.field`, `parts.button`), car le site impose sa police et ses couleurs aux liens et aux boutons (sans cela le bouton « Rechercher » restait bleu).
+
+### Les 12 modèles sectoriels
 
 | Secteur | Modèle (famille) | Identité | Particularité |
 |---|---|---|---|

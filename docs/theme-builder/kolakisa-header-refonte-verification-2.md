@@ -9,8 +9,10 @@
 
 Attention : sans Playwright (`NODE_PATH`), la suite Chrome est **ignorée** sans échec ; l'exécution du 4 novembre sans Playwright affichait 52 réussites hors Chrome.
 
-## Contrôle visuel (`AUDIT_TYPE=header node scripts/audit-pieds.js <dossier> <clés>`)
-12 modèles × 3 largeurs (1280, 820, 390 px) = 36 mesures : débordement, chevauchement, éléments hors écran, contraste.
+## Contrôle visuel (`AUDIT_TYPE=header node scripts/audit-pieds.js <dossier> [clés]`)
+**100 modèles × 3 largeurs (300 mesures)** : aucun débordement horizontal, aucun chevauchement, aucun élément hors écran ; seules alertes : le contraste des 10 en-têtes superposés + l'hôtel (faux positif : texte clair mesuré contre le fond blanc de la page ; le script ne mesure plus ces modèles). Relecture à l'œil de 2 planches de 10 (barres supérieures ; classique et collants) : identités nettes, plus de bleu imposé, un défaut vu et corrigé (bouton « Rechercher » resté bleu).
+
+Détail des 12 sectoriels : 12 modèles × 3 largeurs (1280, 820, 390 px) = 36 mesures : débordement, chevauchement, éléments hors écran, contraste.
 * 33 mesures sans défaut ; 3 alertes de contraste, toutes sur `hotel-couverture` : **faux positif** (texte clair d'un en-tête superposé mesuré contre le fond blanc de la page ; l'aperçu le pose sur un visuel sombre).
 * Polices réellement appliquées (Chrome, `getComputedStyle`) : menu et logo de chacun des 12 modèles prennent la police de leur identité (Lato/Playfair, Nunito, Space Grotesk, Source Sans 3/Lora, DM Sans/Instrument Serif, Inter/Plus Jakarta Sans, Source Sans 3/Libre Baskerville, Jost/Cormorant, Lato/Cinzel, Quicksand, Manrope, Nunito Sans/Lora).
 * **Non mesuré** : la police des boutons (sélecteur de la sonde introuvable) ; elle est posée sur l'élément du bouton lui-même, mais n'a pas été vérifiée dans le navigateur.
