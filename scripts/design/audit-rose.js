@@ -27,9 +27,10 @@ const WORDS = /\b(pink|hotpink|deeppink|lightpink|fuchsia|magenta|orchid|violet-
 // Exceptions documentées (docs/KOLAKISA_TITAN_XXXV_ZERO_ROSE.md) : couleurs qui ne relèvent pas de l'interface Kolakisa.
 //  - contenu des sites des clients : bibliothèque de thèmes, palettes de style, préréglages de couleur du constructeur
 //  - surligneurs de texte « Rose » des éditeurs (choix d'auteur dans le contenu ; des articles enregistrés l'utilisent)
+//  - catalogues de modèles du Theme Builder (identités visuelles propres des sites clients, indépendantes de l'interface Kolakisa)
 //  - marques externes : couleur officielle des réseaux sociaux
 const EXCEPTIONS = [
-  /^src[\\/]marketing[\\/]themes[\\/]/, /^src[\\/]services[\\/]stylePalettes\.js$/, /^public[\\/]js[\\/]page-builder-theme\.js$/,
+  /^src[\\/]themeBuilder[\\/]catalog[\\/]/, /^src[\\/]marketing[\\/]themes[\\/]/, /^src[\\/]services[\\/]stylePalettes\.js$/, /^public[\\/]js[\\/]page-builder-theme\.js$/,
   /^src[\\/]marketing[\\/]templates[\\/]blocks\.js$/, /^public[\\/]js[\\/]site-settings\.js$/,
   /^src[\\/]editor[\\/](blog[\\/]documentMode|blog-editor|course-editor)\.js$/,
   /^views[\\/]marketing-public[\\/]_node\.ejs$/, /^public[\\/]js[\\/]theme-code-editor\.js$/,

@@ -130,6 +130,8 @@ describe("Effacer les données : demandes, confirmation, effacement réel", () =
     });
     test("e-mail non parti : la demande devient « Échouée » (e-mail non envoyé) avec l'état réel de la file ; relance possible ; transitions interdites refusées sans effet", async () => {
       const e3 = mail(); const made = await create(boss, e3); assert.equal(made.status, 302, `création refusée : ${flash(made.text)}`); const r = lastReq(); assert.equal(r.status, "pending", "demande créée en attente avant l'échec simulé");
+      // le courrier est repris par la file en arrière-plan (SMTP injoignable) : on attend la fin de sa première tentative avant de forcer l'état, sinon elle réécrit « en attente » juste après
+      for (let i = 0; i < 100 && db.prepare("SELECT 1 FROM mail_outbox WHERE lower(to_email) = ? AND (status = 'sending' OR (status = 'pending' AND attempts = 0))").get(e3); i++) await new Promise((r) => setTimeout(r, 50));
       db.prepare("UPDATE mail_outbox SET status = 'failed', last_error = 'serveur SMTP injoignable (ECONNECTION)' WHERE lower(to_email) = ?").run(e3);
       const list = (await boss.get(`${PAGE}?etat=failed`)).text; assert.match(list, /E-mail non envoyé/, `liste des demandes échouées sans l'étiquette attendue (état de la file : ${JSON.stringify(outboxTo(e3).map((x) => [x.status, x.last_error]))}, demande : ${JSON.stringify(req(r.id).status)})`); assert.match(list, /E-mail NON envoyé/);
       const f = req(r.id); assert.equal(f.status, "failed"); assert.equal(f.failure_code, "mail_failed"); assert.match(f.failure_note, /n'est pas parti/); assert.ok(!f.failure_note.includes(e3));
