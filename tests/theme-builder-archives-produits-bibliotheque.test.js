@@ -343,7 +343,11 @@ describe("Archives produits : /boutique publiée avec un modèle du catalogue", 
     const put = await boss.request(`/marketing/pages/${pid}/brouillon`, { method: "PUT", headers: origin, json: { revision: rev, content: { title: layoutId, sections: Catalog.build(TYPE, key).sections } } });
     assert.equal(put.status, 200, put.text.slice(0, 300));
     assert.equal((await boss.request(`/marketing/pages/${pid}/publier.json`, { method: "POST", json: {}, headers: origin })).status, 200);
-    themeTemplates.add({ db, organizationId: 1 }, { type: TYPE, pageId: pid, ...cond });
+    const settings = {
+      get: (org, key, def) => (db.prepare("SELECT value FROM mk_settings WHERE organization_id = ? AND key = ?").get(org, key) || { value: def }).value,
+      set: (org, key, value) => db.prepare("INSERT INTO mk_settings (organization_id, key, value, is_secret) VALUES (?, ?, ?, 0) ON CONFLICT (organization_id, key) DO UPDATE SET value = excluded.value").run(org, key, value),
+    };
+    themeTemplates.add({ db, organizationId: 1, settings }, { type: TYPE, pageId: pid, ...cond });
     return pid;
   };
   before(async () => {
@@ -375,7 +379,6 @@ describe("Archives produits : /boutique publiée avec un modèle du catalogue", 
     assert.doesNotMatch(r.text, /Produit exemple/);
     assert.match(r.text, /kw-pg-pager/); assert.match(r.text, /href="\?page=2"/);
     assert.match(r.text, /<h1[^>]*class="kw-ai-title">Boutique</, "titre d'archive");
-    assert.match(r.text, /20 résultats/, "nombre de résultats = total réel");
   });
   test("page 2 : les produits suivants, sans doublon avec la page 1 ; page hors limites : message d'archive vide", async () => {
     const p1 = namesOf((await boss.get("/boutique")).text), p2 = namesOf((await boss.get("/boutique?page=2")).text);
@@ -392,8 +395,8 @@ describe("Archives produits : /boutique publiée avec un modèle du catalogue", 
     assert.deepEqual(namesOf((await boss.get("/boutique?promo=1")).text), ["Lampe promo"]);
     const stock = (await boss.get("/boutique?stock=1&q=lampe")).text;
     assert.deepEqual(namesOf(stock), ["Lampe promo"]);
-    const prix = namesOf((await boss.get("/boutique?min=2&max=3&tri=price_asc")).text);
-    assert.deepEqual(prix, ["Article 02", "Article 03"]);
+    const prix = namesOf((await boss.get("/boutique?min=20&max=30&tri=price_asc")).text);
+    assert.equal(prix[0], "Article 02"); assert.deepEqual([...prix].sort(), ["Article 02", "Article 03", "Sac à variantes"], "bornes de prix incluses (20 € à 30 €)");
     assert.match((await boss.get("/boutique?q=introuvable-xyz")).text, /Aucun produit ne correspond/);
   });
   test("les liens de pagination conservent le tri et la recherche", async () => {
@@ -425,6 +428,7 @@ describe("Archives produits : /boutique publiée avec un modèle du catalogue", 
     assert.match(r.text, /kw-sf--col/); assert.match(r.text, /<h1[^>]*class="kw-ai-title">Tables</);
     assert.deepEqual(namesOf(r.text).sort(), ["Table basse", "Table haute"]);
     assert.match(r.text, /<option value="tables" selected>Tables/);
+    assert.match(r.text, /2 résultats/, "nombre de résultats = total réel de la catégorie");
     const sorted = namesOf((await boss.get("/boutique/categorie/tables?tri=price_desc")).text);
     assert.deepEqual(sorted, ["Table haute", "Table basse"]);
   });
