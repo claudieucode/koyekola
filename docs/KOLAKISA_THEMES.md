@@ -11,7 +11,8 @@ Chaque thème est un **paquet autonome** : `src/marketing/themes/packs/<clé>/{p
 
 Fichiers servis sur `/theme-packs/<clé>/style.css|motion.js` (ETag, cache 7 jours).
 
-## Thèmes livrés (40)
+## Thèmes livrés (70)
+70 thèmes : 10 de la refonte, 30 de la première extension, 30 de l'extension n°2 (cinéma, théâtre, joaillerie, fleuriste, brasserie, vignoble, food truck, cocktails, barbier, tatouage, conseil, comptable, recrutement, cybersécurité, documentation, mairie, planétarium, villas, glamping, plongée, aviation privée, vélo électrique, hardware, jeux de société, ébénisterie, opéra, créateur de contenu, funéraire, danse, sapologie). Plan et justification des remplacements : `docs/themes/PLAN_LOT2.md`.
 Liste complète, avec concept, polices, palette, pages et options : `docs/themes/FICHES_IDENTITE.md` (générée par `node scripts/themes-fiches.js`).
 Univers couverts : sport, gastronomie (restaurant, boulangerie, thé et café), science, architecture, technologie (SaaS, néobanque), mode (luxe, streetwear), éducation (école, crèche), santé (clinique, vétérinaire), immobilier, agences et portfolios (agence, photographe, portfolio, art afro-contemporain), musique et jeux (festival, podcast, esport), voyage (hôtel, aventure), beauté (yoga, spa, skincare), services (avocats, coworking, BTP, logistique), associations (ONG, communauté spirituelle), mariage, presse et édition (magazine, éditeur, musée), automobile, nature (ferme bio, solaire).
 
