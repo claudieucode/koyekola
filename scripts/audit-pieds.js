@@ -53,7 +53,8 @@ const VPS = [["desktop", 1280, 800], ["tablette", 820, 900], ["mobile", 390, 800
           const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
           const bgOf = (el) => { for (let e = el; e && e !== document.documentElement; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor); if (c && c.a > 0.85) return c; } return { r: 255, g: 255, b: 255, a: 1 }; };
           const low = [];
-          for (const el of root.querySelectorAll("a,button,p,span,h1,h2,h3,label,li")) {
+          const overlay = root.classList.contains("kw-theme-overlay"); // en-tête superposé : son texte clair se pose sur le visuel d'ouverture, pas sur le fond blanc de la page
+          for (const el of overlay ? [] : root.querySelectorAll("a,button,p,span,h1,h2,h3,label,li")) {
             if (!vis(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
             const fg = parse(getComputedStyle(el).color), bg = bgOf(el); if (!fg) continue;
             const L1 = lum(fg), L2 = lum(bg), ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
