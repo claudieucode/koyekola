@@ -5,3 +5,7 @@
 .lp-main>.lp-block-layout .kw-layout>.kw-node:has(.pk-bleed){width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important}
 .pk-bleed{display:block;width:100%;box-sizing:border-box}
 .lp-main>.lp-block-layout:has(.pk-bleed){padding-top:0!important;padding-bottom:0!important;margin-top:0!important;margin-bottom:0!important}
+
+/* Réglage « Animations » (option standard « motion », posée par le moteur) : calm = plus de mouvement continu ; off = ni animations ni transitions. Le thème garde sa mise en page. */
+&[data-pk-motion="calm"] *,&[data-pk-motion="calm"] *::before,&[data-pk-motion="calm"] *::after{animation:none!important;scroll-behavior:auto!important}
+&[data-pk-motion="off"] *,&[data-pk-motion="off"] *::before,&[data-pk-motion="off"] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}

@@ -32,11 +32,21 @@ function load() {
       const scoped = scopeCss(BASE + "\n" + css, spec.key);
       const version = String(spec.version || "1.0.0");
       const hash = crypto.createHash("sha1").update(scoped).update(js).digest("hex").slice(0, 10);
+      addStandardOptions(spec, css, js);
       packs.set(spec.key, { spec, css: scoped, js, hash, version });
     } catch (e) { problems.push({ key: entry.name, message: String(e.message).slice(0, 300) }); }
   }
   cache = { packs, problems };
   return cache;
+}
+// Contrat de personnalisation (moteur partagé) : tout thème qui anime quelque chose (CSS animé, transitions ou script) reçoit le réglage « Animations », branché sur base.css
+// (data-pk-motion = on | calm | off). Un thème qui déclare déjà une option « motion » garde la sienne. Idempotent.
+const ANIMATES = (css, js) => Boolean(js) || /@keyframes|animation\s*:|animation-name|transition\s*:/.test(css);
+const MOTION_OPTION = Object.freeze({ key: "motion", label: "Animations du thème", type: "choice", default: "on", choices: [["on", "Toutes les animations"], ["calm", "Calmes : sans mouvement continu, transitions conservées"], ["off", "Aucune animation"]] });
+function addStandardOptions(spec, css, js) {
+  if (!ANIMATES(css, js)) return;
+  spec.options = spec.options || [];
+  if (!spec.options.some((o) => o.key === "motion")) spec.options.push({ ...MOTION_OPTION, choices: MOTION_OPTION.choices.map((c) => [...c]) });
 }
 const reload = () => { cache = null; return load(); };
 
