@@ -38,3 +38,8 @@ Voir `live.json` du dossier de sortie : tri par le formulaire du modèle (URL `?
 * Les aperçus ont des produits **d'exemple sans image** : le rendu avec de vraies photos (formats variés) n'est pas couvert par les mesures.
 * Chrome uniquement (ni Safari ni Firefox).
 * Les audits d'interface d'administration (`audit-interface.js`, `audit-qualite.js`, `audit-editeurs.js`) n'ont pas été relancés : aucun écran d'administration n'est modifié (seules la CSS et les gabarits des sites créés le sont).
+
+## 5. Contrôles automatisés après reconstruction (5 novembre 2026)
+
+Le dossier de travail a été perdu avant publication et reconstruit à partir de la trace du développement. Ont ensuite été relancés, tous verts : `tests/theme-builder-archives-produits-bibliotheque.test.js` (43/43, vrai serveur, `/boutique` publiée, panier, filtres, pagination, étiquette, isolation), `theme-builder-catalogue(-public)`, `theme-builder-stabilisation`, `programme20-5-boutique-builder`, `theme-builder-noyau`, `theme-builder-entetes-bibliotheque`, `programme20-4-import-enregistrement` (31/31), et le filet de sécurité `widgets-parts-regression`.
+Les 300 rendus Chrome du §1 ont été mesurés **avant** la reconstruction ; l'outil `scripts/audit-archives-produits.js` n'a pas pu être relancé ici (Playwright absent). À relancer pour confirmer.
