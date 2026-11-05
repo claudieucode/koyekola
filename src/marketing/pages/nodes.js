@@ -587,7 +587,8 @@ const NODE_TYPES = {
     const value = numberIn(0, 100, { integer: true })(p.value);
     if (!label) throw new Error(`${at} (barre de progression) : un libellé est obligatoire (lu par les lecteurs d'écran).`);
     if (value === null) throw new Error(`${at} (barre de progression) : valeur entre 0 et 100.`);
-    return { label, value, showValue: p.showValue !== false, animate: p.animate === true };
+    const dur = numberIn(200, 5000, { integer: true })(p.duration), ease = oneOf("linear", "out")(p.easing);
+    return { label, value, showValue: p.showValue !== false, animate: p.animate === true, ...(dur ? { duration: dur } : {}), ...(ease ? { easing: ease } : {}) };
   } },
   menu: { label: "Menu de navigation", category: "interaction", props: (p, at, h) => {
     // Un niveau de sous-menu (liste déroulante) ; sur mobile, le menu peut se replier derrière un bouton
@@ -637,7 +638,7 @@ const NODE_TYPES = {
     const label = line(p.label, 120);
     if (!label) throw new Error(`${at} (compteur) : dites ce que mesure ce nombre (et sa source).`);
     const sep = oneOf("dot", "none")(p.separator); // séparateur des milliers : espace (défaut), point ou aucun
-    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500, ...(sep ? { separator: sep } : {}) };
+    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500, ...(sep ? { separator: sep } : {}), ...(numberIn(100, 5000, { integer: true })(p.delay) ? { delay: numberIn(100, 5000, { integer: true })(p.delay) } : {}), ...(numberIn(-1e9, 1e9)(p.start) ? { start: numberIn(-1e9, 1e9)(p.start) } : {}), ...(oneOf("linear", "out")(p.easing) ? { easing: oneOf("linear", "out")(p.easing) } : {}) };
   } },
   testimonial: { label: "Témoignage", category: "marketing", props: (p, at, h) => {
     const text = clean(p.text, 1200), name = line(p.name, 80);
@@ -727,7 +728,7 @@ const NODE_TYPES = {
       const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
       return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
     }).filter(Boolean);
-    return { src, alt, spots, ...(p.trigger === "hover" ? { trigger: "hover" } : {}), ...imageSize(p) };
+    return { src, alt, spots, ...(p.trigger === "hover" ? { trigger: "hover" } : {}), ...(p.pulse === true ? { pulse: true } : {}), ...imageSize(p) };
   } },
   posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
@@ -812,7 +813,7 @@ const NODE_TYPES = {
   animatedheading: { label: "Titre animé", category: "text", props: (p, at) => {
     const words = (Array.isArray(p.words) ? p.words : []).map((w) => line(w, 40)).filter(Boolean).slice(0, 8);
     if (words.length < 2) throw new Error(`${at} (titre animé) : au moins deux mots qui se succèdent.`);
-    return { before: line(p.before, 80), words, after: line(p.after, 80), level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", effect: oneOf("fade", "type")(p.effect) || "fade", interval: numberIn(1500, 6000, { integer: true })(p.interval) || 2500 };
+    return { before: line(p.before, 80), words, after: line(p.after, 80), level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", effect: oneOf("fade", "type", "slide", "blur", "zoom")(p.effect) || "fade", interval: numberIn(1500, 6000, { integer: true })(p.interval) || 2500, ...(p.cursor === false ? { cursor: false } : {}) };
   } },
   // Boîte retournable : recto (icône, titre, texte) au repos, verso (titre, texte, bouton) au survol, au focus ou au toucher
   flipbox: { label: "Boîte retournable", category: "interaction", props: (p, at, h) => {
@@ -820,7 +821,7 @@ const NODE_TYPES = {
     if (!frontTitle) throw new Error(`${at} (boîte retournable) : le titre du recto est obligatoire.`);
     const icon = h.iconNames.includes(String(p.icon || "")) ? String(p.icon) : "";
     const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton du verso)`), ctaLabel = line(p.ctaLabel, 40);
-    return { icon, frontTitle, frontText: clean(p.frontText, 300), backTitle, backText: clean(p.backText, 400), ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), effect: oneOf("flip", "fade")(p.effect) || "flip", height: numberIn(160, 600, { integer: true })(p.height) || 280 };
+    return { icon, frontTitle, frontText: clean(p.frontText, 300), backTitle, backText: clean(p.backText, 400), ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), effect: oneOf("flip", "fade")(p.effect) || "flip", height: numberIn(160, 600, { integer: true })(p.height) || 280, ...(p.direction === "vertical" ? { direction: "vertical" } : {}), ...(numberIn(200, 1500, { integer: true })(p.duration) ? { duration: numberIn(200, 1500, { integer: true })(p.duration) } : {}) };
   } },
   // Liste de prix : prestations réelles (nom, prix, description, lien facultatif), points de conduite jusqu'au prix
   pricelist: { label: "Liste de prix", category: "marketing", props: (p, at, h) => {
@@ -2082,7 +2083,8 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (n.type === "readingprogress" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.thickness)) rules.base.push(`.kw-n-${n.id} .kw-readbar{height:${n.props.thickness}px}`);
       if (n.type === "rating" && NODE_ID.test(String(n.id || "")) && n.props && Number.isFinite(n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-rating-fill{width:${Math.round((n.props.value / (n.props.scale || 5)) * 1000) / 10}%}`);
       if (n.type === "map" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-map-frame{height:${n.props.height}px}`);
-      if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
+      if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) { rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`); if (n.props.duration || n.props.easing) rules.base.push(`.kw-n-${n.id}.kw-progress-anim .kw-progress-bar{${n.props.duration ? `transition-duration:${n.props.duration}ms;` : ""}${n.props.easing === "linear" ? "transition-timing-function:linear" : n.props.easing === "out" ? "transition-timing-function:cubic-bezier(.16,1,.3,1)" : ""}}`); }
+      if (n.type === "flipbox" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.duration)) rules.base.push(`.kw-n-${n.id} .kw-flip-inner{transition-duration:${n.props.duration}ms}`);
       // Grille réglée pour l'ordinateur : sur tablette et mobile, elle se resserre d'elle-même (2 colonnes au plus, puis 1)
       // tant qu'aucune valeur propre à l'écran n'est réglée — comme une grille sans réglage
       if (n.type === "grid" && NODE_ID.test(String(n.id || ""))) {
