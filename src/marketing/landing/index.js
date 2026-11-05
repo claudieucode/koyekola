@@ -433,7 +433,9 @@ function viewModel(ctx, page) {
   // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
   const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
   const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
-  return { ...page, sections, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
+  // Motion Studio : la page ne charge sa feuille de styles et son runtime que si elle contient un composant ou un réglage Motion Studio
+  const motionStudio = pageNodes.STUDIO.usage(sections, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null);
+  return { ...page, sections, motionStudio, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {

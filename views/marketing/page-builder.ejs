@@ -291,6 +291,7 @@
   <% ["eye", "eyeOff", "lock", "copy", "trash", "grip", "chevronDown", "chevronRight", "plus", "close", "check", "arrowUp", "arrowDown", "alignLeft", "alignCenter", "alignRight", "alignJustify", "link", "list", "listOrdered", "indentMore", "indentLess", "clearFormat", "highlighter", "mousePointer", "edit", "upload", "layers", "search", "type", "image", "video", "columns", "layout", "borderBox", "spacing", "minus", "star", "graduation", "clock", "quote", "braces", "listChecks", "moveVertical", "play", "fileText", "chevronLeft", "arrowRightLeft", "maximize", "monitor", "tablet", "smartphone", "sliders", "moreHorizontal", "listPlus", "listMinus", "undo", "redo", "sun", "moon", "palette", "sparkles", "eraser", "annotArrow", "annotCircle", "annotRect", "send"].concat(spec.types.map((t) => t.icon), spec.icons).filter((v, i, a) => a.indexOf(v) === i && iconExists(v)).forEach((name) => { %><template data-pb-icon="<%= name %>"><%- icon(name, { size: 16 }) %></template><% }) %>
   <script type="application/json" id="pb-boot"><%- boot %></script>
   <script src="<%= asset('/js/page-builder-effects.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-motion-studio.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-direct.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-ai.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-quality.js') %>" defer></script>

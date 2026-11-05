@@ -2097,7 +2097,10 @@
   }
   function nodeContentFields(it, box, disabled) {
     var p = it.props || (it.props = {});
-    if (NT[it.type] && NT[it.type].schema && !deniedWidget(it.type)) { schemaFields(it, box, disabled); return; }
+    if (NT[it.type] && NT[it.type].schema && !deniedWidget(it.type)) {
+      if (NT[it.type].motion && window.pbMotionStudio && window.pbMotionStudio.panel(it, box, disabled)) return; // composant Motion Studio : panneau à six sections (page-builder-motion-studio.js)
+      schemaFields(it, box, disabled); return;
+    }
     if (deniedWidget(it.type)) { box.appendChild(h("p", { class: "pb-note is-warn" }, icon("lock"), h("span", { text: "Widget " + SPEC.widgetPermissions[deniedWidget(it.type)] + " : vous pouvez le déplacer ou le supprimer, pas le modifier." }))); disabled = true; }
     var set = function (k, light) { return function (v) { setProp(it.id, k, v, { key: it.id + ":" + k, light: light !== false }); }; };
     // Deux réglages qui ne s'affichent qu'ENSEMBLE (ex. texte + adresse d'un bouton) : quand un seul est rempli, on le dit au lieu de ne rien montrer
@@ -5486,6 +5489,7 @@
     canvasReady = true;
     guarded(refreshStart); // premier rendu terminé : seul moment où une page vide peut proposer le choix de création
     doc.body.classList.add("lp-builder");
+    if (window.pbMotionStudio) window.pbMotionStudio.canvas(frame.contentWindow); // runtime Motion Studio du canevas (mode éditeur : lecture / pause / position)
     if (window.pbDirect) window.pbDirect.canvas(doc); // manipulation directe : couche de survol et poignées de ce document
     doc.body.classList.toggle("pb-outlines", aids.outlines);
     doc.body.classList.toggle("pb-hand", tool === "hand");
@@ -8671,6 +8675,10 @@
     },
     keepPreview: function () { aiHold = false; scheduleSave(); },
     discardPreview: function () { undo(); future.pop(); futureLabels.pop(); updateHistoryButtons(); aiHold = false; scheduleSave(); },
+  });
+  if (window.pbMotionStudio) window.pbMotionStudio.attach({
+    h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, accGroup: accGroup, numField: numField, selectField: selectField, checkField: checkField,
+    schemaFields: schemaFields, frame: function () { return frame; }, setTab: function (t) { inspTab = t; store.set("insp-tab", t); renderInspector(); },
   });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
