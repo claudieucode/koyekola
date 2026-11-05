@@ -17,6 +17,15 @@ const CATEGORIES = Object.freeze([
   { key: "sante", label: "Santé et bien-être" },
   { key: "immobilier", label: "Immobilier" },
   { key: "agence", label: "Agences créatives et portfolios" },
+  { key: "divertissement", label: "Musique, jeux et médias audio" },
+  { key: "voyage", label: "Voyage et hôtellerie" },
+  { key: "beaute", label: "Beauté et bien-être" },
+  { key: "services", label: "Entreprises et services" },
+  { key: "association", label: "Associations et communautés" },
+  { key: "evenement", label: "Mariage et événements" },
+  { key: "edition", label: "Presse, édition et culture" },
+  { key: "auto", label: "Automobile et mobilité" },
+  { key: "nature", label: "Nature, agriculture et énergie" },
   { key: "anciens", label: "Thèmes précédents (conservés)" },
 ]);
 const CATEGORY_KEYS = new Set(CATEGORIES.map((c) => c.key));
