@@ -54,6 +54,7 @@ async function startServerOnce(extraEnv = {}) {
   return {
     base: `http://localhost:${port}`,
     dir,
+    logs: () => log, // journal du serveur de test (diagnostic)
     // Jeton anti-robot des formulaires publics, comme celui de la page affichée à un humain (signé avec la clé du
     // serveur de test, daté de 5 secondes : voir src/marketing/forms/antispam.js)
     formToken: () => {
