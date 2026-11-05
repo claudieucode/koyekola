@@ -406,6 +406,11 @@ const PARTS = {
     price: part("Prix", ".kw-pg-price", TEXT),
     old: part("Ancien prix", ".kw-pg-old", TEXT),
     out: part("Mention « épuisé »", ".kw-pg-out", TEXT_BG),
+    badge: part("Pastille promo / rupture", ".kw-pg-badge", TEXT_BG),
+    category: part("Catégorie", ".kw-pg-cat", TEXT),
+    description: part("Description courte", ".kw-pg-desc", TEXT),
+    cart: part("Bouton d'ajout au panier", ".kw-pg-cart", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    pager: part("Pagination", ".kw-pg-pg", { ...TEXT_BG, border: true }, ["hover", "focus"]),
   },
   shopbuy: {
     price: part("Prix", ".kw-pb-price", TEXT),

@@ -1,20 +1,42 @@
-<%# Grille de produits de la boutique (widgets/shop.js). Variables : p, cls, attrs, isBuilder, d = { items, closed }. %>
+<%# Grille de produits de la boutique (widgets/shop.js). Variables : p, cls, attrs, isBuilder, d = { items, closed, total, base, pager, demo }. %>
 <% const items = (d && d.items) || []; if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pg-empty">Boutique fermée (<%= d.closed === "module" ? "module Commerce non activé pour ce site" : "ouvrez-la dans Boutique → Réglages" %>) : cet élément reste vide au public.</p></section><% } %><% } else { %>
-<section class="<%= cls %> kw-pg"<%- attrs %> style="--kw-pg-cols: <%= p.columns %>">
+<section class="<%= cls %> kw-pg<%= p.layout === "list" ? " kw-pg--list" : "" %><%= p.cardStyle === "plain" ? " kw-pg--plain" : p.cardStyle === "soft" ? " kw-pg--soft" : "" %>"<%- attrs %> style="--kw-pg-cols: <%= p.columns %>; --kw-pg-ratio: <%= String(p.ratio || "1/1").replace(/[^0-9/]/g, "") %><%= p.layout === "list" && (p.ratio === "4/3" || p.ratio === "16/9") ? "; --kw-pg-img-w: 300px" : "" %>">
   <% if (p.title) { %><h3 class="kw-pg-title"><%= p.title %></h3><% } %>
-  <% if (!items.length) { %><p class="kw-pg-empty"><%= p.empty %></p><% } else { %>
+  <% if (!items.length) { %><p class="kw-pg-empty" role="status"><%= p.empty %></p><% } else { %>
   <ul class="kw-pg-grid">
-    <% items.forEach((x) => { %>
-    <li class="kw-pg-card">
-      <a class="kw-pg-link" href="<%= d.base %>/produit/<%= encodeURIComponent(x.slug) %>">
-        <% if (p.showImage) { %><% if (x.image_url) { %><img class="kw-pg-img" src="<%= x.image_url %>" alt="" loading="lazy" decoding="async" width="400" height="400"><% } else { %><span class="kw-pg-img kw-pg-noimg" aria-hidden="true"></span><% } %><% } %>
+    <% items.forEach((x) => { const href = d.base + "/produit/" + encodeURIComponent(x.slug); %>
+    <li class="kw-pg-card<%= !x.inStock ? " kw-pg-card--out" : "" %>">
+      <a class="kw-pg-link" href="<%= href %>">
+        <% if (p.showImage || p.showBadge) { %><span class="kw-pg-media">
+          <% if (p.showImage) { %><% if (x.image_url) { %><img class="kw-pg-img" src="<%= x.image_url %>" alt="" loading="lazy" decoding="async" width="400" height="400"><% } else { %><span class="kw-pg-img kw-pg-noimg" aria-hidden="true"></span><% } %><% } %>
+          <% if (p.showBadge && !x.inStock) { %><span class="kw-pg-badge kw-pg-badge--out">Rupture de stock</span><% } else if (p.showBadge && x.onSale) { %><span class="kw-pg-badge"><%= p.badgeLabel %></span><% } %>
+        </span><% } %>
+        <% if (p.showCategory && x.categories && x.categories[0]) { %><span class="kw-pg-cat"><%= x.categories[0].name %></span><% } %>
         <span class="kw-pg-name"><%= x.name %></span>
       </a>
+      <% if (p.showDescription && x.short_description) { %><p class="kw-pg-desc"><%= x.short_description %></p><% } %>
       <% if (p.showPrice) { %><p class="kw-pg-price"><% if (x.onSale) { %><s class="kw-pg-old"><%= x.regularLabel %></s> <% } %><%= x.isVariable ? "À partir de " : "" %><strong><%= x.priceLabel %></strong></p><% } %>
       <% if (!x.inStock) { %><p class="kw-pg-out">Rupture de stock</p><% } %>
+      <% if (p.showCart && x.inStock) { %>
+        <% if (x.isVariable) { %><form class="kw-pg-add" method="get" action="<%= href %>"><button class="kw-pg-cart kw-pb-btn" type="submit"><%= p.optionsLabel %></button></form>
+        <% } else if (x.demo) { %><span class="kw-pg-cart kw-pb-btn" aria-disabled="true"><%= p.cartLabel %></span>
+        <% } else { %><form class="kw-pg-add" method="post" action="<%= d.base %>/panier/ajouter" data-sh-add>
+          <input type="hidden" name="product_id" value="<%= x.id %>"><input type="hidden" name="quantity" value="1"><input type="hidden" name="retour" value="<%= d.base %>">
+          <button class="kw-pg-cart kw-pb-btn" type="submit"><%= p.cartLabel %></button><p class="kw-pb-msg" data-sh-msg role="status" aria-live="polite"></p>
+        </form><% } %>
+      <% } %>
     </li>
     <% }) %>
   </ul>
+  <% if (d.pager) { const pg = d.pager, last = pg.pages, cur = pg.page, link = (n) => "?" + (pg.base ? pg.base + "&" : "") + "page=" + n;
+       const nums = []; for (let n = 1; n <= last; n++) if (n === 1 || n === last || Math.abs(n - cur) <= 1) nums.push(n); %>
+  <nav class="kw-pg-pager" aria-label="Pages du catalogue">
+    <% if (cur > 1) { %><a class="kw-pg-pg" rel="prev" href="<%= link(cur - 1) %>">Précédent</a><% } %>
+    <% nums.forEach((n, i) => { if (i && n - nums[i - 1] > 1) { %><span class="kw-pg-gap" aria-hidden="true">…</span><% } %><% if (n === cur) { %><span class="kw-pg-pg kw-pg-pg--cur" aria-current="page"><%= n %></span><% } else { %><a class="kw-pg-pg" href="<%= link(n) %>"><%= n %></a><% } %><% }) %>
+    <% if (cur < last) { %><a class="kw-pg-pg" rel="next" href="<%= link(cur + 1) %>">Suivant</a><% } %>
+  </nav>
+  <% } %>
+  <% if (p.showCart && !isBuilder && !d.demo) { %><script src="/js/boutique.js" defer></script><% } %>
   <% } %>
 </section>
 <% } %>
