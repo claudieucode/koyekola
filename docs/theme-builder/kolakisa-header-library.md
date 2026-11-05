@@ -1,4 +1,4 @@
-# Bibliothèque d'en-têtes du Theme Builder (100 modèles)
+# Bibliothèque d'en-têtes du Theme Builder (100 modèles, dont 12 sectoriels)
 
 Documentation technique de la catégorie **En-tête**. Références : [`elementor-header-reference.md`](elementor-header-reference.md) (ce qu'Elementor fait, confirmé / non vérifiable)
 et [`kolakisa-header-audit.md`](kolakisa-header-audit.md) (état avant refonte).
@@ -70,6 +70,43 @@ Règles de composition (`band()` dans `header.js`) :
 * Une rangée dont **tout** le contenu est masqué sur mobile est elle-même masquée (`hideOn`).
 * Toutes les rangées sont dans **un seul conteneur** pleine largeur (`wrap()`), sans espace entre rangées. C'est ce conteneur qui porte le comportement.
 
+## 3 bis. Identités propres : les 12 modèles sectoriels (refonte du 4 novembre 2026)
+
+Les 88 premiers modèles utilisent les cinq identités du site (jetons de la charte : `token:primary`…). Douze modèles les remplacent des plus redondants et portent **leur propre identité**, déclarée dans `IDENT` (`catalog/header.js`, exportée en `skins`) :
+couleurs en valeurs fixes (jamais la charte du site ni celle de l'administration), polices de la **bibliothèque locale**, arrondis, graisses, casse et densité propres. Le catalogue « plat » les ajoute au filtre « identité » (5 + 12 = 17).
+La police est posée sur tous les éléments de texte ; pour le menu, le compte et le logo elle passe par les **parties** du widget (`parts.link`, `parts.text`), car le site impose sa police aux liens.
+
+| Secteur | Modèle (famille) | Identité | Particularité |
+|---|---|---|---|
+| Restaurant | `restaurant-reservation` (classique) | beige chaud, bordeaux, Playfair Display / Lato | barre de coordonnées, logo central, « Réserver une table » |
+| École | `ecole-inscriptions` (classique) | blanc, vert d'eau, ambre, Nunito | bandeau d'annonce ; **se réduit au défilement** |
+| Cabinet | `cabinet-confiance` (classique) | gris-vert, vert sapin, Lora / Source Sans 3 | coordonnées, rendez-vous |
+| Portfolio | `portfolio-signature` (minimal) | crème, noir, Instrument Serif / DM Sans | nom en grand, menu discret ; **se réduit** |
+| Bien-être | `bien-etre-pastille` (minimal) | vert doux, Lora / Nunito Sans | pastille arrondie |
+| Agence | `agence-brutaliste` (créatif) | noir, jaune acide, Space Grotesk | capitales, filet épais ; **se réduit** |
+| Mode | `mode-boutique-promo` (boutique) | rose poudré, prune, Cormorant / Jost | bandeau promotionnel, compte et panier |
+| SaaS | `saas-violet-essai` (saas) | blanc, violet, Plus Jakarta Sans / Inter | connexion + essai ; **se réduit** |
+| Média | `media-une-du-jour` (magazine) | papier, rouge, Libre Baskerville / Source Sans 3 | date, recherche, double filet |
+| Hôtel | `hotel-couverture` (transparent) | pierre noire, or, Cinzel / Lato | superposé à la couverture, **devient plein au défilement** |
+| Immobilier | `immobilier-recherche` (collant) | blanc, cyan, Manrope | large recherche ; **se réduit** |
+| Association | `association-don` (barre) | crème, orange brûlé, Quicksand | bandeau d'engagement, « Faire un don » |
+
+Modèles retirés (les plus proches d'un autre de leur famille) : `classique-sobre`, `classique-filet-accent`, `classique-lien-contact`, `minimal-pile-a-droite`, `minimal-titre-puis-menu`, `creatif-pile-gauche`, `boutique-compacte`, `saas-collant-fin`, `blog-minimal-recherche`, `collant-filet-accent`, `barre-connexion-discrete`, `superpose-pastille`.
+Les en-têtes déjà utilisés par des sites sont des **copies indépendantes** : aucun n'est touché ; les clés retirées répondent 404 dans la bibliothèque.
+
+## 4 bis. Effets au défilement (propriété `headerFx`)
+
+Propriété de conteneur validée par la grammaire (`nodes.js`, `container`) : `shrink`, `solid` ou `both`, lue sur le **premier conteneur** de l'en-tête (comme la position).
+
+| Valeur | Effet | Condition |
+|---|---|---|
+| `shrink` | la rangée se réduit (remplissage vertical 6 px, logo ≤ 32 px) dès 8 px de défilement, puis retrouve sa taille en haut de page | en-tête collant ou superposé |
+| `solid` | un en-tête **superposé** (transparent, texte clair) se fixe en haut (`position: fixed`) et prend le fond et le texte du site (`--kw-background`, `--kw-text`) | en-tête superposé |
+| `both` | les deux | — |
+
+Mécanisme : `_sections.ejs` / `themeRender.partMode` ajoutent `kw-theme-fx-<valeur>` et `data-kw-scroll` à l'enveloppe ; `landing.js` pose `is-scrolled` (un écouteur passif, une image à la fois) ; `landing.css` porte les règles sur les **rangées** (transition 0,2 s, supprimée si le visiteur demande moins de mouvement ; boutons laissés dans leurs couleurs).
+Sans la propriété rien ne change. Ne pas confondre avec `motion.scrollFx` (effets de mouvement d'un élément).
+
 ## 4. Comportements
 
 | Mode | Déclaration | Effet |
@@ -122,7 +159,7 @@ Le contrôle visuel est `scripts/audit-entetes.js` (Playwright, non installé pa
 
 ## 9. Limites connues
 
-* Pas d'effets de défilement propres à l'en-tête (rétrécissement, transparence au défilement), ni de pointeurs de menu configurables, ni de sous-menus à plusieurs niveaux (grammaire `menu`).
+* Effets de défilement limités à « réduit » et « superposé → plein » (voir §4 bis) ; pas de pointeurs de menu configurables, ni de sous-menus à plusieurs niveaux (grammaire `menu`).
 * Le collant d'un en-tête **à plusieurs rangées** colle en bloc (Elementor v3 permet de ne coller qu'une section).
 * L'aperçu de la bibliothèque ne charge pas le script du menu mobile : le menu y est montré déployé ; sur le site et dans l'éditeur il se replie derrière un bouton.
 * Les liens de boutons du catalogue (`/catalogue`, `/contact`, `/inscription`, `/connexion`, `/blog`, `/faq`) sont des pages de la plateforme ; à adapter si le site n'a pas ces pages. Les réseaux sociaux pointent vers les accueils des réseaux (à remplacer).
@@ -142,3 +179,13 @@ Le contrôle visuel est `scripts/audit-entetes.js` (Playwright, non installé pa
 * **Rangées/zones compilées plutôt que 100 arbres écrits à la main** : une grammaire courte garantit l'alignement (flex, jamais d'absolu), l'adaptation mobile et la cohérence ; chaque modèle reste modifiable dans l'éditeur (éléments natifs).
 * **Position portée par l'enveloppe** : la seule façon de rendre `sticky` effectif dans une page qui fait défiler un bloc plus grand que la bande.
 * **Menu d'exemple réservé à la bibliothèque** : préserve la règle « sans menu affecté, rien » sur les sites.
+
+## 12. Éléments du cahier des charges non proposés (et pourquoi)
+
+| Demande | État | Raison |
+|---|---|---|
+| Sélecteur de langue ou de région | **non proposé** | le site public n'a pas de versions traduites à commuter : un sélecteur serait un contrôle sans effet |
+| Favoris / liste de souhaits | **non proposé** | pas de fonction « favoris » côté visiteur (ni table, ni route) |
+| Coordonnées | proposé | liste d'icônes `contact` : textes d'exemple à remplacer, aucun numéro inventé |
+| Menu mobile et hamburger, sous-menus, clavier | déjà fournis | `landing.js` : bouton, Échap, retour du focus, fermeture à la sortie |
+| Aperçu responsive avant publication, dupliquer, renommer, publier, archiver | déjà fournis | interface du Theme Builder (boutons Ordinateur / Tablette / Mobile) |
