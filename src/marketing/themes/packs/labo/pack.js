@@ -294,7 +294,7 @@ module.exports = {
   concept: "Un carnet de laboratoire : papier millimétré, encre noir-bleu et un seul signal cyan, avec des planches annotées, des courbes qui se tracent et un réticule qui lit chaque valeur.",
   description: "Institut de recherche : grille de repérage et cotes visibles, graphiques SVG interactifs tracés à l'apparition, publications filtrables par année et domaine, trombinoscope, fiches d'instruments et jeux de données ouverts.",
   brand: "Institut Mérel", modules: ["formulaires", "recherche"],
-  dna: { header: "barre-coordonnees-technique", hero: "grille-donnees-visualisation", grid: "publications-et-instruments", motion: "trace-de-courbes-et-curseur" },
+  dna: { header: "barre-coordonnees-technique", hero: "grille-donnees-visualisation", grid: "publications-et-instruments", motion: "trace-de-courbes-et-curseur", shapes: "filets-et-reperes-techniques", rhythm: "dense-donnees", signature: "graphiques-interactifs-a-reticule" },
   tokens: {
     colors: { primary: "#00c2e0", secondary: "#0b1628", accent: "#ffd400", background: "#f4f2ea", surface: "#fbfaf5", text: "#0b1628", muted: "#4a5a70", success: "#13734a", warning: "#8a5a00", error: "#b3261e" },
     fonts: { heading: "font.space-grotesk", body: "font.ibm-plex-mono", button: "font.jetbrains-mono", link: "font.ibm-plex-mono" },

@@ -115,7 +115,7 @@ module.exports = {
   concept: "Une affiche de match : titres monumentaux en biais, bandeau de scores qui défile, compte à rebours en direct, classement et joueurs en carrousel.",
   description: "Club ou ligue sportifs : affiche de match crème, noir et orange signal, compte à rebours du prochain match, calendrier et résultats à onglets, classement, effectif en carrousel, billetterie.",
   brand: "Arène Sporting Club", modules: ["formulaires", "recherche"],
-  dna: { header: "ticker-barre-noire", hero: "titre-monumental-avec-carte-match", grid: "listes-matchs-et-carrousel", motion: "compte-a-rebours-et-compteurs" },
+  dna: { header: "ticker-barre-noire", hero: "titre-monumental-avec-carte-match", grid: "listes-matchs-et-carrousel", motion: "compte-a-rebours-et-compteurs", shapes: "angles-vifs-et-ombres-dures", rhythm: "dense-affiche", signature: "carte-match-et-compte-a-rebours" },
   tokens: {
     colors: { primary: "#ff4b1f", secondary: "#0e0e0e", accent: "#ffd23f", background: "#f3efe6", surface: "#ffffff", text: "#111111", muted: "#5d5a52", success: "#1e7e34", warning: "#8a5a00", error: "#c62828" },
     fonts: { heading: "font.anton", body: "font.work-sans", button: "font.barlow-condensed", link: "font.work-sans" },

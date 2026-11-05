@@ -221,7 +221,7 @@ module.exports = {
   concept: "Une agence de quartier dessinée comme un carnet d'architecte : fenêtres en arche, biens illustrés en SVG, filtres instantanés, plan de ville et plan de maison interactifs.",
   description: "Agence immobilière : pierre calcaire, encre ardoise et safran, biens dessinés avec filtres instantanés (mode, type, budget, pièces), fiche à galerie et plan interactif, plan des quartiers, estimation, équipe et conseils.",
   brand: "Pierre — agence immobilière", modules: ["formulaires", "recherche", "carte"],
-  dna: { header: "double-barre-contact-et-nav-filets", hero: "fenetre-en-arche-jour-soir-et-finder", grid: "cartes-biens-filtres-et-plan-interactif", motion: "bascule-jour-soir-et-filtres-instantanes" },
+  dna: { header: "double-barre-contact-et-nav-filets", hero: "fenetre-en-arche-jour-soir-et-finder", grid: "cartes-biens-filtres-et-plan-interactif", motion: "bascule-jour-soir-et-filtres-instantanes", shapes: "arches-et-plans", rhythm: "alterne-clair", signature: "filtres-de-biens-et-plan-cliquable" },
   tokens: {
     colors: { primary: "#e0a21b", secondary: "#1d2530", accent: "#2b6f64", background: "#f4f0e8", surface: "#fffdf8", text: "#1d2530", muted: "#5a6068", success: "#2b6f64", warning: "#8a5a00", error: "#b3361f" },
     fonts: { heading: "font.bricolage-grotesque", body: "font.dm-sans", button: "font.dm-sans", link: "font.ibm-plex-mono" },

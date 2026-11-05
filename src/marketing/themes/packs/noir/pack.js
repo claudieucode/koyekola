@@ -199,7 +199,7 @@ module.exports = {
   concept: "Un magazine de mode : titres Didone monumentaux qui chevauchent des visuels asymétriques, menu plein écran, lookbook en défilement horizontal et croquis de mode au trait.",
   description: "Maison de mode de luxe : noir profond, ivoire et or mat, titres Didone monumentaux, menu plein écran, lookbook horizontal, collections filtrables, boutique de démonstration avec pastilles de taille et de coloris.",
   brand: "Maison Noir", modules: ["formulaires", "recherche"],
-  dna: { header: "logo-centre-plein-ecran-overlay", hero: "composition-asymetrique-typo", grid: "lookbook-defilement-horizontal", motion: "lettres-et-parallaxe-douce" },
+  dna: { header: "logo-centre-plein-ecran-overlay", hero: "composition-asymetrique-typo", grid: "lookbook-defilement-horizontal", motion: "lettres-et-parallaxe-douce", shapes: "filets-minces-et-arches", rhythm: "scenique-lent", signature: "lookbook-horizontal" },
   tokens: {
     colors: { primary: "#c9a25f", secondary: "#0b0a09", accent: "#9b1226", background: "#0b0a09", surface: "#15120f", text: "#f2ece1", muted: "#a9a193", success: "#4f8f5b", warning: "#c9a25f", error: "#e0485c" },
     fonts: { heading: "font.bodoni-moda", body: "font.jost", button: "font.jost", link: "font.jost" },

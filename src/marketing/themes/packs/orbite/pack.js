@@ -224,7 +224,7 @@ module.exports = {
   concept: "Un produit lumineux dans la nuit : verre dépoli, halos violet et cyan, pilule de navigation flottante et grande maquette d'application en perspective.",
   description: "Site de logiciel SaaS en mode sombre (ou clair) : en-tête pilule flottante, maquette d'appli en perspective, bento animé avec spotlight au curseur, tarifs avec bascule mensuel/annuel, comparatif, ressources.",
   brand: "Orbite", modules: ["formulaires", "recherche"],
-  dna: { header: "pilule-flottante", hero: "mockup-produit-centre", grid: "bento", motion: "spotlight-curseur-et-bascule-tarifs" },
+  dna: { header: "pilule-flottante", hero: "mockup-produit-centre", grid: "bento", motion: "spotlight-curseur-et-bascule-tarifs", shapes: "arrondis-et-halos", rhythm: "modulaire-bento", signature: "maquette-produit-et-tarifs" },
   tokens: {
     colors: { primary: "#a285ff", secondary: "#2fd4f0", accent: "#2fd4f0", background: "#060818", surface: "#0e1233", text: "#eaedff", muted: "#a4acd4", success: "#34d399", warning: "#fbbf24", error: "#f87171" },
     fonts: { heading: "font.sora", body: "font.inter", button: "font.manrope", link: "font.inter" },

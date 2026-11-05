@@ -221,7 +221,7 @@ module.exports = {
   concept: "Un cahier d'écolier à grands carreaux : intercalaires colorés, surligneur, notes manuscrites et formes de la trousse pour présenter programmes, parcours et vie de campus.",
   description: "École, université ou centre de formation : papier Seyès, onglets d'intercalaires, programmes filtrables, frise de parcours par cursus, plan de campus interactif, admissions pas à pas, équipe pédagogique et calendrier.",
   brand: "Institut Cursus", modules: ["formulaires", "recherche"],
-  dna: { header: "onglets-intercalaires-de-cahier", hero: "page-seyes-annotee-et-trousse", grid: "fiches-cartonnees-et-frise-de-parcours", motion: "surligneur-tampons-et-regle-de-lecture" },
+  dna: { header: "onglets-intercalaires-de-cahier", hero: "page-seyes-annotee-et-trousse", grid: "fiches-cartonnees-et-frise-de-parcours", motion: "surligneur-tampons-et-regle-de-lecture", shapes: "papier-decoupe-et-tampons", rhythm: "alterne-ludique", signature: "frise-de-parcours-et-filtres-formations" },
   tokens: {
     colors: { primary: "#3b46d9", secondary: "#231d3d", accent: "#ff6b4a", background: "#fbf6e9", surface: "#fffdf6", text: "#231d3d", muted: "#5f5a78", success: "#1c7f58", warning: "#8a5a00", error: "#c0362c" },
     fonts: { heading: "font.fraunces", body: "font.figtree", button: "font.bricolage-grotesque", link: "font.caveat" },

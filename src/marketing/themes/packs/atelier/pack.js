@@ -130,7 +130,7 @@ module.exports = {
   concept: "Un collage brutaliste : mots géants, autocollants qui tournent, aplats lime, rose et bleu, projets en tuiles filtrables et curseur-étiquette.",
   description: "Agence créative ou studio de design : fond lilas, aplats colorés et bordures épaisses, portfolio filtrable, étude de cas détaillée, services, équipe, journal et méthode en cinq étapes.",
   brand: "Atelier Nord", modules: ["formulaires", "recherche"],
-  dna: { header: "grille-bordee-menu-numerote", hero: "mots-geants-collage-autocollants", grid: "tuiles-colorees-filtrables", motion: "curseur-etiquette-et-bandeau-defilant" },
+  dna: { header: "grille-bordee-menu-numerote", hero: "mots-geants-collage-autocollants", grid: "tuiles-colorees-filtrables", motion: "curseur-etiquette-et-bandeau-defilant", shapes: "brutalisme-bordures-epaisses", rhythm: "dense-collage", signature: "tuiles-filtrables-et-etude-de-cas" },
   tokens: {
     colors: { primary: "#3a3cff", secondary: "#141414", accent: "#ff3d81", background: "#e9e2ff", surface: "#ffffff", text: "#141414", muted: "#4a4560", success: "#1e7e34", warning: "#8a5a00", error: "#c62828" },
     fonts: { heading: "font.unbounded", body: "font.figtree", button: "font.archivo", link: "font.figtree" },

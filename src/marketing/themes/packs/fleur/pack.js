@@ -167,7 +167,7 @@ module.exports = {
   concept: "Un livre de cuisine de luxe : ivoire chaud, vert profond, filet doré, serif à fort contraste, menu à points de conduite et assiettes dessinées au trait.",
   description: "Restaurant gastronomique : fond ivoire et vert profond, menu dégustation en deux colonnes avec accords mets-vins, carte à onglets, histoire de la cheffe, salle illustrée, horaires et réservation.",
   brand: "Fleur de sel", modules: ["formulaires", "recherche"],
-  dna: { header: "logo-centre-menu-centre", hero: "plein-ecran-serif-immersif", grid: "menu-degustation-colonnes", motion: "fondu-lent-et-zoom" },
+  dna: { header: "logo-centre-menu-centre", hero: "plein-ecran-serif-immersif", grid: "menu-degustation-colonnes", motion: "fondu-lent-et-zoom", shapes: "filets-fins-dores", rhythm: "aere-narratif", signature: "menu-degustation-et-accords" },
   tokens: {
     colors: { primary: "#143127", secondary: "#0c1d16", accent: "#b8923f", background: "#f7f1e4", surface: "#fbf7ee", text: "#1c2a23", muted: "#59574a", success: "#2f6b4f", warning: "#7a5f25", error: "#9b2c2c" },
     fonts: { heading: "font.cormorant-garamond", body: "font.newsreader", button: "font.newsreader", link: "font.newsreader" },

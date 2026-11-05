@@ -219,10 +219,10 @@ module.exports = {
   concept: "Un jardin apaisant : formes de galets et d'arches, feuillages dessinés, parcours patient en sentier, taille du texte réglable et conseils santé dépliables.",
   description: "Maison de santé pluridisciplinaire : lin chaud, prune, sauge et miel, formes organiques, barre d'urgence rassurante, soins filtrables, équipe, parcours patient, horaires et accès, conseils et FAQ.",
   brand: "Maison de santé Sève", modules: ["formulaires", "recherche", "cartes"],
-  dna: { header: "barre-urgence-et-taille-du-texte", hero: "arche-botanique-et-galets-flottants", grid: "galets-organiques-et-sentier-du-parcours", motion: "respiration-guidee-et-feuillage-qui-pousse" },
+  dna: { header: "barre-urgence-et-taille-du-texte", hero: "arche-botanique-et-galets-flottants", grid: "galets-organiques-et-sentier-du-parcours", motion: "respiration-guidee-et-feuillage-qui-pousse", shapes: "galets-et-organique", rhythm: "aere-apaisant", signature: "sentier-de-parcours-et-conseils-depliables" },
   tokens: {
     colors: { primary: "#4f2547", secondary: "#2a1f2b", accent: "#e9a53a", background: "#f5f0e8", surface: "#fffdf9", text: "#2a1f2b", muted: "#5e5260", success: "#2f6b4f", warning: "#8a5a00", error: "#b3261e" },
-    fonts: { heading: "font.fraunces", body: "font.figtree", button: "font.figtree", link: "font.figtree" },
+    fonts: { heading: "font.young-serif", body: "font.atkinson-hyperlegible", button: "font.atkinson-hyperlegible", link: "font.atkinson-hyperlegible" },
     radius: { sm: 12, md: 20, lg: 32, button: 999, field: 16, card: 28 }, shadow: { card: "0 14px 40px rgba(79,37,71,.12)", button: "0 6px 18px rgba(79,37,71,.22)" }, border: { width: 2, color: "#d9cfc0" },
     type: { h1: { size: 72, weight: 500, lineHeight: 1.04, transform: "none" }, h2: { size: 46, weight: 500, lineHeight: 1.1, transform: "none" } },
   },

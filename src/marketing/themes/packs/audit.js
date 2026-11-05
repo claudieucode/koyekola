@@ -55,8 +55,19 @@ function distance(a, b) {
   if (a.tokens.colors.background.toLowerCase() !== b.tokens.colors.background.toLowerCase()) d += 0.1;
   return Math.min(1, d);
 }
-function auditDiversity(specs, min = 0.6) {
+// Les 8 axes de l'empreinte structurelle : navigation, hero, grille, paire typographique, formes, animation, rythme, composant signature
+const AXES = ["header", "hero", "grid", "typo", "shapes", "motion", "rhythm", "signature"];
+const axisValue = (s, k) => (k === "typo" ? `${s.tokens.fonts.heading}+${s.tokens.fonts.body}` : s.dna[k]);
+const sharedAxes = (a, b) => AXES.filter((k) => axisValue(a, k) !== undefined && axisValue(a, k) === axisValue(b, k));
+function auditDiversity(specs, min = 0.6, maxShared = 3) {
   const problems = [];
+  for (const s of specs) for (const k of ["shapes", "rhythm", "signature"]) if (!s.dna[k]) problems.push(`${s.key} : axe « ${k} » manquant dans l'empreinte`);
+  for (let i = 0; i < specs.length; i++) for (let j = i + 1; j < specs.length; j++) {
+    const sh = sharedAxes(specs[i], specs[j]);
+    if (sh.length > maxShared) problems.push(`${specs[i].key} et ${specs[j].key} partagent ${sh.length} axes sur 8 (${sh.join(", ")}) : maximum ${maxShared}`);
+    if (axisValue(specs[i], "typo") === axisValue(specs[j], "typo")) problems.push(`${specs[i].key} et ${specs[j].key} utilisent la même paire typographique`);
+    if (specs[i].tokens.colors.primary.toLowerCase() === specs[j].tokens.colors.primary.toLowerCase() && specs[i].tokens.colors.background.toLowerCase() === specs[j].tokens.colors.background.toLowerCase()) problems.push(`${specs[i].key} et ${specs[j].key} ont la même palette dominante`);
+  }
   for (let i = 0; i < specs.length; i++) for (let j = i + 1; j < specs.length; j++) {
     const d = distance(specs[i], specs[j]);
     if (d < min) problems.push(`${specs[i].key} et ${specs[j].key} se ressemblent trop (distance ${d.toFixed(2)} < ${min})`);
@@ -65,4 +76,4 @@ function auditDiversity(specs, min = 0.6) {
   return problems;
 }
 
-module.exports = { auditPack, auditDiversity, distance, htmlNodes };
+module.exports = { auditPack, auditDiversity, distance, htmlNodes, AXES, sharedAxes };

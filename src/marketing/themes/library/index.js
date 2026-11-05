@@ -35,7 +35,7 @@ function check(spec) {
   if (!Array.isArray(spec.tags) || !spec.tags.length || spec.tags.some((t) => !STYLES.has(t))) bad(`styles : au moins un parmi ${[...STYLES].join(", ")}`);
   if (!spec.siteType || !spec.concept) bad("type de site ou concept créatif manquant");
   if (!spec.tokens || !spec.tokens.colors || !spec.tokens.fonts) bad("jetons (couleurs et polices) manquants");
-  if (!spec.dna || !spec.dna.header || !spec.dna.hero || !spec.dna.grid || !spec.dna.motion) bad("empreinte de structure (dna.header, hero, grid, motion) manquante");
+  if (!spec.dna || !spec.dna.header || !spec.dna.hero || !spec.dna.grid || !spec.dna.motion || !spec.dna.shapes || !spec.dna.rhythm || !spec.dna.signature) bad("empreinte de structure à 8 axes (dna.header, hero, grid, motion, shapes, rhythm, signature + paire typographique) incomplète");
   if (!Array.isArray(spec.pages) || spec.pages.length < 4) bad("au moins quatre pages");
   if (spec.pages[0].key !== "accueil") bad("la première page doit être « accueil »");
   const keys = new Set();

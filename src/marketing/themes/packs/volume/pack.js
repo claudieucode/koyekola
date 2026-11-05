@@ -345,7 +345,7 @@ module.exports = {
   concept: "Minimalisme spatial : béton clair et anthracite, une seule touche d'accent, rail vertical fixe, grand plan asymétrique, élévations et axonométries au trait, révélations par masque.",
   description: "Agence d'architecture : rail vertical fixe, plan en élévation pleine largeur, projets en colonnes décalées avec filtre par typologie, fiche technique, légende de plan, comparateur avant/après et index typographique.",
   brand: "Volume Architectes", modules: ["formulaires", "recherche"],
-  dna: { header: "rail-vertical-gauche", hero: "plan-asymetrique-plein-ecran", grid: "projets-colonnes-decalees", motion: "revelation-par-masque" },
+  dna: { header: "rail-vertical-gauche", hero: "plan-asymetrique-plein-ecran", grid: "projets-colonnes-decalees", motion: "revelation-par-masque", shapes: "rectangles-plans-et-cotes", rhythm: "alterne-asymetrique", signature: "projets-et-plan-de-masse" },
   tokens: {
     colors: { primary: "#a84a28", secondary: "#26282a", accent: "#2f6b5e", background: "#e9e6e0", surface: "#f5f3ef", text: "#26282a", muted: "#585a5b", success: "#2f6b3e", warning: "#7d5a0c", error: "#b3261e" },
     fonts: { heading: "font.inter-tight", body: "font.inter", button: "font.archivo", link: "font.inter-tight" },
