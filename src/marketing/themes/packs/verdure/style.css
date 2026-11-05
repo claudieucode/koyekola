@@ -1,0 +1,54 @@
+/* Verdure — la serre pédagogique. Confiné à body[data-kw-pack="verdure"]. */
+body{--sh-accent:var(--pk-accent,#2f7d4f);--sh-on-accent:#ffffff;--sh-bg:#f3f7ef;--sh-text:#1c2a21;--vd-g:var(--pk-accent,#2f7d4f);--vd-bg:#f3f7ef;--vd-ink:#1c2a21;--vd-mut:#566a5d;--vd-line:#d6e2d3;--vd-dk:#173a28;--vd-gut:clamp(16px,4vw,48px);
+  background:var(--vd-bg);color:var(--vd-ink);font-family:var(--kw-font-body);line-height:1.65;margin:0;-webkit-font-smoothing:antialiased}
+.lp-main,.sh-main{max-width:none;margin:0;padding:0}
+.pk-bleed{display:block;width:100%}.vd-wrap{max-width:1240px;margin:0 auto;padding:0 var(--vd-gut)}
+a{color:inherit;text-underline-offset:3px}:focus-visible{outline:3px solid var(--vd-g);outline-offset:3px}
+.vd-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.vd-lab{font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--vd-g);margin:0 0 .6rem}
+.vd-h1,.vd-h2{font-family:var(--kw-font-heading);font-weight:700;line-height:1.08;margin:0 0 .8rem;color:var(--vd-dk)}
+.vd-h1{font-size:clamp(2rem,4.6vw,3.4rem)}.vd-h1--xl{font-size:clamp(2.6rem,7vw,5.4rem);letter-spacing:-.02em}.vd-h2{font-size:clamp(1.4rem,2.8vw,2rem);margin-top:1.5rem}
+.vd-lead{font-size:1.12rem;max-width:50ch;color:var(--vd-mut)}.vd-small{font-size:.9rem;color:var(--vd-mut)}
+.vd-btn{display:inline-block;background:var(--vd-g);color:#fff;text-decoration:none;padding:.95em 1.9em;border-radius:999px;font-weight:700;min-height:48px;box-sizing:border-box;transition:transform .25s}.vd-btn:hover{transform:translateY(-2px)}
+/* en-tête : recherche centrale */
+.vd-head{background:#fff;border-bottom:1px solid var(--vd-line);position:sticky;top:0;z-index:40}
+.vd-bar{display:grid;grid-template-columns:auto minmax(220px,1fr) auto;gap:1.4rem;align-items:center;max-width:1300px;margin:0 auto;padding:.8rem var(--vd-gut)}
+.vd-logo{display:flex;align-items:center;gap:.5rem;text-decoration:none;font-family:var(--kw-font-heading);font-weight:800;font-size:1.5rem;color:var(--vd-dk)}.vd-leaf{width:30px;height:30px;color:var(--vd-g)}.vd-leaf--l{width:44px;height:44px}
+.vd-search{display:flex;align-items:center;justify-content:space-between;background:var(--vd-bg);border:1px solid var(--vd-line);border-radius:999px;overflow:hidden;max-width:620px;width:100%;justify-self:center;text-decoration:none;color:var(--vd-mut);padding-left:1.2em;min-height:48px;box-sizing:border-box}
+.vd-search b{background:var(--vd-g);color:#fff;padding:0 1.4em;display:inline-flex;align-items:center;min-height:48px}
+.vd-act{display:flex;gap:1rem;font-weight:600;font-size:.92rem}.vd-act a{text-decoration:none;display:inline-flex;align-items:center;min-height:48px}.vd-cart{background:var(--vd-dk);color:#fff;border-radius:999px;padding:0 1.2em}
+.vd-sub{display:flex;gap:1.6rem;flex-wrap:wrap;max-width:1300px;margin:0 auto;padding:0 var(--vd-gut) .6rem;font-size:.9rem;font-weight:600}.vd-sub a{text-decoration:none;min-height:32px;display:inline-flex;align-items:center;color:var(--vd-mut)}.vd-sub a:hover{color:var(--vd-g)}
+/* accueil */
+.vd-hero{padding:clamp(36px,7vw,96px) 0;overflow:hidden}.vd-hero-in{display:grid;grid-template-columns:1.1fr .9fr;gap:2rem;align-items:center}
+.vd-art{position:relative;height:clamp(240px,34vw,440px)}.vd-big{position:absolute;color:var(--vd-g);transform-origin:50% 100%;animation:verdure-sway 6s ease-in-out infinite}
+.vd-big--1{width:56%;height:auto;left:4%;bottom:0}.vd-big--2{width:42%;height:auto;right:6%;bottom:12%;color:#5aa573;animation-delay:-2s}.vd-big--3{width:30%;height:auto;left:38%;top:0;color:#173a28;animation-delay:-4s}
+body[data-pk-balancement="off"] .vd-big{animation:none}
+.vd-sec{padding:clamp(28px,5vw,64px) 0}.vd-ph{padding:clamp(40px,6vw,88px) 0 clamp(20px,3vw,40px)}
+.vd-fil{background:#fff;border-block:1px solid var(--vd-line);padding:clamp(32px,5vw,64px) 0}
+.vd-fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0 1.4rem}
+.vd-fc{display:grid;gap:.2rem;background:var(--vd-bg);border:1px solid var(--vd-line);border-radius:22px;padding:1.2rem 1.4rem;text-decoration:none;min-height:80px;transition:border-color .2s,transform .2s}.vd-fc b{font-family:var(--kw-font-heading);font-size:1.2rem;color:var(--vd-dk)}.vd-fc span{color:var(--vd-mut);font-size:.92rem}.vd-fc:hover{border-color:var(--vd-g);transform:translateY(-2px)}
+.vd-rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem;list-style:none;padding:0;counter-reset:r}.vd-rules li{counter-increment:r;background:#fff;border:1px solid var(--vd-line);border-radius:22px;padding:1.4rem;color:var(--vd-mut)}.vd-rules li::before{content:counter(r);display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--vd-g);color:#fff;font-weight:700;margin-bottom:.6rem}.vd-rules b{display:block;color:var(--vd-dk);font-size:1.1rem}
+.vd-q{background:#fff;border:1px solid var(--vd-line);border-radius:16px;padding:1rem 1.3rem;margin-bottom:.8rem}.vd-q summary{cursor:pointer;font-weight:700;min-height:32px}
+.vd-foot{background:var(--vd-dk);color:#e6efe4;padding:48px 0 22px;margin-top:40px}.vd-foot .vd-leaf{color:#8fd2a2}.vd-foot-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem}.vd-foot .vd-lab,.vd-foot .vd-small{color:#a9c4b0}.vd-fl{display:grid;gap:.4rem}.vd-fl a{text-decoration:none}.vd-fl a:hover{text-decoration:underline}.vd-copy{text-align:center;font-size:.8rem;color:#a9c4b0;margin:2rem 0 0}
+@keyframes verdure-sway{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+/* ===== boutique réelle ===== */
+.sh-head{background:#fff;border-bottom:1px solid var(--vd-line);display:flex;justify-content:space-between;align-items:center;padding:.8rem var(--vd-gut)}
+.sh-brand{font-family:var(--kw-font-heading);font-weight:800;font-size:1.5rem;color:var(--vd-dk);text-decoration:none}.sh-nav{font-weight:600;font-size:.92rem}
+.sh-main{max-width:1240px;margin:0 auto;padding:clamp(24px,4vw,56px) var(--vd-gut)}
+.sh-title{font-family:var(--kw-font-heading);font-weight:800;color:var(--vd-dk);font-size:clamp(1.8rem,4vw,2.8rem)}
+.sh-layout{display:grid;grid-template-columns:260px 1fr;gap:2rem;align-items:start}
+.sh-filters{background:#fff;border:1px solid var(--vd-line);border-radius:22px;padding:1.2rem;position:sticky;top:7rem}
+.sh-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:1.2rem}
+.sh-card{background:#fff;border:1px solid var(--vd-line);border-radius:22px;overflow:hidden;box-shadow:0 6px 18px rgba(23,58,40,.08);padding-bottom:1rem;transition:transform .25s}.sh-card:hover{transform:translateY(-3px)}
+.sh-card-img{aspect-ratio:1/1;object-fit:cover;width:100%;height:auto;display:block;background:linear-gradient(160deg,#cfe6d3,#8fc39f)}
+.sh-card-name{display:block;padding:.8rem 1rem 0;font-weight:700;color:var(--vd-dk)}.sh-card .sh-price,.sh-card .sh-stock{padding:0 1rem}.sh-price strong{color:var(--vd-g)}
+.sh-btn{border-radius:999px;min-height:48px;font-weight:700}.sh-btn-primary{background:var(--vd-g);color:#fff;border-color:var(--vd-g)}
+.sh-product{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,56px);align-items:start}
+.sh-gallery img,.sh-big{width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;border-radius:28px;background:linear-gradient(160deg,#cfe6d3,#8fc39f);display:block}
+.sh-info{background:#fff;border:1px solid var(--vd-line);border-radius:28px;padding:clamp(18px,3vw,36px);position:sticky;top:7rem}
+.sh-desc,.sh-product+section{grid-column:1/-1}
+input,select,textarea{border-radius:12px}
+@media (max-width:860px){.vd-bar{grid-template-columns:1fr auto}.vd-search{grid-column:1/-1;grid-row:2;max-width:none}.vd-search span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.vd-hero-in,.sh-product,.sh-layout{grid-template-columns:1fr}.vd-art{height:180px}.sh-filters,.sh-info{position:static}
+  .sh-buy{position:sticky;bottom:0;background:#fff;padding:.8rem;border-top:1px solid var(--vd-line);margin:0 -.2rem;z-index:10}}
+body[data-pk-cartes="droites"] .sh-card,body[data-pk-cartes="droites"] .vd-fc,body[data-pk-cartes="droites"] .vd-rules li,body[data-pk-cartes="droites"] .vd-q,body[data-pk-cartes="droites"] .sh-info,body[data-pk-cartes="droites"] .sh-filters,body[data-pk-cartes="droites"] .sh-gallery img{border-radius:6px}
+@media (prefers-reduced-motion:reduce){.vd-big{animation:none}.vd-btn,.vd-fc,.sh-card{transition:none}}
