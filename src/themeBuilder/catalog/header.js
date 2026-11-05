@@ -31,7 +31,7 @@ const tone = (S, bg) => {
 };
 const PAD = { xs: "6px", sm: "10px", lg: "24px", xl: "36px" };
 const GLASS = (S) => (S.bg.startsWith("#") && S.bg.length === 7 ? `${S.bg}cc` : "#ffffffcc");
-const HIDE_MOBILE = new Set(["social", "date", "note", "tag", "cta2", "link"]);
+const HIDE_MOBILE = new Set(["social", "date", "note", "tag", "cta2", "link", "contact"]);
 
 // Un code est masqué sur mobile s'il le demande (« @m », « @tm ») ou si c'est un élément secondaire (réseaux, date, message, pastille, bouton contour, lien, recherche compacte) sans « :keep » ; le bouton principal, le menu, le compte, le panier et la grande recherche restent
 const hiddenOnMobile = (code) => { if (/@(tm|m)$/.test(code)) return true; const [name, x] = code.split("|")[0].split(":"); return (HIDE_MOBILE.has(name) && x !== "keep") || (name === "search" && x !== "wide"); };
@@ -59,10 +59,19 @@ function item(k, code) {
     case "date": node = { type: "dyntext", props: { source: "today", before: "", after: "", fallback: "", tag: "span" }, ...sty({ color: S.mute, fontSize: "13px", textTransform: "uppercase", letterSpacing: "1.5px" }) }; break;
     case "note": node = k.T(`<p>${a1}</p>`, { fontSize: "14px", color: S.mute }); break;
     case "tag": node = k.T(`<p><strong>${a1 || "Nouveau"}</strong></p>`, { fontSize: "12px", backgroundColor: S.accent, color: S.onAccent, borderRadius: "999px", paddingTop: "3px", paddingBottom: "3px", paddingLeft: "10px", paddingRight: "10px" }); break;
+    case "contact": node = k.W("iconlist", { items: [{ text: "Votre téléphone", icon: "smartphone" }, { text: "Votre adresse e-mail", icon: "mail" }], inline: true, iconColor: S.accent }, { color: S.fg, fontSize: "13px" }); break; // coordonnées : textes à remplacer, jamais de numéro inventé
     case "cta": node = k.B(a1 || "Découvrir", a2 || "/catalogue"); break;
     case "cta2": node = k.B(a1 || "Nous contacter", a2 || "/contact", "outline", S.bg === "token:primary" ? { color: S.fg, borderColor: S.fg } : {}); break; // identité « marque » : le contour orange sur le bleu de marque est trop peu contrasté (2,3)
     case "link": node = k.LINK(a1 || "Contact", a2 || "/contact", { alignSelf: "center", textDecoration: "none" }); break;
     default: throw new Error(`En-tête : élément inconnu « ${name} ».`);
+  }
+  // Identité PROPRE (polices de la bibliothèque) : la police s'applique à tous les éléments de texte. Le site impose sa propre police aux liens et aux boutons (`.lp-site a`, `.kw-btn`) : posée sur le widget, elle
+  // ne les atteindrait pas ; pour le menu, le logo et le compte on utilise donc les « parties » du widget (parts.js), dont le sélecteur l'emporte. Le champ de recherche garde la police du navigateur.
+  if (S.font && S.font.startsWith("font.") && !["search", "~"].includes(name)) {
+    const set = (d) => ({ styles: { desktop: d } });
+    node = { ...node, styles: { ...(node.styles || {}), desktop: { ...((node.styles || {}).desktop || {}), fontFamily: name === "logo" || name === "title" ? S.head : S.font } } };
+    if (name === "menu" || name === "account") node.parts = { link: set({ fontFamily: S.font }) };
+    if (name === "logo") node.parts = { text: set({ fontFamily: S.head, fontWeight: S.weight, fontSize: "24px", color: S.fg }) };
   }
   const hide = hid === "tm" ? ["tablet", "mobile"] : hiddenOnMobile(code) ? ["mobile"] : null;
   return hide ? { ...node, hideOn: hide } : node;
@@ -112,27 +121,42 @@ const CTA = "cta|Découvrir|/catalogue", SUB = "cta|S'abonner|/blog", START = "c
 const OFFER = "note|Une offre à mettre en avant — modifiez ce message.", MORE = "link|En savoir plus|/";
 // Toutes les rangées sont dans UN conteneur pleine largeur (sans espace entre rangées) : c'est lui qui porte « collant » ou « superposé » (themeRender.partMode lit le premier enfant de la section),
 // si bien que l'en-tête entier se comporte comme un seul bloc.
-function wrap(S, bands, mode) {
+function wrap(S, bands, mode, fx) {
   const st = { display: "flex", flexDirection: "column", gap: "0px", width: "100%" };
   if (mode === "sticky") Object.assign(st, { position: "sticky", top: "0px", zIndex: 50, boxShadow: S.shadow === "none" ? "sm" : S.shadow });
   if (mode === "glass") Object.assign(st, { position: "sticky", top: "0px", zIndex: 50 });
   if (mode === "overlay") Object.assign(st, { position: "absolute", top: "0px", left: "0px", right: "0px", zIndex: 40 });
-  return { type: "container", props: { full: true }, children: bands, ...sty(st) };
+  return { type: "container", props: { full: true, ...(fx ? { headerFx: fx } : {}) }, children: bands, ...sty(st) };
 }
+// Modes composés : « stickyshrink » (collant, la rangée se réduit au défilement), « overlaysolid » (superposé et transparent, il devient plein au défilement)
+const BASE_MODE = { stickyshrink: "sticky", overlaysolid: "overlay" }, FX = { stickyshrink: "shrink", overlaysolid: "solid" };
 const M = (family, skin, key, label, tags, desc, rows, mode) => ({ key, family, skin, label, tags, desc,
-  build: (k) => [wrap(k.S, rows.map((row, i) => band(k.S, row, i === 0, mode)), mode)] });
+  build: (k) => [wrap(k.S, rows.map((row, i) => band(k.S, row, i === 0, BASE_MODE[mode] || mode)), BASE_MODE[mode] || mode, FX[mode])] });
+
+// Identités PROPRES aux modèles sectoriels : couleurs en valeurs fixes et polices de la bibliothèque locale (Apparence → Polices), indépendantes de la charte du site comme de l'administration.
+const IDENT = [
+  { key: "resto", label: "Restaurant chaleureux", bg: "#fbf6ee", fg: "#2b1a12", mute: "#7b6350", alt: "#f0e4d0", accent: "#8c2f1b", onAccent: "#fff8ef", line: "#e2d2b8", radius: "4px", btnRadius: "2px", shadow: "none", font: "font.lato", head: "font.playfair-display", weight: "700", caps: "none", track: "0px", bw: "1px", pad: "16px", gap: "24px", btn: "solid", rule: "single" },
+  { key: "ecole", label: "École lumineuse", bg: "#ffffff", fg: "#0f3d3a", mute: "#4b6b68", alt: "#e6f4f1", accent: "#f59e0b", onAccent: "#1f1300", line: "#cfe6e2", radius: "14px", btnRadius: "999px", shadow: "none", font: "font.nunito", head: "font.nunito", weight: "800", caps: "none", track: "0px", bw: "1px", pad: "16px", gap: "24px", btn: "solid", rule: "single" },
+  { key: "agence", label: "Agence contrastée", bg: "#0d0d0d", fg: "#f5f5f0", mute: "#a3a3a3", alt: "#1c1c1c", accent: "#c6ff3d", onAccent: "#0d0d0d", line: "#2e2e2e", radius: "0px", btnRadius: "0px", shadow: "none", font: "font.space-grotesk", head: "font.space-grotesk", weight: "700", caps: "uppercase", track: "1px", bw: "2px", pad: "18px", gap: "28px", btn: "solid", rule: "thick" },
+  { key: "cabinet", label: "Cabinet sobre", bg: "#f4f7f5", fg: "#1c2b27", mute: "#52665f", alt: "#e3ece8", accent: "#2f6f5e", onAccent: "#ffffff", line: "#cfdcd6", radius: "6px", btnRadius: "6px", shadow: "none", font: "font.source-sans-3", head: "font.lora", weight: "600", caps: "none", track: "0px", bw: "1px", pad: "16px", gap: "24px", btn: "solid", rule: "single" },
+  { key: "portfolio", label: "Portfolio éditorial", bg: "#f6f4ef", fg: "#111111", mute: "#5f5b54", alt: "#ebe7de", accent: "#111111", onAccent: "#f6f4ef", line: "#d8d3c7", radius: "0px", btnRadius: "0px", shadow: "none", font: "font.dm-sans", head: "font.instrument-serif", weight: "400", caps: "none", track: "0px", bw: "1px", pad: "20px", gap: "32px", btn: "outline", rule: "none" },
+  { key: "saas", label: "SaaS violet", bg: "#ffffff", fg: "#0f172a", mute: "#475569", alt: "#f1f0fe", accent: "#6d28d9", onAccent: "#ffffff", line: "#e5e3f7", radius: "10px", btnRadius: "10px", shadow: "none", font: "font.inter", head: "font.plus-jakarta-sans", weight: "700", caps: "none", track: "0px", bw: "1px", pad: "16px", gap: "24px", btn: "solid", rule: "single" },
+  { key: "media", label: "Média classique", bg: "#fffdf8", fg: "#1a1a1a", mute: "#5a5a55", alt: "#f3efe4", accent: "#c8102e", onAccent: "#ffffff", line: "#1a1a1a", radius: "0px", btnRadius: "0px", shadow: "none", font: "font.source-sans-3", head: "font.libre-baskerville", weight: "700", caps: "uppercase", track: "1.4px", bw: "2px", pad: "16px", gap: "28px", btn: "solid", rule: "double" },
+  { key: "mode", label: "Mode et boutique", bg: "#fdf2f0", fg: "#3a1f26", mute: "#7d5560", alt: "#f6dcd8", accent: "#3a1f26", onAccent: "#fdf2f0", line: "#ecc9c3", radius: "0px", btnRadius: "0px", shadow: "none", font: "font.jost", head: "font.cormorant-garamond", weight: "600", caps: "none", track: "0.4px", bw: "1px", pad: "18px", gap: "28px", btn: "solid", rule: "single" },
+  { key: "hotel", label: "Hôtel de luxe", bg: "#1c1917", fg: "#f5efe3", mute: "#c9bfa9", alt: "#292524", accent: "#c9a24b", onAccent: "#1c1917", line: "#44403c", radius: "0px", btnRadius: "0px", shadow: "none", font: "font.lato", head: "font.cinzel", weight: "600", caps: "uppercase", track: "2px", bw: "1px", pad: "18px", gap: "32px", btn: "outline", rule: "none" },
+  { key: "asso", label: "Association engagée", bg: "#fffbea", fg: "#3b2a08", mute: "#7a5c1c", alt: "#fdefc0", accent: "#c2410c", onAccent: "#ffffff", line: "#f0dc96", radius: "12px", btnRadius: "999px", shadow: "none", font: "font.quicksand", head: "font.quicksand", weight: "700", caps: "none", track: "0px", bw: "1px", pad: "16px", gap: "24px", btn: "solid", rule: "single" },
+  { key: "immo", label: "Immobilier net", bg: "#ffffff", fg: "#1b2430", mute: "#52606f", alt: "#eaf4f7", accent: "#0e7490", onAccent: "#ffffff", line: "#d6e4ea", radius: "8px", btnRadius: "8px", shadow: "none", font: "font.manrope", head: "font.manrope", weight: "800", caps: "none", track: "0px", bw: "1px", pad: "16px", gap: "24px", btn: "solid", rule: "single" },
+  { key: "sante", label: "Bien-être doux", bg: "#f2f7f1", fg: "#25402f", mute: "#5b7564", alt: "#e1eddf", accent: "#3f7a4c", onAccent: "#ffffff", line: "#cfe0cc", radius: "28px", btnRadius: "999px", shadow: "md", font: "font.nunito-sans", head: "font.lora", weight: "600", caps: "none", track: "0px", bw: "0px", pad: "18px", gap: "22px", btn: "solid", rule: "none" },
+];
 
 const LAYOUTS = [
   // ── 1 · Classique et corporate ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   M("classique", "clair", "classique-logo-menu-bouton", "Logo, menu et bouton d'action", ["classique", "navigation", "bouton"], "Logo à gauche, menu et bouton d'action à droite.", [R(["logo"], [], ["menu", CTA])]),
   M("classique", "editorial", "classique-menu-contre-logo", "Menu collé au logo", ["classique", "contact", "double bouton"], "Menu juste après le logo, deux boutons à droite.", [R(["logo", "menu"], [], [CONTACT, CTA])]),
-  M("classique", "doux", "classique-sobre", "Logo et menu seuls", ["sobre", "navigation"], "Logo et menu, sans bouton.", [R(["logo"], [], ["menu"])]),
-  M("classique", "marque", "classique-lien-contact", "Menu et lien de contact", ["professionnel", "contact"], "Menu puis lien de contact en fin de rangée.", [R(["logo"], [], ["menu", "link|Contact|/contact"])]),
   M("classique", "nuit", "classique-connexion", "Connexion et inscription", ["compte", "double action"], "Menu, lien de connexion et bouton d'inscription.", [R(["logo"], [], ["menu", LOGIN, "cta|Créer un compte|/inscription"])]),
   M("classique", "clair", "classique-menu-centre-recherche", "Menu central et recherche", ["recherche", "centré", "bouton"], "Menu au centre, recherche et bouton à droite.", [R(["logo"], ["menu"], ["search:mini", CTA])]),
   M("classique", "editorial", "classique-logo-central", "Logo central", ["centré", "élégant", "bouton"], "Menu à gauche, logo au centre, bouton à droite.", [R(["menu"], ["logo:48"], [CTA])]),
   M("classique", "doux", "classique-large", "Pleine largeur aérée", ["large", "aéré", "rendez-vous"], "Colonne élargie, logo plus grand, rangée haute.", [R(["logo:52"], [], ["menu", "cta|Prendre rendez-vous|/contact"], { pad: "lg", inn: { maxWidth: "1440px" } })]),
-  M("classique", "marque", "classique-filet-accent", "Liseré d'accent, menu central", ["accent", "identité", "centré"], "Menu central entre le logo et le bouton, épais liseré de couleur dessous.", [R(["logo"], ["menu"], [CTA], { rule: "accent" })]),
   M("classique", "nuit", "classique-deux-niveaux", "Deux niveaux", ["complet", "navigation", "aide"], "Logo, aide et bouton ; menu sur une seconde rangée centrée.", [R(["logo"], [], ["link|Aide|/faq", CTA], { rule: "none" }), R([], ["menu"], [], { bg: "alt", pad: "sm" })]),
 
   // ── 2 · Centré et éditorial ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -156,14 +180,11 @@ const LAYOUTS = [
   M("boutique", "nuit", "boutique-recherche-compte", "Recherche et compte", ["recherche", "compte", "sombre"], "Logo, grand champ de recherche, compte.", [R(["logo"], ["search:wide"], ["account"])]),
   M("boutique", "doux", "boutique-rayons", "Rayons sous la recherche", ["catégories", "boutique", "rayons"], "Logo, recherche, compte, panier ; menu des rayons sur une seconde rangée.", [R(["logo"], [], ["search:mini:catalogue", "account", "cart"], { rule: "none" }), R(["menu"], [], ["link|Promotions|/catalogue"], { bg: "alt", pad: "sm" })]),
   M("boutique", "editorial", "boutique-service", "Barre de service", ["service", "aide", "boutique"], "Message de service et aide au-dessus, logo/menu/panier dessous.", [R(["note:keep|Une information de service à afficher ici."], [], ["link|Aide|/faq"], { bg: "alt", pad: "xs", rule: "none" }), R(["logo"], ["menu"], ["cart"])]),
-  M("boutique", "nuit", "boutique-compacte", "Compacte", ["compact", "boutique", "recherche"], "Logo et menu réduits, recherche et panier.", [R(["logo:36", "menu:sm"], [], ["search:mini", "cart"], { pad: "sm" })]),
   M("boutique", "marque", "boutique-vitrine", "Vitrine centrée", ["boutique", "centré", "vitrine"], "Menu à gauche, logo au centre, recherche et panier.", [R(["menu"], ["logo:50"], ["search:mini", "cart"])]),
 
   // ── 4 · Minimal et portfolio ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   M("minimal", "clair", "minimal-nom-et-menu", "Nom et menu", ["minimaliste", "portfolio", "sobre"], "Titre du site à gauche, menu à droite.", [R(["title:24"], [], ["menu"])]),
   M("minimal", "editorial", "minimal-menu-gauche-logo-droite", "Menu à gauche, logo à droite", ["minimaliste", "capitales", "inversé"], "Menu en capitales à gauche, petit logo à droite.", [R(["menu:caps"], [], ["logo:36"], { pad: "lg" })]),
-  M("minimal", "doux", "minimal-pile-a-droite", "Logo et menu empilés à droite", ["minimaliste", "droite", "empilé"], "Logo puis menu, alignés à droite.", [R([], [], ["logo:36"], { rule: "none", pad: "sm" }), R([], [], ["menu"], { pad: "sm" })]),
-  M("minimal", "clair", "minimal-titre-puis-menu", "Titre puis menu", ["minimaliste", "gauche", "empilé"], "Titre à gauche, menu discret dessous.", [R(["title:30"], [], [], { rule: "none" }), R(["menu:sm"], [], [], { pad: "sm" })]),
   M("minimal", "nuit", "minimal-portfolio", "Portfolio", ["portfolio", "capitales", "sombre"], "Petit titre, menu en capitales au centre, lien de contact, grandes marges.", [R(["title:20"], ["menu:caps"], ["link|Contact|/contact"], { pad: "xl" })]),
   M("minimal", "marque", "minimal-parlons-en", "Menu et « Parlons-en »", ["minimaliste", "contact", "bouton"], "Menu et bouton de contact contour.", [R(["logo:38"], [], ["menu", "cta2|Parlons-en|/contact"])]),
   M("minimal", "doux", "minimal-pastille-flottante", "Pastille flottante", ["flottant", "arrondi", "moderne"], "Logo, menu et bouton dans une pastille détachée du bord.", [R(["logo:34"], ["menu"], [CTA], { card: true, pill: true })]),
@@ -181,14 +202,12 @@ const LAYOUTS = [
   M("saas", "marque", "saas-essai-gratuit", "Essai gratuit centré", ["saas", "centré", "marque"], "Menu centré, bouton « essai gratuit ».", [R(["logo"], ["menu"], ["cta|Essai gratuit|/inscription"])]),
   M("saas", "editorial", "saas-logo-pastille", "Logo et pastille", ["nouveau", "pastille", "saas"], "Pastille à côté du logo, menu et bouton.", [R(["logo", "tag|Nouveau@tm"], [], ["menu", CTA])]),
   M("saas", "editorial", "saas-produit-recherche", "Produit et recherche", ["produit", "recherche", "bouton"], "Menu central, recherche et bouton de démarrage.", [R(["logo"], ["menu"], ["search:mini", START])]),
-  M("saas", "doux", "saas-collant-fin", "Collant fin avec recherche", ["collant", "compact", "recherche"], "Rangée fine collée en haut : menu central, recherche et bouton, filet discret.", [R(["logo:36"], ["menu:sm"], ["search:mini", START], { pad: "sm", rule: "thin" })], "sticky"),
 
   // ── 6 · Transparent sur visuel (superposé : posé sur le visuel d'ouverture de la page) ─────────────────────────────────────────────────────────────────────
   M("transparent", "nuit", "superpose-classique", "Superposé classique", ["transparent", "superposé", "héros"], "Posé sur le visuel d'ouverture, logo à gauche, menu et bouton à droite.", [R(["logo"], [], ["menu", CTA])], "overlay"),
   M("transparent", "clair", "superpose-logo-central", "Superposé, logo central", ["transparent", "centré", "héros"], "Menu, logo central et bouton sur le visuel.", [R(["menu"], ["logo:50"], [CTA])], "overlay"),
   M("transparent", "doux", "superpose-menu-pres-du-logo", "Superposé, menu près du logo", ["transparent", "contour", "héros"], "Logo et menu à gauche, bouton contour à droite.", [R(["logo", "menu"], [], ["cta2|Contact|/contact"])], "overlay"),
   M("transparent", "editorial", "superpose-titre-capitales", "Superposé, titre et capitales", ["transparent", "éditorial", "capitales"], "Titre du site et menu en capitales sur le visuel.", [R(["title:24"], [], ["menu:caps"])], "overlay"),
-  M("transparent", "marque", "superpose-pastille", "Superposé, pastille", ["transparent", "pilule", "flottant"], "Pastille sombre flottante sur le visuel.", [R(["logo:34"], ["menu"], [CTA], { card: true, pill: true })], "overlay"),
   M("transparent", "nuit", "superpose-recherche-compte", "Superposé, recherche et compte", ["transparent", "recherche", "compte"], "Menu central, recherche et compte sur le visuel.", [R(["logo"], ["menu"], ["search:mini", "account"])], "overlay"),
   M("transparent", "clair", "superpose-reseaux", "Superposé, réseaux", ["transparent", "réseaux", "centré"], "Réseaux à gauche, logo central, menu à droite.", [R(["social"], ["logo:48"], ["menu"])], "overlay"),
   M("transparent", "marque", "superpose-grand-large", "Superposé, très large", ["transparent", "large", "héros"], "Colonne élargie, grand logo, menu agrandi central et bouton.", [R(["logo:52"], ["menu:lg"], [CTA], { pad: "xl", inn: { maxWidth: "1440px" } })], "overlay"),
@@ -199,7 +218,6 @@ const LAYOUTS = [
   M("collant", "clair", "collant-classique", "Collant classique", ["collant", "sticky", "ombre"], "Reste collé en haut, ombre légère.", [R(["logo"], [], ["menu", CTA])], "sticky"),
   M("collant", "doux", "collant-verre-central", "Verre, menu central", ["collant", "verre", "recherche"], "Verre dépoli : menu, logo central, recherche et compte.", [R(["menu"], ["logo:42"], ["search:mini", "account"])], "glass"),
   M("collant", "marque", "collant-ombre-marque", "Collant couleur de marque", ["collant", "marque", "ombre"], "Bande de marque collée, menu central, bouton.", [R(["logo"], ["menu"], [CTA])], "sticky"),
-  M("collant", "editorial", "collant-filet-accent", "Collant à liseré", ["collant", "éditorial", "accent"], "Titre, menu en capitales, bouton, liseré d'accent.", [R(["title:24"], [], ["menu:caps", CTA], { rule: "accent" })], "sticky"),
   M("collant", "clair", "collant-centre-panier", "Collant, logo central et panier", ["collant", "boutique", "centré"], "Menu, logo central, recherche et panier.", [R(["menu"], ["logo:46"], ["search:mini", "cart"])], "sticky"),
   M("collant", "nuit", "collant-fin-sombre", "Collant fin sombre, titre et panier", ["collant", "compact", "boutique"], "Rangée fine et sombre : titre, menu réduit central, panier.", [R(["title:20"], ["menu:sm"], ["cart"], { pad: "xs" })], "sticky"),
   M("collant", "doux", "collant-recherche-compte", "Collant, recherche et compte", ["collant", "recherche", "compte"], "Logo et menu, recherche et compte.", [R(["logo", "menu"], [], ["search:mini", "account"])], "sticky"),
@@ -216,7 +234,6 @@ const LAYOUTS = [
   M("barre", "clair", "barre-cta-logo-centre", "Barre bouton, logo centré", ["barre supérieure", "centré", "bouton"], "Message et bouton, puis logo centré et menu dessous.", [R(["note:keep|Ouverture, nouveauté, événement : une phrase suffit."], [], [CTA], { bg: "accent", pad: "xs", rule: "none" }), R([], ["logo:48"], [], { rule: "none" }), R([], ["menu"], [], { pad: "sm" })]),
   M("barre", "marque", "barre-encre-date-reseaux", "Barre encre", ["date", "réseaux", "contraste"], "Barre sombre (date, réseaux) au-dessus d'un en-tête classique.", [R(["date"], [], ["social"], { bg: "ink", pad: "xs", rule: "none" }), R(["logo"], [], ["menu", CTA])]),
   M("barre", "nuit", "barre-service-compte-panier", "Barre service, compte et panier", ["service", "boutique", "sombre"], "Liens de service, compte et panier ; logo et menu central.", [R(["link|Aide|/faq", "link|Contact|/contact"], [], ["account", "cart"], { bg: "alt", pad: "xs", rule: "none" }), R(["logo"], ["menu"], [])]),
-  M("barre", "doux", "barre-connexion-discrete", "Barre connexion discrète", ["connexion", "discret", "barre supérieure"], "Lien de connexion en haut à droite, logo, menu et bouton.", [R([], [], [LOGIN], { bg: "alt", pad: "xs", rule: "none" }), R(["logo"], [], ["menu", CTA])]),
   M("barre", "editorial", "barre-titre-reseaux-menu", "Barre éditoriale complète", ["éditorial", "date", "réseaux"], "Date et réseaux, grand titre centré, menu en capitales.", [R(["date"], [], ["social"], { pad: "xs", rule: "thin" }), R([], ["title:36"], [], { rule: "none" }), R([], ["menu:caps"], [], { pad: "sm" })]),
 
   // ── 9 · Magazine et blog ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -226,7 +243,6 @@ const LAYOUTS = [
   M("magazine", "clair", "blog-rubriques-dessous", "Rubriques sous le logo", ["blog", "rubriques", "recherche"], "Logo et recherche ; rubriques sur une seconde rangée.", [R(["logo"], [], ["search:mini"], { rule: "none" }), R(["menu"], [], [], { bg: "alt", pad: "sm" })]),
   M("magazine", "marque", "blog-newsletter", "Blog et newsletter", ["blog", "newsletter", "marque"], "Titre, menu central, bouton d'abonnement.", [R(["title:24"], ["menu"], [SUB])]),
   M("magazine", "editorial", "magazine-titre-gauche", "Titre, date et rubriques, filet épais", ["magazine", "éditorial", "date"], "Titre à gauche, date et rubriques en capitales, filet épais.", [R(["title:34"], [], ["date", "menu:caps"], { rule: "thick" })]),
-  M("magazine", "nuit", "blog-minimal-recherche", "Blog minimal", ["blog", "minimaliste", "recherche"], "Petit logo, menu réduit et recherche.", [R(["logo:36"], [], ["menu:sm", "search:mini"])]),
   M("magazine", "nuit", "magazine-reseaux-titre", "Réseaux, titre, recherche, rubriques", ["magazine", "réseaux", "sombre"], "Réseaux à gauche, titre central, recherche à droite ; rubriques en capitales dessous.", [R(["social"], ["title:30"], ["search:mini"], { rule: "none" }), R([], ["menu:caps"], [], { pad: "sm" })]),
   M("magazine", "doux", "blog-compte-abonnement", "Blog, compte et abonnement", ["blog", "compte", "abonnement"], "Menu, connexion et bouton d'abonnement.", [R(["logo"], [], ["menu", "link|Connexion|/connexion", SUB])]),
   M("magazine", "marque", "magazine-filet-double", "Magazine, double filet", ["magazine", "recherche", "compte"], "Titre centré sous double filet ; recherche, rubriques, compte.", [R([], ["title:40"], [], { rule: "double" }), R(["search:mini"], ["menu"], ["account"], { pad: "sm" })]),
@@ -238,10 +254,23 @@ const LAYOUTS = [
   M("creatif", "marque", "creatif-bandeau-marque", "Bandeau de marque, menu centré dessous", ["marque", "bandeau", "large"], "Large bande de couleur : logo et bouton, menu agrandi centré sur une seconde rangée.", [R(["logo:56"], [], [CTA], { pad: "lg", rule: "none" }), R([], ["menu:lg"], [], { pad: "sm" })]),
   M("creatif", "nuit", "creatif-bicolore", "Bicolore", ["bicolore", "réseaux", "contraste"], "Rangée d'accent (logo, réseaux) et rangée sombre (menu, bouton).", [R(["logo"], [], ["social"], { bg: "accent", rule: "none" }), R(["menu"], [], [CTA], { bg: "alt", pad: "sm" })]),
   M("creatif", "doux", "creatif-double-carte", "Deux cartes", ["cartes", "flottant", "compte"], "Une carte logo/compte/panier, une pastille de navigation.", [R(["logo:36"], [], ["cart", "account"], { card: true, rule: "none" }), R([], ["menu"], [], { card: true, pill: true, pad: "sm" })]),
-  M("creatif", "clair", "creatif-pile-gauche", "Pile à gauche", ["empilé", "gauche", "aéré"], "Logo puis menu, alignés à gauche, grandes marges.", [R(["logo:44"], [], [], { rule: "none", pad: "lg" }), R(["menu"], [], [], { pad: "sm" })]),
   M("creatif", "editorial", "creatif-pile-centre-reseaux", "Pile centrée avec réseaux", ["empilé", "centré", "réseaux"], "Titre, menu en capitales et réseaux, centrés.", [R([], ["title:36"], [], { rule: "none", pad: "sm" }), R([], ["menu:caps"], [], { rule: "none", pad: "xs" }), R([], ["social:keep"], [], { pad: "sm" })]),
   M("creatif", "nuit", "creatif-icones", "Icônes", ["icônes", "compact", "réseaux"], "Titre à gauche ; réseaux, panier et compte en icônes.", [R(["title"], [], ["social:keep", "cart", "account"])]),
   M("creatif", "marque", "creatif-menu-geant", "Menu géant et recherche", ["affiche", "aéré", "recherche"], "Rangée très haute, menu agrandi, liseré d'accent ; recherche sur une seconde rangée.", [R(["logo"], [], ["menu:lg"], { pad: "xl", rule: "accent" }), R(["search:wide"], [], [], { bg: "alt", pad: "sm" })]),
+
+  // ── Modèles sectoriels (répartis dans leur famille) : identité, palette et polices propres (liste IDENT) ──────────────────────────────────────────────────────
+  M("classique", "resto", "restaurant-reservation", "Restaurant : réservation et carte", ["restaurant", "réservation", "chaleureux"], "Barre de coordonnées ; logo central entre la carte et le bouton de réservation.", [R(["contact"], [], ["social"], { bg: "alt", pad: "xs", rule: "none" }), R(["menu:caps"], ["logo:52"], ["link|La carte|/catalogue", "cta|Réserver une table|/contact"], { pad: "lg", rule: "thin" })]),
+  M("classique", "ecole", "ecole-inscriptions", "École : inscriptions et espace élève", ["éducation", "inscription", "élèves"], "Bandeau d'annonce, logo, menu et boutons d'inscription ; se réduit au défilement.", [R(["note|Inscriptions ouvertes : modifiez ce message."], [], ["link|Espace élève|/connexion"], { bg: "accent", pad: "xs", rule: "none" }), R(["logo:44"], [], ["menu", "cta|S'inscrire|/inscription"], { rule: "thin" })], "stickyshrink"),
+  M("creatif", "agence", "agence-brutaliste", "Agence : titre brut en capitales", ["agence", "créatif", "contraste"], "Nom en capitales, menu en capitales, bouton au ton acide, filet épais ; se réduit au défilement.", [R(["title:26"], [], ["menu:caps", "cta|Parlons-en|/contact"], { rule: "thick", pad: "lg" })], "stickyshrink"),
+  M("classique", "cabinet", "cabinet-confiance", "Cabinet : coordonnées et rendez-vous", ["cabinet", "professionnel", "rendez-vous"], "Barre de coordonnées, logo, menu et bouton de rendez-vous.", [R(["contact"], [], ["link|Espace client|/connexion"], { bg: "alt", pad: "xs", rule: "none" }), R(["logo:44"], [], ["menu", "cta|Prendre rendez-vous|/contact"])]),
+  M("minimal", "portfolio", "portfolio-signature", "Portfolio : signature et menu discret", ["portfolio", "minimaliste", "signature"], "Nom en grand à gauche, menu discret à droite, sans filet ; se réduit au défilement.", [R(["title:30"], [], ["menu:sm"], { rule: "none", pad: "lg" })], "stickyshrink"),
+  M("saas", "saas", "saas-violet-essai", "SaaS : essai gratuit", ["saas", "produit", "essai"], "Logo, menu central, connexion et bouton d'essai ; se réduit au défilement.", [R(["logo:38"], ["menu"], [LOGIN, "cta|Essai gratuit|/inscription"], { rule: "thin" })], "stickyshrink"),
+  M("magazine", "media", "media-une-du-jour", "Média : une du jour", ["média", "magazine", "éditorial"], "Date et recherche, grand titre centré, rubriques en capitales sous double filet.", [R(["date"], [], ["search:mini"], { pad: "xs", rule: "none" }), R([], ["title:46"], [], { rule: "none" }), R([], ["menu:caps"], [], { rule: "double", pad: "sm" })]),
+  M("boutique", "mode", "mode-boutique-promo", "Mode : boutique et promotion", ["boutique", "mode", "promotion"], "Bandeau promotionnel, logo central, menu à gauche, compte et panier à droite.", [R([], ["note:keep|Une offre à mettre en avant : modifiez ce message."], [], { bg: "accent", pad: "xs", rule: "none" }), R(["menu"], ["logo:46"], ["account", "cart"], { rule: "thin", pad: "lg" })]),
+  M("transparent", "hotel", "hotel-couverture", "Hôtel : superposé à la couverture", ["hôtel", "luxe", "superposé"], "En-tête transparent sur le visuel d'ouverture ; il devient plein au défilement.", [R(["menu:caps"], ["title:30"], ["cta2|Réserver|/contact"], { pad: "lg", rule: "none" })], "overlaysolid"),
+  M("barre", "asso", "association-don", "Association : faire un don", ["association", "don", "engagement"], "Bandeau d'engagement, logo, menu et grand bouton « Faire un don ».", [R(["note|Chaque geste compte : modifiez ce message."], [], ["link|Devenir bénévole|/contact"], { bg: "alt", pad: "xs", rule: "none" }), R(["logo:46"], [], ["menu", "cta|Faire un don|/contact"], { pad: "lg", rule: "accent" })]),
+  M("collant", "immo", "immobilier-recherche", "Immobilier : recherche de biens", ["immobilier", "recherche", "annonces"], "Logo et menu, large recherche, bouton de contact ; se réduit au défilement.", [R(["logo:40", "menu"], ["search:wide"], ["cta|Nous contacter|/contact"], { rule: "thin" })], "stickyshrink"),
+  M("minimal", "sante", "bien-etre-pastille", "Bien-être : pastille douce", ["bien-être", "santé", "pastille"], "En-tête en pastille arrondie : logo, menu et bouton de rendez-vous.", [R(["logo:38"], [], ["menu", "cta|Prendre rendez-vous|/contact"], { card: true, pill: true, rule: "none" })]),
 ];
 
-module.exports = { type: "header", kind: "component", flat: true, families: FAMILIES, layouts: LAYOUTS };
+module.exports = { type: "header", kind: "component", flat: true, families: FAMILIES, layouts: LAYOUTS, skins: IDENT };
