@@ -813,6 +813,16 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 /* En-tête du site collé en haut de page ou superposé au visuel d'ouverture (portés par l'enveloppe du bloc, voir _sections.ejs) */
 .lp-block.lp-site-header.kw-theme-sticky { position: sticky; top: 0; z-index: 60; }
 .lp-block.lp-site-header.kw-theme-overlay { position: absolute; top: 0; left: 0; right: 0; margin-inline: 0; z-index: 60; }
+/* Effets d'un en-tête au défilement (propriété de conteneur headerFx, classe is-scrolled posée par landing.js) : sobres (0,2 s), aucune animation si le visiteur demande moins de mouvement.
+   Les règles visent les RANGÉES (.kw-full imbriqué dans le conteneur d'en-tête), jamais le conteneur extérieur. */
+.lp-block.lp-site-header[data-kw-scroll] .kw-full .kw-full { transition: padding .2s ease, background-color .2s ease, box-shadow .2s ease; }
+.lp-block.lp-site-header[data-kw-scroll=shrink].is-scrolled .kw-full .kw-full, .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled .kw-full .kw-full { padding-top: 6px !important; padding-bottom: 6px !important; }
+.lp-block.lp-site-header[data-kw-scroll=shrink].is-scrolled .kw-sitelogo-img, .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled .kw-sitelogo-img { max-height: 32px; width: auto; }
+/* « Plein » : un en-tête superposé (transparent) se fixe en haut et prend le fond et le texte du site dès que la page défile */
+.lp-block.lp-site-header.kw-theme-overlay.kw-theme-fx-solid, .lp-block.lp-site-header.kw-theme-overlay.kw-theme-fx-both { position: fixed; }
+.lp-block.lp-site-header[data-kw-scroll=solid].is-scrolled .kw-full .kw-full, .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled .kw-full .kw-full { background-color: var(--kw-background, #fff) !important; box-shadow: 0 1px 0 rgba(15, 23, 42, .08), 0 6px 18px rgba(15, 23, 42, .08); }
+.lp-block.lp-site-header[data-kw-scroll=solid].is-scrolled :is(a:not([class*="kw-btn"]), p, span, h1, h2, h3, .kw-menu-burger), .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled :is(a:not([class*="kw-btn"]), p, span, h1, h2, h3, .kw-menu-burger) { color: var(--kw-text, #10222f) !important; }
+@media (prefers-reduced-motion: reduce) { .lp-block.lp-site-header[data-kw-scroll] .kw-full .kw-full { transition: none; } }
 /* Un en-tête (ou un pied) de site touche le bord de la page : pas de marge de colonne au-dessus (en-tête) ni en dessous (pied) */
 .lp-main:has(> .lp-block.lp-site-header:first-child) { padding-top: 0; }
 .lp-main:has(> .lp-block.lp-site-footer:last-child) { padding-bottom: 0; }

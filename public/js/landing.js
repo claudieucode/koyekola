@@ -192,6 +192,13 @@
       });
     });
   });
+  // En-tête à effet au défilement (data-kw-scroll) : la classe is-scrolled est posée dès que la page a défilé de 8 px (un seul écouteur passif, une image à la fois)
+  var fxHead = document.querySelector(".lp-site-header[data-kw-scroll]");
+  if (fxHead && !document.body.hasAttribute("data-kw-builder")) {
+    var fxTick = false, fxSet = function () { fxTick = false; fxHead.classList.toggle("is-scrolled", (window.pageYOffset || document.documentElement.scrollTop) > 8); };
+    window.addEventListener("scroll", function () { if (!fxTick) { fxTick = true; window.requestAnimationFrame(fxSet); } }, { passive: true });
+    fxSet();
+  }
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {
     b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); });

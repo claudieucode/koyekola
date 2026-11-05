@@ -17,6 +17,9 @@ const PER_TYPE = () => (SKINS.length * 20);
 // Catalogue « plat » (ex. En-tête) : chaque modèle est UNE composition propre (famille + identité fixée par le modèle), pas un croisement mise en page × identité.
 // d.flat = true, d.families = [{ key, label }], chaque mise en page porte { key, family, skin } ; le filtre « mise en page » de l'interface liste alors les familles.
 
+// Identités d'un catalogue : les cinq du site, plus celles qu'un catalogue « plat » déclare lui-même (d.skins : palette et polices propres à ses modèles)
+const identities = (d) => (d && d.skins ? [...SKINS, ...d.skins] : SKINS);
+
 const META = new Map();
 function entries(type) {
   const d = def(type);
@@ -27,7 +30,7 @@ function entries(type) {
   const out = [];
   if (d.flat) {
     const fam = new Map(d.families.map((f) => [f.key, f]));
-    for (const l of d.layouts) { const s = SKINS.find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
+    for (const l of d.layouts) { const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
   } else for (const l of d.layouts) for (const s of SKINS) out.push({ key: `${l.key}.${s.key}`, type, layoutKey: l.key, layoutId: l.key, skinKey: s.key, name: `${l.label} · ${s.label}`, layoutLabel: l.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] });
   META.set(type, out);
   return out;
@@ -42,7 +45,7 @@ function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, l
   const pages = Math.max(1, Math.ceil(rows.length / lim)), p = Math.min(pages, Math.max(1, Number(page) || 1));
   const d = def(type);
   return { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
-    layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: SKINS.map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
+    layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: identities(d).map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
 }
 const find = (type, key) => entries(type).find((e) => e.key === key) || null;
 
@@ -53,7 +56,7 @@ function build(type, key, env = {}) {
   if (!meta) return null;
   const ck = `${type}:${key}:${env.formId || 0}`;
   if (CACHE.has(ck)) return CACHE.get(ck);
-  const d = def(type), S = skinOf(meta.skinKey);
+  const d = def(type), S = identities(d).find((x) => x.key === meta.skinKey) || skinOf(meta.skinKey);
   const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
   const children = withIds(buildFn(kit(S), env));
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
