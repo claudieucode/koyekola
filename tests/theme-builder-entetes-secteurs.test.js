@@ -53,6 +53,8 @@ describe("En-têtes sectoriels : identité propre", () => {
         if (["menu", "link", "button"].includes(n.type)) assert.equal(f, id.font, `${e.key} : ${n.type}`);
         if (["sitelogo", "sitetitle"].includes(n.type)) assert.equal(f, id.head, `${e.key} : ${n.type}`);
         if (n.type === "menu") assert.equal(n.parts.link.styles.desktop.fontFamily, id.font, `${e.key} : lien du menu`);
+        if (n.type === "search") { const b = n.parts.button.styles.desktop; // la couleur suit la rangée (une rangée colorée ou superposée a sa propre teinte) : toujours une couleur FIXE, jamais le bleu du site
+          assert.match(b.backgroundColor, /^#[0-9a-f]{6,8}$/i, `${e.key} : bouton de recherche`); assert.match(b.color, /^#[0-9a-f]{6,8}$/i, `${e.key} : texte du bouton de recherche`); assert.equal(b.fontFamily, id.font); }
         if (n.type === "sitelogo") assert.equal(n.parts.text.styles.desktop.fontFamily, id.head, `${e.key} : texte du logo`);
       });
     }

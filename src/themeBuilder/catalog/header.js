@@ -67,11 +67,12 @@ function item(k, code) {
     default: throw new Error(`En-tête : élément inconnu « ${name} ».`);
   }
   // Identité PROPRE (polices de la bibliothèque) : la police s'applique à tous les éléments de texte. Le site impose sa propre police aux liens et aux boutons (`.lp-site a`, `.kw-btn`) : posée sur le widget, elle
-  // ne les atteindrait pas ; pour le menu, le logo et le compte on utilise donc les « parties » du widget (parts.js), dont le sélecteur l'emporte. Le champ de recherche garde la police du navigateur.
-  if (S.font && S.font.startsWith("font.") && !["search", "~"].includes(name)) {
+  // ne les atteindrait pas ; pour le menu, le logo, le compte et la recherche on utilise donc les « parties » du widget (parts.js), dont le sélecteur l'emporte (le bouton de recherche prend ainsi les couleurs de l'identité, pas le bleu du site).
+  if (S.font && S.font.startsWith("font.") && name !== "~") {
     const set = (d) => ({ styles: { desktop: d } });
     node = { ...node, styles: { ...(node.styles || {}), desktop: { ...((node.styles || {}).desktop || {}), fontFamily: name === "logo" || name === "title" ? S.head : S.font } } };
     if (name === "menu" || name === "account") node.parts = { link: set({ fontFamily: S.font }) };
+    if (name === "search") node.parts = { field: set({ fontFamily: S.font, backgroundColor: S.alt, color: S.fg, borderColor: S.line }), button: set({ fontFamily: S.font, backgroundColor: S.accent, color: S.onAccent, borderRadius: S.btnRadius }) };
     if (name === "logo") node.parts = { text: set({ fontFamily: S.head, fontWeight: S.weight, fontSize: "24px", color: S.fg }) };
   }
   const hide = hid === "tm" ? ["tablet", "mobile"] : hiddenOnMobile(code) ? ["mobile"] : null;
