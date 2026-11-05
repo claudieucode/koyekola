@@ -24,10 +24,10 @@ function extras(post) {
   } catch { /* ignoré */ }
   return out;
 }
-function postScope(post, { contentHtml = "", minutes = null, author = "" } = {}) {
+function postScope(post, { contentHtml = "", minutes = null, author = "", toc = [] } = {}) {
   const safeImg = (p) => (typeof p === "string" && (/^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(p) || /^https:\/\/[^\s"'<>]+$/.test(p)) ? p : "");
   return { title: post.title, url: require("../../services/urls").publicPath("post", post), excerpt: String(post.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300), image: safeImg(post.cover_path),
-    date: MS(post.published_at), category: post.category || "", author, minutes: minutes || null, contentHtml,
+    date: MS(post.published_at), category: post.category || "", author, minutes: minutes || null, contentHtml, toc: Array.isArray(toc) ? toc.filter((t) => t && t.text && t.id).map((t) => ({ level: Number(t.level) || 2, text: String(t.text), id: String(t.id), href: t.href ? String(t.href) : "" })) : [],
     id: post.id, slug: post.slug, authorId: post.author_id || null, tags: String(post.tags || "").split(",").map((t) => t.trim()).filter(Boolean), modified: MS(post.updated_at),
     ...extras(post), views: post.views || 0, commentsOpen: post.comments_enabled !== 0,
     seoTitle: String(post.seo_title || "").slice(0, 160), seoDescription: String(post.seo_description || "").replace(/\s+/g, " ").trim().slice(0, 320) };
@@ -52,7 +52,8 @@ const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, p
 function partMode(section) {
   const first = section && Array.isArray(section.children) ? section.children[0] : null;
   const pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
-  return pos === "sticky" ? " kw-theme-sticky" : pos === "absolute" ? " kw-theme-overlay" : "";
+  const fx = first && first.props && ["shrink", "solid", "both"].includes(first.props.headerFx) ? first.props.headerFx : "";
+  return (pos === "sticky" ? " kw-theme-sticky" : pos === "absolute" ? " kw-theme-overlay" : "") + (fx && pos ? ` kw-theme-fx-${fx}` : "");
 }
 // Un modèle fait de bandes pleine largeur (conteneurs « pleine largeur ») doit pouvoir toucher les bords : sa zone n'est alors plus limitée à la colonne de texte du site. Sans bande pleine largeur, rien ne change.
 const bleedOf = (sections) => ((sections || []).some((s) => s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true))) ? " kw-theme-bleed" : "");
@@ -162,10 +163,10 @@ function previewScope(db, ctx, page, typesOverride = null, pick = {}) {
     const post = chosen || db.prepare("SELECT * FROM posts WHERE published = 1 ORDER BY published_at DESC, id DESC LIMIT 1").get();
     if (!post) return {};
     const blog = require("../../services/blog");
-    let html = "";
-    try { html = blog.renderPost(post, {}).html; } catch { html = ""; }
+    let html = "", toc = [];
+    try { const r = blog.renderPost(post, {}); html = r.html; toc = r.toc || []; } catch { html = ""; }
     const author = post.author_id ? db.prepare("SELECT username FROM users WHERE id = ?").get(post.author_id) : null;
-    return { post: postScope(post, { contentHtml: html, author: author ? author.username : "" }) };
+    return { post: postScope(post, { contentHtml: html, toc, author: author ? author.username : "" }) };
   } catch { return {}; }
 }
 
@@ -199,7 +200,7 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
       // En-tête SUPERPOSÉ (transparent, texte clair) : il est posé sur le visuel d'ouverture de la page ; sans visuel dessous, le texte blanc disparaît sur le fond blanc de l'aperçu
-      const overlay = type === "header" && section && partMode(section) === " kw-theme-overlay";
+      const overlay = type === "header" && section && partMode(section).startsWith(" kw-theme-overlay");
       const hero = (h) => `<div aria-hidden="true" style="height:${h}px;background:linear-gradient(135deg,#1e293b,#475569 60%,#64748b)"></div>`;
       const body = overlay ? html + hero(thumb ? 150 : 360) + (thumb ? "" : FILLER) : thumb ? html : type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html;
       done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title><style>html,body{margin:0}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body>${body}</body></html>`);

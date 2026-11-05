@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="<%= asset("/css/landing.css") %>">
   <%# Styles du thème et de la mise en page du site : avant les styles des éléments, qui restent prioritaires %>
   <% if (siteX && siteX.assets.theme) { %><style id="kw-site-theme"><%- siteX.assets.theme %></style><% } %>
+  <%# Thème autonome (paquet) : sa propre feuille de styles, confinée à body[data-kw-pack], chargée après la base neutre et avant le CSS personnalisé du site %>
+  <% if (siteX && siteX.assets.pack && siteX.assets.pack.link) { %><%- siteX.assets.pack.link %><% } %>
   <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle, siteX.id); if (ff) { %><style id="kw-site-faces"><%- ff %></style><% } } %>
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
@@ -21,7 +23,7 @@
   <%# CSS personnalisé de la page : vérifié (aucune ressource externe), confiné au contenu de la page %>
   <% if (page.customCss) { %><style><%- page.customCss %></style><% } %>
 </head>
-<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %><%- siteX ? siteX.assets.lightboxAttrs : "" %> style="<%= siteStyle %> --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text); <%= siteX ? siteX.assets.lightboxVars : "" %>">
+<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %><%- siteX && siteX.assets.pack ? siteX.assets.pack.attr : "" %><%- siteX ? siteX.assets.lightboxAttrs : "" %> style="<%= siteStyle %> <%= siteX && siteX.assets.pack ? siteX.assets.pack.vars : "" %>--lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text); <%= siteX ? siteX.assets.lightboxVars : "" %>">
 <% } else { %><body class="lp-body"<%- bAttr %> style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
   <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <%# En-tête AUTOMATIQUE : le menu affecté à « En-tête du site » s'affiche même sans composant d'en-tête (jamais en double si la page montre déjà ce menu) %>
@@ -38,6 +40,7 @@
   <% if (!preview) { %><%- include("../partials/consent-banner") %>
   <script src="<%= asset("/js/visitor.js") %>" defer></script><% } %>
   <script src="<%= asset("/js/landing.js") %>" defer></script>
+  <% if (siteX && siteX.assets.pack && siteX.assets.pack.script) { %><%- siteX.assets.pack.script %><% } %>
   <script src="<%= asset("/js/kw-effects.js") %>" defer></script>
   <% if (kwCode && kwCode.bodyEnd) { %><%- kwCode.bodyEnd %><% } %>
 </body>

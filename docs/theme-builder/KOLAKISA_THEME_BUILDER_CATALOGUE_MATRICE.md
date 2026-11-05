@@ -21,30 +21,9 @@ Catalogue **plat** de 100 compositions distinctes (refonte de novembre 2026) : l
 
 ## Pied de page
 
-| Mise en page | Description | Étiquettes |
-|---|---|---|
-| Une ligne (`une-ligne`) | Copyright et navigation sur une seule ligne. | minimaliste, sobre, copyright |
-| Copyright seul (`copyright-seul`) | Uniquement la ligne de copyright, centrée. | minimaliste, copyright, centré |
-| Trois colonnes (`trois-colonnes`) | Marque, navigation et appel à nous contacter. | colonnes, classique, contact |
-| Quatre colonnes (`quatre-colonnes`) | Marque, navigation, rubriques du site et catégories. | colonnes, complet, catégories |
-| Cinq colonnes (`cinq-colonnes`) | Marque, deux navigations, articles récents et réseaux. | colonnes, grand site, réseaux |
-| Logo et description (`logo-description`) | Logo et présentation à gauche, navigation à droite, filet puis copyright. | marque, présentation, navigation |
-| Newsletter (`newsletter`) | Bloc d'abonnement mis en avant dans une carte, navigation dessous. | newsletter, abonnement, conversion |
-| Réseaux sociaux (`reseaux`) | Invitation à suivre, grandes icônes de réseaux centrées. | réseaux, social, centré |
-| Navigation secondaire (`navigation-secondaire`) | Navigation principale en haut, liens utiles et copyright en bas. | navigation, liens utiles, légal |
-| Boutique (`boutique`) | Liens, compte du client, mini-panier et accès à la boutique. | boutique, panier, compte |
-| Blog (`blog`) | Catégories, articles récents et recherche. | blog, catégories, articles récents |
-| Site professionnel (`pro`) | Marque, navigation et prise de contact, sobre. | professionnel, contact, rendez-vous |
-| Plateforme de formation (`formation`) | Formations récentes du catalogue, navigation et compte élève. | formation, catalogue, formations |
-| Grande zone de marque (`marque-geante`) | Nom du site en très grand, navigation et copyright dessous. | marque, impact, grand |
-| Deux rangées (`deux-rangees`) | Rangée marque, navigation et réseaux, rangée de copyright sur fond distinct. | complet, rangées, réseaux |
-| Appel à l'action (`appel-action`) | Bandeau d'appel à l'action de couleur au-dessus d'un pied de page compact. | conversion, appel à l'action, bouton |
-| Éditorial (`editorial`) | Titre du site centré entre deux filets, rubriques en ligne, date du jour. | éditorial, journal, filets |
-| Centré (`centre`) | Tout est empilé et centré : logo, navigation, réseaux, copyright. | centré, élégant, réseaux |
-| Colonnes asymétriques (`asymetrique`) | Grande colonne de marque et d'abonnement, deux fines colonnes de liens. | asymétrique, newsletter, navigation |
-| Accordéons mobile (`accordeons`) | Rubriques qui se déplient (idéal sur téléphone), navigation et copyright. | mobile, accordéon, compact |
-
-Identités : Clair épuré · Couleur de marque · Nuit · Éditorial · Doux et arrondi — clés `<mise-en-page>.<identité>` (ex. `une-ligne.clair`).
+Catalogue **plat** de 100 compositions distinctes (refonte de novembre 2026) : liste complète dans [`kolakisa-footer-library-modeles.md`](kolakisa-footer-library-modeles.md), documentation dans [`kolakisa-footer-library.md`](kolakisa-footer-library.md).
+10 familles de 10 : Minimal et compact · Multi-colonnes · Newsletter et abonnement · Coordonnées et carte · Réseaux sociaux et légal · Boutique et e-commerce · Éditorial et magazine · Entreprise et SaaS · Créatif et portfolio · Centré et navigation horizontale.
+Chaque modèle fixe son identité (20 par identité) ; clés `<identifiant>.<identité>` (ex. `ligne-copyright-menu.clair`). Les anciennes clés du catalogue 20 × 5 (`une-ligne.clair`, `trois-colonnes.nuit`…) n'existent plus.
 
 ## Page individuelle
 

@@ -32,7 +32,7 @@ describe("miniatures réelles et retour", () => {
     assert.equal((await boss.get(U(A, "/api/bibliotheque/header/inconnu.inconnu/vignette"))).status, 404);
   });
   test("modèle du site : la vignette montre son document enregistré ; un autre site ne peut pas la lire", async () => {
-    const used = await post(U(A, "/api/bibliotheque/utiliser"), { type: "footer", key: "une-ligne.nuit" });
+    const used = await post(U(A, "/api/bibliotheque/utiliser"), { type: "footer", key: "ligne-copyright-menu.clair" });
     const id = JSON.parse(used.text).template.id;
     const v = await boss.get(U(A, `/api/modeles/${id}/vignette`)); assert.equal(v.status, 200); assert.match(v.text, /kw-theme-footer/); assert.match(v.text, /Tous droits/);
     assert.equal((await boss.get(U(B, `/api/modeles/${id}/vignette`))).status, 404, "isolation entre sites");

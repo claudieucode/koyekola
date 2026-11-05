@@ -176,7 +176,22 @@ function normalizeTokens(input = {}, { strict = false, fontScope } = {}) {
   for (const k of Object.keys(D.shadow)) shadow[k] = Object.hasOwn(SHADOWS, src.shadow && src.shadow[k]) ? src.shadow[k] : D.shadow[k];
   const border = { width: intIn(src.border && src.border.width, 0, 4, D.border.width), color: HEX.test(String(src.border && src.border.color || "")) ? src.border.color.toLowerCase() : D.border.color };
   const sizes = { content: intIn(src.sizes && src.sizes.content, 640, 1600, D.sizes.content), narrow: intIn(src.sizes && src.sizes.narrow, 480, 1000, D.sizes.narrow), buttonHeight: intIn(src.sizes && src.sizes.buttonHeight, 32, 72, D.sizes.buttonHeight), fieldHeight: intIn(src.sizes && src.sizes.fieldHeight, 32, 72, D.sizes.fieldHeight) };
-  return { colors, customColors, fonts, type, link, list, buttons, images, forms, space, radius, shadow, border, sizes };
+  return { colors, customColors, fonts, type, link, list, buttons, images, forms, space, radius, shadow, border, sizes, pack: normalizePack(src.pack) };
+}
+
+// Thème autonome (paquet de thème, themes/packs) : identifiant du paquet actif + options de personnalisation (valeurs courtes, validées de nouveau par le paquet au rendu).
+// Un site sans paquet garde { key: "", options: {} } : aucun CSS ni script de thème n'est alors chargé.
+const PACK_KEY = /^[a-z][a-z0-9-]{1,39}$/;
+const PACK_OPT_KEY = /^[a-z][a-z0-9-]{0,24}$/;
+const PACK_OPT_VALUE = /^[#a-z0-9 .%,()-]{0,40}$/i;
+function normalizePack(input) {
+  const out = { key: "", options: {} };
+  if (!input || typeof input !== "object") return out;
+  if (typeof input.key === "string" && PACK_KEY.test(input.key)) out.key = input.key;
+  if (out.key && input.options && typeof input.options === "object" && !Array.isArray(input.options)) {
+    for (const [k, v] of Object.entries(input.options).slice(0, 16)) if (PACK_OPT_KEY.test(k) && typeof v === "string" && PACK_OPT_VALUE.test(v)) out.options[k] = v;
+  }
+  return out;
 }
 
 // Texte lisible sur une couleur pleine (boutons) : blanc ou texte foncé, celui qui contraste le plus (WCAG)

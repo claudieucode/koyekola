@@ -107,7 +107,7 @@ module.exports = () => {
     const t = target(req, res); if (!t) return;
     const key = String(req.params.key);
     const item = KEY.test(key) ? themes.libraryItem(t.siteId, key) : null;
-    if (item && item.hasDemo) return res.render("marketing/themes-detail", { ...base(req, t, {}), title: item.name, theme: item, installedRow: themes.get(t.siteId, key), readOnly: t.readOnly, STYLE_LABELS, canDemo: req.mk.can("forms.write") && req.mk.can("appearance.styles") });
+    if (item && item.hasDemo) return res.render("marketing/themes-detail", { ...base(req, t, {}), title: item.name, theme: item, packValues: item.state === "active" && (item.options || []).length ? themes.packOptionValues(req.mk.ctx, t.siteId, key) : null, installedRow: themes.get(t.siteId, key), readOnly: t.readOnly, STYLE_LABELS, canDemo: req.mk.can("forms.write") && req.mk.can("appearance.styles") });
     const theme = themeOf(req, res, t); if (!theme) return;
     res.render("marketing/themes-detail-legacy", { ...base(req, t, {}), title: theme.name, theme, readOnly: t.readOnly, previousKey: null });
   });
@@ -152,6 +152,17 @@ module.exports = () => {
         extra = ` ${d.pages.length} pages de démonstration ont été ajoutées en brouillon${d.menu ? ` et le menu « ${d.menu.name} » a été créé` : ""}.`;
       }
       return `Thème « ${th.name} » activé sur « ${t.name} » : le site public l'utilise maintenant.${extra}`;
+    });
+  });
+  // Options du thème actif (déclarées par le thème : couleurs, choix, plages). « Rétablir » ramène les valeurs d'origine du thème.
+  router.post("/site-web/themes/:key/options", need("appearance.publish"), (req, res, next) => {
+    const t = target(req, res); if (!t) return;
+    const key = String(req.params.key);
+    run(req, res, next, t, `/${KEY.test(key) ? key : ""}/details`, () => {
+      if (!KEY.test(key)) throw new UserError("Thème inconnu.");
+      const given = {}; for (const [k, v] of Object.entries(req.body || {})) if (k.startsWith("opt_") && typeof v === "string") given[k.slice(4)] = v;
+      const r = themes.setPackOptions(req.mk.ctx, t.siteId, key, given, { reset: req.body.reset === "1" });
+      return req.body.reset === "1" ? `Options de « ${r.name} » rétablies aux valeurs d'origine du thème.` : `Options de « ${r.name} » enregistrées : le site public les utilise maintenant.`;
     });
   });
   router.post("/site-web/themes/:key/demo", need("forms.write"), (req, res, next) => {

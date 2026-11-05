@@ -440,7 +440,8 @@ const NODE_TYPES = {
   // Largeur du contenu : encadrée (1100 px centrés, par défaut) ou pleine largeur
   // Mode d'affichage des enfants (facultatif ; absent = conteneur ordinaire, comme avant) : « onglets » (un enfant = un onglet, titre = son nom) ou
   // « carrousel » (un enfant = une diapositive, avec le carrousel du site). Les enfants restent de vrais conteneurs, modifiables dans le canevas.
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p) }) },
+  // headerFx : effet d'un EN-TÊTE au défilement, lu sur le premier conteneur de l'en-tête (themeRender.partMode, _sections.ejs) : « shrink » (la rangée se réduit), « solid » (un en-tête superposé devient plein), « both ». Sans rapport avec motion.scrollFx (effets de mouvement d'un élément).
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p), ...(oneOf("shrink", "solid", "both")(p.headerFx) ? { headerFx: p.headerFx } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément

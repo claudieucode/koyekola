@@ -17,6 +17,9 @@ const PER_TYPE = () => (SKINS.length * 20);
 // Catalogue « plat » (ex. En-tête) : chaque modèle est UNE composition propre (famille + identité fixée par le modèle), pas un croisement mise en page × identité.
 // d.flat = true, d.families = [{ key, label }], chaque mise en page porte { key, family, skin } ; le filtre « mise en page » de l'interface liste alors les familles.
 
+// Identités d'un catalogue : les cinq du site, plus celles qu'un catalogue « plat » déclare lui-même (d.skins : palette et polices propres à ses modèles)
+const identities = (d) => (d && d.skins ? (d.ownSkins ? d.skins : [...SKINS, ...d.skins]) : SKINS);
+
 const META = new Map();
 function entries(type) {
   const d = def(type);
@@ -27,7 +30,7 @@ function entries(type) {
   const out = [];
   if (d.flat) {
     const fam = new Map(d.families.map((f) => [f.key, f]));
-    for (const l of d.layouts) { const s = SKINS.find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
+    for (const l of d.layouts) { const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
   } else for (const l of d.layouts) for (const s of SKINS) out.push({ key: `${l.key}.${s.key}`, type, layoutKey: l.key, layoutId: l.key, skinKey: s.key, name: `${l.label} · ${s.label}`, layoutLabel: l.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] });
   META.set(type, out);
   return out;
@@ -42,9 +45,29 @@ function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, l
   const pages = Math.max(1, Math.ceil(rows.length / lim)), p = Math.min(pages, Math.max(1, Number(page) || 1));
   const d = def(type);
   return { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
-    layouts: d.layouts.map((l) => ({ key: l.key, label: l.label })), skins: SKINS.map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
+    layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: identities(d).map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
 }
 const find = (type, key) => entries(type).find((e) => e.key === key) || null;
+
+// Lisibilité des liens du texte d'article : la couleur par défaut des liens (couleur d'accent) peut disparaître sur un fond sombre (identités Nuit et Marque). On suit le fond EFFECTIF de chaque élément
+// et, quand le contenu de l'article est posé sur un fond sombre, la partie « liens » du contenu reçoit une couleur claire soulignée (réglage natif « parties », modifiable dans l'éditeur).
+const hexLum = (h) => { const m = /^#([0-9a-f]{6})/i.exec(h); if (!m) return null; const v = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+// null = inchangé (fond transparent ou semi-transparent) ; sinon « sombre » ou « clair » avec la couleur de texte lisible associée
+const bgClass = (c) => {
+  if (!c || typeof c !== "string") return null;
+  if (c === "token:primary" || c === "token:secondary") return { dark: true, on: "token:on-primary" };
+  if (c === "token:accent") return { dark: true, on: "token:on-accent" };
+  if (c.startsWith("token:")) return { dark: false };
+  if (/^#[0-9a-f]{8}$/i.test(c)) return null;
+  const l = hexLum(c); return l === null ? null : l < 0.25 ? { dark: true, on: "#f1f5f9" } : { dark: false };
+};
+function legibleLinks(nodes, bg) {
+  for (const n of nodes) {
+    const own = bgClass(n.styles && n.styles.desktop && n.styles.desktop.backgroundColor), here = own || bg;
+    if (n.type === "postcontent" && here && here.dark && !(n.parts && n.parts.link)) n.parts = { ...(n.parts || {}), link: { styles: { desktop: { color: here.on, textDecoration: "underline" } } } };
+    if (n.children) legibleLinks(n.children, here);
+  }
+}
 
 const CACHE = new Map();
 // Document d'un modèle : { name, kind: "component" | "page", section | sections }. env : { formId } (formulaire d'inscription réel du site, s'il en existe un).
@@ -53,9 +76,10 @@ function build(type, key, env = {}) {
   if (!meta) return null;
   const ck = `${type}:${key}:${env.formId || 0}`;
   if (CACHE.has(ck)) return CACHE.get(ck);
-  const d = def(type), S = skinOf(meta.skinKey);
-  const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutKey).build;
+  const d = def(type), S = identities(d).find((x) => x.key === meta.skinKey) || skinOf(meta.skinKey);
+  const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
   const children = withIds(buildFn(kit(S), env));
+  if (type === "single_post") legibleLinks(children, null);
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
   if (CACHE.size > 300) CACHE.clear();

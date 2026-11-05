@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
+const Catalog = require("../src/themeBuilder/catalog");
 
 const hostReq = (srv, host, path) => {
   const u = new URL(srv.base);
@@ -55,7 +56,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     assert.equal(types.length, 9); for (const t of types) assert.equal(t.count, 100, t.type);
     const l = JSON.parse((await boss.get(U(A, "/api/bibliotheque?type=header&limite=10&page=3"))).text);
     assert.equal(l.items.length, 10); assert.equal(l.page, 3); assert.equal(l.total, 100); assert.ok(!("section" in l.items[0]));
-    const f = JSON.parse((await boss.get(U(A, "/api/bibliotheque?type=header&identite=nuit"))).text); assert.equal(f.total, 20);
+    const f = JSON.parse((await boss.get(U(A, "/api/bibliotheque?type=header&identite=nuit"))).text); assert.equal(f.total, require("../src/themeBuilder/catalog").entries("header").filter((e) => e.skinKey === "nuit").length);
     assert.equal((await boss.get(U(A, "/api/bibliotheque?type=custom"))).status, 404, "type sans bibliothèque");
     for (const t of types) {
       const key = JSON.parse((await boss.get(U(A, `/api/bibliotheque?type=${t.type}&limite=1`))).text).items[0].key;
@@ -71,7 +72,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     assert.equal(one("SELECT COUNT(*) n FROM mk_tb_templates").n, 0, "rien n'a été créé");
   });
   test("en-tête et pied de page de la bibliothèque : ils habillent le blog, un article et la 404 du site A, pas le site B", async () => {
-    await adopt(A, "header", "classique-logo-menu-bouton.clair"); await adopt(A, "footer", "une-ligne.clair");
+    await adopt(A, "header", "classique-logo-menu-bouton.clair"); await adopt(A, "footer", "ligne-copyright-menu.clair");
     for (const p of ["/", "/blog", "/blog/article-a", "/introuvable-xyz"]) {
       const r = await hostReq(srv, "a.test", p); assert.ok([200, 404].includes(r.status), `${p} → ${r.status}`);
       // pages du Page Builder (accueil) : les parties sont dans la page même ; pages de la plateforme : dans leur zone « partie globale »
@@ -82,7 +83,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     const b = await hostReq(srv, "b.test", "/blog"); assert.equal(b.status, 200); assert.doesNotMatch(b.text, /kw-theme-(header|footer)/, "isolation");
   });
   test("article, archives, recherche et page introuvable de la bibliothèque : rendus avec les contenus réels du site", async () => {
-    await adopt(A, "single_post", "classique.clair"); await adopt(A, "archive", "grille-3.pleine"); await adopt(A, "search_results", "vedette.clair"); await adopt(A, "not_found", "simple.centre");
+    await adopt(A, "single_post", Catalog.entries("single_post")[0].key); await adopt(A, "archive", "grille-3.pleine"); await adopt(A, "search_results", "vedette.clair"); await adopt(A, "not_found", "simple.centre");
     const post = await hostReq(srv, "a.test", "/blog/article-a"); assert.equal(post.status, 200); assert.match(post.text, /kw-theme-template/); assert.match(post.text, /<h1[^>]*>[^<]*Article de A/);
     const arch = await hostReq(srv, "a.test", "/blog"); assert.match(arch.text, /kw-theme-template/); assert.match(arch.text, /Article de A/); assert.doesNotMatch(arch.text, /Article de B/);
     const q = await hostReq(srv, "a.test", "/blog?q=Article"); assert.match(q.text, /kw-theme-template/); assert.match(q.text, /Article de A/);
@@ -90,7 +91,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     const other = await hostReq(srv, "b.test", "/blog/article-b"); assert.doesNotMatch(other.text, /kw-theme-template/, "le site B garde son rendu");
   });
   test("copie indépendante : modifier ou archiver la copie du site ne change pas la bibliothèque ; export puis import", async () => {
-    const t = JSON.parse((await post(U(A, "/api/bibliotheque/utiliser"), { type: "footer", key: "trois-colonnes.nuit" })).text); assert.ok(t.ok, JSON.stringify(t).slice(0, 200));
+    const t = JSON.parse((await post(U(A, "/api/bibliotheque/utiliser"), { type: "footer", key: "trois-colonnes-marque.marque" })).text); assert.ok(t.ok, JSON.stringify(t).slice(0, 200));
     const tpl = t.template, ex = await boss.get(U(A, `/api/modeles/${tpl.id}/export.json`)); assert.equal(ex.status, 200);
     const imp = JSON.parse((await post(U(B, "/api/importer"), { payload: JSON.parse(ex.text) })).text); assert.ok(imp.ok, JSON.stringify(imp).slice(0, 200)); assert.equal(imp.template.type, "footer");
     assert.equal((await post(U(A, `/api/modeles/${tpl.id}/archiver`))).status, 200);

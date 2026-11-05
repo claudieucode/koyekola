@@ -158,6 +158,7 @@ function createMarketingRouters({ db }) {
   publicRoutes.use(require("./smsPublic")({ db }));
   publicRoutes.use(require("./socialPublic")({ db }));
   publicRoutes.use(require("./themeArtPublic")()); // visuels originaux des thèmes de la bibliothèque (SVG générés)
+  publicRoutes.use(require("./themePackPublic")()); // fichiers CSS et JS des thèmes autonomes (paquets)
   publicRoutes.use(require("./privacyExportPublic")({ db })); // confirmation et téléchargement d'un export de données personnelles (lien à jeton)
   // API /api/v1 : authentification par clé, jamais par cookie — montée séparément (voir server.js)
   const { createApiRouter } = require("../api/router");

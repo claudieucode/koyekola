@@ -1762,6 +1762,15 @@ details[open] > summary > .mk-sh-chev { transform: rotate(180deg); }
 .mk-td-pages { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .mk-td-pages a { display: inline-block; padding: 3px 11px; border: 1px solid var(--mk-border, #dbe4ea); border-radius: 999px; font-size: .86rem; text-decoration: none; color: var(--mk-text, #1d2733); }
 .mk-td-pages a:hover { border-color: var(--mk-navy, #0f2a5c); background: var(--mk-hover, rgba(15, 42, 92, .07)); }
+/* Options de personnalisation du thème actif (fiche de détails) */
+.mk-td-options { margin: 18px 0 22px; padding: 16px 18px; border: 1px solid var(--mk-border, #dbe4ea); border-radius: 12px; background: var(--surface, #fff); }
+.mk-td-h { margin: 0 0 6px; font-size: 1.05rem; }
+.mk-td-opt { display: grid; grid-template-columns: minmax(120px, 220px) 1fr; align-items: center; gap: 10px 16px; padding: 8px 0; border-top: 1px solid var(--mk-border, #dbe4ea); }
+.mk-td-opt label { font-weight: 600; font-size: .92rem; }
+.mk-td-opt select, .mk-td-opt input[type=range] { width: 100%; max-width: 340px; min-height: 44px; }
+.mk-td-opt input[type=color] { width: 64px; height: 44px; padding: 2px; border: 1px solid var(--mk-border, #dbe4ea); border-radius: 8px; background: var(--surface, #fff); cursor: pointer; }
+.mk-td-options .mk-th-actions { margin-top: 14px; }
+@media (max-width: 640px) { .mk-td-opt { grid-template-columns: 1fr; } }
 /* Aperçu complet */
 .mk-tp-bar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px 16px; align-items: center; padding: 10px 0 12px; border-bottom: 1px solid var(--mk-border, #dbe4ea); }   /* titre, appareils et actions sur une rangée ; pages sur la suivante, défilante */
 .mk-tp-title { display: flex; flex-direction: column; min-width: 140px; }
