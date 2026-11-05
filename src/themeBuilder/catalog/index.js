@@ -18,7 +18,7 @@ const PER_TYPE = () => (SKINS.length * 20);
 // d.flat = true, d.families = [{ key, label }], chaque mise en page porte { key, family, skin } ; le filtre « mise en page » de l'interface liste alors les familles.
 
 // Identités d'un catalogue : les cinq du site, plus celles qu'un catalogue « plat » déclare lui-même (d.skins : palette et polices propres à ses modèles)
-const identities = (d) => (d && d.skins ? [...SKINS, ...d.skins] : SKINS);
+const identities = (d) => (d && d.skins ? (d.ownSkins ? d.skins : [...SKINS, ...d.skins]) : SKINS);
 
 const META = new Map();
 function entries(type) {
@@ -30,7 +30,7 @@ function entries(type) {
   const out = [];
   if (d.flat) {
     const fam = new Map(d.families.map((f) => [f.key, f]));
-    for (const l of d.layouts) { const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
+    for (const l of d.layouts) { const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
   } else for (const l of d.layouts) for (const s of SKINS) out.push({ key: `${l.key}.${s.key}`, type, layoutKey: l.key, layoutId: l.key, skinKey: s.key, name: `${l.label} · ${s.label}`, layoutLabel: l.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] });
   META.set(type, out);
   return out;

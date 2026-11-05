@@ -17,32 +17,36 @@ const CHROME = process.env.CHROME_PATH || ["/Applications/Google Chrome.app/Cont
 const SKIP = !chromium || !CHROME ? "Playwright ou Chrome absent" : false;
 
 const BASE = ["clair", "marque", "nuit", "editorial", "doux"];
-const sector = Catalog.entries("header").filter((e) => !BASE.includes(e.skinKey));
+const SECTOR_IDS = ["restaurant", "ecole", "agence", "cabinet", "portfolio", "saas-violet", "media", "mode-boutique", "hotel", "association", "immobilier", "bien-etre"];
+const all = Catalog.entries("header");
+const sector = all.filter((e) => SECTOR_IDS.some((w) => e.layoutId.startsWith(w)));
 const doc = (key) => Catalog.build("header", key).section;
 const walk = (nodes, fn) => { for (const n of nodes || []) { fn(n); if (n && n.children) walk(n.children, fn); } };
 
 describe("En-têtes sectoriels : identité propre", () => {
   test("12 modèles sectoriels, répartis dans leurs familles, chacun avec sa propre identité (12 identités distinctes), identifiants uniques", () => {
     assert.equal(sector.length, 12);
-    assert.equal(Header.skins.length, 12);
+    assert.equal(Header.skins.length, 34);
     assert.equal(new Set(sector.map((e) => e.skinKey)).size, 12);
+    assert.ok(all.every((e) => !BASE.includes(e.skinKey)), "aucun modèle ne garde une identité du site");
     const ids = Catalog.entries("header").map((e) => e.layoutId); assert.equal(new Set(ids).size, ids.length, "identifiants de mise en page uniques");
     for (const w of ["restaurant", "ecole", "agence", "cabinet", "portfolio", "saas", "media", "mode", "hotel", "association", "immobilier", "bien-etre"]) assert.ok(sector.some((e) => e.layoutId.startsWith(w)), `secteur « ${w} » absent`);
   });
-  test("palettes et polices FIXES : aucune couleur de la charte du site (jetons), polices de la bibliothèque locale, palettes toutes différentes", () => {
+  test("palettes et polices FIXES sur les 100 modèles : aucune couleur de la charte du site (jetons), polices de la bibliothèque locale, 34 palettes toutes différentes", () => {
     const seen = new Set();
-    for (const e of sector) {
-      assert.ok(!JSON.stringify(doc(e.key)).includes('"token:'), `${e.key} : couleur de la charte du site`);
-      const id = Header.skins.find((s) => s.key === e.skinKey);
+    for (const e of all) assert.ok(!JSON.stringify(doc(e.key)).includes('"token:'), `${e.key} : couleur de la charte du site`);
+    for (const id of Header.skins) {
+      const e = { key: id.key };
       for (const f of [id.font, id.head]) assert.ok(fontLib.isId(f), `${e.key} : police « ${f} » absente de la bibliothèque`);
       for (const c of [id.bg, id.fg, id.accent, id.onAccent]) assert.match(c, /^#[0-9a-f]{6}$/i, `${e.key} : couleur ${c}`);
       const sig = [id.bg, id.accent, id.head].join("|"); assert.ok(!seen.has(sig), `${e.key} : palette et police déjà utilisées`); seen.add(sig);
       assert.notEqual(id.bg.toLowerCase(), "#0b1220", `${e.key} : fond de l'identité « Nuit »`);
     }
-    assert.ok(new Set(Header.skins.map((s) => s.head)).size >= 8);
+    assert.ok(new Set(Header.skins.map((s) => s.head)).size >= 18, "au moins 18 polices de titres différentes");
+    assert.ok(new Set(Header.skins.map((s) => s.font)).size >= 14, "au moins 14 polices de texte différentes");
   });
-  test("typographie propre : menus, liens, boutons prennent la police de l'identité, logo et titre celle des titres ; menu, compte et logo via les parties du widget (le site impose sa police aux liens)", () => {
-    for (const e of sector) {
+  test("typographie propre (100 modèles) : menus, liens, boutons prennent la police de l'identité, logo et titre celle des titres ; menu, compte et logo via les parties du widget (le site impose sa police aux liens)", () => {
+    for (const e of all) {
       const id = Header.skins.find((x) => x.key === e.skinKey);
       walk(doc(e.key).children, (n) => {
         const f = n.styles && n.styles.desktop && n.styles.desktop.fontFamily;
