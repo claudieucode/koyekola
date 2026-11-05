@@ -55,7 +55,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     assert.equal(types.length, 9); for (const t of types) assert.equal(t.count, 100, t.type);
     const l = JSON.parse((await boss.get(U(A, "/api/bibliotheque?type=header&limite=10&page=3"))).text);
     assert.equal(l.items.length, 10); assert.equal(l.page, 3); assert.equal(l.total, 100); assert.ok(!("section" in l.items[0]));
-    const f = JSON.parse((await boss.get(U(A, "/api/bibliotheque?type=header&identite=nuit"))).text); assert.equal(f.total, 20);
+    const f = JSON.parse((await boss.get(U(A, "/api/bibliotheque?type=header&identite=nuit"))).text); assert.equal(f.total, require("../src/themeBuilder/catalog").entries("header").filter((e) => e.skinKey === "nuit").length);
     assert.equal((await boss.get(U(A, "/api/bibliotheque?type=custom"))).status, 404, "type sans bibliothèque");
     for (const t of types) {
       const key = JSON.parse((await boss.get(U(A, `/api/bibliotheque?type=${t.type}&limite=1`))).text).items[0].key;

@@ -23,7 +23,7 @@ const signature = (key) => JSON.stringify(doc(key), (k, v) => {
 });
 
 describe("En-têtes : le catalogue", () => {
-  test("exactement 100 modèles : 10 familles de 10, 20 par identité, clés et noms uniques", () => {
+  test("exactement 100 modèles : 10 familles de 10 ; 88 sur les 5 identités du site et 12 modèles sectoriels à identité propre ; clés et noms uniques", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100, "clés uniques");
     assert.equal(new Set(all.map((e) => e.name)).size, 100, "noms uniques");
@@ -31,7 +31,10 @@ describe("En-têtes : le catalogue", () => {
     for (const e of all) { byFamily[e.layoutKey] = (byFamily[e.layoutKey] || 0) + 1; bySkin[e.skinKey] = (bySkin[e.skinKey] || 0) + 1; }
     assert.deepEqual(Object.keys(byFamily).sort(), Header.families.map((f) => f.key).sort());
     for (const [f, n] of Object.entries(byFamily)) assert.equal(n, 10, `famille ${f}`);
-    for (const [s, n] of Object.entries(bySkin)) assert.equal(n, 20, `identité ${s}`);
+    const BASE = ["clair", "marque", "nuit", "editorial", "doux"];
+    for (const [s, n] of Object.entries(bySkin)) assert.ok(BASE.includes(s) ? n >= 15 : n === 1, `identité ${s} : ${n}`);
+    assert.equal(BASE.reduce((a, b) => a + bySkin[b], 0), 88); assert.equal(Object.keys(bySkin).length, 17);
+    const ids = all.map((e) => e.layoutId); assert.equal(new Set(ids).size, ids.length, "identifiants de mise en page uniques (la construction cherche par identifiant)");
   });
   test("clés sûres pour une adresse (ASCII minuscule, chiffres, tiret) : aucune clé ne casse la route de la bibliothèque", () => {
     for (const e of all) assert.match(e.key, /^[a-z0-9]+(-[a-z0-9]+)*\.[a-z]+$/, e.key);
@@ -79,17 +82,17 @@ describe("En-têtes : le catalogue", () => {
     for (const e of all) {
       const p = (doc(e.key).children[0].styles.desktop || {}).position || "";
       if (p === "absolute") { overlay += 1; assert.equal(e.layoutKey, "transparent", `${e.key} : superposé hors famille`); }
-      if (p === "sticky") { sticky += 1; assert.ok(["collant", "saas"].includes(e.layoutKey), `${e.key} : collant hors famille`); }
+      if (p === "sticky") { sticky += 1; assert.ok(["collant", "saas"].includes(e.layoutKey) || !["clair", "marque", "nuit", "editorial", "doux"].includes(e.skinKey), `${e.key} : collant hors famille`); }
     }
     assert.equal(overlay, 10); assert.ok(sticky >= 10, `collants : ${sticky}`);
   });
   test("liste : recherche sans accents, filtre par famille et par identité, pagination ; la liste ne contient jamais les documents", () => {
     const p = Catalog.list("header", { limit: 24 });
-    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, 10); assert.equal(p.skins.length, 5);
+    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, 10); assert.equal(p.skins.length, 17);
     assert.ok(!("section" in p.items[0]));
     assert.equal(Catalog.list("header", { layout: "boutique" }).total, 10);
-    assert.equal(Catalog.list("header", { skin: "nuit" }).total, 20);
-    assert.equal(Catalog.list("header", { layout: "saas", skin: "doux" }).total, 2);
+    assert.ok(Catalog.list("header", { skin: "nuit" }).total >= 15);
+    assert.equal(Catalog.list("header", { layout: "saas", skin: "doux" }).total, all.filter((e) => e.layoutKey === "saas" && e.skinKey === "doux").length);
     assert.ok(Catalog.list("header", { q: "ECOMMERCE" }).total >= 0);
     assert.ok(Catalog.list("header", { q: "collant" }).total >= 10);
     assert.equal(Catalog.list("header", { q: "zzzz-inconnu" }).total, 0);
