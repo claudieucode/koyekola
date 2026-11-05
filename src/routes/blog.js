@@ -378,7 +378,7 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
   const postTaxo = taxonomy.termsOf("post", post.id);
   const primaryTerm = postTaxo.primary;
   const nearestCats = primaryTerm ? [primaryTerm.name, ...taxonomy.ancestors(primaryTerm.id).map((a) => a.name).reverse()] : [];
-  themeRender.renderRegion(req, res, db, "single_post", { category: nearestCats[0] || post.category || "", categories: nearestCats.slice(1), tags: (postTaxo.tags || []).map((t) => t.name), postId: post.id, authorId: post.author_id || null, scope: { post: themeRender.postScope(post, { contentHtml: article.html, minutes, author: author ? author.username : "" }) } }, (themeTemplate) => {
+  themeRender.renderRegion(req, res, db, "single_post", { category: nearestCats[0] || post.category || "", categories: nearestCats.slice(1), tags: (postTaxo.tags || []).map((t) => t.name), postId: post.id, authorId: post.author_id || null, scope: { post: themeRender.postScope(post, { contentHtml: article.html, toc, minutes, author: author ? author.username : "" }) } }, (themeTemplate) => {
   res.render("blog/show", {
     themeTemplate, post, crumbs, author, seo, article: { ...article, toc, html: pageCount > 1 ? article.pages[pageNo - 1] : article.html, pageNo, pageCount }, minutes, tags, modified, previous, next, shareUrl: ownUrl, lang: post.language && post.language !== "fr" ? post.language : null,
     tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,

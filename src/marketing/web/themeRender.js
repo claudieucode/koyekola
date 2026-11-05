@@ -24,10 +24,10 @@ function extras(post) {
   } catch { /* ignoré */ }
   return out;
 }
-function postScope(post, { contentHtml = "", minutes = null, author = "" } = {}) {
+function postScope(post, { contentHtml = "", minutes = null, author = "", toc = [] } = {}) {
   const safeImg = (p) => (typeof p === "string" && (/^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(p) || /^https:\/\/[^\s"'<>]+$/.test(p)) ? p : "");
   return { title: post.title, url: require("../../services/urls").publicPath("post", post), excerpt: String(post.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 300), image: safeImg(post.cover_path),
-    date: MS(post.published_at), category: post.category || "", author, minutes: minutes || null, contentHtml,
+    date: MS(post.published_at), category: post.category || "", author, minutes: minutes || null, contentHtml, toc: Array.isArray(toc) ? toc.filter((t) => t && t.text && t.id).map((t) => ({ level: Number(t.level) || 2, text: String(t.text), id: String(t.id), href: t.href ? String(t.href) : "" })) : [],
     id: post.id, slug: post.slug, authorId: post.author_id || null, tags: String(post.tags || "").split(",").map((t) => t.trim()).filter(Boolean), modified: MS(post.updated_at),
     ...extras(post), views: post.views || 0, commentsOpen: post.comments_enabled !== 0,
     seoTitle: String(post.seo_title || "").slice(0, 160), seoDescription: String(post.seo_description || "").replace(/\s+/g, " ").trim().slice(0, 320) };
@@ -163,10 +163,10 @@ function previewScope(db, ctx, page, typesOverride = null, pick = {}) {
     const post = chosen || db.prepare("SELECT * FROM posts WHERE published = 1 ORDER BY published_at DESC, id DESC LIMIT 1").get();
     if (!post) return {};
     const blog = require("../../services/blog");
-    let html = "";
-    try { html = blog.renderPost(post, {}).html; } catch { html = ""; }
+    let html = "", toc = [];
+    try { const r = blog.renderPost(post, {}); html = r.html; toc = r.toc || []; } catch { html = ""; }
     const author = post.author_id ? db.prepare("SELECT username FROM users WHERE id = ?").get(post.author_id) : null;
-    return { post: postScope(post, { contentHtml: html, author: author ? author.username : "" }) };
+    return { post: postScope(post, { contentHtml: html, toc, author: author ? author.username : "" }) };
   } catch { return {}; }
 }
 

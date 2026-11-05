@@ -49,6 +49,26 @@ function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, l
 }
 const find = (type, key) => entries(type).find((e) => e.key === key) || null;
 
+// Lisibilité des liens du texte d'article : la couleur par défaut des liens (couleur d'accent) peut disparaître sur un fond sombre (identités Nuit et Marque). On suit le fond EFFECTIF de chaque élément
+// et, quand le contenu de l'article est posé sur un fond sombre, la partie « liens » du contenu reçoit une couleur claire soulignée (réglage natif « parties », modifiable dans l'éditeur).
+const hexLum = (h) => { const m = /^#([0-9a-f]{6})/i.exec(h); if (!m) return null; const v = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+// null = inchangé (fond transparent ou semi-transparent) ; sinon « sombre » ou « clair » avec la couleur de texte lisible associée
+const bgClass = (c) => {
+  if (!c || typeof c !== "string") return null;
+  if (c === "token:primary" || c === "token:secondary") return { dark: true, on: "token:on-primary" };
+  if (c === "token:accent") return { dark: true, on: "token:on-accent" };
+  if (c.startsWith("token:")) return { dark: false };
+  if (/^#[0-9a-f]{8}$/i.test(c)) return null;
+  const l = hexLum(c); return l === null ? null : l < 0.25 ? { dark: true, on: "#f1f5f9" } : { dark: false };
+};
+function legibleLinks(nodes, bg) {
+  for (const n of nodes) {
+    const own = bgClass(n.styles && n.styles.desktop && n.styles.desktop.backgroundColor), here = own || bg;
+    if (n.type === "postcontent" && here && here.dark && !(n.parts && n.parts.link)) n.parts = { ...(n.parts || {}), link: { styles: { desktop: { color: here.on, textDecoration: "underline" } } } };
+    if (n.children) legibleLinks(n.children, here);
+  }
+}
+
 const CACHE = new Map();
 // Document d'un modèle : { name, kind: "component" | "page", section | sections }. env : { formId } (formulaire d'inscription réel du site, s'il en existe un).
 function build(type, key, env = {}) {
@@ -59,6 +79,7 @@ function build(type, key, env = {}) {
   const d = def(type), S = identities(d).find((x) => x.key === meta.skinKey) || skinOf(meta.skinKey);
   const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
   const children = withIds(buildFn(kit(S), env));
+  if (type === "single_post") legibleLinks(children, null);
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
   if (CACHE.size > 300) CACHE.clear();

@@ -204,7 +204,7 @@ function siteInfo(ctx, page) {
   const safeLogo = (/^\/uploads\/[A-Za-z0-9_\/.-]{1,200}\.(png|jpe?g|webp|gif|avif|svg)$/i.test(logo) && !logo.includes("..")) || /^https:\/\/[^\s"'<>]{3,300}$/i.test(logo) ? logo : "";
   return { name: (site && site.name) || (page && page.site_id ? "" : seo.site_name) || (page && page.site_id ? "" : "KOLAKISA"), homeUrl: home ? `/p/${home.slug}` : "/", logo: siteLogo || safeLogo };
 }
-function dynamicProps(ctx, n, visitor, page) {
+function dynamicProps(ctx, n, visitor, page, scope) {
   const p = n.props;
   if (n.type === "posts") {
     const { listPosts } = require("../bridge/catalog");
@@ -259,8 +259,11 @@ function dynamicProps(ctx, n, visitor, page) {
   // Boutons de partage : adresse publique de la page (https seulement : un partage vers une adresse locale n'aurait aucun sens)
   if (n.type === "sharebuttons") {
     const base = String(ctx.baseUrl || "").replace(/\/+$/, "");
-    const shareUrl = page && page.slug && /^https:\/\/[^\s"'<>]+$/.test(base) ? `${base}/p/${page.slug}` : "";
-    return { ...p, shareUrl, pageTitle: page ? page.title || page.name || "" : "" };
+    // Modèle d'article : on partage l'article COURANT (adresse et titre de l'article), pas la page-modèle qui porte la mise en page
+    const post = scope && scope.post && scope.post.url ? scope.post : null;
+    const abs = (u) => (/^https:\/\/[^\s"'<>]+$/.test(u) ? u : /^\/(?!\/)[^\s"'<>]*$/.test(u) && /^https:\/\/[^\s"'<>]+$/.test(base) ? `${base}${u}` : "");
+    const shareUrl = post ? abs(String(post.url)) : (page && page.slug && /^https:\/\/[^\s"'<>]+$/.test(base) ? `${base}/p/${page.slug}` : "");
+    return { ...p, shareUrl, pageTitle: post ? String(post.title || "") : page ? page.title || page.name || "" : "" };
   }
   if (n.type === "account") return { ...p, loggedIn: Boolean(visitor && visitor.loggedIn), cartCount: visitor ? visitor.cartCount || 0 : 0 };
   return null;
@@ -305,7 +308,7 @@ function nodeView(ctx, nodes, visitor, page, scope) {
         base: Object.entries((visitor && visitor.query) || {}).filter(([k]) => k !== `lp-${n.id}`).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&") } };
     }
     if (n.type === "menu") { const r = resolveMenuNode(n, page, visitor); if (r) n = r; }
-    const dyn = dynamicProps(ctx, n, visitor, page);
+    const dyn = dynamicProps(ctx, n, visitor, page, scope);
     if (dyn) n = { ...n, props: dyn };
     // Code : coloration calculée à l'affichage (texte échappé + <span class="kw-tok-…"> générés par highlight.js) ; jamais enregistrée
     if (n.type === "code" && n.props.language) n = { ...n, props: { ...n.props, html: require("../pages/highlight").highlight(n.props.text, n.props.language) } };
@@ -411,7 +414,10 @@ function viewModel(ctx, page) {
   for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { if (n.type === "toc") tocs.push(n); else if (n.type === "heading" && n.props && n.props.text) heads.push(n); });
   if (tocs.length) {
     for (const n of heads) n.tocId = n.anchor || `kw-h-${n.id}`;
-    for (const t of tocs) t.props = { ...t.props, items: heads.filter((n) => Number(n.props.level) >= 2 && Number(n.props.level) <= Number(t.props.depth)).map((n) => ({ level: Number(n.props.level), text: n.props.text, href: `#${n.tocId}` })) };
+    // Modèle d'article : le sommaire liste les intertitres de l'ARTICLE (pas les titres de la page-modèle)
+    const articleToc = scope.post && Array.isArray(scope.post.toc) ? scope.post.toc : null;
+    if (articleToc) for (const t of tocs) t.props = { ...t.props, items: articleToc.filter((h) => h.level >= 2 && h.level <= Number(t.props.depth)).map((h) => ({ level: h.level, text: h.text, href: h.href || `#${h.id}` })) };
+    else for (const t of tocs) t.props = { ...t.props, items: heads.filter((n) => Number(n.props.level) >= 2 && Number(n.props.level) <= Number(t.props.depth)).map((n) => ({ level: Number(n.props.level), text: n.props.text, href: `#${n.tocId}` })) };
   }
   // CSS personnalisé de la page (revalidé à chaque affichage ; un CSS devenu invalide n'est simplement pas appliqué)
   let customCss = "";
