@@ -69,7 +69,7 @@ const loop = (k, kind, cols, style, o = {}) => {
 const heading = (k, txt, st = {}) => k.H(txt, "2", { fontSize: "24px", ...st });
 const cats = (k) => k.W("catfilter", { source: "posts", allLabel: "Toutes", showCount: true }, { color: k.S.fg });
 const list = (k, p) => k.W("querylist", { source: "posts", mode: "recent", count: 5, layout: "compact", showCount: false, empty: "Rien à afficher pour le moment.", ...p }, { color: k.S.fg, width: "100%" });
-const refine = (k, o = {}) => k.card([k.H("Affiner la recherche", "3", { fontSize: "20px" }), muted(k, "<p>Aucun résultat qui convienne ? Reformulez votre recherche ou parcourez le site.</p>"), box(k, { maxWidth: "100%" }), ...(o.cats ? [cats(k)] : [])], { width: "100%" });
+const refine = (k, o = {}) => k.card([k.H("Affiner la recherche", "3", { fontSize: "20px" }), muted(k, "<p>Aucun résultat qui convienne ? Reformulez votre recherche ou parcourez le site.</p>"), box(k, { maxWidth: "100%" }), ...(o.cats ? [cats(k)] : [])], { alignSelf: "stretch" });
 
 // ── Contenus : ce que la page de résultats montre ───────────────────────────────────────────────────
 // kind : type de résultats principal ; more(k, c) → sections de résultats d'autres types ; aside(k) → colonne secondaire ; after(k) → pistes ; count : nombre d'articles dans le titre (le moteur ne compte que le blog).
