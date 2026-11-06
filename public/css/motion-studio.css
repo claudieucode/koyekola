@@ -231,6 +231,8 @@
 .kw-ms-fm.kw-ms-live.is-center .kw-ms-fm-link { justify-content: center; }
 .kw-ms-fm.kw-ms-live .kw-ms-fm-panel :is(a, button):focus-visible { outline-color: currentColor; }
 html.kw-ms-lock { overflow: hidden; }
+/* Dans un en-tête de site, les boutons du menu plein écran suivent la typographie du widget (taille, police, casse, couleur) : un en-tête choisit son propre style de bouton */
+.lp-site-header .kw-ms-fm-toggle, .lp-site-header .kw-ms-fm-close, .kw-theme-header .kw-ms-fm-toggle, .kw-theme-header .kw-ms-fm-close { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; }
 
 /* ---- Témoignages animés (motion-testimonials) ---- */
 .kw-ms-ts-list { margin: 0; display: grid; gap: 32px; }
