@@ -42,6 +42,7 @@ function checkSpec(m, where) {
     if (!Array.isArray(m.presets) || !m.presets.length || m.presets.length > 40 || !m.presets.every((p) => Array.isArray(p) && p.length === 2 && PRESET.test(p[0]) && typeof p[1] === "string" && p[1].trim())) bad("« presets » : liste [[identifiant, libellé], …] (1 à 40).");
     if (new Set(m.presets.map((p) => p[0])).size !== m.presets.length) bad("« presets » : identifiants en double.");
   }
+  if (m.preview !== undefined && typeof m.preview !== "boolean") bad("« preview » : vrai ou faux (faux = pas de bouton Lire / Pause : composant piloté par le défilement ou par un clic du visiteur).");
   if (m.controls !== undefined && (!Array.isArray(m.controls) || !m.controls.every((c) => CONTROLS.includes(c)))) bad(`« controls » : parmi ${CONTROLS.join(", ")}.`);
   if (m.controls && m.controls.includes("preset") && !m.presets) bad("« controls » contient « preset » mais « presets » est absent.");
   if (m.params !== undefined) {
@@ -178,6 +179,6 @@ function editorSpec() {
     scenes: require("./motionScenes").editorSpec(), // lot 3 : effets, déclencheurs, transitions, défilement fluide
 }
 // Ce que l'éditeur reçoit pour un widget (fiche `motion` + réglages par défaut effectifs)
-const widgetSpec = (spec) => spec ? { module: spec.module, presets: spec.presets || null, controls: spec.controls || CONTROLS.filter((c) => c !== "preset" || spec.presets), params: spec.params || [], defaults: effective(null, spec) } : null;
+const widgetSpec = (spec) => spec ? { module: spec.module, presets: spec.presets || null, controls: spec.controls || CONTROLS.filter((c) => c !== "preset" || spec.presets), preview: spec.preview !== false, params: spec.params || [], defaults: effective(null, spec) } : null;
 
 module.exports = { CURRENT, TRIGGERS, SCREENS, REDUCED, CONTROLS, LIMITS, BASE_DEFAULTS, MIGRATIONS, checkSpec, normalize, effective, attrs, usage, editorSpec, widgetSpec };

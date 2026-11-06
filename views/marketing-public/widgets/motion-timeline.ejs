@@ -1,0 +1,16 @@
+<%# Chronologie animée (widgets/motion-timeline.js). Variables : p, cls, attrs. Sans JavaScript ou en mouvement réduit : chronologie complète, ligne pleine.
+    Avec JavaScript (public/js/motion-studio/steps.js) : la ligne se remplit selon le défilement, les étapes apparaissent. %>
+<% const tag = ["h2", "h3", "h4"].includes(p.titleTag) ? p.titleTag : "h3"; %>
+<div class="<%= cls %> kw-ms kw-ms-tl is-<%= p.layout === "alternate" ? "alternate" : "left" %>" data-kw-ms-kind="timeline"<%- attrs %>>
+  <span class="kw-ms-tl-line" aria-hidden="true"><span class="kw-ms-tl-fill" data-ms-fill></span></span>
+  <ol class="kw-ms-tl-list"><% p.items.forEach((it) => { %>
+    <li class="kw-ms-tl-item" data-ms-step>
+      <span class="kw-ms-tl-dot" aria-hidden="true" data-ms-dot></span>
+      <div class="kw-ms-tl-card" data-ms-reveal>
+        <% if (it.date) { %><p class="kw-ms-tl-date"><%= it.date %></p><% } %>
+        <<%= tag %> class="kw-ms-tl-title"><%= it.title %></<%= tag %>>
+        <% if (it.text) { %><p class="kw-ms-tl-text"><%= it.text %></p><% } %>
+      </div>
+    </li><% }) %>
+  </ol>
+</div>

@@ -53,6 +53,9 @@
     return clamp((raw - s) / (e - s), 0, 1);
   }
 
+  // Seuil de visibilité du déclencheur « viewport » : 20 %, abaissé pour un élément très haut (il ne serait jamais visible à 20 % : il ne se déclencherait pas)
+  function viewportThreshold(el, win) { var h = el.getBoundingClientRect().height, vh = win.innerHeight || 1; return h > 0 ? clamp(0.9 * vh / h, 0.01, 0.2) : 0.2; }
+
   var registry = {}; // nom → init (commun à tous les runtimes de la fenêtre)
   function register(name, init) { if (typeof init === "function") registry[name] = init; }
 
@@ -188,7 +191,7 @@
           if (e.isIntersecting) { run(rec); if (!cfg.repeat) io.disconnect(); }
           else if (cfg.repeat && rec.played) { hold(rec); }
         });
-      }, { threshold: 0.2 });
+      }, { threshold: viewportThreshold(el, win) });
       io.observe(el); rec.cleanups.push(function () { io.disconnect(); });
     }
 
@@ -387,5 +390,5 @@
     if (win.document.readyState === "loading") win.document.addEventListener("DOMContentLoaded", start); else start();
   }
 
-  return { VERSION: 1, DEFAULTS: DEFAULTS, EASINGS: EASINGS, TRIGGERS: TRIGGERS, BP: BP, register: register, registered: function () { return Object.keys(registry); }, parseConfig: parseConfig, staggerDelay: staggerDelay, scrollProgress: scrollProgress, breakpointOf: breakpointOf, easingCss: easingCss, create: create, autostart: autostart };
+  return { VERSION: 1, DEFAULTS: DEFAULTS, EASINGS: EASINGS, TRIGGERS: TRIGGERS, BP: BP, register: register, registered: function () { return Object.keys(registry); }, parseConfig: parseConfig, staggerDelay: staggerDelay, viewportThreshold: viewportThreshold, scrollProgress: scrollProgress, breakpointOf: breakpointOf, easingCss: easingCss, create: create, autostart: autostart };
 });

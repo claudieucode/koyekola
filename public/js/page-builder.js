@@ -2080,6 +2080,7 @@ function selectField(label, value, options, onChange, opts) {
       var head = h("div", { class: "pb-items-head" }, h("strong", { text: "Élément " + (i + 1) }), h("span", { class: "pb-items-tools" },
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Monter l'élément " + (i + 1), "data-tip": "Monter", disabled: disabled || i === 0, onclick: function () { move(-1); } }, icon("arrowUp")),
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Descendre l'élément " + (i + 1), "data-tip": "Descendre", disabled: disabled || i === list.length - 1, onclick: function () { move(1); } }, icon("arrowDown")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Dupliquer l'élément " + (i + 1), "data-tip": "Dupliquer", disabled: disabled || list.length >= f.max, onclick: function () { var cur = live(), next = cur.slice(); next.splice(i + 1, 0, Object.assign({}, cur[i])); commit(next); } }, icon("copy")),
         h("button", { type: "button", class: "pb-icon-btn is-danger", "aria-label": "Supprimer l'élément " + (i + 1), "data-tip": "Supprimer", disabled: disabled || list.length <= min, onclick: function () { commit(live().filter(function (_, k) { return k !== i; })); } }, icon("trash"))));
       var card = h("div", { class: "pb-items-item" }, head);
       f.fields.forEach(function (sf) {

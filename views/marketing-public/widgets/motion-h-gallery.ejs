@@ -1,0 +1,17 @@
+<%# Galerie à défilement horizontal (widgets/motion-h-gallery.js). Variables : p, cls, attrs, L (L.items[i].url). Sans JavaScript, en mouvement réduit (et sur mobile par défaut) : bande à faire défiler, focalisable au clavier.
+    Avec JavaScript : la scène est épinglée et la bande avance avec le défilement vertical (public/js/motion-studio/h-gallery.js). %>
+<% const tag = ["h2", "h3", "h4"].includes(p.titleTag) ? p.titleTag : "h3"; const ratio = ["landscape", "square", "portrait"].includes(p.ratio) ? p.ratio : "landscape"; %>
+<div class="<%= cls %> kw-ms kw-ms-hg is-<%= ratio %>"<%- attrs %>>
+  <div class="kw-ms-hg-stage">
+    <div class="kw-ms-hg-view" role="region" aria-label="<%= p.label %>" tabindex="0" data-ms-view>
+      <ul class="kw-ms-hg-track" data-ms-track><% p.items.forEach((it, i) => { const link = L.items[i] && L.items[i].url; %>
+        <li class="kw-ms-hg-item" data-ms-item>
+          <figure class="kw-ms-hg-fig<%= it.image ? "" : " is-text" %>"><% if (it.image) { %><img class="kw-ms-hg-img" src="<%= it.image %>" alt="<%= it.imageAlt || "" %>" loading="lazy" decoding="async" draggable="false"><% } else { %><span class="kw-ms-hg-num" aria-hidden="true"><%= String(i + 1).padStart(2, "0") %></span><% } %>
+            <figcaption class="kw-ms-hg-cap"><<%= tag %> class="kw-ms-hg-title"><% if (link) { %><a class="kw-ms-hg-link" href="<%= link %>"><%= it.title %></a><% } else { %><%= it.title %><% } %></<%= tag %>><% if (it.caption) { %><span class="kw-ms-hg-sub"><%= it.caption %></span><% } %></figcaption>
+          </figure>
+        </li><% }) %>
+      </ul>
+    </div>
+    <% if (p.showProgress) { %><div class="kw-ms-hg-bar" aria-hidden="true"><span class="kw-ms-hg-fill"></span></div><% } %>
+  </div>
+</div>

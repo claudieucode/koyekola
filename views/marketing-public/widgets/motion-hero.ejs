@@ -1,0 +1,14 @@
+<%# Hero animé (widgets/motion-hero.js). Variables : p, cls, attrs, L (L.buttons[i].url), isBuilder. Sans JavaScript : tout est visible, le fond est fixe. L'entrée en séquence et le fond animé sont faits par public/js/motion-studio/hero.js. %>
+<% const tag = p.tag === "h2" ? "h2" : "h1"; const layout = ["split-right", "split-left", "centered"].includes(p.layout) ? p.layout : "split-right"; const height = ["auto", "tall", "full"].includes(p.height) ? p.height : "tall"; const bg = ["none", "aurora", "gradient"].includes(p.bg) ? p.bg : "aurora"; %>
+<div class="<%= cls %> kw-ms kw-ms-hr is-<%= layout %> is-h-<%= height %><%= p.image ? " has-visual" : "" %> is-bg-<%= bg %>" data-kw-ms-bg="<%= bg %>" data-kw-ms-bgspeed="<%= p.bgSpeed === "normal" ? "normal" : "slow" %>"<%- attrs %>>
+  <% if (bg !== "none") { %><div class="kw-ms-hr-bg" aria-hidden="true"><span class="kw-ms-hr-orb is-1"></span><span class="kw-ms-hr-orb is-2"></span><span class="kw-ms-hr-orb is-3"></span></div><% } %>
+  <div class="kw-ms-hr-inner">
+    <div class="kw-ms-hr-copy">
+      <% if (p.eyebrow) { %><p class="kw-ms-hr-eyebrow" data-ms-seq><%= p.eyebrow %></p><% } %>
+      <<%= tag %> class="kw-ms-hr-title" data-ms-seq><%= p.title %></<%= tag %>>
+      <% if (p.subtitle) { %><p class="kw-ms-hr-sub" data-ms-seq><%= p.subtitle %></p><% } %>
+      <% if (p.buttons.length) { %><div class="kw-ms-hr-actions" data-ms-seq><% p.buttons.forEach((b, i) => { if (L.buttons[i] && L.buttons[i].url) { %><a class="kw-button<%= b.style === "outline" ? " kw-btn-outline" : "" %>" href="<%= L.buttons[i].url %>"><%= b.label %></a><% } }) %></div><% } %>
+    </div>
+    <% if (p.image) { %><div class="kw-ms-hr-visual" data-ms-seq data-ms-visual><img class="kw-ms-hr-img" src="<%= p.image %>" alt="<%= p.imageAlt || "" %>" loading="eager" decoding="async"></div><% } %>
+  </div>
+</div>

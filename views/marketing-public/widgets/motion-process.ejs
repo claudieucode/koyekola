@@ -1,0 +1,15 @@
+<%# Étapes de processus (widgets/motion-process.js). Variables : p, cls, attrs. Sans JavaScript ou en mouvement réduit : toutes les étapes visibles, traits tracés.
+    Avec JavaScript (public/js/motion-studio/steps.js) : chaque pastille apparaît puis le trait se trace jusqu'à la suivante. %>
+<% const tag = ["h2", "h3", "h4"].includes(p.titleTag) ? p.titleTag : "h3"; %>
+<div class="<%= cls %> kw-ms kw-ms-pr is-<%= p.layout === "column" ? "column" : "row" %>" data-kw-ms-kind="process"<%- attrs %>>
+  <ol class="kw-ms-pr-list"><% p.items.forEach((it, i) => { %>
+    <li class="kw-ms-pr-step" data-ms-step>
+      <span class="kw-ms-pr-badge" aria-hidden="true" data-ms-reveal data-ms-badge><%= i + 1 %></span>
+      <% if (i < p.items.length - 1) { %><span class="kw-ms-pr-link" aria-hidden="true" data-ms-draw></span><% } %>
+      <div class="kw-ms-pr-body" data-ms-reveal>
+        <<%= tag %> class="kw-ms-pr-title"><span class="kw-ms-sr">Étape <%= i + 1 %> : </span><%= it.title %></<%= tag %>>
+        <% if (it.text) { %><p class="kw-ms-pr-text"><%= it.text %></p><% } %>
+      </div>
+    </li><% }) %>
+  </ol>
+</div>
