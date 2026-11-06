@@ -76,7 +76,7 @@ describe("En-têtes Atelier : les 100 modèles dans Chrome (ordinateur, tablette
         const defects = await page.evaluate(inspect);
         if (defects.length) report.push({ key: e.key, name, defects: [...new Set(defects)].slice(0, 4) });
         if (name === "ordinateur" && sharp) {
-          const box = await page.evaluate(() => { const r = (document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, Math.floor(r.top)), width: 1280, height: Math.max(40, Math.min(360, Math.ceil(r.height))) }; });
+          const box = await page.evaluate(() => { const r = (document.querySelector(".lp-site-header") || document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, Math.floor(r.top)), width: 1280, height: Math.max(40, Math.min(360, Math.ceil(r.height))) }; });
           const png = await page.screenshot({ clip: box });
           shots[e.key] = await sharp(png).resize(64, 16, { fit: "fill" }).removeAlpha().raw().toBuffer();
         }

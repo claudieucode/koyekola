@@ -29,7 +29,7 @@ const OUT = process.env.OUT || "/private/tmp/claude-501/hd-shots";
         await p.setViewportSize({ width: w, height: 500 });
         await p.goto(`${srv.base}/marketing/site-web/sites/${A}/constructeur-de-theme/api/bibliotheque/header/${key}/apercu`, { waitUntil: "load" });
         await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(900);
-        const box = await p.evaluate(() => { const r = (document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, r.top), width: innerWidth, height: Math.min(Math.max(r.height + 4, 40), 300) }; });
+        const box = await p.evaluate(() => { const r = (document.querySelector(".lp-site-header") || document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, r.top), width: innerWidth, height: Math.min(Math.max(r.height + 4, 40), 300) }; });
         const f = path.join(OUT, `${m.key}-${tag}.png`); fs.writeFileSync(f, await p.screenshot({ clip: box })); rows.push({ f, tag, m });
       }
     }
