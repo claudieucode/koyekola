@@ -72,7 +72,8 @@ describe("En-têtes Atelier : les 100 modèles dans Chrome (ordinateur, tablette
       for (const e of entries) {
         const res = await page.goto(`${srv.base}${U(A, `/api/bibliotheque/header/${e.key}/apercu`)}`, { waitUntil: "load" });
         if (!res || res.status() !== 200) { report.push({ key: e.key, name, defects: [`HTTP ${res && res.status()}`] }); continue; }
-        await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(120);
+        // polices : « fonts.ready » peut répondre avant que les polices déclarées soient demandées ; on les charge toutes (la page ne déclare que celles qu'elle utilise) avant de mesurer
+        await page.evaluate(async () => { await document.fonts.ready; await Promise.all([...document.fonts].map((f) => f.load().catch(() => null))); await document.fonts.ready; }); await page.waitForTimeout(120);
         const defects = await page.evaluate(inspect);
         if (defects.length) report.push({ key: e.key, name, defects: [...new Set(defects)].slice(0, 4) });
         if (name === "ordinateur" && sharp) {
