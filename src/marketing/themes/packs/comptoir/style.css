@@ -195,7 +195,7 @@ body[data-pk-pied="ticket"] .cp-foot .cp-tag{clip-path:none;border:0;border-bott
 body[data-pk-pied="ticket"] .cp-legal{text-align:center}
 
 /* ----- texte, tableaux et éléments du CMS ----- */
-.cp-prose{max-width:44rem;line-height:1.7}
+.cp-prose{max-width:40rem;line-height:1.7}
 .cp-prose h2{font-family:var(--kw-font-heading);font-weight:400;font-size:1.7rem;margin:2.2rem 0 .7rem}.cp-prose h3{font-family:var(--kw-font-heading);font-weight:400;font-size:1.35rem;margin:1.8rem 0 .5rem}
 .cp-prose h4{font-size:1.1rem;margin:1.4rem 0 .4rem}.cp-prose h5{font-size:1rem;margin:1.2rem 0 .3rem;text-transform:uppercase;letter-spacing:.06em}.cp-prose h6{font-size:.9rem;margin:1rem 0 .3rem;color:var(--cp-mute);text-transform:uppercase}
 .cp-prose p,.cp-prose ul,.cp-prose ol,.cp-prose blockquote,.cp-prose figure,.cp-prose pre,.cp-prose .cp-cols,.cp-prose .cp-tablewrap{margin:0 0 1.2rem}
@@ -211,9 +211,9 @@ body[data-pk-pied="ticket"] .cp-legal{text-align:center}
 .cp-cols{display:grid;grid-template-columns:1fr 1fr;gap:1rem 2rem}@media (max-width:620px){.cp-cols{grid-template-columns:1fr}}
 .cp-callout{border:2px solid var(--cp-ink);background:var(--cp-butter);color:#2b2118;padding:.9rem 1.1rem;margin:0 0 1.2rem}
 .cp-404{padding:clamp(3rem,9vw,6rem) 0}
-.lp-main input,.lp-main textarea,.lp-main select{font:inherit;font-size:16px;background:var(--cp-paper);color:var(--cp-ink);border:2px solid var(--cp-ink);border-radius:2px;padding:.7em .9em;min-height:46px;box-sizing:border-box;max-width:100%}
-.lp-main input:focus,.lp-main textarea:focus{outline:3px solid var(--cp-butter);outline-offset:1px}
-.lp-main button,.lp-main [type=submit],.lp-main .lp-btn{font-family:var(--kw-font-button);font-weight:700;font-size:.95rem;background:var(--cp-blue);color:#fff;border:2px solid var(--cp-ink);border-radius:2px;padding:.6em 1.4em;min-height:46px;cursor:pointer;box-shadow:3px 3px 0 var(--cp-butter)}
+:where(.lp-main) input,:where(.lp-main) textarea,:where(.lp-main) select{font:inherit;font-size:16px;background:var(--cp-paper);color:var(--cp-ink);border:2px solid var(--cp-ink);border-radius:2px;padding:.7em .9em;min-height:46px;box-sizing:border-box;max-width:100%}
+:where(.lp-main) input:focus,:where(.lp-main) textarea:focus{outline:3px solid var(--cp-butter);outline-offset:1px}
+:where(.lp-main) button,:where(.lp-main) [type=submit],:where(.lp-main) .lp-btn{font-family:var(--kw-font-button);font-weight:700;font-size:.95rem;background:var(--cp-blue);color:#fff;border:2px solid var(--cp-ink);border-radius:2px;padding:.6em 1.4em;min-height:46px;cursor:pointer;box-shadow:3px 3px 0 var(--cp-butter)}
 .lp-main label{font-size:.92rem;font-weight:700}
 .lp-main>.lp-block-layout:not(:has(.pk-bleed)) h2{font-family:var(--kw-font-heading);font-weight:400}
 

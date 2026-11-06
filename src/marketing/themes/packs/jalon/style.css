@@ -123,7 +123,7 @@ body[data-pk-liste="cartes"] .jl-rel-b{height:100%;box-sizing:border-box}
 .jl-crumb{font-size:.85rem;color:var(--jl-mute);margin:0 0 1.4rem}.jl-crumb a{color:inherit}
 .jl-vhead{display:flex;gap:1.4rem;align-items:flex-end;margin-bottom:.4rem}
 body[data-pk-version="note"] .jl-vhead .jl-borne{display:none}
-.jl-prose{max-width:46rem;line-height:1.7}
+.jl-prose{max-width:40rem;line-height:1.7}
 .jl-prose h2{font-family:var(--kw-font-heading);font-weight:800;font-size:1.7rem;text-transform:uppercase;margin:2.2rem 0 .7rem;line-height:1.1}
 .jl-prose h3{font-family:var(--kw-font-heading);font-weight:800;font-size:1.35rem;text-transform:uppercase;margin:1.8rem 0 .5rem}
 .jl-prose h4{font-size:1.1rem;margin:1.4rem 0 .4rem}.jl-prose h5{font-size:1rem;margin:1.2rem 0 .3rem;text-transform:uppercase;letter-spacing:.06em}.jl-prose h6{font-size:.88rem;margin:1rem 0 .3rem;color:var(--jl-mute);text-transform:uppercase;letter-spacing:.08em}
@@ -155,9 +155,9 @@ body[data-pk-pied="borne"] .jl-sign{display:none}body[data-pk-pied="borne"] .jl-
 body[data-pk-nuit="oui"] .jl-foot{background:#0b0c0e}
 
 /* ----- éléments du CMS ----- */
-.lp-main input,.lp-main textarea,.lp-main select{font:inherit;font-size:16px;background:var(--jl-paper);color:var(--jl-ink);border:2px solid var(--jl-ink);border-radius:2px;padding:.7em .9em;min-height:46px;box-sizing:border-box;max-width:100%}
-.lp-main input:focus,.lp-main textarea:focus{outline:3px solid var(--jl-redl);outline-offset:1px}
-.lp-main button,.lp-main [type=submit],.lp-main .lp-btn{font-family:var(--kw-font-button);font-weight:600;font-size:.9rem;background:var(--jl-blue);color:#fff;border:2px solid var(--jl-blue);border-radius:2px;padding:.6em 1.4em;min-height:46px;cursor:pointer}
+:where(.lp-main) input,:where(.lp-main) textarea,:where(.lp-main) select{font:inherit;font-size:16px;background:var(--jl-paper);color:var(--jl-ink);border:2px solid var(--jl-ink);border-radius:2px;padding:.7em .9em;min-height:46px;box-sizing:border-box;max-width:100%}
+:where(.lp-main) input:focus,:where(.lp-main) textarea:focus{outline:3px solid var(--jl-redl);outline-offset:1px}
+:where(.lp-main) button,:where(.lp-main) [type=submit],:where(.lp-main) .lp-btn{font-family:var(--kw-font-button);font-weight:600;font-size:.9rem;background:var(--jl-blue);color:#fff;border:2px solid var(--jl-blue);border-radius:2px;padding:.6em 1.4em;min-height:46px;cursor:pointer}
 .lp-main label{font-weight:600;font-size:.92rem}
 .lp-main>.lp-block-layout:not(:has(.pk-bleed)) h2{font-family:var(--kw-font-heading);font-weight:800;text-transform:uppercase}
 

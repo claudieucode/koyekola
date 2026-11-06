@@ -1,5 +1,5 @@
 /* Plume — carnet personnel. Papier blanc cassé, encre graphite, bleu de plume ; serif de lecture, filets d'un pixel, aucune forme décorative. */
-body{--pl-bg:#fcfbf8;--pl-paper:#ffffff;--pl-ink:#222120;--pl-mute:#5e5b57;--pl-line:#d9d5cc;--pl-acc:var(--pk-accent,#2a6f97);--pl-accl:var(--pl-acc);--pl-w:38rem;--pl-gut:clamp(18px,5vw,40px);--pk-max:44rem;--pk-gutter:var(--pl-gut);
+body{--pl-bg:#fcfbf8;--pl-paper:#ffffff;--pl-ink:#222120;--pl-mute:#5e5b57;--pl-line:#d9d5cc;--pl-acc:var(--pk-accent,#2a6f97);--pl-accl:var(--pl-acc);--pl-w:42rem;--pl-gut:clamp(18px,5vw,40px);--pk-max:44rem;--pk-gutter:var(--pl-gut);
   background:var(--pl-bg);color:var(--pl-ink);font-family:var(--kw-font-body);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased}
 body[data-pk-sombre="oui"]{--pl-bg:#16171a;--pl-paper:#1d1e22;--pl-ink:#ebe8e1;--pl-mute:#aaa69d;--pl-line:#35363c;--pl-accl:color-mix(in srgb,var(--pl-acc) 45%,#ffffff)}
 .pl-col{max-width:var(--pl-w);margin:0 auto;padding:0 var(--pl-gut);box-sizing:border-box}
@@ -23,7 +23,7 @@ a:hover{text-decoration-thickness:2px}
 .pl-nav{display:flex;flex-wrap:wrap;gap:.2rem 1.4rem;font-size:.95rem}
 .pl-nav a{color:var(--pl-ink);text-decoration:none;padding:.5rem 0;background:linear-gradient(var(--pl-accl),var(--pl-accl)) 0 100%/0 1px no-repeat;transition:background-size .35s ease}
 .pl-nav a:hover,.pl-nav a:focus-visible{background-size:100% 1px}
-.pl-prog{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--pl-accl);transition:width .1s linear}
+.pl-prog{position:fixed;left:0;top:0;height:2px;width:0;z-index:40;background:var(--pl-accl);transition:width .1s linear}
 body[data-pk-entete="centre"] .pl-bar{flex-direction:column;align-items:center;gap:.4rem;padding-top:1.8rem}
 body[data-pk-entete="centre"] .pl-logo{font-size:2rem}
 body[data-pk-entete="centre"] .pl-nav{justify-content:center;border-top:1px solid var(--pl-line);padding-top:.3rem;width:100%;max-width:34rem}
@@ -32,7 +32,7 @@ body[data-pk-entete="centre"] .pl-nav{justify-content:center;border-top:1px soli
   body[data-pk-entete="rail"] .pl-head{position:fixed;left:0;top:0;bottom:0;width:13.5rem;border-bottom:0;border-right:1px solid var(--pl-line);z-index:5}
   body[data-pk-entete="rail"] .pl-bar{flex-direction:column;align-items:flex-start;padding:2rem 1.4rem;gap:2rem}
   body[data-pk-entete="rail"] .pl-nav{flex-direction:column;gap:.1rem}
-  body[data-pk-entete="rail"] .pl-prog{left:auto;right:-1px;bottom:auto;top:0;width:2px!important}
+  body[data-pk-entete="rail"] .pl-prog{left:13.5rem;top:0;width:2px!important;height:0}
 }
 
 /* ----- hero et sections ----- */
@@ -165,10 +165,10 @@ body[data-pk-pied="sobre"] .pl-foot{padding:1.4rem 0}
 @media (max-width:560px){.pl-foot-c{grid-template-columns:1fr 1fr}}
 
 /* ----- éléments du CMS (formulaire, recherche) ----- */
-.lp-main input,.lp-main textarea,.lp-main select{font:inherit;font-size:16px;background:var(--pl-paper);color:var(--pl-ink);border:1px solid var(--pl-ink);border-radius:0;padding:.7em .9em;min-height:46px;box-sizing:border-box;max-width:100%}
-.lp-main input:focus,.lp-main textarea:focus{outline:2px solid var(--pl-accl);outline-offset:2px}
-.lp-main button,.lp-main [type=submit],.lp-main .lp-btn{font-family:var(--kw-font-button);font-size:.95rem;background:var(--pl-ink);color:var(--pl-bg);border:1px solid var(--pl-ink);border-radius:0;padding:.6em 1.4em;min-height:46px;cursor:pointer}
-.lp-main button:hover,.lp-main [type=submit]:hover{background:var(--pl-accl);border-color:var(--pl-accl);color:#fff}
+:where(.lp-main) input,:where(.lp-main) textarea,:where(.lp-main) select{font:inherit;font-size:16px;background:var(--pl-paper);color:var(--pl-ink);border:1px solid var(--pl-ink);border-radius:0;padding:.7em .9em;min-height:46px;box-sizing:border-box;max-width:100%}
+:where(.lp-main) input:focus,:where(.lp-main) textarea:focus{outline:2px solid var(--pl-accl);outline-offset:2px}
+:where(.lp-main) button,:where(.lp-main) [type=submit],:where(.lp-main) .lp-btn{font-family:var(--kw-font-button);font-size:.95rem;background:var(--pl-ink);color:var(--pl-bg);border:1px solid var(--pl-ink);border-radius:0;padding:.6em 1.4em;min-height:46px;cursor:pointer}
+:where(.lp-main) button:hover,:where(.lp-main) [type=submit]:hover{background:var(--pl-accl);border-color:var(--pl-accl);color:#fff}
 .lp-main label{font-size:.9rem}
 .lp-main>.lp-block-layout:not(:has(.pk-bleed)) h2{font-family:var(--kw-font-heading);font-weight:600}
 

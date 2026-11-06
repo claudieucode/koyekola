@@ -7,6 +7,10 @@
   var norm = function (s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); };
   b.classList.add("am-js");
 
+  // En-tête fixe : la page démarre juste dessous
+  var hd = one(".am-head"), sizeHead = function () { if (hd) b.style.setProperty("--am-hh", hd.offsetHeight + "px"); };
+  sizeHead(); window.addEventListener("resize", sizeHead);
+
   // Mèche : part de la page déjà lue
   var burn = function () {
     var h = document.documentElement, max = h.scrollHeight - window.innerHeight, p = max > 0 ? Math.min(1, Math.max(0.02, window.scrollY / max)) : 0.02;
