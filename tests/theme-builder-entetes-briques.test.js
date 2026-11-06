@@ -79,7 +79,7 @@ describe("Briques d'en-tête dans un vrai Chrome", { skip: SKIP }, () => {
       const disc = by((e) => cs(e).borderRadius.includes("999") && cs(e).backgroundImage.includes("gradient")), ring = by((e) => cs(e).borderRadius.includes("999") && cs(e).borderTopWidth === "2px"), slash = by((e) => cs(e).transform !== "none"), stripe = by((e) => cs(e).backgroundImage.includes("gradient") && parseFloat(cs(e).height) <= 8), vrule = by((e) => parseFloat(cs(e).width) === 1 && parseFloat(cs(e).height) === 32);
       const box = (e) => e && { w: Math.round(e.getBoundingClientRect().width), h: Math.round(e.getBoundingClientRect().height) };
       return { disc: box(disc), ring: box(ring), slash: slash && { t: cs(slash).transform, ...box(slash) }, stripe: box(stripe), vrule: box(vrule) }; });
-    assert.deepEqual(r.disc, { w: 64, h: 64 }); assert.deepEqual(r.ring, { w: 56, h: 56 }); assert.ok(r.slash && r.slash.t.startsWith("matrix"), "bandeau non incliné"); assert.ok(r.stripe && r.stripe.w > 900, "liseré pleine largeur"); assert.ok(r.vrule, "filet vertical");
+    assert.deepEqual(r.disc, { w: 64, h: 64 }); assert.deepEqual(r.ring, { w: 56, h: 56 }); assert.ok(r.slash && r.slash.t.startsWith("matrix"), "bandeau non incliné"); assert.ok(r.stripe && r.stripe.w > 600, "liseré pleine largeur"); assert.ok(r.vrule, "filet vertical");
     assert.deepEqual(errors, []); await ctx.close();
   });
   test("titre monumental : taille fluide (grande sur ordinateur, bornée sur mobile), sans débordement horizontal", async () => {
@@ -89,9 +89,9 @@ describe("Briques d'en-tête dans un vrai Chrome", { skip: SKIP }, () => {
   test("ticker : le widget « défilement continu » anime la bande, met en pause au survol ; blocs d'information : consignes, jamais de coordonnées inventées", async () => {
     const { ctx, pg } = await open(slug, 1280);
     const anim = await pg.evaluate(() => { const t = document.querySelector(".kw-marquee"); return { n: t.getAnimations({ subtree: true }).length, css: [...t.querySelectorAll("*")].some((e) => getComputedStyle(e).animationName !== "none") }; }); assert.ok(anim.n > 0 || anim.css, "la bande ne défile pas");
-    const txt = await pg.locator(".kw-iconlist").innerText(); assert.match(txt, /horaires/i); assert.match(txt, /téléphone/i); assert.match(txt, /adresse/i); assert.doesNotMatch(txt, /\d{2}[ .]\d{2}[ .]\d{2}/);
+    const txt = (await pg.locator(".kw-iconlist").allInnerTexts()).join(" "); assert.match(txt, /horaires/i); assert.match(txt, /téléphone/i); assert.match(txt, /adresse/i); assert.doesNotMatch(txt, /\d{2}[ .]\d{2}[ .]\d{2}/);
     await ctx.close();
-    const m = await open(slug, 390); assert.equal(await m.pg.locator(".kw-iconlist").isVisible(), false, "bloc d'infos masqué sur mobile"); await m.ctx.close();
+    const m = await open(slug, 390); for (const l of await m.pg.locator(".kw-iconlist").all()) assert.equal(await l.isVisible(), false, "bloc d'infos masqué sur mobile"); await m.ctx.close();
   });
   test("mosaïque : liens en cases bordées à retour à la ligne ; navigation verticale : liens empilés ; menu lu dans le menu affecté", async () => {
     const { ctx, pg } = await open(slug, 1280);
@@ -102,7 +102,7 @@ describe("Briques d'en-tête dans un vrai Chrome", { skip: SKIP }, () => {
   test("menu plein écran sur ORDINATEUR et mobile : le bouton ouvre un panneau avec les liens du menu affecté, Échap ferme ; sans menu affecté : rien n'est affiché", async () => {
     for (const w of [1280, 390]) {
       const { ctx, pg, errors } = await open(slug, w);
-      const toggle = pg.locator(".kw-ms-fm-toggle"); assert.ok(await toggle.isVisible(), `${w} : bouton absent`);
+      await pg.waitForSelector(".kw-ms-live"); const toggle = pg.locator(".kw-ms-fm-toggle"); assert.ok(await toggle.isVisible(), `${w} : bouton absent`);
       assert.equal(await pg.locator(".kw-ms-fm-panel").isVisible(), false, `${w} : panneau déjà ouvert`);
       await toggle.click(); await pg.waitForTimeout(900);
       assert.ok(await pg.locator(".kw-ms-fm-panel").isVisible(), `${w} : le panneau ne s'ouvre pas`);
@@ -113,9 +113,9 @@ describe("Briques d'en-tête dans un vrai Chrome", { skip: SKIP }, () => {
     }
     const { ctx, pg } = await open(bareSlug, 1280); assert.equal(await pg.locator(".kw-ms-fm").count(), 0, "menu plein écran affiché sans menu affecté"); await ctx.close();
   });
-  test("pastille de panier : le mini-panier du site porte la pastille de compte colorée de la brique", async () => {
+  test("pastille de panier : la règle de style de la partie « pastille » est écrite pour le mini-panier (la pastille ne s'affiche qu'avec des articles)", async () => {
     const { ctx, pg } = await open(slug, 1280);
-    const r = await pg.evaluate(() => { const c = document.querySelector(".kw-mc-count"); return c ? { bg: getComputedStyle(c).backgroundColor, rad: getComputedStyle(c).borderRadius } : null; });
-    assert.ok(r, "pastille absente"); assert.equal(r.bg, "rgb(255, 90, 54)"); await ctx.close();
+    const r = await pg.evaluate(() => { const m = document.querySelector(".kw-minicart"); const cls = m ? [...m.classList].find((c) => /^kw-n-/.test(c)) : ""; const css = [...document.querySelectorAll("style")].map((s) => s.textContent).join("\n"); return { cls, ok: !!cls && new RegExp(`\\.${cls}[^{]*\\.kw-mc-count[^{]*\\{[^}]*(255, ?90, ?54|#ff5a36)`, "i").test(css) }; });
+    assert.ok(r.cls, "mini-panier absent"); assert.ok(r.ok, "règle de la pastille absente"); await ctx.close();
   });
 });

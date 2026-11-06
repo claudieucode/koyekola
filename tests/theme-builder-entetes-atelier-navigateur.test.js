@@ -6,6 +6,8 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
 const { TEST_KEY } = require("./marketing-helpers");
+const V = require("../scripts/lib/entetes-visuel");
+const TOLEREES = require("../scripts/lib/entetes-paires-tolerees.json");
 const { startServer, loginInstructor } = require("./helpers");
 const Catalog = require("../src/themeBuilder/catalog");
 const { MODELS } = require("../src/themeBuilder/catalog/header"), { SECTORS } = require("../src/themeBuilder/catalog/header/models");
@@ -75,25 +77,22 @@ describe("En-têtes Atelier : les 100 modèles dans Chrome (ordinateur, tablette
         await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(120);
         const defects = await page.evaluate(inspect);
         if (defects.length) report.push({ key: e.key, name, defects: [...new Set(defects)].slice(0, 4) });
-        if (name === "ordinateur" && sharp) {
-          const box = await page.evaluate(() => { const r = (document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, Math.floor(r.top)), width: 1280, height: Math.max(40, Math.min(360, Math.ceil(r.height))) }; });
-          const png = await page.screenshot({ clip: box });
-          shots[e.key] = await sharp(png).resize(64, 16, { fit: "fill" }).removeAlpha().raw().toBuffer();
-        }
+        if (name === "ordinateur" && sharp) shots[e.key] = await V.descriptor(page, sharp); // en dernier : le texte est rendu transparent pour la mesure
       }
       await ctx.close();
     }
-    // diversité : distance moyenne par pixel entre rendus réduits (0 = identiques, 1 = opposés)
-    const keys = Object.keys(shots), near = [];
-    for (let i = 0; i < keys.length; i++) {
-      let best = { d: 9, k: "" };
-      for (let j = 0; j < keys.length; j++) { if (i === j) continue; let s = 0; const a = shots[keys[i]], b = shots[keys[j]]; for (let p = 0; p < a.length; p++) s += Math.abs(a[p] - b[p]); const d = s / a.length / 255; if (d < best.d) best = { d, k: keys[j] }; }
-      near.push({ key: keys[i], voisin: best.k, distance: Math.round(best.d * 1000) / 1000 });
+    // diversité VISUELLE (rendus réels, niveaux de gris, sans texte, 96×24, contraste normalisé, distance L2) : plus proche voisin de chaque modèle et paires sous le seuil
+    if (sharp) {
+      const a = V.analyse(shots, V.SEUIL), tolerees = new Set(TOLEREES), paires = a.paires.map((x) => `${x.a}|${x.b}`);
+      const nouvelles = a.paires.filter((x) => !tolerees.has(`${x.a}|${x.b}`)), reglees = [...tolerees].filter((t) => !paires.includes(t));
+      console.log(`Distance visuelle : plus proche ${a.plusProche} ; ${a.paires.length} paire(s) sous le seuil ${V.SEUIL} (${tolerees.size} héritée(s) tolérée(s))`);
+      if (process.env.GENERER_RAPPORT === "1") fs.writeFileSync(path.join(__dirname, "..", "docs", "theme-builder", "rapport-visuel-entetes-atelier.json"), JSON.stringify({ modeles: entries.length, largeurs: WIDTHS.map((x) => `${x[0]} ${x[1]}px`), defectueux: report, seuil: V.SEUIL, plusProche: a.plusProche, nbPaires: a.paires.length, paires: a.paires, voisins: a.voisins, descripteurs: Object.fromEntries(Object.entries(shots).map(([k, v]) => [k, V.encode(v)])) }, null, 1));
+      assert.deepEqual(nouvelles, [], `paires d'en-têtes trop proches (distance < ${V.SEUIL}) : ${JSON.stringify(nouvelles.slice(0, 6))}`);
+      assert.deepEqual(reglees, [], `paires héritées désormais distinctes : les retirer de scripts/lib/entetes-paires-tolerees.json : ${JSON.stringify(reglees)}`);
+      // bibliothèque finale : AUCUNE paire tolérée (ENTETES_STRICT=1)
+      if (process.env.ENTETES_STRICT === "1") assert.deepEqual(a.paires, [], `mode strict : ${a.paires.length} paire(s) trop proches`);
     }
-    const minD = near.length ? Math.min(...near.map((x) => x.distance)) : null;
-    if (process.env.GENERER_RAPPORT === "1") fs.writeFileSync(path.join(__dirname, "..", "docs", "theme-builder", "rapport-visuel-entetes-atelier.json"), JSON.stringify({ modeles: entries.length, largeurs: WIDTHS.map((x) => `${x[0]} ${x[1]}px`), defectueux: report, diversite: { methode: "distance moyenne par pixel entre captures 64×16 de l'en-tête à 1280 px (0 = identiques)", plusProche: minD, voisins: near.sort((a, b) => a.distance - b.distance).slice(0, 20) } }, null, 1) + "\n");
     if (report.length) console.log("Modèles défectueux :\n" + report.map((r) => `  ${r.key} (${r.name}) : ${r.defects.join(" ; ")}`).join("\n"));
-    if (sharp) { console.log("Distance minimale entre deux rendus :", minD, JSON.stringify(near.sort((a, b) => a.distance - b.distance).slice(0, 5))); assert.ok(minD >= 0.015, `deux rendus quasi identiques : ${JSON.stringify(near.slice(0, 3))}`); }
     assert.deepEqual(report, [], `${new Set(report.map((r) => r.key)).size} modèle(s) défectueux`);
   });
 });

@@ -54,7 +54,7 @@ describe("Contrat de secteur : validation", () => {
     const font = sector("luxe"); font.models[0].S = { ...font.models[0].S, head: "Arial" }; bad(font, /polices/);
     bad(sector("luxe", { mode: "flottant" }), /mode inconnu/); bad(sector("luxe", { anim: "explose" }), /anim inconnue/);
     bad(sector("luxe", { features: ["a"] }), /au moins 3/); bad(sector("luxe", { dark: undefined }), /dark/); bad(sector("luxe", { build: null }), /build/);
-    const s2 = sector("luxe"); s2.models[1].S = B.ID("autre", "x", s2.models[1].S); bad(s2, /S\.key/);
+    const s2 = sector("luxe"); s2.models[1].S = { ...s2.models[1].S, key: "autre" }; bad(s2, /S\.key/);
   });
   test("validation profonde : nœud refusé par la grammaire, animation annoncée absente", () => {
     const M = { ...model("luxe", 1), sector: "luxe" }, k = kit(M.S);

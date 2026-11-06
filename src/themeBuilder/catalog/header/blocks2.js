@@ -33,9 +33,14 @@ const ticker = (k, items, o = {}) => ({ type: "marquee", props: { items: items.m
 
 // ── Blocs d'information : consignes à remplacer (jamais de numéro, d'adresse ou d'horaire inventé) ──
 const INFO = { hours: { icon: "clock", text: "Vos horaires d'ouverture" }, phone: { icon: "smartphone", text: "Votre téléphone" }, address: { icon: "mapPin", text: "Votre adresse" }, mail: { icon: "mail", text: "Votre adresse e-mail" } };
-// kinds : ["hours","phone","address","mail"] ; o : inline (true = en ligne), color, icon, size, gap, hideOn (défaut : mobile)
-const info = (k, kinds, o = {}) => ({ type: "iconlist", props: { items: kinds.map((x) => ({ text: (INFO[x] || INFO.phone).text, icon: (INFO[x] || INFO.phone).icon })), inline: o.inline !== false, iconColor: o.icon || k.S.accent },
-  ...sty(compact({ color: o.color || k.S.fg, fontFamily: o.font || k.S.font, fontSize: o.size || "13px", gap: o.gap, ...(o.st || {}) })), hideOn: o.hideOn || ["mobile"] });
+// kinds : ["hours","phone","address","mail"] ; o : inline (true par défaut : une ligne), color, icon, size, gap, hideOn (défaut : mobile)
+// En ligne, chaque information est sa propre liste d'une entrée dans un groupe flex : une liste « en ligne » (is-inline) impose display:flex et résisterait au masquage sur mobile (hideOn) ; une liste simple se masque bien.
+const info = (k, kinds, o = {}) => {
+  const one = (items) => ({ type: "iconlist", props: { items: items.map((x) => ({ text: (INFO[x] || INFO.phone).text, icon: (INFO[x] || INFO.phone).icon })), inline: false, iconColor: o.icon || k.S.accent },
+    ...sty(compact({ color: o.color || k.S.fg, fontFamily: o.font || k.S.font, fontSize: o.size || "13px", ...(o.st || {}) })), hideOn: o.hideOn || ["mobile"] });
+  if (o.inline === false) return one(kinds);
+  return { type: "group", children: kinds.map((x) => one([x])), ...sty(compact({ display: "flex", flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: o.gap || "10px" })) };
+};
 
 // ── Navigations ──
 // Navigation en MOSAÏQUE : les liens du menu affecté forment des cases (bordure + remplissage) qui passent à la ligne dans un bloc de largeur bornée (o.w, px) ; ce n'est PAS une grille à colonnes
