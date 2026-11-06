@@ -82,7 +82,7 @@ describe("Theme Builder : vignette = aperçu = rendu publié (vrai serveur)", ()
         const th = await boss.get(`${base}/vignette`), pv = await boss.get(`${base}/apercu`);
         assert.equal(th.status, 200, `${type}/${e.key} vignette`); assert.equal(pv.status, 200, `${type}/${e.key} aperçu`);
         // Même corps de modèle (le gabarit d'aperçu n'ajoute que du remplissage hors modèle pour en-tête/pied)
-        const core = (h) => h.replace(/<p style="margin:0;padding:8px 16px;background:#fef3c7[^>]*>[^<]*<\/p>/, "").replace(/<div style="max-width:1100px[\s\S]*?Contenu de la page \(aperçu\)<\/p><\/div>/, "").replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "");
+        const core = (h) => h.replace(/<div style="max-width:1100px[\s\S]*?Contenu de la page \(aperçu\)<\/p><\/div>/, "").replace(/<p style="margin:0;padding:8px 16px;background:#fef3c7[^>]*>[^<]*<\/p>/, "").replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "");
         assert.equal(core(th.text), core(pv.text), `${type}/${e.key} : vignette et aperçu identiques`);
         seen.add(core(th.text));
       }
