@@ -743,8 +743,15 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 @media (max-width: 767px) {
   .kw-menu.is-enhanced .kw-menu-burger { display: inline-flex; }
   .kw-menu.is-enhanced:not(.is-open) > .kw-menu-list { display: none; }
-  .kw-menu.is-enhanced.is-open > .kw-menu-list { flex-direction: column; margin-top: 8px; }
+  .kw-menu.is-enhanced.is-open > .kw-menu-list { flex-direction: column; flex-wrap: nowrap; align-items: stretch; margin-top: 8px; }
+  /* Menu mobile : une pile compacte, chaque ligne est une zone tactile de 44 px, sans vide entre les liens */
+  .kw-menu.is-enhanced.is-open .kw-menu-item { width: 100%; }
+  .kw-menu.is-enhanced.is-open .kw-menu-link { display: flex; align-items: center; flex: 1 1 auto; min-height: 44px; padding-top: 6px; padding-bottom: 6px; }
+  .kw-menu.is-enhanced.is-open .kw-sub-toggle { width: 44px; height: 44px; }
+  .kw-menu.is-enhanced.is-open > .kw-menu-list { max-height: calc(100vh - 120px); overflow-y: auto; overscroll-behavior: contain; }
 }
+/* Message d'aide de l'éditeur (logo absent) : discret, jamais plus large que le logo attendu, absent du site publié (rendu seulement dans l'éditeur) */
+.kw-sitelogo .kw-empty { max-width: 18rem; margin: 4px 0 0; font-size: 12px; line-height: 1.35; }
 /* Bascule */
 .kw-toggle { border: 1px solid rgba(16, 34, 47, .15); border-radius: 10px; padding: 0 16px; }
 .kw-toggle-title { padding: 14px 0; font-weight: 700; cursor: pointer; }
