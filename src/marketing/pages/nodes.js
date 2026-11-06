@@ -333,6 +333,7 @@ function declarations(set, band = false) {
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
   for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k) && k !== "transitionEasing").concat(entries.filter(([k]) => CORNERS.has(k) || k === "transitionEasing"))) {
     const p = STYLE_PROPS[k];
+    if (k === "fontFamily" && p) { const fv = p.out ? p.out(v) : v; d.push(`font-family:${fv}`, `--kw-font-link:${fv}`, `--kw-font-button:${fv}`, `--kw-font-heading:${fv}`); continue; } // la police réglée sur un élément atteint ses liens, boutons et titres (le site leur impose la sienne par ces variables)
     if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
   if (set.columnCount !== undefined && set.columnGap === undefined) d.push("column-gap:2rem"); // écart par défaut entre les colonnes de texte

@@ -296,9 +296,9 @@
 .kw-mcar-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
 /* Logo, titre du site, copyright */
 .kw-sitelogo { display: inline-flex; flex-direction: column; align-items: flex-start; }
+:where(.kw-sitelogo) { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; } /* valeurs par défaut sur l'élément : les réglages de l'élément (et ses « parties ») les remplacent */
 .kw-sitelogo-link { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }
 .kw-sitelogo-img { display: block; height: 48px; width: auto; max-width: 100%; }
-.kw-sitelogo-text { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
 .kw-sitetitle { margin: 0; font-weight: 800; }
 .kw-sitetitle-link { color: inherit; text-decoration: none; }
 .kw-sitetitle-link:hover, .kw-sitelogo-link:hover .kw-sitelogo-text { text-decoration: underline; }
@@ -489,13 +489,15 @@
 /* Page d'un site (Site Web) : le design system du site remplace les réglages de la page (variables --kw-…, validées
    côté serveur). Mêmes structures, seules les valeurs changent. */
 .lp-site { font-family: var(--kw-font-body); font-size: var(--kw-body-size); font-weight: var(--kw-body-weight); line-height: var(--kw-body-lh); }
-.lp-site h1, .lp-site h2, .lp-site h3 { font-family: var(--kw-font-heading); }
+/* un bouton natif n'hérite pas de la typographie du navigateur : celle de l'élément l'atteint */
+:where(.lp-site) :where(button) { font-family: inherit; letter-spacing: inherit; text-transform: inherit; }
+:where(.lp-site) :where(h1, h2, h3) { font-family: var(--kw-font-heading); } /* spécificité nulle : la police réglée sur l'élément l'emporte toujours */
 .lp-site .lp-hero h1 { font-size: clamp(24px, 5.5vw, var(--kw-h1-size)); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); color: var(--kw-text, var(--kw-secondary)); }
 .lp-site .lp-block.lp-bg-primary .lp-hero h1, .lp-site .lp-block.lp-bg-dark .lp-hero h1, .lp-site .lp-block.lp-bg-accent .lp-hero h1 { color: inherit; }
 .lp-site .lp-section h2 { font-size: var(--kw-h2-size); font-weight: var(--kw-h2-weight); line-height: var(--kw-h2-lh); }
 .lp-site .lp-section { margin: var(--kw-space-lg) 0; }
-.lp-site a { font-family: var(--kw-font-link); }
-.lp-site .lp-btn, .lp-site .kw-btn { font-family: var(--kw-font-button); }
+:where(.lp-site) :where(a) { font-family: var(--kw-font-link); }
+:where(.lp-site) :where(.lp-btn, .kw-btn) { font-family: var(--kw-font-button); }
 .lp-site .lp-btn { min-height: var(--kw-button-height); border-radius: var(--kw-radius-button); box-shadow: var(--kw-shadow-button); font-size: var(--kw-button-size); font-weight: var(--kw-button-weight); }
 .lp-site .lp-course, .lp-site .lp-signup { border-radius: var(--kw-radius-card); box-shadow: var(--kw-shadow-card); }
 .lp-site .lp-figure img, .lp-site .lp-hero-img { border-radius: var(--kw-radius-lg); }
@@ -909,6 +911,7 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 @media (max-width: 560px) { .kw-posts-list .kw-post-card { flex-direction: column; } .kw-posts-list .kw-post-card img { width: 100%; } }
 /* Recherche */
 .kw-search { display: flex; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.kw-search button { font-family: inherit; font-size: inherit; letter-spacing: inherit; text-transform: inherit; line-height: inherit; } /* un bouton natif n'hérite pas de la typographie : la typographie réglée sur la recherche l'atteint */
 .kw-search input { flex: 1 1 200px; min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid rgba(16, 34, 47, .25); border-radius: 8px; font: inherit; }
 /* Compte du visiteur */
 .kw-account { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
