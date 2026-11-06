@@ -20,7 +20,7 @@ Date : 2026-11-05. Méthode : lecture du code (`src/`) ; « à vérifier » = pr
 | Flux RSS | existe | `web/rss.js`, `services/rssFeeds.js` |
 | Menus multiples, zones latérales | partiel | `cmsmenu`, `sidebar`, `navigation.js` ; nombre de menus à vérifier |
 | Fil d'Ariane | existe | bloc `breadcrumb` + JSON-LD BreadcrumbList |
-| Données structurées | **partiel** | `seo/schema.js` : WebSite+SearchAction, BreadcrumbList, ImageObject. `Article/BlogPosting`, `Person`, `Organization`, `Recipe`, `Review`, `Event`, `FAQPage`, `Course` : non trouvés |
+| Données structurées | **partiel (corrigé après relecture)** | `seo/schema.js` + `routes/blog.js:342` : WebSite+SearchAction, BreadcrumbList, ImageObject, Organization, BlogPosting/Article, Person, FAQPage, HowTo, Course existent pour les articles du blog. Absents : `Recipe`, `Event`, `Review` |
 | Open Graph / Twitter Card | à vérifier | `utils/seo.js` |
 | Multilinguisme | **absent** | aucune gestion de langues dans le contenu |
 | Contenus réservés / membres | partiel | `siteUsers.js`, cours ; contenu d'article réservé non confirmé |
@@ -32,7 +32,7 @@ Date : 2026-11-05. Méthode : lecture du code (`src/`) ; « à vérifier » = pr
 
 ## Capacités manquantes qui bloquent des thèmes
 - **Types de contenu personnalisés** (+ champs, filtres, carte) : thèmes 22, 24, 26, 27, 28, 29.
-- **Données structurées éditoriales** : thèmes de blog (BlogPosting), 4 (Recipe), 22 (Event), 23 (Course), 21/23 (FAQPage), 28 (Review).
+- **Données structurées** `Recipe` (thème 4), `Event` (22), `Review` (28) : absentes ; BlogPosting, FAQPage et Course existent.
 - **Archives par date** : thèmes 1, 11 (archives par année) ; **multilingue** : filtre « multilingue ».
 - **Bloc recette et calculateur** : thèmes 4 et 9.
 
