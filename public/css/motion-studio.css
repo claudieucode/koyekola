@@ -282,3 +282,119 @@
 .kw-ms-sw-label { font-weight: 600; overflow-wrap: anywhere; }
 .kw-ms-toast-msg { overflow-wrap: anywhere; }
 /* ms:d fin des classes complémentaires */
+
+/* ms:t begin — lot T : textes et cascade (Titre à mot souligné, Révélation de texte, Texte cinétique, Machine à écrire, Texte rotatif, Texte dégradé animé,
+   Texte masqué par image, Brouillage de texte, Compteur animé, Bande liée au défilement, Texte circulaire, Liste ou grille animée).
+   Aucune couleur en dur : tout hérite de la page ou des variables posées par le gabarit (valeurs validées). Contenu visible sans JavaScript. */
+
+/* ---- Commun lot T ---- */
+.kw-ms-tclock { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+.kw-ms-tbox { display: inline-grid; max-width: 100%; vertical-align: top; }
+.kw-ms-tbox-ghost { grid-area: 1 / 1; visibility: hidden; pointer-events: none; user-select: none; }
+.kw-ms-tbox-live { grid-area: 1 / 1; }
+/* Bouton Pause des boucles sans fin (page publiée) */
+.kw-ms-tpause { display: block; margin: .5rem 0 0; padding: .25rem .75rem; font: inherit; font-size: .8125rem; line-height: 1.4; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 999px; cursor: pointer; opacity: .75; }
+.kw-ms-tpause:hover, .kw-ms-tpause:focus-visible, .kw-ms-tpause[aria-pressed="true"] { opacity: 1; }
+/* Variantes lisibles par les lecteurs d'écran seulement (le contenu reste dans la page sans JavaScript) */
+.kw-ms-tpw-alt, .kw-ms-scr-alt, .kw-ms-rot:not(.kw-ms-rot-live) .kw-ms-rot-alt { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* ---- Machine à écrire (motion-typewriter) ---- */
+.kw-ms-tpw { position: relative; margin: 0; }
+.kw-ms-tpw-vis, .kw-ms-tpw-pre, .kw-ms-tpw-suf, .kw-ms-tpw-p { display: inline; }
+.kw-ms-tcursor { display: inline-block; margin-left: .06em; background: currentColor; animation: kw-ms-tblink 1s steps(1) infinite; }
+.kw-ms-tpw.is-cursor-bar .kw-ms-tcursor { width: .08em; min-width: 2px; height: 1em; vertical-align: text-bottom; }
+.kw-ms-tpw.is-cursor-block .kw-ms-tcursor { width: .55em; height: 1em; vertical-align: text-bottom; opacity: .7; }
+.kw-ms-tpw.is-cursor-underscore .kw-ms-tcursor { width: .6em; height: .1em; vertical-align: baseline; }
+@keyframes kw-ms-tblink { 50% { opacity: 0; } }
+
+/* ---- Texte rotatif (motion-rotating-text) ---- */
+.kw-ms-rot { position: relative; margin: 0; }
+.kw-ms-rot-slot { display: inline-block; }
+.kw-ms-rot-live .kw-ms-rot-slot { display: inline-grid; vertical-align: bottom; perspective: 600px; }
+.kw-ms-rot-live .kw-ms-rot-w { grid-area: 1 / 1; justify-self: start; opacity: 0; white-space: nowrap; will-change: transform, opacity; }
+.kw-ms-rot-live .kw-ms-rot-w:first-child { opacity: 1; }
+.kw-ms-rot-pre, .kw-ms-rot-post { display: inline; }
+
+/* ---- Compteur animé (motion-number-ticker) ---- */
+.kw-ms-tick { display: flex; flex-direction: column; gap: .25em; }
+.kw-ms-tick-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; line-height: 1.1; }
+.kw-ms-tick-vis { display: inline-block; }
+.kw-ms-tick-label { opacity: .8; }
+
+/* ---- Texte dégradé animé (motion-gradient-text) ---- */
+.kw-ms-grad { position: relative; margin: 0; }
+.kw-ms-grad-text { display: inline-block; max-width: 100%; }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .kw-ms-grad-text { background-image: var(--kw-gt-flow); background-size: 100% 100%; background-repeat: no-repeat; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .kw-ms-grad-live.is-flow .kw-ms-grad-text { background-size: 200% 100%; background-repeat: repeat-x; }
+  .kw-ms-grad-live.is-shimmer .kw-ms-grad-text { background-image: linear-gradient(100deg, transparent 35%, var(--kw-gt-hl) 50%, transparent 65%), var(--kw-gt-base); background-size: 250% 100%, 100% 100%; background-repeat: no-repeat; background-position: 150% 0, 0 0; }
+}
+
+/* ---- Texte masqué par image ou couleur (motion-text-mask) ---- */
+.kw-ms-tmask { position: relative; margin: 0; }
+.kw-ms-tmask-text { display: inline-block; max-width: 100%; }
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .kw-ms-tmask-text { background-image: var(--kw-tm-bg); background-size: var(--kw-tm-size); background-position: center, 0 0; background-repeat: no-repeat; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+}
+.kw-ms-tmask-wipe { display: inline-grid; max-width: 100%; }
+.kw-ms-tmask-wipe > * { grid-area: 1 / 1; }
+.kw-ms-tmask-out { display: inline-block; max-width: 100%; -webkit-text-stroke: 1.5px currentColor; -webkit-text-fill-color: transparent; }
+
+/* ---- Brouillage de texte (motion-text-scramble) ---- */
+.kw-ms-scr { position: relative; margin: 0; }
+.kw-ms-scr-vis { display: inline-block; max-width: 100%; }
+.kw-ms-scr-p { display: inline; }
+
+/* ---- Texte circulaire (motion-circular-text) ---- */
+.kw-ms-circ { width: min(100%, var(--kw-ct-size, 260px)); }
+.kw-ms-circ-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.kw-ms-circ-spin { transform-origin: 50% 50%; transform-box: view-box; }
+.kw-ms-circ-text, .kw-ms-circ-center { fill: currentColor; }
+
+/* ---- Titre à mot souligné (motion-animated-heading) ---- */
+.kw-ms-ahd { margin: 0; --kw-ah-w: 3px; }
+.kw-ms-ahd.is-thin { --kw-ah-w: 2px; }
+.kw-ms-ahd.is-bold { --kw-ah-w: 5px; }
+.kw-ms-ahd-before, .kw-ms-ahd-after { display: inline-block; }
+.kw-ms-ahd-word { position: relative; display: inline-block; isolation: isolate; }
+.kw-ms-ahd-text { position: relative; display: inline-block; }
+.kw-ms-ahd-deco { position: absolute; pointer-events: none; overflow: visible; left: -2%; width: 104%; bottom: -.2em; height: .36em; }
+.kw-ms-ahd-deco path { fill: none; stroke: var(--kw-ah-c, currentColor); stroke-width: var(--kw-ah-w); stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.kw-ms-ahd-word.is-circle .kw-ms-ahd-deco { left: -9%; width: 118%; top: -.22em; bottom: auto; height: calc(100% + .44em); }
+.kw-ms-ahd-word.is-strike .kw-ms-ahd-deco { left: -3%; width: 106%; top: calc(50% - .1em); bottom: auto; height: .2em; }
+.kw-ms-ahd-mark { position: absolute; z-index: -1; left: -.12em; right: -.12em; bottom: .04em; height: .55em; background: var(--kw-ah-c, currentColor); opacity: .4; border-radius: .12em; transform-origin: 0 50%; }
+
+/* ---- Texte cinétique (motion-kinetic-text) ---- */
+.kw-ms-kin { margin: 0; overflow-x: clip; }
+.kw-ms-kin-line { display: block; transform-origin: 50% 60%; }
+.kw-ms-kin-line.is-outline { -webkit-text-stroke: .03em currentColor; -webkit-text-fill-color: transparent; }
+.kw-ms-kin-line.is-accent { color: var(--kw-kn-accent, currentColor); }
+
+/* ---- Liste ou grille animée (motion-cascade) ---- */
+.kw-ms-casc { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; perspective: 900px; }
+.kw-ms-casc.is-list { grid-template-columns: minmax(0, 1fr); }
+.kw-ms-casc.is-grid.is-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kw-ms-casc.is-grid.is-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kw-ms-casc.is-grid.is-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1023px) { .kw-ms-casc.is-grid.is-cols-3, .kw-ms-casc.is-grid.is-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 767px) { .kw-ms-casc.is-grid { grid-template-columns: minmax(0, 1fr); } }
+.kw-ms-casc-item { min-width: 0; padding: 1.25rem; will-change: transform, opacity; }
+.kw-ms-casc.is-look-card .kw-ms-casc-item { border: 1px solid color-mix(in srgb, currentColor 18%, transparent); border-radius: .75rem; background: color-mix(in srgb, currentColor 4%, transparent); }
+.kw-ms-casc.is-look-line .kw-ms-casc-item { padding-inline: 0; border-top: 2px solid color-mix(in srgb, currentColor 35%, transparent); }
+.kw-ms-casc.is-look-plain .kw-ms-casc-item { padding: .25rem 0; }
+.kw-ms-casc-img { display: block; width: 100%; height: auto; margin-bottom: .75rem; border-radius: .5rem; }
+.kw-ms-casc-title { margin: 0 0 .35rem; font-size: 1.15em; font-weight: 700; line-height: 1.25; }
+.kw-ms-casc-link { color: inherit; }
+.kw-ms-casc-text { margin: 0; opacity: .85; }
+
+/* ---- Bande liée au défilement (motion-marquee-velocity) ---- */
+.kw-ms-mvel { position: relative; }
+.kw-ms-mvel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .25em 0; }
+.kw-ms-mvel-item { display: inline-flex; align-items: center; gap: 1.25em; padding-right: 1.25em; }
+.kw-ms-mvel-sep { opacity: .5; }
+.kw-ms-mvel-live, .kw-ms-mvel-view { overflow: hidden; }
+.kw-ms-mvel-track { display: flex; width: max-content; will-change: transform; }
+.kw-ms-mvel-group { flex: none; }
+.kw-ms-mvel-live .kw-ms-mvel-list { flex-wrap: nowrap; }
+.kw-ms-mvel-live .kw-ms-mvel-item { white-space: nowrap; }
+/* ms:t end */
