@@ -53,6 +53,9 @@
     return clamp((raw - s) / (e - s), 0, 1);
   }
 
+  // Seuil de visibilité du déclencheur « viewport » : 20 %, abaissé pour un élément très haut (il ne serait jamais visible à 20 % : il ne se déclencherait pas)
+  function viewportThreshold(el, win) { var h = el.getBoundingClientRect().height, vh = win.innerHeight || 1; return h > 0 ? clamp(0.9 * vh / h, 0.01, 0.2) : 0.2; }
+
   var registry = {}; // nom → init (commun à tous les runtimes de la fenêtre)
   function register(name, init) { if (typeof init === "function") registry[name] = init; }
 
@@ -188,7 +191,7 @@
           if (e.isIntersecting) { run(rec); if (!cfg.repeat) io.disconnect(); }
           else if (cfg.repeat && rec.played) { hold(rec); }
         });
-      }, { threshold: 0.2 });
+      }, { threshold: viewportThreshold(el, win) });
       io.observe(el); rec.cleanups.push(function () { io.disconnect(); });
     }
 
@@ -217,7 +220,121 @@
       var list = r.querySelectorAll ? r.querySelectorAll("[data-kw-ms-module]") : [];
       Array.prototype.forEach.call(list, init);
     }
-    function reactivateAll() { recs.forEach(function (rec) { if (rec.factory) { var p = rec.played; teardown(rec); rec.played = p; activate(rec, rec.factory); } }); }
+    function reactivateAll() { recs.forEach(function (rec) { if (rec.factory) { var p = rec.played; teardown(rec); rec.played = p; activate(rec, rec.factory); } }); startPage(); }
+
+    // ---------- Lot 3 : scènes de la page (timeline multi-éléments), transitions de sections, défilement fluide ----------
+    // Données écrites par le serveur (<script id="kw-ms-scenes">) ; le cœur (scenes-core) et le défilement fluide sont des modules chargés à la demande.
+    // Éditeur : aucun déclencheur ; le panneau « Scènes » pilote l'API `scenes` (set / play / pause / resume / seek / stop) avec le contenu en cours d'édition.
+    var core = null, coreP = null, pageGen = 0, pageRecs = [], smooth = null, edit = {}, sceneData = null;
+    try { var sd = doc.getElementById("kw-ms-scenes"); sceneData = sd ? JSON.parse(sd.textContent || "null") : null; } catch (e) { sceneData = null; }
+    var NODE = /^[a-z0-9]{6,20}$/;
+    var findNode = function (id) { return NODE.test(String(id)) ? doc.querySelector('[data-node-id="' + id + '"]') || doc.querySelector(".kw-n-" + id) : null; };
+    function ensureCore() {
+      if (core) return Promise.resolve(core);
+      if (!coreP) { coreP = load("scenes-core").then(function (f) { core = f(); return core; }); coreP.catch(function () { coreP = null; }); }
+      return coreP;
+    }
+    function stopPage() {
+      pageGen++;
+      pageRecs.forEach(function (r) { r.cleanups.splice(0).forEach(function (fn) { try { fn(); } catch (e) { /* nettoyage au mieux */ } }); if (r.player) r.player.destroy(); });
+      pageRecs = [];
+      if (smooth) { smooth.destroy(); smooth = null; }
+    }
+    // Surveille l'arrivée d'un élément à l'écran par mesure (défilement, redimensionnement, mise en page) plutôt que par IntersectionObserver : celui-ci ne voit
+    // pas un élément dont l'état de départ est lui-même rogné (clip-path), donc une révélation « en volet » ne se déclencherait jamais.
+    function watchView(el, rec, threshold, onEnter, onLeave) {
+      var raf = 0, inside = false, ro = null;
+      var chk = function () {
+        raf = 0;
+        var r = el.getBoundingClientRect(), vh = win.innerHeight || 1, vis = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        var now = r.height > 0 && vis > 0 && (vis / r.height >= threshold || vis / vh >= threshold);
+        if (now && !inside) { inside = true; onEnter(); } else if (!now && inside) { inside = false; if (onLeave) onLeave(); }
+      };
+      var q = function () { if (!raf) raf = win.requestAnimationFrame(chk); };
+      win.addEventListener("scroll", q, { passive: true }); win.addEventListener("resize", q); win.addEventListener("load", q);
+      if (win.ResizeObserver) { ro = new win.ResizeObserver(q); ro.observe(doc.documentElement); }
+      rec.cleanups.push(function () { win.removeEventListener("scroll", q); win.removeEventListener("resize", q); win.removeEventListener("load", q); if (ro) ro.disconnect(); if (raf) win.cancelAnimationFrame(raf); });
+      q();
+    }
+    function bindScene(c, sc, reduced, bp) {
+      if ((sc.off || []).indexOf(bp) >= 0 || !(sc.steps && sc.steps.length)) return;
+      var trig = sc.trigger || "viewport", anchor = findNode(c.anchorOf(sc));
+      if (!anchor) return; // élément absent de cette page (masqué pour ce visiteur…) : la scène ne fait rien, le contenu reste affiché
+      var rec = { cleanups: [], player: c.createPlayer(sc, { find: findNode, cleanOnFinish: trig !== "scroll", reduced: reduced }) }, player = rec.player;
+      pageRecs.push(rec);
+      if (!player.count) return;
+      if (trig === "click") player.rest(); // les animations naissent en pause à l'état de départ : le clic laisse le contenu tel quel jusqu'au déclencheur (mouvement réduit : aucune animation créée)
+      var on = function (t, type, fn, opt) { t.addEventListener(type, fn, opt); rec.cleanups.push(function () { t.removeEventListener(type, fn, opt); }); };
+      var go = function () { if (reduced) player.finish(); else player.play(); }; // mouvement réduit : états finaux, sans animation
+      if (trig === "click") { on(anchor, "click", go); return; }
+      if (reduced && trig === "scroll") trig = "viewport";
+      if (!reduced) player.hold();
+      if (trig === "load") {
+        if (doc.readyState === "complete") { var id = win.requestAnimationFrame(go); rec.cleanups.push(function () { win.cancelAnimationFrame(id); }); } else on(win, "load", go);
+        return;
+      }
+      if (trig === "scroll") {
+        var raf = 0, rg = sc.scrub || {}, total = player.total || 1;
+        var upd = function () { raf = 0; player.seek(scrollProgress(anchor.getBoundingClientRect(), win.innerHeight || 1, rg.start, rg.end) * total); };
+        var q = function () { if (!raf) raf = win.requestAnimationFrame(upd); };
+        on(win, "scroll", q, { passive: true }); on(win, "resize", q); rec.cleanups.push(function () { if (raf) win.cancelAnimationFrame(raf); });
+        upd(); return;
+      }
+      var done = false;
+      watchView(anchor, rec, 0.2, function () { if (done) return; go(); if (!sc.repeat) done = true; }, function () { if (sc.repeat && player.played() && !reduced) player.hold(); });
+    }
+    // Transition des sections : chaque section sous la ligne de flottaison apparaît quand elle arrive à l'écran ; celles déjà visibles à l'ouverture ne sont jamais masquées
+    function bindSections(c, reduced) {
+      var st = sceneData && sceneData.sectionTransition;
+      if (!st || reduced) return;
+      var vh = win.innerHeight || 0;
+      Array.prototype.forEach.call(doc.querySelectorAll(".lp-main > *"), function (el) {
+        if (el.classList.contains("lp-site-part") || el.getBoundingClientRect().top < vh) return;
+        var anims = c.animateStep(el, st.type, { delay: 0, duration: st.duration || 700, easing: "smooth" }), rec = { cleanups: [], player: { destroy: function () { anims.forEach(function (a) { try { a.cancel(); } catch (e) { /* retirée */ } }); } } };
+        anims.forEach(function (a) { a.onfinish = function () { try { a.cancel(); } catch (e) { /* retirée */ } }; });
+        pageRecs.push(rec);
+        var shown = false;
+        watchView(el, rec, 0.1, function () { if (shown) return; shown = true; anims.forEach(function (a) { a.currentTime = 0; a.play(); }); });
+      });
+    }
+    function startPage() {
+      stopPage();
+      if (editor || destroyed || !sceneData) return;
+      var gen = pageGen, reduced = Boolean(reduceQ.matches), bp = breakpointOf(win.innerWidth);
+      if ((sceneData.scenes && sceneData.scenes.length) || sceneData.sectionTransition) {
+        ensureCore().then(function (c) {
+          if (gen !== pageGen || destroyed) return;
+          (sceneData.scenes || []).forEach(function (sc) { try { bindScene(c, sc, reduced, bp); } catch (e) { /* une scène défaillante n'arrête pas les autres */ } });
+          try { bindSections(c, reduced); } catch (e) { /* contenu déjà visible */ }
+        }, function () { /* module introuvable : le contenu reste affiché tel quel */ });
+      }
+      // Défilement fluide : jamais en mouvement réduit, jamais avec le magnétisme de défilement (scroll-snap) de la page
+      var snap = ""; try { snap = win.getComputedStyle(doc.documentElement).scrollSnapType || ""; } catch (e) { snap = ""; }
+      if (sceneData.smoothScroll && !reduced && (snap === "" || snap === "none")) {
+        load("smooth-scroll").then(function (f) { if (gen === pageGen && !destroyed && !smooth) smooth = f().create(win, sceneData.smoothScroll); }, function () { /* défilement natif */ });
+      }
+    }
+    // API des scènes (éditeur) : lit un plan { scenes: [...] } fourni par le panneau, joue la scène sur le canevas. Chaque appel renvoie une promesse (chargement du cœur).
+    var scenesApi = {
+      set: function (data) { Object.keys(edit).forEach(function (k) { edit[k].destroy(); }); edit = {}; sceneData = data && typeof data === "object" ? data : null; return true; },
+      data: function () { return sceneData; },
+      build: function (id) {
+        return ensureCore().then(function (c) {
+          var sc = ((sceneData && sceneData.scenes) || []).filter(function (x) { return x.id === id; })[0];
+          if (!sc) return null;
+          if (edit[id]) edit[id].destroy();
+          return (edit[id] = c.createPlayer(sc, { find: findNode }));
+        });
+      },
+      play: function (id) { return scenesApi.build(id).then(function (p) { if (!p) return false; p.play(); return true; }); },
+      pause: function (id) { if (!edit[id]) return false; edit[id].pause(); return true; },
+      resume: function (id) { if (!edit[id]) return false; edit[id].resume(); return true; },
+      stop: function (id) { if (!edit[id]) return false; edit[id].destroy(); delete edit[id]; return true; },
+      seek: function (id, ms) { var go = function (p) { if (!p) return false; p.seek(ms); return true; }; return edit[id] ? Promise.resolve(go(edit[id])) : scenesApi.build(id).then(go); },
+      time: function (id) { return edit[id] ? edit[id].time() : 0; },
+      duration: function (id) { return edit[id] ? edit[id].total : 0; },
+      state: function (id) { return edit[id] ? edit[id].state() : "idle"; },
+    };
 
     // Points de rupture et préférence de mouvement : réévaluation de tous les éléments
     var lastBp = breakpointOf(win.innerWidth);
@@ -235,21 +352,24 @@
       mo.observe(doc.body, { childList: true, subtree: true });
     }
 
+    startPage();
+
     var target = function (t) { return typeof t === "string" ? doc.querySelector('[data-node-id="' + t + '"]') || doc.getElementById(t) : t; };
     var recOf = function (t) { var el = target(t); return el ? recs.get(el) : null; };
     return {
-      scan: scan, mode: editor ? "editor" : "public",
+      scan: scan, mode: editor ? "editor" : "public", scenes: scenesApi,
       // API de l'éditeur (identifiant d'élément ou élément) — sans effet en dehors d'un élément initialisé
       play: function (t) { var r = recOf(t); if (!r || !r.inst) return false; each(r, function (a) { a.cancel(); }); if (r.inst.play) r.inst.play(); else each(r, function (a) { a.currentTime = 0; a.play(); }); return true; },
       pause: function (t) { var r = recOf(t); if (!r || !r.inst) return false; if (r.inst.pause) r.inst.pause(); else each(r, function (a) { a.pause(); }); return true; },
       resume: function (t) { var r = recOf(t); if (!r || !r.inst) return false; each(r, function (a) { a.play(); }); return true; },
       seek: function (t, ms) { var r = recOf(t); if (!r || !r.inst) return false; if (r.inst.seek) r.inst.seek(ms); else each(r, function (a) { a.pause(); a.currentTime = ms; }); return true; },
-      stop: function (t) { var r = recOf(t); if (!r) return false; rest(r); return true; },
+      stop: function (t) { var r = recOf(t); if (!r) return false; rest(r); if (r.inst && r.inst.stop) { try { r.inst.stop(); } catch (e) { /* module défaillant */ } } /* ms:t */ return true; },
       duration: function (t) { var r = recOf(t); return r && r.inst ? totalOf(r) : 0; },
       state: function (t) { var el = target(t); return el ? el.getAttribute("data-kw-ms-state") : null; },
       count: function () { return recs.size; },
       destroy: function () {
         if (destroyed) return; destroyed = true;
+        stopPage(); Object.keys(edit).forEach(function (k) { edit[k].destroy(); }); edit = {};
         if (mo) mo.disconnect();
         mq.forEach(function (p) { p[0].removeEventListener("change", p[1]); });
         recs.forEach(function (rec) { teardown(rec); });
@@ -262,7 +382,7 @@
     var start = function () {
       var d = win.document;
       var editor = Boolean(d.body && d.body.hasAttribute("data-kw-builder"));
-      if (!editor && !d.querySelector("[data-kw-ms-module]")) return;
+      if (!editor && !d.querySelector("[data-kw-ms-module]") && !d.getElementById("kw-ms-scenes")) return;
       var inst = create(win, { mode: editor ? "editor" : "public" });
       win.kwMotionStudio = inst; inst.scan();
       win.addEventListener("pagehide", function () { inst.destroy(); });
@@ -270,5 +390,5 @@
     if (win.document.readyState === "loading") win.document.addEventListener("DOMContentLoaded", start); else start();
   }
 
-  return { VERSION: 1, DEFAULTS: DEFAULTS, EASINGS: EASINGS, TRIGGERS: TRIGGERS, BP: BP, register: register, registered: function () { return Object.keys(registry); }, parseConfig: parseConfig, staggerDelay: staggerDelay, scrollProgress: scrollProgress, breakpointOf: breakpointOf, easingCss: easingCss, create: create, autostart: autostart };
+  return { VERSION: 1, DEFAULTS: DEFAULTS, EASINGS: EASINGS, TRIGGERS: TRIGGERS, BP: BP, register: register, registered: function () { return Object.keys(registry); }, parseConfig: parseConfig, staggerDelay: staggerDelay, viewportThreshold: viewportThreshold, scrollProgress: scrollProgress, breakpointOf: breakpointOf, easingCss: easingCss, create: create, autostart: autostart };
 });

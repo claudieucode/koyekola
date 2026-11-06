@@ -8712,6 +8712,11 @@ function selectField(label, value, options, onChange, opts) {
     h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, accGroup: accGroup, numField: numField, selectField: selectField, checkField: checkField,
     schemaFields: schemaFields, frame: function () { return frame; }, setTab: function (t) { inspTab = t; store.set("insp-tab", t); renderInspector(); },
   });
+  // Timeline visuelle du Motion Studio (scènes multi-éléments, transitions de page, défilement fluide) : lit et écrit theme.motionScenes par change()
+  if (window.pbMotionTimeline) window.pbMotionTimeline.attach({
+    h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, change: change, accGroup: accGroup, selectField: selectField, checkField: checkField,
+    frame: function () { return frame; }, content: function () { return content; }, selection: function () { return selection.slice(); }, canWrite: function () { return canWrite; },
+  });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
     accGroup: accGroup, ownValue: ownValue, inheritedValue: inheritedValue, canvasEl: canvasEl, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
