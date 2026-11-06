@@ -52,10 +52,6 @@
    "siteId": true,
    "classe": "isolee"
   },
-  "cms_customizer_shares": {
-   "siteId": true,
-   "classe": "isolee"
-  },
   "cms_customizer_versions": {
    "siteId": true,
    "classe": "isolee"
@@ -93,10 +89,6 @@
    "classe": "plateforme"
   },
   "cms_theme_revisions": {
-   "siteId": true,
-   "classe": "isolee"
-  },
-  "cms_theme_settings": {
    "siteId": true,
    "classe": "isolee"
   },

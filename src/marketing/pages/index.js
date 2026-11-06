@@ -972,12 +972,6 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
       else missingPart(which, tb[which]); // le repli sur l'ancienne partie n'est jamais silencieux
     }
   }
-  // Aperçu du personnalisateur : en-tête / pied choisis dans le travail en cours de la personne (cette requête seulement)
-  const over = page && page.site_id ? require("../../services/previewParts").of(page.site_id) : null;
-  if (over) {
-    if (Object.hasOwn(over, "header")) p.header = partOf(ctx, over.header, "header");
-    if (Object.hasOwn(over, "footer")) p.footer = partOf(ctx, over.footer, "footer");
-  }
   // Aperçu d'un modèle précis (composant d'en-tête / de pied de page) : EXACTEMENT ce composant, sa copie de travail, à la place de la partie résolue
   const forced = force && page && page.site_id ? force : null;
   if (forced) for (const which of ["header", "footer"]) if (forced[which]) p[which] = partOf(ctx, forced[which], which, forced[which]);

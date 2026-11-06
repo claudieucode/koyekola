@@ -1,5 +1,5 @@
 // Intelligent Regeneration & History (programme 21.9) — stockage. Tables créées à la demande (comme 21.4, 21.5, 21.7, 21.8 : les migrations se télescopent entre paliers parallèles).
-// Rien n'est dupliqué : les pages restent dans mk_landing_pages (historique natif services/revisions.js inchangé), le design dans le personnalisateur, les médias dans la médiathèque (références seulement).
+// Rien n'est dupliqué : les pages restent dans mk_landing_pages (historique natif services/revisions.js inchangé), le design dans le moteur de styles, les médias dans la médiathèque (références seulement).
 //   mk_regen_ops        : journal central des opérations (humaines ou IA) : demande, périmètre, changements, statut, parent (restauration/annulation), consommation IA.
 //   mk_regen_op_snaps   : lien opération ↔ snapshots (avant / après).
 //   mk_regen_snapshots  : états cohérents (widget, section, page, design, site), compressés, dédupliqués par empreinte.

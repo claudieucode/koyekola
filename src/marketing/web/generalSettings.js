@@ -63,7 +63,7 @@ function build(req, t) {
     header: t.siteId ? `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme?type=header` : "/marketing/site-web/principal/constructeur-de-theme?type=header",
     footer: t.siteId ? `/marketing/site-web/sites/${t.siteId}/constructeur-de-theme?type=footer` : "/marketing/site-web/principal/constructeur-de-theme?type=footer",
     styles: `/marketing/site-web/styles${q}`, designSystem: t.siteId ? `/marketing/site-web/sites/${t.siteId}/reglages/design-system` : null,
-    customizer: `/marketing/site-web/personnaliser${q}`, media: t.siteId ? `/marketing/site-web/sites/${t.siteId}/medias` : "/marketing/site-web/mediatheque",
+    media: t.siteId ? `/marketing/site-web/sites/${t.siteId}/medias` : "/marketing/site-web/mediatheque",
   };
   return {
     scope, fields, choices, info, links, sections: SECTIONS, readOnly: t.readOnly,

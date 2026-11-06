@@ -1,5 +1,5 @@
 // KOLAKISA CMS — Apparence → Styles : gestionnaire de styles globaux PAR SITE, sur les vraies routes, la vraie base, de vrais comptes.
-// Écran (réglages de design uniquement), palettes lisibles (AA), brouillon PARTAGÉ avec Personnaliser (une seule valeur par réglage), publication réellement appliquée
+// Écran (réglages de design uniquement), palettes lisibles (AA), brouillon unique par réglage, publication réellement appliquée
 // au moteur du site et au rendu, validation, conflits, permissions côté serveur, isolation A / B / principal.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -12,7 +12,7 @@ describe("styles : écran, palettes, brouillon partagé, publication, permission
   let srv, boss, db, orgId, A, B, adminA, editorA, viewerA, pageA;
   const one = (sql, ...a) => db.prepare(sql).get(...a);
   const idOf = (c) => one("SELECT id FROM users WHERE email = ?", c.email).id;
-  const ST = "/marketing/site-web/styles", PZ = "/marketing/site-web/personnaliser";
+  const ST = "/marketing/site-web/styles", PZ = ST;
   const person = async (siteId, role) => { const c = await newStudent(srv); db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, ?)").run(siteId, idOf(c), role); return c; };
   const q = (site) => (site ? `?site=${site}` : "");
   const bootOf = (html) => JSON.parse(/<script type="application\/json" id="st-data">([\s\S]*?)<\/script>/.exec(html)[1].replace(/\\u003c/g, "<"));
@@ -34,7 +34,7 @@ describe("styles : écran, palettes, brouillon partagé, publication, permission
   after(() => { db.close(); return srv.stop(); });
 
   describe("écran", () => {
-    test("site A : seulement les réglages de DESIGN (palette, typographie, formes, boutons) ; l'identité, l'en-tête et le CSS restent dans Personnaliser", async () => {
+    test("site A : seulement les réglages de DESIGN (palette, typographie, formes, boutons) ; l'identité, l'en-tête et le CSS ne sont pas des réglages de Styles", async () => {
       const r = await boss.get(`${ST}?site=${A}`);
       assert.equal(r.status, 200);
       for (const f of ["data-st-root", "data-st-save", "data-st-publish", "data-st-discard", "data-st-undo", "Guide de style", "Page du site", 'id="st-data"']) assert.ok(r.text.includes(f), f);
@@ -44,7 +44,7 @@ describe("styles : écran, palettes, brouillon partagé, publication, permission
       for (const id of ["tokens.colors.primary", "tokens.colors.accent", "tokens.fonts.heading", "tokens.type.h1.size", "tokens.radius.md", "tokens.space.md", "tokens.buttons.hover.bg", "tokens.link.color", "settings.layout.containerWidth"]) assert.ok(ids.includes(id), id);
       for (const id of ["name", "settings.identity.logoUrl", "settings.customCss", "header.logo.text", "footer.tagline"]) assert.ok(!ids.includes(id), `${id} n'est pas un réglage de Styles`);
       assert.equal(b.siteId, A); assert.equal(b.principal, false); assert.equal(b.can.edit, true); assert.equal(b.can.publish, true);
-      assert.equal(b.base, "/marketing/site-web/personnaliser"); assert.equal(b.siteQuery, `?site=${A}`);
+      assert.equal(b.base, "/marketing/site-web/styles"); assert.equal(b.siteQuery, `?site=${A}`);
       assert.ok(Object.keys(b.fontStacks).length >= 5, "piles de polices pour le guide de style");
       assert.ok(Object.hasOwn(b.defaults, "tokens.colors.primary"), "valeurs d'origine de Kolakisa proposées");
       assert.match(r.text, /cms-styles\.js/);
@@ -91,20 +91,18 @@ describe("styles : écran, palettes, brouillon partagé, publication, permission
     });
   });
 
-  describe("brouillon partagé avec Personnaliser et publication", () => {
-    test("une palette enregistrée par Styles apparaît dans Personnaliser (même brouillon, une seule valeur) et inversement", async () => {
+  describe("brouillon et publication", () => {
+    test("une palette enregistrée par Styles est relue au rechargement ; un réglage hors Styles du brouillon est conservé tel quel", async () => {
       const ch = palettes.changesFor("bordeaux", A);
       const saved = json(await post(adminA, "/brouillon", A, { changes: ch }));
       assert.equal(saved.ok, true); assert.ok(draftOf(A));
       const stBoot = bootOf((await adminA.get(`${ST}?site=${A}`)).text);
       assert.equal(stBoot.changes["tokens.colors.primary"], "#8a1c3a");
-      const pzBoot = JSON.parse(/<script type="application\/json" id="kwc-boot">([\s\S]*?)<\/script>/.exec((await adminA.get(`${PZ}?site=${A}`)).text)[1].replace(/\\u003c/g, "<"));
-      assert.equal(pzBoot.changes["tokens.colors.primary"], "#8a1c3a", "Personnaliser voit le même brouillon");
-      // un changement fait côté Personnaliser (identité) est conservé tel quel par Styles
-      const both = { ...ch, "settings.identity.description": "Slogan du brouillon" };
+      // un réglage du moteur hors des panneaux de Styles (arrière-plan) est conservé tel quel par Styles
+      const both = { ...ch, "settings.background.color": "#fafafa" };
       assert.equal(json(await post(adminA, "/brouillon", A, { changes: both, rev: saved.draft.rev })).ok, true);
       const b2 = bootOf((await adminA.get(`${ST}?site=${A}`)).text);
-      assert.deepEqual(b2.outside, { "settings.identity.description": "Slogan du brouillon" }, "réglages hors Styles transmis pour être conservés");
+      assert.deepEqual(b2.outside, { "settings.background.color": "#fafafa" }, "réglages hors Styles transmis pour être conservés");
       assert.equal(b2.outsideChanges, 1);
     });
     test("publier : le moteur du site ET le rendu utilisent les nouvelles couleurs ; l'autre site et le principal ne changent pas", async () => {

@@ -290,17 +290,7 @@ function singlePostFor(req) {
     if (site) { stored = (site.settings || {}).singlePost || null; themeDefaults = ((site.tokens || {}).pack || {}).singlePost || null; }
     else stored = require("../services/appearance").state(null).published.singlePost || null;
   } catch { stored = null; }
-  let cfg = spLib.resolve(stored, themeDefaults);
-  const work = req.kwCzWork && req.kwCzWork[site ? String(site.id) : "p"];
-  if (work && typeof work === "object" && req.kwCzCan && req.kwCzCan("appearance.read", site ? site.id : null)) {
-    try {
-      const prefix = site ? "settings.singlePost." : "singlePost.";
-      const next = JSON.parse(JSON.stringify(cfg));
-      for (const [id, v] of Object.entries(require("../services/customizer").cleanChanges(work, site ? site.id : null))) if (id.startsWith(prefix)) spLib.set(next, id.slice(prefix.length), v);
-      cfg = spLib.normalize(next);
-    } catch { /* un brouillon invalide ne casse jamais l'aperçu */ }
-  }
-  return cfg;
+  return spLib.resolve(stored, themeDefaults);
 }
 function renderPostPage(req, res, post, { preview = false } = {}) {
   const commentCfgNow = commentsEngine.settingsOf("post", post.id); // réglages du site de CET article

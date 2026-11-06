@@ -1,23 +1,28 @@
-// Publication unique sur un VRAI serveur : réglage dans le personnalisateur → brouillon → aperçu → publication → page publique réelle ; isolation entre sites.
+// Publication unique sur un VRAI serveur : réglages publiés (enregistrés directement en base : l'écran d'édition n'existe plus) → page publique réelle ; isolation entre sites.
 const { describe, test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, Client, loginInstructor } = require("./helpers");
 
-describe("Publication unique : du personnalisateur à la page publique", () => {
+describe("Publication unique : des réglages publiés à la page publique", () => {
   let srv, boss, db, A, B, orgId;
-  const PZ = "/marketing/site-web/personnaliser";
+  const spLib = require("../src/services/singlePost");
   const one = (sql, ...a) => db.prepare(sql).get(...a);
-  const json = (r) => { try { return JSON.parse(r.text); } catch { return null; } };
-  const q = (site) => (site ? `?site=${site}` : "");
-  const post = (c, path, site, body) => c.postJson(`${PZ}${path}${q(site)}`, { ...(site ? { site: String(site) } : {}), ...body });
   const page = async (slug, path = "") => (await new Client(srv.base).get(`/blog/${slug}${path}`)).text;
   const idx = (html, s) => html.indexOf(s);
+  // Enregistre directement des réglages « publiés » (clés pointées « singlePost.… » ou « settings.singlePost.… ») : principal → appearance_configs, site → mk_sites.settings
   const publish = async (site, changes) => {
-    const d = json(await post(boss, "/brouillon", site, { changes }));
-    assert.equal(d && d.ok, true, JSON.stringify(d));
-    const p = json(await post(boss, "/publier", site, { rev: d.draft.rev }));
-    assert.equal(p && p.ok, true, JSON.stringify(p));
+    const cur = site ? ((JSON.parse(one("SELECT settings FROM mk_sites WHERE id = ?", site).settings || "{}").singlePost) || null) : (one("SELECT published FROM appearance_configs WHERE site_id IS NULL") ? JSON.parse(one("SELECT published FROM appearance_configs WHERE site_id IS NULL").published).singlePost : null);
+    const obj = spLib.normalize(cur, { strict: false });
+    for (const [k, v] of Object.entries(changes)) spLib.set(obj, k.replace(/^(settings\.)?singlePost\./, ""), v);
+    const stored = spLib.compact(obj, { strict: true });
+    if (site) {
+      const st = JSON.parse(one("SELECT settings FROM mk_sites WHERE id = ?", site).settings || "{}"); st.singlePost = stored;
+      db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify(st), site);
+    } else {
+      const row = one("SELECT published FROM appearance_configs WHERE site_id IS NULL"); const pub = row && row.published ? JSON.parse(row.published) : {}; pub.singlePost = stored;
+      db.prepare("INSERT INTO appearance_configs (site_id, published) VALUES (NULL, ?) ON CONFLICT (COALESCE(site_id, 0)) DO UPDATE SET published = excluded.published").run(JSON.stringify(pub));
+    }
   };
   const PRE = "singlePost.";
 
@@ -50,30 +55,11 @@ describe("Publication unique : du personnalisateur à la page publique", () => {
     assert.ok(!/data-sp-autoload="1"/.test(html));
   });
 
-  test("brouillon refusé si une valeur est invalide (message clair), rien d'enregistré", async () => {
-    const r = await post(boss, "/brouillon", null, { changes: { [`${PRE}sidebar.layout`]: "diagonale" } });
-    assert.ok(r.status >= 400 && r.status < 500, String(r.status));
-    assert.match(r.text, /choix inconnu/);
-    const r2 = await post(boss, "/brouillon", null, { changes: { [`${PRE}content.widthPx`]: 99999 } });
-    assert.ok(r2.status >= 400 && r2.status < 500);
-    const r3 = await post(boss, "/brouillon", null, { changes: { "singlePost.inconnu.reglage": 1 } });
-    assert.ok(r3.status >= 400 && r3.status < 500);
-  });
-
-  test("aperçu : le brouillon n'est visible que dans l'aperçu de la personne, le public ne change pas avant « Publier »", async () => {
-    const changes = { [`${PRE}sidebar.layout`]: "none", [`${PRE}container.layout`]: "narrow", [`${PRE}comments.enabled`]: false };
-    const r = json(await post(boss, "/rendu", null, { changes }));
-    assert.equal(r && r.ok, true, JSON.stringify(r));
-    assert.equal(r.structural, true);
-    const prev = (await boss.get("/blog/central?kwcustom=1")).text;
-    assert.match(prev, /data-sp-sidebar="none"/);
-    assert.match(prev, /data-sp-container="narrow"/);
-    assert.doesNotMatch(prev, /id="commentaires"/);
-    assert.doesNotMatch(prev, /class="article-right sp-sidebar"/);
-    const pub = await page("central");
-    assert.match(pub, /data-sp-sidebar="default"/);
-    assert.match(pub, /id="commentaires"/);
-    json(await post(boss, "/annuler", null, {}));
+  test("une valeur invalide est refusée par le moteur de réglages (message clair), rien n'est enregistré", () => {
+    const bad = (path, v) => { const o = spLib.normalize(null, { strict: false }); spLib.set(o, path, v); return () => spLib.compact(o, { strict: true }); };
+    assert.throws(bad("sidebar.layout", "diagonale"), /choix inconnu/);
+    assert.throws(bad("content.widthPx", 99999));
+    assert.equal(one("SELECT COUNT(*) n FROM appearance_configs WHERE published LIKE '%singlePost%' AND published NOT LIKE '%\"singlePost\":null%'").n, 0);
   });
 
   test("publication : structure, ordre des éléments, colonne, commentaires, partage, similaires, navigation sur la page publique", async () => {
@@ -151,16 +137,10 @@ describe("Publication unique : du personnalisateur à la page publique", () => {
   });
 
   test("site secondaire : ses réglages vont dans SES paramètres, l'autre site et le principal restent intacts", async () => {
-    const d = json(await post(boss, "/brouillon", A, { changes: { "settings.singlePost.share.size": 48 } }));
-    assert.equal(d && d.ok, true, JSON.stringify(d));
-    const p = json(await post(boss, "/publier", A, { rev: d.draft.rev }));
-    assert.equal(p && p.ok, true, JSON.stringify(p));
+    await publish(A, { "settings.singlePost.share.size": 48 });
     assert.equal(JSON.parse(one("SELECT settings FROM mk_sites WHERE id = ?", A).settings).singlePost.share.size, 48);
     assert.doesNotMatch(String(one("SELECT settings FROM mk_sites WHERE id = ?", B).settings || ""), /singlePost/);
     assert.equal(JSON.parse(one("SELECT published FROM appearance_configs WHERE site_id IS NULL").published).singlePost.share.size, 36);
-    // un réglage du principal est refusé sur un site, et inversement
-    const bad = await post(boss, "/brouillon", A, { changes: { "singlePost.share.size": 40 } });
-    assert.ok(bad.status >= 400 && bad.status < 500);
   });
 
   test("réinitialiser : revenir aux valeurs d'origine ne stocke plus rien", async () => {

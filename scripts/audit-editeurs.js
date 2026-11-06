@@ -20,7 +20,7 @@ const [dir, out] = process.argv.slice(2);
   const auto = Number((await boss.post("/marketing/automatisations", { name: "Scénario audit", kind: "marketing", trigger_event: "lms.user_registered" })).location.match(/(\d+)$/)[1]);
   const editors = [
     ["page", `/marketing/pages/${pageId}/editeur`], ["page-vide", `/marketing/pages/${emptyId}/editeur`], ["email", `/marketing/modeles/${tpl}`], ["scenario", `/marketing/automatisations/${auto}`],
-    ["article", `/marketing/site-web/articles/ajouter`], ["editeur-site", `/marketing/site-web/editeur-du-site`], ["personnaliser", `/marketing/site-web/personnaliser`],
+    ["article", `/marketing/site-web/articles/ajouter`], ["editeur-site", `/marketing/site-web/editeur-du-site`],
   ];
   const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
   const report = [];

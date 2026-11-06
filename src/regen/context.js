@@ -66,7 +66,7 @@ function dependencies(ctx, siteId, analysis, resolved) {
     dep.scopeKind = "global"; const tok = analysis.property && analysis.property.token;
     dep.tokens.push(tok || "(couleur)");
     for (const p of sitePages) { const txt = JSON.stringify(contentOf(p.id).sections || []); const n = tok ? (txt.match(new RegExp(`token:${tok}\\b`, "g")) || []).length + (txt.match(new RegExp(`"background":"${tok === "secondary" ? "dark" : tok}"`, "g")) || []).length : 0; dep.pages.push({ id: p.id, name: p.name, uses: n }); }
-    dep.notes.push("Une couleur du design est lue par tout le site (boutons, fonds, liens) : toutes les pages publiées après publication du brouillon du personnalisateur.");
+    dep.notes.push("Une couleur du design est lue par tout le site (boutons, fonds, liens) : toutes les pages publiées après publication du brouillon des styles.");
     return dep;
   }
   const s = resolved.section;

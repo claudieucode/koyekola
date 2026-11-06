@@ -46,7 +46,6 @@ const SECTIONS = [
       leaf("apparence/theme-builder", "Theme Builder", `${BASE}/apparence/theme-builder`, { permission: "forms.read" }), // le centre de contrôle du design — site principal ET sites créés : UNIQUE endroit où l'on gère en-tête et pied de page (+ pages, articles, archives, 404, boutique)
       leaf("apparence/themes", "Thèmes", `${BASE}/themes`, { permission: "appearance.read" }),
       leaf("apparence/fichiers", "Éditeur de fichiers", `${BASE}/themes/fichiers`, { permission: "appearance.read" }), // fichiers JSON virtuels d'un thème installé (services/themeFiles.js)
-      leaf("apparence/personnaliser", "Personnaliser", `${BASE}/personnaliser`, { permission: "appearance.read", fullscreen: true }), // écran plein cadre (hors coque du CMS)
       leaf("apparence", "Éditeur du site", `${BASE}/editeur-du-site`, { permission: "appearance.read" }),
       leaf("apparence/templates", "Templates", `${BASE}/templates`, { permission: "appearance.read" }),
       leaf("apparence/patterns", "Patterns", `${BASE}/patterns`, { permission: "appearance.read" }),
@@ -215,7 +214,7 @@ const SITE_MODULES = {
   polices: { label: "Polices", kind: "delegate", to: "/site-web/polices", reg: "polices", permission: "appearance.read", legacy: `${BASE}/polices` },
   // Apparence → Widgets : écran partagé /site-web/widgets ouvert dans le cadre du site (zones, blocs et widgets désactivés de CE site)
   widgets: { label: "Widgets", kind: "delegate", to: "/site-web/widgets", reg: "widgets", permission: "appearance.read", legacy: `${BASE}/widgets` },
-  // Apparence → Styles : gestionnaire de styles globaux (palette, typographie, formes, boutons) ; écran partagé /site-web/styles ouvert dans le cadre du site (brouillon partagé avec Personnaliser)
+  // Apparence → Styles : gestionnaire de styles globaux (palette, typographie, formes, boutons) ; écran partagé /site-web/styles ouvert dans le cadre du site
   // Apparence → Patterns : bibliothèque de compositions réutilisables ; écran partagé /site-web/patterns ouvert dans le cadre du site (compositions et pages de CE site)
   // Apparence → Templates : packs de site, gabarits de pages et « Mes modèles » ; écran partagé /site-web/templates ouvert dans le cadre du site (importation dans CE site)
   // Apparence → Éditeur du site : espace de travail par site autour du Page Builder ; écran partagé /site-web/editeur-du-site ouvert dans le cadre du site
@@ -372,7 +371,6 @@ const ABILITY = {
   "apparence/themes": { mode: "open", module: "themes" },
   "apparence/fichiers": { mode: "open", module: "themes", sub: "fichiers" },
   "apparence/polices": { mode: "open", module: "polices" },
-  "apparence/personnaliser": { mode: "customizer" }, // écran plein cadre : le site est « ?site=<id> » (vérifié par le serveur)
   "apparence/widgets": { mode: "open", module: "widgets" },
   "apparence/styles": { mode: "open", module: "styles" },
   "apparence/patterns": { mode: "open", module: "patterns" },
@@ -423,7 +421,6 @@ function projectItem(item, group, space) {
   if (a && a.mode === "central") return null;
   if (a && a.mode === "themebuilder") return { ...base, href: `${space.base}/constructeur-de-theme`, status: "live", external: true };
   if (a && a.mode === "link") return { ...base, href: space.listHref || `${BASE}/sites`, status: "live", external: true };
-  if (a && a.mode === "customizer") return { ...base, href: `${BASE}/personnaliser?site=${space.siteId}`, status: "live", external: true };
   if (a && a.mode === "open") {
     if (a.teamOnly && space.limited) return null; // création d'article : réservée à l'équipe (décision A-D9 non approuvée) → absente du menu d'un accès limité
     const m = siteModule(space, a.module);

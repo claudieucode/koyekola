@@ -67,7 +67,6 @@ window.KOLA_TIPS = {
     "/site-web/apparence/templates": "Les modèles de mise en page (accueil, article, archive…) appliqués automatiquement.",
     "/site-web/apparence/patterns": "Des ensembles de sections prêts à insérer dans vos pages.",
     "/site-web/apparence/styles": "Les couleurs, polices, tailles et boutons du site, en brouillon avant publication.",
-    "/site-web/personnaliser": "Modifiez l'apparence du site avec un aperçu réel : brouillon, publication et versions précédentes.",
     "/site-web/editeur-du-site": "Modifiez le gabarit global du site (en-tête, pied de page, zones) et voyez le résultat avant de publier.",
     "/site-web/templates": "Choisissez et gérez les modèles de page de ce site : listes, fiches, pages d'accueil.",
     "/site-web/patterns": "Bibliothèque de blocs réutilisables de ce site : créez-les une fois, insérez-les partout.",

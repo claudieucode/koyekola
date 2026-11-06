@@ -41,7 +41,7 @@ describe("barre d'administration : coque, sites, création, notifications, profi
         assert.equal((r.text.match(/<nav class="kab"/g) || []).length, 1, `${u} : une seule barre`);
         assert.match(r.text, /href="[^"]*adminbar\.css/); assert.match(r.text, /src="[^"]*adminbar\.js/);
       }
-      for (const u of ["/", "/connexion", "/marketing/site-web/sites", `/marketing/pages/${pageA}/apercu`, `/marketing/site-web/personnaliser?site=${A}`]) assert.doesNotMatch((await boss.get(u)).text, /<nav class="kab"/, `${u} : pas de barre`);
+      for (const u of ["/", "/connexion", "/marketing/site-web/sites", `/marketing/pages/${pageA}/apercu`]) assert.doesNotMatch((await boss.get(u)).text, /<nav class="kab"/, `${u} : pas de barre`);
     });
     test("plus de doublon dans la barre du haut : un seul menu de compte, un seul bouton de thème, plus de sélecteur de site dans le menu latéral", async () => {
       const t = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
@@ -122,11 +122,11 @@ describe("barre d'administration : coque, sites, création, notifications, profi
       const draft = Number(db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, status, kind, site_id) VALUES (?, 'Brouillon', 'brouillon-a', 'Brouillon', ?, 'draft', 'page', ?)").run(orgId, SECTIONS, A).lastInsertRowid);
       assert.deepEqual([...bar((await boss.get(`/marketing/pages/${draft}`)).text).matchAll(/data-kab-ctx="([\w-]+)"/g)].map((m) => m[1]), ["page-editor", "page-preview"]);
     });
-    test("tableau de bord d'un site : « Page d'accueil » (sa vraie page) et « Personnaliser » (ce site) ; sans page d'accueil : seulement « Personnaliser »", async () => {
+    test("tableau de bord d'un site : « Page d'accueil » (sa vraie page) ; sans page d'accueil : aucune action d'accueil, et plus de « Personnaliser »", async () => {
       const b = bar((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
-      assert.ok(links(b).includes(`/marketing/pages/${homeA}/editeur`)); assert.ok(links(b).includes(`/marketing/site-web/personnaliser?site=${A}`));
+      assert.ok(links(b).includes(`/marketing/pages/${homeA}/editeur`)); assert.ok(!links(b).some((h) => /personnaliser/.test(h)), "plus de bouton Personnaliser");
       const g = bar((await boss.get(`${SP}/${C}/tableau-de-bord`)).text);
-      assert.doesNotMatch(g, /data-kab-ctx="home-edit"/); assert.match(g, /data-kab-ctx="customize"/);
+      assert.doesNotMatch(g, /data-kab-ctx="home-edit"/); assert.doesNotMatch(g, /data-kab-ctx="customize"/);
     });
     test("aucune action de page là où aucune page n'est consultée (liste des médias)", async () => {
       assert.doesNotMatch(bar((await boss.get(`${SP}/${A}/medias`)).text), /data-kab-ctx="page-/);

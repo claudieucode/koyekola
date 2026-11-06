@@ -58,7 +58,7 @@ describe("Régénération intelligente et historique (serveur réel)", () => {
     const rs = await post(boss, U(A, "/api/restaurer"), { snapshotId: before.id, restoreAnyway: true }); assert.equal(rs.status, 200, rs.text.slice(0, 300)); assert.equal(sections(pageA)[0].style.background, "primary");
     assert.ok(json(await boss.get(U(A, "/api/historique"))).total >= 4, "rien n'est supprimé de l'historique");
   });
-  test("design réel : changement GLOBAL = confirmation d'impact obligatoire ; écrit dans le brouillon du personnalisateur natif ; annulation", async () => {
+  test("design réel : changement GLOBAL = confirmation d'impact obligatoire ; écrit dans le brouillon de Styles ; annulation", async () => {
     const pr = await post(boss, U(A, "/api/demander"), { text: "Modifie toutes les couleurs secondaires du site en rouge" }); assert.equal(pr.status, 200, pr.text.slice(0, 300));
     const p = json(pr); assert.equal(p.plan.executor, "design_token"); assert.equal(p.impact.level, "high"); assert.equal(p.plan.requiresConfirmation, true);
     const no = await post(boss, U(A, `/api/operations/${p.opId}/appliquer`), {}); assert.equal(no.status, 409); assert.equal(json(no).code, "confirm_required");

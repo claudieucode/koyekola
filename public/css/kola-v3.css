@@ -1,6 +1,6 @@
 /* =====================================================================================================================
    KOLAKISA — Design system v3 « Marine, à plat » : site public, espace élève, pages de compte et d'authentification, pages d'erreur.
-   Chargé APRÈS style.css par partials/header.ejs. Même source de couleurs (--primary marine, --accent bleu d'action : ils suivent Apparence → Personnaliser),
+   Chargé APRÈS style.css par partials/header.ejs. Même source de couleurs (--primary marine, --accent bleu d'action : ils suivent Apparence → Styles),
    même esprit que l'administration (kola-ui.css v2) : plat, filets fins, une hiérarchie portée par la couleur, la typographie et l'espace — plus de dégradés
    décoratifs, de reflets ni de halos. Sommaire : 1 Jetons · 2 Marque et pied de page · 3 En-tête de page et mises en page · 4 États vides · 5 Authentification ·
    6 Pages d'erreur · 7 Compte et espace élève · 8 Finitions (focus, boutons) · 9 Écrans étroits et mouvement réduit

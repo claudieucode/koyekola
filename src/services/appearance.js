@@ -266,7 +266,7 @@ function logoPath(mediaId) {
 }
 function year() { return String(new Date().getFullYear()); }
 // parts(preview) : { css, header, footer, preview } — la version publiée (mémorisée) ou, en aperçu, le brouillon
-// override : configuration complète fournie par l'appelant (aperçu du personnalisateur : rien n'est lu en base ni mémorisé)
+// override : configuration complète fournie par l'appelant (aperçu des styles : rien n'est lu en base ni mémorisé)
 function parts({ preview = false, override = null } = {}) {
   let base;
   if (override) {

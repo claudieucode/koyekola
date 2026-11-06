@@ -3,8 +3,8 @@
 <% if (typeof dash !== "undefined" && dash && dash.site && dash.site.ok && dash.site.current) { const cur = dash.site.current; %>
 <section class="dpanel" aria-labelledby="site-appearance-title">
   <h2 id="site-appearance-title">Apparence du site « <%= cur.name %> »</h2>
-  <p>Logo, couleurs, typographie, en-tête et pied de page se règlent <strong>site par site</strong> dans le personnalisateur du CMS : les autres sites ne sont jamais modifiés.</p>
-  <p><a class="btn btn-primary" href="/marketing/site-web/personnaliser<%= cur.main ? '' : '?site=' + cur.id %>">Personnaliser ce site</a> <a class="btn" href="<%= cur.main ? '/marketing/site-web/principal/apparence' : '/marketing/site-web/sites/' + cur.id + '/apparence' %>">Thèmes, styles, en-tête et pied de page</a></p>
+  <p>Couleurs, typographie, thème, en-tête et pied de page se règlent <strong>site par site</strong> dans le CMS : les autres sites ne sont jamais modifiés.</p>
+  <p><a class="btn btn-primary" href="<%= cur.main ? '/marketing/site-web/principal/apparence' : '/marketing/site-web/sites/' + cur.id + '/apparence' %>">Thèmes, styles, en-tête et pied de page</a></p>
 </section>
 <h2 class="dash-section">Votre espace de travail</h2>
 <% } %>

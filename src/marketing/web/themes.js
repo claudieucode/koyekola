@@ -121,7 +121,7 @@ module.exports = () => {
       const pageKey = item.pages.some((p) => p.key === req.query.page) ? String(req.query.page) : item.pages[0].key;
       const qs = t.siteId ? `?site=${t.siteId}` : "";
       res.set("Cache-Control", "no-store");
-      return res.render("marketing/themes-preview", { ...base(req, t, {}), title: `Aperçu : ${item.name}`, theme: item, pageKey, canCustomize: req.mk.can("appearance.read"), frame: `${BASE}/${key}/demo/${pageKey}${qs}`, readOnly: t.readOnly, canDemo: req.mk.can("forms.write") && req.mk.can("appearance.styles") });
+      return res.render("marketing/themes-preview", { ...base(req, t, {}), title: `Aperçu : ${item.name}`, theme: item, pageKey, frame: `${BASE}/${key}/demo/${pageKey}${qs}`, readOnly: t.readOnly, canDemo: req.mk.can("forms.write") && req.mk.can("appearance.styles") });
     }
     const theme = KEY.test(key) ? (themes.get(t.siteId, key) || themes.available(t.siteId).find((x) => x.key === key) || null) : null;
     if (!theme) return res.status(404).render("error", { message: "Thème introuvable." });

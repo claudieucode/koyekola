@@ -28,7 +28,6 @@
       <details class="aib-menu"><summary class="aib-btn" aria-label="Paramètres du projet">Paramètres</summary>
         <div class="aib-menu-pop">
           <% if (project.siteId) { %><a href="/marketing/site-web/sites/<%= project.siteId %>">Ouvrir le site « <%= project.siteName %> »</a>
-          <a href="/marketing/site-web/personnaliser?site=<%= project.siteId %>">Personnaliser l'apparence</a>
           <a href="/marketing/site-web/sites/<%= project.siteId %>/domaines">Domaines du site</a><% } %>
           <a href="/marketing/ia/studio">Tous mes projets IA</a>
           <button type="button" id="aib-toggle-assist">Replier / afficher l'assistant</button>

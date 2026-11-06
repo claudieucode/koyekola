@@ -389,7 +389,7 @@ function state(ctx, id, { can = () => true } = {}) {
     S("architecture", v.plan.accepted ? (Object.keys(v.applied.pages || {}).length ? "done" : "in_progress") : "to_review", v.plan.accepted ? "Plan accepté." : "Plan à relire et accepter."),
     S("catalogue", v.structure.accepted ? (catCount ? "done" : "in_progress") : "to_review", v.structure.accepted ? `${catCount} catégorie(s) dans le catalogue.` : "Structure à relire et accepter."),
     S("produits", catalogCount ? (pendingDrafts.length ? "in_progress" : "done") : v.products.length ? "in_progress" : "not_started", `${catalogCount} produit(s) dans le catalogue, ${pendingDrafts.length} brouillon(s) en attente.`),
-    S("design", designApplied ? "done" : designRuns.length ? "in_progress" : "not_started", designApplied ? "Direction artistique appliquée au brouillon du personnalisateur." : "Aucune direction appliquée."),
+    S("design", designApplied ? "done" : designRuns.length ? "in_progress" : "not_started", designApplied ? "Direction artistique appliquée au brouillon des styles." : "Aucune direction appliquée."),
     S("medias", !catalogCount ? "not_started" : val.checks.find((x) => x.key === "images").level === "ok" ? "done" : "to_review", val.checks.find((x) => x.key === "images").message),
     S("configuration", cfg.todo.some((t) => t.level === "blocking") ? "error" : cfg.todo.some((t) => t.level === "warning") ? "to_review" : "done", cfg.todo.length ? `${cfg.todo.length} point(s) à traiter.` : "Configuration complète."),
     S("seo", !catalogCount && !v.products.length ? "not_started" : val.seo.issues.some((i) => i.level === "warn") || draftIssues.some((i) => i.level === "warn") ? "to_review" : "done", `${val.seo.issues.length + draftIssues.length} remarque(s).`),

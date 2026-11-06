@@ -203,7 +203,7 @@ function mountedRoutes() {
 
 // Règles créées après la figeage de l'oracle (liste des pages PAGES-01, modèles de pages du site builder) : leur comportement est testé explicitement
 const POST_ORACLE = new Set(["pages-liste-du-site", "pages-actions-du-site", "modele-page-enregistrement", "modele-page-lecture", "modele-page-suppression",
-  "corbeille-du-site", "equipe-du-site", "themes-du-site", "polices-du-site", "barre-du-site", "personnaliser-du-site", "widgets-du-site", "styles-du-site", "editeur-du-site", "templates-du-site", "patterns-du-site"]);
+  "corbeille-du-site", "equipe-du-site", "themes-du-site", "polices-du-site", "barre-du-site", "widgets-du-site", "styles-du-site", "editeur-du-site", "templates-du-site", "patterns-du-site"]);
 
 describe("la table déclarative reproduit EXACTEMENT l'ancienne logique (oracle)", () => {
   const variants = [

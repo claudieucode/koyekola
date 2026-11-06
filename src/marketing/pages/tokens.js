@@ -189,7 +189,7 @@ function normalizePack(input) {
   if (!input || typeof input !== "object") return out;
   if (typeof input.key === "string" && PACK_KEY.test(input.key)) out.key = input.key;
   if (out.key && input.options && typeof input.options === "object" && !Array.isArray(input.options)) {
-    for (const [k, v] of Object.entries(input.options).slice(0, 64)) if (PACK_OPT_KEY.test(k) && typeof v === "string" && PACK_OPT_VALUE.test(v)) out.options[k] = v;
+    for (const [k, v] of Object.entries(input.options).slice(0, 16)) if (PACK_OPT_KEY.test(k) && typeof v === "string" && PACK_OPT_VALUE.test(v)) out.options[k] = v;
   }
   return out;
 }
