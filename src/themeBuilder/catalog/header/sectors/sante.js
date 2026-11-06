@@ -124,10 +124,10 @@ const MODELS = [
     build: (k, P) => {
       const S = k.S, gold = S.accent;
       const hair = () => compact({ type: "container", children: [], ...sty({ width: "48px", height: "1px", backgroundColor: gold, flexShrink: 0 }, { width: "20px" }, { width: "12px" }) });
-      return [row(k, [grid("1fr auto 1fr", [left([nav(k, "plain", { size: "12.5px", weight: "500", caps: "uppercase", track: "2.4px", hover: gold, gap: "28px" })]), g([hair(), mark(k, { size: "clamp(26px, 3.4vw, 40px)", weight: "500", italic: true }), hair()], { gap: "18px", flexWrap: "nowrap", justifyContent: "center" }), right([X.info(k, ["hours"], { color: S.mute, icon: gold, size: "12px", hideOn: ["mobile", "tablet"] }), btn(k, P.cta[0], P.cta[1], "outline", { fg: gold, border: gold, size: "12px", caps: "uppercase", track: "2px", radius: "0px", weight: "500" })], { gap: "20px", flexWrap: "nowrap" })], { width: "100%", gap: "24px" }, { gridTemplate: "1fr" }, { gridTemplate: "1fr" })], { pv: "26px", bg: S.bg, st: {}, bb: { w: "1px", c: "#2f5651" } })];
+      return [row(k, [grid("1fr auto 1fr", [left([nav(k, "plain", { size: "12.5px", weight: "500", caps: "uppercase", track: "2.4px", hover: gold, gap: "28px" })]), g([hair(), mark(k, { size: "clamp(26px, 3.4vw, 40px)", weight: "500", italic: true }), hair()], { gap: "18px", flexWrap: "nowrap", justifyContent: "center" }), right([X.info(k, ["hours"], { color: S.mute, icon: gold, size: "12px" }), btn(k, P.cta[0], P.cta[1], "outline", { fg: gold, border: gold, size: "12px", caps: "uppercase", track: "2px", radius: "0px", weight: "500" })], { gap: "20px", flexWrap: "nowrap" })], { width: "100%", gap: "24px" }, { gridTemplate: "1fr" }, { gridTemplate: "1fr" })], { pv: "26px", bg: S.bg, st: {}, bb: { w: "1px", c: "#2f5651" } })];
     },
     mode: "stickyshrink", anim: "reveal", hover: "lift", dark: true, tags: ["spa", "luxe", "sombre", "or", "capitales"],
-    features: ["Marque italique encadrée de filets or", "Horaires d'ouverture à remplacer, masqués sur tablette et mobile", "Collant, se réduit au défilement", "Navigation en capitales espacées"],
+    features: ["Marque italique encadrée de filets or", "Horaires d'ouverture à remplacer, masqués sur mobile", "Collant, se réduit au défilement", "Navigation en capitales espacées"],
     animations: ["reveal", "lift"], settings: ["Couleurs", "Police", "Espacement", "Filets or", "Animation d'entrée", "Comportement au défilement"] },
 
   // 09 ── Cap Nutrition : programme de coaching, bandes inclinées + mosaïque

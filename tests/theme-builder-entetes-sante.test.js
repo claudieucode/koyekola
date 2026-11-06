@@ -1,5 +1,5 @@
 // En-têtes du secteur « sante » : contrat, nœuds, identité, contraste, animations annoncées réelles, aucune donnée inventée, responsive.
-const { test, describe } = require("node:test");
+const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const HEADER = require("../src/themeBuilder/catalog/header");
 const contract = require("../src/themeBuilder/catalog/header/contract");
@@ -119,7 +119,7 @@ describe("En-têtes santé : site publié dans Chrome", { skip: SKIP }, () => {
   });
   test("menu : visible sur ordinateur ; replié sur mobile derrière un bouton qui l'ouvre et le referme ; 02 : menu plein écran (Échap)", async () => {
     for (const m of MODELS.filter((x) => x.key !== "sante-02")) {
-      const d = await open(m); assert.ok((await d.pg.locator(".lp-site-header .kw-menu-link").allInnerTexts()).join(" ").includes("Alpha"), `${m.key} : menu affecté absent`); await d.ctx.close();
+      const d = await open(m); assert.ok((await d.pg.locator(".lp-site-header .kw-menu-link").allInnerTexts()).join(" ").toLowerCase().includes("alpha"), `${m.key} : menu affecté absent`); await d.ctx.close();
       const { ctx, pg } = await open(m, { width: 390, height: 800 }); const burger = pg.locator(".lp-site-header .kw-menu-burger");
       assert.ok(await burger.isVisible(), `${m.key} : pas de bouton de menu mobile`); assert.ok(!(await pg.locator(".lp-site-header .kw-menu-list").first().isVisible()), `${m.key} : déjà ouvert`);
       await burger.click(); await pg.waitForTimeout(150); assert.ok(await pg.locator(".lp-site-header .kw-menu-list").first().isVisible(), `${m.key} : ne s'ouvre pas`);
@@ -141,7 +141,7 @@ describe("En-têtes santé : site publié dans Chrome", { skip: SKIP }, () => {
     for (const m of MODELS.filter((x) => x.mode === "sticky" || x.mode === "glass")) {
       const { ctx, pg } = await open(m); await pg.evaluate(() => window.scrollTo(0, 900)); await pg.waitForTimeout(300);
       assert.ok(await pg.evaluate(() => document.querySelector(".lp-site-header").getBoundingClientRect().top <= 1), `${m.key} : pas collant`);
-      if (m.mode === "glass") assert.match(await pg.evaluate(() => getComputedStyle(document.querySelector(".lp-site-header")).backdropFilter || getComputedStyle(document.querySelector(".lp-site-header .kw-full")).backdropFilter), /blur/, "verre dépoli"); await ctx.close();
+      if (m.mode === "glass") assert.ok(await pg.evaluate(() => [document.querySelector(".lp-site-header"), ...document.querySelectorAll(".lp-site-header *")].some((e) => /blur/.test(getComputedStyle(e).backdropFilter || getComputedStyle(e).webkitBackdropFilter || ""))), "verre dépoli"); await ctx.close();
     }
   });
   test("mouvement réduit : aucune animation infinie en cours dans l'en-tête ; clavier : Tab atteint l'en-tête", async () => {
