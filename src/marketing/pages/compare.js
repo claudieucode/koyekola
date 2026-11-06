@@ -41,9 +41,7 @@ function compareContents(before, after) {
   field("title", "Titre de la page");
   field("description", "Description de la page");
   field("seo", "Référencement (SEO)");
-  const noMotion = (c) => { const t = { ...((c || {}).theme || {}) }; delete t.motionScenes; return { theme: t }; };
-  { const x = noMotion(before), y = noMotion(after); if (JSON.stringify(x) !== JSON.stringify(y)) changes.page.push("Couleurs de la page"); }
-  if (JSON.stringify(((before || {}).theme || {}).motionScenes ?? null) !== JSON.stringify(((after || {}).theme || {}).motionScenes ?? null)) changes.page.push("Scènes et mouvement de la page");
+  field("theme", "Couleurs de la page");
   for (const [id, x] of b) if (!a.has(id)) changes.added.push({ id, label: labelOf(x.item, x.isNode) });
   for (const [id, x] of a) if (!b.has(id)) changes.removed.push({ id, label: labelOf(x.item, x.isNode) });
   // Rang d'un élément parmi ses voisins présents dans les DEUX contenus (un ajout ou un retrait ne déplace pas les autres)

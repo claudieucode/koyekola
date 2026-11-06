@@ -360,7 +360,7 @@
       pause: function (t) { var r = recOf(t); if (!r || !r.inst) return false; if (r.inst.pause) r.inst.pause(); else each(r, function (a) { a.pause(); }); return true; },
       resume: function (t) { var r = recOf(t); if (!r || !r.inst) return false; each(r, function (a) { a.play(); }); return true; },
       seek: function (t, ms) { var r = recOf(t); if (!r || !r.inst) return false; if (r.inst.seek) r.inst.seek(ms); else each(r, function (a) { a.pause(); a.currentTime = ms; }); return true; },
-      stop: function (t) { var r = recOf(t); if (!r) return false; rest(r); return true; },
+      stop: function (t) { var r = recOf(t); if (!r) return false; rest(r); if (r.inst && r.inst.stop) { try { r.inst.stop(); } catch (e) { /* module défaillant */ } } /* ms:t */ return true; },
       duration: function (t) { var r = recOf(t); return r && r.inst ? totalOf(r) : 0; },
       state: function (t) { var el = target(t); return el ? el.getAttribute("data-kw-ms-state") : null; },
       count: function () { return recs.size; },

@@ -1,0 +1,4 @@
+<%# Texte cinétique (widgets/motion-kinetic-text.js). Toutes les lignes sont écrites en clair. Animation : public/js/motion-studio/kinetic.js. %>
+<% const tag = ["h1", "h2", "h3", "h4", "p", "div"].includes(p.tag) ? p.tag : "h2"; %>
+<<%= tag %> class="<%= cls %> kw-ms kw-ms-kin" style="--kw-kn-accent: <%= d.accent %>"<%- attrs %>><% (p.lines || []).forEach((l) => { %><span class="kw-ms-kin-line is-<%= ["outline", "accent"].includes(l.look) ? l.look : "solid" %>"><%= l.text %></span>
+<% }) %></<%= tag %>>

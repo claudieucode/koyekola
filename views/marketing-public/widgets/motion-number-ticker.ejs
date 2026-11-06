@@ -1,0 +1,2 @@
+<%# Compteur animé (widgets/motion-number-ticker.js). d.text = valeur FINALE déjà mise en forme (lisible sans JavaScript) ; d.opts = réglages du compteur pour le module (text-fx.js, ticker). %>
+<div class="<%= cls %> kw-ms kw-ms-tick" data-kw-ms-fx="ticker" data-kw-ms-opts="<%= JSON.stringify(d.opts) %>"<%- attrs %>><span class="kw-ms-tick-num"><%= d.text %></span><% if (p.label) { %><span class="kw-ms-tick-label"><%= p.label %></span><% } %></div>

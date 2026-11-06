@@ -101,8 +101,8 @@ function normalize(raw, spec) {
   if (ease) keep("easing", ease);
   keep("stagger", int(...LIMITS.stagger)(cur.stagger));
   const it = cur.iterations === "infinite" ? "infinite" : int(...LIMITS.iterations)(cur.iterations);
-  if (it !== null && it !== 1) out.iterations = it;
-  if (MOTION.DIRECTIONS.includes(cur.direction) && cur.direction !== "normal") out.direction = cur.direction;
+  if (it !== null && it !== base.iterations) out.iterations = it; // ms:t — relatif au défaut du composant (boucle sans fin par défaut : « une fois » doit rester choisissable)
+  if (MOTION.DIRECTIONS.includes(cur.direction) && cur.direction !== base.direction) out.direction = cur.direction;
   if (cur.repeat === true) out.repeat = true;
   if (cur.scrub && typeof cur.scrub === "object") {
     const start = int(0, 99)(cur.scrub.start), end = int(1, 100)(cur.scrub.end);

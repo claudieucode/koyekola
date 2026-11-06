@@ -1,0 +1,4 @@
+<%# Bande liée au défilement (widgets/motion-marquee-velocity.js). Sans JavaScript : liste de textes qui passe à la ligne. Animation : public/js/motion-studio/marquee-velocity.js. %>
+<div class="<%= cls %> kw-ms kw-ms-mvel" role="region" aria-label="<%= p.label || "Bandeau défilant" %>"<%- attrs %>>
+<ul class="kw-ms-mvel-list"><% (p.items || []).forEach((it) => { %><li class="kw-ms-mvel-item"><%= it.text %><% if (p.separator) { %><span class="kw-ms-mvel-sep" aria-hidden="true"><%= p.separator %></span><% } %></li><% }) %></ul>
+</div>

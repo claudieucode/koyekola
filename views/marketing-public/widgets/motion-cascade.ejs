@@ -1,0 +1,6 @@
+<%# Liste ou grille animée (widgets/motion-cascade.js). Liste sémantique <ul>/<li>, tous les éléments écrits en clair. L : liens comptés (L.items[i].link). Animation : public/js/motion-studio/cascade.js. %>
+<% const cols = ["2", "3", "4"].includes(p.columns) ? p.columns : "3"; const look = ["card", "line", "plain"].includes(p.look) ? p.look : "card"; const tt = ["h2", "h3", "h4", "p"].includes(p.titleTag) ? p.titleTag : "h3"; %>
+<ul class="<%= cls %> kw-ms kw-ms-casc is-<%= p.layout === "list" ? "list" : "grid" %> is-cols-<%= cols %> is-look-<%= look %>"<%- attrs %>>
+<% (p.items || []).forEach((it, i) => { const href = L.items && L.items[i] && L.items[i].link; %>
+  <li class="kw-ms-casc-item"><% if (it.image) { %><img class="kw-ms-casc-img" src="<%= it.image %>" alt="<%= it.alt || "" %>" loading="lazy" decoding="async"><% } %><<%= tt %> class="kw-ms-casc-title"><% if (href) { %><a class="kw-ms-casc-link" href="<%= href %>"><%= it.title %></a><% } else { %><%= it.title %><% } %></<%= tt %>><% if (it.text) { %><p class="kw-ms-casc-text"><%= it.text %></p><% } %></li>
+<% }) %></ul>
