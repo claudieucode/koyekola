@@ -1747,6 +1747,8 @@ function normalizeMotion(raw, type) {
   // Mouvement réduit : l'animation s'adapte (ou disparaît) quand le visiteur le demande ; « toujours animer » doit être choisi explicitement
   if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse || out.scrollFx || out.mouseFx)) out.alwaysMotion = true;
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
+  // Parallaxe d'arrière-plan : amplitude (en %) du déplacement de l'image de fond ; valeur hors liste ignorée
+  if ([10, 20, 35, 50].includes(raw.bgParallax)) out.bgParallax = raw.bgParallax;
   // Motion Studio : réglages versionnés (motionStudio.js) ; préréglages et paramètres validés par la fiche `motion` du widget
   if (raw.studio) { const st = STUDIO.normalize(raw.studio, CUSTOM_WIDGETS[type] ? CUSTOM_WIDGETS[type].motion : null); if (st) out.studio = st; }
   return Object.keys(out).length ? out : undefined;
@@ -1953,6 +1955,7 @@ function motionAttrs(n) {
   if (m.mouseFx) a += ` data-kw-mfx="${esc(JSON.stringify(m.mouseFx))}"`;
   if (m.off && (m.scroll || m.mouse || m.scrollFx || m.mouseFx)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
   if (m.alwaysMotion) a += " data-kw-motion-always";
+  if (m.bgParallax) a += ` data-kw-bgpar="${m.bgParallax}"`;
   return a + studioAttrs.replace(" data-kw-motion-always", m.alwaysMotion ? "" : " data-kw-motion-always");
 }
 

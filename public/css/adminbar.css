@@ -9,7 +9,7 @@ html[data-kola-theme="dark"] .is-cms { --kab-bg: #061425; --kab-bg-2: #0d2540; }
 .kab { position: fixed; top: 0; left: 0; right: 0; z-index: calc(var(--z-dropdown, 80) + 30); height: var(--kab-h); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 var(--kg-gutter); background: var(--kab-bg); color: var(--kab-text); border-bottom: 1px solid var(--kab-line); font-size: 0.84rem; line-height: 1; }
 .kab-zone { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .kab-left { flex: 1 1 auto; }
-.kab-right { flex: 0 0 auto; gap: 2px; }
+.kab-right { flex: 0 0 auto; gap: 4px; }
 .kab-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--kab-line); flex: none; }
 .kab-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

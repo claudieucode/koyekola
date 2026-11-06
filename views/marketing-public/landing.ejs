@@ -46,6 +46,7 @@
   <script src="<%= asset("/js/landing.js") %>" defer></script>
   <% if (siteX && siteX.assets.pack && siteX.assets.pack.script) { %><%- siteX.assets.pack.script %><% } %>
   <script src="<%= asset("/js/kw-effects.js") %>" defer></script>
+  <script src="<%= asset("/js/kw-bgpar.js") %>" defer></script>
   <%# Motion Studio : runtime partagé + adresses (avec empreinte) des modules de CETTE page, chargés à la demande par le runtime %>
   <% if (page.motionStudio) { %><script type="application/json" id="kw-ms-modules"><%- JSON.stringify(Object.fromEntries(page.motionStudio.modules.map((m) => [m, asset("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c") %></script>
   <script src="<%= asset("/js/kw-motion-studio.js") %>" defer></script><% } %>
