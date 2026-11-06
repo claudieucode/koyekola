@@ -4,18 +4,24 @@
 // La polarité est ignorée (un en-tête noir sur blanc et son négatif sont « le même dessin ») : distance = min(L2(a, b), L2(a, inverse(b))).
 const W = 96, H = 24, CLIP_W = 1280, CLIP_H = 320;
 // Seuil : sous cette distance, deux en-têtes sont considérés comme jumeaux (calibré sur les rendus réels : voir docs/theme-builder/HEADER_LIBRARY_AUDIT_V3.md)
-const SEUIL = Number(process.env.ENTETES_SEUIL) || 0.06;
+const SEUIL = Number(process.env.ENTETES_SEUIL) || 0.05;
 const HIDE_TEXT = "*{color:transparent!important;text-shadow:none!important;-webkit-text-fill-color:transparent!important;text-decoration-color:transparent!important;caret-color:transparent!important}input::placeholder{color:transparent!important}*,*::before,*::after{animation:none!important;transition:none!important}";
 
 // Capture d'une page déjà chargée (aperçu d'en-tête) → descripteur (Buffer 96×24, 1 octet par pixel)
 async function descriptor(page, sharp) {
   await page.addStyleTag({ content: HIDE_TEXT });
-  const top = await page.evaluate(() => { const r = (document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return Math.max(0, Math.floor(r.top)); });
-  const png = await page.screenshot({ clip: { x: 0, y: top, width: CLIP_W, height: CLIP_H } });
-  return fromPng(png, sharp);
+  const box = await page.evaluate(() => { const r = (document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { top: Math.max(0, Math.floor(r.top)), h: Math.ceil(r.height) }; });
+  const png = await page.screenshot({ clip: { x: 0, y: box.top, width: CLIP_W, height: CLIP_H } });
+  return fromPng(png, sharp, Math.min(CLIP_H, Math.max(8, box.h)));
 }
-async function fromPng(png, sharp) {
-  const raw = await sharp(png).removeAlpha().greyscale().resize(W, H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
+// hh : hauteur de l'en-tête dans la capture ; le fond de page sous l'en-tête est remplacé par le gris moyen de l'en-tête (seul le dessin de l'en-tête compte, la polarité devient neutre)
+async function fromPng(png, sharp, hh) {
+  let img = sharp(png).removeAlpha().greyscale();
+  if (hh && hh < CLIP_H) {
+    const top = sharp(png).removeAlpha().greyscale().extract({ left: 0, top: 0, width: CLIP_W, height: hh }), mean = Math.round((await top.clone().stats()).channels[0].mean);
+    img = sharp(await top.png().toBuffer()).extend({ bottom: CLIP_H - hh, background: { r: mean, g: mean, b: mean } }).greyscale();
+  }
+  const raw = await img.resize(W, H, { fit: "fill", kernel: "lanczos3" }).raw().toBuffer();
   let lo = 255, hi = 0; for (const v of raw) { if (v < lo) lo = v; if (v > hi) hi = v; }
   const out = Buffer.alloc(raw.length), span = Math.max(1, hi - lo);
   for (let i = 0; i < raw.length; i++) out[i] = Math.round(((raw[i] - lo) / span) * 255);
@@ -29,7 +35,7 @@ function analyse(descs, seuil = SEUIL, only) {
   const keys = Object.keys(descs), voisins = [], paires = [];
   for (let i = 0; i < keys.length; i++) {
     let best = { distance: 9, voisin: "" };
-    for (let j = 0; j < keys.length; j++) { if (i === j) continue; const d = distance(descs[keys[i]], descs[keys[j]]); if (d < best.distance) best = { distance: d, voisin: keys[j] }; if (j > i && d < seuil) paires.push({ a: keys[i], b: keys[j], distance: Math.round(d * 1000) / 1000 }); }
+    for (let j = 0; j < keys.length; j++) { if (i === j) continue; const d = distance(descs[keys[i]], descs[keys[j]]); if (d < best.distance) best = { distance: d, voisin: keys[j] }; if (j > i && d < seuil) paires.push({ a: keys[i] < keys[j] ? keys[i] : keys[j], b: keys[i] < keys[j] ? keys[j] : keys[i], distance: Math.round(d * 1000) / 1000 }); }
     if (!only || only.includes(keys[i])) voisins.push({ key: keys[i], voisin: best.voisin, distance: Math.round(best.distance * 1000) / 1000 });
   }
   voisins.sort((x, y) => x.distance - y.distance); paires.sort((x, y) => x.distance - y.distance);
