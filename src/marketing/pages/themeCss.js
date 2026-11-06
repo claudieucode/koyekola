@@ -94,6 +94,9 @@ function themeCss(tokens) {
   if (f.labelColor) rule(".lp-site .kw-signup-form label, .lp-site .kw-signup-form legend", [`color:${colorCss(f.labelColor)}`]);
   if (f.accent) rule(".lp-site .kw-signup-form input[type=checkbox], .lp-site .kw-signup-form input[type=radio]", [`accent-color:${colorCss(f.accent)}`]);
 
+  // ---- Réglages globaux du personnalisateur (niveau 2 de la hiérarchie) : écrits après les styles du thème, avant ceux des éléments
+  if (t.global) { const g = require("./globalStyles").globalCss(t.global, "site"); if (g) out.push(g); }
+
   return out.join("\n");
 }
 

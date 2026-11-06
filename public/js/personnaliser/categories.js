@@ -10,6 +10,14 @@
   var title = document.getElementById("pz-detail-title");
   var body = document.getElementById("pz-detail-body");
   var back = document.getElementById("pz-back");
+  var kicker = document.getElementById("pz-detail-kicker");
+  var backFn = null;
+  // Les catégories qui ont des sous-écrans (Global…) pilotent l'en-tête et le retour : K.detail.setHead(kicker, titre), K.detail.setBack(fn | null)
+  K.detail = {
+    setHead: function (k, t) { kicker.textContent = k || "Vous personnalisez"; title.textContent = t; },
+    setBack: function (fn) { backFn = typeof fn === "function" ? fn : null; },
+    focusTitle: function () { title.focus({ preventScroll: true }); }
+  };
   var panels = {};
   var lastButton = null, selected = null; // la dernière catégorie ouverte reste repérée dans la liste au retour
 
@@ -37,7 +45,7 @@
     if (c) selected = c.id;
     Array.prototype.forEach.call(list.children, function (b) { if (selected && b.dataset.cat === selected) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current"); });
     if (!c) { detail.hidden = true; home.hidden = false; enter(home); if (lastButton) lastButton.focus({ preventScroll: true }); return; }
-    title.textContent = c.label; body.textContent = "";
+    backFn = null; kicker.textContent = "Vous personnalisez"; title.textContent = c.label; body.textContent = "";
     var impl = panels[c.id];
     if (impl && typeof impl.render === "function") impl.render(body);
     else { var p = document.createElement("p"); p.textContent = "Les réglages de cette catégorie ne sont pas encore disponibles."; body.appendChild(p); }
@@ -46,8 +54,8 @@
 
   build();
   K.on("change:category", show);
-  back.addEventListener("click", function () { K.set("category", null); });
-  detail.addEventListener("keydown", function (e) { if (e.key === "Escape") K.set("category", null); });
+  back.addEventListener("click", function () { if (backFn) backFn(); else K.set("category", null); });
+  detail.addEventListener("keydown", function (e) { if (e.key === "Escape" && !e.defaultPrevented) { if (backFn) backFn(); else K.set("category", null); } });
 
   // Aide : texte repliable sous l'identité du site
   var help = document.getElementById("pz-help"), helpText = document.getElementById("pz-help-text");

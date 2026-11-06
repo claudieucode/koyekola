@@ -16,6 +16,7 @@ const { UserError } = require("../../utils/errors");
 const { need, safeJson } = require("./kit");
 const categories = require("./personnaliserCategories");
 const { previewTargets } = require("./styles");
+const gs = require("../pages/globalStyles");
 
 const BASE = "/marketing/site-web/personnaliser";
 const API = "/marketing/site-web/styles";
@@ -57,11 +58,12 @@ module.exports = () => {
       panels: panels.map((p) => ({ id: p.id, label: p.label, icon: p.icon, hint: p.hint, tabs: p.tabs, controls: p.controls })),
       values: st.values, live: st.live, changes: st.changes, draft: st.draft, revision: st.revision, stale: st.stale, pendingEngineDraft: st.pendingEngineDraft, perControl: st.can,
       can: { edit: can("appearance.styles") && !t.readOnly, publish: can("appearance.publish") && !t.readOnly, css: can("pages.code"), seo: can("seo.edit"), home: can("forms.write") && !t.readOnly },
+      global: { ...gs.uiSpec(t.siteId), base: siteStyles.liveBase(req.mk.ctx, t.siteId) },
       menus, zones, home: { id: homeId, pages: homePages },
       links: {
         close: t.principal ? "/marketing" : `/marketing/site-web/sites/${t.siteId}/tableau-de-bord`,
         menus: t.principal ? "/marketing/site-web/navigation" : `/marketing/site-web/navigation?site=${t.siteId}`,
-        widgets: `/marketing/site-web/widgets${q}`, themeBuilder: `/marketing/site-web/apparence/theme-builder${q}`, styles: `${API}${q}`,
+        widgets: `/marketing/site-web/widgets${q}`, fonts: `/marketing/site-web/polices${q}`, themeBuilder: `/marketing/site-web/apparence/theme-builder${q}`, styles: `${API}${q}`,
         pages: t.principal ? "/marketing/pages" : `/marketing/site-web/sites/${t.siteId}/pages`,
       },
     };

@@ -27,6 +27,7 @@ const siteSettings = () => require("../marketing/pages/siteSettings");
 const BOTH = ["principal", "site"];
 const PANELS = [
   { id: "identite", label: "Identité du site", icon: "id", hint: "Nom, slogan, logos et icône de l'onglet." },
+  { id: "global", label: "Global", icon: "palette", hint: "Typographie, couleurs, conteneur et boutons du site." },
   { id: "couleurs", label: "Couleurs", icon: "palette", hint: "Couleurs globales, liens et bordures." },
   { id: "typographie", label: "Typographie", icon: "type", hint: "Polices, tailles, graisses et interlignes." },
   { id: "mise-en-page", label: "Mise en page", icon: "layout", hint: "Largeurs, espacements, arrondis et points de rupture." },
@@ -229,6 +230,9 @@ for (const [scope, prefix] of [["site", "settings.singlePost."], ["principal", "
 // CSS (un site : réglage « customCss » du site ; le principal n'a pas de CSS additionnel enregistrable)
 add("settings.customCss", "css", "css", "CSS additionnel du site", { scope: ["site"], perm: "pages.code", max: 20000, help: "Règles « .ma-classe { … } » appliquées aux pages du site (aucun @, aucune ressource externe)." });
 
+// Global (Typographie, Couleurs, Conteneur, Boutons) : quatre réglages, chacun un ensemble validé par marketing/pages/globalStyles (valeur vide = héritée du thème)
+const globalStyles = () => require("../marketing/pages/globalStyles");
+for (const [k, label] of [["typography", "Typographie"], ["colors", "Couleurs"], ["container", "Conteneur"], ["buttons", "Boutons"]]) add(`tokens.global.${k}`, "global", "global", label, { section: k });
 const BY_ID = new Map(controls.map((c) => [c.id, c]));
 // Réglage par identifiant et portée (principal | site)
 const ctl = (id) => BY_ID.get(id) || null;
@@ -267,6 +271,10 @@ function liveConfig(ctx, siteId) {
 // ---------- Validation d'un ensemble de changements ----------
 // Chaque chemin doit exister dans le catalogue de CE site ; la valeur est convertie puis validée par le moteur lui-même (validation stricte).
 function coerce(c, raw, siteId) {
+  if (c.kind === "global") {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new UserError(`${c.label} : réglages invalides.`);
+    return globalStyles().normalizeSection(c.section, raw, { strict: true, fontScope: { siteId } });
+  }
   if (c.sp) { try { return singlePost.cleanField(c.sp, raw); } catch (e) { if (e && e.isSinglePost) throw new UserError(e.message); throw e; } }
   if (c.kind === "palette") {
     if (!Array.isArray(raw) || raw.length > c.max) throw new UserError(`${c.label} : ${c.max} couleurs au plus.`);
@@ -369,6 +377,7 @@ function diffAgainst(live, changes, siteId) {
   for (const [id, v] of Object.entries(changes)) {
     const cur = getPath(live, id);
     const spc = ctl(id);
+    if (spc && spc.kind === "global") { if (JSON.stringify(v) !== JSON.stringify(globalStyles().normalizeSection(spc.section, cur))) out[id] = v; continue; }
     if (spc && spc.sp) { if (JSON.stringify(v === undefined ? null : v) !== JSON.stringify(cur === undefined ? null : cur)) out[id] = v; continue; }
     if (Array.isArray(v)) { if (JSON.stringify(v) !== JSON.stringify(Array.isArray(cur) ? cur.map((x) => ({ key: x.key, label: x.label, hex: x.hex })) : [])) out[id] = v; continue; }
     const same = typeof v === "number" ? Number(cur) === v : (v === null || v === "") ? (cur === null || cur === undefined || cur === "") : String(cur) === String(v);
@@ -387,6 +396,7 @@ const resolveColor = (v, config) => {
 };
 const valuesOf = (siteId, config) => Object.fromEntries(catalog(siteId).map((c) => {
   const v = getPath(config, c.id);
+  if (c.kind === "global") return [c.id, globalStyles().normalizeSection(c.section, v)];
   const out = v === undefined || v === null ? (c.kind === "toggle" ? false : c.kind === "palette" ? [] : "") : (c.kind === "color" ? resolveColor(v, config) : v);
   return [c.id, out];
 }));
@@ -452,7 +462,7 @@ function assetsOf(siteId, config) {
   const a = siteSettings().siteAssets(config.tokens, config.settings, themeCss);
   const vars = BODY_VARS(config.tokens);
   // @font-face de la bibliothèque et des polices téléversées par CE site, pour que la police choisie s'affiche sans recharger
-  return { bodyStyle: vars, theme: a.theme, custom: a.custom, pack: a.pack ? { vars: a.pack.vars, attr: a.pack.attr } : null, faces: String(fontLib.faceCssFor(vars, { siteId }) || "").replace(/[<>]/g, "") };
+  return { bodyStyle: vars, theme: a.theme, custom: a.custom, pack: a.pack ? { vars: a.pack.vars, attr: a.pack.attr } : null, faces: String(fontLib.faceCssFor(`${vars}\n${String(a.theme || "")}`, { siteId }) || "").replace(/[<>]/g, "") };
 }
 function contrast(t) {
   const out = [], c = t.colors;
@@ -507,4 +517,9 @@ function restoreVersion(ctx, siteId, versionId, userId, { can } = {}) {
   return saveDraft(ctx, siteId, merged, userId, { can });
 }
 
-module.exports = { PANELS, catalog, panelsFor, state, saveDraft, discardDraft, previewFor, publish, history, restoreVersion, cleanChanges, applyChanges, assetsOf, controlById: (id) => ctl(id), MAX_VERSIONS };
+// Valeurs d'origine du site (couleurs, tailles, polices, boutons) : montrées par l'écran Global comme « valeur héritée du thème »
+function liveBase(ctx, siteId) {
+  const t = tokensLib.normalizeTokens(liveConfig(ctx, siteId).config.tokens || {});
+  return { type: t.type, colors: t.colors, sizes: t.sizes, fonts: t.fonts, buttons: t.buttons, radius: t.radius };
+}
+module.exports = { liveBase, PANELS, catalog, panelsFor, state, saveDraft, discardDraft, previewFor, publish, history, restoreVersion, cleanChanges, applyChanges, assetsOf, controlById: (id) => ctl(id), MAX_VERSIONS };

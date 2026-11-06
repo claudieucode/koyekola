@@ -131,22 +131,6 @@ describe("personnaliser : coque (navigateur)", { skip: SKIP }, () => {
     await page.context().close();
   });
 
-  test("Global : une couleur change l'aperçu en direct, Publier l'applique au site, l'autre site n'est pas touché", async () => {
-    const page = await open(); await go(page, B);
-    await page.locator(".pz-cat", { hasText: "Global" }).click();
-    await shot(page, "10-global");
-    const field = page.locator('[data-ctl="tokens.colors.primary"] input[type=text]').first();
-    await field.fill("#aa2244"); await field.blur();
-    await page.waitForFunction(() => { const d = document.getElementById("pz-frame").contentDocument; return d && d.body && /aa2244/i.test((d.body.getAttribute("style") || "") + (d.documentElement.innerHTML.match(/aa2244/i) || "")); }, null, { timeout: 10000 });
-    await page.waitForFunction(() => !document.getElementById("pz-publish").disabled, null, { timeout: 8000 });
-    await page.waitForTimeout(2200);
-    await page.click("#pz-publish"); await page.getByRole("button", { name: "Publier maintenant" }).click();
-    await page.waitForFunction(() => /Publié/.test(document.getElementById("pz-toast").textContent) && !document.getElementById("pz-toast").hidden, null, { timeout: 15000 });
-    assert.match(JSON.parse(one("SELECT tokens FROM mk_sites WHERE id = ?", B).tokens).colors.primary, /aa2244/i);
-    assert.doesNotMatch(String(one("SELECT tokens FROM mk_sites WHERE id = ?", A).tokens), /aa2244/i);
-    await page.context().close();
-  });
-
   test("Page d'accueil : le choix d'une page s'enregistre pour CE site", async () => {
     const page = await open(); await go(page, A);
     const extra = Number(db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, status, kind, site_id, published_at) VALUES (?, 'Autre accueil', 'autre-accueil', 'Autre accueil', '[]', 'published', 'page', ?, datetime('now'))").run(orgId, A).lastInsertRowid);

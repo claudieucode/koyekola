@@ -68,7 +68,9 @@ html, body { height: 100%; margin: 0; }
 .pz-detail-head { display: flex; align-items: center; min-height: var(--pz-row-h); border-bottom: 1px solid var(--pz-rule); }
 .pz-back { width: var(--pz-row-h); align-self: stretch; display: grid; place-items: center; border: 0; border-right: 1px solid var(--pz-rule); background: transparent; color: var(--pz-ink); transition: background var(--pz-t); }
 .pz-back:hover { background: var(--pz-hover); }
-.pz-detail-title { margin: 0; padding: 0 var(--pz-gutter); font-size: var(--pz-fs-md); font-weight: 700; color: var(--pz-navy); outline: none; }
+.pz-detail-text { display: flex; flex-direction: column; padding: 8px var(--pz-gutter); min-width: 0; }
+.pz-detail-kicker { font-size: var(--pz-fs-sm); color: var(--pz-ink-2); }
+.pz-detail-title { margin: 0; font-size: var(--pz-fs-lg); line-height: 1.25; font-weight: 400; color: var(--pz-navy); outline: none; }
 .pz-detail-body { padding: 20px var(--pz-gutter); color: var(--pz-ink-2); font-size: var(--pz-fs-sm); }
 .pz-detail-body p { margin: 0; }
 

@@ -56,3 +56,7 @@ Reconstruction du module sur une base propre (l'ancien module a été retiré : 
 - **Droits** : `appearance.read` (ouvrir), `appearance.styles` (modifier), `appearance.publish` (publier), `pages.code` (CSS), `seo.edit` (description), `forms.write` (page d'accueil).
 - Fichiers ajoutés à l'étape 2 : `public/js/personnaliser/settings.js` (champs, brouillon, aperçu, publication, panneaux), `public/css/personnaliser-reglages.css`, route d'accueil dans `src/marketing/web/personnaliser.js`.
 - Pas de planification de publication ni de lien partagé (retirés avec l'ancien module).
+
+# Étape 3 : Global (Typographie, Couleurs, Conteneur, Boutons)
+
+Détail complet : `docs/customizer/GLOBAL_MODULE.md`. La catégorie Global remplace l'ancien rendu générique par quatre sous-écrans (`public/js/personnaliser/global.js`) branchés sur le modèle `tokens.global` (`src/marketing/pages/globalStyles.js`).

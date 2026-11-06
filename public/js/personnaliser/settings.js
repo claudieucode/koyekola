@@ -361,7 +361,7 @@
     K.setDirty(dirty() && boot.can.edit);
     renderCounts();
   }
-  function afterChange() { status(); schedulePreview(); scheduleSave(); }
+  function afterChange() { status(); schedulePreview(); scheduleSave(); K.emit("settings:changed"); }
 
   // ---------- Serveur ----------
   function post(path, body) {
@@ -382,7 +382,7 @@
     var mine = ++seq;
     post(boot.api + "/rendu", { changes: work() }).then(function (r) {
       if (mine < seq) return;
-      warnings = r.warnings || [];
+      warnings = r.warnings || []; K.emit("settings:warnings", warnings);
       Object.keys(errors).forEach(function (id) { if (!/hexadécimal/.test(errors[id])) delete errors[id]; });
       showErrors();
       if (r.structural) K.preview.softReload(); else applyAssets(r.assets);
@@ -391,7 +391,7 @@
       if (mine < seq) return;
       if (e.network) { toast(e.message, "error"); return; }
       var id = matchError(e.message);
-      if (id) setError(id, e.message); else toast(e.message, "error");
+      if (id) setError(id, e.message); if (!id || !document.querySelector('[data-ctl="' + id + '"]')) toast(e.message, "error");
       status();
     });
   }
@@ -446,6 +446,8 @@
     });
   }
   K.pending = work; // réglages modifiés non publiés (lecture seule, pour les tests et les futurs modules)
+  // Outils partagés avec les sous-écrans des catégories (Global…) : mêmes valeurs, même brouillon, même aperçu, même publication
+  K.api = { h: h, icon: icon, toast: toast, modal: modal, values: function () { return values; }, set: set, device: function () { return device; }, pending: work };
   K.on("publish", publish);
   K.on("change:device", function (d) { device = d; refreshDeviceFields(); });
   window.addEventListener("pagehide", function () { if (dirty() && boot.can.edit && navigator.sendBeacon) { /* le brouillon est enregistré 1,2 s après chaque changement */ } });

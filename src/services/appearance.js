@@ -250,11 +250,12 @@ function buildCss(cfg) {
   const l = t.link;
   rule(":where(main) a:where(:not([class]))", [l.color ? `color:${colorOf(l.color)}` : "", l.underline === "always" ? "text-decoration:underline" : l.underline === "none" ? "text-decoration:none" : ""]);
   rule(":where(main) a:where(:not([class])):hover", [l.hoverColor ? `color:${colorOf(l.hoverColor)}` : "", l.underline === "hover" ? "text-decoration:underline" : ""]);
+  if (t.global) { const gcss = require("../marketing/pages/globalStyles").globalCss(t.global, "principal"); if (gcss) rules.push(gcss); }
   const decl = root.length ? `:root{${root.join(";")}}` : "";
   const hasAny = decl || rules.length;
   // Polices de la bibliothèque choisies pour le site : leurs règles @font-face sont livrées avec la feuille
   // (les polices TÉLÉVERSÉES ne sont pas figées ici : leurs règles sont ajoutées à chaque rendu par parts(), pour suivre les variantes ajoutées ou retirées)
-  const faces = hasAny ? require("../utils/fontLibrary").faceCssFor(`${decl}:root{${kw}}`) : "";
+  const faces = hasAny ? require("../utils/fontLibrary").faceCssFor(`${decl}:root{${kw}}${rules.join("")}`) : "";
   return hasAny ? `${faces}${decl}:root{${kw}}${rules.join("")}` : "";
 }
 

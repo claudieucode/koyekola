@@ -2,7 +2,7 @@
 // « panels » : réglages du moteur de styles (services/siteStyles) affichés dans la catégorie ; « view » : panneau spécial (menus, widgets, accueil, liens vers le Theme Builder).
 // Un réglage n'est jamais proposé deux fois : chaque panneau du moteur appartient à UNE catégorie.
 module.exports = Object.freeze([
-  { id: "global", label: "Global", panels: ["couleurs", "palette", "typographie", "boutons"] },
+  { id: "global", label: "Global", panels: ["global"] },
   { id: "entete", label: "Entête", panels: ["en-tete"], view: "themebuilder-header" },
   { id: "types-de-publication", label: "Types de publication", panels: ["single-post"] },
   { id: "general", label: "Général", panels: ["mise-en-page", "arriere-plan", "images", "formulaires", "appareils", "mode-sombre"] },
