@@ -1,0 +1,21 @@
+# En-têtes du secteur « agence » (agences créatives et studios digitaux)
+
+Fichier : `src/themeBuilder/catalog/header/sectors/agence.js` (briques propres : `src/themeBuilder/catalog/header/agence-parts.js`).
+Zone visuelle : expérimental mais utilisable, typographie expressive, asymétrie, brutalisme, menus créatifs. Aucune image, aucun HTML libre ; menus = menu affecté à « En-tête » ; aucune donnée inventée (les infos pratiques sont des consignes à remplacer).
+
+## Matrice de conception
+
+| Clé | Nom | Direction | Composition | Palette (fond / texte / accent) | Polices (titres / texte) | Navigation | Animations | Responsive |
+|---|---|---|---|---|---|---|---|---|
+| agence-01 | Hors Cadre | Design expérimental | Bandeau défilant noir ; marque + anneau en haut à gauche ; cases de navigation décalées vers le bas ; bouton remonté | #efe9dd / #141414 / #ff4b1f | Syne / Space Mono | Cases à bordure franche (mosaïque), remplies au survol | Entrée « monte », survol « surgit », bandeau défilant | Cases qui passent à la ligne, décalage retiré sur mobile, burger |
+| agence-02 | Colossal Type | Typographie monumentale | Ligne d'infos ; nom du site pleine largeur (fluide 56 à 200 px) ; filet citron de 8 px ; navigation répartie + bouton flèche | #0c0c0c / #f2efe6 / #d4ff3a | Archivo Black / Inter Tight | Capitales espacées, soulignement au survol | Dévoilement par masque du nom, survol « se soulève » ; se réduit au défilement | Nom fluide, navigation repliée en burger |
+| agence-03 | Dalle Rose | Brutalisme moderne | 4 cellules à filets de 4 px (bloc rose, accroche, date, bouton) + barre de navigation noire pleine largeur | #dcdad2 / #000000 / #ff2e93 | Dela Gothic One / Space Mono | Cases pleines inversées au survol | Entrée « glisse », survol « appuie » ; collant | Cellules 2 puis 1 colonne, burger |
+| agence-04 | Fil Oblique | Artistique asymétrique | Bloc de marque orange collé au bord, bandeau incliné et disque dégradé qui se chevauchent, navigation + bouton rond en bas à droite | #f7efe4 / #1d1240 / #ff6a3d | Instrument Serif / DM Sans | Soulignement qui se révèle | Entrée « glisse », survol « flotte » | Bloc de marque + burger + bouton |
+| agence-05 | Seuil Ouvert | Studio minimal à menu plein écran | Ligne unique : point, nom mono, mention, bouton « Menu » | #0a0a0a / #ffffff / #7c6cff | Inter Tight / DM Mono | Menu plein écran numéroté, effet cercle, cascade | Dévoilement de la marque ; superposé puis plein au défilement | Identique, mention masquée sur mobile |
+| agence-06 | Table des Projets | Portfolio à index numéroté | Petit nom à gauche, mot « Index » géant à droite, ligne basse en 3 cellules | #f4f4ef / #101010 / #1a1aff | Familjen Grotesk / DM Mono | Index plein écran numéroté, panneau qui glisse à droite | Entrée douce ; collant | Mot géant, cellules empilées |
+| agence-07 | Boucle Rose | Studio de motion design | Liseré dégradé, tête de lecture + marque, pilules de navigation, 2 boutons, ruban défilant | #120a24 / #f6f1ff / #ff4fa3 | Unbounded / Space Grotesk | Pilules pleines au survol | Entrée « zoom », survol « pulse », ruban à contre-sens | Burger, bouton principal gardé, ruban gardé |
+| agence-08 | Maison Rétro | Branding rétro contemporain | Médaillon rond central, date + accroche à gauche, bouton + réseaux à droite, navigation sous double filet | #f2e3c6 / #3a1c10 / #b93c1e | Caprasimo / DM Sans | Cases à contour, remplies au survol | Entrée « monte », survol « flotte » | Médaillon en tête, colonne unique |
+| agence-09 | Plan Masse | Studio d'architecture web | Colonne de marque jaune, infos pratiques + bouton, navigation en onglets mono | #0f2a4a / #e8f1ff / #ffd23f | IBM Plex Sans Condensed / IBM Plex Mono | Onglets à filet supérieur | Entrée « glisse » ; collant | Colonne réduite puis empilée, infos masquées sur mobile |
+| agence-10 | Collectif Ruban | Collectif d'artistes | Rubans inclinés, nom centré penché, bouton rond, cases de navigation dessous | #ffd93d / #111111 / #2d2bff | Bagel Fat One / Space Grotesk | Cases à bordure noire, bleues au survol | Entrée « zoom », survol « vacille » | Nom centré, rubans masqués, bouton rond centré |
+
+Toutes les animations sont natives (moteur de mouvement du Page Builder, Motion Studio pour le menu plein écran, widget « marquee » pour les bandeaux) et désactivées si le visiteur demande moins de mouvement.
