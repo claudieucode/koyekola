@@ -2000,6 +2000,24 @@ function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
   }
   return [...base, ...["wide", "tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
 }
+// Lisibilité garantie : un texte et un fond en couleurs HEXADÉCIMALES réglés sur le même écran avec un contraste inférieur à 2:1 (noir sur noir, blanc sur blanc)
+// rendraient le texte invisible. Le fond choisi est conservé ; le texte prend la couleur lisible la plus proche (blanc ou presque noir). Les valeurs en variables
+// (var(--kw-…)), transparentes ou en dégradé ne sont jamais modifiées : seul un réglage littéral, donc vérifiable, est corrigé.
+const HEX_RGB = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const lumHex = (h) => { let x = String(h).slice(1); if (x.length === 3) x = x.split("").map((c) => c + c).join(""); const v = [0, 2, 4].map((i) => parseInt(x.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+const contrastHex = (a, b) => { const l1 = lumHex(a), l2 = lumHex(b); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
+function guardContrast(styles) {
+  if (!styles || typeof styles !== "object") return styles;
+  let out = null;
+  for (const [bp, st] of Object.entries(styles)) {
+    if (!st || !HEX_RGB.test(String(st.color || "")) || !HEX_RGB.test(String(st.backgroundColor || ""))) continue;
+    if (contrastHex(st.color, st.backgroundColor) >= 2) continue;
+    out = out || { ...styles };
+    out[bp] = { ...st, color: lumHex(st.backgroundColor) < 0.4 ? "#ffffff" : "#111111" };
+  }
+  return out || styles;
+}
+
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const mediaOf = (bp) => (bp.key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
@@ -2015,7 +2033,10 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (!def) continue;
       const sel = `.kw-node.kw-n-${n.id} ${def.select}`;
       for (const bp of BREAKPOINTS) {
-        const d = set.styles && set.styles[bp.key] ? declarations(set.styles[bp.key]) : "";
+        let st = set.styles && set.styles[bp.key];
+        // Menu horizontal : « Écart » règle l'espace ENTRE les liens d'une ligne ; il ne doit pas devenir un vide démesuré quand la liste passe en colonne (menu mobile)
+        if (n.type === "menu" && key === "list" && st && st.gap !== undefined && st.rowGap === undefined && st.columnGap === undefined && !(n.props && n.props.vertical)) { const { gap, ...rest } = st; st = { ...rest, columnGap: gap, rowGap: "4px" }; }
+        const d = st ? declarations(st) : "";
         if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
       }
       for (const state of STATES) {
@@ -2063,7 +2084,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
     addParts(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
