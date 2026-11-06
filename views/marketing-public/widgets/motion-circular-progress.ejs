@@ -1,0 +1,9 @@
+<%# Progression circulaire (widgets/motion-circular-progress.js). Variables : p, cls, attrs, isBuilder. Anneau et nombre FINAUX écrits ici (lisibles sans JavaScript) ; public/js/motion-studio/circular.js les anime. %>
+<% const v = Math.max(0, Math.min(100, Number(p.value) || 0)); const dec = p.decimals === "1" ? 1 : 0; const sw = { thin: 6, regular: 10, thick: 16 }[p.thickness] || 10; const r = 50 - sw / 2;
+   const size = ["sm", "md", "lg"].includes(p.size) ? p.size : "md"; const tone = ["primary", "secondary", "accent", "success", "warning", "error"].includes(p.tone) ? p.tone : "primary";
+   const txt = v.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); %>
+<div class="<%= cls %> kw-ms kw-ms-d kw-ms-cp kw-ms-cp-<%= size %> kw-ms-tone-<%= tone %>" role="progressbar" aria-label="<%= p.label %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= v %>" aria-valuetext="<%= txt %> <%= p.unit || "%" %>"<%- attrs %>>
+  <div class="kw-ms-cp-ring"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="kw-ms-cp-track" cx="50" cy="50" r="<%= r %>" fill="none" stroke-width="<%= sw %>"/><circle class="kw-ms-cp-arc" cx="50" cy="50" r="<%= r %>" fill="none" stroke-width="<%= sw %>" stroke-linecap="<%= p.cap === "butt" ? "butt" : "round" %>" pathLength="100" stroke-dasharray="100" stroke-dashoffset="<%= Math.round((100 - v) * 100) / 100 %>" transform="rotate(-90 50 50)"/></svg>
+    <% if (p.showValue !== false) { %><span class="kw-ms-cp-val" aria-hidden="true"><span class="kw-ms-num" data-to="<%= v %>" data-dec="<%= dec %>"><%= txt %></span><% if (p.unit) { %><span class="kw-ms-cp-unit"><%= p.unit %></span><% } %></span><% } %></div>
+  <% if (p.caption) { %><span class="kw-ms-cp-cap"><%= p.caption %></span><% } %>
+</div>

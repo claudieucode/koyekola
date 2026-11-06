@@ -1,0 +1,10 @@
+<%# Barres de progression animées (widgets/motion-progress-bars.js). Variables : p, cls, attrs, isBuilder. Largeurs et valeurs FINALES écrites ici ; public/js/motion-studio/bars.js les anime. %>
+<% const TONES = ["primary", "secondary", "accent", "success", "warning", "error"]; const tone = TONES.includes(p.tone) ? p.tone : "primary"; const variant = ["round", "square", "thin", "thick"].includes(p.variant) ? p.variant : "round"; const items = Array.isArray(p.items) ? p.items : []; %>
+<ul class="<%= cls %> kw-ms kw-ms-d kw-ms-pb kw-ms-pb-<%= variant %> kw-ms-tone-<%= tone %>"<%- attrs %>>
+  <% items.forEach((it, i) => { const v = Math.max(0, Math.min(100, Number(it.value) || 0)); const t = TONES.includes(it.tone) ? it.tone : ""; const dec = v % 1 ? 1 : 0; const txt = v.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); %>
+  <li class="kw-ms-pb-item<%= t ? " kw-ms-tone-" + t : "" %>">
+    <div class="kw-ms-pb-head"><span class="kw-ms-pb-label" id="kw-pb-<%= i %>-<%= cls.split(" ").pop() %>"><%= it.label %></span><% if (p.showValue !== false) { %><span class="kw-ms-pb-val" aria-hidden="true"><span class="kw-ms-num" data-to="<%= v %>" data-dec="<%= dec %>"><%= txt %></span><%= p.unit || "" %></span><% } %></div>
+    <div class="kw-ms-pb-track" role="progressbar" aria-labelledby="kw-pb-<%= i %>-<%= cls.split(" ").pop() %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= v %>" aria-valuetext="<%= txt %> <%= p.unit || "" %>"><span class="kw-ms-pb-fill" style="width:<%= v %>%"></span></div>
+  </li>
+  <% }) %>
+</ul>
