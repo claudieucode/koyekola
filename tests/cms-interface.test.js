@@ -22,7 +22,7 @@ describe("registre et menu", () => {
   test("le registre couvre la structure cible (14 rubriques : « Navigation » est devenu Apparence → Menus) sans adresse en double", () => {
     assert.deepEqual(cmsNav.SECTIONS.map((s) => s.label), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
     assert.equal(unique.length, cmsNav.ALL.length);
-    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Theme Builder", "Thèmes", "Éditeur de fichiers", "Éditeur du site", "Templates", "Patterns", "Styles", "Polices", "Widgets", "Menus"]);
+    assert.deepEqual(cmsNav.SECTIONS.find((s) => s.key === "apparence").items.map((i) => i.label), ["Theme Builder", "Thèmes", "Éditeur de fichiers", "Personnaliser", "Éditeur du site", "Templates", "Patterns", "Styles", "Polices", "Widgets", "Menus"]);
   });
 
   test("chaque écran du registre répond 200 dans la coque CMS, avec son menu ouvert sur la bonne entrée", async () => {
@@ -31,6 +31,8 @@ describe("registre et menu", () => {
       // « Mes sites » (liste globale) est une destination du menu Marketing : elle n'a plus de coque CMS (voir « Sites et Tests A/B »)
       if (item.key === "sites") { assert.equal((await boss.get(item.href)).status, 200, item.href); continue; }
       const res = await boss.get(item.href);
+      // Personnaliser est un écran plein cadre (aperçu du site) : il répond 200 mais n'est pas dans la coque du CMS
+      if (item.fullscreen) { assert.equal(res.status, 200, item.href); assert.match(res.text, /id="pz-boot"/, `${item.href} : personnalisateur`); continue; }
       // ARTICLES-02 : « Ajouter un article » ouvre directement l'éditeur (redirection), il n'a plus d'écran dans la coque
       if (/\/articles\/ajouter(?:[?#]|$)/.test(item.href)) { assert.equal(res.status, 302, item.href); assert.match(res.location, /^\/formateur\/blog\/nouveau/); continue; }
       assert.equal(res.status, 200, item.href);

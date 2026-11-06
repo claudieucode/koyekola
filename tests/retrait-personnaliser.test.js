@@ -28,7 +28,7 @@ describe("retrait du module Personnaliser : fichiers et références", () => {
     for (const dir of ["src", "views", "public/js", "public/css"]) {
       for (const f of walk(path.join(ROOT, dir))) {
         const t = fs.readFileSync(f, "utf8");
-        if (/services\/customizer\b|\.\/customizer["']|customizerPreview|previewParts|themes\/customization|kwPartsPreview|kwShared|kwshare|apparence\/personnaliser/.test(t)) bad.push(path.relative(ROOT, f));
+        if (/services\/customizer\b|\.\/customizer["']|customizerPreview|previewParts|themes\/customization|kwPartsPreview|kwShared|kwshare/.test(t)) bad.push(path.relative(ROOT, f));
       }
     }
     // _ancienne-bibliotheque : pages de démonstration d'un thème boutique (« Comment personnaliser » = contenu de vitrine, sans lien avec le module)
@@ -53,14 +53,14 @@ describe("retrait du module Personnaliser : serveur réel", () => {
       assert.equal(r.status, 404, u);
     }
   });
-  test("l'écran Styles fonctionne et ne mentionne plus Personnaliser ; Thèmes et Theme Builder s'ouvrent", async () => {
+  test("l'écran Styles fonctionne sans planification ni partage ; Thèmes et Theme Builder s'ouvrent", async () => {
     const st = await boss.get("/marketing/site-web/styles");
     assert.equal(st.status, 200);
-    assert.match(st.text, /personnaliser\?site|personnaliser"/, "lien vers la nouvelle coque"); assert.doesNotMatch(st.text, /planifier|partager/i);
+    assert.match(st.text, /site-web\/personnaliser/, "entrée « Personnaliser » dans le menu Apparence (nouvelle coque)"); assert.doesNotMatch(st.text, /planifier|partager/i);
     for (const u of ["/marketing/site-web/themes", "/marketing/site-web/apparence/theme-builder", "/marketing/site-web/sites"]) {
       const r = await boss.get(u);
       assert.equal(r.status, 200, u);
-      assert.doesNotMatch(r.text, /Personnaliser le site|>Personnaliser</, u);
+      assert.doesNotMatch(r.text, /Personnaliser le site/, u);
     }
   });
   test("tables : propres au module supprimées, partagées conservées, colonnes de planification retirées", () => {
