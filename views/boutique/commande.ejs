@@ -50,7 +50,7 @@
 </form>
 <aside class="sh-summary" aria-label="Récapitulatif">
   <h2>Récapitulatif</h2>
-  <ul class="sh-lines"><% priced.lines.forEach((l) => { %><li><%= l.quantity %> × <%= l.name %><%= l.variantLabel ? " (" + l.variantLabel + ")" : "" %> <span><%= money(l.unitCents * l.quantity) %></span></li><% }) %></ul>
+  <ul class="sh-lines"><% priced.lines.forEach((l) => { %><li><%= l.quantity %> × <%= l.name %><%= l.variantLabel ? " (" + l.variantLabel + ")" : "" %><%= l.customText ? " — " + l.customLabel + " : « " + l.customText + " »" : "" %> <span><%= money(l.unitCents * l.quantity) %></span></li><% }) %></ul>
   <dl class="sh-totals">
     <div><dt>Sous-total</dt><dd><%= money(priced.totals.subtotal) %></dd></div>
     <% if (priced.totals.discount) { %><div><dt>Réduction</dt><dd>− <%= money(priced.totals.discount) %></dd></div><% } %>

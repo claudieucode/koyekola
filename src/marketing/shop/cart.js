@@ -5,6 +5,7 @@ const { MarketingError } = require("../errors");
 const catalog = require("./catalog");
 const store = require("./store");
 const calc = require("./calc");
+const personalization = require("./personalization");
 
 const MAX_QTY = 99;
 const MAX_LINES = 50;
@@ -51,11 +52,12 @@ function resolveBuyable(s, productId, variantId) {
   return { p, v };
 }
 
-function addItem(s, cart, { productId, variantId = null, quantity = 1, expectedVersion }) {
+function addItem(s, cart, { productId, variantId = null, quantity = 1, expectedVersion, customText = "" }) {
   checkVersion(cart, expectedVersion);
   const qty = qtyOf(quantity);
   const { p, v } = resolveBuyable(s, Number(productId), variantId);
-  const line = s.db.prepare("SELECT * FROM mk_shop_cart_items WHERE cart_id = ? AND product_id = ? AND COALESCE(variant_id, 0) = ?").get(cart.id, p.id, v ? v.id : 0);
+  const custom = personalization.validate(s.db, p.id, customText).text;
+  const line = s.db.prepare("SELECT * FROM mk_shop_cart_items WHERE cart_id = ? AND product_id = ? AND COALESCE(variant_id, 0) = ? AND COALESCE(custom_text, '') = ?").get(cart.id, p.id, v ? v.id : 0, custom || "");
   const next = (line ? line.quantity : 0) + qty;
   if (next > MAX_QTY) throw new MarketingError("invalid_field", `Quantité maximale par article : ${MAX_QTY}.`);
   const stock = catalog.stockOf(p, v);
@@ -63,7 +65,7 @@ function addItem(s, cart, { productId, variantId = null, quantity = 1, expectedV
   if (line) s.db.prepare("UPDATE mk_shop_cart_items SET quantity = ? WHERE id = ?").run(next, line.id);
   else {
     if (s.db.prepare("SELECT COUNT(*) AS n FROM mk_shop_cart_items WHERE cart_id = ?").get(cart.id).n >= MAX_LINES) throw new MarketingError("invalid_field", "Le panier contient trop d'articles différents.");
-    s.db.prepare("INSERT INTO mk_shop_cart_items (cart_id, product_id, variant_id, quantity) VALUES (?,?,?,?)").run(cart.id, p.id, v ? v.id : null, qty);
+    s.db.prepare("INSERT INTO mk_shop_cart_items (cart_id, product_id, variant_id, quantity, custom_text) VALUES (?,?,?,?,?)").run(cart.id, p.id, v ? v.id : null, qty, custom);
   }
   touch(s, cart);
 }
@@ -127,9 +129,11 @@ function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, 
     const price = catalog.priceOf(p, v, now);
     const stock = catalog.stockOf(p, v);
     const label = v ? Object.values(v.options).join(" / ") : null;
+    const perso = personalization.get(s.db, p.id);
     if (stock !== null && it.quantity > stock) issues.push({ itemId: it.id, kind: "stock", available: stock, message: stock > 0 ? `« ${p.name} » : seulement ${stock} en stock.` : `« ${p.name} » est en rupture de stock.` });
     lines.push({
       key: `${it.id}`, itemId: it.id, productId: p.id, variantId: v ? v.id : null, name: p.name, variantLabel: label, sku: (v && v.sku) || p.sku, slug: p.slug, image: (v && v.image_url) || p.image_url,
+      customText: perso && it.custom_text ? it.custom_text : null, customLabel: perso ? perso.label : null,
       quantity: it.quantity, unitCents: price.unitCents, regularCents: price.regularCents, onSale: price.onSale, requiresShipping: p.requires_shipping === 1,
       weightGrams: (v && v.weight_grams != null ? v.weight_grams : p.weight_grams) || 0, categoryIds: p.categories.map((c) => c.id), stock,
     });

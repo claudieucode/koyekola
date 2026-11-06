@@ -1,0 +1,11 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Mes souhaits</h1>
+<% if (!items.length) { %><p class="sh-empty">Votre liste est vide. Sur une fiche produit, choisissez « Ajouter à mes souhaits ».</p>
+<% } else { %>
+<%- include("_grid", { items }) %>
+<ul class="sh-wish-list">
+  <% items.forEach((p) => { %><li><a href="<%= shop.base %>/produit/<%= encodeURIComponent(p.slug) %>"><%= p.name %></a>
+    <form class="sh-inline" method="post" action="<%= shop.base %>/souhaits/retirer"><input type="hidden" name="product_id" value="<%= p.id %>"><input type="hidden" name="retour" value="<%= shop.base %>/souhaits"><button class="sh-link" type="submit" aria-label="Retirer <%= p.name %> de mes souhaits">Retirer</button></form></li><% }) %>
+</ul>
+<% } %>
+<%- include("_bottom") %>

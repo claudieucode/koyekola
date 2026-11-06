@@ -45,3 +45,14 @@
 4. Produits groupés / kits.
 5. Abonnements (récurrence Stripe, pause, résiliation en un clic).
 6. Contrôle d'âge, créneaux de livraison, accès membre.
+
+## Briques ajoutées au moteur (migration 131)
+| Brique | Ce qui existe maintenant | Fichiers |
+|---|---|---|
+| Avis vérifiés | Un avis ne peut venir que d'une commande **payée** contenant le produit (jeton de la commande ou compte client). Un seul avis par commande et produit. Modération dans l'admin (onglet « Avis ») : à relire / publié / refusé, ou publication directe (réglage). HTML retiré. | `shop/reviews.js`, `views/boutique/avis.ejs`, `views/marketing/boutique/avis.ejs` |
+| Données Google | `Product` + `Offer` (ou `AggregateOffer` pour les variantes) et `BreadcrumbList` sur chaque fiche. `AggregateRating` et `Review` **uniquement** s'il existe des avis publiés. | `shop/seo.js` |
+| Personnalisation par ligne | Réglage par produit (libellé, aide, longueur max, obligatoire). Le texte est validé côté serveur, séparé par ligne de panier, copié sur la commande, visible dans l'admin et l'e-mail. Le prix ne change pas. | `shop/personalization.js` |
+| Liste de souhaits | Par navigateur (cookie) et rattachée au compte si connecté ; propre à chaque boutique ; page `/boutique/souhaits`. | `shop/wishlist.js` |
+
+Toujours absents (donc interdits dans les thèmes) : collections, produits groupés/coffrets, abonnements, contrôle d'âge, créneaux de livraison, accès membre, comparateur, liste de naissance, prix variable selon la personnalisation.
+Tests : `tests/boutique-briques.test.js`.

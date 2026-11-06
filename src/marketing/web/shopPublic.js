@@ -10,6 +10,10 @@ const customers = require("../shop/customers");
 const payments = require("../shop/payments");
 const notify = require("../shop/notify");
 const view = require("../shop/view");
+const reviews = require("../shop/reviews");
+const personalization = require("../shop/personalization");
+const wishlist = require("../shop/wishlist");
+const seo = require("../shop/seo");
 const siteModules = require("../siteModules");
 const pagesLib = require("../pages");
 const { tokensToCss } = require("../pages/tokens");
@@ -19,6 +23,7 @@ const { createRateLimiter } = require("../../middlewares/security");
 
 const CART_COOKIE = "kola_cart";
 const CUSTOMER_COOKIE = "kola_cust";
+const WISH_COOKIE = "kola_wish";
 const BASE = "/boutique";
 
 module.exports = ({ db }) => {
@@ -84,7 +89,7 @@ module.exports = ({ db }) => {
     const category = q.category ? catalog.categoryBySlug(s, q.category) : null;
     const title = category ? category.name : q.tag ? `Étiquette : ${q.tag}` : q.q ? `Résultats pour « ${q.q} »` : "Boutique";
     const categories = catalog.listCategories(s);
-    const done = (themeTemplate) => render(req, res, "catalogue", { title, result, category, categories, q, query: req.query, themeTemplate: themeTemplate || null });
+    const done = (themeTemplate) => render(req, res, "catalogue", { title, result, category, categories, q, query: req.query, themeTemplate: themeTemplate || null, ratings: reviews.summaries(s, result.items.map((p) => p.id)) });
     // Le modèle de thème reçoit TOUS les critères de l'adresse (recherche, étiquette, prix, stock, promotion, tri, page) : sa grille, ses filtres et son compteur lisent le même contexte que cette page.
     const ctxQuery = { categorie: category ? category.slug : "", q: q.q, etiquette: q.tag };
     for (const k of ["min", "max", "stock", "promo", "vedette", "tri", "page"]) if (typeof req.query[k] === "string") ctxQuery[k] = req.query[k].slice(0, 40);
@@ -98,13 +103,74 @@ module.exports = ({ db }) => {
     listing(req, res, { categorySlug: req.params.slug });
   });
 
+  const wishOf = (req) => wishlist.find(req.shop.s, view.readCookie(req, WISH_COOKIE));
   router.get(`${BASE}/produit/:slug`, (req, res) => {
     const { s, settings } = req.shop;
     const product = catalog.publicProduct(s, req.params.slug);
     if (!product) return res.status(404).render("error", { message: "Ce produit n'existe pas ou n'est plus en vente." });
     const related = catalog.relatedProducts(s, product, 4);
+    const sum = settings.reviews_enabled ? reviews.forProduct(s, product.id) : { items: [], count: 0, average: null, distribution: {} };
+    const origin = `${req.protocol}://${req.get("host")}`;
+    const crumb = seo.productBreadcrumb(product, { origin, base: BASE, shopName: present(req).shop.name });
+    const jsonLd = [seo.safeJson(seo.productLd(product, { origin, base: BASE, currency: settings.currency, reviews: sum, shopName: present(req).shop.name })), seo.safeJson(crumb.ld)];
+    const wished = new Set(wishlist.productIds(s, wishOf(req)));
     region(req, res, "product", { category: product.categories[0] ? product.categories[0].name : "", categories: product.categories.map((c) => c.name), scope: { product: view.productScope(product, { base: BASE, currency: settings.currency }) } },
-      (themeTemplate) => render(req, res, "produit", { title: product.name, product, related, themeTemplate: themeTemplate || null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null }));
+      (themeTemplate) => render(req, res, "produit", { title: product.name, product, related, themeTemplate: themeTemplate || null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null,
+        personalization: personalization.get(db, product.id), reviews: sum, breadcrumb: crumb.items, jsonLd, wished, ratings: reviews.summaries(s, related.map((p) => p.id)) }));
+  });
+
+  // ── Souhaits ──
+  const safeBack = (b, fallback) => (/^\/boutique\/[A-Za-z0-9\-_/]*$/.test(b || "") ? b : fallback);
+  router.get(`${BASE}/souhaits`, (req, res) => {
+    const { s } = req.shop;
+    const list = wishOf(req);
+    const ids = wishlist.productIds(s, list);
+    const items = ids.map((id) => catalog.productById(s, id)).filter((p) => p && p.status === "published");
+    render(req, res, "souhaits", { title: "Mes souhaits", items, ratings: reviews.summaries(s, ids) });
+  });
+  const wishAction = (mutate) => (req, res) => {
+    try {
+      const { s } = req.shop;
+      let list = wishOf(req);
+      if (!list) { const made = wishlist.create(s, req.shopCustomer ? req.shopCustomer.id : null); view.setCookie(req, res, WISH_COOKIE, made.token, { days: 365 }); list = wishlist.find(s, made.token); }
+      if (req.shopCustomer && !list.customer_id) list = wishlist.attachCustomer(s, list, req.shopCustomer.id);
+      mutate(s, list, req.body.product_id);
+      if (wantsJson(req)) return res.json({ ok: true, count: wishlist.productIds(s, list).length });
+      res.redirect(303, safeBack(req.body.retour, `${BASE}/souhaits`));
+    } catch (error) {
+      if (!(error instanceof MarketingError)) throw error;
+      if (wantsJson(req)) return res.status(422).json({ ok: false, message: error.message });
+      res.redirect(303, `${safeBack(req.body.retour, BASE)}?erreur=${encodeURIComponent(error.message)}`);
+    }
+  };
+  router.post(`${BASE}/souhaits/ajouter`, wishAction((s, list, pid) => wishlist.add(s, list, pid)));
+  router.post(`${BASE}/souhaits/retirer`, wishAction((s, list, pid) => wishlist.remove(s, list, pid)));
+
+  // ── Avis (acheteurs vérifiés uniquement : jeton de la commande ou compte du client) ──
+  const reviewContext = (req, res) => {
+    const { s } = req.shop;
+    const order = orders.orderByNumber(s, req.params.number);
+    const allowed = order && (view.orderTokenOk(order, req.query.k) || (req.shopCustomer && order.customer_id === req.shopCustomer.id));
+    if (!allowed) { res.status(404).render("error", { message: "Commande introuvable." }); return null; }
+    const product = catalog.productById(s, req.params.pid);
+    if (!product) { res.status(404).render("error", { message: "Ce produit n'existe plus." }); return null; }
+    return { order, product, key: view.orderToken(order) };
+  };
+  router.get(`${BASE}/avis/:number/:pid(\\d+)`, (req, res) => {
+    const c = reviewContext(req, res); if (!c) return;
+    let error = null;
+    try { reviews.eligibleOrder(req.shop.s, c.order, c.product.id); if (!req.shop.settings.reviews_enabled) error = "Les avis sont désactivés sur cette boutique."; } catch (e) { if (!(e instanceof MarketingError)) throw e; error = e.message; }
+    render(req, res, "avis", { title: "Donner mon avis", ...c, error, values: {}, done: null }, error ? 403 : 200);
+  });
+  router.post(`${BASE}/avis/:number/:pid(\\d+)`, (req, res) => {
+    const c = reviewContext(req, res); if (!c) return;
+    try {
+      const r = reviews.submit(req.shop.s, req.shop.settings, c.order, c.product.id, req.body || {});
+      render(req, res, "avis", { title: "Merci pour votre avis", ...c, error: null, values: {}, done: r.status });
+    } catch (e) {
+      if (!(e instanceof MarketingError)) throw e;
+      render(req, res, "avis", { title: "Donner mon avis", ...c, error: e.message, values: req.body || {}, done: null }, e.code === "conflict" ? 409 : 422);
+    }
   });
 
   // ── Panier ──
@@ -133,7 +199,7 @@ module.exports = ({ db }) => {
       res.redirect(303, `${back}?erreur=${encodeURIComponent(error.message)}`);
     }
   };
-  router.post(`${BASE}/panier/ajouter`, cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version }), () => `${BASE}/panier`));
+  router.post(`${BASE}/panier/ajouter`, cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version, customText: req.body.custom_text }), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/ligne/:id(\\d+)`, cartAction((req, k) => cart.setQuantity(req.shop.s, k, Number(req.params.id), req.body.quantity, req.body.version), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/ligne/:id(\\d+)/supprimer`, cartAction((req, k) => cart.removeItem(req.shop.s, k, Number(req.params.id), req.body.version), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/coupon`, cartAction((req, k) => cart.setCoupon(req.shop.s, k, req.body.retirer ? "" : req.body.code), () => `${BASE}/panier`));
@@ -211,7 +277,7 @@ module.exports = ({ db }) => {
   router.get(`${BASE}/commande/confirmation/:number`, (req, res) => {
     const order = loadOrderFor(req, res);
     if (!order) return;
-    render(req, res, "confirmation", { title: `Commande ${order.number}`, order: orders.orderDetail(req.shop.s, order), key: view.orderToken(order), statusLabels: orders.STATUS_LABELS, instructions: order.payment_method === "manual" ? req.shop.settings.manual_instructions : null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null });
+    render(req, res, "confirmation", { title: `Commande ${order.number}`, order: orders.orderDetail(req.shop.s, order), reviewable: req.shop.settings.reviews_enabled ? new Set(db.prepare("SELECT product_id FROM mk_shop_order_items WHERE order_id = ? AND product_id IS NOT NULL").all(order.id).map((r) => r.product_id)) : new Set(), key: view.orderToken(order), statusLabels: orders.STATUS_LABELS, instructions: order.payment_method === "manual" ? req.shop.settings.manual_instructions : null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null });
   });
   // Nouvelle tentative de paiement d'une commande en attente (carte)
   router.post(`${BASE}/commande/:number/payer`, async (req, res, next) => {

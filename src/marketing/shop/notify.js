@@ -18,7 +18,7 @@ const SUBJECTS = {
 };
 
 function body(event, order, items, extra) {
-  const lines = items.map((i) => `- ${one(i.name)}${i.variant_label ? ` (${one(i.variant_label)})` : ""} × ${i.quantity} : ${money(i.line_subtotal_cents - i.discount_cents, order.currency)}`);
+  const lines = items.map((i) => `- ${one(i.name)}${i.variant_label ? ` (${one(i.variant_label)})` : ""}${i.custom_text ? ` — ${one(i.custom_label || "Personnalisation")} : « ${one(i.custom_text)} »` : ""} × ${i.quantity} : ${money(i.line_subtotal_cents - i.discount_cents, order.currency)}`);
   const recap = [`Commande ${order.number}`, ...lines, "", `Total : ${money(order.total_cents, order.currency)}`];
   const intro = {
     order_created: "Nous avons bien reçu votre commande. Elle sera traitée une fois le paiement confirmé.",
