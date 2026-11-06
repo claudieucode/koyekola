@@ -6,7 +6,7 @@ const fs = require("fs");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor, Client } = require("./helpers");
 const Catalog = require("../src/themeBuilder/catalog");
-const { MODELS } = require("../src/themeBuilder/catalog/header/models");
+const { MODELS } = require("../src/themeBuilder/catalog/header"); // liste fusionnée (modèles de secteur)
 const headerIdentity = require("../src/marketing/pages/headerIdentity");
 const nodes = require("../src/marketing/pages/nodes");
 
