@@ -215,6 +215,17 @@
     var fxTick = false, fxSet = function () { fxTick = false; fxHead.classList.toggle("is-scrolled", (window.pageYOffset || document.documentElement.scrollTop) > 8); };
     window.addEventListener("scroll", function () { if (!fxTick) { fxTick = true; window.requestAnimationFrame(fxSet); } }, { passive: true });
     fxSet();
+    // « Se cache » : masqué quand on descend (au-delà de 120 px), réaffiché dès qu'on remonte ; jamais masqué tant qu'un menu de l'en-tête a le focus ou est ouvert
+    if (fxHead.getAttribute("data-kw-scroll") === "hide") {
+      var hideLast = window.pageYOffset || 0, hideTick = false;
+      window.addEventListener("scroll", function () {
+        if (hideTick) return; hideTick = true;
+        window.requestAnimationFrame(function () {
+          hideTick = false; var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+          if (Math.abs(y - hideLast) > 6) { fxHead.classList.toggle("is-hidden", y > hideLast && y > 120 && !fxHead.querySelector("[aria-expanded=true]")); hideLast = y; }
+        });
+      }, { passive: true });
+    }
   }
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {

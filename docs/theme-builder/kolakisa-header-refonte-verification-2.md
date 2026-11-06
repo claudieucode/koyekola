@@ -1,3 +1,5 @@
+> **Document historique.** La bibliothèque décrite ici (100 compositions en rangées, 34 identités) a été remplacée par la bibliothèque « Atelier » : voir [HEADER_LIBRARY_100_MODELS_REPORT.md](HEADER_LIBRARY_100_MODELS_REPORT.md).
+
 # En-têtes sectoriels — rapport de vérification (4 novembre 2026)
 
 ## Tests automatisés

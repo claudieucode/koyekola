@@ -844,7 +844,11 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .lp-block.lp-site-header.kw-theme-overlay.kw-theme-fx-solid, .lp-block.lp-site-header.kw-theme-overlay.kw-theme-fx-both { position: fixed; }
 .lp-block.lp-site-header[data-kw-scroll=solid].is-scrolled .kw-full .kw-full, .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled .kw-full .kw-full { background-color: var(--kw-background, #fff) !important; box-shadow: 0 1px 0 rgba(15, 23, 42, .08), 0 6px 18px rgba(15, 23, 42, .08); }
 .lp-block.lp-site-header[data-kw-scroll=solid].is-scrolled :is(a:not([class*="kw-btn"]), p, span, h1, h2, h3, .kw-menu-burger), .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled :is(a:not([class*="kw-btn"]), p, span, h1, h2, h3, .kw-menu-burger) { color: var(--kw-text, #10222f) !important; }
-@media (prefers-reduced-motion: reduce) { .lp-block.lp-site-header[data-kw-scroll] .kw-full .kw-full { transition: none; } }
+/* « Se cache » : l'en-tête collant sort de l'écran quand on descend et revient dès qu'on remonte (classe is-hidden posée par landing.js) */
+.lp-block.lp-site-header[data-kw-scroll=hide] { transition: transform .28s ease; }
+.lp-block.lp-site-header[data-kw-scroll=hide].is-hidden { transform: translateY(-110%); }
+.lp-block.lp-site-header[data-kw-scroll=hide]:focus-within { transform: none; }
+@media (prefers-reduced-motion: reduce) { .lp-block.lp-site-header[data-kw-scroll] .kw-full .kw-full, .lp-block.lp-site-header[data-kw-scroll=hide] { transition: none; } }
 /* Un en-tête (ou un pied) de site touche le bord de la page : pas de marge de colonne au-dessus (en-tête) ni en dessous (pied) */
 .lp-main:has(> .lp-block.lp-site-header:first-child) { padding-top: 0; }
 .lp-main:has(> .lp-block.lp-site-footer:last-child) { padding-bottom: 0; }

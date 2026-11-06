@@ -4210,6 +4210,10 @@ function selectField(label, value, options, onChange, opts) {
           box.appendChild(h("div", { class: "pb-field" }, h("label", { for: wid, text: "Largeur max. de ce conteneur" }), winp, h("p", { class: "pb-hint", id: wid + "-h", text: "Propre à l'écran « " + bpLabel(device) + " » ; px, %, rem ou vw. Le conteneur reste centré et ne dépasse jamais son parent." })));
         }
       }
+      if (p.full) {
+        box.appendChild(selectField("Effet de l'en-tête au défilement", p.headerFx || "", [["", "Aucun"], ["shrink", "Se réduit"], ["solid", "Devient plein (en-tête superposé)"], ["both", "Se réduit et devient plein"], ["hide", "Se cache en descendant, revient en remontant"]], function (v) { change(function () { var n = byId(it.id); if (!n) return false; n.props = n.props || {}; if (v) n.props.headerFx = v; else delete n.props.headerFx; }, { label: "Effet de l'en-tête au défilement" }); }, { disabled: dis }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Sans effet hors d'un en-tête du Theme Builder (premier conteneur de l'en-tête, collant ou superposé). Coupé si le visiteur demande moins de mouvement." }));
+      }
       box.appendChild(selectField("Balise HTML", p.tag || "div", SPEC.boxTags.map(function (t) { return [t, BOX_TAG_LABEL[t] || t]; }), function (v) { setProp(it.id, "tag", v); }, { disabled: dis }));
       box.appendChild(h("p", { class: "pb-hint", text: "La balise donne le sens de la zone aux lecteurs d'écran et aux moteurs de recherche ; l'affichage ne change pas." }));
     }

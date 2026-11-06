@@ -1,3 +1,5 @@
+> **Document historique.** La bibliothèque décrite ici (100 compositions en rangées, 34 identités) a été remplacée par la bibliothèque « Atelier » : voir [HEADER_LIBRARY_100_MODELS_REPORT.md](HEADER_LIBRARY_100_MODELS_REPORT.md).
+
 # Rapport de vérification — bibliothèque d'en-têtes (novembre 2026)
 
 Outil : `scripts/audit-entetes.js` (Chrome + Playwright, serveur KOLAKISA de test réel). Reproductible : `node scripts/audit-entetes.js <dossier>`.
