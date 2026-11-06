@@ -80,6 +80,7 @@
   if (!calm && "IntersectionObserver" in window) {
     document.body.classList.add("et-js");
     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); } }); }, { rootMargin: "0px 0px -8% 0px" });
-    $$(".et-card,.et-dest,.et-stage,.et-bag,.et-person").forEach(function (el) { el.setAttribute("data-reveal", ""); io.observe(el); });
+    $(".et-card,.et-dest,.et-stage,.et-bag,.et-person").forEach(function (el) { el.setAttribute("data-reveal", ""); if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add("is-in"); else io.observe(el); });
+    setTimeout(function () { $("[data-reveal]").forEach(function (el) { el.classList.add("is-in"); }); }, 2500);
   }
 })();
