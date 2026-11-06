@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // Audit de la bibliothèque d'en-têtes « Atelier » (100 modèles) : unicité de la STRUCTURE (pas des couleurs), identité propre, éléments natifs, mouvement, réglages.
 // Usage : node scripts/audit-entetes-atelier.js [--json] [--rapport]   (--rapport écrit docs/theme-builder/HEADER_LIBRARY_100_MODELS_REPORT.md)
+//         node scripts/audit-entetes-atelier.js --visuel [secteur…]   (captures réelles Chrome, distance visuelle en niveaux de gris sans texte : écrit docs/theme-builder/rapport-visuel-entetes-atelier.json ;
+//         avec des secteurs : seuls ceux-ci sont recapturés, les autres viennent des descripteurs enregistrés ; nécessite KOYEKOLA_TEST_SEED_DB, NODE_PATH vers playwright-core et sharp)
 const fs = require("fs");
 const path = require("path");
 const Catalog = require("../src/themeBuilder/catalog");
-const { MODELS, SECTORS } = require("../src/themeBuilder/catalog/header/models");
+const { MODELS } = require("../src/themeBuilder/catalog/header"), { SECTORS } = require("../src/themeBuilder/catalog/header/models");
 
 // Signature de COMPOSITION : types d'éléments, mise en page (flex/grille/position/filets/formes), style de navigation, sans couleur, police, ni texte
 const LAYOUT_KEYS = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "gridTemplate", "position", "borderStyle", "borderTopWidth", "borderBottomWidth", "borderLeftWidth", "borderRightWidth", "borderWidth", "borderRadius", "boxShadow", "maxWidth", "width", "height", "backdropBlur", "textTransform", "fontStyle"];
@@ -30,7 +32,7 @@ function audit() {
   const dup = [...sigs.values()].filter((v) => v.length > 1);
   return { count: entries.length, rows, duplicates: dup, distinct: sigs.size };
 }
-module.exports = { audit, shape, docOf, MODELS, SECTORS };
+module.exports = { audit, shape, docOf, visuel, MODELS, SECTORS };
 
 
 // ── Rapport Markdown ────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -67,7 +69,41 @@ function rapport(r, extra = "") {
   return L.join("\n");
 }
 
-if (require.main === module) {
+// ── Distance visuelle (rendus réels) ──────────────────────────────────────────────────────────────────────────────────────────
+const VISUEL_JSON = path.join(__dirname, "..", "docs", "theme-builder", "rapport-visuel-entetes-atelier.json");
+async function visuel(secteurs) {
+  const V = require("./lib/entetes-visuel");
+  const { TEST_KEY } = require("../tests/marketing-helpers"), { startServer, loginInstructor } = require("../tests/helpers");
+  const { chromium } = require("playwright-core"), sharp = require("sharp");
+  const CHROME = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  const prev = fs.existsSync(VISUEL_JSON) ? JSON.parse(fs.readFileSync(VISUEL_JSON, "utf8")) : {};
+  const descs = Object.fromEntries(Object.entries(prev.descripteurs || {}).map(([k, v]) => [k, V.decode(v)]));
+  const todo = Catalog.entries("header").filter((e) => !secteurs.length || secteurs.includes(e.layoutKey));
+  const srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+  const boss = await loginInstructor(srv), db = srv.db(), org = db.prepare("SELECT id FROM mk_organizations").get().id;
+  const site = Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (?, 'Site A', 'site-a', '{}')").run(org).lastInsertRowid);
+  const b = await chromium.launch({ executablePath: CHROME, headless: true }), ctx = await b.newContext({ viewport: { width: 1280, height: 600 } });
+  await ctx.addCookies([...boss.cookies].map(([n, v]) => ({ name: n, value: v, url: srv.base })));
+  const page = await ctx.newPage();
+  for (const e of todo) {
+    await page.goto(`${srv.base}/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/header/${e.key}/apercu`, { waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(500);
+    descs[e.key] = await V.descriptor(page, sharp);
+  }
+  await b.close(); db.close(); await srv.stop();
+  for (const k of Object.keys(descs)) if (!Catalog.find("header", k)) delete descs[k];
+  const a = V.analyse(descs, V.SEUIL), only = secteurs.length ? todo.map((e) => e.key) : null, mine = only ? V.analyse(descs, V.SEUIL, only) : a;
+  const rapport = { modeles: Object.keys(descs).length, methode: `captures 1280×${V.CLIP_H} depuis le haut de l'en-tête, texte transparent, niveaux de gris, ${V.W}×${V.H}, contraste normalisé, distance L2 (0 = identiques ; polarité ignorée)`, seuil: V.SEUIL,
+    plusProche: a.plusProche, nbPaires: a.paires.length, paires: a.paires, voisins: a.voisins, descripteurs: Object.fromEntries(Object.entries(descs).map(([k, v]) => [k, V.encode(v)])) };
+  fs.writeFileSync(VISUEL_JSON, JSON.stringify(rapport, null, 1));
+  console.log(`${rapport.modeles} modèles ; plus proche voisin : ${a.plusProche} ; ${a.paires.length} paire(s) sous le seuil ${V.SEUIL}`);
+  for (const p of mine.paires.slice(0, 30)) console.log(`  trop proches : ${p.a} / ${p.b} (${p.distance})`);
+  if (only) for (const v of mine.voisins) console.log(`  ${v.key} → ${v.voisin} (${v.distance})`);
+  return rapport;
+}
+if (require.main === module && process.argv.includes("--visuel")) {
+  visuel(process.argv.slice(process.argv.indexOf("--visuel") + 1).filter((x) => !x.startsWith("--"))).then(() => process.exit(0), (e) => { console.error(e); process.exit(1); });
+} else if (require.main === module) {
   const r = audit();
   if (process.argv.includes("--rapport")) { const extra = fs.existsSync(path.join(__dirname, "..", "docs", "theme-builder", ".entetes-atelier-resultats.md")) ? fs.readFileSync(path.join(__dirname, "..", "docs", "theme-builder", ".entetes-atelier-resultats.md"), "utf8") : ""; fs.writeFileSync(path.join(__dirname, "..", "docs", "theme-builder", "HEADER_LIBRARY_100_MODELS_REPORT.md"), rapport(r, extra)); console.log("rapport écrit"); process.exit(0); }
   if (process.argv.includes("--json")) { console.log(JSON.stringify({ count: r.count, distinct: r.distinct, duplicates: r.duplicates, rows: r.rows.map(({ sig, ...x }) => x) }, null, 1)); process.exit(0); }

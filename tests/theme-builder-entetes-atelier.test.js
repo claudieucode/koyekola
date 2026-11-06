@@ -8,7 +8,7 @@ const store = require("../src/themeBuilder/store");
 const Catalog = require("../src/themeBuilder/catalog");
 const { useTemplate } = require("../src/themeBuilder/catalog/use");
 const { normalizeSections, newSectionId } = require("../src/marketing/pages/sections");
-const { MODELS, SECTORS } = require("../src/themeBuilder/catalog/header/models");
+const { MODELS } = require("../src/themeBuilder/catalog/header"), { SECTORS } = require("../src/themeBuilder/catalog/header/models");
 const { audit } = require("../scripts/audit-entetes-atelier");
 const { startServer, loginInstructor } = require("./helpers");
 
@@ -61,7 +61,7 @@ describe("En-têtes Atelier : le catalogue", () => {
       assert.doesNotThrow(() => normalizeSections(ctx, [{ id: newSectionId(), type: "layout", children: doc(e.key).children }]), e.key);
       for (const n of nodesOf(e.key)) used.add(n.type);
     }
-    for (const t of used) assert.ok(["container", "group", "stack", "grid", "sitelogo", "sitetitle", "menu", "search", "account", "minicart", "button", "social", "dyntext", "text", "iconlist", "divider", "spacer", "heading", "link"].includes(t), `type inattendu : ${t}`);
+    for (const t of used) assert.ok(["container", "group", "stack", "grid", "sitelogo", "sitetitle", "menu", "search", "account", "minicart", "button", "social", "dyntext", "text", "iconlist", "divider", "spacer", "heading", "link", "marquee", "motionfsmenu"].includes(t), `type inattendu : ${t}`);
   });
   test("aucun contenu factice : ni image, ni vidéo, ni script, ni HTML libre ; les menus lisent le menu affecté ; coordonnées = consignes", () => {
     for (const e of all) {

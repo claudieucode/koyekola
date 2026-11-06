@@ -8,7 +8,8 @@ module.exports = {
     { key: "label", kind: "text", label: "Nom du menu (lu par les lecteurs d'écran)", max: 60, required: true, default: "Menu principal" },
     { key: "buttonLabel", kind: "text", label: "Texte du bouton d'ouverture", max: 24, required: true, default: "Menu" },
     { key: "closeLabel", kind: "text", label: "Texte du bouton de fermeture", max: 24, required: true, default: "Fermer" },
-    { key: "links", kind: "items", label: "Liens", min: 2, max: 12,
+    { key: "source", kind: "select", label: "Origine des liens", options: [["manual", "Liens écrits ci-dessous"], ["location", "Menu affecté à l'emplacement « En-tête » (Apparence → Menus)"]], default: "manual" },
+    { key: "links", kind: "items", label: "Liens (utilisés si l'origine est « Liens écrits »)", min: 2, max: 12,
       default: [{ label: "Accueil", url: "/" }, { label: "Formations", url: "/catalogue" }, { label: "À propos", url: "/" }, { label: "Contact", url: "/" }],
       fields: [
         { key: "label", kind: "text", label: "Texte du lien", max: 60, required: true, default: "Un lien" },

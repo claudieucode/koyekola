@@ -5,7 +5,7 @@ const fs = require("fs"), path = require("path");
 const { TEST_KEY } = require("../tests/marketing-helpers");
 const { startServer, loginInstructor } = require("../tests/helpers");
 const Catalog = require("../src/themeBuilder/catalog");
-const { MODELS, SECTORS } = require("../src/themeBuilder/catalog/header/models");
+const { MODELS } = require("../src/themeBuilder/catalog/header"), { SECTORS } = require("../src/themeBuilder/catalog/header/models");
 const { chromium } = require("playwright-core");
 const sharp = require("sharp");
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";

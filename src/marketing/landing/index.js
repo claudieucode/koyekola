@@ -316,6 +316,13 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (n.type === "code" && n.props.language) n = { ...n, props: { ...n.props, html: require("../pages/highlight").highlight(n.props.text, n.props.language) } };
     // Widget personnalisé : son gabarit et ses champs « lien » (comptés dans cet ordre, comme dans linksOf)
     const cw = pageNodes.CUSTOM_WIDGETS[n.type];
+    // Menu plein écran lu dans le menu AFFECTÉ à « En-tête » (source « location ») : mêmes liens que le widget Menu (premier niveau), aucune liste recopiée ; sans menu affecté, rien n'est affiché
+    if (n.type === "motionfsmenu" && n.props && n.props.source === "location") {
+      const r = resolveMenuNode({ type: "menu", props: { source: "location", location: "header", items: [] } }, page, visitor);
+      const links = ((r && r.props.items) || []).filter((it) => it.url && it.url !== "#").slice(0, 12).map((it) => ({ label: String(it.label).slice(0, 60), url: it.url }));
+      if (!links.length) return null;
+      n = { ...n, props: { ...n.props, links } };
+    }
     if (cw) {
       // Données dynamiques du widget (requête, article courant, visiteur…) : jamais bloquant, un échec donne un widget vide
       let data = null;

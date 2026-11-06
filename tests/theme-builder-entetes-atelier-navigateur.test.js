@@ -8,7 +8,7 @@ const path = require("path");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
 const Catalog = require("../src/themeBuilder/catalog");
-const { MODELS, SECTORS } = require("../src/themeBuilder/catalog/header/models");
+const { MODELS } = require("../src/themeBuilder/catalog/header"), { SECTORS } = require("../src/themeBuilder/catalog/header/models");
 
 let chromium = null, sharp = null;
 try { chromium = require("playwright-core").chromium; } catch { /* absent */ }
