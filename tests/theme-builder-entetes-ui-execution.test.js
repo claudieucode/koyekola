@@ -100,6 +100,7 @@ describe("Serveur : aperçu en contexte, origine bibliothèque, retour au modèl
   });
 });
 
+const expectEventually = async (fn, what, ms = 15000) => { const end = Date.now() + ms; let last; while (Date.now() < end) { try { if (await fn()) return; } catch (e) { last = e; } await new Promise((r) => setTimeout(r, 250)); } assert.fail(`attendu : ${what}${last ? ` (${last.message})` : ""}`); };
 describe("Chrome réel : bibliothèque (appareils, contexte, défilement), retour au modèle, site publié (identité, logo alternatif, barre fermable)", { skip: SKIP }, () => {
   let srv, boss, db, browser, A, site;
   const ORIGIN = () => ({ Origin: srv.base });
@@ -254,51 +255,52 @@ describe("Chrome réel : bibliothèque (appareils, contexte, défilement), retou
     await pp.evaluate(() => { document.querySelectorAll("[data-kw-dismiss]").forEach((b) => b.click()); }); assert.equal(await pp.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("kw-dismiss")).length), 0, "aperçu : rien de mémorisé");
     await pctx.close();
   });
+  // Éditeur réel dans Chrome : page contenant la section d'un vrai modèle d'en-tête
+  const editorPage = async (key, idPrefix) => {
+    const sec = JSON.parse(JSON.stringify(Catalog.build("header", key).section)); sec.id = idPrefix;
+    const id = Number((await boss.post("/marketing/pages", { name: `Édition ${idPrefix}` })).location.match(/(\d+)$/)[1]);
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(id).revision;
+    assert.equal((await boss.request(`/marketing/pages/${id}/brouillon`, { method: "PUT", json: { revision: rev, content: { sections: [sec] } }, headers: ORIGIN() })).status, 200);
+    const ctx = await newCtx({ width: 1500, height: 1000 }), page = await tracked(ctx);
+    await page.goto(`${srv.base}/marketing/pages/${id}/editeur`); await page.waitForSelector("li.pb-node", { timeout: 30000 });
+    return { sec, id, ctx, page };
+  };
+  const nodeOf = async (id, nodeId) => { const boot = JSON.parse((await boss.get(`/marketing/pages/${id}/editeur`)).text.match(/<script type="application\/json" id="pb-boot">([\s\S]*?)<\/script>/)[1]); let f = null; const find = (list) => { for (const n of list || []) { if (n.id === nodeId) f = n; else find(n.children); } }; find(boot.content.sections.flatMap((x) => x.children || [])); return f; };
+  const pick = async (page, nodeId) => { await page.locator(`li.pb-node[data-id="${nodeId}"] > .pb-row-item`).first().click(); await page.waitForSelector("[data-pb-inspector]"); };
+  const field = (page, label) => page.locator("[data-pb-inspector] .pb-field", { has: page.locator("label", { hasText: label }) }).first();
+  test("éditeur réel : identité du modèle / du site, barre fermable, effet de l'en-tête et réglages alternatifs du logo sont réglables et enregistrés", async () => {
+    const { sec, id, ctx, page } = await editorPage(KEY_A, "sect0000e001");
+    const first = sec.children[0]; let logo = null; walkAll(sec, (n) => { if (!logo && (n.type === "sitelogo" || n.type === "sitetitle")) logo = n; });
+    await pick(page, first.id);
+    assert.ok(await page.locator("[data-pb-inspector] label", { hasText: "Effet de l'en-tête au défilement" }).count(), "effet au défilement présent");
+    const ident = field(page, "Couleurs et polices de l'en-tête").locator("select"); assert.equal(await ident.inputValue(), "", "par défaut : identité du modèle");
+    await ident.selectOption("site");
+    await expectEventually(async () => ((await nodeOf(id, first.id)).props || {}).headerIdentity === "site", "identité du site enregistrée");
+    await page.locator("[data-pb-inspector] .pb-field", { has: page.locator("label", { hasText: "Couleurs et polices de l'en-tête" }) }).locator("select").selectOption("");
+    await expectEventually(async () => ((await nodeOf(id, first.id)).props || {}).headerIdentity === undefined, "retour à l'identité du modèle");
+    const row = (first.children || []).find((c) => c.type === "container");
+    if (row) { await pick(page, row.id); await page.getByLabel(/Barre fermable/).check(); await expectEventually(async () => ((await nodeOf(id, row.id)).props || {}).dismissible === true, "barre fermable enregistrée"); }
+    await pick(page, logo.id);
+    const isLogo = logo.type === "sitelogo";
+    await page.getByLabel(isLogo ? /Texte alternatif au défilement \(logo sans image\)/ : /Texte alternatif au défilement/).fill("AB"); await page.keyboard.press("Tab");
+    await expectEventually(async () => ((await nodeOf(id, logo.id)).props || {}).scrollText === "AB", "texte alternatif enregistré");
+    if (isLogo) { await page.getByLabel("Taille du logo une fois la page défilée").selectOption("32"); await expectEventually(async () => ((await nodeOf(id, logo.id)).props || {}).scrollHeight === 32, "échelle alternative enregistrée"); }
+    await ctx.close();
+  });
+  test("éditeur réel : chaque réglage d'animation d'un élément d'en-tête est atteignable (animation, durée, délai, courbe, répétition, direction, déclenchement, selon l'écran, accessibilité, survol)", async () => {
+    const { sec, id, ctx, page } = await editorPage(KEY_A, "sect0000e002");
+    let target = null; walkAll(sec, (n) => { if (!target && ["menu", "cmsmenu", "button"].includes(n.type)) target = n; });
+    await pick(page, target.id);
+    await page.locator("[data-pb-inspector] [role=tab]", { hasText: "Avancé" }).click();
+    const sum = page.locator("[data-pb-inspector] details > summary", { hasText: "Effets de mouvement" }).first(); await sum.waitFor();
+    if (!(await sum.evaluate((e) => e.parentElement.open))) await sum.click();
+    await page.locator("[data-pb-anim-pick]").click(); await page.locator('.pb-amenu [data-anim="fade-in-up"]').click();
+    await expectEventually(async () => ((await nodeOf(id, target.id)).motion || {}).entrance === "fade-in-up", "animation enregistrée");
+    const labels = (await page.locator("[data-pb-inspector] label").allInnerTexts()).map((l) => l.trim().toLowerCase());
+    for (const want of ["durée", "délai", "courbe d'accélération", "répétition", "direction", "déclenchement"]) assert.ok(labels.some((l) => l.startsWith(want)), `réglage « ${want} » (${labels.join(" ; ")})`);
+    const txt = await page.locator("[data-pb-inspector]").innerText(); assert.match(txt, /Selon l'écran/); assert.match(txt, /Accessibilité/i); assert.match(txt, /Au survol/);
+    await ctx.close();
+  });
   test("aucune erreur JavaScript dans les parcours de l'interface", () => { assert.deepEqual(errors, []); });
 });
 
-const { setup, SKIP: SKIP_ED } = require("./helpers-editeur-navigateur");
-describe("Éditeur (navigateur simulé) : nouveaux réglages d'en-tête et accès à chaque réglage d'animation des éléments d'un en-tête", { skip: SKIP_ED }, () => {
-  let H;
-  before(async () => { H = await setup(); });
-  after(async () => { if (H) await H.stop(); });
-  const sectionOfModel = (key) => { const s = JSON.parse(JSON.stringify(Catalog.build("header", key).section)); return s; };
-  test("conteneur d'en-tête : identité (modèle / site), barre fermable et effet au défilement sont réglables et relus du serveur ; le logo a ses réglages alternatifs", async () => {
-    const sec = sectionOfModel(KEY_A); sec.id = "sect00000001";
-    let first = sec.children[0], logo = null; walkAll(sec, (n) => { if (!logo && (n.type === "sitelogo" || n.type === "sitetitle")) logo = n; });
-    const id = await H.newPage("Entête réglages", { sections: [sec] });
-    const ed = await H.openEditor(id);
-    ed.selectLayer(first.id);
-    assert.ok(ed.labels().some((l) => l.startsWith("Effet de l'en-tête au défilement")), "effet au défilement");
-    const ident = ed.ctl("Couleurs et polices de l'en-tête"); assert.equal(ident.value, "", "par défaut : l'identité du modèle");
-    ed.set(ident, "site");
-    await H.until(async () => ((await H.serverNode(id, first.id)).props || {}).headerIdentity === "site", 8000, "identité du site enregistrée");
-    ed.set(ed.ctl("Couleurs et polices de l'en-tête"), "");
-    await H.until(async () => ((await H.serverNode(id, first.id)).props || {}).headerIdentity === undefined, 8000, "retour à l'identité du modèle");
-    // barre fermable sur la première rangée
-    const row = (first.children || []).find((c) => c.type === "container");
-    if (row) { ed.selectLayer(row.id); ed.set(ed.ctl("Barre fermable"), true); await H.until(async () => ((await H.serverNode(id, row.id)).props || {}).dismissible === true, 8000, "barre fermable enregistrée"); }
-    // logo / titre
-    ed.selectLayer(logo.id);
-    const isLogo = logo.type === "sitelogo";
-    ed.set(ed.ctl(isLogo ? "Texte alternatif au défilement (logo sans image)" : "Texte alternatif au défilement"), "AB");
-    await H.until(async () => ((await H.serverNode(id, logo.id)).props || {}).scrollText === "AB", 8000, "texte alternatif enregistré");
-    if (isLogo) { ed.set(ed.ctl("Taille du logo une fois la page défilée"), "32"); await H.until(async () => ((await H.serverNode(id, logo.id)).props || {}).scrollHeight === 32, 8000, "échelle alternative enregistrée"); }
-  });
-  test("animation d'un élément d'en-tête : animation, durée, délai, courbe, répétition, direction, déclenchement, selon l'écran, accessibilité et survol sont atteignables", async () => {
-    const sec = sectionOfModel(KEY_A); sec.id = "sect00000002";
-    let target = null; walkAll(sec, (n) => { if (!target && (n.type === "menu" || n.type === "cmsmenu" || n.type === "button")) target = n; });
-    const id = await H.newPage("Entête animation", { sections: [sec] });
-    const ed = await H.openEditor(id);
-    ed.selectLayer(target.id); ed.tab("Avancé");
-    assert.ok(ed.sectionTitles().includes("Effets de mouvement"), `panneau de mouvement (${ed.sectionTitles().join(" | ")})`);
-    ed.section("Effets de mouvement");
-    assert.ok(ed.insp.querySelector("[data-pb-anim-pick]"), "choix de l'animation");
-    ed.click(ed.insp.querySelector("[data-pb-anim-pick]")); ed.click(ed.doc.querySelector('.pb-amenu [data-anim="fade-in-up"]'));
-    await H.until(async () => ((await H.serverNode(id, target.id)).motion || {}).entrance === "fade-in-up", 8000, "animation enregistrée");
-    const labels = ed.labels().map((l) => l.toLowerCase());
-    for (const want of ["durée", "délai", "courbe d'accélération", "répétition", "direction", "déclenchement"]) assert.ok(labels.some((l) => l.startsWith(want)), `réglage « ${want} » (${labels.join(" ; ")})`);
-    const txt = ed.insp.textContent;
-    assert.match(txt, /Selon l'écran/); assert.match(txt, /Accessibilité/); assert.match(txt, /Au survol/);
-  });
-});

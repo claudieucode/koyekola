@@ -38,5 +38,5 @@ Vérification faite : le panneau « Effets de mouvement » (onglet Avancé, `pub
 
 ## 6. Tests
 
-* `tests/theme-builder-entetes-ui-execution.test.js` : unités (identité, grammaire fermée), serveur (aperçu, origine, retour au modèle, annulation, isolation, droits), Chrome réel (appareils, contexte, défilement dans l'aperçu, vignette, retour au modèle dans l'interface, identité sur site publié, logo alternatif, barre fermable, aucune erreur JavaScript), éditeur simulé (nouveaux réglages, accès aux réglages d'animation).
+* `tests/theme-builder-entetes-ui-execution.test.js` : unités (identité, grammaire fermée), serveur (aperçu, origine, retour au modèle, annulation, isolation, droits), Chrome réel (appareils, contexte, défilement dans l'aperçu, vignette, retour au modèle dans l'interface, identité sur site publié, logo alternatif, barre fermable, aucune erreur JavaScript), éditeur RÉEL dans Chrome (nouveaux réglages enregistrés et relus ; accès aux réglages d'animation d'un élément d'en-tête). Les tests d'éditeur en navigateur simulé (jsdom) existants ne peuvent pas s'exécuter sur cette machine (jsdom absent) : ils n'ont pas été relancés.
 * Tests existants relancés : voir le rapport de livraison.
