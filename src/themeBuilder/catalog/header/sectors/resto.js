@@ -68,7 +68,7 @@ module.exports = {
     // ── 02 · Gastronomie étoilée sobre : une rangée aérée, menu plein écran ──────────────────────────────────────────────────────────────
     {
       key: "resto-02", name: "Table Étoilée", art: "Gastronomie sobre", desc: "Une seule rangée très aérée : réservation à gauche, marque espacée entre deux filets, menu plein écran numéroté à droite.",
-      S: ID("resto-02", "Table Étoilée", { bg: "#0f0e0c", fg: "#efe6d6", mute: "#b3a58c", alt: "#1a1814", accent: "#c8a456", onAccent: "#14110b", line: "#3a3429", font: "font.raleway", head: "font.cormorant-garamond", weight: "500", btnRadius: "0px" }),
+      S: ID("resto-02", "Table Étoilée", { bg: "#5a1a28", fg: "#f6ecdc", mute: "#e0cfb4", alt: "#6a2232", accent: "#c8a456", onAccent: "#14110b", line: "#8a5a50", font: "font.raleway", head: "font.cormorant-garamond", weight: "500", btnRadius: "0px" }),
       build: (k, P) => {
         const S = k.S;
         const brand = g([line(k, { color: S.accent, st: { width: "36px" } }), mark(k, { size: clampPx(15, 24, 2.4), caps: "uppercase", track: "0.42em", weight: "500", st: { textAlign: "center" } }), line(k, { color: S.accent, st: { width: "36px" } })], { flexWrap: "nowrap", gap: "20px", justifyContent: "center", flexGrow: 0 }, undefined, { flexBasis: "100%", order: -1, gap: "12px" });

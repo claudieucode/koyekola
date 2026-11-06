@@ -40,7 +40,7 @@ const MODELS = [
 
   // 02 ── Silence de Kyoto : minimalisme japonais, une rangée très fine, menu plein écran
   { key: "sante-02", name: "Silence de Kyoto", art: "Minimalisme japonais", desc: "Une rangée très fine : sceau vermillon, marque minuscule, filet, menu plein écran numéroté. Beaucoup de vide, un seul accent.",
-    S: ID("sante-02", "Silence de Kyoto", { bg: "#fbfaf7", fg: "#1c1c1a", mute: "#5c5a55", alt: "#efede7", accent: "#b5472f", onAccent: "#ffffff", line: "#d9d6cd", font: "font.zen-kaku-gothic-new", head: "font.zen-old-mincho", weight: "500", track: "2px" }),
+    S: ID("sante-02", "Silence de Kyoto", { bg: "#e9e6dc", fg: "#1c1c1a", mute: "#5c5a55", alt: "#efede7", accent: "#b5472f", onAccent: "#ffffff", line: "#d9d6cd", font: "font.zen-kaku-gothic-new", head: "font.zen-old-mincho", weight: "500", track: "2px" }),
     build: (k, P) => {
       const S = k.S;
       return [row(k, [left([slow(X.disc(k, { size: 12, color: S.accent }), "fade-in", 0, 1600), mark(k, { size: "14px", weight: "500", caps: "uppercase", track: "4px" })], { gap: "14px" }),

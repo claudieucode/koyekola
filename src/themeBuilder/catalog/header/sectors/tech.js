@@ -37,9 +37,9 @@ module.exports = {
         const S = k.S;
         const cMark = stack([note(k, "Index", { size: "11px", color: S.mute, caps: "uppercase", track: "1.6px" }), mark(k, { kind: "title", size: "26px", weight: "800", track: "-0.04em", lh: 1 })], { gap: "10px", alignItems: "flex-start" });
         const cNav = stack([hide(nav(k, "plain", { size: "16px", weight: "600" }), ["desktop", "tablet"]), hide(nav(k, "thin", { vertical: true, size: "17px", weight: "500", color: S.fg, hover: S.accent }))], { gap: "0px", alignItems: "flex-start" });
-        const cNote = hide(note(k, P.tagline, { size: "14px", color: S.mute, st: { maxWidth: "280px" } }));
+        const cNote = hide(note(k, P.tagline, { size: "14px", color: S.mute, st: { maxWidth: "280px" } }), ["tablet", "mobile"]);
         const cAct = stack([account(k, { size: "15px" }), btn(k, "Démonstration", "/contact", "line", { size: "14px", fg: S.fg }), btn(k, P.cta[0], P.cta[1], "solid", { size: "14px", padV: "12px", padH: "22px" })], { gap: "14px", alignItems: "flex-start" });
-        return [row(k, [grid("1fr 1fr 1.3fr 1fr", [cMark, cNav, cNote, cAct], { width: "100%", gap: "32px", alignItems: "start" }, { gridTemplate: "1fr 1fr", gap: "22px" }, { gridTemplate: "1fr", gap: "14px" })], { pv: "22px", st: { ...bd(S.fg, "6px", "Top") } })];
+        return [row(k, [grid("1fr 1fr 1.3fr 1fr", [cMark, cNav, cNote, cAct], { width: "100%", gap: "32px", alignItems: "start" }, { gridTemplate: "1fr 1fr 1fr", gap: "22px" }, { gridTemplate: "1fr", gap: "14px" })], { pv: "22px", st: { ...bd(S.fg, "6px", "Top") } })];
       },
       mode: "static", anim: "reveal", hover: "push", dark: false, tags: ["suisse", "grille", "menu empilé", "minimal"],
       features: ["Filet épais et grille de quatre colonnes alignée", "Menu du site affiché en liste verticale (replié en menu classique sur mobile)", "Connexion, démonstration et bouton d'appel groupés dans la quatrième colonne"],

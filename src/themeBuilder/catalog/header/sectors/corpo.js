@@ -129,7 +129,7 @@ module.exports = {
         const live = g([X.ticker(k, ["Indice à renseigner", "Performance à renseigner", "Actualité à renseigner", "Communiqué à renseigner"], { bg: "#12211a", color: "#9db5a8", size: "12px", sep: "▲", speed: "slow", caps: "uppercase", track: "1px", padV: "11px" })], { flexGrow: 1, flexBasis: "0px", minWidth: "0px", overflow: "hidden", flexWrap: "nowrap", borderStyle: "solid", borderWidth: "1px", borderColor: "#25382f" }, { flexBasis: "100%" });
         const acts = g([account(k, { size: "12.5px" }), btn(k, "Nous contacter", "/contact", "outline", { fg: "#3ddc97", border: "#3ddc97", size: "12px", caps: "uppercase", track: "1px" })], { flexWrap: "nowrap" });
         const top = row(S, [brand, live, acts], { paddingTop: "14px", paddingBottom: "14px" }, { paddingTop: "12px", paddingBottom: "12px", paddingLeft: "18px", paddingRight: "18px" }, { paddingTop: "10px", paddingBottom: "10px", paddingLeft: "14px", paddingRight: "14px" }, { flexWrap: "wrap", gap: "18px" });
-        const navRow = row(S, [nav(k, "mono", { size: "13px", caps: "uppercase", track: "1px", gap: "28px" })], { backgroundColor: "#12211a", paddingTop: "8px", paddingBottom: "8px" }, undefined, undefined, { justifyContent: "flex-start" });
+        const navRow = row(S, [nav(k, "mono", { size: "13px", caps: "uppercase", track: "1px", gap: "28px", color: "#0a1410", hover: "#0a1410" })], { backgroundColor: "#d6ebdf", paddingTop: "8px", paddingBottom: "8px" }, undefined, undefined, { justifyContent: "flex-start" });
         return [top, navRow, X.stripe(k, { h: 2, gradient: { from: "#3ddc97", to: "#0a1410", angle: 90 } })];
       },
       mode: "sticky", anim: "zoom", hover: "", dark: true, tags: ["finance", "ticker", "monospace"],

@@ -41,12 +41,17 @@ describe("En-têtes Atelier : les 100 modèles dans Chrome (ordinateur, tablette
     for (const e of root.querySelectorAll("*")) {
       if (!vis(e)) continue;
       const r = e.getBoundingClientRect();
+      // contenu rogné par un ancêtre à débordement masqué qui, lui, tient dans l'écran (piste d'une bande défilante, ruban) : pas un défaut visible
+      let clipped = false; for (let a = e.parentElement; a && a !== root.parentElement; a = a.parentElement) { const o = getComputedStyle(a).overflowX; if ((o === "hidden" || o === "clip") && a.getBoundingClientRect().right <= vw + 2) { clipped = true; break; } }
+      if (clipped) continue;
       if (r.right > vw + 2 && getComputedStyle(e).position !== "fixed") { defects.push(`dépasse à droite : ${e.tagName.toLowerCase()}.${String(e.className).split(" ")[0]} (${Math.round(r.right)} > ${vw})`); break; }
     }
     for (const e of root.querySelectorAll("*")) {
       const d = getComputedStyle(e).display;
-      if (!(d.includes("grid") || d.includes("flex")) || e.children.length < 2) continue;
-      const kids = [...e.children].filter(vis).map((c) => c.getBoundingClientRect()).filter((r) => r.height > 4 && r.width > 4);
+      if (!(d.includes("grid") || d.includes("flex")) || e.children.length < 2 || e.classList.contains("kw-dismiss-btn")) continue;
+      // formes décoratives vides (disques, anneaux, bandes) et bouton de fermeture de barre : leur chevauchement est voulu
+      const deco = (c) => c.classList.contains("kw-dismiss-btn") || (c.children.length === 0 && !c.textContent.trim() && c.tagName === "DIV");
+      const kids = [...e.children].filter((c) => vis(c) && !deco(c)).map((c) => c.getBoundingClientRect()).filter((r) => r.height > 4 && r.width > 4);
       for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
         const a = kids[i], b = kids[j];
         const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
