@@ -31,7 +31,8 @@
 <% } else { %><body class="lp-body"<%- bAttr %> style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
   <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <%# En-tête AUTOMATIQUE : le menu affecté à « En-tête du site » s'affiche même sans composant d'en-tête (jamais en double si la page montre déjà ce menu) %>
-  <% if (page.autoNav && page.autoNav.header) { %><header class="lp-autohead"><a class="lp-autohead-brand" href="/"><% if (sx && sx.identity.logoUrl) { %><img src="<%= sx.identity.logoUrl %>" alt="<%= siteX.name %>"><% } else { %><%= siteX ? siteX.name : "KOLAKISA" %><% } %></a><%- include("_autonav", { nav: page.autoNav.header, cls: "lp-autohead-nav" }) %></header><% } %>
+  <% const hsx = sx && sx.header ? sx.header : null; const composedHead = page.sections.some((x) => x.sitePart === "header" && !x.hidden); const autoHeadNav = page.autoNav && page.autoNav.header ? page.autoNav.header : (hsx && hsx.auto && !composedHead && (!page.kind || page.kind === "page") && page.header_mode !== "none" ? { name: "", items: [] } : null); %>
+  <% if (autoHeadNav) { %><%- include("_autohead", { nav: autoHeadNav, mobileNav: page.autoNav ? page.autoNav.mobile : null, sx, siteX }) %><% } %>
   <% if (kwCode && kwCode.bodyStart) { %><%- kwCode.bodyStart %><% } %>
   <%# Pied de page : le Theme Builder en fournit un (section « sitePart ») → les widgets de pied et la ligne légale entrent DANS ce pied, jamais un second <footer> %>
   <% const tbFoot = page.sections.some((x) => x.sitePart === "footer" && !x.hidden); const noFoot = typeof funnelContext !== "undefined" && funnelContext && funnelContext.hideFooter; const footLegal = tbFoot && !noFoot ? include("_foot-legal", { siteX, sx, privacyFor: typeof privacyFor === "function" ? privacyFor : null }) : ""; %>
@@ -47,6 +48,7 @@
   <% if (siteX && siteX.assets.pack && siteX.assets.pack.script) { %><%- siteX.assets.pack.script %><% } %>
   <script src="<%= asset("/js/kw-effects.js") %>" defer></script>
   <script src="<%= asset("/js/kw-bgpar.js") %>" defer></script>
+  <script src="<%= asset("/js/kw-header.js") %>" defer></script>
   <%# Motion Studio : runtime partagé + adresses (avec empreinte) des modules de CETTE page, chargés à la demande par le runtime %>
   <% if (page.motionStudio) { %><script type="application/json" id="kw-ms-modules"><%- JSON.stringify(Object.fromEntries(page.motionStudio.modules.map((m) => [m, asset("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c") %></script>
   <% if (page.motionStudio.scenes) { %><script type="application/json" id="kw-ms-scenes"><%- JSON.stringify(page.motionStudio.scenes).replace(/</g, "\\u003c") %></script><% } %>

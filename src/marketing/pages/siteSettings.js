@@ -304,12 +304,18 @@ function verifiedCustomCode(c) {
   return customHtml.verify(codePayload(c), c.sig) ? { head: c.head, bodyStart: c.bodyStart, bodyEnd: c.bodyEnd } : none;
 }
 
+// CSS de l'entête du site (réglages « Entête » du personnalisateur) : vide tant qu'aucun réglage n'est renseigné
+function headerCssOf(settings) {
+  const id = settings.identity || {};
+  return require("./headerStyle").headerCss(settings.header, { breakpoints: breakpointsOf(settings), containerWidth: (settings.layout && settings.layout.containerWidth) || 1100, logoUrl: id.logoUrl, tpLogoUrl: settings.header && settings.header.tpLogoUrl, hasLogo: Boolean(id.logoUrl) });
+}
+
 // Tout ce que le gabarit public affiche pour un site, calculé une fois (valeurs déjà validées)
 function siteAssets(tokens, settings, themeCss) {
   let custom = "";
   try { custom = normalizeSiteCss(settings.customCss, { strict: false }); } catch { custom = ""; }
   return {
-    theme: [themeCss(tokens), layoutCss(settings), require("./nodes").classCss(settings.classes, breakpointsOf(settings))].filter(Boolean).join("\n").replace(/</g, ""),
+    theme: [themeCss(tokens), layoutCss(settings), require("./nodes").classCss(settings.classes, breakpointsOf(settings)), headerCssOf(settings)].filter(Boolean).join("\n").replace(/</g, ""),
     custom: custom.replace(/</g, ""),
     code: verifiedCustomCode(settings.customCode),
     transition: transitionCss(settings),

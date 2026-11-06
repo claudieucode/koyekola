@@ -1,0 +1,18 @@
+<%# En-tête AUTOMATIQUE d'un site : logo, titre, slogan, menu principal et menu hors-champ. Réglages : personnalisateur → Entête (settings.header, rendu par headerStyle). nav = { name, items }, oc = menu du panneau hors-champ ou null. %>
+<% const hs = sx && sx.header ? sx.header : {}; const logo = sx && sx.identity ? sx.identity.logoUrl : ""; const siteTitle = hs.title || (siteX ? siteX.name : "KOLAKISA"); const oc = hs.ocVis ? (mobileNav || (nav.items.length ? nav : null)) : null; const tpLogo = hs.tpEnabled && hs.tpLogo && hs.tpLogoUrl ? hs.tpLogoUrl : ""; %>
+<header class="lp-autohead<%= hs.tpEnabled ? " is-tp" : "" %>" data-kw-header>
+  <a class="lp-autohead-brand" href="/">
+    <% if (logo) { %><span class="lp-ah-logo lp-ah-logo-main<%= hs.logoSvg ? " is-mask" : "" %>"><img class="lp-ah-logo-img" src="<%= logo %>" alt="<%= siteTitle %>"></span><% } %>
+    <% if (tpLogo) { %><span class="lp-ah-logo lp-ah-logo-tp<%= hs.logoSvg ? " is-mask" : "" %>"><img class="lp-ah-logo-img" src="<%= tpLogo %>" alt="<%= siteTitle %>"></span><% } %>
+    <span class="lp-ah-text"><span class="lp-ah-title"><%= siteTitle %></span><% if (hs.tagline) { %><span class="lp-ah-tagline"><%= hs.tagline %></span><% } %></span>
+  </a>
+  <% if (nav.items.length) { %><%- include("_autonav", { nav, cls: "lp-autohead-nav" }) %><% } %>
+  <% if (oc) { %>
+  <button type="button" class="lp-oc-toggle" aria-expanded="false" aria-controls="lp-oc-panel" aria-label="<%= hs.ocLabel || "Menu" %>"><span class="lp-oc-bars" aria-hidden="true"><i></i><i></i><i></i></span><% if (hs.ocShowLabel) { %><span class="lp-oc-label"><%= hs.ocLabel || "Menu" %></span><% } %></button>
+  <button type="button" class="lp-oc-backdrop" tabindex="-1" aria-hidden="true"></button>
+  <div class="lp-oc is-<%= hs.ocMode || "panel" %> is-from-<%= hs.ocDir || "right" %>" id="lp-oc-panel" role="dialog" aria-modal="true" aria-label="<%= oc.name || "Menu" %>" hidden>
+    <button type="button" class="lp-oc-close" aria-label="Fermer le menu"><span aria-hidden="true">×</span></button>
+    <%- include("_autonav", { nav: oc, cls: "lp-oc-nav" }) %>
+  </div>
+  <% } %>
+</header>

@@ -1564,3 +1564,44 @@ html.kw-noscroll { overflow: hidden; }
 .kw-marquee-item:has(.kw-marquee-img) { display: inline-flex; align-items: center; }
 
 .kw-st-vis { display: inline; }
+
+/* ===== Entête du site (personnalisateur → Entête) : identité, menu hors-champ. Les réglages variables sont générés par headerStyle.js ===== */
+.lp-autohead { position: relative; }
+.lp-autohead-brand { gap: 10px; }
+.lp-ah-logo { display: inline-block; line-height: 0; }
+.lp-ah-logo-img { display: block; height: 36px; width: auto; max-width: 180px; object-fit: contain; }
+.lp-ah-logo.is-mask { background-color: currentColor; }
+.lp-ah-logo.is-mask .lp-ah-logo-img { opacity: 0; }
+.lp-ah-logo-tp { display: none; }
+.lp-ah-text { display: flex; flex-direction: column; min-width: 0; }
+.lp-ah-title { line-height: 1.2; }
+.lp-ah-tagline { font-size: 0.8em; font-weight: 400; opacity: 0.8; line-height: 1.3; }
+.lp-oc-toggle { display: none; align-items: center; gap: 8px; min-height: 44px; min-width: 44px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; cursor: pointer; justify-content: center; }
+.lp-oc-toggle:focus-visible, .lp-oc-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.lp-oc-bars { display: inline-flex; flex-direction: column; gap: 4px; width: 22px; }
+.lp-oc-bars i { display: block; height: 2px; border-radius: 2px; background: currentColor; transition: transform .2s ease, opacity .2s ease; }
+.lp-oc-toggle[aria-expanded="true"] .lp-oc-bars i:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.lp-oc-toggle[aria-expanded="true"] .lp-oc-bars i:nth-child(2) { opacity: 0; }
+.lp-oc-toggle[aria-expanded="true"] .lp-oc-bars i:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+.lp-oc-backdrop { position: fixed; inset: 0; z-index: 998; border: 0; padding: 0; background: rgba(5, 12, 20, 0.5); opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+.lp-oc-backdrop.is-open { opacity: 1; pointer-events: auto; }
+.lp-oc { position: fixed; z-index: 999; overflow-y: auto; background: #fff; color: #10222f; padding: 56px 20px 24px; box-shadow: 0 10px 40px rgba(5, 12, 20, 0.25); transition: transform .28s ease, opacity .28s ease; }
+.lp-oc[hidden] { display: none; }
+.lp-oc.is-panel { top: 0; bottom: 0; width: min(86vw, 340px); }
+.lp-oc.is-panel.is-from-right { right: 0; transform: translateX(100%); }
+.lp-oc.is-panel.is-from-left { left: 0; transform: translateX(-100%); }
+.lp-oc.is-full { inset: 0; opacity: 0; transform: scale(1.02); }
+.lp-oc.is-dropdown { left: 0; right: 0; top: 0; max-height: 80vh; opacity: 0; transform: translateY(-12px); }
+.lp-oc.is-open, .lp-oc.is-panel.is-from-right.is-open, .lp-oc.is-panel.is-from-left.is-open { transform: none; opacity: 1; }
+.lp-oc-close { position: absolute; top: 8px; right: 12px; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: inherit; font-size: 30px; line-height: 1; cursor: pointer; }
+.is-from-left .lp-oc-close { right: auto; left: 12px; }
+.lp-oc-nav .kw-menu-list { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.lp-oc-nav .kw-menu-link { display: block; padding: 12px 8px; color: inherit; text-decoration: none; border-radius: 6px; }
+.lp-oc-nav .kw-menu-link:hover, .lp-oc-nav .kw-menu-link:focus-visible { background: rgba(2, 119, 182, 0.08); }
+.lp-oc-nav .kw-submenu { display: none; list-style: none; margin: 0 0 4px 12px; padding: 0 0 0 8px; border-left: 2px solid rgba(16, 34, 47, 0.12); }
+.lp-oc-nav .has-sub.is-sub-open > .kw-submenu { display: block; }
+.lp-oc-nav .has-sub { position: relative; }
+.lp-oc-nav .kw-sub-toggle { position: absolute; top: 4px; right: 0; width: 40px; height: 40px; border: 0; background: transparent; color: inherit; font-size: 18px; cursor: pointer; border-radius: 6px; }
+.lp-oc-nav .has-sub > .kw-menu-link { padding-right: 44px; }
+body.kw-oc-lock { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .lp-oc, .lp-oc-backdrop, .lp-oc-bars i { transition: none; } }

@@ -38,6 +38,7 @@ const PANELS = [
   { id: "appareils", label: "Tablette et mobile", icon: "tablet", hint: "Tailles et marges propres à la tablette et au mobile." },
   { id: "mode-sombre", label: "Mode sombre", icon: "moon", hint: "Couleurs du site pour les visiteurs qui préfèrent un thème sombre." },
   { id: "palette", label: "Palette du site", icon: "palette", hint: "Couleurs nommées, réutilisables dans tout le site." },
+  { id: "entete", label: "Entête", icon: "header", hint: "Titre et logo, menu principal, menu hors-champ, entête transparent, largeur et marges (sites).", rich: "header" },
   { id: "en-tete", label: "En-tête", icon: "header", hint: "Logo, annonce et boutons de l'en-tête (site principal) ; composant d'en-tête (sites)." },
   { id: "menus", label: "Menus", icon: "menu", hint: "Menus du site et emplacements." },
   { id: "pied", label: "Pied de page", icon: "footer", hint: "Marque, texte et mentions du pied de page." },
@@ -59,6 +60,33 @@ add("footer.tagline", "identite", "textarea", "Slogan du pied de page", { scope:
 add("settings.identity.logoUrl", "identite", "media", "Logo principal", { scope: ["site"], live: false, store: "url", help: "Image de la médiathèque de CE site." });
 add("settings.identity.logoMobileUrl", "identite", "media", "Logo mobile", { scope: ["site"], live: false, store: "url", help: "Utilisé sur les petits écrans lorsqu'il est défini." });
 add("settings.identity.faviconUrl", "identite", "media", "Favicon (icône de l'onglet)", { scope: ["site"], live: false, store: "url", help: "PNG, SVG, ICO, WebP ou JPG." });
+
+// Entête (sites) : une ligne par réglage de headerSettings (UNE table pour la validation, l'interface et le rendu : aucun contrôle sans effet)
+// live = le réglage ne change que le CSS (aperçu instantané) ; les réglages qui changent le contenu de l'entête rechargent l'aperçu.
+{
+  const HS = require("../marketing/pages/headerSettings");
+  const RELOAD = new Set(["auto", "title", "tagline", "ocVis", "ocMode", "ocDir", "ocLabel", "ocShowLabel", "tpEnabled", "tpLogo", "tpLogoUrl", "logoSvg"]);
+  const KINDS = { bool: "toggle", enum: "select", text: "text", num: "number", color: "color", vis: "vis", space: "space", media: "media" };
+  for (const e of HS.catalog()) {
+    const o = { scope: ["site"], live: !RELOAD.has(e.id.replace(/(T|M)$/, "")) && !RELOAD.has(e.id), g: e.g, tab: e.tab, def: e.def };
+    if (e.resp !== undefined) o.resp = e.resp, o.base = e.id.slice(0, e.id.length - e.resp.length);
+    if (e.help) o.help = e.help;
+    if (e.unit) o.unit = e.unit;
+    if (e.step) o.step = e.step;
+    if (e.min !== undefined) o.min = e.min;
+    if (e.max !== undefined) o.max = e.max;
+    if (e.type === "text") o.max = e.max || 100;
+    if (e.type === "color") o.allowEmpty = true;
+    if (e.type === "num") o.nullable = true;
+    if (e.type === "media") o.store = "url";
+    if (e.type === "space") o.corners = Boolean(e.corners);
+    if (e.options) o.options = e.options.map((x) => [x[0], x[1]]);
+    if (e.font) o.font = true;
+    if (e.showIf) o.showIf = { [`settings.header.${e.showIf}`]: true };
+    if (e.family) { o.family = e.family; o.state = e.state; }
+    add(`settings.header.${e.id}`, "entete", KINDS[e.type], e.label, o);
+  }
+}
 
 // Couleurs
 const C = tokensLib.COLOR_LABELS;
@@ -263,7 +291,7 @@ const UNSUPPORTED = {
 
 // ---------- Thème du site : réglages propres à chaque thème (manifeste mesuré, themes/customization) ----------
 // Un site dont le thème est un paquet ne reçoit QUE les réglages qui agissent sur ce thème : les siens (manifeste) + ceux du moteur que la mesure a vus agir (jetons).
-const ALWAYS = (c) => c.panel === "single-post" || c.panel === "theme-choice" || c.panel === "identite" || c.panel === "menus" || c.panel === "css" || c.id.startsWith("parts.");
+const ALWAYS = (c) => c.panel === "single-post" || c.panel === "entete" || c.panel === "theme-choice" || c.panel === "identite" || c.panel === "menus" || c.panel === "css" || c.id.startsWith("parts.");
 const themeCustomization = () => require("../marketing/themes/customization");
 const packKeyOf = (siteId, over) => {
   if (siteId === null || siteId === undefined) return "";
@@ -346,6 +374,11 @@ function coerce(c, raw, siteId) {
   if (c.kind === "palette") {
     if (!Array.isArray(raw) || raw.length > c.max) throw new UserError(`${c.label} : ${c.max} couleurs au plus.`);
     return raw.map((x) => ({ key: String((x && x.key) || ""), label: String((x && x.label) || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40), hex: String((x && x.hex) || "").trim().toLowerCase() }));
+  }
+  if (c.kind === "vis" || c.kind === "space") {
+    const HS = require("../marketing/pages/headerSettings");
+    const key = c.id.replace(/^settings\.header\./, "");
+    try { return HS.normalize({ [key]: raw }, { strict: true, helpers: { bad: (m) => new UserError(m) } })[key]; } catch (e) { throw new UserError(e.message); }
   }
   if (c.kind === "toggle") return raw === true || raw === "1" || raw === 1 || raw === "true" || raw === "on";
   if (c.kind === "number") {

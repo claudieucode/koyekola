@@ -70,7 +70,7 @@ function headerCss(header, { breakpoints, containerWidth = 1100, logoUrl = "", t
   if (h.rowBorderColor) push(rule(HEAD, [["border-bottom-color", color(h.rowBorderColor)]]));
 
   // ----- Titre et logo -----
-  push(perDevice(h, "logoWidth", R, (v) => rule(".lp-ah-logo-img", [["width", px(v)], ["max-width", "none"], ["height", "auto"]])));
+  push(perDevice(h, "logoWidth", R, (v) => rule(".lp-autohead-brand .lp-ah-logo-img", [["width", px(v)], ["max-width", "none"], ["height", "auto"]])));
   // Logo « SVG / masque » : le fichier sert de masque, la couleur choisie le remplit (l'image d'origine reste en dessous, invisible, pour la taille et l'accessibilité)
   const maskRule = (sel, u) => (safeUrl(u) ? rule(sel, [["-webkit-mask", `url("${safeUrl(u)}") center / contain no-repeat`], ["mask", `url("${safeUrl(u)}") center / contain no-repeat`]]) : "");
   if (h.logoSvg) push(maskRule(".lp-ah-logo-main.is-mask", logoUrl));

@@ -379,7 +379,7 @@ function resolveMenuNode(n, page, visitor) {
 // En-tête / pied de page AUTOMATIQUES : une page de site sans en-tête (ou sans pied de page) composé affiche tout de même le menu AFFECTÉ à l'emplacement (c'est le rôle d'une affectation). Rien n'est ajouté si la page
 // montre déjà ce menu (widget Menu ou Menu du CMS pour cet emplacement : jamais deux fois), si l'en-tête a été retiré pour cette page, ou pour une page d'atterrissage / une étape de tunnel.
 function autoNavigation(page, sections, visitor) {
-  const out = { header: null, footer: null };
+  const out = { header: null, footer: null, mobile: null };
   if (page.kind && page.kind !== "page") return out;
   const has = { header: false, footer: false };
   for (const s of sections) {
@@ -391,6 +391,8 @@ function autoNavigation(page, sections, visitor) {
     });
   }
   if (!has.header && page.header_mode !== "none") { const m = menuFor(page, visitor, { location: "header" }); const items = cmsLinks(m && m.items); if (items.length) out.header = { name: m.name, items }; }
+  // Menu du panneau hors-champ (emplacement « Mobile ») : repli sur le menu d'en-tête s'il n'est pas affecté
+  { const m = menuFor(page, visitor, { location: "mobile" }); const items = cmsLinks(m && m.items); if (items.length) out.mobile = { name: m.name, items }; }
   if (!has.footer) { const m = menuFor(page, visitor, { location: "footer" }); const items = cmsLinks(m && m.items); if (items.length) out.footer = { name: m.name, items }; }
   return out;
 }
