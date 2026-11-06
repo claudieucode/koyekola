@@ -33,7 +33,7 @@
       var q = parseFloat(a.getAttribute("data-q")), u = a.getAttribute("data-u"), v = q * k; if (u === "pc") u = "";
       if (u === "g" && v >= 1000) { v = v / 1000; u = "kg"; } else if (u === "kg" && v < 1) { v = v * 1000; u = "g"; }
       if (u === "cl" && v >= 100) { v = v / 100; u = "L"; }
-      var qe = one(".mj-q", a), ue = one(".mj-u", a);
+      var qe = one(".mj-qty", a), ue = one(".mj-u", a);
       if (qe) qe.textContent = (u === "g" || u === "cl") ? String(Math.round(v / (v > 40 ? 5 : 1)) * (v > 40 ? 5 : 1)) : fr(v);
       if (ue) ue.textContent = u;
     });

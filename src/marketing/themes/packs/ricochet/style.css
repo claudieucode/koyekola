@@ -62,7 +62,7 @@ a{color:var(--rc-aT)}a:focus-visible{outline:3px solid var(--rc-mint);outline-of
 /* liens */
 .rc-links{display:flex;flex-direction:column;gap:12px}
 .rc-row{display:flex;align-items:stretch;gap:8px}
-.rc-link{flex:1;min-width:0;display:flex;align-items:center;gap:14px;min-height:68px;padding:10px 12px 10px 10px;border-radius:999px;background:var(--rc-sf);border:2px solid var(--rc-line);color:var(--rc-tx);text-decoration:none;position:relative;overflow:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1),border-color .2s,background .2s;box-sizing:border-box}
+.rc-link{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:68px;padding:10px 14px 10px 10px;border-radius:34px;background:var(--rc-sf);border:2px solid var(--rc-line);color:var(--rc-tx);text-decoration:none;position:relative;overflow:hidden;transition:transform .3s cubic-bezier(.34,1.56,.64,1),border-color .2s,background .2s;box-sizing:border-box}
 .rc-link:hover{transform:translateY(-3px) scale(1.01);border-color:var(--rc-ac);background:var(--rc-sf2)}.rc-link:active{transform:scale(.98)}
 .rc-ico{flex:none;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:var(--rc-ac);color:var(--rc-dk)}
 .rc-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}.rc-txt b{font-weight:700;font-size:1.02rem;overflow-wrap:anywhere}.rc-txt small{color:var(--rc-mu);font-size:.86rem;overflow-wrap:anywhere}
@@ -124,3 +124,5 @@ body{background:#fff!important;color:#000!important;padding-bottom:0!important}
 .rc-head,.rc-tabs,.rc-foot,.rc-ripples,.rc-authorbox,.rc-crumbs{display:none!important}
 .rc-col{max-width:none}.rc-prose,.rc-h1,.rc-lead,.rc-post-k{color:#000!important;background:none!important;box-shadow:none!important}.rc-h1{font-size:26pt}.rc-prose p,.rc-prose li{font-size:12pt}a{color:#000!important}
 }
+
+@media (max-width:560px){.rc-go{display:none}.rc-pill{font-size:.64rem;padding:.15em .5em;align-self:flex-start;margin-top:2px}.rc-txt b{font-size:1rem}.rc-link{gap:10px}}
