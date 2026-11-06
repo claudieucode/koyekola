@@ -130,7 +130,7 @@ describe("design v3 : pages publiques, élève, authentification, erreurs, compt
       assert.match(rule(".hero-stage::before"), /content:\s*none/); assert.match(rule(".card"), /box-shadow:\s*none/);
       assert.doesNotMatch(CSS.replace(/\.hero-slides::after[^}]*\}/, ""), /radial-gradient/);
     });
-    test("la couleur d'action suit Apparence → Personnaliser : la feuille n'impose aucune couleur codée en dur pour la marque, les boutons ni les liens", () => {
+    test("la couleur d'action suit Apparence → Styles : la feuille n'impose aucune couleur codée en dur pour la marque, les boutons ni les liens", () => {
       assert.match(rule(".logo::before"), /background:\s*var\(--accent\)/);   // le texte blanc de la pastille est le seul littéral
       for (const sel of [".kv-tabs a[aria-current=\"page\"]", ".kv-count", ".kv-account-nav a:hover"]) { const r = rule(sel); assert.ok(r, sel); assert.doesNotMatch(r, /#[0-9a-f]{3,6}\b/i, `${sel} : jetons seulement`); }
     });

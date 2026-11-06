@@ -7858,8 +7858,9 @@ function selectField(label, value, options, onChange, opts) {
       });
     } else {
       box.appendChild(h("p", { class: "pb-note", text: "Couleurs, polices, tailles de titres, boutons et espacements viennent du design system du site « " + PAGE.siteName + " » : les modifier là les applique à toutes ses pages." }));
-      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/design-system", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"));
-      box.appendChild(h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/constructeur-de-theme?type=footer", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site"));
+      box.appendChild(h("div", { class: "pb-btn-stack" },
+        h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/design-system", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"),
+        h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/constructeur-de-theme?type=footer", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site")));
     }
     // CSS de la page : confiné au contenu de la page, vérifié à l'enregistrement (aucune ressource externe)
     box.appendChild(h("p", { class: "pb-sub", text: "CSS de la page" }));
@@ -8716,6 +8717,11 @@ function selectField(label, value, options, onChange, opts) {
   if (window.pbMotionStudio) window.pbMotionStudio.attach({
     h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, accGroup: accGroup, numField: numField, selectField: selectField, checkField: checkField,
     schemaFields: schemaFields, frame: function () { return frame; }, setTab: function (t) { inspTab = t; store.set("insp-tab", t); renderInspector(); },
+  });
+  // Timeline visuelle du Motion Studio (scènes multi-éléments, transitions de page, défilement fluide) : lit et écrit theme.motionScenes par change()
+  if (window.pbMotionTimeline) window.pbMotionTimeline.attach({
+    h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, change: change, accGroup: accGroup, selectField: selectField, checkField: checkField,
+    frame: function () { return frame; }, content: function () { return content; }, selection: function () { return selection.slice(); }, canWrite: function () { return canWrite; },
   });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,

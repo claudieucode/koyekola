@@ -71,7 +71,7 @@
     var h = A.h, s = studioOf(it), n = ANIM_KEYS.filter(function (k) { return s[k] !== undefined; }).length;
     return A.accGroup("ms-anim", "Animation", true, function (b) {
       if (has(spec, "preset")) b.appendChild(A.selectField("Effet", effective(it, spec, "preset"), spec.presets, function (v) { setStudio(it, "Effet d'animation", function (st) { st.preset = v === spec.defaults.preset ? undefined : v; }); }, { disabled: locked }));
-      b.appendChild(previewRow(it));
+      if (spec.preview !== false) b.appendChild(previewRow(it)); // faux : composant piloté par le défilement ou par un clic (rien à lire dans l'éditeur)
       if (has(spec, "duration")) b.appendChild(numRow(it, spec, "duration", "Durée", 50, 10000, "ms", 50));
       if (has(spec, "delay")) b.appendChild(numRow(it, spec, "delay", "Délai", 0, 10000, "ms", 50));
       if (has(spec, "stagger")) b.appendChild(numRow(it, spec, "stagger", "Décalage entre éléments", 0, 1000, "ms", 5));
@@ -144,7 +144,7 @@
     box.appendChild(contentSection(it, locked));
     box.appendChild(styleSection());
     box.appendChild(animationSection(it, spec, locked));
-    if (has(spec, "trigger") || has(spec, "repeat")) box.appendChild(interactionsSection(it, spec, locked));
+    if (has(spec, "trigger") || has(spec, "repeat") || has(spec, "scrub")) box.appendChild(interactionsSection(it, spec, locked));
     box.appendChild(responsiveSection(it, locked));
     box.appendChild(advancedSection(it, locked));
     return true;

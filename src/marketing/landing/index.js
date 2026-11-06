@@ -442,8 +442,8 @@ function viewModel(ctx, page) {
   const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
   const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
   // Motion Studio : la page ne charge sa feuille de styles et son runtime que si elle contient un composant ou un réglage Motion Studio
-  const motionStudio = pageNodes.STUDIO.usage(sections, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null);
-  return { ...page, sections, motionStudio, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
+  const motionStudio = pageNodes.STUDIO.usage(sections, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null, page.theme && page.theme.motionScenes);
+  return { ...page, sections, motionStudio, motionCss: require("../pages/motionScenes").css(page.theme && page.theme.motionScenes), nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {

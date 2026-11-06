@@ -42,7 +42,6 @@
               <input type="hidden" name="<%= k %>" value="<%= val(k) %>" data-sg-field="<%= k %>"></div>
             <p class="mk-sg-help" id="sg-h-<%= k %>"><%= k === "favicon" ? "Carrée, d'au moins 512 × 512 pixels de préférence (PNG, SVG, ICO, WebP ou JPEG). Elle s'affiche dans l'onglet du navigateur et les marque-pages." : "Image de la médiathèque, affichée dans le pied de page des pages du site." %> <a href="<%= G.links.media %>">Ajouter une image à la médiathèque</a></p>
             <p class="mk-sg-err" data-sg-err="<%= k %>" hidden></p></div></div><% }); %>
-        <% if (!T.siteId) { %><p class="mk-sg-help mk-sg-flat">L'icône et le logo du site principal se règlent dans <a href="<%= G.links.customizer %>">Apparence → Personnaliser</a>.</p><% } %>
         <% if (has("site_slug")) { %><div class="mk-sg-row">
           <div class="mk-sg-label"><label for="sg-site_slug">Identifiant du site</label><%- badge("site_slug") %></div>
           <div class="mk-sg-control"><input id="sg-site_slug" type="text" name="site_slug" maxlength="60" autocomplete="off" spellcheck="false" value="<%= val("site_slug") %>" data-sg-field="site_slug" aria-describedby="sg-h-site_slug sg-e-site_slug" required<%= dis("site_slug") %>>

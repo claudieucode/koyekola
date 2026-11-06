@@ -197,7 +197,10 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   // Commentaires du site : bloc complet (voir services/comments) ou null = le site hérite du site principal
   let commentsBlock = null;
   if (src.comments && typeof src.comments === "object") { try { commentsBlock = require("../../services/comments").normalizeSettings(src.comments); } catch { commentsBlock = null; } }
-  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, customCode, classes, extras, seo, general, reading, comments: commentsBlock };
+  // Publication unique (Personnalisation → Types de publication) : réglages complets, ou null = affichage d'origine de la page d'article
+  let singlePost = null;
+  try { singlePost = require("../../services/singlePost").compact(src.singlePost, { strict }); } catch (e) { if (e && e.isSinglePost) throw bad(e.message); singlePost = null; }
+  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, customCode, classes, extras, seo, general, reading, comments: commentsBlock, singlePost };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus

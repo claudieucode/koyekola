@@ -139,3 +139,6 @@ body{background:#fff!important;color:#000!important}
 .fi-head,.fi-foot,.fi-sec--tint,.fi-crumbs,.fi-side .fi-btn,.fi-hs{display:none!important}
 .fi-dossier{box-shadow:none;border:1px solid #000}.fi-tab{border-color:#000}.fi-two{display:block}.fi-coord{box-shadow:none;background:none;border:1px solid #000;break-inside:avoid;margin-top:10pt}.fi-h1{font-size:30pt}a{color:#000!important}
 }
+/* Garde responsive : les colonnes peuvent rétrécir sous la largeur de leur contenu */
+@media (max-width:980px){.fi-two,.fi-hero-in,.fi-panel{grid-template-columns:minmax(0,1fr)}.fi-two>*,.fi-hero-in>*,.fi-panel>*{min-width:0}}
+.fi-main,.fi-ticks li{overflow-wrap:anywhere;min-width:0}

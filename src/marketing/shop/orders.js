@@ -111,10 +111,10 @@ function createFromCart(s, cart, input) {
       .run(s.organizationId, s.siteId ?? null, number, input.customerId || null, email, method, priced.currency, settings.prices_include_tax, priced.totals.subtotal, priced.totals.discount, priced.totals.shipping, priced.totals.tax, priced.totals.total,
         priced.coupon ? priced.coupon.code : null, priced.shipping.chosen ? priced.shipping.chosen.name : null, JSON.stringify(billing), JSON.stringify(shippingAddr), JSON.stringify(priced.totals.taxLines), key);
     const orderId = Number(info.lastInsertRowid);
-    const insItem = s.db.prepare("INSERT INTO mk_shop_order_items (order_id, product_id, variant_id, name, variant_label, sku, quantity, unit_price_cents, line_subtotal_cents, discount_cents, tax_cents, requires_shipping, weight_grams) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    const insItem = s.db.prepare("INSERT INTO mk_shop_order_items (order_id, product_id, variant_id, name, variant_label, sku, quantity, unit_price_cents, line_subtotal_cents, discount_cents, tax_cents, requires_shipping, weight_grams, custom_text, custom_label) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     priced.lines.forEach((l, i) => {
       const t = priced.totals.lines[i];
-      insItem.run(orderId, l.productId, l.variantId, l.name, l.variantLabel, l.sku, l.quantity, l.unitCents, t.subtotal, t.discount, t.tax, l.requiresShipping ? 1 : 0, l.weightGrams);
+      insItem.run(orderId, l.productId, l.variantId, l.name, l.variantLabel, l.sku, l.quantity, l.unitCents, t.subtotal, t.discount, t.tax, l.requiresShipping ? 1 : 0, l.weightGrams, l.customText || null, l.customText ? l.customLabel : null);
       reserve(s, l, orderId);
     });
     if (priced.coupon) {

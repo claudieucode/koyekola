@@ -161,7 +161,7 @@ function assign(packs) {
 const all = (packs) => (CACHE && CACHE.size === packs.length ? CACHE : (CACHE = assign(packs)));
 const identityOf = (packs, key) => all(packs).get(key) || null;
 
-// Modifications du brouillon de styles (identifiants du personnalisateur : voir services/customizer.js)
+// Modifications du brouillon de styles (identifiants des styles : voir services/siteStyles.js)
 function styleChanges(id) {
   const c = {};
   for (const k of ["primary", "secondary", "accent", "background", "surface", "text", "muted"]) c[`tokens.colors.${k}`] = id.colors[k];

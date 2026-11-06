@@ -1,0 +1,12 @@
+<%# Boutons de partage : URL réelle de l'article, réseaux choisis, aucun compteur. « Copier le lien » confirme visiblement. %>
+<% if (sp.share.enabled && spShare.length) { %>
+<div class="share sp-share share-<%= variant %> sp-share-<%= sp.share.style %>" role="group" aria-label="Partager cet article">
+  <% if (label) { %><span class="share-label"><%= label %></span><% } %>
+  <% spShare.forEach((n) => { %>
+    <% if (n.id === "copy") { %><button type="button" class="share-btn share-copy" data-copy-link="<%= shareUrl %>" aria-label="Copier le lien de l'article" title="Copier le lien"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span class="share-copy-text<%= sp.share.labels ? "" : " sr-only" %>">Copier le lien</span></button>
+    <% } else { %><a class="share-btn share-<%= n.id %>" href="<%= n.href %>"<%- n.id === "email" ? "" : ' target="_blank" rel="noopener noreferrer"' %> aria-label="Partager sur <%= n.label %><%= n.id === "email" ? "" : " (nouvelle fenêtre)" %>" title="<%= n.label %>"><span class="sp-share-ico" aria-hidden="true"><%= { facebook: "f", x: "𝕏", linkedin: "in", whatsapp: "wa", pinterest: "P", telegram: "tg", email: "✉" }[n.id] %></span><span class="<%= sp.share.labels ? "sp-share-txt" : "sr-only" %>"><%= n.label %></span></a><% } %>
+  <% }) %>
+  <button type="button" class="share-btn" data-native-share data-title="<%= post.title %>" data-url="<%= shareUrl %>" hidden aria-label="Partager avec une autre application" title="Partager"><span aria-hidden="true">↗</span></button>
+  <span class="sp-copy-status sr-only" role="status" aria-live="polite" data-copy-status></span>
+</div>
+<% } %>

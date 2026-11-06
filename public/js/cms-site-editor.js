@@ -110,7 +110,7 @@
   }
   function railPublish(box) {
     box.appendChild(h("p", { class: "field-hint", text: "Brouillons non publiés et pages pas encore en ligne. Chaque page est contrôlée avant publication (formulaire publié, formation en ligne, widgets complets…)." }));
-    if (S.styles.draftCount) box.appendChild(h("p", { class: "mk-wd-banner" }, [plural(S.styles.draftCount, "réglage") + " de style en brouillon (Styles / Personnaliser) : ", h("a", { href: S.links.styles, text: "ouvrir Styles pour les publier" })]));
+    if (S.styles.draftCount) box.appendChild(h("p", { class: "mk-wd-banner" }, [plural(S.styles.draftCount, "réglage") + " de style en brouillon (Styles) : ", h("a", { href: S.links.styles, text: "ouvrir Styles pour les publier" })]));
     if (!S.pending.length) { box.appendChild(h("p", { class: "mk-se-none", text: "Rien à publier : toutes les pages sont en ligne, sans brouillon en attente." })); return; }
     var form = h("div", { class: "mk-se-pending" });
     S.pending.forEach(function (p) {
@@ -125,7 +125,7 @@
   function railTools(box) {
     box.appendChild(h("p", { class: "field-hint", text: "Les autres outils de conception du site :" }));
     var ul = h("ul", { class: "mk-se-tools" });
-    [["Styles", S.links.styles, "Palette, typographie, formes, boutons"], ["Personnaliser", S.links.customizer, "Identité, en-tête, pied de page, CSS"], ["Patterns", S.links.patterns, "Compositions à insérer dans les pages"], ["Templates", S.links.templates, "Modèles de pages et de sites"], ["Menus", S.links.menus, "Navigation et emplacements"], ["Widgets", S.links.widgets, "Zones du blog et du pied de page"], ["Thèmes", S.links.themes, "Aspect général"], ["Polices", S.links.fonts, "Bibliothèque de polices"]].forEach(function (t) { ul.appendChild(h("li", null, h("a", { href: t[1] }, [h("strong", { text: t[0] }), h("span", { class: "field-hint", text: t[2] })]))); });
+    [["Styles", S.links.styles, "Palette, typographie, formes, boutons"], ["Patterns", S.links.patterns, "Compositions à insérer dans les pages"], ["Templates", S.links.templates, "Modèles de pages et de sites"], ["Menus", S.links.menus, "Navigation et emplacements"], ["Widgets", S.links.widgets, "Zones du blog et du pied de page"], ["Thèmes", S.links.themes, "Aspect général"], ["Polices", S.links.fonts, "Bibliothèque de polices"]].forEach(function (t) { ul.appendChild(h("li", null, h("a", { href: t[1] }, [h("strong", { text: t[0] }), h("span", { class: "field-hint", text: t[2] })]))); });
     box.appendChild(ul);
   }
   function renderRail() { var box = $("[data-se-railbody]"); box.textContent = ""; box.setAttribute("aria-labelledby", "se-tab-" + tab); ({ pages: railPages, parts: railParts, publish: railPublish, tools: railTools })[tab](box); }

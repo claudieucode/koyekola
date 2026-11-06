@@ -2267,3 +2267,96 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 
 /* Motion Studio : aperçu de l'animation (lecture, pause, position) */
 .pb-ms-preview input[type="range"] { width: 100%; accent-color: var(--primary); }
+
+/* =====================================================================================================================
+   ERGONOMIE DE L'ÉDITEUR — système d'espacement et de dimensions partagé (échelle 4 / 8 / 12 / 16 / 24).
+   Règle : deux contrôles voisins ne se touchent jamais (écart mini 4 px, 8 px dans un panneau) ; les zones cliquables font au moins 28 px.
+   ===================================================================================================================== */
+:root {
+  --pb-sp-1: 4px; --pb-sp-2: 8px; --pb-sp-3: 12px; --pb-sp-4: 16px; --pb-sp-5: 24px;
+  --pb-ctl-sm: 30px; --pb-ctl-md: 34px; --pb-ctl-lg: 40px; --pb-hit: 32px;
+}
+/* Rangées de boutons-icônes : un écart régulier entre voisins */
+.pb-flag + .pb-flag, .pb-icon-btn + .pb-icon-btn, .pb-icon-btn + .pb-flag, .pb-flag + .pb-icon-btn,
+.pb-panel-toggle + .pb-panel-toggle, .pb-gizmo-btn + .pb-gizmo-btn, .pb-gizmo-btn + .pb-icon-btn, .pb-icon-btn + .pb-gizmo-btn { margin-left: var(--pb-sp-1); }
+.pb-zoom-value { margin: 0 var(--pb-sp-1); }
+.pb-gizmo { gap: var(--pb-sp-1); }
+.pb-panel-actions { gap: var(--pb-sp-1); }
+.pb-tools { gap: var(--pb-sp-1); }
+.pb-flag { width: 26px; height: 26px; }
+/* Titres de groupes de la palette : un peu d'air avant la grille */
+.pb-pal-toggle { margin-bottom: var(--pb-sp-1); }
+/* Panneaux : sections en colonne, boutons empilés séparés */
+.pb-insp-section { display: flex; flex-direction: column; gap: var(--pb-sp-2); padding: var(--pb-sp-3); }
+.pb-insp-section .pb-hist-row { margin-top: 0; gap: var(--pb-sp-2); }
+.pb-insp-section .pb-insp-bar { gap: var(--pb-sp-2); }
+.pb-insp-bar .pb-seg { gap: var(--pb-sp-1); padding: 3px; }
+.pb-insp-bar .pb-seg button { min-height: 28px; min-width: 32px; padding: 0 var(--pb-sp-2); }
+.pb-pagebtn { min-height: var(--pb-ctl-md); }
+.pb-hist-btn { min-height: var(--pb-ctl-md); }
+.pb-btn-stack { display: flex; flex-direction: column; align-items: stretch; gap: var(--pb-sp-2); margin: var(--pb-sp-2) 0; }
+.pb-btn-stack > .btn { justify-content: center; text-align: center; min-height: var(--pb-ctl-md); }
+.pb-inspector .btn + .btn, .pb-panel .btn + .btn { margin-top: var(--pb-sp-2); }
+.pb-inspector .pb-hist-row .btn + .btn, .pb-inspector .pb-btn-stack .btn + .btn { margin-top: 0; }
+/* Boutons : dimensions cohérentes avec leur taille */
+.pb-inspector .btn, .pb-panel .btn, .pb-left .btn, .pb-right .btn { min-height: var(--pb-ctl-md); }
+.pb-inspector .btn-sm, .pb-panel .btn-sm, .pb-left .btn-sm, .pb-right .btn-sm { min-height: var(--pb-ctl-sm); padding-left: var(--pb-sp-3); padding-right: var(--pb-sp-3); }
+/* Champs : hauteur et rythme réguliers */
+.pb-field input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), .pb-field select { min-height: var(--pb-ctl-md); }
+.pb-field textarea { padding: var(--pb-sp-2) var(--pb-sp-3); line-height: 1.45; }
+.pb-field > label, .pb-field > .pb-label { display: block; margin-bottom: var(--pb-sp-1); }
+.pb-field + .pb-field { margin-top: var(--pb-sp-3); }
+.pb-field label:has(> input[type="checkbox"]), .pb-field label:has(> input[type="radio"]) { display: flex; align-items: center; gap: var(--pb-sp-2); min-height: 28px; }
+/* Dialogues et fenêtres flottantes : marges intérieures régulières, boutons d'action espacés */
+.pb-comp-dlg-foot, .pb-sp-actions { display: flex; justify-content: flex-end; gap: var(--pb-sp-2); padding-top: var(--pb-sp-3); }
+.pb-modal-actions, .pb-dlg-actions { display: flex; justify-content: flex-end; gap: var(--pb-sp-2); }
+/* Barre d'actions flottante sur le canevas, liste des enfants, fil d'Ariane, boutons de repli : écarts et zones cliquables réguliers */
+.pb-cbar { gap: var(--pb-sp-1); padding: var(--pb-sp-1); }
+.pb-kids { gap: var(--pb-sp-1); }
+.pb-crumbs { gap: var(--pb-sp-1) var(--pb-sp-2); }
+.pb-crumbs button { min-height: 24px; padding: 0 var(--pb-sp-1); border-radius: var(--pb-radius-sm); }
+.pb-twist { min-width: 24px; min-height: 24px; }
+.pb-insp-bar { margin-bottom: var(--pb-sp-2); }
+
+/* ms:tl — Motion Studio, lot 3 : timeline visuelle (scènes), options de page (transitions, défilement fluide) */
+.pb-tl { display: grid; gap: 8px; min-width: 0; }
+.pb-tl-transport { align-items: center; }
+.pb-tl-time { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--editor-muted); }
+.pb-tl-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pb-tl-nums input { width: 100%; min-width: 0; }
+.pb-tl-board { display: grid; grid-template-columns: 112px minmax(0, 1fr); border: 1px solid var(--editor-border); border-radius: 8px; background: var(--editor-card); overflow: hidden; }
+.pb-tl-heads { display: grid; grid-template-rows: 24px; grid-auto-rows: 40px; border-right: 1px solid var(--editor-border); background: var(--editor-panel-secondary); }
+.pb-tl-corner { display: flex; align-items: center; padding: 0 8px; height: 24px; font-size: 11px; font-weight: 600; color: var(--editor-muted); border-bottom: 1px solid var(--editor-border); }
+.pb-tl-track-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 0 4px 0 8px; border-bottom: 1px solid var(--editor-border); min-width: 0; height: 40px; }
+.pb-tl-track-name { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pb-tl-track-name.is-missing { color: var(--editor-danger); }
+.pb-tl-track-tools { display: inline-flex; gap: 2px; flex: none; }
+.pb-tl-track-tools .btn { min-width: 20px; height: 20px; padding: 0 3px; font-size: 11px; line-height: 1; }
+.pb-tl-scroll { overflow-x: auto; overflow-y: hidden; min-width: 0; }
+.pb-tl-lanes { position: relative; min-width: 100%; }
+.pb-tl-ruler { position: relative; height: 24px; border-bottom: 1px solid var(--editor-border); background: var(--editor-panel-secondary); cursor: col-resize; touch-action: none; }
+.pb-tl-tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--editor-border); padding-left: 3px; font-size: 10px; line-height: 24px; color: var(--editor-muted); pointer-events: none; }
+.pb-tl-tick.is-major { border-left-color: var(--editor-muted); }
+.pb-tl-lane { position: relative; height: 40px; border-bottom: 1px solid var(--editor-border); }
+.pb-tl-bar { position: absolute; top: 6px; height: 28px; min-width: 14px; padding: 0 12px 0 6px; border: 1px solid var(--editor-accent); border-radius: 6px; background: color-mix(in srgb, var(--editor-accent) 22%, var(--editor-card)); color: var(--editor-text); font-size: 11px; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: grab; touch-action: none; }
+.pb-tl-bar.kind-out { border-color: var(--editor-danger); background: color-mix(in srgb, var(--editor-danger) 18%, var(--editor-card)); }
+.pb-tl-bar.kind-emph { border-style: dashed; }
+.pb-tl-bar.is-linked { border-left-width: 4px; }
+.pb-tl-bar.is-missing { opacity: .55; text-decoration: line-through; }
+.pb-tl-bar.is-selected { box-shadow: 0 0 0 2px var(--editor-accent); }
+.pb-tl-bar.is-dragging { cursor: grabbing; }
+.pb-tl-bar:focus-visible { outline: none; box-shadow: var(--editor-focus); }
+.pb-tl-bar-label { pointer-events: none; }
+.pb-tl-grip { position: absolute; top: 0; right: 0; bottom: 0; width: 8px; cursor: ew-resize; background: color-mix(in srgb, var(--editor-accent) 45%, transparent); border-radius: 0 5px 5px 0; }
+.pb-tl-playhead { position: absolute; top: 0; bottom: 0; left: 0; width: 0; border-left: 2px solid var(--editor-danger); pointer-events: none; z-index: 2; }
+.pb-tl-empty { padding: 8px; margin: 0; }
+.pb-tl-step, .pb-tl-scene, .pb-tl-page, .pb-tl-add { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--editor-border); border-radius: 8px; }
+.pb-tl-page { margin-top: 8px; }
+.pb-tl .is-warn { color: var(--editor-danger); }
+@media (prefers-reduced-motion: reduce) { .pb-tl-bar { transition: none; } }
+/* ms:tl — correctif : rien dans « Scènes et mouvement » ne doit élargir le panneau de la page */
+.pb-tl, .pb-tl-page, .pb-tl-step, .pb-tl-scene, .pb-tl-add { grid-template-columns: minmax(0, 1fr); max-width: 100%; }
+.pb-tl > *, .pb-tl-page > *, .pb-tl-step > *, .pb-tl-scene > *, .pb-tl-add > * { min-width: 0; max-width: 100%; }
+.pb-tl select, .pb-tl input[type="text"], .pb-tl input[type="number"] { max-width: 100%; box-sizing: border-box; }
+.pb-tl-board { max-width: 100%; }
+[data-pb-page-settings] details[data-group="ms-scenes"] { max-width: 100%; overflow-x: hidden; }

@@ -122,8 +122,6 @@ function headHtml(pack) {
     script: p.js ? `<script src="${base}/motion.js?v=${p.hash}" defer></script>` : "",
     attr: ` data-kw-pack="${p.spec.key}"${extras}`,
     vars: vars ? `${vars};` : "",
-    // Réglages de personnalisation choisis (clés « z-… ») : règles CSS validées, vides tant que rien n'est réglé (design d'origine inchangé)
-    cz: require("../customization").cssFor(p.spec.key, pack.options),
   };
 }
 

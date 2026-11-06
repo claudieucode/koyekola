@@ -17,7 +17,7 @@ const { transaction } = require("../marketing/db/tx");
 
 const pagesLib = () => require("../marketing/pages");
 const navigation = () => require("./navigation");
-const customizer = () => require("./customizer");
+const siteStyles = () => require("./siteStyles");
 const patternLibrary = () => require("./patternLibrary");
 const themeTemplates = () => require("../marketing/pages/themeTemplates");
 const KEY_RE = /^[A-Za-z0-9_-]{8,64}$/;
@@ -165,7 +165,7 @@ function importTemplate(ctx, siteId, { ref, importKey, name = "", menu = false, 
         if (!nav.assignments({ siteId }).header) { nav.assign("header", m.id, { siteId }); result.menu.assigned = ["header"]; }
       }
       if (styles) {
-        const c = customizer(), draft = c.state(ctx, siteId, { can: () => true }).changes;
+        const c = siteStyles(), draft = c.state(ctx, siteId, { can: () => true }).changes;
         const idy = packBrand.idOf(pack.key);
         const changes = idy ? { ...draft, ...packIdentity.styleChanges(idy) } : { ...draft, ...palettes.changesFor(pack.palette, siteId), "tokens.fonts.heading": pack.fonts.heading, "tokens.fonts.body": pack.fonts.body };
         c.saveDraft(ctx, siteId, changes, userId, { can });

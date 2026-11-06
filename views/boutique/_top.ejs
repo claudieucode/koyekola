@@ -15,6 +15,8 @@
   <link rel="stylesheet" href="<%= asset("/css/boutique.css") %>">
   <%# Thème autonome (paquet) : mêmes feuilles que le site public, confinées à body[data-kw-pack] ; la boutique en reçoit donc l'identité complète %>
   <% if (site && site.assets && site.assets.pack && site.assets.pack.link) { %><%- site.assets.pack.link %><% } %>
+  <% (typeof jsonLd !== "undefined" ? jsonLd : []).forEach((j) => { %><script type="application/ld+json"><%- j %></script>
+  <% }) %>
   <% if (site && site.assets && site.assets.theme) { %><style><%- site.assets.theme %></style><% } %>
   <% if (site && site.assets && site.assets.custom) { %><style><%- site.assets.custom %></style><% } %>
 </head>
@@ -24,6 +26,7 @@
     <a class="sh-brand" href="<%= site ? "/" : shop.base %>"><% if (sx && sx.identity && sx.identity.logoUrl) { %><img src="<%= sx.identity.logoUrl %>" alt="<%= shop.name %>"><% } else { %><%= shop.name %><% } %></a>
     <nav class="sh-nav" aria-label="Boutique">
       <a href="<%= shop.base %>">Boutique</a>
+      <a href="<%= shop.base %>/souhaits">Souhaits</a>
       <a href="<%= shop.base %>/compte"><%= shop.customer ? "Mon compte" : "Se connecter" %></a>
       <a class="sh-cart" href="<%= shop.base %>/panier">Panier <span class="sh-badge" data-sh-cart-count><%= shop.cartCount %></span></a>
     </nav>

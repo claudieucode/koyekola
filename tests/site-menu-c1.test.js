@@ -61,7 +61,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const entries = site.flatMap((g) => g.entrees);
     assert.ok(entries.filter((e) => e.grise).length >= 2, "R8 lots 2 à 4 : médias, articles et commentaires sont ouverts ; SEO : les neuf rubriques sont ouvertes ; le reste reste grisé");
-    for (const e of entries) { if (e.grise) assert.equal(e.href, null, e.libelle); else if (e.libelle === "Personnaliser") assert.equal(e.href, `/marketing/site-web/personnaliser?site=${A}`, "écran plein cadre : le site est celui du menu, jamais un autre"); else assert.match(e.href, new RegExp(`^(${SP}/${A}/|${SP}$)`), e.libelle); }
+    for (const e of entries) { if (e.grise) assert.equal(e.href, null, e.libelle); else assert.match(e.href, new RegExp(`^(${SP}/${A}/|${SP}$)`), e.libelle); }
   });
   test("chaque lien ouvert du menu répond 200 DANS le cadre du site (bandeau + menu) : aucun lien ne renvoie au CMS principal", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
@@ -70,8 +70,6 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     for (const h of links) {
       const r = await boss.get(h.replace(/#.*$/, ""));
       if (/\/articles\/ajouter(?:[?#]|$)/.test(h)) { assert.equal(r.status, 302, h); assert.match(r.location, /^\/formateur\/blog\/nouveau/); continue; } // ARTICLES-02 : ouvre l'éditeur
-      // PERSONNALISER : écran plein cadre (aperçu du site), hors cadre du site ; il ouvre le site du menu et lui seul
-      if (/\/personnaliser\?site=\d+$/.test(h)) { assert.equal(r.status, 200, h); assert.equal(h, `/marketing/site-web/personnaliser?site=${A}`); assert.match(r.text, /"siteName":"Site Alpha"/, h); continue; }
       // THEME BUILDER : centre de contrôle plein écran (sa propre coque), ouvert pour CE site seulement
       if (/\/sites\/\d+\/constructeur-de-theme$/.test(h)) { assert.equal(r.status, 200, h); assert.ok(h.includes(`/sites/${A}/`), h); continue; }
       assert.equal(r.status, 200, h);
@@ -82,7 +80,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("une entrée grisée n'ouvre rien : ni adresse « Bientôt » dans le menu, ni écran du principal, ni donnée", async () => {
     const html = navHtml((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     for (const w of ["/utilisateurs/roles", "/outils/sauvegardes", "/outils/logs", "/outils/systeme"]) assert.ok(!html.includes(w), w);
-    assert.ok(!new RegExp(`href="/marketing/site-web/(?!sites|personnaliser\\?site=${A}")`).test(html), "aucun lien vers l'administration du site principal");
+    assert.ok(!new RegExp(`href="/marketing/site-web/(?!sites)`).test(html), "aucun lien vers l'administration du site principal");
   });
   test("rôles limités à un site : même ordre de groupes, sous-ensemble selon les permissions, jamais un lien vers un autre site", async () => {
     const full = flatLabels(parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text));
@@ -101,7 +99,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("site principal : son menu garde les 72 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
-    assert.equal(entries.length, 79 + 4 + 4 + 10 - 1); // − 2 (En-tête et Pied de page retirés, gérés par le Theme Builder) + 1 (Theme Builder, désormais aussi pour le principal)
+    assert.equal(entries.length, 79 + 4 + 4 + 10 - 1 - 1); // − 2 (En-tête et Pied de page retirés, gérés par le Theme Builder) + 1 (Theme Builder, désormais aussi pour le principal)
     // // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; /* « Composants » masqué du menu affiché */ // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
     for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash" && !i.siteOnly)) assert.ok(entries.some((e) => e.href === (reg.key === "apparence/theme-builder" ? `${PR}/constructeur-de-theme` : reg.href)), reg.href);

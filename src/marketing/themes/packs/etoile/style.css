@@ -421,3 +421,5 @@ body[data-pk-shoot="off"] .et-shoot1,body[data-pk-shoot="off"] .et-shoot2{animat
 }
 @media (max-width:420px){.et-actions .et-btn{width:100%}.et-recap{padding:20px 16px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Garde responsive : la rangée de planches de navigation défile dans son cadre au lieu de déborder de l'écran */
+@media (max-width:1100px){.et-planks-in{overflow-x:auto;justify-content:flex-start;padding-inline:10px;scrollbar-width:none;max-width:100%}.et-planks-in::-webkit-scrollbar{display:none}.et-plank{flex:0 0 auto;min-width:96px;font-size:1.1rem;padding:.3em 1em}}

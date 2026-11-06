@@ -120,27 +120,6 @@ function applyTokens(ctx, siteId, tokens, label) {
   }
   return next;
 }
-// Réglages de personnalisation rangés par site et par thème (table cms_theme_settings) : jamais perdus en changeant de thème
-const major = (v) => String(v || "1").split(".")[0];
-function stashPackOptions(ctx, siteId) {
-  try {
-    const cur = currentTokens(ctx, siteId).pack || {};
-    if (!cur.key || !cur.options || !Object.keys(cur.options).length) return;
-    const p = packs.get(cur.key);
-    db.prepare(`INSERT INTO cms_theme_settings (site_id, theme_key, theme_version, options) VALUES (?, ?, ?, ?)
-      ON CONFLICT (COALESCE(site_id, 0), theme_key) DO UPDATE SET theme_version = excluded.theme_version, options = excluded.options, updated_at = datetime('now')`)
-      .run(scope(siteId), cur.key, p ? String(p.spec.version || "1.0.0") : "1.0.0", JSON.stringify(cur.options));
-  } catch { /* ranger les réglages ne doit jamais empêcher un changement de thème */ }
-}
-function savedPackOptions(siteId, key) {
-  try {
-    const r = db.prepare(`SELECT theme_version, options FROM cms_theme_settings WHERE ${sameScope("site_id")} AND theme_key = ?`).get(scope(siteId), String(key));
-    const p = packs.get(String(key));
-    if (!r || !p || major(r.theme_version) !== major(p.spec.version)) return null;
-    const o = JSON.parse(r.options);
-    return o && typeof o === "object" ? o : null;
-  } catch { return null; }
-}
 // Le rendu public lit bien les nouveaux jetons (même source que les pages publiques)
 function verifyApplied(ctx, siteId, next) {
   const id = scope(siteId);
@@ -166,10 +145,7 @@ function activate(ctx, siteId, key) {
   let next;
   try {
     transaction(db, () => {
-      stashPackOptions(ctx, siteId);
-      const saved = savedPackOptions(siteId, theme.key);
-      const withSaved = saved && theme.tokens && theme.tokens.pack && theme.tokens.pack.key ? { ...theme.tokens, pack: { key: theme.tokens.pack.key, options: saved } } : theme.tokens;
-      next = applyTokens(ctx, siteId, withSaved, `Thème « ${theme.name} »`);
+      next = applyTokens(ctx, siteId, theme.tokens, `Thème « ${theme.name} »`);
       db.prepare(`UPDATE cms_themes SET active = 0 WHERE ${sameScope("site_id")} AND active = 1`).run(scope(siteId));
       if (theme.key !== catalog.DEFAULT_KEY) {
         const info = db.prepare(`UPDATE cms_themes SET active = 1, activated_by = ?, activated_at = datetime('now'), previous_key = ?, previous_tokens = ? WHERE ${sameScope("site_id")} AND theme_key = ?`)
@@ -392,10 +368,9 @@ function setPackOptions(ctx, siteId, key, input, { reset = false } = {}) {
   if (!p || !(p.spec.options || []).length) throw new UserError("Ce thème n'a pas d'options de personnalisation.");
   if (activeKey(siteId) !== p.spec.key) throw new UserError(`Le thème « ${p.spec.name} » n'est pas le thème actif de ce site : activez-le d'abord.`);
   const before = currentTokens(ctx, siteId);
-  const kept = reset ? {} : Object.fromEntries(Object.entries((before.pack && before.pack.options) || {}).filter(([k]) => k.startsWith("z-"))); // réglages du personnalisateur : l'écran d'options ne les efface pas
-  const options = reset ? {} : { ...packs.resolveOptions(p.spec, input || {}), ...kept };
+  const options = reset ? {} : packs.resolveOptions(p.spec, input || {});
   applyTokens(ctx, siteId, { ...before, pack: { key: p.spec.key, options } }, `Options du thème « ${p.spec.name} »`);
   return { name: p.spec.name, options };
 }
 
-module.exports = { savedPackOptions, packOptionValues, setPackOptions, installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens, manifestOf, saveManifest, audit, gallery, libraryItem, installDemo };
+module.exports = { packOptionValues, setPackOptions, installed, available, get, activeKey, installFromCatalog, installPackage, activate, revert, remove, previewTokens, manifestOf, saveManifest, audit, gallery, libraryItem, installDemo };

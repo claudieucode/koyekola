@@ -16,9 +16,7 @@
   </div>
   <div class="mk-tg-foot">
     <a class="btn btn-outline btn-sm" href="<%= to("/" + t.key + "/apercu") %>"<% if (t.hasDemo) { %> data-th-preview data-th-pages="<%= JSON.stringify(t.pages.map((p) => [p.key, p.name])) %>" data-th-label="<%= t.name %>" data-th-cat="<%= t.categoryLabel %>" data-th-poster="<%= t.previews ? t.previews.card : "" %>" aria-haspopup="dialog"<% } %>>Prévisualiser</a>
-    <% if (t.state === "active") { %>
-      <a class="btn btn-primary btn-sm" href="/marketing/site-web/personnaliser<%= T.siteId ? "?site=" + T.siteId : "" %>">Personnaliser</a>
-    <% } else if (t.state === "installed" && canActivate && !readOnly) { %>
+    <% if (t.state === "installed" && canActivate && !readOnly) { %>
       <form method="post" action="<%= BASE %>/<%= t.key %>/activer" data-th-form><%- siteField %><button class="btn btn-primary btn-sm" type="submit" data-confirm="Utiliser « <%= t.name %> » sur « <%= T.name %> » ? Vos contenus ne sont pas modifiés ; l'apparence du site change." data-busy="Activation…">Utiliser ce thème</button></form>
     <% } else if (t.state === "available" && canInstall && !readOnly) { %>
       <form method="post" action="<%= BASE %>/installer" data-th-form><%- siteField %><input type="hidden" name="key" value="<%= t.key %>"><button class="btn btn-primary btn-sm" type="submit" data-busy="Installation…">Installer</button></form>

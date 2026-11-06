@@ -34,6 +34,19 @@
   <div class="field-group"><label for="f-sd">Description SEO</label><input id="f-sd" name="seo_description" value="<%= v.seo_description || "" %>" maxlength="320"<%= dis %>></div>
   <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
 </form>
+<% if (product) { const pz = typeof personalization !== "undefined" ? personalization : null; %>
+<section class="mk-panel" aria-labelledby="pz-h"><h2 id="pz-h">Personnalisation (gravure, initiales, message)</h2>
+  <p class="field-hint">Le client saisit un court texte avant d'ajouter au panier ; il apparaît sur la commande et dans l'e-mail. Le prix ne change pas.</p>
+  <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/personnalisation">
+    <div class="field-group"><label><input type="checkbox" name="enabled" value="1"<%= pz ? " checked" : "" %><%= canWrite ? "" : " disabled" %>> Proposer une personnalisation sur ce produit</label></div>
+    <div class="field-group"><label for="pz-l">Ce que le client personnalise</label><input id="pz-l" name="label" maxlength="60" value="<%= pz ? pz.label : "Texte à graver" %>"<%= canWrite ? "" : " disabled" %>></div>
+    <div class="field-group"><label for="pz-h2">Aide affichée dans le champ (facultatif)</label><input id="pz-h2" name="hint" maxlength="160" value="<%= pz ? pz.hint : "" %>"<%= canWrite ? "" : " disabled" %>></div>
+    <div class="field-group"><label for="pz-m">Nombre de caractères maximum</label><input id="pz-m" name="max_length" type="number" min="1" max="200" value="<%= pz ? pz.maxLength : 20 %>"<%= canWrite ? "" : " disabled" %>></div>
+    <div class="field-group"><label><input type="checkbox" name="required" value="1"<%= pz && pz.required ? " checked" : "" %><%= canWrite ? "" : " disabled" %>> Champ obligatoire</label></div>
+    <% if (canWrite) { %><button class="btn btn-primary btn-sm" type="submit">Enregistrer la personnalisation</button><% } %>
+  </form>
+</section>
+<% } %>
 <% if (product && product.type === "variable") { %>
 <section class="mk-panel" aria-labelledby="var-h"><h2 id="var-h">Variantes</h2>
   <% if (!product.attributes.length) { %><p class="mk-empty">Définissez d'abord les attributs (ex. « Taille: S, M, L »), enregistrez, puis ajoutez les variantes.</p><% } else { %>

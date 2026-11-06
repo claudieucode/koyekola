@@ -1,10 +1,10 @@
 <%#
   KOLAKISA CMS → Apparence → Styles : gestionnaire de styles globaux du site (palette, typographie, formes, boutons). Les données (réglages, valeurs en ligne, brouillon, palettes)
-  sont dans le bloc JSON ci-dessous ; public/js/cms-styles.js construit l'écran. Les enregistrements passent par les routes de Personnaliser (validation et publication par le serveur).
+  sont dans le bloc JSON ci-dessous ; public/js/cms-styles.js construit l'écran. Les enregistrements passent par les routes de Styles (validation et publication par le serveur).
 %><%- include("partials/top", { title, active }) %>
 <div class="mk-st" data-st-root>
   <header class="mk-st-head">
-    <div class="mk-head-main"><h1>Styles</h1><p class="mk-head-sub">Le système de design de <strong><%= T.name %></strong> : couleurs, typographie, formes et boutons. Les réglages sont partagés avec Personnaliser (un seul brouillon, une seule valeur par réglage).</p></div>
+    <div class="mk-head-main"><h1>Styles</h1><p class="mk-head-sub">Le système de design de <strong><%= T.name %></strong> : couleurs, typographie, formes et boutons.</p></div>
     <div class="mk-st-actions">
       <p class="mk-st-state" data-st-state role="status" aria-live="polite">Chargement…</p>
       <button type="button" class="mk-wd-btn" data-st-undo disabled>Annuler</button>

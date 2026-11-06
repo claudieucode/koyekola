@@ -13,6 +13,8 @@ const payments = require("../shop/payments");
 const notify = require("../shop/notify");
 const view = require("../shop/view");
 const siteModules = require("../siteModules");
+const reviews = require("../shop/reviews");
+const personalization = require("../shop/personalization");
 
 const PAGE = 25;
 module.exports = () => {
@@ -91,7 +93,7 @@ module.exports = () => {
   route("get", "/produits/:pid(\\d+)", "shop.read", (req, res, s) => {
     const product = catalog.productById(s, req.params.pid);
     if (!product) return res.status(404).render("error", { message: "Produit introuvable." });
-    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {} });
+    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {}, personalization: personalization.get(s.db, product.id) });
   });
   route("post", "/produits/:pid(\\d+)", "shop.write", (req, res, s) => {
     catalog.updateProduct(s, Number(req.params.pid), productInput(req.body));
@@ -125,6 +127,32 @@ module.exports = () => {
     audit(req, s, "shop_stock.adjusted", "shop_product", req.params.pid, { delta: req.body.delta });
     flashOk(req, "Stock ajusté.");
     res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+
+  route("post", "/produits/:pid(\\d+)/personnalisation", "shop.write", (req, res, s) => {
+    if (!catalog.getProduct(s, req.params.pid)) throw new MarketingError("not_found", "Produit introuvable.");
+    personalization.save(s.db, Number(req.params.pid), { enabled: req.body.enabled ? 1 : 0, label: req.body.label, hint: req.body.hint, max_length: req.body.max_length, required: req.body.required ? 1 : 0 });
+    audit(req, s, "shop_product.personalization", "shop_product", req.params.pid);
+    flashOk(req, "Personnalisation enregistrée.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+
+  // ── Avis clients (modération) ──
+  route("get", "/avis", "shop.read", (req, res, s) => {
+    const list = reviews.adminList(s, { status: req.query.statut, page: req.query.page, perPage: PAGE });
+    render(req, res, "avis", "Boutique — avis", "boutique/avis", { list });
+  });
+  route("post", "/avis/:rid(\\d+)/statut", "shop.write", (req, res, s) => {
+    reviews.moderate(s, req.params.rid, req.body.statut);
+    audit(req, s, "shop_review.moderated", "shop_review", req.params.rid, { status: req.body.statut });
+    flashOk(req, "Avis mis à jour.");
+    res.redirect(`${req.shopSpace.base}/boutique/avis`);
+  }, { write: true });
+  route("post", "/avis/:rid(\\d+)/supprimer", "shop.write", (req, res, s) => {
+    reviews.remove(s, req.params.rid);
+    audit(req, s, "shop_review.deleted", "shop_review", req.params.rid);
+    flashOk(req, "Avis supprimé.");
+    res.redirect(`${req.shopSpace.base}/boutique/avis`);
   }, { write: true });
 
   // ── Catégories ──
@@ -170,7 +198,7 @@ module.exports = () => {
   route("get", "/reglages", "shop.read", (req, res, s) => render(req, res, "reglages", "Boutique — réglages", "boutique/reglages", { zones: store.listZones(s), taxRules: store.listTaxRules(s), coupons: store.listCoupons(s), providers: payments.status(store.getSettings(s)), products: catalog.adminList(s, { perPage: 100 }).items }));
   route("post", "/reglages", "shop.write", (req, res, s) => {
     const b = req.body;
-    const input = { currency: b.currency, prices_include_tax: b.prices_include_tax ? 1 : 0, tax_enabled: b.tax_enabled ? 1 : 0, default_country: b.default_country, guest_checkout: b.guest_checkout ? 1 : 0, low_stock_threshold: b.low_stock_threshold, notify_email: b.notify_email, order_prefix: b.order_prefix };
+    const input = { currency: b.currency, prices_include_tax: b.prices_include_tax ? 1 : 0, tax_enabled: b.tax_enabled ? 1 : 0, default_country: b.default_country, guest_checkout: b.guest_checkout ? 1 : 0, reviews_enabled: b.reviews_enabled ? 1 : 0, reviews_auto_publish: b.reviews_auto_publish ? 1 : 0, low_stock_threshold: b.low_stock_threshold, notify_email: b.notify_email, order_prefix: b.order_prefix };
     // Ouvrir la boutique et choisir les moyens de paiement : droit « shop.payments » (réglages sensibles)
     if (req.mk.can("shop.payments")) { input.enabled = b.enabled ? 1 : 0; input.payment_methods = [].concat(b.payment_methods || []).flatMap((x) => String(x).split(",")); input.manual_instructions = b.manual_instructions; }
     store.saveSettings(s, input);

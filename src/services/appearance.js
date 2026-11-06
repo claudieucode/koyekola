@@ -82,9 +82,10 @@ function normalizeConfig(input = {}, { strict = true, siteId } = {}) {
     tokens: tokensLib.normalizeTokens(s.tokens || {}, { strict, fontScope: siteId === undefined ? undefined : { siteId } }),
     header: normalizeHeader(s.header || {}),
     footer: normalizeFooter(s.footer || {}),
+    singlePost: (() => { try { return require("./singlePost").compact(s.singlePost, { strict }); } catch (e) { if (strict && e && e.isSinglePost) throw new UserError(e.message); return null; } })(),
   };
 }
-const DEFAULT_CONFIG = Object.freeze({ tokens: DEFAULT_TOKENS, header: DEFAULT_HEADER, footer: DEFAULT_FOOTER });
+const DEFAULT_CONFIG = Object.freeze({ tokens: DEFAULT_TOKENS, header: DEFAULT_HEADER, footer: DEFAULT_FOOTER, singlePost: null });
 
 // ---------- Lecture / écriture ----------
 const row = (siteId = null) => db.prepare(`SELECT * FROM appearance_configs WHERE ${sameScope("site_id")}`).get(siteId);
@@ -265,7 +266,7 @@ function logoPath(mediaId) {
 }
 function year() { return String(new Date().getFullYear()); }
 // parts(preview) : { css, header, footer, preview } — la version publiée (mémorisée) ou, en aperçu, le brouillon
-// override : configuration complète fournie par l'appelant (aperçu du personnalisateur : rien n'est lu en base ni mémorisé)
+// override : configuration complète fournie par l'appelant (aperçu des styles : rien n'est lu en base ni mémorisé)
 function parts({ preview = false, override = null } = {}) {
   let base;
   if (override) {

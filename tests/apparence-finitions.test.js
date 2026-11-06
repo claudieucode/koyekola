@@ -1,5 +1,5 @@
 // KOLAKISA CMS — Apparence : finitions d'accessibilité et d'indépendance vis-à-vis du thème de l'administration (mission TITAN XIII).
-// Garde-fous : un seul titre de niveau 1 sur Personnaliser (écran plein cadre), onglets dont aria-controls désigne un panneau existant,
+// Garde-fous : onglets dont aria-controls désigne un panneau existant,
 // et l'exemple de page de « Styles » qui montre les couleurs du SITE (jamais celles du thème clair/sombre de l'administration).
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
@@ -15,12 +15,6 @@ describe("apparence : finitions", () => {
   before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); });
   after(() => srv && srv.stop());
 
-  test("Personnaliser : exactement un titre de niveau 1, qui nomme le site personnalisé", async () => {
-    const html = (await boss.get("/marketing/site-web/personnaliser")).text;
-    const h1 = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/g)];
-    assert.equal(h1.length, 1);
-    assert.match(h1[0][1], /Vous personnalisez/);
-  });
   test("Styles et Éditeur du site : le panneau désigné par aria-controls des onglets existe", async () => {
     const st = (await boss.get("/marketing/site-web/styles")).text;
     assert.match(st, /id="st-body"[^>]*role="tabpanel"|role="tabpanel"[^>]*id="st-body"/);

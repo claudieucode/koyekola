@@ -1,0 +1,6 @@
+<%# Bouton « Ajouter aux souhaits » : formulaire réel (liste serveur), pas de coeur décoratif. %>
+<form class="sh-wish" method="post" action="<%= shop.base %>/souhaits/<%= wished && wished.has(product.id) ? "retirer" : "ajouter" %>">
+  <input type="hidden" name="product_id" value="<%= product.id %>">
+  <input type="hidden" name="retour" value="<%= shop.base %>/produit/<%= product.slug %>">
+  <button class="sh-link" type="submit"><%= wished && wished.has(product.id) ? "Retirer de mes souhaits" : "Ajouter à mes souhaits" %></button>
+</form>

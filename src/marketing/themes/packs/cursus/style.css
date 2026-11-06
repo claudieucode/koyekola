@@ -407,3 +407,7 @@ body.cu-js .is-in .cu-bar-row i,body.cu-js .cu-bars.is-in i{transform:none}
 }
 @media(max-width:420px){.cu-foot-grid{grid-template-columns:1fr}.cu-stats-in{gap:10px}.cu-stats-in span{font-size:.85rem}.cu-teacher{grid-template-columns:1fr}.cu-fig{max-width:120px}}
 @media(prefers-reduced-motion:reduce){body *{animation:none!important;transition:none!important}body.cu-js [data-reveal],body.cu-js .cu-bar-row i{opacity:1!important;transform:none!important}body.cu-js .cu-hl::before{transform:skewX(-6deg)!important}}
+/* Garde responsive : le tampon décoratif ne fait pas déborder la page */
+.cu-hero{overflow-x:clip}
+@media (max-width:640px){.cu-stamp{max-width:calc(100% - 24px)}}
+@media (max-width:640px){.cu-stage{overflow:hidden}}

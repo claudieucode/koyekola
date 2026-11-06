@@ -303,10 +303,10 @@ describe("Administration par site : isolation des données", () => {
     assert.equal((await prof.get("/formateur/seo")).status, 200, "le site principal garde la suite SEO centrale");
   });
 
-  test("apparence : le thème personnel reste global ; le site sélectionné a son lien vers le personnalisateur du site", async () => {
+  test("apparence : le thème personnel reste global ; le site sélectionné a son lien vers l'apparence du site", async () => {
     const html = await text(`/formateur/apparence?site=${siteA}`);
     assert.match(html, /Apparence du site « Site Alpha »/);
-    assert.match(html, new RegExp(`/marketing/site-web/personnaliser\\?site=${siteA}`));
+    assert.match(html, new RegExp(`/marketing/site-web/sites/${siteA}/apparence`));
     assert.match(html, /theme-grid/, "les préférences du compte restent proposées");
     await prof.get("/formateur/apparence?site=principal");
   });

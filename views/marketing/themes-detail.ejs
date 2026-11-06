@@ -32,7 +32,6 @@
             <button class="btn btn-primary" type="submit" data-confirm="Utiliser « <%= theme.name %> » sur « <%= T.name %> » ? Vos contenus ne sont pas modifiés ; l'apparence du site change." data-busy="Activation…">Utiliser ce thème</button>
           </form>
         <% } %>
-        <% if (theme.state === "active") { %><a class="btn btn-primary" href="/marketing/site-web/personnaliser<%= T.siteId ? "?site=" + T.siteId : "" %>">Personnaliser</a><% } %>
         <% if (theme.state === "active" && installedRow && installedRow.hasPrevious && canActivate && !readOnly) { %><form method="post" action="<%= BASE %>/revenir" data-th-form><%- siteField %><button class="btn btn-outline" type="submit" data-confirm="Rétablir l'apparence précédente de « <%= T.name %> » ?">Revenir au thème précédent</button></form><% } %>
         <% if (installedRow && installedRow.removable && canDelete && !readOnly) { %><form method="post" action="<%= BASE %>/<%= theme.key %>/supprimer" data-th-form><%- siteField %><button class="btn btn-danger" type="submit" data-confirm="Supprimer le thème « <%= theme.name %> » de « <%= T.name %> » ? Vos pages, médias et réglages ne sont pas touchés." data-busy="Suppression…">Supprimer ce thème du site</button></form><% } %>
       </div>

@@ -153,3 +153,6 @@ html[data-kb-motion="lite"] .app-rail-link, html[data-kb-motion="off"] .app-rail
   html[data-kb-dock="bottom"] .dash-dock { --kb-dock-left: var(--dash-sidebar-w); }
   html[data-kb-dock="bottom"] .dash-dock.is-collapsed { --kb-dock-left: var(--dash-sidebar-w-collapsed); }
 }
+
+/* Ergonomie : écart régulier entre les liens de la barre d'applications */
+.app-rail-link { margin-top: 2px; margin-bottom: 2px; }

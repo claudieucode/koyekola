@@ -1,6 +1,6 @@
 // AI Design Generator — assemblage d'un DESIGN complet et adaptateur de jetons.
 // Responsabilités : Color Palette Generator (color.js) · Typography Planner (typography.js) · Spacing/Sizing · Component Style Mapper · Responsive Design Planner · Layout Planner · Design Token Adapter · Design Validation Engine.
-// Le design est exprimé en réglages du PERSONNALISATEUR natif (« chemin → valeur », ex. tokens.colors.primary) : jamais de second système, jamais de propriété de composant inventée.
+// Le design est exprimé en réglages du moteur de styles (« chemin → valeur », ex. tokens.colors.primary) : jamais de second système, jamais de propriété de composant inventée.
 const color = require("./color");
 const typo = require("./typography");
 const tokensLib = require("../marketing/pages/tokens");
@@ -12,7 +12,7 @@ const RADIUS = { net: { sm: 2, md: 4, lg: 8, card: 6, button: 4, field: 4 }, dou
 const SHADOW = { minimaliste: "none", luxe: "sm", editorial: "none", corporate: "md", institutionnel: "sm", educatif: "md", ecommerce: "md", tech: "md", creatif: "lg" };
 const LAYOUT = { compacte: { contentWidth: 1100, containerWidth: 1240, gutter: 20 }, equilibree: { contentWidth: 1080, containerWidth: 1280, gutter: 24 }, aeree: { contentWidth: 1040, containerWidth: 1320, gutter: 32 } };
 
-// Limites des réglages émis (reflet du catalogue du personnalisateur ; vérifié par test contre le catalogue réel)
+// Limites des réglages émis (reflet du catalogue des styles ; vérifié par test contre le catalogue réel)
 const LIMITS = {
   color: (v) => color.HEX.test(v),
   size: [10, 96], line: [1, 2], ls: [-0.1, 0.5], space: [0, 200], radius: [0, 48], bw: [0, 4], bh: [32, 72], bpy: [4, 32], bpx: [8, 64], fpy: [4, 24], fpx: [6, 32], cw: [320, 1200], cn: [480, 1920], gutter: [0, 80],
@@ -54,7 +54,7 @@ function build(direction) {
   return { direction, palette: p, typography: t, spacing: space, radius, layout, components, responsive, sectionStyles, unavailable };
 }
 
-// Design Token Adapter : design → { chemin du personnalisateur: valeur }
+// Design Token Adapter : design → { chemin des styles: valeur }
 function toChanges(d) {
   const c = {}, p = d.palette, t = d.typography;
   for (const k of ["primary", "secondary", "accent", "background", "surface", "text", "muted", "success", "warning", "error"]) c[`tokens.colors.${k}`] = p[k];

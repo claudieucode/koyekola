@@ -1,6 +1,6 @@
-// AI Design Generator (programme 21.5) : brief → directions artistiques → réglages du PERSONNALISATEUR natif (brouillon), jamais publiés.
+// AI Design Generator (programme 21.5) : brief → directions artistiques → réglages du moteur de styles (brouillon), jamais publiés.
 // Chaîne : analyzer (brief, déterministe) → [IA optionnelle : choix énumérés seulement] → design.proposals (3 variantes d'une même structure) → validation (contrastes, polices, bornes, normaliseurs stricts)
-// → proposition enregistrée (mk_design_runs, créée à la demande) → comparaison avant/après avec PROTECTION des réglages manuels → application dans le brouillon du personnalisateur → annulation.
+// → proposition enregistrée (mk_design_runs, créée à la demande) → comparaison avant/après avec PROTECTION des réglages manuels → application dans le brouillon des styles → annulation.
 // Le site vient de l'appelant (adresse), jamais du brief. L'IA est un « port » injectable (`call`) : par défaut l'IA centrale en production (ai.call) ; le nouveau Kolakisa AI Core s'y branche sans changement.
 const { MarketingError } = require("../marketing/errors");
 const tokensLib = require("../marketing/pages/tokens");
@@ -9,7 +9,7 @@ const design = require("./design");
 
 const bad = (m) => new MarketingError("invalid_field", m);
 const pagesLib = () => require("../marketing/pages");
-const customizer = () => require("../services/customizer"); // charge la base de l'application : appelé seulement à l'application
+const styles = () => require("../services/siteStyles"); // charge la base de l'application : appelé seulement à l'application
 const json = (s, d) => { try { const v = JSON.parse(s); return v && typeof v === "object" ? v : d; } catch { return d; } };
 
 function ensureSchema(db) {
@@ -89,7 +89,7 @@ function compare(ctx, siteId, runId, key, { can = () => true } = {}) {
   const run = getRun(ctx, siteId, runId);
   const prop = run.proposals.find((p) => p.key === key);
   if (!prop) throw new MarketingError("not_found", "Variante introuvable.");
-  const st = customizer().state(ctx, siteId, { can });
+  const st = styles().state(ctx, siteId, { can });
   const mine = lastApplied(ctx, siteId);
   const rows = Object.entries(prop.changes).map(([path, proposed]) => {
     const current = st.values[path], live = st.live[path], isDraft = Object.hasOwn(st.changes, path);
@@ -107,7 +107,7 @@ function compare(ctx, siteId, runId, key, { can = () => true } = {}) {
   return { rows, summary: { same: rows.filter((r) => r.status === "same").length, replace: rows.filter((r) => r.status === "replace").length, protected: rows.filter((r) => r.status === "protected").length, total: rows.length } };
 }
 
-// Application : fusion dans le BROUILLON du personnalisateur (les réglages en attente de la personne sont conservés). overwrite : false | "all" | [chemins]. Jamais publié.
+// Application : fusion dans le BROUILLON des styles (les réglages en attente de la personne sont conservés). overwrite : false | "all" | [chemins]. Jamais publié.
 function apply(ctx, siteId, runId, key, { overwrite = false, can = () => true, userId = null } = {}) {
   const run = getRun(ctx, siteId, runId);
   if (run.status === "undone") throw bad("Cette proposition a été annulée : lancez-en une nouvelle.");
@@ -121,7 +121,7 @@ function apply(ctx, siteId, runId, key, { overwrite = false, can = () => true, u
   const take = cmp.rows.filter((r) => r.status === "new" || r.status === "replace" || (r.status === "protected" && allow(r.path)));
   const skipped = cmp.rows.filter((r) => r.status === "protected" && !allow(r.path)).map((r) => r.path);
   if (!take.length) throw bad("Rien à appliquer : tous les réglages de cette variante sont déjà en place ou protégés (vos personnalisations).");
-  const C = customizer();
+  const C = styles();
   const before = C.state(ctx, siteId, { can });
   const merged = { ...before.changes };
   for (const r of take) merged[r.path] = r.proposed;
@@ -136,10 +136,10 @@ function apply(ctx, siteId, runId, key, { overwrite = false, can = () => true, u
 function undo(ctx, siteId, runId, { can = () => true, userId = null } = {}) {
   const run = getRun(ctx, siteId, runId);
   if (run.status !== "applied") throw bad("Seule une proposition appliquée peut être annulée.");
-  const C = customizer();
+  const C = styles();
   const st = C.state(ctx, siteId, { can });
-  if (st.draft && st.draft.rev !== run.applied.draftRev) throw new MarketingError("conflict", "Le brouillon du personnalisateur a été modifié depuis : l'annulation automatique est refusée pour ne rien écraser. Utilisez « Annuler » dans le personnalisateur.");
-  if (!st.draft) throw new MarketingError("conflict", "Le brouillon a été publié ou supprimé depuis : rien à annuler ici (l'historique des versions du personnalisateur permet de revenir en arrière).");
+  if (st.draft && st.draft.rev !== run.applied.draftRev) throw new MarketingError("conflict", "Le brouillon des styles a été modifié depuis : l'annulation automatique est refusée pour ne rien écraser. Utilisez « Annuler » dans l'écran Styles.");
+  if (!st.draft) throw new MarketingError("conflict", "Le brouillon a été publié ou supprimé depuis : rien à annuler ici (l'historique des versions des styles permet de revenir en arrière).");
   C.saveDraft(ctx, siteId, run.applied.beforeChanges || {}, userId ?? ctx.userId ?? null, { can });
   ctx.db.prepare("UPDATE mk_design_runs SET status = 'undone', updated_at = datetime('now') WHERE id = ?").run(run.id);
   return { restored: Object.keys(run.applied.beforeChanges || {}).length };

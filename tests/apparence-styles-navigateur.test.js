@@ -141,13 +141,13 @@ describe("styles (navigateur)", { skip: SKIP }, () => {
   test("erreur serveur et réseau : jamais présentée comme réussie ; conflit entre deux sessions : message clair et enregistrement bloqué", async () => {
     const page = await open(); await edit(page);
     await page.getByRole("button", { name: "Appliquer la palette Océan" }).click();
-    await page.route("**/personnaliser/brouillon*", (r) => r.abort("connectionfailed"));
+    await page.route("**/styles/brouillon*", (r) => r.abort("connectionfailed"));
     await page.click("[data-st-save]"); await page.locator("[data-st-banner]:not([hidden])").waitFor();
     assert.match(await page.locator("[data-st-banner]").innerText(), /Connexion impossible/); assert.match(await state(page), /Modifications non enregistrées/);
-    await page.unroute("**/personnaliser/brouillon*");
-    await page.route("**/personnaliser/brouillon*", (r) => r.fulfill({ status: 500, contentType: "application/json", body: "{}" }));
+    await page.unroute("**/styles/brouillon*");
+    await page.route("**/styles/brouillon*", (r) => r.fulfill({ status: 500, contentType: "application/json", body: "{}" }));
     await page.click("[data-st-save]"); await page.waitForFunction(() => /erreur 500/.test(document.querySelector("[data-st-banner]").textContent));
-    await page.unroute("**/personnaliser/brouillon*");
+    await page.unroute("**/styles/brouillon*");
     // deux sessions : un autre onglet enregistre un brouillon d'abord
     db.prepare("INSERT INTO cms_customizer_drafts (site_id, changes, rev, base_rev) VALUES (?, ?, 1, ?)").run(A, JSON.stringify({ "tokens.colors.secondary": "#14352a" }), one("SELECT settings_revision r FROM mk_sites WHERE id = ?", A).r);
     await page.click("[data-st-save]"); await page.locator("[data-st-banner-action]:not([hidden])").waitFor();

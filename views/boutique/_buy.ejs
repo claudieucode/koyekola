@@ -13,6 +13,12 @@
     </select>
   </label>
   <% } %>
+  <% if (typeof personalization !== "undefined" && personalization) { %>
+  <label><%= personalization.label %><%= personalization.required ? "" : " (facultatif)" %>
+    <input type="text" name="custom_text" maxlength="<%= personalization.maxLength %>"<%= personalization.required ? " required" : "" %> autocomplete="off"<% if (personalization.hint) { %> placeholder="<%= personalization.hint %>"<% } %> data-sh-custom>
+    <small class="sh-hint"><%= personalization.maxLength %> caractères au maximum</small>
+  </label>
+  <% } %>
   <label>Quantité<input type="number" name="quantity" value="1" min="1" max="99" inputmode="numeric" required></label>
   <button class="sh-btn sh-btn-primary" type="submit">Ajouter au panier</button>
   <p class="sh-msg" data-sh-msg role="status" aria-live="polite"></p>

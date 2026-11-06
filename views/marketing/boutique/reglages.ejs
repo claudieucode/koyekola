@@ -9,6 +9,8 @@
   <div class="field-group"><label for="r-mail">Adresse notifiée à chaque nouvelle commande</label><input id="r-mail" name="notify_email" type="email" value="<%= st.notify_email || "" %>"<%= dis %>></div>
   <div class="field-group"><label for="r-low">Seuil de stock bas</label><input id="r-low" name="low_stock_threshold" type="number" min="0" value="<%= st.low_stock_threshold %>"<%= dis %>></div>
   <div class="field-group"><label><input type="checkbox" name="guest_checkout" value="1"<%= st.guest_checkout ? " checked" : "" %><%= dis %>> Autoriser la commande sans compte</label></div>
+  <div class="field-group"><label><input type="checkbox" name="reviews_enabled" value="1"<%= st.reviews_enabled ? " checked" : "" %><%= dis %>> Autoriser les avis des clients ayant acheté le produit</label></div>
+  <div class="field-group"><label><input type="checkbox" name="reviews_auto_publish" value="1"<%= st.reviews_auto_publish ? " checked" : "" %><%= dis %>> Publier les avis sans relecture (sinon vous les validez dans l'onglet Avis)</label></div>
   <div class="field-group"><label><input type="checkbox" name="tax_enabled" value="1"<%= st.tax_enabled ? " checked" : "" %><%= dis %>> Appliquer les taxes configurées ci-dessous</label></div>
   <div class="field-group"><label><input type="checkbox" name="prices_include_tax" value="1"<%= st.prices_include_tax ? " checked" : "" %><%= dis %>> Les prix saisis incluent les taxes</label></div>
   <fieldset><legend>Moyens de paiement</legend>

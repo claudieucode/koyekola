@@ -78,9 +78,6 @@ function contextItems({ can, space, active, content, site }) {
     const home = db.prepare("SELECT id, name FROM mk_landing_pages WHERE id = ? AND site_id = ? AND archived_at IS NULL").get(site.home_page_id, site.id);
     if (home) out.push({ key: "home-edit", label: "Modifier la page d'accueil", short: "Page d'accueil", icon: "edit", href: `/marketing/pages/${home.id}/editeur`, primary: true });
   }
-  if (/^apparence|^sitedash$|^espace\/tableau-de-bord$/.test(String(active)) && can("appearance.read")) {
-    out.push({ key: "customize", label: "Personnaliser le site", short: "Personnaliser", icon: "palette", href: `/marketing/site-web/personnaliser${siteId ? `?site=${siteId}` : ""}` });
-  }
   return out;
 }
 
