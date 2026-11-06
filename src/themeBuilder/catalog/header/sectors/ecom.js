@@ -54,10 +54,10 @@ module.exports = {
       S: ID("ecom-02", "Maison Lin", { bg: "#faf8f5", fg: "#1c1b19", mute: "#6b655c", alt: "#efe9e0", accent: "#1c1b19", onAccent: "#faf8f5", line: "#ddd5c8", font: "font.jost", head: "font.bodoni-moda", weight: "500", btnRadius: "0px" }),
       build: (k) => { const S = k.S; return [
         row(k, [
-          g([X.fsMenu(k, { buttonLabel: "Catégories", closeLabel: "Fermer", preset: "slide-down", numbers: true, align: "left", caps: "uppercase", track: "2px", size: "12px" })], { flexGrow: 1, flexBasis: "0px", justifyContent: "flex-start", flexWrap: "nowrap" }),
+          g([X.fsMenu(k, { buttonLabel: "Catégories", closeLabel: "Fermer", preset: "slide-down", numbers: true, align: "left", caps: "uppercase", track: "2px", size: "12px" })], { flexGrow: 1, flexBasis: "0px", justifyContent: "flex-start", flexWrap: "nowrap" }, undefined, { flexGrow: 0, flexBasis: "auto" }),
           mark(k, { size: "clamp(22px, 3vw, 38px)", caps: "uppercase", track: "6px", weight: "500", kind: "title" }),
-          g([account(k, { size: "12px" }), cart(k, { bg: S.fg, fg: S.bg })], { flexGrow: 1, flexBasis: "0px", justifyContent: "flex-end", gap: "20px", flexWrap: "nowrap" }),
-        ], { pv: "30px", wrap: "nowrap", innM: { gap: "10px" }, m: { paddingTop: "16px", paddingBottom: "12px" } }),
+          g([account(k, { size: "12px" }), cart(k, { bg: S.fg, fg: S.bg })], { flexGrow: 1, flexBasis: "0px", justifyContent: "flex-end", gap: "20px", flexWrap: "nowrap" }, undefined, { flexGrow: 0, flexBasis: "auto" }),
+        ], { pv: "30px", wrap: "wrap", innM: { gap: "10px" }, m: { paddingTop: "16px", paddingBottom: "12px" } }),
         row(k, [search(k, { grow: true, max: "520px", radius: "0px", fieldBg: "transparent", fieldLine: S.line, placeholder: "Rechercher une pièce…" })], { pv: "10px", j: "center", st: rule(S.line, "1px", "Top") }),
       ]; },
       mode: "sticky", anim: "reveal", hover: "", dark: false, tags: ["mode", "épuré", "plein écran", "centré"],
@@ -147,7 +147,7 @@ module.exports = {
           stack([
             g([search(k, { grow: true, max: "560px", radius: "0px", fieldBg: "transparent", fieldLine: S.fg, placeholder: "Rechercher dans l'atelier…" }), g([account(k, { size: "13px" }), cart(k, {})], { gap: "18px", flexWrap: "nowrap" })], { justifyContent: "space-between", gap: "22px", flexWrap: "nowrap" }, { flexWrap: "wrap" }),
             X.ticker(k, [P.notice, "Annonce facultative — modifiez ce message"], { size: "34px", weight: "800", caps: "uppercase", font: S.head, track: "-0.5px", speed: "slow", sep: "✦", padV: "6px", color: S.fg }),
-          ], { justifyContent: "space-between", gap: "30px", paddingTop: "28px", paddingBottom: "18px", paddingLeft: "36px", paddingRight: "28px" }, { paddingLeft: "24px", paddingRight: "20px" }, { paddingLeft: "14px", paddingRight: "14px", paddingTop: "10px", paddingBottom: "12px", gap: "12px" }),
+          ], { justifyContent: "space-between", gap: "30px", overflowX: "hidden", paddingTop: "28px", paddingBottom: "18px", paddingLeft: "36px", paddingRight: "28px" }, { paddingLeft: "24px", paddingRight: "20px" }, { paddingLeft: "14px", paddingRight: "14px", paddingTop: "10px", paddingBottom: "12px", gap: "12px" }),
         ], { width: "100%", gap: "0px", alignItems: "stretch" }, { gridTemplate: "220px 1fr" }, { gridTemplate: "1fr" })], { paddingLeft: "0px", paddingRight: "0px", ...rule(S.fg, "2px") }, { paddingLeft: "0px", paddingRight: "0px" }, { paddingLeft: "0px", paddingRight: "0px" }),
       ]; },
       mode: "static", anim: "slide", hover: "", dark: false, tags: ["créateur", "navigation latérale", "vertical", "ticker"],
@@ -177,7 +177,7 @@ module.exports = {
     {
       key: "ecom-09", name: "Cherche & Trouve", art: "Recherche d'abord", desc: "Grand bandeau bleu : mini-rangée (marque, compte, panier), champ de recherche géant au centre, catégories en pastilles centrées.",
       S: ID("ecom-09", "Cherche & Trouve", { bg: "#1d3fd6", fg: "#ffffff", mute: "#dbe4ff", alt: "#ffffff", accent: "#ffd23f", onAccent: "#111111", line: "#4a66e8", font: "font.manrope", head: "font.manrope", weight: "800", btnRadius: "999px", radius: "999px" }),
-      build: (k) => { const S = k.S, big = search(k, { grow: true, max: "820px", radius: "999px", fieldBg: "#ffffff", fieldLine: "#ffffff", placeholder: "Que cherchez-vous ?" });
+      build: (k) => { const S = k.S, big = search(k, { grow: true, max: "820px", radius: "999px", fieldBg: "#ffffff", fieldLine: "#ffffff", placeholder: "Rechercher…" });
         big.parts = { field: { styles: { desktop: { fontFamily: S.font, backgroundColor: "#ffffff", color: "#111111", borderColor: "#ffffff", borderRadius: "999px", fontSize: "19px", paddingTop: "18px", paddingBottom: "18px", paddingLeft: "28px" } } }, button: { styles: { desktop: { fontFamily: S.font, backgroundColor: S.accent, color: S.onAccent, borderRadius: "999px", fontSize: "16px", fontWeight: "800" } } } };
         return [band(S, [
           inner([mark(k, { size: "24px", weight: "800", track: "-0.5px" }), g([account(k, { size: "13px", color: "#ffffff" }), cart(k, { bg: S.accent, fg: S.onAccent })], { gap: "18px", flexWrap: "nowrap" })], { paddingTop: "14px" }),
@@ -196,7 +196,7 @@ module.exports = {
         band(S, [grid("4fr 5fr", [
           stack([
             X.monument(k, { min: 40, max: 92, caps: "uppercase", track: "-2px", lh: 0.88, font: S.head }),
-            search(k, { w: "100%", radius: "0px", fieldBg: S.alt, fieldLine: S.fg, placeholder: "Rechercher dans le catalogue…" }),
+            g([search(k, { grow: true, max: "100%", radius: "0px", fieldBg: S.alt, fieldLine: S.fg, placeholder: "Rechercher…" })], { flexWrap: "wrap", gap: "0px" }),
           ], { gap: "16px", justifyContent: "space-between", paddingTop: "22px", paddingBottom: "22px", paddingLeft: "26px", paddingRight: "26px", ...rule(S.fg, "3px", "Right") }, { paddingLeft: "20px", paddingRight: "20px" }, { paddingLeft: "14px", paddingRight: "14px", paddingTop: "14px", paddingBottom: "12px", borderRightWidth: "0px", borderBottomWidth: "3px", borderBottomStyle: "solid", borderBottomColor: S.fg }),
           stack([
             X.navTiles(k, "block", { w: 640, gap: "0px", border: S.fg, bg: S.alt, size: "14px", weight: "700", caps: "uppercase", track: "0.6px", padV: "14px", padH: "18px" }),
