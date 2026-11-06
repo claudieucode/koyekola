@@ -1605,3 +1605,4 @@ html.kw-noscroll { overflow: hidden; }
 .lp-oc-nav .has-sub > .kw-menu-link { padding-right: 44px; }
 body.kw-oc-lock { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .lp-oc, .lp-oc-backdrop, .lp-oc-bars i { transition: none; } }
+.lp-oc-label { font-weight: 600; font-size: 0.95em; }

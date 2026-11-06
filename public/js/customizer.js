@@ -266,7 +266,7 @@
     var input;
     if (c.kind === "vis") input = visInput(c, lid, disabled);
     else if (c.kind === "space") input = spaceInput(c, lid, disabled);
-    else if (c.kind === "select" && c.options.length <= 3) input = segInput(c, lid, disabled);
+    else if (c.kind === "select" && c.options.length <= 3) input = hdrSegInput(c, lid, disabled);
     else if (c.kind === "number") { input = numberInput(Object.assign({}, c, { ph: ph }), lid, disabled); if (ph !== null && (values[c.id] === null || values[c.id] === "" || values[c.id] === undefined)) { var n = input.querySelector(".kwc-num"); if (n) n.placeholder = String(ph); } }
     else if (c.kind === "color") input = colorInput(c, lid, disabled);
     else if (c.kind === "select") input = selectInput(c, lid, disabled);
@@ -292,7 +292,7 @@
     });
     return box;
   }
-  function segInput(c, lid, disabled) {
+  function hdrSegInput(c, lid, disabled) {
     var box = h("div", { class: "kwh-seg", role: "group", "aria-labelledby": lid });
     c.options.forEach(function (o) {
       var on = String(values[c.id]) === String(o[0]);
