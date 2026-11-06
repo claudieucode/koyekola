@@ -45,3 +45,23 @@ Le calcul de la barre d'outils contextuelle (`fitContext`) a été testé group�
 ## Tests de non-régression
 
 Le code du produit n'a pas été modifié par ce lot ; les suites existantes de l'éditeur (`editeur-blocs-a11y-perf-navigateur`, `editeur-widgets`, etc.) restent la référence. Voir le rapport final pour le détail des suites exécutées.
+
+## Tout le site : temps de réponse du serveur (mesuré en local, 6 nov. 2026)
+
+`scripts/perf/mesure-latence-serveur.js --n 15` : vrai serveur isolé, 8 formations, 120 articles, 3 000 contacts. Temps de réponse médian (p50, ms) :
+pages publiques 5 à 14 (accueil 10,6 ; catalogue 8 ; blog 14 ; article 13) ; espace élève 6 ; espace formateur 8 à 34 (gestion 34, formations 22) ;
+Marketing 4 à 20 (contacts 20, pages 13) ; SEO 10. Pire p95 : 425 ms (contacts Marketing, 3 000 lignes), 216 ms (segments), 181 ms (sitemap). Requêtes SQL : 4 à 152 par page, 0,1 à 3,9 ms au total.
+**Le serveur n'est pas le goulot : toutes les pages répondent en moins de 35 ms (médiane).**
+
+## Production (https://kolakisa.com, mesuré avec curl le 6 nov. 2026 depuis ce poste)
+
+| Page | Premier octet | Total |
+|---|---:|---:|
+| / | 0,66 à 0,92 s | 0,81 à 0,97 s |
+| /catalogue | 0,68 s | 0,74 s |
+| /blog | 0,75 s | 0,89 s |
+| /connexion | 0,68 s | 0,71 s |
+
+Décomposition (accueil) : connexion TCP ≈ 0,155 s, TLS ≈ 0,31 s, puis réponse de l'origine ≈ 0,19–0,20 s (`x-hcdn-upstream-rt`). Les fichiers `.css` et `.js` sont servis **sans en-tête de cache** (`x-hcdn-cache-status: MISS` à chaque fois, ≈ 0,19 s d'origine par fichier), alors que le serveur applicatif local en envoie. Ils sont donc servis par une couche d'hébergement qui n'applique pas ces en-têtes.
+Correctif : `public/.htaccess` (durée de cache des fichiers statiques). **À vérifier après déploiement** (voir le rapport final) : si la couche d'hébergement ignore ce fichier, l'effet sera nul.
+Limite : mesures depuis un seul poste, hors navigateur (pas de Lighthouse), latence réseau propre à ce poste.

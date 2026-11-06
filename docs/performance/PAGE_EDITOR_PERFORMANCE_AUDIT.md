@@ -22,6 +22,9 @@ Mesures : Chrome réel (Playwright), vrai serveur, profil CPU (CDP) par scénari
 - **Animations / Lottie / 3D** : non chargés par l'éditeur au démarrage (aucun script correspondant dans la liste des 19).
 - **Persistance** : l'enregistrement automatique attend 1 s après la dernière modification (≈ 0,8–1,2 s mesuré, délai compris).
 
+## Production (hors éditeur)
+Le serveur répond en moins de 35 ms (médiane) en local sur tout le site ; en production le premier octet arrive après 0,66 à 0,92 s (réseau + TLS ≈ 0,47 s, origine ≈ 0,2 s) et les fichiers css/js sont servis sans en-tête de cache. Gravité : moyenne (chaque visite et chaque ouverture de l'éditeur revalident 30 fichiers). Correction : `public/.htaccess`.
+
 ## Essai de correction
 Le point 3 a été essayé (une seule lecture de mise en page au lieu d'une par groupe) : **aucun gain** (83 → 90 ms), donc non retenu.
 

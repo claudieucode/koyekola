@@ -11,3 +11,9 @@ for (const f of ["scripts/perf/bench-page-builder.js", "scripts/perf/mesure-ouve
 test("rapports de performance de l'éditeur présents", () => {
   for (const f of ["AUDIT", "RESULTS", "OPTIMIZATION_REPORT"]) assert.ok(fs.existsSync(path.join(ROOT, "docs/performance", `PAGE_EDITOR_PERFORMANCE_${f}.md`)) || fs.existsSync(path.join(ROOT, "docs/performance", `PAGE_EDITOR_${f}.md`)), f);
 });
+test("public/.htaccess : cache des fichiers statiques déclaré", () => {
+  const s = fs.readFileSync(path.join(ROOT, "public", ".htaccess"), "utf8");
+  assert.match(s, /Cache-Control "public, max-age=\d+"/);
+  assert.match(s, /ExpiresByType text\/css/);
+  assert.doesNotMatch(s, /immutable/, "durée bornée : un fichier non versionné ne doit pas rester figé");
+});

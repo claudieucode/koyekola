@@ -1,0 +1,20 @@
+# KOLAKISA — mise en cache des fichiers statiques côté navigateur et réseau de diffusion.
+# Mesuré en production (6 nov. 2026) : css/js/images arrivaient SANS en-tête de cache (le réseau répondait « MISS » à chaque visite, ≈ 190 ms
+# par fichier côté serveur d'origine). Les adresses des scripts et feuilles de style portent un numéro de version (?v=…) : une nouvelle
+# version change l'adresse, donc une durée longue est sans risque.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|mjs|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 7 days"
+  ExpiresByType application/javascript "access plus 7 days"
+  ExpiresByType text/javascript "access plus 7 days"
+  ExpiresByType image/svg+xml "access plus 30 days"
+  ExpiresByType image/png "access plus 30 days"
+  ExpiresByType image/jpeg "access plus 30 days"
+  ExpiresByType image/webp "access plus 30 days"
+  ExpiresByType font/woff2 "access plus 365 days"
+</IfModule>
