@@ -17,7 +17,7 @@ const OUT = process.env.OUT || "/private/tmp/claude-501/hd-shots";
   const A = Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (?, 'Site A', 'site-a', '{}')").run(org).lastInsertRowid);
   const b = await chromium.launch({ executablePath: CHROME, headless: true });
   // se connecter dans le navigateur : récupérer le cookie via un login HTTP serait long ; on réutilise le contexte du helper s'il l'expose
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 400 } });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 400 }, reducedMotion: "reduce" }); // l'aperçu joue les animations d'entrée : on capture l'état final
   await ctx.addCookies([...boss.cookies].map(([n, v]) => ({ name: n, value: v, url: srv.base })));
   const p = await ctx.newPage();
   const secs = SECTORS.filter((s) => !only.length || only.includes(s.key));
@@ -29,7 +29,7 @@ const OUT = process.env.OUT || "/private/tmp/claude-501/hd-shots";
         await p.setViewportSize({ width: w, height: 500 });
         await p.goto(`${srv.base}/marketing/site-web/sites/${A}/constructeur-de-theme/api/bibliotheque/header/${key}/apercu`, { waitUntil: "load" });
         await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(900);
-        const box = await p.evaluate(() => { const r = (document.querySelector(".lp-site-header") || document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, r.top), width: innerWidth, height: Math.min(Math.max(r.height + 4, 40), 300) }; });
+        const box = await p.evaluate(() => { const r = (document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, r.top), width: innerWidth, height: Math.min(Math.max(r.height + 4, 40), 300) }; });
         const f = path.join(OUT, `${m.key}-${tag}.png`); fs.writeFileSync(f, await p.screenshot({ clip: box })); rows.push({ f, tag, m });
       }
     }

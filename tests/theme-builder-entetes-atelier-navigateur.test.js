@@ -66,7 +66,8 @@ describe("En-têtes Atelier : les 100 modèles dans Chrome (ordinateur, tablette
   test("aucun modèle n'a de défaut visible aux trois largeurs ; le menu mobile s'ouvre ; rapport + diversité des rendus", async () => {
     const entries = Catalog.entries("header"), report = [], shots = {};
     for (const [name, w, h] of WIDTHS) {
-      const ctx = await browser.newContext({ viewport: { width: w, height: h } });
+      // mouvement réduit : l'aperçu exécute le vrai moteur de mouvement (les éléments qui entrent en animation ne sont pas encore visibles à 120 ms) ; la mesure porte sur l'état final
+      const ctx = await browser.newContext({ viewport: { width: w, height: h }, reducedMotion: "reduce" });
       await ctx.addCookies([...boss.cookies].map(([n, v]) => ({ name: n, value: v, url: srv.base })));
       const page = await ctx.newPage();
       for (const e of entries) {
@@ -77,7 +78,7 @@ describe("En-têtes Atelier : les 100 modèles dans Chrome (ordinateur, tablette
         const defects = await page.evaluate(inspect);
         if (defects.length) report.push({ key: e.key, name, defects: [...new Set(defects)].slice(0, 4) });
         if (name === "ordinateur" && sharp) {
-          const box = await page.evaluate(() => { const r = (document.querySelector(".lp-site-header") || document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, Math.floor(r.top)), width: 1280, height: Math.max(40, Math.min(360, Math.ceil(r.height))) }; });
+          const box = await page.evaluate(() => { const r = (document.querySelector(".kw-theme-header") || document.body).getBoundingClientRect(); return { x: 0, y: Math.max(0, Math.floor(r.top)), width: 1280, height: Math.max(40, Math.min(360, Math.ceil(r.height))) }; });
           const png = await page.screenshot({ clip: box });
           shots[e.key] = await sharp(png).resize(64, 16, { fit: "fill" }).removeAlpha().raw().toBuffer();
         }
