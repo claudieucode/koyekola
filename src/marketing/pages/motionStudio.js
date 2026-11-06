@@ -151,6 +151,13 @@ function usage(sections, walk, specOf) {
   const modules = new Set();
   let any = false;
   for (const s of sections || []) {
+  // Lot 3 : scènes, transitions de sections, défilement fluide → runtime + modules à la demande (scenes-core, smooth-scroll) ; données écrites par le serveur
+  const scenes = page ? require("./motionScenes").forRender(page) : null;
+  if (scenes) {
+    any = true;
+    if (scenes.scenes || scenes.sectionTransition) modules.add("scenes-core");
+    if (scenes.smoothScroll) modules.add("smooth-scroll");
+  }
     if (!s || s.type !== "layout") continue;
     walk(s.children, (n) => {
       const spec = specOf(n.type);
@@ -158,7 +165,8 @@ function usage(sections, walk, specOf) {
       else if (n.motion && n.motion.studio) any = true;
     });
   }
-  return any ? { css: modules.size > 0, modules: [...modules].sort() } : null;
+  const widgetModules = [...modules].filter((m) => m !== "scenes-core" && m !== "smooth-scroll");
+  return any ? { css: widgetModules.length > 0, modules: [...modules].sort(), ...(scenes ? { scenes } : {}) } : null;
 }
 
 // Ce que reçoit l'éditeur (une fois, dans editorSpec)
@@ -167,6 +175,7 @@ function editorSpec() {
     v: CURRENT, triggers: Object.entries(TRIGGERS), easings: Object.keys(MOTION.EASINGS), directions: MOTION.DIRECTIONS, reduced: Object.entries(REDUCED), screens: SCREENS,
     limits: LIMITS, defaults: BASE_DEFAULTS, controls: CONTROLS,
   };
+    scenes: require("./motionScenes").editorSpec(), // lot 3 : effets, déclencheurs, transitions, défilement fluide
 }
 // Ce que l'éditeur reçoit pour un widget (fiche `motion` + réglages par défaut effectifs)
 const widgetSpec = (spec) => spec ? { module: spec.module, presets: spec.presets || null, controls: spec.controls || CONTROLS.filter((c) => c !== "preset" || spec.presets), params: spec.params || [], defaults: effective(null, spec) } : null;
