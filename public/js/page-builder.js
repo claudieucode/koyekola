@@ -1014,6 +1014,7 @@
     if (it.parts) { Object.keys(it.parts).forEach(function (k) { cleanSet(it.parts[k]); if (!Object.keys(it.parts[k]).length) delete it.parts[k]; }); if (!Object.keys(it.parts).length) delete it.parts; }
   }
   var COMPOSED_LABEL = { filter: "filtres", backdrop: "filtres de l'arrière-plan", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
+  var CASCADE_KEYS = ["fontFamily", "fontSize", "fontWeight", "color", "letterSpacing", "textTransform", "lineHeight"];
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
   // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
   function setStyles(ids, map, opts) {
@@ -1031,6 +1032,12 @@
           var set = styleSet(it, device, styleState, !empty, key);
           if (!set) return;
           if (empty) delete set[key]; else set[key] = value;
+          // Réglage du WIDGET lui-même (pas d'une partie) : s'il existe un réglage de la même propriété posé sur l'une de ses parties (cas des modèles de la
+          // bibliothèque, dont les parties portent déjà une police ou une couleur), il masquerait le nouveau réglage : on le retire pour que le choix de l'utilisateur
+          // s'applique réellement (priorité : la dernière valeur choisie sur le widget l'emporte).
+          if (!empty && !styleTarget && (!styleState || styleState === "normal") && CASCADE_KEYS.indexOf(key) >= 0 && it.parts) {
+            Object.keys(it.parts).forEach(function (pk) { var ps = it.parts[pk] && it.parts[pk].styles && it.parts[pk].styles[device]; if (ps && ps[key] !== undefined) delete ps[key]; });
+          }
         });
         cleanStyles(it);
       });
@@ -2840,7 +2847,7 @@ function selectField(label, value, options, onChange, opts) {
     hotspot: { kind: "Image à points", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     posts: { kind: "Derniers articles", groups: TEXTUAL, order: TEXT_ORDER },
     courselist: { kind: "Formations du catalogue", groups: TEXTUAL, order: TEXT_ORDER },
-    search: { kind: "Recherche", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true }, order: ["size", "spacing", "layout"] },
+    search: { kind: "Recherche", groups: { layout: ["alignSelf"], typography: ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "textTransform"], color: ["color"], size: SIZE_W, spacing: true }, order: ["typography", "size", "spacing", "layout"] },
     account: { kind: "Compte du visiteur", groups: TEXTUAL, order: TEXT_ORDER, states: true },
     dyntext: { kind: "Texte dynamique", groups: TEXTUAL, order: TEXT_ORDER },
     alert: { kind: "Alerte", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2849,7 +2856,7 @@ function selectField(label, value, options, onChange, opts) {
     pricing: { kind: "Offre tarifaire", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["background", "border", "effects", "typography", "spacing", "size", "layout"], states: true },
     breadcrumb: { kind: "Fil d'Ariane", groups: TEXTUAL, order: TEXT_ORDER },
     sharebuttons: { kind: "Boutons de partage", groups: { layout: ["alignSelf"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["color", "spacing", "layout", "effects"] },
-    social: { kind: "Réseaux sociaux", groups: { layout: ["alignSelf"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["color", "spacing", "layout", "effects"] },
+    social: { kind: "Réseaux sociaux", groups: { layout: ["alignSelf"], typography: ["fontFamily", "fontSize", "fontWeight"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["typography", "color", "spacing", "layout", "effects"] },
     modal: { kind: "Fenêtre (modale)", groups: { layout: ["alignSelf"], spacing: true }, order: ["spacing", "layout"] },
     carousel: { kind: "Carrousel", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     image: { kind: "Image", groups: { layout: ["alignSelf"], size: null, media: null, spacing: true, border: null, effects: null }, states: true, order: ["size", "media", "border", "effects", "spacing", "layout"] },
@@ -2865,7 +2872,7 @@ function selectField(label, value, options, onChange, opts) {
     iconbox: { kind: "Boîte d'icône", groups: TEXTUAL, order: TEXT_ORDER },
     signupform: { kind: "Formulaire", groups: TEXTUAL, order: TEXT_ORDER },
     animatedheading: { kind: "Titre animé", groups: TEXTUAL, order: TEXT_ORDER },
-    sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], spacing: true, effects: ["opacity"] }, order: ["spacing", "layout", "effects"] },
+    sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], typography: ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "textTransform"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["typography", "spacing", "layout", "effects"] },
     sitetitle: { kind: "Titre du site", groups: TEXTUAL, order: TEXT_ORDER },
     catfilter: { kind: "Filtre par catégorie", groups: TEXTUAL, order: TEXT_ORDER },
     postcontent: { kind: "Contenu de l'article", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },

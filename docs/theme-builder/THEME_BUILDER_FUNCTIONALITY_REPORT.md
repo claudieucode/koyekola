@@ -30,3 +30,15 @@ Il s'agit de widgets composés (tarifs, compteur, diaporama, témoignage, alerte
 - Page seule, fiche produit, archive produits, barre latérale, personnalisé : même moteur de rendu, mais **non mesurés** séparément dans le test de bout en bout.
 - Le widget Menu n'est mesuré que s'il a un menu assigné.
 - 13 types demandent un contenu réel (image, vidéo, formulaire…) pour être rendus : non mesurés par l'audit automatique (erreurs 422 de validation, pas de défaut de rendu).
+
+## Complément — réglages d'un bouton, d'un texte, du logo, de la recherche et du compte dans les modèles de la bibliothèque
+Cause racine, reproduite dans le vrai éditeur (clic sur l'élément, panneau « Style », fenêtres de couleur et de police) :
+1. Les modèles de la bibliothèque posent des réglages sur les **parties** du widget (lien du menu, lien du compte, texte du logo, champ et bouton de recherche). Une partie est plus précise que le widget : le réglage fait ensuite sur le widget lui-même était donc écrasé.
+2. Les widgets **Logo du site** et **Recherche** n'avaient aucun réglage de police ni de couleur sur le widget (seulement dans les parties) ; **Réseaux sociaux** n'avait pas de police.
+
+Correction (`public/js/page-builder.js`, `public/css/landing.css`) :
+- Quand on règle police, taille, graisse, couleur, espacement des lettres, casse ou interligne sur le widget, le même réglage posé sur l'une de ses parties est retiré : le choix de l'utilisateur s'applique.
+- Logo, recherche et réseaux sociaux reçoivent les réglages de texte au niveau du widget ; le texte saisi dans le champ de recherche hérite de la couleur.
+
+Vérification (`scripts/audit-editeur-modeles.js`, test `tests/theme-builder-modeles-editeur.test.js`) : dans le vrai éditeur, sur des modèles d'en-tête et de pied de page, boutons, liens, titres, textes, copyright, menus, compte, logo, recherche : police conforme dans le canevas et sur le site publié ; couleur conforme (sauf cas ci-dessous).
+Cas voulus : le libellé du bouton « Rechercher » garde sa couleur propre quand on règle la couleur du widget (se règle dans la partie « Bouton ») ; le menu n'apparaît sur le site que s'il contient des liens.

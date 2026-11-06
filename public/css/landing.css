@@ -916,6 +916,7 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 /* Recherche */
 .kw-search { display: flex; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .kw-search button { font-family: inherit; font-size: inherit; letter-spacing: inherit; text-transform: inherit; line-height: inherit; } /* un bouton natif n'hérite pas de la typographie : la typographie réglée sur la recherche l'atteint */
+:where(.kw-search) input { color: inherit; }
 .kw-search input { flex: 1 1 200px; min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid rgba(16, 34, 47, .25); border-radius: 8px; font: inherit; }
 /* Compte du visiteur */
 .kw-account { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
