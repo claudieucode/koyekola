@@ -544,16 +544,6 @@ a.kw-ms-pf-card:hover .kw-ms-pf-img, a.kw-ms-pf-card:focus-visible .kw-ms-pf-img
   .kw-ms-sw:not([data-kw-motion-always]) .kw-ms-sw-ctl, .kw-ms-sw:not([data-kw-motion-always]) .kw-ms-sw-thumb, .kw-ms-sw:not([data-kw-motion-always]) .kw-ms-sw-tick, .kw-ms-sw:not([data-kw-motion-always]) .kw-ms-sw-state span { transition: none !important; }
 }
 /* ms:d end */
-/* ms:d correctifs */
-.kw-ms-ff-static[hidden], .kw-ms-ff-form[hidden] { display: none; }
-/* ms:d fin des correctifs */
-/* ms:d classes complémentaires */
-.kw-ms-ch-total-n { font-variant-numeric: tabular-nums; }
-.kw-ms-sk-card { gap: 12px; }
-.kw-ms-sk-list { gap: 16px; }
-.kw-ms-sw-label { font-weight: 600; overflow-wrap: anywhere; }
-.kw-ms-toast-msg { overflow-wrap: anywhere; }
-/* ms:d fin des classes complémentaires */
 
 /* ms:t begin — lot T : textes et cascade (Titre à mot souligné, Révélation de texte, Texte cinétique, Machine à écrire, Texte rotatif, Texte dégradé animé,
    Texte masqué par image, Brouillage de texte, Compteur animé, Bande liée au défilement, Texte circulaire, Liste ou grille animée).
@@ -771,3 +761,13 @@ html.kw-ms-nocursor *:not(input):not(textarea):not(select) { cursor: none !impor
 .kw-ms-lt-pause { margin-top: 8px; padding: .35em .9em; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: .8rem; cursor: pointer; }
 .kw-ms-lt-pause:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
 /* ms:v fin */
+/* ms:d correctifs */
+.kw-ms-ff-static[hidden], .kw-ms-ff-form[hidden] { display: none; }
+/* ms:d fin des correctifs */
+/* ms:d classes complémentaires */
+.kw-ms-ch-total-n { font-variant-numeric: tabular-nums; }
+.kw-ms-sk-card { gap: 12px; }
+.kw-ms-sk-list { gap: 16px; }
+.kw-ms-sw-label { font-weight: 600; overflow-wrap: anywhere; }
+.kw-ms-toast-msg { overflow-wrap: anywhere; }
+/* ms:d fin des classes complémentaires */

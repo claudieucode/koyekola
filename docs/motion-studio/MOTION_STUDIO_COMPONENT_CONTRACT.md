@@ -169,15 +169,3 @@ Fiches `widgets/motion-*.js` : Titre à mot souligné, Révélation de texte, Te
 * **Composant continu sans lecture** (`preview: false`, `controls: []`) : bande liée au défilement, qui démarre seule (page et éditeur).
 * Variables CSS posées par les gabarits (`--kw-gt-*`, `--kw-tm-*`, `--kw-ah-c`, `--kw-kn-accent`, `--kw-ct-size`) : couleurs du site ou `#rrggbb` validées, adresses d'image encodées (`src/marketing/pages/motionText.js`).
 <!-- ms:t end -->
-
-<!-- ms:t begin -->
-## Lot T : textes et cascade (12 composants)
-
-Fiches `widgets/motion-*.js` : Titre à mot souligné, Révélation de texte, Texte cinétique, Machine à écrire, Texte rotatif, Texte dégradé animé, Texte masqué par image, Brouillage de texte, Compteur animé, Bande liée au défilement, Texte circulaire, Liste ou grille animée. Modules : `split-text` (étendu : effets de révélation en plus des 6 d'origine), `text-fx` (huit effets choisis par `data-kw-ms-fx`), `kinetic`, `cascade`, `marquee-velocity`.
-
-* **Animation « horloge »** (machine à écrire, brouillage, compteur) : le texte dépend de la progression. Le module crée une animation invisible avec `ctx.animate` (élément `.kw-ms-tclock`) et lit sa progression à chaque image (arrêt hors écran) ; déclencheur, défilement, répétition, lecture / pause / position de l'éditeur sont ceux du runtime, sans second moteur. Annulée (éditeur, clic avant le premier jeu) : le texte final est affiché.
-* **Boucles sans fin** : bouton « Mettre en pause » (`.kw-ms-tpause`) ajouté après le composant sur la page publiée (jamais dans l'éditeur).
-* **Valeur par défaut `iterations: "infinite"`** : `motionStudio.normalize` compare `iterations` et `direction` au défaut du composant (et non plus à 1 / normal) pour que « une fois » reste choisissable.
-* **Composant continu sans lecture** (`preview: false`, `controls: []`) : bande liée au défilement, qui démarre seule (page et éditeur).
-* Variables CSS posées par les gabarits (`--kw-gt-*`, `--kw-tm-*`, `--kw-ah-c`, `--kw-kn-accent`, `--kw-ct-size`) : couleurs du site ou `#rrggbb` validées, adresses d'image encodées (`src/marketing/pages/motionText.js`).
-<!-- ms:t end -->
