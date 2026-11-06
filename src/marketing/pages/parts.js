@@ -513,4 +513,7 @@ const ROOT_ONLY = {
   icon: "la racine est l'icône", menuanchor: "ancre invisible : aucun rendu public", textpath: "texte sur un tracé SVG : propriétés CSS de boîte sans effet sur les sous-éléments SVG",
 };
 
+// Motion Studio : chaque widget animé est une scène autonome pilotée par son propre script ; sa racine est l'unique élément réglable (les réglages de mouvement sont dans l'onglet Mouvement)
+for (const t of ["motionanimatedbg", "motionanimatedheading", "motionbutton", "motioncardstack", "motioncascade", "motionchart", "motioncircular", "motioncirculartext", "motioncompare", "motioncursor", "motionformfeedback", "motionfsmenu", "motiongauge", "motiongradienttext", "motionhgallery", "motionhero", "motionimageparallax", "motionimagereveal", "motionkinetictext", "motionloader", "motionlogomarquee", "motionlottie", "motionmagneticbutton", "motionmarqueevelocity", "motionmetric", "motionnumberticker", "motionpinscenes", "motionportfolio", "motionprocess", "motionbars", "motionrotatingtext", "motionscrollseq", "motionsplittext", "motionstickystory", "motionsvgdraw", "motionswitch", "motiontabs", "motiontestimonials", "motiontextmask", "motionrevealtext", "motiontextscramble", "motiontiltcard", "motiontimeline", "motiontoast", "motiontypewriter"]) ROOT_ONLY[t] = "scène Motion Studio : la racine est l'unique élément réglable, le mouvement a ses propres réglages";
+
 module.exports = { PARTS, ROOT_ONLY, allows, spec, scan };
