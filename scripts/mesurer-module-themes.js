@@ -38,7 +38,6 @@ const med = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor
   const act = [];
   for (const k of keys.slice(0, 5)) { const t0 = process.hrtime.bigint(); await boss.request(`${B}/${k}/activer`, { method: "POST", json: { site }, headers: O }); act.push(Number(process.hrtime.bigint() - t0) / 1e6); }
   res["activation d'un thème (médiane de 5)"] = { ms_mediane: +med(act).toFixed(1), ms_premier: +act[0].toFixed(1) };
-  await time("personnalisateur (page)", () => get(`/marketing/site-web/personnaliser${Q}`));
   await srv.stop();
   fs.writeFileSync(process.argv[2] || ".mesure-themes.json", JSON.stringify(res, null, 1));
   for (const [k, v] of Object.entries(res)) console.log(k.padEnd(48), JSON.stringify(v));
