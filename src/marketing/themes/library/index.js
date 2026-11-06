@@ -26,10 +26,14 @@ const CATEGORIES = Object.freeze([
   { key: "edition", label: "Presse, édition et culture" },
   { key: "auto", label: "Automobile et mobilité" },
   { key: "nature", label: "Nature, agriculture et énergie" },
+  { key: "luxe", label: "Boutiques de luxe" },
+  { key: "ecommerce", label: "Boutiques en ligne" },
   { key: "anciens", label: "Thèmes précédents (conservés)" },
 ]);
 const CATEGORY_KEYS = new Set(CATEGORIES.map((c) => c.key));
 const STYLES = new Set(["minimaliste", "editorial", "audacieux", "chaleureux", "sombre", "luxe", "ludique", "technique", "naturel", "classique", "moderne", "geometrique", "experimental"]);
+// Pages réelles du moteur de boutique (catalogue, panier, compte) : un thème peut y renvoyer sans page de démonstration
+const SHOP_URL = /^\/boutique(\/[a-z0-9\/-]*)?$/;
 const PAGE_KEY = /^[a-z][a-z0-9-]{1,29}$/;
 const VERSION = "2.0.0";
 const AUTHOR = "Équipe Kolakisa";
@@ -51,7 +55,7 @@ function check(spec) {
   for (const p of spec.pages) { if (!PAGE_KEY.test(String(p.key)) || keys.has(p.key)) bad(`page « ${p.key} » invalide ou en double`); keys.add(p.key); if (!p.name || typeof p.render !== "function") bad(`page « ${p.key} » sans nom ou sans fonction de rendu`); }
   for (const need of ["contact", "recherche", "introuvable"]) if (!keys.has(need)) bad(`page « ${need} » manquante`);
   if (!Array.isArray(spec.menu) || !spec.menu.length) bad("menu manquant");
-  for (const [label, url] of spec.menu) { if (!label) bad("entrée de menu sans libellé"); const slug = String(url).replace(/^\//, ""); if (url !== "/" && !keys.has(slug)) bad(`le menu pointe vers « ${url} » qui n'est pas une page du thème`); }
+  for (const [label, url] of spec.menu) { if (!label) bad("entrée de menu sans libellé"); const slug = String(url).replace(/^\//, ""); if (url !== "/" && !SHOP_URL.test(url) && !keys.has(slug)) bad(`le menu pointe vers « ${url} » qui n'est pas une page du thème`); }
   const fontLib = require("../../../utils/fontLibrary");
   for (const role of ["heading", "body", "button", "link"]) { const f = spec.tokens.fonts[role]; if (f !== undefined && !(Object.hasOwn(tokensLib.FONTS, f) || fontLib.isId(f))) bad(`police « ${f} » inconnue (${role})`); }
   for (const o of spec.options || []) { if (!/^[a-z][a-z0-9-]{0,24}$/.test(o.key) || !o.label || !["color", "choice", "range"].includes(o.type)) bad(`option « ${o.key} » invalide`); }

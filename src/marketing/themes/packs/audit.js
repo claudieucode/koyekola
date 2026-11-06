@@ -33,7 +33,7 @@ function auditPack(spec) {
         if (h.startsWith("#")) continue;
         if (/^https:\/\//.test(h) || h.startsWith("mailto:")) continue;
         const slug = h.replace(/^\//, "").split(/[?#]/)[0];
-        if (!(SYSTEM_PATHS.has(h.split(/[?#]/)[0]) || pageKeys.has(slug))) problems.push(`${at} : lien mort « ${h} »`);
+        if (!(SYSTEM_PATHS.has(h.split(/[?#]/)[0]) || /^\/boutique(\/[a-z0-9\/-]*)?$/.test(h.split(/[?#]/)[0]) || pageKeys.has(slug))) problems.push(`${at} : lien mort « ${h} »`);
       }
       for (const m of html.matchAll(/<img\b[^>]*>/g)) if (!/\balt="/.test(m[0])) problems.push(`${at} : image sans texte alternatif`);
       h1 += (html.match(/aria-level="1"/g) || []).length;
