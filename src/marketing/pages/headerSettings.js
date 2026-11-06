@@ -60,7 +60,7 @@ for (const [k, label] of [["", "normal"], ["Hover", "survol"], ["Active", "actif
 }
 add("menuSubColor", "color", "", U("menu", "design", "Sous-menu : texte/lien"));
 add("menuSubBg", "color", "", U("menu", "design", "Sous-menu : arrière-plan"));
-add("menuFont", "text", "", U("menu", "design", "Police du menu", { font: true }), { max: 80 });
+add("menuFont", "enum", "", U("menu", "design", "Police du menu", { options: [["", "Héritée"], ["heading", "Police des titres"], ["body", "Police du texte"], ["button", "Police des boutons"]] }), { options: ["", "heading", "body", "button"] });
 resp("menuSize", "num", null, U("menu", "design", "Taille du texte", { unit: "px", min: 10, max: 40 }), { min: 10, max: 40 });
 add("menuWeight", "enum", "", U("menu", "design", "Graisse", { options: [["", "Héritée"], ["400", "Normale"], ["500", "Moyenne"], ["600", "Demi-grasse"], ["700", "Grasse"], ["800", "Très grasse"]] }), { options: FONT_WEIGHTS });
 add("menuLineHeight", "num", null, U("menu", "design", "Hauteur de ligne", { min: 1, max: 3, step: 0.05 }), { min: 1, max: 3 });
@@ -82,7 +82,7 @@ add("ocColorActive", "color", "", U("oc", "design", "Lien — actif"));
 add("ocBg", "color", "", U("oc", "design", "Arrière-plan du panneau"));
 add("ocBgHover", "color", "", U("oc", "design", "Arrière-plan d'un lien — survol"));
 add("ocTriggerColor", "color", "", U("oc", "design", "Couleur du déclencheur"));
-add("ocFont", "text", "", U("oc", "design", "Police du menu", { font: true }), { max: 80 });
+add("ocFont", "enum", "", U("oc", "design", "Police du menu", { options: [["", "Héritée"], ["heading", "Police des titres"], ["body", "Police du texte"], ["button", "Police des boutons"]] }), { options: ["", "heading", "body", "button"] });
 resp("ocSize", "num", null, U("oc", "design", "Taille du texte", { unit: "px", min: 10, max: 48 }), { min: 10, max: 48 });
 add("ocWeight", "enum", "", U("oc", "design", "Graisse", { options: [["", "Héritée"], ["400", "Normale"], ["500", "Moyenne"], ["600", "Demi-grasse"], ["700", "Grasse"], ["800", "Très grasse"]] }), { options: FONT_WEIGHTS });
 add("ocLineHeight", "num", null, U("oc", "design", "Hauteur de ligne", { min: 1, max: 3, step: 0.05 }), { min: 1, max: 3 });
@@ -153,7 +153,7 @@ function normalize(input, { strict = false, helpers = {} } = {}) {
       case "color": { const v = String(raw).trim().toLowerCase(); out[e.id] = HEX.test(v) || /^token:[a-z0-9-]{1,24}$/.test(v) ? v : refuse("code couleur #rrggbb attendu."); break; }
       case "vis": { const v = String(raw); if (v === "auto" && e.def === "auto") { out[e.id] = "auto"; break; } out[e.id] = /^[dtm]{0,3}$/.test(v) ? [...new Set(v.split(""))].sort((a, b) => "dtm".indexOf(a) - "dtm".indexOf(b)).join("") : refuse("appareils attendus parmi d, t, m."); break; }
       case "space": { const r = parseSpace(raw, e.min, e.max); out[e.id] = r.ok ? r.value : refuse(`quatre valeurs entre ${e.min} et ${e.max} attendues.`); break; }
-      case "media": out[e.id] = helpers.mediaUrl ? helpers.mediaUrl(raw, label, strict) : String(raw); break;
+      case "media": { const m = String(raw).trim(); out[e.id] = helpers.mediaUrl ? helpers.mediaUrl(raw, label, strict) : (/^(\/uploads\/[A-Za-z0-9._\-\/]+|https:\/\/[A-Za-z0-9._~\-\/%?=&+:@]+)$/.test(m) && !m.includes("..") ? m : refuse("choisissez une image de la médiathèque ou une adresse https.")); break; }
       default: out[e.id] = e.def;
     }
   }

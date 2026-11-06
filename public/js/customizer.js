@@ -83,7 +83,7 @@
   // ---------- Panneaux ----------
   var side = $("#kwc-panel");
   function renderRoot() {
-    openPanel = null; side.textContent = "";
+    openPanel = null; hdrView = "root"; hdrTab = "elements"; side.textContent = "";
     var head = h("div", { class: "kwc-root-head" }, [h("span", { class: "kwc-kicker", text: "Vous personnalisez" }), h("strong", { text: boot.siteName })]);
     side.appendChild(head);
     side.appendChild(h("p", { class: "kwc-scope-note", text: "Les réglages d'ici s'appliquent à tout le site. Pour modifier un seul élément, utilisez « Sélectionner un élément » puis « Modifier seulement cet élément »." }));
@@ -124,6 +124,7 @@
     var p = boot.panels.filter(function (x) { return x.id === id; })[0];
     side.appendChild(h("div", { class: "kwc-panel-head" }, [h("button", { type: "button", class: "kwc-iconbtn", "aria-label": "Retour à la liste des réglages", title: "Retour", onclick: renderRoot }, [icon("back")]), h("div", null, [h("span", { class: "kwc-kicker", text: "Personnalisation" }), h("h2", { text: p.label })])]));
     var body = h("div", { class: "kwc-fields" });
+    if (p && p.rich === "header") { hdrView = hdrView || "root"; side.appendChild(headerRubric()); updateVisibility(); renderCounts(); return; }
     if (id === "menus") body.appendChild(menusPanel());
     else {
       if (id === "en-tete" && !boot.principal) body.appendChild(note("L'en-tête d'un site est un composant du Page Builder : il se compose là-bas.", boot.links.pageBuilder, "Modifier l'en-tête et le pied de page"));
@@ -150,6 +151,181 @@
   }
 
   // ---------- Contrôles ----------
+
+  // ================= Rubrique « Entête » (Personnalisation → Entête) =================
+  // Les contrôles viennent de la table headerSettings (serveur) : chaque ligne est un réglage réel du rendu. Un réglage « par appareil » (resp) montre la valeur de l'appareil d'aperçu courant.
+  var hdrView = "root", hdrTab = "elements";
+  var HDR_VIEWS = {
+    logo: { label: "Titre et logo du site", crumb: "Logo" },
+    oc: { label: "Menu hors-champ", crumb: "Menu hors-champ" },
+    menu: { label: "Menu principal", crumb: "Menu principal" },
+    tp: { label: "Entête transparent", crumb: "Entête transparent" },
+    favicon: { label: "Favicon", crumb: "Favicon" },
+  };
+  var DEV_SUFFIX = { desktop: "", tablet: "T", mobile: "M" }, DEV_NAME = { desktop: "Ordinateur", tablet: "Tablette", mobile: "Mobile" };
+  function devKey() { return DEV_SUFFIX[device] || ""; }
+  function hdrPanel() { return boot.panels.filter(function (x) { return x.id === "entete"; })[0]; }
+  function hdrControls(g, tab) { return hdrPanel().controls.filter(function (c) { return c.g === g && c.tab === tab && (c.resp === undefined || c.resp === devKey()); }); }
+  // Valeur héritée affichée en grisé (tablette : ordinateur ; mobile : tablette puis ordinateur)
+  function inherited(c) {
+    if (c.resp === undefined || c.resp === "") return null;
+    var chain = c.resp === "M" ? ["T", ""] : [""];
+    for (var i = 0; i < chain.length; i++) { var v = values["settings.header." + c.base + chain[i]]; if (v !== null && v !== undefined && v !== "") return v; }
+    return null;
+  }
+  function headerRubric() {
+    var wrap = h("div", { class: "kwh" });
+    var inSub = hdrView !== "root";
+    var v = HDR_VIEWS[hdrView];
+    var tabs = inSub && hdrView !== "favicon" ? [["general", "GÉNÉRAL"], ["design", "DESIGN"]] : !inSub ? [["elements", "ÉLÉMENTS"], ["design", "DESIGN"]] : null;
+    wrap.appendChild(h("div", { class: "kwc-panel-head" }, [
+      h("button", { type: "button", class: "kwc-iconbtn", "aria-label": inSub ? "Retour à Entête" : "Retour à la liste des réglages", title: "Retour", onclick: function () { if (inSub) { hdrView = hdrView === "favicon" ? "logo" : "root"; hdrTab = hdrView === "root" ? "elements" : "general"; renderPanel("entete"); } else renderRoot(); } }, [icon("back")]),
+      h("div", null, [h("span", { class: "kwc-kicker", text: inSub ? "Personnalisation ▸ " + (hdrView === "favicon" ? "Logo ▸ " : "") + v.crumb : "Vous personnalisez" }), h("h2", { text: inSub ? v.label : "Entête" })]),
+    ]));
+    if (tabs) {
+      var bar = h("div", { class: "kwh-tabs", role: "tablist" });
+      tabs.forEach(function (t) { bar.appendChild(h("button", { type: "button", role: "tab", class: "kwh-tab", "aria-selected": String(hdrTab === t[0]), onclick: function () { hdrTab = t[0]; renderPanel("entete"); } }, [t[1]])); });
+      wrap.appendChild(bar);
+    }
+    var body = h("div", { class: "kwc-fields kwh-body" });
+    if (!boot.can.edit) body.appendChild(note("Vous pouvez consulter ces réglages ; la modification n'est pas disponible pour ce compte ou ce site."));
+    if (!inSub) {
+      if (hdrTab === "elements") rootElements(body); else hdrControls("entete", "design").forEach(function (c) { body.appendChild(hfield(c)); });
+    } else if (hdrView === "favicon") faviconView(body);
+    else subView(body, hdrView, hdrTab);
+    wrap.appendChild(body);
+    return wrap;
+  }
+  function navRow(label, hint, view) {
+    return h("button", { type: "button", class: "kwc-row kwh-row", "data-hdr-open": view, onclick: function () { hdrView = view; hdrTab = "general"; renderPanel("entete"); } }, [h("span", { class: "kwc-row-txt" }, [h("strong", { text: label }), hint ? h("small", { text: hint }) : null]), icon("chev", "kwc-row-chev")]);
+  }
+  function rootElements(body) {
+    body.appendChild(hfield(controls["settings.header.auto"]));
+    body.appendChild(h("h3", { class: "kwh-h", text: "Préréglages de l'entête" }));
+    body.appendChild(navRow("Titre et logo du site", "Logo, titre, slogan, favicon", "logo"));
+    body.appendChild(navRow("Menu hors-champ", "Panneau de navigation ouvert par un bouton", "oc"));
+    body.appendChild(navRow("Menu principal", "Menu de l'emplacement « En-tête du site »", "menu"));
+    body.appendChild(h("h3", { class: "kwh-h", text: "Types d'entête" }));
+    body.appendChild(navRow("Entête transparent", "L'entête passe par-dessus le haut de la page", "tp"));
+    // Composition : une seule rangée existe dans le moteur ; l'état réel de chaque élément (par appareil) est affiché, jamais un faux réglage
+    var comp = h("div", { class: "kwh-comp", role: "group", "aria-label": "Composition de l'entête" });
+    comp.appendChild(h("h3", { class: "kwh-h", text: "Composition" }));
+    var main = h("div", { class: "kwh-comp-row" }, [h("span", { class: "kwh-comp-name", text: "Entête principal" })]);
+    function chip(label, vis) { return h("span", { class: "kwh-chip" + (vis ? "" : " is-off") }, [label + " · " + (vis ? vis : "masqué")]); }
+    function devs(vs) { vs = String(vs || ""); return vs ? vs.split("").map(function (d) { return ({ d: "ordinateur", t: "tablette", m: "mobile" })[d]; }).join(", ") : ""; }
+    var logo = values["settings.identity.logoUrl"], tv = values["settings.header.titleVis"], lv = values["settings.header.logoVis"];
+    main.appendChild(chip("Logo et titre", lv === "" ? "" : devs(lv || "dtm")));
+    main.appendChild(chip("Menu principal", devs(values["settings.header.menuVis"] === undefined ? "dtm" : values["settings.header.menuVis"])));
+    main.appendChild(chip("Menu hors-champ", devs(values["settings.header.ocVis"])));
+    comp.appendChild(main);
+    comp.appendChild(h("p", { class: "kwc-hint", text: "L'entête de ce moteur a une rangée principale. Les rangées « au-dessus » et « sous l'entête » ne sont pas disponibles ; l'ordre est : identité, menu principal, menu hors-champ (l'alignement se règle dans Design)." }));
+    body.appendChild(comp);
+    void logo; void tv;
+  }
+  function subView(body, view, tab) {
+    if (view === "logo" && tab === "general") {
+      body.appendChild(h("h3", { class: "kwh-h", text: "Logo" }));
+      body.appendChild(field(controls["settings.identity.logoUrl"]));
+    }
+    if ((view === "menu" || view === "oc") && tab === "general") body.appendChild(menuConfigure());
+    if (view === "tp" && tab === "general") body.appendChild(note("L'entête transparent s'applique à l'entête automatique du site (logo, titre et menu). Il ne s'affiche que si « Afficher l'entête automatique du site » est activé dans Éléments."));
+    var last = ""; // regroupe les couleurs par famille : titre « Couleur de menu » avant la première
+    hdrControls(view, tab).forEach(function (c) {
+      if (c.family && c.family !== last) { last = c.family; body.appendChild(h("h3", { class: "kwh-h", text: ({ menuColor: "Couleur de menu — texte/lien", menuBg: "Couleur de menu — arrière-plan" })[c.family] || "Couleurs" })); }
+      body.appendChild(hfield(c));
+    });
+    if (view === "logo" && tab === "general") body.appendChild(navRow("Favicon", "Icône de l'onglet du navigateur", "favicon"));
+  }
+  function menuConfigure() {
+    var box = h("div", { class: "kwh-menu" });
+    box.appendChild(h("a", { class: "kwc-row kwh-row", href: boot.links.menus, target: "_blank", rel: "noopener", "data-hdr-menus": "1" }, [h("span", { class: "kwc-row-txt" }, [h("strong", { text: "Configurez le menu ici." }), h("small", { text: "Gestionnaire de menus : créer, modifier, organiser, sous-menus. S'ouvre dans un nouvel onglet." })]), icon("ext", "kwc-row-chev")]));
+    box.appendChild(h("button", { type: "button", class: "kwc-btn", onclick: function () { reloadFrame(); } }, ["Actualiser l'aperçu après modification"]));
+    return box;
+  }
+  function faviconView(body) {
+    body.appendChild(note("L'icône qui s'affiche dans l'onglet du navigateur et les favoris. Formats : PNG, SVG, ICO, WebP ou JPG, choisis dans la médiathèque de ce site."));
+    var c = controls["settings.identity.faviconUrl"];
+    body.appendChild(field(c));
+    var url = values[c.id];
+    if (url) body.appendChild(h("div", { class: "kwh-fav" }, [h("img", { src: url, alt: "Aperçu du favicon", width: 32, height: 32 }), h("span", { text: "Aperçu (32 × 32)" })]));
+  }
+  // Un réglage de l'entête : même champ générique, avec les contrôles propres à son type
+  function hfield(c0) {
+    var c = c0, ph = inherited(c0);
+    var wrap = h("div", { class: "kwc-field kwc-k-" + c.kind + " kwh-f", "data-ctl": c.id });
+    var lid = "kwc-f-" + c.id.replace(/[^a-z0-9]/gi, "-");
+    var disabled = !boot.can.edit;
+    var label = c.label;
+    var showDev = c.resp !== undefined;
+    var head = h("div", { class: "kwc-field-head" }, [
+      h("label", { for: lid, text: label }),
+      showDev ? h("span", { class: "kwh-dev", title: "Valeur de l'appareil d'aperçu : " + DEV_NAME[device] }, [DEV_NAME[device]]) : null,
+      h("button", { type: "button", class: "kwc-reset", hidden: true, "aria-label": "Réinitialiser « " + label + " »", title: "Réinitialiser", onclick: function () { set(c.id, c.def === undefined ? live[c.id] : c.def, true); renderPanel("entete"); } }, [icon("reset")]),
+    ]);
+    wrap.appendChild(head);
+    var input;
+    if (c.kind === "vis") input = visInput(c, lid, disabled);
+    else if (c.kind === "space") input = spaceInput(c, lid, disabled);
+    else if (c.kind === "select" && c.options.length <= 3) input = segInput(c, lid, disabled);
+    else if (c.kind === "number") { input = numberInput(Object.assign({}, c, { ph: ph }), lid, disabled); if (ph !== null && (values[c.id] === null || values[c.id] === "" || values[c.id] === undefined)) { var n = input.querySelector(".kwc-num"); if (n) n.placeholder = String(ph); } }
+    else if (c.kind === "color") input = colorInput(c, lid, disabled);
+    else if (c.kind === "select") input = selectInput(c, lid, disabled);
+    else if (c.kind === "toggle") input = toggleInput(c, lid, disabled);
+    else if (c.kind === "media") input = mediaInput(c, lid, disabled);
+    else input = textInput(c, lid, disabled);
+    wrap.appendChild(input);
+    if (ph !== null && c.kind === "space" && !values[c.id]) wrap.appendChild(h("small", { class: "kwc-help", text: "Valeur héritée : " + String(ph).replace(/;.*/, "") }));
+    if (c.help) wrap.appendChild(h("small", { class: "kwc-help", text: c.help }));
+    wrap.appendChild(h("small", { class: "kwc-err", id: lid + "-err", role: "alert", hidden: true }));
+    return wrap;
+  }
+  function visInput(c, lid, disabled) {
+    var cur = values[c.id];
+    if (cur === "auto") cur = values["settings.identity.logoUrl"] ? "" : "dtm"; // « auto » = comportement d'origine : le titre s'efface quand un logo est affiché
+    cur = String(cur || "");
+    var box = h("div", { class: "kwh-vis", role: "group", "aria-labelledby": lid });
+    [["d", "Ordinateur"], ["t", "Tablette"], ["m", "Mobile"]].forEach(function (d) {
+      var on = cur.indexOf(d[0]) >= 0;
+      var b = h("button", { type: "button", class: "kwh-vbtn", "aria-pressed": String(on), "aria-label": d[1] + (on ? " : visible" : " : masqué"), title: d[1], disabled: disabled, "data-dev": d[0] }, [icon(d[0] === "d" ? "desktop" : d[0] === "t" ? "tablet" : "mobile"), h("span", { class: "kwh-vtxt", text: d[1] })]);
+      b.addEventListener("click", function () { var now = b.getAttribute("aria-pressed") !== "true"; b.setAttribute("aria-pressed", String(now)); b.setAttribute("aria-label", d[1] + (now ? " : visible" : " : masqué")); var out = ""; [].forEach.call(box.querySelectorAll(".kwh-vbtn"), function (x) { if (x.getAttribute("aria-pressed") === "true") out += x.getAttribute("data-dev"); }); set(c.id, out); });
+      box.appendChild(b);
+    });
+    return box;
+  }
+  function segInput(c, lid, disabled) {
+    var box = h("div", { class: "kwh-seg", role: "group", "aria-labelledby": lid });
+    c.options.forEach(function (o) {
+      var on = String(values[c.id]) === String(o[0]);
+      var b = h("button", { type: "button", class: "kwh-sbtn", "aria-pressed": String(on), disabled: disabled, text: o[1] });
+      b.addEventListener("click", function () { [].forEach.call(box.children, function (x) { x.setAttribute("aria-pressed", String(x === b)); }); set(c.id, o[0]); updateVisibility(); });
+      box.appendChild(b);
+    });
+    return box;
+  }
+  function spaceInput(c, lid, disabled) {
+    var raw = String(values[c.id] || ""), parts = raw.split(";"), unit = parts[1] || "px", nums = (parts[0] || ",,,").split(",");
+    while (nums.length < 4) nums.push("");
+    var allSame = nums.every(function (x) { return x === nums[0]; });
+    var linked = allSame;
+    var labels = c.corners ? ["HAUT GAUCHE", "HAUT DROITE", "BAS DROITE", "BAS GAUCHE"] : ["EN HAUT", "À DROITE", "EN BAS", "À GAUCHE"];
+    var grid = h("div", { class: "kwh-space" });
+    var inputs = nums.map(function (x, i) { return h("input", { type: "number", class: "kwh-sp", id: i === 0 ? lid : null, min: c.min, max: c.max, step: "any", value: x, disabled: disabled, "aria-label": c.label + " — " + labels[i].toLowerCase(), inputmode: "decimal" }); });
+    var sel = h("select", { class: "kwh-unit", disabled: disabled, "aria-label": c.label + " : unité" }, ["px", "em", "rem", "%"].map(function (u) { return h("option", { value: u, text: u }); })); sel.value = unit;
+    var link = h("button", { type: "button", class: "kwh-link", "aria-pressed": String(linked), disabled: disabled, title: "Lier les quatre valeurs", "aria-label": "Lier les quatre valeurs" }, [icon("link")]);
+    function commit() {
+      var vals = inputs.map(function (i) { return i.value; });
+      var bad = vals.some(function (x) { return x !== "" && (!isFinite(Number(x)) || Number(x) < c.min || Number(x) > c.max); });
+      if (bad) { setError(c.id, c.label + " : des nombres entre " + c.min + " et " + c.max + " sont attendus.", true); return; }
+      clearError(c.id);
+      var empty = vals.every(function (x) { return x === ""; });
+      set(c.id, empty ? "" : vals.join(",") + (sel.value === "px" ? "" : ";" + sel.value));
+    }
+    inputs.forEach(function (inp, i) { inp.addEventListener("input", function () { if (link.getAttribute("aria-pressed") === "true") inputs.forEach(function (o) { if (o !== inp) o.value = inp.value; }); commit(); }); grid.appendChild(h("label", { class: "kwh-sp-cell" }, [inp, h("span", { class: "kwh-sp-lab", text: labels[i] })])); });
+    link.addEventListener("click", function () { var on = link.getAttribute("aria-pressed") !== "true"; link.setAttribute("aria-pressed", String(on)); if (on && inputs[0].value !== "") { inputs.forEach(function (o) { o.value = inputs[0].value; }); commit(); } });
+    sel.addEventListener("change", commit);
+    return h("div", { class: "kwh-spacewrap" }, [h("div", { class: "kwh-unitrow" }, [sel]), h("div", { class: "kwh-spacerow" }, [grid, link])]);
+  }
+
   function field(c) {
     var wrap = h("div", { class: "kwc-field kwc-k-" + c.kind, "data-ctl": c.id });
     var lid = "kwc-f-" + c.id.replace(/[^a-z0-9]/gi, "-");
@@ -511,7 +687,11 @@
   function withParam(url) { var base = url.split("#")[0], hash = url.indexOf("#") >= 0 ? url.slice(url.indexOf("#")) : ""; return base.replace(/([?&])kwcustom=1(&|$)/, "$1").replace(/[?&]$/, "") + (base.indexOf("?") >= 0 ? "&" : "?") + "kwcustom=1" + hash; }
   function loadFrame(url) { $("#kwc-loading").classList.add("on"); iframe.src = withParam(url); }
   var scrollKeep = null;
-  function reloadFrame() { var w = iframe.contentWindow; try { scrollKeep = w ? w.scrollY : 0; } catch (e) { scrollKeep = 0; } $("#kwc-loading").classList.add("on"); try { w.location.reload(); } catch (e) { loadFrame(currentPage()); } }
+  function reloadFrame() { var w = iframe.contentWindow; try { scrollKeep = w ? w.scrollY : 0; } catch (e) { scrollKeep = 0; } $("#kwc-loading").classList.add("on"); 
+    // Un rechargement demandé pendant qu'un autre est en cours (le cadre est alors « about:blank ») ne peut pas recharger une page vide : on recharge l'adresse de la page choisie
+    var href = ""; try { href = w ? w.location.href : ""; } catch (e) { href = ""; }
+    if (!w || !href || href === "about:blank") { loadFrame(currentPage()); return; }
+    try { w.location.reload(); } catch (e) { loadFrame(currentPage()); } }
   function currentPage() { return $("#kwc-page").value || (boot.previews[0] && boot.previews[0].url) || "/"; }
   iframe.addEventListener("load", function () {
     $("#kwc-loading").classList.remove("on");
@@ -542,6 +722,7 @@
   // Appareils
   $$("[data-device]").forEach(function (b) { b.addEventListener("click", function () {
     device = b.getAttribute("data-device"); $("#kwc-frame").setAttribute("data-device", device);
+    if (openPanel === "entete") renderPanel("entete");
     $$("[data-device]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
     refreshDeviceFields();
   }); });

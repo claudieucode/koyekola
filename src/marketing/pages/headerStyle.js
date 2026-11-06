@@ -81,7 +81,7 @@ function headerCss(header, { breakpoints, containerWidth = 1100, logoUrl = "", t
   push(rule(".lp-ah-title", [["color", color(h.titleColor)]]));
   push(rule(".lp-autohead-brand:hover .lp-ah-title", [["color", color(h.titleHover)]]));
   push(rule(".lp-ah-tagline", [["color", color(h.taglineColor)]]));
-  push(rule(".lp-ah-logo.is-mask", [["background-color", color(h.logoColor) || "currentColor"]]));
+  if (h.logoColor) push(rule(".lp-ah-logo.is-mask", [["background-color", color(h.logoColor)]]));
   push(visCss(".lp-ah-title", HS.effectiveVis(h.titleVis, hasLogo), R));
   push(visCss(".lp-ah-tagline", h.taglineVis, R));
   push(visCss(".lp-autohead-brand", h.logoVis, R)); // « Visibilité » : tout le bloc identité (logo, titre, slogan)
@@ -100,7 +100,7 @@ function headerCss(header, { breakpoints, containerWidth = 1100, logoUrl = "", t
   if (h.menuSubBorder) push(rule(SUB, [["border-style", "solid"], ["border-width", spaceCss(h.menuSubBorder)], ["border-color", color(h.menuSubBorderColor) || "currentColor"]]));
   else if (h.menuSubBorderColor) push(rule(SUB, [["border-color", color(h.menuSubBorderColor)]]));
   if (h.menuSubRadius) push(rule(SUB, [["border-radius", spaceCss(h.menuSubRadius)], ["overflow", "hidden"]]));
-  push(rule(NAV, [["font-family", h.menuFont ? `var(--kw-font-${h.menuFont}, ${h.menuFont})` : ""], ["font-weight", h.menuWeight], ["line-height", h.menuLineHeight], ["letter-spacing", h.menuLetter !== null ? `${h.menuLetter}em` : ""], ["text-transform", h.menuTransform]]));
+  push(rule(NAV, [["font-family", h.menuFont ? `var(--kw-font-${h.menuFont}, inherit)` : ""], ["font-weight", h.menuWeight], ["line-height", h.menuLineHeight], ["letter-spacing", h.menuLetter !== null ? `${h.menuLetter}em` : ""], ["text-transform", h.menuTransform]]));
   push(perDevice(h, "menuSize", R, (v) => rule(`${NAV}, ${LINK}`, [["font-size", px(v)]])));
   push(perDevice(h, "menuPadding", R, (v) => rule(LINK, [["padding", spaceCss(v)]])));
   push(perDevice(h, "menuMargin", R, (v) => rule(".lp-autohead-nav, .lp-site-header .kw-menu-list", [["margin", spaceCss(v)]])));
@@ -133,7 +133,7 @@ function headerCss(header, { breakpoints, containerWidth = 1100, logoUrl = "", t
   push(rule(`${OCNAV} .kw-menu-link`, [["color", color(h.ocColor)]]));
   push(rule(`${OCNAV} .kw-menu-link:hover`, [["color", color(h.ocColorHover)], ["background-color", color(h.ocBgHover)]]));
   push(rule(`${OCNAV} .kw-menu-link[aria-current="page"]`, [["color", color(h.ocColorActive)]]));
-  push(rule(".lp-oc", [["background", color(h.ocBg)], ["font-family", h.ocFont ? `var(--kw-font-${h.ocFont}, ${h.ocFont})` : ""], ["font-weight", h.ocWeight], ["line-height", h.ocLineHeight], ["letter-spacing", h.ocLetter !== null ? `${h.ocLetter}em` : ""]]));
+  push(rule(".lp-oc", [["background", color(h.ocBg)], ["font-family", h.ocFont ? `var(--kw-font-${h.ocFont}, inherit)` : ""], ["font-weight", h.ocWeight], ["line-height", h.ocLineHeight], ["letter-spacing", h.ocLetter !== null ? `${h.ocLetter}em` : ""]]));
   push(rule(`${OCNAV} .kw-submenu`, [["background", color(h.ocSubBg)]]));
   push(rule(`${OCNAV} .kw-submenu .kw-menu-link`, [["color", color(h.ocSubColor)]]));
   push(rule(".lp-oc-toggle", [["color", color(h.ocTriggerColor)]]));
