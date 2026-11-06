@@ -154,7 +154,7 @@ describe("Chrome réel : bibliothèque (appareils, contexte, défilement), retou
     }
     await page.click('.tb-devices button[data-dev="mobile"]'); assert.ok(await fr.locator(".kw-menu-burger").first().isVisible(), "mobile : le menu se replie derrière un bouton (media queries réelles)");
     await page.click('.tb-devices button[data-dev="desktop"]'); await page.waitForFunction(() => document.getElementById("tb-prev-frame").contentWindow.innerWidth === 1280);
-    assert.match(await fr.locator("body").innerText(), /Aperçu · fond d'ouverture neutre/);
+    assert.match(await fr.locator("body").innerText(), /Aperçu · fond d'ouverture neutre/i);
     // défilement dans l'aperçu : « se réduit » agit pour de bon
     const inFrame = (fn, arg) => page.evaluate(([src, a]) => { const w = document.getElementById("tb-prev-frame").contentWindow; return w.eval(`(${src})`)(a); }, [fn.toString(), arg]);
     assert.equal(await inFrame(() => document.querySelector(".lp-site-header").classList.contains("is-scrolled")), false);

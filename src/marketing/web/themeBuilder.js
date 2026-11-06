@@ -40,7 +40,7 @@ module.exports = () => {
   };
   const card = (ctx, t, conflictIds, light = false) => {
     const base = { ...t, docRev: docRev(ctx, t), describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
-    if (light) return base;
+    if (light) return { ...base, origin: t.type === "header" ? originOf(ctx, t, docOf(ctx, t)) : null };
     const doc = docOf(ctx, t), th = thumbnail(doc);
     return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc, origin: originOf(ctx, t, doc) };
   };
