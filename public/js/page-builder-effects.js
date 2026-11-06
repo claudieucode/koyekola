@@ -420,6 +420,8 @@
       }
       // --- Au survol ---
       inner.appendChild(A.selectField("Au survol", m.hover || "", [["", "Aucun effet"]].concat(A.SPEC.hovers), function (v) { setMotion(it, "Effet au survol", function (mm) { if (v) mm.hover = v; else delete mm.hover; }); }, { disabled: locked }));
+      // --- Parallaxe d'arrière-plan ---
+      inner.appendChild(A.selectField("Parallaxe de l'image de fond", String(m.bgParallax || ""), [["", "Aucune"], ["10", "Légère"], ["20", "Moyenne"], ["35", "Forte"], ["50", "Très forte"]], function (v) { setMotion(it, "Parallaxe de fond", function (mm) { if (v) mm.bgParallax = Number(v); else delete mm.bgParallax; }); }, { disabled: locked, hint: "L'image de fond de l'élément se déplace plus lentement que la page. Visible sur la page publiée (pas dans l'éditeur)." }));
       // --- Accessibilité ---
       inner.appendChild(h("p", { class: "pb-prop-sub" }, h("span", { class: "pb-prop-label", text: "Accessibilité" })));
       inner.appendChild(A.checkField("Respecter les préférences système de mouvement réduit", !m.alwaysMotion, function (v) { setMotion(it, "Mouvement réduit", function (mm) { if (v) delete mm.alwaysMotion; else mm.alwaysMotion = true; }); }, { disabled: locked, hint: "Activé : pour les visiteurs qui ont demandé moins d'animations, l'entrée devient un fondu court (ou disparaît), le défilement et la souris sont coupés." }));

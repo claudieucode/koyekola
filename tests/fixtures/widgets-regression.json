@@ -189,11 +189,11 @@
   "error": "077eff4a78c934e47be5e4a4156c535358bcf57e"
  },
  "marquee": {
-  "json": "3b18ff4bc45f6404835945b1d433877daefd1b29",
+  "json": "f0f3ac5db1ceb2d93cf2eb0ba90bc19d6b62d538",
   "css": "8439d68d5fcb17b7789802fc9fa7c18e9cd750a8"
  },
  "mediacarousel": {
-  "json": "438935f5c107d0f13cd8fe2680d132c16a4d75df",
+  "json": "0e1513320ed79453976b40bf8f3885455b128ad5",
   "css": "de166cc26062e446515db4ff71e27d3a5793b2ab"
  },
  "menu": {
@@ -274,6 +274,10 @@
   "json": "dd680cb385590596a08caae298c49b9b93e087b7",
   "css": "c4fabe1cd67228f310d0c0bd53bc066a712dedbd"
  },
+ "reviews": {
+  "json": "c343e9e40ee928b45101df6cc8712a6c56bef698",
+  "css": "e7f69b1c419f753b3092f11be50101bb20844592"
+ },
  "search": {
   "json": "578fe38c08a009d318e14b714c199baaeca4cb9c",
   "css": "c2e1a63e1fc6257f9c83c4d5ed159fcdf9804eeb"
@@ -322,7 +326,7 @@
   "css": "549cf388e0834f5279fe92d6594f9cb1ae9d4ee3"
  },
  "slides": {
-  "json": "39936600f56a206aca7f2c8f0d4cf0c34c5c8c65",
+  "json": "aa5082de9f98c154bcc2bf2ddc192019f63bed58",
   "css": "d03a0ddb2f3bf374b4b5dac85acce06cfca30b49"
  },
  "smartlink": {
@@ -336,6 +340,10 @@
  "spacer": {
   "json": "5a5ef04e86947b4d618abd113cc8358d8546c6ac",
   "css": "36a3ad659592108f761aa3fb43ebd38b6a702f8a"
+ },
+ "splittext": {
+  "json": "e811085e7d010c2114bef9d9d4f27329ec5fe3ed",
+  "css": "5b87db1dbd08fe6a226e338f3ae00c951cbffebe"
  },
  "stack": {
   "json": "9d08d4ff17752b01ce6d2886e3c9dd3ac1eb7a34",
@@ -358,7 +366,7 @@
   "css": "23dd096f643d2f480cda2238b25268c89cfcb2b4"
  },
  "testimonialcarousel": {
-  "json": "cff688a164f65fc30b86ecfb999b8e11e9481e2c",
+  "json": "c55c8577b9f5faa8012c926419bc26a277cdbe07",
   "css": "23dd096f643d2f480cda2238b25268c89cfcb2b4"
  },
  "text": {

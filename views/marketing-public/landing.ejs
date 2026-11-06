@@ -14,6 +14,7 @@
   <% if (siteX && siteX.assets.theme) { %><style id="kw-site-theme"><%- siteX.assets.theme %></style><% } %>
   <%# Thème autonome (paquet) : sa propre feuille de styles, confinée à body[data-kw-pack], chargée après la base neutre et avant le CSS personnalisé du site %>
   <% if (siteX && siteX.assets.pack && siteX.assets.pack.link) { %><%- siteX.assets.pack.link %><% } %>
+  <% if (siteX && siteX.assets.pack && siteX.assets.pack.cz) { %><style id="kw-pack-cz"><%- siteX.assets.pack.cz %></style><% } %>
   <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle, siteX ? siteX.id : null); if (ff) { %><style id="kw-site-faces"><%- ff %></style><% } } %>
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
@@ -49,6 +50,7 @@
   <% if (page.motionStudio) { %><script type="application/json" id="kw-ms-modules"><%- JSON.stringify(Object.fromEntries(page.motionStudio.modules.map((m) => [m, asset("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c") %></script>
   <% if (page.motionStudio.scenes) { %><script type="application/json" id="kw-ms-scenes"><%- JSON.stringify(page.motionStudio.scenes).replace(/</g, "\\u003c") %></script><% } %>
   <script src="<%= asset("/js/kw-motion-studio.js") %>" defer></script><% } %>
+  <script src="<%= asset("/js/kw-bgpar.js") %>" defer></script>
   <% if (kwCode && kwCode.bodyEnd) { %><%- kwCode.bodyEnd %><% } %>
 </body>
 </html>

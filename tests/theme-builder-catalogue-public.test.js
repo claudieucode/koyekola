@@ -67,12 +67,12 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
   });
   test("droits : sans connexion, ni liste ni utilisation", async () => {
     const anon = await fetch(`${srv.base}${U(A, "/api/bibliotheque?type=header")}`, { redirect: "manual" }); assert.ok([301, 302, 401, 403].includes(anon.status), `${anon.status}`);
-    const use = await fetch(`${srv.base}${U(A, "/api/bibliotheque/utiliser")}`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/json", Origin: srv.base }, body: JSON.stringify({ type: "header", key: "classique-logo-menu-bouton.clair" }) });
+    const use = await fetch(`${srv.base}${U(A, "/api/bibliotheque/utiliser")}`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/json", Origin: srv.base }, body: JSON.stringify({ type: "header", key: "tech-01.tech-01" }) });
     assert.ok([301, 302, 401, 403].includes(use.status), `${use.status}`);
     assert.equal(one("SELECT COUNT(*) n FROM mk_tb_templates").n, 0, "rien n'a été créé");
   });
   test("en-tête et pied de page de la bibliothèque : ils habillent le blog, un article et la 404 du site A, pas le site B", async () => {
-    await adopt(A, "header", "classique-logo-menu-bouton.clair"); await adopt(A, "footer", "ligne-copyright-menu.clair");
+    await adopt(A, "header", "tech-01.tech-01"); await adopt(A, "footer", "ligne-copyright-menu.clair");
     for (const p of ["/", "/blog", "/blog/article-a", "/introuvable-xyz"]) {
       const r = await hostReq(srv, "a.test", p); assert.ok([200, 404].includes(r.status), `${p} → ${r.status}`);
       // pages du Page Builder (accueil) : les parties sont dans la page même ; pages de la plateforme : dans leur zone « partie globale »

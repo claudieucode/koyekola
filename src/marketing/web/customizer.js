@@ -75,7 +75,15 @@ module.exports = () => {
     const t = target(req, res); if (!t) return;
     const can = canOf(req);
     try { customizer.runDue({ organizationId: req.mk.ctx.organizationId }); } catch { /* une planification en échec ne bloque jamais l'écran (elle est annulée et signalée) */ }
-    const st = customizer.state(req.mk.ctx, t.siteId, { can });
+    let st = customizer.state(req.mk.ctx, t.siteId, { can });
+    // Depuis l'aperçu d'un thème (« Personnaliser le site ») : ce thème est essayé dans le brouillon (rien n'est publié) ; le thème déjà actif ouvre simplement le personnalisateur
+    const wantTheme = typeof req.query.theme === "string" ? req.query.theme : "";
+    if (wantTheme && t.siteId && !t.readOnly && can("appearance.styles") && /^[a-z][a-z0-9-]{1,39}$/.test(wantTheme) && require("../themes/library").has(wantTheme) && (st.values["theme.key"] || "") !== wantTheme) {
+      try {
+        customizer.saveDraft(req.mk.ctx, t.siteId, { ...st.changes, "theme.key": wantTheme }, req.session.user.id, { rev: st.draft ? st.draft.rev : undefined, can });
+        st = customizer.state(req.mk.ctx, t.siteId, { can });
+      } catch { /* le brouillon reste tel quel : l'écran s'ouvre quand même */ }
+    }
     const menus = navigation.listMenus({ siteId: t.siteId }).map((m) => ({ id: m.id, name: m.name, items: m.items, locations: m.locations, broken: m.broken }));
     const q = t.siteId ? `?site=${t.siteId}` : "";
     // L'aperçu du cadre part du brouillon enregistré (copie de travail de CETTE session, pour CE site seulement)

@@ -1,3 +1,5 @@
+> **Document historique.** La bibliothèque décrite ici (100 compositions en rangées, 34 identités) a été remplacée par la bibliothèque « Atelier » : voir [HEADER_LIBRARY_100_MODELS_REPORT.md](HEADER_LIBRARY_100_MODELS_REPORT.md).
+
 # Bibliothèque d'en-têtes du Theme Builder (100 modèles, 34 identités propres)
 
 Documentation technique de la catégorie **En-tête**. Références : [`elementor-header-reference.md`](elementor-header-reference.md) (ce qu'Elementor fait, confirmé / non vérifiable)

@@ -1,7 +1,7 @@
 <%# Défilement continu (widget personnalisé : src/marketing/pages/widgets/marquee.js). Variables : p, cls, attrs.
     La liste n'est écrite qu'une fois pour les lecteurs d'écran ; la copie qui assure la boucle est cachée (aria-hidden). %>
-<% const list = (hidden) => { %><ul class="kw-marquee-list"<%- hidden ? ' aria-hidden="true"' : "" %>><% p.items.forEach((it) => { %><li class="kw-marquee-item"><%= it.text %><% if (p.separator) { %><span class="kw-marquee-sep" aria-hidden="true"><%= p.separator %></span><% } %></li><% }) %></ul><% }; %>
-<div class="<%= cls %> is-<%= p.speed %> is-<%= p.direction %><%= p.pauseHover ? " has-hover-pause" : "" %>" role="region" aria-label="<%= p.label || "Informations défilantes" %>"<%- attrs %>>
+<% const list = (hidden) => { %><ul class="kw-marquee-list"<%- hidden ? ' aria-hidden="true"' : "" %>><% p.items.forEach((it) => { %><li class="kw-marquee-item"><% if (it.image) { %><img class="kw-marquee-img" src="<%= it.image %>" alt="<%= hidden ? "" : it.text %>" loading="lazy" decoding="async"><% } else { %><%= it.text %><% } %><% if (p.separator) { %><span class="kw-marquee-sep" aria-hidden="true"><%= p.separator %></span><% } %></li><% }) %></ul><% }; %>
+<div class="<%= cls %> is-img-<%= p.imageSize || "m" %> is-<%= p.speed %> is-<%= p.direction %><%= p.pauseHover ? " has-hover-pause" : "" %>" role="region" aria-label="<%= p.label || "Informations défilantes" %>"<%- attrs %>>
   <input type="checkbox" class="kw-marquee-pause" id="mq-<%= n.id %>" aria-label="Mettre le défilement en pause">
   <label class="kw-marquee-pause-label" for="mq-<%= n.id %>"><span class="kw-marquee-pause-text">Pause</span></label>
   <div class="kw-marquee-view"><div class="kw-marquee-track"><% list(false); list(true); %></div></div>
