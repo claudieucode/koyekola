@@ -146,13 +146,13 @@ body.pf-js [data-reveal]{opacity:0;transform:translateY(12px);transition:opacity
 @keyframes preface-tick{from{transform:translateY(-6px);opacity:.3}to{transform:none;opacity:1}}
 body.pf-js [data-cd="s"].is-tick{animation:preface-tick .35s ease}
 @media (max-width:960px){
-  .pf-hero-in,.pf-two,.pf-art-in,.pf-foot-in{grid-template-columns:1fr}.pf-trois,.pf-bl{grid-template-columns:1fr}.pf-hero-r{max-width:320px;justify-self:start}.pf-side{position:static}.pf-av{grid-template-columns:1fr}
+  .pf-hero-in,.pf-two,.pf-art-in,.pf-foot-in{grid-template-columns:minmax(0,1fr)}.pf-trois,.pf-bl{grid-template-columns:minmax(0,1fr)}.pf-hero-r{max-width:320px;justify-self:start}.pf-side{position:static}.pf-av{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:640px){
   .pf-head-in{display:flex;flex-wrap:wrap;justify-content:space-between}.pf-brand{order:1}.pf-mini{order:2}.pf-nav{order:3;width:100%;justify-content:flex-start}
-  .pf-cols{grid-template-columns:1fr}.pf-j{grid-template-columns:48px 1fr}.pf-j-n{width:48px;height:48px}.pf-jl::before{left:23px}.pf-j-s{grid-column:2;grid-row:auto;justify-self:start}
-  body[data-pk-liste="tableau"] .pf-j{grid-template-columns:1fr}body[data-pk-liste="tableau"] .pf-j>*{grid-column:1!important;grid-row:auto!important;justify-self:start!important}
-  .pf-bj summary{grid-template-columns:1fr}.pf-bj details p{margin-left:0}.pf-cad-u b{font-size:clamp(2.2rem,14vw,3.6rem)}
+  .pf-cols{grid-template-columns:minmax(0,1fr)}.pf-j{grid-template-columns:48px 1fr}.pf-j-n{width:48px;height:48px}.pf-jl::before{left:23px}.pf-j-s{grid-column:2;grid-row:auto;justify-self:start}
+  body[data-pk-liste="tableau"] .pf-j{grid-template-columns:minmax(0,1fr)}body[data-pk-liste="tableau"] .pf-j>*{grid-column:1!important;grid-row:auto!important;justify-self:start!important}
+  .pf-bj summary{grid-template-columns:minmax(0,1fr)}.pf-bj details p{margin-left:0}.pf-cad-u b{font-size:clamp(2.2rem,14vw,3.6rem)}
 }
 @media (prefers-reduced-motion:reduce){
   body.pf-js [data-reveal]{opacity:1;transform:none;transition:none}.pf-prog-b i{transition:none}body.pf-js [data-cd="s"].is-tick{animation:none}.pf-btn{transition:none}

@@ -94,7 +94,7 @@ body:not([data-pk-tampon-anim="off"]) .md-hero-r .md-stamp,body:not([data-pk-tam
 .md-m-t{font-family:var(--md-serif);font-size:1.35rem;line-height:1.25;max-width:34ch}.md-m-r{color:var(--md-mu);font-size:.95rem}
 .md-m-k{display:grid;text-align:right}.md-m-k b{font-family:var(--md-serif);font-weight:400;font-size:2.2rem;line-height:1;color:var(--md-ink)}.md-m-k span{font-size:.8rem;color:var(--md-mu)}
 body[data-pk-liste="cartes"] .md-ml--full,body[data-pk-liste="cartes"] .md-cl-b>.md-ml{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px}
-body[data-pk-liste="cartes"] .md-m{grid-template-columns:1fr;border:1px solid var(--md-ln);padding:18px;background:var(--md-sf)}body[data-pk-liste="cartes"] .md-m:last-child{border-bottom:1px solid var(--md-ln)}body[data-pk-liste="cartes"] .md-m-k{text-align:left}
+body[data-pk-liste="cartes"] .md-m{grid-template-columns:minmax(0,1fr);border:1px solid var(--md-ln);padding:18px;background:var(--md-sf)}body[data-pk-liste="cartes"] .md-m:last-child{border-bottom:1px solid var(--md-ln)}body[data-pk-liste="cartes"] .md-m-k{text-align:left}
 body[data-pk-liste="frise"] .md-m{padding:10px 0}body[data-pk-liste="frise"] .md-m-r{display:none}body[data-pk-liste="frise"] .md-m-t{font-size:1.05rem;max-width:none;font-family:var(--md-sans)}body[data-pk-liste="frise"] .md-m-k b{font-size:1.3rem}body[data-pk-liste="frise"] .md-m-k span{display:none}
 .md-filt{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
 .md-chip{border:1px solid var(--md-ln);color:var(--md-tx);text-decoration:none;font-size:.88rem;padding:.45em 1em;background:var(--md-sf);min-height:20px}.md-chip.is-on{background:var(--md-tx);color:#fff}
@@ -124,7 +124,7 @@ body[data-pk-liste="frise"] .md-m{padding:10px 0}body[data-pk-liste="frise"] .md
 .md-ab{display:grid;grid-template-columns:200px 1fr;gap:clamp(24px,5vw,56px)}.md-ab-p{padding-top:32px}.md-ab-p .md-stamp{width:160px;height:160px}
 /* ----- estimateur et créneaux ----- */
 .md-two{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,48px);align-items:start}
-.md-two .md-cl{grid-template-columns:1fr}.md-two .md-cl .md-art{padding:0}
+.md-two .md-cl{grid-template-columns:minmax(0,1fr)}.md-two .md-cl .md-art{padding:0}
 .md-fields{display:grid;gap:20px}
 .md-fl{display:block;font-weight:600;font-size:.9rem;margin-bottom:8px}
 .md-opts{display:flex;flex-wrap:wrap;gap:8px}
@@ -157,11 +157,11 @@ body[data-pk-pied="clauses"] .md-foot-sig{display:none}body[data-pk-pied="clause
 body.md-js [data-reveal]{opacity:0;transform:translateY(10px);transition:opacity .5s,transform .5s}body.md-js [data-reveal].is-in{opacity:1;transform:none}
 .md-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--md-tx);color:#fff;font-size:.88rem;padding:.7em 1.1em;z-index:60;border-left:4px solid var(--md-red)}
 @media (max-width:960px){
-  .md-hero-in,.md-two,.md-ab,.md-foot-in{grid-template-columns:1fr}.md-ofs{grid-template-columns:1fr}.md-ch{grid-template-columns:1fr 1fr}.md-hero-r{max-width:480px}
-  .md-ph-in,.md-cl{grid-template-columns:1fr}.md-cl .md-art,.md-ph-in .md-art{padding-top:0}.md-ab-p{padding-top:0}
+  .md-hero-in,.md-two,.md-ab,.md-foot-in{grid-template-columns:minmax(0,1fr)}.md-ofs{grid-template-columns:minmax(0,1fr)}.md-ch{grid-template-columns:1fr 1fr}.md-hero-r{max-width:480px}
+  .md-ph-in,.md-cl{grid-template-columns:minmax(0,1fr)}.md-cl .md-art,.md-ph-in .md-art{padding-top:0}.md-ab-p{padding-top:0}
 }
 @media (max-width:640px){
-  .md-m{grid-template-columns:1fr}.md-m-k{text-align:left}.md-cols,.md-404-in{grid-template-columns:1fr}.md-tl li{grid-template-columns:1fr}.md-rdv span{display:none}.md-hero-r .md-stamp{right:0}
+  .md-m{grid-template-columns:minmax(0,1fr)}.md-m-k{text-align:left}.md-cols,.md-404-in{grid-template-columns:minmax(0,1fr)}.md-tl li{grid-template-columns:minmax(0,1fr)}.md-rdv span{display:none}.md-hero-r .md-stamp{right:0}
 }
 @media (prefers-reduced-motion:reduce){
   body .md-stamp{animation:none!important}body.md-js [data-reveal]{opacity:1;transform:none;transition:none}.md-btn{transition:none}
