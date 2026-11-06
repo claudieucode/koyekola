@@ -1,6 +1,7 @@
 /* Comptoir — badge « ouvert maintenant », filtre des services, devis en 3 questions, recherche dans l'index. Sans dépendance. */
 (function () {
   var b = document.body; if (!b || b.getAttribute("data-kw-pack") !== "comptoir") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) b.setAttribute("data-pk-reduced", "1");
   var one = function (s, r) { return (r || document).querySelector(s); };
   var all = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var norm = function (s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); };

@@ -194,7 +194,7 @@ module.exports = {
     reading: "chapeau-standfirst-citation-de-dirigeant-et-tableau-de-caracteristiques",
   },
   tokens: {
-    colors: { primary: "#0e4d64", secondary: "#0b2f3d", accent: "#b93a14", background: "#f3f4f1", surface: "#ffffff", text: "#13242c", muted: "#4a5c64", success: "#2f6b3f", warning: "#8a5a0a", error: "#a3302a" },
+    colors: { primary: "#8a5a00", secondary: "#0b2f3d", accent: "#b93a14", background: "#f3f4f1", surface: "#ffffff", text: "#13242c", muted: "#4a5c64", success: "#2f6b3f", warning: "#8a5a0a", error: "#a3302a" },
     fonts: { heading: "font.league-spartan", body: "font.pt-sans", button: "font.league-spartan", link: "font.pt-sans" },
     radius: { sm: 0, md: 0, lg: 0, button: 0, field: 0, card: 0 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#c5cdd0" },
     type: { h1: { size: 52, weight: 800, lineHeight: 1.05, transform: "none" }, h2: { size: 32, weight: 800, lineHeight: 1.12, transform: "none" } },

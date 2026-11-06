@@ -1,5 +1,5 @@
 /* Bulletin — actualités d'entreprise. Bleu pétrole profond, vermillon d'alerte, blanc cassé ; rail de dates, pictogrammes industriels, coins coupés, filets épais. */
-body{--bu-blue:#0e4d64;--bu-blue2:#0b2f3d;--bu-red:var(--pk-alerte,#b93a14);--bu-paper:#f3f4f1;--bu-white:#fff;--bu-tint:#e4eaea;--bu-ink:#13242c;--bu-mut:#4a5c64;--bu-line:#c5cdd0;--bu-hot:#ffb199;
+body{--bu-blue:#8a5a00;--bu-blue2:#0b2f3d;--bu-red:var(--pk-alerte,#b93a14);--bu-paper:#f3f4f1;--bu-white:#fff;--bu-tint:#e4eaea;--bu-ink:#13242c;--bu-mut:#4a5c64;--bu-line:#c5cdd0;--bu-hot:#ffb199;
   --bu-gut:clamp(16px,4vw,52px);--bu-max:1240px;--bu-read:68ch;
   background:var(--bu-paper);color:var(--bu-ink);font-family:var(--kw-font-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
 body[data-pk-nuit="oui"]{--bu-blue:#7fc3dc;--bu-blue2:#04141a;--bu-red:#ff8f6b;--bu-paper:#0c1a20;--bu-white:#122630;--bu-tint:#16303b;--bu-ink:#e8f0f2;--bu-mut:#a9bcc3;--bu-line:#2c4753}

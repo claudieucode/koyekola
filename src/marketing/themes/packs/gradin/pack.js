@@ -206,13 +206,13 @@ module.exports = {
     reading: "fira-sans-17-px-ligne-de-64-caracteres-citations-a-guillemet-orange",
   },
   tokens: {
-    colors: { primary: "#c2410c", secondary: "#231a14", accent: "#0f6b4f", background: "#fff7ec", surface: "#ffffff", text: "#231a14", muted: "#6a5a4d", success: "#13803f", warning: "#8a5a00", error: "#b3261e" },
+    colors: { primary: "#7c2d5b", secondary: "#231a14", accent: "#0f6b4f", background: "#fff7ec", surface: "#ffffff", text: "#231a14", muted: "#6a5a4d", success: "#13803f", warning: "#8a5a00", error: "#b3261e" },
     fonts: { heading: "font.plus-jakarta-sans", body: "font.fira-sans", button: "font.plus-jakarta-sans", link: "font.fira-sans" },
     radius: { sm: 0, md: 2, lg: 4, button: 2, field: 2, card: 2 }, shadow: { card: "6px 6px 0 #f1d9bd", button: "none" }, border: { width: 2, color: "#231a14" },
     type: { h1: { size: 56, weight: 800, lineHeight: 1.05, transform: "none" }, h2: { size: 34, weight: 700, lineHeight: 1.12, transform: "none" } },
   },
   options: [
-    { key: "brique", label: "Orange brique (couleur principale)", type: "color", default: "#c2410c" },
+    { key: "brique", label: "Orange brique (couleur principale)", type: "color", default: "#7c2d5b" },
     { key: "sapin", label: "Vert sapin (gratuit)", type: "color", default: "#0f6b4f" },
     { key: "entete", label: "En-tête", type: "choice", default: "ruban", choices: [["ruban", "Ruban promotionnel et barre"], ["marches", "Barre à marches"], ["centre", "Logo centré"]] },
     { key: "pied", label: "Pied de page", type: "choice", default: "escalier", choices: [["escalier", "Colonnes en escalier"], ["simple", "Simple"]] },

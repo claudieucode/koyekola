@@ -1,6 +1,7 @@
 /* Repère — recherche instantanée (clavier, surlignage, état « aucun résultat »), sommaire d'article, « utile ? » mémorisé, premiers pas à cocher, filtres de catégories. Sans dépendance. */
 (function () {
   var b = document.body; if (!b || b.getAttribute("data-kw-pack") !== "repere") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) b.setAttribute("data-pk-reduced", "1");
   var one = function (s, r) { return (r || document).querySelector(s); };
   var all = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var store = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };

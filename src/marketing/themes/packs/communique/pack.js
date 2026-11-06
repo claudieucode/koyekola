@@ -87,7 +87,7 @@ const communique = (c) => {
 };
 
 // ---------- kit média ----------
-const COULEURS = [["Vert Aubrac", "#0b4f6c", "Couleur principale, titres et logo"], ["Saumon presse", "#fff1e5", "Fond des documents imprimés"], ["Encre", "#1c1b1a", "Texte courant"], ["Rouge embargo", "#b3261e", "Mentions d'alerte uniquement"], ["Or cargo", "#d99a1d", "Accents et chiffres clés"]];
+const COULEURS = [["Vert Aubrac", "#5b2a86", "Couleur principale, titres et logo"], ["Saumon presse", "#fff1e5", "Fond des documents imprimés"], ["Encre", "#1c1b1a", "Texte courant"], ["Rouge embargo", "#b3261e", "Mentions d'alerte uniquement"], ["Or cargo", "#d99a1d", "Accents et chiffres clés"]];
 const kitmedia = (c) => [
   sec(header(c)),
   pagehead("Kit média", "Tout pour illustrer <em>un article</em>", "Logos, couleurs, textes de présentation : ce qu'on peut copier tout de suite, et ce qu'on demande au service de presse."),
@@ -167,7 +167,7 @@ module.exports = {
     reading: "empattement-de-lecture-dix-huit-pixels-colonne-de-soixante-cinq-signes",
   },
   tokens: {
-    colors: { primary: "#0b4f6c", secondary: "#1c1b1a", accent: "#d99a1d", background: "#fff1e5", surface: "#fffaf5", text: "#1c1b1a", muted: "#555049", success: "#1e6b3a", warning: "#8a5a00", error: "#b3261e" },
+    colors: { primary: "#5b2a86", secondary: "#1c1b1a", accent: "#d99a1d", background: "#fff1e5", surface: "#fffaf5", text: "#1c1b1a", muted: "#555049", success: "#1e6b3a", warning: "#8a5a00", error: "#b3261e" },
     fonts: { heading: "font.noto-serif-display", body: "font.source-serif-4", button: "font.barlow-condensed", link: "font.source-serif-4" },
     radius: { sm: 0, md: 0, lg: 2, button: 0, field: 0, card: 0 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#1c1b1a" },
     type: { h1: { size: 54, weight: 600, lineHeight: 1.06, transform: "none" }, h2: { size: 32, weight: 600, lineHeight: 1.15, transform: "none" } },

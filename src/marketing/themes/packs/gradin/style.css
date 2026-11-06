@@ -1,5 +1,5 @@
 /* Gradin — école en ligne. Tout ce fichier est confiné à body[data-kw-pack="gradin"] au chargement. */
-body{--gr-or:var(--pk-brique,#c2410c);--gr-pine:var(--pk-sapin,#0f6b4f);--gr-bg:#fff7ec;--gr-sf:#fff;--gr-tx:#231a14;--gr-mu:#6a5a4d;--gr-ln:#231a14;--gr-soft:#f6e6cf;--gr-gut:clamp(16px,4vw,48px);--gr-max:1180px;
+body{--gr-or:var(--pk-brique,#7c2d5b);--gr-pine:var(--pk-sapin,#0f6b4f);--gr-bg:#fff7ec;--gr-sf:#fff;--gr-tx:#231a14;--gr-mu:#6a5a4d;--gr-ln:#231a14;--gr-soft:#f6e6cf;--gr-gut:clamp(16px,4vw,48px);--gr-max:1180px;
   --gr-sans:var(--kw-font-heading),system-ui,sans-serif;--gr-body:var(--kw-font-body),system-ui,sans-serif;
   background:var(--gr-bg);color:var(--gr-tx);font-family:var(--gr-body);margin:0;-webkit-font-smoothing:antialiased}
 .lp-main{max-width:none;padding:0;margin:0}
