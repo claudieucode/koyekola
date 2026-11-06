@@ -33,7 +33,7 @@ body[data-pk-page="sobre"] .am-rail{display:none}
 .am-nav a:hover,.am-nav a:focus-visible{border-color:var(--am-fl)}
 .am-mini{font-family:var(--kw-font-heading);font-weight:700;font-size:.85rem;padding:.2rem .6rem;border:2px solid var(--am-ink);white-space:nowrap}
 .am-mini b{color:var(--am-fll)}
-@media (max-width:760px){.am-nav{display:none}.am-mini{display:none}.am-bar{padding:.55rem var(--am-gut)}}
+@media (max-width:760px){.am-mini{display:none}.am-bar{padding:.55rem var(--am-gut);flex-wrap:wrap}.am-nav{display:flex;order:3;flex:1 0 100%;min-width:0;overflow-x:auto;gap:.2rem 1.1rem;font-size:.85rem;scrollbar-width:none;-webkit-overflow-scrolling:touch}.am-nav::-webkit-scrollbar{display:none}.am-nav a{white-space:nowrap;min-height:44px;display:inline-flex;align-items:center}}
 body[data-pk-entete="muet"] .am-nav,body[data-pk-entete="muet"] .am-mini{display:none}
 body[data-pk-entete="pilule"] .am-head{background:transparent;backdrop-filter:none;border:0;pointer-events:none}
 body[data-pk-entete="pilule"] .am-bar{pointer-events:auto;max-width:44rem;margin:.7rem auto;background:var(--am-paper);border:2px solid var(--am-ink);border-radius:999px;padding:.4rem .5rem .4rem 1.2rem;box-shadow:4px 4px 0 var(--am-ink);width:calc(100% - 2*var(--am-gut))}

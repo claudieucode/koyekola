@@ -15,7 +15,8 @@
   <%# Thème autonome (paquet) : sa propre feuille de styles, confinée à body[data-kw-pack], chargée après la base neutre et avant le CSS personnalisé du site %>
   <% if (siteX && siteX.assets.pack && siteX.assets.pack.link) { %><%- siteX.assets.pack.link %><% } %>
   <% if (siteX && siteX.assets.pack && siteX.assets.pack.cz) { %><style id="kw-pack-cz"><%- siteX.assets.pack.cz %></style><% } %>
-  <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle, siteX ? siteX.id : null); if (ff) { %><style id="kw-site-faces"><%- ff %></style><% } } %>
+  <% if (siteStyle && typeof fontFacesFor === "function") { const ff = fontFacesFor(siteStyle, siteX ? siteX.id : null); if (ff) { const pre = []; String(ff).replace(/url\((\/[^)"' ]+\.woff2)\)/g, (m, u) => { if (pre.length < 2 && !pre.includes(u)) pre.push(u); return m; }); %><% pre.forEach((u) => { %><link rel="preload" as="font" type="font/woff2" href="<%= u %>" crossorigin>
+  <% }) %><style id="kw-site-faces"><%- ff %></style><% } } %>
   <% if (page.nodeCss) { %><style><%- page.nodeCss %></style><% } %>
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
   <% if (siteX && siteX.assets.custom) { %><style id="kw-site-custom"><%- siteX.assets.custom %></style><% } %>

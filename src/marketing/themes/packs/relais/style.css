@@ -179,3 +179,6 @@ body{background:#fff!important;color:#000!important}
 .rl-case-h{border:0;padding:0}.rl-h1{font-size:26pt;max-width:none}.rl-art{display:block}.rl-facts{position:static;box-shadow:none;margin-bottom:12pt;break-inside:avoid}
 .rl-big{color:#000}.rl-bar-f{transform:none!important;animation:none!important}.rl-body{max-width:none}a{color:#000!important}
 }
+/* Garde responsive : les colonnes peuvent rétrécir sous la largeur de leur contenu */
+@media (max-width:980px){.rl-art{grid-template-columns:minmax(0,1fr)}.rl-art>*{min-width:0}}
+.rl-facts,.rl-facts dd,.rl-facts dt{overflow-wrap:anywhere}
