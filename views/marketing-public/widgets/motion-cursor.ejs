@@ -1,0 +1,4 @@
+<%# Curseur personnalisé (widgets/motion-cursor.js). Variables : p, cls, attrs, isBuilder. Le curseur est créé par public/js/motion-studio/cursor.js (souris seulement) ; réglages lus dans data-kw-ms-opts. Page publiée : ce bloc n'affiche rien. %>
+<% const opts = JSON.stringify({ look: p.look, size: p.size, grow: p.grow, inertia: p.inertia, blend: p.blend === true, hideNative: p.hideNative === true }); %>
+<% if (isBuilder) { %><div class="<%= cls %> kw-ms kw-ms-cur is-builder"<%- attrs %> data-kw-ms-opts="<%= opts %>"><span class="kw-ms-cur-note">Curseur personnalisé : actif sur la page publiée (souris seulement)</span></div>
+<% } else { %><span class="<%= cls %> kw-ms kw-ms-cur" hidden<%- attrs %> data-kw-ms-opts="<%= opts %>"></span><% } %>

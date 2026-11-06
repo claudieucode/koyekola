@@ -1068,7 +1068,7 @@ function schemaProps(def) {
   return (p, at, h) => {
     const out = {};
     for (const f of def.schema) out[f.key] = validateField(f, p[f.key], `${at} (${def.label}, ${f.label})`, h);
-    if (def.validate) def.validate(out, `${at} (${def.label})`); // règles qui portent sur l'ensemble des réglages
+    if (def.validate) def.validate(out, `${at} (${def.label})`, h); // règles qui portent sur l'ensemble des réglages (h : contexte de l'enregistrement, ex. organisation et site de la page)
     return out;
   };
 }

@@ -122,7 +122,8 @@ function assertFormsUsable(ctx, sections, pageFormId, siteId, { tolerated = new 
 }
 function normalizeContent(ctx, page, input = {}) {
   const raw = (Array.isArray(input.sections) ? input.sections : []).map((s) => (s && typeof s === "object" && s.id === undefined ? { ...s, id: newSectionId() } : s));
-  const normalized = normalizeSections(ctx, raw);
+  // pageSiteId : site de la page enregistrée (null = site principal) ; les composants qui citent un fichier de la médiathèque (Lottie…) vérifient qu'il appartient à CE site
+  const normalized = normalizeSections(Object.assign(Object.create(Object.getPrototypeOf(ctx)), ctx, { pageSiteId: page.site_id === undefined ? undefined : page.site_id }), raw);
   assertComponentsUsable(ctx, normalized, page.site_id);
   // Seulement pour une VRAIE page (un modèle de page enregistré n'a pas de site : le contrôle a lieu quand il est utilisé pour créer une page)
   // Composants et modèles n'ont pas de formulaire de page (`form_id` absent) : leur contrôle a lieu quand ils sont placés dans une page

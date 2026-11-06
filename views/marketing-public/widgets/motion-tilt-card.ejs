@@ -1,0 +1,13 @@
+<%# Carte inclinée 3D (widgets/motion-tilt-card.js). Variables : p, cls, attrs, L (L.link). Sans JavaScript ou sans souris : carte à plat, contenu identique. %>
+<% const tag = ["h2", "h3", "h4", "p"].includes(p.titleTag) ? p.titleTag : "h3"; %>
+<div class="<%= cls %> kw-ms kw-ms-tc"<%- attrs %>>
+  <div class="kw-ms-tc-card">
+    <% if (p.image) { %><img class="kw-ms-tc-img" src="<%= p.image %>" alt="<%= p.imageAlt || "" %>" loading="lazy" decoding="async" draggable="false"><% } %>
+    <div class="kw-ms-tc-body">
+      <<%= tag %> class="kw-ms-tc-title"><%= p.title %></<%= tag %>>
+      <% if (p.text) { %><p class="kw-ms-tc-text"><%= p.text %></p><% } %>
+      <% if (p.linkLabel && L.link) { %><a class="kw-ms-tc-link" href="<%= L.link %>"><%= p.linkLabel %></a><% } %>
+    </div>
+    <span class="kw-ms-tc-glare" aria-hidden="true"></span>
+  </div>
+</div>

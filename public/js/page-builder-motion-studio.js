@@ -144,7 +144,7 @@
     box.appendChild(contentSection(it, locked));
     box.appendChild(styleSection());
     box.appendChild(animationSection(it, spec, locked));
-    if (has(spec, "trigger") || has(spec, "repeat")) box.appendChild(interactionsSection(it, spec, locked));
+    if (has(spec, "trigger") || has(spec, "repeat") || has(spec, "scrub")) box.appendChild(interactionsSection(it, spec, locked));
     box.appendChild(responsiveSection(it, locked));
     box.appendChild(advancedSection(it, locked));
     return true;

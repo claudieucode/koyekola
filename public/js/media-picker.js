@@ -10,9 +10,9 @@
 // onPick reçoit le média choisi { id, path, url, name, title, alt, type, mime, size, width, height… } (un tableau si multiple).
 (function () {
   var K = window.KWMedia;
-  var TYPE_OPTIONS = [["", "Tous les fichiers"], ["image", "Images"], ["video", "Vidéos"], ["audio", "Audio"], ["documents", "Documents"]];
-  var ACCEPT = { image: "image/jpeg,image/png,image/gif,image/webp,image/avif", video: "video/mp4,video/webm", audio: "audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a", documents: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" };
-  var SINGULAR = { image: "une image", video: "une vidéo", audio: "un fichier audio", documents: "un document" };
+  var TYPE_OPTIONS = [["", "Tous les fichiers"], ["image", "Images"], ["video", "Vidéos"], ["audio", "Audio"], ["documents", "Documents"], ["lottie", "Animations Lottie"]];
+  var ACCEPT = { image: "image/jpeg,image/png,image/gif,image/webp,image/avif", video: "video/mp4,video/webm", audio: "audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a", documents: ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx", lottie: ".json,.lottie,application/json" };
+  var SINGULAR = { image: "une image", video: "une vidéo", audio: "un fichier audio", documents: "un document", lottie: "une animation Lottie" };
 
   function h(tag, attrs, kids) {
     var el = document.createElement(tag);

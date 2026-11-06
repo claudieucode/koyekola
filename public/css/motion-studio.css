@@ -670,3 +670,104 @@ a.kw-ms-pf-card:hover .kw-ms-pf-img, a.kw-ms-pf-card:focus-visible .kw-ms-pf-img
 .kw-ms-mvel-live .kw-ms-mvel-list { flex-wrap: nowrap; }
 .kw-ms-mvel-live .kw-ms-mvel-item { white-space: nowrap; }
 /* ms:t end */
+
+/* ms:v début — visuels et médias : révélation d'image, parallaxe, tracé SVG, carte inclinée, boutons, fonds animés, curseur, lecteur Lottie */
+.kw-ms-vr-16-9 { aspect-ratio: 16 / 9; } .kw-ms-vr-4-3 { aspect-ratio: 4 / 3; } .kw-ms-vr-3-2 { aspect-ratio: 3 / 2; } .kw-ms-vr-1-1 { aspect-ratio: 1 / 1; } .kw-ms-vr-3-4 { aspect-ratio: 3 / 4; } .kw-ms-vr-21-9 { aspect-ratio: 21 / 9; }
+.kw-ms-vempty { display: grid; place-items: center; text-align: center; min-height: 120px; padding: 16px; border: 1px dashed color-mix(in srgb, currentColor 40%, transparent); border-radius: 8px; font-size: .9rem; opacity: .75; }
+.kw-ms-vcap { margin-top: .5em; font-size: .875em; opacity: .8; }
+
+/* Révélation d'image */
+.kw-ms-ir { display: block; margin: 0; }
+.kw-ms-ir-link { display: block; color: inherit; text-decoration: none; }
+.kw-ms-ir-frame { display: block; position: relative; overflow: hidden; width: 100%; }
+.kw-ms-ir-img { display: block; width: 100%; height: 100%; object-fit: cover; will-change: transform; }
+
+/* Parallaxe d'image : repli = image fixe recadrée */
+.kw-ms-pp { display: block; margin: 0; }
+.kw-ms-pp-frame { display: block; position: relative; overflow: hidden; width: 100%; }
+.kw-ms-pp-img { position: absolute; left: 0; top: 0; display: block; width: 100%; height: 100%; object-fit: cover; will-change: transform; }
+
+/* Tracé SVG */
+.kw-ms-sd { display: flex; }
+.kw-ms-sd.is-center { justify-content: center; } .kw-ms-sd.is-left { justify-content: flex-start; } .kw-ms-sd.is-right { justify-content: flex-end; }
+.kw-ms-sd-svg { display: block; max-width: 100%; height: auto; overflow: visible; }
+
+/* Carte inclinée 3D : à plat sans souris */
+.kw-ms-tc { display: block; perspective: none; }
+.kw-ms-tc-card { position: relative; overflow: hidden; border-radius: 16px; background: var(--kw-surface, Canvas); color: inherit; border: 1px solid color-mix(in srgb, currentColor 14%, transparent); box-shadow: 0 10px 30px rgb(0 0 0 / .12); will-change: transform; }
+.kw-ms-tc-img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+.kw-ms-tc-body { display: grid; gap: 8px; padding: 20px; }
+.kw-ms-tc-title { margin: 0; }
+.kw-ms-tc-text { margin: 0; opacity: .85; }
+.kw-ms-tc-link { justify-self: start; font-weight: 600; color: var(--kw-primary, var(--lp-accent, currentColor)); }
+.kw-ms-tc-glare { position: absolute; inset: 0; pointer-events: none; opacity: var(--kw-ms-go, 0); background: radial-gradient(circle at var(--kw-ms-gx, 50%) var(--kw-ms-gy, 50%), rgb(255 255 255 / .85), transparent 55%); transition: opacity 200ms ease-out; }
+
+/* Boutons animés et magnétiques : variantes de survol en CSS (marchent sans JavaScript et au clavier) */
+.kw-ms-bw { display: flex; --kw-ms-dur: 350ms; --kw-ms-ease: cubic-bezier(.2, .7, .2, 1); }
+.kw-ms-bw.is-left { justify-content: flex-start; } .kw-ms-bw.is-center { justify-content: center; } .kw-ms-bw.is-right { justify-content: flex-end; }
+.kw-ms-mb { padding: 8px; }
+.kw-ms-bt { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: .6em; max-width: 100%; overflow: hidden; isolation: isolate; border: 2px solid transparent; border-radius: var(--kw-radius-button, 999px); background: var(--kw-primary, var(--lp-accent, #0277b6)); color: var(--kw-on-primary, var(--lp-on-accent, Canvas)); font-weight: 600; line-height: 1.2; text-decoration: none; cursor: pointer; }
+.kw-ms-bt.is-sm { padding: .5em 1.1em; font-size: .875rem; } .kw-ms-bt.is-md { padding: .75em 1.5em; font-size: 1rem; } .kw-ms-bt.is-lg { padding: 1em 2em; font-size: 1.125rem; }
+.kw-ms-bt.is-block { display: flex; width: 100%; }
+.kw-ms-bt:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.kw-ms-bt-label, .kw-ms-bt-arrow { position: relative; z-index: 1; }
+.kw-ms-bt-arrow { flex: none; width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform var(--kw-ms-dur) var(--kw-ms-ease); }
+.kw-ms-bt-fill { position: absolute; inset: 0; z-index: 0; opacity: 0; pointer-events: none; background: color-mix(in srgb, var(--kw-primary, var(--lp-accent, #0277b6)) 62%, black); }
+.kw-ms-bw[data-kw-ms*='"preset":"fill-slide"'] .kw-ms-bt-fill { opacity: 1; transform: translateX(-101%); transition: transform var(--kw-ms-dur) var(--kw-ms-ease); }
+.kw-ms-bw[data-kw-ms*='"preset":"fill-slide"'] .kw-ms-bt:hover .kw-ms-bt-fill, .kw-ms-bw[data-kw-ms*='"preset":"fill-slide"'] .kw-ms-bt:focus-visible .kw-ms-bt-fill { transform: translateX(0); }
+.kw-ms-bw[data-kw-ms*='"preset":"fill-circle"'] .kw-ms-bt-fill { opacity: 1; clip-path: circle(0% at var(--kw-ms-x, 50%) var(--kw-ms-y, 50%)); transition: clip-path var(--kw-ms-dur) var(--kw-ms-ease); }
+.kw-ms-bw[data-kw-ms*='"preset":"fill-circle"'] .kw-ms-bt:hover .kw-ms-bt-fill, .kw-ms-bw[data-kw-ms*='"preset":"fill-circle"'] .kw-ms-bt:focus-visible .kw-ms-bt-fill { clip-path: circle(150% at var(--kw-ms-x, 50%) var(--kw-ms-y, 50%)); }
+.kw-ms-bw[data-kw-ms*='"preset":"underline"'] .kw-ms-bt { background: transparent; color: var(--kw-primary, var(--lp-accent, #0277b6)); }
+.kw-ms-bw[data-kw-ms*='"preset":"underline"'] .kw-ms-bt::after { content: ""; position: absolute; left: 1.5em; right: 1.5em; bottom: .45em; height: 2px; background: currentColor; transform: scaleX(0); transform-origin: left center; transition: transform var(--kw-ms-dur) var(--kw-ms-ease); }
+.kw-ms-bw[data-kw-ms*='"preset":"underline"'] .kw-ms-bt:hover::after, .kw-ms-bw[data-kw-ms*='"preset":"underline"'] .kw-ms-bt:focus-visible::after { transform: scaleX(1); }
+.kw-ms-bw[data-kw-ms*='"preset":"arrow-shift"'] .kw-ms-bt:hover .kw-ms-bt-arrow, .kw-ms-bw[data-kw-ms*='"preset":"arrow-shift"'] .kw-ms-bt:focus-visible .kw-ms-bt-arrow { transform: translateX(.45em); }
+.kw-ms-bw[data-kw-ms*='"preset":"lift"'] .kw-ms-bt { transition: transform var(--kw-ms-dur) var(--kw-ms-ease), box-shadow var(--kw-ms-dur) var(--kw-ms-ease); }
+.kw-ms-bw[data-kw-ms*='"preset":"lift"'] .kw-ms-bt:hover, .kw-ms-bw[data-kw-ms*='"preset":"lift"'] .kw-ms-bt:focus-visible { box-shadow: 0 10px 22px rgb(0 0 0 / .25); }
+.kw-ms-bw[data-kw-ms*='"preset":"lift"']:not(.kw-ms-mb) .kw-ms-bt:hover, .kw-ms-bw[data-kw-ms*='"preset":"lift"']:not(.kw-ms-mb) .kw-ms-bt:focus-visible { transform: translateY(-3px); }
+.kw-ms-bw[data-kw-ms*='"preset":"shine"'] .kw-ms-bt::before { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; z-index: 2; pointer-events: none; background: linear-gradient(100deg, transparent, rgb(255 255 255 / .45), transparent); transform: translateX(0) skewX(-20deg); transition: transform calc(var(--kw-ms-dur) * 2) var(--kw-ms-ease); }
+.kw-ms-bw[data-kw-ms*='"preset":"shine"'] .kw-ms-bt:hover::before, .kw-ms-bw[data-kw-ms*='"preset":"shine"'] .kw-ms-bt:focus-visible::before { transform: translateX(450%) skewX(-20deg); }
+
+/* Fonds animés : le rendu fixe (sans script, mouvement réduit) est le même fond, immobile */
+.kw-ms-bg { --kw-ms-grain: .14; position: relative; display: grid; align-items: center; min-height: var(--kw-ms-min, 360px); overflow: hidden; isolation: isolate; border-radius: var(--kw-radius-card, 0); background: var(--kw-ms-c1); }
+.kw-ms-bg.is-light { color: rgb(255 255 255); } .kw-ms-bg.is-dark { color: rgb(15 23 42); }
+.kw-ms-bg-art { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.kw-ms-bg-art > span { position: absolute; display: block; will-change: transform; }
+.kw-ms-bg-l1 { inset: -50%; background: linear-gradient(135deg, var(--kw-ms-c1), var(--kw-ms-c2) 50%, var(--kw-ms-c3)); }
+.kw-ms-bg-l2, .kw-ms-bg-l3 { display: none; }
+.kw-ms-bg[data-kw-ms*='"preset":"mesh"'] .kw-ms-bg-l1 { inset: auto; left: -10%; top: -15%; width: 75%; height: 80%; background: radial-gradient(circle at 50% 50%, var(--kw-ms-c1), transparent 70%); }
+.kw-ms-bg[data-kw-ms*='"preset":"mesh"'] .kw-ms-bg-l2 { display: block; right: -12%; top: 5%; width: 70%; height: 75%; background: radial-gradient(circle at 50% 50%, var(--kw-ms-c2), transparent 70%); }
+.kw-ms-bg[data-kw-ms*='"preset":"mesh"'] .kw-ms-bg-l3 { display: block; left: 15%; bottom: -25%; width: 75%; height: 80%; background: radial-gradient(circle at 50% 50%, var(--kw-ms-c3), transparent 70%); }
+.kw-ms-bg-art > .kw-ms-bg-grain { inset: -10%; opacity: var(--kw-ms-grain); mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.kw-ms-bg[data-kw-ms*='"grain":0,'] .kw-ms-bg-grain, .kw-ms-bg[data-kw-ms*='"grain":0}'] .kw-ms-bg-grain { display: none; }
+.kw-ms-bg-body { position: relative; z-index: 1; width: 100%; max-width: 48rem; margin-inline: auto; padding: clamp(24px, 5vw, 64px); }
+.kw-ms-bg.is-center .kw-ms-bg-body { text-align: center; } .kw-ms-bg.is-left .kw-ms-bg-body { margin-inline: 0; text-align: left; }
+.kw-ms-bg-title { margin: 0 0 .4em; }
+.kw-ms-bg-text { margin: 0 0 1.2em; }
+.kw-ms-bg-btn { display: inline-block; padding: .7em 1.4em; border: 2px solid currentColor; border-radius: 999px; color: inherit; font-weight: 600; text-decoration: none; }
+.kw-ms-bg-btn:hover, .kw-ms-bg-btn:focus-visible { background: color-mix(in srgb, currentColor 18%, transparent); }
+.kw-ms-bg-pause { position: absolute; right: 12px; bottom: 12px; z-index: 2; padding: .35em .9em; border: 1px solid currentColor; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); color: inherit; font: inherit; font-size: .8rem; cursor: pointer; }
+.kw-ms-bg-pause:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
+
+/* Curseur personnalisé */
+.kw-ms-cur[hidden] { display: none; }
+.kw-ms-cur.is-builder { display: block; padding: 12px 16px; border: 1px dashed color-mix(in srgb, currentColor 40%, transparent); border-radius: 8px; font-size: .9rem; opacity: .8; }
+.kw-ms-cur-note { display: block; }
+.kw-ms-cursor { position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 2147483000; pointer-events: none; transition: opacity 200ms ease-out; }
+.kw-ms-cursor.is-hidden { opacity: 0; }
+.kw-ms-cursor-ring { position: absolute; left: 0; top: 0; width: var(--kw-ms-cs, 36px); height: var(--kw-ms-cs, 36px); box-sizing: border-box; border: 2px solid var(--kw-primary, var(--lp-accent, #0277b6)); border-radius: 50%; will-change: transform; transition: background-color 200ms ease-out; }
+.kw-ms-cursor.is-grown .kw-ms-cursor-ring { background: color-mix(in srgb, var(--kw-primary, var(--lp-accent, #0277b6)) 16%, transparent); }
+.kw-ms-cursor-dot { position: absolute; left: 0; top: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--kw-primary, var(--lp-accent, #0277b6)); will-change: transform; }
+.kw-ms-cursor.is-blend { mix-blend-mode: difference; }
+.kw-ms-cursor.is-blend .kw-ms-cursor-ring { border-color: rgb(255 255 255); } .kw-ms-cursor.is-blend .kw-ms-cursor-dot { background: rgb(255 255 255); }
+html.kw-ms-nocursor *:not(input):not(textarea):not(select) { cursor: none !important; }
+@media (pointer: coarse), (prefers-reduced-motion: reduce) { .kw-ms-cursor { display: none; } html.kw-ms-nocursor *:not(input):not(textarea):not(select) { cursor: auto !important; } }
+
+/* Lecteur Lottie */
+.kw-ms-lt { display: flex; flex-direction: column; margin: 0; }
+.kw-ms-lt.is-center { align-items: center; } .kw-ms-lt.is-left { align-items: flex-start; } .kw-ms-lt.is-right { align-items: flex-end; }
+.kw-ms-lt-stage { position: relative; width: 100%; height: var(--kw-ms-lt-h, auto); min-height: var(--kw-ms-lt-h, 120px); }
+.kw-ms-lt-stage > svg { display: block; width: 100%; height: 100%; }
+.kw-ms-lt-poster { display: block; width: 100%; height: 100%; object-fit: contain; }
+.kw-ms-lt-pause { margin-top: 8px; padding: .35em .9em; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: .8rem; cursor: pointer; }
+.kw-ms-lt-pause:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
+/* ms:v fin */
