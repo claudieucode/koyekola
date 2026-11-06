@@ -9,7 +9,7 @@
 //  media-04  Fréquence Noire      webzine culture / musique          bloc de marque plein à gauche collé au bord, bandeau incliné, rubriques en mono, filet dégradé
 //  media-05  Onde Courte          radio / podcast                    disque en dégradé + barres d'égaliseur animées, pastille « direct », rubriques en pilules sur bande
 //  media-06  Saison Pourpre       théâtre / lieu à programmation     infos pratiques, grand nom à gauche, rubriques en mosaïque de cases, bouton de réservation
-//  media-07  Cimaise              galerie d'art contemporain         trois colonnes hautes séparées par des filets verticaux, rubriques empilées
+//  media-07  Vernissage              galerie d'art contemporain         trois colonnes hautes séparées par des filets verticaux, rubriques empilées
 //  media-08  Chambre Claire       portfolio photographe minimal      une ligne fine : marque minuscule, date, bouton « Index » ouvrant un menu plein écran numéroté
 //  media-09  Carnet Ocre          blog personnel éditorial           grande marque italique + accroche à gauche, rubriques fines et actions à droite, double filet
 //  media-10  Écran Rouge          chaîne vidéo / créateur            marque en pavé, recherche large centrale, compte + abonnement, rangée de « puces » de rubriques
@@ -132,8 +132,8 @@ module.exports = {
     },
     // ── 07 · galerie d'art contemporain ──────────────────────────────────────────────────────────────────────────────────
     {
-      key: "media-07", name: "Cimaise", art: "Galerie d'art contemporain", desc: "Trois colonnes hautes séparées par des filets verticaux, rubriques empilées : l'en-tête d'un accrochage.",
-      S: ID("media-07", "Cimaise", { bg: "#ffffff", fg: "#0a0a0a", mute: "#4a4a4a", alt: "#f1f1ee", accent: "#ff3b00", onAccent: "#0a0a0a", line: "#0a0a0a", font: "font.space-mono", head: "font.syne", weight: "700", caps: "uppercase" }),
+      key: "media-07", name: "Vernissage", art: "Galerie d'art contemporain", desc: "Trois colonnes hautes séparées par des filets verticaux, rubriques empilées : l'en-tête d'un accrochage.",
+      S: ID("media-07", "Vernissage", { bg: "#ffffff", fg: "#0a0a0a", mute: "#4a4a4a", alt: "#f1f1ee", accent: "#ff3b00", onAccent: "#0a0a0a", line: "#0a0a0a", font: "font.space-mono", head: "font.syne", weight: "700", caps: "uppercase" }),
       build: (k, P) => {
         const col = { paddingTop: "26px", paddingBottom: "26px", paddingLeft: "26px", paddingRight: "26px", borderStyle: "solid", borderWidth: "0px", borderRightWidth: "1px", borderColor: k.S.line, alignSelf: "stretch" };
         return [
