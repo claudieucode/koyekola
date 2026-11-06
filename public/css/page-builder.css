@@ -2304,3 +2304,9 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-tl-page { margin-top: 8px; }
 .pb-tl .is-warn { color: var(--editor-danger); }
 @media (prefers-reduced-motion: reduce) { .pb-tl-bar { transition: none; } }
+/* ms:tl — correctif : rien dans « Scènes et mouvement » ne doit élargir le panneau de la page */
+.pb-tl, .pb-tl-page, .pb-tl-step, .pb-tl-scene, .pb-tl-add { grid-template-columns: minmax(0, 1fr); max-width: 100%; }
+.pb-tl > *, .pb-tl-page > *, .pb-tl-step > *, .pb-tl-scene > *, .pb-tl-add > * { min-width: 0; max-width: 100%; }
+.pb-tl select, .pb-tl input[type="text"], .pb-tl input[type="number"] { max-width: 100%; box-sizing: border-box; }
+.pb-tl-board { max-width: 100%; }
+[data-pb-page-settings] details[data-group="ms-scenes"] { max-width: 100%; overflow-x: hidden; }
