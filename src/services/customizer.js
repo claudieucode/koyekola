@@ -26,6 +26,7 @@ const siteSettings = () => require("../marketing/pages/siteSettings");
 // live : true = ne change que le CSS (aperçu instantané sans recharger la page) ; false = change le contenu (l'aperçu se recharge, sans perdre la position)
 const BOTH = ["principal", "site"];
 const PANELS = [
+  { id: "theme-choice", label: "Thème du site", icon: "palette", hint: "Changer de thème : l'aperçu l'essaie tout de suite, rien n'est publié avant « Publier »." },
   { id: "identite", label: "Identité du site", icon: "id", hint: "Nom, slogan, logos et icône de l'onglet." },
   { id: "couleurs", label: "Couleurs", icon: "palette", hint: "Couleurs globales, liens et bordures." },
   { id: "typographie", label: "Typographie", icon: "type", hint: "Polices, tailles, graisses et interlignes." },
@@ -207,8 +208,18 @@ add("tokens.customColors", "palette", "palette", "Couleurs de la palette", { sco
 // CSS (un site : réglage « customCss » du site ; le principal n'a pas de CSS additionnel enregistrable)
 add("settings.customCss", "css", "css", "CSS additionnel du site", { scope: ["site"], perm: "pages.code", max: 20000, help: "Règles « .ma-classe { … } » appliquées aux pages du site (aucun @, aucune ressource externe)." });
 
+// Thème du site (sites seulement) : essayé dans l'aperçu, appliqué par « Publier » (activation du thème : jetons du thème, réglages précédents du thème restaurés)
+const themeChoices = (siteId) => {
+  const lib = require("../marketing/themes/library");
+  const active = require("./themes").activeKey(siteId);
+  const list = lib.allMeta().map((m) => [m.key, m.name]);
+  if (!list.some(([k]) => k === active)) list.unshift([active, active === "kolakisa" ? "Kolakisa — d'origine" : active]);
+  return list;
+};
+add("theme.key", "theme-choice", "select", "Thème", { scope: ["site"], live: false, options: themeChoices, help: "Changer de thème applique ses couleurs, polices et formes. Vos réglages de chaque thème sont gardés : si vous revenez à un thème, ils sont restaurés." });
+
 const BY_ID = new Map(controls.map((c) => [c.id, c]));
-const ROOTS = ["tokens", "header", "footer", "settings", "name", "parts"];
+const ROOTS = ["tokens", "header", "footer", "settings", "name", "parts", "theme"];
 
 // Ce que le moteur ne sait PAS rendre : affiché tel quel dans le personnalisateur (jamais une option sans effet)
 const UNSUPPORTED = {
@@ -229,10 +240,52 @@ const UNSUPPORTED = {
   ],
 };
 
+// ---------- Thème du site : réglages propres à chaque thème (manifeste mesuré, themes/customization) ----------
+// Un site dont le thème est un paquet ne reçoit QUE les réglages qui agissent sur ce thème : les siens (manifeste) + ceux du moteur que la mesure a vus agir (jetons).
+const ALWAYS = (c) => c.panel === "theme-choice" || c.panel === "identite" || c.panel === "menus" || c.panel === "css" || c.id.startsWith("parts.");
+const themeCustomization = () => require("../marketing/themes/customization");
+const packKeyOf = (siteId, over) => {
+  if (siteId === null || siteId === undefined) return "";
+  if (typeof over === "string" && over && themeCustomization().manifestOf(over)) return over;
+  try {
+    const row = db.prepare("SELECT tokens FROM mk_sites WHERE id = ?").get(siteId);
+    const k = row && row.tokens ? (JSON.parse(row.tokens).pack || {}).key : "";
+    return k && require("../marketing/themes/packs").has(k) ? k : "";
+  } catch { return ""; }
+};
+const TP = "tokens.pack.options.";
+const KIND = { color: "color", number: "number", select: "select", toggle: "toggle" };
+function themeControls(siteId, over) {
+  const key = packKeyOf(siteId, over);
+  if (!key) return [];
+  const m = themeCustomization().manifestOf(key);
+  if (!m) return [];
+  const out = [];
+  for (const pn of m.panels) for (const c of pn.controls) {
+    out.push({ id: TP + c.optKey, panel: `tp-${pn.id}`, kind: KIND[c.kind], label: c.label, scope: ["site"], live: true, pack: true, themeKey: key, source: c.source,
+      default: c.default, ...(c.options ? { options: c.options.map(([v, l]) => [String(v), l]) } : {}), ...(c.kind === "number" ? { min: c.min, max: c.max, step: c.step || 1, unit: c.unit || "" } : {}), ...(c.kind === "toggle" ? {} : {}) });
+  }
+  return out;
+}
+const themePanels = (siteId, over) => { const key = packKeyOf(siteId, over); const m = key ? themeCustomization().manifestOf(key) : null; return m ? m.panels.map((pn) => ({ id: `tp-${pn.id}`, label: pn.label, icon: pn.id === "theme" ? "palette" : "layout", hint: pn.hint, theme: true })) : []; };
+// Réglage par identifiant, pour CE site (statique ou propre au thème)
+const ctl = (id, siteId, over) => BY_ID.get(id) || (String(id).startsWith(TP) ? themeControls(siteId, over).find((c) => c.id === id) || null : null);
+
 // ---------- Portée ----------
 const scopeName = (siteId) => (siteId === null ? "principal" : "site");
-const catalog = (siteId) => controls.filter((c) => c.scope.includes(scopeName(siteId)));
-const panelsFor = (siteId) => PANELS.filter((p) => p.id === "menus" || catalog(siteId).some((c) => c.panel === p.id)).map((p) => ({ ...p, controls: catalog(siteId).filter((c) => c.panel === p.id).map((c) => publicControl(c, siteId)) }));
+const catalog = (siteId, over) => {
+  const base = controls.filter((c) => c.scope.includes(scopeName(siteId)));
+  const key = packKeyOf(siteId, over);
+  if (!key) return base;
+  if (process.env.KOLAKISA_THEME_MEASURE === "1") return [...base, ...themeControls(siteId, over)]; // mesure des effets (scripts/mesurer-personnalisation-moteur.js) : aucun réglage masqué
+  const eff = themeCustomization().staticFor(key);
+  return [...base.filter((c) => ALWAYS(c) || eff.has(c.id)), ...themeControls(siteId, over)];
+};
+const panelsFor = (siteId, over) => {
+  const cat = catalog(siteId, over);
+  const all = [...themePanels(siteId, over), ...PANELS];
+  return all.filter((p) => p.id === "menus" || cat.some((c) => c.panel === p.id)).map((p) => ({ ...p, controls: cat.filter((c) => c.panel === p.id).map((c) => publicControl(c, siteId)) }));
+};
 function publicControl(c, siteId) {
   const o = typeof c.options === "function" ? c.options(siteId) : c.options;
   const { options, scope, ...rest } = c;
@@ -256,12 +309,18 @@ function liveConfig(ctx, siteId) {
     return { config: clone({ tokens: st.published.tokens, header: st.published.header, footer: st.published.footer }), revision: st.revision, pendingEngineDraft: st.hasDraft };
   }
   const site = pages().requireSite(ctx, siteId);
-  return { config: clone({ name: site.name, tokens: site.tokens, settings: site.settings, parts: { header: site.header_component_id || null, footer: site.footer_component_id || null } }), revision: site.settings_revision, site, pendingEngineDraft: false };
+  return { config: clone({ name: site.name, tokens: site.tokens, settings: site.settings, theme: { key: require("./themes").activeKey(siteId) }, parts: { header: site.header_component_id || null, footer: site.footer_component_id || null } }), revision: site.settings_revision, site, pendingEngineDraft: false };
 }
 
 // ---------- Validation d'un ensemble de changements ----------
 // Chaque chemin doit exister dans le catalogue de CE site ; la valeur est convertie puis validée par le moteur lui-même (validation stricte).
 function coerce(c, raw, siteId) {
+  if (c.pack) {
+    if (raw === "" || raw === null || raw === undefined) return String(c.default); // « rétablir » : valeur d'origine du thème
+    const v = themeCustomization().cleanValue(c.kind === "toggle" ? { kind: "toggle" } : c, c.kind === "toggle" ? (raw === true || raw === "on" || raw === "1" || raw === 1 || raw === "true" ? "on" : "off") : raw);
+    if (v === null) throw new UserError(`${c.label} : valeur refusée pour ce thème.`);
+    return v;
+  }
   if (c.kind === "palette") {
     if (!Array.isArray(raw) || raw.length > c.max) throw new UserError(`${c.label} : ${c.max} couleurs au plus.`);
     return raw.map((x) => ({ key: String((x && x.key) || ""), label: String((x && x.label) || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40), hex: String((x && x.hex) || "").trim().toLowerCase() }));
@@ -317,9 +376,11 @@ function cleanChanges(raw, siteId, { can = () => true } = {}) {
   const entries = Object.entries(raw);
   if (entries.length > MAX_CHANGES) throw new UserError("Trop de réglages à la fois.");
   const out = {};
+  const over = typeof raw["theme.key"] === "string" ? raw["theme.key"] : "";
+  const cat = catalog(siteId, over);
   for (const [id, value] of entries) {
-    const c = BY_ID.get(id);
-    if (!c || !c.scope.includes(scopeName(siteId))) throw new UserError(`Réglage inconnu pour ce site : « ${String(id).slice(0, 60)} ».`);
+    const c = ctl(id, siteId, over);
+    if (!c || !c.scope.includes(scopeName(siteId)) || !cat.some((x) => x.id === id)) throw new UserError(`Réglage inconnu pour ce site : « ${String(id).slice(0, 60)} ».`);
     if (c.perm && !can(c.perm)) throw new UserError(`« ${c.label} » : vous n'avez pas la permission de modifier ce réglage (« ${c.perm} »).`);
     const v = coerce(c, value, siteId);
     if (c.kind === "media" && !mediaBelongs(c, v, siteId)) throw new UserError(`${c.label} : cette image n'appartient pas à la médiathèque de ce site.`);
@@ -329,16 +390,30 @@ function cleanChanges(raw, siteId, { can = () => true } = {}) {
 }
 
 // Applique des changements à une configuration complète et la valide avec les moteurs (strict : une valeur refusée lève une erreur claire)
+// Jetons d'un thème de la bibliothèque pour un site (les couleurs ajoutées par l'équipe survivent ; les réglages déjà faits sur ce thème sont restaurés)
+function themeSwitchTokens(siteId, key, base) {
+  const m = require("../marketing/themes/library").manifests().find((x) => x.key === key);
+  if (!m) return null;
+  const saved = require("./themes").savedPackOptions(siteId, key);
+  return { ...clone(m.tokens), customColors: (base && base.customColors) || [], pack: { key, options: saved || {} } };
+}
 function applyChanges(config, changes, siteId) {
   const next = clone(config);
+  if (siteId !== null && typeof changes["theme.key"] === "string" && changes["theme.key"] !== ((config.theme || {}).key)) {
+    const t = themeSwitchTokens(siteId, changes["theme.key"], config.tokens);
+    if (!t) throw new UserError("Thème : choix inconnu.");
+    next.tokens = t;
+  }
   for (const [id, v] of Object.entries(changes)) setPath(next, id, v);
+  delete next.theme;
   if (siteId === null) {
     // Le moteur d'apparence valide tout (jetons, en-tête, pied de page) ; les valeurs refusées sont signalées, jamais corrigées en silence
     const normalized = appearance.normalizeConfig(next, { strict: true, siteId: null });
-    assertTokensKept(next.tokens, normalized.tokens, changes);
+    assertTokensKept(next.tokens, normalized.tokens, changes, siteId);
     return { config: normalized };
   }
   const tokens = tokensLib.normalizeTokens(next.tokens, { strict: true, fontScope: { siteId } });
+  assertTokensKept(next.tokens, tokens, Object.fromEntries(Object.entries(changes).filter(([id]) => id.startsWith(TP))), siteId);
   const settings = siteSettings().normalizeSettings(next.settings, { strict: true });
   const name = String(next.name || "").trim();
   if (!name) throw new UserError("Le nom du site est obligatoire.");
@@ -347,20 +422,21 @@ function applyChanges(config, changes, siteId) {
   return { config: { name, tokens, settings, parts } };
 }
 // Les jetons sont « normalisés » : une valeur remplacée par un défaut (hors limites) est une erreur, pas une correction silencieuse
-function assertTokensKept(sent, normalized, changes) {
+function assertTokensKept(sent, normalized, changes, siteId) {
   for (const id of Object.keys(changes)) {
     if (!id.startsWith("tokens.")) continue;
     const a = getPath({ tokens: sent }, id), b = getPath({ tokens: normalized }, id);
     if (a === undefined || a === null || a === "") continue;
-    if (String(a).toLowerCase() !== String(b).toLowerCase() && Number(a) !== Number(b)) throw new UserError(`${BY_ID.get(id).label} : valeur hors des limites autorisées.`);
+    if (String(a).toLowerCase() !== String(b).toLowerCase() && Number(a) !== Number(b)) throw new UserError(`${(ctl(id, siteId) || BY_ID.get(id) || { label: id }).label} : valeur hors des limites autorisées.`);
   }
 }
 
 // Seuls les réglages réellement différents de la version en ligne restent dans le brouillon
-function diffAgainst(live, changes) {
+function diffAgainst(live, changes, siteId) {
   const out = {};
   for (const [id, v] of Object.entries(changes)) {
-    const cur = getPath(live, id);
+    let cur = getPath(live, id);
+    if ((cur === undefined || cur === null) && String(id).startsWith(TP)) { const pc = ctl(id, siteId); if (pc) cur = pc.default; }
     if (Array.isArray(v)) { if (JSON.stringify(v) !== JSON.stringify(Array.isArray(cur) ? cur.map((x) => ({ key: x.key, label: x.label, hex: x.hex })) : [])) out[id] = v; continue; }
     const same = typeof v === "number" ? Number(cur) === v : (v === null || v === "") ? (cur === null || cur === undefined || cur === "") : String(cur) === String(v);
     if (!same) out[id] = v;
@@ -376,7 +452,7 @@ const resolveColor = (v, config) => {
   const custom = (t.customColors || []).find((c) => c.key === key);
   return (custom && custom.hex) || (t.colors && t.colors[key]) || "";
 };
-const valuesOf = (siteId, config) => Object.fromEntries(catalog(siteId).map((c) => { const v = getPath(config, c.id); return [c.id, v === undefined || v === null ? (c.kind === "toggle" ? false : "") : (c.kind === "color" ? resolveColor(v, config) : v)]; }).map(([id, v]) => [id, v === "" && BY_ID.get(id).kind === "palette" ? [] : v]));
+const valuesOf = (siteId, config, over = (config.theme && config.theme.key) || "") => Object.fromEntries(catalog(siteId, over).map((c) => { let v = getPath(config, c.id); if (c.pack) { if (v === undefined || v === null || v === "") v = c.default; return [c.id, c.kind === "toggle" ? v === "on" : c.kind === "number" ? Number(v) : v]; } return [c.id, v === undefined || v === null ? (c.kind === "toggle" ? false : "") : (c.kind === "color" ? resolveColor(v, config) : v)]; }).map(([id, v]) => [id, v === "" && BY_ID.get(id) && BY_ID.get(id).kind === "palette" ? [] : v]));
 
 // ---------- Brouillon ----------
 const draftRow = (siteId) => db.prepare(`SELECT * FROM cms_customizer_drafts WHERE ${sameScope("site_id")}`).get(siteId);
@@ -389,11 +465,11 @@ function state(ctx, siteId, { can = () => true } = {}) {
   let changes = row ? parse(row.changes) : {};
   let stale = null;
   try { changes = cleanChanges(changes, siteId, { can: () => true }); applyChanges(live.config, changes, siteId); } catch (e) { stale = e.message; changes = {}; }
-  changes = diffAgainst(live.config, changes);
+  changes = diffAgainst(live.config, changes, siteId);
   const effective = applyChanges(live.config, changes, siteId).config;
   return {
-    siteId, panels: panelsFor(siteId), unsupported: UNSUPPORTED[scopeName(siteId)],
-    live: valuesOf(siteId, live.config), values: valuesOf(siteId, effective), changes,
+    siteId, panels: panelsFor(siteId, typeof changes["theme.key"] === "string" ? changes["theme.key"] : ""), unsupported: UNSUPPORTED[scopeName(siteId)],
+    live: valuesOf(siteId, live.config, typeof changes["theme.key"] === "string" ? changes["theme.key"] : ""), values: valuesOf(siteId, { ...effective, theme: { key: typeof changes["theme.key"] === "string" ? changes["theme.key"] : (live.config.theme || {}).key } }), changes,
     draft: row ? { rev: row.rev, baseRev: row.base_rev, updatedAt: row.updated_at, updatedBy: row.updated_by, count: Object.keys(changes).length, publishAt: row.publish_at ? `${row.publish_at.replace(" ", "T")}Z` : null, scheduleError: row.publish_error || null } : { rev: 0, baseRev: live.revision, updatedAt: null, count: 0 },
     revision: live.revision, shares: activeShares(siteId), stale, pendingEngineDraft: live.pendingEngineDraft, can: Object.fromEntries(catalog(siteId).filter((c) => c.perm).map((c) => [c.id, Boolean(can(c.perm))])),
   };
@@ -402,7 +478,7 @@ function state(ctx, siteId, { can = () => true } = {}) {
 // Enregistre le brouillon (remplace l'ensemble). rev = version que la personne a sous les yeux : si une autre session l'a changée, rien n'est écrasé.
 function saveDraft(ctx, siteId, rawChanges, userId, { rev, can } = {}) {
   const live = liveConfig(ctx, siteId);
-  const changes = diffAgainst(live.config, cleanChanges(rawChanges, siteId, { can }));
+  const changes = diffAgainst(live.config, cleanChanges(rawChanges, siteId, { can }), siteId);
   applyChanges(live.config, changes, siteId); // refus clair avant d'écrire
   const row = draftRow(siteId);
   if (row && Number.isInteger(rev) && rev !== row.rev) throw new UserError("Le brouillon a été modifié depuis que vous l'avez ouvert (autre onglet ou autre personne). Rechargez le personnalisateur : vos modifications n'ont pas été enregistrées.");
@@ -422,9 +498,9 @@ function discardDraft(siteId) {
 const BODY_VARS = (tokens) => tokensLib.tokensToCss(tokens);
 function previewFor(ctx, siteId, rawChanges, { can } = {}) {
   const live = liveConfig(ctx, siteId);
-  const changes = diffAgainst(live.config, cleanChanges(rawChanges, siteId, { can }));
+  const changes = diffAgainst(live.config, cleanChanges(rawChanges, siteId, { can }), siteId);
   const { config } = applyChanges(live.config, changes, siteId);
-  const structural = Object.keys(changes).some((id) => !BY_ID.get(id).live);
+  const structural = Object.keys(changes).some((id) => !(ctl(id, siteId) || { live: false }).live);
   return { changes, config, structural, assets: assetsOf(siteId, config), warnings: contrast(config.tokens) };
 }
 // Ce que la page publique du site charge, recalculé : feuilles de style (même code que le rendu public)
@@ -437,7 +513,7 @@ function assetsOf(siteId, config) {
   const a = siteSettings().siteAssets(config.tokens, config.settings, themeCss);
   const vars = BODY_VARS(config.tokens);
   // @font-face de la bibliothèque et des polices téléversées par CE site, pour que la police choisie s'affiche sans recharger
-  return { bodyStyle: vars, theme: a.theme, custom: a.custom, faces: String(fontLib.faceCssFor(vars, { siteId }) || "").replace(/[<>]/g, "") };
+  return { bodyStyle: vars, theme: a.theme, custom: a.custom, pack: a.pack ? { vars: a.pack.vars, attr: a.pack.attr, cz: a.pack.cz } : null, faces: String(fontLib.faceCssFor(vars, { siteId }) || "").replace(/[<>]/g, "") };
 }
 function contrast(t) {
   const out = [], c = t.colors;
@@ -456,20 +532,29 @@ function publish(ctx, siteId, userId, { rev, note = "", can = () => true } = {})
   const live = liveConfig(ctx, siteId);
   if (siteId === null && live.pendingEngineDraft) throw new UserError("Un brouillon de l'Éditeur du site (Apparence → Styles, En-tête ou Pied de page) est en cours : publiez-le ou annulez-le d'abord, pour ne publier que vos changements ici.");
   if (row.base_rev !== live.revision) throw new UserError("L'apparence de ce site a été publiée par ailleurs depuis le début de ce brouillon : rechargez le personnalisateur pour repartir de la version en ligne (vos changements ne sont pas appliqués).");
-  const changes = diffAgainst(live.config, cleanChanges(parse(row.changes), siteId, { can }));
+  let changes = diffAgainst(live.config, cleanChanges(parse(row.changes), siteId, { can }), siteId);
   if (!Object.keys(changes).length) { discardDraft(siteId); throw new UserError("Rien à publier : le brouillon est identique à la version en ligne."); }
-  const { config } = applyChanges(live.config, changes, siteId);
-  const previous = Object.fromEntries(Object.keys(changes).map((id) => { const v = getPath(live.config, id); return [id, v === undefined ? null : v]; }));
+  // Changement de thème : activé d'abord (jetons du thème, réglages rangés restaurés) ; le reste des réglages du brouillon s'applique par-dessus, comme choisi dans l'aperçu
+  let liveNow = live;
+  if (siteId !== null && typeof changes["theme.key"] === "string") {
+    const themes = require("./themes"), key = changes["theme.key"];
+    if (!themes.get(siteId, key)) themes.installFromCatalog(ctx, siteId, key);
+    themes.activate(ctx, siteId, key);
+    liveNow = liveConfig(ctx, siteId);
+    changes = diffAgainst(liveNow.config, Object.fromEntries(Object.entries(changes).filter(([id]) => id !== "theme.key")), siteId);
+  }
+  const { config } = applyChanges(liveNow.config, changes, siteId);
+  const previous = Object.fromEntries(Object.keys(changes).map((id) => { const v = getPath(liveNow.config, id); return [id, v === undefined ? null : v]; }));
   transaction(db, () => {
     if (siteId === null) {
       appearance.setDraft(null, config, userId);
       appearance.publish(null, userId, note || "Personnaliser");
     } else {
-      pages().saveSiteDesign(ctx, siteId, { tokens: config.tokens, settings: config.settings, name: config.name, revision: live.revision });
-      const lp = live.config.parts || {};
+      pages().saveSiteDesign(ctx, siteId, { tokens: config.tokens, settings: config.settings, name: config.name, revision: liveNow.revision });
+      const lp = liveNow.config.parts || {};
       if ((lp.header || null) !== config.parts.header || (lp.footer || null) !== config.parts.footer) pages().setSiteParts(ctx, siteId, { header: config.parts.header, footer: config.parts.footer });
     }
-    db.prepare("INSERT INTO cms_customizer_versions (site_id, changes, previous, note, published_by) VALUES (?, ?, ?, ?, ?)").run(siteId, JSON.stringify(changes), JSON.stringify(previous), String(note || "").slice(0, 120), userId);
+    db.prepare("INSERT INTO cms_customizer_versions (site_id, changes, previous, note, published_by) VALUES (?, ?, ?, ?, ?)").run(siteId, JSON.stringify(changes), JSON.stringify(previous), String(note || (liveNow !== live ? "Changement de thème" : "")).slice(0, 120), userId);
     db.prepare(`DELETE FROM cms_customizer_versions WHERE ${sameScope("site_id")} AND id NOT IN (SELECT id FROM cms_customizer_versions WHERE ${sameScope("site_id")} ORDER BY id DESC LIMIT ?)`).run(siteId, siteId, MAX_VERSIONS);
     discardDraft(siteId);
   });
@@ -484,7 +569,7 @@ function restoreVersion(ctx, siteId, versionId, userId, { can } = {}) {
   const r = db.prepare(`SELECT previous FROM cms_customizer_versions WHERE id = ? AND ${sameScope("site_id")}`).get(Number(versionId), siteId);
   if (!r) throw new UserError("Version introuvable.");
   const prev = parse(r.previous);
-  const usable = Object.fromEntries(Object.entries(prev).filter(([id]) => BY_ID.has(id) && BY_ID.get(id).scope.includes(scopeName(siteId))).map(([id, v]) => [id, v === null ? (BY_ID.get(id).kind === "toggle" ? false : BY_ID.get(id).kind === "palette" ? [] : "") : v]));
+  const usable = Object.fromEntries(Object.entries(prev).filter(([id]) => { const c = ctl(id, siteId); return c && c.scope.includes(scopeName(siteId)); }).map(([id, v]) => { const c = ctl(id, siteId); return [id, v === null ? (c.pack ? c.default : c.kind === "toggle" ? false : c.kind === "palette" ? [] : "") : v]; }));
   if (!Object.keys(usable).length) throw new UserError("Cette version ne contient aucun réglage restaurable.");
   const row = draftRow(siteId);
   const merged = { ...(row ? parse(row.changes) : {}), ...usable };
@@ -558,4 +643,4 @@ function shareLookup(token) {
 const revokeShares = (siteId) => db.prepare("UPDATE cms_customizer_shares SET revoked_at = datetime('now') WHERE site_id = ? AND revoked_at IS NULL").run(siteId).changes;
 const activeShares = (siteId) => (siteId === null ? 0 : db.prepare("SELECT COUNT(*) AS n FROM cms_customizer_shares WHERE site_id = ? AND revoked_at IS NULL AND expires_at > datetime('now')").get(siteId).n);
 
-module.exports = { schedule, unschedule, runDue, createShare, shareLookup, revokeShares, activeShares, PANELS, UNSUPPORTED, catalog, panelsFor, state, saveDraft, discardDraft, previewFor, publish, history, restoreVersion, cleanChanges, applyChanges, assetsOf, controlById: (id) => BY_ID.get(id) || null, MAX_VERSIONS };
+module.exports = { schedule, unschedule, runDue, createShare, shareLookup, revokeShares, activeShares, PANELS, UNSUPPORTED, catalog, panelsFor, state, saveDraft, discardDraft, previewFor, publish, history, restoreVersion, cleanChanges, applyChanges, assetsOf, controlById: (id, siteId) => ctl(id, siteId === undefined ? null : siteId) || null, packKeyOf, themeControls, MAX_VERSIONS };
