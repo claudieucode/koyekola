@@ -80,7 +80,7 @@ body[data-pk-entete="enseigne"] .cp-btn--call{display:none}
 @media (max-width:860px){.cp-avis{grid-template-columns:1fr}}
 .cp-avis figure{margin:0;background:var(--cp-paper);border:2px solid var(--cp-ink);padding:1.1rem}
 .cp-avis blockquote{margin:0 0 .8rem}.cp-avis blockquote p{margin:0}
-.cp-avis figcaption{font-weight:700;font-size:.9rem}.cp-avis figcaption span{color:#b86f00;margin-left:.4rem;letter-spacing:.1em}
+.cp-avis figcaption{font-weight:700;font-size:.9rem}.cp-avis figcaption span{color:#9a5b00;margin-left:.4rem;letter-spacing:.1em}
 body[data-pk-nuit="oui"] .cp-avis figcaption span{color:var(--cp-butter)}
 .cp-split{display:grid;grid-template-columns:1fr 1fr;gap:2rem 3rem}
 @media (max-width:760px){.cp-split{grid-template-columns:1fr}}
