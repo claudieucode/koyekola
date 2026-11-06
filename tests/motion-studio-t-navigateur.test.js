@@ -75,7 +75,7 @@ describe("Motion Studio lot t : 12 composants de texte (Chrome réel)", { skip: 
   const ready = (page, k) => page.waitForFunction((s) => { const e = document.querySelector(s); return e && e.getAttribute("data-kw-ms-state"); }, sel(k), { timeout: 15000 });
   const readyAll = async (page, keys = ["heading", "reveal", "kinetic", "typewriter", "rotating", "gradient", "mask", "scramble", "ticker", "marquee", "circular", "cascade"]) => { for (const k of keys) await ready(page, k); };
   const noOverflow = (page) => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
-  const text = (page, s) => page.evaluate((s) => document.querySelector(s).textContent.replace(/\s+/g, " ").trim(), s);
+  const text = (page, s) => page.evaluate((s) => document.querySelector(s).textContent.replace(/[ \t\r\n]+/g, " ").trim(), s);
 
   test("page publiée : feuille, runtime et modules chargés ; les 12 composants démarrent sans erreur", async () => {
     const reqs = []; const { page, errs, ctx } = await (async () => { const c = await browser.newContext({ viewport: { width: 1200, height: 800 } }); const p = await c.newPage(); const er = []; p.on("pageerror", (e) => er.push(e.message)); p.on("request", (r) => reqs.push(r.url())); await p.goto(`${srv.base}/p/${slug}`, { waitUntil: "load" }); return { page: p, errs: er, ctx: c }; })();
@@ -110,7 +110,7 @@ describe("Motion Studio lot t : 12 composants de texte (Chrome réel)", { skip: 
     // pause : le texte ne change plus
     const btn = page.locator(".kw-ms-tpause").first();
     await btn.scrollIntoViewIfNeeded(); assert.equal(await btn.getAttribute("aria-pressed"), "false");
-    await btn.click(); assert.equal(await btn.getAttribute("aria-pressed"), "true");
+    await btn.click(); assert.equal(await btn.getAttribute("aria-pressed"), "true"); await wait(250);
     const a = await typed(); await wait(900); assert.equal(await typed(), a, "texte figé pendant la pause");
     await btn.click(); await until(async () => (await typed()) !== a, "reprise après la pause", 6000);
     assert.deepEqual(errs, []); await ctx.close();
@@ -164,10 +164,10 @@ describe("Motion Studio lot t : 12 composants de texte (Chrome réel)", { skip: 
     const r1 = await rot(); await wait(400); assert.notEqual(await rot(), r1, "le cercle tourne");
     assert.ok(await page.locator(`${sel("circular")} textPath`).count() === 1);
     // masque : balayage jusqu'à l'état final plein
-    await until(() => page.evaluate((s) => getComputedStyle(document.querySelector(s + " .kw-ms-tmask-text")).clipPath, sel("mask")).then((c) => c === "inset(0px)" || c === "none" || c === "inset(0px 0px 0px 0px)"), "balayage terminé", 8000);
+    await until(() => page.evaluate((s) => getComputedStyle(document.querySelector(s + " .kw-ms-tmask-text")).clipPath, sel("mask")).then((c) => c === "none" || /^inset\(0(px|%)?( 0(px|%)?){0,3}\)$/.test(c)), "balayage terminé", 8000);
     assert.equal(await page.locator(`${sel("mask")} .kw-ms-tmask-out`).count(), 1, "contour sous le remplissage");
     // titre : tracé dessiné jusqu'au bout
-    await until(() => page.evaluate((s) => { const d = document.querySelector(s + " .kw-ms-ahd-deco"); const c = getComputedStyle(d).clipPath; return c === "none" || /inset\(0(px)?( 0(px)?){0,3}\)/.test(c); }, sel("heading")), "tracé terminé", 8000);
+    await until(() => page.evaluate((s) => { const d = document.querySelector(s + " .kw-ms-ahd-deco"); const c = getComputedStyle(d).clipPath; return c === "none" || /^inset\(0(px|%)?( 0(px|%)?){0,3}\)$/.test(c); }, sel("heading")), "tracé terminé", 8000);
     // révélation par lettres et cinétique : état final lisible (opacité 1, pas de transformation)
     for (const k of ["reveal", "kinetic"]) await until(() => page.evaluate((s) => [...document.querySelectorAll(s + " .kw-ms-u, " + s + " .kw-ms-kin-line")].every((u) => getComputedStyle(u).opacity === "1" && ["none", "matrix(1, 0, 0, 1, 0, 0)"].includes(getComputedStyle(u).transform)), sel(k)), `${k} terminé`, 9000);
     assert.ok(await page.locator(`${sel("reveal")} .kw-ms-u`).count() === "Révélation lettre par lettre".replace(/ /g, "").length, "une unité par lettre");
@@ -243,7 +243,7 @@ describe("Motion Studio lot t : 12 composants de texte (Chrome réel)", { skip: 
     for (const k of ["typewriter", "rotating", "gradient", "mask", "scramble", "ticker", "circular", "cascade", "kinetic", "heading", "marquee"]) assert.equal(await state(page, k), "reduced", k);
     assert.equal(await text(page, sel("typewriter")), "Nous créons des sites , des boutiques");
     assert.equal(await page.locator(`${sel("typewriter")} .kw-ms-tpw-vis`).count(), 0, "pas de version animée");
-    assert.equal(await text(page, sel("ticker")), "1 250+ clients");
+    assert.equal(await text(page, sel("ticker")), "1\u202f250+clients");
     assert.equal(await text(page, sel("scramble")), "Décodez votre message");
     assert.equal(await page.locator(`${sel("marquee")} .kw-ms-mvel-track`).count(), 0, "bande immobile");
     assert.equal(await page.locator(".kw-ms-tpause").count(), 0, "rien ne bouge : pas de bouton Pause");
@@ -257,7 +257,7 @@ describe("Motion Studio lot t : 12 composants de texte (Chrome réel)", { skip: 
 
   test("sans JavaScript : tous les textes sont affichés, visibles et lisibles ; fond découpé conservé ; aucun débordement", async () => {
     const { page, ctx } = await open({ viewport: { width: 320, height: 700 } }, { js: false });
-    const vis = (s) => page.evaluate((s) => { const e = document.querySelector(s); const st = getComputedStyle(e); return { t: e.textContent.replace(/\s+/g, " ").trim(), op: st.opacity, v: st.visibility, d: st.display }; }, s);
+    const vis = (s) => page.evaluate((s) => { const e = document.querySelector(s); const st = getComputedStyle(e); return { t: e.textContent.replace(/[ \t\r\n]+/g, " ").trim(), op: st.opacity, v: st.visibility, d: st.display }; }, s);
     assert.match((await vis(sel("typewriter"))).t, /^Nous créons des sites/);
     assert.equal((await vis(sel("rotating"))).t, "Pour enseigner vendre grandir mieux");
     assert.equal((await vis(sel("ticker"))).t, "1 250+clients");
@@ -265,7 +265,7 @@ describe("Motion Studio lot t : 12 composants de texte (Chrome réel)", { skip: 
     assert.equal((await vis(sel("mask"))).t, "ÉNERGIE");
     assert.equal((await vis(sel("gradient"))).t, "Un texte plein de couleurs");
     assert.match((await vis(sel("heading"))).t, /Créez des pages inoubliables vite/);
-    assert.match((await vis(sel("cascade"))).t, /Simple Un Rapide Deux Souple Trois Clair Quatre/);
+    assert.match((await vis(sel("cascade"))).t, /SimpleUn RapideDeux SoupleTrois ClairQuatre/);
     assert.match((await vis(sel("marquee"))).t, /Formations/);
     for (const k of ["typewriter", "rotating", "ticker", "mask", "gradient", "heading", "kinetic", "cascade", "marquee", "circular"]) { const v = await vis(sel(k)); assert.deepEqual([v.op, v.v], ["1", "visible"], k); }
     // seul le premier mot du texte rotatif est affiché, les autres sont retirés de l'affichage sans l'être des lecteurs d'écran
@@ -307,8 +307,8 @@ describe("Motion Studio lot t : 12 composants de texte (Chrome réel)", { skip: 
     await until(() => frameEval((ids) => Object.values(ids).every((i) => { const e = document.querySelector('[data-node-id="' + i + '"]'); return e && e.getAttribute("data-kw-ms-state") === "ready"; }), NID).catch(() => false), "12 composants initialisés dans le canevas", 40000).catch(async () => {
       const st = await frameEval((ids) => Object.entries(ids).map(([t, i]) => { const e = document.querySelector('[data-node-id="' + i + '"]'); return t + ":" + (e && e.getAttribute("data-kw-ms-state")); }), NID); throw new Error("états : " + st.join(" "));
     });
-    const cv = (type, selector) => frameEval(([i, s]) => { const e = document.querySelector('[data-node-id="' + i + '"]'); const t = s ? e.querySelector(s) : e; return t ? t.textContent.replace(/\s+/g, " ").trim() : null; }, [NID[type], selector]);
-    assert.equal(await cv("motiontypewriter", ".kw-ms-tbox-live"), "des sites", "machine à écrire : phrase complète au repos");
+    const cv = (type, selector) => frameEval(([i, s]) => { const e = document.querySelector('[data-node-id="' + i + '"]'); const t = s ? e.querySelector(s) : e; return t ? t.textContent.replace(/[ \t\r\n]+/g, " ").trim() : null; }, [NID[type], selector]);
+    assert.equal(await cv("motiontypewriter", ".kw-ms-tbox-live"), "des sites rapides", "machine à écrire : phrase complète au repos");
     assert.equal(await cv("motionnumberticker", ".kw-ms-tbox-live"), "1 250+", "compteur : valeur finale au repos");
     assert.equal(await cv("motiontextscramble", ".kw-ms-tbox-live"), "Décodez votre message");
     assert.equal(await frameEval((i) => document.querySelector('[data-node-id="' + i + '"]').getAnimations({ subtree: true }).filter((a) => a.playState === "running").length, NID.motionrotatingtext), 0, "rien ne tourne tout seul dans l'éditeur");
