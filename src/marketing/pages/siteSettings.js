@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   // Code personnalisé (head, début et fin de body) : écrit par un compte « pages.code » et SIGNÉ côté serveur ; restitué seulement si la signature est valide
   customCode: { head: "", bodyStart: "", bodyEnd: "", sig: "" },
   classes: [],
+  header: require("./headerSettings").DEFAULTS,
   extras: { language: "fr", smoothScroll: false, noindex: false },
   // Référencement du site (palier 11) : valeurs par défaut des pages du site. La description du site est identity.description,
   // l'interdiction d'indexer tout le site est extras.noindex : une seule source pour chaque valeur.
@@ -200,7 +201,9 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   // Publication unique (Personnalisation → Types de publication) : réglages complets, ou null = affichage d'origine de la page d'article
   let singlePost = null;
   try { singlePost = require("../../services/singlePost").compact(src.singlePost, { strict }); } catch (e) { if (e && e.isSinglePost) throw bad(e.message); singlePost = null; }
-  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, customCode, classes, extras, seo, general, reading, comments: commentsBlock, singlePost };
+  // Entête du site (réglages du personnalisateur → Entête) : validés par headerSettings, rendus par headerStyle
+  const header = require("./headerSettings").normalize(src.header, { strict, helpers: { mediaUrl, bad } });
+  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, customCode, classes, extras, seo, general, reading, header, comments: commentsBlock, singlePost };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus
