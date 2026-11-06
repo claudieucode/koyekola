@@ -195,14 +195,14 @@ module.exports = {
     reading: "vollkorn-17-px-ligne-de-62-caracteres-lettrine-et-epigraphes",
   },
   tokens: {
-    colors: { primary: "#2a1b6e", secondary: "#1a1240", accent: "#d9461f", background: "#fdeedc", surface: "#fff8ee", text: "#1a1240", muted: "#5a4f78", success: "#13803f", warning: "#8a5a00", error: "#b3261e" },
+    colors: { primary: "#2a1b6e", secondary: "#1a1240", accent: "#b13412", background: "#fdeedc", surface: "#fff8ee", text: "#1a1240", muted: "#5a4f78", success: "#13803f", warning: "#8a5a00", error: "#b3261e" },
     fonts: { heading: "font.league-spartan", body: "font.vollkorn", button: "font.league-spartan", link: "font.vollkorn" },
     radius: { sm: 0, md: 0, lg: 2, button: 0, field: 0, card: 0 }, shadow: { card: "none", button: "none" }, border: { width: 1, color: "#1a1240" },
     type: { h1: { size: 64, weight: 700, lineHeight: 1.02, transform: "none" }, h2: { size: 36, weight: 600, lineHeight: 1.1, transform: "none" } },
   },
   options: [
     { key: "accent", label: "Encre (couleur principale)", type: "color", default: "#2a1b6e" },
-    { key: "vermillon", label: "Vermillon (accent)", type: "color", default: "#d9461f" },
+    { key: "vermillon", label: "Vermillon (accent)", type: "color", default: "#b13412" },
     { key: "mode", label: "Mode d'affichage", type: "choice", default: "jour", choices: [["jour", "Papier pêche"], ["nuit", "Nuit indigo"]] },
     { key: "entete", label: "En-tête", type: "choice", default: "centre", choices: [["centre", "Logo centré"], ["colonne", "Logo à gauche, liens à droite"], ["minimal", "Minimal, compteur seul"]] },
     { key: "pied", label: "Pied de page", type: "choice", default: "colophon", choices: [["colophon", "Colophon en colonnes"], ["mince", "Mince, une ligne"]] },

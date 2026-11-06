@@ -79,7 +79,7 @@ body:not([data-pk-tampon-anim="off"]) .md-hero-r .md-stamp,body:not([data-pk-tam
 .md-of-n{font-size:1.5rem;margin:0}.md-of-d{margin:0;color:var(--md-mu);line-height:1.5}
 .md-of-p{margin:.6em 0 0}.md-of-p b{font-family:var(--md-serif);font-weight:400;font-size:2.2rem}.md-of-p span{font-size:.85rem;color:var(--md-mu)}
 .md-of-dur{margin:0 0 .6em;font-size:.85rem;color:var(--md-red);font-weight:600}
-.md-of ul{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;flex:1}.md-of li{display:flex;gap:8px;line-height:1.45;font-size:.95rem}.md-of li .md-ic{color:var(--md-ink);margin-top:.15em}
+.md-of ul{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;flex:1}.md-of li{display:flex;gap:8px;line-height:1.45;font-size:1rem}.md-of li .md-ic{color:var(--md-ink);margin-top:.15em}
 .md-quote{background:var(--md-soft);padding:clamp(32px,5vw,64px) 0}
 .md-quote blockquote{margin:0 auto;max-width:800px;text-align:center}
 .md-quote p{font-family:var(--md-serif);font-size:clamp(1.4rem,2.8vw,2.1rem);line-height:1.35;margin:0 0 .8em}.md-quote cite{font-size:.85rem;color:var(--md-mu);font-style:normal}
@@ -171,3 +171,4 @@ body.md-js [data-reveal]{opacity:0;transform:translateY(10px);transition:opacity
   body{background:#fff!important;color:#000;padding-left:0!important}.md-ph,.md-cl{border-color:#888}.md-prose,.md-cl-b p{max-width:none;font-size:11pt}.md-chiffres{background:#fff;color:#000}.md-ch b,.md-ch span{color:#000}
   a{color:#000;text-decoration:underline}
 }
+.md-of,.md-m,.md-m-a,.md-cl-b,.md-tool,.md-hero-l,.md-hero-r,.md-day,.md-fld{min-width:0}

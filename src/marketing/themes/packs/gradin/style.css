@@ -121,7 +121,7 @@ body[data-pk-page="pleine"] .gr-ph-in{grid-template-columns:1fr}body[data-pk-pag
 .gr-pl-f{position:absolute;top:-14px;left:16px;background:var(--gr-or);color:#fff;font-family:var(--gr-sans);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.3em .8em}
 .gr-pl-n{font-size:1.4rem;font-weight:800;margin:0}.gr-pl-d{margin:0;color:var(--gr-mu)}
 .gr-pl-p{margin:.5em 0}.gr-pl-p b{font-family:var(--gr-sans);font-size:2.6rem;font-weight:800;line-height:1}.gr-pl-p span{display:block;font-size:.86rem;color:var(--gr-mu)}
-.gr-pl ul{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;flex:1}.gr-pl li{display:flex;gap:8px;line-height:1.45;font-size:.95rem}
+.gr-pl ul{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:8px;flex:1}.gr-pl li{display:flex;gap:8px;line-height:1.45;font-size:1rem}
 .gr-faq details{border-top:2px solid var(--gr-ln);padding:14px 0;max-width:76ch}.gr-faq details:last-child{border-bottom:2px solid var(--gr-ln)}
 .gr-faq summary{cursor:pointer;font-family:var(--gr-sans);font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:16px}.gr-faq summary::after{content:"+";color:var(--gr-or);font-size:1.5rem;line-height:1}.gr-faq details[open] summary::after{content:"−"}.gr-faq summary::-webkit-details-marker{display:none}
 .gr-faq p{margin:.7em 0 0;color:var(--gr-mu);line-height:1.65}
@@ -174,3 +174,4 @@ body.gr-js [data-reveal]{opacity:0;transform:translateY(12px);transition:opacity
   .gr-head,.gr-foot,.gr-cta2,.gr-actions,.gr-box,.gr-stairs{display:none!important}
   body{background:#fff!important;color:#000}.gr-prose{max-width:none;font-size:11pt}.gr-ph{border:0}a{color:#000;text-decoration:underline}
 }
+.gr-hero-l,.gr-hero-r,.gr-f,.gr-pl,.gr-mod,.gr-box,.gr-ring-w,.gr-mods{min-width:0}

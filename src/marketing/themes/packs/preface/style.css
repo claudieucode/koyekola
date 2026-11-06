@@ -1,5 +1,5 @@
 /* Préface — page « bientôt disponible ». Tout ce fichier est confiné à body[data-kw-pack="preface"] au chargement. */
-body{--pf-ink:var(--pk-accent,#2a1b6e);--pf-ver:var(--pk-vermillon,#d9461f);--pf-bg:#fdeedc;--pf-sf:#fff8ee;--pf-tx:#1a1240;--pf-mu:#5a4f78;--pf-ln:#1a1240;--pf-soft:#f6dcbc;--pf-acc:var(--pk-accent,#2a1b6e);--pf-on:#fff;--pf-gut:clamp(16px,4vw,48px);--pf-max:1160px;
+body{--pf-ink:var(--pk-accent,#2a1b6e);--pf-ver:var(--pk-vermillon,#b13412);--pf-bg:#fdeedc;--pf-sf:#fff8ee;--pf-tx:#1a1240;--pf-mu:#5a4f78;--pf-ln:#1a1240;--pf-soft:#f6dcbc;--pf-acc:var(--pk-accent,#2a1b6e);--pf-on:#fff;--pf-gut:clamp(16px,4vw,48px);--pf-max:1160px;
   --pf-sans:var(--kw-font-heading),system-ui,sans-serif;--pf-serif:var(--kw-font-body),Georgia,serif;
   background:var(--pf-bg);color:var(--pf-tx);font-family:var(--pf-serif);margin:0;-webkit-font-smoothing:antialiased}
 body[data-pk-mode="nuit"]{--pf-bg:#120d2b;--pf-sf:#1b1440;--pf-tx:#f6e9d6;--pf-mu:#bdb2dc;--pf-ln:#f6e9d6;--pf-soft:#2a2058;--pf-acc:#cbbcff;--pf-on:#120d2b;--pf-ver:#ff8a63}
@@ -161,3 +161,4 @@ body.pf-js [data-cd="s"].is-tick{animation:preface-tick .35s ease}
   .pf-head,.pf-foot,.pf-cta,.pf-actions,.pf-mini{display:none!important}
   body{background:#fff!important;color:#000}.pf-prose{max-width:none;font-size:11pt}.pf-hero{border:0}a{color:#000;text-decoration:underline}.pf-cad-u b{color:#000!important}
 }
+.pf-hero-l,.pf-hero-r,.pf-j,.pf-bl li,.pf-trois li,.pf-prose,.pf-side{min-width:0}
