@@ -24,6 +24,8 @@ const edge = (o) => (o.top || o.bottom ? compact({ borderStyle: o.style || "soli
 // Une rangée : bande pleine largeur + contenu borné
 const R = (k, kids, o = {}) => band(k.S, [B.inner(kids, { justifyContent: o.j || "space-between", ...(o.inn || {}) }, o.innT, o.innM)],
   compact({ backgroundColor: o.bg || k.S.bg, color: o.fg || k.S.fg, paddingTop: o.pv || "16px", paddingBottom: o.pv || "16px", ...edge(o), ...(o.st || {}) }), o.t, o.m);
+// champ de recherche clair sur fond sombre : texte sombre (contraste ≥ 4,5)
+const lightField = (n) => { n.parts.field.styles.desktop.color = "#0f0f10"; return n; };
 const fold = { gridTemplate: "1fr" };
 const flush = { paddingLeft: "0px", paddingRight: "0px" };
 
@@ -152,6 +154,7 @@ module.exports = {
       key: "media-08", name: "Chambre Claire", art: "Portfolio photographe minimal", desc: "Une ligne fine : marque minuscule, date, bouton « Index » qui ouvre un menu plein écran numéroté.",
       S: ID("media-08", "Chambre Claire", { bg: "#f5f3ee", fg: "#111111", mute: "#55524c", alt: "#e8e5dd", accent: "#111111", onAccent: "#f5f3ee", line: "#111111", font: "font.dm-mono", head: "font.instrument-serif", weight: "400" }),
       build: (k) => [
+        X.stripe(k, { h: 14, gradient: { from: "#111111", to: "#111111", angle: 90 } }),
         R(k, [
           mark(k, { size: "22px", italic: true }),
           date(k, { color: k.S.mute, size: "11px" }),
@@ -181,9 +184,10 @@ module.exports = {
       key: "media-10", name: "Écran Rouge", art: "Chaîne vidéo et créateur", desc: "Marque en pavé, recherche large centrale, compte et abonnement, rangée de puces de rubriques : une chaîne de contenus.",
       S: ID("media-10", "Écran Rouge", { bg: "#0f0f10", fg: "#f4f4f5", mute: "#b4b4bb", alt: "#232326", accent: "#e11d1d", onAccent: "#ffffff", line: "#303034", font: "font.inter", head: "font.archivo-black", weight: "400", btnRadius: "999px", btn: "pill" }),
       build: (k, P) => [
+        X.stripe(k, { h: 4, gradient: { from: "#e11d1d", to: "#e11d1d", angle: 90 } }),
         R(k, [
           X.slab(k, [mark(k, { size: "24px", weight: "400", color: "#ffffff" })], { bg: k.S.accent, fg: "#ffffff", padV: "8px", padH: "18px", radius: "14px" }),
-          search(k, { grow: true, max: "560px", radius: "999px", placeholder: "Rechercher une vidéo" }),
+          lightField(search(k, { grow: true, max: "560px", radius: "999px", placeholder: "Rechercher une vidéo", fieldBg: "#f4f4f5" })),
           g([account(k), btn(k, P.cta[0], P.cta[1], "pill", { padH: "22px" })], { gap: "16px", flexWrap: "nowrap" }),
         ], { pv: "12px", inn: { gap: "24px" } }),
         R(k, [nav(k, "pill", { size: "13.5px", weight: "600", gap: "8px", hover: k.S.fg, onHover: k.S.bg })], { pv: "8px", j: "flex-start", ...sep(null, ["1px", k.S.line]) }),
