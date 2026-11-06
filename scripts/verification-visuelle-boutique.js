@@ -61,17 +61,10 @@ const THEMES = (process.env.THEMES || "maille,flamme,verdure,pointure").split(",
         }
       }
     }
-    let done = 0;
-    const results = await pool(jobs.filter((j) => !j.error), 3, async (j) => {
-      const base = ["--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-sandbox", `--window-size=${Math.max(j.w, 500)},${j.h}`, "--virtual-time-budget=2500"];
-      const dom = await run([...base, "--dump-dom", `file://${j.file}`]);
-      const m = dom.match(/<title>RESULT:(\{.*?\})<\/title>/);
-      let r = { key: j.key, size: j.name, error: "mesure indisponible" };
-      if (m) { const v = JSON.parse(m[1]); r = { key: j.key, size: j.name, width: j.w, scrollWidth: v.sw, overflowX: v.sw > v.iw + 1, outside: v.out, firstOutside: v.first, height: v.sh }; }
-      if (CAP !== "aucune") await run([...base, `--screenshot=${path.join(OUT, "captures", `${j.key}.${j.name}.png`)}`, `file://${j.file}`]);
-      if (++done % 10 === 0) console.error(`mesures ${done}/${jobs.length}`);
-      return r;
-    });
+    // Mesure par un processus séparé (arrêt forcé de chaque Chrome, résultats écrits au fur et à mesure) pendant que le serveur de test reste démarré
+    const jsonl = path.join(OUT, "resultats.jsonl"); try { fs.writeFileSync(jsonl, ""); } catch {}
+    await new Promise((resolve) => { const c = require("node:child_process").spawn(process.execPath, [path.join(__dirname, "mesurer-pages-chrome.js"), path.join(OUT, "html"), "3"], { stdio: "inherit" }); c.on("close", resolve); });
+    const results = fs.readFileSync(jsonl, "utf8").split("\n").filter(Boolean).map((l) => { const r = JSON.parse(l); return { key: r.file.replace(/\.(desktop|tablette|mobile)\.host\.html$/, ""), size: r.size, scrollWidth: r.scrollWidth, overflowX: r.overflowX, outside: r.outside, firstOutside: r.first, error: r.error }; });
     const bad = results.filter((r) => r.error || r.overflowX || r.outside > 0);
     const report = { generated: new Date().toISOString(), themes: THEMES, measures: results.length, defective: bad.length, errors: jobs.filter((j) => j.error), details: bad };
     fs.writeFileSync(path.join(OUT, "rapport.json"), JSON.stringify({ ...report, all: results }, null, 1));
