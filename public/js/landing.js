@@ -310,17 +310,17 @@
   if ((counters.length || bars.length) && "IntersectionObserver" in window && !document.body.hasAttribute("data-kw-builder") && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
     document.documentElement.classList.add("kw-count-ready");
     var run = function (el) {
-      var target = Number(el.getAttribute("data-kw-count")), dec = Number(el.getAttribute("data-kw-decimals")) || 0, dur = Number(el.getAttribute("data-kw-duration")) || 1500;
+      var target = Number(el.getAttribute("data-kw-count")), dec = Number(el.getAttribute("data-kw-decimals")) || 0, dur = Number(el.getAttribute("data-kw-duration")) || 1500, wait = Number(el.getAttribute("data-kw-delay")) || 0, from = Number(el.getAttribute("data-kw-start")) || 0, ease = el.getAttribute("data-kw-ease");
       var out = el.querySelector(".kw-counter-value"), t0 = null;
       var sepMode = el.getAttribute("data-kw-sep");
       var fmt = function (v) { var s = v.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); return sepMode === "dot" ? s.replace(/[\u202f\u00a0]/g, ".") : sepMode === "none" ? s.replace(/[\u202f\u00a0]/g, "") : s; };
-      var step = function (t) { if (t0 === null) t0 = t; var k = Math.min(1, (t - t0) / dur); var e = 1 - Math.pow(1 - k, 3); out.textContent = fmt(target * e); if (k < 1) requestAnimationFrame(step); else out.textContent = fmt(target); };
-      requestAnimationFrame(step);
+      var step = function (t) { if (t0 === null) t0 = t; var k = Math.min(1, (t - t0) / dur); var e = ease === "linear" ? k : ease === "out" ? 1 - Math.pow(1 - k, 5) : 1 - Math.pow(1 - k, 3); out.textContent = fmt(from + (target - from) * e); if (k < 1) requestAnimationFrame(step); else out.textContent = fmt(target); };
+      if (wait > 0) setTimeout(function () { requestAnimationFrame(step); }, wait); else requestAnimationFrame(step);
     };
     var obs = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (!en.isIntersecting) return; obs.unobserve(en.target); if (en.target.hasAttribute("data-kw-count")) run(en.target); else en.target.classList.add("is-in"); });
     }, { threshold: 0.3 });
-    Array.prototype.forEach.call(counters, function (el) { el.querySelector(".kw-counter-value").textContent = (0).toLocaleString("fr-FR"); obs.observe(el); });
+    Array.prototype.forEach.call(counters, function (el) { el.querySelector(".kw-counter-value").textContent = (Number(el.getAttribute("data-kw-start")) || 0).toLocaleString("fr-FR", { minimumFractionDigits: Number(el.getAttribute("data-kw-decimals")) || 0, maximumFractionDigits: Number(el.getAttribute("data-kw-decimals")) || 0 }); obs.observe(el); });
     Array.prototype.forEach.call(bars, function (el) { obs.observe(el); });
   }
   // Interactions : [déclencheur, action, élément visé] ; l'élément visé est retrouvé par sa classe (.kw-n-<id>)

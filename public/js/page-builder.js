@@ -2022,7 +2022,11 @@
     if (ctl.scrub) ctl.scrub(lab);
     return withRestore(h("div", { class: "pb-field" }, lab, ctl, hint ? h("p", { class: "pb-hint", text: hint }) : null), function () { apply(Number(value) || 0, {}); });
   }
-  function selectField(label, value, options, onChange, opts) {
+  // Réglage facultatif d'un widget animé : la valeur par défaut est retirée des données (rien de superflu enregistré)
+  function optSelect(it, label, key, current, options, dflt, disabled) {
+    return selectField(label, String(current === undefined || current === null ? dflt : current), options, function (v) { change(function () { var x = byId(it.id).props; if (v === dflt) delete x[key]; else x[key] = /^-?\d+$/.test(v) ? Number(v) : v; }); }, { disabled: disabled });
+  }
+function selectField(label, value, options, onChange, opts) {
     opts = opts || {};
     var id = fid();
     var sel = h("select", { id: id, disabled: opts.disabled }, options.map(function (o) { return h("option", { value: String(o[0]), text: o[1] }); }));
@@ -2242,6 +2246,10 @@
         box.appendChild(numberField("Valeur (0 à 100)", p.value, { min: 0, max: 100, step: 1, integer: true, slider: [0, 100], allowEmpty: false, staticUnit: "%", disabled: disabled }, function (n, opts) { if (n === null) return false; setProp(it.id, "value", n, opts && opts.light ? { key: opts.key || it.id + ":value", light: true } : null); }, "Une donnée réelle (par ex. places réservées) ; ne pas inventer de chiffre."));
         box.appendChild(checkField("Afficher la valeur en %", p.showValue !== false, function (v) { setProp(it.id, "showValue", v); }, { disabled: disabled }));
         box.appendChild(checkField("Remplir la barre à l'apparition (animation)", p.animate, function (v) { setProp(it.id, "animate", v); }, { disabled: disabled }));
+        if (p.animate) {
+          box.appendChild(optSelect(it, "Durée du remplissage", "duration", p.duration, [["1000", "1 s (défaut)"], ["400", "Rapide (0,4 s)"], ["2000", "2 s"], ["4000", "Lente (4 s)"]], "1000", disabled));
+          box.appendChild(optSelect(it, "Courbe", "easing", p.easing, [["smooth", "Douce (défaut)"], ["linear", "Régulière"], ["out", "Rapide puis lente"]], "smooth", disabled));
+        }
         break;
       case "menu":
         box.appendChild(textField("Nom du menu (lecteurs d'écran)", p.label, set("label"), { max: 60, disabled: disabled }));
@@ -2362,7 +2370,8 @@
         box.appendChild(textField("Mots qui se succèdent (un par ligne, 2 à 8)", (p.words || []).join("\n"), function (v) { setProp(it.id, "words", v.split("\n").map(function (x) { return x.trim(); }).filter(Boolean)); }, { multiline: true, disabled: disabled }));
         box.appendChild(textField("Fin (fixe)", p.after, set("after"), { max: 80, disabled: disabled }));
         box.appendChild(selectField("Niveau", p.level, [["1", "Titre 1 (un seul par page)"], ["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"]], set("level", false), { disabled: disabled }));
-        box.appendChild(selectField("Effet", p.effect || "fade", [["fade", "Fondu"], ["type", "Machine à écrire"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Effet", p.effect || "fade", [["fade", "Fondu"], ["slide", "Glissement"], ["blur", "Flou"], ["zoom", "Zoom"], ["type", "Machine à écrire"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        if (p.effect === "type") box.appendChild(checkField("Curseur clignotant à droite du mot", p.cursor !== false, function (v) { change(function () { var x = byId(it.id).props; if (v) delete x.cursor; else x.cursor = false; }); }, { disabled: disabled }));
         box.appendChild(selectField("Durée par mot", String(p.interval || 2500), [["1500", "1,5 s"], ["2500", "2,5 s"], ["4000", "4 s"], ["6000", "6 s"]], function (v) { setProp(it.id, "interval", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "L'animation se voit dans l'aperçu et sur la page publiée (jamais si le visiteur a demandé moins d'animations). Les lecteurs d'écran lisent la phrase entière." }));
         break;
@@ -2377,6 +2386,8 @@
         box.appendChild(textField("Bouton du verso : texte (facultatif)", p.ctaLabel, pairSet("ctaLabel", "ctaUrl", "Le bouton du verso"), { max: 40, disabled: disabled }));
         box.appendChild(textField("Bouton du verso : adresse", p.ctaUrl, pairSet("ctaUrl", "ctaLabel", "Le bouton du verso"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…" }));
         box.appendChild(selectField("Effet", p.effect || "flip", [["flip", "Retournement"], ["fade", "Fondu"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        if ((p.effect || "flip") === "flip") box.appendChild(optSelect(it, "Sens du retournement", "direction", p.direction, [["horizontal", "Horizontal (défaut)"], ["vertical", "Vertical"]], "horizontal", disabled));
+        box.appendChild(optSelect(it, "Vitesse", "duration", p.duration, [["600", "Normale (0,6 s)"], ["300", "Rapide (0,3 s)"], ["1000", "Lente (1 s)"]], "600", disabled));
         box.appendChild(selectField("Hauteur", String(p.height || 280), [["200", "200 px"], ["280", "280 px"], ["360", "360 px"], ["440", "440 px"]].concat([200, 280, 360, 440].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le verso s'affiche au survol, au clavier (Tab puis Entrée) ou d'un toucher sur mobile." }));
         break;
@@ -2452,6 +2463,7 @@
       case "hotspot":
         box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (m.alt) x.alt = m.alt; }); }, disabled));
         box.appendChild(resolutionField(it, [p.src], disabled));
+        box.appendChild(checkField("Faire pulser les points (attire le regard)", p.pulse === true, function (v) { change(function () { var x = byId(it.id).props; if (v) x.pulse = true; else delete x.pulse; }); }, { disabled: disabled }));
         box.appendChild(selectField("Ouvrir l'infobulle", p.trigger === "hover" ? "hover" : "click", [["click", "Au clic"], ["hover", "Au survol (et au clic)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "hover") x.trigger = "hover"; else delete x.trigger; }); }, { disabled: disabled }));
         box.appendChild(textField("Texte de remplacement de l'image", p.alt, set("alt"), { max: 200, disabled: disabled }));
         (p.spots || []).forEach(function (sp, i) {
@@ -2520,6 +2532,9 @@
         box.appendChild(selectField("Décimales", String(p.decimals || 0), [["0", "Aucune"], ["1", "1"], ["2", "2"]], function (v) { setProp(it.id, "decimals", Number(v)); }, { disabled: disabled }));
         box.appendChild(selectField("Séparateur des milliers", p.separator || "space", [["space", "Espace (1 234)"], ["dot", "Point (1.234)"], ["none", "Aucun (1234)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "space") delete x.separator; else x.separator = v; }); }, { disabled: disabled }));
         box.appendChild(selectField("Animation du comptage", String(p.duration === undefined ? 1500 : p.duration), [["0", "Aucune"], ["800", "Rapide"], ["1500", "Normale"], ["3000", "Lente"]], function (v) { setProp(it.id, "duration", Number(v)); }, { disabled: disabled }));
+        box.appendChild(optSelect(it, "Départ après", "delay", p.delay, [["0", "Tout de suite"], ["300", "0,3 s"], ["600", "0,6 s"], ["1000", "1 s"], ["2000", "2 s"]], "0", disabled));
+        box.appendChild(optSelect(it, "Courbe du comptage", "easing", p.easing, [["smooth", "Douce (défaut)"], ["linear", "Régulière"], ["out", "Rapide puis lente"]], "smooth", disabled));
+        box.appendChild(textField("Valeur de départ (0 par défaut)", String(p.start || 0), function (v) { var n = Number(String(v).replace(",", ".")); if (!isFinite(n)) { toast("Nombre attendu.", true); return; } change(function () { var x = byId(it.id).props; if (n === 0) delete x.start; else x.start = n; }); }, { disabled: disabled }));
         break;
       case "testimonial":
         box.appendChild(textField("Témoignage (réel, avec l'accord de la personne)", p.text, set("text"), { multiline: true, max: 1200, disabled: disabled }));
