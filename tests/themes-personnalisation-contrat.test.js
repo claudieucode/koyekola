@@ -13,7 +13,7 @@ describe("contrat de personnalisation des thèmes", () => {
       assert.ok(keys.length >= 3, `${s.key} : au moins 3 réglages`);
       assert.equal(new Set(keys).size, keys.length, `${s.key} : clés d'options en double`);
       for (const o of s.options) {
-        assert.match(o.key, /^[a-z][a-z0-9]*$/, `${s.key}.${o.key}`);
+        assert.match(o.key, /^[a-z][a-z0-9-]*$/, `${s.key}.${o.key}`);
         assert.ok(o.label && ["color", "choice", "range"].includes(o.type), `${s.key}.${o.key} : libellé et type`);
         assert.ok(packs.resolveOptions(s, {})[o.key] !== undefined, `${s.key}.${o.key} : valeur par défaut valide`);
       }

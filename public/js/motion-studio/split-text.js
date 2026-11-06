@@ -18,16 +18,6 @@
     scale: [{ opacity: 0, transform: "scale(.5)" }, { opacity: 1, transform: NONE }],
     flip: [{ opacity: 0, transform: "rotateX(-90deg) translateY(.3em)" }, { opacity: 1, transform: NONE }],
   };
-  // Effets supplémentaires du composant « Révélation de texte » (lot t, module partagé) : le composant « Texte animé » n'en propose que les 6 ci-dessus
-  var REVEAL = {
-    dim: [{ opacity: 0.15 }, { opacity: 1 }],
-    "slide-left": [{ opacity: 0, transform: "translateX(-.8em)" }, { opacity: 1, transform: NONE }],
-    "slide-right": [{ opacity: 0, transform: "translateX(.8em)" }, { opacity: 1, transform: NONE }],
-    rotate: [{ opacity: 0, transform: "rotate(10deg) translateY(.5em)" }, { opacity: 1, transform: NONE }],
-    wipe: [{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
-    "blur-in": [{ opacity: 0, filter: "blur(.5em)", transform: "scale(1.1)" }, { opacity: 1, filter: "blur(0)", transform: NONE }],
-  };
-  var frames = function (id) { return PRESETS[id] || REVEAL[id] || null; };
   // Texte → suite de { w: "mot" } et { s: " " } (les espaces sont conservés tels quels entre les mots)
   function splitWords(text) {
     var out = [];
@@ -42,7 +32,7 @@
     var src = el.querySelector(".kw-ms-st-src");
     if (!src || ctx.reduced) return {};
     var unit = el.getAttribute("data-kw-ms-split") || "words";
-    var preset = frames(ctx.cfg.preset) ? ctx.cfg.preset : "fade-up";
+    var preset = PRESETS[ctx.cfg.preset] ? ctx.cfg.preset : "fade-up";
     var segs = [], full = [];
     Array.prototype.forEach.call(src.childNodes, function (n) {
       if (n.nodeName === "BR") { segs.push({ br: true }); full.push(" "); }
@@ -92,7 +82,7 @@
     if (!units.length) { restore(); return {}; }
 
     var n = units.length;
-    units.forEach(function (u, i) { ctx.animate(u, frames(preset), { delay: ctx.stagger(i, n) }); });
+    units.forEach(function (u, i) { ctx.animate(u, PRESETS[preset], { delay: ctx.stagger(i, n) }); });
 
     function restore() { el.textContent = ""; el.appendChild(src); }
     // Les lignes dépendent de la largeur et des polices : on reconstruit (l'état « déjà joué » est conservé par le runtime)
@@ -102,5 +92,5 @@
     }
     return { destroy: restore };
   }
-  return { PRESETS: PRESETS, REVEAL: REVEAL, splitWords: splitWords, charsOf: charsOf, init: init };
+  return { PRESETS: PRESETS, splitWords: splitWords, charsOf: charsOf, init: init };
 });

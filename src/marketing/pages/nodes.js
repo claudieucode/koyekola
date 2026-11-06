@@ -1749,8 +1749,6 @@ function normalizeMotion(raw, type) {
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
   // Motion Studio : réglages versionnés (motionStudio.js) ; préréglages et paramètres validés par la fiche `motion` du widget
   if (raw.studio) { const st = STUDIO.normalize(raw.studio, CUSTOM_WIDGETS[type] ? CUSTOM_WIDGETS[type].motion : null); if (st) out.studio = st; }
-  // Parallaxe d'arrière-plan : amplitude (en %) du déplacement de l'image de fond ; valeur hors liste ignorée
-  if ([10, 20, 35, 50].includes(raw.bgParallax)) out.bgParallax = raw.bgParallax;
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -1955,7 +1953,6 @@ function motionAttrs(n) {
   if (m.mouseFx) a += ` data-kw-mfx="${esc(JSON.stringify(m.mouseFx))}"`;
   if (m.off && (m.scroll || m.mouse || m.scrollFx || m.mouseFx)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
   if (m.alwaysMotion) a += " data-kw-motion-always";
-  if (m.bgParallax) a += ` data-kw-bgpar="${m.bgParallax}"`;
   return a + studioAttrs.replace(" data-kw-motion-always", m.alwaysMotion ? "" : " data-kw-motion-always");
 }
 

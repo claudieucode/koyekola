@@ -91,7 +91,7 @@ function meta(key) {
   const cat = CATEGORIES.find((c) => c.key === s.category);
   const bg = (s.tokens.colors || {}).background || "#ffffff";
   return {
-    key: s.key, name: s.name, category: s.category, categoryLabel: cat.label, tags: s.tags, siteType: s.siteType, description: s.description, concept: s.concept, featured: Boolean(s.featured), isNew: true, order: s.order || 0,
+    key: s.key, name: s.name, category: s.category, categoryLabel: cat.label, tags: s.tags, siteType: s.siteType, description: s.description, concept: s.concept, featured: Boolean(s.featured), isNew: true, collection: s.collection || "", collectionLabel: ({ blog: "Blog et publication", pro: "Sites professionnels" })[s.collection] || "", order: s.order || 0,
     modules: s.modules || [], pages: s.pages.map((p) => ({ key: p.key, name: p.name })), palette: ["primary", "secondary", "accent", "background"].map((k) => (s.tokens.colors || {})[k]).filter(Boolean),
     fonts: { heading: s.tokens.fonts.heading, body: s.tokens.fonts.body }, dark: lum(bg) < 0.35, pack: true, dna: s.dna, options: s.options || [],
     previews: { home: `/img/theme-previews/${s.key}-home.webp`, inner: `/img/theme-previews/${s.key}-inner.webp`, mobile: `/img/theme-previews/${s.key}-mobile.webp`, card: `/img/theme-previews/${s.key}-card.webp`, card2: `/img/theme-previews/${s.key}-card2.webp`, phone: `/img/theme-previews/${s.key}-phone.webp` },

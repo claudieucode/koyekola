@@ -48,9 +48,7 @@
   <script src="<%= asset("/js/kw-effects.js") %>" defer></script>
   <%# Motion Studio : runtime partagé + adresses (avec empreinte) des modules de CETTE page, chargés à la demande par le runtime %>
   <% if (page.motionStudio) { %><script type="application/json" id="kw-ms-modules"><%- JSON.stringify(Object.fromEntries(page.motionStudio.modules.map((m) => [m, asset("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c") %></script>
-  <% if (page.motionStudio.scenes) { %><script type="application/json" id="kw-ms-scenes"><%- JSON.stringify(page.motionStudio.scenes).replace(/</g, "\\u003c") %></script><% } %>
   <script src="<%= asset("/js/kw-motion-studio.js") %>" defer></script><% } %>
-  <script src="<%= asset("/js/kw-bgpar.js") %>" defer></script>
   <% if (kwCode && kwCode.bodyEnd) { %><%- kwCode.bodyEnd %><% } %>
 </body>
 </html>
