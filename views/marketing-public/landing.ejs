@@ -19,6 +19,8 @@
   <%# CSS personnalisé du site (réglages du site), puis transition entre les pages (jamais dans l'éditeur) %>
   <% if (siteX && siteX.assets.custom) { %><style id="kw-site-custom"><%- siteX.assets.custom %></style><% } %>
   <% if (siteX && siteX.assets.transition && !(typeof builder !== "undefined" && builder)) { %><style><%- siteX.assets.transition %></style><% } %>
+<%# Motion Studio lot 3 : transition de CETTE page (API View Transitions, réglage de la page ; après celle du site pour la remplacer), jamais dans l'éditeur %>
+  <% if (page.motionCss && !(typeof builder !== "undefined" && builder)) { %><style id="kw-page-transition"><%- page.motionCss %></style><% } %>
 <% const kwCode = siteX && siteX.assets.code && !preview && !(typeof builder !== "undefined" && builder) ? siteX.assets.code : null; %>
   <% if (kwCode && kwCode.head) { %><%- kwCode.head %><% } %>
   <%# CSS personnalisé de la page : vérifié (aucune ressource externe), confiné au contenu de la page %>
@@ -45,6 +47,7 @@
   <script src="<%= asset("/js/kw-effects.js") %>" defer></script>
   <%# Motion Studio : runtime partagé + adresses (avec empreinte) des modules de CETTE page, chargés à la demande par le runtime %>
   <% if (page.motionStudio) { %><script type="application/json" id="kw-ms-modules"><%- JSON.stringify(Object.fromEntries(page.motionStudio.modules.map((m) => [m, asset("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c") %></script>
+  <% if (page.motionStudio.scenes) { %><script type="application/json" id="kw-ms-scenes"><%- JSON.stringify(page.motionStudio.scenes).replace(/</g, "\\u003c") %></script><% } %>
   <script src="<%= asset("/js/kw-motion-studio.js") %>" defer></script><% } %>
   <% if (kwCode && kwCode.bodyEnd) { %><%- kwCode.bodyEnd %><% } %>
 </body>
