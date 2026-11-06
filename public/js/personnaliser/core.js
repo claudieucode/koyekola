@@ -7,7 +7,7 @@
   try { boot = JSON.parse(el.textContent); } catch (e) { boot = {}; }
 
   var handlers = {};
-  var state = { device: boot.defaultDevice || "desktop", collapsed: false, category: null, dirty: false, publishing: false };
+  var state = { device: boot.defaultDevice || "desktop", collapsed: false, category: null, dirty: false, publishing: false, publishable: false };
 
   var KWPZ = window.KWPZ = {
     boot: boot,
@@ -21,7 +21,7 @@
     setDirty: function (v) { KWPZ.set("dirty", Boolean(v)); },
     // Confirmation avant de perdre un travail non publié (fermeture, changement de site)
     canLeave: function () { return !state.dirty || window.confirm("Vous avez des modifications non publiées. Quitter quand même ?"); },
-    toast: function (message) { KWPZ.emit("toast", message); }
+    toast: function (message, kind) { KWPZ.emit("toast", { message: message, kind: kind || "ok" }); }
   };
 
   window.addEventListener("beforeunload", function (e) { if (state.dirty) { e.preventDefault(); e.returnValue = ""; } });

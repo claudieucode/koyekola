@@ -31,3 +31,28 @@ Reconstruction du module sur une base propre (l'ancien module a été retiré : 
 - Aperçu : vrai rendu HTML du site dans un cadre de même origine ; la largeur du cadre suit l'appareil (100 %, 768 px, 375 px) donc le site applique ses vraies règles responsives. Masquer le panneau ne recharge pas l'aperçu.
 - Sous 900 px de large, le panneau recouvre l'aperçu (tiroir) au lieu de le comprimer.
 - Publier est inactif tant qu'aucune catégorie n'a de modification ; le moteur de publication viendra avec les catégories. Guide de style : emplacement et événement prêts, contenu à venir.
+
+---
+
+# Étape 2 : les dix catégories sont branchées
+
+| Catégorie | Contenu | Source de vérité |
+|---|---|---|
+| Global | Couleurs, palette du site, typographie, boutons | moteur de styles `services/siteStyles` (brouillon → publication) |
+| Entête | Renvoie au Theme Builder (unique gestionnaire de l'en-tête) | Theme Builder |
+| Types de publication | Publication unique : zone de titre, mise en page, colonne latérale, auteur, partage, navigation… (onglets Général / Design) | `services/singlePost` via le moteur de styles |
+| Général | Mise en page, arrière-plan, images, champs de formulaire, tablette et mobile, mode sombre | moteur de styles |
+| Pied de page | Renvoie au Theme Builder | Theme Builder |
+| Identité du site | Nom, description, logo, logo mobile, favicon | moteur de styles |
+| Menus | Liste des menus et emplacements, lien vers Navigation | `services/navigation` (lecture) |
+| Widgets | État des zones, lien vers Widgets | `services/widgets` (lecture) |
+| Réglages de la page d'accueil | Choix de la page d'accueil d'un site (écriture directe) | `pages.setHomePage` |
+| CSS additionnel | CSS propre à un site (droit `pages.code`) | moteur de styles |
+
+## Fonctionnement
+- **Aperçu en direct** : chaque modification est envoyée à `POST /marketing/site-web/styles/rendu` (validation côté serveur) ; les réglages qui ne changent que le CSS remplacent les feuilles de style de l'aperçu sans recharger ; les autres rechargent l'aperçu en gardant la position.
+- **Brouillon** : enregistré automatiquement 1,2 s après un changement (`/styles/brouillon`, verrou de révision). **Publier** : fenêtre de confirmation listant les réglages, puis `/styles/publier` ; le site public utilise alors les réglages. Seul le site visé est touché.
+- **Erreurs** : une valeur refusée par le serveur est affichée sur son champ ; Publier reste inactif tant qu'une erreur existe.
+- **Droits** : `appearance.read` (ouvrir), `appearance.styles` (modifier), `appearance.publish` (publier), `pages.code` (CSS), `seo.edit` (description), `forms.write` (page d'accueil).
+- Fichiers ajoutés à l'étape 2 : `public/js/personnaliser/settings.js` (champs, brouillon, aperçu, publication, panneaux), `public/css/personnaliser-reglages.css`, route d'accueil dans `src/marketing/web/personnaliser.js`.
+- Pas de planification de publication ni de lien partagé (retirés avec l'ancien module).

@@ -37,7 +37,8 @@ describe("retrait du module Personnaliser : fichiers et références", () => {
   test("le moteur de styles partagé existe et se charge sans le module", () => {
     const s = require("../src/services/siteStyles");
     for (const k of ["state", "saveDraft", "discardDraft", "previewFor", "publish", "history", "restoreVersion", "applyChanges"]) assert.equal(typeof s[k], "function", k);
-    for (const id of ["identite", "en-tete", "pied", "menus", "css", "single-post", "theme-choice"]) assert.equal(s.PANELS.some((p) => p.id === id), false, `panneau ${id} retiré`);
+    for (const id of ["theme-choice"]) assert.equal(s.PANELS.some((p) => p.id === id), false, `panneau ${id} retiré`);
+    for (const k of ["schedule", "unschedule", "runDue", "createShare", "shareLookup"]) assert.equal(s[k], undefined, `${k} retiré (planification et liens partagés)`);
   });
 });
 

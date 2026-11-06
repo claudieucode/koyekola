@@ -26,16 +26,22 @@ const siteSettings = () => require("../marketing/pages/siteSettings");
 // live : true = ne change que le CSS (aperçu instantané sans recharger la page) ; false = change le contenu (l'aperçu se recharge, sans perdre la position)
 const BOTH = ["principal", "site"];
 const PANELS = [
+  { id: "identite", label: "Identité du site", icon: "id", hint: "Nom, slogan, logos et icône de l'onglet." },
   { id: "couleurs", label: "Couleurs", icon: "palette", hint: "Couleurs globales, liens et bordures." },
   { id: "typographie", label: "Typographie", icon: "type", hint: "Polices, tailles, graisses et interlignes." },
   { id: "mise-en-page", label: "Mise en page", icon: "layout", hint: "Largeurs, espacements, arrondis et points de rupture." },
+  { id: "single-post", label: "Types de publication › Publication unique", icon: "layout", tabs: true, hint: "Pages d'article : zone de titre, mise en page, colonne latérale, auteur, partage, navigation, similaires, commentaires, typographie, couleurs et espacements." },
   { id: "arriere-plan", label: "Arrière-plan", icon: "image", hint: "Couleur, dégradé et image de fond des pages." },
   { id: "images", label: "Images", icon: "image", hint: "Arrondi, bordure, ombre et cadrage des images." },
   { id: "formulaires", label: "Champs de formulaire", icon: "form", hint: "Apparence des champs (inscription, recherche)." },
   { id: "appareils", label: "Tablette et mobile", icon: "tablet", hint: "Tailles et marges propres à la tablette et au mobile." },
   { id: "mode-sombre", label: "Mode sombre", icon: "moon", hint: "Couleurs du site pour les visiteurs qui préfèrent un thème sombre." },
   { id: "palette", label: "Palette du site", icon: "palette", hint: "Couleurs nommées, réutilisables dans tout le site." },
+  { id: "en-tete", label: "En-tête", icon: "header", hint: "Logo, annonce et boutons de l'en-tête (site principal) ; composant d'en-tête (sites)." },
+  { id: "menus", label: "Menus", icon: "menu", hint: "Menus du site et emplacements." },
+  { id: "pied", label: "Pied de page", icon: "footer", hint: "Marque, texte et mentions du pied de page." },
   { id: "boutons", label: "Boutons", icon: "button", hint: "Forme, couleurs et états des boutons." },
+  { id: "css", label: "CSS additionnel", icon: "code", hint: "Règles CSS propres à ce site." },
 ];
 const controls = [];
 const add = (id, panel, kind, label, o = {}) => controls.push({ id, panel, kind, label, scope: BOTH, live: true, ...o });
@@ -78,6 +84,19 @@ add("tokens.sizes.content", "mise-en-page", "number", "Largeur du contenu large"
 add("tokens.sizes.narrow", "mise-en-page", "number", "Largeur du contenu étroit (texte, articles)", { scope: ["principal"], min: 480, max: 1000, unit: "px" });
 add("settings.layout.fullWidth", "mise-en-page", "toggle", "Disposition pleine largeur", { scope: ["site"], help: "Sinon, le contenu est encadré dans la largeur de conteneur." });
 add("settings.layout.containerWidth", "mise-en-page", "number", "Largeur du conteneur", { scope: ["site"], min: 480, max: 1920, unit: "px" });
+
+// Identité
+add("name", "identite", "text", "Nom du site", { scope: ["site"], max: 100, live: false, help: "Affiché par le logo textuel et le titre du site." });
+add("header.logo.text", "identite", "text", "Nom affiché (logo texte)", { scope: ["principal"], max: 40, live: false });
+add("header.logo.mode", "identite", "select", "Logo de l'en-tête", { scope: ["principal"], live: false, options: [["text", "Texte"], ["image", "Image de la médiathèque"]] });
+add("header.logo.mediaId", "identite", "media", "Image du logo", { scope: ["principal"], live: false, store: "id", showIf: { "header.logo.mode": "image" }, help: "Image de la médiathèque de ce site." });
+add("header.logo.alt", "identite", "text", "Texte alternatif du logo", { scope: ["principal"], max: 120, live: false });
+add("settings.identity.description", "identite", "textarea", "Slogan / description du site", { scope: ["site"], max: 300, live: false, perm: "seo.edit", help: "Aussi utilisé comme description pour le référencement (droit « seo.edit »)." });
+add("footer.tagline", "identite", "textarea", "Slogan du pied de page", { scope: ["principal"], max: 200, live: false });
+add("settings.identity.logoUrl", "identite", "media", "Logo principal", { scope: ["site"], live: false, store: "url", help: "Image de la médiathèque de CE site." });
+add("settings.identity.logoMobileUrl", "identite", "media", "Logo mobile", { scope: ["site"], live: false, store: "url", help: "Utilisé sur les petits écrans lorsqu'il est défini." });
+add("settings.identity.faviconUrl", "identite", "media", "Favicon (icône de l'onglet)", { scope: ["site"], live: false, store: "url", help: "PNG, SVG, ICO, WebP ou JPG." });
+
 add("settings.layout.contentWidth", "mise-en-page", "number", "Largeur du contenu de texte", { scope: ["site"], min: 320, max: 1200, unit: "px" });
 add("settings.layout.gutter", "mise-en-page", "number", "Marge latérale (écrans étroits)", { scope: ["site"], min: 0, max: 80, unit: "px" });
 for (const k of ["sm", "md", "lg", "xl"]) add(`tokens.space.${k}`, "mise-en-page", "number", `Espacement ${k.toUpperCase()}`, { scope: ["site"], min: 0, max: 200, unit: "px" });
@@ -94,6 +113,33 @@ add("settings.layout.breakpoints.mobile", "mise-en-page", "number", "Point de ru
 add("settings.transitions.type", "mise-en-page", "select", "Transition entre les pages", { scope: ["site"], options: [["none", "Aucune"], ["fade", "Fondu"], ["slide", "Glissement"]], help: "Désactivée pour les personnes qui demandent moins d'animations." });
 add("settings.transitions.duration", "mise-en-page", "number", "Durée de la transition", { scope: ["site"], min: 100, max: 1000, unit: "ms", showIf: { "settings.transitions.type": ["fade", "slide"] } });
 add("tokens.shadow.card", "mise-en-page", "select", "Ombre des cartes", { options: [["none", "Aucune"], ["sm", "Légère"], ["md", "Moyenne"], ["lg", "Forte"]] });
+
+// En-tête (principal : composé par le moteur d'apparence ; un site compose son en-tête dans le Page Builder)
+add("header.search", "en-tete", "toggle", "Recherche", { scope: ["principal"], live: false });
+add("header.cart", "en-tete", "toggle", "Panier", { scope: ["principal"], live: false });
+add("header.account", "en-tete", "toggle", "Compte", { scope: ["principal"], live: false });
+add("header.announcement.enabled", "en-tete", "toggle", "Bandeau d'annonce", { scope: ["principal"], live: false });
+add("header.announcement.text", "en-tete", "text", "Texte de l'annonce", { scope: ["principal"], max: 160, live: false, showIf: { "header.announcement.enabled": true } });
+add("header.announcement.url", "en-tete", "text", "Lien de l'annonce", { scope: ["principal"], max: 300, live: false, showIf: { "header.announcement.enabled": true } });
+add("header.cta.enabled", "en-tete", "toggle", "Bouton d'action", { scope: ["principal"], live: false });
+add("header.cta.label", "en-tete", "text", "Texte du bouton", { scope: ["principal"], max: 30, live: false, showIf: { "header.cta.enabled": true } });
+add("header.cta.url", "en-tete", "text", "Adresse du bouton", { scope: ["principal"], max: 300, live: false, showIf: { "header.cta.enabled": true } });
+add("header.cta.style", "en-tete", "select", "Style du bouton", { scope: ["principal"], live: false, options: [["primary", "Principal"], ["secondary", "Secondaire"], ["outline", "Contour"]], showIf: { "header.cta.enabled": true } });
+add("header.mobile.showCta", "en-tete", "toggle", "Bouton d'action sur mobile", { scope: ["principal"], live: false });
+
+// En-tête et pied d'un SITE : quel composant réutilisable du Page Builder sert d'en-tête / de pied (le contenu du composant se compose dans le Page Builder)
+const partOptions = (siteId) => [["", "Aucun"], ...db.prepare("SELECT id, name FROM mk_web_components WHERE (site_id IS NULL OR site_id = ?) AND organization_id = (SELECT organization_id FROM mk_sites WHERE id = ?) ORDER BY name COLLATE NOCASE").all(siteId, siteId).map((c) => [c.id, c.name])];
+add("parts.header", "en-tete", "select", "Composant d'en-tête du site", { scope: ["site"], live: false, part: true, options: partOptions, help: "Affiché en haut de chaque page du site (sauf exception de page). Son contenu se modifie dans le Page Builder." });
+add("parts.footer", "pied", "select", "Composant de pied de page du site", { scope: ["site"], live: false, part: true, options: partOptions, help: "Affiché en bas de chaque page du site. Son contenu se modifie dans le Page Builder." });
+
+// Pied de page
+add("footer.brand.mode", "pied", "select", "Marque du pied de page", { scope: ["principal"], live: false, options: [["text", "Texte"], ["image", "Image de la médiathèque"], ["header", "Comme l'en-tête"]] });
+add("footer.brand.text", "pied", "text", "Nom affiché", { scope: ["principal"], max: 40, live: false });
+add("footer.brand.mediaId", "pied", "media", "Image de la marque", { scope: ["principal"], live: false, store: "id", showIf: { "footer.brand.mode": "image" } });
+add("footer.brand.alt", "pied", "text", "Texte alternatif de l'image", { scope: ["principal"], max: 120, live: false });
+add("footer.copyright", "pied", "text", "Mention de copyright", { scope: ["principal"], max: 200, live: false, help: "{année} est remplacé par l'année en cours." });
+add("footer.cookies", "pied", "toggle", "Lien « Cookies »", { scope: ["principal"], live: false });
+
 
 // Boutons
 add("tokens.radius.button", "boutons", "number", "Arrondi des boutons", { min: 0, max: 48, unit: "px" });
@@ -161,6 +207,28 @@ for (const [k, label] of [["background", "Fond"], ["surface", "Surface (cartes)"
 // Palette nommée du site (jetons « customColors » : utilisables dans les styles des éléments)
 add("tokens.customColors", "palette", "palette", "Couleurs de la palette", { scope: ["site"], max: tokensLib.MAX_CUSTOM_COLORS, help: "Donnez un nom à une couleur pour la réutiliser. Les couleurs nommées sont proposées dans les sélecteurs de couleur de cet écran." });
 
+// Site : « settings.singlePost.… » ; site principal : « singlePost.… ». Un changement de structure recharge l'aperçu (live: false), jamais d'effet fictif.
+const singlePost = require("./singlePost");
+const SPK = { bool: "toggle", enum: "select", int: "number", float: "number", text: "text", csv: "text", color: "color", font: "select", order: "order", box: "box", resp: "resp" };
+for (const [scope, prefix] of [["site", "settings.singlePost."], ["principal", "singlePost."]]) {
+  for (const f of singlePost.F) {
+    const extra = { scope: [scope], live: false, sp: f, tab: f.tab, group: f.group, head: f.head, help: f.help };
+    if (f.kind === "enum") Object.assign(extra, { options: f.options.map(([v, l]) => [String(v), l]), thumbs: f.thumbs, segmented: f.segmented });
+    if (f.kind === "font") Object.assign(extra, { options: (siteId) => [["", "Héritée"], ...fontOptions(siteId)] });
+    if (f.kind === "int" || f.kind === "float") Object.assign(extra, { min: f.min, max: f.max, step: f.step || 1, unit: f.unit || "", slider: f.slider, nullable: f.nullable || f.kind === "float" });
+    if (f.kind === "text" || f.kind === "csv") Object.assign(extra, { max: f.max });
+    if (f.kind === "color") Object.assign(extra, { allowEmpty: true });
+    if (f.kind === "order") Object.assign(extra, { items: f.ids.map(([id, label]) => ({ id, label, locked: (f.locked || []).includes(id) })) });
+    if (f.kind === "box") Object.assign(extra, { responsive: Boolean(f.responsive), corners: Boolean(f.corners), noUnit: Boolean(f.noUnit), max: f.max || 400 });
+    if (f.kind === "resp") Object.assign(extra, { min: f.min, max: f.max, unit: f.unit || "px" });
+    if (f.showIf) extra.showIf = Object.fromEntries(Object.entries(f.showIf).map(([k, v]) => [prefix + k, v]));
+    add(prefix + f.path, "single-post", SPK[f.kind], f.label, extra);
+  }
+}
+
+// CSS (un site : réglage « customCss » du site ; le principal n'a pas de CSS additionnel enregistrable)
+add("settings.customCss", "css", "css", "CSS additionnel du site", { scope: ["site"], perm: "pages.code", max: 20000, help: "Règles « .ma-classe { … } » appliquées aux pages du site (aucun @, aucune ressource externe)." });
+
 const BY_ID = new Map(controls.map((c) => [c.id, c]));
 // Réglage par identifiant et portée (principal | site)
 const ctl = (id) => BY_ID.get(id) || null;
@@ -168,7 +236,7 @@ const scopeName = (siteId) => (siteId === null ? "principal" : "site");
 const catalog = (siteId) => controls.filter((c) => c.scope.includes(scopeName(siteId)));
 const panelsFor = (siteId) => {
   const cat = catalog(siteId);
-  return PANELS.filter((p) => cat.some((c) => c.panel === p.id)).map((p) => ({ ...p, controls: cat.filter((c) => c.panel === p.id).map((c) => publicControl(c, siteId)) }));
+  return PANELS.filter((p) => p.id === "menus" || cat.some((c) => c.panel === p.id)).map((p) => ({ ...p, controls: cat.filter((c) => c.panel === p.id).map((c) => publicControl(c, siteId)) }));
 };
 function publicControl(c, siteId) {
   const o = typeof c.options === "function" ? c.options(siteId) : c.options;
@@ -190,15 +258,16 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 function liveConfig(ctx, siteId) {
   if (siteId === null) {
     const st = appearance.state(null);
-    return { config: clone({ tokens: st.published.tokens, header: st.published.header, footer: st.published.footer }), revision: st.revision, pendingEngineDraft: st.hasDraft };
+    return { config: clone({ tokens: st.published.tokens, header: st.published.header, footer: st.published.footer, singlePost: singlePost.resolve(st.published.singlePost) }), revision: st.revision, pendingEngineDraft: st.hasDraft };
   }
   const site = pages().requireSite(ctx, siteId);
-  return { config: clone({ name: site.name, tokens: site.tokens, settings: site.settings }), revision: site.settings_revision, site, pendingEngineDraft: false };
+  return { config: clone({ name: site.name, tokens: site.tokens, settings: { ...site.settings, singlePost: singlePost.resolve(site.settings && site.settings.singlePost) }, parts: { header: site.header_component_id || null, footer: site.footer_component_id || null } }), revision: site.settings_revision, site, pendingEngineDraft: false };
 }
 
 // ---------- Validation d'un ensemble de changements ----------
 // Chaque chemin doit exister dans le catalogue de CE site ; la valeur est convertie puis validée par le moteur lui-même (validation stricte).
 function coerce(c, raw, siteId) {
+  if (c.sp) { try { return singlePost.cleanField(c.sp, raw); } catch (e) { if (e && e.isSinglePost) throw new UserError(e.message); throw e; } }
   if (c.kind === "palette") {
     if (!Array.isArray(raw) || raw.length > c.max) throw new UserError(`${c.label} : ${c.max} couleurs au plus.`);
     return raw.map((x) => ({ key: String((x && x.key) || ""), label: String((x && x.label) || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 40), hex: String((x && x.hex) || "").trim().toLowerCase() }));
@@ -208,6 +277,12 @@ function coerce(c, raw, siteId) {
     if (raw === "" || raw === null || raw === undefined) { if (c.nullable || c.id.startsWith("tokens.link") || c.id.startsWith("tokens.type")) return null; throw new UserError(`${c.label} : une valeur est attendue.`); }
     const n = Number(raw);
     if (!Number.isFinite(n) || n < c.min || n > c.max) throw new UserError(`${c.label} : un nombre entre ${c.min} et ${c.max} est attendu.`);
+    return n;
+  }
+  if (c.kind === "select" && c.part) {
+    if (raw === "" || raw === null || raw === undefined) return "";
+    const n = Number(raw);
+    if (!Number.isInteger(n) || !c.options(siteId).some(([v]) => v === n)) throw new UserError(`${c.label} : composant inconnu pour ce site.`);
     return n;
   }
   if (c.kind === "select") {
@@ -274,7 +349,9 @@ function applyChanges(config, changes, siteId) {
   const settings = siteSettings().normalizeSettings(next.settings, { strict: true });
   const name = String(next.name || "").trim();
   if (!name) throw new UserError("Le nom du site est obligatoire.");
-  return { config: { name, tokens, settings } };
+  if (settings.customCss) { try { siteSettings().normalizeSiteCss(settings.customCss, { strict: true }); } catch (e) { throw new UserError(e.message); } }
+  const parts = { header: next.parts && next.parts.header ? Number(next.parts.header) : null, footer: next.parts && next.parts.footer ? Number(next.parts.footer) : null };
+  return { config: { name, tokens, settings, parts } };
 }
 // Les jetons sont « normalisés » : une valeur remplacée par un défaut (hors limites) est une erreur, pas une correction silencieuse
 function assertTokensKept(sent, normalized, changes, siteId) {
@@ -291,6 +368,8 @@ function diffAgainst(live, changes, siteId) {
   const out = {};
   for (const [id, v] of Object.entries(changes)) {
     const cur = getPath(live, id);
+    const spc = ctl(id);
+    if (spc && spc.sp) { if (JSON.stringify(v === undefined ? null : v) !== JSON.stringify(cur === undefined ? null : cur)) out[id] = v; continue; }
     if (Array.isArray(v)) { if (JSON.stringify(v) !== JSON.stringify(Array.isArray(cur) ? cur.map((x) => ({ key: x.key, label: x.label, hex: x.hex })) : [])) out[id] = v; continue; }
     const same = typeof v === "number" ? Number(cur) === v : (v === null || v === "") ? (cur === null || cur === undefined || cur === "") : String(cur) === String(v);
     if (!same) out[id] = v;
@@ -325,6 +404,9 @@ function state(ctx, siteId, { can = () => true } = {}) {
   try { changes = cleanChanges(changes, siteId, { can: () => true }); applyChanges(live.config, changes, siteId); } catch (e) { stale = e.message; changes = {}; }
   changes = diffAgainst(live.config, changes, siteId);
   const effective = applyChanges(live.config, changes, siteId).config;
+  // La publication unique est enregistrée « compacte » (seulement ce qui diffère des valeurs d'origine) : l'écran affiche toujours la valeur complète
+  if (siteId === null) effective.singlePost = singlePost.resolve(effective.singlePost);
+  else effective.settings = { ...effective.settings, singlePost: singlePost.resolve(effective.settings && effective.settings.singlePost) };
   return {
     siteId, panels: panelsFor(siteId), live: valuesOf(siteId, live.config), values: valuesOf(siteId, effective), changes,
     draft: row ? { rev: row.rev, baseRev: row.base_rev, updatedAt: row.updated_at, updatedBy: row.updated_by, count: Object.keys(changes).length } : { rev: 0, baseRev: live.revision, updatedAt: null, count: 0 },
@@ -400,6 +482,8 @@ function publish(ctx, siteId, userId, { rev, note = "", can = () => true } = {})
       appearance.publish(null, userId, note || "Styles");
     } else {
       pages().saveSiteDesign(ctx, siteId, { tokens: config.tokens, settings: config.settings, name: config.name, revision: liveNow.revision });
+      const lp = liveNow.config.parts || {};
+      if ((lp.header || null) !== config.parts.header || (lp.footer || null) !== config.parts.footer) pages().setSiteParts(ctx, siteId, { header: config.parts.header, footer: config.parts.footer });
     }
     db.prepare("INSERT INTO cms_customizer_versions (site_id, changes, previous, note, published_by) VALUES (?, ?, ?, ?, ?)").run(siteId, JSON.stringify(changes), JSON.stringify(previous), String(note || (liveNow !== live ? "Changement de thème" : "")).slice(0, 120), userId);
     db.prepare(`DELETE FROM cms_customizer_versions WHERE ${sameScope("site_id")} AND id NOT IN (SELECT id FROM cms_customizer_versions WHERE ${sameScope("site_id")} ORDER BY id DESC LIMIT ?)`).run(siteId, siteId, MAX_VERSIONS);

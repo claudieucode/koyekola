@@ -13,7 +13,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 .pz { font: 400 var(--pz-fs-md)/1.4 var(--pz-font); color: var(--pz-ink); background: var(--pz-canvas); overflow: hidden; -webkit-font-smoothing: antialiased; }
-.pz button { font: inherit; color: inherit; cursor: pointer; }
+.pz :where(button) { font: inherit; color: inherit; cursor: pointer; }
 .pz svg { width: 20px; height: 20px; flex: none; }
 .pz [hidden] { display: none !important; }
 .pz :is(a, button):focus-visible { outline: none; box-shadow: var(--pz-focus); }
@@ -115,3 +115,4 @@ html, body { height: 100%; margin: 0; }
   .pz-reload { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .pz *, .pz *::before, .pz *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; } }
+.pz-toast.is-error { background: var(--pz-alert); }

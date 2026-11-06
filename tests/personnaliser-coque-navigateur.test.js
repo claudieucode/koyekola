@@ -23,7 +23,7 @@ describe("personnaliser : coque (navigateur)", { skip: SKIP }, () => {
     context.setDefaultTimeout(10000);
     const page = await context.newPage();
     page.on("pageerror", (e) => errors.push(`pageerror : ${e.message}`));
-    page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(`console : ${m.text().slice(0, 200)}`); });
+    page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|beforeunload/.test(m.text())) errors.push(`console : ${m.text().slice(0, 200)}`); });
     return page;
   };
   const go = async (page, site = A) => { await page.goto(`${srv.base}${PZ}?site=${site}`); await page.waitForFunction(() => document.getElementById("pz-frame") && document.getElementById("pz-frame").contentDocument && document.getElementById("pz-frame").contentDocument.readyState === "complete" && !document.getElementById("pz-stage").classList.contains("is-loading")); };
@@ -49,7 +49,7 @@ describe("personnaliser : coque (navigateur)", { skip: SKIP }, () => {
     for (const id of ["#pz-close", "#pz-styleguide", "#pz-publish", "#pz-hide"]) assert.ok(await page.locator(id).isVisible(), id);
     assert.deepEqual(await page.locator(".pz-device").allInnerTexts(), ["Ordinateur", "Tablette", "Mobile"]);
     const w = (await page.locator("#pz-panel").boundingBox()).width; assert.ok(w >= 270 && w <= 340, `largeur du panneau ${w}`);
-    assert.equal(await page.locator("#pz-publish").isDisabled(), true, "Publier inactif sans modification");
+    assert.equal(await page.locator("#pz-publish").isDisabled(), true, "Publier inactif sans modification : " + JSON.stringify(await page.evaluate(() => window.KWPZ.pending())));
     // la barre du bas reste collée en bas du panneau, la barre du haut en haut
     const foot = await page.locator(".pz-foot").boundingBox(), top = await page.locator(".pz-bar").boundingBox();
     assert.ok(Math.abs(foot.y + foot.height - 900) < 2 && top.y === 0);
@@ -96,16 +96,76 @@ describe("personnaliser : coque (navigateur)", { skip: SKIP }, () => {
     await page.context().close();
   });
 
-  test("catégories : sélection, vue détail sans faux réglage, retour, clavier", async () => {
+  test("catégories : sélection, vue détail, retour, clavier ; Entête et Pied de page renvoient au Theme Builder", async () => {
     const page = await open(); await go(page);
     await page.locator(".pz-cat", { hasText: "Entête" }).click();
     assert.equal(await page.locator("#pz-detail-title").innerText(), "Entête"); assert.ok(await page.locator("#pz-view-detail").isVisible());
-    assert.equal(await page.locator("#pz-detail-body input, #pz-detail-body select, #pz-detail-body textarea").count(), 0, "aucun faux réglage");
+    assert.ok(await page.locator('#pz-detail-body a[href*="theme-builder"]').isVisible(), "lien vers le Theme Builder");
     await shot(page, "05-detail");
     await page.click("#pz-back");
     assert.equal(await page.locator(".pz-cat[aria-current='true']").innerText(), "Entête");
     await page.locator(".pz-cat", { hasText: "Menus" }).focus(); await page.keyboard.press("Enter"); assert.equal(await page.locator("#pz-detail-title").innerText(), "Menus");
     await page.keyboard.press("Escape"); assert.ok(await page.locator("#pz-view-home").isVisible());
+    await page.locator(".pz-cat", { hasText: "Widgets" }).click(); assert.ok(await page.locator("#pz-detail-body").getByText("Colonne latérale principale").isVisible());
+    await page.context().close();
+  });
+
+  test("Identité du site : le nom change dans l'aperçu avant publication, puis seulement CE site après « Publier »", async () => {
+    const page = await open(); await go(page, A);
+    assert.equal(await page.locator("#pz-publish").isDisabled(), true);
+    await page.locator(".pz-cat", { hasText: "Identité du site" }).click();
+    await page.getByLabel("Nom du site", { exact: true }).fill("Alpha renommé");
+    await page.waitForFunction(() => !document.getElementById("pz-publish").disabled, null, { timeout: 8000 });
+    await page.waitForFunction(() => { const d = document.getElementById("pz-frame").contentDocument; return d && d.body && /Alpha renommé/.test(d.body.innerText); }, null, { timeout: 12000 }); // l'aperçu montre le nouveau nom AVANT publication
+    await shot(page, "08-identite");
+    await page.locator(".pz-back").click(); await page.locator(".pz-cat", { hasText: "Types de publication" }).click(); await shot(page, "11-types"); if (process.env.PZ_DEBUG) console.log("STRAY", await page.evaluate(() => { const e = document.elementFromPoint(18, 112); return e ? e.outerHTML.slice(0, 300) + " | " + e.parentNode.outerHTML.slice(0, 300) : "none"; }));
+    await page.locator(".pz-back").click(); await page.locator(".pz-cat", { hasText: "Identité du site" }).click();
+    assert.equal(JSON.parse(one("SELECT name FROM mk_sites WHERE id = ?", A) ? JSON.stringify(one("SELECT name FROM mk_sites WHERE id = ?", A).name) : '""'), "Alpha", "rien n'est publié avant « Publier »");
+    await page.waitForTimeout(2200); // enregistrement automatique du brouillon
+    assert.ok(one("SELECT changes FROM cms_customizer_drafts WHERE site_id = ?", A), "brouillon enregistré");
+    await page.click("#pz-publish"); await page.getByRole("button", { name: "Publier maintenant" }).click();
+    await page.waitForFunction(() => /Publié/.test(document.getElementById("pz-toast").textContent) && !document.getElementById("pz-toast").hidden, null, { timeout: 15000 });
+    assert.equal(one("SELECT name FROM mk_sites WHERE id = ?", A).name, "Alpha renommé");
+    assert.equal(one("SELECT name FROM mk_sites WHERE id = ?", B).name, "Beta", "l'autre site est intact");
+    assert.equal(one("SELECT COUNT(*) n FROM cms_customizer_drafts WHERE site_id = ?", A).n, 0, "brouillon vidé après publication");
+    await page.context().close();
+  });
+
+  test("Global : une couleur change l'aperçu en direct, Publier l'applique au site, l'autre site n'est pas touché", async () => {
+    const page = await open(); await go(page, B);
+    await page.locator(".pz-cat", { hasText: "Global" }).click();
+    await shot(page, "10-global");
+    const field = page.locator('[data-ctl="tokens.colors.primary"] input[type=text]').first();
+    await field.fill("#aa2244"); await field.blur();
+    await page.waitForFunction(() => { const d = document.getElementById("pz-frame").contentDocument; return d && d.body && /aa2244/i.test((d.body.getAttribute("style") || "") + (d.documentElement.innerHTML.match(/aa2244/i) || "")); }, null, { timeout: 10000 });
+    await page.waitForFunction(() => !document.getElementById("pz-publish").disabled, null, { timeout: 8000 });
+    await page.waitForTimeout(2200);
+    await page.click("#pz-publish"); await page.getByRole("button", { name: "Publier maintenant" }).click();
+    await page.waitForFunction(() => /Publié/.test(document.getElementById("pz-toast").textContent) && !document.getElementById("pz-toast").hidden, null, { timeout: 15000 });
+    assert.match(JSON.parse(one("SELECT tokens FROM mk_sites WHERE id = ?", B).tokens).colors.primary, /aa2244/i);
+    assert.doesNotMatch(String(one("SELECT tokens FROM mk_sites WHERE id = ?", A).tokens), /aa2244/i);
+    await page.context().close();
+  });
+
+  test("Page d'accueil : le choix d'une page s'enregistre pour CE site", async () => {
+    const page = await open(); await go(page, A);
+    const extra = Number(db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, sections, status, kind, site_id, published_at) VALUES (?, 'Autre accueil', 'autre-accueil', 'Autre accueil', '[]', 'published', 'page', ?, datetime('now'))").run(orgId, A).lastInsertRowid);
+    await page.reload(); await go(page, A);
+    await page.locator(".pz-cat", { hasText: "Réglages de la page d'accueil" }).click();
+    await page.selectOption("#pz-home", String(extra)); await page.getByRole("button", { name: "Définir comme page d'accueil" }).click();
+    await page.waitForFunction((id) => document.getElementById("pz-toast") && /Page d'accueil enregistrée/.test(document.getElementById("pz-toast").textContent), extra, { timeout: 8000 });
+    assert.equal(one("SELECT home_page_id h FROM mk_sites WHERE id = ?", A).h, extra);
+    db.prepare("UPDATE mk_sites SET home_page_id = (SELECT id FROM mk_landing_pages WHERE slug = 'accueil-alpha') WHERE id = ?").run(A); // remet l'accueil d'origine pour les parcours suivants
+    await page.context().close();
+  });
+
+  test("CSS additionnel : règle refusée par le serveur → message sur le champ, rien n'est publié", async () => {
+    const page = await open(); await go(page, A);
+    await page.locator(".pz-cat", { hasText: "CSS additionnel" }).click();
+    assert.ok(await page.evaluate(() => window.KWPZ.boot.can.css), "droit CSS : " + JSON.stringify(await page.evaluate(() => window.KWPZ.boot.can)));
+    await page.locator("[data-ctl='settings.customCss'] textarea").fill("@import url(https://x.test/a.css); body{color:red}");
+    await page.waitForSelector("[data-ctl='settings.customCss'] .kwc-err:not([hidden])", { timeout: 8000 });
+    assert.equal(await page.locator("#pz-publish").isDisabled(), true);
     await page.context().close();
   });
 

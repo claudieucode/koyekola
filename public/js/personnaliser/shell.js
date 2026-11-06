@@ -45,15 +45,15 @@
   // ----- Publier : états normal / survol / focus / désactivé / chargement (le moteur de publication viendra avec les catégories) -----
   var pub = $("pz-publish");
   function renderPublish() {
-    var state = K.state.publishing ? "loading" : K.state.dirty && !K.boot.readOnly ? "ready" : "disabled";
+    var state = K.state.publishing ? "loading" : K.state.publishable ? "ready" : "disabled";
     pub.dataset.state = state; var off = state !== "ready"; pub.disabled = off; pub.setAttribute("aria-disabled", String(off)); pub.setAttribute("aria-busy", String(state === "loading"));
   }
-  K.on("change:dirty", renderPublish); K.on("change:publishing", renderPublish); renderPublish();
+  K.on("change:publishable", renderPublish); K.on("change:dirty", renderPublish); K.on("change:publishing", renderPublish); renderPublish();
   pub.addEventListener("click", function () { K.emit("publish"); });
 
   // ----- Message bref -----
   var toast = $("pz-toast"), tt = null;
-  K.on("toast", function (m) { toast.textContent = m; toast.hidden = false; clearTimeout(tt); tt = setTimeout(function () { toast.hidden = true; }, 3500); });
+  K.on("toast", function (m) { var o = typeof m === "string" ? { message: m, kind: "ok" } : m; toast.textContent = o.message; toast.className = "pz-toast" + (o.kind === "error" ? " is-error" : ""); toast.setAttribute("role", o.kind === "error" ? "alert" : "status"); toast.hidden = false; clearTimeout(tt); tt = setTimeout(function () { toast.hidden = true; }, o.kind === "error" ? 7000 : 3500); });
 
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !K.state.category && !e.defaultPrevented && K.state.collapsed) K.set("collapsed", false); });
 })();
