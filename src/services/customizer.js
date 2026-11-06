@@ -41,6 +41,7 @@ const PANELS = [
   { id: "menus", label: "Menus", icon: "menu", hint: "Menus du site et emplacements." },
   { id: "pied", label: "Pied de page", icon: "footer", hint: "Marque, texte et mentions du pied de page." },
   { id: "boutons", label: "Boutons", icon: "button", hint: "Forme, couleurs et états des boutons." },
+  { id: "type-page", label: "Page individuelle", icon: "layout", group: "Types de publication", hint: "Zone de titre, conteneur, colonne latérale, largeur et marges des pages du site (sites du CMS)." },
   { id: "css", label: "CSS additionnel", icon: "code", hint: "Règles CSS propres à ce site." },
 ];
 const controls = [];
@@ -190,6 +191,9 @@ add("tokens.forms.placeholderColor", "formulaires", "color", "Aide à la saisie"
 add("tokens.forms.labelColor", "formulaires", "color", "Libellés", { scope: ["site"], allowEmpty: true });
 add("tokens.forms.accent", "formulaires", "color", "Cases et boutons radio", { scope: ["site"], allowEmpty: true });
 
+// Types de publication → Page individuelle (réglages déclarés dans un module à part)
+require("./customizerPageSingle").register(add);
+
 // Valeurs par appareil (rendues sous les points de rupture du site par siteSettings.layoutCss)
 for (const [dev, name] of [["tablet", "tablette"], ["mobile", "mobile"]]) {
   for (const [k, label, lo, hi] of [["h1", "Titre 1", 10, 96], ["h2", "Titre 2", 10, 96], ["h3", "Titre 3", 10, 96], ["body", "Texte courant", 10, 40]]) add(`settings.responsive.${dev}.${k}`, "appareils", "number", `${label} — ${name}`, { scope: ["site"], min: lo, max: hi, unit: "px", nullable: true, help: k === "h1" ? "Vide : la taille globale s'applique." : undefined });
@@ -231,6 +235,7 @@ const UNSUPPORTED = {
     ["CSS additionnel", "Le moteur d'apparence du site principal n'enregistre pas de CSS libre."],
     ["Options des articles, archives et pagination", "Les gabarits du blog n'exposent pas de réglages de thème (ils se règlent dans Apparence → Templates)."],
     ["Valeurs différentes par appareil", "Les réglages du site principal sont globaux (l'aperçu montre le comportement responsive réel) ; les valeurs par appareil existent pour les sites."],
+    ["Types de publication : Page individuelle", "Réservé aux sites du CMS : les pages du site principal ne passent pas par ce cadre de présentation."],
     ["Lien d'aperçu partageable", "Réservé aux sites : une page publiée du site sert de support au lien."],
   ],
   site: [
@@ -242,7 +247,7 @@ const UNSUPPORTED = {
 
 // ---------- Thème du site : réglages propres à chaque thème (manifeste mesuré, themes/customization) ----------
 // Un site dont le thème est un paquet ne reçoit QUE les réglages qui agissent sur ce thème : les siens (manifeste) + ceux du moteur que la mesure a vus agir (jetons).
-const ALWAYS = (c) => c.panel === "theme-choice" || c.panel === "identite" || c.panel === "menus" || c.panel === "css" || c.id.startsWith("parts.");
+const ALWAYS = (c) => c.panel === "theme-choice" || c.panel === "identite" || c.panel === "menus" || c.panel === "css" || c.panel === "type-page" || c.id.startsWith("parts.");
 const themeCustomization = () => require("../marketing/themes/customization");
 const packKeyOf = (siteId, over) => {
   if (siteId === null || siteId === undefined) return "";

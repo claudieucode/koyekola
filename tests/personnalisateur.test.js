@@ -46,7 +46,7 @@ describe("personnalisateur : brouillon, aperçu, publication, permissions, isola
       const ids = boot.panels.flatMap((p) => p.controls.map((c) => c.id));
       for (const id of ["tokens.colors.primary", "tokens.fonts.heading", "settings.layout.containerWidth", "settings.identity.logoUrl", "settings.identity.faviconUrl", "settings.customCss", "name"]) assert.ok(ids.includes(id), id);
       for (const id of ["header.logo.text", "footer.tagline", "tokens.sizes.content"]) assert.ok(!ids.includes(id), `${id} n'existe pas pour un site`);
-      assert.deepEqual(boot.panels.map((p) => p.id), ["theme-choice", "identite", "couleurs", "typographie", "mise-en-page", "arriere-plan", "images", "formulaires", "appareils", "mode-sombre", "palette", "en-tete", "menus", "pied", "boutons", "css"].filter((x) => boot.panels.some((p) => p.id === x)));
+      assert.deepEqual(boot.panels.map((p) => p.id), ["theme-choice", "identite", "couleurs", "typographie", "mise-en-page", "arriere-plan", "images", "formulaires", "appareils", "mode-sombre", "palette", "en-tete", "menus", "pied", "boutons", "type-page", "css"].filter((x) => boot.panels.some((p) => p.id === x)));
       assert.ok(boot.unsupported.length > 0, "ce que le moteur ne sait pas rendre est dit, pas caché");
       assert.doesNotMatch(r.text, /Elementor|WPForms|Astra/);
     });

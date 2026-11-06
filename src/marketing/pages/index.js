@@ -36,6 +36,9 @@ function normalizeTheme(input) {
   // Format de mise en page (conception guidée) : valeur du thème, enregistrée et versionnée avec la page
   const layout = layoutFormat.normalizeLayout(input && input.layout);
   if (layout) theme.layout = layout;
+  // Page individuelle : exceptions de CETTE page (champs facultatifs ; absent = hérite des réglages du site) : voir pages/pageSingle.js
+  const single = require("./pageSingle").normalize(input && input.single, { strict: true, partial: true });
+  if (Object.keys(single).length) theme.single = single;
   // Magnétisme de défilement de la page (position, marge, arrêt obligatoire)
   const snap = require("./scrollSnap").normalize(input && input.scrollSnap);
   if (snap) theme.scrollSnap = snap;

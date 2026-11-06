@@ -89,7 +89,10 @@
     side.appendChild(h("p", { class: "kwc-scope-note", text: "Les réglages d'ici s'appliquent à tout le site. Pour modifier un seul élément, utilisez « Sélectionner un élément » puis « Modifier seulement cet élément »." }));
     var list = h("ul", { class: "kwc-list", role: "list" });
     // L'en-tête et le pied de page ne se règlent plus ici : le Theme Builder est leur UNIQUE gestionnaire (une ligne d'accès remplace les deux anciens panneaux)
+    var lastGroup = "";
     boot.panels.filter(function (p) { return p.id !== "en-tete" && p.id !== "pied"; }).forEach(function (p) {
+      if (p.group && p.group !== lastGroup) list.appendChild(h("li", { class: "kwc-group-title", role: "presentation", text: p.group }));
+      lastGroup = p.group || lastGroup;
       var btn = h("button", { type: "button", class: "kwc-row", "data-panel": p.id, onclick: function () { renderPanel(p.id); } }, [
         h("span", { class: "kwc-row-ico" }, [icon(p.icon)]),
         h("span", { class: "kwc-row-txt" }, [h("strong", { text: p.label }), h("small", { text: p.hint })]),
@@ -125,6 +128,7 @@
     side.appendChild(h("div", { class: "kwc-panel-head" }, [h("button", { type: "button", class: "kwc-iconbtn", "aria-label": "Retour à la liste des réglages", title: "Retour", onclick: renderRoot }, [icon("back")]), h("div", null, [h("span", { class: "kwc-kicker", text: "Personnalisation" }), h("h2", { text: p.label })])]));
     var body = h("div", { class: "kwc-fields" });
     if (id === "menus") body.appendChild(menusPanel());
+    else if (id === "type-page") body.appendChild(pageSinglePanel(p));
     else {
       if (id === "en-tete" && !boot.principal) body.appendChild(note("L'en-tête d'un site est un composant du Page Builder : il se compose là-bas.", boot.links.pageBuilder, "Modifier l'en-tête et le pied de page"));
       if (id === "pied" && !boot.principal) body.appendChild(note("Le pied de page d'un site est un composant du Page Builder : il se compose là-bas.", boot.links.pageBuilder, "Modifier l'en-tête et le pied de page"));
@@ -160,6 +164,8 @@
     var input;
     if (c.kind === "color") input = colorInput(c, lid, disabled);
     else if (c.kind === "number") input = numberInput(c, lid, disabled);
+    else if (c.kind === "select" && c.variant === "thumbs") input = thumbsInput(c, lid, disabled);
+    else if (c.kind === "select" && c.variant === "segmented") input = segmentedInput(c, lid, disabled);
     else if (c.kind === "select") input = selectInput(c, lid, disabled);
     else if (c.kind === "toggle") input = toggleInput(c, lid, disabled);
     else if (c.kind === "media") input = mediaInput(c, lid, disabled);
@@ -233,6 +239,94 @@
     range.addEventListener("input", function () { num.value = range.value; commit(range.value); });
     return h("div", { class: "kwc-numrow" }, [range, num, c.unit ? h("span", { class: "kwc-unit", text: c.unit }) : null]);
   }
+  // ---------- Page individuelle : onglets Général / Design, vignettes de mise en page, boutons à choix, marges à quatre côtés ----------
+  // Chaque contrôle reste un réglage ordinaire du catalogue (même validation serveur, même aperçu, même brouillon) : seule la présentation change.
+  var psTab = "general", linkedSpacing = { padding: true, margin: true };
+  function thumbBox(kind, value) {
+    // Vignette dessinée à partir de la vraie règle de mise en page (largeur relative du contenu, côté de la colonne) : jamais une illustration décorative
+    var frame = h("span", { class: "kwc-th kwc-th-" + kind + " kwc-th-v-" + value, "aria-hidden": "true" });
+    var content = h("span", { class: "kwc-th-content" }, [h("span", { class: "kwc-th-bar" }), h("span", { class: "kwc-th-line" }), h("span", { class: "kwc-th-line kwc-th-short" })]);
+    if (value === "default") { frame.appendChild(h("span", { class: "kwc-th-globe", text: "◐" })); return frame; }
+    if (kind === "sidebar" && value === "none") { frame.appendChild(content); return frame; }
+    if (kind === "sidebar") { var aside = h("span", { class: "kwc-th-aside" }); if (value === "left") frame.appendChild(aside); frame.appendChild(content); if (value === "right") frame.appendChild(aside); return frame; }
+    frame.appendChild(content); return frame;
+  }
+  function thumbsInput(c, lid, disabled) {
+    var wrap = h("div", { class: "kwc-thumbs", role: "radiogroup", "aria-label": c.label, id: lid });
+    c.options.forEach(function (o) {
+      var on = String(values[c.id]) === String(o[0]);
+      var b = h("button", { type: "button", class: "kwc-thumb-btn" + (on ? " is-on" : ""), role: "radio", "aria-checked": String(on), title: o[1], disabled: disabled, onclick: function () { set(c.id, o[0]); $$(".kwc-thumb-btn", wrap).forEach(function (x) { var sel = x === b; x.classList.toggle("is-on", sel); x.setAttribute("aria-checked", String(sel)); }); } }, [thumbBox(c.thumb, String(o[0])), h("span", { class: "kwc-thumb-label", text: o[1] })]);
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+  function segmentedInput(c, lid, disabled) {
+    var wrap = h("div", { class: "kwc-seg", role: "radiogroup", "aria-label": c.label, id: lid });
+    c.options.forEach(function (o) {
+      var on = String(values[c.id]) === String(o[0]);
+      var b = h("button", { type: "button", class: "kwc-seg-btn" + (on ? " is-on" : ""), role: "radio", "aria-checked": String(on), disabled: disabled, text: o[1], onclick: function () { set(c.id, o[0]); updateVisibility(); $$(".kwc-seg-btn", wrap).forEach(function (x) { var sel = x === b; x.classList.toggle("is-on", sel); x.setAttribute("aria-checked", String(sel)); }); } });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+  var SIDE_LABEL = { top: "En haut", right: "À droite", bottom: "En bas", left: "À gauche" };
+  function spacingQuad(prop, label) {
+    var disabled = !boot.can.edit;
+    var ids = ["top", "right", "bottom", "left"].map(function (sd) { return "settings.pageSingle." + prop + "." + device + "." + sd; }).filter(function (id) { return controls[id]; });
+    var box = h("div", { class: "kwc-field kwc-spacing", "data-spacing": prop });
+    var devName = { desktop: "ordinateur", tablet: "tablette", mobile: "mobile" }[device];
+    box.appendChild(h("div", { class: "kwc-field-head" }, [h("label", { text: label }), h("span", { class: "kwc-unit", text: "px · " + devName })]));
+    var row = h("div", { class: "kwc-quad" }), inputs = [];
+    function commit(id, raw, from) {
+      var n = raw === "" ? null : Number(raw), c = controls[id];
+      if (n !== null && (!isFinite(n) || n < c.min || n > c.max)) { setError(id, label + " : un nombre entre " + c.min + " et " + c.max + " est attendu.", true); return; }
+      clearError(id); set(id, n);
+      if (linkedSpacing[prop] && from) ids.forEach(function (o, i) { if (o !== id) { clearError(o); set(o, n); inputs[i].value = raw; } });
+    }
+    ids.forEach(function (id, i) {
+      var sd = id.split(".").pop(), v = values[id];
+      var inp = h("input", { type: "number", class: "kwc-quad-in", min: 0, max: 400, step: 1, value: v === null || v === undefined ? "" : v, disabled: disabled, "aria-label": label + " — " + SIDE_LABEL[sd].toLowerCase() + " (" + devName + ")", placeholder: "" });
+      inp.addEventListener("input", function () { commit(id, inp.value, true); });
+      inputs.push(inp);
+      row.appendChild(h("label", { class: "kwc-quad-cell" }, [inp, h("span", { text: SIDE_LABEL[sd] })]));
+    });
+    var link = h("button", { type: "button", class: "kwc-quad-link" + (linkedSpacing[prop] ? " is-on" : ""), "aria-pressed": String(linkedSpacing[prop]), title: linkedSpacing[prop] ? "Valeurs liées : cliquer pour les délier" : "Valeurs indépendantes : cliquer pour les lier", "aria-label": "Lier ou délier les quatre côtés", disabled: disabled, onclick: function () { linkedSpacing[prop] = !linkedSpacing[prop]; link.classList.toggle("is-on", linkedSpacing[prop]); link.setAttribute("aria-pressed", String(linkedSpacing[prop])); link.title = linkedSpacing[prop] ? "Valeurs liées : cliquer pour les délier" : "Valeurs indépendantes : cliquer pour les lier"; } }, [icon("link")]);
+    var reset = h("button", { type: "button", class: "kwc-btn kwc-quad-reset", text: "Réinitialiser", disabled: disabled, onclick: function () { ids.forEach(function (id, i) { clearError(id); set(id, live[id] === undefined ? null : live[id]); inputs[i].value = live[id] === null || live[id] === undefined ? "" : live[id]; }); } });
+    box.appendChild(h("div", { class: "kwc-quad-row" }, [row, link]));
+    box.appendChild(reset);
+    return box;
+  }
+  function pageSinglePanel(p) {
+    var root = h("div", { class: "kwc-ps" });
+    var tabs = h("div", { class: "kwc-tabs", role: "tablist" }), body = h("div", { class: "kwc-tabbody", role: "tabpanel" });
+    function draw() {
+      body.textContent = "";
+      $$(".kwc-tab", tabs).forEach(function (t) { var on = t.getAttribute("data-tab") === psTab; t.classList.toggle("is-on", on); t.setAttribute("aria-selected", String(on)); });
+      var mine = p.controls.filter(function (c) { return c.tab === psTab; });
+      if (psTab === "design") {
+        body.appendChild(h("h3", { class: "kwc-group-h", text: "Espacement" }));
+        body.appendChild(h("p", { class: "kwc-hint", text: "Marge interne = espace entre le cadre de la page et son contenu (padding). Marge externe = espace autour de la page (margin). Les valeurs suivent l'appareil choisi en bas de l'aperçu ; vide = valeur du thème." }));
+        body.appendChild(spacingQuad("padding", "Marge interne")); body.appendChild(spacingQuad("margin", "Marge externe"));
+        var groups = [["titleStyle", "Zone de titre"], ["box", "Conteneur : arrière-plan, bordure, ombre"]];
+        groups.forEach(function (g) {
+          var det = h("details", { class: "kwc-details" }, [h("summary", { text: g[1] })]);
+          mine.filter(function (c) { return c.group === g[0]; }).forEach(function (c) { det.appendChild(field(c)); });
+          body.appendChild(det);
+        });
+      } else {
+        var titles = { title: "Zone de titre", container: "Conteneur", sidebar: "Colonne latérale", width: "Largeur du contenu" }, last = "";
+        mine.forEach(function (c) {
+          if (c.group !== last) { last = c.group; if (c.group !== "title") body.appendChild(h("h3", { class: "kwc-group-h", text: titles[c.group] || "" })); }
+          body.appendChild(field(c));
+        });
+      }
+      updateVisibility(); renderCounts();
+    }
+    [["general", "GÉNÉRAL"], ["design", "DESIGN"]].forEach(function (t) { tabs.appendChild(h("button", { type: "button", class: "kwc-tab", role: "tab", "data-tab": t[0], text: t[1], onclick: function () { psTab = t[0]; draw(); } })); });
+    root.appendChild(tabs); root.appendChild(body); psRedraw = draw; draw();
+    return root;
+  }
+  var psRedraw = null;
   function selectInput(c, lid, disabled) {
     var sel = h("select", { id: lid, disabled: disabled }, c.options.map(function (o) { return h("option", { value: String(o[0]), text: o[1] }); }));
     sel.value = String(values[c.id] === null || values[c.id] === undefined ? "" : values[c.id]);
@@ -404,6 +498,7 @@
   // Appareils
   $$("[data-device]").forEach(function (b) { b.addEventListener("click", function () {
     device = b.getAttribute("data-device"); $("#kwc-frame").setAttribute("data-device", device);
+    if (openPanel === "type-page" && psRedraw && psTab === "design") psRedraw();
     $$("[data-device]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
   }); });
 

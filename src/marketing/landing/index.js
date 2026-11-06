@@ -425,13 +425,14 @@ function viewModel(ctx, page) {
   let customCss = "";
   try { customCss = page.theme && page.theme.css ? pageNodes.normalizePageCss(page.theme.css) : ""; } catch { customCss = ""; }
   // Points de rupture du site de la page (réglages du site) : écrans « Tablette » et « Mobile » de ses éléments
-  let breakpoints;
+  let breakpoints, siteLayout;
   try {
     const row = page.site_id ? ctx.db.prepare(`SELECT settings FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(page.site_id, ctx.organizationId) : null;
-    breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
+    const ss = row ? require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}")) : null;
+    breakpoints = ss ? require("../pages/siteSettings").breakpointsOf(ss) : undefined; siteLayout = ss ? ss.layout : undefined;
   } catch { breakpoints = undefined; }
   // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
-  const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
+  const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints), page.kind === "page" && page.theme && page.theme.single ? require("../pages/pageSingle").css(page.theme.single, { layout: siteLayout, breakpoints }, { full: false }) : ""].filter(Boolean).join("\n");
   const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
   // Motion Studio : la page ne charge sa feuille de styles et son runtime que si elle contient un composant ou un réglage Motion Studio
   const motionStudio = pageNodes.STUDIO.usage(sections, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null);

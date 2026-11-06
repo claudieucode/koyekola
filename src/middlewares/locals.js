@@ -79,6 +79,9 @@ function injectLocals(req, res, next) {
   // Zones de widgets (Apparence → Widgets) : HTML déjà validé de la zone DU SITE de la requête (domaine d'un site, sinon site principal) ; « » si rien à afficher.
   // widgetZoneFor(siteId, zone) : pour les gabarits qui connaissent leur site (pages d'un site). Lecture à la demande, jamais mise en cache.
   res.locals.widgetZone = (zone) => require("../services/widgets").renderZone(req.kwSite ? req.kwSite.id : null, zone);
+  // pageSingleFor(site, page) : cadre « Page individuelle » effectif d'une page du CMS (exception de la page > réglages du site) ; null hors pages d'un site
+  res.locals.pageSingleFor = (site, page) => require("../marketing/pages/pageSingle").resolveFor(site && site.settings, page);
+  res.locals.pageHasH1 = (sections) => require("../marketing/pages/pageSingle").hasH1(sections);
   res.locals.widgetZoneFor = (siteId, zone) => require("../services/widgets").renderZone(Number.isInteger(siteId) && siteId > 0 ? siteId : null, zone);
   // Menus de navigation du CMS par emplacement (header, footer, mobile) : null = aucun menu affecté, la page garde son affichage d'origine.
   // Calculés à la demande (seulement par l'en-tête et le pied de page publics) et une seule fois par requête, toujours à jour.

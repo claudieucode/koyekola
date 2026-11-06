@@ -1564,3 +1564,10 @@ html.kw-noscroll { overflow: hidden; }
 .kw-marquee-item:has(.kw-marquee-img) { display: inline-flex; align-items: center; }
 
 .kw-st-vis { display: inline; }
+
+/* Page individuelle : zone de titre et cadre de la colonne latérale (les largeurs, couleurs et marges viennent de la feuille générée par pages/pageSingle.js) */
+.kw-page-title { padding: 32px 0 8px; }
+.kw-page-title h1 { margin: 0; overflow-wrap: anywhere; }
+.kw-ps-frame > .lp-main { max-width: none; margin: 0; padding: 0; min-width: 0; }
+.kw-ps-aside { min-width: 0; overflow-wrap: anywhere; }
+.kw-ps-aside img { max-width: 100%; height: auto; }

@@ -26,6 +26,8 @@ const DEFAULT_SETTINGS = Object.freeze({
   responsive: { tablet: { h1: null, h2: null, h3: null, body: null, gutter: null, spaceLg: null, spaceXl: null }, mobile: { h1: null, h2: null, h3: null, body: null, gutter: null, spaceLg: null, spaceXl: null } },
   // Mode sombre du site : "off" = jamais ; "auto" = suit la préférence de la personne (système). Couleurs vides = couleur du site inchangée.
   dark: { mode: "off", background: "", surface: "", text: "", muted: "", primary: "" },
+  // Page individuelle (pages du CMS) : zone de titre, conteneur, colonne latérale, largeur, marges : voir pages/pageSingle.js
+  pageSingle: require("./pageSingle").DEFAULTS,
   customCss: "",
   // Code personnalisé (head, début et fin de body) : écrit par un compte « pages.code » et SIGNÉ côté serveur ; restitué seulement si la signature est valide
   customCode: { head: "", bodyStart: "", bodyEnd: "", sig: "" },
@@ -197,7 +199,8 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   // Commentaires du site : bloc complet (voir services/comments) ou null = le site hérite du site principal
   let commentsBlock = null;
   if (src.comments && typeof src.comments === "object") { try { commentsBlock = require("../../services/comments").normalizeSettings(src.comments); } catch { commentsBlock = null; } }
-  return { identity, background, layout, lightbox, transitions, responsive, dark, customCss, customCode, classes, extras, seo, general, reading, comments: commentsBlock };
+  const pageSingle = require("./pageSingle").normalize(src.pageSingle, { strict });
+  return { identity, background, layout, lightbox, transitions, responsive, dark, pageSingle, customCss, customCode, classes, extras, seo, general, reading, comments: commentsBlock };
 }
 
 // Points de rupture effectifs d'un site (utilisés par le CSS des éléments : pageCss) ; défauts si inconnus
@@ -255,6 +258,8 @@ function layoutCss(settings) {
       out.push(`html[data-kw-force-dark] .lp-site{${v.join(";")};color-scheme:dark}`);
     }
   }
+  const ps = require("./pageSingle").css(s.pageSingle, { layout: s.layout, breakpoints: bp });
+  if (ps) out.push(ps);
   if (s.extras.smoothScroll) out.push(`@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}`);
   return out.join("\n");
 }

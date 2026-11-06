@@ -27,7 +27,9 @@
   <%# CSS personnalisé de la page : vérifié (aucune ressource externe), confiné au contenu de la page %>
   <% if (page.customCss) { %><style><%- page.customCss %></style><% } %>
 </head>
-<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site"<%- bAttr %><%- siteX && siteX.assets.pack ? siteX.assets.pack.attr : "" %><%- siteX ? siteX.assets.lightboxAttrs : "" %> style="<%= siteStyle %> <%= siteX && siteX.assets.pack ? siteX.assets.pack.vars : "" %>--lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text); <%= siteX ? siteX.assets.lightboxVars : "" %>">
+<%# Page individuelle (Apparence → Personnaliser) : cadre effectif de cette page (exception de la page > réglages du site) ; la colonne latérale réutilise la zone de widgets « sidebar » et n'existe que si elle a du contenu %>
+<% const ps = typeof pageSingleFor === "function" ? pageSingleFor(siteX, page) : null; const psSide = ps && (ps.sidebar.layout === "left" || ps.sidebar.layout === "right") && typeof widgetZoneFor === "function" ? widgetZoneFor(Number.isInteger(siteX.id) ? siteX.id : null, "sidebar") : ""; const psClass = ps ? " kw-kind-page" + (psSide ? " kw-ps-sb" : "") : ""; %>
+<% const bAttr = typeof builder !== "undefined" && builder ? " data-kw-builder" : ""; %><% if (siteStyle) { %><body class="lp-body lp-site<%= psClass %>"<%- bAttr %><%- siteX && siteX.assets.pack ? siteX.assets.pack.attr : "" %><%- siteX ? siteX.assets.lightboxAttrs : "" %> style="<%= siteStyle %> <%= siteX && siteX.assets.pack ? siteX.assets.pack.vars : "" %>--lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text); <%= siteX ? siteX.assets.lightboxVars : "" %>">
 <% } else { %><body class="lp-body"<%- bAttr %> style="--lp-accent: <%= page.theme.accent %>; --lp-bg: <%= page.theme.background %>; --lp-text: <%= page.theme.text %>"><% } %>
   <% if (preview && !(typeof builder !== "undefined" && builder)) { %><p class="lp-preview-bar"><%= typeof previewLabel !== "undefined" && previewLabel ? previewLabel + " " : "Aperçu — " %>Les clics et inscriptions ne sont pas enregistrés.</p><% } %>
   <%# En-tête AUTOMATIQUE : le menu affecté à « En-tête du site » s'affiche même sans composant d'en-tête (jamais en double si la page montre déjà ce menu) %>
@@ -35,10 +37,13 @@
   <% if (kwCode && kwCode.bodyStart) { %><%- kwCode.bodyStart %><% } %>
   <%# Pied de page : le Theme Builder en fournit un (section « sitePart ») → les widgets de pied et la ligne légale entrent DANS ce pied, jamais un second <footer> %>
   <% const tbFoot = page.sections.some((x) => x.sitePart === "footer" && !x.hidden); const noFoot = typeof funnelContext !== "undefined" && funnelContext && funnelContext.hideFooter; const footLegal = tbFoot && !noFoot ? include("_foot-legal", { siteX, sx, privacyFor: typeof privacyFor === "function" ? privacyFor : null }) : ""; %>
+  <% if (psSide) { %><div class="kw-ps-frame"><% } %>
   <main class="lp-main" id="main">
+    <% if (ps && ps.title.enabled && typeof pageHasH1 === "function" && !pageHasH1(page.sections)) { %><header class="kw-page-title"><h1><%= page.title || page.name %></h1></header><% } %>
     <% if (thanks && !page.sections.some((x) => x.type === "form")) { %><section class="lp-section"><p class="lp-thanks" role="status"><%= thanks %></p></section><% } %>
     <%- include("_sections", { footLegal, page, form, preview, thanks, error, values, fieldCatalog, propertyDefs, builder: typeof builder !== "undefined" && builder }) %>
   </main>
+  <% if (psSide) { %><aside class="kw-ps-aside" aria-label="Colonne latérale"><%- psSide %></aside></div><% } %>
   <%# Pied de page : la marque du site (logo et nom des réglages du site) ; sans site, la marque de la plateforme %>
   <% if (!(typeof funnelContext !== "undefined" && funnelContext && funnelContext.hideFooter) && !tbFoot) { %><%# Widgets du site (Apparence → Widgets) : sections 1 et 2 de pied de page %><% const wzId = siteX && Number.isInteger(siteX.id) ? siteX.id : null; const wz1 = typeof widgetZoneFor === "function" ? widgetZoneFor(wzId, "footer-1") : "", wz2 = typeof widgetZoneFor === "function" ? widgetZoneFor(wzId, "footer-2") : ""; %><% if (!(typeof builder !== "undefined" && builder) && (wz1 || wz2)) { %><div class="lp-foot-widgets"><%- wz1 %><%- wz2 %></div><% } %><footer class="lp-foot"><% if (page.autoNav && page.autoNav.footer) { %><%- include("_autonav", { nav: page.autoNav.footer, cls: "lp-foot-nav" }) %><% } %><%- include("_foot-legal", { siteX, sx, privacyFor: typeof privacyFor === "function" ? privacyFor : null }) %></footer><% } %>
   <% if (!preview) { %><%- include("../partials/consent-banner") %>
