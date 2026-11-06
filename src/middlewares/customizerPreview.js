@@ -22,6 +22,7 @@ function attach(req, res) {
     req.kwShared = true; // le comptage des vues ignore ces visites
   } else if (!user || !work || typeof work !== "object") return;
   res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" });
+  req.kwCzWork = work; req.kwCzCan = can; // réglages en cours, relus par les rendus qui en dépendent (ex. Publication unique)
   const customizer = require("../services/customizer");
   const appearance = require("../services/appearance");
 

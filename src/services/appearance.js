@@ -82,9 +82,10 @@ function normalizeConfig(input = {}, { strict = true, siteId } = {}) {
     tokens: tokensLib.normalizeTokens(s.tokens || {}, { strict, fontScope: siteId === undefined ? undefined : { siteId } }),
     header: normalizeHeader(s.header || {}),
     footer: normalizeFooter(s.footer || {}),
+    singlePost: (() => { try { return require("./singlePost").compact(s.singlePost, { strict }); } catch (e) { if (strict && e && e.isSinglePost) throw new UserError(e.message); return null; } })(),
   };
 }
-const DEFAULT_CONFIG = Object.freeze({ tokens: DEFAULT_TOKENS, header: DEFAULT_HEADER, footer: DEFAULT_FOOTER });
+const DEFAULT_CONFIG = Object.freeze({ tokens: DEFAULT_TOKENS, header: DEFAULT_HEADER, footer: DEFAULT_FOOTER, singlePost: null });
 
 // ---------- Lecture / écriture ----------
 const row = (siteId = null) => db.prepare(`SELECT * FROM appearance_configs WHERE ${sameScope("site_id")}`).get(siteId);

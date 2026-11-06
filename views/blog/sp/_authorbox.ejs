@@ -1,0 +1,15 @@
+<% const initials = (name) => String(name || "?").trim().slice(0, 1).toUpperCase(); const tplHtmlA = typeof themeTemplate !== "undefined" && themeTemplate ? String(themeTemplate) : ""; %>
+<% if (sp.authorBox.enabled && author && !tplHtmlA.includes("kw-authorbox")) { const ab = sp.authorBox; %>
+<section class="article-author sp-authorbox" aria-labelledby="author-title" data-sp-align="<%= ab.align %>">
+  <% if (author.avatar_path) { %><img class="article-author-avatar" src="<%= author.avatar_path %>" alt="" width="<%= ab.avatarSize %>" height="<%= ab.avatarSize %>" loading="lazy" style="width:<%= ab.avatarSize %>px;height:<%= ab.avatarSize %>px">
+  <% } else { %><span class="article-author-avatar article-author-initials" style="width:<%= ab.avatarSize %>px;height:<%= ab.avatarSize %>px;background:<%= avatarColor(author.username) %>" aria-hidden="true"><%= initials(author.username) %></span><% } %>
+  <div>
+    <h2 class="article-author-label" id="author-title"><%= ab.title %></h2>
+    <p class="article-author-name"><a href="/blog/auteur/<%= author.id %>"><%= author.username %></a></p>
+    <% if (ab.bio && author.bio) { %><p class="article-author-bio"><%= author.bio %></p><% } %>
+    <% if (ab.social && author.website && /^https?:\/\//i.test(author.website)) { %><p class="sp-author-links"><a href="<%= author.website %>" rel="noopener nofollow" target="_blank">Site web de l'auteur<span class="sr-only"> (nouvelle fenêtre)</span></a></p><% } %>
+    <% if (author.postCount > 1) { %><p><a href="/blog/auteur/<%= author.id %>">Voir ses <%= author.postCount %> articles</a></p><% } %>
+    <% if (spAuthorRecent.length) { %><ul class="sp-author-recent" aria-label="Publications récentes de l'auteur"><% spAuthorRecent.forEach((p) => { %><li><a href="<%= postUrl(p) %>"><%= p.title %></a></li><% }) %></ul><% } %>
+  </div>
+</section>
+<% } %>

@@ -31,6 +31,7 @@ const PANELS = [
   { id: "couleurs", label: "Couleurs", icon: "palette", hint: "Couleurs globales, liens et bordures." },
   { id: "typographie", label: "Typographie", icon: "type", hint: "Polices, tailles, graisses et interlignes." },
   { id: "mise-en-page", label: "Mise en page", icon: "layout", hint: "Largeurs, espacements, arrondis et points de rupture." },
+  { id: "single-post", label: "Types de publication › Publication unique", icon: "layout", tabs: true, hint: "Pages d'article : zone de titre, mise en page, colonne latérale, auteur, partage, navigation, similaires, commentaires, typographie, couleurs et espacements." },
   { id: "arriere-plan", label: "Arrière-plan", icon: "image", hint: "Couleur, dégradé et image de fond des pages." },
   { id: "images", label: "Images", icon: "image", hint: "Arrondi, bordure, ombre et cadrage des images." },
   { id: "formulaires", label: "Champs de formulaire", icon: "form", hint: "Apparence des champs (inscription, recherche)." },
@@ -218,8 +219,28 @@ const themeChoices = (siteId) => {
 };
 add("theme.key", "theme-choice", "select", "Thème", { scope: ["site"], live: false, options: themeChoices, help: "Changer de thème applique ses couleurs, polices et formes. Vos réglages de chaque thème sont gardés : si vous revenez à un thème, ils sont restaurés." });
 
+// Publication unique : les réglages sont décrits UNE fois dans services/singlePost (types, limites, valeurs d'origine) ; ils sont proposés ici sans les recopier.
+// Site : « settings.singlePost.… » ; site principal : « singlePost.… ». Un changement de structure recharge l'aperçu (live: false), jamais d'effet fictif.
+const singlePost = require("./singlePost");
+const SPK = { bool: "toggle", enum: "select", int: "number", float: "number", text: "text", csv: "text", color: "color", font: "select", order: "order", box: "box", resp: "resp" };
+for (const [scope, prefix] of [["site", "settings.singlePost."], ["principal", "singlePost."]]) {
+  for (const f of singlePost.F) {
+    const extra = { scope: [scope], live: false, sp: f, tab: f.tab, group: f.group, head: f.head, help: f.help };
+    if (f.kind === "enum") Object.assign(extra, { options: f.options.map(([v, l]) => [String(v), l]), thumbs: f.thumbs, segmented: f.segmented });
+    if (f.kind === "font") Object.assign(extra, { options: (siteId) => [["", "Héritée"], ...fontOptions(siteId)] });
+    if (f.kind === "int" || f.kind === "float") Object.assign(extra, { min: f.min, max: f.max, step: f.step || 1, unit: f.unit || "", slider: f.slider, nullable: f.nullable || f.kind === "float" });
+    if (f.kind === "text" || f.kind === "csv") Object.assign(extra, { max: f.max });
+    if (f.kind === "color") Object.assign(extra, { allowEmpty: true });
+    if (f.kind === "order") Object.assign(extra, { items: f.ids.map(([id, label]) => ({ id, label, locked: (f.locked || []).includes(id) })) });
+    if (f.kind === "box") Object.assign(extra, { responsive: Boolean(f.responsive), corners: Boolean(f.corners), noUnit: Boolean(f.noUnit), max: f.max || 400 });
+    if (f.kind === "resp") Object.assign(extra, { min: f.min, max: f.max, unit: f.unit || "px" });
+    if (f.showIf) extra.showIf = Object.fromEntries(Object.entries(f.showIf).map(([k, v]) => [prefix + k, v]));
+    add(prefix + f.path, "single-post", SPK[f.kind], f.label, extra);
+  }
+}
+
 const BY_ID = new Map(controls.map((c) => [c.id, c]));
-const ROOTS = ["tokens", "header", "footer", "settings", "name", "parts", "theme"];
+const ROOTS = ["tokens", "header", "footer", "settings", "name", "parts", "theme", "singlePost"];
 
 // Ce que le moteur ne sait PAS rendre : affiché tel quel dans le personnalisateur (jamais une option sans effet)
 const UNSUPPORTED = {
@@ -242,7 +263,7 @@ const UNSUPPORTED = {
 
 // ---------- Thème du site : réglages propres à chaque thème (manifeste mesuré, themes/customization) ----------
 // Un site dont le thème est un paquet ne reçoit QUE les réglages qui agissent sur ce thème : les siens (manifeste) + ceux du moteur que la mesure a vus agir (jetons).
-const ALWAYS = (c) => c.panel === "theme-choice" || c.panel === "identite" || c.panel === "menus" || c.panel === "css" || c.id.startsWith("parts.");
+const ALWAYS = (c) => c.panel === "single-post" || c.panel === "theme-choice" || c.panel === "identite" || c.panel === "menus" || c.panel === "css" || c.id.startsWith("parts.");
 const themeCustomization = () => require("../marketing/themes/customization");
 const packKeyOf = (siteId, over) => {
   if (siteId === null || siteId === undefined) return "";
@@ -306,15 +327,16 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 function liveConfig(ctx, siteId) {
   if (siteId === null) {
     const st = appearance.state(null);
-    return { config: clone({ tokens: st.published.tokens, header: st.published.header, footer: st.published.footer }), revision: st.revision, pendingEngineDraft: st.hasDraft };
+    return { config: clone({ tokens: st.published.tokens, header: st.published.header, footer: st.published.footer, singlePost: singlePost.resolve(st.published.singlePost) }), revision: st.revision, pendingEngineDraft: st.hasDraft };
   }
   const site = pages().requireSite(ctx, siteId);
-  return { config: clone({ name: site.name, tokens: site.tokens, settings: site.settings, theme: { key: require("./themes").activeKey(siteId) }, parts: { header: site.header_component_id || null, footer: site.footer_component_id || null } }), revision: site.settings_revision, site, pendingEngineDraft: false };
+  return { config: clone({ name: site.name, tokens: site.tokens, settings: { ...site.settings, singlePost: singlePost.resolve(site.settings && site.settings.singlePost) }, theme: { key: require("./themes").activeKey(siteId) }, parts: { header: site.header_component_id || null, footer: site.footer_component_id || null } }), revision: site.settings_revision, site, pendingEngineDraft: false };
 }
 
 // ---------- Validation d'un ensemble de changements ----------
 // Chaque chemin doit exister dans le catalogue de CE site ; la valeur est convertie puis validée par le moteur lui-même (validation stricte).
 function coerce(c, raw, siteId) {
+  if (c.sp) { try { return singlePost.cleanField(c.sp, raw); } catch (e) { if (e && e.isSinglePost) throw new UserError(e.message); throw e; } }
   if (c.pack) {
     if (raw === "" || raw === null || raw === undefined) return String(c.default); // « rétablir » : valeur d'origine du thème
     const v = themeCustomization().cleanValue(c.kind === "toggle" ? { kind: "toggle" } : c, c.kind === "toggle" ? (raw === true || raw === "on" || raw === "1" || raw === 1 || raw === "true" ? "on" : "off") : raw);
@@ -436,6 +458,8 @@ function diffAgainst(live, changes, siteId) {
   const out = {};
   for (const [id, v] of Object.entries(changes)) {
     let cur = getPath(live, id);
+    const spc = ctl(id, siteId);
+    if (spc && spc.sp) { if (JSON.stringify(v === undefined ? null : v) !== JSON.stringify(cur === undefined ? null : cur)) out[id] = v; continue; }
     if ((cur === undefined || cur === null) && String(id).startsWith(TP)) { const pc = ctl(id, siteId); if (pc) cur = pc.default; }
     if (Array.isArray(v)) { if (JSON.stringify(v) !== JSON.stringify(Array.isArray(cur) ? cur.map((x) => ({ key: x.key, label: x.label, hex: x.hex })) : [])) out[id] = v; continue; }
     const same = typeof v === "number" ? Number(cur) === v : (v === null || v === "") ? (cur === null || cur === undefined || cur === "") : String(cur) === String(v);

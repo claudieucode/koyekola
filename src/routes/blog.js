@@ -281,6 +281,27 @@ router.get("/blog/auteur/:id", (req, res) => {
 });
 
 // Page d'un article (aussi utilisée par l'aperçu de l'éditeur : preview = true)
+// Réglages « Publication unique » de CE site (site de l'adresse, sinon site principal) ; dans l'aperçu du personnalisateur, le brouillon de la personne est superposé en mémoire
+const spLib = require("../services/singlePost");
+function singlePostFor(req) {
+  const site = req.kwSite && Number.isInteger(req.kwSite.id) ? req.kwSite : null;
+  let stored = null; let themeDefaults = null;
+  try {
+    if (site) { stored = (site.settings || {}).singlePost || null; themeDefaults = ((site.tokens || {}).pack || {}).singlePost || null; }
+    else stored = require("../services/appearance").state(null).published.singlePost || null;
+  } catch { stored = null; }
+  let cfg = spLib.resolve(stored, themeDefaults);
+  const work = req.kwCzWork && req.kwCzWork[site ? String(site.id) : "p"];
+  if (work && typeof work === "object" && req.kwCzCan && req.kwCzCan("appearance.read", site ? site.id : null)) {
+    try {
+      const prefix = site ? "settings.singlePost." : "singlePost.";
+      const next = JSON.parse(JSON.stringify(cfg));
+      for (const [id, v] of Object.entries(require("../services/customizer").cleanChanges(work, site ? site.id : null))) if (id.startsWith(prefix)) spLib.set(next, id.slice(prefix.length), v);
+      cfg = spLib.normalize(next);
+    } catch { /* un brouillon invalide ne casse jamais l'aperçu */ }
+  }
+  return cfg;
+}
 function renderPostPage(req, res, post, { preview = false } = {}) {
   const commentCfgNow = commentsEngine.settingsOf("post", post.id); // réglages du site de CET article
   const commentThread = commentsEngine.thread("post", post.id, { page: req.query.cpage });
@@ -371,7 +392,8 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     seo.graph = { page: { type: "WebPage", url: ownUrl, crumbs, imagePath, inLanguage: lang, datePublished: isoDateTime(post.published_at), dateModified: isoDateTime(post.updated_at) }, main };
   }
   const pageScope = urls.contentScope("post", "posts.id", req.kwSite || null);
-  const { previous, next } = post.published ? blog.neighbours(post, pageScope) : { previous: null, next: null };
+  const sp = singlePostFor(req);
+  const { previous, next } = post.published ? blog.neighbours(post, pageScope, { categoryOnly: sp.postNav.mode === "category" }) : { previous: null, next: null };
   // Sommaire : les titres des autres pages pointent vers leur page (?page=N#ancre) ; ceux de la page affichée restent des ancres simples
   const toc = (post.toc_enabled === 0 ? [] : article.toc).map((t) => (pageCount > 1 ? { ...t, href: t.page === pageNo ? `#${t.id}` : `?page=${t.page}#${t.id}` } : t));
   // Modèle de thème « Article du blog » (Page Builder) : remplace l'en-tête, l'image et le texte ; sans modèle publié, rien ne change
@@ -384,7 +406,18 @@ function renderPostPage(req, res, post, { preview = false } = {}) {
     tocTitle: post.toc_title || "Sommaire", tocNumbering: post.toc_numbering || "h2", preview,
     categorySlug: post.category ? taxonomy.categorySlugOfName(post.category) : "", postTerms,
     sidebar: { popular: blog.popular(4, post.id, pageScope), recent: blog.recent(4, post.id, pageScope), categories: blog.categories(pageScope), newsletter },
-    similar: post.published ? blog.similar(post, 3, pageScope) : [],
+    similar: post.published ? (sp.related.enabled ? spLib.related(post, blog.relatedCandidates(post, pageScope), sp, { parseTags: blog.parseTags }).map(blog.card) : []) : [],
+    sp, spCss: spLib.css(sp), spAttrs: spLib.layoutAttrs(sp),
+    spReadTime: Number.isInteger(post.reading_minutes) && post.reading_minutes > 0 && sp.readingTime.enabled ? { minutes: post.reading_minutes, text: sp.readingTime.label.replace("{n}", String(post.reading_minutes)) } : spLib.readingTime(pageCount > 1 ? article.pages[pageNo - 1] : article.html, sp),
+    spDate: post.published_at ? { text: spLib.formatDate(sp.date.source === "modified" && post.updated_at ? post.updated_at : post.published_at, sp.date.format), iso: String(sp.date.source === "modified" && post.updated_at ? post.updated_at : post.published_at).replace(" ", "T") + "Z" } : null,
+    spUpdated: sp.date.updatedOnlyIfDifferent ? (modified ? { text: spLib.formatDate(modified, sp.date.format), iso: String(modified).replace(" ", "T") + "Z" } : null) : (post.updated_at ? { text: spLib.formatDate(post.updated_at, sp.date.format), iso: String(post.updated_at).replace(" ", "T") + "Z" } : null),
+    spMeta: spLib.metaParts(sp, { date: post.published_at ? { text: spLib.formatDate(sp.date.source === "modified" && post.updated_at ? post.updated_at : post.published_at, sp.date.format), iso: String(sp.date.source === "modified" && post.updated_at ? post.updated_at : post.published_at).replace(" ", "T") + "Z" } : null,
+      author: author ? { name: author.username, url: "/blog/auteur/" + author.id, avatar: author.avatar_path } : null,
+      readTime: Number.isInteger(post.reading_minutes) && post.reading_minutes > 0 && sp.readingTime.enabled ? { minutes: post.reading_minutes, text: sp.readingTime.label.replace("{n}", String(post.reading_minutes)) } : spLib.readingTime(pageCount > 1 ? article.pages[pageNo - 1] : article.html, sp),
+      updated: sp.date.updatedOnlyIfDifferent ? (modified ? { text: spLib.formatDate(modified, sp.date.format), iso: String(modified).replace(" ", "T") + "Z" } : null) : (post.updated_at ? { text: spLib.formatDate(post.updated_at, sp.date.format), iso: String(post.updated_at).replace(" ", "T") + "Z" } : null),
+      commentCount: commentThread.total, tags: postTerms.tags.map((x) => ({ name: x.name, url: x.url })) }),
+    spShare: spLib.shareLinks(sp, { url: ownUrl, title: post.title }),
+    spAuthorRecent: author && sp.authorBox.enabled ? blog.authorRecent(author.id, post.id, sp.authorBox.recent, pageScope) : [],
     comments: commentThread,
     replyTo: replyTarget,
     commentHtml: (body) => commentsEngine.html(body, { links: commentCfgNow.links_allowed }),

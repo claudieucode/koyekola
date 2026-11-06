@@ -228,3 +228,42 @@ html[data-kola-theme="dark"] .kwc-toast-error { background: #7a1f29; color: #fff
 .kwc-scope-line { margin-top: 4px; font-size: 12px; opacity: .92; }
 .kwc-scope-link { display: inline-block; margin-top: 6px; color: #fff; font-weight: 700; text-decoration: underline; }
 .kwc-selbar { pointer-events: auto; }
+
+/* Publication unique : onglets, groupes repliables, vignettes, liste réordonnable, champs 4 côtés */
+.kwc-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 0 0 12px; border-bottom: 1px solid var(--kwc-line, #d9dee5); }
+.kwc-tab { padding: 12px 8px; background: none; border: 0; border-bottom: 2px solid transparent; font: inherit; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: .78rem; color: #5b6676; cursor: pointer; }
+.kwc-tab[aria-selected="true"] { color: #1d3fd8; border-bottom-color: #1d3fd8; }
+.kwc-tab:focus-visible, .kwc-thumb:focus-visible, .kwc-segbtn:focus-visible, .kwc-iconbtn:focus-visible, .kwc-box-link:focus-visible { outline: 2px solid #1d3fd8; outline-offset: 2px; }
+.kwc-group { margin: 0 0 8px; border: 1px solid var(--kwc-line, #d9dee5); border-radius: 8px; background: #fff; }
+.kwc-group > summary { padding: 11px 12px; font-weight: 600; cursor: pointer; list-style: none; }
+.kwc-group > summary::after { content: "›"; float: right; transform: rotate(90deg); transition: transform .15s; }
+.kwc-group[open] > summary::after { transform: rotate(-90deg); }
+.kwc-group > .kwc-field { margin: 0; padding: 10px 12px; border-top: 1px solid #eef1f4; }
+.kwc-thumbs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kwc-thumb { padding: 6px; border: 2px solid var(--kwc-line, #d9dee5); border-radius: 8px; background: #fff; color: #6b7686; cursor: pointer; }
+.kwc-thumb.is-on { border-color: #3b5bdb; background: #3b5bdb; color: #fff; }
+.kwc-thumb-svg { display: block; width: 100%; height: auto; }
+.kwc-seg { display: flex; border: 1px solid var(--kwc-line, #d9dee5); border-radius: 6px; overflow: hidden; }
+.kwc-segbtn { flex: 1; padding: 9px 6px; border: 0; background: #fff; font: inherit; font-weight: 600; cursor: pointer; color: #3a4452; }
+.kwc-segbtn + .kwc-segbtn { border-left: 1px solid var(--kwc-line, #d9dee5); }
+.kwc-segbtn.is-on { background: #3b5bdb; color: #fff; }
+.kwc-order { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.kwc-order-item { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--kwc-line, #d9dee5); border-radius: 6px; background: #fff; cursor: grab; }
+.kwc-order-item.is-off .kwc-order-label { opacity: .5; text-decoration: line-through; }
+.kwc-order-item.is-drag { opacity: .5; }
+.kwc-order-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.kwc-grip { color: #94a0b2; letter-spacing: -2px; }
+.kwc-boxwrap { display: grid; gap: 6px; }
+.kwc-box-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.kwc-devbadge { font-size: .72rem; padding: 2px 8px; border-radius: 999px; background: #eef1fb; color: #3b5bdb; }
+.kwc-box { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: stretch; }
+.kwc-box-cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--kwc-line, #d9dee5); border-radius: 6px; overflow: hidden; }
+.kwc-box-cell { display: grid; }
+.kwc-box-cell + .kwc-box-cell { border-left: 1px solid var(--kwc-line, #d9dee5); }
+.kwc-box-cell input { width: 100%; min-width: 0; border: 0; text-align: center; padding: 9px 2px; }
+.kwc-box-lbl { text-align: center; font-size: .6rem; letter-spacing: .04em; color: #7a8596; padding: 2px 0 4px; }
+.kwc-box-link { width: 40px; border: 1px solid var(--kwc-line, #d9dee5); border-radius: 6px; background: #f0f2f5; cursor: pointer; }
+.kwc-box-link.is-on { background: #dbe3ff; border-color: #3b5bdb; }
+.kwc-unitsel { border: 0; background: none; font: inherit; }
+@media (max-width: 420px) { .kwc-box { grid-template-columns: 1fr; } .kwc-box-link { width: 100%; height: 34px; } }
+@media (prefers-reduced-motion: reduce) { .kwc-group > summary::after { transition: none; } }

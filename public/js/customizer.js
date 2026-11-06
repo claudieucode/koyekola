@@ -128,7 +128,7 @@
     else {
       if (id === "en-tete" && !boot.principal) body.appendChild(note("L'en-tête d'un site est un composant du Page Builder : il se compose là-bas.", boot.links.pageBuilder, "Modifier l'en-tête et le pied de page"));
       if (id === "pied" && !boot.principal) body.appendChild(note("Le pied de page d'un site est un composant du Page Builder : il se compose là-bas.", boot.links.pageBuilder, "Modifier l'en-tête et le pied de page"));
-      p.controls.forEach(function (c) { body.appendChild(field(c)); });
+      if (p.tabs) singleBody(p, body); else p.controls.forEach(function (c) { body.appendChild(field(c)); });
       if (id === "couleurs" && warnings.length) body.appendChild(warnBox());
       if (id === "couleurs") body.appendChild(h("p", { class: "kwc-hint", text: "Une couleur vide reprend la valeur d'origine du site. Les couleurs ne s'appliquent qu'aux éléments qui utilisent les couleurs globales : les styles personnalisés d'une page restent intacts." }));
     }
@@ -165,6 +165,9 @@
     else if (c.kind === "media") input = mediaInput(c, lid, disabled);
     else if (c.kind === "css") input = cssInput(c, lid, disabled);
     else if (c.kind === "palette") input = paletteInput(c, lid, disabled);
+    else if (c.kind === "order") input = orderInput(c, lid, disabled);
+    else if (c.kind === "box") input = boxInput(c, lid, disabled);
+    else if (c.kind === "resp") input = respInput(c, lid, disabled);
     else input = textInput(c, lid, disabled);
     wrap.appendChild(input);
     if (c.help) wrap.appendChild(h("small", { class: "kwc-help", text: c.help }));
@@ -234,6 +237,8 @@
     return h("div", { class: "kwc-numrow" }, [range, num, c.unit ? h("span", { class: "kwc-unit", text: c.unit }) : null]);
   }
   function selectInput(c, lid, disabled) {
+    if (c.thumbs) return thumbsInput(c, lid, disabled);
+    if (c.segmented) return segInput(c, lid, disabled);
     var sel = h("select", { id: lid, disabled: disabled }, c.options.map(function (o) { return h("option", { value: String(o[0]), text: o[1] }); }));
     sel.value = String(values[c.id] === null || values[c.id] === undefined ? "" : values[c.id]);
     sel.addEventListener("change", function () { set(c.id, c.number ? Number(sel.value) : sel.value); updateVisibility(); });
@@ -283,6 +288,139 @@
     return h("div", { class: "kwc-media" }, [thumb, h("div", { class: "kwc-media-side" }, [name, h("div", { class: "kwc-media-act" }, kids)])]);
   }
   var mediaCache = {};
+  // ---------- Publication unique : onglets, groupes, vignettes, ordre, 4 côtés, valeurs par appareil ----------
+  var spTab = "general";
+  function singleBody(p, body) {
+    var tabs = h("div", { class: "kwc-tabs", role: "tablist", "aria-label": "Publication unique" }, [["general", "Général"], ["design", "Design"]].map(function (t) {
+      return h("button", { type: "button", role: "tab", class: "kwc-tab", "aria-selected": String(spTab === t[0]), "data-sptab": t[0], text: t[1], onclick: function () { spTab = t[0]; renderPanel(p.id); } });
+    }));
+    body.appendChild(tabs);
+    var groups = [], by = {};
+    p.controls.filter(function (c) { return c.tab === spTab; }).forEach(function (c) { var g = c.group || "Réglages"; if (!by[g]) { by[g] = []; groups.push(g); } by[g].push(c); });
+    groups.forEach(function (g, i) {
+      var det = h("details", { class: "kwc-group", "data-group": g }); if (i < 2 || spTab === "design" && i < 1) det.open = true;
+      det.appendChild(h("summary", { class: "kwc-group-title", text: g }));
+      by[g].forEach(function (c) { det.appendChild(field(c)); });
+      body.appendChild(det);
+    });
+  }
+  var NS_ = "http://www.w3.org/2000/svg";
+  function svgEl(name, attrs) { var e = document.createElementNS(NS_, name); Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); }); return e; }
+  // Vignette réelle d'une mise en page : dessine la structure (colonne, largeur du texte) — pas une illustration décorative
+  function thumbSvg(kind, value) {
+    var s = svgEl("svg", { viewBox: "0 0 120 80", class: "kwc-thumb-svg", "aria-hidden": "true", focusable: "false" });
+    s.appendChild(svgEl("rect", { x: 3, y: 3, width: 114, height: 74, rx: 4, fill: "none", stroke: "currentColor", "stroke-opacity": ".35" }));
+    function block(x, y, w, hh, o) { s.appendChild(svgEl("rect", { x: x, y: y, width: w, height: hh, rx: 2, fill: "currentColor", "fill-opacity": o || ".22" })); }
+    function lines(x, y, w, n) { for (var i = 0; i < n; i++) s.appendChild(svgEl("rect", { x: x, y: y + i * 6, width: i === n - 1 ? w * .6 : w, height: 2.5, rx: 1, fill: "currentColor", "fill-opacity": ".3" })); }
+    if (value === "default") { s.appendChild(svgEl("circle", { cx: 60, cy: 40, r: 14, fill: "none", stroke: "currentColor", "stroke-opacity": ".4" })); s.appendChild(svgEl("path", { d: "M46 40h28M60 26c-6 6-6 22 0 28M60 26c6 6 6 22 0 28", fill: "none", stroke: "currentColor", "stroke-opacity": ".4" })); return s; }
+    if (kind === "container") {
+      if (value === "full") { block(8, 8, 104, 22); lines(8, 38, 104, 5); }
+      else if (value === "narrow") { block(34, 10, 52, 20); lines(34, 38, 52, 5); }
+      else { block(14, 10, 92, 24); lines(14, 42, 92, 4); }
+    } else {
+      if (value === "none") { block(26, 10, 68, 22); lines(26, 40, 68, 5); }
+      else if (value === "left") { block(10, 10, 22, 58); block(38, 10, 72, 20); lines(38, 38, 72, 5); }
+      else { block(10, 10, 72, 20); lines(10, 38, 72, 5); block(88, 10, 22, 58); }
+    }
+    return s;
+  }
+  function thumbsInput(c, lid, disabled) {
+    var box = h("div", { class: "kwc-thumbs", role: "radiogroup", "aria-label": c.label });
+    c.options.forEach(function (o) {
+      var on = String(values[c.id]) === String(o[0]);
+      var b = h("button", { type: "button", class: "kwc-thumb" + (on ? " is-on" : ""), role: "radio", "aria-checked": String(on), title: o[1], "aria-label": o[1], disabled: disabled, onclick: function () { set(c.id, o[0]); $$("button", box).forEach(function (x) { var y = x === b; x.classList.toggle("is-on", y); x.setAttribute("aria-checked", String(y)); }); updateVisibility(); } }, [thumbSvg(c.thumbs, o[0])]);
+      box.appendChild(b);
+    });
+    return box;
+  }
+  function segInput(c, lid, disabled) {
+    var box = h("div", { class: "kwc-seg", role: "radiogroup", "aria-label": c.label });
+    c.options.forEach(function (o) {
+      var on = String(values[c.id]) === String(o[0]);
+      var b = h("button", { type: "button", class: "kwc-segbtn" + (on ? " is-on" : ""), role: "radio", "aria-checked": String(on), text: o[1], disabled: disabled, onclick: function () { set(c.id, o[0]); $$("button", box).forEach(function (x) { var y = x === b; x.classList.toggle("is-on", y); x.setAttribute("aria-checked", String(y)); }); updateVisibility(); } });
+      box.appendChild(b);
+    });
+    return box;
+  }
+  // Liste réordonnable (glisser-déposer ET boutons monter/descendre au clavier) avec visibilité par élément
+  function orderInput(c, lid, disabled) {
+    var list = clone(values[c.id] || []); var label = {}; c.items.forEach(function (i) { label[i.id] = i; });
+    var ul = h("ul", { class: "kwc-order", id: lid });
+    function commit() { set(c.id, clone(list)); draw(); }
+    function move(i, d) { var j = i + d; if (j < 0 || j >= list.length) return; var t = list[i]; list[i] = list[j]; list[j] = t; commit(); var b = $$("li", ul)[j]; if (b) { var f = b.querySelector(d < 0 ? ".kwc-up" : ".kwc-down"); if (f) f.focus(); } }
+    var dragIndex = null;
+    function draw() {
+      ul.textContent = "";
+      list.forEach(function (it, i) {
+        var meta = label[it.id] || { label: it.id };
+        var li = h("li", { class: "kwc-order-item" + (it.visible ? "" : " is-off"), draggable: disabled ? "false" : "true", "data-i": i });
+        li.addEventListener("dragstart", function (e) { dragIndex = i; try { e.dataTransfer.setData("text/plain", String(i)); e.dataTransfer.effectAllowed = "move"; } catch (x) { /* ancien navigateur */ } li.classList.add("is-drag"); });
+        li.addEventListener("dragend", function () { li.classList.remove("is-drag"); dragIndex = null; });
+        li.addEventListener("dragover", function (e) { if (dragIndex !== null) { e.preventDefault(); } });
+        li.addEventListener("drop", function (e) { e.preventDefault(); if (dragIndex === null || dragIndex === i) return; var m = list.splice(dragIndex, 1)[0]; list.splice(i, 0, m); dragIndex = null; commit(); });
+        li.appendChild(h("span", { class: "kwc-grip", "aria-hidden": "true", text: "⋮⋮" }));
+        li.appendChild(h("span", { class: "kwc-order-label", text: meta.label }));
+        li.appendChild(h("button", { type: "button", class: "kwc-iconbtn kwc-up", "aria-label": "Monter « " + meta.label + " »", disabled: disabled || i === 0, text: "↑", onclick: function () { move(i, -1); } }));
+        li.appendChild(h("button", { type: "button", class: "kwc-iconbtn kwc-down", "aria-label": "Descendre « " + meta.label + " »", disabled: disabled || i === list.length - 1, text: "↓", onclick: function () { move(i, 1); } }));
+        li.appendChild(h("button", { type: "button", class: "kwc-iconbtn kwc-eye", "aria-pressed": String(!!it.visible), "aria-label": (it.visible ? "Masquer « " : "Afficher « ") + meta.label + " »", title: it.visible ? "Visible" : "Masqué", disabled: disabled || meta.locked, text: it.visible ? "●" : "○", onclick: function () { it.visible = !it.visible; commit(); } }));
+        ul.appendChild(li);
+      });
+    }
+    draw();
+    return ul;
+  }
+  var DEVNAME = { desktop: "Ordinateur", tablet: "Tablette", mobile: "Mobile" };
+  function devBadge() { return h("span", { class: "kwc-devbadge", "data-devbadge": "1", title: "Valeur pour : " + DEVNAME[device], text: DEVNAME[device] }); }
+  function refreshDeviceFields() { $$(".kwc-k-box,.kwc-k-resp").forEach(function (row) { var c = controls[row.getAttribute("data-ctl")]; if (c) refreshField(c); }); }
+  // Quatre côtés (haut, droite, bas, gauche) avec liaison, unité et valeur propre à chaque appareil
+  function boxInput(c, lid, disabled) {
+    var all = clone(values[c.id] || {}); var dev = c.responsive ? device : "desktop";
+    var cur = (c.responsive ? all[dev] : all) || { top: null, right: null, bottom: null, left: null, unit: "px", linked: false };
+    var inputs = {}; var SIDES = [["top", "EN HAUT"], ["right", "À DROITE"], ["bottom", "EN BAS"], ["left", "À GAUCHE"]];
+    if (c.corners) SIDES = [["top", "HAUT-G"], ["right", "HAUT-D"], ["bottom", "BAS-D"], ["left", "BAS-G"]];
+    function commit() {
+      var any = SIDES.some(function (s) { return cur[s[0]] !== null && cur[s[0]] !== undefined; });
+      var next = any ? { top: cur.top, right: cur.right, bottom: cur.bottom, left: cur.left, unit: c.noUnit ? "px" : (cur.unit || "px"), linked: !!cur.linked } : null;
+      if (c.responsive) { var o = clone(all); o[dev] = next; var has = ["desktop", "tablet", "mobile"].some(function (d) { return o[d]; }); all = has ? { desktop: o.desktop || null, tablet: o.tablet || null, mobile: o.mobile || null } : null; set(c.id, all); }
+      else { all = next; set(c.id, next); }
+    }
+    var row = h("div", { class: "kwc-box" });
+    var cells = h("div", { class: "kwc-box-cells" });
+    SIDES.forEach(function (s) {
+      var inp = h("input", { type: "number", class: "kwc-num", min: c.corners || c.noUnit ? 0 : -400, max: c.max, step: 1, inputmode: "numeric", disabled: disabled, "aria-label": c.label + " — " + s[1].toLowerCase(), value: cur[s[0]] === null || cur[s[0]] === undefined ? "" : cur[s[0]] });
+      inp.addEventListener("input", function () {
+        var v = inp.value === "" ? null : Number(inp.value);
+        if (v !== null && (!isFinite(v) || v < (c.corners || c.noUnit ? 0 : -400) || v > c.max)) { setError(c.id, c.label + " : un nombre entre " + (c.corners || c.noUnit ? 0 : -400) + " et " + c.max + " est attendu.", true); return; }
+        clearError(c.id);
+        if (cur.linked) SIDES.forEach(function (t) { cur[t[0]] = v; if (inputs[t[0]] !== inp) inputs[t[0]].value = v === null ? "" : v; }); else cur[s[0]] = v;
+        commit();
+      });
+      inputs[s[0]] = inp; cells.appendChild(h("label", { class: "kwc-box-cell" }, [inp, h("span", { class: "kwc-box-lbl", text: s[1] })]));
+    });
+    var link = h("button", { type: "button", class: "kwc-box-link" + (cur.linked ? " is-on" : ""), "aria-pressed": String(!!cur.linked), "aria-label": "Lier les quatre valeurs", title: "Lier les valeurs", disabled: disabled, text: "🔗", onclick: function () {
+      cur.linked = !cur.linked; link.classList.toggle("is-on", cur.linked); link.setAttribute("aria-pressed", String(cur.linked));
+      if (cur.linked) { var first = SIDES.map(function (s) { return cur[s[0]]; }).filter(function (v) { return v !== null && v !== undefined; })[0]; if (first !== undefined) SIDES.forEach(function (s) { cur[s[0]] = first; inputs[s[0]].value = first; }); }
+      commit();
+    } });
+    row.appendChild(cells); row.appendChild(link);
+    var top = h("div", { class: "kwc-box-top" }, [c.responsive ? devBadge() : null]);
+    if (!c.noUnit) { var unit = h("select", { class: "kwc-unitsel", "aria-label": "Unité", disabled: disabled }, ["px", "em", "rem", "%"].map(function (u) { return h("option", { value: u, text: u }); })); unit.value = cur.unit || "px"; unit.addEventListener("change", function () { cur.unit = unit.value; commit(); }); top.appendChild(unit); }
+    return h("div", { class: "kwc-boxwrap" }, [top, row]);
+  }
+  // Nombre propre à chaque appareil : vide = valeur héritée de l'ordinateur (puis du thème)
+  function respInput(c, lid, disabled) {
+    var all = clone(values[c.id] || { desktop: null, tablet: null, mobile: null });
+    var v = all[device]; var inherited = device !== "desktop" && (v === null || v === undefined) ? all.desktop : null;
+    var num = h("input", { type: "number", id: lid, class: "kwc-num", min: c.min, max: c.max, step: 1, inputmode: "numeric", disabled: disabled, value: v === null || v === undefined ? "" : v, placeholder: inherited !== null && inherited !== undefined ? String(inherited) : "" });
+    num.addEventListener("input", function () {
+      var x = num.value === "" ? null : Number(num.value);
+      if (x !== null && (!isFinite(x) || x < c.min || x > c.max)) { setError(c.id, c.label + " : un nombre entre " + c.min + " et " + c.max + " est attendu.", true); return; }
+      clearError(c.id); all[device] = x; var any = ["desktop", "tablet", "mobile"].some(function (d) { return all[d] !== null && all[d] !== undefined; });
+      set(c.id, any ? { desktop: all.desktop === undefined ? null : all.desktop, tablet: all.tablet === undefined ? null : all.tablet, mobile: all.mobile === undefined ? null : all.mobile } : null);
+    });
+    var reset = h("button", { type: "button", class: "kwc-iconbtn", "aria-label": "Réinitialiser la valeur " + DEVNAME[device].toLowerCase(), title: "Réinitialiser (" + DEVNAME[device] + ")", disabled: disabled, text: "↺", onclick: function () { num.value = ""; num.dispatchEvent(new Event("input")); } });
+    return h("div", { class: "kwc-numrow" }, [devBadge(), num, h("span", { class: "kwc-unit", text: c.unit || "px" }), reset]);
+  }
   function updateVisibility() {
     $$("[data-ctl]").forEach(function (row) {
       var c = controls[row.getAttribute("data-ctl")]; if (!c || !c.showIf) return;
@@ -405,6 +543,7 @@
   $$("[data-device]").forEach(function (b) { b.addEventListener("click", function () {
     device = b.getAttribute("data-device"); $("#kwc-frame").setAttribute("data-device", device);
     $$("[data-device]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    refreshDeviceFields();
   }); });
 
   // ---------- Brouillon et publication ----------
