@@ -19,7 +19,7 @@ module.exports = {
     { key: "minHeight", kind: "number", label: "Hauteur minimale (px)", min: 160, max: 900, integer: true, default: 360 },
   ],
   validate(p, at) { if (p.buttonLabel && !p.link) throw new Error(`${at} : un bouton demande une adresse.`); },
-  data(ctx, p) { const V = require("../motionVisual"); return { c1: V.cssColor(p.color1) || "var(--kw-primary, #0277b6)", c2: V.cssColor(p.color2) || "var(--kw-secondary, #6d28d9)", c3: V.cssColor(p.color3) || "var(--kw-accent, #db2777)" }; },
+  data(ctx, p) { const V = require("../motionVisual"); return { c1: V.cssColor(p.color1) || "var(--kw-primary, #0277b6)", c2: V.cssColor(p.color2) || "var(--kw-secondary, #6d28d9)", c3: V.cssColor(p.color3) || "var(--kw-accent, #f59e0b)" }; },
   motion: {
     module: "animated-bg",
     presets: [["gradient", "Dégradé animé"], ["mesh", "Mesh gradient"], ["noise", "Grain animé"]],
