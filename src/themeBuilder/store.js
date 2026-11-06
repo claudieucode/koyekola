@@ -195,4 +195,14 @@ function restoreVersion(ctx, siteId, id, number) {
     return { ...get(ctx, siteId, id), conditionsRestored };
   });
 }
-module.exports = { byDocument, docName, list, get, bySource, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };
+// Point de retour AVANT une opération qui remplace le contenu de travail (ex. « Revenir au modèle initial ») : la copie de travail actuelle devient une version, restaurable depuis « Versions ».
+function checkpoint(ctx, siteId, id) {
+  const t = get(ctx, siteId, id);
+  if (t.sourceKind !== "component") throw bad("Ce modèle n'est pas un composant.");
+  const c = P().getComponent(ctx, t.sourceId); if (!c) throw bad("Le document de ce modèle n'existe plus.", "not_found");
+  const n = (ctx.db.prepare("SELECT COALESCE(MAX(number), 0) m FROM mk_tb_versions WHERE template_id = ?").get(t.id).m) + 1;
+  ctx.db.prepare("INSERT INTO mk_tb_versions (template_id, number, name, conditions, snapshot, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, n, t.name, JSON.stringify(t.conditions), JSON.stringify({ kind: "component", name: c.name, section: c.draft || c.section }), ctx.userId ?? null);
+  ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
+  return n;
+}
+module.exports = { checkpoint, byDocument, docName, list, get, bySource, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };

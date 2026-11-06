@@ -30,11 +30,19 @@ module.exports = () => {
   const docOf = (ctx, t) => { try { return t.sourceKind === "page" ? P().getPage(ctx, t.sourceId).working : (() => { const c = P().getComponent(ctx, t.sourceId); return c ? (c.draft || c.section) : null; })(); } catch { return null; } };
   // Révision du DOCUMENT affiché (brouillon enregistré du composant / de la page) : change à chaque enregistrement, contrairement à celle du modèle ; clé de cache des vignettes
   const docRev = (ctx, t) => { try { const d = t.sourceKind === "page" ? P().getPage(ctx, t.sourceId) : P().getComponent(ctx, t.sourceId); return d ? `${d.revision}:${d.updated_at || d.updatedAt || ""}` : "0"; } catch { return "0"; } };
+  // Origine bibliothèque d'un en-tête installé : la clé du modèle est gardée dans le premier conteneur du document (libraryKey) ; absente pour un en-tête créé autrement
+  const originKey = (section) => { const first = section && Array.isArray(section.children) ? section.children[0] : null; return first && first.props && typeof first.props.libraryKey === "string" ? first.props.libraryKey : ""; };
+  const stampKey = (section, key) => { const sec = JSON.parse(JSON.stringify(section)); const first = sec && Array.isArray(sec.children) ? sec.children[0] : null; if (first && first.type === "container") { first.props = { ...(first.props || {}), libraryKey: key }; } return sec; };
+  const originOf = (ctx, t, doc) => {
+    if (t.type !== "header" || t.sourceKind !== "component") return null;
+    const key = originKey(doc); if (!key) return null;
+    const m = Catalog.find("header", key); return m ? { type: "header", key, name: m.name } : null;
+  };
   const card = (ctx, t, conflictIds, light = false) => {
     const base = { ...t, docRev: docRev(ctx, t), describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
-    if (light) return base;
+    if (light) return { ...base, origin: t.type === "header" ? originOf(ctx, t, docOf(ctx, t)) : null };
     const doc = docOf(ctx, t), th = thumbnail(doc);
-    return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc };
+    return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc, origin: originOf(ctx, t, doc) };
   };
   const listAll = (ctx, id, f = {}, light = false) => {
     TB.legacy.adoptSiteParts(ctx, id);
@@ -95,6 +103,23 @@ module.exports = () => {
   router.post(`${T}/restaurer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.restore(ctx, id, tid(req)))));
   router.post(`${T}/dupliquer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.duplicate(ctx, id, tid(req)))));
   router.post(`${T}/supprimer`, need("forms.write"), need("pages.delete"), run((ctx, id, req) => TB.store.remove(ctx, id, tid(req))));
+  // « Revenir au modèle initial » : un en-tête installé depuis la bibliothèque retrouve exactement la composition d'origine (copie de travail du SEUL document de ce modèle ; rien n'est publié).
+  // L'état avant le retour est gardé comme version (« Versions » › Restaurer) : l'opération est annulable.
+  router.post(`${T}/revenir-au-modele`, need("forms.write"), run((ctx, id, req) => {
+    const t = TB.store.get(ctx, id, tid(req));
+    if (t.status === "archived") throw new MarketingError("conflict", "Ce modèle est archivé : restaurez-le avant de le modifier.");
+    if (t.type !== "header" || t.sourceKind !== "component") throw new MarketingError("invalid_field", "Seul un en-tête installé depuis la bibliothèque peut revenir à son modèle initial.");
+    const key = originKey(docOf(ctx, t));
+    if (!key) throw new MarketingError("invalid_field", "Cet en-tête n'a pas été installé depuis la bibliothèque : le modèle d'origine n'est pas connu.");
+    const meta = Catalog.find("header", key); if (!meta) throw new MarketingError("not_found", "Le modèle d'origine n'existe plus dans la bibliothèque.");
+    const fresh = Catalog.build("header", key, { formId: siteFormId(ctx, id) });
+    if (!fresh || fresh.kind !== "component") throw new MarketingError("not_found", "Le modèle d'origine est introuvable.");
+    return require("../../marketing/db/tx").transaction(ctx.db, () => {
+      const version = TB.store.checkpoint(ctx, id, t.id);
+      P().saveComponentDraft(ctx, t.sourceId, stampKey(fresh.section, key));
+      return { ...one(ctx, id, TB.store.get(ctx, id, t.id)), version, original: { key, name: meta.name } };
+    });
+  }));
   router.get(`${T}/versions`, need("forms.read"), run((ctx, id, req) => ({ versions: TB.store.versions(ctx, id, tid(req)).map((v) => ({ ...v, describe: TB.conditions.describe(v.conditions) })) })));
   router.post(`${T}/versions/:n(\\d+)/restaurer`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.restoreVersion(ctx, id, tid(req), Number(req.params.n)); return { ...one(ctx, id, r), conditionsRestored: r.conditionsRestored }; }));
   router.get(`${T}/instances`, need("forms.read"), run((ctx, id, req) => instances(ctx, id, tid(req))));
@@ -161,6 +186,8 @@ module.exports = () => {
   router.post(`${LIB}/utiliser`, need("forms.write"), run((ctx, id, req) => {
     const b = body(req); libType(ctx, id, String(b.type || ""));
     const t = useTemplate(ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });
+    // En-tête : la clé du modèle d'origine est gardée dans le document (sert à « Revenir au modèle initial ») ; échec = installation sans cette fonction, jamais une erreur
+    if (String(b.type) === "header" && t.sourceKind === "component") { try { const c = P().getComponent(ctx, t.sourceId); if (c) P().updateComponent(ctx, t.sourceId, { section: stampKey(c.section, String(b.key)) }); } catch { /* origine non mémorisée */ } }
     return { template: card(ctx, t, new Set()) };
   }));
   }

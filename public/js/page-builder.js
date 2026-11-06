@@ -2354,6 +2354,8 @@ function selectField(label, value, options, onChange, opts) {
       case "sitelogo":
         box.appendChild(selectField("Hauteur", String(p.height || 48), [["32", "32 px"], ["48", "48 px"], ["64", "64 px"], ["96", "96 px"]].concat([32, 48, 64, 96].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Taille du logo une fois la page défilée", p.scrollHeight ? String(p.scrollHeight) : "", [["", "Identique"], ["24", "24 px"], ["32", "32 px"], ["40", "40 px"], ["48", "48 px"], ["64", "64 px"]].concat([24, 32, 40, 48, 64].indexOf(Number(p.scrollHeight)) < 0 && p.scrollHeight ? [[String(p.scrollHeight), p.scrollHeight + " px"]] : []), function (v) { setProp(it.id, "scrollHeight", v ? Number(v) : ""); }, { disabled: disabled }));
+        box.appendChild(textField("Texte alternatif au défilement (logo sans image)", p.scrollText || "", set("scrollText"), { max: 40, disabled: disabled, onChange: true, hint: "Ex. des initiales. Remplace le nom du site quand la page défile. Agit dans un en-tête collant ou superposé." }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
         break;
       case "catfilter":
@@ -2368,6 +2370,7 @@ function selectField(label, value, options, onChange, opts) {
       case "sitetitle":
         box.appendChild(selectField("Balise", p.tag || "p", [["p", "Paragraphe"], ["span", "Texte en ligne"], ["h1", "Titre 1"], ["h2", "Titre 2"], ["h3", "Titre 3"]], function (v) { setProp(it.id, "tag", v); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        box.appendChild(textField("Texte alternatif au défilement", p.scrollText || "", set("scrollText"), { max: 40, disabled: disabled, onChange: true, hint: "Ex. des initiales. Remplace le nom du site quand la page défile. Agit dans un en-tête collant ou superposé." }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le nom du site de cette page (sinon le nom du site des réglages SEO), toujours à jour." }));
         break;
       case "copyright":
@@ -4224,7 +4227,10 @@ function selectField(label, value, options, onChange, opts) {
       if (p.full) {
         box.appendChild(selectField("Effet de l'en-tête au défilement", p.headerFx || "", [["", "Aucun"], ["shrink", "Se réduit"], ["solid", "Devient plein (en-tête superposé)"], ["both", "Se réduit et devient plein"], ["hide", "Se cache en descendant, revient en remontant"]], function (v) { change(function () { var n = byId(it.id); if (!n) return false; n.props = n.props || {}; if (v) n.props.headerFx = v; else delete n.props.headerFx; }, { label: "Effet de l'en-tête au défilement" }); }, { disabled: dis }));
         box.appendChild(h("p", { class: "pb-hint", text: "Sans effet hors d'un en-tête du Theme Builder (premier conteneur de l'en-tête, collant ou superposé). Coupé si le visiteur demande moins de mouvement." }));
+        box.appendChild(selectField("Couleurs et polices de l'en-tête", p.headerIdentity === "site" ? "site" : "", [["", "Identité du modèle (couleurs et polices du modèle)"], ["site", "Couleurs et polices du site"]], function (v) { setProp(it.id, "headerIdentity", v); }, { disabled: dis }));
+        box.appendChild(h("p", { class: "pb-hint", text: "À régler sur le premier conteneur d'un en-tête. « Couleurs et polices du site » masque, à l'affichage, les couleurs et polices propres au modèle ; rien n'est effacé : revenir sur « Identité du modèle » les rétablit. Jamais appliqué sans votre choix." }));
       }
+      box.appendChild(checkField("Barre fermable (bouton de fermeture pour le visiteur)", p.dismissible === true, function (v) { setProp(it.id, "dismissible", v); }, { disabled: dis, hint: "Pour une barre supérieure : le visiteur la masque d'un clic, son choix est mémorisé dans son navigateur (elle revient si son texte change). Rien n'est supprimé." }));
       box.appendChild(selectField("Balise HTML", p.tag || "div", SPEC.boxTags.map(function (t) { return [t, BOX_TAG_LABEL[t] || t]; }), function (v) { setProp(it.id, "tag", v); }, { disabled: dis }));
       box.appendChild(h("p", { class: "pb-hint", text: "La balise donne le sens de la zone aux lecteurs d'écran et aux moteurs de recherche ; l'affichage ne change pas." }));
     }

@@ -442,7 +442,7 @@ const NODE_TYPES = {
   // Mode d'affichage des enfants (facultatif ; absent = conteneur ordinaire, comme avant) : « onglets » (un enfant = un onglet, titre = son nom) ou
   // « carrousel » (un enfant = une diapositive, avec le carrousel du site). Les enfants restent de vrais conteneurs, modifiables dans le canevas.
   // headerFx : effet d'un EN-TÊTE au défilement, lu sur le premier conteneur de l'en-tête (themeRender.partMode, _sections.ejs) : « shrink » (la rangée se réduit), « solid » (un en-tête superposé devient plein), « both ». Sans rapport avec motion.scrollFx (effets de mouvement d'un élément).
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p), ...(oneOf("shrink", "solid", "both", "hide")(p.headerFx) ? { headerFx: p.headerFx } : {}) }) },
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p), ...(oneOf("shrink", "solid", "both", "hide")(p.headerFx) ? { headerFx: p.headerFx } : {}), ...(p.headerIdentity === "site" ? { headerIdentity: "site" } : {}), ...(p.dismissible === true ? { dismissible: true } : {}), ...(typeof p.libraryKey === "string" && /^[a-z0-9.-]{3,80}$/.test(p.libraryKey) ? { libraryKey: p.libraryKey } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
@@ -789,12 +789,12 @@ const NODE_TYPES = {
   } },
   // Logo, titre du site, copyright : contenu lu à l'affichage (logo et nom des réglages SEO, nom du site de la page,
   // année en cours) ; seuls les réglages d'affichage sont enregistrés
-  sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false }) },
+  sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(numberIn(16, 160, { integer: true })(p.scrollHeight) ? { scrollHeight: numberIn(16, 160, { integer: true })(p.scrollHeight) } : {}), ...(line(p.scrollText, 40) ? { scrollText: line(p.scrollText, 40) } : {}) }) },
   // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
   postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },
   // Filtre par catégorie : liens « ?categorie=… » vers la même page (à associer à une grille en boucle « filtrer avec l'adresse »)
   catfilter: { label: "Filtre par catégorie", category: "dynamic", props: (p) => ({ source: oneOf("posts", "courses")(p.source) || "posts", allLabel: line(p.allLabel, 40) || "Toutes", showCount: p.showCount !== false }) },
-  sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false }) },
+  sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false, ...(line(p.scrollText, 40) ? { scrollText: line(p.scrollText, 40) } : {}) }) },
   copyright: { label: "Copyright", category: "dynamic", props: (p) => ({ owner: line(p.owner, 80), text: line(p.text, 160) }) },
   // Bouton d'achat : ajoute la formation au VRAI panier de KOLAKISA (POST /panier/ajouter/:id), ou mène directement à la commande.
   // La formation doit exister et être publiée ; le prix affiché vient du catalogue à l'affichage (jamais saisi).
@@ -2083,7 +2083,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if ((n.type === "social" || n.type === "sharebuttons") && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}${n.props.text ? "::before,.kw-n-" + n.id + "::after" : ""}{${n.props.text ? "" : "border:0;"}border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
-      if (n.type === "sitelogo" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-sitelogo-img{height:${n.props.height}px}`);
+      if (n.type === "sitelogo" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) { rules.base.push(`.kw-n-${n.id} .kw-sitelogo-img{height:${n.props.height}px}`); if (Number.isInteger(n.props.scrollHeight)) rules.base.push(`.lp-block.lp-site-header.lp-site-part.is-scrolled .kw-n-${n.id} .kw-sitelogo-img{height:${n.props.scrollHeight}px;max-height:none}`); }
       if (n.type === "flipbox" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id}{min-height:${n.props.height}px}`);
       if (n.type === "readingprogress" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.thickness)) rules.base.push(`.kw-n-${n.id} .kw-readbar{height:${n.props.thickness}px}`);
       if (n.type === "rating" && NODE_ID.test(String(n.id || "")) && n.props && Number.isFinite(n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-rating-fill{width:${Math.round((n.props.value / (n.props.scale || 5)) * 1000) / 10}%}`);

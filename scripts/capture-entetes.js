@@ -17,7 +17,7 @@ const OUT = process.env.OUT || "/private/tmp/claude-501/hd-shots";
   const A = Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (?, 'Site A', 'site-a', '{}')").run(org).lastInsertRowid);
   const b = await chromium.launch({ executablePath: CHROME, headless: true });
   // se connecter dans le navigateur : récupérer le cookie via un login HTTP serait long ; on réutilise le contexte du helper s'il l'expose
-  const ctx = await b.newContext({ viewport: { width: 1280, height: 400 } });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 400 }, reducedMotion: "reduce" }); // l'aperçu joue les animations d'entrée : on capture l'état final
   await ctx.addCookies([...boss.cookies].map(([n, v]) => ({ name: n, value: v, url: srv.base })));
   const p = await ctx.newPage();
   const secs = SECTORS.filter((s) => !only.length || only.includes(s.key));
