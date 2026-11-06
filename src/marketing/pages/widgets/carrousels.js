@@ -1,7 +1,9 @@
 // Famille « Carrousels » : diaporama (Slides), carrousel de témoignages, carrousel média. Tous réutilisent l'exécution du carrousel du site
 // (public/js/landing.js : défilement natif, boutons, points, lecture automatique, boucle) : aucun nouveau script.
 const bool = (key, label, def) => ({ key, kind: "bool", label, default: def });
-const behaviour = (withHeight) => [
+const behaviour = (withHeight, withPerView = true) => [
+  { key: "effect", kind: "select", label: "Transition entre les éléments", options: [["slide", "Défilement (glissé)"], ["fade", "Fondu (un seul élément visible)"]], default: "slide" },
+  ...(withPerView ? [{ key: "perView", kind: "number", label: "Éléments visibles à la fois (bureau ; 1 sur mobile)", min: 1, max: 4, integer: true, default: 1 }] : []),
   ...(withHeight ? [{ key: "height", kind: "number", label: "Hauteur (px)", min: 200, max: 900, integer: true, default: 460 }] : []),
   bool("dots", "Afficher les points de navigation", true),
   bool("loop", "Reboucler (de la dernière à la première)", false),
@@ -28,7 +30,7 @@ module.exports = [
         ] },
       { key: "align", kind: "select", label: "Alignement du texte", options: [["center", "Centré"], ["left", "À gauche"]], default: "center" },
       { key: "kenBurns", kind: "select", label: "Effet Ken Burns (zoom lent sur l'image)", options: [["none", "Aucun"], ["in", "Zoom avant"], ["out", "Zoom arrière"]], default: "none" },
-      ...behaviour(true),
+      ...behaviour(true, false),
     ],
     validate(p, at) { p.slides.forEach((s, i) => { if (s.buttonLabel && !s.buttonUrl) throw new Error(`${at}, diapositive ${i + 1} : un bouton demande une adresse.`); if (s.buttonUrl && !s.buttonLabel) throw new Error(`${at}, diapositive ${i + 1} : une adresse de bouton demande son texte.`); }); },
   },

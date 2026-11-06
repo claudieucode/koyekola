@@ -620,7 +620,7 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...imageSize(p) };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...(p.effect === "fade" ? { effect: "fade" } : {}), ...(numberIn(2, 4, { integer: true })(p.perView) ? { perView: numberIn(2, 4, { integer: true })(p.perView) } : {}), ...imageSize(p) };
   } },
   toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
     const title = line(p.title, 150), text = clean(p.text, 4000);
@@ -1745,6 +1745,8 @@ function normalizeMotion(raw, type) {
   // Mouvement réduit : l'animation s'adapte (ou disparaît) quand le visiteur le demande ; « toujours animer » doit être choisi explicitement
   if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse || out.scrollFx || out.mouseFx)) out.alwaysMotion = true;
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
+  // Parallaxe d'arrière-plan : amplitude (en %) du déplacement de l'image de fond ; valeur hors liste ignorée
+  if ([10, 20, 35, 50].includes(raw.bgParallax)) out.bgParallax = raw.bgParallax;
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -1948,6 +1950,7 @@ function motionAttrs(n) {
   if (m.mouseFx) a += ` data-kw-mfx="${esc(JSON.stringify(m.mouseFx))}"`;
   if (m.off && (m.scroll || m.mouse || m.scrollFx || m.mouseFx)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
   if (m.alwaysMotion) a += " data-kw-motion-always";
+  if (m.bgParallax) a += ` data-kw-bgpar="${m.bgParallax}"`;
   return a;
 }
 

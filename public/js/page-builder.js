@@ -2298,6 +2298,8 @@ function selectField(label, value, options, onChange, opts) {
             textField("Légende " + (i + 1), im.caption, function (v) { change(function () { byId(it.id).props.images[i].caption = v; }, { key: it.id + ":cap" + i, light: true }); }, { max: 200, disabled: disabled }),
             h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || p.images.length < 3, onclick: function () { change(function () { byId(it.id).props.images.splice(i, 1); }); } }, "Retirer")));
         });
+        box.appendChild(optSelect(it, "Transition entre les images", "effect", p.effect, [["slide", "Défilement (glissé)"], ["fade", "Fondu (une seule image visible)"]], "slide", disabled));
+        box.appendChild(optSelect(it, "Images visibles à la fois (bureau ; 1 sur mobile)", "perView", p.perView, [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]], "1", disabled));
         box.appendChild(checkField("Points de navigation", p.dots !== false, function (v) { setProp(it.id, "dots", v); }, { disabled: disabled }));
         box.appendChild(checkField("Revenir au début après la dernière image (boucle)", p.loop, function (v) { setProp(it.id, "loop", v); }, { disabled: disabled }));
         box.appendChild(checkField("Défilement automatique", p.autoplay, function (v) { setProp(it.id, "autoplay", v); }, { disabled: disabled, hint: "S'arrête au survol, au clavier ou au toucher ; jamais si la personne réduit les animations." }));

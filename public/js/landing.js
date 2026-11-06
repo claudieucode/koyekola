@@ -83,7 +83,24 @@
       var c = atEnd ? slides.length - 1 : current();
       dots.forEach(function (d, i) { d.setAttribute("aria-current", i === c ? "true" : "false"); });
     };
-    if (loop) {
+    // Transition « fondu » : un seul élément visible à la fois (empilés, l'actif est opaque) ; sans ce script, le défilement natif reste en place
+    var fade = box.getAttribute("data-kw-effect") === "fade" && slides.length > 1, idx = 0;
+    if (fade) {
+      box.classList.add("is-fade");
+      var show = function (i) {
+        idx = (i + slides.length) % slides.length;
+        Array.prototype.forEach.call(slides, function (s, k) { s.classList.toggle("is-active", k === idx); s.setAttribute("aria-hidden", k === idx ? "false" : "true"); });
+        dots.forEach(function (d, k) { d.setAttribute("aria-current", k === idx ? "true" : "false"); });
+        prev.disabled = !loop && idx === 0; next.disabled = !loop && idx === slides.length - 1;
+      };
+      current = function () { return idx; };
+      goTo = function (i) { show(i); };
+      sync = function () { show(idx); };
+      prev.replaceWith(prev = prev.cloneNode(true)); next.replaceWith(next = next.cloneNode(true));
+      prev.addEventListener("click", function () { show(idx - 1); });
+      next.addEventListener("click", function () { show(idx + 1); });
+    }
+    if (loop && !fade) {
       prev.onclick = null; next.onclick = null;
       prev.replaceWith(prev = prev.cloneNode(true)); next.replaceWith(next = next.cloneNode(true));
       prev.addEventListener("click", function () { var atStart = track.scrollLeft <= 2; goTo(atStart ? slides.length - 1 : current() - 1); });
@@ -99,7 +116,7 @@
       track.addEventListener("pointerdown", function () { stopped = true; });
       setInterval(function () {
         if (paused || stopped || document.hidden) return;
-        var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+        var atEnd = fade ? idx === slides.length - 1 : track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
         if (atEnd && !loop) { stopped = true; return; }
         goTo(atEnd ? 0 : current() + 1);
       }, every * 1000);
@@ -358,6 +375,17 @@
   });
   // Vidéo de fond : arrêtée si la personne a demandé à réduire les animations
   if (reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-bg-video"), function (v) { v.removeAttribute("autoplay"); try { v.pause(); } catch (e) { /* rien */ } });
+  // Texte animé lettre par lettre : décalages posés ici (jamais de style en ligne) ; sans ce script ou sous « réduire les animations », le texte reste entier
+  if (!inBuilder && !reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-splittext"), function (el) {
+    var parts = el.querySelectorAll(".kw-st-c"), dur = Number(el.getAttribute("data-kw-dur")) || 600;
+    var step = Math.min(Number(el.getAttribute("data-kw-stagger")) || 40, parts.length > 1 ? 2500 / (parts.length - 1) : 40);
+    Array.prototype.forEach.call(parts, function (c, i) { c.style.transitionDuration = dur + "ms"; c.style.transitionDelay = Math.round(i * step) + "ms"; });
+    el.classList.add("kw-st-ready");
+    var go = function () { requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add("is-in"); }); }); };
+    if (el.getAttribute("data-kw-trigger") === "load" || !("IntersectionObserver" in window)) { go(); return; }
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { io.disconnect(); go(); } }); }, { threshold: 0.2 });
+    io.observe(el);
+  });
   // Titre animé : les mots se succèdent (jamais dans l'éditeur, jamais si la personne réduit les animations)
   if (!inBuilder && !reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-rotate[data-kw-words]"), function (el) {
     var words; try { words = JSON.parse(el.getAttribute("data-kw-words")); } catch (e) { return; }
@@ -488,7 +516,7 @@
       box._kwAnim = anim;
       anim.addEventListener("DOMLoaded", function () {
         box.setAttribute("data-kw-state", "loaded");
-        if (reduce) { anim.goToAndStop(0, true); return; }
+        if (reduce || box.hasAttribute("data-kw-still")) { anim.goToAndStop(0, true); return; }
         if (trigger === "hover") { box.addEventListener("mouseenter", function () { anim.play(); box.setAttribute("data-kw-state", "playing"); }); box.addEventListener("mouseleave", function () { anim.pause(); box.setAttribute("data-kw-state", "paused"); }); anim.goToAndStop(0, true); }
         else if (trigger === "click") { anim.goToAndStop(0, true); box.style.cursor = "pointer"; box.addEventListener("click", function () { if (anim.isPaused) { anim.play(); box.setAttribute("data-kw-state", "playing"); } else { anim.pause(); box.setAttribute("data-kw-state", "paused"); } }); }
         else { anim.play(); box.setAttribute("data-kw-state", "playing"); }

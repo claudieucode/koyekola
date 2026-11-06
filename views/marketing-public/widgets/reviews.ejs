@@ -1,0 +1,15 @@
+<%# Avis clients (widgets/reviews.js). Variables : p, cls, attrs, n. La note moyenne est calculée ici à partir des notes saisies : rien n'est inventé. %>
+<% const rated = p.items.filter((r) => r.rating > 0); const avg = rated.length ? rated.reduce((s, r) => s + r.rating, 0) / rated.length : 0; const stars = (v) => "★".repeat(v) + "☆".repeat(5 - v); %>
+<section class="<%= cls %> is-<%= p.layout %> is-cols-<%= p.columns %>" aria-label="<%= p.title || "Avis clients" %>"<%- attrs %>>
+  <% if (p.title || (p.showSummary && rated.length)) { %><header class="kw-reviews-head">
+    <% if (p.title) { %><h2 class="kw-reviews-title"><%= p.title %></h2><% } %>
+    <% if (p.showSummary && rated.length) { %><p class="kw-reviews-summary"><span class="kw-reviews-stars" role="img" aria-label="Note moyenne : <%= avg.toLocaleString("fr-FR", { maximumFractionDigits: 1 }) %> sur 5"><%= stars(Math.round(avg)) %></span> <strong><%= avg.toLocaleString("fr-FR", { maximumFractionDigits: 1 }) %></strong> / 5 · <%= rated.length %> avis</p><% } %>
+  </header><% } %>
+  <ul class="kw-reviews-list"><% p.items.forEach((r) => { %>
+    <li class="kw-review">
+      <% if (r.rating > 0) { %><p class="kw-review-stars" role="img" aria-label="Note : <%= r.rating %> sur 5"><%= stars(r.rating) %></p><% } %>
+      <blockquote class="kw-review-text"><p><%= r.text %></p></blockquote>
+      <footer class="kw-review-who"><% if (r.avatar) { %><img class="kw-review-avatar" src="<%= r.avatar %>" alt="" loading="lazy" decoding="async"><% } %><span><strong class="kw-review-name"><%= r.name %></strong><% if (r.role) { %><span class="kw-review-role"><%= r.role %></span><% } %><% if (r.date || r.source) { %><span class="kw-review-meta"><%= [r.date, r.source].filter(Boolean).join(" · ") %></span><% } %></span></footer>
+    </li><% }) %>
+  </ul>
+</section>
