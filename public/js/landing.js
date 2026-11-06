@@ -227,6 +227,16 @@
       }, { passive: true });
     }
   }
+  // Barre fermable ([data-kw-dismissible]) : le bouton masque la barre ; le choix est mémorisé dans le navigateur du visiteur (clé = identifiant de la barre + empreinte de son texte :
+  // si le texte change, la barre revient). Rien n'est supprimé ; dans l'éditeur et dans l'aperçu de la bibliothèque, rien n'est mémorisé.
+  if (!document.body.hasAttribute("data-kw-builder")) Array.prototype.forEach.call(document.querySelectorAll("[data-kw-dismissible]"), function (bar) {
+    var btn = bar.querySelector(":scope > [data-kw-dismiss]"); if (!btn) return;
+    var memo = !document.body.hasAttribute("data-kw-demo"), id = (bar.className.match(/kw-n-[A-Za-z0-9_-]+/) || ["bar"])[0], t = (bar.textContent || "").replace(/\s+/g, " ").trim(), hsh = 0;
+    for (var ci = 0; ci < t.length; ci += 1) hsh = (hsh * 31 + t.charCodeAt(ci)) | 0;
+    var key = "kw-dismiss:" + id + ":" + (hsh >>> 0).toString(36);
+    try { if (memo && window.localStorage.getItem(key) === "1") bar.classList.add("is-dismissed"); } catch (e) { /* stockage indisponible : la barre reste affichée */ }
+    btn.addEventListener("click", function () { bar.classList.add("is-dismissed"); try { if (memo) window.localStorage.setItem(key, "1"); } catch (e) { /* non mémorisé */ } });
+  });
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {
     b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); });

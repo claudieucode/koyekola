@@ -101,13 +101,14 @@
       item("Renommer", () => rename(t)); item("Dupliquer", () => act(t, "dupliquer", "Modèle dupliqué (brouillon)."));
       if (t.status === "published") item("Dépublier", () => act(t, "depublier", "Modèle dépublié."));
       item("Archiver", () => act(t, "archiver", "Modèle archivé."));
+      if (t.origin) item("Revenir au modèle initial", () => revertOrigin(t));
     }
     if (canWrite && t.status === "archived") { item("Restaurer", () => act(t, "restaurer", "Modèle restauré en brouillon.")); if (canRemove) item("Supprimer définitivement", () => remove(t)); }
     item("Exporter (JSON)", () => { location.href = `${base}/api/modeles/${t.id}/export.json`; }); item("Versions", () => versions(t)); item("Où est-il utilisé ?", () => where(t));
     wrap.append(btn, ul); return wrap;
   }
   function infoBtn(name, fn) { const b = el("button", "tb-info"); b.type = "button"; b.setAttribute("aria-label", `Informations sur ${name}`); b.append(svgOf(ICONS.info)); b.firstChild.setAttribute("width", "18"); b.firstChild.setAttribute("height", "18"); b.addEventListener("click", fn); return b; }
-  function details(t) { info(`Détails — ${t.name}`, (box) => { const p = (k, v) => { const x = el("p"); x.append(el("b", "", `${k} : `), document.createTextNode(v)); box.append(x); }; p("Type", t.typeLabel); p("État", ST[t.status]); p("S'affiche", t.describe.include); if (t.describe.exclude) p("Sauf", t.describe.exclude); p("Modifié", dates(t.updatedAt)); }); }
+  function details(t) { info(`Détails — ${t.name}`, (box) => { const p = (k, v) => { const x = el("p"); x.append(el("b", "", `${k} : `), document.createTextNode(v)); box.append(x); }; p("Type", t.typeLabel); p("État", ST[t.status]); p("S'affiche", t.describe.include); if (t.describe.exclude) p("Sauf", t.describe.exclude); p("Modifié", dates(t.updatedAt)); if (t.origin) p("Modèle d'origine", `${t.origin.name} (bibliothèque)`); }); }
   // Carte « structure type » : un type sans modèle. Pointillés + libellé explicite : ce n'est PAS l'aperçu d'un modèle existant.
   function ghost(t) {
     const c = el("article", "tb-tcard"); c.dataset.type = t.key; const ch = el("div", "tb-ch"); ch.append(el("h3", "", t.label), infoBtn(t.label, () => info(t.label, (box) => box.append(el("p", "", LEAD[t.key] || ""), el("p", "sw-muted", "Aucun modèle n'existe pour cette partie : la structure ci-dessous est un exemple, pas un aperçu de votre site.")))));
@@ -276,6 +277,12 @@
     e.preventDefault(); const t = renaming; if (!t) return;
     try { await post(`/modeles/${t.id}/renommer`, { name: $("tb-ren-name").value }); closeDlg($("tb-dlg-ren")); status("Modèle renommé.", "ok"); await refresh(); } catch (err) { status(err.message, "err"); closeDlg($("tb-dlg-ren")); }
   });
+  // « Revenir au modèle initial » : la copie de travail de CET en-tête retrouve la composition de la bibliothèque (confirmation d'abord ; l'état précédent reste dans « Versions »)
+  async function revertOrigin(t) {
+    if (!t.origin || !confirm(`Revenir au modèle initial « ${t.origin.name} » ?\n\nL'en-tête « ${t.name} » retrouve la composition d'origine de la bibliothèque (contenu, couleurs, polices et réglages remis à zéro dans sa copie de travail). L'état actuel est gardé dans « Versions » : vous pourrez l'annuler. Rien n'est publié ; vos autres modèles et vos autres sites ne changent pas.`)) return;
+    try { const r = await post(`/modeles/${t.id}/revenir-au-modele`); status(`« ${t.name} » est revenu au modèle initial « ${r.original.name} » (brouillon). Pour annuler : Versions › Restaurer la version ${r.version}.`, "ok"); await refresh(); }
+    catch (e) { status(e.message, "err"); }
+  }
   async function remove(t) { if (!confirm(`Supprimer définitivement « ${t.name} » ? Le document (page ou composant) reste dans vos pages.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
   async function publish(t) {
     const go = async (replace) => { const r = await post(`/modeles/${t.id}/publier`, { revision: t.revision, replace }); status(r.replaced && r.replaced.length ? `Publié : remplace « ${r.replaced.map((o) => o.name).join(" », « ")} » (repassé en brouillon).` : r.conflicts && r.conflicts.length ? `Publié, avec ${r.conflicts.length} avertissement(s) : voir les conflits.` : "Modèle publié.", "ok"); await refresh(); };

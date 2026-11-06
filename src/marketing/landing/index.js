@@ -399,6 +399,7 @@ function autoNavigation(page, sections, visitor) {
 function baseScope(ctx, visitor, page) {
   return { visitor, page, site: siteInfo(ctx, page), now: new Date(), query: (visitor && visitor.query) || {}, ...((page && page.scope) || {}) };
 }
+const headerIdentity = require("../pages/headerIdentity");
 function viewModel(ctx, page) {
   const scope = baseScope(ctx, page.visitor, page);
   const sections = page.sections.map((s0) => {
@@ -408,7 +409,7 @@ function viewModel(ctx, page) {
     const c = getCourse(ctx, s.courseId);
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
     return { ...s, course: courseView(c) };
-  }).filter(Boolean);
+  }).filter(Boolean).map((s) => (s.type === "layout" ? headerIdentity.apply(s) : s));
   // Attributs de mouvement (entrée, défilement, souris) calculés une seule fois, au même endroit, pour le canevas, l'aperçu et la page publiée
   for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { n.motionAttr = pageNodes.motionAttrs(n); });
   // Table des matières : titres de la page (dans l'ordre d'affichage), chacun avec son ancre (la sienne, sinon kw-h-<id>)

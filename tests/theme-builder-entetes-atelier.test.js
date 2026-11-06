@@ -163,7 +163,10 @@ describe("En-têtes Atelier : rendu par le vrai moteur (aperçu, vignette, site 
         assert.equal(r.status, 200, `${e.key} ${kind}`);
         assert.match(r.text, /kw-theme-part kw-theme-header/, `${e.key} ${kind} : partie d'en-tête`);
         assert.match(r.text, /kw-sitelogo|kw-sitetitle/, `${e.key} ${kind} : identité du site`);
-        assert.ok(!/<script/i.test(r.text), `${e.key} ${kind} : script`);
+        // vignette : aucun script ; aperçu complet : seul le script de défilement du site (fichier, jamais de code dans la page) pour essayer « se réduit / se cache »
+        const scripts = r.text.match(/<script\b[^>]*>[\s\S]*?<\/script>/gi) || [];
+        if (kind === "vignette") assert.equal(scripts.length, 0, `${e.key} vignette : script`);
+        else assert.ok(scripts.every((x) => /^<script src="[^"]*\/js\/landing\.js[^"]*" defer><\/script>$/.test(x)), `${e.key} apercu : script autre que landing.js`);
         assert.ok(r.text.includes("@font-face") && r.text.toLowerCase().includes(fam(M.S.head).toLowerCase()), `${e.key} ${kind} : police propre « ${fam(M.S.head)} » non chargée`);
       }
     }
