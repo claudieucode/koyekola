@@ -148,6 +148,7 @@ const SITE_RULES = Object.freeze([
   // Barre d'administration : notifications du site actif ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
   { id: "barre-du-site", pattern: /^\/barre(?:\/|$)/, kind: "param", terminal: true },
   { id: "widgets-du-site", pattern: /^\/site-web\/widgets(?:\/|$)/, kind: "param", terminal: true },
+  { id: "personnaliser-du-site", pattern: /^\/site-web\/personnaliser(?:\/|$)/, kind: "param", terminal: true },
   { id: "styles-du-site", pattern: /^\/site-web\/styles(?:\/|$)/, kind: "param", terminal: true },
   { id: "patterns-du-site", pattern: /^\/site-web\/patterns(?:\/|$)/, kind: "param", terminal: true },
   { id: "templates-du-site", pattern: /^\/site-web\/templates(?:\/|$)/, kind: "param", terminal: true },
@@ -178,6 +179,7 @@ const FAMILIES = Object.freeze([
   { id: "polices-par-site", scope: "site", pattern: /^\/site-web\/polices(?:\/|$)/ },
   { id: "barre-par-site", scope: "site", pattern: /^\/barre(?:\/|$)/ },
   { id: "widgets-par-site", scope: "site", pattern: /^\/site-web\/widgets(?:\/|$)/ },
+  { id: "personnaliser-par-site", scope: "site", pattern: /^\/site-web\/personnaliser(?:\/|$)/ },
   { id: "styles-par-site", scope: "site", pattern: /^\/site-web\/styles(?:\/|$)/ },
   { id: "patterns-par-site", scope: "site", pattern: /^\/site-web\/patterns(?:\/|$)/ },
   { id: "templates-par-site", scope: "site", pattern: /^\/site-web\/templates(?:\/|$)/ },

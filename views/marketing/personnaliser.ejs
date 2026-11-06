@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
+  <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="mk-media-site" content="<%= mediaSite %>">
+  <title><%= title %> · KOLAKISA</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="<%= asset('/css/personnaliser.css') %>">
+</head>
+<body class="pz" data-device="desktop">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="pz-i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="pz-i-brush" viewBox="0 0 24 24"><path d="M18.4 3.6a2 2 0 013 3l-8.6 8.6-3-3 8.6-8.6zM9.9 12.3l3 3c0 2.700-2 5-5.400 5.200-1.500.1-2.900-.4-3.800-1 1.700-.4 1.800-1.600 1.800-2.700 0-1.700 1.200-3.200 3.100-3.700.4-.1.900-.1 1.300.2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+      <symbol id="pz-i-gear" viewBox="0 0 24 24"><path d="M12 8.800a3.200 3.200 0 100 6.400 3.200 3.200 0 000-6.400zm8.200 4.100l-1.700-.3a6.800 6.800 0 00-.7-1.700l1-1.400a.8.800 0 00-.1-1l-1.400-1.400a.8.800 0 00-1-.1l-1.400 1a6.800 6.800 0 00-1.700-.7l-.3-1.700a.8.800 0 00-.8-.6h-2a.8.800 0 00-.8.600l-.3 1.700c-.6.2-1.200.4-1.700.7l-1.400-1a.8.800 0 00-1 .1L4.800 8.500a.8.800 0 00-.1 1l1 1.400c-.3.500-.5 1.100-.7 1.700l-1.700.3a.8.800 0 00-.6.800v2c0 .4.300.7.600.8l1.700.3c.2.600.4 1.200.7 1.700l-1 1.400a.8.800 0 00.1 1l1.400 1.400c.3.300.7.300 1 .1l1.400-1c.5.300 1.100.5 1.700.7l.3 1.700c.1.400.4.600.8.600h2c.4 0 .7-.2.8-.6l.3-1.700c.6-.2 1.200-.4 1.700-.7l1.400 1c.3.200.7.200 1-.1l1.400-1.400c.3-.3.300-.7.100-1l-1-1.400c.3-.5.500-1.100.7-1.700l1.700-.3c.4-.1.600-.4.600-.8v-2a.8.800 0 00-.6-.8z" fill="currentColor"/></symbol>
+      <symbol id="pz-i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M9.500 9.500a2.500 2.500 0 114 2c-.9.600-1.500 1.100-1.500 2.200M12 17h.01" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="pz-i-chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="pz-i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="pz-i-hide" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M13.500 8l-4 4 4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="pz-i-desktop" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="1.500" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="pz-i-tablet" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 17h14" stroke="currentColor" stroke-width="2"/></symbol>
+      <symbol id="pz-i-mobile" viewBox="0 0 24 24"><rect x="7" y="2.500" width="10" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 17.500h10" stroke="currentColor" stroke-width="2"/></symbol>
+      <symbol id="pz-i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 11-2.400-5.700M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="pz-i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 4v16" stroke="currentColor" stroke-width="2"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="pz-app" id="pz-app">
+    <aside class="pz-panel" id="pz-panel" aria-label="Personnaliser le site">
+      <header class="pz-bar" role="toolbar" aria-label="Actions principales">
+        <a class="pz-bar-btn" id="pz-close" href="<%= T.principal ? '/marketing' : '/marketing/site-web/sites/' + T.siteId + '/tableau-de-bord' %>" aria-label="Fermer la personnalisation" title="Fermer"><svg aria-hidden="true"><use href="#pz-i-close"/></svg></a>
+        <button class="pz-bar-btn" id="pz-styleguide" type="button" aria-pressed="false" aria-label="Guide de style" title="Guide de style"><svg aria-hidden="true"><use href="#pz-i-brush"/></svg></button>
+        <span class="pz-bar-fill"></span>
+        <button class="pz-publish" id="pz-publish" type="button" data-state="disabled" aria-disabled="true" disabled><span class="pz-publish-label">Publier</span><span class="pz-publish-gear" aria-hidden="true"><svg><use href="#pz-i-gear"/></svg></span><span class="pz-spin" aria-hidden="true"></span></button>
+      </header>
+
+      <div class="pz-views" id="pz-views">
+        <section class="pz-view pz-view-home" id="pz-view-home" aria-label="Catégories">
+          <div class="pz-ident">
+            <div class="pz-ident-text"><p class="pz-ident-kicker">Vous personnalisez</p><p class="pz-ident-name" id="pz-site-name"><%= T.name %></p></div>
+            <button class="pz-help" type="button" id="pz-help" aria-label="Aide sur la personnalisation" aria-expanded="false" aria-controls="pz-help-text"><svg aria-hidden="true"><use href="#pz-i-help"/></svg></button>
+          </div>
+          <p class="pz-help-text" id="pz-help-text" hidden>Choisissez une catégorie pour régler l'apparence du site. L'aperçu à droite montre le vrai site.</p>
+          <nav class="pz-cats" id="pz-cats" aria-label="Catégories de personnalisation"></nav>
+        </section>
+        <section class="pz-view pz-view-detail" id="pz-view-detail" aria-label="Détail de la catégorie" hidden>
+          <div class="pz-detail-head"><button class="pz-back" type="button" id="pz-back" aria-label="Retour aux catégories"><svg aria-hidden="true"><use href="#pz-i-back"/></svg></button><h2 class="pz-detail-title" id="pz-detail-title" tabindex="-1"></h2></div>
+          <div class="pz-detail-body" id="pz-detail-body"></div>
+        </section>
+      </div>
+
+      <footer class="pz-foot" aria-label="Contrôles de l'aperçu">
+        <button class="pz-hide" id="pz-hide" type="button" aria-label="Masquer les contrôles" aria-controls="pz-panel" aria-expanded="true"><svg aria-hidden="true"><use href="#pz-i-hide"/></svg><span>Masquer les contrôles</span></button>
+        <div class="pz-devices" id="pz-devices" role="radiogroup" aria-label="Appareil d'aperçu"></div>
+      </footer>
+    </aside>
+
+    <main class="pz-stage" id="pz-stage" aria-label="Aperçu du site">
+      <button class="pz-show" id="pz-show" type="button" aria-controls="pz-panel" aria-label="Afficher les contrôles" title="Afficher les contrôles" hidden><svg aria-hidden="true"><use href="#pz-i-panel"/></svg></button>
+      <button class="pz-reload" id="pz-reload" type="button" aria-label="Actualiser l'aperçu" title="Actualiser l'aperçu"><svg aria-hidden="true"><use href="#pz-i-refresh"/></svg></button>
+      <div class="pz-loadbar" id="pz-loadbar" aria-hidden="true"></div>
+      <div class="pz-frame-wrap" id="pz-frame-wrap">
+        <iframe class="pz-frame" id="pz-frame" title="Aperçu du site <%= T.name %>" referrerpolicy="same-origin"></iframe>
+      </div>
+      <div class="pz-error" id="pz-error" role="alert" hidden>
+        <p class="pz-error-title">L'aperçu n'a pas pu se charger.</p>
+        <p class="pz-error-text" id="pz-error-text">Vérifiez votre connexion puis réessayez.</p>
+        <button class="pz-retry" id="pz-retry" type="button">Réessayer</button>
+      </div>
+    </main>
+  </div>
+  <div class="pz-toast" id="pz-toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="application/json" id="pz-boot"><%- bootJson %></script>
+  <script src="<%= asset('/js/personnaliser/core.js') %>"></script>
+  <script src="<%= asset('/js/personnaliser/categories.js') %>"></script>
+  <script src="<%= asset('/js/personnaliser/preview.js') %>"></script>
+  <script src="<%= asset('/js/personnaliser/shell.js') %>"></script>
+</body>
+</html>

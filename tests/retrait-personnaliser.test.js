@@ -28,7 +28,7 @@ describe("retrait du module Personnaliser : fichiers et références", () => {
     for (const dir of ["src", "views", "public/js", "public/css"]) {
       for (const f of walk(path.join(ROOT, dir))) {
         const t = fs.readFileSync(f, "utf8");
-        if (/services\/customizer\b|\.\/customizer["']|customizerPreview|previewParts|themes\/customization|kwPartsPreview|kwShared|kwshare|\/personnaliser\b|apparence\/personnaliser/.test(t)) bad.push(path.relative(ROOT, f));
+        if (/services\/customizer\b|\.\/customizer["']|customizerPreview|previewParts|themes\/customization|kwPartsPreview|kwShared|kwshare|apparence\/personnaliser/.test(t)) bad.push(path.relative(ROOT, f));
       }
     }
     // _ancienne-bibliotheque : pages de démonstration d'un thème boutique (« Comment personnaliser » = contenu de vitrine, sans lien avec le module)
@@ -46,8 +46,8 @@ describe("retrait du module Personnaliser : serveur réel", () => {
   before(async () => { srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" }); boss = await loginInstructor(srv); db = srv.db(); });
   after(() => srv && srv.stop());
 
-  test("l'écran et toutes ses routes répondent 404", async () => {
-    for (const u of ["/marketing/site-web/personnaliser", "/marketing/site-web/personnaliser?site=1", "/marketing/site-web/personnaliser/brouillon", "/marketing/site-web/personnaliser/publier", "/marketing/site-web/personnaliser/planifier", "/marketing/site-web/personnaliser/partager"]) {
+  test("les routes de l'ancien module (brouillon, publication, planification, partage) répondent 404", async () => {
+    for (const u of ["/marketing/site-web/personnaliser/brouillon", "/marketing/site-web/personnaliser/publier", "/marketing/site-web/personnaliser/planifier", "/marketing/site-web/personnaliser/partager"]) {
       const r = await boss.get(u);
       assert.equal(r.status, 404, u);
     }
@@ -55,7 +55,7 @@ describe("retrait du module Personnaliser : serveur réel", () => {
   test("l'écran Styles fonctionne et ne mentionne plus Personnaliser ; Thèmes et Theme Builder s'ouvrent", async () => {
     const st = await boss.get("/marketing/site-web/styles");
     assert.equal(st.status, 200);
-    assert.doesNotMatch(st.text, /Personnaliser/);
+    assert.match(st.text, /personnaliser\?site|personnaliser"/, "lien vers la nouvelle coque"); assert.doesNotMatch(st.text, /planifier|partager/i);
     for (const u of ["/marketing/site-web/themes", "/marketing/site-web/apparence/theme-builder", "/marketing/site-web/sites"]) {
       const r = await boss.get(u);
       assert.equal(r.status, 200, u);

@@ -117,6 +117,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./fonts")()); // Apparence → Polices : bibliothèque, téléversement et installation de polices par site
   admin.use(require("./adminBar")()); // Barre d'administration : notifications du site actif
   admin.use(require("./widgets")()); // Apparence → Widgets : zones, blocs et widgets désactivés par site
+  admin.use(require("./personnaliser")()); // Personnaliser : coque de l'écran plein cadre (étape 1)
   admin.use(require("./styles")()); // Apparence → Styles : gestionnaire de styles globaux par site 
   admin.use(require("./siteEditor")()); // Apparence → Éditeur du site : espace de travail par site autour du Page Builder (pages, parties globales, aperçu, publication)
   admin.use(require("./templatesLibrary")()); // Apparence → Templates : packs de site, gabarits de pages et « Mes modèles » par site (aperçu, importation)
