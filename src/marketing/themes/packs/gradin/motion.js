@@ -12,7 +12,8 @@
   if (!calm && "IntersectionObserver" in window) {
     body.classList.add("gr-js");
     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); } }); }, { rootMargin: "0px 0px -6% 0px" });
-    $$("[data-reveal]").forEach(function (n) { io.observe(n); });
+    $$("[data-reveal]").forEach(function (n) { if (n.getBoundingClientRect().top < window.innerHeight) n.classList.add("is-in"); else io.observe(n); });
+    setTimeout(function () { $$("[data-reveal]").forEach(function (n) { n.classList.add("is-in"); }); }, 2500);
   }
 
   // ----- filtre des formations -----

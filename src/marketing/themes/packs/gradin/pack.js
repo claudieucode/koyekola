@@ -36,6 +36,10 @@ const nbLessons = MODULES.reduce((n, m) => n + m[2].length, 0);
 const totalMin = MODULES.reduce((n, m) => n + m[2].reduce((a, l) => a + l[1], 0), 0);
 const hm = (min) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`;
 const eur = (n) => `${n} €`;
+// Cohérence des chiffres : la durée et le nombre de leçons du parcours viennent du programme
+FORMATIONS[0].d = hm(totalMin);
+PLANS.forEach((p) => { p.items[0] = p.items[0].replace("6 modules et 22 leçons vidéo", `6 modules et ${nbLessons} leçons vidéo`); });
+FAQ[1][1] = `Environ ${Math.floor(totalMin / 60)} heures et ${totalMin % 60} minutes de vidéo, plus des exercices. La plupart des élèves terminent en trois à quatre semaines, à raison d'une heure par semaine.`;
 
 const IC = {
   arr: '<path d="M4 12h15m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',

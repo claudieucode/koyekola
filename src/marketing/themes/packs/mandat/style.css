@@ -172,3 +172,5 @@ body.md-js [data-reveal]{opacity:0;transform:translateY(10px);transition:opacity
   a{color:#000;text-decoration:underline}
 }
 .md-of,.md-m,.md-m-a,.md-cl-b,.md-tool,.md-hero-l,.md-hero-r,.md-day,.md-fld{min-width:0}
+.md-hero{overflow-x:clip}.md-hero-r .md-stamp{right:10px}.md-fine{font-size:.9rem}.md-art{font-size:.82rem}
+.md-day b{text-transform:none}.md-day b::first-letter{text-transform:uppercase}
