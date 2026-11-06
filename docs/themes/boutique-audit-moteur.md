@@ -35,7 +35,8 @@
 - Pas d'avis ni de notes, pas de données structurées `Product`/`Offer`, pas de liste de souhaits.
 - Les produits de démonstration n'ont pas de photos : chaque thème montre une surface colorée à la place d'une image.
 - Les structures de pages (fiche produit, panier, filtres) sont celles du moteur ; la diversité vient du CSS (grille, galerie collante ou défilante, bouton d'achat fixe sur mobile, mosaïque…). Un tiroir de panier ou un panneau de filtres superposé demanderait de nouveaux gabarits.
-- Les mesures de performance (Lighthouse, LCP, CLS, INP), les captures multi-résolutions et le test clavier complet n'ont pas été exécutés pour ces thèmes.
+- Les mesures de performance (Lighthouse, LCP, CLS, INP), la revue de conception chiffrée, le test clavier complet et la validation des données structurées n'ont pas été exécutés pour ces thèmes.
+- Vérification visuelle réalisée (`scripts/verification-visuelle-boutique.js`) : 4 thèmes × 7 pages réelles (catalogue, catalogue sans résultat, fiche simple, fiche à variantes, panier, commande, compte) × 3 largeurs (1280, 820, 390) = 84 mesures dans Chrome, 0 débordement horizontal. Les pages d'accueil des thèmes (blocs du Page Builder) ne sont pas mesurées par ce script.
 
 ## 4. Architecture proposée pour les briques manquantes (séparée des thèmes)
 1. Avis vérifiés (achat réel, modération) + `schema.org` `Product`/`Offer`/`AggregateRating`/`BreadcrumbList`.
