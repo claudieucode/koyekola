@@ -121,7 +121,7 @@ module.exports = {
       build: (k, P) => { const S = k.S; return [
         row(k, [
           stack([mark(k, { kind: "logo", size: "17px", caps: "uppercase", track: "2px", weight: "700" }), note(k, "(Index des projets)", { color: S.mute, size: "12px", caps: "uppercase", track: "1.6px" })], { gap: "6px" }),
-          style(X.fsMenu(k, { buttonLabel: "Index", closeLabel: "Fermer", numbers: true, align: "left", preset: "slide-right", duration: 700, stagger: 80, size: "68px", font: S.head, track: "-0.04em" }), {}, { fontSize: "52px" }, { fontSize: "38px" }),
+          style(X.fsMenu(k, { buttonLabel: "Index", closeLabel: "Fermer", numbers: true, align: "left", preset: "slide-right", duration: 700, stagger: 80, size: "58px", font: S.head, track: "-0.04em" }), {}, { fontSize: "46px" }, { fontSize: "34px" }),
         ], { pv: "14px", inn: { flexWrap: "nowrap", alignItems: "center" }, bottom: { w: "2px", c: S.fg } }),
         row(k, [grid("1fr 2fr 1fr", [
           cell([date(k, { color: S.fg })], { paddingTop: "9px", paddingBottom: "9px", borderStyle: "solid", borderWidth: "0px", borderRightWidth: "1px", borderColor: S.line }),
