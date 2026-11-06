@@ -305,3 +305,5 @@ body.et-js [data-reveal].is-in{opacity:1;transform:none}
 
 @media(prefers-reduced-motion:reduce){.et-dash,.et-stamp{animation:none!important}.et-card-in,.et-bag a,.et-btn,.et-ar{transition:none!important}.et-js [data-reveal]{opacity:1;transform:none;transition:none}}
 @media print{.et-head,.et-foot,.et-fiche .et-stamp,.et-share,.et-burger,.et-actions,.et-chips{display:none!important}body{background:#fff;color:#000;font-size:12pt}.et-art{display:block}.et-fiche{position:static;margin-bottom:1rem;break-inside:avoid}.et-prose{max-width:none}.et-prose a::after{content:" (" attr(href) ")";font-size:.8em}.et-fig,.et-quote{break-inside:avoid}}
+.et-hero-in>*,.et-twocol>*,.et-art>*,.et-rt>*{min-width:0}
+@media(max-width:820px){.et-page .et-stamp{width:84px;height:84px}.et-book{transform:none}}

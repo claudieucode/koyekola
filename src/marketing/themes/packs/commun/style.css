@@ -279,3 +279,4 @@ body[data-pk-pied="simple"] .cm-foot{padding:16px 0 12px}body[data-pk-pied="simp
 
 @media(prefers-reduced-motion:reduce){.cm-bunt path,.cm-sun,.cm-bar-f,.cm-404-fig .cm-st{animation:none!important}.cm-btn,.cm-tk,.cm-ar,.cm-chips a,.cm-formules li,.cm-new-in,.cm-arts a{transition:none!important}}
 @media print{.cm-head,.cm-foot,.cm-side,.cm-share,.cm-actions,.cm-chips,.cm-bunt{display:none!important}body{background:#fff;color:#000;font-size:12pt}.cm-art{display:block}.cm-prose{max-width:none}.cm-prose a::after{content:" (" attr(href) ")";font-size:.8em}.cm-quote,.cm-box,.cm-tbl{break-inside:avoid}.cm-box{transform:none;background:#eee}}
+.cm-hero-in>*,.cm-art>*,.cm-two>*,.cm-calc>*{min-width:0}

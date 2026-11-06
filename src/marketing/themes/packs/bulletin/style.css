@@ -274,3 +274,4 @@ body[data-pk-pied="compact"] .bu-foot{padding:16px 0 12px}body[data-pk-pied="com
 
 @media(prefers-reduced-motion:reduce){.bu-lead-bg,.bu-404-fig .bu-imp,.bu-ticker-a{animation:none!important}.bu-ar,.bu-btn,.bu-n-in{transition:none!important}}
 @media print{.bu-head,.bu-foot,.bu-side .bu-btn,.bu-actions,.bu-chips{display:none!important}body{background:#fff;color:#000;font-size:12pt}.bu-art{display:block}.bu-side{position:static;margin-top:1rem;break-inside:avoid}.bu-prose{max-width:none}.bu-prose a::after{content:" (" attr(href) ")";font-size:.8em}.bu-quote,.bu-tbl{break-inside:avoid}.bu-lead-card{clip-path:none;background:#fff;color:#000}}
+.bu-hero-in>*,.bu-art>*,.bu-two>*{min-width:0}

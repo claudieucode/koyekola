@@ -258,3 +258,4 @@ body[data-pk-pied="discret"] .ob-foot{padding:16px 0 12px}body[data-pk-pied="dis
 
 @media(prefers-reduced-motion:reduce){.ob-img,.ob-hero-img .ob-img,.ob-view-img .ob-img,.ob-stat-b i,.ob-404-fr,.ob-fr .ob-img{animation:none!important}.ob-fr-in,.ob-fr-img .ob-img,.ob-btn,.ob-ar{transition:none!important}}
 @media print{.ob-head,.ob-foot,.ob-lb,.ob-actions,.ob-chips{display:none!important}body{background:#fff;color:#000;font-size:12pt}.ob-view{display:block;background:#fff;color:#000}.ob-view-img{position:static!important;height:auto!important;aspect-ratio:3/2}.ob-cap,.ob-meta,.ob-exif dd,.ob-exif dt{color:#000}.ob-prose a::after{content:" (" attr(href) ")";font-size:.8em}.ob-prose{max-width:none}}
+.ob-serie>*,.ob-two>*,.ob-view>*{min-width:0}

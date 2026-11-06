@@ -296,3 +296,4 @@ body[data-pk-pied="mince"] .co-legal{margin-top:8px}
 @media(prefers-reduced-motion:reduce){.co-404-env .co-env{animation:none!important}.co-btn,.co-ar,.co-row-in,.co-env,.co-nav a::after,.co-read{transition:none!important}}
 @media print{.co-head,.co-foot,.co-subbar,.co-side,.co-share,.co-burger,.co-actions,.co-read{display:none!important}body{background:#fff;color:#000;font-size:12pt}.co-issue{display:block}.co-prose{max-width:none;column-count:1!important}.co-prose a::after{content:" (" attr(href) ")";font-size:.8em}.co-quote,.co-box,.co-tbl{break-inside:avoid}}
 .co-subbar-x{background:transparent;border:2px solid var(--co-paper);color:var(--co-paper);width:44px;height:44px;font-size:1.4rem;line-height:1;cursor:pointer;border-radius:2px;flex:none}
+.co-une-in>*,.co-issue>*,.co-two>*,.co-calc>*{min-width:0}
