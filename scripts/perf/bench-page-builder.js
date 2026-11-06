@@ -15,6 +15,9 @@ const arg = (n, d) => { const a = process.argv.find((x) => x.startsWith(`--${n}=
 const SIZES = arg("sizes", "20,100,300,400").split(",").map(Number);
 const PROFILE = process.argv.includes("--profile");
 const JSON_OUT = arg("json", "");
+// --mix=riche : une partie des éléments sont des widgets INTERACTIFS (accordéon, onglets, compteur, titre animé, progression) dont les scripts
+// ne s'initialisent qu'une fois : leur modification recharge le cadre du canevas en entier (scénario que la page « simple » ne montre pas)
+const MIX = arg("mix", "simple");
 const CHROME = process.env.CHROME_PATH || ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"].find((p) => fs.existsSync(p));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -24,6 +27,14 @@ function makeContent(total) {
   const id = (p) => `${p}${String(++n).padStart(9, "0")}`.slice(0, 12);
   const leaf = (i) => {
     const k = i % 6;
+    if (MIX === "riche" && k >= 2 && k <= 4) {
+      const r = (Math.floor(i / 6) * 3 + k) % 5;
+      if (r === 0) return { id: id("ac"), type: "accordion", props: { items: [{ q: `Question ${i} ?`, a: "Réponse courte." }, { q: "Autre ?", a: "Oui." }] } };
+      if (r === 1) return { id: id("tb"), type: "tabs", props: { items: [{ title: "Un", text: "Premier." }, { title: "Deux", text: "Second." }] } };
+      if (r === 2) return { id: id("ct"), type: "counter", props: { value: 120 + i, label: `Chiffre ${i}`, suffix: "", prefix: "", duration: 1500 } };
+      if (r === 3) return { id: id("ah"), type: "animatedheading", props: { before: "Apprenez", words: ["Photoshop", "Blender"], after: "vite", level: "3", effect: "fade", interval: 2500 } };
+      return { id: id("pg"), type: "progress", props: { label: `Progression ${i}`, value: 60, showValue: true } };
+    }
     if (k === 0) return { id: id("hd"), type: "heading", props: { text: `Titre ${i}`, level: 3 }, styles: { desktop: { color: "#10222f", fontWeight: "700" }, mobile: { fontSize: "20px" } } };
     if (k === 1) return { id: id("tx"), type: "text", props: { html: `<p>Paragraphe ${i} : <strong>texte</strong> de démonstration avec un <a href="/blog">lien</a> et assez de mots pour occuper une ligne.</p>` } };
     if (k === 2) return { id: id("bt"), type: "button", props: { label: `Bouton ${i}`, url: "/catalogue", variant: "primary" } };
@@ -56,7 +67,7 @@ async function main() {
   console.log(`# Page Builder — banc de mesure (${results.config.date}) — ${results.config.model} ×${results.config.cpus}, Chrome ${version}, charge ${results.config.load.join(" ")}`);
   for (const size of SIZES) {
     const { sections, nodes } = makeContent(size);
-    const pageId = Number((await boss.post("/marketing/pages", { name: `Banc ${size}` })).location.match(/(\d+)$/)[1]);
+    const pageId = Number((await boss.post("/marketing/pages", { name: `Banc ${MIX} ${size}` })).location.match(/(\d+)$/)[1]);
     const db = srv.db();
     const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pageId).revision;
     const put = await boss.request(`/marketing/pages/${pageId}/brouillon`, { method: "PUT", json: { revision: rev, content: { sections } }, headers: { Origin: srv.base } });
