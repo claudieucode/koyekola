@@ -352,11 +352,11 @@
       mo.observe(doc.body, { childList: true, subtree: true });
     }
 
-    startPage();
-
     var target = function (t) { return typeof t === "string" ? doc.querySelector('[data-node-id="' + t + '"]') || doc.getElementById(t) : t; };
     var recOf = function (t) { var el = target(t); return el ? recs.get(el) : null; };
     return {
+    startPage();
+
       scan: scan, mode: editor ? "editor" : "public", scenes: scenesApi,
       // API de l'éditeur (identifiant d'élément ou élément) — sans effet en dehors d'un élément initialisé
       play: function (t) { var r = recOf(t); if (!r || !r.inst) return false; each(r, function (a) { a.cancel(); }); if (r.inst.play) r.inst.play(); else each(r, function (a) { a.currentTime = 0; a.play(); }); return true; },
@@ -369,10 +369,10 @@
       count: function () { return recs.size; },
       destroy: function () {
         if (destroyed) return; destroyed = true;
-        stopPage(); Object.keys(edit).forEach(function (k) { edit[k].destroy(); }); edit = {};
         if (mo) mo.disconnect();
         mq.forEach(function (p) { p[0].removeEventListener("change", p[1]); });
         recs.forEach(function (rec) { teardown(rec); });
+        stopPage(); Object.keys(edit).forEach(function (k) { edit[k].destroy(); }); edit = {};
         recs.clear();
       },
     };

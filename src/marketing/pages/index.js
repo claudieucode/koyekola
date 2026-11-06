@@ -128,10 +128,10 @@ function normalizeContent(ctx, page, input = {}) {
   // Seulement pour une VRAIE page (un modèle de page enregistré n'a pas de site : le contrôle a lieu quand il est utilisé pour créer une page)
   // Composants et modèles n'ont pas de formulaire de page (`form_id` absent) : leur contrôle a lieu quand ils sont placés dans une page
   if (page.working && page.published && "form_id" in page) assertFormsUsable(ctx, normalized, page.form_id, page.site_id, { tolerated: formIdsOf([...page.working.sections, ...page.published.sections], page.form_id) });
+  return {
   // Motion Studio lot 3 : scènes, transitions et défilement fluide, rangés dans le thème de la page ; références aux éléments nettoyées (avertissement)
   const nodesLib = require("./nodes");
   const theme = require("./motionScenes").applyToTheme(normalizeTheme(input.theme), input.theme, ctx, normalized, nodesLib.walk);
-  return {
     sections: normalized,
     theme,
     title: line(input.title, 120) || page.name,

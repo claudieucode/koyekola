@@ -7747,8 +7747,8 @@ function selectField(label, value, options, onChange, opts) {
     box.appendChild(textField("Description (aperçu de partage)", content.description, setC("description"), { multiline: true, max: 300, disabled: !canWrite }));
     if (!IS_COMPONENT) formatSection(box);
     if (!IS_COMPONENT) scrollSnapSection(box);
-    if (!IS_COMPONENT && window.pbMotionTimeline) window.pbMotionTimeline.panel(box); // scènes, transitions de page / de sections, défilement fluide (Motion Studio)
     // ----- Référencement (palier 11) : mêmes données que la page publique, aperçu et analyse calculés par le moteur SEO du serveur -----
+    if (!IS_COMPONENT && window.pbMotionTimeline) window.pbMotionTimeline.panel(box); // scènes, transitions de page / de sections, défilement fluide (Motion Studio)
     var seoCfg = boot.seo || {};
     var seoCan = canWrite && seoCfg.canEdit;
     var scheduleSerp = function () { clearTimeout(serpTimer); serpTimer = setTimeout(refreshSerp, 450); };
@@ -8339,8 +8339,8 @@ function selectField(label, value, options, onChange, opts) {
   function healIgnored(list) {
     var seen = {};
     list.forEach(function (w) {
-      if (w.kind === "scene_target" && window.pbMotionTimeline) window.pbMotionTimeline.heal(w); // scène qui visait un élément supprimé : pas retiré
       var it = w.nodeId && byId(w.nodeId), p = it && it.parts && it.parts[w.part];
+      if (w.kind === "scene_target" && window.pbMotionTimeline) window.pbMotionTimeline.heal(w); // scène qui visait un élément supprimé : pas retiré
       if (it && w.kind === "interaction_target" && it.interactions) {
         var keep = it.interactions.filter(function (x) { return x.target !== w.target; });
         if (keep.length) it.interactions = keep; else delete it.interactions;
@@ -8698,12 +8698,12 @@ function selectField(label, value, options, onChange, opts) {
     h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, accGroup: accGroup, numField: numField, selectField: selectField, checkField: checkField,
     schemaFields: schemaFields, frame: function () { return frame; }, setTab: function (t) { inspTab = t; store.set("insp-tab", t); renderInspector(); },
   });
+  if (window.pbEffects) window.pbEffects.attach({
   // Timeline visuelle du Motion Studio (scènes multi-éléments, transitions de page, défilement fluide) : lit et écrit theme.motionScenes par change()
   if (window.pbMotionTimeline) window.pbMotionTimeline.attach({
     h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, change: change, accGroup: accGroup, selectField: selectField, checkField: checkField,
     frame: function () { return frame; }, content: function () { return content; }, selection: function () { return selection.slice(); }, canWrite: function () { return canWrite; },
   });
-  if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,
     accGroup: accGroup, ownValue: ownValue, inheritedValue: inheritedValue, canvasEl: canvasEl, setStyle: setStyle, setStyles: setStyles, parseLength: parseLength, numField: numField, numericControl: numericControl, selectField: selectField, checkField: checkField,
     openMedia: openMedia, breakpointSwitch: breakpointSwitch, getDevice: function () { return device; }, getState: function () { return styleState; },
