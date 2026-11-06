@@ -58,7 +58,7 @@ body[data-pk-entete="barre"] .rb-logo{text-align:left}body[data-pk-entete="barre
 body[data-pk-entete="barre"] .rb-logo-s{border-top:0;padding:0;margin:0;letter-spacing:.2em}
 body[data-pk-entete="barre"] .rb-nav{padding:0}
 body[data-pk-entete="barre"] .rb-top{display:none}
-body[data-pk-entete="compact"] .rb-head{position:sticky;top:0;z-index:30}
+body[data-pk-entete="compact"] .rb-head{position:fixed;left:0;right:0;top:0;z-index:30}body[data-pk-entete="compact"] .lp-main{padding-top:62px}
 body[data-pk-entete="compact"] .rb-top,body[data-pk-entete="compact"] .rb-logo-s,body[data-pk-entete="compact"] .rb-rubs{display:none}
 body[data-pk-entete="compact"] .rb-mast-in{flex-direction:row;justify-content:space-between;align-items:center;padding-top:.6rem;padding-bottom:.6rem}
 body[data-pk-entete="compact"] .rb-logo-t{font-size:1.6rem;padding:0}body[data-pk-entete="compact"] .rb-nav{padding:0}

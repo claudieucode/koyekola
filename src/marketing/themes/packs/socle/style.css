@@ -32,7 +32,7 @@ a{color:inherit;text-underline-offset:.18em}
 .so-nav{display:flex;flex-wrap:wrap;gap:.2rem 1.5rem}.so-nav a{font-weight:600;text-decoration:none;padding:.4em 0;border-bottom:3px solid transparent;font-size:.98rem}.so-nav a:hover{border-color:var(--so-acc)}
 .so-cta{background:var(--so-acc);color:#fff;font-weight:600;text-decoration:none;padding:.6em 1.2em;white-space:nowrap}.so-cta:hover{background:var(--so-dark)}
 .so-burger{display:none}
-body[data-pk-entete="simple"] .so-util{display:none}body[data-pk-entete="simple"] .so-head{position:sticky;top:0;z-index:30}body[data-pk-entete="simple"] .so-bar-in{min-height:64px}
+body[data-pk-entete="simple"] .so-util{display:none}body[data-pk-entete="simple"] .so-head{position:fixed;left:0;right:0;top:0;z-index:30}body[data-pk-entete="simple"] .lp-main{padding-top:65px}body[data-pk-entete="simple"] .so-bar-in{min-height:64px}
 body[data-pk-entete="centre"] .so-bar-in{flex-wrap:wrap;justify-content:center;padding-top:1rem;padding-bottom:.4rem}body[data-pk-entete="centre"] .so-logo{margin:0 auto;flex:0 0 100%;justify-content:center}body[data-pk-entete="centre"] .so-nav{justify-content:center;flex:1 1 100%;border-top:1px solid var(--so-line);padding-top:.4rem}body[data-pk-entete="centre"] .so-cta{display:none}
 
 /* ----- accueil ----- */
