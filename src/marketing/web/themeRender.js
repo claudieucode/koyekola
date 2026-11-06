@@ -37,7 +37,8 @@ function postScope(post, { contentHtml = "", minutes = null, author = "", toc = 
 function wrapHtml(res, vm, siteOk, body, cls) {
   // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
   const main = require("../../services/appearance").publishedTokens();
-  const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}), { siteId: main ? null : siteOk ? siteOk.id : undefined });
+  // Polices : celles du site ET celles que les éléments du modèle posent eux-mêmes (identité propre d'un modèle : « font.<famille> » dans ses styles) ; sans cela le navigateur retomberait sur la police du site
+  const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}) + "\n" + String(vm.nodeCss || ""), { siteId: main ? null : siteOk ? siteOk.id : undefined });
   // Partie globale (en-tête, pied) : même colonne de contenu que les pages du site (réglage de largeur du site, comme dans le Page Builder) ; la feuille de la plateforme ne doit pas changer l'aspect des liens non stylés
   const band = cls.includes("kw-theme-part") ? ".kw-theme-part { color: var(--kw-text, #10222f); } :where(.kw-theme-part) a:not([class]) { color: revert; text-decoration: revert; } .kw-theme-part.kw-theme-sticky { position: sticky; top: 0; z-index: 60; } .kw-theme-part.kw-theme-overlay { position: absolute; top: 0; left: 0; right: 0; z-index: 60; }" : "";
   // Gabarits de contenu : titre et description d'archive à une échelle de page (le titre de niveau 1 du thème est pensé pour un bandeau d'accueil)
@@ -52,7 +53,7 @@ const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, p
 function partMode(section) {
   const first = section && Array.isArray(section.children) ? section.children[0] : null;
   const pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
-  const fx = first && first.props && ["shrink", "solid", "both"].includes(first.props.headerFx) ? first.props.headerFx : "";
+  const fx = first && first.props && ["shrink", "solid", "both", "hide"].includes(first.props.headerFx) ? first.props.headerFx : "";
   return (pos === "sticky" ? " kw-theme-sticky" : pos === "absolute" ? " kw-theme-overlay" : "") + (fx && pos ? ` kw-theme-fx-${fx}` : "");
 }
 // Un modèle fait de bandes pleine largeur (conteneurs « pleine largeur ») doit pouvoir toucher les bords : sa zone n'est alors plus limitée à la colonne de texte du site. Sans bande pleine largeur, rien ne change.

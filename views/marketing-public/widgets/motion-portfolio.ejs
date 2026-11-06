@@ -1,0 +1,18 @@
+<%# Portfolio filtrable animé (widgets/motion-portfolio.js). Variables : p, cls, attrs, L (L.items[i].url). Sans JavaScript : toutes les cartes, les boutons de filtre restent cachés.
+    Avec JavaScript (public/js/motion-studio/portfolio-grid.js) : filtres actifs ; les cartes restantes glissent à leur nouvelle place (technique FLIP), sans animation en mouvement réduit. %>
+<% const tag = ["h2", "h3", "h4"].includes(p.titleTag) ? p.titleTag : "h3"; const cats = [...new Set(p.items.map((x) => x.category).filter(Boolean))]; const ratio = ["landscape", "square", "portrait"].includes(p.ratio) ? p.ratio : "landscape"; const cols = ["2", "3", "4"].includes(String(p.columns)) ? String(p.columns) : "3"; %>
+<div class="<%= cls %> kw-ms kw-ms-pf is-c<%= cols %> is-<%= ratio %>" role="region" aria-label="<%= p.label %>"<%- attrs %>>
+  <% if (cats.length > 1) { %><div class="kw-ms-pf-filters" role="group" aria-label="Filtrer par catégorie" hidden data-ms-filters>
+    <button type="button" class="kw-ms-pf-filter is-on" data-ms-filter="" aria-pressed="true"><%= p.allLabel %></button><% cats.forEach((c) => { %>
+    <button type="button" class="kw-ms-pf-filter" data-ms-filter="<%= c %>" aria-pressed="false"><%= c %></button><% }) %>
+  </div><% } %>
+  <ul class="kw-ms-pf-grid" data-ms-grid><% p.items.forEach((it, i) => { const link = L.items[i] && L.items[i].url; %>
+    <li class="kw-ms-pf-item" data-ms-item data-ms-cat="<%= it.category %>">
+      <% if (link) { %><a class="kw-ms-pf-card" href="<%= link %>"><% } else { %><div class="kw-ms-pf-card"><% } %>
+        <div class="kw-ms-pf-media"><% if (it.image) { %><img class="kw-ms-pf-img" src="<%= it.image %>" alt="<%= it.imageAlt || "" %>" loading="lazy" decoding="async"><% } else { %><span class="kw-ms-pf-ph" aria-hidden="true"><%= it.title.slice(0, 1).toUpperCase() %></span><% } %></div>
+        <div class="kw-ms-pf-cap"><% if (it.category) { %><span class="kw-ms-pf-cat"><%= it.category %></span><% } %><<%= tag %> class="kw-ms-pf-title"><%= it.title %></<%= tag %>><% if (it.description) { %><span class="kw-ms-pf-desc"><%= it.description %></span><% } %></div>
+      <% if (link) { %></a><% } else { %></div><% } %>
+    </li><% }) %>
+  </ul>
+  <p class="kw-ms-sr" role="status" aria-live="polite" data-ms-status></p>
+</div>

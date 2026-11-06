@@ -1,0 +1,13 @@
+<%# Menu plein écran animé (widgets/motion-fullscreen-menu.js). Variables : p, cls, attrs, L (L.links[i].url), n, isBuilder. Sans JavaScript : la liste de liens est affichée telle quelle (le bouton reste caché).
+    Avec JavaScript (public/js/motion-studio/fullscreen-menu.js) : le bouton s'affiche et la liste devient un panneau plein écran (rôle dialogue, focus piégé, Échap). %>
+<div class="<%= cls %> kw-ms kw-ms-fm is-<%= p.align === "center" ? "center" : "left" %>"<%- attrs %>>
+  <button type="button" class="kw-ms-fm-toggle" hidden aria-expanded="false" aria-controls="kw-fm-<%= n.id %>"><span class="kw-ms-fm-bars" aria-hidden="true"><i></i><i></i><i></i></span><span class="kw-ms-fm-toggle-text"><%= p.buttonLabel %></span></button>
+  <div class="kw-ms-fm-panel" id="kw-fm-<%= n.id %>" data-ms-panel data-ms-label="<%= p.label %>">
+    <button type="button" class="kw-ms-fm-close" hidden><span aria-hidden="true">✕</span> <span><%= p.closeLabel %></span></button>
+    <nav class="kw-ms-fm-nav" aria-label="<%= p.label %>">
+      <ul class="kw-ms-fm-list"><% p.links.forEach((l, i) => { if (L.links[i] && L.links[i].url) { %>
+        <li class="kw-ms-fm-item"><a class="kw-ms-fm-link" href="<%= L.links[i].url %>"><% if (p.numbers) { %><span class="kw-ms-fm-n" aria-hidden="true"><%= String(i + 1).padStart(2, "0") %></span><% } %><span class="kw-ms-fm-text"><%= l.label %></span></a></li><% } }) %>
+      </ul>
+    </nav>
+  </div>
+</div>

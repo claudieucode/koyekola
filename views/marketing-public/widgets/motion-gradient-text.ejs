@@ -1,0 +1,3 @@
+<%# Texte dégradé animé (widgets/motion-gradient-text.js). d = dégradés déjà composés de couleurs validées. Animation : public/js/motion-studio/text-fx.js (gradient). %>
+<% const tag = ["h1", "h2", "h3", "h4", "p", "div"].includes(p.tag) ? p.tag : "h2"; %>
+<<%= tag %> class="<%= cls %> kw-ms kw-ms-grad" data-kw-ms-fx="gradient" style="--kw-gt-flow: <%= d.flow %>; --kw-gt-base: <%= d.base %>; --kw-gt-hl: <%= d.hl %>"<%- attrs %>><span class="kw-ms-grad-text"><%= p.text %></span></<%= tag %>>

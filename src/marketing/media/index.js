@@ -13,17 +13,19 @@ const crypto = require("crypto");
 const { uploadsRoot } = require("../../config/paths");
 const { checkCtx, audit, resolveSite, MarketingError } = require("../audience/shared");
 const { removeUploadedFile } = require("../../utils/uploads");
+const lottie = require("./lottie");
 
 const MAX_IMAGE = 5 * 1024 * 1024; // une image d'e-mail au-delà de 5 Mo n'a pas de sens (chargement, filtres)
 const MAX_DOCUMENT = 10 * 1024 * 1024;
 const MAX_AUDIO = 25 * 1024 * 1024;
+const MAX_LOTTIE = 2 * 1024 * 1024; // une animation Lottie légère : au-delà, le chargement de la page en souffre (contrôle de contenu strict : voir lottie.js)
 const MAX_VIDEO = 50 * 1024 * 1024; // le fichier passe en mémoire pendant l'envoi : au-delà, passer par YouTube / Vimeo / Bunny
 const MAX_UPLOAD = MAX_VIDEO;
 const PUBLIC_BASE = "/uploads/marketing";
-const TYPES = ["image", "video", "audio", "pdf", "document"];
-const TYPE_LABELS = { image: "Images", video: "Vidéos", audio: "Audio", pdf: "PDF", document: "Documents" };
-const LIMITS = { image: MAX_IMAGE, pdf: MAX_DOCUMENT, document: MAX_DOCUMENT, audio: MAX_AUDIO, video: MAX_VIDEO };
-const LIMIT_WORDS = { image: "une image", pdf: "un PDF", document: "un document", audio: "un fichier audio", video: "une vidéo" };
+const TYPES = ["image", "video", "audio", "pdf", "document", "lottie"];
+const TYPE_LABELS = { image: "Images", video: "Vidéos", audio: "Audio", pdf: "PDF", document: "Documents", lottie: "Animations Lottie" };
+const LIMITS = { image: MAX_IMAGE, pdf: MAX_DOCUMENT, document: MAX_DOCUMENT, audio: MAX_AUDIO, video: MAX_VIDEO, lottie: MAX_LOTTIE };
+const LIMIT_WORDS = { image: "une image", pdf: "un PDF", document: "un document", audio: "un fichier audio", video: "une vidéo", lottie: "une animation Lottie" };
 
 // ---------- Type réel du fichier (signature) ----------
 const OFFICE = {
@@ -58,10 +60,14 @@ function sniff(buf, name = "") {
   // Documents Office : conteneur ZIP dont le contenu correspond à l'extension annoncée (le nom ne fait que départager)
   if (b.length >= 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04) {
     const ext = extOf(name);
+    // dotLottie (.lottie = archive ZIP) : accepté seulement si le contenu passe le contrôle strict (manifest, animations, images, tailles décompressées bornées)
+    if (ext === "lottie") return lottie.checkLottieZip(b).ok ? { kind: "document", type: "lottie", mime: "application/zip", ext: ".lottie" } : null;
     const def = OFFICE[ext];
     if (def && b.includes(Buffer.from(def.marker))) return { kind: "document", type: "document", mime: def.mime, ext: `.${ext}` };
     return null;
   }
+  // Animation Lottie (.json) : reconnue dans le CONTENU (objet JSON avec v, fr, ip, op, w, h, layers) et acceptée seulement après le contrôle strict ; tout autre JSON est refusé
+  if (b.length >= 2 && b.length <= lottie.MAX_JSON && lottie.checkJson(b).ok) return { kind: "document", type: "lottie", mime: "application/json", ext: ".json" };
   if (b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]))) {
     const ext = extOf(name);
     if (LEGACY_OFFICE[ext]) return { kind: "document", type: "document", mime: LEGACY_OFFICE[ext], ext: `.${ext}` };
@@ -87,10 +93,14 @@ function webpSize(b) {
   return { width: null, height: null };
 }
 
-const FORMATS = "images (JPEG, PNG, GIF, WebP, AVIF), vidéos (MP4, WebM), audio (MP3, WAV, OGG, M4A) et documents (PDF, Word, Excel, PowerPoint)";
+const FORMATS = "images (JPEG, PNG, GIF, WebP, AVIF), vidéos (MP4, WebM), audio (MP3, WAV, OGG, M4A), animations Lottie (.json, .lottie) et documents (PDF, Word, Excel, PowerPoint)";
 // Explication claire pour un fichier refusé (jamais d'acceptation silencieuse)
-function refuse(originalName, declared) {
+function refuse(originalName, declared, buffer) {
   const ext = extOf(originalName);
+  if ((ext === "json" || ext === "lottie") && Buffer.isBuffer(buffer)) { // pourquoi une animation est refusée : message précis (jamais d'acceptation silencieuse)
+    const r = ext === "lottie" ? lottie.checkLottieZip(buffer) : lottie.checkJson(buffer);
+    return r.reason ? `Animation Lottie refusée : ${r.reason}` : ext === "json" ? "Ce fichier JSON n'est pas une animation Lottie : seules les animations Lottie sont acceptées." : "Ce fichier n'est pas un fichier dotLottie valide.";
+  }
   if (ext === "svg" || declared === "image/svg+xml") return "Les images SVG ne sont pas acceptées : elles peuvent contenir du code et la plupart des messageries ne les affichent pas. Utilisez un PNG ou un JPEG.";
   if (["exe", "msi", "bat", "cmd", "com", "scr", "sh", "js", "mjs", "php", "py", "rb", "pl", "jar", "apk", "dll", "html", "htm", "xhtml", "hta", "vbs", "ps1", "docm", "xlsm", "pptm"].includes(ext)) return `Ce type de fichier n'est pas autorisé (.${ext}) : un fichier exécutable ou contenant du code ne peut pas être envoyé.`;
   if (["docx", "xlsx", "pptx", "doc", "xls", "ppt"].includes(ext)) return `Ce fichier n'est pas un vrai document .${ext} : son contenu ne correspond pas à son extension.`;
@@ -171,7 +181,7 @@ function effectiveLimit(type) {
   return max;
 }
 // Extension → type : les formats que le serveur accepte (le type RÉEL est toujours relu dans le contenu du fichier : l'extension ne sert qu'à prévenir avant l'envoi)
-const EXT_TYPES = { jpg: "image", jpeg: "image", png: "image", gif: "image", webp: "image", avif: "image", mp4: "video", webm: "video", mp3: "audio", wav: "audio", ogg: "audio", m4a: "audio", pdf: "pdf", doc: "document", docx: "document", xls: "document", xlsx: "document", ppt: "document", pptx: "document" };
+const EXT_TYPES = { jpg: "image", jpeg: "image", png: "image", gif: "image", webp: "image", avif: "image", mp4: "video", webm: "video", mp3: "audio", wav: "audio", ogg: "audio", m4a: "audio", json: "lottie", lottie: "lottie", pdf: "pdf", doc: "document", docx: "document", xls: "document", xlsx: "document", ppt: "document", pptx: "document" };
 const ACCEPT = Object.keys(EXT_TYPES).map((e) => `.${e}`).join(",");
 // Configuration d'envoi donnée à la page (limites en Mo par type, effectives) : ce que la personne voit est ce que le serveur applique
 function uploadConfig() {
@@ -185,7 +195,7 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, sit
   const mediaSite = uploadSite(ctx, siteId); // R5 : médiathèque commune ou propre à un site
   if (!Buffer.isBuffer(buffer) || !buffer.length) throw new MarketingError("invalid_field", "Fichier vide.");
   const info = sniff(buffer, originalName);
-  if (!info) throw new MarketingError("invalid_field", refuse(originalName, declaredType));
+  if (!info) throw new MarketingError("invalid_field", refuse(originalName, declaredType, buffer));
   if (allow && info.type === "video" && !allow.includes("video")) throw new MarketingError("invalid_field", "Un e-mail ne peut pas lire de vidéo. Publiez-la (YouTube, Vimeo…) puis utilisez le bloc « Vidéo » avec son adresse : le message affichera une miniature cliquable.");
   if (allow && !allow.includes(info.type)) throw new MarketingError("invalid_field", `Ce fichier est ${LIMIT_WORDS[info.type]} : ici, seuls ${allow.map((t) => TYPE_LABELS[t].toLowerCase()).join(" et ")} sont acceptés. Les autres fichiers s'envoient dans Site Web → Médias.`);
   const max = effectiveLimit(info.type); // limite choisie dans Paramètres → Médias, jamais au-delà du plafond du serveur
@@ -420,5 +430,5 @@ function purgeMedia(ctx, id) {
 module.exports = {
   visibleSql, referenceSql, forSite, siteOfUpload: (ctx) => (Number.isInteger(ctx.siteFilter) ? ctx.siteFilter : undefined), saveUpload, setMediaScope, crossSiteUsage, parsePublicPath, newPublicPath, orgLevel, listMedia, mediaMonths, mediaCounts, getMedia, updateMedia, deleteMedia, trashMedia, restoreMedia, purgeMedia, mediaUsage, usageHref, sniff,
   effectiveLimit, uploadConfig, ACCEPT, EXT_TYPES, assertWritable, LARGE_BYTES,
-  MAX_IMAGE, MAX_DOCUMENT, MAX_AUDIO, MAX_VIDEO, MAX_UPLOAD, PUBLIC_BASE, TYPES, TYPE_LABELS, FORMATS, SORTS,
+  MAX_IMAGE, MAX_DOCUMENT, MAX_AUDIO, MAX_VIDEO, MAX_LOTTIE, MAX_UPLOAD, PUBLIC_BASE, TYPES, TYPE_LABELS, FORMATS, SORTS,
 };

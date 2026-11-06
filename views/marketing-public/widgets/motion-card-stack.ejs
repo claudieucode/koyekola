@@ -1,0 +1,18 @@
+<%# Cartes empilées (widgets/motion-card-stack.js). Variables : p, cls, attrs, L (L.cards[i].buttonUrl). Sans JavaScript : liste de cartes l'une sous l'autre. L'empilement (position: sticky) est activé par public/js/motion-studio/card-stack.js. %>
+<% const tag = ["h2", "h3", "h4"].includes(p.titleTag) ? p.titleTag : "h3"; %>
+<div class="<%= cls %> kw-ms kw-ms-cs" data-kw-ms-height="<%= p.height %>"<%- attrs %>>
+  <ol class="kw-ms-cs-list"><% p.cards.forEach((c, i) => { %>
+    <li class="kw-ms-cs-card">
+      <article class="kw-ms-cs-in is-<%= ["surface", "accent", "dark"].includes(c.tone) ? c.tone : "surface" %>">
+        <% if (c.image) { %><img class="kw-ms-cs-img" src="<%= c.image %>" alt="" loading="lazy" decoding="async"><% } %>
+        <div class="kw-ms-cs-body">
+          <% if (c.kicker) { %><p class="kw-ms-cs-kicker"><%= c.kicker %></p><% } %>
+          <<%= tag %> class="kw-ms-cs-title"><%= c.title %></<%= tag %>>
+          <% if (c.text) { %><p class="kw-ms-cs-text"><%= c.text %></p><% } %>
+          <% if (c.buttonLabel && L.cards[i] && L.cards[i].buttonUrl) { %><a class="kw-button kw-btn-sm kw-ms-cs-btn" href="<%= L.cards[i].buttonUrl %>"><%= c.buttonLabel %></a><% } %>
+        </div>
+        <span class="kw-ms-cs-veil" aria-hidden="true"></span>
+      </article>
+    </li><% }) %>
+  </ol>
+</div>

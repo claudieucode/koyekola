@@ -333,6 +333,7 @@ function declarations(set, band = false) {
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
   for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k) && k !== "transitionEasing").concat(entries.filter(([k]) => CORNERS.has(k) || k === "transitionEasing"))) {
     const p = STYLE_PROPS[k];
+    if (k === "fontFamily" && p) { const fv = p.out ? p.out(v) : v; d.push(`font-family:${fv}`, `--kw-font-link:${fv}`, `--kw-font-button:${fv}`, `--kw-font-heading:${fv}`); continue; } // la police réglée sur un élément atteint ses liens, boutons et titres (le site leur impose la sienne par ces variables)
     if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
   if (set.columnCount !== undefined && set.columnGap === undefined) d.push("column-gap:2rem"); // écart par défaut entre les colonnes de texte
@@ -441,7 +442,7 @@ const NODE_TYPES = {
   // Mode d'affichage des enfants (facultatif ; absent = conteneur ordinaire, comme avant) : « onglets » (un enfant = un onglet, titre = son nom) ou
   // « carrousel » (un enfant = une diapositive, avec le carrousel du site). Les enfants restent de vrais conteneurs, modifiables dans le canevas.
   // headerFx : effet d'un EN-TÊTE au défilement, lu sur le premier conteneur de l'en-tête (themeRender.partMode, _sections.ejs) : « shrink » (la rangée se réduit), « solid » (un en-tête superposé devient plein), « both ». Sans rapport avec motion.scrollFx (effets de mouvement d'un élément).
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p), ...(oneOf("shrink", "solid", "both")(p.headerFx) ? { headerFx: p.headerFx } : {}) }) },
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p), ...(oneOf("shrink", "solid", "both", "hide")(p.headerFx) ? { headerFx: p.headerFx } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
@@ -620,7 +621,7 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...imageSize(p) };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...(p.effect === "fade" ? { effect: "fade" } : {}), ...(numberIn(2, 4, { integer: true })(p.perView) ? { perView: numberIn(2, 4, { integer: true })(p.perView) } : {}), ...imageSize(p) };
   } },
   toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
     const title = line(p.title, 150), text = clean(p.text, 4000);
@@ -1068,7 +1069,7 @@ function schemaProps(def) {
   return (p, at, h) => {
     const out = {};
     for (const f of def.schema) out[f.key] = validateField(f, p[f.key], `${at} (${def.label}, ${f.label})`, h);
-    if (def.validate) def.validate(out, `${at} (${def.label})`); // règles qui portent sur l'ensemble des réglages
+    if (def.validate) def.validate(out, `${at} (${def.label})`, h); // règles qui portent sur l'ensemble des réglages (h : contexte de l'enregistrement, ex. organisation et site de la page)
     return out;
   };
 }

@@ -338,7 +338,7 @@ describe("lot 5 — Avancé", () => {
     const p = pages.createPage(A, { name: "Lot 5", kind: "page" });
     const save = (kids) => pages.saveDraft(A, p.id, { sections: [{ id: "sect00000001", type: "layout", children: kids }] }, { revision: pages.getPage(A, p.id).revision }).content.sections[0].children;
     const out = save([
-      { id: "ani000000001", type: "animatedheading", props: { before: "Apprenez", words: ["Photoshop", " ", "Blender"], after: "vite", interval: 99999, effect: "zoom" } },
+      { id: "ani000000001", type: "animatedheading", props: { before: "Apprenez", words: ["Photoshop", " ", "Blender"], after: "vite", interval: 99999, effect: "inconnu" } },
       { id: "flp000000001", type: "flipbox", props: { frontTitle: "Recto", backTitle: "Verso", ctaLabel: "Voir", ctaUrl: "/catalogue", height: 9999, effect: "fade" } },
       { id: "prl000000001", type: "pricelist", props: { items: [{ title: "Coaching", price: "50 €", link: "/connexion" }, { title: "", price: "" }] } },
       { id: "toc000000001", type: "toc", props: { depth: "9" } },

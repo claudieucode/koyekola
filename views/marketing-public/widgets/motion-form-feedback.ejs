@@ -1,0 +1,8 @@
+<%# Retour de formulaire animé (widgets/motion-form-feedback.js). Variables : p, cls, attrs, isBuilder. Sans JavaScript : les deux états sont décrits en clair (aperçu) ; form-feedback.js construit le vrai mini-formulaire ou s'attache à celui de la page. %>
+<% const demo = p.mode !== "page"; %>
+<div class="<%= cls %> kw-ms kw-ms-d kw-ms-ff" data-kw-ms-mode="<%= demo ? "demo" : "page" %>" data-kw-ms-title="<%= p.title || "" %>" data-kw-ms-field="<%= p.fieldLabel || "Votre adresse e-mail" %>" data-kw-ms-button="<%= p.buttonLabel || "Envoyer" %>" data-kw-ms-ok="<%= p.successMessage %>" data-kw-ms-err="<%= p.errorMessage %>" data-kw-ms-summary="<%= p.summary %>" data-kw-ms-note="<%= p.note !== false ? "1" : "0" %>"<%- attrs %>>
+  <% if (demo) { %><div class="kw-ms-ff-static"><% if (p.title) { %><p class="kw-ms-ff-title"><%= p.title %></p><% } %>
+    <p class="kw-ms-ff-msg is-ok"><strong>Succès :</strong> <%= p.successMessage %></p>
+    <p class="kw-ms-ff-msg is-err"><strong>Erreur :</strong> <%= p.errorMessage %></p></div>
+  <% } else if (isBuilder) { %><p class="kw-ms-ff-note">Retour animé du formulaire d'inscription de cette page : champs obligatoires vérifiés avant l'envoi, message de retour animé. Ajoutez un élément « Formulaire » sur la page.</p><% } %>
+</div>

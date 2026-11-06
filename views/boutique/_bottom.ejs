@@ -1,5 +1,6 @@
   </main>
   <footer class="sh-foot"><a href="<%= shop.base %>"><%= shop.name %></a> · <a href="<%= shop.base %>/panier">Panier</a> · <a href="<%= shop.base %>/compte">Mon compte</a></footer>
   <script src="<%= asset("/js/boutique.js") %>" defer></script>
+  <% if (site && site.assets && site.assets.pack && site.assets.pack.script) { %><%- site.assets.pack.script %><% } %>
 </body>
 </html>

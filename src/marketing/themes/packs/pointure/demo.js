@@ -1,0 +1,31 @@
+// Catalogue de démonstration « Pointure » (24 paires et accessoires). Étiquettes = marques fictives de démonstration, état « authentifiée », éditions.
+const P = { Pointure: ["40", "41", "42", "43", "44"] };
+module.exports = {
+  categories: ["Basket montante", "Basket basse", "Running", "Éditions limitées", "Entretien"],
+  products: [
+    ["Halo High Noir/Orange", 0, 169, 0, { ...P }, "partiel", ["authentifiee", "neuf"], "Montante en cuir, semelle cousue."],
+    ["Halo High Crème", 0, 169, 0, { ...P }, "ok", ["authentifiee", "neuf"], "Version crème, lacets cirés."],
+    ["Dune Mid Sable", 0, 149, 119, { ...P }, "ok", ["neuf", "fin-de-serie"], "Suédine sable, semelle gomme."],
+    ["Vortex High Acide", 0, 189, 0, { ...P }, "ok", ["authentifiee", "neuf"], "Coloris acide, empeigne en mesh."],
+    ["Orbit Low Blanc", 1, 129, 0, { ...P }, "ok", ["neuf"], "La basse blanche de tous les jours."],
+    ["Orbit Low Noir", 1, 129, 0, { ...P }, "ok", ["neuf"], "Total noir, semelle tonale."],
+    ["Ligne 85 Gris", 1, 139, 0, { ...P }, "partiel", ["neuf", "retro"], "Silhouette années 80."],
+    ["Ligne 85 Bleu", 1, 139, 0, { ...P }, "ok", ["neuf", "retro"], "Bleu roi, détails réfléchissants."],
+    ["Court Classic Vert", 1, 119, 95, { ...P }, "ok", ["neuf", "fin-de-serie"], "Tennis en cuir pleine fleur."],
+    ["Pulse Run Citron", 2, 159, 0, { ...P }, "ok", ["neuf"], "Amorti mousse, tige tricotée."],
+    ["Pulse Run Noir", 2, 159, 0, { ...P }, "ok", ["neuf"], "Version discrète pour le bitume."],
+    ["Tempo Run Rouge", 2, 139, 0, { ...P }, "rupture", ["neuf"], "Légère, 240 g."],
+    ["Trail Roc Kaki", 2, 175, 0, { ...P }, "ok", ["neuf"], "Crampons de 4 mm."],
+    ["Archive 01 – Reprise 1998", 3, 320, 0, { ...P }, "partiel", ["authentifiee", "edition-limitee"], "Réédition numérotée à 500 paires."],
+    ["Archive 02 – Chrome", 3, 360, 0, { ...P }, "ok", ["authentifiee", "edition-limitee"], "Finition miroir, boîte collector."],
+    ["Collab Atelier x Studio", 3, 280, 0, { ...P }, "ok", ["authentifiee", "edition-limitee"], "Collaboration de studio, série courte."],
+    ["Halo High Prototype (occasion)", 3, 450, 0, { Pointure: ["42", "43"] }, "ok", ["authentifiee", "occasion"], "Occasion, état 9/10, vérifiée à la main."],
+    ["Orbit Low Pastel (occasion)", 3, 95, 0, { Pointure: ["41", "42"] }, "ok", ["authentifiee", "occasion"], "Occasion, état 8/10."],
+    ["Lacets cirés (3 paires)", 4, 12, 0, { Longueur: ["120 cm", "150 cm"] }, "ok", ["accessoire"], "Plusieurs coloris."],
+    ["Kit de nettoyage", 4, 29, 0, null, "ok", ["accessoire"], "Brosse, mousse nettoyante, chiffon."],
+    ["Spray imperméabilisant", 4, 16, 0, null, "libre", ["accessoire"], "Protège cuir et suédine."],
+    ["Embouts de forme (cèdre)", 4, 32, 25, { Pointure: ["40-42", "43-45"] }, "ok", ["accessoire", "fin-de-serie"], "Absorbent l'humidité."],
+    ["Boîte de rangement", 4, 22, 0, null, "ok", ["accessoire"], "Façade transparente, empilable."],
+    ["Semelles confort", 4, 24, 0, { Pointure: ["40-42", "43-45"] }, "ok", ["accessoire"], "Mousse à mémoire de forme."],
+  ],
+};

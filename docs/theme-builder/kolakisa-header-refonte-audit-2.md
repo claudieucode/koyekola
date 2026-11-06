@@ -1,3 +1,5 @@
+> **Document historique.** La bibliothèque décrite ici (100 compositions en rangées, 34 identités) a été remplacée par la bibliothèque « Atelier » : voir [HEADER_LIBRARY_100_MODELS_REPORT.md](HEADER_LIBRARY_100_MODELS_REPORT.md).
+
 # En-têtes — deuxième refonte : audit et décisions (4 novembre 2026)
 
 Cette refonte part de la bibliothèque livrée le 3 novembre (`kolakisa-header-audit.md`, `kolakisa-header-library.md`). Elle ne la jette pas : elle mesure son écart avec le cahier des charges « identité indépendante, secteurs, comportements » et comble ce qui peut l'être **sans contrôle décoratif**.

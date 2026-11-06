@@ -1,0 +1,32 @@
+// Catalogue de démonstration « Maille » (24 produits : variantes, promotions, ruptures). Données de démonstration, jamais créées sur la boutique d'un client sans action explicite.
+const T = { Taille: ["XS", "S", "M", "L"] };
+module.exports = {
+  categories: ["Pulls", "Cardigans", "Écharpes et étoles", "Plaids", "Accessoires"],
+  products: [
+    ["Pull col rond Brume", 0, 295, 0, { ...T, Coloris: ["Brume", "Avoine", "Nuit"] }, "partiel", ["cachemire", "mongolie"], "Cachemire 2 fils, côtes fines, coupe droite."],
+    ["Pull col roulé Avoine", 0, 340, 0, { ...T, Coloris: ["Avoine", "Pierre"] }, "ok", ["cachemire"], "Col roulé souple, tricot mille-côtes."],
+    ["Pull marin Nuit", 0, 320, 0, { ...T }, "ok", ["cachemire"], "Maille serrée, encolure bateau."],
+    ["Pull oversize Pierre", 0, 360, 288, { ...T, Coloris: ["Pierre", "Brume"] }, "ok", ["cachemire", "fin-de-serie"], "Épaules tombantes, tricot gonflant."],
+    ["Pull zippé Argile", 0, 385, 0, { ...T }, "rupture", ["cachemire"], "Zip invisible, col montant."],
+    ["Pull torsadé Écru", 0, 410, 0, { ...T }, "ok", ["cachemire", "torsades"], "Torsades tricotées main."],
+    ["Cardigan long Brume", 1, 420, 0, { ...T, Coloris: ["Brume", "Nuit"] }, "ok", ["cachemire"], "Cardigan long sans boutons."],
+    ["Cardigan boutonné Avoine", 1, 380, 0, { ...T }, "partiel", ["cachemire"], "Boutons en corne, poches plaquées."],
+    ["Gilet sans manches Pierre", 1, 250, 0, { ...T }, "ok", ["cachemire"], "À porter seul ou sur une chemise."],
+    ["Veste en maille Nuit", 1, 520, 0, { ...T }, "ok", ["cachemire", "edition-limitee"], "Maille milanaise, doublée jersey de soie."],
+    ["Cardigan court Argile", 1, 340, 272, { ...T }, "ok", ["cachemire", "fin-de-serie"], "Coupe courte, manches trois-quarts."],
+    ["Écharpe Brume 200 cm", 2, 135, 0, null, "ok", ["cachemire"], "Écharpe unie, franges roulottées."],
+    ["Étole Avoine", 2, 190, 0, { Coloris: ["Avoine", "Brume", "Nuit"] }, "ok", ["cachemire"], "Étole légère 70 × 200 cm."],
+    ["Écharpe à chevrons Nuit", 2, 165, 0, null, "ok", ["cachemire", "tisse"], "Chevrons tissés main."],
+    ["Snood Pierre", 2, 120, 0, null, "rupture", ["cachemire"], "Cercle de maille, deux tours."],
+    ["Plaid Brume", 3, 480, 0, null, "ok", ["cachemire", "maison"], "130 × 180 cm, bords surfilés."],
+    ["Plaid chevrons Avoine", 3, 540, 0, null, "ok", ["cachemire", "maison"], "Tissage chevrons, 420 g."],
+    ["Couverture voyage Nuit", 3, 290, 232, null, "ok", ["cachemire", "voyage", "fin-de-serie"], "Compacte, livrée dans sa pochette."],
+    ["Bonnet côtelé Argile", 4, 95, 0, { Coloris: ["Argile", "Nuit", "Avoine"] }, "ok", ["cachemire"], "Bonnet double épaisseur."],
+    ["Gants Pierre", 4, 110, 0, { Taille: ["S", "M", "L"] }, "partiel", ["cachemire"], "Doublés cachemire."],
+    ["Chaussettes de maison", 4, 65, 0, { Taille: ["36-38", "39-41", "42-44"] }, "ok", ["cachemire"], "Maille douce, talon renforcé."],
+    ["Bandeau Brume", 4, 58, 0, null, "ok", ["cachemire"], "Bandeau large, doublé polaire."],
+    ["Mitaines Nuit", 4, 88, 0, null, "ok", ["cachemire"], "Mitaines longues, pouce libre."],
+    ["Pochette de soin", 4, 24, 0, null, "libre", ["entretien"], "Sachet cèdre et peigne à cachemire."],
+    ["Pull Édition Atelier", 0, 640, 0, { ...T }, "ok", ["cachemire", "edition-limitee"], "Série numérotée de 100 pièces."],
+  ],
+};

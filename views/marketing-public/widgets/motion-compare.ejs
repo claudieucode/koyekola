@@ -1,0 +1,23 @@
+<%# Comparaison de données (widgets/motion-compare.js). Variables : p, cls, attrs, isBuilder. Barres, valeurs et écarts FINAUX écrits ici ; public/js/motion-studio/compare.js les anime. %>
+<% const TONES = ["primary", "secondary", "accent", "success", "warning", "error"]; const tA = TONES.includes(p.toneA) ? p.toneA : "secondary", tB = TONES.includes(p.toneB) ? p.toneB : "primary";
+   const dec = [0, 1, 2].includes(Number(p.decimals)) ? Number(p.decimals) : 0; const unit = p.unit || ""; const items = Array.isArray(p.items) ? p.items : [];
+   const nf = (x, d) => Number(x).toLocaleString("fr-FR", { minimumFractionDigits: d == null ? dec : d, maximumFractionDigits: d == null ? dec : d }); const round = (x) => Math.round(x * 100) / 100;
+   const gmax = Math.max(1e-9, ...items.map((i) => Math.max(Number(i.a) || 0, Number(i.b) || 0))); const better = ["up", "down", "none"].includes(p.better) ? p.better : "up"; %>
+<div class="<%= cls %> kw-ms kw-ms-d kw-ms-cmp"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-ms-cmp-title"><%= p.title %></p><% } %>
+  <ul class="kw-ms-cmp-legend"><li><span class="kw-ms-cmp-sw kw-ms-tone-<%= tA %>"></span><%= p.nameA %></li><li><span class="kw-ms-cmp-sw kw-ms-tone-<%= tB %>"></span><%= p.nameB %></li></ul>
+  <ul class="kw-ms-cmp-list">
+    <% items.forEach((it) => { const a = Number(it.a) || 0, b = Number(it.b) || 0; const m = p.scale === "row" ? Math.max(1e-9, a, b) : gmax;
+       const pct = a > 0 ? Math.round(((b - a) / a) * 1000) / 10 : null; const dir = pct === null ? "none" : pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+       const good = dir === "none" || dir === "flat" || better === "none" ? "" : (dir === better ? " is-good" : " is-bad"); %>
+    <li class="kw-ms-cmp-row">
+      <span class="kw-ms-cmp-label"><%= it.label %></span>
+      <div class="kw-ms-cmp-bars">
+        <div class="kw-ms-cmp-line"><span class="kw-ms-sr"><%= p.nameA %> : </span><span class="kw-ms-cmp-track" aria-hidden="true"><span class="kw-ms-cmp-fill kw-ms-tone-<%= tA %>" style="width:<%= round((a / m) * 100) %>%"></span></span><span class="kw-ms-cmp-n"><span class="kw-ms-num" data-to="<%= a %>" data-dec="<%= dec %>"><%= nf(a) %></span><%= unit ? " " + unit : "" %></span></div>
+        <div class="kw-ms-cmp-line"><span class="kw-ms-sr"><%= p.nameB %> : </span><span class="kw-ms-cmp-track" aria-hidden="true"><span class="kw-ms-cmp-fill kw-ms-tone-<%= tB %>" style="width:<%= round((b / m) * 100) %>%"></span></span><span class="kw-ms-cmp-n"><span class="kw-ms-num" data-to="<%= b %>" data-dec="<%= dec %>"><%= nf(b) %></span><%= unit ? " " + unit : "" %></span></div>
+      </div>
+      <% if (p.showDelta !== false) { %><span class="kw-ms-cmp-delta is-<%= dir %><%= good %>"><span class="kw-ms-sr">Évolution : </span><% if (pct === null) { %>—<% } else if (pct === 0) { %>=<% } else { %><span aria-hidden="true"><%= pct > 0 ? "▲" : "▼" %></span> <%= pct > 0 ? "+" : "−" %><%= nf(Math.abs(pct), 1) %> %<% } %></span><% } %>
+    </li>
+    <% }) %>
+  </ul>
+</div>

@@ -7,7 +7,11 @@ module.exports = {
   schema: [
     { key: "items", kind: "items", label: "Textes", min: 1, max: 12,
       default: [{ text: "Formations en ligne" }, { text: "Accompagnement personnalisé" }, { text: "Communauté active" }],
-      fields: [{ key: "text", kind: "text", label: "Texte", max: 80, required: true, default: "Mon texte" }] },
+      fields: [
+        { key: "text", kind: "text", label: "Texte (ou nom du logo si une image est choisie)", max: 80, required: true, default: "Mon texte" },
+        { key: "image", kind: "image", label: "Image ou logo (facultatif : remplace le texte à l'écran)" },
+      ] },
+    { key: "imageSize", kind: "select", label: "Taille des images", options: [["s", "Petite (28 px)"], ["m", "Moyenne (44 px)"], ["l", "Grande (64 px)"]], default: "m" },
     { key: "speed", kind: "select", label: "Vitesse", options: [["slow", "Lente"], ["normal", "Normale"], ["fast", "Rapide"]], default: "normal" },
     { key: "direction", kind: "select", label: "Sens", options: [["left", "Vers la gauche"], ["right", "Vers la droite"]], default: "left" },
     { key: "separator", kind: "text", label: "Séparateur entre les textes", max: 3, default: "•" },

@@ -394,7 +394,19 @@ const PARTS = {
     bar: part("Barre de séparation", ".kw-compare-bar", { background: true, size: ["width"], effects: ["opacity", "boxShadow"] }),
     knob: part("Poignée", ".kw-compare-knob", DOT),
   },
+  reviews: {
+    title: part("Titre", ".kw-reviews-title", TEXT),
+    summary: part("Note moyenne", ".kw-reviews-summary", TEXT),
+    card: part("Carte d'avis", ".kw-review", { ...BOX }),
+    stars: part("Étoiles", ".kw-review-stars", { typography: ["fontSize", "letterSpacing"], color: ["color"], spacing: spacingAll }),
+    text: part("Texte de l'avis", ".kw-review-text", TEXT),
+    name: part("Nom", ".kw-review-name", TEXT),
+    role: part("Fonction", ".kw-review-role", TEXT),
+    avatar: part("Photo", ".kw-review-avatar", { size: ["width", "height"], border: true, effects: ["opacity", "boxShadow"] }),
+  },
+  splittext: { unit: part("Lettres / mots", ".kw-st-c", { typography: ["fontFamily", "fontWeight"], color: ["color"] }) },
   marquee: {
+    image: part("Image ou logo", ".kw-marquee-img", { size: ["height"], effects: ["opacity", "boxShadow"] }),
     item: part("Élément", ".kw-marquee-item", TEXT_BG),
     sep: part("Séparateur", ".kw-marquee-sep", TEXT),
     pause: part("Bouton pause", ".kw-marquee-pause", LINK, ["hover", "focus"]),
@@ -500,5 +512,8 @@ const ROOT_ONLY = {
   link: "la racine est le lien", html: "contenu libre signé : pas de structure connue", dyntext: "la racine est le texte dynamique", copyright: "la racine est le paragraphe",
   icon: "la racine est l'icône", menuanchor: "ancre invisible : aucun rendu public", textpath: "texte sur un tracé SVG : propriétés CSS de boîte sans effet sur les sous-éléments SVG",
 };
+
+// Motion Studio : chaque widget animé est une scène autonome pilotée par son propre script ; sa racine est l'unique élément réglable (les réglages de mouvement sont dans l'onglet Mouvement)
+for (const t of ["motionanimatedbg", "motionanimatedheading", "motionbutton", "motioncardstack", "motioncascade", "motionchart", "motioncircular", "motioncirculartext", "motioncompare", "motioncursor", "motionformfeedback", "motionfsmenu", "motiongauge", "motiongradienttext", "motionhgallery", "motionhero", "motionimageparallax", "motionimagereveal", "motionkinetictext", "motionloader", "motionlogomarquee", "motionlottie", "motionmagneticbutton", "motionmarqueevelocity", "motionmetric", "motionnumberticker", "motionpinscenes", "motionportfolio", "motionprocess", "motionbars", "motionrotatingtext", "motionscrollseq", "motionsplittext", "motionstickystory", "motionsvgdraw", "motionswitch", "motiontabs", "motiontestimonials", "motiontextmask", "motionrevealtext", "motiontextscramble", "motiontiltcard", "motiontimeline", "motiontoast", "motiontypewriter"]) ROOT_ONLY[t] = "scène Motion Studio : la racine est l'unique élément réglable, le mouvement a ses propres réglages";
 
 module.exports = { PARTS, ROOT_ONLY, allows, spec, scan };

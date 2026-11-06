@@ -1,0 +1,16 @@
+<%# Carte de métrique (widgets/motion-metric-card.js). Variables : p, cls, attrs, isBuilder. Valeur, variation et courbe FINALES écrites ici ; public/js/motion-studio/metric.js les anime. %>
+<% const TONES = ["primary", "secondary", "accent", "success", "warning", "error"]; const tone = TONES.includes(p.tone) ? p.tone : "primary"; const dec = [0, 1, 2].includes(Number(p.decimals)) ? Number(p.decimals) : 0;
+   const nf = (x, d) => Number(x).toLocaleString("fr-FR", { minimumFractionDigits: d == null ? dec : d, maximumFractionDigits: d == null ? dec : d }); const v = Number(p.value) || 0; const round = (x) => Math.round(x * 100) / 100;
+   const pts = String(p.spark || "").split(/[\s;,]+/).filter(Boolean).map(Number).filter((x) => Number.isFinite(x)); const spark = pts.length >= 2 ? pts : null;
+   const d = Number(p.delta) || 0; const dir = d > 0 ? "up" : d < 0 ? "down" : "flat"; const better = ["up", "down", "none"].includes(p.better) ? p.better : "up"; const good = dir === "flat" || better === "none" ? "" : dir === better ? " is-good" : " is-bad";
+   const full = `${p.prefix || ""}${nf(v)}${p.suffix ? " " + p.suffix : ""}`; let xy = null;
+   if (spark) { const lo = Math.min(...spark), hi = Math.max(...spark), span = hi - lo || 1; xy = spark.map((s, i) => [round((i / (spark.length - 1)) * 100), round(28 - ((s - lo) / span) * 26)]); } %>
+<div class="<%= cls %> kw-ms kw-ms-d kw-ms-mc kw-ms-tone-<%= tone %>"<%- attrs %>>
+  <div class="kw-ms-mc-card">
+    <p class="kw-ms-mc-label"><%= p.label %></p>
+    <p class="kw-ms-mc-value"><span class="kw-ms-sr"><%= full %></span><span class="kw-ms-mc-num" aria-hidden="true"><% if (p.prefix) { %><span class="kw-ms-mc-pre"><%= p.prefix %></span><% } %><span class="kw-ms-num" data-to="<%= v %>" data-dec="<%= dec %>"><%= nf(v) %></span><% if (p.suffix) { %><span class="kw-ms-mc-suf"><%= p.suffix %></span><% } %></span></p>
+    <% if (p.showDelta !== false) { %><p class="kw-ms-mc-delta is-<%= dir %><%= good %>"><span class="kw-ms-mc-badge"><span aria-hidden="true"><%= dir === "up" ? "▲" : dir === "down" ? "▼" : "■" %></span> <span class="kw-ms-sr"><%= dir === "up" ? "En hausse de " : dir === "down" ? "En baisse de " : "Stable : " %></span><%= dir === "flat" ? "0" : (d > 0 ? "+" : "−") + nf(Math.abs(d), 1) %> %</span><% if (p.deltaLabel) { %> <span class="kw-ms-mc-dl"><%= p.deltaLabel %></span><% } %></p><% } %>
+    <% if (xy) { %><div class="kw-ms-mc-sparkwrap" aria-hidden="true"><svg class="kw-ms-mc-spark" viewBox="0 0 100 30" preserveAspectRatio="none" focusable="false"><polygon class="kw-ms-mc-area" points="0,30 <%= xy.map((q) => q.join(",")).join(" ") %> 100,30"/><polyline class="kw-ms-mc-line" points="<%= xy.map((q) => q.join(",")).join(" ") %>" fill="none" vector-effect="non-scaling-stroke"/></svg></div>
+    <p class="kw-ms-sr">Évolution récente : <%= spark.map((x) => nf(x)).join(", ") %></p><% } %>
+  </div>
+</div>

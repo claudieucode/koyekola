@@ -2080,6 +2080,7 @@ function selectField(label, value, options, onChange, opts) {
       var head = h("div", { class: "pb-items-head" }, h("strong", { text: "Élément " + (i + 1) }), h("span", { class: "pb-items-tools" },
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Monter l'élément " + (i + 1), "data-tip": "Monter", disabled: disabled || i === 0, onclick: function () { move(-1); } }, icon("arrowUp")),
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Descendre l'élément " + (i + 1), "data-tip": "Descendre", disabled: disabled || i === list.length - 1, onclick: function () { move(1); } }, icon("arrowDown")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Dupliquer l'élément " + (i + 1), "data-tip": "Dupliquer", disabled: disabled || list.length >= f.max, onclick: function () { var cur = live(), next = cur.slice(); next.splice(i + 1, 0, Object.assign({}, cur[i])); commit(next); } }, icon("copy")),
         h("button", { type: "button", class: "pb-icon-btn is-danger", "aria-label": "Supprimer l'élément " + (i + 1), "data-tip": "Supprimer", disabled: disabled || list.length <= min, onclick: function () { commit(live().filter(function (_, k) { return k !== i; })); } }, icon("trash"))));
       var card = h("div", { class: "pb-items-item" }, head);
       f.fields.forEach(function (sf) {
@@ -2301,6 +2302,8 @@ function selectField(label, value, options, onChange, opts) {
             textField("Légende " + (i + 1), im.caption, function (v) { change(function () { byId(it.id).props.images[i].caption = v; }, { key: it.id + ":cap" + i, light: true }); }, { max: 200, disabled: disabled }),
             h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || p.images.length < 3, onclick: function () { change(function () { byId(it.id).props.images.splice(i, 1); }); } }, "Retirer")));
         });
+        box.appendChild(optSelect(it, "Transition entre les images", "effect", p.effect, [["slide", "Défilement (glissé)"], ["fade", "Fondu (une seule image visible)"]], "slide", disabled));
+        box.appendChild(optSelect(it, "Images visibles à la fois (bureau ; 1 sur mobile)", "perView", p.perView, [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]], "1", disabled));
         box.appendChild(checkField("Points de navigation", p.dots !== false, function (v) { setProp(it.id, "dots", v); }, { disabled: disabled }));
         box.appendChild(checkField("Revenir au début après la dernière image (boucle)", p.loop, function (v) { setProp(it.id, "loop", v); }, { disabled: disabled }));
         box.appendChild(checkField("Défilement automatique", p.autoplay, function (v) { setProp(it.id, "autoplay", v); }, { disabled: disabled, hint: "S'arrête au survol, au clavier ou au toucher ; jamais si la personne réduit les animations." }));
@@ -4210,6 +4213,10 @@ function selectField(label, value, options, onChange, opts) {
           });
           box.appendChild(h("div", { class: "pb-field" }, h("label", { for: wid, text: "Largeur max. de ce conteneur" }), winp, h("p", { class: "pb-hint", id: wid + "-h", text: "Propre à l'écran « " + bpLabel(device) + " » ; px, %, rem ou vw. Le conteneur reste centré et ne dépasse jamais son parent." })));
         }
+      }
+      if (p.full) {
+        box.appendChild(selectField("Effet de l'en-tête au défilement", p.headerFx || "", [["", "Aucun"], ["shrink", "Se réduit"], ["solid", "Devient plein (en-tête superposé)"], ["both", "Se réduit et devient plein"], ["hide", "Se cache en descendant, revient en remontant"]], function (v) { change(function () { var n = byId(it.id); if (!n) return false; n.props = n.props || {}; if (v) n.props.headerFx = v; else delete n.props.headerFx; }, { label: "Effet de l'en-tête au défilement" }); }, { disabled: dis }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Sans effet hors d'un en-tête du Theme Builder (premier conteneur de l'en-tête, collant ou superposé). Coupé si le visiteur demande moins de mouvement." }));
       }
       box.appendChild(selectField("Balise HTML", p.tag || "div", SPEC.boxTags.map(function (t) { return [t, BOX_TAG_LABEL[t] || t]; }), function (v) { setProp(it.id, "tag", v); }, { disabled: dis }));
       box.appendChild(h("p", { class: "pb-hint", text: "La balise donne le sens de la zone aux lecteurs d'écran et aux moteurs de recherche ; l'affichage ne change pas." }));
@@ -7746,6 +7753,7 @@ function selectField(label, value, options, onChange, opts) {
     box.appendChild(textField("Description (aperçu de partage)", content.description, setC("description"), { multiline: true, max: 300, disabled: !canWrite }));
     if (!IS_COMPONENT) formatSection(box);
     if (!IS_COMPONENT) scrollSnapSection(box);
+    if (!IS_COMPONENT && window.pbMotionTimeline) window.pbMotionTimeline.panel(box); // scènes, transitions de page / de sections, défilement fluide (Motion Studio)
     // ----- Référencement (palier 11) : mêmes données que la page publique, aperçu et analyse calculés par le moteur SEO du serveur -----
     var seoCfg = boot.seo || {};
     var seoCan = canWrite && seoCfg.canEdit;
@@ -8337,6 +8345,7 @@ function selectField(label, value, options, onChange, opts) {
   function healIgnored(list) {
     var seen = {};
     list.forEach(function (w) {
+      if (w.kind === "scene_target" && window.pbMotionTimeline) window.pbMotionTimeline.heal(w); // scène qui visait un élément supprimé : pas retiré
       var it = w.nodeId && byId(w.nodeId), p = it && it.parts && it.parts[w.part];
       if (it && w.kind === "interaction_target" && it.interactions) {
         var keep = it.interactions.filter(function (x) { return x.target !== w.target; });

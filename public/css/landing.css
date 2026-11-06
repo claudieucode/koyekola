@@ -296,9 +296,9 @@
 .kw-mcar-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
 /* Logo, titre du site, copyright */
 .kw-sitelogo { display: inline-flex; flex-direction: column; align-items: flex-start; }
+:where(.kw-sitelogo) { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; } /* valeurs par défaut sur l'élément : les réglages de l'élément (et ses « parties ») les remplacent */
 .kw-sitelogo-link { display: inline-flex; align-items: center; color: inherit; text-decoration: none; }
 .kw-sitelogo-img { display: block; height: 48px; width: auto; max-width: 100%; }
-.kw-sitelogo-text { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
 .kw-sitetitle { margin: 0; font-weight: 800; }
 .kw-sitetitle-link { color: inherit; text-decoration: none; }
 .kw-sitetitle-link:hover, .kw-sitelogo-link:hover .kw-sitelogo-text { text-decoration: underline; }
@@ -489,13 +489,15 @@
 /* Page d'un site (Site Web) : le design system du site remplace les réglages de la page (variables --kw-…, validées
    côté serveur). Mêmes structures, seules les valeurs changent. */
 .lp-site { font-family: var(--kw-font-body); font-size: var(--kw-body-size); font-weight: var(--kw-body-weight); line-height: var(--kw-body-lh); }
-.lp-site h1, .lp-site h2, .lp-site h3 { font-family: var(--kw-font-heading); }
+/* un bouton natif n'hérite pas de la typographie du navigateur : celle de l'élément l'atteint */
+:where(.lp-site) :where(button) { font-family: inherit; letter-spacing: inherit; text-transform: inherit; }
+:where(.lp-site) :where(h1, h2, h3) { font-family: var(--kw-font-heading); } /* spécificité nulle : la police réglée sur l'élément l'emporte toujours */
 .lp-site .lp-hero h1 { font-size: clamp(24px, 5.5vw, var(--kw-h1-size)); font-weight: var(--kw-h1-weight); line-height: var(--kw-h1-lh); color: var(--kw-text, var(--kw-secondary)); }
 .lp-site .lp-block.lp-bg-primary .lp-hero h1, .lp-site .lp-block.lp-bg-dark .lp-hero h1, .lp-site .lp-block.lp-bg-accent .lp-hero h1 { color: inherit; }
 .lp-site .lp-section h2 { font-size: var(--kw-h2-size); font-weight: var(--kw-h2-weight); line-height: var(--kw-h2-lh); }
 .lp-site .lp-section { margin: var(--kw-space-lg) 0; }
-.lp-site a { font-family: var(--kw-font-link); }
-.lp-site .lp-btn, .lp-site .kw-btn { font-family: var(--kw-font-button); }
+:where(.lp-site) :where(a) { font-family: var(--kw-font-link); }
+:where(.lp-site) :where(.lp-btn, .kw-btn) { font-family: var(--kw-font-button); }
 .lp-site .lp-btn { min-height: var(--kw-button-height); border-radius: var(--kw-radius-button); box-shadow: var(--kw-shadow-button); font-size: var(--kw-button-size); font-weight: var(--kw-button-weight); }
 .lp-site .lp-course, .lp-site .lp-signup { border-radius: var(--kw-radius-card); box-shadow: var(--kw-shadow-card); }
 .lp-site .lp-figure img, .lp-site .lp-hero-img { border-radius: var(--kw-radius-lg); }
@@ -633,6 +635,16 @@ body.pb-hand.is-panning,body.pb-hand.is-panning *{cursor:grabbing}
 .kw-carousel-btn { position: absolute; top: 40%; z-index: 1; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.92); box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2); font-size: 24px; line-height: 1; cursor: pointer; }
 .kw-carousel-btn.is-prev { left: 8px; } .kw-carousel-btn.is-next { right: 8px; }
 .kw-carousel-btn:disabled { opacity: 0; pointer-events: none; }
+/* Transitions des carrousels : « fondu » (activé par le script seulement) et plusieurs éléments visibles à la fois */
+[data-kw-carousel].is-fade .kw-carousel-track { display: grid; overflow: hidden; scroll-snap-type: none; padding-bottom: 0; }
+[data-kw-carousel].is-fade .kw-carousel-slide { grid-area: 1 / 1; flex: none; width: 100%; opacity: 0; visibility: hidden; transition: opacity .7s ease, visibility 0s linear .7s; }
+[data-kw-carousel].is-fade .kw-carousel-slide.is-active { opacity: 1; visibility: visible; transition: opacity .7s ease, visibility 0s; }
+@media (prefers-reduced-motion: reduce) { [data-kw-carousel].is-fade .kw-carousel-slide, [data-kw-carousel].is-fade .kw-carousel-slide.is-active { transition: none; } }
+@media (min-width: 761px) {
+  [data-kw-carousel][data-kw-per="2"] .kw-carousel-slide { flex: 0 0 calc((100% - 12px) / 2); }
+  [data-kw-carousel][data-kw-per="3"] .kw-carousel-slide { flex: 0 0 calc((100% - 24px) / 3); }
+  [data-kw-carousel][data-kw-per="4"] .kw-carousel-slide { flex: 0 0 calc((100% - 36px) / 4); }
+}
 .kw-carousel-btn:focus-visible { outline: 2px solid var(--kw-primary, #0277b6); outline-offset: 2px; }
 /* Anti-débordement : un mot très long (adresse collée, nom technique) passe à la ligne au lieu d'élargir la page ;
    un élément d'une rangée flexible peut rétrécir sous la largeur de son contenu */
@@ -832,7 +844,11 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .lp-block.lp-site-header.kw-theme-overlay.kw-theme-fx-solid, .lp-block.lp-site-header.kw-theme-overlay.kw-theme-fx-both { position: fixed; }
 .lp-block.lp-site-header[data-kw-scroll=solid].is-scrolled .kw-full .kw-full, .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled .kw-full .kw-full { background-color: var(--kw-background, #fff) !important; box-shadow: 0 1px 0 rgba(15, 23, 42, .08), 0 6px 18px rgba(15, 23, 42, .08); }
 .lp-block.lp-site-header[data-kw-scroll=solid].is-scrolled :is(a:not([class*="kw-btn"]), p, span, h1, h2, h3, .kw-menu-burger), .lp-block.lp-site-header[data-kw-scroll=both].is-scrolled :is(a:not([class*="kw-btn"]), p, span, h1, h2, h3, .kw-menu-burger) { color: var(--kw-text, #10222f) !important; }
-@media (prefers-reduced-motion: reduce) { .lp-block.lp-site-header[data-kw-scroll] .kw-full .kw-full { transition: none; } }
+/* « Se cache » : l'en-tête collant sort de l'écran quand on descend et revient dès qu'on remonte (classe is-hidden posée par landing.js) */
+.lp-block.lp-site-header[data-kw-scroll=hide] { transition: transform .28s ease; }
+.lp-block.lp-site-header[data-kw-scroll=hide].is-hidden { transform: translateY(-110%); }
+.lp-block.lp-site-header[data-kw-scroll=hide]:focus-within { transform: none; }
+@media (prefers-reduced-motion: reduce) { .lp-block.lp-site-header[data-kw-scroll] .kw-full .kw-full, .lp-block.lp-site-header[data-kw-scroll=hide] { transition: none; } }
 /* Un en-tête (ou un pied) de site touche le bord de la page : pas de marge de colonne au-dessus (en-tête) ni en dessous (pied) */
 .lp-main:has(> .lp-block.lp-site-header:first-child) { padding-top: 0; }
 .lp-main:has(> .lp-block.lp-site-footer:last-child) { padding-bottom: 0; }
@@ -899,6 +915,7 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 @media (max-width: 560px) { .kw-posts-list .kw-post-card { flex-direction: column; } .kw-posts-list .kw-post-card img { width: 100%; } }
 /* Recherche */
 .kw-search { display: flex; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.kw-search button { font-family: inherit; font-size: inherit; letter-spacing: inherit; text-transform: inherit; line-height: inherit; } /* un bouton natif n'hérite pas de la typographie : la typographie réglée sur la recherche l'atteint */
 .kw-search input { flex: 1 1 200px; min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid rgba(16, 34, 47, .25); border-radius: 8px; font: inherit; }
 /* Compte du visiteur */
 .kw-account { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
@@ -1496,3 +1513,46 @@ html.kw-noscroll { overflow: hidden; }
 
 /* Petits écrans : le titre principal ne coupe jamais un mot long */
 @media (max-width: 480px) { .lp-site h1.kw-heading, .lp-site .lp-hero h1 { font-size: min(var(--kw-h1-size, 44px), 8.5vw); } }
+
+/* Avis clients (widget « reviews ») : grille ou liste de cartes, note moyenne calculée */
+.kw-reviews { min-width: 0; }
+.kw-reviews-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin: 0 0 20px; }
+.kw-reviews-title { margin: 0; font-size: 1.5rem; line-height: 1.25; overflow-wrap: anywhere; }
+.kw-reviews-summary { margin: 0; }
+.kw-reviews-stars, .kw-review-stars { color: #b45309; letter-spacing: 2px; }
+.kw-reviews-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(var(--kw-rv-cols, 3), minmax(0, 1fr)); }
+.kw-reviews.is-cols-1 { --kw-rv-cols: 1; } .kw-reviews.is-cols-2 { --kw-rv-cols: 2; } .kw-reviews.is-cols-3 { --kw-rv-cols: 3; }
+.kw-reviews.is-list .kw-reviews-list { grid-template-columns: minmax(0, 1fr); }
+.kw-review { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 20px; border: 1px solid rgba(16, 34, 47, 0.14); border-radius: 12px; background: Canvas; color: CanvasText; }
+.kw-review-stars { margin: 0; }
+.kw-review-text { margin: 0; flex: 1 1 auto; }
+.kw-review-text p { margin: 0; overflow-wrap: anywhere; }
+.kw-review-who { display: flex; align-items: center; gap: 12px; margin: 0; }
+.kw-review-who > span { display: flex; flex-direction: column; min-width: 0; }
+.kw-review-name, .kw-review-role, .kw-review-meta { overflow-wrap: anywhere; }
+.kw-review-role, .kw-review-meta { font-size: 0.875rem; opacity: 0.75; }
+.kw-review-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+@media (max-width: 900px) { .kw-reviews.is-grid .kw-reviews-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kw-reviews.is-cols-1.is-grid .kw-reviews-list { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .kw-reviews.is-grid .kw-reviews-list { grid-template-columns: minmax(0, 1fr); } }
+
+/* Texte animé lettre par lettre (widget « splittext ») : l'état caché n'existe qu'une fois le script prêt (sans script : texte entier) */
+.kw-splittext { margin: 0; overflow-wrap: anywhere; }
+.kw-splittext.is-left { text-align: left; } .kw-splittext.is-center { text-align: center; } .kw-splittext.is-right { text-align: right; }
+.kw-st-w { display: inline-block; white-space: nowrap; }
+.kw-splittext.kw-st-ready .kw-st-c { display: inline-block; opacity: 0; transition-property: opacity, transform, filter; transition-timing-function: cubic-bezier(.2, .7, .2, 1); transition-duration: 600ms; }
+.kw-splittext.kw-st-ready.is-rise .kw-st-c { transform: translateY(0.6em); }
+.kw-splittext.kw-st-ready.is-blur .kw-st-c { filter: blur(8px); }
+.kw-splittext.kw-st-ready.is-slide .kw-st-c { transform: translateX(-0.5em); }
+.kw-splittext.kw-st-ready.is-zoom .kw-st-c { transform: scale(0.4); }
+.kw-splittext.kw-st-ready.is-in .kw-st-c { opacity: 1; transform: none; filter: none; }
+@media (prefers-reduced-motion: reduce) { .kw-splittext.kw-st-ready .kw-st-c { opacity: 1; transform: none; filter: none; transition: none; } }
+
+/* Parallaxe d'arrière-plan : image de fond couvrante (les réglages de l'élément, plus précis, l'emportent) */
+.kw-bgpar { background-size: cover; background-repeat: no-repeat; }
+
+/* Défilement continu avec images : taille des logos */
+.kw-marquee-img { display: block; width: auto; max-width: none; height: 44px; object-fit: contain; }
+.kw-marquee.is-img-s .kw-marquee-img { height: 28px; } .kw-marquee.is-img-l .kw-marquee-img { height: 64px; }
+.kw-marquee-item:has(.kw-marquee-img) { display: inline-flex; align-items: center; }
+
+.kw-st-vis { display: inline; }

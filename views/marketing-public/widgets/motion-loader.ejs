@@ -1,0 +1,17 @@
+<%# Chargement et squelette (widgets/motion-loader.js). Variables : p, cls, attrs, isBuilder. Formes écrites ici (animation CSS en boucle) ; loader.js ajoute le bouton Pause et règle la vitesse. %>
+<% const V = ["spinner", "ring", "dots", "bars", "pulse", "skeleton-text", "skeleton-card", "skeleton-profile", "skeleton-list"]; const v = V.includes(p.variant) ? p.variant : "spinner"; const tone = ["primary", "secondary", "accent", "success", "warning", "error"].includes(p.tone) ? p.tone : "primary";
+   const size = ["sm", "md", "lg"].includes(p.size) ? p.size : "md"; const lines = Math.max(1, Math.min(8, Number(p.lines) || 3)); const sk = v.startsWith("skeleton"); const widths = [100, 92, 78, 96, 64, 88, 72, 84]; %>
+<div class="<%= cls %> kw-ms kw-ms-d kw-ms-ld kw-ms-ld-<%= v %> kw-ms-ld-<%= size %> kw-ms-tone-<%= tone %>" role="status" data-kw-ms-pausable="<%= p.pausable !== false ? "1" : "0" %>"<%- attrs %>>
+  <div class="kw-ms-ld-stage">
+    <% if (v === "spinner" || v === "ring") { %><span class="kw-ms-ld-shape" aria-hidden="true"></span>
+    <% } else if (v === "dots") { %><span class="kw-ms-ld-shape" aria-hidden="true"><i></i><i></i><i></i></span>
+    <% } else if (v === "bars") { %><span class="kw-ms-ld-shape" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <% } else if (v === "pulse") { %><span class="kw-ms-ld-shape" aria-hidden="true"></span>
+    <% } else if (v === "skeleton-text") { %><div class="kw-ms-ld-sk" aria-hidden="true"><% for (let i = 0; i < lines; i++) { %><span class="kw-ms-sk-line" style="width:<%= widths[i % widths.length] %>%"></span><% } %></div>
+    <% } else if (v === "skeleton-card") { %><div class="kw-ms-ld-sk kw-ms-sk-card" aria-hidden="true"><span class="kw-ms-sk-media"></span><span class="kw-ms-sk-line" style="width:70%"></span><span class="kw-ms-sk-line" style="width:100%"></span><span class="kw-ms-sk-line" style="width:55%"></span></div>
+    <% } else if (v === "skeleton-profile") { %><div class="kw-ms-ld-sk kw-ms-sk-profile" aria-hidden="true"><span class="kw-ms-sk-avatar"></span><div class="kw-ms-sk-col"><span class="kw-ms-sk-line" style="width:60%"></span><span class="kw-ms-sk-line" style="width:40%"></span></div></div>
+    <% } else { %><div class="kw-ms-ld-sk kw-ms-sk-list" aria-hidden="true"><% for (let i = 0; i < lines; i++) { %><div class="kw-ms-sk-row"><span class="kw-ms-sk-avatar"></span><div class="kw-ms-sk-col"><span class="kw-ms-sk-line" style="width:<%= widths[i % widths.length] %>%"></span><span class="kw-ms-sk-line" style="width:45%"></span></div></div><% } %></div>
+    <% } %>
+    <% if (p.showLabel && !sk) { %><span class="kw-ms-ld-label"><%= p.label %></span><% } else { %><span class="kw-ms-sr"><%= p.label %></span><% } %>
+  </div>
+</div>

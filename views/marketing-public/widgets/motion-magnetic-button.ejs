@@ -1,0 +1,6 @@
+<%# Bouton magnétique (widgets/motion-magnetic-button.js). Variables : p, cls, attrs, L (L.link). VRAI lien <a href> ; l'attraction vers le curseur est posée par public/js/motion-studio/magnetic-button.js (souris seulement). Sans JavaScript : bouton ordinaire avec ses effets de survol (CSS). %>
+<% const S = { sm: "is-sm", md: "is-md", lg: "is-lg" }; const A = { left: "is-left", center: "is-center", right: "is-right" }; %>
+<div class="<%= cls %> kw-ms kw-ms-mb kw-ms-bw <%= A[p.align] || "is-center" %>"<%- attrs %>>
+<% if (L.link) { %><a class="kw-ms-bt <%= S[p.size] || "is-lg" %>" href="<%= L.link %>"<% if (p.newTab) { %> target="_blank" rel="noopener noreferrer"<% } %>><span class="kw-ms-bt-fill" aria-hidden="true"></span><span class="kw-ms-bt-label"><%= p.label %></span><% if (p.arrow === "right") { %><svg class="kw-ms-bt-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h15M13 6l6 6-6 6"/></svg><% } else if (p.arrow === "up-right") { %><svg class="kw-ms-bt-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17 17 7M8 7h9v9"/></svg><% } %></a>
+<% } else if (isBuilder) { %><p class="kw-ms-vempty">Indiquez l'adresse du lien dans l'onglet Contenu.</p><% } %>
+</div>

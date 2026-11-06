@@ -1,0 +1,115 @@
+{
+ "modeles": 100,
+ "largeurs": [
+  "ordinateur 1280px",
+  "tablette 820px",
+  "mobile 390px"
+ ],
+ "defectueux": [],
+ "diversite": {
+  "methode": "distance moyenne par pixel entre captures 64×16 de l'en-tête à 1280 px (0 = identiques)",
+  "plusProche": 0.017,
+  "voisins": [
+   {
+    "key": "tech-04.tech-04",
+    "voisin": "sante-05.sante-05",
+    "distance": 0.017
+   },
+   {
+    "key": "sante-05.sante-05",
+    "voisin": "tech-04.tech-04",
+    "distance": 0.017
+   },
+   {
+    "key": "corpo-09.corpo-09",
+    "voisin": "tech-04.tech-04",
+    "distance": 0.018
+   },
+   {
+    "key": "tech-09.tech-09",
+    "voisin": "tech-04.tech-04",
+    "distance": 0.019
+   },
+   {
+    "key": "luxe-10.luxe-10",
+    "voisin": "resto-10.resto-10",
+    "distance": 0.02
+   },
+   {
+    "key": "agence-05.agence-05",
+    "voisin": "media-05.media-05",
+    "distance": 0.02
+   },
+   {
+    "key": "resto-10.resto-10",
+    "voisin": "luxe-10.luxe-10",
+    "distance": 0.02
+   },
+   {
+    "key": "media-05.media-05",
+    "voisin": "agence-05.agence-05",
+    "distance": 0.02
+   },
+   {
+    "key": "tech-10.tech-10",
+    "voisin": "resto-10.resto-10",
+    "distance": 0.021
+   },
+   {
+    "key": "agence-06.agence-06",
+    "voisin": "agence-05.agence-05",
+    "distance": 0.021
+   },
+   {
+    "key": "sante-10.sante-10",
+    "voisin": "resto-03.resto-03",
+    "distance": 0.021
+   },
+   {
+    "key": "resto-03.resto-03",
+    "voisin": "sante-10.sante-10",
+    "distance": 0.021
+   },
+   {
+    "key": "tech-06.tech-06",
+    "voisin": "sante-06.sante-06",
+    "distance": 0.022
+   },
+   {
+    "key": "corpo-04.corpo-04",
+    "voisin": "sante-01.sante-01",
+    "distance": 0.022
+   },
+   {
+    "key": "corpo-05.corpo-05",
+    "voisin": "media-05.media-05",
+    "distance": 0.022
+   },
+   {
+    "key": "sante-01.sante-01",
+    "voisin": "corpo-04.corpo-04",
+    "distance": 0.022
+   },
+   {
+    "key": "sante-06.sante-06",
+    "voisin": "tech-06.tech-06",
+    "distance": 0.022
+   },
+   {
+    "key": "resto-01.resto-01",
+    "voisin": "resto-03.resto-03",
+    "distance": 0.022
+   },
+   {
+    "key": "sante-04.sante-04",
+    "voisin": "corpo-05.corpo-05",
+    "distance": 0.023
+   },
+   {
+    "key": "resto-07.resto-07",
+    "voisin": "agence-06.agence-06",
+    "distance": 0.023
+   }
+  ]
+ }
+}

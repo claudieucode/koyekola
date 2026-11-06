@@ -15,6 +15,7 @@
   var live = clone(boot.live);                 // version en ligne
   var values = clone(boot.values);             // valeurs affichées (en ligne + changements)
   var saved = clone(boot.changes || {});       // dernier brouillon ENREGISTRÉ
+  var panelsTheme = (boot.values || {})["theme.key"] || "";
   var rev = boot.draft.rev || 0;               // version du brouillon connue du serveur
   var errors = {};                             // erreurs de validation par réglage
   var undoStack = [], redoStack = [];
@@ -338,6 +339,9 @@
       applied = mine; warnings = r.warnings || [];
       Object.keys(errors).forEach(function (id) { if (!/hexadécimal/.test(errors[id])) delete errors[id]; });
       showErrors();
+      // Changement de thème : les réglages proposés sont ceux du NOUVEAU thème → brouillon enregistré, puis l'écran est rechargé sur ce brouillon
+      var wantTheme = work()["theme.key"] || (boot.live || {})["theme.key"];
+      if (wantTheme && wantTheme !== panelsTheme) { panelsTheme = wantTheme; saveDraft().then(function (ok) { if (ok !== false) location.reload(); }); return; }
       if (r.structural) reloadFrame(); else applyAssets(r.assets);
       if (openPanel === "couleurs") { var old = $(".kwc-warn"); if (old) old.remove(); if (warnings.length) { var b = $(".kwc-fields"); if (b) b.insertBefore(warnBox(), b.querySelector(".kwc-hint")); } }
       setStatus();
@@ -358,6 +362,12 @@
     if (typeof a.theme === "string") styleEl(doc, "kw-site-theme").textContent = a.theme;
     if (typeof a.custom === "string") styleEl(doc, "kw-site-custom").textContent = a.custom;
     if (typeof a.faces === "string") styleEl(doc, "kw-site-faces").textContent = a.faces;
+    // Thème autonome : réglages du thème (variables et attributs du <body>) et règles de personnalisation par composant
+    if (a.pack && doc.body) {
+      styleEl(doc, "kw-pack-cz").textContent = typeof a.pack.cz === "string" ? a.pack.cz : "";
+      String(a.pack.vars || "").split(";").forEach(function (d) { var i = d.indexOf(":"); if (i > 0) doc.body.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim()); });
+      String(a.pack.attr || "").replace(/(data-pk-[a-z0-9-]+)="([^"]*)"/g, function (m, k, v) { doc.body.setAttribute(k, v); return m; });
+    }
     if (typeof a.bodyStyle === "string" && doc.body) a.bodyStyle.split(";").forEach(function (d) { var i = d.indexOf(":"); if (i > 0) doc.body.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim()); });
   }
   function withParam(url) { var base = url.split("#")[0], hash = url.indexOf("#") >= 0 ? url.slice(url.indexOf("#")) : ""; return base.replace(/([?&])kwcustom=1(&|$)/, "$1").replace(/[?&]$/, "") + (base.indexOf("?") >= 0 ? "&" : "?") + "kwcustom=1" + hash; }

@@ -7,12 +7,12 @@
   const keep = (over = {}, path = spaceBase) => { const p = new URLSearchParams(); const o = { type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, mois: f.month, vue: view === "grille" ? "" : view, portee: f.portee, ...f.raw, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return path + (t ? "?" + t : ""); };
   const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
   const monthName = (m) => MONTHS[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4);
-  const typeOptions = [["", "Tous les médias", counts.all], ["image", "Images", counts.image], ["audio", "Audio", counts.audio], ["video", "Vidéo", counts.video], ["documents", "Documents", counts.documents]];
+  const typeOptions = [["", "Tous les médias", counts.all], ["image", "Images", counts.image], ["audio", "Audio", counts.audio], ["video", "Vidéo", counts.video], ["documents", "Documents", counts.documents], ["lottie", "Animations Lottie", counts.lottie]];
   const dimsOf = (m) => (m.width ? `${m.width} × ${m.height} px` : "—");
   const advanced = Boolean(f.raw.ext || f.raw.tmin || f.raw.tmax || f.raw.lmin || f.raw.lmax || f.raw.doublons || f.raw.volumineux);
   const filtered = Boolean(f.q || f.period || f.type || f.month || f.raw.dossier || advanced);
   const small = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : n >= 1024 ? Math.round(n / 1024) + " Ko" : n + " o");
-  const label = (m) => ({ image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document" }[m.type] || "Fichier");
+  const label = (m) => ({ image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document", lottie: "Lottie" }[m.type] || "Fichier");
   const ext = (m) => { const e = String(m.path).split(".").pop().toUpperCase(); return e.length <= 5 ? e : label(m).toUpperCase(); };
   const fdate = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
 %>

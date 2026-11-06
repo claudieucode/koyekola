@@ -1,0 +1,11 @@
+<%# Bande de logos (widgets/motion-logo-marquee.js). Variables : p, cls, attrs, L (L.logos[i].url). Sans JavaScript ou en mouvement réduit : grille de logos qui passe à la ligne.
+    Avec JavaScript (public/js/motion-studio/logo-marquee.js) : la liste est copiée (copie inerte et cachée aux lecteurs d'écran) et défile en boucle, avec pause. %>
+<div class="<%= cls %> kw-ms kw-ms-lm is-h<%= ["32", "48", "64", "96"].includes(String(p.height)) ? p.height : "48" %><%= p.grayscale ? " is-gray" : "" %><%= p.fade ? " has-fade" : "" %>" role="region" aria-label="<%= p.label %>"<%- attrs %>>
+  <div class="kw-ms-lm-view" data-ms-view>
+    <div class="kw-ms-lm-track" data-ms-track>
+      <ul class="kw-ms-lm-list" data-ms-list><% p.logos.forEach((l, i) => { const link = L.logos[i] && L.logos[i].url; %>
+        <li class="kw-ms-lm-item"><% if (link) { %><a class="kw-ms-lm-link" href="<%= link %>"><% } %><% if (l.image) { %><img class="kw-ms-lm-img" src="<%= l.image %>" alt="<%= l.name %>" loading="lazy" decoding="async" draggable="false"><% } else { %><span class="kw-ms-lm-name"><%= l.name %></span><% } %><% if (link) { %></a><% } %></li><% }) %>
+      </ul>
+    </div>
+  </div>
+</div>
