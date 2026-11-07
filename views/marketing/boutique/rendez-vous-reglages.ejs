@@ -1,0 +1,71 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Rendez-vous — réglages" }) %>
+<p class="field-hint"><a href="<%= base %>/rendez-vous">Retour à l'agenda</a>. Les créneaux proposés au public sont calculés à partir de ces réglages : jamais de créneau inventé.</p>
+
+<h2>Général</h2>
+<form method="post" action="<%= base %>/rendez-vous/reglages" class="mk-form">
+  <label><input type="checkbox" name="enabled" value="1"<%= apptSettings.enabled ? " checked" : "" %>> Ouvrir la prise de rendez-vous au public</label>
+  <label><input type="checkbox" name="auto_confirm" value="1"<%= apptSettings.auto_confirm ? " checked" : "" %>> Confirmer automatiquement (sinon, vous confirmez chaque demande)</label>
+  <label>Pas entre deux créneaux (minutes)<input type="number" name="step_min" min="5" max="240" value="<%= apptSettings.step_min %>"></label>
+  <label>Délai minimum avant un rendez-vous (heures)<input type="number" name="min_notice_hours" min="0" max="720" value="<%= apptSettings.min_notice_hours %>"></label>
+  <label>Réservable jusqu'à (jours à l'avance)<input type="number" name="horizon_days" min="1" max="365" value="<%= apptSettings.horizon_days %>"></label>
+  <label>Fuseau horaire<input name="timezone" value="<%= apptSettings.timezone %>"></label>
+  <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
+</form>
+
+<h2>Types de rendez-vous</h2>
+<% if (!types.length) { %><p class="mk-empty">Aucun type pour le moment. Exemples : essayage, conseil, atelier.</p><% } %>
+<% types.forEach((t) => { %>
+<form method="post" action="<%= base %>/rendez-vous/types" class="mk-form">
+  <input type="hidden" name="id" value="<%= t.id %>">
+  <label>Nom<input name="name" required maxlength="80" value="<%= t.name %>"></label>
+  <label>Durée (minutes)<input type="number" name="duration_min" min="5" max="480" required value="<%= t.duration_min %>"></label>
+  <label>Lieu<select name="location_kind"><option value="place"<%= t.location_kind === "place" ? " selected" : "" %>>Sur place</option><option value="visio"<%= t.location_kind === "visio" ? " selected" : "" %>>Visioconférence</option></select></label>
+  <label>Adresse (si sur place)<input name="location" maxlength="300" value="<%= t.location || "" %>"></label>
+  <label>Description<textarea name="description" rows="2" maxlength="1000"><%= t.description || "" %></textarea></label>
+  <label>Proposé au public<select name="active"><option value="1"<%= t.active ? " selected" : "" %>>Oui</option><option value="0"<%= !t.active ? " selected" : "" %>>Non</option></select></label>
+  <% if (canWrite) { %><button class="btn btn-outline btn-sm" type="submit">Enregistrer</button><% } %>
+</form>
+<% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/rendez-vous/types/<%= t.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="S'il existe déjà des rendez-vous de ce type, il sera seulement désactivé." data-mk-confirm-title="Supprimer ce type ?" data-mk-confirm-ok="Supprimer">Supprimer « <%= t.name %> »</button></form><% } %>
+<% }) %>
+<% if (canWrite) { %>
+<h3>Nouveau type</h3>
+<form method="post" action="<%= base %>/rendez-vous/types" class="mk-form">
+  <label>Nom<input name="name" required maxlength="80" placeholder="Essayage"></label>
+  <label>Durée (minutes)<input type="number" name="duration_min" min="5" max="480" required value="30"></label>
+  <label>Lieu<select name="location_kind"><option value="place">Sur place</option><option value="visio">Visioconférence</option></select></label>
+  <label>Adresse (si sur place)<input name="location" maxlength="300"></label>
+  <label>Description<textarea name="description" rows="2" maxlength="1000"></textarea></label>
+  <button class="btn btn-primary" type="submit">Ajouter le type</button>
+</form>
+<% } %>
+
+<h2>Disponibilités hebdomadaires</h2>
+<% if (!rules.length) { %><p class="mk-empty">Aucune disponibilité : aucun créneau n'est proposé.</p><% } else { %>
+<ul><% rules.forEach((r) => { %><li><%= DAYS[r.weekday] %> de <%= r.start_time %> à <%= r.end_time %>
+  <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/rendez-vous/disponibilites/<%= r.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul>
+<% } %>
+<% if (canWrite) { %>
+<form method="post" action="<%= base %>/rendez-vous/disponibilites" class="mk-form">
+  <fieldset><legend>Jours</legend><% for (let i = 1; i <= 7; i++) { %><label><input type="checkbox" name="weekday" value="<%= i %>"> <%= DAYS[i] %></label> <% } %></fieldset>
+  <label>De<input type="time" name="start_time" required value="09:00"></label>
+  <label>À<input type="time" name="end_time" required value="18:00"></label>
+  <button class="btn btn-primary" type="submit">Ajouter</button>
+</form>
+<% } %>
+
+<h2>Exceptions (congés, jours fermés)</h2>
+<% if (!exceptions.length) { %><p class="mk-empty">Aucune exception.</p><% } else { %>
+<ul><% exceptions.forEach((e) => { %><li><%= frDate(e.day) %> — <%= e.start_time ? "bloqué de " + e.start_time + " à " + e.end_time : "fermé toute la journée" %><%= e.reason ? " (" + e.reason + ")" : "" %>
+  <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/rendez-vous/exceptions/<%= e.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul>
+<% } %>
+<% if (canWrite) { %>
+<form method="post" action="<%= base %>/rendez-vous/exceptions" class="mk-form">
+  <label>Date<input type="date" name="day" required></label>
+  <label>De (vide = toute la journée)<input type="time" name="start_time"></label>
+  <label>À<input type="time" name="end_time"></label>
+  <label>Raison (facultatif)<input name="reason" maxlength="120"></label>
+  <button class="btn btn-primary" type="submit">Ajouter l'exception</button>
+</form>
+<% } %>
+<%- include("../partials/bottom") %>

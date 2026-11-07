@@ -17,6 +17,7 @@
   <% order.taxLines.forEach((t) => { %><div><dt><%= order.prices_include_tax ? "dont " : "" %><%= t.name %></dt><dd><%= money(t.amountCents) %></dd></div><% }) %>
   <div class="sh-total"><dt>Total</dt><dd><%= money(order.total_cents) %></dd></div>
 </dl>
+<% if (order.delivery_date) { %><p>Créneau de livraison : <strong><%= slotText %></strong></p><% } %>
 <% if (order.tracking_number) { %><p>Suivi du colis : <strong><%= order.tracking_number %></strong></p><% } %>
 <p><a class="sh-btn" href="<%= shop.base %>">Retour à la boutique</a></p>
 <%- include("_bottom") %>

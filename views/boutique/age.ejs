@@ -1,0 +1,19 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Produit réservé aux adultes</h1>
+<p class="sh-meta">« <%= product.name %> »</p>
+<% if (refused) { %>
+<p class="sh-error" role="alert">Ce produit est réservé aux personnes de <%= need %> ans et plus : vous ne pouvez pas l'acheter. Le reste de la boutique reste accessible.</p>
+<p><a class="sh-btn" href="<%= shop.base %>">Retour à la boutique</a></p>
+<% } else if (already) { %>
+<p class="sh-ok" role="status">Vous avez déjà déclaré avoir au moins <%= need %> ans.</p>
+<p><a class="sh-btn sh-btn-primary" href="<%= retour %>">Continuer</a></p>
+<% } else { %>
+<p>Ce produit est réservé aux personnes de <strong><%= need %> ans et plus</strong>. Pour l'acheter, déclarez votre âge. Il s'agit d'une déclaration sur l'honneur ; la livraison peut exiger une pièce d'identité.</p>
+<form class="sh-form" method="post" action="<%= shop.base %>/age">
+  <input type="hidden" name="p" value="<%= product.id %>">
+  <input type="hidden" name="retour" value="<%= retour %>">
+  <button class="sh-btn sh-btn-primary" type="submit" name="choix" value="oui">Je confirme avoir au moins <%= need %> ans</button>
+  <button class="sh-btn" type="submit" name="choix" value="non">Je n'ai pas <%= need %> ans</button>
+</form>
+<% } %>
+<%- include("_bottom") %>

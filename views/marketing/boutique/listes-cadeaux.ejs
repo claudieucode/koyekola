@@ -1,0 +1,11 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Listes de naissance et de cadeaux" }) %>
+<p class="field-hint">Listes créées par vos clients. Les chiffres « offerts » ne comptent que les cadeaux dont la commande est payée. L'adresse d'un bénéficiaire n'apparaît jamais ici : vous la voyez sur la commande concernée.</p>
+<% if (!list.items.length) { %><p class="mk-empty">Aucune liste pour le moment.</p><% } else { %>
+<div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Listes de cadeaux</caption>
+<thead><tr><th scope="col">Liste</th><th scope="col">Propriétaire</th><th scope="col">Date</th><th scope="col">Articles</th><th scope="col">Offerts / souhaités</th><th scope="col">Livraison chez le bénéficiaire</th><th scope="col">Statut</th></tr></thead><tbody>
+<% list.items.forEach((l) => { %>
+<tr><th scope="row"><%= l.title %><br><small>créée le <%= String(l.created_at).slice(0, 10) %></small></th><td><%= l.owner_name || "—" %><br><small><%= l.owner_email || "" %></small></td><td><%= l.event_date || "—" %></td><td><%= l.articles %></td><td><%= l.offered %> / <%= l.wanted %></td><td><%= l.allow_recipient_delivery && l.has_address ? "Oui" : "Non" %></td><td><%= l.status === "active" ? "Ouverte" : "Fermée" %></td></tr>
+<% }) %></tbody></table></div>
+<% } %>
+<%- include("../partials/bottom") %>

@@ -6,6 +6,8 @@ const catalog = require("./catalog");
 const store = require("./store");
 const calc = require("./calc");
 const personalization = require("./personalization");
+const access = require("./access");
+const age = require("./age");
 
 const MAX_QTY = 99;
 const MAX_LINES = 50;
@@ -52,10 +54,12 @@ function resolveBuyable(s, productId, variantId) {
   return { p, v };
 }
 
-function addItem(s, cart, { productId, variantId = null, quantity = 1, expectedVersion, customText = "" }) {
+function addItem(s, cart, { productId, variantId = null, quantity = 1, expectedVersion, customText = "", ageConfirmed = 0 }) {
   checkVersion(cart, expectedVersion);
   const qty = qtyOf(quantity);
   const { p, v } = resolveBuyable(s, Number(productId), variantId);
+  access.assertPurchasable(s, p.id); // réservé aux membres / vente privée fermée : refusé par le serveur
+  age.assertAllowed(s.db, p.id, ageConfirmed); // contrôle d'âge : refus côté serveur sans déclaration de majorité
   const custom = personalization.validate(s.db, p.id, customText).text;
   const line = s.db.prepare("SELECT * FROM mk_shop_cart_items WHERE cart_id = ? AND product_id = ? AND COALESCE(variant_id, 0) = ? AND COALESCE(custom_text, '') = ?").get(cart.id, p.id, v ? v.id : 0, custom || "");
   const next = (line ? line.quantity : 0) + qty;
@@ -124,6 +128,11 @@ function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, 
     const v = p && it.variant_id ? p.variants.find((x) => x.id === it.variant_id) : null;
     if (!p || p.status !== "published" || (it.variant_id && !v) || (p.type === "variable" && !v)) {
       issues.push({ itemId: it.id, kind: "unavailable", message: `« ${p ? p.name : "Un article"} » n'est plus disponible.` });
+      continue;
+    }
+    const gate = access.gate(s, p.id, { now });
+    if (!gate.purchasable) {
+      issues.push({ itemId: it.id, kind: "access", message: `« ${p.name} » : ${gate.message}` });
       continue;
     }
     const price = catalog.priceOf(p, v, now);

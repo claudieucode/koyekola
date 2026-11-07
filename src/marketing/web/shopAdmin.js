@@ -14,7 +14,12 @@ const notify = require("../shop/notify");
 const view = require("../shop/view");
 const siteModules = require("../siteModules");
 const reviews = require("../shop/reviews");
+const access = require("../shop/access");
 const personalization = require("../shop/personalization");
+const giftLists = require("../shop/giftLists");
+const deliverySlots = require("../shop/deliverySlots");
+const age = require("../shop/age");
+const compare = require("../shop/compare");
 
 const PAGE = 25;
 module.exports = () => {
@@ -93,7 +98,7 @@ module.exports = () => {
   route("get", "/produits/:pid(\\d+)", "shop.read", (req, res, s) => {
     const product = catalog.productById(s, req.params.pid);
     if (!product) return res.status(404).render("error", { message: "Produit introuvable." });
-    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {}, personalization: personalization.get(s.db, product.id) });
+    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {}, personalization: personalization.get(s.db, product.id), ageLevel: age.productLevel(s.db, product.id), specs: compare.specsToText(compare.getSpecs(s.db, product.id)) });
   });
   route("post", "/produits/:pid(\\d+)", "shop.write", (req, res, s) => {
     catalog.updateProduct(s, Number(req.params.pid), productInput(req.body));
@@ -137,6 +142,30 @@ module.exports = () => {
     res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
   }, { write: true });
 
+  route("post", "/produits/:pid(\\d+)/specifications", "shop.write", (req, res, s) => {
+    if (!catalog.getProduct(s, req.params.pid)) throw new MarketingError("not_found", "Produit introuvable.");
+    compare.saveSpecs(s.db, Number(req.params.pid), req.body.specs);
+    audit(req, s, "shop_product.specs", "shop_product", req.params.pid);
+    flashOk(req, "Caractéristiques enregistrées.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+
+  // Contrôle d'âge légal : âge minimum d'un produit (0 = aucun, 16, 18, 21)
+  route("post", "/produits/:pid(\\d+)/age", "shop.write", (req, res, s) => {
+    if (!catalog.getProduct(s, req.params.pid)) throw new MarketingError("not_found", "Produit introuvable.");
+    age.saveProduct(s.db, Number(req.params.pid), req.body.min_age);
+    audit(req, s, "shop_product.age", "shop_product", req.params.pid, { min_age: req.body.min_age });
+    flashOk(req, "Contrôle d'âge enregistré.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  route("post", "/categories/:cid(\\d+)/age", "shop.write", (req, res, s) => {
+    if (!catalog.categoryById(s, req.params.cid)) throw new MarketingError("not_found", "Catégorie introuvable.");
+    age.saveCategory(s.db, Number(req.params.cid), req.body.min_age);
+    audit(req, s, "shop_category.age", "shop_category", req.params.cid, { min_age: req.body.min_age });
+    flashOk(req, "Contrôle d'âge enregistré.");
+    res.redirect(`${req.shopSpace.base}/boutique/categories`);
+  }, { write: true });
+
   // ── Avis clients (modération) ──
   route("get", "/avis", "shop.read", (req, res, s) => {
     const list = reviews.adminList(s, { status: req.query.statut, page: req.query.page, perPage: PAGE });
@@ -155,8 +184,47 @@ module.exports = () => {
     res.redirect(`${req.shopSpace.base}/boutique/avis`);
   }, { write: true });
 
+  // ── Accès membre et ventes privées ──
+  const back = (req) => `${req.shopSpace.base}/boutique/acces`;
+  const done = (req, res, s, action, type, id, msg, meta) => { audit(req, s, action, type, id, meta); flashOk(req, msg); res.redirect(back(req)); };
+  route("get", "/acces", "shop.read", (req, res, s) => {
+    render(req, res, "acces", "Boutique — accès membre", "boutique/acces", {
+      members: access.listMembers(s, { status: req.query.statut }), invitations: access.listInvitations(s), rules: access.listRules(s), sales: access.listSales(s),
+      productChoices: catalog.adminList(s, { perPage: 100 }).items.map((p) => ({ id: p.id, name: p.name })), categoryChoices: catalog.listCategories(s).map((c) => ({ id: c.id, name: c.name })), fmt: access.fmt, inputValue: access.inputValue,
+    });
+  });
+  route("post", "/acces/membres", "shop.write", (req, res, s) => { access.addByEmail(s, req.body.email); done(req, res, s, "shop_member.added", "shop_member", "", "Membre ajouté."); }, { write: true });
+  route("post", "/acces/membres/:cid(\\d+)/statut", "shop.write", (req, res, s) => {
+    if (!["approved", "revoked"].includes(req.body.statut)) throw new MarketingError("invalid_field", "État inconnu.");
+    access.setMember(s, req.params.cid, req.body.statut, "admin");
+    done(req, res, s, "shop_member.status", "shop_member", req.params.cid, req.body.statut === "approved" ? "Membre approuvé." : "Accès retiré.", { status: req.body.statut });
+  }, { write: true });
+  route("post", "/acces/codes", "shop.write", (req, res, s) => {
+    const r = access.createInvitation(s, { code: req.body.code, note: req.body.note, maxUses: req.body.max_uses, expiresAt: req.body.expires_at }, req.mk.ctx.userId ?? null);
+    done(req, res, s, "shop_invitation.created", "shop_invitation", r.id, `Code créé : ${r.code}`);
+  }, { write: true });
+  route("post", "/acces/codes/:iid(\\d+)/etat", "shop.write", (req, res, s) => { access.setInvitationActive(s, req.params.iid, req.body.actif === "1"); done(req, res, s, "shop_invitation.toggled", "shop_invitation", req.params.iid, "Code mis à jour."); }, { write: true });
+  route("post", "/acces/regles", "shop.write", (req, res, s) => {
+    const kind = req.body.kind === "category" ? "category" : "product";
+    access.saveRule(s, { kind, targetId: kind === "category" ? req.body.category_id : req.body.product_id, mode: req.body.mode });
+    done(req, res, s, "shop_access_rule.saved", "shop_access_rule", "", "Règle enregistrée.");
+  }, { write: true });
+  route("post", "/acces/regles/:rid(\\d+)/supprimer", "shop.write", (req, res, s) => { access.deleteRule(s, req.params.rid); done(req, res, s, "shop_access_rule.deleted", "shop_access_rule", req.params.rid, "Règle supprimée."); }, { write: true });
+  route("post", "/acces/ventes", "shop.write", (req, res, s) => {
+    const id = access.createSale(s, { name: req.body.name, starts_at: req.body.starts_at, ends_at: req.body.ends_at, product_ids: req.body.product_ids, category_ids: req.body.category_ids });
+    done(req, res, s, "shop_sale.created", "shop_sale", id, "Vente privée créée.");
+  }, { write: true });
+  route("post", "/acces/ventes/:vid(\\d+)", "shop.write", (req, res, s) => { access.updateSaleWindow(s, req.params.vid, req.body); done(req, res, s, "shop_sale.updated", "shop_sale", req.params.vid, "Dates de la vente mises à jour."); }, { write: true });
+  route("post", "/acces/ventes/:vid(\\d+)/supprimer", "shop.write", (req, res, s) => { access.deleteSale(s, req.params.vid); done(req, res, s, "shop_sale.deleted", "shop_sale", req.params.vid, "Vente supprimée."); }, { write: true });
+
+  // ── Listes de naissance / de cadeaux (lecture : chiffres réels ; l'adresse du bénéficiaire n'est visible que sur les commandes) ──
+  route("get", "/listes-cadeaux", "shop.read", (req, res, s) => {
+    const list = giftLists.adminList(s, { page: req.query.page, perPage: PAGE });
+    render(req, res, "listes-cadeaux", "Boutique — listes de cadeaux", "boutique/listes-cadeaux", { list });
+  });
+
   // ── Catégories ──
-  route("get", "/categories", "shop.read", (req, res, s) => render(req, res, "categories", "Boutique — catégories", "boutique", { categories: catalog.listCategories(s) }));
+  route("get", "/categories", "shop.read", (req, res, s) => render(req, res, "categories", "Boutique — catégories", "boutique", { categories: (() => { const lv = age.categoryLevels(s.db); return catalog.listCategories(s).map((c) => ({ ...c, minAge: lv.get(c.id) || 0 })); })() }));
   route("post", "/categories", "shop.write", (req, res, s) => { catalog.saveCategory(s, req.body); flashOk(req, "Catégorie enregistrée."); res.redirect(`${req.shopSpace.base}/boutique/categories`); }, { write: true });
   route("post", "/categories/:cid(\\d+)/supprimer", "shop.write", (req, res, s) => { catalog.deleteCategory(s, Number(req.params.cid)); flashOk(req, "Catégorie supprimée."); res.redirect(`${req.shopSpace.base}/boutique/categories`); }, { write: true });
 
@@ -170,7 +238,7 @@ module.exports = () => {
     if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
     const detail = orders.orderDetail(s, order);
     const next = orders.TRANSITIONS[order.status].filter((t) => t !== "paid" || order.payment_method === "manual");
-    render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, statusLabels: orders.STATUS_LABELS, next });
+    render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, slotText: deliverySlots.describe(detail), statusLabels: orders.STATUS_LABELS, next });
   });
   route("post", "/commandes/:oid(\\d+)/statut", "shop.orders", (req, res, s) => {
     const { order } = orderCtx(req, s);
@@ -195,7 +263,7 @@ module.exports = () => {
   }, { write: true });
 
   // ── Réglages : boutique, paiement, livraison, taxes, coupons ──
-  route("get", "/reglages", "shop.read", (req, res, s) => render(req, res, "reglages", "Boutique — réglages", "boutique/reglages", { zones: store.listZones(s), taxRules: store.listTaxRules(s), coupons: store.listCoupons(s), providers: payments.status(store.getSettings(s)), products: catalog.adminList(s, { perPage: 100 }).items }));
+  route("get", "/reglages", "shop.read", (req, res, s) => render(req, res, "reglages", "Boutique — réglages", "boutique/reglages", { slots: deliverySlots.list(s), zones: store.listZones(s), taxRules: store.listTaxRules(s), coupons: store.listCoupons(s), providers: payments.status(store.getSettings(s)), products: catalog.adminList(s, { perPage: 100 }).items }));
   route("post", "/reglages", "shop.write", (req, res, s) => {
     const b = req.body;
     const input = { currency: b.currency, prices_include_tax: b.prices_include_tax ? 1 : 0, tax_enabled: b.tax_enabled ? 1 : 0, default_country: b.default_country, guest_checkout: b.guest_checkout ? 1 : 0, reviews_enabled: b.reviews_enabled ? 1 : 0, reviews_auto_publish: b.reviews_auto_publish ? 1 : 0, low_stock_threshold: b.low_stock_threshold, notify_email: b.notify_email, order_prefix: b.order_prefix };
@@ -210,9 +278,15 @@ module.exports = () => {
   route("post", "/livraison/zones/:zid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteZone(s, Number(req.params.zid)); flashOk(req, "Zone supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`); }, { write: true });
   route("post", "/livraison/zones/:zid(\\d+)/methodes", "shop.write", (req, res, s) => {
     const b = req.body;
-    store.saveMethod(s, Number(req.params.zid), { name: b.name, kind: b.kind, cost_cents: euros(b.cost), min_subtotal_cents: euros(b.min_subtotal), min_weight_grams: int(b.min_weight_grams), max_weight_grams: int(b.max_weight_grams) });
+    const methodId = store.saveMethod(s, Number(req.params.zid), { name: b.name, kind: b.kind, cost_cents: euros(b.cost), min_subtotal_cents: euros(b.min_subtotal), min_weight_grams: int(b.min_weight_grams), max_weight_grams: int(b.max_weight_grams) });
+    if (b.requires_slot) deliverySlots.setMethodRequires(s, methodId, true);
     flashOk(req, "Méthode ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`);
   }, { write: true });
+  // Créneaux de livraison : méthode qui exige un créneau, créneaux récurrents
+  route("post", "/livraison/methodes/:mid(\\d+)/creneau", "shop.write", (req, res, s) => { deliverySlots.setMethodRequires(s, Number(req.params.mid), Boolean(req.body.requires_slot)); audit(req, s, "shop_shipping.slot_required", "shop_shipping_method", req.params.mid, { requires_slot: req.body.requires_slot ? 1 : 0 }); flashOk(req, "Méthode mise à jour."); res.redirect(`${req.shopSpace.base}/boutique/reglages#creneaux`); }, { write: true });
+  route("post", "/creneaux", "shop.write", (req, res, s) => { const id = deliverySlots.save(s, req.body); audit(req, s, "shop_delivery_slot.created", "shop_delivery_slot", id); flashOk(req, "Créneau ajouté."); res.redirect(`${req.shopSpace.base}/boutique/reglages#creneaux`); }, { write: true });
+  route("post", "/creneaux/:cid(\\d+)/etat", "shop.write", (req, res, s) => { deliverySlots.setActive(s, Number(req.params.cid), Boolean(req.body.actif)); flashOk(req, "Créneau mis à jour."); res.redirect(`${req.shopSpace.base}/boutique/reglages#creneaux`); }, { write: true });
+  route("post", "/creneaux/:cid(\\d+)/supprimer", "shop.write", (req, res, s) => { deliverySlots.remove(s, Number(req.params.cid)); audit(req, s, "shop_delivery_slot.deleted", "shop_delivery_slot", req.params.cid); flashOk(req, "Créneau supprimé."); res.redirect(`${req.shopSpace.base}/boutique/reglages#creneaux`); }, { write: true });
   route("post", "/livraison/methodes/:mid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteMethod(s, Number(req.params.mid)); flashOk(req, "Méthode supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`); }, { write: true });
   route("post", "/taxes", "shop.write", (req, res, s) => {
     const b = req.body;
@@ -228,6 +302,8 @@ module.exports = () => {
     flashOk(req, "Coupon créé."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`);
   }, { write: true });
   route("post", "/coupons/:kid(\\d+)/etat", "shop.write", (req, res, s) => { store.setCouponActive(s, Number(req.params.kid), Boolean(req.body.actif)); flashOk(req, "Coupon mis à jour."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`); }, { write: true });
+
+  require("./shopRdv").mountAdmin({ route, render, audit }); // prise de rendez-vous (migration 137)
 
   return router;
 };

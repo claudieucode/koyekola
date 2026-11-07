@@ -10,8 +10,17 @@
     <% if (shop.customer) { %><p>Connecté : <strong><%= shop.customer.email %></strong></p>
     <% } else { %><label>Adresse e-mail<input type="email" name="email" value="<%= v.email %>" required autocomplete="email" maxlength="200"></label><% } %>
   </fieldset>
+  <% if (typeof giftInfo !== "undefined" && giftInfo) { %>
+  <fieldset><legend>Cadeau de liste</legend>
+    <p>Ce panier contient un cadeau pour la liste « <%= giftInfo.titles.join(" », « ") %> ».</p>
+    <% if (giftInfo.canDeliver) { %>
+    <label class="sh-check"><input type="radio" name="gift_delivery" value="" data-sh-gift-delivery checked> Livrer à mon adresse</label>
+    <label class="sh-check"><input type="radio" name="gift_delivery" value="recipient" data-sh-gift-delivery> Livrer chez le bénéficiaire (son adresse reste confidentielle, seul le vendeur la voit)</label>
+    <% } %>
+  </fieldset>
+  <% } %>
   <% if (priced.shipping.required) { %>
-  <fieldset><legend>Adresse de livraison</legend>
+  <fieldset data-sh-ship-fieldset><legend>Adresse de livraison</legend>
     <label>Nom complet<input name="ship_name" value="<%= a("ship_name") %>" required autocomplete="name" maxlength="120"></label>
     <label>Adresse<input name="ship_line1" value="<%= a("ship_line1") %>" required autocomplete="address-line1" maxlength="160"></label>
     <label>Complément<input name="ship_line2" value="<%= a("ship_line2") %>" autocomplete="address-line2" maxlength="160"></label>
@@ -32,6 +41,14 @@
     <label class="sh-check"><input type="radio" name="shipping_method" value="<%= o.id %>" required<%= priced.shipping.chosen && priced.shipping.chosen.id === o.id ? " checked" : "" %>> <%= o.name %> — <%= o.costCents ? money(o.costCents) : "offerte" %></label>
     <% }) %>
   </fieldset>
+  <% if (typeof slots !== "undefined" && slots) { %>
+  <fieldset><legend>Créneau de livraison</legend>
+    <p class="sh-hint">Obligatoire pour : <%= slots.methods.map((m) => m.name).join(", ") %>. Les créneaux affichés sont ceux qui sont réellement disponibles.</p>
+    <% if (!slots.days.length) { %><p class="sh-error" role="alert">Aucun créneau n'est disponible pour le moment : cette méthode de livraison ne peut pas être commandée.</p><% } %>
+    <% slots.days.forEach((d) => { %><div class="sh-slot-day"><p><strong><%= d.label %></strong></p>
+      <% d.slots.forEach((c) => { %><label class="sh-check"><input type="radio" name="delivery_slot" value="<%= c.value %>"<%= v.deliverySlot === c.value ? " checked" : "" %>> <%= c.name ? c.name + " — " : "" %>de <%= c.start %> à <%= c.end %> <small>(<%= c.remaining %> place<%= c.remaining > 1 ? "s" : "" %> disponible<%= c.remaining > 1 ? "s" : "" %>)</small></label><% }) %></div><% }) %>
+  </fieldset>
+  <% } %>
   <% } %>
   <fieldset><legend>Adresse de facturation</legend>
     <label class="sh-check"><input type="checkbox" name="same_billing" value="1" checked> Identique à l'adresse de livraison<%= priced.shipping.required ? "" : " (non applicable : produits numériques)" %></label>
@@ -46,6 +63,12 @@
     <% if (!methods.length) { %><p class="sh-error" role="alert">Aucun moyen de paiement n'est disponible pour le moment.</p><% } %>
     <% methods.forEach((m, i) => { %><label class="sh-check"><input type="radio" name="payment_method" value="<%= m.key %>" required<%= (v.paymentMethod ? v.paymentMethod === m.key : i === 0) ? " checked" : "" %>> <%= m.label %></label><% }) %>
   </fieldset>
+  <% if (typeof ageRequired !== "undefined" && ageRequired) { %>
+  <fieldset><legend>Produit réservé aux adultes</legend>
+    <p class="sh-hint">Votre panier contient un produit réservé aux personnes de <%= ageRequired %> ans et plus. Déclaration sur l'honneur ; la livraison peut exiger une pièce d'identité.</p>
+    <label class="sh-check"><input type="checkbox" name="age_confirm" value="1" required> Je confirme avoir au moins <%= ageRequired %> ans</label>
+  </fieldset>
+  <% } %>
   <button class="sh-btn sh-btn-primary" type="submit"<%= methods.length ? "" : " disabled" %>>Confirmer la commande — <%= money(priced.totals.total) %></button>
 </form>
 <aside class="sh-summary" aria-label="Récapitulatif">
