@@ -1017,6 +1017,7 @@
   var CASCADE_KEYS = ["fontFamily", "fontSize", "fontWeight", "color", "letterSpacing", "textTransform", "lineHeight"];
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
   // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
+  // La clé de regroupement d'historique contient les éléments visés, la partie et l'écran/état : deux éléments différents ne partagent JAMAIS une étape d'annulation.
   function setStyles(ids, map, opts) {
     if (probing) { Object.keys(map).forEach(function (k) { probing.push(stylePath(k)); }); return; }
     ids = ids || selection;
@@ -1041,7 +1042,7 @@
         });
         cleanStyles(it);
       });
-    }, { key: opts && opts.key ? opts.key + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") }) !== false) previewStyles(ids, map);
+    }, { key: opts && opts.key ? opts.key + ":" + ids.join(",") + ":" + (styleTarget || "") + ":" + device + ":" + styleState : null, light: opts && opts.light, label: "Style : " + Object.keys(map).map(function (k) { return SP[k] ? SP[k].label : COMPOSED_LABEL[k] || k; }).slice(0, 2).join(", ") + (device !== "desktop" ? " (" + bpLabel(device) + ")" : "") }) !== false) previewStyles(ids, map);
   }
   // Retour visuel IMMÉDIAT : la valeur choisie est posée tout de suite en style en ligne sur l'élément du canevas, sans attendre le rendu
   // serveur. Le rendu serveur qui suit remplace la page et retire ces styles (clearPreviews) : seul ce qui est certain d'être identique
@@ -1097,7 +1098,7 @@
       var it = byId(id);
       if (!it) return false;
       if (isNode(it)) { it.props = it.props || {}; it.props[key] = value; } else it[key] = value;
-    }, { key: opts && opts.key, light: opts && opts.light, label: "Contenu : " + typeLabel(byId(id) || {}) });
+    }, { key: opts && opts.key ? (String(opts.key).indexOf(id) >= 0 ? opts.key : id + ":" + opts.key) : undefined, light: opts && opts.light, label: "Contenu : " + typeLabel(byId(id) || {}) });
   }
   // Valeurs saisies : « 24 » → « 24px » ; vérification avant envoi (le serveur revérifie)
   var LEN = /^-?\d{1,4}(\.\d{1,3})?(px|%|rem|em|vh|vw)$/;
