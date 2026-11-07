@@ -1,0 +1,62 @@
+<%- include("_top", { noindex: true }) %>
+<%
+  const q = m ? `?m=${m}` : "";
+  const act = (path) => `${shop.base}/liste/${list.public_token}/gerer${path}`;
+  const hid = m ? `<input type="hidden" name="m" value="${m}">` : "";
+%>
+<h1 class="sh-title">Gérer : <%= list.title %></h1>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (info) { %><p role="status"><%= info %></p><% } %>
+<% if (fresh) { %><p role="status"><strong>Votre liste est créée.</strong> Conservez cette page : son adresse contient votre accès privé de gestion (<%= list.owner_email ? "elle vous a aussi été envoyée par e-mail" : "aucun e-mail n'a été renseigné, notez-la" %>).</p><% } %>
+<h2>Lien à partager</h2>
+<p><a href="<%= shareUrl %>"><%= shareUrl %></a></p>
+<p><small>Toute personne qui a ce lien peut voir la liste (sans votre adresse) et offrir un article. Personne d'autre ne peut la trouver.</small></p>
+
+<h2>Articles</h2>
+<% if (!items.length) { %><p class="sh-empty">Ajoutez votre premier article ci-dessous.</p><% } else { %>
+<div class="sh-table-wrap"><table class="sh-table"><caption class="sr-only">Articles</caption>
+<thead><tr><th scope="col">Article</th><th scope="col">Souhaités</th><th scope="col">Offerts</th><th scope="col">Restants</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+<% items.forEach((it) => { %><tr>
+  <th scope="row"><%= it.name %><% if (it.variantLabel) { %><br><small><%= it.variantLabel %></small><% } %></th>
+  <td><%= it.wanted %></td><td><%= it.offered %></td><td><%= it.remaining %></td>
+  <td>
+    <form class="sh-inline" method="post" action="<%= act("/article/" + it.id) %>"><%- hid %><input type="hidden" name="item_id" value="<%= it.id %>"><label><span class="sr-only">Quantité souhaitée</span><input type="number" name="wanted" value="<%= it.wanted %>" min="<%= Math.max(1, it.offered) %>" max="99" required></label><button class="sh-link" type="submit">Modifier</button></form>
+    <% if (!it.offered && !it.reserved) { %><form class="sh-inline" method="post" action="<%= act("/retirer") %>"><%- hid %><input type="hidden" name="item_id" value="<%= it.id %>"><button class="sh-link" type="submit">Retirer</button></form><% } %>
+  </td></tr><% }) %></tbody></table></div>
+<% } %>
+<form class="sh-form" method="post" action="<%= act("/article") %>"><%- hid %>
+  <fieldset><legend>Ajouter un article</legend>
+    <label>Produit<select name="choice" required><option value="">Choisir…</option><% choices.forEach((c) => { %><option value="<%= c.value %>"><%= c.label %></option><% }) %></select></label>
+    <label>Quantité souhaitée<input type="number" name="wanted" value="1" min="1" max="99" required></label>
+    <button class="sh-btn" type="submit">Ajouter</button>
+  </fieldset>
+</form>
+
+<h2>Cadeaux reçus</h2>
+<% if (!gifts.length) { %><p class="sh-empty">Aucun cadeau payé pour le moment.</p><% } else { %>
+<ul>
+  <% gifts.forEach((g) => { %><li><strong><%= g.quantity %> × <%= g.product_name %></strong><%= g.variant_label ? " (" + g.variant_label + ")" : "" %> — de la part de <%= g.from_name || "un proche (anonyme)" %><% if (g.note) { %><br><em>« <%= g.note %> »</em><% } %></li><% }) %>
+</ul>
+<% } %>
+
+<h2>Détails de la liste</h2>
+<form class="sh-form" method="post" action="<%= act("/details") %>"><%- hid %>
+  <label>Titre<input name="title" value="<%= list.title %>" required maxlength="120"></label>
+  <label>Message<textarea name="message" rows="3" maxlength="1000"><%= list.message || "" %></textarea></label>
+  <label>Date<input type="date" name="event_date" value="<%= list.event_date || "" %>"></label>
+  <fieldset><legend>Livraison chez vous</legend>
+    <p><small>Votre adresse n'est jamais affichée<%= list.recipient_address ? " (une adresse est enregistrée : laissez les champs vides pour la conserver)" : "" %>.</small></p>
+    <label class="sh-check"><input type="checkbox" name="allow_recipient_delivery" value="1"<%= list.allow_recipient_delivery ? " checked" : "" %>> Proposer la livraison à mon adresse</label>
+    <label>Nom<input name="ship_name" maxlength="120"></label>
+    <label>Adresse<input name="ship_line1" maxlength="160"></label>
+    <label>Complément<input name="ship_line2" maxlength="160"></label>
+    <div class="sh-row"><label>Code postal<input name="ship_postal_code" maxlength="20"></label><label>Ville<input name="ship_city" maxlength="100"></label></div>
+    <div class="sh-row"><label>Pays (code, ex. FR)<input name="ship_country" maxlength="2" pattern="[A-Za-z]{2}"></label><label>Téléphone<input name="ship_phone" maxlength="30"></label></div>
+  </fieldset>
+  <button class="sh-btn" type="submit">Enregistrer</button>
+</form>
+<form class="sh-form" method="post" action="<%= act("/statut") %>"><%- hid %>
+  <input type="hidden" name="statut" value="<%= list.status === "active" ? "closed" : "active" %>">
+  <button class="sh-btn" type="submit"><%= list.status === "active" ? "Fermer la liste (plus de nouveaux cadeaux)" : "Rouvrir la liste" %></button>
+</form>
+<%- include("_bottom") %>

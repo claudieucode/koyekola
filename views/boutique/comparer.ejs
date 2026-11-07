@@ -1,0 +1,26 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Comparer des produits</h1>
+<% if (typeof error !== "undefined" && error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (!cmp.products.length) { %><p class="sh-empty">Aucun produit à comparer. Sur une fiche produit, choisissez « Comparer ce produit » (jusqu'à <%= cmp.max %> produits).</p>
+<% } else { %>
+<p class="sh-meta"><%= cmp.products.length %> produit<%= cmp.products.length > 1 ? "s" : "" %> sur <%= cmp.max %> au maximum.<% if (cmp.products.length > 1) { %> Les lignes marquées « Différence » n'ont pas la même valeur selon les produits.<% } %></p>
+<div class="sh-compare-wrap" style="overflow-x:auto">
+<table class="sh-compare-table">
+  <caption class="sr-only">Comparaison de <%= cmp.products.map((p) => p.name).join(", ") %></caption>
+  <thead><tr><td></td>
+    <% cmp.products.forEach((p) => { %><th scope="col">
+      <% if (p.image_url) { %><img src="<%= p.image_url %>" alt="" width="120" height="120" loading="lazy"><br><% } %>
+      <a href="<%= shop.base %>/produit/<%= encodeURIComponent(p.slug) %>"><%= p.name %></a>
+      <form class="sh-inline" method="post" action="<%= shop.base %>/comparer/retirer"><input type="hidden" name="product_id" value="<%= p.id %>"><input type="hidden" name="retour" value="<%= shop.base %>/comparer"><button class="sh-link" type="submit" aria-label="Retirer <%= p.name %> de la comparaison">Retirer</button></form>
+    </th><% }) %></tr></thead>
+  <tbody>
+    <% cmp.rows.forEach((r) => { %><tr<%= r.differs ? ' class="sh-diff"' : "" %>>
+      <th scope="row"><%= r.label %><% if (r.differs) { %> <strong class="sh-diff-tag">(Différence)</strong><% } %></th>
+      <% r.cells.forEach((c) => { %><td<%= r.differs ? ' style="background:#fff7d6"' : "" %>><% if (c.old) { %><s class="sh-old"><%= c.old %></s> <% } %><%= c.text || "—" %></td><% }) %>
+    </tr><% }) %>
+  </tbody>
+</table>
+</div>
+<form method="post" action="<%= shop.base %>/comparer/vider"><input type="hidden" name="retour" value="<%= shop.base %>/comparer"><button class="sh-link" type="submit">Vider la comparaison</button></form>
+<% } %>
+<%- include("_bottom") %>

@@ -1,0 +1,8 @@
+<%# Bouton « Comparer » : formulaire réel (liste dans un cookie de la boutique), fonctionne sans JavaScript. %>
+<% const inCmp = typeof compared !== "undefined" && compared && compared.has(product.id); %>
+<form class="sh-compare" method="post" action="<%= shop.base %>/comparer/<%= inCmp ? "retirer" : "ajouter" %>">
+  <input type="hidden" name="product_id" value="<%= product.id %>">
+  <input type="hidden" name="retour" value="<%= shop.base %>/produit/<%= product.slug %>">
+  <button class="sh-link" type="submit"><%= inCmp ? "Retirer de la comparaison" : "Comparer ce produit" %></button>
+  <% if (inCmp) { %> · <a href="<%= shop.base %>/comparer">Voir la comparaison</a><% } %>
+</form>

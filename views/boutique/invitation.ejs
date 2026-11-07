@@ -1,0 +1,26 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Accès membre</h1>
+<% if (info) { %><p class="sh-ok" role="status"><%= info %></p><% } %>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (!shop.customer) { %>
+<p>Pour utiliser un code d'invitation ou demander l'accès, vous devez avoir un compte client sur cette boutique.</p>
+<p><a class="sh-btn sh-btn-primary" href="<%= shop.base %>/compte">Me connecter ou créer un compte</a></p>
+<% } else if (member && member.status === "approved") { %>
+<p>Vous êtes membre : les produits réservés aux membres sont accessibles.</p>
+<p><a class="sh-btn" href="<%= shop.base %>">Voir la boutique</a></p>
+<% } else if (member && member.status === "revoked") { %>
+<p>Le vendeur a retiré votre accès membre. Contactez la boutique si vous pensez qu'il s'agit d'une erreur.</p>
+<% } else { %>
+<form class="sh-form" method="post" action="<%= shop.base %>/invitation">
+  <label>Code d'invitation<input type="text" name="code" maxlength="40" required autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+  <button class="sh-btn sh-btn-primary" type="submit">Valider mon code</button>
+</form>
+<% if (member && member.status === "pending") { %><p>Votre demande d'accès est en attente de validation par le vendeur.</p>
+<% } else { %>
+<form class="sh-form" method="post" action="<%= shop.base %>/invitation/demande">
+  <p>Vous n'avez pas de code ? Le vendeur peut approuver votre compte.</p>
+  <button class="sh-btn" type="submit">Demander l'accès</button>
+</form>
+<% } %>
+<% } %>
+<%- include("_bottom") %>

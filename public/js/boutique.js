@@ -32,3 +32,19 @@
       .then(function () { if (button) button.disabled = false; });
   });
 })();
+
+// Liste de cadeaux : « livrer chez le bénéficiaire » masque l'adresse de l'invité (le serveur utilise alors l'adresse enregistrée de la liste, qui n'est jamais affichée).
+(function () {
+  var radios = document.querySelectorAll("[data-sh-gift-delivery]");
+  var box = document.querySelector("[data-sh-ship-fieldset]");
+  if (!radios.length || !box) return;
+  function sync() {
+    var recipient = Array.prototype.some.call(radios, function (r) { return r.checked && r.value === "recipient"; });
+    box.hidden = recipient;
+    Array.prototype.forEach.call(box.querySelectorAll("input"), function (i) {
+      if (recipient) { if (i.required) { i.dataset.wasRequired = "1"; i.required = false; } } else if (i.dataset.wasRequired) { i.required = true; }
+    });
+  }
+  Array.prototype.forEach.call(radios, function (r) { r.addEventListener("change", sync); });
+  sync();
+})();

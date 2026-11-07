@@ -21,6 +21,7 @@
   <%- include("_buy", { product }) %>
   <% } %>
   <%- include("_wish", { product }) %>
+  <%- include("_compare", { product }) %>
 </article>
 <% if (!themeTemplate && product.description) { %><section class="sh-desc"><h2>Description</h2><div class="sh-prose"><%= product.description %></div></section><% } %>
 <section class="sh-reviews" id="avis" aria-labelledby="avis-t">

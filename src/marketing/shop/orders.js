@@ -4,6 +4,9 @@ const { MarketingError } = require("../errors");
 const { transaction } = require("../db/tx");
 const cartSvc = require("./cart");
 const store = require("./store");
+const giftLists = require("./giftLists");
+const deliverySlots = require("./deliverySlots");
+const age = require("./age");
 
 // Transitions autorisées (statut → statuts suivants). « pending → paid » n'est pas accessible à l'interface : voir markPaid / changeStatus.
 const TRANSITIONS = Object.freeze({
@@ -86,6 +89,7 @@ function createFromCart(s, cart, input) {
   return transaction(s.db, () => {
     const fresh = s.db.prepare("SELECT * FROM mk_shop_carts WHERE id = ?").get(cart.id);
     if (!fresh || fresh.status !== "open") { const again = existingFor(); if (again) return { order: again, duplicate: true }; throw new MarketingError("conflict", "Ce panier n'est plus disponible."); }
+    input = giftLists.prepareCheckout(s, fresh.id, input); // liste de cadeaux : plafond revérifié, livraison chez le bénéficiaire (adresse jamais montrée à l'invité)
 
     const billing = address(input.billing, "Adresse de facturation", { required: false });
     const priced0 = cartSvc.priceCart(s, fresh, { dest: {}, email });
@@ -104,17 +108,25 @@ function createFromCart(s, cart, input) {
       throw new MarketingError("price_changed", "Le total de votre commande a changé. Vérifiez le nouveau total avant de payer.");
     }
     if (priced.totals.total < 0) throw new MarketingError("invalid_field", "Total invalide.");
+    // Contrôle d'âge : la case « J'ai au moins N ans » est exigée si le panier contient un produit soumis (déclaration sur l'honneur, enregistrée sur la commande)
+    const ageNeeded = age.requiredForProducts(s.db, priced.lines.map((l) => l.productId));
+    if (ageNeeded && !(input.ageConfirmed === true || input.ageConfirmed === "1" || input.ageConfirmed === 1)) throw new MarketingError("age_required", `Cochez la case « Je confirme avoir au moins ${ageNeeded} ans » pour commander : votre panier contient un produit réservé aux personnes de ${ageNeeded} ans et plus.`);
 
+    // Créneau de livraison : exigé par certaines méthodes (ex. froid) ; revalidé ici, dans la transaction, avec la capacité réelle du moment.
+    const slotChoice = priced.shipping.chosen && priced.shipping.chosen.requiresSlot ? deliverySlots.validateChoice(s, input.deliverySlot) : null;
     const number = nextNumber(s, settings);
     const info = s.db.prepare(`INSERT INTO mk_shop_orders (organization_id, site_id, number, customer_id, email, status, payment_status, payment_method, currency, prices_include_tax, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents,
       coupon_code, shipping_method_name, billing_address, shipping_address, tax_lines, idempotency_key) VALUES (?,?,?,?,?, 'pending','unpaid',?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .run(s.organizationId, s.siteId ?? null, number, input.customerId || null, email, method, priced.currency, settings.prices_include_tax, priced.totals.subtotal, priced.totals.discount, priced.totals.shipping, priced.totals.tax, priced.totals.total,
         priced.coupon ? priced.coupon.code : null, priced.shipping.chosen ? priced.shipping.chosen.name : null, JSON.stringify(billing), JSON.stringify(shippingAddr), JSON.stringify(priced.totals.taxLines), key);
     const orderId = Number(info.lastInsertRowid);
+    if (slotChoice) deliverySlots.record(s, orderId, slotChoice);
+    if (ageNeeded) s.db.prepare("UPDATE mk_shop_orders SET age_confirmed_at = datetime('now'), age_confirmed_min = ? WHERE id = ?").run(ageNeeded, orderId);
     const insItem = s.db.prepare("INSERT INTO mk_shop_order_items (order_id, product_id, variant_id, name, variant_label, sku, quantity, unit_price_cents, line_subtotal_cents, discount_cents, tax_cents, requires_shipping, weight_grams, custom_text, custom_label) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
     priced.lines.forEach((l, i) => {
       const t = priced.totals.lines[i];
-      insItem.run(orderId, l.productId, l.variantId, l.name, l.variantLabel, l.sku, l.quantity, l.unitCents, t.subtotal, t.discount, t.tax, l.requiresShipping ? 1 : 0, l.weightGrams, l.customText || null, l.customText ? l.customLabel : null);
+      const inserted = insItem.run(orderId, l.productId, l.variantId, l.name, l.variantLabel, l.sku, l.quantity, l.unitCents, t.subtotal, t.discount, t.tax, l.requiresShipping ? 1 : 0, l.weightGrams, l.customText || null, l.customText ? l.customLabel : null);
+      giftLists.onOrderLine(s, l.itemId, Number(inserted.lastInsertRowid), l.quantity); // lien liste de cadeaux (compté seulement au paiement)
       reserve(s, l, orderId);
     });
     if (priced.coupon) {
@@ -189,6 +201,7 @@ function markPaid(s, orderId, { provider, providerRef, amountCents, currency, ac
       }
       s.db.prepare("UPDATE mk_shop_orders SET stock_released = 0 WHERE id = ?").run(order.id);
     }
+    giftLists.onPaid(s, order.id); // liste de cadeaux : « offert » n'augmente qu'ici, à la commande payée
     addEvent(s.db, order.id, { kind: "paid", from: order.status, to: "paid", actor: actor || `provider:${provider}`, note: late ? "Confirmation tardive après annulation : commande rétablie, stock à vérifier." : null });
     return { status: "paid", order: getOrder(s, order.id), late };
   });
@@ -238,6 +251,7 @@ function changeStatus(s, orderId, to, { actor, note, canMarkPaid = false, tracki
     return transaction(s.db, () => {
       s.db.prepare("UPDATE mk_shop_orders SET status = 'refunded', payment_status = 'refunded', updated_at = datetime('now') WHERE id = ?").run(order.id);
       s.db.prepare("UPDATE mk_shop_payments SET status = 'refunded', updated_at = datetime('now') WHERE order_id = ? AND status = 'succeeded'").run(order.id);
+      giftLists.onRefunded(s, order.id); // liste de cadeaux : les unités remboursées redeviennent disponibles
       addEvent(s.db, order.id, { kind: "status", from: order.status, to, actor, note: note || "Remboursement enregistré (à effectuer chez le fournisseur de paiement)." });
       return getOrder(s, order.id);
     });

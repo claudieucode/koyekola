@@ -2,8 +2,9 @@
 <%- include("_head", { heading: "Catégories" }) %>
 <section class="mk-panel">
   <% if (!categories.length) { %><div class="mk-empty"><%- illu("boutique", { className: "kx-empty-ill" }) %><p>Aucune catégorie.</p></div><% } else { %>
-  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Catégories</caption><thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">Produits en ligne</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Catégories</caption><thead><tr><th scope="col">Nom</th><th scope="col">Adresse</th><th scope="col">Produits en ligne</th><th scope="col">Âge minimum</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
   <% categories.forEach((c) => { %><tr><th scope="row"><%= c.parent_id ? "↳ " : "" %><%= c.name %></th><td><code><%= c.slug %></code></td><td><%= c.product_count %></td>
+    <td><% if (canWrite) { %><form method="post" action="<%= base %>/categories/<%= c.id %>/age"><label class="sr-only" for="ca-<%= c.id %>">Âge minimum de <%= c.name %></label><select id="ca-<%= c.id %>" name="min_age"><% [[0, "Aucun"], [16, "16 ans"], [18, "18 ans"], [21, "21 ans"]].forEach((o) => { %><option value="<%= o[0] %>"<%= (c.minAge || 0) === o[0] ? " selected" : "" %>><%= o[1] %></option><% }) %></select> <button class="btn btn-ghost btn-sm" type="submit">Appliquer</button></form><% } else { %><%= c.minAge ? c.minAge + " ans" : "—" %><% } %></td>
     <td><% if (canWrite) { %><form method="post" action="<%= base %>/categories/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Les produits restent, sans cette catégorie." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></td></tr><% }) %>
   </tbody></table></div><% } %>
   <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/categories"><h2>Nouvelle catégorie</h2>

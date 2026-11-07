@@ -3,6 +3,7 @@
 // jamais à partir d'un identifiant de site fourni par le navigateur. Les prix sont des entiers (centimes).
 const { MarketingError } = require("../errors");
 const { transaction } = require("../db/tx");
+const access = require("./access");
 
 const OPERATIONAL_TYPES = Object.freeze(["simple", "variable", "digital"]); // « downloadable » et « grouped » : réservés, pas encore traités
 const STATUSES = ["draft", "published", "archived"];
@@ -311,6 +312,9 @@ function catalogQuery(s, q = {}, now = new Date()) {
   const effArgs = [t, t, t, t];
   const where2 = [];
   const args2 = [];
+  // Accès membre : les produits « masqués » ne sortent jamais pour un visiteur non-membre (aucun appelant n'a à s'en souvenir).
+  const hid = access.hiddenIds(s);
+  if (hid.length) { where.push("p.id NOT IN (SELECT value FROM json_each(?))"); args.push(JSON.stringify(hid)); }
 
   if (q.q) {
     const like = `%${String(q.q).slice(0, 80).replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
@@ -346,6 +350,7 @@ function catalogQuery(s, q = {}, now = new Date()) {
 
 function publicProduct(s, slug, now = new Date()) {
   const row = s.db.prepare(`SELECT * FROM mk_shop_products WHERE organization_id = ? AND ${siteCond(s)} AND slug = ? AND status = 'published' AND deleted_at IS NULL`).get(s.organizationId, ...siteArgs(s), String(slug || ""));
+  if (row && access.isHidden(s, row.id)) return null; // produit masqué aux non-membres : même réponse qu'un produit inexistant
   return row ? hydrate(s, [row], now)[0] : null;
 }
 function productById(s, id, now = new Date()) {
@@ -357,7 +362,8 @@ function relatedProducts(s, product, limit = 4, now = new Date()) {
   if (!ids.length) return [];
   const rows = s.db.prepare(`SELECT DISTINCT p.* FROM mk_shop_products p JOIN mk_shop_product_categories pc ON pc.product_id = p.id WHERE pc.category_id IN (${ids.map(() => "?").join(",")}) AND p.id <> ? AND p.organization_id = ? AND ${siteCond(s, "p.")} AND p.status = 'published' AND p.deleted_at IS NULL ORDER BY p.is_featured DESC, p.id DESC LIMIT ?`)
     .all(...ids, product.id, s.organizationId, ...siteArgs(s), Math.min(12, Math.max(1, limit)));
-  return hydrate(s, rows, now);
+  const hidden = access.hiddenIds(s);
+  return hydrate(s, rows, now).filter((p) => !hidden.includes(p.id));
 }
 
 function adminList(s, { q, status, page = 1, perPage = 25 } = {}) {

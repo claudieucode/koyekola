@@ -59,7 +59,7 @@ function shippingOptions(methods, { subtotalCents, weightGrams }) {
     let cost = m.cost_cents;
     // « Gratuite dès X » n'est proposée QUE lorsque le seuil est atteint (sous le seuil, c'est une autre méthode qui s'applique).
     if (m.kind === "free_over") { if (m.min_subtotal_cents == null || subtotalCents < m.min_subtotal_cents) continue; cost = 0; }
-    out.push({ id: m.id, name: m.name, kind: m.kind, costCents: cost });
+    out.push({ id: m.id, name: m.name, kind: m.kind, costCents: cost, requiresSlot: m.requires_slot === 1 });
   }
   return out.sort((a, b) => a.costCents - b.costCents || a.id - b.id);
 }

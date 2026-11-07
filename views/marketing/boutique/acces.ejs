@@ -1,0 +1,72 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Accès membre et ventes privées" }) %>
+<p class="field-hint">Un membre est un client inscrit que vous approuvez, ou qui entre avec un code d'invitation valable. Toutes les dates sont en heure UTC et lues dans la base : aucun compte à rebours n'est simulé.</p>
+<% const stLabel = { pending: "Demande en attente", approved: "Membre", revoked: "Accès retiré" }; const invLabel = { valid: "Valable", expired: "Expiré", used_up: "Épuisé", disabled: "Désactivé" }; const saleLabel = { upcoming: "À venir", open: "En cours", ended: "Terminée" }; %>
+
+<section class="mk-panel" aria-labelledby="ac-membres">
+  <h2 id="ac-membres">Membres</h2>
+  <% if (!members.length) { %><p class="mk-empty">Aucun membre pour le moment.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Membres</caption><thead><tr><th scope="col">Client</th><th scope="col">État</th><th scope="col">Origine</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  <% members.forEach((m) => { %><tr><th scope="row"><%= m.name || m.email %><br><span class="mk-sub"><%= m.email %></span></th><td><%= stLabel[m.status] %></td><td><%= { admin: "Vendeur", invitation: "Code d'invitation", request: "Demande du client" }[m.source] %></td>
+    <td><% if (canWrite) { %>
+      <% if (m.status !== "approved") { %><form class="mk-inline-form" method="post" action="<%= base %>/acces/membres/<%= m.customer_id %>/statut"><input type="hidden" name="statut" value="approved"><button class="btn btn-outline btn-sm" type="submit">Approuver</button></form><% } %>
+      <% if (m.status !== "revoked") { %><form class="mk-inline-form" method="post" action="<%= base %>/acces/membres/<%= m.customer_id %>/statut"><input type="hidden" name="statut" value="revoked"><button class="btn btn-ghost btn-sm" type="submit">Retirer l'accès</button></form><% } %>
+    <% } %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/acces/membres"><div class="field-group"><label for="ac-email">Ajouter un client inscrit (adresse e-mail)</label><input id="ac-email" type="email" name="email" required maxlength="200"></div><button class="btn btn-outline btn-sm" type="submit">Ajouter comme membre</button></form><% } %>
+</section>
+
+<section class="mk-panel" aria-labelledby="ac-codes">
+  <h2 id="ac-codes">Codes d'invitation</h2>
+  <% if (!invitations.length) { %><p class="mk-empty">Aucun code.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Codes d'invitation</caption><thead><tr><th scope="col">Code</th><th scope="col">Utilisations</th><th scope="col">Expire</th><th scope="col">État</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  <% invitations.forEach((i) => { %><tr><th scope="row"><code><%= i.code %></code><% if (i.note) { %><br><span class="mk-sub"><%= i.note %></span><% } %></th><td><%= i.used_count %> / <%= i.max_uses %></td><td><%= i.expires_at ? fmt(i.expires_at) : "Jamais" %></td><td><%= invLabel[i.state] %></td>
+    <td><% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/acces/codes/<%= i.id %>/etat"><input type="hidden" name="actif" value="<%= i.active ? "0" : "1" %>"><button class="btn btn-ghost btn-sm" type="submit"><%= i.active ? "Désactiver" : "Réactiver" %></button></form><% } %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/acces/codes">
+    <div class="field-group"><label for="ac-code">Code (laissez vide pour en générer un)</label><input id="ac-code" name="code" maxlength="32" autocomplete="off"></div>
+    <div class="field-group"><label for="ac-max">Utilisations maximum</label><input id="ac-max" type="number" name="max_uses" value="1" min="1" max="100000" required></div>
+    <div class="field-group"><label for="ac-exp">Expiration (UTC, facultatif)</label><input id="ac-exp" type="datetime-local" name="expires_at"></div>
+    <div class="field-group"><label for="ac-note">Note interne (facultatif)</label><input id="ac-note" name="note" maxlength="120"></div>
+    <button class="btn btn-primary btn-sm" type="submit">Créer le code</button></form><% } %>
+</section>
+
+<section class="mk-panel" aria-labelledby="ac-regles">
+  <h2 id="ac-regles">Produits et catégories réservés aux membres</h2>
+  <% if (!rules.length) { %><p class="mk-empty">Aucune règle : tout est public.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Règles d'accès</caption><thead><tr><th scope="col">Cible</th><th scope="col">Pour les non-membres</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  <% rules.forEach((r) => { %><tr><th scope="row"><%= r.kind === "product" ? "Produit" : "Catégorie" %> : <%= r.target_name %></th><td><%= r.mode === "hide" ? "Masqué du catalogue" : "Visible avec cadenas" %></td>
+    <td><% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/acces/regles/<%= r.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Supprimer</button></form><% } %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+  <% if (canWrite) { %>
+  <form class="mk-form" method="post" action="<%= base %>/acces/regles"><input type="hidden" name="kind" value="product">
+    <div class="field-group"><label for="ac-rp">Produit</label><select id="ac-rp" name="product_id" required><option value="">Choisir…</option><% productChoices.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %></select></div>
+    <div class="field-group"><label for="ac-rpm">Pour les non-membres</label><select id="ac-rpm" name="mode"><option value="lock">Visible avec cadenas</option><option value="hide">Masqué du catalogue</option></select></div>
+    <button class="btn btn-outline btn-sm" type="submit">Réserver ce produit</button></form>
+  <form class="mk-form" method="post" action="<%= base %>/acces/regles"><input type="hidden" name="kind" value="category">
+    <div class="field-group"><label for="ac-rc">Catégorie (sous-catégories comprises)</label><select id="ac-rc" name="category_id" required><option value="">Choisir…</option><% categoryChoices.forEach((c) => { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
+    <div class="field-group"><label for="ac-rcm">Pour les non-membres</label><select id="ac-rcm" name="mode"><option value="lock">Visible avec cadenas</option><option value="hide">Masqué du catalogue</option></select></div>
+    <button class="btn btn-outline btn-sm" type="submit">Réserver cette catégorie</button></form>
+  <% } %>
+</section>
+
+<section class="mk-panel" aria-labelledby="ac-ventes">
+  <h2 id="ac-ventes">Ventes privées à durée limitée</h2>
+  <p class="field-hint">Hors de la fenêtre (avant le début ou après la fin), les produits rattachés ne peuvent être ni ajoutés au panier ni commandés : le serveur refuse.</p>
+  <% if (!sales.length) { %><p class="mk-empty">Aucune vente.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Ventes privées</caption><thead><tr><th scope="col">Vente</th><th scope="col">Fenêtre (UTC)</th><th scope="col">État</th><th scope="col">Cibles</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+  <% sales.forEach((v) => { %><tr><th scope="row"><%= v.name %></th><td><%= fmt(v.starts_at) %> → <%= fmt(v.ends_at) %></td><td><%= saleLabel[v.state] %></td><td><%= v.targets.map((t) => (t.kind === "product" ? "" : "Catégorie ") + t.name).join(", ") %></td>
+    <td><% if (canWrite) { %>
+      <form class="mk-inline-form" method="post" action="<%= base %>/acces/ventes/<%= v.id %>"><input type="hidden" name="name" value="<%= v.name %>"><label class="sr-only" for="vs-<%= v.id %>">Début</label><input id="vs-<%= v.id %>" type="datetime-local" name="starts_at" value="<%= inputValue(v.starts_at) %>" required><label class="sr-only" for="ve-<%= v.id %>">Fin</label><input id="ve-<%= v.id %>" type="datetime-local" name="ends_at" value="<%= inputValue(v.ends_at) %>" required><button class="btn btn-outline btn-sm" type="submit">Changer les dates</button></form>
+      <form class="mk-inline-form" method="post" action="<%= base %>/acces/ventes/<%= v.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Supprimer</button></form>
+    <% } %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/acces/ventes">
+    <div class="field-group"><label for="av-n">Nom de la vente</label><input id="av-n" name="name" required maxlength="80"></div>
+    <div class="field-group"><label for="av-s">Début (UTC)</label><input id="av-s" type="datetime-local" name="starts_at" required></div>
+    <div class="field-group"><label for="av-e">Fin (UTC)</label><input id="av-e" type="datetime-local" name="ends_at" required></div>
+    <div class="field-group"><label for="av-p">Produits (Ctrl/Cmd pour en choisir plusieurs)</label><select id="av-p" name="product_ids" multiple size="6"><% productChoices.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %></select></div>
+    <div class="field-group"><label for="av-c">Catégories</label><select id="av-c" name="category_ids" multiple size="4"><% categoryChoices.forEach((c) => { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
+    <button class="btn btn-primary btn-sm" type="submit">Créer la vente</button></form><% } %>
+</section>
+<%- include("../partials/bottom") %>

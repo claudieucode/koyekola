@@ -47,6 +47,24 @@
   </form>
 </section>
 <% } %>
+<% if (product) { %>
+<section class="mk-panel" aria-labelledby="sp-h"><h2 id="sp-h">Caractéristiques (comparateur)</h2>
+  <p class="field-hint">Une caractéristique par ligne, au format « Libellé: valeur » (ex. « Poids: 250 g »), 20 au maximum. Elles s'affichent dans le comparateur de produits.</p>
+  <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/specifications">
+    <div class="field-group"><label for="sp-t">Caractéristiques</label><textarea id="sp-t" name="specs" rows="6" maxlength="4000"<%= canWrite ? "" : " disabled" %>><%= typeof specs !== "undefined" ? specs : "" %></textarea></div>
+    <% if (canWrite) { %><button class="btn btn-primary btn-sm" type="submit">Enregistrer les caractéristiques</button><% } %>
+  </form>
+</section>
+<% } %>
+<% if (product) { const ag = typeof ageLevel !== "undefined" ? ageLevel : 0; %>
+<section class="mk-panel" aria-labelledby="ag-h"><h2 id="ag-h">Contrôle d'âge (alcool, tabac…)</h2>
+  <p class="field-hint">La fiche reste visible, mais l'achat exige que le client déclare avoir l'âge minimum (ajout au panier et commande). Attention : c'est une simple déclaration sur l'honneur, sans vérification d'identité ; la livraison peut exiger une pièce d'identité. L'âge peut aussi être réglé par catégorie (le plus élevé s'applique).</p>
+  <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/age">
+    <div class="field-group"><label for="ag-n">Âge minimum</label><select id="ag-n" name="min_age"<%= canWrite ? "" : " disabled" %>><% [[0, "Aucun contrôle"], [16, "16 ans"], [18, "18 ans"], [21, "21 ans"]].forEach((o) => { %><option value="<%= o[0] %>"<%= ag === o[0] ? " selected" : "" %>><%= o[1] %></option><% }) %></select></div>
+    <% if (canWrite) { %><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><% } %>
+  </form>
+</section>
+<% } %>
 <% if (product && product.type === "variable") { %>
 <section class="mk-panel" aria-labelledby="var-h"><h2 id="var-h">Variantes</h2>
   <% if (!product.attributes.length) { %><p class="mk-empty">Définissez d'abord les attributs (ex. « Taille: S, M, L »), enregistrez, puis ajoutez les variantes.</p><% } else { %>

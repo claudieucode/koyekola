@@ -1,6 +1,23 @@
+<%# Accès membre / vente privée : le serveur refuse aussi l'ajout au panier, ce message n'est qu'une explication. %>
+<% if (typeof gate !== "undefined" && gate && gate.sale && gate.purchasable) { %><p class="sh-stock" role="status">Vente privée « <%= gate.sale.name %> » : jusqu'au <time datetime="<%= gate.sale.endsAt.replace(" ", "T") %>Z"><%= gate.sale.endsLabel %></time>.</p><% } %>
+<% if (typeof gate !== "undefined" && gate && !gate.purchasable) { %>
+<p class="sh-error" role="status"><span aria-hidden="true">&#128274;</span> <%= gate.message %></p>
+<% if (gate.reason === "members") { %><p><a class="sh-btn" href="<%= shop.base %>/invitation">Accès membre</a></p><% } %>
+<% } else { %>
 <%# Formulaire d'ajout au panier. Le serveur revérifie produit, variante, quantité et stock : rien de ce formulaire n'est une preuve de prix. %>
 <% if (typeof error !== "undefined" && error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
 <% if (!product.inStock) { %><p class="sh-stock sh-out" role="status">Rupture de stock</p>
+<% } else { %>
+<% const ag = typeof ageGate !== "undefined" && ageGate && ageGate.required ? ageGate : null; %>
+<% if (ag) { %><p class="sh-age" role="note"><strong>Ce produit est réservé aux personnes de <%= ag.required %> ans et plus.</strong></p><% } %>
+<% if (ag && ag.confirmed < ag.required) { %>
+<form class="sh-buy sh-form" method="post" action="<%= shop.base %>/age">
+  <p>Pour l'acheter, déclarez votre âge (déclaration sur l'honneur).</p>
+  <input type="hidden" name="p" value="<%= product.id %>">
+  <input type="hidden" name="retour" value="<%= shop.base %>/produit/<%= product.slug %>">
+  <button class="sh-btn sh-btn-primary" type="submit" name="choix" value="oui">Je confirme avoir au moins <%= ag.required %> ans</button>
+  <button class="sh-btn" type="submit" name="choix" value="non">Je n'ai pas <%= ag.required %> ans</button>
+</form>
 <% } else { %>
 <form class="sh-buy sh-form" method="post" action="<%= shop.base %>/panier/ajouter" data-sh-add>
   <input type="hidden" name="product_id" value="<%= product.id %>">
@@ -23,4 +40,6 @@
   <button class="sh-btn sh-btn-primary" type="submit">Ajouter au panier</button>
   <p class="sh-msg" data-sh-msg role="status" aria-live="polite"></p>
 </form>
+<% } %>
+<% } %>
 <% } %>
