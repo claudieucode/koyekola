@@ -73,7 +73,7 @@ Un contrôle plus large (familles `editeur-*`, `apparence-*`, `widgets-*`, etc.)
 La suite complète du projet (787 fichiers) n'a **pas** été exécutée en entier : trop longue sur cette machine.
 
 ## 8. Publication et déploiement (état réel)
-- **Commits** : 20 commits sur `header-builder-elementor` (documentation, lots L0 à L8, audit).
+- **Commits** : 13 commits sur `header-builder-elementor` (documentation, lots L0 à L8, audit).
 - **Push** : la branche `header-builder-elementor` est poussée sur GitHub (`claudieucode/koyekola`). **Confirmé** par la réponse du dépôt distant.
 - **Fusion dans `main` : NON FAITE.** Pendant la mission, `main` a reçu d'autres travaux sur les en-têtes (nouvelle bibliothèque « Atelier », identité du modèle ou du site, effet « masquer », logo alternatif au défilement). Un essai de fusion dans un espace isolé donne **8 zones de conflit dans 6 fichiers** (`nodes.js`, `landing/index.js`, `themeRender.js`, `_node.ejs`, `_sections.ejs`, `landing.css`) : les deux travaux modifient les mêmes mécanismes (lecture des réglages d'en-tête sur le premier enfant, effets de défilement, logo). Les concilier demande des décisions de fond (un seul modèle de réglages, un seul effet « masquer ») et de refaire les tests des deux côtés : ce n'est pas une opération à faire en aveugle.
 - **Déploiement : NON FAIT.** Les outils Hostinger n'étaient pas connectés et le déploiement se fait à la main dans hPanel depuis `main`. Rien n'a été déployé ; aucun test de fumée en production n'a été fait.
