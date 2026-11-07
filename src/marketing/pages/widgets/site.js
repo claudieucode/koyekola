@@ -167,8 +167,16 @@ const FAMILY = [
     schema: [
       { key: "label", kind: "text", label: "Texte (facultatif)", max: 30, default: "Panier" },
       bool("showCount", "Afficher le nombre d'articles", true), bool("hideEmpty", "Masquer quand le panier est vide", false),
+      { key: "skin", kind: "select", label: "Affichage", options: [["link", "Lien vers le panier"], ["drawer", "Tiroir avec le contenu du panier"]], default: "link" },
     ],
-    data(ctx, p, env) { return { count: (env.visitor && env.visitor.cartCount) || 0 }; },
+    // Tiroir : MÊME panier que le widget « Panier » (les formations mises dans le panier du visiteur, en session), jamais un contenu inventé ; une formation dépubliée disparaît
+    data(ctx, p, env) {
+      const base = { count: (env.visitor && env.visitor.cartCount) || 0 };
+      if (p.skin !== "drawer") return base;
+      const { getCourse } = require("../../bridge/catalog");
+      const items = ((env.visitor && env.visitor.cartIds) || []).map((id) => getCourse(ctx, id)).filter(Boolean).map((c) => ({ title: c.title, url: `/cours/${encodeURIComponent(c.slug)}`, priceCents: c.price_cents || 0 }));
+      return { ...base, items, totalCents: items.reduce((a, c) => a + c.priceCents, 0) };
+    },
   },
 ];
 module.exports = FAMILY;

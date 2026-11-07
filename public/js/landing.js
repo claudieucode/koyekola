@@ -291,6 +291,14 @@
       }
     });
   });
+  // Mini-panier en tiroir : le panier s'ouvre dans un panneau latéral (dialogue natif : Échap ferme, le focus revient au bouton)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-cart-open]"), function (open) {
+    var dlg = document.getElementById(open.getAttribute("data-kw-cart-open")); if (!dlg || typeof dlg.showModal !== "function" || document.body.hasAttribute("data-kw-builder")) return;
+    open.addEventListener("click", function () { dlg.showModal(); var f = dlg.querySelector(".kw-cart-close"); if (f) f.focus(); });
+    var close = dlg.querySelector(".kw-cart-close"); if (close) close.addEventListener("click", function () { dlg.close(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", function () { open.focus(); });
+  });
   // Menu du compte (<details>) : Échap, clic en dehors ou focus qui sort le referment ; le focus revient au titre après Échap
   Array.prototype.forEach.call(document.querySelectorAll(".kw-account-details"), function (d) {
     d.addEventListener("keydown", function (e) { if (e.key === "Escape" && d.open) { d.open = false; var s = d.querySelector("summary"); if (s) s.focus(); } });

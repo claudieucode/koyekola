@@ -47,10 +47,10 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-041 | Barre de recherche | 02, 09 | Formulaire | `search` | Soumission | testé | `tests/header-recherche-navigateur.test.js` : le widget Recherche existant est inchangé (balisage d'origine) |
 | H-042 | Recherche plein écran | 09 | Superposition de recherche | peau plein écran | Focus, Échap, mobile | testé | `tests/header-recherche-navigateur.test.js` : loupe → fenêtre plein écran, focus dans le champ, Échap / fond / bouton Fermer, focus rendu à la loupe, mouvement réduit |
 | H-043 | Résultats instantanés | 09 (NON VÉRIFIÉ chez Elementor) | Suggestions pendant la frappe | endpoint JSON limité | Limites, isolation | testé | `tests/header-recherche-navigateur.test.js` : suggestions dès 2 caractères, publiés seulement, 6 au plus, texte sans exécution de HTML, flèches + Entrée, annonce aux lecteurs d'écran ; route `/recherche/suggestions` (mêmes règles de portée que `/recherche`, jamais en cache) |
-| H-044 | Connexion / compte / avatar / déconnexion | 02, 09 | Compte visiteur | `account` | Invité / membre | documenté (existant partiel) | — |
-| H-045 | Menu utilisateur déroulant | 09 | Menu compte | menu compte | Navigateur | documenté (à développer, L5) | — |
-| H-046 | Panier + nombre + montant | 02, 09 | Compteur réel | `minicart` (lien + compteur) | Ajout produit → compteur | documenté (existant partiel) | — |
-| H-047 | Mini-panier (tiroir) | 09 | Aperçu des articles | tiroir branché sur le panier réel | Données réelles ; vide | documenté (à développer, L5) | — |
+| H-044 | Connexion / compte / avatar / déconnexion | 02, 09 | Compte visiteur | `account` | Invité / membre | testé | `tests/header-compte-navigateur.test.js` : invité (Se connecter) et membre réel (menu) ; widget sans option inchangé |
+| H-045 | Menu utilisateur déroulant | 09 | Menu compte | menu compte | Navigateur | testé | `tests/header-compte-navigateur.test.js` : menu déroulant (Mon compte, Panier, Se déconnecter en POST), Entrée / Tab / Échap / clic extérieur, focus rendu au titre |
+| H-046 | Panier + nombre + montant | 02, 09 | Compteur réel | `minicart` (lien + compteur) | Ajout produit → compteur | développé (panier des FORMATIONS : nombre réel testé ; panier de la boutique produits non branché) | `tests/header-minipanier-navigateur.test.js` : compteur réel du panier du visiteur ; le montant est dans le tiroir (total) |
+| H-047 | Mini-panier (tiroir) | 09 | Aperçu des articles | tiroir branché sur le panier réel | Données réelles ; vide | développé (tiroir branché sur le panier des FORMATIONS, testé ; le panier de la boutique de produits n'est PAS branché) | `tests/header-minipanier-navigateur.test.js` : contenu et total du vrai panier, liens /commande et /panier, panier vide, invité, clavier, widget existant inchangé |
 | H-048 | Liste de souhaits / comparaison | 09 | Modules compatibles | **aucun module** | — | exclu (pas de module à connecter ; pas de simulation) | — |
 | H-049 | Déclencheur de popup / tiroir | 09 | Ouvrir un panneau | `modal` (déclencheurs existants) | Clic → ouverture | documenté (existant) | — |
 | H-050 | Icônes sociales | 02 | Réseaux | `social` | Rendu | documenté (existant) | — |
@@ -69,7 +69,7 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-063 | Réduction de hauteur | 06 (Elementor : CSS, pas de contrôle natif) | Rétrécissement au défilement | `shrink` (existe via `headerFx`, sans interface) | Pas de saut de contenu | testé | `tests/header-reglages-navigateur.test.js` : effet « réduire » réglé dans le panneau, enregistré, rechargé, publié ; ancien format lu à l'identique (`theme-builder-en-tete-collant-public`) |
 | H-064 | Masquer en descendant / réapparaître | 06 (Elementor : EXTENSION) | Gagner de la place | `hideOnScrollDown` | Défilement ↓↑ ; focus clavier | testé | `tests/header-etats-navigateur.test.js` : masqué en descendant, réapparaît en remontant, focus clavier le révèle, jamais masqué en haut, sans transition en mouvement réduit |
 | H-065 | État normal / transparent / défilé / sticky / mobile / menu ouvert | 06 | États stylables | états `top`/`scrolled`/`menuOpen` | Styles par état | testé | `tests/header-etats-navigateur.test.js` (haut / défilé / logos), `tests/header-menus-navigateur.test.js` (classe `is-menu-open`), `tests/header-reglages.test.js` (CSS des états défilé et menu ouvert) |
-| H-066 | Hauteur réservée, z-index, empilement | 06 | Pas de saut de contenu | `--kw-header-h` + espaceur | CLS < 0,1 | testé | `tests/header-etats-navigateur.test.js` : espaceur = hauteur de l'en-tête fixé, contenu non recouvert (mesure CLS globale : L8) |
+| H-066 | Hauteur réservée, z-index, empilement | 06 | Pas de saut de contenu | `--kw-hdr-top`, position collée dans le flux (pas d'espaceur) | CLS < 0,1 | testé | `tests/header-performance-navigateur.test.js` : CLS < 0,1 pour les cinq modes (collé, fixé, réduit, masquable, superposé plein) ; le mode « fixé » est réalisé dans le flux (un en-tête hors flux avec espaceur ajouté par script mesurait 0,16) |
 | H-067 | Animations d'entrée, transitions (durée, délai, courbe) | 06 | Apparition | Motion Studio (existant) | Déclenchement ; durée | documenté (existant) | — |
 | H-068 | Effets de défilement (vertical, horizontal, parallaxe, opacité, échelle) | 06 | Liés au scroll | `kw-effects.js` (existant) | Navigateur | documenté (existant) | — |
 | H-069 | Effets de souris (suivi, 3D tilt) | 06 | Profondeur | `kw-effects.js` (existant) | Navigateur ; écran tactile | documenté (existant) | — |
@@ -98,19 +98,19 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-096 | Versions et restauration | 01, 13 | Historique | `mk_tb_versions` (30) | Restauration non destructive | documenté (existant, preuve ligne par ligne à rattacher) | — |
 | H-097 | Import / export | 13 | Portabilité | `portable.js` | Aller-retour | documenté (existant, test à rattacher) | — |
 | H-098 | Aperçu sur un autre contenu | 01, 10 | Preview Settings | `/contenus-apercu` | Navigateur | documenté (existant) | — |
-| H-099 | Isolation multi-sites | 13, 15 | Aucune fuite | `site_id IS ?` | 2–3 sites | testé (en-têtes, menus) | `tests/theme-builder-site-principal.test.js`, `apparence-menus-integration.test.js` |
+| H-099 | Isolation multi-sites | 13, 15 | Aucune fuite | `site_id IS ?` | 2–3 sites | testé | `tests/header-isolation.test.js` : réglages, états, panneaux de méga-menu et route `menu.json` isolés par site ; `theme-builder-site-principal`, `apparence-menus-integration` (existants) |
 
 ## 8. Qualité transversale
 | ID | Référence | Source | Attendu | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
 |---|---|---|---|---|---|---|---|
-| H-100 | `<header>`, `<nav>`, ARIA, focus visible, Échap | 11 | Accessible | runtime + gabarits | Audit clavier/lecteur d'écran | documenté (à vérifier, L8) | — |
-| H-101 | Contrastes, alternatives textuelles | 11 | WCAG 2.1 AA (cible Kolakisa ; Elementor déclare 2.0 AA) | charte | Contrôle auto + manuel | documenté (L8) | — |
+| H-100 | `<header>`, `<nav>`, ARIA, focus visible, Échap | 11 | Accessible | runtime + gabarits | Audit clavier/lecteur d'écran | testé (repères, noms, focus, cibles ; lecteur d'écran réel NON testé) | `tests/header-accessibilite-navigateur.test.js` : `role="banner"`, navigation nommée, aucun lien/bouton sans nom (y compris tiroir ouvert), focus visible au clavier, cibles ≥ 44 px (bouton Menu, Fermer, bascules), `lang` |
+| H-101 | Contrastes, alternatives textuelles | 11 | WCAG 2.1 AA (cible Kolakisa ; Elementor déclare 2.0 AA) | charte | Contrôle auto + manuel | développé (contraste du tiroir testé ≥ 4,5:1 ; contraste des en-têtes personnalisés non audité) | `tests/header-accessibilite-navigateur.test.js` (contraste du panneau du tiroir) |
 | H-102 | Sécurité : HTML, attributs, contenus externes | 13 | Aucun script libre | grammaire fermée | Tests de rejet | documenté (existant, à compléter L8) | — |
-| H-103 | Performance (DOM, CLS, INP) | 12 | Budget | un seul écouteur passif | Mesures | documenté (L8) | — |
+| H-103 | Performance (DOM, CLS, INP) | 12 | Budget | un seul écouteur passif | Mesures | testé (CLS et tâches longues ; INP réel non mesuré) | `tests/header-performance-navigateur.test.js` |
 | H-104 | Non-régression CMS / Theme Builder / éditeur / menus | 14 | Rien ne casse | suites existantes | `npm test` | documenté (L8) | — |
 
-## Bilan (mis à jour après les lots L5 recherche et L6) — chiffres recomptés par script
-- Lignes : **72**. `testé` (preuve de test citée) : **31**. `développé` (partiel, reste à tester ou compléter) : **2**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
-- `documenté` (déjà présent dans le code, preuve à rattacher) : **34**. `documenté (à développer)` : **3**. `exclu` (justifié) : **2**.
-- Lots terminés : **L0, L1, L2, L3, L4, L6** et **L5 en partie** (recherche plein écran et suggestions). **NON faits** : mini-panier en tiroir (H-047), menu compte déroulant (H-045), barre d'annonce / horaires / contact dédiés (H-053), pictogrammes de vignettes (G-16), calques orientés rangées/zones (H-010), bascule d'état sur le canevas (G-15).
-- Écarts assumés : image et badge d'un élément de menu non faits (L3) ; aucun test sur un vrai écran tactile ; mini-panier : le widget existant reste un lien avec compteur.
+## Bilan (état au dernier lot construit) — chiffres recomptés par script
+- Lignes : **72**. `testé` (preuve de test citée) : **35**. `développé` (partiel : reste à tester ou compléter, détail dans la ligne) : **5**. `validé` : **0** (la validation de bout en bout est celle de `HEADER_FINAL_AUDIT.md`).
+- `documenté` (présent dans le code avant la mission ; preuve à rattacher ou non reprise) : **29**. `documenté (à développer)` : **1**. `exclu` (justifié) : **2**.
+- **Lots construits** : L0 réglages d'en-tête · L1 états et comportements · L2 responsive (prouvé) · L3 menus, tiroir mobile · L4 méga-menu · L5 recherche plein écran + suggestions, menu du compte, mini-panier en tiroir (panier des formations) · L6 condition « visiteur » · L8 accessibilité, isolation, performance.
+- **Non faits** : calques orientés rangées/zones (H-010), bascule d'état sur le canevas (G-15), pictogrammes de vignettes (G-16), image et badge d'un élément de menu (H-033), barre d'annonce / horaires / contact dédiés (H-053 : composition des widgets existants), mini-panier de la boutique de PRODUITS (H-047), test sur un vrai écran tactile et avec un lecteur d'écran réel.

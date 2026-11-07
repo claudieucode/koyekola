@@ -73,7 +73,7 @@ logo     : variantes par état (clair / sombre / transparent) — médias du sit
 
 ### 4.2 Runtime public unique `public/js/kw-header.js`
 - Remplace l'écouteur `fxHead` de `landing.js` (qui reste en repli tant que le nouveau bloc est absent).
-- Responsabilités : seuil de défilement → classes `is-scrolled` / `is-hidden` ; variable CSS `--kw-header-h` ; espaceur anti-décalage (CLS) pour `sticky`/`fixed` ; ouverture/fermeture des menus, panneaux et tiroirs (focus, Échap, fermeture extérieure) ; `prefers-reduced-motion` ; `requestAnimationFrame` + `passive`.
+- Responsabilités : seuil de défilement → classes `is-scrolled` / `is-hidden` ; variable CSS `--kw-header-h` ; AUCUN espaceur : le mode « fixé » reste dans le flux (position collée), car un en-tête hors flux dont l'espaceur est ajouté par script faisait sauter la page (CLS mesuré 0,16, corrigé) ; ouverture/fermeture des menus, panneaux et tiroirs (focus, Échap, fermeture extérieure) ; `prefers-reduced-motion` ; `requestAnimationFrame` + `passive`.
 - Aucune dépendance externe ; ne manipule que des classes et attributs ARIA.
 
 ### 4.3 États, responsive par élément
@@ -122,3 +122,12 @@ Voir `HEADER_IMPLEMENTATION_PLAN.md`.
 - `partMode` lu sur le premier enfant : `themeRender.js:52` **[V]**.
 - Seuil `is-scrolled` à 8 px : `public/js/landing.js:195-198` **[V]**.
 - Points marqués [S] ci-dessus : à lever par test dans le lot concerné.
+
+
+## 10. État d'implémentation (mis à jour après les lots L0 à L8 partiels)
+Écarts entre cette architecture cible et ce qui a été réellement construit :
+- **Fixé** : réalisé avec la position collée dans le flux (pas d'espaceur) — décision prise après mesure du CLS.
+- **Méga-menu / tiroir** : le méga-menu est un composant du site relié à une rubrique (`props.mega`) ; le tiroir mobile est un panneau construit par le script du visiteur autour de la liste du menu (pas un composant libre). Un tiroir à contenu libre (hors menu) n'a pas été construit.
+- **Rangées par appareil** : couvert par le moteur de styles existant (`order`, `flexDirection`, `hideOn`) ; aucune structure nouvelle.
+- **Non construits** : mini-panier en tiroir, menu compte déroulant, calques orientés rangées/zones, bascule d'état sur le canevas, pictogrammes de vignettes dédiés, image/badge d'un élément de menu.
+- **Structure HTML** : l'en-tête reste rendu dans `<main>` (structure historique de la page) ; il porte `role="banner"`. Le sortir de `<main>` demanderait de revoir le gabarit de page entier.
