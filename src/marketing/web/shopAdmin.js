@@ -98,7 +98,7 @@ module.exports = () => {
   route("get", "/produits/:pid(\\d+)", "shop.read", (req, res, s) => {
     const product = catalog.productById(s, req.params.pid);
     if (!product) return res.status(404).render("error", { message: "Produit introuvable." });
-    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {}, personalization: personalization.get(s.db, product.id), ageLevel: age.productLevel(s.db, product.id), specs: compare.specsToText(compare.getSpecs(s.db, product.id)) });
+    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {}, personalization: personalization.get(s.db, product.id), ageLevel: age.productLevel(s.db, product.id), specs: compare.specsToText(compare.getSpecs(s.db, product.id)), plans: require("../shop/subscriptions").listPlans(s, product.id), stripeReady: require("../shop/stripeClient").configured() });
   });
   route("post", "/produits/:pid(\\d+)", "shop.write", (req, res, s) => {
     catalog.updateProduct(s, Number(req.params.pid), productInput(req.body));
@@ -304,6 +304,8 @@ module.exports = () => {
   route("post", "/coupons/:kid(\\d+)/etat", "shop.write", (req, res, s) => { store.setCouponActive(s, Number(req.params.kid), Boolean(req.body.actif)); flashOk(req, "Coupon mis à jour."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`); }, { write: true });
 
   require("./shopRdv").mountAdmin({ route, render, audit }); // prise de rendez-vous (migration 137)
+
+  require("./shopAbonnements").mountAdmin({ route, render, audit }); // abonnements (migration 139)
 
   return router;
 };

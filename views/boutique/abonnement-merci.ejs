@@ -1,0 +1,18 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Merci</h1>
+<% if (sub.status === "incomplete") { %>
+<p class="sh-meta" role="status">Votre paiement n'est pas encore confirmé par la banque. Aucun abonnement n'est actif tant que ce n'est pas fait ; vous recevrez un e-mail. Vous n'êtes pas débité deux fois si vous rechargez cette page.</p>
+<% } else if (sub.status === "cancelled") { %>
+<p class="sh-empty">Cet abonnement n'est pas actif.</p>
+<% } else { %>
+<p class="sh-ok" role="status">Votre abonnement est en place.</p>
+<dl class="sh-meta">
+  <dt>Produit</dt><dd><%= sub.product_name %></dd>
+  <dt>Formule</dt><dd><%= sub.plan_label %> : <%= money(sub.price_cents) %> <%= cadence(sub) %>, tout compris</dd>
+  <% if (sub.current_period_end) { %><dt>Prochaine échéance</dt><dd><%= frDate(sub.current_period_end) %></dd><% } %>
+</dl>
+<p>Votre commande est créée dès que le paiement est confirmé ; un e-mail vous donne le lien pour gérer l'abonnement (pause, formule, résiliation en un clic).</p>
+<p><a class="sh-btn" href="<%= link %>">Gérer mon abonnement</a></p>
+<% } %>
+<p><a href="<%= shop.base %>">Retour à la boutique</a></p>
+<%- include("_bottom") %>
