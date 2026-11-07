@@ -134,3 +134,4 @@ Source : `scripts/audit-interface.js` (géométrie, 1920/1440/820/390 px) et `sc
 | Animations | Vérifié (statique) | 0 règle animant la mise en page, 0 `transition: all`, 47 règles de réduction des mouvements |
 | Éditeurs (pages, e-mails, scénarios, articles, éditeur du site, personnaliser) | Audité | `scripts/audit-editeurs.js` ; tests `*navigateur*` des éditeurs |
 | Galerie de thèmes | Corrigé puis vérifié en sombre | contrastes |
+| Theme Builder (refonte 3, novembre 2026) | Refait puis vérifié (clair, sombre, 390 / 820 / 1600 px) | barre latérale 240 px réductible à 64 px (choix mémorisé, réduite d'office sur tablette) ; contrôles remplis sans cadre, libellé en préfixe ; cartes : miniature uniforme, message « Actuellement affiché » sans encadré, actions Modifier (plein) / Aperçu (discret) / Publier (contour) ; parties sans modèle = carte discrète ; fondu d'entrée limité aux changements de catégorie ; tests `theme-builder-*navigateur*` (26/26) |

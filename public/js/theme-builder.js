@@ -43,7 +43,7 @@
     archive: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M8 9h.01M12 9h.01M16 9h.01M8 12h.01M12 12h.01M16 12h.01M8 15h.01M12 15h.01M16 15h.01"/>'), search_results: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><circle cx="11" cy="11.5" r="2.5"/><path d="M13 13.5l2.5 2.5M6.5 8h11"/>'),
     single_product: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M7 9h2l1.2 5h5L16.5 10H9.3"/><circle cx="11" cy="16.5" r=".6"/><circle cx="15" cy="16.5" r=".6"/>'), product_archive: IC('<rect x="4" y="4.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4.5" width="6.5" height="6.5" rx="1"/><rect x="4" y="13" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13" width="6.5" height="6.5" rx="1"/>'),
     not_found: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M7 14.5v-4l-2 3h3M10.5 10.5h2.5v4h-2.5zM15.5 14.5v-4l-2 3h3"/>'), sidebar: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M15 5v14"/>'), custom: IC('<path d="M12 4v16M4 12h16"/>'),
-    info: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 11v5.5" stroke="Canvas" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7.7" r="1.2" fill="Canvas"/></svg>',
+    info: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>',
   };
   const R = (c, x, y, w, h) => `<rect class="tb-w-${c}" x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5"/>`, T = (x, y, t, a) => `<text class="tb-w-txt" x="${x}" y="${y}"${a ? ` text-anchor="${a}"` : ""}>${t}</text>`;
   const grid = (cols, rows, x0, y0, w, h) => { let o = ""; const cw = (w - (cols - 1) * 6) / cols, rh = h / rows; for (let r = 0; r < rows; r += 1) for (let c = 0; c < cols; c += 1) { const x = x0 + c * (cw + 6), y = y0 + r * rh; o += R("img", x, y, cw, rh - 14) + R("line", x, y + rh - 10, cw, 2) + R("line", x, y + rh - 5, cw * 0.6, 2); } return o; };
@@ -81,7 +81,7 @@
       if (!g) { g = "x"; ul.append(el("li", "tb-grp", "Parties du site")); }
       const li = el("li"), b = el("button"); b.type = "button"; b.setAttribute("aria-current", String(cur === t.key)); if (!t.available) { b.disabled = true; b.title = t.reason; }
       const dot = el("span", "tb-dot"); dot.dataset.live = t.live ? "1" : "0"; dot.setAttribute("aria-hidden", "true");
-      b.title = t.label; b.append(icon(t.key), el("span", "tb-lbl", t.label), el("span", "tb-count", String(t.count)), dot);
+      const cn = el("span", "tb-count", String(t.count)); if (!t.count) cn.dataset.z = "1"; b.title = t.label; b.append(icon(t.key), el("span", "tb-lbl", t.label), cn, dot);
       if (t.live) b.setAttribute("aria-label", `${t.label} : ${t.count} modèle(s), ${t.live} publié(s)`);
       b.addEventListener("click", () => go(t.key)); li.append(b); ul.append(li);
     }
@@ -111,10 +111,10 @@
   function details(t) { info(`Détails — ${t.name}`, (box) => { const p = (k, v) => { const x = el("p"); x.append(el("b", "", `${k} : `), document.createTextNode(v)); box.append(x); }; p("Type", t.typeLabel); p("État", ST[t.status]); p("S'affiche", t.describe.include); if (t.describe.exclude) p("Sauf", t.describe.exclude); p("Modifié", dates(t.updatedAt)); }); }
   // Carte « structure type » : un type sans modèle. Pointillés + libellé explicite : ce n'est PAS l'aperçu d'un modèle existant.
   function ghost(t) {
-    const c = el("article", "tb-tcard"); c.dataset.type = t.key; const ch = el("div", "tb-ch"); ch.append(el("h3", "", t.label), infoBtn(t.label, () => info(t.label, (box) => box.append(el("p", "", LEAD[t.key] || ""), el("p", "sw-muted", "Aucun modèle n'existe pour cette partie : la structure ci-dessous est un exemple, pas un aperçu de votre site.")))));
-    const th = el("div", "tb-thumb"); th.append(svgOf(wireSvg(t.key))); const b = el("div", "tb-body tb-body-g"); b.append(el("p", "tb-type", "Aucun modèle"));
+    const c = el("article", "tb-tcard"); c.dataset.type = t.key; const ch = el("div", "tb-ch"); const chip = el("span", "tb-chip"); chip.append(icon(t.key)); ch.append(chip, el("h3", "", t.label), infoBtn(t.label, () => info(t.label, (box) => box.append(el("p", "", LEAD[t.key] || ""), el("p", "sw-muted", "Aucun modèle n'existe pour cette partie : la structure ci-dessous est un exemple, pas un aperçu de votre site.")))));
+    const d = el("p", "tb-ghost-d", LEAD[t.key] || ""); const b = el("div", "tb-body tb-body-g"); b.append(el("p", "tb-type", "Aucun modèle"));
     if (canWrite) { const a = el("div", "tb-actions"); const bt = el("button", "btn btn-sm btn-outline", "Créer un modèle"); bt.type = "button"; bt.setAttribute("aria-label", `Créer un modèle : ${t.label}`); bt.addEventListener("click", () => { $("tb-new-name").value = ""; $("tb-new-type").value = t.key; openDlg("tb-dlg-new"); }); a.append(bt); b.append(a); }
-    c.append(ch, th, b); return c;
+    c.append(ch, d, b); return c;
   }
   function card(t) {
     const c = el("article", "tb-card"); c.dataset.status = t.status; c.dataset.id = t.id;
@@ -123,7 +123,7 @@
     const b = el("div", "tb-body"), sub = el("div", "tb-sub"); sub.append(el("p", "tb-type", t.typeLabel));
     const bd = el("div", "tb-badges"); const s = el("span", "tb-badge", ST[t.status]); s.dataset.k = t.status; bd.append(s); if (t.hasConflict) { const x = el("span", "tb-badge", "Conflit"); x.dataset.k = "conflict"; bd.append(x); } if (t.documentMissing) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; bd.append(x); } sub.append(bd); b.append(sub);
     // Brouillon qui remplacerait le modèle actif : note intégrée (icône + texte secondaire), sans encadré. Mêmes données (willReplace) ; aucune logique d'état ajoutée.
-    if (t.status === "draft" && t.willReplace && t.willReplace.length) { const n = el("p", "tb-hint"); n.setAttribute("role", "note"); const ic = svgOf(ICONS.hidden); ic.setAttribute("class", "tb-hint-ico"); ic.setAttribute("aria-hidden", "true"); const tx = el("span", "tb-hint-tx"); tx.append(el("span", "tb-hint-t", `Actuellement affiché : ${t.willReplace.join(", ")}`), el("span", "tb-hint-s", "Publiez ce modèle pour remplacer celui actuellement actif.")); n.append(ic, tx); b.append(n); }
+    if (t.status === "draft" && t.willReplace && t.willReplace.length) { const n = el("p", "tb-hint"); n.setAttribute("role", "note"); const ic = svgOf(ICONS.hidden); ic.setAttribute("class", "tb-hint-ico"); ic.setAttribute("aria-hidden", "true"); const tx = el("span", "tb-hint-tx"); tx.append(el("span", "tb-hint-t", `Actuellement affiché : ${t.willReplace.join(", ")}`), el("span", "tb-hint-s", "Publiez pour remplacer le modèle actif.")); n.append(ic, tx); b.append(n); }
     const m = el("div", "tb-meta"); const l1 = el("span", "tb-cond"), tx = el("span", "tb-cond-t"); tx.append(el("b", "", "S'affiche : "), document.createTextNode(t.describe.include)); l1.append(tx);
     // « Conditions » est rangé avec la ligne qu'il modifie (« S'affiche »), en action discrète.
     if (canWrite && t.status !== "archived") { const cd = el("button", "btn btn-sm btn-quiet", "Conditions"); cd.type = "button"; cd.addEventListener("click", () => conditions(t)); l1.append(cd); }
@@ -132,7 +132,7 @@
     const l3 = el("span"); l3.append(el("b", "", "Modifié : "), document.createTextNode(dates(t.updatedAt))); m.append(l3); b.append(m);
     // Actions : « Modifier » (principale), « Aperçu » (secondaire), « Publier » à droite ; le menu ⋯ est dans l'en-tête de la carte.
     const a = el("div", "tb-actions"); const ed = el("a", "btn btn-sm btn-primary", "Modifier"); ed.href = t.editUrl; a.append(ed);
-    const pv = el("button", "btn btn-sm btn-outline", "Aperçu"); pv.type = "button"; pv.setAttribute("aria-label", `Aperçu de « ${t.name} »`); pv.addEventListener("click", () => preview(t)); a.append(pv);
+    const pv = el("button", "btn btn-sm btn-outline tb-ghostbtn", "Aperçu"); pv.type = "button"; pv.setAttribute("aria-label", `Aperçu de « ${t.name} »`); pv.addEventListener("click", () => preview(t)); a.append(pv);
     if (canWrite && t.status !== "archived") { a.append(el("span", "tb-spacer"));
       const pb = el("button", "btn btn-sm btn-outline", t.status === "published" ? "Republier" : "Publier"); pb.type = "button"; pb.addEventListener("click", () => publish(t)); a.append(pb); }
     b.append(a); c.append(b); return c;
@@ -143,7 +143,8 @@
   function pump() { while (running < 4 && queue.length) { const n = queue.shift(); if (!n.isConnected) continue; running += 1; fetchThumb(n).finally(() => { running -= 1; pump(); }); } }
   // Miniature RÉELLE : le HTML rendu par le moteur public pour CE modèle (fetch → iframe isolée « sandbox » sans script), réduit à la largeur de la carte. 3 rendus au plus en parallèle, HTML mis en cache pour la session ; en cas d'échec l'appelant garde la miniature filaire.
   const FRAME = { header: [960, 192], footer: [960, 288], def: [1000, 600] }, frames = new Map(), fq = []; let fRun = 0;
-  const fitRo = "ResizeObserver" in window ? new ResizeObserver((es) => { for (const e of es) { const f = e.target.querySelector("iframe.tb-frame"); if (f) f.style.transform = `scale(${e.target.clientWidth / Number(f.getAttribute("width"))})`; } }) : null;
+  const fitFrame = (n, f) => { const k = n.clientWidth / Number(f.getAttribute("width")); f.style.transform = `scale(${k})`; f.style.top = n.dataset.kind === "header" || n.dataset.kind === "footer" ? "10px" : `${Math.max(0, (n.clientHeight - Number(f.getAttribute("height")) * k) / 2)}px`; };
+  const fitRo = "ResizeObserver" in window ? new ResizeObserver((es) => { for (const e of es) { const f = e.target.querySelector("iframe.tb-frame"); if (f) fitFrame(e.target, f); } }) : null;
   function frameThumb(n, url, kind, key) {
     return new Promise((ok, no) => { fq.push({ n, url, kind, key, ok, no }); framePump(); });
   }
@@ -156,7 +157,7 @@
         if (!j.n.isConnected) return;
         const [w, h] = FRAME[j.kind] || FRAME.def, f = document.createElement("iframe");
         f.className = "tb-frame"; f.setAttribute("sandbox", ""); f.setAttribute("tabindex", "-1"); f.setAttribute("aria-hidden", "true"); f.setAttribute("width", String(w)); f.setAttribute("height", String(h)); f.srcdoc = html;
-        j.n.textContent = ""; j.n.append(f); j.n.dataset.state = "ok"; j.n.dataset.real = "1"; f.style.transform = `scale(${(j.n.clientWidth || 240) / w})`; if (fitRo) fitRo.observe(j.n);
+        j.n.textContent = ""; j.n.append(f); j.n.dataset.state = "ok"; j.n.dataset.real = "1"; if (j.n.clientWidth) fitFrame(j.n, f); else f.style.transform = `scale(${240 / w})`; if (fitRo) fitRo.observe(j.n);
       })().then(j.ok, j.no).finally(() => { fRun -= 1; framePump(); });
     }
   }
@@ -192,7 +193,7 @@
     cell("S'affiche", document.createTextNode(t.describe.include + (t.describe.exclude ? ` (sauf ${t.describe.exclude})` : "")));
     cell("Modifié", document.createTextNode(dates(t.updatedAt)));
     const a = el("div", "tb-actions"); const ed = el("a", "btn btn-sm btn-primary", "Modifier"); ed.href = t.editUrl; a.append(ed);
-    const pv = el("button", "btn btn-sm btn-outline", "Aperçu"); pv.type = "button"; pv.setAttribute("aria-label", `Aperçu de « ${t.name} »`); pv.addEventListener("click", () => preview(t)); a.append(pv);
+    const pv = el("button", "btn btn-sm btn-outline tb-ghostbtn", "Aperçu"); pv.type = "button"; pv.setAttribute("aria-label", `Aperçu de « ${t.name} »`); pv.addEventListener("click", () => preview(t)); a.append(pv);
     if (canWrite && t.status !== "archived") { const pb = el("button", "btn btn-sm btn-outline", t.status === "published" ? "Republier" : "Publier"); pb.type = "button"; pb.addEventListener("click", () => publish(t)); a.append(pb); }
     a.append(menu(t)); cell("Actions", a).classList.add("tb-c-act"); return tr;
   }
@@ -224,7 +225,7 @@
     if (list) { const tb = el("table", "tb-table"); tb.setAttribute("aria-label", "Modèles"); const hd = el("thead"), hr = el("tr"); for (const h of ["Modèle", "Type", "État", "S'affiche", "Modifié", "Actions"]) { const th = el("th", "", h); th.scope = "col"; hr.append(th); } hd.append(hr); tb.append(hd); host = el("tbody"); tb.append(host); if (sorted.length || ghosts.length) box.append(tb); }
     const frag = document.createDocumentFragment(); let n = 0;
     for (const t of sorted) { if (n >= shown) break; frag.append(list ? rowOf(t) : card(t)); n += 1; }
-    if (n >= shown && sorted.length > shown) { /* suite : bouton ci-dessous */ } else for (const t of ghosts) frag.append(list ? ghostRow(t) : ghost(t));
+    if (n >= shown && sorted.length > shown) { /* suite : bouton ci-dessous */ } else { if (!list && n && ghosts.length) frag.append(el("h2", "tb-sec-h", "Parties sans modèle")); for (const t of ghosts) frag.append(list ? ghostRow(t) : ghost(t)); }
     host.append(frag); watchThumbs();
     if (sorted.length > shown) { const more = el("button", "btn btn-outline tb-more", `Afficher la suite (${sorted.length - shown} autres)`); more.type = "button"; more.addEventListener("click", () => { shown += PAGE; drawCards(); }); box.append(more); }
     const cf = $("tb-conflicts"); cf.hidden = !data.conflicts.length; cf.textContent = "";
@@ -242,17 +243,18 @@
   // Modifications non enregistrées : la fenêtre de conditions (ou de création/renommage) ouverte et modifiée demande confirmation avant de quitter la vue.
   const dirty = () => [...document.querySelectorAll("#tb dialog[open]")].some((d) => d.dataset.dirty === "1");
   const guard = () => !dirty() || confirm("Des modifications ne sont pas enregistrées. Quitter sans les enregistrer ?");
+  const enter = () => { const b = $("tb-cards"); b.dataset.enter = "1"; clearTimeout(enter.t); enter.t = setTimeout(() => { delete b.dataset.enter; }, 360); };
   function go(type) {
     if (type === cur) return;
     if (!guard()) return;
-    cur = type; shown = PAGE; syncUrl(false); load();
+    enter(); cur = type; shown = PAGE; syncUrl(false); load();
   }
   window.addEventListener("popstate", (e) => {
     if (!guard()) { history.pushState({ tb: navDepth }, "", location.href); return; }
-    navDepth = e.state && Number.isInteger(e.state.tb) ? e.state.tb : 0; readUrl(); shown = PAGE; load();
+    navDepth = e.state && Number.isInteger(e.state.tb) ? e.state.tb : 0; readUrl(); shown = PAGE; enter(); load();
   });
   window.addEventListener("beforeunload", (e) => { if (dirty()) { e.preventDefault(); e.returnValue = ""; } });
-  $("tb-back").addEventListener("click", () => { if (!guard()) return; if (navDepth > 0) { history.back(); } else { cur = ""; shown = PAGE; syncUrl(false); load(); } });
+  $("tb-back").addEventListener("click", () => { if (!guard()) return; if (navDepth > 0) { history.back(); } else { enter(); cur = ""; shown = PAGE; syncUrl(false); load(); } });
   async function load() {
     const q = querystring(), key = q.toString(); q.set("leger", "1");
     if (ctl) ctl.abort(); ctl = new AbortController(); const my = ++loadSeq;
@@ -512,6 +514,7 @@
   }
   for (const b of document.querySelectorAll(".tb-views button")) b.addEventListener("click", () => setView(b.dataset.view));
 
+  { const lay = root.querySelector(".tb-layout"), bt = $("tb-collapse"); const set = (mini, persist) => { lay.dataset.side = mini ? "mini" : "full"; bt.setAttribute("aria-pressed", String(mini)); const t = mini ? "Agrandir la barre latérale" : "Réduire la barre latérale"; bt.title = t; bt.setAttribute("aria-label", t); if (persist) store.set("kola.themeBuilder.side", mini ? "mini" : "full"); }; const sd = store.get("kola.themeBuilder.side"); set(sd ? sd === "mini" : Boolean(window.matchMedia && matchMedia("(max-width: 1024px)").matches), false); /* tablette : barre réduite d'office, le choix de l'utilisateur prime */ bt.addEventListener("click", () => set(lay.dataset.side !== "mini", true)); }
   $("tb-tools").addEventListener("submit", (e) => e.preventDefault());
   $("tb-q").addEventListener("input", () => { clearTimeout(load.t); load.t = setTimeout(() => { shown = PAGE; syncUrl(true); load(); }, 250); });
   $("tb-st").addEventListener("change", () => { shown = PAGE; syncUrl(true); load(); });
@@ -528,5 +531,5 @@
   });
   // Départ : adresse → état ; préférences d'affichage et de tri retrouvées.
   { const sv = store.get(VKEY), so = store.get("kola.themeBuilder.sort"); if (so && SORT[so]) $("tb-sort").value = so; readUrl(); history.replaceState({ tb: 0 }, "", location.href); shown = PAGE; if (sv === "list") { view = "list"; for (const b of document.querySelectorAll(".tb-views button")) b.setAttribute("aria-pressed", String(b.dataset.view === "list")); } }
-  load();
+  enter(); load();
 })();
