@@ -37,7 +37,7 @@ Voir `HEADER_FEATURE_MATRIX.md` : **72** fonctionnalités ; **35 testées** (pre
 | `tests/header-performance-navigateur.test.js` | CLS de cinq modes, tâches longues | 7 |
 | **Total** | | **104** |
 
-Exécution finale de ces 14 fichiers : **RESULTAT_HEADER_A_REMPLIR**.
+Exécution finale (7 novembre 2026, une seule exécution séquentielle avec le contrôle ciblé du § 7) : **les 14 fichiers passent intégralement — 19 suites ✔, 0 ✖.**
 
 ## 5. Défauts réels trouvés ET corrigés pendant la mission (par les tests)
 1. **Régression de mon lot menus** : les liens des sous-menus étaient numérotés avant celui de leur rubrique (suivi des clics décalé) — attrapée par `tests/editeur-v2`, corrigée, test dédié ajouté.
@@ -62,12 +62,18 @@ Exécution finale de ces 14 fichiers : **RESULTAT_HEADER_A_REMPLIR**.
 - **Étude Elementor** : aucune vérification dans un Elementor installé.
 
 ## 7. Régressions
-Contrôle ciblé sur les familles touchées : **RESULTAT_REGRESSION_A_REMPLIR**.
+Contrôle ciblé de **73 fichiers** (tous les `theme-builder-*`, `header-*`, les tests qui touchent la recherche, le compte, le mini-panier, les menus et les widgets modifiés) : **687 tests, 681 réussis, 6 échecs — tous déjà présents avant la mission**.
+Un contrôle plus large (familles `editeur-*`, `apparence-*`, `widgets-*`, etc.) a été lancé puis arrêté : trop lent. Il avait déjà révélé 3 échecs d'`apparence-styles-navigateur` / `apparence-templates-navigateur`, **vérifiés identiques sur le code d'avant la mission**.
 Échecs **déjà présents avant la mission** (vérifiés en relançant les mêmes tests sans mes changements) :
 - `widgets-parts-regression` : types de widgets du registre ≠ référence (`motionsplittext`, `sidebar`).
+- `widgets-interactions-navigateur` (diaporama / carrousels), `widgets-parties-rendu-navigateur` (parties), `widgets-publie-navigateur` (2 cas) : mêmes échecs sur le code d'avant la mission (vérifié par relance isolée).
+- `apparence-styles-navigateur` (1 cas) et `apparence-templates-navigateur` (2 cas) : idem.
 - `theme-builder-apercu-vignette` (rendu d'un modèle de produits) et `theme-builder-catalogue-direct-navigateur` (filtre d'identité du catalogue).
 - `site-menu-c1-navigateur` : 4 cas du menu d'administration d'un site.
 La suite complète du projet (787 fichiers) n'a **pas** été exécutée en entier : trop longue sur cette machine.
 
-## 8. Publication et déploiement
-Voir le rapport final de la session : état du commit, du push et du déploiement, avec ce qui a réellement été confirmé.
+## 8. Publication et déploiement (état réel)
+- **Commits** : 20 commits sur `header-builder-elementor` (documentation, lots L0 à L8, audit).
+- **Push** : la branche `header-builder-elementor` est poussée sur GitHub (`claudieucode/koyekola`). **Confirmé** par la réponse du dépôt distant.
+- **Fusion dans `main` : NON FAITE.** Pendant la mission, `main` a reçu d'autres travaux sur les en-têtes (nouvelle bibliothèque « Atelier », identité du modèle ou du site, effet « masquer », logo alternatif au défilement). Un essai de fusion dans un espace isolé donne **8 zones de conflit dans 6 fichiers** (`nodes.js`, `landing/index.js`, `themeRender.js`, `_node.ejs`, `_sections.ejs`, `landing.css`) : les deux travaux modifient les mêmes mécanismes (lecture des réglages d'en-tête sur le premier enfant, effets de défilement, logo). Les concilier demande des décisions de fond (un seul modèle de réglages, un seul effet « masquer ») et de refaire les tests des deux côtés : ce n'est pas une opération à faire en aveugle.
+- **Déploiement : NON FAIT.** Les outils Hostinger n'étaient pas connectés et le déploiement se fait à la main dans hPanel depuis `main`. Rien n'a été déployé ; aucun test de fumée en production n'a été fait.
