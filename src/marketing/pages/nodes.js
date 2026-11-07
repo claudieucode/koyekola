@@ -611,6 +611,13 @@ const NODE_TYPES = {
     const out = { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
     // Sur mobile : liste dépliée sous le bouton (par défaut) ou tiroir latéral (Header Builder) ; le tiroir suppose le bouton « Menu »
     if (out.mobileToggle && p.mobileMode === "drawer") { out.mobileMode = "drawer"; out.drawerSide = p.drawerSide === "left" ? "left" : "right"; }
+    // Méga-menu : « identifiant de l'élément du menu → identifiant du composant (panneau) », pour les rubriques de premier niveau d'un menu du CMS. Seuls des entiers positifs ;
+    // le composant doit appartenir au MÊME site (vérifié à l'affichage et à l'enregistrement du panneau).
+    if (source !== "manual" && p.mega && typeof p.mega === "object" && !Array.isArray(p.mega)) {
+      const mega = {};
+      for (const [k, v] of Object.entries(p.mega).slice(0, 12)) { const id = Number(k), cid = Number(v); if (Number.isInteger(id) && id > 0 && Number.isInteger(cid) && cid > 0) mega[String(id)] = cid; }
+      if (Object.keys(mega).length) { out.mega = mega; out.megaTrigger = p.megaTrigger === "click" ? "click" : "hover"; out.megaWidth = p.megaWidth === "full" ? "full" : "item"; }
+    }
     if (source === "location") { out.source = source; out.location = ["header", "footer", "mobile"].includes(p.location) ? p.location : "header"; }
     else if (source === "name") { out.source = source; out.menuName = line(p.menuName, 80); }
     return out;

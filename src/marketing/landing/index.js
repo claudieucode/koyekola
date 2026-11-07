@@ -309,7 +309,7 @@ function nodeView(ctx, nodes, visitor, page, scope) {
       return { ...n, children, loopInfo: { empty: !found.items.length, message: loop.empty, paginate: Boolean(loop.paginate) && found.pages > 1, pagination: loop.pagination || "numbers", pageNo: found.pageNo, pages: found.pages,
         base: Object.entries((visitor && visitor.query) || {}).filter(([k]) => k !== `lp-${n.id}`).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&") } };
     }
-    if (n.type === "menu") { const r = resolveMenuNode(n, page, visitor); if (r) n = r; }
+    if (n.type === "menu") { const r = resolveMenuNode(n, page, visitor, ctx, scope); if (r) n = r; }
     const dyn = dynamicProps(ctx, n, visitor, page, scope);
     if (dyn) n = { ...n, props: dyn };
     // Code : coloration calculée à l'affichage (texte échappé + <span class="kw-tok-…"> générés par highlight.js) ; jamais enregistrée
@@ -341,7 +341,7 @@ function nodeView(ctx, nodes, visitor, page, scope) {
 // Isolation : un menu est cherché UNIQUEMENT dans le site de la page (site_id NULL = site principal) ; sans menu affecté on n'affiche RIEN (jamais le menu d'un autre site, jamais un menu « par défaut »).
 const navService = () => require("../../services/navigation");
 const cmsLinks = (items) => (items || []).filter((it) => it.href || (it.children || []).length).map((it) => {
-  const out = { label: it.label, url: it.href || "#" };
+  const out = { id: it.id, label: it.label, url: it.href || "#" };
   if (it.newTab) out.newTab = true;
   if (it.rel) out.rel = String(it.rel).replace(/[^a-z ]/g, "");
   // Champs enrichis de l'éditeur de menus (déjà validés par le service de navigation) : icône, description, classes CSS, attribut title
@@ -368,7 +368,16 @@ function menuFor(page, visitor, { source = "location", location = "header", menu
 }
 // Widget « Menu » (nœud menu) : source « emplacement » / « menu précis », ou ancienne liste de démonstration non modifiée (traitée comme « en-tête »). Une liste manuelle explicite n'est jamais touchée.
 const SAMPLE_MENU = [{ label: "Accueil", url: "/" }, { label: "Services", url: "#", children: [{ label: "Conseil", url: "/contact" }, { label: "Accompagnement", url: "/contact" }] }, { label: "Blog", url: "/blog" }, { label: "Contact", url: "/contact" }];
-function resolveMenuNode(n, page, visitor) {
+function megaNodes(ctx, componentId, page, visitor, scope) {
+  try {
+    const c = require("../pages").getComponent(ctx, Number(componentId));
+    const siteOf = (x) => (x && Number.isInteger(x.site_id) ? x.site_id : null);
+    if (!c || siteOf(c) !== siteOf(page) || !c.section || c.section.type !== "layout" || !Array.isArray(c.section.children)) return null; // autre site, ou composant d'une autre nature : rien
+    const nodes = nodeView(ctx, c.section.children, visitor, page, { ...(scope || {}), megaDepth: 1 });
+    return nodes.length ? nodes : null;
+  } catch { return null; }
+}
+function resolveMenuNode(n, page, visitor, ctx, scope) {
   const p = n.props || {};
   const demo = pageNodes.isDemoMenu(p);
   const source = demo ? "location" : p.source;
@@ -379,6 +388,15 @@ function resolveMenuNode(n, page, visitor) {
   // Jamais sur un site (rendu public, aperçu d'une copie, éditeur) : sans menu affecté on n'affiche toujours rien.
   const sample = !items.length && page && page.demoMenu === true;
   if (sample) items = SAMPLE_MENU;
+  // Méga-menu : le panneau d'une rubrique est un composant DU MÊME SITE (jamais celui d'un autre site) ; son contenu publié est rendu avec les mêmes règles que le reste de la page.
+  // Un panneau ne contient pas lui-même de méga-menu (pas de récursion).
+  if (p.mega && ctx && !(scope && scope.megaDepth)) {
+    for (const it of items) {
+      const cid = p.mega[String(it.id)]; if (!cid) continue;
+      const nodes = megaNodes(ctx, cid, page, visitor, scope);
+      if (nodes) it.mega = { id: cid, nodes };
+    }
+  }
   return { ...n, props: { ...p, items, cms: { source, location: demo ? "header" : p.location || "", name: found ? found.name : "", found: items.length > 0, demo, ...(sample ? { sample: true } : {}) } } };
 }
 // En-tête / pied de page AUTOMATIQUES : une page de site sans en-tête (ou sans pied de page) composé affiche tout de même le menu AFFECTÉ à l'emplacement (c'est le rôle d'une affectation). Rien n'est ajouté si la page
@@ -414,8 +432,12 @@ function viewModel(ctx, page) {
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
     return { ...s, course: courseView(c) };
   }).filter(Boolean);
+  // Panneaux de méga-menu : contenu rendu dans le menu, mais stylé comme le reste (CSS, mouvement) : ils entrent dans les mêmes calculs que les sections de la page
+  const panelSections = [];
+  for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { if (n.type === "menu" && n.props && Array.isArray(n.props.items)) n.props.items.forEach((it) => { if (it.mega) panelSections.push({ type: "layout", id: `mega${it.mega.id}`, children: it.mega.nodes }); }); });
+  const withPanels = panelSections.length ? [...sections, ...panelSections] : sections;
   // Attributs de mouvement (entrée, défilement, souris) calculés une seule fois, au même endroit, pour le canevas, l'aperçu et la page publiée
-  for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { n.motionAttr = pageNodes.motionAttrs(n); });
+  for (const s of withPanels) if (s.type === "layout") pageNodes.walk(s.children, (n) => { n.motionAttr = pageNodes.motionAttrs(n); });
   // Table des matières : titres de la page (dans l'ordre d'affichage), chacun avec son ancre (la sienne, sinon kw-h-<id>)
   const tocs = [], heads = [];
   for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { if (n.type === "toc") tocs.push(n); else if (n.type === "heading" && n.props && n.props.text) heads.push(n); });
@@ -436,10 +458,10 @@ function viewModel(ctx, page) {
     breakpoints = row ? require("../pages/siteSettings").breakpointsOf(require("../pages/siteSettings").normalizeSettings(JSON.parse(row.settings || "{}"))) : undefined;
   } catch { breakpoints = undefined; }
   // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
-  const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(sections, breakpoints)].filter(Boolean).join("\n");
+  const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(withPanels, breakpoints)].filter(Boolean).join("\n");
   const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
   // Motion Studio : la page ne charge sa feuille de styles et son runtime que si elle contient un composant ou un réglage Motion Studio
-  const motionStudio = pageNodes.STUDIO.usage(sections, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null);
+  const motionStudio = pageNodes.STUDIO.usage(withPanels, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null);
   return { ...page, sections, motionStudio, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
@@ -453,7 +475,7 @@ function linksOf(page) {
     if (s.type === "course" && s.course) out.push({ section: i, label: `Formation : ${s.course.title}`, url: s.course.url });
     // Section libre : mêmes liens, dans l'ordre d'affichage des éléments
     // Un élément aux données corrompues ne fait pas échouer le calcul des liens de toute la page : il n'en compte aucun (le rendu fait de même, voir _node-safe.ejs)
-    if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+    const visit = (n) => {
       const mark = out.length;
       try {
       if ((n.type === "sitelogo" || n.type === "sitetitle") && n.props.link && n.props.homeUrl) out.push({ section: i, label: n.type === "sitelogo" ? "Logo du site" : "Titre du site", url: n.props.homeUrl });
@@ -470,7 +492,8 @@ function linksOf(page) {
       if (n.type === "heading" && n.props.link) out.push({ section: i, label: `Titre : ${n.props.text}`, url: n.props.link });
       if (n.type === "button") out.push({ section: i, label: n.props.label, url: n.props.url });
       if (n.type === "link") out.push({ section: i, label: n.props.label, url: n.props.url });
-      if (n.type === "menu") n.props.items.forEach((m) => { out.push({ section: i, label: `Menu : ${m.label}`, url: m.url }); (m.children || []).forEach((c) => out.push({ section: i, label: `Menu : ${m.label} › ${c.label}`, url: c.url })); });
+      // Même ordre que le gabarit : rubrique, ses sous-niveaux (en profondeur), puis le contenu de son panneau de méga-menu
+      if (n.type === "menu") { const items = (list, prefix) => list.forEach((m) => { out.push({ section: i, label: `Menu : ${prefix}${m.label}`, url: m.url }); items(m.children || [], `${prefix}${m.label} › `); if (m.mega) pageNodes.walk(m.mega.nodes, visit); }); items(n.props.items, ""); }
       if (n.type === "image" && n.props.link) out.push({ section: i, label: `Image : ${n.props.alt}`, url: n.props.link });
       if (n.type === "icon" && n.props.link) out.push({ section: i, label: `Icône : ${n.props.label}`, url: n.props.link });
       if (n.type === "gallery") n.props.images.forEach((im) => { if (im.link) out.push({ section: i, label: `Galerie : ${im.alt}`, url: im.link }); });
@@ -483,7 +506,8 @@ function linksOf(page) {
       if (n.type === "account") { out.push({ section: i, label: n.props.loggedIn ? "Mon compte" : "Se connecter", url: n.props.loggedIn ? "/mon-compte" : "/connexion" }); if (n.props.showCart) out.push({ section: i, label: "Panier", url: "/panier" }); }
       if (n.type === "modal" && n.props.ctaUrl) out.push({ section: i, label: `Fenêtre : ${n.props.ctaLabel}`, url: n.props.ctaUrl });
       if (n.type === "course" && n.props.course) out.push({ section: i, label: `Formation : ${n.props.course.title}`, url: n.props.course.url });      } catch { out.length = mark; }
-    });
+    };
+    if (s.type === "layout") pageNodes.walk(s.children, visit);
   });
   // Les ancres (#…) sautent dans la page sans passer par le compteur de clics (même règle que href() du rendu)
   return out.filter((l) => !/^(#|mailto:)/.test(String(l.url)));

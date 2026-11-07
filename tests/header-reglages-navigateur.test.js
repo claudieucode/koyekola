@@ -171,5 +171,31 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     await pub.context.close();
   });
 
+  test("méga-menu dans l'éditeur : rubriques du menu listées, « Créer un panneau » crée un composant du site et l'associe, enregistré, publié, visible au survol ; « Retirer » le détache", async () => {
+    let loc = db.prepare("SELECT menu_id FROM nav_locations WHERE site_id = ? AND location = 'header'").get(site);
+    if (!loc) { const m = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Menu méga', 'menu-mega', 'published')").run(site).lastInsertRowid); db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, NULL, 0, 'custom', '/a', 'Page A', 'published')").run(m); db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(site, m); loc = { menu_id: m }; }
+    const label = db.prepare("SELECT label FROM nav_items WHERE menu_id = ? AND parent_id IS NULL ORDER BY position LIMIT 1").get(loc.menu_id).label;
+    const t = await adopt("classique-logo-menu-bouton.clair");
+    const { context, page } = await open({ width: 1500, height: 950 }); await openEditor(page, t);
+    await page.locator("[data-pb-layers] li.pb-node > .pb-row-item", { hasText: /Menu de navigati/ }).first().click();
+    const item = page.locator("[data-pb-mega-item]").first(); await item.waitFor();
+    assert.match(await item.innerText(), new RegExp(label));
+    const [popup] = await Promise.all([context.waitForEvent("page"), item.locator("[data-pb-mega-create]").click()]);
+    assert.match(popup.url(), /\/composants\/\d+\/editeur/, "l'éditeur du panneau s'ouvre dans un nouvel onglet"); await popup.close();
+    await item.locator("[data-pb-mega-edit]").waitFor();
+    const comp = db.prepare("SELECT id, site_id, name FROM mk_web_components WHERE name LIKE 'Méga-menu · %' AND site_id = ? ORDER BY id DESC LIMIT 1").get(site);
+    assert.ok(comp, "composant créé dans CE site"); assert.equal(comp.name, `Méga-menu · ${label}`);
+    await page.locator("[data-pb-page-settings]").waitFor({ state: "attached" });
+    await save(page);
+    await page.click("[data-pb-publish]"); await page.waitForFunction(() => /publié, à jour|À jour/.test(document.querySelector("[data-pb-status]").textContent));
+    const pub = await open({ width: 1280, height: 800 }, false); await pub.page.goto(`${srv.base}/p/${slug()}`);
+    await pub.page.locator(".lp-site-header .kw-menu-item.has-mega").first().hover();
+    assert.match(await pub.page.locator(".lp-site-header .kw-mega").innerText(), /Première colonne[\s\S]*Deuxième colonne[\s\S]*Troisième colonne/, "le panneau de départ est affiché");
+    await pub.context.close();
+    await item.locator("[data-pb-mega-remove]").click(); await item.locator("[data-pb-mega-create]").waitFor();
+    assert.equal(db.prepare("SELECT 1 FROM mk_web_components WHERE id = ?").get(comp.id) !== undefined, true, "le composant est conservé");
+    await context.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });
 });

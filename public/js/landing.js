@@ -223,7 +223,12 @@
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {
     b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); });
-    b.parentNode.addEventListener("keydown", function (e) { if (e.key === "Escape") { b.setAttribute("aria-expanded", "false"); b.focus(); } });
+    // Échap referme et rend le focus à la rubrique ; « is-dismissed » masque le sous-menu / le panneau même si le focus reste dans la rubrique (sinon :focus-within le garderait ouvert), jusqu'à la sortie de la souris ou du focus
+    var li0 = b.parentNode, undismiss = function () { li0.classList.remove("is-dismissed"); };
+    li0.addEventListener("keydown", function (e) { if (e.key === "Escape") { b.setAttribute("aria-expanded", "false"); li0.classList.add("is-dismissed"); b.focus(); } else if (e.key === "ArrowDown" || e.key === "ArrowRight") undismiss(); });
+    li0.addEventListener("mouseleave", undismiss);
+    li0.addEventListener("focusout", function (e) { if (!e.relatedTarget || !li0.contains(e.relatedTarget)) undismiss(); });
+    b.addEventListener("click", undismiss);
   });
   // Menu mobile : bouton « Menu » qui déplie la liste sous lui, ou — réglage « tiroir » (data-kw-menu-drawer) — l'ouvre dans un panneau latéral : fond assombri, défilement de la page bloqué,
   // focus gardé dans le panneau (Tab boucle), Échap / clic extérieur / choix d'un lien le ferment et le focus revient au bouton. La classe is-menu-open est posée sur l'en-tête (état de style « Menu ouvert »).
@@ -276,7 +281,12 @@
       var sibs = Array.prototype.filter.call(group.children, function (x) { return x.tagName === "LI"; }), at = sibs.indexOf(li), n = sibs.length;
       var root = ul.closest(".kw-menu"), vertical = !top || !root || root.classList.contains("is-vertical") || Boolean(ul.closest(".kw-menu-panel"));
       var focusLink = function (x) { var l = x && x.querySelector(":scope > .kw-menu-link"); if (l) { e.preventDefault(); l.focus(); } };
-      var openSub = function () { var t = li.querySelector(":scope > .kw-sub-toggle"); if (!t) return false; t.setAttribute("aria-expanded", "true"); var first = li.querySelector(":scope > .kw-submenu > li"); if (!first) return false; focusLink(first); return true; };
+      var openSub = function () {
+        var t = li.querySelector(":scope > .kw-sub-toggle"); if (!t) return false; t.setAttribute("aria-expanded", "true");
+        var first = li.querySelector(":scope > .kw-submenu > li"); if (first) { focusLink(first); return true; }
+        var mega = li.querySelector(":scope > .kw-mega"), f = mega && mega.querySelector("a[href], button:not([disabled])"); // méga-menu : le premier lien ou bouton du panneau
+        if (f) { e.preventDefault(); f.focus(); return true; } return false;
+      };
       if (k === "Home") return focusLink(sibs[0]);
       if (k === "End") return focusLink(sibs[n - 1]);
       if (k === (vertical ? "ArrowDown" : "ArrowRight")) return focusLink(sibs[(at + 1) % n]);
@@ -287,6 +297,27 @@
         var parent = group.parentNode, t = parent && parent.querySelector(":scope > .kw-sub-toggle"); if (t) t.setAttribute("aria-expanded", "false"); focusLink(parent);
       }
     });
+  });
+  // Méga-menu : le panneau est recalé pour rester dans l'écran (décalage horizontal minimal), à l'ouverture au survol, au focus ou au clic
+  var fitMega = function (li) {
+    var p = li.querySelector(":scope > .kw-mega"); if (!p || window.getComputedStyle(p).position !== "absolute" || li.closest("[data-kw-mega-width=full]")) return;
+    p.style.marginLeft = "0px";
+    var r = p.getBoundingClientRect(), vw = document.documentElement.clientWidth, shift = 0;
+    if (r.right > vw - 8) shift = vw - 8 - r.right;
+    if (r.left + shift < 8) shift = 8 - r.left;
+    p.style.marginLeft = shift + "px";
+  };
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-menu-item.has-mega"), function (li) {
+    var later = function () { window.requestAnimationFrame(function () { fitMega(li); }); };
+    li.addEventListener("mouseenter", later); li.addEventListener("focusin", later);
+    var t = li.querySelector(":scope > .kw-sub-toggle"); if (t) t.addEventListener("click", later);
+  });
+  // Méga-menu et sous-menus ouverts au clic ou au clavier : un clic en dehors du menu, ou le focus qui le quitte, les referme (jamais de panneau resté ouvert hors de portée)
+  document.addEventListener("click", function (e) {
+    Array.prototype.forEach.call(document.querySelectorAll(".kw-menu .kw-sub-toggle[aria-expanded=true]"), function (t) { var li = t.parentNode; if (li && !li.contains(e.target)) t.setAttribute("aria-expanded", "false"); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-menu-item.has-mega"), function (li) {
+    li.addEventListener("focusout", function (e) { var t = li.querySelector(":scope > .kw-sub-toggle"); if (t && e.relatedTarget && !li.contains(e.relatedTarget)) t.setAttribute("aria-expanded", "false"); });
   });
   // Fenêtres (modales) de la page
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-modal-open]"), function (b) {

@@ -2287,6 +2287,7 @@
           box.appendChild(selectField("Ouverture du menu sur mobile", p.mobileMode === "drawer" ? "drawer" : "inline", [["inline", "Déplié sous le bouton"], ["drawer", "Tiroir latéral"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "drawer") { x.mobileMode = "drawer"; } else { delete x.mobileMode; delete x.drawerSide; } }); }, { disabled: disabled }));
           if (p.mobileMode === "drawer") box.appendChild(selectField("Côté du tiroir", p.drawerSide === "left" ? "left" : "right", [["right", "À droite"], ["left", "À gauche"]], function (v) { change(function () { byId(it.id).props.drawerSide = v; }); }, { disabled: disabled }));
         }
+        if (isHeaderDoc() && p.source && p.source !== "manual") megaSection(box, it, p, disabled);
         break;
       case "carousel":
         box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
@@ -7732,6 +7733,51 @@
         openStructurePicker({ parent: null, index: wasHome ? content.sections.length : 0 });
       } }, d.gabarit ? "Appliquer le gabarit" : "Continuer")));
     box.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); startStep = PC ? "catalog" : "choice"; paintStart(); } });
+  }
+  // ---------- Méga-menu (en-tête) : un panneau composé librement par rubrique du menu ----------
+  // Le panneau est un COMPOSANT du site (éditeur existant) ; le menu ne garde que « identifiant de la rubrique → identifiant du composant » (props.mega).
+  function megaStarter() {
+    var col = function (title) { return { type: "container", props: {}, styles: { desktop: { display: "flex", flexDirection: "column", gap: "8px", flexGrow: "1" } }, children: [{ type: "heading", props: { text: title, level: "3" } }, { type: "text", props: { html: "<p>Décrivez cette rubrique en une phrase.</p>" } }, { type: "button", props: { label: "En savoir plus", url: "/" } }] }; };
+    return { type: "layout", children: [{ type: "container", props: {}, styles: { desktop: { display: "flex", flexDirection: "row", gap: "32px" }, mobile: { flexDirection: "column" } }, children: [col("Première colonne"), col("Deuxième colonne"), col("Troisième colonne")] }] };
+  }
+  function megaSection(box, it, p, disabled) {
+    box.appendChild(h("p", { class: "pb-sub", text: "Méga-menus" }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Une rubrique du menu peut ouvrir un panneau composé librement : colonnes, images, textes, boutons. Le panneau est un composant de ce site : « Modifier le panneau » l'ouvre dans l'éditeur, « Mettre à jour » le publie." }));
+    var host = h("div", { "data-pb-mega": "" }, h("p", { class: "pb-hint", text: "Chargement des rubriques du menu…" }));
+    box.appendChild(host);
+    var mega = p.mega || {}, ids = Object.keys(mega).map(function (k) { return mega[k]; });
+    var q = "source=" + encodeURIComponent(p.source) + "&location=" + encodeURIComponent(p.location || "") + "&menuName=" + encodeURIComponent(p.menuName || "") + "&ids=" + ids.join(",");
+    api("GET", "/marketing/site-web/composants/" + PAGE.component.id + "/menu.json?" + q).then(function (r) {
+      host.textContent = "";
+      if (!r.items.length) { host.appendChild(h("p", { class: "pb-hint", text: "Aucun menu publié pour cette source : affectez un menu dans Apparence → Menus pour créer des panneaux." })); return; }
+      r.items.forEach(function (item) {
+        var cid = mega[String(item.id)], comp = cid ? r.components[cid] : null;
+        var row = h("div", { class: "pb-mega-row", "data-pb-mega-item": String(item.id) }, h("strong", { text: item.label }));
+        if (comp) {
+          row.appendChild(h("span", { class: "pb-hint", text: "Panneau : " + comp.name + (comp.hasDraft ? " (modifications non publiées)" : "") }));
+          row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-mega-edit": String(item.id), onclick: function () { window.open("/marketing/site-web/composants/" + comp.id + "/editeur", "_blank", "noopener"); } }, "Modifier le panneau"));
+          row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-pb-mega-remove": String(item.id), onclick: function () { change(function () { var x = byId(it.id).props; var m = Object.assign({}, x.mega || {}); delete m[String(item.id)]; if (Object.keys(m).length) x.mega = m; else { delete x.mega; delete x.megaTrigger; delete x.megaWidth; } }); toast("Panneau retiré de la rubrique (le composant est conservé)."); renderInspector(); } }, "Retirer"));
+        } else {
+          row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-pb-mega-create": String(item.id), onclick: function () { createPanel(item); } }, "Créer un panneau"));
+        }
+        host.appendChild(row);
+      });
+      if (ids.length) {
+        host.appendChild(selectField("Ouverture du panneau", p.megaTrigger === "click" ? "click" : "hover", [["hover", "Au survol (et au clavier)"], ["click", "Au clic"]], function (v) { setProp(it.id, "megaTrigger", v); }, { disabled: disabled }));
+        host.appendChild(selectField("Largeur du panneau", p.megaWidth === "full" ? "full" : "item", [["item", "Sous la rubrique"], ["full", "Pleine largeur de l'en-tête"]], function (v) { setProp(it.id, "megaWidth", v); }, { disabled: disabled }));
+      }
+    }, function () { host.textContent = ""; host.appendChild(h("p", { class: "pb-note is-warn", text: "Impossible de lire les rubriques du menu." })); });
+    function createPanel(item) {
+      var tryName = function (n) {
+        return api("POST", "/marketing/site-web/composants", { name: "Méga-menu · " + item.label + (n > 1 ? " (" + n + ")" : ""), section: megaStarter(), kind: "standard", global: !PAGE.siteId, siteId: PAGE.siteId }).catch(function (err) { if (n < 6 && /porte déjà ce nom/.test(err.message || "")) return tryName(n + 1); throw err; });
+      };
+      tryName(1).then(function (r) {
+        change(function () { var x = byId(it.id).props; var m = Object.assign({}, x.mega || {}); m[String(item.id)] = r.component.id; x.mega = m; if (!x.megaTrigger) x.megaTrigger = "hover"; if (!x.megaWidth) x.megaWidth = "item"; });
+        toast("Panneau créé. Modifiez-le dans l'onglet qui s'ouvre, puis cliquez « Mettre à jour ».");
+        window.open("/marketing/site-web/composants/" + r.component.id + "/editeur", "_blank", "noopener");
+        renderInspector();
+      }, apiFail);
+    }
   }
   // ---------- Réglages de l'EN-TÊTE (Header Builder) : bloc `header` de la section, validé par le serveur (headerSettings.js) ----------
   // Lecture : le bloc s'il existe, sinon l'ancien format (position de la première bande + headerFx) : le panneau affiche donc l'état réel d'un en-tête ancien.

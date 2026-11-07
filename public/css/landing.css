@@ -1528,3 +1528,18 @@ html.kw-noscroll { overflow: hidden; }
 @keyframes kw-slide-l { from { transform: translateX(-100%); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .kw-menu-backdrop, .kw-menu-panel, .kw-menu-panel.is-left, .kw-menu-panel.is-right { animation: none; } }
 
+/* Méga-menu (Header Builder) : panneau composé dans l'éditeur, ouvert au survol, au clic ou au clavier ; sur mobile, accordéon sous la rubrique */
+.kw-mega { display: none; box-sizing: border-box; flex-basis: 100%; min-width: 0; }
+.kw-sub-toggle[aria-expanded="true"] + .kw-mega { display: block; }
+@media (min-width: 768px) {
+  .kw-menu:not(.is-vertical) .kw-mega { position: absolute; top: 100%; left: 0; z-index: 30; min-width: min(720px, calc(100vw - 32px)); max-width: calc(100vw - 32px); padding: 20px 24px; border: 1px solid rgba(16, 34, 47, .12); border-radius: 12px; background: var(--kw-surface, #fff); color: var(--kw-text, #10222f); box-shadow: 0 16px 40px rgba(15, 23, 42, .16); }
+  .kw-menu[data-kw-mega=hover]:not(.is-vertical) .kw-menu-item.has-mega:hover > .kw-mega, .kw-menu[data-kw-mega=hover]:not(.is-vertical) .kw-menu-item.has-mega:focus-within > .kw-mega { display: block; }
+  /* pleine largeur : le panneau se cale sur l'en-tête (la rubrique cesse d'être le repère de position) */
+  .kw-menu[data-kw-mega-width=full]:not(.is-vertical) .kw-menu-item.has-mega { position: static; }
+  .kw-menu[data-kw-mega-width=full]:not(.is-vertical) .kw-mega { left: 0; right: 0; width: auto; min-width: 0; max-width: none; border-radius: 0 0 12px 12px; }
+  .lp-block.lp-site-header:has([data-kw-mega-width=full]):not(.kw-theme-sticky):not(.kw-theme-fixed):not(.kw-theme-overlay) { position: relative; }
+}
+@media (max-width: 767px) { .kw-mega { padding: 4px 0 8px 14px; } }
+.kw-menu-panel .kw-mega { padding: 4px 0 8px 14px; }
+.kw-menu .kw-menu-item.is-dismissed > .kw-mega, .kw-menu .kw-menu-item.is-dismissed > .kw-submenu { display: none !important; }
+
