@@ -5,7 +5,7 @@
 ## Fait
 * Audit complet : `docs/site-principal/MIGRATION_THEME_BUILDER_AUDIT.md`.
 * Retrait de 3 vues orphelines (`site.ejs`, `site-header.ejs`, `site-footer.ejs`), après recherche exhaustive : aucune n'est utilisée. Retour possible par `git revert`.
-* Nouveau test dans un vrai Chrome (`tests/site-principal-theme-builder.test.js`, avec un petit pilote `tests/helpers-chrome-cdp.js` car Playwright n'est pas installé) : accueil, catalogue, blog, connexion, pied de page, menu mobile, à 390 / 820 / 1280 px.
+* Nouveau test dans un vrai Chrome (`tests/site-principal-theme-builder.test.js`, avec un petit pilote `tests/helpers-chrome-site.js` car Playwright n'est pas installé) : accueil, catalogue, blog, connexion, pied de page, menu mobile, à 390 / 820 / 1280 px.
 
 ## Preuves exécutées
 * Nouveau test navigateur : 4 réussis sur 4. Sans modèle : habillage d'origine, aucun défilement horizontal. Avec modèles : en-tête et pied du Theme Builder affichés, aucun défaut de débordement, aucune erreur JavaScript. Après archivage : HTML de l'en-tête/pied et mesures calculées IDENTIQUES à l'état de départ (les 12 combinaisons page x largeur). Isolation : un modèle du site principal n'apparaît pas sur un site client, et inversement.

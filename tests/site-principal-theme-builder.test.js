@@ -1,4 +1,4 @@
-// Site principal + Theme Builder, dans un VRAI Chrome (pilote DevTools maison, voir helpers-chrome-cdp.js) et sur un serveur réel.
+// Site principal + Theme Builder, dans un VRAI Chrome (pilote DevTools maison, voir helpers-chrome-site.js) et sur un serveur réel.
 // Preuves : (1) SANS modèle, l'habillage d'origine s'affiche (mesures à 390 / 820 / 1280 px) ; (2) AVEC modèles publiés, l'en-tête et le pied du Theme Builder
 // s'affichent sans défilement horizontal ; (3) après archivage, le rendu redevient EXACTEMENT celui d'avant (HTML de l'habillage et mesures identiques) ;
 // (4) isolation : un modèle du site principal n'apparaît jamais sur un site client (adresse de domaine) et inversement.
@@ -9,7 +9,7 @@ const http = require("http");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
 
-const Cdp = require("./helpers-chrome-cdp");
+const Cdp = require("./helpers-chrome-site");
 const SKIP = Cdp.AVAILABLE ? false : "Chrome absent : preuve navigateur non exécutée sur cette machine";
 const WIDTHS = [390, 820, 1280];
 const PAGES = ["/", "/catalogue", "/blog", "/connexion"];
