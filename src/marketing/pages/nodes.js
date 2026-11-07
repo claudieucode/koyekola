@@ -749,9 +749,11 @@ const NODE_TYPES = {
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80), sort: oneOf("recent", "title", "price")(p.sort) || "recent",
     showPrice: p.showPrice !== false, cta: line(p.cta, 40) || "Découvrir", empty: line(p.empty, 160) || "Aucune formation publiée pour le moment.",
   }) },
-  search: { label: "Recherche", category: "dynamic", props: (p) => ({
-    target: oneOf("blog", "catalogue")(p.target) || "catalogue", placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher",
-  }) },
+  // skin « overlay » (Header Builder) : une loupe qui ouvre la recherche en plein écran ; suggest : suggestions pendant la frappe (cible « site » : articles et pages publiés du site, mêmes règles que /recherche)
+  search: { label: "Recherche", category: "dynamic", props: (p) => {
+    const target = oneOf("blog", "catalogue", "site")(p.target) || "catalogue";
+    return { target, placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher", ...(p.skin === "overlay" ? { skin: "overlay" } : {}), ...(p.suggest === true && target === "site" ? { suggest: true } : {}) };
+  } },
   account: { label: "Compte du visiteur", category: "dynamic", props: (p) => ({
     login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier",
   }) },

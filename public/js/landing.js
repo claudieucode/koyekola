@@ -298,6 +298,51 @@
       }
     });
   });
+  // Recherche : loupe → recherche en plein écran (dialogue natif : Échap ferme, le focus est rendu à la loupe), et suggestions pendant la frappe (data-kw-suggest) :
+  // requête différée de 200 ms, une seule à la fois, résultats écrits avec textContent (jamais de HTML), flèches Haut / Bas, Entrée suit le lien, annonce du nombre de résultats pour les lecteurs d'écran.
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-search-open]"), function (open) {
+    var dlg = document.getElementById(open.getAttribute("data-kw-search-open")); if (!dlg || typeof dlg.showModal !== "function" || document.body.hasAttribute("data-kw-builder")) return;
+    open.addEventListener("click", function () { dlg.showModal(); var input = dlg.querySelector("input[type=search]"); if (input) input.focus(); });
+    var close = dlg.querySelector(".kw-search-close"); if (close) close.addEventListener("click", function () { dlg.close(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); }); // clic sur le fond
+    dlg.addEventListener("close", function () { open.focus(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-suggest]"), function (form) {
+    var input = form.querySelector("input[type=search]"), host = form.parentNode, list = host.querySelector(".kw-search-suggest"), status = host.querySelector("[data-kw-suggest-status]");
+    if (!input || !list || document.body.hasAttribute("data-kw-builder")) return;
+    var url = form.getAttribute("data-kw-suggest"), timer = null, ctl = null, shown = -1;
+    var hide = function () { list.hidden = true; list.textContent = ""; shown = -1; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); };
+    var mark = function (i) { var items = list.querySelectorAll("[role=option]"); Array.prototype.forEach.call(items, function (it, k) { it.setAttribute("aria-selected", k === i ? "true" : "false"); }); shown = i; if (items[i]) input.setAttribute("aria-activedescendant", items[i].id); else input.removeAttribute("aria-activedescendant"); };
+    var paint = function (results) {
+      list.textContent = "";
+      if (!results.length) { hide(); if (status) status.textContent = "Aucune suggestion"; return; }
+      results.forEach(function (r, k) {
+        var li = document.createElement("li"), a = document.createElement("a"), kind = document.createElement("span");
+        li.setAttribute("role", "option"); li.id = list.id + "-" + k; li.setAttribute("aria-selected", "false");
+        a.href = r.url; a.textContent = r.title; kind.className = "kw-suggest-kind"; kind.textContent = r.kind || ""; a.appendChild(kind); li.appendChild(a); list.appendChild(li);
+      });
+      list.hidden = false; input.setAttribute("aria-expanded", "true"); shown = -1;
+      if (status) status.textContent = results.length + (results.length > 1 ? " suggestions disponibles" : " suggestion disponible");
+    };
+    input.setAttribute("role", "combobox"); input.setAttribute("aria-expanded", "false");
+    input.addEventListener("input", function () {
+      clearTimeout(timer); var q = input.value.trim();
+      if (q.length < 2) { if (ctl) ctl.abort(); hide(); if (status) status.textContent = ""; return; }
+      timer = setTimeout(function () {
+        if (ctl) ctl.abort(); ctl = typeof AbortController === "function" ? new AbortController() : null;
+        fetch(url + "?q=" + encodeURIComponent(q), { credentials: "same-origin", signal: ctl ? ctl.signal : undefined }).then(function (r) { return r.ok ? r.json() : { results: [] }; })
+          .then(function (j) { if (input.value.trim() === q) paint(Array.isArray(j.results) ? j.results.slice(0, 6) : []); }, function () { /* annulée ou hors ligne : aucune suggestion */ });
+      }, 200);
+    });
+    input.addEventListener("keydown", function (e) {
+      var items = list.querySelectorAll("[role=option]");
+      if (e.key === "ArrowDown" && items.length) { e.preventDefault(); mark((shown + 1) % items.length); }
+      else if (e.key === "ArrowUp" && items.length) { e.preventDefault(); mark((shown - 1 + items.length) % items.length); }
+      else if (e.key === "Enter" && shown >= 0 && items[shown]) { e.preventDefault(); items[shown].querySelector("a").click(); }
+      else if (e.key === "Escape" && !list.hidden) { e.stopPropagation(); hide(); }
+    });
+    document.addEventListener("click", function (e) { if (!host.contains(e.target)) hide(); });
+  });
   // Méga-menu : le panneau est recalé pour rester dans l'écran (décalage horizontal minimal), à l'ouverture au survol, au focus ou au clic
   var fitMega = function (li) {
     var p = li.querySelector(":scope > .kw-mega"); if (!p || window.getComputedStyle(p).position !== "absolute" || li.closest("[data-kw-mega-width=full]")) return;

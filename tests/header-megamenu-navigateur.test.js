@@ -107,5 +107,12 @@ describe("Header Builder L4 : méga-menu (navigateur)", { skip: SKIP }, () => {
     v = await env.visit(); await servicesItem(v.page).hover(); assert.match(await v.page.locator(".lp-site-header .kw-mega").innerText(), /Titre modifié/, "publié : visible"); await v.context.close();
   });
 
+  test("suivi des clics : chaque lien du menu et du panneau redirige vers sa vraie destination (ordre du gabarit = ordre de linksOf)", async () => {
+    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMega({}));
+    const { context, page } = await env.visit();
+    await env.checkTrackedLinks(page, { Accueil: "/", Services: "/services", Contact: "/contact", "Tout voir": "/tout-voir" });
+    await context.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(env.errors, []); });
 });

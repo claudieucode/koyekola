@@ -2499,7 +2499,9 @@
         box.appendChild(textField("Texte s'il n'y a aucune formation", p.empty, set("empty"), { max: 160, disabled: disabled }));
         break;
       case "search":
-        box.appendChild(selectField("Rechercher dans", p.target, [["catalogue", "Le catalogue des formations"], ["blog", "Le blog"]], function (v) { setProp(it.id, "target", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Rechercher dans", p.target, [["catalogue", "Le catalogue des formations"], ["blog", "Le blog"], ["site", "Le site (articles et pages)"]], function (v) { change(function () { var x = byId(it.id).props; x.target = v; if (v !== "site") delete x.suggest; }); }, { disabled: disabled }));
+        box.appendChild(selectField("Affichage", p.skin === "overlay" ? "overlay" : "classic", [["classic", "Champ de recherche dans la page"], ["overlay", "Loupe qui ouvre la recherche en plein écran"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "overlay") x.skin = "overlay"; else delete x.skin; }); }, { disabled: disabled }));
+        if (p.target === "site") box.appendChild(checkField("Suggestions pendant la frappe", p.suggest === true, function (v) { change(function () { var x = byId(it.id).props; if (v) x.suggest = true; else delete x.suggest; }); }, { disabled: disabled, hint: "Jusqu'à 6 articles ou pages du site, dès 2 caractères saisis." }));
         box.appendChild(textField("Texte d'exemple dans le champ", p.placeholder, set("placeholder"), { max: 80, disabled: disabled }));
         box.appendChild(textField("Texte du bouton", p.button, set("button"), { max: 30, disabled: disabled }));
         break;

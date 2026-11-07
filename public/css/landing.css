@@ -1543,3 +1543,16 @@ html.kw-noscroll { overflow: hidden; }
 .kw-menu-panel .kw-mega { padding: 4px 0 8px 14px; }
 .kw-menu .kw-menu-item.is-dismissed > .kw-mega, .kw-menu .kw-menu-item.is-dismissed > .kw-submenu { display: none !important; }
 
+/* Recherche (Header Builder) : loupe → plein écran, suggestions pendant la frappe */
+.kw-search-open { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 10px; background: none; color: inherit; cursor: pointer; }
+.kw-search-open:hover { background: rgba(127, 127, 127, .14); } .kw-search-open svg { width: 22px; height: 22px; }
+.kw-search-dialog { width: 100vw; max-width: none; height: 100vh; max-height: none; margin: 0; padding: 12vh 6vw 6vh; border: 0; background: var(--kw-background, #fff); color: var(--kw-text, #10222f); box-sizing: border-box; }
+.kw-search-dialog[open] { display: block; animation: kw-fade .18s ease-out; } .kw-search-dialog::backdrop { background: rgba(15, 23, 42, .55); }
+.kw-search-dialog .kw-search-form { display: flex; gap: 10px; max-width: 760px; margin: 0 auto; } .kw-search-dialog .kw-search-form input { flex: 1; min-height: 56px; padding: 0 18px; font-size: 1.3rem; border-radius: 12px; border: 1px solid rgba(16, 34, 47, .25); background: transparent; color: inherit; }
+.kw-search-close { position: absolute; top: 16px; right: 16px; min-width: 48px; min-height: 48px; border: 0; border-radius: 12px; background: none; color: inherit; font-size: 32px; line-height: 1; cursor: pointer; } .kw-search-close:hover { background: rgba(127, 127, 127, .14); }
+.kw-search-suggest { list-style: none; margin: 8px auto 0; padding: 6px; max-width: 760px; border: 1px solid rgba(16, 34, 47, .12); border-radius: 12px; background: var(--kw-surface, #fff); box-shadow: 0 10px 28px rgba(15, 23, 42, .12); }
+.kw-search-wrap { position: relative; } .kw-search-wrap > .kw-search-suggest { position: absolute; left: 0; right: 0; top: 100%; z-index: 40; margin: 6px 0 0; max-width: none; }
+.kw-search-suggest li a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px; color: inherit; text-decoration: none; }
+.kw-search-suggest li a:hover, .kw-search-suggest li[aria-selected="true"] a { background: rgba(127, 127, 127, .16); } .kw-suggest-kind { opacity: .65; font-size: .82em; flex: none; }
+@media (prefers-reduced-motion: reduce) { .kw-search-dialog[open] { animation: none; } }
+

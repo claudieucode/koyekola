@@ -47,6 +47,19 @@ async function setup({ siteName = "Site en-tête" } = {}) {
     if (opts.tall !== false) await page.addStyleTag({ content: "body, .lp-main{min-height:4000px}" });
     return { context, page };
   };
+  // Suivi des clics : chaque lien compté (/p/<adresse>/clic/<n>) doit rediriger vers la destination de SON texte (l'ordre du gabarit et celui de linksOf doivent coïncider)
+  env.checkTrackedLinks = async (page, expected) => {
+    const { Client } = require("./helpers");
+    const links = await page.evaluate(() => [...document.querySelectorAll(".lp-site-header a[href*='/clic/']")].map((a) => ({ text: a.textContent.trim().split("\n")[0].trim(), href: a.getAttribute("href") })));
+    const seen = {};
+    for (const l of links) {
+      const key = Object.keys(expected).filter((k) => l.text === k || l.text.startsWith(k)).sort((x, y) => y.length - x.length)[0]; // le texte peut inclure une description
+      if (!key) continue;
+      const r = await new Client(env.srv.base).request(l.href, { headers: { "User-Agent": "Mozilla/5.0 (Macintosh) Chrome/120" } });
+      assert.equal(r.location, expected[key], `« ${key} » (${l.href}) redirige vers ${r.location} au lieu de ${expected[key]}`); seen[key] = true;
+    }
+    for (const k of Object.keys(expected)) assert.ok(seen[k], `lien suivi « ${k} » absent`);
+  };
   env.close = async () => { if (env.browser) await env.browser.close(); if (env.db) env.db.close(); if (env.srv) await env.srv.stop(); };
   return env;
 }

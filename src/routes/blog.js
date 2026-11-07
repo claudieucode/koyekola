@@ -241,6 +241,28 @@ router.get("/recherche", (req, res) => {
   res.set("Cache-Control", "private, no-cache").render("search", { q, articles, pages, seo: { noindex: true }, title: q ? `Recherche : ${q}` : "Recherche" });
 });
 
+// Suggestions pendant la frappe (widget Recherche) : MÊMES règles de portée que /recherche (articles publiés du domaine, pages publiées du site principal), mais seulement titre et adresse,
+// 6 résultats au plus, 2 caractères minimum, jamais mis en cache ; aucun HTML renvoyé (le navigateur écrit les textes avec textContent).
+router.get("/recherche/suggestions", (req, res) => {
+  const fold = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const q = String(req.query.q || "").replace(/\s+/g, " ").trim().slice(0, 100);
+  const out = [];
+  if (q.length >= 2) {
+    const terms = fold(q).split(" ").filter(Boolean);
+    const matches = (parts) => { const hay = fold(parts.join(" \n ")); return terms.every((t) => hay.includes(t)); };
+    const scope = urls.contentScope("post", "posts.id", req.kwSite || null);
+    for (const p of postColumns.lightRows(db.prepare(`SELECT ${postColumns.listColumns()} FROM posts WHERE published = 1 AND deleted_at IS NULL${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC`).all(...(scope ? scope.params : [])))) {
+      if (out.length >= 6) break;
+      if (matches([p.title, p.excerpt, p.category, p.subcategory, p.tags])) out.push({ title: String(p.title || "").slice(0, 120), url: urls.publicPath("post", p), kind: "Article" });
+    }
+    if (out.length < 6) for (const p of db.prepare("SELECT name, title, slug FROM mk_landing_pages WHERE status = 'published' AND archived_at IS NULL AND kind = 'page' AND site_id IS NULL ORDER BY published_at DESC, id DESC").all()) {
+      if (out.length >= 6) break;
+      if (matches([p.name, p.title])) out.push({ title: String(p.title || p.name || "").slice(0, 120), url: `/p/${encodeURIComponent(p.slug)}`, kind: "Page" });
+    }
+  }
+  res.set("Cache-Control", "no-store").json({ q, results: out });
+});
+
 router.get("/blog/feed.xml", (req, res) => {
   const { escapeXml } = require("../utils/seo");
   const feedScope = urls.contentScope("post", "posts.id", req.kwSite || null); // le flux d'un domaine ne contient que les articles de ce domaine

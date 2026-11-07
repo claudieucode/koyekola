@@ -114,5 +114,12 @@ describe("Header Builder L3 : menus et tiroir mobile (navigateur)", { skip: SKIP
     await context.close();
   });
 
+  test("suivi des clics sur trois niveaux : chaque lien redirige vers sa vraie destination", async () => {
+    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMenu({}));
+    const { context, page } = await env.visit();
+    await env.checkTrackedLinks(page, { Accueil: "/", Services: "/services", Web: "/web", Conseil: "/conseil", WordPress: "/wordpress", Boutique: "/boutique", Contact: "/contact" });
+    await context.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(env.errors, []); });
 });
