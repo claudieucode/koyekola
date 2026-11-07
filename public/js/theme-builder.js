@@ -284,7 +284,65 @@
     catch (e) { status(e.message, "err"); }
   }
   async function remove(t) { if (!confirm(`Supprimer définitivement « ${t.name} » ? Le document (page ou composant) reste dans vos pages.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
+  // Publication d'un pied : « Où afficher ce pied ? » (tout le site / conditions personnalisées), résumé, conflits expliqués AVANT publication, test d'adresse
+  let pubT = null, pubPlan = null, pubTimer = 0, pubSeq = 0;
+  const scopeOf = () => { const r = document.querySelector('input[name="tb-scope"]:checked'); return r ? r.value : ""; };
+  const pubRd = (id) => [...$(id).querySelectorAll("[data-row]")].map((r) => r.read());
+  const pubConds = () => ({ include: scopeOf() === "custom" ? pubRd("tb-pub-inc") : [], exclude: pubRd("tb-pub-exc") });
+  const issue = (k, txt) => { const d = el("div", "tb-issue"); d.dataset.k = k; d.append(el("p", "", txt)); return d; };
+  function pubGate() {
+    const sc = scopeOf(), box = $("tb-pub-issues"), rep = box.querySelector("[data-replace]");
+    const blocked = pubPlan && pubPlan.blocking.length && !(rep && rep.checked);
+    $("tb-pub-go").disabled = !sc || !pubPlan || Boolean(blocked) || (sc === "custom" && !pubConds().include.length && !pubConds().exclude.length);
+  }
+  async function pubRefresh() {
+    const my = ++pubSeq, sc = scopeOf(), kids = $("tb-pub-conds").children; $("tb-pub-conds").hidden = !sc;
+    for (let i = 0; i < 3; i++) kids[i].hidden = sc === "site";
+    if (!sc) { $("tb-pub-sum").textContent = ""; $("tb-pub-issues").textContent = ""; $("tb-pub-go").disabled = true; return; }
+    let r; $("tb-pub-msg").hidden = true;
+    try { r = (await api(`/modeles/${pubT.id}/plan-publication?conditions=${encodeURIComponent(JSON.stringify(pubConds()))}`)).plan; } catch (e) { if (my === pubSeq) { $("tb-pub-msg").hidden = false; $("tb-pub-msg").textContent = e.message; $("tb-pub-go").disabled = true; } return; }
+    if (my !== pubSeq) return;
+    const keep = $("tb-pub-issues").querySelector("[data-replace]") && $("tb-pub-issues").querySelector("[data-replace]").checked;
+    pubPlan = r; $("tb-pub-sum").textContent = `Résumé : ${r.summary.text}.`;
+    const box = $("tb-pub-issues"); box.textContent = "";
+    if (r.impact.of) { const names = r.impact.takesFrom.map((x) => `« ${x.name} » (${x.pages})`).join(", "); box.append(issue("info", `Parmi les ${r.impact.of} page(s) publiée(s) du site, ce pied s'affichera sur ${r.impact.wins}${names ? `, à la place de ${names}` : ""}.`)); }
+    for (const b of r.blocking) { const d = issue("block", b.message); const lb = el("label", "tb-scope-opt"), cb = el("input"); cb.type = "checkbox"; cb.dataset.replace = "1"; cb.checked = Boolean(keep); cb.addEventListener("change", pubGate); lb.append(cb, el("span", "", `Remplacer « ${b.otherName} » (il repasse en brouillon, rien n'est supprimé)`)); d.append(lb); box.append(d); }
+    for (const w of r.warnings) box.append(issue("warn", `${w.message} Vous pouvez garder les deux : la règle de priorité est automatique (le plus précis, puis le plus récent).`));
+    for (const o of r.overlaps) box.append(issue("info", o.message));
+    pubGate();
+  }
+  const pubSoon = () => { clearTimeout(pubTimer); pubTimer = setTimeout(pubRefresh, 200); };
+  async function publishDialog(t) {
+    try {
+      if (!opts) opts = await api("/options");
+      const first = (await api(`/modeles/${t.id}/plan-publication`)).plan.firstPublish;
+      pubT = t; pubPlan = null; $("tb-dlg-pub-h").textContent = `Publier « ${t.name} »`;
+      const inc = $("tb-pub-inc"), exc = $("tb-pub-exc"); inc.textContent = ""; exc.textContent = "";
+      for (const c of t.conditions.include || []) inc.append(row(allowedKinds(t.type), c));
+      for (const c of t.conditions.exclude || []) exc.append(row(allowedKinds(t.type), c));
+      $("tb-scope-site").checked = !first && !(t.conditions.include || []).length; $("tb-scope-custom").checked = !first && (t.conditions.include || []).length > 0;
+      $("tb-pub-url").value = ""; $("tb-pub-try-out").textContent = ""; $("tb-pub-msg").hidden = true;
+      openDlg("tb-dlg-pub"); await pubRefresh(); ($("tb-scope-site").checked || $("tb-scope-custom").checked ? $("tb-pub-go") : $("tb-scope-site")).focus();
+    } catch (e) { status(e.message, "err"); }
+  }
+  $("tb-pub-add-inc").addEventListener("click", () => { $("tb-pub-inc").append(row(allowedKinds(pubT.type))); pubSoon(); });
+  $("tb-pub-add-exc").addEventListener("click", () => { $("tb-pub-exc").append(row(allowedKinds(pubT.type))); pubSoon(); });
+  $("tb-form-pub").addEventListener("change", (e) => { if (!e.target.matches("[data-replace]")) pubSoon(); });
+  $("tb-form-pub").addEventListener("click", (e) => { if (e.target.closest("[data-row] button")) pubSoon(); });
+  $("tb-pub-try").addEventListener("click", async () => {
+    const out = $("tb-pub-try-out"); out.textContent = "";
+    try { const r = await api(`/modeles/${pubT.id}/s-applique?url=${encodeURIComponent($("tb-pub-url").value.trim())}&conditions=${encodeURIComponent(JSON.stringify(pubConds()))}`); out.textContent = `${r.pageLabel} : ${r.message}${r.note ? ` ${r.note}` : ""}`; }
+    catch (e) { out.textContent = e.message; }
+  });
+  $("tb-form-pub").addEventListener("submit", async (e) => {
+    e.preventDefault(); const rep = $("tb-pub-issues").querySelector("[data-replace]");
+    try {
+      const r = await post(`/modeles/${pubT.id}/publier`, { strict: true, scope: scopeOf(), conditions: pubConds(), revision: pubT.revision, replace: Boolean(rep && rep.checked) });
+      closeDlg($("tb-dlg-pub")); status(`Publié. ${r.summary.text}.${r.replaced && r.replaced.length ? ` Remplace « ${r.replaced.map((o) => o.name).join(" », « ")} » (repassé en brouillon).` : ""}`, "ok"); await refresh();
+    } catch (err) { $("tb-pub-msg").hidden = false; $("tb-pub-msg").textContent = err.message; }
+  });
   async function publish(t) {
+    if (t.type === "footer" && t.status !== "published") return publishDialog(t);
     const go = async (replace) => { const r = await post(`/modeles/${t.id}/publier`, { revision: t.revision, replace }); status(r.replaced && r.replaced.length ? `Publié : remplace « ${r.replaced.map((o) => o.name).join(" », « ")} » (repassé en brouillon).` : r.conflicts && r.conflicts.length ? `Publié, avec ${r.conflicts.length} avertissement(s) : voir les conflits.` : "Modèle publié.", "ok"); await refresh(); };
     try { await go(false); }
     catch (e) {
@@ -303,6 +361,27 @@
 
   // ---- éditeur de conditions
   const LIST = { ids: "Identifiants (virgules)", category: "Catégories (virgules)", childCategory: "Sous-catégories de (virgules)", tag: "Étiquettes (virgules)", author: "Auteurs (identifiants)", names: "Noms (virgules)" };
+  // Sélecteur avec recherche (listes de pages, catégories, étiquettes, auteurs, rôles…) : puces + champ de recherche + résultats (boutons, accessibles au clavier). Valeurs lues par get().
+  const PICK = { "page.ids": ["page", "Pages"], "course.ids": ["course", "Formations"], "post.category": ["category", "Catégories"], "post.tag": ["tag", "Étiquettes"], "product.category": ["product_category", "Catégories de produits"], "product.tag": ["product_tag", "Étiquettes de produits"],
+    "page.author": ["author", "Auteurs"], "post.author": ["author", "Auteurs"], "product.author": ["author", "Auteurs"], "author.ids": ["author", "Auteurs"], "visitor.roles": ["role", "Rôles"] };
+  function picker(type, title, numeric) {
+    const root = el("div", "tb-pick"), chips = el("div", "tb-pick-chips"), inp = el("input"), list = el("ul", "tb-pick-list"), sel = new Map(); let t = 0, seq = 0;
+    inp.type = "search"; inp.placeholder = "Rechercher dans la liste…"; inp.autocomplete = "off"; inp.setAttribute("aria-label", `${title} : rechercher`); list.hidden = true;
+    const changed = () => root.dispatchEvent(new Event("change", { bubbles: true }));
+    const paint = () => { chips.textContent = ""; for (const [v, l] of sel) { const c = el("span", "tb-chip"); c.append(el("span", "", l)); const x = el("button", "", "×"); x.type = "button"; x.setAttribute("aria-label", `Retirer ${l}`); x.addEventListener("click", () => { sel.delete(v); paint(); changed(); inp.focus(); }); c.append(x); chips.append(c); } };
+    const load = async () => {
+      const my = ++seq; let r; try { r = await api(`/cibles?type=${type}&q=${encodeURIComponent(inp.value.trim())}`); } catch { return; } if (my !== seq) return;
+      list.textContent = ""; const items = r.items.filter((i) => !sel.has(i.value)); list.hidden = false;
+      if (!items.length) list.append(el("li", "tb-pick-empty", r.items.length ? "Tout est déjà choisi." : "Aucun résultat."));
+      for (const i of items) { const li = el("li"), b = el("button", "", i.hint ? `${i.label} (${i.hint})` : i.label); b.type = "button"; b.addEventListener("click", () => { sel.set(i.value, i.label); paint(); changed(); inp.value = ""; list.hidden = true; inp.focus(); }); li.append(b); list.append(li); }
+    };
+    inp.addEventListener("focus", load); inp.addEventListener("input", () => { clearTimeout(t); t = setTimeout(load, 200); });
+    inp.addEventListener("keydown", (e) => { if (e.key === "Escape" && !list.hidden) { e.stopPropagation(); e.preventDefault(); list.hidden = true; } });
+    root.addEventListener("focusout", () => setTimeout(() => { if (!root.contains(document.activeElement)) list.hidden = true; }, 120));
+    root.append(chips, inp, list);
+    root._pick = { get: () => [...sel.keys()], set: (vals) => { sel.clear(); for (const v of [].concat(vals || [])) { const pg = type === "page" && opts ? opts.pages.find((p) => p.id === Number(v)) : null; sel.set(numeric ? Number(v) : v, pg ? pg.name : numeric ? `n° ${v}` : String(v)); } paint(); } };
+    return root;
+  }
   function row(kindsAllowed, c) {
     const r = el("div", "tb-row"); const kw = el("label", "sw-field", "Condition"); const ks = el("select"); for (const k of opts.kinds.filter((k) => kindsAllowed.includes(k.key))) { const o = el("option", "", k.label); o.value = k.key; ks.append(o); } kw.append(ks); r.append(kw);
     const params = el("div", "tb-row-params"); params.style.display = "contents"; r.append(params); const rm = el("button", "btn btn-sm btn-outline", "Retirer"); rm.type = "button"; rm.addEventListener("click", () => { r.remove(); $("tb-dlg-cond").dataset.dirty = "1"; }); r.append(rm);
@@ -313,6 +392,8 @@
         if (k === "sub") { w.append(el("span", "", "Type d'archive")); inp = el("select"); for (const s of opts.subs[ks.value] || []) { const o = el("option", "", { all: "Toutes", blog: "Blog", category: "Catégorie", tag: "Étiquette", author: "Auteur", date: "Date", search: "Recherche", shop: "Boutique" }[s] || s); o.value = s; inp.append(o); } }
         else if (k === "parent") { w.append(el("span", "", "Page parente")); inp = el("select"); for (const p of opts.pages) { const o = el("option", "", p.name); o.value = p.id; inp.append(o); } }
         else if (k === "direct" || k === "child") { w.append(el("span", "", k === "direct" ? "Enfants directs seulement" : "Inclure les sous-éléments")); inp = el("input"); inp.type = "checkbox"; }
+        else if (k === "state") { w.append(el("span", "", "Connexion")); inp = el("select"); for (const [v, l] of [["in", "Connecté"], ["out", "Non connecté"]]) { const o = el("option", "", l); o.value = v; inp.append(o); } }
+        else if (PICK[`${ks.value}.${k}`]) { const [pt, title] = PICK[`${ks.value}.${k}`]; w.append(el("span", "", title)); inp = picker(pt, title, ["page", "course", "author"].includes(pt)); }
         else if (k === "id") { w.append(el("span", "", "Identifiant")); inp = el("input"); }
         else if (k === "args") continue;
         else { w.append(el("span", "", LIST[k] || k)); inp = el("input"); inp.maxLength = 400; if (k === "ids" && ks.value === "page") { inp.placeholder = "ex. " + (opts.pages[0] ? opts.pages[0].id : "12"); } }
@@ -320,10 +401,10 @@
       }
     };
     ks.addEventListener("change", fields); if (c) ks.value = c.kind; fields();
-    if (c) for (const inp of params.querySelectorAll("[data-k]")) { const v = c[inp.dataset.k]; if (v === undefined) continue; if (inp.type === "checkbox") inp.checked = Boolean(v); else inp.value = Array.isArray(v) ? v.join(", ") : v; }
+    if (c) for (const inp of params.querySelectorAll("[data-k]")) { const v = c[inp.dataset.k]; if (v === undefined) continue; if (inp._pick) inp._pick.set(v); else if (inp.type === "checkbox") inp.checked = Boolean(v); else inp.value = Array.isArray(v) ? v.join(", ") : v; }
     r.dataset.row = "1"; r.getKind = () => ks.value; r.read = () => {
       const o = { kind: ks.value };
-      for (const inp of params.querySelectorAll("[data-k]")) { const k = inp.dataset.k; if (inp.type === "checkbox") { if (inp.checked) o[k] = true; } else if (inp.value.trim() !== "") { o[k] = k === "parent" ? Number(inp.value) : k === "sub" ? (inp.value === "all" ? undefined : inp.value) : inp.value; } }
+      for (const inp of params.querySelectorAll("[data-k]")) { const k = inp.dataset.k; if (inp._pick) { const v = inp._pick.get(); if (v.length) o[k] = v; } else if (inp.type === "checkbox") { if (inp.checked) o[k] = true; } else if (inp.value.trim() !== "") { o[k] = k === "parent" ? Number(inp.value) : k === "sub" ? (inp.value === "all" ? undefined : inp.value) : inp.value; } }
       return o;
     };
     return r;

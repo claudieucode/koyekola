@@ -894,7 +894,7 @@ const NODE_TYPES = {
 // Catégories dans l'ordre d'Elementor. Chaque type d'élément y a une fiche : catégorie, mots de recherche (ce que l'on tape
 // naturellement), permission exigée pour l'AJOUTER ou le MODIFIER (le cadenas de la bibliothèque, vérifié aussi à
 // l'enregistrement, voir lockedWidgetChanges) et version du schéma de ses réglages.
-const WIDGET_GROUPS = { layout: "Mise en page", basic: "Basique", general: "Général", form: "Formulaire", advanced: "Avancé", site: "Site", commerce: "E-commerce", social: "Réseaux sociaux" };
+const WIDGET_GROUPS = { layout: "Mise en page", basic: "Basique", general: "Général", form: "Formulaire", advanced: "Avancé", site: "Site", commerce: "E-commerce", social: "Réseaux sociaux", footer: "Pied de page" };
 const WIDGETS = {
   container: ["layout", "boite bloc conteneur div section flexbox flex zone"],
   grid: ["layout", "grille tableau colonnes lignes cases grid"],
@@ -1286,12 +1286,14 @@ function sanitizeRich(input) {
     allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "s", "sup", "sub", "a", "ul", "ol", "li", "blockquote", "code", "mark", "h2", "h3", "h4", "h5", "h6", "span"],
     allowedAttributes: { a: ["href", "target", "rel"], p: ["style"], h2: ["style"], h3: ["style"], h4: ["style"], h5: ["style"], h6: ["style"], li: ["style"], span: ["style"], mark: [] },
     allowedStyles: { "*": { "text-align": [/^(left|center|right|justify)$/], color: [/^#[0-9a-f]{3,8}$/i], "background-color": [/^#[0-9a-f]{3,8}$/i], "padding-left": [/^\d{1,3}px$/] } },
-    allowedSchemes: ["https"],
+    allowedSchemes: ["https", "mailto", "tel"],
     allowProtocolRelative: false,
     transformTags: {
       a: (tag, attribs) => {
         const href = String(attribs.href || "");
-        const ok = /^\/(?!\/)[^\s<>"'`\\]*$/.test(href) || /^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(href);
+        // Mêmes schémas que linkUrl (sections.js), formes strictes : page du site, https://, e-mail sans paramètre, téléphone en chiffres
+        const ok = /^\/(?!\/)[^\s<>"'`\\]*$/.test(href) || /^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(href)
+          || /^mailto:[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63}){1,5}$/.test(href) || /^tel:\+?[0-9]{4,15}$/.test(href);
         if (!ok) return { tagName: "span", attribs: {} };
         return { tagName: "a", attribs: { href, ...(attribs.target === "_blank" && href.startsWith("https://") ? { target: "_blank", rel: "noopener noreferrer" } : {}) } };
       },
@@ -1415,12 +1417,12 @@ function sanitizeHtmlBlock(input) {
   const attrs = { "*": common, a: ["href", "target", "rel", ...common], img: ["src", "alt", "width", "height", "loading", ...common], td: ["colspan", "rowspan", ...common], th: ["colspan", "rowspan", "scope", ...common], time: ["datetime", ...common], ol: ["start", "reversed", ...common], details: ["open", ...common] };
   for (const t of SVG_TAGS) attrs[t] = SVG_ATTRS.concat(common);
   return sanitizeHtml(String(input || "").slice(0, 20000), {
-    allowedTags: tags, allowedAttributes: attrs, allowedSchemes: ["https", "mailto"], allowedSchemesByTag: { img: ["https"] }, allowProtocolRelative: false,
+    allowedTags: tags, allowedAttributes: attrs, allowedSchemes: ["https", "mailto", "tel"], allowedSchemesByTag: { img: ["https"] }, allowProtocolRelative: false,
     parser: { lowerCaseAttributeNames: false },
     transformTags: {
       a: (tag, a) => {
         const href = String(a.href || "");
-        const ok = /^\/(?!\/)[^\s<>"'`\\]*$/.test(href) || /^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(href) || /^#[a-z][a-z0-9-]{0,39}$/.test(href) || /^mailto:[^\s<>"'`\\]+$/.test(href);
+        const ok = /^\/(?!\/)[^\s<>"'`\\]*$/.test(href) || /^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(href) || /^#[a-z][a-z0-9-]{0,39}$/.test(href) || /^mailto:[^\s<>"'`\\]+$/.test(href) || /^tel:\+?[0-9]{4,15}$/.test(href);
         const keep = Object.fromEntries(Object.entries(a).filter(([k]) => k !== "href" && k !== "target" && k !== "rel"));
         return ok ? { tagName: "a", attribs: { ...keep, href, ...(a.target === "_blank" ? { target: "_blank", rel: "noopener noreferrer" } : {}) } } : { tagName: "span", attribs: keep };
       },

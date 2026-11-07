@@ -45,7 +45,14 @@ function regionContext(siteId, family, o = {}) {
   return c;
 }
 // Contexte par défaut d'une page du site qui ne déclare rien (catalogue, formation, compte…) : accueil si « / », sinon page
-const defaultContext = (siteId, path = "/") => ({ siteId, view: path === "/" ? "front" : "page", id: null, authorId: null, parents: [], categories: [], categoryAncestors: [], tags: [] });
+// Chantier B : compte client, pages de la boutique et fiche formation ont leur propre vue (urlContext.viewOfPath) ; le reste est inchangé.
+const defaultContext = (siteId, path = "/") => { const v = require("./urlContext").viewOfPath(path); const view = v && ["account", "shop_page", "course"].includes(v.view) ? v.view : path === "/" ? "front" : "page"; return { siteId, view, id: null, authorId: null, parents: [], categories: [], categoryAncestors: [], tags: [] }; };
+// Ajoute au contexte ce que le site sait du visiteur (connecté, rôle) pour les conditions « visiteur » ; les réponses publiques sont « private, no-cache » (server.js).
+function withVisitor(c, visitor, req) {
+  if (!c || !visitor) return c;
+  const customer = Boolean(req && req.shopCustomer);
+  return { ...c, visitor: { loggedIn: Boolean(visitor.loggedIn || customer), role: visitor.role || (customer ? "client" : "") } };
+}
 
 // Modèles de parties globales (en-tête, pied de page) applicables à un contexte : { header, footer } (modèle complet ou null)
 function resolveParts(ctx, siteId, c) {
@@ -129,4 +136,4 @@ function pickRegion(ctx, siteId, families, o = {}) {
   } catch { /* repli historique */ }
   return null;
 }
-module.exports = { singleFor, partsFor, pickRegion, published, FAMILY, regionContext, defaultContext, resolveParts, resolveExtras, extrasFor, pageRowOf, hasParts };
+module.exports = { withVisitor, singleFor, partsFor, pickRegion, published, FAMILY, regionContext, defaultContext, resolveParts, resolveExtras, extrasFor, pageRowOf, hasParts };

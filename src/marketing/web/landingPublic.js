@@ -69,9 +69,9 @@ module.exports = ({ db }) => {
   const widgetOf = (page, id) => {
     if (!/^[a-z0-9]{6,20}$/.test(String(id || ""))) return null;
     let found = null;
-    for (const s of page.sections) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && n.type === "signupform" && !n.hidden) found = n; });
+    for (const s of page.sections) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe") && !n.hidden) found = n; });
     if (!found) return null;
-    try { const f = forms.getForm({ db, organizationId: page.organization_id }, Number(found.props.formId)); return sameSite(page, f) ? f : null; } catch { return null; }
+    try { const fctx = { db, organizationId: page.organization_id }; const f = found.type === "emailsubscribe" ? require("../pages/emailSubscribe").formFor(fctx, page, found.props) : forms.getForm(fctx, Number(found.props.formId)); return f && sameSite(page, f) ? f : null; } catch { return null; }
   };
 
   // Test A/B en cours : version du visiteur (collante s'il a accepté le suivi, sinon stable pour la journée, sans cookie) et contenu correspondant

@@ -1,0 +1,10 @@
+<%# Informations légales (src/marketing/pages/widgets/footer.js). Variables : p, d (lines[{label,text}], links[{label,url}], empty), cls, attrs, isBuilder. Liens : pages du site ou https:// déjà validés côté serveur. %>
+<% if (d && !d.empty) { %>
+<div class="<%= cls %> <%= p.layout === "inline" ? "is-inline" : "is-stack" %>"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <% if (d.lines.length) { %><ul class="kw-biz-list"><% d.lines.forEach((l) => { %><li class="kw-biz-item"><% if (l.label) { %><span class="kw-biz-label"><%= l.label %> : </span><% } %><span class="kw-biz-text"><%= l.text %></span></li><% }) %></ul><% } %>
+  <% if (d.links.length) { %><ul class="kw-biz-list kw-biz-pages"><% d.links.forEach((l) => { %><li class="kw-biz-item"><a class="kw-biz-link" href="<%= l.url %>"<%- /^https:/.test(l.url) ? ' rel="noopener"' : "" %>><%= l.label %></a></li><% }) %></ul><% } %>
+</div>
+<% } else if (isBuilder) { %>
+<div class="<%= cls %> kw-biz-empty"<%- attrs %>><p class="kw-biz-hint">Informations légales : rien à afficher. Renseignez-les dans Paramètres → Données de l’entreprise.</p></div>
+<% } %>

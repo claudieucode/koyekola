@@ -1,0 +1,6 @@
+<%# Téléphone cliquable (src/marketing/pages/widgets/footer.js). Variables : p, d (number, label, href « tel: » reconstruit côté serveur), cls, attrs, isBuilder. %>
+<% if (d && d.href) { %>
+<p class="<%= cls %>"<%- attrs %>><% if (p.showIcon) { %><span class="kw-biz-icon" aria-hidden="true"><%- icon("smartphone", { size: 18 }) %></span><% } %><% if (p.prefix) { %><span class="kw-biz-prefix"><%= p.prefix %> </span><% } %><% if (p.showLabel && d.label) { %><span class="kw-biz-label"><%= d.label %> : </span><% } %><a class="kw-biz-link" href="<%= d.href %>"><%= d.number %></a></p>
+<% } else if (isBuilder) { %>
+<p class="<%= cls %> kw-biz-empty"<%- attrs %>><span class="kw-biz-hint">Téléphone : aucun numéro. Renseignez-le dans Paramètres → Données de l’entreprise.</span></p>
+<% } %>

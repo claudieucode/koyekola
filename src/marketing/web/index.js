@@ -105,6 +105,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./pageTests")());
   admin.use(require("./articles")()); // KOLAKISA CMS → Articles (palier 4) : gestion des articles du blog
   admin.use(require("./taxonomies")()); // Catégories et étiquettes (palier 5)
+  admin.use(require("./businessSettings")()); // Paramètres → Données de l'entreprise (pied de page) — avant le moteur de réglages
   admin.use(require("./settings")()); // Paramètres : moteur de réglages (palier 14) — avant les modules qui avaient leur propre écran
   admin.use(require("./comments")()); // Commentaires : modération et réglages (palier 6)
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)

@@ -35,7 +35,7 @@ function resolve(templates, ctx, { type = null } = {}) {
   return { winner, candidates: cands.map((c) => ({ id: c.t.id, score: c.score, matchedBy: c.matchedBy })), explain };
 }
 // Deux conditions peuvent-elles correspondre à une même page ? Conservateur (peut sur-signaler, ne rate pas un chevauchement).
-const LISTS = ["ids", "category", "childCategory", "tag", "author", "names"];
+const LISTS = ["ids", "category", "childCategory", "tag", "author", "names", "roles"];
 function condOverlap(a, b) {
   const va = C.KINDS[a.kind].views, vb = C.KINDS[b.kind].views;
   if (!va.some((v) => vb.includes(v))) return false;
@@ -43,6 +43,7 @@ function condOverlap(a, b) {
   for (const k of LISTS) if (a[k] && b[k] && !a[k].some((x) => b[k].map((y) => String(y).toLowerCase()).includes(String(x).toLowerCase()))) return false;
   if (a.kind === "child_of" && a.parent !== b.parent && a.direct && b.direct) return false;
   if (a.sub && b.sub && a.sub !== b.sub) return false;
+  if (a.kind === "visitor" && a.state !== b.state) return false;
   return true;
 }
 const topScore = (t) => { const inc = conds(t).include; return inc.length ? Math.max(...inc.map(M.scoreOf)) : 10; };

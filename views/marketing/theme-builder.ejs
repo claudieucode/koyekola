@@ -115,6 +115,24 @@
     <div class="tb-dlg-actions"><button class="btn btn-outline" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Enregistrer</button></div>
   </form></dialog>
 
+  <dialog id="tb-dlg-pub" aria-labelledby="tb-dlg-pub-h"><form method="dialog" id="tb-form-pub">
+    <h2 id="tb-dlg-pub-h">Publier le pied de page</h2>
+    <fieldset class="tb-scope"><legend>Où afficher ce pied ?</legend>
+      <label class="tb-scope-opt"><input type="radio" name="tb-scope" value="site" id="tb-scope-site"><span><strong>Tout le site</strong><small>Sur toutes les pages, sauf exclusions éventuelles.</small></span></label>
+      <label class="tb-scope-opt"><input type="radio" name="tb-scope" value="custom" id="tb-scope-custom"><span><strong>Conditions personnalisées</strong><small>Seulement sur les pages que vous choisissez (boutique, compte, formations, pages précises…).</small></span></label>
+    </fieldset>
+    <div id="tb-pub-conds" hidden>
+      <h3>Afficher sur</h3><div id="tb-pub-inc" class="tb-rows"></div><button class="btn btn-sm" type="button" id="tb-pub-add-inc">+ Ajouter une condition</button>
+      <h3>Sauf sur</h3><div id="tb-pub-exc" class="tb-rows"></div><button class="btn btn-sm" type="button" id="tb-pub-add-exc">+ Ajouter une exclusion</button>
+    </div>
+    <p class="tb-sum" id="tb-pub-sum" role="status" aria-live="polite"></p>
+    <div id="tb-pub-issues" aria-live="polite"></div>
+    <div class="tb-pub-test"><label class="sw-field">Tester une adresse<input id="tb-pub-url" placeholder="/boutique/compte" autocomplete="off"></label><button class="btn btn-sm btn-outline" type="button" id="tb-pub-try">Ce pied s'applique-t-il ici ?</button></div>
+    <p id="tb-pub-try-out" role="status" aria-live="polite"></p>
+    <p class="tb-warn" id="tb-pub-msg" role="alert" hidden></p>
+    <div class="tb-dlg-actions"><button class="btn btn-outline" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit" id="tb-pub-go" disabled>Publier</button></div>
+  </form></dialog>
+
   <dialog id="tb-dlg-info" aria-labelledby="tb-dlg-info-h"><div>
     <h2 id="tb-dlg-info-h">Détails</h2><div id="tb-info"></div>
     <div class="tb-dlg-actions"><button class="btn btn-primary" type="button" data-close>Fermer</button></div>
@@ -125,7 +143,7 @@
     <p class="sw-muted">Simulez une page de votre site : le moteur dit quel modèle gagne et pourquoi les autres sont écartés. Rien n'est modifié.</p>
     <div class="tb-grid2">
       <label class="sw-field">Type<select id="tb-why-type"></select></label>
-      <label class="sw-field">Page vue<select id="tb-why-view"><option value="front">Accueil</option><option value="page">Page</option><option value="post">Article</option><option value="archive">Archive</option><option value="search">Recherche</option><option value="not_found">404</option><option value="product">Produit</option><option value="product_archive">Archive produits</option></select></label>
+      <label class="sw-field">Page vue<select id="tb-why-view"><option value="front">Accueil</option><option value="page">Page</option><option value="post">Article</option><option value="archive">Archive</option><option value="search">Recherche</option><option value="not_found">404</option><option value="product">Produit</option><option value="product_archive">Archive produits</option><option value="account">Compte client</option><option value="shop_page">Panier / commande</option><option value="course">Fiche formation</option></select></label>
       <label class="sw-field">Identifiant du contenu<input id="tb-why-id" inputmode="numeric"></label>
       <label class="sw-field">Catégories (virgules)<input id="tb-why-cat"></label>
       <label class="sw-field">Étiquettes (virgules)<input id="tb-why-tag"></label>

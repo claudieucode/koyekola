@@ -96,6 +96,36 @@ registerDynamicSource("site.name", { label: "Nom du site", resolve: (s) => (s.si
 registerDynamicSource("site.url", { label: "Adresse de l'accueil du site", kind: "url", resolve: (s) => (s.site && s.site.homeUrl) || null });
 registerDynamicSource("date.today", { label: "Date du jour", resolve: (s) => longDate((s.now || new Date()).getTime()) });
 registerDynamicSource("date.year", { label: "Année en cours", resolve: (s) => String((s.now || new Date()).getFullYear()) });
+registerDynamicSource("site.year", { label: "Année en cours (pour le copyright)", resolve: (s) => String((s.now || new Date()).getFullYear()) });
+registerDynamicSource("site.copyright", { label: "Copyright automatique (© année + raison sociale ou nom du site)", resolve: (s) => require("./business").copyrightText(s.business, s.site && s.site.name, s.now) });
+registerDynamicSource("site.tagline", { label: "Slogan du site (Données de l'entreprise)", resolve: (s) => (s.business && s.business.profile.tagline) || null });
+// Données d'entreprise du site (Paramètres → Données de l'entreprise) : scope.business = { profile (vue publique), tz }. Texte seulement ; l'affichage échappe.
+const BZ = () => require("./business");
+const BP = (f) => (s) => { const v = s.business ? f(s.business.profile, s) : null; return v === undefined || v === "" ? null : v; };
+registerDynamicSource("business.legalname", { label: "Raison sociale", resolve: BP((p) => p.legalName) });
+registerDynamicSource("business.tagline", { label: "Slogan", resolve: BP((p) => p.tagline) });
+registerDynamicSource("business.address", { label: "Adresse complète", resolve: BP((p) => BZ().addressLine(p.address)) });
+registerDynamicSource("business.street", { label: "Adresse : rue", resolve: BP((p) => p.address.street) });
+registerDynamicSource("business.postalcode", { label: "Adresse : code postal", resolve: BP((p) => p.address.postalCode) });
+registerDynamicSource("business.city", { label: "Adresse : ville", resolve: BP((p) => p.address.city) });
+registerDynamicSource("business.country", { label: "Adresse : pays", resolve: BP((p) => p.address.country) });
+registerDynamicSource("business.phone", { label: "Téléphone (principal)", resolve: BP((p) => (p.phones[0] || {}).number) });
+registerDynamicSource("business.phone2", { label: "Téléphone (second)", resolve: BP((p) => (p.phones[1] || {}).number) });
+registerDynamicSource("business.phone_url", { label: "Lien « tel: » du téléphone principal", kind: "url", resolve: BP((p) => BZ().telHref((p.phones[0] || {}).number)) });
+registerDynamicSource("business.email", { label: "E-mail de contact", resolve: BP((p) => p.email) });
+registerDynamicSource("business.email_url", { label: "Lien « mailto: » de l'e-mail de contact", kind: "url", resolve: BP((p) => BZ().mailHref(p.email)) });
+registerDynamicSource("business.hours", { label: "Horaires d'ouverture (résumé)", resolve: BP((p) => BZ().hoursSummary(p.hours)) });
+registerDynamicSource("business.open_now", { label: "Ouvert maintenant / fermé (selon le fuseau du site)", resolve: (s) => { const o = s.business ? BZ().openNow(s.business.profile.hours, s.now, s.business.tz) : null; return o ? o.label : null; } });
+registerDynamicSource("business.legalform", { label: "Forme juridique", resolve: BP((p) => p.legal.form) });
+registerDynamicSource("business.registration", { label: "Immatriculations (SIRET, RCS, TVA…)", resolve: BP((p) => p.legal.registrations.map((r) => `${r.label} ${r.value}`).join(" · ")) });
+registerDynamicSource("business.publisher", { label: "Directeur de la publication", resolve: BP((p) => p.legal.publisher) });
+registerDynamicSource("business.host", { label: "Hébergeur", resolve: BP((p) => [p.legal.hostName, p.legal.hostAddress].filter(Boolean).join(", ")) });
+registerDynamicSource("business.delivery", { label: "Livraison (texte)", resolve: BP((p) => p.delivery.text) });
+registerDynamicSource("business.returns", { label: "Retours (texte)", resolve: BP((p) => p.delivery.returns) });
+registerDynamicSource("business.notice_url", { label: "Page des mentions légales", kind: "url", resolve: BP((p) => p.legalPages.notice) });
+registerDynamicSource("business.privacy_url", { label: "Page de confidentialité", kind: "url", resolve: BP((p) => p.legalPages.privacy) });
+registerDynamicSource("business.terms_url", { label: "Page des conditions de vente", kind: "url", resolve: BP((p) => p.legalPages.terms) });
+for (let i = 1; i <= 6; i++) registerDynamicSource(`business.custom${i}`, { label: `Champ personnalisé n°${i} (valeur)`, resolve: BP((p) => (p.custom[i - 1] || {}).value) });
 // Adresse : paramètre d'URL (?q=…) — texte seulement, borné
 registerDynamicSource("query.q", { label: "Recherche saisie (?q=)", resolve: (s) => (s.query && typeof s.query.q === "string" && s.query.q.trim() ? s.query.q.trim().slice(0, 80) : null) });
 registerDynamicSource("query.categorie", { label: "Catégorie demandée (?categorie=)", resolve: (s) => (s.query && typeof s.query.categorie === "string" && s.query.categorie.trim() ? s.query.categorie.trim().slice(0, 60) : null) });
@@ -165,7 +195,7 @@ function nodeIsDynamic(node) {
   return found;
 }
 // Catalogue des sources pour l'éditeur (sélecteur d'étiquettes)
-const GROUP_LABELS = { post: "Article du blog", course: "Formation", product: "Produit (formation)", user: "Visiteur", page: "Page", site: "Site", date: "Date", query: "Adresse (?…)" };
+const GROUP_LABELS = { post: "Article du blog", course: "Formation", product: "Produit (formation)", user: "Visiteur", page: "Page", site: "Site", business: "Entreprise", date: "Date", query: "Adresse (?…)" };
 function catalog() {
   return {
     groups: Object.entries(GROUP_LABELS).map(([key, label]) => ({ key, label })),

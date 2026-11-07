@@ -1,0 +1,6 @@
+<%# E-mail cliquable (src/marketing/pages/widgets/footer.js). Variables : p, d (email, href « mailto: » reconstruit côté serveur), cls, attrs, isBuilder. %>
+<% if (d && d.href) { %>
+<p class="<%= cls %>"<%- attrs %>><% if (p.showIcon) { %><span class="kw-biz-icon" aria-hidden="true"><%- icon("mail", { size: 18 }) %></span><% } %><% if (p.prefix) { %><span class="kw-biz-prefix"><%= p.prefix %> </span><% } %><a class="kw-biz-link" href="<%= d.href %>"><%= p.text || d.email %></a></p>
+<% } else if (isBuilder) { %>
+<p class="<%= cls %> kw-biz-empty"<%- attrs %>><span class="kw-biz-hint">E-mail : aucune adresse. Renseignez-la dans Paramètres → Données de l’entreprise.</span></p>
+<% } %>

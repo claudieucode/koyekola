@@ -1,6 +1,6 @@
 // Registre FERMÉ des types de modèles du Theme Builder (programme 23.1). `views` : vues du contexte de résolution auxquelles le type s'applique ; `global` : s'applique à toute vue (en-tête, pied,
 // barre latérale) ; `module` : module de site requis (siteModules) ; `legacy` : famille de l'ancien système importée dans ce type.
-const VIEWS = Object.freeze(["front", "page", "post", "archive", "search", "not_found", "product", "product_archive"]);
+const VIEWS = Object.freeze(["front", "page", "post", "archive", "search", "not_found", "product", "product_archive", "account", "shop_page", "course"]);
 const TYPES = Object.freeze({
   header: { label: "En-tête", group: "global", global: true, legacy: null },
   footer: { label: "Pied de page", group: "global", global: true, legacy: null },

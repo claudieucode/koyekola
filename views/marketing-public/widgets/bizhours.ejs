@@ -1,0 +1,14 @@
+<%# Horaires d'ouverture (src/marketing/pages/widgets/footer.js). Variables : p, d (rows[{days,closed,text,from,to}], status{open,label,day}|null, exceptions[{date,label,text}], note), cls, attrs, isBuilder. « Ouvert maintenant » est calculé côté serveur (fuseau du site) à chaque affichage. %>
+<% if (d && d.rows && d.rows.length) { %>
+<div class="<%= cls %>"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <% if (d.status) { %><p class="kw-biz-status <%= d.status.open ? "is-open" : "is-closed" %>" role="status"><span class="kw-biz-dot" aria-hidden="true"></span><%= d.status.label %><% if (d.status.exception) { %> <span class="kw-biz-muted">(<%= d.status.exception %>)</span><% } %></p><% } %>
+  <dl class="kw-biz-hours">
+    <% d.rows.forEach((r) => { %><div class="kw-biz-row<%= r.today ? " is-today" : "" %>"><dt><%= r.days %></dt><dd><%= r.closed ? p.closedLabel : r.text %></dd></div><% }) %>
+  </dl>
+  <% if (d.exceptions && d.exceptions.length) { %><ul class="kw-biz-exceptions"><% d.exceptions.forEach((x) => { %><li><strong><%= x.date %></strong><% if (x.label) { %> <%= x.label %><% } %> : <%= x.text %></li><% }) %></ul><% } %>
+  <% if (d.note) { %><p class="kw-biz-note"><%= d.note %></p><% } %>
+</div>
+<% } else if (isBuilder) { %>
+<div class="<%= cls %> kw-biz-empty"<%- attrs %>><p class="kw-biz-hint">Horaires : aucun horaire renseigné. Indiquez-les dans Paramètres → Données de l’entreprise.</p></div>
+<% } %>

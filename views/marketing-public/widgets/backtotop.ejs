@@ -1,0 +1,4 @@
+<%# Retour en haut (src/marketing/pages/widgets/footer.js). Variables : p, cls, attrs, isBuilder. Sans JavaScript le lien « # » remonte quand même ; avec public/js/kw-backtotop.js : apparition après défilement (mode fixé), défilement fluide sauf en mouvement réduit, focus rendu au début de la page. Dans l'éditeur : bouton en place, sans script. %>
+<% const fixed = p.mode !== "inline"; %>
+<div class="<%= cls %> <%= fixed ? "is-fixed is-" + (p.side === "left" ? "left" : "right") : "is-inline" %>"<%- attrs %><% if (!isBuilder && fixed) { %> data-kw-btt="<%= p.threshold %>"<% } %>><a class="kw-btt-link" href="#" aria-label="<%= p.label %>"><span class="kw-btt-icon" aria-hidden="true"><%- icon("arrowUp", { size: 20 }) %></span><% if (p.showLabel || !fixed) { %><span class="kw-btt-text"><%= p.label %></span><% } %></a></div>
+<% if (!isBuilder && fixed && typeof asset === "function") { %><script src="<%= asset("/js/kw-backtotop.js") %>" defer></script><% } %>

@@ -1,0 +1,9 @@
+<%# Champs personnalisés de l'entreprise (src/marketing/pages/widgets/footer.js). Variables : p, d (items[{label,value}]), cls, attrs, isBuilder. %>
+<% if (d && d.items && d.items.length) { %>
+<div class="<%= cls %>"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <ul class="kw-biz-list"><% d.items.forEach((it) => { %><li class="kw-biz-item"><% if (p.showLabels) { %><span class="kw-biz-label"><%= it.label %> : </span><% } %><span class="kw-biz-text"><%= it.value %></span></li><% }) %></ul>
+</div>
+<% } else if (isBuilder) { %>
+<div class="<%= cls %> kw-biz-empty"<%- attrs %>><p class="kw-biz-hint">Champs personnalisés : aucun champ rempli. Ajoutez-les dans Paramètres → Données de l’entreprise.</p></div>
+<% } %>

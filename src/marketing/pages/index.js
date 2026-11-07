@@ -957,6 +957,8 @@ function missingPart(which, componentId) {
 }
 // Partie globale d'un site (section rendable) pour un composant donné : version diffusée, jamais le brouillon ; null si elle n'existe plus (interface du rendu hors Page Builder)
 const partSection = (ctx, componentId, which) => partOf(ctx, componentId, which, null);
+// Section de démonstration d'un thème en paquet qui est à elle seule un pied de page : une bande contenant un unique bloc HTML dont le premier élément est <footer>
+const isPackFooterSection = (x) => Boolean(x && x.type === "layout" && !x.sitePart && Array.isArray(x.children) && x.children.length === 1 && x.children[0] && x.children[0].type === "html" && x.children[0].props && /^\s*<footer[\s>]/i.test(String(x.children[0].props.html || "")));
 // Affichage : l'en-tête d'une page est celui du site (par défaut), aucun (exception) ou une variante (exception)
 function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = false, force = null } = {}) {
   const p = siteParts(ctx, page && page.site_id, { draftId });
@@ -980,7 +982,9 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
     if (page.header_mode === "none") header = null;
     else if (page.header_mode === "variant") header = partOf(ctx, page.header_component_id, "header", draftId) || p.header;
   }
-  const body = themeBuilder && page && page.site_id && !forced ? themeSingleSections(ctx, page, sections) : sections;
+  let body = themeBuilder && page && page.site_id && !forced ? themeSingleSections(ctx, page, sections) : sections;
+  // Un seul pied : quand le site a un pied (Theme Builder), le pied « de démonstration » d'un thème en paquet (section HTML qui commence par <footer>, voir themes/packs/kit.js) n'est pas affiché en plus
+  if (themeBuilder && page && page.site_id && p.footer) body = body.filter((x) => !isPackFooterSection(x));
   return [header, ...body, ...(themeBuilder && page && page.site_id !== undefined ? themeExtraSections(ctx, page) : []), p.footer].filter(Boolean);
 }
 // Theme Builder · Page individuelle : le modèle publié qui s'applique à une page du Page Builder l'enveloppe. Le contenu PROPRE de la page prend la place de l'élément « Contenu de l'article »

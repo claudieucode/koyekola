@@ -60,7 +60,7 @@ function partMode(section) {
 const bleedOf = (sections) => ((sections || []).some((s) => s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true))) ? " kw-theme-bleed" : "");
 // Rend le modèle de vue `vm` avec les éléments du Page Builder (callback : html | null). Un callback passé à res.render ne passe jamais par themeLayout (rendu de fragment).
 function renderVm(res, vm, siteOk, cls, done) {
-  res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false }, (err, body) => {
+  res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false, legalSite: siteOk || null }, (err, body) => {
     if (err) return done(null);
     try { done(wrapHtml(res, vm, siteOk, body, cls)); } catch { done(null); }
   });
@@ -108,10 +108,11 @@ function renderParts(req, res) {
       const ctx = ctxOf(db, marketing);
       const TB = require("../../themeBuilder/render");
       if (!TB.hasParts(ctx, site.id)) return resolve({});
-      const win = TB.resolveParts(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]));
       const visitor = visitorContext(db, marketing.organizationId, req);
+      const baseCtx = TB.withVisitor(res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]), visitor, req); // + visiteur connecté / rôle (conditions du pied)
+      const win = TB.resolveParts(ctx, site.id, baseCtx);
       const out = {};
-      const extras = TB.resolveExtras(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]));
+      const extras = TB.resolveExtras(ctx, site.id, baseCtx);
       // Barre latérale puis modèles personnalisés, rendus dans l'ordre (le plus précis d'abord) ; un échec n'empêche jamais la page
       const extraJobs = [];
       if (extras.sidebar) extraJobs.push(new Promise((ok) => {

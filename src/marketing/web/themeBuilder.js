@@ -20,7 +20,7 @@ module.exports = () => {
   const sid = (req) => (principal ? null : Number(req.params.id)), body = (req) => (req.body && typeof req.body === "object" ? req.body : {});
   const spaceBase = (site) => (principal ? "/marketing/site-web/principal" : `/marketing/site-web/sites/${site.id}`);
   const run = (fn) => (req, res, next) => Promise.resolve().then(() => fn(req.mk.ctx, sid(req), req, res)).then((d) => { if (d !== undefined) res.set("Cache-Control", "no-store").json({ ok: true, ...d }); }).catch((e) => {
-    if (e instanceof MarketingError || (e && e.code && STATUS[e.code])) return res.status(STATUS[e.code] || 400).set("Cache-Control", "no-store").json({ ok: false, error: e.message, code: e.code, conflicts: e.conflicts });
+    if (e instanceof MarketingError || (e && e.code && STATUS[e.code])) return res.status(STATUS[e.code] || 400).set("Cache-Control", "no-store").json({ ok: false, error: e.message, code: e.code, conflicts: e.conflicts, needsScope: e.needsScope || undefined });
     next(e);
   });
   // Le composant s'ouvre AVEC l'identifiant du modèle : l'éditeur affiche et vérifie exactement ce modèle (jamais un autre qui partagerait la même source)
@@ -97,7 +97,26 @@ module.exports = () => {
   });
   router.post(`${T}/renommer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.rename(ctx, id, tid(req), body(req).name))));
   router.post(`${T}/conditions`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.setConditions(ctx, id, tid(req), body(req).conditions || {}, { revision: body(req).revision ?? null }); return { ...one(ctx, id, r.template), conflicts: r.conflicts }; }));
-  router.post(`${T}/publier`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.publish(ctx, id, tid(req), { revision: body(req).revision ?? null, replace: body(req).replace === true }); return { ...one(ctx, id, r.template), version: r.version, conflicts: r.conflicts, replaced: r.replaced }; }));
+  router.post(`${T}/publier`, need("forms.write"), run((ctx, id, req) => {
+    const b = body(req);
+    // Avec « strict » (l'écran l'envoie toujours) : la première publication exige une portée choisie (tout le site / conditions personnalisées). Sans : comportement d'origine.
+    const r = TB.store.publishScoped(ctx, id, tid(req), { revision: b.revision ?? null, replace: b.replace === true, strict: b.strict === true, scope: b.scope ? String(b.scope) : null, conditions: b.conditions });
+    return { ...one(ctx, id, r.template), version: r.version, conflicts: r.conflicts, replaced: r.replaced, summary: TB.publication.summary(ctx, id, r.template.conditions) };
+  }));
+  // Plan de publication (lecture seule) : « où afficher ? », résumé, conflits, chevauchements, effet sur les pages réelles. ?conditions=<JSON> pour simuler d'autres conditions.
+  const parseConds = (req) => { if (req.query.conditions === undefined) return null; try { return JSON.parse(String(req.query.conditions).slice(0, 8000)); } catch { throw new MarketingError("invalid_field", "Conditions illisibles."); } };
+  router.get(`${T}/plan-publication`, need("forms.read"), run((ctx, id, req) => { try { return { plan: TB.publication.plan(ctx, id, tid(req), { conditions: parseConds(req) }) }; } catch (e) { if (e instanceof MarketingError) throw e; if (e && e.code === "invalid_field") throw new MarketingError("invalid_field", e.message); throw e; } }));
+  // « Ce modèle s'applique-t-il à cette adresse ? » (aucune écriture). visiteur=connecte|anonyme et role= pour tester les conditions de connexion.
+  router.get(`${T}/s-applique`, need("forms.read"), run((ctx, id, req) => {
+    const v = String(req.query.visiteur || ""), visitor = v === "connecte" ? { loggedIn: true, role: String(req.query.role || "").slice(0, 40) } : v === "anonyme" ? { loggedIn: false, role: "" } : null;
+    let r; try { r = TB.publication.appliesToUrl(ctx, id, tid(req), String(req.query.url || ""), { visitor, conditions: parseConds(req) }); } catch (e) { if (e && e.code === "invalid_field" && !(e instanceof MarketingError)) throw new MarketingError("invalid_field", e.message); throw e; }
+    if (!r.ok) throw new MarketingError("invalid_field", r.error);
+    return r;
+  }));
+  // Sélecteurs de cibles avec recherche (pages, catégories, étiquettes, auteurs, produits, formations, rôles) du site de l'adresse
+  router.get(`${A}/cibles`, need("forms.read"), run((ctx, id, req) => {
+    try { return { items: TB.publication.targets(ctx, id, String(req.query.type || ""), String(req.query.q || "")) }; } catch (e) { if (e && e.code === "invalid_field" && !(e instanceof MarketingError)) throw new MarketingError("invalid_field", e.message); throw e; }
+  }));
   router.post(`${T}/depublier`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.unpublish(ctx, id, tid(req)))));
   router.post(`${T}/archiver`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.archive(ctx, id, tid(req)))));
   router.post(`${T}/restaurer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.restore(ctx, id, tid(req)))));

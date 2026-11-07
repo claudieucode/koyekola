@@ -290,3 +290,13 @@ dialog::backdrop { background: rgb(5 14 25 / .62); }
 
 @media (prefers-reduced-motion: reduce) { .tb-theme button, .tb-side button, .tb .btn, article.tb-card, article.tb-tcard { transition: none; } }
 @media (max-width: 820px) { .tb-layout { grid-template-columns: minmax(0, 1fr); } .tb-site { display: none; } }
+
+/* Chantier B : publication du pied (où afficher ?), sélecteurs de cibles */
+.tb-scope { border: 1px solid var(--tb-line); border-radius: var(--tb-rc, 10px); padding: 10px 12px; margin: 10px 0; display: grid; gap: 8px; } .tb-scope legend { font-weight: 600; padding: 0 6px; }
+.tb-scope-opt { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; } .tb-scope-opt span { display: grid; gap: 2px; } .tb-scope-opt small { color: var(--tb-muted, #64748b); } .tb-scope-opt input { margin-top: 4px; }
+.tb-sum { margin: 10px 0; padding: 8px 10px; border-radius: 8px; background: var(--tb-soft); font-weight: 600; overflow-wrap: anywhere; } .tb-sum:empty { display: none; }
+#tb-pub-issues { display: grid; gap: 8px; } #tb-pub-issues .tb-issue { border: 1px solid var(--tb-line); border-left-width: 4px; border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; } #tb-pub-issues .tb-issue[data-k="block"] { border-left-color: #dc2626; } #tb-pub-issues .tb-issue[data-k="warn"] { border-left-color: #d97706; } #tb-pub-issues .tb-issue[data-k="info"] { border-left-color: #2563eb; }
+.tb-pub-test { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-top: 12px; } .tb-pub-test .sw-field { flex: 1 1 200px; min-width: 0; }
+.tb-pick { display: grid; gap: 6px; min-width: 0; } .tb-pick-chips { display: flex; flex-wrap: wrap; gap: 4px; } .tb-pick-chips:empty { display: none; }
+.tb-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; border: 1px solid var(--tb-line); border-radius: 999px; padding: 2px 4px 2px 10px; background: var(--tb-soft); } .tb-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tb-chip button { border: 0; background: transparent; cursor: pointer; color: inherit; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 999px; }
+.tb-pick-list { list-style: none; margin: 0; padding: 4px; border: 1px solid var(--tb-line); border-radius: 8px; max-height: 180px; overflow: auto; background: var(--tb-surface, Canvas); } .tb-pick-list[hidden] { display: none; } .tb-pick-list li button { width: 100%; text-align: left; border: 0; background: transparent; color: inherit; padding: 6px 8px; border-radius: 6px; cursor: pointer; } .tb-pick-list li button:hover, .tb-pick-list li button:focus-visible { background: var(--tb-soft); } .tb-pick-list .tb-pick-empty { padding: 6px 8px; color: var(--tb-muted, #64748b); }
