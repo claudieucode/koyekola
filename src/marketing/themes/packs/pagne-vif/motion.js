@@ -4,6 +4,7 @@
 (function () {
   var body = document.body;
   if (!body || body.getAttribute("data-kw-pack") !== "pagne-vif") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) document.body.classList.add("pk-calme"); // respecte « moins d'animations » : le CSS du thème coupe aussi ses animations
   var all = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
   var el = function (tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
   body.classList.add("pv-js");
