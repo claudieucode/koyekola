@@ -1,0 +1,31 @@
+// Catalogue de démonstration « Lumière Objet » (24 produits : variantes, promotions, ruptures). Données de démonstration, jamais créées sur la boutique d'un client sans action explicite.
+const F = { Finition: ["Laiton", "Noir mat", "Opale"] };
+module.exports = {
+  categories: ["Suspensions", "Lampes à poser", "Appliques", "Lampadaires", "Ampoules et accessoires"],
+  products: [
+    ["Suspension Dôme", 0, 320, 0, { ...F }, "partiel", ["suspension", "laiton"], "Dôme en métal spun, douille E27, câble textile de 2 m."],
+    ["Suspension Trois Sphères", 0, 540, 0, null, "ok", ["suspension", "verre"], "Trois globes en verre soufflé à hauteurs décalées."],
+    ["Suspension Anneau", 0, 460, 0, { Finition: ["Laiton", "Noir mat"] }, "ok", ["suspension", "led"], "Anneau lumineux à LED intégrée, lumière chaude."],
+    ["Suspension Cône Opale", 0, 285, 228, null, "ok", ["suspension", "fin-de-serie"], "Verre opale, diffusion douce, douille E27."],
+    ["Suspension Cascade", 0, 780, 0, null, "ok", ["suspension", "edition-limitee"], "Sept disques de laiton empilés, pièce de grande hauteur."],
+    ["Suspension Lanterne", 0, 360, 0, null, "rupture", ["suspension"], "Cage de métal ajouré et verre clair."],
+    ["Lampe Sphère", 1, 210, 0, { ...F }, "ok", ["lampe", "verre"], "Globe d'opaline sur pied de laiton, douille E14."],
+    ["Lampe Bourgeon", 1, 175, 0, null, "ok", ["lampe", "ceramique"], "Céramique émaillée, abat-jour de lin."],
+    ["Lampe Arc", 1, 290, 0, { Finition: ["Laiton", "Noir mat"] }, "ok", ["lampe", "bureau"], "Bras articulé, tête orientable, douille GU10."],
+    ["Lampe Pilier", 1, 240, 0, null, "ok", ["lampe", "marbre"], "Colonne de marbre, abat-jour cylindrique."],
+    ["Lampe Champignon", 1, 195, 156, null, "ok", ["lampe", "fin-de-serie"], "Dôme d'opaline posé sur tige, lumière enveloppante."],
+    ["Lampe Galet", 1, 130, 0, null, "libre", ["lampe", "rechargeable"], "Luminaire nomade rechargeable, variateur tactile."],
+    ["Applique Demi-lune", 2, 165, 0, { ...F }, "ok", ["applique", "laiton"], "Demi-disque qui dessine un arc de lumière sur le mur."],
+    ["Applique Tube", 2, 140, 0, null, "ok", ["applique"], "Tube d'opaline, fixation murale cachée."],
+    ["Applique Bras", 2, 210, 0, { Finition: ["Laiton", "Noir mat"] }, "ok", ["applique", "liseuse"], "Bras pivotant, interrupteur sur le corps."],
+    ["Applique Plissée", 2, 185, 0, null, "rupture", ["applique", "textile"], "Abat-jour plissé, lumière tamisée."],
+    ["Lampadaire Totem", 3, 620, 0, null, "ok", ["lampadaire", "edition-limitee"], "Trois sphères superposées, hauteur 170 cm."],
+    ["Lampadaire Arc Marbre", 3, 890, 0, null, "ok", ["lampadaire", "marbre"], "Grand arc au-dessus du canapé, socle de marbre."],
+    ["Lampadaire Liseuse", 3, 310, 248, { Finition: ["Noir mat", "Laiton"] }, "ok", ["lampadaire", "fin-de-serie"], "Tête orientable, variateur au pied."],
+    ["Lampadaire Tripode", 3, 480, 0, null, "ok", ["lampadaire", "bois"], "Trois pieds en frêne, abat-jour lin."],
+    ["Ampoule globe verre fumé", 4, 18, 0, null, "ok", ["ampoule", "e27"], "Ampoule décorative E27, lumière chaude."],
+    ["Ampoule LED variable", 4, 22, 0, null, "libre", ["ampoule", "led"], "Température réglable de chaude à froide."],
+    ["Câble textile 3 m", 4, 24, 0, { Coloris: ["Noir", "Ivoire", "Terracotta"] }, "ok", ["accessoire"], "Câble tressé avec interrupteur en ligne."],
+    ["Rosace de plafond", 4, 29, 0, { ...F }, "ok", ["accessoire"], "Cache-fixation en métal pour suspension."],
+  ],
+};

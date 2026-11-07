@@ -1,0 +1,147 @@
+/* Cuir — maroquinerie de luxe : cuir, coutures, héritage. Confiné à body[data-kw-pack="cuir"]. */
+body{--sh-accent:#8e3f17;--sh-on-accent:#f4ecdf;--sh-bg:var(--cu-sand);--sh-text:#2a1a12;--cu-thread:var(--pk-fil,#d6b06a);--cu-sand:#e9dfcf;--cu-paper:#f4ecdf;--cu-hide:#2a1a12;--cu-hide2:#3a251a;--cu-saddle:#8e3f17;--cu-ink:#2a1a12;--cu-mut:#6a5444;--cu-line:#c9b79d;--cu-gut:clamp(18px,4vw,56px);--cu-cut:14px;
+  background:var(--cu-sand);color:var(--cu-ink);font-family:var(--kw-font-body);line-height:1.65;margin:0;-webkit-font-smoothing:antialiased}
+body[data-pk-fond="creme"]{--cu-sand:#f1e9db}
+.lp-main,.sh-main{max-width:none;margin:0;padding:0}
+.pk-bleed{display:block;width:100%}
+.cu-wrap{max-width:1200px;margin:0 auto;padding:0 var(--cu-gut)}.cu-narrow{max-width:760px}
+a{color:inherit;text-underline-offset:4px}
+:focus-visible{outline:2px solid var(--cu-saddle);outline-offset:3px}
+.cu-dark :focus-visible,.cu-head :focus-visible,.cu-foot :focus-visible{outline-color:var(--cu-thread)}
+.cu-lab{font-size:.74rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cu-mut);margin:0 0 .9rem;font-weight:600}
+.cu-dark .cu-lab,.cu-foot .cu-lab,.cu-head .cu-lab{color:var(--cu-thread)}
+.cu-h1,.cu-h2{font-family:var(--kw-font-heading);font-weight:400;line-height:1.1;margin:0 0 1rem}
+.cu-h1{font-size:clamp(2.2rem,5vw,3.8rem)}.cu-h1--xl{font-size:clamp(2.8rem,7.5vw,6rem)}.cu-h1 em,.cu-h2 em{font-style:italic;color:var(--cu-saddle)}
+.cu-dark .cu-h1 em,.cu-dark .cu-h2 em{color:var(--cu-thread)}
+.cu-h2{font-size:clamp(1.5rem,3vw,2.3rem)}
+.cu-lead{font-size:1.12rem;max-width:52ch;color:var(--cu-mut)}.cu-dark .cu-lead{color:#d9c8b0}
+.cu-small{font-size:.92rem;color:var(--cu-mut)}
+/* boutons : cuir biseauté + surpiqûre */
+.cu-btn{position:relative;display:inline-block;background:var(--cu-saddle);color:#fbf4e8;text-decoration:none;padding:.95em 2em;font-weight:600;letter-spacing:.06em;font-size:.92rem;min-height:48px;box-sizing:border-box;clip-path:polygon(var(--cu-cut) 0,calc(100% - var(--cu-cut)) 0,100% var(--cu-cut),100% calc(100% - var(--cu-cut)),calc(100% - var(--cu-cut)) 100%,var(--cu-cut) 100%,0 calc(100% - var(--cu-cut)),0 var(--cu-cut));transition:background .3s ease}
+.cu-btn::after{content:"";position:absolute;inset:5px;border:1px dashed var(--cu-thread);clip-path:inherit;pointer-events:none}
+.cu-btn:hover{background:#6f2e0e}
+.cu-btn--ghost{background:transparent;color:inherit;box-shadow:inset 0 0 0 1px currentColor}.cu-btn--ghost:hover{background:rgba(214,176,106,.18)}
+.cu-link{margin-left:1.2rem;font-weight:600;font-size:.95rem}
+/* surpiqûre (utilitaire) */
+.cu-stitch{border:1px dashed var(--cu-line);outline:0}
+.cu-seam-h{display:block;height:0;border:0;border-top:2px dashed var(--cu-thread);margin:0;opacity:.9}
+/* en-tête */
+.cu-head{background:var(--cu-hide);color:#f1e5d1;position:relative;padding-bottom:7px}
+.cu-head::after{content:"";position:absolute;left:0;right:0;bottom:3px;border-top:2px dashed var(--cu-thread);opacity:.85}
+.cu-promo{text-align:center;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;background:#1b100a;color:var(--cu-thread);padding:.55em 1em}
+.cu-bar{display:flex;align-items:center;gap:1.5rem;max-width:1300px;margin:0 auto;padding:1rem var(--cu-gut)}
+.cu-logo{text-decoration:none;display:flex;align-items:center;gap:.8rem;color:#f6ead6}
+.cu-logo svg{width:38px;height:38px;flex:none}
+.cu-logo span{font-family:var(--kw-font-heading);font-size:1.55rem;letter-spacing:.04em;line-height:1}.cu-logo i{display:block;font-style:normal;font-family:var(--kw-font-body);font-size:.64rem;letter-spacing:.24em;text-transform:uppercase;color:var(--cu-thread);margin-top:.25rem}
+.cu-nav{display:flex;gap:1.6rem;flex-wrap:wrap;margin-left:auto;font-size:.9rem;font-weight:600;letter-spacing:.03em}
+.cu-nav a{text-decoration:none;padding:.5em 0;min-height:24px;border-bottom:2px solid transparent}.cu-nav a:hover{border-color:var(--cu-thread)}
+.cu-ic{width:24px;height:24px;display:inline-grid;place-items:center;padding:10px;margin:-10px -2px;color:#f6ead6}.cu-ic svg{width:22px;height:22px}
+.cu-nav--ic{margin-left:0;gap:.8rem;align-items:center}
+/* accueil : héros asymétrique sur cuir sombre */
+.cu-dark{background:radial-gradient(120% 90% at 20% 0%,var(--cu-hide2),var(--cu-hide) 70%);color:#f1e5d1;position:relative}
+.cu-hero{padding:clamp(44px,8vw,110px) 0 clamp(52px,8vw,120px)}
+.cu-hero-in{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(24px,5vw,80px);align-items:center}
+.cu-hero-art{position:relative}
+.cu-hero-art svg,.cu-stage svg{display:block;width:100%;height:auto}
+.cu-hero-cap{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cu-thread);margin:.8rem 0 0;text-align:center}
+.cu-sec{padding:clamp(40px,6vw,84px) 0}
+.cu-ph{padding:clamp(40px,7vw,88px) 0 clamp(24px,4vw,44px);background:var(--cu-paper);border-bottom:1px solid var(--cu-line);position:relative}
+.cu-ph::after{content:"";position:absolute;left:var(--cu-gut);right:var(--cu-gut);bottom:6px;border-top:1px dashed var(--cu-line)}
+.cu-prose h2{margin-top:2rem}
+/* gros plan de coutures */
+.cu-close{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,72px);align-items:center}
+.cu-close figure{margin:0}.cu-close svg{display:block;width:100%;height:auto;clip-path:polygon(18px 0,calc(100% - 18px) 0,100% 18px,100% calc(100% - 18px),calc(100% - 18px) 100%,18px 100%,0 calc(100% - 18px),0 18px)}
+.cu-close figcaption{font-size:.82rem;color:var(--cu-mut);margin-top:.6rem}
+.cu-seam line,.cu-seam path{fill:none;stroke:var(--cu-thread);stroke-width:3;stroke-linecap:round;stroke-dasharray:14 9}
+.cu-seam--b line,.cu-seam--b path{stroke-dasharray:14 9;stroke-dashoffset:11}
+.cu-grain{fill:none;stroke:#000;stroke-opacity:.14;stroke-width:1.2}
+/* étapes de fabrication : marge numérotée */
+.cu-steps{list-style:none;margin:2rem 0 0;padding:0;display:grid;gap:0;counter-reset:cust}
+.cu-steps li{counter-increment:cust;display:grid;grid-template-columns:4.2rem 1fr;gap:1rem;padding:1.3rem 0;border-top:1px dashed var(--cu-line)}
+.cu-steps li::before{content:counter(cust,decimal-leading-zero);font-family:var(--kw-font-heading);font-size:2rem;color:var(--cu-saddle);line-height:1}
+.cu-steps b{display:block;font-family:var(--kw-font-heading);font-size:1.3rem;font-weight:400;margin-bottom:.2rem}.cu-steps span{color:var(--cu-mut)}
+.cu-split{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(24px,5vw,72px);align-items:start}
+.cu-split--r{grid-template-columns:1.2fr .8fr}
+/* fiches cuir dépliantes */
+.cu-fiches{border-top:1px dashed var(--cu-line);margin-top:1.4rem}
+.cu-fiche{border-bottom:1px dashed var(--cu-line)}
+.cu-fiche summary{cursor:pointer;list-style:none;display:grid;gap:.15rem;padding:1.1rem 0;min-height:48px}.cu-fiche summary::-webkit-details-marker{display:none}
+.cu-fiche-t{font-family:var(--kw-font-heading);font-size:1.4rem}.cu-fiche-t::after{content:"+";float:right;color:var(--cu-saddle)}.cu-fiche[open] .cu-fiche-t::after{content:"\2212"}
+.cu-fiche-s{color:var(--cu-mut)}
+.cu-dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem;margin:.4rem 0 1.4rem}
+.cu-dl div{background:var(--cu-paper);padding:.9rem 1rem;border:1px dashed var(--cu-line)}.cu-dl dt{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cu-mut)}.cu-dl dd{margin:.2rem 0 0;font-family:var(--kw-font-heading);font-size:1.15rem}
+.cu-q{border-bottom:1px dashed var(--cu-line);padding:1rem 0}.cu-q summary{cursor:pointer;font-weight:600;min-height:32px}
+/* ===== ATELIER : personnalisation avec aperçu en direct ===== */
+.cu-atelier{background:var(--cu-paper);border-block:1px solid var(--cu-line);padding:clamp(40px,6vw,88px) 0}
+.cu-at{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,56px);align-items:center;margin-top:1.6rem}
+.cu-stage{background:radial-gradient(90% 80% at 50% 30%,#4a3023,#241610);padding:clamp(16px,3vw,36px);clip-path:polygon(22px 0,calc(100% - 22px) 0,100% 22px,100% calc(100% - 22px),calc(100% - 22px) 100%,22px 100%,0 calc(100% - 22px),0 22px);position:relative}
+.cu-stage::after{content:"";position:absolute;inset:8px;border:1px dashed rgba(214,176,106,.55);clip-path:inherit;pointer-events:none}
+.cu-leather{fill:var(--cu-leather,#9a4a1e)}.cu-shade{fill:#000;fill-opacity:.2}.cu-light{fill:#fff;fill-opacity:.1}
+.cu-thread{fill:none;stroke:var(--cu-fil,#d6b06a);stroke-width:2.6;stroke-linecap:round;stroke-dasharray:9 7}
+.cu-handle{fill:none;stroke:var(--cu-fil,#d6b06a);stroke-width:12;stroke-linecap:round}
+.cu-hardware{fill:var(--cu-fil,#d6b06a)}
+.cu-mono{font-family:var(--kw-font-heading);font-size:46px;fill:var(--cu-fil,#d6b06a);letter-spacing:.14em}.cu-mono--sh{fill:#000;fill-opacity:.45}.cu-mono.is-ghost{fill-opacity:.35}
+.cu-ctl{display:grid;gap:1.1rem}
+.cu-ctl label,.cu-ctl legend{display:block;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--cu-mut);padding:0;margin:0 0 .45rem}
+.cu-ctl fieldset{border:0;margin:0;padding:0;min-width:0}
+.cu-ctl input[type=text]{width:100%;box-sizing:border-box;font:inherit;font-family:var(--kw-font-heading);font-size:1.6rem;letter-spacing:.3em;text-transform:uppercase;padding:.55rem .8rem;min-height:52px;background:#fffaf0;color:var(--cu-ink);border:1px solid var(--cu-line);border-bottom:2px dashed var(--cu-saddle);border-radius:0}
+.cu-opts{display:flex;flex-wrap:wrap;gap:.6rem}
+.cu-opt{font:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:.55rem;min-height:44px;padding:.4rem .9rem;background:#fffaf0;color:var(--cu-ink);border:1px solid var(--cu-line);border-radius:0;font-size:.92rem}
+.cu-opt i{width:20px;height:20px;border:1px solid rgba(0,0,0,.35);display:block;flex:none;background:var(--sw,#999)}
+.cu-opt[aria-pressed="true"]{border-color:var(--cu-saddle);box-shadow:inset 0 0 0 1px var(--cu-saddle);font-weight:700}
+.cu-opt:hover{background:#fff}
+.cu-note{font-size:.88rem;color:var(--cu-mut);border-left:3px solid var(--cu-thread);padding:.2rem 0 .2rem .9rem;margin:0}
+.cu-vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cu-fallback{color:var(--cu-mut);font-size:.9rem}
+.cu-mini{margin:.6rem 0 1rem;max-width:260px}.cu-mini .cu-stage{padding:10px}.cu-mini .cu-stage::after{inset:4px}
+/* ===== réassurance honnête ===== */
+.cu-vals{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
+.cu-vals li{background:var(--cu-paper);padding:1.3rem 1.3rem 1.4rem;border:1px dashed var(--cu-line);clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%,0 12px);color:var(--cu-mut)}
+.cu-vals b{display:block;font-family:var(--kw-font-heading);font-size:1.25rem;font-weight:400;color:var(--cu-ink);margin-bottom:.3rem}
+/* pied */
+.cu-foot{background:#1b100a;color:#d9c8b0;padding:48px 0 22px;margin-top:40px;position:relative}
+.cu-foot::before{content:"";position:absolute;left:0;right:0;top:8px;border-top:2px dashed var(--cu-thread);opacity:.7}
+.cu-foot-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem}
+.cu-fl{display:grid;gap:.4rem;font-size:.93rem}.cu-fl a{text-decoration:none}.cu-fl a:hover{text-decoration:underline}
+.cu-foot .cu-small{color:#b8a58c}
+.cu-copy{text-align:center;font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:#a8957c;margin:2rem 0 0}
+/* grille réelle (widget shopgrid) */
+.lp-main [class*="shopgrid"] img{aspect-ratio:4/5;object-fit:cover}
+/* ===== boutique réelle (/boutique/*) : mêmes pages du moteur, identité Cuir ===== */
+.sh-head{background:var(--cu-hide);color:#f1e5d1;display:flex;align-items:center;gap:1rem;padding:1rem var(--cu-gut);border-bottom:3px double var(--cu-thread)}
+.sh-brand{font-family:var(--kw-font-heading);font-size:1.6rem;letter-spacing:.04em;text-decoration:none;color:#f6ead6}
+.sh-nav{margin-left:auto;font-weight:600;font-size:.92rem}.sh-nav a{color:#f1e5d1}
+.sh-main{max-width:1200px;margin:0 auto;padding:clamp(28px,5vw,64px) var(--cu-gut)}
+.sh-title{font-family:var(--kw-font-heading);font-weight:400;font-size:clamp(1.8rem,4vw,3rem)}
+.sh-filters{background:var(--cu-paper);border:1px dashed var(--cu-line);margin:1.2rem 0 2rem;padding:.9rem 1rem}
+.sh-filters .sh-form{display:flex;flex-wrap:wrap;gap:.8rem 1.2rem;align-items:flex-end}
+.sh-filters label{font-size:.76rem;letter-spacing:.14em;text-transform:uppercase;color:var(--cu-mut);font-weight:700}
+.sh-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:1.6rem 1.2rem}
+.sh-card{background:var(--cu-paper);border:0;padding:12px 12px 16px;position:relative;clip-path:polygon(14px 0,calc(100% - 14px) 0,100% 14px,100% 100%,0 100%,0 14px);box-shadow:inset 0 0 0 1px var(--cu-line)}
+.sh-card::after{content:"";position:absolute;inset:6px;border:1px dashed var(--cu-line);pointer-events:none}
+.sh-card-img{border-radius:0;aspect-ratio:4/5;object-fit:cover;width:100%;height:auto;background:linear-gradient(160deg,#9a4a1e,#4a2412)}
+.sh-card-name{display:block;margin-top:.7rem;font-family:var(--kw-font-heading);font-size:1.15rem}
+.sh-price{color:var(--cu-mut)}.sh-price strong{color:var(--cu-ink)}
+.sh-btn{border-radius:0;font-weight:600;letter-spacing:.04em;min-height:48px;background:transparent;border:1px solid var(--cu-ink);color:var(--cu-ink)}
+.sh-btn-primary{background:var(--cu-saddle);border-color:var(--cu-saddle);color:#fbf4e8}
+.sh-product{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,64px);align-items:start}
+.sh-gallery{position:static}
+.sh-gallery img,.sh-big{border-radius:0;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;background:linear-gradient(160deg,#9a4a1e,#4a2412);display:block}
+.sh-desc,.sh-product+section{grid-column:1/-1}
+input,select,textarea{border-radius:0}
+.sh-buy [data-sh-custom]{text-transform:uppercase;letter-spacing:.2em}
+/* animation : la couture se tisse quand le bloc entre à l'écran */
+@keyframes cuir-coudre{from{stroke-dashoffset:260}to{stroke-dashoffset:0}}
+.cu-js .cu-seam.is-in line,.cu-js .cu-seam.is-in path{animation:cuir-coudre 1.6s ease-out both}
+body[data-pk-grain="plat"] .cu-dark{background:var(--cu-hide)}
+body[data-pk-bords="droit"] .cu-btn,body[data-pk-bords="droit"] .cu-btn::after,body[data-pk-bords="droit"] .sh-card,body[data-pk-bords="droit"] .cu-vals li,body[data-pk-bords="droit"] .cu-stage,body[data-pk-bords="droit"] .cu-close svg{clip-path:none}
+@media (max-width:900px){
+  .cu-bar{flex-wrap:wrap;gap:.8rem 1rem}.cu-nav{order:3;width:100%;margin-left:0;gap:1.1rem}.cu-nav--ic{order:2;margin-left:auto;width:auto}
+  .cu-hero-in,.cu-close,.cu-at,.cu-split,.cu-split--r,.sh-product{grid-template-columns:1fr}
+  .cu-vals{grid-template-columns:1fr}
+  .cu-hero-art{order:-1;max-width:420px}
+}
+@media (max-width:480px){.cu-steps li{grid-template-columns:3rem 1fr}.cu-link{display:inline-block;margin:.8rem 0 0}}
+body[data-pk-couture="off"] .cu-seam-h,body[data-pk-couture="off"] .cu-head::after,body[data-pk-couture="off"] .cu-foot::before{display:none}
+body[data-pk-annonce="off"] .cu-promo{display:none}
+@media (prefers-reduced-motion:reduce){.cu-btn{transition:none}.cu-js .cu-seam.is-in line,.cu-js .cu-seam.is-in path{animation:none}}
