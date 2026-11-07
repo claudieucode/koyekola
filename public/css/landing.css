@@ -817,13 +817,13 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .lp-block.lp-site-header.kw-theme-sticky { position: sticky; top: var(--kw-hdr-top, 0); z-index: var(--kw-hdr-z, 60); }
 .lp-block.lp-site-header.kw-theme-overlay { position: absolute; top: 0; left: 0; right: 0; margin-inline: 0; z-index: var(--kw-hdr-z, 60); }
 /* Header Builder : en-tête « fixé » (hors flux : un espaceur de sa hauteur garde la page en place, voir landing.js), coller sur certains appareils seulement, masquage au défilement */
-.lp-block.lp-site-header.kw-theme-fixed { position: fixed; top: var(--kw-hdr-top, 0); left: 0; right: 0; margin-inline: 0; z-index: var(--kw-hdr-z, 60); }
+/* « Fixé » : reste en haut de l'écran. Réalisé avec la position collée, qui garde l'en-tête DANS le flux : aucun espaceur à ajouter après coup, donc aucun saut de contenu (mesuré : un en-tête vraiment hors flux faisait sauter la page, CLS 0,16) */
+.lp-block.lp-site-header.kw-theme-fixed { position: sticky; top: var(--kw-hdr-top, 0); z-index: var(--kw-hdr-z, 60); }
 @media (min-width: 1024px) { .lp-block.lp-site-header.kw-hdr-no-desktop:is(.kw-theme-sticky, .kw-theme-fixed) { position: static; } }
 @media (min-width: 768px) and (max-width: 1023px) { .lp-block.lp-site-header.kw-hdr-no-tablet:is(.kw-theme-sticky, .kw-theme-fixed) { position: static; } }
 @media (max-width: 767px) { .lp-block.lp-site-header.kw-hdr-no-mobile:is(.kw-theme-sticky, .kw-theme-fixed) { position: static; } }
 .lp-block.lp-site-header[data-kw-hide] { transition: transform .25s ease; }
 .lp-block.lp-site-header[data-kw-hide].is-hidden { transform: translateY(-110%); }
-.kw-hdr-spacer { display: block; width: 100%; pointer-events: none; }
 /* Effets d'un en-tête au défilement (propriété de conteneur headerFx, classe is-scrolled posée par landing.js) : sobres (0,2 s), aucune animation si le visiteur demande moins de mouvement.
    Les règles visent les RANGÉES (.kw-full imbriqué dans le conteneur d'en-tête), jamais le conteneur extérieur. */
 .lp-block.lp-site-header[data-kw-scroll] .kw-full .kw-full { transition: padding .2s ease, background-color .2s ease, box-shadow .2s ease; }
@@ -1555,4 +1555,6 @@ html.kw-noscroll { overflow: hidden; }
 .kw-search-suggest li a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px; color: inherit; text-decoration: none; }
 .kw-search-suggest li a:hover, .kw-search-suggest li[aria-selected="true"] a { background: rgba(127, 127, 127, .16); } .kw-suggest-kind { opacity: .65; font-size: .82em; flex: none; }
 @media (prefers-reduced-motion: reduce) { .kw-search-dialog[open] { animation: none; } }
+.kw-menu-panel .kw-sub-toggle { width: 44px; height: 44px; margin-left: auto; }
+@media (max-width: 767px) { .kw-menu.is-enhanced .kw-sub-toggle { width: 44px; height: 44px; } }
 

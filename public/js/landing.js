@@ -212,13 +212,6 @@
     window.addEventListener("scroll", function () { if (!fxTick) { fxTick = true; window.requestAnimationFrame(fxSet); } }, { passive: true });
     if (fxHide) fxHead.addEventListener("focusin", function () { fxHead.classList.remove("is-hidden"); });
     fxSet();
-    // En-tête fixé (hors flux) : un espaceur de la même hauteur garde le contenu en place (pas de saut à la mise en page ni au redimensionnement)
-    if (fxHead.classList.contains("kw-theme-fixed") && "ResizeObserver" in window) {
-      var spacer = document.createElement("div"); spacer.className = "kw-hdr-spacer"; spacer.setAttribute("aria-hidden", "true");
-      fxHead.parentNode.insertBefore(spacer, fxHead);
-      var fit = function () { spacer.style.height = window.getComputedStyle(fxHead).position === "fixed" ? fxHead.offsetHeight + "px" : "0"; };
-      new ResizeObserver(fit).observe(fxHead); window.addEventListener("resize", fit); fit();
-    }
   }
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {

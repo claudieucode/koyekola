@@ -55,13 +55,12 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
   });
   after(async () => { if (browser) await browser.close(); if (db) db.close(); if (srv) await srv.stop(); });
 
-  test("en-tête FIXÉ : hors flux, un espaceur garde le contenu en place (rien n'est recouvert), il reste en haut au défilement", async () => {
+  test("en-tête FIXÉ : reste en haut de l'écran au défilement, dans le flux (le contenu n'est pas recouvert et ne saute pas)", async () => {
     await publishHeader("classique-logo-menu-bouton.clair", { mode: "fixed" });
     const { context, page } = await visit();
-    assert.equal(await hdr(page, "position"), "fixed");
+    assert.equal(await hdr(page, "position"), "sticky", "réalisé avec la position collée : aucun saut de contenu");
+    assert.equal(await page.locator(".kw-hdr-spacer").count(), 0, "aucun espaceur ajouté après coup");
     const hh = (await hdr(page, "rect")).height;
-    const sp = await page.evaluate(() => { const s = document.querySelector(".kw-hdr-spacer"); return s ? s.getBoundingClientRect().height : null; });
-    assert.ok(sp !== null && Math.abs(sp - hh) < 2, `espaceur ${sp} / en-tête ${hh}`);
     const bodyTop = await page.evaluate(() => [...document.querySelectorAll(".lp-block")].find((b) => /CORPS DE PAGE/.test(b.textContent) && !b.classList.contains("lp-site-header")).getBoundingClientRect().top);
     assert.ok(bodyTop >= hh - 2, `le contenu (${bodyTop}) commence sous l'en-tête (${hh})`);
     await scrollTo(page, 600); assert.ok(Math.abs((await hdr(page, "rect")).top) < 1, "reste collé en haut");

@@ -3,7 +3,7 @@
 //
 //   section.header = { v:1, mode, fx, threshold, offset, zIndex, stickOn, shrink, hideOnScroll }
 //
-// - mode      : "static" (ordinaire) · "sticky" (collé en haut) · "fixed" (fixé, hors flux) · "overlay" (superposé au visuel d'ouverture)
+// - mode      : "static" (ordinaire) · "sticky" (collé en haut) · "fixed" (fixé en haut, reste dans le flux : aucun espaceur ni saut de contenu) · "overlay" (superposé au visuel d'ouverture)
 // - fx        : "" · "shrink" (les rangées se réduisent) · "solid" (un en-tête superposé devient plein) · "both"
 // - threshold : défilement (px) à partir duquel l'en-tête passe à l'état « défilé » (classe is-scrolled)
 // - offset    : décalage haut (px) d'un en-tête collé ou fixé (ex. sous une barre d'administration)

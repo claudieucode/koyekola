@@ -7816,7 +7816,7 @@
     var d = headerNow(), dis = !canWrite, moving = d.mode === "sticky" || d.mode === "fixed", live = d.mode !== "static";
     box.appendChild(h("p", { class: "pb-sub", text: "Comportement de l'en-tête" }));
     box.appendChild(h("p", { class: "pb-hint", text: "Ces réglages décident comment l'en-tête se comporte sur le site publié. Ils sont enregistrés avec l'en-tête : déplacer ou supprimer un bloc ne les change plus." }));
-    box.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (la page est décalée)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
+    box.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (reste visible, sans décalage)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
     if (!live) box.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a ni effet de défilement ni masquage. Choisissez une autre position pour les activer." }));
     if (moving) {
       box.appendChild(h("p", { class: "pb-sub", text: "Coller sur" }));
@@ -7839,7 +7839,7 @@
       box.appendChild(numberField("Niveau d'empilement (1 à 100)", d.zIndex, { min: 1, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ zIndex: n }, "z"); }, "Plus la valeur est haute, plus l'en-tête passe au-dessus des autres éléments. 60 par défaut."));
       box.appendChild(h("p", { class: "pb-hint", text: "Pour changer l'apparence d'un élément après le défilement (fond, couleur, taille), sélectionnez-le puis choisissez l'état « Après défilement » dans l'onglet Style." }));
     }
-    var modeText = { static: "Ordinaire : défile avec la page.", sticky: "Collé : reste visible en haut de l'écran pendant le défilement.", fixed: "Fixé : reste en haut de l'écran, hors du flux de la page.", overlay: "Superposé : posé sur le haut du visuel d'ouverture de chaque page." }[d.mode];
+    var modeText = { static: "Ordinaire : défile avec la page.", sticky: "Collé : reste visible en haut de l'écran pendant le défilement.", fixed: "Fixé : reste en haut de l'écran pendant tout le défilement.", overlay: "Superposé : posé sur le haut du visuel d'ouverture de chaque page." }[d.mode];
     var fxText = d.fx ? " Effet : " + ({ shrink: "hauteur réduite", solid: "fond plein", both: "hauteur réduite et fond plein" })[d.fx] + " après " + d.threshold + " px." : "";
     var hideText = d.hideOnScroll.enabled ? " Masqué en descendant." : "";
     var devText = moving && d.stickOn.length < 3 ? " Actif sur : " + HDR_DEVICES.filter(function (x) { return d.stickOn.indexOf(x[0]) >= 0; }).map(function (x) { return x[1].toLowerCase(); }).join(", ") + "." : "";
