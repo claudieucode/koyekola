@@ -53,8 +53,8 @@ body[data-pk-entete="titane"] .cb-head{background:var(--cb-pap);color:var(--cb-c
 .cb-hero .cb-cote span{background:#eef0f1}
 @keyframes cabine-trace-w{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes cabine-trace-h{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.cb-js .cb-plan.is-in .cb-cote--w::before{transform-origin:left center;animation:cabine-trace-w 1.3s ease-out both}
-.cb-js .cb-plan.is-in .cb-cote--h::before{transform-origin:center top;animation:cabine-trace-h 1.3s .2s ease-out both}
+body.cb-js .cb-plan.is-in .cb-cote--w::before{transform-origin:left center;animation:cabine-trace-w 1.3s ease-out both}
+body.cb-js .cb-plan.is-in .cb-cote--h::before{transform-origin:center top;animation:cabine-trace-h 1.3s .2s ease-out both}
 /* étapes en capsules */
 .cb-steps{list-style:none;margin:2rem 0 0;padding:0;display:grid;gap:.9rem;counter-reset:cabs}
 .cb-steps li{counter-increment:cabs;display:grid;grid-template-columns:3.2rem 1fr;gap:1rem;padding:1rem 1.2rem;background:var(--cb-pap);border:1px solid var(--cb-line);border-radius:var(--cb-r)}
@@ -148,5 +148,5 @@ body[data-pk-annonce="off"] .cb-promo{display:none}
   .cb-hero-art{order:-1}
 }
 @media (max-width:560px){.cb-vals{grid-template-columns:1fr}.cb-res li{grid-template-columns:1fr}.cb-link{display:inline-block;margin:.8rem 0 0}.cb-steps li{grid-template-columns:2.8rem 1fr;padding:.9rem}.sh-main table tbody th{width:auto}}
-@media (prefers-reduced-motion:reduce){.cb-btn{transition:none}.cb-js .cb-plan.is-in .cb-cote--w::before,.cb-js .cb-plan.is-in .cb-cote--h::before{animation:none}}
-.cb-js .cb-plan:not(.is-in) .cb-cote::before{transform:scale(0)}
+@media (prefers-reduced-motion:reduce){.cb-btn{transition:none}body.cb-js .cb-plan.is-in .cb-cote--w::before,body.cb-js .cb-plan.is-in .cb-cote--h::before{animation:none}}
+body.cb-js .cb-plan:not(.is-in) .cb-cote::before{transform:scale(0)}
