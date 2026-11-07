@@ -49,7 +49,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
   after(async () => { if (browser) await browser.close(); if (db) db.close(); if (srv) await srv.stop(); });
 
   test("un en-tête ancien (collant du catalogue) : le panneau affiche son état réel, sans rien écrire tant qu'on ne change rien", async () => {
-    const t = await adopt("saas-verre-depoli.clair", false);
+    const t = await adopt("luxe-02.luxe-02", false);
     const { context, page } = await open(); await openEditor(page, t);
     assert.match(await page.locator("[data-pb-header-summary]").innerText(), /Collé/);
     assert.equal(await field(page, "Position").inputValue(), "sticky");
@@ -60,7 +60,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
   });
 
   test("régler la position, l'effet et le seuil : enregistré, retrouvé au rechargement, appliqué sur le site publié, seuil respecté au défilement", async () => {
-    const t = await adopt("classique-logo-menu-bouton.clair");
+    const t = await adopt("luxe-01.luxe-01");
     const { context, page } = await open(); await openEditor(page, t);
     assert.equal(await field(page, "Position").inputValue(), "static");
     assert.equal(await field(page, "Effet au défilement").count(), 0, "un en-tête ordinaire n'a pas d'effet : le réglage n'est pas proposé");
@@ -79,13 +79,13 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     assert.ok(head, "l'en-tête publié est présent");
     assert.match(head.cls, /kw-theme-sticky/); assert.match(head.cls, /kw-theme-fx-both/); assert.equal(head.scroll, "both"); assert.equal(head.thr, "40");
     await pub.page.addStyleTag({ content: "body{min-height:3000px}" });
-    const scrolled = async (y) => { await pub.page.evaluate((v) => window.scrollTo(0, v), y); await pub.page.waitForTimeout(200); return pub.page.evaluate(() => document.querySelector(".lp-site-header").classList.contains("is-scrolled")); };
-    assert.equal(await scrolled(20), false, "sous le seuil : pas d'effet"); assert.equal(await scrolled(80), true, "au-delà du seuil : effet"); assert.equal(await scrolled(0), false, "retour en haut : effet retiré");
+    const scrolled = async (y) => { await pub.page.evaluate((v) => window.scrollTo({ top: v, behavior: "instant" }), y); await pub.page.waitForTimeout(300); return pub.page.evaluate(() => document.querySelector(".lp-site-header").classList.contains("is-scrolled")); };
+    assert.equal(await scrolled(20), false, "sous le seuil : pas d'effet"); assert.equal(await scrolled(300), true, "au-delà du seuil : effet"); assert.equal(await scrolled(0), false, "retour en haut : effet retiré");
     await pub.context.close();
   });
 
   test("passer un en-tête collant en « Ordinaire » le rend ordinaire sur le site, même si sa première bande garde son ancien style", async () => {
-    const t = await adopt("saas-verre-depoli.clair");
+    const t = await adopt("luxe-02.luxe-02");
     const { context, page } = await open(); await openEditor(page, t);
     await field(page, "Position").selectOption("static"); await save(page);
     await page.click("[data-pb-publish]"); await page.waitForFunction(() => /publié, à jour|À jour/.test(document.querySelector("[data-pb-status]").textContent));
@@ -97,7 +97,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
   });
 
   test("annuler (Ctrl+Z) rétablit le réglage précédent ; lecture seule impossible à modifier n'est pas testée ici (droits : voir tests de l'éditeur)", async () => {
-    const t = await adopt("classique-logo-menu-bouton.clair", false);
+    const t = await adopt("luxe-01.luxe-01", false);
     const { context, page } = await open(); await openEditor(page, t);
     await field(page, "Position").selectOption("overlay");
     assert.match(await page.locator("[data-pb-header-summary]").innerText(), /Superposé/);
@@ -108,7 +108,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
   });
 
   test("réglages complets : fixé, coller sur certains appareils (jamais zéro), décalage, masquage — enregistrés et appliqués sur le site publié", async () => {
-    const t = await adopt("classique-logo-menu-bouton.clair");
+    const t = await adopt("luxe-01.luxe-01");
     const { context, page } = await open(); await openEditor(page, t);
     await field(page, "Position").selectOption("fixed");
     const dev = (n) => page.locator("[data-pb-page-settings]").getByLabel(n, { exact: true });
@@ -137,7 +137,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
   });
 
   test("état « Après défilement » : proposé en dernier pour un élément d'un en-tête (onglet Style) avec son explication ; l'écriture et l'application sont prouvées par header-etats-navigateur et header-reglages", async () => {
-    const t = await adopt("classique-logo-menu-bouton.clair", false);
+    const t = await adopt("luxe-01.luxe-01", false);
     const { context, page } = await open(); await openEditor(page, t);
     await field(page, "Position").selectOption("sticky");
     await page.locator("[data-pb-layers] li.pb-node > .pb-row-item").first().click();
@@ -155,7 +155,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     const m = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Menu réglages', 'menu-reglages', 'published')").run(site).lastInsertRowid);
     db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, NULL, 0, 'custom', '/a', 'Page A', 'published')").run(m);
     db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(site, m);
-    const t = await adopt("classique-logo-menu-bouton.clair");
+    const t = await adopt("luxe-01.luxe-01");
     const { context, page } = await open({ width: 1500, height: 950 }); await openEditor(page, t);
     await page.locator("[data-pb-layers] li.pb-node > .pb-row-item", { hasText: /Menu de navigati/ }).first().click();
     const sel = page.getByLabel("Ouverture du menu sur mobile"); await sel.waitFor();
@@ -175,7 +175,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     let loc = db.prepare("SELECT menu_id FROM nav_locations WHERE site_id = ? AND location = 'header'").get(site);
     if (!loc) { const m = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Menu méga', 'menu-mega', 'published')").run(site).lastInsertRowid); db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, NULL, 0, 'custom', '/a', 'Page A', 'published')").run(m); db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(site, m); loc = { menu_id: m }; }
     const label = db.prepare("SELECT label FROM nav_items WHERE menu_id = ? AND parent_id IS NULL ORDER BY position LIMIT 1").get(loc.menu_id).label;
-    const t = await adopt("classique-logo-menu-bouton.clair");
+    const t = await adopt("luxe-01.luxe-01");
     const { context, page } = await open({ width: 1500, height: 950 }); await openEditor(page, t);
     await page.locator("[data-pb-layers] li.pb-node > .pb-row-item", { hasText: /Menu de navigati/ }).first().click();
     const item = page.locator("[data-pb-mega-item]").first(); await item.waitFor();

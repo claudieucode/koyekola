@@ -26,11 +26,11 @@ describe("Header Builder L3 : menus et tiroir mobile (navigateur)", { skip: SKIP
   after(async () => { if (env) await env.close(); });
 
   test("trois niveaux, icône, description, classe CSS : tout est rendu dans l'en-tête publié ; le troisième niveau s'ouvre au survol", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMenu({}));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({}));
     const { context, page } = await env.visit();
     assert.equal(await page.locator(".lp-site-header .kw-menu-item").count(), 3, "trois rubriques");
     assert.equal(await page.locator(".lp-site-header .kw-menu-icon svg").count(), 1, "icône de « Accueil »");
-    assert.match(await page.locator(".lp-site-header .kw-menu-desc").innerText(), /Tout ce que nous faisons/);
+    assert.match(await page.locator(".lp-site-header .kw-menu-desc").innerText(), /tout ce que nous faisons/i);
     assert.equal(await page.locator(".lp-site-header .kw-submenu-deep li.mon-lien").count(), 1, "troisième niveau avec sa classe");
     const deep = page.locator(".lp-site-header .kw-submenu-deep").first();
     assert.equal(await deep.isVisible(), false, "fermé au départ");
@@ -56,7 +56,7 @@ describe("Header Builder L3 : menus et tiroir mobile (navigateur)", { skip: SKIP
   });
 
   test("tiroir mobile : bouton « Menu » → panneau à droite avec fond assombri, défilement bloqué, focus dedans, état « menu ouvert » sur l'en-tête", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky" }, withDrawer("right"));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "sticky" }, withDrawer("right"));
     const { context, page } = await env.visit({ viewport: { width: 390, height: 800 } });
     const burger = page.locator(".lp-site-header .kw-menu-burger");
     assert.equal(await burger.isVisible(), true);
@@ -92,7 +92,7 @@ describe("Header Builder L3 : menus et tiroir mobile (navigateur)", { skip: SKIP
   });
 
   test("tiroir à gauche ; il se ferme si l'écran repasse en grand ; mouvement réduit sans animation", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withDrawer("left"));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withDrawer("left"));
     const { context, page } = await env.visit({ viewport: { width: 390, height: 800 }, reducedMotion: "reduce" });
     await page.locator(".lp-site-header .kw-menu-burger").click(); const panel = page.locator(".kw-menu-panel"); await panel.waitFor();
     assert.ok((await panel.boundingBox()).x < 2, "à gauche"); assert.equal(await panel.evaluate((e) => getComputedStyle(e).animationName), "none", "mouvement réduit : pas d'animation");
@@ -103,7 +103,7 @@ describe("Header Builder L3 : menus et tiroir mobile (navigateur)", { skip: SKIP
   });
 
   test("tiroir : les trois niveaux restent utilisables (bascules) et tous les liens sont visibles", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withDrawer("right"));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withDrawer("right"));
     const { context, page } = await env.visit({ viewport: { width: 390, height: 800 } });
     await page.locator(".lp-site-header .kw-menu-burger").click(); const panel = page.locator(".kw-menu-panel"); await panel.waitFor();
     await panel.locator('.kw-sub-toggle[aria-label="Sous-menu : Services"]').click();
@@ -115,7 +115,7 @@ describe("Header Builder L3 : menus et tiroir mobile (navigateur)", { skip: SKIP
   });
 
   test("suivi des clics sur trois niveaux : chaque lien redirige vers sa vraie destination", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMenu({}));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({}));
     const { context, page } = await env.visit();
     await env.checkTrackedLinks(page, { Accueil: "/", Services: "/services", Web: "/web", Conseil: "/conseil", WordPress: "/wordpress", Boutique: "/boutique", Contact: "/contact" });
     await context.close();

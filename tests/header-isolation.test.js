@@ -35,16 +35,16 @@ describe("Header Builder : isolation entre sites (site publié)", { skip: SKIP }
   after(async () => { if (env) await env.close(); });
 
   test("réglages d'en-tête : le site A colle son en-tête avec décalage et masquage, le site B garde un en-tête ordinaire ; aucun réglage ne passe de l'un à l'autre", async () => {
-    await publishFor(env.site, "classique-logo-menu-bouton.clair", { mode: "sticky", offset: 30, zIndex: 80, hideOnScroll: { enabled: true, tolerance: 10 } });
-    await publishFor(siteB, "classique-logo-menu-bouton.clair", { mode: "static" });
+    await publishFor(env.site, "luxe-01.luxe-01", { mode: "sticky", offset: 30, zIndex: 80, hideOnScroll: { enabled: true, tolerance: 10 } });
+    await publishFor(siteB, "luxe-01.luxe-01", { mode: "static" });
     const a = await headerOf(env.slug()), b = await headerOf(slugB());
     assert.match(a, /kw-theme-sticky/); assert.match(a, /--kw-hdr-top:30px/); assert.match(a, /--kw-hdr-z:80/); assert.match(a, /data-kw-hide="1"/);
     assert.doesNotMatch(b, /kw-theme-sticky|--kw-hdr|data-kw-hide|data-kw-scroll/, `le site B reste ordinaire : ${b}`);
   });
 
   test("états de style et logos : un style « Après défilement » du site A n'apparaît jamais dans la page du site B", async () => {
-    await publishFor(env.site, "classique-logo-menu-bouton.clair", { mode: "sticky" }, (s) => { s.children[0].states = { scrolled: { backgroundColor: "#ff0000" } }; });
-    await publishFor(siteB, "classique-logo-menu-bouton.clair", { mode: "sticky" });
+    await publishFor(env.site, "luxe-01.luxe-01", { mode: "sticky" }, (s) => { s.children[0].states = { scrolled: { backgroundColor: "#ff0000" } }; });
+    await publishFor(siteB, "luxe-01.luxe-01", { mode: "sticky" });
     const htmlA = (await new Client(env.srv.base).get(`/p/${env.slug()}`, { headers: UA })).text, htmlB = (await new Client(env.srv.base).get(`/p/${slugB()}`, { headers: UA })).text;
     assert.match(htmlA, /is-scrolled[^{]*\{[^}]*#ff0000/i, "le site A porte son état"); assert.doesNotMatch(htmlB, /#ff0000/i, "le site B n'a pas la couleur du site A");
   });
@@ -59,8 +59,8 @@ describe("Header Builder : isolation entre sites (site publié)", { skip: SKIP }
     const panel = await env.boss.request("/marketing/site-web/composants", { method: "POST", json: { name: "Panneau secret du site A", siteId: env.site, global: false, kind: "standard", section: { type: "layout", children: [{ id: "secretpanel01", type: "heading", props: { text: "CONFIDENTIEL SITE A", level: "3" } }] } }, headers: env.origin });
     assert.equal(panel.status, 201, panel.text.slice(0, 200)); const panelId = JSON.parse(panel.text).component.id;
     const mega = (menuItem) => (s) => { const walk = (nodes) => { for (const n of nodes) { if (n.type === "menu") n.props = { ...n.props, source: "location", location: "header", mega: { [String(menuItem)]: panelId } }; if (n.children) walk(n.children); } }; walk(s.children); };
-    await publishFor(env.site, "classique-logo-menu-bouton.clair", { mode: "static" }, mega(itemA));
-    await publishFor(siteB, "classique-logo-menu-bouton.clair", { mode: "static" }, mega(itemB)); // B référence le panneau de A
+    await publishFor(env.site, "luxe-01.luxe-01", { mode: "static" }, mega(itemA));
+    await publishFor(siteB, "luxe-01.luxe-01", { mode: "static" }, mega(itemB)); // B référence le panneau de A
     const htmlA = (await new Client(env.srv.base).get(`/p/${env.slug()}`, { headers: UA })).text, htmlB = (await new Client(env.srv.base).get(`/p/${slugB()}`, { headers: UA })).text;
     assert.match(htmlA, /CONFIDENTIEL SITE A/, "le site A affiche son panneau"); assert.doesNotMatch(htmlB, /CONFIDENTIEL SITE A/, "le site B ne reçoit jamais le panneau de A"); assert.doesNotMatch(htmlB, /has-mega/);
   });

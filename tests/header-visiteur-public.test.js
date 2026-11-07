@@ -16,8 +16,8 @@ describe("Header Builder L6 : en-tête selon le visiteur (site publié)", { skip
 
   before(async () => {
     env = await setup({ siteName: "Site visiteurs" });
-    guestHeader = await adopt("classique-logo-menu-bouton.clair");           // ordinaire
-    memberHeader = await adopt("saas-verre-depoli.clair");                   // collé : reconnaissable (kw-theme-sticky)
+    guestHeader = await adopt("luxe-01.luxe-01");           // ordinaire
+    memberHeader = await adopt("luxe-02.luxe-02");                   // collé : reconnaissable (kw-theme-sticky)
     guestHeader = await conditions(guestHeader, { include: [{ kind: "visitor", who: "guest" }], exclude: [] });
     memberHeader = await conditions(memberHeader, { include: [{ kind: "visitor", who: "member" }], exclude: [] });
     await publish(guestHeader); await publish(memberHeader);

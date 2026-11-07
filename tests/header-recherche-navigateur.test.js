@@ -30,7 +30,7 @@ describe("Header Builder L5 : recherche plein écran et suggestions (navigateur)
   });
 
   test("loupe → recherche plein écran : la fenêtre s'ouvre, le focus est dans le champ, les suggestions n'affichent que des publiés, le texte est écrit sans exécuter de HTML", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withSearch({ target: "site", skin: "overlay", suggest: true, placeholder: "Rechercher…", button: "Chercher" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withSearch({ target: "site", skin: "overlay", suggest: true, placeholder: "Rechercher…", button: "Chercher" }));
     const { context, page } = await env.visit();
     const open = page.locator(".lp-site-header .kw-search-open"), dlg = page.locator(".kw-search-dialog");
     assert.equal(await open.isVisible(), true); assert.equal(await dlg.isVisible(), false, "fermée au départ"); assert.equal(await open.getAttribute("aria-haspopup"), "dialog");
@@ -72,7 +72,7 @@ describe("Header Builder L5 : recherche plein écran et suggestions (navigateur)
   });
 
   test("champ dans la page avec suggestions : la liste s'ouvre sous le champ et Échap la ferme", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withSearch({ target: "site", suggest: true, placeholder: "Rechercher…", button: "Chercher" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withSearch({ target: "site", suggest: true, placeholder: "Rechercher…", button: "Chercher" }));
     const { context, page } = await env.visit();
     assert.equal(await page.locator(".lp-site-header .kw-search-open").count(), 0, "pas de loupe : champ dans la page");
     const input = page.locator(".lp-site-header input[type=search]"); await input.fill("guide"); await page.locator(".kw-search-suggest").waitFor({ state: "visible" });
@@ -82,7 +82,7 @@ describe("Header Builder L5 : recherche plein écran et suggestions (navigateur)
   });
 
   test("le widget Recherche existant est inchangé (formulaire d'origine, mêmes attributs, mêmes cibles)", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withSearch({ target: "catalogue", placeholder: "Rechercher…", button: "OK" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withSearch({ target: "catalogue", placeholder: "Rechercher…", button: "OK" }));
     const html = (await env.visit()); const form = await html.page.evaluate(() => { const f = document.querySelector(".lp-site-header form[role=search]"); return f ? { action: f.getAttribute("action"), tag: f.tagName, cls: f.className, children: [...f.children].map((c) => c.tagName) } : null; });
     assert.deepEqual({ action: form.action, tag: form.tag, children: form.children }, { action: "/catalogue", tag: "FORM", children: ["LABEL", "INPUT", "BUTTON"] }); assert.match(form.cls, /kw-search/);
     await html.context.close();

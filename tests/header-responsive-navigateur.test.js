@@ -22,7 +22,7 @@ describe("Header Builder L2 : responsive par élément (navigateur)", { skip: SK
   after(async () => { if (env) await env.close(); });
 
   test("ordre par appareil : A B C sur ordinateur, C B A sur mobile ; le bureau n'est pas touché par le réglage mobile", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, (s) => {
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (s) => {
       const g = mark(s);
       g.styles = { ...(g.styles || {}), desktop: { ...((g.styles || {}).desktop || {}), display: "flex", flexDirection: "row" } };
       const k = Math.min(3, g.children.length); g.children.slice(0, k).forEach((c, i) => { c.styles = { ...(c.styles || {}), mobile: { ...((c.styles || {}).mobile || {}), order: String(k - i) } }; });
@@ -37,7 +37,7 @@ describe("Header Builder L2 : responsive par élément (navigateur)", { skip: SK
   });
 
   test("visibilité par appareil : un élément masqué sur mobile reste visible sur ordinateur et tablette", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, (s) => { const g = mark(s); g.children[g.children.length - 1].hideOn = ["mobile"]; ids = [g.children[g.children.length - 1].id]; });
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (s) => { const g = mark(s); g.children[g.children.length - 1].hideOn = ["mobile"]; ids = [g.children[g.children.length - 1].id]; });
     const shown = async (viewport) => { const v = await env.visit({ viewport }); const r = await x(v.page, ids[0]); await v.context.close(); return r && r.shown; };
     assert.equal(await shown({ width: 1280, height: 800 }), true, "ordinateur : visible");
     assert.equal(await shown({ width: 900, height: 800 }), true, "tablette : visible");
@@ -45,7 +45,7 @@ describe("Header Builder L2 : responsive par élément (navigateur)", { skip: SK
   });
 
   test("direction par appareil : ligne sur ordinateur, colonne sur mobile (les éléments s'empilent)", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, (s) => {
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (s) => {
       const g = mark(s);
       g.styles = { ...(g.styles || {}), desktop: { ...((g.styles || {}).desktop || {}), display: "flex", flexDirection: "row" }, mobile: { flexDirection: "column" } };
     });
@@ -58,7 +58,7 @@ describe("Header Builder L2 : responsive par élément (navigateur)", { skip: SK
     const base = (() => { try { return JSON.parse(env.db.prepare("SELECT settings FROM mk_sites WHERE id = ?").get(env.site).settings || "{}"); } catch { return {}; } })();
     env.db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify({ ...base, layout: { ...(base.layout || {}), breakpoints: { tablet: 1279, mobile: 600, wide: 1920 } } }), env.site);
     let groupId = null;
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, (s) => { const g = mark(s); groupId = g.id; g.styles = { ...(g.styles || {}), tablet: { display: "none" } }; });
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (s) => { const g = mark(s); groupId = g.id; g.styles = { ...(g.styles || {}), tablet: { display: "none" } }; });
     const hiddenAt = async (w) => { const v = await env.visit({ viewport: { width: w, height: 800 } }); const r = await v.page.evaluate((i) => getComputedStyle(document.querySelector(`.lp-site-header .kw-n-${i}`)).display, groupId); await v.context.close(); return r === "none"; };
     assert.equal(await hiddenAt(1100), true, "1100 px : tablette (réglée à ≤ 1279)");
     assert.equal(await hiddenAt(1300), false, "1300 px : ordinateur");

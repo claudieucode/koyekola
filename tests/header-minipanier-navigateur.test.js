@@ -19,7 +19,7 @@ describe("Header Builder L5 : mini-panier en tiroir (navigateur)", { skip: SKIP 
     course = await createCourse(env.boss, env.srv, { title: "Formation du panier", price: 35 });
     student = await newStudent(env.srv); empty = await newStudent(env.srv);
     const added = await student.post(`/panier/ajouter/${course.id}`, {}); assert.ok([200, 302, 303].includes(added.status), `ajout au panier : ${added.status}`);
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withCart({ label: "Panier", showCount: true, skin: "drawer" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withCart({ label: "Panier", showCount: true, skin: "drawer" }));
   });
   after(async () => { if (env) await env.close(); });
 
@@ -54,9 +54,9 @@ describe("Header Builder L5 : mini-panier en tiroir (navigateur)", { skip: SKIP 
   });
 
   test("le widget Mini-panier existant est inchangé (lien vers /panier avec compteur)", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withCart({ label: "Panier", showCount: true }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withCart({ label: "Panier", showCount: true }));
     const { context, page } = await visitAs(student);
-    assert.equal(await page.locator(".lp-site-header .kw-mc-open").count(), 0); const a = page.locator(".lp-site-header a.kw-minicart"); assert.equal(await a.getAttribute("href"), "/panier"); assert.match(await a.innerText(), /1/);
+    assert.equal(await page.locator(".lp-site-header .kw-mc-open").count(), 0); const a = page.locator(".lp-site-header a.kw-minicart.kw-n-mcart00001"); assert.equal(await a.getAttribute("href"), "/panier"); assert.match(await a.innerText(), /1/);
     await context.close();
   });
 

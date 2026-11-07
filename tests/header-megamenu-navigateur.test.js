@@ -30,7 +30,7 @@ describe("Header Builder L4 : méga-menu (navigateur)", { skip: SKIP }, () => {
   const servicesItem = (page) => page.locator(".lp-site-header .kw-menu-item.has-mega");
 
   test("au survol : le panneau s'ouvre sous la rubrique, avec son propre style ; il se referme quand on le quitte", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMega({}));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMega({}));
     const { context, page } = await env.visit();
     assert.equal(await servicesItem(page).count(), 1, "une seule rubrique a un panneau");
     const panel = page.locator(".lp-site-header .kw-mega"); assert.equal(await panel.isVisible(), false, "fermé au départ");
@@ -58,7 +58,7 @@ describe("Header Builder L4 : méga-menu (navigateur)", { skip: SKIP }, () => {
   });
 
   test("ouverture au clic : le survol n'ouvre pas ; le bouton ouvre ; un clic ailleurs et le focus qui sort referment", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMega({ megaTrigger: "click" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMega({ megaTrigger: "click" }));
     const { context, page } = await env.visit();
     const panel = page.locator(".lp-site-header .kw-mega"), toggle = servicesItem(page).locator("> .kw-sub-toggle");
     await servicesItem(page).hover(); assert.equal(await panel.isVisible(), false, "le survol n'ouvre pas en mode clic");
@@ -70,7 +70,7 @@ describe("Header Builder L4 : méga-menu (navigateur)", { skip: SKIP }, () => {
   });
 
   test("pleine largeur : le panneau couvre toute la largeur de l'en-tête", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMega({ megaWidth: "full" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMega({ megaWidth: "full" }));
     const { context, page } = await env.visit();
     await servicesItem(page).hover();
     const head = await page.locator(".lp-site-header").boundingBox(), box = await page.locator(".lp-site-header .kw-mega").boundingBox();
@@ -79,7 +79,7 @@ describe("Header Builder L4 : méga-menu (navigateur)", { skip: SKIP }, () => {
   });
 
   test("mobile : le panneau s'ouvre en accordéon sous la rubrique (dans le flux, sans déborder)", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMega({ mobileToggle: true }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMega({ mobileToggle: true }));
     const { context, page } = await env.visit({ viewport: { width: 390, height: 800 } });
     await page.locator(".lp-site-header .kw-menu-burger").click();
     const toggle = servicesItem(page).locator("> .kw-sub-toggle"); await toggle.click();
@@ -90,10 +90,10 @@ describe("Header Builder L4 : méga-menu (navigateur)", { skip: SKIP }, () => {
   });
 
   test("isolation : le panneau d'un AUTRE site n'est jamais affiché ; un panneau retiré ou inexistant ne casse pas le menu", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, (s) => { const walk = (nodes) => { for (const n of nodes) { if (n.type === "menu") n.props = { ...n.props, source: "location", location: "header", mega: { [String(servicesId)]: otherPanel } }; if (n.children) walk(n.children); } }; walk(s.children); });
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (s) => { const walk = (nodes) => { for (const n of nodes) { if (n.type === "menu") n.props = { ...n.props, source: "location", location: "header", mega: { [String(servicesId)]: otherPanel } }; if (n.children) walk(n.children); } }; walk(s.children); });
     const a = await env.visit(); assert.equal(await a.page.locator(".lp-site-header .has-mega").count(), 0, "pas de panneau étranger"); assert.equal(await a.page.locator(".lp-site-header .kw-menu-item").count(), 3, "le menu reste complet");
     assert.doesNotMatch(await a.page.content(), /Panneau Etranger/); await a.context.close();
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, (s) => { const walk = (nodes) => { for (const n of nodes) { if (n.type === "menu") n.props = { ...n.props, source: "location", location: "header", mega: { [String(servicesId)]: 999999 } }; if (n.children) walk(n.children); } }; walk(s.children); });
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (s) => { const walk = (nodes) => { for (const n of nodes) { if (n.type === "menu") n.props = { ...n.props, source: "location", location: "header", mega: { [String(servicesId)]: 999999 } }; if (n.children) walk(n.children); } }; walk(s.children); });
     const b = await env.visit(); assert.equal(await b.page.locator(".lp-site-header .has-mega").count(), 0, "composant inexistant : ignoré"); assert.equal(await b.page.locator(".lp-site-header .kw-menu-item").count(), 3); await b.context.close();
   });
 
@@ -101,14 +101,14 @@ describe("Header Builder L4 : méga-menu (navigateur)", { skip: SKIP }, () => {
     const comp = JSON.parse((await env.boss.get(`/marketing/site-web/composants/${panelId}.json`)).text).component;
     const section = JSON.parse(JSON.stringify(comp.draft || comp.section)); section.children[0].children[0].props.text = "Titre modifié";
     assert.equal((await env.boss.request(`/marketing/site-web/composants/${panelId}/brouillon`, { method: "PUT", headers: env.origin, json: { revision: comp.revision, content: { title: comp.name, sections: [section] } } })).status, 200);
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMega({}));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMega({}));
     let v = await env.visit(); await servicesItem(v.page).hover(); assert.doesNotMatch(await v.page.locator(".lp-site-header .kw-mega").innerText(), /Titre modifié/, "brouillon non publié : pas visible"); await v.context.close();
     assert.equal((await env.boss.request(`/marketing/site-web/composants/${panelId}/mettre-a-jour`, { method: "POST", json: {}, headers: env.origin })).status, 200);
     v = await env.visit(); await servicesItem(v.page).hover(); assert.match(await v.page.locator(".lp-site-header .kw-mega").innerText(), /Titre modifié/, "publié : visible"); await v.context.close();
   });
 
   test("suivi des clics : chaque lien du menu et du panneau redirige vers sa vraie destination (ordre du gabarit = ordre de linksOf)", async () => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withMega({}));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMega({}));
     const { context, page } = await env.visit();
     await env.checkTrackedLinks(page, { Accueil: "/", Services: "/services", Contact: "/contact", "Tout voir": "/tout-voir" });
     await context.close();

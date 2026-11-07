@@ -13,7 +13,7 @@ describe("Header Builder L8 : accessibilité de l'en-tête publié (navigateur)"
     const item = (parent, pos, label, url) => Number(db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, ?, ?, 'custom', ?, ?, 'published')").run(menu, parent, pos, url, label).lastInsertRowid);
     const s = item(null, 0, "Services", "/services"); item(s, 0, "Web", "/web"); item(null, 1, "Contact", "/contact");
     db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(env.site, menu);
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky" }, withMenu({ mobileToggle: true, mobileMode: "drawer" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "sticky" }, withMenu({ mobileToggle: true, mobileMode: "drawer" }));
   });
   after(async () => { if (env) await env.close(); });
 

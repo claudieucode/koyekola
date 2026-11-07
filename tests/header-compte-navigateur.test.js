@@ -15,7 +15,7 @@ describe("Header Builder L5 : menu du compte (navigateur)", { skip: SKIP }, () =
     page.on("pageerror", (e) => env.errors.push(`pageerror : ${e.message}`));
     await page.goto(`${env.srv.base}/p/${env.slug()}`); await page.waitForSelector(".lp-site-header"); return { context, page };
   };
-  before(async () => { env = await setup({ siteName: "Site compte" }); student = await newStudent(env.srv); await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withAccount({ skin: "menu", showCart: true, login: "Se connecter", account: "Mon compte", cart: "Panier" })); });
+  before(async () => { env = await setup({ siteName: "Site compte" }); student = await newStudent(env.srv); await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withAccount({ skin: "menu", showCart: true, login: "Se connecter", account: "Mon compte", cart: "Panier" })); });
   after(async () => { if (env) await env.close(); });
 
   test("visiteur connecté : un bouton « Mon compte » ouvre un menu (compte, panier, déconnexion) ; Échap le ferme et rend le focus", async () => {
@@ -44,11 +44,11 @@ describe("Header Builder L5 : menu du compte (navigateur)", { skip: SKIP }, () =
   test("invité : les liens habituels (Se connecter), aucun menu déroulant ; le widget sans option est inchangé", async () => {
     const { context, page } = await visitAs(null);
     assert.equal(await page.locator(".lp-site-header .kw-account-details").count(), 0, "pas de menu pour un invité");
-    assert.match(await page.locator(".lp-site-header .kw-account").innerText(), /Se connecter/);
+    assert.match(await page.locator(".lp-site-header .kw-account.kw-n-acct000001").innerText(), /Se connecter/);
     await context.close();
-    await env.publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withAccount({ showCart: true, login: "Se connecter", account: "Mon compte", cart: "Panier" }));
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withAccount({ showCart: true, login: "Se connecter", account: "Mon compte", cart: "Panier" }));
     const m = await visitAs(student); assert.equal(await m.page.locator(".lp-site-header .kw-account-details").count(), 0, "sans l'option « menu » : lien simple, comme avant");
-    assert.match(await m.page.locator(".lp-site-header .kw-account").innerText(), /Mon compte/); await m.context.close();
+    assert.match(await m.page.locator(".lp-site-header .kw-account.kw-n-acct000001").innerText(), /Mon compte/); await m.context.close();
   });
 
   test("aucune erreur de script", () => { assert.deepEqual(env.errors, []); });

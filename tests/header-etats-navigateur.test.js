@@ -56,7 +56,7 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
   after(async () => { if (browser) await browser.close(); if (db) db.close(); if (srv) await srv.stop(); });
 
   test("en-tête FIXÉ : reste en haut de l'écran au défilement, dans le flux (le contenu n'est pas recouvert et ne saute pas)", async () => {
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "fixed" });
+    await publishHeader("luxe-01.luxe-01", { mode: "fixed" });
     const { context, page } = await visit();
     assert.equal(await hdr(page, "position"), "sticky", "réalisé avec la position collée : aucun saut de contenu");
     assert.equal(await page.locator(".kw-hdr-spacer").count(), 0, "aucun espaceur ajouté après coup");
@@ -68,15 +68,15 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
   });
 
   test("« Coller sur » : collé sur ordinateur seulement → collé à 1280 px, ordinaire sur mobile (390 px)", async () => {
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky", stickOn: ["desktop"] });
+    await publishHeader("luxe-01.luxe-01", { mode: "sticky", stickOn: ["desktop"] });
     const d = await visit(); assert.equal(await hdr(d.page, "position"), "sticky"); await d.context.close();
     const m = await visit({ viewport: { width: 390, height: 800 } }); assert.equal(await hdr(m.page, "position"), "static", "redevient ordinaire sur mobile"); await m.context.close();
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky", stickOn: ["mobile"] });
+    await publishHeader("luxe-01.luxe-01", { mode: "sticky", stickOn: ["mobile"] });
     const t = await visit({ viewport: { width: 1280, height: 800 } }); assert.equal(await hdr(t.page, "position"), "static", "ordinaire sur ordinateur"); await t.context.close();
   });
 
   test("décalage depuis le haut : l'en-tête collé s'arrête à 24 px du bord, niveau d'empilement appliqué", async () => {
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky", offset: 24, zIndex: 77 });
+    await publishHeader("luxe-01.luxe-01", { mode: "sticky", offset: 24, zIndex: 77 });
     const { context, page } = await visit(); await scrollTo(page, 700);
     const r = await hdr(page, "rect"); assert.ok(Math.abs(r.top - 24) < 1.5, `top = ${r.top}`);
     assert.equal(await hdr(page, "zIndex"), "77");
@@ -84,7 +84,7 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
   });
 
   test("masquage : disparaît en descendant, réapparaît en remontant, reste visible quand le clavier y a le focus ; jamais masqué en haut de page", async () => {
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky", hideOnScroll: { enabled: true, tolerance: 8 } });
+    await publishHeader("luxe-01.luxe-01", { mode: "sticky", hideOnScroll: { enabled: true, tolerance: 8 } });
     const { context, page } = await visit();
     assert.ok(!/is-hidden/.test(await hdr(page, "class")), "visible en haut de page");
     await scrollTo(page, 300); await scrollTo(page, 700); assert.match(await hdr(page, "class"), /is-hidden/, "masqué en descendant");
@@ -98,7 +98,7 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
   });
 
   test("réduction des animations : le masquage se fait sans transition", async () => {
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky", hideOnScroll: { enabled: true, tolerance: 8 } });
+    await publishHeader("luxe-01.luxe-01", { mode: "sticky", hideOnScroll: { enabled: true, tolerance: 8 } });
     const { context, page } = await visit({ reducedMotion: "reduce" });
     assert.match(await hdr(page, "transitionDuration"), /^0s/);
     await context.close();
@@ -106,7 +106,7 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
   });
 
   test("style « Après défilement » : appliqué seulement une fois le seuil franchi, retiré en haut de page", async () => {
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky", threshold: 50 }, (s) => { s.children[0].states = { ...(s.children[0].states || {}), scrolled: { backgroundColor: "#ff0000" } }; });
+    await publishHeader("luxe-01.luxe-01", { mode: "sticky", threshold: 50 }, (s) => { s.children[0].states = { ...(s.children[0].states || {}), scrolled: { backgroundColor: "#ff0000" } }; });
     const { context, page } = await visit();
     const bg = () => page.evaluate(() => getComputedStyle(document.querySelector(".lp-site-header .kw-node")).backgroundColor);
     assert.notEqual(await bg(), "rgb(255, 0, 0)", "pas rouge en haut");
@@ -117,7 +117,7 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
   });
 
   test("sans réglage particulier, un en-tête collé garde l'état « défilé » suivi (styles par état) sans effet visuel imposé", async () => {
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky" });
+    await publishHeader("luxe-01.luxe-01", { mode: "sticky" });
     const { context, page } = await visit();
     assert.equal(await page.evaluate(() => document.querySelector(".lp-site-header").getAttribute("data-kw-scroll")), "watch");
     await scrollTo(page, 100); assert.match(await hdr(page, "class"), /is-scrolled/); await scrollTo(page, 0); assert.doesNotMatch(await hdr(page, "class"), /is-scrolled/);
@@ -126,8 +126,8 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
 
   test("logos par état : logo « en haut de page » tant que la page n'a pas défilé, logo principal après, logo mobile sur petit écran ; un seul affiché à la fois", async () => {
     db.prepare("UPDATE mk_sites SET settings = ? WHERE id = ?").run(JSON.stringify({ identity: { logoUrl: "/uploads/logo-principal.png" } }), site);
-    const withLogos = (s) => { const walk = (n) => { for (const c of n) { if (c.type === "sitelogo") { c.props = { ...(c.props || {}), logoTop: "https://img.test/logo-haut.png", logoMobile: "https://img.test/logo-mobile.png" }; } if (c.children) walk(c.children); } }; walk(s.children); };
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "sticky" }, withLogos);
+    const withLogos = (s) => { const walk = (n) => { for (const c of n) { delete c.hideOn; /* le modèle peut masquer son logo sur mobile */ if (c.type === "sitelogo") { c.props = { ...(c.props || {}), logoTop: "https://img.test/logo-haut.png", logoMobile: "https://img.test/logo-mobile.png" }; } if (c.children) walk(c.children); } }; walk(s.children); };
+    await publishHeader("tech-04.tech-04", { mode: "sticky" }, withLogos);
     const shown = (page) => page.evaluate(() => [...document.querySelectorAll(".lp-site-header .kw-sitelogo-set img")].filter((i) => getComputedStyle(i).display !== "none").map((i) => i.getAttribute("src").split("/").pop()));
     const { context, page } = await visit();
     assert.deepEqual(await shown(page), ["logo-haut.png"], "en haut de page : logo d'en-tête");
@@ -136,7 +136,7 @@ describe("Header Builder L1 : états et comportements (navigateur)", { skip: SKI
     await context.close();
     const m = await visit({ viewport: { width: 390, height: 800 } }); assert.deepEqual(await shown(m.page), ["logo-mobile.png"], "mobile : logo mobile"); await m.context.close();
     // En-tête ordinaire (pas d'état « défilé ») : jamais le logo « en haut de page » (il remplacerait le logo principal pour toujours)
-    await publishHeader("classique-logo-menu-bouton.clair", { mode: "static" }, withLogos);
+    await publishHeader("tech-04.tech-04", { mode: "static" }, withLogos);
     const o = await visit(); assert.deepEqual(await shown(o.page), ["logo-principal.png"]); await o.context.close();
   });
 

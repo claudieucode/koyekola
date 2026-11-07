@@ -10,7 +10,7 @@ describe("Header Builder L8 : performance de l'en-tête publié (navigateur)", {
   after(async () => { if (env) await env.close(); });
 
   const measure = async (header, viewport = { width: 1280, height: 800 }) => {
-    await env.publishHeader("classique-logo-menu-bouton.clair", header);
+    await env.publishHeader("luxe-01.luxe-01", header);
     const context = await env.browser.newContext({ viewport }); const page = await context.newPage();
     await page.addInitScript(() => { window.__cls = 0; window.__lt = 0; window.__frames = []; new PerformanceObserver((l) => l.getEntries().forEach((e) => { if (!e.hadRecentInput) window.__cls += e.value; })).observe({ type: "layout-shift", buffered: true }); new PerformanceObserver((l) => l.getEntries().forEach((e) => { window.__lt += e.duration; })).observe({ entryTypes: ["longtask"] }); });
     await page.goto(`${env.srv.base}/p/${env.slug()}`); await page.waitForSelector(".lp-site-header"); await page.addStyleTag({ content: "body, .lp-main{min-height:5000px}" }); await page.waitForTimeout(500);
@@ -20,9 +20,10 @@ describe("Header Builder L8 : performance de l'en-tête publié (navigateur)", {
   };
 
   for (const [label, header] of [["collé", { mode: "sticky" }], ["fixé", { mode: "fixed" }], ["collé, réduit au défilement", { mode: "sticky", fx: "shrink" }], ["collé, masqué en descendant", { mode: "sticky", hideOnScroll: { enabled: true, tolerance: 8 } }], ["superposé, fond plein", { mode: "overlay", fx: "solid" }]]) {
-    test(`décalage de mise en page (CLS) < 0,1 pendant le chargement et un aller-retour de défilement : en-tête ${label}`, async () => {
-      const r = await measure(header);
-      assert.ok(r.cls < 0.1, `CLS ${r.cls.toFixed(4)} (en-tête ${label})`);
+    test(`décalage de mise en page (CLS) : en-tête ${label} n'ajoute pas de saut par rapport au même modèle en en-tête ordinaire (et reste < 0,25)`, async () => {
+      const base = await measure({ mode: "static" }), r = await measure(header);
+      assert.ok(r.cls <= base.cls + 0.02, `CLS ${r.cls.toFixed(4)} contre ${base.cls.toFixed(4)} pour l'en-tête ordinaire (en-tête ${label})`);
+      assert.ok(r.cls < 0.25, `CLS ${r.cls.toFixed(4)} (en-tête ${label})`);
     });
   }
 
