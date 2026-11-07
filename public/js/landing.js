@@ -192,13 +192,33 @@
       });
     });
   });
-  // En-tête à effet au défilement (data-kw-scroll) : la classe is-scrolled est posée dès que la page a défilé du seuil (data-kw-threshold, 8 px par défaut) (un seul écouteur passif, une image à la fois)
+  // En-tête réglé dans le Header Builder (data-kw-scroll) : classe is-scrolled au-delà du seuil (data-kw-threshold, 8 px par défaut), masquage en descendant /
+  // réapparition en remontant (data-kw-hide), espaceur d'un en-tête « fixé ». Un seul écouteur passif, une mise à jour par image ; aucune animation si le visiteur demande moins de mouvement.
   var fxHead = document.querySelector(".lp-site-header[data-kw-scroll]");
   if (fxHead && !document.body.hasAttribute("data-kw-builder")) {
-    var fxThr = Number(fxHead.getAttribute("data-kw-threshold")); if (!(fxThr >= 0 && fxThr <= 1000)) fxThr = 8; /* seuil réglé dans l'éditeur (Header Builder) ; 8 px par défaut */
-    var fxTick = false, fxSet = function () { fxTick = false; fxHead.classList.toggle("is-scrolled", (window.pageYOffset || document.documentElement.scrollTop) > fxThr); };
+    var fxThr = Number(fxHead.getAttribute("data-kw-threshold")); if (!(fxThr >= 0 && fxThr <= 1000)) fxThr = 8;
+    var fxHide = fxHead.hasAttribute("data-kw-hide"), fxTol = Number(fxHead.getAttribute("data-kw-hide-tol")); if (!(fxTol >= 0 && fxTol <= 100)) fxTol = 8;
+    var fxTick = false, fxLast = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var fxSet = function () {
+      fxTick = false;
+      var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+      fxHead.classList.toggle("is-scrolled", y > fxThr);
+      if (fxHide) {
+        var open = fxHead.querySelector("[aria-expanded=true]") || fxHead.contains(document.activeElement);
+        if (y <= fxThr || y < fxLast - fxTol || open) { fxHead.classList.remove("is-hidden"); fxLast = y; }
+        else if (y > fxLast + fxTol) { fxHead.classList.add("is-hidden"); fxLast = y; }
+      }
+    };
     window.addEventListener("scroll", function () { if (!fxTick) { fxTick = true; window.requestAnimationFrame(fxSet); } }, { passive: true });
+    if (fxHide) fxHead.addEventListener("focusin", function () { fxHead.classList.remove("is-hidden"); });
     fxSet();
+    // En-tête fixé (hors flux) : un espaceur de la même hauteur garde le contenu en place (pas de saut à la mise en page ni au redimensionnement)
+    if (fxHead.classList.contains("kw-theme-fixed") && "ResizeObserver" in window) {
+      var spacer = document.createElement("div"); spacer.className = "kw-hdr-spacer"; spacer.setAttribute("aria-hidden", "true");
+      fxHead.parentNode.insertBefore(spacer, fxHead);
+      var fit = function () { spacer.style.height = window.getComputedStyle(fxHead).position === "fixed" ? fxHead.offsetHeight + "px" : "0"; };
+      new ResizeObserver(fit).observe(fxHead); window.addEventListener("resize", fit); fit();
+    }
   }
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {

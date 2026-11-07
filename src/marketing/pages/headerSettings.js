@@ -53,18 +53,31 @@ function resolve(section) {
 }
 
 // Classes de l'enveloppe (celle que la page fait défiler) : identiques à l'ancien format pour sticky / overlay.
+// kw-hdr-no-<appareil> : l'en-tête collé / fixé redevient ordinaire sur cet appareil (réglage « Coller sur »).
 function classes(section) {
   const h = resolve(section);
   const base = h.mode === "sticky" ? " kw-theme-sticky" : h.mode === "overlay" ? " kw-theme-overlay" : h.mode === "fixed" ? " kw-theme-fixed" : "";
-  return base + (h.fx && h.mode !== "static" ? ` kw-theme-fx-${h.fx}` : "");
+  const off = h.mode === "sticky" || h.mode === "fixed" ? DEVICES.filter((d) => !h.stickOn.includes(d)).map((d) => ` kw-hdr-no-${d}`).join("") : "";
+  return base + off + (h.fx && h.mode !== "static" ? ` kw-theme-fx-${h.fx}` : "");
 }
 
-// Données publiques lues par le script du visiteur (data-kw-*) : seulement des nombres et des mots d'une liste fermée.
-// L0 : mêmes attributs que l'ancien format (data-kw-scroll seulement s'il y a un effet) ; le seuil n'est écrit que s'il diffère de 8 px.
+// Données publiques lues par le script du visiteur (data-kw-*) et variables CSS : seulement des nombres entiers bornés et des mots d'une liste fermée.
+//  - data-kw-scroll : effet (shrink / solid / both) ou « watch » (simple suivi de l'état « défilé » pour les styles par état)
+//  - data-kw-threshold : seuil de défilement en px (écrit seulement s'il diffère de 8)
+//  - data-kw-hide, data-kw-hide-tol : masquage en descendant, réapparition en remontant (tolérance en px)
+//  - style : --kw-hdr-top (décalage), --kw-hdr-z (empilement), --kw-hdr-shrink (hauteur du logo réduit)
 function dataAttrs(section) {
   const h = resolve(section);
   const a = {};
-  if (h.fx && h.mode !== "static") { a["data-kw-scroll"] = h.fx; if (h.threshold !== 8) a["data-kw-threshold"] = String(h.threshold); }
+  if (h.mode === "static") return a;
+  a["data-kw-scroll"] = h.fx || "watch";
+  if (h.threshold !== 8) a["data-kw-threshold"] = String(h.threshold);
+  if (h.hideOnScroll.enabled) { a["data-kw-hide"] = "1"; a["data-kw-hide-tol"] = String(h.hideOnScroll.tolerance); }
+  const vars = [];
+  if (h.offset) vars.push(`--kw-hdr-top:${h.offset}px`);
+  if (h.zIndex !== 60) vars.push(`--kw-hdr-z:${h.zIndex}`);
+  if (h.shrink.height !== 32) vars.push(`--kw-hdr-shrink:${h.shrink.height}px`);
+  if (vars.length) a.style = vars.join(";");
   return a;
 }
 

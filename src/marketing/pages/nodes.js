@@ -28,7 +28,9 @@ const BREAKPOINTS = [
   { key: "tablet", label: "Tablette", media: "(max-width: 1023px)" },
   { key: "mobile", label: "Mobile", media: "(max-width: 767px)" },
 ];
-const STATES = [{ key: "hover", label: "Survol", sel: ":hover" }, { key: "focus", label: "Focus", sel: ":focus-visible" }, { key: "active", label: "Clic", sel: ":active" }];
+// « scrolled » (Header Builder) : style d'un élément de l'EN-TÊTE quand la page a défilé au-delà du seuil ; la règle porte sur l'ancêtre (`pre`), pas sur l'élément lui-même.
+const STATES = [{ key: "hover", label: "Survol", sel: ":hover" }, { key: "focus", label: "Focus", sel: ":focus-visible" }, { key: "active", label: "Clic", sel: ":active" }, { key: "scrolled", label: "Après défilement", sel: "", pre: ".lp-site-header.is-scrolled" }];
+const stateRule = (state, sel, d) => (state.pre ? `${state.pre} ${sel}{${d}}` : `${sel}${state.sel}{${d}}`);
 
 const newNodeId = () => crypto.randomBytes(6).toString("hex");
 const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").trim().slice(0, max) : "");
@@ -787,7 +789,11 @@ const NODE_TYPES = {
   } },
   // Logo, titre du site, copyright : contenu lu à l'affichage (logo et nom des réglages SEO, nom du site de la page,
   // année en cours) ; seuls les réglages d'affichage sont enregistrés
-  sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false }) },
+  // logoTop : logo affiché tant que la page n'a pas défilé (ex. logo clair sur un en-tête transparent) ; logoMobile : logo des petits écrans. Facultatifs ; images du site (même contrôle que le widget Image).
+  sitelogo: { label: "Logo du site", category: "dynamic", props: (p, at, h) => {
+    const top = p.logoTop ? h.imageUrl(p.logoTop, `${at} (logo en haut de page)`) : "", mobile = p.logoMobile ? h.imageUrl(p.logoMobile, `${at} (logo mobile)`) : "";
+    return { height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(top ? { logoTop: top } : {}), ...(mobile ? { logoMobile: mobile } : {}) };
+  } },
   // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
   postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },
   // Filtre par catégorie : liens « ?categorie=… » vers la même page (à associer à une grille en boucle « filtrer avec l'adresse »)
@@ -1991,7 +1997,7 @@ function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
     if (!/^[a-z][a-z0-9-]{0,29}$/.test(c.name)) continue;
     const sel = `.lp-site :where(.${c.name})`;
     for (const bp of BREAKPOINTS) { const d = c.styles && c.styles[bp.key] ? declarations(c.styles[bp.key]) : ""; if (d) (bp.media ? media[bp.key] : base).push(`${sel}{${d}}`); }
-    for (const state of STATES) { const d = c.states && c.states[state.key] ? declarations(c.states[state.key]) : ""; if (d) base.push(`${sel}${state.sel}{${d}}`); }
+    for (const state of STATES) { const d = c.states && c.states[state.key] ? declarations(c.states[state.key]) : ""; if (d) base.push(stateRule(state, sel, d)); }
   }
   return [...base, ...["wide", "tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
 }
@@ -2015,7 +2021,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       }
       for (const state of STATES) {
         const d = set.states && set.states[state.key] ? declarations(set.states[state.key]) : "";
-        if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+        if (d) rules.base.push(stateRule(state, sel, d));
       }
     }
   };
@@ -2029,7 +2035,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
     }
     for (const state of STATES) {
       const d = states && states[state.key] ? declarations(states[state.key], band) : "";
-      if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
+      if (d) rules.base.push(stateRule(state, sel, d));
     }
   };
   // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE

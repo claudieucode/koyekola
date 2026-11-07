@@ -63,7 +63,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     const t = await adopt("classique-logo-menu-bouton.clair");
     const { context, page } = await open(); await openEditor(page, t);
     assert.equal(await field(page, "Position").inputValue(), "static");
-    assert.equal(await field(page, "Effet au défilement").isDisabled(), true, "un en-tête ordinaire n'a pas d'effet");
+    assert.equal(await field(page, "Effet au défilement").count(), 0, "un en-tête ordinaire n'a pas d'effet : le réglage n'est pas proposé");
     await field(page, "Position").selectOption("sticky");
     await field(page, "Effet au défilement").selectOption("both");
     const thr = field(page, "Seuil de défilement (px)"); await thr.fill("40"); await thr.press("Enter");
@@ -104,6 +104,49 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     await page.locator("body").click({ position: { x: 5, y: 5 } }); await page.keyboard.press("Control+z"); await page.waitForTimeout(400);
     await page.click("#pb-tab-page"); await page.waitForSelector("[data-pb-header-summary]");
     assert.equal(await field(page, "Position").inputValue(), "static");
+    await context.close();
+  });
+
+  test("réglages complets : fixé, coller sur certains appareils (jamais zéro), décalage, masquage — enregistrés et appliqués sur le site publié", async () => {
+    const t = await adopt("classique-logo-menu-bouton.clair");
+    const { context, page } = await open(); await openEditor(page, t);
+    await field(page, "Position").selectOption("fixed");
+    const dev = (n) => page.locator("[data-pb-page-settings]").getByLabel(n, { exact: true });
+    assert.equal(await dev("Ordinateur").isChecked(), true);
+    await dev("Mobile").uncheck(); await dev("Tablette").uncheck();
+    assert.match(await page.locator("[data-pb-header-summary]").innerText(), /Actif sur : ordinateur/);
+    await dev("Ordinateur").click(); // dernier appareil coché : refusé, la case revient
+    assert.equal(await dev("Ordinateur").isChecked(), true, "au moins un appareil reste coché");
+    const off = field(page, "Décalage depuis le haut (px)"); await off.fill("20"); await off.press("Enter");
+    await field(page, "Effet au défilement").selectOption("shrink");
+    assert.equal(await field(page, "Hauteur du logo réduit (px)").isVisible(), true, "visible avec l'effet « réduire »");
+    await page.locator("[data-pb-page-settings]").getByLabel("Masquer en descendant, réapparaître en remontant").check();
+    assert.equal(await field(page, "Tolérance (px)").isVisible(), true);
+    await save(page);
+    await page.reload(); await page.waitForSelector("#pb-tab-page", { state: "attached" }); await page.waitForTimeout(800); await page.click("#pb-tab-page"); await page.waitForSelector("[data-pb-header-summary]");
+    assert.equal(await field(page, "Position").inputValue(), "fixed"); assert.equal(await field(page, "Décalage depuis le haut (px)").inputValue(), "20");
+    assert.equal(await dev("Mobile").isChecked(), false); assert.equal(await dev("Ordinateur").isChecked(), true);
+    assert.equal(await page.locator("[data-pb-page-settings]").getByLabel("Masquer en descendant, réapparaître en remontant").isChecked(), true);
+    await page.click("[data-pb-publish]"); await page.waitForFunction(() => /publié, à jour|À jour/.test(document.querySelector("[data-pb-status]").textContent));
+    await context.close();
+    const pub = await open({ width: 1280, height: 800 }, false); await pub.page.goto(`${srv.base}/p/${slug()}`);
+    const h = await pub.page.evaluate(() => { const e = document.querySelector(".lp-site-header"); return { cls: e.className, hide: e.getAttribute("data-kw-hide"), style: e.getAttribute("style") || "" }; });
+    assert.match(h.cls, /kw-theme-fixed/); assert.match(h.cls, /kw-hdr-no-tablet/); assert.match(h.cls, /kw-hdr-no-mobile/); assert.doesNotMatch(h.cls, /kw-hdr-no-desktop/);
+    assert.equal(h.hide, "1"); assert.match(h.style, /--kw-hdr-top:20px/);
+    await pub.context.close();
+  });
+
+  test("état « Après défilement » : proposé en dernier pour un élément d'un en-tête (onglet Style) avec son explication ; l'écriture et l'application sont prouvées par header-etats-navigateur et header-reglages", async () => {
+    const t = await adopt("classique-logo-menu-bouton.clair", false);
+    const { context, page } = await open(); await openEditor(page, t);
+    await field(page, "Position").selectOption("sticky");
+    await page.locator("[data-pb-layers] li.pb-node > .pb-row-item").first().click();
+    await page.getByRole("tab", { name: "Style" }).first().click();
+    const states = page.locator('[aria-label="État de l\'élément"]');
+    await states.waitFor();
+    const labels = (await states.locator("button").allInnerTexts()).map((x) => x.trim()); assert.equal(labels[0], "Normal"); assert.equal(labels[labels.length - 1], "Après défilement", "l'état propre aux en-têtes est proposé en dernier");
+    await states.getByRole("radio", { name: "Après défilement" }).click();
+    assert.match(await page.locator(".pb-insp-note").first().innerText(), /défilé au-delà du seuil/);
     await context.close();
   });
 

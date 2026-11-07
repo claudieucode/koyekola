@@ -2337,6 +2337,15 @@
         box.appendChild(selectField("Hauteur", String(p.height || 48), [["32", "32 px"], ["48", "48 px"], ["64", "64 px"], ["96", "96 px"]].concat([32, 48, 64, 96].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
+        if (isHeaderDoc()) {
+          // Variantes de logo (en-tête) : l'état « en haut de page » (ex. logo clair sur fond transparent) et les petits écrans ; elles remplacent le logo principal quand elles s'appliquent
+          [["logoTop", "Logo en haut de page", "Affiché tant que la page n'a pas défilé (par exemple un logo clair sur un en-tête transparent). Le logo principal revient après le défilement. Sans effet si l'en-tête est ordinaire."], ["logoMobile", "Logo mobile", "Remplace le logo sur les écrans de 767 px et moins."]].forEach(function (v) {
+            box.appendChild(h("p", { class: "pb-sub", text: v[1] }));
+            box.appendChild(mediaPreview(p[v[0]], function (m) { change(function () { byId(it.id).props[v[0]] = m.path; }); }, disabled));
+            if (p[v[0]]) box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-pb-clear-logo": v[0], onclick: function () { change(function () { delete byId(it.id).props[v[0]]; }); } }, "Retirer"));
+            box.appendChild(h("p", { class: "pb-hint", text: v[2] }));
+          });
+        }
         break;
       case "catfilter":
         box.appendChild(selectField("Catégories de…", p.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"]], function (v) { setProp(it.id, "source", v); }, { disabled: disabled }));
@@ -3892,15 +3901,17 @@
     partsRow(items, box);
     var bar = breakpointSwitch(items);
     if (pdef && styleState !== "normal" && pdef.states.indexOf(styleState) < 0) styleState = "normal";
-    if (schema.states && (pdef || items.every(function (x) { return inspectorFor(x).states; }))) {
+    // « Après défilement » : état propre aux éléments d'un EN-TÊTE (la page a défilé au-delà du seuil) ; jamais pour une partie interne d'un widget ni pour les éléments sans apparence propre
+    var hdrState = function (x) { return !pdef && isHeaderDoc() && NO_STATES.indexOf(x.type) < 0; };
+    if ((schema.states || hdrState(it)) && (pdef || items.every(function (x) { return inspectorFor(x).states || hdrState(x); }))) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
-      var stateList = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : SPEC.states;
+      var stateList = (Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : schema.states ? SPEC.states : []).filter(function (st) { return st.key !== "scrolled"; }).concat(hdrState(it) ? SPEC.states.filter(function (st) { return st.key === "scrolled"; }) : []);
       bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
         return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; renderInspector(); renderContext(); } }, st.label);
       })));
     } else if (styleState !== "normal") styleState = "normal";
     box.appendChild(bar);
-    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic" }[styleState] + ", sur tous les écrans." }));
+    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic", scrolled: "moment où la page a défilé au-delà du seuil de l'en-tête" }[styleState] + ", sur tous les écrans." }));
     else if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris)." }));
     // Une propriété, une seule place : la couleur du texte va dans la typographie quand elle existe, la couleur de fond
     // dans « Fond » (avec l'image et le dégradé)
@@ -7724,18 +7735,23 @@
   function isHeaderDoc() { var c = IS_COMPONENT && PAGE.component; if (!c) return false; var t = (PAGE.identity && PAGE.identity.template) || (c.identity && c.identity.template); return c.role === "header" || Boolean(t && t.type === "header"); }
   function headerSection() { var s = content.sections && content.sections[0]; return s && s.type === "layout" ? s : null; }
   function headerNow() {
-    var s = headerSection(); if (!s) return { mode: "static", fx: "", threshold: 8 };
-    if (s.header && typeof s.header === "object") return { mode: s.header.mode || "static", fx: s.header.fx || "", threshold: s.header.threshold === undefined ? 8 : s.header.threshold };
+    var dflt = { mode: "static", fx: "", threshold: 8, offset: 0, zIndex: 60, stickOn: ["desktop", "tablet", "mobile"], shrink: { height: 32 }, hideOnScroll: { enabled: false, tolerance: 8 } };
+    var s = headerSection(); if (!s) return dflt;
+    if (s.header && typeof s.header === "object") {
+      var hd = s.header;
+      return { mode: hd.mode || "static", fx: hd.fx || "", threshold: hd.threshold === undefined ? 8 : hd.threshold, offset: hd.offset || 0, zIndex: hd.zIndex || 60,
+        stickOn: Array.isArray(hd.stickOn) && hd.stickOn.length ? hd.stickOn : dflt.stickOn, shrink: { height: hd.shrink && hd.shrink.height ? hd.shrink.height : 32 }, hideOnScroll: { enabled: Boolean(hd.hideOnScroll && hd.hideOnScroll.enabled), tolerance: hd.hideOnScroll && hd.hideOnScroll.tolerance !== undefined ? hd.hideOnScroll.tolerance : 8 } };
+    }
     var first = s.children && s.children[0], pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
     var fx = first && first.props && /^(shrink|solid|both)$/.test(first.props.headerFx || "") ? first.props.headerFx : "";
     var mode = pos === "sticky" ? "sticky" : pos === "absolute" ? "overlay" : "static";
-    return { mode: mode, fx: mode === "static" ? "" : fx, threshold: 8 };
+    return Object.assign(dflt, { mode: mode, fx: mode === "static" ? "" : fx });
   }
   function setHeader(patch, key) {
     change(function () {
       var s = headerSection(); if (!s) return false;
-      var cur = headerNow(), next = Object.assign({ v: 1 }, s.header || {}, cur, patch);
-      if (next.mode === "static") next.fx = "";
+      var next = Object.assign({ v: 1 }, s.header || {}, headerNow(), patch);
+      if (next.mode === "static") { next.fx = ""; next.hideOnScroll = { enabled: false, tolerance: next.hideOnScroll.tolerance }; }
       s.header = next;
     }, { key: "header:" + (key || "all"), label: "Réglages de l'en-tête", light: true });
     // Le panneau se redessine (champs désactivés, résumé) en gardant le focus clavier sur le même champ
@@ -7743,16 +7759,39 @@
     box.textContent = ""; renderHeaderSettings(box);
     if (at >= 0) { var again = box.querySelectorAll("select, input")[at]; if (again && !again.disabled) again.focus(); }
   }
+  var HDR_DEVICES = [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]];
   function renderHeaderSettings(box) {
-    var d = headerNow(), dis = !canWrite;
+    var d = headerNow(), dis = !canWrite, moving = d.mode === "sticky" || d.mode === "fixed", live = d.mode !== "static";
     box.appendChild(h("p", { class: "pb-sub", text: "Comportement de l'en-tête" }));
     box.appendChild(h("p", { class: "pb-hint", text: "Ces réglages décident comment l'en-tête se comporte sur le site publié. Ils sont enregistrés avec l'en-tête : déplacer ou supprimer un bloc ne les change plus." }));
-    box.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
-    box.appendChild(selectField("Effet au défilement", d.fx, [["", "Aucun"], ["shrink", "Réduire la hauteur des rangées"], ["solid", "Passer à un fond plein"], ["both", "Réduire et fond plein"]], function (v) { setHeader({ fx: v }, "fx"); }, { disabled: dis || d.mode === "static" }));
-    if (d.mode === "static") box.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a pas d'effet de défilement. Choisissez « Collé » ou « Superposé » pour en activer un." }));
-    if (d.fx) box.appendChild(numberField("Seuil de défilement (px)", d.threshold, { min: 0, max: 1000, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ threshold: n }, "threshold"); }, "Distance parcourue par la page avant que l'effet se déclenche. 8 px par défaut."));
-    var live = d.mode === "overlay" ? "Superposé : posé sur le haut du visuel d'ouverture de chaque page." : d.mode === "sticky" ? "Collé : reste visible en haut de l'écran pendant le défilement." : "Ordinaire : défile avec la page.";
-    box.appendChild(h("p", { class: "pb-note", "data-pb-header-summary": "", text: live + (d.fx ? " Effet : " + ({ shrink: "hauteur réduite", solid: "fond plein", both: "hauteur réduite et fond plein" })[d.fx] + " après " + d.threshold + " px." : "") }));
+    box.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (la page est décalée)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
+    if (!live) box.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a ni effet de défilement ni masquage. Choisissez une autre position pour les activer." }));
+    if (moving) {
+      box.appendChild(h("p", { class: "pb-sub", text: "Coller sur" }));
+      HDR_DEVICES.forEach(function (dv) {
+        box.appendChild(checkField(dv[1], d.stickOn.indexOf(dv[0]) >= 0, function (on) {
+          var next = HDR_DEVICES.map(function (x) { return x[0]; }).filter(function (k) { return k === dv[0] ? on : d.stickOn.indexOf(k) >= 0; });
+          if (!next.length) { setHeader({}, "stick-last"); return; } // au moins un appareil : la case décochée revient
+          setHeader({ stickOn: next }, "stickOn");
+        }, { disabled: dis }));
+      });
+      box.appendChild(h("p", { class: "pb-hint", text: "Sur les autres appareils, l'en-tête redevient ordinaire." }));
+      box.appendChild(numberField("Décalage depuis le haut (px)", d.offset, { min: 0, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ offset: n }, "offset"); }, "Distance entre le haut de l'écran et l'en-tête (ex. sous une barre fixe)."));
+    }
+    if (live) {
+      box.appendChild(selectField("Effet au défilement", d.fx, [["", "Aucun"], ["shrink", "Réduire la hauteur des rangées"], ["solid", "Passer à un fond plein"], ["both", "Réduire et fond plein"]], function (v) { setHeader({ fx: v }, "fx"); }, { disabled: dis }));
+      box.appendChild(numberField("Seuil de défilement (px)", d.threshold, { min: 0, max: 1000, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ threshold: n }, "threshold"); }, "Distance parcourue par la page avant l'état « défilé » (effet, styles « Après défilement », masquage). 8 px par défaut."));
+      if (d.fx === "shrink" || d.fx === "both") box.appendChild(numberField("Hauteur du logo réduit (px)", d.shrink.height, { min: 24, max: 120, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ shrink: { height: n } }, "shrink"); }, "Taille maximale du logo une fois l'en-tête réduit."));
+      box.appendChild(checkField("Masquer en descendant, réapparaître en remontant", d.hideOnScroll.enabled, function (on) { setHeader({ hideOnScroll: { enabled: on, tolerance: d.hideOnScroll.tolerance } }, "hide"); }, { disabled: dis, hint: "L'en-tête reste visible quand un menu est ouvert ou que le clavier y a le focus." }));
+      if (d.hideOnScroll.enabled) box.appendChild(numberField("Tolérance (px)", d.hideOnScroll.tolerance, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ hideOnScroll: { enabled: true, tolerance: n } }, "tol"); }, "Mouvement minimal avant de masquer ou d'afficher : évite les à-coups."));
+      box.appendChild(numberField("Niveau d'empilement (1 à 100)", d.zIndex, { min: 1, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ zIndex: n }, "z"); }, "Plus la valeur est haute, plus l'en-tête passe au-dessus des autres éléments. 60 par défaut."));
+      box.appendChild(h("p", { class: "pb-hint", text: "Pour changer l'apparence d'un élément après le défilement (fond, couleur, taille), sélectionnez-le puis choisissez l'état « Après défilement » dans l'onglet Style." }));
+    }
+    var modeText = { static: "Ordinaire : défile avec la page.", sticky: "Collé : reste visible en haut de l'écran pendant le défilement.", fixed: "Fixé : reste en haut de l'écran, hors du flux de la page.", overlay: "Superposé : posé sur le haut du visuel d'ouverture de chaque page." }[d.mode];
+    var fxText = d.fx ? " Effet : " + ({ shrink: "hauteur réduite", solid: "fond plein", both: "hauteur réduite et fond plein" })[d.fx] + " après " + d.threshold + " px." : "";
+    var hideText = d.hideOnScroll.enabled ? " Masqué en descendant." : "";
+    var devText = moving && d.stickOn.length < 3 ? " Actif sur : " + HDR_DEVICES.filter(function (x) { return d.stickOn.indexOf(x[0]) >= 0; }).map(function (x) { return x[1].toLowerCase(); }).join(", ") + "." : "";
+    box.appendChild(h("p", { class: "pb-note", "data-pb-header-summary": "", text: modeText + fxText + hideText + devText }));
   }
   function renderPageSettings() {
     pageSettingsStale = false;

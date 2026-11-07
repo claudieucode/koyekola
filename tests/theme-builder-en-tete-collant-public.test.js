@@ -59,7 +59,7 @@ describe("En-tête collant / superposé : pages publiées", () => {
   });
   test("feuille de style : règles collant / superposé et suppression de la marge de colonne au-dessus de l'en-tête", () => {
     const css = fs.readFileSync(path.join(__dirname, "..", "public", "css", "landing.css"), "utf8");
-    assert.match(css, /\.lp-block\.lp-site-header\.kw-theme-sticky\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/);
+    assert.match(css, /\.lp-block\.lp-site-header\.kw-theme-sticky\s*\{[^}]*position:\s*sticky[^}]*top:\s*(?:0|var\(--kw-hdr-top,\s*0\))/); // 0 par défaut ; le Header Builder règle le décalage par la variable --kw-hdr-top
     assert.match(css, /\.lp-block\.lp-site-header\.kw-theme-overlay\s*\{[^}]*position:\s*absolute[^}]*left:\s*0[^}]*right:\s*0/);
     assert.match(css, /\.lp-main:has\(> \.lp-block\.lp-site-header:first-child\)\s*\{\s*padding-top:\s*0/);
   });

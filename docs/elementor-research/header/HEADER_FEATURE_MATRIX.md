@@ -24,7 +24,7 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 |---|---|---|---|---|---|---|---|
 | H-020 | Site Logo | 02 | Logo + lien accueil | `sitelogo` | Rendu + lien | documenté (existant) | `theme-builder-entetes-bibliotheque` (chaque en-tête a une identité) |
 | H-021 | Site Title / Tagline | 02 | Titre / description | `sitetitle` ; description : à vérifier | Rendu | documenté (existant partiel) | — |
-| H-022 | Logo par état (clair/sombre/transparent) | — (bonne pratique ; non documenté Elementor) | Variante selon l'état de l'en-tête | `sitelogo` + variantes | Changement au défilement ; isolation | documenté (à développer, L1) | — |
+| H-022 | Logo par état (clair/sombre/transparent) | — (bonne pratique ; non documenté Elementor) | Variante selon l'état de l'en-tête | `sitelogo` + variantes | Changement au défilement ; isolation | testé | `tests/header-etats-navigateur.test.js` : logo « en haut de page » → logo principal après défilement ; logo mobile ≤ 767 px ; un seul affiché ; en-tête ordinaire : logo principal |
 
 ## 3. Navigation
 | ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
@@ -65,11 +65,11 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 |---|---|---|---|---|---|---|---|
 | H-060 | Sticky / fixe | 06 | En-tête collé en haut | `position: sticky` (existant) | Classe, une seule enveloppe | testé | `tests/theme-builder-en-tete-collant-public.test.js` |
 | H-061 | Transparent / superposé | 06 | Sur le visuel | `position: absolute` (existant) | Jamais les deux | testé | `tests/theme-builder-en-tete-collant-public.test.js` |
-| H-062 | Seuil de défilement réglable, décalage (offset) | 06 | Déclencheur d'état | `behavior.threshold/offset` | Navigateur | documenté (à développer, L1) | — |
-| H-063 | Réduction de hauteur | 06 (Elementor : CSS, pas de contrôle natif) | Rétrécissement au défilement | `shrink` (existe via `headerFx`, sans interface) | Pas de saut de contenu | documenté (existant sans interface ; L0-L1) | — |
-| H-064 | Masquer en descendant / réapparaître | 06 (Elementor : EXTENSION) | Gagner de la place | `hideOnScrollDown` | Défilement ↓↑ ; focus clavier | documenté (à développer, L1) | — |
-| H-065 | État normal / transparent / défilé / sticky / mobile / menu ouvert | 06 | États stylables | états `top`/`scrolled`/`menuOpen` | Styles par état | documenté (à développer, L1) | — |
-| H-066 | Hauteur réservée, z-index, empilement | 06 | Pas de saut de contenu | `--kw-header-h` + espaceur | CLS < 0,1 | documenté (à développer, L1) | — |
+| H-062 | Seuil de défilement réglable, décalage (offset) | 06 | Déclencheur d'état | `behavior.threshold/offset` | Navigateur | testé | `tests/header-reglages.test.js` (unitaire), `tests/header-reglages-navigateur.test.js` (éditeur), `tests/header-etats-navigateur.test.js` (site publié) : seuil 40 px respecté (sous le seuil : pas d'effet), décalage 24 px, niveau d'empilement 77 |
+| H-063 | Réduction de hauteur | 06 (Elementor : CSS, pas de contrôle natif) | Rétrécissement au défilement | `shrink` (existe via `headerFx`, sans interface) | Pas de saut de contenu | testé | `tests/header-reglages-navigateur.test.js` : effet « réduire » réglé dans le panneau, enregistré, rechargé, publié ; ancien format lu à l'identique (`theme-builder-en-tete-collant-public`) |
+| H-064 | Masquer en descendant / réapparaître | 06 (Elementor : EXTENSION) | Gagner de la place | `hideOnScrollDown` | Défilement ↓↑ ; focus clavier | testé | `tests/header-etats-navigateur.test.js` : masqué en descendant, réapparaît en remontant, focus clavier le révèle, jamais masqué en haut, sans transition en mouvement réduit |
+| H-065 | État normal / transparent / défilé / sticky / mobile / menu ouvert | 06 | États stylables | états `top`/`scrolled`/`menuOpen` | Styles par état | développé (états haut/défilé testés ; « menu ouvert » prévu L3) | `tests/header-etats-navigateur.test.js` : style « Après défilement » appliqué après le seuil, retiré en haut ; logo par état |
+| H-066 | Hauteur réservée, z-index, empilement | 06 | Pas de saut de contenu | `--kw-header-h` + espaceur | CLS < 0,1 | testé | `tests/header-etats-navigateur.test.js` : espaceur = hauteur de l'en-tête fixé, contenu non recouvert (mesure CLS globale : L8) |
 | H-067 | Animations d'entrée, transitions (durée, délai, courbe) | 06 | Apparition | Motion Studio (existant) | Déclenchement ; durée | documenté (existant) | — |
 | H-068 | Effets de défilement (vertical, horizontal, parallaxe, opacité, échelle) | 06 | Liés au scroll | `kw-effects.js` (existant) | Navigateur | documenté (existant) | — |
 | H-069 | Effets de souris (suivi, 3D tilt) | 06 | Profondeur | `kw-effects.js` (existant) | Navigateur ; écran tactile | documenté (existant) | — |
@@ -79,7 +79,7 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
 |---|---|---|---|---|---|---|---|
 | H-080 | Fonds (uni, dégradé, image), typographie, bordures, ombres, transformations | 05 | Style complet | 86 propriétés de style (existant) | Persistance + rendu | documenté (existant) | — |
-| H-081 | États normal / survol / focus / actif / ouvert / désactivé | 05 | États visuels | `STATES` (hover/focus/active existants) ; ouvert/désactivé à ajouter | Rendu par état | documenté (partiel ; L1) | — |
+| H-081 | États normal / survol / focus / actif / ouvert / désactivé | 05 | États visuels | `STATES` (hover/focus/active existants) ; ouvert/désactivé à ajouter | Rendu par état | développé (survol/focus/clic existants + « Après défilement » ; « ouvert/désactivé » restent à ajouter) | `tests/header-reglages.test.js` (CSS généré) ; `header-reglages-navigateur` (état proposé dans l'éditeur) |
 | H-082 | Valeurs responsive indépendantes | 07 | Bureau ≠ tablette ≠ mobile | `BREAKPOINTS` (héritage descendant) | Le mobile ne modifie pas le bureau | documenté (existant, test d'héritage à écrire) | — |
 | H-083 | Visibilité par appareil | 07 | « Masquer sur » | `hideOn` | Jamais les trois à la fois | documenté (existant) | — |
 | H-084 | Ordre des éléments par appareil, rangées par appareil | 07 | Réordonner | `order` par écran | Navigateur | documenté (à développer, L2) | — |
@@ -109,10 +109,7 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-103 | Performance (DOM, CLS, INP) | 12 | Budget | un seul écouteur passif | Mesures | documenté (L8) | — |
 | H-104 | Non-régression CMS / Theme Builder / éditeur / menus | 14 | Rien ne casse | suites existantes | `npm test` | documenté (L8) | — |
 
-## Bilan (2026-11-07) — chiffres recomptés par script
-- Lignes : **72** (H-001 → H-104, avec trous de numérotation volontaires).
-- `testé` (preuve de test citée) : **10**. `validé` : **0** (aucune validation de bout en bout n'a encore eu lieu).
-- `documenté` (capacité déjà présente dans le code, partielle ou à vérifier ; preuve à rattacher) : **42**.
-- `documenté (à développer)` : **18** — sticky à états, logo par état, masquage au défilement, ordre par appareil, menus multi-niveaux, tiroirs, méga-menu, recherche plein écran, suggestions, tiroir panier, menu compte, condition visiteur, calques d'en-tête.
-- `exclu` (justifié) : **2** — sélecteur de langue/devise (H-055), liste de souhaits/comparaison (H-048).
-- Aucune ligne n'est marquée développée à ce jour.
+## Bilan (mis à jour après le lot L1) — chiffres recomptés par script
+- Lignes : **72**. `testé` (preuve de test citée) : **15**. `développé` (partiellement : reste à tester ou à compléter) : **2**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
+- `documenté` (déjà présent dans le code, preuve à rattacher) : **40**. `documenté (à développer)` : **13**. `exclu` (justifié) : **2**.
+- Lots terminés : **L0** (réglages d'en-tête, panneau, lecteur unique), **L1** (états de défilement, fixé, appareils, décalage, masquage, logos par état). Lots restants : L2 → L9.

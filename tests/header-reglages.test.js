@@ -31,7 +31,8 @@ describe("Réglages d'en-tête : lecture", () => {
     assert.equal(hs.classes(legacy("", "shrink")), "");
     assert.equal(hs.classes(legacy("sticky", "shrink")), " kw-theme-sticky kw-theme-fx-shrink");
     assert.deepEqual(hs.dataAttrs(legacy("sticky", "both")), { "data-kw-scroll": "both" });
-    assert.deepEqual(hs.dataAttrs(legacy("sticky", "")), {});
+    assert.deepEqual(hs.dataAttrs(legacy("sticky", "")), { "data-kw-scroll": "watch" }, "un en-tête collé suit l'état défilé (styles par état)");
+    assert.deepEqual(hs.dataAttrs(legacy("", "")), {}, "un en-tête ordinaire n'a aucun attribut");
   });
   test("le bloc header l'emporte sur le premier enfant ; déplacer ou retirer le premier enfant ne change plus rien", () => {
     const s = { ...legacy("sticky", "shrink"), header: { mode: "overlay", fx: "solid", threshold: 40 } };
@@ -52,4 +53,33 @@ describe("Réglages d'en-tête : normaliseur de sections", () => {
     const out = norm({ type: "layout", children: [] }); assert.equal("header" in out, false);
   });
   test("un bloc invalide est ignoré sans erreur", () => { assert.equal("header" in norm({ type: "layout", header: "x", children: [] }), false); });
+});
+
+describe("Réglages d'en-tête : fixé, appareils, décalage, masquage", () => {
+  test("fixé : classe dédiée ; collé sur certains appareils : classes kw-hdr-no-<appareil> pour les autres", () => {
+    assert.equal(hs.classes({ header: { mode: "fixed" }, children: [] }), " kw-theme-fixed");
+    assert.equal(hs.classes({ header: { mode: "sticky", stickOn: ["desktop"] }, children: [] }), " kw-theme-sticky kw-hdr-no-tablet kw-hdr-no-mobile");
+    assert.equal(hs.classes({ header: { mode: "overlay", stickOn: ["desktop"] }, children: [] }), " kw-theme-overlay", "la superposition n'est pas concernée par « coller sur »");
+    assert.equal(hs.classes({ header: { mode: "static", stickOn: ["desktop"] }, children: [] }), "");
+  });
+  test("attributs publics : seuil, masquage, variables CSS (nombres bornés uniquement)", () => {
+    const a = hs.dataAttrs({ header: { mode: "sticky", fx: "shrink", threshold: 30, offset: 24, zIndex: 77, shrink: { height: 40 }, hideOnScroll: { enabled: true, tolerance: 12 } }, children: [] });
+    assert.deepEqual(a, { "data-kw-scroll": "shrink", "data-kw-threshold": "30", "data-kw-hide": "1", "data-kw-hide-tol": "12", style: "--kw-hdr-top:24px;--kw-hdr-z:77;--kw-hdr-shrink:40px" });
+    const evil = hs.dataAttrs({ header: { mode: "sticky", offset: "1px;background:url(x)", zIndex: "9;x" }, children: [] });
+    assert.ok(!evil.style, "aucune valeur non numérique ne passe dans le style");
+  });
+  test("masquage impossible sur un en-tête ordinaire", () => { assert.deepEqual(hs.dataAttrs({ header: { mode: "static", hideOnScroll: { enabled: true } }, children: [] }), {}); });
+});
+
+describe("État de style « Après défilement » (grammaire)", () => {
+  const nodes = require("../src/marketing/pages/nodes");
+  test("l'état existe, son sélecteur vise l'en-tête défilé", () => {
+    const st = nodes.STATES.find((x) => x.key === "scrolled"); assert.ok(st); assert.equal(st.pre, ".lp-site-header.is-scrolled");
+  });
+  test("le CSS généré préfixe la règle par l'en-tête défilé ; survol, focus et clic sont inchangés", () => {
+    const sec = { id: "s1", type: "layout", children: [{ id: "nodeaa1", type: "container", props: {}, styles: { desktop: { backgroundColor: "#ffffff" } }, states: { scrolled: { backgroundColor: "#ff0000" }, hover: { backgroundColor: "#00ff00" } }, children: [] }] };
+    const css = nodes.pageCss([sec]);
+    assert.match(css, /\.lp-site-header\.is-scrolled \.kw-n-nodeaa1\{[^}]*#ff0000/i);
+    assert.match(css, /\.kw-n-nodeaa1:hover\{[^}]*#00ff00/i);
+  });
 });
