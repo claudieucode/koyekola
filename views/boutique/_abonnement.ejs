@@ -1,0 +1,30 @@
+<%# Abonnement (migration 139) : proposé À CÔTÉ de l'achat unique, jamais à sa place. Aucune formule présélectionnée ; prix et récurrence écrits avant le paiement. Le serveur revérifie tout. %>
+<% if (typeof subscription !== "undefined" && subscription) { %>
+<section class="sh-sub" aria-labelledby="sub-t-<%= product.id %>">
+  <h2 id="sub-t-<%= product.id %>">Ou recevez-le par abonnement</h2>
+  <p>L'achat unique ci-dessus reste possible. Avec l'abonnement, vous payez une première échéance maintenant, puis une échéance à chaque date ci-dessous, jusqu'à ce que vous résiliez. Les prix sont tout compris : livraison et taxes incluses, aucun frais caché.</p>
+  <ul class="sh-sub-plans">
+    <% subscription.plans.forEach((p) => { %><li><strong><%= p.label %></strong> : <%= money(p.price_cents) %> <%= p.cadence %><% if (p.shownDiscount) { %> (remise de <%= p.shownDiscount %> % sur le prix à l'unité)<% } %></li><% }) %>
+  </ul>
+  <form class="sh-sub-form sh-form" method="post" action="<%= shop.base %>/abonnements/souscrire">
+    <input type="hidden" name="product_id" value="<%= product.id %>">
+    <% if (product.isVariable) { %>
+    <label>Variante
+      <select name="variant_id" required>
+        <option value="">Choisir…</option>
+        <% product.variants.forEach((v) => { const out = v.manage_stock && v.stock_qty <= 0; %><option value="<%= v.id %>"<%= out ? " disabled" : "" %>><%= Object.values(v.options).join(" / ") %><%= out ? " — rupture" : "" %></option><% }) %>
+      </select>
+    </label>
+    <% } %>
+    <label>Formule
+      <select name="plan_id" required>
+        <option value="">Choisir une formule…</option>
+        <% subscription.plans.forEach((p) => { %><option value="<%= p.id %>"><%= p.label %> — <%= money(p.price_cents) %> <%= p.cadence %></option><% }) %>
+      </select>
+    </label>
+    <% if (!shop.customer) { %><label>Votre e-mail (pour gérer l'abonnement)<input type="email" name="email" required maxlength="200" autocomplete="email"></label><% } %>
+    <button class="sh-btn" type="submit">S'abonner et payer la première échéance</button>
+  </form>
+  <p class="sh-meta"><strong>Comment résilier :</strong> en un clic, à tout moment, depuis <a href="<%= shop.base %>/abonnements">Mes abonnements</a> ou le lien reçu par e-mail. Pause et changement de formule y sont aussi.</p>
+</section>
+<% } %>

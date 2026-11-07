@@ -272,4 +272,33 @@ function expireStale(s, minutes = 60) {
   return rows.length;
 }
 
-module.exports = { TRANSITIONS, STATUS_LABELS, createFromCart, getOrder, orderByNumber, orderDetail, listOrders, recordPaymentAttempt, markPaid, markPaymentFailed, cancelOrder, changeStatus, expireStale, addEvent };
+// Commande de réassort d'un abonnement : créée DIRECTEMENT « payée » quand le fournisseur confirme une facture payée (jamais avant).
+// À appeler dans une transaction. La clé d'idempotence (une par facture) et l'unicité du paiement empêchent tout doublon.
+// Le stock est décompté s'il est géré ; s'il manque, la commande est quand même créée (l'argent est encaissé) avec une note « stock insuffisant ».
+function createSubscriptionOrder(s, d) {
+  const settings = store.getSettings(s);
+  const number = nextNumber(s, settings);
+  const ship = JSON.stringify(d.shippingAddress || {});
+  const info = s.db.prepare(`INSERT INTO mk_shop_orders (organization_id, site_id, number, customer_id, email, status, payment_status, payment_method, currency, prices_include_tax, subtotal_cents, discount_cents, shipping_cents, tax_cents, total_cents,
+    shipping_method_name, billing_address, shipping_address, tax_lines, idempotency_key, paid_at) VALUES (?,?,?,?,?, 'paid','paid','stripe',?,?,?,0,0,0,?,?, '{}', ?, '[]', ?, datetime('now'))`)
+    .run(s.organizationId, s.siteId ?? null, number, d.customerId || null, d.email, d.currency, settings.prices_include_tax, d.totalCents, d.totalCents, "Abonnement (livraison incluse)", ship, d.idempotencyKey);
+  const orderId = Number(info.lastInsertRowid);
+  s.db.prepare("INSERT INTO mk_shop_order_items (order_id, product_id, variant_id, name, variant_label, sku, quantity, unit_price_cents, line_subtotal_cents, discount_cents, tax_cents, requires_shipping, weight_grams) VALUES (?,?,?,?,?,?,1,?,?,0,0,?,?)")
+    .run(orderId, d.productId || null, d.variantId || null, d.name, d.variantLabel || null, d.sku || null, d.totalCents, d.totalCents, d.requiresShipping ? 1 : 0, d.weightGrams || null);
+  s.db.prepare("INSERT INTO mk_shop_payments (organization_id, site_id, order_id, provider, provider_ref, amount_cents, currency, status) VALUES (?,?,?,?,?,?,?, 'succeeded')").run(s.organizationId, s.siteId ?? null, orderId, "stripe", d.providerRef, d.totalCents, d.currency);
+  addEvent(s.db, orderId, { kind: "created", to: "paid", actor: "provider:stripe", note: d.note || "Commande de réassort d'abonnement" });
+  addEvent(s.db, orderId, { kind: "paid", from: "pending", to: "paid", actor: "provider:stripe", note: `Facture ${d.providerRef}` });
+  if (d.productId) {
+    const table = d.variantId ? "mk_shop_variants" : "mk_shop_products";
+    const id = d.variantId || d.productId;
+    const row = s.db.prepare(`SELECT manage_stock FROM ${table} WHERE id = ?`).get(id);
+    if (row && row.manage_stock === 1) {
+      const r = s.db.prepare(`UPDATE ${table} SET stock_qty = stock_qty - 1 WHERE id = ? AND stock_qty >= 1`).run(id);
+      if (r.changes) s.db.prepare("INSERT INTO mk_shop_stock_movements (organization_id, site_id, product_id, variant_id, delta, reason, order_id) VALUES (?,?,?,?,?, 'order', ?)").run(s.organizationId, s.siteId ?? null, d.productId, d.variantId || null, -1, orderId);
+      else addEvent(s.db, orderId, { kind: "stock_short", actor: "system", note: "Stock insuffisant pour ce réassort déjà payé : à traiter à la main (expédier plus tard ou rembourser)." });
+    }
+  }
+  return getOrder(s, orderId);
+}
+
+module.exports = { createSubscriptionOrder, TRANSITIONS, STATUS_LABELS, createFromCart, getOrder, orderByNumber, orderDetail, listOrders, recordPaymentAttempt, markPaid, markPaymentFailed, cancelOrder, changeStatus, expireStale, addEvent };

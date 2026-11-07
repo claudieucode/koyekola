@@ -76,4 +76,32 @@ function notifyAppointment(s, a, event, { to, shopName, cancelUrl, bookingUrl } 
   } catch { return { queued: false }; }
 }
 
-module.exports = { notify, onOrderEvent, notifyAppointment, SUBJECTS };
+// Abonnements : même file d'envoi. Chaque message dit l'état RÉEL, le prix et la récurrence, et rappelle que la résiliation se fait en un clic via le lien de gestion.
+const cadenceOf = (x) => (x.interval_unit === "week" ? (x.interval_count === 1 ? "chaque semaine" : `toutes les ${x.interval_count} semaines`) : (x.interval_count === 1 ? "chaque mois" : `tous les ${x.interval_count} mois`));
+const frDay = (sql) => (sql ? `${String(sql).slice(8, 10)}/${String(sql).slice(5, 7)}/${String(sql).slice(0, 4)}` : "");
+const SUB_SUBJECTS = {
+  started: "Votre abonnement est confirmé", payment_failed: "Prélèvement de votre abonnement non abouti", paused: "Votre abonnement est en pause", resumed: "Votre abonnement reprend",
+  plan_changed: "Votre formule d'abonnement a changé", cancel_requested: "Résiliation de votre abonnement confirmée", cancelled: "Votre abonnement est terminé", cancelled_by_seller: "Votre abonnement a été arrêté par la boutique", manage_link: "Votre lien de gestion d'abonnement",
+};
+function notifySubscription(s, sub, event, { manageUrl, extra, to, shopName } = {}) {
+  const recap = [`${one(sub.product_name)}${sub.variant_label ? ` (${one(sub.variant_label)})` : ""}`, `Formule : ${one(sub.plan_label)} — ${money(sub.price_cents, sub.currency)} ${cadenceOf(sub)}, tout compris`];
+  if (sub.current_period_end && sub.status !== "cancelled") recap.push(`${sub.cancel_at_period_end ? "Dernière échéance couverte jusqu'au" : "Prochaine échéance :"} ${frDay(sub.current_period_end)}`);
+  const intro = {
+    started: "Merci ! Votre abonnement est en place. Vous serez prélevé à chaque échéance, jusqu'à ce que vous le résiliez.",
+    payment_failed: "Le dernier prélèvement n'a pas abouti. Vous n'avez rien payé pour cette échéance. Mettez à jour votre moyen de paiement ou résiliez quand vous voulez.",
+    paused: "Votre abonnement est en pause : aucun prélèvement et aucune livraison tant que vous ne le reprenez pas.",
+    resumed: "Votre abonnement reprend. Les prélèvements et livraisons redémarrent.",
+    plan_changed: "Votre formule est modifiée. Le nouveau prix s'applique à la prochaine échéance, sans frais supplémentaire.",
+    cancel_requested: "Votre résiliation est enregistrée. Aucun nouveau prélèvement n'aura lieu.",
+    cancelled: "Votre abonnement est terminé. Plus aucun prélèvement n'aura lieu.",
+    cancelled_by_seller: "La boutique a arrêté votre abonnement. Plus aucun prélèvement n'aura lieu.",
+    manage_link: "Voici le lien pour gérer votre abonnement : mettre en pause, changer de formule ou résilier.",
+  }[event];
+  const tail = manageUrl ? ["", `Gérer mon abonnement (pause, formule, résiliation en un clic) : ${manageUrl}`] : [];
+  try {
+    const r = queueMail(s.db, { kind: "shop_subscription", to: to || sub.email, subject: `${SUB_SUBJECTS[event]}${shopName ? ` — ${one(shopName)}` : ""}`, text: [intro, "", ...recap, ...(extra ? ["", extra] : []), ...tail].join("\n"), sensitive: true });
+    return { queued: !!r.queued };
+  } catch { return { queued: false }; }
+}
+
+module.exports = { notify, onOrderEvent, notifyAppointment, notifySubscription, cadenceOf, SUBJECTS };

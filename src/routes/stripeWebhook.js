@@ -1,7 +1,7 @@
 // Webhook Stripe : POST /stripe/webhook. Monté dans server.js avec le corps BRUT (la signature porte sur les octets exacts)
 // et avant le contrôle d'origine (Stripe n'est pas un navigateur). Configurez dans Stripe l'adresse
 // <SITE_URL>/stripe/webhook et les événements : checkout.session.completed, checkout.session.async_payment_succeeded,
-// checkout.session.async_payment_failed, checkout.session.expired, charge.refunded ; copiez le « secret de signature » dans STRIPE_WEBHOOK_SECRET.
+// checkout.session.async_payment_failed, checkout.session.expired, charge.refunded, et pour les abonnements : invoice.paid, invoice.payment_failed, customer.subscription.updated, customer.subscription.deleted ; copiez le « secret de signature » dans STRIPE_WEBHOOK_SECRET.
 const express = require("express");
 const db = require("../config/database");
 const payments = require("../services/payments");
@@ -23,6 +23,12 @@ router.post("/webhook", (req, res) => {
   }
   const session = event.data && event.data.object;
   try {
+    // Abonnements de boutique (migration 139) : checkout en mode « subscription », factures et cycle de vie de l'abonnement (même signature vérifiée ci-dessus). Événements rejoués = aucun effet.
+    const subscriptions = require("../marketing/shop/subscriptions");
+    if (subscriptions.isSubscriptionEvent(event)) {
+      const sub = subscriptions.handleStripeEvent(db, event);
+      if (sub.handled) return res.json({ received: true });
+    }
     // Programme 20.5 : une session de BOUTIQUE (référence « shop:<commande> ») ou le remboursement d'un paiement de boutique est traité par le moteur de boutique (même signature vérifiée ci-dessus)
     const shopRef = session && typeof session.client_reference_id === "string" && session.client_reference_id.startsWith("shop:");
     const shopRefund = event.type === "charge.refunded" && session && typeof session.payment_intent === "string" && db.prepare("SELECT 1 FROM mk_shop_payments WHERE provider = 'stripe' AND provider_intent = ?").get(session.payment_intent);

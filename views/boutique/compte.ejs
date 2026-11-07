@@ -7,6 +7,7 @@
   <label>Téléphone<input name="phone" value="<%= shop.customer.phone || "" %>" maxlength="30"></label>
   <button class="sh-btn" type="submit">Enregistrer</button>
 </form>
+<% if (typeof hasSubscriptions !== "undefined" && hasSubscriptions) { %><p><a href="<%= shop.base %>/abonnements">Mes abonnements</a></p><% } %>
 <h2>Mes commandes</h2>
 <% if (!customerOrders.length) { %><p class="sh-empty">Vous n'avez pas encore passé de commande.</p><% } else { %>
 <table class="sh-table"><thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Statut</th><th scope="col">Total</th></tr></thead><tbody>
