@@ -82,4 +82,8 @@ describe("État de style « Après défilement » (grammaire)", () => {
     assert.match(css, /\.lp-site-header\.is-scrolled \.kw-n-nodeaa1\{[^}]*#ff0000/i);
     assert.match(css, /\.kw-n-nodeaa1:hover\{[^}]*#00ff00/i);
   });
+  test("état « Menu ouvert » : règle préfixée par l'en-tête dont le menu est ouvert", () => {
+    const sec = { id: "s2", type: "layout", children: [{ id: "nodebb2", type: "container", props: {}, styles: {}, states: { menuOpen: { backgroundColor: "#0000ff" } }, children: [] }] };
+    assert.match(nodes.pageCss([sec]), /\.lp-site-header\.is-menu-open \.kw-n-nodebb2\{[^}]*#0000ff/i);
+  });
 });

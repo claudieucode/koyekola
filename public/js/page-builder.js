@@ -2283,6 +2283,10 @@
         }
         box.appendChild(checkField("Liens les uns sous les autres", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled }));
         box.appendChild(checkField("Sur mobile, replier derrière un bouton « Menu »", p.mobileToggle, function (v) { setProp(it.id, "mobileToggle", v); }, { disabled: disabled }));
+        if (p.mobileToggle) {
+          box.appendChild(selectField("Ouverture du menu sur mobile", p.mobileMode === "drawer" ? "drawer" : "inline", [["inline", "Déplié sous le bouton"], ["drawer", "Tiroir latéral"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "drawer") { x.mobileMode = "drawer"; } else { delete x.mobileMode; delete x.drawerSide; } }); }, { disabled: disabled }));
+          if (p.mobileMode === "drawer") box.appendChild(selectField("Côté du tiroir", p.drawerSide === "left" ? "left" : "right", [["right", "À droite"], ["left", "À gauche"]], function (v) { change(function () { byId(it.id).props.drawerSide = v; }); }, { disabled: disabled }));
+        }
         break;
       case "carousel":
         box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
@@ -3905,13 +3909,13 @@
     var hdrState = function (x) { return !pdef && isHeaderDoc() && NO_STATES.indexOf(x.type) < 0; };
     if ((schema.states || hdrState(it)) && (pdef || items.every(function (x) { return inspectorFor(x).states || hdrState(x); }))) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
-      var stateList = (Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : schema.states ? SPEC.states : []).filter(function (st) { return st.key !== "scrolled"; }).concat(hdrState(it) ? SPEC.states.filter(function (st) { return st.key === "scrolled"; }) : []);
+      var stateList = (Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : schema.states ? SPEC.states : []).filter(function (st) { return st.key !== "scrolled" && st.key !== "menuOpen"; }).concat(hdrState(it) ? SPEC.states.filter(function (st) { return st.key === "scrolled" || st.key === "menuOpen"; }) : []);
       bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
         return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; renderInspector(); renderContext(); } }, st.label);
       })));
     } else if (styleState !== "normal") styleState = "normal";
     box.appendChild(bar);
-    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic", scrolled: "moment où la page a défilé au-delà du seuil de l'en-tête" }[styleState] + ", sur tous les écrans." }));
+    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic", scrolled: "moment où la page a défilé au-delà du seuil de l'en-tête", menuOpen: "moment où le menu de l'en-tête est ouvert" }[styleState] + ", sur tous les écrans." }));
     else if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris)." }));
     // Une propriété, une seule place : la couleur du texte va dans la typographie quand elle existe, la couleur de fond
     // dans « Fond » (avec l'image et le dégradé)

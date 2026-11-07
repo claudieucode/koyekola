@@ -144,10 +144,31 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     await page.getByRole("tab", { name: "Style" }).first().click();
     const states = page.locator('[aria-label="État de l\'élément"]');
     await states.waitFor();
-    const labels = (await states.locator("button").allInnerTexts()).map((x) => x.trim()); assert.equal(labels[0], "Normal"); assert.equal(labels[labels.length - 1], "Après défilement", "l'état propre aux en-têtes est proposé en dernier");
+    const labels = (await states.locator("button").allInnerTexts()).map((x) => x.trim()); assert.equal(labels[0], "Normal"); assert.deepEqual(labels.slice(-2), ["Après défilement", "Menu ouvert"], "les deux états propres aux en-têtes sont proposés en dernier");
     await states.getByRole("radio", { name: "Après défilement" }).click();
     assert.match(await page.locator(".pb-insp-note").first().innerText(), /défilé au-delà du seuil/);
     await context.close();
+  });
+
+  test("menu de l'en-tête : « Ouverture du menu sur mobile » (déplié / tiroir, côté) réglable dans l'éditeur, enregistré, appliqué sur le site publié", async () => {
+    // Un menu du site est affecté à l'emplacement « en-tête » (sans menu, le widget n'affiche rien)
+    const m = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Menu réglages', 'menu-reglages', 'published')").run(site).lastInsertRowid);
+    db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, NULL, 0, 'custom', '/a', 'Page A', 'published')").run(m);
+    db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(site, m);
+    const t = await adopt("classique-logo-menu-bouton.clair");
+    const { context, page } = await open({ width: 1500, height: 950 }); await openEditor(page, t);
+    await page.locator("[data-pb-layers] li.pb-node > .pb-row-item", { hasText: /Menu de navigati/ }).first().click();
+    const sel = page.getByLabel("Ouverture du menu sur mobile"); await sel.waitFor();
+    assert.equal(await sel.inputValue(), "inline", "déplié par défaut");
+    await sel.selectOption("drawer");
+    const side = page.getByLabel("Côté du tiroir"); await side.waitFor(); await side.selectOption("left");
+    await save(page);
+    await page.click("[data-pb-publish]"); await page.waitForFunction(() => /publié, à jour|À jour/.test(document.querySelector("[data-pb-status]").textContent));
+    await context.close();
+    const pub = await open({ width: 390, height: 800 }, false); await pub.page.goto(`${srv.base}/p/${slug()}`);
+    assert.equal(await pub.page.locator(".lp-site-header nav[data-kw-menu-drawer=left]").count(), 1, "le menu publié porte le réglage tiroir à gauche");
+    await pub.page.locator(".lp-site-header .kw-menu-burger").click(); await pub.page.locator(".kw-menu-panel.is-left").waitFor();
+    await pub.context.close();
   });
 
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });

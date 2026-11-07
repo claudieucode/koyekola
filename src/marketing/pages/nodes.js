@@ -29,7 +29,7 @@ const BREAKPOINTS = [
   { key: "mobile", label: "Mobile", media: "(max-width: 767px)" },
 ];
 // « scrolled » (Header Builder) : style d'un élément de l'EN-TÊTE quand la page a défilé au-delà du seuil ; la règle porte sur l'ancêtre (`pre`), pas sur l'élément lui-même.
-const STATES = [{ key: "hover", label: "Survol", sel: ":hover" }, { key: "focus", label: "Focus", sel: ":focus-visible" }, { key: "active", label: "Clic", sel: ":active" }, { key: "scrolled", label: "Après défilement", sel: "", pre: ".lp-site-header.is-scrolled" }];
+const STATES = [{ key: "hover", label: "Survol", sel: ":hover" }, { key: "focus", label: "Focus", sel: ":focus-visible" }, { key: "active", label: "Clic", sel: ":active" }, { key: "scrolled", label: "Après défilement", sel: "", pre: ".lp-site-header.is-scrolled" }, { key: "menuOpen", label: "Menu ouvert", sel: "", pre: ".lp-site-header.is-menu-open" }];
 const stateRule = (state, sel, d) => (state.pre ? `${state.pre} ${sel}{${d}}` : `${sel}${state.sel}{${d}}`);
 
 const newNodeId = () => crypto.randomBytes(6).toString("hex");
@@ -609,6 +609,8 @@ const NODE_TYPES = {
     const source = ["manual", "location", "name"].includes(p.source) ? p.source : "manual";
     if (source === "manual" && !items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
     const out = { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
+    // Sur mobile : liste dépliée sous le bouton (par défaut) ou tiroir latéral (Header Builder) ; le tiroir suppose le bouton « Menu »
+    if (out.mobileToggle && p.mobileMode === "drawer") { out.mobileMode = "drawer"; out.drawerSide = p.drawerSide === "left" ? "left" : "right"; }
     if (source === "location") { out.source = source; out.location = ["header", "footer", "mobile"].includes(p.location) ? p.location : "header"; }
     else if (source === "name") { out.source = source; out.menuName = line(p.menuName, 80); }
     return out;

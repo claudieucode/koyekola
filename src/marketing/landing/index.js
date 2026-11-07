@@ -344,6 +344,11 @@ const cmsLinks = (items) => (items || []).filter((it) => it.href || (it.children
   const out = { label: it.label, url: it.href || "#" };
   if (it.newTab) out.newTab = true;
   if (it.rel) out.rel = String(it.rel).replace(/[^a-z ]/g, "");
+  // Champs enrichis de l'éditeur de menus (déjà validés par le service de navigation) : icône, description, classes CSS, attribut title
+  if (it.icon && /^[a-zA-Z]{1,30}$/.test(String(it.icon))) out.icon = String(it.icon);
+  if (it.description) out.description = String(it.description).slice(0, 160);
+  if (it.cssClass && /^[a-z0-9_ -]{1,120}$/i.test(String(it.cssClass))) out.cssClass = String(it.cssClass);
+  if (it.titleAttr) out.titleAttr = String(it.titleAttr).slice(0, 120);
   const kids = cmsLinks(it.children).filter((c) => c.url !== "#");
   if (kids.length) out.children = kids;
   return out;

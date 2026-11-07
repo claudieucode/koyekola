@@ -225,17 +225,68 @@
     b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); });
     b.parentNode.addEventListener("keydown", function (e) { if (e.key === "Escape") { b.setAttribute("aria-expanded", "false"); b.focus(); } });
   });
+  // Menu mobile : bouton « Menu » qui déplie la liste sous lui, ou — réglage « tiroir » (data-kw-menu-drawer) — l'ouvre dans un panneau latéral : fond assombri, défilement de la page bloqué,
+  // focus gardé dans le panneau (Tab boucle), Échap / clic extérieur / choix d'un lien le ferment et le focus revient au bouton. La classe is-menu-open est posée sur l'en-tête (état de style « Menu ouvert »).
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-menu-toggle]"), function (nav) {
     var list = nav.querySelector(".kw-menu-list");
     var b = document.createElement("button"); b.type = "button"; b.className = "kw-menu-burger"; b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-controls", list.id);
     b.innerHTML = '<span aria-hidden="true"></span><span class="kw-menu-burger-label">Menu</span>';
-    var setOpen = function (on) { b.setAttribute("aria-expanded", on ? "true" : "false"); nav.classList.toggle("is-open", on); };
+    var side = nav.getAttribute("data-kw-menu-drawer"), head = nav.closest(".lp-site-header"), small = window.matchMedia ? window.matchMedia("(max-width: 767px)") : null;
+    var panel = null, backdrop = null, locked = null;
+    var focusables = function () { return Array.prototype.filter.call(panel.querySelectorAll("a[href], button:not([disabled])"), function (e) { return e.offsetParent !== null; }); };
+    var setOpen = function (on) {
+      b.setAttribute("aria-expanded", on ? "true" : "false"); nav.classList.toggle("is-open", on);
+      if (head) head.classList.toggle("is-menu-open", on);
+      if (!side) return;
+      if (on) {
+        var host = nav.closest(".lp-site") || document.body; // le panneau garde les couleurs et les polices du site, mais sort de l'en-tête (un fond flouté ou un transform y piégerait un panneau fixé)
+        panel = document.createElement("div"); panel.className = "kw-menu-panel is-" + side; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true"); panel.setAttribute("aria-label", nav.getAttribute("aria-label") || "Menu");
+        var close = document.createElement("button"); close.type = "button"; close.className = "kw-menu-close"; close.setAttribute("aria-label", "Fermer le menu"); close.innerHTML = "<span aria-hidden=\"true\">×</span>";
+        close.addEventListener("click", function () { setOpen(false); b.focus(); });
+        backdrop = document.createElement("div"); backdrop.className = "kw-menu-backdrop"; backdrop.addEventListener("click", function () { setOpen(false); b.focus(); });
+        panel.appendChild(close); panel.appendChild(list); host.appendChild(backdrop); host.appendChild(panel);
+        locked = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden";
+        panel.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("a[href]")) setOpen(false); });
+        panel.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") { e.stopPropagation(); setOpen(false); b.focus(); return; }
+          if (e.key !== "Tab") return;
+          var f = focusables(); if (!f.length) return; var first = f[0], last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        });
+        var f0 = focusables(); (f0[1] || f0[0] || close).focus();
+      } else if (panel) {
+        nav.appendChild(list); panel.remove(); backdrop.remove(); panel = null; backdrop = null; document.documentElement.style.overflow = locked || ""; locked = null;
+      }
+    };
     b.addEventListener("click", function () { setOpen(b.getAttribute("aria-expanded") !== "true"); });
     // 22.8 — clavier et lecteurs d'écran : Échap referme le menu et rend le focus au bouton ; Tab hors du menu le referme (jamais de menu resté ouvert hors de vue)
     nav.addEventListener("keydown", function (e) { if (e.key === "Escape" && nav.classList.contains("is-open")) { setOpen(false); b.focus(); } });
-    nav.addEventListener("focusout", function (e) { if (nav.classList.contains("is-open") && e.relatedTarget && !nav.contains(e.relatedTarget)) setOpen(false); });
+    nav.addEventListener("focusout", function (e) { if (!side && nav.classList.contains("is-open") && e.relatedTarget && !nav.contains(e.relatedTarget)) setOpen(false); });
+    if (small && small.addEventListener) small.addEventListener("change", function (e) { if (!e.matches && b.getAttribute("aria-expanded") === "true") setOpen(false); }); // retour sur grand écran : le menu redevient celui de l'en-tête
     nav.insertBefore(b, list);
     nav.classList.add("is-enhanced");
+  });
+  // Menus : clavier (flèches). Menu horizontal : Droite / Gauche changent de rubrique, Bas ouvre le sous-menu et va sur son premier lien. Liste verticale (menu vertical, tiroir) et sous-menus :
+  // Bas / Haut parcourent les liens, Droite ouvre un sous-menu imbriqué, Gauche le referme et revient à sa rubrique. Début / Fin : premier / dernier lien. Échap referme (géré plus haut).
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-menu-list"), function (ul) {
+    ul.addEventListener("keydown", function (e) {
+      var k = e.key; if (["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "Home", "End"].indexOf(k) < 0 || e.altKey || e.ctrlKey || e.metaKey) return;
+      var link = e.target.closest ? e.target.closest(".kw-menu-link") : null; if (!link) return;
+      var li = link.parentNode, group = li.parentNode, top = group === ul;
+      var sibs = Array.prototype.filter.call(group.children, function (x) { return x.tagName === "LI"; }), at = sibs.indexOf(li), n = sibs.length;
+      var root = ul.closest(".kw-menu"), vertical = !top || !root || root.classList.contains("is-vertical") || Boolean(ul.closest(".kw-menu-panel"));
+      var focusLink = function (x) { var l = x && x.querySelector(":scope > .kw-menu-link"); if (l) { e.preventDefault(); l.focus(); } };
+      var openSub = function () { var t = li.querySelector(":scope > .kw-sub-toggle"); if (!t) return false; t.setAttribute("aria-expanded", "true"); var first = li.querySelector(":scope > .kw-submenu > li"); if (!first) return false; focusLink(first); return true; };
+      if (k === "Home") return focusLink(sibs[0]);
+      if (k === "End") return focusLink(sibs[n - 1]);
+      if (k === (vertical ? "ArrowDown" : "ArrowRight")) return focusLink(sibs[(at + 1) % n]);
+      if (k === (vertical ? "ArrowUp" : "ArrowLeft")) return focusLink(sibs[(at - 1 + n) % n]);
+      if (!vertical && k === "ArrowDown") { openSub(); return; }          // menu horizontal : Bas entre dans le sous-menu
+      if (vertical && k === "ArrowRight") { openSub(); return; }           // liste verticale : Droite entre dans le sous-menu
+      if (!top && k === "ArrowLeft") {                                     // sous-menu : Gauche referme et remonte à la rubrique
+        var parent = group.parentNode, t = parent && parent.querySelector(":scope > .kw-sub-toggle"); if (t) t.setAttribute("aria-expanded", "false"); focusLink(parent);
+      }
+    });
   });
   // Fenêtres (modales) de la page
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-modal-open]"), function (b) {

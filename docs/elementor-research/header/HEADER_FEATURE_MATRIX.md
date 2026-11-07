@@ -31,13 +31,13 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 |---|---|---|---|---|---|---|---|
 | H-030 | Menu horizontal / vertical / déroulant | 08 | Navigation principale | `menu`, `cmsmenu` | Rendu 3 dispositions | documenté (existant partiel) | `apparence-menus*` (gestion des menus) |
 | H-031 | Menu lié aux menus réels | 08 | Aucun système parallèle | `nav_locations` (existant) | Menu d'un autre site introuvable | testé | `tests/apparence-menus-integration.test.js` |
-| H-032 | Sous-menus multi-niveaux | 08 | Profondeur > 1 | profondeur 3 | Rendu + clavier | documenté (à développer, L3) | — |
-| H-033 | Icônes, badges, descriptions, images dans le menu | 08 | Éléments enrichis | champs par `nav_item` | Rendu + échappement | documenté (à développer, L3) | — |
-| H-034 | Hamburger / menu mobile | 08 | Repli sous un seuil | `.kw-menu-burger` (existant, dépliage en place) | aria-expanded, Échap | documenté (existant partiel) | — |
-| H-035 | Menu hors-canvas (tiroir) | 08, 09 | Panneau latéral à contenu libre | `drawer` | Focus piégé, Échap, retour du focus | documenté (à développer, L3) | — |
+| H-032 | Sous-menus multi-niveaux | 08 | Profondeur > 1 | profondeur 3 | Rendu + clavier | testé | `tests/header-menus-navigateur.test.js` : trois niveaux rendus, troisième niveau ouvert au survol, bascules dans le tiroir (la limite de 3 niveaux est celle du gestionnaire de menus) |
+| H-033 | Icônes, badges, descriptions, images dans le menu | 08 | Éléments enrichis | champs par `nav_item` | Rendu + échappement | développé (icône, description, classe CSS et attribut title : testés ; image et badge : NON faits) | `tests/header-menus-navigateur.test.js` : icône, description, classe du troisième niveau. Image (`media_id`) et badge : à faire (écart assumé, voir plan) |
+| H-034 | Hamburger / menu mobile | 08 | Repli sous un seuil | `.kw-menu-burger` (existant, dépliage en place) | aria-expanded, Échap | testé | `tests/header-menus-navigateur.test.js` : bouton « Menu » (≤ 767 px), aria-expanded, Échap, focus rendu au bouton |
+| H-035 | Menu hors-canvas (tiroir) | 08, 09 | Panneau latéral à contenu libre | `drawer` | Focus piégé, Échap, retour du focus | testé | `tests/header-menus-navigateur.test.js` : tiroir à droite/à gauche, fond assombri, défilement bloqué, focus piégé (Tab/Maj+Tab sur 14 pas), Échap/fond/bouton Fermer, fermeture au passage en grand écran, mouvement réduit ; réglage dans l'éditeur : `tests/header-reglages-navigateur.test.js` |
 | H-036 | Méga-menu (panneau composé) | 08 | Colonnes, images, texte, boutons, cartes | `megapanel` | Survol/clic/tactile/clavier/mobile | documenté (à développer, L4) | — |
-| H-037 | Déclencheurs survol / clic / tactile | 08 | Ouverture des sous-menus | runtime `kw-header.js` | Navigateur (3 modes) | documenté (à développer, L3-L4) | — |
-| H-038 | Navigation au clavier des menus | 08, 11 | Flèches, Échap, focus visible | runtime | Navigateur | documenté (à développer, L3) | — |
+| H-037 | Déclencheurs survol / clic / tactile | 08 | Ouverture des sous-menus | runtime `kw-header.js` | Navigateur (3 modes) | développé (survol, clic des bascules et focus testés ; tactile réel non testé) | `tests/header-menus-navigateur.test.js` : survol niveau 2 → 3, bascules au clic dans le tiroir ; un vrai écran tactile n'a pas été testé |
+| H-038 | Navigation au clavier des menus | 08, 11 | Flèches, Échap, focus visible | runtime | Navigateur | testé | `tests/header-menus-navigateur.test.js` : flèches, Début/Fin, Droite/Gauche entre niveaux, focus piégé dans le tiroir |
 | H-039 | Menu secondaire / emplacements | 08 | Plusieurs menus | emplacements header/footer/mobile | Affectation | testé | `tests/apparence-menus-wp.test.js` |
 
 ## 4. Éléments interactifs et e-commerce
@@ -68,7 +68,7 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-062 | Seuil de défilement réglable, décalage (offset) | 06 | Déclencheur d'état | `behavior.threshold/offset` | Navigateur | testé | `tests/header-reglages.test.js` (unitaire), `tests/header-reglages-navigateur.test.js` (éditeur), `tests/header-etats-navigateur.test.js` (site publié) : seuil 40 px respecté (sous le seuil : pas d'effet), décalage 24 px, niveau d'empilement 77 |
 | H-063 | Réduction de hauteur | 06 (Elementor : CSS, pas de contrôle natif) | Rétrécissement au défilement | `shrink` (existe via `headerFx`, sans interface) | Pas de saut de contenu | testé | `tests/header-reglages-navigateur.test.js` : effet « réduire » réglé dans le panneau, enregistré, rechargé, publié ; ancien format lu à l'identique (`theme-builder-en-tete-collant-public`) |
 | H-064 | Masquer en descendant / réapparaître | 06 (Elementor : EXTENSION) | Gagner de la place | `hideOnScrollDown` | Défilement ↓↑ ; focus clavier | testé | `tests/header-etats-navigateur.test.js` : masqué en descendant, réapparaît en remontant, focus clavier le révèle, jamais masqué en haut, sans transition en mouvement réduit |
-| H-065 | État normal / transparent / défilé / sticky / mobile / menu ouvert | 06 | États stylables | états `top`/`scrolled`/`menuOpen` | Styles par état | développé (états haut/défilé testés ; « menu ouvert » prévu L3) | `tests/header-etats-navigateur.test.js` : style « Après défilement » appliqué après le seuil, retiré en haut ; logo par état |
+| H-065 | État normal / transparent / défilé / sticky / mobile / menu ouvert | 06 | États stylables | états `top`/`scrolled`/`menuOpen` | Styles par état | testé | `tests/header-etats-navigateur.test.js` (haut / défilé / logos), `tests/header-menus-navigateur.test.js` (classe `is-menu-open`), `tests/header-reglages.test.js` (CSS des états défilé et menu ouvert) |
 | H-066 | Hauteur réservée, z-index, empilement | 06 | Pas de saut de contenu | `--kw-header-h` + espaceur | CLS < 0,1 | testé | `tests/header-etats-navigateur.test.js` : espaceur = hauteur de l'en-tête fixé, contenu non recouvert (mesure CLS globale : L8) |
 | H-067 | Animations d'entrée, transitions (durée, délai, courbe) | 06 | Apparition | Motion Studio (existant) | Déclenchement ; durée | documenté (existant) | — |
 | H-068 | Effets de défilement (vertical, horizontal, parallaxe, opacité, échelle) | 06 | Liés au scroll | `kw-effects.js` (existant) | Navigateur | documenté (existant) | — |
@@ -109,7 +109,8 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-103 | Performance (DOM, CLS, INP) | 12 | Budget | un seul écouteur passif | Mesures | documenté (L8) | — |
 | H-104 | Non-régression CMS / Theme Builder / éditeur / menus | 14 | Rien ne casse | suites existantes | `npm test` | documenté (L8) | — |
 
-## Bilan (mis à jour après le lot L2) — chiffres recomptés par script
-- Lignes : **72**. `testé` (preuve de test citée) : **20**. `développé` (partiel, reste à tester ou compléter) : **2**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
-- `documenté` (déjà présent dans le code, preuve à rattacher) : **36**. `documenté (à développer)` : **12**. `exclu` (justifié) : **2**.
-- Lots terminés : **L0** (réglages d'en-tête, panneau, lecteur unique), **L1** (états de défilement, fixé, appareils, décalage, masquage, logos par état), **L2** (responsive par élément : prouvé sur un en-tête publié ; capacités déjà présentes dans le moteur). Lots restants : L3 → L9.
+## Bilan (mis à jour après le lot L3) — chiffres recomptés par script
+- Lignes : **72**. `testé` (preuve de test citée) : **25**. `développé` (partiel, reste à tester ou compléter) : **3**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
+- `documenté` (déjà présent dans le code, preuve à rattacher) : **35**. `documenté (à développer)` : **7**. `exclu` (justifié) : **2**.
+- Lots terminés : **L0**, **L1**, **L2**, **L3** (menus à 3 niveaux, icône/description, clavier, tiroir mobile, état « Menu ouvert »). Lots restants : L4 (méga-menu) → L9.
+- Écarts assumés du lot L3 : image et badge d'un élément de menu non faits.

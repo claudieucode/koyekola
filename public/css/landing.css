@@ -1502,3 +1502,29 @@ html.kw-noscroll { overflow: hidden; }
   .kw-sitelogo-set.has-mobile .kw-logo-main, .lp-site-header[data-kw-scroll]:not(.is-scrolled) .kw-sitelogo-set.has-mobile .kw-logo-top { display: none; }
   .kw-sitelogo-set.has-mobile .kw-logo-mobile { display: inline-block; }
 }
+
+/* Menu enrichi (Header Builder) : icône et description d'un élément, troisième niveau, tiroir mobile */
+.kw-menu-link:has(.kw-menu-icon) { display: inline-flex; align-items: center; gap: 8px; }
+.kw-menu-icon { display: inline-flex; flex: none; } .kw-menu-icon svg { width: 18px; height: 18px; }
+.kw-menu-label { display: inline-flex; flex-direction: column; } .kw-menu-desc { font-weight: 400; font-size: .82em; opacity: .75; line-height: 1.35; }
+.kw-submenu > li { position: relative; } .kw-submenu > li.has-sub { display: flex; align-items: center; flex-wrap: wrap; }
+.kw-submenu .kw-submenu { padding-left: 14px; }
+@media (min-width: 768px) {
+  .kw-menu:not(.is-vertical) .kw-submenu .kw-submenu { top: -6px; left: 100%; padding-left: 12px; }
+  .kw-menu:not(.is-vertical) .kw-menu-item:nth-last-child(-n+2) .kw-submenu .kw-submenu { left: auto; right: 100%; }
+  .kw-menu:not(.is-vertical) .kw-submenu > li.has-sub:hover > .kw-submenu, .kw-menu:not(.is-vertical) .kw-submenu > li.has-sub:focus-within > .kw-submenu { display: block; }
+}
+.kw-menu-backdrop { position: fixed; inset: 0; z-index: 998; background: rgba(15, 23, 42, .5); animation: kw-fade .18s ease-out; }
+.kw-menu-panel { position: fixed; top: 0; bottom: 0; z-index: 999; width: min(86vw, 360px); overflow-y: auto; padding: 68px 20px 24px; background: var(--kw-background, #fff); color: var(--kw-text, #10222f); box-shadow: 0 0 40px rgba(15, 23, 42, .25); animation: kw-slide-r .22s ease-out; }
+.kw-menu-panel.is-left { left: 0; animation-name: kw-slide-l; } .kw-menu-panel.is-right { right: 0; }
+.kw-menu-panel .kw-menu-list { display: flex; flex-direction: column; flex-wrap: nowrap; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.kw-menu-panel .kw-menu-link { padding: 12px 0; font-size: 1.05rem; }
+.kw-menu-panel .kw-submenu { padding-left: 14px; }
+.kw-menu-close { position: absolute; top: 12px; right: 12px; min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: none; color: inherit; font-size: 28px; line-height: 1; cursor: pointer; }
+.kw-menu-close:hover { background: rgba(15, 23, 42, .08); }
+.kw-menu-panel.is-left .kw-menu-close { right: 12px; }
+@keyframes kw-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kw-slide-r { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes kw-slide-l { from { transform: translateX(-100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .kw-menu-backdrop, .kw-menu-panel, .kw-menu-panel.is-left, .kw-menu-panel.is-right { animation: none; } }
+
