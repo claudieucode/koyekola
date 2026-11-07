@@ -4,6 +4,20 @@ Date : 2026-11-07. Branche de travail : `header-builder-elementor` (créée depu
 Principe : lots **ordonnés par dépendance**, chacun livré **implémenté + testé + rendu éditeur identique au rendu public** (règle déjà utilisée dans `docs/ELEMENTOR_IMPLEMENTATION_ROADMAP.md`). Aucun lot n'est déclaré terminé sans preuve dans `HEADER_FEATURE_MATRIX.md`.
 Les écarts traités sont ceux de `HEADER_GAP_ANALYSIS.md` (G-xx). Architecture : `15_KOLAKISA_HEADER_ARCHITECTURE.md`.
 
+## État d'avancement (réel)
+| Lot | État | Preuve |
+|---|---|---|
+| L0 Fondation | **Fait** | `header-reglages*.test.js` |
+| L1 États et comportements | **Fait** | `header-etats-navigateur`, `header-reglages` |
+| L2 Responsive par élément | **Fait (prouvé ; capacités déjà dans le moteur)** | `header-responsive-navigateur` |
+| L3 Navigation et tiroir | **Fait** (image/badge d'un élément : non fait) | `header-menus-navigateur` |
+| L4 Méga-menu | **Fait** | `header-megamenu-navigateur` |
+| L5 Interactions | **Fait en grande partie** : recherche plein écran + suggestions, menu du compte, mini-panier (panier des formations). **Non fait** : mini-panier de la boutique de produits, widgets dédiés annonce/horaires/contact | `header-recherche`, `header-compte`, `header-minipanier` |
+| L6 Conditions étendues | **Fait** : « visiteur » ; date non faite | `header-visiteur*.test.js` |
+| L7 Ergonomie de l'éditeur | **Non fait** (calques d'en-tête, bascule d'état, vignettes) | — |
+| L8 Qualité transversale | **Fait en partie** : accessibilité, isolation, performance ; audit lecteur d'écran réel et tactile non faits | `header-accessibilite`, `header-isolation`, `header-performance` |
+| L9 Audit, commit, push, déploiement | Audit rédigé (`HEADER_FINAL_AUDIT.md`) ; commits locaux ; push/déploiement : voir le rapport de session | — |
+
 ## Prérequis à chaque lot
 1. Lire `docs/KOLAKISA_DESIGN_CHARTE.md`, `KOLAKISA_MOTION.md`, `KOLAKISA_WIDGET_STYLE_ARCHITECTURE.md` (un seul chemin `styleSet`).
 2. Aucune migration destructive. Colonnes/clés ajoutées avec valeurs par défaut ; lecture de l'ancien format conservée.
