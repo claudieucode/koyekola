@@ -1,0 +1,35 @@
+// Catalogue de démonstration « Objectif Noir » (26 produits fictifs : variantes, promotions, ruptures). Étiquettes de COMPATIBILITÉ réelles (monture-rf, monture-e, monture-z) :
+// elles alimentent les liens « kits compatibles » (/boutique/etiquette/<nom>). Les caractéristiques du comparateur se saisissent dans l'admin produit (non créées par la démo).
+const M = { Monture: ["RF", "E", "Z"] };
+module.exports = {
+  categories: ["Boîtiers", "Objectifs", "Vidéo et stabilisation", "Éclairage", "Stockage et batteries", "Sacs et supports"],
+  products: [
+    ["Boîtier hybride plein format 45 Mpx", 0, 2490, 0, null, "ok", ["monture-rf", "plein-format", "video"], "Capteur 45 Mpx, stabilisation du capteur, double logement de cartes."],
+    ["Boîtier hybride plein format 24 Mpx", 0, 1790, 1590, null, "ok", ["monture-e", "plein-format", "fin-de-serie"], "Capteur 24 Mpx, vidéo 4K, viseur électronique."],
+    ["Boîtier hybride APS-C 26 Mpx", 0, 1190, 0, null, "ok", ["monture-z", "aps-c"], "Compact et léger, écran orientable."],
+    ["Boîtier vidéo plein format 6K", 0, 3290, 0, null, "rupture", ["monture-rf", "plein-format", "video"], "Enregistrement 6K interne, sorties pour moniteur externe."],
+    ["Objectif 24-70 mm f/2,8", 1, 1290, 0, M, "partiel", ["plein-format", "zoom"], "Zoom standard lumineux, ouverture constante."],
+    ["Objectif 50 mm f/1,4", 1, 690, 0, M, "ok", ["plein-format", "focale-fixe"], "Focale fixe lumineuse pour portrait et reportage."],
+    ["Objectif 85 mm f/1,8", 1, 590, 0, M, "ok", ["plein-format", "focale-fixe"], "Portrait, flou d'arrière-plan progressif."],
+    ["Objectif 16 mm f/2,8 grand-angle", 1, 490, 0, { Monture: ["RF", "E"] }, "ok", ["aps-c", "focale-fixe"], "Grand-angle compact pour paysage et vlog."],
+    ["Téléobjectif 70-200 mm f/4", 1, 1190, 990, null, "ok", ["monture-rf", "plein-format", "zoom", "fin-de-serie"], "Téléobjectif léger, stabilisé."],
+    ["Objectif macro 90 mm", 1, 749, 0, null, "ok", ["monture-e", "plein-format", "macro"], "Rapport de reproduction 1:1."],
+    ["Stabilisateur trois axes pour boîtier", 2, 389, 0, null, "ok", ["video", "monture-rf", "monture-e", "monture-z"], "Charge utile 2,5 kg, mode vertical."],
+    ["Micro canon directionnel", 2, 149, 0, null, "ok", ["video"], "Prise 3,5 mm, bonnette anti-vent fournie."],
+    ["Moniteur de terrain 7 pouces", 2, 329, 0, null, "ok", ["video"], "Entrée HDMI, aides à la mise au point."],
+    ["Cage de montage vidéo", 2, 119, 0, { Monture: ["RF", "E", "Z"] }, "ok", ["video"], "Aluminium usiné, points de fixation 1/4 de pouce."],
+    ["Torche LED bicolore 60 W", 3, 249, 0, null, "ok", ["video", "lumiere"], "Température de couleur réglable de 2700 K à 6500 K."],
+    ["Panneau LED de poche", 3, 69, 55, null, "ok", ["video", "lumiere", "fin-de-serie"], "Rechargeable par USB, fixation sabot."],
+    ["Flash cobra sans fil", 3, 219, 0, { Monture: ["RF", "E", "Z"] }, "ok", ["lumiere"], "Contrôle sans fil, synchronisation rapide."],
+    ["Réflecteur pliable 5 en 1", 3, 29, 0, { Taille: ["60 cm", "110 cm"] }, "ok", ["lumiere"], "Diffuseur, blanc, argent, or, noir."],
+    ["Carte mémoire rapide", 4, 59, 0, { Capacité: ["64 Go", "128 Go", "256 Go"] }, "ok", ["stockage"], "Écriture continue élevée pour la vidéo 4K."],
+    ["Batterie de rechange", 4, 79, 0, { Modèle: ["Type A", "Type B"] }, "ok", ["batterie"], "Batterie lithium-ion d'origine compatible, selon le boîtier."],
+    ["Chargeur double USB-C", 4, 49, 0, null, "libre", ["batterie"], "Charge deux batteries à la fois."],
+    ["Disque SSD de sauvegarde 1 To", 4, 129, 0, null, "ok", ["stockage"], "Format de poche, interface USB 3."],
+    ["Sac à dos photo 25 L", 5, 159, 0, { Couleur: ["Noir", "Gris anthracite"] }, "ok", ["sac"], "Compartiments modulables, accès latéral."],
+    ["Trépied carbone voyage", 5, 249, 0, null, "ok", ["support"], "Plié 40 cm, charge 8 kg, rotule à friction."],
+    ["Rotule fluide vidéo", 5, 189, 0, null, "ok", ["support", "video"], "Mouvement progressif pour panoramiques."],
+    ["Bracelet de main cuir", 5, 39, 0, null, "ok", ["support"], "Fixation rapide sur l'anneau du boîtier."],
+    ["Kit de nettoyage optique", 5, 24, 0, null, "ok", ["entretien"], "Soufflet, pinceau, lingette microfibre, liquide."],
+  ],
+};

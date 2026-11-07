@@ -10,7 +10,7 @@ const library = require("../src/marketing/themes/library");
 const audit = require("../src/marketing/themes/packs/audit");
 const shopkit = require("../src/marketing/themes/packs/shopkit");
 
-const KEYS = ["maille", "flamme", "verdure", "pointure", "cuir", "dentelle", "plume-or", "lumiere-objet", "carre-soie", "salon-vivant", "sommeil-doux", "museau", "boucles-fieres", "pagne-vif", "monture-claire", "percale-fine", "corde-et-bois", "deuxieme-vie", "produit-unique"].filter((k) => fs.existsSync(path.join(__dirname, "..", "src", "marketing", "themes", "packs", k, "pack.js")));
+const KEYS = ["maille", "flamme", "verdure", "pointure", "cuir", "dentelle", "plume-or", "lumiere-objet", "carre-soie", "salon-vivant", "sommeil-doux", "museau", "boucles-fieres", "pagne-vif", "monture-claire", "percale-fine", "corde-et-bois", "deuxieme-vie", "produit-unique", "ambre-rare", "perle-noire", "cercle-prive", "atelier-botte", "petit-nid", "cabine-haute", "cuisine-claire", "objectif-noir", "service-dresse"].filter((k) => fs.existsSync(path.join(__dirname, "..", "src", "marketing", "themes", "packs", k, "pack.js")));
 const HOST = "www.themes-shop.example";
 const site = { headers: { "x-forwarded-host": HOST, "User-Agent": "Mozilla/5.0 (test)" } };
 let srv, boss, db, siteId, orgId;

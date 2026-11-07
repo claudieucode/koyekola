@@ -1,0 +1,33 @@
+// Catalogue de démonstration « Cuisine claire » (26 produits). Aucune caractéristique chiffrée ni classe énergétique : ce sont des exemples de fiches, à compléter par le vendeur dans « Caractéristiques (comparateur) ».
+// Étiquettes d'usage utilisées par les guides : petit-espace, famille, patisserie, cafe-maison. Catégories : froid, cuisson, lavage-et-vaisselle, cafe-et-boissons, preparation, petit-electromenager.
+module.exports = {
+  categories: ["Froid", "Cuisson", "Lavage et vaisselle", "Café et boissons", "Préparation", "Petit électroménager"],
+  products: [
+    ["Réfrigérateur table top", 0, 289, 0, null, "ok", ["petit-espace"], "Format compact pour studio ou coin cuisine."],
+    ["Réfrigérateur combiné", 0, 649, 579, null, "ok", ["famille"], "Réfrigérateur et congélateur superposés."],
+    ["Congélateur coffre", 0, 399, 0, null, "ok", ["famille"], "Pour stocker en quantité."],
+    ["Cave à vin de service", 0, 459, 0, null, "rupture", [], "Pour ranger les bouteilles au frais."],
+    ["Four encastrable multifonction", 1, 429, 0, null, "ok", ["patisserie"], "Plusieurs modes de cuisson, nettoyage facilité."],
+    ["Plaque de cuisson induction", 1, 349, 299, null, "ok", ["patisserie", "petit-espace"], "Plaque à poser ou encastrer, commandes tactiles."],
+    ["Micro-ondes grill", 1, 139, 0, null, "ok", ["petit-espace"], "Réchauffe et gratine."],
+    ["Mini-four posable", 1, 99, 0, null, "ok", ["petit-espace", "patisserie"], "Un petit four de comptoir."],
+    ["Lave-linge hublot", 2, 499, 0, { Couleur: ["Blanc", "Graphite"] }, "ok", ["famille"], "Chargement frontal, plusieurs programmes."],
+    ["Lave-vaisselle pose libre", 2, 449, 0, null, "ok", ["famille"], "Pose libre, paniers modulables."],
+    ["Lave-vaisselle compact", 2, 319, 279, null, "ok", ["petit-espace"], "Format réduit pour petites cuisines."],
+    ["Sèche-linge à condensation", 2, 529, 0, null, "partiel", ["famille"], "Séchage en intérieur sans évacuation."],
+    ["Machine à café à grains", 3, 399, 0, null, "ok", ["cafe-maison"], "Moulin intégré, bac à marc amovible."],
+    ["Machine à capsules", 3, 89, 0, { Couleur: ["Noir", "Rouge", "Crème"] }, "ok", ["cafe-maison", "petit-espace"], "Compacte, réservoir amovible."],
+    ["Cafetière filtre programmable", 3, 59, 0, null, "ok", ["cafe-maison"], "Se programme la veille."],
+    ["Bouilloire à température réglable", 3, 49, 39, null, "ok", ["cafe-maison"], "Pour le thé et les infusions."],
+    ["Moulin à café électrique", 3, 35, 0, null, "libre", ["cafe-maison"], "Mouture à la demande."],
+    ["Robot pâtissier", 4, 329, 0, { Couleur: ["Crème", "Anthracite"] }, "ok", ["patisserie"], "Bol inox, plusieurs accessoires."],
+    ["Mixeur plongeant", 4, 45, 0, null, "ok", ["petit-espace", "patisserie"], "Pour les soupes et les sauces."],
+    ["Blender à verre", 4, 79, 0, null, "ok", ["famille"], "Pichet gradué, lames inox."],
+    ["Batteur électrique", 4, 39, 0, null, "ok", ["patisserie"], "Fouets et crochets fournis."],
+    ["Robot multifonction", 4, 189, 159, null, "ok", ["famille", "patisserie"], "Hache, râpe, émince."],
+    ["Grille-pain deux fentes", 5, 29, 0, null, "ok", ["petit-espace"], "Réglage du brunissage."],
+    ["Friteuse à air", 5, 119, 0, null, "ok", ["famille"], "Cuisson avec peu de matière grasse."],
+    ["Cuiseur à riz", 5, 49, 0, null, "ok", ["petit-espace"], "Cuisson et maintien au chaud."],
+    ["Balance de cuisine", 5, 19, 0, null, "ok", ["patisserie"], "Plateau en verre, pesée précise."],
+  ],
+};

@@ -1,0 +1,33 @@
+// Catalogue de démonstration « Service Dressé » (26 produits : variantes, promotions, ruptures). Données de démonstration, jamais créées sur la boutique d'un client sans action explicite.
+// Les catégories « Pour la table » (carafes, plats, nappes) se comptent en tout dans le composeur ; les autres se comptent par convive.
+module.exports = {
+  categories: ["Assiettes", "Verres et cristal", "Couverts", "Linge et serviettes", "Pour la table"],
+  products: [
+    ["Assiette plate Liseré céladon", 0, 28, 0, null, "ok", ["porcelaine", "celadon"], "Porcelaine blanche, filet céladon, 27 cm."],
+    ["Assiette creuse Liseré céladon", 0, 26, 0, null, "ok", ["porcelaine", "celadon"], "Porcelaine blanche, filet céladon, 22 cm."],
+    ["Assiette à dessert Liseré céladon", 0, 22, 0, null, "ok", ["porcelaine", "celadon"], "Porcelaine blanche, filet céladon, 21 cm."],
+    ["Assiette de présentation Champagne", 0, 45, 0, null, "ok", ["porcelaine", "champagne"], "Sous-assiette gris perle, bord champagne, 31 cm."],
+    ["Assiette plate Nuit étoilée", 0, 34, 27, null, "ok", ["porcelaine", "fin-de-serie"], "Porcelaine bleu nuit, bord or, 27 cm."],
+    ["Assiette à pain Rose poudré", 0, 16, 0, null, "rupture", ["porcelaine"], "Petite assiette rose poudré, 16 cm."],
+    ["Verre à eau Cristal taillé", 1, 38, 0, null, "ok", ["cristal"], "Cristal taillé main, 32 cl."],
+    ["Verre à vin rouge Cristal", 1, 42, 0, null, "ok", ["cristal"], "Cristal fin, 55 cl, pied étiré."],
+    ["Verre à vin blanc Cristal", 1, 40, 0, null, "ok", ["cristal"], "Cristal fin, 38 cl."],
+    ["Flûte à champagne Cristal", 1, 44, 0, null, "ok", ["cristal"], "Cristal fin, 22 cl."],
+    ["Gobelet Whisky taillé", 1, 52, 41, null, "ok", ["cristal", "fin-de-serie"], "Cristal taillé losanges, 30 cl."],
+    ["Verre teinté d'été", 1, 24, 0, { Teinte: ["Vert d'eau", "Ambre", "Bleu fumé"] }, "ok", ["verre"], "Verre soufflé teinté dans la masse, 30 cl."],
+    ["Fourchette de table", 2, 24, 0, { Finition: ["Argent", "Champagne"] }, "ok", ["couverts"], "Acier poli, manche plat."],
+    ["Couteau de table", 2, 26, 0, { Finition: ["Argent", "Champagne"] }, "ok", ["couverts"], "Lame crantée, acier poli."],
+    ["Cuillère de table", 2, 24, 0, { Finition: ["Argent", "Champagne"] }, "partiel", ["couverts"], "Acier poli, bol ovale."],
+    ["Petite cuillère", 2, 14, 0, null, "ok", ["couverts"], "Acier poli, 14 cm."],
+    ["Fourchette à dessert", 2, 16, 0, null, "ok", ["couverts"], "Acier poli, 17 cm."],
+    ["Couteau à poisson", 2, 22, 0, null, "ok", ["couverts"], "Lame en spatule, acier poli."],
+    ["Serviette en lin lavé", 3, 16, 0, { Coloris: ["Écru", "Céladon", "Bleu nuit"] }, "ok", ["lin"], "Lin lavé, 45 × 45 cm, ourlet main."],
+    ["Rond de serviette Laiton", 3, 12, 0, null, "ok", ["accessoire"], "Anneau en laiton poli."],
+    ["Nappe en lin", 4, 140, 0, { Dimension: ["150 × 250 cm", "170 × 320 cm"] }, "ok", ["lin"], "Lin lavé, ourlet à jours."],
+    ["Chemin de table Lin brodé", 4, 58, 46, null, "ok", ["lin", "fin-de-serie"], "Lin brodé blanc sur blanc, 40 × 150 cm."],
+    ["Carafe Cristal", 4, 120, 0, null, "ok", ["cristal"], "Cristal taillé, 1,2 litre, bouchon plat."],
+    ["Plat ovale Liseré céladon", 4, 96, 0, null, "ok", ["porcelaine", "celadon"], "Porcelaine, 38 cm."],
+    ["Soupière Liseré céladon", 4, 180, 0, null, "rupture", ["porcelaine", "celadon"], "Porcelaine avec couvercle, 2 litres."],
+    ["Coupelle à fruits sur pied", 4, 88, 0, null, "libre", ["porcelaine"], "Porcelaine, pied haut, 26 cm."],
+  ],
+};
