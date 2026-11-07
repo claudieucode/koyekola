@@ -754,8 +754,9 @@ const NODE_TYPES = {
     const target = oneOf("blog", "catalogue", "site")(p.target) || "catalogue";
     return { target, placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher", ...(p.skin === "overlay" ? { skin: "overlay" } : {}), ...(p.suggest === true && target === "site" ? { suggest: true } : {}) };
   } },
+  // skin « menu » (Header Builder) : un visiteur connecté voit un menu déroulant (Mon compte, Panier, Se déconnecter) ; un visiteur non connecté garde les liens habituels
   account: { label: "Compte du visiteur", category: "dynamic", props: (p) => ({
-    login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier",
+    login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier", ...(p.skin === "menu" ? { skin: "menu" } : {}),
   }) },
   dyntext: { label: "Texte dynamique", category: "dynamic", props: (p, at) => {
     const source = oneOf("firstName", "today", "year", "pageTitle", "courseCount", "postCount")(p.source);

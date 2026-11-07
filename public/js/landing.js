@@ -291,6 +291,12 @@
       }
     });
   });
+  // Menu du compte (<details>) : Échap, clic en dehors ou focus qui sort le referment ; le focus revient au titre après Échap
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-account-details"), function (d) {
+    d.addEventListener("keydown", function (e) { if (e.key === "Escape" && d.open) { d.open = false; var s = d.querySelector("summary"); if (s) s.focus(); } });
+    d.addEventListener("focusout", function (e) { if (d.open && e.relatedTarget && !d.contains(e.relatedTarget)) d.open = false; });
+    document.addEventListener("click", function (e) { if (d.open && !d.contains(e.target)) d.open = false; });
+  });
   // Recherche : loupe → recherche en plein écran (dialogue natif : Échap ferme, le focus est rendu à la loupe), et suggestions pendant la frappe (data-kw-suggest) :
   // requête différée de 200 ms, une seule à la fois, résultats écrits avec textContent (jamais de HTML), flèches Haut / Bas, Entrée suit le lien, annonce du nombre de résultats pour les lecteurs d'écran.
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-search-open]"), function (open) {

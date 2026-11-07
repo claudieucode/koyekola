@@ -2508,6 +2508,7 @@
       case "account":
         box.appendChild(textField("Lien pour un visiteur non connecté", p.login, set("login"), { max: 40, disabled: disabled }));
         box.appendChild(textField("Lien pour un visiteur connecté", p.account, set("account"), { max: 40, disabled: disabled }));
+        box.appendChild(selectField("Affichage pour un visiteur connecté", p.skin === "menu" ? "menu" : "links", [["links", "Lien « Mon compte »"], ["menu", "Menu déroulant (compte, panier, déconnexion)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "menu") x.skin = "menu"; else delete x.skin; }); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers le panier (avec le nombre de formations)", p.showCart !== false, function (v) { setProp(it.id, "showCart", v); }, { disabled: disabled }));
         box.appendChild(textField("Texte du lien panier", p.cart, set("cart"), { max: 30, disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Lu à chaque affichage : la personne connectée voit « " + (p.account || "Mon compte") + " » et son panier. Dans l'éditeur et l'aperçu, la page est montrée comme à un visiteur non connecté." }));
