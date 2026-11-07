@@ -1,0 +1,20 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Mes abonnements</h1>
+<% if (sent) { %><p class="sh-ok" role="status">Si cette adresse a des abonnements, un e-mail avec le lien de gestion vient d'être envoyé.</p><% } %>
+<% if (shop.customer) { %>
+  <% if (!list.length) { %><p class="sh-empty">Vous n'avez aucun abonnement pour le moment.</p><% } else { %>
+  <ul class="sh-wish-list">
+    <% list.forEach((x) => { %><li><a href="<%= shop.base %>/abonnements/<%= x.id %>"><strong><%= x.product_name %></strong></a> · <%= x.plan_label %> · <%= money(x.price_cents) %> <%= cadence(x) %> · <%= statusLabel(x) %><% if (x.current_period_end && x.status !== "cancelled" && x.status !== "paused") { %> · échéance du <%= frDate(x.current_period_end) %><% } %></li><% }) %>
+  </ul>
+  <% } %>
+<% } else { %>
+  <p>Connectez-vous à votre compte pour voir vos abonnements, ou recevez par e-mail le lien de gestion de votre abonnement.</p>
+  <p><a class="sh-btn" href="<%= shop.base %>/compte">Se connecter</a></p>
+  <form class="sh-form" method="post" action="<%= shop.base %>/abonnements/lien">
+    <label>Votre e-mail<input type="email" name="email" required maxlength="200" autocomplete="email"></label>
+    <button class="sh-btn" type="submit">Recevoir mon lien par e-mail</button>
+  </form>
+<% } %>
+<h2>Comment résilier</h2>
+<p>La résiliation se fait en un clic, à tout moment, depuis la page de votre abonnement : un seul bouton, aucune question, aucune démarche par courrier ou par téléphone. Vous recevez un e-mail de confirmation.</p>
+<%- include("_bottom") %>

@@ -3,6 +3,7 @@
 (function () {
   var body = document.body;
   if (!body || body.getAttribute("data-kw-pack") !== "salon-vivant") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) document.body.classList.add("pk-calme"); // respecte « moins d'animations » : le CSS du thème coupe aussi ses animations
   body.classList.add("sv-js");
 
   function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; }

@@ -19,6 +19,7 @@ const giftLists = require("../shop/giftLists");
 const compare = require("../shop/compare");
 const seo = require("../shop/seo");
 const age = require("../shop/age");
+const subscriptions = require("../shop/subscriptions");
 const siteModules = require("../siteModules");
 const pagesLib = require("../pages");
 const { tokensToCss } = require("../pages/tokens");
@@ -47,7 +48,7 @@ module.exports = ({ db }) => {
     const settings = store.getSettings(s);
     if (!settings.enabled) return res.status(404).render("error", { message: "Cette boutique n'est pas ouverte." });
     req.shop = { s, settings, marketing };
-    res.set("Cache-Control", /^\/(panier|commande|compte|liste|invitation)/.test(req.path) || req.method !== "GET" ? "no-store" : "no-cache");
+    res.set("Cache-Control", /^\/(panier|commande|compte|liste|invitation|abonnements)/.test(req.path) || req.method !== "GET" ? "no-store" : "no-cache");
     const token = view.readCookie(req, CUSTOMER_COOKIE);
     req.shopCustomer = token ? customers.fromSession(s, token) : null;
     s.viewerCustomerId = req.shopCustomer ? req.shopCustomer.id : null; // accès membre : le visiteur est celui de la session, jamais une valeur du navigateur
@@ -127,7 +128,7 @@ module.exports = ({ db }) => {
     const compared = new Set(compare.products(s, compare.parseCookie(view.readCookie(req, CMP_COOKIE))).map((p) => p.id));
     region(req, res, "product", { category: product.categories[0] ? product.categories[0].name : "", categories: product.categories.map((c) => c.name), scope: { product: view.productScope(product, { base: BASE, currency: settings.currency }) } },
       (themeTemplate) => render(req, res, "produit", { title: product.name, product, related, themeTemplate: themeTemplate || null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null,
-        gate: access.gate(s, product.id), personalization: personalization.get(db, product.id), ageGate: { required: age.requiredForProduct(db, product.id), confirmed: ageOf(req) }, reviews: sum, breadcrumb: crumb.items, jsonLd, wished, compared, ratings: reviews.summaries(s, related.map((p) => p.id)) }));
+        gate: access.gate(s, product.id), subscription: subscriptions.offerFor(s, product), personalization: personalization.get(db, product.id), ageGate: { required: age.requiredForProduct(db, product.id), confirmed: ageOf(req) }, reviews: sum, breadcrumb: crumb.items, jsonLd, wished, compared, ratings: reviews.summaries(s, related.map((p) => p.id)) }));
   });
 
   // ── Accès membre : code d'invitation et demande d'accès (compte client obligatoire) ──
@@ -485,7 +486,7 @@ module.exports = ({ db }) => {
   router.get(`${BASE}/compte`, (req, res) => {
     if (!req.shopCustomer) return loginPage(req, res);
     const list = orders.listOrders(req.shop.s, { customerId: req.shopCustomer.id, perPage: 50 });
-    render(req, res, "compte", { title: "Mon compte", customerOrders: list.items.map((o) => ({ ...o, key: view.orderToken(o) })), statusLabels: orders.STATUS_LABELS, info: req.query.ok ? "Modifications enregistrées." : null });
+    render(req, res, "compte", { title: "Mon compte", customerOrders: list.items.map((o) => ({ ...o, key: view.orderToken(o) })), statusLabels: orders.STATUS_LABELS, info: req.query.ok ? "Modifications enregistrées." : null, hasSubscriptions: subscriptions.hasAny(req.shop.s) });
   });
   router.post(`${BASE}/compte/connexion`, (req, res) => {
     const key = `${req.ip}|${req.shop.s.siteId}|${String(req.body.email || "").toLowerCase()}`;
@@ -551,6 +552,8 @@ module.exports = ({ db }) => {
   });
 
   require("./shopRdv").mountPublic({ router, BASE, render, present, wantsJson, limiter: createRateLimiter(20, 15 * 60 * 1000) }); // prise de rendez-vous (migration 137)
+
+  require("./shopAbonnements").mountPublic({ router, BASE, render, present, limiter: createRateLimiter(20, 15 * 60 * 1000) }); // abonnements (migration 139)
 
   return router;
 };

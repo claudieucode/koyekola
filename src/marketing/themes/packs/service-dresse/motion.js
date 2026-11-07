@@ -6,6 +6,7 @@
 (function () {
   var body = document.body;
   if (!body || body.getAttribute("data-kw-pack") !== "service-dresse") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) document.body.classList.add("pk-calme"); // respecte « moins d'animations » : le CSS du thème coupe aussi ses animations
   var box = document.querySelector("[data-sd-composer]");
   if (!box) return;
   var all = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };

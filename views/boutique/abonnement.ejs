@@ -1,0 +1,50 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Mon abonnement</h1>
+<% if (info) { %><p class="sh-ok" role="status"><%= info %></p><% } %>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<dl class="sh-meta">
+  <dt>Produit</dt><dd><%= sub.product_name %><%= sub.variant_label ? " (" + sub.variant_label + ")" : "" %></dd>
+  <dt>Formule</dt><dd><%= sub.plan_label %> : <%= money(sub.price_cents) %> <%= cadence(sub) %>, tout compris</dd>
+  <dt>Statut</dt><dd><%= statusLabel %></dd>
+  <% if (sub.status === "paused") { %><dt>Prélèvements</dt><dd>En pause : aucun prélèvement ni livraison</dd>
+  <% } else if (sub.status === "cancelled") { %><dt>Résilié le</dt><dd><%= frDate(sub.cancelled_at) %></dd>
+  <% } else if (sub.current_period_end) { %><dt><%= sub.cancel_at_period_end ? "Fin de la période payée" : "Prochaine échéance" %></dt><dd><%= frDate(sub.current_period_end) %><%= sub.cancel_at_period_end ? " (aucun prélèvement ensuite)" : "" %></dd><% } %>
+</dl>
+<% if (sub.status === "past_due") { %><p class="sh-error" role="status">Le dernier prélèvement n'a pas abouti. Un e-mail vous indique comment régler ; vous pouvez aussi résilier ci-dessous.</p><% } %>
+<% if (sub.status !== "cancelled") { %>
+<h2>Gérer mon abonnement</h2>
+<div class="sh-sub-actions">
+  <% if (sub.status === "active" && !sub.cancel_at_period_end) { %>
+  <form class="sh-form" method="post" action="<%= shop.base %>/abonnements/<%= sub.id %>/pause<%= kq %>"><button class="sh-btn" type="submit">Mettre en pause</button></form>
+  <% } %>
+  <% if (sub.status === "paused") { %>
+  <form class="sh-form" method="post" action="<%= shop.base %>/abonnements/<%= sub.id %>/reprise<%= kq %>"><button class="sh-btn" type="submit">Reprendre l'abonnement</button></form>
+  <% } %>
+  <% if (["active", "paused"].includes(sub.status) && !sub.cancel_at_period_end && plans.length > 1) { %>
+  <form class="sh-form" method="post" action="<%= shop.base %>/abonnements/<%= sub.id %>/formule<%= kq %>">
+    <label>Changer de formule
+      <select name="plan_id" required>
+        <option value="">Choisir…</option>
+        <% plans.forEach((p) => { if (p.id !== sub.plan_id) { %><option value="<%= p.id %>"><%= p.label %> — <%= money(p.price_cents) %> <%= cadence(p) %></option><% } }) %>
+      </select>
+    </label>
+    <p class="sh-hint">Le nouveau prix s'applique à la prochaine échéance, sans frais supplémentaire.</p>
+    <button class="sh-btn" type="submit">Changer de formule</button>
+  </form>
+  <% } %>
+  <% if (!sub.cancel_at_period_end) { %>
+  <form class="sh-form" method="post" action="<%= shop.base %>/abonnements/<%= sub.id %>/resilier<%= kq %>">
+    <p>La résiliation est immédiate et sans condition. Vous recevez un e-mail de confirmation.</p>
+    <button class="sh-btn sh-btn-primary" type="submit">Résilier mon abonnement</button>
+  </form>
+  <% } else { %><p>Votre résiliation est enregistrée : plus aucun prélèvement après le <%= frDate(sub.current_period_end) %>.</p><% } %>
+</div>
+<% } %>
+<h2>Commandes de cet abonnement</h2>
+<% if (!history.length) { %><p class="sh-empty">Aucune commande pour le moment.</p><% } else { %>
+<table class="sh-table"><thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Total</th></tr></thead><tbody>
+<% history.forEach((o) => { %><tr><th scope="row"><a href="<%= shop.base %>/commande/confirmation/<%= encodeURIComponent(o.number) %>?k=<%= o.key %>"><%= o.number %></a></th><td><%= String(o.created_at).slice(0, 10) %></td><td><%= money(o.total_cents) %></td></tr><% }) %>
+</tbody></table>
+<% } %>
+<p><a href="<%= shop.base %>/abonnements<%= kq %>">Retour</a></p>
+<%- include("_bottom") %>

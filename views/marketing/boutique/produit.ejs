@@ -56,6 +56,24 @@
   </form>
 </section>
 <% } %>
+<% if (product && typeof plans !== "undefined") { %>
+<section class="mk-panel" aria-labelledby="ab-h"><h2 id="ab-h">Abonnement (récurrent)</h2>
+  <p class="field-hint">Proposez ce produit en abonnement, à côté de l'achat unique (qui reste toujours disponible). Chaque formule fixe le prix TOUT COMPRIS prélevé à chaque échéance (livraison et taxes incluses : le client ne paie rien d'autre). Une remise n'est affichée que si vous la saisissez et qu'elle correspond au prix. Le client peut mettre en pause, changer de formule ou résilier en un clic. <%= stripeReady ? "" : "Les clés Stripe du serveur et le secret de webhook ne sont pas posés : rien n'est proposé au public tant que ce n'est pas fait." %></p>
+  <% if (plans.length) { %><ul><% plans.forEach((p) => { %><li><strong><%= p.label %></strong> : <%= money(p.price_cents) %> <%= p.interval_count === 1 ? (p.interval_unit === "week" ? "chaque semaine" : "chaque mois") : "tous les " + p.interval_count + (p.interval_unit === "week" ? " semaines" : " mois") %><%= p.discount_percent ? " (remise annoncée : " + p.discount_percent + " %)" : "" %>
+    <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/produits/<%= product.id %>/formules/<%= p.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Retirer cette formule ? Les abonnements en cours gardent leur prix." data-mk-confirm-ok="Retirer">Retirer</button></form><% } %></li><% }) %></ul>
+  <% } else { %><p class="mk-empty">Aucune formule : ce produit ne s'achète qu'à l'unité.</p><% } %>
+  <% if (canWrite) { %>
+  <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/formules">
+    <div class="field-group"><label for="ab-l">Nom de la formule</label><input id="ab-l" name="label" maxlength="60" required placeholder="Chaque mois"></div>
+    <div class="field-group"><label for="ab-c">Tous les</label><input id="ab-c" name="interval_count" type="number" min="1" max="12" value="1" required></div>
+    <div class="field-group"><label for="ab-u">Unité</label><select id="ab-u" name="interval_unit"><option value="week">semaine(s)</option><option value="month" selected>mois</option></select></div>
+    <div class="field-group"><label for="ab-p">Prix tout compris à chaque échéance (€)</label><input id="ab-p" name="price" inputmode="decimal" placeholder="29,90"></div>
+    <div class="field-group"><label for="ab-d">Remise annoncée en % (facultatif, laissez vide si aucune)</label><input id="ab-d" name="discount_percent" type="number" min="0" max="90"></div>
+    <button class="btn btn-primary btn-sm" type="submit">Ajouter la formule</button>
+  </form>
+  <% } %>
+</section>
+<% } %>
 <% if (product) { const ag = typeof ageLevel !== "undefined" ? ageLevel : 0; %>
 <section class="mk-panel" aria-labelledby="ag-h"><h2 id="ag-h">Contrôle d'âge (alcool, tabac…)</h2>
   <p class="field-hint">La fiche reste visible, mais l'achat exige que le client déclare avoir l'âge minimum (ajout au panier et commande). Attention : c'est une simple déclaration sur l'honneur, sans vérification d'identité ; la livraison peut exiger une pièce d'identité. L'âge peut aussi être réglé par catégorie (le plus élevé s'applique).</p>
