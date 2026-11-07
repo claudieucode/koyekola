@@ -1,0 +1,111 @@
+// Header Builder, lot L0 — dans un VRAI Chrome : le panneau « En-tête » de l'éditeur lit l'état réel d'un en-tête (ancien format compris), écrit le bloc `header`,
+// l'enregistre, et le site publié applique la position, l'effet et le seuil. Ignoré si Playwright / Chrome sont absents.
+const { test, describe, before, after } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("fs");
+const { TEST_KEY } = require("./marketing-helpers");
+const { startServer, loginInstructor } = require("./helpers");
+
+let chromium = null;
+try { chromium = require("playwright-core").chromium; } catch { /* module absent */ }
+const CHROME = process.env.CHROME_PATH || ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"].find((p) => fs.existsSync(p));
+const SKIP = !chromium || !CHROME ? "Playwright ou Chrome absent : réglages d'en-tête non exécutés sur cette machine" : false;
+const sect = (id, text) => ({ id, type: "layout", children: [{ id: `${id}h`.slice(0, 20), type: "heading", props: { text, level: "2" } }] });
+
+describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP }, () => {
+  let srv, boss, db, browser, site, pageId, errors = [];
+  const origin = { Origin: "" };
+  const U = (p = "") => `/marketing/site-web/sites/${site}/constructeur-de-theme${p}`;
+  const slug = () => db.prepare("SELECT slug FROM mk_landing_pages WHERE id = ?").get(pageId).slug;
+  const adopt = async (key, publish = true) => {
+    const used = await boss.request(U("/api/bibliotheque/utiliser"), { method: "POST", json: { type: "header", key }, headers: origin });
+    assert.equal(used.status, 200, used.text.slice(0, 200));
+    const t = JSON.parse(used.text).template;
+    if (publish) { const pub = await boss.request(U(`/api/modeles/${t.id}/publier`), { method: "POST", json: { replace: true }, headers: origin }); assert.equal(pub.status, 200, pub.text.slice(0, 300)); }
+    return t;
+  };
+  const open = async (viewport = { width: 1440, height: 900 }, authed = true) => {
+    const context = await browser.newContext({ viewport });
+    if (authed) await context.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
+    const page = await context.newPage(); context.setDefaultTimeout(20000);
+    page.on("pageerror", (e) => errors.push(`pageerror : ${e.message}`));
+    page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(`console : ${m.text().slice(0, 200)}`); });
+    return { context, page };
+  };
+  const openEditor = async (page, t) => { await page.goto(srv.base + t.editUrl); await page.waitForSelector("#pb-tab-page", { state: "attached" }); await page.waitForFunction(() => !!document.querySelector("[data-pb-status]") && document.querySelector("[data-pb-status]").textContent.length > 0); await page.click("#pb-tab-page"); await page.waitForSelector("[data-pb-header-summary]"); };
+  const field = (page, label) => page.locator("[data-pb-page-settings]").getByLabel(label, { exact: true });
+  const save = async (page) => { await page.click("[data-pb-save-now]"); await page.waitForFunction(() => /Enregistré|Tout est enregistré/.test(document.body.innerText)); };
+
+  before(async () => {
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    origin.Origin = srv.base; boss = await loginInstructor(srv); db = srv.db();
+    site = Number((await boss.post("/marketing/site-web/sites", { name: "Site en-tête" })).location.match(/sites\/(\d+)/)[1]);
+    pageId = Number((await boss.post("/marketing/pages", { name: "Accueil", site_id: site, kind: "page", template: "", ouvrir: "editeur" })).location.match(/pages\/(\d+)/)[1]);
+    const rev = db.prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pageId).revision;
+    assert.equal((await boss.request(`/marketing/pages/${pageId}/brouillon`, { method: "PUT", headers: origin, json: { revision: rev, content: { title: "Accueil", sections: [sect("sect00000001", "CORPS")] } } })).status, 200);
+    assert.equal((await boss.request(`/marketing/pages/${pageId}/publier.json`, { method: "POST", json: {}, headers: origin })).status, 200);
+    browser = await chromium.launch({ executablePath: CHROME, headless: true });
+  });
+  after(async () => { if (browser) await browser.close(); if (db) db.close(); if (srv) await srv.stop(); });
+
+  test("un en-tête ancien (collant du catalogue) : le panneau affiche son état réel, sans rien écrire tant qu'on ne change rien", async () => {
+    const t = await adopt("saas-verre-depoli.clair", false);
+    const { context, page } = await open(); await openEditor(page, t);
+    assert.match(await page.locator("[data-pb-header-summary]").innerText(), /Collé/);
+    assert.equal(await field(page, "Position").inputValue(), "sticky");
+    assert.notEqual(await field(page, "Effet au défilement").inputValue(), undefined);
+    const comp = db.prepare("SELECT draft, section FROM mk_web_components WHERE id = ?").get(t.sourceId || t.source_id || t.documentId);
+    if (comp) assert.ok(!/"header":/.test(comp.draft || comp.section || ""), "ouvrir le panneau n'écrit rien");
+    await context.close();
+  });
+
+  test("régler la position, l'effet et le seuil : enregistré, retrouvé au rechargement, appliqué sur le site publié, seuil respecté au défilement", async () => {
+    const t = await adopt("classique-logo-menu-bouton.clair");
+    const { context, page } = await open(); await openEditor(page, t);
+    assert.equal(await field(page, "Position").inputValue(), "static");
+    assert.equal(await field(page, "Effet au défilement").isDisabled(), true, "un en-tête ordinaire n'a pas d'effet");
+    await field(page, "Position").selectOption("sticky");
+    await field(page, "Effet au défilement").selectOption("both");
+    const thr = field(page, "Seuil de défilement (px)"); await thr.fill("40"); await thr.press("Enter");
+    assert.match(await page.locator("[data-pb-header-summary]").innerText(), /Collé[\s\S]*40 px/);
+    await save(page);
+    await page.reload(); await page.waitForSelector("#pb-tab-page", { state: "attached" }); await page.waitForTimeout(800); await page.click("#pb-tab-page"); await page.waitForSelector("[data-pb-header-summary]");
+    assert.equal(await field(page, "Position").inputValue(), "sticky"); assert.equal(await field(page, "Effet au défilement").inputValue(), "both"); assert.equal(await field(page, "Seuil de défilement (px)").inputValue(), "40");
+    await page.click("[data-pb-publish]"); await page.waitForFunction(() => /publié, à jour|À jour/.test(document.querySelector("[data-pb-status]").textContent));
+    await context.close();
+    const pub = await open({ width: 1280, height: 800 }, false);
+    await pub.page.goto(`${srv.base}/p/${slug()}`);
+    const head = await pub.page.evaluate(() => { const h = document.querySelector(".lp-site-header"); return h ? { cls: h.className, scroll: h.getAttribute("data-kw-scroll"), thr: h.getAttribute("data-kw-threshold") } : null; });
+    assert.ok(head, "l'en-tête publié est présent");
+    assert.match(head.cls, /kw-theme-sticky/); assert.match(head.cls, /kw-theme-fx-both/); assert.equal(head.scroll, "both"); assert.equal(head.thr, "40");
+    await pub.page.addStyleTag({ content: "body{min-height:3000px}" });
+    const scrolled = async (y) => { await pub.page.evaluate((v) => window.scrollTo(0, v), y); await pub.page.waitForTimeout(200); return pub.page.evaluate(() => document.querySelector(".lp-site-header").classList.contains("is-scrolled")); };
+    assert.equal(await scrolled(20), false, "sous le seuil : pas d'effet"); assert.equal(await scrolled(80), true, "au-delà du seuil : effet"); assert.equal(await scrolled(0), false, "retour en haut : effet retiré");
+    await pub.context.close();
+  });
+
+  test("passer un en-tête collant en « Ordinaire » le rend ordinaire sur le site, même si sa première bande garde son ancien style", async () => {
+    const t = await adopt("saas-verre-depoli.clair");
+    const { context, page } = await open(); await openEditor(page, t);
+    await field(page, "Position").selectOption("static"); await save(page);
+    await page.click("[data-pb-publish]"); await page.waitForFunction(() => /publié, à jour|À jour/.test(document.querySelector("[data-pb-status]").textContent));
+    await context.close();
+    const pub = await open({ width: 1280, height: 800 }, false); await pub.page.goto(`${srv.base}/p/${slug()}`);
+    const cls = await pub.page.evaluate(() => document.querySelector(".lp-site-header").className);
+    assert.ok(!/kw-theme-sticky|kw-theme-overlay/.test(cls), `en-tête ordinaire : ${cls}`);
+    await pub.context.close();
+  });
+
+  test("annuler (Ctrl+Z) rétablit le réglage précédent ; lecture seule impossible à modifier n'est pas testée ici (droits : voir tests de l'éditeur)", async () => {
+    const t = await adopt("classique-logo-menu-bouton.clair", false);
+    const { context, page } = await open(); await openEditor(page, t);
+    await field(page, "Position").selectOption("overlay");
+    assert.match(await page.locator("[data-pb-header-summary]").innerText(), /Superposé/);
+    await page.locator("body").click({ position: { x: 5, y: 5 } }); await page.keyboard.press("Control+z"); await page.waitForTimeout(400);
+    await page.click("#pb-tab-page"); await page.waitForSelector("[data-pb-header-summary]");
+    assert.equal(await field(page, "Position").inputValue(), "static");
+    await context.close();
+  });
+
+  test("aucune erreur de script", () => { assert.deepEqual(errors, []); });
+});

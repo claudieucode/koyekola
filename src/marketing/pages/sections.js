@@ -9,6 +9,7 @@ const { MarketingError } = require("../errors");
 const { getCourse } = require("../bridge/catalog");
 const { parseVideoUrl } = require("../../utils/video");
 const nodes = require("./nodes");
+const headerSettings = require("./headerSettings");
 
 const MAX_SECTIONS = 30;
 const bad = (message) => new MarketingError("invalid_field", message);
@@ -171,7 +172,8 @@ const TYPES = {
       const h = { ctx, imageUrl, linkUrl, iconNames: nodes.iconNames() };
       const kids = Array.isArray(raw.children) ? raw.children : [];
       try {
-        return { type: "layout", children: kids.map((c, i) => nodes.normalizeNode(c, `${at} › élément ${i + 1}`, h, 1, counter || { n: 0, ids: new Set() })) };
+        const header = headerSettings.normalize(raw.header); // réglages d'en-tête (Header Builder) : bloc validé, absent pour les autres sections
+        return { type: "layout", ...(header ? { header } : {}), children: kids.map((c, i) => nodes.normalizeNode(c, `${at} › élément ${i + 1}`, h, 1, counter || { n: 0, ids: new Set() })) };
       } catch (error) {
         if (error instanceof MarketingError) throw error;
         throw bad(error.message);

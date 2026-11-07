@@ -2,6 +2,7 @@
 // de contenu, avec ses données (article courant, catégorie demandée). Toute erreur renvoie null : la page garde alors son
 // affichage d'origine (un modèle ne peut jamais casser le blog ni la page d'erreur).
 const pages = require("../pages");
+const headerSettings = require("../pages/headerSettings");
 const landing = require("../landing");
 const forms = require("../forms");
 const tokens = require("../pages/tokens");
@@ -49,12 +50,7 @@ function wrapHtml(res, vm, siteOk, body, cls) {
 }
 const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, page.site_id) : null; return site && site.status === "active" ? site : null; };
 // Comportement d'une partie globale, lu dans sa première bande : « collant » (position: sticky) ou « superposé » (position: absolute) ; la bande est dans le <div> de la partie, qui ne peut coller que si c'est lui qui porte la position
-function partMode(section) {
-  const first = section && Array.isArray(section.children) ? section.children[0] : null;
-  const pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
-  const fx = first && first.props && ["shrink", "solid", "both"].includes(first.props.headerFx) ? first.props.headerFx : "";
-  return (pos === "sticky" ? " kw-theme-sticky" : pos === "absolute" ? " kw-theme-overlay" : "") + (fx && pos ? ` kw-theme-fx-${fx}` : "");
-}
+function partMode(section) { return headerSettings.classes(section); }
 // Un modèle fait de bandes pleine largeur (conteneurs « pleine largeur ») doit pouvoir toucher les bords : sa zone n'est alors plus limitée à la colonne de texte du site. Sans bande pleine largeur, rien ne change.
 const bleedOf = (sections) => ((sections || []).some((s) => s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true))) ? " kw-theme-bleed" : "");
 // Rend le modèle de vue `vm` avec les éléments du Page Builder (callback : html | null). Un callback passé à res.render ne passe jamais par themeLayout (rendu de fragment).

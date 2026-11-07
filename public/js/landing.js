@@ -192,10 +192,11 @@
       });
     });
   });
-  // En-tête à effet au défilement (data-kw-scroll) : la classe is-scrolled est posée dès que la page a défilé de 8 px (un seul écouteur passif, une image à la fois)
+  // En-tête à effet au défilement (data-kw-scroll) : la classe is-scrolled est posée dès que la page a défilé du seuil (data-kw-threshold, 8 px par défaut) (un seul écouteur passif, une image à la fois)
   var fxHead = document.querySelector(".lp-site-header[data-kw-scroll]");
   if (fxHead && !document.body.hasAttribute("data-kw-builder")) {
-    var fxTick = false, fxSet = function () { fxTick = false; fxHead.classList.toggle("is-scrolled", (window.pageYOffset || document.documentElement.scrollTop) > 8); };
+    var fxThr = Number(fxHead.getAttribute("data-kw-threshold")); if (!(fxThr >= 0 && fxThr <= 1000)) fxThr = 8; /* seuil réglé dans l'éditeur (Header Builder) ; 8 px par défaut */
+    var fxTick = false, fxSet = function () { fxTick = false; fxHead.classList.toggle("is-scrolled", (window.pageYOffset || document.documentElement.scrollTop) > fxThr); };
     window.addEventListener("scroll", function () { if (!fxTick) { fxTick = true; window.requestAnimationFrame(fxSet); } }, { passive: true });
     fxSet();
   }

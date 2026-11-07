@@ -7718,11 +7718,48 @@
       } }, d.gabarit ? "Appliquer le gabarit" : "Continuer")));
     box.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); startStep = PC ? "catalog" : "choice"; paintStart(); } });
   }
+  // ---------- Réglages de l'EN-TÊTE (Header Builder) : bloc `header` de la section, validé par le serveur (headerSettings.js) ----------
+  // Lecture : le bloc s'il existe, sinon l'ancien format (position de la première bande + headerFx) : le panneau affiche donc l'état réel d'un en-tête ancien.
+  // Document d'en-tête : modèle « En-tête » du Theme Builder (identité du modèle) ou composant affecté comme en-tête du site (ancien réglage)
+  function isHeaderDoc() { var c = IS_COMPONENT && PAGE.component; if (!c) return false; var t = (PAGE.identity && PAGE.identity.template) || (c.identity && c.identity.template); return c.role === "header" || Boolean(t && t.type === "header"); }
+  function headerSection() { var s = content.sections && content.sections[0]; return s && s.type === "layout" ? s : null; }
+  function headerNow() {
+    var s = headerSection(); if (!s) return { mode: "static", fx: "", threshold: 8 };
+    if (s.header && typeof s.header === "object") return { mode: s.header.mode || "static", fx: s.header.fx || "", threshold: s.header.threshold === undefined ? 8 : s.header.threshold };
+    var first = s.children && s.children[0], pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
+    var fx = first && first.props && /^(shrink|solid|both)$/.test(first.props.headerFx || "") ? first.props.headerFx : "";
+    var mode = pos === "sticky" ? "sticky" : pos === "absolute" ? "overlay" : "static";
+    return { mode: mode, fx: mode === "static" ? "" : fx, threshold: 8 };
+  }
+  function setHeader(patch, key) {
+    change(function () {
+      var s = headerSection(); if (!s) return false;
+      var cur = headerNow(), next = Object.assign({ v: 1 }, s.header || {}, cur, patch);
+      if (next.mode === "static") next.fx = "";
+      s.header = next;
+    }, { key: "header:" + (key || "all"), label: "Réglages de l'en-tête", light: true });
+    // Le panneau se redessine (champs désactivés, résumé) en gardant le focus clavier sur le même champ
+    var box = $("[data-pb-page-settings]"), fields = [].slice.call(box.querySelectorAll("select, input")), at = fields.indexOf(document.activeElement);
+    box.textContent = ""; renderHeaderSettings(box);
+    if (at >= 0) { var again = box.querySelectorAll("select, input")[at]; if (again && !again.disabled) again.focus(); }
+  }
+  function renderHeaderSettings(box) {
+    var d = headerNow(), dis = !canWrite;
+    box.appendChild(h("p", { class: "pb-sub", text: "Comportement de l'en-tête" }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Ces réglages décident comment l'en-tête se comporte sur le site publié. Ils sont enregistrés avec l'en-tête : déplacer ou supprimer un bloc ne les change plus." }));
+    box.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
+    box.appendChild(selectField("Effet au défilement", d.fx, [["", "Aucun"], ["shrink", "Réduire la hauteur des rangées"], ["solid", "Passer à un fond plein"], ["both", "Réduire et fond plein"]], function (v) { setHeader({ fx: v }, "fx"); }, { disabled: dis || d.mode === "static" }));
+    if (d.mode === "static") box.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a pas d'effet de défilement. Choisissez « Collé » ou « Superposé » pour en activer un." }));
+    if (d.fx) box.appendChild(numberField("Seuil de défilement (px)", d.threshold, { min: 0, max: 1000, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ threshold: n }, "threshold"); }, "Distance parcourue par la page avant que l'effet se déclenche. 8 px par défaut."));
+    var live = d.mode === "overlay" ? "Superposé : posé sur le haut du visuel d'ouverture de chaque page." : d.mode === "sticky" ? "Collé : reste visible en haut de l'écran pendant le défilement." : "Ordinaire : défile avec la page.";
+    box.appendChild(h("p", { class: "pb-note", "data-pb-header-summary": "", text: live + (d.fx ? " Effet : " + ({ shrink: "hauteur réduite", solid: "fond plein", both: "hauteur réduite et fond plein" })[d.fx] + " après " + d.threshold + " px." : "") }));
+  }
   function renderPageSettings() {
     pageSettingsStale = false;
     var box = $("[data-pb-page-settings]");
     if (box.contains(document.activeElement)) return; // saisie en cours : on ne redessine pas
     box.textContent = "";
+    if (isHeaderDoc()) { renderHeaderSettings(box); return; }
     var seo = content.seo || {};
     var setC = function (k) { return function (v) { change(function () { content[k] = v; }, { key: "page:" + k, light: true }); }; };
     var setS = function (k) { return function (v) { change(function () { content.seo = Object.assign({}, content.seo); if (v === "" || v === false) delete content.seo[k]; else content.seo[k] = v; }, { key: "seo:" + k, light: true }); }; };
@@ -8391,7 +8428,7 @@
       el.classList.toggle("is-live", !cm.hasDraft);
       if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = part ? "Mettre à jour" : cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
       var pv = $("[data-pb-preview]"); if (pv) pv.style.display = "";
-      var tab = $("#pb-tab-page"); if (tab) tab.style.display = "none";
+      var tab = $("#pb-tab-page"); if (tab) { var isHdr = isHeaderDoc(); tab.style.display = isHdr ? "" : "none"; if (isHdr && tab.textContent !== "En-tête") tab.textContent = "En-tête"; }
       return;
     }
     var live = status === "published";
