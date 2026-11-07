@@ -44,9 +44,9 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
 |---|---|---|---|---|---|---|---|
 | H-040 | Bouton / Icône / Bouton avec icône / CTA | 02 | Actions | `button`, `icon`, `cta` | Rendu + états | documenté (existant) | — |
-| H-041 | Barre de recherche | 02, 09 | Formulaire | `search` | Soumission | documenté (existant) | — |
-| H-042 | Recherche plein écran | 09 | Superposition de recherche | peau plein écran | Focus, Échap, mobile | documenté (à développer, L5) | — |
-| H-043 | Résultats instantanés | 09 (NON VÉRIFIÉ chez Elementor) | Suggestions pendant la frappe | endpoint JSON limité | Limites, isolation | documenté (à développer, L5) | — |
+| H-041 | Barre de recherche | 02, 09 | Formulaire | `search` | Soumission | testé | `tests/header-recherche-navigateur.test.js` : le widget Recherche existant est inchangé (balisage d'origine) |
+| H-042 | Recherche plein écran | 09 | Superposition de recherche | peau plein écran | Focus, Échap, mobile | testé | `tests/header-recherche-navigateur.test.js` : loupe → fenêtre plein écran, focus dans le champ, Échap / fond / bouton Fermer, focus rendu à la loupe, mouvement réduit |
+| H-043 | Résultats instantanés | 09 (NON VÉRIFIÉ chez Elementor) | Suggestions pendant la frappe | endpoint JSON limité | Limites, isolation | testé | `tests/header-recherche-navigateur.test.js` : suggestions dès 2 caractères, publiés seulement, 6 au plus, texte sans exécution de HTML, flèches + Entrée, annonce aux lecteurs d'écran ; route `/recherche/suggestions` (mêmes règles de portée que `/recherche`, jamais en cache) |
 | H-044 | Connexion / compte / avatar / déconnexion | 02, 09 | Compte visiteur | `account` | Invité / membre | documenté (existant partiel) | — |
 | H-045 | Menu utilisateur déroulant | 09 | Menu compte | menu compte | Navigateur | documenté (à développer, L5) | — |
 | H-046 | Panier + nombre + montant | 02, 09 | Compteur réel | `minicart` (lien + compteur) | Ajout produit → compteur | documenté (existant partiel) | — |
@@ -93,7 +93,7 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-091 | Produits et archives produits (WooCommerce) | 10 | Pages boutique | `product`, `product_archive` | Module requis | testé | `tests/theme-builder-stockage.test.js` (module Commerce requis) |
 | H-092 | Priorité et conflits | 10 (règle non documentée chez Elementor) | Un seul gagnant | `scoreOf`, `resolve`, `explain` | Précis > général ; égalité signalée | testé | `tests/theme-builder-regles.test.js` |
 | H-093 | Aucune page avec deux en-têtes / sans en-tête par conflit | 10 | Cohérence | un gagnant + repli historique | Pas de doublon | testé | `tests/theme-builder-pied-unique.test.js` (équivalent pied), `theme-builder-site-principal.test.js` |
-| H-094 | Condition utilisateur connecté / rôle | 10 (EXTENSION chez Elementor) | Selon le visiteur | condition « visiteur » | Invité vs membre, cache | documenté (à développer, L6) | — |
+| H-094 | Condition utilisateur connecté / rôle | 10 (EXTENSION chez Elementor) | Selon le visiteur | condition « visiteur » | Invité vs membre, cache | testé | `tests/header-visiteur.test.js` (validation, évaluation, priorité, conflits) et `tests/header-visiteur-public.test.js` (invité et membre réels voient chacun leur en-tête ; page jamais en cache partagé) |
 | H-095 | Brouillon / publication / dépublication / archivage | 01 | Cycle de vie | `store.js` | Statuts | testé | `tests/theme-builder-stockage.test.js` |
 | H-096 | Versions et restauration | 01, 13 | Historique | `mk_tb_versions` (30) | Restauration non destructive | documenté (existant, preuve ligne par ligne à rattacher) | — |
 | H-097 | Import / export | 13 | Portabilité | `portable.js` | Aller-retour | documenté (existant, test à rattacher) | — |
@@ -109,8 +109,8 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-103 | Performance (DOM, CLS, INP) | 12 | Budget | un seul écouteur passif | Mesures | documenté (L8) | — |
 | H-104 | Non-régression CMS / Theme Builder / éditeur / menus | 14 | Rien ne casse | suites existantes | `npm test` | documenté (L8) | — |
 
-## Bilan (mis à jour après le lot L4) — chiffres recomptés par script
-- Lignes : **72**. `testé` (preuve de test citée) : **27**. `développé` (partiel, reste à tester ou compléter) : **2**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
-- `documenté` (déjà présent dans le code, preuve à rattacher) : **35**. `documenté (à développer)` : **6**. `exclu` (justifié) : **2**.
-- Lots terminés : **L0**, **L1**, **L2**, **L3**, **L4** (méga-menu). Lots restants : L5 (recherche plein écran, suggestions, mini-panier, compte, annonce), L6 (conditions visiteur), L7 (ergonomie éditeur), L8 (qualité transversale), L9 (audit, commit, déploiement).
-- Écarts assumés : image et badge d'un élément de menu non faits (L3) ; aucun test sur un vrai écran tactile.
+## Bilan (mis à jour après les lots L5 recherche et L6) — chiffres recomptés par script
+- Lignes : **72**. `testé` (preuve de test citée) : **31**. `développé` (partiel, reste à tester ou compléter) : **2**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
+- `documenté` (déjà présent dans le code, preuve à rattacher) : **34**. `documenté (à développer)` : **3**. `exclu` (justifié) : **2**.
+- Lots terminés : **L0, L1, L2, L3, L4, L6** et **L5 en partie** (recherche plein écran et suggestions). **NON faits** : mini-panier en tiroir (H-047), menu compte déroulant (H-045), barre d'annonce / horaires / contact dédiés (H-053), pictogrammes de vignettes (G-16), calques orientés rangées/zones (H-010), bascule d'état sur le canevas (G-15).
+- Écarts assumés : image et badge d'un élément de menu non faits (L3) ; aucun test sur un vrai écran tactile ; mini-panier : le widget existant reste un lien avec compteur.

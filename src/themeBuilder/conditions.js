@@ -19,12 +19,14 @@ const KINDS = Object.freeze({
   product: { label: "Produits", views: ["product"] },
   product_archive: { label: "Archives de produits", views: ["product_archive", "search"] },
   custom: { label: "Condition personnalisée", views: Types.VIEWS },
+  // Visiteur (Header Builder) : connecté ou non ; utilisable en inclusion (« pour les membres ») ou en exclusion (« sauf pour les visiteurs non connectés »)
+  visitor: { label: "Visiteur", views: Types.VIEWS },
 });
 // Critères autorisés par kind : ids (entiers), names (textes), booléens
 const CRITERIA = Object.freeze({
   site: [], front_page: [], singular: [], not_found: [], search: [],
   page: ["ids", "author"], post: ["ids", "category", "childCategory", "tag", "author"], product: ["ids", "category", "childCategory", "tag", "author"],
-  child_of: ["parent", "direct"], author: ["ids"], archive: ["sub", "names", "child"], product_archive: ["sub", "names", "child"], custom: ["id", "args"],
+  child_of: ["parent", "direct"], author: ["ids"], archive: ["sub", "names", "child"], product_archive: ["sub", "names", "child"], custom: ["id", "args"], visitor: ["who"],
 });
 const custom = new Map(); // conditions personnalisées enregistrées par le code serveur (jamais saisies par l'utilisateur)
 function registerCondition(id, def) {
@@ -62,11 +64,13 @@ function normalizeOne(raw, where) {
     else if (k === "parent") { const n = Number(v); if (!Number.isInteger(n) || n < 1) throw bad(`${where} : page parente invalide.`); out.parent = n; }
     else if (k === "direct" || k === "child") out[k] = v === true || v === "true" || v === "1" || v === 1;
     else if (k === "sub") { if (!SUBS[kind].includes(v)) throw bad(`${where} : sous-type d'archive inconnu.`); if (v !== "all") out.sub = v; }
+    else if (k === "who") { if (v !== "guest" && v !== "member") throw bad(`${where} : choisissez « visiteur connecté » ou « visiteur non connecté ».`); out.who = v; }
     else if (k === "id") { if (!customDef(String(v))) throw bad(`${where} : condition personnalisée inconnue.`); out.id = String(v); }
     else if (k === "args") { if (typeof v !== "object" || Array.isArray(v) || JSON.stringify(v).length > 500) throw bad(`${where} : arguments trop volumineux.`); out.args = v; }
   }
   if (kind === "child_of" && !out.parent) throw bad(`${where} : choisissez la page parente.`);
   if (kind === "custom" && !out.id) throw bad(`${where} : condition personnalisée manquante.`);
+  if (kind === "visitor" && !out.who) throw bad(`${where} : choisissez « visiteur connecté » ou « visiteur non connecté ».`);
   return out;
 }
 // Normalise { include, exclude } ; vide = « tout le site ». Si `type` est donné, refuse une condition qui ne peut jamais correspondre à une vue de ce type.
@@ -101,6 +105,7 @@ function describeOne(c) {
     case "child_of": return `${c.direct ? "Enfants directs" : "Tous les descendants"} de la page n° ${c.parent}`;
     case "author": return c.ids ? `Contenus des auteurs ${idl(c.ids)}` : "Contenus de tout auteur";
     case "custom": return (customDef(c.id) || { label: c.id }).label;
+    case "visitor": return c.who === "member" ? "Visiteurs connectés" : "Visiteurs non connectés";
     case "archive": case "product_archive": {
       const base = c.kind === "archive" ? "Archives" : "Archives de produits";
       const sub = { blog: "du blog", category: "de catégorie", tag: "d'étiquette", author: "d'auteur", date: "par date", search: "(recherche)", shop: "(boutique)" }[c.sub] || "";

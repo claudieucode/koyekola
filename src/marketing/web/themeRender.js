@@ -103,10 +103,11 @@ function renderParts(req, res) {
       const ctx = ctxOf(db, marketing);
       const TB = require("../../themeBuilder/render");
       if (!TB.hasParts(ctx, site.id)) return resolve({});
-      const win = TB.resolveParts(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]));
       const visitor = visitorContext(db, marketing.organizationId, req);
+      const baseCtx = { ...(res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0])), visitor: { loggedIn: Boolean(visitor && visitor.loggedIn) } };
+      const win = TB.resolveParts(ctx, site.id, baseCtx);
       const out = {};
-      const extras = TB.resolveExtras(ctx, site.id, res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]));
+      const extras = TB.resolveExtras(ctx, site.id, baseCtx);
       // Barre latérale puis modèles personnalisés, rendus dans l'ordre (le plus précis d'abord) ; un échec n'empêche jamais la page
       const extraJobs = [];
       if (extras.sidebar) extraJobs.push(new Promise((ok) => {

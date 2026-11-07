@@ -959,7 +959,7 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
   const p = siteParts(ctx, page && page.site_id, { draftId });
   // Theme Builder (23.1) : seulement la page publiée et son aperçu (jamais le canevas de l'éditeur) ; sans modèle applicable, comportement historique inchangé
   if (themeBuilder && page && page.site_id !== undefined) {
-    const tb = require("../../themeBuilder/render").partsFor(ctx, page);
+    const tb = require("../../themeBuilder/render").partsFor(ctx, page, page && page.visitor);
     for (const which of ["header", "footer"]) {
       // Le Theme Builder gère cette partie mais aucun de ses modèles ne s'applique à cette page : pas de partie (jamais l'ancien réglage du site)
       if (tb[which] === undefined && tb.managed && tb.managed[which]) { p[which] = null; continue; }

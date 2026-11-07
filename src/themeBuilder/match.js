@@ -21,6 +21,7 @@ function scoreOf(c) {
     case "child_of": return c.direct ? 80 : 70;
     case "author": return c.ids ? 60 : 25;
     case "custom": return (C.customDef(c.id) || { score: 50 }).score;
+    case "visitor": return 35; // plus précis qu'un contenu individuel quelconque (20), moins qu'une page d'accueil ou un contenu choisi
     case "archive": case "product_archive": {
       if (!c.sub || c.sub === "all") return c.names ? 55 : 20;
       return (c.names ? 60 : 40) + extra(c.child ? 1 : 0);
@@ -40,6 +41,8 @@ function matches(c, ctx) {
     case "front_page": return v === "front";
     case "singular": return SINGLE.has(v);
     case "not_found": return v === "not_found";
+    // Visiteur : le contexte porte { visitor: { loggedIn } } (rendu public) ; sans information, le visiteur est traité comme non connecté
+    case "visitor": return ((ctx.visitor && ctx.visitor.loggedIn) ? "member" : "guest") === c.who;
     case "search": return v === "search" || a.kind === "search";
     case "custom": { const d = C.customDef(c.id); try { return Boolean(d && d.check(ctx, c.args || {})); } catch { return false; } }
     case "child_of": {
