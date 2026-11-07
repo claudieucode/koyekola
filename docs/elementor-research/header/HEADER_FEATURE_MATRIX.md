@@ -1,0 +1,118 @@
+# HEADER — Matrice de couverture et de traçabilité
+
+Date : 2026-11-07 (état « documentation terminée, développement non commencé »).
+Règle : aucune ligne n'est **testé** ou **validé** sans preuve. « Source » renvoie aux fichiers de ce dossier (les URL Elementor y sont citées une à une).
+Statuts : `documenté` (étudié, pas encore développé) · `développé` · `testé` (preuve citée) · `validé` (testé + vérifié en navigateur + audit) · `exclu` (justifié).
+Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans les fichiers 02, 04, 07 ; ils ne sont répétés ici que s'ils changent le développement.
+
+## 1. Structure et conteneurs
+| ID | Référence Elementor | Source | Comportement attendu | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-001 | Conteneur Flexbox (direction, wrap, justify, align, gap) | 03 | Disposer des éléments en ligne/colonne | `container`/`group`/`stack` (existant) | Rendu des 4 sens ; retour à la ligne | documenté (existant, preuve à rattacher) | — |
+| H-002 | Conteneur imbriqué | 03 | Rangées/zones imbriquées | `MAX_DEPTH = 8` | Profondeur 8 acceptée, 9 refusée | documenté (existant) | — |
+| H-003 | Largeur boxed / pleine | 03 | Contenu encadré ou pleine largeur | `container` `full:true` | Rendu des deux modes | documenté (existant) | — |
+| H-004 | Hauteur min, débordement, z-index, position | 03 | Réglages de boîte | 86 propriétés de style | Persistance + rendu | documenté (existant) | — |
+| H-005 | Grille | 03 | Grille de colonnes | `grid` (existant) | Rendu 2–4 colonnes | documenté (existant) | — |
+| H-006 | Ajouter / déplacer / glisser-déposer / dupliquer / copier-coller / supprimer | 03, 04 | Édition directe sur le canevas | éditeur (existant) | Parcours navigateur sans perte d'élément | documenté (existant) | — |
+| H-007 | Masquer / verrouiller / renommer (Navigator) | 03, 04 | Panneau de structure | calques (existant) | Navigateur | documenté (existant) | — |
+| H-008 | Copier/coller le style | 04 | Réutiliser un style | existant (par groupe) | Navigateur | documenté (existant) | — |
+| H-009 | Enregistrer comme élément réutilisable | 03 | Template d'élément | composants (existant) | Navigateur | documenté (existant) | — |
+| H-010 | Calques orientés rangées/zones d'un en-tête | 03 | Lire la hiérarchie d'un coup d'œil | Vue en-tête dans les calques | Navigateur | documenté (à développer, L7) | — |
+
+## 2. Widgets d'identité
+| ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-020 | Site Logo | 02 | Logo + lien accueil | `sitelogo` | Rendu + lien | documenté (existant) | `theme-builder-entetes-bibliotheque` (chaque en-tête a une identité) |
+| H-021 | Site Title / Tagline | 02 | Titre / description | `sitetitle` ; description : à vérifier | Rendu | documenté (existant partiel) | — |
+| H-022 | Logo par état (clair/sombre/transparent) | — (bonne pratique ; non documenté Elementor) | Variante selon l'état de l'en-tête | `sitelogo` + variantes | Changement au défilement ; isolation | documenté (à développer, L1) | — |
+
+## 3. Navigation
+| ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-030 | Menu horizontal / vertical / déroulant | 08 | Navigation principale | `menu`, `cmsmenu` | Rendu 3 dispositions | documenté (existant partiel) | `apparence-menus*` (gestion des menus) |
+| H-031 | Menu lié aux menus réels | 08 | Aucun système parallèle | `nav_locations` (existant) | Menu d'un autre site introuvable | testé | `tests/apparence-menus-integration.test.js` |
+| H-032 | Sous-menus multi-niveaux | 08 | Profondeur > 1 | profondeur 3 | Rendu + clavier | documenté (à développer, L3) | — |
+| H-033 | Icônes, badges, descriptions, images dans le menu | 08 | Éléments enrichis | champs par `nav_item` | Rendu + échappement | documenté (à développer, L3) | — |
+| H-034 | Hamburger / menu mobile | 08 | Repli sous un seuil | `.kw-menu-burger` (existant, dépliage en place) | aria-expanded, Échap | documenté (existant partiel) | — |
+| H-035 | Menu hors-canvas (tiroir) | 08, 09 | Panneau latéral à contenu libre | `drawer` | Focus piégé, Échap, retour du focus | documenté (à développer, L3) | — |
+| H-036 | Méga-menu (panneau composé) | 08 | Colonnes, images, texte, boutons, cartes | `megapanel` | Survol/clic/tactile/clavier/mobile | documenté (à développer, L4) | — |
+| H-037 | Déclencheurs survol / clic / tactile | 08 | Ouverture des sous-menus | runtime `kw-header.js` | Navigateur (3 modes) | documenté (à développer, L3-L4) | — |
+| H-038 | Navigation au clavier des menus | 08, 11 | Flèches, Échap, focus visible | runtime | Navigateur | documenté (à développer, L3) | — |
+| H-039 | Menu secondaire / emplacements | 08 | Plusieurs menus | emplacements header/footer/mobile | Affectation | testé | `tests/apparence-menus-wp.test.js` |
+
+## 4. Éléments interactifs et e-commerce
+| ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-040 | Bouton / Icône / Bouton avec icône / CTA | 02 | Actions | `button`, `icon`, `cta` | Rendu + états | documenté (existant) | — |
+| H-041 | Barre de recherche | 02, 09 | Formulaire | `search` | Soumission | documenté (existant) | — |
+| H-042 | Recherche plein écran | 09 | Superposition de recherche | peau plein écran | Focus, Échap, mobile | documenté (à développer, L5) | — |
+| H-043 | Résultats instantanés | 09 (NON VÉRIFIÉ chez Elementor) | Suggestions pendant la frappe | endpoint JSON limité | Limites, isolation | documenté (à développer, L5) | — |
+| H-044 | Connexion / compte / avatar / déconnexion | 02, 09 | Compte visiteur | `account` | Invité / membre | documenté (existant partiel) | — |
+| H-045 | Menu utilisateur déroulant | 09 | Menu compte | menu compte | Navigateur | documenté (à développer, L5) | — |
+| H-046 | Panier + nombre + montant | 02, 09 | Compteur réel | `minicart` (lien + compteur) | Ajout produit → compteur | documenté (existant partiel) | — |
+| H-047 | Mini-panier (tiroir) | 09 | Aperçu des articles | tiroir branché sur le panier réel | Données réelles ; vide | documenté (à développer, L5) | — |
+| H-048 | Liste de souhaits / comparaison | 09 | Modules compatibles | **aucun module** | — | exclu (pas de module à connecter ; pas de simulation) | — |
+| H-049 | Déclencheur de popup / tiroir | 09 | Ouvrir un panneau | `modal` (déclencheurs existants) | Clic → ouverture | documenté (existant) | — |
+| H-050 | Icônes sociales | 02 | Réseaux | `social` | Rendu | documenté (existant) | — |
+| H-051 | Séparateur / espaceur / texte / titre / image | 02 | Contenu | `divider`, `spacer`, `text`, `heading`, `image` | Rendu | documenté (existant) | — |
+| H-052 | HTML personnalisé sécurisé | 02, 13 | Contenu libre contrôlé | `html` (admin seulement) | Rejet des scripts | documenté (existant) | — |
+| H-053 | Barre d'annonce, horaires, contact, bouton d'appel | 02 (NON VÉRIFIÉ chez Elementor) | Messages promotionnels | composition de widgets existants | Rendu | documenté (L5) | — |
+| H-054 | Lottie / vidéo / SVG animé | 02 | Médias animés | `lottie`, `video` (existant) | Rendu + reduced-motion | documenté (existant) | — |
+| H-055 | Sélecteur de langue / devise | 02, 09 | Commutation | — | — | exclu (pas de multilingue public ; Elementor : extensions) | — |
+
+## 5. Comportements, états, mouvement
+| ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-060 | Sticky / fixe | 06 | En-tête collé en haut | `position: sticky` (existant) | Classe, une seule enveloppe | testé | `tests/theme-builder-en-tete-collant-public.test.js` |
+| H-061 | Transparent / superposé | 06 | Sur le visuel | `position: absolute` (existant) | Jamais les deux | testé | `tests/theme-builder-en-tete-collant-public.test.js` |
+| H-062 | Seuil de défilement réglable, décalage (offset) | 06 | Déclencheur d'état | `behavior.threshold/offset` | Navigateur | documenté (à développer, L1) | — |
+| H-063 | Réduction de hauteur | 06 (Elementor : CSS, pas de contrôle natif) | Rétrécissement au défilement | `shrink` (existe via `headerFx`, sans interface) | Pas de saut de contenu | documenté (existant sans interface ; L0-L1) | — |
+| H-064 | Masquer en descendant / réapparaître | 06 (Elementor : EXTENSION) | Gagner de la place | `hideOnScrollDown` | Défilement ↓↑ ; focus clavier | documenté (à développer, L1) | — |
+| H-065 | État normal / transparent / défilé / sticky / mobile / menu ouvert | 06 | États stylables | états `top`/`scrolled`/`menuOpen` | Styles par état | documenté (à développer, L1) | — |
+| H-066 | Hauteur réservée, z-index, empilement | 06 | Pas de saut de contenu | `--kw-header-h` + espaceur | CLS < 0,1 | documenté (à développer, L1) | — |
+| H-067 | Animations d'entrée, transitions (durée, délai, courbe) | 06 | Apparition | Motion Studio (existant) | Déclenchement ; durée | documenté (existant) | — |
+| H-068 | Effets de défilement (vertical, horizontal, parallaxe, opacité, échelle) | 06 | Liés au scroll | `kw-effects.js` (existant) | Navigateur | documenté (existant) | — |
+| H-069 | Effets de souris (suivi, 3D tilt) | 06 | Profondeur | `kw-effects.js` (existant) | Navigateur ; écran tactile | documenté (existant) | — |
+| H-070 | `prefers-reduced-motion` | 06, 11 | Désactiver les animations | existant dans `kw-effects.js` | Émulation | documenté (existant) | — |
+
+## 6. Style et responsive
+| ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-080 | Fonds (uni, dégradé, image), typographie, bordures, ombres, transformations | 05 | Style complet | 86 propriétés de style (existant) | Persistance + rendu | documenté (existant) | — |
+| H-081 | États normal / survol / focus / actif / ouvert / désactivé | 05 | États visuels | `STATES` (hover/focus/active existants) ; ouvert/désactivé à ajouter | Rendu par état | documenté (partiel ; L1) | — |
+| H-082 | Valeurs responsive indépendantes | 07 | Bureau ≠ tablette ≠ mobile | `BREAKPOINTS` (héritage descendant) | Le mobile ne modifie pas le bureau | documenté (existant, test d'héritage à écrire) | — |
+| H-083 | Visibilité par appareil | 07 | « Masquer sur » | `hideOn` | Jamais les trois à la fois | documenté (existant) | — |
+| H-084 | Ordre des éléments par appareil, rangées par appareil | 07 | Réordonner | `order` par écran | Navigateur | documenté (à développer, L2) | — |
+| H-085 | Points de rupture configurables | 07 | Seuils | seuils fixes (≥1920, ≤1023, ≤767) | — | documenté (écart assumé : seuils fixes ; à décider) | — |
+| H-086 | Prévisualisation responsive réaliste | 07 | Aperçu par appareil | canevas par écran (existant) | Navigateur | documenté (existant) | — |
+
+## 7. Conditions, publication, versions
+| ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-090 | Tout le site / accueil / pages / articles / archives / catégories / recherche / 404 | 10 | Où afficher | `conditions.js` (KINDS) | Inclusion/exclusion | testé | `tests/theme-builder-regles.test.js`, `theme-builder-contexte-rendu.test.js` |
+| H-091 | Produits et archives produits (WooCommerce) | 10 | Pages boutique | `product`, `product_archive` | Module requis | testé | `tests/theme-builder-stockage.test.js` (module Commerce requis) |
+| H-092 | Priorité et conflits | 10 (règle non documentée chez Elementor) | Un seul gagnant | `scoreOf`, `resolve`, `explain` | Précis > général ; égalité signalée | testé | `tests/theme-builder-regles.test.js` |
+| H-093 | Aucune page avec deux en-têtes / sans en-tête par conflit | 10 | Cohérence | un gagnant + repli historique | Pas de doublon | testé | `tests/theme-builder-pied-unique.test.js` (équivalent pied), `theme-builder-site-principal.test.js` |
+| H-094 | Condition utilisateur connecté / rôle | 10 (EXTENSION chez Elementor) | Selon le visiteur | condition « visiteur » | Invité vs membre, cache | documenté (à développer, L6) | — |
+| H-095 | Brouillon / publication / dépublication / archivage | 01 | Cycle de vie | `store.js` | Statuts | testé | `tests/theme-builder-stockage.test.js` |
+| H-096 | Versions et restauration | 01, 13 | Historique | `mk_tb_versions` (30) | Restauration non destructive | documenté (existant, preuve ligne par ligne à rattacher) | — |
+| H-097 | Import / export | 13 | Portabilité | `portable.js` | Aller-retour | documenté (existant, test à rattacher) | — |
+| H-098 | Aperçu sur un autre contenu | 01, 10 | Preview Settings | `/contenus-apercu` | Navigateur | documenté (existant) | — |
+| H-099 | Isolation multi-sites | 13, 15 | Aucune fuite | `site_id IS ?` | 2–3 sites | testé (en-têtes, menus) | `tests/theme-builder-site-principal.test.js`, `apparence-menus-integration.test.js` |
+
+## 8. Qualité transversale
+| ID | Référence | Source | Attendu | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
+|---|---|---|---|---|---|---|---|
+| H-100 | `<header>`, `<nav>`, ARIA, focus visible, Échap | 11 | Accessible | runtime + gabarits | Audit clavier/lecteur d'écran | documenté (à vérifier, L8) | — |
+| H-101 | Contrastes, alternatives textuelles | 11 | WCAG 2.1 AA (cible Kolakisa ; Elementor déclare 2.0 AA) | charte | Contrôle auto + manuel | documenté (L8) | — |
+| H-102 | Sécurité : HTML, attributs, contenus externes | 13 | Aucun script libre | grammaire fermée | Tests de rejet | documenté (existant, à compléter L8) | — |
+| H-103 | Performance (DOM, CLS, INP) | 12 | Budget | un seul écouteur passif | Mesures | documenté (L8) | — |
+| H-104 | Non-régression CMS / Theme Builder / éditeur / menus | 14 | Rien ne casse | suites existantes | `npm test` | documenté (L8) | — |
+
+## Bilan (2026-11-07) — chiffres recomptés par script
+- Lignes : **72** (H-001 → H-104, avec trous de numérotation volontaires).
+- `testé` (preuve de test citée) : **10**. `validé` : **0** (aucune validation de bout en bout n'a encore eu lieu).
+- `documenté` (capacité déjà présente dans le code, partielle ou à vérifier ; preuve à rattacher) : **42**.
+- `documenté (à développer)` : **18** — sticky à états, logo par état, masquage au défilement, ordre par appareil, menus multi-niveaux, tiroirs, méga-menu, recherche plein écran, suggestions, tiroir panier, menu compte, condition visiteur, calques d'en-tête.
+- `exclu` (justifié) : **2** — sélecteur de langue/devise (H-055), liste de souhaits/comparaison (H-048).
+- Aucune ligne n'est marquée développée à ce jour.
