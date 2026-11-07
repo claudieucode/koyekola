@@ -80,11 +80,11 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 |---|---|---|---|---|---|---|---|
 | H-080 | Fonds (uni, dégradé, image), typographie, bordures, ombres, transformations | 05 | Style complet | 86 propriétés de style (existant) | Persistance + rendu | documenté (existant) | — |
 | H-081 | États normal / survol / focus / actif / ouvert / désactivé | 05 | États visuels | `STATES` (hover/focus/active existants) ; ouvert/désactivé à ajouter | Rendu par état | développé (survol/focus/clic existants + « Après défilement » ; « ouvert/désactivé » restent à ajouter) | `tests/header-reglages.test.js` (CSS généré) ; `header-reglages-navigateur` (état proposé dans l'éditeur) |
-| H-082 | Valeurs responsive indépendantes | 07 | Bureau ≠ tablette ≠ mobile | `BREAKPOINTS` (héritage descendant) | Le mobile ne modifie pas le bureau | documenté (existant, test d'héritage à écrire) | — |
-| H-083 | Visibilité par appareil | 07 | « Masquer sur » | `hideOn` | Jamais les trois à la fois | documenté (existant) | — |
-| H-084 | Ordre des éléments par appareil, rangées par appareil | 07 | Réordonner | `order` par écran | Navigateur | documenté (à développer, L2) | — |
-| H-085 | Points de rupture configurables | 07 | Seuils | seuils fixes (≥1920, ≤1023, ≤767) | — | documenté (écart assumé : seuils fixes ; à décider) | — |
-| H-086 | Prévisualisation responsive réaliste | 07 | Aperçu par appareil | canevas par écran (existant) | Navigateur | documenté (existant) | — |
+| H-082 | Valeurs responsive indépendantes | 07 | Bureau ≠ tablette ≠ mobile | `BREAKPOINTS` (héritage descendant) | Le mobile ne modifie pas le bureau | testé | `tests/controles-numeriques-navigateur.test.js` (écrans : chacun garde sa valeur) ; `tests/header-responsive-navigateur.test.js` : un réglage mobile n'altère pas le bureau |
+| H-083 | Visibilité par appareil | 07 | « Masquer sur » | `hideOn` | Jamais les trois à la fois | testé | `tests/header-responsive-navigateur.test.js` : élément masqué sur mobile, visible sur ordinateur et tablette |
+| H-084 | Ordre des éléments par appareil, rangées par appareil | 07 | Réordonner | `order` par écran | Navigateur | testé | `tests/header-responsive-navigateur.test.js` : ordre naturel sur ordinateur, inversé sur mobile (propriété `order` par écran, déjà dans le moteur de styles) ; direction ligne → colonne |
+| H-085 | Points de rupture configurables | 07 | Seuils | Points de rupture réglables par site (existant) ; seuils par défaut ≤1023 / ≤767 / ≥1920 | — | testé | Points de rupture RÉGLABLES PAR SITE (`settings.layout.breakpoints`) : `tests/responsive-largeurs-navigateur.test.js` + `tests/header-responsive-navigateur.test.js` (tablette ≤ 1279 px) |
+| H-086 | Prévisualisation responsive réaliste | 07 | Aperçu par appareil | canevas par écran (existant) | Navigateur | testé | `tests/responsive-largeurs-navigateur.test.js` : concordance du canevas par appareil et de la page publiée |
 
 ## 7. Conditions, publication, versions
 | ID | Référence Elementor | Source | Comportement | Équivalent Kolakisa | Tests prévus | Statut | Preuve |
@@ -109,7 +109,7 @@ Colonnes condensées : **Contrôles** et **Responsive** sont détaillés dans le
 | H-103 | Performance (DOM, CLS, INP) | 12 | Budget | un seul écouteur passif | Mesures | documenté (L8) | — |
 | H-104 | Non-régression CMS / Theme Builder / éditeur / menus | 14 | Rien ne casse | suites existantes | `npm test` | documenté (L8) | — |
 
-## Bilan (mis à jour après le lot L1) — chiffres recomptés par script
-- Lignes : **72**. `testé` (preuve de test citée) : **15**. `développé` (partiellement : reste à tester ou à compléter) : **2**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
-- `documenté` (déjà présent dans le code, preuve à rattacher) : **40**. `documenté (à développer)` : **13**. `exclu` (justifié) : **2**.
-- Lots terminés : **L0** (réglages d'en-tête, panneau, lecteur unique), **L1** (états de défilement, fixé, appareils, décalage, masquage, logos par état). Lots restants : L2 → L9.
+## Bilan (mis à jour après le lot L2) — chiffres recomptés par script
+- Lignes : **72**. `testé` (preuve de test citée) : **20**. `développé` (partiel, reste à tester ou compléter) : **2**. `validé` : **0** (aucune validation finale de bout en bout avant l'audit L9).
+- `documenté` (déjà présent dans le code, preuve à rattacher) : **36**. `documenté (à développer)` : **12**. `exclu` (justifié) : **2**.
+- Lots terminés : **L0** (réglages d'en-tête, panneau, lecteur unique), **L1** (états de défilement, fixé, appareils, décalage, masquage, logos par état), **L2** (responsive par élément : prouvé sur un en-tête publié ; capacités déjà présentes dans le moteur). Lots restants : L3 → L9.
