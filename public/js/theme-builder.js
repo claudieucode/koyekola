@@ -37,6 +37,7 @@
   // Icônes de navigation et structures types : balisage STATIQUE du code (aucune donnée du site), analysé par DOMParser comme les aperçus serveur.
   const IC = (d) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">${d}</svg>`;
   const ICONS = {
+    hidden: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 6.1A9.6 9.6 0 0 1 12 6c4.5 0 8 4 9 6a15 15 0 0 1-2.7 3.4M6.7 7.5A15 15 0 0 0 3 12c1 2 4.5 6 9 6 1.4 0 2.6-.3 3.7-.8M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
     all: IC('<path d="M4 7h16M7 12h10M10 17h4"/>'), header: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M3.5 9h17"/>'), footer: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M3.5 15h17"/>'),
     single_page: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M6 16l4-4 3 3 2-2 3 3"/><circle cx="9" cy="9" r="1"/>'), single_post: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M6.5 9h4v4h-4zM13 9h5M13 12h5M6.5 16h11"/>'),
     archive: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M8 9h.01M12 9h.01M16 9h.01M8 12h.01M12 12h.01M16 12h.01M8 15h.01M12 15h.01M16 15h.01"/>'), search_results: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><circle cx="11" cy="11.5" r="2.5"/><path d="M13 13.5l2.5 2.5M6.5 8h11"/>'),
@@ -121,7 +122,8 @@
     const th = el("a", "tb-thumb"); th.href = t.editUrl; th.setAttribute("aria-label", `Ouvrir « ${t.name} » dans l'éditeur`); lazyThumb(th, t, c); c.append(th);
     const b = el("div", "tb-body"), sub = el("div", "tb-sub"); sub.append(el("p", "tb-type", t.typeLabel));
     const bd = el("div", "tb-badges"); const s = el("span", "tb-badge", ST[t.status]); s.dataset.k = t.status; bd.append(s); if (t.hasConflict) { const x = el("span", "tb-badge", "Conflit"); x.dataset.k = "conflict"; bd.append(x); } if (t.documentMissing) { const x = el("span", "tb-badge", "Document manquant"); x.dataset.k = "conflict"; bd.append(x); } sub.append(bd); b.append(sub);
-    if (t.status === "draft" && t.willReplace && t.willReplace.length) b.append(el("p", "tb-hint", `Non affiché : le site montre « ${t.willReplace.join(" », « ")} ». Publiez pour le remplacer.`));
+    // Brouillon qui remplacerait le modèle actif : note intégrée (icône + texte secondaire), sans encadré. Mêmes données (willReplace) ; aucune logique d'état ajoutée.
+    if (t.status === "draft" && t.willReplace && t.willReplace.length) { const n = el("p", "tb-hint"); n.setAttribute("role", "note"); const ic = svgOf(ICONS.hidden); ic.setAttribute("class", "tb-hint-ico"); ic.setAttribute("aria-hidden", "true"); const tx = el("span", "tb-hint-tx"); tx.append(el("span", "tb-hint-t", `Actuellement affiché : ${t.willReplace.join(", ")}`), el("span", "tb-hint-s", "Publiez ce modèle pour remplacer celui actuellement actif.")); n.append(ic, tx); b.append(n); }
     const m = el("div", "tb-meta"); const l1 = el("span", "tb-cond"), tx = el("span", "tb-cond-t"); tx.append(el("b", "", "S'affiche : "), document.createTextNode(t.describe.include)); l1.append(tx);
     // « Conditions » est rangé avec la ligne qu'il modifie (« S'affiche »), en action discrète.
     if (canWrite && t.status !== "archived") { const cd = el("button", "btn btn-sm btn-quiet", "Conditions"); cd.type = "button"; cd.addEventListener("click", () => conditions(t)); l1.append(cd); }
