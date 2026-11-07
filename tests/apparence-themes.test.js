@@ -281,10 +281,13 @@ describe("apparence-thèmes : installation, activation, aperçu, suppression, is
       assert.match(flashOf((await adminA.get((await adminA.post(`${TH}/mon-theme/supprimer`, { site: String(A) })).location)).text), /n'est pas installé/);
     });
     test("supprimer depuis un autre site ne touche pas le thème du site A (même identifiant)", async () => {
-      await boss.post(`${TH}/installer`, { package: pkg({ key: "commun" }), site: String(A) }); await boss.post(`${TH}/installer`, { package: pkg({ key: "commun" }), site: String(B) });
-      await boss.post(`${TH}/commun/supprimer`, { site: String(B) });
-      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'commun' AND site_id = ?", A).n, 1);
-      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'commun' AND site_id = ?", B).n, 0);
+      // Identifiant libre : « commun » est devenu un thème du catalogue Kolakisa (installation refusée), il ne convient plus à ce test.
+      await boss.post(`${TH}/installer`, { package: pkg({ key: "partage-essai" }), site: String(A) }); await boss.post(`${TH}/installer`, { package: pkg({ key: "partage-essai" }), site: String(B) });
+      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'partage-essai' AND site_id = ?", A).n, 1, "installé sur A");
+      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'partage-essai' AND site_id = ?", B).n, 1, "installé sur B");
+      await boss.post(`${TH}/partage-essai/supprimer`, { site: String(B) });
+      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'partage-essai' AND site_id = ?", A).n, 1);
+      assert.equal(one("SELECT COUNT(*) n FROM cms_themes WHERE theme_key = 'partage-essai' AND site_id = ?", B).n, 0);
     });
   });
 
