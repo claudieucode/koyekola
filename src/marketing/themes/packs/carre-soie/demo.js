@@ -1,0 +1,31 @@
+// Catalogue de démonstration « Carré de Soie » (24 produits : variantes, promotions, ruptures). Données de démonstration, jamais créées sur la boutique d'un client sans action explicite.
+const F = { Format: ["70 cm", "90 cm"] };
+module.exports = {
+  categories: ["Carrés 90", "Foulards et twillys", "Étoles et châles", "Cravates et pochettes", "Accessoires"],
+  products: [
+    ["Carré Jardin de Samarcande", 0, 245, 0, { ...F, Coloris: ["Indigo", "Grenat"] }, "partiel", ["soie", "jardin"], "Twill de soie 14 mm, ourlet roulotté main."],
+    ["Carré Étriers du matin", 0, 245, 0, { ...F }, "ok", ["soie", "etriers"], "Chaîne de maillons sur fond bordeaux."],
+    ["Carré Vagues de Kyoto", 0, 255, 0, { ...F, Coloris: ["Lagon", "Encre"] }, "ok", ["soie", "vagues"], "Écailles concentriques, six couleurs."],
+    ["Carré Ikat émeraude", 0, 255, 204, { ...F }, "ok", ["soie", "ikat", "fin-de-serie"], "Losanges d'ikat, émeraude et safran."],
+    ["Carré Pivoines", 0, 265, 0, { ...F }, "rupture", ["soie", "jardin"], "Pivoines à l'aquarelle sur fond ivoire."],
+    ["Carré Rayures de marine", 0, 235, 0, { ...F, Coloris: ["Marine", "Rouge"] }, "ok", ["soie", "rayures"], "Rayures larges, bordure contrastée."],
+    ["Carré Paisley nuit", 0, 275, 0, { ...F }, "ok", ["soie", "edition-limitee"], "Boteh brodé d'or sur fond nuit."],
+    ["Carré Abeilles", 0, 245, 0, null, "ok", ["soie"], "Semis d'abeilles, vert sapin."],
+    ["Twilly Étriers", 1, 85, 0, { Coloris: ["Bordeaux", "Marine", "Ivoire"] }, "ok", ["soie", "etriers"], "Ruban de soie 5 × 86 cm."],
+    ["Foulard Vagues 50", 1, 120, 0, null, "ok", ["soie", "vagues"], "Foulard carré 50 cm, ourlet main."],
+    ["Bandana soie Ikat", 1, 95, 76, null, "ok", ["soie", "ikat", "fin-de-serie"], "Bandana 55 cm, twill léger."],
+    ["Écharpe Samarcande", 1, 160, 0, null, "partiel", ["soie", "jardin"], "Longue écharpe 40 × 160 cm."],
+    ["Étole Aurore", 2, 210, 0, { Coloris: ["Aurore", "Prune", "Sable"] }, "ok", ["soie"], "Étole mousseline 70 × 180 cm."],
+    ["Châle Cachemire d'été", 2, 320, 0, null, "ok", ["soie", "edition-limitee"], "Soie et modal, 100 × 200 cm."],
+    ["Étole Dégradé lagon", 2, 195, 0, null, "rupture", ["soie", "vagues"], "Dégradé teint à la main."],
+    ["Châle Brocart", 2, 360, 288, null, "ok", ["soie", "fin-de-serie"], "Jacquard de soie, franges nouées."],
+    ["Cravate Étriers", 3, 110, 0, { Coloris: ["Bordeaux", "Marine"] }, "ok", ["soie", "etriers"], "Soie sergée, doublure laine."],
+    ["Cravate Ikat", 3, 110, 0, null, "ok", ["soie", "ikat"], "Motif ikat, largeur 7 cm."],
+    ["Pochette Jardin", 3, 55, 0, null, "ok", ["soie", "jardin"], "Pochette 33 cm, ourlet main."],
+    ["Nœud papillon Vagues", 3, 78, 0, null, "ok", ["soie", "vagues"], "Réglable, soie imprimée."],
+    ["Bague à foulard", 4, 68, 0, null, "ok", ["accessoire"], "Anneau en laiton doré."],
+    ["Pochette de voyage", 4, 42, 0, null, "ok", ["accessoire", "entretien"], "Sachet en coton pour ranger un carré."],
+    ["Boîte cadeau carré 90", 4, 18, 0, null, "libre", ["accessoire"], "Boîte rigide et papier de soie."],
+    ["Carré Édition Atelier", 0, 390, 0, { ...F }, "ok", ["soie", "edition-limitee"], "Série numérotée de 200 carrés."],
+  ],
+};
