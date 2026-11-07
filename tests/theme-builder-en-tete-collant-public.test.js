@@ -38,24 +38,24 @@ describe("En-tête collant / superposé : pages publiées", () => {
   after(async () => { if (db) db.close(); if (srv) await srv.stop(); });
 
   test("en-tête ordinaire : aucune classe de comportement", async () => {
-    await adopt("classique-logo-menu-bouton.clair");
+    await adopt("luxe-01.luxe-01");
     const h = header(await live()); assert.match(h, /lp-site-header/); assert.doesNotMatch(h, /kw-theme-(sticky|overlay)/);
   });
   test("en-tête collant et verre dépoli : l'enveloppe porte kw-theme-sticky", async () => {
-    await adopt("collant-classique.clair"); assert.match(header(await live()), /kw-theme-sticky/);
-    await adopt("saas-verre-depoli.clair"); assert.match(header(await live()), /kw-theme-sticky/);
+    await adopt("luxe-02.luxe-02"); assert.match(header(await live()), /kw-theme-sticky/);
+    await adopt("tech-01.tech-01"); assert.match(header(await live()), /kw-theme-sticky/);
   });
   test("en-tête superposé : l'enveloppe porte kw-theme-overlay (jamais les deux)", async () => {
-    await adopt("superpose-classique.nuit"); const h = header(await live());
+    await adopt("tech-10.tech-10"); const h = header(await live());
     assert.match(h, /kw-theme-overlay/); assert.doesNotMatch(h, /kw-theme-sticky/);
   });
   test("collant à plusieurs rangées : tout l'en-tête colle ensemble (une seule enveloppe)", async () => {
-    await adopt("collant-deux-rangees.marque"); const html = await live();
+    await adopt("ecom-01.ecom-01"); const html = await live();
     assert.match(header(html), /kw-theme-sticky/);
     assert.equal((html.match(/lp-site-header/g) || []).length >= 1, true);
   });
   test("retour à un en-tête ordinaire : les classes disparaissent (rien ne reste d'un modèle remplacé)", async () => {
-    await adopt("classique-logo-menu-bouton.clair"); assert.doesNotMatch(header(await live()), /kw-theme-(sticky|overlay)/);
+    await adopt("luxe-01.luxe-01"); assert.doesNotMatch(header(await live()), /kw-theme-(sticky|overlay)/);
   });
   test("feuille de style : règles collant / superposé et suppression de la marge de colonne au-dessus de l'en-tête", () => {
     const css = fs.readFileSync(path.join(__dirname, "..", "public", "css", "landing.css"), "utf8");

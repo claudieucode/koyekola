@@ -105,11 +105,13 @@ describe("chaque classe utilisée par les pages a un style", () => {
     const defined = new Set([...ALL_CSS.matchAll(/\.([a-zA-Z][\w-]*)/g)].map((m) => m[1]));
     // Classes volontairement sans règle : marqueurs de structure
     // kw-tcar-slide / kw-mcar-slide : accroches de structure des carrousels (le style est porté par kw-carousel-slide)
-    const markers = new Set(["post", "course-main", "rich-field", "small", "lesson-resources", "plan-lesson-title", "hero-text", "kw-tcar-slide", "kw-mcar-slide"]);
+    const markers = new Set(["post", "course-main", "rich-field", "small", "lesson-resources", "plan-lesson-title", "hero-text", "kw-tcar-slide", "kw-mcar-slide", "kw-ms-cmp", "kw-ms-ff", "kw-ms-mc", "kw-st-vis", "has-nav", "has-arrows", "has-dots", "grid", "i", "is-c", "vertical"]); // kw-ms-* / kw-st-vis / has-* : accroches de structure des composants Motion Studio et du carrousel ; grid, i, is-c, vertical : faux positifs de l'extraction
     // Un nom qui finit par « - » est le début d'un nom complété par une valeur (« language-<%= langue %> », « is-<%= état %> ») : il ne peut pas avoir de règle à lui seul
     // Accroches de structure inventoriées au 2026-11-03 (écrans des paliers récents : boutique, constructeur IA, SEO, Theme Builder…) et faux positifs de l'extraction (mots de scripts : typeof, vue…) : sans style propre, à résorber au fil des écrans
     for (const c of ["sh-buy", "site", "sh-filters", "sh-status", "sh-coupon", "sh-info", "sh-desc", "cur-sections", "fa-empty", "open", "unread", "page-blocks-card", "mk-crumb", "aibh-resume", "aj", "aj-table", "t", "low", "fs-tabs", "col-site", "view", "md-know", "md-save-label", "mk-pb-edge", "typeof", "bare", "tab", "visibility", "mk-site-back", "mk-cms-fold-text", "layout", "pl-copy-label", "checkedKey", "pl-field", "pl-save-label", "mk-btn", "mk-seo-content-link", "mk-seo-live", "sw-ai-entry", "sw-resume", "sw-form", "sw-main", "sw-pages", "mk-tx-list", "mk-pv-linkcheck", "vue", "tb-cat-tools", "mk-th", "mk-th-lead", "mk-th-state", "mk-td", "mk-td-media", "mk-th-previewpage", "mk-tg", "mk-tg-active-body", "mk-tg-sel", "a", "ex-label", "mk-im-main", "mk-im-toggle", "s", "mk-px-new", "mk-px-list", "mk-px-mail", "kw-menu-empty", "kw-pay-label", "kw-pb", "kw-sc-cart", "kw-sc-checkout", "kw-sc-account", "kw-pg", "mc-resume-cta", "mc-library", "faq-toggle", "kw-theme-extras", "is-dressed", "is-message"]) markers.add(c);
-    const orphans = [...used].filter((c) => !c.endsWith("-") && !defined.has(c) && !markers.has(c));
+    // Motion Studio : chaque module (public/js/motion-studio/*.js) injecte lui-même ses styles ; ses classes « kw-ms-* » n'ont donc pas de règle dans public/css
+    for (const c of ["is-builder", "is-grown", "is-cover", "is-canvas", "is-reached"]) markers.add(c);
+    const orphans = [...used].filter((c) => !c.endsWith("-") && !c.startsWith("kw-ms-") && !defined.has(c) && !markers.has(c));
     assert.deepEqual(orphans, []);
   });
 });

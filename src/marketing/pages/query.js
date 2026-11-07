@@ -200,7 +200,7 @@ registerQuerySource("products", {
     const args = [ctx.organizationId, ...(siteId == null ? [] : [siteId])];
     const cur = env.scope.product || null;
     if (q.include) { where.push(`p.id IN (${q.include.map(() => "?").join(",")})`); args.push(...q.include); }
-    const exclude = [...(q.exclude || []), ...(q.excludeCurrent && cur && Number.isInteger(cur.id) ? [cur.id] : [])];
+    const exclude = [...(q.exclude || []), ...require("../shop/access").hiddenIds(st), ...(q.excludeCurrent && cur && Number.isInteger(cur.id) ? [cur.id] : [])];
     if (exclude.length) { where.push(`p.id NOT IN (${exclude.map(() => "?").join(",")})`); args.push(...exclude); }
     if (q.categories) {
       const catIds = [];

@@ -230,7 +230,7 @@
         $("[data-tq-prev]").disabled = list.length < 2; $("[data-tq-next]").disabled = list.length < 2;
         $("[data-tq-full]").href = BASE + "/" + th.key + "/apercu" + qsite; $("[data-tq-details]").href = BASE + "/" + th.key + "/details" + qsite;
         actions.textContent = "";
-        var src = th.card.querySelector("form[data-th-form]") || th.card.querySelector(".mk-tg-foot a.btn-primary");   // la VRAIE action de la carte (installer, utiliser, personnaliser)
+        var src = th.card.querySelector("form[data-th-form]");   // la VRAIE action de la carte (installer, utiliser)
         if (src) actions.appendChild(src.cloneNode(true));
       };
       var show = function (i) {

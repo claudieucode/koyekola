@@ -1,0 +1,37 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title"><%= list.title %></h1>
+<% if (list.event_date) { %><p><small>Date : <%= list.event_date %></small></p><% } %>
+<% if (list.message) { %><p><%= list.message %></p><% } %>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (list.status !== "active") { %><p class="sh-empty">Cette liste est fermée : il n'est plus possible d'offrir un article.</p><% } %>
+<% if (!items.length) { %><p class="sh-empty">Cette liste ne contient pas encore d'article.</p>
+<% } else { %>
+<div class="sh-table-wrap"><table class="sh-table"><caption class="sr-only">Articles de la liste</caption>
+<thead><tr><th scope="col">Article</th><th scope="col">Prix</th><th scope="col">Souhaités</th><th scope="col">Offerts</th><th scope="col">Restants</th><th scope="col"><span class="sr-only">Offrir</span></th></tr></thead><tbody>
+<% items.forEach((it) => { %>
+<tr>
+  <th scope="row"><% if (it.slug && it.available) { %><a href="<%= shop.base %>/produit/<%= encodeURIComponent(it.slug) %>"><%= it.name %></a><% } else { %><%= it.name %><% } %><% if (it.variantLabel) { %><br><small><%= it.variantLabel %></small><% } %></th>
+  <td><%= it.unitCents != null ? money(it.unitCents) : "—" %></td>
+  <td data-sh-wanted><%= it.wanted %></td>
+  <td data-sh-offered><%= it.offered %></td>
+  <td data-sh-remaining><%= it.remaining %></td>
+  <td>
+    <% if (list.status !== "active") { %>
+    <% } else if (it.remaining <= 0) { %><strong>Offert</strong>
+    <% } else if (!it.available) { %><small>Indisponible</small>
+    <% } else if (it.offerable <= 0) { %><small>Réservé (paiement en cours) ou en rupture</small>
+    <% } else { %>
+    <form class="sh-form" method="post" action="<%= shop.base %>/liste/<%= list.public_token %>/offrir">
+      <input type="hidden" name="item_id" value="<%= it.id %>">
+      <label>Quantité<input type="number" name="quantity" value="1" min="1" max="<%= it.offerable %>" required></label>
+      <label>Votre prénom (facultatif, visible du bénéficiaire)<input name="from_name" maxlength="60"></label>
+      <label>Un petit mot (facultatif)<input name="note" maxlength="500"></label>
+      <button class="sh-btn" type="submit">Offrir</button>
+    </form>
+    <% } %>
+  </td>
+</tr>
+<% }) %></tbody></table></div>
+<p><small>« Offerts » ne compte que les cadeaux payés. <%= canDeliver ? "Au moment de commander, vous pourrez choisir de faire livrer le cadeau chez le bénéficiaire sans voir son adresse." : "" %></small></p>
+<% } %>
+<%- include("_bottom") %>

@@ -1,3 +1,5 @@
+> **Document historique.** La bibliothèque décrite ici (100 compositions en rangées, 34 identités) a été remplacée par la bibliothèque « Atelier » : voir [HEADER_LIBRARY_100_MODELS_REPORT.md](HEADER_LIBRARY_100_MODELS_REPORT.md).
+
 # Audit initial — catégorie En-tête du Theme Builder (avant refonte)
 
 Établi à partir du code du dépôt (`main`, novembre 2026). Chaque constat renvoie à un fichier ; rien n'est supposé.

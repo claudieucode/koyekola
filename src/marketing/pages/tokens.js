@@ -176,7 +176,14 @@ function normalizeTokens(input = {}, { strict = false, fontScope } = {}) {
   for (const k of Object.keys(D.shadow)) shadow[k] = Object.hasOwn(SHADOWS, src.shadow && src.shadow[k]) ? src.shadow[k] : D.shadow[k];
   const border = { width: intIn(src.border && src.border.width, 0, 4, D.border.width), color: HEX.test(String(src.border && src.border.color || "")) ? src.border.color.toLowerCase() : D.border.color };
   const sizes = { content: intIn(src.sizes && src.sizes.content, 640, 1600, D.sizes.content), narrow: intIn(src.sizes && src.sizes.narrow, 480, 1000, D.sizes.narrow), buttonHeight: intIn(src.sizes && src.sizes.buttonHeight, 32, 72, D.sizes.buttonHeight), fieldHeight: intIn(src.sizes && src.sizes.fieldHeight, 32, 72, D.sizes.fieldHeight) };
-  return { colors, customColors, fonts, type, link, list, buttons, images, forms, space, radius, shadow, border, sizes, pack: normalizePack(src.pack) };
+  const out = { colors, customColors, fonts, type, link, list, buttons, images, forms, space, radius, shadow, border, sizes, pack: normalizePack(src.pack) };
+  // Réglages globaux du personnalisateur (Typographie, Couleurs, Conteneur, Boutons) : présents seulement s'ils diffèrent des valeurs d'origine (un site qui n'a rien réglé garde des jetons identiques)
+  if (src.global && typeof src.global === "object") {
+    const gs = require("./globalStyles");
+    const g = gs.normalizeGlobal(src.global, { strict, fontScope });
+    if (JSON.stringify(g) !== JSON.stringify(gs.defaults())) out.global = g;
+  }
+  return out;
 }
 
 // Thème autonome (paquet de thème, themes/packs) : identifiant du paquet actif + options de personnalisation (valeurs courtes, validées de nouveau par le paquet au rendu).

@@ -4,10 +4,12 @@
 <section class="mk-panel"><h2>Résumé</h2>
   <p>Statut : <strong><%= statusLabels[order.status] %></strong> · Paiement : <strong><%= PS[order.payment_status] %></strong> (<%= order.payment_method %>) · Client : <%= order.email %> · <%= String(order.created_at).slice(0, 16) %></p>
   <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Articles</caption><thead><tr><th scope="col">Article</th><th scope="col">SKU</th><th scope="col">Qté</th><th scope="col">Prix unitaire</th><th scope="col">Total</th></tr></thead><tbody>
-  <% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %><%= i.variant_label ? " (" + i.variant_label + ")" : "" %></th><td><%= i.sku || "—" %></td><td><%= i.quantity %></td><td><%= money(i.unit_price_cents) %></td><td><%= money(i.line_subtotal_cents - i.discount_cents) %></td></tr><% }) %>
+  <% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %><%= i.variant_label ? " (" + i.variant_label + ")" : "" %><% if (i.custom_text) { %><br><small><strong><%= i.custom_label || "Personnalisation" %> :</strong> « <%= i.custom_text %> »</small><% } %></th><td><%= i.sku || "—" %></td><td><%= i.quantity %></td><td><%= money(i.unit_price_cents) %></td><td><%= money(i.line_subtotal_cents - i.discount_cents) %></td></tr><% }) %>
   </tbody></table></div>
   <p>Sous-total <%= money(order.subtotal_cents) %><% if (order.discount_cents) { %> · Réduction − <%= money(order.discount_cents) %> (<%= order.coupon_code %>)<% } %> · Livraison <%= money(order.shipping_cents) %><%= order.shipping_method_name ? " (" + order.shipping_method_name + ")" : "" %> · Taxes <%= money(order.tax_cents) %> <%= order.prices_include_tax ? "(incluses)" : "(en sus)" %> · <strong>Total <%= money(order.total_cents) %></strong></p>
   <% if (order.shippingAddress && order.shippingAddress.line1) { const a = order.shippingAddress; %><p>Livraison : <%= a.name %>, <%= a.line1 %> <%= a.line2 %>, <%= a.postal_code %> <%= a.city %>, <%= a.country %></p><% } %>
+  <% if (order.delivery_date) { %><p><strong>Créneau de livraison :</strong> <%= slotText %></p><% } %>
+  <% if (order.age_confirmed_at) { %><p><strong>Contrôle d'âge :</strong> le client a déclaré avoir au moins <%= order.age_confirmed_min %> ans le <%= String(order.age_confirmed_at).slice(0, 16) %> (case cochée à la commande). <small>Simple déclaration sur l'honneur, sans vérification d'identité : la livraison peut exiger une pièce d'identité.</small></p><% } %>
   <% if (order.tracking_number) { %><p>Suivi : <%= order.tracking_number %></p><% } %>
 </section>
 <% if (canOrders && next.length) { %>

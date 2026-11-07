@@ -1,5 +1,5 @@
 // AI Design Generator (programme 21.5) : écran « Direction artistique » d'un site. Le site vient de l'ADRESSE (/site-web/sites/:id/direction-artistique), vérifié par le service.
-// Droits : appearance.read (voir) · appearance.styles (générer, appliquer, annuler — comme le personnalisateur). Écrit dans le BROUILLON du personnalisateur natif ; ne publie jamais.
+// Droits : appearance.read (voir) · appearance.styles (générer, appliquer, annuler — comme l'écran Styles). Écrit dans le BROUILLON des styles du site ; ne publie jamais.
 const express = require("express");
 const dg = require("../../designGen");
 const tokensLib = require("../pages/tokens");
@@ -23,7 +23,7 @@ module.exports = () => {
     const ctx = req.mk.ctx, id = sid(req);
     try {
       const run = await dg.generate(ctx, id, { text: req.body.brief, category: req.body.category, sector: req.body.sector, country: req.body.country, lang: req.body.lang }, { useAi: req.body.ia === "oui" });
-      flash(req, "ok", "Propositions prêtes : rien n'est modifié sur votre site. Comparez-les, puis appliquez-en une dans le brouillon du personnalisateur.");
+      flash(req, "ok", "Propositions prêtes : rien n'est modifié sur votre site. Comparez-les, puis appliquez-en une dans le brouillon des styles.");
       res.redirect(`${W(id)}/${run.id}`);
     } catch (e) { if (!known(e)) return next(e); flash(req, "error", e.message); res.redirect(W(id)); }
   });
@@ -31,20 +31,20 @@ module.exports = () => {
     const ctx = req.mk.ctx, id = sid(req);
     const run = dg.getRun(ctx, id, Number(req.params.rid));
     const key = run.proposals.some((p) => p.key === req.query.variante) ? req.query.variante : null;
-    res.set("Cache-Control", "no-store").render("marketing/site-design-generator", { title: "Direction artistique", active: "sites", marketingShell: true, mode: "run", siteId: id, W: W(id), run, key, cmp: key ? dg.compare(ctx, id, run.id, key, { can: can(req) }) : null, FONTS: tokensLib.FONTS, canWrite: req.mk.can("appearance.styles"), custom: `/marketing/site-web/personnaliser?site=${id}` });
+    res.set("Cache-Control", "no-store").render("marketing/site-design-generator", { title: "Direction artistique", active: "sites", marketingShell: true, mode: "run", siteId: id, W: W(id), run, key, cmp: key ? dg.compare(ctx, id, run.id, key, { can: can(req) }) : null, FONTS: tokensLib.FONTS, canWrite: req.mk.can("appearance.styles"), custom: `/marketing/site-web/styles?site=${id}` });
   }));
   router.post("/site-web/sites/:id(\\d+)/direction-artistique/:rid(\\d+)/appliquer", need("appearance.styles"), (req, res, next) => {
     const ctx = req.mk.ctx, id = sid(req), rid = Number(req.params.rid);
     try {
       const overwrite = req.body.remplacer_tout === "oui" ? "all" : [].concat(req.body.remplacer || []).flatMap((x) => String(x).split(",")).filter(Boolean);
       const r = dg.apply(ctx, id, rid, String(req.body.variante || ""), { overwrite, can: can(req), userId: req.session.user.id });
-      flash(req, "ok", `${r.applied} réglage(s) ajoutés au brouillon du personnalisateur${r.protectedKept.length ? `, ${r.protectedKept.length} de vos réglages conservés` : ""}. Rien n'est publié : relisez puis publiez dans le personnalisateur.`);
+      flash(req, "ok", `${r.applied} réglage(s) ajoutés au brouillon des styles${r.protectedKept.length ? `, ${r.protectedKept.length} de vos réglages conservés` : ""}. Rien n'est publié : relisez puis publiez dans l'écran Styles.`);
     } catch (e) { if (!known(e)) return next(e); flash(req, "error", e.message); }
     res.redirect(`${W(id)}/${rid}`);
   });
   router.post("/site-web/sites/:id(\\d+)/direction-artistique/:rid(\\d+)/annuler", need("appearance.styles"), (req, res, next) => {
     const ctx = req.mk.ctx, id = sid(req), rid = Number(req.params.rid);
-    try { const r = dg.undo(ctx, id, rid, { can: can(req), userId: req.session.user.id }); flash(req, "ok", `Annulé : le brouillon du personnalisateur est revenu à son état d'avant (${r.restored} réglage(s) en attente).`); }
+    try { const r = dg.undo(ctx, id, rid, { can: can(req), userId: req.session.user.id }); flash(req, "ok", `Annulé : le brouillon des styles est revenu à son état d'avant (${r.restored} réglage(s) en attente).`); }
     catch (e) { if (!known(e)) return next(e); flash(req, "error", e.message); }
     res.redirect(`${W(id)}/${rid}`);
   });

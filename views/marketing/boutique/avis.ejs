@@ -1,0 +1,22 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Avis clients" }) %>
+<p class="field-hint">Ces avis viennent uniquement de clients ayant payé le produit. Vous pouvez les publier, les refuser ou les supprimer, mais pas en écrire.</p>
+<nav class="mk-tabs" aria-label="Filtrer les avis">
+  <a href="<%= base %>/avis"<%= !query.statut ? ' aria-current="page"' : "" %>>Tous<% if (list.pending) { %> (<%= list.pending %> à relire)<% } %></a>
+  <a href="<%= base %>/avis?statut=pending"<%= query.statut === "pending" ? ' aria-current="page"' : "" %>>À relire</a>
+  <a href="<%= base %>/avis?statut=published"<%= query.statut === "published" ? ' aria-current="page"' : "" %>>Publiés</a>
+  <a href="<%= base %>/avis?statut=rejected"<%= query.statut === "rejected" ? ' aria-current="page"' : "" %>>Refusés</a>
+</nav>
+<% if (!list.items.length) { %><p class="mk-empty">Aucun avis pour le moment.</p><% } else { %>
+<div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Avis clients</caption>
+<thead><tr><th scope="col">Produit</th><th scope="col">Note</th><th scope="col">Avis</th><th scope="col">Commande</th><th scope="col">Statut</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+<% const labels = { pending: "À relire", published: "Publié", rejected: "Refusé" }; list.items.forEach((r) => { %>
+<tr><th scope="row"><%= r.product_name %></th><td><%= r.rating %> / 5</td><td><% if (r.title) { %><strong><%= r.title %></strong><br><% } %><%= r.body || "" %><br><small><%= r.author_name %> · <%= String(r.created_at).slice(0, 10) %></small></td><td><%= r.order_number %></td><td><%= labels[r.status] %></td>
+<td><% if (canWrite) { %>
+  <% if (r.status !== "published") { %><form class="mk-inline-form" method="post" action="<%= base %>/avis/<%= r.id %>/statut"><input type="hidden" name="statut" value="published"><button class="btn btn-outline btn-sm" type="submit">Publier</button></form><% } %>
+  <% if (r.status !== "rejected") { %><form class="mk-inline-form" method="post" action="<%= base %>/avis/<%= r.id %>/statut"><input type="hidden" name="statut" value="rejected"><button class="btn btn-ghost btn-sm" type="submit">Refuser</button></form><% } %>
+  <form class="mk-inline-form" method="post" action="<%= base %>/avis/<%= r.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="L'avis sera définitivement supprimé." data-mk-confirm-title="Supprimer cet avis ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form>
+<% } %></td></tr>
+<% }) %></tbody></table></div>
+<% } %>
+<%- include("../partials/bottom") %>

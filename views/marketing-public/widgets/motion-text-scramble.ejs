@@ -1,0 +1,3 @@
+<%# Brouillage de texte (widgets/motion-text-scramble.js). Sans JavaScript : première phrase affichée, les autres lisibles par les lecteurs d'écran. Animation : text-fx.js (scramble). %>
+<% const tag = ["h1", "h2", "h3", "h4", "p", "div"].includes(p.tag) ? p.tag : "h2"; const list = (p.phrases || []).map((x) => x.text).filter(Boolean); %>
+<<%= tag %> class="<%= cls %> kw-ms kw-ms-scr" data-kw-ms-fx="scramble"<%- attrs %>><span class="kw-ms-scr-p"><%= list[0] %></span><% list.slice(1).forEach((t) => { %> <span class="kw-ms-scr-alt">, <span class="kw-ms-scr-p"><%= t %></span></span><% }) %></<%= tag %>>

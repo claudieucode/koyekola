@@ -1,0 +1,22 @@
+<%# Jauge (widgets/motion-gauge.js). Variables : p, cls, attrs, isBuilder. Géométrie FINALE écrite ici (lisible sans JavaScript) ; public/js/motion-studio/gauge.js l'anime. %>
+<% const TONES = ["primary", "secondary", "accent", "success", "warning", "error"]; const lo = Number(p.min), hi = Number(p.max) > lo ? Number(p.max) : lo + 100;
+   const raw = Number(p.value) || 0, v = Math.max(lo, Math.min(hi, raw)), f = (v - lo) / (hi - lo); const dec = [0, 1, 2].includes(Number(p.decimals)) ? Number(p.decimals) : 0;
+   const nf = (n) => Number(n).toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); const R = 48, CX = 60, CY = 60;
+   const pt = (x, r) => { const a = Math.PI * (1 - x); return [Math.round((CX + r * Math.cos(a)) * 100) / 100, Math.round((CY - r * Math.sin(a)) * 100) / 100]; };
+   const arc = (a, b, r) => { const s = pt(a, r), e = pt(b, r); return `M${s[0]} ${s[1]} A${r} ${r} 0 0 1 ${e[0]} ${e[1]}`; };
+   const needle = p.mode !== "fill"; const tone = TONES.includes(p.tone) ? p.tone : "primary";
+   const zones = (Array.isArray(p.zones) ? p.zones : []).slice().sort((a, b) => a.to - b.to); let prev = lo; const segs = [];
+   zones.forEach((z) => { const to = Math.min(hi, Math.max(prev, z.to)); if (to > prev) segs.push({ a: (prev - lo) / (hi - lo), b: (to - lo) / (hi - lo), tone: TONES.includes(z.tone) ? z.tone : "primary", name: z.name }); prev = Math.max(prev, to); });
+   const zone = zones.find((z) => v <= z.to) || null; const unit = p.unit || ""; const txt = nf(raw);
+   const tip = pt(f, R - 8); %>
+<div class="<%= cls %> kw-ms kw-ms-d kw-ms-g kw-ms-tone-<%= tone %>" role="meter" aria-label="<%= p.label %>" aria-valuemin="<%= lo %>" aria-valuemax="<%= hi %>" aria-valuenow="<%= v %>" aria-valuetext="<%= txt %> <%= unit %><%= zone ? " – " + zone.name : "" %>"<%- attrs %>>
+  <svg class="kw-ms-g-svg" viewBox="0 0 120 72" aria-hidden="true" focusable="false">
+    <path class="kw-ms-g-track" d="<%= arc(0, 1, R) %>" fill="none" stroke-width="10"/>
+    <% if (needle) { segs.forEach((s) => { %><path class="kw-ms-g-seg kw-ms-tone-<%= s.tone %>" d="<%= arc(s.a, s.b, R) %>" fill="none" stroke-width="10"/><% }) %>
+    <g class="kw-ms-g-needle"><line x1="<%= CX %>" y1="<%= CY %>" x2="<%= tip[0] %>" y2="<%= tip[1] %>" stroke-width="3" stroke-linecap="round"/></g><circle class="kw-ms-g-hub" cx="<%= CX %>" cy="<%= CY %>" r="4.5"/>
+    <% } else { %><path class="kw-ms-g-arc" d="<%= arc(0, 1, R) %>" fill="none" stroke-width="10" pathLength="100" stroke-dasharray="100" stroke-dashoffset="<%= Math.round((1 - f) * 10000) / 100 %>"/><% } %>
+  </svg>
+  <div class="kw-ms-g-read" aria-hidden="true"><span class="kw-ms-g-val"><span class="kw-ms-num" data-from="<%= lo %>" data-to="<%= v %>" data-real="<%= raw %>" data-dec="<%= dec %>"><%= txt %></span><% if (unit) { %><span class="kw-ms-g-unit"><%= unit %></span><% } %></span><% if (zone) { %><span class="kw-ms-g-zone"><%= zone.name %></span><% } %></div>
+  <% if (p.showRange !== false) { %><div class="kw-ms-g-range" aria-hidden="true"><span><%= nf(lo) %></span><span><%= nf(hi) %></span></div><% } %>
+  <p class="kw-ms-label"><%= p.label %></p>
+</div>

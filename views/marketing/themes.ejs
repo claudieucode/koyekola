@@ -46,7 +46,6 @@
       <h2><%= act.name %></h2>
       <p class="mk-sub"><%= act.description %></p>
       <div class="mk-tg-actions">
-        <a class="btn btn-primary btn-sm" href="/marketing/site-web/personnaliser<%= T.siteId ? "?site=" + T.siteId : "" %>"><%- icon("palette", { size: 16 }) %>Personnaliser</a>
         <a class="btn btn-outline btn-sm" href="<%= to("/" + act.key + "/details") %>">Informations</a>
         <% if (act.hasDemo) { %><a class="btn btn-outline btn-sm" href="<%= to("/" + act.key + "/apercu") %>">Revoir la démonstration</a><% } %>
       </div>

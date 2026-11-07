@@ -16,8 +16,10 @@ module.exports = {
     { key: "align", kind: "select", label: "Alignement", options: [["center", "Centré"], ["left", "À gauche"], ["right", "À droite"]], default: "center" },
   ],
   // Brouillon : l'adresse peut être vide (contenu de départ) ; saisie, elle doit viser un fichier .json. La publication exige une adresse (complete).
-  validate(p, at) {
+  validate(p, at, h) {
     if (p.src && !/\.json(\?[^\s"'<>]*)?$/i.test(p.src)) throw new Error(`${at} : l'adresse doit être celle d'un fichier .json (ex. https://assets.exemple.com/animation.json).`);
+    // Correctif (lot « v ») : un fichier de la médiathèque doit appartenir à l'organisation et au site de la page (avant : n'importe quelle organisation)
+    if (p.src && /^\/uploads\/marketing\//.test(p.src)) require("../motionVisual").checkMediaPath(p.src, h, at, { type: "lottie" });
   },
   complete(p) { return p.src ? "" : "indiquez l'adresse du fichier .json de l'animation."; },
 };

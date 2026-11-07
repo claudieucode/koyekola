@@ -35,8 +35,8 @@ function saveSettings(s, input) {
   const threshold = Number(input.low_stock_threshold ?? cur.low_stock_threshold);
   if (!Number.isInteger(threshold) || threshold < 0 || threshold > 100000) throw new MarketingError("invalid_field", "Seuil de stock bas invalide.");
   const manual = input.manual_instructions !== undefined ? String(input.manual_instructions).slice(0, 2000) : cur.manual_instructions;
-  s.db.prepare(`UPDATE mk_shop_settings SET enabled=?, currency=?, prices_include_tax=?, tax_enabled=?, default_country=?, guest_checkout=?, low_stock_threshold=?, payment_methods=?, manual_instructions=?, notify_email=?, order_prefix=?, updated_at=datetime('now') WHERE id = ?`)
-    .run(bool("enabled"), cur2, bool("prices_include_tax"), bool("tax_enabled"), dc, bool("guest_checkout"), threshold, JSON.stringify(methods), manual || null, email || null, prefix, cur.id);
+  s.db.prepare(`UPDATE mk_shop_settings SET enabled=?, currency=?, prices_include_tax=?, tax_enabled=?, default_country=?, guest_checkout=?, low_stock_threshold=?, payment_methods=?, manual_instructions=?, notify_email=?, order_prefix=?, reviews_enabled=?, reviews_auto_publish=?, updated_at=datetime('now') WHERE id = ?`)
+    .run(bool("enabled"), cur2, bool("prices_include_tax"), bool("tax_enabled"), dc, bool("guest_checkout"), threshold, JSON.stringify(methods), manual || null, email || null, prefix, bool("reviews_enabled"), bool("reviews_auto_publish"), cur.id);
   return getSettings(s);
 }
 

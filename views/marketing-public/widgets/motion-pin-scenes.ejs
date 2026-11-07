@@ -1,0 +1,13 @@
+<%# Section épinglée à scènes (widgets/motion-pin-scenes.js). Variables : p, cls, attrs. Sans JavaScript ou en mouvement réduit : les scènes sont l'une sous l'autre.
+    Avec JavaScript : la scène .kw-ms-pn-stage reste collée (position: sticky) pendant que le défilement change de scène (public/js/motion-studio/pin-scenes.js). %>
+<% const tag = p.titleTag === "h3" ? "h3" : "h2"; %>
+<div class="<%= cls %> kw-ms kw-ms-pn<%= p.showNav ? " has-nav" : "" %>" role="region" aria-label="<%= p.label %>"<%- attrs %>>
+  <div class="kw-ms-pn-stage">
+    <ol class="kw-ms-pn-scenes"><% p.scenes.forEach((s, i) => { %>
+      <li class="kw-ms-pn-scene<%= i === 0 ? " is-active" : "" %><%= s.image ? " has-img" : "" %>" data-ms-scene>
+        <% if (s.image) { %><img class="kw-ms-pn-img" src="<%= s.image %>" alt="<%= s.imageAlt || "" %>" loading="<%= i === 0 ? "eager" : "lazy" %>" decoding="async"><% } %>
+        <div class="kw-ms-pn-copy"><<%= tag %> class="kw-ms-pn-title"><%= s.title %></<%= tag %>><% if (s.text) { %><p class="kw-ms-pn-text"><%= s.text %></p><% } %></div>
+      </li><% }) %>
+    </ol>
+  </div>
+</div>

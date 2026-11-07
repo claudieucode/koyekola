@@ -32,7 +32,7 @@ describe("registre et menu", () => {
       if (item.key === "sites") { assert.equal((await boss.get(item.href)).status, 200, item.href); continue; }
       const res = await boss.get(item.href);
       // Personnaliser est un écran plein cadre (aperçu du site) : il répond 200 mais n'est pas dans la coque du CMS
-      if (item.fullscreen) { assert.equal(res.status, 200, item.href); assert.match(res.text, /id="kwc-boot"/, `${item.href} : personnalisateur`); continue; }
+      if (item.fullscreen) { assert.equal(res.status, 200, item.href); assert.match(res.text, /id="pz-boot"/, `${item.href} : personnalisateur`); continue; }
       // ARTICLES-02 : « Ajouter un article » ouvre directement l'éditeur (redirection), il n'a plus d'écran dans la coque
       if (/\/articles\/ajouter(?:[?#]|$)/.test(item.href)) { assert.equal(res.status, 302, item.href); assert.match(res.location, /^\/formateur\/blog\/nouveau/); continue; }
       assert.equal(res.status, 200, item.href);

@@ -1,0 +1,41 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Listes de naissance et de cadeaux</h1>
+<p>Créez une liste, choisissez les produits que vous souhaitez et partagez un lien privé avec vos proches. Chacun voit ce qu'il reste à offrir ; un cadeau n'est compté qu'une fois payé.</p>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (mine.length) { %>
+<h2>Mes listes</h2>
+<ul class="sh-wish-list">
+  <% mine.forEach((l) => { %><li><a href="<%= shop.base %>/liste/<%= l.public_token %>/gerer"><%= l.title %></a><%= l.status === "closed" ? " (fermée)" : "" %></li><% }) %>
+</ul>
+<% } %>
+<h2>Créer une liste</h2>
+<form class="sh-form" method="post" action="<%= shop.base %>/listes">
+  <fieldset><legend>Votre liste</legend>
+    <label>Titre<input name="title" value="<%= values.title || "" %>" required maxlength="120" placeholder="Naissance de Léa"></label>
+    <label>Message d'accueil (facultatif)<textarea name="message" rows="3" maxlength="1000"><%= values.message || "" %></textarea></label>
+    <label>Date de l'événement (facultatif)<input type="date" name="event_date" value="<%= values.event_date || "" %>"></label>
+  </fieldset>
+  <% if (!shop.customer) { %>
+  <fieldset><legend>Pour retrouver votre liste</legend>
+    <label>Votre prénom (facultatif)<input name="owner_name" value="<%= values.owner_name || "" %>" maxlength="80" autocomplete="given-name"></label>
+    <label>Votre e-mail (recommandé : nous vous y envoyons le lien privé de gestion)<input type="email" name="owner_email" value="<%= values.owner_email || "" %>" maxlength="200" autocomplete="email"></label>
+  </fieldset>
+  <% } else { %><p>Connecté : <strong><%= shop.customer.email %></strong>. La liste sera rattachée à votre compte.</p><% } %>
+  <fieldset><legend>Livraison chez vous (facultatif)</legend>
+    <p>Votre adresse ne sera jamais affichée : elle n'est transmise qu'au vendeur quand un invité choisit de vous faire livrer.</p>
+    <label class="sh-check"><input type="checkbox" name="allow_recipient_delivery" value="1"<%= values.allow_recipient_delivery ? " checked" : "" %>> Proposer la livraison à mon adresse</label>
+    <label>Nom<input name="ship_name" value="<%= values.ship_name || "" %>" maxlength="120" autocomplete="name"></label>
+    <label>Adresse<input name="ship_line1" value="<%= values.ship_line1 || "" %>" maxlength="160" autocomplete="address-line1"></label>
+    <label>Complément<input name="ship_line2" value="<%= values.ship_line2 || "" %>" maxlength="160"></label>
+    <div class="sh-row">
+      <label>Code postal<input name="ship_postal_code" value="<%= values.ship_postal_code || "" %>" maxlength="20" autocomplete="postal-code"></label>
+      <label>Ville<input name="ship_city" value="<%= values.ship_city || "" %>" maxlength="100" autocomplete="address-level2"></label>
+    </div>
+    <div class="sh-row">
+      <label>Pays (code, ex. FR)<input name="ship_country" value="<%= values.ship_country || "" %>" maxlength="2" minlength="2" pattern="[A-Za-z]{2}" autocomplete="country"></label>
+      <label>Téléphone (facultatif)<input name="ship_phone" value="<%= values.ship_phone || "" %>" maxlength="30" autocomplete="tel"></label>
+    </div>
+  </fieldset>
+  <button class="sh-btn" type="submit">Créer ma liste</button>
+</form>
+<%- include("_bottom") %>

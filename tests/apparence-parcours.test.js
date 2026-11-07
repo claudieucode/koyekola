@@ -64,7 +64,7 @@ describe("parcours Templates → Éditeur → Patterns → Styles → publicatio
   test("4. Styles : le brouillon préparé par le pack est visible dans Styles ; le publier change le site (moteur et rendu)", async () => {
     const st = bootOf((await adminA.get(`${R}/styles?site=${A}`)).text, "st-data");
     assert.equal(st.values["tokens.colors.primary"], IDY("service-professionnel").colors.primary, "identité du pack dans le brouillon"); assert.equal(st.live["tokens.colors.primary"], "#0277b6", "version en ligne inchangée jusque-là");
-    const pub = json(await adminA.postJson(`${R}/personnaliser/publier?site=${A}`, { site: String(A), rev: st.draft.rev }));
+    const pub = json(await adminA.postJson(`${R}/styles/publier?site=${A}`, { site: String(A), rev: st.draft.rev }));
     assert.equal(pub.ok, true, JSON.stringify(pub));
     assert.equal(JSON.parse(one("SELECT tokens FROM mk_sites WHERE id = ?", A).tokens).colors.primary, IDY("service-professionnel").colors.primary);
     const st2 = bootOf((await adminA.get(`${R}/styles?site=${A}`)).text, "st-data"); assert.equal(st2.live["tokens.colors.primary"], IDY("service-professionnel").colors.primary); assert.equal(st2.draft.count, 0);
@@ -91,6 +91,6 @@ describe("parcours Templates → Éditeur → Patterns → Styles → publicatio
     assert.ok(hub.pages.some((p) => p.published), "l'état publié survit au rechargement");
     const lib = bootOf((await adminA.get(`${R}/templates?site=${A}`)).text, "tp-data"); assert.equal(lib.history.length, 1);
     assert.equal(siteB(), snapshotB, "le site B n'a pas changé");
-    assert.ok(one("SELECT COUNT(*) n FROM mk_audit_logs WHERE action IN ('template.imported','pattern.inserted','customizer.published','site_editor.published')").n >= 4, "chaque étape est journalisée");
+    assert.ok(one("SELECT COUNT(*) n FROM mk_audit_logs WHERE action IN ('template.imported','pattern.inserted','styles.published','site_editor.published')").n >= 4, "chaque étape est journalisée");
   });
 });

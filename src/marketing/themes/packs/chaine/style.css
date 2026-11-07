@@ -364,3 +364,6 @@ body.ch-js .ch-card[data-reveal].is-in{transition:opacity .5s ease,transform .5s
 .ch-nw{white-space:nowrap}@media (max-width:760px){.ch-stk--1{display:none}}
 .ch-off{display:none!important}
 .ch-404 .ch-h1{margin-bottom:.6em}
+/* Garde responsive : le bouton « S'abonner » ne dépasse jamais l'écran */
+@media (max-width:640px){.ch-sub{white-space:normal;max-width:100%;font-size:1.05rem;text-align:center}}
+.ch-sub-a,.ch-sub-b{min-width:0}

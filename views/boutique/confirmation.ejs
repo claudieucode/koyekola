@@ -8,7 +8,7 @@
 <form method="post" action="<%= shop.base %>/commande/<%= encodeURIComponent(order.number) %>/payer?k=<%= key %>"><button class="sh-btn sh-btn-primary" type="submit">Payer par carte</button></form>
 <% } %>
 <table class="sh-table"><thead><tr><th scope="col">Article</th><th scope="col">Qté</th><th scope="col">Total</th></tr></thead><tbody>
-<% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %><%= i.variant_label ? " (" + i.variant_label + ")" : "" %></th><td><%= i.quantity %></td><td><%= money(i.line_subtotal_cents - i.discount_cents) %></td></tr><% }) %>
+<% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %><%= i.variant_label ? " (" + i.variant_label + ")" : "" %><% if (i.custom_text) { %><br><small class="sh-custom"><%= i.custom_label || "Personnalisation" %> : « <%= i.custom_text %> »</small><% } %><% if (order.payment_status === "paid" && i.product_id && typeof reviewable !== "undefined" && reviewable.has(i.product_id)) { %><br><a class="sh-link" href="<%= shop.base %>/avis/<%= encodeURIComponent(order.number) %>/<%= i.product_id %>?k=<%= key %>">Donner mon avis</a><% } %></th><td><%= i.quantity %></td><td><%= money(i.line_subtotal_cents - i.discount_cents) %></td></tr><% }) %>
 </tbody></table>
 <dl class="sh-totals">
   <div><dt>Sous-total</dt><dd><%= money(order.subtotal_cents) %></dd></div>
@@ -17,6 +17,7 @@
   <% order.taxLines.forEach((t) => { %><div><dt><%= order.prices_include_tax ? "dont " : "" %><%= t.name %></dt><dd><%= money(t.amountCents) %></dd></div><% }) %>
   <div class="sh-total"><dt>Total</dt><dd><%= money(order.total_cents) %></dd></div>
 </dl>
+<% if (order.delivery_date) { %><p>Créneau de livraison : <strong><%= slotText %></strong></p><% } %>
 <% if (order.tracking_number) { %><p>Suivi du colis : <strong><%= order.tracking_number %></strong></p><% } %>
 <p><a class="sh-btn" href="<%= shop.base %>">Retour à la boutique</a></p>
 <%- include("_bottom") %>

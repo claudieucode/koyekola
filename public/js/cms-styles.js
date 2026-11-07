@@ -1,4 +1,4 @@
-// KOLAKISA CMS → Apparence → Styles : gestionnaire de styles globaux. Données = JSON #st-data posé par le serveur ; enregistrements = routes de Personnaliser
+// KOLAKISA CMS → Apparence → Styles : gestionnaire de styles globaux. Données = JSON #st-data posé par le serveur ; enregistrements = routes /site-web/styles/{rendu,brouillon,annuler,publier,restaurer}
 // (même brouillon, mêmes validations, même publication). Le serveur REVALIDE tout ; rien n'est annoncé comme réussi avant sa réponse.
 (function () {
   var root = document.querySelector("[data-st-root]");
@@ -192,7 +192,7 @@
     if (warnings.length) el.appendChild(h("p", { class: "field-hint", role: "status", text: "Contrôle du serveur : " + warnings.join(" ") }));
   }
   function renderHistory() {
-    body.appendChild(h("p", { class: "field-hint", text: "Publications faites depuis Styles ou Personnaliser. « Revenir en arrière » place les anciennes valeurs dans le brouillon : rien n'est publié tant que vous ne publiez pas." }));
+    body.appendChild(h("p", { class: "field-hint", text: "Publications faites depuis Styles. « Revenir en arrière » place les anciennes valeurs dans le brouillon : rien n'est publié tant que vous ne publiez pas." }));
     if (!boot.history.length) { body.appendChild(h("p", { class: "mk-st-empty", text: "Aucune publication enregistrée pour ce site." })); return; }
     var ul = h("ul", { class: "mk-st-versions" });
     boot.history.forEach(function (v) {
@@ -242,7 +242,7 @@
     ]));
   }
 
-  // ---------- Appels au serveur (routes de Personnaliser) ----------
+  // ---------- Appels au serveur ----------
   function post(path, bodyObj) {
     var payload = Object.assign({ site: boot.siteId === null ? "" : String(boot.siteId) }, bodyObj);
     return fetch(boot.base + path + boot.siteQuery, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(payload) })
@@ -267,7 +267,7 @@
       var id = matchError(e.message); if (id) { errors[id] = e.message; showError(id); } else showBanner(e.message); setState();
     });
   }
-  // Les réglages du brouillon qui ne font pas partie de Styles (identité, en-tête… faits dans Personnaliser) sont conservés tels quels dans l'aperçu et l'enregistrement
+  // Les réglages du brouillon qui ne font pas partie de cet écran (ajoutés par la Direction artistique, par exemple) sont conservés tels quels dans l'aperçu et l'enregistrement
   var outsideChanges = clone(boot.outside || {});
   function outside() { return outsideChanges; }
 
@@ -327,7 +327,7 @@
   function publish() {
     if (busy || !boot.can.publish || hasErrors() || pending() === 0 || conflict) return;
     var n = pending(), o = Object.keys(outside()).length;
-    if (!confirm("Publier " + n + " réglage" + (n > 1 ? "s" : "") + " de style sur le site « " + boot.siteName + " » ? Ils seront visibles par tous les visiteurs." + (o ? "\n\nLe brouillon contient aussi " + o + " réglage" + (o > 1 ? "s" : "") + " d'identité, d'en-tête ou de pied de page (Personnaliser) : ils seront publiés en même temps." : ""))) return;
+    if (!confirm("Publier " + n + " réglage" + (n > 1 ? "s" : "") + " de style sur le site « " + boot.siteName + " » ? Ils seront visibles par tous les visiteurs." + (o ? "\n\nLe brouillon contient aussi " + o + " réglage" + (o > 1 ? "s" : "") + " hors de cet écran (Direction artistique…) : ils seront publiés en même temps." : ""))) return;
     (dirty() ? saveDraft() : Promise.resolve(true)).then(function (ok) {
       if (!ok) return;
       busy = "publish"; setState();
@@ -348,7 +348,7 @@
   // ---------- Démarrage ----------
   if (boot.stale) showBanner("Le brouillon enregistré n'est plus applicable (" + boot.stale + ") : il est ignoré.");
   if (boot.readOnly) showBanner("Ce site est archivé ou supprimé : consultation seule.");
-  if (boot.outsideChanges) showBanner(boot.outsideChanges + " réglage" + (boot.outsideChanges > 1 ? "s" : "") + " du brouillon (identité, en-tête, pied de page…) se modifie dans Personnaliser ; ils sont conservés tels quels.");
+  if (boot.outsideChanges) showBanner(boot.outsideChanges + " réglage" + (boot.outsideChanges > 1 ? "s" : "") + " du brouillon hors de cet écran (Direction artistique…) sont conservés tels quels.");
   $("[data-st-loading]").hidden = true; $("[data-st-layout]").hidden = false;
   renderTabs(); renderBody(); renderGuide(); setState(); fit();
 })();

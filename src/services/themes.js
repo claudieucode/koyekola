@@ -253,7 +253,7 @@ function gallery(siteId, { q = "", category = "", style = "", state = "", sort =
   const items = all.map(({ manifest, meta }) => { const compatible = catalog.isCompatible(manifest); const st = stateOf(sid, manifest.key, compatible); return { ...meta, version: manifest.version, author: manifest.author, state: st, installed: st === "active" || st === "installed" || (st === "incompatible" && Boolean(rowOf(sid, manifest.key))), compatible, hasDemo: meta.pages.length > 0 }; });
   const needle = fold(q).trim();
   // Facettes : chaque compteur tient compte de TOUS les autres filtres (recherche, style, état, catégorie) sauf du sien, pour que le nombre affiché soit celui des résultats réels
-  const okQ = (t) => !needle || fold([t.name, t.description, t.categoryLabel, t.siteType, t.tags.join(" ")].join(" ")).includes(needle);
+  const okQ = (t) => !needle || fold([t.name, t.description, t.categoryLabel, t.collectionLabel || "", t.siteType, t.tags.join(" ")].join(" ")).includes(needle);
   const okStyle = (t) => !style || t.tags.includes(style);
   const okCat = (t) => !category || t.category === category;
   const okState = (t) => !state || (state === "installed" ? t.installed : t.state === state);
@@ -367,8 +367,8 @@ function setPackOptions(ctx, siteId, key, input, { reset = false } = {}) {
   const p = packs.get(String(key));
   if (!p || !(p.spec.options || []).length) throw new UserError("Ce thème n'a pas d'options de personnalisation.");
   if (activeKey(siteId) !== p.spec.key) throw new UserError(`Le thème « ${p.spec.name} » n'est pas le thème actif de ce site : activez-le d'abord.`);
-  const options = reset ? {} : packs.resolveOptions(p.spec, input || {});
   const before = currentTokens(ctx, siteId);
+  const options = reset ? {} : packs.resolveOptions(p.spec, input || {});
   applyTokens(ctx, siteId, { ...before, pack: { key: p.spec.key, options } }, `Options du thème « ${p.spec.name} »`);
   return { name: p.spec.name, options };
 }

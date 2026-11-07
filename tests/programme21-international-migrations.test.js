@@ -57,6 +57,7 @@ describe("migrations du programme 21 : additives, ordonnées, sans perte de donn
     for (const f of p21) {
       const sql = fs.readFileSync(path.join(MIGRATIONS, f), "utf8").split("\n").filter((l) => !/^\s*--/.test(l)).join("\n");
       // Seule exception documentée : 128 reconstruit mk_tb_templates/mk_tb_versions (SQLite ne sait pas retirer un NOT NULL) ; chaque ligne est recopiée AVANT le DROP
+      if (parseInt(f, 10) === 132) { assert.match(sql, /DROP TABLE IF EXISTS cms_customizer_shares[\s\S]*DROP TABLE IF EXISTS cms_theme_settings/i, "132 : retrait du module Personnaliser (tables propres au module uniquement)"); assert.doesNotMatch(sql, /DROP\s+TABLE\s+(IF EXISTS\s+)?(cms_customizer_drafts|cms_customizer_versions|mk_sites|cms_pages|cms_themes)\b/i, "132 : ne touche aucune table partagée"); continue; }
       if (parseInt(f, 10) === 128) { assert.match(sql, /INSERT INTO mk_tb_templates_r[\s\S]*SELECT[\s\S]*FROM mk_tb_templates;[\s\S]*INSERT INTO mk_tb_versions_r[\s\S]*FROM mk_tb_versions;[\s\S]*DROP TABLE mk_tb_versions;[\s\S]*DROP TABLE mk_tb_templates;/i, "128 : recopie avant suppression"); continue; }
       assert.doesNotMatch(sql, /\bDROP\s+(TABLE|COLUMN|INDEX)\b|\bDELETE\s+FROM\b|\bTRUNCATE\b|\bALTER\s+TABLE\s+\w+\s+DROP\b/i, `${f} : opération destructive`);
       assert.match(sql, /CREATE TABLE|ALTER TABLE|CREATE INDEX/i, f);

@@ -1,0 +1,5 @@
+<%# Onglets animés (widgets/motion-tabs.js). Variables : p, cls, attrs, isBuilder. Sans JavaScript : tous les panneaux sont lisibles, chacun avec son titre. public/js/motion-studio/tabs.js crée la liste d'onglets (rôles ARIA, clavier, indicateur). %>
+<% const items = Array.isArray(p.items) ? p.items : []; const look = ["line", "pills", "boxed"].includes(p.look) ? p.look : "line"; const vertical = p.orientation === "vertical"; const start = Math.max(1, Math.min(items.length || 1, Number(p.start) || 1)); %>
+<div class="<%= cls %> kw-ms kw-ms-d kw-ms-tabs kw-ms-tabs-<%= look %><%= vertical ? " is-vertical" : "" %>" data-kw-ms-label="<%= p.label %>" data-kw-ms-start="<%= start %>"<%- attrs %>>
+  <div class="kw-ms-tabs-panels"><% items.forEach((it, i) => { %><section class="kw-ms-tabs-panel"><h3 class="kw-ms-tabs-title"><%= it.title %></h3><div class="kw-ms-tabs-body"><% String(it.text || "").split(/\n{2,}/).forEach((para) => { if (para.trim()) { %><p><%= para.trim() %></p><% } }) %></div></section><% }) %></div>
+</div>

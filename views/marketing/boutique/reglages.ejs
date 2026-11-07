@@ -9,6 +9,8 @@
   <div class="field-group"><label for="r-mail">Adresse notifiée à chaque nouvelle commande</label><input id="r-mail" name="notify_email" type="email" value="<%= st.notify_email || "" %>"<%= dis %>></div>
   <div class="field-group"><label for="r-low">Seuil de stock bas</label><input id="r-low" name="low_stock_threshold" type="number" min="0" value="<%= st.low_stock_threshold %>"<%= dis %>></div>
   <div class="field-group"><label><input type="checkbox" name="guest_checkout" value="1"<%= st.guest_checkout ? " checked" : "" %><%= dis %>> Autoriser la commande sans compte</label></div>
+  <div class="field-group"><label><input type="checkbox" name="reviews_enabled" value="1"<%= st.reviews_enabled ? " checked" : "" %><%= dis %>> Autoriser les avis des clients ayant acheté le produit</label></div>
+  <div class="field-group"><label><input type="checkbox" name="reviews_auto_publish" value="1"<%= st.reviews_auto_publish ? " checked" : "" %><%= dis %>> Publier les avis sans relecture (sinon vous les validez dans l'onglet Avis)</label></div>
   <div class="field-group"><label><input type="checkbox" name="tax_enabled" value="1"<%= st.tax_enabled ? " checked" : "" %><%= dis %>> Appliquer les taxes configurées ci-dessous</label></div>
   <div class="field-group"><label><input type="checkbox" name="prices_include_tax" value="1"<%= st.prices_include_tax ? " checked" : "" %><%= dis %>> Les prix saisis incluent les taxes</label></div>
   <fieldset><legend>Moyens de paiement</legend>
@@ -19,10 +21,29 @@
   <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
 </form>
 
+<% if (typeof slots !== "undefined") { %>
+<section class="mk-panel" id="creneaux"><h2>Créneaux de livraison</h2>
+  <p class="field-hint">Créneaux récurrents proposés au client quand la méthode de livraison choisie exige un créneau (cochez « Exige un créneau » sur la méthode, dans la section Livraison). Seuls les créneaux ayant encore de la place, après le délai minimum et dans l'horizon, sont proposés. Les heures sont celles du serveur.</p>
+  <% if (!slots.length) { %><p>Aucun créneau défini.</p><% } else { %><ul class="mk-list"><% slots.forEach((c) => { %><li><strong><%= c.label || "Créneau" %></strong> — <%= c.weekdays.map((d) => ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"][d]).join(", ") %>, <%= c.start_time %>–<%= c.end_time %> · <%= c.capacity %> commande(s) max · délai <%= c.min_notice_hours %> h · horizon <%= c.horizon_days %> j<%= c.excluded.length ? " · exclus : " + c.excluded.join(", ") : "" %> · <%= c.active ? "actif" : "en pause" %>
+    <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/creneaux/<%= c.id %>/etat"><% if (!c.active) { %><input type="hidden" name="actif" value="1"><% } %><button class="btn btn-ghost btn-sm" type="submit"><%= c.active ? "Mettre en pause" : "Réactiver" %></button></form>
+    <form class="mk-inline-form" method="post" action="<%= base %>/creneaux/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer ce créneau ? Les commandes déjà passées gardent leur créneau." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } %>
+  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/creneaux">
+    <div class="field-group"><label for="cs-l">Nom (facultatif)</label><input id="cs-l" name="label" maxlength="60" placeholder="Livraison réfrigérée"></div>
+    <fieldset><legend>Jours</legend><% ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"].forEach((d, i) => { %><label class="mk-check"><input type="checkbox" name="weekdays" value="<%= i + 1 %>"> <%= d %></label> <% }) %></fieldset>
+    <div class="field-group"><label for="cs-s">De</label><input id="cs-s" name="start_time" type="time" required></div>
+    <div class="field-group"><label for="cs-e">À</label><input id="cs-e" name="end_time" type="time" required></div>
+    <div class="field-group"><label for="cs-c">Commandes max par créneau</label><input id="cs-c" name="capacity" type="number" min="1" max="1000" required></div>
+    <div class="field-group"><label for="cs-n">Délai minimum (heures)</label><input id="cs-n" name="min_notice_hours" type="number" min="0" max="720" value="24"></div>
+    <div class="field-group"><label for="cs-h">Horizon (jours)</label><input id="cs-h" name="horizon_days" type="number" min="1" max="90" value="14"></div>
+    <div class="field-group"><label for="cs-x">Jours exclus (AAAA-MM-JJ, séparés par des virgules)</label><input id="cs-x" name="excluded_dates" placeholder="2026-12-25, 2027-01-01"></div>
+    <button class="btn btn-primary btn-sm" type="submit">Ajouter le créneau</button></form><% } %>
+</section>
+<% } %>
 <section class="mk-panel" id="livraison"><h2>Livraison</h2>
   <p class="field-hint">Une zone liste des pays (codes ISO, ex. « FR, BE ») ; une zone sans pays vaut « tous les pays ». Sans zone correspondante, la livraison est refusée pour ce pays.</p>
   <% zones.forEach((z) => { %><div class="mk-callout"><span><strong><%= z.name %></strong> — <%= z.countries.length ? z.countries.join(", ") : "tous les pays" %>
-    <ul><% z.methods.forEach((m) => { %><li><%= m.name %> — <%= { flat: "forfait", free_over: "gratuite dès", weight: "selon le poids" }[m.kind] %> <%= m.kind === "free_over" ? money(m.min_subtotal_cents) : money(m.cost_cents) %><% if (m.min_weight_grams != null || m.max_weight_grams != null) { %> (<%= m.min_weight_grams ?? 0 %>–<%= m.max_weight_grams ?? "∞" %> g)<% } %>
+    <ul><% z.methods.forEach((m) => { %><li><%= m.name %> — <%= { flat: "forfait", free_over: "gratuite dès", weight: "selon le poids" }[m.kind] %> <%= m.kind === "free_over" ? money(m.min_subtotal_cents) : money(m.cost_cents) %><% if (m.min_weight_grams != null || m.max_weight_grams != null) { %> (<%= m.min_weight_grams ?? 0 %>–<%= m.max_weight_grams ?? "∞" %> g)<% } %><%= m.requires_slot ? " — exige un créneau" : "" %>
+      <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/methodes/<%= m.id %>/creneau"><label><input type="checkbox" name="requires_slot" value="1"<%= m.requires_slot ? " checked" : "" %>> Exige un créneau</label> <button class="btn btn-ghost btn-sm" type="submit">Appliquer</button></form><% } %>
       <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/methodes/<%= m.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul>
     <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones/<%= z.id %>/methodes">
       <div class="field-group"><label for="m-n<%= z.id %>">Nom</label><input id="m-n<%= z.id %>" name="name" required></div>
@@ -31,6 +52,7 @@
       <div class="field-group"><label for="m-m<%= z.id %>">Montant minimal</label><input id="m-m<%= z.id %>" name="min_subtotal" inputmode="decimal"></div>
       <div class="field-group"><label for="m-w1<%= z.id %>">Poids min (g)</label><input id="m-w1<%= z.id %>" name="min_weight_grams" type="number" min="0"></div>
       <div class="field-group"><label for="m-w2<%= z.id %>">Poids max (g)</label><input id="m-w2<%= z.id %>" name="max_weight_grams" type="number" min="0"></div>
+      <div class="field-group"><label><input type="checkbox" name="requires_slot" value="1"> Exige un créneau de livraison (ex. livraison réfrigérée)</label></div>
       <button class="btn btn-outline btn-sm" type="submit">Ajouter la méthode</button></form>
     <form method="post" action="<%= base %>/livraison/zones/<%= z.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer la zone et ses méthodes ?" data-mk-confirm-ok="Supprimer">Supprimer la zone</button></form><% } %></span></div><% }) %>
   <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones"><div class="field-group"><label for="z-n">Nouvelle zone</label><input id="z-n" name="name" required placeholder="France"></div><div class="field-group"><label for="z-c">Pays (codes)</label><input id="z-c" name="countries" placeholder="FR, BE"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>

@@ -17,19 +17,22 @@
 
 const MODES = ["static", "sticky", "fixed", "overlay"];
 const FX = ["shrink", "solid", "both"];
+const LEGACY_FX = [...FX, "hide"]; // ancien format : « hide » = l'en-tête se cache en descendant (réglage historique, conservé tel quel)
 const DEVICES = ["desktop", "tablet", "mobile"];
 
 const int = (v, min, max, dflt) => { const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n))) : dflt; };
 const bool = (v) => v === true || v === "true" || v === 1 || v === "1";
 
 // Valide un bloc brut (venant de l'éditeur ou d'un import) : valeurs inconnues ignorées, bornes appliquées.
-function normalize(raw) {
+function normalize(raw, { legacy = false } = {}) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const mode = MODES.includes(raw.mode) ? raw.mode : "static";
-  const fx = FX.includes(raw.fx) ? raw.fx : "";
+  // Bloc `header` : « masquer » est le réglage hideOnScroll (un effet « hide » reçu est converti) ; ancien format : « hide » reste un effet, comme avant
+  const converted = !legacy && raw.fx === "hide";
+  const fx = (legacy ? LEGACY_FX : FX).includes(raw.fx) ? raw.fx : "";
   const stickOn = Array.isArray(raw.stickOn) ? DEVICES.filter((d) => raw.stickOn.includes(d)) : DEVICES.slice();
   const shrink = raw.shrink && typeof raw.shrink === "object" ? { height: int(raw.shrink.height, 24, 120, 32) } : { height: 32 };
-  const hide = raw.hideOnScroll && typeof raw.hideOnScroll === "object" ? { enabled: bool(raw.hideOnScroll.enabled), tolerance: int(raw.hideOnScroll.tolerance, 0, 100, 8) } : { enabled: false, tolerance: 8 };
+  const hide = converted ? { enabled: true, tolerance: 6 } : raw.hideOnScroll && typeof raw.hideOnScroll === "object" ? { enabled: bool(raw.hideOnScroll.enabled), tolerance: int(raw.hideOnScroll.tolerance, 0, 100, 8) } : { enabled: false, tolerance: 8 };
   return {
     v: 1, mode, fx: mode === "static" ? "" : fx,
     threshold: int(raw.threshold, 0, 1000, 8), offset: int(raw.offset, 0, 200, 0), zIndex: int(raw.zIndex, 1, 100, 60),
@@ -41,9 +44,9 @@ function normalize(raw) {
 function legacyOf(section) {
   const first = section && Array.isArray(section.children) ? section.children[0] : null;
   const pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
-  const fx = first && first.props && FX.includes(first.props.headerFx) ? first.props.headerFx : "";
+  const fx = first && first.props && LEGACY_FX.includes(first.props.headerFx) ? first.props.headerFx : "";
   const mode = pos === "sticky" ? "sticky" : pos === "absolute" ? "overlay" : "static";
-  return normalize({ mode, fx: mode === "static" ? "" : fx });
+  return normalize({ mode, fx: mode === "static" ? "" : fx }, { legacy: true });
 }
 
 // Réglages effectifs d'une section d'en-tête : le bloc `header` s'il existe, sinon l'ancien format.
@@ -66,11 +69,12 @@ function classes(section) {
 //  - data-kw-threshold : seuil de défilement en px (écrit seulement s'il diffère de 8)
 //  - data-kw-hide, data-kw-hide-tol : masquage en descendant, réapparition en remontant (tolérance en px)
 //  - style : --kw-hdr-top (décalage), --kw-hdr-z (empilement), --kw-hdr-shrink (hauteur du logo réduit)
+const hasAlt = (list) => (list || []).some((c) => c && ((["sitelogo", "sitetitle"].includes(c.type) && c.props && (c.props.scrollHeight || c.props.scrollText)) || hasAlt(c.children)));
 function dataAttrs(section) {
   const h = resolve(section);
   const a = {};
   if (h.mode === "static") return a;
-  a["data-kw-scroll"] = h.fx || "watch";
+  a["data-kw-scroll"] = h.fx || (section && hasAlt(section.children) ? "track" : "watch"); // « track » : un logo ou un titre alternatif au défilement a besoin de l'état défilé
   if (h.threshold !== 8) a["data-kw-threshold"] = String(h.threshold);
   if (h.hideOnScroll.enabled) { a["data-kw-hide"] = "1"; a["data-kw-hide-tol"] = String(h.hideOnScroll.tolerance); }
   const vars = [];

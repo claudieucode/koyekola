@@ -25,7 +25,7 @@ const sha = (buffer) => crypto.createHash("sha256").update(buffer).digest("hex")
 const SHA = /^[0-9a-f]{64}$/;
 const ORIGIN = /^\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?(?:\d{4}\/(?:0[1-9]|1[0-2])\/)?[A-Za-z0-9][A-Za-z0-9_.-]{0,150}$/;
 const REFS = /\/uploads\/marketing\/\d{1,9}\/(?:site-\d{1,9}\/)?[A-Za-z0-9][A-Za-z0-9_.-]{0,150}/g;
-const LIMITS = { image: media.MAX_IMAGE, pdf: media.MAX_DOCUMENT, document: media.MAX_DOCUMENT, audio: media.MAX_AUDIO, video: media.MAX_VIDEO };
+const LIMITS = { image: media.MAX_IMAGE, pdf: media.MAX_DOCUMENT, document: media.MAX_DOCUMENT, audio: media.MAX_AUDIO, video: media.MAX_VIDEO, lottie: media.MAX_LOTTIE };
 const fail = (message) => Object.assign(new Error(message), { user: true });
 
 // Contexte de média de CE site : un accès limité ne voit que son site ; l'équipe, le site choisi + les médias communs

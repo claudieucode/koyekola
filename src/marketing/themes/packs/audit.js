@@ -33,7 +33,7 @@ function auditPack(spec) {
         if (h.startsWith("#")) continue;
         if (/^https:\/\//.test(h) || h.startsWith("mailto:")) continue;
         const slug = h.replace(/^\//, "").split(/[?#]/)[0];
-        if (!(SYSTEM_PATHS.has(h.split(/[?#]/)[0]) || pageKeys.has(slug))) problems.push(`${at} : lien mort « ${h} »`);
+        if (!(SYSTEM_PATHS.has(h.split(/[?#]/)[0]) || /^\/boutique(\/[a-z0-9\/-]*)?$/.test(h.split(/[?#]/)[0]) || pageKeys.has(slug))) problems.push(`${at} : lien mort « ${h} »`);
       }
       for (const m of html.matchAll(/<img\b[^>]*>/g)) if (!/\balt="/.test(m[0])) problems.push(`${at} : image sans texte alternatif`);
       h1 += (html.match(/aria-level="1"/g) || []).length;
@@ -41,6 +41,13 @@ function auditPack(spec) {
     const nativeH1 = JSON.stringify(sections).includes('"level":"1"') ? 1 : 0;
     if (h1 + nativeH1 !== 1) problems.push(`${at} : ${h1 + nativeH1} titre(s) de niveau 1 (il en faut exactement un)`);
   }
+  // Règle permanente « responsive » : la feuille de styles du thème doit s'adapter aux petits écrans (au moins une règle @media sur la largeur maximale) et ne pas
+  // imposer de largeur fixe supérieure à celle d'un petit mobile (320 px) à un conteneur sans largeur maximale.
+  try {
+    const css = (packs.get(spec.key) || {}).css || "";
+    if (css && !/@media[^{]*max-width/i.test(css)) problems.push(`${spec.key} : aucune règle @media (max-width: …) — le thème n'est pas adapté aux petits écrans`);
+    if (css && !/@media[^{]*prefers-reduced-motion/i.test(css) && /@keyframes/i.test(css)) problems.push(`${spec.key} : animations sans règle prefers-reduced-motion`);
+  } catch { /* la feuille de styles est contrôlée par le chargement du paquet */ }
   return problems;
 }
 

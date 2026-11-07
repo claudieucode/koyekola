@@ -1,0 +1,18 @@
+<%# Histoire collante (widgets/motion-sticky-story.js). Variables : p, cls, attrs, isBuilder. Sans JavaScript, en mouvement réduit ou sur petit écran : chaque étape est suivie de son visuel.
+    Sur grand écran avec JavaScript : la colonne .kw-ms-ss-stage (copie décorative, aria-hidden) reste collée et montre le visuel de l'étape en cours. %>
+<% const tag = ["h2", "h3", "h4"].includes(p.titleTag) ? p.titleTag : "h3"; const num = (i) => String(i + 1).padStart(2, "0"); %>
+<div class="<%= cls %> kw-ms kw-ms-ss is-side-<%= p.side === "left" ? "left" : "right" %><%= p.dimInactive ? " is-dim" : "" %>"<%- attrs %>>
+  <ol class="kw-ms-ss-steps"><% p.steps.forEach((s, i) => { %>
+    <li class="kw-ms-ss-step" data-ms-step>
+      <% if (s.kicker) { %><p class="kw-ms-ss-kicker"><%= s.kicker %></p><% } %>
+      <<%= tag %> class="kw-ms-ss-title"><%= s.title %></<%= tag %>>
+      <% if (s.text) { %><p class="kw-ms-ss-text"><%= s.text %></p><% } %>
+      <% if (s.image) { %><img class="kw-ms-ss-inline" src="<%= s.image %>" alt="<%= s.imageAlt || "" %>" loading="lazy" decoding="async"><% } %>
+    </li><% }) %>
+  </ol>
+  <div class="kw-ms-ss-stage" aria-hidden="true">
+    <div class="kw-ms-ss-frame"><% p.steps.forEach((s, i) => { %>
+      <figure class="kw-ms-ss-fig<%= i === 0 ? " is-active" : "" %>" data-ms-fig><% if (s.image) { %><img class="kw-ms-ss-img" src="<%= s.image %>" alt="" loading="<%= i === 0 ? "eager" : "lazy" %>" decoding="async"><% } else { %><span class="kw-ms-ss-num"><%= num(i) %></span><% } %></figure><% }) %>
+    </div>
+  </div>
+</div>

@@ -14,7 +14,7 @@
     <tbody>
     <% priced.lines.forEach((l) => { %>
       <tr>
-        <th scope="row"><a href="<%= shop.base %>/produit/<%= encodeURIComponent(l.slug) %>"><%= l.name %></a><% if (l.variantLabel) { %><br><small><%= l.variantLabel %></small><% } %></th>
+        <th scope="row"><a href="<%= shop.base %>/produit/<%= encodeURIComponent(l.slug) %>"><%= l.name %></a><% if (l.variantLabel) { %><br><small><%= l.variantLabel %></small><% } %><% if (typeof gifts !== "undefined" && gifts[l.itemId]) { %><br><small class="sh-custom">Cadeau pour la liste « <%= gifts[l.itemId] %> »</small><% } %><% if (l.customText) { %><br><small class="sh-custom"><%= l.customLabel %> : « <%= l.customText %> »</small><% } %></th>
         <td data-label="Prix unitaire"><% if (l.onSale) { %><s class="sh-old"><%= money(l.regularCents) %></s> <% } %><%= money(l.unitCents) %></td>
         <td data-label="Quantité">
           <form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= l.itemId %>">

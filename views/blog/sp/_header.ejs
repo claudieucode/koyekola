@@ -1,0 +1,30 @@
+<%# Zone de titre d'un article : éléments dans l'ordre et avec la visibilité choisis (Personnalisation → Publication unique). Aucune donnée fictive : un élément sans valeur n'est pas rendu. %>
+<% const ta = sp.titleArea; const sep = sp.meta.separator; %>
+<% if (!ta.enabled) { %>
+<h1 class="sr-only post-title" data-sp-title-hidden><%= post.title %></h1>
+<% } else { %>
+<header class="article-header sp-header" data-sp-align="<%= ta.align %>">
+  <% ta.items.forEach((it) => { if (!it.visible) return; %>
+    <% if (it.id === "breadcrumb") { %><div class="sp-breadcrumb"><%- include("../../partials/breadcrumb", { crumbs }) %></div>
+    <% } else if (it.id === "categories") { %>
+      <% if (postTerms.primary) { %><a class="article-category" href="<%= postTerms.primary.url %>"><%= postTerms.primary.name %></a><% } else if (post.category) { %><a class="article-category" href="<%= termUrl("category", categorySlug) %>"><%= post.category %></a><% } %>
+    <% } else if (it.id === "title") { %><h1 class="post-title"><%= post.title %></h1>
+    <% } else if (it.id === "excerpt") { %>
+      <% if (post.excerpt) { const words = String(post.excerpt).split(/\s+/); const cut = words.length > ta.excerptWords; %><p class="article-lead"><%= cut ? words.slice(0, ta.excerptWords).join(" ") + "…" : post.excerpt %></p><% } %>
+    <% } else if (it.id === "meta") { %>
+      <% if (spMeta.length) { %><p class="post-meta article-meta">
+        <% spMeta.forEach((m, i) => { %><% if (i > 0 && sep !== "none") { %><span class="sp-sep" aria-hidden="true"><%= sep %></span> <% } %>
+          <% if (m.id === "date") { %><time datetime="<%= m.iso %>"><%= m.text %></time>
+          <% } else if (m.id === "author") { %><span class="sp-author"><% if (sp.author.avatar && m.avatar) { %><img class="sp-avatar" src="<%= m.avatar %>" alt="" width="24" height="24" loading="lazy"> <% } %><%= sp.author.prefix ? sp.author.prefix + " " : "" %><% if (sp.author.link) { %><a href="<%= m.url %>"><%= m.name %></a><% } else { %><%= m.name %><% } %></span>
+          <% } else if (m.id === "readtime") { %><span class="article-minutes"><%- icon("clock", { size: 14 }) %> <%= m.text %></span>
+          <% } else if (m.id === "updated") { %><span class="sp-updated">Mis à jour le <time datetime="<%= m.iso %>"><%= m.text %></time></span>
+          <% } else if (m.id === "comments") { %><a class="sp-comment-count" href="#commentaires"><%= m.text %></a>
+          <% } else if (m.id === "taxonomies") { %><span class="sp-terms"><% m.items.forEach((t, j) => { %><%= j ? ", " : "" %><a href="<%= t.url %>"><%= t.name %></a><% }) %></span><% } %>
+        <% }) %>
+      </p><% } %>
+    <% } else if (it.id === "image") { %>
+      <% if (post.cover_path) { %><figure class="article-cover"><img class="post-cover" src="<%= post.cover_path %>" alt="<%= post.cover_alt || post.title %>" width="1200" height="675" fetchpriority="high" decoding="async"></figure><% } %>
+    <% } %>
+  <% }) %>
+</header>
+<% } %>

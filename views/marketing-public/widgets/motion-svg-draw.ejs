@@ -1,0 +1,6 @@
+<%# Tracé SVG animé (widgets/motion-svg-draw.js). Variables : p, cls, attrs, d (SVG nettoyé par le serveur : viewBox + markup reconstruit depuis une liste blanche). Sans JavaScript : le tracé est affiché en entier. %>
+<% const A = ["left", "right"].includes(p.align) ? p.align : "center"; const W = Number(p.width) || 320; %>
+<div class="<%= cls %> kw-ms kw-ms-sd is-<%= A %>"<%- attrs %>>
+<% if (d && d.ok) { %><svg class="kw-ms-sd-svg" viewBox="<%= d.viewBox %>" width="<%= W %>" fill="none" stroke="currentColor" stroke-width="<%= p.strokeWidth || 4 %>" stroke-linecap="<%= ["round", "butt", "square"].includes(p.cap) ? p.cap : "round" %>" stroke-linejoin="round"<% if (p.alt) { %> role="img" aria-label="<%= p.alt %>"<% } else { %> aria-hidden="true"<% } %> focusable="false"><%- d.markup %></svg>
+<% } else if (isBuilder) { %><p class="kw-ms-vempty"><%= d && d.error ? d.error : "Choisissez une forme ou collez un SVG." %></p><% } %>
+</div>

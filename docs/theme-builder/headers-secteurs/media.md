@@ -1,0 +1,26 @@
+# En-têtes du secteur « media » (Médias, magazines, culture et portfolios)
+
+Fichier : `src/themeBuilder/catalog/header/sectors/media.js` (clés `media-01` à `media-10`, qui remplacent les 10 modèles hérités, jumeaux les uns des autres).
+Zone visuelle : édition et presse (serifs de titrage, condensées, mono), filets, rubriques, date ; composition par aplats et dégradés natifs, aucune image factice.
+Tous les textes d'annonce sont des consignes à remplacer. Menus = menu affecté à « En-tête ». Boutons vers `/blog` et `/contact`.
+
+## Matrice de conception
+
+| Clé | Nom | Direction artistique | Composition (silhouette) | Palette (fond / texte / accent / secondaire) | Typographie (titres / texte) | Navigation | Composants | Animations | Comportement au défilement | Responsive |
+|---|---|---|---|---|---|---|---|---|---|---|
+| media-01 | Le Courrier | Mât de magazine classique | 3 rangées centrées : bandeau date/accroche/réseaux, titre monumental entre filets épais (4 px), rubriques centrées + bouton | crème, encre, rouge brique, sable | Playfair Display 900 / Lora | soulignée (se révèle au survol), capitales espacées | monument fluide, date, réseaux, bouton | reveal du titre, fade-in du menu, survol « lift » | statique | titre fluide dès 320 px ; menu replié ; date et réseaux masqués sur mobile |
+| media-02 | Dépêche Direct | Journal en ligne à ticker | pastille « En direct » + ticker rouge pleine largeur, rangée marque/date/recherche/bouton, onglets sous filet épais | blanc, bleu nuit, rouge, gris clair | Oswald 700 / IBM Plex Sans Condensed | onglets (filet haut) | ticker natif (pause survol/clavier), recherche, date | slide-in-left du nom, survol « push » | collant | ticker en pile sur tablette/mobile ; menu replié ; date masquée |
+| media-03 | Pivoine | Magazine mode / lifestyle | liseré dégradé + capsule flottante arrondie (médaillon dégradé, marque italique, pilules, recherche, bouton) | rose poudré, prune, rose vif, blanc | Bodoni Moda italique / DM Sans | pilules qui se remplissent | disque dégradé, liseré dégradé, recherche | zoom-in, survol « grow » | collant | capsule aux angles adoucis, menu replié, recherche pleine largeur |
+| media-04 | Fréquence Noire | Webzine culture / musique | bloc de marque plein collé au bord gauche, bandeau incliné, rubriques mono, date + bouton, filet dégradé | noir, blanc cassé, jaune acide, gris | Anton / Space Mono | monospace, souligné au survol | slab plein, bandeau incliné, date | slide-in-left, survol « push » | se réduit | bandeau incliné masqué ≤ tablette ; grille 2 colonnes sur mobile |
+| media-05 | Onde Courte | Radio / podcast | disque dégradé + marque, égaliseur de 12 barres, pastille « En direct » + bouton ; bande de pilules et réseaux | marine, lavande, rose, violet foncé | Righteous / DM Sans | pilules | égaliseur, disque, pastille, réseaux | fade-in-up en cascade (barres), survol « pulse » | collant | égaliseur masqué ≤ tablette ; menu replié |
+| media-06 | Saison Pourpre | Théâtre / lieu à programmation | bande d'infos pratiques, grand nom à gauche + mosaïque de cases dorées + bouton « Réserver », liseré dégradé | bordeaux, crème, or, prune | Gloock / Newsreader | mosaïque de cases (bordure or) | infos pratiques (consignes), mosaïque, bouton | fade-in-up, survol « lift » | statique | infos masquées sur mobile ; grille repliée |
+| media-07 | Vernissage | Galerie d'art contemporain | 3 colonnes hautes à filets verticaux (marque + exposition / rubriques empilées / date + réseaux + bouton), filet haut orange épais | blanc, noir, orange, gris | Syne 700 / Space Mono | verticale (toujours visible) | menu vertical, date, réseaux, bouton contour | fade-in | collant | 2 colonnes en tablette, 1 en mobile |
+| media-08 | Chambre Claire | Portfolio photographe minimal | une ligne fine : marque italique minuscule, date, bouton « Index » | papier, noir, noir, gris | Instrument Serif / DM Mono | menu plein écran numéroté (ordinateur et mobile) | fsMenu (Motion Studio) | fade-in, préréglage « fade » du panneau | se cache en descendant | identique sur mobile (déjà plein écran) |
+| media-09 | Carnet Ocre | Blog personnel éditorial | grande marque italique + accroche à gauche ; rubriques fines, réseaux et bouton souligné à droite ; double filet | papier ocre, brun, terre cuite, sable | Fraunces 600 italique / Newsreader | fine, soulignement progressif | accroche, réseaux, bouton « ligne » | fade-in-up, survol « float » | statique | une colonne en tablette ; menu replié |
+| media-10 | Écran Rouge | Chaîne vidéo / créateur | pavé de marque rouge arrondi, recherche large, compte + abonnement ; rangée de puces | noir, blanc, rouge, gris | Archivo Black / Inter | puces (inversées au survol) | recherche, compte, bouton pilule | fade-in-up, survol « pop » | collant | recherche pleine largeur, menu replié |
+
+## Limites connues
+
+* Menu vertical de `media-07` : toujours visible (le contrat dispense le menu vertical du repli mobile).
+* `media-08` : l'aperçu du menu plein écran dans la bibliothèque est à plat (correction moteur faite par un autre agent) ; le panneau se teste sur la page publiée.
+* Pas de numérotation des liens du menu de rangée, pas de grille à colonnes pour la mosaïque (cf. contrat).

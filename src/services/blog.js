@@ -109,10 +109,20 @@ function similar(post, limit = 3, scope = null) {
   return [...relevant, ...rest].slice(0, limit).map((s) => card(s.p));
 }
 
-// Précédent = plus ancien, suivant = plus récent (ordre de publication)
-function neighbours(post, scope = null) {
+// Candidats aux « publications similaires » : articles publiés du même périmètre (le tri et le score sont faits par services/singlePost)
+function relatedCandidates(post, scope = null, limit = 300) {
+  return db.prepare(`SELECT ${postColumns.listColumns()} FROM posts WHERE published = 1 AND id != ?${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT ?`).all(post.id, ...(scope ? scope.params : []), limit).map(postColumns.withLazyContent);
+}
+// Articles récents d'un auteur (boîte d'auteur), l'article courant exclu
+function authorRecent(authorId, exceptId, limit, scope = null) {
+  if (!authorId || !limit) return [];
+  return db.prepare(`SELECT * FROM posts WHERE published = 1 AND id != ? AND author_id = ?${scope ? " AND " + scope.sql : ""} ORDER BY published_at DESC, id DESC LIMIT ?`).all(exceptId, authorId, ...(scope ? scope.params : []), Math.min(5, limit)).map(card);
+}
+// Précédent = plus ancien, suivant = plus récent (ordre de publication) ; categoryOnly : seulement dans la catégorie de l'article
+function neighbours(post, scope = null, { categoryOnly = false } = {}) {
   if (!post.published || !post.published_at) return { previous: null, next: null };
-  const extra = scope ? " AND " + scope.sql : "", sp = scope ? scope.params : [];
+  const catSql = categoryOnly && post.category ? " AND category = ?" : "", catArgs = categoryOnly && post.category ? [post.category] : [];
+  const extra = (scope ? " AND " + scope.sql : "") + catSql, sp = [...(scope ? scope.params : []), ...catArgs];
   const previous = db.prepare(`SELECT * FROM posts WHERE published = 1 AND (published_at < ? OR (published_at = ? AND id < ?))${extra} ORDER BY published_at DESC, id DESC LIMIT 1`).get(post.published_at, post.published_at, post.id, ...sp);
   const next = db.prepare(`SELECT * FROM posts WHERE published = 1 AND (published_at > ? OR (published_at = ? AND id > ?))${extra} ORDER BY published_at ASC, id ASC LIMIT 1`).get(post.published_at, post.published_at, post.id, ...sp);
   return { previous: previous ? card(previous) : null, next: next ? card(next) : null };
@@ -454,7 +464,7 @@ module.exports = {
   imageVariants, rememberVariants, variantCacheSize: () => variantCache.size, VARIANT_CACHE_MAX,
   listComments, countComments, getComment, deleteComment, COMMENT_MAX,
   STATUSES, parseTags, excerptOf, textOf, clearPlainCache, categories, categoryBySlug, subcategories, allTags, canonicalCategory, canonicalSubcategory, canonicalTags,
-  popular, recent, similar, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled, uniqueSlug,
+  popular, recent, similar, relatedCandidates, authorRecent, neighbours, authorOf, instructors, courseCard, renderPost, countView, card, promoteScheduled, uniqueSlug,
   addRevision, describeChange, revisionKind, revisionFingerprint, listRevisions, countRevisions, getRevision, metaOf, revisionImages, releaseImage, REVISION_META, RESTORED_META, REVISION_KINDS, MAX_REVISIONS, getAutosave, setAutosave, clearAutosave,
   listMedia, addMedia, getMedia, mediaByPath, updateMedia, mediaUsage, imageReferences, searchLinks, suggestLinks, PAGES,
 };

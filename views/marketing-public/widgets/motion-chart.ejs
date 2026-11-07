@@ -1,0 +1,34 @@
+<%# Graphique animé (widgets/motion-chart.js). Variables : p, cls, attrs, isBuilder. Graphique FINAL et tableau de données écrits ici ; public/js/motion-studio/chart.js les anime. %>
+<% const TONES = ["primary", "secondary", "accent", "success", "warning", "error"]; const CYCLE = ["primary", "accent", "secondary", "success", "warning", "error"];
+   const type = ["bar", "line", "donut"].includes(p.type) ? p.type : "bar"; const tone = TONES.includes(p.tone) ? p.tone : "primary"; const dec = [0, 1, 2].includes(Number(p.decimals)) ? Number(p.decimals) : 0; const unit = p.unit || "";
+   const items = (Array.isArray(p.items) ? p.items : []).map((it) => ({ label: String(it.label || ""), value: Math.max(0, Number(it.value) || 0) })); const n = items.length;
+   const nf = (x) => Number(x).toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+   const round = (x) => Math.round(x * 100) / 100; const maxV = Math.max(0, ...items.map((i) => i.value)); const total = items.reduce((s, i) => s + i.value, 0);
+   const nice = (m) => { if (m <= 0) return 1; const pw = Math.pow(10, Math.floor(Math.log10(m))); for (const c of [1, 1.2, 1.6, 2, 2.4, 3, 4, 6, 8, 10]) if (c * pw >= m) return c * pw; return 10 * pw; };
+   const top = nice(maxV); const ticks = [0, 1, 2, 3, 4].map((k) => (top * k) / 4).reverse(); const grid = p.showGrid !== false; const vals = p.showValues !== false; %>
+<figure class="<%= cls %> kw-ms kw-ms-d kw-ms-ch kw-ms-cht-<%= type %> kw-ms-tone-<%= tone %>"<%- attrs %>>
+  <figcaption class="kw-ms-ch-title"><%= p.title %></figcaption>
+  <% if (type === "bar" || type === "line") { %>
+  <div class="kw-ms-ch-body<%= grid ? " has-grid" : "" %><%= vals ? " has-values" : "" %>" aria-hidden="true">
+    <% if (grid) { %><div class="kw-ms-ch-y"><% ticks.forEach((t) => { %><span><%= nf(t) %></span><% }) %></div><% } %>
+    <div class="kw-ms-ch-main">
+      <div class="kw-ms-ch-plot" style="--ms-n:<%= n %>">
+        <% if (type === "bar") { items.forEach((it) => { const h = round((it.value / top) * 100); %><div class="kw-ms-ch-cell"><span class="kw-ms-ch-bar" style="height:<%= h %>%"></span><% if (vals) { %><span class="kw-ms-ch-v" style="bottom:<%= h %>%"><%= nf(it.value) %><%= unit ? " " + unit : "" %></span><% } %></div><% }) %>
+        <% } else { const pts = items.map((it, i) => [round(((i + 0.5) / n) * 100), round(100 - (it.value / top) * 100)]); %>
+        <svg class="kw-ms-ch-line" viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false"><polygon class="kw-ms-ch-area" points="<%= pts[0][0] %>,100 <%= pts.map((q) => q.join(",")).join(" ") %> <%= pts[n - 1][0] %>,100"/><polyline class="kw-ms-ch-path" points="<%= pts.map((q) => q.join(",")).join(" ") %>" fill="none" vector-effect="non-scaling-stroke"/></svg>
+        <% items.forEach((it, i) => { %><span class="kw-ms-ch-dot" style="left:<%= pts[i][0] %>%;bottom:<%= round(100 - pts[i][1]) %>%"></span><% if (vals) { %><span class="kw-ms-ch-v" style="left:<%= pts[i][0] %>%;bottom:<%= round(100 - pts[i][1]) %>%"><%= nf(it.value) %><%= unit ? " " + unit : "" %></span><% } %><% }) %>
+        <% } %>
+      </div>
+      <div class="kw-ms-ch-xs" style="--ms-n:<%= n %>"><% items.forEach((it) => { %><span class="kw-ms-ch-x"><%= it.label %></span><% }) %></div>
+    </div>
+  </div>
+  <% } else { let acc = 0; %>
+  <div class="kw-ms-ch-donutwrap" aria-hidden="true">
+    <div class="kw-ms-ch-ring"><svg viewBox="0 0 100 100" focusable="false"><circle class="kw-ms-ch-track" cx="50" cy="50" r="38" fill="none" stroke-width="16"/>
+      <% items.forEach((it, i) => { const len = total > 0 ? (it.value / total) * 100 : 0; const shown = Math.max(0, round(len - (n > 1 && len > 1 ? 0.8 : 0))); %><circle class="kw-ms-ch-seg kw-ms-tone-<%= CYCLE[i % 6] %>" cx="50" cy="50" r="38" fill="none" stroke-width="16" pathLength="100" stroke-dasharray="<%= shown %> <%= round(100 - shown) %>" stroke-dashoffset="<%= -round(acc) %>" transform="rotate(-90 50 50)"/><% acc += len; }) %></svg>
+      <span class="kw-ms-ch-total"><span class="kw-ms-ch-total-n"><%= nf(total) %></span><% if (unit) { %><span class="kw-ms-ch-total-u"><%= unit %></span><% } %></span></div>
+    <ul class="kw-ms-ch-legend"><% items.forEach((it, i) => { %><li><span class="kw-ms-ch-sw kw-ms-tone-<%= CYCLE[i % 6] %>"></span><span class="kw-ms-ch-lab"><%= it.label %></span><span class="kw-ms-ch-lv"><%= nf(it.value) %><%= unit ? " " + unit : "" %><% if (total > 0) { %> · <%= nf(Math.round((it.value / total) * 1000) / 10) %> %<% } %></span></li><% }) %></ul>
+  </div>
+  <% } %>
+  <div class="<%= p.showTable ? "kw-ms-ch-data" : "kw-ms-sr" %>"><table class="kw-ms-ch-table"><caption>Données : <%= p.title %></caption><thead><tr><th scope="col">Étiquette</th><th scope="col">Valeur<%= unit ? " (" + unit + ")" : "" %></th></tr></thead><tbody><% items.forEach((it) => { %><tr><th scope="row"><%= it.label %></th><td><%= nf(it.value) %></td></tr><% }) %></tbody></table></div>
+</figure>

@@ -83,7 +83,24 @@
       var c = atEnd ? slides.length - 1 : current();
       dots.forEach(function (d, i) { d.setAttribute("aria-current", i === c ? "true" : "false"); });
     };
-    if (loop) {
+    // Transition « fondu » : un seul élément visible à la fois (empilés, l'actif est opaque) ; sans ce script, le défilement natif reste en place
+    var fade = box.getAttribute("data-kw-effect") === "fade" && slides.length > 1, idx = 0;
+    if (fade) {
+      box.classList.add("is-fade");
+      var show = function (i) {
+        idx = (i + slides.length) % slides.length;
+        Array.prototype.forEach.call(slides, function (s, k) { s.classList.toggle("is-active", k === idx); s.setAttribute("aria-hidden", k === idx ? "false" : "true"); });
+        dots.forEach(function (d, k) { d.setAttribute("aria-current", k === idx ? "true" : "false"); });
+        prev.disabled = !loop && idx === 0; next.disabled = !loop && idx === slides.length - 1;
+      };
+      current = function () { return idx; };
+      goTo = function (i) { show(i); };
+      sync = function () { show(idx); };
+      prev.replaceWith(prev = prev.cloneNode(true)); next.replaceWith(next = next.cloneNode(true));
+      prev.addEventListener("click", function () { show(idx - 1); });
+      next.addEventListener("click", function () { show(idx + 1); });
+    }
+    if (loop && !fade) {
       prev.onclick = null; next.onclick = null;
       prev.replaceWith(prev = prev.cloneNode(true)); next.replaceWith(next = next.cloneNode(true));
       prev.addEventListener("click", function () { var atStart = track.scrollLeft <= 2; goTo(atStart ? slides.length - 1 : current() - 1); });
@@ -99,7 +116,7 @@
       track.addEventListener("pointerdown", function () { stopped = true; });
       setInterval(function () {
         if (paused || stopped || document.hidden) return;
-        var atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+        var atEnd = fade ? idx === slides.length - 1 : track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
         if (atEnd && !loop) { stopped = true; return; }
         goTo(atEnd ? 0 : current() + 1);
       }, every * 1000);
@@ -212,7 +229,28 @@
     window.addEventListener("scroll", function () { if (!fxTick) { fxTick = true; window.requestAnimationFrame(fxSet); } }, { passive: true });
     if (fxHide) fxHead.addEventListener("focusin", function () { fxHead.classList.remove("is-hidden"); });
     fxSet();
+    // « Se cache » : masqué quand on descend (au-delà de 120 px), réaffiché dès qu'on remonte ; jamais masqué tant qu'un menu de l'en-tête a le focus ou est ouvert
+    if (fxHead.getAttribute("data-kw-scroll") === "hide") {
+      var hideLast = window.pageYOffset || 0, hideTick = false;
+      window.addEventListener("scroll", function () {
+        if (hideTick) return; hideTick = true;
+        window.requestAnimationFrame(function () {
+          hideTick = false; var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+          if (Math.abs(y - hideLast) > 6) { fxHead.classList.toggle("is-hidden", y > hideLast && y > 120 && !fxHead.querySelector("[aria-expanded=true]")); hideLast = y; }
+        });
+      }, { passive: true });
+    }
   }
+  // Barre fermable ([data-kw-dismissible]) : le bouton masque la barre ; le choix est mémorisé dans le navigateur du visiteur (clé = identifiant de la barre + empreinte de son texte :
+  // si le texte change, la barre revient). Rien n'est supprimé ; dans l'éditeur et dans l'aperçu de la bibliothèque, rien n'est mémorisé.
+  if (!document.body.hasAttribute("data-kw-builder")) Array.prototype.forEach.call(document.querySelectorAll("[data-kw-dismissible]"), function (bar) {
+    var btn = bar.querySelector(":scope > [data-kw-dismiss]"); if (!btn) return;
+    var memo = !document.body.hasAttribute("data-kw-demo"), id = (bar.className.match(/kw-n-[A-Za-z0-9_-]+/) || ["bar"])[0], t = (bar.textContent || "").replace(/\s+/g, " ").trim(), hsh = 0;
+    for (var ci = 0; ci < t.length; ci += 1) hsh = (hsh * 31 + t.charCodeAt(ci)) | 0;
+    var key = "kw-dismiss:" + id + ":" + (hsh >>> 0).toString(36);
+    try { if (memo && window.localStorage.getItem(key) === "1") bar.classList.add("is-dismissed"); } catch (e) { /* stockage indisponible : la barre reste affichée */ }
+    btn.addEventListener("click", function () { bar.classList.add("is-dismissed"); try { if (memo) window.localStorage.setItem(key, "1"); } catch (e) { /* non mémorisé */ } });
+  });
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {
     b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); });
@@ -465,17 +503,17 @@
   if ((counters.length || bars.length) && "IntersectionObserver" in window && !document.body.hasAttribute("data-kw-builder") && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
     document.documentElement.classList.add("kw-count-ready");
     var run = function (el) {
-      var target = Number(el.getAttribute("data-kw-count")), dec = Number(el.getAttribute("data-kw-decimals")) || 0, dur = Number(el.getAttribute("data-kw-duration")) || 1500;
+      var target = Number(el.getAttribute("data-kw-count")), dec = Number(el.getAttribute("data-kw-decimals")) || 0, dur = Number(el.getAttribute("data-kw-duration")) || 1500, wait = Number(el.getAttribute("data-kw-delay")) || 0, from = Number(el.getAttribute("data-kw-start")) || 0, ease = el.getAttribute("data-kw-ease");
       var out = el.querySelector(".kw-counter-value"), t0 = null;
       var sepMode = el.getAttribute("data-kw-sep");
       var fmt = function (v) { var s = v.toLocaleString("fr-FR", { minimumFractionDigits: dec, maximumFractionDigits: dec }); return sepMode === "dot" ? s.replace(/[\u202f\u00a0]/g, ".") : sepMode === "none" ? s.replace(/[\u202f\u00a0]/g, "") : s; };
-      var step = function (t) { if (t0 === null) t0 = t; var k = Math.min(1, (t - t0) / dur); var e = 1 - Math.pow(1 - k, 3); out.textContent = fmt(target * e); if (k < 1) requestAnimationFrame(step); else out.textContent = fmt(target); };
-      requestAnimationFrame(step);
+      var step = function (t) { if (t0 === null) t0 = t; var k = Math.min(1, (t - t0) / dur); var e = ease === "linear" ? k : ease === "out" ? 1 - Math.pow(1 - k, 5) : 1 - Math.pow(1 - k, 3); out.textContent = fmt(from + (target - from) * e); if (k < 1) requestAnimationFrame(step); else out.textContent = fmt(target); };
+      if (wait > 0) setTimeout(function () { requestAnimationFrame(step); }, wait); else requestAnimationFrame(step);
     };
     var obs = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (!en.isIntersecting) return; obs.unobserve(en.target); if (en.target.hasAttribute("data-kw-count")) run(en.target); else en.target.classList.add("is-in"); });
     }, { threshold: 0.3 });
-    Array.prototype.forEach.call(counters, function (el) { el.querySelector(".kw-counter-value").textContent = (0).toLocaleString("fr-FR"); obs.observe(el); });
+    Array.prototype.forEach.call(counters, function (el) { el.querySelector(".kw-counter-value").textContent = (Number(el.getAttribute("data-kw-start")) || 0).toLocaleString("fr-FR", { minimumFractionDigits: Number(el.getAttribute("data-kw-decimals")) || 0, maximumFractionDigits: Number(el.getAttribute("data-kw-decimals")) || 0 }); obs.observe(el); });
     Array.prototype.forEach.call(bars, function (el) { obs.observe(el); });
   }
   // Interactions : [déclencheur, action, élément visé] ; l'élément visé est retrouvé par sa classe (.kw-n-<id>)
@@ -513,6 +551,17 @@
   });
   // Vidéo de fond : arrêtée si la personne a demandé à réduire les animations
   if (reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-bg-video"), function (v) { v.removeAttribute("autoplay"); try { v.pause(); } catch (e) { /* rien */ } });
+  // Texte animé lettre par lettre : décalages posés ici (jamais de style en ligne) ; sans ce script ou sous « réduire les animations », le texte reste entier
+  if (!inBuilder && !reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-splittext"), function (el) {
+    var parts = el.querySelectorAll(".kw-st-c"), dur = Number(el.getAttribute("data-kw-dur")) || 600;
+    var step = Math.min(Number(el.getAttribute("data-kw-stagger")) || 40, parts.length > 1 ? 2500 / (parts.length - 1) : 40);
+    Array.prototype.forEach.call(parts, function (c, i) { c.style.transitionDuration = dur + "ms"; c.style.transitionDelay = Math.round(i * step) + "ms"; });
+    el.classList.add("kw-st-ready");
+    var go = function () { requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add("is-in"); }); }); };
+    if (el.getAttribute("data-kw-trigger") === "load" || !("IntersectionObserver" in window)) { go(); return; }
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { io.disconnect(); go(); } }); }, { threshold: 0.2 });
+    io.observe(el);
+  });
   // Titre animé : les mots se succèdent (jamais dans l'éditeur, jamais si la personne réduit les animations)
   if (!inBuilder && !reduce) Array.prototype.forEach.call(document.querySelectorAll(".kw-rotate[data-kw-words]"), function (el) {
     var words; try { words = JSON.parse(el.getAttribute("data-kw-words")); } catch (e) { return; }
@@ -643,7 +692,7 @@
       box._kwAnim = anim;
       anim.addEventListener("DOMLoaded", function () {
         box.setAttribute("data-kw-state", "loaded");
-        if (reduce) { anim.goToAndStop(0, true); return; }
+        if (reduce || box.hasAttribute("data-kw-still")) { anim.goToAndStop(0, true); return; }
         if (trigger === "hover") { box.addEventListener("mouseenter", function () { anim.play(); box.setAttribute("data-kw-state", "playing"); }); box.addEventListener("mouseleave", function () { anim.pause(); box.setAttribute("data-kw-state", "paused"); }); anim.goToAndStop(0, true); }
         else if (trigger === "click") { anim.goToAndStop(0, true); box.style.cursor = "pointer"; box.addEventListener("click", function () { if (anim.isPaused) { anim.play(); box.setAttribute("data-kw-state", "playing"); } else { anim.pause(); box.setAttribute("data-kw-state", "paused"); } }); }
         else { anim.play(); box.setAttribute("data-kw-state", "playing"); }

@@ -8,6 +8,8 @@
       <span class="sh-card-name"><%= p.name %></span>
     </a>
     <p class="sh-price"><% if (p.onSale) { %><s class="sh-old"><%= money(p.regularFromCents) %></s> <% } %><%= p.isVariable ? "À partir de " : "" %><strong><%= money(p.priceFromCents) %></strong></p>
+    <% if (typeof ratings !== "undefined" && ratings[p.id]) { %><p class="sh-rating-mini" aria-label="Note <%= ratings[p.id].average %> sur 5, <%= ratings[p.id].count %> avis"><span aria-hidden="true">★</span> <%= String(ratings[p.id].average).replace(".", ",") %> (<%= ratings[p.id].count %>)</p><% } %>
+    <% if (typeof gates !== "undefined" && gates[p.id]) { const g = gates[p.id]; %><p class="sh-stock<%= g.purchasable ? "" : " sh-out" %>"><% if (g.reason === "members") { %><span aria-hidden="true">&#128274;</span> Réservé aux membres<% } else if (!g.purchasable) { %>Vente privée : <%= g.reason === "sale_before" ? "ouvre le " + g.sale.startsLabel : "terminée" %><% } else { %>Vente privée jusqu'au <%= g.sale.endsLabel %><% } %></p><% } %>
     <% if (!p.inStock) { %><p class="sh-stock sh-out">Rupture de stock</p><% } else if (p.onSale) { %><p class="sh-stock">Promotion</p><% } %>
   </li>
   <% }) %>

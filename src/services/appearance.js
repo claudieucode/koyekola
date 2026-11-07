@@ -82,9 +82,10 @@ function normalizeConfig(input = {}, { strict = true, siteId } = {}) {
     tokens: tokensLib.normalizeTokens(s.tokens || {}, { strict, fontScope: siteId === undefined ? undefined : { siteId } }),
     header: normalizeHeader(s.header || {}),
     footer: normalizeFooter(s.footer || {}),
+    singlePost: (() => { try { return require("./singlePost").compact(s.singlePost, { strict }); } catch (e) { if (strict && e && e.isSinglePost) throw new UserError(e.message); return null; } })(),
   };
 }
-const DEFAULT_CONFIG = Object.freeze({ tokens: DEFAULT_TOKENS, header: DEFAULT_HEADER, footer: DEFAULT_FOOTER });
+const DEFAULT_CONFIG = Object.freeze({ tokens: DEFAULT_TOKENS, header: DEFAULT_HEADER, footer: DEFAULT_FOOTER, singlePost: null });
 
 // ---------- Lecture / écriture ----------
 const row = (siteId = null) => db.prepare(`SELECT * FROM appearance_configs WHERE ${sameScope("site_id")}`).get(siteId);
@@ -249,11 +250,12 @@ function buildCss(cfg) {
   const l = t.link;
   rule(":where(main) a:where(:not([class]))", [l.color ? `color:${colorOf(l.color)}` : "", l.underline === "always" ? "text-decoration:underline" : l.underline === "none" ? "text-decoration:none" : ""]);
   rule(":where(main) a:where(:not([class])):hover", [l.hoverColor ? `color:${colorOf(l.hoverColor)}` : "", l.underline === "hover" ? "text-decoration:underline" : ""]);
+  if (t.global) { const gcss = require("../marketing/pages/globalStyles").globalCss(t.global, "principal"); if (gcss) rules.push(gcss); }
   const decl = root.length ? `:root{${root.join(";")}}` : "";
   const hasAny = decl || rules.length;
   // Polices de la bibliothèque choisies pour le site : leurs règles @font-face sont livrées avec la feuille
   // (les polices TÉLÉVERSÉES ne sont pas figées ici : leurs règles sont ajoutées à chaque rendu par parts(), pour suivre les variantes ajoutées ou retirées)
-  const faces = hasAny ? require("../utils/fontLibrary").faceCssFor(`${decl}:root{${kw}}`) : "";
+  const faces = hasAny ? require("../utils/fontLibrary").faceCssFor(`${decl}:root{${kw}}${rules.join("")}`) : "";
   return hasAny ? `${faces}${decl}:root{${kw}}${rules.join("")}` : "";
 }
 
@@ -265,7 +267,7 @@ function logoPath(mediaId) {
 }
 function year() { return String(new Date().getFullYear()); }
 // parts(preview) : { css, header, footer, preview } — la version publiée (mémorisée) ou, en aperçu, le brouillon
-// override : configuration complète fournie par l'appelant (aperçu du personnalisateur : rien n'est lu en base ni mémorisé)
+// override : configuration complète fournie par l'appelant (aperçu des styles : rien n'est lu en base ni mémorisé)
 function parts({ preview = false, override = null } = {}) {
   let base;
   if (override) {

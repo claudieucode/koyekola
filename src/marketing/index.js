@@ -50,8 +50,6 @@ function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }
     const worker = createWorker({ db, handlers, log });
     // Synchronisation Mailchimp automatique (toutes les heures, si l'organisation a connecté Mailchimp)
     try { require("./mailchimp/scheduler").start({ db, settings, bus, organizationId: organization.id, env, log }); } catch (error) { log.warn?.("[KOLAKISA] Synchronisation Mailchimp non planifiée :", error.message); }
-    // Publications planifiées du personnalisateur : vérifiées chaque minute (indépendant du worker de la file de travaux)
-    if (env.NODE_ENV !== "test") setInterval(() => { try { require("../services/customizer").runDue({ organizationId: organization.id }); } catch (error) { log.warn?.("[KOLAKISA] Publication planifiée :", error.message); } }, 60_000).unref();
     // Lance la lecture périodique du LMS (appelé par server.js quand le worker est actif)
     const startBridge = () => bridgeEvents.startBridge(db, organization.id);
     return { ready: true, organizationId: organization.id, settings, bus, worker, migrations, startBridge, tools };

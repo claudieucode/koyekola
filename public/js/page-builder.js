@@ -1014,6 +1014,7 @@
     if (it.parts) { Object.keys(it.parts).forEach(function (k) { cleanSet(it.parts[k]); if (!Object.keys(it.parts[k]).length) delete it.parts[k]; }); if (!Object.keys(it.parts).length) delete it.parts; }
   }
   var COMPOSED_LABEL = { filter: "filtres", backdrop: "filtres de l'arrière-plan", shadow: "ombre personnalisée", overlay: "voile", gradient: "dégradé", backgroundImage: "image de fond", transform: "transformation", mask: "masque" };
+  var CASCADE_KEYS = ["fontFamily", "fontSize", "fontWeight", "color", "letterSpacing", "textTransform", "lineHeight"];
   function setStyle(ids, key, value, opts) { var m = {}; m[key] = value; setStyles(ids, m, opts); }
   // Plusieurs propriétés en une seule étape d'annulation (côtés liés, retrait du fond…)
   function setStyles(ids, map, opts) {
@@ -1031,6 +1032,12 @@
           var set = styleSet(it, device, styleState, !empty, key);
           if (!set) return;
           if (empty) delete set[key]; else set[key] = value;
+          // Réglage du WIDGET lui-même (pas d'une partie) : s'il existe un réglage de la même propriété posé sur l'une de ses parties (cas des modèles de la
+          // bibliothèque, dont les parties portent déjà une police ou une couleur), il masquerait le nouveau réglage : on le retire pour que le choix de l'utilisateur
+          // s'applique réellement (priorité : la dernière valeur choisie sur le widget l'emporte).
+          if (!empty && !styleTarget && (!styleState || styleState === "normal") && CASCADE_KEYS.indexOf(key) >= 0 && it.parts) {
+            Object.keys(it.parts).forEach(function (pk) { var ps = it.parts[pk] && it.parts[pk].styles && it.parts[pk].styles[device]; if (ps && ps[key] !== undefined) delete ps[key]; });
+          }
         });
         cleanStyles(it);
       });
@@ -2022,7 +2029,11 @@
     if (ctl.scrub) ctl.scrub(lab);
     return withRestore(h("div", { class: "pb-field" }, lab, ctl, hint ? h("p", { class: "pb-hint", text: hint }) : null), function () { apply(Number(value) || 0, {}); });
   }
-  function selectField(label, value, options, onChange, opts) {
+  // Réglage facultatif d'un widget animé : la valeur par défaut est retirée des données (rien de superflu enregistré)
+  function optSelect(it, label, key, current, options, dflt, disabled) {
+    return selectField(label, String(current === undefined || current === null ? dflt : current), options, function (v) { change(function () { var x = byId(it.id).props; if (v === dflt) delete x[key]; else x[key] = /^-?\d+$/.test(v) ? Number(v) : v; }); }, { disabled: disabled });
+  }
+function selectField(label, value, options, onChange, opts) {
     opts = opts || {};
     var id = fid();
     var sel = h("select", { id: id, disabled: opts.disabled }, options.map(function (o) { return h("option", { value: String(o[0]), text: o[1] }); }));
@@ -2076,6 +2087,7 @@
       var head = h("div", { class: "pb-items-head" }, h("strong", { text: "Élément " + (i + 1) }), h("span", { class: "pb-items-tools" },
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Monter l'élément " + (i + 1), "data-tip": "Monter", disabled: disabled || i === 0, onclick: function () { move(-1); } }, icon("arrowUp")),
         h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Descendre l'élément " + (i + 1), "data-tip": "Descendre", disabled: disabled || i === list.length - 1, onclick: function () { move(1); } }, icon("arrowDown")),
+        h("button", { type: "button", class: "pb-icon-btn", "aria-label": "Dupliquer l'élément " + (i + 1), "data-tip": "Dupliquer", disabled: disabled || list.length >= f.max, onclick: function () { var cur = live(), next = cur.slice(); next.splice(i + 1, 0, Object.assign({}, cur[i])); commit(next); } }, icon("copy")),
         h("button", { type: "button", class: "pb-icon-btn is-danger", "aria-label": "Supprimer l'élément " + (i + 1), "data-tip": "Supprimer", disabled: disabled || list.length <= min, onclick: function () { commit(live().filter(function (_, k) { return k !== i; })); } }, icon("trash"))));
       var card = h("div", { class: "pb-items-item" }, head);
       f.fields.forEach(function (sf) {
@@ -2242,6 +2254,10 @@
         box.appendChild(numberField("Valeur (0 à 100)", p.value, { min: 0, max: 100, step: 1, integer: true, slider: [0, 100], allowEmpty: false, staticUnit: "%", disabled: disabled }, function (n, opts) { if (n === null) return false; setProp(it.id, "value", n, opts && opts.light ? { key: opts.key || it.id + ":value", light: true } : null); }, "Une donnée réelle (par ex. places réservées) ; ne pas inventer de chiffre."));
         box.appendChild(checkField("Afficher la valeur en %", p.showValue !== false, function (v) { setProp(it.id, "showValue", v); }, { disabled: disabled }));
         box.appendChild(checkField("Remplir la barre à l'apparition (animation)", p.animate, function (v) { setProp(it.id, "animate", v); }, { disabled: disabled }));
+        if (p.animate) {
+          box.appendChild(optSelect(it, "Durée du remplissage", "duration", p.duration, [["1000", "1 s (défaut)"], ["400", "Rapide (0,4 s)"], ["2000", "2 s"], ["4000", "Lente (4 s)"]], "1000", disabled));
+          box.appendChild(optSelect(it, "Courbe", "easing", p.easing, [["smooth", "Douce (défaut)"], ["linear", "Régulière"], ["out", "Rapide puis lente"]], "smooth", disabled));
+        }
         break;
       case "menu":
         box.appendChild(textField("Nom du menu (lecteurs d'écran)", p.label, set("label"), { max: 60, disabled: disabled }));
@@ -2298,6 +2314,8 @@
             textField("Légende " + (i + 1), im.caption, function (v) { change(function () { byId(it.id).props.images[i].caption = v; }, { key: it.id + ":cap" + i, light: true }); }, { max: 200, disabled: disabled }),
             h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || p.images.length < 3, onclick: function () { change(function () { byId(it.id).props.images.splice(i, 1); }); } }, "Retirer")));
         });
+        box.appendChild(optSelect(it, "Transition entre les images", "effect", p.effect, [["slide", "Défilement (glissé)"], ["fade", "Fondu (une seule image visible)"]], "slide", disabled));
+        box.appendChild(optSelect(it, "Images visibles à la fois (bureau ; 1 sur mobile)", "perView", p.perView, [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"]], "1", disabled));
         box.appendChild(checkField("Points de navigation", p.dots !== false, function (v) { setProp(it.id, "dots", v); }, { disabled: disabled }));
         box.appendChild(checkField("Revenir au début après la dernière image (boucle)", p.loop, function (v) { setProp(it.id, "loop", v); }, { disabled: disabled }));
         box.appendChild(checkField("Défilement automatique", p.autoplay, function (v) { setProp(it.id, "autoplay", v); }, { disabled: disabled, hint: "S'arrête au survol, au clavier ou au toucher ; jamais si la personne réduit les animations." }));
@@ -2341,6 +2359,8 @@
       case "sitelogo":
         box.appendChild(selectField("Hauteur", String(p.height || 48), [["32", "32 px"], ["48", "48 px"], ["64", "64 px"], ["96", "96 px"]].concat([32, 48, 64, 96].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Taille du logo une fois la page défilée", p.scrollHeight ? String(p.scrollHeight) : "", [["", "Identique"], ["24", "24 px"], ["32", "32 px"], ["40", "40 px"], ["48", "48 px"], ["64", "64 px"]].concat([24, 32, 40, 48, 64].indexOf(Number(p.scrollHeight)) < 0 && p.scrollHeight ? [[String(p.scrollHeight), p.scrollHeight + " px"]] : []), function (v) { setProp(it.id, "scrollHeight", v ? Number(v) : ""); }, { disabled: disabled }));
+        box.appendChild(textField("Texte alternatif au défilement (logo sans image)", p.scrollText || "", set("scrollText"), { max: 40, disabled: disabled, onChange: true, hint: "Ex. des initiales. Remplace le nom du site quand la page défile. Agit dans un en-tête collant ou superposé." }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
         if (isHeaderDoc()) {
           // Variantes de logo (en-tête) : l'état « en haut de page » (ex. logo clair sur fond transparent) et les petits écrans ; elles remplacent le logo principal quand elles s'appliquent
@@ -2364,6 +2384,7 @@
       case "sitetitle":
         box.appendChild(selectField("Balise", p.tag || "p", [["p", "Paragraphe"], ["span", "Texte en ligne"], ["h1", "Titre 1"], ["h2", "Titre 2"], ["h3", "Titre 3"]], function (v) { setProp(it.id, "tag", v); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        box.appendChild(textField("Texte alternatif au défilement", p.scrollText || "", set("scrollText"), { max: 40, disabled: disabled, onChange: true, hint: "Ex. des initiales. Remplace le nom du site quand la page défile. Agit dans un en-tête collant ou superposé." }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le nom du site de cette page (sinon le nom du site des réglages SEO), toujours à jour." }));
         break;
       case "copyright":
@@ -2376,7 +2397,8 @@
         box.appendChild(textField("Mots qui se succèdent (un par ligne, 2 à 8)", (p.words || []).join("\n"), function (v) { setProp(it.id, "words", v.split("\n").map(function (x) { return x.trim(); }).filter(Boolean)); }, { multiline: true, disabled: disabled }));
         box.appendChild(textField("Fin (fixe)", p.after, set("after"), { max: 80, disabled: disabled }));
         box.appendChild(selectField("Niveau", p.level, [["1", "Titre 1 (un seul par page)"], ["2", "Titre 2"], ["3", "Titre 3"], ["4", "Titre 4"]], set("level", false), { disabled: disabled }));
-        box.appendChild(selectField("Effet", p.effect || "fade", [["fade", "Fondu"], ["type", "Machine à écrire"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Effet", p.effect || "fade", [["fade", "Fondu"], ["slide", "Glissement"], ["blur", "Flou"], ["zoom", "Zoom"], ["type", "Machine à écrire"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        if (p.effect === "type") box.appendChild(checkField("Curseur clignotant à droite du mot", p.cursor !== false, function (v) { change(function () { var x = byId(it.id).props; if (v) delete x.cursor; else x.cursor = false; }); }, { disabled: disabled }));
         box.appendChild(selectField("Durée par mot", String(p.interval || 2500), [["1500", "1,5 s"], ["2500", "2,5 s"], ["4000", "4 s"], ["6000", "6 s"]], function (v) { setProp(it.id, "interval", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "L'animation se voit dans l'aperçu et sur la page publiée (jamais si le visiteur a demandé moins d'animations). Les lecteurs d'écran lisent la phrase entière." }));
         break;
@@ -2391,6 +2413,8 @@
         box.appendChild(textField("Bouton du verso : texte (facultatif)", p.ctaLabel, pairSet("ctaLabel", "ctaUrl", "Le bouton du verso"), { max: 40, disabled: disabled }));
         box.appendChild(textField("Bouton du verso : adresse", p.ctaUrl, pairSet("ctaUrl", "ctaLabel", "Le bouton du verso"), { list: "pb-links", disabled: disabled, placeholder: "/catalogue, /p/… ou https://…" }));
         box.appendChild(selectField("Effet", p.effect || "flip", [["flip", "Retournement"], ["fade", "Fondu"]], function (v) { setProp(it.id, "effect", v); }, { disabled: disabled }));
+        if ((p.effect || "flip") === "flip") box.appendChild(optSelect(it, "Sens du retournement", "direction", p.direction, [["horizontal", "Horizontal (défaut)"], ["vertical", "Vertical"]], "horizontal", disabled));
+        box.appendChild(optSelect(it, "Vitesse", "duration", p.duration, [["600", "Normale (0,6 s)"], ["300", "Rapide (0,3 s)"], ["1000", "Lente (1 s)"]], "600", disabled));
         box.appendChild(selectField("Hauteur", String(p.height || 280), [["200", "200 px"], ["280", "280 px"], ["360", "360 px"], ["440", "440 px"]].concat([200, 280, 360, 440].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le verso s'affiche au survol, au clavier (Tab puis Entrée) ou d'un toucher sur mobile." }));
         break;
@@ -2466,6 +2490,7 @@
       case "hotspot":
         box.appendChild(mediaPreview(p.src, function (m) { change(function () { var x = byId(it.id).props; x.src = m.path; if (m.alt) x.alt = m.alt; }); }, disabled));
         box.appendChild(resolutionField(it, [p.src], disabled));
+        box.appendChild(checkField("Faire pulser les points (attire le regard)", p.pulse === true, function (v) { change(function () { var x = byId(it.id).props; if (v) x.pulse = true; else delete x.pulse; }); }, { disabled: disabled }));
         box.appendChild(selectField("Ouvrir l'infobulle", p.trigger === "hover" ? "hover" : "click", [["click", "Au clic"], ["hover", "Au survol (et au clic)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "hover") x.trigger = "hover"; else delete x.trigger; }); }, { disabled: disabled }));
         box.appendChild(textField("Texte de remplacement de l'image", p.alt, set("alt"), { max: 200, disabled: disabled }));
         (p.spots || []).forEach(function (sp, i) {
@@ -2537,6 +2562,9 @@
         box.appendChild(selectField("Décimales", String(p.decimals || 0), [["0", "Aucune"], ["1", "1"], ["2", "2"]], function (v) { setProp(it.id, "decimals", Number(v)); }, { disabled: disabled }));
         box.appendChild(selectField("Séparateur des milliers", p.separator || "space", [["space", "Espace (1 234)"], ["dot", "Point (1.234)"], ["none", "Aucun (1234)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "space") delete x.separator; else x.separator = v; }); }, { disabled: disabled }));
         box.appendChild(selectField("Animation du comptage", String(p.duration === undefined ? 1500 : p.duration), [["0", "Aucune"], ["800", "Rapide"], ["1500", "Normale"], ["3000", "Lente"]], function (v) { setProp(it.id, "duration", Number(v)); }, { disabled: disabled }));
+        box.appendChild(optSelect(it, "Départ après", "delay", p.delay, [["0", "Tout de suite"], ["300", "0,3 s"], ["600", "0,6 s"], ["1000", "1 s"], ["2000", "2 s"]], "0", disabled));
+        box.appendChild(optSelect(it, "Courbe du comptage", "easing", p.easing, [["smooth", "Douce (défaut)"], ["linear", "Régulière"], ["out", "Rapide puis lente"]], "smooth", disabled));
+        box.appendChild(textField("Valeur de départ (0 par défaut)", String(p.start || 0), function (v) { var n = Number(String(v).replace(",", ".")); if (!isFinite(n)) { toast("Nombre attendu.", true); return; } change(function () { var x = byId(it.id).props; if (n === 0) delete x.start; else x.start = n; }); }, { disabled: disabled }));
         break;
       case "testimonial":
         box.appendChild(textField("Témoignage (réel, avec l'accord de la personne)", p.text, set("text"), { multiline: true, max: 1200, disabled: disabled }));
@@ -2839,7 +2867,7 @@
     hotspot: { kind: "Image à points", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     posts: { kind: "Derniers articles", groups: TEXTUAL, order: TEXT_ORDER },
     courselist: { kind: "Formations du catalogue", groups: TEXTUAL, order: TEXT_ORDER },
-    search: { kind: "Recherche", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true }, order: ["size", "spacing", "layout"] },
+    search: { kind: "Recherche", groups: { layout: ["alignSelf"], typography: ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "textTransform"], color: ["color"], size: SIZE_W, spacing: true }, order: ["typography", "size", "spacing", "layout"] },
     account: { kind: "Compte du visiteur", groups: TEXTUAL, order: TEXT_ORDER, states: true },
     dyntext: { kind: "Texte dynamique", groups: TEXTUAL, order: TEXT_ORDER },
     alert: { kind: "Alerte", groups: TEXTUAL, order: TEXT_ORDER },
@@ -2848,7 +2876,7 @@
     pricing: { kind: "Offre tarifaire", groups: { layout: ["alignSelf"], typography: null, color: null, size: SIZE_W, spacing: true, background: true, border: null, effects: null }, order: ["background", "border", "effects", "typography", "spacing", "size", "layout"], states: true },
     breadcrumb: { kind: "Fil d'Ariane", groups: TEXTUAL, order: TEXT_ORDER },
     sharebuttons: { kind: "Boutons de partage", groups: { layout: ["alignSelf"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["color", "spacing", "layout", "effects"] },
-    social: { kind: "Réseaux sociaux", groups: { layout: ["alignSelf"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["color", "spacing", "layout", "effects"] },
+    social: { kind: "Réseaux sociaux", groups: { layout: ["alignSelf"], typography: ["fontFamily", "fontSize", "fontWeight"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["typography", "color", "spacing", "layout", "effects"] },
     modal: { kind: "Fenêtre (modale)", groups: { layout: ["alignSelf"], spacing: true }, order: ["spacing", "layout"] },
     carousel: { kind: "Carrousel", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
     image: { kind: "Image", groups: { layout: ["alignSelf"], size: null, media: null, spacing: true, border: null, effects: null }, states: true, order: ["size", "media", "border", "effects", "spacing", "layout"] },
@@ -2864,7 +2892,7 @@
     iconbox: { kind: "Boîte d'icône", groups: TEXTUAL, order: TEXT_ORDER },
     signupform: { kind: "Formulaire", groups: TEXTUAL, order: TEXT_ORDER },
     animatedheading: { kind: "Titre animé", groups: TEXTUAL, order: TEXT_ORDER },
-    sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], spacing: true, effects: ["opacity"] }, order: ["spacing", "layout", "effects"] },
+    sitelogo: { kind: "Logo du site", groups: { layout: ["alignSelf"], typography: ["fontFamily", "fontSize", "fontWeight", "letterSpacing", "textTransform"], color: ["color"], spacing: true, effects: ["opacity"] }, order: ["typography", "spacing", "layout", "effects"] },
     sitetitle: { kind: "Titre du site", groups: TEXTUAL, order: TEXT_ORDER },
     catfilter: { kind: "Filtre par catégorie", groups: TEXTUAL, order: TEXT_ORDER },
     postcontent: { kind: "Contenu de l'article", groups: { layout: ["alignSelf"], size: SIZE_W, spacing: true, border: null, effects: null }, order: ["size", "border", "effects", "spacing", "layout"] },
@@ -4215,6 +4243,15 @@
           box.appendChild(h("div", { class: "pb-field" }, h("label", { for: wid, text: "Largeur max. de ce conteneur" }), winp, h("p", { class: "pb-hint", id: wid + "-h", text: "Propre à l'écran « " + bpLabel(device) + " » ; px, %, rem ou vw. Le conteneur reste centré et ne dépasse jamais son parent." })));
         }
       }
+      if (p.full) {
+        if (!isHeaderDoc()) { /* dans un en-tête, l'onglet « En-tête » règle l'effet (un seul endroit) */
+        box.appendChild(selectField("Effet de l'en-tête au défilement", p.headerFx || "", [["", "Aucun"], ["shrink", "Se réduit"], ["solid", "Devient plein (en-tête superposé)"], ["both", "Se réduit et devient plein"], ["hide", "Se cache en descendant, revient en remontant"]], function (v) { change(function () { var n = byId(it.id); if (!n) return false; n.props = n.props || {}; if (v) n.props.headerFx = v; else delete n.props.headerFx; }, { label: "Effet de l'en-tête au défilement" }); }, { disabled: dis }));
+        box.appendChild(h("p", { class: "pb-hint", text: "Sans effet hors d'un en-tête du Theme Builder (premier conteneur de l'en-tête, collant ou superposé). Coupé si le visiteur demande moins de mouvement." }));
+        }
+        box.appendChild(selectField("Couleurs et polices de l'en-tête", p.headerIdentity === "site" ? "site" : "", [["", "Identité du modèle (couleurs et polices du modèle)"], ["site", "Couleurs et polices du site"]], function (v) { setProp(it.id, "headerIdentity", v); }, { disabled: dis }));
+        box.appendChild(h("p", { class: "pb-hint", text: "À régler sur le premier conteneur d'un en-tête. « Couleurs et polices du site » masque, à l'affichage, les couleurs et polices propres au modèle ; rien n'est effacé : revenir sur « Identité du modèle » les rétablit. Jamais appliqué sans votre choix." }));
+      }
+      box.appendChild(checkField("Barre fermable (bouton de fermeture pour le visiteur)", p.dismissible === true, function (v) { setProp(it.id, "dismissible", v); }, { disabled: dis, hint: "Pour une barre supérieure : le visiteur la masque d'un clic, son choix est mémorisé dans son navigateur (elle revient si son texte change). Rien n'est supprimé." }));
       box.appendChild(selectField("Balise HTML", p.tag || "div", SPEC.boxTags.map(function (t) { return [t, BOX_TAG_LABEL[t] || t]; }), function (v) { setProp(it.id, "tag", v); }, { disabled: dis }));
       box.appendChild(h("p", { class: "pb-hint", text: "La balise donne le sens de la zone aux lecteurs d'écran et aux moteurs de recherche ; l'affichage ne change pas." }));
     }
@@ -7796,8 +7833,10 @@
         stickOn: Array.isArray(hd.stickOn) && hd.stickOn.length ? hd.stickOn : dflt.stickOn, shrink: { height: hd.shrink && hd.shrink.height ? hd.shrink.height : 32 }, hideOnScroll: { enabled: Boolean(hd.hideOnScroll && hd.hideOnScroll.enabled), tolerance: hd.hideOnScroll && hd.hideOnScroll.tolerance !== undefined ? hd.hideOnScroll.tolerance : 8 } };
     }
     var first = s.children && s.children[0], pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
-    var fx = first && first.props && /^(shrink|solid|both)$/.test(first.props.headerFx || "") ? first.props.headerFx : "";
+    var fx = first && first.props && /^(shrink|solid|both|hide)$/.test(first.props.headerFx || "") ? first.props.headerFx : "";
     var mode = pos === "sticky" ? "sticky" : pos === "absolute" ? "overlay" : "static";
+    // Ancien réglage « Se cache en descendant » (headerFx = hide) : affiché comme le masquage réglable de l'onglet
+    if (fx === "hide") return Object.assign(dflt, { mode: mode, fx: "", hideOnScroll: { enabled: mode !== "static", tolerance: 6 } });
     return Object.assign(dflt, { mode: mode, fx: mode === "static" ? "" : fx });
   }
   function setHeader(patch, key) {
@@ -7860,6 +7899,7 @@
     box.appendChild(textField("Description (aperçu de partage)", content.description, setC("description"), { multiline: true, max: 300, disabled: !canWrite }));
     if (!IS_COMPONENT) formatSection(box);
     if (!IS_COMPONENT) scrollSnapSection(box);
+    if (!IS_COMPONENT && window.pbMotionTimeline) window.pbMotionTimeline.panel(box); // scènes, transitions de page / de sections, défilement fluide (Motion Studio)
     // ----- Référencement (palier 11) : mêmes données que la page publique, aperçu et analyse calculés par le moteur SEO du serveur -----
     var seoCfg = boot.seo || {};
     var seoCan = canWrite && seoCfg.canEdit;
@@ -7951,8 +7991,9 @@
       });
     } else {
       box.appendChild(h("p", { class: "pb-note", text: "Couleurs, polices, tailles de titres, boutons et espacements viennent du design system du site « " + PAGE.siteName + " » : les modifier là les applique à toutes ses pages." }));
-      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/design-system", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"));
-      box.appendChild(h("a", { class: "btn btn-ghost btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/constructeur-de-theme?type=footer", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site"));
+      box.appendChild(h("div", { class: "pb-btn-stack" },
+        h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/reglages/design-system", target: "_blank", rel: "noopener" }, "Ouvrir les styles globaux du site"),
+        h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/constructeur-de-theme?type=footer", target: "_blank", rel: "noopener" }, "En-tête et pied de page du site")));
     }
     // CSS de la page : confiné au contenu de la page, vérifié à l'enregistrement (aucune ressource externe)
     box.appendChild(h("p", { class: "pb-sub", text: "CSS de la page" }));
@@ -8451,6 +8492,7 @@
   function healIgnored(list) {
     var seen = {};
     list.forEach(function (w) {
+      if (w.kind === "scene_target" && window.pbMotionTimeline) window.pbMotionTimeline.heal(w); // scène qui visait un élément supprimé : pas retiré
       var it = w.nodeId && byId(w.nodeId), p = it && it.parts && it.parts[w.part];
       if (it && w.kind === "interaction_target" && it.interactions) {
         var keep = it.interactions.filter(function (x) { return x.target !== w.target; });
@@ -8808,6 +8850,11 @@
   if (window.pbMotionStudio) window.pbMotionStudio.attach({
     h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, accGroup: accGroup, numField: numField, selectField: selectField, checkField: checkField,
     schemaFields: schemaFields, frame: function () { return frame; }, setTab: function (t) { inspTab = t; store.set("insp-tab", t); renderInspector(); },
+  });
+  // Timeline visuelle du Motion Studio (scènes multi-éléments, transitions de page, défilement fluide) : lit et écrit theme.motionScenes par change()
+  if (window.pbMotionTimeline) window.pbMotionTimeline.attach({
+    h: h, toast: toast, SPEC: SPEC, bpLabel: bpLabel, change: change, accGroup: accGroup, selectField: selectField, checkField: checkField,
+    frame: function () { return frame; }, content: function () { return content; }, selection: function () { return selection.slice(); }, canWrite: function () { return canWrite; },
   });
   if (window.pbEffects) window.pbEffects.attach({
     h: h, store: store, toast: toast, SPEC: SPEC, BPS: BPS, bpLabel: bpLabel, byId: byId, isNode: isNode, change: change, idsOf: idsOf,

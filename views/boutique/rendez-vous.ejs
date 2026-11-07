@@ -1,0 +1,60 @@
+<%- include("_top", { noindex: true }) %>
+<% const q = productSlug ? "&produit=" + encodeURIComponent(productSlug) : ""; const base = shop.base + "/rendez-vous"; %>
+<h1 class="sh-title"><%= step === "cancel" ? "Annuler mon rendez-vous" : step === "done" ? "Rendez-vous enregistré" : "Prendre rendez-vous" %></h1>
+<% if (step === "unavailable") { %>
+  <p class="sh-empty">La prise de rendez-vous n'est pas ouverte pour le moment.</p>
+  <p><a class="sh-btn" href="<%= shop.base %>">Retour à la boutique</a></p>
+<% } else if (step === "cancel") { %>
+  <p class="sh-meta"><%= appointment.type_name %> · <%= frDate(appointment.start_at) %> à <%= appointment.start_at.slice(11) %></p>
+  <% if (done) { %><p class="sh-ok" role="status">Votre rendez-vous est annulé. Le créneau est de nouveau libre.</p>
+  <p><a class="sh-btn" href="<%= base %>">Reprendre rendez-vous</a></p>
+  <% } else if (appointment.status === "cancelled") { %><p class="sh-empty">Ce rendez-vous est déjà annulé.</p>
+  <% } else { %>
+  <form class="sh-form" method="post" action="<%= base %>/annuler/<%= appointment.id %>?k=<%= k %>">
+    <p>Souhaitez-vous vraiment annuler ce rendez-vous ?</p>
+    <button class="sh-btn sh-btn-primary" type="submit">Oui, annuler le rendez-vous</button>
+  </form>
+  <% } %>
+<% } else if (step === "done") { %>
+  <p class="sh-ok" role="status"><%= appointment.status === "confirmed" ? "Votre rendez-vous est confirmé." : "Votre demande est enregistrée : le créneau est réservé pour vous, le vendeur doit encore la confirmer." %></p>
+  <dl class="sh-meta">
+    <dt>Rendez-vous</dt><dd><%= appointment.type_name %> (<%= appointment.duration_min %> min)</dd>
+    <dt>Quand</dt><dd><%= frDate(appointment.start_at) %> à <%= appointment.start_at.slice(11) %></dd>
+    <dt>Où</dt><dd><%= appointment.location_kind === "visio" ? "En visioconférence (le lien vous sera communiqué)" : appointment.location %></dd>
+    <% if (appointment.product_name) { %><dt>Produit</dt><dd><%= appointment.product_name %></dd><% } %>
+  </dl>
+  <p>Un e-mail récapitulatif est envoyé à <strong><%= appointment.customer_email %></strong> avec un lien pour annuler.</p>
+  <p><a href="<%= cancelLink %>">Annuler ce rendez-vous</a></p>
+  <p><a class="sh-btn" href="<%= shop.base %>">Retour à la boutique</a></p>
+<% } else { %>
+  <% if (product) { %><p class="sh-meta">À propos de : <a href="<%= shop.base %>/produit/<%= encodeURIComponent(product.slug) %>"><%= product.name %></a></p><% } %>
+  <% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+  <% if (step === "types") { %>
+    <p>Choisissez le type de rendez-vous.</p>
+    <ul class="sh-wish-list">
+    <% types.forEach((t) => { %><li><a href="<%= base %>?type=<%= t.id %><%= q %>"><strong><%= t.name %></strong></a> · <%= t.duration_min %> min · <%= t.location_kind === "visio" ? "visio" : t.location %><% if (t.description) { %><br><small><%= t.description %></small><% } %></li><% }) %>
+    </ul>
+  <% } else if (step === "dates") { %>
+    <p><strong><%= type.name %></strong> · <%= type.duration_min %> min · <a href="<%= base %>?<%= q.slice(1) %>">changer</a></p>
+    <% if (!days.length) { %><p class="sh-empty">Aucun créneau libre pour le moment. Revenez plus tard.</p>
+    <% } else { %><p>Choisissez un jour.</p><ul class="sh-wish-list"><% days.forEach((d) => { %><li><a href="<%= base %>?type=<%= type.id %>&date=<%= d.date %><%= q %>"><%= frDate(d.date) %></a> · <%= d.count %> créneau<%= d.count > 1 ? "x" : "" %> libre<%= d.count > 1 ? "s" : "" %></li><% }) %></ul><% } %>
+  <% } else if (step === "slots") { %>
+    <p><strong><%= type.name %></strong> · <%= frDate(date) %> · <a href="<%= base %>?type=<%= type.id %><%= q %>">autre jour</a></p>
+    <% if (!slots.length) { %><p class="sh-empty">Plus aucun créneau libre ce jour-là.</p>
+    <% } else { %>
+    <form class="sh-form" method="post" action="<%= base %>">
+      <input type="hidden" name="type_id" value="<%= type.id %>"><input type="hidden" name="date" value="<%= date %>"><input type="hidden" name="produit" value="<%= productSlug %>">
+      <fieldset><legend>Heure</legend>
+        <% slots.forEach((x) => { %><label><input type="radio" name="time" value="<%= x.time %>"<%= values.time === x.time ? " checked" : "" %> required> <%= x.time %></label> <% }) %>
+      </fieldset>
+      <label>Nom<input name="name" maxlength="80" required autocomplete="name" value="<%= values.name || "" %>"></label>
+      <label>E-mail<input name="email" type="email" maxlength="160" required autocomplete="email" value="<%= values.email || "" %>"></label>
+      <label>Téléphone (facultatif)<input name="phone" type="tel" maxlength="30" autocomplete="tel" value="<%= values.phone || "" %>"></label>
+      <label>Note (facultatif)<textarea name="note" rows="3" maxlength="1000"><%= values.note || "" %></textarea></label>
+      <div hidden aria-hidden="true"><label>Ne pas remplir<input name="website" tabindex="-1" autocomplete="off"></label></div>
+      <button class="sh-btn sh-btn-primary" type="submit">Réserver ce créneau</button>
+    </form>
+    <% } %>
+  <% } %>
+<% } %>
+<%- include("_bottom") %>

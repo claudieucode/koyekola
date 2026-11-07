@@ -1,0 +1,12 @@
+<% const tplHtmlN = typeof themeTemplate !== "undefined" && themeTemplate ? String(themeTemplate) : ""; %>
+<% if (sp.postNav.enabled && (previous || next) && !tplHtmlN.includes("kw-postnav")) { const pn = sp.postNav; %>
+<nav class="article-pager sp-nav sp-nav-<%= pn.style %>" data-sp-align="<%= pn.align %>" aria-label="Articles précédent et suivant">
+  <% [["prev", previous, "Article précédent", "←"], ["next", next, "Article suivant", "→"]].forEach(([dir, p, text, arrow]) => { if (!p) return; %>
+    <a class="article-pager-link<%= dir === "next" ? " article-pager-next" : "" %>" href="<%= postUrl(p) %>" rel="<%= dir %>">
+      <% if (pn.images && p.cover_path) { %><img class="sp-nav-img" src="<%= p.cover_path %>" alt="" width="96" height="64" loading="lazy"><% } %>
+      <span class="article-pager-dir"><%= dir === "prev" ? arrow + " " : "" %><%= text %><%= dir === "next" ? " " + arrow : "" %></span>
+      <% if (pn.titles) { %><span class="article-pager-title"><%= p.title %></span><% } else { %><span class="sr-only"><%= p.title %></span><% } %>
+    </a>
+  <% }) %>
+</nav>
+<% } %>

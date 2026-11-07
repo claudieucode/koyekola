@@ -145,11 +145,10 @@ const SITE_RULES = Object.freeze([
   { id: "themes-du-site", pattern: /^\/site-web\/themes(?:\/|$)/, kind: "param", terminal: true },
   // Apparence → Polices : polices du site (bibliothèque, téléversement, installation) ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
   { id: "polices-du-site", pattern: /^\/site-web\/polices(?:\/|\.|$)/, kind: "param", terminal: true },
-  // Apparence → Personnaliser : brouillon et publication PAR SITE ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
   // Barre d'administration : notifications du site actif ; le site est « ?site= » ou le champ « site » (absent = site principal, équipe seulement)
   { id: "barre-du-site", pattern: /^\/barre(?:\/|$)/, kind: "param", terminal: true },
-  { id: "personnaliser-du-site", pattern: /^\/site-web\/personnaliser(?:\/|$)/, kind: "param", terminal: true },
   { id: "widgets-du-site", pattern: /^\/site-web\/widgets(?:\/|$)/, kind: "param", terminal: true },
+  { id: "personnaliser-du-site", pattern: /^\/site-web\/personnaliser(?:\/|$)/, kind: "param", terminal: true },
   { id: "styles-du-site", pattern: /^\/site-web\/styles(?:\/|$)/, kind: "param", terminal: true },
   { id: "patterns-du-site", pattern: /^\/site-web\/patterns(?:\/|$)/, kind: "param", terminal: true },
   { id: "templates-du-site", pattern: /^\/site-web\/templates(?:\/|$)/, kind: "param", terminal: true },
@@ -179,8 +178,8 @@ const FAMILIES = Object.freeze([
   { id: "themes-par-site", scope: "site", pattern: /^\/site-web\/themes(?:\/|$)/ },
   { id: "polices-par-site", scope: "site", pattern: /^\/site-web\/polices(?:\/|$)/ },
   { id: "barre-par-site", scope: "site", pattern: /^\/barre(?:\/|$)/ },
-  { id: "personnaliser-par-site", scope: "site", pattern: /^\/site-web\/personnaliser(?:\/|$)/ },
   { id: "widgets-par-site", scope: "site", pattern: /^\/site-web\/widgets(?:\/|$)/ },
+  { id: "personnaliser-par-site", scope: "site", pattern: /^\/site-web\/personnaliser(?:\/|$)/ },
   { id: "styles-par-site", scope: "site", pattern: /^\/site-web\/styles(?:\/|$)/ },
   { id: "patterns-par-site", scope: "site", pattern: /^\/site-web\/patterns(?:\/|$)/ },
   { id: "templates-par-site", scope: "site", pattern: /^\/site-web\/templates(?:\/|$)/ },

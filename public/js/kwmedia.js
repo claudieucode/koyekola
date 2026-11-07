@@ -3,7 +3,7 @@
 // logique de médiathèque n'est recopiée ailleurs.
 (function () {
   var BASE = "/marketing/site-web/mediatheque";
-  var TYPE_LABELS = { image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document" };
+  var TYPE_LABELS = { image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document", lottie: "Animation Lottie" };
 
   // MEDIA-01 : chaque site a SA médiathèque. Le site de la page (ou de l'éditeur) accompagne CHAQUE appel ; le serveur le vérifie contre les droits de la personne
   // (il n'est jamais cru sur parole) : sans lui, un accès limité à un site est refusé et l'équipe tomberait dans la médiathèque commune.

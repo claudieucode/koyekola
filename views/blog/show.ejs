@@ -1,4 +1,6 @@
 <%- include("../partials/header", { title: post.title }) %>
+<link rel="stylesheet" href="<%= asset('/css/single-post.css') %>">
+<% if (spCss) { %><style data-sp-style><%- spCss %></style><% } %>
 <%
   const iso = (d) => d.replace(" ", "T") + "Z";
   const showToc = article.toc.length >= 2;
@@ -16,8 +18,7 @@
 %>
   <div class="article-progress" aria-hidden="true"><span class="article-progress-bar" data-progress-bar></span></div>
 
-  <div class="container article-page">
-    <%- include("../partials/breadcrumb", { crumbs }) %>
+  <div class="container article-page sp-page" data-sp-container="<%= spAttrs.container %>" data-sp-container-style="<%= spAttrs.containerStyle %>" data-sp-sidebar="<%= spAttrs.sidebar %>" data-sp-sidebar-style="<%= spAttrs.sidebarStyle %>" data-sp-sidebar-mobile="<%= spAttrs.sidebarMobile %>" data-sp-content="<%= spAttrs.content %>" data-sp-autoload="<%= sp.autoload.enabled ? "1" : "0" %>" data-sp-float="<%= sp.share.enabled && sp.share.floating ? "1" : "0" %>">
     <% if (typeof preview !== "undefined" && preview) { %><p class="form-error" role="status">Aperçu : version en cours de rédaction, visible seulement par vous.</p>
     <% } else if (!post.published) { %><p class="form-error" role="status"><%= post.status === "scheduled" ? "Programmé" : post.status === "archived" ? "Archivé" : post.status === "review" ? "En relecture" : "Brouillon" %> : cet article n'est visible que par vous.</p><% } %>
 
@@ -34,7 +35,7 @@
             </nav>
           <% } %>
           <p class="article-reading">Lecture : <strong data-progress-text>0 %</strong></p>
-          <%- include("partials/share", { variant: "vertical", label: "Partager" }) %>
+          <% if (sp.share.enabled && sp.share.floating) { %><%- include("sp/_share", { variant: "vertical", label: sp.share.label }) %><% } %>
         </div>
       </aside>
 
@@ -42,24 +43,8 @@
       <article class="article-main" data-article<% if (typeof lang !== "undefined" && lang) { %> lang="<%= lang %>"<% } %>>
         <%# Modèle de thème (Page Builder) : remplace l'en-tête, l'image à la une, le sommaire mobile et le texte ; sinon affichage d'origine %>
         <% if (typeof themeTemplate !== "undefined" && themeTemplate) { %><%- themeTemplate %><% } else { %>
-        <header class="article-header">
-          <% if (postTerms.primary) { %><a class="article-category" href="<%= postTerms.primary.url %>"><%= postTerms.primary.name %></a><% } else if (post.category) { %><a class="article-category" href="<%= termUrl("category", categorySlug) %>"><%= post.category %></a><% } %>
-          <h1 class="post-title"><%= post.title %></h1>
-          <% if (post.excerpt) { %><p class="article-lead"><%= post.excerpt %></p><% } %>
-          <p class="post-meta article-meta">
-            <% if (post.published_at) { %><time datetime="<%= iso(post.published_at) %>"><%= formatDate(post.published_at) %></time><% } %>
-            <% if (author) { %><span aria-hidden="true">·</span> <span>par <a href="/blog/auteur/<%= author.id %>"><%= author.username %></a></span><% } %>
-            <span aria-hidden="true">·</span> <span class="article-minutes"><%- icon("clock", { size: 14 }) %> <%= minutes %> min de lecture</span>
-            <% if (modified) { %><span aria-hidden="true">·</span> <span>Mis à jour le <time datetime="<%= iso(modified) %>"><%= formatDate(modified) %></time></span><% } %>
-          </p>
-          <%- include("partials/share", { variant: "inline", label: "" }) %>
-        </header>
-
-        <% if (post.cover_path) { %>
-          <figure class="article-cover">
-            <img class="post-cover" src="<%= post.cover_path %>" alt="<%= post.cover_alt || post.title %>" width="1200" height="675" fetchpriority="high" decoding="async">
-          </figure>
-        <% } %>
+        <%- include("sp/_header") %>
+        <% if (sp.share.enabled && sp.share.before) { %><%- include("sp/_share", { variant: "inline", label: sp.share.label }) %><% } %>
 
         <% if (showToc) { %>
           <details class="article-toc-mobile">
@@ -70,7 +55,8 @@
           </details>
         <% } %>
 
-        <div class="markdown article-content"><%- article.html %></div>
+        <%- sp.authorBox.position === "before-content" ? include("sp/_authorbox") : "" %>
+        <div class="markdown article-content sp-content"><%- article.html %></div>
         <% if (article.pageCount > 1) { %>
           <nav class="article-pages" aria-label="Pages de l'article">
             <% if (article.pageNo > 1) { %><a class="btn btn-outline" rel="prev" href="?page=<%= article.pageNo - 1 %>">← Page précédente</a><% } %>
@@ -86,84 +72,26 @@
           </ul>
         <% } %>
 
-        <%- include("partials/share", { variant: "end", label: "Cet article vous a été utile ? Partagez-le :" }) %>
-
-        <% const tplHtml = typeof themeTemplate !== "undefined" && themeTemplate ? String(themeTemplate) : ""; /* éléments déjà présents dans le modèle de thème : pas de doublon */ %>
-        <% if (author && !tplHtml.includes("kw-authorbox")) { %>
-          <section class="article-author" aria-labelledby="author-title">
-            <% if (author.avatar_path) { %><img class="article-author-avatar" src="<%= author.avatar_path %>" alt="" width="72" height="72" loading="lazy">
-            <% } else { %><span class="article-author-avatar article-author-initials" style="background:<%= avatarColor(author.username) %>" aria-hidden="true"><%= initials(author.username) %></span><% } %>
-            <div>
-              <h2 class="article-author-label" id="author-title">À propos de l'auteur</h2>
-              <p class="article-author-name"><%= author.username %></p>
-              <% if (author.bio) { %><p class="article-author-bio"><%= author.bio %></p><% } %>
-              <% if (author.postCount > 1) { %><p><a href="/blog/auteur/<%= author.id %>">Voir ses <%= author.postCount %> articles</a></p><% } %>
-            </div>
-          </section>
-        <% } %>
-
-        <% if ((previous || next) && !tplHtml.includes("kw-postnav")) { %>
-          <nav class="article-pager" aria-label="Articles précédent et suivant">
-            <% if (previous) { %><a class="article-pager-link" href="<%= postUrl(previous) %>" rel="prev"><span class="article-pager-dir"><%- icon("arrowLeft", { size: 14 }) %> Article précédent</span><span class="article-pager-title"><%= previous.title %></span></a><% } else { %><span></span><% } %>
-            <% if (next) { %><a class="article-pager-link article-pager-next" href="<%= postUrl(next) %>" rel="next"><span class="article-pager-dir">Article suivant <%- icon("arrowRight", { size: 14 }) %></span><span class="article-pager-title"><%= next.title %></span></a><% } %>
-          </nav>
-        <% } %>
-
-        <% if (post.comments_enabled) { %>
-          <section class="article-comments" id="commentaires" aria-labelledby="comments-title">
-            <% if (!tplHtml.includes("kw-postcomments")) { /* liste déjà affichée par l'élément « Commentaires » du modèle */ %>
-            <h2 id="comments-title">Commentaires <span class="article-comments-count">(<%= comments.total %>)</span></h2>
-            <% if (commentNotice) { %><p class="comment-notice" role="status"><%= commentNotice %></p><% } %>
-            <% if (comments.roots.length) { %>
-              <ol class="comment-list">
-                <% comments.roots.forEach((c) => { %><%- include("_comment", { c, level: 1 }) %><% }) %>
-              </ol>
-              <% if (comments.pages > 1) { %>
-                <nav class="comment-pager" aria-label="Pages de commentaires">
-                  <% if (comments.page > 1) { %><a class="btn btn-outline btn-sm" href="?cpage=<%= comments.page - 1 %>#commentaires">Commentaires précédents</a><% } %>
-                  <span>Page <%= comments.page %> sur <%= comments.pages %></span>
-                  <% if (comments.page < comments.pages) { %><a class="btn btn-outline btn-sm" href="?cpage=<%= comments.page + 1 %>#commentaires">Commentaires suivants</a><% } %>
-                </nav>
-              <% } %>
-            <% } else if (commentsOpen) { %>
-              <p class="comment-empty">Aucun commentaire pour l'instant : soyez le premier à réagir.</p>
-            <% } else { %>
-              <p class="comment-empty">Aucun commentaire.</p>
-            <% } %>
-            <% } %>
-            <% if (commentsOpen && (me || commentCfg.guests_allowed)) { %>
-              <form method="post" action="/blog/<%= post.slug %>/commentaires" class="comment-form" id="commentaire-form" novalidate>
-                <% if (replyTo) { %>
-                  <input type="hidden" name="parent_id" value="<%= replyTo.id %>">
-                  <p class="comment-replying" role="status">Réponse à <strong><%= replyTo.name %></strong> · <a href="<%= postUrl(post) %>#commentaires">Annuler</a></p>
-                <% } %>
-                <% if (commentError) { %><p class="form-error" role="alert" id="comment-error"><%= commentError %></p><% } %>
-                <% if (!me) { const req2 = commentCfg.require_name_email; const ck = commenterCookie || {}; %>
-                  <div class="comment-form-row">
-                    <div><label for="comment-name">Nom<%= req2 ? " *" : " (facultatif)" %></label><input id="comment-name" type="text" name="author_name" maxlength="60"<%= req2 ? " required" : "" %> autocomplete="name" value="<%= commentForm.name || ck.name || '' %>"></div>
-                    <div><label for="comment-email">E-mail<%= req2 ? " *" : " (facultatif)" %> <span class="field-hint">(jamais affiché)</span></label><input id="comment-email" type="email" name="author_email" maxlength="120"<%= req2 ? " required" : "" %> autocomplete="email" value="<%= commentForm.email || ck.email || '' %>"></div>
-                  </div>
-                <% } %>
-                <label for="comment-body"><%= replyTo ? "Votre réponse" : "Votre commentaire" %></label>
-                <textarea id="comment-body" name="body" rows="4" maxlength="<%= commentMax %>" required<%- commentError ? ' aria-describedby="comment-error"' : '' %> placeholder="Partagez votre avis, une question, une expérience…"><%= commentDraft %></textarea>
-                <% if (!me) { %><input type="hidden" name="form_token" value="<%= commentToken %>"><% } %>
-                <div class="comment-hp" aria-hidden="true"><label>Ne pas remplir <input type="text" name="contact_url" tabindex="-1" autocomplete="off"></label></div>
-                <% if (!me && commentCfg.cookie_consent) { %><p class="comment-consent"><label><input type="checkbox" name="remember" value="1"<%= commenterCookie ? " checked" : "" %>> Enregistrer mon nom et mon e-mail dans ce navigateur pour mon prochain commentaire.</label></p><% } %>
-                <div class="comment-form-foot"><span class="field-hint"><% if (me) { %>Publié sous le nom <strong><%= me.username %></strong>. <% } %>Texte seul, <%= commentMax %> caractères au plus.<%= commentCfg.moderation === "all" || (commentCfg.moderation === "first" && !me) ? " Les commentaires sont relus avant d'apparaître." : "" %></span><button type="submit" class="btn btn-primary"><%= replyTo ? "Publier la réponse" : "Publier le commentaire" %></button></div>
-              </form>
-            <% } else if (commentClosedByAge) { %>
-              <p class="comment-empty">Les commentaires sont fermés : cette publication date de plus de <%= commentCfg.close_days %> jours.</p>
-            <% } else if (commentsOpen) { %>
-              <div class="comment-login">
-                <p>Connectez-vous pour laisser un commentaire. Pas encore membre ? L'inscription est gratuite.</p>
-                <div class="comment-login-actions">
-                  <a class="btn btn-primary" href="/inscription?redirect=<%= encodeURIComponent(`/blog/${post.slug}#commentaires`) %>">Créer un compte</a>
-                  <a class="btn btn-outline" href="/connexion?redirect=<%= encodeURIComponent(`/blog/${post.slug}#commentaires`) %>">Se connecter</a>
-                </div>
-              </div>
-            <% } %>
-          </section>
-        <% } %>
+        <%# Blocs de fin d'article dans l'ordre choisi (position de chaque bloc → rang) %>
+        <%
+          const rank = { share: 20, authorBox: { "after-content": 10, "after-share": 30, "after-nav": 0, "before-content": -1 }[sp.authorBox.position], postNav: { "after-share": 31, "after-author": 40, "after-comments": 70 }[sp.postNav.position], comments: sp.comments.position === "before-nav" ? 35 : 60, relatedBefore: 55, relatedAfter: 65 };
+          if (sp.authorBox.position === "after-nav") rank.authorBox = rank.postNav + 1;
+          const tail = [];
+          if (sp.share.enabled && sp.share.after) tail.push(["share", rank.share]);
+          if (sp.authorBox.enabled && sp.authorBox.position !== "before-content") tail.push(["authorbox", rank.authorBox]);
+          if (sp.postNav.enabled) tail.push(["nav", rank.postNav]);
+          if (sp.comments.enabled) tail.push(["comments", rank.comments]);
+          if (sp.related.enabled && sp.related.position === "before-comments") tail.push(["related", rank.comments - 1]);
+          if (sp.related.enabled && sp.related.position === "after-comments") tail.push(["related", rank.comments + 1]);
+          tail.sort((x, y) => x[1] - y[1]);
+        %>
+        <% tail.forEach(([id]) => { %>
+          <% if (id === "share") { %><%- include("sp/_share", { variant: "end", label: "Cet article vous a été utile ? Partagez-le :" }) %>
+          <% } else if (id === "authorbox") { %><%- include("sp/_authorbox") %>
+          <% } else if (id === "nav") { %><%- include("sp/_nav") %>
+          <% } else if (id === "comments") { %><%- include("sp/_comments") %>
+          <% } else if (id === "related") { %><%- include("sp/_related") %><% } %>
+        <% }) %>
 
         <section class="article-final-cta">
           <h2>Prêt à développer vos compétences ?</h2>
@@ -173,7 +101,8 @@
       </article>
 
       <%# ---------- Droite : populaires, récents, catégories, newsletter, formations ---------- %>
-      <aside class="article-right" aria-label="Plus d'articles">
+      <% if (sp.sidebar.layout !== "none") { %>
+      <aside class="article-right sp-sidebar" aria-label="Plus d'articles">
         <div class="article-sticky">
           <% if (sidebar.popular.length) { %>
             <section class="side-block">
@@ -213,30 +142,14 @@
           </section>
         </div>
       </aside>
+      <% } %>
     </div>
 
-    <% if (similar.length) { %>
-      <section class="article-similar" aria-labelledby="similar-title">
-        <h2 id="similar-title">Vous pourriez également aimer</h2>
-        <div class="post-grid">
-          <% similar.forEach((p) => { %>
-            <article class="post-card">
-              <% if (p.cover_path) { %><a href="<%= postUrl(p) %>" class="post-card-cover" tabindex="-1" aria-hidden="true"><img src="<%= p.cover_path %>" alt="" loading="lazy" width="640" height="360"></a>
-              <% } else { %><span class="post-card-cover post-card-cover-empty" aria-hidden="true"></span><% } %>
-              <div class="post-card-body">
-                <% if (p.category) { %><span class="post-card-category"><%= p.category %></span><% } %>
-                <h3><a href="<%= postUrl(p) %>"><%= p.title %></a></h3>
-                <p><%= p.summary %></p>
-                <p class="post-card-foot"><time datetime="<%= iso(p.published_at) %>"><%= formatDate(p.published_at) %></time> <a href="<%= postUrl(p) %>" class="post-card-more" aria-label="Lire l'article « <%= p.title %> »">Lire l'article</a></p>
-              </div>
-            </article>
-          <% }) %>
-        </div>
-      </section>
-    <% } %>
+    <% if (sp.related.enabled && sp.related.position === "end") { %><%- include("sp/_related") %><% } %>
     <%# Colonne latérale (Apparence → Widgets) : sous l'article sur la page d'un article %>
     <%- typeof widgetZone === "function" ? widgetZone("sidebar") : "" %>
   </div>
   <script src="<%= asset('/js/blog-article.js') %>" defer></script>
+  <% if (sp.autoload.enabled && previous) { %><script id="sp-autoload-config" type="application/json"><%- JSON.stringify({ max: sp.autoload.max, updateUrl: sp.autoload.updateUrl, loading: sp.autoload.loadingText, error: sp.autoload.errorText, end: sp.autoload.endText, prev: postUrl(previous), mode: sp.postNav.mode }).replace(/</g, "\\u003c") %></script><script src="<%= asset('/js/single-post-autoload.js') %>" defer></script><% } %>
 
 <%- include("../partials/footer") %>

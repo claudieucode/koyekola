@@ -189,11 +189,11 @@
   "error": "077eff4a78c934e47be5e4a4156c535358bcf57e"
  },
  "marquee": {
-  "json": "3b18ff4bc45f6404835945b1d433877daefd1b29",
+  "json": "f0f3ac5db1ceb2d93cf2eb0ba90bc19d6b62d538",
   "css": "8439d68d5fcb17b7789802fc9fa7c18e9cd750a8"
  },
  "mediacarousel": {
-  "json": "438935f5c107d0f13cd8fe2680d132c16a4d75df",
+  "json": "0e1513320ed79453976b40bf8f3885455b128ad5",
   "css": "de166cc26062e446515db4ff71e27d3a5793b2ab"
  },
  "menu": {
@@ -210,6 +210,186 @@
  "modal": {
   "json": "2cb5c6d47b8698fa86bfa6162a6a75f9718cdc6d",
   "css": "491a5c0d2c6e83f7652e3d8e26a08435b68083d2"
+ },
+ "motionanimatedbg": {
+  "json": "f20e4e7f7adeb6f4f048cd0f8be5ce3a26950a12",
+  "css": "31dad858f26ff696d1e2b7bbf14fc0ec27b1f5d2"
+ },
+ "motionanimatedheading": {
+  "json": "25776c75f92e46d5b85b77c3cf26fc2951aff4b8",
+  "css": "31dad858f26ff696d1e2b7bbf14fc0ec27b1f5d2"
+ },
+ "motionbars": {
+  "json": "37cc06c655beed1ec692210000c4b25513cd5296",
+  "css": "d513b8325dcdc2d731b4b691379891cda6c644b6"
+ },
+ "motionbutton": {
+  "json": "89ed7de0d2719444802df339ebf7ec625cffe4e4",
+  "css": "d513b8325dcdc2d731b4b691379891cda6c644b6"
+ },
+ "motioncardstack": {
+  "json": "aef429b3b909e7e742deceff7b95a34910342441",
+  "css": "520b7a9a20ddf16958f71c6a08ba54f3bb4cd08f"
+ },
+ "motioncascade": {
+  "json": "39fbb77a1d892255c297472c32a7b4d194016b07",
+  "css": "520b7a9a20ddf16958f71c6a08ba54f3bb4cd08f"
+ },
+ "motionchart": {
+  "json": "8406c941517f781b851fc0917526ea73d72ce700",
+  "css": "520b7a9a20ddf16958f71c6a08ba54f3bb4cd08f"
+ },
+ "motioncircular": {
+  "json": "09cb7ca12b4ce9a9706d7550eb6f8b75d925df57",
+  "css": "520b7a9a20ddf16958f71c6a08ba54f3bb4cd08f"
+ },
+ "motioncirculartext": {
+  "json": "f2430705666fb9264923dae510752ef4b48ef973",
+  "css": "520b7a9a20ddf16958f71c6a08ba54f3bb4cd08f"
+ },
+ "motioncompare": {
+  "json": "2e54863e2ac1fc445cfae85891535085ffcc2ab8",
+  "css": "520b7a9a20ddf16958f71c6a08ba54f3bb4cd08f"
+ },
+ "motioncursor": {
+  "json": "8b7809dea8c13dd17d2c280ef767c150cb6a00cc",
+  "css": "520b7a9a20ddf16958f71c6a08ba54f3bb4cd08f"
+ },
+ "motionformfeedback": {
+  "json": "7f3e7dfe673e8f3fa3dd588f14883a2887442bfb",
+  "css": "22f3f350d245e1983f84365060d43729a98492ff"
+ },
+ "motionfsmenu": {
+  "json": "01d00a0e65401642df477a0e63173cd2139a19fa",
+  "css": "22f3f350d245e1983f84365060d43729a98492ff"
+ },
+ "motiongauge": {
+  "json": "f3c02cb8f05e756d83f9a3ac9f8296d037e6050b",
+  "css": "7048cbf9973439804d0f2ae7d610dd9a25a67007"
+ },
+ "motiongradienttext": {
+  "json": "91d092e7996a55f1a1f42830b4009e75f986d86a",
+  "css": "7048cbf9973439804d0f2ae7d610dd9a25a67007"
+ },
+ "motionhero": {
+  "json": "cc8b821951abab3fcf84b4c40ce142e3f80a8f50",
+  "css": "0a43635c768703cb0f54be93e27ff817ae685ccd"
+ },
+ "motionhgallery": {
+  "json": "364d347f9e9cfe5135c18ad1bcf6bd62b632f0ce",
+  "css": "0a43635c768703cb0f54be93e27ff817ae685ccd"
+ },
+ "motionimageparallax": {
+  "json": "0da308298606d2274849bde01ce8f8ec833e7dc6",
+  "css": "0ee58de9dd2a9321fb7952fc0bb836ffc6d3f5d4"
+ },
+ "motionimagereveal": {
+  "json": "b8901e65131dd2d9faf002a7e43cc42a19c4f25e",
+  "css": "0ee58de9dd2a9321fb7952fc0bb836ffc6d3f5d4"
+ },
+ "motionkinetictext": {
+  "json": "d2d5303930c7a131ab7b7170d5bab73d1dc74dd0",
+  "css": "43cc6023fd56b709d0f8448617e5028043178824"
+ },
+ "motionloader": {
+  "json": "7b59914064f4f5409955ff7fa33b784865fd6946",
+  "css": "11254abab5345a07eb858183f6a5953ef922072d"
+ },
+ "motionlogomarquee": {
+  "json": "96c358159e5ec59985979799a34d88646a09f13d",
+  "css": "11254abab5345a07eb858183f6a5953ef922072d"
+ },
+ "motionlottie": {
+  "json": "8ee57e5ca831afe7ae40457292375ca11b52bb5b",
+  "css": "11254abab5345a07eb858183f6a5953ef922072d"
+ },
+ "motionmagneticbutton": {
+  "json": "39c15ce530c7d68d85ba1b8b976f3dd365158391",
+  "css": "f0798a9fc61f243631772db24355cc3bf4112405"
+ },
+ "motionmarqueevelocity": {
+  "json": "d308351020a5e7115a996de3f2842d2bbffa8b56",
+  "css": "f0798a9fc61f243631772db24355cc3bf4112405"
+ },
+ "motionmetric": {
+  "json": "3b73f4f888afad9318052aabd29e995b7df0d56c",
+  "css": "f0798a9fc61f243631772db24355cc3bf4112405"
+ },
+ "motionnumberticker": {
+  "json": "f969ba2e42a6e92401c470d2d4475eb333a7453f",
+  "css": "11590fc79702e43e8820424f02f7bdb6ae5a306c"
+ },
+ "motionpinscenes": {
+  "json": "c79d145cb601e30febd739fc079f3e264d969c8f",
+  "css": "e6a353b74a73372ac92c6470b318f910712d2e0d"
+ },
+ "motionportfolio": {
+  "json": "b50f44ea279e1ab4af8d5b46ab6ffb7c5253c848",
+  "css": "e6a353b74a73372ac92c6470b318f910712d2e0d"
+ },
+ "motionprocess": {
+  "json": "d968d8e7bb6e042f0ebd97b49f53d34991919e11",
+  "css": "e6a353b74a73372ac92c6470b318f910712d2e0d"
+ },
+ "motionrevealtext": {
+  "json": "f817241a4ff976fcd098d472b327a5c852cbc425",
+  "css": "06b247e9a04b0bb87e2faba39818d64616f2df25"
+ },
+ "motionrotatingtext": {
+  "json": "bf755953ca8190bdc588f7ee77a4535f501b9eb0",
+  "css": "06b247e9a04b0bb87e2faba39818d64616f2df25"
+ },
+ "motionscrollseq": {
+  "json": "b4a81ef835aa85fd9dc4e157e711895f2fae840d",
+  "css": "e83f57aa0e55c9ca4dfbe327a9a0e8f2eb47f503"
+ },
+ "motionsplittext": {
+  "json": "16b4fdf92b27b235be494231b5fabbfb599f54b9",
+  "css": "e83f57aa0e55c9ca4dfbe327a9a0e8f2eb47f503"
+ },
+ "motionstickystory": {
+  "json": "60925b208d84fe696688300c27bcfb6a7fde808c",
+  "css": "e83f57aa0e55c9ca4dfbe327a9a0e8f2eb47f503"
+ },
+ "motionsvgdraw": {
+  "json": "129e16f23b094444e755ccf8030801a9a69380ee",
+  "css": "e83f57aa0e55c9ca4dfbe327a9a0e8f2eb47f503"
+ },
+ "motionswitch": {
+  "json": "c3fd56249e689a3cc961b0f99d170dde451a3e42",
+  "css": "e83f57aa0e55c9ca4dfbe327a9a0e8f2eb47f503"
+ },
+ "motiontabs": {
+  "json": "e00c827321bddaa95fd69802c0e3fd00c1f645b5",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
+ },
+ "motiontestimonials": {
+  "json": "02f71ab93be45ffc5fb32f76b4e002fe9137a270",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
+ },
+ "motiontextmask": {
+  "json": "84b62d9e235b57b3fb5a15e27ddd4bed3cbbaf4c",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
+ },
+ "motiontextscramble": {
+  "json": "7ff7e4c54ba2a14f5dd31693ffdba0c903d76d5b",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
+ },
+ "motiontiltcard": {
+  "json": "e4b1120bbd2d36772f0b91bc8074335b61f1f212",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
+ },
+ "motiontimeline": {
+  "json": "c5235407cb12c53ef2b1401fbea908b6aceebf20",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
+ },
+ "motiontoast": {
+  "json": "6e4b508db380a0bb19bb728466ce90fcbad6a98d",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
+ },
+ "motiontypewriter": {
+  "json": "58312f01c9d8f4d21bbf00658d1209304e6b9cc8",
+  "css": "0411fb16f7b111a8495af613cdc8f7560ab1c639"
  },
  "paypalbutton": {
   "json": "c3f2add70bede1f89197e79bd21a4f3ce7e600a8",
@@ -274,6 +454,10 @@
   "json": "dd680cb385590596a08caae298c49b9b93e087b7",
   "css": "c4fabe1cd67228f310d0c0bd53bc066a712dedbd"
  },
+ "reviews": {
+  "json": "c343e9e40ee928b45101df6cc8712a6c56bef698",
+  "css": "e7f69b1c419f753b3092f11be50101bb20844592"
+ },
  "search": {
   "json": "578fe38c08a009d318e14b714c199baaeca4cb9c",
   "css": "c2e1a63e1fc6257f9c83c4d5ed159fcdf9804eeb"
@@ -322,7 +506,7 @@
   "css": "549cf388e0834f5279fe92d6594f9cb1ae9d4ee3"
  },
  "slides": {
-  "json": "39936600f56a206aca7f2c8f0d4cf0c34c5c8c65",
+  "json": "aa5082de9f98c154bcc2bf2ddc192019f63bed58",
   "css": "d03a0ddb2f3bf374b4b5dac85acce06cfca30b49"
  },
  "smartlink": {
@@ -336,6 +520,10 @@
  "spacer": {
   "json": "5a5ef04e86947b4d618abd113cc8358d8546c6ac",
   "css": "36a3ad659592108f761aa3fb43ebd38b6a702f8a"
+ },
+ "splittext": {
+  "json": "e811085e7d010c2114bef9d9d4f27329ec5fe3ed",
+  "css": "5b87db1dbd08fe6a226e338f3ae00c951cbffebe"
  },
  "stack": {
   "json": "9d08d4ff17752b01ce6d2886e3c9dd3ac1eb7a34",
@@ -358,7 +546,7 @@
   "css": "23dd096f643d2f480cda2238b25268c89cfcb2b4"
  },
  "testimonialcarousel": {
-  "json": "cff688a164f65fc30b86ecfb999b8e11e9481e2c",
+  "json": "c55c8577b9f5faa8012c926419bc26a277cdbe07",
   "css": "23dd096f643d2f480cda2238b25268c89cfcb2b4"
  },
  "text": {

@@ -1,0 +1,19 @@
+<%- include("_top", { noindex: true }) %>
+<h1 class="sh-title">Votre avis sur « <%= product.name %> »</h1>
+<p class="sh-meta">Commande <%= order.number %> · avis vérifié</p>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (done) { %>
+<p class="sh-ok" role="status"><%= done === "published" ? "Merci ! Votre avis est publié." : "Merci ! Votre avis sera publié après relecture." %></p>
+<p><a class="sh-btn" href="<%= shop.base %>/produit/<%= encodeURIComponent(product.slug) %>">Retour au produit</a></p>
+<% } else { %>
+<form class="sh-form" method="post" action="<%= shop.base %>/avis/<%= encodeURIComponent(order.number) %>/<%= product.id %>?k=<%= key %>">
+  <fieldset><legend>Votre note</legend>
+    <% [5,4,3,2,1].forEach((n) => { %><label><input type="radio" name="rating" value="<%= n %>"<%= String(values.rating) === String(n) ? " checked" : "" %> required> <%= n %> / 5</label><% }) %>
+  </fieldset>
+  <label>Titre (facultatif)<input name="title" maxlength="120" value="<%= values.title || "" %>"></label>
+  <label>Votre avis<textarea name="body" rows="5" maxlength="2000"><%= values.body || "" %></textarea></label>
+  <label>Prénom affiché<input name="author_name" maxlength="60" value="<%= values.author_name || "" %>"></label>
+  <button class="sh-btn sh-btn-primary" type="submit">Envoyer mon avis</button>
+</form>
+<% } %>
+<%- include("_bottom") %>

@@ -335,6 +335,7 @@ function declarations(set, band = false) {
   // Coins après l'arrondi général (sinon « border-radius » les écraserait)
   for (const [k, v] of entries.filter(([k]) => !CORNERS.has(k) && !PLACEMENT.has(k) && k !== "transitionEasing").concat(entries.filter(([k]) => CORNERS.has(k) || k === "transitionEasing"))) {
     const p = STYLE_PROPS[k];
+    if (k === "fontFamily" && p) { const fv = p.out ? p.out(v) : v; d.push(`font-family:${fv}`, `--kw-font-link:${fv}`, `--kw-font-button:${fv}`, `--kw-font-heading:${fv}`); continue; } // la police réglée sur un élément atteint ses liens, boutons et titres (le site leur impose la sienne par ces variables)
     if (p) d.push(band && (k === "paddingLeft" || k === "paddingRight") ? `--kw-p${k === "paddingLeft" ? "l" : "r"}:${p.out ? p.out(v) : v}` : `${p.css}:${p.out ? p.out(v) : v}`);
   }
   if (set.columnCount !== undefined && set.columnGap === undefined) d.push("column-gap:2rem"); // écart par défaut entre les colonnes de texte
@@ -443,7 +444,7 @@ const NODE_TYPES = {
   // Mode d'affichage des enfants (facultatif ; absent = conteneur ordinaire, comme avant) : « onglets » (un enfant = un onglet, titre = son nom) ou
   // « carrousel » (un enfant = une diapositive, avec le carrousel du site). Les enfants restent de vrais conteneurs, modifiables dans le canevas.
   // headerFx : effet d'un EN-TÊTE au défilement, lu sur le premier conteneur de l'en-tête (themeRender.partMode, _sections.ejs) : « shrink » (la rangée se réduit), « solid » (un en-tête superposé devient plein), « both ». Sans rapport avec motion.scrollFx (effets de mouvement d'un élément).
-  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p), ...(oneOf("shrink", "solid", "both")(p.headerFx) ? { headerFx: p.headerFx } : {}) }) },
+  container: { label: "Conteneur", category: "structure", container: true, props: (p, at, h) => ({ ...boxProps(p, at, h), ...(p.full === true ? { full: true } : p.band === true ? { band: true } : {}), ...nestedProps(p), ...(oneOf("shrink", "solid", "both", "hide")(p.headerFx) ? { headerFx: p.headerFx } : {}), ...(p.headerIdentity === "site" ? { headerIdentity: "site" } : {}), ...(p.dismissible === true ? { dismissible: true } : {}), ...(typeof p.libraryKey === "string" && /^[a-z0-9.-]{3,80}$/.test(p.libraryKey) ? { libraryKey: p.libraryKey } : {}) }) },
   columns: { label: "Colonnes", category: "structure", container: true, props: () => ({}) },
   column: { label: "Colonne", category: "structure", container: true, props: () => ({}) },
   // Grille : peut devenir une BOUCLE (« Répéter pour chaque article / formation ») : ses enfants sont le modèle d'un élément
@@ -589,7 +590,8 @@ const NODE_TYPES = {
     const value = numberIn(0, 100, { integer: true })(p.value);
     if (!label) throw new Error(`${at} (barre de progression) : un libellé est obligatoire (lu par les lecteurs d'écran).`);
     if (value === null) throw new Error(`${at} (barre de progression) : valeur entre 0 et 100.`);
-    return { label, value, showValue: p.showValue !== false, animate: p.animate === true };
+    const dur = numberIn(200, 5000, { integer: true })(p.duration), ease = oneOf("linear", "out")(p.easing);
+    return { label, value, showValue: p.showValue !== false, animate: p.animate === true, ...(dur ? { duration: dur } : {}), ...(ease ? { easing: ease } : {}) };
   } },
   menu: { label: "Menu de navigation", category: "interaction", props: (p, at, h) => {
     // Un niveau de sous-menu (liste déroulante) ; sur mobile, le menu peut se replier derrière un bouton
@@ -630,7 +632,7 @@ const NODE_TYPES = {
       return src ? { src, alt, caption: line(im && im.caption, 200) } : null;
     }).filter(Boolean);
     if (images.length < 2) throw new Error(`${at} (carrousel) : au moins deux images.`);
-    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...imageSize(p) };
+    return { images, label: line(p.label, 80) || "Carrousel d'images", dots: p.dots !== false, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5, loop: p.loop === true, ...(p.effect === "fade" ? { effect: "fade" } : {}), ...(numberIn(2, 4, { integer: true })(p.perView) ? { perView: numberIn(2, 4, { integer: true })(p.perView) } : {}), ...imageSize(p) };
   } },
   toggle: { label: "Bascule", category: "interaction", props: (p, at) => {
     const title = line(p.title, 150), text = clean(p.text, 4000);
@@ -648,7 +650,7 @@ const NODE_TYPES = {
     const label = line(p.label, 120);
     if (!label) throw new Error(`${at} (compteur) : dites ce que mesure ce nombre (et sa source).`);
     const sep = oneOf("dot", "none")(p.separator); // séparateur des milliers : espace (défaut), point ou aucun
-    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500, ...(sep ? { separator: sep } : {}) };
+    return { value, prefix: line(p.prefix, 10), suffix: line(p.suffix, 16), label, decimals: numberIn(0, 2, { integer: true })(p.decimals) || 0, duration: numberIn(0, 5000, { integer: true })(p.duration) ?? 1500, ...(sep ? { separator: sep } : {}), ...(numberIn(100, 5000, { integer: true })(p.delay) ? { delay: numberIn(100, 5000, { integer: true })(p.delay) } : {}), ...(numberIn(-1e9, 1e9)(p.start) ? { start: numberIn(-1e9, 1e9)(p.start) } : {}), ...(oneOf("linear", "out")(p.easing) ? { easing: oneOf("linear", "out")(p.easing) } : {}) };
   } },
   testimonial: { label: "Témoignage", category: "marketing", props: (p, at, h) => {
     const text = clean(p.text, 1200), name = line(p.name, 80);
@@ -738,7 +740,7 @@ const NODE_TYPES = {
       const xx = numberIn(0, 100)(x && x.x), yy = numberIn(0, 100)(x && x.y);
       return title && xx !== null && yy !== null ? { x: xx, y: yy, title, text: line(x.text, 300) } : null;
     }).filter(Boolean);
-    return { src, alt, spots, ...(p.trigger === "hover" ? { trigger: "hover" } : {}), ...imageSize(p) };
+    return { src, alt, spots, ...(p.trigger === "hover" ? { trigger: "hover" } : {}), ...(p.pulse === true ? { pulse: true } : {}), ...imageSize(p) };
   } },
   posts: { label: "Derniers articles du blog", category: "dynamic", props: (p) => ({
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80),
@@ -801,16 +803,17 @@ const NODE_TYPES = {
   } },
   // Logo, titre du site, copyright : contenu lu à l'affichage (logo et nom des réglages SEO, nom du site de la page,
   // année en cours) ; seuls les réglages d'affichage sont enregistrés
-  // logoTop : logo affiché tant que la page n'a pas défilé (ex. logo clair sur un en-tête transparent) ; logoMobile : logo des petits écrans. Facultatifs ; images du site (même contrôle que le widget Image).
+  // logoTop : logo affiché tant que la page n'a pas défilé ; logoMobile : logo des petits écrans (Header Builder, images du site) ; scrollHeight / scrollText : taille et texte alternatifs au défilement (réglages existants).
   sitelogo: { label: "Logo du site", category: "dynamic", props: (p, at, h) => {
     const top = p.logoTop ? h.imageUrl(p.logoTop, `${at} (logo en haut de page)`) : "", mobile = p.logoMobile ? h.imageUrl(p.logoMobile, `${at} (logo mobile)`) : "";
-    return { height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(top ? { logoTop: top } : {}), ...(mobile ? { logoMobile: mobile } : {}) };
+    const sh = numberIn(16, 160, { integer: true })(p.scrollHeight), st = line(p.scrollText, 40);
+    return { height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(sh ? { scrollHeight: sh } : {}), ...(st ? { scrollText: st } : {}), ...(top ? { logoTop: top } : {}), ...(mobile ? { logoMobile: mobile } : {}) };
   } },
   // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
   postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },
   // Filtre par catégorie : liens « ?categorie=… » vers la même page (à associer à une grille en boucle « filtrer avec l'adresse »)
   catfilter: { label: "Filtre par catégorie", category: "dynamic", props: (p) => ({ source: oneOf("posts", "courses")(p.source) || "posts", allLabel: line(p.allLabel, 40) || "Toutes", showCount: p.showCount !== false }) },
-  sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false }) },
+  sitetitle: { label: "Titre du site", category: "dynamic", props: (p) => ({ tag: oneOf("p", "span", "h1", "h2", "h3")(p.tag) || "p", link: p.link !== false, ...(line(p.scrollText, 40) ? { scrollText: line(p.scrollText, 40) } : {}) }) },
   copyright: { label: "Copyright", category: "dynamic", props: (p) => ({ owner: line(p.owner, 80), text: line(p.text, 160) }) },
   // Bouton d'achat : ajoute la formation au VRAI panier de KOLAKISA (POST /panier/ajouter/:id), ou mène directement à la commande.
   // La formation doit exister et être publiée ; le prix affiché vient du catalogue à l'affichage (jamais saisi).
@@ -830,7 +833,7 @@ const NODE_TYPES = {
   animatedheading: { label: "Titre animé", category: "text", props: (p, at) => {
     const words = (Array.isArray(p.words) ? p.words : []).map((w) => line(w, 40)).filter(Boolean).slice(0, 8);
     if (words.length < 2) throw new Error(`${at} (titre animé) : au moins deux mots qui se succèdent.`);
-    return { before: line(p.before, 80), words, after: line(p.after, 80), level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", effect: oneOf("fade", "type")(p.effect) || "fade", interval: numberIn(1500, 6000, { integer: true })(p.interval) || 2500 };
+    return { before: line(p.before, 80), words, after: line(p.after, 80), level: oneOf("1", "2", "3", "4", "5", "6")(String(p.level)) || "2", effect: oneOf("fade", "type", "slide", "blur", "zoom")(p.effect) || "fade", interval: numberIn(1500, 6000, { integer: true })(p.interval) || 2500, ...(p.cursor === false ? { cursor: false } : {}) };
   } },
   // Boîte retournable : recto (icône, titre, texte) au repos, verso (titre, texte, bouton) au survol, au focus ou au toucher
   flipbox: { label: "Boîte retournable", category: "interaction", props: (p, at, h) => {
@@ -838,7 +841,7 @@ const NODE_TYPES = {
     if (!frontTitle) throw new Error(`${at} (boîte retournable) : le titre du recto est obligatoire.`);
     const icon = h.iconNames.includes(String(p.icon || "")) ? String(p.icon) : "";
     const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton du verso)`), ctaLabel = line(p.ctaLabel, 40);
-    return { icon, frontTitle, frontText: clean(p.frontText, 300), backTitle, backText: clean(p.backText, 400), ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), effect: oneOf("flip", "fade")(p.effect) || "flip", height: numberIn(160, 600, { integer: true })(p.height) || 280 };
+    return { icon, frontTitle, frontText: clean(p.frontText, 300), backTitle, backText: clean(p.backText, 400), ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), effect: oneOf("flip", "fade")(p.effect) || "flip", height: numberIn(160, 600, { integer: true })(p.height) || 280, ...(p.direction === "vertical" ? { direction: "vertical" } : {}), ...(numberIn(200, 1500, { integer: true })(p.duration) ? { duration: numberIn(200, 1500, { integer: true })(p.duration) } : {}) };
   } },
   // Liste de prix : prestations réelles (nom, prix, description, lien facultatif), points de conduite jusqu'au prix
   pricelist: { label: "Liste de prix", category: "marketing", props: (p, at, h) => {
@@ -1085,7 +1088,7 @@ function schemaProps(def) {
   return (p, at, h) => {
     const out = {};
     for (const f of def.schema) out[f.key] = validateField(f, p[f.key], `${at} (${def.label}, ${f.label})`, h);
-    if (def.validate) def.validate(out, `${at} (${def.label})`); // règles qui portent sur l'ensemble des réglages
+    if (def.validate) def.validate(out, `${at} (${def.label})`, h); // règles qui portent sur l'ensemble des réglages (h : contexte de l'enregistrement, ex. organisation et site de la page)
     return out;
   };
 }
@@ -1763,6 +1766,8 @@ function normalizeMotion(raw, type) {
   // Mouvement réduit : l'animation s'adapte (ou disparaît) quand le visiteur le demande ; « toujours animer » doit être choisi explicitement
   if (raw.alwaysMotion === true && (out.entrance || out.scroll || out.mouse || out.scrollFx || out.mouseFx)) out.alwaysMotion = true;
   if (Object.hasOwn(HOVERS, raw.hover)) out.hover = raw.hover;
+  // Parallaxe d'arrière-plan : amplitude (en %) du déplacement de l'image de fond ; valeur hors liste ignorée
+  if ([10, 20, 35, 50].includes(raw.bgParallax)) out.bgParallax = raw.bgParallax;
   // Motion Studio : réglages versionnés (motionStudio.js) ; préréglages et paramètres validés par la fiche `motion` du widget
   if (raw.studio) { const st = STUDIO.normalize(raw.studio, CUSTOM_WIDGETS[type] ? CUSTOM_WIDGETS[type].motion : null); if (st) out.studio = st; }
   return Object.keys(out).length ? out : undefined;
@@ -1969,6 +1974,7 @@ function motionAttrs(n) {
   if (m.mouseFx) a += ` data-kw-mfx="${esc(JSON.stringify(m.mouseFx))}"`;
   if (m.off && (m.scroll || m.mouse || m.scrollFx || m.mouseFx)) a += ` data-kw-fx-off="${m.off.join(" ")}"`;
   if (m.alwaysMotion) a += " data-kw-motion-always";
+  if (m.bgParallax) a += ` data-kw-bgpar="${m.bgParallax}"`;
   return a + studioAttrs.replace(" data-kw-motion-always", m.alwaysMotion ? "" : " data-kw-motion-always");
 }
 
@@ -2013,6 +2019,24 @@ function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
   }
   return [...base, ...["wide", "tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
 }
+// Lisibilité garantie : un texte et un fond en couleurs HEXADÉCIMALES réglés sur le même écran avec un contraste inférieur à 2:1 (noir sur noir, blanc sur blanc)
+// rendraient le texte invisible. Le fond choisi est conservé ; le texte prend la couleur lisible la plus proche (blanc ou presque noir). Les valeurs en variables
+// (var(--kw-…)), transparentes ou en dégradé ne sont jamais modifiées : seul un réglage littéral, donc vérifiable, est corrigé.
+const HEX_RGB = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const lumHex = (h) => { let x = String(h).slice(1); if (x.length === 3) x = x.split("").map((c) => c + c).join(""); const v = [0, 2, 4].map((i) => parseInt(x.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+const contrastHex = (a, b) => { const l1 = lumHex(a), l2 = lumHex(b); return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05); };
+function guardContrast(styles) {
+  if (!styles || typeof styles !== "object") return styles;
+  let out = null;
+  for (const [bp, st] of Object.entries(styles)) {
+    if (!st || !HEX_RGB.test(String(st.color || "")) || !HEX_RGB.test(String(st.backgroundColor || ""))) continue;
+    if (contrastHex(st.color, st.backgroundColor) >= 2) continue;
+    out = out || { ...styles };
+    out[bp] = { ...st, color: lumHex(st.backgroundColor) < 0.4 ? "#ffffff" : "#111111" };
+  }
+  return out || styles;
+}
+
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const mediaOf = (bp) => (bp.key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
@@ -2028,7 +2052,10 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (!def) continue;
       const sel = `.kw-node.kw-n-${n.id} ${def.select}`;
       for (const bp of BREAKPOINTS) {
-        const d = set.styles && set.styles[bp.key] ? declarations(set.styles[bp.key]) : "";
+        let st = set.styles && set.styles[bp.key];
+        // Menu horizontal : « Écart » règle l'espace ENTRE les liens d'une ligne ; il ne doit pas devenir un vide démesuré quand la liste passe en colonne (menu mobile)
+        if (n.type === "menu" && key === "list" && st && st.gap !== undefined && st.rowGap === undefined && st.columnGap === undefined && !(n.props && n.props.vertical)) { const { gap, ...rest } = st; st = { ...rest, columnGap: gap, rowGap: "4px" }; }
+        const d = st ? declarations(st) : "";
         if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
       }
       for (const state of STATES) {
@@ -2076,7 +2103,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, n.styles, n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
     addParts(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
@@ -2099,12 +2126,13 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (n.type === "iconlist" && NODE_ID.test(String(n.id || "")) && n.props && n.props.iconColor) rules.base.push(`.kw-n-${n.id} .kw-iconlist-icon{color:${colorCss(n.props.iconColor)}}`);
       if ((n.type === "social" || n.type === "sharebuttons") && NODE_ID.test(String(n.id || "")) && n.props) rules.base.push(`.kw-n-${n.id}{--kw-soc:${Number(n.props.size) || 32}px}`);
       if (n.type === "divider" && NODE_ID.test(String(n.id || "")) && n.props && (n.props.lineStyle !== "solid" || n.props.thickness > 1 || n.props.color)) rules.base.push(`.kw-n-${n.id}${n.props.text ? "::before,.kw-n-" + n.id + "::after" : ""}{${n.props.text ? "" : "border:0;"}border-top:${n.props.thickness}px ${n.props.lineStyle} ${n.props.color ? colorCss(n.props.color) : "currentColor"}}`);
-      if (n.type === "sitelogo" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-sitelogo-img{height:${n.props.height}px}`);
+      if (n.type === "sitelogo" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) { rules.base.push(`.kw-n-${n.id} .kw-sitelogo-img{height:${n.props.height}px}`); if (Number.isInteger(n.props.scrollHeight)) rules.base.push(`.lp-block.lp-site-header.lp-site-part.is-scrolled .kw-n-${n.id} .kw-sitelogo-img{height:${n.props.scrollHeight}px;max-height:none}`); }
       if (n.type === "flipbox" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id}{min-height:${n.props.height}px}`);
       if (n.type === "readingprogress" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.thickness)) rules.base.push(`.kw-n-${n.id} .kw-readbar{height:${n.props.thickness}px}`);
       if (n.type === "rating" && NODE_ID.test(String(n.id || "")) && n.props && Number.isFinite(n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-rating-fill{width:${Math.round((n.props.value / (n.props.scale || 5)) * 1000) / 10}%}`);
       if (n.type === "map" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.height)) rules.base.push(`.kw-n-${n.id} .kw-map-frame{height:${n.props.height}px}`);
-      if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`);
+      if (n.type === "progress" && NODE_ID.test(String(n.id || "")) && Number.isInteger(n.props && n.props.value)) { rules.base.push(`.kw-n-${n.id} .kw-progress-bar{width:${n.props.value}%}`); if (n.props.duration || n.props.easing) rules.base.push(`.kw-n-${n.id}.kw-progress-anim .kw-progress-bar{${n.props.duration ? `transition-duration:${n.props.duration}ms;` : ""}${n.props.easing === "linear" ? "transition-timing-function:linear" : n.props.easing === "out" ? "transition-timing-function:cubic-bezier(.16,1,.3,1)" : ""}}`); }
+      if (n.type === "flipbox" && NODE_ID.test(String(n.id || "")) && n.props && Number.isInteger(n.props.duration)) rules.base.push(`.kw-n-${n.id} .kw-flip-inner{transition-duration:${n.props.duration}ms}`);
       // Grille réglée pour l'ordinateur : sur tablette et mobile, elle se resserre d'elle-même (2 colonnes au plus, puis 1)
       // tant qu'aucune valeur propre à l'écran n'est réglée — comme une grille sans réglage
       if (n.type === "grid" && NODE_ID.test(String(n.id || ""))) {

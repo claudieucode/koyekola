@@ -10,7 +10,7 @@
   var extOf = function (name) { var m = /\.([A-Za-z0-9]{1,8})$/.exec(String(name || "")); return m ? m[1].toLowerCase() : ""; };
   var fingerprint = function (f) { return [f.name, f.size, f.lastModified || 0].join("|"); }; // même nom, même taille, même date : le même fichier choisi deux fois
   var fmtSize = function (n) { n = Number(n) || 0; return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : n >= 1024 ? Math.round(n / 1024) + " Ko" : n + " o"; };
-  var WORDS = { image: "une image", video: "une vidéo", audio: "un fichier audio", pdf: "un PDF", document: "un document" };
+  var WORDS = { image: "une image", video: "une vidéo", audio: "un fichier audio", pdf: "un PDF", document: "un document", lottie: "une animation Lottie" };
 
   // cfg (fournie par le serveur, source unique) : { extTypes: { jpg: "image", … }, limits: { image: Mo, … }, formats: "…" }
   function validate(file, cfg) {

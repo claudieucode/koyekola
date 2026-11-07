@@ -1,4 +1,5 @@
 <%- include("_top", { metaDescription: product.seo_description || product.short_description || "" }) %>
+<nav class="sh-crumbs" aria-label="Fil d'Ariane"><ol><% breadcrumb.forEach((c, i) => { %><li><% if (i < breadcrumb.length - 1) { %><a href="<%= c.url %>"><%= c.name %></a><% } else { %><span aria-current="page"><%= c.name %></span><% } %></li><% }) %></ol></nav>
 <% if (themeTemplate) { %><%- themeTemplate %><% } %>
 <article class="sh-product">
   <% if (!themeTemplate) { %>
@@ -19,7 +20,21 @@
   <% } else { %>
   <%- include("_buy", { product }) %>
   <% } %>
+  <%- include("_wish", { product }) %>
+  <%- include("_compare", { product }) %>
 </article>
 <% if (!themeTemplate && product.description) { %><section class="sh-desc"><h2>Description</h2><div class="sh-prose"><%= product.description %></div></section><% } %>
+<section class="sh-reviews" id="avis" aria-labelledby="avis-t">
+  <h2 id="avis-t">Avis clients</h2>
+  <% if (!reviews.count) { %><p class="sh-empty">Aucun avis pour le moment. Seuls les clients ayant acheté ce produit peuvent en laisser un.</p>
+  <% } else { %>
+  <p class="sh-rating" aria-label="Note moyenne <%= reviews.average %> sur 5, <%= reviews.count %> avis"><strong><%= String(reviews.average).replace(".", ",") %></strong> / 5 · <%= reviews.count %> avis vérifié<%= reviews.count > 1 ? "s" : "" %></p>
+  <ul class="sh-review-list">
+    <% reviews.items.forEach((r) => { %><li class="sh-review"><p class="sh-stars" aria-label="<%= r.rating %> sur 5"><%= "★".repeat(r.rating) %><span aria-hidden="true"><%= "☆".repeat(5 - r.rating) %></span></p>
+      <% if (r.title) { %><p><strong><%= r.title %></strong></p><% } %><% if (r.body) { %><p><%= r.body %></p><% } %>
+      <p class="sh-meta"><%= r.author_name %> · <%= String(r.created_at).slice(0, 10) %> · achat vérifié</p></li><% }) %>
+  </ul>
+  <% } %>
+</section>
 <% if (related.length) { %><section><h2>Produits associés</h2><%- include("_grid", { items: related }) %></section><% } %>
 <%- include("_bottom") %>

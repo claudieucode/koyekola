@@ -1,0 +1,26 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Rendez-vous" }) %>
+<p class="field-hint">Heures de la boutique (fuseau <%= tz %>). <a href="<%= base %>/rendez-vous/reglages">Types, disponibilités et réglages</a> · <a href="/boutique/rendez-vous" target="_blank" rel="noopener">Voir la page publique</a></p>
+<nav class="mk-tabs" aria-label="Filtrer les rendez-vous">
+  <a href="<%= base %>/rendez-vous"<%= !query.statut && query.periode !== "passes" ? ' aria-current="page"' : "" %>>À venir<% if (list.pending) { %> (<%= list.pending %> à confirmer)<% } %></a>
+  <a href="<%= base %>/rendez-vous?statut=pending">À confirmer</a>
+  <a href="<%= base %>/rendez-vous?statut=confirmed">Confirmés</a>
+  <a href="<%= base %>/rendez-vous?periode=passes"<%= query.periode === "passes" ? ' aria-current="page"' : "" %>>Passés</a>
+</nav>
+<% if (!list.items.length) { %><p class="mk-empty">Aucun rendez-vous.</p><% } else { %>
+<div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Agenda des rendez-vous</caption>
+<thead><tr><th scope="col">Quand</th><th scope="col">Type</th><th scope="col">Client</th><th scope="col">Statut</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+<% let lastDay = ""; list.items.forEach((a) => { const day = a.start_at.slice(0, 10); %>
+<% if (day !== lastDay) { lastDay = day; %><tr><th colspan="5" scope="colgroup"><%= frDate(day) %></th></tr><% } %>
+<tr><th scope="row"><%= a.start_at.slice(11) %>–<%= a.end_at.slice(11) %></th>
+<td><%= a.type_name %><% if (a.product_name) { %><br><small>Produit : <%= a.product_name %></small><% } %></td>
+<td><%= a.customer_name %><br><small><%= a.customer_email %><%= a.customer_phone ? " · " + a.customer_phone : "" %></small><% if (a.note) { %><br><small>« <%= a.note %> »</small><% } %></td>
+<td><%= STATUS[a.status] %><%= a.status === "cancelled" ? (a.cancelled_by === "customer" ? " (par le client)" : " (par vous)") : "" %></td>
+<td><% if (canWrite && a.status !== "cancelled") { %>
+  <% if (a.status === "pending") { %><form class="mk-inline-form" method="post" action="<%= base %>/rendez-vous/<%= a.id %>/statut"><input type="hidden" name="statut" value="confirmed"><button class="btn btn-outline btn-sm" type="submit">Confirmer</button></form><% } %>
+  <form class="mk-inline-form" method="post" action="<%= base %>/rendez-vous/<%= a.id %>/statut"><input type="hidden" name="statut" value="cancelled"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Le client sera prévenu par e-mail et le créneau sera libéré." data-mk-confirm-title="Annuler ce rendez-vous ?" data-mk-confirm-ok="Annuler le rendez-vous">Annuler</button></form>
+  <form class="mk-inline-form" method="post" action="<%= base %>/rendez-vous/<%= a.id %>/reporter"><label class="sr-only" for="d<%= a.id %>">Nouvelle date</label><input id="d<%= a.id %>" type="date" name="date" required value="<%= day %>"> <label class="sr-only" for="t<%= a.id %>">Nouvelle heure</label><input id="t<%= a.id %>" type="time" name="time" required value="<%= a.start_at.slice(11) %>"><button class="btn btn-outline btn-sm" type="submit">Reporter</button></form>
+<% } %></td></tr>
+<% }) %></tbody></table></div>
+<% } %>
+<%- include("../partials/bottom") %>

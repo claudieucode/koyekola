@@ -1,0 +1,3 @@
+<%# Texte masqué par image ou couleur (widgets/motion-text-mask.js). d.bg = fonds (image puis couleur de repli) déjà composés à partir de valeurs validées. Animation : text-fx.js (mask). %>
+<% const tag = ["h1", "h2", "h3", "h4", "p", "div"].includes(p.tag) ? p.tag : "h2"; %>
+<<%= tag %> class="<%= cls %> kw-ms kw-ms-tmask" data-kw-ms-fx="mask" data-kw-ms-fill="<%= d.fill %>"<%- attrs %>><span class="kw-ms-tmask-text" style="--kw-tm-bg: <%= d.bg %>; --kw-tm-size: <%= d.size %>"><%= p.text %></span></<%= tag %>>

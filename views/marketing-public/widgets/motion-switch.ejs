@@ -1,0 +1,10 @@
+<%# Interrupteurs et cases animés (widgets/motion-switch.js). Variables : p, cls, attrs, isBuilder. Vrais <input type="checkbox"> : tout fonctionne et s'anime (CSS) sans JavaScript. %>
+<% const items = Array.isArray(p.items) ? p.items : []; const sw = p.variant !== "checkbox"; const tone = ["primary", "secondary", "accent", "success", "warning", "error"].includes(p.tone) ? p.tone : "primary"; const base = "kw-sw-" + cls.split(" ").pop(); %>
+<fieldset class="<%= cls %> kw-ms kw-ms-d kw-ms-sw kw-ms-sw-<%= sw ? "switch" : "checkbox" %> kw-ms-tone-<%= tone %>"<%- p.remember ? " data-kw-ms-remember" : "" %><%- attrs %>>
+  <legend class="kw-ms-sw-legend"><%= p.legend %></legend>
+  <% items.forEach((it, i) => { %><div class="kw-ms-sw-item"><label class="kw-ms-sw-row" for="<%= base %>-<%= i %>"><input class="kw-ms-sw-input" type="checkbox" id="<%= base %>-<%= i %>"<%- sw ? ' role="switch"' : "" %><%= it.checked ? " checked" : "" %><% if (it.hint) { %> aria-describedby="<%= base %>-<%= i %>-h"<% } %>>
+    <% if (sw) { %><span class="kw-ms-sw-ctl" aria-hidden="true"><span class="kw-ms-sw-thumb"></span></span><% } else { %><span class="kw-ms-sw-ctl" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path class="kw-ms-sw-tick" d="M5 10.5l3.4 3.4L15 6.8" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></svg></span><% } %>
+    <span class="kw-ms-sw-txt"><span class="kw-ms-sw-label"><%= it.label %></span><% if (it.hint) { %><span class="kw-ms-sw-hint" id="<%= base %>-<%= i %>-h"><%= it.hint %></span><% } %></span>
+    <% if (sw && p.showState !== false) { %><span class="kw-ms-sw-state" aria-hidden="true"><span class="kw-ms-sw-on"><%= p.onText || "Activé" %></span><span class="kw-ms-sw-off"><%= p.offText || "Désactivé" %></span></span><% } %></label></div>
+  <% }) %>
+</fieldset>

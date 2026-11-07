@@ -55,7 +55,7 @@ function analyze(text, selection = {}) {
   }
   const op = OPS.find(([re]) => re.test(t));
   if (op) { out.intent = "rewrite_text"; out.op = op[1]; out.target.kind = selection.fieldKey ? "field" : here ? "section" : out.target.pageHint || selection.pageId ? "page" : "none"; if (out.scope.requested === "unspecified") out.scope.requested = selection.fieldKey ? "local" : here ? "local" : "page"; return out; }
-  if (/(change|refais|modifie|nouveau).*(design|style|apparence)/.test(t) && /page/.test(t)) { out.intent = "redesign_page"; out.target.kind = "page"; out.supported = false; out.note = "Le design est global (personnalisateur) : à l'échelle d'une page, seuls les attributs de style natifs des sections (fond, espacement, alignement, largeur) peuvent être modifiés, section par section."; return out; }
+  if (/(change|refais|modifie|nouveau).*(design|style|apparence)/.test(t) && /page/.test(t)) { out.intent = "redesign_page"; out.target.kind = "page"; out.supported = false; out.note = "Le design est global (moteur de styles) : à l'échelle d'une page, seuls les attributs de style natifs des sections (fond, espacement, alignement, largeur) peuvent être modifiés, section par section."; return out; }
   if (/(conseil|comment|pourquoi|que penses|faut-il|\?)/.test(t)) { out.intent = "advice"; return out; }
   out.ambiguities.push({ field: "intent", question: "Je n'ai pas compris la modification souhaitée. Exemples : « Raccourcis ce texte », « Ajoute une section FAQ après les services », « Change la couleur secondaire du site en bleu marine »." });
   return out;

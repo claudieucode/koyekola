@@ -1,0 +1,7 @@
+<%# Lecteur Lottie (widgets/motion-lottie-player.js). Variables : p, cls, attrs, L (L.src), isBuilder. Sans JavaScript : image d'attente (si choisie). public/js/motion-studio/lottie-player.js lit src (data-kw-ms-opts) et charge lottie_light.min.js à la demande. %>
+<% const A = { center: "is-center", left: "is-left", right: "is-right" }; const opts = JSON.stringify({ src: p.src || "", alt: p.alt || "" }); %>
+<figure class="<%= cls %> kw-ms kw-ms-lt <%= A[p.align] || "is-center" %>"<%- attrs %> data-kw-ms-opts="<%= opts %>">
+<% if (!p.src) { %><% if (isBuilder) { %><div class="kw-ms-vempty">Choisissez le fichier de l'animation dans l'onglet Contenu.</div><% } %>
+<% } else { %><div class="kw-ms-lt-stage"<% if (p.height) { %> style="--kw-ms-lt-h: <%= Number(p.height) %>px"<% } %><% if (p.alt) { %> role="img" aria-label="<%= p.alt %>"<% } else { %> aria-hidden="true"<% } %>><% if (p.poster) { %><img class="kw-ms-lt-poster" src="<%= p.poster %>" alt="" loading="lazy" decoding="async" draggable="false"><% } %></div>
+<% if (p.caption) { %><figcaption class="kw-ms-vcap"><%= p.caption %></figcaption><% } %><% } %>
+</figure>

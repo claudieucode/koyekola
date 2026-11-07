@@ -1,0 +1,10 @@
+<%# Séquence d'images au défilement (widgets/motion-scroll-sequence.js). Variables : p, cls, attrs, isBuilder. Sans JavaScript, sans canvas ou en mouvement réduit : la première image reste affichée.
+    Les adresses des images de la séquence sont dans data-kw-ms-opts ; public/js/motion-studio/scroll-sequence.js les charge à l'approche (chargement différé) et les dessine sur le canvas. %>
+<% const urls = p.frames.map((f) => f.image).filter(Boolean); const tag = ["h2", "h3", "p"].includes(p.titleTag) ? p.titleTag : "h2"; %>
+<div class="<%= cls %> kw-ms kw-ms-sq is-<%= p.fit === "cover" ? "cover" : "contain" %>" data-kw-ms-opts="<%= JSON.stringify({ frames: urls }) %>"<%- attrs %>>
+  <div class="kw-ms-sq-stage">
+    <% if (urls.length) { %><img class="kw-ms-sq-first" src="<%= urls[0] %>" alt="<%= p.label %>" decoding="async"><% } else if (isBuilder) { %><p class="kw-ms-sq-empty">Ajoutez des images de la médiathèque pour créer la séquence.</p><% } %>
+    <canvas class="kw-ms-sq-canvas" aria-hidden="true" hidden></canvas>
+    <% if (p.title || p.caption) { %><div class="kw-ms-sq-copy"><% if (p.title) { %><<%= tag %> class="kw-ms-sq-title"><%= p.title %></<%= tag %>><% } %><% if (p.caption) { %><p class="kw-ms-sq-caption"><%= p.caption %></p><% } %></div><% } %>
+  </div>
+</div>

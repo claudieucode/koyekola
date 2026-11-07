@@ -38,7 +38,8 @@ function postScope(post, { contentHtml = "", minutes = null, author = "", toc = 
 function wrapHtml(res, vm, siteOk, body, cls) {
   // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
   const main = require("../../services/appearance").publishedTokens();
-  const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}), { siteId: main ? null : siteOk ? siteOk.id : undefined });
+  // Polices : celles du site ET celles que les éléments du modèle posent eux-mêmes (identité propre d'un modèle : « font.<famille> » dans ses styles) ; sans cela le navigateur retomberait sur la police du site
+  const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}) + "\n" + (((main || (siteOk && siteOk.tokens) || {}).global) ? require("../pages/globalStyles").globalCss((main || siteOk.tokens).global, "site") : "") + "\n" + String(vm.nodeCss || ""), { siteId: main ? null : siteOk ? siteOk.id : undefined });
   // Partie globale (en-tête, pied) : même colonne de contenu que les pages du site (réglage de largeur du site, comme dans le Page Builder) ; la feuille de la plateforme ne doit pas changer l'aspect des liens non stylés
   const band = cls.includes("kw-theme-part") ? ".kw-theme-part { color: var(--kw-text, #10222f); } :where(.kw-theme-part) a:not([class]) { color: revert; text-decoration: revert; } .kw-theme-part.kw-theme-sticky { position: sticky; top: 0; z-index: 60; } .kw-theme-part.kw-theme-overlay { position: absolute; top: 0; left: 0; right: 0; z-index: 60; }" : "";
   // Gabarits de contenu : titre et description d'archive à une échelle de page (le titre de niveau 1 du thème est pensé pour un bandeau d'accueil)
@@ -182,6 +183,15 @@ function catalogScope(db, ctx, type) {
   return {};
 }
 const FILLER = '<div style="max-width:1100px;margin:0 auto;padding:40px 24px;font:14px/1.6 system-ui,sans-serif;color:#64748b"><div style="height:160px;border-radius:12px;background:linear-gradient(135deg,#e2e8f0,#cbd5e1);margin-bottom:20px"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:80%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:65%"></div><div style="height:12px;background:#e2e8f0;border-radius:6px;margin:10px 0;width:72%"></div><p style="margin-top:18px;font-size:12px">Contenu de la page (aperçu)</p></div>';
+// Contexte de page d'un aperçu d'en-tête : fond d'ouverture neutre (dégradé, libellé « aperçu ») puis une page de remplissage assez longue pour essayer le défilement
+const HERO_BG = "linear-gradient(135deg,#1e293b,#475569 60%,#64748b)";
+const headerContext = (thumb) => {
+  const hero = (h) => `<div aria-hidden="true" style="position:relative;height:${h}px;background:${HERO_BG}">${thumb ? "" : '<span style="position:absolute;left:24px;bottom:16px;font:600 12px/1.4 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#e2e8f0">Aperçu · fond d\'ouverture neutre</span>'}</div>`;
+  return thumb ? hero(150) : hero(420) + FILLER + FILLER + FILLER + FILLER;
+};
+// Aperçu d'en-tête : le menu plein écran (widget « motionfsmenu ») s'affiche FERMÉ, bouton seul, comme sur le site publié. Sans cela, l'aperçu (qui ne charge pas le script du widget) montrerait la liste de liens à plat ;
+// le panneau et ses effets se testent sur la page publiée. Additif : aucun effet sur le rendu public.
+const FSMENU_CLOSED = ".kw-ms-fm .kw-ms-fm-panel{display:none}.kw-ms-fm .kw-ms-fm-toggle[hidden]{display:inline-flex}";
 // done(html | null). doc : résultat de catalog.build()
 // thumb : miniature de carte (sans bloc de remplissage, sans défilement) ; mêmes éléments et même CSS que l'aperçu complet
 function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false }, done) {
@@ -191,18 +201,17 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     const ctx = ctxOf(db, marketing);
     const section = doc.kind === "component" ? doc.section : null;
     const content = pages.normalizeContent(ctx, { site_id: siteId }, { sections: doc.kind === "component" ? [doc.section] : doc.sections });
+    // En-tête : rendu comme une partie du site (sitePart) pour que le défilement, le logo alternatif et l'identité du site agissent comme sur la page publiée
+    if (type === "header" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "parthead", sitePart: "header" } : x));
     const visitor = visitorContext(db, marketing.organizationId, req);
     const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" ? { demoShop: true } : {}) } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
-      // En-tête SUPERPOSÉ (transparent, texte clair) : il est posé sur le visuel d'ouverture de la page ; sans visuel dessous, le texte blanc disparaît sur le fond blanc de l'aperçu
-      const overlay = type === "header" && section && partMode(section).startsWith(" kw-theme-overlay");
-      const hero = (h) => `<div aria-hidden="true" style="height:${h}px;background:linear-gradient(135deg,#1e293b,#475569 60%,#64748b)"></div>`;
-      // Archive de produits : l'aperçu de la bibliothèque montre des produits D'EXEMPLE (jamais ceux du site) ; la mention n'est pas dans la vignette
+      // En-tête : contexte de page NEUTRE sous l'en-tête (dégradé CSS sans image ni texte qui paraisse réel) pour juger un en-tête superposé, transparent ou en verre ; mêmes éléments dans la vignette (plus court)
       const demoNote = type === "product_archive" && sampleMenu && !thumb ? '<p style="margin:0;padding:8px 16px;background:#fef3c7;color:#78350f;font:13px/1.4 system-ui,sans-serif;text-align:center">Aperçu avec des produits d\'exemple : votre boutique affichera ses vrais produits.</p>' : "";
-      const body = demoNote + (overlay ? html + hero(thumb ? 150 : 360) + (thumb ? "" : FILLER) : thumb ? html : type === "header" ? html + FILLER : type === "footer" ? FILLER + html : html);
-      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title><style>html,body{margin:0}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body>${body}</body></html>`);
+      const body = demoNote + (type === "header" ? html + headerContext(thumb) : type === "footer" ? (thumb ? "" : FILLER) + html : html);
+      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title>${type === "header" && html.includes("kw-ms-fm") ? `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/motion-studio.css") : "/css/motion-studio.css"}">` : ""}<style>html,body{margin:0}${type === "header" ? FSMENU_CLOSED : ""}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body${thumb ? "" : ' data-kw-demo="1"'}>${body}${thumb ? "" : '<script src="' + (res.locals.asset ? res.locals.asset("/js/landing.js") : "/js/landing.js") + '" defer></script>'}</body></html>`);
     });
   } catch { done(null); }
 }

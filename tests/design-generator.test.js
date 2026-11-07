@@ -1,4 +1,4 @@
-// Programme 21.5 — AI Design Generator. Pur : palettes, typographie, jetons, validation. Service : base en mémoire + IA simulée. Web : vrai serveur (brouillon du personnalisateur natif).
+// Programme 21.5 — AI Design Generator. Pur : palettes, typographie, jetons, validation. Service : base en mémoire + IA simulée. Web : vrai serveur (brouillon de Styles).
 // Aucun appel réseau, aucun coût ; rien n'est jamais publié par le générateur.
 const { test, describe, before, after, beforeEach } = require("node:test");
 const assert = require("node:assert/strict");
@@ -184,7 +184,7 @@ describe("service : IA simulée, isolation, protection (L, M, N)", () => {
   });
 });
 
-describe("web : brouillon du personnalisateur natif, protection, annulation, isolation", () => {
+describe("web : brouillon de Styles, protection, annulation, isolation", () => {
   let srv, boss, db, A, B, adminA, viewerA, adminB;
   const G = (id, rest = "") => `/marketing/site-web/sites/${id}/direction-artistique${rest}`;
   const idOf = (c) => db.prepare("SELECT id FROM users WHERE email = ?").get(c.email).id;
@@ -201,7 +201,7 @@ describe("web : brouillon du personnalisateur natif, protection, annulation, iso
   });
   after(() => { db.close(); return srv.stop(); });
 
-  test("G. écran, 3 directions avec aperçu, comparaison, application dans le BROUILLON (rien en ligne), réglages acceptés par le personnalisateur réel", async () => {
+  test("G. écran, 3 directions avec aperçu, comparaison, application dans le BROUILLON (rien en ligne), réglages acceptés par Styles", async () => {
     assert.match((await boss.get(G(A))).text, /Votre brief/);
     const rid = await run(boss, A); assert.ok(rid);
     const view = await boss.get(G(A, `/${rid}`));
@@ -211,10 +211,11 @@ describe("web : brouillon du personnalisateur natif, protection, annulation, iso
     const ap = await boss.post(G(A, `/${rid}/appliquer`), { variante: "a" });
     assert.equal(ap.status, 302);
     const d = draft(A);
-    assert.ok(d && d.changes["tokens.colors.primary"] && d.changes["tokens.fonts.heading"] && d.changes["settings.responsive.mobile.h1"], "dans le brouillon du personnalisateur");
+    assert.ok(d && d.changes["tokens.colors.primary"] && d.changes["tokens.fonts.heading"] && d.changes["settings.responsive.mobile.h1"], "dans le brouillon de Styles");
     assert.equal(JSON.stringify(live(A)), liveBefore, "le site publié n'a pas changé : rien n'est publié");
-    const cust = await boss.get(`/marketing/site-web/personnaliser?site=${A}`);
-    assert.equal(cust.status, 200, "le personnalisateur natif ouvre le brouillon");
+    const cust = await boss.get(`/marketing/site-web/styles?site=${A}`);
+    assert.equal(cust.status, 200, "l'écran Styles ouvre le brouillon");
+    assert.match(cust.text, /id="st-data"/); assert.ok(cust.text.includes("tokens.colors.primary"));
     assert.equal(db.prepare("SELECT status FROM mk_design_runs WHERE id = ?").get(rid).status, "applied");
   });
   test("K. réglage manuel protégé : conservé par défaut, remplacé seulement sur demande ; réglages en attente du brouillon conservés", async () => {

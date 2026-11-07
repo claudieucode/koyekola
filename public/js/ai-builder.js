@@ -248,7 +248,7 @@
       const ai = h("input", { type: "checkbox" });
       wrap.append(h("div", { class: "aib-bar aib-col" }, h("label", { for: "aib-design-brief", text: "Style souhaité" }), brief, h("div", { class: "aib-inline" }, btn(run ? "Demander de nouvelles propositions" : "Proposer des directions artistiques", () => act(() => api("POST", "/design/generer", { brief: { text: brief.value }, useAi: ai.checked })), { primary: true }), h("label", { class: "aib-inline" }, ai, " Affiner avec l'IA (consomme votre quota)"))));
     } else wrap.append(h("p", { class: "aib-msg is-warn", text: "Votre rôle ne permet pas de modifier l'apparence : vous pouvez seulement consulter." }));
-    wrap.append(h("p", { class: "aib-hint", text: "Appliquer une proposition l'ajoute au BROUILLON du personnalisateur ; rien n'est publié. Vos réglages manuels sont conservés sauf demande contraire." }));
+    wrap.append(h("p", { class: "aib-hint", text: "Appliquer une proposition l'ajoute au BROUILLON des styles ; rien n'est publié. Vos réglages manuels sont conservés sauf demande contraire." }));
     if (!run) { wrap.append(h("p", { text: "Aucune proposition pour le moment." })); return wrap; }
     const grid = h("div", { class: "aib-grid" });
     for (const p of run.proposals) {
@@ -262,7 +262,7 @@
         h("div", { class: "aib-inline" }, btn("Comparer", () => compareDesign(run.id, p.key)), CAN.design && run.status !== "applied" && p.ok !== false ? btn("Appliquer", () => applyDesign(run.id, p.key), { primary: true }) : null)));
     }
     wrap.append(grid);
-    if (S.runs.designApplied) wrap.append(h("div", { class: "aib-cta" }, h("p", { text: `Direction artistique appliquée au brouillon du personnalisateur (${S.runs.designApplied.applied ? S.runs.designApplied.applied.count : "?"} réglage(s)).` }), h("a", { class: "aib-btn", href: `/marketing/site-web/personnaliser?site=${S.project.siteId}`, target: "_blank", rel: "noopener" }, "Ajuster les couleurs et polices dans le personnalisateur"), CAN.design ? btn("Annuler l'application", () => act(() => api("POST", `/design/${S.runs.designApplied.id}/annuler`, {})), { danger: true }) : null));
+    if (S.runs.designApplied) wrap.append(h("div", { class: "aib-cta" }, h("p", { text: `Direction artistique appliquée au brouillon des styles (${S.runs.designApplied.applied ? S.runs.designApplied.applied.count : "?"} réglage(s)).` }), h("a", { class: "aib-btn", href: `/marketing/site-web/styles?site=${S.project.siteId}`, target: "_blank", rel: "noopener" }, "Ajuster les couleurs et polices dans le personnalisateur"), CAN.design ? btn("Annuler l'application", () => act(() => api("POST", `/design/${S.runs.designApplied.id}/annuler`, {})), { danger: true }) : null));
     return wrap;
   }
   async function compareDesign(rid, key) {

@@ -34,6 +34,15 @@ describe("Réglages d'en-tête : lecture", () => {
     assert.deepEqual(hs.dataAttrs(legacy("sticky", "")), { "data-kw-scroll": "watch" }, "un en-tête collé suit l'état défilé (styles par état)");
     assert.deepEqual(hs.dataAttrs(legacy("", "")), {}, "un en-tête ordinaire n'a aucun attribut");
   });
+  test("réglage existant « hide » (masquer en descendant) : conservé à l'identique dans l'ancien format, converti en masquage réglable dans le bloc header", () => {
+    assert.equal(hs.classes(legacy("sticky", "hide")), " kw-theme-sticky kw-theme-fx-hide");
+    assert.deepEqual(hs.dataAttrs(legacy("sticky", "hide")), { "data-kw-scroll": "hide" });
+    const n = hs.normalize({ mode: "sticky", fx: "hide" }); assert.equal(n.fx, ""); assert.deepEqual(n.hideOnScroll, { enabled: true, tolerance: 6 });
+  });
+  test("logo ou titre alternatif au défilement (réglage existant) : l'état défilé est suivi (« track »)", () => {
+    const sec = { type: "layout", children: [{ id: "a", type: "container", styles: { desktop: { position: "sticky" } }, props: {}, children: [{ id: "l", type: "sitelogo", props: { scrollText: "K" } }] }] };
+    assert.deepEqual(hs.dataAttrs(sec), { "data-kw-scroll": "track" }); assert.deepEqual(hs.dataAttrs({ type: "layout", children: [{ id: "a", type: "container", styles: { desktop: { position: "sticky" } }, props: {}, children: [] }] }), { "data-kw-scroll": "watch" });
+  });
   test("le bloc header l'emporte sur le premier enfant ; déplacer ou retirer le premier enfant ne change plus rien", () => {
     const s = { ...legacy("sticky", "shrink"), header: { mode: "overlay", fx: "solid", threshold: 40 } };
     assert.equal(hs.classes(s), " kw-theme-overlay kw-theme-fx-solid");

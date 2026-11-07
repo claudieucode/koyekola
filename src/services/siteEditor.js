@@ -8,7 +8,7 @@ const { UserError } = require("../utils/errors");
 const pagesLib = () => require("../marketing/pages");
 const landing = () => require("../marketing/landing");
 const navigation = () => require("./navigation");
-const customizer = () => require("./customizer");
+const styles = () => require("./siteStyles");
 const MAX_PAGES = 200;
 
 function componentOf(ctx, id) {
@@ -27,7 +27,7 @@ function overview(ctx, siteId) {
   const site = siteId ? pagesLib().requireSite(ctx, siteId) : null;
   const assigned = navigation().assignments({ siteId }), menus = {};
   for (const [loc, id] of Object.entries(assigned)) { const m = navigation().menuRow(id); if (m && m.status === "published") menus[loc] = { id: m.id, name: m.name }; }
-  const st = customizer().state(ctx, siteId, { can: () => true });
+  const st = styles().state(ctx, siteId, { can: () => true });
   return {
     site: { id: siteId, name: site ? site.name : "Site principal", principal: siteId === null, homePageId: site ? site.home_page_id : null, publicUrl: String((site && site.settings && site.settings.seo && site.settings.seo.publicUrl) || process.env.SITE_URL || "").replace(/\/+$/, "") },
     pages: pages(ctx, siteId), parts: site ? { header: componentOf(ctx, site.header_component_id), footer: componentOf(ctx, site.footer_component_id) } : { header: null, footer: null },

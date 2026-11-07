@@ -316,6 +316,13 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (n.type === "code" && n.props.language) n = { ...n, props: { ...n.props, html: require("../pages/highlight").highlight(n.props.text, n.props.language) } };
     // Widget personnalisé : son gabarit et ses champs « lien » (comptés dans cet ordre, comme dans linksOf)
     const cw = pageNodes.CUSTOM_WIDGETS[n.type];
+    // Menu plein écran lu dans le menu AFFECTÉ à « En-tête » (source « location ») : mêmes liens que le widget Menu (premier niveau), aucune liste recopiée ; sans menu affecté, rien n'est affiché
+    if (n.type === "motionfsmenu" && n.props && n.props.source === "location") {
+      const r = resolveMenuNode({ type: "menu", props: { source: "location", location: "header", items: [] } }, page, visitor);
+      const links = ((r && r.props.items) || []).filter((it) => it.url && it.url !== "#").slice(0, 12).map((it) => ({ label: String(it.label).slice(0, 60), url: it.url }));
+      if (!links.length) return null;
+      n = { ...n, props: { ...n.props, links } };
+    }
     if (cw) {
       // Données dynamiques du widget (requête, article courant, visiteur…) : jamais bloquant, un échec donne un widget vide
       let data = null;
@@ -422,6 +429,7 @@ function autoNavigation(page, sections, visitor) {
 function baseScope(ctx, visitor, page) {
   return { visitor, page, site: siteInfo(ctx, page), now: new Date(), query: (visitor && visitor.query) || {}, ...((page && page.scope) || {}) };
 }
+const headerIdentity = require("../pages/headerIdentity");
 function viewModel(ctx, page) {
   const scope = baseScope(ctx, page.visitor, page);
   const sections = page.sections.map((s0) => {
@@ -431,7 +439,7 @@ function viewModel(ctx, page) {
     const c = getCourse(ctx, s.courseId);
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
     return { ...s, course: courseView(c) };
-  }).filter(Boolean);
+  }).filter(Boolean).map((s) => (s.type === "layout" ? headerIdentity.apply(s) : s));
   // Panneaux de méga-menu : contenu rendu dans le menu, mais stylé comme le reste (CSS, mouvement) : ils entrent dans les mêmes calculs que les sections de la page
   const panelSections = [];
   for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { if (n.type === "menu" && n.props && Array.isArray(n.props.items)) n.props.items.forEach((it) => { if (it.mega) panelSections.push({ type: "layout", id: `mega${it.mega.id}`, children: it.mega.nodes }); }); });
@@ -461,8 +469,8 @@ function viewModel(ctx, page) {
   const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(withPanels, breakpoints)].filter(Boolean).join("\n");
   const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
   // Motion Studio : la page ne charge sa feuille de styles et son runtime que si elle contient un composant ou un réglage Motion Studio
-  const motionStudio = pageNodes.STUDIO.usage(withPanels, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null);
-  return { ...page, sections, motionStudio, nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
+  const motionStudio = pageNodes.STUDIO.usage(withPanels, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null, page.theme && page.theme.motionScenes);
+  return { ...page, sections, motionStudio, motionCss: require("../pages/motionScenes").css(page.theme && page.theme.motionScenes), nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
 }
 // Liens cliquables d'une page AFFICHÉE (viewModel), dans l'ordre : le même calcul sert au rendu et à /p/<adresse>/clic/<n>
 function linksOf(page) {

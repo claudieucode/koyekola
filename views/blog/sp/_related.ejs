@@ -1,0 +1,20 @@
+<%# Publications similaires : vraies données du site (jamais l'article lu, jamais de doublon) ; rien si aucune n'est pertinente. %>
+<% if (sp.related.enabled && similar.length) { const r = sp.related, c = r.card; %>
+<section class="article-similar sp-related" aria-labelledby="similar-title" data-sp-layout="<%= r.layout %>">
+  <% if (r.title) { %><h2 id="similar-title"><%= r.title %></h2><% } %>
+  <% if (r.text) { %><p class="sp-related-text"><%= r.text %></p><% } %>
+  <div class="post-grid sp-related-grid">
+    <% similar.forEach((p) => { %>
+      <article class="post-card sp-card">
+        <% if (c.image) { %><% if (p.cover_path) { %><a href="<%= postUrl(p) %>" class="post-card-cover" tabindex="-1" aria-hidden="true"><img src="<%= p.cover_path %>" alt="" loading="lazy" width="640" height="360"></a><% } else { %><span class="post-card-cover post-card-cover-empty" aria-hidden="true"></span><% } %><% } %>
+        <div class="post-card-body">
+          <% if (c.category && p.category) { %><span class="post-card-category"><%= p.category %></span><% } %>
+          <% if (c.title) { %><h3><a href="<%= postUrl(p) %>"><%= p.title %></a></h3><% } %>
+          <% if (c.excerpt && p.summary) { %><p><%= p.summary %></p><% } %>
+          <p class="post-card-foot"><% if (c.author && p.author_name) { %><span><%= p.author_name %></span> <% } %><% if (c.date && p.published_at) { %><time datetime="<%= String(p.published_at).replace(" ", "T") %>Z"><%= formatDate(p.published_at) %></time> <% } %><% if (c.more) { %><a href="<%= postUrl(p) %>" class="post-card-more" aria-label="Lire l'article « <%= p.title %> »">Lire la suite →</a><% } %></p>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+</section>
+<% } %>

@@ -85,3 +85,18 @@
   .sh-head { padding: 12px 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .sh-body * { transition: none !important; animation: none !important; } }
+
+/* Fil d'Ariane, avis, souhaits, personnalisation (briques de boutique) */
+.sh-crumbs ol { display: flex; flex-wrap: wrap; gap: 4px 8px; list-style: none; margin: 0 0 12px; padding: 0; font-size: .85rem; }
+.sh-crumbs li + li::before { content: "/"; margin-right: 8px; opacity: .5; }
+.sh-reviews { margin-top: 32px; }
+.sh-review-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px; }
+.sh-review { padding: 12px 0; border-top: 1px solid var(--sh-rule); }
+.sh-review p { margin: 0 0 4px; }
+.sh-stars { color: var(--sh-accent, currentColor); letter-spacing: 2px; }
+.sh-rating-mini { margin: 2px 0; font-size: .85rem; }
+.sh-hint { display: block; font-weight: 400; opacity: .7; }
+.sh-custom { display: inline-block; margin-top: 2px; }
+.sh-wish { margin: 10px 0 0; }
+.sh-wish-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 6px; }
+.sh-wish-list li { display: flex; gap: 12px; justify-content: space-between; align-items: center; }

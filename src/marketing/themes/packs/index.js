@@ -109,7 +109,7 @@ function resolveOptions(spec, given = {}) {
 
 // Balises du <head> et de <body> d'un site dont le thème actif est un paquet : { link, script, attr, vars } (chaînes HTML déjà sûres : clé validée, options validées par le schéma)
 function headHtml(pack) {
-  const empty = { link: "", script: "", attr: "", vars: "" };
+  const empty = { link: "", script: "", attr: "", vars: "", cz: "" };
   if (!pack || !pack.key) return empty;
   const p = get(pack.key);
   if (!p) return empty;

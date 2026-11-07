@@ -1,0 +1,9 @@
+<%# Révélation d'image (widgets/motion-image-reveal.js). Variables : p, cls, attrs, L (L.link), isBuilder. Sans JavaScript : l'image est affichée en entier ; le masque est posé par public/js/motion-studio/image-reveal.js. %>
+<% const R = { "16-9": "kw-ms-vr-16-9", "4-3": "kw-ms-vr-4-3", "3-2": "kw-ms-vr-3-2", "1-1": "kw-ms-vr-1-1", "3-4": "kw-ms-vr-3-4", "21-9": "kw-ms-vr-21-9" }; const ratio = R[p.ratio] || R["16-9"]; %>
+<% const img = () => { %><span class="kw-ms-ir-frame <%= ratio %>"><img class="kw-ms-ir-img" src="<%= p.image %>" alt="<%= p.alt || "" %>" loading="lazy" decoding="async" draggable="false"></span><% }; %>
+<figure class="<%= cls %> kw-ms kw-ms-ir"<%- attrs %>>
+<% if (!p.image) { %><% if (isBuilder) { %><div class="kw-ms-vempty <%= ratio %>">Choisissez une image dans l'onglet Contenu.</div><% } %>
+<% } else if (L.link) { %><a class="kw-ms-ir-link" href="<%= L.link %>"><% img() %></a>
+<% } else { %><% img() %><% } %>
+<% if (p.caption && p.image) { %><figcaption class="kw-ms-vcap"><%= p.caption %></figcaption><% } %>
+</figure>

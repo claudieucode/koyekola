@@ -1,0 +1,5 @@
+<%# Texte circulaire (widgets/motion-circular-text.js). SVG natif <textPath> : le texte est du vrai texte (sélectionnable, lu par les lecteurs d'écran). d = géométrie calculée par le widget. Rotation : text-fx.js (circular). %>
+<% const pid = "kw-ct-" + n.id; %>
+<div class="<%= cls %> kw-ms kw-ms-circ" data-kw-ms-fx="circular" style="--kw-ct-size: <%= p.size %>px"<%- attrs %>>
+<svg class="kw-ms-circ-svg" viewBox="0 0 200 200" role="img" aria-label="<%= p.text %>" focusable="false"><g transform="rotate(<%= p.startAngle %> 100 100)"><g class="kw-ms-circ-spin"><defs><path id="<%= pid %>" d="M 100,<%= 100 - d.r %> A <%= d.r %>,<%= d.r %> 0 1 1 99.99,<%= 100 - d.r %>" fill="none"></path></defs><text class="kw-ms-circ-text" font-size="<%= d.fs %>" font-weight="<%= p.weight %>"><textPath href="#<%= pid %>" startOffset="0" textLength="<%= d.circ %>" lengthAdjust="spacing"><%= d.str %></textPath></text></g></g><% if (p.center) { %><text class="kw-ms-circ-center" x="100" y="100" text-anchor="middle" dominant-baseline="central" font-size="<%= Math.round(d.r * 0.55) %>"><%= p.center %></text><% } %></svg>
+</div>

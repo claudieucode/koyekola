@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="/css/site-wizard.css">
 <div class="sw">
   <p class="mk-back"><a href="/marketing/site-web/sites/<%= siteId %>/assistant">← Assistant de création</a></p>
-  <div class="mk-head"><div class="mk-head-main"><h1>Direction artistique</h1><p class="mk-head-sub">Décrivez le style voulu : le générateur propose des palettes, des polices, des espacements et des styles de composants <strong>vérifiés (contrastes, lisibilité)</strong>. Il écrit dans le <strong>brouillon du personnalisateur</strong> : rien n'est publié, vos réglages personnels sont conservés.</p></div></div>
+  <div class="mk-head"><div class="mk-head-main"><h1>Direction artistique</h1><p class="mk-head-sub">Décrivez le style voulu : le générateur propose des palettes, des polices, des espacements et des styles de composants <strong>vérifiés (contrastes, lisibilité)</strong>. Il écrit dans le <strong>brouillon des styles</strong> : rien n'est publié, vos réglages personnels sont conservés.</p></div></div>
 
 <% if (mode === "index") { %>
   <section class="mk-panel">
@@ -64,7 +64,7 @@
         </tbody>
       </table>
       <% if (cmp.summary.protected) { %><label class="sw-confirm"><input type="checkbox" name="remplacer_tout" value="oui"> Remplacer aussi TOUS mes réglages protégés</label><% } %>
-      <% if (canWrite && run.status !== "undone") { %><div class="sw-actions"><button class="btn btn-primary" type="submit">Ajouter au brouillon du personnalisateur</button><a class="btn btn-outline" href="<%= custom %>" target="_blank" rel="noopener">Ouvrir le personnalisateur</a></div><% } %>
+      <% if (canWrite && run.status !== "undone") { %><div class="sw-actions"><button class="btn btn-primary" type="submit">Ajouter au brouillon des styles</button><a class="btn btn-outline" href="<%= custom %>" target="_blank" rel="noopener">Ouvrir le personnalisateur</a></div><% } %>
     </form>
     <% if (run.status === "applied" && canWrite) { %><form method="post" action="<%= W %>/<%= run.id %>/annuler" class="sw-actions"><button class="btn btn-outline" type="submit">Annuler cette application</button></form><% } %>
     <details><summary>Rapport de validation</summary>

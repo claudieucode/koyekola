@@ -77,7 +77,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
   admin.use(require("./siteModules")()); // R7 lot 6.0 : activation des modules par site (équipe seulement)
   admin.use(require("./aiMedia")()); // Programme 21.7 : médias IA et gestionnaire de ressources (génération asynchrone, provenance, affectation aux pages)
-  admin.use(require("./designGenerator")()); // Programme 21.5 : direction artistique générée (brouillon du personnalisateur)
+  admin.use(require("./designGenerator")()); // Programme 21.5 : direction artistique générée (brouillon des styles)
   admin.use(require("./pageGenerator")()); // Programme 21.4 : générateur de pages natives à partir d'un plan (brouillons uniquement)
   admin.use(require("./contentGenerator")()); // Programme 21.6 : générateur de contenus (textes des sections natives, SEO, révisions, brouillon)
   admin.use(require("./regeneration")()); // Programme 21.9 : régénération intelligente et historique (brouillons seulement)
@@ -116,9 +116,9 @@ function createMarketingRouters({ db }) {
   admin.use(require("./themeDemo")()); // Apparence → Thèmes : aperçu complet (site de démonstration isolé) d'un thème de la bibliothèque
   admin.use(require("./fonts")()); // Apparence → Polices : bibliothèque, téléversement et installation de polices par site
   admin.use(require("./adminBar")()); // Barre d'administration : notifications du site actif
-  admin.use(require("./customizer")()); // Apparence → Personnaliser : brouillon, aperçu en direct et publication, par site
   admin.use(require("./widgets")()); // Apparence → Widgets : zones, blocs et widgets désactivés par site
-  admin.use(require("./styles")()); // Apparence → Styles : gestionnaire de styles globaux par site (brouillon partagé avec Personnaliser)
+  admin.use(require("./personnaliser")()); // Personnaliser : coque de l'écran plein cadre (étape 1)
+  admin.use(require("./styles")()); // Apparence → Styles : gestionnaire de styles globaux par site 
   admin.use(require("./siteEditor")()); // Apparence → Éditeur du site : espace de travail par site autour du Page Builder (pages, parties globales, aperçu, publication)
   admin.use(require("./templatesLibrary")()); // Apparence → Templates : packs de site, gabarits de pages et « Mes modèles » par site (aperçu, importation)
   admin.use(require("./patternsLibrary")()); // Apparence → Patterns : bibliothèque de compositions réutilisables par site (aperçu, insertion dans une page)

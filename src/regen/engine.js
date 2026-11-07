@@ -1,5 +1,5 @@
 // AI Regeneration Orchestrator : demande → analyse → contexte → dépendances → périmètre MINIMAL → impact → aperçu (proposition enregistrée) → application contrôlée → journal, snapshots, annulation.
-// Aucun moteur de génération parallèle : les textes passent par le Content Generator (reviseValue / generatePage), les images par l'AI Media, le design par le personnalisateur natif, les sections par les
+// Aucun moteur de génération parallèle : les textes passent par le Content Generator (reviseValue / generatePage), les images par l'AI Media, le design par le moteur de styles natif, les sections par les
 // normaliseurs natifs (pages.saveDraft). Rien n'est publié. Une proposition ne modifie RIEN ; l'application revérifie les droits, les protections, les empreintes (conflits) et la révision de la page.
 const { transaction } = require("../marketing/db/tx");
 const analyzer = require("./analyzer");
@@ -27,9 +27,9 @@ const BG = ["default", "surface", "primary", "accent", "dark"], PADDING = ["none
 function planScope(analysis, resolved, dep) {
   const a = analysis, p = { executor: null, scope: "", why: "", targets: [], needsConfirmation: false, escalation: null };
   const secLabel = resolved.section ? ctxLib.label(resolved.section) : "";
-  if (a.intent === "change_design") { p.executor = "design_token"; p.scope = "design"; p.why = "La demande concerne une couleur du design : seul ce réglage du personnalisateur est modifié (brouillon), sans toucher aux pages."; p.targets = [{ kind: "design", ref: TOKEN_PATH[a.property.token] || "tokens.colors", label: `Couleur « ${a.property.token || "?"} » du design` }]; p.needsConfirmation = true; return p; }
+  if (a.intent === "change_design") { p.executor = "design_token"; p.scope = "design"; p.why = "La demande concerne une couleur du design : seul ce réglage des styles est modifié (brouillon), sans toucher aux pages."; p.targets = [{ kind: "design", ref: TOKEN_PATH[a.property.token] || "tokens.colors", label: `Couleur « ${a.property.token || "?"} » du design` }]; p.needsConfirmation = true; return p; }
   if (a.intent === "change_style") {
-    if (a.property.name === "fontSize") { if (resolved.node) { p.executor = "style_node"; p.scope = "node"; p.why = "Un seul élément est modifié (taille du texte)."; p.targets = [{ kind: "node", ref: resolved.node.id, label: `Élément ${resolved.node.type}`, value: resolved.node }]; } else { p.executor = null; p.unsupported = "La taille du titre d'une section native (bandeau, cartes…) n'est pas un réglage de la section : elle suit le design du site. Elle ne se règle que sur un élément d'une section libre (sélectionnez-le) ou globalement dans le personnalisateur."; } return p; }
+    if (a.property.name === "fontSize") { if (resolved.node) { p.executor = "style_node"; p.scope = "node"; p.why = "Un seul élément est modifié (taille du texte)."; p.targets = [{ kind: "node", ref: resolved.node.id, label: `Élément ${resolved.node.type}`, value: resolved.node }]; } else { p.executor = null; p.unsupported = "La taille du titre d'une section native (bandeau, cartes…) n'est pas un réglage de la section : elle suit le design du site. Elle ne se règle que sur un élément d'une section libre (sélectionnez-le) ou globalement dans le moteur de styles."; } return p; }
     if (resolved.section) { p.executor = "style_section"; p.scope = "section"; p.why = `Un seul réglage de style (${a.property.name}) de ${secLabel} est modifié ; son contenu et les autres sections ne sont pas touchés.`; p.targets = [{ kind: "section", ref: resolved.section.id, label: secLabel, value: resolved.section }]; }
     else p.unsupported = "Précisez la section à modifier (sélectionnez-la ou nommez-la).";
     return p;
@@ -194,7 +194,7 @@ async function applyDesign(ctx, siteId, op, { allow, resolve, can }) {
   protect.mark(ctx, siteId, "design", pl.path, pl.value, op.id);
   history.attach(ctx, op.id, "before", before); history.attach(ctx, op.id, "after", after);
   history.update(ctx, siteId, op.id, { status: "applied", appliedAt: now() });
-  return { opId: op.id, status: "applied", result: {}, note: "Brouillon du personnalisateur mis à jour : rien n'est publié (publiez depuis le personnalisateur)." };
+  return { opId: op.id, status: "applied", result: {}, note: "Brouillon des styles mis à jour : rien n'est publié (publiez depuis Apparence → Styles)." };
 }
 function reject(ctx, siteId, opId) { const op = history.get(ctx, siteId, opId); if (op.status !== "proposed") throw bad("Cette proposition a déjà été traitée.", "conflict"); history.update(ctx, siteId, opId, { status: "rejected" }); return { opId, status: "rejected" }; }
 
