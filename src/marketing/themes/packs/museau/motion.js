@@ -4,6 +4,7 @@
 (function () {
   var body = document.body;
   if (!body || body.getAttribute("data-kw-pack") !== "museau") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) document.body.classList.add("pk-calme"); // respecte « moins d'animations » : le CSS du thème coupe aussi ses animations
   var KEY = "museau-profil";
   var memoire = body.getAttribute("data-pk-memoire") !== "off";
   body.classList.add("mu-js");

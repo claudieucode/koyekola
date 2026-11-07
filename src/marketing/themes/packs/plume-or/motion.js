@@ -2,6 +2,7 @@
    C'est un aperçu : le texte réellement commandé se saisit sur la fiche produit (personnalisation par ligne du moteur). Rien n'est envoyé, stocké ni mis au panier. */
 (function () {
   var b = document.body; if (!b || b.getAttribute("data-kw-pack") !== "plume-or") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) document.body.classList.add("pk-calme"); // respecte « moins d'animations » : le CSS du thème coupe aussi ses animations
   var all = function (s) { return Array.prototype.slice.call(document.querySelectorAll(s)); };
   all("[data-po-grav]").forEach(function (root) {
     var tools = root.querySelector("[data-po-tools]"), out = root.querySelector("[data-po-out]"), pen = root.querySelector(".po-pen");

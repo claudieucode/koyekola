@@ -4,6 +4,7 @@
 (function () {
   var body = document.body;
   if (!body || body.getAttribute("data-kw-pack") !== "corde-et-bois") return;
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; if (reduceMotion) document.body.classList.add("pk-calme"); // respecte « moins d'animations » : le CSS du thème coupe aussi ses animations
   var KEY = "corde-et-bois-niveau";
   var memoire = body.getAttribute("data-pk-memoire") !== "off";
   body.classList.add("cb-js");
