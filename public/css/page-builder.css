@@ -2368,3 +2368,17 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-tl select, .pb-tl input[type="text"], .pb-tl input[type="number"] { max-width: 100%; box-sizing: border-box; }
 .pb-tl-board { max-width: 100%; }
 [data-pb-page-settings] details[data-group="ms-scenes"] { max-width: 100%; overflow-x: hidden; }
+
+/* Onglet « En-tête » : listes en une seule carte, une ligne par réglage ou par élément (icône, titre, explication, flèche), séparées par des filets fins */
+.pb-hdr-list { display: flex; flex-direction: column; margin: 0 0 14px; border: 1px solid var(--line, #d9e2ea); border-radius: var(--pb-radius-md, 8px); background: var(--card, #fff); overflow: hidden; }
+.pb-hdr-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 0; border-top: 1px solid var(--line, #e3eaf0); background: none; font: inherit; text-align: left; color: var(--text, #10222f); cursor: pointer; }
+.pb-hdr-row:first-child { border-top: 0; }
+.pb-hdr-row:hover { background: #f4f8fb; }
+.pb-hdr-row:focus-visible { outline: 2px solid var(--primary, #1e5f8f); outline-offset: -2px; }
+.pb-hdr-ico { flex: none; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 6px; background: #eef3f7; color: var(--primary, #1e5f8f); }
+.pb-hdr-ico svg { width: 16px; height: 16px; }
+.pb-hdr-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pb-hdr-title { font-size: 13px; font-weight: 650; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-hdr-hint { font-size: 11.5px; color: var(--muted, #5b6b78); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-hdr-go { flex: none; display: inline-flex; color: var(--muted, #5b6b78); }
+.pb-hdr-go svg { width: 14px; height: 14px; }

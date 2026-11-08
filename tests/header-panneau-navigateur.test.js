@@ -57,9 +57,9 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
 
   test("les boutons d'éléments listent les éléments de l'en-tête et ouvrent leurs réglages à droite", async () => {
     const pane = page.locator("[data-pb-page-settings]");
-    const btns = pane.locator(".pb-hdr-access button");
-    assert.ok(await btns.count() >= 6, "boutons d'accès");
-    await pane.getByRole("button", { name: "Style après défilement" }).click();
+    const btns = pane.locator(".pb-hdr-row");
+    assert.ok(await btns.count() >= 8, "lignes d'accès (réglages + éléments)");
+    await pane.locator(".pb-hdr-row", { hasText: "Après défilement" }).first().click();
     await page.locator("[data-pb-inspector] .pb-insp-title").waitFor();
     assert.match(await page.locator("[data-pb-inspector]").innerText(), /Après défilement/);
   });

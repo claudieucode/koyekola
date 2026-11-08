@@ -7881,10 +7881,20 @@ function selectField(label, value, options, onChange, opts) {
   function headerAccess(box) {
     var sec = headerSection(), root = sec && sec.children && sec.children[0]; if (!root) return;
     var open = function (id, tab, state) { styleState = state || "normal"; inspTab = tab; store.set("insp-tab", tab); select(id); renderInspector(); };
-    box.appendChild(h("p", { class: "pb-sub", text: "Réglages complets du conteneur de l'en-tête" }));
-    box.appendChild(h("p", { class: "pb-hint", text: "Mise en page, fond, bordure, ombre, espacements, ancre, visibilité par écran… s'ouvrent dans le panneau de droite, avec le choix de l'écran (ordinateur, tablette, mobile) et de l'état." }));
-    var row = function (items) { return h("div", { class: "pb-hdr-access", style: "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px" }, items.map(function (b) { return h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { open(root.id, b[1], b[2]); } }, b[0]); })); };
-    box.appendChild(row([["Mise en page et contenu", "content"], ["Style (état normal)", "style"], ["Style après défilement", "style", "scrolled"], ["Style menu ouvert", "style", "menuOpen"], ["Avancé (ancre, écrans, CSS)", "advanced"]]));
+    // Une seule carte, une ligne par réglage (titre, courte explication, flèche) : plus de boutons en vrac
+    var row = function (iconName, title, hint, onclick, depth) {
+      return h("button", { type: "button", class: "pb-hdr-row", style: depth ? "padding-left:" + (14 + depth * 14) + "px" : null, onclick: onclick },
+        h("span", { class: "pb-hdr-ico", "aria-hidden": "true" }, icon(iconName)),
+        h("span", { class: "pb-hdr-txt" }, h("span", { class: "pb-hdr-title", text: title }), hint ? h("span", { class: "pb-hdr-hint", text: hint }) : null),
+        h("span", { class: "pb-hdr-go", "aria-hidden": "true" }, icon("chevronRight")));
+    };
+    box.appendChild(h("p", { class: "pb-sub", text: "Réglages du conteneur" }));
+    box.appendChild(h("div", { class: "pb-hdr-list" }, [
+      row("layout", "Mise en page et contenu", "Direction, largeur, structure", function () { open(root.id, "content"); }),
+      row("palette", "Style", "Fond, bordure, ombre, espacements", function () { open(root.id, "style"); }),
+      row("arrowDown", "Après défilement", "Apparence une fois la page défilée", function () { open(root.id, "style", "scrolled"); }),
+      row("listChecks", "Menu ouvert", "Apparence quand le menu est déplié", function () { open(root.id, "style", "menuOpen"); }),
+      row("sliders", "Avancé", "Ancre, écrans, CSS personnalisé", function () { open(root.id, "advanced"); })]));
     headerRows(box, sec);
     headerRootPanel(box, root);
     if (PAGE.siteId) {
@@ -7892,18 +7902,16 @@ function selectField(label, value, options, onChange, opts) {
       box.appendChild(h("p", { class: "pb-hint", text: "La largeur à partir de laquelle un écran compte comme « tablette » ou « mobile » se règle pour tout le site (en-tête compris). Le repli du menu en bouton se règle séparément, sur le menu." }));
       box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/responsive", target: "_blank", rel: "noopener" }, "Régler les écrans du site"));
     }
-    var els = []; (function walk(list) { (list || []).forEach(function (n) { if (n !== root) els.push(n); if (n.children) walk(n.children); }); })(sec.children[0].children);
+    var els = []; (function walk(list, depth) { (list || []).forEach(function (n) { if (n !== root) els.push({ n: n, depth: depth }); if (n.children) walk(n.children, Math.min(depth + 1, 3)); }); })(sec.children[0].children, 0);
     if (els.length) {
-      box.appendChild(h("p", { class: "pb-sub", text: "Éléments de l'en-tête (cliquez pour tout régler)" }));
-      box.appendChild(h("div", { class: "pb-hdr-access", style: "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px" }, els.map(function (n) {
-        // Nom reconnaissable : le nom donné, sinon le type + son texte, sinon le type + ce qu'il contient (« Conteneur · Logo du site, Menu »)
-        var t = (preview(n) || "").slice(0, 22), inside = (n.children || []).slice(0, 3).map(typeLabel).join(", ");
-        var label = n.name || typeLabel(n) + (t ? " · " + t : inside ? " · " + inside : "");
-        return h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); } }, label);
+      box.appendChild(h("p", { class: "pb-sub", text: "Éléments de l'en-tête" }));
+      box.appendChild(h("div", { class: "pb-hdr-list" }, els.map(function (e) {
+        var n = e.n, t = (preview(n) || "").slice(0, 40), inside = (n.children || []).slice(0, 3).map(typeLabel).join(", ");
+        var hint = n.name ? typeLabel(n) : t || (inside ? inside : "");
+        return row(isNode(n) && NT[n.type] ? NT[n.type].icon : "layout", n.name || typeLabel(n), n.name ? hint : (t ? t : inside), function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); }, e.depth);
       })));
     }
   }
-  // Réglages du conteneur de l'en-tête rendus ICI (mêmes contrôles que le panneau de droite : mêmes valeurs, mêmes écrans et états), regroupés comme dans Elementor
   // Rangées de l'en-tête (les conteneurs de premier niveau) : chacune peut se coller seule en haut de l'écran pendant que les autres défilent
   function headerRows(box, sec) {
     var rows = (sec.children || []).filter(function (n) { return n.type === "container"; });
