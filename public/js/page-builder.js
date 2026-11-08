@@ -7852,9 +7852,26 @@ function selectField(label, value, options, onChange, opts) {
     box.textContent = ""; renderHeaderSettings(box);
     if (at >= 0) { var again = box.querySelectorAll("select, input")[at]; if (again && !again.disabled) again.focus(); }
   }
+  // Accès direct aux réglages complets (Contenu / Style / Avancé, écrans, états) du conteneur de l'en-tête et de chacun de ses éléments : le panneau de droite s'ouvre dessus
+  function headerAccess(box) {
+    var sec = headerSection(), root = sec && sec.children && sec.children[0]; if (!root) return;
+    var open = function (id, tab, state) { styleState = state || "normal"; inspTab = tab; store.set("insp-tab", tab); select(id); renderInspector(); };
+    box.appendChild(h("p", { class: "pb-sub", text: "Réglages complets du conteneur de l'en-tête" }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Mise en page, fond, bordure, ombre, espacements, ancre, visibilité par écran… s'ouvrent dans le panneau de droite, avec le choix de l'écran (ordinateur, tablette, mobile) et de l'état." }));
+    var row = function (items) { return h("div", { class: "pb-hdr-access", style: "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px" }, items.map(function (b) { return h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { open(root.id, b[1], b[2]); } }, b[0]); })); };
+    box.appendChild(row([["Mise en page et contenu", "content"], ["Style (état normal)", "style"], ["Style après défilement", "style", "scrolled"], ["Style menu ouvert", "style", "menuOpen"], ["Avancé (ancre, écrans, CSS)", "advanced"]]));
+    var els = []; (function walk(list) { (list || []).forEach(function (n) { if (n !== root) els.push(n); if (n.children) walk(n.children); }); })(sec.children[0].children);
+    if (els.length) {
+      box.appendChild(h("p", { class: "pb-sub", text: "Éléments de l'en-tête (cliquez pour tout régler)" }));
+      box.appendChild(h("div", { class: "pb-hdr-access", style: "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px" }, els.map(function (n) {
+        var t = (preview(n) || "").slice(0, 18); return h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); } }, typeLabel(n) + (t ? " · " + t : ""));
+      })));
+    }
+  }
   var HDR_DEVICES = [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]];
   function renderHeaderSettings(box) {
     var d = headerNow(), dis = !canWrite, moving = d.mode === "sticky" || d.mode === "fixed", live = d.mode !== "static";
+    headerAccess(box);
     box.appendChild(h("p", { class: "pb-sub", text: "Comportement de l'en-tête" }));
     box.appendChild(h("p", { class: "pb-hint", text: "Ces réglages décident comment l'en-tête se comporte sur le site publié. Ils sont enregistrés avec l'en-tête : déplacer ou supprimer un bloc ne les change plus." }));
     box.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (reste visible, sans décalage)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
