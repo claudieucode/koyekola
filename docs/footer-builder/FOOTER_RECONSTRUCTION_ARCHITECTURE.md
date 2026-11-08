@@ -1,4 +1,15 @@
-# Reconstruction de la bibliothèque de pieds de page : architecture (étape « Fondations »)
+# Reconstruction de la bibliothèque de pieds de page : architecture
+
+## État final (intégration, 8 novembre 2026)
+
+- **La bibliothèque liste exactement les 100 nouveaux modèles** (15 familles, toutes `built: true`, répartition = cible). **Plus aucun ancien n'est listé.** La logique de transition de la section 4 (anciens listés tant que leur famille n'est pas construite) reste dans `footer.js` mais n'a plus d'effet : elle ne sert qu'aux tests qui simulent des familles non construites.
+- **Les 100 anciens identifiants sont tous remappés** vers un vrai nouveau modèle (`footer-aliases.js`, table lisible par groupe ; version argumentée : `ALIAS_ANCIENS_MODELES.md`). `Catalog.find(ancien)` renvoie le nouveau modèle ; un pied déjà installé garde sa copie (jamais modifiée) ; « Revenir au modèle d'origine » donne le remplaçant et met à jour la mémoire d'origine.
+- **Distinction** : 4 950 paires comparées par `footer/empreinte.js` ; similarité maximale 0,69 (seuil du test : 0,85), moyenne 0,27, aucune empreinte identique. Tableau complet : `CATALOGUE_100_MODELES.md` (généré par `node scripts/documenter-pieds.js`).
+- **Moteur** : `finishNode` calcule désormais les états survol/focus des liens sur le fond LOCAL (carte ou pastille de couleur), pas seulement sur le fond de la rangée ; les cartes de `band` sont refinies sur leur fond.
+- Tests : `footer-reconstruction` (127+ contrôles sans « skip »), `footer-aliases`, `footer-100-integration` (serveur réel : « Utiliser », enregistrement, rechargement, publication et page publique des 100 modèles ; aperçu et vignette des 200 identifiants ; pieds installés avec un ancien identifiant).
+
+---
+
 
 Date : 8 novembre 2026. Branche `footer-reconstruction`. Cette étape prépare le terrain : **aucun des 100 nouveaux modèles n'est encore écrit**. Les 100 anciens restent listés (par famille, voir §4) tant que leur famille n'est pas construite.
 
@@ -43,11 +54,11 @@ Identifiant stable `ft-<famille>-<nn>-<nom>` (contrôlé par `modele()` et par l
 - Un ancien non listé reste **ouvrable** par son identifiant (ouverture, « Utiliser », « Revenir au modèle d'origine », vignette) : `Catalog.find` consulte d'abord la liste puis la table d'alias puis les modèles cachés.
 - Une famille qui n'a ni nouveau ni ancien listé n'apparaît pas dans le filtre ; à la fin les 15 apparaissent.
 - Cible finale : 15 familles `built` = **100 nouveaux listés, 0 ancien**. Garde-fou : `built: true` exige `models.length === target` (erreur au chargement sinon).
-- État actuel (mesuré) : 100 entrées listées = 100 anciens, réparties en 14 familles (institutionnels n'a encore aucun modèle).
+- État actuel (mesuré, intégration terminée) : 100 entrées listées = 100 nouveaux, 15 familles, 0 ancien listé.
 
 ## 5. Alias : règles
 
-1. `ANCIENS_IDENTIFIANTS` ne change jamais. 2. `ALIAS[ancien]` pointe d'abord vers lui-même ; l'agent d'une famille le remappe vers un nouvel identifiant quand il existe un remplaçant. 3. Un ancien identifiant ne réapparaît **jamais** dans la liste dès que sa famille est construite ou qu'il est redirigé (test). 4. Un nouvel identifiant ne peut pas être un ancien (test). 5. Les pieds déjà installés sont des copies : rien n'est migré, rien n'est touché ; seule la colonne `origin_key` est relue, et `find()` la résout toujours. Les autres catégories du Theme Builder n'ont ni alias ni marqueur (test).
+1. `ANCIENS_IDENTIFIANTS` ne change jamais. 2. `ALIAS[ancien]` pointe désormais vers un nouvel identifiant `ft-…` pour les 100 anciens (plusieurs anciens peuvent partager le même remplaçant). 3. Un ancien identifiant ne réapparaît **jamais** dans la liste dès que sa famille est construite ou qu'il est redirigé (test). 4. Un nouvel identifiant ne peut pas être un ancien (test). 5. Les pieds déjà installés sont des copies : rien n'est migré, rien n'est touché ; seule la colonne `origin_key` est relue, et `find()` la résout toujours. Les autres catégories du Theme Builder n'ont ni alias ni marqueur (test).
 
 ## 6. Éléments ajoutés : où et comment
 

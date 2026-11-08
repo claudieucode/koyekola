@@ -19,11 +19,24 @@ describe("Pied de page : identifiants gelés", () => {
     assert.deepEqual([...ANCIENS_IDENTIFIANTS], calcules);
     assert.ok(Object.isFrozen(ANCIENS_IDENTIFIANTS) && Object.isFrozen(ALIAS), "table figée");
   });
-  test("la table d'alias couvre les 100 anciens identifiants et rien d'autre ; chaque cible existe", () => {
+  test("la table d'alias couvre les 100 anciens identifiants et rien d'autre ; chaque cible est un VRAI nouveau modèle listé (jamais un ancien, jamais lui-même)", () => {
     assert.deepEqual(Object.keys(ALIAS).sort(), [...ANCIENS_IDENTIFIANTS].sort());
+    const nouveaux = new Set(Footer.layouts.filter((l) => !l.legacy).map((l) => l.fullKey));
+    assert.equal(nouveaux.size, 100);
     for (const [ancien, cible] of Object.entries(ALIAS)) {
-      assert.ok(ANCIENS_IDENTIFIANTS.includes(cible) || Footer.layouts.some((l) => l.fullKey === cible), `${ancien} → ${cible} : cible introuvable`);
+      assert.ok(nouveaux.has(cible), `${ancien} → ${cible} : le nouveau modèle n'existe pas dans la bibliothèque`);
+      assert.ok(!ANCIENS_IDENTIFIANTS.includes(cible), `${ancien} pointe vers un ancien identifiant`);
     }
+  });
+  test("la table d'alias est cohérente avec l'usage : un ancien modèle de lettre d'information, de boutique, d'éditorial, de SaaS pointe vers une famille proche", () => {
+    const fam = (id) => Footer.layouts.find((l) => l.fullKey === ALIAS[id]).family;
+    for (const id of ANCIENS_IDENTIFIANTS) {
+      if (/^boutique-(quatre|service|compte|recherche|offres|bandeau|categories|mini|cartes)/.test(id)) assert.equal(fam(id), "ecommerce", id);
+      if (/^(blog|magazine|journal|editorial)-/.test(id)) assert.equal(fam(id), "editoriaux", id);
+      if (/^saas-/.test(id)) assert.equal(fam(id), "saas-tech", id);
+      if (/^(ligne-copyright|logo-et-copyright|copyright-)/.test(id)) assert.equal(fam(id), "minimalistes", id);
+    }
+    assert.ok(new Set(Object.values(ALIAS)).size >= 30, "les 100 anciens ne se concentrent pas sur quelques modèles");
   });
 });
 
@@ -43,20 +56,22 @@ describe("Pied de page : les anciens identifiants restent ouvrables", () => {
     for (const k of ["", "n-importe-quoi", "ligne-copyright-menu", "ligne-copyright-menu.inconnu", "ft-minimalistes-99-fantome", "__proto__", "constructor"]) assert.equal(Catalog.find("footer", k), null, k);
     assert.equal(Footer.resolveAlias("constructor"), null);
   });
-  test("règle : un ancien identifiant n'est listé que si sa famille n'est pas construite et qu'il n'est pas redirigé ; jamais deux fois", () => {
+  test("règle : un ancien identifiant n'est JAMAIS listé (liste = exactement les 100 nouveaux) mais find() donne le nouveau modèle qui le remplace", () => {
     const entrees = Catalog.entries("footer"), cles = entrees.map((e) => e.key);
+    assert.equal(cles.length, 100);
     assert.equal(new Set(cles).size, cles.length, "aucun doublon dans la liste");
-    assert.ok(entrees.length >= 1, "la liste n'est jamais vide");
-    const construites = new Set(Footer.familles.filter((f) => f.built).map((f) => f.key));
+    assert.ok(cles.every((k) => /^ft-/.test(k)) && entrees.every((e) => !e.legacy));
+    assert.equal(Footer.familles.filter((f) => f.built).length, 15);
     for (const id of ANCIENS_IDENTIFIANTS) {
-      const e = Catalog.find("footer", id), redirige = ALIAS[id] !== id;
-      const attendu = !redirige && !construites.has(e.layoutKey);
-      assert.equal(cles.includes(id), attendu, `${id} listé=${cles.includes(id)} attendu=${attendu}`);
+      assert.ok(!cles.includes(id), `${id} ne doit plus être listé`);
+      const m = Catalog.find("footer", id);
+      assert.equal(m.key, ALIAS[id], `${id} → ${ALIAS[id]}`);
+      assert.ok(cles.includes(m.key), "le remplaçant est bien dans la liste");
     }
   });
   test("simulation : toutes les familles construites → 0 ancien listé, les 100 restent ouvrables par le catalogue assemblé", () => {
     const familles = Footer.FAMILLES_CLES.map((k) => ({ key: k, label: k, description: "", target: 0, built: true, models: [] }));
-    const sim = Footer.assemble({ familles });
+    const sim = Footer.assemble({ familles, alias: Object.fromEntries(ANCIENS_IDENTIFIANTS.map((i) => [i, i])) });
     assert.equal(sim.layouts.filter((l) => l.legacy).length, 0);
     assert.equal(sim.hiddenLayouts.length, 100);
     for (const id of ANCIENS_IDENTIFIANTS) { assert.equal(sim.resolveAlias(id), id); assert.ok(sim.hiddenLayouts.some((l) => l.fullKey === id), id); }
@@ -64,13 +79,14 @@ describe("Pied de page : les anciens identifiants restent ouvrables", () => {
   test("simulation : une famille construite masque ses anciens (sans toucher aux autres) ; un alias redirige vers le nouveau modèle", () => {
     const modele = (nn) => Kit.modele({ id: Kit.identifiantModele("minimalistes", nn, "essai"), name: `Essai ${nn}`, family: "minimalistes", description: "Modèle d'essai.", tags: ["essai"], identity: "neutre", structure: { rows: [Kit.L(["copy"], ["menuh"], { pad: "sm" })] } }, "minimalistes");
     const familles = Footer.FAMILLES_CLES.map((k) => ({ key: k, label: k, description: "", target: k === "minimalistes" ? 1 : 0, built: k === "minimalistes", models: k === "minimalistes" ? [modele(1)] : [] }));
-    const avant = Footer.assemble({ familles: Footer.FAMILLES_CLES.map((k) => ({ key: k, label: k, description: "", target: 0, built: false, models: [] })) });
-    const sim = Footer.assemble({ familles });
+    const identite = Object.fromEntries(ANCIENS_IDENTIFIANTS.map((i) => [i, i]));
+    const avant = Footer.assemble({ familles: Footer.FAMILLES_CLES.map((k) => ({ key: k, label: k, description: "", target: 0, built: false, models: [] })), alias: identite });
+    const sim = Footer.assemble({ familles, alias: identite });
     const mini = ANCIENS_IDENTIFIANTS.filter((id) => avant.layouts.find((l) => l.fullKey === id).family === "minimalistes");
     assert.ok(mini.length >= 5);
     for (const id of mini) assert.ok(!sim.layouts.some((l) => l.fullKey === id), `${id} ne doit plus être listé`);
     assert.equal(sim.layouts.length, avant.layouts.length - mini.length + 1);
-    const alias = { ...ALIAS, [mini[0]]: "ft-minimalistes-01-essai" };
+    const alias = { ...identite, [mini[0]]: "ft-minimalistes-01-essai" };
     const redir = Footer.assemble({ familles, alias });
     assert.equal(redir.resolveAlias(mini[0]), "ft-minimalistes-01-essai");
     assert.equal(redir.resolveAlias("ft-minimalistes-01-essai"), null, "un nouvel identifiant n'est pas un alias");

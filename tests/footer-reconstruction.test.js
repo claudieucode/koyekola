@@ -46,7 +46,7 @@ describe("Pied de page : les 15 familles", () => {
     assert.equal(new Set(cles).size, cles.length);
     assert.equal(cles.length, Footer.nouveaux + Footer.anciensListes);
     for (const f of construites) assert.ok(!entrees.some((e) => e.legacy && e.layoutKey === f.key), `anciens encore listés dans ${f.key}`);
-    if (!toutConstruit) assert.ok(Footer.anciensListes > 0, "des familles restent à construire : leurs anciens modèles sont encore listés");
+    assert.ok(toutConstruit && Footer.anciensListes === 0 && Footer.nouveaux === 100, "15 familles construites : exactement 100 nouveaux modèles et aucun ancien dans la liste");
   });
   for (const f of Footer.familles) {
     test(`famille « ${f.key} » (${f.built ? "construite" : "à construire"}) : cohérence`, () => {
@@ -131,6 +131,15 @@ describe("Pied de page : chaque nouveau modèle listé (paramétré)", () => {
     assert.equal(new Set(listes.map((l) => l.fullKey)).size, listes.length);
     assert.equal(new Set(listes.map((l) => l.label)).size, listes.length);
   });
+  test("noms : aucun quasi-doublon (mots communs < 60 %), descriptions toutes différentes, 100 identifiants stables ≤ 80 caractères au format ft-<famille>-<nn>-<nom>", () => {
+    const mots = (s) => new Set(s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length > 2 && !["des", "les", "aux", "avec", "pour", "une", "sur", "dans", "sous", "est"].includes(w)));
+    for (let i = 0; i < listes.length; i++) for (let j = i + 1; j < listes.length; j++) {
+      const a = mots(listes[i].label), b = mots(listes[j].label), commun = [...a].filter((x) => b.has(x)).length;
+      assert.ok(commun / (a.size + b.size - commun) < 0.6, `noms trop proches : « ${listes[i].label} » / « ${listes[j].label} »`);
+    }
+    assert.equal(new Set(listes.map((l) => l.desc)).size, 100);
+    for (const l of listes) { assert.ok(l.fullKey.length <= 80 && l.desc.length <= 280 && l.desc.length >= 40, l.fullKey); assert.match(l.fullKey, /^ft-[a-z0-9-]+-\d{2}-[a-z0-9-]+$/); }
+  });
   test("distinction structurelle : jamais deux empreintes identiques parmi les nouveaux modèles", () => {
     const vus = new Map();
     for (const l of listes) { const e = Emp.empreinte(docOf(l)); assert.ok(!vus.has(e), `${l.fullKey} a la même structure que ${vus.get(e)}`); vus.set(e, l.fullKey); }
@@ -138,7 +147,8 @@ describe("Pied de page : chaque nouveau modèle listé (paramétré)", () => {
 });
 
 describe("Pied de page : état final (appliqué quand les 15 familles sont construites)", () => {
-  test("exactement 100 nouveaux modèles listés, 0 ancien, répartition par famille = cible", { skip: toutConstruit ? false : `familles construites : ${construites.length}/15` }, () => {
+  test("exactement 100 nouveaux modèles listés, 0 ancien, répartition par famille = cible", () => {
+    assert.equal(construites.length, 15, "les 15 familles sont construites");
     const entrees = Catalog.entries("footer");
     assert.equal(entrees.length, 100);
     assert.equal(entrees.filter((e) => e.legacy).length, 0);
@@ -147,7 +157,8 @@ describe("Pied de page : état final (appliqué quand les 15 familles sont const
     assert.deepEqual(parFamille, CIBLE);
     assert.equal(new Set(entrees.map((e) => e.name)).size, 100);
   });
-  test("aucune paire de modèles de structure trop proche : similarité ≤ 0,85", { skip: toutConstruit ? false : "familles non toutes construites" }, () => {
+  test("aucune paire de modèles de structure trop proche : similarité ≤ 0,85", () => {
+    assert.equal(listes.length, 100);
     const docs = listes.map((l) => ({ k: l.fullKey, t: Emp.jetons(docOf(l)) }));
     for (let i = 0; i < docs.length; i++) for (let j = i + 1; j < docs.length; j++) {
       const s = Emp.similarite(docs[i].t, docs[j].t);

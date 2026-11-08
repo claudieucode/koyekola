@@ -65,7 +65,15 @@ function mesurerDansLaPage(mobile) {
   // bande pleine largeur : la bande racine couvre toute la largeur de la fenêtre (à la barre de défilement près) et son contenu intérieur est centré
   const rb = root.getBoundingClientRect(), pleine = Math.abs(rb.left) <= 1 && rb.width >= document.documentElement.clientWidth - 1;
   const gauche = rects.length ? Math.min(...rects.map((r) => r.x)) : 0, droite = rects.length ? Math.max(...rects.map((r) => r.x + r.w)) : 0;
-  return { debordement: document.documentElement.scrollWidth - document.documentElement.clientWidth, chevauchements: chevauchements.slice(0, 6), horsEcran: horsEcran.slice(0, 6), coupes: coupes.slice(0, 4), cibles: petites.slice(0, 8), contraste: contraste.slice(0, 6),
+  // volets d'accordéon mobile : chaque volet ouvert doit montrer du contenu visible (hors son titre) ; un volet réduit à son titre n'a pas de bouton (masqué)
+  const voletsVides = []; let nVolets = 0;
+  if (mobile) for (const b of root.querySelectorAll(".kw-nacc-head")) {
+    nVolets++; if (b.getAttribute("aria-expanded") !== "true") b.click();
+    const p = document.getElementById(b.getAttribute("aria-controls"));
+    const contenu = p ? [...p.querySelectorAll("a,img,svg,input,button,p,span,li,summary")].filter((e) => !e.classList.contains("kw-heading") && !e.closest(".kw-heading") && vis(e)).length : 0;
+    if (!contenu) voletsVides.push((b.textContent || "").trim().slice(0, 24));
+  }
+  return { voletsVides, nVolets, debordement: document.documentElement.scrollWidth - document.documentElement.clientWidth, chevauchements: chevauchements.slice(0, 6), horsEcran: horsEcran.slice(0, 6), coupes: coupes.slice(0, 4), cibles: petites.slice(0, 8), contraste: contraste.slice(0, 6),
     bandePleine: pleine, hauteur: Math.round(rb.height), haut: Math.round(rb.top), marges: [Math.round(gauche), Math.round(innerWidth - droite)], elements: rects.length };
 }
 
@@ -90,7 +98,7 @@ function mesurerDansLaPage(mobile) {
   }
   const entrees = Catalog.entries("footer").filter((e) => (!IDS || IDS.includes(e.key)) && (!FAMILLES || FAMILLES.includes(e.layoutKey)));
   if (CAPTURES) fs.mkdirSync(CAPTURES, { recursive: true });
-  const chrome = await Chrome.launch();
+  let chrome = null; for (let i = 0; i < 6 && !chrome; i++) { try { chrome = await Chrome.launch(); } catch (e) { console.error("Chrome : nouvel essai (" + String(e.message).slice(0, 80) + ")"); await Chrome.wait(4000); } } if (!chrome) throw new Error("Chrome n'a pas démarré après 6 essais");
   const mesures = [];
   try {
     const cookies = [...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base }));
@@ -117,7 +125,7 @@ function mesurerDansLaPage(mobile) {
     if (r.erreur) c.push("erreur"); if (r.absent) c.push("absent");
     if (r.debordement > 1) c.push("debordement"); if (r.chevauchements && r.chevauchements.length) c.push("chevauchement"); if (r.horsEcran && r.horsEcran.length) c.push("hors-ecran");
     if (r.coupes && r.coupes.length) c.push("texte-coupe"); if (r.erreursJs && r.erreursJs.length) c.push("erreur-js"); if (r.bandePleine === false) c.push("bande-non-pleine");
-    if (r.cibles && r.cibles.length) c.push("cible-tactile"); if (r.contraste && r.contraste.length) c.push("contraste"); if (r.hauteur !== undefined && r.hauteur < 20) c.push("hauteur-nulle");
+    if (r.cibles && r.cibles.length) c.push("cible-tactile"); if (r.contraste && r.contraste.length) c.push("contraste"); if (r.hauteur !== undefined && r.hauteur < 20) c.push("hauteur-nulle"); if (r.voletsVides && r.voletsVides.length) c.push("volet-vide");
     return c;
   };
   const defauts = mesures.map((r) => ({ ...r, defauts: defaut(r) })).filter((r) => r.defauts.length);

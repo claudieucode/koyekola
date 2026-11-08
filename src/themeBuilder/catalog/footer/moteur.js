@@ -42,8 +42,18 @@ const buttonStates = (S, solid) => ({ hover: solid ? { backgroundColor: S.onAcce
 const T44 = { minHeight: "44px", display: "inline-flex", alignItems: "center" };
 const mergePart = (node, key, add) => { const cur = (node.parts || {})[key] || {}; node.parts = { ...(node.parts || {}), [key]: { ...cur, styles: { ...(cur.styles || {}), ...(add.styles ? Object.fromEntries(Object.entries(add.styles).map(([bp, v]) => [bp, { ...((cur.styles || {})[bp] || {}), ...v }])) : {}) }, ...(add.states ? { states: add.states } : {}) } }; };
 // Applique à un élément (et à ses enfants) les états survol / focus et les zones cliquables de 44 px sur mobile. Mutation sur des nœuds fraîchement construits.
-function finishNode(S, n) {
-  for (const c of n.children || []) finishNode(S, c);
+// Fond LOCAL : un bloc qui pose son propre fond uni (carte, pastille de couleur) change le fond réel de tout ce qu'il contient. Les états survol / focus des liens qu'il contient sont alors calculés sur CE fond
+// (couleur de survol d'accent seulement si lisible dessus, contour de focus de la couleur du lien ou, à défaut, noir/blanc lisible) ; hors d'un tel bloc, rien ne change.
+function toneLocal(S, n, bg) {
+  if (!isHex6(bg) || !isHex6(S.bg) || bg.toLowerCase() === S.bg.toLowerCase()) return S;
+  const own = ((n.styles || {}).desktop || {}).color;
+  const fg = isHex6(own) && contrastOf(own, bg) >= 4.5 ? own : isHex6(S.fg) && contrastOf(S.fg, bg) >= 4.5 ? S.fg : contrastOf("#ffffff", bg) >= contrastOf("#000000", bg) ? "#ffffff" : "#000000";
+  return { ...S, bg, fg };
+}
+function finishNode(S0, n, bg0 = S0.bg) {
+  const fond = ((n.styles || {}).desktop || {}).backgroundColor, bgHere = isHex6(fond) ? fond : bg0;
+  for (const c of n.children || []) finishNode(S0, c, bgHere);
+  const S = toneLocal(S0, n, bg0); // le fond d'un nœud ne change pas ses propres états (un bouton plein garde ses couleurs) : seul le fond de ses PARENTS compte
   // le site impose sa police aux liens : les liens des widgets de données reprennent la police (et la casse) de l'identité, comme les autres liens du pied
   const fam = S.font && S.font.startsWith("font.") ? { fontFamily: S.font } : {}, caps = S.caps && S.caps !== "none" ? { textTransform: S.caps, letterSpacing: S.track } : {};
   const mobile = (st) => { n.styles = { ...(n.styles || {}), mobile: { ...((n.styles || {}).mobile || {}), ...st } }; };
@@ -136,7 +146,7 @@ function rawItem(k, code, env, center) {
     case "recent": return k.W("querylist", { title: "", source: "posts", mode: "recent", count: Number(x) || 3, layout: "compact", showImage: false, showDate: true, empty: "Les articles apparaîtront ici." }, { color: S.fg, fontSize: "14px" });
     case "popular": return k.W("querylist", { title: "", source: "posts", mode: "popular", count: Number(x) || 3, layout: "compact", showImage: false, showDate: false, empty: "Les articles apparaîtront ici." }, { color: S.fg, fontSize: "14px" });
     case "courses": return k.W("courselist", { count: Number(x) || 3, sort: "recent", showPrice: false, cta: "Découvrir", empty: "Les formations apparaîtront ici." }, { width: "100%" });
-    case "search": return k.search(x === "catalogue" ? "catalogue" : "blog", { width: "100%", maxWidth: "340px" });
+    case "search": return k.search(x === "catalogue" ? "catalogue" : "blog", { width: "100%", maxWidth: "420px" });
     case "account": { const n = k.account({ alignSelf: center ? "center" : "flex-start" }); n.props.showCart = false; return n; }
     case "cart": return k.W("minicart", { label: "Panier", showCount: true, hideEmpty: false }, { color: S.fg, fontWeight: "600" });
     case "toggle": return k.W("toggle", { title: a1, text: a2, open: false }, { color: S.fg, width: "100%" });
@@ -193,7 +203,7 @@ function band(S0, row, first, env) {
     const cols = row.cols.map((c) => {
       const w = typeof c[0] === "number" ? c[0] : 1, codes = typeof c[0] === "number" ? c.slice(1) : c;
       const st = { flexBasis: "0px", flexGrow: w, minWidth: row.cols.length === 1 ? "0px" : min, alignItems: center ? "center" : "flex-start", gap: "12px", ...(center ? { textAlign: "center" } : {}) };
-      return row.cards ? k.card(it(codes), st) : k.col(it(codes), st);
+      return row.cards ? finishNode(S, k.card(it(codes), st)) : k.col(it(codes), st); // la carte pose un fond : ses liens sont refinis sur CE fond
     });
     inner = k.inner(cols, { alignItems: "flex-start", justifyContent: "space-between", gap: S.gap, ...(row.frame ? { borderStyle: "solid", borderWidth: "1.5px", borderColor: S.fg, paddingTop: "28px", paddingBottom: "28px", paddingLeft: "28px", paddingRight: "28px" } : {}), ...max });
   } else if (row.z) {

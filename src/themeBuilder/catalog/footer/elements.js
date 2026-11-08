@@ -31,8 +31,8 @@ function networkItems(list, urls = {}) {
   return out;
 }
 function socialNode(k, list, urls, look, center) {
-  const S = k.S, n = k.social(networkItems(list, urls), { gap: look === "big" ? "14px" : "8px", ...(center ? { justifyContent: "center" } : {}) });
-  if (look === "plain") { n.props.shape = "plain"; n.props.size = "24"; } else if (look === "big") n.props.size = "48"; else if (look === "sq") n.props.shape = "square";
+  const S = k.S, n = k.social(networkItems(list, urls), { gap: look === "big" ? "14px" : look === "plain" ? "2px" : "8px", ...(center ? { justifyContent: "center" } : {}) });
+  if (look === "plain") { n.props.shape = "plain"; n.props.size = "44"; /* glyphe de 24 px (taille × 0,55) dans une cible de 44 px : jamais de pictogramme de 12 px */ } else if (look === "big") n.props.size = "48"; else if (look === "sq") n.props.shape = "square";
   void S;
   return n;
 }
@@ -56,7 +56,7 @@ registerElement("shoplinks", (k, { a1 }, env, center) => k.W("shoplinks", { titl
 registerElement("legallinks", (k, { x }, env, center) => {
   const S = k.S, st = { fontSize: "13px", fontWeight: "500" };
   return k.row([k.LINK("Cookies", "/cookies", st), k.LINK("Contact", "/contact", st),
-    k.W("bizlegal", { title: "", showName: false, showForm: false, showRegistrations: false, showPublisher: false, showHost: false, showPages: true, layout: "inline", hintMissing: true }, { color: S.fg, fontSize: "13px", fontWeight: "500", marginTop: "-8px" })],
+    k.W("bizlegal", { title: "", showName: false, showForm: false, showRegistrations: false, showPublisher: false, showHost: false, showPages: true, layout: x === "stack" ? "stack" : "inline", hintMissing: true }, { color: S.fg, fontSize: "13px", fontWeight: "500", ...(x === "stack" ? {} : { marginTop: "-8px" }) })],
     { gap: "10px", ...(center ? { justifyContent: "center" } : {}), ...(x === "stack" ? { flexDirection: "column", alignItems: "flex-start" } : {}) });
 });
 

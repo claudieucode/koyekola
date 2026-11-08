@@ -73,11 +73,11 @@ describe("Rendu unifié du pied de page : page de l'éditeur, blog, boutique", (
 
   test("sans modèle : repli exact. Page éditeur : un seul <footer> d'origine ; boutique : pied fixe d'origine ; blog : un seul pied d'origine", async () => {
     const a = await page(pA);
-    assert.equal(footers(a), 1); assert.equal(count(a, 'class="lp-foot"'), 1); assert.equal(count(a, "data-kw-footer"), 0);
+    assert.equal(footers(a), 1); assert.equal(count(a, 'class="lp-foot"'), 1); assert.equal(count(a, " data-kw-footer="), 0);
     const s = await get("/boutique", H2);
     assert.equal(s.status, 200); assert.equal(footers(s.text), 1);
     assert.ok(s.text.includes('<footer class="sh-foot"><a href="/boutique">Site Deux</a> · <a href="/boutique/panier">Panier</a> · <a href="/boutique/compte">Mon compte</a></footer>'), "pied boutique d'origine, à l'identique");
-    assert.equal(count(s.text, "data-kw-footer"), 0);
+    assert.equal(count(s.text, " data-kw-footer="), 0);
     const b = await get("/blog");
     assert.equal(b.status, 200); assert.equal(footers(b.text), 1, "blog : un seul pied d'origine"); assert.ok(b.text.includes('class="site-footer"'));
   });
@@ -114,7 +114,7 @@ describe("Rendu unifié du pied de page : page de l'éditeur, blog, boutique", (
       assert.equal((await post(U(S1, `/api/modeles/${T1.id}/publier`))).status, 200);
       for (const [nom, h] of Object.entries(await siteSurfaces(pA, H1))) {
         assert.equal(footers(h), 1, `${nom}, ${n} éléments : un seul <footer>`);
-        assert.equal(count(h, "data-kw-footer"), 1);
+        assert.equal(count(h, " data-kw-footer="), 1);
         assert.equal(count(h, `PIED-UN-TB-${n - 1}"`) + count(h, `PIED-UN-TB-${n - 1}<`), 1, `${nom}, ${n} éléments : le dernier est rendu une fois`);
       }
     }
@@ -128,12 +128,12 @@ describe("Rendu unifié du pied de page : page de l'éditeur, blog, boutique", (
 
   test("page exclue des conditions : aucun pied Theme Builder, aucun pied fantôme ; le repli d'origine s'affiche une seule fois", async () => {
     const h = await page(pX);
-    assert.ok(!h.includes("PIED-UN-TB")); assert.equal(count(h, "data-kw-footer"), 0);
+    assert.ok(!h.includes("PIED-UN-TB")); assert.equal(count(h, " data-kw-footer="), 0);
     assert.equal(footers(h), 1); assert.equal(count(h, 'class="lp-foot"'), 1);
   });
 
   test("isolation : le pied du site 1 n'apparaît sur aucune page du site 2 ni du principal ; le site 2 a son propre pied, le site 1 garde le sien", async () => {
-    for (const [nom, h] of Object.entries(await siteSurfaces(pB, H2))) { assert.ok(!h.includes("PIED-UN-TB") && !h.includes("ZONE-PIED-UN"), `${nom} : rien du site 1`); assert.equal(footers(h), 1, `${nom} : repli historique`); assert.equal(count(h, "data-kw-footer"), 0); }
+    for (const [nom, h] of Object.entries(await siteSurfaces(pB, H2))) { assert.ok(!h.includes("PIED-UN-TB") && !h.includes("ZONE-PIED-UN"), `${nom} : rien du site 1`); assert.equal(footers(h), 1, `${nom} : repli historique`); assert.equal(count(h, " data-kw-footer="), 0); }
     for (const [nom, h] of Object.entries(await mainSurfaces())) { assert.ok(!h.includes("PIED-UN-TB") && !h.includes("ZONE-PIED-UN"), `${nom} (principal) : rien du site 1`); assert.equal(footers(h), 1); }
     const T2 = await footer(S2, "Pied Deux", {}); await saveDraft(T2, "PIED-DEUX-TB", 3); await publish(S2, T2);
     for (const [nom, h] of Object.entries(await siteSurfaces(pB, H2))) { assert.ok(h.includes("PIED-DEUX-TB") && !h.includes("PIED-UN-TB"), nom); assert.equal(footers(h), 1); }
@@ -175,7 +175,7 @@ describe("Rendu unifié du pied de page : page de l'éditeur, blog, boutique", (
       if (n === 25) { await saveDraft(T, "PIED-PRINCIPAL-TB", 25); assert.equal((await post(U(null, `/api/modeles/${T.id}/publier`))).status, 200); }
       for (const [nom, h] of Object.entries(await mainSurfaces())) {
         assert.ok(h.includes("PIED-PRINCIPAL-TB"), `${nom} : pied du Theme Builder`);
-        assert.equal(footers(h), 1, `${nom} : un seul <footer>`); assert.equal(count(h, "data-kw-footer"), 1);
+        assert.equal(footers(h), 1, `${nom} : un seul <footer>`); assert.equal(count(h, " data-kw-footer="), 1);
         assert.equal(count(h, `PIED-PRINCIPAL-TB-${n - 1}"`) + count(h, `PIED-PRINCIPAL-TB-${n - 1}<`), 1);
         assert.ok(KO_ORIGINE(h), `${nom} : aucun pied d'origine en plus`);
         const j = h.indexOf("ZONE-PIED-PRINCIPAL"), k = h.indexOf("data-kw-consent-open", j);

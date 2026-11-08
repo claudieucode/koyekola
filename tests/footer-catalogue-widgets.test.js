@@ -14,6 +14,7 @@ const landing = require("../src/marketing/landing");
 const business = require("../src/marketing/pages/business");
 const Catalog = require("../src/themeBuilder/catalog");
 const { useTemplate } = require("../src/themeBuilder/catalog/use");
+const Kit = require("../src/themeBuilder/catalog/footer/kit-conception");
 const Footer = require("../src/themeBuilder/catalog/footer");
 const { icon } = require("../src/utils/icons");
 const { startServer, loginInstructor } = require("./helpers");
@@ -86,14 +87,14 @@ describe("Catalogue des pieds : widgets de données d'entreprise (sans serveur)"
     business.save(m.db, 1, SITE_FULL, PROFILE);
   });
 
-  test("le total réel est 100 modèles listés (anciens : 10 familles d'origine × 10, rattachées aux familles de la refonte), clés inchangées et uniques ; aucune clé de mise en page n'a disparu", () => {
+  test("le total réel est 100 nouveaux modèles listés en 15 familles ; identifiants ft-… uniques ; plus aucun ancien dans la liste (ils restent ouvrables par alias)", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100);
-    assert.equal(Footer.families.length, new Set(all.map((e) => e.layoutKey)).size); // familles de la refonte ayant au moins un modèle listé (15 au final)
-    assert.equal(new Set(Footer.layouts.map((l) => l.legacyFamily)).size, 10);
+    assert.ok(all.every((e) => /^ft-/.test(e.key) && !e.legacy));
+    assert.equal(Footer.families.length, 15);
+    assert.equal(new Set(all.map((e) => e.layoutKey)).size, 15);
     assert.equal(Footer.layouts.length, 100);
-    // les clés `<mise en page>.<identité>` : la mise en page ne change pas (les sites ont des copies), l'identité d'origine est conservée dans le suffixe
-    for (const l of Footer.layouts) assert.ok(all.some((e) => e.layoutId === l.key && e.key === `${l.key}.${l.keySkin}`), l.key);
+    assert.equal(Footer.anciensListes, 0);
   });
 
   test("chaque modèle se construit, valide la grammaire du Page Builder, s'insère et garde ses états (survol, focus) après l'enregistrement", () => {
@@ -110,42 +111,48 @@ describe("Catalogue des pieds : widgets de données d'entreprise (sans serveur)"
     assert.equal(u.type, "footer");
   });
 
-  test("les modèles pertinents utilisent les nouveaux widgets (coordonnées, téléphone, e-mail, horaires, légal, paiements, livraison, retour en haut, copyright automatique)", () => {
-    const origine = (e) => (Footer.layouts.find((l) => l.fullKey === e.key) || {}).legacyFamily; // famille d'ORIGINE (les 10 anciennes), la liste étant désormais rangée par familles métier
-    const count = (fam, type) => all.filter((e) => origine(e) === fam && typesOf(e.key).includes(type)).length;
+  test("la bibliothèque utilise les widgets « Pied de page » (coordonnées, téléphone, e-mail, horaires, légal, paiements, livraison, retour en haut, copyright automatique) là où c'est pertinent", () => {
+    const parFamille = (fam, type) => all.filter((e) => e.layoutKey === fam && typesOf(e.key).includes(type)).length;
     const total = (type) => all.filter((e) => typesOf(e.key).includes(type)).length;
-    assert.ok(count("contact", "bizcontact") >= 9, `contact : bizcontact ${count("contact", "bizcontact")}`);
-    assert.ok(count("contact", "bizhours") >= 3, "horaires dans la famille contact");
-    assert.ok(count("colonnes", "bizcontact") >= 4 && count("entreprise", "bizcontact") >= 3 && count("centre", "bizcontact") >= 1 && count("reseaux", "bizcontact") >= 1 && count("creatif", "bizcontact") >= 3, "coordonnées dans colonnes, entreprise, centre, réseaux, créatif");
-    assert.ok(count("boutique", "bizpayments") >= 4 && count("boutique", "bizdelivery") >= 4, "boutique : paiements et livraison");
-    assert.ok(total("bizphone") >= 3 && total("bizemail") >= 1, "téléphone et e-mail cliquables");
-    assert.ok(total("bizlegal") >= 25, `liens et informations légales : ${total("bizlegal")}`);
-    assert.ok(total("backtotop") >= 15, `retour en haut : ${total("backtotop")}`);
-    assert.ok(count("editorial", "backtotop") >= 3 && count("entreprise", "backtotop") >= 4, "retour en haut dans blog et pro");
+    assert.ok(total("bizcontact") >= 30, `coordonnées : ${total("bizcontact")}`);
+    assert.ok(total("bizhours") >= 20, `horaires : ${total("bizhours")}`);
+    assert.ok(total("bizphone") >= 5 && total("bizemail") >= 5, "téléphone et e-mail cliquables");
+    assert.ok(total("bizlegal") >= 80, `liens et informations légales : ${total("bizlegal")}`);
+    assert.ok(total("backtotop") >= 30, `retour en haut : ${total("backtotop")}`);
+    assert.ok(total("bizpayments") >= 5 && total("bizdelivery") >= 2, "paiements et livraison");
+    assert.ok(parFamille("ecommerce", "bizpayments") >= 3, "e-commerce : paiements");
+    assert.ok(parFamille("services", "bizcontact") >= 4 && parFamille("institutionnels", "bizcontact") >= 4, "services et institutionnels : coordonnées");
+    assert.equal(total("copyright"), 100, "un copyright automatique dans CHAQUE modèle");
     // copyright automatique : le propriétaire vient de la raison sociale (vide = nom du site) ; jamais d'année écrite à la main
     for (const e of all) walk(section(e.key).children, (n) => { if (n.type === "copyright") { assert.equal(n.props.owner, "{{business.legalname}}", e.key); assert.ok(!/\b(19|20)\d\d\b/.test(n.props.text), `${e.key} : année figée`); } });
     // plus aucun faux texte de coordonnées
     for (const e of all) walk(section(e.key).children, (n) => assert.notEqual(n.type, "iconlist", `${e.key} : liste d'icônes figée`));
-    assert.ok(!JSON.stringify(all.map((e) => section(e.key))).includes("Votre adresse"), "texte « Votre adresse… » figé");
+    assert.ok(!/Votre adresse(?! e-mail| sert)/.test(JSON.stringify(all.map((e) => section(e.key)))), "texte « Votre adresse… » figé (seuls le libellé de champ « Votre adresse e-mail » et la phrase « Votre adresse sert… » sont admis)");
   });
 
-  test("aucune colonne, zone ou rangée n'est faite UNIQUEMENT de widgets de données : un élément permanent évite tout trou quand le site n'a rien renseigné", () => {
-    for (const e of all) walk(section(e.key).children, (n) => {
-      if (!["stack", "group", "container"].includes(n.type) || !(n.children || []).length) return;
-      const leaves = []; walk(n.children, (x) => { if (!x.children) leaves.push(x.type); });
-      assert.ok(!leaves.every((t) => DATA.includes(t) || t === "bizlegal"), `${e.key} : conteneur « ${n.type} » fait seulement de ${[...new Set(leaves)].join("/")}`);
-    });
+  test("aucune colonne ou zone d'une rangée en colonnes n'est faite UNIQUEMENT de widgets de données : un élément permanent (ou le titre d'un volet d'accordéon) évite tout trou quand le site n'a rien renseigné", () => {
+    const feuilles = (n, o = []) => { if (!n.children || !n.children.length) o.push(n.type); else n.children.forEach((c) => feuilles(c, o)); return o; };
+    for (const e of all) for (const bande of (section(e.key).children[0] || {}).children || []) {
+      const inner = (bande.children || [])[0]; if (!inner) continue;
+      const d = (inner.styles && inner.styles.desktop) || {};
+      if (d.flexDirection === "column" || (inner.children || []).length < 2) continue; // pile centrée ou zone unique : un élément absent ne laisse aucun trou
+      for (const col of inner.children || []) {
+        if (col.name) continue; // volet d'accordéon : son titre est toujours affiché
+        assert.ok(!feuilles(col).every((t) => DATA.includes(t)), `${e.key} : colonne faite seulement de ${[...new Set(feuilles(col))].join("/")}`);
+      }
+    }
   });
 
   test("SANS données d'entreprise : aucun widget de données n'écrit quoi que ce soit, aucun lien tel:/mailto:, copyright au nom du site, pas de bloc vide ni de texte d'aide", async () => {
     for (const e of all) {
       const { html } = await renderModel(e.key, SITE_EMPTY);
-      assert.ok(!/kw-biz-/.test(html), `${e.key} : un widget de données affiche quelque chose sans donnée`);
+      const sansEtatHonnete = html.replace(/(kw-emailsub-missing[^>]*>\s*)<p class="kw-biz-title"/g, '$1<p class="titre"'); // la lettre d'information sans formulaire affiche son état honnête « non configuré » (voulu) : ce n'est pas une donnée d'entreprise
+      assert.ok(!/kw-biz-/.test(sansEtatHonnete), `${e.key} : un widget de données affiche quelque chose sans donnée`);
       assert.ok(!/href="(tel|mailto):/.test(html), `${e.key} : lien tel:/mailto:`);
       assert.ok(!/class="[^"]*kw-bizlegal/.test(html) && !/class="[^"]*kw-bizcontact/.test(html), `${e.key} : enveloppe vide`);
       assert.match(html, /© 2026 Boulangerie vide\. Tous droits réservés\./, `${e.key} : copyright automatique`);
       assert.ok(!/\{\{|\}\}/.test(html), `${e.key} : étiquette non résolue`);
-      assert.ok(!/Votre (adresse|numéro)/.test(html), `${e.key} : faux texte`);
+      assert.ok(!/Votre (adresse(?! e-mail| sert)|numéro)/.test(html), `${e.key} : faux texte`);
     }
   });
 
@@ -160,7 +167,8 @@ describe("Catalogue des pieds : widgets de données d'entreprise (sans serveur)"
       if (types.includes("bizhours")) assert.match(html, /Horaires d(’|')ouverture|kw-biz-hours/, `${e.key} : horaires`);
       if (types.includes("bizpayments")) assert.match(html, /Carte bancaire/, `${e.key} : paiements`);
       if (types.includes("bizdelivery")) assert.match(html, /Livraison sous 3 jours/, `${e.key} : livraison`);
-      if (types.includes("bizlegal")) assert.match(html, /href="\/mentions-legales"/, `${e.key} : pages légales`);
+      let pagesLegales = false; walk(section(e.key).children, (n) => { if (n.type === "bizlegal" && n.props.showPages) pagesLegales = true; });
+      if (pagesLegales) assert.match(html, /href="\/mentions-legales"/, `${e.key} : pages légales`);
       if (types.includes("backtotop")) assert.match(html, /href="#"[^>]*aria-label="Retour en haut"/, `${e.key} : retour en haut`);
     }
   });
@@ -170,8 +178,9 @@ describe("Catalogue des pieds : widgets de données d'entreprise (sans serveur)"
     const routes = fs.readdirSync(path.join(__dirname, "../src/routes")).map((f) => fs.readFileSync(path.join(__dirname, "../src/routes", f), "utf8")).join("\n") + fs.readFileSync(path.join(__dirname, "../src/marketing/web/shopPublic.js"), "utf8").replace(/base = "\/boutique"|"\/boutique/g, '"/boutique"');
     for (const r of FIXED_ROUTES) assert.ok(routes.includes(`"${r}"`) || routes.includes(`"${r}/`) || routes.includes(`'${r}'`), `route ${r} introuvable dans src/routes`);
     for (const e of all) walk(section(e.key).children, (n) => {
-      if (n.type === "link" || n.type === "button") { assert.ok(FIXED_ROUTES.includes(n.props.url), `${e.key} : adresse « ${n.props.url} »`); assert.ok(n.props.label && n.props.label.trim().length >= 2, `${e.key} : lien sans libellé`); }
-      if (n.type === "social") for (const it of n.props.items) assert.match(it.url, /^https:\/\/www\.[a-z]+\.com\/$/, e.key);
+      // adresses admises : pages réelles de la plateforme (Kit.LIENS_PLATEFORME), ancre « # », adresses d'EXEMPLE https://exemple.fr|org/… (marquées exemple dans le modèle), réseaux et boutiques d'applications en https
+      if (n.type === "link" || n.type === "button") { assert.ok(Kit.LIENS_PLATEFORME.includes(n.props.url) || /^https:\/\/(exemple\.(fr|org)|[a-z0-9.-]+\.[a-z]{2,})\/[a-z0-9\-\/._]*$/.test(n.props.url) || n.props.url === "#" || /^(mailto:[^\s@]+@[^\s@]+\.[a-z]{2,}|tel:\+?[0-9 ]+)$/.test(n.props.url), `${e.key} : adresse « ${n.props.url} »`); assert.ok(n.props.label && n.props.label.trim().length >= 2, `${e.key} : lien sans libellé`); }
+      if (n.type === "social") for (const it of n.props.items) assert.match(it.url, /^(https:\/\/[a-z0-9.-]+\.[a-z]{2,}\/[a-z0-9\-\/._@]*|mailto:[^\s@]+@[^\s@]+\.[a-z]{2,}|\/)$/, e.key);
     });
   });
 
@@ -263,15 +272,18 @@ describe("Catalogue des pieds : aperçu, vignette et publication (serveur réel)
   });
   after(async () => { if (db) db.close(); if (srv) await srv.stop(); });
 
-  test("les 100 aperçus et vignettes : 200, un seul pied, copyright, AUCUN script (aperçu de la bibliothèque), même document pour l'aperçu et la vignette", async () => {
+  test("les 100 aperçus et vignettes : 200, un seul pied, copyright, AUCUN script dans la vignette (l'aperçu ne charge que landing.js), même document pour l'aperçu et la vignette", async () => {
     const shape = (h) => (h.match(/kw-(sitelogo|sitetitle|menu|search|account|minicart|button|link|social|copyright|map|signup|querylist|courselist|toggle|dyntext|bizcontact|bizhours|bizlegal|bizpayments|bizdelivery|bizphone|bizemail|backtotop)\b/g) || []).join(",");
     for (const e of all) {
       const a = await boss.get(U(`/api/bibliotheque/footer/${e.key}/apercu`)), v = await boss.get(U(`/api/bibliotheque/footer/${e.key}/vignette`));
       for (const [kind, r] of [["apercu", a], ["vignette", v]]) {
         assert.equal(r.status, 200, `${e.key} ${kind}`);
-        assert.ok(!/<script/i.test(r.text), `${e.key} ${kind} : script`);
+        // La vignette n'a AUCUN script ; l'aperçu complet charge seulement le script de la page (/js/landing.js : accordéons mobiles, comme sur un site publié)
+        const scripts = r.text.match(/<script\b[^>]*>/gi) || [];
+        if (kind === "vignette") assert.equal(scripts.length, 0, `${e.key} vignette : script`);
+        else assert.ok(scripts.length === 1 && /src="[^"]*\/js\/landing\.js[^"]*"/.test(scripts[0]), `${e.key} apercu : seul /js/landing.js attendu, trouvé ${scripts.join(" ")}`);
         assert.equal((r.text.match(/kw-theme-footer\b/g) || []).length, 1, `${e.key} ${kind} : un seul pied`);
-        assert.ok(!/kw-biz-/.test(r.text.replace(/<style[\s\S]*?<\/style>/gi, "")), `${e.key} ${kind} : donnée d'entreprise inventée dans l'aperçu`);
+        assert.ok(!/kw-biz-/.test(r.text.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/(kw-emailsub-missing[^>]*>\s*)<p class="kw-biz-title"/g, '$1<p class="titre"')), `${e.key} ${kind} : donnée d'entreprise inventée dans l'aperçu`);
         assert.ok((r.text.match(/<footer\b/g) || []).length <= 1, `${e.key} ${kind} : plusieurs <footer>`);
         assert.match(r.text, /©/, `${e.key} ${kind}`);
       }
@@ -291,10 +303,8 @@ describe("Catalogue des pieds : aperçu, vignette et publication (serveur réel)
   });
 
   test("site publié : un seul <footer> par page, SANS données (aucun trou, pas de tel:/mailto:) puis AVEC données (coordonnées cliquables, copyright à la raison sociale)", async () => {
-    const keys = [
-      all.find((e) => e.layoutId === "coordonnees-trois-colonnes").key, all.find((e) => e.layoutId === "boutique-quatre-colonnes").key,
-      all.find((e) => e.layoutId === "corporate-sombre-large").key, all.find((e) => e.layoutId === "centre-legal").key,
-    ];
+    const keys = ["ft-services-05-domicile-zone-horaires", "ft-ecommerce-01-mega-enseigne", "ft-corporate-07-affiche-noir-et-or", "ft-minimalistes-05-cartouche-centre"];
+    for (const k of keys) assert.ok(all.some((e) => e.key === k), k);
     for (const [s, host, full] of [[A2, "sans.test", false], [B2, "avec.test", true]]) {
       for (const [i, key] of keys.entries()) {
         const t = JSON.parse((await post(U("/api/bibliotheque/utiliser", s), { type: "footer", key })).text).template;

@@ -13,6 +13,9 @@ const Kit = require("./footer/kit-conception");
 const Aliases = require("./footer-aliases");
 const { IDENT, IDENT2 } = require("./identities");
 
+// VERSION de composition d'un modèle (entier >= 1, 1 par défaut quand le modèle n'en déclare pas) et date d'ajout (AAAA-MM-JJ). Voir docs/footer-builder/FOOTER_BIBLIOTHEQUE_INTERFACE.md.
+const VERSION_DEFAUT = 1;
+const AJOUT_DEFAUT = "2026-11-08"; // date de la reconstruction : valeur des nouveaux modèles qui ne déclarent pas `addedAt` ; les anciens modèles n'ont pas de date (null)
 const FAMILLES_CLES = ["minimalistes", "corporate", "ecommerce", "saas-tech", "editoriaux", "creatifs-portfolios", "education", "communautes", "services", "restauration-hotellerie", "immobilier", "finance-juridique", "ong-associations", "landing-pages", "institutionnels"];
 const CIBLE = { minimalistes: 8, corporate: 8, ecommerce: 8, "saas-tech": 8, editoriaux: 7, "creatifs-portfolios": 6, education: 6, communautes: 6, services: 7, "restauration-hotellerie": 6, immobilier: 5, "finance-juridique": 6, "ong-associations": 5, "landing-pages": 6, institutionnels: 8 };
 
@@ -43,14 +46,16 @@ function assemble({ familles = FAMILLES_CLES.map(charger), legacy = ancien, alia
     const skin = typeof m.identity === "string" ? ambiances.get(m.identity) : m.identity;
     if (!skin) throw new Error(`Pied de page : identité inconnue pour « ${m.id} ».`);
     if (typeof m.identity !== "string") ambiances.set(skin.key.replace(/^amb-/, ""), skin);
+    if (m.version !== undefined && !(Number.isInteger(m.version) && m.version >= 1 && m.version <= 9999)) throw new Error(`Pied de page : version de « ${m.id} » invalide (entier de 1 à 9999 attendu).`);
+    if (m.addedAt !== undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(String(m.addedAt)) && !Number.isNaN(Date.parse(m.addedAt)))) throw new Error(`Pied de page : addedAt de « ${m.id} » invalide (AAAA-MM-JJ attendu).`);
     const resp = m.responsive || {};
     const rows = m.structure.rows.map((r) => ({ ...r, ...(resp.tablet || r.tablet ? { tablet: { ...(resp.tablet || {}), ...(r.tablet || {}) } } : {}), ...(resp.mobile || r.mobile ? { mobile: { ...(resp.mobile || {}), ...(r.mobile || {}) } } : {}) }));
-    nouveaux.push({ key: m.id, fullKey: m.id, family: f.key, skin: skin.key, label: m.name, tags: m.tags, desc: m.description, model: m, build: (k, env) => [wrap(k.S, rows, env)] });
+    nouveaux.push({ key: m.id, fullKey: m.id, family: f.key, skin: skin.key, label: m.name, tags: m.tags, desc: m.description, version: m.version ?? VERSION_DEFAUT, addedAt: m.addedAt ?? AJOUT_DEFAUT, model: m, build: (k, env) => [wrap(k.S, rows, env)] });
   }
   // anciens : rattachés à une famille ; listés seulement si leur famille n'est pas construite et qu'ils ne sont pas redirigés
   const tous = legacy.layouts.map((l) => {
     const id = `${l.key}.${l.keySkin || l.skin}`;
-    return { ...l, family: familleAncien(l), legacy: true, legacyFamily: l.family, fullKey: id };
+    return { ...l, family: familleAncien(l), legacy: true, version: VERSION_DEFAUT, addedAt: null, legacyFamily: l.family, fullKey: id };
   });
   const listes = [], caches = [];
   for (const l of tous) {
@@ -71,8 +76,8 @@ function assemble({ familles = FAMILLES_CLES.map(charger), legacy = ancien, alia
     for (let i = 0; i < 10 && Object.hasOwn(alias, cur) && alias[cur] !== cur; i++) cur = alias[cur];
     return cur;
   };
-  return { type: "footer", kind: "component", flat: true, ownSkins: true, families, hiddenFamilies, layouts, hiddenLayouts: caches, skins, aliases: alias, resolveAlias,
+  return { type: "footer", kind: "component", flat: true, sortable: true, ownSkins: true, families, hiddenFamilies, layouts, hiddenLayouts: caches, skins, aliases: alias, resolveAlias,
     familles: [...parCle.values()].map((f) => familleDe(f.key)), nouveaux: nouveaux.length, anciensListes: listes.length };
 }
 
-module.exports = { ...assemble(), assemble, FAMILLES_CLES, CIBLE, familleAncien };
+module.exports = { ...assemble(), assemble, VERSION_DEFAUT, AJOUT_DEFAUT, FAMILLES_CLES, CIBLE, familleAncien };

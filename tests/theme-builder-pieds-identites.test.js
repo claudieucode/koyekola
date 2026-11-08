@@ -30,7 +30,8 @@ describe("Pieds de page : identité propre", () => {
       const id = Footer.skins.find((x) => x.key === e.skinKey);
       walk(doc(e.key).children, (n) => {
         const f = n.styles && n.styles.desktop && n.styles.desktop.fontFamily;
-        if (["menu", "link", "button"].includes(n.type)) assert.equal(f, id.font, `${e.key} : ${n.type}`);
+        // la police du texte, ou celle des titres de la MÊME identité (un grand lien d'index ou de pied-affiche prend la police de titre) : jamais une police étrangère à l'identité
+        if (["menu", "link", "button"].includes(n.type)) assert.ok(f === id.font || f === id.head, `${e.key} : ${n.type} ${f} (identité ${id.font} / ${id.head})`);
         if (["sitelogo", "sitetitle"].includes(n.type)) assert.equal(f, id.head, `${e.key} : ${n.type}`);
         if (n.type === "menu") assert.equal(n.parts.link.styles.desktop.fontFamily, id.font, `${e.key} : lien du menu`);
         if (n.type === "sitelogo") assert.equal(n.parts.text.styles.desktop.fontFamily, id.head, `${e.key} : texte du logo`);

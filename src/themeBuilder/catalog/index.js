@@ -25,7 +25,7 @@ function flatEntries(type, d, layouts) {
   const fam = new Map(d.families.concat(d.hiddenFamilies || []).map((f) => [f.key, f]));
   return layouts.map((l) => {
     const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family);
-    return { key: l.fullKey || `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key], build: l.build, ...(l.legacy ? { legacy: true } : {}) };
+    return { key: l.fullKey || `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key], build: l.build, ...(l.legacy ? { legacy: true } : {}), ...(l.version !== undefined ? { version: l.version, addedAt: l.addedAt ?? null } : {}) };
   });
 }
 const META = new Map();
@@ -43,16 +43,38 @@ function entries(type) {
   return out;
 }
 const fold = (v) => String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-// Liste paginée : { items, total, page, pages, limit, layouts, skins }
-function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, limit = 24 } = {}) {
+// Tris proposés par un catalogue « triable » (aujourd'hui le seul Pied de page ; les autres types ne changent pas). "" = ordre du catalogue.
+const SORTS = [{ key: "", label: "Ordre de la bibliothèque" }, { key: "nom", label: "Nom (A → Z)" }, { key: "famille", label: "Famille" }, { key: "recent", label: "Plus récents d'abord" }, { key: "favoris", label: "Favoris d'abord" }];
+const cmpText = (a, b) => String(a).localeCompare(String(b), "fr", { sensitivity: "base", numeric: true });
+function sortRows(rows, tri, favs, famOrder) {
+  const idx = new Map(rows.map((e, i) => [e.key, i])), by = (f) => (a, b) => f(a, b) || idx.get(a.key) - idx.get(b.key); // égalité : ordre du catalogue (tri stable et déterministe)
+  if (tri === "nom") return [...rows].sort(by((a, b) => cmpText(a.name, b.name)));
+  if (tri === "famille") return [...rows].sort(by((a, b) => (famOrder.get(a.layoutKey) ?? 99) - (famOrder.get(b.layoutKey) ?? 99) || cmpText(a.name, b.name)));
+  if (tri === "recent") return [...rows].sort(by((a, b) => String(b.addedAt || "").localeCompare(String(a.addedAt || "")) || (b.version || 0) - (a.version || 0)));
+  if (tri === "favoris") return [...rows].sort(by((a, b) => (favs && favs.has(b.key) ? 1 : 0) - (favs && favs.has(a.key) ? 1 : 0)));
+  return rows;
+}
+// Liste paginée : { items, total, page, pages, limit, layouts, skins } (+ familles, sorts pour un catalogue triable).
+// favorites (Set de clés) et favOnly ne servent qu'aux catalogues triables ; tri est ignoré par les autres.
+function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, limit = 24, tri = "", favorites = null, favOnly = false } = {}) {
   const all = entries(type);
   if (!all.length) return { items: [], total: 0, page: 1, pages: 1, limit, layouts: [], skins: [] };
+  const d = def(type), sortable = Boolean(d.sortable);
   const needle = fold(q).trim(), t = fold(tag), lim = Math.min(60, Math.max(1, Number(limit) || 24));
-  const rows = all.filter((e) => (!skin || e.skinKey === skin) && (!lay || e.layoutKey === lay) && (!t || e.tags.some((x) => fold(x) === t)) && (!needle || fold(`${e.name} ${e.desc} ${e.tags.join(" ")}`).includes(needle)));
+  const base = all.filter((e) => (!skin || e.skinKey === skin) && (!t || e.tags.some((x) => fold(x) === t)) && (!needle || fold(`${e.name} ${e.desc} ${e.tags.join(" ")}`).includes(needle)) && (!sortable || !favOnly || (favorites && favorites.has(e.key))));
+  let rows = base.filter((e) => !lay || e.layoutKey === lay);
+  const famOrder = new Map(sortable ? d.familles.map((f, i) => [f.key, i]) : []);
+  if (sortable && SORTS.some((s) => s.key === tri)) rows = sortRows(rows, tri, favorites, famOrder);
   const pages = Math.max(1, Math.ceil(rows.length / lim)), p = Math.min(pages, Math.max(1, Number(page) || 1));
-  const d = def(type);
-  return { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
+  const out = { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
     layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: identities(d).map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
+  if (sortable) {
+    // Facette : nombre de modèles par famille avec TOUS les autres filtres appliqués (recherche, identité, étiquette, favoris), hors filtre de famille ; les 15 familles sont toujours présentes
+    const cnt = {}; for (const e of base) cnt[e.layoutKey] = (cnt[e.layoutKey] || 0) + 1;
+    out.familles = d.familles.map((f) => ({ key: f.key, label: f.label, description: f.description || "", built: !!f.built, target: f.target, count: cnt[f.key] || 0 }));
+    out.sorts = SORTS; out.sort = SORTS.some((s) => s.key === tri) ? tri : "";
+  }
+  return out;
 }
 // Compositions que le catalogue ne LISTE plus (anciens modèles d'une famille reconstruite) mais qui restent ouvrables : « Revenir au modèle d'origine », vignette, aperçu d'un pied déjà installé.
 const HIDDEN = new Map();

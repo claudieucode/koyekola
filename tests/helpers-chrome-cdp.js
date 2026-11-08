@@ -67,6 +67,11 @@ async function launch() {
         await cmd("Input.dispatchKeyEvent", { type: "keyDown", key, code, modifiers: mods, windowsVirtualKeyCode: key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0 });
         await cmd("Input.dispatchKeyEvent", { type: "keyUp", key, code, modifiers: mods, windowsVirtualKeyCode: key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0 });
       },
+      // Touche « réelle » avec texte (Entrée, Espace) : déclenche l'activation native d'un bouton ou d'un lien, contrairement à key() qui n'envoie pas de texte. Ajout seul : key() ne change pas.
+      async pressActivation(name) {
+        const k = name === "Enter" ? { key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r" } : { key: " ", code: "Space", windowsVirtualKeyCode: 32, text: " " };
+        await cmd("Input.dispatchKeyEvent", { type: "keyDown", ...k }); await cmd("Input.dispatchKeyEvent", { type: "keyUp", key: k.key, code: k.code, windowsVirtualKeyCode: k.windowsVirtualKeyCode });
+      },
       // Capture PNG (Buffer) de la fenêtre, ou d'un rectangle { x, y, width, height } en pixels de la page
       async screenshot(clip) { const r = await cmd("Page.captureScreenshot", { format: "png", ...(clip ? { clip: { ...clip, scale: 1 } } : {}) }); return Buffer.from(r.data, "base64"); },
       async close() { await send("Target.closeTarget", { targetId }).catch(() => {}); },

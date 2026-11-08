@@ -7,7 +7,7 @@
   <% } else { %>
     <% if (p.intro) { %><p class="kw-emailsub-intro"><%= p.intro %></p><% } %>
     <% if (ws && ws.error) { %><p class="lp-error" role="alert"><%= ws.error %></p><% } %>
-    <form class="kw-emailsub-form" method="post" action="/p/<%= typeof page !== "undefined" && page ? page.slug : "" %>/inscription" novalidate><input type="hidden" name="tz" data-tz><input type="hidden" name="w" value="<%= n.id %>">
+    <% const hasPage = typeof page !== "undefined" && page && page.slug; %><form class="kw-emailsub-form" method="post" action="<%= hasPage ? "/p/" + page.slug + "/inscription" : "/p/_pied/inscription" %>" novalidate><input type="hidden" name="tz" data-tz><% if (!hasPage) { %><input type="hidden" name="back" value="<%= typeof kwBack !== "undefined" ? kwBack : "/" %>"><% } %><input type="hidden" name="w" value="<%= n.id %>">
       <%- include("../_signup-fields", { form: d.form, fieldCatalog: d.all ? d.fieldCatalog : {}, propertyDefs: d.all ? d.propertyDefs : [], values: ws && ws.values ? ws.values : {}, prefix: "w" + n.id, autofocus: false }) %>
       <button type="submit" class="kw-button kw-btn-primary kw-emailsub-submit"<%= inPreview ? " disabled" : "" %>><%= p.button %></button>
     </form>
