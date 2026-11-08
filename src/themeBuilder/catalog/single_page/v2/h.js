@@ -23,6 +23,27 @@ const scopeCss = (S) => [
   `--kw-border:${S.bw === "0px" ? "0px" : S.bw} solid ${S.line}`,
 ].join(";");
 const scoped = (k, node) => { node.css = scopeCss(k.S); return node; };
+// Couleurs dérivées d'une direction artistique (fond, texte, accent) : texte discret, fond alterné, filet, texte sur accent ; l'accent est rapproché du texte jusqu'à rester visible sur le fond
+const hx = (n) => `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
+const rgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const mix = (a, b, t) => { const x = rgb(a), y = rgb(b); return hx(((x[0] + (y[0] - x[0]) * t) << 16) | ((x[1] + (y[1] - x[1]) * t) << 8) | (x[2] + (y[2] - x[2]) * t)); };
+const lum = (h) => { const c = rgb(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const MOOD = { L: "light", D: "dark", B: "brand", E: "edit", S: "soft" };
+const ID2 = ([n, , m, label, bg0, fg0, ac0, head, font]) => {
+  // fond et texte : si même le noir ou le blanc purs n'atteignent pas 7:1 sur ce fond intermédiaire, le fond est éclairci ou assombri jusqu'au contraste voulu
+  let bg = bg0, fg = fg0, t = 0; const dark = lum(bg) <= 0.18 || (lum(bg) < 0.3 && ratio("#ffffff", bg) >= ratio("#000000", bg));
+  while (ratio(fg, bg) < 7.2 && t < 1) { t += 0.1; fg = mix(fg0, dark ? "#ffffff" : "#000000", t); }
+  t = 0; while (ratio(fg, bg) < 7.2 && t < 1) { t += 0.05; bg = mix(bg0, dark ? "#000000" : "#ffffff", t); }
+  let mute = mix(fg, bg, 0.28); t = 0.28; while (ratio(mute, bg) < 4.6 && t > 0) { t -= 0.04; mute = mix(fg, bg, Math.max(t, 0)); }
+  const alt = mix(bg, fg, 0.07), line = mix(bg, fg, 0.18);
+  let accent = ac0; t = 0; while (ratio(accent, bg) < 3.2 && ratio(accent, alt) < 3.2 && t < 1) { t += 0.1; accent = mix(ac0, fg, t); }
+  const onAccent = ratio("#ffffff", accent) >= ratio("#111111", accent) ? "#ffffff" : "#111111";
+  let acc2 = accent; t = 0; while (ratio(onAccent, acc2) < 4.6 && t < 1) { t += 0.1; acc2 = mix(accent, onAccent === "#ffffff" ? "#000000" : "#ffffff", t); }
+  return ID([`c${n}`, label, MOOD[m], bg, fg, mute, alt, acc2, onAccent, line, font, head]);
+};
+const DIR = require("./directions");
+const dir = (n) => ID2(DIR.find((r) => r[0] === n));
 const L = (skin, key, label, tags, desc, build) => ({ key, label, tags, desc, skin: skin.key, skinDef: skin, build });
 const p = (t) => `<p>${t}</p>`;
 const NARROW = (max) => ({ maxWidth: max, marginLeft: "auto", marginRight: "auto", width: "100%" });
@@ -54,5 +75,7 @@ const map = (k, h = 320) => W(k, "map", { address: "[Adresse ou lieu à renseign
 const form = (k, env, heading, intro, button) => (env && env.formId ? W(k, "signupform", { formId: env.formId, heading, intro, button }, { width: "100%" }) : contactCard(k, heading));
 const cta = (k, title, text, label = "Nous écrire") => W(k, "cta", { skin: "classic", title, titleTag: "h2", text: `[${text}]`, buttonLabel: label, link: "/contact", align: "center" });
 const counter = (k, label) => W(k, "counter", { value: 0, label: `[${label}]`, suffix: "", prefix: "", duration: 1500 });
+// Emplacement de visuel : une carte à hauteur réservée dont la consigne dit quoi y placer ; l'auteur la remplace par son image, sa galerie ou sa vidéo (aucune image factice n'est jamais fournie)
+const slot = (k, label = "Visuel", height = 220) => k.card([k.T(p(`[${label} : remplacez cette zone par votre contenu]`), { color: k.S.mute, textAlign: "center" })], { minHeight: `${height}px`, justifyContent: "center", alignItems: "center", width: "100%" });
 const marquee = (k, words) => W(k, "marquee", { items: words.map((text) => ({ text })), speed: "normal", direction: "left", separator: "•", pauseHover: true, label: "Informations défilantes" });
-module.exports = { scopeCss, scoped, ID, L, W, TITLE, p, NARROW, SOC, px, own, H1, content, desc, sect, band, head, box, boxes, cards, steps, faq, tabs, person, plan, quote, note, toc, contactCard, map, form, cta, counter, marquee };
+module.exports = { slot, dir, ID2, scopeCss, scoped, ID, L, W, TITLE, p, NARROW, SOC, px, own, H1, content, desc, sect, band, head, box, boxes, cards, steps, faq, tabs, person, plan, quote, note, toc, contactCard, map, form, cta, counter, marquee };
