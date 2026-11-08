@@ -106,7 +106,7 @@ describe("personnaliser : coque (navigateur)", { skip: SKIP }, () => {
     assert.equal(await page.locator(".pz-cat[aria-current='true']").innerText(), "Entête");
     await page.locator(".pz-cat", { hasText: "Menus" }).focus(); await page.keyboard.press("Enter"); assert.equal(await page.locator("#pz-detail-title").innerText(), "Menus");
     await page.keyboard.press("Escape"); assert.ok(await page.locator("#pz-view-home").isVisible());
-    await page.locator(".pz-cat", { hasText: "Widgets" }).click(); assert.ok(await page.locator("#pz-detail-body").getByText("Colonne latérale principale").isVisible());
+    await page.locator(".pz-cat", { hasText: "Widgets" }).click(); await page.locator("#pz-detail-body").getByText("Colonne latérale principale").first().waitFor({ state: "visible", timeout: 10000 }); /* les zones se chargent depuis le serveur (composition directe dans le panneau) */
     await page.context().close();
   });
 
