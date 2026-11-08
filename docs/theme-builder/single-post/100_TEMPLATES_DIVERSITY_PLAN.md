@@ -90,7 +90,7 @@ Titre : H = haut centré, G = gauche, S = sur l'image (en flux, jamais en absolu
 | 50 | Ressources cours | texte + panneau ressources | G | L | liens et fichiers |
 | 51 | Vidéo cours | vidéo + notes | G | T | notes à droite |
 | 52 | Exercices | texte + accordéons | G | – | `accordion` solutions repliées |
-| 53 | Quiz ⚙ | texte + quiz | G | – | nécessite un widget quiz |
+| 53 | Auto-évaluation | texte + `accordion` questions/réponses | G | – | questions repliables, score non calculé (pas de faux quiz) |
 | 54 | Cours associés | texte + `querylist` | G | – | « cours suivants » |
 
 ### 7. Photographie et création (8)
@@ -99,7 +99,7 @@ Titre : H = haut centré, G = gauche, S = sur l'image (en flux, jamais en absolu
 | 55 | Photo reportage | images plein écran en alternance | H | T | texte court |
 | 56 | Galerie immersive | galerie en tête | S | Ga | texte sous galerie |
 | 57 | Plein écran | une image par écran | G | F | défilement |
-| 58 | Avant/après ⚙ | comparateur | G | – | nécessite un widget comparateur |
+| 58 | Avant et après | deux images côte à côte | G | Sp | légendes « avant » / « après » (pas de curseur interactif) |
 | 59 | Portfolio éditorial | grille d'images + texte | G | Ga | fiche projet |
 | 60 | Images alternées | zigzag | G | L/R | alternance |
 | 61 | Illustrations | colonne + planches | H | I | légendes, crédits |
@@ -122,7 +122,7 @@ Titre : H = haut centré, G = gauche, S = sur l'image (en flux, jamais en absolu
 |---|---|---|---|---|---|
 | 71 | Récit de voyage | image large + texte | S | T | galerie finale |
 | 72 | Guide touristique | texte + infos pratiques | G | L | encadré infos |
-| 73 | Carte | texte + bloc carte | G | – | carte (si widget disponible ⚙) |
+| 73 | Lieux et plan d'accès | texte + liste d'adresses | G | R | adresses en `iconlist`, lien externe fourni par l'auteur |
 | 74 | Itinéraire | jours en colonnes | G | I | étapes jour par jour |
 | 75 | Gastronomie | image + fiche | G | R | adresse, prix |
 | 76 | Culturel | colonne + agenda | G | Sp | dates utiles |
@@ -166,7 +166,13 @@ Titre : H = haut centré, G = gauche, S = sur l'image (en flux, jamais en absolu
 ## 5. Répartition
 Blogs minimalistes 8, magazines 10, journaux 10, blogs personnels/pro 10, tech 8, éducation 8, photo 8, business 8, voyage/lifestyle 6, santé/sport 6, formats avancés 8, créatif 10 = **100**. Aucune famille au-dessus de 10 %.
 
-## 6. Points à valider avant génération
+## 6. Décisions validées (étape 2)
+* **Voie B retenue** (8 novembre 2026) : remplacement complet de la bibliothèque, par groupes, jamais en une seule fois.
+* Les trois concepts ⚙ (53, 58, 73) sont remplacés par des versions réalisables avec les widgets existants ; aucune fonction simulée.
+* Anciennes clés : conservées comme alias de lecture seule (aperçus déjà partagés) mais retirées de la liste affichée. Aucun site ni article n'est touché.
+* Le catalogue affiché ne dépassera jamais 100 modèles : l'ancien lot reste en place jusqu'à ce que les 100 nouveaux soient validés, puis bascule en une seule opération annulable.
+
+## 7. Points qui restaient à valider
 * Voie A (conserver) ou B (remplacer).
 * ⚙ Les concepts 53, 58, 73 dépendent d'une brique inexistante : les produire seulement après l'ajout (ou les remplacer).
 * Les concepts « avertissement éditorial » (81, 68) utilisent des textes génériques **modifiables** : aucun conseil médical/financier n'est inventé.
