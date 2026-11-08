@@ -26,6 +26,8 @@ function useTemplate(ctx, siteId, type, key, { name, conditions } = {}) {
     else created = P().createPage(ctx, { name: store.docName(ctx, siteId, "page", label), siteId, kind: "page", sections: JSON.parse(JSON.stringify(doc.sections)) });
     const tpl = store.create(ctx, siteId, { type, name: label, conditions: conditions || {}, sourceKind: doc.kind, sourceId: created.id });
     if (type === "footer") ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ? WHERE id = ? AND organization_id = ?").run(meta.key, tpl.id, ctx.organizationId); // mémoire du modèle d'origine (« Revenir au modèle d'origine »)
+    // Identité propre du modèle (couleurs et polices fixes) : mémorisée pour permettre « suit le site » / « hybride » sans réécrire le document
+    if (type === "single_post") { const snap = require("../identityMode").snapshot(Catalog.identityOf(type, meta)); if (snap) ctx.db.prepare("UPDATE mk_tb_templates SET identity = ? WHERE id = ? AND organization_id = ?").run(JSON.stringify(snap), tpl.id, ctx.organizationId); }
     return tpl;
   });
 }

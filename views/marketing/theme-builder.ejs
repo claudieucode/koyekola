@@ -92,6 +92,22 @@
     <div class="tb-dlg-actions"><button class="btn btn-outline" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Renommer</button></div>
   </form></dialog>
 
+  <dialog id="tb-dlg-idn" aria-labelledby="tb-dlg-idn-h"><form method="dialog" id="tb-form-idn">
+    <h2 id="tb-dlg-idn-h">Identité graphique du modèle</h2>
+    <p class="muted" id="tb-idn-help">Choisissez si ce modèle garde ses propres couleurs et polices ou reprend celles de votre site. Le contenu du modèle n'est jamais modifié : vous pouvez changer d'avis à tout moment.</p>
+    <fieldset class="sw-field"><legend class="sr-only">Mode</legend>
+      <label><input type="radio" name="tb-idn-mode" value="own"> Indépendant : le modèle garde ses couleurs et ses polices</label>
+      <label><input type="radio" name="tb-idn-mode" value="site"> Suit le site : couleurs et polices de la charte du site</label>
+      <label><input type="radio" name="tb-idn-mode" value="hybrid"> Hybride : le modèle garde son style, sauf ce que vous cochez</label>
+    </fieldset>
+    <fieldset class="sw-field" id="tb-idn-groups"><legend>Repris du site (mode hybride)</legend>
+      <label><input type="checkbox" name="tb-idn-use" value="colors"> Fond et textes</label>
+      <label><input type="checkbox" name="tb-idn-use" value="accent"> Couleur d'accent (boutons, liens)</label>
+      <label><input type="checkbox" name="tb-idn-use" value="fonts"> Polices</label>
+    </fieldset>
+    <div class="tb-dlg-actions"><button class="btn btn-outline" type="button" data-close>Annuler</button><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+  </form></dialog>
+
   <dialog id="tb-prev" class="tb-prev" aria-labelledby="tb-prev-h">
     <header class="tb-prev-bar">
       <button type="button" class="tb-back" id="tb-prev-back"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Retour aux modèles</span></button>

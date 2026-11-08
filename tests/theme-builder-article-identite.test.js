@@ -50,6 +50,22 @@ describe("Article individuel : identités propres (code)", () => {
   });
 });
 
+describe("Article individuel : univers sectoriels et anciens liens (code)", () => {
+  const all = Catalog.entries("single_post");
+  test("famille « Univers sectoriels » : 6 mises en page (automobile, architecture, immobilier, mode, art, recherche), 13 familles, toujours 100 modèles", () => {
+    const sec = all.filter((e) => e.layoutKey === "secteurs").map((e) => e.layoutId).sort();
+    assert.deepEqual(sec, ["critique-art", "essai-automobile", "guide-immobilier", "lookbook-mode", "projet-architecture", "publication-recherche"]);
+    assert.equal(all.length, 100); assert.equal(Catalog.list("single_post", { limit: 60 }).layouts.length, 13);
+  });
+  test("les liens d'aperçu des 6 mises en page remplacées mènent à leur voisine, sans erreur", () => {
+    for (const [old, now] of [["captures-ecran", "demonstration"], ["images-alternees", "lookbook-mode"], ["lieux-et-acces", "guide-immobilier"], ["infographie-sources", "publication-recherche"], ["blog-agence", "projet-architecture"], ["article-conseil", "guide-immobilier"]]) {
+      assert.equal(all.filter((e) => e.layoutId === old).length, 0, `${old} ne doit plus être au catalogue`);
+      const m = Catalog.find("single_post", `${old}.clair`); assert.ok(m && m.layoutId === now, `${old}.clair → ${m && m.layoutId}`); assert.ok(Catalog.build("single_post", m.key));
+    }
+    assert.equal(Catalog.find("single_post", "inconnu.clair"), null);
+  });
+});
+
 describe("Article individuel : le modèle garde SON identité quand la charte du site change (serveur réel)", () => {
   let srv, boss, db, org, A, B;
   const ORIGIN = () => ({ Origin: srv.base });

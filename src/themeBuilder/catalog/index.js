@@ -47,7 +47,16 @@ function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, l
   return { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
     layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: identities(d).map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
 }
-const find = (type, key) => entries(type).find((e) => e.key === key) || null;
+// Identité (couleurs et polices) d'une entrée du catalogue, ou null
+const identityOf = (type, meta) => { const d = def(type); return d ? identities(d).find((x) => x.key === meta.skinKey) || null : null; };
+// Une ancienne mise en page remplacée (d.aliases : ancienne clé → nouvelle mise en page) mène à sa voisine, avec la même identité d'origine : les liens d'aperçu partagés ne cassent pas
+const find = (type, key) => {
+  const all = entries(type), hit = all.find((e) => e.key === key);
+  if (hit) return hit;
+  const d = def(type), cut = String(key).lastIndexOf(".");
+  const to = d && d.aliases && cut > 0 ? d.aliases[String(key).slice(0, cut)] : null;
+  return to ? all.find((e) => e.layoutId === to) || null : null;
+};
 
 // Lisibilité des liens du texte d'article : la couleur par défaut des liens (couleur d'accent) peut disparaître sur un fond sombre (identités Nuit et Marque). On suit le fond EFFECTIF de chaque élément
 // et, quand le contenu de l'article est posé sur un fond sombre, la partie « liens » du contenu reçoit une couleur claire soulignée (réglage natif « parties », modifiable dans l'éditeur).
@@ -88,4 +97,4 @@ function build(type, key, env = {}) {
 }
 const thumbDoc = (type, key, env = {}) => { const b = build(type, key, env); return b ? (b.section || b.sections[0]) : null; };
 const stats = () => types().map((t) => ({ type: t, label: Types.TYPES[t].label, count: entries(t).length, layouts: def(t).layouts.length, ...(def(t).flat ? { flat: true } : {}) }));
-module.exports = { types, list, find, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };
+module.exports = { types, list, find, identityOf, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };

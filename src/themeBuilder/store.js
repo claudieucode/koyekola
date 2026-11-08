@@ -194,7 +194,10 @@ function duplicate(ctx, siteId, id) {
     let sid;
     if (t.sourceKind === "page") sid = P().duplicatePage(ctx, t.sourceId, { siteId }).id;
     else { const c = P().getComponent(ctx, t.sourceId); if (!c) throw bad("Le document de ce modèle n'existe plus.", "not_found"); sid = P().createComponent(ctx, { name: docName(ctx, siteId, "component", `${t.name} (copie)`), section: c.section, siteId, kind: "standard" }).id; }
-    return create(ctx, siteId, { type: t.type, name: `${t.name} (copie)`, conditions: t.conditions, sourceKind: t.sourceKind, sourceId: sid });
+    const copy = create(ctx, siteId, { type: t.type, name: `${t.name} (copie)`, conditions: t.conditions, sourceKind: t.sourceKind, sourceId: sid });
+    const idn = row(ctx, siteId, t.id).identity; // la copie garde l'identité (et le mode) du modèle d'origine
+    if (idn) ctx.db.prepare("UPDATE mk_tb_templates SET identity = ? WHERE id = ? AND site_id IS ? AND organization_id = ?").run(idn, copy.id, siteId, ctx.organizationId);
+    return copy;
   });
 }
 function versions(ctx, siteId, id) {
@@ -225,4 +228,20 @@ function checkpoint(ctx, siteId, id) {
   ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
   return n;
 }
-module.exports = { checkpoint, byDocument, docName, list, get, bySource, create, rename, setConditions, publish, publishScoped, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };
+
+// Identité graphique mémorisée avec le modèle (voir identityMode.js) : null = aucune (modèle historique, jamais transformé au rendu)
+const IdentityMode = require("./identityMode");
+function identityOf(ctx, siteId, id) {
+  const r = row(ctx, siteId, id);
+  return r ? IdentityMode.parse(r.identity) : null;
+}
+function setIdentity(ctx, siteId, id, input, { revision = null } = {}) {
+  const t = get(ctx, siteId, id);
+  if (t.status === "archived") throw bad("Ce modèle est archivé : restaurez-le avant de le modifier.");
+  if (revision !== null && Number(revision) !== t.revision) throw bad("Ce modèle a été modifié ailleurs : rechargez avant d'enregistrer.", "conflict");
+  let cfg; try { cfg = IdentityMode.normalize(input, identityOf(ctx, siteId, id)); } catch (e) { throw bad(e.message); }
+  ctx.db.prepare("UPDATE mk_tb_templates SET identity = ? WHERE id = ? AND site_id IS ? AND organization_id = ?").run(JSON.stringify(cfg), t.id, siteId, ctx.organizationId); touch(ctx, siteId, t.id);
+  return get(ctx, siteId, id);
+}
+
+module.exports = { identityOf, setIdentity, checkpoint, byDocument, docName, list, get, bySource, create, rename, setConditions, publish, publishScoped, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };

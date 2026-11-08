@@ -64,6 +64,16 @@ function renderVm(res, vm, siteOk, cls, done) {
 // Site dont on cherche les modèles : celui du domaine de la requête (req.kwSite) sauf indication contraire de la route ; null = site principal (modèles à site_id NULL)
 const siteIdOf = (req, siteId) => (siteId !== undefined ? siteId : req.kwSite && Number.isInteger(req.kwSite.id) ? req.kwSite.id : null);
 
+// Identité graphique du modèle (mode « suit le site » / « hybride ») : appliquée à l'AFFICHAGE seulement, le document enregistré n'est jamais réécrit. Sans identité mémorisée ou en mode indépendant : sections inchangées. Jamais bloquant.
+function withIdentity(ctx, page, sections) {
+  try {
+    const t = require("../../themeBuilder/store").byDocument(ctx, "page", page.id);
+    if (!t || t.siteId !== (page.site_id === undefined ? null : page.site_id)) return sections;
+    const cfg = require("../../themeBuilder/store").identityOf(ctx, t.siteId, t.id);
+    return cfg && cfg.mode !== "own" ? require("../../themeBuilder/identityMode").apply(sections, cfg) : sections;
+  } catch { return sections; }
+}
+
 // done(html | null)
 // type : une famille ou une liste ordonnée (la première qui a un modèle en ligne gagne : ex. archive de catégorie, puis liste du blog)
 function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, authorId = null, scope = {}, query = {}, siteId } = {}, done) {
@@ -85,7 +95,8 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     if (!row) return end(null);
     const page = landing.getPublishedPage(db, row.slug);
     if (!page) return end(null);
-    const sections = pages.resolveSections(ctx, page.sections).filter((s) => !s.hidden && audienceMatches(s.audience, visitor));
+    let sections = pages.resolveSections(ctx, page.sections).filter((s) => !s.hidden && audienceMatches(s.audience, visitor));
+    sections = withIdentity(ctx, page, sections);
     const vm = landing.viewModel(ctx, { ...page, visitor: { ...visitor, query: { ...visitor.query, ...query } }, scope, sections });
     renderVm(res, vm, siteOf(ctx, page), `kw-theme-template${bleedOf(sections)}`, end);
   } catch (error) { end(null); }

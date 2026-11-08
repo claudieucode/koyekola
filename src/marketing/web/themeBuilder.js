@@ -40,7 +40,7 @@ module.exports = () => {
     const m = Catalog.find("header", key); return m ? { type: "header", key, name: m.name } : null;
   };
   const card = (ctx, t, conflictIds, light = false) => {
-    const base = { ...t, docRev: docRev(ctx, t), describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
+    const base = { ...t, identity: ((i) => (i ? { mode: i.mode, use: i.use, colors: i.own && [i.own.bg, i.own.fg, i.own.accent] } : null))(TB.store.identityOf(ctx, t.siteId, t.id)), docRev: docRev(ctx, t), describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
     if (light) return { ...base, origin: t.type === "header" || t.type === "footer" ? originOf(ctx, t, t.type === "header" ? docOf(ctx, t) : null) : null };
     const doc = docOf(ctx, t), th = thumbnail(doc);
     return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc, origin: originOf(ctx, t, doc) };
@@ -88,7 +88,7 @@ module.exports = () => {
       const ctx = req.mk.ctx, site = sid(req), t = TB.store.get(ctx, site, tid(req));
       let doc = null;
       if (t.sourceKind === "component") { const c = P().getComponent(ctx, t.sourceId); const sec = c && (c.draft || c.section); if (sec) doc = { kind: "component", section: sec }; }
-      else { const pg = P().getPage(ctx, t.sourceId); if (pg && pg.working && pg.working.sections) doc = { kind: "page", sections: pg.working.sections }; }
+      else { const pg = P().getPage(ctx, t.sourceId); if (pg && pg.working && pg.working.sections) { const idn = TB.store.identityOf(ctx, site, t.id); doc = { kind: "page", sections: idn && idn.mode !== "own" ? require("../../themeBuilder/identityMode").apply(pg.working.sections, idn) : pg.working.sections }; } }
       if (!doc) return res.status(404).type("text").send("Le document de ce modèle est introuvable.");
       require("./themeRender").previewDoc(req, res, { siteId: site, type: t.type, doc, thumb: true }, (html) => {
         if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
@@ -96,6 +96,8 @@ module.exports = () => {
       });
     } catch (e) { if (e instanceof MarketingError || (e && STATUS[e.code])) return res.status(STATUS[e.code] || 400).type("text").send(e.message); next(e); }
   });
+  // Identité graphique du modèle : indépendant / suit le site / hybride (voir themeBuilder/identityMode.js) ; le document du modèle n'est pas modifié
+  router.post(`${T}/identite`, need("forms.write"), run((ctx, id, req) => { const b = body(req); return one(ctx, id, TB.store.setIdentity(ctx, id, tid(req), { mode: b.mode, use: b.use }, { revision: b.revision ?? null })); }));
   router.post(`${T}/renommer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.rename(ctx, id, tid(req), body(req).name))));
   router.post(`${T}/conditions`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.setConditions(ctx, id, tid(req), body(req).conditions || {}, { revision: body(req).revision ?? null }); return { ...one(ctx, id, r.template), conflicts: r.conflicts }; }));
   router.post(`${T}/publier`, need("forms.write"), run((ctx, id, req) => {

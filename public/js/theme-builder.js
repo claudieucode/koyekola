@@ -102,6 +102,7 @@
       item("Renommer", () => rename(t)); item("Dupliquer", () => act(t, "dupliquer", "Modèle dupliqué (brouillon)."));
       if (t.status === "published") item("Dépublier", () => act(t, "depublier", "Modèle dépublié."));
       item("Archiver", () => { if (t.type === "footer" && t.status === "published" && !confirm(`Archiver « ${t.name} » ?\n\nCe pied s'affiche actuellement : ${t.describe.include}${t.describe.exclude ? ` (sauf ${t.describe.exclude})` : ""}.\nIl ne sera plus affiché sur le site. Vous pourrez le restaurer depuis les archives.`)) return; act(t, "archiver", "Modèle archivé (récupérable dans les archives)."); });
+      if (t.identity) item("Identité graphique…", () => identity(t));
       if (t.origin) item("Revenir au modèle initial", () => revertOrigin(t));
     }
     if (canWrite && t.status === "archived") { item("Restaurer", () => act(t, "restaurer", "Modèle restauré en brouillon.")); if (canRemove) item("Supprimer définitivement", () => remove(t)); }
@@ -280,6 +281,21 @@
   $("tb-form-ren").addEventListener("submit", async (e) => {
     e.preventDefault(); const t = renaming; if (!t) return;
     try { await post(`/modeles/${t.id}/renommer`, { name: $("tb-ren-name").value }); closeDlg($("tb-dlg-ren")); status("Modèle renommé.", "ok"); await refresh(); } catch (err) { status(err.message, "err"); closeDlg($("tb-dlg-ren")); }
+  });
+  // Identité graphique (indépendant / suit le site / hybride) : le document du modèle n'est pas modifié, seul l'affichage change
+  let identing = null;
+  function identity(t) {
+    identing = t; const cur = t.identity || { mode: "own", use: [] };
+    document.querySelectorAll('input[name="tb-idn-mode"]').forEach((r) => { r.checked = r.value === cur.mode; });
+    document.querySelectorAll('input[name="tb-idn-use"]').forEach((c) => { c.checked = (cur.use || []).includes(c.value); });
+    syncIdentity(); openDlg("tb-dlg-idn");
+  }
+  function syncIdentity() { const m = (document.querySelector('input[name="tb-idn-mode"]:checked') || {}).value; $("tb-idn-groups").hidden = m !== "hybrid"; }
+  document.querySelectorAll('input[name="tb-idn-mode"]').forEach((r) => r.addEventListener("change", syncIdentity));
+  $("tb-form-idn").addEventListener("submit", async (e) => {
+    e.preventDefault(); const t = identing; if (!t) return;
+    const mode = (document.querySelector('input[name="tb-idn-mode"]:checked') || {}).value, use = [...document.querySelectorAll('input[name="tb-idn-use"]:checked')].map((c) => c.value);
+    try { await post(`/modeles/${t.id}/identite`, { mode, use, revision: t.revision }); closeDlg($("tb-dlg-idn")); status("Identité graphique enregistrée.", "ok"); await refresh(); } catch (err) { status(err.message, "err"); closeDlg($("tb-dlg-idn")); }
   });
   // « Revenir au modèle initial » : la copie de travail de CET en-tête retrouve la composition de la bibliothèque (confirmation d'abord ; l'état précédent reste dans « Versions »)
   async function revertOrigin(t) {
