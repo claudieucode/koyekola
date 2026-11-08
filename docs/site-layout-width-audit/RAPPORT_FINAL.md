@@ -23,3 +23,6 @@ Mesure avant correction (en-tête et pied de la bibliothèque, base.css injecté
 - Vues EJS à 900 / 620 px (`.container`, `.container-narrow`), boutique à 1120 px (`.sh-main`) : volontairement étroites pour la lecture / les formulaires, ou à traiter avec la boutique.
 - Éditeur : les contrôles « Largeur du contenu » (encadrée / fond pleine largeur / pleine largeur / personnalisée) existent déjà ; aucune modification faite.
 - Tests complets du dépôt et audits `audit-interface` / `audit-qualite` / `audit-responsive` : voir la fin de la conversation pour leur état.
+
+## Complément (2e capture) : sections ordinaires
+Après la première correction, l'en-tête et le pied étaient pleine largeur, mais les sections du corps (bandeaux avec fond ou image) restaient dans une boîte de 1280 px. `packs/base.css` : le bloc d'une section ordinaire occupe maintenant 100 % de la largeur (fond et image s'étalent) ; son contenu garde exactement sa position, calculée par une marge latérale `max(gouttière, (100 % − --pk-max)/2 + gouttière)`. Test navigateur ajouté (5 largeurs : bloc à 100 %, texte à la même place, aucun débordement). Les 130 démos de thèmes : largeur des blocs inchangée (elles utilisent `.pk-bleed`), mêmes 2 débordements préexistants à 390 px.
