@@ -7978,12 +7978,53 @@ function selectField(label, value, options, onChange, opts) {
     HDR_BURGERS.forEach(function (m) { if (m.props && sig(m.props) === cur) found = m.key; });
     return found || "custom";
   }
+  // Aperçu RÉEL et cliquable du menu mobile : la page rendue par le serveur (mêmes styles, même script que le site publié) dans un cadre de téléphone ou de tablette
+  var hdrPrevDev = "phone", hdrPrevOpen = false;
+  function headerLivePreview(b, active) {
+    var wrap = h("div", { class: "pb-hdr-live" });
+    var W = hdrPrevDev === "tab" ? 820 : 390, H = hdrPrevDev === "tab" ? 600 : 640;
+    var fr = h("iframe", { class: "pb-hdr-live-frame", title: "Aperçu réel du menu mobile", sandbox: "allow-scripts allow-same-origin" });
+    var box = h("div", { class: "pb-hdr-phone is-" + hdrPrevDev }, fr);
+    var note = h("p", { class: "pb-hint pb-hdr-live-note", "aria-live": "polite" });
+    var seg = h("div", { class: "pb-hdr-live-seg", role: "radiogroup", "aria-label": "Taille de l'aperçu" }, [["phone", "Téléphone"], ["tab", "Tablette"]].map(function (o) {
+      return h("button", { type: "button", role: "radio", "aria-checked": String(hdrPrevDev === o[0]), onclick: function () { hdrPrevDev = o[0]; hdrPrevOpen = false; var bx = $("[data-pb-page-settings]"); hdrOpen = "mobile"; bx.textContent = ""; renderHeaderSettings(bx); } }, o[1]);
+    }));
+    var toggle = h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: true, onclick: function () { var bg = burgerIn(); if (bg) bg.click(); } }, "Ouvrir / fermer le menu");
+    wrap.appendChild(h("p", { class: "pb-hdr-sublabel", text: "Aperçu réel" }));
+    wrap.appendChild(h("div", { class: "pb-hdr-live-bar" }, seg, toggle));
+    wrap.appendChild(box); wrap.appendChild(note);
+    b.appendChild(wrap);
+    var burgerIn = function () { try { var d = fr.contentDocument; return d && d.querySelector(".kw-menu-burger"); } catch (e) { return null; } };
+    var fit = function () { var cw = box.clientWidth || 240, sc = Math.min(1, cw / W); fr.style.width = W + "px"; fr.style.height = H + "px"; fr.style.transform = "scale(" + sc + ")"; box.style.height = Math.round(H * sc) + "px"; };
+    requestAnimationFrame(fit);
+    if (active === "none") { note.textContent = "Menu étalé : aucun bouton, le menu reste visible sur tous les écrans."; box.classList.add("is-idle"); }
+    fetch(BASE + "/rendu", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: payload() }) })
+      .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, t: t }; }); })
+      .then(function (res) {
+        if (!res.ok) { note.textContent = "Aperçu indisponible pour le moment."; return; }
+        fr.onload = function () {
+          fit();
+          try {
+            var d = fr.contentDocument, st = d.createElement("style"); st.textContent = "[data-kw-add], .kw-add { display: none !important; } html { scroll-behavior: auto; }"; d.head.appendChild(st);
+          } catch (e) { /* aperçu sans retouche */ }
+          var tries = 0, wait = function () {
+            var bg = burgerIn();
+            if (bg) { toggle.disabled = false; note.textContent = "Touchez le bouton dans l'aperçu : c'est le vrai menu, tel que vos visiteurs le verront."; if (hdrPrevOpen) { hdrPrevOpen = false; setTimeout(function () { bg.click(); }, 250); } return; }
+            if (++tries < 12) { setTimeout(wait, 150); return; }
+            if (active !== "none") note.textContent = "Aucun bouton n'apparaît : le menu de cet en-tête est vide (ajoutez des liens dans Apparence → Menus, emplacement « En-tête ») ou l'écran de l'aperçu est plus large que la taille choisie.";
+          };
+          wait();
+        };
+        fr.srcdoc = res.t;
+      }).catch(function () { note.textContent = "Aperçu indisponible pour le moment."; });
+  }
   function headerMobile(b) {
     var menus = hdrMenus(), dis = !canWrite;
     var redraw = function () { hdrOpen = "mobile"; var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderHeaderSettings(bx); };
     if (!menus.length) { b.appendChild(h("p", { class: "pb-hint", text: "Cet en-tête n'a pas encore de menu. Ajoutez un élément « Menu de navigation » : le modèle de menu hamburger s'appliquera ensuite à tous les menus de l'en-tête." })); return; }
     b.appendChild(h("p", { class: "pb-hint", text: "Sur les écrans plus petits qu'un ordinateur, le menu se replie derrière un bouton hamburger. Choisissez un modèle : il s'applique à tous les menus de l'en-tête." }));
     var active = hdrBurgerOf(menus[0].props);
+    headerLivePreview(b, active);
     var tiles = h("div", { class: "pb-hdr-tiles", role: "radiogroup", "aria-label": "Modèle de menu hamburger" });
     HDR_BURGERS.forEach(function (m) {
       var mock = h("span", { class: "pb-mm is-" + m.mock, "aria-hidden": "true" }, h("span", { class: "pb-mm-bar" }, h("i", { class: "pb-mm-logo" }), h("i", { class: "pb-mm-btn" })), h("i", { class: "pb-mm-panel" }));
@@ -7997,6 +8038,8 @@ function selectField(label, value, options, onChange, opts) {
             x.props.mobileToggle = true; Object.keys(m.props).forEach(function (k) { x.props[k] = m.props[k]; });
           });
         }, { label: "Modèle de menu hamburger : " + m.label });
+        hdrPrevOpen = Boolean(m.props);
+        if (m.props) { var q = menus[0].props.menuBreakpoint || 767; var want = q > 767 ? "tablet" : "mobile"; if (device !== want) { setDevice(want); toast("Écran « " + bpLabel(want) + " » : le canevas montre maintenant le bouton hamburger."); } }
         redraw();
       } }, mock, h("span", { class: "pb-hdr-tile-title", text: m.label }), h("span", { class: "pb-hdr-tile-hint", text: m.hint })));
     });

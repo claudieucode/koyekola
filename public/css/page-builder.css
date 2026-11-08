@@ -2472,3 +2472,16 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-mm.is-inline .pb-mm-panel { display: block; top: 14px; left: 0; right: 0; height: 12px; }
 .pb-mm.is-none .pb-mm-btn { display: none; }
 .pb-mm.is-none .pb-mm-bar::after { content: ""; width: 26px; height: 4px; border-radius: 2px; background: var(--editor-muted); opacity: .6; }
+
+/* Aperçu réel du menu mobile : cadre de téléphone / tablette qui contient la vraie page, réduite pour tenir dans la colonne */
+.pb-hdr-live { padding: 0 12px 6px; }
+.pb-hdr-live .pb-hdr-sublabel { margin: 8px 0 6px; padding: 0; }
+.pb-hdr-live-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; }
+.pb-hdr-live-seg { display: inline-grid; grid-template-columns: repeat(2, auto); gap: 4px; }
+.pb-hdr-live-seg button { min-height: 28px; padding: 0 10px; border: 1px solid var(--editor-border-strong); border-radius: 6px; background: var(--editor-card); color: var(--editor-text-secondary); font: inherit; font-size: 12px; cursor: pointer; }
+.pb-hdr-live-seg button[aria-checked="true"] { background: var(--editor-accent); border-color: var(--editor-accent); color: #fff; font-weight: 700; }
+.pb-hdr-phone { position: relative; overflow: hidden; border: 6px solid var(--editor-text); border-radius: 22px; background: #fff; box-sizing: content-box; }
+.pb-hdr-phone.is-tab { border-radius: 14px; border-width: 5px; }
+.pb-hdr-live-frame { display: block; border: 0; transform-origin: top left; background: #fff; }
+.pb-hdr-phone.is-idle { opacity: .55; }
+.pb-hdr-live-note { margin: 8px 0 4px; }

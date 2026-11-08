@@ -8,6 +8,9 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
   let env, editUrl, componentId, context, page;
   before(async () => {
     env = await setup({ siteName: "Site panneau" });
+    const db = env.db, menu = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Principal', 'principal', 'published')").run(env.site).lastInsertRowid);
+    for (const [i, [l, u]] of [["Accueil", "/"], ["Services", "/services"], ["Contact", "/contact"]].entries()) db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, NULL, ?, 'custom', ?, ?, 'published')").run(menu, i, u, l);
+    db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(env.site, menu);
     const r = await env.publishHeader("luxe-01.luxe-01", { mode: "sticky" });
     componentId = r.componentId; editUrl = r.template.editUrl;
     context = await env.browser.newContext({ viewport: { width: 1500, height: 950 } });
@@ -67,6 +70,21 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     const c2 = await cls(); assert.match(c2, /is-menu-open/); assert.doesNotMatch(c2, /is-scrolled/);
     await pane.getByRole("radio", { name: "Normal" }).click(); await page.waitForTimeout(300);
     assert.doesNotMatch(await cls(), /is-scrolled|is-menu-open/, "retour à l'aperçu normal");
+  });
+
+  test("menu hamburger : aperçu RÉEL et cliquable (le vrai menu s'ouvre), et le canevas passe sur l'écran mobile", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Menu mobile");
+    await pane.locator(".pb-hdr-tile", { hasText: "Plein écran" }).click();
+    const live = page.frameLocator(".pb-hdr-live-frame");
+    await live.locator(".kw-menu-burger").waitFor({ timeout: 15000 });
+    assert.match(await live.locator(".kw-menu-burger").getAttribute("class"), /is-lines2/, "le bouton du modèle choisi");
+    await live.locator(".kw-menu-panel.is-full").waitFor({ timeout: 5000 }); // ouvert automatiquement après le choix
+    assert.ok(await live.locator(".kw-menu-panel.is-full a", { hasText: "Services" }).count() >= 1, "les vrais liens du menu sont dans le panneau");
+    await live.locator(".kw-menu-close").dispatchEvent("click"); await page.waitForTimeout(300); assert.equal(await live.locator(".kw-menu-panel").count(), 0, "se referme");
+    await pane.getByRole("button", { name: "Ouvrir / fermer le menu" }).click(); await live.locator(".kw-menu-panel.is-full").waitFor(); // le bouton de l'éditeur ouvre le même menu
+    assert.equal(await page.locator('.pb-top .pb-devices button[data-device="mobile"]').getAttribute("aria-checked"), "true", "le canevas est passé sur Mobile");
+    const canvas = page.frameLocator("iframe[data-pb-frame]");
+    await canvas.locator(".kw-menu-burger").first().waitFor({ timeout: 8000 });
   });
 
   test("menu hamburger : le choix d'un modèle s'applique aux menus de l'en-tête et se retrouve dans le document ; la taille d'écran aussi", async () => {
