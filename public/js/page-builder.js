@@ -7896,7 +7896,10 @@ function selectField(label, value, options, onChange, opts) {
     if (els.length) {
       box.appendChild(h("p", { class: "pb-sub", text: "Éléments de l'en-tête (cliquez pour tout régler)" }));
       box.appendChild(h("div", { class: "pb-hdr-access", style: "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px" }, els.map(function (n) {
-        var t = (preview(n) || "").slice(0, 18); return h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); } }, typeLabel(n) + (t ? " · " + t : ""));
+        // Nom reconnaissable : le nom donné, sinon le type + son texte, sinon le type + ce qu'il contient (« Conteneur · Logo du site, Menu »)
+        var t = (preview(n) || "").slice(0, 22), inside = (n.children || []).slice(0, 3).map(typeLabel).join(", ");
+        var label = n.name || typeLabel(n) + (t ? " · " + t : inside ? " · " + inside : "");
+        return h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); } }, label);
       })));
     }
   }
