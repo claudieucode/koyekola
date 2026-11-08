@@ -861,11 +861,11 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 .lp-block.lp-site-header.kw-theme-fixed { position: sticky; top: var(--kw-hdr-top, 0); z-index: var(--kw-hdr-z, 60); }
 /* Barre collée en BAS de l'écran : la place (hauteur réservée) reste dans la page, la barre elle-même est fixée au bas ; les sous-menus s'ouvrent vers le haut */
 .lp-block.lp-site-header.kw-theme-bottom { position: relative; top: auto; height: var(--kw-hdr-h, 72px); }
-.lp-block.lp-site-header.kw-theme-bottom > :first-child { position: fixed; left: 0; right: 0; bottom: var(--kw-hdr-top, 0); z-index: var(--kw-hdr-z, 60); }
+.lp-block.lp-site-header.kw-theme-bottom > .kw-layout { display: block; position: fixed; left: 0; right: 0; bottom: var(--kw-hdr-top, 0); z-index: var(--kw-hdr-z, 60); }
 .lp-block.lp-site-header.kw-theme-bottom :is(.kw-submenu, .kw-mega) { top: auto; bottom: 100%; }
-@media (min-width: 1024px) { .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-desktop { height: auto; } .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-desktop > :first-child { position: static; } }
-@media (min-width: 768px) and (max-width: 1023px) { .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-tablet { height: auto; } .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-tablet > :first-child { position: static; } }
-@media (max-width: 767px) { .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-mobile { height: auto; } .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-mobile > :first-child { position: static; } }
+@media (min-width: 1024px) { .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-desktop { height: auto; } .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-desktop > .kw-layout { position: static; } }
+@media (min-width: 768px) and (max-width: 1023px) { .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-tablet { height: auto; } .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-tablet > .kw-layout { position: static; } }
+@media (max-width: 767px) { .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-mobile { height: auto; } .lp-block.lp-site-header.kw-theme-bottom.kw-hdr-no-mobile > .kw-layout { position: static; } }
 @media (min-width: 1024px) { .lp-block.lp-site-header.kw-hdr-no-desktop:is(.kw-theme-sticky, .kw-theme-fixed) { position: static; } }
 @media (min-width: 768px) and (max-width: 1023px) { .lp-block.lp-site-header.kw-hdr-no-tablet:is(.kw-theme-sticky, .kw-theme-fixed) { position: static; } }
 @media (max-width: 767px) { .lp-block.lp-site-header.kw-hdr-no-mobile:is(.kw-theme-sticky, .kw-theme-fixed) { position: static; } }
