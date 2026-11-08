@@ -168,11 +168,15 @@ const FAMILY = [
       { key: "label", kind: "text", label: "Texte (facultatif)", max: 30, default: "Panier" },
       bool("showCount", "Afficher le nombre d'articles", true), bool("hideEmpty", "Masquer quand le panier est vide", false),
       { key: "skin", kind: "select", label: "Affichage", options: [["link", "Lien vers le panier"], ["drawer", "Tiroir avec le contenu du panier"]], default: "link" },
+      { key: "icon", kind: "select", label: "Icône", options: [["cart", "Chariot"], ["bag", "Sac"], ["basket", "Panier"]], default: "cart" },
+      { key: "countStyle", kind: "select", label: "Nombre d'articles", options: [["bubble", "Pastille"], ["text", "Entre parenthèses"]], default: "bubble" },
+      bool("showTotal", "Afficher le total à côté de l'icône", false),
+      { key: "drawerSide", kind: "select", label: "Côté du tiroir", options: [["right", "À droite"], ["left", "À gauche"]], default: "right" },
     ],
     // Tiroir : MÊME panier que le widget « Panier » (les formations mises dans le panier du visiteur, en session), jamais un contenu inventé ; une formation dépubliée disparaît
     data(ctx, p, env) {
       const base = { count: (env.visitor && env.visitor.cartCount) || 0 };
-      if (p.skin !== "drawer") return base;
+      if (p.skin !== "drawer" && !p.showTotal) return base;
       const { getCourse } = require("../../bridge/catalog");
       const items = ((env.visitor && env.visitor.cartIds) || []).map((id) => getCourse(ctx, id)).filter(Boolean).map((c) => ({ title: c.title, url: `/cours/${encodeURIComponent(c.slug)}`, priceCents: c.price_cents || 0 }));
       return { ...base, items, totalCents: items.reduce((a, c) => a + c.priceCents, 0) };

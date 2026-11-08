@@ -206,7 +206,7 @@ const PARTS = {
     fill: part("Remplissage", ".kw-readbar-fill", { background: true }),
   },
   sitelogo: {
-    image: part("Image", ".kw-sitelogo-img", { size: ["width", "height", "maxHeight"], media: true, effects: ["opacity", "filter"] }),
+    image: part("Image", ".kw-sitelogo-img", { size: ["width", "height", "maxHeight"], media: true, border: true, effects: ["opacity", "filter", "boxShadow", "transitionDuration"] }, ["hover"]),
     text: part("Texte", ".kw-sitelogo-text", TEXT),
   },
   cart: {
@@ -221,9 +221,9 @@ const PARTS = {
     edit: part("Lien « modifier »", ".kw-cart-edit", { typography: true, color: ["color"] }, ["hover"]),
   },
   minicart: {
-    icon: part("Icône", ".kw-mc-icon", ICON),
-    label: part("Libellé", ".kw-mc-label", TEXT),
-    count: part("Pastille", ".kw-mc-count", { ...TEXT, background: true, border: true }),
+    icon: part("Icône", ".kw-mc-icon", ICON, ["hover", "focus"]),
+    label: part("Libellé", ".kw-mc-label", TEXT, ["hover", "focus"]),
+    count: part("Pastille", ".kw-mc-count", { ...TEXT, background: true, border: true }, ["hover"]),
   },
   linkinbio: {
     avatar: part("Photo", ".kw-lib-avatar", { size: ["width", "height"], border: true, effects: ["opacity", "boxShadow"] }),

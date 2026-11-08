@@ -11,7 +11,7 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     const db = env.db, menu = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Principal', 'principal', 'published')").run(env.site).lastInsertRowid);
     for (const [i, [l, u]] of [["Accueil", "/"], ["Services", "/services"], ["Contact", "/contact"]].entries()) db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, NULL, ?, 'custom', ?, ?, 'published')").run(menu, i, u, l);
     db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(env.site, menu);
-    const r = await env.publishHeader("luxe-01.luxe-01", { mode: "sticky" });
+    const r = await env.publishHeader("luxe-01.luxe-01", { mode: "sticky" }, (sec) => { let host = null; const w = (l) => l.forEach((n) => { if (!host && Array.isArray(n.children)) host = n; if (n.children) w(n.children); }); w(sec.children); host.children.unshift({ id: "lgo0000001aa", type: "sitelogo", props: { height: 48, link: true } }); });
     componentId = r.componentId; editUrl = r.template.editUrl;
     context = await env.browser.newContext({ viewport: { width: 1500, height: 950 } });
     await context.addCookies([...env.boss.cookies].map(([name, value]) => ({ name, value, url: env.srv.base })));
@@ -163,6 +163,42 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(1500);
     const d2 = JSON.parse(env.db.prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(componentId).draft); const m2 = []; (function walk(l) { (l || []).forEach((n) => { if (n.type === "menu") m2.push(n); if (n.children) walk(n.children); }); })((Array.isArray(d2.sections) ? d2.sections[0] : d2).children);
     for (const m of m2) { assert.ok(!m.props.mobileToggle, "menu étalé : plus de bouton"); assert.equal(m.props.mobileMode, undefined); assert.equal(m.props.menuBreakpoint, undefined); }
+  });
+
+  test("éléments d'en-tête : les réglages du logo sont rangés en groupes repliables, un seul ouvert à la fois", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Éléments de l'en-tête");
+    await pane.locator("details.pb-hdr-acc[open] .pb-hdr-row:not([aria-expanded])", { hasText: "Logo du site" }).first().click();
+    const insp = page.locator("[data-pb-inspector]"); await insp.getByText("Hauteur du logo (px)").waitFor({ timeout: 10000 });
+    const groups = insp.locator("details.pb-hdr-acc > summary");
+    for (const t of ["Logo et lien", "Au défilement", "Variantes du logo"]) assert.equal(await groups.filter({ hasText: t }).count(), 1, `groupe « ${t} »`);
+    assert.equal(await insp.locator("details.pb-hdr-acc[open]").count(), 1, "un seul groupe ouvert au départ");
+    await groups.filter({ hasText: "Au défilement" }).click(); await page.waitForTimeout(300);
+    assert.equal(await insp.locator("details.pb-hdr-acc[open]").count(), 1, "ouvrir un groupe referme l'autre");
+    await groups.filter({ hasText: "Logo et lien" }).click(); await page.waitForTimeout(300);
+  });
+
+  test("capture (seulement si SHOT est défini)", async () => {
+    if (!process.env.SHOT) return;
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Éléments de l'en-tête");
+    await pane.locator("details.pb-hdr-acc[open] .pb-hdr-row:not([aria-expanded])", { hasText: "Logo du site" }).first().click(); await page.waitForTimeout(600);
+    await page.locator("[data-pb-inspector]").screenshot({ path: process.env.SHOT + "-light.png" });
+    await page.evaluate(() => { try { localStorage.setItem("pb:palette-theme", JSON.stringify("dark")); } catch (e) {} });
+    await page.locator('button[data-theme-mode="dark"], [data-pb-palette-dark]').first().click({ timeout: 2000 }).catch(() => {});
+  });
+
+  test("logo : hauteur libre, lien personnalisé et nouvel onglet dans le panneau de droite", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Éléments de l'en-tête");
+    await pane.locator("details.pb-hdr-acc[open] .pb-hdr-row:not([aria-expanded])", { hasText: "Logo du site" }).first().click();
+    const insp = page.locator("[data-pb-inspector]"); await insp.getByText("Hauteur du logo (px)").waitFor({ timeout: 10000 });
+    const h = insp.locator(".pb-field", { hasText: "Hauteur du logo (px)" }).locator("input").first();
+    await h.fill("73"); await h.press("Enter"); await page.waitForTimeout(400);
+    const href = insp.locator(".pb-field", { hasText: "Adresse du lien" }).locator("input").first();
+    await href.fill("https://exemple.com/promo"); await href.press("Tab"); await page.waitForTimeout(500);
+    await insp.getByText("Ouvrir dans un nouvel onglet").waitFor({ timeout: 5000 });
+    await insp.getByLabel("Ouvrir dans un nouvel onglet").check(); await page.waitForTimeout(300);
+    await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(1500);
+    const draft = env.db.prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(componentId).draft;
+    assert.match(draft, /"height":73/); assert.match(draft, /"href":"https:\/\/exemple\.com\/promo"/); assert.match(draft, /"newTab":true/);
   });
 
   test("les boutons d'éléments listent les éléments de l'en-tête et ouvrent leurs réglages à droite", async () => {

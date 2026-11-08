@@ -125,7 +125,7 @@ function build(type, key, env = {}) {
   const d = def(type), S = identities(d).find((x) => x.key === meta.skinKey) || skinOf(meta.skinKey);
   const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
   const children = withIds(buildFn(kit(S), env));
-  if (type === "single_post") legibleLinks(children, null);
+  if (type === "single_post") { legibleLinks(children, null); require("./single_post/apply").apply(children, S); } // identité propre : voir single_post/apply.js
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
   if (CACHE.size > 300) CACHE.clear();

@@ -99,3 +99,63 @@ Cible : tout réglage doit être atteignable depuis l'onglet « En-tête », dan
 ## Synthèse (mise à jour)
 Les lignes « ABSENT » du premier état sont traitées : balise HTML, fond vidéo et diaporama, séparateur de forme et points de rupture du site existaient déjà (le tableau était incomplet) ; ont été construits : bord de l'écran (haut / bas), point de rupture du menu, pointeur du menu, pastille / icône / description des éléments de menu, aperçu des états sur le canevas, rangée collée seule, et l'onglet « En-tête » qui rend maintenant lui-même les réglages du conteneur (écran, état, groupes) en plus de l'accès aux éléments.
 Reste : image par élément de menu ; test réel au toucher / lecteur d'écran / Safari / Firefox.
+
+---
+## Widgets d'en-tête, réglage par réglage (comparaison avec `02_HEADER_WIDGET_CATALOG.md`)
+Statuts : **OK** présent · **FAIT** ajouté dans cette étape (testé) · **Style** disponible dans l'onglet Style, partie indiquée · **Non fait**.
+
+### Logo du site (Elementor : Site Logo)
+| Réglage Elementor | KOLAKISA | Statut |
+|---|---|---|
+| Lien : aucun / accueil / adresse personnalisée / nouvel onglet | « Le logo est un lien », adresse, nouvel onglet (https) | **FAIT** |
+| Largeur, largeur max, hauteur, ajustement de l'objet | hauteur libre 20–160 px (contenu) ; largeur, hauteur max, ajustement : Style › partie « Image » | **FAIT** / Style |
+| Opacité, filtres | Style › Image › effets (opacité, filtre) | Style |
+| Bordure, rayon, ombre | Style › Image › bordure, ombre | **FAIT** |
+| Survol : opacité, filtre, durée de transition | état « survol » de la partie Image + durée de transition | **FAIT** |
+| Alignement | Style › disposition | Style |
+| Légende, résolution d'image, lightbox | non | Non fait (sans objet pour un logo) |
+| Logos par état (haut de page, défilement, mobile) | variantes du logo | OK (au-delà d'Elementor) |
+
+### Menu (Elementor : WordPress Menu / Menu)
+| Réglage Elementor | KOLAKISA | Statut |
+|---|---|---|
+| Disposition horizontale / verticale / déroulante | « Liens les uns sous les autres » + bouton mobile | OK |
+| Pointeur (souligné, double, encadré, fond) et animation | pointeur + 4 animations + couleur | OK |
+| Indicateur de sous-menu (chevron, angle, plus, aucun) | « Indicateur de sous-menu » | **FAIT** |
+| Animation des sous-menus | fondu / glissement | **FAIT** |
+| Point de rupture, bouton mobile, modèles | menu hamburger : 9 modèles, aperçu réel, taille d'écran | OK |
+| Méga-menu | panneaux composés | OK |
+| Typographie, couleurs, survol, focus des liens | Style › partie « Liens » (survol, focus) | Style |
+| Élément actif (page courante) | non | Non fait |
+| Image / badge d'un élément | pastille, icône, description ; image non | OK (image : Non fait) |
+
+### Recherche (Elementor : Search / Search Form)
+| Réglage Elementor | KOLAKISA | Statut |
+|---|---|---|
+| Skins classique / minimal / plein écran | champ + bouton ; loupe dans le champ ; loupe qui ouvre le plein écran | **FAIT** (minimal) |
+| Bouton texte ou icône | « Bouton de recherche » : texte, loupe seule, loupe dans le champ | **FAIT** |
+| Placeholder, résultats en direct | texte d'exemple, suggestions pendant la frappe | OK |
+| Style du champ et du bouton (fond, bordure, rayon, ombre, survol, focus) | Style › parties « Champ » et « Bouton » | Style |
+| Requête (sources, tri, pagination) | cible catalogue / blog / site | OK (sans pagination) |
+
+### Compte (Elementor : Login / My Account)
+| Réglage Elementor | KOLAKISA | Statut |
+|---|---|---|
+| Textes des liens connecté / non connecté | OK | OK |
+| Icône | « Présentation du lien » : texte, icône et texte, icône seule | **FAIT** |
+| Menu déroulant (mon compte, panier, déconnexion) | affichage « menu » | OK |
+| Style des liens, du panier, de la pastille | Style › parties | Style |
+| Formulaire de connexion complet dans l'en-tête, redirection après connexion | non | Non fait |
+
+### Panier (Elementor : Menu Cart)
+| Réglage Elementor | KOLAKISA | Statut |
+|---|---|---|
+| Icône chariot / sac / panier | « Icône » | **FAIT** |
+| Indicateur : pastille / texte / aucun | pastille, entre parenthèses, masqué | **FAIT** |
+| Sous-total à côté de l'icône | « Afficher le total » | **FAIT** |
+| Masquer si vide | OK | OK |
+| Panier latéral gauche / droite | « Côté du tiroir » | **FAIT** |
+| Style icône, libellé, pastille, survol | Style › parties, états survol / focus | **FAIT** |
+| Ouverture au survol, ouverture automatique, boutons voir panier / paiement placés | non | Non fait |
+
+**Présentation** : dans l'éditeur, les réglages du logo, du menu, de la recherche et du compte d'un en-tête sont rangés en groupes repliables (un seul ouvert à la fois), comme l'onglet « En-tête ».
