@@ -17,6 +17,8 @@ const { need, safeJson } = require("./kit");
 const categories = require("./personnaliserCategories");
 const { previewTargets } = require("./styles");
 const gs = require("../pages/globalStyles");
+const headerSettings = require("../pages/headerSettings");
+const TB = require("../../themeBuilder/render");
 
 const BASE = "/marketing/site-web/personnaliser";
 const API = "/marketing/site-web/styles";
@@ -27,6 +29,25 @@ const DEVICES = Object.freeze([
   { id: "mobile", label: "Mobile", width: 375 },
 ]);
 const LOCATION_LABEL = { header: "En-tête", footer: "Pied de page", mobile: "Mobile" };
+
+// En-tête qui s'applique à l'accueil du site (Theme Builder). Réglages de COMPORTEMENT (collé, superposé, masqué au défilement…) modifiables d'ici seulement si :
+//  · le composant appartient à CE site (jamais un composant partagé : le modifier changerait d'autres sites) ;
+//  · il n'a pas de modifications non publiées dans le Theme Builder (elles seraient publiées sans que la personne les ait vues).
+const headerOf = (req, t) => {
+  try {
+    const ctx = req.mk.ctx;
+    if (!TB.hasParts(ctx, t.siteId)) return null;
+    const win = TB.resolveParts(ctx, t.siteId, { ...TB.defaultContext(t.siteId, "/"), visitor: { loggedIn: false } });
+    if (!win.header) return null;
+    const c = pages.getComponent(ctx, Number(win.header.sourceId));
+    if (!c || !c.section) return null;
+    let reason = "";
+    if (t.readOnly) reason = "Ce site est archivé ou supprimé : restaurez-le avant de le modifier.";
+    else if (c.site_id === null || c.site_id !== t.siteId) reason = "Cet en-tête est partagé entre plusieurs sites : modifiez-le dans le Theme Builder pour ne pas changer les autres sites.";
+    else if (c.hasDraft) reason = "Cet en-tête a des modifications non publiées dans le Theme Builder : publiez-les ou annulez-les avant de régler son comportement ici.";
+    return { component: c, info: { id: c.id, name: win.header.name || c.name, settings: headerSettings.resolve(c.section), editable: !reason, reason } };
+  } catch { return null; }
+};
 
 module.exports = () => {
   const router = express.Router();
@@ -60,6 +81,7 @@ module.exports = () => {
       can: { edit: can("appearance.styles") && !t.readOnly, publish: can("appearance.publish") && !t.readOnly, css: can("pages.code"), seo: can("seo.edit"), home: can("forms.write") && !t.readOnly },
       global: { ...gs.uiSpec(t.siteId), base: siteStyles.liveBase(req.mk.ctx, t.siteId) },
       menus, zones, home: { id: homeId, pages: homePages },
+      header: (() => { const h = headerOf(req, t); return h ? h.info : null; })(),
       links: {
         close: t.principal ? "/marketing" : `/marketing/site-web/sites/${t.siteId}/tableau-de-bord`,
         menus: t.principal ? "/marketing/site-web/navigation" : `/marketing/site-web/navigation?site=${t.siteId}`,
@@ -87,6 +109,29 @@ module.exports = () => {
     } catch (e) {
       if (e instanceof UserError || (e && e.status === 422)) return res.status(422).json({ error: { code: "invalid_field", message: e.message } });
       return res.status(422).json({ error: { code: "invalid_field", message: e && e.message ? e.message : "Page refusée." } });
+    }
+  });
+  // Comportement de l'en-tête du site (mode, effets, décalage, empilement, masquage au défilement, appareils) : mêmes règles de validation que le Theme Builder (headerSettings.normalize),
+  // même chemin d'enregistrement (brouillon du composant puis mise à jour), site vérifié par le serveur, jamais un composant partagé.
+  router.post("/site-web/personnaliser/entete", need("forms.write"), (req, res) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    res.set("Cache-Control", "no-store");
+    const h = headerOf(req, t);
+    if (!h) return res.status(422).json({ error: { code: "invalid_state", message: "Ce site n'a pas d'en-tête créé dans le Theme Builder." } });
+    if (!h.info.editable) return res.status(409).json({ error: { code: "invalid_state", message: h.info.reason } });
+    const norm = headerSettings.normalize(req.body && req.body.settings);
+    if (!norm) return res.status(422).json({ error: { code: "invalid_field", message: "Réglages d'en-tête invalides." } });
+    try {
+      const ctx = req.mk.ctx, c = h.component;
+      const section = JSON.parse(JSON.stringify(c.section));
+      section.header = norm;
+      const saved = pages.saveComponentDraft(ctx, c.id, section, { revision: c.revision });
+      pages.publishComponent(ctx, c.id, { revision: saved.revision });
+      try { recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: req.session.user.id, action: "site.header_behavior_set", resourceType: "component", resourceId: c.id, metadata: { mode: norm.mode }, siteId: t.siteId }); } catch { /* l'audit ne bloque jamais */ }
+      res.json({ ok: true, settings: headerSettings.resolve(pages.getComponent(ctx, c.id).section) });
+    } catch (e) {
+      const code = e && e.code === "conflict" ? 409 : 422;
+      return res.status(code).json({ error: { code: code === 409 ? "conflict" : "invalid_field", message: e && e.message ? e.message : "Enregistrement refusé." } });
     }
   });
   return router;
