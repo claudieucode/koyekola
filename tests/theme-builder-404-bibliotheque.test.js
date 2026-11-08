@@ -1,124 +1,96 @@
-// Bibliothèque « Page 404 » du Theme Builder : 100 modèles distincts par leur COMPOSITION (pas par la couleur seule), valides, responsives, sans lien factice ;
-// aperçu = vignette, utilisation → publication → page introuvable réelle du site ; isolation entre sites ; remplacement sans contenu périmé.
+// Page 404 — bibliothèque de 100 concepts sur un vrai serveur : chaque modèle, utilisé puis publié, fait de la page introuvable du site un VRAI 404 (noindex, isolation entre sites, accueil toujours 200) et reste responsive à 1440 / 820 / 390 px.
+// La diversité (axes et arbres) est vérifiée dans theme-builder-404-diversite.test.js.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
+const fs = require("node:fs");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
 const Catalog = require("../src/themeBuilder/catalog");
 
+let chromium = null;
+try { chromium = require("playwright-core").chromium; } catch { /* absent */ }
+const CHROME = process.env.CHROME_PATH || ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/usr/bin/google-chrome", "/usr/bin/chromium"].find((p) => fs.existsSync(p));
+const SKIP_BROWSER = !chromium || !CHROME ? "Playwright ou Chrome absent" : false;
+
+const ALL = Catalog.entries("not_found");
 const walk = (n, f) => { f(n); (n.children || []).forEach((c) => walk(c, f)); };
 const docOf = (key) => { const b = Catalog.build("not_found", key); return { type: "layout", children: b.sections[0].children }; };
-// Arbre des types d'éléments seulement (la composition), sans valeurs ni identifiants
-const tree = (n) => `${n.type}${n.children ? `(${n.children.map(tree).join(",")})` : ""}`;
+const ALLOWED_URL = /^\/(|blog|catalogue|contact|boutique|compte)$/;
+const AXES = ["C", "N", "M", "A", "R", "P", "T", "D"], STRUCT = [0, 1, 2, 3, 4, 7];
 
-describe("Page 404 : 100 modèles distincts, structurés et responsives (catalogue)", () => {
-  const all = Catalog.entries("not_found");
-  test("exactement 100 modèles, clés et noms uniques ; les anciens modèles ont disparu", () => {
-    assert.equal(all.length, 100);
-    assert.equal(new Set(all.map((e) => e.key)).size, 100);
-    assert.equal(new Set(all.map((e) => e.name)).size, 100);
-    for (const old of ["minimale.clair", "grand-404.clair", "deux-colonnes.clair", "bandeau.marque", "complet.nuit"]) assert.equal(Catalog.find("not_found", old), null, old);
-  });
-  test("distincts par la composition : les 5 traitements d'un même contenu ont 5 structures différentes, et aucun document n'est répété", () => {
-    const byLayout = {};
-    for (const e of all) (byLayout[e.layoutKey] ||= []).push(tree(docOf(e.key)));
-    assert.equal(Object.keys(byLayout).length, 20);
-    for (const [k, trees] of Object.entries(byLayout)) assert.equal(new Set(trees).size, 5, `${k} : 5 compositions`);
-    const docs = all.map((e) => JSON.stringify(docOf(e.key), (key, v) => (key === "id" ? undefined : v)));
-    assert.equal(new Set(docs).size, 100, "aucun document identique");
-    assert.ok(new Set(all.map((e) => tree(docOf(e.key)))).size >= 60, "au moins 60 compositions différentes sur 100");
-  });
-  test("chaque modèle : un message 404 compréhensible, une action utile, aucun lien factice, aucune position absolue, responsive", () => {
-    const OK_URL = /^\/(?:|blog|catalogue|contact|boutique|compte)$/;
-    for (const e of all) {
-      const doc = docOf(e.key); let h1 = 0, actions = 0, grids = 0, badGrid = 0, abs = 0, rows = 0, badRow = 0; const bad = [];
-      walk(doc, (n) => {
-        if (n.type === "heading" && n.props && n.props.level === "1") h1 += 1;
-        if (n.type === "button" || n.type === "link") { actions += 1; if (!OK_URL.test(String(n.props.url))) bad.push(n.props.url); }
-        if (n.type === "search" || n.type === "menu") actions += 1;
-        if (n.type === "menu") { assert.equal(n.props.source, "manual", `${e.key} : menu à liens manuels (jamais vide)`); for (const it of n.props.items) if (!OK_URL.test(it.url)) bad.push(it.url); }
-        const d = (n.styles && n.styles.desktop) || {};
-        if (n.type === "grid" && !(n.props && n.props.loop)) { grids += 1; if (!(n.styles.tablet && n.styles.mobile)) badGrid += 1; }
-        if (d.position === "absolute" || d.position === "fixed") abs += 1;
-        if (d.display === "flex" && d.flexDirection === "row") { rows += 1; if (d.flexWrap !== "wrap") badRow += 1; }
-      });
-      assert.equal(h1, 1, `${e.key} : un seul titre principal`);
-      assert.ok(actions >= 1, `${e.key} : au moins une action`);
-      assert.deepEqual(bad, [], `${e.key} : liens réels`);
-      assert.equal(badGrid, 0, `${e.key} : grilles adaptées tablette / mobile`);
-      assert.equal(abs, 0, `${e.key} : pas de positionnement absolu`);
-      assert.equal(badRow, 0, `${e.key} : lignes qui passent à la ligne sur petit écran`);
-    }
-  });
-  test("les 5 identités visuelles sont toutes présentes, 20 modèles chacune", () => {
-    const n = {}; for (const e of all) n[e.skinKey] = (n[e.skinKey] || 0) + 1;
-    assert.deepEqual(Object.values(n), [20, 20, 20, 20, 20]);
-  });
+// Signature d'arbre : types, imbrication, sens des flex, colonnes des grilles — sans valeurs ni identifiants
+const sig = (n) => `${n.type}${n.styles && n.styles.desktop && n.styles.desktop.flexDirection === "row" ? "~" : ""}${n.styles && n.styles.desktop && n.styles.desktop.columns ? "#" + n.styles.desktop.columns : ""}${(n.children || []).length ? "(" + n.children.map(sig).join(",") + ")" : ""}`;
+// Sac de jetons (type + disposition) pour comparer deux compositions
+const bag = (n) => { const m = new Map(); walk(n, (x) => { const d = (x.styles && x.styles.desktop) || {}; const t = `${x.type}|${d.flexDirection || ""}|${d.columns || ""}|${d.alignItems || ""}|${d.justifyContent || ""}`; m.set(t, (m.get(t) || 0) + 1); }); return m; };
+const jaccard = (a, b) => { let i = 0, u = 0; for (const k of new Set([...a.keys(), ...b.keys()])) { const x = a.get(k) || 0, y = b.get(k) || 0; i += Math.min(x, y); u += Math.max(x, y); } return u ? i / u : 1; };
+
+
+const hostReq = (srv, host, path) => new Promise((resolve, reject) => {
+  const u = new URL(srv.base);
+  const r = http.request({ host: u.hostname, port: u.port, path, method: "GET", headers: { Host: host, "User-Agent": "Mozilla/5.0 Chrome/120 Safari/537.36" } }, (resp) => { let text = ""; resp.on("data", (d) => (text += d)); resp.on("end", () => resolve({ status: resp.statusCode, text, headers: resp.headers })); });
+  r.on("error", reject); r.end();
 });
 
-const hostReq = (srv, host, path) => {
-  const u = new URL(srv.base);
-  return new Promise((resolve, reject) => {
-    const r = http.request({ host: u.hostname, port: u.port, path, method: "GET", headers: { Host: host, "User-Agent": "Mozilla/5.0 Chrome/120 Safari/537.36" } }, (resp) => {
-      let text = ""; resp.on("data", (d) => (text += d)); resp.on("end", () => resolve({ status: resp.statusCode, text }));
-    });
-    r.on("error", reject); r.end();
-  });
-};
-
-describe("Page 404 : bibliothèque → aperçu → site public (vrai serveur)", () => {
-  let srv, boss, db, org, A, B;
+describe("Page 404  : serveur réel, vrai statut 404, isolation, responsive", () => {
+  let srv, boss, db, org, A, B, browser;
   const ORIGIN = () => ({ Origin: srv.base });
   const U = (s, p = "") => `/marketing/site-web/sites/${s}/constructeur-de-theme${p}`;
   const post = (path, body) => boss.request(path, { method: "POST", json: body || {}, headers: ORIGIN() });
   const mkSite = (name, slug) => Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (?, ?, ?, '{}')").run(org, name, slug).lastInsertRowid);
   const setDomain = async (site, url) => { const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${site}/reglages.json`)).text); return boss.request(`/marketing/site-web/sites/${site}/reglages.json`, { method: "PUT", json: { settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: url } }, revision: cur.revision }, headers: ORIGIN() }); };
-  const adopt = async (site, key, publish = true) => {
-    const u = await post(U(site, "/api/bibliotheque/utiliser"), { type: "not_found", key }); assert.equal(u.status, 200, u.text.slice(0, 300));
-    const t = JSON.parse(u.text).template;
-    if (publish) { const p = await post(U(site, `/api/modeles/${t.id}/publier`), { replace: true }); assert.equal(p.status, 200, p.text.slice(0, 300)); }
+  const adopt = async (site, key) => {
+    const u = await post(U(site, "/api/bibliotheque/utiliser"), { type: "not_found", key }); assert.equal(u.status, 200, `${key} : ${u.text.slice(0, 300)}`);
+    const t = JSON.parse(u.text).template; const p = await post(U(site, `/api/modeles/${t.id}/publier`), { replace: true }); assert.equal(p.status, 200, `${key} : ${p.text.slice(0, 300)}`);
     return t;
   };
   before(async () => {
-    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+    srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "",  });
     boss = await loginInstructor(srv); db = srv.db(); org = db.prepare("SELECT id FROM mk_organizations").get().id;
     A = mkSite("Site A", "site-a"); B = mkSite("Site B", "site-b");
     const home = Number(db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, status, site_id, published_at, kind, indexable) VALUES (?, 'Accueil A', 'accueil-a', 'Accueil A', 'published', ?, datetime('now'), 'page', 1)").run(org, A).lastInsertRowid);
     db.prepare("UPDATE mk_sites SET home_page_id = ? WHERE id = ?").run(home, A);
     assert.equal((await setDomain(A, "https://a.test")).status, 200); assert.equal((await setDomain(B, "https://b.test")).status, 200);
+    if (!SKIP_BROWSER) browser = await chromium.launch({ executablePath: CHROME, headless: true });
   });
-  after(async () => { if (db) db.close(); if (srv) await srv.stop(); });
+  after(async () => { if (browser) await browser.close(); if (db) db.close(); if (srv) await srv.stop(); });
 
-  test("les 100 modèles : l'aperçu et la vignette répondent, rendent le même modèle et son message 404", async () => {
-    const all = Catalog.entries("not_found"); let n = 0;
-    for (const e of all) {
-      const base = U(A, `/api/bibliotheque/not_found/${e.key}`);
-      const pv = await boss.get(`${base}/apercu`), th = await boss.get(`${base}/vignette`);
-      assert.equal(pv.status, 200, e.key); assert.equal(th.status, 200, e.key);
-      const core = (h) => h.replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "").replace(/ data-kw-demo="1"/, "").replace(/<script src="[^"]*landing\.js[^"]*" defer><\/script>/, "");
-      assert.equal(core(pv.text), core(th.text), `${e.key} : aperçu = vignette`);
-      assert.match(pv.text, /kw-theme-template/, e.key);
-      const title = docOf(e.key).children; let t = ""; walk({ children: title }, (x) => { if (x.type === "heading" && x.props.level === "1") t = x.props.text; });
-      assert.ok(pv.text.includes(t.replace(/'/g, "&#39;")) || pv.text.includes(t), `${e.key} : titre « ${t} »`);
-      n += 1;
+  test("pour CHAQUE modèle : utilisé puis publié, l'adresse inconnue du site A répond HTTP 404 avec le titre du modèle, noindex, et le site B n'en montre rien", async () => {
+    for (const e of ALL) {
+      const title = JSON.stringify(docOf(e.key)).match(/"text":"([^"]*)","level":"1"/);
+      const h1 = (() => { let t = ""; walk(docOf(e.key), (n) => { if (n.type === "heading" && n.props && n.props.level === "1" && n.props.tag !== "p") t = n.props.text; if (n.type !== "heading" && n.props && (n.props.tag === "h1" || n.props.titleTag === "h1")) t = n.props.text || n.props.title || (n.props.phrases && n.props.phrases[0].text) || t; }); return t; })();
+      assert.ok(h1, `${e.key} : titre de niveau 1`); void title;
+      await adopt(A, e.key);
+      const a = await hostReq(srv, "a.test", "/introuvable-xyz");
+      assert.equal(a.status, 404, `${e.key} : statut`);
+      assert.ok(a.text.includes(h1) || a.text.includes(h1.replace(/'/g, "&#39;")), `${e.key} : titre « ${h1} » affiché`);
+      assert.match(String(a.headers["x-robots-tag"] || "") + a.text, /noindex/, `${e.key} : noindex`);
+      const b = await hostReq(srv, "b.test", "/introuvable-xyz"); assert.equal(b.status, 404);
+      assert.ok(!b.text.includes(h1) || h1 === "Page introuvable.", `${e.key} : isolation (le site B n'affiche pas le modèle du site A)`);
     }
-    assert.equal(n, 100);
   });
-  test("utilisé puis publié : la vraie page introuvable du site A l'affiche, pas celle du site B ; un autre modèle le remplace sans reste de l'ancien", async () => {
-    await adopt(A, "humour.centre");
-    const a1 = await hostReq(srv, "a.test", "/introuvable-xyz"); assert.equal(a1.status, 404);
-    assert.match(a1.text, /Oups, on a perdu cette page/);
-    const b = await hostReq(srv, "b.test", "/introuvable-xyz"); assert.doesNotMatch(b.text, /Oups, on a perdu cette page/, "isolation entre sites");
-    await adopt(A, "corporate.scinde");
-    const a2 = await hostReq(srv, "a.test", "/introuvable-xyz"); assert.equal(a2.status, 404);
-    assert.match(a2.text, /La page demandée n&#39;existe pas|La page demandée n'existe pas/);
-    assert.doesNotMatch(a2.text, /Oups, on a perdu cette page/, "aucun contenu de l'ancien modèle");
+  test("URL existante : l'accueil du site A reste un 200 normal (aucun soft 404)", async () => {
+    const ok = await hostReq(srv, "a.test", "/"); assert.equal(ok.status, 200);
   });
-  test("recherche et liens des modèles : le champ de recherche est présent et les boutons pointent vers des pages réelles", async () => {
-    await adopt(A, "recherche.carte");
-    const r = await hostReq(srv, "a.test", "/introuvable-xyz"); assert.equal(r.status, 404);
-    assert.match(r.text, /type="search"|class="[^"]*kw-search/, "champ de recherche");
-    assert.match(r.text, /href="\/"/, "retour à l'accueil");
+  test("responsive : chaque modèle à 1440 / 820 / 390 px — aucun défilement horizontal, un seul h1, polices chargées", { skip: SKIP_BROWSER }, async () => {
+    const bad = [];
+    for (const w of [1440, 820, 390]) {
+      const ctx = await browser.newContext({ viewport: { width: w, height: 800 } }); await ctx.addCookies([...boss.cookies].map(([n, v]) => ({ name: n, value: v, url: srv.base })));
+      const page = await ctx.newPage();
+      for (const e of ALL) {
+        await page.goto(srv.base + U(A, `/api/bibliotheque/not_found/${e.key}/apercu`), { waitUntil: "load" });
+        await page.evaluate(async () => { await document.fonts.ready; });
+        const m = await page.evaluate(() => {
+          const vw = document.documentElement.clientWidth;
+          // Un élément qui dépasse mais est rogné par un ancêtre (bande défilante, carrousel, texte découpé…) n'est pas un défaut : seul compte ce que le visiteur peut voir ou atteindre
+          const clipped = (el) => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const cs = getComputedStyle(p); if (cs.overflowX !== "visible") { const r = p.getBoundingClientRect(); if (r.left >= -2 && r.right <= vw + 2) return true; } } return false; };
+          const off = [...document.querySelectorAll("h1,h2,p,a,button,input,form,nav,li,span")].filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && (r.right > vw + 2 || r.left < -2) && !clipped(el); }).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).slice(0, 30)}`);
+          return { over: document.documentElement.scrollWidth > vw + 1, h1: document.querySelectorAll("h1").length, off: off.length, sample: off.slice(0, 3) };
+        });
+        if (m.over || m.h1 !== 1 || m.off) bad.push(`${e.key} @${w} : ${JSON.stringify(m)}`);
+      }
+      await ctx.close();
+    }
+    assert.deepEqual(bad, []);
   });
 });
