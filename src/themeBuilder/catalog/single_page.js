@@ -181,3 +181,6 @@ FAMILIES.forEach((fam, fi) => fam.names.forEach((label, vi) => {
 const entries = () => layouts.map((l) => ({ key: `${l.key}.${l.skin}`, layoutKey: l.key, layoutId: l.key, skinKey: l.skin, name: l.label, layoutLabel: l.label, desc: l.desc, tags: [...l.tags, l.skin], build: l.build }));
 
 module.exports = { type: "single_page", kind: "page", layouts, entries };
+
+// Aperçu de la bibliothèque v2 (identités propres) tant qu'elle n'est pas complète : KW_SINGLE_PAGE_V2=1. Sans cette variable, rien ne change.
+if (process.env.KW_SINGLE_PAGE_V2) module.exports = require("./single_page/v2/catalog");
