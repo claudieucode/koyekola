@@ -2047,6 +2047,37 @@ function guardContrast(styles) {
   return out || styles;
 }
 
+
+// ---------- Isolation des filtres d'un conteneur ----------
+// En CSS, « filter » sur une boîte s'applique à la boîte ENTIÈRE rendue avec ses enfants : un flou posé sur une section ou un conteneur flouterait aussi son titre,
+// son texte, ses boutons. Règle voulue : un filtre posé sur un conteneur n'agit QUE sur son fond propre (couleur, image, dégradé, voile). Pour tout conteneur qui
+// définit un filtre non neutre (sur un écran ou un état quelconque), le fond ET le filtre passent sur un pseudo-élément ::before placé derrière les contenus ;
+// le conteneur lui-même n'a plus ni fond ni filtre. Un conteneur sans filtre, et tout élément qui n'est pas un conteneur (image, titre, bouton…), sont rendus comme avant.
+// Voir docs/page-builder/ISOLATION_CONTENEUR_FILTRES.md.
+const FILTER_NEUTRAL = { blur: 0, brightness: 100, contrast: 100, grayscale: 0, saturate: 100, sepia: 0, hueRotate: 0, invert: 0 };
+const realFilter = (f) => Boolean(f) && Object.entries(f).some(([k, v]) => v !== FILTER_NEUTRAL[k]);
+const BG_KEYS = new Set(["backgroundColor", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment", "backgroundClip", "backgroundImage", "gradient", "overlay", "filter"]);
+const onlyKeys = (set, keep) => Object.fromEntries(Object.entries(set || {}).filter(([k]) => keep(k)));
+// Renvoie { bleed } si le nœud doit répartir fond + filtre sur ::before, sinon null (rendu inchangé)
+function filteredBackground(type, styles, states) {
+  const def = Object.hasOwn(NODE_TYPES, type) ? NODE_TYPES[type] : null;
+  if (type !== "layout" && (!def || def.container !== true)) return null; // « layout » : la section libre (hors registre des éléments)
+  const sets = [...Object.values(styles || {}), ...Object.values(states || {})].filter((x) => x && typeof x === "object");
+  if (!sets.some((x) => realFilter(x.filter))) return null;
+  if (sets.some((x) => x.backgroundClip === "text")) return null; // fond « dans les lettres » : le fond épouse le texte, il ne peut pas être déplacé → comportement d'origine
+  const blur = Math.max(0, ...sets.map((x) => (x.filter && x.filter.blur) || 0));
+  return { bleed: Math.ceil(blur * 2) };
+}
+// Rayon des coins effectif sur un écran (héritage ordinateur → tablette → mobile ; le grand écran hérite de l'ordinateur seulement)
+function radiusAt(styles, bpKey) {
+  const chain = bpKey === "mobile" ? ["mobile", "tablet", "desktop"] : bpKey === "tablet" ? ["tablet", "desktop"] : bpKey === "wide" ? ["wide", "desktop"] : ["desktop"];
+  const eff = (k) => { for (const c of chain) if (styles && styles[c] && styles[c][k] !== undefined) return styles[c][k]; return undefined; };
+  const out = (k) => { const v = eff(k); return v === undefined ? undefined : STYLE_PROPS[k].out ? STYLE_PROPS[k].out(v) : v; };
+  const all = out("borderRadius"), corners = ["borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius"].map(out);
+  if (corners.some((c) => c !== undefined)) return corners.map((c) => (c === undefined ? all || "0" : c)).join(" ");
+  return all || "";
+}
+
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const mediaOf = (bp) => (bp.key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
@@ -2074,17 +2105,47 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       }
     }
   };
-  const add = (id, styles, states, band = false) => {
+  const add = (id, styles, states, band = false, type = "") => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
+    const split = filteredBackground(type, styles, states);
+    if (!split) {
+      for (const bp of BREAKPOINTS) {
+        const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
+        if (!d) continue;
+        (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
+      }
+      for (const state of STATES) {
+        const d = states && states[state.key] ? declarations(states[state.key], band) : "";
+        if (d) rules.base.push(stateRule(state, sel, d));
+      }
+      return;
+    }
+    // Fond filtré : le conteneur garde tout SAUF fond et filtre ; ::before (derrière les contenus) porte le fond et le filtre, sur chaque écran et chaque état
+    const { bleed } = split, own = (k) => !BG_KEYS.has(k), bgOnly = (k) => BG_KEYS.has(k);
+    const pseudoStatic = `content:"";position:absolute;inset:${bleed ? `-${bleed}px` : "0"};z-index:-1;pointer-events:none;border-radius:inherit`;
+    rules.base.push(`:where(${sel}){position:relative;isolation:isolate}`, `${sel}::before{${pseudoStatic}}`);
+    const extra = (set) => (set.transitionDuration !== undefined ? [`transition:background-color ${set.transitionDuration}ms ease, filter ${set.transitionDuration}ms ease`, ...(set.transitionEasing ? [`transition-timing-function:${set.transitionEasing}`] : [])] : []);
+    const clip = (bp) => { // recadrage du débord du flou, avec les coins arrondis du conteneur (écrit seulement quand il change)
+      if (!bleed) return "";
+      const r = radiusAt(styles, bp.key), prev = bp.key === "desktop" ? null : bp.key === "mobile" ? radiusAt(styles, "tablet") : radiusAt(styles, "desktop");
+      if (prev !== null && r === prev) return "";
+      return `clip-path:inset(${bleed}px${r ? ` round ${r}` : ""})`;
+    };
     for (const bp of BREAKPOINTS) {
-      const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
-      if (!d) continue;
-      (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
+      const set = styles && styles[bp.key];
+      const dn = set ? declarations(onlyKeys(set, own), band) : "";
+      const dp = [set ? declarations(onlyKeys(set, bgOnly)) : "", ...(set ? extra(set) : []), clip(bp)].filter(Boolean).join(";");
+      const bucket = bp.media ? rules.media[bp.key] : rules.base;
+      if (dn) bucket.push(`${sel}{${dn}}`);
+      if (dp) bucket.push(`${sel}::before{${dp}}`);
     }
     for (const state of STATES) {
-      const d = states && states[state.key] ? declarations(states[state.key], band) : "";
-      if (d) rules.base.push(stateRule(state, sel, d));
+      const set = states && states[state.key];
+      if (!set) continue;
+      const dn = declarations(onlyKeys(set, own), band), dp = [declarations(onlyKeys(set, bgOnly)), ...extra(set)].filter(Boolean).join(";");
+      if (dn) rules.base.push(stateRule(state, sel, dn));
+      if (dp) rules.base.push(state.pre ? `${state.pre} ${sel}::before{${dp}}` : `${sel}${state.sel}::before{${dp}}`);
     }
   };
   // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE
@@ -2108,12 +2169,12 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   };
   const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
-    add(s.id, s.styles, s.states);
+    add(s.id, s.styles, s.states, false, s.type);
     if (s.type === "layout") rowMarginRules(s.id, "layout", s.styles, s.children, true);
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full), n.type);
     addParts(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »

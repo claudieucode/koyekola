@@ -65,6 +65,8 @@ async function launch() {
         await cmd("Input.dispatchKeyEvent", { type: "keyDown", key, code, modifiers: mods, windowsVirtualKeyCode: key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0 });
         await cmd("Input.dispatchKeyEvent", { type: "keyUp", key, code, modifiers: mods, windowsVirtualKeyCode: key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0 });
       },
+      // Capture PNG (Buffer) de la fenêtre, ou d'un rectangle { x, y, width, height } en pixels de la page
+      async screenshot(clip) { const r = await cmd("Page.captureScreenshot", { format: "png", ...(clip ? { clip: { ...clip, scale: 1 } } : {}) }); return Buffer.from(r.data, "base64"); },
       async close() { await send("Target.closeTarget", { targetId }).catch(() => {}); },
     };
     return page;
