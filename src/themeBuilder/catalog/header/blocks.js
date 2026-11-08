@@ -81,7 +81,23 @@ const contact = (k, o = {}) => ({ type: "iconlist", props: { items: [{ text: "Vo
 // Groupe flex : ligne par défaut ; retour à la ligne autorisé (le responsive vient du flex-wrap, pas de positions fixes)
 const g = (children, st = {}, t, m) => ({ type: "group", children, ...sty(compact({ display: "flex", flexDirection: "row", alignItems: "center", gap: "16px", flexWrap: "wrap", ...st }), t, m) });
 const stack = (children, st = {}, t, m) => ({ type: "stack", children, ...sty(compact({ display: "flex", flexDirection: "column", gap: "6px", ...st }), t, m) });
-const grid = (cols, children, st = {}, t, m) => ({ type: "grid", children, ...sty(compact({ display: "grid", gridTemplate: cols, alignItems: "center", gap: "16px", ...st }), t, m) });
+// Nombre de colonnes d'un gabarit de grille (« 1fr 1fr », « repeat(3, 1fr) », « minmax(0,1fr) auto »…) ; 0 si inconnu
+const trackCount = (tpl) => { const v = String(tpl || "").trim(); if (!v) return 0; const rep = v.match(/^repeat\(\s*(\d+)/); if (rep) return Number(rep[1]); let depth = 0, n = 0, cur = false; for (const ch of v) { if (ch === "(") depth++; if (ch === ")") depth--; if (/\s/.test(ch) && depth === 0) { if (cur) n++; cur = false; } else cur = true; } return n + (cur ? 1 : 0); };
+// Dernière ligne incomplète (3 cases sur 2 colonnes) : la dernière case VISIBLE occupe la ligne entière au lieu de laisser un trou. Deux colonnes seulement (le cas courant) ; les cases masquées sur l'appareil ne comptent pas.
+const closeRow = (node, t, m) => {
+  const kids = (node.children || []).filter((k) => k && typeof k === "object"); if (!kids.length) return node;
+  const hidden = (k, dev) => (Array.isArray(k.hideOn) && k.hideOn.includes(dev)) || (k.styles && k.styles[dev] && k.styles[dev].display === "none") || (dev === "mobile" && hidden(k, "tablet"));
+  const tabletCols = trackCount(t && t.gridTemplate), mobileCols = m && m.gridTemplate ? trackCount(m.gridTemplate) : tabletCols;
+  const plan = (dev, cols) => { if (cols !== 2) return null; const vis = kids.filter((k) => !hidden(k, dev)); return vis.length % 2 === 1 && vis.length > 1 ? vis[vis.length - 1] : null; };
+  const lt = !t || !t.gridTemplate ? null : plan("tablet", tabletCols), lm = !(t && t.gridTemplate) && !(m && m.gridTemplate) ? null : plan("mobile", mobileCols);
+  const put = (k, dev, span) => { k.styles = { ...(k.styles || {}), [dev]: { ...((k.styles && k.styles[dev]) || {}), gridColumnSpan: span } }; };
+  if (lt) put(lt, "tablet", 2);
+  // le mobile hérite de la tablette : toute case qui y a reçu un étalement le perd si le mobile n'a plus deux colonnes ou si une autre case devient la dernière
+  if (lt && lt !== lm) put(lt, "mobile", 1);
+  if (lm) put(lm, "mobile", 2);
+  return node;
+};
+const grid = (cols, children, st = {}, t, m) => closeRow({ type: "grid", children, ...sty(compact({ display: "grid", gridTemplate: cols, alignItems: "center", gap: "16px", ...st }), t, m) }, t, m);
 // Bande pleine largeur (fond, filets) : les rangées d'un en-tête sont des bandes ; `inner` borne le contenu à la largeur du site
 const band = (S, children, st = {}, t, m) => ({ type: "container", props: { full: true }, children, ...sty(compact({ backgroundColor: S.bg, color: S.fg, display: "flex", flexDirection: "column", alignItems: "stretch", gap: "0px", paddingLeft: "24px", paddingRight: "24px", ...st }), t || { paddingLeft: "18px", paddingRight: "18px" }, m || { paddingLeft: "14px", paddingRight: "14px" }) });
 const inner = (children, st = {}, t, m) => ({ type: "container", children, ...sty(compact({ display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: "20px", flexWrap: "wrap", maxWidth: "1240px", width: "100%", marginLeft: "auto", marginRight: "auto", ...st }), t, m) });
