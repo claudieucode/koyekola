@@ -2372,8 +2372,12 @@ function selectField(label, value, options, onChange, opts) {
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
       case "sitelogo":
-        box.appendChild(selectField("Hauteur", String(p.height || 48), [["32", "32 px"], ["48", "48 px"], ["64", "64 px"], ["96", "96 px"]].concat([32, 48, 64, 96].indexOf(Number(p.height)) < 0 && p.height ? [[String(p.height), p.height + " px"]] : []), function (v) { setProp(it.id, "height", Number(v)); }, { disabled: disabled }));
-        box.appendChild(checkField("Lien vers l'accueil du site", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        box.appendChild(numberField("Hauteur du logo (px)", p.height || 48, { min: 20, max: 160, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "height", n); }, "De 20 à 160 px. Pour la largeur, le rognage ou l'arrondi : onglet Style, partie « Image »."));
+        box.appendChild(checkField("Le logo est un lien", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
+        if (p.link !== false) {
+          box.appendChild(textField("Adresse du lien (vide = accueil du site)", p.href || "", function (v) { change(function () { var x = byId(it.id).props; if (String(v).trim()) x.href = String(v).trim(); else { delete x.href; delete x.newTab; } }); }, { max: 500, disabled: disabled, placeholder: "/page ou https://…" }));
+          if (/^https:\/\//.test(p.href || "")) box.appendChild(checkField("Ouvrir dans un nouvel onglet", p.newTab === true, function (v) { setProp(it.id, "newTab", v ? true : undefined); }, { disabled: disabled }));
+        }
         box.appendChild(selectField("Taille du logo une fois la page défilée", p.scrollHeight ? String(p.scrollHeight) : "", [["", "Identique"], ["24", "24 px"], ["32", "32 px"], ["40", "40 px"], ["48", "48 px"], ["64", "64 px"]].concat([24, 32, 40, 48, 64].indexOf(Number(p.scrollHeight)) < 0 && p.scrollHeight ? [[String(p.scrollHeight), p.scrollHeight + " px"]] : []), function (v) { setProp(it.id, "scrollHeight", v ? Number(v) : ""); }, { disabled: disabled }));
         box.appendChild(textField("Texte alternatif au défilement (logo sans image)", p.scrollText || "", set("scrollText"), { max: 40, disabled: disabled, onChange: true, hint: "Ex. des initiales. Remplace le nom du site quand la page défile. Agit dans un en-tête collant ou superposé." }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));

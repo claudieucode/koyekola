@@ -830,7 +830,9 @@ const NODE_TYPES = {
   sitelogo: { label: "Logo du site", category: "dynamic", props: (p, at, h) => {
     const top = p.logoTop ? h.imageUrl(p.logoTop, `${at} (logo en haut de page)`) : "", mobile = p.logoMobile ? h.imageUrl(p.logoMobile, `${at} (logo mobile)`) : "";
     const sh = numberIn(16, 160, { integer: true })(p.scrollHeight), st = line(p.scrollText, 40);
-    return { height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(sh ? { scrollHeight: sh } : {}), ...(st ? { scrollText: st } : {}), ...(top ? { logoTop: top } : {}), ...(mobile ? { logoMobile: mobile } : {}) };
+    // Lien du logo : l'accueil du site par défaut ; une adresse personnalisée (page du site, https://…) et l'ouverture dans un nouvel onglet sont facultatives
+    const href = p.href ? h.linkUrl(p.href, `${at} (lien du logo)`) : "";
+    return { height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(href ? { href } : {}), ...(p.newTab === true && href.startsWith("https://") ? { newTab: true } : {}), ...(sh ? { scrollHeight: sh } : {}), ...(st ? { scrollText: st } : {}), ...(top ? { logoTop: top } : {}), ...(mobile ? { logoMobile: mobile } : {}) };
   } },
   // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
   postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },

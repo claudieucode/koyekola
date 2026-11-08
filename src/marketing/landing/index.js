@@ -250,7 +250,7 @@ function dynamicProps(ctx, n, visitor, page, scope) {
   if (n.type === "sitelogo" || n.type === "sitetitle" || n.type === "copyright") {
     const s = siteInfo(ctx, page);
     if (n.type === "copyright") return { ...p, year: String(new Date().getFullYear()), owner: p.owner || s.name };
-    return { ...p, name: s.name, homeUrl: s.homeUrl, ...(n.type === "sitelogo" ? { logo: s.logo } : {}) };
+    return { ...p, name: s.name, homeUrl: (n.type === "sitelogo" && p.href) || s.homeUrl, ...(n.type === "sitelogo" ? { logo: s.logo } : {}) };
   }
   // Formulaire : affiché seulement s'il est publié (sinon rien sur la page publique, un avertissement dans l'éditeur)
   if (n.type === "signupform") {
