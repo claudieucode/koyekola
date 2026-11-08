@@ -79,7 +79,7 @@
         var r = el("div", "mu-out-rub"); rub.forEach(function (a) { r.appendChild(copy(a, "mu-rb")); }); out.appendChild(r);
       }
       var b = best(root, state.animal, state.age, state.taille);
-      store(false, { a: state.animal, g: state.age, t: state.taille, h: b ? b.href : "" });
+      if (announce) store(false, { a: state.animal, g: state.age, t: state.taille, h: b ? b.href : "" }); // seulement après un vrai choix du visiteur (jamais le chien par défaut au premier affichage)
       mon();
       if (announce) status.textContent = "Sélection mise à jour : " + nom + (parts.length ? ", " + parts.join(", ").toLowerCase() : "") + ".";
     }

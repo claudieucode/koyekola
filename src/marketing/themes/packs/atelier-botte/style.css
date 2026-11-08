@@ -159,7 +159,7 @@ input,select,textarea{border-radius:2px}
 @keyframes atelier-botte-pose{from{opacity:.4}to{opacity:1}}
 body.ab-js:not([data-pk-motion="calm"]):not([data-pk-motion="off"]) .ab-draw{stroke-dasharray:520;stroke-dashoffset:520}
 body.ab-js:not([data-pk-motion="calm"]):not([data-pk-motion="off"]) .ab-in .ab-draw{animation:atelier-botte-trace 2s ease-out both}
-.ab-js .ab-stage svg{animation:atelier-botte-pose .6s ease both}
+body.ab-js .ab-stage svg{animation:atelier-botte-pose .6s ease both}
 .ab-sh-up,.ab-sh-patine{transition:fill .5s ease,fill-opacity .6s ease}
 body[data-pk-arches="droit"] .ab-arch-in,body[data-pk-arches="droit"] .ab-arch-in::after,body[data-pk-arches="droit"] .ab-stage,body[data-pk-arches="droit"] .ab-stage::after,body[data-pk-arches="droit"] .sh-card,body[data-pk-arches="droit"] .sh-card-img,body[data-pk-arches="droit"] .sh-gallery img,body[data-pk-arches="droit"] .sh-big,body[data-pk-arches="droit"] .lp-main [class*="shopgrid"] img{border-radius:2px}
 body[data-pk-perfo="off"] .ab-head::after,body[data-pk-perfo="off"] .ab-foot::before,body[data-pk-perfo="off"] .ab-ph::after{display:none}
@@ -174,4 +174,4 @@ body[data-pk-rdv="off"] .ab-rdv{visibility:hidden}
   .ab-arch{order:-1;max-width:340px}
 }
 @media (max-width:480px){.ab-steps li{grid-template-columns:3rem 1fr}.ab-link{display:inline-block;margin:.8rem 0 0}.ab-promo{letter-spacing:.06em}.ab-logo span{font-size:1.3rem}}
-@media (prefers-reduced-motion:reduce){.ab-btn,.ab-sh-up,.ab-sh-patine{transition:none}body.ab-js .ab-draw{stroke-dasharray:none!important;stroke-dashoffset:0!important}body.ab-js .ab-in .ab-draw,.ab-js .ab-stage svg{animation:none}}
+@media (prefers-reduced-motion:reduce){.ab-btn,.ab-sh-up,.ab-sh-patine{transition:none}body.ab-js .ab-draw{stroke-dasharray:none!important;stroke-dashoffset:0!important}body.ab-js .ab-in .ab-draw,body.ab-js .ab-stage svg{animation:none}}
