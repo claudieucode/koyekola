@@ -36,4 +36,21 @@ describe("Parties globales (en-tête, pied) avec la base des thèmes : fond plei
       await context.close();
     }
   });
+
+  test("section ordinaire : le bloc (fond, image) occupe 100 % de la fenêtre, son contenu reste dans la colonne centrée de 1280 px", async () => {
+    for (const width of [375, 768, 1280, 1920, 2560]) {
+      const { context, page } = await env.visit({ viewport: { width, height: 900 }, tall: false });
+      await page.addStyleTag({ content: BASE_CSS });
+      const m = await page.evaluate(() => {
+        const block = [...document.querySelectorAll(".lp-main > .lp-block-layout")].find((b) => !b.classList.contains("lp-site-part") && b.textContent.includes("CORPS DE PAGE"));
+        const h = block.querySelector("h2"), b = block.getBoundingClientRect(), t = h.getBoundingClientRect();
+        return { vw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth, left: Math.round(b.left), width: Math.round(b.width), textLeft: Math.round(t.left) };
+      });
+      const expected = Math.max(24, (m.vw - 1280) / 2 + 24);
+      assert.deepEqual({ left: m.left, width: m.width }, { left: 0, width: m.vw }, `${width} px : bloc ${m.left}/${m.width}`);
+      assert.ok(Math.abs(m.textLeft - expected) <= 1, `${width} px : texte à ${m.textLeft}, attendu ${expected}`);
+      assert.equal(m.sw, m.vw, `${width} px : défilement horizontal`);
+      await context.close();
+    }
+  });
 });
