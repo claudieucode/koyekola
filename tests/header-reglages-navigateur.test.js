@@ -158,6 +158,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     const t = await adopt("luxe-01.luxe-01");
     const { context, page } = await open({ width: 1500, height: 950 }); await openEditor(page, t);
     await page.locator("[data-pb-layers] li.pb-node > .pb-row-item", { hasText: /Menu de navigati/ }).first().click();
+    await page.locator("[data-pb-inspector] details.pb-hdr-acc > summary", { hasText: "Bouton mobile" }).click(); // les réglages du menu sont rangés en groupes repliables
     const sel = page.getByLabel("Ouverture du menu sur mobile"); await sel.waitFor();
     assert.equal(await sel.inputValue(), "inline", "déplié par défaut");
     await sel.selectOption("drawer");
@@ -178,6 +179,7 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     const t = await adopt("luxe-01.luxe-01");
     const { context, page } = await open({ width: 1500, height: 950 }); await openEditor(page, t);
     await page.locator("[data-pb-layers] li.pb-node > .pb-row-item", { hasText: /Menu de navigati/ }).first().click();
+    await page.locator("[data-pb-inspector] details.pb-hdr-acc > summary", { hasText: "Méga-menu" }).click();
     const item = page.locator("[data-pb-mega-item]").first(); await item.waitFor();
     assert.match(await item.innerText(), new RegExp(label));
     const [popup] = await Promise.all([context.waitForEvent("page"), item.locator("[data-pb-mega-create]").click()]);

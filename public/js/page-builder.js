@@ -2117,13 +2117,18 @@ function selectField(label, value, options, onChange, opts) {
     });
   }
   // Groupes repliables (un seul ouvert à la fois) pour les réglages des éléments d'en-tête : même présentation que l'onglet « En-tête »
-  function accGroups(root) {
+  var accOpenFor = {}; // élément → groupe ouvert : le groupe reste ouvert quand le panneau se redessine après une modification
+  function accGroups(root, nodeId) {
     var first = true;
     return function (title) {
-      var det = h("details", { class: "pb-hdr-acc", open: first ? "" : null }); first = false;
+      var want = accOpenFor[nodeId], isOpen = want === undefined ? first : want === title; first = false;
+      var det = h("details", { class: "pb-hdr-acc", open: isOpen ? "" : null });
       det.appendChild(h("summary", {}, h("span", { class: "pb-hdr-acc-title", text: title }), h("span", { class: "pb-hdr-acc-chev", "aria-hidden": "true" }, icon("chevronRight"))));
       var body = h("div", { class: "pb-hdr-acc-body" }); det.appendChild(body);
-      det.addEventListener("toggle", function () { if (det.open) [].forEach.call(root.querySelectorAll(":scope > details.pb-hdr-acc"), function (o) { if (o !== det && o.open) o.open = false; }); });
+      det.addEventListener("toggle", function () {
+        if (det.open) { accOpenFor[nodeId] = title; [].forEach.call(root.querySelectorAll(":scope > details.pb-hdr-acc"), function (o) { if (o !== det && o.open) o.open = false; }); }
+        else if (accOpenFor[nodeId] === title) accOpenFor[nodeId] = "";
+      });
       root.appendChild(det); return body;
     };
   }
@@ -2137,7 +2142,7 @@ function selectField(label, value, options, onChange, opts) {
     var set = function (k, light) { return function (v) { setProp(it.id, k, v, { key: it.id + ":" + k, light: light !== false }); }; };
     // Deux réglages qui ne s'affichent qu'ENSEMBLE (ex. texte + adresse d'un bouton) : quand un seul est rempli, on le dit au lieu de ne rien montrer
     var pairSet = function (k, other, what) { return function (v) { set(k)(v); if (!String(v || "").trim() !== !(byId(it.id).props[other] || "").toString().trim()) toast(what + " n'apparaît que si le texte ET l'adresse sont remplis."); }; };
-    var grp = ["menu", "sitelogo", "search", "account"].indexOf(it.type) >= 0 && isHeaderDoc() ? accGroups(box) : null;
+    var grp = ["menu", "sitelogo", "search", "account"].indexOf(it.type) >= 0 && isHeaderDoc() ? accGroups(box, it.id) : null;
     switch (it.type) {
       case "heading":
         box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, dyn: true, hint: "Ou double-cliquez sur le titre dans la page. { } : insérer une donnée dynamique." }));
@@ -2335,7 +2340,7 @@ function selectField(label, value, options, onChange, opts) {
           box.appendChild(selectField("Ouverture du menu sur mobile", p.mobileMode === "drawer" ? "drawer" : "inline", [["inline", "Déplié sous le bouton"], ["drawer", "Tiroir latéral"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "drawer") { x.mobileMode = "drawer"; } else { delete x.mobileMode; delete x.drawerSide; } }); }, { disabled: disabled }));
           if (p.mobileMode === "drawer") box.appendChild(selectField("Côté du tiroir", p.drawerSide === "left" ? "left" : "right", [["right", "À droite"], ["left", "À gauche"]], function (v) { change(function () { byId(it.id).props.drawerSide = v; }); }, { disabled: disabled }));
         }
-        if (isHeaderDoc() && p.source && p.source !== "manual") megaSection(box, it, p, disabled);
+        if (isHeaderDoc() && p.source && p.source !== "manual") { if (grp) box = grp("Méga-menu"); megaSection(box, it, p, disabled); }
         break;
       case "carousel":
         box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
